@@ -246,11 +246,9 @@ export class ReactorClient implements IReactorClient {
       );
 
       const scopeResult = operationsByScope[scopeName];
-      if (scopeResult) {
-        allOperations.push(...scopeResult.results);
-        if (scopeResult.nextCursor) {
-          activeCursors[scopeName] = scopeResult.nextCursor;
-        }
+      allOperations.push(...scopeResult.results);
+      if (scopeResult.nextCursor) {
+        activeCursors[scopeName] = scopeResult.nextCursor;
       }
     }
 

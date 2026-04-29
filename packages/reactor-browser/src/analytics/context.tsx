@@ -1,7 +1,4 @@
-import type { BrowserAnalyticsStoreOptions } from "@powerhousedao/analytics-engine-browser";
-import { BrowserAnalyticsStore } from "@powerhousedao/analytics-engine-browser";
-import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
-import { AnalyticsQueryEngine } from "@powerhousedao/analytics-engine-core";
+import type { AnalyticsQueryEngine } from "@powerhousedao/analytics-engine-core";
 import {
   QueryClient,
   QueryClientProvider,
@@ -14,34 +11,16 @@ import { childLogger } from "document-model";
 import type { PropsWithChildren } from "react";
 import { useEffect } from "react";
 import { getGlobal } from "../global/core.js";
+import type { CreateStoreOptions } from "./store.js";
+import { getAnalyticsStore } from "./store.js";
 
 const logger = childLogger(["reactor-browser", "analytics", "provider"]);
 
 const defaultQueryClient = new QueryClient();
 
-type CreateStoreOptions = BrowserAnalyticsStoreOptions;
-
 export const analyticsOptionsKey = ["analytics", "options"] as const;
 export const analyticsStoreKey = ["analytics", "store"] as const;
-export const analyticsEngineKey = ["analytics", "store"] as const;
-
-export async function createAnalyticsStore(options: CreateStoreOptions) {
-  const store = new BrowserAnalyticsStore(options);
-  await store.init();
-
-  const engine = new AnalyticsQueryEngine(store);
-  return {
-    store,
-    engine,
-    options,
-  };
-}
-
-export async function getAnalyticsStore(): Promise<IAnalyticsStore | null> {
-  const globalAnalytics = await getGlobal("analytics");
-
-  return globalAnalytics?.store ?? null;
-}
+export const analyticsEngineKey = ["analytics", "engine"] as const;
 
 export function useAnalyticsStoreOptions() {
   return useQuery<CreateStoreOptions | undefined>({
@@ -102,16 +81,15 @@ interface BaseAnalyticsProviderProps extends PropsWithChildren {
   queryClient?: QueryClient;
 }
 
-type CreateAnalyticsStoreProps =
-  | {
-      options?: CreateStoreOptions;
-    }
-  | {
-      databaseName?: string;
-    };
-
 type AnalyticsProviderProps = BaseAnalyticsProviderProps &
-  CreateAnalyticsStoreProps;
+  (
+    | {
+        options?: CreateStoreOptions;
+      }
+    | {
+        databaseName?: string;
+      }
+  );
 
 function CreateAnalyticsStore() {
   const { mutate } = useCreateAnalyticsStore();

@@ -65,8 +65,11 @@ ph reactor --port 5000
 **Option 2: Run both Connect and Reactor together**
 
 ```bash
-# Start both Connect and Reactor for development
-ph dev
+# In one terminal: start the Reactor
+ph reactor
+
+# In another terminal: start Connect Studio
+ph connect
 ```
 
 All options will start a Reactor API instance, typically accessible at:

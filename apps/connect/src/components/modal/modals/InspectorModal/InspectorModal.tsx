@@ -2,6 +2,7 @@ import { InspectorModal as ConnectInspectorModal } from "@powerhousedao/design-s
 import { REACTOR_SCHEMA } from "@powerhousedao/reactor-browser";
 import { closePHModal, usePHModal } from "@powerhousedao/reactor-browser";
 import { useDbExplorer } from "./useDbExplorer.js";
+import { useDebugInspector } from "./useDebugInspector.js";
 import { useIntegrityInspector } from "./useIntegrityInspector.js";
 import { useProcessorsInspector } from "./useProcessorsInspector.js";
 import { useQueueInspector } from "./useQueueInspector.js";
@@ -19,6 +20,8 @@ export const InspectorModal: React.FC = () => {
   const queueInspectorProps = useQueueInspector();
   const processorsInspectorProps = useProcessorsInspector();
   const integrityInspectorProps = useIntegrityInspector();
+  const { currentPgVersion, supportedPgVersions, onResetToPgVersion } =
+    useDebugInspector();
 
   return (
     <ConnectInspectorModal
@@ -35,6 +38,11 @@ export const InspectorModal: React.FC = () => {
         pageSize: DEFAULT_PAGE_SIZE,
         onExportDb,
         onImportDb,
+        pgVersionControl: {
+          currentPgVersion,
+          supportedPgVersions,
+          onResetToPgVersion,
+        },
       }}
       remotesInspectorProps={{
         getRemotes,

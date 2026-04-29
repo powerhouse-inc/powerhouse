@@ -1,5 +1,6 @@
 export type PackagesConfig = {
   packages: string[];
+  localPackage?: { name: string; version: string } | null;
 };
 
 function assertPackagesConfig(value: unknown): asserts value is PackagesConfig {

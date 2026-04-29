@@ -1,7 +1,4 @@
-import type {
-  ActionFromOperation,
-  DocumentModelDocumentTypeMetadata,
-} from "@powerhousedao/codegen";
+import type { DocumentModelDocumentTypeMetadata } from "@powerhousedao/codegen";
 import type {
   DocumentModelGlobalState,
   DocumentSpecification,
@@ -73,10 +70,10 @@ export function getLatestDocumentModelSpecVersionNumber(
   return getLatestDocumentModelSpec(documentModelState).version;
 }
 
-export function getDocumentModelVariableNames(documentType: string) {
-  const kebabCaseDocumentType = kebabCase(documentType);
-  const pascalCaseDocumentType = pascalCase(documentType);
-  const camelCaseDocumentType = camelCase(documentType);
+export function getDocumentModelVariableNames(documentModelName: string) {
+  const kebabCaseDocumentType = kebabCase(documentModelName);
+  const pascalCaseDocumentType = pascalCase(documentModelName);
+  const camelCaseDocumentType = camelCase(documentModelName);
   const documentTypeVariableName = `${camelCaseDocumentType}DocumentType`;
   const stateName = `${pascalCaseDocumentType}State`;
   const globalStateName = `${pascalCaseDocumentType}GlobalState`;
@@ -126,40 +123,6 @@ export function getDocumentModelVariableNames(documentType: string) {
   };
 }
 
-export function getDocumentModelOperationsModuleVariableNames(
-  module: ModuleSpecification,
-) {
-  const actions = getActionsFromModule(module);
-  const errors = getErrorsFromActions(actions);
-  return { actions, errors };
-}
-
-function getActionFromOperation(
-  operation: OperationSpecification,
-): ActionFromOperation {
-  const { name, schema, scope = "global", errors } = operation;
-  if (!name) {
-    throw new Error("Operation name is required");
-  }
-  const hasInput = schema !== null;
-  const isEmptyInput =
-    hasInput &&
-    schema.includes("_empty") &&
-    !schema.replace(/_empty:\s*Boolean/, "").match(/\w+:\s*\w+/);
-  const hasAttachment = hasInput && schema.includes(": Attachment");
-  const state = scope === "global" ? "" : scope;
-
-  return {
-    name,
-    hasInput,
-    isEmptyInput,
-    hasAttachment,
-    scope,
-    state,
-    errors,
-  };
-}
-
 function makeNormalizedError(error: OperationErrorSpecification) {
   if (!error.name) {
     throw new Error("Error name is required");
@@ -171,8 +134,8 @@ function makeNormalizedError(error: OperationErrorSpecification) {
   };
 }
 
-function getErrorsFromAction(action: ActionFromOperation) {
-  const errors = action.errors;
+function getErrorsFromOperation(operation: OperationSpecification) {
+  const errors = operation.errors;
   const errorCodeSet = new Set<string>();
   const normalizedErrors: OperationErrorSpecification[] = [];
 
@@ -191,10 +154,6 @@ function getErrorsFromAction(action: ActionFromOperation) {
   return normalizedErrors;
 }
 
-function getErrorsFromActions(actions: ActionFromOperation[]) {
-  return actions.flatMap(getErrorsFromAction);
-}
-
-function getActionsFromModule(module: ModuleSpecification) {
-  return module.operations.map(getActionFromOperation);
+function getErrorsFromOperations(operations: OperationSpecification[]) {
+  return operations.flatMap(getErrorsFromOperation);
 }

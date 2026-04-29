@@ -428,6 +428,7 @@ query PollSyncEnvelopes(
       documentId
       error
     }
+    hasMore
   }
 }
 

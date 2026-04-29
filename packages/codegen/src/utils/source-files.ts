@@ -1,12 +1,19 @@
+import path from "path";
 import type { Project } from "ts-morph";
 
 /** Gets a SourceFile by name in a ts-morph Project, or creates a new one
  * if none with that path exists.
  */
 export function getOrCreateSourceFile(project: Project, filePath: string) {
+  const dirName = path.dirname(filePath);
+  if (!project.getDirectory(dirName)) {
+    project.createDirectory(dirName);
+  }
   const sourceFile = project.getSourceFile(filePath);
   if (!sourceFile) {
-    const newSourceFile = project.createSourceFile(filePath, "");
+    const newSourceFile = project.createSourceFile(filePath, "", {
+      overwrite: true,
+    });
     return {
       alreadyExists: false,
       sourceFile: newSourceFile,
@@ -46,10 +53,10 @@ export async function ensureDirectoriesExist(
   for (const dirPath of pathsToEnsure) {
     const dir = project.getDirectory(dirPath);
     if (!dir) {
-      project.createDirectory(dirPath);
+      const newDir = project.createDirectory(dirPath);
+      await newDir.save();
     }
   }
-  await project.save();
 }
 
 export function getPreviousVersionSourceFile(args: {

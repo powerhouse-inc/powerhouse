@@ -1,8 +1,4 @@
-import type {
-  Issuer,
-  JwtCredentialPayload,
-  VerifiedCredential,
-} from "did-jwt-vc";
+import type { JwtCredentialPayload } from "did-jwt-vc";
 import { createVerifiableCredentialJwt, verifyCredential } from "did-jwt-vc";
 import { Resolver } from "did-resolver";
 import { getResolver as keyDidResolver } from "key-did-resolver";
@@ -10,7 +6,9 @@ import type {
   AuthVerifiedCredential,
   CreateBearerTokenOptions,
   IAuthCredentialSubject,
+  Issuer,
   PKHDid,
+  VerifiedCredential,
 } from "./types.js";
 
 export type ILogger = {
@@ -57,15 +55,19 @@ export async function verifyAuthBearerToken(
 ): Promise<false | AuthVerifiedCredential> {
   try {
     const now = parseInt(String(Date.now() / 1000));
-    const verified = await verifyCredential(jwt, getResolver(), {
-      policies: {
-        now: parseInt(String(Date.now() / 1000)),
-        expirationDate: true,
-        issuanceDate: true,
+    const verified: VerifiedCredential = await verifyCredential(
+      jwt,
+      getResolver(),
+      {
+        policies: {
+          now: parseInt(String(Date.now() / 1000)),
+          expirationDate: true,
+          issuanceDate: true,
+        },
       },
-    });
+    );
 
-    if (verified.payload.exp && verified.payload.exp! < now) {
+    if (verified.payload.exp && verified.payload.exp < now) {
       return false;
     }
     assertIsAuthCredential(verified);

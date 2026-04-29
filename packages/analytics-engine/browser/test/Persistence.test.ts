@@ -6,7 +6,7 @@ import { DateTime } from "luxon";
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { BrowserAnalyticsStore } from "../src/BrowserAnalyticsStore.js";
-import { createFsPglite } from "../src/utils.js";
+import { createFsPglite } from "../test-utils.js";
 
 const TEST_SOURCE = AnalyticsPath.fromString(
   "test/analytics/AnalyticsStore.spec",

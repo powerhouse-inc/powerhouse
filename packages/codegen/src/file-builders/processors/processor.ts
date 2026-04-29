@@ -3,48 +3,50 @@ import type {
   ProcessorApps,
 } from "@powerhousedao/shared/processors";
 import { camelCase, kebabCase, pascalCase } from "change-case";
+import { createOrUpdateManifest } from "file-builders";
 import path from "path";
 import { factoryBuildersTemplate } from "templates";
 import type { SourceFile } from "ts-morph";
 import { ts, type Project } from "ts-morph";
 import {
-  buildTsMorphProject,
   ensureDirectoriesExist,
   formatSourceFileWithPrettier,
+  getOrCreateDirectory,
   getOrCreateSourceFile,
 } from "utils";
 import { tsMorphGenerateAnalyticsProcessor } from "./analytics.js";
 import { tsMorphGenerateRelationalDbProcessor } from "./relational-db.js";
 
 export async function tsMorphGenerateProcessor(args: {
+  project: Project;
   processorName: string;
   documentTypes: string[];
-  rootDir: string;
   processorType: "relationalDb" | "analytics";
   processorApps: ProcessorApps;
 }) {
   const {
+    project,
     processorName,
     documentTypes,
-    rootDir,
     processorType,
     processorApps,
   } = args;
   const kebabCaseName = kebabCase(processorName);
   const camelCaseName = camelCase(processorName);
   const pascalCaseName = pascalCase(processorName);
-  const processorsDirPath = path.join(rootDir, "processors");
+  const { directory: processorsDir } = getOrCreateDirectory(
+    project,
+    "processors",
+  );
+  const projectDir = processorsDir.getParentOrThrow().getPath();
+  const processorsDirPath = processorsDir.getPath();
   const dirPath = path.join(processorsDirPath, kebabCaseName);
-  const sourceFilesPath = path.join(processorsDirPath, "**/*");
-  const project = buildTsMorphProject(rootDir);
   await ensureDirectoriesExist(project, processorsDirPath, dirPath);
-  project.addSourceFilesAtPaths(sourceFilesPath);
 
   if (processorType === "analytics") {
     await tsMorphGenerateAnalyticsProcessor({
       processorName,
       documentTypes,
-      rootDir,
       camelCaseName,
       dirPath,
       kebabCaseName,
@@ -56,7 +58,6 @@ export async function tsMorphGenerateProcessor(args: {
     await tsMorphGenerateRelationalDbProcessor({
       processorName,
       documentTypes,
-      rootDir,
       camelCaseName,
       dirPath,
       kebabCaseName,
@@ -75,7 +76,12 @@ export async function tsMorphGenerateProcessor(args: {
       kebabCaseName,
     });
   }
-  await project.save();
+  await createOrUpdateManifest(
+    {
+      processors: [{ name: processorName, id: kebabCaseName }],
+    },
+    projectDir,
+  );
 }
 
 async function updateFactoryBuildersFile(v: {

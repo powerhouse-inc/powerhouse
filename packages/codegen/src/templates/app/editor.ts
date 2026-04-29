@@ -2,6 +2,10 @@ import { tsx } from "@tmpl/core";
 
 export const appEditorFileTemplate = () =>
   tsx`
+/**
+ * WARNING: DO NOT EDIT
+ * This file is auto-generated and updated by codegen
+ */
 import { useSetPHAppConfig } from "@powerhousedao/reactor-browser";
 import type { EditorProps } from "document-model";
 import { DriveExplorer } from "./components/DriveExplorer.js";

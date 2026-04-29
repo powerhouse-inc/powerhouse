@@ -39,6 +39,8 @@ export const DEFAULT_CONNECT_OUTDIR = ".ph/connect-build/dist/" as const;
 
 export const DEFAULT_RENOWN_URL = "https://www.renown.id" as const;
 
+export const DEFAULT_REGISTRY_URL = "https://registry.dev.vetra.io" as const;
+
 export const DEFAULT_SWITCHBOARD_PORT = 4001 as const;
 
 export const DEFAULT_VETRA_DRIVE_ID = "vetra" as const;
@@ -60,6 +62,7 @@ export const VERSIONED_DEPENDENCIES = [
   "@powerhousedao/reactor-api",
   "@powerhousedao/reactor-browser",
   "@powerhousedao/connect",
+  "@powerhousedao/shared",
   "@powerhousedao/analytics-engine-core",
 ];
 

@@ -1,7 +1,8 @@
 {
   "name": "@powerhousedao/shared",
-  "version": "6.0.0-dev.163",
+  "version": "6.0.0-dev.207",
   "type": "module",
+  "sideEffects": false,
   "publishConfig": {
     "access": "public"
   },
@@ -78,11 +79,12 @@
     }
   },
   "dependencies": {
-    "write-package": "catalog:",
+    "@sentry/node": "^9.47.1",
     "@sindresorhus/fnv1a": "catalog:",
     "chalk": "catalog:",
     "change-case": "catalog:",
     "cmd-ts": "catalog:",
+    "enquirer": "catalog:",
     "jszip": "^3.10.1",
     "kysely": "catalog:",
     "luxon": "catalog:",
@@ -90,18 +92,21 @@
     "npm-package-arg": "catalog:",
     "package-directory": "^8.1.0",
     "package-manager-detector": "catalog:",
+    "remeda": "catalog:",
+    "rolldown": "catalog:",
     "safe-stable-stringify": "^2.4.3",
     "sha1-uint8array": "^0.10.7",
+    "write-package": "catalog:",
     "zocker": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@types/bun": "catalog:",
     "@types/luxon": "catalog:",
+    "@types/npm-package-arg": "catalog:",
     "@types/react": "catalog:",
     "react": "catalog:",
     "tsdown": "catalog:",
-    "tsx": "catalog:",
-    "@types/npm-package-arg": "catalog:"
+    "tsx": "catalog:"
   }
 }

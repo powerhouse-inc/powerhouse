@@ -101,6 +101,9 @@
       "path": "test/e2e-utils"
     },
     {
+      "path": "test/lb-loadtest"
+    },
+    {
       "path": "test/switchboard"
     },
     {

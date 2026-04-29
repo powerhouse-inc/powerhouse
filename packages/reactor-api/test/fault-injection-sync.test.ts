@@ -272,14 +272,16 @@ describe("Fault-Injection Sync", () => {
     await manualTimer.tick();
     expect(channel.getConnectionState().state).toBe("reconnecting");
 
-    // First recovery attempt -> network error (recoverable), still reconnecting
-    await vi.advanceTimersByTimeAsync(50);
-    expect(channel.getConnectionState().state).toBe("reconnecting");
-
-    // Advance past backoff delay - second recovery attempt -> real resolver succeeds
-    await vi.advanceTimersByTimeAsync(500);
-
-    expect(channel.getConnectionState().state).toBe("connected");
+    // Advance time until the recovery retry succeeds. The backoff delay is
+    // jittered and the recovery involves async work across multiple microtask
+    // turns, so we advance in steps and let vi.waitFor re-check the assertion.
+    await vi.waitFor(
+      async () => {
+        await vi.advanceTimersByTimeAsync(50);
+        expect(channel.getConnectionState().state).toBe("connected");
+      },
+      { timeout: 2000, interval: 0 },
+    );
     expect(manualTimer.isRunning()).toBe(true);
   });
 });

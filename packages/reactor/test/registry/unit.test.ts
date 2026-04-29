@@ -23,33 +23,51 @@ describe("DocumentModelRegistry", () => {
 
   describe("registerModules", () => {
     it("should register a single module successfully", () => {
-      expect(() => registry.registerModules(documentModelModule)).not.toThrow();
+      const results = registry.registerModules(documentModelModule);
+      expect(results).toHaveLength(1);
+      expect(results[0]).toEqual({
+        status: "success",
+        item: documentModelModule,
+      });
       expect(registry.getAllModules()).toHaveLength(1);
       expect(registry.getAllModules()[0]).toBe(documentModelModule);
     });
 
     it("should register multiple modules successfully", () => {
-      expect(() =>
-        registry.registerModules(documentModelModule, driveModule),
-      ).not.toThrow();
+      const results = registry.registerModules(
+        documentModelModule,
+        driveModule,
+      );
+      expect(results).toHaveLength(2);
+      expect(results[0].status).toBe("success");
+      expect(results[1].status).toBe("success");
       expect(registry.getAllModules()).toHaveLength(2);
       expect(registry.getAllModules()).toContain(documentModelModule);
       expect(registry.getAllModules()).toContain(driveModule);
     });
 
-    it("should throw DuplicateModuleError when registering duplicate module", () => {
+    it("should return error result for duplicate module without breaking other registrations", () => {
       registry.registerModules(documentModelModule);
-      expect(() => registry.registerModules(documentModelModule)).toThrow(
-        DuplicateModuleError,
+      const results = registry.registerModules(
+        documentModelModule,
+        driveModule,
       );
-      expect(() => registry.registerModules(documentModelModule)).toThrow(
-        `Document model module already registered for type: ${documentModelModule.documentModel.global.id}`,
-      );
+      expect(results).toHaveLength(2);
+      expect(results[0].status).toBe("error");
+      expect(results[0].item).toBe(documentModelModule);
+      expect(
+        (results[0] as { status: "error"; error: Error }).error,
+      ).toBeInstanceOf(DuplicateModuleError);
+      expect(results[1].status).toBe("success");
+      expect(results[1].item).toBe(driveModule);
+      expect(registry.getAllModules()).toHaveLength(2);
     });
 
     it("should allow registering different modules with different IDs", () => {
       registry.registerModules(documentModelModule);
-      expect(() => registry.registerModules(driveModule)).not.toThrow();
+      const results = registry.registerModules(driveModule);
+      expect(results).toHaveLength(1);
+      expect(results[0].status).toBe("success");
       expect(registry.getAllModules()).toHaveLength(2);
     });
   });

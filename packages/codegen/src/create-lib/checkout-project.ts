@@ -1,6 +1,5 @@
 import path from "node:path";
-import { runCmd } from "./utils.js";
-
+import { runCmd } from "@powerhousedao/shared/clis";
 /**
  * Clones a git repository and returns the path to the cloned project.
  * @param repositoryUrl - The URL of the git repository to clone

@@ -125,6 +125,7 @@ export {
 // Document Model Registry
 export {
   DocumentModelRegistry,
+  DuplicateManifestError,
   DuplicateModuleError,
   InvalidModuleError,
   ModuleNotFoundError,

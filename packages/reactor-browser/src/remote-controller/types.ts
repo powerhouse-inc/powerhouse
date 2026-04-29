@@ -13,7 +13,19 @@ import type {
 } from "../graphql/gen/schema.js";
 import type { ReactorGraphQLClient } from "../graphql/types.js";
 export { PropagationMode } from "../graphql/gen/schema.js";
-export type { ReactorGraphQLClient } from "../graphql/types.js";
+
+export type RemoteControllerGraphQLClient = Pick<
+  ReactorGraphQLClient,
+  | "GetDocument"
+  | "GetDocumentWithOperations"
+  | "GetDocumentOperations"
+  | "MutateDocument"
+  | "CreateDocument"
+  | "CreateEmptyDocument"
+  | "DeleteDocument"
+  | "BatchGetDocumentOperations"
+  | "BatchGetDocumentWithOperations"
+>;
 
 export type RemoteDocumentData = PhDocumentFieldsFragment;
 
@@ -27,7 +39,7 @@ export type RemoteOperationResultPage =
  * Options for creating a RemoteDocumentController.
  */
 export type RemoteControllerOptions = {
-  client: ReactorGraphQLClient;
+  client: RemoteControllerGraphQLClient;
   /** Remote document id. Omit for new documents. */
   documentId?: string;
   /** "batch" requires explicit push(), "streaming" auto-pushes after actions. Defaults to "batch" */

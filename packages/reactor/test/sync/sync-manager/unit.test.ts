@@ -94,6 +94,7 @@ describe("SyncManager - Unit Tests", () => {
         lastFailureUtcMs: 0,
         pushBlocked: false,
         pushFailureCount: 0,
+        receivingPages: false,
       }),
       onConnectionStateChange: vi.fn().mockReturnValue(() => {}),
     };
@@ -164,6 +165,7 @@ describe("SyncManager - Unit Tests", () => {
         lastFailureUtcMs: 0,
         pushBlocked: false,
         pushFailureCount: 0,
+        receivingPages: false,
       }),
       onConnectionStateChange: vi.fn().mockReturnValue(() => {}),
     } as any;
@@ -446,6 +448,10 @@ describe("SyncManager - Unit Tests", () => {
 
       await syncManager.startup();
 
+      // backfill runs asynchronously after startup returns
+      await vi.waitFor(() => {
+        expect(startupChannel.outbox.add).toHaveBeenCalled();
+      });
       expect(mockOperationIndex.find).toHaveBeenCalledWith(
         "collection1",
         5,
@@ -453,7 +459,45 @@ describe("SyncManager - Unit Tests", () => {
         undefined,
         expect.any(AbortSignal),
       );
-      expect(startupChannel.outbox.add).toHaveBeenCalled();
+    });
+
+    it("should not block startup on backfill", async () => {
+      const startupChannel = createTestChannel();
+      startupChannel.outbox.init(5);
+      vi.mocked(mockChannelFactory.instance).mockReturnValue(
+        startupChannel as any,
+      );
+
+      let resolveFind!: (value: any) => void;
+      const findPromise = new Promise((resolve) => {
+        resolveFind = resolve;
+      });
+      vi.mocked(mockOperationIndex.find).mockReturnValue(findPromise as any);
+
+      const remoteRecord: RemoteRecord = {
+        id: "channel1",
+        name: "remote1",
+        collectionId: "collection1",
+        channelConfig: { type: "internal", parameters: {} },
+        filter: { documentId: [], scope: [], branch: "main" },
+        options: { sinceTimestampUtcMs: "0" },
+        status: {
+          push: { state: "idle", failureCount: 0 },
+          pull: { state: "idle", failureCount: 0 },
+        },
+      };
+
+      vi.mocked(mockRemoteStorage.list).mockResolvedValue([remoteRecord]);
+
+      await syncManager.startup();
+
+      expect(mockEventBus.subscribe).toHaveBeenCalledWith(
+        ReactorEventTypes.JOB_WRITE_READY,
+        expect.any(Function),
+      );
+
+      resolveFind(createFindResult([]));
+      await new Promise((r) => setTimeout(r, 10));
     });
   });
 
@@ -629,6 +673,41 @@ describe("SyncManager - Unit Tests", () => {
       await expect(syncManager.remove("nonexistent")).rejects.toThrow(
         "Remote with name 'nonexistent' does not exist",
       );
+    });
+
+    it("should cancel in-flight backfill when removing a remote", async () => {
+      await syncManager.startup();
+
+      let resolveFind!: (value: any) => void;
+      const findPromise = new Promise((resolve) => {
+        resolveFind = resolve;
+      });
+      vi.mocked(mockOperationIndex.find).mockReturnValue(findPromise as any);
+
+      const channelConfig: ChannelConfig = {
+        type: "internal",
+        parameters: {},
+      };
+
+      await syncManager.add("remote1", "collection1", channelConfig);
+
+      await syncManager.remove("remote1");
+
+      resolveFind(
+        createFindResult([
+          {
+            id: "op1",
+            documentId: "doc1",
+            scope: "global",
+            branch: "main",
+            ordinal: 1,
+          },
+        ]),
+      );
+
+      await new Promise((r) => setTimeout(r, 20));
+
+      expect(mockChannel.outbox.add).not.toHaveBeenCalled();
     });
   });
 
@@ -2366,10 +2445,11 @@ describe("SyncManager - Unit Tests", () => {
       await new Promise((resolve) => setTimeout(resolve, 20));
 
       expect(addedSyncOps).toHaveLength(2);
-      // Both SyncOps target different documents (doc1, doc2) so after
-      // sorting by documentId their dependency chains are independent
+      // First SyncOp has no dependencies
       expect(addedSyncOps[0].jobDependencies).toEqual([]);
-      expect(addedSyncOps[1].jobDependencies).toEqual([]);
+      // Second SyncOp depends on the first via batch dependency chain
+      // (linkBatchDependencies adds cross-document deps for batch integrity)
+      expect(addedSyncOps[1].jobDependencies).toEqual([addedSyncOps[0].jobId]);
     });
 
     it("should flush partial batch on JOB_FAILED", async () => {
@@ -3461,7 +3541,7 @@ describe("SyncManager - Unit Tests", () => {
         mockOperationIndex,
         mockReactor,
         mockEventBus,
-        maxLimit,
+        { maxDeadLettersPerRemote: maxLimit },
       );
 
       const ch = createTestChannel();
@@ -3523,7 +3603,7 @@ describe("SyncManager - Unit Tests", () => {
         mockOperationIndex,
         mockReactor,
         mockEventBus,
-        maxLimit,
+        { maxDeadLettersPerRemote: maxLimit },
       );
 
       const ch = createTestChannel();
@@ -3585,7 +3665,7 @@ describe("SyncManager - Unit Tests", () => {
         mockOperationIndex,
         mockReactor,
         mockEventBus,
-        maxLimit,
+        { maxDeadLettersPerRemote: maxLimit },
       );
 
       const ch = createTestChannel();
@@ -4319,8 +4399,10 @@ describe("SyncManager - Unit Tests", () => {
         branch: "main",
       });
 
-      // outbox.add should be called twice (once per page)
-      expect(mockChannel.outbox.add).toHaveBeenCalledTimes(2);
+      // backfill runs asynchronously after add() returns
+      await vi.waitFor(() => {
+        expect(mockChannel.outbox.add).toHaveBeenCalledTimes(2);
+      });
 
       // All 3 operations should reach the outbox
       const allSyncOps = vi
@@ -4380,7 +4462,10 @@ describe("SyncManager - Unit Tests", () => {
         branch: "main",
       });
 
-      expect(addedSyncOps).toHaveLength(2);
+      // backfill runs asynchronously after add() returns
+      await vi.waitFor(() => {
+        expect(addedSyncOps).toHaveLength(2);
+      });
       // First page SyncOp has no dependencies
       expect(addedSyncOps[0].jobDependencies).toEqual([]);
       // Second page SyncOp (same doc) should depend on first page's jobId
@@ -4433,8 +4518,10 @@ describe("SyncManager - Unit Tests", () => {
         branch: "main",
       });
 
-      // advanceOrdinal should be called with max ordinal from page 2
-      expect(mockChannel.outbox.advanceOrdinal).toHaveBeenCalledWith(30);
+      // backfill runs asynchronously after add() returns
+      await vi.waitFor(() => {
+        expect(mockChannel.outbox.advanceOrdinal).toHaveBeenCalledWith(30);
+      });
     });
   });
 });

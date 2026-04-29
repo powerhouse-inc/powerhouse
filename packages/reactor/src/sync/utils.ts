@@ -390,3 +390,174 @@ export function mergeCollectionMemberships(
 
   return mergedMemberships;
 }
+
+type ChunkableItem = {
+  syncOp: { jobId: string; jobDependencies: string[] };
+};
+
+/**
+ * Chunks sync operations into batches that respect dependency-connected
+ * components. SyncOps linked by jobDependencies are kept in the same chunk.
+ * If a connected component exceeds maxSize, it is split by topological order.
+ */
+export function chunkSyncOperations<T extends ChunkableItem>(
+  items: T[],
+  maxSize: number,
+): T[][] {
+  if (items.length === 0) return [];
+  if (items.length <= maxSize) return [items];
+
+  // Union-Find
+  const parent = items.map((_, i) => i);
+  const rank = new Array<number>(items.length).fill(0);
+
+  function find(x: number): number {
+    while (parent[x] !== x) {
+      parent[x] = parent[parent[x]];
+      x = parent[x];
+    }
+    return x;
+  }
+
+  function union(a: number, b: number): void {
+    const ra = find(a);
+    const rb = find(b);
+    if (ra === rb) return;
+    if (rank[ra] < rank[rb]) {
+      parent[ra] = rb;
+    } else if (rank[ra] > rank[rb]) {
+      parent[rb] = ra;
+    } else {
+      parent[rb] = ra;
+      rank[ra]++;
+    }
+  }
+
+  const jobIdToIndex = new Map<string, number>();
+  for (let i = 0; i < items.length; i++) {
+    jobIdToIndex.set(items[i].syncOp.jobId, i);
+  }
+
+  for (let i = 0; i < items.length; i++) {
+    for (const dep of items[i].syncOp.jobDependencies) {
+      const depIdx = jobIdToIndex.get(dep);
+      if (depIdx !== undefined) {
+        union(i, depIdx);
+      }
+    }
+  }
+
+  // Group into components preserving insertion order
+  const componentMap = new Map<number, T[]>();
+  for (let i = 0; i < items.length; i++) {
+    const root = find(i);
+    let component = componentMap.get(root);
+    if (!component) {
+      component = [];
+      componentMap.set(root, component);
+    }
+    component.push(items[i]);
+  }
+
+  const components = [...componentMap.values()];
+
+  // Greedy bin-packing
+  const chunks: T[][] = [];
+  let currentChunk: T[] = [];
+
+  for (const component of components) {
+    if (component.length > maxSize) {
+      // Flush current chunk first
+      if (currentChunk.length > 0) {
+        chunks.push(currentChunk);
+        currentChunk = [];
+      }
+      // Split oversized component by topological walk
+      for (const subChunk of splitComponent(component, maxSize)) {
+        chunks.push(subChunk);
+      }
+      continue;
+    }
+
+    if (currentChunk.length + component.length > maxSize) {
+      if (currentChunk.length > 0) {
+        chunks.push(currentChunk);
+      }
+      currentChunk = [...component];
+    } else {
+      currentChunk.push(...component);
+    }
+  }
+
+  if (currentChunk.length > 0) {
+    chunks.push(currentChunk);
+  }
+
+  return chunks;
+}
+
+/**
+ * Splits an oversized connected component into chunks by topological order.
+ * Cross-chunk dependency references are handled by the caller's dep filter.
+ */
+function splitComponent<T extends ChunkableItem>(
+  items: T[],
+  maxSize: number,
+): T[][] {
+  // Build in-degree map for topological sort within the component
+  const jobIdToItem = new Map<string, T>();
+  const jobIds = new Set<string>();
+  for (const item of items) {
+    jobIdToItem.set(item.syncOp.jobId, item);
+    jobIds.add(item.syncOp.jobId);
+  }
+
+  const inDegree = new Map<string, number>();
+  const adjacency = new Map<string, string[]>();
+  for (const item of items) {
+    const key = item.syncOp.jobId;
+    if (!inDegree.has(key)) inDegree.set(key, 0);
+    if (!adjacency.has(key)) adjacency.set(key, []);
+    for (const dep of item.syncOp.jobDependencies) {
+      if (jobIds.has(dep)) {
+        inDegree.set(key, (inDegree.get(key) ?? 0) + 1);
+        if (!adjacency.has(dep)) adjacency.set(dep, []);
+        adjacency.get(dep)!.push(key);
+      }
+    }
+  }
+
+  // Kahn's algorithm
+  const queue: string[] = [];
+  for (const [key, degree] of inDegree) {
+    if (degree === 0) queue.push(key);
+  }
+
+  const sorted: T[] = [];
+  while (queue.length > 0) {
+    const key = queue.shift()!;
+    sorted.push(jobIdToItem.get(key)!);
+    for (const neighbor of adjacency.get(key) ?? []) {
+      const newDegree = (inDegree.get(neighbor) ?? 1) - 1;
+      inDegree.set(neighbor, newDegree);
+      if (newDegree === 0) queue.push(neighbor);
+    }
+  }
+
+  // Fall back to insertion order for any items not reached (cycle safety)
+  if (sorted.length < items.length) {
+    const sortedIds = new Set(sorted.map((item) => item.syncOp.jobId));
+    for (const item of items) {
+      if (!sortedIds.has(item.syncOp.jobId)) {
+        sorted.push(item);
+      }
+    }
+  }
+
+  // Slice into chunks
+  const chunks: T[][] = [];
+  for (let i = 0; i < sorted.length; i += maxSize) {
+    chunks.push(sorted.slice(i, i + maxSize));
+  }
+  return chunks;
+}

@@ -5,16 +5,30 @@ import {
   DocumentEditorDebugTools,
   serviceWorkerManager,
 } from "@powerhousedao/connect/utils";
-import {
-  ToastContainer,
-  WagmiContext,
-} from "@powerhousedao/design-system/connect";
 import { useEffect } from "react";
+import { ToastContainer } from "../services/toast.js";
 import { PackageInstallPrompt } from "./package-install-prompt.js";
+
 export const App = () => {
-  // refresh page on vite preload error due to outdated chunks
+  // refresh page on vite preload error due to outdated chunks — but only when
+  // the failing dynamic import is one of Connect's own chunks. External
+  // dynamic imports (e.g. the package manager loading a package from the
+  // configured CDN) should let the error propagate so the caller can surface
+  // it; reloading here drops any open state and hides the real failure.
   useEffect(() => {
-    const handlePreloadError = () => {
+    const handlePreloadError = (event: Event) => {
+      const payload = (event as Event & { payload?: unknown }).payload;
+      const message =
+        payload instanceof Error ? payload.message : String(payload ?? "");
+      const failedUrl = message.match(/https?:\/\/[^\s"']+/)?.[0];
+
+      if (failedUrl && !failedUrl.startsWith(window.location.origin)) {
+        console.debug(
+          `[Connect] Skipping reload — vite:preloadError for off-origin URL: ${failedUrl}`,
+        );
+        return;
+      }
+
       console.log("Outdated chunks detected, reloading page...");
       window.location.reload();
     };
@@ -36,12 +50,10 @@ export const App = () => {
 
   return (
     <SentryProvider>
-      <WagmiContext>
-        <ToastContainer position="bottom-right" containerId="connect" />
-        <Router />
-        <PackageInstallPrompt />
-        <Analytics />
-      </WagmiContext>
+      <ToastContainer position="bottom-right" />
+      <Router />
+      <PackageInstallPrompt />
+      <Analytics />
     </SentryProvider>
   );
 };

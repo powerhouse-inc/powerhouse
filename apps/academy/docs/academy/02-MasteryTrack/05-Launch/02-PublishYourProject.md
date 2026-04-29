@@ -243,14 +243,11 @@ ph install @your-org-ph/package-name
 
 This makes your document models and editors available within that Powerhouse instance.
 
-<details>
-<summary>Future: Package Manager UI</summary>
+### Package Manager UI
 
-A visual package manager is planned for Connect's settings, allowing installation at the click of a button.
+A visual package manager can be found in Connect's settings (bottom left settings wheel), allowing installation at the click of a button.
 
-![package manager](images/homedesign.png)
-
-</details>
+![package manager](images/package-installer.png)
 
 ---
 

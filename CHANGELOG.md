@@ -1,3 +1,576 @@
+## 6.0.0-dev.207 (2026-04-29)
+
+This was a version bump only, there were no code changes.
+
+## 6.0.0-dev.206 (2026-04-28)
+
+### 🚀 Features
+
+- add support for custom registry URL in config update during installation ([b5acf164b](https://github.com/powerhouse-inc/powerhouse/commit/b5acf164b))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
+## 6.0.0-dev.205 (2026-04-28)
+
+### 🩹 Fixes
+
+- **codegen:** restore pglite deps in project boilerplate ([9d102c61c](https://github.com/powerhouse-inc/powerhouse/commit/9d102c61c))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
+## 6.0.0-dev.204 (2026-04-28)
+
+### 🩹 Fixes
+
+- **codegen:** pin graphql to 16.12.0 in project boilerplate ([ba3b15a9b](https://github.com/powerhouse-inc/powerhouse/commit/ba3b15a9b))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
+## 6.0.0-dev.203 (2026-04-28)
+
+### 🩹 Fixes
+
+- **ph-cli:** forward processorConfig to switchboard for vetra interactive ([7f8dc486f](https://github.com/powerhouse-inc/powerhouse/commit/7f8dc486f))
+- **shared:** include operation example creators in documentModelActions ([71aa740fa](https://github.com/powerhouse-inc/powerhouse/commit/71aa740fa))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
+## 6.0.0-dev.202 (2026-04-28)
+
+### 🩹 Fixes
+
+- **codegen:** use .raw on vitestConfigTemplate ([dbea9094a](https://github.com/powerhouse-inc/powerhouse/commit/dbea9094a))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.201 (2026-04-28)
+
+### 🚀 Features
+
+- dispatch set name operation on document when renaming node in drive ([#2513](https://github.com/powerhouse-inc/powerhouse/pull/2513))
+- **design-system:** add back to home button in Breadcrumbs component ([1c50e026c](https://github.com/powerhouse-inc/powerhouse/commit/1c50e026c))
+
+### 🩹 Fixes
+
+- fix some delete issues ([0147000ca](https://github.com/powerhouse-inc/powerhouse/commit/0147000ca))
+- **codegen:** fix types exports on package ([50b2b2383](https://github.com/powerhouse-inc/powerhouse/commit/50b2b2383))
+- **design-system:** show ENS avatar in revision history operations ([cab95c8de](https://github.com/powerhouse-inc/powerhouse/commit/cab95c8de))
+- **document-drive:** allow name collision when kinds are different ([1cb1ccbed](https://github.com/powerhouse-inc/powerhouse/commit/1cb1ccbed))
+- **ph-cli:** lazy load ph code ([3e1f51d29](https://github.com/powerhouse-inc/powerhouse/commit/3e1f51d29))
+- **reactor-browser:** fixes #2504 mode nove ([#2504](https://github.com/powerhouse-inc/powerhouse/issues/2504))
+- **reactor-mcp:** create McpServer per /mcp request to fix concurrent transport collision ([3cfeb5b3f](https://github.com/powerhouse-inc/powerhouse/commit/3cfeb5b3f))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Copilot
+- Guillermo Puente @gpuente
+- Ryan Wolhuter @ryanwolhuter
+
+## 6.0.0-dev.200 (2026-04-27)
+
+This was a version bump only, there were no code changes.
+
+## 6.0.0-dev.199 (2026-04-26)
+
+### 🚀 Features
+
+- **ph-cli:** add ph-clint and mastra dependencies ([a389b5bdd](https://github.com/powerhouse-inc/powerhouse/commit/a389b5bdd))
+- **ph-cli:** add cmd-ts to defineCommand adapter and agent harness ([79ca8fa02](https://github.com/powerhouse-inc/powerhouse/commit/79ca8fa02))
+- **ph-cli:** wire ph code subcommand ([b05da96be](https://github.com/powerhouse-inc/powerhouse/commit/b05da96be))
+- **shared/clis:** add code subcommand definition ([faa77ba04](https://github.com/powerhouse-inc/powerhouse/commit/faa77ba04))
+
+### 🩹 Fixes
+
+- **ph-cli:** satisfy lint rules in ph code harness ([e5bc6f7cd](https://github.com/powerhouse-inc/powerhouse/commit/e5bc6f7cd))
+- **shared/clis:** collapse code description to a single line for prettier ([ac5bd403d](https://github.com/powerhouse-inc/powerhouse/commit/ac5bd403d))
+
+### ❤️ Thank You
+
+- Frank
+
+## 6.0.0-dev.198 (2026-04-26)
+
+This was a version bump only, there were no code changes.
+
+## 6.0.0-dev.197 (2026-04-25)
+
+### 🚀 Features
+
+- **ph-cli,registry,shared:** add unpublish command with registry-side cdn purge ([8816644f1](https://github.com/powerhouse-inc/powerhouse/commit/8816644f1))
+- **ph-cli,registry,shared:** add unpublish command with registry-side cdn purge ([#2508](https://github.com/powerhouse-inc/powerhouse/pull/2508))
+
+### 🩹 Fixes
+
+- exclude pglite wasm and data files on ph build ([96eee628c](https://github.com/powerhouse-inc/powerhouse/commit/96eee628c))
+- **codegen:** fix lint issues on generated code ([1a63ff533](https://github.com/powerhouse-inc/powerhouse/commit/1a63ff533))
+- **codegen:** fix editors subexport ([9b7153ba1](https://github.com/powerhouse-inc/powerhouse/commit/9b7153ba1))
+- **design-system:** import FC type explicitly in toast.tsx ([d8a64780f](https://github.com/powerhouse-inc/powerhouse/commit/d8a64780f))
+- **ph-cli:** prompt for dist-tag when publishing prerelease versions ([99ceb6c29](https://github.com/powerhouse-inc/powerhouse/commit/99ceb6c29))
+- **ph-cli:** prompt for dist-tag when publishing prerelease versions ([#2510](https://github.com/powerhouse-inc/powerhouse/pull/2510))
+- **shared:** ignore duplicate react external ([48ef681db](https://github.com/powerhouse-inc/powerhouse/commit/48ef681db))
+- **switchboard:** fall back to free port on EADDRINUSE and propagate to vetra ([182118e02](https://github.com/powerhouse-inc/powerhouse/commit/182118e02))
+- **switchboard:** fall back to free port on EADDRINUSE and propagate to vetra ([#2511](https://github.com/powerhouse-inc/powerhouse/pull/2511))
+
+### 🔥 Performance
+
+- **analytics-engine-browser:** move createFsPglite to test-utils subpath ([d9a66201a](https://github.com/powerhouse-inc/powerhouse/commit/d9a66201a))
+- **design-system:** improve DocumentToolbar tree-shaking ([6d3bf98ad](https://github.com/powerhouse-inc/powerhouse/commit/6d3bf98ad))
+- **reactor-browser:** drop GqlRequestChannel runtime reference in useGetSwitchboardLink ([85a3c3940](https://github.com/powerhouse-inc/powerhouse/commit/85a3c3940))
+- **vetra-packages:** drop validator dependency ([86a78223c](https://github.com/powerhouse-inc/powerhouse/commit/86a78223c))
+
+### ❤️ Thank You
+
+- acaldas
+- Copilot
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+
+## 6.0.0-dev.196 (2026-04-24)
+
+### 🚀 Features
+
+- separate generate commands ([#2505](https://github.com/powerhouse-inc/powerhouse/pull/2505))
+
+### ❤️ Thank You
+
+- Ryan Wolhuter @ryanwolhuter
+
+## 6.0.0-dev.195 (2026-04-24)
+
+### 🚀 Features
+
+- **codegen:** add sideEffects:false to generated package boilerplate ([844449485](https://github.com/powerhouse-inc/powerhouse/commit/844449485))
+- **reactor-browser:** add code splitting and move renown crypto out of reactor ([647c5b282](https://github.com/powerhouse-inc/powerhouse/commit/647c5b282))
+- **reactor-browser:** split analytics into store and react hooks ([071f62c45](https://github.com/powerhouse-inc/powerhouse/commit/071f62c45))
+- **shared:** isolate generateMock into its own module ([862fcc58b](https://github.com/powerhouse-inc/powerhouse/commit/862fcc58b))
+- **tree-shaking:** add sideEffects:false and lazy-load pglite ([92f8e988e](https://github.com/powerhouse-inc/powerhouse/commit/92f8e988e))
+
+### 🩹 Fixes
+
+- outdated pnpm lock ([4a1f21903](https://github.com/powerhouse-inc/powerhouse/commit/4a1f21903))
+- **analytics-engine:** lazy-load pglite in browser analytics store ([9ba35e149](https://github.com/powerhouse-inc/powerhouse/commit/9ba35e149))
+- **common:** cleanup deps ([8602d77ba](https://github.com/powerhouse-inc/powerhouse/commit/8602d77ba))
+- **commong:** update tsconfig ([2c3037dcf](https://github.com/powerhouse-inc/powerhouse/commit/2c3037dcf))
+- **design-system:** exclude test and storybook-only files from bundle ([dd9a92c10](https://github.com/powerhouse-inc/powerhouse/commit/dd9a92c10))
+- **drive-analytics:** import from reactor-browser/analytics subpath ([f438e09c5](https://github.com/powerhouse-inc/powerhouse/commit/f438e09c5))
+- **reactor-browser:** duplicated query key on analytics engine ([2594471ce](https://github.com/powerhouse-inc/powerhouse/commit/2594471ce))
+- **registry:** downgrade express to v4 to fix package details page 404 ([40cd8a5d8](https://github.com/powerhouse-inc/powerhouse/commit/40cd8a5d8))
+- **registry:** downgrade express to v4 to fix package details page 404 ([#2507](https://github.com/powerhouse-inc/powerhouse/pull/2507))
+- **shared:** keep react in browser neverBundle to avoid duplicate instances ([1dd206a09](https://github.com/powerhouse-inc/powerhouse/commit/1dd206a09))
+- **shared:** lazy-load jszip to remove it from the eager document model bundle ([fc920a3e9](https://github.com/powerhouse-inc/powerhouse/commit/fc920a3e9))
+- **shared:** keep react in browser neverBundle to avoid duplicate instances ([#2495](https://github.com/powerhouse-inc/powerhouse/pull/2495))
+- **shared,document-model:** make zip utils async ([72a6447e4](https://github.com/powerhouse-inc/powerhouse/commit/72a6447e4))
+
+### ❤️ Thank You
+
+- acaldas
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+
+## 6.0.0-dev.194 (2026-04-23)
+
+### 🩹 Fixes
+
+- **codegen:** updated dependencies list ([b4545f389](https://github.com/powerhouse-inc/powerhouse/commit/b4545f389))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.193 (2026-04-23)
+
+### 🚀 Features
+
+- version picker for install, preserve picked version across reloads ([3cf54c3a3](https://github.com/powerhouse-inc/powerhouse/commit/3cf54c3a3))
+- version picker for install, preserve picked version across reloads ([#2496](https://github.com/powerhouse-inc/powerhouse/pull/2496))
+
+### 🩹 Fixes
+
+- **connect:** trim trailing slash, upsert npm-fallback, prune stale boot entries ([2e9c8d119](https://github.com/powerhouse-inc/powerhouse/commit/2e9c8d119))
+- **connect:** trim trailing slash, upsert npm-fallback, prune stale boot entries ([#2494](https://github.com/powerhouse-inc/powerhouse/pull/2494))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+
+## 6.0.0-dev.192 (2026-04-22)
+
+### 🚀 Features
+
+- update migrate command ([#2492](https://github.com/powerhouse-inc/powerhouse/pull/2492))
+
+### 🩹 Fixes
+
+- **reactor-browser:** added hidden methods on graphql client type ([6af8b7f12](https://github.com/powerhouse-inc/powerhouse/commit/6af8b7f12))
+
+### ❤️ Thank You
+
+- acaldas
+- Ryan Wolhuter @ryanwolhuter
+
+## 6.0.0-dev.191 (2026-04-22)
+
+### 🩹 Fixes
+
+- **registry:** don't filter /packages to empty when storage metadata can't be read ([e3dd952de](https://github.com/powerhouse-inc/powerhouse/commit/e3dd952de))
+- **registry:** don't filter /packages to empty when storage metadata can't be read ([#2493](https://github.com/powerhouse-inc/powerhouse/pull/2493))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+
+## 6.0.0-dev.190 (2026-04-22)
+
+### 🚀 Features
+
+- preserve dist-tags end-to-end and streamline package manager UX ([#2490](https://github.com/powerhouse-inc/powerhouse/pull/2490))
+- **connect:** filter available packages and accept name@tag in search ([34e34335c](https://github.com/powerhouse-inc/powerhouse/commit/34e34335c))
+- **connect:** scope package listing to the custom registry + npm fallback ([faf4d6e88](https://github.com/powerhouse-inc/powerhouse/commit/faf4d6e88))
+
+### 🩹 Fixes
+
+- **builder-tools:** preserve version from powerhouse.config.json ([74c717d27](https://github.com/powerhouse-inc/powerhouse/commit/74c717d27))
+- **connect:** only surface npm fallback when no local matches ([fe717d65d](https://github.com/powerhouse-inc/powerhouse/commit/fe717d65d))
+- **shared:** preserve dist-tag in powerhouse.config.json from ph install ([8a32d4ce8](https://github.com/powerhouse-inc/powerhouse/commit/8a32d4ce8))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+
+## 6.0.0-dev.189 (2026-04-22)
+
+### 🚀 Features
+
+- **connect:** pg migration banner ([8a8662e2f](https://github.com/powerhouse-inc/powerhouse/commit/8a8662e2f))
+- **lb:** wip on m1 features ([096384d5c](https://github.com/powerhouse-inc/powerhouse/commit/096384d5c))
+- **lb:** the load balancer now pins through milestone 2 ([b928cfe04](https://github.com/powerhouse-inc/powerhouse/commit/b928cfe04))
+- **switchboard-lb:** proxy upstream routes via least_conn (M1) ([5e3343b21](https://github.com/powerhouse-inc/powerhouse/commit/5e3343b21))
+
+### 🩹 Fixes
+
+- import now works -- lots of gotchas ([df8594200](https://github.com/powerhouse-inc/powerhouse/commit/df8594200))
+- **connect:** dump and import block and quiesce queue before working with the db ([dd0d99cf3](https://github.com/powerhouse-inc/powerhouse/commit/dd0d99cf3))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 4.7
+
+## 6.0.0-dev.188 (2026-04-21)
+
+### 🩹 Fixes
+
+- **connect:** guard bundled-packages import so vite dep scan doesn't fail without the plugin ([89e08e8d4](https://github.com/powerhouse-inc/powerhouse/commit/89e08e8d4))
+- **ph-cli:** pin @tsdown/css to match tsdown version ([961675548](https://github.com/powerhouse-inc/powerhouse/commit/961675548))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
+## 6.0.0-dev.187 (2026-04-21)
+
+### 🩹 Fixes
+
+- **ci:** install sentry-cli via official installer ([52a3b3fbd](https://github.com/powerhouse-inc/powerhouse/commit/52a3b3fbd))
+
+### ❤️ Thank You
+
+- Frank
+
+## 6.0.0-dev.186 (2026-04-21)
+
+### 🩹 Fixes
+
+- **ci:** invoke sentry-cli via --package so npx resolves the binary ([21cf95abb](https://github.com/powerhouse-inc/powerhouse/commit/21cf95abb))
+
+### ❤️ Thank You
+
+- Frank
+
+## 6.0.0-dev.185 (2026-04-21)
+
+### 🚀 Features
+
+- **sentry:** upload source maps + tag releases in CI ([46461b97e](https://github.com/powerhouse-inc/powerhouse/commit/46461b97e))
+
+### 🩹 Fixes
+
+- **telemetry:** remove autoSessionTracking (removed in Sentry v8+) ([bd37e0cb7](https://github.com/powerhouse-inc/powerhouse/commit/bd37e0cb7))
+
+### ❤️ Thank You
+
+- Frank
+
+## 6.0.0-dev.184 (2026-04-21)
+
+### 🚀 Features
+
+- **cli:** opt-out Sentry error reporting for ph-cli and ph-cmd ([1f9c3be35](https://github.com/powerhouse-inc/powerhouse/commit/1f9c3be35))
+
+### 🩹 Fixes
+
+- **cli:** use injected CLI_VERSION / getVersion() (src/version.ts is gitignored) ([331aa34a1](https://github.com/powerhouse-inc/powerhouse/commit/331aa34a1))
+- **renown:** use appId on credential api fetch ([dfd0cb4c0](https://github.com/powerhouse-inc/powerhouse/commit/dfd0cb4c0))
+
+### ❤️ Thank You
+
+- acaldas
+- Frank
+
+## 6.0.0-dev.183 (2026-04-21)
+
+### 🚀 Features
+
+- emit editor assets as hashed files via resolveNewUrlToAsset ([27f0ea69c](https://github.com/powerhouse-inc/powerhouse/commit/27f0ea69c))
+- bundle local packages into connect for offline preview ([caa4c85a8](https://github.com/powerhouse-inc/powerhouse/commit/caa4c85a8))
+- step 1 of a switchboard load balancer ([618c32bfc](https://github.com/powerhouse-inc/powerhouse/commit/618c32bfc))
+- reactor now attempts to migrate dbs from old versions ([92b2fdde9](https://github.com/powerhouse-inc/powerhouse/commit/92b2fdde9))
+- add offline preview for installed packages ([#2476](https://github.com/powerhouse-inc/powerhouse/pull/2476))
+- **docker:** run connect nginx as non-root (H3) ([3120ba1c4](https://github.com/powerhouse-inc/powerhouse/commit/3120ba1c4))
+- **registry:** wire npm uplink for transparent CDN fallback ([74181971f](https://github.com/powerhouse-inc/powerhouse/commit/74181971f))
+
+### 🩹 Fixes
+
+- tsc issues ([c21c84d8e](https://github.com/powerhouse-inc/powerhouse/commit/c21c84d8e))
+- resolve virtual bundled-packages module under NodeNext ([a4a0ae5e2](https://github.com/powerhouse-inc/powerhouse/commit/a4a0ae5e2))
+- **ph-cli:** prioritize PH_REGISTRY_URL env over config in install ([8463ff18d](https://github.com/powerhouse-inc/powerhouse/commit/8463ff18d))
+- **shared:** handle react imports in cjs deps ([78941ed7c](https://github.com/powerhouse-inc/powerhouse/commit/78941ed7c))
+- **switchboard:** since each subgraph adds its own listeners, we need to update the maxlisteners ([b14c031de](https://github.com/powerhouse-inc/powerhouse/commit/b14c031de))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Frank
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+
+## 6.0.0-dev.182 (2026-04-20)
+
+This was a version bump only, there were no code changes.
+
+## 6.0.0-dev.181 (2026-04-19)
+
+This was a version bump only, there were no code changes.
+
+## 6.0.0-dev.180 (2026-04-18)
+
+### 🩹 Fixes
+
+- **connect:** surface package install errors instead of reloading ([1aa72df91](https://github.com/powerhouse-inc/powerhouse/commit/1aa72df91))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
+## 6.0.0-dev.179 (2026-04-17)
+
+### 🩹 Fixes
+
+- **reactor-browser:** run auth middleware on batch GraphQL calls ([23acffb0b](https://github.com/powerhouse-inc/powerhouse/commit/23acffb0b))
+
+### ❤️ Thank You
+
+- Frank
+
+## 6.0.0-dev.178 (2026-04-17)
+
+### 🚀 Features
+
+- **codegen:** include config section in manifest template and merge ([5658e6ef7](https://github.com/powerhouse-inc/powerhouse/commit/5658e6ef7))
+- **shared:** add config field to package manifest ([f1b3e7ee8](https://github.com/powerhouse-inc/powerhouse/commit/f1b3e7ee8))
+
+### ❤️ Thank You
+
+- Frank
+
+## 6.0.0-dev.177 (2026-04-17)
+
+### 🚀 Features
+
+- **connect:** show package version in settings package manager ([1886fc2fd](https://github.com/powerhouse-inc/powerhouse/commit/1886fc2fd))
+
+### 🩹 Fixes
+
+- **design-system:** give dropdown menu real border and shadow ([6964335ff](https://github.com/powerhouse-inc/powerhouse/commit/6964335ff))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
+## 6.0.0-dev.176 (2026-04-16)
+
+### 🩹 Fixes
+
+- update lockfile ([728604c16](https://github.com/powerhouse-inc/powerhouse/commit/728604c16))
+- **reactor-api:** make vite dependency more permissive ([273f1586c](https://github.com/powerhouse-inc/powerhouse/commit/273f1586c))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.175 (2026-04-16)
+
+### 🚀 Features
+
+- **connect:** retry default drives with backoff on startup race ([5c1cfd50f](https://github.com/powerhouse-inc/powerhouse/commit/5c1cfd50f))
+- **design-system:** collapsible sections in package manager list ([32b60cefa](https://github.com/powerhouse-inc/powerhouse/commit/32b60cefa))
+
+### 🩹 Fixes
+
+- **builder-tools:** share React with CDN editors in dev ([8d4e23351](https://github.com/powerhouse-inc/powerhouse/commit/8d4e23351))
+- **design-system:** show "Installed" in package search for installed packages ([8637db2d2](https://github.com/powerhouse-inc/powerhouse/commit/8637db2d2))
+- **design-system:** hide empty manifest fields in package list item ([557fd79e1](https://github.com/powerhouse-inc/powerhouse/commit/557fd79e1))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
+## 6.0.0-dev.174 (2026-04-15)
+
+### 🚀 Features
+
+- **shared,ph-cli:** extract registry helpers, refactor publish/install commands ([f00289f6b](https://github.com/powerhouse-inc/powerhouse/commit/f00289f6b))
+
+### 🩹 Fixes
+
+- **deps:** resolve all critical and high security vulnerabilities ([6a8531af3](https://github.com/powerhouse-inc/powerhouse/commit/6a8531af3))
+- **shared,ph-cli:** switch publish to execFileSync, use POWERHOUSE_CONFIG_FILE constant ([eb0d4865c](https://github.com/powerhouse-inc/powerhouse/commit/eb0d4865c))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.173 (2026-04-15)
+
+### 🚀 Features
+
+- **renown,ph-cli:** moved cli login to renown sdk ([09ac65eff](https://github.com/powerhouse-inc/powerhouse/commit/09ac65eff))
+
+### 🩹 Fixes
+
+- **renown:** fix sleep listener leak, fix pre-existing test failures, add test script ([606e9f82e](https://github.com/powerhouse-inc/powerhouse/commit/606e9f82e))
+- **renown,ph-cli:** address PR review feedback for login refactor ([d2a0227de](https://github.com/powerhouse-inc/powerhouse/commit/d2a0227de))
+- **renown,ph-cli:** address second round of PR review feedback ([d03005eee](https://github.com/powerhouse-inc/powerhouse/commit/d03005eee))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.172 (2026-04-15)
+
+### 🩹 Fixes
+
+- since we have to derive document operations on import, we were discarding the initial state on export ([db8ab6733](https://github.com/powerhouse-inc/powerhouse/commit/db8ab6733))
+- **connect:** mark i18n chunk as side-effectful so init() isn't tree-shaken ([98dc33786](https://github.com/powerhouse-inc/powerhouse/commit/98dc33786))
+- **design-system:** stretch Operation tooltip bg and add copy button ([13b9afe3e](https://github.com/powerhouse-inc/powerhouse/commit/13b9afe3e))
+- **design-system:** render ConnectTooltip above z-10 stacking contexts ([361cb8b60](https://github.com/powerhouse-inc/powerhouse/commit/361cb8b60))
+- **shared:** added logout command ([3a428fff9](https://github.com/powerhouse-inc/powerhouse/commit/3a428fff9))
+- **switchboard:** support setting dynamic model loading with env var and only enabled https node hooks when needed ([cbb96b940](https://github.com/powerhouse-inc/powerhouse/commit/cbb96b940))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Guillermo Puente @gpuente
+
+## 6.0.0-dev.171 (2026-04-14)
+
+### 🚀 Features
+
+- added yield utility method, and yield with timer in job executor ([d751d2472](https://github.com/powerhouse-inc/powerhouse/commit/d751d2472))
+- sync paging ([6d90fe1a4](https://github.com/powerhouse-inc/powerhouse/commit/6d90fe1a4))
+
+### 🩹 Fixes
+
+- backfill in touchchannel should be async so as not to kill switchboard ([a1e8ed3e3](https://github.com/powerhouse-inc/powerhouse/commit/a1e8ed3e3))
+- backfill should be async on start too, but we need to make sure to track it and kill on remove ([f994cb8bc](https://github.com/powerhouse-inc/powerhouse/commit/f994cb8bc))
+- **connect:** delete pglite idb on clear storage to avoid flush race ([c3a731835](https://github.com/powerhouse-inc/powerhouse/commit/c3a731835))
+- **powerhouse-vetra-packages:** resolve duplicate graphql module causing false state validation errors ([38ac1daf5](https://github.com/powerhouse-inc/powerhouse/commit/38ac1daf5))
+- **reactor-api:** namespace package subgraph ([cc82e0943](https://github.com/powerhouse-inc/powerhouse/commit/cc82e0943))
+- **reactor-api:** uppercase packages namespace and type improvement ([f455ced56](https://github.com/powerhouse-inc/powerhouse/commit/f455ced56))
+- **reactor-browser:** export documents as .phd when no extension is set ([494ac0a3a](https://github.com/powerhouse-inc/powerhouse/commit/494ac0a3a))
+- **vetra:** generate manifest from global state in package generator ([f5de73f05](https://github.com/powerhouse-inc/powerhouse/commit/f5de73f05))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Guillermo Puente @gpuente
+
+## 6.0.0-dev.170 (2026-04-13)
+
+### 🚀 Features
+
+- **connect:** display error message on load error ([5b9b62068](https://github.com/powerhouse-inc/powerhouse/commit/5b9b62068))
+
+### 🩹 Fixes
+
+- dedupe upgrade manifest and subscribe to package installs ([1adeba37d](https://github.com/powerhouse-inc/powerhouse/commit/1adeba37d))
+- declare react as peerDependency and dedupe on vite ([3444dab52](https://github.com/powerhouse-inc/powerhouse/commit/3444dab52))
+- **reactor:** make registerModules and registerUpgradeManifests resilient to invalid items ([20b4dd6c6](https://github.com/powerhouse-inc/powerhouse/commit/20b4dd6c6))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.169 (2026-04-13)
+
+This was a version bump only, there were no code changes.
+
+## 6.0.0-dev.168 (2026-04-12)
+
+This was a version bump only, there were no code changes.
+
+## 6.0.0-dev.167 (2026-04-11)
+
+This was a version bump only, there were no code changes.
+
+## 6.0.0-dev.166 (2026-04-10)
+
+### 🩹 Fixes
+
+- **design-system,connect:** cleanup dependencies ([97466944a](https://github.com/powerhouse-inc/powerhouse/commit/97466944a))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.165 (2026-04-10)
+
+### 🩹 Fixes
+
+- broken link llm docs ([44efa9d3b](https://github.com/powerhouse-inc/powerhouse/commit/44efa9d3b))
+
+### ❤️ Thank You
+
+- CallmeT-ty @CallmeT-ty
+
+## 6.0.0-dev.164 (2026-04-09)
+
+### 🩹 Fixes
+
+- **reactor-browser:** fixed document import ([b8e6d0aad](https://github.com/powerhouse-inc/powerhouse/commit/b8e6d0aad))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.163 (2026-04-09)
 
 ### 🩹 Fixes

@@ -1,11 +1,11 @@
-import { FileSystemError } from "./errors.js";
-import JSZip from "jszip";
+import type JSZip from "jszip";
 import type { PHDocument, PHDocumentHeader } from "./documents.js";
 import {
   filterDocumentOperationsResultingState,
   garbageCollectDocumentOperations,
   replayDocument,
 } from "./documents.js";
+import { FileSystemError } from "./errors.js";
 import type { DocumentOperations } from "./operations.js";
 import { documentModelReducer } from "./reducers.js";
 import type { PHBaseState } from "./state.js";
@@ -20,8 +20,15 @@ import type {
 } from "./types.js";
 import { validateOperations } from "./validation.js";
 
-export function createZip(document: PHDocument) {
-  // create zip file
+const NON_DOMAIN_SCOPES = new Set(["auth", "document"]);
+
+async function loadJSZip() {
+  const { default: JSZip } = await import("jszip");
+  return JSZip;
+}
+
+export async function createZip(document: PHDocument) {
+  const JSZip = await loadJSZip();
   const zip = new JSZip();
 
   const header = document.header;
@@ -45,7 +52,8 @@ export function createZip(document: PHDocument) {
  * Used when the full document is not available (e.g., in onOperations handler).
  * Creates a ZIP with minimal header and empty operations.
  */
-export function createMinimalZip(data: MinimalBackupData) {
+export async function createMinimalZip(data: MinimalBackupData) {
+  const JSZip = await loadJSZip();
   const now = new Date().toISOString();
   const header: PHDocumentHeader = {
     id: data.documentId,
@@ -64,7 +72,6 @@ export function createMinimalZip(data: MinimalBackupData) {
   zip.file("state.json", JSON.stringify(data.state, null, 2));
   zip.file("current-state.json", JSON.stringify(data.state, null, 2));
   zip.file("operations.json", JSON.stringify({}, null, 2));
-
   return zip;
 }
 
@@ -72,7 +79,7 @@ export async function baseSaveToFileHandle(
   document: PHDocument,
   input: FileSystemFileHandle,
 ) {
-  const zip = createZip(document);
+  const zip = await createZip(document);
   const blob = await zip.generateAsync({ type: "blob" });
   const writable = await input.createWritable();
   await writable.write(blob);
@@ -115,9 +122,15 @@ async function loadFromZip<TState extends PHBaseState>(
     throw new Error(errorMessages.join("\n"));
   }
 
+  const domainOperations = Object.fromEntries(
+    Object.entries(clearedOperations).filter(
+      ([scope]) => !NON_DOMAIN_SCOPES.has(scope),
+    ),
+  ) as DocumentOperations;
+
   const result = replayDocument(
     initialState,
-    clearedOperations,
+    domainOperations,
     reducer,
     header,
     undefined,
@@ -125,7 +138,7 @@ async function loadFromZip<TState extends PHBaseState>(
     options,
   );
 
-  return result;
+  return { ...result, operations: clearedOperations };
 }
 
 export async function baseLoadFromInput<TState extends PHBaseState>(
@@ -133,6 +146,7 @@ export async function baseLoadFromInput<TState extends PHBaseState>(
   reducer: Reducer<TState>,
   options?: ReplayDocumentOptions,
 ): Promise<PHDocument<TState>> {
+  const JSZip = await loadJSZip();
   const zip = new JSZip();
   await zip.loadAsync(input);
   return loadFromZip(zip, reducer, options);

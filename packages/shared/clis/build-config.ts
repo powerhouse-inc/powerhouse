@@ -1,3 +1,4 @@
+import { esmExternalRequirePlugin } from "rolldown/plugins";
 import type { InlineConfig } from "tsdown";
 
 const entry = [
@@ -15,6 +16,18 @@ const entry = [
 ];
 
 const alwaysBundle = ["**"];
+
+// React must be external in rolldown (via neverBundle) so ESM `import ... from "react"`
+// stays as a bare import and resolves to the host's React at runtime — otherwise
+// rolldown bundles react.production.js into a chunk and we get two React instances.
+// esmExternalRequirePlugin additionally rewrites any CJS `require("react")` in bundled
+// deps to an ESM import so they hit the same external.
+const reactExternals = [
+  "react",
+  "react-dom",
+  "react/jsx-runtime",
+  "react-dom/client",
+];
 
 const nodeNeverBundle = [
   // we know that we don't want connect inside connect
@@ -40,6 +53,9 @@ const nodeNeverBundle = [
   "@types/node",
   "@types/react",
   "@types/react-dom",
+  // exclude pglite wasm/data chunks
+  "@electric-sql/pglite",
+  "@electric-sql/pglite-tools",
 ];
 
 const browserNeverBundle = [...nodeNeverBundle, "@powerhousedao/reactor-api"];
@@ -63,6 +79,15 @@ export const browserBuildConfig: InlineConfig = {
   clean,
   dts,
   sourcemap,
+  plugins: [
+    esmExternalRequirePlugin({
+      external: reactExternals,
+      skipDuplicateCheck: true,
+    }),
+  ],
+  inputOptions: {
+    experimental: { resolveNewUrlToAsset: true },
+  },
 };
 
 export const nodeBuildConfig: InlineConfig = {

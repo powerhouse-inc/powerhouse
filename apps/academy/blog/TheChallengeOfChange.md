@@ -20,7 +20,7 @@ The pace of innovation is relentless. Organizations today find themselves in a r
 
 The pace of innovation often outstrips an organization’s ability to adapt, keep up with rapidly changing requirements, shifting goals, and technological advancements.
 
-<!-- truncate -->
+{/* truncate */}
 
 Across many industries, this comes down to a familiar struggle of common trade-offs in product and solution development.
 

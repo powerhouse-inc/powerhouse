@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/common",
-  "version": "6.0.0-dev.163",
+  "version": "6.0.0-dev.207",
   "license": "AGPL-3.0-only",
   "type": "module",
   "files": [
@@ -37,29 +37,15 @@
     "react-dom": ">=19.0.0"
   },
   "dependencies": {
-    "chalk": "catalog:",
-    "cmd-ts": "catalog:",
-    "document-model": "workspace:*",
     "graphql-request": "catalog:",
-    "npm-package-arg": "catalog:",
-    "package-directory": "^8.1.0",
     "@powerhousedao/shared": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
     "@powerhousedao/analytics-engine-core": "workspace:*",
-    "luxon": "catalog:",
-    "read-pkg": "catalog:",
-    "semver": "catalog:",
-    "zocker": "^3.0.0"
+    "luxon": "catalog:"
   },
   "devDependencies": {
-    "@powerhousedao/config": "workspace:*",
     "@types/node": "catalog:",
     "@types/luxon": "catalog:",
-    "@types/npm-package-arg": "catalog:",
-    "@types/wicg-file-system-access": "^2020.9.6",
-    "document-model": "workspace:*",
-    "tsdown": "catalog:",
-    "vitest": "catalog:",
-    "zod": "catalog:"
+    "tsdown": "catalog:"
   }
 }

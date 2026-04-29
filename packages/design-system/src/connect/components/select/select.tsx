@@ -37,7 +37,7 @@ function fixedForwardRef<T, P = {}>(
   return forwardRef(render) as any;
 }
 
-export const ConnectSelect = fixedForwardRef(function Select<
+export const ConnectSelect = /* @__PURE__ */ fixedForwardRef(function Select<
   TValue extends string,
 >(props: ConnectSelectProps<TValue>, ref: ForwardedRef<HTMLDivElement>) {
   const {

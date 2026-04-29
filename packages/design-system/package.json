@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/design-system",
-  "version": "6.0.0-dev.163",
+  "version": "6.0.0-dev.207",
   "description": "",
   "files": [
     "dist",
@@ -45,6 +45,10 @@
       "types": "./dist/connect/index.d.ts",
       "import": "./dist/connect/index.js"
     },
+    "./connect/toast": {
+      "types": "./dist/connect/components/toast/toast.d.ts",
+      "import": "./dist/connect/components/toast/toast.js"
+    },
     "./rwa": {
       "types": "./dist/rwa/index.d.ts",
       "import": "./dist/rwa/index.js"
@@ -73,8 +77,12 @@
   },
   "homepage": "https://github.com/powerhouse-inc/design-system#readme",
   "devDependencies": {
+    "@babel/core": "^7.29.0",
+    "@babel/plugin-transform-react-pure-annotations": "^7.27.1",
+    "@babel/preset-typescript": "^7.28.5",
     "@powerhousedao/config": "workspace:*",
     "@prettier/sync": "^0.5.2",
+    "@rollup/plugin-babel": "^7.0.0",
     "@storybook/addon-actions": "^8.6.7",
     "@storybook/addon-docs": "^8.6.3",
     "@storybook/addon-essentials": "^8.6.7",
@@ -98,7 +106,7 @@
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "camelcase": "^8.0.0",
-    "happy-dom": "^20.8.8",
+    "happy-dom": "^20.8.9",
     "jsdom": "^24.0.0",
     "react": "catalog:",
     "react-dom": "catalog:",
@@ -106,8 +114,8 @@
     "storybook-addon-pseudo-states": "^4.0.4",
     "tailwind-scrollbar": "^4.0.1",
     "tailwindcss": "catalog:",
-    "vite": "catalog:",
     "tsdown": "catalog:",
+    "vite": "catalog:",
     "vitest": "catalog:"
   },
   "peerDependencies": {
@@ -132,22 +140,19 @@
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "cmdk": "^1.0.4",
-    "date-fns": "^4.1.0",
+    "date-fns": "catalog:",
     "date-fns-tz": "^3.2.0",
     "diff": "^8.0.3",
     "document-model": "workspace:*",
-    "mathjs": "^13.1.1",
+    "mathjs": "^15.2.0",
     "natural-orderby": "^4.0.0",
     "react-hook-form": "^7.53.0",
     "react-json-view-lite": "^2.5.0",
-    "react-multi-select-component": "^4.3.4",
     "react-number-format": "^5.4.2",
     "react-select": "^5.8.0",
     "react-toastify": "^10.0.4",
     "tailwind-merge": "catalog:",
     "tsx": "catalog:",
-    "usehooks-ts": "^3.1.1",
-    "viem": "^2.46.2",
-    "wagmi": "^3.5.0"
+    "usehooks-ts": "^3.1.1"
   }
 }

@@ -1,12 +1,10 @@
-import { PGlite } from "@electric-sql/pglite";
 import type {
   DocumentModelModule,
   UpgradeManifest,
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import { ConsoleLogger } from "document-model";
-import { Kysely } from "kysely";
-import { PGliteDialect } from "kysely-pglite-dialect";
+import type { Kysely } from "kysely";
 import { CollectionMembershipCache } from "../cache/collection-membership-cache.js";
 import { DocumentMetaCache } from "../cache/document-meta-cache.js";
 import { KyselyOperationIndex } from "../cache/kysely-operation-index.js";
@@ -60,6 +58,7 @@ import { GqlResponseChannelFactory } from "../sync/channels/gql-response-channel
 import { SyncBuilder } from "../sync/sync-builder.js";
 import type { JwtHandler } from "../sync/types.js";
 import { ChannelScheme } from "../sync/types.js";
+import { createDefaultDatabase } from "./create-default-database.js";
 import { Reactor } from "./reactor.js";
 import type {
   Database,
@@ -197,17 +196,33 @@ export class ReactorBuilder {
 
     const documentModelRegistry = new DocumentModelRegistry();
     if (this.upgradeManifests.length > 0) {
-      documentModelRegistry.registerUpgradeManifests(...this.upgradeManifests);
+      const results = documentModelRegistry.registerUpgradeManifests(
+        ...this.upgradeManifests,
+      );
+      for (const result of results) {
+        if (result.status === "error") {
+          this.logger.error(
+            "Failed to register upgrade manifest: @error",
+            result.error.message,
+          );
+        }
+      }
     }
     if (this.documentModels.length > 0) {
-      documentModelRegistry.registerModules(...this.documentModels);
+      const results = documentModelRegistry.registerModules(
+        ...this.documentModels,
+      );
+      for (const result of results) {
+        if (result.status === "error") {
+          this.logger.error(
+            "Failed to register document model: @error",
+            result.error.message,
+          );
+        }
+      }
     }
 
-    const baseDatabase =
-      this.kyselyInstance ??
-      new Kysely<Database>({
-        dialect: new PGliteDialect(new PGlite()),
-      });
+    const baseDatabase = this.kyselyInstance ?? (await createDefaultDatabase());
 
     if (this.migrationStrategy === "auto") {
       const result = await runMigrations(baseDatabase, REACTOR_SCHEMA);

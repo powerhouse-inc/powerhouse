@@ -18,6 +18,8 @@ export const SearchAutocomplete: React.FC<SearchAutocompleteProps> = (
     loading: externalLoading = false,
     className,
     renderOption,
+    renderRow,
+    keepOpenSelector,
     debounceMs = 300,
   } = props;
 
@@ -59,7 +61,7 @@ export const SearchAutocomplete: React.FC<SearchAutocompleteProps> = (
 
   const handleSubmit = useCallback(() => {
     if (query.trim()) {
-      handleSelect(query.trim());
+      void handleSelect(query.trim());
     }
   }, [query, handleSelect]);
 
@@ -116,48 +118,82 @@ export const SearchAutocomplete: React.FC<SearchAutocompleteProps> = (
         <PopoverContent
           align="start"
           onOpenAutoFocus={(e) => e.preventDefault()}
-          onInteractOutside={() => setIsOpen(false)}
-          className="max-h-60 overflow-y-auto p-1"
+          onInteractOutside={(e) => {
+            if (keepOpenSelector) {
+              const target = e.target as HTMLElement | null;
+              if (target?.closest(keepOpenSelector)) {
+                e.preventDefault();
+                return;
+              }
+            }
+            setIsOpen(false);
+          }}
+          className="max-h-80 overflow-visible p-1"
         >
-          {results.map((option) => (
-            <div
-              key={option.value}
-              className="flex items-center justify-between gap-2 rounded-md px-2 py-1.5 hover:bg-gray-100"
-            >
-              {renderOption ? (
-                <div className="min-w-0 flex-1">{renderOption(option)}</div>
-              ) : (
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-gray-900">
-                    {option.label}
-                  </p>
-                  {option.description && (
-                    <p className="truncate text-xs text-gray-500">
-                      {option.description}
-                    </p>
-                  )}
-                  {option.meta && (
-                    <p className="truncate text-xs text-gray-400">
-                      {option.meta}
-                    </p>
-                  )}
-                </div>
-              )}
-              {selectingValue === option.value && selectingContent ? (
-                <div className="flex shrink-0 items-center justify-center">
-                  {selectingContent}
-                </div>
-              ) : (
-                <button
-                  onClick={() => handleSelect(option.value)}
-                  disabled={selectingValue === option.value}
-                  className="shrink-0 rounded-md bg-gray-900 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-gray-800 disabled:opacity-50"
+          <div className="max-h-80 overflow-y-auto">
+            {results.map((option) => {
+              if (renderRow) {
+                return (
+                  <div key={option.value} className="rounded-md">
+                    {renderRow(option, {
+                      selectingValue,
+                      selectLabel,
+                      selectingContent,
+                      handleSelect: (value) => void handleSelect(value),
+                    })}
+                  </div>
+                );
+              }
+              return (
+                <div
+                  key={option.value}
+                  className="flex items-center justify-between gap-2 rounded-md px-2 py-1.5 hover:bg-gray-100"
                 >
-                  {selectingValue === option.value ? "..." : selectLabel}
-                </button>
-              )}
-            </div>
-          ))}
+                  {renderOption ? (
+                    <div className="min-w-0 flex-1">{renderOption(option)}</div>
+                  ) : (
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-gray-900">
+                        {option.label}
+                      </p>
+                      {option.version && (
+                        <p className="truncate text-xs text-gray-500">
+                          v{option.version}
+                        </p>
+                      )}
+                      {option.description && (
+                        <p className="truncate text-xs text-gray-500">
+                          {option.description}
+                        </p>
+                      )}
+                      {option.meta && (
+                        <p className="truncate text-xs text-gray-400">
+                          {option.meta}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  {selectingValue === option.value && selectingContent ? (
+                    <div className="flex shrink-0 items-center justify-center">
+                      {selectingContent}
+                    </div>
+                  ) : option.disabled ? (
+                    <span className="shrink-0 rounded-md bg-gray-100 px-3 py-1 text-xs font-medium text-gray-500">
+                      {option.disabledLabel ?? "Unavailable"}
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => void handleSelect(option.value)}
+                      disabled={selectingValue === option.value}
+                      className="shrink-0 rounded-md bg-gray-900 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-gray-800 disabled:opacity-50"
+                    >
+                      {selectingValue === option.value ? "..." : selectLabel}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </PopoverContent>
       </Popover>
       {loading && <p className="mt-1 text-xs text-gray-500">Searching...</p>}

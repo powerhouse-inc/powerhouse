@@ -1,5 +1,5 @@
+import type { Project } from "ts-morph";
 import type { CodegenInput, Config } from "./types.js";
-
 /**
  * Abstract base class for document generators
  * Defines the interface that all document-type handlers must implement
@@ -10,8 +10,14 @@ export abstract class BaseDocumentGen {
    * Can be a single string or an array of strings for generators that handle multiple types
    */
   abstract readonly supportedDocumentTypes: string | string[];
+  project: Project;
 
-  constructor(protected config: Config) {}
+  constructor(
+    protected config: Config,
+    project: Project,
+  ) {
+    this.project = project;
+  }
 
   /**
    * Generate code for the given document

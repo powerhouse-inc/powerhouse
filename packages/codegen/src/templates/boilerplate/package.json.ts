@@ -2,37 +2,37 @@ import { json } from "@tmpl/core";
 
 export const exportsTemplate = json`
   ".": {
-    "types": "./dist/index.d.ts",
+    "types": "./dist/browser/index.d.ts",
     "browser": "./dist/browser/index.js",
     "node": "./dist/node/index.mjs"
   },
   "./document-models": {
-    "types": "./dist/document-models/index.d.ts",
+    "types": "./dist/browser/document-models/index.d.ts",
     "browser": "./dist/browser/document-models/index.js",
     "node": "./dist/node/document-models/index.mjs"
   },
   "./document-models/*": {
-    "types": "./dist/document-models/*/index.d.ts",
+    "types": "./dist/browser/document-models/*/index.d.ts",
     "browser": "./dist/browser/document-models/*/index.js",
     "node": "./dist/node/document-models/*/index.mjs"
   },
   "./editors": {
-    "types": "./dist/editors/index.d.ts",
+    "types": "./dist/browser/editors/index.d.ts",
     "browser": "./dist/browser/editors/index.js",
     "node": "./dist/node/editors/index.mjs"
   },
   "./editors/*": {
-    "types": "./dist/editors/*/index.d.ts",
-    "browser": "./dist/browser/editors/*/index.js",
-    "node": "./dist/node/editors/*/index.mjs"
+    "types": "./dist/browser/editors/*/editor.d.ts",
+    "browser": "./dist/browser/editors/*/editor.js",
+    "node": "./dist/node/editors/*/editor.mjs"
   },
   "./subgraphs": {
-    "types": "./dist/subgraphs/index.d.ts",
+    "types": "./dist/browser/subgraphs/index.d.ts",
     "browser": "./dist/browser/subgraphs/index.js",
     "node": "./dist/node/subgraphs/index.mjs"
   },
   "./processors": {
-    "types": "./dist/processors/index.d.ts",
+    "types": "./dist/browser/processors/index.d.ts",
     "browser": "./dist/browser/processors/index.js",
     "node": "./dist/node/processors/index.mjs"
   },
@@ -62,7 +62,7 @@ const dependenciesTemplate = (versionedDependencies: string[]) =>
   json`
   ${versionedDependencies.join(",\n")},
   "@powerhousedao/document-engineering": "1.40.1",
-  "graphql": "^16.10.0",
+  "graphql": "16.12.0",
   "graphql-tag": "^2.12.6",
   "zod": "^4.3.5",
   "react": "^19.2.3",
@@ -87,7 +87,6 @@ const devDependenciesTemplate = (versionedDevDependencies: string[]) =>
   "tailwindcss": "^4.1.16",
   "typescript": "^5.9.3",
   "typescript-eslint": "^8.46.2",
-  "vite": "8.0.2",
   "vitest": "4.1.1",
   "@vitejs/plugin-react": "6.0.1",
   "vite-tsconfig-paths": "6.1.1"
@@ -107,6 +106,7 @@ export const packageJsonTemplate = (
   "files": [
     "/dist"
   ],
+  "sideEffects": false,
   "exports": {
     ${exportsTemplate}
   },

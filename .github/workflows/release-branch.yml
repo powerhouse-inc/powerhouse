@@ -97,11 +97,69 @@ jobs:
           --skip-push="${{ inputs.skip_push == true }}" \
           --skip-git-tag="${{ inputs.skip_git_tag == true }}"
 
+      # Install sentry-cli globally so the subsequent steps can invoke it
+      # reliably (npx-based invocation had resolution issues).
+      - name: Install sentry-cli
+        if: ${{ inputs.dry_run != true && inputs.skip_publish != true }}
+        run: curl -sL https://sentry.io/get-cli/ | SENTRY_CLI_VERSION=2.58.5 bash
+
+      # Upload source maps to self-hosted Sentry so production stack traces
+      # map back to original TypeScript source in this repo.
+      - name: Upload source maps to Sentry
+        if: ${{ inputs.dry_run != true && inputs.skip_publish != true }}
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_URL: ${{ secrets.SENTRY_URL }}
+          SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+        run: |
+          set -euo pipefail
+          VERSION=$(git tag --sort=-v:refname --points-at HEAD | head -1)
+          if [ -z "$VERSION" ]; then
+            echo "No new tag at HEAD, skipping Sentry upload"
+            exit 0
+          fi
+          echo "Sentry release: $VERSION"
+
+          for proj in powerhouse ph-cli; do
+            sentry-cli releases new -p "$proj" "$VERSION" || true
+          done
+          sentry-cli releases set-commits "$VERSION" --auto -p powerhouse || true
+
+          for dir in apps/connect/dist apps/switchboard/dist apps/academy/dist \
+                     packages/reactor-api/dist packages/switchboard/dist; do
+            [ -d "$dir" ] || continue
+            sentry-cli sourcemaps upload \
+              --release "$VERSION" \
+              --project powerhouse \
+              "$dir" || true
+          done
+
+          for dir in clis/ph-cli/dist clis/ph-cmd/dist; do
+            [ -d "$dir" ] || continue
+            sentry-cli sourcemaps upload \
+              --release "$VERSION" \
+              --project ph-cli \
+              "$dir" || true
+          done
+
+          for proj in powerhouse ph-cli; do
+            sentry-cli releases finalize -p "$proj" "$VERSION" || true
+          done
+
   publish-docker:
     name: Build and Publish Docker Images
     needs: release
     if: ${{ inputs.dry_run != true }}
     uses: "./.github/workflows/publish-docker-images.yml"
+    secrets: inherit
+
+  test-package-managers:
+    name: Test Package Managers
+    needs: release
+    if: ${{ inputs.dry_run != true && inputs.skip_publish != true }}
+    uses: "./.github/workflows/test-package-managers.yml"
+    with:
+      tag: ${{ github.ref_name == 'main' && 'dev' || startsWith(github.ref_name, 'release/staging') && 'staging' || startsWith(github.ref_name, 'release/production') && 'latest' || 'dev' }}
     secrets: inherit
 
   determine-downstream-params:
@@ -167,3 +225,54 @@ jobs:
       channel: ${{ needs.determine-downstream-params.outputs.channel }}
       dry-run: false
     secrets: inherit
+
+  notify-discord:
+    name: Notify Discord on Failure
+    if: ${{ always() && (needs.release.result == 'failure' || needs.publish-docker.result == 'failure' || needs.test-package-managers.result == 'failure' || needs.determine-downstream-params.result == 'failure' || needs.trigger-downstream.result == 'failure') }}
+    needs:
+      [
+        release,
+        publish-docker,
+        test-package-managers,
+        determine-downstream-params,
+        trigger-downstream,
+      ]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download test step results
+        if: ${{ needs.test-package-managers.result == 'failure' }}
+        uses: actions/download-artifact@v4
+        with:
+          pattern: step-results-*
+          path: /tmp/step-results
+          merge-multiple: true
+
+      - name: Send Discord notification
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_FAILURES }}
+        run: |
+          FAILURES=""
+          [ "${{ needs.release.result }}" = "failure" ] && FAILURES="${FAILURES}• release\n"
+          [ "${{ needs.publish-docker.result }}" = "failure" ] && FAILURES="${FAILURES}• publish-docker\n"
+          [ "${{ needs.determine-downstream-params.result }}" = "failure" ] && FAILURES="${FAILURES}• determine-downstream-params\n"
+          [ "${{ needs.trigger-downstream.result }}" = "failure" ] && FAILURES="${FAILURES}• trigger-downstream\n"
+
+          if [ "${{ needs.test-package-managers.result }}" = "failure" ]; then
+            FAILURES="${FAILURES}• test-package-managers\n"
+            if [ -d "/tmp/step-results" ]; then
+              for f in /tmp/step-results/*.txt; do
+                [ ! -f "$f" ] && continue
+                PM=$(basename "$f" .txt)
+                STEPS=$(cat "$f" | sed '/^$/d' | sed 's/^/    ◦ /')
+                FAILURES="${FAILURES}  **${PM}:**\n${STEPS}\n"
+              done
+            fi
+          fi
+
+          curl -H "Content-Type: application/json" -X POST "$DISCORD_WEBHOOK" -d '{
+            "embeds": [{
+              "title": "⚠️ Release Pipeline Failed",
+              "description": "**Branch:** `${{ github.ref_name }}`\n\n**Failed jobs:**\n'"${FAILURES}"'\n**Run:** [`release-branch`](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})",
+              "color": 16711680
+            }]
+          }'

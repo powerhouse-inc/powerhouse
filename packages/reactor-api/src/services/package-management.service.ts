@@ -80,7 +80,15 @@ export class PackageManagementService {
     this.loadedModulesCache.set(name, models);
 
     if (this.documentModelRegistry) {
-      this.documentModelRegistry.registerModules(...models);
+      const results = this.documentModelRegistry.registerModules(...models);
+      for (const result of results) {
+        if (result.status === "error") {
+          this.logger.error(
+            "Failed to register document model: @error",
+            result.error.message,
+          );
+        }
+      }
     }
 
     this.logger.info(

@@ -1,4 +1,5 @@
 import * as common from "@powerhousedao/powerhouse-vetra-packages";
+import commonPkg from "@powerhousedao/powerhouse-vetra-packages/package.json" with { type: "json" };
 import type {
   IPackagesListener,
   PackageManagerInstallResult,
@@ -13,25 +14,52 @@ import {
   type DocumentModelModule,
 } from "@powerhousedao/shared/document-model";
 import * as vetra from "@powerhousedao/vetra";
+import vetraPkg from "@powerhousedao/vetra/package.json" with { type: "json" };
 
 type PackageMeta = {
   name: string;
   importUrl: string | null;
   stylesheetUrl: string | null;
+  version?: string;
+  /**
+   * Full spec the user asked for (e.g. `@scope/pkg@2.0.0-beta.2`). Kept so a
+   * reload re-installs exactly the tag/version originally picked rather than
+   * sliding to `latest`. Absent for legacy entries and local packages.
+   */
+  spec?: string;
 };
+
+/**
+ * Strip any `@tag` / `@version` suffix from a package spec, returning the bare
+ * package name. Mirrors `parsePackageSpec` on the UI side.
+ */
+function parseBareName(spec: string): string {
+  const trimmed = spec.trim();
+  const at = trimmed.startsWith("@")
+    ? trimmed.lastIndexOf("@")
+    : trimmed.indexOf("@");
+  return at > 0 ? trimmed.slice(0, at) : trimmed;
+}
 
 type PackageWithMeta = PackageMeta & {
   loadedPackage: DocumentModelLib;
+  spec?: string;
 };
 
+async function fetchPackageJsonVersion(
+  baseUrl: string,
+): Promise<string | undefined> {
+  try {
+    const res = await fetch(baseUrl);
+    if (!res.ok) return undefined;
+    const pkg = (await res.json()) as { version?: unknown };
+    return typeof pkg.version === "string" ? pkg.version : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 const LOCAL_PACKAGE_NAME = "Local" as const;
-const COMMON_PACKAGE_NAME = "Common" as const;
-const VETRA_PACKAGE_NAME = "@powerhousedao/vetra" as const;
-const LOCAL_PACKAGES: string[] = [
-  LOCAL_PACKAGE_NAME,
-  COMMON_PACKAGE_NAME,
-  VETRA_PACKAGE_NAME,
-];
 
 export class BrowserPackageManager implements IPackageManager {
   registryUrl: string | null;
@@ -43,6 +71,8 @@ export class BrowserPackageManager implements IPackageManager {
   #localPackage: DocumentModelLib | undefined;
 
   #cdnUrl: string | null;
+  #localPackageVersion: string | undefined;
+  #localPackageNames: Set<string> = new Set([LOCAL_PACKAGE_NAME]);
 
   constructor(namespace: string, registryUrl: string | null) {
     this.#storage = new BrowserLocalStorage<PackageMeta>(
@@ -58,20 +88,48 @@ export class BrowserPackageManager implements IPackageManager {
     return `${base}/-/cdn`;
   }
 
-  async init(localPackage?: DocumentModelLib) {
-    const commonPackageWithMeta = this.#loadCommonPackage();
-    this.#registerPackage(commonPackageWithMeta);
-    const vetraPackageWithMeta = this.#loadVetraPackage();
-    this.#registerPackage(vetraPackageWithMeta);
+  async init(localPackage?: DocumentModelLib, localPackageVersion?: string) {
+    this.addLocalPackage(common.manifest.name, common, commonPkg.version);
+    this.addLocalPackage(vetra.manifest.name, vetra, vetraPkg.version);
     if (localPackage) {
-      this.updateLocalPackage(localPackage);
+      this.updateLocalPackage(localPackage, localPackageVersion);
     }
     for (const packageName of this.#storage.keys()) {
-      await this.addPackage(packageName);
+      // Re-hydrate with the originally-requested spec so a tag/version pick
+      // sticks across reloads. Fall back to the bare key for legacy entries
+      // (pre-spec) and for entries that never had a tag.
+      const existingMeta = this.#storage.get(packageName);
+      const specForReload = existingMeta?.spec ?? packageName;
+      console.debug(
+        `[Connect][PackageManager] Rehydrating "${packageName}" via spec "${specForReload}"`,
+      );
+      const result = await this.addPackage(specForReload);
+      // Previously-installed package that no longer resolves (version
+      // withdrawn from npm, registry moved, etc.) would otherwise
+      // 404-toast on every boot forever. Drop it from persistent storage
+      // so the failure is one-shot instead of sticky.
+      if (result.type === "error") {
+        this.#storage.delete(packageName);
+      }
     }
   }
 
-  updateLocalPackage(pkg: DocumentModelLib) {
+  addLocalPackage(
+    name: string,
+    loadedPackage: DocumentModelLib,
+    version?: string,
+  ) {
+    this.#localPackageNames.add(name);
+    this.#registerPackage({
+      name,
+      importUrl: null,
+      stylesheetUrl: null,
+      loadedPackage,
+      version,
+    });
+  }
+
+  updateLocalPackage(pkg: DocumentModelLib, version?: string) {
     console.debug("Updating local package:", pkg);
     this.#localPackage = pkg;
     this.#registerPackage({
@@ -80,6 +138,17 @@ export class BrowserPackageManager implements IPackageManager {
       importUrl: null,
       loadedPackage: pkg,
     });
+    if (version) {
+      this.#localPackageVersion = version;
+      this.#notifyPackagesChanged();
+      return;
+    }
+    fetchPackageJsonVersion("/package.json")
+      .then((fetchedVersion) => {
+        this.#localPackageVersion = fetchedVersion;
+        if (fetchedVersion) this.#notifyPackagesChanged();
+      })
+      .catch(() => {});
   }
 
   get packages() {
@@ -91,8 +160,8 @@ export class BrowserPackageManager implements IPackageManager {
   }
 
   getPackageSource(packageName: string) {
-    // check vs the constant name we use for common packages
-    if (LOCAL_PACKAGES.includes(packageName)) {
+    // check vs packages registered as local (Common, Vetra, bundled packages...)
+    if (this.#localPackageNames.has(packageName)) {
       return "common";
     }
     // check if the package has the same name as the local project
@@ -107,16 +176,45 @@ export class BrowserPackageManager implements IPackageManager {
     return "registry-install";
   }
 
-  async addPackage(packageName: string): Promise<PackageManagerInstallResult> {
-    const existingPackage = this.#packages.get(packageName);
+  getPackageVersion(packageName: string): string | undefined {
+    if (packageName === this.#localPackage?.manifest.name) {
+      return this.#localPackageVersion;
+    }
+    return this.#storage.get(packageName)?.version;
+  }
+
+  async addPackage(packageSpec: string): Promise<PackageManagerInstallResult> {
+    // `packageSpec` may include a `@tag` / `@version` suffix (e.g. user picked
+    // a specific version in the package manager UI, or re-hydrated on reload
+    // from the persisted spec). We always register/look up by the bare name so
+    // status tracking, version lookups, and uninstall all go through a single
+    // canonical key. The spec itself is kept on the meta so reloads re-fetch
+    // the same tag.
+    const bareName = parseBareName(packageSpec);
+    const hasTagOrVersion = bareName !== packageSpec;
+    console.debug(
+      `[Connect][PackageManager] addPackage spec="${packageSpec}" bareName="${bareName}"`,
+    );
+
+    const existingPackage = this.#packages.get(bareName);
     if (existingPackage) {
+      console.debug(
+        `[Connect][PackageManager] "${bareName}" already loaded; skipping re-fetch`,
+      );
       return {
         type: "success",
         package: existingPackage,
       };
     }
     try {
-      const packageWithMeta = await this.#loadPackage(packageName);
+      const packageWithMeta = await this.#loadPackage(packageSpec);
+      // `#loadPackage*` set `name` to whatever spec it built the URL from.
+      // Canonicalize to the bare name for the map/storage keys, and stash the
+      // original spec separately so reloads re-use it.
+      packageWithMeta.name = bareName;
+      if (hasTagOrVersion) {
+        packageWithMeta.spec = packageSpec;
+      }
       this.#registerPackage(packageWithMeta);
 
       return {
@@ -124,9 +222,15 @@ export class BrowserPackageManager implements IPackageManager {
         package: packageWithMeta.loadedPackage,
       };
     } catch (error) {
+      const normalized =
+        error instanceof Error ? error : new Error(String(error));
+      console.error(
+        `[Connect][PackageManager] Failed to install package "${packageSpec}": ${normalized.message}`,
+        normalized,
+      );
       return {
         type: "error",
-        error: error instanceof Error ? error : new Error(String(error)),
+        error: normalized,
       };
     }
   }
@@ -163,24 +267,6 @@ export class BrowserPackageManager implements IPackageManager {
     return Promise.reject(new Error("Model not available"));
   }
 
-  #loadCommonPackage(): PackageWithMeta {
-    return {
-      name: common.manifest.name,
-      importUrl: null,
-      stylesheetUrl: null,
-      loadedPackage: common,
-    };
-  }
-
-  #loadVetraPackage(): PackageWithMeta {
-    return {
-      name: vetra.manifest.name,
-      importUrl: null,
-      stylesheetUrl: null,
-      loadedPackage: vetra,
-    };
-  }
-
   async #loadPackageFromNodeModules(name: string): Promise<PackageWithMeta> {
     const importUrl = `/node_modules/${name}/browser/index.js`;
     const stylesheetUrl = `/node_modules/${name}/style.css`;
@@ -190,6 +276,9 @@ export class BrowserPackageManager implements IPackageManager {
       importUrl,
       stylesheetUrl,
     });
+    packageWithMeta.version = await fetchPackageJsonVersion(
+      `/node_modules/${name}/package.json`,
+    );
 
     return packageWithMeta;
   }
@@ -202,11 +291,14 @@ export class BrowserPackageManager implements IPackageManager {
       importUrl,
       stylesheetUrl,
     });
+    packageWithMeta.version = await fetchPackageJsonVersion(
+      `${this.#cdnUrl}/${name}/package.json`,
+    );
 
     return packageWithMeta;
   }
 
-  async #importPackage(packageMeta: PackageMeta) {
+  async #importPackage(packageMeta: PackageMeta): Promise<PackageWithMeta> {
     const { name, importUrl, stylesheetUrl } = packageMeta;
     if (!importUrl) {
       throw new Error(`Import url not defined for package "${name}".`);
@@ -225,7 +317,7 @@ export class BrowserPackageManager implements IPackageManager {
   }
 
   async #loadPackage(packageName: string): Promise<PackageWithMeta> {
-    if (LOCAL_PACKAGES.includes(packageName)) {
+    if (this.#localPackageNames.has(packageName)) {
       throw new Error(
         `Package "${packageName}" is a local package and cannot be loaded dynamically.`,
       );
@@ -253,7 +345,8 @@ export class BrowserPackageManager implements IPackageManager {
   }
 
   #registerPackage(packageWithMeta: PackageWithMeta) {
-    const { name, loadedPackage, importUrl, stylesheetUrl } = packageWithMeta;
+    const { name, loadedPackage, importUrl, stylesheetUrl, version, spec } =
+      packageWithMeta;
 
     if (stylesheetUrl !== null) {
       this.#mountStylesheet(name, stylesheetUrl);
@@ -263,7 +356,12 @@ export class BrowserPackageManager implements IPackageManager {
       name,
       importUrl,
       stylesheetUrl,
+      version,
+      ...(spec ? { spec } : {}),
     });
+    console.debug(
+      `[Connect][PackageManager] Registered "${name}" (version=${version ?? "?"}, spec=${spec ?? "—"})`,
+    );
 
     this.#notifyPackagesChanged();
   }

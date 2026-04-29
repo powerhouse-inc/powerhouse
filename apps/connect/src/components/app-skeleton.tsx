@@ -4,8 +4,41 @@ import {
   ConnectSidebar,
   HomeScreen,
 } from "@powerhousedao/design-system/connect";
-import { useEffect, useState } from "react";
+import {
+  useEffect,
+  useState,
+  useSyncExternalStore,
+  type PropsWithChildren,
+} from "react";
+import {
+  getMigrationStatus,
+  subscribeMigrationStatus,
+  type MigrationPhase,
+} from "./migration-status.js";
 const LOADER_DELAY = 250;
+
+const PHASE_LABEL: Record<MigrationPhase, string> = {
+  clone: "Backing up local database…",
+  dump: "Exporting data from previous version…",
+  restore: "Restoring data into the new database…",
+};
+
+const MigrationOverlay = () => {
+  const status = useSyncExternalStore(
+    subscribeMigrationStatus,
+    getMigrationStatus,
+    () => null,
+  );
+  if (!status) return null;
+  return (
+    <div className="absolute inset-0 z-20 flex items-center justify-center">
+      <div className="rounded-lg bg-white/90 px-6 py-4 text-sm text-gray-900 shadow-lg">
+        <div className="font-medium">Upgrading local database…</div>
+        <div className="text-gray-600">{PHASE_LABEL[status.phase]}</div>
+      </div>
+    </div>
+  );
+};
 
 const Loader = ({ delay = LOADER_DELAY }: { delay?: number }) => {
   const isSSR = typeof window === "undefined";
@@ -44,11 +77,11 @@ const Loader = ({ delay = LOADER_DELAY }: { delay?: number }) => {
   );
 };
 
-export const AppSkeleton = () => {
+export const AppSkeleton: React.FC<PropsWithChildren> = (props) => {
   const isSSR = typeof window === "undefined";
   const isHomeScreen = !isSSR && window.location.pathname === getBasePath();
   return (
-    <div className="flex h-screen">
+    <div className="flex h-screen overflow-hidden">
       <ConnectSidebar
         className="animate-pulse"
         onLogin={undefined}
@@ -60,7 +93,7 @@ export const AppSkeleton = () => {
         containerClassName={
           isSSR || !isHomeScreen ? "hidden home-screen" : undefined
         }
-        children={null}
+        children={props.children ?? null}
       />
       {isSSR ? (
         <script
@@ -75,7 +108,8 @@ export const AppSkeleton = () => {
           }}
         />
       ) : null}
-      <Loader />
+      {!props.children ? <Loader /> : null}
+      <MigrationOverlay />
     </div>
   );
 };

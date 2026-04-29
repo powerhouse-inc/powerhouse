@@ -4,7 +4,11 @@ import { mkdir } from "node:fs/promises";
 import type { Server } from "node:http";
 import path from "node:path";
 import { runServer } from "verdaccio";
-import { createPowerhouseRouter, createPublishHook } from "./middleware.js";
+import {
+  createPowerhouseRouter,
+  createPublishHook,
+  createUnpublishHook,
+} from "./middleware.js";
 import { NotificationManager } from "./notifications/manager.js";
 import { SSEChannel } from "./notifications/sse.js";
 import { WebhookChannel } from "./notifications/webhook.js";
@@ -104,6 +108,7 @@ export async function runRegistry(args: RegistryCommandArgs) {
   // Our routes take priority over Verdaccio
   app.use(createPowerhouseRouter(config, sseChannel, webhookChannel));
   app.use(createPublishHook(config, notifications));
+  app.use(createUnpublishHook(config, notifications));
 
   // Verdaccio handles everything else (npm protocol, web UI, auth)
   app.use((req, res) => verdaccioHandler(req, res));

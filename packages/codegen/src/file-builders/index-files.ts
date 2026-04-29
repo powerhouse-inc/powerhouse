@@ -1,26 +1,26 @@
 import path from "node:path";
 import type { Project } from "ts-morph";
 
-type MakeLegacyIndexFileArgs = {
+type MakeModuleIndexFileArgs = {
   /** The project to make the legacy index file for */
   project: Project;
   /** The directory containing the module.ts files to generate from */
   modulesDirPath: string;
   modules: {
     unversionedName: string;
-    versionedName: string | undefined;
+    versionedName: string;
     moduleSpecifier: string;
   }[];
 };
 
 /**
- * Makes a legacy index.ts file for the modules file which exports the modules as individual exports instead of an array of named exports.
+ * Makes a index.ts file for the modules file which exports the modules as individual exports instead of an array of named exports.
  */
-export function makeLegacyIndexFile({
+export function makeModulesIndexFile({
   project,
   modulesDirPath,
   modules,
-}: MakeLegacyIndexFileArgs) {
+}: MakeModuleIndexFileArgs) {
   const indexSourceFilePath = path.join(modulesDirPath, "index.ts");
 
   // get the source file for the index.ts file if it exists

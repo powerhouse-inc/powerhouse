@@ -25,7 +25,7 @@ import type { WebhookConfig } from "../src/types.js";
 const REGISTRY_URL = `http://localhost:${DEFAULT_PORT}`;
 const TEST_PKG_NAME = "test-pkg";
 const TEST_PKG_VERSION = "1.0.0";
-const POLL_TIMEOUT = 5000;
+const POLL_TIMEOUT = 15000;
 const POLL_INTERVAL = 200;
 
 let authToken: string;

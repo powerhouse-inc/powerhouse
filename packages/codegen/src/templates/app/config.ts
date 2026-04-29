@@ -7,7 +7,6 @@ export const appConfigFileTemplate = (v: {
   ts`
 import type { PHAppConfig } from "@powerhousedao/reactor-browser";
 
-/** Editor config for the <%= pascalCaseAppName %> */
 export const editorConfig: PHAppConfig = {
   isDragAndDropEnabled: ${v.isDragAndDropEnabledString},
   allowedDocumentTypes: ${v.allowedDocumentTypesString}

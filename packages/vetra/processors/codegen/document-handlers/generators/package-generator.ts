@@ -1,7 +1,7 @@
-import { generateManifest } from "@powerhousedao/codegen";
+import { createOrUpdateManifest } from "@powerhousedao/codegen/file-builders";
 import type {
+  VetraPackageGlobalState,
   VetraPackagePHState,
-  VetraPackageState,
 } from "../../../../document-models/vetra-package/index.js";
 import { logger } from "../../logger.js";
 import { BaseDocumentGen } from "../base-document-gen.js";
@@ -33,10 +33,9 @@ export class PackageGenerator extends BaseDocumentGen {
 
   async generate(input: CodegenInput): Promise<void> {
     const fullState = input.state as VetraPackagePHState;
-    const state = fullState as unknown as VetraPackageState;
+    const state = fullState.global as VetraPackageGlobalState;
 
-    logger.info("🔄 Generating manifest for package");
-    generateManifest(
+    await createOrUpdateManifest(
       {
         name: state.name ?? "",
         category: state.category ?? "",
@@ -48,7 +47,6 @@ export class PackageGenerator extends BaseDocumentGen {
       },
       this.config.CURRENT_WORKING_DIR,
     );
-    logger.info("✅ Manifest generated successfully");
 
     // Backup the document
     await minimalBackupDocument(

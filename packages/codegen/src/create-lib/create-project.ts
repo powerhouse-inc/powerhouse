@@ -1,44 +1,13 @@
+import { runCmd, writeFileEnsuringDir } from "@powerhousedao/shared/clis";
 import chalk from "chalk";
-import { buildBoilerplatePackageJson } from "file-builders";
 import fs from "node:fs";
 import path from "path";
-import {
-  agentsTemplate,
-  buildPowerhouseConfigTemplate,
-  claudeSettingsLocalTemplate,
-  claudeTemplate,
-  connectEntrypointTemplate,
-  cursorMcpTemplate,
-  dockerfileTemplate,
-  documentModelsIndexTemplate,
-  documentModelsTemplate,
-  editorsIndexTemplate,
-  editorsTemplate,
-  eslintConfigTemplate,
-  factoryBuildersTemplate,
-  geminiSettingsTemplate,
-  gitIgnoreTemplate,
-  indexHtmlTemplate,
-  indexTsTemplate,
-  licenseTemplate,
-  mainTsxTemplate,
-  ManifestTemplate,
-  mcpTemplate,
-  nginxConfTemplate,
-  npmrcTemplate,
-  processorsFactoryTemplate,
-  processorsIndexTemplate,
-  readmeTemplate,
-  styleTemplate,
-  subgraphsIndexTemplate,
-  switchboardEntrypointTemplate,
-  syncAndPublishWorkflowTemplate,
-  tsConfigTemplate,
-  vitestConfigTemplate,
-} from "templates";
+import { gitIgnoreTemplate } from "templates";
 import { runPrettier } from "utils";
-import { upgradeManifestsTemplate } from "../templates/boilerplate/document-models/upgrade-manifests.js";
-import { runCmd, writeFileEnsuringDir } from "./utils.js";
+import {
+  writeAllGeneratedProjectFiles,
+  writeProjectRootFiles,
+} from "file-builders";
 type CreateProjectArgs = {
   name: string;
   packageManager: string;
@@ -90,9 +59,7 @@ export async function createProject({
     // Write the boilerplate files for the project
     console.log(chalk.blue(`▶️ Creating project boilerplate files...\n`));
     await writeProjectRootFiles({ name, tag, version, remoteDrive });
-    await writeModuleFiles();
-    await writeAiConfigFiles();
-    await writeCIFiles();
+    await writeAllGeneratedProjectFiles();
     console.log(chalk.green(`✅ Project boilerplate files created\n`));
 
     if (!skipInstall) {
@@ -117,95 +84,4 @@ export async function createProject({
     console.error(error);
     process.exit(1);
   }
-}
-
-async function writeProjectRootFiles(args: {
-  name: string;
-  tag?: string;
-  version?: string;
-  remoteDrive?: string;
-}) {
-  const { name, tag, version, remoteDrive } = args;
-  await writeFileEnsuringDir("LICENSE", licenseTemplate);
-  await writeFileEnsuringDir("README.md", readmeTemplate);
-  await writeFileEnsuringDir(".npmrc", npmrcTemplate);
-  const packageJson = await buildBoilerplatePackageJson({
-    name,
-    tag,
-    version,
-  });
-  const Manifest = ManifestTemplate(name);
-  await writeFileEnsuringDir("powerhouse.manifest.json", Manifest);
-  const powerhouseConfig = await buildPowerhouseConfigTemplate({
-    tag,
-    version,
-    remoteDrive,
-  });
-  await writeFileEnsuringDir("powerhouse.config.json", powerhouseConfig);
-  await writeFileEnsuringDir("package.json", packageJson);
-  await writeFileEnsuringDir("tsconfig.json", tsConfigTemplate);
-  await writeFileEnsuringDir("index.html", indexHtmlTemplate);
-  await writeFileEnsuringDir("main.tsx", mainTsxTemplate);
-  await writeFileEnsuringDir("eslint.config.js", eslintConfigTemplate);
-  await writeFileEnsuringDir("index.ts", indexTsTemplate);
-  await writeFileEnsuringDir("style.css", styleTemplate);
-  await writeFileEnsuringDir("vitest.config.ts", vitestConfigTemplate);
-}
-
-async function writeModuleFiles() {
-  await writeFileEnsuringDir(
-    "document-models/document-models.ts",
-    documentModelsTemplate,
-  );
-  await writeFileEnsuringDir(
-    "document-models/index.ts",
-    documentModelsIndexTemplate,
-  );
-  await writeFileEnsuringDir(
-    "document-models/upgrade-manifests.ts",
-    upgradeManifestsTemplate,
-  );
-  await writeFileEnsuringDir("editors/editors.ts", editorsTemplate);
-  await writeFileEnsuringDir("editors/index.ts", editorsIndexTemplate);
-  await writeFileEnsuringDir(
-    "processors/factory.ts",
-    processorsFactoryTemplate,
-  );
-  await writeFileEnsuringDir("processors/index.ts", processorsIndexTemplate);
-  await writeFileEnsuringDir("processors/connect.ts", factoryBuildersTemplate);
-  await writeFileEnsuringDir(
-    "processors/switchboard.ts",
-    factoryBuildersTemplate,
-  );
-  await writeFileEnsuringDir("subgraphs/index.ts", subgraphsIndexTemplate);
-  await writeFileEnsuringDir("processors/index.ts", processorsIndexTemplate);
-}
-
-async function writeAiConfigFiles() {
-  await writeFileEnsuringDir("CLAUDE.md", claudeTemplate);
-  await writeFileEnsuringDir("AGENTS.md", agentsTemplate);
-  await writeFileEnsuringDir(".mcp.json", mcpTemplate);
-  await writeFileEnsuringDir(".gemini/settings.json", geminiSettingsTemplate);
-  await writeFileEnsuringDir(".cursor/mcp.json", cursorMcpTemplate);
-  await writeFileEnsuringDir(
-    ".claude/settings.local.json",
-    claudeSettingsLocalTemplate,
-  );
-}
-
-async function writeCIFiles() {
-  await writeFileEnsuringDir(
-    ".github/workflows/sync-and-publish.yml",
-    syncAndPublishWorkflowTemplate,
-  );
-  await writeFileEnsuringDir("Dockerfile", dockerfileTemplate);
-  await writeFileEnsuringDir("docker/nginx.conf", nginxConfTemplate);
-  await writeFileEnsuringDir(
-    "docker/connect-entrypoint.sh",
-    connectEntrypointTemplate,
-  );
-  await writeFileEnsuringDir(
-    "docker/switchboard-entrypoint.sh",
-    switchboardEntrypointTemplate,
-  );
 }

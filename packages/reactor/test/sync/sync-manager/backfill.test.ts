@@ -63,7 +63,6 @@ describe("SyncManager Backfill", () => {
       operationIndex,
       mockReactor,
       eventBus,
-      100,
     );
   });
 
@@ -120,7 +119,10 @@ describe("SyncManager Backfill", () => {
         channelConfig,
       );
 
-      expect(sentEnvelopes).toHaveLength(1);
+      // backfill runs asynchronously after add() returns
+      await vi.waitFor(() => {
+        expect(sentEnvelopes).toHaveLength(1);
+      });
       expect(sentEnvelopes[0].operations).toHaveLength(1);
       expect(sentEnvelopes[0].operations![0].operation.id).toBe("op1");
       expect(remote.channel.outbox.items).toHaveLength(0);
@@ -222,7 +224,10 @@ describe("SyncManager Backfill", () => {
         { documentId: [driveId], scope: ["global"], branch: "main" },
       );
 
-      expect(sentEnvelopes).toHaveLength(1);
+      // backfill runs asynchronously after add() returns
+      await vi.waitFor(() => {
+        expect(sentEnvelopes).toHaveLength(1);
+      });
       expect(sentEnvelopes[0].operations).toHaveLength(1);
       expect(sentEnvelopes[0].operations![0].operation.id).toBe("op1");
       expect(remote.channel.outbox.items).toHaveLength(0);
@@ -306,7 +311,10 @@ describe("SyncManager Backfill", () => {
         { sinceTimestampUtcMs: "2023-01-01T00:00:01.000Z" },
       );
 
-      expect(sentEnvelopes).toHaveLength(1);
+      // backfill runs asynchronously after add() returns
+      await vi.waitFor(() => {
+        expect(sentEnvelopes).toHaveLength(1);
+      });
       expect(sentEnvelopes[0].operations).toHaveLength(1);
       expect(sentEnvelopes[0].operations![0].operation.id).toBe("op-new");
       expect(remote.channel.outbox.items).toHaveLength(0);

@@ -43,7 +43,6 @@ export * from "./subgraph-modules.js";
 export * from "./supported-document-types.js";
 export * from "./timeline-revision.js";
 export * from "./toast.js";
-export * from "./use-feature-flags.js";
 export * from "./use-get-switchboard-link.js";
 export * from "./use-on-drop-file.js";
 export * from "./user-permissions.js";

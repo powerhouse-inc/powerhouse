@@ -170,7 +170,7 @@ export async function baseMinimalSaveToFile(
   path: string,
   extension: string,
 ) {
-  const zip = createMinimalZip(data);
+  const zip = await createMinimalZip(data);
   const file = await zip.generateAsync({
     type: "uint8array",
     streamFiles: true,
@@ -205,7 +205,7 @@ export async function baseSaveToFile(
   name?: string,
 ) {
   // create zip file
-  const zip = createZip(document);
+  const zip = await createZip(document);
   const file = await zip.generateAsync({
     type: "uint8array",
     streamFiles: true,

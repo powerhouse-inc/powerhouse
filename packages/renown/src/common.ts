@@ -178,7 +178,7 @@ export class Renown implements IRenown {
       throw new Error("RENOWN_URL is not set");
     }
     const url = new URL(
-      `/api/auth/credential?address=${encodeURIComponent(address)}&chainId=${encodeURIComponent(chainId)}&connectId=${encodeURIComponent(appDid)}`,
+      `/api/auth/credential?address=${encodeURIComponent(address)}&chainId=${encodeURIComponent(chainId)}&connectId=${encodeURIComponent(appDid)}&appId=${encodeURIComponent(appDid)}`,
       this.#baseUrl,
     );
     const response = await fetch(url, {

@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import { RemoteClient } from "../../src/remote-controller/remote-client.js";
-import type { ReactorGraphQLClient } from "../../src/remote-controller/types.js";
+import type { RemoteControllerGraphQLClient } from "../../src/remote-controller/types.js";
 
 function createMockClient(
-  overrides: Partial<ReactorGraphQLClient> = {},
-): ReactorGraphQLClient {
+  overrides: Partial<RemoteControllerGraphQLClient> = {},
+): RemoteControllerGraphQLClient {
   return {
     GetDocument: vi.fn().mockResolvedValue({ document: null }),
     GetDocumentWithOperations: vi.fn().mockResolvedValue({ document: null }),
@@ -30,7 +30,7 @@ function createMockClient(
       deleteDocument: true,
     }),
     ...overrides,
-  };
+  } as unknown as RemoteControllerGraphQLClient;
 }
 
 function makeDocData(id = "doc-1") {

@@ -119,13 +119,16 @@ export class ProcessorGenerator extends BaseDocumentGen {
         }
 
         // Generate the processor using the codegen function
-        await generateProcessor({
-          processorName: state.name,
-          processorType,
-          documentTypes,
-          skipFormat: this.config.PH_CONFIG.skipFormat,
-          processorApps,
-        });
+        await generateProcessor(
+          {
+            processorName: state.name,
+            processorType,
+            documentTypes,
+            processorApps,
+          },
+          this.project,
+        );
+        await this.project.save();
 
         logger.info(
           `✅ Processor generation completed successfully for: ${state.name}`,

@@ -18,6 +18,7 @@ describe("handleTargetNameCollisions", () => {
     const result = handleTargetNameCollisions({
       nodes: nodes.filter((n) => n.id !== "2"),
       srcName: "my-budget",
+      srcKind: "file",
       targetParentFolder: null,
     });
 
@@ -39,6 +40,7 @@ describe("handleTargetNameCollisions", () => {
     const result = handleTargetNameCollisions({
       nodes: nodes.filter((n) => n.id !== "2"),
       srcName: "budget",
+      srcKind: "file",
       targetParentFolder: null,
     });
 
@@ -54,6 +56,7 @@ describe("handleTargetNameCollisions", () => {
     const result = handleTargetNameCollisions({
       nodes: nodes.filter((n) => n.id !== "1"),
       srcName: "budget",
+      srcKind: "file",
       targetParentFolder: null,
     });
 
@@ -81,6 +84,7 @@ describe("handleTargetNameCollisions", () => {
     const result = handleTargetNameCollisions({
       nodes: nodes.filter((n) => n.id !== "2"),
       srcName: "my-doc",
+      srcKind: "file",
       targetParentFolder: "folder-1",
     });
 
@@ -103,6 +107,7 @@ describe("handleTargetNameCollisions", () => {
     const firstResult = handleTargetNameCollisions({
       nodes: nodes.filter((n) => n.id !== "2"),
       srcName: "my-budget",
+      srcKind: "file",
       targetParentFolder: null,
     });
     expect(firstResult).toBe("my-budget");
@@ -116,6 +121,7 @@ describe("handleTargetNameCollisions", () => {
     const secondResult = handleTargetNameCollisions({
       nodes: updatedNodes.filter((n) => n.id !== "2"),
       srcName: "my-budget",
+      srcKind: "file",
       targetParentFolder: null,
     });
 

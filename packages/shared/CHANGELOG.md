@@ -1,3 +1,388 @@
+## 6.0.0-dev.207 (2026-04-29)
+
+This was a version bump only for @powerhousedao/shared to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.206 (2026-04-28)
+
+This was a version bump only for @powerhousedao/shared to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.205 (2026-04-28)
+
+This was a version bump only for @powerhousedao/shared to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.204 (2026-04-28)
+
+This was a version bump only for @powerhousedao/shared to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.203 (2026-04-28)
+
+### 🩹 Fixes
+
+- **shared:** include operation example creators in documentModelActions ([71aa740fa](https://github.com/powerhouse-inc/powerhouse/commit/71aa740fa))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
+## 6.0.0-dev.202 (2026-04-28)
+
+This was a version bump only for @powerhousedao/shared to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.201 (2026-04-28)
+
+### 🩹 Fixes
+
+- **document-drive:** allow name collision when kinds are different ([1cb1ccbed](https://github.com/powerhouse-inc/powerhouse/commit/1cb1ccbed))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
+## 6.0.0-dev.200 (2026-04-27)
+
+This was a version bump only for @powerhousedao/shared to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.199 (2026-04-26)
+
+### 🚀 Features
+
+- **shared/clis:** add code subcommand definition ([faa77ba04](https://github.com/powerhouse-inc/powerhouse/commit/faa77ba04))
+- **ph-cli:** add ph-clint and mastra dependencies ([a389b5bdd](https://github.com/powerhouse-inc/powerhouse/commit/a389b5bdd))
+
+### 🩹 Fixes
+
+- **shared/clis:** collapse code description to a single line for prettier ([ac5bd403d](https://github.com/powerhouse-inc/powerhouse/commit/ac5bd403d))
+
+### ❤️ Thank You
+
+- Frank
+
+## 6.0.0-dev.198 (2026-04-26)
+
+This was a version bump only for @powerhousedao/shared to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.197 (2026-04-25)
+
+### 🚀 Features
+
+- **ph-cli,registry,shared:** add unpublish command with registry-side cdn purge ([8816644f1](https://github.com/powerhouse-inc/powerhouse/commit/8816644f1))
+
+### 🩹 Fixes
+
+- **shared:** ignore duplicate react external ([48ef681db](https://github.com/powerhouse-inc/powerhouse/commit/48ef681db))
+- **codegen:** fix editors subexport ([9b7153ba1](https://github.com/powerhouse-inc/powerhouse/commit/9b7153ba1))
+- exclude pglite wasm and data files on ph build ([96eee628c](https://github.com/powerhouse-inc/powerhouse/commit/96eee628c))
+
+### 🔥 Performance
+
+- **design-system:** improve DocumentToolbar tree-shaking ([6d3bf98ad](https://github.com/powerhouse-inc/powerhouse/commit/6d3bf98ad))
+
+### ❤️ Thank You
+
+- acaldas
+- Copilot
+- Guillermo Puente @gpuente
+
+## 6.0.0-dev.196 (2026-04-24)
+
+### 🚀 Features
+
+- separate generate commands ([#2505](https://github.com/powerhouse-inc/powerhouse/pull/2505))
+
+### ❤️ Thank You
+
+- Ryan Wolhuter @ryanwolhuter
+
+## 6.0.0-dev.195 (2026-04-24)
+
+### 🚀 Features
+
+- **codegen:** add sideEffects:false to generated package boilerplate ([844449485](https://github.com/powerhouse-inc/powerhouse/commit/844449485))
+- **shared:** isolate generateMock into its own module ([862fcc58b](https://github.com/powerhouse-inc/powerhouse/commit/862fcc58b))
+- **tree-shaking:** add sideEffects:false and lazy-load pglite ([92f8e988e](https://github.com/powerhouse-inc/powerhouse/commit/92f8e988e))
+
+### 🩹 Fixes
+
+- **registry:** downgrade express to v4 to fix package details page 404 ([40cd8a5d8](https://github.com/powerhouse-inc/powerhouse/commit/40cd8a5d8))
+- outdated pnpm lock ([4a1f21903](https://github.com/powerhouse-inc/powerhouse/commit/4a1f21903))
+- **common:** cleanup deps ([8602d77ba](https://github.com/powerhouse-inc/powerhouse/commit/8602d77ba))
+- **shared,document-model:** make zip utils async ([72a6447e4](https://github.com/powerhouse-inc/powerhouse/commit/72a6447e4))
+- **shared:** lazy-load jszip to remove it from the eager document model bundle ([fc920a3e9](https://github.com/powerhouse-inc/powerhouse/commit/fc920a3e9))
+- **shared:** keep react in browser neverBundle to avoid duplicate instances ([1dd206a09](https://github.com/powerhouse-inc/powerhouse/commit/1dd206a09))
+
+### ❤️ Thank You
+
+- acaldas
+- Guillermo Puente @gpuente
+
+## 6.0.0-dev.194 (2026-04-23)
+
+### 🩹 Fixes
+
+- **codegen:** updated dependencies list ([b4545f389](https://github.com/powerhouse-inc/powerhouse/commit/b4545f389))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.193 (2026-04-23)
+
+This was a version bump only for @powerhousedao/shared to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.192 (2026-04-22)
+
+### 🚀 Features
+
+- update migrate command ([#2492](https://github.com/powerhouse-inc/powerhouse/pull/2492))
+
+### ❤️ Thank You
+
+- Ryan Wolhuter @ryanwolhuter
+
+## 6.0.0-dev.191 (2026-04-22)
+
+This was a version bump only for @powerhousedao/shared to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.190 (2026-04-22)
+
+### 🚀 Features
+
+- **connect:** filter available packages and accept name@tag in search ([34e34335c](https://github.com/powerhouse-inc/powerhouse/commit/34e34335c))
+
+### 🩹 Fixes
+
+- **shared:** preserve dist-tag in powerhouse.config.json from ph install ([8a32d4ce8](https://github.com/powerhouse-inc/powerhouse/commit/8a32d4ce8))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
+## 6.0.0-dev.189 (2026-04-22)
+
+### 🚀 Features
+
+- **lb:** the load balancer now pins through milestone 2 ([b928cfe04](https://github.com/powerhouse-inc/powerhouse/commit/b928cfe04))
+- **lb:** wip on m1 features ([096384d5c](https://github.com/powerhouse-inc/powerhouse/commit/096384d5c))
+- **switchboard-lb:** proxy upstream routes via least_conn (M1) ([5e3343b21](https://github.com/powerhouse-inc/powerhouse/commit/5e3343b21))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 4.7
+
+## 6.0.0-dev.188 (2026-04-21)
+
+### 🩹 Fixes
+
+- **ph-cli:** pin @tsdown/css to match tsdown version ([961675548](https://github.com/powerhouse-inc/powerhouse/commit/961675548))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
+## 6.0.0-dev.187 (2026-04-21)
+
+### 🩹 Fixes
+
+- **ci:** install sentry-cli via official installer ([52a3b3fbd](https://github.com/powerhouse-inc/powerhouse/commit/52a3b3fbd))
+
+### ❤️ Thank You
+
+- Frank
+
+## 6.0.0-dev.186 (2026-04-21)
+
+### 🩹 Fixes
+
+- **ci:** invoke sentry-cli via --package so npx resolves the binary ([21cf95abb](https://github.com/powerhouse-inc/powerhouse/commit/21cf95abb))
+
+### ❤️ Thank You
+
+- Frank
+
+## 6.0.0-dev.185 (2026-04-21)
+
+### 🚀 Features
+
+- **sentry:** upload source maps + tag releases in CI ([46461b97e](https://github.com/powerhouse-inc/powerhouse/commit/46461b97e))
+
+### 🩹 Fixes
+
+- **telemetry:** remove autoSessionTracking (removed in Sentry v8+) ([bd37e0cb7](https://github.com/powerhouse-inc/powerhouse/commit/bd37e0cb7))
+
+### ❤️ Thank You
+
+- Frank
+
+## 6.0.0-dev.184 (2026-04-21)
+
+### 🚀 Features
+
+- **cli:** opt-out Sentry error reporting for ph-cli and ph-cmd ([1f9c3be35](https://github.com/powerhouse-inc/powerhouse/commit/1f9c3be35))
+
+### ❤️ Thank You
+
+- Frank
+
+## 6.0.0-dev.183 (2026-04-21)
+
+### 🚀 Features
+
+- reactor now attempts to migrate dbs from old versions ([92b2fdde9](https://github.com/powerhouse-inc/powerhouse/commit/92b2fdde9))
+- step 1 of a switchboard load balancer ([618c32bfc](https://github.com/powerhouse-inc/powerhouse/commit/618c32bfc))
+- **docker:** run connect nginx as non-root (H3) ([3120ba1c4](https://github.com/powerhouse-inc/powerhouse/commit/3120ba1c4))
+- bundle local packages into connect for offline preview ([caa4c85a8](https://github.com/powerhouse-inc/powerhouse/commit/caa4c85a8))
+- emit editor assets as hashed files via resolveNewUrlToAsset ([27f0ea69c](https://github.com/powerhouse-inc/powerhouse/commit/27f0ea69c))
+
+### 🩹 Fixes
+
+- **shared:** handle react imports in cjs deps ([78941ed7c](https://github.com/powerhouse-inc/powerhouse/commit/78941ed7c))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Frank
+- Guillermo Puente @gpuente
+
+## 6.0.0-dev.182 (2026-04-20)
+
+This was a version bump only for @powerhousedao/shared to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.181 (2026-04-19)
+
+This was a version bump only for @powerhousedao/shared to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.180 (2026-04-18)
+
+This was a version bump only for @powerhousedao/shared to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.179 (2026-04-17)
+
+This was a version bump only for @powerhousedao/shared to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.178 (2026-04-17)
+
+### 🚀 Features
+
+- **shared:** add config field to package manifest ([f1b3e7ee8](https://github.com/powerhouse-inc/powerhouse/commit/f1b3e7ee8))
+
+### ❤️ Thank You
+
+- Frank
+
+## 6.0.0-dev.177 (2026-04-17)
+
+### 🚀 Features
+
+- **connect:** show package version in settings package manager ([1886fc2fd](https://github.com/powerhouse-inc/powerhouse/commit/1886fc2fd))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
+## 6.0.0-dev.176 (2026-04-16)
+
+### 🩹 Fixes
+
+- update lockfile ([728604c16](https://github.com/powerhouse-inc/powerhouse/commit/728604c16))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.175 (2026-04-16)
+
+This was a version bump only for @powerhousedao/shared to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.174 (2026-04-15)
+
+### 🚀 Features
+
+- **shared,ph-cli:** extract registry helpers, refactor publish/install commands ([f00289f6b](https://github.com/powerhouse-inc/powerhouse/commit/f00289f6b))
+
+### 🩹 Fixes
+
+- **deps:** resolve all critical and high security vulnerabilities ([6a8531af3](https://github.com/powerhouse-inc/powerhouse/commit/6a8531af3))
+- **shared,ph-cli:** switch publish to execFileSync, use POWERHOUSE_CONFIG_FILE constant ([eb0d4865c](https://github.com/powerhouse-inc/powerhouse/commit/eb0d4865c))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.173 (2026-04-15)
+
+### 🩹 Fixes
+
+- **renown:** fix sleep listener leak, fix pre-existing test failures, add test script ([606e9f82e](https://github.com/powerhouse-inc/powerhouse/commit/606e9f82e))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.172 (2026-04-15)
+
+### 🩹 Fixes
+
+- since we have to derive document operations on import, we were discarding the initial state on export ([db8ab6733](https://github.com/powerhouse-inc/powerhouse/commit/db8ab6733))
+- **shared:** added logout command ([3a428fff9](https://github.com/powerhouse-inc/powerhouse/commit/3a428fff9))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+
+## 6.0.0-dev.171 (2026-04-14)
+
+### 🩹 Fixes
+
+- **vetra:** generate manifest from global state in package generator ([f5de73f05](https://github.com/powerhouse-inc/powerhouse/commit/f5de73f05))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
+## 6.0.0-dev.170 (2026-04-13)
+
+### 🩹 Fixes
+
+- declare react as peerDependency and dedupe on vite ([3444dab52](https://github.com/powerhouse-inc/powerhouse/commit/3444dab52))
+- **reactor:** make registerModules and registerUpgradeManifests resilient to invalid items ([20b4dd6c6](https://github.com/powerhouse-inc/powerhouse/commit/20b4dd6c6))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.169 (2026-04-13)
+
+This was a version bump only for @powerhousedao/shared to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.168 (2026-04-12)
+
+This was a version bump only for @powerhousedao/shared to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.167 (2026-04-11)
+
+This was a version bump only for @powerhousedao/shared to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.166 (2026-04-10)
+
+### 🩹 Fixes
+
+- **design-system,connect:** cleanup dependencies ([97466944a](https://github.com/powerhouse-inc/powerhouse/commit/97466944a))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.165 (2026-04-10)
+
+This was a version bump only for @powerhousedao/shared to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.164 (2026-04-09)
+
+This was a version bump only for @powerhousedao/shared to align it with other projects, there were no code changes.
+
 ## 6.0.0-dev.163 (2026-04-09)
 
 ### 🩹 Fixes

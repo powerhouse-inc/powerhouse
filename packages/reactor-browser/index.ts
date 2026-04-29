@@ -1,5 +1,5 @@
 export * from "./src/actions/index.js";
-export * from "./src/analytics/index.js";
+export * from "./src/analytics/store.js";
 export * from "./src/constants.js";
 export * from "./src/context/index.js";
 export * from "./src/document-cache.js";

@@ -10,13 +10,12 @@ import {
   addRemoteDrive,
   DocumentCache,
   DocumentChangeType,
-  dropAllReactorStorage,
   extractDriveSlugFromPath,
   extractNodeSlugFromPath,
   getDrives,
   login,
-  RegistryClient,
   refreshReactorDataClient,
+  RegistryClient,
   setDefaultPHGlobalConfig,
   setDocumentCache,
   setDrives,
@@ -29,6 +28,7 @@ import {
   setSelectedDrive,
   setSelectedNode,
   setVetraPackageManager,
+  type IPackageManager,
   type PHToastFn,
 } from "@powerhousedao/reactor-browser";
 import {
@@ -36,7 +36,11 @@ import {
   RenownBuilder,
   RenownCryptoBuilder,
 } from "@renown/sdk";
-import { logger, type DocumentModelLib } from "document-model";
+import {
+  logger,
+  type DocumentModelLib,
+  type UpgradeManifest,
+} from "document-model";
 import { initFeatureFlags } from "../feature-flags.js";
 import { PackageDiscoveryService } from "../package-discovery.js";
 import { BrowserPackageManager } from "../package-manager.js";
@@ -44,14 +48,29 @@ import { loadPackagesConfig } from "../packages.config.js";
 import { createProcessorHostModule } from "./processor-host-module.js";
 
 export async function clearReactorStorage() {
-  const pg = window.ph?.reactorClientModule?.pg;
-  if (!pg) {
-    throw new Error("PGlite not found");
-  }
+  await window.ph?.reactorClientModule?.pg?.close();
 
-  await dropAllReactorStorage(pg);
+  // Dropping tables inside an existing PGlite instance is unreliable with
+  // `relaxedDurability: true` followed by an immediate page reload — pending
+  // IDB writes can be lost. Deleting the underlying database outright sidesteps
+  // flush-timing; the next startup re-creates and re-migrates from scratch.
+  const dbs = await indexedDB.databases();
+  const targets = dbs
+    .map((d) => d.name)
+    .filter(
+      (n): n is string =>
+        !!n && !n.startsWith("ph-pglite-backup::") && /pglite|reactor/i.test(n),
+    );
 
-  await pg.close();
+  await Promise.all(
+    targets.map(
+      (name) =>
+        new Promise<void>((resolve) => {
+          const req = indexedDB.deleteDatabase(name);
+          req.onsuccess = req.onerror = req.onblocked = () => resolve();
+        }),
+    ),
+  );
 }
 
 export async function createReactor(localPackage?: DocumentModelLib) {
@@ -99,7 +118,23 @@ export async function createReactor(localPackage?: DocumentModelLib) {
     PH_PACKAGE_REGISTRY_URL,
   );
   setVetraPackageManager(packageManager);
-  await packageManager.init(localPackage);
+  await packageManager.init(localPackage, packagesConfig.localPackage?.version);
+  // Register any packages marked as provider: "local" in powerhouse.config.json
+  // that the vite plugin bundled into this build. The virtual module is only
+  // emitted when `phBundledPackagesPlugin` is registered (ph-cli's Connect
+  // flow); running `vite dev` against apps/connect's own config has no
+  // bundled packages, so a resolution failure here is expected. The
+  // indirection + @vite-ignore also keeps Vite's dep scanner from treating
+  // the specifier as a real npm package to pre-bundle.
+  try {
+    const bundledPackagesModule = "ph-bundled-packages-virtual";
+    const { default: registerBundledPackages } = (await import(
+      /* @vite-ignore */ bundledPackagesModule
+    )) as { default: (pm: IPackageManager) => void };
+    registerBundledPackages(packageManager);
+  } catch {
+    // no bundled packages in this build
+  }
   const packagesResult = await packageManager.addPackages(
     packagesConfig.packages,
   );
@@ -123,7 +158,14 @@ export async function createReactor(localPackage?: DocumentModelLib) {
   // get upgrade manifests from packages
   const upgradeManifests = packageManager.packages
     .flatMap((pkg) => pkg.upgradeManifests)
-    .filter((u) => u !== undefined);
+    .filter(
+      (manifest, index, manifests) =>
+        // deduplicate by documentType and version
+        manifest !== undefined &&
+        manifests.findIndex(
+          (m) => m && m.documentType === manifest.documentType,
+        ) === index,
+    ) as UpgradeManifest<readonly number[]>[];
 
   // initialize package discovery service for auto-installing unknown document types
   const discoveryService =
@@ -242,7 +284,9 @@ export async function createReactor(localPackage?: DocumentModelLib) {
           const { manifest, processorFactory } = pkg;
           const name = manifest.name;
           const id = manifest.name;
-          logger.info("Loading processor factory: @name", name);
+          const version = packageManager.getPackageVersion(name);
+          const label = version ? `${name}@${version}` : name;
+          logger.info("Loading processor factory: @label", label);
           try {
             const factory = await processorFactory?.(processorHostModule);
             if (!factory) return;
@@ -251,7 +295,7 @@ export async function createReactor(localPackage?: DocumentModelLib) {
               factory,
             );
           } catch (error) {
-            logger.error(`Error registering processor: @name`, name);
+            logger.error(`Error registering processor: @label`, label);
             logger.error("@error", error);
           }
         }),

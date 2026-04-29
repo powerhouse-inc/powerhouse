@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-api",
-  "version": "6.0.0-dev.163",
+  "version": "6.0.0-dev.207",
   "description": "",
   "type": "module",
   "repository": {
@@ -46,9 +46,9 @@
   "author": "",
   "license": "AGPL-3.0-only",
   "dependencies": {
-    "@apollo/gateway": "^2.11.3",
+    "@apollo/gateway": "^2.13.2",
     "@apollo/server": "^5.5.0",
-    "@apollo/subgraph": "^2.11.3",
+    "@apollo/subgraph": "^2.13.2",
     "@as-integrations/express4": "^1.1.2",
     "@electric-sql/pglite": "catalog:",
     "@opentelemetry/auto-instrumentations-node": "^0.57.1",
@@ -114,11 +114,10 @@
     "@types/ws": "^8.18.1",
     "tsdown": "catalog:",
     "msw": "^2.7.3",
-    "vite-tsconfig-paths": "catalog:",
     "vitest": "catalog:"
   },
   "peerDependencies": {
-    "vite": "catalog:"
+    "vite": "^8.0.0"
   },
   "peerDependenciesMeta": {
     "vite": {

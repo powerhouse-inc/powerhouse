@@ -216,12 +216,13 @@ export class ReactorSubgraph extends BaseSubgraph {
         this.logger.debug("pollSyncEnvelopes(@args)", args);
 
         try {
-          const { envelopes, ackOrdinal, deadLetters } =
+          const { envelopes, ackOrdinal, deadLetters, hasMore } =
             resolvers.pollSyncEnvelopes(this.syncManager, args);
           return {
             envelopes,
             ackOrdinal,
             deadLetters,
+            hasMore,
           };
         } catch (error) {
           this.logger.error("Error in pollSyncEnvelopes(@args): @Error", error);

@@ -14,8 +14,16 @@ import type { DocumentModelLib } from "document-model";
 import { useEffect, useMemo } from "react";
 import { useLocalStorage } from "usehooks-ts";
 
-const REGISTRY_PACKAGES_KEY =
-  `REGISTRY_PACKAGES:${PH_PACKAGE_REGISTRY_URL}` as const;
+// Normalize the registry URL before using it as the localStorage key.
+// Otherwise `http://host` and `http://host/` produce two separate maps and
+// the install/status flow reads from one while the registry fetch writes to
+// the other.
+const REGISTRY_PACKAGES_KEY = `REGISTRY_PACKAGES:${
+  typeof PH_PACKAGE_REGISTRY_URL === "string" &&
+  PH_PACKAGE_REGISTRY_URL.endsWith("/")
+    ? PH_PACKAGE_REGISTRY_URL.slice(0, -1)
+    : PH_PACKAGE_REGISTRY_URL
+}` as const;
 
 export function useRegistryPackages() {
   const packageManager = useVetraPackageManager();
@@ -49,6 +57,32 @@ export function useRegistryPackages() {
             const status = getPackageStatusFromPackageSource(packageSource);
             newRegistryPackages[packageInfo.name] =
               makeRegistryPackageFromPackageInfo(packageInfo, status);
+          } else {
+            // Keep the cached entry's status, but refresh anything the
+            // registry sent. This includes distTags and the versions list
+            // the Package Manager UI filters on.
+            //
+            // For `version`, prefer the actually-installed version from the
+            // package manager (set by the rehydration effect). `packageInfo.version`
+            // is the registry's newest-published version, which for installed
+            // packages would incorrectly overwrite the user's picked version
+            // on the next /packages refresh.
+            const installedVersion = packageManager.getPackageVersion(
+              packageInfo.name,
+            );
+            newRegistryPackages[packageInfo.name] = {
+              ...existingPackage,
+              manifest: packageInfo.manifest ?? existingPackage.manifest,
+              version:
+                installedVersion ??
+                packageInfo.version ??
+                existingPackage.version,
+              distTags: packageInfo.distTags ?? existingPackage.distTags,
+              versions: packageInfo.versions ?? existingPackage.versions,
+              documentTypes: packageInfo.documentTypes.length
+                ? packageInfo.documentTypes
+                : existingPackage.documentTypes,
+            };
           }
         }
 
@@ -65,24 +99,24 @@ export function useRegistryPackages() {
     if (packageManagerPackages?.length) {
       for (const packageManagerPackage of packageManagerPackages) {
         setRegistryPackagesMap((existingRegistryPackages) => {
-          const existingPackage =
-            existingRegistryPackages[packageManagerPackage.manifest.name];
+          const packageName = packageManagerPackage.manifest.name;
+          const existingPackage = existingRegistryPackages[packageName];
           const newRegistryPackages = { ...existingRegistryPackages };
+          const version = packageManager.getPackageVersion(packageName);
           if (existingPackage) {
-            newRegistryPackages[packageManagerPackage.manifest.name] = {
+            newRegistryPackages[packageName] = {
               ...existingPackage,
+              version: version ?? existingPackage.version,
             };
           } else {
-            const packageSource = packageManager.getPackageSource(
-              packageManagerPackage.manifest.name,
-            );
+            const packageSource = packageManager.getPackageSource(packageName);
             const status = getPackageStatusFromPackageSource(packageSource);
             const newRegistryPackage = makeRegistryPackageFromDocumentModelLib(
               packageManagerPackage,
               status,
+              version,
             );
-            newRegistryPackages[packageManagerPackage.manifest.name] =
-              newRegistryPackage;
+            newRegistryPackages[packageName] = newRegistryPackage;
           }
           return newRegistryPackages;
         });
@@ -112,16 +146,49 @@ export function useRegistryPackages() {
     });
   }
 
+  /**
+   * Register a freshly-installed package that came in via the npm-uplink
+   * fallback — the user typed a bare name, our local `/packages` didn't know
+   * it, but the install succeeded because verdaccio proxy-fetched the tarball.
+   *
+   * This is the one legitimate case where the status update runs against a
+   * name that wasn't in the registry map. We treat it as an insert rather
+   * than logging the "does not exist" error. Data is pulled from the loaded
+   * module so the UI card shows the real manifest immediately; the next
+   * `/packages` refresh will add `versions`/`distTags`.
+   */
+  function registerFallbackRegistryPackage(
+    packageName: string,
+    loadedPackage: DocumentModelLib,
+    version: string | undefined,
+    status: RegistryPackageStatus,
+  ) {
+    setRegistryPackagesMap((oldRegistryPackages) => {
+      const newRegistryPackages = { ...oldRegistryPackages };
+      newRegistryPackages[packageName] = {
+        ...makeRegistryPackageFromDocumentModelLib(
+          loadedPackage,
+          status,
+          version,
+        ),
+        name: packageName,
+      };
+      return newRegistryPackages;
+    });
+  }
+
   return {
     registryPackagesMap,
     registryPackageList,
     updateRegistryPackageStatus,
+    registerFallbackRegistryPackage,
   };
 }
 
 function makeRegistryPackageFromDocumentModelLib(
   documentModelLib: DocumentModelLib,
   status: RegistryPackageStatus,
+  version?: string,
 ): RegistryPackage {
   return {
     name: documentModelLib.manifest.name,
@@ -131,6 +198,7 @@ function makeRegistryPackageFromDocumentModelLib(
     ),
     status,
     manifest: documentModelLib.manifest,
+    version,
   };
 }
 

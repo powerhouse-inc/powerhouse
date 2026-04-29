@@ -1,6 +1,11 @@
 import { defineConfig } from "tsdown";
 export default defineConfig({
-  entry: ["start-connect.tsx", "main.tsx", "pglite.worker.ts"],
+  entry: [
+    "start-connect.tsx",
+    "main.tsx",
+    "pglite.worker.ts",
+    "pglite.worker.legacy.ts",
+  ],
   platform: "browser",
   outDir: "dist",
   clean: true,

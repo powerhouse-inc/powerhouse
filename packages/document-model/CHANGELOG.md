@@ -1,3 +1,320 @@
+## 6.0.0-dev.207 (2026-04-29)
+
+This was a version bump only for document-model to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.206 (2026-04-28)
+
+This was a version bump only for document-model to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.205 (2026-04-28)
+
+This was a version bump only for document-model to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.204 (2026-04-28)
+
+This was a version bump only for document-model to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.203 (2026-04-28)
+
+This was a version bump only for document-model to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.202 (2026-04-28)
+
+This was a version bump only for document-model to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.201 (2026-04-28)
+
+This was a version bump only for document-model to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.200 (2026-04-27)
+
+This was a version bump only for document-model to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.199 (2026-04-26)
+
+### 🚀 Features
+
+- **ph-cli:** add ph-clint and mastra dependencies ([a389b5bdd](https://github.com/powerhouse-inc/powerhouse/commit/a389b5bdd))
+
+### ❤️ Thank You
+
+- Frank
+
+## 6.0.0-dev.198 (2026-04-26)
+
+This was a version bump only for document-model to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.197 (2026-04-25)
+
+### 🩹 Fixes
+
+- exclude pglite wasm and data files on ph build ([96eee628c](https://github.com/powerhouse-inc/powerhouse/commit/96eee628c))
+
+### 🔥 Performance
+
+- **design-system:** improve DocumentToolbar tree-shaking ([6d3bf98ad](https://github.com/powerhouse-inc/powerhouse/commit/6d3bf98ad))
+
+### ❤️ Thank You
+
+- acaldas
+- Copilot
+
+## 6.0.0-dev.196 (2026-04-24)
+
+### 🚀 Features
+
+- separate generate commands ([#2505](https://github.com/powerhouse-inc/powerhouse/pull/2505))
+
+### ❤️ Thank You
+
+- Ryan Wolhuter @ryanwolhuter
+
+## 6.0.0-dev.195 (2026-04-24)
+
+### 🚀 Features
+
+- **codegen:** add sideEffects:false to generated package boilerplate ([844449485](https://github.com/powerhouse-inc/powerhouse/commit/844449485))
+
+### 🩹 Fixes
+
+- **registry:** downgrade express to v4 to fix package details page 404 ([40cd8a5d8](https://github.com/powerhouse-inc/powerhouse/commit/40cd8a5d8))
+- outdated pnpm lock ([4a1f21903](https://github.com/powerhouse-inc/powerhouse/commit/4a1f21903))
+- **common:** cleanup deps ([8602d77ba](https://github.com/powerhouse-inc/powerhouse/commit/8602d77ba))
+- **shared,document-model:** make zip utils async ([72a6447e4](https://github.com/powerhouse-inc/powerhouse/commit/72a6447e4))
+
+### ❤️ Thank You
+
+- acaldas
+- Guillermo Puente @gpuente
+
+## 6.0.0-dev.194 (2026-04-23)
+
+### 🩹 Fixes
+
+- **codegen:** updated dependencies list ([b4545f389](https://github.com/powerhouse-inc/powerhouse/commit/b4545f389))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.193 (2026-04-23)
+
+This was a version bump only for document-model to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.192 (2026-04-22)
+
+### 🚀 Features
+
+- update migrate command ([#2492](https://github.com/powerhouse-inc/powerhouse/pull/2492))
+
+### ❤️ Thank You
+
+- Ryan Wolhuter @ryanwolhuter
+
+## 6.0.0-dev.191 (2026-04-22)
+
+This was a version bump only for document-model to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.190 (2026-04-22)
+
+This was a version bump only for document-model to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.189 (2026-04-22)
+
+### 🚀 Features
+
+- **lb:** the load balancer now pins through milestone 2 ([b928cfe04](https://github.com/powerhouse-inc/powerhouse/commit/b928cfe04))
+- **lb:** wip on m1 features ([096384d5c](https://github.com/powerhouse-inc/powerhouse/commit/096384d5c))
+- **switchboard-lb:** proxy upstream routes via least_conn (M1) ([5e3343b21](https://github.com/powerhouse-inc/powerhouse/commit/5e3343b21))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 4.7
+
+## 6.0.0-dev.188 (2026-04-21)
+
+### 🩹 Fixes
+
+- **ph-cli:** pin @tsdown/css to match tsdown version ([961675548](https://github.com/powerhouse-inc/powerhouse/commit/961675548))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
+## 6.0.0-dev.187 (2026-04-21)
+
+### 🩹 Fixes
+
+- **ci:** install sentry-cli via official installer ([52a3b3fbd](https://github.com/powerhouse-inc/powerhouse/commit/52a3b3fbd))
+
+### ❤️ Thank You
+
+- Frank
+
+## 6.0.0-dev.186 (2026-04-21)
+
+### 🩹 Fixes
+
+- **ci:** invoke sentry-cli via --package so npx resolves the binary ([21cf95abb](https://github.com/powerhouse-inc/powerhouse/commit/21cf95abb))
+
+### ❤️ Thank You
+
+- Frank
+
+## 6.0.0-dev.185 (2026-04-21)
+
+### 🚀 Features
+
+- **sentry:** upload source maps + tag releases in CI ([46461b97e](https://github.com/powerhouse-inc/powerhouse/commit/46461b97e))
+
+### ❤️ Thank You
+
+- Frank
+
+## 6.0.0-dev.184 (2026-04-21)
+
+### 🚀 Features
+
+- **cli:** opt-out Sentry error reporting for ph-cli and ph-cmd ([1f9c3be35](https://github.com/powerhouse-inc/powerhouse/commit/1f9c3be35))
+
+### ❤️ Thank You
+
+- Frank
+
+## 6.0.0-dev.183 (2026-04-21)
+
+### 🚀 Features
+
+- reactor now attempts to migrate dbs from old versions ([92b2fdde9](https://github.com/powerhouse-inc/powerhouse/commit/92b2fdde9))
+- step 1 of a switchboard load balancer ([618c32bfc](https://github.com/powerhouse-inc/powerhouse/commit/618c32bfc))
+- **docker:** run connect nginx as non-root (H3) ([3120ba1c4](https://github.com/powerhouse-inc/powerhouse/commit/3120ba1c4))
+- emit editor assets as hashed files via resolveNewUrlToAsset ([27f0ea69c](https://github.com/powerhouse-inc/powerhouse/commit/27f0ea69c))
+
+### 🩹 Fixes
+
+- **shared:** handle react imports in cjs deps ([78941ed7c](https://github.com/powerhouse-inc/powerhouse/commit/78941ed7c))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Frank
+- Guillermo Puente @gpuente
+
+## 6.0.0-dev.182 (2026-04-20)
+
+This was a version bump only for document-model to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.181 (2026-04-19)
+
+This was a version bump only for document-model to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.180 (2026-04-18)
+
+This was a version bump only for document-model to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.179 (2026-04-17)
+
+This was a version bump only for document-model to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.178 (2026-04-17)
+
+This was a version bump only for document-model to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.177 (2026-04-17)
+
+This was a version bump only for document-model to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.176 (2026-04-16)
+
+### 🩹 Fixes
+
+- update lockfile ([728604c16](https://github.com/powerhouse-inc/powerhouse/commit/728604c16))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.175 (2026-04-16)
+
+This was a version bump only for document-model to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.174 (2026-04-15)
+
+### 🩹 Fixes
+
+- **deps:** resolve all critical and high security vulnerabilities ([6a8531af3](https://github.com/powerhouse-inc/powerhouse/commit/6a8531af3))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.173 (2026-04-15)
+
+### 🩹 Fixes
+
+- **renown:** fix sleep listener leak, fix pre-existing test failures, add test script ([606e9f82e](https://github.com/powerhouse-inc/powerhouse/commit/606e9f82e))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.172 (2026-04-15)
+
+This was a version bump only for document-model to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.171 (2026-04-14)
+
+### 🩹 Fixes
+
+- **vetra:** generate manifest from global state in package generator ([f5de73f05](https://github.com/powerhouse-inc/powerhouse/commit/f5de73f05))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
+## 6.0.0-dev.170 (2026-04-13)
+
+### 🩹 Fixes
+
+- declare react as peerDependency and dedupe on vite ([3444dab52](https://github.com/powerhouse-inc/powerhouse/commit/3444dab52))
+- **reactor:** make registerModules and registerUpgradeManifests resilient to invalid items ([20b4dd6c6](https://github.com/powerhouse-inc/powerhouse/commit/20b4dd6c6))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.169 (2026-04-13)
+
+This was a version bump only for document-model to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.168 (2026-04-12)
+
+This was a version bump only for document-model to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.167 (2026-04-11)
+
+This was a version bump only for document-model to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.166 (2026-04-10)
+
+### 🩹 Fixes
+
+- **design-system,connect:** cleanup dependencies ([97466944a](https://github.com/powerhouse-inc/powerhouse/commit/97466944a))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.165 (2026-04-10)
+
+This was a version bump only for document-model to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.164 (2026-04-09)
+
+This was a version bump only for document-model to align it with other projects, there were no code changes.
+
 ## 6.0.0-dev.163 (2026-04-09)
 
 ### 🩹 Fixes

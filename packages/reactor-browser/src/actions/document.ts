@@ -12,8 +12,10 @@ import {
   addFolder as baseAddFolder,
   copyNode as baseCopyNode,
   deleteNode as baseDeleteNode,
+  moveNode as baseMoveNode,
   updateFile as baseUpdateFile,
   generateNodesCopy,
+  getDescendants,
   handleTargetNameCollisions,
   isFileNode,
   isFolderNode,
@@ -23,6 +25,7 @@ import type {
   DocumentModelModule,
   DocumentOperations,
   Operation,
+  PHBaseState,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
 import {
@@ -33,6 +36,7 @@ import {
   documentModelDocumentType,
   generateId,
   replayDocument,
+  setName,
 } from "@powerhousedao/shared/document-model";
 import { logger } from "document-model";
 import {
@@ -42,6 +46,9 @@ import {
 import { isDocumentTypeSupported } from "../utils/documents.js";
 import { getUserPermissions } from "../utils/user.js";
 import { queueActions, queueOperations, uploadOperations } from "./queue.js";
+
+const BASE_STATE_KEYS = new Set(["auth"]);
+const NON_DOMAIN_SCOPES = new Set(["auth", "document"]);
 
 async function isDocumentInLocation(
   document: PHDocument,
@@ -130,8 +137,8 @@ function getDocumentTypeIcon(
   }
 }
 
-export function downloadFile(document: PHDocument, fileName: string) {
-  const zip = createZip(document);
+export async function downloadFile(document: PHDocument, fileName: string) {
+  const zip = await createZip(document);
   zip
     .generateAsync({ type: "blob" })
     .then((blob) => {
@@ -151,29 +158,26 @@ export function downloadFile(document: PHDocument, fileName: string) {
 async function getDocumentExtension(document: PHDocument): Promise<string> {
   const documentType = document.header.documentType;
 
-  // DocumentModel definitions always use "phdm"
-  if (documentType === documentModelDocumentType) {
-    return "phdm";
-  }
-
   let rawExtension: string | undefined;
 
-  const reactorClient = window.ph?.reactorClient;
-  if (reactorClient) {
-    const { results: documentModelModules } =
-      await reactorClient.getDocumentModelModules();
-    const module = documentModelModules.find(
-      (m: DocumentModelModule) => m.documentModel.global.id === documentType,
-    );
-    rawExtension = module?.utils.fileExtension;
+  if (documentType === documentModelDocumentType) {
+    const globalState = (document.state as { global?: { extension?: string } })
+      .global;
+    rawExtension = globalState?.extension;
+  } else {
+    const reactorClient = window.ph?.reactorClient;
+    if (reactorClient) {
+      const { results: documentModelModules } =
+        await reactorClient.getDocumentModelModules();
+      const module = documentModelModules.find(
+        (m: DocumentModelModule) => m.documentModel.global.id === documentType,
+      );
+      rawExtension = module?.utils.fileExtension;
+    }
   }
 
-  // Clean the extension (remove leading/trailing dots) and fallback to "phdm"
-  const cleanExtension = (rawExtension ?? "phdm").replace(/^\.+|\.+$/g, "");
-  return cleanExtension || "phdm";
+  return (rawExtension ?? "").replace(/^\.+|\.+$/g, "");
 }
-
-const BASE_STATE_KEYS = new Set(["auth", "document"]);
 
 /**
  * Fetches all operations for a document using cursor-based pagination.
@@ -216,6 +220,40 @@ export async function fetchDocumentOperations(
   return operations;
 }
 
+export function extractInitialState(
+  documentScopeOps: Operation[],
+): PHBaseState {
+  const upgradeOp = documentScopeOps.find(
+    (op) => op.action.type === "UPGRADE_DOCUMENT",
+  );
+  if (!upgradeOp) {
+    throw new Error(
+      "No UPGRADE_DOCUMENT operation found — document is invalid",
+    );
+  }
+  const input = upgradeOp.action.input as {
+    initialState?: PHBaseState;
+    state?: PHBaseState;
+  };
+  const initialState = input.initialState ?? input.state;
+  if (!initialState) {
+    throw new Error(
+      "UPGRADE_DOCUMENT operation has no initialState — document is invalid",
+    );
+  }
+  return initialState;
+}
+
+export function filterDomainOperations(
+  operations: DocumentOperations,
+): DocumentOperations {
+  return Object.fromEntries(
+    Object.entries(operations).filter(
+      ([scope]) => !NON_DOMAIN_SCOPES.has(scope),
+    ),
+  );
+}
+
 export async function exportFile(document: PHDocument, suggestedName?: string) {
   const reactorClient = window.ph?.reactorClient;
   if (!reactorClient) {
@@ -224,16 +262,18 @@ export async function exportFile(document: PHDocument, suggestedName?: string) {
 
   // Fetch operations page-by-page (document from reactor has operations: {})
   const operations = await fetchDocumentOperations(reactorClient, document);
-  const documentWithOps = { ...document, operations };
+  const initialState = extractInitialState(operations["document"] ?? []);
+  const documentWithOps = { ...document, operations, initialState };
 
   // Get the extension from the document model module
   const extension = await getDocumentExtension(documentWithOps);
 
-  const name = `${suggestedName || documentWithOps.header.name || "Untitled"}.${extension}.phd`;
+  const baseName = suggestedName || documentWithOps.header.name || "Untitled";
+  const name = extension ? `${baseName}.${extension}.phd` : `${baseName}.phd`;
 
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   if (!window.showSaveFilePicker) {
-    return downloadFile(documentWithOps, name);
+    return await downloadFile(documentWithOps, name);
   }
   try {
     const fileHandle = await window.showSaveFilePicker({
@@ -297,10 +337,14 @@ export async function addDocument(
     await reactorClient.getDocumentModelModule(documentType);
 
   // create - use passed document's state if available
-  const newDocument = documentModelModule.utils.createDocument({
-    ...document?.state,
-  });
+  const newDocument = document ?? documentModelModule.utils.createDocument();
   newDocument.header.name = name;
+  if (preferredEditor) {
+    newDocument.header.meta = {
+      ...newDocument.header.meta,
+      preferredEditor,
+    };
+  }
 
   // Create document using ReactorClient
   let newDoc: PHDocument;
@@ -386,8 +430,13 @@ export async function addFile(
     document.header.meta?.preferredEditor,
   );
 
-  // then add all the operations in chunks
-  await uploadOperations(documentId, document.operations, queueOperations);
+  // then add all the operations in chunks (exclude document-scope ops —
+  // the reactor already generated CREATE_DOCUMENT + UPGRADE_DOCUMENT above)
+  await uploadOperations(
+    documentId,
+    filterDomainOperations(document.operations),
+    queueOperations,
+  );
 }
 
 export async function addFileWithProgress(
@@ -535,28 +584,35 @@ export async function addFileWithProgress(
 
     onProgress?.({ stage: "initializing", progress: 20 });
 
+    const doc = await reactor.get(documentId);
+    console.log("Document created, starting upload of operations");
     // Uploading stage (20-100%)
-    await uploadOperations(documentId, document.operations, queueOperations, {
-      onProgress: (uploadProgress) => {
-        if (
-          uploadProgress.totalOperations &&
-          uploadProgress.uploadedOperations !== undefined
-        ) {
-          const uploadPercent =
-            uploadProgress.totalOperations > 0
-              ? uploadProgress.uploadedOperations /
-                uploadProgress.totalOperations
-              : 0;
-          const overallProgress = 20 + Math.round(uploadPercent * 80);
-          onProgress?.({
-            stage: "uploading",
-            progress: overallProgress,
-            totalOperations: uploadProgress.totalOperations,
-            uploadedOperations: uploadProgress.uploadedOperations,
-          });
-        }
+    await uploadOperations(
+      documentId,
+      filterDomainOperations(document.operations),
+      queueOperations,
+      {
+        onProgress: (uploadProgress) => {
+          if (
+            uploadProgress.totalOperations &&
+            uploadProgress.uploadedOperations !== undefined
+          ) {
+            const uploadPercent =
+              uploadProgress.totalOperations > 0
+                ? uploadProgress.uploadedOperations /
+                  uploadProgress.totalOperations
+                : 0;
+            const overallProgress = 20 + Math.round(uploadPercent * 80);
+            onProgress?.({
+              stage: "uploading",
+              progress: overallProgress,
+              totalOperations: uploadProgress.totalOperations,
+              uploadedOperations: uploadProgress.uploadedOperations,
+            });
+          }
+        },
       },
-    });
+    );
 
     onProgress?.({ stage: "complete", progress: 100, fileNode });
 
@@ -695,12 +751,24 @@ export async function deleteNode(driveId: string, nodeId: string) {
     throw new Error("ReactorClient not initialized");
   }
 
-  // delete the node in the drive document
-  await reactorClient.execute(driveId, "main", [
-    baseDeleteNode({ id: nodeId }),
-  ]);
+  const drive = await reactorClient.get<DocumentDriveDocument>(driveId);
+  const node = drive.state.global.nodes.find((n) => n.id === nodeId);
+  if (!node) {
+    throw new Error(`Node ${nodeId} not found in drive ${driveId}`);
+  }
 
-  // now delete the document
+  if (isFolderNode(node)) {
+    const descendants = getDescendants(node, drive.state.global.nodes);
+    const fileDescendants = descendants.filter(isFileNode);
+    for (const file of fileDescendants) {
+      await reactorClient.deleteDocument(file.id);
+    }
+    await reactorClient.execute(driveId, "main", [
+      baseDeleteNode({ id: nodeId }),
+    ]);
+    return;
+  }
+
   await reactorClient.deleteDocument(nodeId);
 }
 
@@ -719,6 +787,14 @@ export async function renameNode(
     throw new Error("ReactorClient not initialized");
   }
 
+  const renameNodeResult = await reactorClient.execute(nodeId, "main", [
+    setName({ name }),
+  ]);
+
+  if (renameNodeResult.header.name !== name) {
+    throw new Error("There was an error renaming the node");
+  }
+
   // Rename the node in the drive document using updateNode action
   const drive = await reactorClient.execute<DocumentDriveDocument>(
     driveId,
@@ -728,7 +804,7 @@ export async function renameNode(
 
   const node = drive.state.global.nodes.find((n) => n.id === nodeId);
   if (!node) {
-    throw new Error("There was an error renaming node");
+    throw new Error("There was an error renaming node in the drive");
   }
   return node;
 }
@@ -746,6 +822,14 @@ export async function renameDriveNode(
   const reactorClient = window.ph?.reactorClient;
   if (!reactorClient) {
     throw new Error("ReactorClient not initialized");
+  }
+
+  const renameNodeResult = await reactorClient.execute(nodeId, "main", [
+    setName({ name }),
+  ]);
+
+  if (renameNodeResult.header.name !== name) {
+    throw new Error("There was an error renaming the node");
   }
 
   await reactorClient.execute(driveId, "main", [
@@ -770,12 +854,12 @@ export async function moveNode(
   if (!reactorClient) {
     throw new Error("ReactorClient not initialized");
   }
-
-  // Get current parent folder from source node
-  const sourceParent = src.parentFolder ?? driveId;
-  const targetParent = target?.id ?? driveId;
-
-  return await reactorClient.moveChildren(sourceParent, targetParent, [src.id]);
+  return await reactorClient.execute(driveId, "main", [
+    baseMoveNode({
+      srcFolder: src.id,
+      targetParentFolder: target?.id,
+    }),
+  ]);
 }
 
 async function _duplicateDocument(
@@ -832,6 +916,7 @@ export async function copyNode(
       const resolvedName = handleTargetNameCollisions({
         nodes: drive.state.global.nodes,
         srcName: copyNodeInput.targetName || node.name,
+        srcKind: isFileNode(node) ? "file" : "folder",
         targetParentFolder: copyNodeInput.targetParentFolder || null,
       });
       resolvedNamesMap.set(copyNodeInput.targetId, resolvedName);

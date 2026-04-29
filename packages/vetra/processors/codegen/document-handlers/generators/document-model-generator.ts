@@ -1,6 +1,5 @@
 import {
-  generateFromDocument,
-  generateManifest,
+  generateDocumentModel,
   validateDocumentModelState,
 } from "@powerhousedao/codegen";
 import type {
@@ -10,7 +9,6 @@ import type {
 import { logger } from "../../logger.js";
 import { BaseDocumentGen } from "../base-document-gen.js";
 import type { CodegenInput } from "../types.js";
-import { USE_VERSIONING } from "./constants.js";
 import { minimalBackupDocument } from "./utils.js";
 
 /**
@@ -81,43 +79,11 @@ export class DocumentModelGenerator extends BaseDocumentGen {
       `🔄 Starting code generation for document model: ${globalState.name}`,
     );
     try {
-      await generateFromDocument({
-        documentModelState: globalState,
-        config: this.config.PH_CONFIG,
-        useVersioning: USE_VERSIONING,
-      });
+      await generateDocumentModel(globalState, this.project);
+      await this.project.save();
       logger.info(
         `✅ Code generation completed successfully for: ${globalState.name}`,
       );
-
-      // Update the manifest with the new document model
-      try {
-        logger.debug(
-          `🔄 Updating manifest with document model: ${globalState.name} (ID: ${globalState.id})`,
-        );
-
-        generateManifest(
-          {
-            documentModels: [
-              {
-                id: globalState.id,
-                name: globalState.name,
-              },
-            ],
-          },
-          this.config.CURRENT_WORKING_DIR,
-        );
-
-        logger.debug(
-          `✅ Manifest updated successfully for document model: ${globalState.name}`,
-        );
-      } catch (manifestError) {
-        logger.error(
-          `⚠️ Failed to update manifest for document model ${globalState.name}:`,
-          manifestError,
-        );
-        // Don't throw here - code generation was successful
-      }
 
       // Backup the document
       const fullState = input.state as DocumentModelPHState;

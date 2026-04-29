@@ -1,8 +1,15 @@
-# Powerhouse CLI Commands (6.0.0-dev.163)<br>
+# Powerhouse CLI Commands (6.0.0-dev.207)<br>
 This document provides detailed information about the available commands in the Powerhouse CLI.<br><br>
 The Powerhouse CLI (ph-cli) is a command-line interface tool that provides essential commands for managing Powerhouse projects. The tool and it's commands are fundamental for creating, building, and running Document Models as a builder in studio mode.<br>
 ## Table of Contents
 - [Generate](#generate)
+- [All](#all)
+- [Document Model](#document-model)
+- [Editor](#editor)
+- [App](#app)
+- [Processor](#processor)
+- [Subgraph](#subgraph)
+- [Migration File](#migration-file)
 - [Vetra](#vetra)
 - [Connect](#connect)
 - [Connect Studio](#connect-studio)
@@ -18,86 +25,175 @@ The Powerhouse CLI (ph-cli) is a command-line interface tool that provides essen
 - [Uninstall](#uninstall)
 <br>
 ## Generate
-
-The generate command creates code from document models. It helps you build editors, 
-processors, and other components based on your document model files.
-
-This command:
-1. Reads document model definitions
-2. Generates code for specified components (editors, processors, etc.)
-3. Supports customization of output and generation options
-4. Can watch files for changes and regenerate code automatically
-
-### arguments
-#### Document Model File Path <br>
-Path to the document model file.<br><br>
-**usage:** `[document model file path]`<br>
+The generate command creates code for Powerhouse modules. It helps you create new code from scratch, or to re-generate existing code in your project.
+## All
+Re-generate all modules in the current project
+### flags
+#### Help <br>
+show help<br><br>
+**usage:** `--help, -h`<br>
 
 
+## Document Model
+Generate a document model
 ### options
 #### File <br>
-Path to the document model file.<br><br>
-**usage:** `--file <str>`<br>
+Path to the file to generate the document model from<br><br>
+**usage:** `--file, -f <file>`<br>
 
-#### Editor <br>
-Editor name.<br><br>
-**usage:** `--editor <str>`<br>
+#### Dir <br>
+Name of the directory of an existing document model to re-generate<br><br>
+**usage:** `--dir, -d <dir>`<br>
 
-#### Editor Id <br>
-Editor ID<br><br>
-**usage:** `--editor-id <str>`<br>
 
-#### Editor Dir Name <br>
-Use a different directory name for the generated editor. Default is the editor name in kebab case.<br><br>
-**usage:** `--editor-dir-name <str>`<br>
+### flags
+#### All <br>
+Re-generate all existing document models in the current project<br><br>
+**usage:** `--all, -a`<br>
+
+#### Debug <br>
+Log arguments passed to this command<br><br>
+**usage:** `--debug`<br>
+
+#### Help <br>
+show help<br><br>
+**usage:** `--help, -h`<br>
+
+
+## Editor
+Generate a document editor
+### options
+#### Name <br>
+The name of the document editor to generate<br><br>
+**usage:** `--name, -n <str>`<br>
 
 #### Document Type <br>
-Document type for the generated document editor.<br><br>
-**usage:** `--document-type <str>`<br>
+The document type for the new editor<br><br>
+**usage:** `--document-type, -t <str>`<br>
+
+#### Dir <br>
+Name of the directory of an existing editor to re-generate<br><br>
+**usage:** `--dir, -d <dir>`<br>
+
+
+### flags
+#### All <br>
+Re-generate all existing editors in the current project<br><br>
+**usage:** `--all, -a`<br>
+
+#### Debug <br>
+Log arguments passed to this command<br><br>
+**usage:** `--debug`<br>
+
+#### Help <br>
+show help<br><br>
+**usage:** `--help, -h`<br>
+
+
+## App
+Generate a drive app
+### options
+#### Name <br>
+The name of the drive app to generate<br><br>
+**usage:** `--name, -n <str>`<br>
 
 #### Document Types <br>
-[DEPRECATED] Comma separated list of document types for the generated document editor. [WARNING] Generated editor code is not set up to handle multiple document types.<br><br>
-**usage:** `--document-types <str>`<br>
+The document types allowed by the new app<br><br>
+**usage:** `--document-types <str>, -t=<str>`<br>
 
-#### App <br>
-App name.<br><br>
-**usage:** `--app <str>`<br>
+#### Dir <br>
+Name of the directory of an existing app to re-generate<br><br>
+**usage:** `--dir, -d <dir>`<br>
 
-#### App Id <br>
-App ID.<br><br>
-**usage:** `--app-id <str>`<br>
 
-#### App Dir Name <br>
-Use a different directory name for the generated app. Default is the app name in kebab case.<br><br>
-**usage:** `--app-dir-name <str>`<br>
+### flags
+#### Disable Drag And Drop <br>
+Do not allow drag and drop in this drive app.<br><br>
+**usage:** `--disable-drag-and-drop`<br>
+**default**: `false`
+#### All <br>
+Re-generate all existing apps in the current project<br><br>
+**usage:** `--all, -a`<br>
 
-#### Processor <br>
-Processor name.<br><br>
-**usage:** `--processor <str>`<br>
+#### Debug <br>
+Log arguments passed to this command<br><br>
+**usage:** `--debug`<br>
 
-#### Processor Type <br>
-Whether to generate an analytics processor or a relational DB processor. Default is analytics.<br><br>
-**usage:** `--processor-type <value>`<br>
+#### Help <br>
+show help<br><br>
+**usage:** `--help, -h`<br>
+
+
+## Processor
+Generate a processor
+### options
+#### Name <br>
+The name of the processor to generate<br><br>
+**usage:** `--name, -n <str>`<br>
+
+#### Type <br>
+The type of processor to generate<br><br>
+**usage:** `--type <value>`<br>
 **default**: `analytics`
-#### Processor Apps <br>
-The apps where the generated processor will run<br><br>
-**usage:** `--processor-apps <value>`<br>
-**default**: `switchboard`
-#### Subgraph <br>
-Subgraph name.<br><br>
-**usage:** `--subgraph <str>`<br>
+#### Document Types <br>
+The document types the processor will run on<br><br>
+**usage:** `--document-types <str>, -t=<str>`<br>
+**default**: ``
+#### Apps <br>
+Whether the processor will run in switchboard (nodejs), connect (browser), or both<br><br>
+**usage:** `--apps <value>`<br>
+**default**: `switchboard,connect`
+#### Dir <br>
+Name of the directory of an existing processor to re-generate<br><br>
+**usage:** `--dir, -d <dir>`<br>
 
-#### Import Script <br>
-Import script name.<br><br>
-**usage:** `--import-script <str>`<br>
 
-#### Allowed Document Types <br>
-Supported document types for a app.<br><br>
-**usage:** `--allowed-document-types <str>`<br>
+### flags
+#### All <br>
+Re-generate all existing processors in the current project<br><br>
+**usage:** `--all, -a`<br>
 
-#### Migration File <br>
-Path to the migration file.<br><br>
-**usage:** `--migration-file <str>`<br>
+#### Debug <br>
+Log arguments passed to this command<br><br>
+**usage:** `--debug`<br>
+
+#### Help <br>
+show help<br><br>
+**usage:** `--help, -h`<br>
+
+
+## Subgraph
+Generate a subgraph
+### options
+#### Name <br>
+The name of the subgraph to generate<br><br>
+**usage:** `--name, -n <str>`<br>
+
+#### Dir <br>
+Name of the directory of an existing subgraph to re-generate<br><br>
+**usage:** `--dir, -d <dir>`<br>
+
+
+### flags
+#### All <br>
+Re-generate all existing subgraphs in the current project<br><br>
+**usage:** `--all, -a`<br>
+
+#### Debug <br>
+Log arguments passed to this command<br><br>
+**usage:** `--debug`<br>
+
+#### Help <br>
+show help<br><br>
+**usage:** `--help, -h`<br>
+
+
+## Migration File
+Generate a migration file
+### options
+#### Path *[required]*<br>
+Path to the migration file<br><br>
+**usage:** `--path, -p <str>`<br>
 
 #### Schema File <br>
 Path to the output file. Defaults to './schema.ts'<br><br>
@@ -105,34 +201,6 @@ Path to the output file. Defaults to './schema.ts'<br><br>
 
 
 ### flags
-#### Disable Drag And Drop <br>
-Disable drag and drop in the generated app.<br><br>
-**usage:** `--disable-drag-and-drop`<br>
-
-#### Force <br>
-Overwrite operation reducers.<br><br>
-**usage:** `--force, -f`<br>
-
-#### Logs <br>
-Show additional logging information.<br><br>
-**usage:** `--logs`<br>
-
-#### Watch <br>
-Watch the generated code.<br><br>
-**usage:** `--watch, -w`<br>
-
-#### Skip Format <br>
-Skip formatting the generated code.<br><br>
-**usage:** `--skip-format, -sf`<br>
-
-#### Use Versioning <br>
-Allow upgrading document models with versioning.<br><br>
-**usage:** `--use-versioning`<br>
-**default**: `true`
-#### Migrate Legacy <br>
-Migrate existing legacy document model code to versioned structure. Implies --use-versioning.<br><br>
-**usage:** `--migrate-legacy`<br>
-**default**: `false`
 #### Debug <br>
 Log arguments passed to this command<br><br>
 **usage:** `--debug`<br>
@@ -616,6 +684,12 @@ show help<br><br>
 
 ## Migrate
 Run migrations
+### options
+#### Version <br>
+The version to migrate to. Accepts a valid semver version or `staging`, `dev`, `latest`.<br><br>
+**usage:** `--version, -v <str>`<br>
+**default**: `latest`
+
 ### flags
 #### Debug <br>
 Log arguments passed to this command<br><br>
@@ -767,14 +841,17 @@ show help<br><br>
 
 ## Install
 
-The install command adds Powerhouse dependencies to your project. It installs packages
-from the Powerhouse registry by default and updates configuration files.
+The install command adds Powerhouse dependencies to your project.
 
-This command:
-1. Resolves the registry URL (--registry flag > powerhouse.config.json > PH_REGISTRY_URL env > default)
-2. Installs the package using your package manager with the resolved registry
-3. Updates powerhouse.config.json to include the new dependencies
-4. Updates style.css with CSS imports if applicable
+By default it only registers the package in powerhouse.config.json with
+provider "registry" — Connect will load it from the registry CDN at runtime.
+
+With --local, the package is also installed into node_modules and marked
+as provider "local" — it will be bundled into ph connect build so the
+preview works without the registry being reachable.
+
+Resolution order for the registry URL:
+  --registry flag > PH_REGISTRY_URL env > powerhouse.config.json > default
   
 ### arguments
 #### Dependencies *[required]*<br>
@@ -793,6 +870,10 @@ Specify the package manager to use for your project. Can be one of: `npm`, `pnpm
 
 
 ### flags
+#### Local <br>
+Also install packages into node_modules (marks them as provider: "local" so they get bundled into ph connect build)<br><br>
+**usage:** `--local`<br>
+
 #### Npm <br>
 Use 'npm' as package manager<br><br>
 **usage:** `--npm`<br>

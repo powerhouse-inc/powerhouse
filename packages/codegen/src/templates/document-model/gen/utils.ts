@@ -1,8 +1,12 @@
 import { ts } from "@tmpl/core";
-import type { DocumentModelTemplateInputs } from "file-builders";
+import type { DocumentModelFileMakerArgs } from "file-builders";
 
-export const documentModelGenUtilsTemplate = (v: DocumentModelTemplateInputs) =>
+export const documentModelGenUtilsTemplate = (v: DocumentModelFileMakerArgs) =>
   ts`
+/**
+ * WARNING: DO NOT EDIT
+ * This file is auto-generated and updated by codegen
+ */
 import type {
     DocumentModelUtils,
 } from "document-model";
@@ -27,7 +31,7 @@ export const initialGlobalState: ${v.globalStateName} = ${v.initialGlobalState};
 export const initialLocalState: ${v.localStateName} = ${v.initialLocalState};
 
 export const utils: DocumentModelUtils<${v.phStateName}> = {
-    fileExtension: "${v.fileExtension}",
+    fileExtension: "${v.documentModelState.extension}",
     createState(state) {
         return { ...defaultBaseState(), global: { ...initialGlobalState, ...state?.global }, local: { ...initialLocalState, ...state?.local } };
     },

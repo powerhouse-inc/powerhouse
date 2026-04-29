@@ -177,7 +177,7 @@ export type Mutation = {
   readonly pushSyncEnvelopes: Scalars["Boolean"]["output"];
   readonly removeChildren: PhDocument;
   readonly renameDocument: PhDocument;
-  readonly touchChannel: Scalars["Boolean"]["output"];
+  readonly touchChannel: TouchChannelResult;
 };
 
 export type MutationAddChildrenArgs = {
@@ -298,6 +298,7 @@ export type PhDocument = {
   readonly lastModifiedAtUtcIso: Scalars["DateTime"]["output"];
   readonly name: Scalars["String"]["output"];
   readonly operations?: Maybe<ReactorOperationResultPage>;
+  readonly preferredEditor?: Maybe<Scalars["String"]["output"]>;
   readonly revisionsList: ReadonlyArray<Revision>;
   readonly slug?: Maybe<Scalars["String"]["output"]>;
   readonly state: Scalars["JSONObject"]["output"];
@@ -326,6 +327,7 @@ export type PollSyncEnvelopesResult = {
   readonly ackOrdinal: Scalars["Int"]["output"];
   readonly deadLetters: ReadonlyArray<DeadLetterInfo>;
   readonly envelopes: ReadonlyArray<SyncEnvelope>;
+  readonly hasMore: Scalars["Boolean"]["output"];
 };
 
 export enum PropagationMode {
@@ -373,7 +375,7 @@ export type QueryDocumentParentsArgs = {
 
 export type QueryFindDocumentsArgs = {
   paging?: InputMaybe<PagingInput>;
-  search: SearchFilterInput;
+  search?: InputMaybe<SearchFilterInput>;
   view?: InputMaybe<ViewFilterInput>;
 };
 
@@ -474,7 +476,7 @@ export type Subscription = {
 };
 
 export type SubscriptionDocumentChangesArgs = {
-  search: SearchFilterInput;
+  search?: InputMaybe<SearchFilterInput>;
   view?: InputMaybe<ViewFilterInput>;
 };
 
@@ -511,6 +513,11 @@ export type TouchChannelInput = {
   readonly id: Scalars["String"]["input"];
   readonly name: Scalars["String"]["input"];
   readonly sinceTimestampUtcMs: Scalars["String"]["input"];
+};
+
+export type TouchChannelResult = {
+  readonly ackOrdinal: Scalars["Int"]["output"];
+  readonly success: Scalars["Boolean"]["output"];
 };
 
 export type ViewFilterInput = {
@@ -726,7 +733,7 @@ export type GetDocumentParentsQuery = {
 };
 
 export type FindDocumentsQueryVariables = Exact<{
-  search: SearchFilterInput;
+  search?: InputMaybe<SearchFilterInput>;
   view?: InputMaybe<ViewFilterInput>;
   paging?: InputMaybe<PagingInput>;
 }>;
@@ -1026,7 +1033,7 @@ export type DeleteDocumentsMutationVariables = Exact<{
 export type DeleteDocumentsMutation = { readonly deleteDocuments: boolean };
 
 export type DocumentChangesSubscriptionVariables = Exact<{
-  search: SearchFilterInput;
+  search?: InputMaybe<SearchFilterInput>;
   view?: InputMaybe<ViewFilterInput>;
 }>;
 
@@ -1078,6 +1085,7 @@ export type PollSyncEnvelopesQueryVariables = Exact<{
 export type PollSyncEnvelopesQuery = {
   readonly pollSyncEnvelopes: {
     readonly ackOrdinal: number;
+    readonly hasMore: boolean;
     readonly envelopes: ReadonlyArray<{
       readonly type: SyncEnvelopeType;
       readonly key?: string | null | undefined;
@@ -1162,7 +1170,12 @@ export type TouchChannelMutationVariables = Exact<{
   input: TouchChannelInput;
 }>;
 
-export type TouchChannelMutation = { readonly touchChannel: boolean };
+export type TouchChannelMutation = {
+  readonly touchChannel: {
+    readonly success: boolean;
+    readonly ackOrdinal: number;
+  };
+};
 
 export type PushSyncEnvelopesMutationVariables = Exact<{
   envelopes: ReadonlyArray<SyncEnvelopeInput>;
@@ -1317,7 +1330,7 @@ export const GetDocumentParentsDocument = gql`
 `;
 export const FindDocumentsDocument = gql`
   query FindDocuments(
-    $search: SearchFilterInput!
+    $search: SearchFilterInput
     $view: ViewFilterInput
     $paging: PagingInput
   ) {
@@ -1531,7 +1544,7 @@ export const DeleteDocumentsDocument = gql`
 `;
 export const DocumentChangesDocument = gql`
   subscription DocumentChanges(
-    $search: SearchFilterInput!
+    $search: SearchFilterInput
     $view: ViewFilterInput
   ) {
     documentChanges(search: $search, view: $view) {
@@ -1630,12 +1643,16 @@ export const PollSyncEnvelopesDocument = gql`
         documentId
         error
       }
+      hasMore
     }
   }
 `;
 export const TouchChannelDocument = gql`
   mutation TouchChannel($input: TouchChannelInput!) {
-    touchChannel(input: $input)
+    touchChannel(input: $input) {
+      success
+      ackOrdinal
+    }
   }
 `;
 export const PushSyncEnvelopesDocument = gql`
@@ -1754,7 +1771,7 @@ export function getSdk(
       );
     },
     FindDocuments(
-      variables: FindDocumentsQueryVariables,
+      variables?: FindDocumentsQueryVariables,
       requestHeaders?: GraphQLClientRequestHeaders,
       signal?: RequestInit["signal"],
     ): Promise<FindDocumentsQuery> {
@@ -1988,7 +2005,7 @@ export function getSdk(
       );
     },
     DocumentChanges(
-      variables: DocumentChangesSubscriptionVariables,
+      variables?: DocumentChangesSubscriptionVariables,
       requestHeaders?: GraphQLClientRequestHeaders,
       signal?: RequestInit["signal"],
     ): Promise<DocumentChangesSubscription> {

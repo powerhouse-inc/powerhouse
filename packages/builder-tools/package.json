@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/builder-tools",
-  "version": "6.0.0-dev.163",
+  "version": "6.0.0-dev.207",
   "type": "module",
   "license": "AGPL-3.0-only",
   "publishConfig": {
@@ -30,21 +30,10 @@
     "@powerhousedao/shared": "workspace:*",
     "@sentry/vite-plugin": "^4.3.0",
     "@tailwindcss/vite": "catalog:",
-    "@vitejs/plugin-basic-ssl": "catalog:",
     "@vitejs/plugin-react": "catalog:",
     "document-model": "workspace:*",
-    "esbuild": "^0.25.5",
-    "esbuild-plugins-node-modules-polyfill": "catalog:",
-    "fast-glob": "^3.3.3",
-    "identify-monorepo-root": "^1.0.9",
-    "magic-string": "^0.30.17",
-    "read-pkg": "catalog:",
-    "resolve.exports": "^2.0.3",
     "vite": "catalog:",
     "vite-plugin-html": "catalog:",
-    "vite-plugin-node-polyfills": "catalog:",
-    "vite-plugin-svgr": "catalog:",
-    "vite-tsconfig-paths": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {

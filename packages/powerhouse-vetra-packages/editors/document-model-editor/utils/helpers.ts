@@ -21,6 +21,8 @@ import type {
   UnionTypeDefinitionNode,
 } from "graphql";
 import {
+  buildASTSchema,
+  getOperationAST,
   getVariableValues,
   GraphQLError,
   GraphQLInputObjectType,
@@ -36,7 +38,6 @@ import {
   print,
   visit,
 } from "graphql";
-import { buildASTSchema, getOperationAST } from "graphql/utilities";
 import { z } from "zod";
 import type { GqlPrimitiveNodeName } from "../constants/graphql-kinds.js";
 import {

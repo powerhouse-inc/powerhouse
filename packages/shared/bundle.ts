@@ -7,6 +7,8 @@ await build({
     "analytics/index.ts",
     "connect/index.ts",
     "document-model/index.ts",
+    "document-model/utils.ts",
+    "document-model/mock.ts",
     "document-drive/index.ts",
     "processors/index.ts",
     "registry/index.ts",
@@ -16,6 +18,9 @@ await build({
   clean: true,
   dts: true,
   sourcemap: true,
+  deps: {
+    neverBundle: [/^node:.*/],
+  },
 });
 
 await build({

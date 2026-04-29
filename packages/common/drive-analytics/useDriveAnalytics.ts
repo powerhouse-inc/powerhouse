@@ -3,7 +3,7 @@ import {
   AnalyticsGranularity,
   AnalyticsPath,
 } from "@powerhousedao/analytics-engine-core";
-import { useAnalyticsQuery } from "@powerhousedao/reactor-browser";
+import { useAnalyticsQuery } from "@powerhousedao/reactor-browser/analytics";
 import type {
   ActionType,
   NodeTarget,

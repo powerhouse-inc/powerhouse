@@ -1,6 +1,6 @@
 import { directoryExists, fileExists } from "@powerhousedao/shared/clis";
 import { copyFile, mkdir, readdir, rename } from "node:fs/promises";
-import path from "path";
+import path from "node:path";
 
 /**
  * Detects whether a document model directory has a legacy (non-versioned)

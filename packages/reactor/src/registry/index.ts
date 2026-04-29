@@ -5,6 +5,7 @@ export {
 export type { IDocumentModelResolver } from "./document-model-resolver.js";
 export {
   DocumentModelRegistry,
+  DuplicateManifestError,
   DuplicateModuleError,
   InvalidModuleError,
   ModuleNotFoundError,
@@ -12,4 +13,5 @@ export {
 export type {
   IDocumentModelLoader,
   IDocumentModelRegistry,
+  RegistrationResult,
 } from "./interfaces.js";

@@ -1,11 +1,12 @@
 {
   "name": "compat",
   "private": true,
-  "version": "6.0.0-dev.163",
+  "version": "6.0.0-dev.207",
   "publishConfig": {
     "access": "restricted"
   },
   "type": "module",
+  "sideEffects": false,
   "license": "AGPL-3.0-only",
   "files": [
     "dist"

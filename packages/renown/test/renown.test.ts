@@ -362,7 +362,7 @@ describe("Renown login flow", () => {
       await renown.logout();
 
       expect(renown.user).toBeUndefined();
-      expect(renown.status).toBe("not-authorized");
+      expect(renown.status).toBe("initial");
     });
 
     it("should emit user and status events on logout", async () => {
@@ -378,7 +378,7 @@ describe("Renown login flow", () => {
 
       await renown.logout();
 
-      expect(statuses).toEqual(["not-authorized"]);
+      expect(statuses).toEqual(["initial"]);
       expect(users).toEqual([undefined]);
     });
   });

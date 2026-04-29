@@ -9,23 +9,13 @@ import {
 } from "templates";
 import { formatSourceFileWithPrettier, getOrCreateSourceFile } from "utils";
 
-export async function makeRootDirFiles(
-  fileMakerArgs: DocumentModelFileMakerArgs,
-) {
-  await makeDocumentModelVersionIndexFile(fileMakerArgs);
-  await makeDocumentModelRootActionsFile(fileMakerArgs);
-  await makeDocumentModelModuleFile(fileMakerArgs);
-  await makeDocumentModelUtilsFile(fileMakerArgs);
-  await makeDocumentModelHooksFile(fileMakerArgs);
-}
-
-async function makeDocumentModelVersionIndexFile(
+export async function makeDocumentModelVersionIndexFile(
   args: DocumentModelFileMakerArgs,
 ) {
   const template = documentModelIndexTemplate;
-  const { project, documentModelVersionDirPath } = args;
+  const { project, versionDirPath } = args;
 
-  const filePath = path.join(documentModelVersionDirPath, "index.ts");
+  const filePath = path.join(versionDirPath, "index.ts");
 
   const { sourceFile } = getOrCreateSourceFile(project, filePath);
 
@@ -33,24 +23,26 @@ async function makeDocumentModelVersionIndexFile(
   await formatSourceFileWithPrettier(sourceFile);
 }
 
-async function makeDocumentModelUtilsFile(args: DocumentModelFileMakerArgs) {
+export async function makeDocumentModelUtilsFile(
+  args: DocumentModelFileMakerArgs,
+) {
   const template = documentModelUtilsTemplate(args);
-  const { project, documentModelVersionDirPath } = args;
+  const { project, versionDirPath } = args;
 
-  const filePath = path.join(documentModelVersionDirPath, "utils.ts");
+  const filePath = path.join(versionDirPath, "utils.ts");
 
   const { sourceFile } = getOrCreateSourceFile(project, filePath);
   sourceFile.replaceWithText(template);
   await formatSourceFileWithPrettier(sourceFile);
 }
 
-async function makeDocumentModelRootActionsFile(
+export async function makeDocumentModelRootActionsFile(
   args: DocumentModelFileMakerArgs,
 ) {
   const template = documentModelRootActionsFileTemplate(args);
-  const { project, documentModelVersionDirPath } = args;
+  const { project, versionDirPath } = args;
 
-  const filePath = path.join(documentModelVersionDirPath, "actions.ts");
+  const filePath = path.join(versionDirPath, "actions.ts");
 
   const { sourceFile } = getOrCreateSourceFile(project, filePath);
 
@@ -58,11 +50,13 @@ async function makeDocumentModelRootActionsFile(
   await formatSourceFileWithPrettier(sourceFile);
 }
 
-async function makeDocumentModelHooksFile(args: DocumentModelFileMakerArgs) {
+export async function makeDocumentModelHooksFile(
+  args: DocumentModelFileMakerArgs,
+) {
   const template = documentModelHooksFileTemplate(args);
-  const { project, documentModelVersionDirPath } = args;
+  const { project, versionDirPath } = args;
 
-  const filePath = path.join(documentModelVersionDirPath, "hooks.ts");
+  const filePath = path.join(versionDirPath, "hooks.ts");
 
   const { sourceFile } = getOrCreateSourceFile(project, filePath);
 
@@ -70,11 +64,13 @@ async function makeDocumentModelHooksFile(args: DocumentModelFileMakerArgs) {
   await formatSourceFileWithPrettier(sourceFile);
 }
 
-async function makeDocumentModelModuleFile(args: DocumentModelFileMakerArgs) {
-  const { project, documentModelVersionDirPath } = args;
+export async function makeDocumentModelModuleFile(
+  args: DocumentModelFileMakerArgs,
+) {
+  const { project, versionDirPath } = args;
   const template = documentModelModuleFileTemplate(args);
 
-  const moduleFilePath = path.join(documentModelVersionDirPath, "module.ts");
+  const moduleFilePath = path.join(versionDirPath, "module.ts");
 
   const { sourceFile } = getOrCreateSourceFile(project, moduleFilePath);
 

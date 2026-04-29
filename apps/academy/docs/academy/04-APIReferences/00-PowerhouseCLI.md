@@ -16,8 +16,8 @@ pnpm install -g ph-cmd
 
 :::
 
-<!-- AUTO-GENERATED-CLI-COMMANDS-START -->
-<!-- This content is automatically generated. Do not edit directly. -->
+{/* AUTO-GENERATED-CLI-COMMANDS-START */}
+{/* This content is automatically generated. Do not edit directly. */}
 ## Quick Reference
 
 | Command | Description | Example |
@@ -208,6 +208,13 @@ Use your local `powerhouse` monorepo dependencies the current project.
 ### ph-cli Commands
 
 - [Generate](#generate)
+- [All](#all)
+- [Document Model](#document-model)
+- [Editor](#editor)
+- [App](#app)
+- [Processor](#processor)
+- [Subgraph](#subgraph)
+- [Migration File](#migration-file)
 - [Vetra](#vetra)
 - [Connect](#connect)
 - [Connect Studio](#connect-studio)
@@ -224,63 +231,145 @@ Use your local `powerhouse` monorepo dependencies the current project.
 
 
 ## Generate
+The generate command creates code for Powerhouse modules. It helps you create new code from scratch, or to re-generate existing code in your project.
 
-The generate command creates code from document models. It helps you build editors, 
-processors, and other components based on your document model files.
-
-**What it does:**
-- 1. Reads document model definitions
-- 2. Generates code for specified components (editors, processors, etc.)
-- 3. Supports customization of output and generation options
-- 4. Can watch files for changes and regenerate code automatically
+## All
+Re-generate all modules in the current project
 
 
 
+### Flags
+**Help** - show help - Usage: `--help, -h`
 
----
 
-## Parameters
-
-### Arguments
-**Document Model File Path** - Path to the document model file. - Usage: `[document model file path]`
-
+## Document Model
+Generate a document model
 
 
 
 ### Options
-**File** - Path to the document model file. - Usage: `--file <str>`
+**File** - Path to the file to generate the document model from - Usage: `--file, -f <file>`
 
-**Editor** - Editor name. - Usage: `--editor <str>`
+**Dir** - Name of the directory of an existing document model to re-generate - Usage: `--dir, -d <dir>`
 
-**Editor Id** - Editor ID - Usage: `--editor-id <str>`
 
-**Editor Dir Name** - Use a different directory name for the generated editor. Default is the editor name in kebab case. - Usage: `--editor-dir-name <str>`
 
-**Document Type** - Document type for the generated document editor. - Usage: `--document-type <str>`
 
-**Document Types** - [DEPRECATED] Comma separated list of document types for the generated document editor. [WARNING] Generated editor code is not set up to handle multiple document types. - Usage: `--document-types <str>`
+### Flags
+**All** - Re-generate all existing document models in the current project - Usage: `--all, -a`
 
-**App** - App name. - Usage: `--app <str>`
+**Debug** - Log arguments passed to this command - Usage: `--debug`
 
-**App Id** - App ID. - Usage: `--app-id <str>`
+**Help** - show help - Usage: `--help, -h`
 
-**App Dir Name** - Use a different directory name for the generated app. Default is the app name in kebab case. - Usage: `--app-dir-name <str>`
 
-**Processor** - Processor name. - Usage: `--processor <str>`
+## Editor
+Generate a document editor
 
-**Processor Type** - Whether to generate an analytics processor or a relational DB processor. Default is analytics. - Usage: `--processor-type <value>`
+
+
+### Options
+**Name** - The name of the document editor to generate - Usage: `--name, -n <str>`
+
+**Document Type** - The document type for the new editor - Usage: `--document-type, -t <str>`
+
+**Dir** - Name of the directory of an existing editor to re-generate - Usage: `--dir, -d <dir>`
+
+
+
+
+### Flags
+**All** - Re-generate all existing editors in the current project - Usage: `--all, -a`
+
+**Debug** - Log arguments passed to this command - Usage: `--debug`
+
+**Help** - show help - Usage: `--help, -h`
+
+
+## App
+Generate a drive app
+
+
+
+### Options
+**Name** - The name of the drive app to generate - Usage: `--name, -n <str>`
+
+**Document Types** - The document types allowed by the new app - Usage: `--document-types <str>, -t=<str>`
+
+**Dir** - Name of the directory of an existing app to re-generate - Usage: `--dir, -d <dir>`
+
+
+
+
+### Flags
+**Disable Drag And Drop** - Do not allow drag and drop in this drive app. - Usage: `--disable-drag-and-drop`
+
+**Default:** `false`
+**All** - Re-generate all existing apps in the current project - Usage: `--all, -a`
+
+**Debug** - Log arguments passed to this command - Usage: `--debug`
+
+**Help** - show help - Usage: `--help, -h`
+
+
+## Processor
+Generate a processor
+
+
+
+### Options
+**Name** - The name of the processor to generate - Usage: `--name, -n <str>`
+
+**Type** - The type of processor to generate - Usage: `--type <value>`
 
 **Default:** `analytics`
-**Processor Apps** - The apps where the generated processor will run - Usage: `--processor-apps <value>`
+**Document Types** - The document types the processor will run on - Usage: `--document-types <str>, -t=<str>`
 
-**Default:** `switchboard`
-**Subgraph** - Subgraph name. - Usage: `--subgraph <str>`
+**Default:** ``
+**Apps** - Whether the processor will run in switchboard (nodejs), connect (browser), or both - Usage: `--apps <value>`
 
-**Import Script** - Import script name. - Usage: `--import-script <str>`
+**Default:** `switchboard,connect`
+**Dir** - Name of the directory of an existing processor to re-generate - Usage: `--dir, -d <dir>`
 
-**Allowed Document Types** - Supported document types for a app. - Usage: `--allowed-document-types <str>`
 
-**Migration File** - Path to the migration file. - Usage: `--migration-file <str>`
+
+
+### Flags
+**All** - Re-generate all existing processors in the current project - Usage: `--all, -a`
+
+**Debug** - Log arguments passed to this command - Usage: `--debug`
+
+**Help** - show help - Usage: `--help, -h`
+
+
+## Subgraph
+Generate a subgraph
+
+
+
+### Options
+**Name** - The name of the subgraph to generate - Usage: `--name, -n <str>`
+
+**Dir** - Name of the directory of an existing subgraph to re-generate - Usage: `--dir, -d <dir>`
+
+
+
+
+### Flags
+**All** - Re-generate all existing subgraphs in the current project - Usage: `--all, -a`
+
+**Debug** - Log arguments passed to this command - Usage: `--debug`
+
+**Help** - show help - Usage: `--help, -h`
+
+
+## Migration File
+Generate a migration file
+
+
+
+### Options
+**Path *[required]*** - Path to the migration file - Usage: `--path, -p <str>`
 
 **Schema File** - Path to the output file. Defaults to './schema.ts' - Usage: `--schema-file <str>`
 
@@ -288,22 +377,6 @@ processors, and other components based on your document model files.
 
 
 ### Flags
-**Disable Drag And Drop** - Disable drag and drop in the generated app. - Usage: `--disable-drag-and-drop`
-
-**Force** - Overwrite operation reducers. - Usage: `--force, -f`
-
-**Logs** - Show additional logging information. - Usage: `--logs`
-
-**Watch** - Watch the generated code. - Usage: `--watch, -w`
-
-**Skip Format** - Skip formatting the generated code. - Usage: `--skip-format, -sf`
-
-**Use Versioning** - Allow upgrading document models with versioning. - Usage: `--use-versioning`
-
-**Default:** `true`
-**Migrate Legacy** - Migrate existing legacy document model code to versioned structure. Implies --use-versioning. - Usage: `--migrate-legacy`
-
-**Default:** `false`
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`
@@ -713,6 +786,14 @@ Run migrations
 
 
 
+### Options
+**Version** - The version to migrate to. Accepts a valid semver version or `staging`, `dev`, `latest`. - Usage: `--version, -v <str>`
+
+**Default:** `latest`
+
+
+
+
 ### Flags
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
@@ -826,14 +907,17 @@ the CLI to act on behalf of your Ethereum identity for authenticated operations.
 
 ## Install
 
-The install command adds Powerhouse dependencies to your project. It installs packages
-from the Powerhouse registry by default and updates configuration files.
+The install command adds Powerhouse dependencies to your project.
 
-**What it does:**
-- 1. Resolves the registry URL (--registry flag > powerhouse.config.json > PH_REGISTRY_URL env > default)
-- 2. Installs the package using your package manager with the resolved registry
-- 3. Updates powerhouse.config.json to include the new dependencies
-- 4. Updates style.css with CSS imports if applicable
+By default it only registers the package in powerhouse.config.json with
+provider "registry" — Connect will load it from the registry CDN at runtime.
+
+With --local, the package is also installed into node_modules and marked
+as provider "local" — it will be bundled into ph connect build so the
+preview works without the registry being reachable.
+
+Resolution order for the registry URL:
+  --registry flag > PH_REGISTRY_URL env > powerhouse.config.json > default
   
 
 
@@ -857,6 +941,8 @@ from the Powerhouse registry by default and updates configuration files.
 
 
 ### Flags
+**Local** - Also install packages into node_modules (marks them as provider: "local" so they get bundled into ph connect build) - Usage: `--local`
+
 **Npm** - Use 'npm' as package manager - Usage: `--npm`
 
 **Pnpm** - Use 'pnpm' as package manager - Usage: `--pnpm`
@@ -912,4 +998,4 @@ removal of packages, updates configuration files, and ensures proper cleanup.
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`
-<!-- AUTO-GENERATED-CLI-COMMANDS-END -->
+{/* AUTO-GENERATED-CLI-COMMANDS-END */}

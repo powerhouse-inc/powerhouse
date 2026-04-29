@@ -1,33 +1,51 @@
-import type { ModuleSpecification } from "@powerhousedao/shared";
+import type {
+  ModuleSpecification,
+  OperationSpecification,
+} from "@powerhousedao/shared";
 import { ts } from "@tmpl/core";
 import { camelCase, constantCase, pascalCase } from "change-case";
-import type {
-  ActionFromOperation,
-  DocumentModelTemplateInputsWithModule,
-} from "file-builders";
+import type { DocumentModelModuleFileMakerArgs } from "file-builders";
+import { filter, isString, map, pipe, prop } from "remeda";
 
 function makeModuleOperationsTypeName(module: ModuleSpecification) {
   const pascalCaseModuleName = pascalCase(module.name);
   return `${pascalCaseModuleName}Operations`;
 }
 
-function makeCamelCaseActionNamesForImport(actions: ActionFromOperation[]) {
-  return actions.map((a) => camelCase(a.name));
+function makeCamelCaseOperationNamesForImport(
+  operations: OperationSpecification[],
+) {
+  return pipe(
+    operations,
+    map(prop("name")),
+    filter(isString),
+    map((n) => camelCase(n)),
+  );
 }
 
-function makeActionInputSchemasForImport(actions: ActionFromOperation[]) {
-  return actions.map((a) => `${pascalCase(a.name)}InputSchema`);
+function makeOperationInputSchemasForImport(
+  operations: OperationSpecification[],
+) {
+  return pipe(
+    operations,
+    map(prop("name")),
+    filter(isString),
+    map((n) => `${pascalCase(n)}InputSchema`),
+  );
 }
 
-export function makeTestCaseForAction(
-  action: ActionFromOperation,
+export function makeTestCaseForOperation(
+  operation: OperationSpecification,
   isPhDocumentOfTypeFunctionName: string,
 ) {
-  const camelCaseActionName = camelCase(action.name);
-  const pascalCaseActionName = pascalCase(action.name);
-  const constantCaseActionName = constantCase(action.name);
+  if (operation.name === null) {
+    throw new Error(`Operation is missing name.`);
+  }
+  const camelCaseActionName = camelCase(operation.name);
+  const pascalCaseActionName = pascalCase(operation.name);
+  const constantCaseActionName = constantCase(operation.name);
   const actionInputSchemaName = `${pascalCaseActionName}InputSchema`;
-  const scope = action.scope;
+  const scope = operation.scope;
   return ts`
   it('should handle ${camelCaseActionName} operation', () => {
         const document = utils.createDocument();
@@ -51,42 +69,44 @@ export function makeTestCaseForAction(
   `.raw;
 }
 
-export function makeActionImportNames(
-  v: DocumentModelTemplateInputsWithModule,
-) {
-  const actionNames = makeCamelCaseActionNamesForImport(v.actions);
-  const inputSchemaNames = makeActionInputSchemasForImport(v.actions);
+export function makeOperationImportNames(v: DocumentModelModuleFileMakerArgs) {
+  const operationNames = makeCamelCaseOperationNamesForImport(
+    v.module.operations,
+  );
+  const inputSchemaNames = makeOperationInputSchemasForImport(
+    v.module.operations,
+  );
   const importNames = [
     "reducer",
     "utils",
     v.isPhDocumentOfTypeFunctionName,
-    ...actionNames,
+    ...operationNames,
     ...inputSchemaNames,
   ];
   return importNames;
 }
 
-export function makeActionsImports(v: DocumentModelTemplateInputsWithModule) {
-  const importNames = makeActionImportNames(v).join("\n");
+export function makeOperationsImports(v: DocumentModelModuleFileMakerArgs) {
+  const importNames = makeOperationImportNames(v).join("\n");
   return ts`
   import {
     ${importNames}
-  } from "${v.versionedDocumentModelPackageImportPath}";
+  } from "${v.versionImportPath}";
   `.raw;
 }
 
-function makeTestCasesForActions(
-  actions: ActionFromOperation[],
+function makeTestCasesForOperations(
+  operations: OperationSpecification[],
   isPhDocumentOfTypeFunctionName: string,
 ) {
-  return actions
-    .map((action) =>
-      makeTestCaseForAction(action, isPhDocumentOfTypeFunctionName),
+  return operations
+    .map((operation) =>
+      makeTestCaseForOperation(operation, isPhDocumentOfTypeFunctionName),
     )
     .join("\n\n");
 }
 export const documentModelOperationsModuleTestFileTemplate = (
-  v: DocumentModelTemplateInputsWithModule,
+  v: DocumentModelModuleFileMakerArgs,
 ) =>
   ts`
 /**
@@ -100,12 +120,12 @@ import {
   reducer,
   utils,
   ${v.isPhDocumentOfTypeFunctionName},
-  ${makeCamelCaseActionNamesForImport(v.actions)},
-  ${makeActionInputSchemasForImport(v.actions)},
-} from "${v.versionedDocumentModelPackageImportPath}";
+  ${makeCamelCaseOperationNamesForImport(v.module.operations)},
+  ${makeOperationInputSchemasForImport(v.module.operations)},
+} from "${v.versionImportPath}";
 
 describe("${makeModuleOperationsTypeName(v.module)}", () => {
-  ${makeTestCasesForActions(v.actions, v.isPhDocumentOfTypeFunctionName)}
+  ${makeTestCasesForOperations(v.module.operations, v.isPhDocumentOfTypeFunctionName)}
 });
 
 `.raw;

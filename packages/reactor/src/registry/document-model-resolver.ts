@@ -47,12 +47,12 @@ export class DocumentModelResolver implements IDocumentModelResolver {
     const loadPromise = (async () => {
       try {
         const module = await this.loader.load(documentType);
-        try {
-          this.registry.registerModules(module);
-        } catch (registerError) {
-          if (!DuplicateModuleError.isError(registerError)) {
-            throw registerError;
-          }
+        const [result] = this.registry.registerModules(module);
+        if (
+          result.status === "error" &&
+          !DuplicateModuleError.isError(result.error)
+        ) {
+          throw result.error as Error;
         }
       } catch (error) {
         this.failedModelTypes.add(documentType);

@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-browser",
-  "version": "6.0.0-dev.163",
+  "version": "6.0.0-dev.207",
   "license": "AGPL-3.0-only",
   "type": "module",
   "repository": {
@@ -17,6 +17,22 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./analytics": {
+      "types": "./dist/src/analytics/index.d.ts",
+      "import": "./dist/src/analytics/index.js"
+    },
+    "./graphql": {
+      "types": "./dist/src/graphql/client.d.ts",
+      "import": "./dist/src/graphql/client.js"
+    },
+    "./relational": {
+      "types": "./dist/src/relational/index.d.ts",
+      "import": "./dist/src/relational/index.js"
+    },
+    "./renown": {
+      "types": "./dist/src/renown/index.d.ts",
+      "import": "./dist/src/renown/index.js"
     }
   },
   "sideEffects": false,
@@ -29,7 +45,6 @@
     "codegen": "graphql-codegen --config codegen.ts && prettier --write src/graphql/gen/*.ts && eslint --fix src/graphql/gen/*.ts --no-warn-ignored"
   },
   "dependencies": {
-    "@electric-sql/pglite": "catalog:",
     "@powerhousedao/analytics-engine-browser": "workspace:*",
     "@powerhousedao/analytics-engine-core": "workspace:*",
     "@powerhousedao/reactor": "workspace:*",
@@ -46,11 +61,10 @@
     "lodash.isequal": "^4.5.0",
     "luxon": "^3.6.1",
     "lz-string": "^1.5.0",
-    "react": "catalog:",
-    "react-dom": "catalog:",
     "slug": "^11.0.0"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "catalog:",
     "@graphql-codegen/cli": "catalog:",
     "@graphql-codegen/typescript": "catalog:",
     "@graphql-codegen/typescript-graphql-request": "catalog:",
@@ -66,9 +80,15 @@
     "@vitest/browser-playwright": "catalog:",
     "fast-deep-equal": "catalog:",
     "playwright": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
     "tsdown": "catalog:",
     "vite": "catalog:",
     "vitest": "catalog:",
     "vitest-browser-react": "^1.0.1"
+  },
+  "peerDependencies": {
+    "react": ">=19.0.0",
+    "react-dom": ">=19.0.0"
   }
 }

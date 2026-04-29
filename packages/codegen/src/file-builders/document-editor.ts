@@ -2,42 +2,46 @@ import type {
   CommonGenerateEditorArgs,
   EditorVariableNames,
 } from "@powerhousedao/codegen";
+import { createOrUpdateManifest } from "file-builders";
 import { getEditorVariableNames } from "name-builders";
 import path from "path";
 import { documentEditorEditorFileTemplate } from "templates";
-import type { Project } from "ts-morph";
+import { type Project } from "ts-morph";
 import {
-  buildTsMorphProject,
   ensureDirectoriesExist,
   formatSourceFileWithPrettier,
   getDocumentTypeMetadata,
+  getOrCreateDirectory,
   getOrCreateSourceFile,
 } from "utils";
-import { makeEditorModuleFile } from "./editor-common.js";
-import { makeEditorsModulesFile } from "./module-files.js";
+import {
+  makeEditorModuleFile,
+  makeEditorsFile,
+  makeEditorsIndexFile,
+} from "./editor-common.js";
 
 type GenerateEditorArgs = CommonGenerateEditorArgs & {
   documentModelId: string;
 };
 /** Generates a document editor for the given `documentModelId` (also called `documentType`) */
 export async function tsMorphGenerateDocumentEditor({
-  projectDir,
+  project,
   editorDir,
   editorName,
   editorId,
   documentModelId,
 }: GenerateEditorArgs) {
-  const documentModelsDirPath = path.join(projectDir, "document-models");
-  const editorsDirPath = path.join(projectDir, "editors");
+  const { directory: documentModelsDir } = getOrCreateDirectory(
+    project,
+    "document-models",
+  );
+  const documentModelsDirPath = documentModelsDir.getPath();
+  const { directory: editorsDir } = getOrCreateDirectory(project, "editors");
+  const editorsDirPath = editorsDir.getPath();
+  const projectDir = editorsDir.getParentOrThrow().getPath();
   const editorDirPath = path.join(editorsDirPath, editorDir);
   const componentsDirPath = path.join(editorDirPath, "components");
-  const editorSourceFilesPath = path.join(editorsDirPath, "/**/*");
-  const documentModelsSourceFilesPath = path.join(
-    documentModelsDirPath,
-    "/**/*",
-  );
 
-  const project = buildTsMorphProject(projectDir);
   await ensureDirectoriesExist(
     project,
     documentModelsDirPath,
@@ -45,13 +49,9 @@ export async function tsMorphGenerateDocumentEditor({
     editorDirPath,
     componentsDirPath,
   );
-  project.addSourceFilesAtPaths(documentModelsSourceFilesPath);
-  project.addSourceFilesAtPaths(editorSourceFilesPath);
-
   const documentTypeMetadata = getDocumentTypeMetadata({
     project,
     documentModelId,
-    documentModelsDirPath,
   });
 
   const editorVariableNames = getEditorVariableNames(documentTypeMetadata);
@@ -71,9 +71,20 @@ export async function tsMorphGenerateDocumentEditor({
     editorDirPath,
   });
 
-  await makeEditorsModulesFile(project, projectDir);
-
-  await project.save();
+  await makeEditorsFile({ project, editorsDirPath });
+  await makeEditorsIndexFile({ project, editorsDirPath });
+  await createOrUpdateManifest(
+    {
+      editors: [
+        {
+          name: editorName,
+          id: editorId,
+          documentTypes: [documentTypeMetadata.documentModelId],
+        },
+      ],
+    },
+    projectDir,
+  );
 }
 
 type MakeEditorComponentArgs = EditorVariableNames & {

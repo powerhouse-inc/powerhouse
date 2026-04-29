@@ -336,6 +336,7 @@ export type PollSyncEnvelopesResult = {
   readonly ackOrdinal: Scalars["Int"]["output"];
   readonly deadLetters: ReadonlyArray<DeadLetterInfo>;
   readonly envelopes: ReadonlyArray<SyncEnvelope>;
+  readonly hasMore: Scalars["Boolean"]["output"];
 };
 
 export enum PropagationMode {
@@ -1093,6 +1094,7 @@ export type PollSyncEnvelopesQueryVariables = Exact<{
 export type PollSyncEnvelopesQuery = {
   readonly pollSyncEnvelopes: {
     readonly ackOrdinal: number;
+    readonly hasMore: boolean;
     readonly envelopes: ReadonlyArray<{
       readonly type: SyncEnvelopeType;
       readonly key?: string | null | undefined;
@@ -1835,6 +1837,7 @@ export type PollSyncEnvelopesResultResolvers<
     ParentType,
     ContextType
   >;
+  hasMore?: Resolver<ResolversTypes["Boolean"], ParentType, ContextType>;
 }>;
 
 export type QueryResolvers<
@@ -2771,6 +2774,7 @@ export const PollSyncEnvelopesDocument = gql`
         documentId
         error
       }
+      hasMore
     }
   }
 `;

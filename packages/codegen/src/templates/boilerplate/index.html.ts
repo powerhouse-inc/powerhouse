@@ -1,6 +1,6 @@
 import { html } from "@tmpl/core";
 
-export const indexHtmlTemplate = html`<!DOCTYPE html>
+export const indexHtmlTemplate = html`<!doctype html>
   <html lang="en">
     <head>
       <meta charset="UTF-8" />

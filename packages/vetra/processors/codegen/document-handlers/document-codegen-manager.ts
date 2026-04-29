@@ -1,3 +1,4 @@
+import type { Project } from "ts-morph";
 import type { QueuedStrand } from "../interactive-manager.js";
 import { InteractiveManager } from "../interactive-manager.js";
 import { logger } from "../logger.js";
@@ -11,6 +12,7 @@ const DEFAULT_DEBOUNCE_TIME = 1000; // wait 1 second between codegen calls
  * and managing generator registration and instantiation
  */
 export class DocumentCodegenManager {
+  project: Project;
   private generators = new Map<string, BaseDocumentGen>();
   private debounceTimers = new Map<string, NodeJS.Timeout>();
   private processingQueue: Promise<void> = Promise.resolve();
@@ -18,8 +20,10 @@ export class DocumentCodegenManager {
 
   constructor(
     private config: Config,
+    project: Project,
     interactiveMode = false,
   ) {
+    this.project = project;
     this.interactiveManager = new InteractiveManager(interactiveMode);
   }
 
@@ -28,7 +32,7 @@ export class DocumentCodegenManager {
    */
   registerGenerator(
     documentType: string,
-    generatorClass: new (config: Config) => BaseDocumentGen,
+    generatorClass: new (config: Config, project: Project) => BaseDocumentGen,
   ): void {
     if (this.generators.has(documentType)) {
       logger.warn(
@@ -36,7 +40,10 @@ export class DocumentCodegenManager {
       );
     }
 
-    this.generators.set(documentType, new generatorClass(this.config));
+    this.generators.set(
+      documentType,
+      new generatorClass(this.config, this.project),
+    );
     logger.debug(`✅ Registered generator for document type: ${documentType}`);
   }
 
@@ -44,9 +51,9 @@ export class DocumentCodegenManager {
    * Register a generator class that supports multiple document types
    */
   registerMultiTypeGenerator(
-    generatorClass: new (config: Config) => BaseDocumentGen,
+    generatorClass: new (config: Config, project: Project) => BaseDocumentGen,
   ): void {
-    const generator = new generatorClass(this.config);
+    const generator = new generatorClass(this.config, this.project);
     const supportedTypes = generator.getSupportedDocumentTypes();
 
     for (const documentType of supportedTypes) {
@@ -182,7 +189,7 @@ export class DocumentCodegenManager {
           // Don't throw - let codegen continue with other documents
         } finally {
           // Clean up the timer reference
-          this.debounceTimers.delete(documentType);
+          this.debounceTimers.delete(timerKey);
         }
       }, DEFAULT_DEBOUNCE_TIME);
 
