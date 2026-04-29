@@ -40,13 +40,25 @@ export class RemoteReservationStore implements IReservationStore {
       );
     }
 
-    const json = (await response.json()) as { reservationId: string };
+    const json = (await response.json()) as {
+      reservationId: string;
+      createdAtUtc?: string;
+      expiresAtUtc?: string;
+    };
+    // The server is the source of truth for both timestamps. We synthesize
+    // only as a last-resort fallback for older switchboards that don't
+    // include them in the response; in that case the client cannot know the
+    // server's TTL, so expiresAtUtc is a best-effort placeholder.
+    const now = new Date();
     return {
       reservationId: json.reservationId,
       mimeType: options.mimeType,
       fileName: options.fileName,
       extension: options.extension ?? null,
-      createdAtUtc: new Date().toISOString(),
+      createdAtUtc: json.createdAtUtc ?? now.toISOString(),
+      expiresAtUtc:
+        json.expiresAtUtc ??
+        new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString(),
     };
   }
 
@@ -59,6 +71,14 @@ export class RemoteReservationStore implements IReservationStore {
   delete(_reservationId: string): Promise<void> {
     return Promise.reject(
       new Error("RemoteReservationStore.delete is not supported"),
+    );
+  }
+
+  // Sweeping is the server's responsibility; clients have no authority to
+  // delete reservations on a remote switchboard.
+  deleteExpired(_now?: Date): Promise<number> {
+    return Promise.reject(
+      new Error("RemoteReservationStore.deleteExpired is not supported"),
     );
   }
 }

@@ -13,6 +13,7 @@ export class DirectAttachmentUploadFactory implements IAttachmentUploadFactory {
     private readonly db: Kysely<AttachmentDatabase>,
     private readonly basePath: string,
     private readonly reservations: IReservationStore,
+    private readonly maxBytes?: number,
   ) {}
 
   createUpload(
@@ -25,6 +26,7 @@ export class DirectAttachmentUploadFactory implements IAttachmentUploadFactory {
       this.db,
       this.basePath,
       this.reservations,
+      this.maxBytes,
     );
   }
 }

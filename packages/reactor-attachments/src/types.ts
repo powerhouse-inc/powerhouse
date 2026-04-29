@@ -23,14 +23,19 @@ export type AttachmentHeader = {
 
 /**
  * Metadata provided alongside attachment data during sync.
- * The remaining fields (hash, status, source, createdAtUtc, lastAccessedAtUtc)
- * are set by the store when it creates the attachment record.
+ * `createdAtUtc` is the original upload time, propagated from the source
+ * so that the receiving store preserves it instead of synthesizing the
+ * fetch time. `lastAccessedAtUtc` is intentionally omitted: it is a
+ * per-reactor LRU concern that resets on every read.
+ * The remaining fields (hash, status, source, lastAccessedAtUtc) are set
+ * by the store when it creates the attachment record.
  */
 export type AttachmentMetadata = {
   mimeType: string;
   fileName: string;
   sizeBytes: number;
   extension: string | null;
+  createdAtUtc: string;
 };
 
 /**
@@ -81,7 +86,8 @@ export type AttachmentTransportConfig = {
 
 /**
  * A reservation for an in-progress attachment upload.
- * Created by reserve(), deleted when upload.send() completes.
+ * Created by reserve(), deleted when upload.send() completes or
+ * once expiresAtUtc has passed and a sweep runs.
  */
 export type Reservation = {
   reservationId: string;
@@ -89,4 +95,5 @@ export type Reservation = {
   fileName: string;
   extension: string | null;
   createdAtUtc: string;
+  expiresAtUtc: string;
 };

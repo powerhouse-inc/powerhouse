@@ -11,6 +11,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Readable } from "node:stream";
+import type { ReadableStream as NodeReadableStream } from "node:stream/web";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   AttachmentBuilder,
@@ -112,9 +113,9 @@ async function handle(
           extension: header.extension,
         }),
       );
-      Readable.fromWeb(
-        body as unknown as import("node:stream/web").ReadableStream<Uint8Array>,
-      ).pipe(res);
+      Readable.fromWeb(body as unknown as NodeReadableStream<Uint8Array>).pipe(
+        res,
+      );
     } catch {
       sendJson(res, 404, { error: "not found" });
     }

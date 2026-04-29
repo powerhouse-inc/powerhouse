@@ -27,3 +27,16 @@ export class InvalidAttachmentRef extends Error {
     this.name = "InvalidAttachmentRef";
   }
 }
+
+/**
+ * Thrown when an upload exceeds the configured maximum byte cap.
+ * Route handlers should map this to HTTP 413 Payload Too Large.
+ */
+export class UploadTooLarge extends Error {
+  readonly maxBytes: number;
+  constructor(maxBytes: number) {
+    super(`Upload exceeds maximum size of ${maxBytes} bytes`);
+    this.name = "UploadTooLarge";
+    this.maxBytes = maxBytes;
+  }
+}

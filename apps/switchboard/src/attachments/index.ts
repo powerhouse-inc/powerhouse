@@ -1,5 +1,5 @@
 import type { API } from "@powerhousedao/reactor-api";
-import { requireAuth } from "./auth.js";
+import { mountAuthenticatedNodeRoute } from "./mount-auth.js";
 import {
   makeDownloadHandler,
   makeReserveHandler,
@@ -7,23 +7,26 @@ import {
 } from "./routes.js";
 
 export function registerAttachmentRoutes(api: API): void {
-  const { httpAdapter, attachments, authService } = api;
+  const { attachments } = api;
 
-  httpAdapter.mountNodeRoute(
+  mountAuthenticatedNodeRoute(
+    api,
     "POST",
     "/attachments/reservations",
-    requireAuth(authService, makeReserveHandler(attachments)),
+    makeReserveHandler(attachments),
   );
 
-  httpAdapter.mountNodeRoute(
+  mountAuthenticatedNodeRoute(
+    api,
     "PUT",
     "/attachments/reservations/:reservationId",
-    requireAuth(authService, makeUploadHandler(attachments)),
+    makeUploadHandler(attachments),
   );
 
-  httpAdapter.mountNodeRoute(
+  mountAuthenticatedNodeRoute(
+    api,
     "GET",
     "/attachments/:hash",
-    requireAuth(authService, makeDownloadHandler(attachments)),
+    makeDownloadHandler(attachments),
   );
 }

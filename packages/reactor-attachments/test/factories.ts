@@ -67,6 +67,7 @@ export type MockReservationStore = IReservationStore & {
   create: Mock;
   get: Mock;
   delete: Mock;
+  deleteExpired: Mock;
 };
 
 export function createMockReservationStore(
@@ -76,6 +77,7 @@ export function createMockReservationStore(
     create: vi.fn(),
     get: vi.fn(),
     delete: vi.fn().mockResolvedValue(undefined),
+    deleteExpired: vi.fn().mockResolvedValue(0),
     ...overrides,
   } as MockReservationStore;
 }
@@ -134,13 +136,13 @@ export async function createTestAttachmentStore(
   return { db, store, reservationStore, transport, storagePath, cleanup };
 }
 
-export async function createTestReservationStore(): Promise<{
+export async function createTestReservationStore(ttlMs?: number): Promise<{
   db: Kysely<AttachmentDatabase>;
   reservationStore: KyselyReservationStore;
   cleanup: () => Promise<void>;
 }> {
   const { baseDb, db } = await createTestDb();
-  const reservationStore = new KyselyReservationStore(db);
+  const reservationStore = new KyselyReservationStore(db, ttlMs);
 
   const cleanup = async () => {
     await baseDb.destroy();
@@ -194,6 +196,7 @@ const DEFAULT_UPLOAD_OPTIONS: ReserveAttachmentOptions = {
 
 export async function createTestDirectUpload(
   options: ReserveAttachmentOptions = DEFAULT_UPLOAD_OPTIONS,
+  ttlMs?: number,
 ): Promise<{
   upload: DirectAttachmentUpload;
   reservationId: string;
@@ -205,7 +208,7 @@ export async function createTestDirectUpload(
 }> {
   const { baseDb, db } = await createTestDb();
   const storagePath = await mkdtemp(join(tmpdir(), "upload-test-"));
-  const reservationStore = new KyselyReservationStore(db);
+  const reservationStore = new KyselyReservationStore(db, ttlMs);
   const transport = createMockTransport();
   const store = new KyselyAttachmentStore(db, transport, storagePath);
   const reservation = await reservationStore.create(options);

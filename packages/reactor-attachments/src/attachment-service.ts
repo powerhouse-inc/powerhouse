@@ -1,7 +1,7 @@
 import type { AttachmentRef } from "@powerhousedao/reactor";
 import type {
+  IAttachmentReader,
   IAttachmentService,
-  IAttachmentStore,
   IAttachmentUpload,
   IAttachmentUploadFactory,
   IReservationStore,
@@ -15,7 +15,7 @@ import { parseRef } from "./ref.js";
 
 export class AttachmentService implements IAttachmentService {
   constructor(
-    private readonly store: IAttachmentStore,
+    private readonly store: IAttachmentReader,
     private readonly reservations: IReservationStore,
     private readonly uploadFactory: IAttachmentUploadFactory,
   ) {}

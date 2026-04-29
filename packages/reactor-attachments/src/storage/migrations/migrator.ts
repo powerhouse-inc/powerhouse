@@ -3,6 +3,7 @@ import type { MigrationProvider, Kysely } from "kysely";
 
 import * as migration001 from "./001_create_attachment_table.js";
 import * as migration002 from "./002_create_reservation_table.js";
+import * as migration003 from "./003_add_reservation_expires_at.js";
 
 export const ATTACHMENT_SCHEMA = "attachments";
 
@@ -15,6 +16,7 @@ export interface MigrationResult {
 const migrations = {
   "001_create_attachment_table": migration001,
   "002_create_reservation_table": migration002,
+  "003_add_reservation_expires_at": migration003,
 };
 
 class ProgrammaticMigrationProvider implements MigrationProvider {

@@ -35,7 +35,8 @@
       "Bash(gh pr:*)",
       "Bash(gh run:*)",
       "Bash(git stash:*)",
-      "mcp__hotseat"
+      "mcp__hotseat",
+      "Bash(NODE_OPTIONS=--max-old-space-size=8192 npx eslint --config eslint.config.js --quiet --no-warn-ignored packages/reactor-attachments)"
     ],
     "deny": [],
     "ask": []

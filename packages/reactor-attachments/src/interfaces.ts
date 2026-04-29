@@ -68,12 +68,15 @@ export interface IAttachmentUpload {
 }
 
 /**
- * Reactor-facing interface for managing local attachment data.
- * The IAttachmentTransport calls put when it receives data from a remote.
- * The store notifies its configured transport when new data arrives,
- * forming a bidirectional store-transport pair.
+ * Read-only subset of IAttachmentStore.
+ *
+ * Adapters that cannot safely support the local-only write/GC surface
+ * (remote stores, forwarding caches) implement this narrow interface
+ * instead of stub-rejecting unsupported methods. Consumers that only
+ * need to query metadata or stream attachment bytes can take this type
+ * to make their dependency requirements explicit.
  */
-export interface IAttachmentStore {
+export interface IAttachmentReader {
   /**
    * Get attachment metadata without streaming body data.
    * Does NOT update lastAccessedAtUtc -- this is a metadata check,
@@ -82,13 +85,6 @@ export interface IAttachmentStore {
    * @throws AttachmentNotFound if the hash is unknown.
    */
   stat(hash: AttachmentHash): Promise<AttachmentHeader>;
-
-  /**
-   * Check whether attachment data is available locally.
-   * Returns true if the bytes can be served from this reactor's store
-   * without a transport round-trip. Does not trigger a remote fetch.
-   */
-  has(hash: AttachmentHash): Promise<boolean>;
 
   /**
    * Retrieve attachment header and data stream by hash.
@@ -103,6 +99,21 @@ export interface IAttachmentStore {
    *         record exists).
    */
   get(hash: AttachmentHash, signal?: AbortSignal): Promise<AttachmentResponse>;
+}
+
+/**
+ * Reactor-facing interface for managing local attachment data.
+ * The IAttachmentTransport calls put when it receives data from a remote.
+ * The store notifies its configured transport when new data arrives,
+ * forming a bidirectional store-transport pair.
+ */
+export interface IAttachmentStore extends IAttachmentReader {
+  /**
+   * Check whether attachment data is available locally.
+   * Returns true if the bytes can be served from this reactor's store
+   * without a transport round-trip. Does not trigger a remote fetch.
+   */
+  has(hash: AttachmentHash): Promise<boolean>;
 
   /**
    * Store attachment data received from a remote (during sync or re-fetch).
@@ -211,6 +222,15 @@ export interface IReservationStore {
   create(options: ReserveAttachmentOptions): Promise<Reservation>;
   get(reservationId: string): Promise<Reservation>;
   delete(reservationId: string): Promise<void>;
+
+  /**
+   * Delete reservations whose expires_at_utc is at or before `now`.
+   * Returns the number of rows deleted.
+   *
+   * Reservations are not auto-swept; consumers should call this on a
+   * cron / interval to clean up rows left behind by aborted uploads.
+   */
+  deleteExpired(now?: Date): Promise<number>;
 }
 
 /**

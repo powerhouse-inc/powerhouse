@@ -45,6 +45,18 @@ describe("KyselyReservationStore", () => {
       );
     });
 
+    it("sets expiresAtUtc in the future based on TTL", async () => {
+      const before = Date.now();
+      const reservation = await reservationStore.create(TEST_OPTIONS);
+      const after = Date.now();
+
+      const expiresMs = new Date(reservation.expiresAtUtc).getTime();
+      // Default TTL is 24h.
+      const ttlMs = 24 * 60 * 60 * 1000;
+      expect(expiresMs).toBeGreaterThanOrEqual(before + ttlMs);
+      expect(expiresMs).toBeLessThanOrEqual(after + ttlMs);
+    });
+
     it("produces different reservation IDs for same options", async () => {
       const r1 = await reservationStore.create(TEST_OPTIONS);
       const r2 = await reservationStore.create(TEST_OPTIONS);
@@ -87,6 +99,49 @@ describe("KyselyReservationStore", () => {
       await expect(
         reservationStore.delete("nonexistent"),
       ).resolves.toBeUndefined();
+    });
+  });
+
+  describe("get", () => {
+    it("round-trips expiresAtUtc", async () => {
+      const created = await reservationStore.create(TEST_OPTIONS);
+      const fetched = await reservationStore.get(created.reservationId);
+      expect(fetched.expiresAtUtc).toBe(created.expiresAtUtc);
+    });
+  });
+
+  describe("deleteExpired", () => {
+    it("removes rows whose expires_at_utc is at or before now", async () => {
+      const setup = await createTestReservationStore(0);
+      try {
+        await setup.reservationStore.create(TEST_OPTIONS);
+        await setup.reservationStore.create(TEST_OPTIONS);
+
+        const deleted = await setup.reservationStore.deleteExpired();
+        expect(deleted).toBe(2);
+
+        const remaining = await setup.db
+          .selectFrom("attachment_reservation")
+          .selectAll()
+          .execute();
+        expect(remaining).toHaveLength(0);
+      } finally {
+        await setup.cleanup();
+      }
+    });
+
+    it("leaves future reservations alone", async () => {
+      const created = await reservationStore.create(TEST_OPTIONS);
+      const deleted = await reservationStore.deleteExpired();
+      expect(deleted).toBe(0);
+
+      const fetched = await reservationStore.get(created.reservationId);
+      expect(fetched.reservationId).toBe(created.reservationId);
+    });
+
+    it("returns 0 when nothing is expired", async () => {
+      const deleted = await reservationStore.deleteExpired();
+      expect(deleted).toBe(0);
     });
   });
 });

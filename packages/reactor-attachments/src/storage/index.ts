@@ -1,5 +1,8 @@
 export { KyselyAttachmentStore } from "./kysely/attachment-store.js";
-export { KyselyReservationStore } from "./kysely/reservation-store.js";
+export {
+  KyselyReservationStore,
+  DEFAULT_RESERVATION_TTL_MS,
+} from "./kysely/reservation-store.js";
 export type {
   AttachmentDatabase,
   AttachmentRow,

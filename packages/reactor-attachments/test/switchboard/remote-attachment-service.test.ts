@@ -84,8 +84,11 @@ describe("RemoteReservationStore", () => {
     });
 
     expect(reservation.extension).toBeNull();
-    const callArgs = mockFetch.mock.calls[0];
-    expect(JSON.parse(callArgs[1].body as string).extension).toBeNull();
+    const callArgs = mockFetch.mock.calls[0] as [string, RequestInit];
+    const sentBody = JSON.parse(callArgs[1].body as string) as {
+      extension: string | null;
+    };
+    expect(sentBody.extension).toBeNull();
   });
 
   it("sends Authorization header when jwtHandler returns token", async () => {
@@ -106,7 +109,7 @@ describe("RemoteReservationStore", () => {
       expect.objectContaining({
         headers: expect.objectContaining({
           Authorization: "Bearer jwt-token",
-        }),
+        }) as object,
       }),
     );
   });
@@ -260,6 +263,75 @@ describe("RemoteAttachmentStore", () => {
     expect(result.header.extension).toBeNull();
   });
 
+  it("get throws when X-Attachment-Metadata absent and Content-Length missing", async () => {
+    mockFetch.mockResolvedValue(
+      mockResponse(200, {
+        body: streamFromString("data"),
+        headers: {
+          "Content-Type": "image/png",
+        },
+      }),
+    );
+    await expect(store.get("hash-3")).rejects.toThrow(/Content-Length/);
+  });
+
+  it("get throws when Content-Length is not a number", async () => {
+    mockFetch.mockResolvedValue(
+      mockResponse(200, {
+        body: streamFromString("data"),
+        headers: {
+          "Content-Type": "image/png",
+          "Content-Length": "abc",
+        },
+      }),
+    );
+    await expect(store.get("hash-4")).rejects.toThrow(/Content-Length/);
+  });
+
+  it("get throws when Content-Length is negative", async () => {
+    mockFetch.mockResolvedValue(
+      mockResponse(200, {
+        body: streamFromString("data"),
+        headers: {
+          "Content-Type": "image/png",
+          "Content-Length": "-1",
+        },
+      }),
+    );
+    await expect(store.get("hash-5")).rejects.toThrow(/Content-Length/);
+  });
+
+  it("get throws when Content-Length is a non-integer float", async () => {
+    mockFetch.mockResolvedValue(
+      mockResponse(200, {
+        body: streamFromString("data"),
+        headers: {
+          "Content-Type": "image/png",
+          "Content-Length": "1.5",
+        },
+      }),
+    );
+    await expect(store.get("hash-6")).rejects.toThrow(/Content-Length/);
+  });
+
+  it("get falls back to Content-Type fallback when X-Attachment-Metadata is malformed JSON", async () => {
+    mockFetch.mockResolvedValue(
+      mockResponse(200, {
+        body: streamFromString("data"),
+        headers: {
+          "X-Attachment-Metadata": "not json",
+          "Content-Type": "image/png",
+          "Content-Length": "256",
+        },
+      }),
+    );
+    const result = await store.get("hash-7");
+    expect(result.header.mimeType).toBe("image/png");
+    expect(result.header.fileName).toBe("unknown");
+    expect(result.header.sizeBytes).toBe(256);
+    expect(result.header.extension).toBeNull();
+  });
+
   it("get throws AttachmentNotFound on 404", async () => {
     mockFetch.mockResolvedValue(mockResponse(404));
     await expect(store.get("missing")).rejects.toBeInstanceOf(
@@ -298,25 +370,6 @@ describe("RemoteAttachmentStore", () => {
       expect.any(String),
       expect.objectContaining({ signal: controller.signal }),
     );
-  });
-
-  it("stat / has / put / evict / storageUsed throw not supported", async () => {
-    await expect(store.stat("hash")).rejects.toThrow(/not supported/);
-    await expect(store.has("hash")).rejects.toThrow(/not supported/);
-    await expect(
-      store.put(
-        "hash",
-        {
-          mimeType: "text/plain",
-          fileName: "x",
-          sizeBytes: 0,
-          extension: null,
-        },
-        streamFromString(""),
-      ),
-    ).rejects.toThrow(/not supported/);
-    await expect(store.evict("hash")).rejects.toThrow(/not supported/);
-    await expect(store.storageUsed()).rejects.toThrow(/not supported/);
   });
 
   it("uses streamToBytes consumer round-trip", async () => {

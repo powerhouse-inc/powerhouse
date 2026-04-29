@@ -8,9 +8,7 @@ export type NodeHandler = (
 
 /**
  * Wrap a Node-style handler so that, when `authService` is provided and auth is
- * enabled, the request must carry a verifiable Bearer token. AuthService skips
- * token verification for GET/OPTIONS, so we synthesize the verification call
- * with method=POST to force the verify path on every request.
+ * enabled, the request must carry a verifiable Bearer token.
  */
 export function requireAuth(
   authService: AuthService | undefined,
@@ -19,14 +17,15 @@ export function requireAuth(
   if (!authService) return handler;
 
   return async (req, res) => {
-    const authorization = req.headers.authorization ?? "";
-    const url = `http://internal${req.url ?? "/"}`;
-    const synthetic = new Request(url, {
-      method: "POST",
-      headers: authorization ? { authorization } : {},
-    });
-
-    const result = await authService.authenticateRequest(synthetic);
+    let result;
+    try {
+      result = await authService.verifyBearer(req.headers.authorization);
+    } catch {
+      res.statusCode = 500;
+      res.setHeader("Content-Type", "application/json");
+      res.end(JSON.stringify({ error: "Internal authentication error" }));
+      return;
+    }
 
     if (result instanceof Response) {
       const body = await result.text();

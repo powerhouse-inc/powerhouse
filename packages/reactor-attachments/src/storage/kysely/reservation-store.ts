@@ -5,6 +5,8 @@ import type { Reservation, ReserveAttachmentOptions } from "../../types.js";
 import { ReservationNotFound } from "../../errors.js";
 import type { AttachmentDatabase, ReservationRow } from "./types.js";
 
+export const DEFAULT_RESERVATION_TTL_MS = 24 * 60 * 60 * 1000;
+
 function rowToReservation(row: ReservationRow): Reservation {
   return {
     reservationId: row.reservation_id,
@@ -12,15 +14,25 @@ function rowToReservation(row: ReservationRow): Reservation {
     fileName: row.file_name,
     extension: row.extension,
     createdAtUtc: row.created_at_utc,
+    expiresAtUtc: row.expires_at_utc,
   };
 }
 
 export class KyselyReservationStore implements IReservationStore {
-  constructor(private readonly db: Kysely<AttachmentDatabase>) {}
+  private readonly ttlMs: number;
+
+  constructor(
+    private readonly db: Kysely<AttachmentDatabase>,
+    ttlMs: number = DEFAULT_RESERVATION_TTL_MS,
+  ) {
+    this.ttlMs = ttlMs;
+  }
 
   async create(options: ReserveAttachmentOptions): Promise<Reservation> {
     const reservationId = randomUUID();
-    const now = new Date().toISOString();
+    const nowMs = Date.now();
+    const now = new Date(nowMs).toISOString();
+    const expiresAt = new Date(nowMs + this.ttlMs).toISOString();
 
     const row = await this.db
       .insertInto("attachment_reservation")
@@ -30,6 +42,7 @@ export class KyselyReservationStore implements IReservationStore {
         file_name: options.fileName,
         extension: options.extension ?? null,
         created_at_utc: now,
+        expires_at_utc: expiresAt,
       })
       .returningAll()
       .executeTakeFirstOrThrow();
@@ -56,5 +69,14 @@ export class KyselyReservationStore implements IReservationStore {
       .deleteFrom("attachment_reservation")
       .where("reservation_id", "=", reservationId)
       .execute();
+  }
+
+  async deleteExpired(now: Date = new Date()): Promise<number> {
+    const result = await this.db
+      .deleteFrom("attachment_reservation")
+      .where("expires_at_utc", "<=", now.toISOString())
+      .executeTakeFirst();
+
+    return Number(result.numDeletedRows ?? 0);
   }
 }

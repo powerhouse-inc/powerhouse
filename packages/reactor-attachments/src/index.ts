@@ -2,8 +2,10 @@ export {
   AttachmentNotFound,
   InvalidAttachmentRef,
   ReservationNotFound,
+  UploadTooLarge,
 } from "./errors.js";
 export type {
+  IAttachmentReader,
   IAttachmentService,
   IAttachmentStore,
   IAttachmentTransport,
@@ -27,7 +29,10 @@ export { AttachmentService } from "./attachment-service.js";
 export { parseRef, createRef } from "./ref.js";
 export type { ParsedRef } from "./ref.js";
 export { KyselyAttachmentStore } from "./storage/index.js";
-export { KyselyReservationStore } from "./storage/index.js";
+export {
+  KyselyReservationStore,
+  DEFAULT_RESERVATION_TTL_MS,
+} from "./storage/index.js";
 export { runAttachmentMigrations, ATTACHMENT_SCHEMA } from "./storage/index.js";
 export type { AttachmentDatabase } from "./storage/index.js";
 export {

@@ -9,6 +9,7 @@ const TEST_METADATA = {
   fileName: "invoice",
   sizeBytes: 1024,
   extension: "pdf",
+  createdAtUtc: "2020-01-15T12:34:56.000Z",
 };
 
 function mockResponse(
@@ -161,6 +162,196 @@ describe("SwitchboardAttachmentTransport", () => {
         sizeBytes: 512,
         extension: null,
       });
+    });
+
+    it("falls back to Content-Type when X-Attachment-Metadata is malformed JSON", async () => {
+      mockFetch.mockResolvedValue(
+        mockResponse(200, {
+          body: streamFromString("data"),
+          headers: {
+            "X-Attachment-Metadata": "not json",
+            "Content-Type": "image/png",
+            "Content-Length": "512",
+          },
+        }),
+      );
+
+      const result = await transport.fetch(TEST_HASH);
+
+      expect(result!.metadata).toEqual({
+        mimeType: "image/png",
+        fileName: "unknown",
+        sizeBytes: 512,
+        extension: null,
+      });
+    });
+
+    it("normalizes missing extension field to null", async () => {
+      mockFetch.mockResolvedValue(
+        mockResponse(200, {
+          body: streamFromString("data"),
+          headers: {
+            "X-Attachment-Metadata": JSON.stringify({
+              mimeType: "application/pdf",
+              fileName: "invoice",
+              sizeBytes: 1024,
+            }),
+          },
+        }),
+      );
+
+      const result = await transport.fetch(TEST_HASH);
+
+      expect(result!.metadata).toEqual({
+        mimeType: "application/pdf",
+        fileName: "invoice",
+        sizeBytes: 1024,
+        extension: null,
+      });
+      expect(result!.metadata.extension).toBeNull();
+    });
+
+    it("falls back when X-Attachment-Metadata has wrong-type field", async () => {
+      mockFetch.mockResolvedValue(
+        mockResponse(200, {
+          body: streamFromString("data"),
+          headers: {
+            "X-Attachment-Metadata": JSON.stringify({
+              mimeType: "application/pdf",
+              fileName: "invoice",
+              sizeBytes: "1024",
+              extension: "pdf",
+            }),
+            "Content-Type": "image/png",
+            "Content-Length": "512",
+          },
+        }),
+      );
+
+      const result = await transport.fetch(TEST_HASH);
+
+      expect(result!.metadata).toEqual({
+        mimeType: "image/png",
+        fileName: "unknown",
+        sizeBytes: 512,
+        extension: null,
+      });
+    });
+
+    it("falls back when X-Attachment-Metadata is missing required field", async () => {
+      mockFetch.mockResolvedValue(
+        mockResponse(200, {
+          body: streamFromString("data"),
+          headers: {
+            "X-Attachment-Metadata": JSON.stringify({
+              mimeType: "application/pdf",
+              sizeBytes: 1024,
+              extension: "pdf",
+            }),
+            "Content-Type": "image/png",
+            "Content-Length": "512",
+          },
+        }),
+      );
+
+      const result = await transport.fetch(TEST_HASH);
+
+      expect(result!.metadata).toEqual({
+        mimeType: "image/png",
+        fileName: "unknown",
+        sizeBytes: 512,
+        extension: null,
+      });
+    });
+
+    it("falls back when sizeBytes is negative", async () => {
+      mockFetch.mockResolvedValue(
+        mockResponse(200, {
+          body: streamFromString("data"),
+          headers: {
+            "X-Attachment-Metadata": JSON.stringify({
+              mimeType: "application/pdf",
+              fileName: "invoice",
+              sizeBytes: -1,
+              extension: "pdf",
+            }),
+            "Content-Type": "image/png",
+            "Content-Length": "512",
+          },
+        }),
+      );
+
+      const result = await transport.fetch(TEST_HASH);
+
+      expect(result!.metadata).toEqual({
+        mimeType: "image/png",
+        fileName: "unknown",
+        sizeBytes: 512,
+        extension: null,
+      });
+    });
+
+    it("throws when X-Attachment-Metadata absent and Content-Length missing", async () => {
+      mockFetch.mockResolvedValue(
+        mockResponse(200, {
+          body: streamFromString("data"),
+          headers: {
+            "Content-Type": "image/png",
+          },
+        }),
+      );
+
+      await expect(transport.fetch(TEST_HASH)).rejects.toThrow(
+        /Content-Length/,
+      );
+    });
+
+    it("throws when Content-Length is not a number", async () => {
+      mockFetch.mockResolvedValue(
+        mockResponse(200, {
+          body: streamFromString("data"),
+          headers: {
+            "Content-Type": "image/png",
+            "Content-Length": "abc",
+          },
+        }),
+      );
+
+      await expect(transport.fetch(TEST_HASH)).rejects.toThrow(
+        /Content-Length/,
+      );
+    });
+
+    it("throws when Content-Length is negative", async () => {
+      mockFetch.mockResolvedValue(
+        mockResponse(200, {
+          body: streamFromString("data"),
+          headers: {
+            "Content-Type": "image/png",
+            "Content-Length": "-1",
+          },
+        }),
+      );
+
+      await expect(transport.fetch(TEST_HASH)).rejects.toThrow(
+        /Content-Length/,
+      );
+    });
+
+    it("throws when Content-Length is a non-integer float", async () => {
+      mockFetch.mockResolvedValue(
+        mockResponse(200, {
+          body: streamFromString("data"),
+          headers: {
+            "Content-Type": "image/png",
+            "Content-Length": "1.5",
+          },
+        }),
+      );
+
+      await expect(transport.fetch(TEST_HASH)).rejects.toThrow(
+        /Content-Length/,
+      );
     });
   });
 

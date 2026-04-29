@@ -18,11 +18,13 @@ import {
 const TEST_CONTENT = "hello attachment world";
 const TEST_BYTES = new TextEncoder().encode(TEST_CONTENT);
 const TEST_HASH = computeHash(TEST_BYTES);
+const TEST_CREATED_AT = "2020-01-15T12:34:56.000Z";
 const TEST_METADATA = {
   mimeType: "text/plain",
   fileName: "test.txt",
   sizeBytes: TEST_BYTES.byteLength,
   extension: ".txt",
+  createdAtUtc: TEST_CREATED_AT,
 };
 
 describe("KyselyAttachmentStore", () => {
@@ -116,6 +118,18 @@ describe("KyselyAttachmentStore", () => {
       expect(row!.status).toBe("available");
     });
 
+    it("preserves createdAtUtc from metadata instead of synthesizing now", async () => {
+      await store.put(TEST_HASH, TEST_METADATA, streamFromString(TEST_CONTENT));
+
+      const row = await db
+        .selectFrom("attachment")
+        .select("created_at_utc")
+        .where("hash", "=", TEST_HASH)
+        .executeTakeFirst();
+
+      expect(row!.created_at_utc).toBe(TEST_CREATED_AT);
+    });
+
     it("concurrent puts for same hash do not error", async () => {
       await Promise.all([
         store.put(TEST_HASH, TEST_METADATA, streamFromString(TEST_CONTENT)),
@@ -136,6 +150,7 @@ describe("KyselyAttachmentStore", () => {
       expect(response.header.mimeType).toBe("text/plain");
       expect(response.header.fileName).toBe("test.txt");
       expect(response.header.status).toBe("available");
+      expect(response.header.createdAtUtc).toBe(TEST_CREATED_AT);
     });
 
     it("body stream contains correct bytes", async () => {
@@ -298,6 +313,34 @@ describe("KyselyAttachmentStore", () => {
         .executeTakeFirst();
       expect(rowAfter!.status).toBe("evicted");
     });
+
+    it("releases active reader when consumer cancels the body stream", async () => {
+      await store.put(TEST_HASH, TEST_METADATA, streamFromString(TEST_CONTENT));
+
+      const response = await store.get(TEST_HASH);
+
+      // Reader is active — eviction is blocked.
+      await store.evict(TEST_HASH);
+      const blockedRow = await db
+        .selectFrom("attachment")
+        .selectAll()
+        .where("hash", "=", TEST_HASH)
+        .executeTakeFirst();
+      expect(blockedRow!.status).toBe("available");
+
+      // Simulate client disconnect mid-download: cancel the wrapped stream.
+      // wrapStreamWithCleanup.cancel() must run cleanup → release the reader.
+      await response.body.cancel();
+
+      // Reader count should now be 0; eviction succeeds.
+      await store.evict(TEST_HASH);
+      const evictedRow = await db
+        .selectFrom("attachment")
+        .selectAll()
+        .where("hash", "=", TEST_HASH)
+        .executeTakeFirst();
+      expect(evictedRow!.status).toBe("evicted");
+    });
   });
 
   describe("storageUsed", () => {
@@ -314,6 +357,7 @@ describe("KyselyAttachmentStore", () => {
         fileName: "second.txt",
         sizeBytes: bytes2.byteLength,
         extension: ".txt",
+        createdAtUtc: "2020-01-15T12:34:56.000Z",
       };
 
       await store.put(TEST_HASH, TEST_METADATA, streamFromString(TEST_CONTENT));
@@ -333,6 +377,7 @@ describe("KyselyAttachmentStore", () => {
         fileName: "second.txt",
         sizeBytes: bytes2.byteLength,
         extension: ".txt",
+        createdAtUtc: "2020-01-15T12:34:56.000Z",
       };
 
       await store.put(TEST_HASH, TEST_METADATA, streamFromString(TEST_CONTENT));

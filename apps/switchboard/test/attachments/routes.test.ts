@@ -12,9 +12,12 @@ import { join } from "node:path";
 import { Readable, Writable } from "node:stream";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
+  buildContentDisposition,
   makeDownloadHandler,
   makeReserveHandler,
   makeUploadHandler,
+  parseReserveOptions,
+  quoteFilename,
 } from "../../src/attachments/routes.js";
 
 type CapturedRes = ServerResponse & {
@@ -50,11 +53,9 @@ function makeRes(): CapturedRes {
   const chunks: Buffer[] = [];
   const headers: Record<string, string> = {};
   const writable = new Writable({
-    write(chunk, _encoding, callback) {
+    write(chunk: string | Buffer, _encoding, callback) {
       chunks.push(
-        typeof chunk === "string"
-          ? Buffer.from(chunk, "utf8")
-          : Buffer.from(chunk),
+        typeof chunk === "string" ? Buffer.from(chunk, "utf8") : chunk,
       );
       callback();
     },
@@ -116,7 +117,9 @@ describe("attachment routes", () => {
     await handler(req, res);
     await waitFor(res);
     expect(res.statusCode).toBe(201);
-    const body = JSON.parse(res._body.toString("utf8"));
+    const body = JSON.parse(res._body.toString("utf8")) as {
+      reservationId: string;
+    };
     expect(body.reservationId).toMatch(/.+/);
   });
 
@@ -206,7 +209,7 @@ describe("attachment routes", () => {
     expect(downloadRes.getHeader("content-disposition")).toContain("hello.txt");
     const meta = JSON.parse(
       downloadRes.getHeader("x-attachment-metadata") as string,
-    );
+    ) as { fileName: string; mimeType: string; sizeBytes: number };
     expect(meta.fileName).toBe("hello.txt");
     expect(meta.mimeType).toBe("text/plain");
     expect(meta.sizeBytes).toBe(payload.length);
@@ -234,6 +237,72 @@ describe("attachment routes", () => {
     await handler(req, res);
     await waitFor(res);
     expect(res.statusCode).toBe(400);
+  });
+
+  it("GET download returns 400 for uppercase hash", async () => {
+    const handler = makeDownloadHandler(attachments);
+    const req = makeReq({
+      method: "GET",
+      params: { hash: "A".repeat(64) },
+    });
+    const res = makeRes();
+    await handler(req, res);
+    await waitFor(res);
+    expect(res.statusCode).toBe(400);
+    expect(JSON.parse(res._body.toString("utf8"))).toEqual({
+      error: "Invalid attachment hash",
+    });
+  });
+
+  it("PUT upload returns opaque 500 when reservation lookup throws an unmapped error", async () => {
+    const secret = "INTERNAL_DB_PATH=/var/secret/db.sock";
+    const originalGet = attachments.reservations.get.bind(
+      attachments.reservations,
+    );
+    attachments.reservations.get = () => {
+      throw new Error(secret);
+    };
+    try {
+      const handler = makeUploadHandler(attachments);
+      const req = makeReq({
+        method: "PUT",
+        params: { reservationId: "00000000-0000-0000-0000-000000000000" },
+        body: "hello",
+      });
+      const res = makeRes();
+      await handler(req, res);
+      await waitFor(res);
+      expect(res.statusCode).toBe(500);
+      const bodyText = res._body.toString("utf8");
+      expect(JSON.parse(bodyText)).toEqual({ error: "Internal error" });
+      expect(bodyText).not.toContain(secret);
+    } finally {
+      attachments.reservations.get = originalGet;
+    }
+  });
+
+  it("GET download returns opaque 500 when store throws an unmapped error", async () => {
+    const secret = "INTERNAL_FS_PATH=/var/secret/blobs";
+    const originalGet = attachments.store.get.bind(attachments.store);
+    attachments.store.get = () => {
+      throw new Error(secret);
+    };
+    try {
+      const handler = makeDownloadHandler(attachments);
+      const req = makeReq({
+        method: "GET",
+        params: { hash: "a".repeat(64) },
+      });
+      const res = makeRes();
+      await handler(req, res);
+      await waitFor(res);
+      expect(res.statusCode).toBe(500);
+      const bodyText = res._body.toString("utf8");
+      expect(JSON.parse(bodyText)).toEqual({ error: "Internal error" });
+      expect(bodyText).not.toContain(secret);
+    } finally {
+      attachments.store.get = originalGet;
+    }
   });
 
   it("identical uploads dedupe to the same hash", async () => {
@@ -267,5 +336,166 @@ describe("attachment routes", () => {
     const h1 = await doRoundTrip();
     const h2 = await doRoundTrip();
     expect(h1).toBe(h2);
+  });
+
+  describe("validation and header encoding", () => {
+    it("parseReserveOptions rejects fileName with CR/LF", () => {
+      expect(
+        parseReserveOptions({
+          mimeType: "text/plain",
+          fileName: "evil\r\nX-Inj: foo",
+        }),
+      ).toBeNull();
+    });
+
+    it("parseReserveOptions rejects fileName with NUL", () => {
+      expect(
+        parseReserveOptions({
+          mimeType: "text/plain",
+          fileName: "a\x00b",
+        }),
+      ).toBeNull();
+    });
+
+    it("parseReserveOptions rejects oversized fileName", () => {
+      expect(
+        parseReserveOptions({
+          mimeType: "text/plain",
+          fileName: "x".repeat(256),
+        }),
+      ).toBeNull();
+    });
+
+    it("parseReserveOptions rejects empty fileName", () => {
+      expect(
+        parseReserveOptions({
+          mimeType: "text/plain",
+          fileName: "",
+        }),
+      ).toBeNull();
+    });
+
+    it("parseReserveOptions rejects malformed mimeType", () => {
+      for (const mimeType of ["", "plain", "text/plain\r\nX: y", "text/"]) {
+        expect(
+          parseReserveOptions({ mimeType, fileName: "ok.txt" }),
+        ).toBeNull();
+      }
+    });
+
+    it("parseReserveOptions accepts non-ASCII fileName", () => {
+      const opts = parseReserveOptions({
+        mimeType: "application/pdf",
+        fileName: "résumé.pdf",
+      });
+      expect(opts).toEqual({
+        mimeType: "application/pdf",
+        fileName: "résumé.pdf",
+        extension: null,
+      });
+    });
+
+    it("parseReserveOptions accepts mimeType with parameters", () => {
+      const opts = parseReserveOptions({
+        mimeType: "text/plain; charset=utf-8",
+        fileName: "ok.txt",
+      });
+      expect(opts?.mimeType).toBe("text/plain; charset=utf-8");
+    });
+
+    it("quoteFilename escapes backslash and double-quote", () => {
+      expect(quoteFilename(`a"b\\c`)).toBe(`"a\\"b\\\\c"`);
+    });
+
+    it("buildContentDisposition emits ASCII fallback and RFC 5987 form for non-ASCII", () => {
+      const value = buildContentDisposition("résumé.pdf");
+      expect(value).toMatch(
+        /^attachment; filename="[^"]*\.pdf"; filename\*=UTF-8''/,
+      );
+      expect(value).toContain("filename*=UTF-8''r%C3%A9sum%C3%A9.pdf");
+    });
+
+    it("buildContentDisposition produces a header Node accepts even for CR/LF/NUL input", () => {
+      const res = makeRes();
+      for (const fileName of [
+        "evil\r\nX-Inj: foo",
+        "a\x00b.txt",
+        "name\twith\ttabs",
+      ]) {
+        expect(() =>
+          res.setHeader(
+            "Content-Disposition",
+            buildContentDisposition(fileName),
+          ),
+        ).not.toThrow();
+      }
+    });
+
+    it("buildContentDisposition encodes RFC-5987-reserved chars in the encoded form", () => {
+      const value = buildContentDisposition("a'b(c)*!.txt");
+      expect(value).toContain("filename*=UTF-8''a%27b%28c%29%2A%21.txt");
+    });
+
+    it("POST reserve with CRLF in fileName returns 400 and persists no row", async () => {
+      const handler = makeReserveHandler(attachments);
+      const req = makeReq({
+        method: "POST",
+        body: JSON.stringify({
+          mimeType: "text/plain",
+          fileName: "evil\r\nX-Inj: foo",
+        }),
+      });
+      const res = makeRes();
+      await handler(req, res);
+      await waitFor(res);
+      expect(res.statusCode).toBe(400);
+    });
+
+    it("download with non-ASCII fileName produces RFC 6266 Content-Disposition", async () => {
+      const reserveHandler = makeReserveHandler(attachments);
+      const uploadHandler = makeUploadHandler(attachments);
+      const downloadHandler = makeDownloadHandler(attachments);
+
+      const reserveReq = makeReq({
+        method: "POST",
+        body: JSON.stringify({
+          mimeType: "application/pdf",
+          fileName: "résumé.pdf",
+        }),
+      });
+      const reserveRes = makeRes();
+      await reserveHandler(reserveReq, reserveRes);
+      await waitFor(reserveRes);
+      expect(reserveRes.statusCode).toBe(201);
+      const { reservationId } = JSON.parse(
+        reserveRes._body.toString("utf8"),
+      ) as { reservationId: string };
+
+      const uploadReq = makeReq({
+        method: "PUT",
+        params: { reservationId },
+        body: "pdf-bytes",
+      });
+      const uploadRes = makeRes();
+      await uploadHandler(uploadReq, uploadRes);
+      await waitFor(uploadRes);
+      expect(uploadRes.statusCode).toBe(200);
+      const { hash } = JSON.parse(uploadRes._body.toString("utf8")) as {
+        hash: string;
+      };
+
+      const downloadReq = makeReq({ method: "GET", params: { hash } });
+      const downloadRes = makeRes();
+      await downloadHandler(downloadReq, downloadRes);
+      await waitFor(downloadRes);
+      expect(downloadRes.statusCode).toBe(200);
+      const cd = downloadRes.getHeader("content-disposition") as string;
+      expect(cd).toContain("filename*=UTF-8''r%C3%A9sum%C3%A9.pdf");
+      expect(cd).toMatch(/filename="[^"]*\.pdf"/);
+      const meta = JSON.parse(
+        downloadRes.getHeader("x-attachment-metadata") as string,
+      ) as { fileName: string };
+      expect(meta.fileName).toBe("résumé.pdf");
+    });
   });
 });

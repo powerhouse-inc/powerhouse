@@ -34,6 +34,7 @@ describe("KyselyAttachmentStore integration", () => {
       fileName: "lifecycle.txt",
       sizeBytes: bytes.byteLength,
       extension: ".txt",
+      createdAtUtc: "2020-01-15T12:34:56.000Z",
     };
 
     // put
@@ -86,6 +87,7 @@ describe("KyselyAttachmentStore integration", () => {
         fileName: item.fileName,
         sizeBytes: bytes.byteLength,
         extension: ".txt",
+        createdAtUtc: "2020-01-15T12:34:56.000Z",
       };
       await store.put(hash, metadata, streamFromString(item.content));
       expectedTotal += bytes.byteLength;
@@ -103,6 +105,7 @@ describe("KyselyAttachmentStore integration", () => {
       fileName: "idem.txt",
       sizeBytes: bytes.byteLength,
       extension: ".txt",
+      createdAtUtc: "2020-01-15T12:34:56.000Z",
     };
 
     await store.put(hash, metadata, streamFromString(content));
@@ -127,6 +130,7 @@ describe("KyselyAttachmentStore integration", () => {
       fileName: "large.bin",
       sizeBytes: largeBytes.byteLength,
       extension: ".bin",
+      createdAtUtc: "2020-01-15T12:34:56.000Z",
     };
 
     await store.put(hash, metadata, streamFromBytes(largeBytes));

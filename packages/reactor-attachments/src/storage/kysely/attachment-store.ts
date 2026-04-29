@@ -181,7 +181,7 @@ export class KyselyAttachmentStore implements IAttachmentStore {
           status: "available",
           storage_path: relPath,
           source: "sync",
-          created_at_utc: now,
+          created_at_utc: metadata.createdAtUtc,
           last_accessed_at_utc: now,
         })
         .onConflict((oc) => oc.column("hash").doNothing())

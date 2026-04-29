@@ -47,7 +47,20 @@ export class AuthService {
         auth_enabled: true,
       };
     }
-    const token = request.headers.get("authorization")?.split(" ")[1];
+    return this.verifyBearer(request.headers.get("authorization") ?? undefined);
+  }
+
+  /**
+   * Verify a Bearer token regardless of HTTP method. Use this from non-GraphQL
+   * middleware that must enforce authentication on every request.
+   */
+  async verifyBearer(
+    authorization: string | undefined,
+  ): Promise<AuthContext | globalThis.Response> {
+    if (!this.config.enabled) {
+      return { user: undefined, admins: [], auth_enabled: false };
+    }
+    const token = authorization?.split(" ")[1];
     if (!token) {
       return {
         user: undefined,

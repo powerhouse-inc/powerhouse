@@ -24,6 +24,7 @@ export type AttachmentBuildResult = {
 export class AttachmentBuilder {
   private transport: IAttachmentTransport = new NullAttachmentTransport();
   private customUploadFactory?: IAttachmentUploadFactory;
+  private maxUploadBytes?: number;
 
   constructor(
     private readonly db: Kysely<any>,
@@ -37,6 +38,11 @@ export class AttachmentBuilder {
 
   withUploadFactory(factory: IAttachmentUploadFactory): this {
     this.customUploadFactory = factory;
+    return this;
+  }
+
+  withMaxUploadBytes(maxBytes: number): this {
+    this.maxUploadBytes = maxBytes;
     return this;
   }
 
@@ -63,6 +69,7 @@ export class AttachmentBuilder {
         scopedDb,
         this.storagePath,
         reservations,
+        this.maxUploadBytes,
       );
 
     const service = new AttachmentService(store, reservations, uploadFactory);
