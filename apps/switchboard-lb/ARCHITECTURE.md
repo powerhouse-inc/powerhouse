@@ -171,8 +171,9 @@ local M = {}
 local ID_KEYS = {
   "identifier",          -- document, deleteDocument, doc-model queries
   "documentIdentifier",  -- mutateDocument{,Async}, renameDocument
-  "parentIdentifier",    -- addChildren, removeChildren, createDocument
-  "childIdentifier",     -- documentParents
+  "parentIdentifier",    -- createDocument, createEmptyDocument
+  "sourceIdentifier",    -- addRelationship, removeRelationship, documentOutgoingRelationships
+  "targetIdentifier",    -- addRelationship, removeRelationship, documentIncomingRelationships
   "docId",               -- every per-operation mutation on document models
 }
 
@@ -200,7 +201,7 @@ end
 return M
 ```
 
-This sketch shows the single-top-level-key shape only. The shipped `lua/route.lua` (M2) also walks nested paths (`filter.documentId`, `input.filter.documentId`), rejects multi-identifier batches (`identifiers[]`, cross-parent `moveChildren`, cross-channel `pushSyncEnvelopes`, multi-element `touchChannel`) with 409, and routes `pushSyncEnvelopes` on `envelopes[0].channelMeta.id`. See §4.3 for the key set and the precedence rule, §4.4 for multi-document policy, and §9 Q7/Q8 for rationale. The shipped module is the authority — when the spec and the code diverge, fix one or the other and note the decision here. Every module in `lua/` still fits on one screen.
+This sketch shows the single-top-level-key shape only. The shipped `lua/route.lua` (M2) also walks nested paths (`filter.documentId`, `input.filter.documentId`), rejects multi-identifier batches (`identifiers[]`, cross-parent `moveRelationship`, cross-channel `pushSyncEnvelopes`, multi-element `touchChannel`) with 409, and routes `pushSyncEnvelopes` on `envelopes[0].channelMeta.id`. See §4.3 for the key set and the precedence rule, §4.4 for multi-document policy, and §9 Q7/Q8 for rationale. The shipped module is the authority — when the spec and the code diverge, fix one or the other and note the decision here. Every module in `lua/` still fits on one screen.
 
 ### 4.3 Body inspection rules
 
@@ -209,20 +210,21 @@ This sketch shows the single-top-level-key shape only. The shipped `lua/route.lu
 3. Parse with `cjson.safe` — never the raising variant.
 4. Look for the owning identifier in `variables`. The documented key set, derived from the real subgraph resolvers:
 
-   | Key                                                | Operations                                                                                                                         |
-   | -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-   | `identifier`                                       | `document`, `deleteDocument`, all `<Model>.document` queries                                                                       |
-   | `identifiers` _(array)_                            | `deleteDocuments` — see §4.4                                                                                                       |
-   | `documentIdentifier`                               | `mutateDocument`, `mutateDocumentAsync`, `renameDocument`                                                                          |
-   | `parentIdentifier`                                 | `createDocument(parentIdentifier?)`, `createEmptyDocument(parentIdentifier?)`, `addChildren`, `removeChildren`, `documentChildren` |
-   | `childIdentifier`                                  | `documentParents`                                                                                                                  |
-   | `sourceParentIdentifier`, `targetParentIdentifier` | `moveChildren` — both present — see §4.4                                                                                           |
-   | `docId`                                            | every per-operation mutation generated for a document model (sync + async)                                                         |
-   | `filter.documentId` (nested)                       | `documentOperations` query                                                                                                         |
-   | `input.filter.documentId` (nested, list variant)   | `touchChannel`                                                                                                                     |
-   | `envelopes[0].channelMeta.id` (nested)             | `pushSyncEnvelopes` — route on this; supersedes the old operations-walk. See §4.4 and §9 Q7.                                       |
+   | Key                                                | Operations                                                                                                                                                                                                         |
+   | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+   | `identifier`                                       | `document`, `deleteDocument`, all `<Model>.document` queries                                                                                                                                                       |
+   | `identifiers` _(array)_                            | `deleteDocuments` — see §4.4                                                                                                                                                                                       |
+   | `documentIdentifier`                               | `mutateDocument`, `mutateDocumentAsync`, `renameDocument`                                                                                                                                                          |
+   | `parentIdentifier`                                 | `createDocument(parentIdentifier?)`, `createEmptyDocument(parentIdentifier?)`                                                                                                                                      |
+   | `sourceIdentifier`                                 | `addRelationship`, `removeRelationship`, `documentOutgoingRelationships`, `<Model>.documentOutgoingRelationships`                                                                                                  |
+   | `targetIdentifier`                                 | `addRelationship`, `removeRelationship`, `documentIncomingRelationships`, `<Model>.documentIncomingRelationships`, `moveRelationship` (also carries `sourceParentIdentifier`/`targetParentIdentifier` — see below) |
+   | `sourceParentIdentifier`, `targetParentIdentifier` | `moveRelationship` — both present — see §4.4                                                                                                                                                                       |
+   | `docId`                                            | every per-operation mutation generated for a document model (sync + async)                                                                                                                                         |
+   | `filter.documentId` (nested)                       | `documentOperations` query                                                                                                                                                                                         |
+   | `input.filter.documentId` (nested, list variant)   | `touchChannel`                                                                                                                                                                                                     |
+   | `envelopes[0].channelMeta.id` (nested)             | `pushSyncEnvelopes` — route on this; supersedes the old operations-walk. See §4.4 and §9 Q7.                                                                                                                       |
 
-5. **Precedence (top-level keys).** The five top-level identifier keys (`identifier`, `documentIdentifier`, `parentIdentifier`, `childIdentifier`, `docId`) are scanned **in that order**; the first non-empty string match wins and the rest are ignored. The current schema never produces a request with two of these keys set at once, so this rule is academic — but it's pinned here so it doesn't drift. The dedicated handlers for `envelopes` (pushSyncEnvelopes), `identifiers[]` (deleteDocuments), and `sourceParentIdentifier` / `targetParentIdentifier` (moveChildren) run **before** the top-level scan. If a future schema legitimately co-mingles top-level keys, switch to a 409-on-conflict policy here rather than silently picking one.
+5. **Precedence (top-level keys).** The six top-level identifier keys (`identifier`, `documentIdentifier`, `parentIdentifier`, `sourceIdentifier`, `targetIdentifier`, `docId`) are scanned **in that order**; the first non-empty string match wins and the rest are ignored. `addRelationship` and `removeRelationship` carry both `sourceIdentifier` and `targetIdentifier` — under this rule they pin on the source, which is the document the relationship is anchored from. The dedicated handlers for `envelopes` (pushSyncEnvelopes), `identifiers[]` (deleteDocuments), and `sourceParentIdentifier` / `targetParentIdentifier` (moveRelationship) run **before** the top-level scan. If a future schema legitimately co-mingles top-level keys in a way that violates the pin, switch to a 409-on-conflict policy here rather than silently picking one.
 6. If no identifier is found after all the rules in §4.3 step 5 and §4.4, return `409` with a message pointing at the documented key set. We **do not guess**.
 
 We explicitly do **not** run a GraphQL operation parser. The contract with clients is: the owning identifier appears in one of the documented `variables` keys above. We publish and version that contract.
@@ -232,7 +234,7 @@ We explicitly do **not** run a GraphQL operation parser. The contract with clien
 Several real mutations carry more than one document identifier. MVP policy is **reject with 409** whenever the correct single backend cannot be determined. Forwarding multi-id requests to any healthy backend is never acceptable — it silently violates the pinning invariant.
 
 - `deleteDocuments` — `variables.identifiers[]` array present → 409.
-- `moveChildren` — both parents present and equal → route on that value; both present and different → 409.
+- `moveRelationship` — both parents present and equal → route on that value; both present and different → 409.
 - `pushSyncEnvelopes` — route on `envelopes[0].channelMeta.id`; envelopes spanning multiple channels → 409.
 - `touchChannel` — `variables.input.filter.documentId` single element → route; list > 1 → 409.
 - Any request with no identifier after all rules run → 409.
@@ -388,7 +390,8 @@ Unresolved. Decide before the relevant milestone and record the decision here.
 
    **Decided (2026-04-21):** MVP policy is reject-with-409 whenever the correct single backend cannot be determined.
    - `deleteDocuments(identifiers: [ID!]!)` — non-empty `variables.identifiers` array → 409. Split-and-fan-out deferred.
-   - `moveChildren(sourceParentIdentifier, targetParentIdentifier, …)` — both parents present and equal → route on that value; both present and different → 409; only one present → route on it.
+   - `moveRelationship(sourceParentIdentifier, targetParentIdentifier, …)` — both parents present and equal → route on that value; both present and different → 409; only one present → route on it.
+   - `addRelationship` / `removeRelationship` — both `sourceIdentifier` and `targetIdentifier` are present; pin on `sourceIdentifier` per the §4.3 step 5 precedence rule. The two documents need not co-locate for a single mutation, but the source is the document the relationship is anchored from.
    - `pushSyncEnvelopes(envelopes: [...])` — reactor-to-reactor sync protocol. Route on `variables.envelopes[0].channelMeta.id`; if any envelope has a different `channelMeta.id`, return 409. Schema-verified 2026-04-21: `SyncEnvelopeInput.channelMeta: ChannelMetaInput!` and `ChannelMetaInput.id: String!` are both non-null (`packages/reactor-api/src/graphql/reactor/schema.graphql:325-332`), and every batch is produced by a single `GqlRequestChannel` stamping its own `channelId` on every envelope (`gql-req-channel.ts:785-843`) — all envelopes in one call share one `channelMeta.id` by construction.
 
    **Historical options considered** (none viable for MVP): (a) server-side split-and-merge — complex, deferred; (b) client pre-grouping — pushes complexity to every caller; (c) coordinator backend — hotspot; (d) federation-aware switchboard — no cross-Reactor coordinator exists today, so this option is impossible rather than undesirable.
