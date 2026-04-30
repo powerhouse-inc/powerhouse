@@ -17,7 +17,7 @@ import type { IConnectOptions } from "./types.js";
 import { devReactImportmapPlugin } from "./vite-plugins/dev-external-react.js";
 import { connectFaviconPlugin } from "./vite-plugins/favicon.js";
 import { phBundledPackagesPlugin } from "./vite-plugins/ph-bundled-packages.js";
-import { phPackagesPlugin } from "./vite-plugins/ph-packages.js";
+import { phConfigPlugin } from "./vite-plugins/ph-config.js";
 
 const REACT_VERSION = "19.2.0";
 
@@ -312,10 +312,10 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
       exclude: ["@electric-sql/pglite", "@electric-sql/pglite-tools"],
     },
     plugins: [
-      // phPackagesPlugin must be registered before tailwind so its hotUpdate
+      // phConfigPlugin must be registered before tailwind so its hotUpdate
       // hook runs first and can suppress HMR updates for codegen-generated
       // files, preventing tailwind from triggering full page reloads.
-      phPackagesPlugin({
+      phConfigPlugin({
         packages: phPackages,
         projectRoot: options.dirname,
         registryUrl: phPackageRegistryUrl,

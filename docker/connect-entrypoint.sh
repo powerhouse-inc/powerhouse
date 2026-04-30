@@ -9,22 +9,11 @@ JSON_FILE="/var/www/html/project/ph-packages.json"
 # ph-packages.json (set at build time via PH_CONNECT_PACKAGES_REGISTRY).
 RUNTIME_URL="${PH_PACKAGE_REGISTRY_URL:-${PH_REGISTRY_URL:-}}"
 
-# Merge runtime overrides into ph-packages.json — never overwrite, so
-# build-baked fields (localPackage, registryUrl when not overridden) survive.
-if [ -n "$PH_REGISTRY_PACKAGES" ] || [ -n "$RUNTIME_URL" ]; then
-  [ -f "$JSON_FILE" ] || echo '{"packages":[],"localPackage":null,"registryUrl":null}' > "$JSON_FILE"
-
-  JQ_EXPR='.'
-  [ -n "$PH_REGISTRY_PACKAGES" ] && JQ_EXPR="${JQ_EXPR} | .packages = (\$pkgs | split(\",\"))"
-  [ -n "$RUNTIME_URL" ] && JQ_EXPR="${JQ_EXPR} | .registryUrl = \$url"
-
-  TMP=$(mktemp)
-  jq --arg pkgs "$PH_REGISTRY_PACKAGES" --arg url "$RUNTIME_URL" "$JQ_EXPR" "$JSON_FILE" > "$TMP"
-  mv "$TMP" "$JSON_FILE"
-  # mktemp creates the temp file mode 0600 and `mv` preserves it. Force
-  # world-readable so nginx workers can read it even if the pod runs as a
-  # uid different from the file owner.
-  chmod 644 "$JSON_FILE"
+# Write powerhouse.config.json from PH_REGISTRY_PACKAGES env var if set
+if [ -n "$PH_REGISTRY_PACKAGES" ]; then
+  # Convert comma-separated string to JSON array
+  JSON_ARRAY=$(echo "$PH_REGISTRY_PACKAGES" | tr ',' '\n' | sed 's/.*/"&"/' | paste -sd ',' - | sed 's/^/[/;s/$/]/')
+  echo "{\"schemaVersion\":1,\"packages\":${JSON_ARRAY},\"localPackage\":null}" > "${DIST_DIR}/powerhouse.config.json"
 fi
 
 echo "Testing nginx configuration..."
