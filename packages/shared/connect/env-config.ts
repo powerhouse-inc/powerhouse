@@ -547,6 +547,53 @@ export function loadRuntimeEnv(
 }
 
 /**
+ * Loads runtime environment variables and returns both the merged result
+ * (with schema defaults filled in) and the "explicit" subset containing
+ * only keys that were actually set by the user (non-empty source value).
+ *
+ * This enables proper override precedence: file config < env explicit < CLI.
+ * Without this, schema defaults would always win over file config values.
+ */
+export function loadRuntimeEnvWithExplicit(options: LoadEnvOptions = {}): {
+  merged: ConnectRuntimeEnv;
+  explicit: Partial<ConnectRuntimeEnv>;
+} {
+  const { processEnv = {}, fileEnv = {} } = options;
+  const allKeys = new Set(Object.keys(runtimeEnvSchema.shape));
+
+  const explicit: Record<string, unknown> = {};
+  for (const key of allKeys) {
+    const sources = [
+      { name: "process.env", value: processEnv[key] },
+      { name: "fileEnv", value: fileEnv[key] },
+    ];
+
+    for (const source of sources) {
+      const value = source.value;
+      if (value === undefined || value === "") continue;
+
+      try {
+        const fieldSchema = runtimeEnvSchema.shape[
+          key as keyof typeof runtimeEnvSchema.shape
+        ] as z.ZodType<unknown> | undefined;
+        if (fieldSchema) {
+          explicit[key] = fieldSchema.parse(value);
+        }
+        break;
+      } catch {
+        continue;
+      }
+    }
+  }
+
+  const merged = mergeEnvSources(options, allKeys, runtimeEnvSchema);
+  return {
+    merged: runtimeEnvSchema.parse(merged),
+    explicit: explicit as Partial<ConnectRuntimeEnv>,
+  };
+}
+
+/**
  * Loads only build-time environment variables
  *
  * @param options - Environment sources in priority order

@@ -1,5 +1,4 @@
 import { DriveIcon } from "@powerhousedao/connect/components";
-import { connectConfig } from "@powerhousedao/connect/config";
 import {
   ConnectSidebar,
   ConnectTooltipProvider,
@@ -13,6 +12,7 @@ import {
   openRenown,
   setSelectedDrive,
   showPHModal,
+  useIsAddDriveEnabled,
   useDrives,
   useSelectedDriveSafe,
   useUser,
@@ -22,6 +22,7 @@ import { ErrorBoundary } from "./error-boundary.js";
 export function Sidebar() {
   const user = useUser();
   const drives = useDrives();
+  const isAddDriveEnabled = useIsAddDriveEnabled();
   const [selectedDrive] = useSelectedDriveSafe();
   const connectDebug = localStorage.getItem("CONNECT_DEBUG") === "true";
 
@@ -77,7 +78,7 @@ export function Sidebar() {
               icon={<DriveIcon drive={drive} />}
             />
           ))}
-          {connectConfig.drives.addDriveEnabled && (
+          {isAddDriveEnabled && (
             <SidebarAddDriveItem onClick={onAddDriveClick} />
           )}
         </ErrorBoundary>

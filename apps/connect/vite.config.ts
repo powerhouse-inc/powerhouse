@@ -1,7 +1,12 @@
 import tailwind from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
+import { loadRuntimeEnvWithExplicit } from "@powerhousedao/shared/connect";
 import { defineConfig } from "vite";
 import { analyzer } from "vite-bundle-analyzer";
+
+const { explicit: explicitRuntimeEnv } = loadRuntimeEnvWithExplicit({
+  processEnv: process.env,
+});
 
 export default defineConfig({
   resolve: {
@@ -11,6 +16,7 @@ export default defineConfig({
     PH_PACKAGE_REGISTRY_URL: process.env.PH_CONNECT_PACKAGES_REGISTRY
       ? JSON.stringify(process.env.PH_CONNECT_PACKAGES_REGISTRY)
       : null,
+    PH_CONNECT_EXPLICIT_ENV: JSON.stringify(explicitRuntimeEnv),
   },
   envPrefix: ["PH_CONNECT_"],
   optimizeDeps: {

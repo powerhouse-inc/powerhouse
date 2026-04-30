@@ -1,9 +1,12 @@
-import { phGlobalConfigFromEnv } from "@powerhousedao/connect/config";
+import {
+  buildPHGlobalConfig,
+  phGlobalConfigFromEnv,
+} from "@powerhousedao/connect/config";
 import { toast } from "@powerhousedao/connect/services";
 import {
   addDefaultDrivesForNewReactor,
   createBrowserReactor,
-  getDefaultDrivesFromEnv,
+  getDefaultDrives,
 } from "@powerhousedao/connect/utils";
 import {
   addPHEventHandlers,
@@ -112,6 +115,10 @@ export async function createReactor(localPackage?: DocumentModelLib) {
   // load runtime config from powerhouse.config.json (replaceable post-build)
   const runtimeConfig = await loadRuntimeConfig();
 
+  // Apply branding from runtime config
+  const appName = runtimeConfig.connect?.branding?.appName;
+  if (appName) document.title = appName;
+
   // initialize package manager
   const packageManager = new BrowserPackageManager(
     phGlobalConfigFromEnv.routerBasename ?? "",
@@ -135,9 +142,10 @@ export async function createReactor(localPackage?: DocumentModelLib) {
   } catch {
     // no bundled packages in this build
   }
-  const packagesResult = await packageManager.addPackages(
-    runtimeConfig.packages,
-  );
+  const remotePackages = runtimeConfig.packages
+    .filter((p) => p.provider !== "local")
+    .map((p) => (p.version ? `${p.packageName}@${p.version}` : p.packageName));
+  const packagesResult = await packageManager.addPackages(remotePackages);
   packagesResult.map((r) => {
     if (r.type === "error") console.error(r.error);
   });
@@ -207,7 +215,14 @@ export async function createReactor(localPackage?: DocumentModelLib) {
   const documentCache = new DocumentCache(reactorClientModule.client);
 
   // dispatch the events to set the values in the window object
-  setDefaultPHGlobalConfig(phGlobalConfigFromEnv);
+  const basePath = phGlobalConfigFromEnv.basePath ?? "/";
+  const routerBasename = phGlobalConfigFromEnv.routerBasename ?? "/";
+  const mergedGlobalConfig = buildPHGlobalConfig(
+    basePath,
+    routerBasename,
+    runtimeConfig.connect ?? {},
+  );
+  setDefaultPHGlobalConfig(mergedGlobalConfig);
   setReactorClientModule(reactorClientModule);
   setReactorClient(reactorClientModule.client);
   setDocumentCache(documentCache);
@@ -218,7 +233,7 @@ export async function createReactor(localPackage?: DocumentModelLib) {
   setFeatures(features);
 
   // Add default drives for new reactor (after window.ph is set up)
-  const defaultDrivesConfig = getDefaultDrivesFromEnv();
+  const defaultDrivesConfig = getDefaultDrives(runtimeConfig);
   if (defaultDrivesConfig.length > 0) {
     await addDefaultDrivesForNewReactor(defaultDrivesConfig);
   }

@@ -26,9 +26,12 @@ describe("phConfigPlugin", () => {
     rmSync(projectRoot, { recursive: true, force: true });
   });
 
-  it("emits powerhouse.config.json with schemaVersion 1 and the expected shape", () => {
+  it("emits powerhouse.config.json with schemaVersion 2 and structured packages", () => {
     const plugin = phConfigPlugin({
-      packages: ["@scope/pkg-a@1.0.0", "@scope/pkg-b"],
+      packages: [
+        { packageName: "@scope/pkg-a", version: "1.0.0", provider: "registry" },
+        { packageName: "@scope/pkg-b", provider: "registry" },
+      ],
       projectRoot,
     });
 
@@ -47,21 +50,67 @@ describe("phConfigPlugin", () => {
     ) => void;
     generateBundle.call(ctx);
 
-    expect(emitted).toHaveLength(1);
-    expect(emitted[0].fileName).toBe("powerhouse.config.json");
+    expect(emitted).toHaveLength(2);
+    const config = emitted.find((e) => e.fileName === "powerhouse.config.json");
+    const schema = emitted.find(
+      (e) => e.fileName === "powerhouse.config.schema.json",
+    );
+    expect(config).toBeDefined();
+    expect(schema).toBeDefined();
 
-    const parsed = JSON.parse(emitted[0].source) as Record<string, unknown>;
-    expect(parsed.schemaVersion).toBe(1);
-    expect(parsed.packages).toEqual(["@scope/pkg-a@1.0.0", "@scope/pkg-b"]);
+    const parsed = JSON.parse(config!.source) as Record<string, unknown>;
+    expect(parsed.$schema).toBe("./powerhouse.config.schema.json");
+    expect(parsed.schemaVersion).toBe(2);
+    expect(parsed.packages).toEqual([
+      { packageName: "@scope/pkg-a", version: "1.0.0", provider: "registry" },
+      { packageName: "@scope/pkg-b", provider: "registry" },
+    ]);
     expect(parsed.localPackage).toEqual({
       name: "test-project",
       version: "0.1.0",
+    });
+    expect(parsed.connect).toEqual({});
+
+    const parsedSchema = JSON.parse(schema!.source) as Record<string, unknown>;
+    expect(parsedSchema.$id).toBe(
+      "https://powerhouse.inc/schemas/powerhouse.config.json",
+    );
+  });
+
+  it("emits connect section from source config", () => {
+    const plugin = phConfigPlugin({
+      packages: [],
+      projectRoot,
+      connect: {
+        branding: { appName: "Test App" },
+        drives: { allowAddDrive: false },
+      },
+    });
+
+    const emitted: { source: string }[] = [];
+    const ctx = {
+      emitFile(file: { type: string; fileName: string; source: string }) {
+        if (file.type === "asset") emitted.push({ source: file.source });
+      },
+    };
+    const generateBundle = plugin.generateBundle as (
+      this: unknown,
+      ...args: unknown[]
+    ) => void;
+    generateBundle.call(ctx);
+
+    const parsed = JSON.parse(emitted[0].source) as Record<string, unknown>;
+    expect(parsed.connect).toEqual({
+      branding: { appName: "Test App" },
+      drives: { allowAddDrive: false },
     });
   });
 
   it("dev middleware intercepts /powerhouse.config.json with the filtered content", () => {
     const plugin = phConfigPlugin({
-      packages: ["@scope/x@1.0.0"],
+      packages: [
+        { packageName: "@scope/x", version: "1.0.0", provider: "registry" },
+      ],
       projectRoot,
     });
 
@@ -83,7 +132,6 @@ describe("phConfigPlugin", () => {
 
     expect(registeredHandler).toBeDefined();
 
-    // Build a fake request/response pair
     const headers: Record<string, string> = {};
     let body = "";
     const next = vi.fn();
@@ -104,8 +152,49 @@ describe("phConfigPlugin", () => {
     expect(headers["Cache-Control"]).toBe("no-store");
 
     const parsed = JSON.parse(body) as Record<string, unknown>;
-    expect(parsed.schemaVersion).toBe(1);
-    expect(parsed.packages).toEqual(["@scope/x@1.0.0"]);
+    expect(parsed.schemaVersion).toBe(2);
+    expect(parsed.packages).toEqual([
+      { packageName: "@scope/x", version: "1.0.0", provider: "registry" },
+    ]);
+  });
+
+  it("dev middleware serves /powerhouse.config.schema.json", () => {
+    const plugin = phConfigPlugin({ packages: [], projectRoot });
+
+    let registeredHandler:
+      | ((req: IncomingMessage, res: ServerResponse, next: () => void) => void)
+      | undefined;
+    const fakeServer = {
+      middlewares: {
+        use(handler: typeof registeredHandler) {
+          registeredHandler = handler;
+        },
+      },
+    };
+    (plugin.configureServer as (s: typeof fakeServer) => void)(fakeServer);
+
+    const headers: Record<string, string> = {};
+    let body = "";
+    const next = vi.fn();
+    const req = { url: "/powerhouse.config.schema.json" } as IncomingMessage;
+    const res = {
+      setHeader(k: string, v: string) {
+        headers[k] = v;
+      },
+      end(content: string) {
+        body = content;
+      },
+    } as unknown as ServerResponse;
+
+    registeredHandler!(req, res, next);
+
+    expect(next).not.toHaveBeenCalled();
+    expect(headers["Content-Type"]).toBe("application/schema+json");
+    expect(headers["Cache-Control"]).toBe("no-store");
+    const parsed = JSON.parse(body) as Record<string, unknown>;
+    expect(parsed.$id).toBe(
+      "https://powerhouse.inc/schemas/powerhouse.config.json",
+    );
   });
 
   it("dev middleware passes through unrelated requests", () => {
@@ -155,5 +244,32 @@ describe("phConfigPlugin", () => {
     expect(parsed.localPackage).toBeNull();
 
     rmSync(root, { recursive: true, force: true });
+  });
+
+  it("does not leak source-side fields into the emitted config", () => {
+    const plugin = phConfigPlugin({
+      packages: [],
+      projectRoot,
+      connect: {},
+    });
+
+    const emitted: { source: string }[] = [];
+    const ctx = {
+      emitFile(file: { type: string; fileName: string; source: string }) {
+        if (file.type === "asset") emitted.push({ source: file.source });
+      },
+    };
+    const generateBundle = plugin.generateBundle as (
+      this: unknown,
+      ...args: unknown[]
+    ) => void;
+    generateBundle.call(ctx);
+
+    const parsed = JSON.parse(emitted[0].source) as Record<string, unknown>;
+    expect(parsed).not.toHaveProperty("auth");
+    expect(parsed).not.toHaveProperty("switchboard");
+    expect(parsed).not.toHaveProperty("documentModelsDir");
+    expect(parsed).not.toHaveProperty("studio");
+    expect(parsed).not.toHaveProperty("reactor");
   });
 });

@@ -1,5 +1,7 @@
 {
-  "schemaVersion": 1,
+  "$schema": "./powerhouse.config.schema.json",
+  "schemaVersion": 2,
   "packages": [],
-  "localPackage": null
+  "localPackage": null,
+  "connect": {}
 }

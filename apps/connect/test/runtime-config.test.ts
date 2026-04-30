@@ -19,35 +19,106 @@ describe("runtime-config loader", () => {
     delete globalThis.fetch;
   });
 
-  it("tolerates unknown extra fields (forward-compat for Phase 2)", async () => {
-    // Guards the contract that the loader must not reject future fields like
-    // `connect:`. If someone tightens validation, this test fails loudly.
+  it("loads a valid schemaVersion 2 config with structured packages", async () => {
     stubFetch({
-      schemaVersion: 1,
+      schemaVersion: 2,
+      packages: [
+        { packageName: "@scope/pkg-a", version: "1.0.0", provider: "registry" },
+        { packageName: "@scope/pkg-b", provider: "registry" },
+      ],
+      localPackage: { name: "test-project", version: "0.1.0" },
+      connect: {
+        branding: { appName: "Test" },
+        drives: { allowAddDrive: false },
+      },
+    });
+
+    const { loadRuntimeConfig } = await import("../src/runtime-config.js");
+    const config = await loadRuntimeConfig();
+
+    expect(config.schemaVersion).toBe(2);
+    expect(config.packages).toHaveLength(2);
+    expect(config.packages[0].packageName).toBe("@scope/pkg-a");
+    expect(config.packages[0].version).toBe("1.0.0");
+    expect(config.localPackage).toEqual({
+      name: "test-project",
+      version: "0.1.0",
+    });
+    expect(config.connect?.branding?.appName).toBe("Test");
+  });
+
+  it("tolerates unknown extra fields under connect (forward-compat)", async () => {
+    stubFetch({
+      schemaVersion: 2,
       packages: [],
       localPackage: null,
-      futureField: { a: 1 },
-      anotherFuture: "string",
+      connect: {
+        branding: { appName: "Test" },
+        futureField: { a: 1 },
+        anotherFuture: "string",
+      },
+      unrelatedFuture: true,
     });
 
     const { loadRuntimeConfig } = await import("../src/runtime-config.js");
     await expect(loadRuntimeConfig()).resolves.toBeDefined();
   });
 
-  it("warns on unrecognised schemaVersion but does not throw", async () => {
-    // Documented design decision (CONNECT-CONFIG.md §4.5): warn don't throw on
-    // schema mismatch, so a Phase 2 file landing in front of a Phase 1 SPA
-    // (or vice versa) doesn't crash the boot path.
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+  it("rejects schemaVersion 1 with a clear error", async () => {
+    stubFetch({
+      schemaVersion: 1,
+      packages: ["@scope/pkg-a@1.0.0"],
+      localPackage: { name: "test", version: "0.1.0" },
+    });
+
+    const { loadRuntimeConfig } = await import("../src/runtime-config.js");
+    await expect(loadRuntimeConfig()).rejects.toThrow(
+      /unsupported schemaVersion 1/,
+    );
+  });
+
+  it("rejects unrecognised schemaVersion with a clear error", async () => {
     stubFetch({ schemaVersion: 99, packages: [], localPackage: null });
 
     const { loadRuntimeConfig } = await import("../src/runtime-config.js");
+    await expect(loadRuntimeConfig()).rejects.toThrow(
+      /unsupported schemaVersion 99/,
+    );
+  });
+
+  it("rejects packages as strings (old shape)", async () => {
+    stubFetch({
+      schemaVersion: 2,
+      packages: ["@scope/pkg-a@1.0.0"],
+      localPackage: null,
+    });
+
+    const { loadRuntimeConfig } = await import("../src/runtime-config.js");
+    await expect(loadRuntimeConfig()).rejects.toThrow(/must be an object/);
+  });
+
+  it("rejects packages entry without packageName", async () => {
+    stubFetch({
+      schemaVersion: 2,
+      packages: [{ name: "@scope/pkg-a" }],
+      localPackage: null,
+    });
+
+    const { loadRuntimeConfig } = await import("../src/runtime-config.js");
+    await expect(loadRuntimeConfig()).rejects.toThrow(
+      /must have a 'packageName' string/,
+    );
+  });
+
+  it("accepts packages without version or provider", async () => {
+    stubFetch({
+      schemaVersion: 2,
+      packages: [{ packageName: "@scope/pkg-a" }],
+      localPackage: null,
+    });
+
+    const { loadRuntimeConfig } = await import("../src/runtime-config.js");
     const config = await loadRuntimeConfig();
-
-    expect(config.packages).toEqual([]);
-    expect(warn).toHaveBeenCalled();
-    expect(warn.mock.calls[0][0]).toMatch(/schemaVersion/);
-
-    warn.mockRestore();
+    expect(config.packages).toEqual([{ packageName: "@scope/pkg-a" }]);
   });
 });
