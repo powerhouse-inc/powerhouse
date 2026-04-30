@@ -1,3 +1,13 @@
+## 6.0.2-staging.4 (2026-04-30)
+
+### 🩹 Fixes
+
+- **connect, design-system:** fallback drive name to header.name when state name is empty ([c4252c941](https://github.com/powerhouse-inc/powerhouse/commit/c4252c941))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 6.0.2-staging.3 (2026-04-28)
 
 ### 🚀 Features

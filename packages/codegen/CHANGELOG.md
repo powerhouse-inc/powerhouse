@@ -1,3 +1,14 @@
+## 6.0.2-staging.4 (2026-04-30)
+
+### 🩹 Fixes
+
+- **codegen:** migrate packageJson exports and dependencies ([44009c915](https://github.com/powerhouse-inc/powerhouse/commit/44009c915))
+
+### ❤️ Thank You
+
+- acaldas
+- Copilot
+
 ## 6.0.2-staging.3 (2026-04-28)
 
 ### 🚀 Features

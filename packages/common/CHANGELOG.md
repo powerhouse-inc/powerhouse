@@ -1,3 +1,7 @@
+## 6.0.2-staging.4 (2026-04-30)
+
+This was a version bump only for @powerhousedao/common to align it with other projects, there were no code changes.
+
 ## 6.0.2-staging.3 (2026-04-28)
 
 ### 🚀 Features
