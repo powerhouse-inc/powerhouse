@@ -1,4 +1,9 @@
-import type { DocumentOperations } from "document-model";
+import type {
+  DocumentOperations,
+  PHBaseState,
+  PHDocument,
+  PHDocumentHeader,
+} from "document-model";
 import { map, pipe } from "remeda";
 import { type z } from "zod";
 import type {
@@ -14,28 +19,28 @@ type FindDocumentsItems = NonNullable<
   FindDocumentsQuery["findDocuments"]
 >["items"];
 
-type DocumentSchemaZodObject = z.ZodObject<{
-  header: z.ZodObject;
+type TStateSchemaZodObject = z.ZodObject<{
   state: z.ZodObject;
 }>;
 
 export function phDocumentFromQuery<
-  TDocumentSchema extends DocumentSchemaZodObject,
->(document: QueryDocumentResult, documentSchema: TDocumentSchema) {
+  TDocumentSchema extends TStateSchemaZodObject,
+>(document: QueryDocumentResult, documentSchema?: TDocumentSchema) {
   const phDocument = {
-    header: phDocumentHeaderFromQuery(document, documentSchema),
-    state: phDocumentStateFromQuery(document, documentSchema),
-    initialState: phDocumentStateFromQuery(document, documentSchema),
+    header: phDocumentHeaderFromQuery(document),
+    state: phDocumentStateFromQuery(document),
+    initialState: phDocumentStateFromQuery(document),
     operations:
       phDocumentOperationsFromGetDocumentWithOperationsQuery(document),
     clipboard: [],
   };
-  return documentSchema.parse(phDocument);
+  if (documentSchema !== undefined) documentSchema.parse(phDocument);
+  return phDocument as PHDocument;
 }
 
-export function phDocumentFromFindDocumentsQueryItems<
-  TDocumentSchema extends DocumentSchemaZodObject,
->(items: FindDocumentsItems, documentSchema: TDocumentSchema) {
+export function phDocumentsFromQuery<
+  TDocumentSchema extends TStateSchemaZodObject,
+>(items: FindDocumentsItems, documentSchema?: TDocumentSchema) {
   const documents = pipe(
     items,
     map((document) => phDocumentFromQuery(document, documentSchema)),
@@ -43,9 +48,7 @@ export function phDocumentFromFindDocumentsQueryItems<
   return documents;
 }
 
-function phDocumentHeaderFromQuery<
-  TDocumentSchema extends DocumentSchemaZodObject,
->(queryDocument: QueryDocumentResult, documentSchema: TDocumentSchema) {
+function phDocumentHeaderFromQuery(queryDocument: QueryDocumentResult) {
   const phDocumentHeader = {
     branch: "main",
     id: queryDocument.id,
@@ -61,13 +64,15 @@ function phDocumentHeaderFromQuery<
         : queryDocument.lastModifiedAtUtcIso,
     slug: queryDocument.slug ?? "",
   };
-  return documentSchema.shape.header.parse(phDocumentHeader);
+  return phDocumentHeader as PHDocumentHeader;
 }
 
 function phDocumentStateFromQuery<
-  TDocumentSchema extends DocumentSchemaZodObject,
->(queryDocument: QueryDocumentResult, documentSchema: TDocumentSchema) {
-  return documentSchema.shape.state.parse(queryDocument.state);
+  TDocumentSchema extends TStateSchemaZodObject,
+>(queryDocument: QueryDocumentResult, documentSchema?: TDocumentSchema) {
+  if (documentSchema !== undefined)
+    return documentSchema.shape.state.parse(queryDocument.state);
+  return queryDocument.state as PHBaseState;
 }
 
 function phDocumentOperationsFromGetDocumentWithOperationsQuery(

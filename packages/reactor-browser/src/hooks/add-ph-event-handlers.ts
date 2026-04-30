@@ -92,6 +92,7 @@ export const commonGlobalEventHandlerFunctions = {
     addSelectedNodeIdEventHandler();
     addSetSelectedNodeOnPopStateEventHandler();
   },
+  documentCache: addDocumentCacheEventHandler,
 };
 
 const phGlobalEventHandlerRegisterFunctions: PHGlobalEventHandlerAdders = {
@@ -101,7 +102,6 @@ const phGlobalEventHandlerRegisterFunctions: PHGlobalEventHandlerAdders = {
   features: addFeaturesEventHandler,
   modal: addModalEventHandler,
   renown: addRenownEventHandler,
-  documentCache: addDocumentCacheEventHandler,
   vetraPackageManager: addVetraPackageManagerEventHandler,
   packageDiscoveryService: addPackageDiscoveryServiceEventHandler,
   selectedTimelineRevision: addSelectedTimelineRevisionEventHandler,

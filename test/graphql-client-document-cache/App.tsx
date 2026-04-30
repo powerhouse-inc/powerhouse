@@ -1,52 +1,20 @@
-import {
-  createClient,
-  phDocumentFromFindDocumentsQueryItems,
-  setDrives,
-  setSelectedDriveId,
-  setSelectedNode,
-  useEventHandlers,
-} from "@powerhousedao/reactor-browser";
-import type { DocumentDriveDocument } from "@powerhousedao/shared";
-import { DriveDocumentSchema } from "@powerhousedao/shared/document-drive";
 import { ExistingDocumentEditor } from "editors";
-import { useEffect } from "react";
-import type { GetDocumentModelsQuery } from "../../packages/reactor-browser/src/graphql/gen/schema.js";
-
-type GetDocumentModelsResult =
-  GetDocumentModelsQuery["documentModels"]["items"];
-
-const DEFAULT_DRIVE_ID = "powerhouse";
-
-const client = createClient("http://localhost:4001/graphql");
-
-async function fetchDrives(): Promise<DocumentDriveDocument[]> {
-  const result = await client.FindDocuments({
-    search: { type: "powerhouse/document-drive" },
-  });
-  const documents = result.findDocuments.items;
-  if (!documents.length) return [];
-  return phDocumentFromFindDocumentsQueryItems(
-    result.findDocuments.items,
-    DriveDocumentSchema,
-  ) as DocumentDriveDocument[];
-}
+import { useEffect, useState } from "react";
+import { DEFAULT_DRIVE_ID } from "./constants.js";
+import { init } from "./init.js";
 
 export default function App() {
-  useEventHandlers();
+  const [hasInit, setHasInit] = useState(false);
+
   useEffect(() => {
-    fetchDrives()
-      .then((drives) => {
-        setDrives(drives);
-        setSelectedDriveId(DEFAULT_DRIVE_ID);
-        setSelectedNode(undefined);
-      })
+    if (hasInit) return;
+
+    init(DEFAULT_DRIVE_ID)
+      .then(() => setHasInit(true))
       .catch(console.error);
-  }, []);
-  return (
-    <>
-      <section>
-        <ExistingDocumentEditor.Component />
-      </section>
-    </>
-  );
+  }, [hasInit]);
+
+  if (!hasInit) return null;
+
+  return <ExistingDocumentEditor.Component />;
 }
