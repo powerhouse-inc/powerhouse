@@ -1,4 +1,11 @@
 import type {
+  DocumentDriveDocument,
+  DriveInput,
+  FolderNode,
+  Node,
+  SharingType,
+} from "@powerhousedao/shared/document-drive";
+import type {
   Action,
   DocumentModelModule,
   Operation,
@@ -52,6 +59,142 @@ export type CreateDocumentOptions = {
 };
 
 /**
+ * Drive-aware operations grouped under `client.drives`.
+ *
+ * These methods orchestrate the multi-action, multi-document choreography
+ * required to keep a drive's `state.global.nodes` array consistent with the
+ * relationship index and the underlying documents. Use the flat
+ * `IReactorClient` primitives (`get`, `execute`, `find`) for everything that
+ * is not drive-aware.
+ */
+export interface IDriveClient {
+  /**
+   * Creates a new drive document and waits for completion.
+   */
+  create(
+    input: DriveInput,
+    signal?: AbortSignal,
+  ): Promise<DocumentDriveDocument>;
+
+  /**
+   * Deletes a drive document and all of its descendants.
+   */
+  delete(driveIdentifier: string, signal?: AbortSignal): Promise<void>;
+
+  /**
+   * Renames a drive document.
+   */
+  rename(
+    driveIdentifier: string,
+    name: string,
+    signal?: AbortSignal,
+  ): Promise<DocumentDriveDocument>;
+
+  /**
+   * Adds a document to a drive as a single batched operation.
+   *
+   * Issues CREATE_DOCUMENT, UPGRADE_DOCUMENT, ADD_RELATIONSHIP on the new
+   * document and ADD_FILE on the drive in a single dependent batch.
+   */
+  addFile<TDocument extends PHDocument = PHDocument>(
+    driveIdentifier: string,
+    document: PHDocument,
+    parentFolder?: string,
+    signal?: AbortSignal,
+  ): Promise<TDocument>;
+
+  /**
+   * Adds a folder node to a drive.
+   */
+  addFolder(
+    driveIdentifier: string,
+    name: string,
+    parentFolder?: string,
+    signal?: AbortSignal,
+  ): Promise<FolderNode>;
+
+  /**
+   * Removes a node from a drive. Folder nodes cascade: descendant file
+   * documents are deleted first, then the folder node entry itself.
+   */
+  removeNode(
+    driveIdentifier: string,
+    nodeId: string,
+    signal?: AbortSignal,
+  ): Promise<void>;
+
+  /**
+   * Renames a node. Updates both the underlying document header and the
+   * drive's node entry.
+   */
+  renameNode(
+    driveIdentifier: string,
+    nodeId: string,
+    name: string,
+    signal?: AbortSignal,
+  ): Promise<Node>;
+
+  /**
+   * Moves a node to a different parent folder within the same drive.
+   * Pass `undefined` to move the node to the drive root.
+   */
+  moveNode(
+    driveIdentifier: string,
+    srcNodeId: string,
+    targetParentFolderId: string | undefined,
+    signal?: AbortSignal,
+  ): Promise<DocumentDriveDocument>;
+
+  /**
+   * Copies a node (and its subtree, if it is a folder) within a drive.
+   * Each copied file gets a new id and a duplicated document.
+   */
+  copyNode(
+    driveIdentifier: string,
+    srcNodeId: string,
+    targetParentFolderId: string | undefined,
+    signal?: AbortSignal,
+  ): Promise<DocumentDriveDocument>;
+
+  /**
+   * Returns a single node from the drive's `state.global.nodes` array.
+   */
+  getNode(
+    driveIdentifier: string,
+    nodeId: string,
+    signal?: AbortSignal,
+  ): Promise<Node>;
+
+  /**
+   * Returns nodes in the drive, optionally filtered to a single parent
+   * folder. Pass `null` to list root-level nodes only.
+   */
+  listNodes(
+    driveIdentifier: string,
+    parentFolder?: string | null,
+    signal?: AbortSignal,
+  ): Promise<Node[]>;
+
+  /**
+   * Sets the drive's sharing type (LOCAL, CLOUD, PUBLIC).
+   */
+  setSharingType(
+    driveIdentifier: string,
+    sharingType: SharingType,
+    signal?: AbortSignal,
+  ): Promise<DocumentDriveDocument>;
+
+  /**
+   * Sets whether the drive should be available offline.
+   */
+  setAvailableOffline(
+    driveIdentifier: string,
+    availableOffline: boolean,
+    signal?: AbortSignal,
+  ): Promise<DocumentDriveDocument>;
+}
+
+/**
  * The ReactorClient interface that wraps lower-level APIs to provide
  * a simpler interface for document operations.
  *
@@ -62,6 +205,11 @@ export type CreateDocumentOptions = {
  * - Wraps subscription interface with ViewFilters
  */
 export interface IReactorClient {
+  /**
+   * Drive-aware operations. See {@link IDriveClient}.
+   */
+  readonly drives: IDriveClient;
+
   /**
    * Retrieves a list of document model modules.
    *

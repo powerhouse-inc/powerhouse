@@ -12,10 +12,12 @@ export {
 } from "./src/actions/index.js";
 
 // Reactor Interface and Implementation
+export { DriveClient } from "./src/client/drive-client.js";
 export { ReactorClient } from "./src/client/reactor-client.js";
 export {
   DocumentChangeType,
   type DocumentChangeEvent,
+  type IDriveClient,
   type IReactorClient,
 } from "./src/client/types.js";
 export { ReactorBuilder } from "./src/core/reactor-builder.js";

@@ -1,4 +1,4 @@
-import { addFile, deleteNode } from "@powerhousedao/shared/document-drive";
+import { deleteNode } from "@powerhousedao/shared/document-drive";
 import type {
   Action,
   CreateDocumentActionInput,
@@ -44,10 +44,12 @@ import {
   encodeCompositeCursor,
   isCompositeCursor,
 } from "./cursor.js";
+import { DriveClient } from "./drive-client.js";
 import {
   DocumentChangeType,
   type CreateDocumentOptions,
   type DocumentChangeEvent,
+  type IDriveClient,
   type IReactorClient,
 } from "./types.js";
 
@@ -70,6 +72,8 @@ export class ReactorClient implements IReactorClient {
   private documentIndexer: IDocumentIndexer;
   private documentView: IDocumentView;
 
+  readonly drives: IDriveClient;
+
   constructor(
     logger: ILogger,
     reactor: IReactor,
@@ -86,6 +90,7 @@ export class ReactorClient implements IReactorClient {
     this.jobAwaiter = jobAwaiter;
     this.documentIndexer = documentIndexer;
     this.documentView = documentView;
+    this.drives = new DriveClient(this, logger, reactor, signer);
     this.logger.verbose("ReactorClient initialized");
   }
 
@@ -527,6 +532,7 @@ export class ReactorClient implements IReactorClient {
 
   /**
    * Creates an empty document in a drive as a single batched operation.
+   * Delegates to {@link IDriveClient.addFile}.
    */
   async createDocumentInDrive<TDocument extends PHDocument>(
     driveId: string,
@@ -534,102 +540,12 @@ export class ReactorClient implements IReactorClient {
     parentFolder?: string,
     signal?: AbortSignal,
   ): Promise<TDocument> {
-    this.logger.verbose(
-      "createDocumentInDrive(@driveId, @document, @parentFolder)",
+    return this.drives.addFile<TDocument>(
       driveId,
       document,
       parentFolder,
-    );
-
-    const documentId = document.header.id;
-
-    const createInput: CreateDocumentActionInput = {
-      model: document.header.documentType,
-      version: 0,
-      documentId: document.header.id,
-      signing: {
-        signature: document.header.id,
-        publicKey: document.header.sig.publicKey,
-        nonce: document.header.sig.nonce,
-        createdAtUtcIso: document.header.createdAtUtcIso,
-        documentType: document.header.documentType,
-      },
-      slug: document.header.slug,
-      name: document.header.name,
-      branch: document.header.branch,
-      meta: document.header.meta,
-      protocolVersions: document.header.protocolVersions ?? {
-        "base-reducer": 2,
-      },
-    };
-
-    const documentActions: Action[] = await signActions(
-      [
-        createDocumentAction(createInput),
-        upgradeDocumentAction({
-          documentId: document.header.id,
-          model: document.header.documentType,
-          fromVersion: 0,
-          toVersion: 1,
-          initialState: document.state,
-        }),
-        addRelationshipAction(driveId, documentId, "child"),
-      ],
-      this.signer,
       signal,
     );
-
-    const driveActions: Action[] = await signActions(
-      [
-        addFile({
-          id: documentId,
-          name: document.header.name || documentId,
-          documentType: document.header.documentType,
-          parentFolder,
-        }),
-      ],
-      this.signer,
-      signal,
-    );
-
-    const batchResult = await this.reactor.executeBatch(
-      {
-        jobs: [
-          {
-            key: "document",
-            documentId,
-            scope: getSharedActionScope(documentActions),
-            branch: "main",
-            actions: documentActions,
-            dependsOn: [],
-          },
-          {
-            key: "drive",
-            documentId: driveId,
-            scope: getSharedActionScope(driveActions),
-            branch: "main",
-            actions: driveActions,
-            dependsOn: ["document"],
-          },
-        ],
-      },
-      signal,
-    );
-
-    const completedJobs = await Promise.all(
-      Object.values(batchResult.jobs).map((job) =>
-        this.waitForJob(job, signal),
-      ),
-    );
-
-    for (const job of completedJobs) {
-      if (job.status === JobStatus.FAILED) {
-        throw new Error(job.error?.message);
-      }
-    }
-
-    // since we waited for the job to complete we don't need the consistency token
-    return this.reactor.get<TDocument>(documentId);
   }
 
   /**
