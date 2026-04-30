@@ -1,0 +1,149 @@
+// JSON Schema (draft-07) for dist/powerhouse.config.json. Hand-written to
+// mirror RuntimePowerhouseConfig (packages/shared/connect/runtime-config.ts)
+// and PHConnectRuntimeConfig (packages/shared/clis/types.ts).
+//
+// Single source of truth for *what fields exist*. Drift from the runtime
+// validator in apps/connect/src/runtime-config.ts is guarded by the test
+// at runtime-config-schema.test.ts.
+
+export const RUNTIME_CONFIG_SCHEMA_FILENAME = "powerhouse.config.schema.json";
+export const RUNTIME_CONFIG_SCHEMA_REF = `./${RUNTIME_CONFIG_SCHEMA_FILENAME}`;
+
+export const runtimeConfigSchema = {
+  $schema: "http://json-schema.org/draft-07/schema#",
+  $id: "https://powerhouse.inc/schemas/powerhouse.config.json",
+  title: "Powerhouse Connect runtime configuration",
+  description:
+    "Runtime configuration loaded by Connect at boot from /powerhouse.config.json. Operator-mutable in Docker; emitted by ph connect build.",
+  type: "object",
+  additionalProperties: false,
+  required: ["schemaVersion", "packages", "localPackage"],
+  properties: {
+    $schema: {
+      type: "string",
+      description:
+        "Optional JSON Schema reference. Set to './powerhouse.config.schema.json' to enable editor autocomplete and validation.",
+    },
+    schemaVersion: {
+      const: 2,
+      description:
+        "Schema version. Must match the SPA bundle that ships with this dist. The SPA throws on mismatch to prevent SPA/config skew.",
+    },
+    packages: {
+      type: "array",
+      description:
+        "Powerhouse packages this Connect instance loads at runtime.",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["packageName"],
+        properties: {
+          packageName: {
+            type: "string",
+            description: "Fully qualified npm package name (e.g. @scope/name).",
+          },
+          version: {
+            type: "string",
+            description:
+              "Exact version (registry providers) or omit to take latest.",
+          },
+          provider: {
+            type: "string",
+            enum: ["npm", "github", "local", "registry"],
+            description:
+              "Where Connect should resolve the package from at runtime.",
+          },
+          url: {
+            type: "string",
+            description:
+              "Override URL for non-registry providers (e.g. github tarball).",
+          },
+        },
+      },
+    },
+    localPackage: {
+      description:
+        "Identity of the consumer project itself, captured at build time. null for Docker images and other generic deploys with no host project.",
+      oneOf: [
+        { type: "null" },
+        {
+          type: "object",
+          additionalProperties: false,
+          required: ["name", "version"],
+          properties: {
+            name: { type: "string" },
+            version: { type: "string" },
+          },
+        },
+      ],
+    },
+    connect: {
+      type: "object",
+      additionalProperties: false,
+      description:
+        "Connect-specific UI customisations. All fields optional; omit the section entirely for default behaviour.",
+      properties: {
+        branding: {
+          type: "object",
+          additionalProperties: false,
+          description: "App identity and visual branding.",
+          properties: {
+            appName: {
+              type: "string",
+              description:
+                "Browser tab title and any in-app brand text. Defaults to 'Powerhouse Connect'.",
+            },
+            homeBackground: {
+              description:
+                "Optional hero image on the empty home screen. Provide AVIF for the modern path and a PNG/JPG fallback.",
+              oneOf: [
+                { type: "null" },
+                {
+                  type: "object",
+                  additionalProperties: false,
+                  properties: {
+                    avif: {
+                      type: "string",
+                      description: "URL or path to AVIF asset (preferred).",
+                    },
+                    png: {
+                      type: "string",
+                      description: "URL or path to PNG/JPG fallback.",
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        },
+        drives: {
+          type: "object",
+          additionalProperties: false,
+          description: "Default-drive and add-drive UI behaviour.",
+          properties: {
+            allowAddDrive: {
+              type: "boolean",
+              description:
+                "When false, the SPA hides the 'add drive' affordance. Defaults to true.",
+            },
+            defaultDrives: {
+              type: "array",
+              description:
+                "Drives the SPA auto-connects to on first load. Each must specify a URL; name and icon are optional overrides.",
+              items: {
+                type: "object",
+                additionalProperties: false,
+                required: ["url"],
+                properties: {
+                  url: { type: "string" },
+                  name: { type: ["string", "null"] },
+                  icon: { type: ["string", "null"] },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+} as const;

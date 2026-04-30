@@ -27,6 +27,28 @@ export type PowerhousePackage = {
   provider?: PHPackageProvider;
   url?: string;
 };
+
+export type PHConnectBranding = {
+  appName?: string;
+  homeBackground?: { avif?: string; png?: string } | null;
+};
+
+export type PHConnectDefaultDrive = {
+  url: string;
+  name?: string | null;
+  icon?: string | null;
+};
+
+export type PHConnectDrives = {
+  allowAddDrive?: boolean;
+  defaultDrives?: PHConnectDefaultDrive[];
+};
+
+export type PHConnectRuntimeConfig = {
+  branding?: PHConnectBranding;
+  drives?: PHConnectDrives;
+};
+
 export type PowerhouseConfig = {
   // required
   logLevel: LogLevel;
@@ -78,4 +100,5 @@ export type PowerhouseConfig = {
     driveUrl: string;
   };
   packageRegistryUrl?: string;
+  connect?: PHConnectRuntimeConfig;
 };

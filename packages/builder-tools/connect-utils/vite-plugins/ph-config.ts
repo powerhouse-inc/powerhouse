@@ -1,11 +1,19 @@
 import fs from "node:fs";
 import path from "node:path";
 import type { Plugin } from "vite";
+import type { PowerhousePackage } from "@powerhousedao/config";
+import type { PHConnectRuntimeConfig } from "@powerhousedao/shared/clis";
+import { buildRuntimeConfig } from "@powerhousedao/shared/connect";
+import {
+  RUNTIME_CONFIG_SCHEMA_FILENAME,
+  RUNTIME_CONFIG_SCHEMA_REF,
+  runtimeConfigSchema,
+} from "../runtime-config-schema.js";
 
 export type PhConfigPluginOptions = {
-  packages: string[];
+  packages: PowerhousePackage[];
   projectRoot?: string;
-  registryUrl?: string | null;
+  connect?: PHConnectRuntimeConfig;
 };
 
 function readProjectPackageInfo(
@@ -30,16 +38,19 @@ function readProjectPackageInfo(
 export function phConfigPlugin(options: PhConfigPluginOptions): Plugin {
   const projectRoot = options.projectRoot ?? process.cwd();
   const localPackage = readProjectPackageInfo(projectRoot);
+
+  const source = {
+    packages: options.packages,
+    connect: options.connect ?? {},
+  };
+
+  const runtimeConfig = buildRuntimeConfig(source, localPackage);
   const content = JSON.stringify(
-    {
-      schemaVersion: 1,
-      packages: options.packages,
-      localPackage,
-      registryUrl: options.registryUrl ?? null,
-    },
+    { $schema: RUNTIME_CONFIG_SCHEMA_REF, ...runtimeConfig },
     null,
     2,
   );
+  const schemaContent = JSON.stringify(runtimeConfigSchema, null, 2);
 
   return {
     name: "vite-plugin-ph-config",
@@ -51,14 +62,18 @@ export function phConfigPlugin(options: PhConfigPluginOptions): Plugin {
           res.end(content);
           return;
         }
+        if (req.url?.endsWith(`/${RUNTIME_CONFIG_SCHEMA_FILENAME}`)) {
+          res.setHeader("Content-Type", "application/schema+json");
+          res.setHeader("Cache-Control", "no-store");
+          res.end(schemaContent);
+          return;
+        }
         next();
       });
     },
     hotUpdate: {
       order: "pre",
       handler(ctx) {
-        // filter out modules only imported by "style.css"
-        // to avoid page reloads triggered by tailwind
         return ctx.modules.filter((mod) => {
           if (mod.importers.size > 1) {
             return true;
@@ -73,6 +88,11 @@ export function phConfigPlugin(options: PhConfigPluginOptions): Plugin {
         type: "asset",
         fileName: "powerhouse.config.json",
         source: content,
+      });
+      this.emitFile({
+        type: "asset",
+        fileName: RUNTIME_CONFIG_SCHEMA_FILENAME,
+        source: schemaContent,
       });
     },
   };
