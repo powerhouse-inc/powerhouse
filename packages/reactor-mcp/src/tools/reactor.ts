@@ -376,7 +376,7 @@ export async function createReactorMcpProvider(
         if (params.name) {
           document.header.name = params.name;
         }
-        const created = await client.createDocumentInDrive(
+        const created = await client.drives.addFile(
           params.driveId,
           document,
           params.parentFolder,

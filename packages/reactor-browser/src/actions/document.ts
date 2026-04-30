@@ -349,7 +349,7 @@ export async function addDocument(
   // Create document using ReactorClient
   let newDoc: PHDocument;
   try {
-    newDoc = await reactorClient.createDocumentInDrive(
+    newDoc = await reactorClient.drives.addFile(
       driveId,
       newDocument,
       parentFolder,
@@ -946,11 +946,7 @@ export async function copyNode(
         duplicatedDocument.header.name = resolvedName;
       }
 
-      await reactor.createDocumentInDrive(
-        driveId,
-        duplicatedDocument,
-        target?.id,
-      );
+      await reactor.drives.addFile(driveId, duplicatedDocument, target?.id);
     } catch (e) {
       logger.error(
         `Error copying document ${fileNodeToCopy.srcId}: ${String(e)}`,

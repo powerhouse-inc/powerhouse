@@ -9,14 +9,11 @@ import {
   isFileNode,
   isFolderNode,
   moveNode as moveNodeAction,
-  setAvailableOffline as setAvailableOfflineAction,
-  setSharingType as setSharingTypeAction,
   updateNode as updateNodeAction,
   type DocumentDriveDocument,
   type DriveInput,
   type FolderNode,
   type Node,
-  type SharingType,
 } from "@powerhousedao/shared/document-drive";
 import { addFile as addFileAction } from "@powerhousedao/shared/document-drive";
 import {
@@ -79,30 +76,6 @@ export class DriveClient implements IDriveClient {
       undefined,
       signal,
     );
-  }
-
-  async delete(driveIdentifier: string, signal?: AbortSignal): Promise<void> {
-    this.logger.verbose("drives.delete(@driveIdentifier)", driveIdentifier);
-    await this.client.deleteDocument(driveIdentifier, undefined, signal);
-  }
-
-  async rename(
-    driveIdentifier: string,
-    name: string,
-    signal?: AbortSignal,
-  ): Promise<DocumentDriveDocument> {
-    this.logger.verbose(
-      "drives.rename(@driveIdentifier, @name)",
-      driveIdentifier,
-      name,
-    );
-    const renamed = await this.client.rename(
-      driveIdentifier,
-      name,
-      "main",
-      signal,
-    );
-    return renamed as DocumentDriveDocument;
   }
 
   async addFile<TDocument extends PHDocument = PHDocument>(
@@ -455,41 +428,5 @@ export class DriveClient implements IDriveClient {
       return [...nodes];
     }
     return nodes.filter((n) => (n.parentFolder ?? null) === parentFolder);
-  }
-
-  async setSharingType(
-    driveIdentifier: string,
-    sharingType: SharingType,
-    signal?: AbortSignal,
-  ): Promise<DocumentDriveDocument> {
-    this.logger.verbose(
-      "drives.setSharingType(@driveIdentifier, @sharingType)",
-      driveIdentifier,
-      sharingType,
-    );
-    return this.client.execute<DocumentDriveDocument>(
-      driveIdentifier,
-      "main",
-      [setSharingTypeAction({ type: sharingType })],
-      signal,
-    );
-  }
-
-  async setAvailableOffline(
-    driveIdentifier: string,
-    availableOffline: boolean,
-    signal?: AbortSignal,
-  ): Promise<DocumentDriveDocument> {
-    this.logger.verbose(
-      "drives.setAvailableOffline(@driveIdentifier, @availableOffline)",
-      driveIdentifier,
-      availableOffline,
-    );
-    return this.client.execute<DocumentDriveDocument>(
-      driveIdentifier,
-      "main",
-      [setAvailableOfflineAction({ availableOffline })],
-      signal,
-    );
   }
 }

@@ -3,7 +3,6 @@ import type {
   DriveInput,
   FolderNode,
   Node,
-  SharingType,
 } from "@powerhousedao/shared/document-drive";
 import type {
   Action,
@@ -73,20 +72,6 @@ export interface IDriveClient {
    */
   create(
     input: DriveInput,
-    signal?: AbortSignal,
-  ): Promise<DocumentDriveDocument>;
-
-  /**
-   * Deletes a drive document and all of its descendants.
-   */
-  delete(driveIdentifier: string, signal?: AbortSignal): Promise<void>;
-
-  /**
-   * Renames a drive document.
-   */
-  rename(
-    driveIdentifier: string,
-    name: string,
     signal?: AbortSignal,
   ): Promise<DocumentDriveDocument>;
 
@@ -174,24 +159,6 @@ export interface IDriveClient {
     parentFolder?: string | null,
     signal?: AbortSignal,
   ): Promise<Node[]>;
-
-  /**
-   * Sets the drive's sharing type (LOCAL, CLOUD, PUBLIC).
-   */
-  setSharingType(
-    driveIdentifier: string,
-    sharingType: SharingType,
-    signal?: AbortSignal,
-  ): Promise<DocumentDriveDocument>;
-
-  /**
-   * Sets whether the drive should be available offline.
-   */
-  setAvailableOffline(
-    driveIdentifier: string,
-    availableOffline: boolean,
-    signal?: AbortSignal,
-  ): Promise<DocumentDriveDocument>;
 }
 
 /**
@@ -346,6 +313,8 @@ export interface IReactorClient {
    * This is more efficient than createEmpty + addFile as it batches all
    * actions into dependent jobs and waits for them to complete together.
    *
+   * @deprecated Use {@link IDriveClient.addFile} via `client.drives.addFile`
+   * instead. This method will be removed in a future release.
    * @param driveId - The drive document id or slug
    * @param document - The document to create
    * @param parentFolder - Optional folder id within the drive

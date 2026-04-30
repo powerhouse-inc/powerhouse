@@ -34,7 +34,9 @@ const createMockReactorClient = (): IReactorClient => {
     }),
     deleteDocument: vi.fn(),
     execute: vi.fn(),
-    createDocumentInDrive: vi.fn(),
+    drives: {
+      addFile: vi.fn(),
+    },
     find: vi.fn().mockResolvedValue({
       results: [],
       options: { cursor: "", limit: 10 },

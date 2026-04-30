@@ -533,6 +533,9 @@ export class ReactorClient implements IReactorClient {
   /**
    * Creates an empty document in a drive as a single batched operation.
    * Delegates to {@link IDriveClient.addFile}.
+   *
+   * @deprecated Use `client.drives.addFile` instead. This method will be
+   * removed in a future release.
    */
   async createDocumentInDrive<TDocument extends PHDocument>(
     driveId: string,

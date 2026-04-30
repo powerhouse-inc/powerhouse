@@ -436,10 +436,7 @@ export async function createDocument(
     if (parentIdentifier) {
       const parent = await reactorClient.get(parentIdentifier);
       if (parent.header.documentType === DRIVE_DOCUMENT_TYPE) {
-        result = await reactorClient.createDocumentInDrive(
-          parentIdentifier,
-          document,
-        );
+        result = await reactorClient.drives.addFile(parentIdentifier, document);
       } else {
         result = await reactorClient.create(document, parentIdentifier);
       }
@@ -484,10 +481,7 @@ export async function createEmptyDocument(
         if (name) {
           document.header.name = name;
         }
-        result = await reactorClient.createDocumentInDrive(
-          parentIdentifier,
-          document,
-        );
+        result = await reactorClient.drives.addFile(parentIdentifier, document);
       } else {
         result = await reactorClient.createEmpty(args.documentType, {
           parentIdentifier,
@@ -573,10 +567,7 @@ export async function createDocumentWithInitialState(
 
     if (parent.header.documentType === DRIVE_DOCUMENT_TYPE) {
       try {
-        result = await reactorClient.createDocumentInDrive(
-          parentIdentifier,
-          document,
-        );
+        result = await reactorClient.drives.addFile(parentIdentifier, document);
       } catch (error) {
         throw new GraphQLError(
           `Failed to create document in drive: ${error instanceof Error ? error.message : "Unknown error"}`,

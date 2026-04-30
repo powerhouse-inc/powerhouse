@@ -92,22 +92,6 @@ describe("DriveClient Integration Tests", () => {
     });
   });
 
-  describe("delete", () => {
-    it("deletes the drive", async () => {
-      const drive = await createDrive();
-      await client.drives.delete(drive.header.id);
-      await expect(client.get(drive.header.id)).rejects.toThrow();
-    });
-  });
-
-  describe("rename", () => {
-    it("renames the drive header", async () => {
-      const drive = await createDrive("Old Name");
-      const renamed = await client.drives.rename(drive.header.id, "New Name");
-      expect(renamed.header.name).toBe("New Name");
-    });
-  });
-
   describe("addFile", () => {
     it("creates a document and registers it as a FileNode in the drive", async () => {
       const drive = await createDrive();
@@ -345,28 +329,6 @@ describe("DriveClient Integration Tests", () => {
       const root = await client.drives.listNodes(drive.header.id, null);
       expect(root.length).toBe(1);
       expect(root[0].id).toBe(folder.id);
-    });
-  });
-
-  describe("setSharingType", () => {
-    it("updates the drive local-scope sharing type", async () => {
-      const drive = await createDrive();
-      const updated = await client.drives.setSharingType(
-        drive.header.id,
-        "PUBLIC",
-      );
-      expect(updated.state.local.sharingType).toBe("PUBLIC");
-    });
-  });
-
-  describe("setAvailableOffline", () => {
-    it("updates the drive local-scope availableOffline flag", async () => {
-      const drive = await createDrive();
-      const updated = await client.drives.setAvailableOffline(
-        drive.header.id,
-        true,
-      );
-      expect(updated.state.local.availableOffline).toBe(true);
     });
   });
 
