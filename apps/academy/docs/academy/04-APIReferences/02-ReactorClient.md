@@ -120,7 +120,7 @@ See [Job lifecycle](/academy/Architecture/WorkingWithTheReactor#job-lifecycle) f
 
 ## Pagination best practices
 
-All list methods (`find`, `getChildren`, `getParents`, `getOperations`, `getDocumentModelModules`) accept `PagingOptions` and return `PagedResults<T>`. Here are some guidelines for working with paginated results effectively.
+All list methods (`find`, `getOutgoingRelationships`, `getIncomingRelationships`, `getOperations`, `getDocumentModelModules`) accept `PagingOptions` and return `PagedResults<T>`. Here are some guidelines for working with paginated results effectively.
 
 **Use `next()` for sequential iteration.** The `next()` helper on `PagedResults` handles cursor management for you:
 
@@ -138,10 +138,15 @@ while (page) {
 **Set a reasonable `limit`.** The default page size varies by method. If you know you only need a few results, set a small limit to reduce response size:
 
 ```typescript
-const topFive = await reactorClient.getChildren(driveId, undefined, {
-  cursor: "",
-  limit: 5,
-});
+const topFive = await reactorClient.getOutgoingRelationships(
+  driveId,
+  "child",
+  undefined,
+  {
+    cursor: "",
+    limit: 5,
+  },
+);
 ```
 
 **Check `nextCursor` to know if more pages exist.** When `nextCursor` is `undefined`, you have reached the end:
@@ -244,13 +249,14 @@ const atRevision = await reactorClient.get("my-todo-list", { revision: 5 });
 
 ---
 
-### `getChildren`
+### `getOutgoingRelationships`
 
-List child documents of a parent.
+List documents that the given source has outgoing relationships to, filtered by relationship type. For example, pass `"child"` to list a parent's children.
 
 ```typescript
-getChildren(
-  parentIdentifier: string,
+getOutgoingRelationships(
+  sourceIdentifier: string,
+  relationshipType: string,
   view?: ViewFilter,
   paging?: PagingOptions,
   signal?: AbortSignal,
@@ -259,22 +265,24 @@ getChildren(
 
 **Parameters:**
 
-| Name               | Type            | Required | Description                 |
-| ------------------ | --------------- | -------- | --------------------------- |
-| `parentIdentifier` | `string`        | Yes      | Parent document id or slug  |
-| `view`             | `ViewFilter`    | No       | Branch/scopes filter        |
-| `paging`           | `PagingOptions` | No       | Pagination cursor and limit |
-| `signal`           | `AbortSignal`   | No       | Cancel the request          |
+| Name               | Type            | Required | Description                                     |
+| ------------------ | --------------- | -------- | ----------------------------------------------- |
+| `sourceIdentifier` | `string`        | Yes      | Source document id or slug                      |
+| `relationshipType` | `string`        | Yes      | Relationship type to filter by (e.g. `"child"`) |
+| `view`             | `ViewFilter`    | No       | Branch/scopes filter                            |
+| `paging`           | `PagingOptions` | No       | Pagination cursor and limit                     |
+| `signal`           | `AbortSignal`   | No       | Cancel the request                              |
 
 ---
 
-### `getParents`
+### `getIncomingRelationships`
 
-List parent documents of a child.
+List documents that have incoming relationships pointing at the given target, filtered by relationship type. For example, pass `"child"` to list a document's parents.
 
 ```typescript
-getParents(
-  childIdentifier: string,
+getIncomingRelationships(
+  targetIdentifier: string,
+  relationshipType: string,
   view?: ViewFilter,
   paging?: PagingOptions,
   signal?: AbortSignal,
@@ -283,12 +291,13 @@ getParents(
 
 **Parameters:**
 
-| Name              | Type            | Required | Description                 |
-| ----------------- | --------------- | -------- | --------------------------- |
-| `childIdentifier` | `string`        | Yes      | Child document id or slug   |
-| `view`            | `ViewFilter`    | No       | Branch/scopes filter        |
-| `paging`          | `PagingOptions` | No       | Pagination cursor and limit |
-| `signal`          | `AbortSignal`   | No       | Cancel the request          |
+| Name               | Type            | Required | Description                                     |
+| ------------------ | --------------- | -------- | ----------------------------------------------- |
+| `targetIdentifier` | `string`        | Yes      | Target document id or slug                      |
+| `relationshipType` | `string`        | Yes      | Relationship type to filter by (e.g. `"child"`) |
+| `view`             | `ViewFilter`    | No       | Branch/scopes filter                            |
+| `paging`           | `PagingOptions` | No       | Pagination cursor and limit                     |
+| `signal`           | `AbortSignal`   | No       | Cancel the request                              |
 
 ---
 
@@ -456,7 +465,7 @@ createEmpty<TDocument extends PHDocument>(
 
 ### `createDocumentInDrive`
 
-Create a document inside a drive as a single batched operation. More efficient than `createEmpty` followed by `addChildren` because all actions are batched into dependent jobs.
+Create a document inside a drive as a single batched operation. More efficient than `createEmpty` followed by `addRelationship` because all actions are batched into dependent jobs.
 
 ```typescript
 createDocumentInDrive<TDocument extends PHDocument>(
@@ -556,49 +565,83 @@ rename(
 
 ---
 
-### `addChildren`
+### `addRelationship`
 
-Add documents as children to a parent.
+Add a typed relationship from a source document to a target document. To add a child, pass `"child"` as the `relationshipType`.
 
 ```typescript
-addChildren(
-  parentIdentifier: string,
-  documentIdentifiers: string[],
+addRelationship(
+  sourceIdentifier: string,
+  targetIdentifier: string,
+  relationshipType: string,
   branch?: string,
   signal?: AbortSignal,
 ): Promise<PHDocument>
 ```
 
+**Parameters:**
+
+| Name               | Type          | Required | Description                        |
+| ------------------ | ------------- | -------- | ---------------------------------- |
+| `sourceIdentifier` | `string`      | Yes      | Source document id or slug         |
+| `targetIdentifier` | `string`      | Yes      | Target document id or slug         |
+| `relationshipType` | `string`      | Yes      | Relationship type (e.g. `"child"`) |
+| `branch`           | `string`      | No       | Defaults to `"main"`               |
+| `signal`           | `AbortSignal` | No       | Cancel the request                 |
+
 ---
 
-### `removeChildren`
+### `removeRelationship`
 
-Remove child relationships from a parent.
+Remove a typed relationship from a source document to a target document.
 
 ```typescript
-removeChildren(
-  parentIdentifier: string,
-  documentIdentifiers: string[],
+removeRelationship(
+  sourceIdentifier: string,
+  targetIdentifier: string,
+  relationshipType: string,
   branch?: string,
   signal?: AbortSignal,
 ): Promise<PHDocument>
 ```
 
+**Parameters:**
+
+| Name               | Type          | Required | Description                        |
+| ------------------ | ------------- | -------- | ---------------------------------- |
+| `sourceIdentifier` | `string`      | Yes      | Source document id or slug         |
+| `targetIdentifier` | `string`      | Yes      | Target document id or slug         |
+| `relationshipType` | `string`      | Yes      | Relationship type (e.g. `"child"`) |
+| `branch`           | `string`      | No       | Defaults to `"main"`               |
+| `signal`           | `AbortSignal` | No       | Cancel the request                 |
+
 ---
 
-### `moveChildren`
+### `moveRelationship`
 
-Move documents from one parent to another.
+Move a typed relationship from one source document to another, keeping the same target.
 
 ```typescript
-moveChildren(
+moveRelationship(
   sourceParentIdentifier: string,
   targetParentIdentifier: string,
-  documentIdentifiers: string[],
+  targetIdentifier: string,
+  relationshipType: string,
   branch?: string,
   signal?: AbortSignal,
 ): Promise<{ source: PHDocument; target: PHDocument }>
 ```
+
+**Parameters:**
+
+| Name                     | Type          | Required | Description                        |
+| ------------------------ | ------------- | -------- | ---------------------------------- |
+| `sourceParentIdentifier` | `string`      | Yes      | Current source document id or slug |
+| `targetParentIdentifier` | `string`      | Yes      | New source document id or slug     |
+| `targetIdentifier`       | `string`      | Yes      | The target document id or slug     |
+| `relationshipType`       | `string`      | Yes      | Relationship type (e.g. `"child"`) |
+| `branch`                 | `string`      | No       | Defaults to `"main"`               |
+| `signal`                 | `AbortSignal` | No       | Cancel the request                 |
 
 ---
 

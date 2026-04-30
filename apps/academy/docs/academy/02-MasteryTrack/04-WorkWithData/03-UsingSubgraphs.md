@@ -119,7 +119,10 @@ export const getResolvers = (subgraph: BaseSubgraph) => {
         parent: unknown,
         args: { driveId: string; searchTerm: string },
       ) => {
-        const children = await reactorClient.getChildren(args.driveId);
+        const children = await reactorClient.getOutgoingRelationships(
+          args.driveId,
+          "child",
+        );
         const todoItems: string[] = [];
         for (const doc of children.results) {
           if (doc.header.documentType !== "powerhouse/todo-list") {
