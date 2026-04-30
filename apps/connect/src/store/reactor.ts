@@ -44,7 +44,7 @@ import {
 import { initFeatureFlags } from "../feature-flags.js";
 import { PackageDiscoveryService } from "../package-discovery.js";
 import { BrowserPackageManager } from "../package-manager.js";
-import { loadPackagesConfig } from "../packages.config.js";
+import { loadRuntimeConfig } from "../runtime-config.js";
 import { createProcessorHostModule } from "./processor-host-module.js";
 
 export async function clearReactorStorage() {
@@ -109,8 +109,8 @@ export async function createReactor(localPackage?: DocumentModelLib) {
     .withCrypto(renownCrypto)
     .build();
 
-  // load packages list from ph-packages.json (replaceable post-build)
-  const packagesConfig = await loadPackagesConfig();
+  // load runtime config from powerhouse.config.json (replaceable post-build)
+  const runtimeConfig = await loadRuntimeConfig();
 
   // initialize package manager
   const packageManager = new BrowserPackageManager(
@@ -118,7 +118,7 @@ export async function createReactor(localPackage?: DocumentModelLib) {
     PH_PACKAGE_REGISTRY_URL,
   );
   setVetraPackageManager(packageManager);
-  await packageManager.init(localPackage, packagesConfig.localPackage?.version);
+  await packageManager.init(localPackage, runtimeConfig.localPackage?.version);
   // Register any packages marked as provider: "local" in powerhouse.config.json
   // that the vite plugin bundled into this build. The virtual module is only
   // emitted when `phBundledPackagesPlugin` is registered (ph-cli's Connect
@@ -136,7 +136,7 @@ export async function createReactor(localPackage?: DocumentModelLib) {
     // no bundled packages in this build
   }
   const packagesResult = await packageManager.addPackages(
-    packagesConfig.packages,
+    runtimeConfig.packages,
   );
   packagesResult.map((r) => {
     if (r.type === "error") console.error(r.error);

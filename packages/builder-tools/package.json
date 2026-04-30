@@ -23,7 +23,8 @@
   "scripts": {
     "tsc": "tsc",
     "lint": "eslint",
-    "build": "tsdown"
+    "build": "tsdown",
+    "test": "vitest --run"
   },
   "dependencies": {
     "@powerhousedao/config": "workspace:*",
@@ -38,6 +39,7 @@
   },
   "devDependencies": {
     "tsdown": "catalog:",
-    "tsx": "catalog:"
+    "tsx": "catalog:",
+    "vitest": "catalog:"
   }
 }

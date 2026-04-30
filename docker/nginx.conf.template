@@ -61,6 +61,16 @@ http {
             add_header Expires "0";
         }
 
+        # Operator-mutable runtime config: never cache so post-deploy edits
+        # are visible on the next page load.
+        location = ${PH_CONNECT_BASE_PATH}/powerhouse.config.json {
+            alias /var/www/html/project/powerhouse.config.json;
+            access_log off;
+            log_not_found off;
+            etag off;
+            add_header Cache-Control "no-store" always;
+        }
+
         location ~ ${PH_CONNECT_BASE_PATH}/(?!index\.html$)([^/]+\.[a-z0-9]+)$ {
             alias /var/www/html/project/$1;
             access_log off;

@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import type { Plugin } from "vite";
 
-export type PhPackagesPluginOptions = {
+export type PhConfigPluginOptions = {
   packages: string[];
   projectRoot?: string;
 };
@@ -26,11 +26,12 @@ function readProjectPackageInfo(
   }
 }
 
-export function phPackagesPlugin(options: PhPackagesPluginOptions): Plugin {
+export function phConfigPlugin(options: PhConfigPluginOptions): Plugin {
   const projectRoot = options.projectRoot ?? process.cwd();
   const localPackage = readProjectPackageInfo(projectRoot);
   const content = JSON.stringify(
     {
+      schemaVersion: 1,
       packages: options.packages,
       localPackage,
     },
@@ -39,11 +40,12 @@ export function phPackagesPlugin(options: PhPackagesPluginOptions): Plugin {
   );
 
   return {
-    name: "vite-plugin-ph-packages",
+    name: "vite-plugin-ph-config",
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
-        if (req.url?.endsWith("/ph-packages.json")) {
+        if (req.url?.endsWith("/powerhouse.config.json")) {
           res.setHeader("Content-Type", "application/json");
+          res.setHeader("Cache-Control", "no-store");
           res.end(content);
           return;
         }
@@ -67,7 +69,7 @@ export function phPackagesPlugin(options: PhPackagesPluginOptions): Plugin {
     generateBundle() {
       this.emitFile({
         type: "asset",
-        fileName: "ph-packages.json",
+        fileName: "powerhouse.config.json",
         source: content,
       });
     },

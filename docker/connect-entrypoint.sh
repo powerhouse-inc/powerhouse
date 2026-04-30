@@ -8,11 +8,11 @@ DIST_DIR="/var/www/html/project"
 # Resolve registry URL: PH_PACKAGE_REGISTRY_URL > PH_REGISTRY_URL > default
 export PH_PACKAGE_REGISTRY_URL="${PH_PACKAGE_REGISTRY_URL:-${PH_REGISTRY_URL:-https://registry.dev.vetra.io}}"
 
-# Write ph-packages.json from PH_PACKAGES env var if set
+# Write powerhouse.config.json from PH_REGISTRY_PACKAGES env var if set
 if [ -n "$PH_REGISTRY_PACKAGES" ]; then
   # Convert comma-separated string to JSON array
   JSON_ARRAY=$(echo "$PH_REGISTRY_PACKAGES" | tr ',' '\n' | sed 's/.*/"&"/' | paste -sd ',' - | sed 's/^/[/;s/$/]/')
-  echo "{\"packages\":${JSON_ARRAY}}" > "${DIST_DIR}/ph-packages.json"
+  echo "{\"schemaVersion\":1,\"packages\":${JSON_ARRAY},\"localPackage\":null}" > "${DIST_DIR}/powerhouse.config.json"
 fi
 
 echo "Testing nginx configuration..."
