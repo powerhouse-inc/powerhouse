@@ -169,30 +169,31 @@ export type JobInfo = {
   readonly status: Scalars["String"]["output"];
 };
 
-export type MoveChildrenResult = {
+export type MoveRelationshipResult = {
   readonly source: PhDocument;
   readonly target: PhDocument;
 };
 
 export type Mutation = {
-  readonly addChildren: PhDocument;
+  readonly addRelationship: PhDocument;
   readonly createDocument: PhDocument;
   readonly createEmptyDocument: PhDocument;
   readonly deleteDocument: Scalars["Boolean"]["output"];
   readonly deleteDocuments: Scalars["Boolean"]["output"];
-  readonly moveChildren: MoveChildrenResult;
+  readonly moveRelationship: MoveRelationshipResult;
   readonly mutateDocument: PhDocument;
   readonly mutateDocumentAsync: Scalars["String"]["output"];
   readonly pushSyncEnvelopes: Scalars["Boolean"]["output"];
-  readonly removeChildren: PhDocument;
+  readonly removeRelationship: PhDocument;
   readonly renameDocument: PhDocument;
   readonly touchChannel: TouchChannelResult;
 };
 
-export type MutationAddChildrenArgs = {
+export type MutationAddRelationshipArgs = {
   branch?: InputMaybe<Scalars["String"]["input"]>;
-  documentIdentifiers: ReadonlyArray<Scalars["String"]["input"]>;
-  parentIdentifier: Scalars["String"]["input"];
+  relationshipType: Scalars["String"]["input"];
+  sourceIdentifier: Scalars["String"]["input"];
+  targetIdentifier: Scalars["String"]["input"];
 };
 
 export type MutationCreateDocumentArgs = {
@@ -215,10 +216,11 @@ export type MutationDeleteDocumentsArgs = {
   propagate?: InputMaybe<PropagationMode>;
 };
 
-export type MutationMoveChildrenArgs = {
+export type MutationMoveRelationshipArgs = {
   branch?: InputMaybe<Scalars["String"]["input"]>;
-  documentIdentifiers: ReadonlyArray<Scalars["String"]["input"]>;
+  relationshipType: Scalars["String"]["input"];
   sourceParentIdentifier: Scalars["String"]["input"];
+  targetIdentifier: Scalars["String"]["input"];
   targetParentIdentifier: Scalars["String"]["input"];
 };
 
@@ -238,10 +240,11 @@ export type MutationPushSyncEnvelopesArgs = {
   envelopes: ReadonlyArray<SyncEnvelopeInput>;
 };
 
-export type MutationRemoveChildrenArgs = {
+export type MutationRemoveRelationshipArgs = {
   branch?: InputMaybe<Scalars["String"]["input"]>;
-  documentIdentifiers: ReadonlyArray<Scalars["String"]["input"]>;
-  parentIdentifier: Scalars["String"]["input"];
+  relationshipType: Scalars["String"]["input"];
+  sourceIdentifier: Scalars["String"]["input"];
+  targetIdentifier: Scalars["String"]["input"];
 };
 
 export type MutationRenameDocumentArgs = {
@@ -945,14 +948,15 @@ export type RenameDocumentMutation = {
   };
 };
 
-export type AddChildrenMutationVariables = Exact<{
-  parentIdentifier: Scalars["String"]["input"];
-  documentIdentifiers: ReadonlyArray<Scalars["String"]["input"]>;
+export type AddRelationshipMutationVariables = Exact<{
+  sourceIdentifier: Scalars["String"]["input"];
+  targetIdentifier: Scalars["String"]["input"];
+  relationshipType: Scalars["String"]["input"];
   branch?: InputMaybe<Scalars["String"]["input"]>;
 }>;
 
-export type AddChildrenMutation = {
-  readonly addChildren: {
+export type AddRelationshipMutation = {
+  readonly addRelationship: {
     readonly id: string;
     readonly slug?: string | null | undefined;
     readonly name: string;
@@ -967,14 +971,15 @@ export type AddChildrenMutation = {
   };
 };
 
-export type RemoveChildrenMutationVariables = Exact<{
-  parentIdentifier: Scalars["String"]["input"];
-  documentIdentifiers: ReadonlyArray<Scalars["String"]["input"]>;
+export type RemoveRelationshipMutationVariables = Exact<{
+  sourceIdentifier: Scalars["String"]["input"];
+  targetIdentifier: Scalars["String"]["input"];
+  relationshipType: Scalars["String"]["input"];
   branch?: InputMaybe<Scalars["String"]["input"]>;
 }>;
 
-export type RemoveChildrenMutation = {
-  readonly removeChildren: {
+export type RemoveRelationshipMutation = {
+  readonly removeRelationship: {
     readonly id: string;
     readonly slug?: string | null | undefined;
     readonly name: string;
@@ -989,15 +994,16 @@ export type RemoveChildrenMutation = {
   };
 };
 
-export type MoveChildrenMutationVariables = Exact<{
+export type MoveRelationshipMutationVariables = Exact<{
   sourceParentIdentifier: Scalars["String"]["input"];
   targetParentIdentifier: Scalars["String"]["input"];
-  documentIdentifiers: ReadonlyArray<Scalars["String"]["input"]>;
+  targetIdentifier: Scalars["String"]["input"];
+  relationshipType: Scalars["String"]["input"];
   branch?: InputMaybe<Scalars["String"]["input"]>;
 }>;
 
-export type MoveChildrenMutation = {
-  readonly moveChildren: {
+export type MoveRelationshipMutation = {
+  readonly moveRelationship: {
     readonly source: {
       readonly id: string;
       readonly slug?: string | null | undefined;
@@ -1336,7 +1342,7 @@ export type ResolversTypes = ResolversObject<{
   JSONObject: ResolverTypeWrapper<Scalars["JSONObject"]["output"]>;
   JobChangeEvent: ResolverTypeWrapper<JobChangeEvent>;
   JobInfo: ResolverTypeWrapper<JobInfo>;
-  MoveChildrenResult: ResolverTypeWrapper<MoveChildrenResult>;
+  MoveRelationshipResult: ResolverTypeWrapper<MoveRelationshipResult>;
   Mutation: ResolverTypeWrapper<Record<PropertyKey, never>>;
   OperationContext: ResolverTypeWrapper<OperationContext>;
   OperationContextInput: OperationContextInput;
@@ -1396,7 +1402,7 @@ export type ResolversParentTypes = ResolversObject<{
   JSONObject: Scalars["JSONObject"]["output"];
   JobChangeEvent: JobChangeEvent;
   JobInfo: JobInfo;
-  MoveChildrenResult: MoveChildrenResult;
+  MoveRelationshipResult: MoveRelationshipResult;
   Mutation: Record<PropertyKey, never>;
   OperationContext: OperationContext;
   OperationContextInput: OperationContextInput;
@@ -1632,10 +1638,10 @@ export type JobInfoResolvers<
   status?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
 }>;
 
-export type MoveChildrenResultResolvers<
+export type MoveRelationshipResultResolvers<
   ContextType = Context,
-  ParentType extends ResolversParentTypes["MoveChildrenResult"] =
-    ResolversParentTypes["MoveChildrenResult"],
+  ParentType extends ResolversParentTypes["MoveRelationshipResult"] =
+    ResolversParentTypes["MoveRelationshipResult"],
 > = ResolversObject<{
   source?: Resolver<ResolversTypes["PHDocument"], ParentType, ContextType>;
   target?: Resolver<ResolversTypes["PHDocument"], ParentType, ContextType>;
@@ -1646,13 +1652,13 @@ export type MutationResolvers<
   ParentType extends ResolversParentTypes["Mutation"] =
     ResolversParentTypes["Mutation"],
 > = ResolversObject<{
-  addChildren?: Resolver<
+  addRelationship?: Resolver<
     ResolversTypes["PHDocument"],
     ParentType,
     ContextType,
     RequireFields<
-      MutationAddChildrenArgs,
-      "documentIdentifiers" | "parentIdentifier"
+      MutationAddRelationshipArgs,
+      "relationshipType" | "sourceIdentifier" | "targetIdentifier"
     >
   >;
   createDocument?: Resolver<
@@ -1679,14 +1685,15 @@ export type MutationResolvers<
     ContextType,
     RequireFields<MutationDeleteDocumentsArgs, "identifiers">
   >;
-  moveChildren?: Resolver<
-    ResolversTypes["MoveChildrenResult"],
+  moveRelationship?: Resolver<
+    ResolversTypes["MoveRelationshipResult"],
     ParentType,
     ContextType,
     RequireFields<
-      MutationMoveChildrenArgs,
-      | "documentIdentifiers"
+      MutationMoveRelationshipArgs,
+      | "relationshipType"
       | "sourceParentIdentifier"
+      | "targetIdentifier"
       | "targetParentIdentifier"
     >
   >;
@@ -1711,13 +1718,13 @@ export type MutationResolvers<
     ContextType,
     RequireFields<MutationPushSyncEnvelopesArgs, "envelopes">
   >;
-  removeChildren?: Resolver<
+  removeRelationship?: Resolver<
     ResolversTypes["PHDocument"],
     ParentType,
     ContextType,
     RequireFields<
-      MutationRemoveChildrenArgs,
-      "documentIdentifiers" | "parentIdentifier"
+      MutationRemoveRelationshipArgs,
+      "relationshipType" | "sourceIdentifier" | "targetIdentifier"
     >
   >;
   renameDocument?: Resolver<
@@ -2070,7 +2077,7 @@ export type Resolvers<ContextType = Context> = ResolversObject<{
   JSONObject?: GraphQLScalarType;
   JobChangeEvent?: JobChangeEventResolvers<ContextType>;
   JobInfo?: JobInfoResolvers<ContextType>;
-  MoveChildrenResult?: MoveChildrenResultResolvers<ContextType>;
+  MoveRelationshipResult?: MoveRelationshipResultResolvers<ContextType>;
   Mutation?: MutationResolvers<ContextType>;
   OperationContext?: OperationContextResolvers<ContextType>;
   OperationWithContext?: OperationWithContextResolvers<ContextType>;
@@ -2605,15 +2612,17 @@ export const RenameDocumentDocument = gql`
   }
   ${PhDocumentFieldsFragmentDoc}
 `;
-export const AddChildrenDocument = gql`
-  mutation AddChildren(
-    $parentIdentifier: String!
-    $documentIdentifiers: [String!]!
+export const AddRelationshipDocument = gql`
+  mutation AddRelationship(
+    $sourceIdentifier: String!
+    $targetIdentifier: String!
+    $relationshipType: String!
     $branch: String
   ) {
-    addChildren(
-      parentIdentifier: $parentIdentifier
-      documentIdentifiers: $documentIdentifiers
+    addRelationship(
+      sourceIdentifier: $sourceIdentifier
+      targetIdentifier: $targetIdentifier
+      relationshipType: $relationshipType
       branch: $branch
     ) {
       ...PHDocumentFields
@@ -2621,15 +2630,17 @@ export const AddChildrenDocument = gql`
   }
   ${PhDocumentFieldsFragmentDoc}
 `;
-export const RemoveChildrenDocument = gql`
-  mutation RemoveChildren(
-    $parentIdentifier: String!
-    $documentIdentifiers: [String!]!
+export const RemoveRelationshipDocument = gql`
+  mutation RemoveRelationship(
+    $sourceIdentifier: String!
+    $targetIdentifier: String!
+    $relationshipType: String!
     $branch: String
   ) {
-    removeChildren(
-      parentIdentifier: $parentIdentifier
-      documentIdentifiers: $documentIdentifiers
+    removeRelationship(
+      sourceIdentifier: $sourceIdentifier
+      targetIdentifier: $targetIdentifier
+      relationshipType: $relationshipType
       branch: $branch
     ) {
       ...PHDocumentFields
@@ -2637,17 +2648,19 @@ export const RemoveChildrenDocument = gql`
   }
   ${PhDocumentFieldsFragmentDoc}
 `;
-export const MoveChildrenDocument = gql`
-  mutation MoveChildren(
+export const MoveRelationshipDocument = gql`
+  mutation MoveRelationship(
     $sourceParentIdentifier: String!
     $targetParentIdentifier: String!
-    $documentIdentifiers: [String!]!
+    $targetIdentifier: String!
+    $relationshipType: String!
     $branch: String
   ) {
-    moveChildren(
+    moveRelationship(
       sourceParentIdentifier: $sourceParentIdentifier
       targetParentIdentifier: $targetParentIdentifier
-      documentIdentifiers: $documentIdentifiers
+      targetIdentifier: $targetIdentifier
+      relationshipType: $relationshipType
       branch: $branch
     ) {
       source {
@@ -2946,35 +2959,44 @@ export function getSdk<C>(requester: Requester<C>) {
         options,
       ) as Promise<RenameDocumentMutation>;
     },
-    AddChildren(
-      variables: AddChildrenMutationVariables,
+    AddRelationship(
+      variables: AddRelationshipMutationVariables,
       options?: C,
-    ): Promise<AddChildrenMutation> {
-      return requester<AddChildrenMutation, AddChildrenMutationVariables>(
-        AddChildrenDocument,
+    ): Promise<AddRelationshipMutation> {
+      return requester<
+        AddRelationshipMutation,
+        AddRelationshipMutationVariables
+      >(
+        AddRelationshipDocument,
         variables,
         options,
-      ) as Promise<AddChildrenMutation>;
+      ) as Promise<AddRelationshipMutation>;
     },
-    RemoveChildren(
-      variables: RemoveChildrenMutationVariables,
+    RemoveRelationship(
+      variables: RemoveRelationshipMutationVariables,
       options?: C,
-    ): Promise<RemoveChildrenMutation> {
-      return requester<RemoveChildrenMutation, RemoveChildrenMutationVariables>(
-        RemoveChildrenDocument,
+    ): Promise<RemoveRelationshipMutation> {
+      return requester<
+        RemoveRelationshipMutation,
+        RemoveRelationshipMutationVariables
+      >(
+        RemoveRelationshipDocument,
         variables,
         options,
-      ) as Promise<RemoveChildrenMutation>;
+      ) as Promise<RemoveRelationshipMutation>;
     },
-    MoveChildren(
-      variables: MoveChildrenMutationVariables,
+    MoveRelationship(
+      variables: MoveRelationshipMutationVariables,
       options?: C,
-    ): Promise<MoveChildrenMutation> {
-      return requester<MoveChildrenMutation, MoveChildrenMutationVariables>(
-        MoveChildrenDocument,
+    ): Promise<MoveRelationshipMutation> {
+      return requester<
+        MoveRelationshipMutation,
+        MoveRelationshipMutationVariables
+      >(
+        MoveRelationshipDocument,
         variables,
         options,
-      ) as Promise<MoveChildrenMutation>;
+      ) as Promise<MoveRelationshipMutation>;
     },
     DeleteDocument(
       variables: DeleteDocumentMutationVariables,

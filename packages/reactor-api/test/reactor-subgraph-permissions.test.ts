@@ -85,9 +85,9 @@ describe("ReactorSubgraph Permission Checks", () => {
       execute: vi.fn().mockResolvedValue(mockDocument),
       executeAsync: vi.fn().mockResolvedValue("job-123"),
       rename: vi.fn().mockResolvedValue(mockDocument),
-      addChildren: vi.fn().mockResolvedValue(mockParentDocument),
-      removeChildren: vi.fn().mockResolvedValue(mockParentDocument),
-      moveChildren: vi.fn().mockResolvedValue({
+      addRelationship: vi.fn().mockResolvedValue(mockParentDocument),
+      removeRelationship: vi.fn().mockResolvedValue(mockParentDocument),
+      moveRelationship: vi.fn().mockResolvedValue({
         source: mockParentDocument,
         target: mockParentDocument,
       }),
@@ -376,16 +376,17 @@ describe("ReactorSubgraph Permission Checks", () => {
     });
   });
 
-  describe("Mutation: moveChildren", () => {
-    const callMoveChildren = async (ctx: any) => {
+  describe("Mutation: moveRelationship", () => {
+    const callMoveRelationship = async (ctx: any) => {
       const mutation = (reactorSubgraph.resolvers.Mutation as any)
-        ?.moveChildren;
+        ?.moveRelationship;
       return mutation(
         null,
         {
           sourceParentIdentifier: "parent-123",
           targetParentIdentifier: "parent-456",
-          documentIdentifiers: ["doc-123"],
+          targetIdentifier: "doc-123",
+          relationshipType: "child",
         },
         ctx,
       );
@@ -394,7 +395,7 @@ describe("ReactorSubgraph Permission Checks", () => {
     it("should allow when user is global admin", async () => {
       const ctx = createContext({ isAdmin: true, userAddress: "0xadmin" });
 
-      const result = await callMoveChildren(ctx);
+      const result = await callMoveRelationship(ctx);
 
       expect(result).toBeDefined();
     });
@@ -405,7 +406,7 @@ describe("ReactorSubgraph Permission Checks", () => {
       );
       const ctx = createContext({ userAddress: "0xpermitted" });
 
-      await callMoveChildren(ctx);
+      await callMoveRelationship(ctx);
 
       // Should be called twice - once for source, once for target
       expect(mockDocumentPermissionService.canWrite).toHaveBeenCalledTimes(2);
@@ -417,7 +418,7 @@ describe("ReactorSubgraph Permission Checks", () => {
       );
       const ctx = createContext({ userAddress: "0xunpermitted" });
 
-      await expect(callMoveChildren(ctx)).rejects.toThrow("Forbidden");
+      await expect(callMoveRelationship(ctx)).rejects.toThrow("Forbidden");
     });
 
     it("should deny when user cannot write to target parent", async () => {
@@ -426,7 +427,7 @@ describe("ReactorSubgraph Permission Checks", () => {
         .mockResolvedValueOnce(false); // target parent
       const ctx = createContext({ userAddress: "0xunpermitted" });
 
-      await expect(callMoveChildren(ctx)).rejects.toThrow("Forbidden");
+      await expect(callMoveRelationship(ctx)).rejects.toThrow("Forbidden");
     });
   });
 

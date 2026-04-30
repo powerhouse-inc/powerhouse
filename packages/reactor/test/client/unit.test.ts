@@ -95,8 +95,8 @@ describe("ReactorClient Unit Tests", () => {
       }),
       execute: vi.fn(),
       executeBatch: vi.fn(),
-      addChildren: vi.fn(),
-      removeChildren: vi.fn(),
+      addRelationship: vi.fn(),
+      removeRelationship: vi.fn(),
       deleteDocument: vi.fn(),
       getJobStatus: vi.fn(),
       create: vi.fn(),
@@ -1020,10 +1020,10 @@ describe("ReactorClient Unit Tests", () => {
     });
   });
 
-  describe("addChildren", () => {
-    it("should pass signer to reactor.addChildren, wait for job, and return parent document", async () => {
-      const parentId = "parent-1";
-      const childIds = ["child-1", "child-2"];
+  describe("addRelationship", () => {
+    it("should pass signer to reactor.addRelationship, wait for job, and return source document", async () => {
+      const sourceId = "parent-1";
+      const targetId = "child-1";
 
       const jobInfo: JobInfo = {
         id: "job-1",
@@ -1042,18 +1042,19 @@ describe("ReactorClient Unit Tests", () => {
       };
 
       const mockDoc: PHDocument = {
-        header: { id: parentId, documentType: "test" },
+        header: { id: sourceId, documentType: "test" },
       } as PHDocument;
 
-      vi.mocked(mockReactor.addChildren).mockResolvedValue(jobInfo);
+      vi.mocked(mockReactor.addRelationship).mockResolvedValue(jobInfo);
       vi.mocked(mockJobAwaiter.waitForJob).mockResolvedValue(completedJobInfo);
       vi.mocked(mockReactor.getByIdOrSlug).mockResolvedValue(mockDoc);
 
-      const result = await client.addChildren(parentId, childIds);
+      const result = await client.addRelationship(sourceId, targetId, "child");
 
-      expect(mockReactor.addChildren).toHaveBeenCalledWith(
-        parentId,
-        childIds,
+      expect(mockReactor.addRelationship).toHaveBeenCalledWith(
+        sourceId,
+        targetId,
+        "child",
         "main",
         mockSigner,
         undefined,
@@ -1063,7 +1064,7 @@ describe("ReactorClient Unit Tests", () => {
         undefined,
       );
       expect(mockReactor.getByIdOrSlug).toHaveBeenCalledWith(
-        parentId,
+        sourceId,
         { branch: "main" },
         completedJobInfo.consistencyToken,
         undefined,
@@ -1072,10 +1073,10 @@ describe("ReactorClient Unit Tests", () => {
     });
   });
 
-  describe("removeChildren", () => {
-    it("should pass signer to reactor.removeChildren, wait for job, and return parent document", async () => {
-      const parentId = "parent-1";
-      const childIds = ["child-1"];
+  describe("removeRelationship", () => {
+    it("should pass signer to reactor.removeRelationship, wait for job, and return source document", async () => {
+      const sourceId = "parent-1";
+      const targetId = "child-1";
 
       const jobInfo: JobInfo = {
         id: "job-1",
@@ -1094,18 +1095,23 @@ describe("ReactorClient Unit Tests", () => {
       };
 
       const mockDoc: PHDocument = {
-        header: { id: parentId, documentType: "test" },
+        header: { id: sourceId, documentType: "test" },
       } as PHDocument;
 
-      vi.mocked(mockReactor.removeChildren).mockResolvedValue(jobInfo);
+      vi.mocked(mockReactor.removeRelationship).mockResolvedValue(jobInfo);
       vi.mocked(mockJobAwaiter.waitForJob).mockResolvedValue(completedJobInfo);
       vi.mocked(mockReactor.getByIdOrSlug).mockResolvedValue(mockDoc);
 
-      const result = await client.removeChildren(parentId, childIds);
+      const result = await client.removeRelationship(
+        sourceId,
+        targetId,
+        "child",
+      );
 
-      expect(mockReactor.removeChildren).toHaveBeenCalledWith(
-        parentId,
-        childIds,
+      expect(mockReactor.removeRelationship).toHaveBeenCalledWith(
+        sourceId,
+        targetId,
+        "child",
         "main",
         mockSigner,
         undefined,
@@ -1115,7 +1121,7 @@ describe("ReactorClient Unit Tests", () => {
         undefined,
       );
       expect(mockReactor.getByIdOrSlug).toHaveBeenCalledWith(
-        parentId,
+        sourceId,
         { branch: "main" },
         completedJobInfo.consistencyToken,
         undefined,
@@ -1429,7 +1435,7 @@ describe("ReactorClient Unit Tests", () => {
       expect(mockReactor.getByIdOrSlug).not.toHaveBeenCalled();
     });
 
-    it("should throw error when addChildren job fails", async () => {
+    it("should throw error when addRelationship job fails", async () => {
       const jobInfo: JobInfo = {
         id: "job-1",
         status: JobStatus.PENDING,
@@ -1444,46 +1450,46 @@ describe("ReactorClient Unit Tests", () => {
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
         meta: { batchId: "test", batchJobIds: ["job-1"] },
-        error: { message: "Add children failed", stack: "" },
+        error: { message: "Add relationship failed", stack: "" },
       };
 
-      vi.mocked(mockReactor.addChildren).mockResolvedValue(jobInfo);
-      vi.mocked(mockJobAwaiter.waitForJob).mockResolvedValue(failedJobInfo);
-
-      await expect(client.addChildren("parent-1", ["child-1"])).rejects.toThrow(
-        "Add children failed",
-      );
-      expect(mockReactor.getByIdOrSlug).not.toHaveBeenCalled();
-    });
-
-    it("should throw error when removeChildren job fails", async () => {
-      const jobInfo: JobInfo = {
-        id: "job-1",
-        status: JobStatus.PENDING,
-        createdAtUtcIso: new Date().toISOString(),
-        consistencyToken: createEmptyConsistencyToken(),
-        meta: { batchId: "test", batchJobIds: ["job-1"] },
-      };
-
-      const failedJobInfo: JobInfo = {
-        id: "job-1",
-        status: JobStatus.FAILED,
-        createdAtUtcIso: new Date().toISOString(),
-        consistencyToken: createEmptyConsistencyToken(),
-        meta: { batchId: "test", batchJobIds: ["job-1"] },
-        error: { message: "Remove children failed", stack: "" },
-      };
-
-      vi.mocked(mockReactor.removeChildren).mockResolvedValue(jobInfo);
+      vi.mocked(mockReactor.addRelationship).mockResolvedValue(jobInfo);
       vi.mocked(mockJobAwaiter.waitForJob).mockResolvedValue(failedJobInfo);
 
       await expect(
-        client.removeChildren("parent-1", ["child-1"]),
-      ).rejects.toThrow("Remove children failed");
+        client.addRelationship("parent-1", "child-1", "child"),
+      ).rejects.toThrow("Add relationship failed");
       expect(mockReactor.getByIdOrSlug).not.toHaveBeenCalled();
     });
 
-    it("should throw error when moveChildren remove job fails", async () => {
+    it("should throw error when removeRelationship job fails", async () => {
+      const jobInfo: JobInfo = {
+        id: "job-1",
+        status: JobStatus.PENDING,
+        createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-1"] },
+      };
+
+      const failedJobInfo: JobInfo = {
+        id: "job-1",
+        status: JobStatus.FAILED,
+        createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-1"] },
+        error: { message: "Remove relationship failed", stack: "" },
+      };
+
+      vi.mocked(mockReactor.removeRelationship).mockResolvedValue(jobInfo);
+      vi.mocked(mockJobAwaiter.waitForJob).mockResolvedValue(failedJobInfo);
+
+      await expect(
+        client.removeRelationship("parent-1", "child-1", "child"),
+      ).rejects.toThrow("Remove relationship failed");
+      expect(mockReactor.getByIdOrSlug).not.toHaveBeenCalled();
+    });
+
+    it("should throw error when moveRelationship remove job fails", async () => {
       const removeJobInfo: JobInfo = {
         id: "job-remove",
         status: JobStatus.PENDING,
@@ -1501,18 +1507,20 @@ describe("ReactorClient Unit Tests", () => {
         error: { message: "Remove from source failed", stack: "" },
       };
 
-      vi.mocked(mockReactor.removeChildren).mockResolvedValue(removeJobInfo);
+      vi.mocked(mockReactor.removeRelationship).mockResolvedValue(
+        removeJobInfo,
+      );
       vi.mocked(mockJobAwaiter.waitForJob).mockResolvedValue(
         failedRemoveJobInfo,
       );
 
       await expect(
-        client.moveChildren("source-1", "target-1", ["child-1"]),
+        client.moveRelationship("source-1", "target-1", "child-1", "child"),
       ).rejects.toThrow("Remove from source failed");
-      expect(mockReactor.addChildren).not.toHaveBeenCalled();
+      expect(mockReactor.addRelationship).not.toHaveBeenCalled();
     });
 
-    it("should throw error when moveChildren add job fails", async () => {
+    it("should throw error when moveRelationship add job fails", async () => {
       const removeJobInfo: JobInfo = {
         id: "job-remove",
         status: JobStatus.PENDING,
@@ -1546,14 +1554,16 @@ describe("ReactorClient Unit Tests", () => {
         error: { message: "Add to target failed", stack: "" },
       };
 
-      vi.mocked(mockReactor.removeChildren).mockResolvedValue(removeJobInfo);
-      vi.mocked(mockReactor.addChildren).mockResolvedValue(addJobInfo);
+      vi.mocked(mockReactor.removeRelationship).mockResolvedValue(
+        removeJobInfo,
+      );
+      vi.mocked(mockReactor.addRelationship).mockResolvedValue(addJobInfo);
       vi.mocked(mockJobAwaiter.waitForJob)
         .mockResolvedValueOnce(completedRemoveJobInfo)
         .mockResolvedValueOnce(failedAddJobInfo);
 
       await expect(
-        client.moveChildren("source-1", "target-1", ["child-1"]),
+        client.moveRelationship("source-1", "target-1", "child-1", "child"),
       ).rejects.toThrow("Add to target failed");
       expect(mockReactor.getByIdOrSlug).not.toHaveBeenCalled();
     });

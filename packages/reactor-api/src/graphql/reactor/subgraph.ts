@@ -378,40 +378,43 @@ export class ReactorSubgraph extends BaseSubgraph {
         }
       },
 
-      addChildren: async (_parent, args, ctx: Context) => {
-        this.logger.debug("addChildren(@args)", args);
+      addRelationship: async (_parent, args, ctx: Context) => {
+        this.logger.debug("addRelationship(@args)", args);
         try {
-          await this.assertCanWrite(args.parentIdentifier, ctx);
+          await this.assertCanWrite(args.sourceIdentifier, ctx);
 
-          return await resolvers.addChildren(this.reactorClient, args);
+          return await resolvers.addRelationship(this.reactorClient, args);
         } catch (error) {
-          this.logger.error("Error in addChildren(@args): @Error", error);
+          this.logger.error("Error in addRelationship(@args): @Error", error);
           throw error;
         }
       },
 
-      removeChildren: async (_parent, args, ctx: Context) => {
-        this.logger.debug("removeChildren(@args)", args);
+      removeRelationship: async (_parent, args, ctx: Context) => {
+        this.logger.debug("removeRelationship(@args)", args);
         try {
-          await this.assertCanWrite(args.parentIdentifier, ctx);
+          await this.assertCanWrite(args.sourceIdentifier, ctx);
 
-          return await resolvers.removeChildren(this.reactorClient, args);
+          return await resolvers.removeRelationship(this.reactorClient, args);
         } catch (error) {
-          this.logger.error("Error in removeChildren(@args): @Error", error);
+          this.logger.error(
+            "Error in removeRelationship(@args): @Error",
+            error,
+          );
           throw error;
         }
       },
 
-      moveChildren: async (_parent, args, ctx: Context) => {
-        this.logger.debug("moveChildren(@args)", args);
+      moveRelationship: async (_parent, args, ctx: Context) => {
+        this.logger.debug("moveRelationship(@args)", args);
         try {
           await this.assertCanWrite(args.sourceParentIdentifier, ctx);
           await this.assertCanWrite(args.targetParentIdentifier, ctx);
 
-          return await resolvers.moveChildren(this.reactorClient, args);
+          return await resolvers.moveRelationship(this.reactorClient, args);
         } catch (error) {
           this.logger.error(
-            "Error in moveChildren(@args): @Error @args",
+            "Error in moveRelationship(@args): @Error @args",
             error,
             args,
           );

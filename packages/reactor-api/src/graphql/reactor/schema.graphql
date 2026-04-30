@@ -130,7 +130,7 @@ type DocumentWithChildren {
   childIds: [String!]!
 }
 
-type MoveChildrenResult {
+type MoveRelationshipResult {
   source: PHDocument!
   target: PHDocument!
 }
@@ -429,27 +429,30 @@ type Mutation {
     branch: String
   ): PHDocument!
 
-  # Add children to a document
-  addChildren(
-    parentIdentifier: String!
-    documentIdentifiers: [String!]!
+  # Add a relationship between two documents
+  addRelationship(
+    sourceIdentifier: String!
+    targetIdentifier: String!
+    relationshipType: String!
     branch: String
   ): PHDocument!
 
-  # Remove children from a document
-  removeChildren(
-    parentIdentifier: String!
-    documentIdentifiers: [String!]!
+  # Remove a relationship between two documents
+  removeRelationship(
+    sourceIdentifier: String!
+    targetIdentifier: String!
+    relationshipType: String!
     branch: String
   ): PHDocument!
 
-  # Move children between documents
-  moveChildren(
+  # Move a relationship from one source to another
+  moveRelationship(
     sourceParentIdentifier: String!
     targetParentIdentifier: String!
-    documentIdentifiers: [String!]!
+    targetIdentifier: String!
+    relationshipType: String!
     branch: String
-  ): MoveChildrenResult!
+  ): MoveRelationshipResult!
 
   # Delete a single document
   deleteDocument(identifier: String!, propagate: PropagationMode): Boolean!

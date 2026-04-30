@@ -727,27 +727,28 @@ export async function renameDocument(
   }
 }
 
-export async function addChildren(
+export async function addRelationship(
   reactorClient: IReactorClient,
   args: {
-    parentIdentifier: string;
-    documentIdentifiers: readonly string[];
+    sourceIdentifier: string;
+    targetIdentifier: string;
+    relationshipType: string;
     branch?: string | null;
   },
 ): Promise<ReturnType<typeof toGqlPhDocument>> {
   const branch = fromInputMaybe(args.branch);
-  const documentIdentifiers = [...args.documentIdentifiers];
 
   let result: PHDocument;
   try {
-    result = await reactorClient.addChildren(
-      args.parentIdentifier,
-      documentIdentifiers,
+    result = await reactorClient.addRelationship(
+      args.sourceIdentifier,
+      args.targetIdentifier,
+      args.relationshipType,
       branch,
     );
   } catch (error) {
     throw new GraphQLError(
-      `Failed to add children: ${error instanceof Error ? error.message : "Unknown error"}`,
+      `Failed to add relationship: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
 
@@ -760,27 +761,28 @@ export async function addChildren(
   }
 }
 
-export async function removeChildren(
+export async function removeRelationship(
   reactorClient: IReactorClient,
   args: {
-    parentIdentifier: string;
-    documentIdentifiers: readonly string[];
+    sourceIdentifier: string;
+    targetIdentifier: string;
+    relationshipType: string;
     branch?: string | null;
   },
 ): Promise<ReturnType<typeof toGqlPhDocument>> {
   const branch = fromInputMaybe(args.branch);
-  const documentIdentifiers = [...args.documentIdentifiers];
 
   let result: PHDocument;
   try {
-    result = await reactorClient.removeChildren(
-      args.parentIdentifier,
-      documentIdentifiers,
+    result = await reactorClient.removeRelationship(
+      args.sourceIdentifier,
+      args.targetIdentifier,
+      args.relationshipType,
       branch,
     );
   } catch (error) {
     throw new GraphQLError(
-      `Failed to remove children: ${error instanceof Error ? error.message : "Unknown error"}`,
+      `Failed to remove relationship: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
 
@@ -793,12 +795,13 @@ export async function removeChildren(
   }
 }
 
-export async function moveChildren(
+export async function moveRelationship(
   reactorClient: IReactorClient,
   args: {
     sourceParentIdentifier: string;
     targetParentIdentifier: string;
-    documentIdentifiers: readonly string[];
+    targetIdentifier: string;
+    relationshipType: string;
     branch?: string | null;
   },
 ): Promise<{
@@ -806,19 +809,19 @@ export async function moveChildren(
   target: ReturnType<typeof toGqlPhDocument>;
 }> {
   const branch = fromInputMaybe(args.branch);
-  const documentIdentifiers = [...args.documentIdentifiers];
 
   let result: { source: PHDocument; target: PHDocument };
   try {
-    result = await reactorClient.moveChildren(
+    result = await reactorClient.moveRelationship(
       args.sourceParentIdentifier,
       args.targetParentIdentifier,
-      documentIdentifiers,
+      args.targetIdentifier,
+      args.relationshipType,
       branch,
     );
   } catch (error) {
     throw new GraphQLError(
-      `Failed to move children: ${error instanceof Error ? error.message : "Unknown error"}`,
+      `Failed to move relationship: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
 
@@ -844,7 +847,18 @@ export async function deleteDocument(
   const propagate = toReactorPropagationMode(args.propagate);
 
   try {
-    await reactorClient.deleteDocument(args.identifier, propagate);
+    const incoming = await reactorClient.getParents(args.identifier);
+    const driveParent = incoming.results.find(
+      (p) => p.header.documentType === "powerhouse/document-drive",
+    );
+    if (driveParent) {
+      await reactorClient.drives.removeNode(
+        driveParent.header.id,
+        args.identifier,
+      );
+    } else {
+      await reactorClient.deleteDocument(args.identifier, propagate);
+    }
     return true;
   } catch (error) {
     throw new GraphQLError(

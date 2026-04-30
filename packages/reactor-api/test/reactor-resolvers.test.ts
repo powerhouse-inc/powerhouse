@@ -82,7 +82,11 @@ describe("ReactorSubgraph Query Resolvers", () => {
 
       await module.client.create(parent);
       await module.client.create(child);
-      await module.client.addChildren(parent.header.id, [child.header.id]);
+      await module.client.addRelationship(
+        parent.header.id,
+        child.header.id,
+        "child",
+      );
 
       const result = await resolvers.documentChildren(module.client, {
         parentIdentifier: parent.header.id,
@@ -102,7 +106,11 @@ describe("ReactorSubgraph Query Resolvers", () => {
 
       await module.client.create(parent);
       await module.client.create(child);
-      await module.client.addChildren(parent.header.id, [child.header.id]);
+      await module.client.addRelationship(
+        parent.header.id,
+        child.header.id,
+        "child",
+      );
 
       const result = await resolvers.documentParents(module.client, {
         childIdentifier: child.header.id,
@@ -219,17 +227,18 @@ describe("ReactorSubgraph Mutation Resolvers", () => {
     });
   });
 
-  describe("addChildren", () => {
-    it("should add children to a parent document", async () => {
+  describe("addRelationship", () => {
+    it("should add a relationship between documents", async () => {
       const parent = createTestDocument();
       const child = createTestDocument();
 
       await module.client.create(parent);
       await module.client.create(child);
 
-      const result = await resolvers.addChildren(module.client, {
-        parentIdentifier: parent.header.id,
-        documentIdentifiers: [child.header.id],
+      const result = await resolvers.addRelationship(module.client, {
+        sourceIdentifier: parent.header.id,
+        targetIdentifier: child.header.id,
+        relationshipType: "child",
         branch: null,
       });
 
@@ -237,18 +246,23 @@ describe("ReactorSubgraph Mutation Resolvers", () => {
     });
   });
 
-  describe("removeChildren", () => {
-    it("should remove children from a parent document", async () => {
+  describe("removeRelationship", () => {
+    it("should remove a relationship between documents", async () => {
       const parent = createTestDocument();
       const child = createTestDocument();
 
       await module.client.create(parent);
       await module.client.create(child);
-      await module.client.addChildren(parent.header.id, [child.header.id]);
+      await module.client.addRelationship(
+        parent.header.id,
+        child.header.id,
+        "child",
+      );
 
-      const result = await resolvers.removeChildren(module.client, {
-        parentIdentifier: parent.header.id,
-        documentIdentifiers: [child.header.id],
+      const result = await resolvers.removeRelationship(module.client, {
+        sourceIdentifier: parent.header.id,
+        targetIdentifier: child.header.id,
+        relationshipType: "child",
         branch: null,
       });
 

@@ -269,44 +269,50 @@ mutation RenameDocument(
   }
 }
 
-mutation AddChildren(
-  $parentIdentifier: String!
-  $documentIdentifiers: [String!]!
+mutation AddRelationship(
+  $sourceIdentifier: String!
+  $targetIdentifier: String!
+  $relationshipType: String!
   $branch: String
 ) {
-  addChildren(
-    parentIdentifier: $parentIdentifier
-    documentIdentifiers: $documentIdentifiers
+  addRelationship(
+    sourceIdentifier: $sourceIdentifier
+    targetIdentifier: $targetIdentifier
+    relationshipType: $relationshipType
     branch: $branch
   ) {
     ...PHDocumentFields
   }
 }
 
-mutation RemoveChildren(
-  $parentIdentifier: String!
-  $documentIdentifiers: [String!]!
+mutation RemoveRelationship(
+  $sourceIdentifier: String!
+  $targetIdentifier: String!
+  $relationshipType: String!
   $branch: String
 ) {
-  removeChildren(
-    parentIdentifier: $parentIdentifier
-    documentIdentifiers: $documentIdentifiers
+  removeRelationship(
+    sourceIdentifier: $sourceIdentifier
+    targetIdentifier: $targetIdentifier
+    relationshipType: $relationshipType
     branch: $branch
   ) {
     ...PHDocumentFields
   }
 }
 
-mutation MoveChildren(
+mutation MoveRelationship(
   $sourceParentIdentifier: String!
   $targetParentIdentifier: String!
-  $documentIdentifiers: [String!]!
+  $targetIdentifier: String!
+  $relationshipType: String!
   $branch: String
 ) {
-  moveChildren(
+  moveRelationship(
     sourceParentIdentifier: $sourceParentIdentifier
     targetParentIdentifier: $targetParentIdentifier
-    documentIdentifiers: $documentIdentifiers
+    targetIdentifier: $targetIdentifier
+    relationshipType: $relationshipType
     branch: $branch
   ) {
     source {

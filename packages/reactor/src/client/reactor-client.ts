@@ -1,4 +1,3 @@
-import { deleteNode } from "@powerhousedao/shared/document-drive";
 import type {
   Action,
   CreateDocumentActionInput,
@@ -12,7 +11,6 @@ import type { ILogger } from "document-model";
 import {
   addRelationshipAction,
   createDocumentAction,
-  removeRelationshipAction,
   upgradeDocumentAction,
 } from "../actions/index.js";
 import type {
@@ -642,21 +640,24 @@ export class ReactorClient implements IReactorClient {
   /**
    * Adds multiple documents as children to another and waits for completion
    */
-  async addChildren(
-    parentIdentifier: string,
-    documentIdentifiers: string[],
+  async addRelationship(
+    sourceIdentifier: string,
+    targetIdentifier: string,
+    relationshipType: string,
     branch: string = "main",
     signal?: AbortSignal,
   ): Promise<PHDocument> {
     this.logger.verbose(
-      "addChildren(@parentIdentifier, @count children, @branch)",
-      parentIdentifier,
-      documentIdentifiers.length,
+      "addRelationship(@sourceIdentifier, @targetIdentifier, @relationshipType, @branch)",
+      sourceIdentifier,
+      targetIdentifier,
+      relationshipType,
       branch,
     );
-    const jobInfo = await this.reactor.addChildren(
-      parentIdentifier,
-      documentIdentifiers,
+    const jobInfo = await this.reactor.addRelationship(
+      sourceIdentifier,
+      targetIdentifier,
+      relationshipType,
       branch,
       this.signer,
       signal,
@@ -669,7 +670,7 @@ export class ReactorClient implements IReactorClient {
     }
 
     const result = await this.reactor.getByIdOrSlug<PHDocument>(
-      parentIdentifier,
+      sourceIdentifier,
       { branch },
       completedJob.consistencyToken,
       signal,
@@ -678,23 +679,26 @@ export class ReactorClient implements IReactorClient {
   }
 
   /**
-   * Removes multiple documents as children from another and waits for completion
+   * Removes a relationship between two documents and waits for completion.
    */
-  async removeChildren(
-    parentIdentifier: string,
-    documentIdentifiers: string[],
+  async removeRelationship(
+    sourceIdentifier: string,
+    targetIdentifier: string,
+    relationshipType: string,
     branch: string = "main",
     signal?: AbortSignal,
   ): Promise<PHDocument> {
     this.logger.verbose(
-      "removeChildren(@parentIdentifier, @count children, @branch)",
-      parentIdentifier,
-      documentIdentifiers.length,
+      "removeRelationship(@sourceIdentifier, @targetIdentifier, @relationshipType, @branch)",
+      sourceIdentifier,
+      targetIdentifier,
+      relationshipType,
       branch,
     );
-    const jobInfo = await this.reactor.removeChildren(
-      parentIdentifier,
-      documentIdentifiers,
+    const jobInfo = await this.reactor.removeRelationship(
+      sourceIdentifier,
+      targetIdentifier,
+      relationshipType,
       branch,
       this.signer,
       signal,
@@ -707,7 +711,7 @@ export class ReactorClient implements IReactorClient {
     }
 
     const result = await this.reactor.getByIdOrSlug<PHDocument>(
-      parentIdentifier,
+      sourceIdentifier,
       { branch },
       completedJob.consistencyToken,
       signal,
@@ -716,12 +720,13 @@ export class ReactorClient implements IReactorClient {
   }
 
   /**
-   * Moves multiple documents from one parent to another and waits for completion
+   * Moves a relationship from one source document to another and waits for completion.
    */
-  async moveChildren(
+  async moveRelationship(
     sourceParentIdentifier: string,
     targetParentIdentifier: string,
-    documentIdentifiers: string[],
+    targetIdentifier: string,
+    relationshipType: string,
     branch: string = "main",
     signal?: AbortSignal,
   ): Promise<{
@@ -729,15 +734,17 @@ export class ReactorClient implements IReactorClient {
     target: PHDocument;
   }> {
     this.logger.verbose(
-      "moveChildren(@sourceParentIdentifier, @targetParentIdentifier, @count children, @branch)",
+      "moveRelationship(@sourceParentIdentifier, @targetParentIdentifier, @targetIdentifier, @relationshipType, @branch)",
       sourceParentIdentifier,
       targetParentIdentifier,
-      documentIdentifiers.length,
+      targetIdentifier,
+      relationshipType,
       branch,
     );
-    const removeJobInfo = await this.reactor.removeChildren(
+    const removeJobInfo = await this.reactor.removeRelationship(
       sourceParentIdentifier,
-      documentIdentifiers,
+      targetIdentifier,
+      relationshipType,
       branch,
       this.signer,
       signal,
@@ -749,9 +756,10 @@ export class ReactorClient implements IReactorClient {
       throw new Error(removeCompletedJob.error?.message);
     }
 
-    const addJobInfo = await this.reactor.addChildren(
+    const addJobInfo = await this.reactor.addRelationship(
       targetParentIdentifier,
-      documentIdentifiers,
+      targetIdentifier,
+      relationshipType,
       branch,
       this.signer,
       signal,
@@ -847,7 +855,7 @@ export class ReactorClient implements IReactorClient {
         if (descendantId === identifier) {
           continue;
         }
-        const removalJobs = await this.removeFromAllParents(
+        const removalJobs = await this.removeAllIncomingRelationships(
           descendantId,
           signal,
         );
@@ -862,7 +870,10 @@ export class ReactorClient implements IReactorClient {
       }
     }
 
-    const removalJobs = await this.removeFromAllParents(identifier, signal);
+    const removalJobs = await this.removeAllIncomingRelationships(
+      identifier,
+      signal,
+    );
     jobs.push(...removalJobs);
 
     const jobInfo = await this.reactor.deleteDocument(
@@ -1002,7 +1013,7 @@ export class ReactorClient implements IReactorClient {
     };
   }
 
-  private async removeFromAllParents(
+  private async removeAllIncomingRelationships(
     documentId: string,
     signal?: AbortSignal,
   ): Promise<JobInfo[]> {
@@ -1016,81 +1027,16 @@ export class ReactorClient implements IReactorClient {
 
     const jobs: JobInfo[] = [];
     for (const rel of incoming.results) {
-      const relJobs = await this.removeFromParent(documentId, rel, signal);
-      jobs.push(...relJobs);
-    }
-    return jobs;
-  }
-
-  private async removeFromParent(
-    documentId: string,
-    rel: { sourceId: string; relationshipType: string },
-    signal?: AbortSignal,
-  ): Promise<JobInfo[]> {
-    const parentId = rel.sourceId;
-
-    let parentDoc: PHDocument;
-    try {
-      parentDoc = await this.reactor.get(
-        parentId,
-        undefined,
-        undefined,
-        signal,
-      );
-    } catch {
-      return [];
-    }
-
-    const isDrive =
-      parentDoc.header.documentType === "powerhouse/document-drive";
-
-    const relationshipActions: Action[] = await signActions(
-      [removeRelationshipAction(parentId, documentId, rel.relationshipType)],
-      this.signer,
-      signal,
-    );
-
-    if (isDrive) {
-      const driveActions: Action[] = await signActions(
-        [deleteNode({ id: documentId })],
+      const jobInfo = await this.reactor.removeRelationship(
+        rel.sourceId,
+        documentId,
+        rel.relationshipType,
+        "main",
         this.signer,
         signal,
       );
-
-      const batchResult = await this.reactor.executeBatch(
-        {
-          jobs: [
-            {
-              key: "relationship",
-              documentId: parentId,
-              scope: getSharedActionScope(relationshipActions),
-              branch: "main",
-              actions: relationshipActions,
-              dependsOn: [],
-            },
-            {
-              key: "drive",
-              documentId: parentId,
-              scope: getSharedActionScope(driveActions),
-              branch: "main",
-              actions: driveActions,
-              dependsOn: ["relationship"],
-            },
-          ],
-        },
-        signal,
-      );
-
-      return [...Object.values(batchResult.jobs)];
+      jobs.push(jobInfo);
     }
-
-    const jobInfo = await this.reactor.removeChildren(
-      parentId,
-      [documentId],
-      "main",
-      this.signer,
-      signal,
-    );
-    return [jobInfo];
+    return jobs;
   }
 }

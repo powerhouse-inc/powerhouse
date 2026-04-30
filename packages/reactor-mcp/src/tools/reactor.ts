@@ -397,7 +397,18 @@ export async function createReactorMcpProvider(
 
     deleteDocument: toolWithCallback(deleteDocumentTool, async (params) => {
       try {
-        await client.deleteDocument(params.documentId);
+        const incoming = await client.getParents(params.documentId);
+        const driveParent = incoming.results.find(
+          (p) => p.header.documentType === DRIVE_DOCUMENT_TYPE,
+        );
+        if (driveParent) {
+          await client.drives.removeNode(
+            driveParent.header.id,
+            params.documentId,
+          );
+        } else {
+          await client.deleteDocument(params.documentId);
+        }
         return { success: true };
       } catch {
         return { success: false };

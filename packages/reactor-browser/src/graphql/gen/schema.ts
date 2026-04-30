@@ -160,30 +160,31 @@ export type JobInfo = {
   readonly status: Scalars["String"]["output"];
 };
 
-export type MoveChildrenResult = {
+export type MoveRelationshipResult = {
   readonly source: PhDocument;
   readonly target: PhDocument;
 };
 
 export type Mutation = {
-  readonly addChildren: PhDocument;
+  readonly addRelationship: PhDocument;
   readonly createDocument: PhDocument;
   readonly createEmptyDocument: PhDocument;
   readonly deleteDocument: Scalars["Boolean"]["output"];
   readonly deleteDocuments: Scalars["Boolean"]["output"];
-  readonly moveChildren: MoveChildrenResult;
+  readonly moveRelationship: MoveRelationshipResult;
   readonly mutateDocument: PhDocument;
   readonly mutateDocumentAsync: Scalars["String"]["output"];
   readonly pushSyncEnvelopes: Scalars["Boolean"]["output"];
-  readonly removeChildren: PhDocument;
+  readonly removeRelationship: PhDocument;
   readonly renameDocument: PhDocument;
   readonly touchChannel: TouchChannelResult;
 };
 
-export type MutationAddChildrenArgs = {
+export type MutationAddRelationshipArgs = {
   branch?: InputMaybe<Scalars["String"]["input"]>;
-  documentIdentifiers: ReadonlyArray<Scalars["String"]["input"]>;
-  parentIdentifier: Scalars["String"]["input"];
+  relationshipType: Scalars["String"]["input"];
+  sourceIdentifier: Scalars["String"]["input"];
+  targetIdentifier: Scalars["String"]["input"];
 };
 
 export type MutationCreateDocumentArgs = {
@@ -206,10 +207,11 @@ export type MutationDeleteDocumentsArgs = {
   propagate?: InputMaybe<PropagationMode>;
 };
 
-export type MutationMoveChildrenArgs = {
+export type MutationMoveRelationshipArgs = {
   branch?: InputMaybe<Scalars["String"]["input"]>;
-  documentIdentifiers: ReadonlyArray<Scalars["String"]["input"]>;
+  relationshipType: Scalars["String"]["input"];
   sourceParentIdentifier: Scalars["String"]["input"];
+  targetIdentifier: Scalars["String"]["input"];
   targetParentIdentifier: Scalars["String"]["input"];
 };
 
@@ -229,10 +231,11 @@ export type MutationPushSyncEnvelopesArgs = {
   envelopes: ReadonlyArray<SyncEnvelopeInput>;
 };
 
-export type MutationRemoveChildrenArgs = {
+export type MutationRemoveRelationshipArgs = {
   branch?: InputMaybe<Scalars["String"]["input"]>;
-  documentIdentifiers: ReadonlyArray<Scalars["String"]["input"]>;
-  parentIdentifier: Scalars["String"]["input"];
+  relationshipType: Scalars["String"]["input"];
+  sourceIdentifier: Scalars["String"]["input"];
+  targetIdentifier: Scalars["String"]["input"];
 };
 
 export type MutationRenameDocumentArgs = {
@@ -936,14 +939,15 @@ export type RenameDocumentMutation = {
   };
 };
 
-export type AddChildrenMutationVariables = Exact<{
-  parentIdentifier: Scalars["String"]["input"];
-  documentIdentifiers: ReadonlyArray<Scalars["String"]["input"]>;
+export type AddRelationshipMutationVariables = Exact<{
+  sourceIdentifier: Scalars["String"]["input"];
+  targetIdentifier: Scalars["String"]["input"];
+  relationshipType: Scalars["String"]["input"];
   branch?: InputMaybe<Scalars["String"]["input"]>;
 }>;
 
-export type AddChildrenMutation = {
-  readonly addChildren: {
+export type AddRelationshipMutation = {
+  readonly addRelationship: {
     readonly id: string;
     readonly slug?: string | null | undefined;
     readonly name: string;
@@ -958,14 +962,15 @@ export type AddChildrenMutation = {
   };
 };
 
-export type RemoveChildrenMutationVariables = Exact<{
-  parentIdentifier: Scalars["String"]["input"];
-  documentIdentifiers: ReadonlyArray<Scalars["String"]["input"]>;
+export type RemoveRelationshipMutationVariables = Exact<{
+  sourceIdentifier: Scalars["String"]["input"];
+  targetIdentifier: Scalars["String"]["input"];
+  relationshipType: Scalars["String"]["input"];
   branch?: InputMaybe<Scalars["String"]["input"]>;
 }>;
 
-export type RemoveChildrenMutation = {
-  readonly removeChildren: {
+export type RemoveRelationshipMutation = {
+  readonly removeRelationship: {
     readonly id: string;
     readonly slug?: string | null | undefined;
     readonly name: string;
@@ -980,15 +985,16 @@ export type RemoveChildrenMutation = {
   };
 };
 
-export type MoveChildrenMutationVariables = Exact<{
+export type MoveRelationshipMutationVariables = Exact<{
   sourceParentIdentifier: Scalars["String"]["input"];
   targetParentIdentifier: Scalars["String"]["input"];
-  documentIdentifiers: ReadonlyArray<Scalars["String"]["input"]>;
+  targetIdentifier: Scalars["String"]["input"];
+  relationshipType: Scalars["String"]["input"];
   branch?: InputMaybe<Scalars["String"]["input"]>;
 }>;
 
-export type MoveChildrenMutation = {
-  readonly moveChildren: {
+export type MoveRelationshipMutation = {
+  readonly moveRelationship: {
     readonly source: {
       readonly id: string;
       readonly slug?: string | null | undefined;
@@ -1474,15 +1480,17 @@ export const RenameDocumentDocument = gql`
   }
   ${PhDocumentFieldsFragmentDoc}
 `;
-export const AddChildrenDocument = gql`
-  mutation AddChildren(
-    $parentIdentifier: String!
-    $documentIdentifiers: [String!]!
+export const AddRelationshipDocument = gql`
+  mutation AddRelationship(
+    $sourceIdentifier: String!
+    $targetIdentifier: String!
+    $relationshipType: String!
     $branch: String
   ) {
-    addChildren(
-      parentIdentifier: $parentIdentifier
-      documentIdentifiers: $documentIdentifiers
+    addRelationship(
+      sourceIdentifier: $sourceIdentifier
+      targetIdentifier: $targetIdentifier
+      relationshipType: $relationshipType
       branch: $branch
     ) {
       ...PHDocumentFields
@@ -1490,15 +1498,17 @@ export const AddChildrenDocument = gql`
   }
   ${PhDocumentFieldsFragmentDoc}
 `;
-export const RemoveChildrenDocument = gql`
-  mutation RemoveChildren(
-    $parentIdentifier: String!
-    $documentIdentifiers: [String!]!
+export const RemoveRelationshipDocument = gql`
+  mutation RemoveRelationship(
+    $sourceIdentifier: String!
+    $targetIdentifier: String!
+    $relationshipType: String!
     $branch: String
   ) {
-    removeChildren(
-      parentIdentifier: $parentIdentifier
-      documentIdentifiers: $documentIdentifiers
+    removeRelationship(
+      sourceIdentifier: $sourceIdentifier
+      targetIdentifier: $targetIdentifier
+      relationshipType: $relationshipType
       branch: $branch
     ) {
       ...PHDocumentFields
@@ -1506,17 +1516,19 @@ export const RemoveChildrenDocument = gql`
   }
   ${PhDocumentFieldsFragmentDoc}
 `;
-export const MoveChildrenDocument = gql`
-  mutation MoveChildren(
+export const MoveRelationshipDocument = gql`
+  mutation MoveRelationship(
     $sourceParentIdentifier: String!
     $targetParentIdentifier: String!
-    $documentIdentifiers: [String!]!
+    $targetIdentifier: String!
+    $relationshipType: String!
     $branch: String
   ) {
-    moveChildren(
+    moveRelationship(
       sourceParentIdentifier: $sourceParentIdentifier
       targetParentIdentifier: $targetParentIdentifier
-      documentIdentifiers: $documentIdentifiers
+      targetIdentifier: $targetIdentifier
+      relationshipType: $relationshipType
       branch: $branch
     ) {
       source {
@@ -1914,56 +1926,56 @@ export function getSdk(
         variables,
       );
     },
-    AddChildren(
-      variables: AddChildrenMutationVariables,
+    AddRelationship(
+      variables: AddRelationshipMutationVariables,
       requestHeaders?: GraphQLClientRequestHeaders,
       signal?: RequestInit["signal"],
-    ): Promise<AddChildrenMutation> {
+    ): Promise<AddRelationshipMutation> {
       return withWrapper(
         (wrappedRequestHeaders) =>
-          client.request<AddChildrenMutation>({
-            document: AddChildrenDocument,
+          client.request<AddRelationshipMutation>({
+            document: AddRelationshipDocument,
             variables,
             requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
             signal,
           }),
-        "AddChildren",
+        "AddRelationship",
         "mutation",
         variables,
       );
     },
-    RemoveChildren(
-      variables: RemoveChildrenMutationVariables,
+    RemoveRelationship(
+      variables: RemoveRelationshipMutationVariables,
       requestHeaders?: GraphQLClientRequestHeaders,
       signal?: RequestInit["signal"],
-    ): Promise<RemoveChildrenMutation> {
+    ): Promise<RemoveRelationshipMutation> {
       return withWrapper(
         (wrappedRequestHeaders) =>
-          client.request<RemoveChildrenMutation>({
-            document: RemoveChildrenDocument,
+          client.request<RemoveRelationshipMutation>({
+            document: RemoveRelationshipDocument,
             variables,
             requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
             signal,
           }),
-        "RemoveChildren",
+        "RemoveRelationship",
         "mutation",
         variables,
       );
     },
-    MoveChildren(
-      variables: MoveChildrenMutationVariables,
+    MoveRelationship(
+      variables: MoveRelationshipMutationVariables,
       requestHeaders?: GraphQLClientRequestHeaders,
       signal?: RequestInit["signal"],
-    ): Promise<MoveChildrenMutation> {
+    ): Promise<MoveRelationshipMutation> {
       return withWrapper(
         (wrappedRequestHeaders) =>
-          client.request<MoveChildrenMutation>({
-            document: MoveChildrenDocument,
+          client.request<MoveRelationshipMutation>({
+            document: MoveRelationshipDocument,
             variables,
             requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
             signal,
           }),
-        "MoveChildren",
+        "MoveRelationship",
         "mutation",
         variables,
       );

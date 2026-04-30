@@ -106,9 +106,9 @@ describe("Permissions Integration Tests", () => {
       execute: vi.fn().mockResolvedValue(mockDocument),
       executeAsync: vi.fn().mockResolvedValue("job-123"),
       rename: vi.fn().mockResolvedValue(mockDocument),
-      addChildren: vi.fn().mockResolvedValue(mockParentDocument),
-      removeChildren: vi.fn().mockResolvedValue(mockParentDocument),
-      moveChildren: vi.fn().mockResolvedValue({
+      addRelationship: vi.fn().mockResolvedValue(mockParentDocument),
+      removeRelationship: vi.fn().mockResolvedValue(mockParentDocument),
+      moveRelationship: vi.fn().mockResolvedValue({
         source: mockParentDocument,
         target: mockParentDocument,
       }),
@@ -362,20 +362,21 @@ describe("Permissions Integration Tests", () => {
       });
     });
 
-    describe("moveChildren", () => {
-      const callMoveChildren = async (
+    describe("moveRelationship", () => {
+      const callMoveRelationship = async (
         ctx: any,
         sourceId: string,
         targetId: string,
       ) => {
         const mutation = (reactorSubgraph.resolvers.Mutation as any)
-          ?.moveChildren;
+          ?.moveRelationship;
         return mutation(
           null,
           {
             sourceParentIdentifier: sourceId,
             targetParentIdentifier: targetId,
-            documentIdentifiers: ["child-doc"],
+            targetIdentifier: "child-doc",
+            relationshipType: "child",
           },
           ctx,
         );
@@ -398,7 +399,7 @@ describe("Permissions Integration Tests", () => {
         const ctx = createContext({ userAddress: "0xuser" });
 
         await expect(
-          callMoveChildren(ctx, "parent-doc", "doc-123"),
+          callMoveRelationship(ctx, "parent-doc", "doc-123"),
         ).rejects.toThrow("Forbidden");
       });
 
@@ -419,7 +420,7 @@ describe("Permissions Integration Tests", () => {
         const ctx = createContext({ userAddress: "0xuser" });
 
         await expect(
-          callMoveChildren(ctx, "parent-doc", "doc-123"),
+          callMoveRelationship(ctx, "parent-doc", "doc-123"),
         ).rejects.toThrow("Forbidden");
       });
 
@@ -438,7 +439,7 @@ describe("Permissions Integration Tests", () => {
         );
 
         const ctx = createContext({ userAddress: "0xuser" });
-        const result = await callMoveChildren(ctx, "parent-doc", "doc-123");
+        const result = await callMoveRelationship(ctx, "parent-doc", "doc-123");
 
         expect(result).toBeDefined();
       });

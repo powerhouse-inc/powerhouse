@@ -377,51 +377,57 @@ export interface IReactorClient {
   ): Promise<PHDocument>;
 
   /**
-   * Adds multiple documents as children to another and waits for completion
+   * Adds a relationship between two documents and waits for completion.
    *
-   * @param parentIdentifier - Parent document id or slug
-   * @param documentIdentifiers - List of document identifiers to add as children
-   * @param branch - Optional branch to add children to, defaults to "main"
+   * @param sourceIdentifier - Source document id or slug
+   * @param targetIdentifier - Target document id or slug
+   * @param relationshipType - Relationship type identifier
+   * @param branch - Optional branch to add the relationship to, defaults to "main"
    * @param signal - Optional abort signal to cancel the request
-   * @returns The updated parent document
+   * @returns The updated source document
    */
-  addChildren(
-    parentIdentifier: string,
-    documentIdentifiers: string[],
+  addRelationship(
+    sourceIdentifier: string,
+    targetIdentifier: string,
+    relationshipType: string,
     branch?: string,
     signal?: AbortSignal,
   ): Promise<PHDocument>;
 
   /**
-   * Removes multiple documents as children from another and waits for completion
+   * Removes a relationship between two documents and waits for completion.
    *
-   * @param parentIdentifier - Parent document identifiers
-   * @param documentIdentifiers - List of document ids to remove as children
-   * @param branch - Optional branch to remove children from, defaults to "main"
+   * @param sourceIdentifier - Source document id or slug
+   * @param targetIdentifier - Target document id or slug
+   * @param relationshipType - Relationship type identifier
+   * @param branch - Optional branch to remove the relationship from, defaults to "main"
    * @param signal - Optional abort signal to cancel the request
-   * @returns The updated parent document
+   * @returns The updated source document
    */
-  removeChildren(
-    parentIdentifier: string,
-    documentIdentifiers: string[],
+  removeRelationship(
+    sourceIdentifier: string,
+    targetIdentifier: string,
+    relationshipType: string,
     branch?: string,
     signal?: AbortSignal,
   ): Promise<PHDocument>;
 
   /**
-   * Moves multiple documents from one parent to another and waits for completion
+   * Moves a relationship from one source document to another and waits for completion.
    *
    * @param sourceParentIdentifier - Source parent document id or slug
    * @param targetParentIdentifier - Target parent document id or slug
-   * @param documentIdentifiers - List of document identifiers to move
-   * @param branch - Optional branch to move children to, defaults to "main"
+   * @param targetIdentifier - The target document id or slug
+   * @param relationshipType - Relationship type identifier
+   * @param branch - Optional branch to apply the move to, defaults to "main"
    * @param signal - Optional abort signal to cancel the request
    * @returns The updated source and target documents
    */
-  moveChildren(
+  moveRelationship(
     sourceParentIdentifier: string,
     targetParentIdentifier: string,
-    documentIdentifiers: string[],
+    targetIdentifier: string,
+    relationshipType: string,
     branch?: string,
     signal?: AbortSignal,
   ): Promise<{

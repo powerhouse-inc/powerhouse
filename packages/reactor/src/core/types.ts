@@ -348,36 +348,40 @@ export interface IReactor {
   ): Promise<BatchLoadResult>;
 
   /**
-   * Adds multiple documents as children to another
+   * Adds a relationship between two documents.
    *
-   * @param parentId - Parent document id
-   * @param documentIds - List of document ids to add as children
-   * @param branch - Branch to add children to, defaults to "main"
+   * @param sourceId - Source document id
+   * @param targetId - Target document id
+   * @param relationshipType - Relationship type identifier
+   * @param branch - Branch to add the relationship to, defaults to "main"
    * @param signer - Optional signer to sign the actions
    * @param signal - Optional abort signal to cancel the request
    * @returns The job id and status
    */
-  addChildren(
-    parentId: string,
-    documentIds: string[],
+  addRelationship(
+    sourceId: string,
+    targetId: string,
+    relationshipType: string,
     branch?: string,
     signer?: ISigner,
     signal?: AbortSignal,
   ): Promise<JobInfo>;
 
   /**
-   * Removes multiple documents as children from another
+   * Removes a relationship between two documents.
    *
-   * @param parentId - Parent document id
-   * @param documentIds - List of document ids to remove as children
-   * @param branch - Branch to remove children from, defaults to "main"
+   * @param sourceId - Source document id
+   * @param targetId - Target document id
+   * @param relationshipType - Relationship type identifier
+   * @param branch - Branch to remove the relationship from, defaults to "main"
    * @param signer - Optional signer to sign the actions
    * @param signal - Optional abort signal to cancel the request
    * @returns The job id and status
    */
-  removeChildren(
-    parentId: string,
-    documentIds: string[],
+  removeRelationship(
+    sourceId: string,
+    targetId: string,
+    relationshipType: string,
     branch?: string,
     signer?: ISigner,
     signal?: AbortSignal,
