@@ -80,23 +80,25 @@ describe("Permissions Integration Tests", () => {
         if (id === "parent-doc") return mockParentDocument;
         return null;
       }),
-      getChildren: vi.fn().mockResolvedValue({
+      getOutgoingRelationships: vi.fn().mockResolvedValue({
         results: [],
         options: { limit: 10, cursor: "" },
       } as PagedResults<PHDocument>),
-      getParents: vi.fn().mockImplementation(async (id: string) => {
-        // child-doc has parent-doc as parent
-        if (id === "child-doc") {
+      getIncomingRelationships: vi
+        .fn()
+        .mockImplementation(async (id: string) => {
+          // child-doc has parent-doc as parent
+          if (id === "child-doc") {
+            return {
+              results: [mockParentDocument],
+              options: { limit: 10, cursor: "" },
+            } as PagedResults<PHDocument>;
+          }
           return {
-            results: [mockParentDocument],
+            results: [],
             options: { limit: 10, cursor: "" },
           } as PagedResults<PHDocument>;
-        }
-        return {
-          results: [],
-          options: { limit: 10, cursor: "" },
-        } as PagedResults<PHDocument>;
-      }),
+        }),
       find: vi.fn().mockResolvedValue({
         results: [mockDocument],
         options: { limit: 10, cursor: "" },

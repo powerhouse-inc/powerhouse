@@ -95,13 +95,15 @@ query GetDocumentWithOperations(
   }
 }
 
-query GetDocumentChildren(
-  $parentIdentifier: String!
+query GetDocumentOutgoingRelationships(
+  $sourceIdentifier: String!
+  $relationshipType: String!
   $view: ViewFilterInput
   $paging: PagingInput
 ) {
-  documentChildren(
-    parentIdentifier: $parentIdentifier
+  documentOutgoingRelationships(
+    sourceIdentifier: $sourceIdentifier
+    relationshipType: $relationshipType
     view: $view
     paging: $paging
   ) {
@@ -115,13 +117,15 @@ query GetDocumentChildren(
   }
 }
 
-query GetDocumentParents(
-  $childIdentifier: String!
+query GetDocumentIncomingRelationships(
+  $targetIdentifier: String!
+  $relationshipType: String!
   $view: ViewFilterInput
   $paging: PagingInput
 ) {
-  documentParents(
-    childIdentifier: $childIdentifier
+  documentIncomingRelationships(
+    targetIdentifier: $targetIdentifier
+    relationshipType: $relationshipType
     view: $view
     paging: $paging
   ) {

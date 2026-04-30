@@ -419,8 +419,8 @@ describe("ReactorClient Unit Tests", () => {
     });
   });
 
-  describe("getChildren", () => {
-    it("should use documentView.resolveIdOrSlug to resolve the parent identifier", async () => {
+  describe("getOutgoingRelationships", () => {
+    it("should use documentView.resolveIdOrSlug to resolve the source identifier", async () => {
       vi.mocked(mockDocumentView.resolveIdOrSlug).mockResolvedValue(
         "resolved-parent-id",
       );
@@ -429,7 +429,7 @@ describe("ReactorClient Unit Tests", () => {
         options: { cursor: "0", limit: 100 },
       });
 
-      await client.getChildren("parent-slug");
+      await client.getOutgoingRelationships("parent-slug", "child");
 
       expect(mockDocumentView.resolveIdOrSlug).toHaveBeenCalledWith(
         "parent-slug",
@@ -439,7 +439,7 @@ describe("ReactorClient Unit Tests", () => {
       );
       expect(mockDocumentIndexer.getOutgoing).toHaveBeenCalledWith(
         "resolved-parent-id",
-        undefined,
+        ["child"],
         undefined,
         undefined,
         undefined,
@@ -456,7 +456,13 @@ describe("ReactorClient Unit Tests", () => {
         options: { cursor: "0", limit: 100 },
       });
 
-      await client.getChildren("parent-1", view, undefined, signal);
+      await client.getOutgoingRelationships(
+        "parent-1",
+        "child",
+        view,
+        undefined,
+        signal,
+      );
 
       expect(mockDocumentView.resolveIdOrSlug).toHaveBeenCalledWith(
         "parent-1",
@@ -473,7 +479,7 @@ describe("ReactorClient Unit Tests", () => {
         options: { cursor: "0", limit: 100 },
       });
 
-      const result = await client.getChildren("parent-1");
+      const result = await client.getOutgoingRelationships("parent-1", "child");
 
       expect(result.results).toEqual([]);
       expect(mockReactor.find).not.toHaveBeenCalled();
@@ -510,7 +516,7 @@ describe("ReactorClient Unit Tests", () => {
         options: { cursor: "", limit: 10 },
       });
 
-      const result = await client.getChildren("parent-1");
+      const result = await client.getOutgoingRelationships("parent-1", "child");
 
       expect(mockReactor.find).toHaveBeenCalledWith(
         { ids: ["child-1", "child-2"] },
@@ -523,8 +529,8 @@ describe("ReactorClient Unit Tests", () => {
     });
   });
 
-  describe("getParents", () => {
-    it("should use documentView.resolveIdOrSlug to resolve the child identifier", async () => {
+  describe("getIncomingRelationships", () => {
+    it("should use documentView.resolveIdOrSlug to resolve the target identifier", async () => {
       vi.mocked(mockDocumentView.resolveIdOrSlug).mockResolvedValue(
         "resolved-child-id",
       );
@@ -533,7 +539,7 @@ describe("ReactorClient Unit Tests", () => {
         options: { cursor: "0", limit: 100 },
       });
 
-      await client.getParents("child-slug");
+      await client.getIncomingRelationships("child-slug", "child");
 
       expect(mockDocumentView.resolveIdOrSlug).toHaveBeenCalledWith(
         "child-slug",
@@ -543,7 +549,7 @@ describe("ReactorClient Unit Tests", () => {
       );
       expect(mockDocumentIndexer.getIncoming).toHaveBeenCalledWith(
         "resolved-child-id",
-        undefined,
+        ["child"],
         undefined,
         undefined,
         undefined,
@@ -560,7 +566,13 @@ describe("ReactorClient Unit Tests", () => {
         options: { cursor: "0", limit: 100 },
       });
 
-      await client.getParents("child-1", view, undefined, signal);
+      await client.getIncomingRelationships(
+        "child-1",
+        "child",
+        view,
+        undefined,
+        signal,
+      );
 
       expect(mockDocumentView.resolveIdOrSlug).toHaveBeenCalledWith(
         "child-1",
@@ -577,7 +589,7 @@ describe("ReactorClient Unit Tests", () => {
         options: { cursor: "0", limit: 100 },
       });
 
-      const result = await client.getParents("child-1");
+      const result = await client.getIncomingRelationships("child-1", "child");
 
       expect(result.results).toEqual([]);
       expect(mockReactor.find).not.toHaveBeenCalled();
@@ -592,7 +604,7 @@ describe("ReactorClient Unit Tests", () => {
           {
             sourceId: "parent-1",
             targetId: "child-1",
-            relationshipType: "parent",
+            relationshipType: "child",
             createdAt: new Date(),
             updatedAt: new Date(),
           },
@@ -604,7 +616,7 @@ describe("ReactorClient Unit Tests", () => {
         options: { cursor: "", limit: 10 },
       });
 
-      const result = await client.getParents("child-1");
+      const result = await client.getIncomingRelationships("child-1", "child");
 
       expect(mockReactor.find).toHaveBeenCalledWith(
         { ids: ["parent-1"] },

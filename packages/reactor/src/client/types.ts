@@ -234,32 +234,36 @@ export interface IReactorClient {
   ): Promise<PagedResults<Operation>>;
 
   /**
-   * Retrieves children of a document.
+   * Retrieves outgoing relationships of a given type from a source document.
    *
-   * @param parentIdentifier - Required, this is either a document "id" field or a "slug"
+   * @param sourceIdentifier - Required, this is either a document "id" field or a "slug"
+   * @param relationshipType - The relationship type to filter by
    * @param view - Optional filter containing branch and scopes information
    * @param paging - Optional pagination options
    * @param signal - Optional abort signal to cancel the request
-   * @returns The up-to-date PHDocument and paging cursor
+   * @returns The target documents and paging cursor
    */
-  getChildren(
-    parentIdentifier: string,
+  getOutgoingRelationships(
+    sourceIdentifier: string,
+    relationshipType: string,
     view?: ViewFilter,
     paging?: PagingOptions,
     signal?: AbortSignal,
   ): Promise<PagedResults<PHDocument>>;
 
   /**
-   * Retrieves parents of a document.
+   * Retrieves incoming relationships of a given type to a target document.
    *
-   * @param childIdentifier - Required, this is either a document "id" field or a "slug"
+   * @param targetIdentifier - Required, this is either a document "id" field or a "slug"
+   * @param relationshipType - The relationship type to filter by
    * @param view - Optional filter containing branch and scopes information
    * @param paging - Optional pagination options
    * @param signal - Optional abort signal to cancel the request
-   * @returns The up-to-date PHDocument and paging cursor
+   * @returns The source documents and paging cursor
    */
-  getParents(
-    childIdentifier: string,
+  getIncomingRelationships(
+    targetIdentifier: string,
+    relationshipType: string,
     view?: ViewFilter,
     paging?: PagingOptions,
     signal?: AbortSignal,

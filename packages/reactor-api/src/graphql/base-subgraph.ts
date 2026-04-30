@@ -59,7 +59,10 @@ export class BaseSubgraph implements ISubgraph {
   protected getParentIdsFn(): GetParentIdsFn {
     return async (documentId: string): Promise<string[]> => {
       try {
-        const result = await this.reactorClient.getParents(documentId);
+        const result = await this.reactorClient.getIncomingRelationships(
+          documentId,
+          "child",
+        );
         return result.results.map((doc) => doc.header.id);
       } catch {
         return [];

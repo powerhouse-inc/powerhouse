@@ -266,39 +266,41 @@ export class ReactorClient implements IReactorClient {
   }
 
   /**
-   * Retrieves children of a document
+   * Retrieves outgoing relationships of a given type from a source document.
    */
-  async getChildren(
-    parentIdentifier: string,
+  async getOutgoingRelationships(
+    sourceIdentifier: string,
+    relationshipType: string,
     view?: ViewFilter,
     paging?: PagingOptions,
     signal?: AbortSignal,
   ): Promise<PagedResults<PHDocument>> {
     this.logger.verbose(
-      "getChildren(@parentIdentifier, @view, @paging)",
-      parentIdentifier,
+      "getOutgoingRelationships(@sourceIdentifier, @relationshipType, @view, @paging)",
+      sourceIdentifier,
+      relationshipType,
       view,
       paging,
     );
 
-    const parentId = await this.documentView.resolveIdOrSlug(
-      parentIdentifier,
+    const sourceId = await this.documentView.resolveIdOrSlug(
+      sourceIdentifier,
       view,
       undefined,
       signal,
     );
 
     const relationships = await this.documentIndexer.getOutgoing(
-      parentId,
-      undefined,
+      sourceId,
+      [relationshipType],
       undefined,
       undefined,
       signal,
     );
 
-    const childIds = relationships.results.map((rel) => rel.targetId);
+    const targetIds = relationships.results.map((rel) => rel.targetId);
 
-    if (childIds.length === 0) {
+    if (targetIds.length === 0) {
       return {
         results: [],
         options: paging || { cursor: "0", limit: 0 },
@@ -306,7 +308,7 @@ export class ReactorClient implements IReactorClient {
     }
 
     return this.reactor.find(
-      { ids: childIds },
+      { ids: targetIds },
       view,
       paging,
       undefined,
@@ -315,39 +317,41 @@ export class ReactorClient implements IReactorClient {
   }
 
   /**
-   * Retrieves parents of a document
+   * Retrieves incoming relationships of a given type to a target document.
    */
-  async getParents(
-    childIdentifier: string,
+  async getIncomingRelationships(
+    targetIdentifier: string,
+    relationshipType: string,
     view?: ViewFilter,
     paging?: PagingOptions,
     signal?: AbortSignal,
   ): Promise<PagedResults<PHDocument>> {
     this.logger.verbose(
-      "getParents(@childIdentifier, @view, @paging)",
-      childIdentifier,
+      "getIncomingRelationships(@targetIdentifier, @relationshipType, @view, @paging)",
+      targetIdentifier,
+      relationshipType,
       view,
       paging,
     );
 
-    const childId = await this.documentView.resolveIdOrSlug(
-      childIdentifier,
+    const targetId = await this.documentView.resolveIdOrSlug(
+      targetIdentifier,
       view,
       undefined,
       signal,
     );
 
     const relationships = await this.documentIndexer.getIncoming(
-      childId,
-      undefined,
+      targetId,
+      [relationshipType],
       undefined,
       undefined,
       signal,
     );
 
-    const parentIds = relationships.results.map((rel) => rel.sourceId);
+    const sourceIds = relationships.results.map((rel) => rel.sourceId);
 
-    if (parentIds.length === 0) {
+    if (sourceIds.length === 0) {
       return {
         results: [],
         options: paging || { cursor: "0", limit: 0 },
@@ -355,7 +359,7 @@ export class ReactorClient implements IReactorClient {
     }
 
     return this.reactor.find(
-      { ids: parentIds },
+      { ids: sourceIds },
       view,
       paging,
       undefined,

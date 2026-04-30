@@ -17,8 +17,8 @@ import type {
 import {
   createDocumentWithInitialState as createDocumentWithInitialStateResolver,
   createEmptyDocument as createEmptyDocumentResolver,
-  documentChildren as documentChildrenResolver,
-  documentParents as documentParentsResolver,
+  documentIncomingRelationships as documentIncomingRelationshipsResolver,
+  documentOutgoingRelationships as documentOutgoingRelationshipsResolver,
   document as documentResolver,
   findDocuments as findDocumentsResolver,
 } from "./reactor/resolvers.js";
@@ -67,14 +67,24 @@ export interface DocumentModelQueryResolvers<
     },
     ctx: Context,
   ) => Promise<PhDocumentResultPage>;
-  documentChildren: (
+  documentOutgoingRelationships: (
     parent: unknown,
-    args: { parentIdentifier: string; view?: ViewArg; paging?: PagingArg },
+    args: {
+      sourceIdentifier: string;
+      relationshipType: string;
+      view?: ViewArg;
+      paging?: PagingArg;
+    },
     ctx: Context,
   ) => Promise<PhDocumentResultPage>;
-  documentParents: (
+  documentIncomingRelationships: (
     parent: unknown,
-    args: { childIdentifier: string; view?: ViewArg; paging?: PagingArg },
+    args: {
+      targetIdentifier: string;
+      relationshipType: string;
+      view?: ViewArg;
+      paging?: PagingArg;
+    },
     ctx: Context,
   ) => Promise<PhDocumentResultPage>;
 }
@@ -366,28 +376,32 @@ export class DocumentModelSubgraph extends BaseSubgraph {
           return result;
         },
 
-        // Get children of a document (filtered by this document type)
-        documentChildren: async (
+        documentOutgoingRelationships: async (
           _: unknown,
           args: {
-            parentIdentifier: string;
+            sourceIdentifier: string;
+            relationshipType: string;
             view?: { branch?: string; scopes?: string[] };
             paging?: { limit?: number; offset?: number; cursor?: string };
           },
           ctx: Context,
         ) => {
-          const { parentIdentifier, view, paging } = args;
+          const { sourceIdentifier, relationshipType, view, paging } = args;
 
-          await this.assertCanRead(parentIdentifier, ctx);
+          await this.assertCanRead(sourceIdentifier, ctx);
 
-          const result = await documentChildrenResolver(this.reactorClient, {
-            parentIdentifier,
-            view,
-            paging,
-          });
+          const result = await documentOutgoingRelationshipsResolver(
+            this.reactorClient,
+            {
+              sourceIdentifier,
+              relationshipType,
+              view,
+              paging,
+            },
+          );
 
           const filteredItems = result.items.filter(
-            (item) => item.documentType === documentType,
+            (item: PhDocument) => item.documentType === documentType,
           );
 
           return {
@@ -397,22 +411,23 @@ export class DocumentModelSubgraph extends BaseSubgraph {
           };
         },
 
-        // Get parents of a document
-        documentParents: async (
+        documentIncomingRelationships: async (
           _: unknown,
           args: {
-            childIdentifier: string;
+            targetIdentifier: string;
+            relationshipType: string;
             view?: { branch?: string; scopes?: string[] };
             paging?: { limit?: number; offset?: number; cursor?: string };
           },
           ctx: Context,
         ) => {
-          const { childIdentifier, view, paging } = args;
+          const { targetIdentifier, relationshipType, view, paging } = args;
 
-          await this.assertCanRead(childIdentifier, ctx);
+          await this.assertCanRead(targetIdentifier, ctx);
 
-          return documentParentsResolver(this.reactorClient, {
-            childIdentifier,
+          return documentIncomingRelationshipsResolver(this.reactorClient, {
+            targetIdentifier,
+            relationshipType,
             view,
             paging,
           });

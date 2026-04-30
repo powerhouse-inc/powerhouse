@@ -68,11 +68,11 @@ describe("ReactorSubgraph Permission Checks", () => {
     // Note: get() returns PHDocument directly
     mockReactorClient = {
       get: vi.fn().mockResolvedValue(mockDocument),
-      getChildren: vi.fn().mockResolvedValue({
+      getOutgoingRelationships: vi.fn().mockResolvedValue({
         results: [],
         options: { limit: 10, cursor: "" },
       } as PagedResults<PHDocument>),
-      getParents: vi.fn().mockResolvedValue({
+      getIncomingRelationships: vi.fn().mockResolvedValue({
         results: [],
         options: { limit: 10, cursor: "" },
       } as PagedResults<PHDocument>),
@@ -153,36 +153,43 @@ describe("ReactorSubgraph Permission Checks", () => {
     });
   });
 
-  describe("Query: documentChildren", () => {
-    const callDocumentChildren = async (ctx: any) => {
-      const query = (reactorSubgraph.resolvers.Query as any)?.documentChildren;
-      return query(null, { parentIdentifier: "parent-123" }, ctx);
+  describe("Query: documentOutgoingRelationships", () => {
+    const callDocumentOutgoingRelationships = async (ctx: any) => {
+      const query = (reactorSubgraph.resolvers.Query as any)
+        ?.documentOutgoingRelationships;
+      return query(
+        null,
+        { sourceIdentifier: "parent-123", relationshipType: "child" },
+        ctx,
+      );
     };
 
     it("should allow access when user is global admin", async () => {
       const ctx = createContext({ isAdmin: true, userAddress: "0xadmin" });
 
-      const result = await callDocumentChildren(ctx);
+      const result = await callDocumentOutgoingRelationships(ctx);
 
       expect(result).toBeDefined();
     });
 
-    it("should check permission on parent document", async () => {
+    it("should check permission on source document", async () => {
       vi.mocked(mockDocumentPermissionService.canRead!).mockResolvedValue(true);
       const ctx = createContext({ userAddress: "0xpermitted" });
 
-      await callDocumentChildren(ctx);
+      await callDocumentOutgoingRelationships(ctx);
 
       expect(mockDocumentPermissionService.canRead).toHaveBeenCalled();
     });
 
-    it("should deny access when user cannot read parent", async () => {
+    it("should deny access when user cannot read source", async () => {
       vi.mocked(mockDocumentPermissionService.canRead!).mockResolvedValue(
         false,
       );
       const ctx = createContext({ userAddress: "0xunpermitted" });
 
-      await expect(callDocumentChildren(ctx)).rejects.toThrow("Forbidden");
+      await expect(callDocumentOutgoingRelationships(ctx)).rejects.toThrow(
+        "Forbidden",
+      );
     });
   });
 

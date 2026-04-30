@@ -49,17 +49,17 @@ const operationValidators: OperationValidators = {
       );
     }
   },
-  GetDocumentChildren: (data) => {
-    if (data.documentChildren) {
+  GetDocumentOutgoingRelationships: (data) => {
+    if (data.documentOutgoingRelationships) {
       PHDocumentResultPageDTO.parse(
-        data.documentChildren as PhDocumentResultPage,
+        data.documentOutgoingRelationships as PhDocumentResultPage,
       );
     }
   },
-  GetDocumentParents: (data) => {
-    if (data.documentParents) {
+  GetDocumentIncomingRelationships: (data) => {
+    if (data.documentIncomingRelationships) {
       PHDocumentResultPageDTO.parse(
-        data.documentParents as PhDocumentResultPage,
+        data.documentIncomingRelationships as PhDocumentResultPage,
       );
     }
   },

@@ -360,16 +360,18 @@ type Query {
   # Get a specific document by ID or slug
   document(identifier: String!, view: ViewFilterInput): DocumentWithChildren
 
-  # Get children of a document
-  documentChildren(
-    parentIdentifier: String!
+  # Get outgoing relationships of a given type from a source document
+  documentOutgoingRelationships(
+    sourceIdentifier: String!
+    relationshipType: String!
     view: ViewFilterInput
     paging: PagingInput
   ): PHDocumentResultPage!
 
-  # Get parents of a document
-  documentParents(
-    childIdentifier: String!
+  # Get incoming relationships of a given type to a target document
+  documentIncomingRelationships(
+    targetIdentifier: String!
+    relationshipType: String!
     view: ViewFilterInput
     paging: PagingInput
   ): PHDocumentResultPage!

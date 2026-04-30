@@ -340,10 +340,10 @@ export enum PropagationMode {
 
 export type Query = {
   readonly document?: Maybe<DocumentWithChildren>;
-  readonly documentChildren: PhDocumentResultPage;
+  readonly documentIncomingRelationships: PhDocumentResultPage;
   readonly documentModels: DocumentModelResultPage;
   readonly documentOperations: ReactorOperationResultPage;
-  readonly documentParents: PhDocumentResultPage;
+  readonly documentOutgoingRelationships: PhDocumentResultPage;
   readonly findDocuments: PhDocumentResultPage;
   readonly jobStatus?: Maybe<JobInfo>;
   readonly pollSyncEnvelopes: PollSyncEnvelopesResult;
@@ -354,9 +354,10 @@ export type QueryDocumentArgs = {
   view?: InputMaybe<ViewFilterInput>;
 };
 
-export type QueryDocumentChildrenArgs = {
+export type QueryDocumentIncomingRelationshipsArgs = {
   paging?: InputMaybe<PagingInput>;
-  parentIdentifier: Scalars["String"]["input"];
+  relationshipType: Scalars["String"]["input"];
+  targetIdentifier: Scalars["String"]["input"];
   view?: InputMaybe<ViewFilterInput>;
 };
 
@@ -370,9 +371,10 @@ export type QueryDocumentOperationsArgs = {
   paging?: InputMaybe<PagingInput>;
 };
 
-export type QueryDocumentParentsArgs = {
-  childIdentifier: Scalars["String"]["input"];
+export type QueryDocumentOutgoingRelationshipsArgs = {
   paging?: InputMaybe<PagingInput>;
+  relationshipType: Scalars["String"]["input"];
+  sourceIdentifier: Scalars["String"]["input"];
   view?: InputMaybe<ViewFilterInput>;
 };
 
@@ -679,14 +681,15 @@ export type GetDocumentWithOperationsQuery = {
     | undefined;
 };
 
-export type GetDocumentChildrenQueryVariables = Exact<{
-  parentIdentifier: Scalars["String"]["input"];
+export type GetDocumentOutgoingRelationshipsQueryVariables = Exact<{
+  sourceIdentifier: Scalars["String"]["input"];
+  relationshipType: Scalars["String"]["input"];
   view?: InputMaybe<ViewFilterInput>;
   paging?: InputMaybe<PagingInput>;
 }>;
 
-export type GetDocumentChildrenQuery = {
-  readonly documentChildren: {
+export type GetDocumentOutgoingRelationshipsQuery = {
+  readonly documentOutgoingRelationships: {
     readonly totalCount: number;
     readonly hasNextPage: boolean;
     readonly hasPreviousPage: boolean;
@@ -707,14 +710,15 @@ export type GetDocumentChildrenQuery = {
   };
 };
 
-export type GetDocumentParentsQueryVariables = Exact<{
-  childIdentifier: Scalars["String"]["input"];
+export type GetDocumentIncomingRelationshipsQueryVariables = Exact<{
+  targetIdentifier: Scalars["String"]["input"];
+  relationshipType: Scalars["String"]["input"];
   view?: InputMaybe<ViewFilterInput>;
   paging?: InputMaybe<PagingInput>;
 }>;
 
-export type GetDocumentParentsQuery = {
-  readonly documentParents: {
+export type GetDocumentIncomingRelationshipsQuery = {
+  readonly documentIncomingRelationships: {
     readonly totalCount: number;
     readonly hasNextPage: boolean;
     readonly hasPreviousPage: boolean;
@@ -1290,14 +1294,16 @@ export const GetDocumentWithOperationsDocument = gql`
   }
   ${PhDocumentFieldsFragmentDoc}
 `;
-export const GetDocumentChildrenDocument = gql`
-  query GetDocumentChildren(
-    $parentIdentifier: String!
+export const GetDocumentOutgoingRelationshipsDocument = gql`
+  query GetDocumentOutgoingRelationships(
+    $sourceIdentifier: String!
+    $relationshipType: String!
     $view: ViewFilterInput
     $paging: PagingInput
   ) {
-    documentChildren(
-      parentIdentifier: $parentIdentifier
+    documentOutgoingRelationships(
+      sourceIdentifier: $sourceIdentifier
+      relationshipType: $relationshipType
       view: $view
       paging: $paging
     ) {
@@ -1312,14 +1318,16 @@ export const GetDocumentChildrenDocument = gql`
   }
   ${PhDocumentFieldsFragmentDoc}
 `;
-export const GetDocumentParentsDocument = gql`
-  query GetDocumentParents(
-    $childIdentifier: String!
+export const GetDocumentIncomingRelationshipsDocument = gql`
+  query GetDocumentIncomingRelationships(
+    $targetIdentifier: String!
+    $relationshipType: String!
     $view: ViewFilterInput
     $paging: PagingInput
   ) {
-    documentParents(
-      childIdentifier: $childIdentifier
+    documentIncomingRelationships(
+      targetIdentifier: $targetIdentifier
+      relationshipType: $relationshipType
       view: $view
       paging: $paging
     ) {
@@ -1746,38 +1754,38 @@ export function getSdk(
         variables,
       );
     },
-    GetDocumentChildren(
-      variables: GetDocumentChildrenQueryVariables,
+    GetDocumentOutgoingRelationships(
+      variables: GetDocumentOutgoingRelationshipsQueryVariables,
       requestHeaders?: GraphQLClientRequestHeaders,
       signal?: RequestInit["signal"],
-    ): Promise<GetDocumentChildrenQuery> {
+    ): Promise<GetDocumentOutgoingRelationshipsQuery> {
       return withWrapper(
         (wrappedRequestHeaders) =>
-          client.request<GetDocumentChildrenQuery>({
-            document: GetDocumentChildrenDocument,
+          client.request<GetDocumentOutgoingRelationshipsQuery>({
+            document: GetDocumentOutgoingRelationshipsDocument,
             variables,
             requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
             signal,
           }),
-        "GetDocumentChildren",
+        "GetDocumentOutgoingRelationships",
         "query",
         variables,
       );
     },
-    GetDocumentParents(
-      variables: GetDocumentParentsQueryVariables,
+    GetDocumentIncomingRelationships(
+      variables: GetDocumentIncomingRelationshipsQueryVariables,
       requestHeaders?: GraphQLClientRequestHeaders,
       signal?: RequestInit["signal"],
-    ): Promise<GetDocumentParentsQuery> {
+    ): Promise<GetDocumentIncomingRelationshipsQuery> {
       return withWrapper(
         (wrappedRequestHeaders) =>
-          client.request<GetDocumentParentsQuery>({
-            document: GetDocumentParentsDocument,
+          client.request<GetDocumentIncomingRelationshipsQuery>({
+            document: GetDocumentIncomingRelationshipsDocument,
             variables,
             requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
             signal,
           }),
-        "GetDocumentParents",
+        "GetDocumentIncomingRelationships",
         "query",
         variables,
       );

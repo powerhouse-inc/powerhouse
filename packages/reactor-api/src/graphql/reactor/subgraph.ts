@@ -111,26 +111,31 @@ export class ReactorSubgraph extends BaseSubgraph {
         }
       },
 
-      documentChildren: async (_parent, args, ctx: Context) => {
-        this.logger.debug("documentChildren(@args)", args);
+      documentOutgoingRelationships: async (_parent, args, ctx: Context) => {
+        this.logger.debug("documentOutgoingRelationships(@args)", args);
         try {
-          await this.assertCanRead(args.parentIdentifier, ctx);
-          return await resolvers.documentChildren(this.reactorClient, args);
+          await this.assertCanRead(args.sourceIdentifier, ctx);
+          return await resolvers.documentOutgoingRelationships(
+            this.reactorClient,
+            args,
+          );
         } catch (error) {
-          this.logger.error("Error in documentChildren: @Error", error);
+          this.logger.error(
+            "Error in documentOutgoingRelationships: @Error",
+            error,
+          );
           throw error;
         }
       },
 
-      documentParents: async (_parent, args, ctx: Context) => {
-        this.logger.debug("documentParents(@args)", args);
+      documentIncomingRelationships: async (_parent, args, ctx: Context) => {
+        this.logger.debug("documentIncomingRelationships(@args)", args);
         try {
-          await this.assertCanRead(args.childIdentifier, ctx);
-          const result = await resolvers.documentParents(
+          await this.assertCanRead(args.targetIdentifier, ctx);
+          const result = await resolvers.documentIncomingRelationships(
             this.reactorClient,
             args,
           );
-          // Filter results to only include documents the user can read
           if (
             !this.hasGlobalAdminAccess(ctx) &&
             this.documentPermissionService
@@ -150,7 +155,10 @@ export class ReactorSubgraph extends BaseSubgraph {
 
           return result;
         } catch (error) {
-          this.logger.error("Error in documentParents: @Error", error);
+          this.logger.error(
+            "Error in documentIncomingRelationships: @Error",
+            error,
+          );
           throw error;
         }
       },

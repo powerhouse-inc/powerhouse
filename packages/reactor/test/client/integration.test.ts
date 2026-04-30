@@ -129,7 +129,7 @@ describe("ReactorClient Integration Tests", () => {
       });
     });
 
-    describe("getChildren", () => {
+    describe("getOutgoingRelationships", () => {
       it("should retrieve children of a parent document", async () => {
         const parent = createDocModelDocument({ id: "parent-1" });
         const child1 = createDocModelDocument({ id: "child-1" });
@@ -139,7 +139,10 @@ describe("ReactorClient Integration Tests", () => {
         await client.create(child1, "parent-1");
         await client.create(child2, "parent-1");
 
-        const result = await client.getChildren("parent-1");
+        const result = await client.getOutgoingRelationships(
+          "parent-1",
+          "child",
+        );
 
         expect(result.results.length).toBe(2);
         const childIds = result.results.map((doc) => doc.header.id);
@@ -151,7 +154,10 @@ describe("ReactorClient Integration Tests", () => {
         const parent = createDocModelDocument({ id: "lonely-parent" });
         await client.create(parent);
 
-        const result = await client.getChildren("lonely-parent");
+        const result = await client.getOutgoingRelationships(
+          "lonely-parent",
+          "child",
+        );
 
         expect(result.results.length).toBe(0);
       });
@@ -165,17 +171,22 @@ describe("ReactorClient Integration Tests", () => {
           await client.create(child, "parent-2");
         }
 
-        const firstPage = await client.getChildren("parent-2", undefined, {
-          cursor: "",
-          limit: 2,
-        });
+        const firstPage = await client.getOutgoingRelationships(
+          "parent-2",
+          "child",
+          undefined,
+          {
+            cursor: "",
+            limit: 2,
+          },
+        );
 
         expect(firstPage.results.length).toBe(2);
         expect(firstPage.options.cursor).toBeDefined();
       });
     });
 
-    describe("getParents", () => {
+    describe("getIncomingRelationships", () => {
       it("should retrieve parents of a child document", async () => {
         const parent1 = createDocModelDocument({ id: "parent-a" });
         const parent2 = createDocModelDocument({ id: "parent-b" });
@@ -186,7 +197,10 @@ describe("ReactorClient Integration Tests", () => {
         await client.create(child, "parent-a");
         await client.addRelationship("parent-b", "shared-child", "child");
 
-        const result = await client.getParents("shared-child");
+        const result = await client.getIncomingRelationships(
+          "shared-child",
+          "child",
+        );
 
         expect(result.results.length).toBe(2);
         const parentIds = result.results.map((doc) => doc.header.id);
@@ -198,7 +212,10 @@ describe("ReactorClient Integration Tests", () => {
         const orphan = createDocModelDocument({ id: "orphan-doc" });
         await client.create(orphan);
 
-        const result = await client.getParents("orphan-doc");
+        const result = await client.getIncomingRelationships(
+          "orphan-doc",
+          "child",
+        );
 
         expect(result.results.length).toBe(0);
       });
@@ -389,7 +406,10 @@ describe("ReactorClient Integration Tests", () => {
 
         expect(result.header.id).toBe("create-child");
 
-        const children = await client.getChildren("create-parent");
+        const children = await client.getOutgoingRelationships(
+          "create-parent",
+          "child",
+        );
         expect(children.results.length).toBe(1);
         expect(children.results[0].header.id).toBe("create-child");
       });
@@ -434,7 +454,10 @@ describe("ReactorClient Integration Tests", () => {
         );
         expect(batchJobIds.length).toBe(2);
 
-        const children = await client.getChildren("batch-parent");
+        const children = await client.getOutgoingRelationships(
+          "batch-parent",
+          "child",
+        );
         expect(children.results.length).toBe(1);
         expect(children.results[0].header.id).toBe("batch-child");
       });
@@ -535,7 +558,10 @@ describe("ReactorClient Integration Tests", () => {
 
         expect(result.header.documentType).toBe("powerhouse/document-model");
 
-        const children = await client.getChildren("empty-parent");
+        const children = await client.getOutgoingRelationships(
+          "empty-parent",
+          "child",
+        );
         expect(children.results.length).toBe(1);
         expect(children.results[0].header.id).toBe(result.header.id);
       });
@@ -651,7 +677,10 @@ describe("ReactorClient Integration Tests", () => {
 
         expect(result.header.id).toBe("add-parent-1");
 
-        const children = await client.getChildren("add-parent-1");
+        const children = await client.getOutgoingRelationships(
+          "add-parent-1",
+          "child",
+        );
         expect(children.results.length).toBe(1);
         expect(children.results[0].header.id).toBe("add-child-1");
       });
@@ -671,7 +700,10 @@ describe("ReactorClient Integration Tests", () => {
         await client.addRelationship("add-parent-2", "add-child-2b", "child");
         await client.addRelationship("add-parent-2", "add-child-2c", "child");
 
-        const children = await client.getChildren("add-parent-2");
+        const children = await client.getOutgoingRelationships(
+          "add-parent-2",
+          "child",
+        );
         expect(children.results.length).toBe(3);
       });
     });
@@ -690,7 +722,10 @@ describe("ReactorClient Integration Tests", () => {
           "child",
         );
 
-        const children = await client.getChildren("remove-parent-1");
+        const children = await client.getOutgoingRelationships(
+          "remove-parent-1",
+          "child",
+        );
         expect(children.results.length).toBe(0);
       });
 
@@ -716,7 +751,10 @@ describe("ReactorClient Integration Tests", () => {
           "child",
         );
 
-        const children = await client.getChildren("remove-parent-2");
+        const children = await client.getOutgoingRelationships(
+          "remove-parent-2",
+          "child",
+        );
         expect(children.results.length).toBe(1);
         expect(children.results[0].header.id).toBe("remove-child-2b");
       });
@@ -747,10 +785,16 @@ describe("ReactorClient Integration Tests", () => {
           "child",
         );
 
-        const parent1Children = await client.getChildren("move-parent-1");
+        const parent1Children = await client.getOutgoingRelationships(
+          "move-parent-1",
+          "child",
+        );
         expect(parent1Children.results.length).toBe(0);
 
-        const parent2Children = await client.getChildren("move-parent-2");
+        const parent2Children = await client.getOutgoingRelationships(
+          "move-parent-2",
+          "child",
+        );
         expect(parent2Children.results.length).toBe(2);
       });
     });

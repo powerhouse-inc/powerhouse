@@ -128,10 +128,13 @@ describe("DriveClient Integration Tests", () => {
       expect(fileNode?.parentFolder).toBe(folder.id);
     });
 
-    it("registers the parent->child relationship for getChildren", async () => {
+    it("registers the parent->child relationship for getOutgoingRelationships", async () => {
       const drive = await createDrive();
       const child = await createDocInDrive(drive, "Child");
-      const children = await client.getChildren(drive.header.id);
+      const children = await client.getOutgoingRelationships(
+        drive.header.id,
+        "child",
+      );
       const ids = children.results.map((c) => c.header.id);
       expect(ids).toContain(child.header.id);
     });

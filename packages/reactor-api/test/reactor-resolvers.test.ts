@@ -75,8 +75,8 @@ describe("ReactorSubgraph Query Resolvers", () => {
     });
   });
 
-  describe("documentChildren", () => {
-    it("should transform children documents to GraphQL format", async () => {
+  describe("documentOutgoingRelationships", () => {
+    it("should transform outgoing related documents to GraphQL format", async () => {
       const parent = createTestDocument();
       const child = createTestDocument();
 
@@ -88,19 +88,23 @@ describe("ReactorSubgraph Query Resolvers", () => {
         "child",
       );
 
-      const result = await resolvers.documentChildren(module.client, {
-        parentIdentifier: parent.header.id,
-        paging: null,
-        view: null,
-      });
+      const result = await resolvers.documentOutgoingRelationships(
+        module.client,
+        {
+          sourceIdentifier: parent.header.id,
+          relationshipType: "child",
+          paging: null,
+          view: null,
+        },
+      );
 
       expect(result.items.length).toBe(1);
       expect(result.items[0].id).toBe(child.header.id);
     });
   });
 
-  describe("documentParents", () => {
-    it("should transform parent documents to GraphQL format", async () => {
+  describe("documentIncomingRelationships", () => {
+    it("should transform incoming related documents to GraphQL format", async () => {
       const parent = createTestDocument();
       const child = createTestDocument();
 
@@ -112,11 +116,15 @@ describe("ReactorSubgraph Query Resolvers", () => {
         "child",
       );
 
-      const result = await resolvers.documentParents(module.client, {
-        childIdentifier: child.header.id,
-        paging: null,
-        view: null,
-      });
+      const result = await resolvers.documentIncomingRelationships(
+        module.client,
+        {
+          targetIdentifier: child.header.id,
+          relationshipType: "child",
+          paging: null,
+          view: null,
+        },
+      );
 
       expect(result.items.length).toBe(1);
       expect(result.items[0].id).toBe(parent.header.id);

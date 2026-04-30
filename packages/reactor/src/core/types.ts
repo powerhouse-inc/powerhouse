@@ -186,29 +186,33 @@ export interface IReactor {
   ): Promise<TDocument>;
 
   /**
-   * Retrieves the children of a document
+   * Retrieves outgoing relationships of a given type from a source document.
    *
-   * @param parentId - The parent document id
+   * @param sourceId - The source document id
+   * @param relationshipType - The relationship type to filter by
    * @param consistencyToken - Optional token for read-after-write consistency
    * @param signal - Optional abort signal to cancel the request
-   * @returns The list of child document ids
+   * @returns The list of target document ids
    */
-  getChildren(
-    parentId: string,
+  getOutgoingRelationships(
+    sourceId: string,
+    relationshipType: string,
     consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<string[]>;
 
   /**
-   * Retrieves the parents of a document
+   * Retrieves incoming relationships of a given type to a target document.
    *
-   * @param childId - The child document id
+   * @param targetId - The target document id
+   * @param relationshipType - The relationship type to filter by
    * @param consistencyToken - Optional token for read-after-write consistency
    * @param signal - Optional abort signal to cancel the request
-   * @returns The list of parent document ids
+   * @returns The list of source document ids
    */
-  getParents(
-    childId: string,
+  getIncomingRelationships(
+    targetId: string,
+    relationshipType: string,
     consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<string[]>;

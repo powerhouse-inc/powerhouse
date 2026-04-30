@@ -28,7 +28,11 @@ const createMockReactorClient = (): IReactorClient => {
       options: { cursor: "", limit: 10 },
     }),
     createEmpty: vi.fn(),
-    getChildren: vi.fn().mockResolvedValue({
+    getOutgoingRelationships: vi.fn().mockResolvedValue({
+      results: [],
+      options: { cursor: "", limit: 10 },
+    }),
+    getIncomingRelationships: vi.fn().mockResolvedValue({
       results: [],
       options: { cursor: "", limit: 10 },
     }),

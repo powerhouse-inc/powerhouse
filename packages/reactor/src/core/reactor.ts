@@ -259,14 +259,15 @@ export class Reactor implements IReactor {
     );
   }
 
-  async getChildren(
-    documentId: string,
+  async getOutgoingRelationships(
+    sourceId: string,
+    relationshipType: string,
     consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<string[]> {
     const relationships = await this.documentIndexer.getOutgoing(
-      documentId,
-      ["child"],
+      sourceId,
+      [relationshipType],
       undefined,
       consistencyToken,
       signal,
@@ -279,14 +280,15 @@ export class Reactor implements IReactor {
     return relationships.results.map((rel) => rel.targetId);
   }
 
-  async getParents(
-    childId: string,
+  async getIncomingRelationships(
+    targetId: string,
+    relationshipType: string,
     consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<string[]> {
     const relationships = await this.documentIndexer.getIncoming(
-      childId,
-      ["parent"],
+      targetId,
+      [relationshipType],
       undefined,
       consistencyToken,
       signal,
