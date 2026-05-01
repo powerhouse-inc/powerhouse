@@ -1,3 +1,13 @@
+## 6.0.0-dev.210 (2026-05-01)
+
+### 🚀 Features
+
+- created a drive-client that is specific to working with drives ([718b6b1de](https://github.com/powerhouse-inc/powerhouse/commit/718b6b1de))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.0.0-dev.209 (2026-04-30)
 
 ### 🚀 Features
