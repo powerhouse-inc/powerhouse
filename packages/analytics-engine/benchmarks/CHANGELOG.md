@@ -1,3 +1,7 @@
+## 6.0.0-dev.211 (2026-05-02)
+
+This was a version bump only for benchmarks to align it with other projects, there were no code changes.
+
 ## 6.0.0-dev.210 (2026-05-01)
 
 This was a version bump only for benchmarks to align it with other projects, there were no code changes.
