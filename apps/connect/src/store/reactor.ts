@@ -113,12 +113,10 @@ export async function createReactor(localPackage?: DocumentModelLib) {
     .withCrypto(renownCrypto)
     .build();
 
-  // load runtime config from powerhouse.config.json (replaceable post-build)
+  // load runtime config from powerhouse.config.json (replaceable post-build).
+  // Cached: loadComponent() already called this and applied branding before
+  // we got here; this returns the same cached value.
   const runtimeConfig = await loadRuntimeConfig();
-
-  // Apply branding from runtime config
-  const appName = runtimeConfig.connect?.branding?.appName;
-  if (appName) document.title = appName;
 
   // initialize package manager
   const packageManager = new BrowserPackageManager(

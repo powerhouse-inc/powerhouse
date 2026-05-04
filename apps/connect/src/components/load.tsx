@@ -7,10 +7,13 @@ import {
 } from "@powerhousedao/connect/utils";
 import type { DocumentModelLib } from "document-model";
 import { type ReactNode } from "react";
+import { applyConnectBranding, loadRuntimeConfig } from "../runtime-config.js";
 
 export async function loadComponent(localPackage?: DocumentModelLib) {
   await seedPendingPgVersion();
   await detectReactorPgMajor();
+  const runtimeConfig = await loadRuntimeConfig();
+  applyConnectBranding(runtimeConfig);
   await createReactor(localPackage);
   return {
     default: ({ children }: { children?: ReactNode }) => {
