@@ -8,7 +8,16 @@ import {
   type ReactorGraphQLClient,
 } from "@powerhousedao/reactor-browser";
 import type { PHDocument } from "document-model";
-import { filter, isTruthy, map, mapToObj, pipe, prop, unique } from "remeda";
+import {
+  filter,
+  forEach,
+  isTruthy,
+  map,
+  mapToObj,
+  pipe,
+  prop,
+  unique,
+} from "remeda";
 import { batch, type Batch } from "./batch.js";
 
 function makeDocumentsById(documents: (PHDocument | undefined)[] = []) {
@@ -47,14 +56,16 @@ class DocumentFetcher {
 }
 
 async function fetchDocument(client: ReactorGraphQLClient, identifier: string) {
-  const result = await client.GetDocument({
-    identifier,
-  });
-  const document = result.document?.document;
-  if (!document) {
-    throw new Error(`Failed to fetch document with id: ${identifier}`);
+  try {
+    const result = await client.GetDocument({
+      identifier,
+    });
+    const document = result.document?.document;
+    if (!document) return undefined;
+    return phDocumentFromQuery(document);
+  } catch (error) {
+    return undefined;
   }
-  return phDocumentFromQuery(document);
 }
 
 async function batchFetchDocuments(
@@ -84,6 +95,24 @@ export class Cache implements IDocumentCache {
 
   constructor(client: ReactorGraphQLClient) {
     this.fetcher = new DocumentFetcher(client);
+
+    window.addEventListener("MutateDocument", (event) => {
+      console.log(event);
+      this.handleDocumentMutated(event.detail.documentIdentifier).catch(console.error);
+    });
+
+    window.addEventListener("MutateDocumentAsync", (event) => {
+      console.log(event);
+      this.handleDocumentMutated(event.detail.documentIdentifier).catch(console.error);
+    });
+
+    window.addEventListener("DeleteDocument", (event) => {
+      this.handleDocumentDeleted(event.detail.identifier);
+    });
+
+    window.addEventListener("DeleteDocuments", (event) => {
+      this.handleDocumentsDeleted(event.detail.identifiers);
+    });
   }
 
   get(id: string, refetch?: boolean): Promise<PHDocument> {
@@ -209,9 +238,19 @@ export class Cache implements IDocumentCache {
     }
   }
 
-  private handleDocumentCreated(id: string): void {
+  private async handleDocumentMutated(id: string) {
+    this.invalidateBatchesContaining(id);
+    await this.get(id, true);
+    this.notify(id);
+  }
+
+  private handleDocumentDeleted(id: string) {
     this.documents.delete(id);
     this.invalidateBatchesContaining(id);
     this.notify(id);
+  }
+
+  private handleDocumentsDeleted(ids: string[]) {
+    forEach(ids, (id) => this.handleDocumentDeleted(id));
   }
 }

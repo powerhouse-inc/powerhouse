@@ -11,7 +11,9 @@ import {
 } from "@powerhousedao/reactor-browser";
 import type { DocumentDriveDocument } from "@powerhousedao/shared";
 import { DriveDocumentSchema } from "@powerhousedao/shared/document-drive";
+import { forEach } from "remeda";
 import { Cache } from "./cache.js";
+import { eventsToSyncDrive } from "./constants.js";
 
 declare global {
   interface Window {
@@ -49,9 +51,14 @@ export async function init(driveId: string) {
 
   const client = createClient(
     "http://localhost:4001/graphql",
-    async (action, operationName) => {
+    async (action, operationName, operationType, variables) => {
+      console.log({ operationName, operationType, variables });
       const result = await action();
-      window.dispatchEvent(new CustomEvent(operationName));
+      window.dispatchEvent(
+        new CustomEvent(operationName, {
+          detail: variables,
+        }),
+      );
       return result;
     },
   );
@@ -60,10 +67,9 @@ export async function init(driveId: string) {
   setSelectedNode(undefined);
   setDocumentCache(new Cache(client));
 
-  window.addEventListener("CreateDocument", () => {
-    syncDrive(client, driveId).catch(console.error);
-  });
-  window.addEventListener("DeleteDocument", () => {
-    syncDrive(client, driveId).catch(console.error);
+  forEach(eventsToSyncDrive, (name) => {
+    window.addEventListener(name, () => {
+      syncDrive(client, driveId).catch(console.error);
+    });
   });
 }

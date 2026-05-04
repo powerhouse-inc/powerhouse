@@ -1,83 +1,46 @@
-import {
-  DocumentStateViewer,
-  DocumentToolbar,
-} from "@powerhousedao/design-system/connect";
-import { actions, useSelectedTestDocDocument } from "document-models/test-doc";
+import { useDocument } from "@powerhousedao/reactor-browser";
+import { setTestName, type TestDocDocument } from "document-models/test-doc";
+import { useState } from "react";
 
-export function EditorTestDocument() {
-  const [document, dispatch] = useSelectedTestDocDocument();
+export function EditorTestDocument(props: { id: string }) {
+  const { id } = props;
+  const document = useDocument(id) as TestDocDocument;
+  const [name, setName] = useState(document.state.global.name ?? "");
 
-  const handleSetName = (name: string) => {
-    // 'actions' contains all available actions for this document type
-    dispatch(actions.setName(name));
+  if (!document) return null;
+
+  const handleSetName = async (name: string) => {
+    console.log({ name });
+    const result = await window.reactorGraphQLClient?.MutateDocumentAsync({
+      documentIdentifier: id,
+      actions: [setTestName({ name })],
+    });
+    console.log({ result });
+    return result;
   };
 
   return (
     <div className="mx-auto max-w-4xl bg-gray-50 p-6">
-      <DocumentToolbar />
-
-      {/* "ph-default-styles" sets default styles for basic UI elements */}
-      <div className="ph-default-styles">
+      <div>
         {/* Edit document name */}
         <label className="my-6">
           <h3>Document Name</h3>
           <input
             type="text"
-            defaultValue={document.header.name}
+            value={name}
+            onChange={(e) => setName(e.currentTarget.value)}
             placeholder="Enter document name..."
             title="Edit document name and click outside to save."
-            autoFocus
-            onBlur={(e) => handleSetName(e.target.value.trim())}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.currentTarget.blur();
-              }
-            }}
             className="font-semibold"
           />
+          <button
+            onClick={() => {
+              handleSetName(name).catch(console.error);
+            }}
+          >
+            submit
+          </button>
         </label>
-        <hr />
-
-        {/* Document header info */}
-        <div className="mb-6 grid grid-cols-2 gap-x-8">
-          <label>
-            <h3 className="text-base">ID</h3>
-            <input
-              type="text"
-              value={document.header.id}
-              readOnly
-              className="font-mono"
-            />
-          </label>
-          <label>
-            <h3 className="text-base">Created</h3>
-            <input
-              type="text"
-              value={new Date(document.header.createdAtUtcIso).toLocaleString()}
-              readOnly
-            />
-          </label>
-          <label>
-            <h3 className="text-base">Type</h3>
-            <input type="text" value={document.header.documentType} readOnly />
-          </label>
-          <label>
-            <h3 className="text-base">Last Modified</h3>
-            <input
-              type="text"
-              value={new Date(
-                document.header.lastModifiedAtUtcIso,
-              ).toLocaleString()}
-              readOnly
-            />
-          </label>
-        </div>
-
-        {/* Document state */}
-        <div className="mt-6">
-          <h3 className="text-base">Document State</h3>
-          <DocumentStateViewer state={document.state} />
-        </div>
       </div>
     </div>
   );
