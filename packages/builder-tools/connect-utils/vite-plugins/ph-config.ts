@@ -3,13 +3,24 @@ import path from "node:path";
 import type { Plugin } from "vite";
 import type { PowerhousePackage } from "@powerhousedao/config";
 import type { PHConnectRuntimeConfig } from "@powerhousedao/shared/clis";
-import { buildRuntimeConfig } from "@powerhousedao/shared/connect";
+import {
+  applyEnvSeeding,
+  buildRuntimeConfig,
+} from "@powerhousedao/shared/connect";
 import { RUNTIME_CONFIG_SCHEMA_URL } from "../runtime-config-schema.js";
 
 export type PhConfigPluginOptions = {
   packages: PowerhousePackage[];
   projectRoot?: string;
   connect?: PHConnectRuntimeConfig;
+  /**
+   * Explicitly-set runtime env vars (not schema defaults). Used to seed
+   * powerhouse.config.json fields when an env var is set and the field is
+   * absent from the source config. Defaults to `process.env`, but callers
+   * should pass a filtered map when `process.env` has been polluted with
+   * schema defaults (see vite-config.ts).
+   */
+  explicitRuntimeEnv?: Readonly<Record<string, string | undefined>>;
 };
 
 function readProjectPackageInfo(
@@ -35,9 +46,21 @@ export function phConfigPlugin(options: PhConfigPluginOptions): Plugin {
   const projectRoot = options.projectRoot ?? process.cwd();
   const localPackage = readProjectPackageInfo(projectRoot);
 
+  const { connect: seededConnect, seeded } = applyEnvSeeding(
+    options.connect ?? {},
+    options.explicitRuntimeEnv ?? process.env,
+  );
+
+  for (const report of seeded) {
+    console.warn(
+      `[ph-config] Seeded powerhouse.config.json connect.${report.path} from ${report.envVar}. ` +
+        `This env var is deprecated — set the field directly in powerhouse.config.json.`,
+    );
+  }
+
   const source = {
     packages: options.packages,
-    connect: options.connect ?? {},
+    connect: seededConnect,
   };
 
   const runtimeConfig = buildRuntimeConfig(source, localPackage);

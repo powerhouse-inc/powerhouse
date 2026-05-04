@@ -87,25 +87,10 @@ export async function createBrowserReactor(
   } as BrowserReactorClientModule;
 }
 
-/**
- * Parse default drives from runtime config, with env var override.
- * Env var (PH_CONNECT_DEFAULT_DRIVES_URL) wins when explicitly set.
- * Falls back to runtime config's connect.drives.defaultDrives.
- */
 export function getDefaultDrives(
   runtimeConfig: RuntimePowerhouseConfig,
 ): PHConnectDefaultDrive[] {
-  const envValue = import.meta.env.PH_CONNECT_DEFAULT_DRIVES_URL as
-    | string
-    | undefined;
-  if (envValue) {
-    return envValue
-      .split(",")
-      .map((url) => url.trim())
-      .filter(Boolean)
-      .map((url) => ({ url }));
-  }
-  return runtimeConfig.connect?.drives?.defaultDrives ?? [];
+  return runtimeConfig.connect.drives?.defaultDrives ?? [];
 }
 
 /**

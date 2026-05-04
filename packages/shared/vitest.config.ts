@@ -6,7 +6,10 @@ export default defineConfig({
     // analytics/test/*, etc.) ran outside vitest before this config existed
     // and have their own runners / environment requirements; folding them in
     // is a separate effort.
-    include: ["clis/source-config-schema.test.ts"],
+    include: [
+      "clis/source-config-schema.test.ts",
+      "connect/env-to-runtime-config.test.ts",
+    ],
     globals: true,
   },
 });

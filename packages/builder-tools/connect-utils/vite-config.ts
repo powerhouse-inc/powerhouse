@@ -335,6 +335,13 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
         packages: phPackages,
         projectRoot: options.dirname,
         connect: phConfig.connect,
+        // Pass only explicitly-set runtime env vars (not schema defaults) so
+        // env→file seeding only fires for values the operator actually set.
+        // setConnectEnv(env) above writes schema defaults into process.env,
+        // which would otherwise cause defaulted values to seed the file.
+        explicitRuntimeEnv: Object.fromEntries(
+          Object.entries(explicitRuntimeEnv).map(([k, v]) => [k, String(v)]),
+        ),
       }),
       phBundledPackagesPlugin({
         packages: localPackagesFromConfig,
