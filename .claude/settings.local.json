@@ -35,7 +35,8 @@
       "Bash(gh pr:*)",
       "Bash(gh run:*)",
       "Bash(git stash:*)",
-      "mcp__hotseat"
+      "mcp__hotseat",
+      "Bash(npm run *)"
     ],
     "deny": [],
     "ask": []

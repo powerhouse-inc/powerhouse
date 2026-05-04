@@ -1,56 +1,38 @@
 # LLM docs
 
-The Powerhouse Academy provides a comprehensive, LLM-optimized documentation file that combines all academy content into a single, structured markdown file.
+The Powerhouse Academy follows the [llms.txt standard](https://llmstxt.org) to provide machine-readable documentation for LLMs and AI coding tools.
 
-## Download
+## Files
 
-[**Download academy_LLM_docs.md**](/academy_LLM_docs.md) (1.1MB)
+| File                            | Purpose                                                                 | Size  |
+| ------------------------------- | ----------------------------------------------------------------------- | ----- |
+| [llms.txt](/llms.txt)           | Navigation index — links to every doc page with a short description     | ~22KB |
+| [llms-full.txt](/llms-full.txt) | All documentation concatenated into one file for full-context ingestion | ~1MB  |
 
-## Overview
+### llms.txt
 
-| **What's Included**                                               | **LLM Optimization Features**                                   |
-| ----------------------------------------------------------------- | --------------------------------------------------------------- |
-| **95+ documentation files** combined into one structured document | **Structured headings** with semantic hierarchy                 |
-| **Complete academy content** from all categories:                 | **Internal linking** with generated anchors                     |
-| • Get Started tutorials                                           | **Category organization** following site structure              |
-| • Mastery Track guides                                            | **Enhanced code blocks** with context                           |
-| • Example Use Cases                                               | **Semantic markers** for tips, warnings, and important sections |
-| • API References                                                  | **Cross-references** and relationship mapping                   |
-| • Architecture documentation                                      |                                                                 |
-| • Component Library docs                                          |                                                                 |
+A concise index that follows the [llms.txt spec](https://llmstxt.org): an H1 title, a summary blockquote, and H2 sections with links to every page. Ideal for tools that fetch context on demand.
 
-## Programmatic Access
+### llms-full.txt
+
+The complete academy content in a single markdown file. Use this when you want to load the full documentation into a context window at once (e.g. pasting a URL into Claude or ChatGPT).
+
+## Programmatic access
 
 ```bash
-# Direct download via curl
-curl -O https://academy.vetra.io/academy_LLM_docs.md
+# Index (llms.txt)
+curl https://powerhouse.academy/llms.txt
 
-# Wget
-wget https://academy.vetra.io/academy_LLM_docs.md
+# Full content (llms-full.txt)
+curl https://powerhouse.academy/llms-full.txt
 ```
 
-For integration questions or custom format needs, please reach out via our [community channels](https://discord.gg/pwQJwgaQKd).
+## Regenerating the files
 
-## Ask Your LLM
+The files are generated from the academy source docs by the script at `scripts/generate-llm-docs.ts`. Run it with:
 
-Get instant help with common Powerhouse Academy questions:
+```bash
+npm run generate:llm-docs
+```
 
-import LLMRedirect from '@site/src/components/LLMRedirect';
-
-<LLMRedirect 
-  prompt="How do I create a document model in Powerhouse?"
-  title="Creating Document Models"
-  description="Learn about document model creation and setup"
-/>
-
-<LLMRedirect 
-  prompt="What is the Powerhouse architecture and how does it work?"
-  title="Understanding Powerhouse Architecture" 
-  description="Get an overview of the system design and core concepts"
-/>
-
-<LLMRedirect 
-  prompt="How do I build a React editor for my document model?"
-  title="Building Document Editors"
-  description="Step-by-step guidance for creating custom editors"
-/>
+This writes both `static/llms.txt` and `static/llms-full.txt`, which Docusaurus serves at the site root. The legacy `academy_LLM_docs.md` path is also kept for backward compatibility.
