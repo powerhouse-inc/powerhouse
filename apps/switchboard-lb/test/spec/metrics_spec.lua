@@ -67,7 +67,7 @@ describe("metrics.inc_parse_error", function()
         { raw = "body must be a JSON object",                                   label = "non_object_root" },
         { raw = "missing or non-object variables",                              label = "missing_variables" },
         { raw = "deleteDocuments: multi-identifier operations not supported",   label = "multi_identifier" },
-        { raw = "moveChildren: cross-parent operations not supported",          label = "cross_parent_move" },
+        { raw = "moveRelationship: cross-parent operations not supported",      label = "cross_parent_move" },
         { raw = "touchChannel: multi-document filter not supported",            label = "multi_doc_filter" },
         { raw = "no routing identifier found in variables",                     label = "no_identifier" },
         { raw = "pushSyncEnvelopes: envelopes span multiple channels",          label = "cross_channel_envelopes" },
