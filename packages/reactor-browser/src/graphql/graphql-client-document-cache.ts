@@ -1,84 +1,14 @@
-import {
-  addPromiseState,
-  phDocumentFromQuery,
-  readPromiseState,
-  type FulfilledPromise,
-  type IDocumentCache,
-  type PromiseWithState,
-  type ReactorGraphQLClient,
-} from "@powerhousedao/reactor-browser";
 import type { PHDocument } from "document-model";
-import {
-  filter,
-  forEach,
-  isTruthy,
-  map,
-  mapToObj,
-  pipe,
-  prop,
-  unique,
-} from "remeda";
-import { batch, type Batch } from "./batch.js";
+import { forEach } from "remeda";
+import { addPromiseState, readPromiseState } from "../document-cache.js";
+import type {
+  FulfilledPromise,
+  IDocumentCache,
+  PromiseWithState,
+} from "../types/documents.js";
+import { DocumentFetcher } from "./document-fetcher.js";
 
-function makeDocumentsById(documents: (PHDocument | undefined)[] = []) {
-  return pipe(
-    documents,
-    filter(isTruthy),
-    mapToObj((document) => [document.header.id, document]),
-  );
-}
-
-class DocumentFetcher {
-  private batchGetDocuments: Batch<[id: string], PHDocument>;
-
-  constructor(client: ReactorGraphQLClient) {
-    this.batchGetDocuments = batch(
-      async (requests: readonly [id: string][]) => {
-        const ids = unique(map(requests, ([id]) => id));
-        const documents = await batchFetchDocuments(client, ids);
-
-        return makeDocumentsById(documents);
-      },
-      (documentsById, _, id) => {
-        const document = prop(documentsById, id);
-        return document;
-      },
-    );
-  }
-
-  get(id: string): Promise<PHDocument> {
-    return this.batchGetDocuments.call(id);
-  }
-
-  getBatch(ids: string[]): Promise<PHDocument[]> {
-    return Promise.all(map(ids, (id) => this.get(id)));
-  }
-}
-
-async function fetchDocument(client: ReactorGraphQLClient, identifier: string) {
-  try {
-    const result = await client.GetDocument({
-      identifier,
-    });
-    const document = result.document?.document;
-    if (!document) return undefined;
-    return phDocumentFromQuery(document);
-  } catch (error) {
-    return undefined;
-  }
-}
-
-async function batchFetchDocuments(
-  client: ReactorGraphQLClient,
-  identifiers: readonly string[],
-) {
-  const promises = map(identifiers, (identifier) =>
-    fetchDocument(client, identifier),
-  );
-  return await Promise.all(promises);
-}
-
-export class Cache implements IDocumentCache {
+export class GraphQLClientDocumentCache implements IDocumentCache {
   private fetcher: DocumentFetcher;
 
   private documents = new Map<string, PromiseWithState<PHDocument>>();
@@ -93,17 +23,15 @@ export class Cache implements IDocumentCache {
 
   private listeners = new Map<string, (() => void)[]>();
 
-  constructor(client: ReactorGraphQLClient) {
-    this.fetcher = new DocumentFetcher(client);
+  constructor() {
+    this.fetcher = new DocumentFetcher();
 
     window.addEventListener("MutateDocument", (event) => {
-      console.log(event);
-      this.handleDocumentMutated(event.detail.documentIdentifier).catch(console.error);
+      this.handleDocumentMutated(event.detail.identifier).catch(console.error);
     });
 
     window.addEventListener("MutateDocumentAsync", (event) => {
-      console.log(event);
-      this.handleDocumentMutated(event.detail.documentIdentifier).catch(console.error);
+      this.handleDocumentMutated(event.detail.identifier).catch(console.error);
     });
 
     window.addEventListener("DeleteDocument", (event) => {
@@ -204,16 +132,12 @@ export class Cache implements IDocumentCache {
     const ids = Array.isArray(id) ? id : [id];
 
     for (const documentId of ids) {
-      console.log("[cache subscribe]", documentId);
-
       const listeners = this.listeners.get(documentId) ?? [];
       this.listeners.set(documentId, [...listeners, callback]);
     }
 
     return () => {
       for (const documentId of ids) {
-        console.log("[cache unsubscribe]", documentId);
-
         const listeners = this.listeners.get(documentId) ?? [];
         this.listeners.set(
           documentId,
@@ -226,13 +150,6 @@ export class Cache implements IDocumentCache {
   private notify(id: string): void {
     const listeners = this.listeners.get(id) ?? [];
 
-    console.log("[cache notify]", {
-      id,
-      listenerCount: listeners.length,
-      promise: this.documents.get(id),
-      status: this.documents.get(id)?.status,
-    });
-
     for (const listener of listeners) {
       listener();
     }
@@ -240,7 +157,7 @@ export class Cache implements IDocumentCache {
 
   private async handleDocumentMutated(id: string) {
     this.invalidateBatchesContaining(id);
-    await this.get(id, true);
+    await this.get(id);
     this.notify(id);
   }
 

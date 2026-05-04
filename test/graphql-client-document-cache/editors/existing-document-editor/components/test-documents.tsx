@@ -1,22 +1,12 @@
 "use client";
+import {
+  reactorGraphqlDeleteDocument,
+  reactorGraphqlDeleteDocuments,
+} from "@powerhousedao/reactor-browser";
 import { useTestDocDocumentsInSelectedDrive } from "document-models/test-doc";
 import { useState } from "react";
 import { map, prop } from "remeda";
 import { EditorTestDocument } from "./edit-test-document.js";
-
-async function deleteDocument(identifier: string) {
-  const result = await window.reactorGraphQLClient?.DeleteDocument({
-    identifier,
-  });
-  return result;
-}
-
-async function deleteDocuments(identifiers: string[]) {
-  const result = await window.reactorGraphQLClient?.DeleteDocuments({
-    identifiers,
-  });
-  return result;
-}
 
 export function TestDocuments() {
   const [isEditing, setIsEditing] = useState(false);
@@ -39,7 +29,9 @@ export function TestDocuments() {
               {document.state.global.name} ({document.header.documentType}){" "}
               <button
                 onClick={() => {
-                  deleteDocument(document.header.id).catch(console.error);
+                  reactorGraphqlDeleteDocument(document.header.id).catch(
+                    console.error,
+                  );
                 }}
               >
                 delete
@@ -50,9 +42,9 @@ export function TestDocuments() {
       )}
       <button
         onClick={() => {
-          deleteDocuments(map(documents ?? [], prop("header", "id"))).catch(
-            console.error,
-          );
+          reactorGraphqlDeleteDocuments(
+            map(documents ?? [], prop("header", "id")),
+          ).catch(console.error);
         }}
       >
         delete all

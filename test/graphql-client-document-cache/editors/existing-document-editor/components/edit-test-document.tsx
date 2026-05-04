@@ -1,4 +1,7 @@
-import { useDocument } from "@powerhousedao/reactor-browser";
+import {
+  reactorGraphqlMutateDocument,
+  useDocument,
+} from "@powerhousedao/reactor-browser";
 import { setTestName, type TestDocDocument } from "document-models/test-doc";
 import { useState } from "react";
 
@@ -11,10 +14,10 @@ export function EditorTestDocument(props: { id: string }) {
 
   const handleSetName = async (name: string) => {
     console.log({ name });
-    const result = await window.reactorGraphQLClient?.MutateDocumentAsync({
-      documentIdentifier: id,
-      actions: [setTestName({ name })],
-    });
+    const result = await reactorGraphqlMutateDocument(
+      id,
+      setTestName({ name }),
+    );
     console.log({ result });
     return result;
   };

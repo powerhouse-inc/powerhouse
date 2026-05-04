@@ -1,8 +1,11 @@
+import {
+  DEFAULT_DRIVE_ID,
+  reactorGraphqlCreateDocument,
+} from "@powerhousedao/reactor-browser";
 import { utils } from "document-models/test-doc";
 import { randomInteger, randomString } from "remeda";
-import { DEFAULT_DRIVE_ID } from "../../../constants.js";
 
-async function createTestDocument(parentIdentifier: string) {
+async function createTestDocument() {
   const document = utils.createDocument(
     utils.createState({
       global: {
@@ -13,10 +16,7 @@ async function createTestDocument(parentIdentifier: string) {
       },
     }),
   );
-  const result = await window.reactorGraphQLClient?.CreateDocument({
-    document: { ...document, name: "test-name" },
-    parentIdentifier,
-  });
+  const result = await reactorGraphqlCreateDocument(document);
   return result;
 }
 export function CreateTestDocument() {
@@ -25,7 +25,7 @@ export function CreateTestDocument() {
       <section>
         <button
           onClick={() => {
-            createTestDocument(DEFAULT_DRIVE_ID).catch(console.error);
+            createTestDocument().catch(console.error);
           }}
         >
           create doc

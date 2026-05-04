@@ -5,11 +5,12 @@ import type {
   PHDocumentHeader,
 } from "document-model";
 import { map, pipe } from "remeda";
-import { type z } from "zod";
+import { z } from "zod";
 import type {
   FindDocumentsQuery,
   GetDocumentWithOperationsQuery,
 } from "./gen/schema.js";
+import type { TStateSchemaZodObject } from "./types.js";
 
 type QueryDocumentResult = NonNullable<
   GetDocumentWithOperationsQuery["document"]
@@ -18,10 +19,6 @@ type QueryDocumentResult = NonNullable<
 type FindDocumentsItems = NonNullable<
   FindDocumentsQuery["findDocuments"]
 >["items"];
-
-type TStateSchemaZodObject = z.ZodObject<{
-  state: z.ZodObject;
-}>;
 
 export function phDocumentFromQuery<
   TDocumentSchema extends TStateSchemaZodObject,
@@ -90,4 +87,34 @@ function phDocumentOperationsFromGetDocumentWithOperationsQuery(
     global: [...queryDocument.operations.items],
   };
   return documentOperations as DocumentOperations;
+}
+
+export function identifierFromDeleteDocumentOperationVariables(
+  variables: unknown,
+) {
+  return z
+    .object({
+      identifier: z.string(),
+    })
+    .parse(variables).identifier;
+}
+
+export function identifiersFromDeleteDocumentsOperationVariables(
+  variables: unknown,
+) {
+  return z
+    .object({
+      identifiers: z.array(z.string()),
+    })
+    .parse(variables).identifiers;
+}
+
+export function identifierFromMutateDocumentOperationVariables(
+  variables: unknown,
+) {
+  return z
+    .object({
+      documentIdentifier: z.string(),
+    })
+    .parse(variables).documentIdentifier;
 }
