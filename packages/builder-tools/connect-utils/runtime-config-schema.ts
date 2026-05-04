@@ -1,20 +1,37 @@
-// JSON Schema (draft-07) for dist/powerhouse.config.json. Hand-written to
-// mirror RuntimePowerhouseConfig (packages/shared/connect/runtime-config.ts)
-// and PHConnectRuntimeConfig (packages/shared/clis/types.ts).
+// JSON Schema (draft-07) for dist/powerhouse.config.json — the runtime
+// artifact emitted into the build output and fetched by the Connect SPA at
+// boot.
 //
-// Single source of truth for *what fields exist*. Drift from the runtime
-// validator in apps/connect/src/runtime-config.ts is guarded by the test
-// at runtime-config-schema.test.ts.
+// This is a strict SUBSET of the source PowerhouseConfig schema (see
+// CONNECT-CONFIG.md §4.3) plus two runtime-only fields (schemaVersion,
+// localPackage). Field shapes shared with the source schema
+// (PowerhousePackage, PHConnectRuntimeConfig) are imported from the shared
+// fragments module so the two schemas stay in sync by construction.
+//
+// See CONNECT-CONFIG.md §12.7 and §12.8 for architecture and hosting.
 
-export const RUNTIME_CONFIG_SCHEMA_FILENAME = "powerhouse.config.schema.json";
-export const RUNTIME_CONFIG_SCHEMA_REF = `./${RUNTIME_CONFIG_SCHEMA_FILENAME}`;
+import {
+  phConnectRuntimeConfigSchema,
+  powerhousePackageSchema,
+} from "@powerhousedao/shared/connect";
+
+export const RUNTIME_CONFIG_SCHEMA_ID =
+  "https://powerhouse.inc/schemas/powerhouse.config.json";
+
+// GitHub-hosted schema URL. Points at the JSON artifact committed alongside
+// this TS module. Currently tracks the `main` branch — schema edits go live
+// for editors as soon as they merge. Migrate to a `schema-v<N>` tag pinned
+// to schemaVersion if/when stability across edits becomes a concern. See
+// CONNECT-CONFIG.md §12.8.2 for the versioning trade-offs.
+export const RUNTIME_CONFIG_SCHEMA_URL =
+  "https://raw.githubusercontent.com/powerhouse-inc/powerhouse/main/packages/builder-tools/connect-utils/runtime-config.schema.json";
 
 export const runtimeConfigSchema = {
   $schema: "http://json-schema.org/draft-07/schema#",
-  $id: "https://powerhouse.inc/schemas/powerhouse.config.json",
+  $id: RUNTIME_CONFIG_SCHEMA_ID,
   title: "Powerhouse Connect runtime configuration",
   description:
-    "Runtime configuration loaded by Connect at boot from /powerhouse.config.json. Operator-mutable in Docker; emitted by ph connect build.",
+    "Runtime configuration loaded by Connect at boot from /powerhouse.config.json.",
   type: "object",
   additionalProperties: false,
   required: ["schemaVersion", "packages", "localPackage"],
@@ -22,7 +39,7 @@ export const runtimeConfigSchema = {
     $schema: {
       type: "string",
       description:
-        "Optional JSON Schema reference. Set to './powerhouse.config.schema.json' to enable editor autocomplete and validation.",
+        "Optional JSON Schema reference for editor autocomplete. Set to the GitHub-hosted schema URL.",
     },
     schemaVersion: {
       const: 2,
@@ -33,33 +50,7 @@ export const runtimeConfigSchema = {
       type: "array",
       description:
         "Powerhouse packages this Connect instance loads at runtime.",
-      items: {
-        type: "object",
-        additionalProperties: false,
-        required: ["packageName"],
-        properties: {
-          packageName: {
-            type: "string",
-            description: "Fully qualified npm package name (e.g. @scope/name).",
-          },
-          version: {
-            type: "string",
-            description:
-              "Exact version (registry providers) or omit to take latest.",
-          },
-          provider: {
-            type: "string",
-            enum: ["npm", "github", "local", "registry"],
-            description:
-              "Where Connect should resolve the package from at runtime.",
-          },
-          url: {
-            type: "string",
-            description:
-              "Override URL for non-registry providers (e.g. github tarball).",
-          },
-        },
-      },
+      items: powerhousePackageSchema,
     },
     localPackage: {
       description:
@@ -77,73 +68,6 @@ export const runtimeConfigSchema = {
         },
       ],
     },
-    connect: {
-      type: "object",
-      additionalProperties: false,
-      description:
-        "Connect-specific UI customisations. All fields optional; omit the section entirely for default behaviour.",
-      properties: {
-        branding: {
-          type: "object",
-          additionalProperties: false,
-          description: "App identity and visual branding.",
-          properties: {
-            appName: {
-              type: "string",
-              description:
-                "Browser tab title and any in-app brand text. Defaults to 'Powerhouse Connect'.",
-            },
-            homeBackground: {
-              description:
-                "Optional hero image on the empty home screen. Provide AVIF for the modern path and a PNG/JPG fallback.",
-              oneOf: [
-                { type: "null" },
-                {
-                  type: "object",
-                  additionalProperties: false,
-                  properties: {
-                    avif: {
-                      type: "string",
-                      description: "URL or path to AVIF asset (preferred).",
-                    },
-                    png: {
-                      type: "string",
-                      description: "URL or path to PNG/JPG fallback.",
-                    },
-                  },
-                },
-              ],
-            },
-          },
-        },
-        drives: {
-          type: "object",
-          additionalProperties: false,
-          description: "Default-drive and add-drive UI behaviour.",
-          properties: {
-            allowAddDrive: {
-              type: "boolean",
-              description:
-                "When false, the SPA hides the 'add drive' affordance. Defaults to true.",
-            },
-            defaultDrives: {
-              type: "array",
-              description:
-                "Drives the SPA auto-connects to on first load. Each must specify a URL; name and icon are optional overrides.",
-              items: {
-                type: "object",
-                additionalProperties: false,
-                required: ["url"],
-                properties: {
-                  url: { type: "string" },
-                  name: { type: ["string", "null"] },
-                  icon: { type: ["string", "null"] },
-                },
-              },
-            },
-          },
-        },
-      },
-    },
+    connect: phConnectRuntimeConfigSchema,
   },
 } as const;

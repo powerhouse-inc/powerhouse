@@ -1,5 +1,5 @@
 {
-  "$schema": "./powerhouse.config.schema.json",
+  "$schema": "https://raw.githubusercontent.com/powerhouse-inc/powerhouse/main/packages/builder-tools/connect-utils/runtime-config.schema.json",
   "schemaVersion": 2,
   "packages": [],
   "localPackage": null,

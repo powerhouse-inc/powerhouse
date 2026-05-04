@@ -4,11 +4,7 @@ import type { Plugin } from "vite";
 import type { PowerhousePackage } from "@powerhousedao/config";
 import type { PHConnectRuntimeConfig } from "@powerhousedao/shared/clis";
 import { buildRuntimeConfig } from "@powerhousedao/shared/connect";
-import {
-  RUNTIME_CONFIG_SCHEMA_FILENAME,
-  RUNTIME_CONFIG_SCHEMA_REF,
-  runtimeConfigSchema,
-} from "../runtime-config-schema.js";
+import { RUNTIME_CONFIG_SCHEMA_URL } from "../runtime-config-schema.js";
 
 export type PhConfigPluginOptions = {
   packages: PowerhousePackage[];
@@ -46,11 +42,10 @@ export function phConfigPlugin(options: PhConfigPluginOptions): Plugin {
 
   const runtimeConfig = buildRuntimeConfig(source, localPackage);
   const content = JSON.stringify(
-    { $schema: RUNTIME_CONFIG_SCHEMA_REF, ...runtimeConfig },
+    { $schema: RUNTIME_CONFIG_SCHEMA_URL, ...runtimeConfig },
     null,
     2,
   );
-  const schemaContent = JSON.stringify(runtimeConfigSchema, null, 2);
 
   return {
     name: "vite-plugin-ph-config",
@@ -58,14 +53,8 @@ export function phConfigPlugin(options: PhConfigPluginOptions): Plugin {
       server.middlewares.use((req, res, next) => {
         if (req.url?.endsWith("/powerhouse.config.json")) {
           res.setHeader("Content-Type", "application/json");
-          res.setHeader("Cache-Control", "no-store");
+          res.setHeader("Cache-Control", "no-cache");
           res.end(content);
-          return;
-        }
-        if (req.url?.endsWith(`/${RUNTIME_CONFIG_SCHEMA_FILENAME}`)) {
-          res.setHeader("Content-Type", "application/schema+json");
-          res.setHeader("Cache-Control", "no-store");
-          res.end(schemaContent);
           return;
         }
         next();
@@ -88,11 +77,6 @@ export function phConfigPlugin(options: PhConfigPluginOptions): Plugin {
         type: "asset",
         fileName: "powerhouse.config.json",
         source: content,
-      });
-      this.emitFile({
-        type: "asset",
-        fileName: RUNTIME_CONFIG_SCHEMA_FILENAME,
-        source: schemaContent,
       });
     },
   };
