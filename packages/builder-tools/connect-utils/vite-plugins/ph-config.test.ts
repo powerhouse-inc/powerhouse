@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { RUNTIME_CONFIG_SCHEMA_URL } from "../runtime-config-schema.js";
 import { phConfigPlugin } from "./ph-config.js";
 
 function makeProjectRoot(pkg: { name?: string; version?: string }): string {
@@ -50,16 +51,12 @@ describe("phConfigPlugin", () => {
     ) => void;
     generateBundle.call(ctx);
 
-    expect(emitted).toHaveLength(2);
+    expect(emitted).toHaveLength(1);
     const config = emitted.find((e) => e.fileName === "powerhouse.config.json");
-    const schema = emitted.find(
-      (e) => e.fileName === "powerhouse.config.schema.json",
-    );
     expect(config).toBeDefined();
-    expect(schema).toBeDefined();
 
     const parsed = JSON.parse(config!.source) as Record<string, unknown>;
-    expect(parsed.$schema).toBe("./powerhouse.config.schema.json");
+    expect(parsed.$schema).toBe(RUNTIME_CONFIG_SCHEMA_URL);
     expect(parsed.schemaVersion).toBe(2);
     expect(parsed.packages).toEqual([
       { packageName: "@scope/pkg-a", version: "1.0.0", provider: "registry" },
@@ -70,11 +67,6 @@ describe("phConfigPlugin", () => {
       version: "0.1.0",
     });
     expect(parsed.connect).toEqual({});
-
-    const parsedSchema = JSON.parse(schema!.source) as Record<string, unknown>;
-    expect(parsedSchema.$id).toBe(
-      "https://powerhouse.inc/schemas/powerhouse.config.json",
-    );
   });
 
   it("emits connect section from source config", () => {
@@ -149,52 +141,13 @@ describe("phConfigPlugin", () => {
 
     expect(next).not.toHaveBeenCalled();
     expect(headers["Content-Type"]).toBe("application/json");
-    expect(headers["Cache-Control"]).toBe("no-store");
+    expect(headers["Cache-Control"]).toBe("no-cache");
 
     const parsed = JSON.parse(body) as Record<string, unknown>;
     expect(parsed.schemaVersion).toBe(2);
     expect(parsed.packages).toEqual([
       { packageName: "@scope/x", version: "1.0.0", provider: "registry" },
     ]);
-  });
-
-  it("dev middleware serves /powerhouse.config.schema.json", () => {
-    const plugin = phConfigPlugin({ packages: [], projectRoot });
-
-    let registeredHandler:
-      | ((req: IncomingMessage, res: ServerResponse, next: () => void) => void)
-      | undefined;
-    const fakeServer = {
-      middlewares: {
-        use(handler: typeof registeredHandler) {
-          registeredHandler = handler;
-        },
-      },
-    };
-    (plugin.configureServer as (s: typeof fakeServer) => void)(fakeServer);
-
-    const headers: Record<string, string> = {};
-    let body = "";
-    const next = vi.fn();
-    const req = { url: "/powerhouse.config.schema.json" } as IncomingMessage;
-    const res = {
-      setHeader(k: string, v: string) {
-        headers[k] = v;
-      },
-      end(content: string) {
-        body = content;
-      },
-    } as unknown as ServerResponse;
-
-    registeredHandler!(req, res, next);
-
-    expect(next).not.toHaveBeenCalled();
-    expect(headers["Content-Type"]).toBe("application/schema+json");
-    expect(headers["Cache-Control"]).toBe("no-store");
-    const parsed = JSON.parse(body) as Record<string, unknown>;
-    expect(parsed.$id).toBe(
-      "https://powerhouse.inc/schemas/powerhouse.config.json",
-    );
   });
 
   it("dev middleware passes through unrelated requests", () => {

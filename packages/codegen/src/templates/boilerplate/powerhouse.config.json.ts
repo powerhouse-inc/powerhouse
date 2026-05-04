@@ -20,6 +20,7 @@ export async function buildPowerhouseConfigTemplate(args: {
   const vetraConfigField = makeVetraConfigField(args.remoteDrive);
   return json`
   {
+  "$schema": "https://raw.githubusercontent.com/powerhouse-inc/powerhouse/main/packages/shared/clis/source-config.schema.json",
   "documentModelsDir": "./document-models",
   "editorsDir": "./editors",
   "processorsDir": "./processors",

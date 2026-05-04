@@ -1,0 +1,328 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://powerhouse.inc/schemas/powerhouse.source.json",
+  "title": "Powerhouse source configuration",
+  "description": "Project-root powerhouse.config.json: the developer-edited build manifest read by the `ph` CLI and Vite plugins.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Optional JSON Schema reference for editor autocomplete. Set to the GitHub-hosted schema URL."
+    },
+    "logLevel": {
+      "type": "string",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "error",
+        "verbose"
+      ],
+      "description": "Log level for CLI commands and the reactor."
+    },
+    "documentModelsDir": {
+      "type": "string",
+      "description": "Path to the project's document model definitions."
+    },
+    "editorsDir": {
+      "type": "string",
+      "description": "Path to the project's editors."
+    },
+    "processorsDir": {
+      "type": "string",
+      "description": "Path to the project's processors."
+    },
+    "subgraphsDir": {
+      "type": "string",
+      "description": "Path to the project's subgraphs."
+    },
+    "importScriptsDir": {
+      "type": "string",
+      "description": "Path to the project's import scripts."
+    },
+    "skipFormat": {
+      "type": "boolean",
+      "description": "When true, codegen skips Prettier formatting on generated files."
+    },
+    "interactive": {
+      "type": "boolean",
+      "description": "Run CLI commands in interactive mode where applicable."
+    },
+    "watch": {
+      "type": "boolean",
+      "description": "Watch source files and rerun on changes."
+    },
+    "reactor": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Reactor server configuration.",
+      "properties": {
+        "port": {
+          "type": "number",
+          "description": "Port the reactor HTTP server listens on."
+        },
+        "https": {
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "keyPath",
+                "certPath"
+              ],
+              "properties": {
+                "keyPath": {
+                  "type": "string",
+                  "description": "Path to TLS private key."
+                },
+                "certPath": {
+                  "type": "string",
+                  "description": "Path to TLS certificate."
+                }
+              }
+            }
+          ],
+          "description": "Enable HTTPS. `true` for self-signed; object with key/cert paths for custom TLS."
+        },
+        "storage": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type"
+          ],
+          "description": "Reactor persistent storage backend.",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "filesystem",
+                "memory",
+                "postgres",
+                "browser"
+              ]
+            },
+            "filesystemPath": {
+              "type": "string",
+              "description": "Required when `type: filesystem`."
+            },
+            "postgresUrl": {
+              "type": "string",
+              "description": "Required when `type: postgres`."
+            }
+          }
+        }
+      }
+    },
+    "auth": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "admins"
+      ],
+      "description": "Authentication and authorisation settings.",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Master toggle for the auth subsystem."
+        },
+        "admins": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "DIDs granted admin role."
+        },
+        "defaultProtection": {
+          "type": "boolean",
+          "description": "When true, newly-created drives default to authenticated-only access."
+        }
+      }
+    },
+    "switchboard": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Switchboard server configuration.",
+      "properties": {
+        "database": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "url": {
+              "type": "string",
+              "description": "Database connection URL."
+            }
+          }
+        },
+        "port": {
+          "type": "number",
+          "description": "Port the switchboard HTTP server listens on."
+        }
+      }
+    },
+    "studio": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "https"
+      ],
+      "description": "Connect Studio dev-server configuration.",
+      "properties": {
+        "port": {
+          "type": "number",
+          "description": "Port the studio dev server listens on."
+        },
+        "host": {
+          "type": "string",
+          "description": "Host interface to bind."
+        },
+        "https": {
+          "type": "boolean",
+          "description": "Serve studio over HTTPS."
+        },
+        "openBrowser": {
+          "type": "boolean",
+          "description": "Open a browser tab on studio start."
+        }
+      }
+    },
+    "packages": {
+      "type": "array",
+      "description": "Powerhouse packages this project depends on. Shape is shared with the runtime config.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "packageName"
+        ],
+        "properties": {
+          "packageName": {
+            "type": "string",
+            "description": "Fully qualified npm package name (e.g. @scope/name)."
+          },
+          "version": {
+            "type": "string",
+            "description": "Exact version (registry providers) or omit to take latest."
+          },
+          "provider": {
+            "type": "string",
+            "enum": [
+              "npm",
+              "github",
+              "local",
+              "registry"
+            ],
+            "description": "Where Connect should resolve the package from at runtime."
+          },
+          "url": {
+            "type": "string",
+            "description": "Override URL for non-registry providers (e.g. github tarball)."
+          }
+        }
+      }
+    },
+    "vetra": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "driveId",
+        "driveUrl"
+      ],
+      "description": "Vetra integration coordinates.",
+      "properties": {
+        "driveId": {
+          "type": "string"
+        },
+        "driveUrl": {
+          "type": "string"
+        }
+      }
+    },
+    "packageRegistryUrl": {
+      "type": "string",
+      "description": "Registry endpoint used by `ph install` / `ph publish`. Build-time only — does not ship to the runtime config."
+    },
+    "connect": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Connect-specific UI customisations. Copied verbatim into the runtime config at build time.",
+      "properties": {
+        "branding": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "App identity and visual branding.",
+          "properties": {
+            "appName": {
+              "type": "string",
+              "description": "Browser tab title and any in-app brand text. Defaults to 'Powerhouse Connect'."
+            },
+            "homeBackground": {
+              "description": "Optional hero image on the empty home screen. Provide AVIF for the modern path and a PNG/JPG fallback.",
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "avif": {
+                      "type": "string",
+                      "description": "URL or path to AVIF asset (preferred)."
+                    },
+                    "png": {
+                      "type": "string",
+                      "description": "URL or path to PNG/JPG fallback."
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        },
+        "drives": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Default-drive and add-drive UI behaviour.",
+          "properties": {
+            "allowAddDrive": {
+              "type": "boolean",
+              "description": "When false, the SPA hides the 'add drive' affordance. Defaults to true."
+            },
+            "defaultDrives": {
+              "type": "array",
+              "description": "Drives the SPA auto-connects to on first load. Each must specify a URL; name and icon are optional overrides.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "url"
+                ],
+                "properties": {
+                  "url": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "icon": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
