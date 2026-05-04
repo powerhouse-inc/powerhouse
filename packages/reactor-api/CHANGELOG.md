@@ -1,3 +1,13 @@
+## 6.0.2-staging.6 (2026-05-04)
+
+### 🩹 Fixes
+
+- **reactor-api:** a number of hacks to get around the way vite works, and pre-empt sigterm and sigkill ([36bf0918c](https://github.com/powerhouse-inc/powerhouse/commit/36bf0918c))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.0.2-staging.5 (2026-05-04)
 
 ### 🚀 Features

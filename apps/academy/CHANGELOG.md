@@ -1,3 +1,7 @@
+## 6.0.2-staging.6 (2026-05-04)
+
+This was a version bump only for @powerhousedao/academy to align it with other projects, there were no code changes.
+
 ## 6.0.2-staging.5 (2026-05-04)
 
 ### 🚀 Features
