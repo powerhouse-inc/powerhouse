@@ -44,6 +44,9 @@
       "path": "packages/reactor-api"
     },
     {
+      "path": "packages/reactor-attachments"
+    },
+    {
       "path": "packages/reactor-browser"
     },
     {
@@ -99,6 +102,9 @@
     },
     {
       "path": "test/graphql-client-document-cache"
+    },
+    {
+      "path": "test/lb-loadtest"
     },
     {
       "path": "test/switchboard"

@@ -211,7 +211,9 @@ describe("Node Operations", () => {
   });
   it("should handle name collisions in updateFile operation", () => {
     const existingFile1 = generateMock(FileNodeSchema());
+    existingFile1.kind = "file";
     const existingFile2 = generateMock(FileNodeSchema());
+    existingFile2.kind = "file";
     existingFile2.parentFolder = existingFile1.parentFolder;
     const input = generateMock(UpdateFileInputSchema());
     input.id = existingFile2.id;
@@ -242,7 +244,9 @@ describe("Node Operations", () => {
   });
   it("should handle name collisions in updateNode operation", () => {
     const existingNode1 = generateMock(NodeSchema());
+    existingNode1.kind = "file";
     const existingNode2 = generateMock(NodeSchema());
+    existingNode2.kind = "file";
     existingNode2.parentFolder = existingNode1.parentFolder;
     const input = generateMock(UpdateNodeInputSchema());
     input.id = existingNode2.id;
@@ -400,6 +404,7 @@ describe("Node Operations", () => {
   });
   it("should handle name collisions in copyNode operation", () => {
     const existingNode = generateMock(NodeSchema());
+    existingNode.kind = "file";
     const input = generateMock(CopyNodeInputSchema());
     input.srcId = existingNode.id;
     input.targetName = existingNode.name;
@@ -416,6 +421,7 @@ describe("Node Operations", () => {
   });
   it("should handle name collisions in copyNode operation when parent is drive", () => {
     const existingNode = generateMock(NodeSchema());
+    existingNode.kind = "file";
     const input = generateMock(CopyNodeInputSchema());
     existingNode.parentFolder = null;
     input.srcId = existingNode.id;
@@ -433,6 +439,7 @@ describe("Node Operations", () => {
   });
   it("should handle name collisions in copyNode operation", () => {
     const existingNode = generateMock(NodeSchema());
+    existingNode.kind = "file";
     const input = generateMock(CopyNodeInputSchema());
     input.srcId = existingNode.id;
     input.targetName = existingNode.name;
@@ -471,8 +478,10 @@ describe("Node Operations", () => {
   it("should handle name collisions in moveNode operation", () => {
     const existingNode = generateMock(NodeSchema());
     existingNode.name = "test";
+    existingNode.kind = "file";
     const existingNode2 = generateMock(NodeSchema());
     existingNode2.name = "test";
+    existingNode2.kind = "file";
     const input = generateMock(MoveNodeInputSchema());
     input.srcFolder = existingNode2.id;
     input.targetParentFolder = existingNode.parentFolder;
@@ -490,8 +499,10 @@ describe("Node Operations", () => {
     const existingNode = generateMock(NodeSchema());
     existingNode.name = "test";
     existingNode.parentFolder = null;
+    existingNode.kind = "file";
     const existingNode2 = generateMock(NodeSchema());
     existingNode2.name = "test";
+    existingNode2.kind = "file";
     const input = generateMock(MoveNodeInputSchema());
     input.srcFolder = existingNode2.id;
     input.targetParentFolder = null;
@@ -565,5 +576,142 @@ describe("Node Operations", () => {
       error:
         "Circular Reference Error: Attempting to move a node to its current parent folder",
     });
+  });
+
+  it("should allow a file and folder to share a name in the same parent (addFile after addFolder)", () => {
+    const folderInput = generateMock(AddFolderInputSchema());
+    folderInput.name = "Reports";
+    folderInput.parentFolder = null;
+
+    const fileInput = generateMock(AddFileInputSchema());
+    fileInput.name = "Reports";
+    fileInput.parentFolder = null;
+
+    const afterFolder = driveDocumentReducer(document, addFolder(folderInput));
+    const afterFile = driveDocumentReducer(afterFolder, addFile(fileInput));
+
+    const folderNode = afterFile.state.global.nodes.find(
+      (n) => n.id === folderInput.id,
+    );
+    const fileNode = afterFile.state.global.nodes.find(
+      (n) => n.id === fileInput.id,
+    );
+    expect(folderNode?.name).toBe("Reports");
+    expect(folderNode?.kind).toBe("folder");
+    expect(fileNode?.name).toBe("Reports");
+    expect(fileNode?.kind).toBe("file");
+  });
+
+  it("should allow a file and folder to share a name in the same parent (addFolder after addFile)", () => {
+    const fileInput = generateMock(AddFileInputSchema());
+    fileInput.name = "Reports";
+    fileInput.parentFolder = null;
+
+    const folderInput = generateMock(AddFolderInputSchema());
+    folderInput.name = "Reports";
+    folderInput.parentFolder = null;
+
+    const afterFile = driveDocumentReducer(document, addFile(fileInput));
+    const afterFolder = driveDocumentReducer(afterFile, addFolder(folderInput));
+
+    const fileNode = afterFolder.state.global.nodes.find(
+      (n) => n.id === fileInput.id,
+    );
+    const folderNode = afterFolder.state.global.nodes.find(
+      (n) => n.id === folderInput.id,
+    );
+    expect(fileNode?.name).toBe("Reports");
+    expect(fileNode?.kind).toBe("file");
+    expect(folderNode?.name).toBe("Reports");
+    expect(folderNode?.kind).toBe("folder");
+  });
+
+  it("should allow moveNode to place a file into a folder containing a same-named folder", () => {
+    document.state.global.nodes = [
+      { id: "destFolder", parentFolder: null, kind: "folder", name: "Inbox" },
+      {
+        id: "siblingFolder",
+        parentFolder: "destFolder",
+        kind: "folder",
+        name: "Reports",
+      },
+      {
+        id: "movingFile",
+        parentFolder: null,
+        kind: "file",
+        name: "Reports",
+        documentType: "any",
+      },
+    ];
+
+    const updatedDocument = driveDocumentReducer(
+      document,
+      moveNode({
+        srcFolder: "movingFile",
+        targetParentFolder: "destFolder",
+      }),
+    );
+
+    const moved = updatedDocument.state.global.nodes.find(
+      (n) => n.id === "movingFile",
+    );
+    expect(moved?.name).toBe("Reports");
+    expect(moved?.parentFolder).toBe("destFolder");
+  });
+
+  it("should allow copyNode to place a file copy alongside a same-named folder", () => {
+    document.state.global.nodes = [
+      {
+        id: "siblingFolder",
+        parentFolder: null,
+        kind: "folder",
+        name: "Reports",
+      },
+      {
+        id: "srcFile",
+        parentFolder: null,
+        kind: "file",
+        name: "Reports",
+        documentType: "any",
+      },
+    ];
+
+    const updatedDocument = driveDocumentReducer(
+      document,
+      copyNode({
+        srcId: "srcFile",
+        targetId: "copiedFile",
+        targetName: "Reports",
+        targetParentFolder: null,
+      }),
+    );
+
+    const copied = updatedDocument.state.global.nodes.find(
+      (n) => n.id === "copiedFile",
+    );
+    expect(copied?.name).toBe("Reports (copy) 1");
+    expect(copied?.kind).toBe("file");
+  });
+
+  it("should still rename when adding a second file with the same name (regression)", () => {
+    const firstInput = generateMock(AddFileInputSchema());
+    firstInput.name = "Reports";
+    firstInput.parentFolder = null;
+
+    const secondInput = generateMock(AddFileInputSchema());
+    secondInput.name = "Reports";
+    secondInput.parentFolder = null;
+
+    const afterFirst = driveDocumentReducer(document, addFile(firstInput));
+    const afterSecond = driveDocumentReducer(afterFirst, addFile(secondInput));
+
+    const first = afterSecond.state.global.nodes.find(
+      (n) => n.id === firstInput.id,
+    );
+    const second = afterSecond.state.global.nodes.find(
+      (n) => n.id === secondInput.id,
+    );
+    expect(first?.name).toBe("Reports");
+    expect(second?.name).toBe("Reports (copy) 1");
   });
 });

@@ -130,7 +130,7 @@ type DocumentWithChildren {
   childIds: [String!]!
 }
 
-type MoveChildrenResult {
+type MoveRelationshipResult {
   source: PHDocument!
   target: PHDocument!
 }
@@ -360,16 +360,18 @@ type Query {
   # Get a specific document by ID or slug
   document(identifier: String!, view: ViewFilterInput): DocumentWithChildren
 
-  # Get children of a document
-  documentChildren(
-    parentIdentifier: String!
+  # Get outgoing relationships of a given type from a source document
+  documentOutgoingRelationships(
+    sourceIdentifier: String!
+    relationshipType: String!
     view: ViewFilterInput
     paging: PagingInput
   ): PHDocumentResultPage!
 
-  # Get parents of a document
-  documentParents(
-    childIdentifier: String!
+  # Get incoming relationships of a given type to a target document
+  documentIncomingRelationships(
+    targetIdentifier: String!
+    relationshipType: String!
     view: ViewFilterInput
     paging: PagingInput
   ): PHDocumentResultPage!
@@ -429,27 +431,30 @@ type Mutation {
     branch: String
   ): PHDocument!
 
-  # Add children to a document
-  addChildren(
-    parentIdentifier: String!
-    documentIdentifiers: [String!]!
+  # Add a relationship between two documents
+  addRelationship(
+    sourceIdentifier: String!
+    targetIdentifier: String!
+    relationshipType: String!
     branch: String
   ): PHDocument!
 
-  # Remove children from a document
-  removeChildren(
-    parentIdentifier: String!
-    documentIdentifiers: [String!]!
+  # Remove a relationship between two documents
+  removeRelationship(
+    sourceIdentifier: String!
+    targetIdentifier: String!
+    relationshipType: String!
     branch: String
   ): PHDocument!
 
-  # Move children between documents
-  moveChildren(
+  # Move a relationship from one source to another
+  moveRelationship(
     sourceParentIdentifier: String!
     targetParentIdentifier: String!
-    documentIdentifiers: [String!]!
+    targetIdentifier: String!
+    relationshipType: String!
     branch: String
-  ): MoveChildrenResult!
+  ): MoveRelationshipResult!
 
   # Delete a single document
   deleteDocument(identifier: String!, propagate: PropagationMode): Boolean!

@@ -70,7 +70,7 @@
 
 - **Boilerplate (Powerhouse Project)** – The `ph init` command's initial project structure, providing a standard starting point for new Powerhouse packages.
 - **Connect Build** – The output of the `ph connect build` command, which packages a Connect project into a distributable format. This build includes all necessary local/external packages, assets, and styles, and can be previewed locally with `ph connect preview` or deployed.
-- **Development Environment (Powerhouse)** – A local setup for developing Powerhouse applications, typically initiated with the `ph dev` command. It runs essential backend services like the Powerhouse Switchboard to enable real-time document model processing, code generation, and live updates, separate from the front-end Connect Studio.
+- **Development Environment (Powerhouse)** – A local setup for developing Powerhouse applications. Use `ph reactor` to start the backend services (Powerhouse Switchboard) for real-time document model processing, code generation, and live updates, and `ph connect` to start the front-end Connect Studio. These can be run independently or together in separate terminals.
 - **Document Model Editors** – An interface or UI to a document model that allows users to create and modify the data captured by the document models.
 - **Drive** – A logical container in Powerhouse for storing, organizing, and managing collections of documents.
 - **Drive-app** – A UI application, often custom, providing tailored views and interactions with documents in a drive.

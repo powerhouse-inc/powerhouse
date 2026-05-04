@@ -1,5 +1,6 @@
 import { Icon } from "#design-system";
 import { useCopyToClipboard } from "usehooks-ts";
+import { useEns } from "../../../hooks/use-ens.js";
 import { formatEthAddress } from "../../../utils/address.js";
 import { ENSAvatar } from "../../ens-avatar/ens-avatar.js";
 import { ConnectTooltip } from "../../tooltip/tooltip.js";
@@ -12,6 +13,7 @@ export type AddressProps = {
 export function Address(props: AddressProps) {
   const { address, chainId } = props;
   const [, copy] = useCopyToClipboard();
+  const { data: ensData } = useEns(address);
 
   if (!address) return null;
 
@@ -39,7 +41,11 @@ export function Address(props: AddressProps) {
   return (
     <ConnectTooltip content={tooltipContent}>
       <span className="flex w-fit cursor-pointer items-center gap-1 rounded-lg bg-gray-100 p-1 text-xs text-slate-100">
-        <ENSAvatar address={address} chainId={chainId} />
+        <ENSAvatar
+          address={address}
+          chainId={chainId}
+          avatarUrl={ensData?.avatar_url ?? undefined}
+        />
         {shortenedAddress}
       </span>
     </ConnectTooltip>

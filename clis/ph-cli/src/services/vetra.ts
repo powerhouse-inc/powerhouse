@@ -133,6 +133,7 @@ async function startLocalVetraSwitchboard(args: VetraArgs, logger?: ILogger) {
         debug,
         httpsKeyFile,
         httpsCertFile,
+        processorConfig,
         basePath: undefined,
         keypairPath: undefined,
         dbPath: undefined,

@@ -9,7 +9,6 @@ export * from "./document-model/utils.js";
 export * from "./editor-common.js";
 export * from "./index-files.js";
 export * from "./manifest.js";
-export * from "./package-json.js";
 export * from "./processors/processor.js";
 export * from "./subgraphs.js";
 export type * from "./types.js";

@@ -243,14 +243,82 @@ ph install @your-org-ph/package-name
 
 This makes your document models and editors available within that Powerhouse instance.
 
-<details>
-<summary>Future: Package Manager UI</summary>
+### Package Manager UI
 
-A visual package manager is planned for Connect's settings, allowing installation at the click of a button.
+A visual package manager can be found in Connect's settings (bottom left settings wheel), allowing installation at the click of a button.
 
-![package manager](images/homedesign.png)
+![package manager](images/package-installer.png)
 
-</details>
+---
+
+## 4. Publishing to the Vetra Registry (v6.0.0-dev.153+)
+
+:::info New publishing flow
+Starting with `ph-cmd` version **6.0.0-dev.153**, packages can be published to the Vetra package registry using `ph publish`. This enables **dynamic package loading** — Connect can detect the required package from a document file and prompt the user to install it directly from the registry.
+
+This flow applies to **newly created projects** initialized with v6.0.0-dev.153 or later. Existing projects will need to be migrated.
+:::
+
+### 4.1. Set up your environment
+
+Install or update the Powerhouse CLI:
+
+```bash
+pnpm install -g ph-cmd@6.0.0-dev.153
+```
+
+Create a new project pinned to this version:
+
+```bash
+ph init --pnpm --version=6.0.0-dev.153 your-test-project
+```
+
+Start Vetra in watch mode:
+
+```bash
+cd your-test-project && ph vetra --watch
+```
+
+### 4.2. Build your package
+
+1. Create a document model and editor in Vetra Studio. Using Claude is recommended for faster scaffolding.
+2. Create an example document in Connect and export it — you will use this to test dynamic loading later.
+
+### 4.3. Configure package metadata (first publish only)
+
+Before publishing for the first time, update two files:
+
+- **`powerhouse.manifest.json`** — set `name`, `description`, and `publisher`
+- **`package.json`** — update the `name` field to match
+
+Then create an account on the Vetra dev registry:
+
+```bash
+npm adduser --registry=https://registry.dev.vetra.io
+```
+
+### 4.4. Publish
+
+```bash
+ph publish --registry=https://registry.dev.vetra.io
+```
+
+Your package will be available at:
+
+- Registry index: `https://registry.dev.vetra.io/`
+- Package page: `https://registry.dev.vetra.io/your-package-name`
+
+:::tip Publishing new versions
+Bump the `version` field in `package.json` before every subsequent publish.
+:::
+
+### 4.5. Test dynamic loading in Connect
+
+1. Open your Connect instance on [staging.vetra.io](https://staging.vetra.io) (or use `https://connect.sharp-dove-96.vetra.io/`)
+2. Create a local drive
+3. Drag and drop the exported document into the drive
+4. Connect will detect the required package and prompt you to install it from the registry
+5. Once installed, open the document with your editor
 
 ---
 

@@ -31,8 +31,8 @@ Document-model subgraphs are auto-generated for each registered document model a
 - `document(identifier)` — get a single document
 - `documents(paging)` — list all documents of this type
 - `findDocuments(search, view, paging)` — search within this type
-- `documentChildren(parentIdentifier)` — filtered to this type
-- `documentParents(childIdentifier)`
+- `documentOutgoingRelationships(sourceIdentifier, relationshipType)` — filtered to this type
+- `documentIncomingRelationships(targetIdentifier, relationshipType)`
 - `createDocument(name, parentIdentifier)` mutation
 - Per-operation mutations (e.g. `addTodoItem(docId, input)`)
 - Async variants of each mutation (e.g. `addTodoItemAsync(docId, input)`)
@@ -109,7 +109,10 @@ query {
 ```graphql
 # v6 — /graphql/r
 query {
-  documentChildren(parentIdentifier: "my-drive-slug") {
+  documentOutgoingRelationships(
+    sourceIdentifier: "my-drive-slug"
+    relationshipType: "child"
+  ) {
     items {
       id
       name
@@ -128,7 +131,10 @@ query {
 # v6 — /graphql/to-do-list (or via supergraph)
 query {
   ToDoList {
-    documentChildren(parentIdentifier: "my-drive-slug") {
+    documentOutgoingRelationships(
+      sourceIdentifier: "my-drive-slug"
+      relationshipType: "child"
+    ) {
       items {
         id
         name
@@ -536,7 +542,10 @@ export const getResolvers = (subgraph: BaseSubgraph) => {
   return {
     Query: {
       myCustomQuery: async (_parent: unknown, args: { driveId: string }) => {
-        const children = await reactorClient.getChildren(args.driveId);
+        const children = await reactorClient.getOutgoingRelationships(
+          args.driveId,
+          "child",
+        );
         // ... process documents
         return results;
       },

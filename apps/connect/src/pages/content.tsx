@@ -62,7 +62,7 @@ function DriveItem({ drive }: { drive: DocumentDriveDocument }) {
   return (
     <HomeScreenItem
       key={drive.header.id}
-      title={drive.state.global.name}
+      title={drive.state.global.name || drive.header.name}
       description={description}
       icon={<DriveIcon drive={drive} />}
       onClick={() => setSelectedDrive(drive)}

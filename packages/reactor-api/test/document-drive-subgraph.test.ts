@@ -135,8 +135,8 @@ describe("Document-Drive Subgraph", () => {
 
       expect(queriesType.fields).toContain("document");
       expect(queriesType.fields).toContain("findDocuments");
-      expect(queriesType.fields).toContain("documentChildren");
-      expect(queriesType.fields).toContain("documentParents");
+      expect(queriesType.fields).toContain("documentOutgoingRelationships");
+      expect(queriesType.fields).toContain("documentIncomingRelationships");
 
       expect(queriesType.fields).not.toContain(`${documentName}_document`);
     });
@@ -225,8 +225,8 @@ describe("Document-Drive Subgraph", () => {
 
       expect(queries.document).toBeTypeOf("function");
       expect(queries.findDocuments).toBeTypeOf("function");
-      expect(queries.documentChildren).toBeTypeOf("function");
-      expect(queries.documentParents).toBeTypeOf("function");
+      expect(queries.documentOutgoingRelationships).toBeTypeOf("function");
+      expect(queries.documentIncomingRelationships).toBeTypeOf("function");
     });
 
     it("should generate mutation resolvers for valid operations (sync + async) on the Mutations namespace key", () => {

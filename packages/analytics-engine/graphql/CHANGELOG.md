@@ -1,3 +1,82 @@
+## 6.0.0-dev.213 (2026-05-04)
+
+This was a version bump only for @powerhousedao/analytics-engine-graphql to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.212 (2026-05-03)
+
+This was a version bump only for @powerhousedao/analytics-engine-graphql to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.211 (2026-05-02)
+
+This was a version bump only for @powerhousedao/analytics-engine-graphql to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.210 (2026-05-01)
+
+This was a version bump only for @powerhousedao/analytics-engine-graphql to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.209 (2026-04-30)
+
+### 🚀 Features
+
+- **reactor-api:** added system subgraph which returns version and hash information ([248fc1e92](https://github.com/powerhouse-inc/powerhouse/commit/248fc1e92))
+- initial switchboard endpoints and implementation ([01b20cede](https://github.com/powerhouse-inc/powerhouse/commit/01b20cede))
+
+### 🩹 Fixes
+
+- so much linting that it kills my computer ([d6b6ff143](https://github.com/powerhouse-inc/powerhouse/commit/d6b6ff143))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
+## 6.0.0-dev.208 (2026-04-29)
+
+### 🚀 Features
+
+- first swing at a load test ([f7e0f4456](https://github.com/powerhouse-inc/powerhouse/commit/f7e0f4456))
+- added observability profile ([957af0925](https://github.com/powerhouse-inc/powerhouse/commit/957af0925))
+- metrics integration ([1ce0b5fdf](https://github.com/powerhouse-inc/powerhouse/commit/1ce0b5fdf))
+- switchboard-lb M3 ([cc49638e0](https://github.com/powerhouse-inc/powerhouse/commit/cc49638e0))
+- **reactor-api:** added attachment service creation to reactor-api ([f96e9806b](https://github.com/powerhouse-inc/powerhouse/commit/f96e9806b))
+- **reactor-attachments:** initial storage implementation ([b82e0fc8c](https://github.com/powerhouse-inc/powerhouse/commit/b82e0fc8c))
+- **reactor-attachments:** initial setup of package ([ac5bac96a](https://github.com/powerhouse-inc/powerhouse/commit/ac5bac96a))
+
+### 🩹 Fixes
+
+- **reactor-attachments:** fix the tsdown config ([8485b54be](https://github.com/powerhouse-inc/powerhouse/commit/8485b54be))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
+## 6.0.0-dev.207 (2026-04-29)
+
+This was a version bump only for @powerhousedao/analytics-engine-graphql to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.206 (2026-04-28)
+
+This was a version bump only for @powerhousedao/analytics-engine-graphql to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.205 (2026-04-28)
+
+This was a version bump only for @powerhousedao/analytics-engine-graphql to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.204 (2026-04-28)
+
+This was a version bump only for @powerhousedao/analytics-engine-graphql to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.203 (2026-04-28)
+
+This was a version bump only for @powerhousedao/analytics-engine-graphql to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.202 (2026-04-28)
+
+This was a version bump only for @powerhousedao/analytics-engine-graphql to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.201 (2026-04-28)
+
+This was a version bump only for @powerhousedao/analytics-engine-graphql to align it with other projects, there were no code changes.
+
 ## 6.0.0-dev.200 (2026-04-27)
 
 This was a version bump only for @powerhousedao/analytics-engine-graphql to align it with other projects, there were no code changes.

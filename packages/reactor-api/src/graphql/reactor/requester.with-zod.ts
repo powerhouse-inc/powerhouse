@@ -16,7 +16,7 @@ import {
   DocumentWithChildrenDTO,
   JobChangeEventDTO,
   JobInfoDTO,
-  MoveChildrenResultDTO,
+  MoveRelationshipResultDTO,
   OperationResultPageDTO,
   PHDocumentDTO,
   PHDocumentResultPageDTO,
@@ -49,17 +49,17 @@ const operationValidators: OperationValidators = {
       );
     }
   },
-  GetDocumentChildren: (data) => {
-    if (data.documentChildren) {
+  GetDocumentOutgoingRelationships: (data) => {
+    if (data.documentOutgoingRelationships) {
       PHDocumentResultPageDTO.parse(
-        data.documentChildren as PhDocumentResultPage,
+        data.documentOutgoingRelationships as PhDocumentResultPage,
       );
     }
   },
-  GetDocumentParents: (data) => {
-    if (data.documentParents) {
+  GetDocumentIncomingRelationships: (data) => {
+    if (data.documentIncomingRelationships) {
       PHDocumentResultPageDTO.parse(
-        data.documentParents as PhDocumentResultPage,
+        data.documentIncomingRelationships as PhDocumentResultPage,
       );
     }
   },
@@ -104,19 +104,19 @@ const operationValidators: OperationValidators = {
       PHDocumentDTO.parse(data.renameDocument);
     }
   },
-  AddChildren: (data) => {
-    if (data.addChildren) {
-      PHDocumentDTO.parse(data.addChildren);
+  AddRelationship: (data) => {
+    if (data.addRelationship) {
+      PHDocumentDTO.parse(data.addRelationship);
     }
   },
-  RemoveChildren: (data) => {
-    if (data.removeChildren) {
-      PHDocumentDTO.parse(data.removeChildren);
+  RemoveRelationship: (data) => {
+    if (data.removeRelationship) {
+      PHDocumentDTO.parse(data.removeRelationship);
     }
   },
-  MoveChildren: (data) => {
-    if (data.moveChildren) {
-      MoveChildrenResultDTO.parse(data.moveChildren);
+  MoveRelationship: (data) => {
+    if (data.moveRelationship) {
+      MoveRelationshipResultDTO.parse(data.moveRelationship);
     }
   },
   DeleteDocument: (data) => {

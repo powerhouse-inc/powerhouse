@@ -6,6 +6,7 @@ local function send(code, msg)
     ngx.status = code
     ngx.header["Content-Type"] = "application/json"
     ngx.say(cjson.encode({ error = msg }))
+    require("metrics").inc_parse_error(msg)
     ngx.exit(code)
 end
 

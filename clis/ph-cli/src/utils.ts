@@ -168,6 +168,7 @@ export function updateConfigFile(
   projectPath: string,
   task: "install" | "uninstall" = "install",
   provider: "registry" | "local" = "registry",
+  registryUrl?: string,
 ) {
   const configPath = path.join(projectPath, POWERHOUSE_CONFIG_FILE);
 
@@ -190,6 +191,15 @@ export function updateConfigFile(
       provider,
     ),
   };
+
+  if (
+    task === "install" &&
+    registryUrl &&
+    !config.packageRegistryUrl &&
+    dependencies.length > 0
+  ) {
+    updatedConfig.packageRegistryUrl = registryUrl;
+  }
 
   fs.writeFileSync(configPath, JSON.stringify(updatedConfig, null, 2));
 }

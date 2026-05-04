@@ -46,6 +46,7 @@ import net from "node:net";
 import { register } from "node:module";
 import path from "path";
 import { Pool } from "pg";
+import { registerAttachmentRoutes } from "./attachments/index.js";
 import { initFeatureFlags } from "./feature-flags.js";
 import { getRenownSignerConfig, initRenown } from "./renown.js";
 import type { StartServerOptions, SwitchboardReactor } from "./types.js";
@@ -305,6 +306,8 @@ async function initServer(
     },
     "switchboard",
   );
+
+  registerAttachmentRoutes(api);
 
   if (process.env.SENTRY_DSN) {
     // Register Sentry error handler after all routes are established.

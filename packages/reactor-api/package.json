@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-api",
-  "version": "6.0.0-dev.200",
+  "version": "6.0.0-dev.213",
   "description": "",
   "type": "module",
   "repository": {
@@ -66,6 +66,7 @@
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/document-engineering": "catalog:",
     "@powerhousedao/reactor": "workspace:*",
+    "@powerhousedao/reactor-attachments": "workspace:*",
     "@powerhousedao/reactor-mcp": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
     "@renown/sdk": "workspace:*",

@@ -91,9 +91,15 @@ Reservations and attachment data have separate lifecycles. A reservation is tran
 stateDiagram-v2
     [*] --> RESERVED : reserve()
     RESERVED --> [*] : upload.send() (row deleted)
+    RESERVED --> [*] : sweep after expiresAtUtc (row deleted)
 ```
 
-Reservations do not expire at the reservation level. Transport-specific expiry (e.g. presigned URL TTL) is the upload handle's concern -- if the underlying mechanism expires, the handle can refresh it transparently. Reservations are only removed when `upload.send()` succeeds (promoting the data to the `attachment` table).
+Each reservation has an `expiresAtUtc` (default TTL: 24h, configurable via `KyselyReservationStore`'s `ttlMs` constructor argument; the default is also exported as `DEFAULT_RESERVATION_TTL_MS`). The TTL is a contract for clients -- the upload handle is valid until that timestamp. Transport-specific expiry (e.g. presigned URL TTL) is the upload handle's concern; if the underlying mechanism expires before the reservation does, the handle can refresh it transparently.
+
+Reservations are removed in two ways:
+
+- `upload.send()` succeeds and deletes its own row.
+- A periodic sweep (`reservationStore.deleteExpired()`) removes any row whose `expiresAtUtc` has passed. Consumers should schedule this on a cron / interval (e.g. hourly) to clean up rows left behind by aborted or failed uploads.
 
 **Attachment data lifecycle** (in `attachment`):
 
@@ -161,14 +167,19 @@ type AttachmentHeader = {
 
 /**
  * Metadata provided alongside attachment data during sync.
- * The remaining fields (hash, status, source, createdAtUtc, lastAccessedAtUtc)
- * are set by the store when it creates the attachment record.
+ * `createdAtUtc` is the original upload time, propagated from the source
+ * so that the receiving store preserves it instead of synthesizing the
+ * fetch time. `lastAccessedAtUtc` is intentionally omitted: it is a
+ * per-reactor LRU concern that resets on every read.
+ * The remaining fields (hash, status, source, lastAccessedAtUtc) are set
+ * by the store when it creates the attachment record.
  */
 type AttachmentMetadata = {
   mimeType: string;
   fileName: string; // base name without extension
   sizeBytes: number;
   extension: string | null;
+  createdAtUtc: string; // ISO 8601, original upload time
 };
 
 /**
@@ -178,6 +189,20 @@ type ReserveAttachmentOptions = {
   mimeType: string;
   fileName: string; // base name without extension, e.g. "photo"
   extension?: string | null; // e.g. "png", null if unknown
+};
+
+/**
+ * A reservation for an in-progress attachment upload. Returned by reserve();
+ * the row is deleted when upload.send() succeeds or once expiresAtUtc has
+ * passed and a sweep runs.
+ */
+type Reservation = {
+  reservationId: string;
+  mimeType: string;
+  fileName: string;
+  extension: string | null;
+  createdAtUtc: string; // ISO 8601
+  expiresAtUtc: string; // ISO 8601, contract for how long the handle is valid
 };
 
 /**
@@ -589,7 +614,7 @@ A periodic task runs when storage exceeds a configurable threshold:
 
 For mutable backends (disk, S3), eviction removes the data files.
 
-Reservations are not garbage-collected. They are removed only when `upload.send()` succeeds. Abandoned reservations are inert (no data, no storage cost beyond the row) and can be cleaned up manually if needed.
+Reservations are cleaned up by `IReservationStore.deleteExpired(now?)`, which deletes any row whose `expires_at_utc` is at or before `now` and returns the count of deleted rows. Schedule it on a cron / interval (e.g. hourly) so that aborted or failed uploads do not accumulate in `attachment_reservation`. The default TTL is `DEFAULT_RESERVATION_TTL_MS` (24h), configurable per store instance.
 
 ## Package Structure
 
@@ -691,14 +716,19 @@ Reservations and attachments are separate tables. A reservation is transient upl
 
 ```sql
 -- Transient: tracks in-progress client uploads.
--- Rows are created by reserve() and removed by upload.send().
+-- Rows are created by reserve() and removed by upload.send() or
+-- by deleteExpired() once expires_at_utc has passed.
 CREATE TABLE attachment_reservation (
   reservation_id  TEXT PRIMARY KEY,
   mime_type       TEXT NOT NULL,
   file_name       TEXT NOT NULL,
   extension       TEXT,
-  created_at_utc  TEXT NOT NULL   -- ISO 8601
+  created_at_utc  TEXT NOT NULL,  -- ISO 8601
+  expires_at_utc  TEXT NOT NULL   -- ISO 8601, used by the sweep
 );
+
+CREATE INDEX idx_reservation_expires_at
+  ON attachment_reservation(expires_at_utc);
 
 -- Permanent: content-addressed attachment metadata.
 -- Rows are created by upload.send() (client upload) or put() (sync).

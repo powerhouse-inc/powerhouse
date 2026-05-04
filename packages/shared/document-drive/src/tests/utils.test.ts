@@ -261,35 +261,80 @@ describe("getNextCopyNumber", () => {
 
 describe("handleTargetNameCollisions", () => {
   it("returns original name if no collision", () => {
-    const nodes = [{ name: "file1.txt", parentFolder: "folder" }];
+    const nodes = [{ name: "file1.txt", parentFolder: "folder", kind: "file" }];
     const params = {
       nodes: nodes,
       targetParentFolder: "folder",
       srcName: "newfile.txt",
+      srcKind: "file" as const,
     };
     // @ts-expect-error mock
     expect(handleTargetNameCollisions(params)).toBe("newfile.txt");
   });
 
   it("appends copy number if collision occurs", () => {
-    const nodes = [{ name: "newfile.txt", parentFolder: "folder" }];
+    const nodes = [
+      { name: "newfile.txt", parentFolder: "folder", kind: "file" },
+    ];
     const params = {
       nodes: nodes,
       targetParentFolder: "folder",
       srcName: "newfile.txt",
+      srcKind: "file" as const,
     };
     // @ts-expect-error mock
     expect(handleTargetNameCollisions(params)).toBe("newfile.txt (copy) 1");
   });
 
   it("handles null targetParentFolder correctly", () => {
-    const nodes = [{ name: "newfile.txt", parentFolder: null }];
+    const nodes = [{ name: "newfile.txt", parentFolder: null, kind: "file" }];
     const params = {
       nodes: nodes,
       targetParentFolder: "",
       srcName: "newfile.txt",
+      srcKind: "file" as const,
     };
     // @ts-expect-error mock
     expect(handleTargetNameCollisions(params)).toBe("newfile.txt (copy) 1");
+  });
+
+  it("does not collide when sibling has different kind (file vs folder)", () => {
+    const nodes = [{ name: "Reports", parentFolder: "folder", kind: "folder" }];
+    const params = {
+      nodes: nodes,
+      targetParentFolder: "folder",
+      srcName: "Reports",
+      srcKind: "file" as const,
+    };
+    // @ts-expect-error mock
+    expect(handleTargetNameCollisions(params)).toBe("Reports");
+  });
+
+  it("does not collide when sibling has different kind (folder vs file)", () => {
+    const nodes = [{ name: "Reports", parentFolder: "folder", kind: "file" }];
+    const params = {
+      nodes: nodes,
+      targetParentFolder: "folder",
+      srcName: "Reports",
+      srcKind: "folder" as const,
+    };
+    // @ts-expect-error mock
+    expect(handleTargetNameCollisions(params)).toBe("Reports");
+  });
+
+  it("only counts same-kind siblings when computing copy number", () => {
+    const nodes = [
+      { name: "Reports", parentFolder: "folder", kind: "file" },
+      { name: "Reports", parentFolder: "folder", kind: "folder" },
+      { name: "Reports (copy) 1", parentFolder: "folder", kind: "folder" },
+    ];
+    const params = {
+      nodes: nodes,
+      targetParentFolder: "folder",
+      srcName: "Reports",
+      srcKind: "folder" as const,
+    };
+    // @ts-expect-error mock
+    expect(handleTargetNameCollisions(params)).toBe("Reports (copy) 2");
   });
 });

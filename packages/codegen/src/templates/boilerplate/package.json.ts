@@ -1,44 +1,21 @@
 import { json } from "@tmpl/core";
+import {
+  externalDependencies,
+  externalDevDependencies,
+  packageJsonExports,
+} from "../../file-builders/constants.js";
 
-export const exportsTemplate = json`
-  ".": {
-    "types": "./dist/index.d.ts",
-    "browser": "./dist/browser/index.js",
-    "node": "./dist/node/index.mjs"
-  },
-  "./document-models": {
-    "types": "./dist/document-models/index.d.ts",
-    "browser": "./dist/browser/document-models/index.js",
-    "node": "./dist/node/document-models/index.mjs"
-  },
-  "./document-models/*": {
-    "types": "./dist/document-models/*/index.d.ts",
-    "browser": "./dist/browser/document-models/*/index.js",
-    "node": "./dist/node/document-models/*/index.mjs"
-  },
-  "./editors": {
-    "types": "./dist/editors/index.d.ts",
-    "browser": "./dist/browser/editors/index.js",
-    "node": "./dist/node/editors/index.mjs"
-  },
-  "./editors/*": {
-    "types": "./dist/editors/*/editor.d.ts",
-    "browser": "./dist/browser/editors/*/editor.js",
-    "node": "./dist/node/editors/*/editor.mjs"
-  },
-  "./subgraphs": {
-    "types": "./dist/subgraphs/index.d.ts",
-    "browser": "./dist/browser/subgraphs/index.js",
-    "node": "./dist/node/subgraphs/index.mjs"
-  },
-  "./processors": {
-    "types": "./dist/processors/index.d.ts",
-    "browser": "./dist/browser/processors/index.js",
-    "node": "./dist/node/processors/index.mjs"
-  },
-  "./manifest": "./dist/powerhouse.manifest.json",
-  "./style.css": "./dist/style.css"
-`.raw;
+/**
+ * Renders a JS object as the inner body of a JSON object
+ */
+function innerJsonBody(value: object): string {
+  return JSON.stringify(value, null, 2).slice(2, -2).trimEnd();
+}
+
+export const exportsTemplate = innerJsonBody(packageJsonExports);
+
+const externalDepsTemplate = innerJsonBody(externalDependencies);
+const externalDevDepsTemplate = innerJsonBody(externalDevDependencies);
 
 const scriptsTemplate = json`
   "test": "vitest run",
@@ -60,34 +37,14 @@ const scriptsTemplate = json`
 
 const dependenciesTemplate = (versionedDependencies: string[]) =>
   json`
-  ${versionedDependencies.join(",\n")},
-  "@powerhousedao/document-engineering": "1.40.1",
-  "graphql": "^16.10.0",
-  "graphql-tag": "^2.12.6",
-  "zod": "^4.3.5",
-  "react": "^19.2.3",
-  "react-dom": "^19.2.3"
+  ${versionedDependencies.join(",\n  ")},
+${externalDepsTemplate}
 `.raw;
 
 const devDependenciesTemplate = (versionedDevDependencies: string[]) =>
   json`
-  ${versionedDevDependencies.join(",\n")},
-  "@eslint/js": "^9.38.0",
-  "@tailwindcss/cli": "^4.1.18",
-  "@types/node": "^24.9.2",
-  "@types/react": "^19.2.3",
-  "eslint": "^9.38.0",
-  "eslint-plugin-react": "^7.37.5",
-  "eslint-plugin-react-hooks": "^7.0.1",
-  "eslint-config-prettier": "^10.1.8",
-  "eslint-plugin-prettier": "^5.5.4",
-  "globals": "^16.4.0",
-  "tailwindcss": "^4.1.16",
-  "typescript": "^5.9.3",
-  "typescript-eslint": "^8.46.2",
-  "vitest": "4.1.1",
-  "@vitejs/plugin-react": "6.0.1",
-  "vite-tsconfig-paths": "6.1.1"
+  ${versionedDevDependencies.join(",\n  ")},
+${externalDevDepsTemplate}
 `.raw;
 
 export const packageJsonTemplate = (

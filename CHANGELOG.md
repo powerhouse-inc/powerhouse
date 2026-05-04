@@ -1,3 +1,150 @@
+## 6.0.0-dev.213 (2026-05-04)
+
+This was a version bump only, there were no code changes.
+
+## 6.0.0-dev.212 (2026-05-03)
+
+This was a version bump only, there were no code changes.
+
+## 6.0.0-dev.211 (2026-05-02)
+
+This was a version bump only, there were no code changes.
+
+## 6.0.0-dev.210 (2026-05-01)
+
+### 🚀 Features
+
+- created a drive-client that is specific to working with drives ([718b6b1de](https://github.com/powerhouse-inc/powerhouse/commit/718b6b1de))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
+## 6.0.0-dev.209 (2026-04-30)
+
+### 🚀 Features
+
+- initial switchboard endpoints and implementation ([01b20cede](https://github.com/powerhouse-inc/powerhouse/commit/01b20cede))
+- **reactor-api:** added system subgraph which returns version and hash information ([248fc1e92](https://github.com/powerhouse-inc/powerhouse/commit/248fc1e92))
+- **reactor-attachments:** switchboard implementation fixes ([3b320d01c](https://github.com/powerhouse-inc/powerhouse/commit/3b320d01c))
+
+### 🩹 Fixes
+
+- so much linting that it kills my computer ([d6b6ff143](https://github.com/powerhouse-inc/powerhouse/commit/d6b6ff143))
+- **connect, design-system:** fallback drive name to header.name when state name is empty ([d3266842e](https://github.com/powerhouse-inc/powerhouse/commit/d3266842e))
+- **reactor-attachments:** force octet-stream content-type for remote uploads ([fc45afccb](https://github.com/powerhouse-inc/powerhouse/commit/fc45afccb))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Guillermo Puente @gpuente
+
+## 6.0.0-dev.208 (2026-04-29)
+
+### 🚀 Features
+
+- switchboard-lb M3 ([cc49638e0](https://github.com/powerhouse-inc/powerhouse/commit/cc49638e0))
+- metrics integration ([1ce0b5fdf](https://github.com/powerhouse-inc/powerhouse/commit/1ce0b5fdf))
+- added observability profile ([957af0925](https://github.com/powerhouse-inc/powerhouse/commit/957af0925))
+- first swing at a load test ([f7e0f4456](https://github.com/powerhouse-inc/powerhouse/commit/f7e0f4456))
+- **reactor-api:** added attachment service creation to reactor-api ([f96e9806b](https://github.com/powerhouse-inc/powerhouse/commit/f96e9806b))
+- **reactor-attachments:** initial setup of package ([ac5bac96a](https://github.com/powerhouse-inc/powerhouse/commit/ac5bac96a))
+- **reactor-attachments:** initial storage implementation ([b82e0fc8c](https://github.com/powerhouse-inc/powerhouse/commit/b82e0fc8c))
+- **reactor-attachments:** reservations ([f13680db1](https://github.com/powerhouse-inc/powerhouse/commit/f13680db1))
+- **reactor-attachments:** initial direct upload and switchboard transport implementations ([624579adc](https://github.com/powerhouse-inc/powerhouse/commit/624579adc))
+- **reactor-attachments:** added builder ([2f5b10c4b](https://github.com/powerhouse-inc/powerhouse/commit/2f5b10c4b))
+
+### 🩹 Fixes
+
+- **codegen:** migrate packageJson exports and dependencies ([965780cc1](https://github.com/powerhouse-inc/powerhouse/commit/965780cc1))
+- **reactor-attachments:** fix the tsdown config ([8485b54be](https://github.com/powerhouse-inc/powerhouse/commit/8485b54be))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Copilot
+
+## 6.0.0-dev.207 (2026-04-29)
+
+This was a version bump only, there were no code changes.
+
+## 6.0.0-dev.206 (2026-04-28)
+
+### 🚀 Features
+
+- add support for custom registry URL in config update during installation ([b5acf164b](https://github.com/powerhouse-inc/powerhouse/commit/b5acf164b))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
+## 6.0.0-dev.205 (2026-04-28)
+
+### 🩹 Fixes
+
+- **codegen:** restore pglite deps in project boilerplate ([9d102c61c](https://github.com/powerhouse-inc/powerhouse/commit/9d102c61c))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
+## 6.0.0-dev.204 (2026-04-28)
+
+### 🩹 Fixes
+
+- **codegen:** pin graphql to 16.12.0 in project boilerplate ([ba3b15a9b](https://github.com/powerhouse-inc/powerhouse/commit/ba3b15a9b))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
+## 6.0.0-dev.203 (2026-04-28)
+
+### 🩹 Fixes
+
+- **ph-cli:** forward processorConfig to switchboard for vetra interactive ([7f8dc486f](https://github.com/powerhouse-inc/powerhouse/commit/7f8dc486f))
+- **shared:** include operation example creators in documentModelActions ([71aa740fa](https://github.com/powerhouse-inc/powerhouse/commit/71aa740fa))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
+## 6.0.0-dev.202 (2026-04-28)
+
+### 🩹 Fixes
+
+- **codegen:** use .raw on vitestConfigTemplate ([dbea9094a](https://github.com/powerhouse-inc/powerhouse/commit/dbea9094a))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.201 (2026-04-28)
+
+### 🚀 Features
+
+- dispatch set name operation on document when renaming node in drive ([#2513](https://github.com/powerhouse-inc/powerhouse/pull/2513))
+- **design-system:** add back to home button in Breadcrumbs component ([1c50e026c](https://github.com/powerhouse-inc/powerhouse/commit/1c50e026c))
+
+### 🩹 Fixes
+
+- fix some delete issues ([0147000ca](https://github.com/powerhouse-inc/powerhouse/commit/0147000ca))
+- **codegen:** fix types exports on package ([50b2b2383](https://github.com/powerhouse-inc/powerhouse/commit/50b2b2383))
+- **design-system:** show ENS avatar in revision history operations ([cab95c8de](https://github.com/powerhouse-inc/powerhouse/commit/cab95c8de))
+- **document-drive:** allow name collision when kinds are different ([1cb1ccbed](https://github.com/powerhouse-inc/powerhouse/commit/1cb1ccbed))
+- **ph-cli:** lazy load ph code ([3e1f51d29](https://github.com/powerhouse-inc/powerhouse/commit/3e1f51d29))
+- **reactor-browser:** fixes #2504 mode nove ([#2504](https://github.com/powerhouse-inc/powerhouse/issues/2504))
+- **reactor-mcp:** create McpServer per /mcp request to fix concurrent transport collision ([3cfeb5b3f](https://github.com/powerhouse-inc/powerhouse/commit/3cfeb5b3f))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Copilot
+- Guillermo Puente @gpuente
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.200 (2026-04-27)
 
 This was a version bump only, there were no code changes.

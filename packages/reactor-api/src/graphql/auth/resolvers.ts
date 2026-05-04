@@ -140,10 +140,12 @@ export function createGetParentIdsFn(
 ): GetParentIdsFn {
   return async (documentId: string): Promise<string[]> => {
     try {
-      const result = await reactorClient.getParents(documentId);
+      const result = await reactorClient.getIncomingRelationships(
+        documentId,
+        "child",
+      );
       return result.results.map((doc) => doc.header.id);
     } catch {
-      // If document has no parents or error, return empty array
       return [];
     }
   };

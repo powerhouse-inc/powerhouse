@@ -65,8 +65,11 @@ ph reactor --port 5000
 **Option 2: Run both Connect and Reactor together**
 
 ```bash
-# Start both Connect and Reactor for development
-ph dev
+# In one terminal: start the Reactor
+ph reactor
+
+# In another terminal: start Connect Studio
+ph connect
 ```
 
 All options will start a Reactor API instance, typically accessible at:
@@ -151,7 +154,8 @@ The system defines three permission levels for documents:
 - **READ**: A team member can view a budget document but cannot make changes
 - **WRITE**: A contributor can edit a specification document and push updates
 - **ADMIN**: A project lead can modify who has access to the entire project drive
-  :::
+
+:::
 
 ## How It Works
 
@@ -699,7 +703,8 @@ All GraphQL operations below require:
 1. A valid bearer token from `ph access-token`
 2. The token included in the `Authorization` header followed by 'Bearer `<token>`'
 3. The Reactor API running with both `AUTH_ENABLED=true` and `DOCUMENT_PERMISSIONS_ENABLED=true` as variables
-   :::
+
+:::
 
 ## Configuration
 

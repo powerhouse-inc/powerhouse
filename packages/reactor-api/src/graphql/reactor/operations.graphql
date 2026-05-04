@@ -95,13 +95,15 @@ query GetDocumentWithOperations(
   }
 }
 
-query GetDocumentChildren(
-  $parentIdentifier: String!
+query GetDocumentOutgoingRelationships(
+  $sourceIdentifier: String!
+  $relationshipType: String!
   $view: ViewFilterInput
   $paging: PagingInput
 ) {
-  documentChildren(
-    parentIdentifier: $parentIdentifier
+  documentOutgoingRelationships(
+    sourceIdentifier: $sourceIdentifier
+    relationshipType: $relationshipType
     view: $view
     paging: $paging
   ) {
@@ -115,13 +117,15 @@ query GetDocumentChildren(
   }
 }
 
-query GetDocumentParents(
-  $childIdentifier: String!
+query GetDocumentIncomingRelationships(
+  $targetIdentifier: String!
+  $relationshipType: String!
   $view: ViewFilterInput
   $paging: PagingInput
 ) {
-  documentParents(
-    childIdentifier: $childIdentifier
+  documentIncomingRelationships(
+    targetIdentifier: $targetIdentifier
+    relationshipType: $relationshipType
     view: $view
     paging: $paging
   ) {
@@ -269,44 +273,50 @@ mutation RenameDocument(
   }
 }
 
-mutation AddChildren(
-  $parentIdentifier: String!
-  $documentIdentifiers: [String!]!
+mutation AddRelationship(
+  $sourceIdentifier: String!
+  $targetIdentifier: String!
+  $relationshipType: String!
   $branch: String
 ) {
-  addChildren(
-    parentIdentifier: $parentIdentifier
-    documentIdentifiers: $documentIdentifiers
+  addRelationship(
+    sourceIdentifier: $sourceIdentifier
+    targetIdentifier: $targetIdentifier
+    relationshipType: $relationshipType
     branch: $branch
   ) {
     ...PHDocumentFields
   }
 }
 
-mutation RemoveChildren(
-  $parentIdentifier: String!
-  $documentIdentifiers: [String!]!
+mutation RemoveRelationship(
+  $sourceIdentifier: String!
+  $targetIdentifier: String!
+  $relationshipType: String!
   $branch: String
 ) {
-  removeChildren(
-    parentIdentifier: $parentIdentifier
-    documentIdentifiers: $documentIdentifiers
+  removeRelationship(
+    sourceIdentifier: $sourceIdentifier
+    targetIdentifier: $targetIdentifier
+    relationshipType: $relationshipType
     branch: $branch
   ) {
     ...PHDocumentFields
   }
 }
 
-mutation MoveChildren(
+mutation MoveRelationship(
   $sourceParentIdentifier: String!
   $targetParentIdentifier: String!
-  $documentIdentifiers: [String!]!
+  $targetIdentifier: String!
+  $relationshipType: String!
   $branch: String
 ) {
-  moveChildren(
+  moveRelationship(
     sourceParentIdentifier: $sourceParentIdentifier
     targetParentIdentifier: $targetParentIdentifier
-    documentIdentifiers: $documentIdentifiers
+    targetIdentifier: $targetIdentifier
+    relationshipType: $relationshipType
     branch: $branch
   ) {
     source {

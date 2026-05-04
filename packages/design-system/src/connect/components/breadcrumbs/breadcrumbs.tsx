@@ -47,8 +47,17 @@ export function Breadcrumbs() {
     <div className="flex h-9 flex-row items-center gap-2 p-6 text-gray-500">
       {hasSelectedDrive && (
         <>
+          <button
+            type="button"
+            aria-label="Back to home"
+            title="Back to home"
+            className="flex items-center justify-center rounded-md p-1 transition-colors hover:bg-gray-100 hover:text-gray-800"
+            onClick={() => setSelectedDrive(undefined)}
+          >
+            <Icon name="ArrowLeft" size={14} />
+          </button>
           <Breadcrumb
-            name={selectedDrive.state.global.name}
+            name={selectedDrive.state.global.name || selectedDrive.header.name}
             onClick={() => setSelectedDrive(selectedDrive)}
           />
           <span>/</span>

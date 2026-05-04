@@ -118,7 +118,11 @@ export async function document(
 
   let children: PagedResults<PHDocument>;
   try {
-    children = await reactorClient.getChildren(args.identifier, view);
+    children = await reactorClient.getOutgoingRelationships(
+      args.identifier,
+      "child",
+      view,
+    );
   } catch (error) {
     throw new GraphQLError(
       `Failed to fetch children: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -137,10 +141,11 @@ export async function document(
   }
 }
 
-export async function documentChildren(
+export async function documentOutgoingRelationships(
   reactorClient: IReactorClient,
   args: {
-    parentIdentifier: string;
+    sourceIdentifier: string;
+    relationshipType: string;
     view?: {
       branch?: string | null;
       scopes?: readonly string[] | null;
@@ -173,14 +178,15 @@ export async function documentChildren(
 
   let result: PagedResults<PHDocument>;
   try {
-    result = await reactorClient.getChildren(
-      args.parentIdentifier,
+    result = await reactorClient.getOutgoingRelationships(
+      args.sourceIdentifier,
+      args.relationshipType,
       view,
       paging,
     );
   } catch (error) {
     throw new GraphQLError(
-      `Failed to fetch document children: ${error instanceof Error ? error.message : "Unknown error"}`,
+      `Failed to fetch outgoing relationships: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
 
@@ -188,15 +194,16 @@ export async function documentChildren(
     return toPhDocumentResultPage(result);
   } catch (error) {
     throw new GraphQLError(
-      `Failed to convert document children to GraphQL: ${error instanceof Error ? error.message : "Unknown error"}`,
+      `Failed to convert outgoing relationships to GraphQL: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
 }
 
-export async function documentParents(
+export async function documentIncomingRelationships(
   reactorClient: IReactorClient,
   args: {
-    childIdentifier: string;
+    targetIdentifier: string;
+    relationshipType: string;
     view?: {
       branch?: string | null;
       scopes?: readonly string[] | null;
@@ -229,10 +236,15 @@ export async function documentParents(
 
   let result: PagedResults<PHDocument>;
   try {
-    result = await reactorClient.getParents(args.childIdentifier, view, paging);
+    result = await reactorClient.getIncomingRelationships(
+      args.targetIdentifier,
+      args.relationshipType,
+      view,
+      paging,
+    );
   } catch (error) {
     throw new GraphQLError(
-      `Failed to fetch document parents: ${error instanceof Error ? error.message : "Unknown error"}`,
+      `Failed to fetch incoming relationships: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
 
@@ -240,7 +252,7 @@ export async function documentParents(
     return toPhDocumentResultPage(result);
   } catch (error) {
     throw new GraphQLError(
-      `Failed to convert document parents to GraphQL: ${error instanceof Error ? error.message : "Unknown error"}`,
+      `Failed to convert incoming relationships to GraphQL: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
 }
@@ -436,10 +448,7 @@ export async function createDocument(
     if (parentIdentifier) {
       const parent = await reactorClient.get(parentIdentifier);
       if (parent.header.documentType === DRIVE_DOCUMENT_TYPE) {
-        result = await reactorClient.createDocumentInDrive(
-          parentIdentifier,
-          document,
-        );
+        result = await reactorClient.drives.addFile(parentIdentifier, document);
       } else {
         result = await reactorClient.create(document, parentIdentifier);
       }
@@ -484,10 +493,7 @@ export async function createEmptyDocument(
         if (name) {
           document.header.name = name;
         }
-        result = await reactorClient.createDocumentInDrive(
-          parentIdentifier,
-          document,
-        );
+        result = await reactorClient.drives.addFile(parentIdentifier, document);
       } else {
         result = await reactorClient.createEmpty(args.documentType, {
           parentIdentifier,
@@ -573,10 +579,7 @@ export async function createDocumentWithInitialState(
 
     if (parent.header.documentType === DRIVE_DOCUMENT_TYPE) {
       try {
-        result = await reactorClient.createDocumentInDrive(
-          parentIdentifier,
-          document,
-        );
+        result = await reactorClient.drives.addFile(parentIdentifier, document);
       } catch (error) {
         throw new GraphQLError(
           `Failed to create document in drive: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -736,27 +739,28 @@ export async function renameDocument(
   }
 }
 
-export async function addChildren(
+export async function addRelationship(
   reactorClient: IReactorClient,
   args: {
-    parentIdentifier: string;
-    documentIdentifiers: readonly string[];
+    sourceIdentifier: string;
+    targetIdentifier: string;
+    relationshipType: string;
     branch?: string | null;
   },
 ): Promise<ReturnType<typeof toGqlPhDocument>> {
   const branch = fromInputMaybe(args.branch);
-  const documentIdentifiers = [...args.documentIdentifiers];
 
   let result: PHDocument;
   try {
-    result = await reactorClient.addChildren(
-      args.parentIdentifier,
-      documentIdentifiers,
+    result = await reactorClient.addRelationship(
+      args.sourceIdentifier,
+      args.targetIdentifier,
+      args.relationshipType,
       branch,
     );
   } catch (error) {
     throw new GraphQLError(
-      `Failed to add children: ${error instanceof Error ? error.message : "Unknown error"}`,
+      `Failed to add relationship: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
 
@@ -769,27 +773,28 @@ export async function addChildren(
   }
 }
 
-export async function removeChildren(
+export async function removeRelationship(
   reactorClient: IReactorClient,
   args: {
-    parentIdentifier: string;
-    documentIdentifiers: readonly string[];
+    sourceIdentifier: string;
+    targetIdentifier: string;
+    relationshipType: string;
     branch?: string | null;
   },
 ): Promise<ReturnType<typeof toGqlPhDocument>> {
   const branch = fromInputMaybe(args.branch);
-  const documentIdentifiers = [...args.documentIdentifiers];
 
   let result: PHDocument;
   try {
-    result = await reactorClient.removeChildren(
-      args.parentIdentifier,
-      documentIdentifiers,
+    result = await reactorClient.removeRelationship(
+      args.sourceIdentifier,
+      args.targetIdentifier,
+      args.relationshipType,
       branch,
     );
   } catch (error) {
     throw new GraphQLError(
-      `Failed to remove children: ${error instanceof Error ? error.message : "Unknown error"}`,
+      `Failed to remove relationship: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
 
@@ -802,12 +807,13 @@ export async function removeChildren(
   }
 }
 
-export async function moveChildren(
+export async function moveRelationship(
   reactorClient: IReactorClient,
   args: {
     sourceParentIdentifier: string;
     targetParentIdentifier: string;
-    documentIdentifiers: readonly string[];
+    targetIdentifier: string;
+    relationshipType: string;
     branch?: string | null;
   },
 ): Promise<{
@@ -815,19 +821,19 @@ export async function moveChildren(
   target: ReturnType<typeof toGqlPhDocument>;
 }> {
   const branch = fromInputMaybe(args.branch);
-  const documentIdentifiers = [...args.documentIdentifiers];
 
   let result: { source: PHDocument; target: PHDocument };
   try {
-    result = await reactorClient.moveChildren(
+    result = await reactorClient.moveRelationship(
       args.sourceParentIdentifier,
       args.targetParentIdentifier,
-      documentIdentifiers,
+      args.targetIdentifier,
+      args.relationshipType,
       branch,
     );
   } catch (error) {
     throw new GraphQLError(
-      `Failed to move children: ${error instanceof Error ? error.message : "Unknown error"}`,
+      `Failed to move relationship: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
 
@@ -853,7 +859,21 @@ export async function deleteDocument(
   const propagate = toReactorPropagationMode(args.propagate);
 
   try {
-    await reactorClient.deleteDocument(args.identifier, propagate);
+    const incoming = await reactorClient.getIncomingRelationships(
+      args.identifier,
+      "child",
+    );
+    const driveParent = incoming.results.find(
+      (p) => p.header.documentType === "powerhouse/document-drive",
+    );
+    if (driveParent) {
+      await reactorClient.drives.removeNode(
+        driveParent.header.id,
+        args.identifier,
+      );
+    } else {
+      await reactorClient.deleteDocument(args.identifier, propagate);
+    }
     return true;
   } catch (error) {
     throw new GraphQLError(
@@ -1164,10 +1184,12 @@ export function createGetParentIdsFn(
 ): GetParentIdsFn {
   return async (documentId: string): Promise<string[]> => {
     try {
-      const result = await reactorClient.getParents(documentId);
+      const result = await reactorClient.getIncomingRelationships(
+        documentId,
+        "child",
+      );
       return result.results.map((doc) => doc.header.id);
     } catch {
-      // If document has no parents or error, return empty array
       return [];
     }
   };

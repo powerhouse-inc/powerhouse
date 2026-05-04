@@ -29,6 +29,7 @@ export const nodeReducer: DocumentDriveNodeOperations = {
     const name = handleTargetNameCollisions({
       nodes: state.nodes,
       srcName: action.input.name,
+      srcKind: "file",
       targetParentFolder: action.input.parentFolder || null,
     });
 
@@ -66,6 +67,7 @@ export const nodeReducer: DocumentDriveNodeOperations = {
     const name = handleTargetNameCollisions({
       nodes: state.nodes,
       srcName: action.input.name,
+      srcKind: "folder",
       targetParentFolder: action.input.parentFolder || null,
     });
 
@@ -117,6 +119,7 @@ export const nodeReducer: DocumentDriveNodeOperations = {
               name: handleTargetNameCollisions({
                 nodes: state.nodes.filter((n) => n.id !== action.input.id),
                 srcName: action.input.name ?? node.name,
+                srcKind: "file",
                 targetParentFolder:
                   action.input.parentFolder ?? node.parentFolder,
               }),
@@ -145,6 +148,7 @@ export const nodeReducer: DocumentDriveNodeOperations = {
               name: handleTargetNameCollisions({
                 nodes: state.nodes.filter((n) => n.id !== action.input.id),
                 srcName: action.input.name ?? node.name,
+                srcKind: node.kind === "file" ? "file" : "folder",
                 targetParentFolder:
                   action.input.parentFolder ?? node.parentFolder,
               }),
@@ -176,6 +180,7 @@ export const nodeReducer: DocumentDriveNodeOperations = {
     const name = handleTargetNameCollisions({
       nodes: state.nodes,
       srcName: action.input.targetName || node.name,
+      srcKind: node.kind === "file" ? "file" : "folder",
       targetParentFolder: action.input.targetParentFolder || null,
     });
 
@@ -219,6 +224,7 @@ export const nodeReducer: DocumentDriveNodeOperations = {
     const name = handleTargetNameCollisions({
       nodes: state.nodes,
       srcName: node.name,
+      srcKind: node.kind === "file" ? "file" : "folder",
       targetParentFolder: action.input.targetParentFolder || null,
     });
 

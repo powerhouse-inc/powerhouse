@@ -1,5 +1,6 @@
 import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import type { GraphQLManager } from "@powerhousedao/reactor-api";
+import type { AttachmentBuildResult } from "@powerhousedao/reactor-attachments";
 import type { PHDocumentHeader } from "@powerhousedao/shared/document-model";
 import type {
   IProcessorHostModule,
@@ -8,6 +9,7 @@ import type {
 } from "@powerhousedao/shared/processors";
 import type { IHttpAdapter } from "./graphql/gateway/types.js";
 import type { IPackageManager } from "./packages/types.js";
+import type { AuthService } from "./services/auth.service.js";
 export type {
   IPackageLoader,
   IPackageLoaderOptions,
@@ -17,6 +19,8 @@ export type API = {
   httpAdapter: IHttpAdapter;
   graphqlManager: GraphQLManager;
   packages: IPackageManager;
+  attachments: AttachmentBuildResult;
+  authService: AuthService | undefined;
 };
 
 export type ReactorModule = {

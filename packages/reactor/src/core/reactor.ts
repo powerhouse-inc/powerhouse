@@ -259,14 +259,15 @@ export class Reactor implements IReactor {
     );
   }
 
-  async getChildren(
-    documentId: string,
+  async getOutgoingRelationships(
+    sourceId: string,
+    relationshipType: string,
     consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<string[]> {
     const relationships = await this.documentIndexer.getOutgoing(
-      documentId,
-      ["child"],
+      sourceId,
+      [relationshipType],
       undefined,
       consistencyToken,
       signal,
@@ -279,14 +280,15 @@ export class Reactor implements IReactor {
     return relationships.results.map((rel) => rel.targetId);
   }
 
-  async getParents(
-    childId: string,
+  async getIncomingRelationships(
+    targetId: string,
+    relationshipType: string,
     consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<string[]> {
     const relationships = await this.documentIndexer.getIncoming(
-      childId,
-      ["parent"],
+      targetId,
+      [relationshipType],
       undefined,
       consistencyToken,
       signal,
@@ -908,17 +910,19 @@ export class Reactor implements IReactor {
     return result;
   }
 
-  async addChildren(
-    parentId: string,
-    documentIds: string[],
+  async addRelationship(
+    sourceId: string,
+    targetId: string,
+    relationshipType: string,
     branch: string = "main",
     signer?: ISigner,
     signal?: AbortSignal,
   ): Promise<JobInfo> {
     this.logger.verbose(
-      "addChildren(@parentId, @count children, @branch)",
-      parentId,
-      documentIds.length,
+      "addRelationship(@sourceId, @targetId, @relationshipType, @branch)",
+      sourceId,
+      targetId,
+      relationshipType,
       branch,
     );
 
@@ -926,28 +930,30 @@ export class Reactor implements IReactor {
       throw new AbortError();
     }
 
-    let actions: Action[] = documentIds.map((childId) =>
-      addRelationshipAction(parentId, childId, "child"),
-    );
+    let actions: Action[] = [
+      addRelationshipAction(sourceId, targetId, relationshipType),
+    ];
 
     if (signer) {
       actions = await signActions(actions, signer, signal);
     }
 
-    return await this.execute(parentId, branch, actions, signal);
+    return await this.execute(sourceId, branch, actions, signal);
   }
 
-  async removeChildren(
-    parentId: string,
-    documentIds: string[],
+  async removeRelationship(
+    sourceId: string,
+    targetId: string,
+    relationshipType: string,
     branch: string = "main",
     signer?: ISigner,
     signal?: AbortSignal,
   ): Promise<JobInfo> {
     this.logger.verbose(
-      "removeChildren(@parentId, @count children, @branch)",
-      parentId,
-      documentIds.length,
+      "removeRelationship(@sourceId, @targetId, @relationshipType, @branch)",
+      sourceId,
+      targetId,
+      relationshipType,
       branch,
     );
 
@@ -955,15 +961,15 @@ export class Reactor implements IReactor {
       throw new AbortError();
     }
 
-    let actions: Action[] = documentIds.map((childId) =>
-      removeRelationshipAction(parentId, childId, "child"),
-    );
+    let actions: Action[] = [
+      removeRelationshipAction(sourceId, targetId, relationshipType),
+    ];
 
     if (signer) {
       actions = await signActions(actions, signer, signal);
     }
 
-    return await this.execute(parentId, branch, actions, signal);
+    return await this.execute(sourceId, branch, actions, signal);
   }
 
   getJobStatus(jobId: string, signal?: AbortSignal): Promise<JobInfo> {

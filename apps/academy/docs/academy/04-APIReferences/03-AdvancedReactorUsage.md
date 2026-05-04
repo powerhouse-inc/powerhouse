@@ -16,15 +16,15 @@ This page covers the low-level `IReactor` interface and the internal components 
 
 `IReactorClient` is a high-level wrapper around `IReactor`. The table below summarizes the key differences:
 
-| Aspect                  | `IReactor`                                                 | `IReactorClient`                                                                                    |
-| ----------------------- | ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| **Write return values** | Returns `JobInfo` immediately (fire-and-forget)            | Waits for job completion, returns the final document                                                |
-| **Signing**             | Caller passes an `ISigner` explicitly                      | Client manages signing internally                                                                   |
-| **Document lookup**     | Separate `get()`, `getBySlug()`, `getByIdOrSlug()` methods | Single `get(identifier)` that accepts either                                                        |
-| **Children/parents**    | Returns `string[]` (document IDs only)                     | Returns `PagedResults<PHDocument>` (full documents)                                                 |
-| **Convenience methods** | Basic CRUD                                                 | Plus: `createEmpty()`, `createDocumentInDrive()`, `rename()`, `moveChildren()`, `deleteDocuments()` |
-| **Subscriptions**       | Not available (use the event bus directly)                 | `subscribe(search, callback, view?)` for real-time document changes                                 |
-| **Consistency tokens**  | Explicit — pass tokens to reads after writes               | Handled internally by the client                                                                    |
+| Aspect                  | `IReactor`                                                 | `IReactorClient`                                                                                        |
+| ----------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| **Write return values** | Returns `JobInfo` immediately (fire-and-forget)            | Waits for job completion, returns the final document                                                    |
+| **Signing**             | Caller passes an `ISigner` explicitly                      | Client manages signing internally                                                                       |
+| **Document lookup**     | Separate `get()`, `getBySlug()`, `getByIdOrSlug()` methods | Single `get(identifier)` that accepts either                                                            |
+| **Children/parents**    | Returns `string[]` (document IDs only)                     | Returns `PagedResults<PHDocument>` (full documents)                                                     |
+| **Convenience methods** | Basic CRUD                                                 | Plus: `createEmpty()`, `createDocumentInDrive()`, `rename()`, `moveRelationship()`, `deleteDocuments()` |
+| **Subscriptions**       | Not available (use the event bus directly)                 | `subscribe(search, callback, view?)` for real-time document changes                                     |
+| **Consistency tokens**  | Explicit — pass tokens to reads after writes               | Handled internally by the client                                                                        |
 
 **When to use `IReactor` directly:**
 
@@ -96,9 +96,9 @@ const doc = await reactor.getByIdOrSlug<MyDocument>(identifier);
 // With consistency token for read-after-write
 const doc = await reactor.get<MyDocument>(docId, undefined, token);
 
-// Children and parents (returns string[] of IDs, not full documents)
-const childIds = await reactor.getChildren(parentId);
-const parentIds = await reactor.getParents(childId);
+// Outgoing and incoming relationships (returns string[] of IDs, not full documents)
+const childIds = await reactor.getOutgoingRelationships(parentId, "child");
+const parentIds = await reactor.getIncomingRelationships(childId, "child");
 
 // Search
 const results = await reactor.find({ type: "powerhouse/todo-list" });
@@ -125,8 +125,8 @@ const job = await reactor.load(docId, "main", operations);
 const job = await reactor.deleteDocument(docId, signer);
 
 // Manage relationships
-const job = await reactor.addChildren(parentId, [childId1, childId2]);
-const job = await reactor.removeChildren(parentId, [childId1]);
+const job = await reactor.addRelationship(parentId, childId1, "child");
+const job = await reactor.removeRelationship(parentId, childId1, "child");
 ```
 
 ### Batch operations

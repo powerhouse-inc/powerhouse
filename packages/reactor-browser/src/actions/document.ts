@@ -11,7 +11,6 @@ import type {
 import {
   addFolder as baseAddFolder,
   copyNode as baseCopyNode,
-  deleteNode as baseDeleteNode,
   moveNode as baseMoveNode,
   updateFile as baseUpdateFile,
   generateNodesCopy,
@@ -348,7 +347,7 @@ export async function addDocument(
   // Create document using ReactorClient
   let newDoc: PHDocument;
   try {
-    newDoc = await reactorClient.createDocumentInDrive(
+    newDoc = await reactorClient.drives.addFile(
       driveId,
       newDocument,
       parentFolder,
@@ -750,13 +749,7 @@ export async function deleteNode(driveId: string, nodeId: string) {
     throw new Error("ReactorClient not initialized");
   }
 
-  // delete the node in the drive document
-  await reactorClient.execute(driveId, "main", [
-    baseDeleteNode({ id: nodeId }),
-  ]);
-
-  // now delete the document
-  await reactorClient.deleteDocument(nodeId);
+  await reactorClient.drives.removeNode(driveId, nodeId);
 }
 
 export async function renameNode(
@@ -903,6 +896,7 @@ export async function copyNode(
       const resolvedName = handleTargetNameCollisions({
         nodes: drive.state.global.nodes,
         srcName: copyNodeInput.targetName || node.name,
+        srcKind: isFileNode(node) ? "file" : "folder",
         targetParentFolder: copyNodeInput.targetParentFolder || null,
       });
       resolvedNamesMap.set(copyNodeInput.targetId, resolvedName);
@@ -932,11 +926,7 @@ export async function copyNode(
         duplicatedDocument.header.name = resolvedName;
       }
 
-      await reactor.createDocumentInDrive(
-        driveId,
-        duplicatedDocument,
-        target?.id,
-      );
+      await reactor.drives.addFile(driveId, duplicatedDocument, target?.id);
     } catch (e) {
       logger.error(
         `Error copying document ${fileNodeToCopy.srcId}: ${String(e)}`,

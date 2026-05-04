@@ -39,7 +39,7 @@ What OpenResty buys us concretely:
 - **nginx** handles accept loop, HTTP parsing, keep-alive, upstream pooling, graceful reload, worker supervision.
 - **`rewrite_by_lua` / `access_by_lua`** is the exact phase we need to inspect the body and set a routing variable _before_ the upstream is chosen.
 - **`hash $doc_id consistent`** in the upstream block does rendezvous-style consistent hashing natively.
-- **`lua-resty-upstream-healthcheck`** handles active probing with well-understood semantics.
+- **`ngx.timer.every` + cosocket + `lua_shared_dict`** are enough to run our own active probe loop without taking the off-the-shelf `lua-resty-upstream-healthcheck` library — see §5.2 for why pinning forced custom probing.
 - **`nginx-lua-prometheus`** gives us Prometheus-format metrics without a sidecar.
 
 The tradeoff we accept: Lua on the hot path. For GQL-sized payloads (sub-MB), `cjson.decode` is a few tens of microseconds — dominated by the network round trip. We gate this assumption with load tests (see §8 M0).
@@ -86,24 +86,30 @@ The Lua block runs in the nginx **rewrite phase** — after headers are parsed, 
 
 ### 4.1 Route classes
 
-| Class                          | Example                                                     | Where `$doc_id` comes from                                                                             |
-| ------------------------------ | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| **Subgraph (document-scoped)** | `POST /graphql`, `POST /graphql/r`, `POST /graphql/<model>` | Lua reads body, parses JSON, pulls the owning identifier from `variables`. Key set documented in §4.3. |
-| **Drive metadata**             | `GET /d/:drive`                                             | REST; returns the same payload from any backend. Routed to any healthy backend.                        |
-| **Global**                     | `GET /health`, introspection queries                        | handled by the LB directly or routed to any backend.                                                   |
-| **Subscription**               | `WS /graphql/subscriptions`                                 | upgrade forwarded to the pool; sticky for the connection's lifetime.                                   |
+| Class                          | Example                                                                                                             | Where `$doc_id` comes from                                                                             |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| **Subgraph (document-scoped)** | `POST /graphql`, `POST /graphql/r`, `POST /graphql/<model>`, `POST /graphql/stream`, `POST /graphql/<model>/stream` | Lua reads body, parses JSON, pulls the owning identifier from `variables`. Key set documented in §4.3. |
+| **Drive metadata**             | `GET /d/:drive`                                                                                                     | REST; returns the same payload from any backend. Routed to any healthy backend.                        |
+| **Global**                     | `GET /health`, introspection queries                                                                                | handled by the LB directly or routed to any backend.                                                   |
+| **Subscription**               | `WS /graphql/subscriptions`                                                                                         | upgrade forwarded to the pool; sticky for the connection's lifetime.                                   |
 
 Every document-touching request pays a body read + JSON decode. There is no path-only fast path — the real switchboard GraphQL surface (see `packages/reactor-api/src/graphql/reactor/subgraph.ts` and `document-model-subgraph.ts`) never encodes the owning document in the URL. The body-parse cost dominates the LB's per-request overhead; see §2 for the tradeoff we accepted in picking OpenResty.
 
+**Method and shape contract on `/graphql`:** the LB is POST-only with a single JSON object body. GET requests, query-string queries, GraphQL request batching (`[{query, variables}, ...]`), persisted-query-only requests with no `variables`, and any request whose body fails to JSON-decode all return 400. This is by design — every supported routing key lives in `variables`, so anything else is unrouteable. If a real client need for GET / batching / APQ-only ever appears, see §9 Q10.
+
 ### 4.2 Concrete config sketch
+
+The upstream block below is shown for production hostnames and switchboard's default port (`4001`, see `apps/switchboard/src/server.mts`). The committed `conf/upstreams.conf` instead points at the dev compose stubs (`sb-1:8080` / `sb-2:8080` / `sb-3:8080`) — same shape, different `server` lines. Production swaps the `server` entries; nothing else moves.
 
 ```nginx
 # upstreams.conf
 upstream switchboards {
     hash $doc_id consistent;
-    server sb-1.internal:4001 max_fails=3 fail_timeout=10s;
-    server sb-2.internal:4001 max_fails=3 fail_timeout=10s;
-    server sb-3.internal:4001 max_fails=3 fail_timeout=10s;
+    # max_fails=0 disables passive mark-down so the hash module never
+    # skips a peer at selection time — see §5.2 "Pinning under failure".
+    server sb-1.internal:4001 max_fails=0;
+    server sb-2.internal:4001 max_fails=0;
+    server sb-3.internal:4001 max_fails=0;
     keepalive 64;
 }
 
@@ -165,8 +171,9 @@ local M = {}
 local ID_KEYS = {
   "identifier",          -- document, deleteDocument, doc-model queries
   "documentIdentifier",  -- mutateDocument{,Async}, renameDocument
-  "parentIdentifier",    -- addChildren, removeChildren, createDocument
-  "childIdentifier",     -- documentParents
+  "parentIdentifier",    -- createDocument, createEmptyDocument
+  "sourceIdentifier",    -- addRelationship, removeRelationship, documentOutgoingRelationships
+  "targetIdentifier",    -- addRelationship, removeRelationship, documentIncomingRelationships
   "docId",               -- every per-operation mutation on document models
 }
 
@@ -180,50 +187,45 @@ function M.from_body()
     return require("errors").bad_request("missing or malformed variables")
   end
 
-  local found
   for _, k in ipairs(ID_KEYS) do
     local v = payload.variables[k]
     if type(v) == "string" and #v > 0 then
-      if found and found ~= v then
-        return require("errors").conflict("multiple identifiers in variables")
-      end
-      found = v
+      ngx.var.doc_id = v
+      return
     end
   end
 
-  if not found then
-    return require("errors").conflict("no identifier in variables")
-  end
-
-  ngx.var.doc_id = found
+  return require("errors").conflict("no identifier in variables")
 end
 
 return M
 ```
 
-This is illustrative, not final — it handles only the single-top-level-key case. The M2 `lua/route.lua` additionally walks nested paths (`filter.documentId`, `input.filter.documentId`), rejects multi-identifier batches (`identifiers[]`, cross-parent `moveChildren`, cross-channel `pushSyncEnvelopes`) with 409, and routes `pushSyncEnvelopes` on `envelopes[0].channelMeta.id`. See §4.3 for the key set, §4.4 for multi-document policy, and §9 Q7/Q8 for rationale. Every module in `lua/` still fits on one screen.
+This sketch shows the single-top-level-key shape only. The shipped `lua/route.lua` (M2) also walks nested paths (`filter.documentId`, `input.filter.documentId`), rejects multi-identifier batches (`identifiers[]`, cross-parent `moveRelationship`, cross-channel `pushSyncEnvelopes`, multi-element `touchChannel`) with 409, and routes `pushSyncEnvelopes` on `envelopes[0].channelMeta.id`. See §4.3 for the key set and the precedence rule, §4.4 for multi-document policy, and §9 Q7/Q8 for rationale. The shipped module is the authority — when the spec and the code diverge, fix one or the other and note the decision here. Every module in `lua/` still fits on one screen.
 
 ### 4.3 Body inspection rules
 
 1. Cap the body via `client_max_body_size 256k` in the server block. Oversize bodies get `413` before Lua runs.
-2. `ngx.req.read_body()` buffers the body into memory (never to disk for our sizes; see `client_body_buffer_size`).
+2. `ngx.req.read_body()` buffers the body into memory. **`client_body_buffer_size` must equal `client_max_body_size`** (both `256k` today). If `client_body_buffer_size` is smaller, nginx silently spools the body to a temp file and `ngx.req.get_body_data()` returns nil — the Lua extractor then 400s every request with "empty body". Keep them in lockstep on every config change.
 3. Parse with `cjson.safe` — never the raising variant.
 4. Look for the owning identifier in `variables`. The documented key set, derived from the real subgraph resolvers:
 
-   | Key                                                | Operations                                                                                                                         |
-   | -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-   | `identifier`                                       | `document`, `deleteDocument`, all `<Model>.document` queries                                                                       |
-   | `identifiers` _(array)_                            | `deleteDocuments` — see §4.4                                                                                                       |
-   | `documentIdentifier`                               | `mutateDocument`, `mutateDocumentAsync`, `renameDocument`                                                                          |
-   | `parentIdentifier`                                 | `createDocument(parentIdentifier?)`, `createEmptyDocument(parentIdentifier?)`, `addChildren`, `removeChildren`, `documentChildren` |
-   | `childIdentifier`                                  | `documentParents`                                                                                                                  |
-   | `sourceParentIdentifier`, `targetParentIdentifier` | `moveChildren` — both present — see §4.4                                                                                           |
-   | `docId`                                            | every per-operation mutation generated for a document model (sync + async)                                                         |
-   | `filter.documentId` (nested)                       | `documentOperations` query                                                                                                         |
-   | `input.filter.documentId` (nested, list variant)   | `touchChannel`                                                                                                                     |
-   | `envelopes[0].channelMeta.id` (nested)             | `pushSyncEnvelopes` — route on this; supersedes the old operations-walk. See §4.4 and §9 Q7.                                       |
+   | Key                                                | Operations                                                                                                                                                                                                         |
+   | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+   | `identifier`                                       | `document`, `deleteDocument`, all `<Model>.document` queries                                                                                                                                                       |
+   | `identifiers` _(array)_                            | `deleteDocuments` — see §4.4                                                                                                                                                                                       |
+   | `documentIdentifier`                               | `mutateDocument`, `mutateDocumentAsync`, `renameDocument`                                                                                                                                                          |
+   | `parentIdentifier`                                 | `createDocument(parentIdentifier?)`, `createEmptyDocument(parentIdentifier?)`                                                                                                                                      |
+   | `sourceIdentifier`                                 | `addRelationship`, `removeRelationship`, `documentOutgoingRelationships`, `<Model>.documentOutgoingRelationships`                                                                                                  |
+   | `targetIdentifier`                                 | `addRelationship`, `removeRelationship`, `documentIncomingRelationships`, `<Model>.documentIncomingRelationships`, `moveRelationship` (also carries `sourceParentIdentifier`/`targetParentIdentifier` — see below) |
+   | `sourceParentIdentifier`, `targetParentIdentifier` | `moveRelationship` — both present — see §4.4                                                                                                                                                                       |
+   | `docId`                                            | every per-operation mutation generated for a document model (sync + async)                                                                                                                                         |
+   | `filter.documentId` (nested)                       | `documentOperations` query                                                                                                                                                                                         |
+   | `input.filter.documentId` (nested, list variant)   | `touchChannel`                                                                                                                                                                                                     |
+   | `envelopes[0].channelMeta.id` (nested)             | `pushSyncEnvelopes` — route on this; supersedes the old operations-walk. See §4.4 and §9 Q7.                                                                                                                       |
 
-5. If no identifier is found, return `409` with a message pointing at the documented key set. We **do not guess**.
+5. **Precedence (top-level keys).** The six top-level identifier keys (`identifier`, `documentIdentifier`, `parentIdentifier`, `sourceIdentifier`, `targetIdentifier`, `docId`) are scanned **in that order**; the first non-empty string match wins and the rest are ignored. `addRelationship` and `removeRelationship` carry both `sourceIdentifier` and `targetIdentifier` — under this rule they pin on the source, which is the document the relationship is anchored from. The dedicated handlers for `envelopes` (pushSyncEnvelopes), `identifiers[]` (deleteDocuments), and `sourceParentIdentifier` / `targetParentIdentifier` (moveRelationship) run **before** the top-level scan. If a future schema legitimately co-mingles top-level keys in a way that violates the pin, switch to a 409-on-conflict policy here rather than silently picking one.
+6. If no identifier is found after all the rules in §4.3 step 5 and §4.4, return `409` with a message pointing at the documented key set. We **do not guess**.
 
 We explicitly do **not** run a GraphQL operation parser. The contract with clients is: the owning identifier appears in one of the documented `variables` keys above. We publish and version that contract.
 
@@ -232,7 +234,7 @@ We explicitly do **not** run a GraphQL operation parser. The contract with clien
 Several real mutations carry more than one document identifier. MVP policy is **reject with 409** whenever the correct single backend cannot be determined. Forwarding multi-id requests to any healthy backend is never acceptable — it silently violates the pinning invariant.
 
 - `deleteDocuments` — `variables.identifiers[]` array present → 409.
-- `moveChildren` — both parents present and equal → route on that value; both present and different → 409.
+- `moveRelationship` — both parents present and equal → route on that value; both present and different → 409.
 - `pushSyncEnvelopes` — route on `envelopes[0].channelMeta.id`; envelopes spanning multiple channels → 409.
 - `touchChannel` — `variables.input.filter.documentId` single element → route; list > 1 → 409.
 - Any request with no identifier after all rules run → 409.
@@ -241,10 +243,12 @@ See §9 Q7 for rationale and the historical options that were ruled out.
 
 ### 4.5 Failure modes
 
-- **Upstream refuses connection** → nginx marks it failed per `max_fails` / `fail_timeout`. The request fails with `502`. **We set `proxy_next_upstream off`** — retrying on another backend would violate the pinning invariant.
-- **Upstream times out mid-request** → `504`, same rule: no retry.
-- **Upstream returns 5xx** → pass through unchanged.
-- **Backend marked unhealthy by active checks** → removed from the consistent hash ring for that worker. Documents pinned to it become unroutable and return `503` until the backend recovers or an operator intervenes.
+- **Upstream refuses connection** → `proxy_pass` fails at TCP. We set `proxy_next_upstream off` (no retry across backends) **and** `max_fails=0` per `server` entry (no passive mark-down — see §5.2 for why). The request surfaces as `503` (translation note below); pinning is preserved — subsequent requests for the same doc keep targeting the same dead backend until it recovers.
+- **Upstream times out mid-request** → same rule: no retry, `503` to the client.
+- **Upstream returns 5xx** → pass through unchanged. The backend made a decision; the LB doesn't second-guess it.
+- **Backend marked unhealthy by active checks** → reported on `/__hc/status` for observability. **No effect on peer selection**: the peer stays in the consistent-hash ring so pinned docs continue to fail closed (`503` via the TCP-refused path above) rather than silently re-routing to another backend. See §5.2.
+
+**Status translation.** All of "no live upstream", "connection refused", and "upstream timed out" surface to clients as `503` via `proxy_intercept_errors on; error_page 502 504 = @no_backend;` in `routes.conf`. nginx's raw distinctions (`502` for connect failure / no live upstream, `504` for read timeout) are preserved in access logs via `$upstream_status`, but the wire response is uniformly `503` because the LB's contract is "this document is currently unavailable, retry later" — the cause distinction is for operators reading logs, not clients deciding retry policy. The over-translation is intentional; revisit only if a real client need to differentiate appears.
 
 ## 5. Pinning and routing
 
@@ -257,6 +261,8 @@ This is the heart of the system. Getting it wrong means data corruption.
 ### 5.2 Mechanism
 
 nginx's `hash $var consistent` implements [Ketama](https://en.wikipedia.org/wiki/Consistent_hashing)-style consistent hashing across the `server` entries in the upstream block. Weight of each server is configurable. Adding or removing a server remaps ~1/N of keys — the same fundamental tradeoff any stateless scheme has.
+
+**Pinning under failure.** Standard nginx behavior is to skip peers marked `down` — whether by passive `max_fails` tracking or by an active healthcheck calling `set_peer_down` — and pick the next slot in the ring. That's catastrophic under §5.1's invariant: a doc pinned to a dead backend would silently re-route to a different one and split-brain its write log. We disable both paths. `upstreams.conf` sets `max_fails=0` so passive checks never mark peers down. `lua/healthcheck.lua` runs its own probe loop, tracking state in `lua_shared_dict healthcheck` for `/__hc/status` to read; it never calls `set_peer_down`. Net effect: peers always look "up" to the upstream module, the hash module always picks the originally-hashed peer, and a dead pin fails at TCP → 502 → §4.5's `@no_backend` → 503. The healthcheck's job is observability, not routing.
 
 ### 5.3 Caching
 
@@ -302,6 +308,7 @@ This is the biggest operational sharp edge of the MVP. Called out here and in `C
   - standard nginx stubs via `stub_status`
 - **Logs**: custom `log_format` in `log_format.conf` emitting key=value. Include `request_id`, `remote_addr`, `doc_id` (when extracted), `upstream_addr`, `status`, `request_time`, `upstream_response_time`.
 - **Traces**: out of scope for the MVP. Slot reserved for OpenTelemetry (`opentelemetry-nginx` module) later.
+- **`X-LB-Upstream` response header** on `/graphql` and `/d/:drive` responses, exposing `$upstream_addr`. Dev-only debug aid for the `lb-loadtest` harness (§8 M4) — lets a test process observe per-request which backend served the response without log scraping. Not a production feature; the LB is dev-only-published anyway and the header is harmless if it leaks.
 
 ## 7. Concurrency model
 
@@ -318,14 +325,32 @@ We do not write our own event loop; we do not manage our own thread pool. This i
 
 Thin vertical slices, each end-to-end runnable.
 
-- **M0 — Skeleton.** `Dockerfile`, `docker-compose.yml` with LB + 3 stub upstreams, `nginx.conf` serving `/health`. `busted` wired up. Load-test baseline to measure nginx-alone overhead before Lua enters the path. _(≈2 days)_
-- **M1 — Proxy plumbing.** `POST /graphql` and `POST /graphql/*` proxied to the upstream pool with an interim non-pinning balancer (`least_conn`); `GET /d/:drive` and `WS /graphql/subscriptions` likewise. `/health` still served locally. `proxy_next_upstream off` throughout. Integration tests assert path preservation, `X-Request-Id` passthrough, and that the subscription upgrade reaches the pool. No consistent hashing yet — the real API never encodes the owning document in the URL, so path-based pinning is impossible. _(≈2 days)_
-- **M2 — Body-based routing.** `lua/route.lua` reads the body, extracts the owning identifier per the §4.3 key set and the §9 Q7/Q8 policies, and sets `$doc_id`. Ships in three stages: (1) docs-only update reflecting §9 Q5/Q7/Q8 decisions; (2) Lua + unit + integration tests land while `upstreams.conf` still uses `least_conn` — Lua runs but is ignored for routing, and `m1.sh` must still pass; (3) `upstreams.conf` flips to `hash $doc_id consistent` — pinning goes live. Multi-identifier operations reject with 409 per §4.4; `pushSyncEnvelopes` routes on `envelopes[0].channelMeta.id`. _(≈2 days)_
-- **M3 — Health checks + error policy.** `lua-resty-upstream-healthcheck` configured. `proxy_next_upstream off`. Explicit 409 for multi-doc requests and missing doc ids. _(≈2 days)_
-- **M4 — Observability.** `nginx-lua-prometheus` wired up, custom `log_format`, `/metrics` on a separate listener. _(≈2 days)_
-- **M5 — Production hardening.** Fuzz the body parser, run ASAN on the openresty image (the one upstream provides is fine), document the reload runbook, document the "backend list is immutable" operational rule. _(open-ended)_
+- **M0 — Skeleton.** _Done._ `Dockerfile` (dev + runtime), `docker-compose.yml` with LB + 3 stub upstreams, `nginx.conf` serving `/health`, `busted` wired up, k6 baseline measuring nginx-alone overhead — see `test/integration/BASELINE.md` for the reference numbers we regression-check against.
+- **M1 — Proxy plumbing.** _Done._ `POST /graphql` / `POST /graphql/*` / `GET /d/:drive` / `WS /graphql/subscriptions` proxied to the pool, `/health` served locally, `proxy_next_upstream off` throughout. `m1.sh` asserts path preservation, `X-Request-Id` passthrough, and that the WS upgrade reaches the pool.
+- **M2 — Body-based routing.** _Done._ `lua/route.lua` reads the body, extracts the owning identifier per §4.3 / §4.4, and sets `$doc_id`; `upstreams.conf` is on `hash $doc_id consistent`. Multi-identifier operations 409 per §4.4; `pushSyncEnvelopes` routes on `envelopes[0].channelMeta.id`. `m2.sh` covers pinning, every 409/400/413 branch, and the no-Lua-on-non-`/graphql` invariant. The three-stage rollout (docs → Lua-but-`least_conn` → consistent-hash flip) all landed.
+- **M3 — Health checks + reload-survival.** _Done._ Active probing for observability + a pinning-preserving 503 on dead backends per §4.5, plus integration coverage of WS reload-survival per §9 Q3. Concretely:
+  - `lua_shared_dict healthcheck 1m;` and `init_worker_by_lua_block { require("healthcheck").run() }` in `nginx.conf` — shared state across workers per §7.
+  - `lua/healthcheck.lua` runs a per-worker cosocket probe loop against every peer in the `switchboards` upstream every 2s (timeout 1s, fall=3, rise=2) hitting `GET /health`. State (`up`/`down`) is written to `lua_shared_dict healthcheck`; the loop **does not** call `set_peer_down` — see §5.2 for the pinning rationale. Switchboard's `/health` is liveness-only (registered before auth middleware in `packages/reactor-api/src/server.ts:379`); a true `/readyz` that 503s during init/drain is a switchboard-side follow-up.
+  - `upstreams.conf` sets `max_fails=0` per server to disable nginx's passive mark-down. Combined with the healthcheck not calling `set_peer_down`, this is the load-bearing piece of "pinning under failure": the hash module always picks the same peer for a given `$doc_id`, even when that peer is dead — see §5.2.
+  - `routes.conf` translates the resulting 502/504 (TCP refused, upstream timeout) into 503 via `proxy_intercept_errors on; error_page 502 504 = @no_backend;`. Underlying nginx status survives in access logs as `$upstream_status`. See §4.5.
+  - `proxy_next_upstream off` stays — even before status translation, no backend swap is attempted on a transport error.
+  - `/__hc/status` (localhost-only) renders peer state from the `lua_shared_dict`. `m3.sh` resolves docker-compose service names → IPs via `docker inspect` (peers in the status page are reported by `IP:port` — that's what `ngx.upstream.get_primary_peers` returns) and polls for transitions instead of time-waiting. Will move to the M4 metrics listener.
+  - `m3.sh` covers eject, other-pin-survival, recovery, and the strict-pinning property: 5/5 requests pinned to a stopped backend get 503, never 200 from a different one. `m3_ws_reload.sh` (Q3) opens a real WS via `websocat` (added to the dev Dockerfile alongside `curl`), reloads nginx mid-flight, and asserts both the connection and frame round-trip survive.
+  - Stubs in `test/fixtures/` now speak real WebSocket via `lua-resty-websocket-server`; `m1.sh`'s upgrade-check was updated from `200` to `101` accordingly.
+- **M4 — Observability.** _Done._ Prometheus metrics + dedicated `:9090` observability listener, plus the `/__hc/status` move from M3. Concretely:
+  - `nginx-lua-prometheus` 0.20240525 fetched as three pure-Lua files into `/usr/local/openresty/site/lualib/` from the dev + runtime Dockerfile stages. We deliberately avoid `/usr/local/openresty/nginx/lua/` because the dev compose mounts `./lua` there read-only, masking image-baked files. The `-alpine-fat` base is _not_ used — it does not bundle this library either, so its +400MB buys nothing.
+  - `lua_shared_dict prometheus_metrics 2m;` in `nginx.conf`. `init_worker_by_lua_block` runs `metrics.run()` alongside `healthcheck.run()`. A parallel `map "" $route_class { default ""; }` declares the variable at http scope so the server-level `log_by_lua_block` can read it unconditionally.
+  - `lua/metrics.lua` registers the §6.4 trio with the bucket boundaries `{0.0001, 0.0005, 0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1}` (M0 baseline 84µs median / 172µs p95 — default Prometheus buckets are useless at this scale). The `reason` label on `lb_body_parse_errors_total` is a bounded enum mapped from the human strings in `route.lua`'s call sites; the malformed-JSON case prefix-matches because cjson interpolates its decode error into the message. Unmapped reasons fall through to `"unknown"` with an `ngx.log(ngx.WARN, ...)` — bug signal, not a label explosion.
+  - Each `location` block in `routes.conf` sets `$route_class` to `graphql|drive|health|subscription`. A single server-level `log_by_lua_block { require("metrics").record_request() }` covers every location including the `@no_backend` internal redirect (which reuses the original request's log phase — no double counting). Subscription duration observation is skipped (WS lifetime against a 1s-top histogram would dump every connection in `+Inf`); request count is still recorded.
+  - `lua/errors.lua`'s `send()` calls `metrics.inc_parse_error(msg)` immediately before `ngx.exit(code)`, surfacing every 400/409 as a `lb_body_parse_errors_total` increment.
+  - `conf/metrics.conf` defines a `listen 9090` server with `/metrics` and `/__hc/status`. The listener is reachable from the LB container's docker network only — nothing is published to the host in `docker-compose.yml`, so it's accessible from sibling compose services (e.g. the optional `prometheus` profile below) and via `docker exec <lb> curl 127.0.0.1:9090/...`, but never from off-host. `/__hc/status` moved here from `:8080` (M3 placeholder); `m3.sh` updated to scrape via `:9090`.
+  - `m4.sh` covers: `/metrics` 200 on `:9090` and 404 on `:8080`, label combinations after a representative traffic mix, no `reason="unknown"` (which would mean an unmapped error string in `route.lua`), `/__hc/status` move. `metrics_spec.lua` is the cardinality unit test — one `it()` per `REASON_MAP` entry plus the malformed-JSON prefix match plus the unknown fallback, mocking `package.loaded["prometheus"]` so it runs without a live container.
+  - **Optional local visualisation.** `docker-compose.yml` carries an opt-in `--profile observability` that brings up `prom/prometheus:v2.55.0` (scraping `lb:9090` every 5s) and `grafana/grafana:11.3.0` (anonymous Admin, no login wall) with a file-provisioned starter dashboard at `observability/grafana/dashboards/switchboard-lb.json` covering the §6.4 trio plus a backend-distribution panel for visually validating consistent-hash pinning. Launch with `docker compose --profile observability up -d`, then open Grafana at `http://127.0.0.1:3001` and (optionally) Prometheus at `http://127.0.0.1:9091`. No persistence — provisioning YAML/JSON is the source of truth; restarts re-render the same dashboard.
+  - **Real-backend harness (developer aid).** `docker-compose.real.yml` is an override that swaps the three `sb-N` openresty stubs for real switchboard containers (`docker/Dockerfile --target switchboard` pinned to `6.0.0-dev.202` — the first published image exposing the in-repo reactor schema; PGlite storage in per-instance named volumes, no postgres dependency). Bring up with `docker compose -f docker-compose.yml -f docker-compose.real.yml --profile observability up -d --build` (the `observability` profile co-launches Prometheus + Grafana on `127.0.0.1:9091` / `127.0.0.1:3001` so a run is watchable live; the lb-loadtest README treats this as the canonical bring-up), then in another terminal run `pnpm --filter @powerhousedao/lb-loadtest verify`. The harness is a sustained-load consistency tester: a configurable mix of `createDocument` / `mutateDocument` / `document(identifier:)` calls is driven through the LB at `--concurrency` × `--rate-rps` for `--duration-sec`, and every response is checked for backend pinning (against the doc's create backend), `mutateDocument` write-state round-trip (`state.global.name` matches the last action sent), and `document(identifier:)` id round-trip. Failures are categorized (`mutate.pin`, `read.id`, `*.transport`, …), counted, and printed at the end with up to five samples per category — `PASS` exits 0, any failure exits 1. Distinct from the `m1`/`m2`/`m3`/`m4` integration suites (which test the LB against canned stubs) — this harness verifies §5.1 end-to-end against the real switchboard image. M1–M4 tests still pass against stubs unchanged because they don't load the override. Operational reference (full CLI, run table, failure-category cheatsheet): `test/lb-loadtest/README.md`.
+  - Trace export remains out of scope (slot reserved for OpenTelemetry post-M5). `lb_upstream_errors_total` and `stub_status` from §6.4's longer list are deferred — no operational signal that warrants them yet.
+- **M5 — Production hardening.** _Open-ended._ Pick a fuzz approach for `lua/route.lua` — Lua-side property tests in `busted` over `extract()` are the path of least resistance, since `cjson.safe` already short-circuits malformed JSON; the interesting target is the post-decode walk. ASAN: requires building OpenResty with debug + ASAN flags or using the `openresty-debug` packaging — the stock alpine image is **not** ASAN-built, so this is a custom-image task, not a flag flip. Author `RUNBOOK.md` (reload procedure via `scripts/reload.sh`, the "backend list is immutable in prod" rule from §6.3, the §9 Q6 TLS-edge requirement, and pointer to §9 Q4 for the still-open document migration story).
 
-After M5 we reassess: directory-based pinning? TLS termination moved into the LB? HTTP/2 upstream?
+After M5 we reassess: directory-based pinning (§5.4)? TLS termination moved into the LB (§9 Q6)? HTTP/2 upstream?
 
 End-to-end this is **~2–3 weeks of calendar time**, not months.
 
@@ -335,13 +360,13 @@ Unresolved. Decide before the relevant milestone and record the decision here.
 
 1. **Do we need a `balancer_by_lua_block` instead of `hash $doc_id consistent`?**
 
-   **Decided (2026-04-21):** use the native `hash $doc_id consistent` directive. The MVP routing function is a pure function of `$doc_id`, which the built-in directive handles in C with Ketama-style consistent hashing and free integration with `server ... max_fails/fail_timeout` and active health checks. `balancer_by_lua_block` is the right tool only when the routing decision depends on state the directive cannot express (external directory, per-request migration hint, load-aware override) — none of which are MVP requirements. Adopting Lua on the balancer phase would add per-request overhead on top of the M2 body parse, duplicate `server`-directive behavior, and enlarge what we have to reason about under reload.
+   **Decided (2026-04-21):** use the native `hash $doc_id consistent` directive. The MVP routing function is a pure function of `$doc_id`, which the built-in directive handles in C with Ketama-style consistent hashing. `balancer_by_lua_block` is the right tool only when the routing decision depends on state the directive cannot express (external directory, per-request migration hint, load-aware override) — none of which are MVP requirements. Adopting Lua on the balancer phase would add per-request overhead on top of the M2 body parse, duplicate `server`-directive behavior, and enlarge what we have to reason about under reload.
+
+   **M3 footnote (2026-04-27).** The directive's built-in mark-down/skip behavior — both passive (`max_fails`) and active (via libraries that call `set_peer_down`) — is the _opposite_ of what §5.1's pinning invariant wants: skipping a down peer silently re-routes a pinned doc. M3 considered switching to `balancer_by_lua_block` to enforce strict pinning explicitly, but it was unnecessary. Setting `max_fails=0` and writing the active healthcheck to track state in a `lua_shared_dict` without calling `set_peer_down` (see §5.2) keeps every peer "up" from nginx's view, so the directive's selection math always picks the originally-hashed peer. Dead pin → TCP refused → 503 via `@no_backend`. The decision above stands.
 
    **Revisit trigger:** introduction of an external pinning directory (§5.4), or a per-request decision that is not a pure function of `$doc_id`.
 
-   **M1 config reconciliation.** `conf/upstreams.conf` currently declares `hash $doc_id consistent` even though nothing populates `$doc_id` — every request would hash to the same backend. The M1 commit reverts the upstream to `least_conn` per §8; M2 restores `hash $doc_id consistent` in the same commit that introduces `lua/route.lua`, so the swap and the Lua that populates `$doc_id` land atomically — never a window where the config hashes on an empty key.
-
-   _Amendment (2026-04-21):_ the `map "" $doc_id { default ""; }` block in `conf/nginx.conf` stays across every milestone. `conf/log_format.conf` references `$doc_id` directly, and nginx fails config parse with `unknown variable "$doc_id"` if the map is absent. Only the upstream directive changes between M1 and M2.
+   **M1/M2 config reconciliation _(historical, both stages now landed)_.** The M1 commit ran `least_conn` so the upstream wasn't hashing on an unpopulated `$doc_id`; the M2 commit that introduced `lua/route.lua` flipped the upstream back to `hash $doc_id consistent` atomically, so there was never a window where the config hashed on an empty key. The `map "" $doc_id { default ""; }` block in `conf/nginx.conf` stays across every milestone — `conf/log_format.conf` references `$doc_id` directly, and nginx fails config parse with `unknown variable "$doc_id"` if the map is absent.
 
 2. **Read vs write routing.** MVP routes both with the same function. Is there a case for fanning reads to any healthy backend? Only if reads tolerate stale data, and Reactor semantics suggest they don't. _Defer until after M5._
 3. **Subscription stickiness across reloads.** A long-lived WS/SSE connection stays on the same worker's upstream connection across a reload because old workers drain gracefully. We need an integration test that actually proves this. _Owner: M3._
@@ -365,7 +390,8 @@ Unresolved. Decide before the relevant milestone and record the decision here.
 
    **Decided (2026-04-21):** MVP policy is reject-with-409 whenever the correct single backend cannot be determined.
    - `deleteDocuments(identifiers: [ID!]!)` — non-empty `variables.identifiers` array → 409. Split-and-fan-out deferred.
-   - `moveChildren(sourceParentIdentifier, targetParentIdentifier, …)` — both parents present and equal → route on that value; both present and different → 409; only one present → route on it.
+   - `moveRelationship(sourceParentIdentifier, targetParentIdentifier, …)` — both parents present and equal → route on that value; both present and different → 409; only one present → route on it.
+   - `addRelationship` / `removeRelationship` — both `sourceIdentifier` and `targetIdentifier` are present; pin on `sourceIdentifier` per the §4.3 step 5 precedence rule. The two documents need not co-locate for a single mutation, but the source is the document the relationship is anchored from.
    - `pushSyncEnvelopes(envelopes: [...])` — reactor-to-reactor sync protocol. Route on `variables.envelopes[0].channelMeta.id`; if any envelope has a different `channelMeta.id`, return 409. Schema-verified 2026-04-21: `SyncEnvelopeInput.channelMeta: ChannelMetaInput!` and `ChannelMetaInput.id: String!` are both non-null (`packages/reactor-api/src/graphql/reactor/schema.graphql:325-332`), and every batch is produced by a single `GqlRequestChannel` stamping its own `channelId` on every envelope (`gql-req-channel.ts:785-843`) — all envelopes in one call share one `channelMeta.id` by construction.
 
    **Historical options considered** (none viable for MVP): (a) server-side split-and-merge — complex, deferred; (b) client pre-grouping — pushes complexity to every caller; (c) coordinator backend — hotspot; (d) federation-aware switchboard — no cross-Reactor coordinator exists today, so this option is impossible rather than undesirable.
@@ -381,11 +407,17 @@ Unresolved. Decide before the relevant milestone and record the decision here.
 
 9. **Supergraph vs. subgraph routing.** Today `POST /graphql` (supergraph), `POST /graphql/r` (reactor), and `POST /graphql/<model>` are all served by the same switchboard per request, so the LB treats them identically. If the supergraph ever federates across multiple switchboards — or if model-specific subgraphs move to dedicated processes — path-based routing re-enters the picture. _Not a blocker for M2; revisit when real traffic or deployment topology forces the question._
 
+10. **GET `/graphql`, request batching, and APQ-only requests.** Today the LB is POST-only with a single JSON object and routable identifier in `variables` (§4.1). Anything else (GET with a query string, JSON-array request batching, persisted-query-only requests with no `variables`) is rejected with 400 because there's no body shape we can extract a routing key from.
+
+    **Decided (2026-04-27):** keep the POST-only contract. We do not synthesize a doc id from a query string, do not split request batches at the LB, and do not parse `extensions.persistedQuery` to look up the underlying operation. The contract published to clients is simple, the failure mode is loud, and the alternative is either a GraphQL parser at the LB (not happening) or a coordinator backend (hotspot, ruled out under §9 Q7).
+
+    **Revisit trigger:** a real client need we don't already control. If introspection over GET becomes important, route GETs on `/graphql` to any healthy backend without body parsing. If batching becomes important, push the split to clients first; only consider LB-side splitting once a measured pain exists.
+
 ## 10. Appendix — references
 
 - nginx `ngx_http_upstream_hash_module` — the `hash $var consistent` directive we rely on.
 - OpenResty `ngx.req.read_body` docs — the primitive that makes body inspection possible.
-- `lua-resty-upstream-healthcheck` — active health probes.
+- OpenResty `ngx.timer` and cosocket APIs — the primitives our custom probe loop in `lua/healthcheck.lua` is built on. (We considered `lua-resty-upstream-healthcheck` for this; §5.2 has the rejection rationale.)
 - `nginx-lua-prometheus` — metrics exporter.
 - Jump consistent hash (Lamping & Veach) and rendezvous hashing (Thaler & Ravishankar) — background on the scheme nginx implements.
 - HAProxy's `balance hash <var> consistent` — the closest drop-in alternative if we ever move off OpenResty.

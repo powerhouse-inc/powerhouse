@@ -55,15 +55,15 @@ import type { IReactorClient } from "@powerhousedao/reactor-browser";
 
 ### Reading documents
 
-| Method                                                       | Description                                       |
-| ------------------------------------------------------------ | ------------------------------------------------- |
-| `get(identifier, view?)`                                     | Retrieve a document by id or slug                 |
-| `getChildren(parentIdentifier, view?, paging?)`              | List child documents                              |
-| `getParents(childIdentifier, view?, paging?)`                | List parent documents                             |
-| `find(search, view?, paging?)`                               | Search documents by type, parentId, ids, or slugs |
-| `getOperations(documentIdentifier, view?, filter?, paging?)` | Retrieve operations for a document                |
-| `getDocumentModelModules(namespace?, paging?)`               | List registered document model modules            |
-| `getDocumentModelModule(documentType)`                       | Get a specific document model module              |
+| Method                                                                         | Description                                       |
+| ------------------------------------------------------------------------------ | ------------------------------------------------- |
+| `get(identifier, view?)`                                                       | Retrieve a document by id or slug                 |
+| `getOutgoingRelationships(sourceIdentifier, relationshipType, view?, paging?)` | List documents related from a source              |
+| `getIncomingRelationships(targetIdentifier, relationshipType, view?, paging?)` | List documents related into a target              |
+| `find(search, view?, paging?)`                                                 | Search documents by type, parentId, ids, or slugs |
+| `getOperations(documentIdentifier, view?, filter?, paging?)`                   | Retrieve operations for a document                |
+| `getDocumentModelModules(namespace?, paging?)`                                 | List registered document model modules            |
+| `getDocumentModelModule(documentType)`                                         | Get a specific document model module              |
 
 The optional `ViewFilter` lets you target a specific branch, set of scopes, or revision:
 
@@ -90,19 +90,19 @@ All list methods support pagination via `PagingOptions` (`{ cursor, limit }`) an
 
 ### Writing documents
 
-| Method                                                                   | Description                                                        |
-| ------------------------------------------------------------------------ | ------------------------------------------------------------------ |
-| `create(document, parentIdentifier?)`                                    | Create a document from a full `PHDocument` object                  |
-| `createEmpty(documentModelType, options?)`                               | Create an empty document of a given type                           |
-| `createDocumentInDrive(driveId, document, parentFolder?)`                | Create a document inside a drive in a single batched operation     |
-| `execute(documentIdentifier, branch, actions)`                           | Apply actions and wait for completion                              |
-| `executeAsync(documentIdentifier, branch, actions)`                      | Submit actions and return immediately with a `JobInfo`             |
-| `rename(documentIdentifier, name, branch?)`                              | Rename a document                                                  |
-| `addChildren(parentIdentifier, documentIdentifiers, branch?)`            | Add documents as children                                          |
-| `removeChildren(parentIdentifier, documentIdentifiers, branch?)`         | Remove child relationships                                         |
-| `moveChildren(sourceParent, targetParent, documentIdentifiers, branch?)` | Move children between parents                                      |
-| `deleteDocument(identifier, propagate?)`                                 | Delete a document (`PropagationMode.Cascade` deletes children too) |
-| `deleteDocuments(identifiers, propagate?)`                               | Bulk delete                                                        |
+| Method                                                                                      | Description                                                        |
+| ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| `create(document, parentIdentifier?)`                                                       | Create a document from a full `PHDocument` object                  |
+| `createEmpty(documentModelType, options?)`                                                  | Create an empty document of a given type                           |
+| `createDocumentInDrive(driveId, document, parentFolder?)`                                   | Create a document inside a drive in a single batched operation     |
+| `execute(documentIdentifier, branch, actions)`                                              | Apply actions and wait for completion                              |
+| `executeAsync(documentIdentifier, branch, actions)`                                         | Submit actions and return immediately with a `JobInfo`             |
+| `rename(documentIdentifier, name, branch?)`                                                 | Rename a document                                                  |
+| `addRelationship(sourceIdentifier, targetIdentifier, relationshipType, branch?)`            | Add a typed relationship between two documents                     |
+| `removeRelationship(sourceIdentifier, targetIdentifier, relationshipType, branch?)`         | Remove a typed relationship between two documents                  |
+| `moveRelationship(sourceParent, targetParent, targetIdentifier, relationshipType, branch?)` | Move a relationship from one source to another                     |
+| `deleteDocument(identifier, propagate?)`                                                    | Delete a document (`PropagationMode.Cascade` deletes children too) |
+| `deleteDocuments(identifiers, propagate?)`                                                  | Bulk delete                                                        |
 
 ### Subscribing to changes
 

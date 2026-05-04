@@ -61,7 +61,7 @@ export const DocumentWithChildrenDTO = z
   })
   .strip();
 
-export const MoveChildrenResultDTO = z
+export const MoveRelationshipResultDTO = z
   .object({
     source: PHDocumentDTO,
     target: PHDocumentDTO,

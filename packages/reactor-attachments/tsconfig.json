@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.options.json",
+  "compilerOptions": {
+    "outDir": "./dist"
+  },
+  "include": ["**/*"],
+  "references": [
+    {
+      "path": "../reactor"
+    }
+  ]
+}

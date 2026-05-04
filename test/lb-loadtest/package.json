@@ -1,0 +1,19 @@
+{
+  "name": "@powerhousedao/lb-loadtest",
+  "version": "0.0.1",
+  "description": "Real-backend pinning + consistency harness for switchboard-lb",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "verify": "tsx src/run.ts"
+  },
+  "dependencies": {
+    "@powerhousedao/load-test-client": "workspace:*",
+    "document-model": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "tsx": "catalog:"
+  }
+}

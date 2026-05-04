@@ -1,3 +1,4 @@
+import { DEFAULT_REGISTRY_URL } from "@powerhousedao/shared/registry";
 import { json } from "@tmpl/core";
 function makeVetraConfigField(vetraDriveUrl: string | undefined) {
   if (!vetraDriveUrl) return "";
@@ -30,7 +31,8 @@ export async function buildPowerhouseConfigTemplate(args: {
     "port": 4001
   },
   "packages": [
-  ]${vetraConfigField}
+  ],
+  "packageRegistryUrl": "${DEFAULT_REGISTRY_URL}"${vetraConfigField}
 }
 `.raw;
 }
