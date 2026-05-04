@@ -57,6 +57,7 @@ import {
 } from "./config/editor.js";
 import { addDocumentCacheEventHandler } from "./document-cache.js";
 import { addDrivesEventHandler } from "./drives.js";
+import { addGraphQLReactorClientEventHandler } from "./graphql-reactor-client.js";
 import { addLoadingEventHandler } from "./loading.js";
 import { addModalEventHandler } from "./modals.js";
 import { addPackageDiscoveryServiceEventHandler } from "./package-discovery.js";
@@ -93,7 +94,7 @@ export const commonGlobalEventHandlerFunctions = {
     addSetSelectedNodeOnPopStateEventHandler();
   },
   documentCache: addDocumentCacheEventHandler,
-  reactorGraphQLClient: addReactorClientEventHandler,
+  reactorGraphQLClient: addGraphQLReactorClientEventHandler,
 };
 
 const phGlobalEventHandlerRegisterFunctions: PHGlobalEventHandlerAdders = {
