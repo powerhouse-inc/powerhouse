@@ -1,3 +1,42 @@
+## 6.0.2-staging.5 (2026-05-04)
+
+### 🚀 Features
+
+- switchboard-lb M3 ([cc49638e0](https://github.com/powerhouse-inc/powerhouse/commit/cc49638e0))
+- metrics integration ([1ce0b5fdf](https://github.com/powerhouse-inc/powerhouse/commit/1ce0b5fdf))
+- added observability profile ([957af0925](https://github.com/powerhouse-inc/powerhouse/commit/957af0925))
+- first swing at a load test ([f7e0f4456](https://github.com/powerhouse-inc/powerhouse/commit/f7e0f4456))
+- initial switchboard endpoints and implementation ([01b20cede](https://github.com/powerhouse-inc/powerhouse/commit/01b20cede))
+- created a drive-client that is specific to working with drives ([718b6b1de](https://github.com/powerhouse-inc/powerhouse/commit/718b6b1de))
+- use generated get document with operations query in switchboard link ([#2556](https://github.com/powerhouse-inc/powerhouse/pull/2556))
+- added drive info to settings menu ([9217c1b76](https://github.com/powerhouse-inc/powerhouse/commit/9217c1b76))
+- **reactor-api:** added attachment service creation to reactor-api ([f96e9806b](https://github.com/powerhouse-inc/powerhouse/commit/f96e9806b))
+- **reactor-api:** added system subgraph which returns version and hash information ([248fc1e92](https://github.com/powerhouse-inc/powerhouse/commit/248fc1e92))
+- **reactor-attachments:** initial setup of package ([ac5bac96a](https://github.com/powerhouse-inc/powerhouse/commit/ac5bac96a))
+- **reactor-attachments:** initial storage implementation ([b82e0fc8c](https://github.com/powerhouse-inc/powerhouse/commit/b82e0fc8c))
+- **reactor-attachments:** reservations ([f13680db1](https://github.com/powerhouse-inc/powerhouse/commit/f13680db1))
+- **reactor-attachments:** initial direct upload and switchboard transport implementations ([624579adc](https://github.com/powerhouse-inc/powerhouse/commit/624579adc))
+- **reactor-attachments:** added builder ([2f5b10c4b](https://github.com/powerhouse-inc/powerhouse/commit/2f5b10c4b))
+- **reactor-attachments:** switchboard implementation fixes ([3b320d01c](https://github.com/powerhouse-inc/powerhouse/commit/3b320d01c))
+- **switchboard:** adding pglite migration flag ([952075b11](https://github.com/powerhouse-inc/powerhouse/commit/952075b11))
+- **switchboard:** env var to force a specific pg version when using pglite ([5cdd35ca1](https://github.com/powerhouse-inc/powerhouse/commit/5cdd35ca1))
+
+### 🩹 Fixes
+
+- so much linting that it kills my computer ([d6b6ff143](https://github.com/powerhouse-inc/powerhouse/commit/d6b6ff143))
+- **codegen:** migrate packageJson exports and dependencies ([965780cc1](https://github.com/powerhouse-inc/powerhouse/commit/965780cc1))
+- **connect, design-system:** fallback drive name to header.name when state name is empty ([d3266842e](https://github.com/powerhouse-inc/powerhouse/commit/d3266842e))
+- **reactor-attachments:** fix the tsdown config ([8485b54be](https://github.com/powerhouse-inc/powerhouse/commit/8485b54be))
+- **reactor-attachments:** force octet-stream content-type for remote uploads ([fc45afccb](https://github.com/powerhouse-inc/powerhouse/commit/fc45afccb))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Copilot
+- Guillermo Puente @gpuente
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.2-staging.4 (2026-04-30)
 
 ### 🩹 Fixes
