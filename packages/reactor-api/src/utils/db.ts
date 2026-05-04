@@ -119,16 +119,16 @@ export function getDbClient(
 ): {
   db: Db;
   knex: Knex;
+  pglite: PGliteType | undefined;
 } {
   const isPg = connectionString && isPG(connectionString);
   const client = isPg ? "pg" : (ClientPgLite as typeof knex.Client);
-  const connection = isPg
-    ? { connectionString }
-    : {
-        pglite: pgliteFactory
-          ? pgliteFactory(connectionString)
-          : new PGlite(connectionString),
-      };
+  const pgliteInstance: PGliteType | undefined = isPg
+    ? undefined
+    : pgliteFactory
+      ? pgliteFactory(connectionString)
+      : new PGlite(connectionString);
+  const connection = isPg ? { connectionString } : { pglite: pgliteInstance };
 
   // If path is not postgres then it is a filesystem path.
   // Ensures parent directory is created.
@@ -151,7 +151,7 @@ export function getDbClient(
     }),
   });
 
-  return { db: kyselyInstance, knex: knexInstance };
+  return { db: kyselyInstance, knex: knexInstance, pglite: pgliteInstance };
 }
 
 export const initAnalyticsStoreSql = [

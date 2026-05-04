@@ -70,6 +70,13 @@ export class ApolloGatewayAdapter implements IGatewayAdapter<Context> {
       schema,
       logger: this.#logger,
       introspection: true,
+      // Each ApolloServer otherwise registers its own SIGINT/SIGTERM handler
+      // that re-emits the signal via process.kill after server.stop() resolves.
+      // With many subgraph servers that re-emit lands while the reactor's
+      // graceful-shutdown chain is mid-flight, looking like a "second SIGINT"
+      // to the reactor and aborting cleanup. The reactor drives our shutdown
+      // end-to-end (see ReactorBuilder.attachSignalHandlers), so opt out.
+      stopOnTerminationSignals: false,
       plugins: [
         ApolloServerPluginInlineTraceDisabled(),
         ApolloServerPluginLandingPageLocalDefault(),
@@ -104,6 +111,7 @@ export class ApolloGatewayAdapter implements IGatewayAdapter<Context> {
       gateway,
       logger: this.#logger,
       introspection: true,
+      stopOnTerminationSignals: false,
       plugins: [
         ApolloServerPluginDrainHttpServer({ httpServer }),
         ApolloServerPluginInlineTraceDisabled(),

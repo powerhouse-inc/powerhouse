@@ -88,6 +88,7 @@ export class ReactorBuilder {
   private channelScheme?: ChannelScheme;
   private jwtHandler?: JwtHandler;
   private documentModelLoader?: IDocumentModelLoader;
+  private shutdownHooks: Array<() => Promise<void>> = [];
 
   withLogger(logger: ILogger): this {
     this.logger = logger;
@@ -181,6 +182,19 @@ export class ReactorBuilder {
 
   withSignalHandlers(): this {
     this.signalHandlersEnabled = true;
+    return this;
+  }
+
+  /**
+   * Register an async cleanup hook to run during graceful shutdown. Hooks fire
+   * after `reactor.kill()` resolves and before `database.destroy()`, so callers
+   * that depend on the reactor (e.g. an HTTP API layered on top) can drain
+   * cleanly before the underlying kysely instance is torn down. Hook errors are
+   * logged and otherwise ignored — one bad hook cannot strand the rest of the
+   * shutdown chain.
+   */
+  withShutdownHook(hook: () => Promise<void>): this {
+    this.shutdownHooks.push(hook);
     return this;
   }
 
@@ -464,15 +478,28 @@ export class ReactorBuilder {
     }
 
     const nodeProcess = globalThis.process;
+    const realExit = nodeProcess.exit.bind(nodeProcess);
     let shutdownInProgress = false;
+    let pendingExitCode: number | undefined;
 
+    // While our async cleanup runs, swap process.exit for a recording shim so
+    // peer SIGINT handlers (notably vite's bindCLIShortcuts handler, default
+    // enabled) cannot terminate the process before reactor.kill() and
+    // database.destroy() finish. Without this guard the process exits during
+    // the first microtask of our async chain, leaving e.g. PGlite's WAL dirty
+    // and the data-dir lock held.
     const handler = async (signal: string) => {
       if (shutdownInProgress) {
         this.logger!.warn(`Received ${signal} again, forcing exit`);
-        nodeProcess.exit(1);
+        realExit(1);
       }
 
       shutdownInProgress = true;
+      nodeProcess.exit = ((code?: number) => {
+        pendingExitCode ??= code ?? 0;
+        return undefined as never;
+      }) as typeof nodeProcess.exit;
+
       this.logger!.info(`Received ${signal}, starting graceful shutdown...`);
 
       const status = module.reactor.kill();
@@ -481,23 +508,34 @@ export class ReactorBuilder {
         await status.completed;
       } catch (error) {
         this.logger!.error("Shutdown failed waiting for reactor:", error);
-        nodeProcess.exit(1);
+        nodeProcess.exit = realExit;
+        realExit(1);
         return;
+      }
+
+      for (const hook of this.shutdownHooks) {
+        try {
+          await hook();
+        } catch (error) {
+          this.logger!.error("Shutdown hook failed:", error);
+        }
       }
 
       try {
         await module.database.destroy();
       } catch (error) {
         this.logger!.error("Shutdown failed destroying database:", error);
-        nodeProcess.exit(1);
+        nodeProcess.exit = realExit;
+        realExit(1);
         return;
       }
 
       this.logger!.info("Shutdown complete");
-      nodeProcess.exit(0);
+      nodeProcess.exit = realExit;
+      realExit(pendingExitCode ?? 0);
     };
 
-    nodeProcess.on("SIGINT", () => void handler("SIGINT"));
-    nodeProcess.on("SIGTERM", () => void handler("SIGTERM"));
+    nodeProcess.prependListener("SIGINT", () => void handler("SIGINT"));
+    nodeProcess.prependListener("SIGTERM", () => void handler("SIGTERM"));
   }
 }
