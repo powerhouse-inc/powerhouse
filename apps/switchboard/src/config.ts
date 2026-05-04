@@ -11,6 +11,7 @@ interface Config {
   };
   port: number;
   mcp: boolean;
+  migratePglite: boolean;
   drive: DriveInput;
 }
 export const config: Config = {
@@ -27,6 +28,7 @@ export const config: Config = {
       ? Number(process.env.PH_SWITCHBOARD_PORT)
       : (switchboard?.port ?? 4001),
   mcp: true,
+  migratePglite: process.env.PH_MIGRATE_PGLITE === "true",
   drive: {
     id: "powerhouse",
     slug: "powerhouse",

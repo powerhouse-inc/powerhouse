@@ -63,6 +63,7 @@ import {
   getDbClient,
   initAnalyticsStoreSql,
   type DocumentPermissionDatabase,
+  type PgliteFactory,
 } from "./utils/db.js";
 
 const defaultLogger = childLogger(["reactor-api", "server"]);
@@ -71,6 +72,13 @@ type Options = {
   port?: number;
   dbPath: string | undefined;
   client?: PGlite | typeof Pool | undefined;
+  /**
+   * Factory for the PGLite instance backing the read-model store. When set,
+   * `getDbClient` uses it instead of constructing `new PGlite(dbPath)`. Used
+   * by Switchboard to keep a legacy-version data dir readable while running
+   * the newer Switchboard binary.
+   */
+  pgliteFactory?: PgliteFactory;
   configFile?: string;
   packages?: string[];
   auth?: {
@@ -123,11 +131,12 @@ function resolveAttachmentStoragePath(options: Options): string {
  */
 async function initializeDatabaseAndAnalytics(
   dbPath: string | undefined,
+  pgliteFactory: PgliteFactory | undefined,
 ): Promise<{
   relationalDb: IRelationalDb;
   analyticsStore: IAnalyticsStore;
 }> {
-  const { db, knex } = getDbClient(dbPath);
+  const { db, knex } = getDbClient(dbPath, pgliteFactory);
   const relationalDb = createRelationalDb<unknown>(db);
   const analyticsStore = new PostgresAnalyticsStore({
     knex,
@@ -429,13 +438,13 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   const { relationalDb, analyticsStore } = await trace(
     "reactor-api.init.database",
     { tags: { "resource.name": "database" } },
-    () => initializeDatabaseAndAnalytics(options.dbPath),
+    () => initializeDatabaseAndAnalytics(options.dbPath, options.pgliteFactory),
   );
 
   // Use provided document permission service, or create one if env var is set
   let documentPermissionService = options.documentPermissionService;
   if (!documentPermissionService && DOCUMENT_PERMISSIONS_ENABLED === "true") {
-    const { db } = getDbClient(options.dbPath);
+    const { db } = getDbClient(options.dbPath, options.pgliteFactory);
     // Run document permission migrations
     await runMigrations(db as Kysely<unknown>);
     logger.info("Document permission migrations completed");
@@ -459,7 +468,10 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   // Initialize attachment service
   const attachmentStoragePath = resolveAttachmentStoragePath(options);
   await mkdir(attachmentStoragePath, { recursive: true });
-  const { db: attachmentDb } = getDbClient(options.dbPath);
+  const { db: attachmentDb } = getDbClient(
+    options.dbPath,
+    options.pgliteFactory,
+  );
   const attachments = await new AttachmentBuilder(
     attachmentDb,
     attachmentStoragePath,

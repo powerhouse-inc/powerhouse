@@ -58,4 +58,10 @@ if (process.env.PYROSCOPE_SERVER_ADDRESS) {
   }
 }
 
-startSwitchboard({ ...config, meterProvider }).catch(console.error);
+const cliMigratePglite = process.argv.slice(2).includes("--migrate-pglite");
+
+startSwitchboard({
+  ...config,
+  migratePglite: cliMigratePglite || config.migratePglite,
+  meterProvider,
+}).catch(console.error);
