@@ -1,4 +1,5 @@
 import * as lzString from "lz-string";
+import { GetDocumentWithOperationsDocument } from "../graphql/gen/schema.js";
 
 export async function getDriveIdBySlug(driveUrl: string, slug: string) {
   if (!driveUrl) {
@@ -48,27 +49,21 @@ export function getSwitchboardGatewayUrlFromDriveUrl(driveUrl: string) {
 }
 
 export function getDocumentGraphqlQuery() {
-  return `query getDocument($documentId: String!) {
-  document(id: $documentId) {
-      id
-      documentType
-      createdAtUtcIso
-      lastModifiedAtUtcIso
-      name
-      revision
-      stateJSON
-    }
-  }`;
+  const loc = GetDocumentWithOperationsDocument.loc;
+  if (!loc) {
+    throw new Error(
+      "GetDocumentWithOperationsDocument is misconfigured, loc is missing.",
+    );
+  }
+  return loc.source.body;
 }
 
 export function buildDocumentSubgraphQuery(
-  driveUrl: string,
-  documentId: string,
+  identifier: string,
   authToken?: string,
 ) {
-  const driveSlug = getSlugFromDriveUrl(driveUrl);
   const query = getDocumentGraphqlQuery();
-  const variables = { documentId, driveId: driveSlug };
+  const variables = { identifier };
   const headers = authToken
     ? {
         Authorization: `Bearer ${authToken}`,
@@ -87,13 +82,9 @@ export function buildDocumentSubgraphQuery(
 
 export function buildDocumentSubgraphUrl(
   driveUrl: string,
-  documentId: string,
+  identifier: string,
   authToken?: string,
 ) {
-  const encodedQuery = buildDocumentSubgraphQuery(
-    driveUrl,
-    documentId,
-    authToken,
-  );
+  const encodedQuery = buildDocumentSubgraphQuery(identifier, authToken);
   return `${driveUrl}?explorerURLState=${encodedQuery}`;
 }
