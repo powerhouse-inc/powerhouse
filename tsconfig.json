@@ -101,9 +101,6 @@
       "path": "test/e2e-utils"
     },
     {
-      "path": "test/graphql-client-document-cache"
-    },
-    {
       "path": "test/lb-loadtest"
     },
     {
