@@ -198,3 +198,8 @@ export function getRuntimeConfig(): RuntimePowerhouseConfig {
   }
   return cached;
 }
+
+export function applyConnectBranding(config: RuntimePowerhouseConfig): void {
+  const appName = config.connect.branding?.appName;
+  if (appName) document.title = appName;
+}
