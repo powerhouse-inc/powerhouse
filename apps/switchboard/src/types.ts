@@ -87,6 +87,16 @@ export type StartServerOptions = {
    * Triggered by the `--migrate-pglite` CLI flag or `PH_MIGRATE_PGLITE=true`.
    */
   migratePglite?: boolean;
+  /**
+   * Force a specific PGLite-embedded PG major (16 or 17) on startup.
+   *
+   * **Destructive**: any existing local PGLite data dirs are wiped before
+   * the chosen PGLite re-`initdb`'s them at the requested version. Postgres
+   * URLs are unaffected. Takes precedence over `migratePglite`.
+   *
+   * Triggered by `PH_FORCE_PG_VERSION=16|17`.
+   */
+  forcePgVersion?: 16 | 17;
 };
 
 export type SwitchboardReactor = {

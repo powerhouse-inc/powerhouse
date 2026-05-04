@@ -24,6 +24,23 @@ export function isSupportedMajor(major: number): major is SupportedPgMajor {
   return (SUPPORTED_PG_MAJORS as readonly number[]).includes(major);
 }
 
+/**
+ * Parses the `PH_FORCE_PG_VERSION` env var. Returns the validated major, or
+ * `null` when the var is unset/empty. Throws on any value that is not a
+ * supported major — invalid configuration must fail before the server starts
+ * touching disk.
+ */
+export function parseForcePgVersion(
+  raw: string | undefined,
+): SupportedPgMajor | null {
+  if (raw === undefined || raw.trim() === "") return null;
+  const parsed = Number(raw);
+  if (Number.isInteger(parsed) && isSupportedMajor(parsed)) return parsed;
+  throw new Error(
+    `PH_FORCE_PG_VERSION must be one of: ${SUPPORTED_PG_MAJORS.join(", ")} (got: ${raw})`,
+  );
+}
+
 export async function loadPGliteModule(
   major: SupportedPgMajor,
 ): Promise<CurrentPGliteModule> {

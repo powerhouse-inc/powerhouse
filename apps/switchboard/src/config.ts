@@ -3,6 +3,7 @@ dotenv.config();
 
 import { getConfig } from "@powerhousedao/config/node";
 import type { DriveInput } from "@powerhousedao/shared/document-drive";
+import { parseForcePgVersion } from "./pglite-version.js";
 const phConfig = getConfig();
 const { switchboard } = phConfig;
 interface Config {
@@ -12,6 +13,7 @@ interface Config {
   port: number;
   mcp: boolean;
   migratePglite: boolean;
+  forcePgVersion: 16 | 17 | null;
   drive: DriveInput;
 }
 export const config: Config = {
@@ -29,6 +31,7 @@ export const config: Config = {
       : (switchboard?.port ?? 4001),
   mcp: true,
   migratePglite: process.env.PH_MIGRATE_PGLITE === "true",
+  forcePgVersion: parseForcePgVersion(process.env.PH_FORCE_PG_VERSION),
   drive: {
     id: "powerhouse",
     slug: "powerhouse",

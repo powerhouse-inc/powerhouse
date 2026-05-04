@@ -42,6 +42,7 @@ import {
 import dotenv from "dotenv";
 import { Kysely, PostgresDialect } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
+import { promises as fs } from "node:fs";
 import net from "node:net";
 import { register } from "node:module";
 import path from "path";
@@ -175,36 +176,54 @@ async function initServer(
   const readModelPgliteDir =
     !dbPath || !isPostgresUrl(dbPath) ? readModelPath : null;
 
-  // PGLite version pre-flight: detect on-disk PG_VERSION for any local data dirs
-  // and either migrate (when --migrate-pglite is set) or warn and fall through
-  // to the matching legacy PGLite at runtime.
+  // PGLite version pre-flight: when PH_FORCE_PG_VERSION is set, wipe local
+  // data dirs and re-initdb at the chosen version. Otherwise detect on-disk
+  // PG_VERSION and either migrate (when --migrate-pglite is set) or warn and
+  // fall through to the matching legacy PGLite at runtime.
   const pgliteDirs = [reactorPgliteDir, readModelPgliteDir].filter(
     (d): d is string => d !== null,
   );
   const detectedMajors = new Map<string, number>();
-  for (const dir of pgliteDirs) {
-    const major = await readPgVersionFile(dir);
-    if (major !== null) detectedMajors.set(dir, major);
-  }
 
-  if (options.migratePglite) {
-    for (const [dir, major] of detectedMajors) {
-      if (major === CURRENT_PG_MAJOR) continue;
-      await migratePgliteDir(dir, logger);
-      // refresh detected major after a successful migration
-      const after = await readPgVersionFile(dir);
-      if (after !== null) detectedMajors.set(dir, after);
-    }
-  } else {
-    for (const [dir, major] of detectedMajors) {
-      if (major === CURRENT_PG_MAJOR) continue;
+  if (options.forcePgVersion !== undefined && pgliteDirs.length > 0) {
+    if (options.migratePglite) {
       logger.warn(
-        `PGLite data dir at ${dir} was created with PG${major} but Switchboard ships PG${CURRENT_PG_MAJOR}. Running on legacy PGLite. Re-start with --migrate-pglite (or PH_MIGRATE_PGLITE=true) to upgrade.`,
+        "PH_FORCE_PG_VERSION is set; ignoring --migrate-pglite/PH_MIGRATE_PGLITE because the data dirs will be wiped.",
       );
+    }
+    logger.warn(
+      `PH_FORCE_PG_VERSION=${options.forcePgVersion} set; wiping PGLite data dirs and re-initializing at PG${options.forcePgVersion}.`,
+    );
+    for (const dir of pgliteDirs) {
+      await fs.rm(dir, { recursive: true, force: true });
+      logger.info(`Wiped PGLite data dir ${dir}`);
+    }
+  } else if (options.forcePgVersion === undefined) {
+    for (const dir of pgliteDirs) {
+      const major = await readPgVersionFile(dir);
+      if (major !== null) detectedMajors.set(dir, major);
+    }
+
+    if (options.migratePglite) {
+      for (const [dir, major] of detectedMajors) {
+        if (major === CURRENT_PG_MAJOR) continue;
+        await migratePgliteDir(dir, logger);
+        // refresh detected major after a successful migration
+        const after = await readPgVersionFile(dir);
+        if (after !== null) detectedMajors.set(dir, after);
+      }
+    } else {
+      for (const [dir, major] of detectedMajors) {
+        if (major === CURRENT_PG_MAJOR) continue;
+        logger.warn(
+          `PGLite data dir at ${dir} was created with PG${major} but Switchboard ships PG${CURRENT_PG_MAJOR}. Running on legacy PGLite. Re-start with --migrate-pglite (or PH_MIGRATE_PGLITE=true) to upgrade.`,
+        );
+      }
     }
   }
 
   function resolvePgliteMajorForDir(dir: string): SupportedPgMajor {
+    if (options.forcePgVersion !== undefined) return options.forcePgVersion;
     const detected = detectedMajors.get(dir);
     if (detected === undefined) return CURRENT_PG_MAJOR;
     if (!isSupportedMajor(detected)) {

@@ -63,5 +63,6 @@ const cliMigratePglite = process.argv.slice(2).includes("--migrate-pglite");
 startSwitchboard({
   ...config,
   migratePglite: cliMigratePglite || config.migratePglite,
+  forcePgVersion: config.forcePgVersion ?? undefined,
   meterProvider,
 }).catch(console.error);
