@@ -22,6 +22,7 @@ export * from "./editor-modules.js";
 export * from "./features.js";
 export * from "./folder-by-id.js";
 export * from "./graphql-reactor-client.js";
+export * from "./init-graphql-reactor-client.js";
 export * from "./items-in-selected-drive.js";
 export * from "./items-in-selected-folder.js";
 export * from "./loading.js";
