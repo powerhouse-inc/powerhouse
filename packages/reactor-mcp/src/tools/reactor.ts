@@ -376,7 +376,7 @@ export async function createReactorMcpProvider(
         if (params.name) {
           document.header.name = params.name;
         }
-        const created = await client.createDocumentInDrive(
+        const created = await client.drives.addFile(
           params.driveId,
           document,
           params.parentFolder,
@@ -389,15 +389,31 @@ export async function createReactorMcpProvider(
     }),
 
     getDocuments: toolWithCallback(getDocumentsTool, async (params) => {
-      // Use getChildren to get documents under a parent (drive)
-      const result = await client.getChildren(params.parentId);
+      const result = await client.getOutgoingRelationships(
+        params.parentId,
+        "child",
+      );
       const documentIds = result.results.map((doc) => doc.header.id);
       return { documentIds };
     }),
 
     deleteDocument: toolWithCallback(deleteDocumentTool, async (params) => {
       try {
-        await client.deleteDocument(params.documentId);
+        const incoming = await client.getIncomingRelationships(
+          params.documentId,
+          "child",
+        );
+        const driveParent = incoming.results.find(
+          (p) => p.header.documentType === DRIVE_DOCUMENT_TYPE,
+        );
+        if (driveParent) {
+          await client.drives.removeNode(
+            driveParent.header.id,
+            params.documentId,
+          );
+        } else {
+          await client.deleteDocument(params.documentId);
+        }
         return { success: true };
       } catch {
         return { success: false };

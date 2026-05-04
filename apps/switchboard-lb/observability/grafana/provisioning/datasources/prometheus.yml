@@ -1,0 +1,11 @@
+# File-provisioned Prometheus datasource for the local dev grafana.
+# `uid: prometheus` is the stable handle the dashboard JSON references.
+apiVersion: 1
+datasources:
+  - name: Prometheus
+    type: prometheus
+    uid: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false

@@ -7,7 +7,8 @@ local TOP_KEYS = {
     "identifier",
     "documentIdentifier",
     "parentIdentifier",
-    "childIdentifier",
+    "sourceIdentifier",
+    "targetIdentifier",
     "docId",
 }
 
@@ -43,7 +44,7 @@ local function extract(vars)
     local tgt_ok = type(tgt) == "string" and #tgt > 0
     if src_ok and tgt_ok then
         if src ~= tgt then
-            return errors.conflict("moveChildren: cross-parent operations not supported")
+            return errors.conflict("moveRelationship: cross-parent operations not supported")
         end
         return src
     end

@@ -104,7 +104,9 @@ jobs:
             ${{ env.ADDITIONAL_TAG != '' && format('{0}/{1}:{2}', env.HARBOR_REGISTRY, env.HARBOR_PATH, env.ADDITIONAL_TAG) || '' }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          build-args: TAG=${{ env.GITHUB_TAG }}
+          build-args: |
+            TAG=${{ env.GITHUB_TAG }}
+            GIT_SHA=${{ github.sha }}
 
   update-k8s-academy:
     name: Update Academy Image in K8s Hosting

@@ -131,7 +131,7 @@ describe("Relationship Operations", () => {
     reactor.kill();
   });
 
-  describe("addChildren", () => {
+  describe("addRelationship", () => {
     it("should add child relationships to a parent document", async () => {
       const parentDoc = createDocModelDocument({ id: "parent-1" });
       const childDoc1 = createDocModelDocument({ id: "child-1" });
@@ -141,15 +141,22 @@ describe("Relationship Operations", () => {
       await createDocument(childDoc1);
       await createDocument(childDoc2);
 
-      const jobInfo = await reactor.addChildren("parent-1", [
+      const job1 = await reactor.addRelationship(
+        "parent-1",
         "child-1",
+        "child",
+      );
+      const job2 = await reactor.addRelationship(
+        "parent-1",
         "child-2",
-      ]);
+        "child",
+      );
 
-      expect(jobInfo.id).toBeDefined();
-      expect(jobInfo.status).toBe(JobStatus.PENDING);
+      expect(job1.id).toBeDefined();
+      expect(job1.status).toBe(JobStatus.PENDING);
 
-      await waitForJobCompletion(jobInfo.id);
+      await waitForJobCompletion(job1.id);
+      await waitForJobCompletion(job2.id);
 
       const outgoing = await waitForOutgoingCount("parent-1", 2);
       expect(outgoing).toHaveLength(2);
@@ -167,7 +174,11 @@ describe("Relationship Operations", () => {
       await createDocument(parentDoc);
       await createDocument(childDoc);
 
-      const jobInfo = await reactor.addChildren("parent-2", ["child-3"]);
+      const jobInfo = await reactor.addRelationship(
+        "parent-2",
+        "child-3",
+        "child",
+      );
       await waitForJobCompletion(jobInfo.id);
 
       const incoming = await waitForIncomingCount("child-3", 1);
@@ -181,9 +192,11 @@ describe("Relationship Operations", () => {
       const childDoc = createDocModelDocument({ id: "child-4" });
       await createDocument(childDoc);
 
-      const jobInfo = await reactor.addChildren("nonexistent-parent", [
+      const jobInfo = await reactor.addRelationship(
+        "nonexistent-parent",
         "child-4",
-      ]);
+        "child",
+      );
 
       const status = await waitForJobFailure(jobInfo.id);
       expect(status.status).toBe(JobStatus.FAILED);
@@ -194,7 +207,11 @@ describe("Relationship Operations", () => {
       const parentDoc = createDocModelDocument({ id: "parent-3" });
       await createDocument(parentDoc);
 
-      const jobInfo = await reactor.addChildren("parent-3", ["missing-child"]);
+      const jobInfo = await reactor.addRelationship(
+        "parent-3",
+        "missing-child",
+        "child",
+      );
 
       const status = await waitForJobCompletion(jobInfo.id);
       expect(status).not.toBe(JobStatus.FAILED);
@@ -207,10 +224,18 @@ describe("Relationship Operations", () => {
       await createDocument(parentDoc);
       await createDocument(childDoc);
 
-      const firstJob = await reactor.addChildren("parent-4", ["child-5"]);
+      const firstJob = await reactor.addRelationship(
+        "parent-4",
+        "child-5",
+        "child",
+      );
       await waitForJobCompletion(firstJob.id);
 
-      const secondJob = await reactor.addChildren("parent-4", ["child-5"]);
+      const secondJob = await reactor.addRelationship(
+        "parent-4",
+        "child-5",
+        "child",
+      );
       await waitForJobCompletion(secondJob.id);
 
       const outgoing = await waitForOutgoingCount("parent-4", 1);
@@ -219,7 +244,7 @@ describe("Relationship Operations", () => {
     });
   });
 
-  describe("removeChildren", () => {
+  describe("removeRelationship", () => {
     it("should remove child relationships from a parent document", async () => {
       const parentDoc = createDocModelDocument({ id: "parent-5" });
       const childDoc = createDocModelDocument({ id: "child-6" });
@@ -227,10 +252,18 @@ describe("Relationship Operations", () => {
       await createDocument(parentDoc);
       await createDocument(childDoc);
 
-      const addJob = await reactor.addChildren("parent-5", ["child-6"]);
+      const addJob = await reactor.addRelationship(
+        "parent-5",
+        "child-6",
+        "child",
+      );
       await waitForJobCompletion(addJob.id);
 
-      const removeJob = await reactor.removeChildren("parent-5", ["child-6"]);
+      const removeJob = await reactor.removeRelationship(
+        "parent-5",
+        "child-6",
+        "child",
+      );
       await waitForJobCompletion(removeJob.id);
 
       await vi.waitUntil(
@@ -248,7 +281,11 @@ describe("Relationship Operations", () => {
       const parentDoc = createDocModelDocument({ id: "parent-6" });
       await createDocument(parentDoc);
 
-      const removeJob = await reactor.removeChildren("parent-6", ["missing"]);
+      const removeJob = await reactor.removeRelationship(
+        "parent-6",
+        "missing",
+        "child",
+      );
       await waitForJobCompletion(removeJob.id);
 
       const outgoing = await documentIndexer.getOutgoing("parent-6", ["child"]);
@@ -269,10 +306,13 @@ describe("Relationship Operations", () => {
       await createDocument(grandChildDoc);
 
       await waitForJobCompletion(
-        (await reactor.addChildren("parent-7", ["child-7", "child-8"])).id,
+        (await reactor.addRelationship("parent-7", "child-7", "child")).id,
       );
       await waitForJobCompletion(
-        (await reactor.addChildren("child-7", ["grandchild-1"])).id,
+        (await reactor.addRelationship("parent-7", "child-8", "child")).id,
+      );
+      await waitForJobCompletion(
+        (await reactor.addRelationship("child-7", "grandchild-1", "child")).id,
       );
 
       await waitForOutgoingCount("parent-7", 2);

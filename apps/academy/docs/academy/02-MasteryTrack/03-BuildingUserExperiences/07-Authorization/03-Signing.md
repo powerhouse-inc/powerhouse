@@ -237,13 +237,13 @@ This means:
 
 The switchboard signs actions during any mutation that flows through the `ReactorClient`:
 
-| Mutation                                          | What gets signed                                                                                     |
-| ------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `createDocument`                                  | CREATE_DOCUMENT + UPGRADE_DOCUMENT actions, plus parent relationship action if a parent is specified |
-| `createEmptyDocument`                             | Same as above, using a default initial state                                                         |
-| `mutateDocument` / `mutateDocumentAsync`          | All submitted actions                                                                                |
-| `addChildren` / `removeChildren` / `moveChildren` | Relationship actions on the parent document(s)                                                       |
-| `deleteDocument` / `deleteDocuments`              | DELETE_DOCUMENT actions for the target and its descendants                                           |
+| Mutation                                                      | What gets signed                                                                                     |
+| ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `createDocument`                                              | CREATE_DOCUMENT + UPGRADE_DOCUMENT actions, plus parent relationship action if a parent is specified |
+| `createEmptyDocument`                                         | Same as above, using a default initial state                                                         |
+| `mutateDocument` / `mutateDocumentAsync`                      | All submitted actions                                                                                |
+| `addRelationship` / `removeRelationship` / `moveRelationship` | Relationship actions on the source document(s)                                                       |
+| `deleteDocument` / `deleteDocuments`                          | DELETE_DOCUMENT actions for the target and its descendants                                           |
 
 ### When you should pre-sign
 

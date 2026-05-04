@@ -1,0 +1,12 @@
+# File-based dashboard provider. Grafana scans /var/lib/grafana/dashboards
+# every 10s and reloads any JSON that changed — edit switchboard-lb.json in
+# the repo and Grafana picks it up without a restart.
+apiVersion: 1
+providers:
+  - name: switchboard-lb
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards

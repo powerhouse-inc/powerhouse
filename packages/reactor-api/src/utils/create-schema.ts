@@ -836,11 +836,11 @@ function generateNewApiSchema(
       """Find ${documentName} documents by search criteria"""
       findDocuments(search: ${documentName}_SearchFilterInput, view: ${documentName}_ViewFilterInput, paging: ${documentName}_PagingInput): ${documentName}_DocumentResultPage!
 
-      """Get children of a ${documentName} document"""
-      documentChildren(parentIdentifier: String!, view: ${documentName}_ViewFilterInput, paging: ${documentName}_PagingInput): ${documentName}_DocumentResultPage!
+      """Get outgoing relationships of a ${documentName} document"""
+      documentOutgoingRelationships(sourceIdentifier: String!, relationshipType: String!, view: ${documentName}_ViewFilterInput, paging: ${documentName}_PagingInput): ${documentName}_DocumentResultPage!
 
-      """Get parents of a ${documentName} document"""
-      documentParents(childIdentifier: String!, view: ${documentName}_ViewFilterInput, paging: ${documentName}_PagingInput): ${documentName}_DocumentResultPage!
+      """Get incoming relationships to a ${documentName} document"""
+      documentIncomingRelationships(targetIdentifier: String!, relationshipType: String!, view: ${documentName}_ViewFilterInput, paging: ${documentName}_PagingInput): ${documentName}_DocumentResultPage!
     }
   `;
 

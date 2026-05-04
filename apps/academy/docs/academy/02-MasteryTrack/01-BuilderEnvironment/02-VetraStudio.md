@@ -12,7 +12,8 @@ Vetra Studio is the builder environment where you create, manage, and collaborat
 - **Vetra Package Library**: Store, publish, and fork git repositories of packages in the Vetra Package Library.  
   Visit the [Vetra Package Library here](https://vetra.io/packages)
 
-:::info What is a Specification Document?
+:::info
+What is a Specification Document?
 A **specification document** is a configuration file that defines how a specific module in your package should behave. Think of it as a blueprint — it describes the structure, rules, and relationships that Powerhouse uses to generate the actual code for that module. These specification documents unlock **Specification Driven Design & Development**—enabling you to communicate your solution and intent through a structured framework designed for AI collaboration. Specs serve as a shared language that enables precise, iterative edits—turning messy intent into clean execution, and turning business needs into maintainable functionality.
 :::
 
@@ -89,6 +90,27 @@ You could then add the specific remote Vetra drive to your Powerhouse configurat
 ```
 
 An example of a builder team building on the Powerhouse Vetra Ecosystem and its complementary Vetra Studio Drive specifications for the different packages can be found [here](https://vetra.io/builders/bai).
+
+### Connect Claude to the Reactor MCP
+
+Claude can connect directly to your running Reactor via the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/), giving it live access to your drives, documents, and document model operations.
+
+Add the following configuration to your Claude MCP settings (e.g. `~/.claude/mcp.json` for Claude Code, or the MCP servers section in Claude Desktop):
+
+```json
+{
+  "mcpServers": {
+    "reactor-mcp": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "http://localhost:4001/mcp"]
+    }
+  }
+}
+```
+
+This connects Claude to the Reactor running at `http://localhost:4001`. Make sure `ph vetra --watch` (or `ph reactor`) is running before starting a Claude session that uses the MCP.
+
+→ See [Connecting Claude with Reactor MCP](/academy/Cookbook#connecting-claude-with-reactor-mcp) for a step-by-step walkthrough.
 
 <details>
 <summary>📦 Vetra Remote Drive Commands</summary>

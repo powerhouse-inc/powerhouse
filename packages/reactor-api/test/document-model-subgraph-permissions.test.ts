@@ -100,11 +100,11 @@ describe("DocumentModelSubgraph Permission Checks", () => {
     };
 
     mockReactorClient = {
-      getParents: vi.fn().mockResolvedValue({
+      getIncomingRelationships: vi.fn().mockResolvedValue({
         results: [],
         options: { limit: 10, cursor: "" },
       } as PagedResults<PHDocument>),
-      getChildren: vi.fn().mockResolvedValue({
+      getOutgoingRelationships: vi.fn().mockResolvedValue({
         results: [],
         options: { limit: 10, cursor: "" },
       } as PagedResults<PHDocument>),
@@ -218,7 +218,9 @@ describe("DocumentModelSubgraph Permission Checks", () => {
           createMockDocument("parent-1", "Parent 1"),
           createMockDocument("parent-2", "Parent 2"),
         ];
-        vi.mocked(mockReactorClient.getParents!).mockResolvedValue({
+        vi.mocked(
+          mockReactorClient.getIncomingRelationships!,
+        ).mockResolvedValue({
           results: mockParents,
           options: { limit: 10, cursor: "" },
         } as PagedResults<PHDocument>);
@@ -241,10 +243,10 @@ describe("DocumentModelSubgraph Permission Checks", () => {
         expect(parentIds).toEqual(["parent-1", "parent-2"]);
       });
 
-      it("should return empty array if getParents fails", async () => {
-        vi.mocked(mockReactorClient.getParents!).mockRejectedValue(
-          new Error("Not found"),
-        );
+      it("should return empty array if getIncomingRelationships fails", async () => {
+        vi.mocked(
+          mockReactorClient.getIncomingRelationships!,
+        ).mockRejectedValue(new Error("Not found"));
 
         let capturedGetParentsFn:
           | ((docId: string) => Promise<string[]>)

@@ -1,0 +1,54 @@
+# 6.0.0-dev.202 is the first switchboard exposing the in-repo reactor schema
+# (createDocument / mutateDocument / document(identifier:)). Pin deliberately;
+# do not float to `dev` or `latest`.
+
+services:
+  sb-1:
+    image: !reset null
+    build:
+      context: ../..
+      dockerfile: docker/Dockerfile
+      target: switchboard
+      args:
+        TAG: "6.0.0-dev.202"
+    environment:
+      PORT: "8080"
+      LOG_LEVEL: "warn"
+      SKIP_DB_MIGRATIONS: "true"
+    volumes: !override
+      - sb-1-data:/app/.ph
+
+  sb-2:
+    image: !reset null
+    build:
+      context: ../..
+      dockerfile: docker/Dockerfile
+      target: switchboard
+      args:
+        TAG: "6.0.0-dev.202"
+    environment:
+      PORT: "8080"
+      LOG_LEVEL: "warn"
+      SKIP_DB_MIGRATIONS: "true"
+    volumes: !override
+      - sb-2-data:/app/.ph
+
+  sb-3:
+    image: !reset null
+    build:
+      context: ../..
+      dockerfile: docker/Dockerfile
+      target: switchboard
+      args:
+        TAG: "6.0.0-dev.202"
+    environment:
+      PORT: "8080"
+      LOG_LEVEL: "warn"
+      SKIP_DB_MIGRATIONS: "true"
+    volumes: !override
+      - sb-3-data:/app/.ph
+
+volumes:
+  sb-1-data: {}
+  sb-2-data: {}
+  sb-3-data: {}

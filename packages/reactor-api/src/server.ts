@@ -11,10 +11,15 @@ import type {
   ReactorClientModule,
   ProcessorRecord as ReactorProcessorRecord,
 } from "@powerhousedao/reactor";
+import { AttachmentBuilder } from "@powerhousedao/reactor-attachments";
+import type { AttachmentBuildResult } from "@powerhousedao/reactor-attachments";
 import { setupMcpServer } from "@powerhousedao/reactor-mcp";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import type { Kysely } from "kysely";
+import { mkdir } from "node:fs/promises";
 import type http from "node:http";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import type { Pool } from "pg";
 import { WebSocketServer } from "ws";
 // Import tracing - initializes OpenTelemetry and provides stub functions for backwards compatibility
@@ -58,6 +63,7 @@ import {
   getDbClient,
   initAnalyticsStoreSql,
   type DocumentPermissionDatabase,
+  type PgliteFactory,
 } from "./utils/db.js";
 
 const defaultLogger = childLogger(["reactor-api", "server"]);
@@ -66,6 +72,13 @@ type Options = {
   port?: number;
   dbPath: string | undefined;
   client?: PGlite | typeof Pool | undefined;
+  /**
+   * Factory for the PGLite instance backing the read-model store. When set,
+   * `getDbClient` uses it instead of constructing `new PGlite(dbPath)`. Used
+   * by Switchboard to keep a legacy-version data dir readable while running
+   * the newer Switchboard binary.
+   */
+  pgliteFactory?: PgliteFactory;
   configFile?: string;
   packages?: string[];
   auth?: {
@@ -93,22 +106,37 @@ type Options = {
   documentPermissionService?: DocumentPermissionService;
   enableDocumentModelSubgraphs?: boolean;
   logger?: ILogger;
+  /**
+   * Filesystem path for attachment binary storage.
+   * Defaults to a sibling "attachments" directory next to dbPath,
+   * or os.tmpdir() for in-memory DB deployments.
+   */
+  attachmentStoragePath?: string;
 };
 
 type ProcessorInitializer = ProcessorFactoryBuilder;
 
 const DEFAULT_PORT = 4000;
 
+function resolveAttachmentStoragePath(options: Options): string {
+  if (options.attachmentStoragePath) return options.attachmentStoragePath;
+  if (options.dbPath && !options.dbPath.startsWith("postgres")) {
+    return path.resolve(options.dbPath, "..", "attachments");
+  }
+  return path.join(tmpdir(), "reactor-attachments");
+}
+
 /**
  * Initializes the database and analytics store
  */
 async function initializeDatabaseAndAnalytics(
   dbPath: string | undefined,
+  pgliteFactory: PgliteFactory | undefined,
 ): Promise<{
   relationalDb: IRelationalDb;
   analyticsStore: IAnalyticsStore;
 }> {
-  const { db, knex } = getDbClient(dbPath);
+  const { db, knex } = getDbClient(dbPath, pgliteFactory);
   const relationalDb = createRelationalDb<unknown>(db);
   const analyticsStore = new PostgresAnalyticsStore({
     knex,
@@ -309,6 +337,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   port: number;
   httpAdapter: IHttpAdapter;
   authFetchMiddleware: AuthFetchMiddleware | undefined;
+  authService: AuthService | undefined;
   auth: {
     enabled: boolean;
     admins: string[];
@@ -317,6 +346,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   analyticsStore: IAnalyticsStore;
   documentPermissionService: DocumentPermissionService | undefined;
   authorizationService: AuthorizationService | undefined;
+  attachments: AttachmentBuildResult;
   packages: PackageManager;
 }> {
   // Initialize OpenTelemetry tracing
@@ -393,9 +423,10 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
 
   // Create auth fetch middleware if auth is enabled
   let authFetchMiddleware: AuthFetchMiddleware | undefined;
+  let authService: AuthService | undefined;
   if (authEnabled) {
     logger.info("Setting up Auth middleware");
-    const authService = new AuthService({
+    authService = new AuthService({
       enabled: authEnabled,
       admins,
       skipCredentialVerification,
@@ -407,13 +438,13 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   const { relationalDb, analyticsStore } = await trace(
     "reactor-api.init.database",
     { tags: { "resource.name": "database" } },
-    () => initializeDatabaseAndAnalytics(options.dbPath),
+    () => initializeDatabaseAndAnalytics(options.dbPath, options.pgliteFactory),
   );
 
   // Use provided document permission service, or create one if env var is set
   let documentPermissionService = options.documentPermissionService;
   if (!documentPermissionService && DOCUMENT_PERMISSIONS_ENABLED === "true") {
-    const { db } = getDbClient(options.dbPath);
+    const { db } = getDbClient(options.dbPath, options.pgliteFactory);
     // Run document permission migrations
     await runMigrations(db as Kysely<unknown>);
     logger.info("Document permission migrations completed");
@@ -434,6 +465,19 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     logger.info("Authorization service initialized");
   }
 
+  // Initialize attachment service
+  const attachmentStoragePath = resolveAttachmentStoragePath(options);
+  await mkdir(attachmentStoragePath, { recursive: true });
+  const { db: attachmentDb } = getDbClient(
+    options.dbPath,
+    options.pgliteFactory,
+  );
+  const attachments = await new AttachmentBuilder(
+    attachmentDb,
+    attachmentStoragePath,
+  ).build();
+  logger.info("Attachment service initialized");
+
   // Initialize package manager
   const loaders: IPackageLoader[] = options.packageLoaders ?? [
     new ImportPackageLoader(),
@@ -448,6 +492,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     port,
     httpAdapter,
     authFetchMiddleware,
+    authService,
     auth: {
       enabled: authEnabled,
       admins,
@@ -456,6 +501,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     analyticsStore,
     documentPermissionService,
     authorizationService,
+    attachments,
     packages,
   };
 }
@@ -469,6 +515,7 @@ async function _setupAPI(
   reactorProcessorManager: IReactorProcessorManager,
   httpAdapter: IHttpAdapter,
   authFetchMiddleware: AuthFetchMiddleware | undefined,
+  authService: AuthService | undefined,
   port: number,
   packages: PackageManager,
   relationalDb: IRelationalDb,
@@ -483,6 +530,7 @@ async function _setupAPI(
   },
   processorApp: ProcessorApp,
   readModels: IReadModel[],
+  attachments: AttachmentBuildResult,
   authorizationService?: AuthorizationService,
   documentModelRegistry?: IDocumentModelRegistry,
 ): Promise<API> {
@@ -634,6 +682,8 @@ async function _setupAPI(
     httpAdapter,
     graphqlManager,
     packages,
+    attachments,
+    authService,
   };
 }
 
@@ -664,11 +714,13 @@ export async function initializeAndStartAPI(
     port,
     httpAdapter,
     authFetchMiddleware,
+    authService,
     auth,
     relationalDb,
     analyticsStore,
     documentPermissionService,
     authorizationService,
+    attachments,
     packages,
   } = await trace(
     "reactor-api.setup.infrastructure",
@@ -721,6 +773,7 @@ export async function initializeAndStartAPI(
     reactorProcessorManager,
     httpAdapter,
     authFetchMiddleware,
+    authService,
     port,
     packages,
     relationalDb,
@@ -732,6 +785,7 @@ export async function initializeAndStartAPI(
     auth,
     processorApp,
     readModels,
+    attachments,
     authorizationService,
     documentModelRegistry,
   );

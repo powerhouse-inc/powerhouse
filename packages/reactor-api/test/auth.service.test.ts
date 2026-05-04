@@ -175,6 +175,89 @@ describe("AuthService.authenticateRequest()", () => {
     });
   });
 
+  // ── verifyBearer (method-agnostic) ──────────────────────────────────────────
+
+  describe("AuthService.verifyBearer()", () => {
+    it("returns auth_enabled=false when auth is disabled", async () => {
+      const service = new AuthService({ enabled: false, admins: ADMINS });
+
+      const result = await service.verifyBearer("Bearer token");
+
+      expect(result).toEqual({
+        user: undefined,
+        admins: [],
+        auth_enabled: false,
+      });
+      expect(mockVerifyAuthBearerToken).not.toHaveBeenCalled();
+    });
+
+    it("returns an AuthContext with no user when authorization is undefined", async () => {
+      const service = new AuthService({
+        enabled: true,
+        admins: ADMINS,
+        skipCredentialVerification: true,
+      });
+
+      const result = await service.verifyBearer(undefined);
+
+      expect(result).toEqual({
+        user: undefined,
+        admins: ADMINS,
+        auth_enabled: true,
+      });
+      expect(mockVerifyAuthBearerToken).not.toHaveBeenCalled();
+    });
+
+    it("returns an AuthContext with the authenticated user when token is valid", async () => {
+      mockVerifyAuthBearerToken.mockResolvedValue(
+        makeVerified("0xuser", 1, "eip155"),
+      );
+      const service = new AuthService({
+        enabled: true,
+        admins: ADMINS,
+        skipCredentialVerification: true,
+      });
+
+      const result = await service.verifyBearer("Bearer valid-token");
+
+      expect(result).toEqual({
+        user: { address: "0xuser", chainId: 1, networkId: "eip155" },
+        admins: ADMINS,
+        auth_enabled: true,
+      });
+      expect(mockVerifyAuthBearerToken).toHaveBeenCalledWith("valid-token");
+    });
+
+    it("returns a 401 Response when token verification returns false", async () => {
+      mockVerifyAuthBearerToken.mockResolvedValue(false);
+      const service = new AuthService({
+        enabled: true,
+        admins: ADMINS,
+        skipCredentialVerification: true,
+      });
+
+      const result = await service.verifyBearer("Bearer bad-token");
+
+      expect(result).toBeInstanceOf(Response);
+      expect((result as Response).status).toBe(401);
+      const body = (await (result as Response).json()) as { error: string };
+      expect(body.error).toBe("Verification failed");
+    });
+
+    it("verifies tokens regardless of HTTP method (no GET/OPTIONS bypass)", async () => {
+      mockVerifyAuthBearerToken.mockResolvedValue(makeVerified());
+      const service = new AuthService({
+        enabled: true,
+        admins: ADMINS,
+        skipCredentialVerification: true,
+      });
+
+      await service.verifyBearer("Bearer token");
+
+      expect(mockVerifyAuthBearerToken).toHaveBeenCalledTimes(1);
+    });
+  });
+
   // ── credential verification (Renown API) ────────────────────────────────────
 
   describe("credential existence check", () => {

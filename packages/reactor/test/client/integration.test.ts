@@ -129,7 +129,7 @@ describe("ReactorClient Integration Tests", () => {
       });
     });
 
-    describe("getChildren", () => {
+    describe("getOutgoingRelationships", () => {
       it("should retrieve children of a parent document", async () => {
         const parent = createDocModelDocument({ id: "parent-1" });
         const child1 = createDocModelDocument({ id: "child-1" });
@@ -139,7 +139,10 @@ describe("ReactorClient Integration Tests", () => {
         await client.create(child1, "parent-1");
         await client.create(child2, "parent-1");
 
-        const result = await client.getChildren("parent-1");
+        const result = await client.getOutgoingRelationships(
+          "parent-1",
+          "child",
+        );
 
         expect(result.results.length).toBe(2);
         const childIds = result.results.map((doc) => doc.header.id);
@@ -151,7 +154,10 @@ describe("ReactorClient Integration Tests", () => {
         const parent = createDocModelDocument({ id: "lonely-parent" });
         await client.create(parent);
 
-        const result = await client.getChildren("lonely-parent");
+        const result = await client.getOutgoingRelationships(
+          "lonely-parent",
+          "child",
+        );
 
         expect(result.results.length).toBe(0);
       });
@@ -165,17 +171,22 @@ describe("ReactorClient Integration Tests", () => {
           await client.create(child, "parent-2");
         }
 
-        const firstPage = await client.getChildren("parent-2", undefined, {
-          cursor: "",
-          limit: 2,
-        });
+        const firstPage = await client.getOutgoingRelationships(
+          "parent-2",
+          "child",
+          undefined,
+          {
+            cursor: "",
+            limit: 2,
+          },
+        );
 
         expect(firstPage.results.length).toBe(2);
         expect(firstPage.options.cursor).toBeDefined();
       });
     });
 
-    describe("getParents", () => {
+    describe("getIncomingRelationships", () => {
       it("should retrieve parents of a child document", async () => {
         const parent1 = createDocModelDocument({ id: "parent-a" });
         const parent2 = createDocModelDocument({ id: "parent-b" });
@@ -184,9 +195,12 @@ describe("ReactorClient Integration Tests", () => {
         await client.create(parent1);
         await client.create(parent2);
         await client.create(child, "parent-a");
-        await client.addChildren("parent-b", ["shared-child"]);
+        await client.addRelationship("parent-b", "shared-child", "child");
 
-        const result = await client.getParents("shared-child");
+        const result = await client.getIncomingRelationships(
+          "shared-child",
+          "child",
+        );
 
         expect(result.results.length).toBe(2);
         const parentIds = result.results.map((doc) => doc.header.id);
@@ -198,7 +212,10 @@ describe("ReactorClient Integration Tests", () => {
         const orphan = createDocModelDocument({ id: "orphan-doc" });
         await client.create(orphan);
 
-        const result = await client.getParents("orphan-doc");
+        const result = await client.getIncomingRelationships(
+          "orphan-doc",
+          "child",
+        );
 
         expect(result.results.length).toBe(0);
       });
@@ -389,7 +406,10 @@ describe("ReactorClient Integration Tests", () => {
 
         expect(result.header.id).toBe("create-child");
 
-        const children = await client.getChildren("create-parent");
+        const children = await client.getOutgoingRelationships(
+          "create-parent",
+          "child",
+        );
         expect(children.results.length).toBe(1);
         expect(children.results[0].header.id).toBe("create-child");
       });
@@ -434,7 +454,10 @@ describe("ReactorClient Integration Tests", () => {
         );
         expect(batchJobIds.length).toBe(2);
 
-        const children = await client.getChildren("batch-parent");
+        const children = await client.getOutgoingRelationships(
+          "batch-parent",
+          "child",
+        );
         expect(children.results.length).toBe(1);
         expect(children.results[0].header.id).toBe("batch-child");
       });
@@ -535,7 +558,10 @@ describe("ReactorClient Integration Tests", () => {
 
         expect(result.header.documentType).toBe("powerhouse/document-model");
 
-        const children = await client.getChildren("empty-parent");
+        const children = await client.getOutgoingRelationships(
+          "empty-parent",
+          "child",
+        );
         expect(children.results.length).toBe(1);
         expect(children.results[0].header.id).toBe(result.header.id);
       });
@@ -635,7 +661,7 @@ describe("ReactorClient Integration Tests", () => {
   });
 
   describe("Relationship Management", () => {
-    describe("addChildren", () => {
+    describe("addRelationship", () => {
       it("should add a single child to a parent", async () => {
         const parent = createDocModelDocument({ id: "add-parent-1" });
         const child = createDocModelDocument({ id: "add-child-1" });
@@ -643,13 +669,18 @@ describe("ReactorClient Integration Tests", () => {
         await client.create(parent);
         await client.create(child);
 
-        const result = await client.addChildren("add-parent-1", [
+        const result = await client.addRelationship(
+          "add-parent-1",
           "add-child-1",
-        ]);
+          "child",
+        );
 
         expect(result.header.id).toBe("add-parent-1");
 
-        const children = await client.getChildren("add-parent-1");
+        const children = await client.getOutgoingRelationships(
+          "add-parent-1",
+          "child",
+        );
         expect(children.results.length).toBe(1);
         expect(children.results[0].header.id).toBe("add-child-1");
       });
@@ -665,18 +696,19 @@ describe("ReactorClient Integration Tests", () => {
         await client.create(child2);
         await client.create(child3);
 
-        await client.addChildren("add-parent-2", [
-          "add-child-2a",
-          "add-child-2b",
-          "add-child-2c",
-        ]);
+        await client.addRelationship("add-parent-2", "add-child-2a", "child");
+        await client.addRelationship("add-parent-2", "add-child-2b", "child");
+        await client.addRelationship("add-parent-2", "add-child-2c", "child");
 
-        const children = await client.getChildren("add-parent-2");
+        const children = await client.getOutgoingRelationships(
+          "add-parent-2",
+          "child",
+        );
         expect(children.results.length).toBe(3);
       });
     });
 
-    describe("removeChildren", () => {
+    describe("removeRelationship", () => {
       it("should remove a single child from a parent", async () => {
         const parent = createDocModelDocument({ id: "remove-parent-1" });
         const child = createDocModelDocument({ id: "remove-child-1" });
@@ -684,9 +716,16 @@ describe("ReactorClient Integration Tests", () => {
         await client.create(parent);
         await client.create(child, "remove-parent-1");
 
-        await client.removeChildren("remove-parent-1", ["remove-child-1"]);
+        await client.removeRelationship(
+          "remove-parent-1",
+          "remove-child-1",
+          "child",
+        );
 
-        const children = await client.getChildren("remove-parent-1");
+        const children = await client.getOutgoingRelationships(
+          "remove-parent-1",
+          "child",
+        );
         expect(children.results.length).toBe(0);
       });
 
@@ -701,18 +740,27 @@ describe("ReactorClient Integration Tests", () => {
         await client.create(child2, "remove-parent-2");
         await client.create(child3, "remove-parent-2");
 
-        await client.removeChildren("remove-parent-2", [
+        await client.removeRelationship(
+          "remove-parent-2",
           "remove-child-2a",
+          "child",
+        );
+        await client.removeRelationship(
+          "remove-parent-2",
           "remove-child-2c",
-        ]);
+          "child",
+        );
 
-        const children = await client.getChildren("remove-parent-2");
+        const children = await client.getOutgoingRelationships(
+          "remove-parent-2",
+          "child",
+        );
         expect(children.results.length).toBe(1);
         expect(children.results[0].header.id).toBe("remove-child-2b");
       });
     });
 
-    describe("moveChildren", () => {
+    describe("moveRelationship", () => {
       it("should move children between parents", async () => {
         const parent1 = createDocModelDocument({ id: "move-parent-1" });
         const parent2 = createDocModelDocument({ id: "move-parent-2" });
@@ -724,15 +772,29 @@ describe("ReactorClient Integration Tests", () => {
         await client.create(child1, "move-parent-1");
         await client.create(child2, "move-parent-1");
 
-        await client.moveChildren("move-parent-1", "move-parent-2", [
+        await client.moveRelationship(
+          "move-parent-1",
+          "move-parent-2",
           "move-child-1",
+          "child",
+        );
+        await client.moveRelationship(
+          "move-parent-1",
+          "move-parent-2",
           "move-child-2",
-        ]);
+          "child",
+        );
 
-        const parent1Children = await client.getChildren("move-parent-1");
+        const parent1Children = await client.getOutgoingRelationships(
+          "move-parent-1",
+          "child",
+        );
         expect(parent1Children.results.length).toBe(0);
 
-        const parent2Children = await client.getChildren("move-parent-2");
+        const parent2Children = await client.getOutgoingRelationships(
+          "move-parent-2",
+          "child",
+        );
         expect(parent2Children.results.length).toBe(2);
       });
     });
@@ -809,7 +871,7 @@ describe("ReactorClient Integration Tests", () => {
         await client.create(a);
         await client.create(b);
         await client.create(c, "cascade-a");
-        await client.addChildren("cascade-b", ["cascade-c"]);
+        await client.addRelationship("cascade-b", "cascade-c", "child");
 
         await client.deleteDocument("cascade-a", PropagationMode.Cascade);
 
@@ -833,7 +895,7 @@ describe("ReactorClient Integration Tests", () => {
         await client.create(a, "trans-root");
         await client.create(b);
         await client.create(c, "trans-a");
-        await client.addChildren("trans-b", ["trans-c"]);
+        await client.addRelationship("trans-b", "trans-c", "child");
         await client.create(d, "trans-c");
 
         await client.deleteDocument("trans-root", PropagationMode.Cascade);
@@ -850,31 +912,13 @@ describe("ReactorClient Integration Tests", () => {
         expect(dDoc.header.id).toBe("trans-d");
       });
 
-      it("should remove document from all containing drives on delete", async () => {
+      it("should not update drive nodes on raw deleteDocument (drive-naive)", async () => {
         const drive1 = driveDocumentModelModule.utils.createDocument();
-        const drive2 = driveDocumentModelModule.utils.createDocument();
         await client.create(drive1);
-        await client.create(drive2);
 
         const doc = documentModelDocumentModelModule.utils.createDocument();
-        doc.header.name = "Shared Doc";
-        await client.createDocumentInDrive(drive1.header.id, doc);
-
-        await client.addChildren(drive2.header.id, [doc.header.id]);
-        const drive2Actions = [
-          addFile({
-            id: doc.header.id,
-            name: doc.header.name || doc.header.id,
-            documentType: doc.header.documentType,
-          }),
-        ];
-        await client.execute(drive2.header.id, "main", drive2Actions);
-
-        const drive2Before = await client.get(drive2.header.id);
-        const nodesBefore = (drive2Before.state as any).global.nodes || [];
-        expect(
-          nodesBefore.find((n: any) => n.id === doc.header.id),
-        ).toBeDefined();
+        doc.header.name = "Doc";
+        await client.drives.addFile(drive1.header.id, doc);
 
         await client.deleteDocument(doc.header.id);
 
@@ -882,12 +926,29 @@ describe("ReactorClient Integration Tests", () => {
         const drive1Nodes = (drive1After.state as any).global.nodes || [];
         expect(
           drive1Nodes.find((n: any) => n.id === doc.header.id),
-        ).toBeUndefined();
+        ).toBeDefined();
+      });
 
-        const drive2After = await client.get(drive2.header.id);
-        const drive2Nodes = (drive2After.state as any).global.nodes || [];
+      it("should remove document from a drive when called via drives.removeNode", async () => {
+        const drive1 = driveDocumentModelModule.utils.createDocument();
+        await client.create(drive1);
+
+        const doc = documentModelDocumentModelModule.utils.createDocument();
+        doc.header.name = "Shared Doc";
+        await client.drives.addFile(drive1.header.id, doc);
+
+        const drive1Before = await client.get(drive1.header.id);
+        const nodesBefore = (drive1Before.state as any).global.nodes || [];
         expect(
-          drive2Nodes.find((n: any) => n.id === doc.header.id),
+          nodesBefore.find((n: any) => n.id === doc.header.id),
+        ).toBeDefined();
+
+        await client.drives.removeNode(drive1.header.id, doc.header.id);
+
+        const drive1After = await client.get(drive1.header.id);
+        const drive1Nodes = (drive1After.state as any).global.nodes || [];
+        expect(
+          drive1Nodes.find((n: any) => n.id === doc.header.id),
         ).toBeUndefined();
       });
 
@@ -899,13 +960,17 @@ describe("ReactorClient Integration Tests", () => {
 
         const parent = documentModelDocumentModelModule.utils.createDocument();
         parent.header.name = "Parent";
-        await client.createDocumentInDrive(drive1.header.id, parent);
+        await client.drives.addFile(drive1.header.id, parent);
 
         const child = documentModelDocumentModelModule.utils.createDocument();
         child.header.name = "Child";
         await client.create(child, parent.header.id);
 
-        await client.addChildren(drive2.header.id, [child.header.id]);
+        await client.addRelationship(
+          drive2.header.id,
+          child.header.id,
+          "child",
+        );
         const drive2Actions = [
           addFile({
             id: child.header.id,
@@ -921,7 +986,7 @@ describe("ReactorClient Integration Tests", () => {
           nodesBefore.find((n: any) => n.id === child.header.id),
         ).toBeDefined();
 
-        await client.deleteDocument(parent.header.id, PropagationMode.Cascade);
+        await client.drives.removeNode(drive1.header.id, parent.header.id);
 
         const drive1After = await client.get(drive1.header.id);
         const drive1Nodes = (drive1After.state as any).global.nodes || [];
@@ -929,7 +994,6 @@ describe("ReactorClient Integration Tests", () => {
           drive1Nodes.find((n: any) => n.id === parent.header.id),
         ).toBeUndefined();
 
-        // Child survives because drive2 is still a parent
         const childDoc = await client.get(child.header.id);
         expect(childDoc.header.id).toBe(child.header.id);
 
@@ -1091,12 +1155,12 @@ describe("ReactorClient Integration Tests", () => {
       await expect(client.get("non-existent-id")).rejects.toThrow();
     });
 
-    it("should handle non-existent parent in addChildren", async () => {
+    it("should handle non-existent parent in addRelationship", async () => {
       const child = createDocModelDocument({ id: "orphan-child" });
       await client.create(child);
 
       await expect(
-        client.addChildren("non-existent-parent", ["orphan-child"]),
+        client.addRelationship("non-existent-parent", "orphan-child", "child"),
       ).rejects.toThrow();
     });
 

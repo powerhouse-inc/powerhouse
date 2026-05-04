@@ -186,29 +186,33 @@ export interface IReactor {
   ): Promise<TDocument>;
 
   /**
-   * Retrieves the children of a document
+   * Retrieves outgoing relationships of a given type from a source document.
    *
-   * @param parentId - The parent document id
+   * @param sourceId - The source document id
+   * @param relationshipType - The relationship type to filter by
    * @param consistencyToken - Optional token for read-after-write consistency
    * @param signal - Optional abort signal to cancel the request
-   * @returns The list of child document ids
+   * @returns The list of target document ids
    */
-  getChildren(
-    parentId: string,
+  getOutgoingRelationships(
+    sourceId: string,
+    relationshipType: string,
     consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<string[]>;
 
   /**
-   * Retrieves the parents of a document
+   * Retrieves incoming relationships of a given type to a target document.
    *
-   * @param childId - The child document id
+   * @param targetId - The target document id
+   * @param relationshipType - The relationship type to filter by
    * @param consistencyToken - Optional token for read-after-write consistency
    * @param signal - Optional abort signal to cancel the request
-   * @returns The list of parent document ids
+   * @returns The list of source document ids
    */
-  getParents(
-    childId: string,
+  getIncomingRelationships(
+    targetId: string,
+    relationshipType: string,
     consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<string[]>;
@@ -348,36 +352,40 @@ export interface IReactor {
   ): Promise<BatchLoadResult>;
 
   /**
-   * Adds multiple documents as children to another
+   * Adds a relationship between two documents.
    *
-   * @param parentId - Parent document id
-   * @param documentIds - List of document ids to add as children
-   * @param branch - Branch to add children to, defaults to "main"
+   * @param sourceId - Source document id
+   * @param targetId - Target document id
+   * @param relationshipType - Relationship type identifier
+   * @param branch - Branch to add the relationship to, defaults to "main"
    * @param signer - Optional signer to sign the actions
    * @param signal - Optional abort signal to cancel the request
    * @returns The job id and status
    */
-  addChildren(
-    parentId: string,
-    documentIds: string[],
+  addRelationship(
+    sourceId: string,
+    targetId: string,
+    relationshipType: string,
     branch?: string,
     signer?: ISigner,
     signal?: AbortSignal,
   ): Promise<JobInfo>;
 
   /**
-   * Removes multiple documents as children from another
+   * Removes a relationship between two documents.
    *
-   * @param parentId - Parent document id
-   * @param documentIds - List of document ids to remove as children
-   * @param branch - Branch to remove children from, defaults to "main"
+   * @param sourceId - Source document id
+   * @param targetId - Target document id
+   * @param relationshipType - Relationship type identifier
+   * @param branch - Branch to remove the relationship from, defaults to "main"
    * @param signer - Optional signer to sign the actions
    * @param signal - Optional abort signal to cancel the request
    * @returns The job id and status
    */
-  removeChildren(
-    parentId: string,
-    documentIds: string[],
+  removeRelationship(
+    sourceId: string,
+    targetId: string,
+    relationshipType: string,
     branch?: string,
     signer?: ISigner,
     signal?: AbortSignal,

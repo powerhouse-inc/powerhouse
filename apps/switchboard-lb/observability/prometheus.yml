@@ -1,0 +1,13 @@
+# Local prometheus config for the switchboard-lb dev stack.
+# Loaded by the `prometheus` service under `--profile observability` in
+# docker-compose.yml. The 5s scrape interval is tuned for fast feedback
+# when generating traffic with m4.sh / loadtest, not production retention.
+
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+
+scrape_configs:
+  - job_name: switchboard-lb
+    static_configs:
+      - targets: ["lb:9090"]

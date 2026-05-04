@@ -1,4 +1,10 @@
 import type {
+  DocumentDriveDocument,
+  DriveInput,
+  FolderNode,
+  Node,
+} from "@powerhousedao/shared/document-drive";
+import type {
   Action,
   DocumentModelModule,
   Operation,
@@ -52,6 +58,110 @@ export type CreateDocumentOptions = {
 };
 
 /**
+ * Drive-aware operations grouped under `client.drives`.
+ *
+ * These methods orchestrate the multi-action, multi-document choreography
+ * required to keep a drive's `state.global.nodes` array consistent with the
+ * relationship index and the underlying documents. Use the flat
+ * `IReactorClient` primitives (`get`, `execute`, `find`) for everything that
+ * is not drive-aware.
+ */
+export interface IDriveClient {
+  /**
+   * Creates a new drive document and waits for completion.
+   */
+  create(
+    input: DriveInput,
+    signal?: AbortSignal,
+  ): Promise<DocumentDriveDocument>;
+
+  /**
+   * Adds a document to a drive as a single batched operation.
+   *
+   * Issues CREATE_DOCUMENT, UPGRADE_DOCUMENT, ADD_RELATIONSHIP on the new
+   * document and ADD_FILE on the drive in a single dependent batch.
+   */
+  addFile<TDocument extends PHDocument = PHDocument>(
+    driveIdentifier: string,
+    document: PHDocument,
+    parentFolder?: string,
+    signal?: AbortSignal,
+  ): Promise<TDocument>;
+
+  /**
+   * Adds a folder node to a drive.
+   */
+  addFolder(
+    driveIdentifier: string,
+    name: string,
+    parentFolder?: string,
+    signal?: AbortSignal,
+  ): Promise<FolderNode>;
+
+  /**
+   * Removes a node from a drive. Folder nodes cascade: descendant file
+   * documents are deleted first, then the folder node entry itself.
+   */
+  removeNode(
+    driveIdentifier: string,
+    nodeId: string,
+    signal?: AbortSignal,
+  ): Promise<void>;
+
+  /**
+   * Renames a node. Updates both the underlying document header and the
+   * drive's node entry.
+   */
+  renameNode(
+    driveIdentifier: string,
+    nodeId: string,
+    name: string,
+    signal?: AbortSignal,
+  ): Promise<Node>;
+
+  /**
+   * Moves a node to a different parent folder within the same drive.
+   * Pass `undefined` to move the node to the drive root.
+   */
+  moveNode(
+    driveIdentifier: string,
+    srcNodeId: string,
+    targetParentFolderId: string | undefined,
+    signal?: AbortSignal,
+  ): Promise<DocumentDriveDocument>;
+
+  /**
+   * Copies a node (and its subtree, if it is a folder) within a drive.
+   * Each copied file gets a new id and a duplicated document.
+   */
+  copyNode(
+    driveIdentifier: string,
+    srcNodeId: string,
+    targetParentFolderId: string | undefined,
+    signal?: AbortSignal,
+  ): Promise<DocumentDriveDocument>;
+
+  /**
+   * Returns a single node from the drive's `state.global.nodes` array.
+   */
+  getNode(
+    driveIdentifier: string,
+    nodeId: string,
+    signal?: AbortSignal,
+  ): Promise<Node>;
+
+  /**
+   * Returns nodes in the drive, optionally filtered to a single parent
+   * folder. Pass `null` to list root-level nodes only.
+   */
+  listNodes(
+    driveIdentifier: string,
+    parentFolder?: string | null,
+    signal?: AbortSignal,
+  ): Promise<Node[]>;
+}
+
+/**
  * The ReactorClient interface that wraps lower-level APIs to provide
  * a simpler interface for document operations.
  *
@@ -62,6 +172,11 @@ export type CreateDocumentOptions = {
  * - Wraps subscription interface with ViewFilters
  */
 export interface IReactorClient {
+  /**
+   * Drive-aware operations. See {@link IDriveClient}.
+   */
+  readonly drives: IDriveClient;
+
   /**
    * Retrieves a list of document model modules.
    *
@@ -119,32 +234,36 @@ export interface IReactorClient {
   ): Promise<PagedResults<Operation>>;
 
   /**
-   * Retrieves children of a document.
+   * Retrieves outgoing relationships of a given type from a source document.
    *
-   * @param parentIdentifier - Required, this is either a document "id" field or a "slug"
+   * @param sourceIdentifier - Required, this is either a document "id" field or a "slug"
+   * @param relationshipType - The relationship type to filter by
    * @param view - Optional filter containing branch and scopes information
    * @param paging - Optional pagination options
    * @param signal - Optional abort signal to cancel the request
-   * @returns The up-to-date PHDocument and paging cursor
+   * @returns The target documents and paging cursor
    */
-  getChildren(
-    parentIdentifier: string,
+  getOutgoingRelationships(
+    sourceIdentifier: string,
+    relationshipType: string,
     view?: ViewFilter,
     paging?: PagingOptions,
     signal?: AbortSignal,
   ): Promise<PagedResults<PHDocument>>;
 
   /**
-   * Retrieves parents of a document.
+   * Retrieves incoming relationships of a given type to a target document.
    *
-   * @param childIdentifier - Required, this is either a document "id" field or a "slug"
+   * @param targetIdentifier - Required, this is either a document "id" field or a "slug"
+   * @param relationshipType - The relationship type to filter by
    * @param view - Optional filter containing branch and scopes information
    * @param paging - Optional pagination options
    * @param signal - Optional abort signal to cancel the request
-   * @returns The up-to-date PHDocument and paging cursor
+   * @returns The source documents and paging cursor
    */
-  getParents(
-    childIdentifier: string,
+  getIncomingRelationships(
+    targetIdentifier: string,
+    relationshipType: string,
     view?: ViewFilter,
     paging?: PagingOptions,
     signal?: AbortSignal,
@@ -198,6 +317,8 @@ export interface IReactorClient {
    * This is more efficient than createEmpty + addFile as it batches all
    * actions into dependent jobs and waits for them to complete together.
    *
+   * @deprecated Use {@link IDriveClient.addFile} via `client.drives.addFile`
+   * instead. This method will be removed in a future release.
    * @param driveId - The drive document id or slug
    * @param document - The document to create
    * @param parentFolder - Optional folder id within the drive
@@ -260,51 +381,57 @@ export interface IReactorClient {
   ): Promise<PHDocument>;
 
   /**
-   * Adds multiple documents as children to another and waits for completion
+   * Adds a relationship between two documents and waits for completion.
    *
-   * @param parentIdentifier - Parent document id or slug
-   * @param documentIdentifiers - List of document identifiers to add as children
-   * @param branch - Optional branch to add children to, defaults to "main"
+   * @param sourceIdentifier - Source document id or slug
+   * @param targetIdentifier - Target document id or slug
+   * @param relationshipType - Relationship type identifier
+   * @param branch - Optional branch to add the relationship to, defaults to "main"
    * @param signal - Optional abort signal to cancel the request
-   * @returns The updated parent document
+   * @returns The updated source document
    */
-  addChildren(
-    parentIdentifier: string,
-    documentIdentifiers: string[],
+  addRelationship(
+    sourceIdentifier: string,
+    targetIdentifier: string,
+    relationshipType: string,
     branch?: string,
     signal?: AbortSignal,
   ): Promise<PHDocument>;
 
   /**
-   * Removes multiple documents as children from another and waits for completion
+   * Removes a relationship between two documents and waits for completion.
    *
-   * @param parentIdentifier - Parent document identifiers
-   * @param documentIdentifiers - List of document ids to remove as children
-   * @param branch - Optional branch to remove children from, defaults to "main"
+   * @param sourceIdentifier - Source document id or slug
+   * @param targetIdentifier - Target document id or slug
+   * @param relationshipType - Relationship type identifier
+   * @param branch - Optional branch to remove the relationship from, defaults to "main"
    * @param signal - Optional abort signal to cancel the request
-   * @returns The updated parent document
+   * @returns The updated source document
    */
-  removeChildren(
-    parentIdentifier: string,
-    documentIdentifiers: string[],
+  removeRelationship(
+    sourceIdentifier: string,
+    targetIdentifier: string,
+    relationshipType: string,
     branch?: string,
     signal?: AbortSignal,
   ): Promise<PHDocument>;
 
   /**
-   * Moves multiple documents from one parent to another and waits for completion
+   * Moves a relationship from one source document to another and waits for completion.
    *
    * @param sourceParentIdentifier - Source parent document id or slug
    * @param targetParentIdentifier - Target parent document id or slug
-   * @param documentIdentifiers - List of document identifiers to move
-   * @param branch - Optional branch to move children to, defaults to "main"
+   * @param targetIdentifier - The target document id or slug
+   * @param relationshipType - Relationship type identifier
+   * @param branch - Optional branch to apply the move to, defaults to "main"
    * @param signal - Optional abort signal to cancel the request
    * @returns The updated source and target documents
    */
-  moveChildren(
+  moveRelationship(
     sourceParentIdentifier: string,
     targetParentIdentifier: string,
-    documentIdentifiers: string[],
+    targetIdentifier: string,
+    relationshipType: string,
     branch?: string,
     signal?: AbortSignal,
   ): Promise<{
