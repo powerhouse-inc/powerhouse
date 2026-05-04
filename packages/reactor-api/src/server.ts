@@ -127,7 +127,10 @@ function resolveAttachmentStoragePath(options: Options): string {
 }
 
 /**
- * Initializes the database and analytics store
+ * Initializes the database and analytics store. The returned `closers` are
+ * idempotent thunks that release the underlying knex pool and PGlite instance
+ * (when on-disk PGlite is in use); callers are expected to run them as part
+ * of API teardown so PGlite WAL is flushed and the data-dir lock is released.
  */
 async function initializeDatabaseAndAnalytics(
   dbPath: string | undefined,
@@ -135,8 +138,9 @@ async function initializeDatabaseAndAnalytics(
 ): Promise<{
   relationalDb: IRelationalDb;
   analyticsStore: IAnalyticsStore;
+  closers: Array<() => Promise<void>>;
 }> {
-  const { db, knex } = getDbClient(dbPath, pgliteFactory);
+  const { db, knex, pglite } = getDbClient(dbPath, pgliteFactory);
   const relationalDb = createRelationalDb<unknown>(db);
   const analyticsStore = new PostgresAnalyticsStore({
     knex,
@@ -146,7 +150,30 @@ async function initializeDatabaseAndAnalytics(
     await knex.raw(sql);
   }
 
-  return { relationalDb, analyticsStore };
+  return {
+    relationalDb,
+    analyticsStore,
+    closers: makeDbClosers(knex, pglite),
+  };
+}
+
+/**
+ * Builds best-effort closers for a knex/PGlite pair returned by
+ * {@link getDbClient}. Order is significant: knex first releases its pool
+ * (which is what the application talks to), then PGlite flushes WAL and
+ * unlocks the data dir.
+ */
+function makeDbClosers(
+  knexInstance: { destroy: () => Promise<void> },
+  pglite: PGlite | undefined,
+): Array<() => Promise<void>> {
+  const closers: Array<() => Promise<void>> = [() => knexInstance.destroy()];
+  if (pglite) {
+    closers.push(async () => {
+      if (!pglite.closed) await pglite.close();
+    });
+  }
+  return closers;
 }
 
 /**
@@ -348,6 +375,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   authorizationService: AuthorizationService | undefined;
   attachments: AttachmentBuildResult;
   packages: PackageManager;
+  dbClosers: Array<() => Promise<void>>;
 }> {
   // Initialize OpenTelemetry tracing
   if (isTracingEnabled()) {
@@ -434,17 +462,28 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     authFetchMiddleware = createAuthFetchMiddleware(authService);
   }
 
+  const dbClosers: Array<() => Promise<void>> = [];
+
   // Initialize database and analytics store
-  const { relationalDb, analyticsStore } = await trace(
+  const {
+    relationalDb,
+    analyticsStore,
+    closers: analyticsClosers,
+  } = await trace(
     "reactor-api.init.database",
     { tags: { "resource.name": "database" } },
     () => initializeDatabaseAndAnalytics(options.dbPath, options.pgliteFactory),
   );
+  dbClosers.push(...analyticsClosers);
 
   // Use provided document permission service, or create one if env var is set
   let documentPermissionService = options.documentPermissionService;
   if (!documentPermissionService && DOCUMENT_PERMISSIONS_ENABLED === "true") {
-    const { db } = getDbClient(options.dbPath, options.pgliteFactory);
+    const { db, knex, pglite } = getDbClient(
+      options.dbPath,
+      options.pgliteFactory,
+    );
+    dbClosers.push(...makeDbClosers(knex, pglite));
     // Run document permission migrations
     await runMigrations(db as Kysely<unknown>);
     logger.info("Document permission migrations completed");
@@ -468,10 +507,12 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   // Initialize attachment service
   const attachmentStoragePath = resolveAttachmentStoragePath(options);
   await mkdir(attachmentStoragePath, { recursive: true });
-  const { db: attachmentDb } = getDbClient(
-    options.dbPath,
-    options.pgliteFactory,
-  );
+  const {
+    db: attachmentDb,
+    knex: attachmentKnex,
+    pglite: attachmentPglite,
+  } = getDbClient(options.dbPath, options.pgliteFactory);
+  dbClosers.push(...makeDbClosers(attachmentKnex, attachmentPglite));
   const attachments = await new AttachmentBuilder(
     attachmentDb,
     attachmentStoragePath,
@@ -503,6 +544,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     authorizationService,
     attachments,
     packages,
+    dbClosers,
   };
 }
 
@@ -533,6 +575,7 @@ async function _setupAPI(
   attachments: AttachmentBuildResult,
   authorizationService?: AuthorizationService,
   documentModelRegistry?: IDocumentModelRegistry,
+  dbClosers: Array<() => Promise<void>> = [],
 ): Promise<API> {
   const hostModule: IProcessorHostModule = {
     relationalDb,
@@ -678,12 +721,77 @@ async function _setupAPI(
     logger.info(`MCP server available at http://localhost:${port}/mcp`);
   }
 
+  const dispose = buildApiDispose({
+    graphqlManager,
+    httpServer,
+    wsServer,
+    dbClosers,
+    logger,
+  });
+
   return {
     httpAdapter,
     graphqlManager,
     packages,
     attachments,
     authService,
+    dispose,
+  };
+}
+
+/**
+ * Composes the lifecycle teardown for an API instance. Steps run in
+ * dependency order so that draining HTTP/GraphQL surfaces happens before the
+ * underlying knex pool and PGlite WAL are released. Each step is wrapped in
+ * its own try/catch — one failure must not strand the rest of the chain,
+ * since this runs on the way to process exit.
+ */
+function buildApiDispose(args: {
+  graphqlManager: GraphQLManager;
+  httpServer: http.Server;
+  wsServer: WebSocketServer;
+  dbClosers: Array<() => Promise<void>>;
+  logger: ILogger;
+}): () => Promise<void> {
+  const { graphqlManager, httpServer, wsServer, dbClosers, logger } = args;
+  let disposed = false;
+  return async () => {
+    if (disposed) return;
+    disposed = true;
+
+    try {
+      await graphqlManager.shutdown();
+    } catch (error) {
+      logger.error("API dispose: graphqlManager.shutdown failed:", error);
+    }
+
+    try {
+      for (const client of wsServer.clients) client.terminate();
+      await new Promise<void>((resolve) => wsServer.close(() => resolve()));
+    } catch (error) {
+      logger.error("API dispose: wsServer.close failed:", error);
+    }
+
+    if (httpServer.listening) {
+      try {
+        // closeAllConnections forces idle keep-alives shut so close() can resolve;
+        // otherwise SIGINT-driven shutdown stalls until the OS reaps the sockets.
+        httpServer.closeAllConnections();
+        await new Promise<void>((resolve, reject) =>
+          httpServer.close((err) => (err ? reject(err) : resolve())),
+        );
+      } catch (error) {
+        logger.error("API dispose: httpServer.close failed:", error);
+      }
+    }
+
+    for (const close of dbClosers) {
+      try {
+        await close();
+      } catch (error) {
+        logger.error("API dispose: db closer failed:", error);
+      }
+    }
   };
 }
 
@@ -722,6 +830,7 @@ export async function initializeAndStartAPI(
     authorizationService,
     attachments,
     packages,
+    dbClosers,
   } = await trace(
     "reactor-api.setup.infrastructure",
     { tags: { "resource.name": "infrastructure" } },
@@ -788,6 +897,7 @@ export async function initializeAndStartAPI(
     attachments,
     authorizationService,
     documentModelRegistry,
+    dbClosers,
   );
 
   return {

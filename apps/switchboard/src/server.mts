@@ -41,7 +41,7 @@ import {
 } from "document-model";
 import dotenv from "dotenv";
 import { Kysely, PostgresDialect } from "kysely";
-import { PGliteDialect } from "kysely-pglite-dialect";
+import { ClosablePGliteDialect } from "./pglite-dialect.js";
 import { promises as fs } from "node:fs";
 import net from "node:net";
 import { register } from "node:module";
@@ -241,6 +241,16 @@ async function initServer(
     ? resolvePgliteMajorForDir(readModelPgliteDir)
     : null;
 
+  // The reactor-api owns its own PGlite/HTTP/WS resources but has no shutdown
+  // path of its own; we register `api.dispose` as a reactor shutdown hook so
+  // those resources drain inside the reactor's SIGINT chain. The reference
+  // is forward — `initializeClient` runs (and registers the hook) before
+  // `initializeAndStartAPI` returns the api — so the closure reads `apiRef`
+  // at hook-fire time, not at registration time.
+  const apiRef: { current: { dispose: () => Promise<void> } | undefined } = {
+    current: undefined,
+  };
+
   // HTTP registry package loading
   const configPath =
     options.configFile ?? path.join(process.cwd(), "powerhouse.config.json");
@@ -303,13 +313,17 @@ async function initServer(
       const { PGlite } = await loadPGliteModule(reactorPgliteMajor);
       const pglite = new PGlite(reactorPgliteDir);
       const kysely = new Kysely<Database>({
-        dialect: new PGliteDialect(pglite),
+        dialect: new ClosablePGliteDialect(pglite),
       });
       builder.withKysely(kysely);
       logger.info(
         `Using PGlite (PG${reactorPgliteMajor}) for reactor storage at ${reactorPgliteDir}`,
       );
     }
+
+    builder.withShutdownHook(async () => {
+      if (apiRef.current) await apiRef.current.dispose();
+    });
 
     if (httpLoader && dynamicModelLoading) {
       builder.withDocumentModelLoader(httpLoader.documentModelLoader);
@@ -407,6 +421,7 @@ async function initServer(
     },
     "switchboard",
   );
+  apiRef.current = api;
 
   registerAttachmentRoutes(api);
 
