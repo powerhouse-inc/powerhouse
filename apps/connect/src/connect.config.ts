@@ -16,9 +16,6 @@ export const env = loadRuntimeEnv({
   processEnv: import.meta.env,
 });
 
-const envExplicit =
-  typeof PH_CONNECT_EXPLICIT_ENV === "undefined" ? {} : PH_CONNECT_EXPLICIT_ENV;
-
 function getRouterBasenameFromBasePath(basePath: string) {
   return basePath.endsWith("/") ? basePath : basePath + "/";
 }
@@ -88,17 +85,6 @@ function getBuiltInDefaults(
   };
 }
 
-function envExplicitToConfig(): Partial<PHGlobalConfig> {
-  const result: Partial<PHGlobalConfig> = {};
-
-  if ("PH_CONNECT_DISABLE_ADD_DRIVE" in envExplicit) {
-    result.isAddDriveEnabled =
-      !(envExplicit.PH_CONNECT_DISABLE_ADD_DRIVE as boolean);
-  }
-
-  return result;
-}
-
 export function buildPHGlobalConfig(
   basePath: string,
   routerBasename: string,
@@ -111,14 +97,11 @@ export function buildPHGlobalConfig(
     fileOverrides.isAddDriveEnabled = connectFromConfig.drives.allowAddDrive;
   }
 
-  const explicitOverrides = envExplicitToConfig();
-
   return {
     basePath,
     routerBasename,
     ...defaults,
     ...fileOverrides,
-    ...explicitOverrides,
   };
 }
 

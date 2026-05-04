@@ -118,11 +118,17 @@ const appConfigSchema = z.object({
   PH_CONNECT_BASE_PATH: z.string().optional(),
 
   /**
-   * Default drives URL to load on startup
+   * Default drives URL to load on startup.
+   * @deprecated Set `connect.drives.defaultDrives` in powerhouse.config.json
+   * instead. This env var is now used only as a first-time seed for the
+   * config file (set-if-absent semantics). See CONNECT-CONFIG.md §13.
    */
   PH_CONNECT_DEFAULT_DRIVES_URL: z.string().optional(),
-  /*
-   * Names of packages to load in connect
+  /**
+   * Names of packages to load in connect.
+   * @deprecated Set the `packages[]` array in powerhouse.config.json instead.
+   * This env var is now used only as a first-time seed for the config file
+   * (set-if-absent semantics). See CONNECT-CONFIG.md §13.
    */
   PH_CONNECT_PACKAGES: z.string().optional(),
   /**
@@ -165,8 +171,12 @@ const appConfigSchema = z.object({
  */
 const featureFlagsSchema = z.object({
   /**
-   * Hide the "Add Drive" button completely
+   * Hide the "Add Drive" button completely.
    * @default false
+   * @deprecated Set `connect.drives.allowAddDrive` (inverted) in
+   * powerhouse.config.json instead. This env var is now used only as a
+   * first-time seed for the config file (set-if-absent semantics).
+   * See CONNECT-CONFIG.md §13.
    */
   PH_CONNECT_DISABLE_ADD_DRIVE: booleanString.default(false),
 
