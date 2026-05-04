@@ -65,7 +65,7 @@ export async function reactorGraphqlMutateDocument(
     );
   }
 
-  const result = await client.MutateDocumentAsync({
+  const result = await client.MutateDocument({
     documentIdentifier,
     actions,
   });

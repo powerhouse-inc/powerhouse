@@ -88,27 +88,6 @@ function phDocumentOperationsFromGetDocumentWithOperationsQuery(
   };
   return documentOperations as DocumentOperations;
 }
-
-export function identifierFromDeleteDocumentOperationVariables(
-  variables: unknown,
-) {
-  return z
-    .object({
-      identifier: z.string(),
-    })
-    .parse(variables).identifier;
-}
-
-export function identifiersFromDeleteDocumentsOperationVariables(
-  variables: unknown,
-) {
-  return z
-    .object({
-      identifiers: z.array(z.string()),
-    })
-    .parse(variables).identifiers;
-}
-
 export function identifierFromMutateDocumentOperationVariables(
   variables: unknown,
 ) {

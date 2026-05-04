@@ -33,14 +33,6 @@ export class GraphQLClientDocumentCache implements IDocumentCache {
     window.addEventListener("MutateDocumentAsync", (event) => {
       this.handleDocumentMutated(event.detail.identifier).catch(console.error);
     });
-
-    window.addEventListener("DeleteDocument", (event) => {
-      this.handleDocumentDeleted(event.detail.identifier);
-    });
-
-    window.addEventListener("DeleteDocuments", (event) => {
-      this.handleDocumentsDeleted(event.detail.identifiers);
-    });
   }
 
   get(id: string, refetch?: boolean): Promise<PHDocument> {

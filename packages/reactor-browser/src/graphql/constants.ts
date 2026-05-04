@@ -6,6 +6,8 @@ export const graphqlEventsToSyncDrive = [
   "AddChildren",
   "RemoveChildren",
   "MoveChildren",
+  "DeleteDocument",
+  "DeleteDocuments",
 ] as const;
 
 export const graphqlDocumentEvents = [

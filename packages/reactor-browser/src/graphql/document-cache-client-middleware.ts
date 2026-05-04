@@ -1,13 +1,7 @@
 import { isIncludedIn, isStrictEqual } from "remeda";
-import {
-  identifierFromDeleteDocumentOperationVariables,
-  identifiersFromDeleteDocumentsOperationVariables,
-} from "./adapters.js";
+import { identifierFromMutateDocumentOperationVariables } from "./adapters.js";
 import { graphqlEventsToSyncDrive } from "./constants.js";
-import {
-  dispatchGraphQLClientDocumentEvent,
-  dispatchGraphQLClientDocumentsEvent,
-} from "./events.js";
+import { dispatchGraphQLClientDocumentEvent } from "./events.js";
 import type { SdkFunctionWrapper } from "./gen/schema.js";
 
 export const documentCacheClientMiddleware: SdkFunctionWrapper = async (
@@ -23,27 +17,10 @@ export const documentCacheClientMiddleware: SdkFunctionWrapper = async (
     window.dispatchEvent(new CustomEvent(operationName));
   }
 
-  if (
-    isStrictEqual(operationName, "MutateDocument") ||
-    isStrictEqual(operationName, "MutateDocumentAsync")
-  ) {
+  if (isStrictEqual(operationName, "MutateDocument")) {
     dispatchGraphQLClientDocumentEvent(
       operationName,
-      identifierFromDeleteDocumentOperationVariables(variables),
-    );
-  }
-
-  if (isStrictEqual(operationName, "DeleteDocument")) {
-    dispatchGraphQLClientDocumentEvent(
-      operationName,
-      identifierFromDeleteDocumentOperationVariables(variables),
-    );
-  }
-
-  if (isStrictEqual(operationName, "DeleteDocuments")) {
-    dispatchGraphQLClientDocumentsEvent(
-      operationName,
-      identifiersFromDeleteDocumentsOperationVariables(variables),
+      identifierFromMutateDocumentOperationVariables(variables),
     );
   }
 

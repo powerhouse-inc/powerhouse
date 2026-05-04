@@ -1,21 +1,8 @@
-import {
-  DEFAULT_DRIVE_ID,
-  reactorGraphqlCreateDocument,
-} from "@powerhousedao/reactor-browser";
-import { utils } from "document-models/test-doc";
-import { randomInteger, randomString } from "remeda";
+import { reactorGraphqlCreateDocument } from "@powerhousedao/reactor-browser";
+import { createTestDocDocument } from "document-models/test-doc";
 
 async function createTestDocument() {
-  const document = utils.createDocument(
-    utils.createState({
-      global: {
-        name: `test-doc-${randomInteger(1, 100)}`,
-        description: randomString(15),
-        id: randomInteger(1, 1000),
-        value: randomString(1000),
-      },
-    }),
-  );
+  const document = createTestDocDocument();
   const result = await reactorGraphqlCreateDocument(document);
   return result;
 }

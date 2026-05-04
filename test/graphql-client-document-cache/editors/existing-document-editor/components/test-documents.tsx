@@ -2,6 +2,7 @@
 import {
   reactorGraphqlDeleteDocument,
   reactorGraphqlDeleteDocuments,
+  useSelectedDrive,
 } from "@powerhousedao/reactor-browser";
 import { useTestDocDocumentsInSelectedDrive } from "document-models/test-doc";
 import { useState } from "react";
@@ -26,7 +27,8 @@ export function TestDocuments() {
         <>
           {documents?.map((document) => (
             <p key={document.header.id}>
-              {document.state.global.name} ({document.header.documentType}){" "}
+              {document.state.global.name} - {document.state.global.value} (
+              {document.header.documentType}){" "}
               <button
                 onClick={() => {
                   reactorGraphqlDeleteDocument(document.header.id).catch(
