@@ -3,6 +3,7 @@ import {
   commonGlobalEventHandlerFunctions,
   createClient,
   setDocumentCache,
+  setGraphQLReactorClient,
   setSelectedNode,
 } from "@powerhousedao/reactor-browser";
 import { forEach } from "remeda";
@@ -22,7 +23,7 @@ export async function initGraphQLReactorClientWithDocumentCache(
   callEventHandlerRegisterFunctions(commonGlobalEventHandlerFunctions);
 
   const client = createClient(switchboardUrl, documentCacheClientMiddleware);
-  window.ph.reactorGraphQLClient = client;
+  setGraphQLReactorClient(client);
   await reactorGraphqlSyncDrive(driveId);
   setSelectedNode(undefined);
   setDocumentCache(new GraphQLClientDocumentCache());

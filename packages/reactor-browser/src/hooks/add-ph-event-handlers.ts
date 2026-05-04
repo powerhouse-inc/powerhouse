@@ -93,6 +93,7 @@ export const commonGlobalEventHandlerFunctions = {
     addSetSelectedNodeOnPopStateEventHandler();
   },
   documentCache: addDocumentCacheEventHandler,
+  reactorGraphQLClient: addReactorClientEventHandler,
 };
 
 const phGlobalEventHandlerRegisterFunctions: PHGlobalEventHandlerAdders = {
