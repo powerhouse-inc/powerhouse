@@ -61,14 +61,14 @@ http {
             add_header Expires "0";
         }
 
-        # Operator-mutable runtime config: never cache so post-deploy edits
-        # are visible on the next page load.
+        # Operator-mutable runtime config: force revalidation on every load
+        # so post-deploy edits are visible immediately, but allow ETag-based
+        # 304s when the file is unchanged (saves the body transfer).
         location = ${PH_CONNECT_BASE_PATH}/powerhouse.config.json {
             alias /var/www/html/project/powerhouse.config.json;
             access_log off;
             log_not_found off;
-            etag off;
-            add_header Cache-Control "no-store" always;
+            add_header Cache-Control "no-cache" always;
         }
 
         location ~ ${PH_CONNECT_BASE_PATH}/(?!index\.html$)([^/]+\.[a-z0-9]+)$ {
