@@ -1,4 +1,5 @@
 import { Icon, PowerhouseButton } from "#design-system";
+import type { DriveSystemInfoState } from "@powerhousedao/reactor-browser";
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import type { SharingType } from "@powerhousedao/shared/document-drive";
 import { useState } from "react";
@@ -23,6 +24,7 @@ type DriveSettingsFormProps = {
   drive: DocumentDriveDocument;
   sharingType: SharingType;
   availableOffline: boolean;
+  systemInfo: DriveSystemInfoState;
   onSubmit: DriveSettingsFormSubmitHandler;
   handleCancel: () => void;
   handleDeleteDrive: () => void;
@@ -31,11 +33,18 @@ type DriveSettingsFormProps = {
 export type DriveSettingsFormSubmitHandler = SubmitHandler<Inputs>;
 
 export function DriveSettingsForm(props: DriveSettingsFormProps) {
-  const { drive, sharingType, availableOffline, onSubmit, handleDeleteDrive } =
-    props;
+  const {
+    drive,
+    sharingType,
+    availableOffline,
+    systemInfo,
+    onSubmit,
+    handleDeleteDrive,
+  } = props;
   const name = drive.header.name;
 
   const [showLocationSettings, setShowLocationSettings] = useState(false);
+  const [showAbout, setShowAbout] = useState(false);
   const [showDangerZone, setShowDangerZone] = useState(false);
   const [showDeleteDrive, setShowDeleteDrive] = useState(false);
 
@@ -64,6 +73,35 @@ export function DriveSettingsForm(props: DriveSettingsFormProps) {
       >
         <LocationInfo location={location} />
         <AvailableOfflineToggle {...register("availableOffline")} />
+      </Disclosure>
+      <Divider className="my-3" />
+      <Disclosure
+        isOpen={showAbout}
+        onOpenChange={() => setShowAbout(!showAbout)}
+        title="About this drive"
+      >
+        {systemInfo.status === "local" && (
+          <p className="py-2 text-sm text-gray-500">Local drive — N/A</p>
+        )}
+        {systemInfo.status === "loading" && (
+          <p className="py-2 text-sm text-gray-400">Loading…</p>
+        )}
+        {systemInfo.status === "error" && (
+          <p className="py-2 text-sm text-red-600">
+            Could not load system info
+          </p>
+        )}
+        {systemInfo.status === "ready" && (
+          <div className="py-2 text-sm text-gray-700">
+            <div>
+              <span className="font-medium">Version:</span> {systemInfo.version}
+            </div>
+            <div>
+              <span className="font-medium">Git hash:</span>{" "}
+              {systemInfo.gitHash}
+            </div>
+          </div>
+        )}
       </Disclosure>
       <Divider className="my-3" />
       <Disclosure

@@ -26,6 +26,7 @@ export const Default: Story = {
     onOpenChange() {},
     sharingType: "LOCAL",
     availableOffline: true,
+    systemInfo: { status: "local" },
     open: true,
   },
   render: function Wrapper(args) {

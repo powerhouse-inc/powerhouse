@@ -1,5 +1,6 @@
 import type { DivProps } from "#design-system";
 import { Icon, Modal } from "#design-system";
+import type { DriveSystemInfoState } from "@powerhousedao/reactor-browser";
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import type { SharingType } from "@powerhousedao/shared/document-drive";
 import type { ComponentPropsWithoutRef } from "react";
@@ -16,6 +17,7 @@ export type DriveSettingsModalProps = {
   drive: DocumentDriveDocument;
   sharingType: SharingType;
   availableOffline: boolean;
+  systemInfo: DriveSystemInfoState;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onRenameDrive: (drive: DocumentDriveDocument, newName: string) => void;
@@ -37,6 +39,7 @@ export function DriveSettingsModal(props: DriveSettingsModalProps) {
     open,
     sharingType,
     availableOffline,
+    systemInfo,
     onOpenChange,
     onDeleteDrive,
     onRenameDrive,
@@ -102,6 +105,7 @@ export function DriveSettingsModal(props: DriveSettingsModalProps) {
           drive={drive}
           sharingType={sharingType}
           availableOffline={availableOffline}
+          systemInfo={systemInfo}
         />
       </div>
     </Modal>
