@@ -20,6 +20,7 @@ const externalDevDepsTemplate = innerJsonBody(externalDevDependencies);
 const scriptsTemplate = json`
   "test": "vitest run",
   "test:watch": "vitest",
+  "test:coverage": "vitest run --coverage",
   "lint": "eslint --config eslint.config.js --cache --cache-strategy content",
   "lint:fix": "npm run lint -- --fix",
   "tsc": "tsc",
