@@ -24,13 +24,13 @@ export function documentModelModuleFileTemplate({
   import { utils } from "./utils.js";
 
   /** Document model module for the ${pascalCaseDocumentType} document type */
-  export const ${pascalCaseDocumentType}: DocumentModelModule<${phStateName}> = {
+  export const ${pascalCaseDocumentType} = {
     version: ${version},
     reducer,
     actions,
     utils,
     documentModel: createState(defaultBaseState(), documentModel),
-  };
+  } as const satisfies DocumentModelModule<${phStateName}>;
 `;
 
   return template.raw;
