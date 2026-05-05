@@ -1,4 +1,4 @@
-import type { Kysely } from "kysely";
+import { sql, type Kysely, type SqlBool } from "kysely";
 
 export async function up(db: Kysely<any>): Promise<void> {
   await db.schema.dropIndex("idx_reservation_expires_at").ifExists().execute();
@@ -7,7 +7,7 @@ export async function up(db: Kysely<any>): Promise<void> {
     .createIndex("idx_reservation_expires_at_active")
     .on("attachment_reservation")
     .column("expires_at_utc")
-    .where("deleted_at_utc", "is", null)
+    .where(sql<SqlBool>`deleted_at_utc IS NULL`)
     .execute();
 }
 

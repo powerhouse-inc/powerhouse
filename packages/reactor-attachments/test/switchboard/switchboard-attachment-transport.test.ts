@@ -4,6 +4,7 @@ import { streamFromString } from "../factories.js";
 
 const REMOTE_URL = "https://switchboard.example.com";
 const TEST_HASH = "abc123def456";
+const anyString = (): string => expect.any(String) as unknown as string;
 const TEST_METADATA = {
   mimeType: "application/pdf",
   fileName: "invoice",
@@ -162,8 +163,8 @@ describe("SwitchboardAttachmentTransport", () => {
         fileName: "unknown",
         sizeBytes: 512,
         extension: null,
-        createdAtUtc: expect.any(String),
-        lastAccessedAtUtc: expect.any(String),
+        createdAtUtc: anyString(),
+        lastAccessedAtUtc: anyString(),
       });
     });
 
@@ -186,8 +187,8 @@ describe("SwitchboardAttachmentTransport", () => {
         fileName: "unknown",
         sizeBytes: 512,
         extension: null,
-        createdAtUtc: expect.any(String),
-        lastAccessedAtUtc: expect.any(String),
+        createdAtUtc: anyString(),
+        lastAccessedAtUtc: anyString(),
       });
     });
 
@@ -244,8 +245,8 @@ describe("SwitchboardAttachmentTransport", () => {
         fileName: "unknown",
         sizeBytes: 512,
         extension: null,
-        createdAtUtc: expect.any(String),
-        lastAccessedAtUtc: expect.any(String),
+        createdAtUtc: anyString(),
+        lastAccessedAtUtc: anyString(),
       });
     });
 
@@ -272,8 +273,8 @@ describe("SwitchboardAttachmentTransport", () => {
         fileName: "unknown",
         sizeBytes: 512,
         extension: null,
-        createdAtUtc: expect.any(String),
-        lastAccessedAtUtc: expect.any(String),
+        createdAtUtc: anyString(),
+        lastAccessedAtUtc: anyString(),
       });
     });
 
@@ -301,8 +302,8 @@ describe("SwitchboardAttachmentTransport", () => {
         fileName: "unknown",
         sizeBytes: 512,
         extension: null,
-        createdAtUtc: expect.any(String),
-        lastAccessedAtUtc: expect.any(String),
+        createdAtUtc: anyString(),
+        lastAccessedAtUtc: anyString(),
       });
     });
 
