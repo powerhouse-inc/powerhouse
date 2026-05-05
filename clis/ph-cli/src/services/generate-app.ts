@@ -58,5 +58,7 @@ export async function startGenerateApp(
     );
   } else {
     console.log("Please specify either `name`, `dir`, or `all`.");
+    return;
   }
+  await project.save();
 }

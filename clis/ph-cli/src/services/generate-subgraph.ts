@@ -27,5 +27,7 @@ export async function startGenerateSubgraph(
     await generateSubgraph(subgraphName, project);
   } else {
     console.log("Please specify either `name`, `dir`, or `all`.");
+    return;
   }
+  await project.save();
 }
