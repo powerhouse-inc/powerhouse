@@ -158,6 +158,45 @@ describe("RemoteReservationStore", () => {
     await expect(store.get("r-1")).rejects.toThrow(/Reservation get failed/);
   });
 
+  it("get throws when the server returns a payload missing required fields", async () => {
+    mockFetch.mockResolvedValue(
+      mockResponse(200, {
+        json: { reservationId: "r-1", mimeType: "text/plain" },
+      }),
+    );
+    await expect(store.get("r-1")).rejects.toThrow(
+      /does not match the Reservation shape/,
+    );
+  });
+
+  it("get throws when the server returns a payload with wrong field types", async () => {
+    mockFetch.mockResolvedValue(
+      mockResponse(200, {
+        json: {
+          reservationId: "r-1",
+          mimeType: "text/plain",
+          fileName: "x.txt",
+          extension: 42,
+          createdAtUtc: "2024-01-01T00:00:00.000Z",
+          expiresAtUtc: "2024-01-02T00:00:00.000Z",
+        },
+      }),
+    );
+    await expect(store.get("r-1")).rejects.toThrow(
+      /does not match the Reservation shape/,
+    );
+  });
+
+  it("get throws when the server returns a non-JSON body", async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      statusText: "OK",
+      json: () => Promise.reject(new Error("invalid json")),
+    } as unknown as Response);
+    await expect(store.get("r-1")).rejects.toThrow(/non-JSON response/);
+  });
+
   it("delete sends DELETE and resolves on 204", async () => {
     mockFetch.mockResolvedValue(mockResponse(204));
 

@@ -10,6 +10,23 @@ export type SwitchboardClientConfig = {
   fetchFn?: typeof fetch;
 };
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isReservation(value: unknown): value is Reservation {
+  if (!isRecord(value)) return false;
+  if (typeof value.reservationId !== "string") return false;
+  if (typeof value.mimeType !== "string") return false;
+  if (typeof value.fileName !== "string") return false;
+  if (value.extension !== null && typeof value.extension !== "string") {
+    return false;
+  }
+  if (typeof value.createdAtUtc !== "string") return false;
+  if (typeof value.expiresAtUtc !== "string") return false;
+  return true;
+}
+
 export class RemoteReservationStore implements IReservationStore {
   private readonly remoteUrl: string;
   private readonly jwtHandler?: JwtHandler;
@@ -78,7 +95,18 @@ export class RemoteReservationStore implements IReservationStore {
       );
     }
 
-    return (await response.json()) as Reservation;
+    let parsed: unknown;
+    try {
+      parsed = await response.json();
+    } catch {
+      throw new Error("Reservation get returned non-JSON response");
+    }
+    if (!isReservation(parsed)) {
+      throw new Error(
+        "Reservation get returned a payload that does not match the Reservation shape",
+      );
+    }
+    return parsed;
   }
 
   async delete(reservationId: string): Promise<void> {
