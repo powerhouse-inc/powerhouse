@@ -1,6 +1,5 @@
 {
   "compilerOptions": {
-    "outDir": "./dist",
     "rootDir": ".",
     // paths for easy access to project modules
     "paths": {
@@ -19,6 +18,7 @@
     "types": ["node", "vite/client", "vitest/globals"],
     "lib": ["ESNext", "dom", "dom.iterable"],
     "declaration": true,
+    "declarationDir": "./dist/types",
     "declarationMap": true,
     "emitDeclarationOnly": true,
     "strict": true,
@@ -28,5 +28,34 @@
     "skipLibCheck": true
   },
   "include": ["**/*", "./powerhouse.manifest.json"],
-  "exclude": ["dist", "node_modules", ".ph", "vitest.config.ts"]
+  "exclude": ["dist", "node_modules", ".ph", "vitest.config.ts"],
+  "references": [
+    {
+      "path": "../../apps/connect"
+    },
+    {
+      "path": "../../clis/ph-cli"
+    },
+    {
+      "path": "../../packages/analytics-engine/core"
+    },
+    {
+      "path": "../../packages/design-system"
+    },
+    {
+      "path": "../../packages/document-model"
+    },
+    {
+      "path": "../../packages/reactor"
+    },
+    {
+      "path": "../../packages/reactor-api"
+    },
+    {
+      "path": "../../packages/reactor-browser"
+    },
+    {
+      "path": "../../packages/shared"
+    }
+  ]
 }

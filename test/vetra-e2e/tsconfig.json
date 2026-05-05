@@ -3,7 +3,11 @@
   "compilerOptions": {
     "outDir": "./dist",
     "resolveJsonModule": true,
-    "types": ["node", "vite/client", "vitest/globals"],
+    "types": [
+      "node",
+      "vite/client",
+      "vitest/globals"
+    ],
     "paths": {
       "document-models": [
         "./document-models/index.ts"
@@ -52,6 +56,9 @@
     },
     {
       "path": "../e2e-utils"
+    },
+    {
+      "path": "../versioned-documents"
     }
   ],
   "include": [
