@@ -150,6 +150,166 @@ export default function Editor() {
 
 The \`useSelectedTodoDocument\` gets generated automatically so you don't need to implement it yourself.
 
+### Drag-and-drop file uploads (optional pattern)
+
+Use this pattern **only** when your editor needs to accept arbitrary file drops (images, PDFs, CSVs, attachments, etc.). Default editors do **not** need any of this — skip this entire section if your editor does not handle file uploads.
+
+#### Why the default does not work
+
+Connect wraps every editor inside a \`DropZoneWrapper\` (from \`@powerhousedao/design-system/connect\`). That outer wrapper:
+
+1. Only accepts \`.phd\`, \`.phdm\`, and \`.zip\` files (Powerhouse document files).
+2. Sets \`dataTransfer.dropEffect = "none"\` (the blocked / no-entry cursor) for any other file type.
+3. Calls \`event.stopPropagation()\` on \`dragover\`, \`dragenter\`, and \`dragleave\` so events do not bubble past it.
+4. Shows a full-screen overlay when a valid Powerhouse document is dragged in.
+
+Your editor is a **descendant** of \`DropZoneWrapper\`. DOM events bubble inner → outer, so your editor's handlers run **before** DropZone's. Calling \`stopPropagation()\` in your editor prevents DropZone from ever seeing the event — that is how you bypass the \`dropEffect = "none"\` block and accept arbitrary files.
+
+#### Implementation recipe
+
+Attach all four drag handlers (\`onDragOver\`, \`onDragEnter\`, \`onDragLeave\`, \`onDrop\`) to your editor's **root \`div\`**. Always gate every handler on \`event.dataTransfer.types.includes("Files")\` so internal Connect drags (e.g. sidebar nodes carrying \`UI_NODE\`) bubble through to DropZone untouched — only intercept file drags.
+
+~~~tsx
+import { useCallback, useRef, useState, type DragEvent } from "react";
+
+const ALLOWED_EXTENSIONS = [".png", ".jpg", ".jpeg", ".pdf"]; // adjust per editor
+
+function filterAcceptedFiles(fileList: FileList): File[] {
+  return Array.from(fileList).filter((file) => {
+    const lower = file.name.toLowerCase();
+    return ALLOWED_EXTENSIONS.some((ext) => lower.endsWith(ext));
+  });
+}
+
+export default function Editor() {
+  const [isDragOver, setIsDragOver] = useState(false);
+  const dragDepthRef = useRef(0);
+
+  const onEditorDragOver = useCallback((e: DragEvent) => {
+    if (e.dataTransfer.types.includes("Files")) {
+      e.preventDefault(); // signals "drop is allowed here"
+      e.stopPropagation(); // blocks DropZone from setting dropEffect="none"
+    }
+  }, []);
+
+  const onEditorDragEnter = useCallback((e: DragEvent) => {
+    if (e.dataTransfer.types.includes("Files")) {
+      e.stopPropagation();
+      dragDepthRef.current += 1;
+      if (dragDepthRef.current === 1) setIsDragOver(true);
+    }
+  }, []);
+
+  const onEditorDragLeave = useCallback((e: DragEvent) => {
+    if (e.dataTransfer.types.includes("Files")) {
+      e.stopPropagation();
+      dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
+      if (dragDepthRef.current === 0) setIsDragOver(false);
+    }
+  }, []);
+
+  const onEditorDrop = useCallback((e: DragEvent) => {
+    if (e.dataTransfer.types.includes("Files")) {
+      e.preventDefault(); // prevents the browser from opening the file
+      e.stopPropagation();
+      dragDepthRef.current = 0;
+      setIsDragOver(false);
+
+      const accepted = filterAcceptedFiles(e.dataTransfer.files);
+      if (accepted.length === 0) return; // silently ignore rejected files
+      handleFiles(accepted);
+    }
+  }, []);
+
+  return (
+    <div
+      onDragOver={onEditorDragOver}
+      onDragEnter={onEditorDragEnter}
+      onDragLeave={onEditorDragLeave}
+      onDrop={onEditorDrop}
+      className="relative"
+    >
+      {isDragOver && (
+        <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="border-primary/60 bg-background/90 flex flex-col items-center gap-3 rounded-2xl border-2 border-dashed px-10 py-8 shadow-lg">
+            <p className="text-foreground text-base font-medium">
+              Drop files to attach
+            </p>
+          </div>
+        </div>
+      )}
+      {/* ... editor content ... */}
+    </div>
+  );
+}
+~~~
+
+#### Drag-depth counter (flicker-free overlay)
+
+\`dragenter\` and \`dragleave\` fire every time the cursor crosses **any** child boundary inside the editor. Without a depth counter the overlay flickers on/off as the cursor moves over nested elements. The required pattern:
+
+- \`dragenter\`: increment depth; show the overlay when depth goes \`0\` → \`1\`.
+- \`dragleave\`: decrement depth; hide the overlay when depth returns to \`0\`.
+- \`drop\`: reset depth to \`0\` and hide the overlay unconditionally.
+
+#### Drop overlay rules
+
+The overlay \`div\` **MUST** use \`pointer-events-none\`. Without it, the overlay element captures the \`drop\` event and your handler on the root \`div\` will never fire. Use theme tokens (\`bg-background\`, \`text-foreground\`, \`text-primary\`, etc.) so the overlay renders correctly in both light and dark mode.
+
+#### File-type validation
+
+Always validate dropped files at the editor level — do not assume the user dropped what you expect. The \`filterAcceptedFiles\` helper above filters by file-name extension (case-insensitive). For stricter validation, additionally check \`file.type\` (MIME type) before processing. Files that fail validation should be **silently ignored** or surfaced via a toast/notification — never throw on unexpected input, since drag-and-drop is a user-initiated action and exceptions will surface as uncaught render errors.
+
+#### Bridging file handlers in child component contexts
+
+If your file-upload handler lives inside a **child** component's React context (for example, \`usePromptInputAttachments().add\` inside a \`PromptInput\`), you cannot call it directly from the editor root. Use a ref bridge:
+
+~~~tsx
+// editor.tsx — expose a ref the child fills in:
+const addFilesRef = useRef<((files: File[]) => void) | null>(null);
+
+// inside onEditorDrop, after filtering:
+addFilesRef.current?.(accepted);
+
+// pass the ref down to the child:
+<ChatInputBar addFilesRef={addFilesRef} />;
+~~~
+
+~~~tsx
+// ChatInputBar.tsx — bridge component mounted inside the consumer's context:
+import type { MutableRefObject } from "react";
+import { useEffect } from "react";
+
+function DropBridge({
+  addFilesRef,
+}: {
+  addFilesRef?: MutableRefObject<((files: File[]) => void) | null>;
+}) {
+  const { add } = usePromptInputAttachments();
+  useEffect(() => {
+    if (addFilesRef) addFilesRef.current = add;
+    return () => {
+      if (addFilesRef) addFilesRef.current = null;
+    };
+  }, [add, addFilesRef]);
+  return null;
+}
+
+<PromptInput onSubmit={handleSubmit} multiple>
+  <DropBridge addFilesRef={addFilesRef} />
+  {/* ... */}
+</PromptInput>;
+~~~
+
+#### Common pitfalls — DO NOT make these mistakes
+
+1. **Do NOT use \`globalDrop\` together with \`stopPropagation\`.** \`PromptInput\`'s \`globalDrop\` prop attaches drop handlers on \`document\`. \`stopPropagation()\` at the editor root prevents events from ever reaching \`document\`. The two are incompatible — use the ref-bridge pattern instead.
+2. **Always \`preventDefault()\` on BOTH \`dragover\` AND \`drop\`.** Without \`preventDefault\` on \`dragover\`, the browser signals "drop not allowed" and the \`drop\` event will not fire at all. Without \`preventDefault\` on \`drop\`, the browser navigates away to open the dropped file.
+3. **Always gate handlers on \`e.dataTransfer.types.includes("Files")\`.** Connect uses non-file drag types internally (e.g. \`UI_NODE\` for sidebar items). Those drags must bubble through to DropZone untouched — only intercept file drags.
+4. **\`dragenter\` and \`dragleave\` do NOT need \`preventDefault\`.** \`stopPropagation()\` alone is enough on those two; only \`dragover\` and \`drop\` require \`preventDefault\`.
+5. **The overlay \`div\` MUST have \`pointer-events-none\`.** Otherwise the overlay swallows the \`drop\` event and your drop handler never fires.
+6. **Reset \`dragDepthRef.current = 0\` inside \`onDrop\`.** Otherwise a subsequent drag will start with stale depth and the overlay logic breaks.
+
 ## ⚠️ CRITICAL: Generated Files & Modification Rules
 
 ### Generated Files Rule
