@@ -118,8 +118,8 @@ export class RemoteReservationStore implements IReservationStore {
       headers: authHeaders,
     });
 
-    // 204 = success; 404 = already gone, treat as idempotent success.
-    if (!response.ok && response.status !== 404) {
+    // 2xx = success; 404 / 410 = already gone, treat as idempotent success.
+    if (!response.ok && response.status !== 404 && response.status !== 410) {
       throw new Error(
         `Reservation delete failed: ${response.status} ${response.statusText}`,
       );

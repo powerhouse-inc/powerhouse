@@ -30,6 +30,15 @@ export type AttachmentHeader = {
  * access time; it is optional because not every producer (e.g. a fresh
  * `put` from a transport) tracks access yet. Receiving stores that
  * persist locally (LRU concerns) reset it on every read regardless.
+ *
+ * Reliability note: `lastAccessedAtUtc` arriving over the wire is
+ * best-effort. When the producer omits it, the consumer (see
+ * `RemoteAttachmentStore` / `SwitchboardAttachmentTransport`) coalesces
+ * with `createdAtUtc`, so the field can silently equal `createdAtUtc`
+ * even on a server that has never been read. Do NOT use the wire value
+ * for LRU eviction or staleness decisions on remote data; always read
+ * the field from the local store after persistence, where the receiving
+ * store is the authority.
  */
 export type AttachmentMetadata = {
   mimeType: string;

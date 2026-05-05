@@ -212,6 +212,11 @@ describe("RemoteReservationStore", () => {
     await expect(store.delete("missing")).resolves.toBeUndefined();
   });
 
+  it("delete is idempotent on 410 Gone", async () => {
+    mockFetch.mockResolvedValue(mockResponse(410, { statusText: "Gone" }));
+    await expect(store.delete("gone")).resolves.toBeUndefined();
+  });
+
   it("delete throws on other non-2xx", async () => {
     mockFetch.mockResolvedValue(
       mockResponse(500, { statusText: "Internal Server Error" }),

@@ -78,6 +78,16 @@ export class SwitchboardAttachmentTransport implements IAttachmentTransport {
   }
 
   private parseMetadataHeaders(response: Response): AttachmentMetadata {
+    // Compute the fallback at most once; both the recovery path inside the
+    // header parser and the outer "no header / parse failed" path share it.
+    let fallbackCache: AttachmentMetadata | undefined;
+    const fallback = (): AttachmentMetadata => {
+      if (fallbackCache === undefined) {
+        fallbackCache = contentTypeFallback(response);
+      }
+      return fallbackCache;
+    };
+
     const metaHeader = response.headers.get("X-Attachment-Metadata");
     if (metaHeader) {
       try {
@@ -86,17 +96,11 @@ export class SwitchboardAttachmentTransport implements IAttachmentTransport {
           if (parsed.extension === undefined) {
             parsed.extension = null;
           }
-          if (
-            parsed.createdAtUtc === undefined ||
-            parsed.lastAccessedAtUtc === undefined
-          ) {
-            const fallback = contentTypeFallback(response);
-            if (parsed.createdAtUtc === undefined) {
-              parsed.createdAtUtc = fallback.createdAtUtc;
-            }
-            if (parsed.lastAccessedAtUtc === undefined) {
-              parsed.lastAccessedAtUtc = fallback.lastAccessedAtUtc;
-            }
+          if (parsed.createdAtUtc === undefined) {
+            parsed.createdAtUtc = fallback().createdAtUtc;
+          }
+          if (parsed.lastAccessedAtUtc === undefined) {
+            parsed.lastAccessedAtUtc = fallback().lastAccessedAtUtc;
           }
         }
         if (isAttachmentMetadata(parsed)) {
@@ -106,7 +110,7 @@ export class SwitchboardAttachmentTransport implements IAttachmentTransport {
         // fall through to Content-Type fallback
       }
     }
-    return contentTypeFallback(response);
+    return fallback();
   }
 }
 

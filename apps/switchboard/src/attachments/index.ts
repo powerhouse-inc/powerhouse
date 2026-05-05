@@ -19,8 +19,6 @@ export function registerAttachmentRoutes(api: API): void {
     makeReserveHandler(attachments),
   );
 
-  // Reservation-scoped routes must precede /attachments/:hash so the hash
-  // pattern doesn't swallow them.
   mountAuthenticatedNodeRoute(
     api,
     "GET",

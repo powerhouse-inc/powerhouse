@@ -80,6 +80,16 @@ function contentTypeFallback(response: Response): AttachmentMetadata {
 }
 
 function parseMetadata(response: Response): AttachmentMetadata {
+  // Compute the fallback at most once; both the recovery path inside the
+  // header parser and the outer "no header / parse failed" path share it.
+  let fallbackCache: AttachmentMetadata | undefined;
+  const fallback = (): AttachmentMetadata => {
+    if (fallbackCache === undefined) {
+      fallbackCache = contentTypeFallback(response);
+    }
+    return fallbackCache;
+  };
+
   const metaHeader = response.headers.get("X-Attachment-Metadata");
   if (metaHeader) {
     try {
@@ -88,20 +98,14 @@ function parseMetadata(response: Response): AttachmentMetadata {
         if (parsed.extension === undefined) {
           parsed.extension = null;
         }
-        // Older switchboards may omit these timestamps; fall through to
-        // the Date/Last-Modified fallback so we never produce
-        // client-clock-stamped values when the server has authority.
-        if (
-          parsed.createdAtUtc === undefined ||
-          parsed.lastAccessedAtUtc === undefined
-        ) {
-          const fallback = contentTypeFallback(response);
-          if (parsed.createdAtUtc === undefined) {
-            parsed.createdAtUtc = fallback.createdAtUtc;
-          }
-          if (parsed.lastAccessedAtUtc === undefined) {
-            parsed.lastAccessedAtUtc = fallback.lastAccessedAtUtc;
-          }
+        // Older switchboards may omit these timestamps; fall back to the
+        // Date/Last-Modified header so we never produce client-clock-stamped
+        // values when the server has authority.
+        if (parsed.createdAtUtc === undefined) {
+          parsed.createdAtUtc = fallback().createdAtUtc;
+        }
+        if (parsed.lastAccessedAtUtc === undefined) {
+          parsed.lastAccessedAtUtc = fallback().lastAccessedAtUtc;
         }
       }
       if (isAttachmentMetadata(parsed)) {
@@ -111,7 +115,7 @@ function parseMetadata(response: Response): AttachmentMetadata {
       // fall through to Content-Type fallback
     }
   }
-  return contentTypeFallback(response);
+  return fallback();
 }
 
 export class RemoteAttachmentStore implements IAttachmentReader {
