@@ -1,3 +1,7 @@
+/**
+ * WARNING: DO NOT EDIT
+ * This file is auto-generated and updated by codegen
+ */
 import { startConnect } from "@powerhousedao/connect";
 import * as localPackage from "./index.js";
 
