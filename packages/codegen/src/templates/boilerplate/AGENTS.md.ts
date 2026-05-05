@@ -76,6 +76,7 @@ After doing changes to the code, or after creating a new document model or a new
 
 - **TypeScript Check**: Run \`npm run tsc\` to validate type safety
 - **ESLint Check**: Run \`npm run lint:fix\` to check for errors with ESLint
+- **Reducer Test Coverage**: Run \`npm run test:coverage\` after any change to a document model reducer. Document model reducers are pure synchronous functions and **MUST** stay at or above **95%** coverage on lines, branches, functions, and statements. If coverage drops below the threshold, add tests in \`document-models/<name>/v<n>/tests/\` until the threshold is restored — **DO NOT** lower the threshold or exclude files to make the check pass. Cover the happy path _and_ every error code defined via \`ADD_OPERATION_ERROR\` (each error is a branch that needs explicit test coverage).
 
 ## Document editor creation flow
 
