@@ -41,6 +41,7 @@ export const tsConfigTemplate = json`
     "declarationDir": "./dist/types",
     "declarationMap": true,
     "emitDeclarationOnly": true,
+    "incremental": true,
     "strict": true,
     "verbatimModuleSyntax": true,
     "isolatedModules": true,
