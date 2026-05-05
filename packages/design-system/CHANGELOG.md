@@ -1,3 +1,15 @@
+## 6.0.0-dev.216 (2026-05-05)
+
+### 🩹 Fixes
+
+- **codegen,ph-cli,shared:** build package types with tsc ([a1a47e932](https://github.com/powerhouse-inc/powerhouse/commit/a1a47e932))
+- **codegen,ph-cli,shared:** build package types with tsc ([f3658dddc](https://github.com/powerhouse-inc/powerhouse/commit/f3658dddc))
+
+### ❤️ Thank You
+
+- acaldas
+- Copilot
+
 ## 6.0.0-dev.215 (2026-05-05)
 
 ### 🚀 Features

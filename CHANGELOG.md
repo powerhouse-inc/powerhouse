@@ -1,3 +1,20 @@
+## 6.0.0-dev.216 (2026-05-05)
+
+### 🚀 Features
+
+- **codegen:** use satisfies DocumentModelModule instead of type cast ([348663a7a](https://github.com/powerhouse-inc/powerhouse/commit/348663a7a))
+
+### 🩹 Fixes
+
+- **codegen,ph-cli,shared:** build package types with tsc ([f3658dddc](https://github.com/powerhouse-inc/powerhouse/commit/f3658dddc))
+- **codegen,ph-cli,shared:** build package types with tsc ([a1a47e932](https://github.com/powerhouse-inc/powerhouse/commit/a1a47e932))
+- **ph-cli:** write tsmorph changes on generate commands ([b9a8a413b](https://github.com/powerhouse-inc/powerhouse/commit/b9a8a413b))
+
+### ❤️ Thank You
+
+- acaldas
+- Copilot
+
 ## 6.0.0-dev.215 (2026-05-05)
 
 ### 🚀 Features
