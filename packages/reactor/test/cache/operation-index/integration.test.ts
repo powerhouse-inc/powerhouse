@@ -174,6 +174,186 @@ describe("KyselyOperationIndex Integration", () => {
       );
     });
 
+    it("should include retroactively-joined operations even when the cursor has advanced past them", async () => {
+      const driveId = "drive-retroactive";
+      const childDocId = "child-doc-retroactive";
+      const collectionId = driveCollectionId("main", driveId);
+
+      const txn1 = operationIndex.start();
+      const createDriveActionId = generateId();
+      txn1.write([
+        {
+          id: deriveOperationId(
+            driveId,
+            "document",
+            "main",
+            createDriveActionId,
+          ),
+          documentId: driveId,
+          documentType: "powerhouse/document-drive",
+          branch: "main",
+          scope: "document",
+          sourceRemote: "",
+          index: 0,
+          timestampUtcMs: "1704067200000",
+          hash: "hash-drive-create",
+          skip: 0,
+          action: {
+            id: createDriveActionId,
+            type: "CREATE_DOCUMENT",
+            scope: "document",
+            timestampUtcMs: "1704067200000",
+            input: { documentId: driveId, model: "powerhouse/document-drive" },
+          },
+        },
+      ]);
+      txn1.createCollection(collectionId);
+      txn1.addToCollection(collectionId, driveId);
+      await operationIndex.commit(txn1);
+
+      const txn2 = operationIndex.start();
+      const createChildActionId = generateId();
+      const setChildNameActionId = generateId();
+      txn2.write([
+        {
+          id: deriveOperationId(
+            childDocId,
+            "document",
+            "main",
+            createChildActionId,
+          ),
+          documentId: childDocId,
+          documentType: "powerhouse/document-model",
+          branch: "main",
+          scope: "document",
+          sourceRemote: "",
+          index: 0,
+          timestampUtcMs: "1704067201000",
+          hash: "hash-child-create",
+          skip: 0,
+          action: {
+            id: createChildActionId,
+            type: "CREATE_DOCUMENT",
+            scope: "document",
+            timestampUtcMs: "1704067201000",
+            input: {
+              documentId: childDocId,
+              model: "powerhouse/document-model",
+            },
+          },
+        },
+        {
+          id: deriveOperationId(
+            childDocId,
+            "global",
+            "main",
+            setChildNameActionId,
+          ),
+          documentId: childDocId,
+          documentType: "powerhouse/document-model",
+          branch: "main",
+          scope: "global",
+          sourceRemote: "",
+          index: 0,
+          timestampUtcMs: "1704067202000",
+          hash: "hash-child-setname",
+          skip: 0,
+          action: {
+            id: setChildNameActionId,
+            type: "SET_NAME",
+            scope: "global",
+            timestampUtcMs: "1704067202000",
+            input: { name: "Child" },
+          },
+        },
+      ]);
+      await operationIndex.commit(txn2);
+
+      const txn3 = operationIndex.start();
+      const addFolderActionId = generateId();
+      txn3.write([
+        {
+          id: deriveOperationId(driveId, "document", "main", addFolderActionId),
+          documentId: driveId,
+          documentType: "powerhouse/document-drive",
+          branch: "main",
+          scope: "document",
+          sourceRemote: "",
+          index: 1,
+          timestampUtcMs: "1704067203000",
+          hash: "hash-add-folder",
+          skip: 0,
+          action: {
+            id: addFolderActionId,
+            type: "ADD_FOLDER",
+            scope: "document",
+            timestampUtcMs: "1704067203000",
+            input: { id: "folder-1", name: "specs" },
+          },
+        },
+      ]);
+      const folderOrdinals = await operationIndex.commit(txn3);
+      const cursorAfterFolder = folderOrdinals[0];
+
+      const beforeRelResult = await operationIndex.find(collectionId, 0);
+      const beforeChildOps = beforeRelResult.results.filter(
+        (op) => op.documentId === childDocId,
+      );
+      expect(beforeChildOps).toHaveLength(0);
+
+      const txn4 = operationIndex.start();
+      const addRelActionId = generateId();
+      txn4.write([
+        {
+          id: deriveOperationId(driveId, "document", "main", addRelActionId),
+          documentId: driveId,
+          documentType: "powerhouse/document-drive",
+          branch: "main",
+          scope: "document",
+          sourceRemote: "",
+          index: 2,
+          timestampUtcMs: "1704067204000",
+          hash: "hash-add-rel",
+          skip: 0,
+          action: {
+            id: addRelActionId,
+            type: "ADD_RELATIONSHIP",
+            scope: "document",
+            timestampUtcMs: "1704067204000",
+            input: {
+              sourceId: driveId,
+              targetId: childDocId,
+              relationshipType: "child",
+            },
+          },
+        },
+      ]);
+      txn4.addToCollection(collectionId, childDocId);
+      await operationIndex.commit(txn4);
+
+      const result = await operationIndex.find(collectionId, cursorAfterFolder);
+
+      const childOps = result.results.filter(
+        (op) => op.documentId === childDocId,
+      );
+
+      const createOp = childOps.find(
+        (op) => (op.action as { type: string }).type === "CREATE_DOCUMENT",
+      );
+      expect(createOp).toBeDefined();
+      expect(createOp?.id).toBe(
+        deriveOperationId(childDocId, "document", "main", createChildActionId),
+      );
+
+      const setNameOp = childOps.find(
+        (op) => (op.action as { type: string }).type === "SET_NAME",
+      );
+      expect(setNameOp).toBeDefined();
+      expect(setNameOp?.id).toBe(
+        deriveOperationId(childDocId, "global", "main", setChildNameActionId),
+      );
+    });
+
     it("should exclude operations after document left the collection", async () => {
       const driveId = "drive-2";
       const childDocId = "child-doc-2";
