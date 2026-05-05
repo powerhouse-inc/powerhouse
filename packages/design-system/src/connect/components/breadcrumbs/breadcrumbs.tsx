@@ -106,7 +106,7 @@ export function Breadcrumb(props: BreadcrumbProps) {
 
   return (
     <div
-      className="transition-colors last-of-type:text-gray-800 hover:text-gray-800"
+      className="cursor-pointer transition-colors last-of-type:text-gray-800 hover:text-gray-800"
       onClick={onClick}
       role="button"
     >
