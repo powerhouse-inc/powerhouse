@@ -21,6 +21,7 @@
     "typecheck": "tsc",
     "generate:cli-docs": "tsx ./scripts/generate-combined-cli-docs.ts",
     "generate:llm-docs": "tsx ./scripts/generate-llm-docs.ts",
+    "check:doc-snippets": "tsx ./scripts/check-doc-snippets.ts",
     "heroku-postbuild": "npm run build",
     "slides:preview": "marp -s ./slides",
     "slides:build": "marp ./slides"

@@ -88,7 +88,7 @@ function dispatch(
 
 Returns the ID of the currently selected document.
 
-```typescript
+```typescript check
 function useSelectedDocumentId(): string | undefined;
 ```
 
@@ -918,7 +918,7 @@ function showDeleteNodeModal(nodeOrId: Node | string): void;
 
 Returns whether the revision history panel is visible.
 
-```typescript
+```typescript check
 function useRevisionHistoryVisible(): boolean | undefined;
 ```
 
@@ -1154,7 +1154,7 @@ function setIsExternalControlsEnabled(enabled: boolean | undefined): void;
 
 Gets whether drag and drop is enabled for a given drive editor.
 
-```typescript
+```typescript check
 function useIsDragAndDropEnabled(): boolean | undefined;
 ```
 
