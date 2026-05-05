@@ -64,7 +64,7 @@ export const documentModel: DocumentModelGlobalState = {
           examples: [],
           initialValue: '{"todos":[]}',
           schema:
-            "type TodoState {\n  todos: [Todo!]!\n}\n\ntype Todo {\n  id: String!\n  title: String!\n  completed: Boolean!\n}",
+            "type TodoState {\n  todos: [TodoItem!]!\n}\n\ntype TodoItem {\n  id: String!\n  title: String!\n  completed: Boolean!\n}",
         },
         local: {
           examples: [],
@@ -139,7 +139,7 @@ export const documentModel: DocumentModelGlobalState = {
           examples: [],
           initialValue: '{"todos":[],"title":""}',
           schema:
-            "type TodoState {\n  title: String\n  todos: [Todo!]!\n}\n\ntype Todo {\n  id: String!\n  title: String!\n  completed: Boolean!\n}",
+            "type TodoState {\n  title: String\n  todos: [TodoItem!]!\n}\n\ntype TodoItem {\n  id: String!\n  title: String!\n  completed: Boolean!\n}",
         },
         local: {
           examples: [],

@@ -11,10 +11,10 @@ import type { TodoPHState } from "./gen/types.js";
 import { utils } from "./utils.js";
 
 /** Document model module for the Todo document type */
-export const Todo: DocumentModelModule<TodoPHState> = {
+export const Todo = {
   version: 1,
   reducer,
   actions,
   utils,
   documentModel: createState(defaultBaseState(), documentModel),
-};
+} as const satisfies DocumentModelModule<TodoPHState>;
