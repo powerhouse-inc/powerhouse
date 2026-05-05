@@ -310,13 +310,13 @@ describe("RemoteAttachmentStore", () => {
     });
   });
 
-  it("get returns AttachmentResponse with header populated from X-Attachment-Metadata (incl. server-sourced timestamps)", async () => {
+  it("get returns AttachmentResponse with header populated from Attachment-Metadata (incl. server-sourced timestamps)", async () => {
     const body = streamFromString("file data");
     mockFetch.mockResolvedValue(
       mockResponse(200, {
         body,
         headers: {
-          "X-Attachment-Metadata": JSON.stringify({
+          "Attachment-Metadata": JSON.stringify({
             mimeType: "text/plain",
             fileName: "file.txt",
             sizeBytes: 9,
@@ -343,7 +343,7 @@ describe("RemoteAttachmentStore", () => {
     });
   });
 
-  it("get falls back to Content-Type when X-Attachment-Metadata missing", async () => {
+  it("get falls back to Content-Type when Attachment-Metadata missing", async () => {
     mockFetch.mockResolvedValue(
       mockResponse(200, {
         body: streamFromString("data"),
@@ -361,7 +361,7 @@ describe("RemoteAttachmentStore", () => {
     expect(result.header.extension).toBeNull();
   });
 
-  it("get throws when X-Attachment-Metadata absent and Content-Length missing", async () => {
+  it("get throws when Attachment-Metadata absent and Content-Length missing", async () => {
     mockFetch.mockResolvedValue(
       mockResponse(200, {
         body: streamFromString("data"),
@@ -412,12 +412,12 @@ describe("RemoteAttachmentStore", () => {
     await expect(store.get("hash-6")).rejects.toThrow(/Content-Length/);
   });
 
-  it("get falls back to Content-Type fallback when X-Attachment-Metadata is malformed JSON", async () => {
+  it("get falls back to Content-Type fallback when Attachment-Metadata is malformed JSON", async () => {
     mockFetch.mockResolvedValue(
       mockResponse(200, {
         body: streamFromString("data"),
         headers: {
-          "X-Attachment-Metadata": "not json",
+          "Attachment-Metadata": "not json",
           "Content-Type": "image/png",
           "Content-Length": "256",
         },
@@ -451,7 +451,7 @@ describe("RemoteAttachmentStore", () => {
       mockResponse(200, {
         body: streamFromString("data"),
         headers: {
-          "X-Attachment-Metadata": JSON.stringify({
+          "Attachment-Metadata": JSON.stringify({
             mimeType: "text/plain",
             fileName: "x",
             sizeBytes: 4,
@@ -477,7 +477,7 @@ describe("RemoteAttachmentStore", () => {
       mockResponse(200, {
         body: streamFromString("payload"),
         headers: {
-          "X-Attachment-Metadata": JSON.stringify({
+          "Attachment-Metadata": JSON.stringify({
             mimeType: "text/plain",
             fileName: "p.txt",
             sizeBytes: 7,
@@ -493,12 +493,12 @@ describe("RemoteAttachmentStore", () => {
     expect(new TextDecoder().decode(bytes)).toBe("payload");
   });
 
-  it("stat issues HEAD and returns header from X-Attachment-Metadata", async () => {
+  it("stat issues HEAD and returns header from Attachment-Metadata", async () => {
     mockFetch.mockResolvedValue(
       mockResponse(200, {
         headers: {
           "Content-Length": "9",
-          "X-Attachment-Metadata": JSON.stringify({
+          "Attachment-Metadata": JSON.stringify({
             mimeType: "text/plain",
             fileName: "file.txt",
             sizeBytes: 9,

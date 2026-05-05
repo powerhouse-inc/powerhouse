@@ -43,13 +43,13 @@ describe("SwitchboardAttachmentTransport", () => {
   });
 
   describe("fetch", () => {
-    it("returns TransportResponse on 200 with X-Attachment-Metadata header", async () => {
+    it("returns TransportResponse on 200 with Attachment-Metadata header", async () => {
       const body = streamFromString("file data");
       mockFetch.mockResolvedValue(
         mockResponse(200, {
           body,
           headers: {
-            "X-Attachment-Metadata": JSON.stringify(TEST_METADATA),
+            "Attachment-Metadata": JSON.stringify(TEST_METADATA),
           },
         }),
       );
@@ -144,7 +144,7 @@ describe("SwitchboardAttachmentTransport", () => {
       );
     });
 
-    it("falls back to Content-Type when X-Attachment-Metadata absent", async () => {
+    it("falls back to Content-Type when Attachment-Metadata absent", async () => {
       mockFetch.mockResolvedValue(
         mockResponse(200, {
           body: streamFromString("data"),
@@ -167,12 +167,12 @@ describe("SwitchboardAttachmentTransport", () => {
       });
     });
 
-    it("falls back to Content-Type when X-Attachment-Metadata is malformed JSON", async () => {
+    it("falls back to Content-Type when Attachment-Metadata is malformed JSON", async () => {
       mockFetch.mockResolvedValue(
         mockResponse(200, {
           body: streamFromString("data"),
           headers: {
-            "X-Attachment-Metadata": "not json",
+            "Attachment-Metadata": "not json",
             "Content-Type": "image/png",
             "Content-Length": "512",
           },
@@ -196,7 +196,7 @@ describe("SwitchboardAttachmentTransport", () => {
         mockResponse(200, {
           body: streamFromString("data"),
           headers: {
-            "X-Attachment-Metadata": JSON.stringify({
+            "Attachment-Metadata": JSON.stringify({
               mimeType: "application/pdf",
               fileName: "invoice",
               sizeBytes: 1024,
@@ -220,12 +220,12 @@ describe("SwitchboardAttachmentTransport", () => {
       expect(result!.metadata.extension).toBeNull();
     });
 
-    it("falls back when X-Attachment-Metadata has wrong-type field", async () => {
+    it("falls back when Attachment-Metadata has wrong-type field", async () => {
       mockFetch.mockResolvedValue(
         mockResponse(200, {
           body: streamFromString("data"),
           headers: {
-            "X-Attachment-Metadata": JSON.stringify({
+            "Attachment-Metadata": JSON.stringify({
               mimeType: "application/pdf",
               fileName: "invoice",
               sizeBytes: "1024",
@@ -249,12 +249,12 @@ describe("SwitchboardAttachmentTransport", () => {
       });
     });
 
-    it("falls back when X-Attachment-Metadata is missing required field", async () => {
+    it("falls back when Attachment-Metadata is missing required field", async () => {
       mockFetch.mockResolvedValue(
         mockResponse(200, {
           body: streamFromString("data"),
           headers: {
-            "X-Attachment-Metadata": JSON.stringify({
+            "Attachment-Metadata": JSON.stringify({
               mimeType: "application/pdf",
               sizeBytes: 1024,
               extension: "pdf",
@@ -282,7 +282,7 @@ describe("SwitchboardAttachmentTransport", () => {
         mockResponse(200, {
           body: streamFromString("data"),
           headers: {
-            "X-Attachment-Metadata": JSON.stringify({
+            "Attachment-Metadata": JSON.stringify({
               mimeType: "application/pdf",
               fileName: "invoice",
               sizeBytes: -1,
@@ -306,7 +306,7 @@ describe("SwitchboardAttachmentTransport", () => {
       });
     });
 
-    it("throws when X-Attachment-Metadata absent and Content-Length missing", async () => {
+    it("throws when Attachment-Metadata absent and Content-Length missing", async () => {
       mockFetch.mockResolvedValue(
         mockResponse(200, {
           body: streamFromString("data"),

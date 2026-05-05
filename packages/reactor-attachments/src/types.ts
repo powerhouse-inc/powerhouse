@@ -23,7 +23,7 @@ export type AttachmentHeader = {
 
 /**
  * Metadata provided alongside attachment data during sync, and returned
- * via the switchboard's `X-Attachment-Metadata` header on GET/HEAD.
+ * via the switchboard's `Attachment-Metadata` header on GET/HEAD.
  * `createdAtUtc` is the original upload time, propagated from the source
  * so that the receiving store preserves it instead of synthesizing the
  * fetch time. `lastAccessedAtUtc` is the source reactor's most recent

@@ -88,7 +88,7 @@ export class SwitchboardAttachmentTransport implements IAttachmentTransport {
       return fallbackCache;
     };
 
-    const metaHeader = response.headers.get("X-Attachment-Metadata");
+    const metaHeader = response.headers.get("Attachment-Metadata");
     if (metaHeader) {
       try {
         const parsed: unknown = JSON.parse(metaHeader);
@@ -146,7 +146,7 @@ function contentTypeFallback(response: Response): AttachmentMetadata {
   const contentLength = response.headers.get("Content-Length");
   if (contentLength === null) {
     throw new Error(
-      "Switchboard response missing both X-Attachment-Metadata and Content-Length headers",
+      "Switchboard response missing both Attachment-Metadata and Content-Length headers",
     );
   }
   const sizeBytes = Number(contentLength);
@@ -156,7 +156,7 @@ function contentTypeFallback(response: Response): AttachmentMetadata {
     );
   }
   // Last-Modified is the closest legitimate signal we have for an original
-  // creation time when X-Attachment-Metadata is absent. If that's missing too,
+  // creation time when Attachment-Metadata is absent. If that's missing too,
   // fall back to the response Date header (still server-attributed). This is
   // imperfect — Last-Modified reflects the most recent change, not the
   // original upload — but unlike sizeBytes there is no zero-equivalent

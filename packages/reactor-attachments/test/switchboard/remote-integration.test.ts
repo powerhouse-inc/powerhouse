@@ -133,7 +133,7 @@ async function handle(
         res.setHeader("Content-Type", header.mimeType);
         res.setHeader("Content-Length", String(header.sizeBytes));
         res.setHeader(
-          "X-Attachment-Metadata",
+          "Attachment-Metadata",
           JSON.stringify({
             mimeType: header.mimeType,
             fileName: header.fileName,
@@ -151,7 +151,7 @@ async function handle(
       res.setHeader("Content-Type", header.mimeType);
       res.setHeader("Content-Length", String(header.sizeBytes));
       res.setHeader(
-        "X-Attachment-Metadata",
+        "Attachment-Metadata",
         JSON.stringify({
           mimeType: header.mimeType,
           fileName: header.fileName,
@@ -285,7 +285,7 @@ describe("remote attachment service end-to-end", () => {
     );
   });
 
-  it("service.get populates createdAtUtc from extended X-Attachment-Metadata", async () => {
+  it("service.get populates createdAtUtc from extended Attachment-Metadata", async () => {
     const service = createRemoteAttachmentService({ remoteUrl: baseUrl });
 
     const upload = await service.reserve({

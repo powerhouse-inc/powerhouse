@@ -223,7 +223,7 @@ export function makeDownloadHandler(attachments: AttachmentBuildResult) {
       "Content-Disposition",
       buildContentDisposition(header.fileName),
     );
-    res.setHeader("X-Attachment-Metadata", buildMetadataHeader(header));
+    res.setHeader("Attachment-Metadata", buildMetadataHeader(header));
 
     Readable.fromWeb(body as unknown as NodeReadableStream<Uint8Array>).pipe(
       res,
@@ -273,7 +273,7 @@ export function makeStatHandler(attachments: AttachmentBuildResult) {
       "Content-Disposition",
       buildContentDisposition(header.fileName),
     );
-    res.setHeader("X-Attachment-Metadata", buildMetadataHeader(header));
+    res.setHeader("Attachment-Metadata", buildMetadataHeader(header));
     res.end();
   };
 }

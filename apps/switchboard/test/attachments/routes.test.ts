@@ -229,14 +229,14 @@ describe("attachment routes", () => {
     );
     expect(downloadRes.getHeader("content-disposition")).toContain("hello.txt");
     const meta = JSON.parse(
-      downloadRes.getHeader("x-attachment-metadata") as string,
+      downloadRes.getHeader("attachment-metadata") as string,
     ) as { fileName: string; mimeType: string; sizeBytes: number };
     expect(meta.fileName).toBe("hello.txt");
     expect(meta.mimeType).toBe("text/plain");
     expect(meta.sizeBytes).toBe(payload.length);
   });
 
-  it("GET download X-Attachment-Metadata includes server-sourced timestamps", async () => {
+  it("GET download Attachment-Metadata includes server-sourced timestamps", async () => {
     const reserveHandler = makeReserveHandler(attachments);
     const reserveReq = makeReq({
       method: "POST",
@@ -272,14 +272,14 @@ describe("attachment routes", () => {
     await waitFor(downloadRes);
 
     const meta = JSON.parse(
-      downloadRes.getHeader("x-attachment-metadata") as string,
+      downloadRes.getHeader("attachment-metadata") as string,
     ) as { createdAtUtc: string; lastAccessedAtUtc: string };
     expect(typeof meta.createdAtUtc).toBe("string");
     expect(typeof meta.lastAccessedAtUtc).toBe("string");
     expect(new Date(meta.createdAtUtc).toString()).not.toBe("Invalid Date");
   });
 
-  it("HEAD stat returns 200 with X-Attachment-Metadata and zero-byte body", async () => {
+  it("HEAD stat returns 200 with Attachment-Metadata and zero-byte body", async () => {
     const reserveHandler = makeReserveHandler(attachments);
     const reserveReq = makeReq({
       method: "POST",
@@ -321,7 +321,7 @@ describe("attachment routes", () => {
     expect(statRes._body.length).toBe(0);
     expect(statRes.getHeader("content-length")).toBe(String("headdata".length));
     const meta = JSON.parse(
-      statRes.getHeader("x-attachment-metadata") as string,
+      statRes.getHeader("attachment-metadata") as string,
     ) as {
       mimeType: string;
       fileName: string;
@@ -856,7 +856,7 @@ describe("attachment routes", () => {
       expect(cd).toContain("filename*=UTF-8''r%C3%A9sum%C3%A9.pdf");
       expect(cd).toMatch(/filename="[^"]*\.pdf"/);
       const meta = JSON.parse(
-        downloadRes.getHeader("x-attachment-metadata") as string,
+        downloadRes.getHeader("attachment-metadata") as string,
       ) as { fileName: string };
       expect(meta.fileName).toBe("résumé.pdf");
     });
