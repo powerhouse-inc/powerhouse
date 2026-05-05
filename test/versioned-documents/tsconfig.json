@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "composite": true,
     "rootDir": ".",
     // paths for easy access to project modules
     "paths": {
