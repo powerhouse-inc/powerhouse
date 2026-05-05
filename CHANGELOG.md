@@ -1,3 +1,21 @@
+## 6.0.0-dev.214 (2026-05-05)
+
+### 🚀 Features
+
+- use generated get document with operations query in switchboard link ([#2556](https://github.com/powerhouse-inc/powerhouse/pull/2556))
+- added drive info to settings menu ([9217c1b76](https://github.com/powerhouse-inc/powerhouse/commit/9217c1b76))
+- **switchboard:** adding pglite migration flag ([952075b11](https://github.com/powerhouse-inc/powerhouse/commit/952075b11))
+- **switchboard:** env var to force a specific pg version when using pglite ([5cdd35ca1](https://github.com/powerhouse-inc/powerhouse/commit/5cdd35ca1))
+
+### 🩹 Fixes
+
+- **reactor-api:** a number of hacks to get around the way vite works, and pre-empt sigterm and sigkill ([36bf0918c](https://github.com/powerhouse-inc/powerhouse/commit/36bf0918c))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.213 (2026-05-04)
 
 This was a version bump only, there were no code changes.
