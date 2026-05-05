@@ -1,7 +1,7 @@
 import type { API } from "@powerhousedao/reactor-api";
 import { requireAuth, type NodeHandler } from "./auth.js";
 
-export type HttpMethod = "DELETE" | "GET" | "POST" | "PUT";
+export type HttpMethod = "DELETE" | "GET" | "HEAD" | "POST" | "PUT";
 
 /**
  * Mount a Node-style attachment route with `requireAuth` applied unconditionally.

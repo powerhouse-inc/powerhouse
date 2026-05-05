@@ -1,4 +1,5 @@
 import type { JwtHandler } from "@powerhousedao/reactor";
+import { ReservationNotFound } from "../errors.js";
 import type { IReservationStore } from "../interfaces.js";
 import type { Reservation, ReserveAttachmentOptions } from "../types.js";
 import { buildAuthHeaders } from "./build-auth-headers.js";
@@ -62,16 +63,39 @@ export class RemoteReservationStore implements IReservationStore {
     };
   }
 
-  get(_reservationId: string): Promise<Reservation> {
-    return Promise.reject(
-      new Error("RemoteReservationStore.get is not supported"),
-    );
+  async get(reservationId: string): Promise<Reservation> {
+    const url = `${this.remoteUrl}/attachments/reservations/${encodeURIComponent(reservationId)}`;
+    const authHeaders = await buildAuthHeaders(url, this.jwtHandler);
+
+    const response = await this.fetchFn(url, { headers: authHeaders });
+
+    if (response.status === 404) {
+      throw new ReservationNotFound(reservationId);
+    }
+    if (!response.ok) {
+      throw new Error(
+        `Reservation get failed: ${response.status} ${response.statusText}`,
+      );
+    }
+
+    return (await response.json()) as Reservation;
   }
 
-  delete(_reservationId: string): Promise<void> {
-    return Promise.reject(
-      new Error("RemoteReservationStore.delete is not supported"),
-    );
+  async delete(reservationId: string): Promise<void> {
+    const url = `${this.remoteUrl}/attachments/reservations/${encodeURIComponent(reservationId)}`;
+    const authHeaders = await buildAuthHeaders(url, this.jwtHandler);
+
+    const response = await this.fetchFn(url, {
+      method: "DELETE",
+      headers: authHeaders,
+    });
+
+    // 204 = success; 404 = already gone, treat as idempotent success.
+    if (!response.ok && response.status !== 404) {
+      throw new Error(
+        `Reservation delete failed: ${response.status} ${response.statusText}`,
+      );
+    }
   }
 
   // Sweeping is the server's responsibility; clients have no authority to

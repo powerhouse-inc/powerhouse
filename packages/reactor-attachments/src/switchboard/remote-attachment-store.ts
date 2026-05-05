@@ -28,6 +28,13 @@ function isAttachmentMetadata(value: unknown): value is AttachmentMetadata {
   if (value.extension !== null && typeof value.extension !== "string") {
     return false;
   }
+  if (typeof value.createdAtUtc !== "string") return false;
+  if (
+    value.lastAccessedAtUtc !== undefined &&
+    typeof value.lastAccessedAtUtc !== "string"
+  ) {
+    return false;
+  }
   return true;
 }
 
@@ -68,6 +75,7 @@ function contentTypeFallback(response: Response): AttachmentMetadata {
     sizeBytes,
     extension: null,
     createdAtUtc,
+    lastAccessedAtUtc: createdAtUtc,
   };
 }
 
@@ -76,8 +84,25 @@ function parseMetadata(response: Response): AttachmentMetadata {
   if (metaHeader) {
     try {
       const parsed: unknown = JSON.parse(metaHeader);
-      if (isRecord(parsed) && parsed.extension === undefined) {
-        parsed.extension = null;
+      if (isRecord(parsed)) {
+        if (parsed.extension === undefined) {
+          parsed.extension = null;
+        }
+        // Older switchboards may omit these timestamps; fall through to
+        // the Date/Last-Modified fallback so we never produce
+        // client-clock-stamped values when the server has authority.
+        if (
+          parsed.createdAtUtc === undefined ||
+          parsed.lastAccessedAtUtc === undefined
+        ) {
+          const fallback = contentTypeFallback(response);
+          if (parsed.createdAtUtc === undefined) {
+            parsed.createdAtUtc = fallback.createdAtUtc;
+          }
+          if (parsed.lastAccessedAtUtc === undefined) {
+            parsed.lastAccessedAtUtc = fallback.lastAccessedAtUtc;
+          }
+        }
       }
       if (isAttachmentMetadata(parsed)) {
         return parsed;
@@ -101,9 +126,25 @@ export class RemoteAttachmentStore implements IAttachmentReader {
   }
 
   async stat(hash: AttachmentHash): Promise<AttachmentHeader> {
-    const { header, body } = await this.fetchAttachment(hash);
-    await body.cancel();
-    return header;
+    const url = `${this.remoteUrl}/attachments/${hash}`;
+    const authHeaders = await buildAuthHeaders(url, this.jwtHandler);
+
+    const response = await this.fetchFn(url, {
+      method: "HEAD",
+      headers: authHeaders,
+    });
+
+    if (response.status === 404) {
+      throw new AttachmentNotFound(hash);
+    }
+    if (!response.ok) {
+      throw new Error(
+        `Attachment stat failed: ${response.status} ${response.statusText}`,
+      );
+    }
+
+    const metadata = parseMetadata(response);
+    return buildHeader(hash, metadata);
   }
 
   async get(
@@ -135,19 +176,23 @@ export class RemoteAttachmentStore implements IAttachmentReader {
     }
 
     const metadata = parseMetadata(response);
-    const now = new Date().toISOString();
-    const header: AttachmentHeader = {
-      hash,
-      mimeType: metadata.mimeType,
-      fileName: metadata.fileName,
-      sizeBytes: metadata.sizeBytes,
-      extension: metadata.extension,
-      status: "available",
-      source: "sync",
-      createdAtUtc: now,
-      lastAccessedAtUtc: now,
-    };
-
-    return { header, body: response.body };
+    return { header: buildHeader(hash, metadata), body: response.body };
   }
+}
+
+function buildHeader(
+  hash: AttachmentHash,
+  metadata: AttachmentMetadata,
+): AttachmentHeader {
+  return {
+    hash,
+    mimeType: metadata.mimeType,
+    fileName: metadata.fileName,
+    sizeBytes: metadata.sizeBytes,
+    extension: metadata.extension,
+    status: "available",
+    source: "sync",
+    createdAtUtc: metadata.createdAtUtc,
+    lastAccessedAtUtc: metadata.lastAccessedAtUtc ?? metadata.createdAtUtc,
+  };
 }

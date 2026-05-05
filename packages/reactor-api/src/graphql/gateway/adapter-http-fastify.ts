@@ -47,7 +47,7 @@ type GetEntry = {
 };
 
 type NodeEntry = {
-  method: "DELETE" | "GET" | "POST";
+  method: "DELETE" | "GET" | "HEAD" | "POST" | "PUT";
   handler: (
     req: http.IncomingMessage,
     res: http.ServerResponse,
@@ -112,7 +112,7 @@ export class FastifyHttpAdapter implements IHttpAdapter {
   }
 
   mountNodeRoute(
-    method: "DELETE" | "GET" | "POST",
+    method: "DELETE" | "GET" | "HEAD" | "POST" | "PUT",
     path: string,
     handler: (
       req: http.IncomingMessage,
@@ -228,7 +228,12 @@ export class FastifyHttpAdapter implements IHttpAdapter {
 
   #dispatch(req: FastifyRequest, reply: FastifyReply): void | Promise<void> {
     const pathname = new URL(req.url, "http://localhost").pathname;
-    const method = req.method.toUpperCase() as "DELETE" | "GET" | "POST";
+    const method = req.method.toUpperCase() as
+      | "DELETE"
+      | "GET"
+      | "HEAD"
+      | "POST"
+      | "PUT";
 
     // 1. Node routes — exact path + method, handler manages raw response.
     const nodeHandlers = this.#nodeRoutes.get(pathname);

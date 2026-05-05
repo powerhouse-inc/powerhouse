@@ -22,13 +22,14 @@ export type AttachmentHeader = {
 };
 
 /**
- * Metadata provided alongside attachment data during sync.
+ * Metadata provided alongside attachment data during sync, and returned
+ * via the switchboard's `X-Attachment-Metadata` header on GET/HEAD.
  * `createdAtUtc` is the original upload time, propagated from the source
  * so that the receiving store preserves it instead of synthesizing the
- * fetch time. `lastAccessedAtUtc` is intentionally omitted: it is a
- * per-reactor LRU concern that resets on every read.
- * The remaining fields (hash, status, source, lastAccessedAtUtc) are set
- * by the store when it creates the attachment record.
+ * fetch time. `lastAccessedAtUtc` is the source reactor's most recent
+ * access time; it is optional because not every producer (e.g. a fresh
+ * `put` from a transport) tracks access yet. Receiving stores that
+ * persist locally (LRU concerns) reset it on every read regardless.
  */
 export type AttachmentMetadata = {
   mimeType: string;
@@ -36,6 +37,7 @@ export type AttachmentMetadata = {
   sizeBytes: number;
   extension: string | null;
   createdAtUtc: string;
+  lastAccessedAtUtc?: string;
 };
 
 /**

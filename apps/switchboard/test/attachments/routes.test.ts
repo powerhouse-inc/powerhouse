@@ -13,8 +13,11 @@ import { Readable, Writable } from "node:stream";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   buildContentDisposition,
+  makeDeleteReservationHandler,
   makeDownloadHandler,
+  makeGetReservationHandler,
   makeReserveHandler,
+  makeStatHandler,
   makeUploadHandler,
   parseReserveOptions,
   quoteFilename,
@@ -188,7 +191,8 @@ describe("attachment routes", () => {
     expect(upload.ref).toBe(`attachment://v1:${upload.hash}`);
     expect(upload.header.sizeBytes).toBe(payload.length);
 
-    // Reservation should be cleaned up
+    // Reservation should be soft-deleted: get() rejects, but the row remains
+    // in the DB (verified by the dedicated reservation-store unit tests).
     await expect(attachments.reservations.get(reservationId)).rejects.toThrow();
 
     // Download
@@ -213,6 +217,215 @@ describe("attachment routes", () => {
     expect(meta.fileName).toBe("hello.txt");
     expect(meta.mimeType).toBe("text/plain");
     expect(meta.sizeBytes).toBe(payload.length);
+  });
+
+  it("GET download X-Attachment-Metadata includes server-sourced timestamps", async () => {
+    const reserveHandler = makeReserveHandler(attachments);
+    const reserveReq = makeReq({
+      method: "POST",
+      body: JSON.stringify({ mimeType: "text/plain", fileName: "ts.txt" }),
+    });
+    const reserveRes = makeRes();
+    await reserveHandler(reserveReq, reserveRes);
+    await waitFor(reserveRes);
+    const { reservationId } = JSON.parse(reserveRes._body.toString("utf8")) as {
+      reservationId: string;
+    };
+
+    const uploadHandler = makeUploadHandler(attachments);
+    const uploadReq = makeReq({
+      method: "PUT",
+      params: { reservationId },
+      body: "tsdata",
+    });
+    const uploadRes = makeRes();
+    await uploadHandler(uploadReq, uploadRes);
+    await waitFor(uploadRes);
+    const upload = JSON.parse(uploadRes._body.toString("utf8")) as {
+      hash: string;
+    };
+
+    const downloadHandler = makeDownloadHandler(attachments);
+    const downloadReq = makeReq({
+      method: "GET",
+      params: { hash: upload.hash },
+    });
+    const downloadRes = makeRes();
+    await downloadHandler(downloadReq, downloadRes);
+    await waitFor(downloadRes);
+
+    const meta = JSON.parse(
+      downloadRes.getHeader("x-attachment-metadata") as string,
+    ) as { createdAtUtc: string; lastAccessedAtUtc: string };
+    expect(typeof meta.createdAtUtc).toBe("string");
+    expect(typeof meta.lastAccessedAtUtc).toBe("string");
+    expect(new Date(meta.createdAtUtc).toString()).not.toBe("Invalid Date");
+  });
+
+  it("HEAD stat returns 200 with X-Attachment-Metadata and zero-byte body", async () => {
+    const reserveHandler = makeReserveHandler(attachments);
+    const reserveReq = makeReq({
+      method: "POST",
+      body: JSON.stringify({ mimeType: "text/plain", fileName: "head.txt" }),
+    });
+    const reserveRes = makeRes();
+    await reserveHandler(reserveReq, reserveRes);
+    await waitFor(reserveRes);
+    const { reservationId } = JSON.parse(reserveRes._body.toString("utf8")) as {
+      reservationId: string;
+    };
+
+    const uploadHandler = makeUploadHandler(attachments);
+    const uploadReq = makeReq({
+      method: "PUT",
+      params: { reservationId },
+      body: "headdata",
+    });
+    const uploadRes = makeRes();
+    await uploadHandler(uploadReq, uploadRes);
+    await waitFor(uploadRes);
+    const upload = JSON.parse(uploadRes._body.toString("utf8")) as {
+      hash: string;
+    };
+
+    const statHandler = makeStatHandler(attachments);
+    const statReq = makeReq({
+      method: "HEAD",
+      params: { hash: upload.hash },
+    });
+    const statRes = makeRes();
+    await statHandler(statReq, statRes);
+    await waitFor(statRes);
+
+    expect(statRes.statusCode).toBe(200);
+    expect(statRes._body.length).toBe(0);
+    expect(statRes.getHeader("content-length")).toBe(String("headdata".length));
+    const meta = JSON.parse(
+      statRes.getHeader("x-attachment-metadata") as string,
+    ) as {
+      mimeType: string;
+      fileName: string;
+      sizeBytes: number;
+      extension: string | null;
+      createdAtUtc: string;
+      lastAccessedAtUtc: string;
+    };
+    expect(meta.mimeType).toBe("text/plain");
+    expect(meta.fileName).toBe("head.txt");
+    expect(meta.sizeBytes).toBe("headdata".length);
+    expect(typeof meta.createdAtUtc).toBe("string");
+    expect(typeof meta.lastAccessedAtUtc).toBe("string");
+  });
+
+  it("HEAD stat returns 404 for unknown hash", async () => {
+    const handler = makeStatHandler(attachments);
+    const req = makeReq({ method: "HEAD", params: { hash: "a".repeat(64) } });
+    const res = makeRes();
+    await handler(req, res);
+    await waitFor(res);
+    expect(res.statusCode).toBe(404);
+  });
+
+  it("HEAD stat returns 400 for malformed hash", async () => {
+    const handler = makeStatHandler(attachments);
+    const req = makeReq({ method: "HEAD", params: { hash: "not-a-hash" } });
+    const res = makeRes();
+    await handler(req, res);
+    await waitFor(res);
+    expect(res.statusCode).toBe(400);
+  });
+
+  it("GET reservation returns 200 with reservation JSON for active reservation", async () => {
+    const reserveHandler = makeReserveHandler(attachments);
+    const reserveReq = makeReq({
+      method: "POST",
+      body: JSON.stringify({ mimeType: "text/plain", fileName: "r.txt" }),
+    });
+    const reserveRes = makeRes();
+    await reserveHandler(reserveReq, reserveRes);
+    await waitFor(reserveRes);
+    const { reservationId } = JSON.parse(reserveRes._body.toString("utf8")) as {
+      reservationId: string;
+    };
+
+    const handler = makeGetReservationHandler(attachments);
+    const req = makeReq({ method: "GET", params: { reservationId } });
+    const res = makeRes();
+    await handler(req, res);
+    await waitFor(res);
+
+    expect(res.statusCode).toBe(200);
+    const json = JSON.parse(res._body.toString("utf8")) as {
+      reservationId: string;
+      mimeType: string;
+      fileName: string;
+    };
+    expect(json.reservationId).toBe(reservationId);
+    expect(json.mimeType).toBe("text/plain");
+    expect(json.fileName).toBe("r.txt");
+  });
+
+  it("GET reservation returns 404 for unknown id", async () => {
+    const handler = makeGetReservationHandler(attachments);
+    const req = makeReq({
+      method: "GET",
+      params: { reservationId: "00000000-0000-0000-0000-000000000000" },
+    });
+    const res = makeRes();
+    await handler(req, res);
+    await waitFor(res);
+    expect(res.statusCode).toBe(404);
+  });
+
+  it("GET reservation returns 404 for soft-deleted id", async () => {
+    const reserveHandler = makeReserveHandler(attachments);
+    const reserveReq = makeReq({
+      method: "POST",
+      body: JSON.stringify({ mimeType: "text/plain", fileName: "r.txt" }),
+    });
+    const reserveRes = makeRes();
+    await reserveHandler(reserveReq, reserveRes);
+    await waitFor(reserveRes);
+    const { reservationId } = JSON.parse(reserveRes._body.toString("utf8")) as {
+      reservationId: string;
+    };
+
+    await attachments.reservations.delete(reservationId);
+
+    const handler = makeGetReservationHandler(attachments);
+    const req = makeReq({ method: "GET", params: { reservationId } });
+    const res = makeRes();
+    await handler(req, res);
+    await waitFor(res);
+    expect(res.statusCode).toBe(404);
+  });
+
+  it("DELETE reservation returns 204 and is idempotent", async () => {
+    const reserveHandler = makeReserveHandler(attachments);
+    const reserveReq = makeReq({
+      method: "POST",
+      body: JSON.stringify({ mimeType: "text/plain", fileName: "r.txt" }),
+    });
+    const reserveRes = makeRes();
+    await reserveHandler(reserveReq, reserveRes);
+    await waitFor(reserveRes);
+    const { reservationId } = JSON.parse(reserveRes._body.toString("utf8")) as {
+      reservationId: string;
+    };
+
+    const handler = makeDeleteReservationHandler(attachments);
+
+    const req1 = makeReq({ method: "DELETE", params: { reservationId } });
+    const res1 = makeRes();
+    await handler(req1, res1);
+    await waitFor(res1);
+    expect(res1.statusCode).toBe(204);
+
+    const req2 = makeReq({ method: "DELETE", params: { reservationId } });
+    const res2 = makeRes();
+    await handler(req2, res2);
+    await waitFor(res2);
+    expect(res2.statusCode).toBe(204);
   });
 
   it("GET download returns 404 for unknown hash", async () => {

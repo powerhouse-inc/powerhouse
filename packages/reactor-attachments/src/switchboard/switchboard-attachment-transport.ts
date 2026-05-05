@@ -82,8 +82,22 @@ export class SwitchboardAttachmentTransport implements IAttachmentTransport {
     if (metaHeader) {
       try {
         const parsed: unknown = JSON.parse(metaHeader);
-        if (isRecord(parsed) && parsed.extension === undefined) {
-          parsed.extension = null;
+        if (isRecord(parsed)) {
+          if (parsed.extension === undefined) {
+            parsed.extension = null;
+          }
+          if (
+            parsed.createdAtUtc === undefined ||
+            parsed.lastAccessedAtUtc === undefined
+          ) {
+            const fallback = contentTypeFallback(response);
+            if (parsed.createdAtUtc === undefined) {
+              parsed.createdAtUtc = fallback.createdAtUtc;
+            }
+            if (parsed.lastAccessedAtUtc === undefined) {
+              parsed.lastAccessedAtUtc = fallback.lastAccessedAtUtc;
+            }
+          }
         }
         if (isAttachmentMetadata(parsed)) {
           return parsed;
@@ -112,6 +126,13 @@ function isAttachmentMetadata(value: unknown): value is AttachmentMetadata {
     return false;
   }
   if (value.extension !== null && typeof value.extension !== "string") {
+    return false;
+  }
+  if (typeof value.createdAtUtc !== "string") return false;
+  if (
+    value.lastAccessedAtUtc !== undefined &&
+    typeof value.lastAccessedAtUtc !== "string"
+  ) {
     return false;
   }
   return true;
@@ -154,5 +175,6 @@ function contentTypeFallback(response: Response): AttachmentMetadata {
     sizeBytes,
     extension: null,
     createdAtUtc,
+    lastAccessedAtUtc: createdAtUtc,
   };
 }

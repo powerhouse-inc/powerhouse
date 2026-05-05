@@ -222,19 +222,92 @@ export function makeDownloadHandler(attachments: AttachmentBuildResult) {
       "Content-Disposition",
       buildContentDisposition(header.fileName),
     );
-    res.setHeader(
-      "X-Attachment-Metadata",
-      JSON.stringify({
-        mimeType: header.mimeType,
-        fileName: header.fileName,
-        sizeBytes: header.sizeBytes,
-        extension: header.extension,
-      }),
-    );
+    res.setHeader("X-Attachment-Metadata", buildMetadataHeader(header));
 
     Readable.fromWeb(body as unknown as NodeReadableStream<Uint8Array>).pipe(
       res,
     );
+  };
+}
+
+function buildMetadataHeader(header: {
+  mimeType: string;
+  fileName: string;
+  sizeBytes: number;
+  extension: string | null;
+  createdAtUtc: string;
+  lastAccessedAtUtc: string;
+}): string {
+  return JSON.stringify({
+    mimeType: header.mimeType,
+    fileName: header.fileName,
+    sizeBytes: header.sizeBytes,
+    extension: header.extension,
+    createdAtUtc: header.createdAtUtc,
+    lastAccessedAtUtc: header.lastAccessedAtUtc,
+  });
+}
+
+export function makeStatHandler(attachments: AttachmentBuildResult) {
+  return async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
+    const hash = extractParam(req, "hash");
+    if (!hash || !HASH_PATTERN.test(hash)) {
+      sendError(res, 400, "Invalid attachment hash");
+      return;
+    }
+
+    let header;
+    try {
+      header = await attachments.store.stat(hash as AttachmentHash);
+    } catch (err) {
+      sendErrorFromException(res, err);
+      return;
+    }
+
+    res.statusCode = 200;
+    res.setHeader("Content-Type", header.mimeType);
+    res.setHeader("Content-Length", String(header.sizeBytes));
+    res.setHeader(
+      "Content-Disposition",
+      buildContentDisposition(header.fileName),
+    );
+    res.setHeader("X-Attachment-Metadata", buildMetadataHeader(header));
+    res.end();
+  };
+}
+
+export function makeGetReservationHandler(attachments: AttachmentBuildResult) {
+  return async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
+    const reservationId = extractParam(req, "reservationId");
+    if (!reservationId) {
+      sendError(res, 400, "Missing reservationId");
+      return;
+    }
+    try {
+      const reservation = await attachments.reservations.get(reservationId);
+      sendJson(res, 200, reservation);
+    } catch (err) {
+      sendErrorFromException(res, err);
+    }
+  };
+}
+
+export function makeDeleteReservationHandler(
+  attachments: AttachmentBuildResult,
+) {
+  return async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
+    const reservationId = extractParam(req, "reservationId");
+    if (!reservationId) {
+      sendError(res, 400, "Missing reservationId");
+      return;
+    }
+    try {
+      await attachments.reservations.delete(reservationId);
+      res.statusCode = 204;
+      res.end();
+    } catch (err) {
+      sendErrorFromException(res, err);
+    }
   };
 }
 

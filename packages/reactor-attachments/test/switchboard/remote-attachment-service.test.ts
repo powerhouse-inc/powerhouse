@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { AttachmentNotFound } from "../../src/errors.js";
+import { AttachmentNotFound, ReservationNotFound } from "../../src/errors.js";
 import { RemoteAttachmentStore } from "../../src/switchboard/remote-attachment-store.js";
 import { RemoteAttachmentUpload } from "../../src/switchboard/remote-attachment-upload.js";
 import { RemoteAttachmentUploadFactory } from "../../src/switchboard/remote-attachment-upload-factory.js";
@@ -124,12 +124,62 @@ describe("RemoteReservationStore", () => {
     ).rejects.toThrow(/Reservation create failed: 400/);
   });
 
-  it("get throws not supported", async () => {
-    await expect(store.get("r-1")).rejects.toThrow(/not supported/);
+  it("get returns the reservation JSON from the server", async () => {
+    const reservation = {
+      reservationId: "r-1",
+      mimeType: "text/plain",
+      fileName: "hello.txt",
+      extension: "txt",
+      createdAtUtc: "2024-01-01T00:00:00.000Z",
+      expiresAtUtc: "2024-01-02T00:00:00.000Z",
+    };
+    mockFetch.mockResolvedValue(mockResponse(200, { json: reservation }));
+
+    const got = await store.get("r-1");
+
+    expect(got).toEqual(reservation);
+    expect(mockFetch).toHaveBeenCalledWith(
+      `${REMOTE_URL}/attachments/reservations/r-1`,
+      expect.any(Object),
+    );
   });
 
-  it("delete throws not supported", async () => {
-    await expect(store.delete("r-1")).rejects.toThrow(/not supported/);
+  it("get throws ReservationNotFound on 404", async () => {
+    mockFetch.mockResolvedValue(mockResponse(404));
+    await expect(store.get("missing")).rejects.toBeInstanceOf(
+      ReservationNotFound,
+    );
+  });
+
+  it("get throws on non-2xx other than 404", async () => {
+    mockFetch.mockResolvedValue(
+      mockResponse(500, { statusText: "Internal Server Error" }),
+    );
+    await expect(store.get("r-1")).rejects.toThrow(/Reservation get failed/);
+  });
+
+  it("delete sends DELETE and resolves on 204", async () => {
+    mockFetch.mockResolvedValue(mockResponse(204));
+
+    await expect(store.delete("r-1")).resolves.toBeUndefined();
+    expect(mockFetch).toHaveBeenCalledWith(
+      `${REMOTE_URL}/attachments/reservations/r-1`,
+      expect.objectContaining({ method: "DELETE" }),
+    );
+  });
+
+  it("delete is idempotent on 404 (already gone)", async () => {
+    mockFetch.mockResolvedValue(mockResponse(404));
+    await expect(store.delete("missing")).resolves.toBeUndefined();
+  });
+
+  it("delete throws on other non-2xx", async () => {
+    mockFetch.mockResolvedValue(
+      mockResponse(500, { statusText: "Internal Server Error" }),
+    );
+    await expect(store.delete("r-1")).rejects.toThrow(
+      /Reservation delete failed/,
+    );
   });
 });
 
@@ -216,7 +266,7 @@ describe("RemoteAttachmentStore", () => {
     });
   });
 
-  it("get returns AttachmentResponse with synthesized header from X-Attachment-Metadata", async () => {
+  it("get returns AttachmentResponse with header populated from X-Attachment-Metadata (incl. server-sourced timestamps)", async () => {
     const body = streamFromString("file data");
     mockFetch.mockResolvedValue(
       mockResponse(200, {
@@ -227,6 +277,8 @@ describe("RemoteAttachmentStore", () => {
             fileName: "file.txt",
             sizeBytes: 9,
             extension: "txt",
+            createdAtUtc: "2024-01-01T00:00:00.000Z",
+            lastAccessedAtUtc: "2024-06-01T12:00:00.000Z",
           }),
         },
       }),
@@ -234,15 +286,17 @@ describe("RemoteAttachmentStore", () => {
 
     const result = await store.get("hash-1");
     expect(result.body).toBe(body);
-    expect(result.header.hash).toBe("hash-1");
-    expect(result.header.mimeType).toBe("text/plain");
-    expect(result.header.fileName).toBe("file.txt");
-    expect(result.header.sizeBytes).toBe(9);
-    expect(result.header.extension).toBe("txt");
-    expect(result.header.status).toBe("available");
-    expect(result.header.source).toBe("sync");
-    expect(typeof result.header.createdAtUtc).toBe("string");
-    expect(typeof result.header.lastAccessedAtUtc).toBe("string");
+    expect(result.header).toEqual({
+      hash: "hash-1",
+      mimeType: "text/plain",
+      fileName: "file.txt",
+      sizeBytes: 9,
+      extension: "txt",
+      status: "available",
+      source: "sync",
+      createdAtUtc: "2024-01-01T00:00:00.000Z",
+      lastAccessedAtUtc: "2024-06-01T12:00:00.000Z",
+    });
   });
 
   it("get falls back to Content-Type when X-Attachment-Metadata missing", async () => {
@@ -358,6 +412,8 @@ describe("RemoteAttachmentStore", () => {
             fileName: "x",
             sizeBytes: 4,
             extension: null,
+            createdAtUtc: "2024-01-01T00:00:00.000Z",
+            lastAccessedAtUtc: "2024-01-01T00:00:00.000Z",
           }),
         },
       }),
@@ -382,6 +438,8 @@ describe("RemoteAttachmentStore", () => {
             fileName: "p.txt",
             sizeBytes: 7,
             extension: "txt",
+            createdAtUtc: "2024-01-01T00:00:00.000Z",
+            lastAccessedAtUtc: "2024-01-01T00:00:00.000Z",
           }),
         },
       }),
@@ -389,6 +447,49 @@ describe("RemoteAttachmentStore", () => {
     const result = await store.get("h");
     const bytes = await streamToBytes(result.body);
     expect(new TextDecoder().decode(bytes)).toBe("payload");
+  });
+
+  it("stat issues HEAD and returns header from X-Attachment-Metadata", async () => {
+    mockFetch.mockResolvedValue(
+      mockResponse(200, {
+        headers: {
+          "Content-Length": "9",
+          "X-Attachment-Metadata": JSON.stringify({
+            mimeType: "text/plain",
+            fileName: "file.txt",
+            sizeBytes: 9,
+            extension: "txt",
+            createdAtUtc: "2024-01-01T00:00:00.000Z",
+            lastAccessedAtUtc: "2024-06-01T12:00:00.000Z",
+          }),
+        },
+      }),
+    );
+
+    const header = await store.stat("hash-stat");
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      `${REMOTE_URL}/attachments/hash-stat`,
+      expect.objectContaining({ method: "HEAD" }),
+    );
+    expect(header).toEqual({
+      hash: "hash-stat",
+      mimeType: "text/plain",
+      fileName: "file.txt",
+      sizeBytes: 9,
+      extension: "txt",
+      status: "available",
+      source: "sync",
+      createdAtUtc: "2024-01-01T00:00:00.000Z",
+      lastAccessedAtUtc: "2024-06-01T12:00:00.000Z",
+    });
+  });
+
+  it("stat throws AttachmentNotFound on 404", async () => {
+    mockFetch.mockResolvedValue(mockResponse(404));
+    await expect(store.stat("missing")).rejects.toBeInstanceOf(
+      AttachmentNotFound,
+    );
   });
 });
 

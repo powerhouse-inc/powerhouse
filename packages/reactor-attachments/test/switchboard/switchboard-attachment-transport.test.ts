@@ -10,6 +10,7 @@ const TEST_METADATA = {
   sizeBytes: 1024,
   extension: "pdf",
   createdAtUtc: "2020-01-15T12:34:56.000Z",
+  lastAccessedAtUtc: "2020-01-15T12:34:56.000Z",
 };
 
 function mockResponse(
@@ -161,6 +162,8 @@ describe("SwitchboardAttachmentTransport", () => {
         fileName: "unknown",
         sizeBytes: 512,
         extension: null,
+        createdAtUtc: expect.any(String),
+        lastAccessedAtUtc: expect.any(String),
       });
     });
 
@@ -183,6 +186,8 @@ describe("SwitchboardAttachmentTransport", () => {
         fileName: "unknown",
         sizeBytes: 512,
         extension: null,
+        createdAtUtc: expect.any(String),
+        lastAccessedAtUtc: expect.any(String),
       });
     });
 
@@ -195,6 +200,8 @@ describe("SwitchboardAttachmentTransport", () => {
               mimeType: "application/pdf",
               fileName: "invoice",
               sizeBytes: 1024,
+              createdAtUtc: "2020-01-15T12:34:56.000Z",
+              lastAccessedAtUtc: "2020-01-15T12:34:56.000Z",
             }),
           },
         }),
@@ -207,6 +214,8 @@ describe("SwitchboardAttachmentTransport", () => {
         fileName: "invoice",
         sizeBytes: 1024,
         extension: null,
+        createdAtUtc: "2020-01-15T12:34:56.000Z",
+        lastAccessedAtUtc: "2020-01-15T12:34:56.000Z",
       });
       expect(result!.metadata.extension).toBeNull();
     });
@@ -235,6 +244,8 @@ describe("SwitchboardAttachmentTransport", () => {
         fileName: "unknown",
         sizeBytes: 512,
         extension: null,
+        createdAtUtc: expect.any(String),
+        lastAccessedAtUtc: expect.any(String),
       });
     });
 
@@ -261,6 +272,8 @@ describe("SwitchboardAttachmentTransport", () => {
         fileName: "unknown",
         sizeBytes: 512,
         extension: null,
+        createdAtUtc: expect.any(String),
+        lastAccessedAtUtc: expect.any(String),
       });
     });
 
@@ -288,6 +301,8 @@ describe("SwitchboardAttachmentTransport", () => {
         fileName: "unknown",
         sizeBytes: 512,
         extension: null,
+        createdAtUtc: expect.any(String),
+        lastAccessedAtUtc: expect.any(String),
       });
     });
 
