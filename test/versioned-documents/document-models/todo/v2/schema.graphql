@@ -21,10 +21,10 @@ scalar Upload
 
 type TodoState {
   title: String
-  todos: [Todo!]!
+  todos: [TodoItem!]!
 }
 
-type Todo {
+type TodoItem {
   id: String!
   title: String!
   completed: Boolean!
