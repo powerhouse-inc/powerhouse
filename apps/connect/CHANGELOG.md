@@ -1,3 +1,14 @@
+## 6.0.0-dev.214 (2026-05-05)
+
+### 🚀 Features
+
+- **switchboard:** adding pglite migration flag ([952075b11](https://github.com/powerhouse-inc/powerhouse/commit/952075b11))
+- added drive info to settings menu ([9217c1b76](https://github.com/powerhouse-inc/powerhouse/commit/9217c1b76))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.0.0-dev.213 (2026-05-04)
 
 This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.

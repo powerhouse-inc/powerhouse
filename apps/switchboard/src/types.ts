@@ -77,6 +77,26 @@ export type StartServerOptions = {
    * instrumentation.start() reads the global provider via metrics.getMeter().
    */
   meterProvider?: MeterProvider;
+  /**
+   * When true, on startup any local PGLite data dirs whose `PG_VERSION` is
+   * older than the bundled PGLite are migrated to the current version
+   * (backup → dump → restore) before the server boots. When false, the
+   * server logs a warning and runs against the legacy data using the
+   * matching legacy PGLite module.
+   *
+   * Triggered by the `--migrate-pglite` CLI flag or `PH_MIGRATE_PGLITE=true`.
+   */
+  migratePglite?: boolean;
+  /**
+   * Force a specific PGLite-embedded PG major (16 or 17) on startup.
+   *
+   * **Destructive**: any existing local PGLite data dirs are wiped before
+   * the chosen PGLite re-`initdb`'s them at the requested version. Postgres
+   * URLs are unaffected. Takes precedence over `migratePglite`.
+   *
+   * Triggered by `PH_FORCE_PG_VERSION=16|17`.
+   */
+  forcePgVersion?: 16 | 17;
 };
 
 export type SwitchboardReactor = {

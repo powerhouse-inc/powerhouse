@@ -21,6 +21,14 @@ export type API = {
   packages: IPackageManager;
   attachments: AttachmentBuildResult;
   authService: AuthService | undefined;
+  /**
+   * Releases resources owned by the API: shuts down the GraphQL gateway,
+   * closes WebSocket and HTTP servers, destroys knex pools, and closes any
+   * PGlite instances created via {@link getDbClient}. Safe to call once;
+   * intended to be wired into the reactor's shutdown chain via
+   * `ReactorBuilder.withShutdownHook`.
+   */
+  dispose: () => Promise<void>;
 };
 
 export type ReactorModule = {

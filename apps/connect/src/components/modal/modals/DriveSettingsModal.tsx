@@ -7,6 +7,7 @@ import {
   setDriveSharingType,
   showPHModal,
   useDriveById,
+  useDriveSystemInfo,
   usePHModal,
   useSyncList,
 } from "@powerhousedao/reactor-browser";
@@ -22,11 +23,14 @@ export function DriveSettingsModal() {
   const remotes = useSyncList();
 
   const isRemoteDrive = useMemo(() => {
+    if (!drive) return false;
     return remotes.some(
       (remote) =>
         remote.collectionId === driveCollectionId("main", drive.header.id),
     );
   }, [remotes, drive]);
+
+  const systemInfo = useDriveSystemInfo(drive);
 
   if (!driveId || !drive) {
     return null;
@@ -55,6 +59,7 @@ export function DriveSettingsModal() {
       drive={drive}
       sharingType={isRemoteDrive ? "PUBLIC" : "LOCAL"}
       availableOffline={!isRemoteDrive}
+      systemInfo={systemInfo}
       open={open}
       onRenameDrive={onRenameDrive}
       onDeleteDrive={() => showPHModal({ type: "deleteDrive", driveId })}

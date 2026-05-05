@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { PGlite } from "@electric-sql/pglite";
+import type { PGlite } from "@electric-sql/pglite";
 import { metrics } from "@opentelemetry/api";
 import { getConfig } from "@powerhousedao/config/node";
 import { ReactorInstrumentation } from "@powerhousedao/opentelemetry-instrumentation-reactor";
@@ -41,13 +41,22 @@ import {
 } from "document-model";
 import dotenv from "dotenv";
 import { Kysely, PostgresDialect } from "kysely";
-import { PGliteDialect } from "kysely-pglite-dialect";
+import { ClosablePGliteDialect } from "./pglite-dialect.js";
+import { promises as fs } from "node:fs";
 import net from "node:net";
 import { register } from "node:module";
 import path from "path";
 import { Pool } from "pg";
 import { registerAttachmentRoutes } from "./attachments/index.js";
 import { initFeatureFlags } from "./feature-flags.js";
+import { migratePgliteDir } from "./pglite-migration.js";
+import {
+  CURRENT_PG_MAJOR,
+  isSupportedMajor,
+  loadPGliteModule,
+  readPgVersionFile,
+  type SupportedPgMajor,
+} from "./pglite-version.js";
 import { getRenownSignerConfig, initRenown } from "./renown.js";
 import type { StartServerOptions, SwitchboardReactor } from "./types.js";
 import { addDefaultDrive, isPostgresUrl } from "./utils.mjs";
@@ -159,6 +168,89 @@ async function initServer(
   // use postgres url for read model storage if available, otherwise use local PGlite path
   const readModelPath = dbPath || ".ph/read-storage";
 
+  const reactorDbUrl = process.env.PH_REACTOR_DATABASE_URL;
+  const reactorPgliteDir =
+    !reactorDbUrl || !isPostgresUrl(reactorDbUrl)
+      ? "./.ph/reactor-storage"
+      : null;
+  const readModelPgliteDir =
+    !dbPath || !isPostgresUrl(dbPath) ? readModelPath : null;
+
+  // PGLite version pre-flight: when PH_FORCE_PG_VERSION is set, wipe local
+  // data dirs and re-initdb at the chosen version. Otherwise detect on-disk
+  // PG_VERSION and either migrate (when --migrate-pglite is set) or warn and
+  // fall through to the matching legacy PGLite at runtime.
+  const pgliteDirs = [reactorPgliteDir, readModelPgliteDir].filter(
+    (d): d is string => d !== null,
+  );
+  const detectedMajors = new Map<string, number>();
+
+  if (options.forcePgVersion !== undefined && pgliteDirs.length > 0) {
+    if (options.migratePglite) {
+      logger.warn(
+        "PH_FORCE_PG_VERSION is set; ignoring --migrate-pglite/PH_MIGRATE_PGLITE because the data dirs will be wiped.",
+      );
+    }
+    logger.warn(
+      `PH_FORCE_PG_VERSION=${options.forcePgVersion} set; wiping PGLite data dirs and re-initializing at PG${options.forcePgVersion}.`,
+    );
+    for (const dir of pgliteDirs) {
+      await fs.rm(dir, { recursive: true, force: true });
+      logger.info(`Wiped PGLite data dir ${dir}`);
+    }
+  } else if (options.forcePgVersion === undefined) {
+    for (const dir of pgliteDirs) {
+      const major = await readPgVersionFile(dir);
+      if (major !== null) detectedMajors.set(dir, major);
+    }
+
+    if (options.migratePglite) {
+      for (const [dir, major] of detectedMajors) {
+        if (major === CURRENT_PG_MAJOR) continue;
+        await migratePgliteDir(dir, logger);
+        // refresh detected major after a successful migration
+        const after = await readPgVersionFile(dir);
+        if (after !== null) detectedMajors.set(dir, after);
+      }
+    } else {
+      for (const [dir, major] of detectedMajors) {
+        if (major === CURRENT_PG_MAJOR) continue;
+        logger.warn(
+          `PGLite data dir at ${dir} was created with PG${major} but Switchboard ships PG${CURRENT_PG_MAJOR}. Running on legacy PGLite. Re-start with --migrate-pglite (or PH_MIGRATE_PGLITE=true) to upgrade.`,
+        );
+      }
+    }
+  }
+
+  function resolvePgliteMajorForDir(dir: string): SupportedPgMajor {
+    if (options.forcePgVersion !== undefined) return options.forcePgVersion;
+    const detected = detectedMajors.get(dir);
+    if (detected === undefined) return CURRENT_PG_MAJOR;
+    if (!isSupportedMajor(detected)) {
+      throw new Error(
+        `Unsupported PGLite data dir at ${dir}: PG_VERSION=${detected}`,
+      );
+    }
+    return detected;
+  }
+
+  const reactorPgliteMajor = reactorPgliteDir
+    ? resolvePgliteMajorForDir(reactorPgliteDir)
+    : null;
+  const readModelPgliteMajor = readModelPgliteDir
+    ? resolvePgliteMajorForDir(readModelPgliteDir)
+    : null;
+
+  // The reactor-api owns its own PGlite/HTTP/WS resources but has no shutdown
+  // path of its own; we register `api.dispose` as a reactor shutdown hook so
+  // those resources drain inside the reactor's SIGINT chain. The reference
+  // is forward — `initializeClient` runs (and registers the hook) before
+  // `initializeAndStartAPI` returns the api — so the closure reads `apiRef`
+  // at hook-fire time, not at registration time.
+  const apiRef: { current: { dispose: () => Promise<void> } | undefined } = {
+    current: undefined,
+  };
+
   // HTTP registry package loading
   const configPath =
     options.configFile ?? path.join(process.cwd(), "powerhouse.config.json");
@@ -204,7 +296,6 @@ async function initServer(
       logger.info(`Reactor maxSkipThreshold set to ${maxSkipThreshold}`);
     }
 
-    const reactorDbUrl = process.env.PH_REACTOR_DATABASE_URL;
     if (reactorDbUrl && isPostgresUrl(reactorDbUrl)) {
       const connectionString = reactorDbUrl.includes("?")
         ? reactorDbUrl
@@ -216,14 +307,23 @@ async function initServer(
       builder.withKysely(kysely);
       logger.info("Using PostgreSQL for reactor storage");
     } else {
-      const pglitePath = "./.ph/reactor-storage";
-      const pglite = new PGlite(pglitePath);
+      if (!reactorPgliteDir || reactorPgliteMajor === null) {
+        throw new Error("Reactor PGLite directory not resolved");
+      }
+      const { PGlite } = await loadPGliteModule(reactorPgliteMajor);
+      const pglite = new PGlite(reactorPgliteDir);
       const kysely = new Kysely<Database>({
-        dialect: new PGliteDialect(pglite),
+        dialect: new ClosablePGliteDialect(pglite),
       });
       builder.withKysely(kysely);
-      logger.info("Using PGlite for reactor storage");
+      logger.info(
+        `Using PGlite (PG${reactorPgliteMajor}) for reactor storage at ${reactorPgliteDir}`,
+      );
     }
+
+    builder.withShutdownHook(async () => {
+      if (apiRef.current) await apiRef.current.dispose();
+    });
 
     if (httpLoader && dynamicModelLoading) {
       builder.withDocumentModelLoader(httpLoader.documentModelLoader);
@@ -285,11 +385,26 @@ async function initServer(
   }
 
   const apiLogger = logger.child(["reactor-api"]);
+  // When the read-model store is on disk, hand reactor-api a factory that
+  // constructs the matching PGLite (current or legacy) for the detected
+  // PG_VERSION. reactor-api calls the factory synchronously, so the legacy
+  // module is preloaded above.
+  let pgliteFactory:
+    | ((connectionString: string | undefined) => PGlite)
+    | undefined;
+  if (readModelPgliteDir && readModelPgliteMajor !== null) {
+    const { PGlite: ReadModelPGlite } =
+      await loadPGliteModule(readModelPgliteMajor);
+    pgliteFactory = (connectionString) =>
+      new ReadModelPGlite(connectionString ?? readModelPgliteDir);
+  }
+
   const api = await initializeAndStartAPI(
     initializeClient,
     {
       port: serverPort,
       dbPath: readModelPath,
+      pgliteFactory,
       https: options.https,
       packageLoaders: packageLoaders.length > 0 ? packageLoaders : undefined,
       packages: packages,
@@ -306,6 +421,7 @@ async function initServer(
     },
     "switchboard",
   );
+  apiRef.current = api;
 
   registerAttachmentRoutes(api);
 

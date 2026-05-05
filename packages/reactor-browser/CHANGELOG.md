@@ -1,3 +1,16 @@
+## 6.0.0-dev.214 (2026-05-05)
+
+### 🚀 Features
+
+- **switchboard:** adding pglite migration flag ([952075b11](https://github.com/powerhouse-inc/powerhouse/commit/952075b11))
+- added drive info to settings menu ([9217c1b76](https://github.com/powerhouse-inc/powerhouse/commit/9217c1b76))
+- use generated get document with operations query in switchboard link ([#2556](https://github.com/powerhouse-inc/powerhouse/pull/2556))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.213 (2026-05-04)
 
 This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.

@@ -2,7 +2,16 @@ import { connectConfig } from "@powerhousedao/connect/config";
 import { packageJson } from "@powerhousedao/connect/utils";
 import { Icon } from "@powerhousedao/design-system";
 import { About as BaseAbout } from "@powerhousedao/design-system/connect";
-import { closePHModal, showPHModal } from "@powerhousedao/reactor-browser";
+import {
+  closePHModal,
+  driveCollectionId,
+  showPHModal,
+  useDrives,
+  useDriveSystemInfo,
+  useSyncList,
+} from "@powerhousedao/reactor-browser";
+import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
+import { useMemo } from "react";
 
 export const About: React.FC = () => {
   const onOpenInspector = () => {
@@ -20,6 +29,7 @@ export const About: React.FC = () => {
             : undefined
         }
       />
+      <ConnectedDrives />
       <div className="bg-white p-3">
         <h2 className="mb-2 font-semibold">Inspector</h2>
         <p className="mb-3 text-sm font-normal text-gray-600">
@@ -36,3 +46,72 @@ export const About: React.FC = () => {
     </div>
   );
 };
+
+function ConnectedDrives() {
+  const drives = useDrives() ?? [];
+  const remotes = useSyncList();
+
+  const remoteDrives = useMemo(
+    () =>
+      drives.filter((d) =>
+        remotes.some(
+          (r) => r.collectionId === driveCollectionId("main", d.header.id),
+        ),
+      ),
+    [drives, remotes],
+  );
+
+  return (
+    <div className="my-4 bg-white p-3">
+      <h2 className="mb-2 font-semibold">Connected drives</h2>
+      {remoteDrives.length === 0 ? (
+        <p className="text-sm font-normal text-gray-600">
+          No connected remote drives.
+        </p>
+      ) : (
+        <ul className="flex flex-col gap-3">
+          {remoteDrives.map((drive) => (
+            <DriveAboutEntry key={drive.header.id} drive={drive} />
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function DriveAboutEntry({ drive }: { drive: DocumentDriveDocument }) {
+  const info = useDriveSystemInfo(drive);
+  const name = drive.state.global.name || drive.header.name;
+
+  return (
+    <li className="text-sm text-gray-700">
+      <div className="flex items-baseline gap-2">
+        <span className="font-medium">{name}</span>
+        {info.status === "ready" && (
+          <span className="text-xs text-gray-500">{info.host}</span>
+        )}
+      </div>
+      {info.status === "loading" && (
+        <div className="mt-1 text-xs text-gray-400">Loading…</div>
+      )}
+      {info.status === "error" && (
+        <div className="mt-1 text-xs text-red-600">
+          Could not load system info
+        </div>
+      )}
+      {info.status === "ready" && (
+        <div className="mt-1 text-xs text-gray-600">
+          <div>
+            <span className="font-medium">Version:</span> {info.version}
+          </div>
+          <div>
+            <span className="font-medium">Git hash:</span> {info.gitHash}
+          </div>
+        </div>
+      )}
+      {info.status === "local" && (
+        <div className="mt-1 text-xs text-gray-400">Local drive — N/A</div>
+      )}
+    </li>
+  );
+}

@@ -1,4 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
+import type { PGlite as PGliteType } from "@electric-sql/pglite";
 import type { Knex } from "knex";
 import knex from "knex";
 import ClientPgLite from "knex-pglite";
@@ -102,15 +103,32 @@ function isPG(connectionString: string) {
   return false;
 }
 
-export function getDbClient(connectionString: string | undefined = undefined): {
+/**
+ * Optional factory used by callers (e.g. Switchboard) to inject a
+ * version-specific PGLite instance — e.g. `pglite-legacy-02` when an existing
+ * data dir was created with an older PG major. Wire-compatible with the
+ * current PGLite class for the surface knex-pglite uses.
+ */
+export type PgliteFactory = (
+  connectionString: string | undefined,
+) => PGliteType;
+
+export function getDbClient(
+  connectionString: string | undefined = undefined,
+  pgliteFactory?: PgliteFactory,
+): {
   db: Db;
   knex: Knex;
+  pglite: PGliteType | undefined;
 } {
   const isPg = connectionString && isPG(connectionString);
   const client = isPg ? "pg" : (ClientPgLite as typeof knex.Client);
-  const connection = isPg
-    ? { connectionString }
-    : { pglite: new PGlite(connectionString) };
+  const pgliteInstance: PGliteType | undefined = isPg
+    ? undefined
+    : pgliteFactory
+      ? pgliteFactory(connectionString)
+      : new PGlite(connectionString);
+  const connection = isPg ? { connectionString } : { pglite: pgliteInstance };
 
   // If path is not postgres then it is a filesystem path.
   // Ensures parent directory is created.
@@ -133,7 +151,7 @@ export function getDbClient(connectionString: string | undefined = undefined): {
     }),
   });
 
-  return { db: kyselyInstance, knex: knexInstance };
+  return { db: kyselyInstance, knex: knexInstance, pglite: pgliteInstance };
 }
 
 export const initAnalyticsStoreSql = [

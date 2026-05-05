@@ -19,6 +19,7 @@ export const Default: Story = {
     handleDeleteDrive: () => {},
     sharingType: "LOCAL",
     availableOffline: true,
+    systemInfo: { status: "local" },
     drive: {
       header: {
         id: "1",

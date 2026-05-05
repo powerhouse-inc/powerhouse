@@ -1,3 +1,13 @@
+## 6.0.0-dev.214 (2026-05-05)
+
+### 🚀 Features
+
+- **switchboard:** adding pglite migration flag ([952075b11](https://github.com/powerhouse-inc/powerhouse/commit/952075b11))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.0.0-dev.213 (2026-05-04)
 
 This was a version bump only for @powerhousedao/builder-tools to align it with other projects, there were no code changes.

@@ -51,8 +51,9 @@ describe("route.from_body", function()
             { key = "identifier",         value = "doc-1" },
             { key = "documentIdentifier", value = "doc-2" },
             { key = "parentIdentifier",   value = "doc-3" },
-            { key = "childIdentifier",    value = "doc-4" },
-            { key = "docId",              value = "doc-5" },
+            { key = "sourceIdentifier",   value = "doc-4" },
+            { key = "targetIdentifier",   value = "doc-5" },
+            { key = "docId",              value = "doc-6" },
         }
         for _, c in ipairs(cases) do
             it("extracts " .. c.key, function()
@@ -61,6 +62,18 @@ describe("route.from_body", function()
                 assert.equals(c.value, r.doc_id)
             end)
         end
+
+        it("pins on sourceIdentifier when both source+target are present (addRelationship)", function()
+            local r = run(enc({
+                variables = {
+                    sourceIdentifier = "src-A",
+                    targetIdentifier = "tgt-B",
+                    relationshipType = "child",
+                },
+            }))
+            assert.is_false(r.exited)
+            assert.equals("src-A", r.doc_id)
+        end)
     end)
 
     describe("nested paths", function()
@@ -122,7 +135,7 @@ describe("route.from_body", function()
             assert.equals(409, r.status)
         end)
 
-        it("rejects cross-parent moveChildren with 409", function()
+        it("rejects cross-parent moveRelationship with 409", function()
             local r = run(enc({
                 variables = {
                     sourceParentIdentifier = "p-1",
@@ -132,7 +145,7 @@ describe("route.from_body", function()
             assert.equals(409, r.status)
         end)
 
-        it("routes same-parent moveChildren on the parent id", function()
+        it("routes same-parent moveRelationship on the parent id", function()
             local r = run(enc({
                 variables = {
                     sourceParentIdentifier = "p-same",

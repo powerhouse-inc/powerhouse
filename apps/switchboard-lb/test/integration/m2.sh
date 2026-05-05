@@ -105,7 +105,7 @@ resp=$(printf '%s' '{"variables":{"identifiers":["a","b"]}}' | post_graphql)
 check "409 deleteDocuments identifiers[]" "409" "$(status_code "$resp")"
 
 resp=$(printf '%s' '{"variables":{"sourceParentIdentifier":"p1","targetParentIdentifier":"p2"}}' | post_graphql)
-check "409 cross-parent moveChildren" "409" "$(status_code "$resp")"
+check "409 cross-parent moveRelationship" "409" "$(status_code "$resp")"
 
 resp=$(printf '%s' '{"variables":{"envelopes":[{"channelMeta":{"id":"a"}},{"channelMeta":{"id":"b"}}]}}' | post_graphql)
 check "409 cross-channel pushSyncEnvelopes" "409" "$(status_code "$resp")"
