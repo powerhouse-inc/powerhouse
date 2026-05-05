@@ -36,7 +36,11 @@
       "Bash(gh run:*)",
       "Bash(git stash:*)",
       "mcp__hotseat",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(sed 's/.*\\\\\\(```[^ ]*\\\\\\).*/\\\\1/')",
+      "Bash(node -e \"const os = require\\('os'\\); const fs = require\\('fs'\\); const p = os.tmpdir\\(\\); console.log\\('tmpdir:', p, '→ realpath:', fs.realpathSync\\(p\\)\\)\")",
+      "Bash(node -e ' *)",
+      "Bash(git add *)"
     ],
     "deny": [],
     "ask": []

@@ -108,7 +108,7 @@
 
 - [Cookbook](https://powerhouse.academy/academy/Cookbook): This section covers recipes related to the ph-cmd, the command-line tool for Powerhouse project initialization, code generation, package management, a
 - [Glossary](https://powerhouse.academy/academy/Glossary): - Powerhouse – A network organization that provides open-source software and services to support decentralized operations for other network organizati
-- [LLM docs](https://powerhouse.academy/academy/LLMDocs): The Powerhouse Academy provides a comprehensive, LLM-optimized documentation file that combines all academy content into a single, structured markdown
+- [LLM docs](https://powerhouse.academy/academy/LLMDocs): The Powerhouse Academy follows the llms.txt standard to provide machine-readable documentation for LLMs and AI coding tools.
 - [Step 2 — Implement the `TodoList` document model reducer operation handlers](https://powerhouse.academy/academy/TodoListTutorial/ImplementTodoListDocumentModelReducerOperationHandlers): Your document model update's the state of a given document by applying a set of append-only actions. Once these have been applied to the document, we 
 - [Step 3 — Adding our own tests for the document model actions](https://powerhouse.academy/academy/TodoListTutorial/AddTestsForTodoListActions): Similarly to the operation handler logic, when you add a new module to your document model, we generate some boilerplate tests for your code.
 - [Step 5 — Implement `TodoList` document editor UI components](https://powerhouse.academy/academy/TodoListTutorial/ImplementTodoListDocumentEditorUIComponents): Out of the box, we have a component for updating our TodoList documents' names, but we would like to create, read, update, and delete all of the data 
