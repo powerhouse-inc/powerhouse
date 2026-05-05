@@ -1,7 +1,10 @@
-import { addDays } from "date-fns";
-import type { Operation } from "@powerhousedao/shared/document-model";
+import {
+  generateId,
+  type Operation,
+} from "@powerhousedao/shared/document-model";
+import { addHours } from "date-fns";
+import { evolve, join, pipe, randomInteger, randomString, times } from "remeda";
 import type { SignatureArray } from "./types.js";
-
 export const mockSignature: SignatureArray = [
   "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
   "onCoFcadHQoqpoie/XuS7ItuNOQ=",
@@ -50,58 +53,38 @@ export const mockOperation: Operation = {
   },
 };
 
-export const mockOperations = [
-  mockOperation,
-  mockOperation,
-  {
-    ...mockOperation,
-    error: "Data mismatch detected",
-  },
-  { ...mockOperation, skip: 3 },
-  mockOperation,
-  mockOperation,
-  mockOperation,
-  {
-    ...mockOperation,
-    action: { ...mockOperation.action!, context: undefined },
-  },
-  mockOperation,
-  {
-    ...mockOperation,
-    timestampUtcMs: "2024-06-14T14:39:12.936Z",
-  },
-  { ...mockOperation, timestampUtcMs: "2024-06-14T14:39:12.936Z" },
-  { ...mockOperation, timestampUtcMs: "2024-06-14T14:39:12.936Z", skip: 2 },
-  { ...mockOperation, timestampUtcMs: "2024-06-14T14:39:12.936Z" },
-  { ...mockOperation, timestampUtcMs: "2024-06-14T14:39:12.936Z" },
-  {
-    ...mockOperation,
-    timestampUtcMs: "2024-06-14T14:39:12.936Z",
-  },
-  { ...mockOperation, timestampUtcMs: "2024-06-15T14:39:12.936Z", skip: 1 },
-  {
-    ...mockOperation,
-    timestampUtcMs: "2024-06-15T14:39:12.936Z",
-    error: "Data mismatch detected",
-  },
-  {
-    ...mockOperation,
-    timestampUtcMs: "2024-06-15T14:39:12.936Z",
-  },
-  { ...mockOperation, timestampUtcMs: "2024-06-15T14:39:12.936Z" },
-  ...Array.from({ length: 100 }, (_, index) =>
-    Array.from({ length: 5 }, () => ({
-      ...mockOperation,
-      timestampUtcMs: addDays(`2024-06-15T14:39:12.936Z`, index).toISOString(),
-    })),
-  ).flat(),
-].map((op, index) => ({
-  ...op,
-  index,
-}));
+export const mockOperations = makeMockOperations();
 
 export const globalOperations = mockOperations;
 export const localOperations: Operation[] = mockOperations.map((op) => ({
   ...op,
   scope: "local",
 }));
+
+function makeMockOperations(count = 100) {
+  return times(count, (index) =>
+    evolve(mockOperation, {
+      id: () => generateId(),
+      hash: () => `${randomString(27)}=`,
+      index: () => index,
+      timestampUtcMs: (timestamp) => evolveTimestamp(timestamp),
+      error: index % 5 === 0 ? () => "Data mismatch detected" : () => undefined,
+      action: {
+        id: () => generateId(),
+        timestampUtcMs: (timestamp) => evolveTimestamp(timestamp),
+        input: () => ({
+          id: generateId(),
+          content: pipe(
+            randomInteger(1, 100),
+            times((num) => randomString(num)),
+            join(" "),
+          ),
+        }),
+      },
+    }),
+  );
+}
+
+function evolveTimestamp(timestamp: string) {
+  return addHours(timestamp, randomInteger(1, 72)).toISOString();
+}

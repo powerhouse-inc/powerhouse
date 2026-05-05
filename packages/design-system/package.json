@@ -153,6 +153,7 @@
     "react-toastify": "^10.0.4",
     "tailwind-merge": "catalog:",
     "tsx": "catalog:",
-    "usehooks-ts": "^3.1.1"
+    "usehooks-ts": "^3.1.1",
+    "remeda": "catalog:"
   }
 }
