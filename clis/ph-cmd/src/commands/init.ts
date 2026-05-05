@@ -68,23 +68,24 @@ export const init = command({
           tag,
         );
       }
-      const parsed = coerce(resolvedVersion);
-      if (parsed && parsed.major < MIN_PH_CLI_MAJOR) {
-        throw new Error(
-          `${PH_CLI_PACKAGE}@${phCliVersionOrTag} resolves to ${resolvedVersion}, ` +
-            `which doesn't support 'init' (requires >= ${MIN_PH_CLI_MAJOR}.0.0).\n` +
-            `Try:  ph init --dev <args>   or   ph init --version <${MIN_PH_CLI_MAJOR}.x.x> <args>`,
-        );
-      }
     } catch (err) {
-      // Re-throw the version-floor error; swallow only network/registry
-      // failures so a flaky connection doesn't block the user.
-      if (err instanceof Error && err.message.startsWith(PH_CLI_PACKAGE)) {
-        throw err;
-      }
+      // Network/registry hiccup — fall through to the dlx so a flaky
+      // connection doesn't block the user. The dlx will surface its own
+      // error if the version genuinely can't be installed.
       if (args.debug) {
-        console.error(">>> ph-cli version check skipped:", err);
+        console.error(">>> ph-cli version resolution skipped:", err);
       }
+    }
+    const parsed = resolvedVersion ? coerce(resolvedVersion) : null;
+    if (parsed && parsed.major < MIN_PH_CLI_MAJOR) {
+      // Print + exit (rather than throw) to avoid the cli.ts catch handler
+      // shipping this expected user-input error to Sentry.
+      console.error(
+        `${PH_CLI_PACKAGE}@${phCliVersionOrTag} resolves to ${resolvedVersion}, ` +
+          `which doesn't support 'init' (requires >= ${MIN_PH_CLI_MAJOR}.0.0).\n` +
+          `Try:  ph init --dev <args>   or   ph init --version <${MIN_PH_CLI_MAJOR}.x.x> <args>`,
+      );
+      process.exit(1);
     }
 
     const phCliPackage = `${PH_CLI_PACKAGE}@${resolvedVersion ?? phCliVersionOrTag}`;
