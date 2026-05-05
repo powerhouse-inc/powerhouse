@@ -55,6 +55,7 @@ export class KyselyReservationStore implements IReservationStore {
       .selectFrom("attachment_reservation")
       .selectAll()
       .where("reservation_id", "=", reservationId)
+      .where("deleted_at_utc", "is", null)
       .executeTakeFirst();
 
     if (!row) {
@@ -66,17 +67,22 @@ export class KyselyReservationStore implements IReservationStore {
 
   async delete(reservationId: string): Promise<void> {
     await this.db
-      .deleteFrom("attachment_reservation")
+      .updateTable("attachment_reservation")
+      .set({ deleted_at_utc: new Date().toISOString() })
       .where("reservation_id", "=", reservationId)
+      .where("deleted_at_utc", "is", null)
       .execute();
   }
 
   async deleteExpired(now: Date = new Date()): Promise<number> {
+    const nowIso = now.toISOString();
     const result = await this.db
-      .deleteFrom("attachment_reservation")
-      .where("expires_at_utc", "<=", now.toISOString())
+      .updateTable("attachment_reservation")
+      .set({ deleted_at_utc: nowIso })
+      .where("expires_at_utc", "<=", nowIso)
+      .where("deleted_at_utc", "is", null)
       .executeTakeFirst();
 
-    return Number(result.numDeletedRows ?? 0);
+    return Number(result.numUpdatedRows ?? 0);
   }
 }
