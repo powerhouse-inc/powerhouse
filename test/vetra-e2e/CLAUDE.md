@@ -78,7 +78,56 @@ After doing changes to the code, or after creating a new document model or a new
 
 - **TypeScript Check**: Run `npm run tsc` to validate type safety
 - **ESLint Check**: Run `npm run lint:fix` to check for errors with ESLint
-- **Reducer Test Coverage**: Run `npm run test:coverage` after any change to a document model reducer. Document model reducers are pure synchronous functions and **MUST** stay at or above **95%** coverage on lines, branches, functions, and statements. If coverage drops below the threshold, add tests in `document-models/<name>/v<n>/tests/` until the threshold is restored — **DO NOT** lower the threshold or exclude files to make the check pass. Cover the happy path _and_ every error code defined via `ADD_OPERATION_ERROR` (each error is a branch that needs explicit test coverage).
+- **Reducer Test Coverage**: Run `npm run test:coverage` after any change to a document model reducer. Document model reducers are pure synchronous functions and **MUST** stay at or above **95%** coverage on lines, branches, functions, and statements. If coverage drops below the threshold, add tests in `document-models/<name>/v<n>/tests/` until the threshold is restored — **DO NOT** lower the threshold or exclude files to make the check pass. Cover the happy path _and_ every error code defined via `ADD_OPERATION_ERROR` (each error is a branch that needs explicit test coverage). Push toward 100% by following the strategy below.
+
+#### Strategy: reaching 100% reducer coverage
+
+95% is the enforced floor (vitest will fail below it). This strategy describes how to push toward 100% when feasible — and how to recognize when an uncovered branch indicates an implementation problem rather than a missing test.
+
+##### Phase 1: Baseline measurement
+
+Run coverage and identify the gap. Statements and lines reach high coverage quickly — the real challenge is **branch coverage**. Every `||`, `??`, `if`, and `&&` creates two branches; V8 counts them independently.
+
+##### Phase 2: Write scenario tests first
+
+Before chasing branches, write a small number of tests that exercise **realistic operation sequences**. Each test should chain multiple operations together the way a real consumer would use them. This covers the majority of code paths naturally and reveals which branches remain uncovered.
+
+Prefer fewer tests that each cover wide ranges of behavior over many isolated unit tests per branch. A single "full conversation flow" test that exercises 14 operations in sequence is more valuable and more maintainable than 14 separate tests.
+
+##### Phase 3: Categorize every uncovered branch
+
+Don't write tests to hit uncovered branches yet. First, examine each one and classify it:
+
+1. **Wrong nullability in the schema** — The type allows `null` but the value is always initialized and never null at runtime. The defensive fallback (`?? 0`, `?? defaultValue`) creates an unreachable branch. No test can meaningfully cover it because the condition cannot occur through any valid operation sequence.
+2. **Missing validation** — The type is nullable because the schema uses a flattened structure (e.g. a tagged union where fields are optional per variant). Some fields are _required for specific variants_ but the reducer silently accepts their absence. The fallback branch is reachable but only with invalid input that should be rejected.
+3. **Wrong coercion operator** — `||` is used where `??` is needed. Values like `0`, `false`, and `""` are valid but `||` coerces them to the fallback. This is a bug, not a coverage gap.
+4. **Legitimate optionality** — The field is genuinely optional. Both branches (value provided / not provided) are reachable through valid inputs. These are the only branches worth covering with tests.
+
+##### Phase 4: Fix the implementation, don't test around it
+
+For each category:
+
+- **Wrong nullability** → Tighten the type definition. Make the field non-nullable at the source (e.g. `Int!` instead of `Int` in the GraphQL schema). This eliminates the fallback code entirely, removing the untestable branch. Update the source schema via MCP (`SET_STATE_SCHEMA` / `SET_OPERATION_SCHEMA`) and regenerate — see "Document Model Modification Process" below.
+- **Missing validation** → Add validation that throws a specific named error for invalid input (define it via `ADD_OPERATION_ERROR` — see "Error Handling in Operations" below). This converts a silent fallback into an explicit rejection. The validation branch is now both reachable and worth testing.
+- **Wrong operator** → Fix `||` to `??` (or vice versa). Add a test that passes a falsy-but-valid value (`0`, `false`, `""`) and asserts it is preserved.
+- **Legitimate optionality** → Add test cases that exercise both sides. Often these can be folded into existing scenario tests by varying inputs (e.g. one call provides the field, another omits it).
+
+##### Phase 5: Extend scenario tests to cover remaining branches
+
+With the implementation corrected, extend the existing scenario tests to hit newly-testable branches:
+
+- Add a test that skips initialization to cover "not yet initialized" false branches.
+- Add error path tests that chain multiple invalid operations in sequence, asserting each error and verifying state is unchanged (use the operation-index pattern from "Testing Reducer Errors" below — never `.toThrow()`).
+- Add a test that uses minimal/empty inputs to cover fallback-to-null branches on optional fields.
+- Vary inputs across tests so both sides of legitimate `||` / `??` operators are hit (e.g. one test provides `stepIndex: 0`, another omits it).
+
+##### Phase 6: Verify
+
+Run `npm run test:coverage`. Reducers should be at or near 100% across all four metrics. If any branches remain uncovered, repeat the categorization in Phase 3: is it a type problem, a validation gap, an operator bug, or a legitimate test gap? Do not stop at 95% if a small number of uncovered branches remain — they are usually the cheapest signals of an underlying implementation issue.
+
+##### The principle
+
+**Don't test around bad types — fix the types.** When a branch is untestable, the problem is almost never a missing test. It is a type that is too loose, a validation that is missing, or an operator that is wrong. Fix the implementation so that every branch is either reachable and meaningful, or eliminated entirely. Coverage follows naturally from correct types, proper validation, and realistic test scenarios.
 
 ## Document editor creation flow
 
@@ -102,7 +151,7 @@ After doing changes to the code, or after creating a new document model or a new
 Only **after** the codegen has produced the boilerplate files, proceed with the UI implementation:
 
 - Inspect the generated files in the `editors/` folder — do NOT create new files for the main editor component; edit the generated one
-- Inspect the hooks in `editors/hooks` as they should be useful
+- Hooks for each document model are auto-generated at `document-models/<name>/v<n>/hooks.ts` and re-exported through the top-level barrel `document-models/<name>` (which always points at the latest version). Import them from the barrel — there is **no** `editors/hooks/` folder.
 - Read the schema of the document model that the editor is for to know how to interact with it
 - Every editor **MUST** include `<DocumentToolbar />` imported from `@powerhousedao/design-system/connect/index`. Place it at the top of the editor component — do not put anything next to it.
 - Style the editor using tailwind classes or a style tag. If using a style tag, make sure to make the selectors specific to only apply to the editor component.
@@ -132,25 +181,89 @@ Using a "Todo" document model as example:
 
 ~~~typescript
 import { generateId } from "document-model";
-import { useSelectedTodoDocument } from "../hooks/useTodoDocument.js";
-import {
-  addTodo,
-} from "../../document-models/todo/gen/creators.js";
+import { actions, useSelectedTodoDocument } from "document-models/todo";
 
 export default function Editor() {
   const [document, dispatch] = useSelectedTodoDocument();
 
   function handleAddTodo(values: { title: string }) {
     if (values.title) {
-      dispatch(addTodo({ id: generateId(), title: values.title }));
+      dispatch(actions.addTodo({ id: generateId(), title: values.title }));
     }
-  };
+  }
 
-// Note: The `useSelectedTodoDocument` hook is auto-generated. Check the `editors/hooks` folder for the exact hook name.
-// Action creators like `addTodo` are exported from the document model's `gen/creators.js` file.
+  // ...
+}
+
+// Note: The `useSelectedTodoDocument` hook is auto-generated at
+// `document-models/todo/v<n>/hooks.ts` and re-exported via the top-level
+// barrel `document-models/todo` (which always points at the latest version).
+// Action creators are exposed as `actions.<actionName>` from the same barrel
+// (e.g. `actions.addTodo(...)`) — never import from a deep `gen/creators.js` path.
 ~~~
 
-The `useSelectedTodoDocument` gets generated automatically so you don't need to implement it yourself.
+The `useSelectedTodoDocument` (and every other document hook) is auto-generated and re-exported from the `document-models/<name>` top-level barrel, so you don't need to implement it yourself. See the "Editor code conventions" section below for the full import-path rules.
+
+### Editor code conventions (TypeScript & module resolution)
+
+These rules apply to **every** editor regardless of which UI library you use. They come from the project's `tsconfig` (`module: nodenext`, `strict`, `verbatimModuleSyntax`) and ESLint config — they are constraints, not stylistic preferences.
+
+#### Always use the top-level barrel for document-model imports
+
+Every document model exposes a single public surface via its top-level barrel. Use it for **all** document-model symbols (types, actions, hooks, utils):
+
+~~~typescript
+// ✅ GOOD — barrel always points at the latest version
+import { actions, useSelectedTodoDocument } from "document-models/todo";
+import type { TodoAction, TodoDocument } from "document-models/todo";
+
+// ❌ BAD — deep paths bypass the barrel and break when the version increments
+import { useSelectedTodoDocument } from "../hooks/useTodoDocument.js";
+import { addTodo } from "../../document-models/todo/gen/creators.js";
+import type { Todo } from "document-models/todo/v1/gen/schema/types.js";
+~~~
+
+The barrel re-exports types, `actions.<actionName>` action creators, the four generated hooks (`useSelected<Name>Document`, `use<Name>DocumentById`, `use<Name>DocumentsInSelectedDrive`, `use<Name>DocumentsInSelectedFolder`), and `utils`. There is **no** `editors/hooks/` folder — that path does not exist in generated projects.
+
+#### Use the configured tsconfig path aliases — do NOT add `@/*`
+
+The boilerplate `tsconfig.json` already exposes the following path aliases:
+
+- `document-models`, `document-models/<name>`
+- `editors`, `editors/<name>`
+- `processors/<name>`
+- `subgraphs`, `subgraphs/<name>`
+
+Use these directly. **Do NOT** introduce a `@/*` alias — `baseUrl` is not configured in the boilerplate, and any `@/...` import will fail to resolve under `nodenext`.
+
+#### Relative imports MUST include `.js` extensions
+
+The boilerplate uses `"module": "nodenext"`, which requires explicit `.js` extensions on every relative import (even when the source file is `.ts` / `.tsx`):
+
+~~~typescript
+// ✅ GOOD
+import { Button } from "./components/ui/button.js";
+import { cn } from "../lib/utils.js";
+
+// ❌ BAD — fails at compile time
+import { Button } from "./components/ui/button";
+import { cn } from "../lib/utils";
+~~~
+
+When a third-party CLI generates extensionless imports, do a bulk find-and-replace after install to add `.js` to every relative path.
+
+#### Stringifying `unknown` values
+
+The boilerplate ESLint config enables `@typescript-eslint/no-base-to-string` (via `recommendedTypeChecked`). `String(value ?? "")` on a value typed as `unknown` will trip the rule because the default `Object.prototype.toString` produces `"[object Object]"`. Use a small helper:
+
+~~~typescript
+function str(v: unknown): string {
+  if (v == null) return "";
+  if (typeof v === "string") return v;
+  if (typeof v === "number" || typeof v === "boolean") return String(v);
+  return JSON.stringify(v);
+}
+~~~
 
 ### Drag-and-drop file uploads (optional pattern)
 
@@ -311,6 +424,181 @@ function DropBridge({
 4. **`dragenter` and `dragleave` do NOT need `preventDefault`.** `stopPropagation()` alone is enough on those two; only `dragover` and `drop` require `preventDefault`.
 5. **The overlay `div` MUST have `pointer-events-none`.** Otherwise the overlay swallows the `drop` event and your drop handler never fires.
 6. **Reset `dragDepthRef.current = 0` inside `onDrop`.** Otherwise a subsequent drag will start with stale depth and the overlay logic breaks.
+
+### Using shadcn / Vercel AI Elements in editors (optional)
+
+Use this section **only** when your editor needs UI primitives that are not covered by `@powerhousedao/design-system` or `@powerhousedao/document-engineering` — typically chat-style UIs that consume Vercel's AI Elements (`Conversation`, `Message`, `Reasoning`, `Tool`, `PromptInput`, etc.). Default editors should prefer the design-system / document-engineering primitives and skip this entire section.
+
+#### Why manual setup is required
+
+`shadcn init` will fail with `Error: We could not detect a supported framework`. The project is a Powerhouse reactor package, not a Next.js / Vite app, so the shadcn CLI cannot run its init flow. Set up shadcn manually with the steps below.
+
+#### Step 1 — install runtime dependencies
+
+~~~bash
+pnpm add class-variance-authority clsx tailwind-merge lucide-react tw-animate-css
+~~~
+
+#### Step 2 — create `components.json` at the project root
+
+Substitute `<name>` with your editor's name (e.g. `chat-session-editor`):
+
+~~~json
+{
+  "$schema": "https://ui.shadcn.com/schema.json",
+  "style": "new-york",
+  "rsc": false,
+  "tsx": true,
+  "tailwind": {
+    "config": "",
+    "css": "style.css",
+    "baseColor": "neutral",
+    "cssVariables": true
+  },
+  "aliases": {
+    "components": "@/editors/<name>/components",
+    "utils": "@/editors/<name>/lib/utils",
+    "ui": "@/editors/<name>/components/ui",
+    "lib": "@/editors/<name>/lib",
+    "hooks": "@/editors/<name>/hooks"
+  },
+  "iconLibrary": "lucide"
+}
+~~~
+
+The `@/*` alias inside `components.json` is consumed by the shadcn / AI Elements CLIs at install time only — they generate `@/...` imports inside the components they produce. You will rewrite those imports to relative paths in Step 7. **Do NOT** add a corresponding `@/*` alias to `tsconfig.json` — see the "Editor code conventions" section above.
+
+#### Step 3 — create `lib/utils.ts` under your editor
+
+~~~typescript
+// editors/<name>/lib/utils.ts
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+~~~
+
+#### Step 4 — extend `style.css` with the shadcn theme variables
+
+The boilerplate `style.css` already imports `tailwindcss`, `@powerhousedao/design-system/theme.css`, and `@powerhousedao/connect/style.css`. **Append** (do not replace) the shadcn additions:
+
+- `@import "tw-animate-css";` (after the existing `@import "tailwindcss";`)
+- `@custom-variant dark (&:is(.dark *));`
+- A `@theme inline { ... }` block mapping `--color-*` and `--radius-*` to the shadcn variables
+- `:root { ... }` and `.dark { ... }` blocks with `oklch(...)` color values
+- `@layer base { * { @apply border-border outline-ring/50; } body { @apply bg-background text-foreground; } }`
+
+⚠️ **Theme conflict warning**: `@powerhousedao/design-system/theme.css` already declares its own theme tokens. Adding shadcn's color variables on top has not been verified for conflicts — after this step, render a Connect view and confirm both the editor and the rest of Connect still look correct in light and dark mode. If the design-system theme breaks, fall back to using `@powerhousedao/design-system` and `@powerhousedao/document-engineering` primitives instead of shadcn.
+
+#### Step 5 — install AI Elements (Vercel's CLI, NOT shadcn's)
+
+Vercel ships its own CLI for AI chat components — use it, **not** `npx shadcn add`:
+
+~~~bash
+npx ai-elements@latest add conversation message reasoning tool prompt-input code-block
+~~~
+
+**Verify each component name exists in the AI Elements registry before adding** — names that aren't in the registry will hard-error and abort the entire install. The registry list is at https://ai-sdk.dev/elements .
+
+The CLI auto-installs supporting deps: `ai` (the Vercel AI SDK, used for types like `UIMessage`, `ToolUIPart`), `use-stick-to-bottom` (auto-scroll for `Conversation`), `streamdown` plus its plugins (`@streamdown/cjk`, `@streamdown/code`, `@streamdown/math`, `@streamdown/mermaid`) for markdown rendering, and `@radix-ui/react-use-controllable-state` (for the `Reasoning` toggle). These are pulled into your `package.json` automatically.
+
+#### Step 6 — relocate AI Elements files into the editor directory
+
+The CLI puts AI Elements files at `components/ai-elements/` at the **project root**, not inside your editor. Move them:
+
+~~~
+components/ai-elements/  →  editors/<name>/components/ai-elements/
+~~~
+
+After the move, the project-root `components/` directory should be empty and can be deleted. UI primitives installed under `editors/<name>/components/ui/` are already correctly placed.
+
+#### Step 7 — rewrite all `@/...` imports to relative paths with `.js` extensions
+
+The shadcn / AI Elements CLIs generate imports like:
+
+~~~typescript
+import { Button } from "@/editors/<name>/components/ui/button";
+import { cn } from "@/editors/<name>/lib/utils";
+~~~
+
+Both forms break under `nodenext`: `@/*` does not resolve (no `baseUrl`), and the missing `.js` extension fails compilation. Do a bulk find-and-replace across **every file generated in Steps 5–6**. From an `ai-elements/` file, rewrite:
+
+- `@/editors/<name>/components/ui/button` → `../ui/button.js`
+- `@/editors/<name>/lib/utils` → `../../lib/utils.js`
+
+From a `ui/` file, rewrite:
+
+- `@/editors/<name>/components/ui/button` → `./button.js`
+- `@/editors/<name>/lib/utils` → `../../lib/utils.js`
+
+Also fix relative imports between AI Elements files that the CLI generated without extensions — e.g. `./shimmer` → `./shimmer.js`, `./code-block` → `./code-block.js`.
+
+#### Step 8 — bridge document-model types to AI Elements types
+
+AI Elements components use Vercel AI SDK types (`UIMessage`, `ToolUIPart`, `DynamicToolUIPart`). Your document model has its own types (`Message`, `ContentPart`, etc.).
+
+**Do NOT try to convert between them.** Instead, use the **low-level primitives** (which accept plain props — strings, ReactNode) and write thin wrapper components that bridge your document-model types to those primitives:
+
+- Plain-prop primitives: `Message`, `MessageContent`, `Conversation`, `ConversationContent`, `Reasoning`, `ReasoningTrigger`, `ReasoningContent`, `Tool`, `ToolHeader`, `ToolContent`, `ToolInput`, `ToolOutput`, `MessageResponse`.
+- For `ToolHeader`, use `type="dynamic-tool"` with explicit `toolName` and `state` props.
+
+##### Tool state mapping
+
+| Document-model state         | AI Elements `ToolPart["state"]` |
+| ---------------------------- | ------------------------------- |
+| Tool call with no result yet | `"input-available"`             |
+| Tool call with result        | `"output-available"`            |
+| Tool call with error result  | `"output-error"`                |
+
+##### Index-signature mismatch when bridging types
+
+When passing a concrete document-model interface into a function or component typed as `Record<string, unknown> & { id: string; type: ... }`, TypeScript will complain:
+
+~~~
+Type 'MyInterface' is not assignable to type 'Record<string, unknown>'.
+  Index signature for type 'string' is missing in type 'MyInterface'.
+~~~
+
+**Fix**: add `[key: string]: unknown;` to the concrete interface so it satisfies the index signature.
+
+#### Recommended file structure
+
+~~~
+editors/<name>/
+  editor.tsx              ← main editor (edit codegen output)
+  module.ts               ← DO NOT EDIT (codegen)
+  lib/
+    utils.ts              ← cn() helper
+  components/
+    ai-elements/          ← moved from project root in Step 6
+      conversation.tsx
+      message.tsx
+      reasoning.tsx
+      tool.tsx
+      code-block.tsx
+      prompt-input.tsx
+    ui/                   ← shadcn primitives installed by ai-elements CLI
+      button.tsx
+      badge.tsx
+      tooltip.tsx
+      ... etc
+    <wrapper components that bridge document-model types to AI Elements primitives>
+~~~
+
+#### Quick checklist for a shadcn-using editor
+
+1. Create the editor document via MCP and confirm its status (see "Phase 1" above).
+2. Wait for codegen to produce the editor boilerplate.
+3. `pnpm add class-variance-authority clsx tailwind-merge lucide-react tw-animate-css`
+4. Create `components.json` and `editors/<name>/lib/utils.ts`.
+5. Extend `style.css` with the shadcn theme additions; verify the design-system theme still renders correctly.
+6. `npx ai-elements@latest add <components>` — verify component names against the registry first.
+7. Move `components/ai-elements/` into `editors/<name>/components/ai-elements/`.
+8. Bulk-rewrite every `@/...` import to a relative path with a `.js` extension; also add `.js` to extensionless relative imports.
+9. Use the top-level `document-models/<name>` barrel for all document-model imports (see "Editor code conventions" above).
+10. Run `npm run tsc` and `npm run lint:fix`.
 
 ## ⚠️ CRITICAL: Generated Files & Modification Rules
 
