@@ -52,9 +52,6 @@
     },
     {
       "path": "../e2e-utils"
-    },
-    {
-      "path": "../versioned-documents"
     }
   ],
   "include": [
