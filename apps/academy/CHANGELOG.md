@@ -1,3 +1,18 @@
+## 6.0.0-dev.215 (2026-05-05)
+
+### 🚀 Features
+
+- make document cache usable with graphql client ([#2557](https://github.com/powerhouse-inc/powerhouse/pull/2557))
+
+### 🩹 Fixes
+
+- **ci:** pick docker tag matching branch channel ([1f6c5ba7c](https://github.com/powerhouse-inc/powerhouse/commit/1f6c5ba7c))
+
+### ❤️ Thank You
+
+- Frank
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.214 (2026-05-05)
 
 ### 🚀 Features
