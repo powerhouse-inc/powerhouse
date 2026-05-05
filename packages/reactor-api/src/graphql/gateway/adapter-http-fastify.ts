@@ -46,13 +46,16 @@ type GetEntry = {
   matcher: MatchFunction<ParamData>;
 };
 
+type NodeHandler = (
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  body?: unknown,
+) => void;
+
 type NodeEntry = {
   method: "DELETE" | "GET" | "HEAD" | "POST" | "PUT";
-  handler: (
-    req: http.IncomingMessage,
-    res: http.ServerResponse,
-    body?: unknown,
-  ) => void;
+  matcher: MatchFunction<ParamData>;
+  handler: NodeHandler;
 };
 
 // Pre-listen configuration ops (need the Fastify instance to apply).
@@ -64,9 +67,10 @@ export class FastifyHttpAdapter implements IHttpAdapter {
   // Dispatch maps — populated at any time (before or after listen).
   readonly #fetchRoutes: FetchEntry[] = [];
   readonly #getRoutes: Map<string, GetEntry> = new Map();
-  // path → method → handler
-  readonly #nodeRoutes: Map<string, Map<string, NodeEntry["handler"]>> =
-    new Map();
+  // Iterated in registration order on dispatch; entries carry their own
+  // path-to-regexp matcher so parameterised paths (e.g. "/attachments/:hash")
+  // resolve correctly and populate `req.params`.
+  readonly #nodeRoutes: NodeEntry[] = [];
 
   // Ops that need the Fastify instance (CORS config, Connect middleware).
   readonly #setupOps: SetupOp[] = [];
@@ -114,16 +118,13 @@ export class FastifyHttpAdapter implements IHttpAdapter {
   mountNodeRoute(
     method: "DELETE" | "GET" | "HEAD" | "POST" | "PUT",
     path: string,
-    handler: (
-      req: http.IncomingMessage,
-      res: http.ServerResponse,
-      body?: unknown,
-    ) => void,
+    handler: NodeHandler,
   ): void {
-    if (!this.#nodeRoutes.has(path)) {
-      this.#nodeRoutes.set(path, new Map());
-    }
-    this.#nodeRoutes.get(path)!.set(method, handler);
+    this.#nodeRoutes.push({
+      method,
+      matcher: match(normalizePath(path)),
+      handler,
+    });
   }
 
   mountRawMiddleware(middleware: unknown): void {
@@ -235,15 +236,18 @@ export class FastifyHttpAdapter implements IHttpAdapter {
       | "POST"
       | "PUT";
 
-    // 1. Node routes — exact path + method, handler manages raw response.
-    const nodeHandlers = this.#nodeRoutes.get(pathname);
-    if (nodeHandlers) {
-      const handler = nodeHandlers.get(method);
-      if (handler) {
-        reply.hijack();
-        handler(req.raw, reply.raw, req.body);
-        return;
-      }
+    // 1. Node routes — path-to-regexp match + method, handler manages raw
+    // response. Attach decoded params onto `req.raw` so downstream handlers
+    // can read them via the same `req.params` API the Express adapter exposes.
+    for (const entry of this.#nodeRoutes) {
+      if (entry.method !== method) continue;
+      const result = entry.matcher(pathname);
+      if (!result) continue;
+      (req.raw as http.IncomingMessage & { params?: ParamData }).params =
+        result.params;
+      reply.hijack();
+      entry.handler(req.raw, reply.raw, req.body);
+      return;
     }
 
     // 2. GET-specific routes (health, explorer, etc.).

@@ -191,9 +191,26 @@ describe("attachment routes", () => {
     expect(upload.ref).toBe(`attachment://v1:${upload.hash}`);
     expect(upload.header.sizeBytes).toBe(payload.length);
 
-    // Reservation should be soft-deleted: get() rejects, but the row remains
-    // in the DB (verified by the dedicated reservation-store unit tests).
+    // Reservation should be soft-deleted: get() rejects, and the row must
+    // still be present in the DB with deleted_at_utc populated. Asserting
+    // both halves directly here guards against a future regression where
+    // upload accidentally hard-deletes the row.
     await expect(attachments.reservations.get(reservationId)).rejects.toThrow();
+    const row = await (
+      kysely as unknown as Kysely<{
+        attachment_reservation: {
+          reservation_id: string;
+          deleted_at_utc: string | null;
+        };
+      }>
+    )
+      .withSchema("attachments")
+      .selectFrom("attachment_reservation")
+      .selectAll()
+      .where("reservation_id", "=", reservationId)
+      .executeTakeFirst();
+    expect(row).toBeDefined();
+    expect(row!.deleted_at_utc).not.toBeNull();
 
     // Download
     const downloadHandler = makeDownloadHandler(attachments);
@@ -298,6 +315,9 @@ describe("attachment routes", () => {
     await waitFor(statRes);
 
     expect(statRes.statusCode).toBe(200);
+    // Mock-level invariant: the handler must not write a body. Wire-level
+    // body suppression for HEAD is enforced by Node's http module and is
+    // covered by the HEAD-over-real-server test below.
     expect(statRes._body.length).toBe(0);
     expect(statRes.getHeader("content-length")).toBe(String("headdata".length));
     const meta = JSON.parse(
@@ -315,6 +335,71 @@ describe("attachment routes", () => {
     expect(meta.sizeBytes).toBe("headdata".length);
     expect(typeof meta.createdAtUtc).toBe("string");
     expect(typeof meta.lastAccessedAtUtc).toBe("string");
+  });
+
+  it("HEAD over a real http.Server returns headers with a 0-byte wire body", async () => {
+    const reserveHandler = makeReserveHandler(attachments);
+    const reserveReq = makeReq({
+      method: "POST",
+      body: JSON.stringify({ mimeType: "text/plain", fileName: "wire.txt" }),
+    });
+    const reserveRes = makeRes();
+    await reserveHandler(reserveReq, reserveRes);
+    await waitFor(reserveRes);
+    const { reservationId } = JSON.parse(reserveRes._body.toString("utf8")) as {
+      reservationId: string;
+    };
+
+    const uploadHandler = makeUploadHandler(attachments);
+    const uploadReq = makeReq({
+      method: "PUT",
+      params: { reservationId },
+      body: "wire-body-payload",
+    });
+    const uploadRes = makeRes();
+    await uploadHandler(uploadReq, uploadRes);
+    await waitFor(uploadRes);
+    const upload = JSON.parse(uploadRes._body.toString("utf8")) as {
+      hash: string;
+    };
+
+    const { createServer } = await import("node:http");
+    const statHandler = makeStatHandler(attachments);
+    const server = createServer((req, res) => {
+      const m = /^\/attachments\/([^/]+)$/.exec(req.url ?? "/");
+      if (!m) {
+        res.statusCode = 404;
+        res.end();
+        return;
+      }
+      (req as IncomingMessage & { params?: Record<string, string> }).params = {
+        hash: m[1],
+      };
+      void statHandler(req, res);
+    });
+    await new Promise<void>((resolve) => server.listen(0, resolve));
+    const port = (server.address() as { port: number }).port;
+
+    try {
+      const response = await fetch(
+        `http://127.0.0.1:${port}/attachments/${upload.hash}`,
+        {
+          method: "HEAD",
+        },
+      );
+      expect(response.status).toBe(200);
+      expect(response.headers.get("content-length")).toBe(
+        String("wire-body-payload".length),
+      );
+      // Node's http module suppresses the body for HEAD requests at the
+      // protocol level — assert that no bytes arrived on the wire.
+      const buf = await response.arrayBuffer();
+      expect(buf.byteLength).toBe(0);
+    } finally {
+      await new Promise<void>((resolve, reject) =>
+        server.close((err) => (err ? reject(err) : resolve())),
+      );
+    }
   });
 
   it("HEAD stat returns 404 for unknown hash", async () => {
@@ -452,19 +537,84 @@ describe("attachment routes", () => {
     expect(res.statusCode).toBe(400);
   });
 
-  it("GET download returns 400 for uppercase hash", async () => {
+  it("GET download accepts an uppercase hash and canonicalises to lowercase", async () => {
+    // Reserve, upload, then download using the uppercased hash. The route
+    // must accept either case and look up the canonical (lowercase) entry.
+    const reserveHandler = makeReserveHandler(attachments);
+    const reserveReq = makeReq({
+      method: "POST",
+      body: JSON.stringify({ mimeType: "text/plain", fileName: "u.txt" }),
+    });
+    const reserveRes = makeRes();
+    await reserveHandler(reserveReq, reserveRes);
+    await waitFor(reserveRes);
+    const { reservationId } = JSON.parse(reserveRes._body.toString("utf8")) as {
+      reservationId: string;
+    };
+
+    const uploadHandler = makeUploadHandler(attachments);
+    const uploadReq = makeReq({
+      method: "PUT",
+      params: { reservationId },
+      body: "case-test",
+    });
+    const uploadRes = makeRes();
+    await uploadHandler(uploadReq, uploadRes);
+    await waitFor(uploadRes);
+    const upload = JSON.parse(uploadRes._body.toString("utf8")) as {
+      hash: string;
+    };
+
     const handler = makeDownloadHandler(attachments);
     const req = makeReq({
       method: "GET",
-      params: { hash: "A".repeat(64) },
+      params: { hash: upload.hash.toUpperCase() },
     });
     const res = makeRes();
     await handler(req, res);
     await waitFor(res);
-    expect(res.statusCode).toBe(400);
-    expect(JSON.parse(res._body.toString("utf8"))).toEqual({
-      error: "Invalid attachment hash",
+    expect(res.statusCode).toBe(200);
+    expect(res._body.toString("utf8")).toBe("case-test");
+  });
+
+  it("HEAD stat accepts an uppercase hash", async () => {
+    const reserveHandler = makeReserveHandler(attachments);
+    const reserveReq = makeReq({
+      method: "POST",
+      body: JSON.stringify({ mimeType: "text/plain", fileName: "uh.txt" }),
     });
+    const reserveRes = makeRes();
+    await reserveHandler(reserveReq, reserveRes);
+    await waitFor(reserveRes);
+    const { reservationId } = JSON.parse(reserveRes._body.toString("utf8")) as {
+      reservationId: string;
+    };
+
+    const uploadHandler = makeUploadHandler(attachments);
+    const uploadReq = makeReq({
+      method: "PUT",
+      params: { reservationId },
+      body: "head-case",
+    });
+    const uploadRes = makeRes();
+    await uploadHandler(uploadReq, uploadRes);
+    await waitFor(uploadRes);
+    const upload = JSON.parse(uploadRes._body.toString("utf8")) as {
+      hash: string;
+    };
+
+    const statHandler = makeStatHandler(attachments);
+    const statReq = makeReq({
+      method: "HEAD",
+      params: { hash: upload.hash.toUpperCase() },
+    });
+    const statRes = makeRes();
+    await statHandler(statReq, statRes);
+    await waitFor(statRes);
+    expect(statRes.statusCode).toBe(200);
+    expect(statRes.getHeader("content-length")).toBe(
+      String("head-case".length),
+    );
   });
 
   it("PUT upload returns opaque 500 when reservation lookup throws an unmapped error", async () => {

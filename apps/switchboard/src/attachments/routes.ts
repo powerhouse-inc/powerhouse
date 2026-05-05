@@ -13,7 +13,10 @@ import type { ReadableStream as NodeReadableStream } from "node:stream/web";
 
 const logger = childLogger(["switchboard", "attachments"]);
 
-const HASH_PATTERN = /^[a-f0-9]{64}$/;
+// Canonical form is lowercase hex (the SHA-256 hasher emits lowercase), but
+// accept either case from the wire and normalise before lookup. This keeps
+// the API forgiving for hand-typed URLs without changing storage semantics.
+const HASH_PATTERN = /^[a-f0-9]{64}$/i;
 // eslint-disable-next-line no-control-regex
 const CONTROL_CHARS = /[\x00-\x1f\x7f]/;
 // RFC 6838 token chars; allows optional `; param=value` pairs (token or quoted-string).
@@ -203,12 +206,10 @@ export function makeDownloadHandler(attachments: AttachmentBuildResult) {
     const controller = new AbortController();
     req.once("close", () => controller.abort());
 
+    const canonicalHash = hash.toLowerCase() as AttachmentHash;
     let response;
     try {
-      response = await attachments.store.get(
-        hash as AttachmentHash,
-        controller.signal,
-      );
+      response = await attachments.store.get(canonicalHash, controller.signal);
     } catch (err) {
       sendErrorFromException(res, err);
       return;
@@ -256,9 +257,10 @@ export function makeStatHandler(attachments: AttachmentBuildResult) {
       return;
     }
 
+    const canonicalHash = hash.toLowerCase() as AttachmentHash;
     let header;
     try {
-      header = await attachments.store.stat(hash as AttachmentHash);
+      header = await attachments.store.stat(canonicalHash);
     } catch (err) {
       sendErrorFromException(res, err);
       return;
