@@ -64,7 +64,8 @@ const copy = [{ from: "powerhouse.manifest.json", to: "dist" }];
 
 const config = false;
 const clean = true;
-const dts = true;
+// types are emitted via a separate tsc command
+const dts = false;
 const sourcemap = true;
 
 export const browserBuildConfig: InlineConfig = {

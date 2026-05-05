@@ -22,11 +22,33 @@ export async function runBuild(args: BuildArgs) {
   });
 
   const detectResult = await detect();
-  const executeLocalCommand = resolveCommand(
-    detectResult?.agent ?? "npm",
-    "execute-local",
-    ["tailwindcss", "-i", "./style.css", "-o", "./dist/style.css"],
-  );
+  const agent = detectResult?.agent ?? "npm";
+
+  // Emit types with tsc
+  const tscCommand = resolveCommand(agent, "execute-local", ["tsc"]);
+  if (tscCommand === null) {
+    console.error(
+      "You need to have typescript installed to use the `build` command.",
+    );
+    process.exit(1);
+  }
+  try {
+    execSync(`${tscCommand.command} ${tscCommand.args.join(" ")}`, {
+      stdio: "inherit",
+    });
+  } catch {
+    console.warn(
+      "tsc reported errors during dts emission; declarations were still written.",
+    );
+  }
+
+  const executeLocalCommand = resolveCommand(agent, "execute-local", [
+    "tailwindcss",
+    "-i",
+    "./style.css",
+    "-o",
+    "./dist/style.css",
+  ]);
   if (executeLocalCommand === null) {
     console.error(
       "You need to have tailwindcss installed to use the `build` command.",

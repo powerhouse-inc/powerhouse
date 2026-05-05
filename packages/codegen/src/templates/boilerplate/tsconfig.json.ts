@@ -26,7 +26,6 @@ export const tsconfigPathsTemplate = json`
 export const tsConfigTemplate = json`
 {
   "compilerOptions": {
-    "outDir": "./dist",
     "rootDir": ".",
     // paths for easy access to project modules
     "paths": {
@@ -39,6 +38,7 @@ export const tsConfigTemplate = json`
     "types": ["node", "vite/client", "vitest/globals"],
     "lib": ["ESNext", "dom", "dom.iterable"],
     "declaration": true,
+    "declarationDir": "./dist/types",
     "declarationMap": true,
     "emitDeclarationOnly": true,
     "strict": true,

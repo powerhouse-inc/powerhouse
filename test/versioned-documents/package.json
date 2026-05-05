@@ -15,37 +15,37 @@
   ],
   "exports": {
     ".": {
-      "types": "./dist/browser/index.d.ts",
+      "types": "./dist/types/index.d.ts",
       "browser": "./dist/browser/index.js",
       "node": "./dist/node/index.mjs"
     },
     "./document-models": {
-      "types": "./dist/browser/document-models/index.d.ts",
+      "types": "./dist/types/document-models/index.d.ts",
       "browser": "./dist/browser/document-models/index.js",
       "node": "./dist/node/document-models/index.mjs"
     },
     "./document-models/*": {
-      "types": "./dist/browser/document-models/*/index.d.ts",
+      "types": "./dist/types/document-models/*/index.d.ts",
       "browser": "./dist/browser/document-models/*/index.js",
       "node": "./dist/node/document-models/*/index.mjs"
     },
     "./editors": {
-      "types": "./dist/browser/editors/index.d.ts",
+      "types": "./dist/types/editors/index.d.ts",
       "browser": "./dist/browser/editors/index.js",
       "node": "./dist/node/editors/index.mjs"
     },
     "./editors/*": {
-      "types": "./dist/browser/editors/*/editor.d.ts",
+      "types": "./dist/types/editors/*/editor.d.ts",
       "browser": "./dist/browser/editors/*/editor.js",
       "node": "./dist/node/editors/*/editor.mjs"
     },
     "./subgraphs": {
-      "types": "./dist/browser/subgraphs/index.d.ts",
+      "types": "./dist/types/subgraphs/index.d.ts",
       "browser": "./dist/browser/subgraphs/index.js",
       "node": "./dist/node/subgraphs/index.mjs"
     },
     "./processors": {
-      "types": "./dist/browser/processors/index.d.ts",
+      "types": "./dist/types/processors/index.d.ts",
       "browser": "./dist/browser/processors/index.js",
       "node": "./dist/node/processors/index.mjs"
     },
