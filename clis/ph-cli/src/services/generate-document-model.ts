@@ -29,5 +29,7 @@ export async function startGenerateDocumentModel(
     await generateDocumentModel(documentModelState, project);
   } else {
     console.log("Please specify either `file`, `dir`, or `all`.");
+    return;
   }
+  await project.save();
 }
