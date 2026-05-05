@@ -43,7 +43,7 @@ function CreateDocumentButton({ documentModelModule }: Props) {
     documentModelModule.documentModel.global.description;
   return (
     <button
-      className="cursor-pointer rounded-md bg-gray-200 py-2 px-3 hover:bg-gray-300"
+      className="cursor-pointer rounded-md bg-gray-200 px-3 py-2 hover:bg-gray-300"
       title={documentModelName}
       aria-description={documentModelDescription}
       onClick={() => showCreateDocumentModal(documentType)}

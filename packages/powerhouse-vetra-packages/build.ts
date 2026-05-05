@@ -17,10 +17,12 @@ await build({
 });
 
 // Emit dts via tsc; flags live in tsconfig.json.
+console.log("\n▶ Emitting types via tsc...");
 try {
   execSync("tsc", { stdio: "inherit" });
+  console.log("✔ Types emitted to", join("dist", "types"));
 } catch {
   console.warn(
-    "tsc reported errors during dts emission; declarations were still written.",
+    "✘ tsc reported errors above; declarations were still written. Fix the errors to keep types accurate.",
   );
 }

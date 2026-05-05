@@ -32,13 +32,15 @@ export async function runBuild(args: BuildArgs) {
     );
     process.exit(1);
   }
+  console.log("\n▶ Emitting types via tsc...");
   try {
     execSync(`${tscCommand.command} ${tscCommand.args.join(" ")}`, {
       stdio: "inherit",
     });
+    console.log("✔ Types emitted to", join(outDir, "types"));
   } catch {
     console.warn(
-      "tsc reported errors during dts emission; declarations were still written.",
+      "✘ tsc reported errors above; declarations were still written. Fix the errors to keep types accurate.",
     );
   }
 
