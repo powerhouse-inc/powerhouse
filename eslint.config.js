@@ -231,6 +231,7 @@ const typescriptLanguageOptions = {
         "mcr.config.js",
         "tools/scripts/merge-coverage.js",
         "test/scripts/analyze-ops.ts",
+        "test/versioned-documents/vitest.config.ts",
       ],
     },
     tsconfigRootDir: import.meta.dirname,
