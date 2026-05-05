@@ -76,7 +76,56 @@ After doing changes to the code, or after creating a new document model or a new
 
 - **TypeScript Check**: Run \`npm run tsc\` to validate type safety
 - **ESLint Check**: Run \`npm run lint:fix\` to check for errors with ESLint
-- **Reducer Test Coverage**: Run \`npm run test:coverage\` after any change to a document model reducer. Document model reducers are pure synchronous functions and **MUST** stay at or above **95%** coverage on lines, branches, functions, and statements. If coverage drops below the threshold, add tests in \`document-models/<name>/v<n>/tests/\` until the threshold is restored — **DO NOT** lower the threshold or exclude files to make the check pass. Cover the happy path _and_ every error code defined via \`ADD_OPERATION_ERROR\` (each error is a branch that needs explicit test coverage).
+- **Reducer Test Coverage**: Run \`npm run test:coverage\` after any change to a document model reducer. Document model reducers are pure synchronous functions and **MUST** stay at or above **95%** coverage on lines, branches, functions, and statements. If coverage drops below the threshold, add tests in \`document-models/<name>/v<n>/tests/\` until the threshold is restored — **DO NOT** lower the threshold or exclude files to make the check pass. Cover the happy path _and_ every error code defined via \`ADD_OPERATION_ERROR\` (each error is a branch that needs explicit test coverage). Push toward 100% by following the strategy below.
+
+#### Strategy: reaching 100% reducer coverage
+
+95% is the enforced floor (vitest will fail below it). This strategy describes how to push toward 100% when feasible — and how to recognize when an uncovered branch indicates an implementation problem rather than a missing test.
+
+##### Phase 1: Baseline measurement
+
+Run coverage and identify the gap. Statements and lines reach high coverage quickly — the real challenge is **branch coverage**. Every \`||\`, \`??\`, \`if\`, and \`&&\` creates two branches; V8 counts them independently.
+
+##### Phase 2: Write scenario tests first
+
+Before chasing branches, write a small number of tests that exercise **realistic operation sequences**. Each test should chain multiple operations together the way a real consumer would use them. This covers the majority of code paths naturally and reveals which branches remain uncovered.
+
+Prefer fewer tests that each cover wide ranges of behavior over many isolated unit tests per branch. A single "full conversation flow" test that exercises 14 operations in sequence is more valuable and more maintainable than 14 separate tests.
+
+##### Phase 3: Categorize every uncovered branch
+
+Don't write tests to hit uncovered branches yet. First, examine each one and classify it:
+
+1. **Wrong nullability in the schema** — The type allows \`null\` but the value is always initialized and never null at runtime. The defensive fallback (\`?? 0\`, \`?? defaultValue\`) creates an unreachable branch. No test can meaningfully cover it because the condition cannot occur through any valid operation sequence.
+2. **Missing validation** — The type is nullable because the schema uses a flattened structure (e.g. a tagged union where fields are optional per variant). Some fields are _required for specific variants_ but the reducer silently accepts their absence. The fallback branch is reachable but only with invalid input that should be rejected.
+3. **Wrong coercion operator** — \`||\` is used where \`??\` is needed. Values like \`0\`, \`false\`, and \`""\` are valid but \`||\` coerces them to the fallback. This is a bug, not a coverage gap.
+4. **Legitimate optionality** — The field is genuinely optional. Both branches (value provided / not provided) are reachable through valid inputs. These are the only branches worth covering with tests.
+
+##### Phase 4: Fix the implementation, don't test around it
+
+For each category:
+
+- **Wrong nullability** → Tighten the type definition. Make the field non-nullable at the source (e.g. \`Int!\` instead of \`Int\` in the GraphQL schema). This eliminates the fallback code entirely, removing the untestable branch. Update the source schema via MCP (\`SET_STATE_SCHEMA\` / \`SET_OPERATION_SCHEMA\`) and regenerate — see "Document Model Modification Process" below.
+- **Missing validation** → Add validation that throws a specific named error for invalid input (define it via \`ADD_OPERATION_ERROR\` — see "Error Handling in Operations" below). This converts a silent fallback into an explicit rejection. The validation branch is now both reachable and worth testing.
+- **Wrong operator** → Fix \`||\` to \`??\` (or vice versa). Add a test that passes a falsy-but-valid value (\`0\`, \`false\`, \`""\`) and asserts it is preserved.
+- **Legitimate optionality** → Add test cases that exercise both sides. Often these can be folded into existing scenario tests by varying inputs (e.g. one call provides the field, another omits it).
+
+##### Phase 5: Extend scenario tests to cover remaining branches
+
+With the implementation corrected, extend the existing scenario tests to hit newly-testable branches:
+
+- Add a test that skips initialization to cover "not yet initialized" false branches.
+- Add error path tests that chain multiple invalid operations in sequence, asserting each error and verifying state is unchanged (use the operation-index pattern from "Testing Reducer Errors" below — never \`.toThrow()\`).
+- Add a test that uses minimal/empty inputs to cover fallback-to-null branches on optional fields.
+- Vary inputs across tests so both sides of legitimate \`||\` / \`??\` operators are hit (e.g. one test provides \`stepIndex: 0\`, another omits it).
+
+##### Phase 6: Verify
+
+Run \`npm run test:coverage\`. Reducers should be at or near 100% across all four metrics. If any branches remain uncovered, repeat the categorization in Phase 3: is it a type problem, a validation gap, an operator bug, or a legitimate test gap? Do not stop at 95% if a small number of uncovered branches remain — they are usually the cheapest signals of an underlying implementation issue.
+
+##### The principle
+
+**Don't test around bad types — fix the types.** When a branch is untestable, the problem is almost never a missing test. It is a type that is too loose, a validation that is missing, or an operator that is wrong. Fix the implementation so that every branch is either reachable and meaningful, or eliminated entirely. Coverage follows naturally from correct types, proper validation, and realistic test scenarios.
 
 ## Document editor creation flow
 
