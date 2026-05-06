@@ -1,3 +1,13 @@
+## 6.0.0-dev.225 (2026-05-06)
+
+### 🩹 Fixes
+
+- **reactor-api:** added support for x-forwarded-prefix ([40544feb2](https://github.com/powerhouse-inc/powerhouse/commit/40544feb2))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.224 (2026-05-06)
 
 This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.

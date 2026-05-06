@@ -1,3 +1,7 @@
+## 6.0.0-dev.225 (2026-05-06)
+
+This was a version bump only for @powerhousedao/ph-cli to align it with other projects, there were no code changes.
+
 ## 6.0.0-dev.224 (2026-05-06)
 
 ### 🚀 Features
