@@ -1,4 +1,4 @@
-# Powerhouse CLI Commands (6.0.0-dev.223)<br>
+# Powerhouse CLI Commands (6.0.0-dev.224)<br>
 This document provides detailed information about the available commands in the Powerhouse CLI.<br><br>
 The Powerhouse CLI (ph-cli) is a command-line interface tool that provides essential commands for managing Powerhouse projects. The tool and it's commands are fundamental for creating, building, and running Document Models as a builder in studio mode.<br>
 ## Table of Contents
@@ -684,6 +684,12 @@ show help<br><br>
 
 ## Migrate
 Run migrations
+### arguments
+#### Version <br>
+The version to migrate to. Accepts a valid semver version or `staging`, `dev`, `latest`.<br><br>
+**usage:** `[version]`<br>
+
+
 ### options
 #### Version <br>
 The version to migrate to. Accepts a valid semver version or `staging`, `dev`, `latest`.<br><br>
@@ -691,6 +697,10 @@ The version to migrate to. Accepts a valid semver version or `staging`, `dev`, `
 **default**: `latest`
 
 ### flags
+#### Force <br>
+Run migrate from the bundled codegen even if the target version cannot be resolved from the npm registry or differs from the installed ph-cli version.<br><br>
+**usage:** `--force, -f`<br>
+
 #### Debug <br>
 Log arguments passed to this command<br><br>
 **usage:** `--debug`<br>

@@ -1,3 +1,13 @@
+## 6.0.0-dev.224 (2026-05-06)
+
+### 🚀 Features
+
+- **ph-cli:** run migrate with target codegen version ([14bed84ed](https://github.com/powerhouse-inc/powerhouse/commit/14bed84ed))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.223 (2026-05-06)
 
 ### 🚀 Features

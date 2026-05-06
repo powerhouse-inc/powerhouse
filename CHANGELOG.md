@@ -1,3 +1,14 @@
+## 6.0.0-dev.224 (2026-05-06)
+
+### 🚀 Features
+
+- **ph-cli:** run migrate with target codegen version ([14bed84ed](https://github.com/powerhouse-inc/powerhouse/commit/14bed84ed))
+- **ph-cli:** added --force flag to migrate and debug logs ([d30fb8f3f](https://github.com/powerhouse-inc/powerhouse/commit/d30fb8f3f))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.223 (2026-05-06)
 
 ### 🚀 Features
