@@ -75,7 +75,6 @@ export {
   consolidateSyncOperations,
   createIdleHealth,
   filterOperations,
-  sortEnvelopesByFirstOperationTimestamp,
   trimMailboxFromAckOrdinal,
 } from "./utils.js";
 

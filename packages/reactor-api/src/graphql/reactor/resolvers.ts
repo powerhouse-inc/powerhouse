@@ -1,7 +1,6 @@
 import {
   consolidateSyncOperations,
   envelopesToSyncOperations,
-  sortEnvelopesByFirstOperationTimestamp,
   trimMailboxFromAckOrdinal,
   type IReactorClient,
   type ISyncManager,
@@ -1135,7 +1134,7 @@ export function pollSyncEnvelopes(
   }
 
   return {
-    envelopes: sortEnvelopesByFirstOperationTimestamp(envelopes),
+    envelopes,
     ackOrdinal: remote.channel.inbox.ackOrdinal,
     deadLetters,
     hasMore,
@@ -1178,14 +1177,10 @@ export function pushSyncEnvelopes(
     envelopes: SyncEnvelopeArg[];
   },
 ): Promise<boolean> {
-  const sortedEnvelopes = sortEnvelopesByFirstOperationTimestamp(
-    args.envelopes,
-  );
-
   type RemoteRef = ReturnType<ISyncManager["getById"]>;
   const remoteSyncOps = new Map<RemoteRef, SyncOperation[]>();
 
-  for (const envelope of sortedEnvelopes) {
+  for (const envelope of args.envelopes) {
     let remote: RemoteRef;
     try {
       remote = syncManager.getById(envelope.channelMeta.id);
