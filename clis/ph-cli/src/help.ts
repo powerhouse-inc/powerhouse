@@ -16,8 +16,10 @@ Command Overview:
 Options:
   --port <port>               Port to run the server on. Default is 3000.
 
-  --host                      Expose the server to the network. By default, the server
-                              only accepts connections from localhost.
+  --host <ip>                 Expose the server to the network on a specific IP
+                              (e.g. 0.0.0.0 to bind to all interfaces, or a specific
+                              LAN IP). By default, the server only accepts connections
+                              from localhost.
 
   --open                      Automatically open the browser window after starting the server.
 
@@ -39,7 +41,8 @@ Options:
 Examples:
   $ ph connect                                 # Start Connect Studio on default port 3000
   $ ph connect --port 8080                     # Start on port 8080
-  $ ph connect --host                          # Expose to network (not just localhost)
+  $ ph connect --host 0.0.0.0                  # Expose to network (not just localhost)
+  $ ph connect --host 192.168.1.5              # Bind to a specific LAN IP
   $ ph connect --open                          # Open browser automatically
   $ ph connect --cors                          # Enable CORS
   $ ph connect --strictPort                    # Exit if port is in use
@@ -95,7 +98,8 @@ Options:
 
   --port <port>               Port to run the server on. Default is 3000.
 
-  --host                      Expose the server to the network.
+  --host <ip>                 Expose the server to the network on a specific IP
+                              (e.g. 0.0.0.0 to bind to all interfaces).
 
   --open                      Open browser on startup.
 
@@ -115,7 +119,7 @@ Examples:
   $ ph connect preview                            # Preview with defaults
   $ ph connect preview --outDir build             # Preview from 'build' directory
   $ ph connect preview --port 8080                # Preview on port 8080
-  $ ph connect preview --host                     # Expose to network
+  $ ph connect preview --host 0.0.0.0             # Expose to network
   $ ph connect preview --open                     # Open browser automatically
   $ ph connect preview --strictPort               # Exit if port is in use
   $ ph connect preview --base /app                # Set base path to '/app'

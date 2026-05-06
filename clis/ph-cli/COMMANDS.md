@@ -258,6 +258,10 @@ The default drives url to use in connect<br><br>
 The preservation strategy to use on default drives<br><br>
 **usage:** `--drive-preserve-strategy <value>`<br>
 **env**: `PH_CONNECT_DRIVES_PRESERVE_STRATEGY`<br>**default**: `preserve-by-url-and-detach`
+#### Host <br>
+Expose the server to the network. Pass an IP (e.g. 0.0.0.0) to bind to a specific address.<br><br>
+**usage:** `--host <str>`<br>
+
 #### Watch Timeout <br>
 Amount of time to wait before a file is considered changed<br><br>
 **usage:** `--watch-timeout <number>`<br>
@@ -303,10 +307,6 @@ Force dep pre-optimization regardless of whether deps have changed.<br><br>
 #### Debug <br>
 Log arguments passed to this command<br><br>
 **usage:** `--debug`<br>
-
-#### Host <br>
-Expose the server to the network<br><br>
-**usage:** `--host`<br>
 
 #### Open <br>
 Open browser on startup<br><br>
@@ -383,6 +383,10 @@ The default drives url to use in connect<br><br>
 The preservation strategy to use on default drives<br><br>
 **usage:** `--drive-preserve-strategy <value>`<br>
 **env**: `PH_CONNECT_DRIVES_PRESERVE_STRATEGY`<br>**default**: `preserve-by-url-and-detach`
+#### Host <br>
+Expose the server to the network. Pass an IP (e.g. 0.0.0.0) to bind to a specific address.<br><br>
+**usage:** `--host <str>`<br>
+
 #### Watch Timeout <br>
 Amount of time to wait before a file is considered changed<br><br>
 **usage:** `--watch-timeout <number>`<br>
@@ -400,10 +404,6 @@ Force dep pre-optimization regardless of whether deps have changed.<br><br>
 #### Debug <br>
 Log arguments passed to this command<br><br>
 **usage:** `--debug`<br>
-
-#### Host <br>
-Expose the server to the network<br><br>
-**usage:** `--host`<br>
 
 #### Open <br>
 Open browser on startup<br><br>
@@ -519,6 +519,10 @@ The default drives url to use in connect<br><br>
 The preservation strategy to use on default drives<br><br>
 **usage:** `--drive-preserve-strategy <value>`<br>
 **env**: `PH_CONNECT_DRIVES_PRESERVE_STRATEGY`<br>**default**: `preserve-by-url-and-detach`
+#### Host <br>
+Expose the server to the network. Pass an IP (e.g. 0.0.0.0) to bind to a specific address.<br><br>
+**usage:** `--host <str>`<br>
+
 #### Watch Timeout <br>
 Amount of time to wait before a file is considered changed<br><br>
 **usage:** `--watch-timeout <number>`<br>
@@ -536,10 +540,6 @@ Force dep pre-optimization regardless of whether deps have changed.<br><br>
 #### Debug <br>
 Log arguments passed to this command<br><br>
 **usage:** `--debug`<br>
-
-#### Host <br>
-Expose the server to the network<br><br>
-**usage:** `--host`<br>
 
 #### Open <br>
 Open browser on startup<br><br>

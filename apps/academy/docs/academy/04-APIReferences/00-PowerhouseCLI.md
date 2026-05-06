@@ -424,6 +424,8 @@ and real-time processing with a "Vetra" drive or connection to remote drives.
 
 **Environment:** `PH_CONNECT_DRIVES_PRESERVE_STRATEGY`
 **Default:** `preserve-by-url-and-detach`
+**Host** - Expose the server to the network. Pass an IP (e.g. 0.0.0.0) to bind to a specific address. - Usage: `--host <str>`
+
 **Watch Timeout** - Amount of time to wait before a file is considered changed - Usage: `--watch-timeout <number>`
 
 **Environment:** `PH_WATCH_TIMEOUT`
@@ -456,8 +458,6 @@ and real-time processing with a "Vetra" drive or connection to remote drives.
 **Force** - Force dep pre-optimization regardless of whether deps have changed. - Usage: `--force`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
-
-**Host** - Expose the server to the network - Usage: `--host`
 
 **Open** - Open browser on startup - Usage: `--open`
 
@@ -519,6 +519,8 @@ your project.
 
 **Environment:** `PH_CONNECT_DRIVES_PRESERVE_STRATEGY`
 **Default:** `preserve-by-url-and-detach`
+**Host** - Expose the server to the network. Pass an IP (e.g. 0.0.0.0) to bind to a specific address. - Usage: `--host <str>`
+
 **Watch Timeout** - Amount of time to wait before a file is considered changed - Usage: `--watch-timeout <number>`
 
 **Environment:** `PH_WATCH_TIMEOUT`
@@ -534,8 +536,6 @@ your project.
 **Force** - Force dep pre-optimization regardless of whether deps have changed. - Usage: `--force`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
-
-**Host** - Expose the server to the network - Usage: `--host`
 
 **Open** - Open browser on startup - Usage: `--open`
 
@@ -632,6 +632,8 @@ NOTE: You must run `ph connect build` first
 
 **Environment:** `PH_CONNECT_DRIVES_PRESERVE_STRATEGY`
 **Default:** `preserve-by-url-and-detach`
+**Host** - Expose the server to the network. Pass an IP (e.g. 0.0.0.0) to bind to a specific address. - Usage: `--host <str>`
+
 **Watch Timeout** - Amount of time to wait before a file is considered changed - Usage: `--watch-timeout <number>`
 
 **Environment:** `PH_WATCH_TIMEOUT`
@@ -647,8 +649,6 @@ NOTE: You must run `ph connect build` first
 **Force** - Force dep pre-optimization regardless of whether deps have changed. - Usage: `--force`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
-
-**Host** - Expose the server to the network - Usage: `--host`
 
 **Open** - Open browser on startup - Usage: `--open`
 

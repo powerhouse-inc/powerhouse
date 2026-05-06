@@ -204,10 +204,11 @@ export const commonArgs = {
 };
 
 export const commonServerArgs = {
-  host: flag({
-    type: optional(boolean),
+  host: option({
+    type: optional(string),
     long: "host",
-    description: "Expose the server to the network",
+    description:
+      "Expose the server to the network. Pass an IP (e.g. 0.0.0.0) to bind to a specific address.",
   }),
   open: flag({
     type: optional(boolean),
