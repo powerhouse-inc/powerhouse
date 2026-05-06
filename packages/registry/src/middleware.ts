@@ -92,7 +92,59 @@ export function createPowerhouseRouter(
   );
 
   // Package listing API
-  router.get("/packages", (req: Request, res: Response) => {
+  router.get("/packages", async (req: Request, res: Response) => {
+    // Verdaccio's S3-backed metadata is the source of truth for "what
+    // packages exist on this registry". The local cdn-cache is per-pod
+    // ephemeral on emptyDir-mode tenants, so enumerating from disk would
+    // silently drop packages on every pod restart.
+    //
+    // We hit verdaccio's own listing first to get the authoritative names +
+    // latest versions, then warm the cdn-cache concurrently for any package
+    // whose tarball hasn't been extracted yet on this pod. That gives us a
+    // complete /packages response including manifests on the very first
+    // call after a cold start, with subsequent calls hitting warm cache.
+    let knownPackages: Array<{ name: string; version?: string }> = [];
+    try {
+      const r = await fetch(
+        `http://localhost:${config.port}/-/verdaccio/data/packages`,
+      );
+      if (r.ok) {
+        knownPackages = (await r.json()) as Array<{
+          name: string;
+          version?: string;
+        }>;
+      } else {
+        console.error(
+          `[registry] verdaccio package listing returned ${r.status}`,
+        );
+      }
+    } catch (err) {
+      console.error("[registry] failed to enumerate packages:", err);
+    }
+
+    if (knownPackages.length > 0) {
+      // Bound concurrency so the burst of fetch+extract work doesn't drown
+      // the pod on first request after a cold start.
+      const concurrency = 8;
+      let cursor = 0;
+      const workers = Array.from({ length: concurrency }).map(async () => {
+        while (cursor < knownPackages.length) {
+          const idx = cursor++;
+          const pkg = knownPackages[idx];
+          if (!pkg.version) continue;
+          try {
+            await cdn.extractTarball(pkg.name, pkg.version);
+          } catch (err) {
+            console.error(
+              `[registry] failed to warm cache for ${pkg.name}@${pkg.version}:`,
+              err,
+            );
+          }
+        }
+      });
+      await Promise.all(workers);
+    }
+
     const packages = scanPackages(config.cdnCachePath, config.storagePath);
     const documentType = req.query.documentType as string | undefined;
     if (documentType) {
