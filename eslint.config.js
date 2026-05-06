@@ -30,6 +30,9 @@ const normalIgnoredFiles = [
   "**/test-projects/",
   "**/flaky/",
   "apps/connect/lib/",
+  // k6 scripts run in Goja, not Node — workspace globals (__ENV, console)
+  // and rules aren't applicable.
+  "apps/switchboard-lb/test/integration/*.js",
   "clis/ph-cli/src/commands/migrations/templates",
   "**/coverage/",
   "**/playwright-report/",
