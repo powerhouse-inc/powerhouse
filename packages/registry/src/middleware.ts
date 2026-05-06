@@ -91,13 +91,21 @@ export function createPowerhouseRouter(
     },
   );
 
-  // Module-scoped flag: at most one warm-up runs at a time per pod.
-  // Re-entry is cheap (extractTarball already dedups in-flight extractions),
-  // but skipping kicks off the worker pool when one is already grinding lets
-  // hot paths (readiness probes, /packages requests) stay non-blocking.
+  // Throttle warm-up to once every WARM_INTERVAL_MS, plus an in-flight guard
+  // so the worker pool doesn't double-up. Why both:
+  //   - The in-flight guard alone can't stop us from kicking a fresh warm
+  //     the instant the previous one finishes. With kubelet readiness
+  //     probes hitting /packages every 5s × N pods, that's a steady drumbeat
+  //     of fan-out work for no benefit.
+  //   - The interval guard skips redundant cycles when we've recently warmed.
+  // The first call after startup, after invalidation, or after the interval
+  // elapses still kicks a real warm.
+  const WARM_INTERVAL_MS = 30_000;
   let warmInFlight = false;
+  let lastWarmAt = 0;
   async function warmCdnCacheFromVerdaccio(): Promise<void> {
     if (warmInFlight) return;
+    if (Date.now() - lastWarmAt < WARM_INTERVAL_MS) return;
     warmInFlight = true;
     try {
       const r = await fetch(
@@ -136,6 +144,7 @@ export function createPowerhouseRouter(
       console.error("[registry] /packages warm-up failed:", err);
     } finally {
       warmInFlight = false;
+      lastWarmAt = Date.now();
     }
   }
 

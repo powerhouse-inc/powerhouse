@@ -44,7 +44,7 @@ export function getAppMetadata(project: Project, dirName: string) {
   const editorMetadata = getEditorMetadata(project, dirName);
   if (
     !editorMetadata ||
-    isIncludedIn("powerhouse/document-drive", editorMetadata.documentTypes)
+    !isIncludedIn("powerhouse/document-drive", editorMetadata.documentTypes)
   )
     return undefined;
 

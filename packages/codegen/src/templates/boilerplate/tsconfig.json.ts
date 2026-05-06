@@ -35,7 +35,7 @@ export const tsConfigTemplate = json`
     "moduleDetection": "force",
     "target": "esnext",
     "jsx": "react-jsx",
-    "types": ["node", "vite/client", "vitest/globals"],
+    "types": ["node", "vitest/globals"],
     "lib": ["ESNext", "dom", "dom.iterable"],
     "declaration": true,
     "declarationDir": "./dist/types",
@@ -49,6 +49,6 @@ export const tsConfigTemplate = json`
     "skipLibCheck": true
   },
   "include": ["**/*", "./powerhouse.manifest.json"],
-  "exclude": ["dist", "node_modules", ".ph", "vitest.config.ts"]
+  "exclude": ["dist", "node_modules", ".ph", "vitest.config.ts", "main.tsx"]
 }
 `.raw;
