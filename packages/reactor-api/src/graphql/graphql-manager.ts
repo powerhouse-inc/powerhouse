@@ -215,7 +215,7 @@ export class GraphQLManager {
           id: driveDoc.header.id,
           slug: driveDoc.header.slug,
           meta: driveDoc.header.meta,
-          name: driveDoc.state.global.name,
+          name: driveDoc.state.global.name || driveDoc.header.name,
           icon: driveDoc.state.global.icon ?? undefined,
           ...(graphqlEndpoint && { graphqlEndpoint }),
         });
