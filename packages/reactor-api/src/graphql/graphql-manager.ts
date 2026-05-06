@@ -231,7 +231,6 @@ export class GraphQLManager {
           name: driveDoc.state.global.name || driveDoc.header.name,
           icon: driveDoc.state.global.icon ?? undefined,
           ...(graphqlEndpoint && { graphqlEndpoint }),
-          content: Object.fromEntries(request.headers),
         });
       } catch (error: unknown) {
         this.logger.debug(`Drive not found: ${driveIdOrSlug}`, error);
