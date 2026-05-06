@@ -122,7 +122,7 @@ export interface IHttpAdapter {
    * (Express Request/Response are compatible subtypes).
    */
   mountNodeRoute(
-    method: "DELETE" | "GET" | "POST" | "PUT",
+    method: "DELETE" | "GET" | "HEAD" | "POST" | "PUT",
     path: string,
     handler: (
       req: http.IncomingMessage,

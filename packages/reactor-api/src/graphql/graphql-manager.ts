@@ -21,10 +21,6 @@ import type { WebSocketServer } from "ws";
 import { debounce } from "../packages/util.js";
 import type { AuthConfig } from "../services/auth.service.js";
 import { AuthService } from "../services/auth.service.js";
-import {
-  getAuthContext,
-  type AuthFetchMiddleware,
-} from "./gateway/auth-middleware.js";
 import type { AuthorizationService } from "../services/authorization.service.js";
 import type { DocumentPermissionService } from "../services/document-permission.service.js";
 import {
@@ -33,8 +29,16 @@ import {
   createSchema,
 } from "../utils/create-schema.js";
 import { DocumentModelSubgraph } from "./document-model-subgraph.js";
-import { createGraphQLSSEHandler } from "./sse.js";
-import { useServer } from "./websocket.js";
+import {
+  getAuthContext,
+  type AuthFetchMiddleware,
+} from "./gateway/auth-middleware.js";
+import {
+  createDriveFetchMiddleware,
+  getRequestDriveId,
+  type DriveFetchMiddleware,
+} from "./gateway/drive-middleware.js";
+import { DriveOwnershipCache } from "./gateway/drive-ownership-cache.js";
 import type {
   FetchHandler,
   GatewayContextFactory,
@@ -43,6 +47,7 @@ import type {
   SubgraphDefinition,
   WsDisposer,
 } from "./gateway/types.js";
+import { createGraphQLSSEHandler } from "./sse.js";
 
 const DOCUMENT_MODELS_TO_EXCLUDE: string[] = [];
 
@@ -108,6 +113,8 @@ export class GraphQLManager {
 
   private readonly subgraphWsDisposers = new Map<string, WsDisposer>();
   #authMiddleware: AuthFetchMiddleware | undefined;
+  #driveMiddleware: DriveFetchMiddleware | undefined;
+  readonly driveOwnershipCache: DriveOwnershipCache;
 
   /** Cached document models for schema generation - updated on init and regenerate */
   private cachedDocumentModels: DocumentModelModule[] = [];
@@ -135,6 +142,8 @@ export class GraphQLManager {
       this.authService = new AuthService(this.authConfig);
     }
 
+    this.driveOwnershipCache = new DriveOwnershipCache(this.reactorClient);
+
     // Each subscription-enabled subgraph adds listeners to the shared wsServer
     // via graphql-ws's useServer(). The handler cache bounds the count, so
     // unlimited is safe here.
@@ -147,6 +156,14 @@ export class GraphQLManager {
   ) {
     this.#authMiddleware = authMiddleware;
     this.logger.debug(`Initializing Subgraph Manager...`);
+
+    await this.driveOwnershipCache.init();
+    this.#driveMiddleware = createDriveFetchMiddleware(
+      this.driveOwnershipCache,
+    );
+    this.logger.debug(
+      `Drive ownership cache populated with ${this.driveOwnershipCache.size()} drives`,
+    );
 
     // check if Document Drive model is available
     const modulesResult = await this.reactorClient.getDocumentModelModules();
@@ -186,10 +203,17 @@ export class GraphQLManager {
         const driveDoc =
           await this.reactorClient.get<DocumentDriveDocument>(driveIdOrSlug);
 
-        const forwardedProto = request.headers.get("x-forwarded-proto");
+        const forwardedProto = request.headers
+          .get("x-forwarded-proto")
+          ?.split(",")[0]
+          .trim();
         const protocol =
           (forwardedProto ?? url.protocol.replace(":", "")) + ":";
-        const host = request.headers.get("host") ?? "";
+        const forwardedHost = request.headers
+          .get("x-forwarded-host")
+          ?.split(",")[0]
+          .trim();
+        const host = forwardedHost ?? request.headers.get("host") ?? "";
         const basePath = this.path === "/" ? "" : this.path;
         const graphqlEndpoint = `${protocol}//${host}${basePath}/graphql/r`;
 
@@ -197,7 +221,7 @@ export class GraphQLManager {
           id: driveDoc.header.id,
           slug: driveDoc.header.slug,
           meta: driveDoc.header.meta,
-          name: driveDoc.state.global.name,
+          name: driveDoc.state.global.name || driveDoc.header.name,
           icon: driveDoc.state.global.icon ?? undefined,
           ...(graphqlEndpoint && { graphqlEndpoint }),
         });
@@ -206,7 +230,6 @@ export class GraphQLManager {
         return Response.json({ error: "Drive not found" }, { status: 404 });
       }
     });
-
     this.logger.info(`Registered REST endpoint: GET ${driveRoutePath}`);
 
     await this.#setupCoreSubgraphs("graphql", coreSubgraphs);
@@ -442,6 +465,7 @@ export class GraphQLManager {
   #makeContextFactory(): GatewayContextFactory<Context> {
     return (request: Request): Promise<Context> => {
       const authCtx = getAuthContext(request);
+      const driveId = getRequestDriveId(request);
       const headers: IncomingHttpHeaders = {};
       request.headers.forEach((v, k) => {
         headers[k] = v;
@@ -450,6 +474,7 @@ export class GraphQLManager {
         headers,
         db: this.relationalDb,
         ...this.getAdditionalContextFields(),
+        driveId,
         user: authCtx?.user,
         isAdmin: authCtx
           ? (addr) =>
@@ -526,9 +551,7 @@ export class GraphQLManager {
             schema,
             this.#makeContextFactory(),
           );
-          const fetchHandler = this.#authMiddleware
-            ? this.#authMiddleware(rawHandler)
-            : rawHandler;
+          const fetchHandler = this.#composeFetchMiddleware(rawHandler);
           this.subgraphHandlerCache.set(subgraphPath, fetchHandler);
           this.httpAdapter.mount(subgraphPath, fetchHandler);
 
@@ -637,9 +660,7 @@ export class GraphQLManager {
         this.httpServer,
         this.#makeContextFactory(),
       );
-    const fetchHandler = this.#authMiddleware
-      ? this.#authMiddleware(rawHandler)
-      : rawHandler;
+    const fetchHandler = this.#composeFetchMiddleware(rawHandler);
     this.httpAdapter.mount(superGraphPath, fetchHandler);
 
     // Set up SSE subscriptions at the supergraph level (/graphql/stream).
@@ -695,9 +716,23 @@ export class GraphQLManager {
       schema,
       contextFactory: this.#makeContextFactory(),
     });
-    const handler = this.#authMiddleware
-      ? this.#authMiddleware(rawHandler)
-      : rawHandler;
+    const handler = this.#composeFetchMiddleware(rawHandler);
     this.httpAdapter.mount(ssePath, handler, { exact: true });
+  }
+
+  /**
+   * Compose the request-level fetch middleware chain. Auth runs first
+   * (so we don't validate shard before knowing the request is even
+   * authorized), drive-ownership validation runs after.
+   */
+  #composeFetchMiddleware(rawHandler: FetchHandler): FetchHandler {
+    let handler = rawHandler;
+    if (this.#driveMiddleware) {
+      handler = this.#driveMiddleware(handler);
+    }
+    if (this.#authMiddleware) {
+      handler = this.#authMiddleware(handler);
+    }
+    return handler;
   }
 }

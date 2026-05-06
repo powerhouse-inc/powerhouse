@@ -50,16 +50,17 @@ status_code() {
 }
 
 post_graphql() {
+    drive_id="$1"
     curl -sS -D - -o /dev/null -X POST \
         -H "Content-Type: application/json" \
-        --data-binary @- \
+        -H "Drive-Id: $drive_id" \
+        --data-binary '{"query":"{ __typename }"}' \
         "$LB/graphql"
 }
 
 pin_backend() {
-    # Single POST pinned to $1, returns the X-Upstream-Id header value.
-    body='{"variables":{"identifier":"'"$1"'"}}'
-    resp=$(printf '%s' "$body" | post_graphql)
+    # Single POST pinned via the Drive-Id header; returns X-Upstream-Id.
+    resp=$(post_graphql "$1")
     header_value "$resp" X-Upstream-Id
 }
 
@@ -154,8 +155,7 @@ fi
 all_503=1
 i=0
 while [ "$i" -lt 5 ]; do
-    body='{"variables":{"identifier":"'"$ID_X"'"}}'
-    resp=$(printf '%s' "$body" | post_graphql)
+    resp=$(post_graphql "$ID_X")
     s=$(status_code "$resp")
     if [ "$s" != "503" ]; then
         all_503=0

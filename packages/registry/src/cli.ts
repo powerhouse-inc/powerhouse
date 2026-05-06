@@ -90,6 +90,23 @@ export const registryCommand = command({
       defaultValue: () => process.env.REGISTRY_WEB !== "false",
       defaultValueIsSerializable: true,
     }),
+    publicUrl: option({
+      long: "public-url",
+      type: optional(string),
+      defaultValue: () => process.env.PH_REGISTRY_PUBLIC_URL,
+      defaultValueIsSerializable: true,
+    }),
+    authRenown: flag({
+      long: "auth-renown",
+      defaultValue: () => process.env.PH_REGISTRY_AUTH_RENOWN !== "false",
+      defaultValueIsSerializable: true,
+    }),
+    verdaccioSecret: option({
+      long: "verdaccio-secret",
+      type: optional(string),
+      defaultValue: () => process.env.PH_REGISTRY_VERDACCIO_SECRET,
+      defaultValueIsSerializable: true,
+    }),
   },
   handler: async (args) => {
     console.log(args);

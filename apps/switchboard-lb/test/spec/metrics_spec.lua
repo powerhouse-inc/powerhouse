@@ -2,21 +2,17 @@ local helper = require("spec.spec_helper")
 
 -- Mocks the prometheus library so metrics.run() succeeds without the real
 -- nginx-lua-prometheus module on the LuaJIT path. The mock captures
--- every metric registration plus the values passed to inc()/observe(),
--- so the unit test can assert REASON_MAP semantics deterministically.
+-- every metric registration plus the values passed to inc()/observe().
 local function install_prom_mock()
     local captures = {
-        parse_errors = {},
-        requests     = {},
-        durations    = {},
+        requests  = {},
+        durations = {},
     }
 
     local stub_counter_factory = function(name)
         return {
             inc = function(_, v, label_values)
-                if name == "lb_body_parse_errors_total" then
-                    table.insert(captures.parse_errors, label_values[1])
-                elseif name == "lb_requests_total" then
+                if name == "lb_requests_total" then
                     table.insert(captures.requests, label_values)
                 end
             end,
@@ -49,58 +45,6 @@ local function load_metrics()
     package.loaded["metrics"] = nil
     return require("metrics")
 end
-
-describe("metrics.inc_parse_error", function()
-    local captures
-    local metrics
-
-    before_each(function()
-        helper.reset_ngx()
-        captures = install_prom_mock()
-        metrics  = load_metrics()
-        metrics.run()
-    end)
-
-    -- One case per REASON_MAP entry, asserting the bounded enum label.
-    local cases = {
-        { raw = "empty body",                                                   label = "empty_body" },
-        { raw = "body must be a JSON object",                                   label = "non_object_root" },
-        { raw = "missing or non-object variables",                              label = "missing_variables" },
-        { raw = "deleteDocuments: multi-identifier operations not supported",   label = "multi_identifier" },
-        { raw = "moveRelationship: cross-parent operations not supported",      label = "cross_parent_move" },
-        { raw = "touchChannel: multi-document filter not supported",            label = "multi_doc_filter" },
-        { raw = "no routing identifier found in variables",                     label = "no_identifier" },
-        { raw = "pushSyncEnvelopes: envelopes span multiple channels",          label = "cross_channel_envelopes" },
-        { raw = "pushSyncEnvelopes: envelopes[0].channelMeta.id missing",       label = "missing_channel_meta" },
-    }
-
-    for _, c in ipairs(cases) do
-        it("maps '" .. c.raw .. "' -> '" .. c.label .. "'", function()
-            metrics.inc_parse_error(c.raw)
-            assert.equals(c.label, captures.parse_errors[1])
-        end)
-    end
-
-    it("prefix-matches malformed JSON detail to 'malformed_json'", function()
-        metrics.inc_parse_error("malformed JSON: Expected value but found T_END")
-        assert.equals("malformed_json", captures.parse_errors[1])
-    end)
-
-    it("prefix-matches alternate cjson detail to 'malformed_json'", function()
-        metrics.inc_parse_error("malformed JSON: invalid number at character 4")
-        assert.equals("malformed_json", captures.parse_errors[1])
-    end)
-
-    it("falls through to 'unknown' for unmapped reasons", function()
-        metrics.inc_parse_error("some future error string")
-        assert.equals("unknown", captures.parse_errors[1])
-    end)
-
-    it("falls through to 'unknown' for nil reason", function()
-        metrics.inc_parse_error(nil)
-        assert.equals("unknown", captures.parse_errors[1])
-    end)
-end)
 
 describe("metrics.record_request", function()
     local captures

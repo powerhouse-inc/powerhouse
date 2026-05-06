@@ -1,3 +1,43 @@
+## 6.0.0-dev.220 (2026-05-06)
+
+This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.219 (2026-05-06)
+
+This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.218 (2026-05-06)
+
+### 🚀 Features
+
+- **registry:** renown JWT auth in front of verdaccio ([e5bbf93f1](https://github.com/powerhouse-inc/powerhouse/commit/e5bbf93f1))
+
+### 🩹 Fixes
+
+- **reactor-api:** support forward headers on drive url ([a780f2345](https://github.com/powerhouse-inc/powerhouse/commit/a780f2345))
+- add document drive header fallback for name field ([#2562](https://github.com/powerhouse-inc/powerhouse/pull/2562))
+
+### ❤️ Thank You
+
+- acaldas
+- Frank
+- Ryan Wolhuter @ryanwolhuter
+
+## 6.0.0-dev.217 (2026-05-06)
+
+### 🚀 Features
+
+- **switchboard-lb:** rewrite to use simpler drive-id header ([a442207d1](https://github.com/powerhouse-inc/powerhouse/commit/a442207d1))
+- **reactor-attachments:** implementing HEAD, implementing soft-delete and fixing some indexing issues ([f1430bca4](https://github.com/powerhouse-inc/powerhouse/commit/f1430bca4))
+
+### 🩹 Fixes
+
+- **reactor-api, switchboard:** partial-delete index, reservation validation, fastify param routing, case-insensitive hashes ([f0b5b0620](https://github.com/powerhouse-inc/powerhouse/commit/f0b5b0620))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.0.0-dev.216 (2026-05-05)
 
 ### 🩹 Fixes

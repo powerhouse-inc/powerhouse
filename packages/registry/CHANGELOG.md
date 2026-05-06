@@ -1,3 +1,47 @@
+## 6.0.0-dev.220 (2026-05-06)
+
+### 🩹 Fixes
+
+- **registry:** make /packages non-blocking, warm cdn-cache in background ([#2568](https://github.com/powerhouse-inc/powerhouse/pull/2568))
+
+### ❤️ Thank You
+
+- Frank @froid1911
+
+## 6.0.0-dev.219 (2026-05-06)
+
+### 🩹 Fixes
+
+- **registry:** source /packages from verdaccio's authoritative list ([44521252d](https://github.com/powerhouse-inc/powerhouse/commit/44521252d))
+
+### ❤️ Thank You
+
+- Frank
+
+## 6.0.0-dev.218 (2026-05-06)
+
+### 🚀 Features
+
+- **registry:** renown JWT auth in front of verdaccio ([e5bbf93f1](https://github.com/powerhouse-inc/powerhouse/commit/e5bbf93f1))
+
+### 🩹 Fixes
+
+- **registry:** satisfy eslint no-unsafe-assignment in renown middleware test ([e4eda6156](https://github.com/powerhouse-inc/powerhouse/commit/e4eda6156))
+
+### ❤️ Thank You
+
+- Frank
+
+## 6.0.0-dev.217 (2026-05-06)
+
+### 🚀 Features
+
+- **switchboard-lb:** rewrite to use simpler drive-id header ([a442207d1](https://github.com/powerhouse-inc/powerhouse/commit/a442207d1))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.0.0-dev.216 (2026-05-05)
 
 ### 🩹 Fixes

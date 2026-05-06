@@ -3,9 +3,8 @@
 #
 # Verifies that /metrics is exposed only on the loopback :9090 listener
 # (never on :8080), that /__hc/status moved from :8080 to :9090, and that
-# the §8 trio (lb_requests_total, lb_request_duration_seconds,
-# lb_body_parse_errors_total) appears with the expected labels after
-# generating a representative mix of traffic.
+# lb_requests_total and lb_request_duration_seconds appear with the
+# expected labels after generating a representative mix of traffic.
 #
 # Requires `docker compose up -d --build` to already be running.
 
@@ -38,9 +37,11 @@ status_code() {
 }
 
 post_graphql() {
+    drive_id="$1"
     curl -sS -D - -o /dev/null -X POST \
         -H "Content-Type: application/json" \
-        --data-binary @- \
+        -H "Drive-Id: $drive_id" \
+        --data-binary '{"query":"{ __typename }"}' \
         "$LB/graphql"
 }
 
@@ -74,28 +75,17 @@ if [ "$metrics_9090" != "200" ]; then
     exit 1
 fi
 
-# 1. Generate traffic across all four route classes and several status codes.
+# 1. Generate traffic across all the route classes.
 TS=$(date +%s)
 
-# graphql 2xx (or 5xx — we care about the metric being recorded, not the
-# upstream response)
-printf '{"variables":{"identifier":"m4-doc-%s"}}' "$TS" | post_graphql >/dev/null
+# graphql with a Drive-Id header — pinned route.
+post_graphql "m4-drive-$TS" >/dev/null
 
-# graphql 400 — empty body parse error
-resp=$(printf '' | post_graphql)
-check "400 empty body" "400" "$(status_code "$resp")"
-
-# graphql 400 — malformed JSON
-resp=$(printf 'not-json' | post_graphql)
-check "400 malformed JSON" "400" "$(status_code "$resp")"
-
-# graphql 409 — multi-identifier deleteDocuments
-resp=$(printf '{"variables":{"identifiers":["a","b"]}}' | post_graphql)
-check "409 multi-identifier" "409" "$(status_code "$resp")"
-
-# graphql 409 — no routing id
-resp=$(printf '{"variables":{"foo":"bar"}}' | post_graphql)
-check "409 no identifier" "409" "$(status_code "$resp")"
+# graphql without Drive-Id — round-robin fallback path.
+curl -sS -o /dev/null -X POST \
+    -H "Content-Type: application/json" \
+    --data-binary '{"query":"{ __typename }"}' \
+    "$LB/graphql" >/dev/null
 
 # drive 2xx
 curl -sS -o /dev/null "$LB/d/m4-test-drive" >/dev/null
@@ -117,38 +107,12 @@ assert_metric_present 'lb_requests_total class=drive' \
     'lb_requests_total\{[^}]*class="drive"'
 assert_metric_present 'lb_requests_total class=health' \
     'lb_requests_total\{[^}]*class="health"'
-# Status flavours present (graphql 200 may not happen because the dev
-# stubs return 200 but rewrite phase can fail before — assert on the
-# error statuses we forced explicitly).
-assert_metric_present 'lb_requests_total status=400' \
-    'lb_requests_total\{[^}]*status="400"'
-assert_metric_present 'lb_requests_total status=409' \
-    'lb_requests_total\{[^}]*status="409"'
 
 # lb_request_duration_seconds histogram — only graphql/drive paths emit it
 # (subscription is excluded; health has no upstream_response_time so the
 # observe call is skipped).
 assert_metric_present 'lb_request_duration_seconds_bucket class=graphql' \
     'lb_request_duration_seconds_bucket\{[^}]*class="graphql"'
-
-# lb_body_parse_errors_total — one assertion per reason we triggered.
-assert_metric_present 'lb_body_parse_errors_total reason=empty_body' \
-    'lb_body_parse_errors_total\{reason="empty_body"\}'
-assert_metric_present 'lb_body_parse_errors_total reason=malformed_json' \
-    'lb_body_parse_errors_total\{reason="malformed_json"\}'
-assert_metric_present 'lb_body_parse_errors_total reason=multi_identifier' \
-    'lb_body_parse_errors_total\{reason="multi_identifier"\}'
-assert_metric_present 'lb_body_parse_errors_total reason=no_identifier' \
-    'lb_body_parse_errors_total\{reason="no_identifier"\}'
-
-# No "unknown" reason should appear — that signals an unmapped error string.
-if printf '%s' "$METRICS" | grep -Eq 'lb_body_parse_errors_total\{reason="unknown"\}'; then
-    echo "FAIL  no 'unknown' reason label (would indicate an unmapped error string in route.lua)"
-    FAIL=$((FAIL + 1))
-else
-    echo "PASS  no 'unknown' reason label"
-    PASS=$((PASS + 1))
-fi
 
 # 3. /__hc/status moved from :8080 to :9090.
 hc_9090=$(docker exec "$LB_CONTAINER" \

@@ -1,159 +1,33 @@
-local cjson  = require("cjson.safe")
 local helper = require("spec.spec_helper")
 
-local function run(body)
-    _G._test_body = body
-    local SENTINEL = helper.reset_ngx()
-    package.loaded["errors"] = nil
-    package.loaded["route"]  = nil
-    local ok, err = pcall(function() require("route").from_body() end)
-    if not ok and err ~= SENTINEL then error(err) end
-    return {
-        status = ngx.status,
-        exited = not ok,
-        doc_id = ngx.var.doc_id,
-    }
+local function run(http_drive_id)
+    helper.reset_ngx()
+    if http_drive_id ~= nil then
+        ngx.var.http_drive_id = http_drive_id
+    end
+    package.loaded["route"] = nil
+    require("route").from_header()
+    return { doc_id = ngx.var.doc_id }
 end
 
-local function enc(tbl) return cjson.encode(tbl) end
-
-describe("route.from_body", function()
-    describe("error branches", function()
-        it("rejects empty body with 400", function()
-            local r = run(nil)
-            assert.equals(400, r.status)
-            assert.is_true(r.exited)
-        end)
-
-        it("rejects malformed JSON with 400", function()
-            local r = run("{ not json")
-            assert.equals(400, r.status)
-        end)
-
-        it("rejects non-object root with 400", function()
-            local r = run("[1,2,3]")
-            assert.equals(400, r.status)
-        end)
-
-        it("rejects missing variables with 400", function()
-            local r = run(enc({ query = "{ __typename }" }))
-            assert.equals(400, r.status)
-        end)
-
-        it("returns 409 when no routing id can be found", function()
-            local r = run(enc({ variables = { foo = "bar" } }))
-            assert.equals(409, r.status)
-        end)
+describe("route.from_header", function()
+    it("copies the Drive-Id header value into doc_id", function()
+        local r = run("drive-abc-123")
+        assert.equals("drive-abc-123", r.doc_id)
     end)
 
-    describe("top-level identifier keys", function()
-        local cases = {
-            { key = "identifier",         value = "doc-1" },
-            { key = "documentIdentifier", value = "doc-2" },
-            { key = "parentIdentifier",   value = "doc-3" },
-            { key = "sourceIdentifier",   value = "doc-4" },
-            { key = "targetIdentifier",   value = "doc-5" },
-            { key = "docId",              value = "doc-6" },
-        }
-        for _, c in ipairs(cases) do
-            it("extracts " .. c.key, function()
-                local r = run(enc({ variables = { [c.key] = c.value } }))
-                assert.is_false(r.exited)
-                assert.equals(c.value, r.doc_id)
-            end)
-        end
-
-        it("pins on sourceIdentifier when both source+target are present (addRelationship)", function()
-            local r = run(enc({
-                variables = {
-                    sourceIdentifier = "src-A",
-                    targetIdentifier = "tgt-B",
-                    relationshipType = "child",
-                },
-            }))
-            assert.is_false(r.exited)
-            assert.equals("src-A", r.doc_id)
-        end)
+    it("leaves doc_id empty when Drive-Id is missing", function()
+        local r = run(nil)
+        assert.equals("", r.doc_id)
     end)
 
-    describe("nested paths", function()
-        it("extracts filter.documentId (documentOperations)", function()
-            local r = run(enc({ variables = { filter = { documentId = "d-filter" } } }))
-            assert.is_false(r.exited)
-            assert.equals("d-filter", r.doc_id)
-        end)
-
-        it("extracts single-element input.filter.documentId (touchChannel)", function()
-            local r = run(enc({
-                variables = { input = { filter = { documentId = { "d-touch" } } } },
-            }))
-            assert.is_false(r.exited)
-            assert.equals("d-touch", r.doc_id)
-        end)
-
-        it("rejects multi-element input.filter.documentId with 409", function()
-            local r = run(enc({
-                variables = { input = { filter = { documentId = { "a", "b" } } } },
-            }))
-            assert.equals(409, r.status)
-        end)
+    it("leaves doc_id empty when Drive-Id is empty string", function()
+        local r = run("")
+        assert.equals("", r.doc_id)
     end)
 
-    describe("pushSyncEnvelopes", function()
-        it("routes on envelopes[0].channelMeta.id when all envelopes share it", function()
-            local r = run(enc({
-                variables = { envelopes = {
-                    { channelMeta = { id = "ch-1" } },
-                    { channelMeta = { id = "ch-1" } },
-                } },
-            }))
-            assert.is_false(r.exited)
-            assert.equals("ch-1", r.doc_id)
-        end)
-
-        it("rejects cross-channel envelopes with 409", function()
-            local r = run(enc({
-                variables = { envelopes = {
-                    { channelMeta = { id = "ch-1" } },
-                    { channelMeta = { id = "ch-2" } },
-                } },
-            }))
-            assert.equals(409, r.status)
-        end)
-
-        it("rejects missing envelopes[0].channelMeta.id with 409", function()
-            local r = run(enc({
-                variables = { envelopes = { { channelMeta = {} } } },
-            }))
-            assert.equals(409, r.status)
-        end)
-    end)
-
-    describe("multi-identifier operations", function()
-        it("rejects identifiers[] with 409 (deleteDocuments)", function()
-            local r = run(enc({ variables = { identifiers = { "a", "b" } } }))
-            assert.equals(409, r.status)
-        end)
-
-        it("rejects cross-parent moveRelationship with 409", function()
-            local r = run(enc({
-                variables = {
-                    sourceParentIdentifier = "p-1",
-                    targetParentIdentifier = "p-2",
-                },
-            }))
-            assert.equals(409, r.status)
-        end)
-
-        it("routes same-parent moveRelationship on the parent id", function()
-            local r = run(enc({
-                variables = {
-                    sourceParentIdentifier = "p-same",
-                    targetParentIdentifier = "p-same",
-                },
-            }))
-            assert.is_false(r.exited)
-            assert.equals("p-same", r.doc_id)
-        end)
+    it("preserves UUID-shaped values verbatim", function()
+        local r = run("550e8400-e29b-41d4-a716-446655440000")
+        assert.equals("550e8400-e29b-41d4-a716-446655440000", r.doc_id)
     end)
 end)

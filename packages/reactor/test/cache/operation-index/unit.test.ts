@@ -17,6 +17,7 @@ function createMockKysely() {
   const mockSet = vi.fn();
   const mockUpdateTable = vi.fn();
   const mockDoUpdateSet = vi.fn();
+  const mockUnionAll = vi.fn();
 
   const chainable = {
     innerJoin: mockInnerJoin,
@@ -29,6 +30,7 @@ function createMockKysely() {
     execute: mockExecute,
     executeTakeFirst: mockExecuteTakeFirst,
     set: mockSet,
+    unionAll: mockUnionAll,
   };
 
   mockSelectFrom.mockReturnValue(chainable);
@@ -41,6 +43,7 @@ function createMockKysely() {
   mockLimit.mockReturnValue(chainable);
   mockSet.mockReturnValue(chainable);
   mockUpdateTable.mockReturnValue(chainable);
+  mockUnionAll.mockReturnValue(chainable);
 
   const mockOnConflict = vi.fn((cb) => {
     const conflictChain = {
@@ -103,6 +106,7 @@ function createMockKysely() {
       set: mockSet,
       transaction: mockTransaction,
       transactionExecute: mockTransactionExecute,
+      unionAll: mockUnionAll,
     },
   };
 }
@@ -589,7 +593,26 @@ describe("KyselyOperationIndex.find()", () => {
 
     await index.find("collection.doc-123");
 
-    expect(mocks.orderBy).toHaveBeenCalledWith("oi.ordinal", "asc");
+    expect(mocks.orderBy).toHaveBeenCalledWith("ordinal", "asc");
+  });
+
+  it("uses unionAll to combine joiner backfill and new ops branches", async () => {
+    const { db, mocks } = createMockKysely();
+    const index = new KyselyOperationIndex(db);
+
+    mocks.execute.mockResolvedValue([]);
+
+    await index.find("collection.doc-123", 10);
+
+    expect(mocks.unionAll).toHaveBeenCalledTimes(1);
+    expect(mocks.selectFrom).toHaveBeenCalledTimes(2);
+    expect(mocks.where).toHaveBeenCalledWith(
+      "dc.joinedOrdinal",
+      ">",
+      BigInt(10),
+    );
+    expect(mocks.where).toHaveBeenCalledWith("oi.ordinal", "<=", 10);
+    expect(mocks.where).toHaveBeenCalledWith("oi.ordinal", ">", 10);
   });
 
   it("returns hasMore=true when results exceed limit", async () => {

@@ -1,8 +1,11 @@
 import type { API } from "@powerhousedao/reactor-api";
 import { mountAuthenticatedNodeRoute } from "./mount-auth.js";
 import {
+  makeDeleteReservationHandler,
   makeDownloadHandler,
+  makeGetReservationHandler,
   makeReserveHandler,
+  makeStatHandler,
   makeUploadHandler,
 } from "./routes.js";
 
@@ -18,9 +21,30 @@ export function registerAttachmentRoutes(api: API): void {
 
   mountAuthenticatedNodeRoute(
     api,
+    "GET",
+    "/attachments/reservations/:reservationId",
+    makeGetReservationHandler(attachments),
+  );
+
+  mountAuthenticatedNodeRoute(
+    api,
+    "DELETE",
+    "/attachments/reservations/:reservationId",
+    makeDeleteReservationHandler(attachments),
+  );
+
+  mountAuthenticatedNodeRoute(
+    api,
     "PUT",
     "/attachments/reservations/:reservationId",
     makeUploadHandler(attachments),
+  );
+
+  mountAuthenticatedNodeRoute(
+    api,
+    "HEAD",
+    "/attachments/:hash",
+    makeStatHandler(attachments),
   );
 
   mountAuthenticatedNodeRoute(

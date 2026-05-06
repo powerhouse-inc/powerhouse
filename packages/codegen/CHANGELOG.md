@@ -1,3 +1,39 @@
+## 6.0.0-dev.220 (2026-05-06)
+
+This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.219 (2026-05-06)
+
+This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.218 (2026-05-06)
+
+### 🚀 Features
+
+- **registry:** renown JWT auth in front of verdaccio ([e5bbf93f1](https://github.com/powerhouse-inc/powerhouse/commit/e5bbf93f1))
+
+### ❤️ Thank You
+
+- Frank
+
+## 6.0.0-dev.217 (2026-05-06)
+
+### 🚀 Features
+
+- **switchboard-lb:** rewrite to use simpler drive-id header ([a442207d1](https://github.com/powerhouse-inc/powerhouse/commit/a442207d1))
+- **codegen:** document playbook for reaching 100% reducer coverage ([d2421f461](https://github.com/powerhouse-inc/powerhouse/commit/d2421f461))
+- add editor drag-and-drop guidance to AGENTS.md template ([f9dc73d71](https://github.com/powerhouse-inc/powerhouse/commit/f9dc73d71))
+- **codegen:** scaffold vitest coverage with reducer threshold ([94f62106c](https://github.com/powerhouse-inc/powerhouse/commit/94f62106c))
+
+### 🩹 Fixes
+
+- **codegen:** correct hook import paths and inline shadcn editor guide ([20d06c5c3](https://github.com/powerhouse-inc/powerhouse/commit/20d06c5c3))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Guillermo Puente @gpuente
+
 ## 6.0.0-dev.216 (2026-05-05)
 
 ### 🚀 Features

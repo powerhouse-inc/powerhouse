@@ -10,6 +10,7 @@ import {
 import { command } from "cmd-ts";
 import { readPackageSync } from "read-pkg";
 import { prerelease } from "semver";
+import { mintRegistryAuthToken } from "../services/registry-auth.js";
 
 function hasTagFlag(args: string[]): boolean {
   return args.some((a) => a === "--tag" || a.startsWith("--tag="));
@@ -70,12 +71,31 @@ This command:
       console.log(">>> registryUrl", registryUrl);
     }
 
+    // Try Renown auth first: if the user is logged in via `ph login`, mint a
+    // short-lived registry-bound bearer token. Falling back to the legacy
+    // `npm adduser` (htpasswd) path keeps existing flows working until the
+    // grace period ends.
+    let authToken: string | undefined;
     try {
-      await checkNpmAuth(registryUrl);
-    } catch {
-      console.error(`Not authenticated with registry: ${registryUrl}`);
-      console.error(`Run: npm adduser --registry ${registryUrl}`);
-      process.exit(1);
+      authToken = await mintRegistryAuthToken(registryUrl, 5 * 60);
+      if (args.debug) {
+        console.error(`>>> minted renown token for ${registryUrl} (5m TTL)`);
+      }
+    } catch (err) {
+      if (args.debug) {
+        console.error(
+          `>>> renown token mint skipped: ${(err as Error).message}`,
+        );
+      }
+      try {
+        await checkNpmAuth(registryUrl);
+      } catch {
+        console.error(`Not authenticated with registry: ${registryUrl}`);
+        console.error(
+          `Run: ph login (recommended) or npm adduser --registry ${registryUrl}`,
+        );
+        process.exit(1);
+      }
     }
 
     let forwardedArgs = args.forwardedArgs;
@@ -132,6 +152,7 @@ This command:
       registryUrl,
       cwd: projectPath,
       args: forwardedArgs,
+      authToken,
     });
     if (result.stdout) {
       console.log(result.stdout);

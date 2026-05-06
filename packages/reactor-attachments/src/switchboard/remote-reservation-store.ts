@@ -1,4 +1,5 @@
 import type { JwtHandler } from "@powerhousedao/reactor";
+import { ReservationNotFound } from "../errors.js";
 import type { IReservationStore } from "../interfaces.js";
 import type { Reservation, ReserveAttachmentOptions } from "../types.js";
 import { buildAuthHeaders } from "./build-auth-headers.js";
@@ -8,6 +9,23 @@ export type SwitchboardClientConfig = {
   jwtHandler?: JwtHandler;
   fetchFn?: typeof fetch;
 };
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isReservation(value: unknown): value is Reservation {
+  if (!isRecord(value)) return false;
+  if (typeof value.reservationId !== "string") return false;
+  if (typeof value.mimeType !== "string") return false;
+  if (typeof value.fileName !== "string") return false;
+  if (value.extension !== null && typeof value.extension !== "string") {
+    return false;
+  }
+  if (typeof value.createdAtUtc !== "string") return false;
+  if (typeof value.expiresAtUtc !== "string") return false;
+  return true;
+}
 
 export class RemoteReservationStore implements IReservationStore {
   private readonly remoteUrl: string;
@@ -62,16 +80,50 @@ export class RemoteReservationStore implements IReservationStore {
     };
   }
 
-  get(_reservationId: string): Promise<Reservation> {
-    return Promise.reject(
-      new Error("RemoteReservationStore.get is not supported"),
-    );
+  async get(reservationId: string): Promise<Reservation> {
+    const url = `${this.remoteUrl}/attachments/reservations/${encodeURIComponent(reservationId)}`;
+    const authHeaders = await buildAuthHeaders(url, this.jwtHandler);
+
+    const response = await this.fetchFn(url, { headers: authHeaders });
+
+    if (response.status === 404) {
+      throw new ReservationNotFound(reservationId);
+    }
+    if (!response.ok) {
+      throw new Error(
+        `Reservation get failed: ${response.status} ${response.statusText}`,
+      );
+    }
+
+    let parsed: unknown;
+    try {
+      parsed = await response.json();
+    } catch {
+      throw new Error("Reservation get returned non-JSON response");
+    }
+    if (!isReservation(parsed)) {
+      throw new Error(
+        "Reservation get returned a payload that does not match the Reservation shape",
+      );
+    }
+    return parsed;
   }
 
-  delete(_reservationId: string): Promise<void> {
-    return Promise.reject(
-      new Error("RemoteReservationStore.delete is not supported"),
-    );
+  async delete(reservationId: string): Promise<void> {
+    const url = `${this.remoteUrl}/attachments/reservations/${encodeURIComponent(reservationId)}`;
+    const authHeaders = await buildAuthHeaders(url, this.jwtHandler);
+
+    const response = await this.fetchFn(url, {
+      method: "DELETE",
+      headers: authHeaders,
+    });
+
+    // 2xx = success; 404 / 410 = already gone, treat as idempotent success.
+    if (!response.ok && response.status !== 404 && response.status !== 410) {
+      throw new Error(
+        `Reservation delete failed: ${response.status} ${response.statusText}`,
+      );
+    }
   }
 
   // Sweeping is the server's responsibility; clients have no authority to

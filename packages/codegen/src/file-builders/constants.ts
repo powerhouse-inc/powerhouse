@@ -75,6 +75,7 @@ export const externalDevDependencies = {
   "@types/node": "^24.9.2",
   "@types/react": "^19.2.3",
   "@vitejs/plugin-react": "6.0.1",
+  "@vitest/coverage-v8": "4.1.1",
   eslint: "^9.38.0",
   "eslint-config-prettier": "^10.1.8",
   "eslint-plugin-prettier": "^5.5.4",

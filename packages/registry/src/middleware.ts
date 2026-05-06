@@ -91,8 +91,66 @@ export function createPowerhouseRouter(
     },
   );
 
-  // Package listing API
+  // Module-scoped flag: at most one warm-up runs at a time per pod.
+  // Re-entry is cheap (extractTarball already dedups in-flight extractions),
+  // but skipping kicks off the worker pool when one is already grinding lets
+  // hot paths (readiness probes, /packages requests) stay non-blocking.
+  let warmInFlight = false;
+  async function warmCdnCacheFromVerdaccio(): Promise<void> {
+    if (warmInFlight) return;
+    warmInFlight = true;
+    try {
+      const r = await fetch(
+        `http://localhost:${config.port}/-/verdaccio/data/packages`,
+      );
+      if (!r.ok) {
+        console.error(
+          `[registry] verdaccio package listing returned ${r.status}`,
+        );
+        return;
+      }
+      const known = (await r.json()) as Array<{
+        name: string;
+        version?: string;
+      }>;
+      const concurrency = 8;
+      let cursor = 0;
+      const workers = Array.from({ length: concurrency }).map(async () => {
+        while (cursor < known.length) {
+          const idx = cursor++;
+          const pkg = known[idx];
+          if (!pkg.version) continue;
+          try {
+            await cdn.extractTarball(pkg.name, pkg.version);
+          } catch (err) {
+            console.error(
+              `[registry] failed to warm cache for ${pkg.name}@${pkg.version}:`,
+              err,
+            );
+          }
+        }
+      });
+      await Promise.all(workers);
+      console.log(`[registry] /packages warm-up done (${known.length} pkgs)`);
+    } catch (err) {
+      console.error("[registry] /packages warm-up failed:", err);
+    } finally {
+      warmInFlight = false;
+    }
+  }
+
+  // Kick off an initial warm so /packages is useful soon after pod start
+  // even if no clients hit it. Fire-and-forget — must not block the listener.
+  void warmCdnCacheFromVerdaccio();
+
+  // Package listing API.
+  // Returns whatever's currently in the local cdn-cache (instant response —
+  // important: this endpoint is wired to the deployment's readiness probe,
+  // so it must not synchronously fetch or extract). Each call also nudges
+  // a background warm-up so newly-published packages appear in the listing
+  // without operator intervention.
   router.get("/packages", (req: Request, res: Response) => {
+    void warmCdnCacheFromVerdaccio();
     const packages = scanPackages(config.cdnCachePath, config.storagePath);
     const documentType = req.query.documentType as string | undefined;
     if (documentType) {
@@ -253,9 +311,13 @@ export function createUnpublishHook(
           } else {
             cdn.invalidate(parsed.packageName);
           }
+          const renownUser = req.renownUser;
           notifications.notifyUnpublish({
             packageName: parsed.packageName,
             version: parsed.version,
+            publishedBy: renownUser
+              ? { address: renownUser.address, did: renownUser.did }
+              : undefined,
           });
         } catch (err) {
           console.error(
@@ -320,10 +382,14 @@ export function createPublishHook(
         );
       }
 
+      const renownUser = req.renownUser;
+      const publishedBy = renownUser
+        ? { address: renownUser.address, did: renownUser.did }
+        : undefined;
       cdn
         .extractTarball(packageName, version)
         .then(() => {
-          notifications.notifyPublish({ packageName, version });
+          notifications.notifyPublish({ packageName, version, publishedBy });
         })
         .catch((err) => {
           console.error(

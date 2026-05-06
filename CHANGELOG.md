@@ -1,3 +1,71 @@
+## 6.0.0-dev.220 (2026-05-06)
+
+### 🩹 Fixes
+
+- **registry:** make /packages non-blocking, warm cdn-cache in background ([#2568](https://github.com/powerhouse-inc/powerhouse/pull/2568))
+
+### ❤️ Thank You
+
+- Frank @froid1911
+
+## 6.0.0-dev.219 (2026-05-06)
+
+### 🩹 Fixes
+
+- **registry:** source /packages from verdaccio's authoritative list ([44521252d](https://github.com/powerhouse-inc/powerhouse/commit/44521252d))
+
+### ❤️ Thank You
+
+- Frank
+
+## 6.0.0-dev.218 (2026-05-06)
+
+### 🚀 Features
+
+- **registry:** renown JWT auth in front of verdaccio ([e5bbf93f1](https://github.com/powerhouse-inc/powerhouse/commit/e5bbf93f1))
+
+### 🩹 Fixes
+
+- add document drive header fallback for name field ([#2562](https://github.com/powerhouse-inc/powerhouse/pull/2562))
+- **reactor-api:** support forward headers on drive url ([a780f2345](https://github.com/powerhouse-inc/powerhouse/commit/a780f2345))
+- **registry:** satisfy eslint no-unsafe-assignment in renown middleware test ([e4eda6156](https://github.com/powerhouse-inc/powerhouse/commit/e4eda6156))
+
+### ❤️ Thank You
+
+- acaldas
+- Frank
+- Ryan Wolhuter @ryanwolhuter
+
+## 6.0.0-dev.217 (2026-05-06)
+
+### 🚀 Features
+
+- add cursor-pointer class to breadcrumb ([#2561](https://github.com/powerhouse-inc/powerhouse/pull/2561))
+- add editor drag-and-drop guidance to AGENTS.md template ([f9dc73d71](https://github.com/powerhouse-inc/powerhouse/commit/f9dc73d71))
+- add editor drag-and-drop guidance to AGENTS.md template ([#2564](https://github.com/powerhouse-inc/powerhouse/pull/2564))
+- **codegen:** scaffold vitest coverage with reducer threshold ([94f62106c](https://github.com/powerhouse-inc/powerhouse/commit/94f62106c))
+- **codegen:** scaffold vitest coverage with reducer threshold ([#2563](https://github.com/powerhouse-inc/powerhouse/pull/2563))
+- **codegen:** document playbook for reaching 100% reducer coverage ([d2421f461](https://github.com/powerhouse-inc/powerhouse/commit/d2421f461))
+- **reactor-attachments:** implementing HEAD, implementing soft-delete and fixing some indexing issues ([f1430bca4](https://github.com/powerhouse-inc/powerhouse/commit/f1430bca4))
+- **switchboard-lb:** rewrite to use simpler drive-id header ([a442207d1](https://github.com/powerhouse-inc/powerhouse/commit/a442207d1))
+
+### 🩹 Fixes
+
+- **codegen:** correct hook import paths and inline shadcn editor guide ([20d06c5c3](https://github.com/powerhouse-inc/powerhouse/commit/20d06c5c3))
+- **ph-cmd:** fail fast when ph-cli tag resolves below 6.x for init ([0ba8e5f9b](https://github.com/powerhouse-inc/powerhouse/commit/0ba8e5f9b))
+- **ph-cmd:** exit instead of throw on init version-floor failure ([7ab327a77](https://github.com/powerhouse-inc/powerhouse/commit/7ab327a77))
+- **reactor:** documents with out of order ADD_RELATIONSHIP now correctly gets backfilled in sync query ([2b2730126](https://github.com/powerhouse-inc/powerhouse/commit/2b2730126))
+- **reactor-api, switchboard:** partial-delete index, reservation validation, fastify param routing, case-insensitive hashes ([f0b5b0620](https://github.com/powerhouse-inc/powerhouse/commit/f0b5b0620))
+- **reactor-attachments:** code-review feedback ([18cd49ab6](https://github.com/powerhouse-inc/powerhouse/commit/18cd49ab6))
+- **reactor-attachments:** switch to Attachment-Metadata instead of the X- prefix ([7ea3f120a](https://github.com/powerhouse-inc/powerhouse/commit/7ea3f120a))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.216 (2026-05-05)
 
 ### 🚀 Features
