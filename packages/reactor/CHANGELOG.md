@@ -1,3 +1,17 @@
+## 6.0.0-dev.217 (2026-05-06)
+
+### 🚀 Features
+
+- **switchboard-lb:** rewrite to use simpler drive-id header ([a442207d1](https://github.com/powerhouse-inc/powerhouse/commit/a442207d1))
+
+### 🩹 Fixes
+
+- **reactor:** documents with out of order ADD_RELATIONSHIP now correctly gets backfilled in sync query ([2b2730126](https://github.com/powerhouse-inc/powerhouse/commit/2b2730126))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.0.0-dev.216 (2026-05-05)
 
 ### 🩹 Fixes

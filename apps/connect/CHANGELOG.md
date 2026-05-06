@@ -1,3 +1,13 @@
+## 6.0.0-dev.217 (2026-05-06)
+
+### 🚀 Features
+
+- **switchboard-lb:** rewrite to use simpler drive-id header ([a442207d1](https://github.com/powerhouse-inc/powerhouse/commit/a442207d1))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.0.0-dev.216 (2026-05-05)
 
 ### 🩹 Fixes

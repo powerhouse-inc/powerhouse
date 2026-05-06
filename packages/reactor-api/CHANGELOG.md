@@ -1,3 +1,18 @@
+## 6.0.0-dev.217 (2026-05-06)
+
+### 🚀 Features
+
+- **switchboard-lb:** rewrite to use simpler drive-id header ([a442207d1](https://github.com/powerhouse-inc/powerhouse/commit/a442207d1))
+- **reactor-attachments:** implementing HEAD, implementing soft-delete and fixing some indexing issues ([f1430bca4](https://github.com/powerhouse-inc/powerhouse/commit/f1430bca4))
+
+### 🩹 Fixes
+
+- **reactor-api, switchboard:** partial-delete index, reservation validation, fastify param routing, case-insensitive hashes ([f0b5b0620](https://github.com/powerhouse-inc/powerhouse/commit/f0b5b0620))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.0.0-dev.216 (2026-05-05)
 
 ### 🩹 Fixes

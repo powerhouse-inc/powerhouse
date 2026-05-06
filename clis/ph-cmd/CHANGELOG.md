@@ -1,3 +1,19 @@
+## 6.0.0-dev.217 (2026-05-06)
+
+### 🚀 Features
+
+- **switchboard-lb:** rewrite to use simpler drive-id header ([a442207d1](https://github.com/powerhouse-inc/powerhouse/commit/a442207d1))
+
+### 🩹 Fixes
+
+- **ph-cmd:** exit instead of throw on init version-floor failure ([7ab327a77](https://github.com/powerhouse-inc/powerhouse/commit/7ab327a77))
+- **ph-cmd:** fail fast when ph-cli tag resolves below 6.x for init ([0ba8e5f9b](https://github.com/powerhouse-inc/powerhouse/commit/0ba8e5f9b))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Guillermo Puente @gpuente
+
 ## 6.0.0-dev.216 (2026-05-05)
 
 ### 🩹 Fixes
