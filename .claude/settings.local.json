@@ -40,7 +40,16 @@
       "Bash(sed 's/.*\\\\\\(```[^ ]*\\\\\\).*/\\\\1/')",
       "Bash(node -e \"const os = require\\('os'\\); const fs = require\\('fs'\\); const p = os.tmpdir\\(\\); console.log\\('tmpdir:', p, '→ realpath:', fs.realpathSync\\(p\\)\\)\")",
       "Bash(node -e ' *)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(node_modules/.bin/tsx test/ph-lora/scripts/validate-mapping.ts)",
+      "Bash(node_modules/.bin/tsx -e ' *)",
+      "Bash(node -e \"console.log\\(require\\('./packages/renown/package.json'\\).name\\)\")",
+      "Bash(node -e \"console.log\\(require\\('./packages/reactor/package.json'\\).name\\)\")",
+      "Bash(node -e \"console.log\\(require\\('./packages/document-model/package.json'\\).name\\)\")",
+      "Bash(node -e \"console.log\\(JSON.stringify\\(require\\('./packages/document-model/package.json'\\).exports, null, 2\\)\\)\")",
+      "Bash(git commit -m ' *)",
+      "Bash(git check-ignore *)",
+      "Bash(git commit -m 'chore: track .claude/commands in git for team sharing *)"
     ],
     "deny": [],
     "ask": []
