@@ -44,6 +44,14 @@ permissions:
   packages: write
   id-token: write
 
+# Serialize releases per branch. Two simultaneous releases would both bump
+# versions, both publish to npm (one claiming the next dev.X tag, the other
+# failing on republish), and race on git push. Queue rather than cancel —
+# releases shouldn't be aborted mid-publish.
+concurrency:
+  group: release-monorepo-${{ github.ref_name }}
+  cancel-in-progress: false
+
 jobs:
   release:
     name: Release packages in monorepo
