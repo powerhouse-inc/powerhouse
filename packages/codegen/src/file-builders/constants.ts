@@ -74,7 +74,6 @@ export const externalDevDependencies = {
   "@tailwindcss/cli": "^4.1.18",
   "@types/node": "^24.9.2",
   "@types/react": "^19.2.3",
-  "@vitejs/plugin-react": "6.0.1",
   "@vitest/coverage-v8": "4.1.1",
   eslint: "^9.38.0",
   "eslint-config-prettier": "^10.1.8",
@@ -85,7 +84,6 @@ export const externalDevDependencies = {
   tailwindcss: "^4.1.16",
   typescript: "^5.9.3",
   "typescript-eslint": "^8.46.2",
-  vite: "8.0.8",
   "vite-tsconfig-paths": "6.1.1",
   vitest: "4.1.1",
 } as const;
