@@ -108,16 +108,8 @@ export const registryCommand = command({
     authRenown: flag({
       long: "auth-renown",
       description:
-        "Verify Renown-signed bearer tokens in front of verdaccio (stateless). Disabled when --public-url is unset.",
+        "Verify Renown-signed bearer tokens via the verdaccio-auth-renown plugin (stateless). Disabled when --public-url is unset.",
       defaultValue: () => process.env.PH_REGISTRY_AUTH_RENOWN === "true",
-      defaultValueIsSerializable: true,
-    }),
-    verdaccioSecret: option({
-      long: "verdaccio-secret",
-      type: optional(string),
-      description:
-        "Override verdaccio's internal JWT signing secret. Default: random per pod (fine — the swapped JWT never leaves this process).",
-      defaultValue: () => process.env.PH_REGISTRY_VERDACCIO_SECRET,
       defaultValueIsSerializable: true,
     }),
   },

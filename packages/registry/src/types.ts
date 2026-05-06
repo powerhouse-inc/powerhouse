@@ -40,9 +40,7 @@ export interface RegistryConfig {
   s3?: S3Config;
   notify?: NotifyConfig;
   maxBodySize?: string;
-  /** Top-level verdaccio JWT signing secret. If unset, randomized per pod. */
-  verdaccioSecret?: string;
-  /** Enable Renown JWT auth in front of verdaccio. */
+  /** Renown JWT auth via the verdaccio-auth-renown plugin. */
   renown?: RenownAuthConfig;
 }
 
@@ -62,5 +60,4 @@ export interface RegistryCommandArgs {
   webhooks?: string;
   publicUrl?: string;
   authRenown?: boolean;
-  verdaccioSecret?: string;
 }
