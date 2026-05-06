@@ -386,20 +386,12 @@ const app = command({
     }
 
     if (gitPush && didCommit) {
-      const gitPushCommitCmd = [
-        "git",
-        "push",
-        "origin",
-        "HEAD",
-        "--follow-tags",
-      ];
-      console.log(
-        `Pushing the current commit in git with the following command: ${gitPushCommitCmd.join(" ")}`,
-      );
-      const result = runCommandWithBun(gitPushCommitCmd);
-      if (result.exitCode !== 0) {
-        throw new Error("Failed to push commit with git");
-      }
+      // Push with rebase retry. By the time we get here npm has already been
+      // poisoned (immutable versions), so a stuck push is the worst possible
+      // outcome — it leaves an orphaned tag that prevents the next release
+      // from reusing the version. Rebase the chore commit on top of the
+      // latest remote tip and try again.
+      pushWithRebaseRetry({ workspaceVersion, gitTag });
     }
     console.log(">>> Release successfully completed 🚀");
     process.exit(0);
@@ -420,4 +412,84 @@ function runCommandWithBun(
       ...env,
     },
   });
+}
+
+/**
+ * Push the chore-release commit (and optional tag) to origin, rebasing on top
+ * of the remote branch if the push is rejected for being non-fast-forward.
+ *
+ * This protects against the standard race: another PR merges to the same
+ * branch while the release is mid-flight (the npm publish step takes minutes,
+ * leaving a wide window). Without retry the chore commit is stranded, the
+ * tag is orphaned, and the npm package is already published, so the next
+ * release attempt can't reuse the version. With retry, the chore commit
+ * rebases over the new tip and we push again.
+ */
+function pushWithRebaseRetry(opts: {
+  workspaceVersion: string;
+  gitTag: boolean;
+}): void {
+  const branch = getBranchName();
+  const tag = `v${opts.workspaceVersion}`;
+  const maxAttempts = 4;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const cmd = ["git", "push", "origin", "HEAD", "--follow-tags"];
+    console.log(
+      `Push attempt ${attempt}/${maxAttempts} on ${branch}: ${cmd.join(" ")}`,
+    );
+    const result = runCommandWithBun(cmd);
+    if (result.exitCode === 0) {
+      console.log("Push succeeded.");
+      return;
+    }
+
+    if (attempt === maxAttempts) {
+      throw new Error(
+        `Failed to push commit with git after ${maxAttempts} attempts`,
+      );
+    }
+
+    console.warn(
+      `Push rejected (likely non-fast-forward race). Rebasing onto origin/${branch} and retrying.`,
+    );
+
+    const fetch = runCommandWithBun(["git", "fetch", "origin", branch]);
+    if (fetch.exitCode !== 0) {
+      throw new Error("Failed to fetch origin during push retry");
+    }
+
+    // Annotated tag is bound to the old chore commit's SHA. After we rebase,
+    // that commit will have a new SHA, so drop the local tag and recreate it
+    // post-rebase. The tag wasn't pushed (push was rejected) so there's
+    // nothing to undo on the remote.
+    if (opts.gitTag) {
+      runCommandWithBun(["git", "tag", "-d", tag]);
+    }
+
+    const rebase = runCommandWithBun(["git", "rebase", `origin/${branch}`]);
+    if (rebase.exitCode !== 0) {
+      // Conflict between the chore commit (touches package.json + CHANGELOG.md)
+      // and an unrelated PR that touched the same files. Bail loudly — npm
+      // is already poisoned and we need an operator to fix this manually.
+      runCommandWithBun(["git", "rebase", "--abort"]);
+      throw new Error(
+        `Rebase onto origin/${branch} during push retry conflicted; manual intervention required`,
+      );
+    }
+
+    if (opts.gitTag) {
+      const retag = runCommandWithBun([
+        "git",
+        "tag",
+        "--annotate",
+        tag,
+        "--message",
+        tag,
+      ]);
+      if (retag.exitCode !== 0) {
+        throw new Error(`Failed to recreate tag ${tag} after rebase`);
+      }
+    }
+  }
 }

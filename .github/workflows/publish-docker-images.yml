@@ -8,6 +8,13 @@ permissions:
   contents: write
   packages: write
 
+# Share the release-monorepo concurrency group so a standalone
+# workflow_dispatch of this workflow cannot run alongside a release-branch
+# run that's about to invoke this same workflow as a downstream step.
+concurrency:
+  group: release-monorepo-${{ github.ref_name }}
+  cancel-in-progress: false
+
 env:
   REGISTRY: ghcr.io
   HARBOR_REGISTRY: cr.vetra.io
