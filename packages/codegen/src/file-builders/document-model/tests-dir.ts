@@ -5,7 +5,7 @@ import type {
 import { ts } from "@tmpl/core";
 import { camelCase, kebabCase, pascalCase } from "change-case";
 import path from "path";
-import { filter, isIncludedIn, map, pipe } from "remeda";
+import { filter, map, pipe } from "remeda";
 import {
   documentModelTestFileTemplate,
   makeOperationImportNames,
@@ -130,11 +130,28 @@ export async function makeOperationModuleTestFile(
       const expressionText = call.getExpression().getText();
       return expressionText === "it" || expressionText === "test";
     })
-    .map((c) => c.getArguments()[0].getText());
+    // Use the literal value of the description so it doesn't include the
+    // surrounding quotes — otherwise the dedup check below never matches.
+    .map((c) => {
+      const firstArg = c.getArguments()[0];
+      const stringLiteral = firstArg.asKind(SyntaxKind.StringLiteral);
+      if (stringLiteral) return stringLiteral.getLiteralValue();
+      const noSubstitutionTemplate = firstArg.asKind(
+        SyntaxKind.NoSubstitutionTemplateLiteral,
+      );
+      if (noSubstitutionTemplate)
+        return noSubstitutionTemplate.getLiteralValue();
+      return firstArg.getText();
+    });
 
+  // Skip operations whose generated test description (e.g. "should handle
+  // addTodo operation") is already present, to avoid duplicating tests on re-runs.
   const testCasesToAdd = pipe(
     module.operations,
-    filter((o) => !isIncludedIn(camelCase(o.name ?? ""), testCaseNames)),
+    filter((o) => {
+      const opCamelCase = camelCase(o.name ?? "");
+      return !testCaseNames.some((name) => name.includes(opCamelCase));
+    }),
     map((o) => makeTestCaseForOperation(o, isPhDocumentOfTypeFunctionName)),
   );
 
