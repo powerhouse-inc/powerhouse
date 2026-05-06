@@ -1,3 +1,13 @@
+## 6.0.0-dev.222 (2026-05-06)
+
+### 🩹 Fixes
+
+- **release:** retry git push with rebase + add workflow concurrency ([#2572](https://github.com/powerhouse-inc/powerhouse/pull/2572))
+
+### ❤️ Thank You
+
+- Frank @froid1911
+
 ## 6.0.0-dev.220 (2026-05-06)
 
 This was a version bump only for @powerhousedao/config to align it with other projects, there were no code changes.

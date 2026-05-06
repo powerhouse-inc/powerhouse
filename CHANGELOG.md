@@ -1,3 +1,20 @@
+## 6.0.0-dev.222 (2026-05-06)
+
+### 🩹 Fixes
+
+- **codegen:** dedupe test cases ([ac110c571](https://github.com/powerhouse-inc/powerhouse/commit/ac110c571))
+- **codegen:** fix drive editor metadata check ([48f3de5a5](https://github.com/powerhouse-inc/powerhouse/commit/48f3de5a5))
+- **codegen:** fix types export paths and  documentModels type safety ([92c08ecad](https://github.com/powerhouse-inc/powerhouse/commit/92c08ecad))
+- **codegen:** safer test name check ([58132df1b](https://github.com/powerhouse-inc/powerhouse/commit/58132df1b))
+- **codegen,connect,shared:** exclude main.tsx from types and removed vite dependency ([fc9e541d6](https://github.com/powerhouse-inc/powerhouse/commit/fc9e541d6))
+- **registry:** make extractTarball idempotent + throttle /packages warm-up ([#2571](https://github.com/powerhouse-inc/powerhouse/pull/2571))
+- **release:** retry git push with rebase + add workflow concurrency ([#2572](https://github.com/powerhouse-inc/powerhouse/pull/2572))
+
+### ❤️ Thank You
+
+- acaldas
+- Frank @froid1911
+
 ## 6.0.0-dev.220 (2026-05-06)
 
 ### 🩹 Fixes
