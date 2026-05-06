@@ -1,3 +1,13 @@
+## 6.0.0-dev.218 (2026-05-06)
+
+### 🚀 Features
+
+- **registry:** renown JWT auth in front of verdaccio ([e5bbf93f1](https://github.com/powerhouse-inc/powerhouse/commit/e5bbf93f1))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 6.0.0-dev.217 (2026-05-06)
 
 ### 🚀 Features
