@@ -80,6 +80,10 @@ function makeMockReactorClient(
       header: { id: "drive-1", slug: "my-drive", meta: {} },
       state: { global: { name: "Test Drive", icon: null } },
     }),
+    find: vi.fn().mockResolvedValue({
+      results: [],
+      options: { cursor: "", limit: 100 },
+    }),
     ...overrides,
   } as unknown as IReactorClient;
 }

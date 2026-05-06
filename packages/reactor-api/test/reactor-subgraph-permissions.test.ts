@@ -107,7 +107,14 @@ describe("ReactorSubgraph Permission Checks", () => {
         mockDocumentPermissionService as DocumentPermissionService,
       relationalDb: {} as any,
       analyticsStore: {} as any,
-      graphqlManager: {} as any,
+      graphqlManager: {
+        driveOwnershipCache: {
+          has: () => false,
+          add: () => undefined,
+          remove: () => undefined,
+          size: () => 0,
+        },
+      } as any,
       syncManager: {} as any,
     } as SubgraphArgs);
   });

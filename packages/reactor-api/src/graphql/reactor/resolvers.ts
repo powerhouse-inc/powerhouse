@@ -21,7 +21,7 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import { GraphQLError } from "graphql";
 
-const DRIVE_DOCUMENT_TYPE = "powerhouse/document-drive";
+import { DRIVE_DOCUMENT_TYPE } from "./constants.js";
 const POLL_SYNC_ENVELOPES_MAX_LIMIT = 100;
 import type { GetParentIdsFn } from "../../services/document-permission.service.js";
 import {

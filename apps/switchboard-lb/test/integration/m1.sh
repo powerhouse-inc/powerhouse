@@ -53,12 +53,12 @@ check "health 200"              "200" "$(status_code "$resp")"
 check "health no upstream id"   ""    "$(header_value "$resp" X-Upstream-Id)"
 
 # 2. POST /graphql — prefix match, path preserved.
-# From M2 onward the body must carry a routing id or the LB 409s before
-# it ever forwards. The body content is otherwise irrelevant to the
-# path/method/X-Request-Id invariants this script checks.
+# Body content is irrelevant to the path/method/X-Request-Id invariants
+# this script checks. Header-based routing (M2) means the LB does not
+# parse the body at all; missing Drive-Id falls back to round-robin.
 resp=$(curl -sS -D - -o /dev/null -X POST \
     -H "Content-Type: application/json" \
-    --data '{"variables":{"identifier":"m1-test-doc"}}' \
+    --data '{"query":"{ __typename }"}' \
     "$LB/graphql")
 check "graphql POST 200"            "200"      "$(status_code "$resp")"
 check "graphql path preserved"      "/graphql" "$(header_value "$resp" X-Upstream-Path)"
@@ -67,7 +67,7 @@ check "graphql method preserved"    "POST"     "$(header_value "$resp" X-Upstrea
 # 3. POST /graphql/reactor — prefix match, path preserved.
 resp=$(curl -sS -D - -o /dev/null -X POST \
     -H "Content-Type: application/json" \
-    --data '{"variables":{"identifier":"m1-test-doc"}}' \
+    --data '{"query":"{ __typename }"}' \
     "$LB/graphql/reactor")
 check "graphql/reactor POST 200"         "200"              "$(status_code "$resp")"
 check "graphql/reactor path preserved"   "/graphql/reactor" "$(header_value "$resp" X-Upstream-Path)"
@@ -86,7 +86,7 @@ REQ_ID="m1-test-rid-abc123"
 resp=$(curl -sS -D - -o /dev/null -X POST \
     -H "Content-Type: application/json" \
     -H "X-Request-Id: $REQ_ID" \
-    --data '{"variables":{"identifier":"m1-test-doc"}}' \
+    --data '{"query":"{ __typename }"}' \
     "$LB/graphql")
 check "X-Request-Id passthrough" "$REQ_ID" "$(header_value "$resp" X-Request-Id)"
 

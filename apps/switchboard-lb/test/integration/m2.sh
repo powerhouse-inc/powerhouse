@@ -1,13 +1,10 @@
 #!/usr/bin/env sh
-# M2 integration assertions: body-based pinning.
+# M2 integration assertions: header-based pinning.
 #
-# Asserts that /graphql requests with a routing identifier land on the
-# same backend every time; that multi-id / missing-id / malformed bodies
-# return the documented 4xx; that oversized bodies are rejected; and
-# that /health and /d/:drive are unaffected by the body-parse path.
-#
-# The pinning assertions require the upstream to be `hash $doc_id
-# consistent` (M2 stage 3). Run this script after the balancer flip.
+# Asserts that /graphql requests with a `Drive-Id` header land on the
+# same backend every time, that requests without the header still
+# succeed (round-robin fallback), and that /health and /d/:drive are
+# unaffected by the routing path.
 #
 # Requires `docker compose up -d` (or --build) to already be running.
 
@@ -50,25 +47,31 @@ status_code() {
     printf '%s' "$dump" | awk 'NR==1 {print $2; exit}'
 }
 
-post_graphql() {
-    # Reads the body from stdin. Avoids shell-quoting pain and argv size
-    # limits for large payloads.
+post_graphql_with_drive() {
+    drive_id="$1"
     curl -sS -D - -o /dev/null -X POST \
         -H "Content-Type: application/json" \
-        --data-binary @- \
+        -H "Drive-Id: $drive_id" \
+        --data-binary '{"query":"{ __typename }"}' \
         "$LB/graphql"
 }
 
-# 1. Pinning via variables.identifier — same id hits the same backend 5/5.
+post_graphql_no_drive() {
+    curl -sS -D - -o /dev/null -X POST \
+        -H "Content-Type: application/json" \
+        --data-binary '{"query":"{ __typename }"}' \
+        "$LB/graphql"
+}
+
+# 1. Pinning via Drive-Id header — same id hits the same backend 5/5.
 TS=$(date +%s)
 ID="pin-$TS"
-body='{"variables":{"identifier":"'$ID'"}}'
 
 first=""
 same=1
 i=0
 while [ "$i" -lt 5 ]; do
-    resp=$(printf '%s' "$body" | post_graphql)
+    resp=$(post_graphql_with_drive "$ID")
     u=$(header_value "$resp" X-Upstream-Id)
     if [ -z "$first" ]; then
         first="$u"
@@ -77,59 +80,42 @@ while [ "$i" -lt 5 ]; do
     fi
     i=$((i + 1))
 done
-check "identifier pinning: 5/5 same backend" "1" "$same"
+check "Drive-Id pinning: 5/5 same backend" "1" "$same"
 [ -n "$first" ] && echo "        pinned to: $first"
 
-# 2. Pinning via envelopes[0].channelMeta.id — same channel, same backend 5/5.
-CH="ch-$TS"
-body='{"variables":{"envelopes":[{"channelMeta":{"id":"'$CH'"}}]}}'
+# 2. Different drive ids should generally hit different backends across the
+#    sample. Not strictly guaranteed, but consistent hashing over enough
+#    distinct ids should produce >1 distinct backend in 10 trials.
+distinct=$(
+    i=0
+    while [ "$i" -lt 10 ]; do
+        resp=$(post_graphql_with_drive "drive-$TS-$i")
+        header_value "$resp" X-Upstream-Id
+        i=$((i + 1))
+    done | sort -u | wc -l
+)
+if [ "$distinct" -gt 1 ]; then
+    echo "PASS  distinct Drive-Id values spread across >1 backend ($distinct)"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL  distinct Drive-Id values all hit one backend ($distinct)"
+    FAIL=$((FAIL + 1))
+fi
 
-first=""
-same=1
-i=0
-while [ "$i" -lt 5 ]; do
-    resp=$(printf '%s' "$body" | post_graphql)
-    u=$(header_value "$resp" X-Upstream-Id)
-    if [ -z "$first" ]; then
-        first="$u"
-    elif [ "$u" != "$first" ]; then
-        same=0
-    fi
-    i=$((i + 1))
-done
-check "pushSyncEnvelopes pinning: 5/5 same backend" "1" "$same"
-[ -n "$first" ] && echo "        pinned to: $first"
+# 3. Missing Drive-Id header — request still succeeds (round-robin fallback).
+resp=$(post_graphql_no_drive)
+status=$(status_code "$resp")
+# Any 2xx/4xx from the backend is fine; what matters is it didn't 4xx at the LB
+# layer for missing routing info.
+if [ "${status%??}" = "2" ] || [ "${status%??}" = "4" ]; then
+    echo "PASS  missing Drive-Id reaches a backend (status $status)"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL  missing Drive-Id should reach a backend (got $status)"
+    FAIL=$((FAIL + 1))
+fi
 
-# 3. 409 branches.
-resp=$(printf '%s' '{"variables":{"identifiers":["a","b"]}}' | post_graphql)
-check "409 deleteDocuments identifiers[]" "409" "$(status_code "$resp")"
-
-resp=$(printf '%s' '{"variables":{"sourceParentIdentifier":"p1","targetParentIdentifier":"p2"}}' | post_graphql)
-check "409 cross-parent moveRelationship" "409" "$(status_code "$resp")"
-
-resp=$(printf '%s' '{"variables":{"envelopes":[{"channelMeta":{"id":"a"}},{"channelMeta":{"id":"b"}}]}}' | post_graphql)
-check "409 cross-channel pushSyncEnvelopes" "409" "$(status_code "$resp")"
-
-resp=$(printf '%s' '{"variables":{"input":{"filter":{"documentId":["a","b"]}}}}' | post_graphql)
-check "409 multi-element touchChannel" "409" "$(status_code "$resp")"
-
-resp=$(printf '%s' '{"variables":{"foo":"bar"}}' | post_graphql)
-check "409 no routing identifier" "409" "$(status_code "$resp")"
-
-# 4. 400 branches.
-resp=$(printf '%s' '{ not json' | post_graphql)
-check "400 malformed JSON" "400" "$(status_code "$resp")"
-
-resp=$(printf '%s' '{"query":"{ __typename }"}' | post_graphql)
-check "400 missing variables" "400" "$(status_code "$resp")"
-
-# 5. 413 — body > 256 KiB.
-big=$(head -c 300000 /dev/zero | tr '\0' 'x')
-body='{"variables":{"identifier":"'$big'"}}'
-resp=$(printf '%s' "$body" | post_graphql)
-check "413 body over 256 KiB" "413" "$(status_code "$resp")"
-
-# 6. Non-/graphql routes unaffected — no body parse, Lua does not fire.
+# 4. Non-/graphql routes unaffected.
 resp=$(curl -sS -D - -o /dev/null "$LB/health")
 check "health 200 (local)"          "200" "$(status_code "$resp")"
 check "health has no X-Upstream-Id" ""    "$(header_value "$resp" X-Upstream-Id)"
