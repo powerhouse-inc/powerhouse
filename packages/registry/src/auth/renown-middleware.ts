@@ -74,7 +74,12 @@ export function createRenownAuthMiddleware(opts: RenownAuthOptions) {
 
     let verified: Awaited<ReturnType<typeof verifyAuthBearerToken>>;
     try {
-      verified = await verifyAuthBearerToken(token);
+      // Pass `audience` so did-jwt validates the `aud` claim itself. Tokens
+      // minted by ph-cli for this registry carry aud=publicUrl; if we don't
+      // tell did-jwt what audience to accept, it throws
+      // `invalid_config: JWT audience is required but your app address has
+      // not been configured` and we silently fall through.
+      verified = await verifyAuthBearerToken(token, { audience: expectedAud });
     } catch {
       return next();
     }
@@ -82,6 +87,9 @@ export function createRenownAuthMiddleware(opts: RenownAuthOptions) {
       return next();
     }
 
+    // Defence-in-depth: did-jwt's `audience` option already enforced this,
+    // but verify the claim again in case verifyAuthBearerToken's behavior
+    // ever changes (e.g. silently passing without checking).
     const payload = verified.payload as JwtPayloadShape | undefined;
     if (!audienceMatches(payload?.aud, expectedAud)) {
       return next();
