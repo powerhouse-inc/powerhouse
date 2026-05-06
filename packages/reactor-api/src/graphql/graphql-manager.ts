@@ -21,16 +21,6 @@ import type { WebSocketServer } from "ws";
 import { debounce } from "../packages/util.js";
 import type { AuthConfig } from "../services/auth.service.js";
 import { AuthService } from "../services/auth.service.js";
-import {
-  getAuthContext,
-  type AuthFetchMiddleware,
-} from "./gateway/auth-middleware.js";
-import { DriveOwnershipCache } from "./gateway/drive-ownership-cache.js";
-import {
-  createDriveFetchMiddleware,
-  getRequestDriveId,
-  type DriveFetchMiddleware,
-} from "./gateway/drive-middleware.js";
 import type { AuthorizationService } from "../services/authorization.service.js";
 import type { DocumentPermissionService } from "../services/document-permission.service.js";
 import {
@@ -39,8 +29,16 @@ import {
   createSchema,
 } from "../utils/create-schema.js";
 import { DocumentModelSubgraph } from "./document-model-subgraph.js";
-import { createGraphQLSSEHandler } from "./sse.js";
-import { useServer } from "./websocket.js";
+import {
+  getAuthContext,
+  type AuthFetchMiddleware,
+} from "./gateway/auth-middleware.js";
+import {
+  createDriveFetchMiddleware,
+  getRequestDriveId,
+  type DriveFetchMiddleware,
+} from "./gateway/drive-middleware.js";
+import { DriveOwnershipCache } from "./gateway/drive-ownership-cache.js";
 import type {
   FetchHandler,
   GatewayContextFactory,
@@ -49,6 +47,7 @@ import type {
   SubgraphDefinition,
   WsDisposer,
 } from "./gateway/types.js";
+import { createGraphQLSSEHandler } from "./sse.js";
 
 const DOCUMENT_MODELS_TO_EXCLUDE: string[] = [];
 
@@ -204,10 +203,17 @@ export class GraphQLManager {
         const driveDoc =
           await this.reactorClient.get<DocumentDriveDocument>(driveIdOrSlug);
 
-        const forwardedProto = request.headers.get("x-forwarded-proto");
+        const forwardedProto = request.headers
+          .get("x-forwarded-proto")
+          ?.split(",")[0]
+          .trim();
         const protocol =
           (forwardedProto ?? url.protocol.replace(":", "")) + ":";
-        const host = request.headers.get("host") ?? "";
+        const forwardedHost = request.headers
+          .get("x-forwarded-host")
+          ?.split(",")[0]
+          .trim();
+        const host = forwardedHost ?? request.headers.get("host") ?? "";
         const basePath = this.path === "/" ? "" : this.path;
         const graphqlEndpoint = `${protocol}//${host}${basePath}/graphql/r`;
 
@@ -224,7 +230,6 @@ export class GraphQLManager {
         return Response.json({ error: "Drive not found" }, { status: 404 });
       }
     });
-
     this.logger.info(`Registered REST endpoint: GET ${driveRoutePath}`);
 
     await this.#setupCoreSubgraphs("graphql", coreSubgraphs);
