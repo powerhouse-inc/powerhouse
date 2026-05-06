@@ -144,13 +144,13 @@ export async function makeOperationModuleTestFile(
       return firstArg.getText();
     });
 
-  // Skip operations whose generated test description (e.g. "should handle
-  // addTodo operation") is already present, to avoid duplicating tests on re-runs.
+  // Skip operations whose generated test description is already present
   const testCasesToAdd = pipe(
     module.operations,
     filter((o) => {
       const opCamelCase = camelCase(o.name ?? "");
-      return !testCaseNames.some((name) => name.includes(opCamelCase));
+      const expectedTestCaseName = `should handle ${opCamelCase} operation`;
+      return !testCaseNames.some((name) => name === expectedTestCaseName);
     }),
     map((o) => makeTestCaseForOperation(o, isPhDocumentOfTypeFunctionName)),
   );
