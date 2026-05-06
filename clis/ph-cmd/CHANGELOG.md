@@ -1,3 +1,19 @@
+## 6.0.0-dev.226 (2026-05-06)
+
+### 🚀 Features
+
+- various mixed load scenarios for the lb ([6ef3a76bf](https://github.com/powerhouse-inc/powerhouse/commit/6ef3a76bf))
+
+### 🩹 Fixes
+
+- **ph-cmd:** guard ph-cli forwarding when no project is detected ([07343964c](https://github.com/powerhouse-inc/powerhouse/commit/07343964c))
+- bump document-engineering to 1.40.3 and align zod pin ([d50e7e42c](https://github.com/powerhouse-inc/powerhouse/commit/d50e7e42c))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Guillermo Puente @gpuente
+
 ## 6.0.0-dev.225 (2026-05-06)
 
 This was a version bump only for ph-cmd to align it with other projects, there were no code changes.
