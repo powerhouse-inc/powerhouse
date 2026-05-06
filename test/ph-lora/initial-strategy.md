@@ -109,6 +109,20 @@ Tier 1 is a cheap tripwire, not a comprehensive drift detector. It catches the m
 - Keeps expensive models out of the hot path
 - Prior art: Nextra does something similar
 
+**Implementation (built):**
+
+Two CI jobs in `.github/workflows/ph-lora-tier2.yml`:
+
+1. **`validate-mapping`** (blocking, no `continue-on-error`) — zero-cost structural check. Reads every `sourceFiles` entry in `ph-lora-mapping.json` and verifies the path still exists in the repo. If a developer renames a source file without updating the mapping, the PR fails. Runs `test/ph-lora/scripts/validate-mapping.ts`.
+
+2. **`drift-check`** (advisory, `continue-on-error: true`) — runs `test/ph-lora/scripts/check-pr-drift.ts`. Gets changed files via `git diff BASE...HEAD`, skips sections where docs were also updated, sends filtered diff + `checkFocus` to `claude-haiku-4-5` via native fetch, opens a GitHub issue via `gh issue create` if drift is detected. Never blocks merges.
+
+Key design decisions:
+
+- No SDK dependency — native Node 24 `fetch` for the Anthropic API call
+- `drift-check` depends on `validate-mapping` via `needs:` — no point classifying drift against a stale map
+- `ANTHROPIC_API_KEY` missing → exits 0 with warning (advisory, never hard-fails CI)
+
 ### Tier 3 — Large Context, Release-Level Review
 
 - At staging deploy, spin up one agent per academy section in parallel (~8–9 agents)
@@ -121,10 +135,42 @@ Tier 1 is a cheap tripwire, not a comprehensive drift detector. It catches the m
 `ph-lora-mapping.json` is the key mechanism that makes Tier 3 work without RAG. Each section entry carries:
 
 - `docPath` — the academy section to load as the doc context
-- `packages` — the monorepo packages to load as the code context
+- `packages` — the monorepo packages used by Tier 2 for change-detection (prefix match)
+- `sourceFiles` — specific directories and files for Tier 3 agents to load (see below)
 - `checkFocus` — a scoping hint that goes directly into the agent prompt
 
-A Tier 3 agent for React Hooks gets: the content of `04-APIReferences/01-ReactHooks.md` + the source of `packages/reactor-browser` + the `checkFocus` string. No embedding, no retrieval — just structured context assembly. The mapping file is what replaces RAG.
+A Tier 3 agent for React Hooks gets: the content of `04-APIReferences/01-ReactHooks.md` + only `packages/reactor-browser/src/hooks/` + `packages/reactor-browser/index.ts` + the `checkFocus` string. No embedding, no retrieval — just structured context assembly. The mapping file is what replaces RAG.
+
+**Implementation (built):**
+
+`.claude/commands/doc-review.md` — the `/doc-review <section-id>` slash command. Runs a structured mechanical review against a single doc section. Checks:
+
+- Export existence (every documented name vs actual source exports)
+- Signature match (parameter names, types, return types)
+- Example correctness (import paths, function names, argument shape)
+- Summary table completeness
+- Missing exports within the `checkFocus` scope
+
+Outputs a structured findings table with urgency (`high`/`medium`/`low`) and finding type (`stale`/`missing`/`wrong`).
+
+**Gap analyses run:**
+
+| Section            | Findings | Notable                                                                                                                                                |
+| ------------------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| React Hooks        | 9        | Renamed export `setVetraPackages` → `setVetraPackageManager`; example calls wrong hook entirely                                                        |
+| Authorization (07) | 5        | Two import paths fail at build time (`"reactor"` → `@powerhousedao/reactor`, `"renown"` → `@renown/sdk`); `ISigner.publicKey` documented as wrong type |
+
+Both runs confirmed the approach generates actionable signal, not noise.
+
+**Token efficiency — file-level mapping:**
+
+The original mapping pointed at whole packages (`packages/reactor-browser` — 50+ source files). All 15 sections now have a `sourceFiles` field listing specific directories or files. Convention: a path ending in `.ts` is a single file; a path without extension is a directory (load all `.ts` files inside it). Estimated context reduction: ~70% on the source side per Tier 3 run.
+
+Three levers identified for further reduction (not yet implemented):
+
+1. **File-level mapping** — done ✅
+2. **Generated `.d.ts` declarations** — run `tsc --emitDeclarationOnly`; declaration files are 5–10× smaller than source, sufficient for export existence and signature checks
+3. **Doc-as-code** — TSDoc annotations + generated reference pages for the most stable APIs; eliminates drift structurally for reference sections but requires authoring investment
 
 ### Rejected: Embeddings / RAG
 
@@ -136,13 +182,17 @@ A Tier 3 agent for React Hooks gets: the content of `04-APIReferences/01-ReactHo
 
 ## What Was Built
 
-| Artifact                                     | Description                                                                                   |
-| -------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| `apps/academy/static/llms.txt`               | Spec-compliant navigation index ([llmstxt.org](https://llmstxt.org) standard)                 |
-| `apps/academy/static/llms-full.txt`          | Full academy content concatenated; replaces `academy_LLM_docs.md`                             |
-| `apps/academy/scripts/generate-llm-docs.ts`  | Generator producing both files; filters draft/archive content                                 |
-| `test/ph-lora/ph-lora-mapping.json`          | Explicit mapping of 15 doc sections → monorepo packages + 9 unmapped packages flagged as gaps |
-| `apps/academy/scripts/check-doc-snippets.ts` | Tier 1 static checker — extracts TypeScript blocks and runs `tsc`                             |
+| Artifact                                     | Description                                                                                        |
+| -------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `apps/academy/static/llms.txt`               | Spec-compliant navigation index ([llmstxt.org](https://llmstxt.org) standard)                      |
+| `apps/academy/static/llms-full.txt`          | Full academy content concatenated; replaces `academy_LLM_docs.md`                                  |
+| `apps/academy/scripts/generate-llm-docs.ts`  | Generator producing both files; filters draft/archive content                                      |
+| `test/ph-lora/ph-lora-mapping.json`          | Mapping of 15 doc sections → packages + `sourceFiles` (file-level) + `checkFocus`; 9 unmapped gaps |
+| `apps/academy/scripts/check-doc-snippets.ts` | Tier 1 static checker — extracts `typescript check` tagged snippets and runs `tsc`                 |
+| `test/ph-lora/scripts/validate-mapping.ts`   | Tier 2 — validates all `sourceFiles` paths exist; blocks PRs if mapping is stale                   |
+| `test/ph-lora/scripts/check-pr-drift.ts`     | Tier 2 — PR diff classifier using Claude Haiku; opens GitHub issue on drift                        |
+| `.github/workflows/ph-lora-tier2.yml`        | CI workflow: `validate-mapping` (blocking) + `drift-check` (advisory) jobs                         |
+| `.claude/commands/doc-review.md`             | Tier 3 — `/doc-review <section-id>` slash command for manual gap analysis                          |
 
 **Immediate value from the mapping file:** 9 packages had zero doc coverage identified before running a single check.
 
@@ -185,10 +235,10 @@ These packages exist in the monorepo but have no academy section currently respo
 **Trigger model** — four options from the ADR, all viable, not mutually exclusive:
 
 1. Always-on daemon reacting to commits/doc changes via file watch or webhooks
-2. Manual invocation in REPL by a developer
-3. CI job on PR (likely the first one to implement)
-4. Scheduled nightly run
+2. Manual invocation in REPL by a developer — **done** (`/doc-review` slash command)
+3. CI job on PR — **done** (Tier 2 workflow)
+4. Scheduled nightly/release run — next priority for Tier 3
 
-Starting as a Claude Code `/schedule` skill covers option 4 and validates the prompt before CI wiring (option 3). Options 1 and 2 are daemon-mode concerns for after the knowledge vault question is settled.
+Options 1 and 4 are daemon-mode concerns. Option 4 (scheduled full Tier 3 sweep) is the recommended next step: wire a `workflow_dispatch` or `push` to `release/**` trigger that runs all 14 doc sections in parallel via the `/doc-review` logic.
 
 **MCP server** — should ph-lora expose its own MCP server, or is the knowledge vault's MCP server sufficient? Blocked on the knowledge vault decision above.
