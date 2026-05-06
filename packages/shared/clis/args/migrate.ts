@@ -1,4 +1,4 @@
-import { option, optional, positional, string } from "cmd-ts";
+import { boolean, flag, option, optional, positional, string } from "cmd-ts";
 import { debugArgs } from "./common.js";
 
 export const migrateArgs = {
@@ -16,6 +16,13 @@ export const migrateArgs = {
       "The version to migrate to. Accepts a valid semver version or `staging`, `dev`, `latest`.",
     defaultValue: () => "latest" as const,
     defaultValueIsSerializable: true,
+  }),
+  force: flag({
+    type: optional(boolean),
+    long: "force",
+    short: "f",
+    description:
+      "Run migrate from the bundled codegen even if the target version cannot be resolved from the npm registry or differs from the installed ph-cli version.",
   }),
   ...debugArgs,
 };

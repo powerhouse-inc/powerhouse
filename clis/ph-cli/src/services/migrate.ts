@@ -24,24 +24,45 @@ function getBundledPhCliVersion(): string | undefined {
 export async function startMigrate({
   versionPositional,
   version,
+  force,
   debug,
 }: MigrateArgs) {
   const requested = versionPositional ?? version;
   if (debug) console.log(`[migrate] requested version: ${requested}`);
 
-  const targetVersion = await fetchPackageVersionFromNpmRegistry(
-    `@powerhousedao/ph-cli@${requested}`,
-  );
-  const bundledVersion = getBundledPhCliVersion();
-  if (debug) {
-    console.log(`[migrate] resolved target version: ${targetVersion}`);
-    console.log(`[migrate] current ph-cli version: ${bundledVersion}`);
+  let targetVersion: string | undefined;
+  try {
+    targetVersion = await fetchPackageVersionFromNpmRegistry(
+      `@powerhousedao/ph-cli@${requested}`,
+    );
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    if (!force) {
+      throw new Error(
+        `Failed to resolve "${requested}" from the npm registry: ${reason}\nRe-run with --force to migrate using the installed version.`,
+      );
+    }
+    if (debug) {
+      console.log(
+        `[migrate] failed to resolve target version, --force is set, falling back to bundled codegen: ${reason}`,
+      );
+    }
   }
 
-  if (targetVersion === bundledVersion) {
+  const bundledVersion = getBundledPhCliVersion();
+  if (debug) {
+    console.log(
+      `[migrate] resolved target version: ${targetVersion ?? "(unknown)"}`,
+    );
+    console.log(
+      `[migrate] current ph-cli version: ${bundledVersion ?? "(unknown)"}`,
+    );
+  }
+
+  if (!targetVersion || force || targetVersion === bundledVersion) {
     if (debug) console.log(`[migrate] running migrate from bundled codegen`);
     const { migrate } = await import("@powerhousedao/codegen");
-    await migrate(targetVersion);
+    await migrate(targetVersion ?? requested);
     return;
   }
 
