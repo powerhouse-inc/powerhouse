@@ -76,7 +76,7 @@ function makeMockOperations(count = 100) {
           id: generateId(),
           content: pipe(
             randomInteger(1, 100),
-            times((num) => randomString(num)),
+            times((num) => randomString(num || 1)),
             join(" "),
           ),
         }),
