@@ -27,6 +27,8 @@
   "license": "ISC",
   "dependencies": {
     "@powerhousedao/shared": "workspace:*",
+    "@renown/sdk": "workspace:*",
+    "@verdaccio/signature": "8.0.0-next-8.29",
     "cmd-ts": "catalog:",
     "express": "^4.22.1",
     "find-up": "^8.0.0",

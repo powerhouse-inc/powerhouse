@@ -10,6 +10,7 @@ import { listArgs } from "./list.js";
 import { loginArgs } from "./login.js";
 import { migrateArgs } from "./migrate.js";
 import { publishArgs } from "./publish.js";
+import { registryLoginArgs } from "./registry.js";
 import { switchboardArgs } from "./switchboard.js";
 import { uninstallArgs } from "./uninstall.js";
 import { vetraArgs } from "./vetra.js";
@@ -63,6 +64,13 @@ export const phCliHelpCommands = {
     name: "access-token",
     args: accessTokenArgs,
     description: "Generate a bearer token for API authentication",
+    handler: () => {},
+  }),
+  "registry-login": command({
+    name: "registry-login",
+    args: registryLoginArgs,
+    description:
+      "Log in to a Powerhouse registry (writes a Renown bearer token to ~/.npmrc)",
     handler: () => {},
   }),
   inspect: command({

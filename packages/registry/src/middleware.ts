@@ -253,9 +253,13 @@ export function createUnpublishHook(
           } else {
             cdn.invalidate(parsed.packageName);
           }
+          const renownUser = req.renownUser;
           notifications.notifyUnpublish({
             packageName: parsed.packageName,
             version: parsed.version,
+            publishedBy: renownUser
+              ? { address: renownUser.address, did: renownUser.did }
+              : undefined,
           });
         } catch (err) {
           console.error(
@@ -320,10 +324,14 @@ export function createPublishHook(
         );
       }
 
+      const renownUser = req.renownUser;
+      const publishedBy = renownUser
+        ? { address: renownUser.address, did: renownUser.did }
+        : undefined;
       cdn
         .extractTarball(packageName, version)
         .then(() => {
-          notifications.notifyPublish({ packageName, version });
+          notifications.notifyPublish({ packageName, version, publishedBy });
         })
         .catch((err) => {
           console.error(

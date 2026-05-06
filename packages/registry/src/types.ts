@@ -25,6 +25,12 @@ export interface NotifyConfig {
   webhooks?: WebhookConfig[];
 }
 
+export interface RenownAuthConfig {
+  /** Public URL of this registry. Used as the expected `aud` claim on
+   *  Renown-signed bearer tokens. Required when renown auth is enabled. */
+  publicUrl: string;
+}
+
 export interface RegistryConfig {
   port: number;
   storagePath: string;
@@ -34,6 +40,10 @@ export interface RegistryConfig {
   s3?: S3Config;
   notify?: NotifyConfig;
   maxBodySize?: string;
+  /** Top-level verdaccio JWT signing secret. If unset, randomized per pod. */
+  verdaccioSecret?: string;
+  /** Enable Renown JWT auth in front of verdaccio. */
+  renown?: RenownAuthConfig;
 }
 
 export interface RegistryCommandArgs {
@@ -50,4 +60,7 @@ export interface RegistryCommandArgs {
   s3ForcePathStyle: boolean;
   webEnabled: boolean;
   webhooks?: string;
+  publicUrl?: string;
+  authRenown?: boolean;
+  verdaccioSecret?: string;
 }
