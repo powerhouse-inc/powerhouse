@@ -19,6 +19,11 @@ import { AppLoader } from "./src/components/index.js";
  * }
  */
 
+// Type for Vite HMR modules
+export type ModuleNamespace = Record<string, any> & {
+  [Symbol.toStringTag]: "Module";
+};
+
 /** `import.meta` extended with the minimal subset of Vite's HMR API used by the
  * codegen-generated `main.tsx`. Exported so consumer projects can cast
  * `import.meta` to it without pulling `vite/client` into their tsconfig `types`. */
@@ -26,12 +31,12 @@ export type ImportHmr = ImportMeta & {
   hot?: {
     accept(
       deps: readonly string[],
-      cb: (mods: Array<DocumentModelLib<any> | undefined>) => void,
+      cb: (mods: Array<ModuleNamespace | undefined>) => void,
     ): void;
   };
 };
 
-function updateLocalPackage(pkg: DocumentModelLib<any>) {
+function updateLocalPackage(pkg: DocumentModelLib<any> | ModuleNamespace) {
   window.ph?.vetraPackageManager?.updateLocalPackage(pkg as DocumentModelLib);
 }
 
