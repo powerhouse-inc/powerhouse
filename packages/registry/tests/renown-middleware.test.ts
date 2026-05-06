@@ -134,14 +134,19 @@ describe("createRenownAuthMiddleware", () => {
     });
 
     expect(sigMock.signPayload).toHaveBeenCalledOnce();
-    const [payload, secret, opts] = sigMock.signPayload.mock.calls[0];
-    expect(payload).toMatchObject({
-      name: "0xabcdef1234567890",
-      groups: expect.arrayContaining(["$authenticated", "renown"]),
-      real_groups: expect.arrayContaining(["$authenticated", "renown"]),
-    });
-    expect(secret).toBe("test-secret");
-    expect(opts).toMatchObject({ expiresIn: "5m" });
+    type SignArgs = [
+      { name: string; groups: string[]; real_groups: string[] },
+      string,
+      { expiresIn?: string },
+    ];
+    const callArgs = sigMock.signPayload.mock.calls[0] as SignArgs;
+    expect(callArgs[0].name).toBe("0xabcdef1234567890");
+    expect(callArgs[0].groups).toContain("$authenticated");
+    expect(callArgs[0].groups).toContain("renown");
+    expect(callArgs[0].real_groups).toContain("$authenticated");
+    expect(callArgs[0].real_groups).toContain("renown");
+    expect(callArgs[1]).toBe("test-secret");
+    expect(callArgs[2].expiresIn).toBe("5m");
   });
 
   it("falls through when verification rejects", async () => {
