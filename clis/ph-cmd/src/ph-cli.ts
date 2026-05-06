@@ -5,7 +5,15 @@ import { resolveCommand } from "package-manager-detector";
 
 export async function executePhCliCommand(phCliCommand: string) {
   const forwardedArgs = process.argv.slice(3);
-  const { projectPath, packageManager } = await getPowerhouseProjectInfo();
+  const { projectPath, packageManager } = await getPowerhouseProjectInfo(
+    undefined,
+    { silent: true },
+  );
+  if (!projectPath) {
+    throw new Error(
+      `No Powerhouse project directory found, cannot run \`ph ${phCliCommand}\`.\nTo create a local project, run \`ph init\`.\nTo create a global project, run \`ph setup-globals\`.`,
+    );
+  }
   const resolveExecuteLocalCommandResult = resolveCommand(
     packageManager,
     "execute-local",
