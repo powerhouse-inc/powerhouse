@@ -1,3 +1,19 @@
+## 6.0.0-dev.223 (2026-05-06)
+
+### 🚀 Features
+
+- add json viewer for operations tooltip ([#2569](https://github.com/powerhouse-inc/powerhouse/pull/2569))
+
+### 🩹 Fixes
+
+- **release:** drop concurrency from publish-docker-images.yml ([#2572](https://github.com/powerhouse-inc/powerhouse/issues/2572))
+- **renown,registry:** pass audience to verifyAuthBearerToken ([#2574](https://github.com/powerhouse-inc/powerhouse/pull/2574))
+
+### ❤️ Thank You
+
+- Frank @froid1911
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.222 (2026-05-06)
 
 ### 🩹 Fixes
