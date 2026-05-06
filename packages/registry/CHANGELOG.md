@@ -1,3 +1,13 @@
+## 6.0.0-dev.220 (2026-05-06)
+
+### 🩹 Fixes
+
+- **registry:** make /packages non-blocking, warm cdn-cache in background ([#2568](https://github.com/powerhouse-inc/powerhouse/pull/2568))
+
+### ❤️ Thank You
+
+- Frank @froid1911
+
 ## 6.0.0-dev.219 (2026-05-06)
 
 ### 🩹 Fixes
