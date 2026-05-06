@@ -97,6 +97,7 @@ describe("SyncManager - Unit Tests", () => {
         receivingPages: false,
       }),
       onConnectionStateChange: vi.fn().mockReturnValue(() => {}),
+      triggerPull: vi.fn(),
     };
   }
 
@@ -168,6 +169,7 @@ describe("SyncManager - Unit Tests", () => {
         receivingPages: false,
       }),
       onConnectionStateChange: vi.fn().mockReturnValue(() => {}),
+      triggerPull: vi.fn(),
     } as any;
 
     mockRemoteStorage = {
@@ -321,6 +323,7 @@ describe("SyncManager - Unit Tests", () => {
         remoteRecords[0].collectionId,
         remoteRecords[0].filter,
         mockOperationIndex,
+        remoteRecords[0].options,
       );
       expect(mockEventBus.subscribe).toHaveBeenCalledWith(
         ReactorEventTypes.JOB_WRITE_READY,
@@ -576,6 +579,7 @@ describe("SyncManager - Unit Tests", () => {
         "collection1",
         { documentId: [], scope: [], branch: "main" },
         mockOperationIndex,
+        { sinceTimestampUtcMs: "0" },
       );
     });
 
@@ -732,6 +736,29 @@ describe("SyncManager - Unit Tests", () => {
       await syncManager.startup();
 
       expect(() => syncManager.getByName("nonexistent")).toThrow(
+        "Remote with name 'nonexistent' does not exist",
+      );
+    });
+  });
+
+  describe("triggerPull", () => {
+    it("delegates to the named remote's channel", async () => {
+      await syncManager.startup();
+
+      await syncManager.add("remote1", "collection1", {
+        type: "internal",
+        parameters: {},
+      });
+
+      syncManager.triggerPull("remote1");
+
+      expect(mockChannel.triggerPull).toHaveBeenCalledTimes(1);
+    });
+
+    it("throws when the remote does not exist", async () => {
+      await syncManager.startup();
+
+      expect(() => syncManager.triggerPull("nonexistent")).toThrow(
         "Remote with name 'nonexistent' does not exist",
       );
     });

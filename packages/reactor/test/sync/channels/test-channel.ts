@@ -97,6 +97,8 @@ export class TestChannel implements IChannel {
 
   async init(): Promise<void> {}
 
+  triggerPull(): void {}
+
   receive(envelope: SyncEnvelope): void {
     if (this.isShutdown) {
       throw new Error(

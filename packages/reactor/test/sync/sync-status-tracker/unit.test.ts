@@ -49,6 +49,7 @@ function createMockChannel(): IChannel {
       receivingPages: false,
     }),
     onConnectionStateChange: vi.fn().mockReturnValue(() => {}),
+    triggerPull: vi.fn(),
   };
 }
 

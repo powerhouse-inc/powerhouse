@@ -72,6 +72,12 @@ const createMockQueue = (): IQueue =>
 const createPollTimer = (intervalMs = 2000): IPollTimer =>
   new IntervalPollTimer(createMockQueue(), { intervalMs });
 
+const createIntervalPollTimer = (
+  intervalMs = 2000,
+  startPaused = false,
+): IntervalPollTimer =>
+  new IntervalPollTimer(createMockQueue(), { intervalMs, startPaused });
+
 describe("GqlRequestChannel", () => {
   let originalFetch: typeof global.fetch;
 
@@ -180,6 +186,158 @@ describe("GqlRequestChannel", () => {
       // Fast-forward time to trigger next poll
       await vi.advanceTimersByTimeAsync(5000);
       expect(mockFetch).toHaveBeenCalledTimes(3);
+
+      await channel.shutdown();
+    });
+
+    it("should remain paused after init when timer is configured with startPaused", async () => {
+      const cursorStorage = createMockCursorStorage();
+      const mockFetch = createMockFetch({
+        pollSyncEnvelopes: [],
+        touchChannel: true,
+      });
+      global.fetch = mockFetch as unknown as typeof global.fetch;
+
+      const pollTimer = createIntervalPollTimer(5000, true);
+      const channel = new GqlRequestChannel(
+        createMockLogger(),
+        "channel-1",
+        "remote-1",
+        cursorStorage,
+        createTestConfig(),
+        createMockOperationIndex(),
+        pollTimer,
+      );
+
+      await channel.init();
+
+      // touchChannel fires during init (1 fetch), but no poll should follow
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+
+      // The timer is running but paused — advancing time triggers no polls
+      expect(pollTimer.isRunning()).toBe(true);
+      expect(pollTimer.isPaused()).toBe(true);
+
+      await vi.advanceTimersByTimeAsync(20000);
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+
+      // Channel still reports as connected
+      expect(channel.getConnectionState().state).toBe("connected");
+
+      await channel.shutdown();
+    });
+
+    it("triggerPull fires a single poll without resuming the schedule", async () => {
+      const cursorStorage = createMockCursorStorage();
+      const mockFetch = createMockFetch({
+        pollSyncEnvelopes: [],
+        touchChannel: true,
+      });
+      global.fetch = mockFetch as unknown as typeof global.fetch;
+
+      const pollTimer = createIntervalPollTimer(5000, true);
+      const channel = new GqlRequestChannel(
+        createMockLogger(),
+        "channel-1",
+        "remote-1",
+        cursorStorage,
+        createTestConfig(),
+        createMockOperationIndex(),
+        pollTimer,
+      );
+
+      await channel.init();
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+
+      channel.triggerPull();
+      await vi.waitFor(() => {
+        expect(mockFetch).toHaveBeenCalledTimes(2);
+      });
+
+      // Schedule is still paused — no follow-up tick after the manual pull
+      expect(pollTimer.isPaused()).toBe(true);
+      await vi.advanceTimersByTimeAsync(20000);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+
+      await channel.shutdown();
+    });
+
+    it("triggerPull is a safe no-op after shutdown", async () => {
+      const cursorStorage = createMockCursorStorage();
+      const mockFetch = createMockFetch({
+        pollSyncEnvelopes: [],
+        touchChannel: true,
+      });
+      global.fetch = mockFetch as unknown as typeof global.fetch;
+
+      const pollTimer = createIntervalPollTimer(5000, true);
+      const channel = new GqlRequestChannel(
+        createMockLogger(),
+        "channel-1",
+        "remote-1",
+        cursorStorage,
+        createTestConfig(),
+        createMockOperationIndex(),
+        pollTimer,
+      );
+
+      await channel.init();
+      await channel.shutdown();
+      const callsBefore = mockFetch.mock.calls.length;
+      channel.triggerPull();
+      await vi.advanceTimersByTimeAsync(20000);
+      expect(mockFetch).toHaveBeenCalledTimes(callsBefore);
+    });
+
+    it("shutdown while paused stops the timer cleanly", async () => {
+      const cursorStorage = createMockCursorStorage();
+      const mockFetch = createMockFetch({
+        pollSyncEnvelopes: [],
+        touchChannel: true,
+      });
+      global.fetch = mockFetch as unknown as typeof global.fetch;
+
+      const pollTimer = createIntervalPollTimer(5000, true);
+      const channel = new GqlRequestChannel(
+        createMockLogger(),
+        "channel-1",
+        "remote-1",
+        cursorStorage,
+        createTestConfig(),
+        createMockOperationIndex(),
+        pollTimer,
+      );
+
+      await channel.init();
+      expect(pollTimer.isPaused()).toBe(true);
+
+      await channel.shutdown();
+      expect(pollTimer.isRunning()).toBe(false);
+      expect(channel.getConnectionState().state).toBe("disconnected");
+    });
+
+    it("defaults to auto polling when timer is not configured paused", async () => {
+      const cursorStorage = createMockCursorStorage();
+      const mockFetch = createMockFetch({
+        pollSyncEnvelopes: [],
+        touchChannel: true,
+      });
+      global.fetch = mockFetch as unknown as typeof global.fetch;
+
+      const channel = new GqlRequestChannel(
+        createMockLogger(),
+        "channel-1",
+        "remote-1",
+        cursorStorage,
+        createTestConfig(),
+        createMockOperationIndex(),
+        createPollTimer(5000),
+      );
+
+      await channel.init();
+      await vi.waitFor(() => {
+        expect(mockFetch).toHaveBeenCalledTimes(2);
+      });
 
       await channel.shutdown();
     });

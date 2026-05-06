@@ -12,4 +12,10 @@ export type IPollTimer = {
 
   /** Stop the timer */
   stop: () => void;
+
+  /**
+   * Fires the delegate exactly once without changing the running/paused state.
+   * Used by Manual polling mode to pull on demand without resuming the schedule.
+   */
+  triggerNow: () => void;
 };

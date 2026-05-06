@@ -221,6 +221,7 @@ export {
   GqlResponseChannelFactory,
   IntervalPollTimer,
   Mailbox,
+  PollBehavior,
   PollingChannelError,
   sortEnvelopesByFirstOperationTimestamp,
   SyncBuilder,

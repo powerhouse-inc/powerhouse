@@ -219,6 +219,11 @@ export class GqlRequestChannel implements IChannel {
     };
   }
 
+  triggerPull(): void {
+    if (this.isShutdown) return;
+    this.pollTimer.triggerNow();
+  }
+
   /**
    * Initializes the channel by registering it on the remote server and starting polling.
    */

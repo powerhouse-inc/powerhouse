@@ -1,4 +1,4 @@
-import { driveCollectionId } from "@powerhousedao/reactor";
+import { driveCollectionId, type PollBehavior } from "@powerhousedao/reactor";
 import {
   driveCreateDocument,
   setAvailableOffline,
@@ -9,6 +9,10 @@ import {
 } from "@powerhousedao/shared/document-drive";
 import type { PHDocument } from "@powerhousedao/shared/document-model";
 import { getUserPermissions } from "../utils/user.js";
+
+export type AddRemoteDriveOptions = {
+  pollBehavior?: PollBehavior;
+};
 
 export async function addDrive(input: DriveInput, preferredEditor?: string) {
   const { isAllowedToCreateDocuments } = getUserPermissions();
@@ -36,7 +40,11 @@ export async function addDrive(input: DriveInput, preferredEditor?: string) {
   return await reactorClient.create<DocumentDriveDocument>(driveDoc);
 }
 
-export async function addRemoteDrive(url: string, driveId?: string) {
+export async function addRemoteDrive(
+  url: string,
+  driveId?: string,
+  options?: AddRemoteDriveOptions,
+) {
   const reactorClient = window.ph?.reactorClient;
   if (!reactorClient) {
     throw new Error("ReactorClient not initialized");
@@ -70,12 +78,18 @@ export async function addRemoteDrive(url: string, driveId?: string) {
 
   const remoteName = crypto.randomUUID();
 
-  await sync.add(remoteName, collectionId, {
-    type: "gql",
-    parameters: {
-      url: driveInfo.graphqlEndpoint,
+  await sync.add(
+    remoteName,
+    collectionId,
+    {
+      type: "gql",
+      parameters: {
+        url: driveInfo.graphqlEndpoint,
+      },
     },
-  });
+    undefined,
+    options?.pollBehavior ? { pollBehavior: options.pollBehavior } : undefined,
+  );
 
   return resolvedDriveId;
 }
