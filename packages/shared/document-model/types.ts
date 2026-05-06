@@ -1671,10 +1671,10 @@ export type DocumentModelModule<TState extends PHBaseState = PHBaseState> = {
 
 export type DocumentModelLib<TState extends PHBaseState = PHBaseState> = {
   manifest: Manifest;
-  documentModels: DocumentModelModule<TState>[];
-  editors: EditorModule[];
-  subgraphs?: SubgraphModule[];
-  upgradeManifests?: UpgradeManifest<readonly number[]>[] | undefined;
+  documentModels: readonly DocumentModelModule<TState>[];
+  editors: readonly EditorModule[];
+  subgraphs?: readonly SubgraphModule[];
+  upgradeManifests?: readonly UpgradeManifest<readonly number[]>[] | undefined;
   processorFactory?: ProcessorFactoryBuilder;
 };
 
