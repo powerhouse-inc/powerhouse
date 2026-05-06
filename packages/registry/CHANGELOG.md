@@ -1,3 +1,13 @@
+## 6.0.0-dev.219 (2026-05-06)
+
+### 🩹 Fixes
+
+- **registry:** source /packages from verdaccio's authoritative list ([44521252d](https://github.com/powerhouse-inc/powerhouse/commit/44521252d))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 6.0.0-dev.218 (2026-05-06)
 
 ### 🚀 Features
