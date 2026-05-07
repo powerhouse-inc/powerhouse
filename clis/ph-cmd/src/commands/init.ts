@@ -108,7 +108,19 @@ export const init = command({
       console.log(">>> Delegating to ph-cli:", fullCmd);
     }
 
-    execSync(fullCmd, { stdio: "inherit" });
+    try {
+      execSync(fullCmd, { stdio: "inherit" });
+    } catch (err) {
+      // propagate normal non-zero exits but throw on abnormal exits to ensure the error is reported
+      const e = err as {
+        status?: number | null;
+        signal?: NodeJS.Signals | null;
+      };
+      if (typeof e.status === "number" && !e.signal) {
+        process.exit(e.status);
+      }
+      throw err;
+    }
     process.exit(0);
   },
 });

@@ -26,5 +26,14 @@ export async function executePhCliCommand(phCliCommand: string) {
   }
   const { command, args } = resolveExecuteLocalCommandResult;
   const cmd = `${command} ${args.join(" ")}`;
-  execSync(cmd, { stdio: "inherit", cwd: projectPath });
+  try {
+    execSync(cmd, { stdio: "inherit", cwd: projectPath });
+  } catch (err) {
+    // propagate normal non-zero exits but throw on abnormal exits to ensure the error is reported
+    const e = err as { status?: number | null; signal?: NodeJS.Signals | null };
+    if (typeof e.status === "number" && !e.signal) {
+      process.exit(e.status);
+    }
+    throw err;
+  }
 }
