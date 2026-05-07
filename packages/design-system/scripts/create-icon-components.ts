@@ -66,8 +66,9 @@ readdir(iconsDir, (err, files) => {
           return `${camelCase(attrName)}="${attrValue}"`;
         },
       );
-    let iconContent = 'import { Props } from "./index.js";\n';
-    iconContent += `export default function ${componentName}(props: Props) {\n`;
+    let iconContent =
+      'import type { IconComponentProps } from "#design-system";\n';
+    iconContent += `export default function ${componentName}(props: IconComponentProps) {\n`;
     iconContent += `  return (\n${svgDataWithProps}\n  );\n`;
     iconContent += `}\n\n`;
     const formattedIconContent = prettier.format(iconContent, {
@@ -81,14 +82,14 @@ readdir(iconsDir, (err, files) => {
     iconNames.push(componentName);
   });
 
-  let indexContent = "import { ComponentPropsWithoutRef } from 'react';\n\n";
+  iconNames.sort();
+  let indexContent = `import type { IconComponentProps } from "#design-system";\n`;
   for (const iconName of iconNames) {
     indexContent += `import ${iconName} from "./${iconName}.js";\n`;
   }
-  indexContent += `export type Props = ComponentPropsWithoutRef<'svg'>;\n\n`;
+  indexContent += `import type { IconName } from "./types.js";\n\n`;
   indexContent += `export const iconNames = ${JSON.stringify(iconNames, null, 2)} as const;\n\n`;
-  indexContent += `export type IconName = (typeof iconNames)[number];\n`;
-  indexContent += `export const iconComponents: Record<IconName, (props: Props) => React.JSX.Element> = {
+  indexContent += `export const iconComponents: Record<IconName, (props: IconComponentProps) => React.JSX.Element> = {
     ${iconNames.map((name) => name).join(",\n    ")}
   } as const;\n`;
   const formattedTypesContent = prettier.format(indexContent, {

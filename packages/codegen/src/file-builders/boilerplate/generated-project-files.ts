@@ -26,6 +26,7 @@ import {
   mcpTemplate,
   nginxConfTemplate,
   npmrcTemplate,
+  pnpmWorkspaceTemplate,
   processorsFactoryTemplate,
   processorsIndexTemplate,
   readmeTemplate,
@@ -164,6 +165,7 @@ export async function writeProjectRootFiles(
   await writeFileEnsuringDir("LICENSE", licenseTemplate);
   await writeFileEnsuringDir("README.md", readmeTemplate);
   await writeFileEnsuringDir(".npmrc", npmrcTemplate);
+  await writeFileEnsuringDir("pnpm-workspace.yaml", pnpmWorkspaceTemplate);
   const packageJson = await buildBoilerplatePackageJson({
     name,
     tag,
