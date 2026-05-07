@@ -31,6 +31,16 @@ async function main() {
   const args = process.argv.slice(2);
   const command = args[0];
 
+  // Short-circuit `ph --version` / `ph -v` so we don't pay for the full
+  // cmd-ts subcommand tree (which dynamic-imports the heavy clis bundle
+  // just to populate the `version` field). `ph use --version 1.2.3` and
+  // similar are unaffected because they have a subcommand first.
+  if (args.length === 1 && (command === "--version" || command === "-v")) {
+    const { getPhCmdVersionInfo } = await import("@powerhousedao/shared/clis");
+    console.log(await getPhCmdVersionInfo(CLI_VERSION));
+    process.exit(0);
+  }
+
   // handle the special case where running `connect` with no positional argument
   // defaults to `connect studio`
   if (
