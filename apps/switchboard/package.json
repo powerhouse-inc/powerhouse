@@ -63,7 +63,6 @@
     "@powerhousedao/reactor-api": "workspace:*",
     "@powerhousedao/reactor-attachments": "workspace:*",
     "@renown/sdk": "workspace:*",
-    "@pyroscope/nodejs": "^0.4.5",
     "@sentry/node": "^9.6.1",
     "document-model": "workspace:*",
     "dotenv": "^16.4.7",
@@ -74,6 +73,7 @@
     "vite": "catalog:"
   },
   "devDependencies": {
+    "@pyroscope/nodejs": "^0.4.5",
     "@types/express": "^4.17.25",
     "@types/node": "catalog:",
     "@types/pg": "catalog:",
