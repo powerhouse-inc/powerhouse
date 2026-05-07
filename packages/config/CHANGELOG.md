@@ -1,3 +1,14 @@
+## 6.0.0-dev.231 (2026-05-07)
+
+### 🩹 Fixes
+
+- add pnpm workspace to boilerplate ([1b3a6e78c](https://github.com/powerhouse-inc/powerhouse/commit/1b3a6e78c))
+- **ci:** pnpm v11 docker init + global bin path ([9d93dc20a](https://github.com/powerhouse-inc/powerhouse/commit/9d93dc20a))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.230 (2026-05-07)
 
 This was a version bump only for @powerhousedao/config to align it with other projects, there were no code changes.
