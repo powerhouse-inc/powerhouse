@@ -148,3 +148,10 @@ allowBuilds:
   esbuild: true
   oracledb: true
   sqlite3: true
+overrides:
+  axios: '>=1.15.0'
+  defu: '>=6.1.5'
+  flatted: '>=3.4.2'
+  express-rate-limit@>=8: '>=8.2.2'
+  picomatch@>=4: '>=4.0.4'
+  picomatch@<4: '>=2.3.2'
