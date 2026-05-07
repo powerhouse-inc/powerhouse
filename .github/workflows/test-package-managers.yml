@@ -29,9 +29,21 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        package-manager: [npm, pnpm, yarn, bun]
+        include:
+          - id: npm
+            package-manager: npm
+          - id: pnpm-10
+            package-manager: pnpm
+            pnpm-version: "10"
+          - id: pnpm-11
+            package-manager: pnpm
+            pnpm-version: "11"
+          - id: yarn
+            package-manager: yarn
+          - id: bun
+            package-manager: bun
 
-    name: Test with ${{ matrix.package-manager }}
+    name: Test with ${{ matrix.id }}
 
     env:
       PH_TAG: ${{ inputs.tag || (github.base_ref == 'main' && 'dev') || (contains(github.base_ref, 'staging') && 'staging') || (contains(github.base_ref, 'stg') && 'staging') || (contains(github.base_ref, 'production') && 'latest') || (contains(github.base_ref, 'prod') && 'latest') || vars.PH_TAG || 'dev' }}
@@ -54,7 +66,7 @@ jobs:
         if: matrix.package-manager == 'pnpm'
         uses: pnpm/action-setup@v4
         with:
-          version: latest
+          version: ${{ matrix.pnpm-version }}
 
       - name: Setup bun
         if: matrix.package-manager == 'bun'
@@ -62,11 +74,11 @@ jobs:
         with:
           bun-version: latest
 
-      - name: Install ph-cmd globally with ${{ matrix.package-manager }}
+      - name: Install ph-cmd globally with ${{ matrix.id }}
         id: install-ph-cmd
         run: |
           set -o pipefail
-          echo "Installing ph-cmd@$PH_TAG with ${{ matrix.package-manager }}"
+          echo "Installing ph-cmd@$PH_TAG with ${{ matrix.id }}"
           if [ "${{ matrix.package-manager }}" = "npm" ]; then
             ${{ matrix.package-manager }} install -g ph-cmd@${{ env.PH_TAG }} --legacy-peer-deps --ignore-scripts 2>&1 | tee ph-cmd-install.log
           elif [ "${{ matrix.package-manager }}" = "yarn" ]; then
@@ -79,18 +91,18 @@ jobs:
         if: always()
         run: |
           grep -iE "(warn|warning|deprecated|peer|conflict|unmet)" ph-cmd-install.log | while IFS= read -r line; do
-            echo "::warning title=[${{ matrix.package-manager }}] Install ph-cmd::$line"
+            echo "::warning title=[${{ matrix.id }}] Install ph-cmd::$line"
           done || true
 
       - name: Create test directory
         run: |
-          mkdir -p /tmp/ph-test-${{ matrix.package-manager }}
-          cd /tmp/ph-test-${{ matrix.package-manager }}
+          mkdir -p /tmp/ph-test-${{ matrix.id }}
+          cd /tmp/ph-test-${{ matrix.id }}
 
       - name: Run ph init
         id: ph-init
         run: |
-          cd /tmp/ph-test-${{ matrix.package-manager }}
+          cd /tmp/ph-test-${{ matrix.id }}
           CMD="ph init project"
           [ "$PH_TAG" != "latest" ] && CMD="$CMD --$PH_TAG"
           CMD="$CMD --${{ matrix.package-manager }}"
@@ -101,26 +113,26 @@ jobs:
       - name: Parse ph init warnings
         if: always()
         run: |
-          cd /tmp/ph-test-${{ matrix.package-manager }}
+          cd /tmp/ph-test-${{ matrix.id }}
           grep -iE "(warn|warning|deprecated|peer|conflict|unmet)" ph-init.log | while IFS= read -r line; do
-            echo "::warning title=[${{ matrix.package-manager }}] ph init::$line"
+            echo "::warning title=[${{ matrix.id }}] ph init::$line"
           done || true
 
       - name: Install dependencies
         id: install-deps
         if: steps.ph-init.outcome == 'success'
         run: |
-          cd /tmp/ph-test-${{ matrix.package-manager }}/project
-          echo "Installing project dependencies with ${{ matrix.package-manager }}"
+          cd /tmp/ph-test-${{ matrix.id }}/project
+          echo "Installing project dependencies with ${{ matrix.id }}"
           set -o pipefail
           ${{ matrix.package-manager }} install 2>&1 | tee deps-install.log
 
       - name: Parse dependency install warnings
         if: always() && steps.ph-init.outcome == 'success'
         run: |
-          cd /tmp/ph-test-${{ matrix.package-manager }}/project
+          cd /tmp/ph-test-${{ matrix.id }}/project
           grep -iE "(warn|warning|deprecated|peer|conflict|unmet)" deps-install.log | while IFS= read -r line; do
-            echo "::warning title=[${{ matrix.package-manager }}] Install dependencies::$line"
+            echo "::warning title=[${{ matrix.id }}] Install dependencies::$line"
           done || true
 
       - name: Install Powerhouse packages
@@ -128,7 +140,7 @@ jobs:
         if: steps.ph-init.outcome == 'success' && env.PH_PACKAGES != ''
         run: |
           set -o pipefail
-          cd /tmp/ph-test-${{ matrix.package-manager }}/project
+          cd /tmp/ph-test-${{ matrix.id }}/project
 
           IFS=',' read -ra PACKAGES <<< "$PH_PACKAGES"
 
@@ -145,12 +157,12 @@ jobs:
       - name: Parse package install warnings
         if: always() && steps.ph-init.outcome == 'success' && env.PH_PACKAGES != ''
         run: |
-          cd /tmp/ph-test-${{ matrix.package-manager }}/project
+          cd /tmp/ph-test-${{ matrix.id }}/project
 
           for logfile in install-*.log; do
             if [ -f "$logfile" ]; then
               grep -iE "(warn|warning|deprecated|peer|conflict|unmet)" "$logfile" | while IFS= read -r line; do
-                echo "::warning title=[${{ matrix.package-manager }}] ph install::$line"
+                echo "::warning title=[${{ matrix.id }}] ph install::$line"
               done || true
             fi
           done
@@ -159,7 +171,7 @@ jobs:
         id: connect-build
         if: steps.ph-init.outcome == 'success'
         run: |
-          cd /tmp/ph-test-${{ matrix.package-manager }}/project
+          cd /tmp/ph-test-${{ matrix.id }}/project
           echo "Building Connect with ph connect build"
           set -o pipefail
           ph connect build 2>&1 | tee connect-build.log
@@ -176,17 +188,17 @@ jobs:
       - name: Parse build warnings
         if: always() && steps.ph-init.outcome == 'success'
         run: |
-          cd /tmp/ph-test-${{ matrix.package-manager }}/project
+          cd /tmp/ph-test-${{ matrix.id }}/project
           grep -iE "(warn|warning|deprecated)" connect-build.log | while IFS= read -r line; do
-            echo "::warning title=[${{ matrix.package-manager }}] ph connect build::$line"
+            echo "::warning title=[${{ matrix.id }}] ph connect build::$line"
           done || true
 
       - name: Generate Job Summary
         if: always()
         run: |
-          cd /tmp/ph-test-${{ matrix.package-manager }}
+          cd /tmp/ph-test-${{ matrix.id }}
 
-          echo "# Package Manager Test Results: ${{ matrix.package-manager }}" >> $GITHUB_STEP_SUMMARY
+          echo "# Package Manager Test Results: ${{ matrix.id }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "## Configuration" >> $GITHUB_STEP_SUMMARY
           echo "- **ph-cmd version:** ${{ env.PH_TAG }}" >> $GITHUB_STEP_SUMMARY
@@ -266,15 +278,15 @@ jobs:
 
           mkdir -p /tmp/step-results
           if [ -n "$FAILED_STEPS" ]; then
-            echo -e "$FAILED_STEPS" > /tmp/step-results/${{ matrix.package-manager }}.txt
+            echo -e "$FAILED_STEPS" > /tmp/step-results/${{ matrix.id }}.txt
           fi
 
       - name: Upload step results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: step-results-${{ matrix.package-manager }}
-          path: /tmp/step-results/${{ matrix.package-manager }}.txt
+          name: step-results-${{ matrix.id }}
+          path: /tmp/step-results/${{ matrix.id }}.txt
           if-no-files-found: ignore
           retention-days: 1
 
@@ -282,6 +294,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: logs-${{ matrix.package-manager }}
-          path: /tmp/ph-test-${{ matrix.package-manager }}/**/*.log
+          name: logs-${{ matrix.id }}
+          path: /tmp/ph-test-${{ matrix.id }}/**/*.log
           retention-days: 7
