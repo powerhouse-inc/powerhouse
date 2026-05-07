@@ -26,9 +26,9 @@ runs:
       shell: bash
       run: pnpm build
 
-    - name: Run install again after generating binaries
+    - name: Re-link workspace bins now that dist files exist
       shell: bash
-      run: pnpm install --frozen-lockfile
+      run: pnpm rebuild --recursive
 
     - name: Build packages that depend on generated binaries
       shell: bash
