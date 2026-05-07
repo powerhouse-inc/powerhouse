@@ -1,3 +1,14 @@
+## 6.0.0-dev.227 (2026-05-07)
+
+### 🩹 Fixes
+
+- **reactor:** do not sort by timestamp in sync batches, only by ordinal ([7ccc6045c](https://github.com/powerhouse-inc/powerhouse/commit/7ccc6045c))
+- **reactor-api:** paging needs to be operation-dependent, no envelope-- our batching is too good ([e6ab2f853](https://github.com/powerhouse-inc/powerhouse/commit/e6ab2f853))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.0.0-dev.226 (2026-05-06)
 
 ### 🚀 Features

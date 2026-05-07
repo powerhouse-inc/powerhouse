@@ -1,3 +1,13 @@
+## 6.0.0-dev.227 (2026-05-07)
+
+### 🚀 Features
+
+- adding the ability to add remotes through the inspector that do not auto-poll ([adae501de](https://github.com/powerhouse-inc/powerhouse/commit/adae501de))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.0.0-dev.226 (2026-05-06)
 
 ### 🚀 Features
