@@ -163,12 +163,17 @@ async function initServer(
     logger = defaultLogger,
   } = options;
   logger.level = LogLevel;
-  const dbPath = options.dbPath ?? process.env.DATABASE_URL;
+  const dbPath =
+    options.dbPath ??
+    process.env.DATABASE_URL ??
+    process.env.PH_SWITCHBOARD_DATABASE_URL;
 
   // use postgres url for read model storage if available, otherwise use local PGlite path
   const readModelPath = dbPath || ".ph/read-storage";
 
-  const reactorDbUrl = process.env.PH_REACTOR_DATABASE_URL;
+  const reactorDbUrl =
+    process.env.PH_REACTOR_DATABASE_URL ??
+    process.env.PH_SWITCHBOARD_DATABASE_URL;
   const reactorPgliteDir =
     !reactorDbUrl || !isPostgresUrl(reactorDbUrl)
       ? "./.ph/reactor-storage"
