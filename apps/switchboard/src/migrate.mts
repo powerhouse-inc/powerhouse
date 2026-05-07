@@ -1,4 +1,7 @@
 #!/usr/bin/env node
+import dotenv from "dotenv";
+dotenv.config();
+
 import { Kysely, PostgresDialect } from "kysely";
 import { Pool } from "pg";
 import {
@@ -17,6 +20,7 @@ async function main() {
   const config = getConfig();
 
   const dbPath =
+    process.env.PH_SWITCHBOARD_DATABASE_URL ??
     process.env.PH_REACTOR_DATABASE_URL ??
     process.env.DATABASE_URL ??
     config.switchboard?.database?.url;
