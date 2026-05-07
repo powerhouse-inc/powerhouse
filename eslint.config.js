@@ -289,9 +289,7 @@ const unsafeConfig = {
  */
 const builtinSet = new Set(builtinModules);
 
-// `importKind` is added by @typescript-eslint/parser to ImportDeclaration
-// and named/default specifiers. ESLint's core estree types don't know
-// about it, so we narrow with a JSDoc cast at the use sites.
+// `importKind` is added by @typescript-eslint/parser
 /** @typedef {{ importKind?: "type" | "value" }} HasImportKind */
 
 /** @type {import("eslint").Rule.RuleModule} */
@@ -310,7 +308,7 @@ const allowedStaticImportsRule = {
     ],
     messages: {
       notAllowed:
-        "{{message}} (`{{source}}` is not in the allow list; use `await import(...)` or `import type`)",
+        "{{message}} (`{{source}}` is not in the allow list; use `await import(...)` inside the command handler method)",
     },
   },
   create(context) {
@@ -378,8 +376,7 @@ const cliColdPathRules = {
         "@powerhousedao/shared/constants",
         "@powerhousedao/shared/processors",
       ],
-      message:
-        "Do not import modules statically on the CLI cold path. Import them dynamically with `await import(...)` inside the command handler method.",
+      message: "Do not import modules statically on the CLI commands.",
     },
   ],
 };
