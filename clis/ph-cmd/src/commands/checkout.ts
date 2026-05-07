@@ -1,4 +1,3 @@
-import { cloneRepository } from "@powerhousedao/codegen";
 import { debugArgs, packageManagerArgs } from "@powerhousedao/shared/clis/args";
 import { command, option, optional, positional, string } from "cmd-ts";
 import { getPackageManagerFromLockfile } from "../utils/package-manager.js";
@@ -53,6 +52,7 @@ export const checkout = command({
     }
 
     // Clone repository
+    const { cloneRepository } = await import("@powerhousedao/codegen");
     const projectPath = cloneRepository(packageDocument.githubUrl);
 
     const parsedPackageManager = parsePackageManager(packageManagerArgs);
