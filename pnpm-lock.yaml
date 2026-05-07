@@ -742,7 +742,7 @@ importers:
         version: link:../../packages/config
       '@powerhousedao/ph-clint':
         specifier: ^0.1.0-dev.21
-        version: 0.1.0-dev.24(e187e77409b7778c3e02bc8c3057c1df)
+        version: 0.1.0-dev.24(be68599f3749b23d2ac1600b4afab70b)
       '@powerhousedao/reactor':
         specifier: workspace:*
         version: link:../../packages/reactor
@@ -2862,6 +2862,37 @@ importers:
       vite-plugin-html:
         specifier: 'catalog:'
         version: 3.2.2(vite@8.0.8(@types/node@25.2.3)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
+
+  test/test-sync-queue:
+    dependencies:
+      '@powerhousedao/reactor':
+        specifier: workspace:*
+        version: link:../../packages/reactor
+      '@powerhousedao/reactor-api':
+        specifier: workspace:*
+        version: link:../../packages/reactor-api
+      '@powerhousedao/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
+      colorette:
+        specifier: 'catalog:'
+        version: 2.0.20
+      commander:
+        specifier: 'catalog:'
+        version: 12.1.0
+      document-model:
+        specifier: workspace:*
+        version: link:../../packages/document-model
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 25.2.3
+      tsdown:
+        specifier: 'catalog:'
+        version: 0.21.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@tsdown/css@0.21.1)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(synckit@0.11.12)(typescript@5.9.3)
+      tsx:
+        specifier: 'catalog:'
+        version: 4.21.0
 
   test/versioned-documents:
     dependencies:
@@ -7945,29 +7976,23 @@ packages:
   '@polka/url@1.0.0-next.29':
     resolution: {integrity: sha512-wwQAWhWSuHaag8c4q/KN/vCoeOJYshAIvMQwD4GpSb3OiZklFfvAgmj0VCBBImRpuF/aFgIRzllXlVX93Jevww==}
 
-  '@powerhousedao/analytics-engine-core@6.0.0-dev.225':
-    resolution: {integrity: sha512-w9Ado+bUiNjrtItfFiXe4wl8f1h+pbu4q4eoaZOkwNCF0SUfM62gyP57e46rN9pCV8WhGt0ed/GqdZ5jvBXgyQ==}
+  '@powerhousedao/analytics-engine-core@6.0.0-dev.228':
+    resolution: {integrity: sha512-fFzIR4V/kszeeQX7mwczZ2SrtV1MxmhSq0ZGPpU8fFPpF4DO/nrJqam37lNn55zbRziDABeml8j7Tth/tE0yzg==}
 
-  '@powerhousedao/analytics-engine-graphql@6.0.0-dev.225':
-    resolution: {integrity: sha512-P/O7WcUloDVBAZNfLaNdQIjgTVFGvOlOOQEsSVNoVArw/j5S1RVWfA1gUjsld8CkbARp1OepR4m8Hpg/s9aapg==}
+  '@powerhousedao/analytics-engine-graphql@6.0.0-dev.228':
+    resolution: {integrity: sha512-crQ9YQwaootLHP3YZlLW1mSOPaXgXJEA84y2ZoH/LCMLghW1ESEzCMnv3gm7nI0vo+moiiT9vaptLfcJ/zkEJg==}
 
-  '@powerhousedao/analytics-engine-knex@6.0.0-dev.225':
-    resolution: {integrity: sha512-vKpfdaArriRV3zM1RBO1Urn3IaFmtOU/+2XT6YLOimfy3aYcLK+x5jMghTyYfJkL8ayxqha9WzfVz827Qxfywg==}
+  '@powerhousedao/analytics-engine-knex@6.0.0-dev.228':
+    resolution: {integrity: sha512-s09aBuzhpvpgYdXcddqEUxThgw8q04c5eXS+fdoNHpwpx6WBRndG32mcpH8T7fbW0NOvSXXWRgihD68uzMJSQw==}
 
-  '@powerhousedao/analytics-engine-pg@6.0.0-dev.225':
-    resolution: {integrity: sha512-5Kdj5hu9dV7ttoPJ/LFrmqJ9ox/0f5y2kz7CWlhP6AinomRD58tw2tDXB3Kd8/weKu2DauwvMvMS4HoQxRxgYg==}
+  '@powerhousedao/analytics-engine-pg@6.0.0-dev.228':
+    resolution: {integrity: sha512-btGp6dCniS7IH8NLPtiBTxw/jPEg2PBH3NmzptrvTDeZpWgd/dIAYDhu+tLuMo+miqy5mkthjh/b5oIQzy8wmg==}
 
-  '@powerhousedao/codegen@6.0.0-dev.225':
-    resolution: {integrity: sha512-pchM8bWQA99mNHL2oP7X+cqE3BTWpTMlTORPJnEtHDKV1LY2ccZt9x0jf4EOTSmG1Xovz+udjVe6eJ1ARA7n8w==}
+  '@powerhousedao/codegen@6.0.0-dev.228':
+    resolution: {integrity: sha512-Ou9rVfZyBrWZ4TmN0jqfL+C5e/QGwSrUn15224PjMWuP4/TyAUfVsAQGHr3asv+G72tXUIK4J+NhAE07yRuv6g==}
 
-  '@powerhousedao/config@6.0.0-dev.225':
-    resolution: {integrity: sha512-o1ITfTW5qZZd/DONnL/R5JvJj39iZYPd0iSrpiwDLxDj19HXv4y8bUDctaunCCoc17x08xciM9o+bie+KCEw/w==}
-
-  '@powerhousedao/document-engineering@1.40.1':
-    resolution: {integrity: sha512-MpkCJ/yb0ArhRuIuTQtxLfyH/YQHhFpqwTPG7s5WGIYG0xuFypYWoFVKvwyPagN6adM0TEgWbYpwNNEeEElTYw==}
-    peerDependencies:
-      react: ^19.2.0
-      react-dom: ^19.2.0
+  '@powerhousedao/config@6.0.0-dev.228':
+    resolution: {integrity: sha512-IK0DYysjPEs59m+LygVdBxExkutwGZ6BUrj395cXOOIjKqkt4Cb3RFI/Kr4hFXzprNK3YcbSDztOdnjLh04b6Q==}
 
   '@powerhousedao/document-engineering@1.40.3':
     resolution: {integrity: sha512-4TdmDCdM21ILgfgEoKcrh7wp+i2qjqeDDW90Drsp+cGt0oE1PdKqEtqmnxp6YpuYSyGQbK26vdQvLVnWH3tJDg==}
@@ -8014,26 +8039,26 @@ packages:
       kysely-pglite-dialect:
         optional: true
 
-  '@powerhousedao/reactor-api@6.0.0-dev.225':
-    resolution: {integrity: sha512-zkp4AiGh85Ifsgmi7hMmzskZowphsA5Xbs7ovwogkEeTecPPEgCJJAEM1ZhYq4+h9aGqdN9S8o093sO4XRSwag==}
+  '@powerhousedao/reactor-api@6.0.0-dev.228':
+    resolution: {integrity: sha512-IP49O5EcsIG0P1eR51RcAUHMcSp3kTWOYBgC3iAxWiIHcU9Krt414xzG/H5sJWrd2FoAX4DUNkgYDohBYMtgcw==}
     peerDependencies:
       vite: ^8.0.0
     peerDependenciesMeta:
       vite:
         optional: true
 
-  '@powerhousedao/reactor-attachments@6.0.0-dev.225':
-    resolution: {integrity: sha512-2ctfS9ktmS+uuV9W2M4GYx6jWJv6cgG0ryoNXrEVYbJFDb3pWAGKuvo3kLcBu3EzY+OA2MTuuBzxsILvX2L9Sg==}
+  '@powerhousedao/reactor-attachments@6.0.0-dev.228':
+    resolution: {integrity: sha512-doXy87+F/WRRHZ3S3VrCMriZZvwgtx/KN70qHjHh0bOPGlaH3QpaGScT12mXKR8p2JNtSDLnBrey3ZTyN7jTKg==}
 
-  '@powerhousedao/reactor-mcp@6.0.0-dev.225':
-    resolution: {integrity: sha512-rjT1Z7TazRH2blydGmxJX8KD8MooSGiTe+T0gx/v88oqybB1bZp+Gq1up8NkUz70JKeRk6kjY+6nT2GH+DgBpw==}
+  '@powerhousedao/reactor-mcp@6.0.0-dev.228':
+    resolution: {integrity: sha512-417qHgONuNBttLM1l/2BxTwqzCit85+XTh5XnAEBGLt1O1VpOdvk5vH4akkOdXlcqRI7W8xrW3/gKQ9ftkikRQ==}
     hasBin: true
 
-  '@powerhousedao/reactor@6.0.0-dev.225':
-    resolution: {integrity: sha512-u7peqpBIs4FeeMXKQM5AZnpjlMeeEwRxigLI3AFCIz2Il0Yc8k8TzvnPAx6VA2SIqIzns/EPN+kqWNeUSSEsSw==}
+  '@powerhousedao/reactor@6.0.0-dev.228':
+    resolution: {integrity: sha512-n82iZ+ky2YulVAfhXu5vAjb7epQj1PXU7BXQFdIEsKvmCe2ZS8aO/7eZYd5GhHcy9DXVc1wkztlPlw7e68R8Vw==}
 
-  '@powerhousedao/shared@6.0.0-dev.225':
-    resolution: {integrity: sha512-y3DKkUt/8+gYww1eLrzUnBi9lMzOHobmUP0i4vks5uOqAbaYVnklWmL1h6bla0T+4T6nqAXmI2pYBI/VPQeJtg==}
+  '@powerhousedao/shared@6.0.0-dev.228':
+    resolution: {integrity: sha512-gqBQlOs5pBM37QC36ATRXLc+wkTRq1O5KEdgJwb4l9AoASP5DLmGha4CUqQHmh6572AHIXFmekYBVqqu26e9pA==}
 
   '@preact/preset-vite@2.10.5':
     resolution: {integrity: sha512-p0vJpxiVO7KWWazWny3LUZ+saXyZKWv6Ju0bYMWNJRp2YveufRPgSUB1C4MTqGJfz07EehMgfN+AJNwQy+w6Iw==}
@@ -8607,8 +8632,8 @@ packages:
     resolution: {integrity: sha512-Ic6m2U/rMjTkhERIa/0ZtXJP17QUi2CbWE7cqx4J58M8aA3QTfW+2UlQ4psvTX9IO1RfNVhK3pcpdjej7L+t2w==}
     engines: {node: '>=14.0.0'}
 
-  '@renown/sdk@6.0.0-dev.225':
-    resolution: {integrity: sha512-5Gnz1zbFG2Vy+zHpvoXN1jNGAFWXGY5DON1htXzyIA1vC9Up1C2dORrKhWGg4e5B3T8jPUyBz/RyGAsJN/tY3w==}
+  '@renown/sdk@6.0.0-dev.228':
+    resolution: {integrity: sha512-Lce+TSD0BqJJQcRnimw6MCyu+3vfDm6diNh2FM7ZwMZRhWuLAmf8VRWM2o1qB+TSYCSqq0L/qreRPw9qVwnRIw==}
 
   '@repeaterjs/repeater@3.0.6':
     resolution: {integrity: sha512-Javneu5lsuhwNCryN+pXH93VPQ8g0dBX7wItHFgYiwQmzE1sVdg5tWHiOgHywzL2W21XQopa7IwIEnNbmeUJYA==}
@@ -12853,8 +12878,8 @@ packages:
     resolution: {integrity: sha512-yS+Q5i3hBf7GBkd4KG8a7eBNNWNGLTaEwwYWUijIYM7zrlYDM0BFXHjjPWlWZ1Rg7UaddZeIDmi9jF3HmqiQ2w==}
     engines: {node: '>=6.0.0'}
 
-  document-model@6.0.0-dev.225:
-    resolution: {integrity: sha512-BjvO+uM8MJqszBPDbs/gj0NaIcP6m5eH30BD9oRK7bmOBZIVhuZkY3jSq8aCtGUYl3PKW0nj81YsIE2PuAleIA==}
+  document-model@6.0.0-dev.228:
+    resolution: {integrity: sha512-5me9RWlKrHcbwqAeBNyP6B3nsa7dV3DoxeIicRMMv+uY8K5lIg7vmOmPz112jtOUjnb41mNeaQwbxEaHLfBFgg==}
 
   dom-accessibility-api@0.5.16:
     resolution: {integrity: sha512-X7BJ2yElsnOJ30pZF4uIIDfBEVgF4XEBxL9Bxhy6dnrm5hkzqmsWHGTiHqRiITNhMyFLyAiWndIJP7Z1NTteDg==}
@@ -13758,14 +13783,6 @@ packages:
 
   flatted@3.4.2:
     resolution: {integrity: sha512-PjDse7RzhcPkIJwy5t7KPWQSZ9cAbzQXcafsetQoD7sOJRQlGikNbx7yZp2OotDnJyrDcbyRq3Ttb18iYOqkxA==}
-
-  focus-trap-react@11.0.6:
-    resolution: {integrity: sha512-8YbWR8kDf2pQ8G9LT11p39VY4T7eWVrj00Fhp1HUSdv5uW9q6+WK8OMAdy9Ui7vGb1zNouFDzwBIqJwt82rIYQ==}
-    peerDependencies:
-      '@types/react': ^18.0.0 || ^19.0.0
-      '@types/react-dom': ^18.0.0 || ^19.0.0
-      react: ^18.0.0 || ^19.0.0
-      react-dom: ^18.0.0 || ^19.0.0
 
   focus-trap@7.8.0:
     resolution: {integrity: sha512-/yNdlIkpWbM0ptxno3ONTuf+2g318kh2ez3KSeZN5dZ8YC6AAmgeWz+GasYYiBJPFaYcSAPeu4GfhUaChzIJXA==}
@@ -17999,12 +18016,6 @@ packages:
     engines: {node: '>=10'}
     peerDependencies:
       react: ^16.0.0 || 17.x || 18.x || 19.x
-
-  react-confirm@0.4.0:
-    resolution: {integrity: sha512-peth60TScaciyUyM1Wu9JDnf6j/04L8AqV2EBzt/ebGGoD3Y9Ari+PEI6ei6Sqnoz9/cRAtAdtroD+JQyxjKKA==}
-    peerDependencies:
-      react: '>=18.x'
-      react-dom: '>=18.x'
 
   react-day-picker@9.4.3:
     resolution: {integrity: sha512-kQmn7lBR6fHCjaDhW6ByzTMeZUgsBSvIKJLaUKq5xTuJcg2UqHiFAjrPLk/owQS/NzsnSgyGL/bhoi0Z7g+r3w==}
@@ -28221,9 +28232,9 @@ snapshots:
 
   '@polka/url@1.0.0-next.29': {}
 
-  '@powerhousedao/analytics-engine-core@6.0.0-dev.225(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)':
+  '@powerhousedao/analytics-engine-core@6.0.0-dev.228(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)':
     dependencies:
-      '@powerhousedao/shared': 6.0.0-dev.225(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
+      '@powerhousedao/shared': 6.0.0-dev.228(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
       date-fns: 4.1.0
       luxon: 3.7.2
     transitivePeerDependencies:
@@ -28232,9 +28243,9 @@ snapshots:
       - supports-color
     optional: true
 
-  '@powerhousedao/analytics-engine-graphql@6.0.0-dev.225(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)':
+  '@powerhousedao/analytics-engine-graphql@6.0.0-dev.228(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)':
     dependencies:
-      '@powerhousedao/analytics-engine-core': 6.0.0-dev.225(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
+      '@powerhousedao/analytics-engine-core': 6.0.0-dev.228(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
       luxon: 3.7.2
     transitivePeerDependencies:
       - '@emnapi/core'
@@ -28242,9 +28253,9 @@ snapshots:
       - supports-color
     optional: true
 
-  '@powerhousedao/analytics-engine-knex@6.0.0-dev.225(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)':
+  '@powerhousedao/analytics-engine-knex@6.0.0-dev.228(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)':
     dependencies:
-      '@powerhousedao/analytics-engine-core': 6.0.0-dev.225(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
+      '@powerhousedao/analytics-engine-core': 6.0.0-dev.228(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
       change-case: 5.4.4
       date-fns: 4.1.0
       knex: 3.1.0(better-sqlite3@12.6.2)(mysql2@3.17.2)(mysql@2.18.1)(pg@8.18.0)(sqlite3@5.1.7)(tedious@19.2.1(@azure/core-client@1.10.1))
@@ -28262,10 +28273,10 @@ snapshots:
       - tedious
     optional: true
 
-  '@powerhousedao/analytics-engine-pg@6.0.0-dev.225(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)':
+  '@powerhousedao/analytics-engine-pg@6.0.0-dev.228(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)':
     dependencies:
-      '@powerhousedao/analytics-engine-core': 6.0.0-dev.225(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
-      '@powerhousedao/analytics-engine-knex': 6.0.0-dev.225(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
+      '@powerhousedao/analytics-engine-core': 6.0.0-dev.228(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
+      '@powerhousedao/analytics-engine-knex': 6.0.0-dev.228(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
       date-fns: 4.1.0
       knex: 3.1.0(better-sqlite3@12.6.2)(mysql2@3.17.2)(mysql@2.18.1)(pg@8.18.0)(sqlite3@5.1.7)(tedious@19.2.1(@azure/core-client@1.10.1))
       luxon: 3.7.2
@@ -28282,17 +28293,17 @@ snapshots:
       - tedious
     optional: true
 
-  '@powerhousedao/codegen@6.0.0-dev.225(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@fastify/websocket@11.2.0(bufferutil@4.1.0)(utf-8-validate@6.0.6))(@parcel/watcher@2.5.6)(@tsdown/css@0.21.1)(@types/express@5.0.6)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(bufferutil@4.1.0)(crossws@0.3.5)(encoding@0.1.13)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(react-dom@19.2.5(react@19.2.4))(react@19.2.4)(synckit@0.11.12)(typescript@5.9.3)(utf-8-validate@6.0.6)':
+  '@powerhousedao/codegen@6.0.0-dev.228(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@fastify/websocket@11.2.0(bufferutil@4.1.0)(utf-8-validate@6.0.6))(@parcel/watcher@2.5.6)(@tsdown/css@0.21.1)(@types/express@5.0.6)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(bufferutil@4.1.0)(crossws@0.3.5)(encoding@0.1.13)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(react-dom@19.2.5(react@19.2.4))(react@19.2.4)(synckit@0.11.12)(typescript@5.9.3)(utf-8-validate@6.0.6)':
     dependencies:
       '@graphql-codegen/cli': 6.1.1(@fastify/websocket@11.2.0(bufferutil@4.1.0)(utf-8-validate@6.0.6))(@parcel/watcher@2.5.6)(@types/node@25.2.3)(bufferutil@4.1.0)(crossws@0.3.5)(encoding@0.1.13)(graphql@16.12.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
       '@graphql-codegen/typescript': 5.0.7(encoding@0.1.13)(graphql@16.12.0)
-      '@powerhousedao/document-engineering': 1.40.1(@types/express@5.0.6)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(bufferutil@4.1.0)(react-dom@19.2.5(react@19.2.4))(react@19.2.4)(typescript@5.9.3)(utf-8-validate@6.0.6)
-      '@powerhousedao/shared': 6.0.0-dev.225(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
+      '@powerhousedao/document-engineering': 1.40.3(@types/express@5.0.6)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(bufferutil@4.1.0)(react-dom@19.2.5(react@19.2.4))(react@19.2.4)(typescript@5.9.3)(utf-8-validate@6.0.6)
+      '@powerhousedao/shared': 6.0.0-dev.228(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
       '@types/node': 25.2.3
       arg: 5.0.2
       chalk: 5.6.2
       change-case: 5.4.4
-      document-model: 6.0.0-dev.225(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@tsdown/css@0.21.1)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(synckit@0.11.12)(typescript@5.9.3)
+      document-model: 6.0.0-dev.228(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@tsdown/css@0.21.1)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(synckit@0.11.12)(typescript@5.9.3)
       graphql: 16.12.0
       graphql-codegen-typescript-validation-schema: 0.18.1(encoding@0.1.13)(graphql@16.12.0)(zod@4.3.6)
       load-json-file: 7.0.1
@@ -28336,72 +28347,13 @@ snapshots:
       - vue-tsc
     optional: true
 
-  '@powerhousedao/config@6.0.0-dev.225(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)':
+  '@powerhousedao/config@6.0.0-dev.228(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)':
     dependencies:
-      '@powerhousedao/shared': 6.0.0-dev.225(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
+      '@powerhousedao/shared': 6.0.0-dev.228(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
     transitivePeerDependencies:
       - '@emnapi/core'
       - '@emnapi/runtime'
       - supports-color
-    optional: true
-
-  '@powerhousedao/document-engineering@1.40.1(@types/express@5.0.6)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(bufferutil@4.1.0)(react-dom@19.2.5(react@19.2.4))(react@19.2.4)(typescript@5.9.3)(utf-8-validate@6.0.6)':
-    dependencies:
-      '@internationalized/date': 3.11.0
-      '@radix-ui/react-alert-dialog': 1.1.15(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.4))(react@19.2.4)
-      '@radix-ui/react-checkbox': 1.3.3(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.4))(react@19.2.4)
-      '@radix-ui/react-dropdown-menu': 2.1.16(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.4))(react@19.2.4)
-      '@radix-ui/react-popover': 1.1.15(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.4))(react@19.2.4)
-      '@radix-ui/react-progress': 1.1.8(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.4))(react@19.2.4)
-      '@radix-ui/react-radio-group': 1.3.8(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.4))(react@19.2.4)
-      '@radix-ui/react-separator': 1.1.8(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.4))(react@19.2.4)
-      '@radix-ui/react-slot': 1.2.4(@types/react@19.2.14)(react@19.2.4)
-      '@radix-ui/react-switch': 1.2.6(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.4))(react@19.2.4)
-      '@radix-ui/react-tabs': 1.1.13(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.4))(react@19.2.4)
-      '@radix-ui/react-tooltip': 1.2.8(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.4))(react@19.2.4)
-      '@radix-ui/react-visually-hidden': 1.2.4(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.4))(react@19.2.4)
-      '@zxcvbn-ts/core': 3.0.4
-      '@zxcvbn-ts/language-common': 3.0.4
-      '@zxcvbn-ts/language-en': 3.0.2
-      '@zxcvbn-ts/matcher-pwned': 3.0.4
-      class-variance-authority: 0.7.0
-      clsx: 2.1.1
-      cmdk: 1.1.1(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.4))(react@19.2.4)
-      date-fns: 4.1.0
-      date-fns-tz: 3.2.0(date-fns@4.1.0)
-      diff: 7.0.0
-      focus-trap-react: 11.0.6(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.4))(react@19.2.4)
-      graphql: 16.12.0
-      graphql-upload: 17.0.0(@types/express@5.0.6)(graphql@16.12.0)
-      libphonenumber-js: 1.12.37
-      mime: 4.1.0
-      nanoid: 5.1.6
-      natural-compare-lite: 1.4.0
-      react: 19.2.4
-      react-circle-flags: 0.0.22(react@19.2.4)
-      react-confirm: 0.4.0(react-dom@19.2.5(react@19.2.4))(react@19.2.4)
-      react-day-picker: 9.4.3(react@19.2.4)
-      react-docgen: 8.0.2
-      react-dom: 19.2.5(react@19.2.4)
-      react-dropzone: 14.4.1(react@19.2.4)
-      react-hook-form: 7.71.2(react@19.2.4)
-      react-portal: 4.3.0(react-dom@19.2.5(react@19.2.4))(react@19.2.4)
-      react-virtualized: 9.22.6(react-dom@19.2.5(react@19.2.4))(react@19.2.4)
-      remark-gfm: 4.0.1
-      tailwind-merge: 3.4.0
-      usehooks-ts: 3.1.1(react@19.2.4)
-      viem: 2.47.6(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.3.6)
-      world-countries: 5.1.0
-      zod: 4.3.6
-    transitivePeerDependencies:
-      - '@types/express'
-      - '@types/koa'
-      - '@types/react'
-      - '@types/react-dom'
-      - bufferutil
-      - supports-color
-      - typescript
-      - utf-8-validate
     optional: true
 
   '@powerhousedao/document-engineering@1.40.3(@types/express@4.17.25)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(bufferutil@4.1.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(typescript@5.9.3)(utf-8-validate@6.0.6)':
@@ -28575,6 +28527,64 @@ snapshots:
       - typescript
       - utf-8-validate
 
+  '@powerhousedao/document-engineering@1.40.3(@types/express@5.0.6)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(bufferutil@4.1.0)(react-dom@19.2.5(react@19.2.4))(react@19.2.4)(typescript@5.9.3)(utf-8-validate@6.0.6)':
+    dependencies:
+      '@internationalized/date': 3.11.0
+      '@radix-ui/react-alert-dialog': 1.1.15(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.4))(react@19.2.4)
+      '@radix-ui/react-checkbox': 1.3.3(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.4))(react@19.2.4)
+      '@radix-ui/react-dropdown-menu': 2.1.16(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.4))(react@19.2.4)
+      '@radix-ui/react-popover': 1.1.15(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.4))(react@19.2.4)
+      '@radix-ui/react-progress': 1.1.8(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.4))(react@19.2.4)
+      '@radix-ui/react-radio-group': 1.3.8(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.4))(react@19.2.4)
+      '@radix-ui/react-separator': 1.1.8(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.4))(react@19.2.4)
+      '@radix-ui/react-slot': 1.2.4(@types/react@19.2.14)(react@19.2.4)
+      '@radix-ui/react-switch': 1.2.6(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.4))(react@19.2.4)
+      '@radix-ui/react-tabs': 1.1.13(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.4))(react@19.2.4)
+      '@radix-ui/react-tooltip': 1.2.8(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.4))(react@19.2.4)
+      '@radix-ui/react-visually-hidden': 1.2.4(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.4))(react@19.2.4)
+      '@zxcvbn-ts/core': 3.0.4
+      '@zxcvbn-ts/language-common': 3.0.4
+      '@zxcvbn-ts/language-en': 3.0.2
+      '@zxcvbn-ts/matcher-pwned': 3.0.4
+      class-variance-authority: 0.7.0
+      clsx: 2.1.1
+      cmdk: 1.1.1(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.4))(react@19.2.4)
+      date-fns: 4.1.0
+      date-fns-tz: 3.2.0(date-fns@4.1.0)
+      diff: 7.0.0
+      focus-trap: 7.8.0
+      graphql: 16.12.0
+      graphql-upload: 17.0.0(@types/express@5.0.6)(graphql@16.12.0)
+      libphonenumber-js: 1.12.37
+      mime: 4.1.0
+      nanoid: 5.1.6
+      natural-compare-lite: 1.4.0
+      react: 19.2.4
+      react-circle-flags: 0.0.22(react@19.2.4)
+      react-day-picker: 9.4.3(react@19.2.4)
+      react-docgen: 8.0.2
+      react-dom: 19.2.5(react@19.2.4)
+      react-dropzone: 14.4.1(react@19.2.4)
+      react-hook-form: 7.71.2(react@19.2.4)
+      react-portal: 4.3.0(react-dom@19.2.5(react@19.2.4))(react@19.2.4)
+      react-virtualized: 9.22.6(react-dom@19.2.5(react@19.2.4))(react@19.2.4)
+      remark-gfm: 4.0.1
+      tailwind-merge: 3.4.0
+      usehooks-ts: 3.1.1(react@19.2.4)
+      viem: 2.47.6(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.3.6)
+      world-countries: 5.1.0
+      zod: 4.3.6
+    transitivePeerDependencies:
+      - '@types/express'
+      - '@types/koa'
+      - '@types/react'
+      - '@types/react-dom'
+      - bufferutil
+      - supports-color
+      - typescript
+      - utf-8-validate
+    optional: true
+
   '@powerhousedao/document-engineering@1.40.3(@types/express@5.0.6)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(bufferutil@4.1.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(typescript@5.9.3)(utf-8-validate@6.0.6)':
     dependencies:
       '@internationalized/date': 3.11.0
@@ -28632,7 +28642,7 @@ snapshots:
       - typescript
       - utf-8-validate
 
-  '@powerhousedao/ph-clint@0.1.0-dev.24(e187e77409b7778c3e02bc8c3057c1df)':
+  '@powerhousedao/ph-clint@0.1.0-dev.24(be68599f3749b23d2ac1600b4afab70b)':
     dependencies:
       commander: 12.1.0
       handlebars: 4.7.9
@@ -28649,8 +28659,8 @@ snapshots:
       '@mastra/libsql': 1.9.0(@mastra/core@1.28.0(@standard-community/standard-json@0.3.5(@standard-schema/spec@1.1.0)(@types/json-schema@7.0.15)(quansync@1.0.0)(zod-to-json-schema@3.25.1(zod@4.3.6))(zod@4.3.6))(@standard-community/standard-openapi@0.2.9(@standard-community/standard-json@0.3.5(@standard-schema/spec@1.1.0)(@types/json-schema@7.0.15)(quansync@1.0.0)(zod-to-json-schema@3.25.1(zod@4.3.6))(zod@4.3.6))(@standard-schema/spec@1.1.0)(openapi-types@12.1.3)(zod@4.3.6))(@types/json-schema@7.0.15)(bufferutil@4.1.0)(openapi-types@12.1.3)(utf-8-validate@6.0.6)(zod@4.3.6))(bufferutil@4.1.0)(utf-8-validate@6.0.6)
       '@mastra/memory': 1.17.1(@mastra/core@1.28.0(@standard-community/standard-json@0.3.5(@standard-schema/spec@1.1.0)(@types/json-schema@7.0.15)(quansync@1.0.0)(zod-to-json-schema@3.25.1(zod@4.3.6))(zod@4.3.6))(@standard-community/standard-openapi@0.2.9(@standard-community/standard-json@0.3.5(@standard-schema/spec@1.1.0)(@types/json-schema@7.0.15)(quansync@1.0.0)(zod-to-json-schema@3.25.1(zod@4.3.6))(zod@4.3.6))(@standard-schema/spec@1.1.0)(openapi-types@12.1.3)(zod@4.3.6))(@types/json-schema@7.0.15)(bufferutil@4.1.0)(openapi-types@12.1.3)(utf-8-validate@6.0.6)(zod@4.3.6))(zod@4.3.6)
       '@powerhousedao/reactor': link:packages/reactor
-      '@powerhousedao/reactor-api': 6.0.0-dev.225(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@fastify/websocket@11.2.0(bufferutil@4.1.0)(utf-8-validate@6.0.6))(@opentelemetry/api@1.9.1)(@opentelemetry/core@2.5.1(@opentelemetry/api@1.9.1))(@parcel/watcher@2.5.6)(@tsdown/css@0.21.1)(@types/express@5.0.6)(@types/node@25.2.3)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(bufferutil@4.1.0)(crossws@0.3.5)(encoding@0.1.13)(esbuild@0.27.3)(jiti@2.6.1)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(react-dom@19.2.5(react@19.2.4))(react@19.2.4)(synckit@0.11.12)(terser@5.46.1)(tsx@4.21.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(vite@8.0.8(@types/node@25.2.3)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))(yaml@2.8.3)
-      '@powerhousedao/reactor-mcp': 6.0.0-dev.225(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@fastify/websocket@11.2.0(bufferutil@4.1.0)(utf-8-validate@6.0.6))(@parcel/watcher@2.5.6)(@tsdown/css@0.21.1)(@types/express@5.0.6)(@types/node@25.2.3)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(bufferutil@4.1.0)(crossws@0.3.5)(encoding@0.1.13)(esbuild@0.27.3)(jiti@2.6.1)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(react-dom@19.2.5(react@19.2.4))(react@19.2.4)(synckit@0.11.12)(terser@5.46.1)(tsx@4.21.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(yaml@2.8.3)
+      '@powerhousedao/reactor-api': 6.0.0-dev.228(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@fastify/websocket@11.2.0(bufferutil@4.1.0)(utf-8-validate@6.0.6))(@opentelemetry/api@1.9.1)(@opentelemetry/core@2.5.1(@opentelemetry/api@1.9.1))(@parcel/watcher@2.5.6)(@tsdown/css@0.21.1)(@types/express@5.0.6)(@types/node@25.2.3)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(bufferutil@4.1.0)(crossws@0.3.5)(encoding@0.1.13)(esbuild@0.27.3)(jiti@2.6.1)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(react-dom@19.2.5(react@19.2.4))(react@19.2.4)(synckit@0.11.12)(terser@5.46.1)(tsx@4.21.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(vite@8.0.8(@types/node@25.2.3)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))(yaml@2.8.3)
+      '@powerhousedao/reactor-mcp': 6.0.0-dev.228(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@fastify/websocket@11.2.0(bufferutil@4.1.0)(utf-8-validate@6.0.6))(@parcel/watcher@2.5.6)(@tsdown/css@0.21.1)(@types/express@5.0.6)(@types/node@25.2.3)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(bufferutil@4.1.0)(crossws@0.3.5)(encoding@0.1.13)(esbuild@0.27.3)(jiti@2.6.1)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(react-dom@19.2.5(react@19.2.4))(react@19.2.4)(synckit@0.11.12)(terser@5.46.1)(tsx@4.21.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(yaml@2.8.3)
       '@powerhousedao/shared': link:packages/shared
       document-model: link:packages/document-model
       kysely: 0.28.16
@@ -28661,7 +28671,7 @@ snapshots:
       - react-devtools-core
       - utf-8-validate
 
-  '@powerhousedao/reactor-api@6.0.0-dev.225(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@fastify/websocket@11.2.0(bufferutil@4.1.0)(utf-8-validate@6.0.6))(@opentelemetry/api@1.9.1)(@opentelemetry/core@2.5.1(@opentelemetry/api@1.9.1))(@parcel/watcher@2.5.6)(@tsdown/css@0.21.1)(@types/express@5.0.6)(@types/node@25.2.3)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(bufferutil@4.1.0)(crossws@0.3.5)(encoding@0.1.13)(esbuild@0.27.3)(jiti@2.6.1)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(react-dom@19.2.5(react@19.2.4))(react@19.2.4)(synckit@0.11.12)(terser@5.46.1)(tsx@4.21.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(vite@8.0.8(@types/node@25.2.3)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))(yaml@2.8.3)':
+  '@powerhousedao/reactor-api@6.0.0-dev.228(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@fastify/websocket@11.2.0(bufferutil@4.1.0)(utf-8-validate@6.0.6))(@opentelemetry/api@1.9.1)(@opentelemetry/core@2.5.1(@opentelemetry/api@1.9.1))(@parcel/watcher@2.5.6)(@tsdown/css@0.21.1)(@types/express@5.0.6)(@types/node@25.2.3)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(bufferutil@4.1.0)(crossws@0.3.5)(encoding@0.1.13)(esbuild@0.27.3)(jiti@2.6.1)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(react-dom@19.2.5(react@19.2.4))(react@19.2.4)(synckit@0.11.12)(terser@5.46.1)(tsx@4.21.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(vite@8.0.8(@types/node@25.2.3)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))(yaml@2.8.3)':
     dependencies:
       '@apollo/gateway': 2.13.3(encoding@0.1.13)(graphql@16.12.0)
       '@apollo/server': 5.5.0(graphql@16.12.0)
@@ -28682,21 +28692,21 @@ snapshots:
       '@opentelemetry/sdk-trace-base': 1.30.1(@opentelemetry/api@1.9.1)
       '@opentelemetry/semantic-conventions': 1.40.0
       '@originjs/vite-plugin-commonjs': 1.0.3
-      '@powerhousedao/analytics-engine-core': 6.0.0-dev.225(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
-      '@powerhousedao/analytics-engine-graphql': 6.0.0-dev.225(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
-      '@powerhousedao/analytics-engine-pg': 6.0.0-dev.225(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
-      '@powerhousedao/config': 6.0.0-dev.225(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
-      '@powerhousedao/document-engineering': 1.40.1(@types/express@5.0.6)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(bufferutil@4.1.0)(react-dom@19.2.5(react@19.2.4))(react@19.2.4)(typescript@5.9.3)(utf-8-validate@6.0.6)
-      '@powerhousedao/reactor': 6.0.0-dev.225(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@tsdown/css@0.21.1)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(synckit@0.11.12)(typescript@5.9.3)
-      '@powerhousedao/reactor-attachments': 6.0.0-dev.225(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@tsdown/css@0.21.1)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(synckit@0.11.12)(typescript@5.9.3)
-      '@powerhousedao/reactor-mcp': 6.0.0-dev.225(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@fastify/websocket@11.2.0(bufferutil@4.1.0)(utf-8-validate@6.0.6))(@parcel/watcher@2.5.6)(@tsdown/css@0.21.1)(@types/express@5.0.6)(@types/node@25.2.3)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(bufferutil@4.1.0)(crossws@0.3.5)(encoding@0.1.13)(esbuild@0.27.3)(jiti@2.6.1)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(react-dom@19.2.5(react@19.2.4))(react@19.2.4)(synckit@0.11.12)(terser@5.46.1)(tsx@4.21.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(yaml@2.8.3)
-      '@powerhousedao/shared': 6.0.0-dev.225(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
-      '@renown/sdk': 6.0.0-dev.225(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
+      '@powerhousedao/analytics-engine-core': 6.0.0-dev.228(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
+      '@powerhousedao/analytics-engine-graphql': 6.0.0-dev.228(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
+      '@powerhousedao/analytics-engine-pg': 6.0.0-dev.228(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
+      '@powerhousedao/config': 6.0.0-dev.228(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
+      '@powerhousedao/document-engineering': 1.40.3(@types/express@5.0.6)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(bufferutil@4.1.0)(react-dom@19.2.5(react@19.2.4))(react@19.2.4)(typescript@5.9.3)(utf-8-validate@6.0.6)
+      '@powerhousedao/reactor': 6.0.0-dev.228(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@tsdown/css@0.21.1)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(synckit@0.11.12)(typescript@5.9.3)
+      '@powerhousedao/reactor-attachments': 6.0.0-dev.228(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@tsdown/css@0.21.1)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(synckit@0.11.12)(typescript@5.9.3)
+      '@powerhousedao/reactor-mcp': 6.0.0-dev.228(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@fastify/websocket@11.2.0(bufferutil@4.1.0)(utf-8-validate@6.0.6))(@parcel/watcher@2.5.6)(@tsdown/css@0.21.1)(@types/express@5.0.6)(@types/node@25.2.3)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(bufferutil@4.1.0)(crossws@0.3.5)(encoding@0.1.13)(esbuild@0.27.3)(jiti@2.6.1)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(react-dom@19.2.5(react@19.2.4))(react@19.2.4)(synckit@0.11.12)(terser@5.46.1)(tsx@4.21.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(yaml@2.8.3)
+      '@powerhousedao/shared': 6.0.0-dev.228(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
+      '@renown/sdk': 6.0.0-dev.228(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
       body-parser: 1.20.4
       change-case: 5.4.4
       cors: 2.8.6
       devcert: 1.2.3
-      document-model: 6.0.0-dev.225(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@tsdown/css@0.21.1)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(synckit@0.11.12)(typescript@5.9.3)
+      document-model: 6.0.0-dev.228(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@tsdown/css@0.21.1)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(synckit@0.11.12)(typescript@5.9.3)
       dotenv: 16.6.1
       express: 4.21.1
       fastify: 5.8.4
@@ -28770,9 +28780,9 @@ snapshots:
       - yaml
     optional: true
 
-  '@powerhousedao/reactor-attachments@6.0.0-dev.225(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@tsdown/css@0.21.1)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(synckit@0.11.12)(typescript@5.9.3)':
+  '@powerhousedao/reactor-attachments@6.0.0-dev.228(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@tsdown/css@0.21.1)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(synckit@0.11.12)(typescript@5.9.3)':
     dependencies:
-      '@powerhousedao/reactor': 6.0.0-dev.225(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@tsdown/css@0.21.1)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(synckit@0.11.12)(typescript@5.9.3)
+      '@powerhousedao/reactor': 6.0.0-dev.228(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@tsdown/css@0.21.1)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(synckit@0.11.12)(typescript@5.9.3)
       kysely: 0.28.16
     transitivePeerDependencies:
       - '@arethetypeswrong/core'
@@ -28792,20 +28802,20 @@ snapshots:
       - vue-tsc
     optional: true
 
-  '@powerhousedao/reactor-mcp@6.0.0-dev.225(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@fastify/websocket@11.2.0(bufferutil@4.1.0)(utf-8-validate@6.0.6))(@parcel/watcher@2.5.6)(@tsdown/css@0.21.1)(@types/express@5.0.6)(@types/node@25.2.3)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(bufferutil@4.1.0)(crossws@0.3.5)(encoding@0.1.13)(esbuild@0.27.3)(jiti@2.6.1)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(react-dom@19.2.5(react@19.2.4))(react@19.2.4)(synckit@0.11.12)(terser@5.46.1)(tsx@4.21.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(yaml@2.8.3)':
+  '@powerhousedao/reactor-mcp@6.0.0-dev.228(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@fastify/websocket@11.2.0(bufferutil@4.1.0)(utf-8-validate@6.0.6))(@parcel/watcher@2.5.6)(@tsdown/css@0.21.1)(@types/express@5.0.6)(@types/node@25.2.3)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(bufferutil@4.1.0)(crossws@0.3.5)(encoding@0.1.13)(esbuild@0.27.3)(jiti@2.6.1)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(react-dom@19.2.5(react@19.2.4))(react@19.2.4)(synckit@0.11.12)(terser@5.46.1)(tsx@4.21.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(yaml@2.8.3)':
     dependencies:
       '@ai-sdk/openai': 2.0.0(zod@4.3.6)
       '@modelcontextprotocol/sdk': 1.29.0(zod@4.3.6)
       '@openfeature/core': 1.9.1
       '@openfeature/env-var-provider': 0.3.1(@openfeature/server-sdk@1.19.0(@openfeature/core@1.9.1))
       '@openfeature/server-sdk': 1.19.0(@openfeature/core@1.9.1)
-      '@powerhousedao/codegen': 6.0.0-dev.225(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@fastify/websocket@11.2.0(bufferutil@4.1.0)(utf-8-validate@6.0.6))(@parcel/watcher@2.5.6)(@tsdown/css@0.21.1)(@types/express@5.0.6)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(bufferutil@4.1.0)(crossws@0.3.5)(encoding@0.1.13)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(react-dom@19.2.5(react@19.2.4))(react@19.2.4)(synckit@0.11.12)(typescript@5.9.3)(utf-8-validate@6.0.6)
-      '@powerhousedao/config': 6.0.0-dev.225(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
-      '@powerhousedao/reactor': 6.0.0-dev.225(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@tsdown/css@0.21.1)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(synckit@0.11.12)(typescript@5.9.3)
-      '@powerhousedao/shared': 6.0.0-dev.225(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
+      '@powerhousedao/codegen': 6.0.0-dev.228(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@fastify/websocket@11.2.0(bufferutil@4.1.0)(utf-8-validate@6.0.6))(@parcel/watcher@2.5.6)(@tsdown/css@0.21.1)(@types/express@5.0.6)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(bufferutil@4.1.0)(crossws@0.3.5)(encoding@0.1.13)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(react-dom@19.2.5(react@19.2.4))(react@19.2.4)(synckit@0.11.12)(typescript@5.9.3)(utf-8-validate@6.0.6)
+      '@powerhousedao/config': 6.0.0-dev.228(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
+      '@powerhousedao/reactor': 6.0.0-dev.228(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@tsdown/css@0.21.1)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(synckit@0.11.12)(typescript@5.9.3)
+      '@powerhousedao/shared': 6.0.0-dev.228(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
       ai: 5.0.52(zod@4.3.6)
       change-case: 5.4.4
-      document-model: 6.0.0-dev.225(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@tsdown/css@0.21.1)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(synckit@0.11.12)(typescript@5.9.3)
+      document-model: 6.0.0-dev.228(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@tsdown/css@0.21.1)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(synckit@0.11.12)(typescript@5.9.3)
       vite: 8.0.8(@types/node@25.2.3)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3)
       zod: 4.3.6
     transitivePeerDependencies:
@@ -28852,12 +28862,12 @@ snapshots:
       - yaml
     optional: true
 
-  '@powerhousedao/reactor@6.0.0-dev.225(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@tsdown/css@0.21.1)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(synckit@0.11.12)(typescript@5.9.3)':
+  '@powerhousedao/reactor@6.0.0-dev.228(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@tsdown/css@0.21.1)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(synckit@0.11.12)(typescript@5.9.3)':
     dependencies:
       '@electric-sql/pglite': 0.3.15
-      '@powerhousedao/shared': 6.0.0-dev.225(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
+      '@powerhousedao/shared': 6.0.0-dev.228(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
       '@sindresorhus/fnv1a': 3.1.0
-      document-model: 6.0.0-dev.225(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@tsdown/css@0.21.1)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(synckit@0.11.12)(typescript@5.9.3)
+      document-model: 6.0.0-dev.228(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@tsdown/css@0.21.1)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(synckit@0.11.12)(typescript@5.9.3)
       kysely: 0.28.16
       kysely-pglite-dialect: 1.2.0(@electric-sql/pglite@0.3.15)(kysely@0.28.16)
       uuid: 11.1.0
@@ -28879,7 +28889,7 @@ snapshots:
       - vue-tsc
     optional: true
 
-  '@powerhousedao/shared@6.0.0-dev.225(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)':
+  '@powerhousedao/shared@6.0.0-dev.228(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)':
     dependencies:
       '@sentry/node': 9.47.1
       '@sindresorhus/fnv1a': 3.1.0
@@ -30305,9 +30315,9 @@ snapshots:
 
   '@remix-run/router@1.23.2': {}
 
-  '@renown/sdk@6.0.0-dev.225(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)':
+  '@renown/sdk@6.0.0-dev.228(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)':
     dependencies:
-      '@powerhousedao/shared': 6.0.0-dev.225(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
+      '@powerhousedao/shared': 6.0.0-dev.228(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
       did-jwt: 8.0.18
       did-jwt-vc: 4.0.16
       did-key-creator: 1.2.0
@@ -35136,9 +35146,9 @@ snapshots:
     dependencies:
       esutils: 2.0.3
 
-  document-model@6.0.0-dev.225(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@tsdown/css@0.21.1)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(synckit@0.11.12)(typescript@5.9.3):
+  document-model@6.0.0-dev.228(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@tsdown/css@0.21.1)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(synckit@0.11.12)(typescript@5.9.3):
     dependencies:
-      '@powerhousedao/shared': 6.0.0-dev.225(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
+      '@powerhousedao/shared': 6.0.0-dev.228(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
       change-case: 5.4.4
       jszip: 3.10.1
       mime: 4.1.0
@@ -36393,16 +36403,6 @@ snapshots:
   flat@5.0.2: {}
 
   flatted@3.4.2: {}
-
-  focus-trap-react@11.0.6(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.4))(react@19.2.4):
-    dependencies:
-      '@types/react': 19.2.14
-      '@types/react-dom': 19.2.3(@types/react@19.2.14)
-      focus-trap: 7.8.0
-      react: 19.2.4
-      react-dom: 19.2.5(react@19.2.4)
-      tabbable: 6.4.0
-    optional: true
 
   focus-trap@7.8.0:
     dependencies:
@@ -41943,12 +41943,6 @@ snapshots:
   react-circle-flags@0.0.22(react@19.2.5):
     dependencies:
       react: 19.2.5
-
-  react-confirm@0.4.0(react-dom@19.2.5(react@19.2.4))(react@19.2.4):
-    dependencies:
-      react: 19.2.4
-      react-dom: 19.2.5(react@19.2.4)
-    optional: true
 
   react-day-picker@9.4.3(react@19.2.4):
     dependencies:

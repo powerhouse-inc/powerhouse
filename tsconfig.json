@@ -116,6 +116,9 @@
       "path": "test/test-consumer-project"
     },
     {
+      "path": "test/test-sync-queue"
+    },
+    {
       "path": "test/versioned-documents"
     },
     {
