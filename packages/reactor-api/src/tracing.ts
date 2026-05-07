@@ -1,7 +1,10 @@
 // OpenTelemetry Tracing Configuration for Reactor API
 // This file must be loaded before the application starts
 
-import { getNodeAutoInstrumentations } from "@opentelemetry/auto-instrumentations-node";
+import { ExpressInstrumentation } from "@opentelemetry/instrumentation-express";
+import { GraphQLInstrumentation } from "@opentelemetry/instrumentation-graphql";
+import { HttpInstrumentation } from "@opentelemetry/instrumentation-http";
+import { PgInstrumentation } from "@opentelemetry/instrumentation-pg";
 import { OTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-http";
 import { PrometheusExporter } from "@opentelemetry/exporter-prometheus";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
@@ -79,59 +82,38 @@ if (TRACING_ENABLED) {
     spanProcessors: [new BatchSpanProcessor(traceExporter)],
     metricReader,
     instrumentations: [
-      getNodeAutoInstrumentations({
-        // Automatically instrument common libraries
-        "@opentelemetry/instrumentation-http": {
-          enabled: true,
-          ignoreIncomingRequestHook: (req) => {
-            // Don't trace health check endpoints
-            return req.url === "/health" || req.url === "/ready";
-          },
-          // Enable peer service name detection for service graphs
-          requireParentforIncomingSpans: false,
-          requireParentforOutgoingSpans: false,
-          // Add http.target to spans for better observability
-          requestHook: (span, request) => {
-            // Add custom attributes for service graph
-            span.setAttribute(
-              "http.route",
-              (request as IncomingMessage).url || "",
-            );
-          },
-          responseHook: (span, response) => {
-            // Add response attributes
-            if (response.statusCode) {
-              span.setAttribute("http.status_code", response.statusCode);
-            }
-          },
+      new HttpInstrumentation({
+        ignoreIncomingRequestHook: (req) => {
+          // Don't trace health check endpoints
+          return req.url === "/health" || req.url === "/ready";
         },
-        "@opentelemetry/instrumentation-express": {
-          enabled: true,
-          // Add route information to spans
-          requestHook: (span, info) => {
-            if (info.route) {
-              span.setAttribute("http.route", info.route);
-            }
-          },
+        requireParentforIncomingSpans: false,
+        requireParentforOutgoingSpans: false,
+        requestHook: (span, request) => {
+          span.setAttribute(
+            "http.route",
+            (request as IncomingMessage).url || "",
+          );
         },
-        "@opentelemetry/instrumentation-graphql": {
-          enabled: true,
-          // Add GraphQL operation details for service graphs
-          mergeItems: true,
-          allowValues: true,
+        responseHook: (span, response) => {
+          if (response.statusCode) {
+            span.setAttribute("http.status_code", response.statusCode);
+          }
         },
-        "@opentelemetry/instrumentation-pg": {
-          enabled: true,
-          // Add database peer service for service graphs
-          enhancedDatabaseReporting: true,
+      }),
+      new ExpressInstrumentation({
+        requestHook: (span, info) => {
+          if (info.route) {
+            span.setAttribute("http.route", info.route);
+          }
         },
-        "@opentelemetry/instrumentation-redis-4": {
-          enabled: true,
-          // Add Redis peer service for service graphs
-          dbStatementSerializer: (cmdName, cmdArgs) => {
-            return cmdName;
-          },
-        },
+      }),
+      new GraphQLInstrumentation({
+        mergeItems: true,
+        allowValues: true,
+      }),
+      new PgInstrumentation({
+        enhancedDatabaseReporting: true,
       }),
     ],
   });
