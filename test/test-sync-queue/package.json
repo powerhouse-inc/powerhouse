@@ -1,0 +1,35 @@
+{
+  "name": "@powerhousedao/test-sync-queue",
+  "version": "1.0.0",
+  "description": "Manual sync poller / inbox + queue stall diagnostic for Powerhouse Reactor drives",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "private": true,
+  "bin": {
+    "ph-test-sync-queue": "dist/cli.mjs"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    }
+  },
+  "types": "./dist/index.d.mts",
+  "scripts": {
+    "build": "tsdown",
+    "dev": "tsx src/cli.ts"
+  },
+  "dependencies": {
+    "colorette": "catalog:",
+    "commander": "catalog:",
+    "document-model": "workspace:*",
+    "@powerhousedao/reactor": "workspace:*",
+    "@powerhousedao/reactor-api": "workspace:*",
+    "@powerhousedao/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "tsx": "catalog:",
+    "tsdown": "catalog:"
+  }
+}
