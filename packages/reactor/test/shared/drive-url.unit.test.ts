@@ -41,14 +41,14 @@ describe("drive-url", () => {
       });
     });
 
-    it("should handle URLs with longer paths", () => {
+    it("should preserve subpath prefix in the GraphQL endpoint", () => {
       const result = parseDriveUrl(
-        "https://example.com/api/v1/drives/d/my-drive",
+        "https://example.com/api/reactor/d/my-drive",
       );
       expect(result).toEqual({
-        url: "https://example.com/api/v1/drives/d/my-drive",
+        url: "https://example.com/api/reactor/d/my-drive",
         driveId: "my-drive",
-        graphqlEndpoint: "https://example.com/graphql/r",
+        graphqlEndpoint: "https://example.com/api/reactor/graphql/r",
       });
     });
 

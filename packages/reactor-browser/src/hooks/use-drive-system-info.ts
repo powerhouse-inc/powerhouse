@@ -21,9 +21,14 @@ export type DriveSystemInfoState =
 export function deriveSystemUrl(channelUrl: string): string | null {
   try {
     const url = new URL(channelUrl);
-    url.pathname = "/graphql/system";
     url.search = "";
     url.hash = "";
+    const suffix = "/graphql/r";
+    if (url.pathname.endsWith(suffix)) {
+      url.pathname = url.pathname.slice(0, -suffix.length) + "/graphql/system";
+    } else {
+      url.pathname = "/graphql/system";
+    }
     return url.toString();
   } catch {
     return null;
@@ -108,6 +113,7 @@ export function useDriveSystemInfo(
       .catch((err: unknown) => {
         if (controller.signal.aborted) return;
         const message = err instanceof Error ? err.message : String(err);
+        console.error(message);
         const next: DriveSystemInfoState = { status: "error", message };
         cache.set(systemUrl, next);
         setState(next);

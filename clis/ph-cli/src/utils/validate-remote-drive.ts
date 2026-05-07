@@ -20,9 +20,11 @@ export async function setupRemoteDrive(
       return false;
     }
 
-    // Construct GraphQL endpoint from base URL
+    // Construct GraphQL endpoint from base URL, preserving any subpath
+    // prefix (e.g. when the reactor is served behind a proxy at /api/reactor).
     const url = new URL(remoteDriveUrl);
-    const graphqlEndpoint = `${url.protocol}//${url.host}/graphql`;
+    const basePath = url.pathname.replace(/\/d\/[^/]+\/?$/, "");
+    const graphqlEndpoint = `${url.protocol}//${url.host}${basePath}/graphql`;
 
     let documents = await getVetraDocuments(graphqlEndpoint, driveId!);
 
