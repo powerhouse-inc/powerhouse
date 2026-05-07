@@ -83,7 +83,11 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 
 ARG TAG=latest
 ARG GIT_SHA=unknown
-RUN pnpm init && pnpm add --shamefully-hoist @powerhousedao/switchboard@$TAG
+# `pnpm init` in pnpm v11 writes a devEngines.packageManager.version with a
+# caret prefix (e.g. "^11.0.8"), which the very next `pnpm add` rejects with
+# "expected a semver version". Skip pnpm init and write a minimal manifest.
+RUN echo '{"name":"app","version":"1.0.0","type":"module","private":true}' > package.json \
+ && pnpm add --shamefully-hoist @powerhousedao/switchboard@$TAG
 
 COPY docker/switchboard-entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
