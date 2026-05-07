@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 import { phCliCommandNames } from "@powerhousedao/shared/clis/command-names";
-import { assertNodeVersion } from "@powerhousedao/shared/clis/utils";
 import {
   captureCliError,
   initCliTelemetry,
 } from "@powerhousedao/shared/clis/telemetry";
+import { assertNodeVersion } from "@powerhousedao/shared/clis/utils";
 
 // Injected at build time by tsdown (see tsdown.config.ts `define`).
 declare const CLI_VERSION: string;
@@ -55,7 +55,9 @@ async function main() {
   }
 
   // forward command to the local ph-cli installation if it exists
-  if (phCliCommandNames.includes(command)) {
+  if (
+    phCliCommandNames.includes(command as (typeof phCliCommandNames)[number])
+  ) {
     await runPhCliCommand(command);
     process.exit(0);
   }
