@@ -1,9 +1,7 @@
 import { FolderItem } from "@powerhousedao/design-system/connect";
-import { useDrop } from "@powerhousedao/design-system/connect";
 import {
   isFolderNodeKind,
   useNodesInSelectedDriveOrFolder,
-  useSelectedFolder,
 } from "@powerhousedao/reactor-browser";
 import { twMerge } from "tailwind-merge";
 import { FileContentView } from "./file-content-view.js";
@@ -12,19 +10,15 @@ import { DriveLayout } from "./layout.js";
 export function FolderView(props: { className?: string }) {
   const { className } = props;
   const nodes = useNodesInSelectedDriveOrFolder();
-  const selectedFolder = useSelectedFolder();
   const folderNodes = nodes.filter((n) => isFolderNodeKind(n));
-  const { isDropTarget, dropProps } = useDrop({
-    target: selectedFolder,
-  });
   return (
     <div
       className={twMerge(
         "rounded-md border-2 border-transparent p-2",
-        isDropTarget && "border-dashed border-blue-100",
+        // isDropTarget && "border-dashed border-blue-100",
         className,
       )}
-      {...dropProps}
+      // {...dropProps}
     >
       <DriveLayout.ContentSection title="Folders" className="mb-4">
         {folderNodes.length > 0 ? (

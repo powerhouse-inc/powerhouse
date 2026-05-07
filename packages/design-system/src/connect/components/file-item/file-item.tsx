@@ -5,6 +5,7 @@ import {
   getSyncStatusSync,
   setSelectedNode,
   showDeleteNodeModal,
+  useDragNode,
   useNodeActions,
   useSelectedDriveSafe,
   useUserPermissions,
@@ -17,7 +18,6 @@ import type {
 import { useState } from "react";
 import { twMerge } from "tailwind-merge";
 import { defaultNodeOptions, nodeOptionsMap } from "../../constants/options.js";
-import { useDrag } from "../../hooks/use-drag.js";
 import { ConnectDropdownMenu } from "../dropdown-menu/dropdown-menu.js";
 import { NodeInput } from "../node-input/node-input.js";
 import { SyncStatusIcon } from "../status-icon/sync-status-icon.js";
@@ -51,7 +51,10 @@ export function FileItem(props: Props) {
   const sharingType = selectedDrive
     ? getDriveSharingType(selectedDrive)
     : "LOCAL";
-  const { dragProps } = useDrag({ node: fileNode });
+  const dragProps = useDragNode({
+    srcId: fileNode.id,
+    parentId: fileNode.parentFolder ?? undefined,
+  });
   const { isAllowedToCreateDocuments } = useUserPermissions();
   const { onRenameNode, onRenameDriveNodes, onDuplicateNode } =
     useNodeActions();

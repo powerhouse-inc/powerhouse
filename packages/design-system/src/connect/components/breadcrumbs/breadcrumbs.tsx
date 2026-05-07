@@ -3,6 +3,8 @@ import {
   addFolder,
   setSelectedDrive,
   setSelectedNode,
+  useDragNode,
+  useDropNode,
   useSelectedDriveId,
   useSelectedDriveSafe,
   useSelectedNodePath,
@@ -57,6 +59,8 @@ export function Breadcrumbs() {
             <Icon name="ArrowLeft" size={14} />
           </button>
           <Breadcrumb
+            id={selectedDriveId}
+            parentId={undefined}
             name={selectedDrive.state.global.name || selectedDrive.header.name}
             onClick={() => setSelectedDrive(selectedDrive)}
           />
@@ -67,6 +71,8 @@ export function Breadcrumbs() {
         selectedNodePath.map((node) => (
           <Fragment key={node.id}>
             <Breadcrumb
+              id={node.id}
+              parentId={node.parentFolder}
               name={node.name}
               onClick={() => setSelectedNode(node)}
             />
@@ -98,14 +104,20 @@ export function Breadcrumbs() {
 
 export type BreadcrumbProps = {
   name: string;
+  id: string | undefined;
+  parentId: string | null | undefined;
   onClick: () => void;
 };
 
 export function Breadcrumb(props: BreadcrumbProps) {
-  const { name, onClick } = props;
+  const { name, id, parentId, onClick } = props;
+  const dragProps = useDragNode({ srcId: id, parentId: parentId ?? undefined });
+  const dropProps = useDropNode(id);
 
   return (
     <div
+      {...dragProps}
+      {...dropProps}
       className="cursor-pointer transition-colors last-of-type:text-gray-800 hover:text-gray-800"
       onClick={onClick}
       role="button"

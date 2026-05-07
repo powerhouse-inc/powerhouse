@@ -1,4 +1,4 @@
-import { Breadcrumbs, useDrop } from "@powerhousedao/design-system/connect";
+import { Breadcrumbs } from "@powerhousedao/design-system/connect";
 import { useSetPHAppConfig } from "@powerhousedao/reactor-browser";
 import type { EditorProps } from "@powerhousedao/shared/document-model";
 import { CreateDocument } from "./components/create-document.js";
@@ -9,7 +9,6 @@ import { editorConfig } from "./config.js";
 export default function Editor(props: EditorProps) {
   useSetPHAppConfig(editorConfig);
   const { className, children } = props;
-  const { isDropTarget, dropProps } = useDrop();
   const showDocumentEditor = !!children;
 
   return (
@@ -23,8 +22,8 @@ export default function Editor(props: EditorProps) {
         children
       ) : (
         <DriveLayout.Content
-          {...dropProps}
-          className={isDropTarget ? "rounded-xl bg-blue-100" : ""}
+        // {...dropProps}
+        // className={isDropTarget ? "rounded-xl bg-blue-100" : ""}
         >
           <FolderView />
         </DriveLayout.Content>
