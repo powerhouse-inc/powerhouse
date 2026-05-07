@@ -1,3 +1,7 @@
+## 6.0.0-dev.230 (2026-05-07)
+
+This was a version bump only for @powerhousedao/analytics-engine-pg to align it with other projects, there were no code changes.
+
 ## 6.0.0-dev.229 (2026-05-07)
 
 This was a version bump only for @powerhousedao/analytics-engine-pg to align it with other projects, there were no code changes.
