@@ -9,7 +9,7 @@ nvm install 22
 curl -fsSL https://get.pnpm.io/install.sh | sh -
 export PNPM_HOME="/home/$USER/.local/share/pnpm"
 export PATH="$PNPM_HOME:$PATH"
-pnpm install -g ph-cmd
+pnpm add -g ph-cmd
 echo ""
 echo "  🎉 Setup Complete! 🎉"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
