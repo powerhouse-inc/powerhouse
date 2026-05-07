@@ -289,6 +289,11 @@ const unsafeConfig = {
  */
 const builtinSet = new Set(builtinModules);
 
+// `importKind` is added by @typescript-eslint/parser to ImportDeclaration
+// and named/default specifiers. ESLint's core estree types don't know
+// about it, so we narrow with a JSDoc cast at the use sites.
+/** @typedef {{ importKind?: "type" | "value" }} HasImportKind */
+
 /** @type {import("eslint").Rule.RuleModule} */
 const allowedStaticImportsRule = {
   meta: {
@@ -312,7 +317,7 @@ const allowedStaticImportsRule = {
     const opts = context.options[0] ?? {};
     const allow = opts.allow ?? [];
     const message = opts.message ?? "Static import not allowed here.";
-    const isAllowedSource = (src) => {
+    const isAllowedSource = (/** @type {string} */ src) => {
       if (src.startsWith("node:")) return true;
       if (builtinSet.has(src)) return true;
       if (
@@ -323,14 +328,21 @@ const allowedStaticImportsRule = {
       ) {
         return true;
       }
-      return allow.some((name) => src === name || src.startsWith(name + "/"));
+      return allow.some(
+        (/** @type {string} */ name) =>
+          src === name || src.startsWith(name + "/"),
+      );
     };
     return {
       ImportDeclaration(node) {
-        if (node.importKind === "type") return;
+        const decl = /** @type {typeof node & HasImportKind} */ (node);
+        if (decl.importKind === "type") return;
         const hasValueSpecifier =
           node.specifiers.length === 0 ||
-          node.specifiers.some((s) => s.importKind !== "type");
+          node.specifiers.some(
+            (s) =>
+              /** @type {typeof s & HasImportKind} */ (s).importKind !== "type",
+          );
         if (!hasValueSpecifier) return;
         const src = String(node.source.value);
         if (isAllowedSource(src)) return;
@@ -351,6 +363,27 @@ const allowedStaticImportsRule = {
  * built-ins, relative paths, and type-only imports pass through
  * automatically. Everything else must use `await import(...)`.
  */
+/** @type {import("eslint").Linter.RulesRecord} */
+const cliColdPathRules = {
+  "cli-cold-path/allowed-static-imports": [
+    "error",
+    {
+      allow: [
+        "cmd-ts",
+        "@powerhousedao/shared/clis/args",
+        "@powerhousedao/shared/clis/constants",
+        "@powerhousedao/shared/clis/utils",
+        "@powerhousedao/shared/clis/telemetry",
+        "@powerhousedao/shared/clis/command-names",
+        "@powerhousedao/shared/constants",
+        "@powerhousedao/shared/processors",
+      ],
+      message:
+        "Do not import modules statically on the CLI cold path. Import them dynamically with `await import(...)` inside the command handler method.",
+    },
+  ],
+};
+
 const cliColdPathConfig = {
   files: [
     "clis/ph-cli/src/cli.ts",
@@ -363,24 +396,7 @@ const cliColdPathConfig = {
       rules: { "allowed-static-imports": allowedStaticImportsRule },
     },
   },
-  rules: {
-    "cli-cold-path/allowed-static-imports": [
-      "error",
-      {
-        allow: [
-          "cmd-ts",
-          "@powerhousedao/shared/clis/args",
-          "@powerhousedao/shared/clis/constants",
-          "@powerhousedao/shared/clis/utils",
-          "@powerhousedao/shared/clis/telemetry",
-          "@powerhousedao/shared/clis/command-names",
-          "@powerhousedao/shared/constants",
-          "@powerhousedao/shared/processors",
-        ],
-        message: "Heavy module on the CLI cold path.",
-      },
-    ],
-  },
+  rules: cliColdPathRules,
 };
 
 /** Config for javascript files */
