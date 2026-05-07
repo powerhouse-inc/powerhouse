@@ -1,4 +1,4 @@
-import { debugArgs } from "@powerhousedao/shared/clis";
+import { debugArgs } from "@powerhousedao/shared/clis/args";
 import { command, flag, option, optional } from "cmd-ts";
 import { Directory, File } from "cmd-ts/dist/cjs/batteries/fs.js";
 export const generateDocumentModelCmd = command({

@@ -1,5 +1,4 @@
-import { getConfig } from "@powerhousedao/config/node";
-import { getPowerhouseProjectInfo, listArgs } from "@powerhousedao/shared/clis";
+import { listArgs } from "@powerhousedao/shared/clis/args";
 import { command } from "cmd-ts";
 
 export const list = command({
@@ -22,9 +21,12 @@ This command:
     }
 
     try {
+      const { getPowerhouseProjectInfo } =
+        await import("@powerhousedao/shared/clis");
       const projectInfo = await getPowerhouseProjectInfo();
       console.log("\n>>> projectInfo", projectInfo);
 
+      const { getConfig } = await import("@powerhousedao/config/node");
       const phConfig = getConfig(
         projectInfo.projectPath + "/powerhouse.config.json",
       );

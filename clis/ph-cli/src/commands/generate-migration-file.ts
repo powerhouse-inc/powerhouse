@@ -1,5 +1,4 @@
-import { generateDBSchema } from "@powerhousedao/codegen";
-import { debugArgs } from "@powerhousedao/shared/clis";
+import { debugArgs } from "@powerhousedao/shared/clis/args";
 import { command, option, optional, string } from "cmd-ts";
 import path from "path";
 
@@ -21,6 +20,7 @@ export const generateMigrationFileCmd = command({
     ...debugArgs,
   },
   handler: async ({ migrationFile, schemaFile }) => {
+    const { generateDBSchema } = await import("@powerhousedao/codegen");
     await generateDBSchema({
       migrationFile: path.join(process.cwd(), migrationFile),
       schemaFile: schemaFile ? path.join(process.cwd(), schemaFile) : undefined,

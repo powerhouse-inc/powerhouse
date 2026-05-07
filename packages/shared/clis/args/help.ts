@@ -121,8 +121,19 @@ export const phCliHelpCommands = {
   }),
 };
 
-export const phCliCommandNames = Object.values(phCliHelpCommands).flatMap(
-  (cmd) => {
-    return [cmd.name, ...(cmd.aliases ?? [])];
-  },
-);
+export { phCliCommandNames } from "../command-names.js";
+import { phCliCommandNames } from "../command-names.js";
+
+// Compile-time guard that phCliCommandNames matches the names+aliases above.
+type _Names = (typeof phCliCommandNames)[number];
+type _DerivedNames = {
+  [K in keyof typeof phCliHelpCommands]:
+    | (typeof phCliHelpCommands)[K]["name"]
+    | NonNullable<(typeof phCliHelpCommands)[K]["aliases"]>[number];
+}[keyof typeof phCliHelpCommands];
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const __assertPhCliCommandNames: _Names extends _DerivedNames
+  ? _DerivedNames extends _Names
+    ? true
+    : never
+  : never = true;

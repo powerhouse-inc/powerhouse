@@ -1,10 +1,10 @@
 #!/usr/bin/env node
+import { phCliCommandNames } from "@powerhousedao/shared/clis/command-names";
+import { assertNodeVersion } from "@powerhousedao/shared/clis/utils";
 import {
-  assertNodeVersion,
   captureCliError,
   initCliTelemetry,
-  phCliCommandNames,
-} from "@powerhousedao/shared/clis";
+} from "@powerhousedao/shared/clis/telemetry";
 
 // Injected at build time by tsdown (see tsdown.config.ts `define`).
 declare const CLI_VERSION: string;

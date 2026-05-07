@@ -1,7 +1,5 @@
-import {
-  accessTokenArgs,
-  DEFAULT_EXPIRY_SECONDS,
-} from "@powerhousedao/shared/clis";
+import { accessTokenArgs } from "@powerhousedao/shared/clis/args";
+import { DEFAULT_EXPIRY_SECONDS } from "@powerhousedao/shared/clis/constants";
 import { command } from "cmd-ts";
 
 export const accessToken = command({
