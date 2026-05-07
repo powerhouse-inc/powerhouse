@@ -58,7 +58,13 @@ export async function createProject({
 
     // Write the boilerplate files for the project
     console.log(chalk.blue(`▶️ Creating project boilerplate files...\n`));
-    await writeProjectRootFiles({ name, tag, version, remoteDrive });
+    await writeProjectRootFiles({
+      name,
+      tag,
+      version,
+      remoteDrive,
+      packageManager,
+    });
     await writeAllGeneratedProjectFiles();
     console.log(chalk.green(`✅ Project boilerplate files created\n`));
 
@@ -69,7 +75,9 @@ export async function createProject({
           `▶️ Installing project dependencies with ${packageManager}...\n`,
         ),
       );
-      runCmd(`${packageManager} install`);
+      const extra =
+        packageManager === "pnpm" ? " --config.minimum-release-age=0" : "";
+      runCmd(`${packageManager} install${extra}`);
       console.log(chalk.green(`\n✅ Project dependencies installed\n`));
     }
 

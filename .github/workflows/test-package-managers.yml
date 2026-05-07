@@ -76,6 +76,10 @@ jobs:
         if: matrix.id == 'pnpm-11'
         run: echo "$PNPM_HOME/bin" >> "$GITHUB_PATH"
 
+      - name: Disable pnpm minimum-release-age
+        if: matrix.package-manager == 'pnpm'
+        run: echo "minimum-release-age=0" >> ~/.npmrc
+
       - name: Setup bun
         if: matrix.package-manager == 'bun'
         uses: oven-sh/setup-bun@v1

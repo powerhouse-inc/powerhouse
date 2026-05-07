@@ -92,10 +92,14 @@ Resolution order for the registry URL:
           (scope) => `--${scope}:registry=${registryUrl}`,
         );
 
+        const minReleaseAgeArgs =
+          packageManager === "pnpm" ? ["--config.minimum-release-age=0"] : [];
+
         const { resolveCommand } = await import("package-manager-detector");
         const resolved = resolveCommand(packageManager, "add", [
           ...specs,
           ...scopeRegistryArgs,
+          ...minReleaseAgeArgs,
         ]);
         if (!resolved) {
           throw new Error(
