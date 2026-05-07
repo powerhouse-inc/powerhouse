@@ -1,12 +1,5 @@
-import {
-  debugArgs,
-  handleMutuallyExclusiveOptions,
-  logVersionUpdate,
-  parsePackageVersion,
-  runCmd,
-} from "@powerhousedao/shared/clis";
+import { debugArgs } from "@powerhousedao/shared/clis/args";
 import { ALL_POWERHOUSE_DEPENDENCIES } from "@powerhousedao/shared/constants";
-import chalk from "chalk";
 import {
   boolean,
   command,
@@ -18,10 +11,6 @@ import {
   run,
   string,
 } from "cmd-ts";
-import { detect } from "package-manager-detector/detect";
-import { readPackage } from "read-pkg";
-import { clean, valid } from "semver";
-import { writePackage } from "write-package";
 
 export const use = command({
   name: "use",
@@ -59,6 +48,12 @@ export const use = command({
       console.log({ args });
     }
     const tag = tagPositional ?? tagOption;
+    const {
+      handleMutuallyExclusiveOptions,
+      logVersionUpdate,
+      parsePackageVersion,
+      runCmd,
+    } = await import("@powerhousedao/shared/clis");
     handleMutuallyExclusiveOptions({ tag, version }, "versioning strategy");
 
     if (!tag && !version) {
@@ -66,6 +61,18 @@ export const use = command({
         "Please specify either a release tag or a version to use.",
       );
     }
+
+    const [
+      { default: chalk },
+      { readPackage },
+      { writePackage },
+      { clean, valid },
+    ] = await Promise.all([
+      import("chalk"),
+      import("read-pkg"),
+      import("write-package"),
+      import("semver"),
+    ]);
 
     if (version && !valid(clean(version))) {
       throw new Error(`❌ Invalid version: ${chalk.bold(version)}`);
@@ -150,6 +157,7 @@ export const use = command({
     );
 
     if (!skipInstall) {
+      const { detect } = await import("package-manager-detector/detect");
       const packageManager = await detect();
       if (!packageManager) {
         throw new Error(

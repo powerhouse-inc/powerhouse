@@ -1,16 +1,6 @@
-import {
-  debugArgs,
-  getTagFromVersion,
-  logVersionUpdate,
-  parsePackageVersion,
-  runCmd,
-} from "@powerhousedao/shared/clis";
+import { debugArgs } from "@powerhousedao/shared/clis/args";
 import { ALL_POWERHOUSE_DEPENDENCIES } from "@powerhousedao/shared/constants";
-import chalk from "chalk";
 import { boolean, command, flag, optional } from "cmd-ts";
-import { detect } from "package-manager-detector/detect";
-import { readPackage } from "read-pkg";
-import { writePackage } from "write-package";
 
 export const update = command({
   name: "update",
@@ -31,6 +21,17 @@ export const update = command({
       console.log({ args });
     }
     console.log(`\n▶️ Updating Powerhouse dependencies...\n`);
+    const [
+      { default: chalk },
+      { readPackage },
+      { writePackage },
+      { getTagFromVersion, logVersionUpdate, parsePackageVersion, runCmd },
+    ] = await Promise.all([
+      import("chalk"),
+      import("read-pkg"),
+      import("write-package"),
+      import("@powerhousedao/shared/clis"),
+    ]);
     const packageJson = await readPackage();
 
     if (packageJson.dependencies) {
@@ -105,6 +106,7 @@ export const update = command({
 
     if (skipInstall) return;
 
+    const { detect } = await import("package-manager-detector/detect");
     const packageManager = await detect();
 
     if (!packageManager) {

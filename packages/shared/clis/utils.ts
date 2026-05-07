@@ -1,4 +1,5 @@
-import { lt } from "semver";
+// Sub-path: this module loads on the cold path of every CLI invocation.
+import lt from "semver/functions/lt.js";
 import { MINIMUM_NODE_VERSION } from "./constants.js";
 
 export class NodeVersionError extends Error {

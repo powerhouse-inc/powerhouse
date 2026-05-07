@@ -10,13 +10,17 @@ import {
   optional,
   string,
 } from "cmd-ts";
-import { AGENTS } from "package-manager-detector";
+// Sub-path: avoids pulling the package-manager-detector runtime here,
+// which `oneOf(AGENTS)` below would force at module load.
+import type { Agent } from "package-manager-detector";
+import { AGENTS as _AGENTS } from "package-manager-detector/constants";
 import {
   DEFAULT_TIMEOUT,
   DRIVES_PRESERVE_STRATEGIES,
   LOG_LEVELS,
 } from "../constants.js";
 import { getConfig } from "../file-system/get-config.js";
+const AGENTS: Agent[] = _AGENTS;
 
 export const debugArgs = {
   debug: flag({

@@ -1,13 +1,12 @@
-import { serviceArgs, type ServiceAction } from "@powerhousedao/shared/clis";
+import { serviceArgs, type ServiceAction } from "@powerhousedao/shared/clis/args";
 import { command } from "cmd-ts";
 import { execSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { readPackageSync } from "read-pkg";
 
 export const service = command({
   name: "service",
-  description: `  
+  description: `
 The service command manages Powerhouse services, allowing you to start, stop, check status,
 and more. It provides a centralized way to control the lifecycle of services in your project.
 
@@ -17,17 +16,17 @@ This command:
 3. Provides detailed information about running services
 4. Uses PM2 under the hood for process management`,
   args: serviceArgs,
-  handler: (args) => {
+  handler: async (args) => {
     if (args.debug) {
       console.log(args);
     }
     const { action = "status" } = args;
-    manageService(action);
+    await manageService(action);
     process.exit(0);
   },
 });
 
-function manageService(action: ServiceAction) {
+async function manageService(action: ServiceAction) {
   try {
     const dirname = path.dirname(fileURLToPath(import.meta.url));
     const manageScriptPath = path.join(
@@ -46,6 +45,7 @@ function manageService(action: ServiceAction) {
     );
 
     // Read project name from package.json
+    const { readPackageSync } = await import("read-pkg");
     const packageJson = readPackageSync();
     const projectName = packageJson.name;
 

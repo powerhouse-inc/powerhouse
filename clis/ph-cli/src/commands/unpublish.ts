@@ -1,15 +1,6 @@
-import {
-  getPowerhouseProjectInfo,
-  unpublishArgs,
-} from "@powerhousedao/shared/clis";
-import {
-  checkNpmAuth,
-  npmUnpublish,
-  resolveRegistryUrl,
-} from "@powerhousedao/shared/registry";
+import { unpublishArgs } from "@powerhousedao/shared/clis/args";
 import { command } from "cmd-ts";
 import { createInterface } from "node:readline/promises";
-import { readPackageSync } from "read-pkg";
 
 export const unpublish = command({
   name: "unpublish",
@@ -33,18 +24,23 @@ Flags:
       console.log(args);
     }
 
+    const { getPowerhouseProjectInfo } =
+      await import("@powerhousedao/shared/clis");
     const { projectPath } = await getPowerhouseProjectInfo();
 
     if (!projectPath) {
       throw new Error("Could not find project path.");
     }
 
+    const { checkNpmAuth, npmUnpublish, resolveRegistryUrl } =
+      await import("@powerhousedao/shared/registry");
+
     const registryUrl = resolveRegistryUrl({
       registry: args.registry,
       projectPath,
     });
 
-    const spec = resolveSpec(args.spec, projectPath);
+    const spec = await resolveSpec(args.spec, projectPath);
     if (!spec) {
       console.error(
         "No package spec provided and could not read name/version from package.json.",
@@ -101,12 +97,13 @@ Flags:
   },
 });
 
-function resolveSpec(
+async function resolveSpec(
   explicit: string | undefined,
   projectPath: string,
-): string | null {
+): Promise<string | null> {
   if (explicit) return explicit;
   try {
+    const { readPackageSync } = await import("read-pkg");
     const pkg = readPackageSync({ cwd: projectPath });
     if (!pkg.name) return null;
     return pkg.version ? `${pkg.name}@${pkg.version}` : pkg.name;

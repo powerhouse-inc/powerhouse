@@ -1,11 +1,5 @@
 import { cloneRepository } from "@powerhousedao/codegen";
-import {
-  debugArgs,
-  handleMutuallyExclusiveOptions,
-  packageManagerArgs,
-  parsePackageManager,
-  runCmd,
-} from "@powerhousedao/shared/clis";
+import { debugArgs, packageManagerArgs } from "@powerhousedao/shared/clis/args";
 import { command, option, optional, positional, string } from "cmd-ts";
 import { getPackageManagerFromLockfile } from "../utils/package-manager.js";
 import { getPackageDocument } from "../utils/validate-remote-drive-checkout.js";
@@ -39,6 +33,8 @@ export const checkout = command({
     if (!remoteDrive) {
       throw new Error("Please specify a remote drive URL to checkout from");
     }
+    const { handleMutuallyExclusiveOptions, parsePackageManager, runCmd } =
+      await import("@powerhousedao/shared/clis");
     handleMutuallyExclusiveOptions(packageManagerArgs, "package managers");
 
     console.log("Checking out project from remote drive...");

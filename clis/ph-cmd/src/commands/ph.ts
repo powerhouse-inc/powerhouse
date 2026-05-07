@@ -1,8 +1,6 @@
-import {
-  getPhCmdVersionInfo,
-  phCliHelpCommands,
-} from "@powerhousedao/shared/clis";
+import { phCliHelpCommands } from "@powerhousedao/shared/clis/args";
 import { subcommands } from "cmd-ts";
+import { getPhCmdVersionInfo } from "@powerhousedao/shared/clis";
 import { init } from "./init.js";
 import { setupGlobals } from "./setup-globals.js";
 import { update } from "./update.js";

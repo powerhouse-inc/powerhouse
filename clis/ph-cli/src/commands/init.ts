@@ -1,4 +1,4 @@
-import { initArgs } from "@powerhousedao/shared/clis";
+import { initArgs } from "@powerhousedao/shared/clis/args";
 import { command } from "cmd-ts";
 
 export const init = command({

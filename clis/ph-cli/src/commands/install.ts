@@ -1,13 +1,6 @@
-import {
-  getPowerhouseProjectInfo,
-  installArgs,
-  makeDependenciesWithVersions,
-} from "@powerhousedao/shared/clis";
-import { resolveRegistryUrl } from "@powerhousedao/shared/registry";
+import { installArgs } from "@powerhousedao/shared/clis/args";
 import { execSync } from "child_process";
 import { command } from "cmd-ts";
-import { resolveCommand } from "package-manager-detector";
-import { updateConfigFile, updateStylesFile } from "../utils.js";
 
 export const install = command({
   name: "install",
@@ -31,6 +24,9 @@ Resolution order for the registry URL:
       console.log(args);
     }
 
+    const { getPowerhouseProjectInfo, makeDependenciesWithVersions } =
+      await import("@powerhousedao/shared/clis");
+
     const {
       projectPath,
       localProjectPath,
@@ -43,6 +39,8 @@ Resolution order for the registry URL:
       throw new Error(`Could not find project path to install from.`);
     }
 
+    const { resolveRegistryUrl } =
+      await import("@powerhousedao/shared/registry");
     const registryUrl = resolveRegistryUrl({
       registry: args.registry,
       projectPath,
@@ -94,6 +92,7 @@ Resolution order for the registry URL:
           (scope) => `--${scope}:registry=${registryUrl}`,
         );
 
+        const { resolveCommand } = await import("package-manager-detector");
         const resolved = resolveCommand(packageManager, "add", [
           ...specs,
           ...scopeRegistryArgs,
@@ -122,6 +121,8 @@ Resolution order for the registry URL:
         throw error;
       }
     }
+
+    const { updateConfigFile, updateStylesFile } = await import("../utils.js");
 
     try {
       console.log("⚙️ Updating powerhouse config file...");
