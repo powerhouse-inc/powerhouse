@@ -1,3 +1,13 @@
+## 6.0.0-dev.232 (2026-05-07)
+
+### 🩹 Fixes
+
+- opt out of pnpm 11 minimum-release-age; fix docker/boilerplate strict-dep-builds ([75d31f3c6](https://github.com/powerhouse-inc/powerhouse/commit/75d31f3c6))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.231 (2026-05-07)
 
 ### 🩹 Fixes
