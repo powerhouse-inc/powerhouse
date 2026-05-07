@@ -1,3 +1,13 @@
+## 6.0.0-dev.228 (2026-05-07)
+
+### 🚀 Features
+
+- **connect,reactor-api:** set git hash at build time and display with url ([99b5233c7](https://github.com/powerhouse-inc/powerhouse/commit/99b5233c7))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.227 (2026-05-07)
 
 This was a version bump only for ph-cmd to align it with other projects, there were no code changes.
