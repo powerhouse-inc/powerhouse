@@ -1,31 +1,33 @@
+/**
+ * WARNING: DO NOT EDIT
+ * This file is auto-generated and updated by codegen
+ */
 import type {
   IProcessorHostModule,
-  ProcessorFactory,
   ProcessorRecord,
 } from "@powerhousedao/reactor-browser";
-import type { PHDocumentHeader } from "@powerhousedao/shared/document-model";
-import { codegenProcessorFactory } from "./codegen/factory.js";
-import { vetraReadModelProcessorFactory } from "./vetra-read-model/factory.js";
+import type { PHDocumentHeader } from "document-model";
 
-/**
- * This file aggregates all processor factories for the new reactor
- */
+export const processorFactory = async (module: IProcessorHostModule) => {
+  const { processorFactoryBuilders } =
+    module.processorApp === "connect"
+      ? await import("./connect.js")
+      : await import("./switchboard.js");
 
-export const processorFactory = (module: IProcessorHostModule) => {
-  // Initialize all processor factories once with the module
-  const factories: Array<ProcessorFactory> = [];
-
-  // Add all processor factories
-  factories.push(vetraReadModelProcessorFactory(module));
-  factories.push(codegenProcessorFactory(module));
+  const factories = await Promise.all(
+    processorFactoryBuilders.map(
+      async (buildFactory) => await buildFactory(module),
+    ),
+  );
 
   // Return the inner function that will be called for each drive
-  return async (driveHeader: PHDocumentHeader) => {
+  return async (driveHeader: PHDocumentHeader): Promise<ProcessorRecord[]> => {
     const processors: ProcessorRecord[] = [];
 
     // Call each cached factory with the driveHeader
     for (const factory of factories) {
-      processors.push(...(await factory(driveHeader, module.processorApp)));
+      const factoryProcessors = await factory(driveHeader, module.processorApp);
+      processors.push(...factoryProcessors);
     }
 
     return processors;

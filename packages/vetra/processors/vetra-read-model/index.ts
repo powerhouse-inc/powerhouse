@@ -3,9 +3,11 @@ import type {
   OperationWithContext,
 } from "@powerhousedao/reactor-browser";
 import type { Kysely } from "kysely";
-import type { VetraPackageState } from "../../document-models/vetra-package/gen/schema/types.js";
+import type { VetraPackageState } from "document-models/vetra-package";
 import { logger } from "../codegen/logger.js";
 import { type DB } from "./schema.js";
+
+export { vetraReadModelFactoryBuilder } from "./factory.js";
 
 interface VetraPackageGlobalState extends VetraPackageState {}
 

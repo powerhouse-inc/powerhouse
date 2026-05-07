@@ -3,6 +3,7 @@ import type { VetraProcessorConfigType } from "@powerhousedao/config";
 import { VETRA_PROCESSOR_CONFIG_KEY } from "@powerhousedao/config";
 import type {
   IProcessorHostModule,
+  ProcessorFactoryBuilder,
   ProcessorRecord,
 } from "@powerhousedao/reactor-browser";
 import type { PHDocumentHeader } from "@powerhousedao/shared/document-model";
@@ -38,7 +39,7 @@ function isDriveVetra(
   return matchesPattern(driveHeader.slug) || matchesPattern(driveHeader.id);
 }
 
-export const codegenProcessorFactory =
+export const codegenFactoryBuilder: ProcessorFactoryBuilder =
   (module: IProcessorHostModule) =>
   (driveHeader: PHDocumentHeader): ProcessorRecord[] => {
     const config = getConfig();

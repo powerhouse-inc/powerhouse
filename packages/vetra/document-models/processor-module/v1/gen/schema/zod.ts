@@ -1,0 +1,110 @@
+/* eslint-disable @typescript-eslint/no-empty-object-type */
+/* eslint-disable @typescript-eslint/no-unused-vars */
+import * as z from "zod";
+import type {
+  AddDocumentTypeInput,
+  AddProcessorAppInput,
+  DocumentTypeItem,
+  ProcessorModuleState,
+  RemoveDocumentTypeInput,
+  RemoveProcessorAppInput,
+  SetProcessorNameInput,
+  SetProcessorStatusInput,
+  SetProcessorTypeInput,
+  StatusType,
+} from "./types.js";
+
+type Properties<T> = Required<{
+  [K in keyof T]: z.ZodType<T[K]>;
+}>;
+
+type definedNonNullAny = {};
+
+export const isDefinedNonNullAny = (v: any): v is definedNonNullAny =>
+  v !== undefined && v !== null;
+
+export const definedNonNullAnySchema = z
+  .any()
+  .refine((v) => isDefinedNonNullAny(v));
+
+export const StatusTypeSchema = z.enum(["CONFIRMED", "DRAFT"]);
+
+export function AddDocumentTypeInputSchema(): z.ZodObject<
+  Properties<AddDocumentTypeInput>
+> {
+  return z.object({
+    documentType: z.string(),
+    id: z.string(),
+  });
+}
+
+export function AddProcessorAppInputSchema(): z.ZodObject<
+  Properties<AddProcessorAppInput>
+> {
+  return z.object({
+    processorApp: z.string(),
+  });
+}
+
+export function DocumentTypeItemSchema(): z.ZodObject<
+  Properties<DocumentTypeItem>
+> {
+  return z.object({
+    __typename: z.literal("DocumentTypeItem").optional(),
+    documentType: z.string(),
+    id: z.string(),
+  });
+}
+
+export function ProcessorModuleStateSchema(): z.ZodObject<
+  Properties<ProcessorModuleState>
+> {
+  return z.object({
+    __typename: z.literal("ProcessorModuleState").optional(),
+    documentTypes: z.array(z.lazy(() => DocumentTypeItemSchema())),
+    name: z.string(),
+    processorApps: z.array(z.string()),
+    status: StatusTypeSchema,
+    type: z.string(),
+  });
+}
+
+export function RemoveDocumentTypeInputSchema(): z.ZodObject<
+  Properties<RemoveDocumentTypeInput>
+> {
+  return z.object({
+    id: z.string(),
+  });
+}
+
+export function RemoveProcessorAppInputSchema(): z.ZodObject<
+  Properties<RemoveProcessorAppInput>
+> {
+  return z.object({
+    processorApp: z.string(),
+  });
+}
+
+export function SetProcessorNameInputSchema(): z.ZodObject<
+  Properties<SetProcessorNameInput>
+> {
+  return z.object({
+    name: z.string(),
+  });
+}
+
+export function SetProcessorStatusInputSchema(): z.ZodObject<
+  Properties<SetProcessorStatusInput>
+> {
+  return z.object({
+    status: StatusTypeSchema,
+  });
+}
+
+export function SetProcessorTypeInputSchema(): z.ZodObject<
+  Properties<SetProcessorTypeInput>
+> {
+  return z.object({
+    type: z.string(),
+  });
+}

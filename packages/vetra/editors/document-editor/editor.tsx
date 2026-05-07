@@ -1,7 +1,7 @@
 import { DocumentToolbar } from "@powerhousedao/design-system/connect";
 import { useSetPHDocumentEditorConfig } from "@powerhousedao/reactor-browser";
 import { useCallback } from "react";
-import { useSelectedDocumentEditorDocument } from "../../document-models/document-editor/hooks.js";
+import { useSelectedDocumentEditorDocument } from "document-models/document-editor";
 import {
   addDocumentType,
   removeDocumentType,
@@ -9,7 +9,7 @@ import {
   setEditorStatus,
   type AddDocumentTypeInput,
   type RemoveDocumentTypeInput,
-} from "../../document-models/document-editor/index.js";
+} from "document-models/document-editor";
 import { DocumentEditorForm } from "./components/DocumentEditorForm.js";
 import { editorConfig } from "./config.js";
 

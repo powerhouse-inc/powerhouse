@@ -1,0 +1,156 @@
+import type { DocumentModelGlobalState } from "document-model";
+
+export const documentModel: DocumentModelGlobalState = {
+  author: {
+    name: "Powerhouse",
+    website: "https://powerhouse.inc",
+  },
+  description:
+    "This document model defines the schema for PH package information.",
+  extension: ".phdm",
+  id: "powerhouse/package",
+  name: "Vetra Package",
+  specifications: [
+    {
+      changeLog: [],
+      modules: [
+        {
+          description: "",
+          id: "a6156f32-8120-43a5-be8b-51c7feaa3460",
+          name: "base_operations",
+          operations: [
+            {
+              description: "",
+              errors: [],
+              examples: [],
+              id: "33f2eab7-9e07-497f-a4e6-53e50968c3c9",
+              name: "SET_PACKAGE_NAME",
+              reducer: "",
+              schema: "input SetPackageNameInput {\n  name: String!\n}",
+              template: "",
+              scope: "global",
+            },
+            {
+              description: "",
+              errors: [],
+              examples: [],
+              id: "a07bee80-c2a8-40d7-891b-822ee298d7d9",
+              name: "SET_PACKAGE_DESCRIPTION",
+              reducer: "",
+              schema:
+                "input SetPackageDescriptionInput {\n  description: String!\n}",
+              template: "",
+              scope: "global",
+            },
+            {
+              description: "",
+              errors: [],
+              examples: [],
+              id: "f3ad82f8-580a-4c6e-b930-e203cda998bb",
+              name: "SET_PACKAGE_CATEGORY",
+              reducer: "",
+              schema: "input SetPackageCategoryInput {\n  category: String!\n}",
+              template: "",
+              scope: "global",
+            },
+            {
+              description: "",
+              errors: [],
+              examples: [],
+              id: "67f43579-ce98-47e6-bf48-27c0f44818b9",
+              name: "SET_PACKAGE_AUTHOR",
+              reducer: "",
+              schema:
+                "input SetPackageAuthorInput {\n  name: OID\n  website: URL\n}",
+              template: "",
+              scope: "global",
+            },
+            {
+              description: "",
+              errors: [],
+              examples: [],
+              id: "94ba44c4-9627-405e-9ea2-34e9da1c283a",
+              name: "SET_PACKAGE_AUTHOR_NAME",
+              reducer: "",
+              schema: "input SetPackageAuthorNameInput {\n  name: String!\n}",
+              template: "",
+              scope: "global",
+            },
+            {
+              description: "",
+              errors: [],
+              examples: [],
+              id: "3d5c08df-6c14-480b-915b-875941979fd0",
+              name: "SET_PACKAGE_AUTHOR_WEBSITE",
+              reducer: "",
+              schema:
+                "input SetPackageAuthorWebsiteInput {\n  website: URL!\n}",
+              template: "",
+              scope: "global",
+            },
+            {
+              description: "",
+              errors: [],
+              examples: [],
+              id: "ed95f841-6fd0-4552-898d-e915599b7495",
+              name: "ADD_PACKAGE_KEYWORD",
+              reducer: "",
+              schema:
+                "input AddPackageKeywordInput {\n  id: String!\n  label: String!\n}",
+              template: "",
+              scope: "global",
+            },
+            {
+              description: "",
+              errors: [],
+              examples: [],
+              id: "83c4db24-bd2f-424d-9e26-751580d6307b",
+              name: "REMOVE_PACKAGE_KEYWORD",
+              reducer: "",
+              schema: "input RemovePackageKeywordInput {\n  id: String!\n}",
+              template: "",
+              scope: "global",
+            },
+            {
+              description: "",
+              errors: [],
+              examples: [],
+              id: "83a90530-8535-4ea7-ab53-7865532398f7",
+              name: "SET_PACKAGE_GITHUB_URL",
+              reducer: "",
+              schema: "input SetPackageGithubUrlInput {\n  url: URL!\n}",
+              template: "",
+              scope: "global",
+            },
+            {
+              description: "",
+              errors: [],
+              examples: [],
+              id: "e789859a-01ee-4b60-8e7e-a3ad928a26d1",
+              name: "SET_PACKAGE_NPM_URL",
+              reducer: "",
+              schema: "input SetPackageNpmUrlInput {\n  url: URL!\n}",
+              template: "",
+              scope: "global",
+            },
+          ],
+        },
+      ],
+      state: {
+        global: {
+          examples: [],
+          initialValue:
+            '{\n  "name": null,\n  "description": null,\n  "category": null,\n  "author": {\n    "name": null,\n    "website": null\n  },\n  "keywords": [],\n  "githubUrl": null,\n  "npmUrl": null\n}',
+          schema:
+            "type VetraPackageState {\n  name: String\n  description: String\n  category: String\n  author: Author!\n  keywords: [Keyword!]!\n  githubUrl: URL\n  npmUrl: URL\n}\n\ntype Author {\n  name: String\n  website: URL\n}\n\ntype Keyword {\n  id: OID!\n  label: String!\n}",
+        },
+        local: {
+          examples: [],
+          initialValue: "",
+          schema: "",
+        },
+      },
+      version: 1,
+    },
+  ],
+};

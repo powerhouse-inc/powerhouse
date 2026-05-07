@@ -13,8 +13,8 @@ import {
   setProcessorName,
   setProcessorStatus,
   setProcessorType,
-} from "../../document-models/processor-module/index.js";
-import { useSelectedProcessorModuleDocument } from "../hooks/useVetraDocument.js";
+  useSelectedProcessorModuleDocument,
+} from "document-models/processor-module";
 import { ProcessorEditorForm } from "./components/ProcessorEditorForm.js";
 import { editorConfig } from "./config.js";
 

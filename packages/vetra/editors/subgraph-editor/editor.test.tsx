@@ -1,12 +1,17 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
+import { useSelectedSubgraphModuleDocument } from "document-models/subgraph-module";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useSelectedSubgraphModuleDocument } from "../hooks/useVetraDocument.js";
 import Editor from "./editor.js";
 
-vi.mock("../hooks/useVetraDocument.js", () => ({
-  useSelectedSubgraphModuleDocument: vi.fn(),
-}));
+vi.mock("document-models/subgraph-module", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("document-models/subgraph-module")>();
+  return {
+    ...actual,
+    useSelectedSubgraphModuleDocument: vi.fn(),
+  };
+});
 
 vi.mock("@powerhousedao/design-system/connect", () => ({
   DocumentToolbar: () => null,

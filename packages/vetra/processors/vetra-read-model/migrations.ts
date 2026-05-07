@@ -1,10 +1,13 @@
 import type { IRelationalDb } from "@powerhousedao/shared/processors";
+import type { ColumnDefinitionBuilder } from "kysely";
 
 export async function up(db: IRelationalDb<any>): Promise<void> {
   // Create vetra_package table to store VetraPackage document state
   await db.schema
     .createTable("vetra_package")
-    .addColumn("document_id", "varchar(255)", (col) => col.primaryKey()) // VetraPackage state fields
+    .addColumn("document_id", "varchar(255)", (col: ColumnDefinitionBuilder) =>
+      col.primaryKey(),
+    ) // VetraPackage state fields
     .addColumn("name", "varchar(255)")
     .addColumn("description", "text")
     .addColumn("category", "varchar(255)")
@@ -15,15 +18,25 @@ export async function up(db: IRelationalDb<any>): Promise<void> {
     .addColumn("npm_url", "varchar(512)")
     .addColumn("drive_id", "varchar(255)")
     // Document metadata
-    .addColumn("last_operation_index", "integer", (col) => col.notNull())
-    .addColumn("last_operation_hash", "varchar(255)", (col) => col.notNull())
-    .addColumn("last_operation_timestamp", "timestamptz", (col) =>
-      col.notNull(),
+    .addColumn(
+      "last_operation_index",
+      "integer",
+      (col: ColumnDefinitionBuilder) => col.notNull(),
     )
-    .addColumn("created_at", "timestamptz", (col) =>
+    .addColumn(
+      "last_operation_hash",
+      "varchar(255)",
+      (col: ColumnDefinitionBuilder) => col.notNull(),
+    )
+    .addColumn(
+      "last_operation_timestamp",
+      "timestamptz",
+      (col: ColumnDefinitionBuilder) => col.notNull(),
+    )
+    .addColumn("created_at", "timestamptz", (col: ColumnDefinitionBuilder) =>
       col.notNull().defaultTo("now()"),
     )
-    .addColumn("updated_at", "timestamptz", (col) =>
+    .addColumn("updated_at", "timestamptz", (col: ColumnDefinitionBuilder) =>
       col.notNull().defaultTo("now()"),
     )
     .ifNotExists()

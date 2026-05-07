@@ -1,67 +1,101 @@
 {
-  "name": "@powerhousedao/vetra",
-  "description": "Vetra package",
-  "category": "",
-  "publisher": {
-    "name": "@powerhousedao",
-    "url": "https://github.com/powerhouse-inc/powerhouse/tree/main/packages/vetra"
-  },
-  "documentModels": [
-    {
-      "id": "powerhouse/package",
-      "name": "Vetra Package"
-    },
-    {
-      "id": "powerhouse/document-editor",
-      "name": "Document Editor"
-    },
-    {
-      "id": "powerhouse/subgraph-module",
-      "name": "Subgraph Module"
-    },
-    {
-      "id": "powerhouse/processor",
-      "name": "Processor Module"
-    },
-    {
-      "id": "powerhouse/app",
-      "name": "App Module"
-    }
-  ],
-  "editors": [
-    {
-      "id": "vetra-package-editor",
-      "name": "Vetra Package Editor",
-      "documentTypes": ["powerhouse/package"]
-    },
-    {
-      "id": "document-editor-editor",
-      "name": "Document Editor",
-      "documentTypes": ["powerhouse/document-editor"]
-    },
-    {
-      "id": "subgraph-module-editor",
-      "name": "Subgraph Module Editor",
-      "documentTypes": ["powerhouse/subgraph-module"]
-    },
-    {
-      "id": "processor-module-editor",
-      "name": "Processor Module Editor",
-      "documentTypes": ["powerhouse/processor"]
-    },
-    {
-      "id": "app-module-editor",
-      "name": "App Module Editor",
-      "documentTypes": ["powerhouse/app"]
-    }
-  ],
-  "apps": [
-    {
-      "id": "vetra-drive-app",
-      "name": "Vetra Drive App",
-      "app": "vetra-drive-app"
-    }
-  ],
-  "subgraphs": [],
-  "importScripts": []
+	"name": "@powerhousedao/vetra",
+	"description": "Vetra package",
+	"category": "",
+	"publisher": {
+		"name": "@powerhousedao",
+		"url": "https://github.com/powerhouse-inc/powerhouse/tree/main/packages/vetra"
+	},
+	"documentModels": [
+		{
+			"id": "powerhouse/package",
+			"name": "Vetra Package"
+		},
+		{
+			"id": "powerhouse/document-editor",
+			"name": "Document Editor"
+		},
+		{
+			"id": "powerhouse/subgraph-module",
+			"name": "Subgraph Module"
+		},
+		{
+			"id": "powerhouse/processor",
+			"name": "Processor Module"
+		},
+		{
+			"id": "powerhouse/app",
+			"name": "App Module"
+		},
+		{
+			"id": "powerhouse/subgraph",
+			"name": "Subgraph Module"
+		}
+	],
+	"apps": [
+		{
+			"id": "vetra-drive-app",
+			"name": "Vetra Drive App"
+		}
+	],
+	"editors": [
+		{
+			"id": "vetra-package-editor",
+			"name": "Vetra Package Editor",
+			"documentTypes": [
+				"powerhouse/package"
+			]
+		},
+		{
+			"id": "document-editor-editor",
+			"name": "Document Editor",
+			"documentTypes": [
+				"powerhouse/document-editor"
+			]
+		},
+		{
+			"id": "subgraph-module-editor",
+			"name": "Subgraph Module Editor",
+			"documentTypes": [
+				"powerhouse/subgraph-module"
+			]
+		},
+		{
+			"id": "processor-module-editor",
+			"name": "Processor Module Editor",
+			"documentTypes": [
+				"powerhouse/processor"
+			]
+		},
+		{
+			"id": "app-module-editor",
+			"name": "App Module Editor",
+			"documentTypes": [
+				"powerhouse/app"
+			]
+		},
+		{
+			"id": "app-editor",
+			"name": "AppEditor",
+			"documentTypes": [
+				"powerhouse/app"
+			]
+		}
+	],
+	"processors": [
+		{
+			"id": "codegen",
+			"name": "codegen"
+		},
+		{
+			"id": "vetra-read-model",
+			"name": "vetra-read-model"
+		},
+		{
+			"name": "/Users/acaldas/dev/powerhouse/monorepo/packages/vetra/processors",
+			"id": "users-acaldas-dev-powerhouse-monorepo-packages-vetra-processors"
+		}
+	],
+	"subgraphs": [],
+	"config": []
 }

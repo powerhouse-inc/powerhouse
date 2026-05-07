@@ -1,7 +1,7 @@
 import { setName } from "@powerhousedao/shared/document-model";
 import type { FormEventHandler, MouseEventHandler } from "react";
 import { useState } from "react";
-import { useSelectedAppModuleDocument } from "@powerhousedao/vetra/document-models/app-module";
+import { useSelectedAppModuleDocument } from "document-models/app-module";
 
 /** Displays the name of the selected AppModule document and allows editing it */
 export function EditAppModuleName() {

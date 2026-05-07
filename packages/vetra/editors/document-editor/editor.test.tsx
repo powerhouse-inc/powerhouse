@@ -1,12 +1,18 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useSelectedDocumentEditorDocument } from "../../document-models/document-editor/hooks.js";
+import { useSelectedDocumentEditorDocument } from "document-models/document-editor";
 import Editor from "./editor.js";
 
-vi.mock("../../document-models/document-editor/hooks.js", () => ({
-  useSelectedDocumentEditorDocument: vi.fn(),
-}));
+vi.mock("document-models/document-editor", async () => {
+  const actual = await vi.importActual<
+    typeof import("document-models/document-editor")
+  >("document-models/document-editor");
+  return {
+    ...actual,
+    useSelectedDocumentEditorDocument: vi.fn(),
+  };
+});
 
 vi.mock("../hooks/useAvailableDocumentTypes.js", () => ({
   useAvailableDocumentTypes: vi.fn(() => [

@@ -2,7 +2,7 @@ import { generateApp } from "@powerhousedao/codegen";
 import type {
   AppModuleGlobalState,
   AppModulePHState,
-} from "@powerhousedao/vetra/document-models/app-module";
+} from "document-models/app-module";
 import { kebabCase } from "change-case";
 import { logger } from "../../logger.js";
 import { BaseDocumentGen } from "../base-document-gen.js";

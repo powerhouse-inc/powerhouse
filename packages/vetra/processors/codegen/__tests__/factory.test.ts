@@ -2,7 +2,7 @@ import { VETRA_PROCESSOR_CONFIG_KEY } from "@powerhousedao/config";
 import type { IProcessorHostModule } from "@powerhousedao/reactor-browser";
 import type { PHDocumentHeader } from "@powerhousedao/shared/document-model";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { codegenProcessorFactory } from "../factory.js";
+import { codegenFactoryBuilder } from "../factory.js";
 
 // Mock CodegenProcessor to avoid file operations
 vi.mock("../index.js", () => ({
@@ -30,7 +30,7 @@ describe("Codegen Processor Factory - Drive Filtering", () => {
         slug: "vetra",
       } as PHDocumentHeader;
 
-      const result = codegenProcessorFactory(mockModule)(driveHeader);
+      const result = codegenFactoryBuilder(mockModule)(driveHeader);
 
       expect(result).toHaveLength(1);
       expect(result[0]).toHaveProperty("processor");
@@ -43,7 +43,7 @@ describe("Codegen Processor Factory - Drive Filtering", () => {
         slug: "other-slug",
       } as PHDocumentHeader;
 
-      const result = codegenProcessorFactory(mockModule)(driveHeader);
+      const result = codegenFactoryBuilder(mockModule)(driveHeader);
 
       expect(result).toHaveLength(1);
       expect(result[0]).toHaveProperty("processor");
@@ -55,7 +55,7 @@ describe("Codegen Processor Factory - Drive Filtering", () => {
         slug: "vetra-dev",
       } as PHDocumentHeader;
 
-      const result = codegenProcessorFactory(mockModule)(driveHeader);
+      const result = codegenFactoryBuilder(mockModule)(driveHeader);
 
       expect(result).toHaveLength(1);
       expect(result[0]).toHaveProperty("processor");
@@ -67,7 +67,7 @@ describe("Codegen Processor Factory - Drive Filtering", () => {
         slug: "other-slug",
       } as PHDocumentHeader;
 
-      const result = codegenProcessorFactory(mockModule)(driveHeader);
+      const result = codegenFactoryBuilder(mockModule)(driveHeader);
 
       expect(result).toHaveLength(1);
       expect(result[0]).toHaveProperty("processor");
@@ -79,7 +79,7 @@ describe("Codegen Processor Factory - Drive Filtering", () => {
         slug: "other-drive",
       } as PHDocumentHeader;
 
-      const result = codegenProcessorFactory(mockModule)(driveHeader);
+      const result = codegenFactoryBuilder(mockModule)(driveHeader);
 
       expect(result).toHaveLength(0);
     });
@@ -90,7 +90,7 @@ describe("Codegen Processor Factory - Drive Filtering", () => {
         slug: "my-vetra-drive",
       } as PHDocumentHeader;
 
-      const result = codegenProcessorFactory(mockModule)(driveHeader);
+      const result = codegenFactoryBuilder(mockModule)(driveHeader);
 
       expect(result).toHaveLength(0);
     });
@@ -103,7 +103,7 @@ describe("Codegen Processor Factory - Drive Filtering", () => {
         slug: "VETRA",
       } as PHDocumentHeader;
 
-      const result = codegenProcessorFactory(mockModule)(driveHeader);
+      const result = codegenFactoryBuilder(mockModule)(driveHeader);
 
       expect(result).toHaveLength(1);
     });
@@ -114,7 +114,7 @@ describe("Codegen Processor Factory - Drive Filtering", () => {
         slug: "Vetra",
       } as PHDocumentHeader;
 
-      const result = codegenProcessorFactory(mockModule)(driveHeader);
+      const result = codegenFactoryBuilder(mockModule)(driveHeader);
 
       expect(result).toHaveLength(1);
     });
@@ -125,7 +125,7 @@ describe("Codegen Processor Factory - Drive Filtering", () => {
         slug: "VETRA-DEV",
       } as PHDocumentHeader;
 
-      const result = codegenProcessorFactory(mockModule)(driveHeader);
+      const result = codegenFactoryBuilder(mockModule)(driveHeader);
 
       expect(result).toHaveLength(1);
     });
@@ -136,7 +136,7 @@ describe("Codegen Processor Factory - Drive Filtering", () => {
         slug: "other-slug",
       } as PHDocumentHeader;
 
-      const result = codegenProcessorFactory(mockModule)(driveHeader);
+      const result = codegenFactoryBuilder(mockModule)(driveHeader);
 
       expect(result).toHaveLength(1);
     });
@@ -153,7 +153,7 @@ describe("Codegen Processor Factory - Drive Filtering", () => {
         slug: "my-custom-drive",
       } as PHDocumentHeader;
 
-      const result = codegenProcessorFactory(mockModule)(driveHeader);
+      const result = codegenFactoryBuilder(mockModule)(driveHeader);
 
       expect(result).toHaveLength(1);
     });
@@ -168,7 +168,7 @@ describe("Codegen Processor Factory - Drive Filtering", () => {
         slug: "other-slug",
       } as PHDocumentHeader;
 
-      const result = codegenProcessorFactory(mockModule)(driveHeader);
+      const result = codegenFactoryBuilder(mockModule)(driveHeader);
 
       expect(result).toHaveLength(1);
     });
@@ -183,7 +183,7 @@ describe("Codegen Processor Factory - Drive Filtering", () => {
         slug: "vetra",
       } as PHDocumentHeader;
 
-      const result = codegenProcessorFactory(mockModule)(driveHeader);
+      const result = codegenFactoryBuilder(mockModule)(driveHeader);
 
       // Should be rejected because explicit driveId requires exact match
       expect(result).toHaveLength(0);
@@ -199,7 +199,7 @@ describe("Codegen Processor Factory - Drive Filtering", () => {
         slug: "other-slug",
       } as PHDocumentHeader;
 
-      const result = codegenProcessorFactory(mockModule)(driveHeader);
+      const result = codegenFactoryBuilder(mockModule)(driveHeader);
 
       expect(result).toHaveLength(0);
     });
@@ -212,7 +212,7 @@ describe("Codegen Processor Factory - Drive Filtering", () => {
         slug: "vetra",
       } as PHDocumentHeader;
 
-      const result = codegenProcessorFactory(mockModule)(driveHeader);
+      const result = codegenFactoryBuilder(mockModule)(driveHeader);
 
       expect(result).toHaveLength(1);
       expect(result[0].filter).toEqual({
@@ -240,7 +240,7 @@ describe("Codegen Processor Factory - Drive Filtering", () => {
         slug: "vetra",
       } as PHDocumentHeader;
 
-      const result = codegenProcessorFactory(mockModule)(driveHeader);
+      const result = codegenFactoryBuilder(mockModule)(driveHeader);
 
       expect(result).toHaveLength(1);
       // Processor is created with interactive: true (verified by mock being called)

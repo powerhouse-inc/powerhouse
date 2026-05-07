@@ -1,5 +1,6 @@
 import type {
   IProcessorHostModule,
+  ProcessorFactoryBuilder,
   ProcessorRecord,
 } from "@powerhousedao/reactor-browser";
 import type { PHDocumentHeader } from "@powerhousedao/shared/document-model";
@@ -7,7 +8,7 @@ import { VetraReadModelProcessor } from "./index.js";
 import { up } from "./migrations.js";
 import type { DB } from "./schema.js";
 
-export const vetraReadModelProcessorFactory =
+export const vetraReadModelFactoryBuilder: ProcessorFactoryBuilder =
   (module: IProcessorHostModule) =>
   async (driveHeader: PHDocumentHeader): Promise<ProcessorRecord[]> => {
     // Create namespace (same as legacy - all vetra packages share one namespace)

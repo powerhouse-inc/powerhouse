@@ -3,7 +3,7 @@ import { kebabCase } from "change-case";
 import type {
   DocumentEditorPHState,
   DocumentEditorState,
-} from "../../../../document-models/document-editor/index.js";
+} from "document-models/document-editor";
 import { logger } from "../../logger.js";
 import { BaseDocumentGen } from "../base-document-gen.js";
 import type { CodegenInput } from "../types.js";

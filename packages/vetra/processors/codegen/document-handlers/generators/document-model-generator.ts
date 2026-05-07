@@ -51,7 +51,7 @@ export class DocumentModelGenerator extends BaseDocumentGen {
     const validationResult = validateDocumentModelState(globalState);
     if (!validationResult.isValid) {
       const errorList = validationResult.errors
-        .map((error) => `  - ${error}`)
+        .map((error: string) => `  - ${error}`)
         .join("\n");
       logger.info(
         `⚠️  Skipped code generation for '${globalState.name || input.documentId}' due to validation errors:\n${errorList}`,

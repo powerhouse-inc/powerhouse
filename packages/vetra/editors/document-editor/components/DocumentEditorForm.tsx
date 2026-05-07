@@ -3,7 +3,7 @@ import type {
   AddDocumentTypeInput,
   DocumentTypeItem,
   RemoveDocumentTypeInput,
-} from "../../../document-models/document-editor/index.js";
+} from "document-models/document-editor";
 import { StatusPill } from "../../components/index.js";
 import { useAvailableDocumentTypes, useDebounce } from "../../hooks/index.js";
 

@@ -1,20 +1,19 @@
-import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
+import tsconfigPaths from "vite-tsconfig-paths";
 
 export default defineConfig({
   test: {
-    include: [
-      "test/**/*.test.ts",
-      "test/**/*.test.tsx",
-      "document-models/**/*.test.ts",
-      "editors/**/*.test.tsx",
-      "processors/**/*.test.ts",
-      "subgraphs/**/*.test.ts",
-    ],
     globals: true,
-    environment: "happy-dom",
-    setupFiles: ["./setupTests.ts"],
-    passWithNoTests: true,
+    coverage: {
+      provider: "v8",
+      include: ["document-models/**/src/reducers/**"],
+      thresholds: {
+        lines: 95,
+        branches: 95,
+        functions: 95,
+        statements: 95,
+      },
+    },
   },
-  plugins: [react()],
+  plugins: [tsconfigPaths()],
 });

@@ -9,9 +9,9 @@ import {
   setAppStatus,
   setDocumentTypes,
   setDragAndDropEnabled,
-} from "@powerhousedao/vetra/document-models/app-module";
+  useSelectedAppModuleDocument,
+} from "document-models/app-module";
 import { useCallback, useEffect, useState } from "react";
-import { useSelectedAppModuleDocument } from "../../../document-models/app-module/hooks.js";
 import { StatusPill } from "../../components/index.js";
 import { useDebounce } from "../../hooks/index.js";
 
@@ -29,7 +29,7 @@ export const AppEditorForm = () => {
   const [isConfirmed, setIsConfirmed] = useState(status === "CONFIRMED");
   const documentTypesInSelectedDrive = useDocumentTypesInSelectedDrive();
   const supportedDocumentTypesInReactor = useSupportedDocumentTypesInReactor();
-  const [selectedDocumentTypes, setSelectedDocumentTypes] = useState(
+  const [selectedDocumentTypes, setSelectedDocumentTypes] = useState<string[]>(
     allowedDocumentTypes ?? [],
   );
 

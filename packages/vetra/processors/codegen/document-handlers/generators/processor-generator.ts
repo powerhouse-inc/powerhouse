@@ -7,7 +7,7 @@ import {
 import type {
   ProcessorModulePHState,
   ProcessorModuleState,
-} from "../../../../document-models/processor-module/index.js";
+} from "document-models/processor-module";
 import { logger } from "../../logger.js";
 import { BaseDocumentGen } from "../base-document-gen.js";
 import type { CodegenInput } from "../types.js";
@@ -109,11 +109,11 @@ export class ProcessorGenerator extends BaseDocumentGen {
         // Extract document types from the state
         const documentTypes = state.documentTypes.map((dt) => dt.documentType);
 
-        const processorApps = state.processorApps;
+        const processorApps: readonly string[] = state.processorApps;
 
         if (!isProcessorApps(processorApps)) {
           logger.error(
-            `❌ Unsupported processor apps: ${processorApps.join(", ")}`,
+            `❌ Unsupported processor apps: ${(processorApps as readonly string[]).join(", ")}`,
           );
           return;
         }
