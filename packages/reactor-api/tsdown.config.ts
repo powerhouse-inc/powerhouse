@@ -1,5 +1,9 @@
 import { defineConfig } from "tsdown";
 
+const version =
+  process.env.WORKSPACE_VERSION ?? process.env.npm_package_version ?? "unknown";
+const gitSha = process.env.WORKSPACE_GIT_SHA ?? "unknown";
+
 export default defineConfig({
   entry: [
     "index.mts",
@@ -14,5 +18,9 @@ export default defineConfig({
   loader: { ".graphql": "text" },
   deps: {
     onlyAllowBundle: [],
+  },
+  define: {
+    REACTOR_API_VERSION: JSON.stringify(version),
+    REACTOR_API_GIT_SHA: JSON.stringify(gitSha),
   },
 });

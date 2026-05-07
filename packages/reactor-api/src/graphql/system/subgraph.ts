@@ -1,6 +1,6 @@
 import { gql } from "graphql-tag";
 import { BaseSubgraph } from "../base-subgraph.js";
-import { getGitHash, getVersion } from "./version.js";
+import { getGitHash, getGitUrl, getVersion } from "./version.js";
 
 export class SystemSubgraph extends BaseSubgraph {
   name = "system";
@@ -10,6 +10,7 @@ export class SystemSubgraph extends BaseSubgraph {
     type SystemInfo {
       version: String!
       gitHash: String!
+      gitUrl: String
     }
 
     type Query {
@@ -22,6 +23,7 @@ export class SystemSubgraph extends BaseSubgraph {
       system: () => ({
         version: getVersion(),
         gitHash: getGitHash(),
+        gitUrl: getGitUrl(),
       }),
     },
   };

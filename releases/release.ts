@@ -24,11 +24,13 @@ function getBranchName(): string {
 }
 
 function runBuild(workspaceVersion: string) {
+  const workspaceGitSha = resolveWorkspaceGitSha();
   const commands = [["pnpm", "build"]];
   for (const command of commands) {
     try {
       const buildResult = runCommandWithBun(command, {
         WORKSPACE_VERSION: workspaceVersion,
+        WORKSPACE_GIT_SHA: workspaceGitSha,
       });
 
       if (buildResult.exitCode !== 0) {
@@ -412,6 +414,25 @@ function runCommandWithBun(
       ...env,
     },
   });
+}
+
+// Resolve a sha to bake into build artifacts as provenance. Prefer
+// GITHUB_SHA (set by the workflow that triggered the release) so the value
+// matches the commit on the release branch, and fall back to local HEAD for
+// non-CI builds. Note: this is the source-code sha, not the future
+// chore(release) commit sha — that doesn't exist yet at build time.
+function resolveWorkspaceGitSha(): string {
+  if (process.env.GITHUB_SHA) return process.env.GITHUB_SHA;
+  const result = Bun.spawnSync({
+    cmd: ["git", "rev-parse", "HEAD"],
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  if (result.exitCode !== 0) {
+    throw new Error(
+      `Failed to resolve git sha: ${result.stderr.toString().trim()}`,
+    );
+  }
+  return result.stdout.toString().trim();
 }
 
 /**

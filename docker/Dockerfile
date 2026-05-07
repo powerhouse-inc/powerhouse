@@ -90,8 +90,6 @@ RUN chmod +x /app/entrypoint.sh
 
 ENV NODE_ENV=production
 ENV PORT=3000
-ENV PH_VERSION=$TAG
-ENV PH_GIT_SHA=$GIT_SHA
 ENV PH_REGISTRY_PACKAGES=""
 ENV PH_REGISTRY_URL="https://registry.dev.vetra.io"
 ENV PH_PACKAGE_REGISTRY_URL=""
