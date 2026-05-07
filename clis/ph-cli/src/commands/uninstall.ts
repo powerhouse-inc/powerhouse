@@ -1,6 +1,6 @@
-import { uninstallArgs } from "@powerhousedao/shared/clis/args";
-import { execSync } from "child_process";
+import { AGENTS, uninstallArgs } from "@powerhousedao/shared/clis/args";
 import { command } from "cmd-ts";
+import { execSync } from "node:child_process";
 
 export const uninstall = command({
   name: "uninstall",
@@ -13,7 +13,7 @@ This command:
 1. Uninstalls specified Powerhouse dependencies using your package manager
 2. Updates powerhouse.config.json to remove the dependencies
 3. Supports various uninstallation options and configurations
-4. Works with npm, yarn, yarn@berry, pnpm, pnpm@6, bun, deno package managers
+4. Works with ${AGENTS.join(", ")} package managers
 `,
   args: uninstallArgs,
   handler: async (args) => {
