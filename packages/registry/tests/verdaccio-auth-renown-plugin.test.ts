@@ -2,7 +2,7 @@ import express, { type Request, type Response } from "express";
 import http from "node:http";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import pluginFactory, {
-  RenownAuthPlugin,
+  type RenownAuthPlugin,
 } from "../src/auth/verdaccio-auth-renown-plugin.js";
 
 const sdkMock = vi.hoisted(() => ({
