@@ -5,6 +5,7 @@ import reactPlugin from "eslint-plugin-react";
 import reactHooksPlugin from "eslint-plugin-react-hooks";
 import { defineConfig, globalIgnores } from "eslint/config";
 import globals from "globals";
+import { builtinModules } from "node:module";
 import tseslint from "typescript-eslint";
 
 /** These files are typically ignored by eslint by default, so there is no need to investigate why they are ignored. */
@@ -277,6 +278,111 @@ const unsafeConfig = {
   rules: unsafeRules,
 };
 
+/**
+ * Custom rule: only allow static imports whose source matches the `allow`
+ * list. Node built-ins, relative paths, and type-only imports are always
+ * allowed. Everything else must use `await import(...)` or `import type`.
+ *
+ * `no-restricted-imports` is deny-list only — this gives us allow-list
+ * semantics so the config lists what's permitted, not every heavy module
+ * that isn't.
+ */
+const builtinSet = new Set(builtinModules);
+
+/** @type {import("eslint").Rule.RuleModule} */
+const allowedStaticImportsRule = {
+  meta: {
+    type: "problem",
+    schema: [
+      {
+        type: "object",
+        properties: {
+          allow: { type: "array", items: { type: "string" } },
+          message: { type: "string" },
+        },
+        additionalProperties: false,
+      },
+    ],
+    messages: {
+      notAllowed:
+        "{{message}} (`{{source}}` is not in the allow list; use `await import(...)` or `import type`)",
+    },
+  },
+  create(context) {
+    const opts = context.options[0] ?? {};
+    const allow = opts.allow ?? [];
+    const message = opts.message ?? "Static import not allowed here.";
+    const isAllowedSource = (src) => {
+      if (src.startsWith("node:")) return true;
+      if (builtinSet.has(src)) return true;
+      if (
+        src === "." ||
+        src === ".." ||
+        src.startsWith("./") ||
+        src.startsWith("../")
+      ) {
+        return true;
+      }
+      return allow.some((name) => src === name || src.startsWith(name + "/"));
+    };
+    return {
+      ImportDeclaration(node) {
+        if (node.importKind === "type") return;
+        const hasValueSpecifier =
+          node.specifiers.length === 0 ||
+          node.specifiers.some((s) => s.importKind !== "type");
+        if (!hasValueSpecifier) return;
+        const src = String(node.source.value);
+        if (isAllowedSource(src)) return;
+        context.report({
+          node: node.source,
+          messageId: "notAllowed",
+          data: { source: src, message },
+        });
+      },
+    };
+  },
+};
+
+/**
+ * `cli.ts` and command files in `clis/ph-cli` and `clis/ph-cmd` are
+ * loaded eagerly on every CLI invocation. The `allow` array below is the
+ * complete list of value imports permitted at module load — node
+ * built-ins, relative paths, and type-only imports pass through
+ * automatically. Everything else must use `await import(...)`.
+ */
+const cliColdPathConfig = {
+  files: [
+    "clis/ph-cli/src/cli.ts",
+    "clis/ph-cmd/src/cli.ts",
+    "clis/ph-cli/src/commands/*.ts",
+    "clis/ph-cmd/src/commands/*.ts",
+  ],
+  plugins: {
+    "cli-cold-path": {
+      rules: { "allowed-static-imports": allowedStaticImportsRule },
+    },
+  },
+  rules: {
+    "cli-cold-path/allowed-static-imports": [
+      "error",
+      {
+        allow: [
+          "cmd-ts",
+          "@powerhousedao/shared/clis/args",
+          "@powerhousedao/shared/clis/constants",
+          "@powerhousedao/shared/clis/utils",
+          "@powerhousedao/shared/clis/telemetry",
+          "@powerhousedao/shared/clis/command-names",
+          "@powerhousedao/shared/constants",
+          "@powerhousedao/shared/processors",
+        ],
+        message: "Heavy module on the CLI cold path.",
+      },
+    ],
+  },
+};
+
 /** Config for javascript files */
 const javascriptConfig = {
   // disable type aware linting for js files
@@ -302,4 +408,5 @@ export default defineConfig(
   reactConfig,
   javascriptConfig,
   unsafeConfig,
+  cliColdPathConfig,
 );
