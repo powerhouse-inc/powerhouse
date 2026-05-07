@@ -20,7 +20,8 @@ import {
   LOG_LEVELS,
 } from "../constants.js";
 import { getConfig } from "../file-system/get-config.js";
-const AGENTS: Agent[] = _AGENTS;
+
+export const AGENTS: Agent[] = _AGENTS;
 
 export const debugArgs = {
   debug: flag({
