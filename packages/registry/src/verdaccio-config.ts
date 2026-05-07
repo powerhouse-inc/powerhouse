@@ -1,33 +1,36 @@
 import path from "node:path";
 import type { RegistryConfig } from "./types.js";
 
-export function buildVerdaccioConfig(config: RegistryConfig) {
+export interface BuildVerdaccioConfigOptions {
+  /** Absolute path to the directory containing our verdaccio plugin folder
+   *  (`<pluginsPath>/verdaccio-auth-renown/`). Required when Renown auth is
+   *  enabled — verdaccio's loader resolves plugins from this path. */
+  pluginsPath?: string;
+}
+
+export function buildVerdaccioConfig(
+  config: RegistryConfig,
+  opts: BuildVerdaccioConfigOptions = {},
+) {
   const htpasswdPath = path.join(config.storagePath, "htpasswd");
 
   const uplinkUrl = config.uplink ?? "https://registry.npmjs.org/";
 
+  // Build the auth plugin chain. When Renown is enabled, our plugin sits
+  // first — its apiJWTmiddleware completely replaces verdaccio's default
+  // (no secret synchronization to manage). htpasswd remains as a grace-
+  // period fallback for any clients still on the legacy flow.
+  const auth: Record<string, unknown> = {};
+  if (config.renown) {
+    auth["auth-renown"] = { publicUrl: config.renown.publicUrl };
+  }
+  auth.htpasswd = { file: htpasswdPath };
+
   const base: Record<string, unknown> = {
     storage: config.storagePath,
     self_path: "./",
-    // Top-level secret used by verdaccio to sign / verify its API JWTs.
-    // The renown middleware mints a verdaccio-format JWT with the same
-    // secret so verdaccio's apiJWTmiddleware accepts the swapped token.
-    ...(config.verdaccioSecret ? { secret: config.verdaccioSecret } : {}),
-    // Force JWT mode for the npm API. Without this verdaccio falls back to
-    // its legacy aes-encrypted token format, which signPayload won't produce.
-    security: {
-      api: {
-        jwt: {
-          sign: { expiresIn: "5m" },
-          verify: {},
-        },
-      },
-    },
-    auth: {
-      htpasswd: {
-        file: htpasswdPath,
-      },
-    },
+    ...(opts.pluginsPath ? { plugins: opts.pluginsPath } : {}),
+    auth,
     uplinks: {
       npmjs: {
         url: uplinkUrl,

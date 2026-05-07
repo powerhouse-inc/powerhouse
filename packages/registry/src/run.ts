@@ -1,11 +1,10 @@
 import express from "express";
 import { findUp } from "find-up";
-import { randomBytes } from "node:crypto";
 import { mkdir } from "node:fs/promises";
 import type { Server } from "node:http";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { runServer } from "verdaccio";
-import { createRenownAuthMiddleware } from "./auth/renown-middleware.js";
 import {
   createPowerhouseRouter,
   createPublishHook,
@@ -30,6 +29,16 @@ async function resolveDir(dir: string): Promise<string> {
   return found;
 }
 
+/**
+ * Resolve the directory verdaccio should look in to load our auth-renown
+ * plugin. The build emits `dist/verdaccio-auth-renown/{index.cjs, package.json}`
+ * alongside the registry's own bundle, so the plugins-path is the same dir as
+ * this module at runtime.
+ */
+function resolvePluginsPath(): string {
+  return path.dirname(fileURLToPath(import.meta.url));
+}
+
 export async function runRegistry(args: RegistryCommandArgs) {
   const {
     port,
@@ -47,22 +56,14 @@ export async function runRegistry(args: RegistryCommandArgs) {
     s3SecretAccessKey,
     publicUrl,
     authRenown,
-    verdaccioSecret: verdaccioSecretArg,
   } = args;
   const storagePath = await resolveDir(storageDir);
   const cdnCachePath = await resolveDir(cdnCacheDir);
 
-  // Per-pod random verdaccio JWT secret. The verdaccio-format token we mint
-  // in the renown middleware never leaves the pod (it's swapped into the
-  // request before verdaccio sees it), so a per-pod secret is sufficient.
-  // An override is exposed for tests / multi-pod behaviors that depend on
-  // shared verdaccio JWTs.
-  const verdaccioSecret = verdaccioSecretArg ?? randomBytes(32).toString("hex");
-
-  // Renown auth turns on when the operator both opts in (`--auth-renown`,
-  // default true via the CLI flag) and has set --public-url for the audience
-  // claim. Tests / programmatic users that don't pass either keep the legacy
-  // unsigned/htpasswd path with no warning.
+  // Renown auth turns on when the operator opts in (`--auth-renown`, default
+  // gated on PH_REGISTRY_AUTH_RENOWN=true) AND has set --public-url for the
+  // audience claim. Tests / programmatic users that don't pass either keep
+  // the legacy htpasswd-only path with no warning.
   const renownEnabled = authRenown === true && Boolean(publicUrl);
   if (authRenown === true && !publicUrl) {
     console.warn(
@@ -87,7 +88,6 @@ export async function runRegistry(args: RegistryCommandArgs) {
     cdnCachePath,
     uplink,
     webEnabled,
-    verdaccioSecret,
     ...(renownEnabled && publicUrl ? { renown: { publicUrl } } : {}),
     ...(webhookConfigs?.length && {
       notify: { webhooks: webhookConfigs },
@@ -110,7 +110,8 @@ export async function runRegistry(args: RegistryCommandArgs) {
   await mkdir(storagePath, { recursive: true });
   await mkdir(cdnCachePath, { recursive: true });
 
-  const verdaccioConfig = buildVerdaccioConfig(config);
+  const pluginsPath = renownEnabled ? resolvePluginsPath() : undefined;
+  const verdaccioConfig = buildVerdaccioConfig(config, { pluginsPath });
 
   // verdaccio's runServer returns Promise<any> (upstream type limitation)
   const verdaccioServer = (await runServer(verdaccioConfig)) as Server;
@@ -132,23 +133,11 @@ export async function runRegistry(args: RegistryCommandArgs) {
 
   // Our routes take priority over Verdaccio
   app.use(createPowerhouseRouter(config, sseChannel, webhookChannel));
-
-  // Renown bearer-token auth runs before the publish/unpublish hooks so they
-  // see `req.renownUser`, and before verdaccio so the swapped Authorization
-  // header reaches verdaccio's apiJWTmiddleware.
-  if (config.renown) {
-    app.use(
-      createRenownAuthMiddleware({
-        publicUrl: config.renown.publicUrl,
-        verdaccioSecret,
-      }),
-    );
-  }
-
   app.use(createPublishHook(config, notifications));
   app.use(createUnpublishHook(config, notifications));
 
-  // Verdaccio handles everything else (npm protocol, web UI, auth)
+  // Verdaccio handles everything else (npm protocol, web UI, auth via the
+  // verdaccio-auth-renown plugin loaded from `pluginsPath`).
   app.use((req, res) => verdaccioHandler(req, res));
 
   const server = app.listen(port, () => {

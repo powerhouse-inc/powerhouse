@@ -320,13 +320,17 @@ export function createUnpublishHook(
           } else {
             cdn.invalidate(parsed.packageName);
           }
-          const renownUser = req.renownUser;
+          // verdaccio's apiJWTmiddleware (overridden by our auth-renown
+          // plugin) sets req.remote_user. For Renown-authenticated requests
+          // `name` is the lowercase eth address; for anonymous it's undefined.
+          const reqWithUser = req as unknown as {
+            remote_user?: { name?: string };
+          };
+          const address = reqWithUser.remote_user?.name;
           notifications.notifyUnpublish({
             packageName: parsed.packageName,
             version: parsed.version,
-            publishedBy: renownUser
-              ? { address: renownUser.address, did: renownUser.did }
-              : undefined,
+            publishedBy: address ? { address } : undefined,
           });
         } catch (err) {
           console.error(
@@ -391,10 +395,11 @@ export function createPublishHook(
         );
       }
 
-      const renownUser = req.renownUser;
-      const publishedBy = renownUser
-        ? { address: renownUser.address, did: renownUser.did }
-        : undefined;
+      const reqWithUser = req as unknown as {
+        remote_user?: { name?: string };
+      };
+      const address = reqWithUser.remote_user?.name;
+      const publishedBy = address ? { address } : undefined;
       cdn
         .extractTarball(packageName, version)
         .then(() => {
