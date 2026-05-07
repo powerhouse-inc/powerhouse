@@ -1,6 +1,5 @@
 import { AppContainer, DriveIcon } from "@powerhousedao/connect/components";
 import {
-  connectConfig,
   defaultPHAppConfig,
   defaultPHDocumentEditorConfig,
 } from "@powerhousedao/connect/config";
@@ -15,12 +14,14 @@ import {
   setSelectedDrive,
   useAppModuleById,
   useDrives,
+  useIsAddDriveEnabled,
   useSelectedDocumentId,
   useSelectedDriveSafe,
   useSelectedFolder,
 } from "@powerhousedao/reactor-browser";
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import { useEffect } from "react";
+import { getRuntimeConfig } from "../runtime-config.js";
 
 export function Content() {
   const [selectedDrive] = useSelectedDriveSafe();
@@ -72,13 +73,15 @@ function DriveItem({ drive }: { drive: DocumentDriveDocument }) {
 
 function HomeScreenContainer() {
   const drives = useDrives();
-  const config = connectConfig;
+  const isAddDriveEnabled = useIsAddDriveEnabled();
+  const runtimeConfig = getRuntimeConfig();
+  const homeBackground = runtimeConfig.connect?.branding?.homeBackground;
   return (
-    <HomeScreen>
+    <HomeScreen homeBackground={homeBackground}>
       {drives?.map((drive) => {
         return <DriveItem key={drive.header.id} drive={drive} />;
       })}
-      {config.drives.addDriveEnabled && <HomeScreenAddDriveItem />}
+      {isAddDriveEnabled && <HomeScreenAddDriveItem />}
     </HomeScreen>
   );
 }

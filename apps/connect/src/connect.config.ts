@@ -1,10 +1,10 @@
 import {
   setLogLevel,
-  type FullPHGlobalConfig,
   type PHAppConfig,
   type PHDocumentEditorConfig,
   type PHGlobalConfig,
 } from "@powerhousedao/reactor-browser";
+import type { PHConnectRuntimeConfig } from "@powerhousedao/shared/clis";
 import {
   loadRuntimeEnv,
   normalizeBasePath,
@@ -20,12 +20,11 @@ function getRouterBasenameFromBasePath(basePath: string) {
   return basePath.endsWith("/") ? basePath : basePath + "/";
 }
 
-function getPHGlobalConfigFromEnv(): PHGlobalConfig {
-  const basePath = env.PH_CONNECT_BASE_PATH || import.meta.env.BASE_URL;
-  const routerBasename = getRouterBasenameFromBasePath(basePath);
-  const config = {
-    basePath,
-    routerBasename,
+function getBuiltInDefaults(
+  basePath: string,
+  routerBasename: string,
+): Omit<PHGlobalConfig, "basePath" | "routerBasename"> {
+  return {
     allowList: undefined,
     allowedDocumentTypes: [],
     isDragAndDropEnabled: true,
@@ -83,9 +82,33 @@ function getPHGlobalConfigFromEnv(): PHGlobalConfig {
     isAnalyticsDatabaseWorkerEnabled:
       !env.PH_CONNECT_ANALYTICS_DATABASE_WORKER_DISABLED,
     isExternalPackagesEnabled: !env.PH_CONNECT_EXTERNAL_PACKAGES_DISABLED,
-  } satisfies FullPHGlobalConfig;
+  };
+}
 
-  return config;
+export function buildPHGlobalConfig(
+  basePath: string,
+  routerBasename: string,
+  connectFromConfig: PHConnectRuntimeConfig,
+): PHGlobalConfig {
+  const defaults = getBuiltInDefaults(basePath, routerBasename);
+  const fileOverrides: Partial<PHGlobalConfig> = {};
+
+  if (connectFromConfig.drives?.allowAddDrive !== undefined) {
+    fileOverrides.isAddDriveEnabled = connectFromConfig.drives.allowAddDrive;
+  }
+
+  return {
+    basePath,
+    routerBasename,
+    ...defaults,
+    ...fileOverrides,
+  };
+}
+
+function getPHGlobalConfigFromEnv(): PHGlobalConfig {
+  const basePath = env.PH_CONNECT_BASE_PATH || import.meta.env.BASE_URL;
+  const routerBasename = getRouterBasenameFromBasePath(basePath);
+  return buildPHGlobalConfig(basePath, routerBasename, {});
 }
 
 export const phGlobalConfigFromEnv = getPHGlobalConfigFromEnv();

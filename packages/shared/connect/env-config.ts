@@ -118,11 +118,17 @@ const appConfigSchema = z.object({
   PH_CONNECT_BASE_PATH: z.string().optional(),
 
   /**
-   * Default drives URL to load on startup
+   * Default drives URL to load on startup.
+   * @deprecated Set `connect.drives.defaultDrives` in powerhouse.config.json
+   * instead. This env var is now used only as a first-time seed for the
+   * config file (set-if-absent semantics). See CONNECT-CONFIG.md §13.
    */
   PH_CONNECT_DEFAULT_DRIVES_URL: z.string().optional(),
-  /*
-   * Names of packages to load in connect
+  /**
+   * Names of packages to load in connect.
+   * @deprecated Set the `packages[]` array in powerhouse.config.json instead.
+   * This env var is now used only as a first-time seed for the config file
+   * (set-if-absent semantics). See CONNECT-CONFIG.md §13.
    */
   PH_CONNECT_PACKAGES: z.string().optional(),
   /**
@@ -165,8 +171,12 @@ const appConfigSchema = z.object({
  */
 const featureFlagsSchema = z.object({
   /**
-   * Hide the "Add Drive" button completely
+   * Hide the "Add Drive" button completely.
    * @default false
+   * @deprecated Set `connect.drives.allowAddDrive` (inverted) in
+   * powerhouse.config.json instead. This env var is now used only as a
+   * first-time seed for the config file (set-if-absent semantics).
+   * See CONNECT-CONFIG.md §13.
    */
   PH_CONNECT_DISABLE_ADD_DRIVE: booleanString.default(false),
 
@@ -544,6 +554,53 @@ export function loadRuntimeEnv(
   const allKeys = new Set(Object.keys(runtimeEnvSchema.shape));
   const merged = mergeEnvSources(options, allKeys, runtimeEnvSchema);
   return runtimeEnvSchema.parse(merged);
+}
+
+/**
+ * Loads runtime environment variables and returns both the merged result
+ * (with schema defaults filled in) and the "explicit" subset containing
+ * only keys that were actually set by the user (non-empty source value).
+ *
+ * This enables proper override precedence: file config < env explicit < CLI.
+ * Without this, schema defaults would always win over file config values.
+ */
+export function loadRuntimeEnvWithExplicit(options: LoadEnvOptions = {}): {
+  merged: ConnectRuntimeEnv;
+  explicit: Partial<ConnectRuntimeEnv>;
+} {
+  const { processEnv = {}, fileEnv = {} } = options;
+  const allKeys = new Set(Object.keys(runtimeEnvSchema.shape));
+
+  const explicit: Record<string, unknown> = {};
+  for (const key of allKeys) {
+    const sources = [
+      { name: "process.env", value: processEnv[key] },
+      { name: "fileEnv", value: fileEnv[key] },
+    ];
+
+    for (const source of sources) {
+      const value = source.value;
+      if (value === undefined || value === "") continue;
+
+      try {
+        const fieldSchema = runtimeEnvSchema.shape[
+          key as keyof typeof runtimeEnvSchema.shape
+        ] as z.ZodType<unknown> | undefined;
+        if (fieldSchema) {
+          explicit[key] = fieldSchema.parse(value);
+        }
+        break;
+      } catch {
+        continue;
+      }
+    }
+  }
+
+  const merged = mergeEnvSources(options, allKeys, runtimeEnvSchema);
+  return {
+    merged: runtimeEnvSchema.parse(merged),
+    explicit: explicit as Partial<ConnectRuntimeEnv>,
+  };
 }
 
 /**

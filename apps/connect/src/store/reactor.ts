@@ -1,9 +1,12 @@
-import { phGlobalConfigFromEnv } from "@powerhousedao/connect/config";
+import {
+  buildPHGlobalConfig,
+  phGlobalConfigFromEnv,
+} from "@powerhousedao/connect/config";
 import { toast } from "@powerhousedao/connect/services";
 import {
   addDefaultDrivesForNewReactor,
   createBrowserReactor,
-  getDefaultDrivesFromEnv,
+  getDefaultDrives,
 } from "@powerhousedao/connect/utils";
 import {
   addPHEventHandlers,
@@ -44,7 +47,7 @@ import {
 import { initFeatureFlags } from "../feature-flags.js";
 import { PackageDiscoveryService } from "../package-discovery.js";
 import { BrowserPackageManager } from "../package-manager.js";
-import { loadPackagesConfig } from "../packages.config.js";
+import { loadRuntimeConfig } from "../runtime-config.js";
 import { createProcessorHostModule } from "./processor-host-module.js";
 
 export async function clearReactorStorage() {
@@ -109,8 +112,10 @@ export async function createReactor(localPackage?: DocumentModelLib) {
     .withCrypto(renownCrypto)
     .build();
 
-  // load packages list from ph-packages.json (replaceable post-build)
-  const packagesConfig = await loadPackagesConfig();
+  // load runtime config from powerhouse.config.json (replaceable post-build).
+  // Cached: loadComponent() already called this and applied branding before
+  // we got here; this returns the same cached value.
+  const runtimeConfig = await loadRuntimeConfig();
 
   // initialize package manager
   const packageManager = new BrowserPackageManager(
@@ -118,7 +123,7 @@ export async function createReactor(localPackage?: DocumentModelLib) {
     PH_PACKAGE_REGISTRY_URL,
   );
   setVetraPackageManager(packageManager);
-  await packageManager.init(localPackage, packagesConfig.localPackage?.version);
+  await packageManager.init(localPackage, runtimeConfig.localPackage?.version);
   // Register any packages marked as provider: "local" in powerhouse.config.json
   // that the vite plugin bundled into this build. The virtual module is only
   // emitted when `phBundledPackagesPlugin` is registered (ph-cli's Connect
@@ -135,9 +140,10 @@ export async function createReactor(localPackage?: DocumentModelLib) {
   } catch {
     // no bundled packages in this build
   }
-  const packagesResult = await packageManager.addPackages(
-    packagesConfig.packages,
-  );
+  const remotePackages = runtimeConfig.packages
+    .filter((p) => p.provider !== "local")
+    .map((p) => (p.version ? `${p.packageName}@${p.version}` : p.packageName));
+  const packagesResult = await packageManager.addPackages(remotePackages);
   packagesResult.map((r) => {
     if (r.type === "error") console.error(r.error);
   });
@@ -207,7 +213,14 @@ export async function createReactor(localPackage?: DocumentModelLib) {
   const documentCache = new DocumentCache(reactorClientModule.client);
 
   // dispatch the events to set the values in the window object
-  setDefaultPHGlobalConfig(phGlobalConfigFromEnv);
+  const basePath = phGlobalConfigFromEnv.basePath ?? "/";
+  const routerBasename = phGlobalConfigFromEnv.routerBasename ?? "/";
+  const mergedGlobalConfig = buildPHGlobalConfig(
+    basePath,
+    routerBasename,
+    runtimeConfig.connect ?? {},
+  );
+  setDefaultPHGlobalConfig(mergedGlobalConfig);
   setReactorClientModule(reactorClientModule);
   setReactorClient(reactorClientModule.client);
   setDocumentCache(documentCache);
@@ -218,7 +231,7 @@ export async function createReactor(localPackage?: DocumentModelLib) {
   setFeatures(features);
 
   // Add default drives for new reactor (after window.ph is set up)
-  const defaultDrivesConfig = getDefaultDrivesFromEnv();
+  const defaultDrivesConfig = getDefaultDrives(runtimeConfig);
   if (defaultDrivesConfig.length > 0) {
     await addDefaultDrivesForNewReactor(defaultDrivesConfig);
   }

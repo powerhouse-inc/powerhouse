@@ -1,6 +1,10 @@
 import type { PowerhouseConfig } from "@powerhousedao/config";
 import { getConfig } from "@powerhousedao/config/node";
-import { loadConnectEnv, setConnectEnv } from "@powerhousedao/shared/connect";
+import {
+  loadConnectEnv,
+  loadRuntimeEnvWithExplicit,
+  setConnectEnv,
+} from "@powerhousedao/shared/connect";
 import { sentryVitePlugin } from "@sentry/vite-plugin";
 import tailwind from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
@@ -18,7 +22,7 @@ import type { IConnectOptions } from "./types.js";
 import { devReactImportmapPlugin } from "./vite-plugins/dev-external-react.js";
 import { connectFaviconPlugin } from "./vite-plugins/favicon.js";
 import { phBundledPackagesPlugin } from "./vite-plugins/ph-bundled-packages.js";
-import { phPackagesPlugin } from "./vite-plugins/ph-packages.js";
+import { phConfigPlugin } from "./vite-plugins/ph-config.js";
 
 const REACT_VERSION = "19.2.0";
 
@@ -156,19 +160,22 @@ function viteLogger({
   return logger;
 }
 
-function getPackageNamesFromPowerhouseConfig({ packages }: PowerhouseConfig) {
-  if (!packages) return [];
-  // Preserve the version/tag from powerhouse.config.json so Connect's runtime
-  // resolver sees it when building the registry CDN URL. Without this the
-  // registry falls back to its `latest` dist-tag, which may point to a
-  // different release stream than what the project asked for (e.g. latest
-  // vs. dev). Local packages resolve from node_modules and don't need a
-  // version here.
-  return packages.map((p) =>
-    p.version && p.provider !== "local"
-      ? `${p.packageName}@${p.version}`
-      : p.packageName,
-  );
+function parsePackagesEnvOverride(phPackagesStr: string) {
+  return phPackagesStr
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map((entry) => {
+      const lastAt = entry.lastIndexOf("@");
+      if (lastAt > 0) {
+        return {
+          packageName: entry.slice(0, lastAt),
+          version: entry.slice(lastAt + 1),
+          provider: "registry" as const,
+        };
+      }
+      return { packageName: entry, provider: "registry" as const };
+    });
 }
 
 function getLocalPackageNamesFromPowerhouseConfig({
@@ -184,6 +191,10 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
   const mode = options.mode;
   const envDir = options.envDir ?? options.dirname;
   const fileEnv = loadEnv(mode, envDir, "PH_");
+  const { explicit: explicitRuntimeEnv } = loadRuntimeEnvWithExplicit({
+    processEnv: process.env,
+    fileEnv,
+  });
 
   // Load and validate environment with priority: process.env > options > fileEnv > defaults
   const env = loadConnectEnv({
@@ -200,11 +211,13 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
 
   const phConfig = options.powerhouseConfig ?? getConfig(phConfigPath);
 
-  const packagesFromConfig = getPackageNamesFromPowerhouseConfig(phConfig);
+  const packagesFromConfig = phConfig.packages ?? [];
   const localPackagesFromConfig =
     getLocalPackageNamesFromPowerhouseConfig(phConfig);
   const phPackagesStr = env.PH_PACKAGES;
-  const envPhPackages = phPackagesStr?.split(",");
+  const envPhPackages = phPackagesStr
+    ? parsePackagesEnvOverride(phPackagesStr)
+    : undefined;
 
   const phPackages = envPhPackages ?? packagesFromConfig;
 
@@ -299,6 +312,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     },
     define: {
       PH_PACKAGE_REGISTRY_URL: `"${phPackageRegistryUrl}"`,
+      PH_CONNECT_EXPLICIT_ENV: JSON.stringify(explicitRuntimeEnv),
     },
     customLogger,
     envPrefix: ["PH_CONNECT_"],
@@ -313,12 +327,20 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
       exclude: ["@electric-sql/pglite", "@electric-sql/pglite-tools"],
     },
     plugins: [
-      // phPackagesPlugin must be registered before tailwind so its hotUpdate
+      // phConfigPlugin must be registered before tailwind so its hotUpdate
       // hook runs first and can suppress HMR updates for codegen-generated
       // files, preventing tailwind from triggering full page reloads.
-      phPackagesPlugin({
+      phConfigPlugin({
         packages: phPackages,
         projectRoot: options.dirname,
+        connect: phConfig.connect,
+        // Pass only explicitly-set runtime env vars (not schema defaults) so
+        // env→file seeding only fires for values the operator actually set.
+        // setConnectEnv(env) above writes schema defaults into process.env,
+        // which would otherwise cause defaulted values to seed the file.
+        explicitRuntimeEnv: Object.fromEntries(
+          Object.entries(explicitRuntimeEnv).map(([k, v]) => [k, String(v)]),
+        ),
       }),
       phBundledPackagesPlugin({
         packages: localPackagesFromConfig,
