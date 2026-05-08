@@ -1,8 +1,4 @@
-import {
-  compressedKeyInHexfromRaw,
-  encodeDIDfromHexString,
-  rawKeyInHexfromUncompressed,
-} from "did-key-creator";
+import { encodeDIDFromPub, getPublicKey } from "@didtools/key-webcrypto";
 import type { DID, JwkKeyPair } from "./types.js";
 
 export const ECDSA_ALGORITHM: EcKeyAlgorithm = {
@@ -16,22 +12,8 @@ export const ECDSA_SIGN_ALGORITHM = {
   hash: "SHA-256",
 };
 
-export function ab2hex(ab: ArrayBuffer): string {
-  return Array.prototype.map
-    .call(new Uint8Array(ab), (x: number) => ("00" + x.toString(16)).slice(-2))
-    .join("");
-}
-
-export async function parseDid(
-  keyPair: CryptoKeyPair,
-  subtleCrypto: SubtleCrypto,
-): Promise<DID> {
-  const publicKeyRaw = await subtleCrypto.exportKey("raw", keyPair.publicKey);
-  const multicodecName = "p256-pub";
-  const rawKey = rawKeyInHexfromUncompressed(ab2hex(publicKeyRaw));
-  const compressedKey = compressedKeyInHexfromRaw(rawKey);
-  const did = encodeDIDfromHexString(multicodecName, compressedKey);
-  return did as DID;
+export async function parseDid(keyPair: CryptoKeyPair): Promise<DID> {
+  return encodeDIDFromPub(await getPublicKey(keyPair)) as DID;
 }
 
 export async function exportKeyPair(
