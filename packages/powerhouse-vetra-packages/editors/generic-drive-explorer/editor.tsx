@@ -21,10 +21,7 @@ export default function Editor(props: EditorProps) {
       {showDocumentEditor ? (
         children
       ) : (
-        <DriveLayout.Content
-        // {...dropProps}
-        // className={isDropTarget ? "rounded-xl bg-blue-100" : ""}
-        >
+        <DriveLayout.Content>
           <FolderView />
         </DriveLayout.Content>
       )}

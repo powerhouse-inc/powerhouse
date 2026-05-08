@@ -15,10 +15,8 @@ export function FolderView(props: { className?: string }) {
     <div
       className={twMerge(
         "rounded-md border-2 border-transparent p-2",
-        // isDropTarget && "border-dashed border-blue-100",
         className,
       )}
-      // {...dropProps}
     >
       <DriveLayout.ContentSection title="Folders" className="mb-4">
         {folderNodes.length > 0 ? (
