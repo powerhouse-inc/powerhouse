@@ -1,3 +1,13 @@
+## 6.0.0-dev.235 (2026-05-08)
+
+### 🚀 Features
+
+- **ph-cli:** support --allow-build on ph install and ph uninstall fix ([19586d46c](https://github.com/powerhouse-inc/powerhouse/commit/19586d46c))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.234 (2026-05-08)
 
 ### 🩹 Fixes

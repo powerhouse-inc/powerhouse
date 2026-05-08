@@ -1,4 +1,4 @@
-# Powerhouse CLI Commands (6.0.0-dev.234)<br>
+# Powerhouse CLI Commands (6.0.0-dev.235)<br>
 This document provides detailed information about the available commands in the Powerhouse CLI.<br><br>
 The Powerhouse CLI (ph-cli) is a command-line interface tool that provides essential commands for managing Powerhouse projects. The tool and it's commands are fundamental for creating, building, and running Document Models as a builder in studio mode.<br>
 ## Table of Contents
@@ -873,6 +873,10 @@ Names of the dependencies to install<br><br>
 #### Registry <br>
 Registry URL to install from (overrides config and environment)<br><br>
 **usage:** `--registry <str>`<br>
+
+#### Allow Build <br>
+A list of package names that are allowed to run postinstall scripts during installation.<br><br>
+**usage:** `--allow-build <str>`<br>
 
 #### Package Manager <br>
 Specify the package manager to use for your project. Can be one of: `npm`, `pnpm`, `yarn`, or `bun`. Defaults to your environment package manager.<br><br>

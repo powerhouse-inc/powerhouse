@@ -1,3 +1,7 @@
+## 6.0.0-dev.235 (2026-05-08)
+
+This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
+
 ## 6.0.0-dev.234 (2026-05-08)
 
 ### 🩹 Fixes

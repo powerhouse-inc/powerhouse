@@ -95,11 +95,17 @@ Resolution order for the registry URL:
         const minReleaseAgeArgs =
           packageManager === "pnpm" ? ["--config.minimum-release-age=0"] : [];
 
+        const allowBuildArgs =
+          packageManager === "pnpm" && args.allowBuild.length > 0
+            ? [`--allow-build=${args.allowBuild.join(",")}`]
+            : [];
+
         const { resolveCommand } = await import("package-manager-detector");
         const resolved = resolveCommand(packageManager, "add", [
           ...specs,
           ...scopeRegistryArgs,
           ...minReleaseAgeArgs,
+          ...allowBuildArgs,
         ]);
         if (!resolved) {
           throw new Error(
