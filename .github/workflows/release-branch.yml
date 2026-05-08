@@ -57,8 +57,6 @@ jobs:
     name: Release packages in monorepo
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    env:
-      NPM_CONFIG_PROVENANCE: true
     steps:
       - name: Log inputs
         run: |
@@ -89,10 +87,22 @@ jobs:
           git config user.name "Github Actions Bot"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
+      # pnpm v11 stopped reading npm_config_* env vars (including the
+      # NPM_CONFIG_USERCONFIG that actions/setup-node writes), so the temp
+      # .npmrc with the auth token reference is invisible to `pnpm publish`.
+      # Write the token to ~/.npmrc directly so pnpm picks it up by default.
+      - name: Configure npm auth for pnpm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
+        run: |
+          echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" >> ~/.npmrc
+          echo "registry=https://registry.npmjs.org/" >> ~/.npmrc
+
       - name: Run release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
+          PNPM_CONFIG_PROVENANCE: "true"
         run: |
           pnpm run run-release -- \
           --release-mode="${{ inputs.release_mode || 'prerelease' }}" \

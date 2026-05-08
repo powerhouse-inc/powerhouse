@@ -1,7 +1,6 @@
 import {
   consolidateSyncOperations,
   envelopesToSyncOperations,
-  sortEnvelopesByFirstOperationTimestamp,
   trimMailboxFromAckOrdinal,
   type IReactorClient,
   type ISyncManager,
@@ -22,7 +21,9 @@ import type {
 import { GraphQLError } from "graphql";
 
 import { DRIVE_DOCUMENT_TYPE } from "./constants.js";
-const POLL_SYNC_ENVELOPES_MAX_LIMIT = 100;
+
+export const MAX_OPERATIONS_PER_ENVELOPE = 25;
+export const MAX_OPERATIONS_PER_PAGE = 100;
 import type { GetParentIdsFn } from "../../services/document-permission.service.js";
 import {
   fromInputMaybe,
@@ -1039,51 +1040,101 @@ export function pollSyncEnvelopes(
     };
   }
 
-  // Sort by first operation ordinal ascending. Dependencies always point
-  // backward in ordinal order, so a plain ordinal slice never delivers an
-  // operation before its dependency.
+  // Dependencies point backward in ordinal order, so sorting by first op
+  // ordinal preserves dependency ordering across the page.
   const sorted = [...operations].sort((a, b) => {
     const aOrdinal = a.operations[0]?.context.ordinal ?? 0;
     const bOrdinal = b.operations[0]?.context.ordinal ?? 0;
     return aOrdinal - bOrdinal;
   });
 
-  const hasMore = sorted.length > POLL_SYNC_ENVELOPES_MAX_LIMIT;
-  const pageOperations = sorted.slice(0, POLL_SYNC_ENVELOPES_MAX_LIMIT);
-
+  const envelopes: SyncEnvelopeArg[] = [];
+  let pageOps = 0;
+  let hasMore = false;
   let maxOrdinal = args.outboxLatest;
-  for (const syncOp of pageOperations) {
-    for (const op of syncOp.operations) {
-      const opOrdinal = op.context.ordinal;
-      if (opOrdinal > maxOrdinal) {
-        maxOrdinal = opOrdinal;
+
+  outer: for (const syncOp of sorted) {
+    if (pageOps >= MAX_OPERATIONS_PER_PAGE) {
+      hasMore = true;
+      break;
+    }
+
+    const unseen = syncOp.operations.filter(
+      (op) => op.context.ordinal > args.outboxLatest,
+    );
+    if (unseen.length === 0) continue;
+
+    let prevPartKey: string | undefined;
+    let partIdx = 0;
+    let i = 0;
+    while (i < unseen.length) {
+      if (pageOps >= MAX_OPERATIONS_PER_PAGE) {
+        hasMore = true;
+        break outer;
+      }
+
+      const remainingPage = MAX_OPERATIONS_PER_PAGE - pageOps;
+      // Always emit at least one op so an oversized single op makes progress.
+      const chunkSize = Math.max(
+        1,
+        Math.min(MAX_OPERATIONS_PER_ENVELOPE, remainingPage, unseen.length - i),
+      );
+      const slice = unseen.slice(i, i + chunkSize);
+
+      const isOnly =
+        unseen.length <= MAX_OPERATIONS_PER_ENVELOPE &&
+        unseen.length <= remainingPage;
+      const baseKey = syncOp.jobId || undefined;
+      const partKey = isOnly
+        ? baseKey
+        : baseKey
+          ? `${baseKey}__p${partIdx}`
+          : undefined;
+      const partDeps =
+        partIdx === 0
+          ? syncOp.jobDependencies.filter(Boolean)
+          : prevPartKey
+            ? [prevPartKey]
+            : [];
+
+      for (const op of slice) {
+        if (op.context.ordinal > maxOrdinal) maxOrdinal = op.context.ordinal;
+      }
+
+      envelopes.push({
+        type: "OPERATIONS",
+        channelMeta: { id: args.channelId },
+        operations: slice.map((op) => ({
+          operation: serializeOperationForGraphQL(op.operation),
+          context: op.context,
+        })),
+        cursor: {
+          remoteName: remote.name,
+          cursorOrdinal: 0,
+          lastSyncedAtUtcMs: Date.now().toString(),
+        },
+        key: partKey,
+        dependsOn: partDeps.length > 0 ? partDeps : undefined,
+      });
+
+      pageOps += slice.length;
+      i += slice.length;
+      prevPartKey = partKey;
+      partIdx++;
+
+      if (i < unseen.length && pageOps >= MAX_OPERATIONS_PER_PAGE) {
+        hasMore = true;
+        break outer;
       }
     }
   }
 
-  const envelopes = pageOperations.map((syncOp: SyncOperation) => ({
-    type: "OPERATIONS",
-    channelMeta: {
-      id: args.channelId,
-    },
-    operations: syncOp.operations.map((op) => ({
-      operation: serializeOperationForGraphQL(op.operation),
-      context: op.context,
-    })),
-    cursor: {
-      remoteName: remote.name,
-      cursorOrdinal: maxOrdinal,
-      lastSyncedAtUtcMs: Date.now().toString(),
-    },
-    key: syncOp.jobId || undefined,
-    dependsOn:
-      syncOp.jobDependencies.filter(Boolean).length > 0
-        ? syncOp.jobDependencies.filter(Boolean)
-        : undefined,
-  }));
+  for (const envelope of envelopes) {
+    if (envelope.cursor) envelope.cursor.cursorOrdinal = maxOrdinal;
+  }
 
   return {
-    envelopes: sortEnvelopesByFirstOperationTimestamp(envelopes),
+    envelopes,
     ackOrdinal: remote.channel.inbox.ackOrdinal,
     deadLetters,
     hasMore,
@@ -1126,14 +1177,10 @@ export function pushSyncEnvelopes(
     envelopes: SyncEnvelopeArg[];
   },
 ): Promise<boolean> {
-  const sortedEnvelopes = sortEnvelopesByFirstOperationTimestamp(
-    args.envelopes,
-  );
-
   type RemoteRef = ReturnType<ISyncManager["getById"]>;
   const remoteSyncOps = new Map<RemoteRef, SyncOperation[]>();
 
-  for (const envelope of sortedEnvelopes) {
+  for (const envelope of args.envelopes) {
     let remote: RemoteRef;
     try {
       remote = syncManager.getById(envelope.channelMeta.id);

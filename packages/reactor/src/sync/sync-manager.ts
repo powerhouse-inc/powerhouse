@@ -153,6 +153,7 @@ export class SyncManager implements ISyncManager {
         record.collectionId,
         record.filter,
         this.operationIndex,
+        record.options,
       );
 
       const remote: Remote = {
@@ -327,6 +328,7 @@ export class SyncManager implements ISyncManager {
       collectionId,
       filter,
       this.operationIndex,
+      options,
     );
 
     const remote: Remote = {
@@ -372,6 +374,14 @@ export class SyncManager implements ISyncManager {
       });
 
     return remote;
+  }
+
+  triggerPull(name: string): void {
+    const remote = this.remotes.get(name);
+    if (!remote) {
+      throw new Error(`Remote with name '${name}' does not exist`);
+    }
+    remote.channel.triggerPull();
   }
 
   async remove(name: string): Promise<void> {

@@ -2,7 +2,6 @@ import path from "node:path";
 import npa from "npm-package-arg";
 import { packageDirectory } from "package-directory";
 import type { Agent } from "package-manager-detector";
-import { detect, resolveCommand } from "package-manager-detector";
 import { POWERHOUSE_CONFIG_FILE, POWERHOUSE_GLOBAL_DIR } from "../constants.js";
 import type { PackageManagerArgs } from "../types.js";
 import {
@@ -43,16 +42,18 @@ export async function getGlobalPowerhouseProjectDirPath() {
 export async function getPackageManagerAtPowerhouseProjectDirPath(
   projectDirPath: string | undefined,
 ) {
+  const { detect } = await import("package-manager-detector");
   const detectResult = await detect({
     cwd: projectDirPath,
   });
   return detectResult?.agent;
 }
 
-export function getPowerhouseProjectInstallCommand(
+export async function getPowerhouseProjectInstallCommand(
   packageManagerAgent: Agent,
   args: string[] = [],
 ) {
+  const { resolveCommand } = await import("package-manager-detector");
   const resolvedCommand = resolveCommand(packageManagerAgent, "install", args);
   if (!resolvedCommand) {
     console.warn(
@@ -75,6 +76,7 @@ export async function getPowerhouseProjectUninstallCommand(
       `Failed to detect package manager in project directory, falling back to 'npm' as package manager.`,
     );
   }
+  const { resolveCommand } = await import("package-manager-detector");
   const resolvedCommand = resolveCommand(agent ?? "npm", "uninstall", args);
   if (!resolvedCommand) {
     console.warn(

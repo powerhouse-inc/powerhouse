@@ -214,7 +214,14 @@ export class GraphQLManager {
           ?.split(",")[0]
           .trim();
         const host = forwardedHost ?? request.headers.get("host") ?? "";
-        const basePath = this.path === "/" ? "" : this.path;
+        const forwardedPrefix =
+          request.headers
+            .get("x-forwarded-prefix")
+            ?.split(",")[0]
+            .trim()
+            .replace(/\/$/, "") ?? "";
+        const localBase = this.path === "/" ? "" : this.path;
+        const basePath = forwardedPrefix + localBase;
         const graphqlEndpoint = `${protocol}//${host}${basePath}/graphql/r`;
 
         return Response.json({

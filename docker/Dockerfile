@@ -12,7 +12,8 @@ ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
-RUN pnpm config set @jsr:registry https://npm.jsr.io
+RUN pnpm config set @jsr:registry https://npm.jsr.io \
+ && pnpm config set minimum-release-age 0
 
 ARG TAG=latest
 RUN pnpm add -g ph-cmd@$TAG prettier
@@ -79,19 +80,20 @@ RUN apk add --no-cache curl git
 
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable && corepack prepare pnpm@latest --activate \
+ && pnpm config set minimum-release-age 0
 
 ARG TAG=latest
 ARG GIT_SHA=unknown
-RUN pnpm init && pnpm add --shamefully-hoist @powerhousedao/switchboard@$TAG
+RUN echo '{"name":"app","version":"1.0.0","type":"module","private":true}' > package.json \
+ && printf 'allowBuilds:\n  "@apollo/protobufjs": true\n  "@parcel/watcher": true\n  esbuild: true\n  protobufjs: true\n' > pnpm-workspace.yaml \
+ && pnpm add --shamefully-hoist @powerhousedao/switchboard@$TAG
 
 COPY docker/switchboard-entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 
 ENV NODE_ENV=production
 ENV PORT=3000
-ENV PH_VERSION=$TAG
-ENV PH_GIT_SHA=$GIT_SHA
 ENV PH_REGISTRY_PACKAGES=""
 ENV PH_REGISTRY_URL="https://registry.dev.vetra.io"
 ENV PH_PACKAGE_REGISTRY_URL=""

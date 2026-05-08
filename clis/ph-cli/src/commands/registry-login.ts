@@ -1,13 +1,5 @@
-import {
-  getPowerhouseProjectInfo,
-  registryLoginArgs,
-} from "@powerhousedao/shared/clis";
-import {
-  resolveRegistryUrl,
-  writeRegistryAuthToken,
-} from "@powerhousedao/shared/registry";
+import { registryLoginArgs } from "@powerhousedao/shared/clis/args";
 import { command } from "cmd-ts";
-import { mintRegistryAuthToken } from "../services/registry-auth.js";
 
 export const registryLogin = command({
   name: "registry-login",
@@ -31,15 +23,26 @@ Usage:
       console.log(args);
     }
 
+    const { getPowerhouseProjectInfo } =
+      await import("@powerhousedao/shared/clis");
     const projectInfo = await getPowerhouseProjectInfo().catch(() => null);
     const projectPath = projectInfo?.projectPath ?? process.cwd();
+
+    const [
+      { resolveRegistryUrl, writeRegistryAuthToken },
+      { mintRegistryAuthToken },
+      { parseExpiry, formatExpiry },
+    ] = await Promise.all([
+      import("@powerhousedao/shared/registry"),
+      import("../services/registry-auth.js"),
+      import("@renown/sdk/node"),
+    ]);
 
     const registryUrl = resolveRegistryUrl({
       registry: args.registry,
       projectPath,
     });
 
-    const { parseExpiry, formatExpiry } = await import("@renown/sdk/node");
     const expiresIn = parseExpiry(args.expiry);
 
     const token = await mintRegistryAuthToken(registryUrl, expiresIn);

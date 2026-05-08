@@ -16,7 +16,6 @@ import type {
 import { ChannelErrorSource } from "../types.js";
 import {
   consolidateSyncOperations,
-  sortEnvelopesByFirstOperationTimestamp,
   trimMailboxFromAckOrdinal,
 } from "../utils.js";
 import { calculateBackoffDelay } from "./interval-poll-timer.js";
@@ -219,6 +218,11 @@ export class GqlRequestChannel implements IChannel {
     };
   }
 
+  triggerPull(): void {
+    if (this.isShutdown) return;
+    this.pollTimer.triggerNow();
+  }
+
   /**
    * Initializes the channel by registering it on the remote server and starting polling.
    */
@@ -289,12 +293,9 @@ export class GqlRequestChannel implements IChannel {
       trimMailboxFromAckOrdinal(this.outbox, ackOrdinal);
     }
 
-    // todo: Is this necessary? Outbox items should have been sorted when returned.
-    const sortedEnvelopes = sortEnvelopesByFirstOperationTimestamp(envelopes);
-
     // convert the envelopes to sync operations
     const allSyncOps: SyncOperation[] = [];
-    for (const envelope of sortedEnvelopes) {
+    for (const envelope of envelopes) {
       if (envelope.type.toLowerCase() === "operations" && envelope.operations) {
         const syncOps = envelopesToSyncOperations(envelope, this.remoteName);
         for (const syncOp of syncOps) {

@@ -1,4 +1,4 @@
-import { debugArgs } from "@powerhousedao/shared/clis";
+import { debugArgs } from "@powerhousedao/shared/clis/args";
 import { PROCESSOR_APPS } from "@powerhousedao/shared/processors";
 import type { Type } from "cmd-ts";
 import {

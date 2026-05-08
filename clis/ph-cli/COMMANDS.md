@@ -1,4 +1,4 @@
-# Powerhouse CLI Commands (6.0.0-dev.222)<br>
+# Powerhouse CLI Commands (6.0.0-dev.234)<br>
 This document provides detailed information about the available commands in the Powerhouse CLI.<br><br>
 The Powerhouse CLI (ph-cli) is a command-line interface tool that provides essential commands for managing Powerhouse projects. The tool and it's commands are fundamental for creating, building, and running Document Models as a builder in studio mode.<br>
 ## Table of Contents
@@ -258,6 +258,10 @@ The default drives url to use in connect<br><br>
 The preservation strategy to use on default drives<br><br>
 **usage:** `--drive-preserve-strategy <value>`<br>
 **env**: `PH_CONNECT_DRIVES_PRESERVE_STRATEGY`<br>**default**: `preserve-by-url-and-detach`
+#### Host <br>
+Expose the server to the network. Pass an IP (e.g. 0.0.0.0) to bind to a specific address.<br><br>
+**usage:** `--host <str>`<br>
+
 #### Watch Timeout <br>
 Amount of time to wait before a file is considered changed<br><br>
 **usage:** `--watch-timeout <number>`<br>
@@ -303,10 +307,6 @@ Force dep pre-optimization regardless of whether deps have changed.<br><br>
 #### Debug <br>
 Log arguments passed to this command<br><br>
 **usage:** `--debug`<br>
-
-#### Host <br>
-Expose the server to the network<br><br>
-**usage:** `--host`<br>
 
 #### Open <br>
 Open browser on startup<br><br>
@@ -383,6 +383,10 @@ The default drives url to use in connect<br><br>
 The preservation strategy to use on default drives<br><br>
 **usage:** `--drive-preserve-strategy <value>`<br>
 **env**: `PH_CONNECT_DRIVES_PRESERVE_STRATEGY`<br>**default**: `preserve-by-url-and-detach`
+#### Host <br>
+Expose the server to the network. Pass an IP (e.g. 0.0.0.0) to bind to a specific address.<br><br>
+**usage:** `--host <str>`<br>
+
 #### Watch Timeout <br>
 Amount of time to wait before a file is considered changed<br><br>
 **usage:** `--watch-timeout <number>`<br>
@@ -400,10 +404,6 @@ Force dep pre-optimization regardless of whether deps have changed.<br><br>
 #### Debug <br>
 Log arguments passed to this command<br><br>
 **usage:** `--debug`<br>
-
-#### Host <br>
-Expose the server to the network<br><br>
-**usage:** `--host`<br>
 
 #### Open <br>
 Open browser on startup<br><br>
@@ -519,6 +519,10 @@ The default drives url to use in connect<br><br>
 The preservation strategy to use on default drives<br><br>
 **usage:** `--drive-preserve-strategy <value>`<br>
 **env**: `PH_CONNECT_DRIVES_PRESERVE_STRATEGY`<br>**default**: `preserve-by-url-and-detach`
+#### Host <br>
+Expose the server to the network. Pass an IP (e.g. 0.0.0.0) to bind to a specific address.<br><br>
+**usage:** `--host <str>`<br>
+
 #### Watch Timeout <br>
 Amount of time to wait before a file is considered changed<br><br>
 **usage:** `--watch-timeout <number>`<br>
@@ -536,10 +540,6 @@ Force dep pre-optimization regardless of whether deps have changed.<br><br>
 #### Debug <br>
 Log arguments passed to this command<br><br>
 **usage:** `--debug`<br>
-
-#### Host <br>
-Expose the server to the network<br><br>
-**usage:** `--host`<br>
 
 #### Open <br>
 Open browser on startup<br><br>
@@ -684,6 +684,12 @@ show help<br><br>
 
 ## Migrate
 Run migrations
+### arguments
+#### Version <br>
+The version to migrate to. Accepts a valid semver version or `staging`, `dev`, `latest`.<br><br>
+**usage:** `[version]`<br>
+
+
 ### options
 #### Version <br>
 The version to migrate to. Accepts a valid semver version or `staging`, `dev`, `latest`.<br><br>
@@ -691,6 +697,10 @@ The version to migrate to. Accepts a valid semver version or `staging`, `dev`, `
 **default**: `latest`
 
 ### flags
+#### Force <br>
+Run migrate from the bundled codegen even if the target version cannot be resolved from the npm registry or differs from the installed ph-cli version.<br><br>
+**usage:** `--force, -f`<br>
+
 #### Debug <br>
 Log arguments passed to this command<br><br>
 **usage:** `--debug`<br>

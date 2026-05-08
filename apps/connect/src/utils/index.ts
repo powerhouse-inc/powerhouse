@@ -1,6 +1,7 @@
 export * from "./browser.js";
 export * from "./document-editor-debug-tools.js";
 export * from "./drive-preservation.js";
+export * from "./build-info.js";
 export * from "./drive-sections.js";
 export * from "./join.js";
 export * from "./openUrl.js";

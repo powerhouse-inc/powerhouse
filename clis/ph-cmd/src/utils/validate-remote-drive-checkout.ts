@@ -12,7 +12,9 @@ export async function getPackageDocument(
   try {
     const driveId = remoteDriveUrl.split("/").pop();
     const url = new URL(remoteDriveUrl);
-    const graphqlEndpoint = `${url.protocol}//${url.host}/graphql`;
+    // Preserve any subpath prefix (e.g. proxied at /api/reactor).
+    const basePath = url.pathname.replace(/\/d\/[^/]+\/?$/, "");
+    const graphqlEndpoint = `${url.protocol}//${url.host}${basePath}/graphql`;
 
     if (!driveId) {
       return {

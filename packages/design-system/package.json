@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/design-system",
-  "version": "6.0.0-dev.222",
+  "version": "6.0.0-dev.234",
   "description": "",
   "files": [
     "dist",
@@ -115,6 +115,7 @@
     "tailwind-scrollbar": "^4.0.1",
     "tailwindcss": "catalog:",
     "tsdown": "catalog:",
+    "tsx": "catalog:",
     "vite": "catalog:",
     "vitest": "catalog:"
   },
@@ -154,7 +155,6 @@
     "react-toastify": "^10.0.4",
     "remeda": "catalog:",
     "tailwind-merge": "catalog:",
-    "tsx": "catalog:",
     "usehooks-ts": "^3.1.1"
   }
 }

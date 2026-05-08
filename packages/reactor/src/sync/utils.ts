@@ -140,30 +140,6 @@ export function createIdleHealth(): ChannelHealth {
  * This ensures operations are grouped for efficient processing while maintaining
  * causality across documents and scopes.
  */
-/**
- * Sorts envelopes by the timestamp of their first operation.
- * Envelopes without operations are placed at the end.
- */
-export function sortEnvelopesByFirstOperationTimestamp<
-  T extends {
-    operations?:
-      | ReadonlyArray<{ operation: { timestampUtcMs: string } }>
-      | null
-      | undefined;
-  },
->(envelopes: T[]): T[] {
-  return envelopes.slice().sort((a, b) => {
-    const aTimestamp = a.operations?.[0]?.operation.timestampUtcMs;
-    const bTimestamp = b.operations?.[0]?.operation.timestampUtcMs;
-
-    if (!aTimestamp && !bTimestamp) return 0;
-    if (!aTimestamp) return 1;
-    if (!bTimestamp) return -1;
-
-    return new Date(aTimestamp).getTime() - new Date(bTimestamp).getTime();
-  });
-}
-
 export function batchOperationsByDocument(
   operations: OperationWithContext[],
 ): OperationBatch[] {

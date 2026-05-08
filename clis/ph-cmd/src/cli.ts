@@ -1,10 +1,10 @@
 #!/usr/bin/env node
+import { phCliCommandNames } from "@powerhousedao/shared/clis/command-names";
 import {
-  assertNodeVersion,
   captureCliError,
   initCliTelemetry,
-  phCliCommandNames,
-} from "@powerhousedao/shared/clis";
+} from "@powerhousedao/shared/clis/telemetry";
+import { assertNodeVersion } from "@powerhousedao/shared/clis/utils";
 
 // Injected at build time by tsdown (see tsdown.config.ts `define`).
 declare const CLI_VERSION: string;
@@ -31,6 +31,16 @@ async function main() {
   const args = process.argv.slice(2);
   const command = args[0];
 
+  // Short-circuit `ph --version` / `ph -v` so we don't pay for the full
+  // cmd-ts subcommand tree (which dynamic-imports the heavy clis bundle
+  // just to populate the `version` field). `ph use --version 1.2.3` and
+  // similar are unaffected because they have a subcommand first.
+  if (args.length === 1 && (command === "--version" || command === "-v")) {
+    const { getPhCmdVersionInfo } = await import("@powerhousedao/shared/clis");
+    console.log(await getPhCmdVersionInfo(CLI_VERSION));
+    process.exit(0);
+  }
+
   // handle the special case where running `connect` with no positional argument
   // defaults to `connect studio`
   if (
@@ -45,7 +55,9 @@ async function main() {
   }
 
   // forward command to the local ph-cli installation if it exists
-  if (phCliCommandNames.includes(command)) {
+  if (
+    phCliCommandNames.includes(command as (typeof phCliCommandNames)[number])
+  ) {
     await runPhCliCommand(command);
     process.exit(0);
   }

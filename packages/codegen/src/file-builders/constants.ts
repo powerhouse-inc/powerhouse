@@ -59,10 +59,10 @@ export const packageScripts = {
 } as const;
 
 export const externalDependencies = {
-  "@powerhousedao/document-engineering": "1.40.1",
+  "@powerhousedao/document-engineering": "1.40.3",
   graphql: "16.12.0",
   "graphql-tag": "^2.12.6",
-  zod: "^4.3.5",
+  zod: "4.3.6",
   react: "^19.2.3",
   "react-dom": "^19.2.3",
 } as const;

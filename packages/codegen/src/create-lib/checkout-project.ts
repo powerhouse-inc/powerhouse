@@ -50,7 +50,9 @@ export function installDependencies(
       `Installing dependencies with ${packageManager}...`,
       "\x1b[0m",
     );
-    runCmd(`${packageManager} install --loglevel error`);
+    const extra =
+      packageManager === "pnpm" ? " --config.minimum-release-age=0" : "";
+    runCmd(`${packageManager} install --loglevel error${extra}`);
 
     console.log("\x1b[32m", "Dependencies installed successfully!", "\x1b[0m");
     console.log();

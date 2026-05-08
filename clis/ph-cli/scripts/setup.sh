@@ -5,11 +5,11 @@ export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
 nvm --version
-nvm install 22
+nvm install 24
 curl -fsSL https://get.pnpm.io/install.sh | sh -
 export PNPM_HOME="/home/$USER/.local/share/pnpm"
 export PATH="$PNPM_HOME:$PATH"
-pnpm install -g ph-cmd
+pnpm add -g ph-cmd
 echo ""
 echo "  🎉 Setup Complete! 🎉"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

@@ -3,7 +3,13 @@ import type { IOperationIndex } from "../../cache/operation-index-types.js";
 import type { IQueue } from "../../queue/interfaces.js";
 import type { ISyncCursorStorage } from "../../storage/interfaces.js";
 import type { IChannel, IChannelFactory } from "../interfaces.js";
-import type { ChannelConfig, JwtHandler, RemoteFilter } from "../types.js";
+import type {
+  ChannelConfig,
+  JwtHandler,
+  RemoteFilter,
+  RemoteOptions,
+} from "../types.js";
+import { PollBehavior } from "../types.js";
 import { GqlRequestChannel, type GqlChannelConfig } from "./gql-req-channel.js";
 import { IntervalPollTimer } from "./interval-poll-timer.js";
 
@@ -48,6 +54,7 @@ export class GqlRequestChannelFactory implements IChannelFactory {
     collectionId: string,
     filter: RemoteFilter,
     operationIndex: IOperationIndex,
+    options?: RemoteOptions,
   ): IChannel {
     // Extract and validate required parameters
     const url = config.parameters.url;
@@ -132,6 +139,7 @@ export class GqlRequestChannelFactory implements IChannelFactory {
       ...(backpressureCheckIntervalMs !== undefined && {
         backpressureCheckIntervalMs,
       }),
+      startPaused: options?.pollBehavior === PollBehavior.Manual,
     });
 
     return new GqlRequestChannel(

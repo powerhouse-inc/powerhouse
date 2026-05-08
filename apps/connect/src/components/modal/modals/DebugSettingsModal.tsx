@@ -1,5 +1,10 @@
 import { connectConfig } from "@powerhousedao/connect/config";
-import { serviceWorkerManager } from "@powerhousedao/connect/utils";
+import {
+  getGitSha,
+  getGitUrl,
+  serviceWorkerManager,
+  shortGitSha,
+} from "@powerhousedao/connect/utils";
 import { Icon, Modal, PowerhouseButton } from "@powerhousedao/design-system";
 import { Combobox, FormInput } from "@powerhousedao/design-system/connect";
 import { closePHModal, usePHModal } from "@powerhousedao/reactor-browser";
@@ -39,6 +44,30 @@ export const DebugSettingsModal: React.FC = () => {
         <div className="flex text-sm font-bold">
           <Icon name="Ring" size={22} />
           <span className="ml-2">App Version: {connectConfig.appVersion}</span>
+          {(() => {
+            const sha = getGitSha();
+            if (sha === "unknown") return null;
+            const url = getGitUrl();
+            const label = shortGitSha(sha);
+            return url ? (
+              <a
+                className="ml-2 font-mono text-xs font-normal text-blue-600 hover:underline"
+                href={url}
+                target="_blank"
+                rel="noreferrer noopener"
+                title={sha}
+              >
+                ({label})
+              </a>
+            ) : (
+              <span
+                className="ml-2 font-mono text-xs font-normal text-gray-500"
+                title={sha}
+              >
+                ({label})
+              </span>
+            );
+          })()}
         </div>
         <div className="mt-4 flex text-sm font-bold">
           <Icon name="Hdd" size={22} />

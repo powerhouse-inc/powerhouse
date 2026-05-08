@@ -5,7 +5,15 @@ import { resolveCommand } from "package-manager-detector";
 
 export async function executePhCliCommand(phCliCommand: string) {
   const forwardedArgs = process.argv.slice(3);
-  const { projectPath, packageManager } = await getPowerhouseProjectInfo();
+  const { projectPath, packageManager } = await getPowerhouseProjectInfo(
+    undefined,
+    { silent: true },
+  );
+  if (!projectPath) {
+    throw new Error(
+      `No Powerhouse project directory found, cannot run \`ph ${phCliCommand}\`.\nTo create a local project, run \`ph init\`.\nTo create a global project, run \`ph setup-globals\`.`,
+    );
+  }
   const resolveExecuteLocalCommandResult = resolveCommand(
     packageManager,
     "execute-local",
@@ -18,5 +26,14 @@ export async function executePhCliCommand(phCliCommand: string) {
   }
   const { command, args } = resolveExecuteLocalCommandResult;
   const cmd = `${command} ${args.join(" ")}`;
-  execSync(cmd, { stdio: "inherit", cwd: projectPath });
+  try {
+    execSync(cmd, { stdio: "inherit", cwd: projectPath });
+  } catch (err) {
+    // propagate normal non-zero exits but throw on abnormal exits to ensure the error is reported
+    const e = err as { status?: number | null; signal?: NodeJS.Signals | null };
+    if (typeof e.status === "number" && !e.signal) {
+      process.exit(e.status);
+    }
+    throw err;
+  }
 }

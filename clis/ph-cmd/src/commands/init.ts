@@ -1,14 +1,6 @@
-import {
-  fetchNpmVersionFromRegistryForTag,
-  handleMutuallyExclusiveOptions,
-  initArgs,
-  parsePackageManager,
-  parseTag,
-} from "@powerhousedao/shared/clis";
+import { initArgs } from "@powerhousedao/shared/clis/args";
 import { command } from "cmd-ts";
 import { execSync } from "node:child_process";
-import { resolveCommand } from "package-manager-detector";
-import { coerce } from "semver";
 
 const PH_CLI_PACKAGE = "@powerhousedao/ph-cli";
 // `init` was added to ph-cli in the 6.x rewrite. Older versions (still on
@@ -30,6 +22,13 @@ export const init = command({
     if (args.debug) {
       console.log({ args });
     }
+
+    const {
+      fetchNpmVersionFromRegistryForTag,
+      handleMutuallyExclusiveOptions,
+      parsePackageManager,
+      parseTag,
+    } = await import("@powerhousedao/shared/clis");
 
     handleMutuallyExclusiveOptions(
       {
@@ -76,6 +75,7 @@ export const init = command({
         console.error(">>> ph-cli version resolution skipped:", err);
       }
     }
+    const { coerce } = await import("semver");
     const parsed = resolvedVersion ? coerce(resolvedVersion) : null;
     if (parsed && parsed.major < MIN_PH_CLI_MAJOR) {
       // Print + exit (rather than throw) to avoid the cli.ts catch handler
@@ -89,6 +89,7 @@ export const init = command({
     }
 
     const phCliPackage = `${PH_CLI_PACKAGE}@${resolvedVersion ?? phCliVersionOrTag}`;
+    const { resolveCommand } = await import("package-manager-detector");
     const resolved = resolveCommand(pm, "execute", [
       phCliPackage,
       "init",
@@ -108,7 +109,19 @@ export const init = command({
       console.log(">>> Delegating to ph-cli:", fullCmd);
     }
 
-    execSync(fullCmd, { stdio: "inherit" });
+    try {
+      execSync(fullCmd, { stdio: "inherit" });
+    } catch (err) {
+      // propagate normal non-zero exits but throw on abnormal exits to ensure the error is reported
+      const e = err as {
+        status?: number | null;
+        signal?: NodeJS.Signals | null;
+      };
+      if (typeof e.status === "number" && !e.signal) {
+        process.exit(e.status);
+      }
+      throw err;
+    }
     process.exit(0);
   },
 });

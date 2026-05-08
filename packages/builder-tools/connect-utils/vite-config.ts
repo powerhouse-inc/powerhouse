@@ -1,7 +1,6 @@
 import type { PowerhouseConfig } from "@powerhousedao/config";
 import { getConfig } from "@powerhousedao/config/node";
 import { loadConnectEnv, setConnectEnv } from "@powerhousedao/shared/connect";
-import { sentryVitePlugin } from "@sentry/vite-plugin";
 import tailwind from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { join } from "node:path";
@@ -246,21 +245,23 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
 
   if (uploadSentrySourcemaps) {
     plugins.push(
-      sentryVitePlugin({
-        release: {
-          name: release ?? "unknown",
-          inject: false, // prevent it from injecting the release id in the service worker code, this is done in 'src/app/sentry.ts' instead
-        },
-        authToken,
-        org,
-        project,
-        bundleSizeOptimizations: {
-          excludeDebugStatements: true,
-        },
-        reactComponentAnnotation: {
-          enabled: true,
-        },
-      }) as PluginOption,
+      import("@sentry/vite-plugin").then(({ sentryVitePlugin }) =>
+        sentryVitePlugin({
+          release: {
+            name: release ?? "unknown",
+            inject: false, // prevent it from injecting the release id in the service worker code, this is done in 'src/app/sentry.ts' instead
+          },
+          authToken,
+          org,
+          project,
+          bundleSizeOptimizations: {
+            excludeDebugStatements: true,
+          },
+          reactComponentAnnotation: {
+            enabled: true,
+          },
+        }),
+      ) as PluginOption,
     );
   }
 

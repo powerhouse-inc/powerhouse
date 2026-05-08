@@ -1,3 +1,99 @@
+## 6.0.0-dev.234 (2026-05-08)
+
+### 🩹 Fixes
+
+- **ci:** pnpm 11 reads PNPM_CONFIG_* not NPM_CONFIG_* ([b6c05fb23](https://github.com/powerhouse-inc/powerhouse/commit/b6c05fb23))
+- **ci, docker:** pnpm 11 uses pnpm-workspace.yaml for allowBuilds; env var for min-release-age ([37c04c28a](https://github.com/powerhouse-inc/powerhouse/commit/37c04c28a))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.233 (2026-05-08)
+
+This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.232 (2026-05-07)
+
+### 🩹 Fixes
+
+- opt out of pnpm 11 minimum-release-age; fix docker/boilerplate strict-dep-builds ([75d31f3c6](https://github.com/powerhouse-inc/powerhouse/commit/75d31f3c6))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.231 (2026-05-07)
+
+### 🩹 Fixes
+
+- add pnpm workspace to boilerplate ([1b3a6e78c](https://github.com/powerhouse-inc/powerhouse/commit/1b3a6e78c))
+- **ci:** pnpm v11 docker init + global bin path ([9d93dc20a](https://github.com/powerhouse-inc/powerhouse/commit/9d93dc20a))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.230 (2026-05-07)
+
+This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.229 (2026-05-07)
+
+This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.228 (2026-05-07)
+
+### 🚀 Features
+
+- **connect,reactor-api:** set git hash at build time and display with url ([99b5233c7](https://github.com/powerhouse-inc/powerhouse/commit/99b5233c7))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.227 (2026-05-07)
+
+This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.226 (2026-05-06)
+
+### 🚀 Features
+
+- various mixed load scenarios for the lb ([6ef3a76bf](https://github.com/powerhouse-inc/powerhouse/commit/6ef3a76bf))
+
+### 🩹 Fixes
+
+- bump document-engineering to 1.40.3 and align zod pin ([d50e7e42c](https://github.com/powerhouse-inc/powerhouse/commit/d50e7e42c))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Guillermo Puente @gpuente
+
+## 6.0.0-dev.225 (2026-05-06)
+
+This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.224 (2026-05-06)
+
+This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.223 (2026-05-06)
+
+### 🚀 Features
+
+- add json viewer for operations tooltip ([#2569](https://github.com/powerhouse-inc/powerhouse/pull/2569))
+
+### 🩹 Fixes
+
+- **release:** drop concurrency from publish-docker-images.yml ([#2572](https://github.com/powerhouse-inc/powerhouse/issues/2572))
+
+### ❤️ Thank You
+
+- Frank
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.222 (2026-05-06)
 
 ### 🩹 Fixes

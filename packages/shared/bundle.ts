@@ -27,6 +27,32 @@ await build({
   entry: ["clis/index.mts"],
   outDir: "dist/clis",
   platform: "node",
+  clean: false,
+  dts: true,
+  sourcemap: true,
+});
+
+// Sub-paths so cli.ts and command files can import only what they need
+// without pulling the full clis bundle on the cold path.
+await build({
+  entry: ["clis/args/*.ts"],
+  outDir: "dist/clis/args",
+  platform: "node",
+  clean: false,
+  dts: true,
+  sourcemap: true,
+});
+
+await build({
+  entry: [
+    "clis/constants.ts",
+    "clis/utils.ts",
+    "clis/command-names.ts",
+    "clis/services/telemetry.ts",
+  ],
+  outDir: "dist/clis",
+  platform: "node",
+  clean: false,
   dts: true,
   sourcemap: true,
 });

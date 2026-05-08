@@ -1,3 +1,128 @@
+## 6.0.0-dev.234 (2026-05-08)
+
+### 🩹 Fixes
+
+- **ci:** pnpm 11 reads PNPM_CONFIG_* not NPM_CONFIG_* ([b6c05fb23](https://github.com/powerhouse-inc/powerhouse/commit/b6c05fb23))
+- **ci, docker:** pnpm 11 uses pnpm-workspace.yaml for allowBuilds; env var for min-release-age ([37c04c28a](https://github.com/powerhouse-inc/powerhouse/commit/37c04c28a))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.233 (2026-05-08)
+
+This was a version bump only, there were no code changes.
+
+## 6.0.0-dev.232 (2026-05-07)
+
+### 🩹 Fixes
+
+- opt out of pnpm 11 minimum-release-age; fix docker/boilerplate strict-dep-builds ([75d31f3c6](https://github.com/powerhouse-inc/powerhouse/commit/75d31f3c6))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.231 (2026-05-07)
+
+### 🩹 Fixes
+
+- add pnpm workspace to boilerplate ([1b3a6e78c](https://github.com/powerhouse-inc/powerhouse/commit/1b3a6e78c))
+- **ci:** pnpm v11 docker init + global bin path ([9d93dc20a](https://github.com/powerhouse-inc/powerhouse/commit/9d93dc20a))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.230 (2026-05-07)
+
+This was a version bump only, there were no code changes.
+
+## 6.0.0-dev.229 (2026-05-07)
+
+This was a version bump only, there were no code changes.
+
+## 6.0.0-dev.228 (2026-05-07)
+
+### 🚀 Features
+
+- **connect,reactor-api:** set git hash at build time and display with url ([99b5233c7](https://github.com/powerhouse-inc/powerhouse/commit/99b5233c7))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.227 (2026-05-07)
+
+### 🚀 Features
+
+- adding the ability to add remotes through the inspector that do not auto-poll ([adae501de](https://github.com/powerhouse-inc/powerhouse/commit/adae501de))
+
+### 🩹 Fixes
+
+- **reactor:** do not sort by timestamp in sync batches, only by ordinal ([7ccc6045c](https://github.com/powerhouse-inc/powerhouse/commit/7ccc6045c))
+- **reactor-api:** paging needs to be operation-dependent, no envelope-- our batching is too good ([e6ab2f853](https://github.com/powerhouse-inc/powerhouse/commit/e6ab2f853))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
+## 6.0.0-dev.226 (2026-05-06)
+
+### 🚀 Features
+
+- various mixed load scenarios for the lb ([6ef3a76bf](https://github.com/powerhouse-inc/powerhouse/commit/6ef3a76bf))
+- **ph-cli:** accept ip value for host on connect and preview ([63269c832](https://github.com/powerhouse-inc/powerhouse/commit/63269c832))
+
+### 🩹 Fixes
+
+- bump document-engineering to 1.40.3 and align zod pin ([d50e7e42c](https://github.com/powerhouse-inc/powerhouse/commit/d50e7e42c))
+- **ph-cmd:** guard ph-cli forwarding when no project is detected ([07343964c](https://github.com/powerhouse-inc/powerhouse/commit/07343964c))
+- **reactor-api:** remove debug field on drive endpoint ([904630a71](https://github.com/powerhouse-inc/powerhouse/commit/904630a71))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Guillermo Puente @gpuente
+
+## 6.0.0-dev.225 (2026-05-06)
+
+### 🩹 Fixes
+
+- **reactor-api:** added support for x-forwarded-prefix ([40544feb2](https://github.com/powerhouse-inc/powerhouse/commit/40544feb2))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.224 (2026-05-06)
+
+### 🚀 Features
+
+- **ph-cli:** run migrate with target codegen version ([14bed84ed](https://github.com/powerhouse-inc/powerhouse/commit/14bed84ed))
+- **ph-cli:** added --force flag to migrate and debug logs ([d30fb8f3f](https://github.com/powerhouse-inc/powerhouse/commit/d30fb8f3f))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.223 (2026-05-06)
+
+### 🚀 Features
+
+- add json viewer for operations tooltip ([#2569](https://github.com/powerhouse-inc/powerhouse/pull/2569))
+
+### 🩹 Fixes
+
+- **release:** drop concurrency from publish-docker-images.yml ([#2572](https://github.com/powerhouse-inc/powerhouse/issues/2572))
+- **renown,registry:** pass audience to verifyAuthBearerToken ([#2574](https://github.com/powerhouse-inc/powerhouse/pull/2574))
+
+### ❤️ Thank You
+
+- Frank @froid1911
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.222 (2026-05-06)
 
 ### 🩹 Fixes

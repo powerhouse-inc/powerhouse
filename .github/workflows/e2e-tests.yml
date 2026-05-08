@@ -47,8 +47,8 @@ jobs:
       - name: Build
         run: pnpm build
 
-      - name: Run install again after generating binaries
-        run: pnpm install-ci
+      - name: Re-link workspace bins now that dist files exist
+        run: pnpm rebuild --recursive
 
       - name: Build packages that depend on generated binaries
         run: pnpm --filter=@powerhousedao/versioned-documents --no-bail run build
@@ -106,8 +106,8 @@ jobs:
       - name: Build
         run: pnpm build
 
-      - name: Run install again after generating binaries
-        run: pnpm install-ci
+      - name: Re-link workspace bins now that dist files exist
+        run: pnpm rebuild --recursive
 
       - name: Build packages that depend on generated binaries
         run: pnpm --filter=@powerhousedao/versioned-documents --no-bail run build

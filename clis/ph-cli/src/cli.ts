@@ -1,9 +1,9 @@
 #!/usr/bin/env node
+import { assertNodeVersion } from "@powerhousedao/shared/clis/utils";
 import {
-  assertNodeVersion,
   captureCliError,
   initCliTelemetry,
-} from "@powerhousedao/shared/clis";
+} from "@powerhousedao/shared/clis/telemetry";
 import { run } from "cmd-ts";
 import { phCliHelp } from "./commands/ph-cli-help.js";
 import { phCli } from "./commands/ph-cli.js";
