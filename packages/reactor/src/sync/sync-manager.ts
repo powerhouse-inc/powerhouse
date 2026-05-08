@@ -665,7 +665,12 @@ export class SyncManager implements ISyncManager {
         await this.applyInboxBatch(chunk);
       }
     });
-    this.inboxChunkChain = next.catch(() => {});
+    this.inboxChunkChain = next.catch((err) => {
+      this.logger.error(
+        "Inbox chunk processing failed (@error)",
+        err instanceof Error ? err.message : String(err),
+      );
+    });
     return next;
   }
 

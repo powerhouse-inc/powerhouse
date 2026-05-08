@@ -3766,14 +3766,21 @@ describe("SyncManager - Unit Tests", () => {
       const inboxCb = vi.mocked(ch.inbox.onAdded).mock.calls[0][0];
       inboxCb([syncOpA]);
       inboxCb([syncOpB]);
-      await new Promise((r) => setTimeout(r, 20));
 
+      await vi.waitFor(() => {
+        expect((mockReactor as any).loadBatch).toHaveBeenCalledTimes(1);
+      });
+
+      await Promise.resolve();
+      await Promise.resolve();
       expect((mockReactor as any).loadBatch).toHaveBeenCalledTimes(1);
 
       resolveBatch1({});
-      await new Promise((r) => setTimeout(r, 20));
 
-      expect((mockReactor as any).loadBatch).toHaveBeenCalledTimes(2);
+      await vi.waitFor(() => {
+        expect((mockReactor as any).loadBatch).toHaveBeenCalledTimes(2);
+      });
+
       expect((mockReactor as any).loadBatch).toHaveBeenNthCalledWith(
         2,
         {
