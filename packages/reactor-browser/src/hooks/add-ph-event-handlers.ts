@@ -56,6 +56,7 @@ import {
   addIsExternalControlsEnabledEventHandler,
 } from "./config/editor.js";
 import { addDocumentCacheEventHandler } from "./document-cache.js";
+import { addDraggingNodeEventHandler } from "./node-drag-and-drop.js";
 import { addDrivesEventHandler } from "./drives.js";
 import { addGraphQLReactorClientEventHandler } from "./graphql-reactor-client.js";
 import { addLoadingEventHandler } from "./loading.js";
@@ -95,6 +96,7 @@ export const commonGlobalEventHandlerFunctions = {
   },
   documentCache: addDocumentCacheEventHandler,
   reactorGraphQLClient: addGraphQLReactorClientEventHandler,
+  draggingNode: addDraggingNodeEventHandler,
 };
 
 const phGlobalEventHandlerRegisterFunctions: PHGlobalEventHandlerAdders = {

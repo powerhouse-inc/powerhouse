@@ -28,26 +28,16 @@ export function CodePopover(props: {
   const [isOpen, setIsOpen] = useState(false);
 
   /* debounce calls to open by 300ms */
-  const opener = funnel(
-    () => {
-      setIsOpen(true);
-    },
-    {
-      triggerAt: "start",
-      minQuietPeriodMs: 300,
-    },
-  );
+  const opener = funnel(() => setIsOpen(true), {
+    triggerAt: "start",
+    minQuietPeriodMs: 300,
+  });
 
   /* debounce calls to close by 100ms */
-  const closer = funnel(
-    () => {
-      setIsOpen(false);
-    },
-    {
-      triggerAt: "start",
-      minQuietPeriodMs: 100,
-    },
-  );
+  const closer = funnel(() => setIsOpen(false), {
+    triggerAt: "start",
+    minQuietPeriodMs: 100,
+  });
 
   /* If we are in the process of closing, cancel that operation.
     Then call the opener.

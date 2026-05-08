@@ -10,7 +10,7 @@ export type DocumentTypeIcon =
   | "package"
   | "subgraph";
 
-export type ConflictResolution = "replace" | "duplicate";
+export type ConflictResolution = "duplicate";
 
 export interface FileUploadProgress {
   stage:

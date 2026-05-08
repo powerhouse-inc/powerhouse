@@ -5,6 +5,7 @@ import {
   getSyncStatusSync,
   setSelectedNode,
   showDeleteNodeModal,
+  useDragNode,
   useNodeActions,
   useSelectedDriveSafe,
   useUserPermissions,
@@ -17,7 +18,6 @@ import type {
 import { useState } from "react";
 import { twMerge } from "tailwind-merge";
 import { defaultNodeOptions, nodeOptionsMap } from "../../constants/options.js";
-import { useDrag } from "../../hooks/use-drag.js";
 import { ConnectDropdownMenu } from "../dropdown-menu/dropdown-menu.js";
 import { NodeInput } from "../node-input/node-input.js";
 import { SyncStatusIcon } from "../status-icon/sync-status-icon.js";
@@ -51,7 +51,10 @@ export function FileItem(props: Props) {
   const sharingType = selectedDrive
     ? getDriveSharingType(selectedDrive)
     : "LOCAL";
-  const { dragProps } = useDrag({ node: fileNode });
+  const { isDragging, ...dragProps } = useDragNode({
+    srcId: fileNode.id,
+    parentId: fileNode.parentFolder ?? undefined,
+  });
   const { isAllowedToCreateDocuments } = useUserPermissions();
   const { onRenameNode, onRenameDriveNodes, onDuplicateNode } =
     useNodeActions();
@@ -113,6 +116,10 @@ export function FileItem(props: Props) {
         height={34}
         src={iconSrc}
         width={32}
+        /* HTML img elements are draggable by default, so we
+         * must disable it here so that only the container
+         * can be dragged */
+        draggable={false}
       />
       {isReadMode && syncStatus && (
         <div className="absolute bottom-[-2px] right-0 size-3 rounded-full bg-white">
@@ -129,6 +136,7 @@ export function FileItem(props: Props) {
 
   const containerStyles = twMerge(
     "group flex h-12 cursor-pointer select-none items-center rounded-lg bg-gray-200 px-2 text-gray-600 hover:text-gray-800",
+    isDragging ? "opacity-60" : "",
     className,
   );
 
@@ -177,8 +185,9 @@ export function FileItem(props: Props) {
     <div
       className="relative w-64"
       onClick={isReadMode ? () => setSelectedNode(fileNode) : undefined}
+      {...dragProps}
     >
-      <div {...dragProps} className={containerStyles}>
+      <div className={containerStyles}>
         <div className="flex items-center">
           <div className="mr-1.5">{iconNode}</div>
           {content}

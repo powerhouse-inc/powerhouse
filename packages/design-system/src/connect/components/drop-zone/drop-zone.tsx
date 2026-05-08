@@ -1,5 +1,5 @@
 import { Icon } from "#design-system";
-import { setSelectedNode } from "@powerhousedao/reactor-browser";
+import { setSelectedNode, useDropFile } from "@powerhousedao/reactor-browser";
 import type { Node } from "@powerhousedao/shared/document-drive";
 import {
   type ComponentPropsWithoutRef,
@@ -8,7 +8,6 @@ import {
   useState,
 } from "react";
 import { twMerge } from "tailwind-merge";
-import { useDrop } from "../../hooks/use-drop.js";
 import { ConnectReplaceDuplicateModal } from "../modal/replace-duplicate-modal.js";
 import { UploadFileListContainer } from "./upload-file-list-container.js";
 import { useUploadTracker } from "./use-upload-tracker.js";
@@ -70,14 +69,6 @@ export function DropZone(props: DropZoneProps) {
     setModalOpen(true);
   };
 
-  const handleReplace = () => {
-    if (conflictUploadId && onAddFile) {
-      resolveConflict(conflictUploadId, "replace", onAddFile);
-    }
-    setModalOpen(false);
-    setConflictUploadId(null);
-  };
-
   const handleDuplicate = () => {
     if (conflictUploadId && onAddFile) {
       resolveConflict(conflictUploadId, "duplicate", onAddFile);
@@ -91,12 +82,7 @@ export function DropZone(props: DropZoneProps) {
     setConflictUploadId(null);
   };
 
-  const { isDropTarget, dropProps } = useDrop({
-    target: node,
-    onAddFileOverride: handleAddFile,
-    trackNestedDrag: true,
-    acceptedFileExtensions,
-  });
+  const { isDropTarget, ...dropProps } = useDropFile(handleAddFile);
 
   return (
     <div
@@ -144,7 +130,6 @@ export function DropZone(props: DropZoneProps) {
             ? uploadsArray.find((u) => u?.id === conflictUploadId)?.fileName
             : undefined
         }
-        onReplace={handleReplace}
         onDuplicate={handleDuplicate}
       />
     </div>
