@@ -49,10 +49,6 @@
       "types": "./dist/connect/components/toast/toast.d.ts",
       "import": "./dist/connect/components/toast/toast.js"
     },
-    "./rwa": {
-      "types": "./dist/rwa/index.d.ts",
-      "import": "./dist/rwa/index.js"
-    },
     "./style.css": "./dist/style.css",
     "./theme.css": "./theme.css"
   },
@@ -143,14 +139,9 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.0.4",
     "date-fns": "catalog:",
-    "date-fns-tz": "^3.2.0",
     "diff": "^8.0.3",
-    "document-model": "workspace:*",
-    "mathjs": "^15.2.0",
-    "natural-orderby": "^4.0.0",
     "react-hook-form": "^7.53.0",
     "react-json-view-lite": "^2.5.0",
-    "react-number-format": "^5.4.2",
     "react-select": "^5.8.0",
     "react-toastify": "^10.0.4",
     "remeda": "catalog:",
