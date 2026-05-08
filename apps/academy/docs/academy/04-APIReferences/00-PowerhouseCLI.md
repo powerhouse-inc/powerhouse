@@ -947,6 +947,8 @@ Resolution order for the registry URL:
 ### Options
 **Registry** - Registry URL to install from (overrides config and environment) - Usage: `--registry <str>`
 
+**Allow Build** - A list of package names that are allowed to run postinstall scripts during installation. - Usage: `--allow-build <str>`
+
 **Package Manager** - Specify the package manager to use for your project. Can be one of: `npm`, `pnpm`, `yarn`, or `bun`. Defaults to your environment package manager. - Usage: `--package-manager, -p <value>`
 
 
