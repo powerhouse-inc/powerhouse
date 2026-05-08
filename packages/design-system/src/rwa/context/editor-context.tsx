@@ -1,28 +1,28 @@
 import type { ReactNode } from "react";
 import {
-    createContext,
-    useCallback,
-    useContext,
-    useEffect,
-    useMemo,
-    useReducer,
-    useRef,
-    useState,
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
 } from "react";
 import {
-    getActionOperationType,
-    getStateKeyForTableName,
-    getTableNameFor,
+  getActionOperationType,
+  getStateKeyForTableName,
+  getTableNameFor,
 } from "../constants/table.js";
 import type {
-    CashAsset,
-    EditorAction,
-    EditorDispatcher,
-    FixedIncome,
-    Operation,
-    RealWorldAssetsState,
-    TableItemType,
-    TableName,
+  CashAsset,
+  EditorAction,
+  EditorDispatcher,
+  FixedIncome,
+  Operation,
+  RealWorldAssetsState,
+  TableItemType,
+  TableName,
 } from "../types.js";
 import { makeTableData } from "../utils/table.js";
 import { getCashAsset, getFixedIncomeAssets } from "../utils/validators.js";
