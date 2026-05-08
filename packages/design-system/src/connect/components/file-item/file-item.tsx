@@ -116,6 +116,10 @@ export function FileItem(props: Props) {
         height={34}
         src={iconSrc}
         width={32}
+        /* HTML img elements are draggable by default, so we
+         * must disable it here so that only the container
+         * can be dragged */
+        draggable={false}
       />
       {isReadMode && syncStatus && (
         <div className="absolute bottom-[-2px] right-0 size-3 rounded-full bg-white">
@@ -181,8 +185,9 @@ export function FileItem(props: Props) {
     <div
       className="relative w-64"
       onClick={isReadMode ? () => setSelectedNode(fileNode) : undefined}
+      {...dragProps}
     >
-      <div {...dragProps} className={containerStyles}>
+      <div className={containerStyles}>
         <div className="flex items-center">
           <div className="mr-1.5">{iconNode}</div>
           {content}
