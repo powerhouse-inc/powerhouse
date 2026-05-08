@@ -1,5 +1,6 @@
-import { useDocumentById, usePHToast } from "@powerhousedao/reactor-browser";
 import { downloadDocument } from "../utils/download-document.js";
+import { useDocumentById } from "./document-by-id.js";
+import { usePHToast } from "./toast.js";
 
 export function useDownloadDocument(id: string | undefined) {
   const [document] = useDocumentById(id);
