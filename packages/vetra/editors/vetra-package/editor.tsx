@@ -11,7 +11,7 @@ import {
   setPackageGithubUrl,
   setPackageName,
   setPackageNpmUrl,
-} from "../../document-models/vetra-package/index.js";
+} from "document-models/vetra-package";
 import { useSelectedDriveVetraPackage } from "../hooks/useVetraDocument.js";
 import { MetaForm } from "./components/MetaForm.js";
 import { editorConfig } from "./config.js";

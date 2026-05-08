@@ -8,23 +8,23 @@ import { isFileNode } from "@powerhousedao/shared/document-drive";
 import type {
   AppModuleAction,
   AppModuleDocument,
-} from "../../document-models/app-module/index.js";
+} from "document-models/app-module";
 import {
   type DocumentEditorAction,
   type DocumentEditorDocument,
-} from "../../document-models/document-editor/index.js";
+} from "document-models/document-editor";
 import type {
   ProcessorModuleAction,
   ProcessorModuleDocument,
-} from "../../document-models/processor-module/index.js";
+} from "document-models/processor-module";
 import type {
   SubgraphModuleAction,
   SubgraphModuleDocument,
-} from "../../document-models/subgraph-module/index.js";
+} from "document-models/subgraph-module";
 import type {
   VetraPackageAction,
   VetraPackageDocument,
-} from "../../document-models/vetra-package/index.js";
+} from "document-models/vetra-package";
 
 const VETRA_PACKAGE_DOCUMENT_TYPE = "powerhouse/package";
 const DOCUMENT_EDITOR_DOCUMENT_TYPE = "powerhouse/document-editor";

@@ -1,6 +1,7 @@
 import type { PHAppConfig } from "@powerhousedao/reactor-browser";
 
 export const editorConfig: PHAppConfig = {
+  isDragAndDropEnabled: true,
   allowedDocumentTypes: [
     "powerhouse/document-model",
     "powerhouse/app",
@@ -9,5 +10,4 @@ export const editorConfig: PHAppConfig = {
     "powerhouse/subgraph",
     "powerhouse/package",
   ],
-  isDragAndDropEnabled: true,
 };

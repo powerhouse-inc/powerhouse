@@ -3,9 +3,9 @@ import { useSetPHDocumentEditorConfig } from "@powerhousedao/reactor-browser";
 import {
   setSubgraphName,
   setSubgraphStatus,
-} from "@powerhousedao/vetra/document-models/subgraph-module";
+  useSelectedSubgraphModuleDocument,
+} from "document-models/subgraph-module";
 import { useCallback } from "react";
-import { useSelectedSubgraphModuleDocument } from "../hooks/useVetraDocument.js";
 import { SubgraphEditorForm } from "./components/SubgraphEditorForm.js";
 import { editorConfig } from "./config.js";
 

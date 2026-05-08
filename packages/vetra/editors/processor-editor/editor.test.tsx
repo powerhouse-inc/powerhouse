@@ -1,13 +1,21 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { utils } from "../../document-models/processor-module/utils.js";
-import { useSelectedProcessorModuleDocument } from "../hooks/useVetraDocument.js";
+import {
+  useSelectedProcessorModuleDocument,
+  utils,
+} from "document-models/processor-module";
 import Editor from "./editor.js";
 
-vi.mock("../hooks/useVetraDocument.js", () => ({
-  useSelectedProcessorModuleDocument: vi.fn(),
-}));
+vi.mock("document-models/processor-module", async () => {
+  const actual = await vi.importActual<
+    typeof import("document-models/processor-module")
+  >("document-models/processor-module");
+  return {
+    ...actual,
+    useSelectedProcessorModuleDocument: vi.fn(),
+  };
+});
 
 vi.mock("../hooks/useAvailableDocumentTypes.js", () => ({
   useAvailableDocumentTypes: vi.fn(() => [

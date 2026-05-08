@@ -9,6 +9,8 @@ import { DocumentCodegenFactory } from "./document-handlers/index.js";
 import type { CodegenInput } from "./document-handlers/types.js";
 import { logger } from "./logger.js";
 
+export { codegenFactoryBuilder } from "./factory.js";
+
 export class CodegenProcessor implements IProcessor {
   private manager: DocumentCodegenManager;
 

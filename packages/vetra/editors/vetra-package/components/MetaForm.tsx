@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useDebounce } from "../../hooks/index.js";
-import type { Keyword } from "../../../document-models/vetra-package/index.js";
+import type { Keyword } from "document-models/vetra-package";
 
 export interface MetaFormProps {
   name: string;

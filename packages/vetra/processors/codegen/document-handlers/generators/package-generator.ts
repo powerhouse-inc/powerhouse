@@ -2,7 +2,7 @@ import { createOrUpdateManifest } from "@powerhousedao/codegen/file-builders";
 import type {
   VetraPackageGlobalState,
   VetraPackagePHState,
-} from "../../../../document-models/vetra-package/index.js";
+} from "document-models/vetra-package";
 import { logger } from "../../logger.js";
 import { BaseDocumentGen } from "../base-document-gen.js";
 import type { CodegenInput } from "../types.js";

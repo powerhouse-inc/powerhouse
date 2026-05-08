@@ -2,7 +2,7 @@ import { generateSubgraph } from "@powerhousedao/codegen";
 import type {
   SubgraphModulePHState,
   SubgraphModuleState,
-} from "../../../../document-models/subgraph-module/index.js";
+} from "document-models/subgraph-module";
 import { logger } from "../../logger.js";
 import { BaseDocumentGen } from "../base-document-gen.js";
 import type { CodegenInput } from "../types.js";

@@ -4,7 +4,7 @@ import {
   type ProcessorApps,
 } from "@powerhousedao/shared/processors";
 import { useEffect, useState } from "react";
-import type { DocumentTypeItem } from "../../../document-models/processor-module/index.js";
+import type { DocumentTypeItem } from "document-models/processor-module";
 import { StatusPill } from "../../components/index.js";
 import { useAvailableDocumentTypes, useDebounce } from "../../hooks/index.js";
 
@@ -42,7 +42,8 @@ export const ProcessorEditorForm: React.FC<ProcessorEditorFormProps> = ({
   const [documentTypes, setDocumentTypes] =
     useState<DocumentTypeItem[]>(initialDocumentTypes);
   const [selectedDocumentType, setSelectedDocumentType] = useState("");
-  const [processorApps, setProcessorApps] = useState(initialProcessorApps);
+  const [processorApps, setProcessorApps] =
+    useState<ProcessorApps>(initialProcessorApps);
   const [isConfirmed, setIsConfirmed] = useState(false);
 
   // Get available document types from the hook (combines reactor and vetra drive)
@@ -232,7 +233,7 @@ export const ProcessorEditorForm: React.FC<ProcessorEditorFormProps> = ({
         <div className="space-y-2">
           {!isReadOnly && (
             <>
-              {PROCESSOR_APPS.map((processorApp) => (
+              {PROCESSOR_APPS.map((processorApp: ProcessorApp) => (
                 <div key={processorApp} className="flex gap-1">
                   <input
                     type="checkbox"
@@ -242,14 +243,16 @@ export const ProcessorEditorForm: React.FC<ProcessorEditorFormProps> = ({
                     onChange={(event) => {
                       const isChecked = event.target.checked;
                       if (isChecked) {
-                        setProcessorApps((processorApps) => [
+                        setProcessorApps((processorApps: ProcessorApps) => [
                           ...new Set([...processorApps, processorApp]),
                         ]);
                         onAddProcessorApp?.(processorApp);
                       } else {
                         if (processorApps.length > 1) {
-                          setProcessorApps((processorApps) =>
-                            processorApps.filter((p) => p !== processorApp),
+                          setProcessorApps((processorApps: ProcessorApps) =>
+                            processorApps.filter(
+                              (p: ProcessorApp) => p !== processorApp,
+                            ),
                           );
                           onRemoveProcessorApp?.(processorApp);
                         }
@@ -263,7 +266,7 @@ export const ProcessorEditorForm: React.FC<ProcessorEditorFormProps> = ({
           )}
           <div className="space-y-1">
             {isReadOnly &&
-              processorApps.map((processorApp) => (
+              processorApps.map((processorApp: ProcessorApp) => (
                 <span key={processorApp} className="text-sm text-gray-700">
                   {processorApp}
                 </span>
