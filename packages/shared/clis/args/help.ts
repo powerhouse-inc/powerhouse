@@ -1,7 +1,6 @@
 import { command } from "cmd-ts";
 import type { phCliCommandNames } from "../command-names.js";
 import { accessTokenArgs } from "./access-token.js";
-import { codeArgs } from "./code.js";
 import { debugArgs } from "./common.js";
 import { connectArgs } from "./connect.js";
 import { generateArgs } from "./generate.js";
@@ -60,12 +59,6 @@ export const phCliHelpCommands = {
     name: "build",
     args: debugArgs,
     description: "Build your project for publishing to the registry",
-    handler: () => {},
-  }),
-  code: helpCommand({
-    name: "code",
-    args: codeArgs,
-    description: "Open the Powerhouse coding agent (REPL backed by Mastra)",
     handler: () => {},
   }),
   publish: helpCommand({

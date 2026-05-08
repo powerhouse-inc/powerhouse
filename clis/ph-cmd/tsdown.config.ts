@@ -5,7 +5,7 @@ const version =
 const gitSha = process.env.WORKSPACE_GIT_SHA || "unknown";
 
 export default defineConfig({
-  entry: ["src/cli.ts", "src/generate-commands-docs.ts"],
+  entry: ["src/cli.ts"],
   outDir: "dist",
   clean: true,
   dts: true,
