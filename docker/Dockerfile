@@ -85,10 +85,8 @@ RUN corepack enable && corepack prepare pnpm@latest --activate \
 
 ARG TAG=latest
 ARG GIT_SHA=unknown
-# `pnpm init` in pnpm v11 writes a devEngines.packageManager.version with a
-# caret prefix (e.g. "^11.0.8"), which the very next `pnpm add` rejects with
-# "expected a semver version". Skip pnpm init and write a minimal manifest.
-RUN echo '{"name":"app","version":"1.0.0","type":"module","private":true,"pnpm":{"allowBuilds":{"@apollo/protobufjs":true,"@parcel/watcher":true,"esbuild":true,"protobufjs":true}}}' > package.json \
+RUN echo '{"name":"app","version":"1.0.0","type":"module","private":true}' > package.json \
+ && printf 'allowBuilds:\n  "@apollo/protobufjs": true\n  "@parcel/watcher": true\n  esbuild: true\n  protobufjs: true\n' > pnpm-workspace.yaml \
  && pnpm add --shamefully-hoist @powerhousedao/switchboard@$TAG
 
 COPY docker/switchboard-entrypoint.sh /app/entrypoint.sh

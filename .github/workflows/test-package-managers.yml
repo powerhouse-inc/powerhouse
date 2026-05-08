@@ -48,6 +48,7 @@ jobs:
     env:
       PH_TAG: ${{ inputs.tag || (github.base_ref == 'main' && 'dev') || (contains(github.base_ref, 'staging') && 'staging') || (contains(github.base_ref, 'stg') && 'staging') || (contains(github.base_ref, 'production') && 'latest') || (contains(github.base_ref, 'prod') && 'latest') || vars.PH_TAG || 'dev' }}
       PH_PACKAGES: ${{ inputs.packages || vars.PH_PACKAGES || '' }}
+      NPM_CONFIG_MINIMUM_RELEASE_AGE: "0"
 
     steps:
       - name: Checkout
@@ -75,10 +76,6 @@ jobs:
       - name: Append pnpm v11 global bin dir to PATH
         if: matrix.id == 'pnpm-11'
         run: echo "$PNPM_HOME/bin" >> "$GITHUB_PATH"
-
-      - name: Disable pnpm minimum-release-age
-        if: matrix.package-manager == 'pnpm'
-        run: echo "minimum-release-age=0" >> ~/.npmrc
 
       - name: Setup bun
         if: matrix.package-manager == 'bun'
