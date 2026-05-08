@@ -49,6 +49,7 @@ jobs:
       PH_TAG: ${{ inputs.tag || (github.base_ref == 'main' && 'dev') || (contains(github.base_ref, 'staging') && 'staging') || (contains(github.base_ref, 'stg') && 'staging') || (contains(github.base_ref, 'production') && 'latest') || (contains(github.base_ref, 'prod') && 'latest') || vars.PH_TAG || 'dev' }}
       PH_PACKAGES: ${{ inputs.packages || vars.PH_PACKAGES || '' }}
       NPM_CONFIG_MINIMUM_RELEASE_AGE: "0"
+      PNPM_CONFIG_MINIMUM_RELEASE_AGE: "0"
 
     steps:
       - name: Checkout
