@@ -1,40 +1,51 @@
-import type { Node } from "@powerhousedao/shared";
-import { useState, type DragEventHandler } from "react";
+import { type DragEventHandler } from "react";
 import {
-  allPass,
   conditional,
   constant,
-  filter,
-  find,
-  hasAtLeast,
-  isArray,
+  funnel,
   isDefined,
-  isIncludedIn,
   isNot,
   isStrictEqual,
   isTruthy,
-  last,
-  map,
-  pipe,
-  split,
+  once,
 } from "remeda";
 import { moveNodeById } from "../actions/document.js";
-import { useIsDragAndDropEnabled } from "./config/editor.js";
 import { makePHEventFunctions } from "./make-ph-event-functions.js";
 import { useSelectedDriveId } from "./selected-drive.js";
-import { useSelectedFolder } from "./selected-folder.js";
 export type DraggingNode = {
   srcId: string;
   parentId: string | null | undefined;
 };
 
 const draggingNodeEventFunctions = makePHEventFunctions("draggingNode");
-
-export const useDraggingNode = draggingNodeEventFunctions.useValue;
-
-export const setDraggingNode = draggingNodeEventFunctions.setValue;
+const useDraggingNode = draggingNodeEventFunctions.useValue;
+const setDraggingNode = draggingNodeEventFunctions.setValue;
 export const addDraggingNodeEventHandler =
   draggingNodeEventFunctions.addEventHandler;
+
+const draggingNodeSetter = funnel(
+  (node: DraggingNode) => setDraggingNode(node),
+  {
+    reducer: (_, newNode: DraggingNode) => newNode,
+    triggerAt: "start",
+    minQuietPeriodMs: 100,
+  },
+);
+
+const draggingNodeUnsetter = funnel(() => setDraggingNode(undefined), {
+  triggerAt: "start",
+  minQuietPeriodMs: 100,
+});
+
+function setDragging(node: DraggingNode) {
+  draggingNodeUnsetter.cancel();
+  draggingNodeSetter.call(node);
+}
+
+function unsetDragging() {
+  draggingNodeSetter.cancel();
+  draggingNodeUnsetter.call();
+}
 
 /* Decide if a node is being dragged based on its id, parent and drive */
 const isNodeDrag = (params: {
@@ -57,21 +68,24 @@ const isNodeDrag = (params: {
     constant(true),
   );
 
+/* Allows a node to be dragged */
 export function useDragNode(args: {
   srcId: string | undefined;
   parentId: string | null | undefined;
 }) {
   const { srcId, parentId } = args;
   const driveId = useSelectedDriveId();
+
   const params = {
     driveId,
     srcId,
     parentId,
   };
   const draggable = isNodeDrag(params);
+
   const onDragStart: DragEventHandler = () => {
     if (!draggable) return;
-    setDraggingNode(params);
+    setDragging(params);
   };
 
   return {
@@ -116,6 +130,7 @@ const isNodeDrop = (params: {
     constant(true),
   );
 
+/* Allows a node to be a drop target */
 export function useDropNode(targetId: string | undefined) {
   const driveId = useSelectedDriveId();
   const { srcId, parentId } = useDraggingNode() ?? {};
@@ -140,78 +155,13 @@ export function useDropNode(targetId: string | undefined) {
   const onDragEnter: DragEventHandler = (event) => handleNodeDrop(event);
 
   const onDrop: DragEventHandler = (event) =>
-    handleNodeDrop(event, () => {
-      setDraggingNode(undefined);
-      moveNodeById(params).catch(console.error);
-    });
+    handleNodeDrop(
+      event,
+      once(() => {
+        unsetDragging();
+        moveNodeById(params).catch(console.error);
+      }),
+    );
 
   return { onDragEnter, onDragOver, onDrop };
-}
-
-const allowedExtentions = ["zip", "phd", "phdm"] as const;
-
-const hasFilesType = (types: readonly string[]) =>
-  isDefined(find(types, (type) => isStrictEqual(type, "Files")));
-
-const isFileDrop = (event: React.DragEvent<Element>) =>
-  allPass(event.dataTransfer.types, [isArray, hasAtLeast(1), hasFilesType]);
-
-const hasAllowedExtension = (file: File) =>
-  pipe(
-    file,
-    (file) => file.name,
-    split("."),
-    last(),
-    isIncludedIn(allowedExtentions),
-  );
-
-const getFileItems = (event: React.DragEvent<Element>) =>
-  pipe(
-    Array.from(event.dataTransfer.items),
-    filter((item) => isStrictEqual(item.kind, "file")),
-    map((item) => item.getAsFile()),
-    filter(isTruthy),
-  );
-
-export function useDropFile(
-  handleAddFile: (file: File, parent: Node | undefined) => Promise<void>,
-) {
-  const [isDropTarget, setIsDropTarget] = useState(false);
-  const isDragAndDropEnabled = useIsDragAndDropEnabled();
-  const selectedFolder = useSelectedFolder();
-
-  function handleDragEvent(event: React.DragEvent<Element>, cb?: () => void) {
-    if (!isDragAndDropEnabled) return;
-    if (!isFileDrop(event)) return;
-    event.preventDefault();
-    event.stopPropagation();
-    cb?.();
-  }
-
-  const handleAddFiles = (files: File[]) =>
-    map(files, (file) => handleAddFile(file, selectedFolder));
-
-  const onDragEnter: DragEventHandler = (event) => handleDragEvent(event);
-
-  const onDragOver: DragEventHandler = (event) =>
-    handleDragEvent(event, () => setIsDropTarget(true));
-
-  const onDragLeave: DragEventHandler = (event) =>
-    handleDragEvent(event, () => setIsDropTarget(false));
-
-  const onDrop: DragEventHandler = (event) =>
-    handleDragEvent(event, () => {
-      setIsDropTarget(false);
-      Promise.all(
-        pipe(event, getFileItems, filter(hasAllowedExtension), handleAddFiles),
-      ).catch(console.error);
-    });
-
-  return {
-    onDragEnter,
-    onDragOver,
-    onDragLeave,
-    onDrop,
-    isDropTarget,
-  };
 }
