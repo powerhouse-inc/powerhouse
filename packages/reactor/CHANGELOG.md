@@ -1,3 +1,14 @@
+## 6.0.0-dev.234 (2026-05-08)
+
+### 🩹 Fixes
+
+- **ci:** pnpm 11 reads PNPM_CONFIG_* not NPM_CONFIG_* ([b6c05fb23](https://github.com/powerhouse-inc/powerhouse/commit/b6c05fb23))
+- **ci, docker:** pnpm 11 uses pnpm-workspace.yaml for allowBuilds; env var for min-release-age ([37c04c28a](https://github.com/powerhouse-inc/powerhouse/commit/37c04c28a))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.233 (2026-05-08)
 
 This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
