@@ -51,7 +51,7 @@ export function FileItem(props: Props) {
   const sharingType = selectedDrive
     ? getDriveSharingType(selectedDrive)
     : "LOCAL";
-  const dragProps = useDragNode({
+  const { isDragging, ...dragProps } = useDragNode({
     srcId: fileNode.id,
     parentId: fileNode.parentFolder ?? undefined,
   });
@@ -132,6 +132,7 @@ export function FileItem(props: Props) {
 
   const containerStyles = twMerge(
     "group flex h-12 cursor-pointer select-none items-center rounded-lg bg-gray-200 px-2 text-gray-600 hover:text-gray-800",
+    isDragging ? "opacity-60" : "",
     className,
   );
 

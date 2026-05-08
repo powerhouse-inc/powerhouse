@@ -11,6 +11,7 @@ import {
   useUserPermissions,
 } from "@powerhousedao/reactor-browser";
 import { Fragment, useState } from "react";
+import { twMerge } from "tailwind-merge";
 import { NodeInput } from "../node-input/node-input.js";
 
 export function Breadcrumbs() {
@@ -111,14 +112,22 @@ export type BreadcrumbProps = {
 
 export function Breadcrumb(props: BreadcrumbProps) {
   const { name, id, parentId, onClick } = props;
-  const dragProps = useDragNode({ srcId: id, parentId: parentId ?? undefined });
-  const dropProps = useDropNode(id);
+  const { isDragging, ...dragProps } = useDragNode({
+    srcId: id,
+    parentId: parentId ?? undefined,
+  });
+  const { isDropTarget, ...dropProps } = useDropNode(id);
+
+  const containerStyles = twMerge(
+    "cursor-pointer transition-colors last-of-type:text-gray-800 hover:text-gray-800",
+    isDragging ? "opacity-60" : isDropTarget ? "bg-blue-100" : "",
+  );
 
   return (
     <div
       {...dragProps}
       {...dropProps}
-      className="cursor-pointer transition-colors last-of-type:text-gray-800 hover:text-gray-800"
+      className={containerStyles}
       onClick={onClick}
       role="button"
     >

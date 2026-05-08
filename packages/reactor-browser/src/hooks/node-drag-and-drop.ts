@@ -1,17 +1,20 @@
 import { type DragEventHandler } from "react";
 import {
+  allPass,
   conditional,
   constant,
   funnel,
   isDefined,
   isNot,
   isStrictEqual,
+  isString,
   isTruthy,
   once,
 } from "remeda";
 import { moveNodeById } from "../actions/document.js";
 import { makePHEventFunctions } from "./make-ph-event-functions.js";
 import { useSelectedDriveId } from "./selected-drive.js";
+import { useDropTarget } from "./use-drop-target.js";
 export type DraggingNode = {
   srcId: string;
   parentId: string | null | undefined;
@@ -75,6 +78,7 @@ export function useDragNode(args: {
 }) {
   const { srcId, parentId } = args;
   const driveId = useSelectedDriveId();
+  const draggingNodeId = useDraggingNode()?.srcId;
 
   const params = {
     driveId,
@@ -83,14 +87,28 @@ export function useDragNode(args: {
   };
   const draggable = isNodeDrag(params);
 
+  const isDragging = allPass({ srcId, draggingNodeId }, [
+    () => draggable,
+    ({ srcId }) => isString(srcId),
+    ({ draggingNodeId }) => isString(draggingNodeId),
+    ({ srcId, draggingNodeId }) => isStrictEqual(srcId, draggingNodeId),
+  ]);
+
   const onDragStart: DragEventHandler = () => {
     if (!draggable) return;
     setDragging(params);
   };
 
+  const onDragEnd: DragEventHandler = () => {
+    if (!draggable) return;
+    unsetDragging();
+  };
+
   return {
+    isDragging,
     draggable,
     onDragStart,
+    onDragEnd,
   };
 }
 
@@ -134,6 +152,7 @@ const isNodeDrop = (params: {
 export function useDropNode(targetId: string | undefined) {
   const driveId = useSelectedDriveId();
   const { srcId, parentId } = useDraggingNode() ?? {};
+  const { isDropTarget, setTarget, unsetTarget } = useDropTarget();
 
   const params = {
     driveId,
@@ -151,17 +170,23 @@ export function useDropNode(targetId: string | undefined) {
     cb?.();
   }
 
-  const onDragOver: DragEventHandler = (event) => handleNodeDrop(event);
   const onDragEnter: DragEventHandler = (event) => handleNodeDrop(event);
+
+  const onDragOver: DragEventHandler = (event) =>
+    handleNodeDrop(event, once(setTarget));
+
+  const onDragLeave: DragEventHandler = (event) =>
+    handleNodeDrop(event, once(unsetTarget));
 
   const onDrop: DragEventHandler = (event) =>
     handleNodeDrop(
       event,
       once(() => {
         unsetDragging();
+        unsetTarget();
         moveNodeById(params).catch(console.error);
       }),
     );
 
-  return { onDragEnter, onDragOver, onDrop };
+  return { isDropTarget, onDragEnter, onDragOver, onDragLeave, onDrop };
 }

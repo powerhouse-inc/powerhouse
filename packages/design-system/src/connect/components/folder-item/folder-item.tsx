@@ -23,11 +23,11 @@ export function FolderItem(props: {
   const { isAllowedToCreateDocuments } = useUserPermissions();
   const [mode, setMode] = useState<"READ" | "WRITE">("READ");
   const [isDropdownMenuOpen, setIsDropdownMenuOpen] = useState(false);
-  const dragProps = useDragNode({
+  const { isDragging, ...dragProps } = useDragNode({
     srcId: folderNode.id,
     parentId: folderNode.parentFolder,
   });
-  const dropProps = useDropNode(folderNode.id);
+  const { isDropTarget, ...dropProps } = useDropNode(folderNode.id);
   const { onRenameNode, onRenameDriveNodes, onDuplicateNode } =
     useNodeActions();
   const isReadMode = mode === "READ";
@@ -91,8 +91,8 @@ export function FolderItem(props: {
 
   const containerStyles = twMerge(
     "group flex h-12 cursor-pointer select-none items-center rounded-lg bg-gray-200 px-2",
+    isDragging ? "opacity-60" : isDropTarget ? "bg-blue-100" : "",
     className,
-    // isDropTarget && "bg-blue-100",
   );
 
   return (

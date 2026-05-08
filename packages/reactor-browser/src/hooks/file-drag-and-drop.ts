@@ -1,11 +1,9 @@
 import type { Node } from "@powerhousedao/shared";
 import type { DragEventHandler } from "react";
-import { useState } from "react";
 import {
   allPass,
   filter,
   find,
-  funnel,
   hasAtLeast,
   isArray,
   isDefined,
@@ -20,6 +18,7 @@ import {
 } from "remeda";
 import { useIsDragAndDropEnabled } from "./config/editor.js";
 import { useSelectedFolder } from "./selected-folder.js";
+import { useDropTarget } from "./use-drop-target.js";
 
 /* Supported file extensions, more can be added here */
 const allowedExtensions = ["zip", "phd", "phdm"] as const;
@@ -55,31 +54,9 @@ const getFileItems = (event: React.DragEvent<Element>) =>
 export function useDropFile(
   handleAddFile: (file: File, parent: Node | undefined) => Promise<void>,
 ) {
-  const [isDropTarget, setIsDropTarget] = useState(false);
+  const { isDropTarget, setTarget, unsetTarget } = useDropTarget();
   const isDragAndDropEnabled = useIsDragAndDropEnabled();
   const selectedFolder = useSelectedFolder();
-
-  const targetSetter = funnel(() => setIsDropTarget(true), {
-    triggerAt: "start",
-    minQuietPeriodMs: 100,
-  });
-
-  const targetUnsetter = funnel(() => setIsDropTarget(false), {
-    triggerAt: "start",
-    minQuietPeriodMs: 100,
-  });
-
-  function setTarget() {
-    if (!isDragAndDropEnabled) return;
-    targetUnsetter.cancel();
-    targetSetter.call();
-  }
-
-  function unsetTarget() {
-    if (!isDragAndDropEnabled) return;
-    targetSetter.cancel();
-    targetUnsetter.call();
-  }
 
   function handleDragEvent(event: React.DragEvent<Element>, cb?: () => void) {
     if (!isDragAndDropEnabled) return;
