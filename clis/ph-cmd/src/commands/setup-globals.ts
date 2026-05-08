@@ -45,7 +45,11 @@ export const setupGlobals = command({
       }
     };
 
-    if (existsSync(POWERHOUSE_GLOBAL_DIR)) {
+    // The directory itself can exist without the project being bootstrapped —
+    // telemetry writes `~/.ph/telemetry.json` early on. Use the presence of
+    // `package.json` as the real "is initialized" signal.
+    const globalPackageJson = path.join(POWERHOUSE_GLOBAL_DIR, "package.json");
+    if (existsSync(globalPackageJson)) {
       // Repair-in-place: an older bootstrap may have left `name: ".ph"` in
       // package.json, which breaks vite/npm. Fix it on every invocation.
       fixGlobalPackageName();
