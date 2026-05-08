@@ -112,15 +112,20 @@ export class InMemoryQueue implements IQueue {
   }
 
   /**
-   * Get the next job that has all its dependencies met
+   * Returns the head of the sub-queue if its dependencies are met, or null.
+   *
+   * The dispatcher only ever considers the head — a dep-blocked head holds
+   * the rest of its sub-queue. This preserves per-(documentId, scope, branch)
+   * FIFO regardless of how dependencies are authored, and makes the queue's
+   * documented "serialized per document" invariant hold even when callers
+   * omit queueHint dependencies on jobs that share a sub-queue.
    */
   private getNextJobWithMetDependencies(queue: Job[]): Job | null {
-    for (const job of queue) {
-      if (this.areDependenciesMet(job)) {
-        return job;
-      }
+    if (queue.length === 0) {
+      return null;
     }
-    return null;
+    const head = queue[0];
+    return this.areDependenciesMet(head) ? head : null;
   }
 
   private getCreateDocumentType(job: Job): string | undefined {

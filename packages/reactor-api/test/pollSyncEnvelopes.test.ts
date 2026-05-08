@@ -76,6 +76,8 @@ function makeSyncOp(
     operations,
     status: 0,
     callbacks: [],
+    deliveredCount: 0,
+    emittedCount: 0,
   } as unknown as SyncOperation;
 }
 
@@ -178,8 +180,12 @@ describe("pollSyncEnvelopes paging caps", () => {
     }
   });
 
-  it("filters operations the client has already seen via outboxLatest before splitting", () => {
+  it("filters operations the client has already seen via outboxLatest after a prior emission set the cursor", () => {
     const syncOp = makeSyncOp("job-1", "doc-1", range(1, 50), []);
+    // Simulate prior delivery: server has previously emitted all 50 ops, but
+    // client only confirmed the first 30 (outboxLatest=30 on this poll). The
+    // cursor advances past the first 30 and re-emits ords 31..50.
+    syncOp.emittedCount = 50;
     const syncManager = makeSyncManager([syncOp]);
 
     const result = pollSyncEnvelopes(syncManager, {
@@ -196,9 +202,11 @@ describe("pollSyncEnvelopes paging caps", () => {
     expect(result.hasMore).toBe(false);
   });
 
-  it("skips SyncOps where every op was already seen by outboxLatest", () => {
+  it("skips SyncOps where every op was previously emitted and is now confirmed by outboxLatest", () => {
     const seen = makeSyncOp("job-old", "doc-1", [1, 2, 3]);
+    seen.emittedCount = 3;
     const fresh = makeSyncOp("job-new", "doc-1", [4, 5, 6]);
+    fresh.emittedCount = 3;
     const syncManager = makeSyncManager([seen, fresh]);
 
     const result = pollSyncEnvelopes(syncManager, {
@@ -207,6 +215,8 @@ describe("pollSyncEnvelopes paging caps", () => {
       outboxLatest: 3,
     });
 
+    // seen is fully past outboxLatest=3; fresh has all ords > 3 so cursor stays
+    // at 0 and re-emits.
     expect(result.envelopes).toHaveLength(1);
     expect(result.envelopes[0].key).toBe("job-new");
     expect(
@@ -214,6 +224,29 @@ describe("pollSyncEnvelopes paging caps", () => {
         (o: OperationWithContext) => o.context.ordinal,
       ),
     ).toEqual([4, 5, 6]);
+  });
+
+  it("re-emits a syncOp's leading ops when emittedCount is zero, even if outboxLatest covers them", () => {
+    // Regression test for the orphan bug: client claims outboxLatest=300 (e.g.
+    // from a different syncOp that was delivered earlier), but THIS syncOp was
+    // never sent (emittedCount=0). Ops must NOT be skipped.
+    const syncOp = makeSyncOp("job-orphan", "doc-orphan", [10, 20, 30, 40, 50]);
+    const syncManager = makeSyncManager([syncOp]);
+
+    const result = pollSyncEnvelopes(syncManager, {
+      channelId: CHANNEL_ID,
+      outboxAck: 0,
+      outboxLatest: 300,
+    });
+
+    expect(result.envelopes).toHaveLength(1);
+    expect(
+      result.envelopes[0].operations.map(
+        (o: OperationWithContext) => o.context.ordinal,
+      ),
+    ).toEqual([10, 20, 30, 40, 50]);
+    expect(syncOp.deliveredCount).toBe(0);
+    expect(syncOp.emittedCount).toBe(5);
   });
 
   it("truncates the page when total ops exceed MAX_OPERATIONS_PER_PAGE", () => {
@@ -351,5 +384,97 @@ describe("pollSyncEnvelopes paging caps", () => {
       0,
     );
     expect(totalOps).toBe(3 + MAX_OPERATIONS_PER_ENVELOPE * 2 + 2);
+  });
+
+  it("re-emits ops on response loss: cursor only advances when outboxLatest confirms receipt", () => {
+    const syncOp = makeSyncOp("job-1", "doc-1", [10, 20, 30, 40, 50]);
+    const syncManager = makeSyncManager([syncOp]);
+
+    const first = pollSyncEnvelopes(syncManager, {
+      channelId: CHANNEL_ID,
+      outboxAck: 0,
+      outboxLatest: 0,
+    });
+    expect(first.envelopes).toHaveLength(1);
+    expect(
+      first.envelopes[0].operations.map(
+        (o: OperationWithContext) => o.context.ordinal,
+      ),
+    ).toEqual([10, 20, 30, 40, 50]);
+    expect(syncOp.deliveredCount).toBe(0);
+
+    // Client only confirms receipt of the first two ops (response was partial
+    // or lost mid-batch). Cursor must advance to position 2 only.
+    const second = pollSyncEnvelopes(syncManager, {
+      channelId: CHANNEL_ID,
+      outboxAck: 0,
+      outboxLatest: 20,
+    });
+    expect(syncOp.deliveredCount).toBe(2);
+    expect(
+      second.envelopes[0].operations.map(
+        (o: OperationWithContext) => o.context.ordinal,
+      ),
+    ).toEqual([30, 40, 50]);
+
+    // Second response is dropped. Client retries with the same outboxLatest.
+    // Cursor must not advance past the unconfirmed ops.
+    const third = pollSyncEnvelopes(syncManager, {
+      channelId: CHANNEL_ID,
+      outboxAck: 0,
+      outboxLatest: 20,
+    });
+    expect(syncOp.deliveredCount).toBe(2);
+    expect(
+      third.envelopes[0].operations.map(
+        (o: OperationWithContext) => o.context.ordinal,
+      ),
+    ).toEqual([30, 40, 50]);
+  });
+
+  it("does not orphan a syncOp's leading ops when a later syncOp's ordinal sweeps past them (cross-syncOp interleaving)", () => {
+    // doc-A has ords [100, 200, 300]; doc-B has ords [150, 250]. Page cap of 3
+    // forces partial delivery. After the first poll the client has received
+    // some doc-A ops up through ord 200, so outboxLatest=200. doc-B's first op
+    // (ord 150) was delivered in that page too — but the second poll must not
+    // skip it again on doc-B. Pre-fix, the per-op `ordinal > outboxLatest`
+    // filter dropped doc-B's op-150 unconditionally.
+    const docA = makeSyncOp("job-a", "doc-a", [100, 200, 300]);
+    const docB = makeSyncOp("job-b", "doc-b", [150, 250]);
+    const syncManager = makeSyncManager([docA, docB]);
+
+    const first = pollSyncEnvelopes(syncManager, {
+      channelId: CHANNEL_ID,
+      outboxAck: 0,
+      outboxLatest: 0,
+    });
+    // First poll emits all 5 ops since they fit under the page cap.
+    const firstOps = first.envelopes.flatMap((e) =>
+      e.operations.map((o: OperationWithContext) => o.context.ordinal),
+    );
+    expect(firstOps.sort((a, b) => a - b)).toEqual([100, 150, 200, 250, 300]);
+
+    // Client confirms receipt up to ord 200.
+    pollSyncEnvelopes(syncManager, {
+      channelId: CHANNEL_ID,
+      outboxAck: 0,
+      outboxLatest: 200,
+    });
+    // doc-A has [100, 200] confirmed → cursor=2; doc-B has [150] confirmed →
+    // cursor=1. Op 250 in doc-B (ord <= 200 is false) stays. Op 300 in doc-A
+    // stays.
+    expect(docA.deliveredCount).toBe(2);
+    expect(docB.deliveredCount).toBe(1);
+
+    // Client now confirms full receipt and re-polls.
+    const final = pollSyncEnvelopes(syncManager, {
+      channelId: CHANNEL_ID,
+      outboxAck: 0,
+      outboxLatest: 300,
+    });
+    // Both syncOps fully delivered; nothing to send.
+    expect(final.envelopes).toHaveLength(0);
+    expect(docA.deliveredCount).toBe(3);
+    expect(docB.deliveredCount).toBe(2);
   });
 });

@@ -658,7 +658,7 @@ describe("InMemoryQueue", () => {
       expect(d4?.job.id).toBe("job-4");
     });
 
-    it("should dequeue jobs out of order based on dependencies", async () => {
+    it("should head-of-line block within a sub-queue when the head's deps are unmet", async () => {
       const job1 = createTestJob({ id: "job-1", queueHint: ["job-0"] });
       const job2 = createTestJob({ id: "job-2", queueHint: [] });
       const job3 = createTestJob({ id: "job-3", queueHint: [] });
@@ -667,13 +667,29 @@ describe("InMemoryQueue", () => {
       await queue.enqueue(job2);
       await queue.enqueue(job3);
 
-      // Job 1 is blocked, so job 2 should be dequeued
-      const dequeuedJob = await queue.dequeue(
+      // Head (job-1) is dep-blocked; the rest of the sub-queue is held back to
+      // preserve per-(documentId, scope, branch) FIFO.
+      const dequeued = await queue.dequeue(
         job1.documentId,
         job1.scope,
         job1.branch,
       );
-      expect(dequeuedJob?.job.id).toBe("job-2");
+      expect(dequeued).toBeNull();
+
+      // Other sub-queues are unaffected: a job on a different document
+      // dispatches normally even though doc-1's head is blocked.
+      const otherDocJob = createTestJob({
+        id: "job-other",
+        documentId: "doc-other",
+        queueHint: [],
+      });
+      await queue.enqueue(otherDocJob);
+      const dequeuedOther = await queue.dequeue(
+        otherDocJob.documentId,
+        otherDocJob.scope,
+        otherDocJob.branch,
+      );
+      expect(dequeuedOther?.job.id).toBe("job-other");
     });
 
     it("should handle dependencies across different queues", async () => {
