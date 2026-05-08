@@ -1,9 +1,3 @@
-import type {
-  DebugNodeOption,
-  NodeOption,
-  NormalNodeOption,
-  OptionMetadata,
-} from "#design-system";
 import { Icon } from "../../powerhouse/components/icon/icon.js";
 
 export const defaultDriveOptions = [
@@ -66,22 +60,22 @@ export const locationInfoByLocation = {
   },
 } as const;
 
-export const debugNodeOptionsMap: Record<DebugNodeOption, OptionMetadata> = {
-  ["ADD_TRIGGER"]: {
+export const debugNodeOptionsMap = {
+  ADD_TRIGGER: {
     label: "Add Trigger",
     icon: <Icon className="text-orange-900" name="Plus" size={16} />,
   },
-  ["REMOVE_TRIGGER"]: {
+  REMOVE_TRIGGER: {
     label: "Remove Trigger",
     icon: <Icon className="text-orange-900" name="Xmark" size={16} />,
   },
-  ["ADD_INVALID_TRIGGER"]: {
+  ADD_INVALID_TRIGGER: {
     label: "Add Trigger",
     icon: <Icon className="text-orange-900" name="Exclamation" size={16} />,
   },
 } as const;
 
-export const normalNodeOptionsMap: Record<NormalNodeOption, OptionMetadata> = {
+export const folderNodeDropdownOptions = {
   DUPLICATE: {
     label: "Duplicate",
     icon: <Icon name="FilesEarmark" size={16} />,
@@ -95,13 +89,12 @@ export const normalNodeOptionsMap: Record<NormalNodeOption, OptionMetadata> = {
     icon: <Icon name="Trash" size={16} />,
     className: "text-red-900",
   },
-  SETTINGS: {
-    label: "Settings",
-    icon: <Icon name="Gear" size={16} />,
-  },
 } as const;
 
-export const nodeOptionsMap: Record<NodeOption, OptionMetadata> = {
-  ...debugNodeOptionsMap,
-  ...normalNodeOptionsMap,
-} as const;
+export const fileNodeDropdownOptions = {
+  DOWNLOAD: {
+    label: "Download",
+    icon: <Icon name="DownloadFile" size={16} />,
+  },
+  ...folderNodeDropdownOptions,
+};

@@ -31,7 +31,7 @@ vi.mock("@powerhousedao/reactor-browser", () => ({
   setSelectedNode: vi.fn(),
   setSelectedTimelineItem: vi.fn(),
   showRevisionHistory: vi.fn(),
-  exportDocument: vi.fn(),
+  downloadDocument: vi.fn(),
   setSelectedDrive: vi.fn(),
   showPHModal: vi.fn(),
   closePHModal: vi.fn(),

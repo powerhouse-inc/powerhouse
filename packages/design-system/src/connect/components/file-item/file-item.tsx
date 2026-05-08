@@ -1,10 +1,10 @@
 import DefaultImg from "#assets/icons/template.png";
-import type { NodeOption } from "#design-system";
 import { Icon } from "#design-system";
 import {
   getSyncStatusSync,
   setSelectedNode,
   showDeleteNodeModal,
+  useDownloadDocument,
   useDragNode,
   useNodeActions,
   useSelectedDriveSafe,
@@ -16,8 +16,9 @@ import type {
   SharingType,
 } from "@powerhousedao/shared/document-drive";
 import { useState } from "react";
+import { addProp, entries, map, pipe } from "remeda";
 import { twMerge } from "tailwind-merge";
-import { defaultNodeOptions, nodeOptionsMap } from "../../constants/options.js";
+import { fileNodeDropdownOptions } from "../../constants/options.js";
 import { ConnectDropdownMenu } from "../dropdown-menu/dropdown-menu.js";
 import { NodeInput } from "../node-input/node-input.js";
 import { SyncStatusIcon } from "../status-icon/sync-status-icon.js";
@@ -58,25 +59,22 @@ export function FileItem(props: Props) {
   const { isAllowedToCreateDocuments } = useUserPermissions();
   const { onRenameNode, onRenameDriveNodes, onDuplicateNode } =
     useNodeActions();
+  const downloadDocument = useDownloadDocument(fileNode.id);
   const isReadMode = mode === "READ";
   const syncStatus = getSyncStatusSync(fileNode.id, sharingType);
 
   const dropdownMenuHandlers = {
+    DOWNLOAD: downloadDocument,
     DUPLICATE: () => onDuplicateNode(fileNode),
     RENAME: () => setMode("WRITE"),
     DELETE: () => showDeleteNodeModal(fileNode),
   } as const;
 
-  const dropdownMenuOptions = Object.entries(nodeOptionsMap)
-    .map(([id, option]) => ({
-      ...option,
-      id: id as NodeOption,
-    }))
-    .filter((option) =>
-      defaultNodeOptions.includes(
-        option.id as (typeof defaultNodeOptions)[number],
-      ),
-    );
+  const dropdownMenuOptions = pipe(
+    fileNodeDropdownOptions,
+    entries(),
+    map(([id, option]) => addProp(option, "id", id)),
+  );
 
   function onSubmit(name: string) {
     Promise.all([
@@ -95,7 +93,7 @@ export function FileItem(props: Props) {
     setMode("READ");
   }
 
-  function onDropdownMenuOptionClick(itemId: NodeOption) {
+  function onDropdownMenuOptionClick(itemId: string) {
     const handler =
       dropdownMenuHandlers[itemId as keyof typeof dropdownMenuHandlers];
     if (!handler) {

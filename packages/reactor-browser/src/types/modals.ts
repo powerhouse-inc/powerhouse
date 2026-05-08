@@ -27,6 +27,6 @@ export type PHModal =
   | { type: "debugSettings" }
   | { type: "disclaimer" }
   | { type: "cookiesPolicy" }
-  | { type: "exportDocumentWithErrors"; documentId: string }
+  | { type: "downloadDocumentWithErrors"; documentId: string }
   | { type: "inspector" }
   | { type: "missingPackage"; documentType: string };

@@ -40,7 +40,7 @@ export const WithoutData: Story = {
     canUndo: true,
     canRedo: true,
     onSwitchboardLinkClick: undefined,
-    onExport: () => {},
+    onDownloadDocument: () => {},
     onClose: () => {},
     onShowRevisionHistory: () => {},
     editorDispatcher: (action) => {
