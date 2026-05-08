@@ -32,6 +32,8 @@ export class SyncOperation {
   readonly operations: OperationWithContext[];
   status: SyncOperationStatus;
   error?: ChannelError;
+  deliveredCount = 0;
+  emittedCount = 0;
 
   callbacks: SyncOperationStatusCallback[] = [];
 

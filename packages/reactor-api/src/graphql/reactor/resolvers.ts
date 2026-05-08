@@ -1,7 +1,6 @@
 import {
   consolidateSyncOperations,
   envelopesToSyncOperations,
-  trimMailboxFromAckOrdinal,
   type IReactorClient,
   type ISyncManager,
   type JobInfo,
@@ -1010,26 +1009,36 @@ export function pollSyncEnvelopes(
     operationCount: syncOp.operations.length,
   }));
 
-  // trim outbox
+  // Trim acked outbox items, but only those we have fully emitted to this
+  // client. Without the emittedCount guard, a syncOp queued behind a page cap
+  // (never sent) would be dropped when ackOrdinal sweeps past its ordinals,
+  // because ackOrdinal can be advanced by OTHER syncOps the client did
+  // receive — same root-cause class as the resolver's per-op filter bug.
   if (args.outboxAck > 0) {
-    trimMailboxFromAckOrdinal(remote.channel.outbox, args.outboxAck);
+    const ackOrdinal = args.outboxAck;
+    const outbox = remote.channel.outbox;
+    const toRemove: SyncOperation[] = [];
+    for (const syncOp of outbox.items) {
+      const fullyEmitted =
+        (syncOp.emittedCount ?? 0) >= syncOp.operations.length;
+      if (!fullyEmitted) continue;
+      let maxOrdinal = 0;
+      for (const op of syncOp.operations) {
+        if (op.context.ordinal > maxOrdinal) maxOrdinal = op.context.ordinal;
+      }
+      if (maxOrdinal <= ackOrdinal) {
+        toRemove.push(syncOp);
+      }
+    }
+    if (toRemove.length > 0) {
+      for (const syncOp of toRemove) {
+        syncOp.executed();
+      }
+      outbox.remove(...toRemove);
+    }
   }
 
-  let operations = remote.channel.outbox.items;
-
-  // filter remaining outbox operations by outboxLatest
-  operations = operations.filter((syncOp) => {
-    let maxOrdinal = 0;
-    for (const op of syncOp.operations) {
-      maxOrdinal = Math.max(maxOrdinal, op.context.ordinal);
-    }
-
-    if (maxOrdinal > args.outboxLatest) {
-      return true;
-    }
-
-    return false;
-  });
+  const operations = remote.channel.outbox.items;
 
   if (operations.length === 0) {
     return {
@@ -1059,15 +1068,31 @@ export function pollSyncEnvelopes(
       break;
     }
 
-    const unseen = syncOp.operations.filter(
-      (op) => op.context.ordinal > args.outboxLatest,
-    );
-    if (unseen.length === 0) continue;
+    // Advance the per-syncOp delivery cursor past leading ops the client has
+    // both received (outboxLatest) and we have previously emitted
+    // (emittedCount). Gating on emittedCount prevents skipping ops that were
+    // never sent because an earlier syncOp filled the page cap — a syncOp
+    // queued behind that cap has emittedCount = 0 and stays un-advanced even
+    // when outboxLatest sweeps past its ordinals. Gating on outboxLatest
+    // (rather than emittedCount alone) keeps response-loss recovery: emitted
+    // but unconfirmed ops re-emit on the next poll.
+    syncOp.deliveredCount ??= 0;
+    syncOp.emittedCount ??= 0;
+    while (
+      syncOp.deliveredCount < syncOp.emittedCount &&
+      syncOp.operations[syncOp.deliveredCount].context.ordinal <=
+        args.outboxLatest
+    ) {
+      syncOp.deliveredCount += 1;
+    }
+
+    const remaining = syncOp.operations.slice(syncOp.deliveredCount);
+    if (remaining.length === 0) continue;
 
     let prevPartKey: string | undefined;
     let partIdx = 0;
     let i = 0;
-    while (i < unseen.length) {
+    while (i < remaining.length) {
       if (pageOps >= MAX_OPERATIONS_PER_PAGE) {
         hasMore = true;
         break outer;
@@ -1077,13 +1102,17 @@ export function pollSyncEnvelopes(
       // Always emit at least one op so an oversized single op makes progress.
       const chunkSize = Math.max(
         1,
-        Math.min(MAX_OPERATIONS_PER_ENVELOPE, remainingPage, unseen.length - i),
+        Math.min(
+          MAX_OPERATIONS_PER_ENVELOPE,
+          remainingPage,
+          remaining.length - i,
+        ),
       );
-      const slice = unseen.slice(i, i + chunkSize);
+      const slice = remaining.slice(i, i + chunkSize);
 
       const isOnly =
-        unseen.length <= MAX_OPERATIONS_PER_ENVELOPE &&
-        unseen.length <= remainingPage;
+        remaining.length <= MAX_OPERATIONS_PER_ENVELOPE &&
+        remaining.length <= remainingPage;
       const baseKey = syncOp.jobId || undefined;
       const partKey = isOnly
         ? baseKey
@@ -1122,7 +1151,16 @@ export function pollSyncEnvelopes(
       prevPartKey = partKey;
       partIdx++;
 
-      if (i < unseen.length && pageOps >= MAX_OPERATIONS_PER_PAGE) {
+      // Record how far through this syncOp we have emitted. The cursor advance
+      // above only moves past ops counted here, so an unsent syncOp (e.g. one
+      // that never reached emission because of the page cap) cannot have its
+      // delivery cursor advanced by a future poll's outboxLatest.
+      const emittedThrough = syncOp.deliveredCount + i;
+      if (emittedThrough > syncOp.emittedCount) {
+        syncOp.emittedCount = emittedThrough;
+      }
+
+      if (i < remaining.length && pageOps >= MAX_OPERATIONS_PER_PAGE) {
         hasMore = true;
         break outer;
       }

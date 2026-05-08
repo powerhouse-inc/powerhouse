@@ -263,6 +263,7 @@ describe("batch enqueue error cleanup", () => {
             branch: "main",
             operations: [createOperation("global")],
             dependsOn: [],
+            externalDeps: [],
           },
           {
             key: "job2",
@@ -271,6 +272,7 @@ describe("batch enqueue error cleanup", () => {
             branch: "main",
             operations: [createOperation("global")],
             dependsOn: [],
+            externalDeps: [],
           },
         ],
       };
@@ -308,6 +310,7 @@ describe("batch enqueue error cleanup", () => {
             branch: "main",
             operations: [createOperation("global")],
             dependsOn: [],
+            externalDeps: [],
           },
           {
             key: "job2",
@@ -316,6 +319,7 @@ describe("batch enqueue error cleanup", () => {
             branch: "main",
             operations: [createOperation("global")],
             dependsOn: [],
+            externalDeps: [],
           },
           {
             key: "job3",
@@ -324,6 +328,7 @@ describe("batch enqueue error cleanup", () => {
             branch: "main",
             operations: [createOperation("global")],
             dependsOn: [],
+            externalDeps: [],
           },
         ],
       };

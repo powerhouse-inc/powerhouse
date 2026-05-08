@@ -867,9 +867,10 @@ export class Reactor implements IReactor {
         }
         const jobPlan = request.jobs.find((j) => j.key === key)!;
         const jobId = planKeyToJobId.get(key)!;
-        const queueHint = jobPlan.dependsOn.map(
-          (depKey) => planKeyToJobId.get(depKey)!,
-        );
+        const queueHint = [
+          ...jobPlan.dependsOn.map((depKey) => planKeyToJobId.get(depKey)!),
+          ...jobPlan.externalDeps,
+        ];
         const job: Job = {
           id: jobId,
           kind: "load",
