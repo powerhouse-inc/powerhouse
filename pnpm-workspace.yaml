@@ -92,13 +92,6 @@ catalog:
   "ws": 8.19.0
   "@types/ws": 8.18.1
   lightningcss: 1.31.1
-  "better-sqlite3": 12.6.2
-  "sqlite3": 5.1.7
-  "mysql": 2.18.1
-  "mysql2": 3.17.2
-  "tedious": 19.2.1
-  "pg-query-stream": 4.12.0
-  "oracledb": 6.10.0
   "crc": 4.3.2
   "crc-32": 1.2.2
   "tinybench": 6.0.0
@@ -107,8 +100,6 @@ catalog:
   "@vitest/browser": 4.1.1
   "playwright": 1.58.2
   "date-fns": 4.1.0
-  "events": 3.3.0
-  "util": 0.12.5
   "@vitest/browser-playwright": 4.1.1
   "@vitest/coverage-v8": 4.1.1
   "@preact/preset-vite": 2.10.5
@@ -144,14 +135,11 @@ allowBuilds:
   "unrs-resolver": true
   "utf-8-validate": true
   aws-sdk: true
-  better-sqlite3: true
   esbuild: true
-  oracledb: true
-  sqlite3: true
 overrides:
-  axios: '>=1.15.0'
-  defu: '>=6.1.5'
-  flatted: '>=3.4.2'
-  express-rate-limit@>=8: '>=8.2.2'
-  picomatch@>=4: '>=4.0.4'
-  picomatch@<4: '>=2.3.2'
+  axios: ">=1.15.0"
+  defu: ">=6.1.5"
+  flatted: ">=3.4.2"
+  express-rate-limit@>=8: ">=8.2.2"
+  picomatch@>=4: ">=4.0.4"
+  picomatch@<4: ">=2.3.2"

@@ -2,16 +2,14 @@
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "types": ["node"]
+    "types": [
+      "node"
+    ]
   },
-  "include": ["**/*"],
+  "include": [
+    "**/*"
+  ],
   "references": [
-    {
-      "path": "../codegen"
-    },
-    {
-      "path": "../config"
-    },
     {
       "path": "../document-model"
     },
