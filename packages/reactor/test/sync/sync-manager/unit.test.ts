@@ -3373,6 +3373,428 @@ describe("SyncManager - Unit Tests", () => {
 
       expect(ch.deadLetter.add).not.toHaveBeenCalled();
     });
+
+    it("should inject FIFO external dep linking successive load jobs for the same (doc, scope, branch) across inbox batches", async () => {
+      await syncManager.startup();
+
+      const ch = createTestChannel();
+      vi.mocked(mockChannelFactory.instance).mockReturnValue(ch as any);
+
+      await syncManager.add(
+        "remote-fifo",
+        "collection1",
+        { type: "internal", parameters: {} },
+        {
+          documentId: ["doc1"],
+          scope: ["global"],
+          branch: "main",
+        },
+      );
+
+      const syncOpA = new SyncOperation(
+        "syncop-A",
+        "key-A",
+        [],
+        "remote-fifo",
+        "doc1",
+        ["global"],
+        "main",
+        [
+          {
+            operation: {
+              id: "op1",
+              index: 0,
+              skip: 0,
+              hash: "h1",
+              timestampUtcMs: "1000",
+              action: { type: "CREATE", scope: "global" } as any,
+            },
+            context: {
+              documentId: "doc1",
+              documentType: "test",
+              scope: "global",
+              branch: "main",
+              ordinal: 1,
+            },
+          },
+        ],
+      );
+
+      const syncOpB = new SyncOperation(
+        "syncop-B",
+        "key-B",
+        [],
+        "remote-fifo",
+        "doc1",
+        ["global"],
+        "main",
+        [
+          {
+            operation: {
+              id: "op2",
+              index: 1,
+              skip: 0,
+              hash: "h2",
+              timestampUtcMs: "2000",
+              action: { type: "UPDATE", scope: "global" } as any,
+            },
+            context: {
+              documentId: "doc1",
+              documentType: "test",
+              scope: "global",
+              branch: "main",
+              ordinal: 2,
+            },
+          },
+        ],
+      );
+
+      vi.mocked(mockReactor as any).loadBatch = vi
+        .fn()
+        .mockResolvedValueOnce({
+          jobs: { "key-A": { id: "uuid-A", status: "PENDING" } },
+        })
+        .mockResolvedValueOnce({
+          jobs: { "key-B": { id: "uuid-B", status: "PENDING" } },
+        });
+
+      const inboxCb = vi.mocked(ch.inbox.onAdded).mock.calls[0][0];
+      inboxCb([syncOpA]);
+      await new Promise((r) => setTimeout(r, 20));
+      inboxCb([syncOpB]);
+      await new Promise((r) => setTimeout(r, 20));
+
+      expect((mockReactor as any).loadBatch).toHaveBeenCalledTimes(2);
+      expect((mockReactor as any).loadBatch).toHaveBeenNthCalledWith(
+        1,
+        {
+          jobs: [
+            expect.objectContaining({
+              key: "key-A",
+              externalDeps: [],
+            }),
+          ],
+        },
+        expect.any(AbortSignal),
+        { sourceRemote: "remote-fifo" },
+      );
+      expect((mockReactor as any).loadBatch).toHaveBeenNthCalledWith(
+        2,
+        {
+          jobs: [
+            expect.objectContaining({
+              key: "key-B",
+              externalDeps: ["uuid-A"],
+            }),
+          ],
+        },
+        expect.any(AbortSignal),
+        { sourceRemote: "remote-fifo" },
+      );
+    });
+
+    it("should preserve cross-batch sender deps by translating plan key to UUID via planKeyToJobUuid", async () => {
+      await syncManager.startup();
+
+      const ch = createTestChannel();
+      vi.mocked(mockChannelFactory.instance).mockReturnValue(ch as any);
+
+      await syncManager.add(
+        "remote-xdoc",
+        "collection1",
+        { type: "internal", parameters: {} },
+        {
+          documentId: ["docA", "docB"],
+          scope: ["global"],
+          branch: "main",
+        },
+      );
+
+      const syncOpA = new SyncOperation(
+        "syncop-A",
+        "key-A",
+        [],
+        "remote-xdoc",
+        "docA",
+        ["global"],
+        "main",
+        [
+          {
+            operation: {
+              id: "opA",
+              index: 0,
+              skip: 0,
+              hash: "hA",
+              timestampUtcMs: "1000",
+              action: { type: "CREATE", scope: "global" } as any,
+            },
+            context: {
+              documentId: "docA",
+              documentType: "test",
+              scope: "global",
+              branch: "main",
+              ordinal: 1,
+            },
+          },
+        ],
+      );
+
+      // Batch 2: docB depends on key-A from batch 1 (cross-batch, cross-doc).
+      const syncOpB = new SyncOperation(
+        "syncop-B",
+        "key-B",
+        ["key-A"],
+        "remote-xdoc",
+        "docB",
+        ["global"],
+        "main",
+        [
+          {
+            operation: {
+              id: "opB",
+              index: 0,
+              skip: 0,
+              hash: "hB",
+              timestampUtcMs: "2000",
+              action: { type: "CREATE", scope: "global" } as any,
+            },
+            context: {
+              documentId: "docB",
+              documentType: "test",
+              scope: "global",
+              branch: "main",
+              ordinal: 1,
+            },
+          },
+        ],
+      );
+
+      vi.mocked(mockReactor as any).loadBatch = vi
+        .fn()
+        .mockResolvedValueOnce({
+          jobs: { "key-A": { id: "uuid-A", status: "PENDING" } },
+        })
+        .mockResolvedValueOnce({
+          jobs: { "key-B": { id: "uuid-B", status: "PENDING" } },
+        });
+
+      const inboxCb = vi.mocked(ch.inbox.onAdded).mock.calls[0][0];
+      inboxCb([syncOpA]);
+      await new Promise((r) => setTimeout(r, 20));
+      inboxCb([syncOpB]);
+      await new Promise((r) => setTimeout(r, 20));
+
+      // Batch 2's externalDeps should include uuid-A (resolved from key-A
+      // via planKeyToJobUuid). dependsOn stays empty because key-A is not
+      // in batch 2's chunkKeys.
+      expect((mockReactor as any).loadBatch).toHaveBeenNthCalledWith(
+        2,
+        {
+          jobs: [
+            expect.objectContaining({
+              key: "key-B",
+              dependsOn: [],
+              externalDeps: ["uuid-A"],
+            }),
+          ],
+        },
+        expect.any(AbortSignal),
+        { sourceRemote: "remote-xdoc" },
+      );
+    });
+
+    it("should drop cross-batch sender deps with no recorded plan-key mapping", async () => {
+      await syncManager.startup();
+
+      const ch = createTestChannel();
+      vi.mocked(mockChannelFactory.instance).mockReturnValue(ch as any);
+
+      await syncManager.add(
+        "remote-stale",
+        "collection1",
+        { type: "internal", parameters: {} },
+        {
+          documentId: ["doc1"],
+          scope: ["global"],
+          branch: "main",
+        },
+      );
+
+      // Single envelope referencing a plan key the SyncManager has never seen.
+      const syncOp = new SyncOperation(
+        "syncop-stale",
+        "key-now",
+        ["key-from-prehistory"],
+        "remote-stale",
+        "doc1",
+        ["global"],
+        "main",
+        [
+          {
+            operation: {
+              id: "op1",
+              index: 0,
+              skip: 0,
+              hash: "h1",
+              timestampUtcMs: "1000",
+              action: { type: "CREATE", scope: "global" } as any,
+            },
+            context: {
+              documentId: "doc1",
+              documentType: "test",
+              scope: "global",
+              branch: "main",
+              ordinal: 1,
+            },
+          },
+        ],
+      );
+
+      vi.mocked(mockReactor as any).loadBatch = vi.fn().mockResolvedValue({
+        jobs: { "key-now": { id: "uuid-now", status: "PENDING" } },
+      });
+
+      const inboxCb = vi.mocked(ch.inbox.onAdded).mock.calls[0][0];
+      inboxCb([syncOp]);
+      await new Promise((r) => setTimeout(r, 20));
+
+      expect((mockReactor as any).loadBatch).toHaveBeenCalledWith(
+        {
+          jobs: [
+            expect.objectContaining({
+              key: "key-now",
+              dependsOn: [],
+              externalDeps: [],
+            }),
+          ],
+        },
+        expect.any(AbortSignal),
+        { sourceRemote: "remote-stale" },
+      );
+    });
+
+    it("should serialize concurrent inbox-added invocations so the second batch sees the first batch's FIFO mapping", async () => {
+      await syncManager.startup();
+
+      const ch = createTestChannel();
+      vi.mocked(mockChannelFactory.instance).mockReturnValue(ch as any);
+
+      await syncManager.add(
+        "remote-concurrent",
+        "collection1",
+        { type: "internal", parameters: {} },
+        {
+          documentId: ["doc1"],
+          scope: ["global"],
+          branch: "main",
+        },
+      );
+
+      const syncOpA = new SyncOperation(
+        "syncop-cA",
+        "key-cA",
+        [],
+        "remote-concurrent",
+        "doc1",
+        ["global"],
+        "main",
+        [
+          {
+            operation: {
+              id: "cop1",
+              index: 0,
+              skip: 0,
+              hash: "ch1",
+              timestampUtcMs: "1000",
+              action: { type: "CREATE", scope: "global" } as any,
+            },
+            context: {
+              documentId: "doc1",
+              documentType: "test",
+              scope: "global",
+              branch: "main",
+              ordinal: 1,
+            },
+          },
+        ],
+      );
+
+      const syncOpB = new SyncOperation(
+        "syncop-cB",
+        "key-cB",
+        [],
+        "remote-concurrent",
+        "doc1",
+        ["global"],
+        "main",
+        [
+          {
+            operation: {
+              id: "cop2",
+              index: 1,
+              skip: 0,
+              hash: "ch2",
+              timestampUtcMs: "2000",
+              action: { type: "UPDATE", scope: "global" } as any,
+            },
+            context: {
+              documentId: "doc1",
+              documentType: "test",
+              scope: "global",
+              branch: "main",
+              ordinal: 2,
+            },
+          },
+        ],
+      );
+
+      let resolveBatch1!: (value: unknown) => void;
+      const batch1Pending = new Promise((resolve) => {
+        resolveBatch1 = resolve;
+      });
+
+      vi.mocked(mockReactor as any).loadBatch = vi
+        .fn()
+        .mockImplementationOnce(async () => {
+          await batch1Pending;
+          return { jobs: { "key-cA": { id: "uuid-cA", status: "PENDING" } } };
+        })
+        .mockResolvedValueOnce({
+          jobs: { "key-cB": { id: "uuid-cB", status: "PENDING" } },
+        });
+
+      const inboxCb = vi.mocked(ch.inbox.onAdded).mock.calls[0][0];
+      inboxCb([syncOpA]);
+      inboxCb([syncOpB]);
+
+      await vi.waitFor(() => {
+        expect((mockReactor as any).loadBatch).toHaveBeenCalledTimes(1);
+      });
+
+      await Promise.resolve();
+      await Promise.resolve();
+      expect((mockReactor as any).loadBatch).toHaveBeenCalledTimes(1);
+
+      resolveBatch1({});
+
+      await vi.waitFor(() => {
+        expect((mockReactor as any).loadBatch).toHaveBeenCalledTimes(2);
+      });
+
+      expect((mockReactor as any).loadBatch).toHaveBeenNthCalledWith(
+        2,
+        {
+          jobs: [
+            expect.objectContaining({
+              key: "key-cB",
+              externalDeps: ["uuid-cA"],
+            }),
+          ],
+        },
+        expect.any(AbortSignal),
+        { sourceRemote: "remote-concurrent" },
+      );
+    });
   });
 
   describe("dead letter persistence", () => {
