@@ -58,8 +58,10 @@ This command:
 
     try {
       console.log("Uninstalling dependencies 📦 ...");
-      const uninstallCommand =
-        await getPowerhouseProjectUninstallCommand(packageManager);
+      const uninstallCommand = await getPowerhouseProjectUninstallCommand(
+        packageManager,
+        args.dependencies,
+      );
       execSync(uninstallCommand, {
         stdio: "inherit",
         cwd: projectPath,
