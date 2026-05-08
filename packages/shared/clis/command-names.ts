@@ -5,7 +5,6 @@ export const phCliCommandNames = [
   "vetra",
   "connect",
   "build",
-  "code",
   "publish",
   "list",
   "l",

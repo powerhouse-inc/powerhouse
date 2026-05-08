@@ -1,15 +1,19 @@
 {
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
-    "outDir": "./dist",
+    "outDir": "./dist"
   },
-  "include": ["**/*"],
+  "include": [
+    "**/*"
+  ],
+  "exclude": [
+    "dist",
+    "node_modules",
+    "legacy"
+  ],
   "references": [
     {
       "path": "../../packages/codegen"
-    },
-    {
-      "path": "../../packages/common"
     },
     {
       "path": "../../packages/shared"
