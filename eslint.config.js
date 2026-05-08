@@ -35,6 +35,9 @@ const normalIgnoredFiles = [
   // and rules aren't applicable.
   "apps/switchboard-lb/test/integration/*.js",
   "clis/ph-cli/src/commands/migrations/templates",
+  // Stale code intentionally kept out of the active source tree (excluded
+  // from tsconfig too); not type-checkable with the project service.
+  "clis/ph-cmd/legacy/**",
   "**/coverage/",
   "**/playwright-report/",
 ];
