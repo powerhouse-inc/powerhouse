@@ -1,6 +1,6 @@
+import { EditorActionButtons } from "#design-system/connect";
 import { Content, List, Root, Trigger } from "@radix-ui/react-tabs";
 import { useCallback } from "react";
-import { EditorActionButtons } from "#design-system/connect";
 import { useEditorContext } from "../context/editor-context.js";
 import { OtherTab } from "./other-tab.js";
 import { PortfolioTab } from "./portfolio-tab.js";
@@ -9,7 +9,7 @@ export function RWATabs() {
   const tabs = ["Portfolio", "Transactions", "Other"] as const;
   const {
     onSwitchboardLinkClick,
-    onExport,
+    onDownloadDocument,
     onClose,
     onShowRevisionHistory,
     clearSelected,
@@ -36,7 +36,7 @@ export function RWATabs() {
         </List>
         <EditorActionButtons
           onClose={onClose}
-          onExport={onExport}
+          onDownloadDocument={onDownloadDocument}
           onShowRevisionHistory={onShowRevisionHistory}
           onSwitchboardLinkClick={onSwitchboardLinkClick}
         />

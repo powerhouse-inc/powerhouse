@@ -1,4 +1,3 @@
-import type { NodeOption } from "#design-system";
 import { Icon } from "#design-system";
 import {
   setSelectedNode,
@@ -10,8 +9,9 @@ import {
 } from "@powerhousedao/reactor-browser";
 import type { FolderNode } from "@powerhousedao/shared/document-drive";
 import { useState } from "react";
+import { addProp, entries, map, pipe } from "remeda";
 import { twMerge } from "tailwind-merge";
-import { defaultNodeOptions, nodeOptionsMap } from "../../constants/options.js";
+import { folderNodeDropdownOptions } from "../../constants/options.js";
 import { ConnectDropdownMenu } from "../dropdown-menu/dropdown-menu.js";
 import { NodeInput } from "../node-input/node-input.js";
 
@@ -48,24 +48,21 @@ export function FolderItem(props: {
       });
   }
 
-  const dropdownMenuHandlers: Partial<Record<NodeOption, () => void>> = {
+  const dropdownMenuHandlers = {
     DUPLICATE: () => onDuplicateNode(folderNode),
     RENAME: () => setMode("WRITE"),
     DELETE: () => showDeleteNodeModal(folderNode),
   } as const;
 
-  const dropdownMenuOptions = Object.entries(nodeOptionsMap)
-    .map(([id, option]) => ({
-      ...option,
-      id: id as NodeOption,
-    }))
-    .filter((option) =>
-      defaultNodeOptions.includes(
-        option.id as (typeof defaultNodeOptions)[number],
-      ),
-    );
+  const dropdownMenuOptions = pipe(
+    folderNodeDropdownOptions,
+    entries(),
+    map(([id, option]) => addProp(option, "id", id)),
+  );
 
-  function onDropdownMenuOptionClick(itemId: NodeOption) {
+  function onDropdownMenuOptionClick(
+    itemId: keyof typeof dropdownMenuHandlers,
+  ) {
     const handler = dropdownMenuHandlers[itemId];
     if (!handler) {
       console.error(`No handler found for dropdown menu item: ${itemId}`);

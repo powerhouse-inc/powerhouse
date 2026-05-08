@@ -1,28 +1,28 @@
 import type { ReactNode } from "react";
 import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useReducer,
-  useRef,
-  useState,
+    createContext,
+    useCallback,
+    useContext,
+    useEffect,
+    useMemo,
+    useReducer,
+    useRef,
+    useState,
 } from "react";
 import {
-  getActionOperationType,
-  getStateKeyForTableName,
-  getTableNameFor,
+    getActionOperationType,
+    getStateKeyForTableName,
+    getTableNameFor,
 } from "../constants/table.js";
 import type {
-  CashAsset,
-  EditorAction,
-  EditorDispatcher,
-  FixedIncome,
-  Operation,
-  RealWorldAssetsState,
-  TableItemType,
-  TableName,
+    CashAsset,
+    EditorAction,
+    EditorDispatcher,
+    FixedIncome,
+    Operation,
+    RealWorldAssetsState,
+    TableItemType,
+    TableName,
 } from "../types.js";
 import { makeTableData } from "../utils/table.js";
 import { getCashAsset, getFixedIncomeAssets } from "../utils/validators.js";
@@ -33,7 +33,7 @@ export type RWAEditorContextProps = {
   readonly canUndo: boolean;
   readonly canRedo: boolean;
   readonly onSwitchboardLinkClick: (() => void) | undefined;
-  readonly onExport: () => void;
+  readonly onDownloadDocument: () => void;
   readonly onClose: () => void;
   readonly onShowRevisionHistory: () => void;
 };
@@ -89,7 +89,7 @@ const defaultEditorContextValue: TEditorContext = {
   viewItem: () => {},
   createItem: () => {},
   editItem: () => {},
-  onExport: () => {},
+  onDownloadDocument: () => {},
   onClose: () => {},
   handleUndo: () => {},
   handleRedo: () => {},
@@ -170,7 +170,7 @@ export function RWAEditorContextProvider(
     undo,
     redo,
     editorDispatcher,
-    onExport,
+    onDownloadDocument,
     onClose,
     onSwitchboardLinkClick,
     onShowRevisionHistory,
@@ -337,7 +337,7 @@ export function RWAEditorContextProvider(
       editItem,
       clearSelected,
       getIsFormOpen,
-      onExport,
+      onDownloadDocument,
       onClose,
       onSwitchboardLinkClick,
       onShowRevisionHistory,
@@ -359,7 +359,7 @@ export function RWAEditorContextProvider(
       isAllowedToCreateDocuments,
       isAllowedToEditDocuments,
       onClose,
-      onExport,
+      onDownloadDocument,
       onShowRevisionHistory,
       onSwitchboardLinkClick,
       operation,

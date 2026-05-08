@@ -2,7 +2,7 @@ import { Icon } from "#design-system";
 
 export type EditorActionButtonsProps = {
   readonly onSwitchboardLinkClick?: (() => void) | undefined;
-  readonly onExport?: (() => void) | undefined;
+  readonly onDownloadDocument?: (() => void) | undefined;
   readonly onClose: () => void;
   readonly onShowRevisionHistory?: (() => void) | undefined;
   readonly onShowTimeline?: (() => void) | undefined;
@@ -11,7 +11,7 @@ export type EditorActionButtonsProps = {
 export function EditorActionButtons(props: EditorActionButtonsProps) {
   const {
     onSwitchboardLinkClick,
-    onExport,
+    onDownloadDocument,
     onClose,
     onShowRevisionHistory,
     onShowTimeline,

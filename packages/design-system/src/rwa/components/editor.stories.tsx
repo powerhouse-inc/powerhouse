@@ -4,14 +4,14 @@ import { useState } from "react";
 import { useInterval } from "usehooks-ts";
 import { RWAEditorContextProvider } from "../context/editor-context.js";
 import {
-  mockAccounts,
-  mockFixedIncomeTypes,
-  mockFixedIncomes,
-  mockGroupTransactions,
-  mockSPVs,
-  mockServiceProviderFeeTypes,
-  mockStateInitial,
-  mockStateWithData,
+    mockAccounts,
+    mockFixedIncomeTypes,
+    mockFixedIncomes,
+    mockGroupTransactions,
+    mockSPVs,
+    mockServiceProviderFeeTypes,
+    mockStateInitial,
+    mockStateWithData,
 } from "../mocks.js";
 import type { ActionOutputFor } from "../types.js";
 import { RWAEditor } from "./editor.js";
@@ -40,7 +40,7 @@ export const WithoutData: Story = {
     canUndo: true,
     canRedo: true,
     onSwitchboardLinkClick: undefined,
-    onExport: () => {},
+    onDownloadDocument: () => {},
     onClose: () => {},
     onShowRevisionHistory: () => {},
     editorDispatcher: (action) => {
