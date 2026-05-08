@@ -16,7 +16,7 @@ import type { IPackageDiscoveryService } from "./package-discovery.js";
 import type { TimelineItem } from "./timeline.js";
 import type { PHToastFn } from "./toast.js";
 import type { IPackageManager } from "./vetra.js";
-import type { DraggingNode } from "../hooks/drag-and-drop.js";
+import type { DraggingNode } from "../hooks/node-drag-and-drop.js";
 
 export type BrowserReactorClientModule = ReactorClientModule & {
   pg: PGlite;
