@@ -1,3 +1,23 @@
+## 6.0.0-dev.236 (2026-05-09)
+
+### 🚀 Features
+
+- add download button ([#2586](https://github.com/powerhouse-inc/powerhouse/pull/2586))
+- new test-sync-queue cli app that detects sync drift for large drives ([771352e08](https://github.com/powerhouse-inc/powerhouse/commit/771352e08))
+- new test-sync-queue cli app that detects sync drift for large drives ([ddcd53f1e](https://github.com/powerhouse-inc/powerhouse/commit/ddcd53f1e))
+
+### 🩹 Fixes
+
+- switchboard itself was not using proper env vars ([a18a78f05](https://github.com/powerhouse-inc/powerhouse/commit/a18a78f05))
+- switchboard migrate command did not honor proper env vars ([97f8c4781](https://github.com/powerhouse-inc/powerhouse/commit/97f8c4781))
+- switchboard itself was not using proper env vars ([50a3b842f](https://github.com/powerhouse-inc/powerhouse/commit/50a3b842f))
+- switchboard migrate command did not honor proper env vars ([2fc850209](https://github.com/powerhouse-inc/powerhouse/commit/2fc850209))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.235 (2026-05-08)
 
 This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.

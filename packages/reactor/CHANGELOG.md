@@ -1,3 +1,21 @@
+## 6.0.0-dev.236 (2026-05-09)
+
+### 🚀 Features
+
+- add download button ([#2586](https://github.com/powerhouse-inc/powerhouse/pull/2586))
+- new test-sync-queue cli app that detects sync drift for large drives ([771352e08](https://github.com/powerhouse-inc/powerhouse/commit/771352e08))
+- new test-sync-queue cli app that detects sync drift for large drives ([ddcd53f1e](https://github.com/powerhouse-inc/powerhouse/commit/ddcd53f1e))
+
+### 🩹 Fixes
+
+- adding a log on catch and fixing a unit test ([ff3e2d71e](https://github.com/powerhouse-inc/powerhouse/commit/ff3e2d71e))
+- **reactor:** experimental fix for orphan reshuffle and cross-batch FIFO bugs in sync ([e192b7d17](https://github.com/powerhouse-inc/powerhouse/commit/e192b7d17))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.235 (2026-05-08)
 
 This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.

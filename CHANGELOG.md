@@ -1,3 +1,28 @@
+## 6.0.0-dev.236 (2026-05-09)
+
+### 🚀 Features
+
+- new test-sync-queue cli app that detects sync drift for large drives ([ddcd53f1e](https://github.com/powerhouse-inc/powerhouse/commit/ddcd53f1e))
+- fix drag and drop ([#2580](https://github.com/powerhouse-inc/powerhouse/pull/2580))
+- new test-sync-queue cli app that detects sync drift for large drives ([771352e08](https://github.com/powerhouse-inc/powerhouse/commit/771352e08))
+- add download button ([#2586](https://github.com/powerhouse-inc/powerhouse/pull/2586))
+
+### 🩹 Fixes
+
+- switchboard migrate command did not honor proper env vars ([2fc850209](https://github.com/powerhouse-inc/powerhouse/commit/2fc850209))
+- switchboard itself was not using proper env vars ([50a3b842f](https://github.com/powerhouse-inc/powerhouse/commit/50a3b842f))
+- switchboard migrate command did not honor proper env vars ([97f8c4781](https://github.com/powerhouse-inc/powerhouse/commit/97f8c4781))
+- switchboard itself was not using proper env vars ([a18a78f05](https://github.com/powerhouse-inc/powerhouse/commit/a18a78f05))
+- adding a log on catch and fixing a unit test ([ff3e2d71e](https://github.com/powerhouse-inc/powerhouse/commit/ff3e2d71e))
+- **ph-cmd:** check package.json (not the dir) for global project bootstrap ([839d5949d](https://github.com/powerhouse-inc/powerhouse/commit/839d5949d))
+- **reactor:** experimental fix for orphan reshuffle and cross-batch FIFO bugs in sync ([e192b7d17](https://github.com/powerhouse-inc/powerhouse/commit/e192b7d17))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.235 (2026-05-08)
 
 ### 🚀 Features

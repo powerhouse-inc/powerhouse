@@ -1,3 +1,21 @@
+## 6.0.0-dev.236 (2026-05-09)
+
+### 🚀 Features
+
+- add download button ([#2586](https://github.com/powerhouse-inc/powerhouse/pull/2586))
+- new test-sync-queue cli app that detects sync drift for large drives ([771352e08](https://github.com/powerhouse-inc/powerhouse/commit/771352e08))
+- new test-sync-queue cli app that detects sync drift for large drives ([ddcd53f1e](https://github.com/powerhouse-inc/powerhouse/commit/ddcd53f1e))
+
+### 🩹 Fixes
+
+- **ph-cmd:** check package.json (not the dir) for global project bootstrap ([839d5949d](https://github.com/powerhouse-inc/powerhouse/commit/839d5949d))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.235 (2026-05-08)
 
 This was a version bump only for ph-cmd to align it with other projects, there were no code changes.
