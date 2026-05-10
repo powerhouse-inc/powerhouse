@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 import { phCliCommandNames } from "@powerhousedao/shared/clis/command-names";
 import {
-  captureCliError,
   initCliTelemetry,
+  type TelemetryClient,
 } from "@powerhousedao/shared/clis/telemetry";
 import { assertNodeVersion } from "@powerhousedao/shared/clis/utils";
 import { getVersion } from "./get-version.js";
@@ -21,11 +21,16 @@ async function runPhCmdCommand(args: string[]) {
   return await run(args);
 }
 
+let sentryClient: TelemetryClient | undefined = undefined;
+
 async function main() {
   assertNodeVersion();
   // Opt-out telemetry; asked once on first interactive run. No-op under
   // PH_NO_TELEMETRY / DO_NOT_TRACK / CI.
-  await initCliTelemetry({ cliName: "ph-cmd", release: getVersion() });
+  sentryClient = await initCliTelemetry({
+    cliName: "ph-cmd",
+    release: getVersion(),
+  });
   const args = process.argv.slice(2);
   const command = args[0];
 
@@ -67,7 +72,7 @@ async function main() {
 await main().catch(async (error) => {
   const isDebug = process.argv.slice(2).includes("--debug");
   // No-op when telemetry is disabled; flushes before we exit otherwise.
-  await captureCliError(error);
+  await sentryClient?.captureCliError(error);
   if (isDebug) {
     throw error;
   }
