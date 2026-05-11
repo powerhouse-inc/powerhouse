@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 import type { PGlite } from "@electric-sql/pglite";
-import { metrics } from "@opentelemetry/api";
 import { getConfig } from "@powerhousedao/config/node";
 import { ReactorInstrumentation } from "@powerhousedao/opentelemetry-instrumentation-reactor";
 import {
@@ -74,24 +73,6 @@ const DOCUMENT_MODEL_SUBGRAPHS_ENABLED_DEFAULT = true;
 const REQUIRE_SIGNATURES = "REQUIRE_SIGNATURES";
 const REQUIRE_SIGNATURES_DEFAULT = false;
 
-if (process.env.SENTRY_DSN) {
-  defaultLogger.info(
-    "Initialized Sentry with env: @env",
-    process.env.SENTRY_ENV,
-  );
-  Sentry.init({
-    dsn: process.env.SENTRY_DSN,
-    environment: process.env.SENTRY_ENV,
-    // Match the version tag uploaded by release-branch.yml so source maps
-    // resolve. Populated by the CI (WORKSPACE_VERSION) or npm at runtime.
-    release:
-      process.env.SENTRY_RELEASE ||
-      (process.env.npm_package_version
-        ? `v${process.env.npm_package_version}`
-        : undefined),
-  });
-}
-
 const DEFAULT_PORT = process.env.PORT ? Number(process.env.PORT) : 4001;
 
 // How many ports forward from the requested one we will try before giving up.
@@ -148,14 +129,6 @@ async function initServer(
   options: StartServerOptions,
   renown: IRenown | null,
 ) {
-  // Register the global MeterProvider before ReactorInstrumentation is
-  // constructed. setGlobalMeterProvider is a one-way door — once set it cannot
-  // be unset — so this must happen before initializeClient calls
-  // instrumentation.start() → createMetrics() → metrics.getMeter().
-  if (options.meterProvider) {
-    metrics.setGlobalMeterProvider(options.meterProvider);
-  }
-
   const {
     dev,
     packages = [],

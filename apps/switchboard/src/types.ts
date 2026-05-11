@@ -1,4 +1,3 @@
-import type { MeterProvider } from "@opentelemetry/api";
 import type { IReactorClient } from "@powerhousedao/reactor";
 import type { IRenown } from "@renown/sdk";
 import type { DriveInput } from "@powerhousedao/shared/document-drive";
@@ -70,13 +69,6 @@ export type StartServerOptions = {
    */
   dynamicModelLoading?: boolean;
   logger?: ILogger;
-  /**
-   * OpenTelemetry MeterProvider to register as the global provider before
-   * ReactorInstrumentation starts. Must be provided here rather than set
-   * externally to guarantee the registration happens before
-   * instrumentation.start() reads the global provider via metrics.getMeter().
-   */
-  meterProvider?: MeterProvider;
   /**
    * When true, on startup any local PGLite data dirs whose `PG_VERSION` is
    * older than the bundled PGLite are migrated to the current version
