@@ -1,7 +1,15 @@
 import { boolean, command, flag, oneOf, option, run } from "cmd-ts";
-import { appendFileSync } from "node:fs";
+import { appendFileSync, existsSync } from "node:fs";
 import { ReleaseClient } from "nx/release";
 import type { ReleaseType } from "semver";
+
+const SENTRY_INJECT_DIRS = [
+  "apps/connect/dist",
+  "apps/switchboard/dist",
+  "packages/reactor-api/dist",
+  "clis/ph-cli/dist",
+  "clis/ph-cmd/dist",
+];
 
 type Channel = "dev" | "staging" | "production";
 const modes = ["prerelease", "patch", "minor", "major"] as const;
@@ -297,6 +305,10 @@ const app = command({
       }
     }
 
+    if (!dryRun && !skipPublish) {
+      injectSentryDebugIds();
+    }
+
     if (!skipPublish) {
       try {
         const publishResult = await releasePublish({
@@ -424,6 +436,21 @@ function runCommandWithBun(
       ...env,
     },
   });
+}
+
+function injectSentryDebugIds(): void {
+  for (const dir of SENTRY_INJECT_DIRS) {
+    if (!existsSync(dir)) continue;
+    const result = Bun.spawnSync({
+      cmd: ["sentry-cli", "sourcemaps", "inject", dir],
+      stdio: ["inherit", "inherit", "inherit"],
+    });
+    if (result.exitCode !== 0) {
+      console.warn(
+        `sentry-cli sourcemaps inject failed for ${dir} (exit ${result.exitCode})`,
+      );
+    }
+  }
 }
 
 // Resolve a sha to bake into build artifacts as provenance. Prefer
