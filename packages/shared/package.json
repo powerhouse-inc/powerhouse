@@ -76,10 +76,38 @@
     "./clis": {
       "source": "./clis/index.mts",
       "import": "./dist/clis/index.mjs"
+    },
+    "./clis/args": {
+      "source": "./clis/args/index.ts",
+      "import": "./dist/clis/args/index.mjs"
+    },
+    "./clis/args/*": {
+      "source": "./clis/args/*.ts",
+      "import": "./dist/clis/args/*.mjs"
+    },
+    "./clis/constants": {
+      "source": "./clis/constants.ts",
+      "import": "./dist/clis/constants.mjs"
+    },
+    "./clis/utils": {
+      "source": "./clis/utils.ts",
+      "import": "./dist/clis/utils.mjs"
+    },
+    "./clis/command-names": {
+      "source": "./clis/command-names.ts",
+      "import": "./dist/clis/command-names.mjs"
+    },
+    "./clis/telemetry": {
+      "source": "./clis/services/telemetry.ts",
+      "import": "./dist/clis/services/telemetry.mjs"
+    },
+    "./build-config": {
+      "source": "./clis/build-config.mts",
+      "import": "./dist/clis/build-config.mjs"
     }
   },
   "dependencies": {
-    "@sentry/node": "^9.47.1",
+    "@sentry/node-core": "^10.52.0",
     "@sindresorhus/fnv1a": "catalog:",
     "chalk": "catalog:",
     "change-case": "catalog:",

@@ -16,9 +16,6 @@
       "path": "../../packages/codegen"
     },
     {
-      "path": "../../packages/common"
-    },
-    {
       "path": "../../packages/shared"
     }
   ]

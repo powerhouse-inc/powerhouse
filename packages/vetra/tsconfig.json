@@ -51,9 +51,6 @@
       "path": "../codegen"
     },
     {
-      "path": "../common"
-    },
-    {
       "path": "../config"
     },
     {

@@ -46,10 +46,9 @@
     "vitest": "catalog:"
   },
   "dependencies": {
+    "@didtools/key-webcrypto": "^0.2.0",
     "@powerhousedao/shared": "workspace:*",
-    "did-jwt": "^8.0.18",
     "did-jwt-vc": "^4.0.12",
-    "did-key-creator": "^1.2.0",
     "did-resolver": "^4.1.0",
     "key-did-resolver": "^4.0.0",
     "uint8arrays": "^5.1.0"
