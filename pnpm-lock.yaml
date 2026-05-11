@@ -652,6 +652,9 @@ importers:
       '@powerhousedao/vetra':
         specifier: workspace:*
         version: link:../../packages/vetra
+      '@pyroscope/nodejs':
+        specifier: ^0.4.5
+        version: 0.4.10(express@4.22.1)(fastify@5.8.5)
       '@renown/sdk':
         specifier: workspace:*
         version: link:../../packages/renown
@@ -689,9 +692,6 @@ importers:
         specifier: 'catalog:'
         version: 8.0.8(@types/node@25.2.3)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3)
     devDependencies:
-      '@pyroscope/nodejs':
-        specifier: ^0.4.5
-        version: 0.4.10(express@4.22.1)(fastify@5.8.5)
       '@types/express':
         specifier: ^4.17.25
         version: 4.17.25
