@@ -86,7 +86,14 @@ Returns `204` on success, `404` if not found. Predefined webhooks cannot be remo
 When a package is published, each webhook receives a POST with:
 
 ```json
-{ "packageName": "@scope/pkg", "version": "1.0.0" }
+{
+  "packageName": "@scope/pkg",
+  "version": "1.0.0",
+  "publishedBy": {
+    "address": "0xabc...",
+    "did": "did:key:z6Mk..."
+  }
+}
 ```
 
 ### npm Protocol
@@ -109,21 +116,39 @@ ph-registry --port 8080 --storage-dir ./storage --cdn-cache-dir ./cdn-cache
 
 Options:
 
-| Option                   | Env Variable           | Default                       | Description                                       |
-| ------------------------ | ---------------------- | ----------------------------- | ------------------------------------------------- |
-| `--port`                 | `PORT`                 | `8080`                        | Port to listen on                                 |
-| `--storage-dir`          | `REGISTRY_STORAGE`     | `./storage`                   | Verdaccio storage directory                       |
-| `--cdn-cache-dir`        | `REGISTRY_CDN_CACHE`   | `./cdn-cache`                 | CDN cache directory                               |
-| `--uplink`               | `REGISTRY_UPLINK`      | `https://registry.npmjs.org/` | Upstream npm registry URL used for fallback proxy |
-| `--web-enabled`          | `REGISTRY_WEB`         | `true`                        | Enable Verdaccio web UI                           |
-| `--webhook`              | `REGISTRY_WEBHOOKS`    | —                             | Comma-separated webhook URLs to notify on publish |
-| `--s3-bucket`            | `S3_BUCKET`            | —                             | S3 bucket for storage                             |
-| `--s3-endpoint`          | `S3_ENDPOINT`          | —                             | S3 endpoint URL                                   |
-| `--s3-region`            | `S3_REGION`            | —                             | S3 region                                         |
-| `--s3-access-key-id`     | `S3_ACCESS_KEY_ID`     | —                             | S3 access key                                     |
-| `--s3-secret-access-key` | `S3_SECRET_ACCESS_KEY` | —                             | S3 secret key                                     |
-| `--s3-key-prefix`        | `S3_KEY_PREFIX`        | —                             | S3 key prefix                                     |
-| `--s3-force-path-style`  | `S3_FORCE_PATH_STYLE`  | `true`                        | Force S3 path-style URLs                          |
+| Option                   | Env Variable                   | Default                       | Description                                                                                                                                     |
+| ------------------------ | ------------------------------ | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--port`                 | `PORT`                         | `8080`                        | Port to listen on                                                                                                                               |
+| `--storage-dir`          | `REGISTRY_STORAGE`             | `./storage`                   | Verdaccio storage directory                                                                                                                     |
+| `--cdn-cache-dir`        | `REGISTRY_CDN_CACHE`           | `./cdn-cache`                 | CDN cache directory                                                                                                                             |
+| `--uplink`               | `REGISTRY_UPLINK`              | `https://registry.npmjs.org/` | Upstream npm registry URL used for fallback proxy                                                                                               |
+| `--web-enabled`          | `REGISTRY_WEB`                 | `true`                        | Enable Verdaccio web UI                                                                                                                         |
+| `--webhook`              | `REGISTRY_WEBHOOKS`            | —                             | Comma-separated webhook URLs to notify on publish                                                                                               |
+| `--s3-bucket`            | `S3_BUCKET`                    | —                             | S3 bucket for storage                                                                                                                           |
+| `--s3-endpoint`          | `S3_ENDPOINT`                  | —                             | S3 endpoint URL                                                                                                                                 |
+| `--s3-region`            | `S3_REGION`                    | —                             | S3 region                                                                                                                                       |
+| `--s3-access-key-id`     | `S3_ACCESS_KEY_ID`             | —                             | S3 access key                                                                                                                                   |
+| `--s3-secret-access-key` | `S3_SECRET_ACCESS_KEY`         | —                             | S3 secret key                                                                                                                                   |
+| `--s3-key-prefix`        | `S3_KEY_PREFIX`                | —                             | S3 key prefix                                                                                                                                   |
+| `--s3-force-path-style`  | `S3_FORCE_PATH_STYLE`          | `true`                        | Force S3 path-style URLs                                                                                                                        |
+| `--public-url`           | `PH_REGISTRY_PUBLIC_URL`       | —                             | Public URL of this registry — required when Renown auth is enabled. Used as the expected `aud` claim on bearer tokens.                          |
+| `--auth-renown`          | `PH_REGISTRY_AUTH_RENOWN`      | `true`                        | Enable Renown JWT auth in front of verdaccio. Disabled (no-op) when `--public-url` is unset.                                                    |
+| `--verdaccio-secret`     | `PH_REGISTRY_VERDACCIO_SECRET` | random per pod                | Verdaccio JWT signing secret. The renown middleware mints an in-process verdaccio token that never leaves the pod, so a per-pod secret is fine. |
+
+## Authentication
+
+Two authentication paths are supported:
+
+1. **Renown bearer tokens (preferred).** Stateless: the registry verifies the
+   token's signature against the issuer's DID public key, with no shared secret
+   required across replicas. Activated by setting `--public-url`. CLI flow:
+   `ph login` once, then `ph publish` (mints a fresh 5-minute token per
+   invocation) or `ph registry-login` (writes a longer-lived token to
+   `~/.npmrc` for raw `npm publish`).
+
+2. **Legacy htpasswd.** Verdaccio's built-in plugin remains in the auth chain
+   as a grace-period fallback. Per-pod state, so it doesn't survive horizontal
+   scaling — being phased out as soon as all clients have moved to Renown.
 
 ## Deployment
 

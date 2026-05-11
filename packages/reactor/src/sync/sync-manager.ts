@@ -65,6 +65,8 @@ const defaultSyncManagerConfig: SyncManagerConfig = {
   maxInboxBatchSize: 32,
 };
 
+const PLAN_KEY_TO_JOB_UUID_CAP = 10000;
+
 export class SyncManager implements ISyncManager {
   private readonly logger: ILogger;
   private readonly remoteStorage: ISyncRemoteStorage;
@@ -91,6 +93,9 @@ export class SyncManager implements ISyncManager {
     string,
     AbortController
   >();
+  private readonly planKeyToJobUuid = new Map<string, string>();
+  private readonly lastEnqueuedJobIdByKey = new Map<string, string>();
+  private inboxChunkChain: Promise<void> = Promise.resolve();
 
   constructor(
     logger: ILogger,
@@ -153,6 +158,7 @@ export class SyncManager implements ISyncManager {
         record.collectionId,
         record.filter,
         this.operationIndex,
+        record.options,
       );
 
       const remote: Remote = {
@@ -223,6 +229,8 @@ export class SyncManager implements ISyncManager {
       controller.abort();
     }
     this.backfillAbortControllers.clear();
+    this.planKeyToJobUuid.clear();
+    this.lastEnqueuedJobIdByKey.clear();
     this.batchAggregator.clear();
 
     if (this.eventUnsubscribe) {
@@ -327,6 +335,7 @@ export class SyncManager implements ISyncManager {
       collectionId,
       filter,
       this.operationIndex,
+      options,
     );
 
     const remote: Remote = {
@@ -374,6 +383,14 @@ export class SyncManager implements ISyncManager {
     return remote;
   }
 
+  triggerPull(name: string): void {
+    const remote = this.remotes.get(name);
+    if (!remote) {
+      throw new Error(`Remote with name '${name}' does not exist`);
+    }
+    remote.channel.triggerPull();
+  }
+
   async remove(name: string): Promise<void> {
     const remote = this.remotes.get(name);
     if (!remote) {
@@ -417,6 +434,19 @@ export class SyncManager implements ISyncManager {
 
   onSyncStatusChange(callback: SyncStatusChangeCallback): () => void {
     return this.syncStatusTracker.onChange(callback);
+  }
+
+  private recordPlanKeyMapping(planKey: string, jobId: string): void {
+    if (
+      !this.planKeyToJobUuid.has(planKey) &&
+      this.planKeyToJobUuid.size >= PLAN_KEY_TO_JOB_UUID_CAP
+    ) {
+      const oldest = this.planKeyToJobUuid.keys().next().value;
+      if (oldest !== undefined) {
+        this.planKeyToJobUuid.delete(oldest);
+      }
+    }
+    this.planKeyToJobUuid.set(planKey, jobId);
   }
 
   private wireChannelCallbacks(remote: Remote): void {
@@ -626,13 +656,22 @@ export class SyncManager implements ISyncManager {
     }
   }
 
-  private async processInboxChunks(
+  private processInboxChunks(
     chunks: Array<Array<{ remote: Remote; syncOp: SyncOperation }>>,
   ): Promise<void> {
-    for (const chunk of chunks) {
-      if (this.isShutdown) return;
-      await this.applyInboxBatch(chunk);
-    }
+    const next = this.inboxChunkChain.then(async () => {
+      for (const chunk of chunks) {
+        if (this.isShutdown) return;
+        await this.applyInboxBatch(chunk);
+      }
+    });
+    this.inboxChunkChain = next.catch((err) => {
+      this.logger.error(
+        "Inbox chunk processing failed (@error)",
+        err instanceof Error ? err.message : String(err),
+      );
+    });
+    return next;
   }
 
   private async applyInboxJob(
@@ -719,16 +758,31 @@ export class SyncManager implements ISyncManager {
     const sourceRemote = items[0].remote.name;
 
     const chunkKeys = new Set(items.map(({ syncOp }) => syncOp.jobId));
-    const jobs = items.map(({ syncOp }) => ({
-      key: syncOp.jobId,
-      documentId: syncOp.documentId,
-      scope: syncOp.scopes[0],
-      branch: syncOp.branch,
-      operations: syncOp.operations.map((op) => op.operation),
-      dependsOn: syncOp.jobDependencies.filter(
-        (dep) => dep && chunkKeys.has(dep),
-      ),
-    }));
+    const jobs = items.map(({ syncOp }) => {
+      const dependsOn: string[] = [];
+      const externalDeps: string[] = [];
+      for (const dep of syncOp.jobDependencies) {
+        if (!dep) continue;
+        if (chunkKeys.has(dep)) {
+          dependsOn.push(dep);
+        } else {
+          const uuid = this.planKeyToJobUuid.get(dep);
+          if (uuid !== undefined) externalDeps.push(uuid);
+        }
+      }
+      const fifoKey = `${syncOp.documentId}:${syncOp.scopes[0]}:${syncOp.branch}`;
+      const prevUuid = this.lastEnqueuedJobIdByKey.get(fifoKey);
+      if (prevUuid !== undefined) externalDeps.push(prevUuid);
+      return {
+        key: syncOp.jobId,
+        documentId: syncOp.documentId,
+        scope: syncOp.scopes[0],
+        branch: syncOp.branch,
+        operations: syncOp.operations.map((op) => op.operation),
+        dependsOn,
+        externalDeps,
+      };
+    });
 
     const request: BatchLoadRequest = { jobs };
 
@@ -751,6 +805,14 @@ export class SyncManager implements ISyncManager {
     }
 
     if (this.isShutdown) return;
+
+    for (const plan of jobs) {
+      const info = result.jobs[plan.key];
+      if (!info) continue;
+      this.recordPlanKeyMapping(plan.key, info.id);
+      const fifoKey = `${plan.documentId}:${plan.scope}:${plan.branch}`;
+      this.lastEnqueuedJobIdByKey.set(fifoKey, info.id);
+    }
 
     for (const { remote, syncOp } of items) {
       if (!(syncOp.jobId in result.jobs)) {

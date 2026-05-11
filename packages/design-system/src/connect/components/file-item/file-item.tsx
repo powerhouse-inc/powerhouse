@@ -1,10 +1,11 @@
 import DefaultImg from "#assets/icons/template.png";
-import type { NodeOption } from "#design-system";
 import { Icon } from "#design-system";
 import {
   getSyncStatusSync,
   setSelectedNode,
   showDeleteNodeModal,
+  useDownloadDocument,
+  useDragNode,
   useNodeActions,
   useSelectedDriveSafe,
   useUserPermissions,
@@ -15,9 +16,9 @@ import type {
   SharingType,
 } from "@powerhousedao/shared/document-drive";
 import { useState } from "react";
+import { addProp, entries, map, pipe } from "remeda";
 import { twMerge } from "tailwind-merge";
-import { defaultNodeOptions, nodeOptionsMap } from "../../constants/options.js";
-import { useDrag } from "../../hooks/use-drag.js";
+import { fileNodeDropdownOptions } from "../../constants/options.js";
 import { ConnectDropdownMenu } from "../dropdown-menu/dropdown-menu.js";
 import { NodeInput } from "../node-input/node-input.js";
 import { SyncStatusIcon } from "../status-icon/sync-status-icon.js";
@@ -51,29 +52,29 @@ export function FileItem(props: Props) {
   const sharingType = selectedDrive
     ? getDriveSharingType(selectedDrive)
     : "LOCAL";
-  const { dragProps } = useDrag({ node: fileNode });
+  const { isDragging, ...dragProps } = useDragNode({
+    srcId: fileNode.id,
+    parentId: fileNode.parentFolder ?? undefined,
+  });
   const { isAllowedToCreateDocuments } = useUserPermissions();
   const { onRenameNode, onRenameDriveNodes, onDuplicateNode } =
     useNodeActions();
+  const downloadDocument = useDownloadDocument(fileNode.id);
   const isReadMode = mode === "READ";
   const syncStatus = getSyncStatusSync(fileNode.id, sharingType);
 
   const dropdownMenuHandlers = {
+    DOWNLOAD: downloadDocument,
     DUPLICATE: () => onDuplicateNode(fileNode),
     RENAME: () => setMode("WRITE"),
     DELETE: () => showDeleteNodeModal(fileNode),
   } as const;
 
-  const dropdownMenuOptions = Object.entries(nodeOptionsMap)
-    .map(([id, option]) => ({
-      ...option,
-      id: id as NodeOption,
-    }))
-    .filter((option) =>
-      defaultNodeOptions.includes(
-        option.id as (typeof defaultNodeOptions)[number],
-      ),
-    );
+  const dropdownMenuOptions = pipe(
+    fileNodeDropdownOptions,
+    entries(),
+    map(([id, option]) => addProp(option, "id", id)),
+  );
 
   function onSubmit(name: string) {
     Promise.all([
@@ -92,7 +93,7 @@ export function FileItem(props: Props) {
     setMode("READ");
   }
 
-  function onDropdownMenuOptionClick(itemId: NodeOption) {
+  function onDropdownMenuOptionClick(itemId: string) {
     const handler =
       dropdownMenuHandlers[itemId as keyof typeof dropdownMenuHandlers];
     if (!handler) {
@@ -113,6 +114,10 @@ export function FileItem(props: Props) {
         height={34}
         src={iconSrc}
         width={32}
+        /* HTML img elements are draggable by default, so we
+         * must disable it here so that only the container
+         * can be dragged */
+        draggable={false}
       />
       {isReadMode && syncStatus && (
         <div className="absolute bottom-[-2px] right-0 size-3 rounded-full bg-white">
@@ -129,6 +134,7 @@ export function FileItem(props: Props) {
 
   const containerStyles = twMerge(
     "group flex h-12 cursor-pointer select-none items-center rounded-lg bg-gray-200 px-2 text-gray-600 hover:text-gray-800",
+    isDragging ? "opacity-60" : "",
     className,
   );
 
@@ -177,8 +183,9 @@ export function FileItem(props: Props) {
     <div
       className="relative w-64"
       onClick={isReadMode ? () => setSelectedNode(fileNode) : undefined}
+      {...dragProps}
     >
-      <div {...dragProps} className={containerStyles}>
+      <div className={containerStyles}>
         <div className="flex items-center">
           <div className="mr-1.5">{iconNode}</div>
           {content}

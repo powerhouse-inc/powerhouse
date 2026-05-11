@@ -14,9 +14,7 @@ export type ConnectReplaceDuplicateModalProps = ComponentPropsWithoutRef<
   readonly title?: string;
   readonly fileName?: string;
   readonly message?: string;
-  readonly onReplace: () => void;
   readonly onDuplicate: () => void;
-  readonly replaceLabel?: string;
   readonly duplicateLabel?: string;
   readonly bodyProps?: DivProps;
   readonly replaceButtonProps?: ButtonProps;
@@ -34,10 +32,8 @@ export function ConnectReplaceDuplicateModal(
     fileName,
     message,
     children,
-    onReplace,
     onOpenChange,
     onDuplicate,
-    replaceLabel = "Replace",
     duplicateLabel = "Create Copy",
     overlayProps,
     contentProps,
@@ -96,21 +92,7 @@ export function ConnectReplaceDuplicateModal(
           {message || defaultMessage}
           {children}
         </div>
-        <div
-          {...mergeClassNameProps(
-            buttonContainerProps,
-            "mt-8 flex justify-between gap-3",
-          )}
-        >
-          <button
-            onClick={onReplace}
-            {...mergeClassNameProps(
-              replaceButtonProps,
-              twMerge(buttonStyles, "flex-1 bg-slate-50 text-slate-800"),
-            )}
-          >
-            {replaceLabel}
-          </button>
+        <div {...mergeClassNameProps(buttonContainerProps, "mt-8 flex")}>
           <button
             onClick={onDuplicate}
             {...mergeClassNameProps(

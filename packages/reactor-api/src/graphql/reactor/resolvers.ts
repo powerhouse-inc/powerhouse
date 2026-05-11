@@ -1,8 +1,6 @@
 import {
   consolidateSyncOperations,
   envelopesToSyncOperations,
-  sortEnvelopesByFirstOperationTimestamp,
-  trimMailboxFromAckOrdinal,
   type IReactorClient,
   type ISyncManager,
   type JobInfo,
@@ -21,8 +19,10 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import { GraphQLError } from "graphql";
 
-const DRIVE_DOCUMENT_TYPE = "powerhouse/document-drive";
-const POLL_SYNC_ENVELOPES_MAX_LIMIT = 100;
+import { DRIVE_DOCUMENT_TYPE } from "./constants.js";
+
+export const MAX_OPERATIONS_PER_ENVELOPE = 25;
+export const MAX_OPERATIONS_PER_PAGE = 100;
 import type { GetParentIdsFn } from "../../services/document-permission.service.js";
 import {
   fromInputMaybe,
@@ -1009,26 +1009,36 @@ export function pollSyncEnvelopes(
     operationCount: syncOp.operations.length,
   }));
 
-  // trim outbox
+  // Trim acked outbox items, but only those we have fully emitted to this
+  // client. Without the emittedCount guard, a syncOp queued behind a page cap
+  // (never sent) would be dropped when ackOrdinal sweeps past its ordinals,
+  // because ackOrdinal can be advanced by OTHER syncOps the client did
+  // receive — same root-cause class as the resolver's per-op filter bug.
   if (args.outboxAck > 0) {
-    trimMailboxFromAckOrdinal(remote.channel.outbox, args.outboxAck);
+    const ackOrdinal = args.outboxAck;
+    const outbox = remote.channel.outbox;
+    const toRemove: SyncOperation[] = [];
+    for (const syncOp of outbox.items) {
+      const fullyEmitted =
+        (syncOp.emittedCount ?? 0) >= syncOp.operations.length;
+      if (!fullyEmitted) continue;
+      let maxOrdinal = 0;
+      for (const op of syncOp.operations) {
+        if (op.context.ordinal > maxOrdinal) maxOrdinal = op.context.ordinal;
+      }
+      if (maxOrdinal <= ackOrdinal) {
+        toRemove.push(syncOp);
+      }
+    }
+    if (toRemove.length > 0) {
+      for (const syncOp of toRemove) {
+        syncOp.executed();
+      }
+      outbox.remove(...toRemove);
+    }
   }
 
-  let operations = remote.channel.outbox.items;
-
-  // filter remaining outbox operations by outboxLatest
-  operations = operations.filter((syncOp) => {
-    let maxOrdinal = 0;
-    for (const op of syncOp.operations) {
-      maxOrdinal = Math.max(maxOrdinal, op.context.ordinal);
-    }
-
-    if (maxOrdinal > args.outboxLatest) {
-      return true;
-    }
-
-    return false;
-  });
+  const operations = remote.channel.outbox.items;
 
   if (operations.length === 0) {
     return {
@@ -1039,51 +1049,130 @@ export function pollSyncEnvelopes(
     };
   }
 
-  // Sort by first operation ordinal ascending. Dependencies always point
-  // backward in ordinal order, so a plain ordinal slice never delivers an
-  // operation before its dependency.
+  // Dependencies point backward in ordinal order, so sorting by first op
+  // ordinal preserves dependency ordering across the page.
   const sorted = [...operations].sort((a, b) => {
     const aOrdinal = a.operations[0]?.context.ordinal ?? 0;
     const bOrdinal = b.operations[0]?.context.ordinal ?? 0;
     return aOrdinal - bOrdinal;
   });
 
-  const hasMore = sorted.length > POLL_SYNC_ENVELOPES_MAX_LIMIT;
-  const pageOperations = sorted.slice(0, POLL_SYNC_ENVELOPES_MAX_LIMIT);
-
+  const envelopes: SyncEnvelopeArg[] = [];
+  let pageOps = 0;
+  let hasMore = false;
   let maxOrdinal = args.outboxLatest;
-  for (const syncOp of pageOperations) {
-    for (const op of syncOp.operations) {
-      const opOrdinal = op.context.ordinal;
-      if (opOrdinal > maxOrdinal) {
-        maxOrdinal = opOrdinal;
+
+  outer: for (const syncOp of sorted) {
+    if (pageOps >= MAX_OPERATIONS_PER_PAGE) {
+      hasMore = true;
+      break;
+    }
+
+    // Advance the per-syncOp delivery cursor past leading ops the client has
+    // both received (outboxLatest) and we have previously emitted
+    // (emittedCount). Gating on emittedCount prevents skipping ops that were
+    // never sent because an earlier syncOp filled the page cap — a syncOp
+    // queued behind that cap has emittedCount = 0 and stays un-advanced even
+    // when outboxLatest sweeps past its ordinals. Gating on outboxLatest
+    // (rather than emittedCount alone) keeps response-loss recovery: emitted
+    // but unconfirmed ops re-emit on the next poll.
+    syncOp.deliveredCount ??= 0;
+    syncOp.emittedCount ??= 0;
+    while (
+      syncOp.deliveredCount < syncOp.emittedCount &&
+      syncOp.operations[syncOp.deliveredCount].context.ordinal <=
+        args.outboxLatest
+    ) {
+      syncOp.deliveredCount += 1;
+    }
+
+    const remaining = syncOp.operations.slice(syncOp.deliveredCount);
+    if (remaining.length === 0) continue;
+
+    let prevPartKey: string | undefined;
+    let partIdx = 0;
+    let i = 0;
+    while (i < remaining.length) {
+      if (pageOps >= MAX_OPERATIONS_PER_PAGE) {
+        hasMore = true;
+        break outer;
+      }
+
+      const remainingPage = MAX_OPERATIONS_PER_PAGE - pageOps;
+      // Always emit at least one op so an oversized single op makes progress.
+      const chunkSize = Math.max(
+        1,
+        Math.min(
+          MAX_OPERATIONS_PER_ENVELOPE,
+          remainingPage,
+          remaining.length - i,
+        ),
+      );
+      const slice = remaining.slice(i, i + chunkSize);
+
+      const isOnly =
+        remaining.length <= MAX_OPERATIONS_PER_ENVELOPE &&
+        remaining.length <= remainingPage;
+      const baseKey = syncOp.jobId || undefined;
+      const partKey = isOnly
+        ? baseKey
+        : baseKey
+          ? `${baseKey}__p${partIdx}`
+          : undefined;
+      const partDeps =
+        partIdx === 0
+          ? syncOp.jobDependencies.filter(Boolean)
+          : prevPartKey
+            ? [prevPartKey]
+            : [];
+
+      for (const op of slice) {
+        if (op.context.ordinal > maxOrdinal) maxOrdinal = op.context.ordinal;
+      }
+
+      envelopes.push({
+        type: "OPERATIONS",
+        channelMeta: { id: args.channelId },
+        operations: slice.map((op) => ({
+          operation: serializeOperationForGraphQL(op.operation),
+          context: op.context,
+        })),
+        cursor: {
+          remoteName: remote.name,
+          cursorOrdinal: 0,
+          lastSyncedAtUtcMs: Date.now().toString(),
+        },
+        key: partKey,
+        dependsOn: partDeps.length > 0 ? partDeps : undefined,
+      });
+
+      pageOps += slice.length;
+      i += slice.length;
+      prevPartKey = partKey;
+      partIdx++;
+
+      // Record how far through this syncOp we have emitted. The cursor advance
+      // above only moves past ops counted here, so an unsent syncOp (e.g. one
+      // that never reached emission because of the page cap) cannot have its
+      // delivery cursor advanced by a future poll's outboxLatest.
+      const emittedThrough = syncOp.deliveredCount + i;
+      if (emittedThrough > syncOp.emittedCount) {
+        syncOp.emittedCount = emittedThrough;
+      }
+
+      if (i < remaining.length && pageOps >= MAX_OPERATIONS_PER_PAGE) {
+        hasMore = true;
+        break outer;
       }
     }
   }
 
-  const envelopes = pageOperations.map((syncOp: SyncOperation) => ({
-    type: "OPERATIONS",
-    channelMeta: {
-      id: args.channelId,
-    },
-    operations: syncOp.operations.map((op) => ({
-      operation: serializeOperationForGraphQL(op.operation),
-      context: op.context,
-    })),
-    cursor: {
-      remoteName: remote.name,
-      cursorOrdinal: maxOrdinal,
-      lastSyncedAtUtcMs: Date.now().toString(),
-    },
-    key: syncOp.jobId || undefined,
-    dependsOn:
-      syncOp.jobDependencies.filter(Boolean).length > 0
-        ? syncOp.jobDependencies.filter(Boolean)
-        : undefined,
-  }));
+  for (const envelope of envelopes) {
+    if (envelope.cursor) envelope.cursor.cursorOrdinal = maxOrdinal;
+  }
 
   return {
-    envelopes: sortEnvelopesByFirstOperationTimestamp(envelopes),
+    envelopes,
     ackOrdinal: remote.channel.inbox.ackOrdinal,
     deadLetters,
     hasMore,
@@ -1126,14 +1215,10 @@ export function pushSyncEnvelopes(
     envelopes: SyncEnvelopeArg[];
   },
 ): Promise<boolean> {
-  const sortedEnvelopes = sortEnvelopesByFirstOperationTimestamp(
-    args.envelopes,
-  );
-
   type RemoteRef = ReturnType<ISyncManager["getById"]>;
   const remoteSyncOps = new Map<RemoteRef, SyncOperation[]>();
 
-  for (const envelope of sortedEnvelopes) {
+  for (const envelope of args.envelopes) {
     let remote: RemoteRef;
     try {
       remote = syncManager.getById(envelope.channelMeta.id);

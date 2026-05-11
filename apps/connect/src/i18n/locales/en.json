@@ -6,7 +6,7 @@
     "empty": "Empty",
     "create": "Create",
     "save": "Save",
-    "export": "Export",
+    "download": "Download",
     "reload": "Reload",
     "reloadConnect": "Click here to reload Connect"
   },
@@ -73,7 +73,7 @@
         "allSelected": "All documents are selected"
       }
     },
-    "exportDocumentWithErrors": {
+    "downloadDocumentWithErrors": {
       "title": "Your document contains errors",
       "body": "Your document contains structure errors. Do you want to export it anyway?"
     },

@@ -50,8 +50,17 @@ export function parsePkhDid(did: string): PKHDid {
   };
 }
 
+export interface VerifyAuthBearerTokenOptions {
+  /** Expected `aud` claim. Required when verifying tokens that include an
+   *  audience claim — did-jwt rejects them otherwise with
+   *  `invalid_config: JWT audience is required but your app address has not
+   *  been configured`. Tokens minted without `aud` are unaffected. */
+  audience?: string;
+}
+
 export async function verifyAuthBearerToken(
   jwt: string,
+  options?: VerifyAuthBearerTokenOptions,
 ): Promise<false | AuthVerifiedCredential> {
   try {
     const now = parseInt(String(Date.now() / 1000));
@@ -59,6 +68,7 @@ export async function verifyAuthBearerToken(
       jwt,
       getResolver(),
       {
+        ...(options?.audience !== undefined && { audience: options.audience }),
         policies: {
           now: parseInt(String(Date.now() / 1000)),
           expirationDate: true,

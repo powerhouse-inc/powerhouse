@@ -258,6 +258,10 @@ The default drives url to use in connect<br><br>
 The preservation strategy to use on default drives<br><br>
 **usage:** `--drive-preserve-strategy <value>`<br>
 **env**: `PH_CONNECT_DRIVES_PRESERVE_STRATEGY`<br>**default**: `preserve-by-url-and-detach`
+#### Host <br>
+Expose the server to the network. Pass an IP (e.g. 0.0.0.0) to bind to a specific address.<br><br>
+**usage:** `--host <str>`<br>
+
 #### Watch Timeout <br>
 Amount of time to wait before a file is considered changed<br><br>
 **usage:** `--watch-timeout <number>`<br>
@@ -303,10 +307,6 @@ Force dep pre-optimization regardless of whether deps have changed.<br><br>
 #### Debug <br>
 Log arguments passed to this command<br><br>
 **usage:** `--debug`<br>
-
-#### Host <br>
-Expose the server to the network<br><br>
-**usage:** `--host`<br>
 
 #### Open <br>
 Open browser on startup<br><br>
@@ -383,6 +383,10 @@ The default drives url to use in connect<br><br>
 The preservation strategy to use on default drives<br><br>
 **usage:** `--drive-preserve-strategy <value>`<br>
 **env**: `PH_CONNECT_DRIVES_PRESERVE_STRATEGY`<br>**default**: `preserve-by-url-and-detach`
+#### Host <br>
+Expose the server to the network. Pass an IP (e.g. 0.0.0.0) to bind to a specific address.<br><br>
+**usage:** `--host <str>`<br>
+
 #### Watch Timeout <br>
 Amount of time to wait before a file is considered changed<br><br>
 **usage:** `--watch-timeout <number>`<br>
@@ -400,10 +404,6 @@ Force dep pre-optimization regardless of whether deps have changed.<br><br>
 #### Debug <br>
 Log arguments passed to this command<br><br>
 **usage:** `--debug`<br>
-
-#### Host <br>
-Expose the server to the network<br><br>
-**usage:** `--host`<br>
 
 #### Open <br>
 Open browser on startup<br><br>
@@ -519,6 +519,10 @@ The default drives url to use in connect<br><br>
 The preservation strategy to use on default drives<br><br>
 **usage:** `--drive-preserve-strategy <value>`<br>
 **env**: `PH_CONNECT_DRIVES_PRESERVE_STRATEGY`<br>**default**: `preserve-by-url-and-detach`
+#### Host <br>
+Expose the server to the network. Pass an IP (e.g. 0.0.0.0) to bind to a specific address.<br><br>
+**usage:** `--host <str>`<br>
+
 #### Watch Timeout <br>
 Amount of time to wait before a file is considered changed<br><br>
 **usage:** `--watch-timeout <number>`<br>
@@ -536,10 +540,6 @@ Force dep pre-optimization regardless of whether deps have changed.<br><br>
 #### Debug <br>
 Log arguments passed to this command<br><br>
 **usage:** `--debug`<br>
-
-#### Host <br>
-Expose the server to the network<br><br>
-**usage:** `--host`<br>
 
 #### Open <br>
 Open browser on startup<br><br>
@@ -684,6 +684,12 @@ show help<br><br>
 
 ## Migrate
 Run migrations
+### arguments
+#### Version <br>
+The version to migrate to. Accepts a valid semver version or `staging`, `dev`, `latest`.<br><br>
+**usage:** `[version]`<br>
+
+
 ### options
 #### Version <br>
 The version to migrate to. Accepts a valid semver version or `staging`, `dev`, `latest`.<br><br>
@@ -691,6 +697,10 @@ The version to migrate to. Accepts a valid semver version or `staging`, `dev`, `
 **default**: `latest`
 
 ### flags
+#### Force <br>
+Run migrate from the bundled codegen even if the target version cannot be resolved from the npm registry or differs from the installed ph-cli version.<br><br>
+**usage:** `--force, -f`<br>
+
 #### Debug <br>
 Log arguments passed to this command<br><br>
 **usage:** `--debug`<br>
@@ -863,6 +873,10 @@ Names of the dependencies to install<br><br>
 #### Registry <br>
 Registry URL to install from (overrides config and environment)<br><br>
 **usage:** `--registry <str>`<br>
+
+#### Allow Build <br>
+A list of package names that are allowed to run postinstall scripts during installation.<br><br>
+**usage:** `--allow-build <str>`<br>
 
 #### Package Manager <br>
 Specify the package manager to use for your project. Can be one of: `npm`, `pnpm`, `yarn`, or `bun`. Defaults to your environment package manager.<br><br>

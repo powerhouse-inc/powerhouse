@@ -6,6 +6,7 @@ export {
   GqlRequestChannel,
   InMemoryQueue,
   IntervalPollTimer,
+  PollBehavior,
   REACTOR_SCHEMA,
   ReactorBuilder,
   ReactorClientBuilder,

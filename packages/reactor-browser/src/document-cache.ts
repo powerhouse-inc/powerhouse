@@ -43,6 +43,29 @@ export function readPromiseState<T>(
 }
 
 /**
+ * Resolves an array of document promises using `Promise.allSettled`,
+ * returning only the fulfilled values. A single missing/rejected
+ * document does not poison the whole batch. Rejected entries are
+ * logged at warn level so developers can see dangling references.
+ */
+function fulfilledOnly(promises: Promise<PHDocument>[]): Promise<PHDocument[]> {
+  return Promise.allSettled(promises).then((results) => {
+    const documents: PHDocument[] = [];
+    for (const result of results) {
+      if (result.status === "fulfilled") {
+        documents.push(result.value);
+      } else {
+        console.warn(
+          "[DocumentCache] Skipped unavailable document:",
+          result.reason,
+        );
+      }
+    }
+    return documents;
+  });
+}
+
+/**
  * Document cache implementation that uses the new ReactorClient API.
  *
  * This cache subscribes to document change events via IReactorClient.subscribe()
@@ -128,7 +151,7 @@ export class DocumentCache implements IDocumentCache {
     const currentPromises = ids.map((id) => this.get(id));
 
     if (hasDeletedDocuments) {
-      const batchPromise = Promise.all(currentPromises);
+      const batchPromise = fulfilledOnly(currentPromises);
       this.batchPromises.set(key, {
         promises: currentPromises,
         promise: batchPromise,
@@ -148,12 +171,15 @@ export class DocumentCache implements IDocumentCache {
     const states = currentPromises.map((p) =>
       readPromiseState(p as PromiseWithState<PHDocument>),
     );
-    const allFulfilled = states.every((s) => s.status === "fulfilled");
+    const allSettled = states.every((s) => s.status !== "pending");
 
-    if (allFulfilled) {
-      const values = states.map(
-        (s) => (s as { status: "fulfilled"; value: PHDocument }).value,
-      );
+    if (allSettled) {
+      const values = states
+        .filter(
+          (s): s is { status: "fulfilled"; value: PHDocument } =>
+            s.status === "fulfilled",
+        )
+        .map((s) => s.value);
       const batchPromise = Promise.resolve(values) as PromiseWithState<
         PHDocument[]
       >;
@@ -171,7 +197,7 @@ export class DocumentCache implements IDocumentCache {
       return cached.promise;
     }
 
-    const batchPromise = Promise.all(currentPromises);
+    const batchPromise = fulfilledOnly(currentPromises);
     this.batchPromises.set(key, {
       promises: currentPromises,
       promise: batchPromise,

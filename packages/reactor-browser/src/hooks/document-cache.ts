@@ -67,6 +67,44 @@ export function useDocument(id: string | null | undefined) {
 }
 
 /**
+ * Retrieves a document from the reactor and subscribes to changes without
+ * suspending or throwing. Use this when the ID might be stale (e.g., a
+ * previously selected node that has since been deleted) and the consumer
+ * wants to render a placeholder instead of crashing.
+ *
+ * Unlike {@link useGetDocumentAsync}, this hook subscribes to cache
+ * updates, so the returned state stays in sync with reactor changes.
+ *
+ * @param id - The document ID to retrieve, or null/undefined to skip retrieval
+ * @returns An object containing:
+ *   - status: "initial" | "pending" | "success" | "error"
+ *   - data: The document if successfully loaded
+ *   - isPending: Whether the document is currently loading
+ *   - error: Any error that occurred during loading (e.g., document not found)
+ *   - reload: Function to force a refetch, or undefined when no id is supplied
+ */
+export function useDocumentSafe(id: string | null | undefined) {
+  const documentCache = useDocumentCache();
+  const promise = useSyncExternalStore(
+    (cb) => (id && documentCache ? documentCache.subscribe(id, cb) : () => {}),
+    () => (id ? documentCache?.get(id) : undefined),
+  );
+
+  if (!promise || !documentCache || !id) {
+    return {
+      status: "initial",
+      isPending: false,
+      error: undefined,
+      data: undefined,
+      reload: undefined,
+    } as const;
+  }
+
+  const state = getDocumentQueryState(promise);
+  return { ...state, reload: () => documentCache.get(id, true) } as const;
+}
+
+/**
  * Retrieves multiple documents from the reactor using React Suspense.
  * This hook will suspend rendering while any of the documents are loading.
  *

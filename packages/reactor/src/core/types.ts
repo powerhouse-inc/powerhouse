@@ -86,6 +86,10 @@ export type BatchExecutionResult = {
 
 /**
  * A single load job within a batch request.
+ *
+ * `dependsOn` lists intra-batch plan keys (resolved to UUIDs by `loadBatch`).
+ * `externalDeps` lists pre-resolved job UUIDs from prior batches; these are
+ * appended to the queue hint without going through plan-key resolution.
  */
 export type LoadJobPlan = {
   key: string;
@@ -94,6 +98,7 @@ export type LoadJobPlan = {
   branch: string;
   operations: Operation[];
   dependsOn: string[];
+  externalDeps: string[];
 };
 
 /**

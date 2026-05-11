@@ -1,4 +1,4 @@
-import { debugArgs } from "@powerhousedao/shared/clis";
+import { debugArgs } from "@powerhousedao/shared/clis/args";
 import { command, flag, option, optional, string } from "cmd-ts";
 import { Directory } from "cmd-ts/dist/cjs/batteries/fs.js";
 

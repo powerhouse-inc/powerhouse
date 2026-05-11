@@ -1,6 +1,8 @@
 import {
+  array,
   boolean,
   flag,
+  multioption,
   option,
   optional,
   restPositionals,
@@ -25,6 +27,13 @@ export const installArgs = {
     long: "local",
     description:
       'Also install packages into node_modules (marks them as provider: "local" so they get bundled into ph connect build)',
+  }),
+  allowBuild: multioption({
+    type: array(string),
+    long: "allow-build",
+    description:
+      "A list of package names that are allowed to run postinstall scripts during installation.",
+    defaultValue: () => [],
   }),
   ...packageManagerArgs,
   ...debugArgs,

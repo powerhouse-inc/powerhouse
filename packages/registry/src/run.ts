@@ -1,9 +1,11 @@
 import express from "express";
 import { findUp } from "find-up";
+import { randomBytes } from "node:crypto";
 import { mkdir } from "node:fs/promises";
 import type { Server } from "node:http";
 import path from "node:path";
 import { runServer } from "verdaccio";
+import { createRenownAuthMiddleware } from "./auth/renown-middleware.js";
 import {
   createPowerhouseRouter,
   createPublishHook,
@@ -43,9 +45,30 @@ export async function runRegistry(args: RegistryCommandArgs) {
     s3KeyPrefix,
     s3Region,
     s3SecretAccessKey,
+    publicUrl,
+    authRenown,
+    verdaccioSecret: verdaccioSecretArg,
   } = args;
   const storagePath = await resolveDir(storageDir);
   const cdnCachePath = await resolveDir(cdnCacheDir);
+
+  // Per-pod random verdaccio JWT secret. The verdaccio-format token we mint
+  // in the renown middleware never leaves the pod (it's swapped into the
+  // request before verdaccio sees it), so a per-pod secret is sufficient.
+  // An override is exposed for tests / multi-pod behaviors that depend on
+  // shared verdaccio JWTs.
+  const verdaccioSecret = verdaccioSecretArg ?? randomBytes(32).toString("hex");
+
+  // Renown auth turns on when the operator both opts in (`--auth-renown`,
+  // default true via the CLI flag) and has set --public-url for the audience
+  // claim. Tests / programmatic users that don't pass either keep the legacy
+  // unsigned/htpasswd path with no warning.
+  const renownEnabled = authRenown === true && Boolean(publicUrl);
+  if (authRenown === true && !publicUrl) {
+    console.warn(
+      "[registry] auth-renown is enabled but --public-url / PH_REGISTRY_PUBLIC_URL is not set; Renown auth will be disabled.",
+    );
+  }
 
   console.log({
     storagePath,
@@ -64,6 +87,8 @@ export async function runRegistry(args: RegistryCommandArgs) {
     cdnCachePath,
     uplink,
     webEnabled,
+    verdaccioSecret,
+    ...(renownEnabled && publicUrl ? { renown: { publicUrl } } : {}),
     ...(webhookConfigs?.length && {
       notify: { webhooks: webhookConfigs },
     }),
@@ -107,6 +132,19 @@ export async function runRegistry(args: RegistryCommandArgs) {
 
   // Our routes take priority over Verdaccio
   app.use(createPowerhouseRouter(config, sseChannel, webhookChannel));
+
+  // Renown bearer-token auth runs before the publish/unpublish hooks so they
+  // see `req.renownUser`, and before verdaccio so the swapped Authorization
+  // header reaches verdaccio's apiJWTmiddleware.
+  if (config.renown) {
+    app.use(
+      createRenownAuthMiddleware({
+        publicUrl: config.renown.publicUrl,
+        verdaccioSecret,
+      }),
+    );
+  }
+
   app.use(createPublishHook(config, notifications));
   app.use(createUnpublishHook(config, notifications));
 
@@ -122,6 +160,9 @@ export async function runRegistry(args: RegistryCommandArgs) {
     console.log(`  CDN cache: ${cdnCachePath}`);
     if (config.s3) {
       console.log(`  S3:       ${config.s3.endpoint}/${config.s3.bucket}`);
+    }
+    if (config.renown) {
+      console.log(`  Renown auth: ${config.renown.publicUrl}`);
     }
   });
 

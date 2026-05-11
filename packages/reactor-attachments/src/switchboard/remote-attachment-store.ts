@@ -28,6 +28,13 @@ function isAttachmentMetadata(value: unknown): value is AttachmentMetadata {
   if (value.extension !== null && typeof value.extension !== "string") {
     return false;
   }
+  if (typeof value.createdAtUtc !== "string") return false;
+  if (
+    value.lastAccessedAtUtc !== undefined &&
+    typeof value.lastAccessedAtUtc !== "string"
+  ) {
+    return false;
+  }
   return true;
 }
 
@@ -35,7 +42,7 @@ function contentTypeFallback(response: Response): AttachmentMetadata {
   const contentLength = response.headers.get("Content-Length");
   if (contentLength === null) {
     throw new Error(
-      "Switchboard response missing both X-Attachment-Metadata and Content-Length headers",
+      "Switchboard response missing both Attachment-Metadata and Content-Length headers",
     );
   }
   const sizeBytes = Number(contentLength);
@@ -45,7 +52,7 @@ function contentTypeFallback(response: Response): AttachmentMetadata {
     );
   }
   // Last-Modified is the closest legitimate signal we have for an original
-  // creation time when X-Attachment-Metadata is absent. If that's missing too,
+  // creation time when Attachment-Metadata is absent. If that's missing too,
   // fall back to the response date (still server-attributed). This is
   // imperfect — Last-Modified reflects the most recent change, not the
   // original upload — but unlike sizeBytes there is no zero-equivalent
@@ -68,16 +75,38 @@ function contentTypeFallback(response: Response): AttachmentMetadata {
     sizeBytes,
     extension: null,
     createdAtUtc,
+    lastAccessedAtUtc: createdAtUtc,
   };
 }
 
 function parseMetadata(response: Response): AttachmentMetadata {
-  const metaHeader = response.headers.get("X-Attachment-Metadata");
+  // Compute the fallback at most once; both the recovery path inside the
+  // header parser and the outer "no header / parse failed" path share it.
+  let fallbackCache: AttachmentMetadata | undefined;
+  const fallback = (): AttachmentMetadata => {
+    if (fallbackCache === undefined) {
+      fallbackCache = contentTypeFallback(response);
+    }
+    return fallbackCache;
+  };
+
+  const metaHeader = response.headers.get("Attachment-Metadata");
   if (metaHeader) {
     try {
       const parsed: unknown = JSON.parse(metaHeader);
-      if (isRecord(parsed) && parsed.extension === undefined) {
-        parsed.extension = null;
+      if (isRecord(parsed)) {
+        if (parsed.extension === undefined) {
+          parsed.extension = null;
+        }
+        // Older switchboards may omit these timestamps; fall back to the
+        // Date/Last-Modified header so we never produce client-clock-stamped
+        // values when the server has authority.
+        if (parsed.createdAtUtc === undefined) {
+          parsed.createdAtUtc = fallback().createdAtUtc;
+        }
+        if (parsed.lastAccessedAtUtc === undefined) {
+          parsed.lastAccessedAtUtc = fallback().lastAccessedAtUtc;
+        }
       }
       if (isAttachmentMetadata(parsed)) {
         return parsed;
@@ -86,7 +115,7 @@ function parseMetadata(response: Response): AttachmentMetadata {
       // fall through to Content-Type fallback
     }
   }
-  return contentTypeFallback(response);
+  return fallback();
 }
 
 export class RemoteAttachmentStore implements IAttachmentReader {
@@ -101,9 +130,25 @@ export class RemoteAttachmentStore implements IAttachmentReader {
   }
 
   async stat(hash: AttachmentHash): Promise<AttachmentHeader> {
-    const { header, body } = await this.fetchAttachment(hash);
-    await body.cancel();
-    return header;
+    const url = `${this.remoteUrl}/attachments/${hash}`;
+    const authHeaders = await buildAuthHeaders(url, this.jwtHandler);
+
+    const response = await this.fetchFn(url, {
+      method: "HEAD",
+      headers: authHeaders,
+    });
+
+    if (response.status === 404) {
+      throw new AttachmentNotFound(hash);
+    }
+    if (!response.ok) {
+      throw new Error(
+        `Attachment stat failed: ${response.status} ${response.statusText}`,
+      );
+    }
+
+    const metadata = parseMetadata(response);
+    return buildHeader(hash, metadata);
   }
 
   async get(
@@ -135,19 +180,23 @@ export class RemoteAttachmentStore implements IAttachmentReader {
     }
 
     const metadata = parseMetadata(response);
-    const now = new Date().toISOString();
-    const header: AttachmentHeader = {
-      hash,
-      mimeType: metadata.mimeType,
-      fileName: metadata.fileName,
-      sizeBytes: metadata.sizeBytes,
-      extension: metadata.extension,
-      status: "available",
-      source: "sync",
-      createdAtUtc: now,
-      lastAccessedAtUtc: now,
-    };
-
-    return { header, body: response.body };
+    return { header: buildHeader(hash, metadata), body: response.body };
   }
+}
+
+function buildHeader(
+  hash: AttachmentHash,
+  metadata: AttachmentMetadata,
+): AttachmentHeader {
+  return {
+    hash,
+    mimeType: metadata.mimeType,
+    fileName: metadata.fileName,
+    sizeBytes: metadata.sizeBytes,
+    extension: metadata.extension,
+    status: "available",
+    source: "sync",
+    createdAtUtc: metadata.createdAtUtc,
+    lastAccessedAtUtc: metadata.lastAccessedAtUtc ?? metadata.createdAtUtc,
+  };
 }

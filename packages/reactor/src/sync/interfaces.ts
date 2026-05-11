@@ -67,6 +67,13 @@ export interface IChannel {
    * Returns an unsubscribe function.
    */
   onConnectionStateChange(callback: ConnectionStateChangeCallback): () => void;
+
+  /**
+   * Fires a single pull cycle on demand. For Manual poll-behavior remotes this is the
+   * mechanism for syncing without enabling background polling. Implementations that do
+   * not poll (e.g. push-only response channels) should treat this as a no-op.
+   */
+  triggerPull(): void;
 }
 
 /**
@@ -86,6 +93,7 @@ export interface IChannelFactory {
    * @param collectionId - Collection ID to synchronize
    * @param filter - Filter to apply to operations
    * @param operationIndex - Operation index for querying timestamps
+   * @param options - Remote-level options (e.g. pollBehavior). May be omitted; implementations should default sensibly.
    * @returns A new channel instance
    */
   instance(
@@ -98,6 +106,7 @@ export interface IChannelFactory {
     filter: RemoteFilter,
     // TODO: remove from the interface -- currently this is created inside of the builder
     operationIndex: IOperationIndex,
+    options?: RemoteOptions,
   ): IChannel;
 }
 
@@ -206,6 +215,15 @@ export interface ISyncManager {
     options?: RemoteOptions,
     id?: string,
   ): Promise<Remote>;
+
+  /**
+   * Triggers a one-shot pull for the named remote. Useful for Manual poll-behavior
+   * remotes, where the channel is registered but does not poll on a schedule.
+   *
+   * @param name - The name of the remote
+   * @throws Error if the remote does not exist
+   */
+  triggerPull(name: string): void;
 
   /**
    * Removes a remote and stops its channel.

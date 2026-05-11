@@ -1,0 +1,22 @@
+{
+  "extends": "../../tsconfig.options.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "outDir": "./dist"
+  },
+  "include": ["**/*"],
+  "references": [
+    {
+      "path": "../../packages/document-model"
+    },
+    {
+      "path": "../../packages/reactor"
+    },
+    {
+      "path": "../../packages/reactor-api"
+    },
+    {
+      "path": "../../packages/shared"
+    }
+  ]
+}

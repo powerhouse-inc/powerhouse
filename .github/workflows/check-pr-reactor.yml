@@ -6,6 +6,7 @@ on:
     branches: ["main"]
     paths:
       - "packages/reactor/**"
+      - "packages/reactor-api/**"
       - "test/test-connect/**"
       - "test/test-client/**"
       - ".github/workflows/check-pr-reactor.yml"
@@ -13,6 +14,7 @@ on:
     branches: ["main"]
     paths:
       - "packages/reactor/**"
+      - "packages/reactor-api/**"
       - "test/test-connect/**"
       - "test/test-client/**"
       - ".github/workflows/check-pr-reactor.yml"
@@ -85,3 +87,69 @@ jobs:
 
       - name: Run sync integration test
         run: pnpm test:integration
+
+  hub-spoke-catchup:
+    name: Hub-Spoke Catch-up Integration Test
+    needs: test-reactor
+    runs-on: ubuntu-24.04
+    container: node:24
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      RUN_HUB_SPOKE_INTEGRATION: "1"
+      REACTOR_TEST_PG_HOST: postgres
+      REACTOR_TEST_PG_PORT: "5432"
+      REACTOR_TEST_PG_USER: postgres
+      REACTOR_TEST_PG_PASSWORD: postgres
+      PH_REGISTRY_URL: https://registry.dev.vetra.io/
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Install PNPM
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+          run_install: false
+
+      - name: Setup bun global install
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.8
+
+      - name: Install postgresql-client-17 from PGDG (matches dump format 1.15)
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends curl ca-certificates gnupg
+          install -d /usr/share/postgresql-common/pgdg
+          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+            -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc
+          codename="$(. /etc/os-release && echo "$VERSION_CODENAME")"
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt ${codename}-pgdg main" \
+            > /etc/apt/sources.list.d/pgdg.list
+          apt-get update
+          apt-get install -y --no-install-recommends postgresql-client-17
+          pg_restore --version
+
+      - name: Install dependencies
+        run: pnpm install-ci
+
+      - name: Build
+        run: pnpm build
+
+      - name: Run hub-spoke catch-up integration test
+        run: pnpm --filter @powerhousedao/reactor-api exec vitest run test/hub-spoke-catchup.integration.test.ts

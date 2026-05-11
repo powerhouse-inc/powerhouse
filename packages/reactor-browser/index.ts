@@ -5,7 +5,7 @@ export * from "./src/context/index.js";
 export * from "./src/document-cache.js";
 export * from "./src/document-model.js";
 export * from "./src/global/index.js";
-export * from "./src/graphql/client.js";
+export * from "./src/graphql/index.js";
 export * from "./src/hooks/index.js";
 export * from "./src/pglite/index.js";
 export * from "./src/re-exports.js";

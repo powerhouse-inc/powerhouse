@@ -1,5 +1,10 @@
 import { connectConfig } from "@powerhousedao/connect/config";
-import { packageJson } from "@powerhousedao/connect/utils";
+import {
+  getGitSha,
+  getGitUrl,
+  packageJson,
+  shortGitSha,
+} from "@powerhousedao/connect/utils";
 import { Icon } from "@powerhousedao/design-system";
 import { About as BaseAbout } from "@powerhousedao/design-system/connect";
 import {
@@ -29,6 +34,7 @@ export const About: React.FC = () => {
             : undefined
         }
       />
+      <AppGitHash />
       <ConnectedDrives />
       <div className="bg-white p-3">
         <h2 className="mb-2 font-semibold">Inspector</h2>
@@ -46,6 +52,33 @@ export const About: React.FC = () => {
     </div>
   );
 };
+
+function AppGitHash() {
+  const sha = getGitSha();
+  if (sha === "unknown") return null;
+  const url = getGitUrl();
+  const label = shortGitSha(sha);
+  return (
+    <div className="bg-white p-3 text-sm">
+      <span className="font-semibold">Git hash: </span>
+      {url ? (
+        <a
+          className="font-mono underline"
+          href={url}
+          target="_blank"
+          rel="noreferrer noopener"
+          title={sha}
+        >
+          {label}
+        </a>
+      ) : (
+        <span className="font-mono" title={sha}>
+          {label}
+        </span>
+      )}
+    </div>
+  );
+}
 
 function ConnectedDrives() {
   const drives = useDrives() ?? [];
@@ -105,7 +138,22 @@ function DriveAboutEntry({ drive }: { drive: DocumentDriveDocument }) {
             <span className="font-medium">Version:</span> {info.version}
           </div>
           <div>
-            <span className="font-medium">Git hash:</span> {info.gitHash}
+            <span className="font-medium">Git hash: </span>
+            {info.gitUrl ? (
+              <a
+                className="font-mono hover:underline"
+                href={info.gitUrl}
+                target="_blank"
+                rel="noreferrer noopener"
+                title={info.gitHash}
+              >
+                {shortGitSha(info.gitHash)}
+              </a>
+            ) : (
+              <span className="font-mono" title={info.gitHash}>
+                {shortGitSha(info.gitHash)}
+              </span>
+            )}
           </div>
         </div>
       )}

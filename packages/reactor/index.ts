@@ -127,6 +127,7 @@ export {
 // Document Model Registry
 export {
   DocumentModelRegistry,
+  DocumentModelResolver,
   DuplicateManifestError,
   DuplicateModuleError,
   InvalidModuleError,
@@ -134,6 +135,7 @@ export {
   NullDocumentModelResolver,
   type IDocumentModelLoader,
   type IDocumentModelRegistry,
+  type IDocumentModelResolver,
 } from "./src/registry/index.js";
 
 // Storage
@@ -221,8 +223,8 @@ export {
   GqlResponseChannelFactory,
   IntervalPollTimer,
   Mailbox,
+  PollBehavior,
   PollingChannelError,
-  sortEnvelopesByFirstOperationTimestamp,
   SyncBuilder,
   SyncEventTypes,
   SyncOperation,

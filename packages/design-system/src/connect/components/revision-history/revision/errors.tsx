@@ -1,6 +1,7 @@
 import { Icon } from "#design-system";
 import { twMerge } from "tailwind-merge";
-import { ConnectTooltip } from "../../tooltip/tooltip.js";
+import { CodePopover } from "../../code-popover.js";
+import { FormattedJsonViewer } from "../../formatted-json-viewer.js";
 
 export type ErrorsProps = {
   readonly errors: string[] | undefined;
@@ -34,14 +35,13 @@ export function Errors(props: ErrorsProps) {
     </span>
   );
 
-  const tooltipContent = errors?.map((message, index) => (
-    <p className="text-red-800" key={index}>
-      Error: {message}
-    </p>
-  ));
-
   if (hasErrors)
-    return <ConnectTooltip content={tooltipContent}>{content}</ConnectTooltip>;
+    return (
+      <CodePopover
+        content={<FormattedJsonViewer value={errors} />}
+        trigger={content}
+      />
+    );
 
   return content;
 }

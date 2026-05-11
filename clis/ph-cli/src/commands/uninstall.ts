@@ -1,13 +1,6 @@
-import {
-  getPowerhouseProjectInfo,
-  getPowerhouseProjectUninstallCommand,
-  makeDependenciesWithVersions,
-  uninstallArgs,
-} from "@powerhousedao/shared/clis";
-import { execSync } from "child_process";
+import { AGENTS, uninstallArgs } from "@powerhousedao/shared/clis/args";
 import { command } from "cmd-ts";
-import { AGENTS } from "package-manager-detector";
-import { removeStylesImports, updateConfigFile } from "../utils.js";
+import { execSync } from "node:child_process";
 
 export const uninstall = command({
   name: "uninstall",
@@ -27,6 +20,12 @@ This command:
     if (args.debug) {
       console.log(args);
     }
+
+    const {
+      getPowerhouseProjectInfo,
+      getPowerhouseProjectUninstallCommand,
+      makeDependenciesWithVersions,
+    } = await import("@powerhousedao/shared/clis");
 
     const {
       projectPath,
@@ -59,8 +58,10 @@ This command:
 
     try {
       console.log("Uninstalling dependencies 📦 ...");
-      const uninstallCommand =
-        await getPowerhouseProjectUninstallCommand(packageManager);
+      const uninstallCommand = await getPowerhouseProjectUninstallCommand(
+        packageManager,
+        args.dependencies,
+      );
       execSync(uninstallCommand, {
         stdio: "inherit",
         cwd: projectPath,
@@ -70,6 +71,9 @@ This command:
       console.error("❌ Failed to uninstall dependencies");
       throw error;
     }
+
+    const { removeStylesImports, updateConfigFile } =
+      await import("../utils.js");
 
     try {
       console.log("⚙️ Updating powerhouse config file...");

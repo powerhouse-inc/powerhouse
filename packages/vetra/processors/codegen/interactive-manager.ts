@@ -1,4 +1,4 @@
-import { createInterface } from "readline";
+import { createInterface } from "node:readline";
 import type { CodegenInput } from "./document-handlers/types.js";
 import { logger } from "./logger.js";
 

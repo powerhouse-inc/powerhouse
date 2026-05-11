@@ -226,43 +226,57 @@ export class KyselyOperationIndex implements IOperationIndex {
       throw new Error("Operation aborted");
     }
 
-    let query = this.queryExecutor
-      .selectFrom("operation_index_operations as oi")
-      .innerJoin("document_collections as dc", "oi.documentId", "dc.documentId")
-      .selectAll("oi")
-      .select(["dc.documentId", "dc.collectionId"])
-      .where("dc.collectionId", "=", collectionId)
-      .where(
-        sql<boolean>`(dc."leftOrdinal" IS NULL OR oi.ordinal < dc."leftOrdinal")`,
-      )
-      .orderBy("oi.ordinal", "asc");
+    const outerCursor = cursor ?? -1;
+    const pagingCursorOrdinal =
+      paging?.cursor !== undefined ? Number.parseInt(paging.cursor, 10) : -1;
 
-    if (cursor !== undefined) {
-      query = query.where("oi.ordinal", ">", cursor);
-    }
+    const buildBranch = (kind: "joiner" | "newOps") => {
+      let qb = this.queryExecutor
+        .selectFrom("operation_index_operations as oi")
+        .innerJoin(
+          "document_collections as dc",
+          "oi.documentId",
+          "dc.documentId",
+        )
+        .selectAll("oi")
+        .select(["dc.documentId", "dc.collectionId"])
+        .where("dc.collectionId", "=", collectionId)
+        .where(
+          sql<boolean>`(dc."leftOrdinal" IS NULL OR oi.ordinal < dc."leftOrdinal")`,
+        );
 
-    if (view?.branch) {
-      query = query.where("oi.branch", "=", view.branch);
-    }
+      if (kind === "joiner") {
+        qb = qb
+          .where("dc.joinedOrdinal", ">", BigInt(outerCursor))
+          .where("oi.ordinal", "<=", outerCursor);
+      } else {
+        qb = qb.where("oi.ordinal", ">", outerCursor);
+      }
 
-    if (view?.scopes && view.scopes.length > 0) {
-      query = query.where("oi.scope", "in", view.scopes);
-    }
+      qb = qb.where("oi.ordinal", ">", pagingCursorOrdinal);
 
-    if (view?.excludeSourceRemote) {
-      query = query.where("oi.sourceRemote", "!=", view.excludeSourceRemote);
-    }
+      if (view?.branch) {
+        qb = qb.where("oi.branch", "=", view.branch);
+      }
+      if (view?.scopes && view.scopes.length > 0) {
+        qb = qb.where("oi.scope", "in", view.scopes);
+      }
+      if (view?.excludeSourceRemote) {
+        qb = qb.where("oi.sourceRemote", "!=", view.excludeSourceRemote);
+      }
 
-    if (paging?.cursor) {
-      const cursorOrdinal = Number.parseInt(paging.cursor, 10);
-      query = query.where("oi.ordinal", ">", cursorOrdinal);
-    }
+      return qb;
+    };
+
+    let unionQuery = buildBranch("joiner")
+      .unionAll(buildBranch("newOps"))
+      .orderBy("ordinal", "asc");
 
     if (paging?.limit) {
-      query = query.limit(paging.limit + 1);
+      unionQuery = unionQuery.limit(paging.limit + 1);
     }
 
-    const rows = await query.execute();
+    const rows = await unionQuery.execute();
 
     let hasMore = false;
     let items = rows;

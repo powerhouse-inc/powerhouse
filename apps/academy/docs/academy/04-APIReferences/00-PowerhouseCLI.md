@@ -424,6 +424,8 @@ and real-time processing with a "Vetra" drive or connection to remote drives.
 
 **Environment:** `PH_CONNECT_DRIVES_PRESERVE_STRATEGY`
 **Default:** `preserve-by-url-and-detach`
+**Host** - Expose the server to the network. Pass an IP (e.g. 0.0.0.0) to bind to a specific address. - Usage: `--host <str>`
+
 **Watch Timeout** - Amount of time to wait before a file is considered changed - Usage: `--watch-timeout <number>`
 
 **Environment:** `PH_WATCH_TIMEOUT`
@@ -456,8 +458,6 @@ and real-time processing with a "Vetra" drive or connection to remote drives.
 **Force** - Force dep pre-optimization regardless of whether deps have changed. - Usage: `--force`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
-
-**Host** - Expose the server to the network - Usage: `--host`
 
 **Open** - Open browser on startup - Usage: `--open`
 
@@ -519,6 +519,8 @@ your project.
 
 **Environment:** `PH_CONNECT_DRIVES_PRESERVE_STRATEGY`
 **Default:** `preserve-by-url-and-detach`
+**Host** - Expose the server to the network. Pass an IP (e.g. 0.0.0.0) to bind to a specific address. - Usage: `--host <str>`
+
 **Watch Timeout** - Amount of time to wait before a file is considered changed - Usage: `--watch-timeout <number>`
 
 **Environment:** `PH_WATCH_TIMEOUT`
@@ -534,8 +536,6 @@ your project.
 **Force** - Force dep pre-optimization regardless of whether deps have changed. - Usage: `--force`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
-
-**Host** - Expose the server to the network - Usage: `--host`
 
 **Open** - Open browser on startup - Usage: `--open`
 
@@ -632,6 +632,8 @@ NOTE: You must run `ph connect build` first
 
 **Environment:** `PH_CONNECT_DRIVES_PRESERVE_STRATEGY`
 **Default:** `preserve-by-url-and-detach`
+**Host** - Expose the server to the network. Pass an IP (e.g. 0.0.0.0) to bind to a specific address. - Usage: `--host <str>`
+
 **Watch Timeout** - Amount of time to wait before a file is considered changed - Usage: `--watch-timeout <number>`
 
 **Environment:** `PH_WATCH_TIMEOUT`
@@ -647,8 +649,6 @@ NOTE: You must run `ph connect build` first
 **Force** - Force dep pre-optimization regardless of whether deps have changed. - Usage: `--force`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
-
-**Host** - Expose the server to the network - Usage: `--host`
 
 **Open** - Open browser on startup - Usage: `--open`
 
@@ -786,6 +786,16 @@ Run migrations
 
 
 
+---
+
+## Parameters
+
+### Arguments
+**Version** - The version to migrate to. Accepts a valid semver version or `staging`, `dev`, `latest`. - Usage: `[version]`
+
+
+
+
 ### Options
 **Version** - The version to migrate to. Accepts a valid semver version or `staging`, `dev`, `latest`. - Usage: `--version, -v <str>`
 
@@ -795,6 +805,8 @@ Run migrations
 
 
 ### Flags
+**Force** - Run migrate from the bundled codegen even if the target version cannot be resolved from the npm registry or differs from the installed ph-cli version. - Usage: `--force, -f`
+
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`
@@ -934,6 +946,8 @@ Resolution order for the registry URL:
 
 ### Options
 **Registry** - Registry URL to install from (overrides config and environment) - Usage: `--registry <str>`
+
+**Allow Build** - A list of package names that are allowed to run postinstall scripts during installation. - Usage: `--allow-build <str>`
 
 **Package Manager** - Specify the package manager to use for your project. Can be one of: `npm`, `pnpm`, `yarn`, or `bun`. Defaults to your environment package manager. - Usage: `--package-manager, -p <value>`
 

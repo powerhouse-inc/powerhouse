@@ -12,6 +12,9 @@ export default defineConfig({
   ],
   platform: "neutral",
   outDir: "dist",
+  deps: {
+    neverBundle: [/^node:/],
+  },
   clean: true,
   dts: true,
   sourcemap: true,

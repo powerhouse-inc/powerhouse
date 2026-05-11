@@ -69,14 +69,14 @@ export type RemoveTodoInput = {
   id: Scalars["String"]["input"];
 };
 
-export type Todo = {
+export type TodoItem = {
   completed: Scalars["Boolean"]["output"];
   id: Scalars["String"]["output"];
   title: Scalars["String"]["output"];
 };
 
 export type TodoState = {
-  todos: Array<Todo>;
+  todos: Array<TodoItem>;
 };
 
 export type UpdateTodoInput = {

@@ -1,17 +1,17 @@
-import type { NodeOption } from "#design-system";
 import { Icon } from "#design-system";
 import {
   setSelectedNode,
   showDeleteNodeModal,
+  useDragNode,
+  useDropNode,
   useNodeActions,
   useUserPermissions,
 } from "@powerhousedao/reactor-browser";
 import type { FolderNode } from "@powerhousedao/shared/document-drive";
 import { useState } from "react";
+import { addProp, entries, map, pipe } from "remeda";
 import { twMerge } from "tailwind-merge";
-import { defaultNodeOptions, nodeOptionsMap } from "../../constants/options.js";
-import { useDrag } from "../../hooks/use-drag.js";
-import { useDrop } from "../../hooks/use-drop.js";
+import { folderNodeDropdownOptions } from "../../constants/options.js";
 import { ConnectDropdownMenu } from "../dropdown-menu/dropdown-menu.js";
 import { NodeInput } from "../node-input/node-input.js";
 
@@ -23,12 +23,13 @@ export function FolderItem(props: {
   const { isAllowedToCreateDocuments } = useUserPermissions();
   const [mode, setMode] = useState<"READ" | "WRITE">("READ");
   const [isDropdownMenuOpen, setIsDropdownMenuOpen] = useState(false);
-  const { dragProps } = useDrag({ node: folderNode });
+  const { isDragging, ...dragProps } = useDragNode({
+    srcId: folderNode.id,
+    parentId: folderNode.parentFolder,
+  });
+  const { isDropTarget, ...dropProps } = useDropNode(folderNode.id);
   const { onRenameNode, onRenameDriveNodes, onDuplicateNode } =
     useNodeActions();
-  const { isDropTarget, dropProps } = useDrop({
-    target: folderNode,
-  });
   const isReadMode = mode === "READ";
   function onCancel() {
     setMode("READ");
@@ -47,24 +48,21 @@ export function FolderItem(props: {
       });
   }
 
-  const dropdownMenuHandlers: Partial<Record<NodeOption, () => void>> = {
+  const dropdownMenuHandlers = {
     DUPLICATE: () => onDuplicateNode(folderNode),
     RENAME: () => setMode("WRITE"),
     DELETE: () => showDeleteNodeModal(folderNode),
   } as const;
 
-  const dropdownMenuOptions = Object.entries(nodeOptionsMap)
-    .map(([id, option]) => ({
-      ...option,
-      id: id as NodeOption,
-    }))
-    .filter((option) =>
-      defaultNodeOptions.includes(
-        option.id as (typeof defaultNodeOptions)[number],
-      ),
-    );
+  const dropdownMenuOptions = pipe(
+    folderNodeDropdownOptions,
+    entries(),
+    map(([id, option]) => addProp(option, "id", id)),
+  );
 
-  function onDropdownMenuOptionClick(itemId: NodeOption) {
+  function onDropdownMenuOptionClick(
+    itemId: keyof typeof dropdownMenuHandlers,
+  ) {
     const handler = dropdownMenuHandlers[itemId];
     if (!handler) {
       console.error(`No handler found for dropdown menu item: ${itemId}`);
@@ -90,8 +88,8 @@ export function FolderItem(props: {
 
   const containerStyles = twMerge(
     "group flex h-12 cursor-pointer select-none items-center rounded-lg bg-gray-200 px-2",
+    isDragging ? "opacity-60" : isDropTarget ? "bg-blue-100" : "",
     className,
-    isDropTarget && "bg-blue-100",
   );
 
   return (

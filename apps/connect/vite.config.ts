@@ -3,6 +3,10 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 import { analyzer } from "vite-bundle-analyzer";
 
+const version =
+  process.env.WORKSPACE_VERSION ?? process.env.npm_package_version ?? "unknown";
+const gitSha = process.env.WORKSPACE_GIT_SHA ?? "unknown";
+
 export default defineConfig({
   resolve: {
     tsconfigPaths: true,
@@ -11,6 +15,8 @@ export default defineConfig({
     PH_PACKAGE_REGISTRY_URL: process.env.PH_CONNECT_PACKAGES_REGISTRY
       ? JSON.stringify(process.env.PH_CONNECT_PACKAGES_REGISTRY)
       : null,
+    CONNECT_VERSION: JSON.stringify(version),
+    CONNECT_GIT_SHA: JSON.stringify(gitSha),
   },
   envPrefix: ["PH_CONNECT_"],
   optimizeDeps: {

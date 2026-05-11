@@ -1,0 +1,33 @@
+import { writeCliDocsMarkdownFile } from "@powerhousedao/codegen/file-builders";
+import { init } from "../src/commands/init.js";
+import { ph } from "../src/commands/ph.js";
+import { setupGlobals } from "../src/commands/setup-globals.js";
+import { update } from "../src/commands/update.js";
+import { useLocal } from "../src/commands/use-local.js";
+import { use } from "../src/commands/use.js";
+
+const commands = [
+  { name: "init", command: init },
+  { name: "use", command: use },
+  { name: "update", command: update },
+  { name: "setup-globals", command: setupGlobals },
+  { name: "use-local", command: useLocal },
+];
+
+const cliDescription = ph.description ?? "";
+const version =
+  process.env.WORKSPACE_VERSION ?? process.env.npm_package_version ?? "unknown";
+
+async function main() {
+  await writeCliDocsMarkdownFile({
+    filePath: "COMMANDS.md",
+    docsTitle: `PH-CMD CLI Commands (${version})`,
+    docsIntroduction:
+      "This document provides detailed information about the available commands in the PH-CMD CLI. The CLI is published as `ph-cmd` and is invoked with the `ph` command.",
+    cliDescription,
+    entries: commands,
+  });
+  process.exit(0);
+}
+
+await main();

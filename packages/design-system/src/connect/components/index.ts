@@ -25,6 +25,7 @@ export * from "./footer/footer.js";
 export * from "./form-input/form-input.js";
 export * from "./form/add-local-drive-form.js";
 export * from "./form/add-remote-drive-form.js";
+export * from "./formatted-json-viewer.js";
 export * from "./home-screen/home-background-image.js";
 export * from "./home-screen/home-screen-add-drive-item.js";
 export * from "./home-screen/home-screen-item.js";

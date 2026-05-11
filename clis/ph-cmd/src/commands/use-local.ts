@@ -1,4 +1,4 @@
-import { debugArgs, runUseLocal } from "@powerhousedao/shared/clis";
+import { debugArgs } from "@powerhousedao/shared/clis/args";
 import {
   boolean,
   command,
@@ -49,6 +49,7 @@ export const useLocal = command({
       );
     }
 
+    const { runUseLocal } = await import("@powerhousedao/shared/clis");
     await runUseLocal(monorepoPath, skipInstall);
     process.exit(0);
   },

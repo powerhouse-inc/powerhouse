@@ -6,7 +6,6 @@ export default defineConfig({
     "src/index.ts",
     "src/connect/index.ts",
     "src/connect/components/toast/toast.tsx",
-    "src/rwa/index.ts",
     "src/ui/index.ts",
     "src/ui/lib/index.ts",
     "src/ui/**/*.ts",

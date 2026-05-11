@@ -1,4 +1,6 @@
 /**
+ * WARNING: DO NOT EDIT
+ * This file is auto-generated and updated by codegen
  * Factory methods for creating TodoDocument instances
  */
 import type { PHAuthState, PHBaseState, PHDocumentState } from "document-model";
@@ -33,7 +35,7 @@ export function createGlobalState(
   return {
     ...defaultGlobalState(),
     ...(state || {}),
-  } as TodoGlobalState;
+  };
 }
 
 export function createLocalState(

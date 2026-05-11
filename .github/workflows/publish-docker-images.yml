@@ -8,6 +8,16 @@ permissions:
   contents: write
   packages: write
 
+# Intentionally NO concurrency block here. When invoked via `uses:` from
+# release-branch.yml, the called workflow inherits no concurrency from the
+# caller, but if the called workflow declares the SAME group as the caller
+# GitHub treats it as a self-conflict and cancels. The release-branch.yml
+# concurrency group already serializes the parent (and therefore this
+# workflow's invocations from it) — adding a group here only breaks the
+# downstream `needs:` chain. Standalone workflow_dispatch invocations of
+# this workflow are rare operator-driven recovery flows and don't need
+# their own serialization.
+
 env:
   REGISTRY: ghcr.io
   HARBOR_REGISTRY: cr.vetra.io
@@ -42,10 +52,28 @@ jobs:
         run: git fetch --tags origin
       - name: Set last tag
         id: get-tag
+        env:
+          BRANCH: ${{ github.ref_name }}
         run: |
-          TAG=$(git for-each-ref --sort=creatordate --format '%(refname:short)' refs/tags | tail -n 1)
-          echo "GITHUB_TAG=$TAG" >> $GITHUB_ENV
-          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          # Pick the most recent tag for the channel matching this branch.
+          # Same channel logic as `determine-downstream-params` in
+          # release-branch.yml. The previous "tail of all tags" picker would
+          # grab a tag from a sibling channel whenever, say, a
+          # `release/staging/*` cut happened after the most recent `-dev` tag —
+          # the nightly main pipeline would then build with that staging tag
+          # and overwrite Harbor's `staging` floating tag with main-branch code.
+          if [[ "$BRANCH" == "main" ]]; then
+            TAG=$(git tag --sort=-creatordate --list '*-dev.*' | head -n 1)
+          elif [[ "$BRANCH" == release/staging/* ]]; then
+            TAG=$(git tag --sort=-creatordate --list '*-staging.*' | head -n 1)
+          elif [[ "$BRANCH" == release/production/* ]]; then
+            TAG=$(git tag --sort=-creatordate | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1)
+          else
+            echo "::error::Unknown branch '$BRANCH' — refusing to guess a tag"
+            exit 1
+          fi
+          echo "GITHUB_TAG=$TAG" >> "$GITHUB_ENV"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
       - name: Validate tag
         run: |
           if [ -z "${{ env.GITHUB_TAG }}" ]; then
@@ -181,6 +209,53 @@ jobs:
             -H "Content-Type: application/json" \
             -d "{\"query\":\"mutation { notifyNewImageRelease(input: { tag: \\\"${TAG}\\\", channel: \\\"${CHANNEL}\\\", images: [\\\"switchboard\\\", \\\"connect\\\"], secret: \\\"${WEBHOOK_SECRET}\\\" }) { updatedEnvironments } }\"}" \
             || echo "Auto-update notification failed (non-fatal)"
+
+  update-k8s-switchboard-connect:
+    name: Update Switchboard + Connect Images in K8s Hosting
+    needs: build
+    if: ${{ needs.build.outputs.tag != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Determine target environments
+        id: env
+        env:
+          TAG: ${{ needs.build.outputs.tag }}
+        run: |
+          if [[ "$TAG" == *"-dev."* ]]; then
+            echo "targets=dev" >> $GITHUB_OUTPUT
+          else
+            echo "Skipping k8s update — switchboard+connect auto-bump is scoped to the -dev. channel only"
+          fi
+
+      - name: Update switchboard + connect image tags in k8s-hosting
+        if: ${{ steps.env.outputs.targets != '' }}
+        env:
+          TAG: ${{ needs.build.outputs.tag }}
+          TARGETS: ${{ steps.env.outputs.targets }}
+          K8S_REPO_PAT: ${{ secrets.K8S_REPO_PAT }}
+        run: |
+          git clone "https://x-access-token:${K8S_REPO_PAT}@github.com/powerhouse-inc/powerhouse-k8s-hosting.git"
+          cd powerhouse-k8s-hosting
+
+          git config user.name "Github Actions Bot"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          for TARGET_ENV in $TARGETS; do
+            VALUES_FILE="tenants/${TARGET_ENV}/powerhouse-values.yaml"
+            # Update switchboard image tag (line after switchboard's repository line)
+            sed -i '/repository: cr.vetra.io\/powerhouse-inc-powerhouse\/switchboard/{n;s/\(.*tag: \).*/\1'"${TAG}"'/}' "$VALUES_FILE"
+            # Update connect image tag (line after connect's repository line)
+            sed -i '/repository: cr.vetra.io\/powerhouse-inc-powerhouse\/connect/{n;s/\(.*tag: \).*/\1'"${TAG}"'/}' "$VALUES_FILE"
+            git add "$VALUES_FILE"
+          done
+
+          git diff --cached --quiet && echo "No changes to commit" && exit 0
+          git commit -m "chore(${TARGETS// /,}): update switchboard + connect image tags to ${TAG}"
+          for i in 1 2 3; do
+            git pull --rebase origin main && git push && break
+            echo "Push attempt $i failed, retrying..."
+            sleep 5
+          done
 
   update-k8s-registry:
     name: Update Registry Image in K8s Hosting

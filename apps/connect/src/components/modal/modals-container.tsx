@@ -47,9 +47,9 @@ const DriveSettingsModal = lazy(() =>
     default: m.DriveSettingsModal,
   })),
 );
-const ExportDocumentWithErrorsModal = lazy(() =>
-  import("./modals/ExportDocumentWithErrorsModal.js").then((m) => ({
-    default: m.ExportDocumentWithErrorsModal,
+const DownloadDocumentWithErrorsModal = lazy(() =>
+  import("./modals/DownloadDocumentWithErrorsModal.js").then((m) => ({
+    default: m.DownloadDocumentWithErrorsModal,
   })),
 );
 const SettingsModal = lazy(() =>
@@ -82,7 +82,7 @@ const modalComponents = {
   deleteItem: DeleteItemModal,
   disclaimer: DisclaimerModal,
   driveSettings: DriveSettingsModal,
-  exportDocumentWithErrors: ExportDocumentWithErrorsModal,
+  downloadDocumentWithErrors: DownloadDocumentWithErrorsModal,
   inspector: InspectorModal,
   settings: SettingsModal,
   upgradeDrive: UpgradeDriveModal,

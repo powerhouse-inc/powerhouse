@@ -36,6 +36,7 @@ export type {
 export {
   ChannelErrorSource,
   ChannelScheme,
+  PollBehavior,
   SyncEventTypes,
   SyncOperationStatus,
 } from "./types.js";
@@ -74,7 +75,6 @@ export {
   consolidateSyncOperations,
   createIdleHealth,
   filterOperations,
-  sortEnvelopesByFirstOperationTimestamp,
   trimMailboxFromAckOrdinal,
 } from "./utils.js";
 

@@ -46,6 +46,18 @@ services:
       - ./test/integration/baseline.js:/baseline.js:ro
     command: ["run", "/baseline.js"]
 
+  # Mixed-load scenario: real GraphQL mutations + queries against multiple
+  # drives via Drive-Id header. Designed to drive the Grafana dashboard;
+  # requires real switchboards (use docker-compose.real.yml overlay).
+  loadtest-mixed:
+    image: grafana/k6:0.55.0
+    profiles: ["loadtest"]
+    depends_on:
+      - lb
+    volumes:
+      - ./test/integration/mixed-load.js:/mixed-load.js:ro
+    command: ["run", "/mixed-load.js"]
+
   # Optional local observability stack. `docker compose --profile observability up -d`
   # starts prometheus + grafana scraping the LB on the default compose network.
   # Both are bound to 127.0.0.1 on the host; neither is reachable off-host.

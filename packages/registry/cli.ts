@@ -97,6 +97,29 @@ export const registryCommand = command({
       defaultValue: () => process.env.REGISTRY_WEBHOOKS,
       defaultValueIsSerializable: true,
     }),
+    publicUrl: option({
+      long: "public-url",
+      type: optional(string),
+      description:
+        "Public origin of this registry (used as the JWT `aud` claim for Renown bearer tokens). Required when --auth-renown is true.",
+      defaultValue: () => process.env.PH_REGISTRY_PUBLIC_URL,
+      defaultValueIsSerializable: true,
+    }),
+    authRenown: flag({
+      long: "auth-renown",
+      description:
+        "Verify Renown-signed bearer tokens in front of verdaccio (stateless). Disabled when --public-url is unset.",
+      defaultValue: () => process.env.PH_REGISTRY_AUTH_RENOWN === "true",
+      defaultValueIsSerializable: true,
+    }),
+    verdaccioSecret: option({
+      long: "verdaccio-secret",
+      type: optional(string),
+      description:
+        "Override verdaccio's internal JWT signing secret. Default: random per pod (fine — the swapped JWT never leaves this process).",
+      defaultValue: () => process.env.PH_REGISTRY_VERDACCIO_SECRET,
+      defaultValueIsSerializable: true,
+    }),
   },
   handler: async (args) => {
     console.log(args);

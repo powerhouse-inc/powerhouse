@@ -5,13 +5,18 @@ import type {
 } from "@powerhousedao/reactor";
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import type { IRenown } from "@renown/sdk";
+import type {
+  GraphQLClientWindowEvents,
+  ReactorGraphQLClient,
+} from "../graphql/types.js";
 import type { PHGlobalConfig } from "./config.js";
 import type { IDocumentCache } from "./documents.js";
 import type { PHModal } from "./modals.js";
+import type { IPackageDiscoveryService } from "./package-discovery.js";
 import type { TimelineItem } from "./timeline.js";
 import type { PHToastFn } from "./toast.js";
-import type { IPackageDiscoveryService } from "./package-discovery.js";
 import type { IPackageManager } from "./vetra.js";
+import type { DraggingNode } from "../hooks/node-drag-and-drop.js";
 
 export type BrowserReactorClientModule = ReactorClientModule & {
   pg: PGlite;
@@ -23,12 +28,14 @@ export type PHGlobal = PHGlobalConfig & {
   loading?: boolean;
   reactorClientModule?: BrowserReactorClientModule;
   reactorClient?: IReactorClient;
+  reactorGraphQLClient?: ReactorGraphQLClient | undefined;
   renown?: IRenown | LOADING;
   vetraPackageManager?: IPackageManager;
   drives?: DocumentDriveDocument[];
   documentCache?: IDocumentCache;
   selectedDriveId?: string;
   selectedNodeId?: string;
+  draggingNode?: DraggingNode;
   modal?: PHModal;
   selectedTimelineRevision?: string | number | null;
   revisionHistoryVisible?: boolean;
@@ -64,4 +71,5 @@ declare global {
   interface Window {
     ph?: PHGlobal;
   }
+  interface WindowEventMap extends GraphQLClientWindowEvents {}
 }

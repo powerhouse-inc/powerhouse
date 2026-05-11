@@ -33,6 +33,7 @@ export * from "./boilerplate/main.tsx.js";
 export * from "./boilerplate/mcp.json.js";
 export * from "./boilerplate/npmrc.js";
 export * from "./boilerplate/package.json.js";
+export * from "./boilerplate/pnpm-workspace.js";
 export * from "./boilerplate/package.json.legacy.js";
 export * from "./boilerplate/powerhouse.config.json.js";
 export * from "./boilerplate/powerhouse.manifest.json.js";

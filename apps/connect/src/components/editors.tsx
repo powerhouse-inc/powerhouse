@@ -21,9 +21,6 @@ import { CenteredErrorMessage, ErrorBoundary } from "./error-boundary.js";
 
 type Props<TDocument extends PHDocument = PHDocument> = {
   document: TDocument;
-  onClose: () => void;
-  onExport: () => void;
-  onOpenSwitchboardLink?: () => Promise<void>;
 };
 
 function EditorError({ message }: { message: React.ReactNode }) {
@@ -35,12 +32,7 @@ function EditorError({ message }: { message: React.ReactNode }) {
 }
 
 export const DocumentEditor: React.FC<Props> = (props) => {
-  const {
-    document: initialDocument,
-    onClose,
-    onExport,
-    onOpenSwitchboardLink,
-  } = props;
+  const { document: initialDocument } = props;
   const selectedTimelineItem = useSelectedTimelineItem();
   const revisionHistoryVisible = useRevisionHistoryVisible();
   const [document, dispatch] = useDocumentById(initialDocument.header.id);

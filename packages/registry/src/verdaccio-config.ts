@@ -9,6 +9,20 @@ export function buildVerdaccioConfig(config: RegistryConfig) {
   const base: Record<string, unknown> = {
     storage: config.storagePath,
     self_path: "./",
+    // Top-level secret used by verdaccio to sign / verify its API JWTs.
+    // The renown middleware mints a verdaccio-format JWT with the same
+    // secret so verdaccio's apiJWTmiddleware accepts the swapped token.
+    ...(config.verdaccioSecret ? { secret: config.verdaccioSecret } : {}),
+    // Force JWT mode for the npm API. Without this verdaccio falls back to
+    // its legacy aes-encrypted token format, which signPayload won't produce.
+    security: {
+      api: {
+        jwt: {
+          sign: { expiresIn: "5m" },
+          verify: {},
+        },
+      },
+    },
     auth: {
       htpasswd: {
         file: htpasswdPath,
