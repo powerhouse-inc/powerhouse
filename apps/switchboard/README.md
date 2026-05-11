@@ -13,6 +13,7 @@ A powerful document-driven server that provides a unified API for managing and s
 - **HTTPS Support**: Built-in HTTPS server with custom certificates
 - **Profiling**: Integration with Pyroscope for performance monitoring
 - **Error Tracking**: Sentry integration for error monitoring and reporting
+- **Observability**: Unified OpenTelemetry tracing + metrics bootstrap, with optional Sentry APM bridging (same trace IDs in Tempo and Sentry)
 
 ## 📦 Installation
 
@@ -106,10 +107,10 @@ pnpm add -g @powerhousedao/switchboard
 | `PH_REACTOR_DATABASE_URL`   | PostgreSQL URL (takes precedence)  | -                     |
 | `REDIS_URL`                 | Redis connection URL               | -                     |
 | `REDIS_TLS_URL`             | Redis TLS connection URL           | -                     |
-| `SENTRY_DSN`                | Sentry DSN for error tracking      | -                     |
-| `SENTRY_ENV`                | Sentry environment                 | -                     |
 | `PYROSCOPE_SERVER_ADDRESS`  | Pyroscope server address           | -                     |
 | `FEATURE_REACTORV2_ENABLED` | Enable Reactor v2 subgraph feature | `false`               |
+
+See [Observability](#observability) below for Sentry and OpenTelemetry variables.
 
 ### Authentication Configuration
 
@@ -131,6 +132,47 @@ Switchboard supports multiple storage backends:
 - **Filesystem**: Local file-based storage (default)
 - **PostgreSQL**: Persistent database storage
 - **Redis**: Caching layer (optional)
+
+### Observability
+
+Switchboard bootstraps Sentry and OpenTelemetry from a single module (`src/observability.mts`) that is imported as the very first thing in `src/index.mts`. The OpenTelemetry instrumentations (`http`, `express`, `pg`, `graphql`) register require-time hooks at load, so the import order must not be changed.
+
+What runs depends on which environment variables are set:
+
+- `SENTRY_DSN` set → Sentry error reporting is initialized.
+- `ENABLE_TRACING=true` or `NODE_ENV=production` → OpenTelemetry tracing is initialized, exporting spans to Tempo over OTLP HTTP.
+- Both set → OTel spans are also forwarded to Sentry via `SentrySpanProcessor`, so Sentry transactions and Tempo traces share the same trace IDs and cross-link in Grafana.
+- `OTEL_EXPORTER_OTLP_ENDPOINT` set → metrics export to that OTLP HTTP endpoint via a periodic reader. Reactor metrics emitted by `@powerhousedao/opentelemetry-instrumentation-reactor` flow through the same global meter provider.
+
+If neither Sentry nor tracing is enabled, the module is a no-op and no exporters or instrumentations are registered.
+
+#### Environment Variables
+
+| Variable                      | Description                                                                                               | Default                                                    |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| `SENTRY_DSN`                  | Sentry DSN. When unset, Sentry is disabled.                                                               | -                                                          |
+| `SENTRY_ENV`                  | `environment` tag passed to `Sentry.init`.                                                                | -                                                          |
+| `SENTRY_RELEASE`              | Release tag (must match the version uploaded by CI for source maps to resolve).                           | `v${npm_package_version}` if available                     |
+| `SENTRY_TRACES_SAMPLE_RATE`   | APM sampling rate (0.0–1.0).                                                                              | `0.1`                                                      |
+| `ENABLE_TRACING`              | Set to `true` to enable OpenTelemetry tracing outside production.                                         | `false` (auto-enabled when `NODE_ENV=production`)          |
+| `NODE_ENV`                    | When `production`, tracing is enabled automatically. Also exported as `deployment.environment` attribute. | `development`                                              |
+| `OTEL_SERVICE_NAME`           | `service.name` resource attribute.                                                                        | `switchboard`                                              |
+| `TENANT_ID`                   | `tenant.id` resource attribute (used to slice traces by tenant in Grafana).                               | `default`                                                  |
+| `TEMPO_ENDPOINT`              | OTLP HTTP endpoint for trace export.                                                                      | `http://tempo.monitoring.svc.cluster.local:4318/v1/traces` |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP HTTP endpoint for metrics export. Metrics export is disabled when unset.                             | -                                                          |
+| `OTEL_METRIC_EXPORT_INTERVAL` | Metric export interval in milliseconds.                                                                   | `60000`                                                    |
+
+#### Local Development
+
+Tracing is off by default outside production, so a bare `pnpm dev` does not need any of these set. To exercise the full pipeline locally, point `TEMPO_ENDPOINT` and `OTEL_EXPORTER_OTLP_ENDPOINT` at a local OTel collector (or Tempo + Prometheus) and run with `ENABLE_TRACING=true`:
+
+```bash
+ENABLE_TRACING=true \
+TEMPO_ENDPOINT=http://localhost:4318/v1/traces \
+OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318/v1/metrics \
+SENTRY_DSN=... \
+pnpm dev
+```
 
 ## 🐳 Docker Deployment
 
