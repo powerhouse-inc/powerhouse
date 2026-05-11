@@ -72,6 +72,7 @@
     "@powerhousedao/reactor-attachments": "workspace:*",
     "@renown/sdk": "workspace:*",
     "@sentry/node": "^9.6.1",
+    "@sentry/opentelemetry": "^9.6.1",
     "document-model": "workspace:*",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",

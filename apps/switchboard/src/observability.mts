@@ -19,12 +19,16 @@ import { PgInstrumentation } from "@opentelemetry/instrumentation-pg";
 import { Resource } from "@opentelemetry/resources";
 import type { MeterProvider } from "@opentelemetry/sdk-metrics";
 import { NodeSDK } from "@opentelemetry/sdk-node";
-import { BatchSpanProcessor } from "@opentelemetry/sdk-trace-base";
+import {
+  BatchSpanProcessor,
+  type SpanProcessor,
+} from "@opentelemetry/sdk-trace-base";
 import {
   ATTR_SERVICE_NAME,
   ATTR_SERVICE_VERSION,
 } from "@opentelemetry/semantic-conventions";
 import * as Sentry from "@sentry/node";
+import { SentryPropagator, SentrySpanProcessor } from "@sentry/opentelemetry";
 import { childLogger } from "document-model";
 import type { IncomingMessage } from "node:http";
 import { createMeterProviderFromEnv } from "./metrics.js";
@@ -46,6 +50,12 @@ const TEMPO_ENDPOINT =
 
 const SENTRY_DSN = process.env.SENTRY_DSN;
 
+// Default 10% APM sampling — Sentry's own production guidance; overridable
+// per-deploy. Only kicks in once tracesSampleRate * (sampler decision) lands.
+const SENTRY_TRACES_SAMPLE_RATE = parseFloat(
+  process.env.SENTRY_TRACES_SAMPLE_RATE ?? "0.1",
+);
+
 if (SENTRY_DSN) {
   logger.info("Initialized Sentry with env: @env", process.env.SENTRY_ENV);
   Sentry.init({
@@ -58,6 +68,13 @@ if (SENTRY_DSN) {
       (process.env.npm_package_version
         ? `v${process.env.npm_package_version}`
         : undefined),
+    tracesSampleRate: SENTRY_TRACES_SAMPLE_RATE,
+    // When tracing is on, our NodeSDK below owns the OTel globals and Sentry
+    // receives spans via SentrySpanProcessor. Skipping Sentry's bundled OTel
+    // setup avoids two TracerProviders fighting over setGlobalTracerProvider.
+    // When tracing is off, leave the flag unset so @sentry/node's default
+    // auto-OTel still records HTTP transactions for the APM dashboard.
+    skipOpenTelemetrySetup: TRACING_ENABLED,
   });
 }
 
@@ -86,11 +103,19 @@ if (TRACING_ENABLED) {
     "deployment.environment": DEPLOY_ENV,
   });
 
+  const spanProcessors: SpanProcessor[] = [
+    new BatchSpanProcessor(new OTLPTraceExporter({ url: TEMPO_ENDPOINT })),
+  ];
+  if (SENTRY_DSN) {
+    // Fan the same OTel spans into Sentry — same trace IDs as Tempo, so
+    // Sentry transactions cross-link to traces in Grafana.
+    spanProcessors.push(new SentrySpanProcessor());
+  }
+
   sdk = new NodeSDK({
     resource,
-    spanProcessors: [
-      new BatchSpanProcessor(new OTLPTraceExporter({ url: TEMPO_ENDPOINT })),
-    ],
+    spanProcessors,
+    textMapPropagator: SENTRY_DSN ? new SentryPropagator() : undefined,
     instrumentations: [
       new HttpInstrumentation({
         ignoreIncomingRequestHook: (req) =>
@@ -119,6 +144,9 @@ if (TRACING_ENABLED) {
     ],
   });
   sdk.start();
+  if (SENTRY_DSN && typeof Sentry.validateOpenTelemetrySetup === "function") {
+    Sentry.validateOpenTelemetrySetup();
+  }
   logger.info("OpenTelemetry tracing initialized");
 }
 
