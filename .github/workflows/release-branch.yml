@@ -164,6 +164,96 @@ jobs:
             sentry-cli releases finalize -p "$proj" "$VERSION" || true
           done
 
+  publish-ph-binaries:
+    name: Build and publish ph binaries
+    needs: release
+    # Need a real published release (with tag) to attach assets to.
+    if: ${{ inputs.dry_run != true && inputs.skip_publish != true && inputs.skip_git_tag != true && inputs.skip_push != true }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          # Need the tag the release job just pushed.
+          fetch-depth: 0
+          ref: ${{ github.ref_name }}
+
+      - name: General setup
+        uses: ./.github/actions/setup
+
+      - name: Resolve release tag at HEAD
+        id: tag
+        run: |
+          set -euo pipefail
+          git fetch --tags --force
+          TAG=$(git tag --sort=-v:refname --points-at HEAD | head -1)
+          if [ -z "$TAG" ]; then
+            echo "::notice::No release tag at HEAD — skipping binary publish"
+            echo "tag=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          VERSION="${TAG#v}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Compile binaries
+        if: steps.tag.outputs.tag != ''
+        working-directory: clis/ph-cmd
+        env:
+          CLI_VERSION: ${{ steps.tag.outputs.version }}
+          CLI_GIT_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          # bun-darwin-arm64 etc. all cross-compile from linux-x64.
+          targets=(
+            "bun-darwin-arm64:ph-darwin-arm64"
+            "bun-darwin-x64:ph-darwin-x64"
+            "bun-linux-arm64:ph-linux-arm64"
+            "bun-linux-x64:ph-linux-x64"
+            "bun-windows-x64:ph-windows-x64.exe"
+          )
+          for entry in "${targets[@]}"; do
+            target="${entry%%:*}"
+            out="${entry##*:}"
+            echo "▶ compiling $out ($target)"
+            bun build ./src/cli.ts \
+              --compile \
+              --target="$target" \
+              --outfile="artifacts/$out" \
+              --define CLI_VERSION="\"${CLI_VERSION}\"" \
+              --define CLI_GIT_SHA="\"${CLI_GIT_SHA}\""
+          done
+          ( cd artifacts && sha256sum ph-* > checksums.txt )
+          ls -lh artifacts
+
+      - name: Upload binaries to GitHub Release
+        if: steps.tag.outputs.tag != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        working-directory: clis/ph-cmd
+        run: |
+          set -euo pipefail
+          # nx-release normally creates the GitHub release alongside the
+          # changelog. Create it ourselves if it isn't there yet (e.g. when
+          # skip_changelog was set), so the upload below has somewhere to land.
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" --title "$TAG" --notes ""
+          fi
+          # --clobber lets reruns replace the same file names.
+          gh release upload "$TAG" \
+            artifacts/ph-darwin-arm64 \
+            artifacts/ph-darwin-x64 \
+            artifacts/ph-linux-arm64 \
+            artifacts/ph-linux-x64 \
+            artifacts/ph-windows-x64.exe \
+            artifacts/checksums.txt \
+            --clobber
+
   publish-docker:
     name: Build and Publish Docker Images
     needs: release
