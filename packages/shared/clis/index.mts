@@ -16,7 +16,6 @@ export * from "./args/switchboard.js";
 export * from "./args/uninstall.js";
 export * from "./args/unpublish.js";
 export * from "./args/vetra.js";
-export * from "./build-config.js";
 export * from "./constants.js";
 export * from "./file-system/dependencies.js";
 export * from "./file-system/directory-exists.js";

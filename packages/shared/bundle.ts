@@ -49,6 +49,7 @@ await build({
     "clis/utils.ts",
     "clis/command-names.ts",
     "clis/services/telemetry.ts",
+    "clis/build-config.ts",
   ],
   outDir: "dist/clis",
   platform: "node",
