@@ -1,3 +1,15 @@
+## 6.0.0-dev.240 (2026-05-11)
+
+### 🩹 Fixes
+
+- **reactor-api:** exclude hub/spoke test by default, added specific job to test it ([8e8474929](https://github.com/powerhouse-inc/powerhouse/commit/8e8474929))
+- **release:** pass the just-published tag from release -> publish-ph-binaries ([dd19a9b20](https://github.com/powerhouse-inc/powerhouse/commit/dd19a9b20))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+
 ## 6.0.0-dev.239 (2026-05-11)
 
 ### 🚀 Features
