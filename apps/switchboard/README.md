@@ -140,27 +140,27 @@ Switchboard bootstraps Sentry and OpenTelemetry from a single module (`src/obser
 What runs depends on which environment variables are set:
 
 - `SENTRY_DSN` set → Sentry error reporting is initialized.
-- `ENABLE_TRACING=true` or `NODE_ENV=production` → OpenTelemetry tracing is initialized, exporting spans to Tempo over OTLP HTTP.
-- Both set → OTel spans are also forwarded to Sentry via `SentrySpanProcessor`, so Sentry transactions and Tempo traces share the same trace IDs and cross-link in Grafana.
+- `ENABLE_TRACING=true` or `NODE_ENV=production`, **and** at least one trace destination is configured (`TEMPO_ENDPOINT` or `SENTRY_DSN`) → OpenTelemetry tracing is initialized. Spans go to Tempo over OTLP HTTP if `TEMPO_ENDPOINT` is set, and/or to Sentry via `SentrySpanProcessor` if `SENTRY_DSN` is set. When both are set, the same trace IDs appear in Tempo and Sentry and cross-link in Grafana.
+- Tracing requested (prod or `ENABLE_TRACING=true`) but no destination configured → a warning is logged and tracing is **not** started. This avoids the cost of patching `http`/`express`/`pg`/`graphql` and generating spans only to drop them. Set `TEMPO_ENDPOINT` and/or `SENTRY_DSN` to enable.
 - `OTEL_EXPORTER_OTLP_ENDPOINT` set → metrics export to that OTLP HTTP endpoint via a periodic reader. Reactor metrics emitted by `@powerhousedao/opentelemetry-instrumentation-reactor` flow through the same global meter provider.
 
-If neither Sentry nor tracing is enabled, the module is a no-op and no exporters or instrumentations are registered.
+If neither Sentry nor a tracing destination is configured, the module is a no-op and no exporters or instrumentations are registered.
 
 #### Environment Variables
 
-| Variable                      | Description                                                                                               | Default                                                    |
-| ----------------------------- | --------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| `SENTRY_DSN`                  | Sentry DSN. When unset, Sentry is disabled.                                                               | -                                                          |
-| `SENTRY_ENV`                  | `environment` tag passed to `Sentry.init`.                                                                | -                                                          |
-| `SENTRY_RELEASE`              | Release tag (must match the version uploaded by CI for source maps to resolve).                           | `v${npm_package_version}` if available                     |
-| `SENTRY_TRACES_SAMPLE_RATE`   | APM sampling rate (0.0–1.0).                                                                              | `0.1`                                                      |
-| `ENABLE_TRACING`              | Set to `true` to enable OpenTelemetry tracing outside production.                                         | `false` (auto-enabled when `NODE_ENV=production`)          |
-| `NODE_ENV`                    | When `production`, tracing is enabled automatically. Also exported as `deployment.environment` attribute. | `development`                                              |
-| `OTEL_SERVICE_NAME`           | `service.name` resource attribute.                                                                        | `switchboard`                                              |
-| `TENANT_ID`                   | `tenant.id` resource attribute (used to slice traces by tenant in Grafana).                               | `default`                                                  |
-| `TEMPO_ENDPOINT`              | OTLP HTTP endpoint for trace export.                                                                      | `http://tempo.monitoring.svc.cluster.local:4318/v1/traces` |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP HTTP endpoint for metrics export. Metrics export is disabled when unset.                             | -                                                          |
-| `OTEL_METRIC_EXPORT_INTERVAL` | Metric export interval in milliseconds.                                                                   | `60000`                                                    |
+| Variable                      | Description                                                                                                                                                                  | Default                                             |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
+| `SENTRY_DSN`                  | Sentry DSN. When unset, Sentry is disabled.                                                                                                                                  | -                                                   |
+| `SENTRY_ENV`                  | `environment` tag passed to `Sentry.init`.                                                                                                                                   | -                                                   |
+| `SENTRY_RELEASE`              | Release tag (must match the version uploaded by CI for source maps to resolve).                                                                                              | `v${npm_package_version}` if available              |
+| `SENTRY_TRACES_SAMPLE_RATE`   | APM sampling rate (0.0–1.0).                                                                                                                                                 | `0.1`                                               |
+| `ENABLE_TRACING`              | Set to `true` to request tracing outside production. Tracing only starts when a destination is also set.                                                                     | `false` (also requested when `NODE_ENV=production`) |
+| `NODE_ENV`                    | When `production`, tracing is requested automatically. Also exported as `deployment.environment` attribute.                                                                  | `development`                                       |
+| `OTEL_SERVICE_NAME`           | `service.name` resource attribute.                                                                                                                                           | `switchboard`                                       |
+| `TENANT_ID`                   | `tenant.id` resource attribute (used to slice traces by tenant in Grafana).                                                                                                  | `default`                                           |
+| `TEMPO_ENDPOINT`              | OTLP HTTP endpoint for trace export. When unset, OTLP trace export is disabled. In-cluster deploys typically set `http://tempo.monitoring.svc.cluster.local:4318/v1/traces`. | -                                                   |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP HTTP endpoint for metrics export. Metrics export is disabled when unset.                                                                                                | -                                                   |
+| `OTEL_METRIC_EXPORT_INTERVAL` | Metric export interval in milliseconds.                                                                                                                                      | `60000`                                             |
 
 #### Local Development
 

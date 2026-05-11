@@ -40,15 +40,23 @@ const SERVICE_VERSION = process.env.npm_package_version || "unknown";
 const TENANT_ID = process.env.TENANT_ID || "default";
 const DEPLOY_ENV = process.env.NODE_ENV || "development";
 
-const TRACING_ENABLED =
+const TEMPO_ENDPOINT = process.env.TEMPO_ENDPOINT;
+const SENTRY_DSN = process.env.SENTRY_DSN;
+
+const TRACING_REQUESTED =
   process.env.ENABLE_TRACING === "true" ||
   process.env.NODE_ENV === "production";
+const HAS_TRACE_DESTINATION = Boolean(TEMPO_ENDPOINT) || Boolean(SENTRY_DSN);
+const TRACING_ENABLED = TRACING_REQUESTED && HAS_TRACE_DESTINATION;
 
-const TEMPO_ENDPOINT =
-  process.env.TEMPO_ENDPOINT ||
-  "http://tempo.monitoring.svc.cluster.local:4318/v1/traces";
-
-const SENTRY_DSN = process.env.SENTRY_DSN;
+if (TRACING_REQUESTED && !HAS_TRACE_DESTINATION) {
+  logger.warn(
+    "Tracing was requested (NODE_ENV=production or ENABLE_TRACING=true) but " +
+      "no destination is configured — instrumentation will not run. Set " +
+      "TEMPO_ENDPOINT (e.g. http://tempo.monitoring.svc.cluster.local:4318/v1/traces) " +
+      "to export OTLP spans, and/or SENTRY_DSN to forward spans to Sentry.",
+  );
+}
 
 // Default 10% APM sampling — Sentry's own production guidance; overridable
 // per-deploy. Only kicks in once tracesSampleRate * (sampler decision) lands.
@@ -93,7 +101,8 @@ let sdk: NodeSDK | undefined;
 
 if (TRACING_ENABLED) {
   logger.info(`Initializing OpenTelemetry tracing for ${SERVICE_NAME}`);
-  logger.info(`  Tempo endpoint: ${TEMPO_ENDPOINT}`);
+  if (TEMPO_ENDPOINT) logger.info(`  Tempo endpoint: ${TEMPO_ENDPOINT}`);
+  if (SENTRY_DSN) logger.info(`  Sentry span forwarding: enabled`);
   logger.info(`  Tenant: ${TENANT_ID}`);
 
   const resource = new Resource({
@@ -103,9 +112,12 @@ if (TRACING_ENABLED) {
     "deployment.environment": DEPLOY_ENV,
   });
 
-  const spanProcessors: SpanProcessor[] = [
-    new BatchSpanProcessor(new OTLPTraceExporter({ url: TEMPO_ENDPOINT })),
-  ];
+  const spanProcessors: SpanProcessor[] = [];
+  if (TEMPO_ENDPOINT) {
+    spanProcessors.push(
+      new BatchSpanProcessor(new OTLPTraceExporter({ url: TEMPO_ENDPOINT })),
+    );
+  }
   if (SENTRY_DSN) {
     // Fan the same OTel spans into Sentry — same trace IDs as Tempo, so
     // Sentry transactions cross-link to traces in Grafana.
