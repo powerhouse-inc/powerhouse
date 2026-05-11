@@ -1,3 +1,7 @@
+// Opt-in: excluded from default vitest runs by vitest.config.ts; enable with
+// RUN_HUB_SPOKE_INTEGRATION=1. Requires a Postgres reachable at the host/port
+// in REACTOR_TEST_PG_* (defaults to localhost:5433 via `pnpm --filter
+// @powerhousedao/reactor docker:up`) and outbound access to PH_REGISTRY_URL.
 import { type ISyncManager, type ReactorModule } from "@powerhousedao/reactor";
 import { ConsoleLogger } from "document-model";
 import { existsSync, readFileSync } from "node:fs";
