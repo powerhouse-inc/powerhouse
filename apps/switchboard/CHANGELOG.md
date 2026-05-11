@@ -1,3 +1,19 @@
+## 6.0.0-dev.238 (2026-05-11)
+
+### 🚀 Features
+
+- **switchboard:** bridge OpenTelemetry spans to Sentry ([c1f2fc28b](https://github.com/powerhouse-inc/powerhouse/commit/c1f2fc28b))
+- **ph-cli,ph-cmd,shared:** use lightweight sentry sdk ([248c6b2f6](https://github.com/powerhouse-inc/powerhouse/commit/248c6b2f6))
+
+### 🩹 Fixes
+
+- update dockerfiles for pnpm 11 bin path ([d33db03ce](https://github.com/powerhouse-inc/powerhouse/commit/d33db03ce))
+- **switchboard:** only enable tracing if a destination is configured ([8abff8020](https://github.com/powerhouse-inc/powerhouse/commit/8abff8020))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.237 (2026-05-10)
 
 This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.

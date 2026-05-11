@@ -1,3 +1,20 @@
+## 6.0.0-dev.238 (2026-05-11)
+
+### 🚀 Features
+
+- **ph-cli,ph-cmd,shared:** use lightweight sentry sdk ([248c6b2f6](https://github.com/powerhouse-inc/powerhouse/commit/248c6b2f6))
+- **switchboard:** bridge OpenTelemetry spans to Sentry ([c1f2fc28b](https://github.com/powerhouse-inc/powerhouse/commit/c1f2fc28b))
+
+### 🩹 Fixes
+
+- update dockerfiles for pnpm 11 bin path ([d33db03ce](https://github.com/powerhouse-inc/powerhouse/commit/d33db03ce))
+- **shared:** rename build-config.ts -> build-config.mts ([e636e7d38](https://github.com/powerhouse-inc/powerhouse/commit/e636e7d38))
+- **switchboard:** only enable tracing if a destination is configured ([8abff8020](https://github.com/powerhouse-inc/powerhouse/commit/8abff8020))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.237 (2026-05-10)
 
 This was a version bump only, there were no code changes.
