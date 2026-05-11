@@ -104,10 +104,12 @@ jobs:
           echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" >> ~/.npmrc
           echo "registry=https://registry.npmjs.org/" >> ~/.npmrc
 
-      # release.ts appends `tag=v<workspaceVersion>` to $GITHUB_OUTPUT when it
-      # actually creates a tag (i.e. not a dry-run, not --skip-git-tag, and a
-      # real version bump occurred). That output flows through this step into
-      # the job's `outputs.tag` for downstream consumers.
+      # sentry-cli is installed before Run release: release.ts shells out
+      # to `sentry-cli sourcemaps inject` between build and publish.
+      - name: Install sentry-cli
+        if: ${{ inputs.dry_run != true && inputs.skip_publish != true }}
+        run: curl -sL https://sentry.io/get-cli/ | SENTRY_CLI_VERSION=2.58.5 bash
+
       - name: Run release
         id: run-release
         env:
@@ -126,16 +128,6 @@ jobs:
           --skip-push="${{ inputs.skip_push == true }}" \
           --skip-git-tag="${{ inputs.skip_git_tag == true }}"
 
-      # Install sentry-cli globally so the subsequent steps can invoke it
-      # reliably (npx-based invocation had resolution issues).
-      - name: Install sentry-cli
-        if: ${{ inputs.dry_run != true && inputs.skip_publish != true }}
-        run: curl -sL https://sentry.io/get-cli/ | SENTRY_CLI_VERSION=2.58.5 bash
-
-      # Upload source maps to self-hosted Sentry so production stack traces
-      # map back to original TypeScript source in this repo. Uses the tag
-      # captured by release.ts rather than `git tag --points-at HEAD`, because
-      # nx-release's lightweight tag points at the pre-bump commit, not HEAD.
       - name: Upload source maps to Sentry
         if: ${{ inputs.dry_run != true && inputs.skip_publish != true && steps.run-release.outputs.tag != '' }}
         env:
@@ -152,8 +144,7 @@ jobs:
           done
           sentry-cli releases set-commits "$VERSION" --auto -p powerhouse || true
 
-          for dir in apps/connect/dist apps/switchboard/dist apps/academy/dist \
-                     packages/reactor-api/dist packages/switchboard/dist; do
+          for dir in apps/connect/dist apps/switchboard/dist packages/reactor-api/dist; do
             [ -d "$dir" ] || continue
             sentry-cli sourcemaps upload \
               --release "$VERSION" \
