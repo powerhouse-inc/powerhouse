@@ -102,7 +102,7 @@
       "import": "./dist/clis/services/telemetry.mjs"
     },
     "./build-config": {
-      "source": "./clis/build-config.ts",
+      "source": "./clis/build-config.mts",
       "import": "./dist/clis/build-config.mjs"
     }
   },
