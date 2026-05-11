@@ -1,4 +1,5 @@
 import { boolean, command, flag, oneOf, option, run } from "cmd-ts";
+import { appendFileSync } from "node:fs";
 import { ReleaseClient } from "nx/release";
 import type { ReleaseType } from "semver";
 
@@ -394,6 +395,15 @@ const app = command({
       // from reusing the version. Rebase the chore commit on top of the
       // latest remote tip and try again.
       pushWithRebaseRetry({ workspaceVersion, gitTag });
+    }
+    // When this script is invoked from a GitHub Actions step, expose the
+    // tag we just published so downstream jobs (e.g. publish-ph-binaries)
+    // can consume it via `steps.<id>.outputs.tag` / `needs.release.outputs.tag`
+    // without re-deriving it from git tag sort order. Only emit if we
+    // actually created a tag — skipped releases or --skip-git-tag runs leave
+    // the output empty, which downstream jobs gate on.
+    if (gitTag && workspaceVersion && process.env.GITHUB_OUTPUT) {
+      appendFileSync(process.env.GITHUB_OUTPUT, `tag=v${workspaceVersion}\n`);
     }
     console.log(">>> Release successfully completed 🚀");
     process.exit(0);
