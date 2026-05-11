@@ -22,7 +22,6 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import type { Pool } from "pg";
 import { WebSocketServer } from "ws";
-// Import tracing - initializes OpenTelemetry and provides stub functions for backwards compatibility
 import {
   createRelationalDb,
   type IProcessorHostModule,
@@ -51,7 +50,6 @@ import { PackageManager } from "./packages/package-manager.js";
 import { AuthService } from "./services/auth.service.js";
 import { AuthorizationService } from "./services/authorization.service.js";
 import { DocumentPermissionService } from "./services/document-permission.service.js";
-import { initTracing, isTracingEnabled, trace } from "./tracing.js";
 import type {
   API,
   IPackageLoader,
@@ -377,11 +375,6 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   packages: PackageManager;
   dbClosers: Array<() => Promise<void>>;
 }> {
-  // Initialize OpenTelemetry tracing
-  if (isTracingEnabled()) {
-    await initTracing();
-  }
-
   const port = options.port ?? DEFAULT_PORT;
   const { adapter: httpAdapter } = createHttpAdapter("express");
 
@@ -469,10 +462,9 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     relationalDb,
     analyticsStore,
     closers: analyticsClosers,
-  } = await trace(
-    "reactor-api.init.database",
-    { tags: { "resource.name": "database" } },
-    () => initializeDatabaseAndAnalytics(options.dbPath, options.pgliteFactory),
+  } = await initializeDatabaseAndAnalytics(
+    options.dbPath,
+    options.pgliteFactory,
   );
   dbClosers.push(...analyticsClosers);
 
@@ -831,23 +823,11 @@ export async function initializeAndStartAPI(
     attachments,
     packages,
     dbClosers,
-  } = await trace(
-    "reactor-api.setup.infrastructure",
-    { tags: { "resource.name": "infrastructure" } },
-    () => _setupCommonInfrastructure(options),
-  );
+  } = await _setupCommonInfrastructure(options);
 
-  const { documentModels, processors, subgraphs } = await trace(
-    "reactor-api.packages.init",
-    { tags: { "resource.name": "packages" } },
-    () => packages.init(),
-  );
+  const { documentModels, processors, subgraphs } = await packages.init();
 
-  const reactorClientModule = await trace(
-    "reactor-api.reactor-client.init",
-    { tags: { "resource.name": "reactor-client" } },
-    () => clientInitializer(documentModels),
-  );
+  const reactorClientModule = await clientInitializer(documentModels);
 
   // Extract client and syncManager from the module
   const reactorClient = reactorClientModule.client;
