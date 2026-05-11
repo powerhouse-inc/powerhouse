@@ -6,7 +6,11 @@
 #
 # Environment:
 #   PH_INSTALL_DIR  Override install directory (default: $HOME/.local/bin)
-#   PH_VERSION      Install a specific release tag (default: latest)
+#   PH_VERSION      Release to install (default: latest). Accepts:
+#                     - "latest"  → newest stable release
+#                     - "staging" → newest tag matching v*-staging.*
+#                     - "dev"     → newest tag matching v*-dev.*
+#                     - a literal tag, e.g. v6.0.0-dev.237
 #   PH_REPO         GitHub repo slug (default: powerhouse-inc/powerhouse)
 
 set -euo pipefail
@@ -42,11 +46,34 @@ asset="ph-${os}-${arch}${ext}"
 
 # Resolve release tag → asset URLs via the GitHub API.
 api_base="https://api.github.com/repos/${REPO}/releases"
-if [ "$VERSION" = "latest" ]; then
-  release_url="${api_base}/latest"
-else
-  release_url="${api_base}/tags/${VERSION}"
-fi
+case "$VERSION" in
+  latest)
+    release_url="${api_base}/latest"
+    ;;
+  staging|dev)
+    # GitHub's /latest endpoint excludes prereleases, so list all releases
+    # (newest first) and pick the first tag matching the channel pattern.
+    info "Resolving newest '$VERSION' release"
+    list_json=$(curl -fsSL \
+      -H "Accept: application/vnd.github+json" \
+      -H "X-GitHub-Api-Version: 2022-11-28" \
+      ${GITHUB_TOKEN:+-H "Authorization: Bearer $GITHUB_TOKEN"} \
+      "${api_base}?per_page=100") || err "failed to list releases"
+
+    resolved_tag=$(printf '%s' "$list_json" \
+      | tr ',' '\n' \
+      | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' \
+      | grep -E "^v[0-9]+\.[0-9]+\.[0-9]+-${VERSION}\." \
+      | head -1)
+
+    [ -n "$resolved_tag" ] || err "no '$VERSION' release found in last 100 releases"
+    info "Resolved $VERSION → $resolved_tag"
+    release_url="${api_base}/tags/${resolved_tag}"
+    ;;
+  *)
+    release_url="${api_base}/tags/${VERSION}"
+    ;;
+esac
 
 info "Querying release: ${release_url}"
 release_json=$(curl -fsSL \
