@@ -25,7 +25,6 @@
     "test": "vitest --run ./**/*.test.ts"
   },
   "dependencies": {
-    "date-fns": "catalog:",
     "knex": "catalog:",
     "luxon": "catalog:",
     "pg": "catalog:",

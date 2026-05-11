@@ -25,7 +25,6 @@
     "test": "vitest --run ./**/*.test.ts"
   },
   "dependencies": {
-    "date-fns": "catalog:",
     "luxon": "catalog:",
     "@powerhousedao/shared": "workspace:*"
   },

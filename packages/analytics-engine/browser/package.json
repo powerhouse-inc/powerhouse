@@ -31,9 +31,6 @@
   "dependencies": {
     "@powerhousedao/analytics-engine-core": "workspace:*",
     "@electric-sql/pglite": "catalog:",
-    "date-fns": "catalog:",
-    "events": "catalog:",
-    "util": "catalog:",
     "luxon": "catalog:",
     "change-case": "catalog:"
   },
