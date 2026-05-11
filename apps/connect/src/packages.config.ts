@@ -1,6 +1,7 @@
 export type PackagesConfig = {
   packages: string[];
   localPackage?: { name: string; version: string } | null;
+  registryUrl?: string | null;
 };
 
 function assertPackagesConfig(value: unknown): asserts value is PackagesConfig {
@@ -16,6 +17,16 @@ function assertPackagesConfig(value: unknown): asserts value is PackagesConfig {
 
   if (!obj.packages.every((item) => typeof item === "string")) {
     throw new Error("ph-packages.json: 'packages' must be an array of strings");
+  }
+
+  if (
+    obj.registryUrl !== undefined &&
+    obj.registryUrl !== null &&
+    typeof obj.registryUrl !== "string"
+  ) {
+    throw new Error(
+      "ph-packages.json: 'registryUrl' must be a string, null, or omitted",
+    );
   }
 }
 

@@ -42,6 +42,7 @@ import {
   type UpgradeManifest,
 } from "document-model";
 import { initFeatureFlags } from "../feature-flags.js";
+import { NoRegistryDiscoveryService } from "../no-registry-discovery.js";
 import { PackageDiscoveryService } from "../package-discovery.js";
 import { BrowserPackageManager } from "../package-manager.js";
 import { loadPackagesConfig } from "../packages.config.js";
@@ -115,7 +116,7 @@ export async function createReactor(localPackage?: DocumentModelLib) {
   // initialize package manager
   const packageManager = new BrowserPackageManager(
     phGlobalConfigFromEnv.routerBasename ?? "",
-    PH_PACKAGE_REGISTRY_URL,
+    packagesConfig.registryUrl ?? null,
   );
   setVetraPackageManager(packageManager);
   await packageManager.init(localPackage, packagesConfig.localPackage?.version);
@@ -178,11 +179,9 @@ export async function createReactor(localPackage?: DocumentModelLib) {
             storageKey: phGlobalConfigFromEnv.routerBasename ?? "",
           },
         )
-      : undefined;
+      : new NoRegistryDiscoveryService(packageManager);
 
-  if (discoveryService) {
-    setPackageDiscoveryService(discoveryService);
-  }
+  setPackageDiscoveryService(discoveryService);
 
   // create reactor v2 with all versions and upgrade manifests
   const reactorClientModule = await createBrowserReactor(

@@ -4,7 +4,7 @@ import type { PackageInfo } from "@powerhousedao/shared/registry";
 // writes `packageRegistryUrl: "http://host/"`. Verdaccio's own web backend
 // 404s on the doubled slash, which cascades into an empty registry list and
 // masks the real install flow.
-function trimTrailingSlash(url: string): string {
+export function trimTrailingSlash(url: string): string {
   return url.endsWith("/") ? url.slice(0, -1) : url;
 }
 
