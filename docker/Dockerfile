@@ -9,7 +9,7 @@ RUN apk add --no-cache python3 make g++ git bash \
     && ln -sf /usr/bin/python3 /usr/bin/python
 
 ENV PNPM_HOME="/pnpm"
-ENV PATH="$PNPM_HOME:$PATH"
+ENV PATH="$PNPM_HOME/bin:$PNPM_HOME:$PATH"
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
 RUN pnpm config set @jsr:registry https://npm.jsr.io \
@@ -79,7 +79,7 @@ WORKDIR /app
 RUN apk add --no-cache curl git
 
 ENV PNPM_HOME="/pnpm"
-ENV PATH="$PNPM_HOME:$PATH"
+ENV PATH="$PNPM_HOME/bin:$PNPM_HOME:$PATH"
 RUN corepack enable && corepack prepare pnpm@latest --activate \
  && pnpm config set minimum-release-age 0
 
