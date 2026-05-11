@@ -74,7 +74,7 @@ document-models/
     │   ├── gen/                     # Auto-generated code (DO NOT EDIT)
     │   │   ├── reducer.ts
     │   │   ├── creators.ts
-    │   │   ├── schema/types.ts      # V1 TypeScript types
+    │   │   ├── types.ts             # V1 TypeScript types
     │   │   └── ...
     │   ├── src/
     │   │   └── reducers/            # Your v1 reducer implementations
@@ -83,7 +83,7 @@ document-models/
     │
     ├── v2/                          # Version 2
     │   ├── gen/
-    │   │   └── schema/types.ts      # V2 TypeScript types (includes 'title')
+    │   │   └── types.ts             # V2 TypeScript types (includes 'title')
     │   ├── src/
     │   │   └── reducers/
     │   └── module.ts                # Exports DocumentModelModule with version: 2

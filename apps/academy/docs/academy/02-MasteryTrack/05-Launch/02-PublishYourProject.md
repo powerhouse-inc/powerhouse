@@ -53,17 +53,17 @@ Key commands include:
 
 When using the Powerhouse CLI, you can access dev & staging branches for experimental features or bugfixes under development.
 
-| Command                            | Description                                           |
-| ---------------------------------- | ----------------------------------------------------- |
-| **pnpm install -g ph-cmd**         | Install latest stable version                         |
-| **pnpm install -g ph-cmd@dev**     | Install development version                           |
-| **pnpm install -g ph-cmd@staging** | Install staging version                               |
-| **ph init**                        | Use latest stable version of the boilerplate          |
-| **ph init --dev**                  | Use development version of the boilerplate            |
-| **ph init --staging**              | Use staging version of the boilerplate                |
-| **ph use**                         | Switch all dependencies to latest production versions |
-| **ph use dev**                     | Switch all dependencies to development versions       |
-| **ph use prod**                    | Switch all dependencies to production versions        |
+| Command                            | Description                                       |
+| ---------------------------------- | ------------------------------------------------- |
+| **pnpm install -g ph-cmd**         | Install latest stable version                     |
+| **pnpm install -g ph-cmd@dev**     | Install development version                       |
+| **pnpm install -g ph-cmd@staging** | Install staging version                           |
+| **ph init**                        | Use latest stable version of the boilerplate      |
+| **ph init --dev**                  | Use development version of the boilerplate        |
+| **ph init --staging**              | Use staging version of the boilerplate            |
+| **ph use latest**                  | Switch all dependencies to latest stable versions |
+| **ph use dev**                     | Switch all dependencies to development versions   |
+| **ph use staging**                 | Switch all dependencies to staging versions       |
 
 Please be aware that these versions can contain bugs and experimental features that aren't fully tested.
 

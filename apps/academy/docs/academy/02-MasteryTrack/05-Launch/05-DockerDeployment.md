@@ -150,14 +150,14 @@ After starting, you can access:
 
 ### Connect Environment Variables
 
-| Variable                | Description                                            | Default  |
-| ----------------------- | ------------------------------------------------------ | -------- |
-| `PORT`                  | Port the server listens on                             | `4000`   |
-| `PH_CONNECT_BASE_PATH`  | Base URL path for the application                      | `/`      |
-| `PH_PACKAGES`           | Comma-separated list of packages to install at startup | `""`     |
-| `PH_CONNECT_SENTRY_DSN` | Sentry DSN for error tracking                          | `""`     |
-| `PH_CONNECT_SENTRY_ENV` | Sentry environment name                                | `""`     |
-| `DATABASE_URL`          | PostgreSQL connection string                           | Required |
+| Variable                | Description                                         | Default  |
+| ----------------------- | --------------------------------------------------- | -------- |
+| `PORT`                  | Port the server listens on                          | `3001`   |
+| `PH_CONNECT_BASE_PATH`  | Base URL path for the application                   | `/`      |
+| `PH_REGISTRY_PACKAGES`  | Comma-separated list of packages to load at startup | `""`     |
+| `PH_CONNECT_SENTRY_DSN` | Sentry DSN for error tracking                       | `""`     |
+| `PH_CONNECT_SENTRY_ENV` | Sentry environment name                             | `""`     |
+| `DATABASE_URL`          | PostgreSQL connection string                        | Required |
 
 #### Feature Flags
 
@@ -192,7 +192,7 @@ After starting, you can access:
 
 | Variable                      | Description                                            | Default    |
 | ----------------------------- | ------------------------------------------------------ | ---------- |
-| `PORT`                        | Port the server listens on                             | `4001`     |
+| `PORT`                        | Port the server listens on                             | `3000`     |
 | `PH_SWITCHBOARD_PORT`         | Alias for PORT                                         | `$PORT`    |
 | `DATABASE_URL`                | PostgreSQL or SQLite connection string                 | `"dev.db"` |
 | `PH_SWITCHBOARD_DATABASE_URL` | Alias for DATABASE_URL                                 | `"dev.db"` |
@@ -218,14 +218,14 @@ After starting, you can access:
 
 ## Installing Custom Packages
 
-Both Connect and Switchboard support installing custom Powerhouse packages at container startup using the `PH_PACKAGES` environment variable.
+Connect loads custom packages via the `PH_REGISTRY_PACKAGES` environment variable (written to a registry config at startup). Switchboard installs packages via `PH_PACKAGES`.
 
 ```yaml
 services:
   connect:
     image: ghcr.io/powerhouse-inc/powerhouse/connect:dev
     environment:
-      - PH_PACKAGES=@powerhousedao/todo-demo-package,@powerhousedao/another-package
+      - PH_REGISTRY_PACKAGES=@powerhousedao/todo-demo-package,@powerhousedao/another-package
 ```
 
 Packages are installed using the `ph install` command before the service starts.
@@ -243,7 +243,7 @@ The Connect image is based on Alpine Linux and includes:
 
 At startup, the entrypoint script:
 
-1. Installs any packages specified in `PH_PACKAGES`
+1. Loads any packages specified in `PH_REGISTRY_PACKAGES`
 2. Builds the Connect frontend with `ph connect build`
 3. Configures and starts Nginx to serve the built files
 
@@ -259,8 +259,8 @@ The Switchboard image is based on Node.js 24 and includes:
 At startup, the entrypoint script:
 
 1. Installs any packages specified in `PH_PACKAGES`
-2. Runs Prisma database migrations (if using PostgreSQL)
-3. Starts the Switchboard server with `ph switchboard`
+2. Runs Prisma database migrations (if `PH_REACTOR_DATABASE_URL` is set)
+3. Starts the Switchboard server via Node.js
 
 ## Production Considerations
 

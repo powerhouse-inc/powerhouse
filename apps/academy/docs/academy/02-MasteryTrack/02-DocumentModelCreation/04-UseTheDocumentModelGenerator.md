@@ -25,13 +25,13 @@ If you're using the Connect workflow and need to manually generate code:
 The core command to invoke the Document Model Generator is:
 
 ```bash
-ph generate <YourModelName.phd>
+ph generate document-model --file <YourModelName.phd>
 ```
 
 Replace `<YourModelName.phd>` with the actual filename of your exported document model specification. For instance, if your exported file is named `TodoList.phd`, the command would be:
 
 ```bash
-ph generate TodoList.phd
+ph generate document-model --file TodoList.phd
 ```
 
 When executed, this command reads and parses the specification file and generates a set of files and directories within your Powerhouse project.
@@ -80,7 +80,7 @@ When your document model needs to evolve over time—adding new fields, operatio
 Versioning is enabled by default. Simply run:
 
 ```bash
-ph generate TodoList.phd
+ph generate document-model --file TodoList.phd
 ```
 
 ### Versioned Folder Structure
@@ -171,7 +171,7 @@ This approach is useful when working with Connect's Document Model Editor or whe
 2. **Run the Generator Command:**
 
    ```bash
-   ph generate TodoList.phd
+   ph generate document-model --file TodoList.phd
    ```
 
 3. **Explore the Generated Files:**

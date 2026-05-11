@@ -13,7 +13,7 @@
         "clis/ph-cli/src/commands",
         "clis/ph-cli/src/cli.ts"
       ],
-      "checkFocus": "CLI commands (ph init, ph install, ph add), package install steps, generated project structure"
+      "checkFocus": "CLI commands (ph init, ph install, ph add, ph generate and its subcommands), package install steps, generated project structure"
     },
     {
       "id": "mastery-builder-environment",

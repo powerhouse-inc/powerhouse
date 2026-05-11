@@ -57,17 +57,17 @@ If you are starting a new project to be packaged, this command will also prompt 
 
 When installing or using the Powerhouse CLI commands you are able to make use of the dev & staging branches. These branches contain more experimental features than the latest stable release the PH CLI uses by default. They can be used to get access to a bugfix or features under development.
 
-| Command                                                                 | Description                                           |
-| ----------------------------------------------------------------------- | ----------------------------------------------------- |
-| **pnpm install -g ph-cmd** or **npm install -g ph-cmd**                 | Install latest stable version                         |
-| **pnpm install -g ph-cmd@dev** or **npm install -g ph-cmd@dev**         | Install development version                           |
-| **pnpm install -g ph-cmd@staging** or **npm install -g ph-cmd@staging** | Install staging version                               |
-| **ph init**                                                             | Use latest stable version of the boilerplate          |
-| **ph init --dev**                                                       | Use development version of the boilerplate            |
-| **ph init --staging**                                                   | Use staging version of the boilerplate                |
-| **ph use**                                                              | Switch all dependencies to latest production versions |
-| **ph use dev**                                                          | Switch all dependencies to development versions       |
-| **ph use prod**                                                         | Switch all dependencies to production versions        |
+| Command                                                                 | Description                                       |
+| ----------------------------------------------------------------------- | ------------------------------------------------- |
+| **pnpm install -g ph-cmd** or **npm install -g ph-cmd**                 | Install latest stable version                     |
+| **pnpm install -g ph-cmd@dev** or **npm install -g ph-cmd@dev**         | Install development version                       |
+| **pnpm install -g ph-cmd@staging** or **npm install -g ph-cmd@staging** | Install staging version                           |
+| **ph init**                                                             | Use latest stable version of the boilerplate      |
+| **ph init --dev**                                                       | Use development version of the boilerplate        |
+| **ph init --staging**                                                   | Use staging version of the boilerplate            |
+| **ph use latest**                                                       | Switch all dependencies to latest stable versions |
+| **ph use dev**                                                          | Switch all dependencies to development versions   |
+| **ph use staging**                                                      | Switch all dependencies to staging versions       |
 
 Please be aware that these versions can contain bugs and experimental features that aren't fully tested.
 
@@ -270,7 +270,7 @@ Once your schema and operations are defined in Connect, export the specification
 Use the Powerhouse CLI to process an exported `.phdm.zip` file and generate the necessary boilerplate code for your document model.
 
 ```bash
-ph generate YourModelName.phdm.zip
+ph generate document-model --file YourModelName.phdm.zip
 ```
 
 This command creates a new directory under `document-models/YourModelName/` containing:
@@ -307,11 +307,11 @@ This command creates a new directory under `document-models/YourModelName/` cont
 A document editor provides the user interface for interacting with your document model. Generate an editor template:
 
 ```bash
-ph generate --editor YourModelName --document-types powerhouse/YourModelName
+ph generate editor --name YourModelName --document-type powerhouse/YourModelName
 ```
 
-- The `--editor YourModelName` flag specifies the document model this editor is for.
-- The `--document-types powerhouse/YourModelName` flag links the editor to the specific document type defined in your model specification.
+- The `--name YourModelName` flag specifies the document model this editor is for.
+- The `--document-type powerhouse/YourModelName` flag links the editor to the specific document type defined in your model specification.
 
 This creates a template file, typically at `editors/your-model-name/editor.tsx`.
 

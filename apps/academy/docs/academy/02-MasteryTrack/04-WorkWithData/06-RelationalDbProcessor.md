@@ -22,7 +22,7 @@ The code examples below import from `@powerhousedao/reactor-browser`, which re-e
 To generate a relational database processor, run the following command:
 
 ```bash
-ph generate --processor todo-indexer --processor-type relationalDb --document-types powerhouse/todo-list
+ph generate processor --name todo-indexer --type relationalDb --document-types powerhouse/todo-list
 ```
 
 **Breaking down this command:**
@@ -89,7 +89,7 @@ export async function down(db: IRelationalDb<any>): Promise<void> {
 After defining your database schema, generate TypeScript types for type-safe queries and better IDE support:
 
 ```bash
-ph generate --migration-file processors/todo-indexer/migrations.ts
+ph generate migration-file --path processors/todo-indexer/migrations.ts
 ```
 
 **Why Generate Types?**
@@ -264,7 +264,7 @@ export class TodoIndexerProcessor extends RelationalDbProcessor<DB> {
 Generate a new subgraph to expose your processor data:
 
 ```bash
-ph generate --subgraph todo
+ph generate subgraph --name todo
 ```
 
 **What is a Subgraph?**
