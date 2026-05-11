@@ -24,6 +24,7 @@
     "clean": "bun x git clean -fdX",
     "run-release": "bun run releases/release.ts",
     "run-release-safe": "pnpm run-release --verbose --skip-publish --skip-changelog --skip-push",
+    "release-wizard": "tsx scripts/release/index.ts",
     "prepare": "husky",
     "check-circular-imports": "dpdm -T ./**/* --no-tree --no-warning --exit-code circular:1",
     "check-ts-references": "pnpm update-ts-references --check",
