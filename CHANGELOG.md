@@ -1,3 +1,23 @@
+## 6.0.0-dev.239 (2026-05-11)
+
+### 🚀 Features
+
+- **ph-cli,ph-cmd,shared:** use lightweight sentry sdk ([248c6b2f6](https://github.com/powerhouse-inc/powerhouse/commit/248c6b2f6))
+- **ph-cmd:** added scripts to install dev and staging ph-cmd binary ([492555423](https://github.com/powerhouse-inc/powerhouse/commit/492555423))
+- **reactor-browser:** useDocumentSafe hook to get current state of document including error and loading states ([8ecf03a20](https://github.com/powerhouse-inc/powerhouse/commit/8ecf03a20))
+- **switchboard:** bridge OpenTelemetry spans to Sentry ([c1f2fc28b](https://github.com/powerhouse-inc/powerhouse/commit/c1f2fc28b))
+
+### 🩹 Fixes
+
+- update dockerfiles for pnpm 11 bin path ([d33db03ce](https://github.com/powerhouse-inc/powerhouse/commit/d33db03ce))
+- **reactor-browser:** do not throw when fetching multiple documents ([edec7c66d](https://github.com/powerhouse-inc/powerhouse/commit/edec7c66d))
+- **shared:** rename build-config.ts -> build-config.mts ([e636e7d38](https://github.com/powerhouse-inc/powerhouse/commit/e636e7d38))
+- **switchboard:** only enable tracing if a destination is configured ([8abff8020](https://github.com/powerhouse-inc/powerhouse/commit/8abff8020))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.238 (2026-05-11)
 
 ### 🚀 Features
