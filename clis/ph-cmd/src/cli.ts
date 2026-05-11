@@ -7,6 +7,21 @@ import {
 import { assertNodeVersion } from "@powerhousedao/shared/clis/utils";
 import { getVersion } from "./get-version.js";
 
+// Commands whose second positional is itself a subcommand (vs. a project
+// name / file path). Keeping this explicit avoids high-cardinality tag
+// values like `subcommand:my-package` polluting Sentry.
+const COMMANDS_WITH_SUBCOMMANDS = new Set(["connect", "vetra"]);
+
+function detectPackageManager(): string | undefined {
+  // npm, pnpm, yarn and bun all set npm_config_user_agent like
+  // "pnpm/8.5.0 npm/? node/v20.11.1 darwin arm64". When the user invokes
+  // `ph` directly (not via dlx/exec) it's typically unset — skip the tag
+  // in that case rather than mislabel.
+  const ua = process.env.npm_config_user_agent;
+  if (!ua) return undefined;
+  return ua.split(" ")[0]?.split("/")[0] || undefined;
+}
+
 /**
  * ph-cli and ph-cmd are loaded lazily so that the node version is checked before
  * any code is parsed to avoid errors on startup due to unsupported dependencies.
@@ -33,6 +48,20 @@ async function main() {
   });
   const args = process.argv.slice(2);
   const command = args[0];
+  const subcommand =
+    command &&
+    COMMANDS_WITH_SUBCOMMANDS.has(command) &&
+    args[1] &&
+    !args[1].startsWith("-")
+      ? args[1]
+      : undefined;
+  sentryClient?.attachInvocationContext({
+    command,
+    subcommand,
+    pm: detectPackageManager(),
+    argv: args,
+    cwd: process.cwd(),
+  });
 
   // Short-circuit `ph --version` / `ph -v` so we don't pay for the full
   // cmd-ts subcommand tree (which dynamic-imports the heavy clis bundle

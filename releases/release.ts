@@ -1,6 +1,15 @@
 import { boolean, command, flag, oneOf, option, run } from "cmd-ts";
+import { appendFileSync, existsSync } from "node:fs";
 import { ReleaseClient } from "nx/release";
 import type { ReleaseType } from "semver";
+
+const SENTRY_INJECT_DIRS = [
+  "apps/connect/dist",
+  "apps/switchboard/dist",
+  "packages/reactor-api/dist",
+  "clis/ph-cli/dist",
+  "clis/ph-cmd/dist",
+];
 
 type Channel = "dev" | "staging" | "production";
 const modes = ["prerelease", "patch", "minor", "major"] as const;
@@ -296,6 +305,10 @@ const app = command({
       }
     }
 
+    if (!dryRun && !skipPublish) {
+      injectSentryDebugIds();
+    }
+
     if (!skipPublish) {
       try {
         const publishResult = await releasePublish({
@@ -395,6 +408,15 @@ const app = command({
       // latest remote tip and try again.
       pushWithRebaseRetry({ workspaceVersion, gitTag });
     }
+    // When this script is invoked from a GitHub Actions step, expose the
+    // tag we just published so downstream jobs (e.g. publish-ph-binaries)
+    // can consume it via `steps.<id>.outputs.tag` / `needs.release.outputs.tag`
+    // without re-deriving it from git tag sort order. Only emit if we
+    // actually created a tag — skipped releases or --skip-git-tag runs leave
+    // the output empty, which downstream jobs gate on.
+    if (gitTag && workspaceVersion && process.env.GITHUB_OUTPUT) {
+      appendFileSync(process.env.GITHUB_OUTPUT, `tag=v${workspaceVersion}\n`);
+    }
     console.log(">>> Release successfully completed 🚀");
     process.exit(0);
   },
@@ -414,6 +436,21 @@ function runCommandWithBun(
       ...env,
     },
   });
+}
+
+function injectSentryDebugIds(): void {
+  for (const dir of SENTRY_INJECT_DIRS) {
+    if (!existsSync(dir)) continue;
+    const result = Bun.spawnSync({
+      cmd: ["sentry-cli", "sourcemaps", "inject", dir],
+      stdio: ["inherit", "inherit", "inherit"],
+    });
+    if (result.exitCode !== 0) {
+      console.warn(
+        `sentry-cli sourcemaps inject failed for ${dir} (exit ${result.exitCode})`,
+      );
+    }
+  }
 }
 
 // Resolve a sha to bake into build artifacts as provenance. Prefer

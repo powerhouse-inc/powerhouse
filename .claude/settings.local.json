@@ -49,7 +49,8 @@
       "Bash(node -e \"console.log\\(JSON.stringify\\(require\\('./packages/document-model/package.json'\\).exports, null, 2\\)\\)\")",
       "Bash(git commit -m ' *)",
       "Bash(git check-ignore *)",
-      "Bash(git commit -m 'chore: track .claude/commands in git for team sharing *)"
+      "Bash(git commit -m 'chore: track .claude/commands in git for team sharing *)",
+      "Bash(RUN_HUB_SPOKE_INTEGRATION=1 pnpm exec vitest list)"
     ],
     "deny": [],
     "ask": []
