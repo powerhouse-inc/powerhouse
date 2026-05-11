@@ -11,6 +11,12 @@
   ],
   "references": [
     {
+      "path": "../codegen"
+    },
+    {
+      "path": "../config"
+    },
+    {
       "path": "../document-model"
     },
     {
