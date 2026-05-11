@@ -18,7 +18,8 @@ storybook-static
 .gitignore.local
 .ph
 CLAUDE.md
-.claude
+.claude/*
+!.claude/skills/
 coverage/
 coverage-reports/
 .env
