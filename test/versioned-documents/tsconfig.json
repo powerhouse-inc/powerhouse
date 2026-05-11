@@ -1,23 +1,36 @@
 {
-  "extends": "../../tsconfig.options.json",
   "compilerOptions": {
-    "outDir": "./dist",
-    "types": ["node", "vite/client", "vitest/globals"],
-    "lib": ["ESNext", "dom", "dom.iterable"],
-    "customConditions": ["source"],
+    "composite": true,
+    "rootDir": ".",
+    // paths for easy access to project modules
     "paths": {
       "document-models": ["./document-models/index.ts"],
       "document-models/*": ["./document-models/*/index.ts"],
       "editors": ["./editors/index.ts"],
       "editors/*": ["./editors/*/index.ts"],
-      "processors": ["./processors/index.ts"],
       "processors/*": ["./processors/*/index.ts"],
       "subgraphs": ["./subgraphs/index.ts"],
       "subgraphs/*": ["./subgraphs/*/index.ts"]
-    }
+    },
+    "module": "nodenext",
+    "moduleDetection": "force",
+    "target": "esnext",
+    "jsx": "react-jsx",
+    "types": ["node", "vite/client", "vitest/globals"],
+    "lib": ["ESNext", "dom", "dom.iterable"],
+    "declaration": true,
+    "declarationDir": "./dist/types",
+    "declarationMap": true,
+    "emitDeclarationOnly": true,
+    "incremental": true,
+    "strict": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "noUncheckedSideEffectImports": true,
+    "skipLibCheck": true
   },
   "include": ["**/*", "./powerhouse.manifest.json"],
-  "exclude": ["dist", "node_modules", ".ph"],
+  "exclude": ["dist", "node_modules", ".ph", "vitest.config.ts"],
   "references": [
     {
       "path": "../../apps/connect"
@@ -38,7 +51,13 @@
       "path": "../../packages/reactor"
     },
     {
+      "path": "../../packages/reactor-api"
+    },
+    {
       "path": "../../packages/reactor-browser"
+    },
+    {
+      "path": "../../packages/shared"
     }
   ]
 }

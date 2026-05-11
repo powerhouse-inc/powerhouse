@@ -194,6 +194,7 @@ describe("batch context flow", () => {
             branch: "main",
             operations: [createOperation("global")],
             dependsOn: [],
+            externalDeps: [],
           },
           {
             key: "job2",
@@ -202,6 +203,7 @@ describe("batch context flow", () => {
             branch: "main",
             operations: [createOperation("document")],
             dependsOn: [],
+            externalDeps: [],
           },
         ],
       };
@@ -251,6 +253,7 @@ describe("batch context flow", () => {
             branch: "main",
             operations: [createOperation("global")],
             dependsOn: [],
+            externalDeps: [],
           },
         ],
       };

@@ -1,3 +1,321 @@
+## 6.0.0-dev.239 (2026-05-11)
+
+### 🚀 Features
+
+- **ph-cli,ph-cmd,shared:** use lightweight sentry sdk ([248c6b2f6](https://github.com/powerhouse-inc/powerhouse/commit/248c6b2f6))
+- **ph-cmd:** added scripts to install dev and staging ph-cmd binary ([492555423](https://github.com/powerhouse-inc/powerhouse/commit/492555423))
+- **reactor-browser:** useDocumentSafe hook to get current state of document including error and loading states ([8ecf03a20](https://github.com/powerhouse-inc/powerhouse/commit/8ecf03a20))
+- **switchboard:** bridge OpenTelemetry spans to Sentry ([c1f2fc28b](https://github.com/powerhouse-inc/powerhouse/commit/c1f2fc28b))
+
+### 🩹 Fixes
+
+- update dockerfiles for pnpm 11 bin path ([d33db03ce](https://github.com/powerhouse-inc/powerhouse/commit/d33db03ce))
+- **reactor-browser:** do not throw when fetching multiple documents ([edec7c66d](https://github.com/powerhouse-inc/powerhouse/commit/edec7c66d))
+- **shared:** rename build-config.ts -> build-config.mts ([e636e7d38](https://github.com/powerhouse-inc/powerhouse/commit/e636e7d38))
+- **switchboard:** only enable tracing if a destination is configured ([8abff8020](https://github.com/powerhouse-inc/powerhouse/commit/8abff8020))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.238 (2026-05-11)
+
+### 🚀 Features
+
+- **ph-cli,ph-cmd,shared:** use lightweight sentry sdk ([248c6b2f6](https://github.com/powerhouse-inc/powerhouse/commit/248c6b2f6))
+- **switchboard:** bridge OpenTelemetry spans to Sentry ([c1f2fc28b](https://github.com/powerhouse-inc/powerhouse/commit/c1f2fc28b))
+
+### 🩹 Fixes
+
+- update dockerfiles for pnpm 11 bin path ([d33db03ce](https://github.com/powerhouse-inc/powerhouse/commit/d33db03ce))
+- **shared:** rename build-config.ts -> build-config.mts ([e636e7d38](https://github.com/powerhouse-inc/powerhouse/commit/e636e7d38))
+- **switchboard:** only enable tracing if a destination is configured ([8abff8020](https://github.com/powerhouse-inc/powerhouse/commit/8abff8020))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.237 (2026-05-10)
+
+This was a version bump only, there were no code changes.
+
+## 6.0.0-dev.236 (2026-05-09)
+
+### 🚀 Features
+
+- new test-sync-queue cli app that detects sync drift for large drives ([ddcd53f1e](https://github.com/powerhouse-inc/powerhouse/commit/ddcd53f1e))
+- fix drag and drop ([#2580](https://github.com/powerhouse-inc/powerhouse/pull/2580))
+- new test-sync-queue cli app that detects sync drift for large drives ([771352e08](https://github.com/powerhouse-inc/powerhouse/commit/771352e08))
+- add download button ([#2586](https://github.com/powerhouse-inc/powerhouse/pull/2586))
+
+### 🩹 Fixes
+
+- switchboard migrate command did not honor proper env vars ([2fc850209](https://github.com/powerhouse-inc/powerhouse/commit/2fc850209))
+- switchboard itself was not using proper env vars ([50a3b842f](https://github.com/powerhouse-inc/powerhouse/commit/50a3b842f))
+- switchboard migrate command did not honor proper env vars ([97f8c4781](https://github.com/powerhouse-inc/powerhouse/commit/97f8c4781))
+- switchboard itself was not using proper env vars ([a18a78f05](https://github.com/powerhouse-inc/powerhouse/commit/a18a78f05))
+- adding a log on catch and fixing a unit test ([ff3e2d71e](https://github.com/powerhouse-inc/powerhouse/commit/ff3e2d71e))
+- **ph-cmd:** check package.json (not the dir) for global project bootstrap ([839d5949d](https://github.com/powerhouse-inc/powerhouse/commit/839d5949d))
+- **reactor:** experimental fix for orphan reshuffle and cross-batch FIFO bugs in sync ([e192b7d17](https://github.com/powerhouse-inc/powerhouse/commit/e192b7d17))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Ryan Wolhuter @ryanwolhuter
+
+## 6.0.0-dev.235 (2026-05-08)
+
+### 🚀 Features
+
+- **ph-cli:** support --allow-build on ph install and ph uninstall fix ([19586d46c](https://github.com/powerhouse-inc/powerhouse/commit/19586d46c))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.234 (2026-05-08)
+
+### 🩹 Fixes
+
+- **ci:** pnpm 11 reads PNPM_CONFIG_* not NPM_CONFIG_* ([b6c05fb23](https://github.com/powerhouse-inc/powerhouse/commit/b6c05fb23))
+- **ci, docker:** pnpm 11 uses pnpm-workspace.yaml for allowBuilds; env var for min-release-age ([37c04c28a](https://github.com/powerhouse-inc/powerhouse/commit/37c04c28a))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.233 (2026-05-08)
+
+This was a version bump only, there were no code changes.
+
+## 6.0.0-dev.232 (2026-05-07)
+
+### 🩹 Fixes
+
+- opt out of pnpm 11 minimum-release-age; fix docker/boilerplate strict-dep-builds ([75d31f3c6](https://github.com/powerhouse-inc/powerhouse/commit/75d31f3c6))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.231 (2026-05-07)
+
+### 🩹 Fixes
+
+- add pnpm workspace to boilerplate ([1b3a6e78c](https://github.com/powerhouse-inc/powerhouse/commit/1b3a6e78c))
+- **ci:** pnpm v11 docker init + global bin path ([9d93dc20a](https://github.com/powerhouse-inc/powerhouse/commit/9d93dc20a))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.230 (2026-05-07)
+
+This was a version bump only, there were no code changes.
+
+## 6.0.0-dev.229 (2026-05-07)
+
+This was a version bump only, there were no code changes.
+
+## 6.0.0-dev.228 (2026-05-07)
+
+### 🚀 Features
+
+- **connect,reactor-api:** set git hash at build time and display with url ([99b5233c7](https://github.com/powerhouse-inc/powerhouse/commit/99b5233c7))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.227 (2026-05-07)
+
+### 🚀 Features
+
+- adding the ability to add remotes through the inspector that do not auto-poll ([adae501de](https://github.com/powerhouse-inc/powerhouse/commit/adae501de))
+
+### 🩹 Fixes
+
+- **reactor:** do not sort by timestamp in sync batches, only by ordinal ([7ccc6045c](https://github.com/powerhouse-inc/powerhouse/commit/7ccc6045c))
+- **reactor-api:** paging needs to be operation-dependent, no envelope-- our batching is too good ([e6ab2f853](https://github.com/powerhouse-inc/powerhouse/commit/e6ab2f853))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
+## 6.0.0-dev.226 (2026-05-06)
+
+### 🚀 Features
+
+- various mixed load scenarios for the lb ([6ef3a76bf](https://github.com/powerhouse-inc/powerhouse/commit/6ef3a76bf))
+- **ph-cli:** accept ip value for host on connect and preview ([63269c832](https://github.com/powerhouse-inc/powerhouse/commit/63269c832))
+
+### 🩹 Fixes
+
+- bump document-engineering to 1.40.3 and align zod pin ([d50e7e42c](https://github.com/powerhouse-inc/powerhouse/commit/d50e7e42c))
+- **ph-cmd:** guard ph-cli forwarding when no project is detected ([07343964c](https://github.com/powerhouse-inc/powerhouse/commit/07343964c))
+- **reactor-api:** remove debug field on drive endpoint ([904630a71](https://github.com/powerhouse-inc/powerhouse/commit/904630a71))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Guillermo Puente @gpuente
+
+## 6.0.0-dev.225 (2026-05-06)
+
+### 🩹 Fixes
+
+- **reactor-api:** added support for x-forwarded-prefix ([40544feb2](https://github.com/powerhouse-inc/powerhouse/commit/40544feb2))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.224 (2026-05-06)
+
+### 🚀 Features
+
+- **ph-cli:** run migrate with target codegen version ([14bed84ed](https://github.com/powerhouse-inc/powerhouse/commit/14bed84ed))
+- **ph-cli:** added --force flag to migrate and debug logs ([d30fb8f3f](https://github.com/powerhouse-inc/powerhouse/commit/d30fb8f3f))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.223 (2026-05-06)
+
+### 🚀 Features
+
+- add json viewer for operations tooltip ([#2569](https://github.com/powerhouse-inc/powerhouse/pull/2569))
+
+### 🩹 Fixes
+
+- **release:** drop concurrency from publish-docker-images.yml ([#2572](https://github.com/powerhouse-inc/powerhouse/issues/2572))
+- **renown,registry:** pass audience to verifyAuthBearerToken ([#2574](https://github.com/powerhouse-inc/powerhouse/pull/2574))
+
+### ❤️ Thank You
+
+- Frank @froid1911
+- Ryan Wolhuter @ryanwolhuter
+
+## 6.0.0-dev.222 (2026-05-06)
+
+### 🩹 Fixes
+
+- **codegen:** dedupe test cases ([ac110c571](https://github.com/powerhouse-inc/powerhouse/commit/ac110c571))
+- **codegen:** fix drive editor metadata check ([48f3de5a5](https://github.com/powerhouse-inc/powerhouse/commit/48f3de5a5))
+- **codegen:** fix types export paths and  documentModels type safety ([92c08ecad](https://github.com/powerhouse-inc/powerhouse/commit/92c08ecad))
+- **codegen:** safer test name check ([58132df1b](https://github.com/powerhouse-inc/powerhouse/commit/58132df1b))
+- **codegen,connect,shared:** exclude main.tsx from types and removed vite dependency ([fc9e541d6](https://github.com/powerhouse-inc/powerhouse/commit/fc9e541d6))
+- **registry:** make extractTarball idempotent + throttle /packages warm-up ([#2571](https://github.com/powerhouse-inc/powerhouse/pull/2571))
+- **release:** retry git push with rebase + add workflow concurrency ([#2572](https://github.com/powerhouse-inc/powerhouse/pull/2572))
+
+### ❤️ Thank You
+
+- acaldas
+- Frank @froid1911
+
+## 6.0.0-dev.220 (2026-05-06)
+
+### 🩹 Fixes
+
+- **registry:** make /packages non-blocking, warm cdn-cache in background ([#2568](https://github.com/powerhouse-inc/powerhouse/pull/2568))
+
+### ❤️ Thank You
+
+- Frank @froid1911
+
+## 6.0.0-dev.219 (2026-05-06)
+
+### 🩹 Fixes
+
+- **registry:** source /packages from verdaccio's authoritative list ([44521252d](https://github.com/powerhouse-inc/powerhouse/commit/44521252d))
+
+### ❤️ Thank You
+
+- Frank
+
+## 6.0.0-dev.218 (2026-05-06)
+
+### 🚀 Features
+
+- **registry:** renown JWT auth in front of verdaccio ([e5bbf93f1](https://github.com/powerhouse-inc/powerhouse/commit/e5bbf93f1))
+
+### 🩹 Fixes
+
+- add document drive header fallback for name field ([#2562](https://github.com/powerhouse-inc/powerhouse/pull/2562))
+- **reactor-api:** support forward headers on drive url ([a780f2345](https://github.com/powerhouse-inc/powerhouse/commit/a780f2345))
+- **registry:** satisfy eslint no-unsafe-assignment in renown middleware test ([e4eda6156](https://github.com/powerhouse-inc/powerhouse/commit/e4eda6156))
+
+### ❤️ Thank You
+
+- acaldas
+- Frank
+- Ryan Wolhuter @ryanwolhuter
+
+## 6.0.0-dev.217 (2026-05-06)
+
+### 🚀 Features
+
+- add cursor-pointer class to breadcrumb ([#2561](https://github.com/powerhouse-inc/powerhouse/pull/2561))
+- add editor drag-and-drop guidance to AGENTS.md template ([f9dc73d71](https://github.com/powerhouse-inc/powerhouse/commit/f9dc73d71))
+- add editor drag-and-drop guidance to AGENTS.md template ([#2564](https://github.com/powerhouse-inc/powerhouse/pull/2564))
+- **codegen:** scaffold vitest coverage with reducer threshold ([94f62106c](https://github.com/powerhouse-inc/powerhouse/commit/94f62106c))
+- **codegen:** scaffold vitest coverage with reducer threshold ([#2563](https://github.com/powerhouse-inc/powerhouse/pull/2563))
+- **codegen:** document playbook for reaching 100% reducer coverage ([d2421f461](https://github.com/powerhouse-inc/powerhouse/commit/d2421f461))
+- **reactor-attachments:** implementing HEAD, implementing soft-delete and fixing some indexing issues ([f1430bca4](https://github.com/powerhouse-inc/powerhouse/commit/f1430bca4))
+- **switchboard-lb:** rewrite to use simpler drive-id header ([a442207d1](https://github.com/powerhouse-inc/powerhouse/commit/a442207d1))
+
+### 🩹 Fixes
+
+- **codegen:** correct hook import paths and inline shadcn editor guide ([20d06c5c3](https://github.com/powerhouse-inc/powerhouse/commit/20d06c5c3))
+- **ph-cmd:** fail fast when ph-cli tag resolves below 6.x for init ([0ba8e5f9b](https://github.com/powerhouse-inc/powerhouse/commit/0ba8e5f9b))
+- **ph-cmd:** exit instead of throw on init version-floor failure ([7ab327a77](https://github.com/powerhouse-inc/powerhouse/commit/7ab327a77))
+- **reactor:** documents with out of order ADD_RELATIONSHIP now correctly gets backfilled in sync query ([2b2730126](https://github.com/powerhouse-inc/powerhouse/commit/2b2730126))
+- **reactor-api, switchboard:** partial-delete index, reservation validation, fastify param routing, case-insensitive hashes ([f0b5b0620](https://github.com/powerhouse-inc/powerhouse/commit/f0b5b0620))
+- **reactor-attachments:** code-review feedback ([18cd49ab6](https://github.com/powerhouse-inc/powerhouse/commit/18cd49ab6))
+- **reactor-attachments:** switch to Attachment-Metadata instead of the X- prefix ([7ea3f120a](https://github.com/powerhouse-inc/powerhouse/commit/7ea3f120a))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+- Ryan Wolhuter @ryanwolhuter
+
+## 6.0.0-dev.216 (2026-05-05)
+
+### 🚀 Features
+
+- **codegen:** use satisfies DocumentModelModule instead of type cast ([348663a7a](https://github.com/powerhouse-inc/powerhouse/commit/348663a7a))
+
+### 🩹 Fixes
+
+- **codegen,ph-cli,shared:** build package types with tsc ([f3658dddc](https://github.com/powerhouse-inc/powerhouse/commit/f3658dddc))
+- **codegen,ph-cli,shared:** build package types with tsc ([a1a47e932](https://github.com/powerhouse-inc/powerhouse/commit/a1a47e932))
+- **ph-cli:** write tsmorph changes on generate commands ([b9a8a413b](https://github.com/powerhouse-inc/powerhouse/commit/b9a8a413b))
+
+### ❤️ Thank You
+
+- acaldas
+- Copilot
+
+## 6.0.0-dev.215 (2026-05-05)
+
+### 🚀 Features
+
+- make document cache usable with graphql client ([#2557](https://github.com/powerhouse-inc/powerhouse/pull/2557))
+
+### 🩹 Fixes
+
+- **ci:** pick docker tag matching branch channel ([1f6c5ba7c](https://github.com/powerhouse-inc/powerhouse/commit/1f6c5ba7c))
+
+### ❤️ Thank You
+
+- Frank
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.214 (2026-05-05)
 
 ### 🚀 Features

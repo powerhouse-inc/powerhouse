@@ -1,5 +1,6 @@
 import { Icon } from "#design-system";
-import { ConnectTooltip } from "../../tooltip/tooltip.js";
+import { CodePopover } from "../../code-popover.js";
+import { FormattedJsonViewer } from "../../formatted-json-viewer.js";
 import type { Signature } from "../types.js";
 
 export type SignatureProps = {
@@ -10,30 +11,16 @@ export function Signature(props: SignatureProps) {
 
   if (!signatures?.length) return null;
 
-  const tooltipContent = (
-    <div className="text-xs text-slate-300">
-      <h3 className="mb-2">Signature details:</h3>
-      {signatures.map((signature, index) => (
-        <div className="mb-2 last:mb-0" key={signature.hash}>
-          <h4>
-            Signature #{index + 1} -{" "}
-            {signature.isVerified ? "verified" : "unverified"}
-          </h4>
-          <code>
-            <pre>{JSON.stringify(signature, null, 2)}</pre>
-          </code>
-        </div>
-      ))}
-    </div>
-  );
-
   return (
-    <ConnectTooltip content={tooltipContent}>
-      <span className="flex w-fit cursor-pointer items-center gap-1 rounded-lg border border-gray-200 px-2 py-1">
-        <VerificationStatus signatures={signatures} />{" "}
-        <Icon className="text-gray-300" name="InfoSquare" size={16} />
-      </span>
-    </ConnectTooltip>
+    <CodePopover
+      trigger={
+        <span className="flex w-fit cursor-pointer items-center gap-1 rounded-lg border border-gray-200 px-2 py-1">
+          <VerificationStatus signatures={signatures} />{" "}
+          <Icon className="text-gray-300" name="InfoSquare" size={16} />
+        </span>
+      }
+      content={<FormattedJsonViewer value={signatures} collapsed={1} />}
+    />
   );
 }
 

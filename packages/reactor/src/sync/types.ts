@@ -12,8 +12,28 @@ export enum ChannelScheme {
  */
 export type JwtHandler = (url: string) => Promise<string | undefined>;
 
+/**
+ * Controls how a remote drives its polling schedule.
+ * - `Auto` (default): the channel runs the configured interval timer in the background.
+ * - `Manual`: the channel registers and connects but never ticks on its own.
+ *   Callers must invoke ISyncManager.triggerPull(name) to fetch.
+ */
+export enum PollBehavior {
+  Auto = "auto",
+  Manual = "manual",
+}
+
 export type RemoteOptions = {
-  sinceTimestampUtcMs: string;
+  /**
+   * Stringified UTC timestamp (ms). When set and not `"0"`, outbox operations older
+   * than this value are excluded. `"0"` and `undefined` are equivalent and disable
+   * the filter, syncing from the beginning of history.
+   */
+  sinceTimestampUtcMs?: string;
+  /**
+   * Polling cadence for this remote. Defaults to `PollBehavior.Auto` when omitted.
+   */
+  pollBehavior?: PollBehavior;
 };
 
 export type RemoteFilter = {

@@ -76,6 +76,7 @@ describe("loadBatch validation", () => {
           branch: "main",
           operations: [createOperation("global")],
           dependsOn: [],
+          externalDeps: [],
         },
         {
           key: "job1",
@@ -84,6 +85,7 @@ describe("loadBatch validation", () => {
           branch: "main",
           operations: [createOperation("global")],
           dependsOn: [],
+          externalDeps: [],
         },
       ],
     };
@@ -104,6 +106,7 @@ describe("loadBatch validation", () => {
           branch: "main",
           operations: [createOperation("global")],
           dependsOn: ["nonexistent"],
+          externalDeps: [],
         },
       ],
     };
@@ -124,6 +127,7 @@ describe("loadBatch validation", () => {
           branch: "main",
           operations: [createOperation("global")],
           dependsOn: ["job2"],
+          externalDeps: [],
         },
         {
           key: "job2",
@@ -132,6 +136,7 @@ describe("loadBatch validation", () => {
           branch: "main",
           operations: [createOperation("global")],
           dependsOn: ["job1"],
+          externalDeps: [],
         },
       ],
     };
@@ -152,6 +157,7 @@ describe("loadBatch validation", () => {
           branch: "main",
           operations: [createOperation("document")],
           dependsOn: [],
+          externalDeps: [],
         },
       ],
     };
@@ -172,6 +178,7 @@ describe("loadBatch validation", () => {
           branch: "main",
           operations: [],
           dependsOn: [],
+          externalDeps: [],
         },
       ],
     };
@@ -192,6 +199,7 @@ describe("loadBatch validation", () => {
           branch: "main",
           operations: [createOperation("global")],
           dependsOn: [],
+          externalDeps: [],
         },
         {
           key: "job2",
@@ -200,6 +208,7 @@ describe("loadBatch validation", () => {
           branch: "main",
           operations: [createOperation("document")],
           dependsOn: [],
+          externalDeps: [],
         },
       ],
     };
@@ -222,6 +231,7 @@ describe("loadBatch validation", () => {
           branch: "main",
           operations: [createOperation("global")],
           dependsOn: [],
+          externalDeps: [],
         },
         {
           key: "job2",
@@ -230,6 +240,7 @@ describe("loadBatch validation", () => {
           branch: "main",
           operations: [createOperation("document")],
           dependsOn: ["job1"],
+          externalDeps: [],
         },
       ],
     };

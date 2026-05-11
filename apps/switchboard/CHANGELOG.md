@@ -1,3 +1,232 @@
+## 6.0.0-dev.239 (2026-05-11)
+
+### 🚀 Features
+
+- **ph-cmd:** added scripts to install dev and staging ph-cmd binary ([492555423](https://github.com/powerhouse-inc/powerhouse/commit/492555423))
+- **switchboard:** bridge OpenTelemetry spans to Sentry ([c1f2fc28b](https://github.com/powerhouse-inc/powerhouse/commit/c1f2fc28b))
+- **ph-cli,ph-cmd,shared:** use lightweight sentry sdk ([248c6b2f6](https://github.com/powerhouse-inc/powerhouse/commit/248c6b2f6))
+
+### 🩹 Fixes
+
+- update dockerfiles for pnpm 11 bin path ([d33db03ce](https://github.com/powerhouse-inc/powerhouse/commit/d33db03ce))
+- **switchboard:** only enable tracing if a destination is configured ([8abff8020](https://github.com/powerhouse-inc/powerhouse/commit/8abff8020))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.238 (2026-05-11)
+
+### 🚀 Features
+
+- **switchboard:** bridge OpenTelemetry spans to Sentry ([c1f2fc28b](https://github.com/powerhouse-inc/powerhouse/commit/c1f2fc28b))
+- **ph-cli,ph-cmd,shared:** use lightweight sentry sdk ([248c6b2f6](https://github.com/powerhouse-inc/powerhouse/commit/248c6b2f6))
+
+### 🩹 Fixes
+
+- update dockerfiles for pnpm 11 bin path ([d33db03ce](https://github.com/powerhouse-inc/powerhouse/commit/d33db03ce))
+- **switchboard:** only enable tracing if a destination is configured ([8abff8020](https://github.com/powerhouse-inc/powerhouse/commit/8abff8020))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.237 (2026-05-10)
+
+This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.236 (2026-05-09)
+
+### 🚀 Features
+
+- add download button ([#2586](https://github.com/powerhouse-inc/powerhouse/pull/2586))
+- new test-sync-queue cli app that detects sync drift for large drives ([771352e08](https://github.com/powerhouse-inc/powerhouse/commit/771352e08))
+- new test-sync-queue cli app that detects sync drift for large drives ([ddcd53f1e](https://github.com/powerhouse-inc/powerhouse/commit/ddcd53f1e))
+
+### 🩹 Fixes
+
+- switchboard itself was not using proper env vars ([a18a78f05](https://github.com/powerhouse-inc/powerhouse/commit/a18a78f05))
+- switchboard migrate command did not honor proper env vars ([97f8c4781](https://github.com/powerhouse-inc/powerhouse/commit/97f8c4781))
+- switchboard itself was not using proper env vars ([50a3b842f](https://github.com/powerhouse-inc/powerhouse/commit/50a3b842f))
+- switchboard migrate command did not honor proper env vars ([2fc850209](https://github.com/powerhouse-inc/powerhouse/commit/2fc850209))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Ryan Wolhuter @ryanwolhuter
+
+## 6.0.0-dev.235 (2026-05-08)
+
+This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.234 (2026-05-08)
+
+### 🩹 Fixes
+
+- **ci:** pnpm 11 reads PNPM_CONFIG_* not NPM_CONFIG_* ([b6c05fb23](https://github.com/powerhouse-inc/powerhouse/commit/b6c05fb23))
+- **ci, docker:** pnpm 11 uses pnpm-workspace.yaml for allowBuilds; env var for min-release-age ([37c04c28a](https://github.com/powerhouse-inc/powerhouse/commit/37c04c28a))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.233 (2026-05-08)
+
+This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.232 (2026-05-07)
+
+### 🩹 Fixes
+
+- opt out of pnpm 11 minimum-release-age; fix docker/boilerplate strict-dep-builds ([75d31f3c6](https://github.com/powerhouse-inc/powerhouse/commit/75d31f3c6))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.231 (2026-05-07)
+
+### 🩹 Fixes
+
+- add pnpm workspace to boilerplate ([1b3a6e78c](https://github.com/powerhouse-inc/powerhouse/commit/1b3a6e78c))
+- **ci:** pnpm v11 docker init + global bin path ([9d93dc20a](https://github.com/powerhouse-inc/powerhouse/commit/9d93dc20a))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.230 (2026-05-07)
+
+This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.229 (2026-05-07)
+
+This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.228 (2026-05-07)
+
+### 🚀 Features
+
+- **connect,reactor-api:** set git hash at build time and display with url ([99b5233c7](https://github.com/powerhouse-inc/powerhouse/commit/99b5233c7))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.227 (2026-05-07)
+
+This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.226 (2026-05-06)
+
+### 🚀 Features
+
+- various mixed load scenarios for the lb ([6ef3a76bf](https://github.com/powerhouse-inc/powerhouse/commit/6ef3a76bf))
+
+### 🩹 Fixes
+
+- bump document-engineering to 1.40.3 and align zod pin ([d50e7e42c](https://github.com/powerhouse-inc/powerhouse/commit/d50e7e42c))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Guillermo Puente @gpuente
+
+## 6.0.0-dev.225 (2026-05-06)
+
+This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.224 (2026-05-06)
+
+This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.223 (2026-05-06)
+
+### 🚀 Features
+
+- add json viewer for operations tooltip ([#2569](https://github.com/powerhouse-inc/powerhouse/pull/2569))
+
+### 🩹 Fixes
+
+- **release:** drop concurrency from publish-docker-images.yml ([#2572](https://github.com/powerhouse-inc/powerhouse/issues/2572))
+
+### ❤️ Thank You
+
+- Frank
+- Ryan Wolhuter @ryanwolhuter
+
+## 6.0.0-dev.222 (2026-05-06)
+
+### 🩹 Fixes
+
+- **release:** retry git push with rebase + add workflow concurrency ([#2572](https://github.com/powerhouse-inc/powerhouse/pull/2572))
+
+### ❤️ Thank You
+
+- Frank @froid1911
+
+## 6.0.0-dev.220 (2026-05-06)
+
+This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.219 (2026-05-06)
+
+This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.218 (2026-05-06)
+
+### 🚀 Features
+
+- **registry:** renown JWT auth in front of verdaccio ([e5bbf93f1](https://github.com/powerhouse-inc/powerhouse/commit/e5bbf93f1))
+
+### ❤️ Thank You
+
+- Frank
+
+## 6.0.0-dev.217 (2026-05-06)
+
+### 🚀 Features
+
+- **switchboard-lb:** rewrite to use simpler drive-id header ([a442207d1](https://github.com/powerhouse-inc/powerhouse/commit/a442207d1))
+- **reactor-attachments:** implementing HEAD, implementing soft-delete and fixing some indexing issues ([f1430bca4](https://github.com/powerhouse-inc/powerhouse/commit/f1430bca4))
+
+### 🩹 Fixes
+
+- **reactor-attachments:** switch to Attachment-Metadata instead of the X- prefix ([7ea3f120a](https://github.com/powerhouse-inc/powerhouse/commit/7ea3f120a))
+- **reactor-api, switchboard:** partial-delete index, reservation validation, fastify param routing, case-insensitive hashes ([f0b5b0620](https://github.com/powerhouse-inc/powerhouse/commit/f0b5b0620))
+- **reactor-attachments:** code-review feedback ([18cd49ab6](https://github.com/powerhouse-inc/powerhouse/commit/18cd49ab6))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
+## 6.0.0-dev.216 (2026-05-05)
+
+### 🩹 Fixes
+
+- **codegen,ph-cli,shared:** build package types with tsc ([a1a47e932](https://github.com/powerhouse-inc/powerhouse/commit/a1a47e932))
+- **codegen,ph-cli,shared:** build package types with tsc ([f3658dddc](https://github.com/powerhouse-inc/powerhouse/commit/f3658dddc))
+
+### ❤️ Thank You
+
+- acaldas
+- Copilot
+
+## 6.0.0-dev.215 (2026-05-05)
+
+### 🚀 Features
+
+- make document cache usable with graphql client ([#2557](https://github.com/powerhouse-inc/powerhouse/pull/2557))
+
+### 🩹 Fixes
+
+- **ci:** pick docker tag matching branch channel ([1f6c5ba7c](https://github.com/powerhouse-inc/powerhouse/commit/1f6c5ba7c))
+
+### ❤️ Thank You
+
+- Frank
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.214 (2026-05-05)
 
 ### 🚀 Features

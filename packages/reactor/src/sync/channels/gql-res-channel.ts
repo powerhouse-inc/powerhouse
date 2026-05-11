@@ -111,6 +111,9 @@ export class GqlResponseChannel implements IChannel {
     };
   }
 
+  /** Response channels are push-driven; resolvers populate mailboxes directly. */
+  triggerPull(): void {}
+
   private transitionConnectionState(next: ConnectionState): void {
     if (this.connectionState === next) return;
     this.connectionState = next;

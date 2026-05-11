@@ -1,4 +1,5 @@
 export * from "./browser.js";
+export * from "./build-info.js";
 export * from "./document-editor-debug-tools.js";
 export * from "./drive-preservation.js";
 export * from "./drive-sections.js";

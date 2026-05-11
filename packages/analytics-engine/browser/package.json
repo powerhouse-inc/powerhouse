@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/analytics-engine-browser",
-  "version": "6.0.0-dev.214",
+  "version": "6.0.0-dev.239",
   "license": "AGPL-3.0-only",
   "repository": {
     "type": "git",
@@ -31,9 +31,6 @@
   "dependencies": {
     "@powerhousedao/analytics-engine-core": "workspace:*",
     "@electric-sql/pglite": "catalog:",
-    "date-fns": "catalog:",
-    "events": "catalog:",
-    "util": "catalog:",
     "luxon": "catalog:",
     "change-case": "catalog:"
   },

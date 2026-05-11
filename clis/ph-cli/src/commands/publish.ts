@@ -1,15 +1,5 @@
-import {
-  getPowerhouseProjectInfo,
-  publishArgs,
-} from "@powerhousedao/shared/clis";
-import {
-  checkNpmAuth,
-  npmPublish,
-  resolveRegistryUrl,
-} from "@powerhousedao/shared/registry";
+import { publishArgs } from "@powerhousedao/shared/clis/args";
 import { command } from "cmd-ts";
-import { readPackageSync } from "read-pkg";
-import { prerelease } from "semver";
 
 function hasTagFlag(args: string[]): boolean {
   return args.some((a) => a === "--tag" || a.startsWith("--tag="));
@@ -19,11 +9,15 @@ function isInteractive(): boolean {
   return Boolean(process.stdin.isTTY) && !process.env.CI;
 }
 
-function readPrereleaseTag(projectPath: string): {
+async function readPrereleaseTag(projectPath: string): Promise<{
   version: string;
   tag: string;
-} | null {
+} | null> {
   try {
+    const [{ readPackageSync }, { prerelease }] = await Promise.all([
+      import("read-pkg"),
+      import("semver"),
+    ]);
     const pkg = readPackageSync({ cwd: projectPath });
     if (!pkg.version) return null;
     const parts = prerelease(pkg.version);
@@ -55,11 +49,18 @@ This command:
       console.log(args);
     }
 
+    const { getPowerhouseProjectInfo } =
+      await import("@powerhousedao/shared/clis");
     const { projectPath } = await getPowerhouseProjectInfo();
 
     if (!projectPath) {
       throw new Error("Could not find project path.");
     }
+
+    const { checkNpmAuth, npmPublish, resolveRegistryUrl } =
+      await import("@powerhousedao/shared/registry");
+    const { mintRegistryAuthToken } =
+      await import("../services/registry-auth.js");
 
     const registryUrl = resolveRegistryUrl({
       registry: args.registry,
@@ -70,18 +71,37 @@ This command:
       console.log(">>> registryUrl", registryUrl);
     }
 
+    // Try Renown auth first: if the user is logged in via `ph login`, mint a
+    // short-lived registry-bound bearer token. Falling back to the legacy
+    // `npm adduser` (htpasswd) path keeps existing flows working until the
+    // grace period ends.
+    let authToken: string | undefined;
     try {
-      await checkNpmAuth(registryUrl);
-    } catch {
-      console.error(`Not authenticated with registry: ${registryUrl}`);
-      console.error(`Run: npm adduser --registry ${registryUrl}`);
-      process.exit(1);
+      authToken = await mintRegistryAuthToken(registryUrl, 5 * 60);
+      if (args.debug) {
+        console.error(`>>> minted renown token for ${registryUrl} (5m TTL)`);
+      }
+    } catch (err) {
+      if (args.debug) {
+        console.error(
+          `>>> renown token mint skipped: ${(err as Error).message}`,
+        );
+      }
+      try {
+        await checkNpmAuth(registryUrl);
+      } catch {
+        console.error(`Not authenticated with registry: ${registryUrl}`);
+        console.error(
+          `Run: ph login (recommended) or npm adduser --registry ${registryUrl}`,
+        );
+        process.exit(1);
+      }
     }
 
     let forwardedArgs = args.forwardedArgs;
 
     if (!hasTagFlag(forwardedArgs)) {
-      const prereleaseInfo = readPrereleaseTag(projectPath);
+      const prereleaseInfo = await readPrereleaseTag(projectPath);
       if (prereleaseInfo) {
         const { version, tag } = prereleaseInfo;
         if (!isInteractive()) {
@@ -132,6 +152,7 @@ This command:
       registryUrl,
       cwd: projectPath,
       args: forwardedArgs,
+      authToken,
     });
     if (result.stdout) {
       console.log(result.stdout);

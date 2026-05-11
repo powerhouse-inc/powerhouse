@@ -71,7 +71,7 @@ Starts Connect Studio, a development environment for Powerhouse. This command la
 #### Options:
 
 - `-p, --port <port>`: Port to run the server on (default: 3000)
-- `-h, --host`: Expose the server to the network
+- `--host <ip>`: Expose the server to the network on a specific IP (e.g. `0.0.0.0` for all interfaces, or a specific LAN IP)
 - `--https`: Enable HTTPS
 - `--open`: Open the browser automatically
 - `--config-file <configFile>`: Path to the powerhouse.config.js file
@@ -86,7 +86,7 @@ ph connect
 ph connect --port 4000
 
 # Expose to network and enable HTTPS
-ph connect --host --https
+ph connect --host 0.0.0.0 --https
 
 # Open in browser automatically
 ph connect --open

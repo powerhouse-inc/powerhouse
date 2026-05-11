@@ -17,9 +17,9 @@
  * - Flag/arg values that look like secrets (tokens, keys) stripped
  * - No source-context from user files
  */
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
+import { join } from "node:path";
 
 // Sentry project "ph-cli" on the powerhouse-hosted Sentry instance.
 // Public DSNs are safe to ship — they grant write-only ingest access.
@@ -31,6 +31,14 @@ const TELEMETRY_FILE = join(homedir(), ".ph", "telemetry.json");
 type TelemetryConfig = {
   enabled: boolean;
   askedAt: string;
+};
+
+export type TelemetryClient = {
+  /**
+   * Captures an error (if telemetry is initialized) and flushes before the
+   * caller calls process.exit(). Safe no-op when telemetry is disabled.
+   */
+  captureCliError: (err: unknown) => Promise<void>;
 };
 
 function isExplicitlyDisabled(): boolean {
@@ -184,8 +192,6 @@ function scrubEvent<T>(event: T): T {
   return event;
 }
 
-let initialized = false;
-
 /**
  * Initializes Sentry for CLI error reporting if telemetry is enabled.
  * Safe to call multiple times; only the first call takes effect.
@@ -193,13 +199,12 @@ let initialized = false;
 export async function initCliTelemetry(opts: {
   cliName: "ph-cli" | "ph-cmd";
   release?: string;
-}): Promise<void> {
-  if (initialized) return;
+}): Promise<TelemetryClient | undefined> {
   const enabled = await resolveTelemetryConsent();
   if (!enabled) return;
 
-  const Sentry = await import("@sentry/node");
-  Sentry.init({
+  const Sentry = await import("@sentry/node-core/light");
+  const sentryClient = Sentry.init({
     dsn: SENTRY_DSN,
     release: opts.release,
     environment: process.env.NODE_ENV || "production",
@@ -220,22 +225,19 @@ export async function initCliTelemetry(opts: {
   });
   Sentry.setTag("cli_name", opts.cliName);
   if (opts.release) Sentry.setTag("cli_version", opts.release);
-  initialized = true;
-}
-
-/**
- * Captures an error (if telemetry is initialized) and flushes before the
- * caller calls process.exit(). Safe no-op when telemetry is disabled.
- */
-export async function captureCliError(err: unknown): Promise<void> {
-  if (!initialized) return;
-  try {
-    const Sentry = await import("@sentry/node");
-    Sentry.captureException(err);
-    await Sentry.flush(2000);
-  } catch {
-    // Reporting must never mask the real error.
+  if (!sentryClient) {
+    return;
   }
+  return {
+    captureCliError: async (err: unknown) => {
+      try {
+        sentryClient.captureException(err);
+        await sentryClient.flush(2000);
+      } catch {
+        // Reporting must never mask the real error.
+      }
+    },
+  };
 }
 
 /**

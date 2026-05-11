@@ -1,3 +1,7 @@
+/**
+ * WARNING: DO NOT EDIT
+ * This file is auto-generated and updated by codegen
+ */
 import type { DocumentDispatch } from "@powerhousedao/reactor-browser";
 import {
   useDocumentById,
@@ -6,7 +10,7 @@ import {
   useSelectedDocument,
 } from "@powerhousedao/reactor-browser";
 import type { TodoAction, TodoDocument } from "document-models/todo/v1";
-import { isTodoDocument } from "./gen/document-schema.js";
+import { assertIsTodoDocument, isTodoDocument } from "./gen/document-schema.js";
 
 /** Hook to get a Todo document by its id */
 export function useTodoDocumentById(
@@ -18,12 +22,14 @@ export function useTodoDocumentById(
 }
 
 /** Hook to get the selected Todo document */
-export function useSelectedTodoDocument():
-  | [TodoDocument, DocumentDispatch<TodoAction>]
-  | [undefined, undefined] {
+export function useSelectedTodoDocument(): [
+  TodoDocument,
+  DocumentDispatch<TodoAction>,
+] {
   const [document, dispatch] = useSelectedDocument();
-  if (!isTodoDocument(document)) return [undefined, undefined];
-  return [document, dispatch];
+
+  assertIsTodoDocument(document);
+  return [document, dispatch] as const;
 }
 
 /** Hook to get all Todo documents in the selected drive */

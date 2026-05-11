@@ -1,6 +1,5 @@
 import { accessToken } from "./access-token.js";
 import { build } from "./build.js";
-import { code } from "./code.js";
 import { connect } from "./connect.js";
 import { generate } from "./generate.js";
 import { init } from "./init.js";
@@ -11,6 +10,7 @@ import { login } from "./login.js";
 import { logout } from "./logout.js";
 import { migrate } from "./migrate.js";
 import { publish } from "./publish.js";
+import { registryLogin } from "./registry-login.js";
 import { switchboard } from "./switchboard.js";
 import { uninstall } from "./uninstall.js";
 import { unpublish } from "./unpublish.js";
@@ -18,7 +18,6 @@ import { vetra } from "./vetra.js";
 
 export const phCliCommands = {
   init,
-  code,
   generate,
   vetra,
   connect,
@@ -26,6 +25,7 @@ export const phCliCommands = {
   publish,
   unpublish,
   "access-token": accessToken,
+  "registry-login": registryLogin,
   inspect,
   list,
   migrate,

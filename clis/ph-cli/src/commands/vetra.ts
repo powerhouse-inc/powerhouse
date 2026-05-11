@@ -1,4 +1,4 @@
-import { vetraArgs } from "@powerhousedao/shared/clis";
+import { vetraArgs } from "@powerhousedao/shared/clis/args";
 import { command } from "cmd-ts";
 
 export const vetra = command({

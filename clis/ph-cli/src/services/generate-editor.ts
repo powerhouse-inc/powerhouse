@@ -49,5 +49,7 @@ export async function startGenerateEditor(
     );
   } else {
     console.log("Please specify either `name`, `dir`, or `all`.");
+    return;
   }
+  await project.save();
 }

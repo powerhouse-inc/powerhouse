@@ -1,6 +1,5 @@
-import { buildArgs } from "@powerhousedao/shared/clis";
+import { buildArgs } from "@powerhousedao/shared/clis/args";
 import { command } from "cmd-ts";
-import { runBuild } from "../services/build.js";
 
 export const build = command({
   name: "build",
@@ -10,6 +9,7 @@ export const build = command({
       console.log(args);
     }
     try {
+      const { runBuild } = await import("../services/build.js");
       await runBuild(args);
     } catch (error) {
       console.error(error);

@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/analytics-engine-pg",
-  "version": "6.0.0-dev.214",
+  "version": "6.0.0-dev.239",
   "license": "AGPL-3.0-only",
   "repository": {
     "type": "git",
@@ -25,7 +25,6 @@
     "build": "tsdown"
   },
   "dependencies": {
-    "date-fns": "catalog:",
     "knex": "catalog:",
     "luxon": "catalog:",
     "pg": "catalog:",
@@ -37,13 +36,6 @@
     "@types/luxon": "catalog:",
     "@types/node": "catalog:",
     "@types/pg": "catalog:",
-    "better-sqlite3": "catalog:",
-    "sqlite3": "catalog:",
-    "mysql": "catalog:",
-    "mysql2": "catalog:",
-    "tedious": "catalog:",
-    "pg-query-stream": "catalog:",
-    "oracledb": "catalog:",
     "vitest": "catalog:"
   }
 }

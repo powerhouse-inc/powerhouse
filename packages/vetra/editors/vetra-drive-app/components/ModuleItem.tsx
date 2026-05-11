@@ -1,8 +1,7 @@
-import type { NodeOption } from "@powerhousedao/design-system";
 import { cn, Icon } from "@powerhousedao/design-system";
 import {
   ConnectDropdownMenu,
-  nodeOptionsMap,
+  fileNodeDropdownOptions,
 } from "@powerhousedao/design-system/connect";
 import type { FileNode } from "@powerhousedao/shared/document-drive";
 import React, { useState } from "react";
@@ -51,8 +50,8 @@ export const ModuleItem: React.FC<ModuleItemProps> = ({
   // Only show DELETE option
   const dropdownMenuOptions = [
     {
-      ...nodeOptionsMap.DELETE,
-      id: "DELETE" as NodeOption,
+      ...fileNodeDropdownOptions.DELETE,
+      id: "DELETE" as const,
     },
   ];
 
@@ -60,9 +59,10 @@ export const ModuleItem: React.FC<ModuleItemProps> = ({
     DELETE: () => onDelete?.(fileNode),
   } as const;
 
-  function onDropdownMenuOptionClick(itemId: NodeOption) {
-    const handler =
-      dropdownMenuHandlers[itemId as keyof typeof dropdownMenuHandlers];
+  function onDropdownMenuOptionClick(
+    itemId: keyof typeof dropdownMenuHandlers,
+  ) {
+    const handler = dropdownMenuHandlers[itemId];
 
     handler();
     setIsDropdownMenuOpen(false);

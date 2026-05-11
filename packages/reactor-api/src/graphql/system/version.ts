@@ -1,29 +1,22 @@
-import { execSync } from "node:child_process";
+import { buildTreeUrl } from "@powerhousedao/shared";
 
-let cachedVersion: string | undefined;
-let cachedGitHash: string | undefined;
+declare const REACTOR_API_VERSION: string | undefined;
+declare const REACTOR_API_GIT_SHA: string | undefined;
 
 export function getVersion(): string {
-  if (cachedVersion !== undefined) return cachedVersion;
-  cachedVersion =
-    process.env.PH_VERSION ?? process.env.npm_package_version ?? "unknown";
-  return cachedVersion;
+  if (typeof REACTOR_API_VERSION !== "undefined") return REACTOR_API_VERSION;
+  return (
+    process.env.WORKSPACE_VERSION ??
+    process.env.npm_package_version ??
+    "unknown"
+  );
 }
 
 export function getGitHash(): string {
-  if (cachedGitHash !== undefined) return cachedGitHash;
-  if (process.env.PH_GIT_SHA) {
-    cachedGitHash = process.env.PH_GIT_SHA;
-    return cachedGitHash;
-  }
-  try {
-    cachedGitHash = execSync("git rev-parse HEAD", {
-      stdio: ["ignore", "pipe", "ignore"],
-    })
-      .toString()
-      .trim();
-  } catch {
-    cachedGitHash = "unknown";
-  }
-  return cachedGitHash;
+  if (typeof REACTOR_API_GIT_SHA !== "undefined") return REACTOR_API_GIT_SHA;
+  return process.env.WORKSPACE_GIT_SHA ?? "unknown";
+}
+
+export function getGitUrl(): string | null {
+  return buildTreeUrl(getGitHash());
 }

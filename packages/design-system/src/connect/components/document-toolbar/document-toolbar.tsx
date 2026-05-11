@@ -1,9 +1,9 @@
 import { Icon } from "#design-system";
 import {
-  exportDocument,
   setSelectedNode,
   setSelectedTimelineItem,
   showRevisionHistory,
+  useDownloadDocument,
   useGetSwitchboardLink,
   useNodeActions,
   useNodeParentFolderById,
@@ -66,7 +66,7 @@ type DocumentToolbarBaseProps = ComponentPropsWithoutRef<"div"> & {
    * Custom export handler for the document.
    * If not provided, will use the default export functionality.
    */
-  onExport?: (document: PHDocument) => void;
+  onDownloadDocument?: (document: PHDocument) => void;
   /**
    * Controls whether the timeline is visible when the component first renders.
    * @default false
@@ -111,7 +111,7 @@ export const DocumentToolbar: React.FC<DocumentToolbarProps> = (props) => {
   const {
     onClose,
     children,
-    onExport,
+    onDownloadDocument,
     className,
     document: _document,
     onSwitchboardLinkClick,
@@ -130,24 +130,22 @@ export const DocumentToolbar: React.FC<DocumentToolbarProps> = (props) => {
   const [isEditingName, setIsEditingName] = useState(false);
   const parentFolder = useNodeParentFolderById(document?.header.id);
   const handleClose = onClose ?? (() => setSelectedNode(parentFolder));
-  const handleExport = async (doc: PHDocument | undefined) => {
-    if (!doc) return;
-    if (onExport) {
-      onExport(doc);
-    } else {
-      await exportDocument(doc);
-    }
-  };
-
   const documentUndoRedo = useDocumentUndoRedo(document?.header.id);
   const isUndoDisabled = !documentUndoRedo.canUndo;
   const isRedoDisabled = !documentUndoRedo.canRedo;
+  const defaultDownloadDocument = useDownloadDocument(document?.header.id);
 
   const timelineItemsData = useDocumentTimeline(document?.header.id);
 
   const [showTimeline, setShowTimeline] = useState(initialTimelineVisible);
 
   const getSwitchboardLink = useGetSwitchboardLink(document);
+
+  function handleDownloadDocument() {
+    if (!document) return;
+    const downloadDocument = onDownloadDocument ?? defaultDownloadDocument;
+    downloadDocument(document);
+  }
 
   const handleDefaultSwitchboardClick = async () => {
     if (getSwitchboardLink) {
@@ -164,7 +162,7 @@ export const DocumentToolbar: React.FC<DocumentToolbarProps> = (props) => {
     onSwitchboardLinkClick ??
     (getSwitchboardLink ? handleDefaultSwitchboardClick : undefined);
 
-  const isExportDisabled = !document;
+  const isDownloadDisabled = !document;
   const isSwitchboardLinkDisabled = !resolvedSwitchboardHandler;
   const isTimelineDisabled = timelineItemsData.length === 0;
 
@@ -230,17 +228,19 @@ export const DocumentToolbar: React.FC<DocumentToolbarProps> = (props) => {
             <button
               className={twMerge(
                 "flex h-8 items-center rounded-lg border border-gray-200 bg-white px-3 text-sm",
-                isExportDisabled
+                isDownloadDisabled
                   ? "cursor-not-allowed"
                   : "cursor-pointer active:opacity-70",
               )}
-              onClick={() => void handleExport(document)}
-              disabled={isExportDisabled}
+              onClick={handleDownloadDocument}
+              disabled={isDownloadDisabled}
             >
               <span
-                className={isExportDisabled ? "text-gray-500" : "text-gray-900"}
+                className={
+                  isDownloadDisabled ? "text-gray-500" : "text-gray-900"
+                }
               >
-                Export
+                Download
               </span>
             </button>
           )}

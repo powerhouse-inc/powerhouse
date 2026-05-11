@@ -17,9 +17,6 @@
       "path": "../config"
     },
     {
-      "path": "../document-model"
-    },
-    {
       "path": "../reactor-browser"
     },
     {

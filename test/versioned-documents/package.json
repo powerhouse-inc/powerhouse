@@ -15,39 +15,39 @@
   ],
   "exports": {
     ".": {
-      "source": "./index.ts",
+      "types": "./dist/types/index.d.ts",
       "browser": "./dist/browser/index.js",
-      "node": "./dist/node/index.js"
+      "node": "./dist/node/index.mjs"
     },
     "./document-models": {
-      "source": "./document-models/index.ts",
+      "types": "./dist/types/document-models/index.d.ts",
       "browser": "./dist/browser/document-models/index.js",
-      "node": "./dist/node/document-models/index.js"
+      "node": "./dist/node/document-models/index.mjs"
     },
     "./document-models/*": {
-      "source": "./document-models/*/index.ts",
+      "types": "./dist/types/document-models/*/index.d.ts",
       "browser": "./dist/browser/document-models/*/index.js",
-      "node": "./dist/node/document-models/*/index.js"
+      "node": "./dist/node/document-models/*/index.mjs"
     },
     "./editors": {
-      "source": "./editors/index.ts",
+      "types": "./dist/types/editors/index.d.ts",
       "browser": "./dist/browser/editors/index.js",
-      "node": "./dist/node/editors/index.js"
+      "node": "./dist/node/editors/index.mjs"
     },
     "./editors/*": {
-      "source": "./editors/*/index.ts",
-      "browser": "./dist/browser/editors/*/index.js",
-      "node": "./dist/node/editors/*/index.js"
+      "types": "./dist/types/editors/*/editor.d.ts",
+      "browser": "./dist/browser/editors/*/editor.js",
+      "node": "./dist/node/editors/*/editor.mjs"
     },
     "./subgraphs": {
-      "source": "./dist/subgraphs/index.ts",
+      "types": "./dist/types/subgraphs/index.d.ts",
       "browser": "./dist/browser/subgraphs/index.js",
-      "node": "./dist/node/subgraphs/index.js"
+      "node": "./dist/node/subgraphs/index.mjs"
     },
     "./processors": {
-      "source": "./processors/index.ts",
+      "types": "./dist/types/processors/index.d.ts",
       "browser": "./dist/browser/processors/index.js",
-      "node": "./dist/node/processors/index.js"
+      "node": "./dist/node/processors/index.mjs"
     },
     "./manifest": "./dist/powerhouse.manifest.json",
     "./style.css": "./dist/style.css"
@@ -56,7 +56,7 @@
   "scripts": {
     "create:todo": "tsx scripts/create-versioned-todo.ts && ph-cli generate ./scripts/versioned-todo.zip --use-versioning",
     "tsc": "tsc",
-    "lint": "eslint",
+    "lint": "eslint --config eslint.config.js --cache",
     "test": "vitest --run",
     "test:watch": "vitest",
     "test:document-models": "vitest run document-models",
@@ -69,34 +69,51 @@
     "service": "ph-cli service",
     "migrate": "ph-cli migrate",
     "service-startup": "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-startup.sh",
-    "service-unstartup": "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-unstartup.sh"
+    "service-unstartup": "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-unstartup.sh",
+    "lint:fix": "npm run lint -- --fix",
+    "tsc:watch": "tsc --watch",
+    "vetra": "ph-cli vetra"
   },
   "dependencies": {
-    "document-model": "workspace:*",
+    "@powerhousedao/analytics-engine-core": "workspace:*",
+    "@powerhousedao/connect": "workspace:*",
     "@powerhousedao/design-system": "workspace:*",
     "@powerhousedao/document-engineering": "catalog:",
-    "@powerhousedao/reactor": "workspace:*",
+    "@powerhousedao/reactor-api": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
-    "@powerhousedao/connect": "workspace:*",
-    "@powerhousedao/analytics-engine-core": "workspace:*",
+    "@powerhousedao/shared": "workspace:*",
+    "document-model": "workspace:*",
+    "graphql": "catalog:",
+    "graphql-tag": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "catalog:",
+    "@electric-sql/pglite-tools": "catalog:",
+    "@eslint/js": "^9.38.0",
     "@powerhousedao/ph-cli": "workspace:*",
-    "tsdown": "catalog:",
+    "@powerhousedao/reactor": "workspace:*",
     "@tailwindcss/cli": "catalog:",
-    "tailwindcss": "catalog:",
     "@testing-library/jest-dom": "^6.9.1",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "catalog:",
+    "eslint": "^9.38.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.4",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "globals": "^16.4.0",
+    "tailwindcss": "catalog:",
+    "tsdown": "catalog:",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.46.2",
     "vite": "catalog:",
-    "vitest": "catalog:",
-    "@electric-sql/pglite": "catalog:",
-    "@electric-sql/pglite-tools": "catalog:"
+    "vite-tsconfig-paths": "catalog:",
+    "vitest": "catalog:"
   },
   "description": ""
 }

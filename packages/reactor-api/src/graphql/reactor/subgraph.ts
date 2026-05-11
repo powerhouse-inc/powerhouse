@@ -10,6 +10,7 @@ import {
   matchesSearchFilter,
   toGqlDocumentChangeEvent,
 } from "./adapters.js";
+import { DRIVE_DOCUMENT_TYPE } from "./constants.js";
 import type { Resolvers } from "./gen/graphql.js";
 import {
   ensureGlobalDocumentSubscription,
@@ -49,6 +50,24 @@ export class ReactorSubgraph extends BaseSubgraph {
       if (typeof operationType !== "string") continue;
 
       await this.assertCanExecuteOperation(documentId, operationType, ctx);
+    }
+  }
+
+  /**
+   * Returns the drive id when the given identifier (id or slug) refers
+   * to a drive document, otherwise undefined. Used by deleteDocument to
+   * decide whether to invalidate the drive-ownership cache after a
+   * successful delete.
+   */
+  async #resolveDriveId(identifier: string): Promise<string | undefined> {
+    try {
+      const doc = await this.reactorClient.get(identifier);
+      if (doc.header.documentType === DRIVE_DOCUMENT_TYPE) {
+        return doc.header.id;
+      }
+      return undefined;
+    } catch {
+      return undefined;
     }
   }
 
@@ -266,6 +285,10 @@ export class ReactorSubgraph extends BaseSubgraph {
             args,
           );
 
+          if (result?.id && result.documentType === DRIVE_DOCUMENT_TYPE) {
+            this.graphqlManager.driveOwnershipCache.add(result.id);
+          }
+
           // Auto-ownership: set creator as document owner
           if (this.authorizationService && ctx.user?.address && result?.id) {
             await this.documentPermissionService?.initializeDocumentProtection(
@@ -307,6 +330,10 @@ export class ReactorSubgraph extends BaseSubgraph {
             this.reactorClient,
             args,
           );
+
+          if (result?.id && result.documentType === DRIVE_DOCUMENT_TYPE) {
+            this.graphqlManager.driveOwnershipCache.add(result.id);
+          }
 
           // Auto-ownership: set creator as document owner
           if (this.authorizationService && ctx.user?.address && result?.id) {
@@ -435,7 +462,23 @@ export class ReactorSubgraph extends BaseSubgraph {
         try {
           await this.assertCanWrite(args.identifier, ctx);
 
-          return await resolvers.deleteDocument(this.reactorClient, args);
+          // Resolve identifier (id or slug) to detect drive deletes for cache
+          // invalidation. Only one read; no-op for non-drive callers via the
+          // catch.
+          const driveIdToInvalidate = await this.#resolveDriveId(
+            args.identifier,
+          );
+
+          const result = await resolvers.deleteDocument(
+            this.reactorClient,
+            args,
+          );
+
+          if (result && driveIdToInvalidate) {
+            this.graphqlManager.driveOwnershipCache.remove(driveIdToInvalidate);
+          }
+
+          return result;
         } catch (error) {
           this.logger.error("Error in deleteDocument(@args): @Error", error);
           throw error;

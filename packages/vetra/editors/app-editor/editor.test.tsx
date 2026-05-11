@@ -33,7 +33,7 @@ vi.mock("@powerhousedao/reactor-browser", async (importOriginal) => {
     setSelectedNode: vi.fn(),
     setSelectedTimelineItem: vi.fn(),
     showRevisionHistory: vi.fn(),
-    exportDocument: vi.fn(),
+    downloadDocument: vi.fn(),
   };
 });
 

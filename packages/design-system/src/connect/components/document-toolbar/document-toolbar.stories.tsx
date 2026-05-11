@@ -24,7 +24,7 @@ type DocumentToolbarStoryProps = ComponentPropsWithoutRef<"div"> & {
   canRedo?: boolean;
   onUndo?: () => void;
   onRedo?: () => void;
-  onExport?: () => void;
+  onDownloadDocument?: () => void;
   onClose?: () => void;
   onSwitchboardLinkClick?: () => void;
   onHistoryClick?: () => void;
@@ -43,7 +43,7 @@ const DocumentToolbarStory: React.FC<DocumentToolbarStoryProps> = ({
   canRedo = false,
   onUndo,
   onRedo,
-  onExport,
+  onDownloadDocument,
   onClose,
   onSwitchboardLinkClick,
   onHistoryClick,
@@ -112,7 +112,7 @@ const DocumentToolbarStory: React.FC<DocumentToolbarStoryProps> = ({
           {enabledControls.includes("export") && (
             <button
               className="flex h-8 cursor-pointer items-center rounded-lg border border-gray-200 bg-white px-3 text-sm active:opacity-70"
-              onClick={onExport}
+              onClick={onDownloadDocument}
             >
               <span className="text-gray-900">Export</span>
             </button>
@@ -250,7 +250,7 @@ export const Default: Story = {
     canRedo: false,
     onUndo: fn(),
     onRedo: fn(),
-    onExport: fn(),
+    onDownloadDocument: fn(),
     onClose: fn(),
     onHistoryClick: fn(),
   },
@@ -266,7 +266,7 @@ export const AllControlsEnabled: Story = {
     defaultTimelineVisible: true,
     onUndo: fn(),
     onRedo: fn(),
-    onExport: fn(),
+    onDownloadDocument: fn(),
     onClose: fn(),
     onHistoryClick: fn(),
     onSwitchboardLinkClick: fn(),
@@ -307,7 +307,7 @@ export const UndoRedoDisabled: Story = {
     canRedo: false,
     onUndo: fn(),
     onRedo: fn(),
-    onExport: fn(),
+    onDownloadDocument: fn(),
     onClose: fn(),
     onHistoryClick: fn(),
   },
@@ -317,7 +317,7 @@ export const MinimalControls: Story = {
   args: {
     documentName: "Read Only Document",
     enabledControls: ["export"],
-    onExport: fn(),
+    onDownloadDocument: fn(),
     onClose: fn(),
   },
 };
@@ -331,7 +331,7 @@ export const WithSwitchboardLink: Story = {
     showSwitchboardLink: true,
     onUndo: fn(),
     onRedo: fn(),
-    onExport: fn(),
+    onDownloadDocument: fn(),
     onClose: fn(),
     onHistoryClick: fn(),
     onSwitchboardLinkClick: fn(),
@@ -348,7 +348,7 @@ export const WithTimelineExpanded: Story = {
     initialTimelineVisible: true,
     onUndo: fn(),
     onRedo: fn(),
-    onExport: fn(),
+    onDownloadDocument: fn(),
     onClose: fn(),
     onHistoryClick: fn(),
     timelineItems: [
@@ -395,7 +395,7 @@ export const HistoryDisabled: Story = {
     disableRevisionHistory: true,
     onUndo: fn(),
     onRedo: fn(),
-    onExport: fn(),
+    onDownloadDocument: fn(),
     onClose: fn(),
     onHistoryClick: fn(),
   },

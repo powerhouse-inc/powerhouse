@@ -14,6 +14,7 @@ export * from "./list.js";
 export * from "./login.js";
 // export * from "./migrate.old.js";
 export * from "./migrate.js";
+export * from "./registry-login.js";
 // export * from "./service.old.js";
 export * from "./service.js";
 // export * from "./switchboard.old.js";

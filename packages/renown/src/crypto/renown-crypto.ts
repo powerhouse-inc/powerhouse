@@ -1,5 +1,4 @@
-import { bytesToBase64url } from "did-jwt";
-import { fromString } from "uint8arrays";
+import { fromString, toString } from "uint8arrays";
 import type { CreateBearerTokenOptions, Issuer } from "../types.js";
 import { createAuthBearerToken } from "../utils.js";
 import type { DID, IRenownCrypto, JsonWebKeyPairStorage } from "./types.js";
@@ -84,7 +83,7 @@ export class RenownCrypto implements IRenownCrypto {
         const signature = await this.sign(
           typeof data === "string" ? new TextEncoder().encode(data) : data,
         );
-        return bytesToBase64url(signature);
+        return toString(signature, "base64url");
       },
       alg: "ES256",
     };

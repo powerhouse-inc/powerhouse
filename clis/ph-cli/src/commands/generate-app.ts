@@ -1,4 +1,4 @@
-import { debugArgs } from "@powerhousedao/shared/clis";
+import { debugArgs } from "@powerhousedao/shared/clis/args";
 import {
   array,
   boolean,

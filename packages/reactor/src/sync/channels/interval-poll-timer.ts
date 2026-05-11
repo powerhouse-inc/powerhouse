@@ -7,6 +7,12 @@ export type PollTimerConfig = {
   backpressureCheckIntervalMs: number;
   retryBaseDelayMs: number;
   retryMaxDelayMs: number;
+  /**
+   * If true, start() puts the timer into a paused state — running but not ticking.
+   * Use resume() to begin scheduling ticks, or triggerNow() to fire a single tick
+   * without leaving the paused state. Defaults to false (auto-tick on start).
+   */
+  startPaused: boolean;
 };
 
 const DEFAULT_CONFIG: PollTimerConfig = {
@@ -15,6 +21,7 @@ const DEFAULT_CONFIG: PollTimerConfig = {
   backpressureCheckIntervalMs: 500,
   retryBaseDelayMs: 1000,
   retryMaxDelayMs: 300000,
+  startPaused: false,
 };
 
 export function calculateBackoffDelay(
@@ -48,7 +55,7 @@ export class IntervalPollTimer implements IPollTimer {
     this.queue = queue;
     this.config = { ...DEFAULT_CONFIG, ...config };
     this.running = false;
-    this.paused = false;
+    this.paused = this.config.startPaused;
     this.consecutiveFailures = 0;
   }
 
@@ -59,7 +66,9 @@ export class IntervalPollTimer implements IPollTimer {
   start(): void {
     this.running = true;
     this.consecutiveFailures = 0;
-    this.tick();
+    if (!this.paused) {
+      this.tick();
+    }
   }
 
   stop(): void {

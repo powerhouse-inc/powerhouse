@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/vetra",
-  "version": "6.0.0-dev.214",
+  "version": "6.0.0-dev.239",
   "license": "AGPL-3.0-only",
   "type": "module",
   "sideEffects": false,
@@ -62,27 +62,20 @@
     "service-unstartup": "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-unstartup.sh"
   },
   "dependencies": {
-    "@electric-sql/pglite": "catalog:",
-    "@electric-sql/pglite-tools": "catalog:",
-    "@powerhousedao/common": "workspace:*",
+    "@powerhousedao/codegen": "workspace:*",
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/design-system": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
-    "@powerhousedao/builder-tools": "workspace:*",
     "change-case": "catalog:",
-    "colorette": "catalog:",
     "document-model": "workspace:*",
-    "graphql": "catalog:",
-    "graphql-tag": "catalog:",
     "kysely": "catalog:",
-    "zod": "catalog:",
-    "@powerhousedao/codegen": "workspace:*",
     "react": "catalog:",
-    "react-dom": "catalog:",
-    "ts-morph": "catalog:"
+    "ts-morph": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
+    "@powerhousedao/builder-tools": "workspace:*",
     "@tailwindcss/cli": "catalog:",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",
@@ -91,10 +84,15 @@
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "catalog:",
+    "react-dom": "catalog:",
     "tailwindcss": "catalog:",
+    "tsdown": "catalog:",
     "vite": "catalog:",
-    "vitest": "catalog:",
-    "tsdown": "catalog:"
+    "vitest": "catalog:"
+  },
+  "optionalDependencies": {
+    "@powerhousedao/connect": "workspace:*",
+    "@powerhousedao/ph-cli": "workspace:*"
   },
   "description": ""
 }

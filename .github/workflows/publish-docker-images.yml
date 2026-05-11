@@ -8,6 +8,16 @@ permissions:
   contents: write
   packages: write
 
+# Intentionally NO concurrency block here. When invoked via `uses:` from
+# release-branch.yml, the called workflow inherits no concurrency from the
+# caller, but if the called workflow declares the SAME group as the caller
+# GitHub treats it as a self-conflict and cancels. The release-branch.yml
+# concurrency group already serializes the parent (and therefore this
+# workflow's invocations from it) — adding a group here only breaks the
+# downstream `needs:` chain. Standalone workflow_dispatch invocations of
+# this workflow are rare operator-driven recovery flows and don't need
+# their own serialization.
+
 env:
   REGISTRY: ghcr.io
   HARBOR_REGISTRY: cr.vetra.io
@@ -42,10 +52,28 @@ jobs:
         run: git fetch --tags origin
       - name: Set last tag
         id: get-tag
+        env:
+          BRANCH: ${{ github.ref_name }}
         run: |
-          TAG=$(git for-each-ref --sort=creatordate --format '%(refname:short)' refs/tags | tail -n 1)
-          echo "GITHUB_TAG=$TAG" >> $GITHUB_ENV
-          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          # Pick the most recent tag for the channel matching this branch.
+          # Same channel logic as `determine-downstream-params` in
+          # release-branch.yml. The previous "tail of all tags" picker would
+          # grab a tag from a sibling channel whenever, say, a
+          # `release/staging/*` cut happened after the most recent `-dev` tag —
+          # the nightly main pipeline would then build with that staging tag
+          # and overwrite Harbor's `staging` floating tag with main-branch code.
+          if [[ "$BRANCH" == "main" ]]; then
+            TAG=$(git tag --sort=-creatordate --list '*-dev.*' | head -n 1)
+          elif [[ "$BRANCH" == release/staging/* ]]; then
+            TAG=$(git tag --sort=-creatordate --list '*-staging.*' | head -n 1)
+          elif [[ "$BRANCH" == release/production/* ]]; then
+            TAG=$(git tag --sort=-creatordate | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1)
+          else
+            echo "::error::Unknown branch '$BRANCH' — refusing to guess a tag"
+            exit 1
+          fi
+          echo "GITHUB_TAG=$TAG" >> "$GITHUB_ENV"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
       - name: Validate tag
         run: |
           if [ -z "${{ env.GITHUB_TAG }}" ]; then

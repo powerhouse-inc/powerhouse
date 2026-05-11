@@ -41,6 +41,12 @@ export class ManualPollTimer implements IPollTimer {
     }
   }
 
+  triggerNow(): void {
+    if (this.running && this.delegate) {
+      void this.delegate().catch(() => {});
+    }
+  }
+
   isRunning(): boolean {
     return this.running;
   }

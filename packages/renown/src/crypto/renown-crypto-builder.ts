@@ -33,7 +33,7 @@ export class RenownCryptoBuilder {
       subtleCrypto,
       this.keyPairStorage,
     );
-    const did = await parseDid(keyPair, subtleCrypto);
+    const did = await parseDid(keyPair);
 
     return new RenownCrypto(this.keyPairStorage, subtleCrypto, keyPair, did);
   }

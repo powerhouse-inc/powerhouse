@@ -10,14 +10,25 @@ export type DriveSystemInfoState =
   | { status: "local" }
   | { status: "loading" }
   | { status: "error"; message: string }
-  | { status: "ready"; version: string; gitHash: string; host: string };
+  | {
+      status: "ready";
+      version: string;
+      gitHash: string;
+      gitUrl: string | null;
+      host: string;
+    };
 
 export function deriveSystemUrl(channelUrl: string): string | null {
   try {
     const url = new URL(channelUrl);
-    url.pathname = "/graphql/system";
     url.search = "";
     url.hash = "";
+    const suffix = "/graphql/r";
+    if (url.pathname.endsWith(suffix)) {
+      url.pathname = url.pathname.slice(0, -suffix.length) + "/graphql/system";
+    } else {
+      url.pathname = "/graphql/system";
+    }
     return url.toString();
   } catch {
     return null;
@@ -68,12 +79,20 @@ export function useDriveSystemInfo(
     fetch(systemUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query: "{ system { version gitHash } }" }),
+      body: JSON.stringify({
+        query: "{ system { version gitHash gitUrl } }",
+      }),
       signal: controller.signal,
     })
       .then(async (res) => {
         const json = (await res.json()) as {
-          data?: { system?: { version: string; gitHash: string } };
+          data?: {
+            system?: {
+              version: string;
+              gitHash: string;
+              gitUrl: string | null;
+            };
+          };
           errors?: Array<{ message: string }>;
         };
         if (json.errors?.length) {
@@ -85,6 +104,7 @@ export function useDriveSystemInfo(
           status: "ready",
           version: sys.version,
           gitHash: sys.gitHash,
+          gitUrl: sys.gitUrl ?? null,
           host: new URL(systemUrl).host,
         };
         cache.set(systemUrl, next);
@@ -93,6 +113,7 @@ export function useDriveSystemInfo(
       .catch((err: unknown) => {
         if (controller.signal.aborted) return;
         const message = err instanceof Error ? err.message : String(err);
+        console.error(message);
         const next: DriveSystemInfoState = { status: "error", message };
         cache.set(systemUrl, next);
         setState(next);

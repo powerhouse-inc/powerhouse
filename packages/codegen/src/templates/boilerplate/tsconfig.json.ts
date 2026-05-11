@@ -26,7 +26,6 @@ export const tsconfigPathsTemplate = json`
 export const tsConfigTemplate = json`
 {
   "compilerOptions": {
-    "outDir": "./dist",
     "rootDir": ".",
     // paths for easy access to project modules
     "paths": {
@@ -36,11 +35,13 @@ export const tsConfigTemplate = json`
     "moduleDetection": "force",
     "target": "esnext",
     "jsx": "react-jsx",
-    "types": ["node", "vite/client", "vitest/globals"],
+    "types": ["node", "vitest/globals"],
     "lib": ["ESNext", "dom", "dom.iterable"],
     "declaration": true,
+    "declarationDir": "./dist/types",
     "declarationMap": true,
     "emitDeclarationOnly": true,
+    "incremental": true,
     "strict": true,
     "verbatimModuleSyntax": true,
     "isolatedModules": true,
@@ -48,6 +49,6 @@ export const tsConfigTemplate = json`
     "skipLibCheck": true
   },
   "include": ["**/*", "./powerhouse.manifest.json"],
-  "exclude": ["dist", "node_modules", ".ph", "vitest.config.ts"]
+  "exclude": ["dist", "node_modules", ".ph", "vitest.config.ts", "main.tsx"]
 }
 `.raw;

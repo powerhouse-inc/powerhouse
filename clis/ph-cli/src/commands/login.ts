@@ -1,4 +1,4 @@
-import { loginArgs } from "@powerhousedao/shared/clis";
+import { loginArgs } from "@powerhousedao/shared/clis/args";
 import { command } from "cmd-ts";
 
 export const login = command({

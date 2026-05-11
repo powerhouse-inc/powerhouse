@@ -20,6 +20,7 @@ export interface AttachmentReservationTable {
   extension: string | null;
   created_at_utc: string;
   expires_at_utc: string;
+  deleted_at_utc: string | null;
 }
 
 export interface AttachmentDatabase {

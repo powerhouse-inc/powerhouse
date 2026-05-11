@@ -1,8 +1,10 @@
+/* eslint-disable @typescript-eslint/no-empty-object-type */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import * as z from "zod";
 import type {
   AddTodoInput,
   RemoveTodoInput,
-  Todo,
+  TodoItem,
   TodoState,
   UpdateTodoInput,
 } from "./types.js";
@@ -36,9 +38,9 @@ export function RemoveTodoInputSchema(): z.ZodObject<
   });
 }
 
-export function TodoSchema(): z.ZodObject<Properties<Todo>> {
+export function TodoItemSchema(): z.ZodObject<Properties<TodoItem>> {
   return z.object({
-    __typename: z.literal("Todo").optional(),
+    __typename: z.literal("TodoItem").optional(),
     completed: z.boolean(),
     id: z.string(),
     title: z.string(),
@@ -48,7 +50,7 @@ export function TodoSchema(): z.ZodObject<Properties<Todo>> {
 export function TodoStateSchema(): z.ZodObject<Properties<TodoState>> {
   return z.object({
     __typename: z.literal("TodoState").optional(),
-    todos: z.array(z.lazy(() => TodoSchema())),
+    todos: z.array(z.lazy(() => TodoItemSchema())),
   });
 }
 

@@ -147,6 +147,19 @@ export class CdnCache {
   }
 
   async extractTarball(packageName: string, version: string): Promise<void> {
+    const destDir = path.join(this.cdnCachePath, packageName, version);
+
+    // Idempotence guard. extractTarball is hot-path-called from
+    // warmCdnCacheFromVerdaccio on every /packages request (which the
+    // deployment's readiness probe hits every 5s). Without this skip the
+    // tarball is re-fetched (multi-MB over S3) and re-extracted on each
+    // call, pinning CPU at multi-vCPU per pod and triggering HPA spirals.
+    // We treat the presence of package.json as the marker for "already
+    // extracted" — it's the first file npm tarballs put under the version
+    // directory and removing it (e.g. by invalidate*) requires the rest to
+    // go too.
+    if (fs.existsSync(path.join(destDir, "package.json"))) return;
+
     const shortName = packageName.startsWith("@")
       ? packageName.split("/")[1]
       : packageName;
@@ -160,7 +173,6 @@ export class CdnCache {
       return;
     }
 
-    const destDir = path.join(this.cdnCachePath, packageName, version);
     fs.mkdirSync(destDir, { recursive: true });
 
     const tmpFile = path.join(

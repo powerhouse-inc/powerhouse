@@ -1,3 +1,8 @@
+import { type z } from "zod";
+import type {
+  graphqlDocumentEvents,
+  graphqlDocumentsEvents,
+} from "./constants.js";
 import type {
   GetDocumentOperationsQuery,
   GetDocumentQuery,
@@ -29,3 +34,34 @@ export type ReactorGraphQLClient = Sdk & {
     operations: DocumentOperationsPage[];
   }>;
 };
+
+export type GraphQLClientDocumentEvent = CustomEvent<{
+  identifier: string;
+}>;
+
+export type GraphQLClientDocumentsEvent = CustomEvent<{
+  identifiers: string[];
+}>;
+
+export type GraphQLDocumentEventOperationName =
+  (typeof graphqlDocumentEvents)[number];
+
+export type GraphQLDocumentEventsOperationName =
+  (typeof graphqlDocumentsEvents)[number];
+
+export type GraphQLDocumentEvents = Record<
+  GraphQLDocumentEventOperationName,
+  GraphQLClientDocumentEvent
+>;
+
+export type GraphQLDocumentsEvents = Record<
+  GraphQLDocumentEventsOperationName,
+  GraphQLClientDocumentsEvent
+>;
+
+export type GraphQLClientWindowEvents = GraphQLDocumentEvents &
+  GraphQLDocumentsEvents;
+
+export type TStateSchemaZodObject = z.ZodObject<{
+  state: z.ZodObject;
+}>;

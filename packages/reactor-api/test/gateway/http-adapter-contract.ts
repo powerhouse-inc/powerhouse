@@ -389,5 +389,66 @@ export function runHttpAdapterContractTests(
       expect(postHandler).not.toHaveBeenCalled();
       expect(res.status).not.toBe(200);
     });
+
+    it("dispatches a parameterised path and exposes params on req", async () => {
+      let capturedParams: Record<string, string | string[]> | undefined;
+
+      h.adapter.mountNodeRoute(
+        "GET",
+        "/things/:id",
+        (req: IncomingMessage, res: ServerResponse) => {
+          capturedParams = (
+            req as IncomingMessage & {
+              params?: Record<string, string | string[]>;
+            }
+          ).params;
+          res.writeHead(200).end("ok");
+        },
+      );
+
+      const res = await fetch(`${h.url}/things/abc-123`);
+      expect(res.status).toBe(200);
+      expect(capturedParams).toEqual({ id: "abc-123" });
+    });
+
+    it("dispatches multi-segment parameterised paths to the right handler", async () => {
+      const reservation = vi.fn((req: IncomingMessage, res: ServerResponse) => {
+        const params = (
+          req as IncomingMessage & {
+            params?: Record<string, string | string[]>;
+          }
+        ).params;
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ which: "reservation", params }));
+      });
+      const hashRoute = vi.fn((req: IncomingMessage, res: ServerResponse) => {
+        const params = (
+          req as IncomingMessage & {
+            params?: Record<string, string | string[]>;
+          }
+        ).params;
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ which: "hash", params }));
+      });
+
+      h.adapter.mountNodeRoute(
+        "GET",
+        "/attachments/reservations/:reservationId",
+        reservation,
+      );
+      h.adapter.mountNodeRoute("GET", "/attachments/:hash", hashRoute);
+
+      const r1 = await fetch(`${h.url}/attachments/reservations/abc`);
+      expect(await r1.json()).toEqual({
+        which: "reservation",
+        params: { reservationId: "abc" },
+      });
+
+      const r2 = await fetch(`${h.url}/attachments/deadbeef`);
+      expect(await r2.json()).toEqual({
+        which: "hash",
+        params: { hash: "deadbeef" },
+      });
+    });
   });
 }

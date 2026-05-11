@@ -91,8 +91,75 @@ export function createPowerhouseRouter(
     },
   );
 
-  // Package listing API
+  // Throttle warm-up to once every WARM_INTERVAL_MS, plus an in-flight guard
+  // so the worker pool doesn't double-up. Why both:
+  //   - The in-flight guard alone can't stop us from kicking a fresh warm
+  //     the instant the previous one finishes. With kubelet readiness
+  //     probes hitting /packages every 5s × N pods, that's a steady drumbeat
+  //     of fan-out work for no benefit.
+  //   - The interval guard skips redundant cycles when we've recently warmed.
+  // The first call after startup, after invalidation, or after the interval
+  // elapses still kicks a real warm.
+  const WARM_INTERVAL_MS = 30_000;
+  let warmInFlight = false;
+  let lastWarmAt = 0;
+  async function warmCdnCacheFromVerdaccio(): Promise<void> {
+    if (warmInFlight) return;
+    if (Date.now() - lastWarmAt < WARM_INTERVAL_MS) return;
+    warmInFlight = true;
+    try {
+      const r = await fetch(
+        `http://localhost:${config.port}/-/verdaccio/data/packages`,
+      );
+      if (!r.ok) {
+        console.error(
+          `[registry] verdaccio package listing returned ${r.status}`,
+        );
+        return;
+      }
+      const known = (await r.json()) as Array<{
+        name: string;
+        version?: string;
+      }>;
+      const concurrency = 8;
+      let cursor = 0;
+      const workers = Array.from({ length: concurrency }).map(async () => {
+        while (cursor < known.length) {
+          const idx = cursor++;
+          const pkg = known[idx];
+          if (!pkg.version) continue;
+          try {
+            await cdn.extractTarball(pkg.name, pkg.version);
+          } catch (err) {
+            console.error(
+              `[registry] failed to warm cache for ${pkg.name}@${pkg.version}:`,
+              err,
+            );
+          }
+        }
+      });
+      await Promise.all(workers);
+      console.log(`[registry] /packages warm-up done (${known.length} pkgs)`);
+    } catch (err) {
+      console.error("[registry] /packages warm-up failed:", err);
+    } finally {
+      warmInFlight = false;
+      lastWarmAt = Date.now();
+    }
+  }
+
+  // Kick off an initial warm so /packages is useful soon after pod start
+  // even if no clients hit it. Fire-and-forget — must not block the listener.
+  void warmCdnCacheFromVerdaccio();
+
+  // Package listing API.
+  // Returns whatever's currently in the local cdn-cache (instant response —
+  // important: this endpoint is wired to the deployment's readiness probe,
+  // so it must not synchronously fetch or extract). Each call also nudges
+  // a background warm-up so newly-published packages appear in the listing
+  // without operator intervention.
   router.get("/packages", (req: Request, res: Response) => {
+    void warmCdnCacheFromVerdaccio();
     const packages = scanPackages(config.cdnCachePath, config.storagePath);
     const documentType = req.query.documentType as string | undefined;
     if (documentType) {
@@ -253,9 +320,13 @@ export function createUnpublishHook(
           } else {
             cdn.invalidate(parsed.packageName);
           }
+          const renownUser = req.renownUser;
           notifications.notifyUnpublish({
             packageName: parsed.packageName,
             version: parsed.version,
+            publishedBy: renownUser
+              ? { address: renownUser.address, did: renownUser.did }
+              : undefined,
           });
         } catch (err) {
           console.error(
@@ -320,10 +391,14 @@ export function createPublishHook(
         );
       }
 
+      const renownUser = req.renownUser;
+      const publishedBy = renownUser
+        ? { address: renownUser.address, did: renownUser.did }
+        : undefined;
       cdn
         .extractTarball(packageName, version)
         .then(() => {
-          notifications.notifyPublish({ packageName, version });
+          notifications.notifyPublish({ packageName, version, publishedBy });
         })
         .catch((err) => {
           console.error(

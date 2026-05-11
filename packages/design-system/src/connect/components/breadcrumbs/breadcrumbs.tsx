@@ -3,12 +3,15 @@ import {
   addFolder,
   setSelectedDrive,
   setSelectedNode,
+  useDragNode,
+  useDropNode,
   useSelectedDriveId,
   useSelectedDriveSafe,
   useSelectedNodePath,
   useUserPermissions,
 } from "@powerhousedao/reactor-browser";
 import { Fragment, useState } from "react";
+import { twMerge } from "tailwind-merge";
 import { NodeInput } from "../node-input/node-input.js";
 
 export function Breadcrumbs() {
@@ -57,6 +60,8 @@ export function Breadcrumbs() {
             <Icon name="ArrowLeft" size={14} />
           </button>
           <Breadcrumb
+            id={selectedDriveId}
+            parentId={undefined}
             name={selectedDrive.state.global.name || selectedDrive.header.name}
             onClick={() => setSelectedDrive(selectedDrive)}
           />
@@ -67,6 +72,8 @@ export function Breadcrumbs() {
         selectedNodePath.map((node) => (
           <Fragment key={node.id}>
             <Breadcrumb
+              id={node.id}
+              parentId={node.parentFolder}
               name={node.name}
               onClick={() => setSelectedNode(node)}
             />
@@ -98,15 +105,29 @@ export function Breadcrumbs() {
 
 export type BreadcrumbProps = {
   name: string;
+  id: string | undefined;
+  parentId: string | null | undefined;
   onClick: () => void;
 };
 
 export function Breadcrumb(props: BreadcrumbProps) {
-  const { name, onClick } = props;
+  const { name, id, parentId, onClick } = props;
+  const { isDragging, ...dragProps } = useDragNode({
+    srcId: id,
+    parentId: parentId ?? undefined,
+  });
+  const { isDropTarget, ...dropProps } = useDropNode(id);
+
+  const containerStyles = twMerge(
+    "cursor-pointer transition-colors last-of-type:text-gray-800 hover:text-gray-800",
+    isDragging ? "opacity-60" : isDropTarget ? "bg-blue-100" : "",
+  );
 
   return (
     <div
-      className="transition-colors last-of-type:text-gray-800 hover:text-gray-800"
+      {...dragProps}
+      {...dropProps}
+      className={containerStyles}
       onClick={onClick}
       role="button"
     >

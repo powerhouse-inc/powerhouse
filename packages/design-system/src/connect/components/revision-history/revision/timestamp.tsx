@@ -1,5 +1,6 @@
 import { format } from "date-fns";
-import { ConnectTooltip } from "../../tooltip/tooltip.js";
+import { CodePopover } from "../../code-popover.js";
+import { FormattedJsonViewer } from "../../formatted-json-viewer.js";
 
 export type TimestampProps = {
   readonly timestampUtcMs: number | string;
@@ -16,11 +17,17 @@ export function Timestamp(props: TimestampProps) {
   const date = new Date(timestampNumber);
   const shortDate = format(date, "HH:mm 'UTC'");
   const longDate = format(date, "eee, dd MMM yyyy HH:mm:ss 'UTC'");
-  const tooltipContent = <div>{longDate}</div>;
 
   return (
-    <ConnectTooltip content={tooltipContent}>
-      <span className="cursor-pointer text-xs">committed at {shortDate}</span>
-    </ConnectTooltip>
+    <CodePopover
+      content={
+        <FormattedJsonViewer
+          value={{ timestampFormatted: longDate, timestampUtcMs: timestamp }}
+        />
+      }
+      trigger={
+        <span className="cursor-pointer text-xs">committed at {shortDate}</span>
+      }
+    />
   );
 }

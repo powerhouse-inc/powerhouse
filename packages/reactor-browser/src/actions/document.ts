@@ -37,6 +37,7 @@ import {
   setName,
 } from "@powerhousedao/shared/document-model";
 import { logger } from "document-model";
+import { conditional, constant, isDefined, isNot, isStrictEqual } from "remeda";
 import {
   DocumentModelNotFoundError,
   UnsupportedDocumentTypeError,
@@ -504,14 +505,6 @@ export async function addFileWithProgress(
       return undefined;
     }
 
-    // Handle replace resolution by deleting the existing document
-    if (
-      duplicateCheck.isDuplicate &&
-      resolveConflict === "replace" &&
-      duplicateCheck.nodeId
-    ) {
-      await deleteNode(driveId, duplicateCheck.nodeId);
-    }
     // For "duplicate" resolution, we continue normally which creates a new document
     // with a different ID (the default behavior)
 
@@ -818,6 +811,40 @@ export async function renameDriveNode(
 
   const drive = await reactorClient.get<DocumentDriveDocument>(driveId);
   return drive.state.global.nodes.find((n: Node) => n.id === nodeId);
+}
+
+export async function moveNodeById(args: {
+  driveId: string | undefined;
+  srcId: string | undefined;
+  targetId?: string;
+}) {
+  const { driveId, srcId, targetId } = args;
+  if (!driveId || !srcId) return;
+
+  const { isAllowedToCreateDocuments } = getUserPermissions();
+  if (!isAllowedToCreateDocuments) {
+    throw new Error("User is not allowed to move documents");
+  }
+
+  const reactorClient = window.ph?.reactorClient;
+  if (!reactorClient) {
+    throw new Error("ReactorClient not initialized");
+  }
+  const targetParentFolder = conditional(
+    targetId,
+    [isNot(isDefined), constant(undefined)],
+    [isStrictEqual(driveId), constant(undefined)],
+    constant(targetId),
+  );
+
+  if (isStrictEqual(targetParentFolder, srcId)) return;
+
+  return await reactorClient.execute(driveId, "main", [
+    baseMoveNode({
+      srcFolder: srcId,
+      targetParentFolder,
+    }),
+  ]);
 }
 
 export async function moveNode(
