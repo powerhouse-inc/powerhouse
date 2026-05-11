@@ -37,7 +37,7 @@
   "author": "",
   "license": "AGPL-3.0-only",
   "dependencies": {
-    "uuid": "^11.0.5",
+    "uuid": "^14.0.0",
     "kysely": "catalog:",
     "kysely-pglite-dialect": "catalog:",
     "@electric-sql/pglite": "catalog:",
