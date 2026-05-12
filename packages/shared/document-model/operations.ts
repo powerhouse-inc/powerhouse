@@ -14,6 +14,28 @@ export function setNameOperation<TDocument extends PHDocument>(
   return { ...document, header: { ...document.header, name: input.name } };
 }
 
+// updates the preferred editor in the document header meta; clears it when input is null/empty
+export function setPreferredEditorOperation<TDocument extends PHDocument>(
+  document: TDocument,
+  input: { preferredEditor: string | null },
+): TDocument {
+  const existingMeta = document.header.meta ?? {};
+  if (input.preferredEditor) {
+    return {
+      ...document,
+      header: {
+        ...document.header,
+        meta: { ...existingMeta, preferredEditor: input.preferredEditor },
+      },
+    };
+  }
+  const { preferredEditor: _removed, ...rest } = existingMeta;
+  return {
+    ...document,
+    header: { ...document.header, meta: rest },
+  };
+}
+
 export function undoOperation<TDocument extends PHDocument>(
   document: TDocument,
   action: Action,

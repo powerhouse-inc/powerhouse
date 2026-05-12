@@ -282,6 +282,24 @@ export class DriveClient implements IDriveClient {
     return node;
   }
 
+  async setPreferredEditorOnNode(
+    nodeId: string,
+    preferredEditor: string | null,
+    signal?: AbortSignal,
+  ): Promise<PHDocument> {
+    this.logger.verbose(
+      "drives.setPreferredEditorOnNode(@nodeId, @preferredEditor)",
+      nodeId,
+      preferredEditor,
+    );
+    return this.client.setPreferredEditor(
+      nodeId,
+      preferredEditor,
+      "main",
+      signal,
+    );
+  }
+
   async moveNode(
     driveIdentifier: string,
     srcNodeId: string,

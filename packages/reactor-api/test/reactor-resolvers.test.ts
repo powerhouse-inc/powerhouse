@@ -235,6 +235,40 @@ describe("ReactorSubgraph Mutation Resolvers", () => {
     });
   });
 
+  describe("setPreferredEditor", () => {
+    it("should set the preferred editor for a document", async () => {
+      const testDoc = createTestDocument();
+      await module.client.create(testDoc);
+
+      const result = await resolvers.setPreferredEditor(module.client, {
+        documentIdentifier: testDoc.header.id,
+        preferredEditor: "custom-editor",
+        branch: null,
+      });
+
+      expect(result.preferredEditor).toBe("custom-editor");
+    });
+
+    it("should clear the preferred editor when given null", async () => {
+      const testDoc = createTestDocument();
+      await module.client.create(testDoc);
+
+      await resolvers.setPreferredEditor(module.client, {
+        documentIdentifier: testDoc.header.id,
+        preferredEditor: "custom-editor",
+        branch: null,
+      });
+
+      const cleared = await resolvers.setPreferredEditor(module.client, {
+        documentIdentifier: testDoc.header.id,
+        preferredEditor: null,
+        branch: null,
+      });
+
+      expect(cleared.preferredEditor).toBeNull();
+    });
+  });
+
   describe("addRelationship", () => {
     it("should add a relationship between documents", async () => {
       const parent = createTestDocument();

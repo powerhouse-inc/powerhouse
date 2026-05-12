@@ -413,6 +413,21 @@ export class ReactorSubgraph extends BaseSubgraph {
         }
       },
 
+      setPreferredEditor: async (_parent, args, ctx: Context) => {
+        this.logger.debug("setPreferredEditor(@args)", args);
+        try {
+          await this.assertCanWrite(args.documentIdentifier, ctx);
+
+          return await resolvers.setPreferredEditor(this.reactorClient, args);
+        } catch (error) {
+          this.logger.error(
+            "Error in setPreferredEditor(@args): @Error",
+            error,
+          );
+          throw error;
+        }
+      },
+
       addRelationship: async (_parent, args, ctx: Context) => {
         this.logger.debug("addRelationship(@args)", args);
         try {
