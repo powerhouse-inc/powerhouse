@@ -1,3 +1,25 @@
+## 6.0.0-dev.241 (2026-05-12)
+
+### 🚀 Features
+
+- attach invocation context and tags to sentry events ([815c458bd](https://github.com/powerhouse-inc/powerhouse/commit/815c458bd))
+- **connect:** surface missing-model failures and move registry URL to ph-packages.json ([bcb8bbdb0](https://github.com/powerhouse-inc/powerhouse/commit/bcb8bbdb0))
+
+### 🩹 Fixes
+
+- switching postgres versions ([353951582](https://github.com/powerhouse-inc/powerhouse/commit/353951582))
+- do not realExit when there are duplicate signals ([94f2750e7](https://github.com/powerhouse-inc/powerhouse/commit/94f2750e7))
+- **reactor:** fixed issue with cascading reshuffles ([36087940d](https://github.com/powerhouse-inc/powerhouse/commit/36087940d))
+- **release:** pass explicit from-ref to releaseChangelog ([5af1ce209](https://github.com/powerhouse-inc/powerhouse/commit/5af1ce209))
+- **sentry:** inject debug-ids before publish + drop dead dirs ([444c677a2](https://github.com/powerhouse-inc/powerhouse/commit/444c677a2))
+- **switchboard:** move @pyroscope/nodejs to dependencies ([c71e0b3de](https://github.com/powerhouse-inc/powerhouse/commit/c71e0b3de))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Guillermo Puente @gpuente
+
 ## 6.0.0-dev.240 (2026-05-11)
 
 ### 🚀 Features
