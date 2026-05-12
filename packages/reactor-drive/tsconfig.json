@@ -1,0 +1,20 @@
+{
+  "extends": "../../tsconfig.options.json",
+  "compilerOptions": {
+    "outDir": "./dist"
+  },
+  "include": [
+    "**/*"
+  ],
+  "references": [
+    {
+      "path": "../document-model"
+    },
+    {
+      "path": "../reactor"
+    },
+    {
+      "path": "../shared"
+    }
+  ]
+}

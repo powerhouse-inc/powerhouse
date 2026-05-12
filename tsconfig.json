@@ -50,6 +50,9 @@
       "path": "packages/reactor-browser"
     },
     {
+      "path": "packages/reactor-drive"
+    },
+    {
       "path": "packages/reactor-hypercore"
     },
     {
