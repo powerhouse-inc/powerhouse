@@ -6,5 +6,5 @@ export const pnpmWorkspaceTemplate = `allowBuilds:
   "@parcel/watcher": true
   esbuild: true
   protobufjs: true
-  @datadog/pprof: true
+  "@datadog/pprof": true
 `;
