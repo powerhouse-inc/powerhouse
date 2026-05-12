@@ -192,7 +192,10 @@ Three levers identified for further reduction (not yet implemented):
 | `test/ph-lora/scripts/validate-mapping.ts`   | Tier 2 — validates all `sourceFiles` paths exist; blocks PRs if mapping is stale                   |
 | `test/ph-lora/scripts/check-pr-drift.ts`     | Tier 2 — PR diff classifier using Claude Haiku; opens GitHub issue on drift                        |
 | `.github/workflows/ph-lora-tier2.yml`        | CI workflow: `validate-mapping` (blocking) + `drift-check` (advisory) jobs                         |
-| `.claude/commands/doc-review.md`             | Tier 3 — `/doc-review <section-id>` slash command for manual gap analysis                          |
+| `.claude/commands/doc-review.md`             | Tier 3 — `/doc-review <section-id>` slash command; structured gap analysis against source          |
+| `.claude/commands/doc-fix.md`                | Tier 3 — `/doc-fix <section-id>` slash command; applies minimum mechanical fixes from gap report   |
+| `.claude/commands/doc-clarity.md`            | Tier 3 — `/doc-clarity <section-id>` slash command; prose quality review (run after doc-fix)       |
+| `.claude/commands/doc-status.md`             | `/doc-status` slash command; coverage dashboard across all 15 mapped sections and gap reports      |
 
 **Immediate value from the mapping file:** 9 packages had zero doc coverage identified before running a single check.
 
@@ -235,7 +238,12 @@ These packages exist in the monorepo but have no academy section currently respo
 **Trigger model** — four options from the ADR, all viable, not mutually exclusive:
 
 1. Always-on daemon reacting to commits/doc changes via file watch or webhooks
-2. Manual invocation in REPL by a developer — **done** (`/doc-review` slash command)
+2. Manual invocation in REPL by a developer — **done**
+   - `/doc-status` — coverage dashboard, find what needs attention
+   - `/doc-review <section-id>` — structured gap analysis, saves to `gap-reports/`
+   - `/doc-fix <section-id>` — applies mechanical fixes from the gap report
+   - `/doc-clarity <section-id>` — prose quality review, best run after `/doc-fix`
+   - Intended workflow: `doc-status` → `doc-review` → `doc-fix` → `doc-clarity`
 3. CI job on PR — **done** (Tier 2 workflow)
 4. Scheduled nightly/release run — next priority for Tier 3
 

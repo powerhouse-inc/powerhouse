@@ -1,9 +1,22 @@
 name: ph-lora Tier 2 — doc drift classifier
 
+# Trigger disabled pending team sign-off — enable by restoring the pull_request trigger below.
+# on:
+#   pull_request:
+#     branches: ["main", "release/**"]
+#     types: [opened, reopened, synchronize]
 on:
-  pull_request:
-    branches: ["main", "release/**"]
-    types: [opened, reopened, synchronize]
+  workflow_dispatch:
+    inputs:
+      base_sha:
+        description: "Base commit SHA (for drift-check)"
+        required: false
+      head_sha:
+        description: "Head commit SHA (for drift-check)"
+        required: false
+      pr_number:
+        description: "PR number (for drift-check issue title)"
+        required: false
 
 concurrency:
   group: ph-lora-tier2-${{ github.ref }}
@@ -76,7 +89,7 @@ jobs:
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
+          BASE_SHA: ${{ inputs.base_sha }}
+          HEAD_SHA: ${{ inputs.head_sha }}
+          PR_NUMBER: ${{ inputs.pr_number }}
           GITHUB_REPOSITORY: ${{ github.repository }}

@@ -1,7 +1,7 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-05-11T17:37:02.977Z
-> Total Documents: 85
+> Generated: 2026-05-12T12:21:11.234Z
+> Total Documents: 86
 > Source: https://powerhouse.academy/llms-full.txt
 
 
@@ -2552,6 +2552,20 @@ The preview drive allows you to safely test changes before they affect the share
 
 > Source: https://powerhouse.academy/academy/MasteryTrack/BuilderEnvironment/CreateAPackageWithVetra
 
+**INFO:**
+A **Powerhouse Package** is a distributable unit that bundles one or more document models, editors, and optional reactor modules into a single installable artifact. Once published to the Vetra registry, a package can be installed in any Vetra Cloud environment — extending Connect with new document types and editors, and extending Switchboard with the corresponding reactor logic.
+
+
+<figure className="image-container">
+  <img
+    src={require("./images/vetra-cloud-create-a-package.png").default}
+    alt="Create a Package"
+  />
+  <figcaption>The five steps to build and publish a package to the Vetra ecosystem.</figcaption>
+</figure>
+
+On Vetra Cloud you'll find these five steps as a quick reference for creating and publishing a package. This guide walks you through each step in detail — from installing the CLI and scaffolding your project, to building document models and editors, and finally publishing your package to the Vetra registry so others can install it in their environments.
+
 **WARNING:**
 **This tutorial is a summary for builders that are already familiar with building document models**.  
 It provides a summary from initial setup up to publishing a distributable package.
@@ -2566,10 +2580,9 @@ Please start with the [**Get Started**](/) Chapter or [**Document Model Creation
 - `ph init`: Initializes a new Powerhouse project or sets up the local environment.
 - `ph vetra --interactive`: Launches Vetra Studio in interactive mode for package development.
 - `ph vetra --interactive --watch`: Launches Vetra Studio with dynamic reloading for document-models and editors.
-- `pnpm build` or `npm run build`: Builds the project for production.
+- `ph build`: Builds the project for production.
 - `pnpm run test` or `npm test`: Runs unit tests.
-- `npm login`: Logs into your NPM account.
-- `npm publish`: Publishes your package to NPM.
+- `ph publish`: Publishes your package to the Vetra registry.
 - `ph install @your-org-ph/your-package-name`: Installs a published package into a local Powerhouse environment.
 
 </details>
@@ -2599,10 +2612,10 @@ See the [Prerequisites](/academy/MasteryTrack/BuilderEnvironment/Prerequisites) 
 Before creating a specific project, or if you're setting up your environment for the first time, initialize the Powerhouse environment. This command prepares your local setup, including a local Reactor configuration.
 
 ```bash
-ph init
+ph init my-package
 ```
 
-If you are starting a new project to be packaged, this command will also prompt you for a project name. This name will be used for your package.
+Replace `my-package` with your desired package name. If you run `ph init` without a name you will be prompted for one.
 
 <details>
 <summary> How to make use of different branches? </summary>
@@ -2732,6 +2745,23 @@ A specialized AI agent that guides users through document model creation with re
 
 </details>
 
+
+#### 0. Configure the Reactor MCP
+
+Add the following to your Claude MCP settings (`~/.claude/mcp.json` for Claude Code, or the MCP servers section in Claude Desktop):
+
+```json
+{
+  "mcpServers": {
+    "reactor-mcp": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "http://localhost:4001/mcp"]
+    }
+  }
+}
+```
+
+This only needs to be done once. Make sure `ph vetra` is running before starting a Claude session that uses the MCP.
 
 #### 1. Start the Reactor MCP:
 
@@ -3171,13 +3201,7 @@ Update your project's main `index.js` or entry point to export your document mod
 Compile and optimize your project for production:
 
 ```bash
-pnpm build
-```
-
-Or with npm:
-
-```bash
-npm run build
+ph build
 ```
 
 This command typically creates a `dist/` or `build/` directory with the compiled assets. Ensure your `package.json`'s `files` array includes this directory and other necessary assets like `manifest.json`, `document-models`, and `editors` if they are not part of the build output but need to be in the package.
@@ -3209,9 +3233,9 @@ To share your package with others or deploy it to different environments, publis
 
 2.  **Publish the package:**
     ```bash
-    npm publish
+    ph publish
     ```
-    If your package is scoped and public, NPM will use the `publishConfig` from your `package.json`. If not set there, you might need `npm publish --access public`.
+    This publishes your package to the Vetra registry, making it available to install in any Vetra Cloud environment.
 
 ### 4.7. Using your published package
 
@@ -3224,6 +3248,112 @@ ph install @your-org-ph/your-package-name
 This command makes the document models and editors defined in your package available within that Powerhouse instance.
 
 Congratulations! You've successfully created, packaged, and published a Powerhouse Document Model. This enables modularity, reusability, and collaboration within the Powerhouse ecosystem.
+
+---
+
+
+## Vetra Cloud
+
+> Source: https://powerhouse.academy/academy/MasteryTrack/BuilderEnvironment/VetraCloud
+
+Vetra Cloud is the hosted infrastructure layer for Powerhouse applications. It lets you spin up a personal cloud environment that runs **Powerhouse Connect** (the user-facing document editor) and **Powerhouse Switchboard** (the backend GraphQL server) — and extend them with packages from the Vetra registry.
+
+---
+
+## Getting Started
+
+### 1. Connect Your Wallet
+
+Navigate to the **Cloud** section in Vetra and authenticate with your Ethereum wallet via **Renown**. Renown lets Connect sign operations on behalf of your on-chain identity without exposing your private key.
+
+<figure className="image-container">
+  <img
+    src={require("./images/vetra-cloud-connect-wallet.png").default}
+    alt="Connect Wallet via Renown"
+  />
+  <figcaption>Connect your Ethereum wallet via Renown to authenticate with Vetra.</figcaption>
+</figure>
+
+---
+
+### 2. Create an Environment
+
+After authenticating, create a new environment by giving it a name. Each environment gets its own subdomain (e.g. `my-env.vetra.io`) and runs its own isolated set of services.
+
+<figure className="image-container">
+  <img
+    src={require("./images/vetra-cloud-create-environment.png").default}
+    alt="Create Environment"
+  />
+  <figcaption>Give your environment a name to get a dedicated subdomain and isolated set of services.</figcaption>
+</figure>
+
+---
+
+### 3. Configure Services
+
+Inside your environment you can enable and configure three services:
+
+| Service                    | Description                                                    |
+| -------------------------- | -------------------------------------------------------------- |
+| **Powerhouse Connect**     | The document-editor UI served at `connect.<env>.vetra.io`      |
+| **Powerhouse Switchboard** | The GraphQL API server at `switchboard.<env>.vetra.io/graphql` |
+| **Powerhouse Fusion**      | Optional data-fusion layer (disabled by default)               |
+
+Use the **Size** dropdown to pick the compute tier for each service and toggle it on or off with the switch on the right.
+
+<figure className="image-container">
+  <img
+    src={require("./images/vetra-cloud-services.png").default}
+    alt="Services overview"
+  />
+  <figcaption>Enable and configure Connect, Switchboard, and Fusion services for your environment.</figcaption>
+</figure>
+
+---
+
+### 4. Select a Version
+
+Each service shows its currently pinned version. Click **Change version** (or **Update All** when updates are available) to pin Connect and Switchboard to a specific release.
+
+<figure className="image-container">
+  <img
+    src={require("./images/vetra-cloud-available-updates.png").default}
+    alt="Available updates"
+  />
+  <figcaption>Pin each service to a specific version or apply all available updates at once.</figcaption>
+</figure>
+
+---
+
+### 5. Install Packages
+
+Packages extend Connect and Switchboard with additional document models, editors, and reactor modules. Click **+ Add package** in the **Installed Packages** section, then search for a package by name.
+
+Available packages include community and official Powerhouse packages such as:
+
+- `@powerhousedao/builder-profile`
+- `@powerhousedao/contributor-billing`
+- `@powerhousedao/knowledge-note`
+- `@arbitrum/arbgrants`
+
+<figure className="image-container">
+  <img
+    src={require("./images/vetra-cloud-add-package.png").default}
+    alt="Add Package"
+  />
+  <figcaption>Search and select a package from the Vetra registry to install into your environment.</figcaption>
+</figure>
+
+Once you select a package, a **Pending change** banner appears at the bottom. Click **Approve** to apply the change and redeploy your environment.
+
+---
+
+## Next Steps
+
+Once your environment is running you can point your local `ph` CLI at it, or share the Connect URL with collaborators so they can start working with your document models right away.
+
+To publish your own packages to the registry, see the [Publishing Packages](../docs/02-PublishingPackages/index.md) guide.
 
 ---
 
