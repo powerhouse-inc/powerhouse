@@ -83,6 +83,6 @@ export class KyselyReservationStore implements IReservationStore {
       .where("deleted_at_utc", "is", null)
       .executeTakeFirst();
 
-    return Number(result.numUpdatedRows ?? 0);
+    return Number(result.numUpdatedRows);
   }
 }

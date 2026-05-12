@@ -270,7 +270,7 @@ describe("DirectAttachmentUpload", () => {
       const baseline = process.memoryUsage().heapUsed;
 
       const stream = new ReadableStream<Uint8Array>({
-        async pull(controller) {
+        pull(controller) {
           // Allocate per-pull so each chunk is collectible after consumption.
           if (
             (stream as unknown as { _emitted?: number })._emitted === undefined

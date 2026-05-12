@@ -809,8 +809,8 @@ export class SyncManager implements ISyncManager {
     if (this.isShutdown) return;
 
     for (const plan of jobs) {
+      if (!(plan.key in result.jobs)) continue;
       const info = result.jobs[plan.key];
-      if (!info) continue;
       this.recordPlanKeyMapping(plan.key, info.id);
       const fifoKey = `${plan.documentId}:${plan.scope}:${plan.branch}`;
       this.lastEnqueuedJobIdByKey.set(fifoKey, info.id);
