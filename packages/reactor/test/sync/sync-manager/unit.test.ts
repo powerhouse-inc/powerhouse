@@ -4865,7 +4865,7 @@ describe("SyncManager - Unit Tests", () => {
       expect(allOpIds).toContain("op3");
     });
 
-    it("should maintain dependency chain across pages", async () => {
+    it("should maintain dependency chain across pages for separate-scope batches on the same doc", async () => {
       await syncManager.startup();
 
       const channelConfig: ChannelConfig = {
@@ -4873,11 +4873,15 @@ describe("SyncManager - Unit Tests", () => {
         parameters: {},
       };
 
+      // page1 has a doc1/global op, page2 has a doc1/document op. The outbox
+      // carry pattern prepends page1's tail onto page2 before batching, so
+      // both ops batch together in one emit, producing two SyncOps (one per
+      // scope) whose dependency chain links them.
       const page2 = createFindResult([
         {
           id: "op2",
           documentId: "doc1",
-          scope: "global",
+          scope: "document",
           branch: "main",
           ordinal: 2,
         },
@@ -4915,9 +4919,8 @@ describe("SyncManager - Unit Tests", () => {
       await vi.waitFor(() => {
         expect(addedSyncOps).toHaveLength(2);
       });
-      // First page SyncOp has no dependencies
+      // First SyncOp has no dependencies; second SyncOp (same doc) depends on it.
       expect(addedSyncOps[0].jobDependencies).toEqual([]);
-      // Second page SyncOp (same doc) should depend on first page's jobId
       expect(addedSyncOps[1].jobDependencies).toEqual([addedSyncOps[0].jobId]);
     });
 
