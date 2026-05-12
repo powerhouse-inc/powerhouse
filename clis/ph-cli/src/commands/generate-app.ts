@@ -9,7 +9,7 @@ import {
   optional,
   string,
 } from "cmd-ts";
-import { Directory } from "cmd-ts/dist/cjs/batteries/fs.js";
+import { Directory, File } from "cmd-ts/dist/cjs/batteries/fs.js";
 
 export const generateAppCmd = command({
   name: "app",
@@ -27,10 +27,16 @@ export const generateAppCmd = command({
       short: "t",
       description: "The document types allowed by the new app",
     }),
+    document: option({
+      type: optional(File),
+      long: "document",
+      short: "d",
+      description:
+        "Path to a powerhouse/app spec file (.phd or .json) to drive codegen",
+    }),
     dir: option({
       type: optional(Directory),
       long: "dir",
-      short: "d",
       description: "Name of the directory of an existing app to re-generate",
     }),
     disableDragAndDrop: flag({
@@ -44,6 +50,12 @@ export const generateAppCmd = command({
       long: "all",
       short: "a",
       description: "Re-generate all existing apps in the current project",
+    }),
+    extract: flag({
+      long: "extract",
+      short: "x",
+      description:
+        "Write a powerhouse/app spec for each existing drive app into specs/apps/",
     }),
     ...debugArgs,
   },
