@@ -1,3 +1,21 @@
+## 6.0.0-dev.241 (2026-05-12)
+
+### 🚀 Features
+
+- **connect:** surface missing-model failures and move registry URL to ph-packages.json ([bcb8bbdb0](https://github.com/powerhouse-inc/powerhouse/commit/bcb8bbdb0))
+
+### 🩹 Fixes
+
+- **release:** pass explicit from-ref to releaseChangelog ([5af1ce209](https://github.com/powerhouse-inc/powerhouse/commit/5af1ce209))
+- **switchboard:** move @pyroscope/nodejs to dependencies ([c71e0b3de](https://github.com/powerhouse-inc/powerhouse/commit/c71e0b3de))
+- **sentry:** inject debug-ids before publish + drop dead dirs ([444c677a2](https://github.com/powerhouse-inc/powerhouse/commit/444c677a2))
+- switching postgres versions ([353951582](https://github.com/powerhouse-inc/powerhouse/commit/353951582))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+
 ## 6.0.0-dev.240 (2026-05-11)
 
 ### 🚀 Features
