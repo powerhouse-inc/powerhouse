@@ -8,6 +8,7 @@ export default defineConfig({
     "editors/*/index.ts",
     "processors/index.ts",
     "processors/*/index.ts",
+    "codegen/index.ts",
     "powerhouse.manifest.json",
   ],
   platform: "neutral",

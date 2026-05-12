@@ -40,6 +40,7 @@
     "@powerhousedao/reactor": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
     "@powerhousedao/switchboard": "workspace:*",
+    "@powerhousedao/vetra": "workspace:*",
     "@renown/sdk": "workspace:*",
     "@tsdown/css": "catalog:",
     "chalk": "catalog:",
