@@ -30,11 +30,10 @@
     "projectsRelationship": "managed",
     "version": {
       "conventionalCommits": true,
-      "generatorOptions": {
-        "skipLockFileUpdate": true,
-        "updateDependents": "auto",
-        "fallbackCurrentVersionResolver": "disk",
-        "preserveLocalDependencyProtocols": true
+      "updateDependents": "auto",
+      "fallbackCurrentVersionResolver": "disk",
+      "versionActionsOptions": {
+        "skipLockFileUpdate": true
       }
     },
     "changelog": {
