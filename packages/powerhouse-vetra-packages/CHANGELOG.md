@@ -1,3 +1,13 @@
+## 6.0.0-dev.242 (2026-05-12)
+
+### 🩹 Fixes
+
+- **release:** pass explicit from-ref to releaseChangelog ([5af1ce209](https://github.com/powerhouse-inc/powerhouse/commit/5af1ce209))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.241 (2026-05-12)
 
 ### 🚀 Features
