@@ -3,11 +3,13 @@ import { hashDocumentStateForScope } from "@powerhousedao/shared/document-model"
 import { KyselyWriteCache } from "../cache/kysely-write-cache.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
+import { throwIfAborted } from "../shared/utils.js";
 import type {
   IDocumentView,
   IKeyframeStore,
   IOperationStore,
 } from "../storage/interfaces.js";
+import { passthroughKeyframeStore } from "./passthrough-keyframe-store.js";
 import type {
   IDocumentIntegrityService,
   KeyframeValidationIssue,
@@ -15,13 +17,6 @@ import type {
   SnapshotValidationIssue,
   ValidationResult,
 } from "./types.js";
-
-const nullKeyframeStore: IKeyframeStore = {
-  putKeyframe: () => Promise.resolve(),
-  findNearestKeyframe: () => Promise.resolve(undefined),
-  listKeyframes: () => Promise.resolve([]),
-  deleteKeyframes: () => Promise.resolve(0),
-};
 
 export class DocumentIntegrityService implements IDocumentIntegrityService {
   private readonly keyframeStore: IKeyframeStore;
@@ -53,7 +48,7 @@ export class DocumentIntegrityService implements IDocumentIntegrityService {
     const snapshotIssues: SnapshotValidationIssue[] = [];
 
     const replayCache = new KyselyWriteCache(
-      nullKeyframeStore,
+      passthroughKeyframeStore,
       this.operationStore,
       this.documentModelRegistry,
       {
@@ -71,9 +66,7 @@ export class DocumentIntegrityService implements IDocumentIntegrityService {
     );
 
     for (const keyframe of keyframes) {
-      if (signal?.aborted) {
-        throw new Error("Operation aborted");
-      }
+      throwIfAborted(signal);
 
       replayCache.invalidate(documentId, keyframe.scope, branch);
       const replayedDoc = await replayCache.getState(
@@ -135,9 +128,7 @@ export class DocumentIntegrityService implements IDocumentIntegrityService {
           signal,
         );
       } catch {
-        if (signal?.aborted) {
-          throw new Error("Operation aborted");
-        }
+        throwIfAborted(signal);
         continue;
       }
 
@@ -188,9 +179,7 @@ export class DocumentIntegrityService implements IDocumentIntegrityService {
     const scopes = await this.discoverScopes(documentId, branch, signal);
 
     for (const scope of scopes) {
-      if (signal?.aborted) {
-        throw new Error("Operation aborted");
-      }
+      throwIfAborted(signal);
       this.writeCache.invalidate(documentId, scope, branch);
     }
 

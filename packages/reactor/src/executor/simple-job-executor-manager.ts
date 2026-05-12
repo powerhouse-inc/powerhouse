@@ -6,7 +6,7 @@ import type { IQueue } from "../queue/interfaces.js";
 import type { IJobExecutionHandle, Job } from "../queue/types.js";
 import { QueueEventTypes } from "../queue/types.js";
 import type { IDocumentModelResolver } from "../registry/document-model-resolver.js";
-import { ModuleNotFoundError } from "../registry/implementation.js";
+import { ModuleNotFoundError } from "../registry/errors.js";
 import {
   DocumentDeletedError,
   DocumentNotFoundError,

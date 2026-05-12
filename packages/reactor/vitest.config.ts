@@ -24,6 +24,7 @@ export default defineConfig({
         "**/vitest.config.ts",
         "**/run-migrations.ts",
         "**/logging/**",
+        "**/migrations/**",
         "**/*-factory.ts",
         "**/*-builder.ts",
         "**/*passthrough*.ts",

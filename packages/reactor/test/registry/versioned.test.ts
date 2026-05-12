@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import {
-  DocumentModelRegistry,
   DowngradeNotSupportedError,
   DuplicateManifestError,
   DuplicateModuleError,
@@ -8,7 +7,8 @@ import {
   ManifestNotFoundError,
   MissingUpgradeTransitionError,
   ModuleNotFoundError,
-} from "../../src/registry/implementation.js";
+} from "../../src/registry/errors.js";
+import { DocumentModelRegistry } from "../../src/registry/implementation.js";
 import {
   testDocUpgradeManifest,
   testDocV1Module,

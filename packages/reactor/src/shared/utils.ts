@@ -18,3 +18,14 @@ export function yieldToMain(): Promise<void> {
   }
   return new Promise((resolve) => setTimeout(resolve, 0));
 }
+
+const defaultAbortError = (): Error => new Error("Operation aborted");
+
+export function throwIfAborted(
+  signal: AbortSignal | undefined,
+  makeError: () => Error = defaultAbortError,
+): void {
+  if (signal?.aborted) {
+    throw makeError();
+  }
+}

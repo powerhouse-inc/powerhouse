@@ -4,6 +4,8 @@ import {
 } from "@powerhousedao/shared/document-model";
 import { sql, type Kysely, type Transaction } from "kysely";
 import type { PagedResults, PagingOptions } from "../../shared/types.js";
+import { throwIfAborted } from "../../shared/utils.js";
+import { paginateRows } from "./pagination.js";
 import {
   DuplicateOperationError,
   RevisionMismatchError,
@@ -76,9 +78,7 @@ export class KyselyOperationStore implements IOperationStore {
     fn: (txn: AtomicTxn) => void | Promise<void>,
     signal?: AbortSignal,
   ): Promise<void> {
-    if (signal?.aborted) {
-      throw new Error("Operation aborted");
-    }
+    throwIfAborted(signal);
 
     const latestOp = await trx
       .selectFrom("Operation")
@@ -141,9 +141,7 @@ export class KyselyOperationStore implements IOperationStore {
     paging?: PagingOptions,
     signal?: AbortSignal,
   ): Promise<PagedResults<Operation>> {
-    if (signal?.aborted) {
-      throw new Error("Operation aborted");
-    }
+    throwIfAborted(signal);
 
     let query = this.queryExecutor
       .selectFrom("Operation")
@@ -195,40 +193,22 @@ export class KyselyOperationStore implements IOperationStore {
 
     const rows = await query.execute();
 
-    let hasMore = false;
-    let items = rows;
-
-    if (paging?.limit && rows.length > paging.limit) {
-      hasMore = true;
-      items = rows.slice(0, paging.limit);
-    }
-
-    const nextCursor =
-      hasMore && items.length > 0
-        ? items[items.length - 1].index.toString()
-        : undefined;
-
-    const cursor = paging?.cursor || "0";
-    const limit = paging?.limit || 100;
-    const operations = items.map((row) => this.rowToOperation(row));
-
-    return {
-      results: operations,
-      options: { cursor, limit },
-      nextCursor,
-      next: hasMore
-        ? () =>
-            this.getSince(
-              documentId,
-              scope,
-              branch,
-              revision,
-              filter,
-              { cursor: nextCursor!, limit },
-              signal,
-            )
-        : undefined,
-    };
+    return paginateRows(
+      rows,
+      paging,
+      (row) => row.index,
+      (row) => this.rowToOperation(row),
+      (cursor, limit) =>
+        this.getSince(
+          documentId,
+          scope,
+          branch,
+          revision,
+          filter,
+          { cursor, limit },
+          signal,
+        ),
+    );
   }
 
   async getSinceId(
@@ -236,9 +216,7 @@ export class KyselyOperationStore implements IOperationStore {
     paging?: PagingOptions,
     signal?: AbortSignal,
   ): Promise<PagedResults<OperationWithContext>> {
-    if (signal?.aborted) {
-      throw new Error("Operation aborted");
-    }
+    throwIfAborted(signal);
 
     let query = this.queryExecutor
       .selectFrom("Operation")
@@ -262,33 +240,13 @@ export class KyselyOperationStore implements IOperationStore {
 
     const rows = await query.execute();
 
-    // Determine if there are more results
-    let hasMore = false;
-    let items = rows;
-
-    if (paging?.limit && rows.length > paging.limit) {
-      hasMore = true;
-      items = rows.slice(0, paging.limit);
-    }
-
-    // Generate next cursor from last item's id
-    const nextCursor =
-      hasMore && items.length > 0
-        ? items[items.length - 1].id.toString()
-        : undefined;
-
-    const cursor = paging?.cursor || "0";
-    const limit = paging?.limit || 100;
-    const operations = items.map((row) => this.rowToOperationWithContext(row));
-
-    return {
-      results: operations,
-      options: { cursor, limit },
-      nextCursor,
-      next: hasMore
-        ? () => this.getSinceId(id, { cursor: nextCursor!, limit }, signal)
-        : undefined,
-    };
+    return paginateRows(
+      rows,
+      paging,
+      (row) => row.id,
+      (row) => this.rowToOperationWithContext(row),
+      (cursor, limit) => this.getSinceId(id, { cursor, limit }, signal),
+    );
   }
 
   async getConflicting(
@@ -299,9 +257,7 @@ export class KyselyOperationStore implements IOperationStore {
     paging?: PagingOptions,
     signal?: AbortSignal,
   ): Promise<PagedResults<Operation>> {
-    if (signal?.aborted) {
-      throw new Error("Operation aborted");
-    }
+    throwIfAborted(signal);
 
     let query = this.queryExecutor
       .selectFrom("Operation")
@@ -325,39 +281,21 @@ export class KyselyOperationStore implements IOperationStore {
 
     const rows = await query.execute();
 
-    let hasMore = false;
-    let items = rows;
-
-    if (paging?.limit && rows.length > paging.limit) {
-      hasMore = true;
-      items = rows.slice(0, paging.limit);
-    }
-
-    const nextCursor =
-      hasMore && items.length > 0
-        ? items[items.length - 1].index.toString()
-        : undefined;
-
-    const cursor = paging?.cursor || "0";
-    const limit = paging?.limit || 100;
-    const operations = items.map((row) => this.rowToOperation(row));
-
-    return {
-      results: operations,
-      options: { cursor, limit },
-      nextCursor,
-      next: hasMore
-        ? () =>
-            this.getConflicting(
-              documentId,
-              scope,
-              branch,
-              minTimestamp,
-              { cursor: nextCursor!, limit },
-              signal,
-            )
-        : undefined,
-    };
+    return paginateRows(
+      rows,
+      paging,
+      (row) => row.index,
+      (row) => this.rowToOperation(row),
+      (cursor, limit) =>
+        this.getConflicting(
+          documentId,
+          scope,
+          branch,
+          minTimestamp,
+          { cursor, limit },
+          signal,
+        ),
+    );
   }
 
   async getRevisions(
@@ -365,9 +303,7 @@ export class KyselyOperationStore implements IOperationStore {
     branch: string,
     signal?: AbortSignal,
   ): Promise<DocumentRevisions> {
-    if (signal?.aborted) {
-      throw new Error("Operation aborted");
-    }
+    throwIfAborted(signal);
 
     // Get the latest operation for each scope in a single query
     // Uses a subquery to find operations where the index equals the max index for that scope

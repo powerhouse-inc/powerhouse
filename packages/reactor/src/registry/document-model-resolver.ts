@@ -1,4 +1,4 @@
-import { DuplicateModuleError, ModuleNotFoundError } from "./implementation.js";
+import { DuplicateModuleError, ModuleNotFoundError } from "./errors.js";
 import type {
   IDocumentModelLoader,
   IDocumentModelRegistry,
