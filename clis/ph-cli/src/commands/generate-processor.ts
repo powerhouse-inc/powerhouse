@@ -11,7 +11,7 @@ import {
   optional,
   string,
 } from "cmd-ts";
-import { Directory } from "cmd-ts/dist/cjs/batteries/fs.js";
+import { Directory, File } from "cmd-ts/dist/cjs/batteries/fs.js";
 
 const ProcessorAppType: Type<string[], ("connect" | "switchboard")[]> = {
   from(processorApps) {
@@ -69,10 +69,16 @@ export const generateProcessorCmd = command({
       defaultValue: () => ["switchboard" as const, "connect" as const],
       defaultValueIsSerializable: true,
     }),
+    document: option({
+      type: optional(File),
+      long: "document",
+      short: "d",
+      description:
+        "Path to a powerhouse/processor spec file (.phd or .json) to drive codegen",
+    }),
     dir: option({
       type: optional(Directory),
       long: "dir",
-      short: "d",
       description:
         "Name of the directory of an existing processor to re-generate",
     }),
@@ -80,6 +86,12 @@ export const generateProcessorCmd = command({
       long: "all",
       short: "a",
       description: "Re-generate all existing processors in the current project",
+    }),
+    extract: flag({
+      long: "extract",
+      short: "x",
+      description:
+        "Write a powerhouse/processor spec for each existing processor into specs/processors/",
     }),
     ...debugArgs,
   },

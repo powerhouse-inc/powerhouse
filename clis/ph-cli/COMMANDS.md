@@ -29,6 +29,10 @@ The generate command creates code for Powerhouse modules. It helps you create ne
 ## All
 Re-generate all modules in the current project
 ### flags
+#### Extract <br>
+Instead of generating code, write a spec for every module into specs/ (one-shot migration to documents-as-source-of-truth)<br><br>
+**usage:** `--extract, -x`<br>
+
 #### Help <br>
 show help<br><br>
 **usage:** `--help, -h`<br>
@@ -37,19 +41,23 @@ show help<br><br>
 ## Document Model
 Generate a document model
 ### options
-#### File <br>
-Path to the file to generate the document model from<br><br>
-**usage:** `--file, -f <file>`<br>
+#### Document <br>
+Path to a document model spec (.phd or .json) to generate from<br><br>
+**usage:** `--document, -d <file>`<br>
 
 #### Dir <br>
 Name of the directory of an existing document model to re-generate<br><br>
-**usage:** `--dir, -d <dir>`<br>
+**usage:** `--dir <dir>`<br>
 
 
 ### flags
 #### All <br>
 Re-generate all existing document models in the current project<br><br>
 **usage:** `--all, -a`<br>
+
+#### Extract <br>
+Write a powerhouse/document-model spec for each existing document model into specs/document-models/<br><br>
+**usage:** `--extract, -x`<br>
 
 #### Debug <br>
 Log arguments passed to this command<br><br>
@@ -71,15 +79,23 @@ The name of the document editor to generate<br><br>
 The document type for the new editor<br><br>
 **usage:** `--document-type, -t <str>`<br>
 
+#### Document <br>
+Path to a powerhouse/document-editor spec file (.phd or .json) to drive codegen<br><br>
+**usage:** `--document, -d <file>`<br>
+
 #### Dir <br>
 Name of the directory of an existing editor to re-generate<br><br>
-**usage:** `--dir, -d <dir>`<br>
+**usage:** `--dir <dir>`<br>
 
 
 ### flags
 #### All <br>
 Re-generate all existing editors in the current project<br><br>
 **usage:** `--all, -a`<br>
+
+#### Extract <br>
+Write a powerhouse/document-editor spec for each existing editor into specs/editors/<br><br>
+**usage:** `--extract, -x`<br>
 
 #### Debug <br>
 Log arguments passed to this command<br><br>
@@ -101,9 +117,13 @@ The name of the drive app to generate<br><br>
 The document types allowed by the new app<br><br>
 **usage:** `--document-types <str>, -t=<str>`<br>
 
+#### Document <br>
+Path to a powerhouse/app spec file (.phd or .json) to drive codegen<br><br>
+**usage:** `--document, -d <file>`<br>
+
 #### Dir <br>
 Name of the directory of an existing app to re-generate<br><br>
-**usage:** `--dir, -d <dir>`<br>
+**usage:** `--dir <dir>`<br>
 
 
 ### flags
@@ -114,6 +134,10 @@ Do not allow drag and drop in this drive app.<br><br>
 #### All <br>
 Re-generate all existing apps in the current project<br><br>
 **usage:** `--all, -a`<br>
+
+#### Extract <br>
+Write a powerhouse/app spec for each existing drive app into specs/apps/<br><br>
+**usage:** `--extract, -x`<br>
 
 #### Debug <br>
 Log arguments passed to this command<br><br>
@@ -143,15 +167,23 @@ The document types the processor will run on<br><br>
 Whether the processor will run in switchboard (nodejs), connect (browser), or both<br><br>
 **usage:** `--apps <value>`<br>
 **default**: `switchboard,connect`
+#### Document <br>
+Path to a powerhouse/processor spec file (.phd or .json) to drive codegen<br><br>
+**usage:** `--document, -d <file>`<br>
+
 #### Dir <br>
 Name of the directory of an existing processor to re-generate<br><br>
-**usage:** `--dir, -d <dir>`<br>
+**usage:** `--dir <dir>`<br>
 
 
 ### flags
 #### All <br>
 Re-generate all existing processors in the current project<br><br>
 **usage:** `--all, -a`<br>
+
+#### Extract <br>
+Write a powerhouse/processor spec for each existing processor into specs/processors/<br><br>
+**usage:** `--extract, -x`<br>
 
 #### Debug <br>
 Log arguments passed to this command<br><br>
@@ -169,15 +201,23 @@ Generate a subgraph
 The name of the subgraph to generate<br><br>
 **usage:** `--name, -n <str>`<br>
 
+#### Document <br>
+Path to a powerhouse/subgraph spec file (.phd or .json) to drive codegen<br><br>
+**usage:** `--document, -d <file>`<br>
+
 #### Dir <br>
 Name of the directory of an existing subgraph to re-generate<br><br>
-**usage:** `--dir, -d <dir>`<br>
+**usage:** `--dir <dir>`<br>
 
 
 ### flags
 #### All <br>
 Re-generate all existing subgraphs in the current project<br><br>
 **usage:** `--all, -a`<br>
+
+#### Extract <br>
+Write a powerhouse/subgraph spec for each existing subgraph into specs/subgraphs/<br><br>
+**usage:** `--extract, -x`<br>
 
 #### Debug <br>
 Log arguments passed to this command<br><br>

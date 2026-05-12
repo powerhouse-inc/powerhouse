@@ -3,6 +3,13 @@ import {
   buildTsMorphProject,
   getEditorMetadata,
 } from "@powerhousedao/codegen/utils";
+import {
+  extractEditorDocuments,
+  generateEditorFromDocument,
+  getDocument,
+  saveSpec,
+} from "@powerhousedao/vetra/codegen";
+import type { DocumentEditorDocument } from "@powerhousedao/vetra/document-models/document-editor";
 import { dirname } from "node:path";
 import type { GenerateEditorArgs } from "../types.js";
 
@@ -10,13 +17,24 @@ export async function startGenerateEditor(
   args: GenerateEditorArgs,
   projectDir: string,
 ) {
-  const { name, documentType, dir, all, debug } = args;
+  const { name, documentType, document, dir, all, extract, debug } = args;
   if (debug) {
     console.log({ args });
   }
   const project = buildTsMorphProject(projectDir);
+  if (extract) {
+    const docs = extractEditorDocuments(project);
+    for (const doc of docs) {
+      const path = await saveSpec(doc, projectDir);
+      console.log(`Wrote ${path}`);
+    }
+    return;
+  }
   if (all) {
     await generateAllEditors(project);
+  } else if (document) {
+    const doc = (await getDocument(document)) as DocumentEditorDocument;
+    await generateEditorFromDocument(doc, project);
   } else if (name) {
     if (!documentType) {
       throw new Error(
@@ -48,7 +66,9 @@ export async function startGenerateEditor(
       project,
     );
   } else {
-    console.log("Please specify either `name`, `dir`, or `all`.");
+    console.log(
+      "Please specify one of `name`, `document`, `dir`, `all`, or `extract`.",
+    );
     return;
   }
   await project.save();
