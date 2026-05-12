@@ -263,6 +263,10 @@ const app = command({
 
     runBuild(workspaceVersion);
 
+    const changelogFromRef = !skipChangelog
+      ? resolvePreviousReleaseTag()
+      : undefined;
+
     if (!skipChangelog) {
       try {
         const changeLogDryRunResult = await releaseChangelog({
@@ -271,6 +275,7 @@ const app = command({
           releaseGraph,
           verbose,
           dryRun: true,
+          from: changelogFromRef,
           stageChanges: false,
           gitCommit: false,
           gitTag: false,
@@ -291,6 +296,7 @@ const app = command({
           dryRun,
           releaseGraph,
           verbose,
+          from: changelogFromRef,
           gitCommit: false,
           stageChanges: false,
           gitPush: false,
@@ -451,6 +457,23 @@ function injectSentryDebugIds(): void {
       );
     }
   }
+}
+
+function resolvePreviousReleaseTag(): string {
+  const result = Bun.spawnSync({
+    cmd: ["git", "describe", "--tags", "--abbrev=0", "--match", "v*", "HEAD^"],
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  if (result.exitCode !== 0) {
+    throw new Error(
+      `Failed to resolve previous release tag: ${result.stderr.toString().trim()}`,
+    );
+  }
+  const tag = result.stdout.toString().trim();
+  if (!tag) {
+    throw new Error("git describe returned no previous release tag");
+  }
+  return tag;
 }
 
 // Resolve a sha to bake into build artifacts as provenance. Prefer
