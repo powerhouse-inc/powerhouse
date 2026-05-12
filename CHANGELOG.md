@@ -1,3 +1,13 @@
+## 6.0.0-dev.243 (2026-05-12)
+
+### 🩹 Fixes
+
+- **codegen:** add @datadog/pprof to allowed builds ([c7929c192](https://github.com/powerhouse-inc/powerhouse/commit/c7929c192))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.242 (2026-05-12)
 
 ### 🩹 Fixes
