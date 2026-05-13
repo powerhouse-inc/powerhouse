@@ -1,5 +1,6 @@
 import { PGlite } from "@electric-sql/pglite";
 import type { PGlite as PGliteType } from "@electric-sql/pglite";
+import { AtomicNodeFs } from "@powerhousedao/pglite-fs";
 import type { Knex } from "knex";
 import knex from "knex";
 import ClientPgLite from "knex-pglite";
@@ -127,7 +128,9 @@ export function getDbClient(
     ? undefined
     : pgliteFactory
       ? pgliteFactory(connectionString)
-      : new PGlite(connectionString);
+      : connectionString
+        ? new PGlite({ fs: new AtomicNodeFs(connectionString) })
+        : new PGlite();
   const connection = isPg ? { connectionString } : { pglite: pgliteInstance };
 
   // If path is not postgres then it is a filesystem path.
