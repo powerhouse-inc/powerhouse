@@ -52,7 +52,7 @@ export function makeIsEnabledChecker(args: {
  * through the enabled/disabled control lists, applies any component overrides,
  * and renders each control with the current document.
  */
-export function makeToolbarControlsGetter(args: {
+export function makeToolbarControlsRenderer(args: {
   document: PHDocument | undefined;
   enabledControls?: DocumentToolbarControlName[];
   disabledControls?: DocumentToolbarControlName[];
@@ -66,7 +66,7 @@ export function makeToolbarControlsGetter(args: {
     disabledControls,
   });
 
-  const getComponent = (control: DocumentToolbarControlName) =>
+  const renderComponent = (control: DocumentToolbarControlName) =>
     pipe(
       prop(componentOverrides, control),
       defaultTo(prop(defaultControlComponents, control)),
@@ -77,7 +77,7 @@ export function makeToolbarControlsGetter(args: {
     pipe(
       prop(defaultControlSlots, slot),
       filter(checkIsEnabled),
-      map(getComponent),
+      map(renderComponent),
     );
 }
 
@@ -99,7 +99,7 @@ function isControlInPosition(
  * The returned function resolves the custom control or controls assigned to a
  * slot, then renders only the controls that belong in the requested position.
  */
-export function makeCustomControlsGetter(args: {
+export function makeCustomControlsRenderer(args: {
   document: PHDocument | undefined;
   customControls: CustomToolbarControls | undefined;
 }) {

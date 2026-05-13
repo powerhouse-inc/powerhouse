@@ -7,8 +7,8 @@ import type {
   DocumentToolbarProps,
 } from "./types.js";
 import {
-  makeCustomControlsGetter,
-  makeToolbarControlsGetter,
+  makeCustomControlsRenderer,
+  makeToolbarControlsRenderer,
 } from "./utils.js";
 
 /**
@@ -70,23 +70,23 @@ function ControlsContainerSlot(props: ControlsContainerSlotProps) {
     controlsContainer: ControlsContainer = ToolbarControlsContainer,
   } = props;
 
-  const getToolbarControls = makeToolbarControlsGetter({
+  const renderToolbarControls = makeToolbarControlsRenderer({
     document,
     enabledControls,
     disabledControls,
     componentOverrides,
   });
 
-  const getCustomControls = makeCustomControlsGetter({
+  const renderCustomControls = makeCustomControlsRenderer({
     document,
     customControls,
   });
 
   return (
     <ControlsContainer className={controlsContainerClassName}>
-      {getCustomControls(slot, "start")}
-      {getToolbarControls(slot)}
-      {getCustomControls(slot, "end")}
+      {renderCustomControls(slot, "start")}
+      {renderToolbarControls(slot)}
+      {renderCustomControls(slot, "end")}
     </ControlsContainer>
   );
 }
