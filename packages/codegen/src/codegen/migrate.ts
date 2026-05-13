@@ -9,14 +9,7 @@ import {
 } from "@powerhousedao/shared/clis";
 import console from "console";
 import { writeAllGeneratedProjectFiles } from "file-builders";
-import {
-  cpSync,
-  mkdirSync,
-  readdirSync,
-  readFileSync,
-  rmSync,
-  statSync,
-} from "fs";
+import { cpSync, mkdirSync, readdirSync, rmSync, statSync } from "fs";
 import npmFetch from "npm-registry-fetch";
 import { join } from "path";
 import { type PackageJson, readPackage } from "read-pkg";
@@ -35,6 +28,7 @@ import {
 import type { Project } from "ts-morph";
 import { buildTsMorphProject } from "utils";
 import { writePackage } from "write-package";
+import { detectFeatures } from "./features.js";
 import { generateAll } from "./generate.js";
 
 /* Uses the npm cli's fetch function to get the version for a specified tag */
@@ -126,46 +120,6 @@ function preserveProtected(
     }
   }
   return result;
-}
-
-function hasAnalyticsProcessor(processorsDir: string): boolean {
-  const entries = readdirSync(processorsDir, { withFileTypes: true });
-  for (const entry of entries) {
-    if (!entry.isDirectory()) continue;
-    const dir = join(processorsDir, entry.name);
-    // processor.ts is the current shape; index.ts is the pre-migrate fallback.
-    for (const filename of ["processor.ts", "index.ts"]) {
-      try {
-        const contents = readFileSync(join(dir, filename), "utf-8");
-        if (contents.includes("@powerhousedao/analytics-engine-core")) {
-          return true;
-        }
-      } catch {
-        // file missing — try next candidate
-      }
-    }
-  }
-  return false;
-}
-
-function detectFeatures(
-  projectDir: string,
-): Array<keyof typeof FEATURE_DEPENDENCIES> {
-  const features: Array<keyof typeof FEATURE_DEPENDENCIES> = [];
-  const subgraphsDir = join(projectDir, "subgraphs");
-  const subgraphsStat = statSync(subgraphsDir, { throwIfNoEntry: false });
-  if (subgraphsStat?.isDirectory()) {
-    const hasSubgraph = readdirSync(subgraphsDir, {
-      withFileTypes: true,
-    }).some((entry) => entry.isDirectory());
-    if (hasSubgraph) features.push("subgraph");
-  }
-  const processorsDir = join(projectDir, "processors");
-  const processorsStat = statSync(processorsDir, { throwIfNoEntry: false });
-  if (processorsStat?.isDirectory() && hasAnalyticsProcessor(processorsDir)) {
-    features.push("analyticsProcessor");
-  }
-  return features;
 }
 
 export async function migrate(version: string, projectDir = process.cwd()) {

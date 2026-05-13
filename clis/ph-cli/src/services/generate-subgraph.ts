@@ -1,4 +1,9 @@
-import { generateAllSubgraphs, generateSubgraph } from "@powerhousedao/codegen";
+import {
+  detectFeatures,
+  generateAllSubgraphs,
+  generateSubgraph,
+  syncFeatureDependencies,
+} from "@powerhousedao/codegen";
 import {
   buildTsMorphProject,
   getSubgraphMetadata,
@@ -30,4 +35,5 @@ export async function startGenerateSubgraph(
     return;
   }
   await project.save();
+  await syncFeatureDependencies(detectFeatures(projectDir), projectDir);
 }
