@@ -8,16 +8,6 @@ permissions:
   contents: write
   packages: write
 
-# Intentionally NO concurrency block here. When invoked via `uses:` from
-# release-branch.yml, the called workflow inherits no concurrency from the
-# caller, but if the called workflow declares the SAME group as the caller
-# GitHub treats it as a self-conflict and cancels. The release-branch.yml
-# concurrency group already serializes the parent (and therefore this
-# workflow's invocations from it) — adding a group here only breaks the
-# downstream `needs:` chain. Standalone workflow_dispatch invocations of
-# this workflow are rare operator-driven recovery flows and don't need
-# their own serialization.
-
 env:
   REGISTRY: ghcr.io
   HARBOR_REGISTRY: cr.vetra.io
