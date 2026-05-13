@@ -5,6 +5,9 @@ import { defineConfig } from "tsdown";
 const workspaceDir = await findWorkspaceDir(process.cwd());
 const workspacePackages = await findWorkspacePackages(workspaceDir!);
 
+const version =
+  process.env.WORKSPACE_VERSION ?? process.env.npm_package_version ?? "unknown";
+
 export default defineConfig({
   entry: [
     "index.mts",
@@ -29,5 +32,6 @@ export default defineConfig({
           manifest,
         })),
     ),
+    CODEGEN_VERSION: JSON.stringify(version),
   },
 });
