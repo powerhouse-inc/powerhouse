@@ -80,12 +80,15 @@ export class GraphQLClientDocumentCache implements IDocumentCache {
       readPromiseState(promise as PromiseWithState<PHDocument>),
     );
 
-    const allFulfilled = states.every((state) => state.status === "fulfilled");
+    const allSettled = states.every((state) => state.status !== "pending");
 
-    if (allFulfilled) {
-      const values = states.map(
-        (state) => (state as { status: "fulfilled"; value: PHDocument }).value,
-      );
+    if (allSettled) {
+      const values = states
+        .filter(
+          (state): state is { status: "fulfilled"; value: PHDocument } =>
+            state.status === "fulfilled",
+        )
+        .map((state) => state.value);
 
       const batchPromise = Promise.resolve(values) as PromiseWithState<
         PHDocument[]
@@ -102,7 +105,22 @@ export class GraphQLClientDocumentCache implements IDocumentCache {
       return batchPromise;
     }
 
-    const batchPromise = addPromiseState(Promise.all(currentPromises));
+    const batchPromise = addPromiseState(
+      Promise.allSettled(currentPromises).then((results) => {
+        const documents: PHDocument[] = [];
+        for (const result of results) {
+          if (result.status === "fulfilled") {
+            documents.push(result.value);
+          } else {
+            console.warn(
+              "[GraphQLClientDocumentCache] Skipped unavailable document:",
+              result.reason,
+            );
+          }
+        }
+        return documents;
+      }),
+    );
 
     this.batchPromises.set(key, {
       promises: currentPromises,

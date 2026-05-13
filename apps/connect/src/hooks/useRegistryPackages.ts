@@ -1,5 +1,6 @@
 import {
   getPackages,
+  trimTrailingSlash,
   useVetraPackageManager,
 } from "@powerhousedao/reactor-browser";
 import type {
@@ -13,23 +14,18 @@ import type {
 import type { DocumentModelLib } from "document-model";
 import { useEffect, useMemo } from "react";
 import { useLocalStorage } from "usehooks-ts";
-
-// Normalize the registry URL before using it as the localStorage key.
-// Otherwise `http://host` and `http://host/` produce two separate maps and
-// the install/status flow reads from one while the registry fetch writes to
-// the other.
-const REGISTRY_PACKAGES_KEY = `REGISTRY_PACKAGES:${
-  typeof PH_PACKAGE_REGISTRY_URL === "string" &&
-  PH_PACKAGE_REGISTRY_URL.endsWith("/")
-    ? PH_PACKAGE_REGISTRY_URL.slice(0, -1)
-    : PH_PACKAGE_REGISTRY_URL
-}` as const;
+import { getPackagesConfig } from "../packages.config.js";
 
 export function useRegistryPackages() {
   const packageManager = useVetraPackageManager();
   const packageManagerPackages = packageManager?.packages;
+  const registryUrl = getPackagesConfig().registryUrl ?? null;
+  // Normalize so `http://host` and `http://host/` don't produce two separate
+  // localStorage maps where the install/status flow reads from one while the
+  // registry fetch writes to the other.
+  const registryPackagesKey = `REGISTRY_PACKAGES:${registryUrl === null ? null : trimTrailingSlash(registryUrl)}`;
   const [registryPackagesMap, setRegistryPackagesMap] =
-    useLocalStorage<RegistryPackageMap>(REGISTRY_PACKAGES_KEY, {});
+    useLocalStorage<RegistryPackageMap>(registryPackagesKey, {});
   const registryPackageList: RegistryPackageList = useMemo(() => {
     return Array.from(Object.values(registryPackagesMap)).filter(
       (p) => p !== undefined,
@@ -38,9 +34,9 @@ export function useRegistryPackages() {
 
   useEffect(() => {
     async function refreshPackages() {
-      if (PH_PACKAGE_REGISTRY_URL === null || !packageManager) return;
+      if (registryUrl === null || !packageManager) return;
 
-      const packageInfos = await getPackages(PH_PACKAGE_REGISTRY_URL);
+      const packageInfos = await getPackages(registryUrl);
 
       setRegistryPackagesMap((oldPackages) => {
         const newRegistryPackages: RegistryPackageMap = {

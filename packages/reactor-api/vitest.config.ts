@@ -2,6 +2,11 @@ import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { defineConfig } from "vitest/config";
 
+const baseExclude = ["**/node_modules/**", "**/dist/**"];
+if (process.env.RUN_HUB_SPOKE_INTEGRATION !== "1") {
+  baseExclude.push("**/hub-spoke-catchup.integration.test.ts");
+}
+
 export default defineConfig({
   resolve: {
     alias: {
@@ -12,7 +17,7 @@ export default defineConfig({
     },
   },
   test: {
-    exclude: ["**/node_modules/**", "**/dist/**"],
+    exclude: baseExclude,
     deps: {
       optimizer: {
         web: {

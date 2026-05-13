@@ -111,6 +111,51 @@ export class ConnectTestScheduler {
         const opsByScope = await this.module.reactor.getOperations(
           this.config.documentId,
         );
+        const perScope: Record<
+          string,
+          {
+            skipZeroCount: number;
+            totalCount: number;
+            uniqueIds: number;
+            ops: Array<{
+              id: string;
+              index: number;
+              skip: number;
+              hash: string;
+              type: string;
+            }>;
+          }
+        > = {};
+        for (const [scope, paged] of Object.entries(opsByScope)) {
+          const ids = new Set<string>();
+          let skipZero = 0;
+          const ops: Array<{
+            id: string;
+            index: number;
+            skip: number;
+            hash: string;
+            type: string;
+            ts: string;
+          }> = [];
+          for (const op of paged.results) {
+            ids.add(op.id);
+            if (op.skip === 0) skipZero++;
+            ops.push({
+              id: op.id,
+              index: op.index,
+              skip: op.skip,
+              hash: op.hash,
+              type: op.action.type,
+              ts: op.timestampUtcMs,
+            });
+          }
+          perScope[scope] = {
+            skipZeroCount: skipZero,
+            totalCount: paged.results.length,
+            uniqueIds: ids.size,
+            ops,
+          };
+        }
         const allOps = Object.values(opsByScope).flatMap((paged) =>
           paged.results.filter((op) => op.skip === 0),
         );
@@ -119,6 +164,7 @@ export class ConnectTestScheduler {
           documentId: this.config.documentId,
           state: doc.state,
           operationCount: allOps.length,
+          perScope,
           operations: allOps.map((op) => ({
             id: op.id,
             index: op.index,

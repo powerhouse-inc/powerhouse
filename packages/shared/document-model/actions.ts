@@ -44,6 +44,7 @@ import {
   SetModuleDescriptionInputSchema,
   SetModuleNameInputSchema,
   SetNameActionInputSchema,
+  SetPreferredEditorActionInputSchema,
   SetOperationDescriptionInputSchema,
   SetOperationErrorCodeInputSchema,
   SetOperationErrorDescriptionInputSchema,
@@ -134,6 +135,7 @@ import type {
   SetModuleNameAction,
   SetModuleNameInput,
   SetNameAction,
+  SetPreferredEditorAction,
   SetOperationDescriptionAction,
   SetOperationDescriptionInput,
   SetOperationErrorCodeAction,
@@ -466,6 +468,26 @@ export const setName = (name: string | { name: string }) =>
     SetNameActionInputSchema,
     // TODO: THIS IS A BUG: This needs to be changed to a HEADER scope action if it's changing the header.
     "global",
+  );
+
+/**
+ * Changes the preferred editor recorded in the document header meta.
+ *
+ * Passing `null` clears the preferred editor.
+ *
+ * @category Actions
+ */
+export const setPreferredEditor = (
+  input: string | null | { preferredEditor: string | null },
+) =>
+  createAction<SetPreferredEditorAction>(
+    "SET_PREFERRED_EDITOR",
+    typeof input === "object" && input !== null
+      ? input
+      : { preferredEditor: input },
+    undefined,
+    SetPreferredEditorActionInputSchema,
+    "header",
   );
 export const setModelName = (input: SetModelNameInput) =>
   createAction<SetModelNameAction>(
@@ -869,6 +891,7 @@ export const releaseNewVersion = () =>
 
 export const baseActions = {
   setName,
+  setPreferredEditor,
   undo,
   redo,
   prune,

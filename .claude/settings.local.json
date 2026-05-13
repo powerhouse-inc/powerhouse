@@ -36,7 +36,8 @@
       "Bash(gh run:*)",
       "Bash(git stash:*)",
       "mcp__hotseat",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(RUN_HUB_SPOKE_INTEGRATION=1 pnpm exec vitest list)"
     ],
     "deny": [],
     "ask": []

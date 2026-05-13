@@ -43,14 +43,18 @@ function extractSyncManagerFromUrl(
  * Creates a mock fetch function that routes GraphQL sync operations
  * directly to the resolver functions, bypassing the network.
  *
+ * URLs whose hostname is not registered in the syncManagers map fall
+ * through to passthroughFetch (defaults to globalThis.fetch at construction time).
+ *
  * This enables integration testing of GqlChannel without running
  * an actual GraphQL server.
  */
 export function createResolverBridge(
   syncManagers: SyncManagerRegistry,
-  options: ResolverBridgeOptions = {},
+  options: ResolverBridgeOptions & { passthroughFetch?: typeof fetch } = {},
 ): typeof fetch {
   const logEnabled = options.log ?? true;
+  const passthroughFetch = options.passthroughFetch ?? globalThis.fetch;
 
   return async (
     input: RequestInfo | URL,
@@ -63,6 +67,16 @@ export function createResolverBridge(
       url = input.href;
     } else {
       url = input.url;
+    }
+
+    let hostname: string;
+    try {
+      hostname = new URL(url).hostname.toLowerCase();
+    } catch {
+      return passthroughFetch(input, init);
+    }
+    if (!syncManagers.has(hostname)) {
+      return passthroughFetch(input, init);
     }
 
     if (!init?.body) {
@@ -172,7 +186,7 @@ export function createResolverBridge(
       const result = await touchChannel(syncManager, variables);
 
       if (logEnabled) {
-        console.log(`[BRIDGE] touchChannel result: ${result}`);
+        console.log(`[BRIDGE] touchChannel result: ${JSON.stringify(result)}`);
       }
 
       return createMockResponse({ touchChannel: result });

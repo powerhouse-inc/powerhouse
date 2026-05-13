@@ -1,3 +1,82 @@
+## 6.0.0-dev.244 (2026-05-13)
+
+This was a version bump only for @powerhousedao/registry to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.243 (2026-05-12)
+
+This was a version bump only for @powerhousedao/registry to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.242 (2026-05-12)
+
+### 🩹 Fixes
+
+- **release:** pass explicit from-ref to releaseChangelog ([5af1ce209](https://github.com/powerhouse-inc/powerhouse/commit/5af1ce209))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.241 (2026-05-12)
+
+### 🚀 Features
+
+- **connect:** surface missing-model failures and move registry URL to ph-packages.json ([bcb8bbdb0](https://github.com/powerhouse-inc/powerhouse/commit/bcb8bbdb0))
+
+### 🩹 Fixes
+
+- **release:** pass explicit from-ref to releaseChangelog ([5af1ce209](https://github.com/powerhouse-inc/powerhouse/commit/5af1ce209))
+- **switchboard:** move @pyroscope/nodejs to dependencies ([c71e0b3de](https://github.com/powerhouse-inc/powerhouse/commit/c71e0b3de))
+- **sentry:** inject debug-ids before publish + drop dead dirs ([444c677a2](https://github.com/powerhouse-inc/powerhouse/commit/444c677a2))
+- switching postgres versions ([353951582](https://github.com/powerhouse-inc/powerhouse/commit/353951582))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+
+## 6.0.0-dev.240 (2026-05-11)
+
+### 🩹 Fixes
+
+- **reactor-api:** exclude hub/spoke test by default, added specific job to test it ([8e8474929](https://github.com/powerhouse-inc/powerhouse/commit/8e8474929))
+- **release:** pass the just-published tag from release -> publish-ph-binaries ([dd19a9b20](https://github.com/powerhouse-inc/powerhouse/commit/dd19a9b20))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+
+## 6.0.0-dev.239 (2026-05-11)
+
+### 🚀 Features
+
+- **ph-cmd:** added scripts to install dev and staging ph-cmd binary ([492555423](https://github.com/powerhouse-inc/powerhouse/commit/492555423))
+- **switchboard:** bridge OpenTelemetry spans to Sentry ([c1f2fc28b](https://github.com/powerhouse-inc/powerhouse/commit/c1f2fc28b))
+- **ph-cli,ph-cmd,shared:** use lightweight sentry sdk ([248c6b2f6](https://github.com/powerhouse-inc/powerhouse/commit/248c6b2f6))
+
+### 🩹 Fixes
+
+- update dockerfiles for pnpm 11 bin path ([d33db03ce](https://github.com/powerhouse-inc/powerhouse/commit/d33db03ce))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.238 (2026-05-11)
+
+### 🚀 Features
+
+- **switchboard:** bridge OpenTelemetry spans to Sentry ([c1f2fc28b](https://github.com/powerhouse-inc/powerhouse/commit/c1f2fc28b))
+- **ph-cli,ph-cmd,shared:** use lightweight sentry sdk ([248c6b2f6](https://github.com/powerhouse-inc/powerhouse/commit/248c6b2f6))
+
+### 🩹 Fixes
+
+- update dockerfiles for pnpm 11 bin path ([d33db03ce](https://github.com/powerhouse-inc/powerhouse/commit/d33db03ce))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.237 (2026-05-10)
 
 This was a version bump only for @powerhousedao/registry to align it with other projects, there were no code changes.

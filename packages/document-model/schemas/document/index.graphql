@@ -70,6 +70,27 @@ input SetNameAction {
   input: SetNameActionInput!
 }
 
+enum SET_PREFERRED_EDITOR {
+  SET_PREFERRED_EDITOR
+}
+
+input SetPreferredEditorActionInput {
+  preferredEditor: String
+}
+
+type SetPreferredEditorOperation implements IOperation {
+  type: String!
+  input: SetPreferredEditorActionInput!
+  index: Int!
+  timestamp: DateTime!
+  hash: String!
+}
+
+input SetPreferredEditorAction {
+  type: SET_PREFERRED_EDITOR!
+  input: SetPreferredEditorActionInput!
+}
+
 enum UNDO {
   UNDO
 }
@@ -132,6 +153,7 @@ input LoadStateAction {
 
 union DocumentAction =
   | SetNameAction
+  | SetPreferredEditorAction
   | UndoAction
   | RedoAction
   | PruneAction
@@ -139,6 +161,7 @@ union DocumentAction =
 
 type Mutation {
   setName(input: SetNameAction!): IDocument
+  setPreferredEditor(input: SetPreferredEditorAction!): IDocument
   undo(input: UndoAction!): IDocument
   redo(input: RedoAction!): IDocument
   prune(input: PruneAction!): IDocument

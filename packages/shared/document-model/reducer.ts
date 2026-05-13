@@ -27,6 +27,7 @@ import {
   loadStateOperation,
   redoOperation,
   setNameOperation,
+  setPreferredEditorOperation,
   undoOperation,
   undoOperationV2,
   type DocumentOperations,
@@ -221,6 +222,8 @@ function _baseReducer<TState extends PHBaseState = PHBaseState>(
     // TODO: This needs to be changed to a HEADER scope action if it's changing the header.
     case "SET_NAME":
       return setNameOperation(document, parsedAction.input);
+    case "SET_PREFERRED_EDITOR":
+      return setPreferredEditorOperation(document, parsedAction.input);
     case "PRUNE":
       return pruneOperation(document, parsedAction.input, wrappedReducer);
     case "LOAD_STATE":

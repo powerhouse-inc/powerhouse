@@ -57,6 +57,12 @@ jobs:
     name: Release packages in monorepo
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    outputs:
+      # Tag the release step just created (release.ts writes this directly to
+      # $GITHUB_OUTPUT). Empty when no version bump happened, when --skip-git-tag
+      # is set, or when release.ts exits early — downstream jobs (notably
+      # publish-ph-binaries) gate on this so they only run for real releases.
+      tag: ${{ steps.run-release.outputs.tag }}
     steps:
       - name: Log inputs
         run: |
@@ -98,7 +104,14 @@ jobs:
           echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" >> ~/.npmrc
           echo "registry=https://registry.npmjs.org/" >> ~/.npmrc
 
+      # sentry-cli is installed before Run release: release.ts shells out
+      # to `sentry-cli sourcemaps inject` between build and publish.
+      - name: Install sentry-cli
+        if: ${{ inputs.dry_run != true && inputs.skip_publish != true }}
+        run: curl -sL https://sentry.io/get-cli/ | SENTRY_CLI_VERSION=2.58.5 bash
+
       - name: Run release
+        id: run-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
@@ -115,27 +128,15 @@ jobs:
           --skip-push="${{ inputs.skip_push == true }}" \
           --skip-git-tag="${{ inputs.skip_git_tag == true }}"
 
-      # Install sentry-cli globally so the subsequent steps can invoke it
-      # reliably (npx-based invocation had resolution issues).
-      - name: Install sentry-cli
-        if: ${{ inputs.dry_run != true && inputs.skip_publish != true }}
-        run: curl -sL https://sentry.io/get-cli/ | SENTRY_CLI_VERSION=2.58.5 bash
-
-      # Upload source maps to self-hosted Sentry so production stack traces
-      # map back to original TypeScript source in this repo.
       - name: Upload source maps to Sentry
-        if: ${{ inputs.dry_run != true && inputs.skip_publish != true }}
+        if: ${{ inputs.dry_run != true && inputs.skip_publish != true && steps.run-release.outputs.tag != '' }}
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_URL: ${{ secrets.SENTRY_URL }}
           SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+          VERSION: ${{ steps.run-release.outputs.tag }}
         run: |
           set -euo pipefail
-          VERSION=$(git tag --sort=-v:refname --points-at HEAD | head -1)
-          if [ -z "$VERSION" ]; then
-            echo "No new tag at HEAD, skipping Sentry upload"
-            exit 0
-          fi
           echo "Sentry release: $VERSION"
 
           for proj in powerhouse ph-cli; do
@@ -143,8 +144,7 @@ jobs:
           done
           sentry-cli releases set-commits "$VERSION" --auto -p powerhouse || true
 
-          for dir in apps/connect/dist apps/switchboard/dist apps/academy/dist \
-                     packages/reactor-api/dist packages/switchboard/dist; do
+          for dir in apps/connect/dist apps/switchboard/dist packages/reactor-api/dist; do
             [ -d "$dir" ] || continue
             sentry-cli sourcemaps upload \
               --release "$VERSION" \
@@ -163,6 +163,89 @@ jobs:
           for proj in powerhouse ph-cli; do
             sentry-cli releases finalize -p "$proj" "$VERSION" || true
           done
+
+  publish-ph-binaries:
+    name: Build and publish ph binaries
+    needs: release
+    # Only run if the release job actually produced a new tag. Captured as a
+    # job output so we never guess which tag to attach assets to — guards
+    # against release no-ops (no version bump), concurrent runs, and
+    # locally-created tags that happen to match a channel pattern.
+    if: ${{ needs.release.outputs.tag != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    env:
+      TAG: ${{ needs.release.outputs.tag }}
+    steps:
+      - name: Checkout the released tag
+        uses: actions/checkout@v6
+        with:
+          # Depending on whether nx-release's changelog/createRelease step ran
+          # (which writes a lightweight tag against the pre-bump commit), this
+          # ref may point at either the pre-bump commit or the chore(release)
+          # commit itself. We don't depend on the package.json version here:
+          # the compile step injects CLI_VERSION explicitly via --define, so
+          # the binary self-reports `needs.release.outputs.tag` regardless of
+          # which commit the tag landed on.
+          ref: ${{ needs.release.outputs.tag }}
+          fetch-depth: 1
+
+      - name: General setup
+        uses: ./.github/actions/setup
+
+      - name: Compile binaries
+        working-directory: clis/ph-cmd
+        env:
+          CLI_GIT_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          CLI_VERSION="${TAG#v}"
+          mkdir -p artifacts
+          # bun-darwin-arm64 etc. all cross-compile from linux-x64.
+          targets=(
+            "bun-darwin-arm64:ph-darwin-arm64"
+            "bun-darwin-x64:ph-darwin-x64"
+            "bun-linux-arm64:ph-linux-arm64"
+            "bun-linux-x64:ph-linux-x64"
+            "bun-windows-x64:ph-windows-x64.exe"
+          )
+          for entry in "${targets[@]}"; do
+            target="${entry%%:*}"
+            out="${entry##*:}"
+            echo "▶ compiling $out ($target)"
+            bun build ./src/cli.ts \
+              --compile \
+              --target="$target" \
+              --outfile="artifacts/$out" \
+              --define CLI_VERSION="\"${CLI_VERSION}\"" \
+              --define CLI_GIT_SHA="\"${CLI_GIT_SHA}\""
+          done
+          ( cd artifacts && sha256sum ph-* > checksums.txt )
+          ls -lh artifacts
+
+      - name: Upload binaries to GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        working-directory: clis/ph-cmd
+        run: |
+          set -euo pipefail
+          # nx-release normally creates the GitHub release alongside the
+          # changelog. Create it ourselves if it isn't there yet (e.g. when
+          # skip_changelog was set), so the upload below has somewhere to land.
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" --title "$TAG" --notes ""
+          fi
+          # --clobber lets reruns replace the same file names.
+          gh release upload "$TAG" \
+            artifacts/ph-darwin-arm64 \
+            artifacts/ph-darwin-x64 \
+            artifacts/ph-linux-arm64 \
+            artifacts/ph-linux-x64 \
+            artifacts/ph-windows-x64.exe \
+            artifacts/checksums.txt \
+            --clobber
 
   publish-docker:
     name: Build and Publish Docker Images

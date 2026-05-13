@@ -490,8 +490,10 @@ export class ReactorBuilder {
     // and the data-dir lock held.
     const handler = async (signal: string) => {
       if (shutdownInProgress) {
-        this.logger!.warn(`Received ${signal} again, forcing exit`);
-        realExit(1);
+        this.logger!.warn(
+          `Received ${signal} again, continuing graceful shutdown...`,
+        );
+        return;
       }
 
       shutdownInProgress = true;

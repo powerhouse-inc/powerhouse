@@ -17,6 +17,7 @@ export const RESERVED_OPERATION_NAMES = [
   "PRUNE",
   "LOAD_STATE",
   "SET_NAME",
+  "SET_PREFERRED_EDITOR",
   "NOOP",
 ] as const;
 

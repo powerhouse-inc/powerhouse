@@ -9,9 +9,12 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "@nx/js": "^22.4.3",
+    "@nx/js": "^22.7.1",
     "cmd-ts": "^0.14.3",
-    "nx": "^22.4.3",
+    "nx": "^22.7.1",
     "semver": "^7.7.3"
+  },
+  "patchedDependencies": {
+    "@nx/js@22.7.1": "patches/@nx%2Fjs@22.7.1.patch"
   }
 }

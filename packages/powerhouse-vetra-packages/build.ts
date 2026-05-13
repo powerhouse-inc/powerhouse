@@ -1,7 +1,7 @@
 import {
   browserBuildConfig,
   nodeBuildConfig,
-} from "@powerhousedao/shared/clis";
+} from "@powerhousedao/shared/build-config";
 import { execSync } from "node:child_process";
 import { join } from "node:path";
 import { build } from "tsdown";

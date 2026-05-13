@@ -20,7 +20,7 @@ RUN apk add --no-cache python3 make g++ git bash \
 
 # Setup pnpm
 ENV PNPM_HOME="/pnpm"
-ENV PATH="$PNPM_HOME:$PATH"
+ENV PATH="$PNPM_HOME/bin:$PNPM_HOME:$PATH"
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
 # Configure JSR registry
@@ -109,7 +109,7 @@ RUN apk add --no-cache curl openssl
 
 # Setup pnpm
 ENV PNPM_HOME="/pnpm"
-ENV PATH="$PNPM_HOME:$PATH"
+ENV PATH="$PNPM_HOME/bin:$PNPM_HOME:$PATH"
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
 # Configure JSR registry

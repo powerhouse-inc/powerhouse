@@ -186,6 +186,7 @@ export type Mutation = {
   readonly pushSyncEnvelopes: Scalars["Boolean"]["output"];
   readonly removeRelationship: PhDocument;
   readonly renameDocument: PhDocument;
+  readonly setPreferredEditor: PhDocument;
   readonly touchChannel: TouchChannelResult;
 };
 
@@ -251,6 +252,12 @@ export type MutationRenameDocumentArgs = {
   branch?: InputMaybe<Scalars["String"]["input"]>;
   documentIdentifier: Scalars["String"]["input"];
   name: Scalars["String"]["input"];
+};
+
+export type MutationSetPreferredEditorArgs = {
+  branch?: InputMaybe<Scalars["String"]["input"]>;
+  documentIdentifier: Scalars["String"]["input"];
+  preferredEditor?: InputMaybe<Scalars["String"]["input"]>;
 };
 
 export type MutationTouchChannelArgs = {
@@ -938,6 +945,28 @@ export type RenameDocumentMutationVariables = Exact<{
 
 export type RenameDocumentMutation = {
   readonly renameDocument: {
+    readonly id: string;
+    readonly slug?: string | null | undefined;
+    readonly name: string;
+    readonly documentType: string;
+    readonly state: NonNullable<unknown>;
+    readonly createdAtUtcIso: string | Date;
+    readonly lastModifiedAtUtcIso: string | Date;
+    readonly revisionsList: ReadonlyArray<{
+      readonly scope: string;
+      readonly revision: number;
+    }>;
+  };
+};
+
+export type SetPreferredEditorMutationVariables = Exact<{
+  documentIdentifier: Scalars["String"]["input"];
+  preferredEditor?: InputMaybe<Scalars["String"]["input"]>;
+  branch?: InputMaybe<Scalars["String"]["input"]>;
+}>;
+
+export type SetPreferredEditorMutation = {
+  readonly setPreferredEditor: {
     readonly id: string;
     readonly slug?: string | null | undefined;
     readonly name: string;
@@ -1736,6 +1765,12 @@ export type MutationResolvers<
     ParentType,
     ContextType,
     RequireFields<MutationRenameDocumentArgs, "documentIdentifier" | "name">
+  >;
+  setPreferredEditor?: Resolver<
+    ResolversTypes["PHDocument"],
+    ParentType,
+    ContextType,
+    RequireFields<MutationSetPreferredEditorArgs, "documentIdentifier">
   >;
   touchChannel?: Resolver<
     ResolversTypes["TouchChannelResult"],
@@ -2626,6 +2661,22 @@ export const RenameDocumentDocument = gql`
   }
   ${PhDocumentFieldsFragmentDoc}
 `;
+export const SetPreferredEditorDocument = gql`
+  mutation SetPreferredEditor(
+    $documentIdentifier: String!
+    $preferredEditor: String
+    $branch: String
+  ) {
+    setPreferredEditor(
+      documentIdentifier: $documentIdentifier
+      preferredEditor: $preferredEditor
+      branch: $branch
+    ) {
+      ...PHDocumentFields
+    }
+  }
+  ${PhDocumentFieldsFragmentDoc}
+`;
 export const AddRelationshipDocument = gql`
   mutation AddRelationship(
     $sourceIdentifier: String!
@@ -2972,6 +3023,19 @@ export function getSdk<C>(requester: Requester<C>) {
         variables,
         options,
       ) as Promise<RenameDocumentMutation>;
+    },
+    SetPreferredEditor(
+      variables: SetPreferredEditorMutationVariables,
+      options?: C,
+    ): Promise<SetPreferredEditorMutation> {
+      return requester<
+        SetPreferredEditorMutation,
+        SetPreferredEditorMutationVariables
+      >(
+        SetPreferredEditorDocument,
+        variables,
+        options,
+      ) as Promise<SetPreferredEditorMutation>;
     },
     AddRelationship(
       variables: AddRelationshipMutationVariables,

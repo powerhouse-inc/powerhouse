@@ -104,6 +104,11 @@ const operationValidators: OperationValidators = {
       PHDocumentDTO.parse(data.renameDocument);
     }
   },
+  SetPreferredEditor: (data) => {
+    if (data.setPreferredEditor) {
+      PHDocumentDTO.parse(data.setPreferredEditor);
+    }
+  },
   AddRelationship: (data) => {
     if (data.addRelationship) {
       PHDocumentDTO.parse(data.addRelationship);

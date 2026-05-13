@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/shared",
-  "version": "6.0.0-dev.237",
+  "version": "6.0.0-dev.244",
   "type": "module",
   "sideEffects": false,
   "publishConfig": {
@@ -100,6 +100,10 @@
     "./clis/telemetry": {
       "source": "./clis/services/telemetry.ts",
       "import": "./dist/clis/services/telemetry.mjs"
+    },
+    "./build-config": {
+      "source": "./clis/build-config.mts",
+      "import": "./dist/clis/build-config.mjs"
     }
   },
   "dependencies": {

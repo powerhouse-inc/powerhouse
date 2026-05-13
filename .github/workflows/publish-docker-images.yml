@@ -8,16 +8,6 @@ permissions:
   contents: write
   packages: write
 
-# Intentionally NO concurrency block here. When invoked via `uses:` from
-# release-branch.yml, the called workflow inherits no concurrency from the
-# caller, but if the called workflow declares the SAME group as the caller
-# GitHub treats it as a self-conflict and cancels. The release-branch.yml
-# concurrency group already serializes the parent (and therefore this
-# workflow's invocations from it) — adding a group here only breaks the
-# downstream `needs:` chain. Standalone workflow_dispatch invocations of
-# this workflow are rare operator-driven recovery flows and don't need
-# their own serialization.
-
 env:
   REGISTRY: ghcr.io
   HARBOR_REGISTRY: cr.vetra.io
@@ -209,6 +199,53 @@ jobs:
             -H "Content-Type: application/json" \
             -d "{\"query\":\"mutation { notifyNewImageRelease(input: { tag: \\\"${TAG}\\\", channel: \\\"${CHANNEL}\\\", images: [\\\"switchboard\\\", \\\"connect\\\"], secret: \\\"${WEBHOOK_SECRET}\\\" }) { updatedEnvironments } }\"}" \
             || echo "Auto-update notification failed (non-fatal)"
+
+  update-k8s-switchboard-connect:
+    name: Update Switchboard + Connect Images in K8s Hosting
+    needs: build
+    if: ${{ needs.build.outputs.tag != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Determine target environments
+        id: env
+        env:
+          TAG: ${{ needs.build.outputs.tag }}
+        run: |
+          if [[ "$TAG" == *"-dev."* ]]; then
+            echo "targets=dev" >> $GITHUB_OUTPUT
+          else
+            echo "Skipping k8s update — switchboard+connect auto-bump is scoped to the -dev. channel only"
+          fi
+
+      - name: Update switchboard + connect image tags in k8s-hosting
+        if: ${{ steps.env.outputs.targets != '' }}
+        env:
+          TAG: ${{ needs.build.outputs.tag }}
+          TARGETS: ${{ steps.env.outputs.targets }}
+          K8S_REPO_PAT: ${{ secrets.K8S_REPO_PAT }}
+        run: |
+          git clone "https://x-access-token:${K8S_REPO_PAT}@github.com/powerhouse-inc/powerhouse-k8s-hosting.git"
+          cd powerhouse-k8s-hosting
+
+          git config user.name "Github Actions Bot"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          for TARGET_ENV in $TARGETS; do
+            VALUES_FILE="tenants/${TARGET_ENV}/powerhouse-values.yaml"
+            # Update switchboard image tag (line after switchboard's repository line)
+            sed -i '/repository: cr.vetra.io\/powerhouse-inc-powerhouse\/switchboard/{n;s/\(.*tag: \).*/\1'"${TAG}"'/}' "$VALUES_FILE"
+            # Update connect image tag (line after connect's repository line)
+            sed -i '/repository: cr.vetra.io\/powerhouse-inc-powerhouse\/connect/{n;s/\(.*tag: \).*/\1'"${TAG}"'/}' "$VALUES_FILE"
+            git add "$VALUES_FILE"
+          done
+
+          git diff --cached --quiet && echo "No changes to commit" && exit 0
+          git commit -m "chore(${TARGETS// /,}): update switchboard + connect image tags to ${TAG}"
+          for i in 1 2 3; do
+            git pull --rebase origin main && git push && break
+            echo "Push attempt $i failed, retrying..."
+            sleep 5
+          done
 
   update-k8s-registry:
     name: Update Registry Image in K8s Hosting

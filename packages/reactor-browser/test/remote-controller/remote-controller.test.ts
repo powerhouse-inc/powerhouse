@@ -246,6 +246,28 @@ describe("RemoteDocumentController", () => {
       expect(controller.header.name).toBe("Name 2");
       expect(controller.status.pendingActionCount).toBe(2);
     });
+
+    it("applies setPreferredEditor through the dynamic proxy", async () => {
+      const client = createMockClient();
+      const controller = await RemoteDocumentController.pull(
+        DocumentModelController,
+        {
+          client,
+          documentId: "",
+          mode: "batch",
+        },
+      );
+
+      controller.setPreferredEditor({ preferredEditor: "custom-editor" });
+
+      expect(controller.header.meta?.preferredEditor).toBe("custom-editor");
+      expect(controller.status.pendingActionCount).toBe(1);
+
+      controller.setPreferredEditor({ preferredEditor: null });
+
+      expect(controller.header.meta?.preferredEditor).toBeUndefined();
+      expect(controller.status.pendingActionCount).toBe(2);
+    });
   });
 
   describe("push", () => {

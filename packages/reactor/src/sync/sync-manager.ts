@@ -46,9 +46,11 @@ import {
   chunkSyncOperations,
   createIdleHealth,
   filterOperations,
+  splitTrailingSameTimestampRun,
   toOperationWithContext,
   trimMailboxFromBatch,
 } from "./utils.js";
+import type { OperationWithContext } from "@powerhousedao/shared/document-model";
 
 export type SyncManagerConfig = {
   maxDeadLettersPerRemote: number;
@@ -807,8 +809,8 @@ export class SyncManager implements ISyncManager {
     if (this.isShutdown) return;
 
     for (const plan of jobs) {
+      if (!(plan.key in result.jobs)) continue;
       const info = result.jobs[plan.key];
-      if (!info) continue;
       this.recordPlanKeyMapping(plan.key, info.id);
       const fifoKey = `${plan.documentId}:${plan.scope}:${plan.branch}`;
       this.lastEnqueuedJobIdByKey.set(fifoKey, info.id);
@@ -880,7 +882,49 @@ export class SyncManager implements ISyncManager {
 
     let maxOrdinal = ackOrdinal;
     const lastJobByDoc = new Map<string, string>();
+    let prevChainJobId: string | undefined;
     const sinceTimestamp = remote.options.sinceTimestampUtcMs;
+
+    const emitBatches = (operations: OperationWithContext[]): void => {
+      if (operations.length === 0) {
+        return;
+      }
+
+      const batches = batchOperationsByDocument(operations);
+
+      const syncOps: SyncOperation[] = [];
+      for (const batch of batches) {
+        const jobId = crypto.randomUUID();
+        const prevJobId = lastJobByDoc.get(batch.documentId);
+
+        const deps: string[] = [];
+        if (prevJobId) deps.push(prevJobId);
+        if (
+          mode === OutboxMode.BatchTriggered &&
+          prevChainJobId &&
+          prevChainJobId !== prevJobId
+        ) {
+          deps.push(prevChainJobId);
+        }
+
+        const syncOp = new SyncOperation(
+          crypto.randomUUID(),
+          jobId,
+          deps,
+          remote.name,
+          batch.documentId,
+          [batch.scope],
+          batch.branch,
+          batch.operations,
+        );
+
+        syncOps.push(syncOp);
+        lastJobByDoc.set(batch.documentId, jobId);
+        if (mode === OutboxMode.BatchTriggered) prevChainJobId = jobId;
+      }
+
+      remote.channel.outbox.add(...syncOps);
+    };
 
     let page = await this.operationIndex.find(
       remote.collectionId,
@@ -889,6 +933,8 @@ export class SyncManager implements ISyncManager {
       undefined,
       composedSignal,
     );
+
+    let carry: OperationWithContext[] = [];
 
     let hasMore: boolean;
     do {
@@ -903,6 +949,11 @@ export class SyncManager implements ISyncManager {
         toOperationWithContext(entry),
       );
 
+      if (carry.length > 0) {
+        operations = [...carry, ...operations];
+        carry = [];
+      }
+
       if (sinceTimestamp && sinceTimestamp !== "0") {
         operations = operations.filter(
           (op) => op.operation.timestampUtcMs >= sinceTimestamp,
@@ -912,6 +963,8 @@ export class SyncManager implements ISyncManager {
       operations = operations.filter(
         (op) => !this.quarantinedDocumentIds.has(op.context.documentId),
       );
+
+      hasMore = !!page.next;
 
       if (operations.length > 0) {
         operations.sort((a, b) => {
@@ -924,48 +977,23 @@ export class SyncManager implements ISyncManager {
           return a.context.ordinal - b.context.ordinal;
         });
 
-        const batches = batchOperationsByDocument(operations);
-
-        const syncOps: SyncOperation[] = [];
-        let prevChainJobId: string | undefined;
-        for (const batch of batches) {
-          const jobId = crypto.randomUUID();
-          const prevJobId = lastJobByDoc.get(batch.documentId);
-
-          const deps: string[] = [];
-          if (prevJobId) deps.push(prevJobId);
-          if (
-            mode === OutboxMode.BatchTriggered &&
-            prevChainJobId &&
-            prevChainJobId !== prevJobId
-          ) {
-            deps.push(prevChainJobId);
-          }
-
-          const syncOp = new SyncOperation(
-            crypto.randomUUID(),
-            jobId,
-            deps,
-            remote.name,
-            batch.documentId,
-            [batch.scope],
-            batch.branch,
-            batch.operations,
-          );
-
-          syncOps.push(syncOp);
-          lastJobByDoc.set(batch.documentId, jobId);
-          if (mode === OutboxMode.BatchTriggered) prevChainJobId = jobId;
+        if (hasMore) {
+          const split = splitTrailingSameTimestampRun(operations);
+          carry = split.carry;
+          emitBatches(split.emit);
+        } else {
+          emitBatches(operations);
         }
-
-        remote.channel.outbox.add(...syncOps);
       }
 
-      hasMore = !!page.next;
       if (hasMore) {
         page = await page.next!();
       }
     } while (hasMore);
+
+    if (carry.length > 0) {
+      emitBatches(carry);
+    }
 
     remote.channel.outbox.advanceOrdinal(maxOrdinal);
   }

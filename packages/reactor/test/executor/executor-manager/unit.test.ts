@@ -20,10 +20,8 @@ import {
   DocumentModelResolver,
   NullDocumentModelResolver,
 } from "../../../src/registry/document-model-resolver.js";
-import {
-  DocumentModelRegistry,
-  ModuleNotFoundError,
-} from "../../../src/registry/implementation.js";
+import { ModuleNotFoundError } from "../../../src/registry/errors.js";
+import { DocumentModelRegistry } from "../../../src/registry/implementation.js";
 import {
   DocumentDeletedError,
   DocumentNotFoundError,

@@ -1,3 +1,118 @@
+## 6.0.0-dev.244 (2026-05-13)
+
+### 🚀 Features
+
+- **document-model, reactor-api, reactor:** added SET_PREFERRED_EDITOR as a header operation ([1b798614e](https://github.com/powerhouse-inc/powerhouse/commit/1b798614e))
+
+### 🩹 Fixes
+
+- **codegen:** workspace template syntax ([9e9c489fd](https://github.com/powerhouse-inc/powerhouse/commit/9e9c489fd))
+- **connect:** cache usePendingInstallations snapshot to prevent infinite re-render ([13afdd208](https://github.com/powerhouse-inc/powerhouse/commit/13afdd208))
+- **connect:** cache usePendingInstallations snapshot to prevent infinite re-render ([#2600](https://github.com/powerhouse-inc/powerhouse/pull/2600))
+- **reactor:** sync batch system needs no split envelopes across operations that share a timestamp ([b829016ef](https://github.com/powerhouse-inc/powerhouse/commit/b829016ef))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 4.7 (1M context)
+- liberuum
+
+## 6.0.0-dev.243 (2026-05-12)
+
+### 🩹 Fixes
+
+- **codegen:** add @datadog/pprof to allowed builds ([c7929c192](https://github.com/powerhouse-inc/powerhouse/commit/c7929c192))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.242 (2026-05-12)
+
+### 🩹 Fixes
+
+- **release:** pass explicit from-ref to releaseChangelog ([5af1ce209](https://github.com/powerhouse-inc/powerhouse/commit/5af1ce209))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.241 (2026-05-12)
+
+### 🚀 Features
+
+- attach invocation context and tags to sentry events ([815c458bd](https://github.com/powerhouse-inc/powerhouse/commit/815c458bd))
+- **connect:** surface missing-model failures and move registry URL to ph-packages.json ([bcb8bbdb0](https://github.com/powerhouse-inc/powerhouse/commit/bcb8bbdb0))
+
+### 🩹 Fixes
+
+- switching postgres versions ([353951582](https://github.com/powerhouse-inc/powerhouse/commit/353951582))
+- do not realExit when there are duplicate signals ([94f2750e7](https://github.com/powerhouse-inc/powerhouse/commit/94f2750e7))
+- **reactor:** fixed issue with cascading reshuffles ([36087940d](https://github.com/powerhouse-inc/powerhouse/commit/36087940d))
+- **release:** pass explicit from-ref to releaseChangelog ([5af1ce209](https://github.com/powerhouse-inc/powerhouse/commit/5af1ce209))
+- **sentry:** inject debug-ids before publish + drop dead dirs ([444c677a2](https://github.com/powerhouse-inc/powerhouse/commit/444c677a2))
+- **switchboard:** move @pyroscope/nodejs to dependencies ([c71e0b3de](https://github.com/powerhouse-inc/powerhouse/commit/c71e0b3de))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Guillermo Puente @gpuente
+
+## 6.0.0-dev.240 (2026-05-11)
+
+### 🚀 Features
+
+- gigantic hub and spoke catchup integration test ([4283fead6](https://github.com/powerhouse-inc/powerhouse/commit/4283fead6))
+
+### 🩹 Fixes
+
+- **reactor-api:** exclude hub/spoke test by default, added specific job to test it ([8e8474929](https://github.com/powerhouse-inc/powerhouse/commit/8e8474929))
+- **release:** pass the just-published tag from release -> publish-ph-binaries ([dd19a9b20](https://github.com/powerhouse-inc/powerhouse/commit/dd19a9b20))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+
+## 6.0.0-dev.239 (2026-05-11)
+
+### 🚀 Features
+
+- **ph-cli,ph-cmd,shared:** use lightweight sentry sdk ([248c6b2f6](https://github.com/powerhouse-inc/powerhouse/commit/248c6b2f6))
+- **ph-cmd:** added scripts to install dev and staging ph-cmd binary ([492555423](https://github.com/powerhouse-inc/powerhouse/commit/492555423))
+- **reactor-browser:** useDocumentSafe hook to get current state of document including error and loading states ([8ecf03a20](https://github.com/powerhouse-inc/powerhouse/commit/8ecf03a20))
+- **switchboard:** bridge OpenTelemetry spans to Sentry ([c1f2fc28b](https://github.com/powerhouse-inc/powerhouse/commit/c1f2fc28b))
+
+### 🩹 Fixes
+
+- update dockerfiles for pnpm 11 bin path ([d33db03ce](https://github.com/powerhouse-inc/powerhouse/commit/d33db03ce))
+- **reactor-browser:** do not throw when fetching multiple documents ([edec7c66d](https://github.com/powerhouse-inc/powerhouse/commit/edec7c66d))
+- **shared:** rename build-config.ts -> build-config.mts ([e636e7d38](https://github.com/powerhouse-inc/powerhouse/commit/e636e7d38))
+- **switchboard:** only enable tracing if a destination is configured ([8abff8020](https://github.com/powerhouse-inc/powerhouse/commit/8abff8020))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.238 (2026-05-11)
+
+### 🚀 Features
+
+- **ph-cli,ph-cmd,shared:** use lightweight sentry sdk ([248c6b2f6](https://github.com/powerhouse-inc/powerhouse/commit/248c6b2f6))
+- **switchboard:** bridge OpenTelemetry spans to Sentry ([c1f2fc28b](https://github.com/powerhouse-inc/powerhouse/commit/c1f2fc28b))
+
+### 🩹 Fixes
+
+- update dockerfiles for pnpm 11 bin path ([d33db03ce](https://github.com/powerhouse-inc/powerhouse/commit/d33db03ce))
+- **shared:** rename build-config.ts -> build-config.mts ([e636e7d38](https://github.com/powerhouse-inc/powerhouse/commit/e636e7d38))
+- **switchboard:** only enable tracing if a destination is configured ([8abff8020](https://github.com/powerhouse-inc/powerhouse/commit/8abff8020))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.237 (2026-05-10)
 
 This was a version bump only, there were no code changes.

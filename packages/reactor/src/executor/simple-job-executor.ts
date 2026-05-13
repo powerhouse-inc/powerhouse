@@ -709,18 +709,27 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     const existingOpsToReshuffle = nonSupersededOps;
 
-    const skipCount = existingOpsToReshuffle.length;
-
-    if (skipCount > this.config.maxSkipThreshold) {
+    if (existingOpsToReshuffle.length > this.config.maxSkipThreshold) {
       return {
         job,
         success: false,
         error: new Error(
-          `Excessive reshuffle detected: skip count of ${skipCount} exceeds threshold of ${this.config.maxSkipThreshold}. ` +
+          `Excessive reshuffle detected: existing op count of ${existingOpsToReshuffle.length} exceeds threshold of ${this.config.maxSkipThreshold}. ` +
             `This indicates a significant divergence between local and incoming operations.`,
         ),
         duration: Date.now() - startTime,
       };
+    }
+
+    let skipCount = existingOpsToReshuffle.length;
+    if (existingOpsToReshuffle.length > 0) {
+      let minLogicalIndex = Number.POSITIVE_INFINITY;
+      for (const op of existingOpsToReshuffle) {
+        const logical = op.index - op.skip;
+        if (logical < minLogicalIndex) minLogicalIndex = logical;
+      }
+      const logicalSkip = latestRevision - minLogicalIndex;
+      if (logicalSkip > skipCount) skipCount = logicalSkip;
     }
 
     const existingActionIds = new Set(

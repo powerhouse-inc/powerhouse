@@ -34,6 +34,7 @@ import type {
   SchemaPruneAction,
   SchemaRedoAction,
   SchemaSetNameAction,
+  SchemaSetPreferredEditorAction,
   SchemaUndoAction,
   ScopeState,
   SetAuthorNameInput,
@@ -79,6 +80,8 @@ export const RedoSchema = z.enum(["REDO"]);
 
 export const Set_NameSchema = z.enum(["SET_NAME"]);
 
+export const Set_PreferredEditorSchema = z.enum(["SET_PREFERRED_EDITOR"]);
+
 export const UndoSchema = z.enum(["UNDO"]);
 
 export function OperationScopeSchema(): z.ZodString {
@@ -91,6 +94,7 @@ export function DocumentActionSchema() {
     PruneActionSchema(),
     RedoActionSchema(),
     SetNameActionSchema(),
+    SetPreferredEditorActionSchema(),
     UndoActionSchema(),
   ]);
 }
@@ -183,6 +187,22 @@ export function SetNameActionSchema(): z.ZodObject<
     input: SetNameActionInputSchema(),
     type: Set_NameSchema,
     scope: z.literal("global"),
+  });
+}
+
+export function SetPreferredEditorActionInputSchema() {
+  return z.object({ preferredEditor: z.string().nullable() });
+}
+
+export function SetPreferredEditorActionSchema(): z.ZodObject<
+  Properties<SchemaSetPreferredEditorAction>
+> {
+  return z.object({
+    id: z.string(),
+    timestampUtcMs: z.string().datetime(),
+    input: SetPreferredEditorActionInputSchema(),
+    type: Set_PreferredEditorSchema,
+    scope: z.literal("header"),
   });
 }
 

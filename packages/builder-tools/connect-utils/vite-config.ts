@@ -298,9 +298,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
       dedupe: ["react", "react-dom"],
       tsconfigPaths: true,
     },
-    define: {
-      PH_PACKAGE_REGISTRY_URL: `"${phPackageRegistryUrl}"`,
-    },
+    define: {},
     customLogger,
     envPrefix: ["PH_CONNECT_"],
     optimizeDeps: {
@@ -320,6 +318,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
       phPackagesPlugin({
         packages: phPackages,
         projectRoot: options.dirname,
+        registryUrl: phPackageRegistryUrl,
       }),
       phBundledPackagesPlugin({
         packages: localPackagesFromConfig,

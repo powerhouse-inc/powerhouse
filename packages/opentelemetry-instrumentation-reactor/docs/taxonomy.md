@@ -67,7 +67,9 @@ which use UCUM (Unified Code for Units of Measure). Curly-brace annotations like
 
 ## Environment Variables
 
-| Variable                     | Default | Description                                                                     |
-| ---------------------------- | ------- | ------------------------------------------------------------------------------- |
-| `METRICS_ENDPOINT`           | (none)  | OTLP HTTP endpoint for metrics export. Metrics export is disabled when not set. |
-| `METRICS_EXPORT_INTERVAL_MS` | `60000` | Export interval in milliseconds                                                 |
+The package itself reads no environment variables — all configuration is owned by the host application's OTel bootstrap. The following are the standard OpenTelemetry SDK names that hosts typically wire up to drive the global meter provider this package writes to:
+
+| Variable                      | Default | Description                                                                     |
+| ----------------------------- | ------- | ------------------------------------------------------------------------------- |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | (none)  | OTLP HTTP endpoint for metrics export. Metrics export is disabled when not set. |
+| `OTEL_METRIC_EXPORT_INTERVAL` | `60000` | Export interval in milliseconds                                                 |

@@ -33,12 +33,29 @@ type TelemetryConfig = {
   askedAt: string;
 };
 
+export type CliInvocationInfo = {
+  command?: string;
+  subcommand?: string;
+  pm?: string;
+  argv: string[];
+  cwd?: string;
+};
+
 export type TelemetryClient = {
+  /**
+   * Attaches per-invocation context (command, sanitized argv, package
+   * manager) as Sentry tags + a `invocation` context block, plus a single
+   * "cli invoked" breadcrumb. Safe to call once per process.
+   */
+  attachInvocationContext: (info: CliInvocationInfo) => void;
   /**
    * Captures an error (if telemetry is initialized) and flushes before the
    * caller calls process.exit(). Safe no-op when telemetry is disabled.
    */
-  captureCliError: (err: unknown) => Promise<void>;
+  captureCliError: (
+    err: unknown,
+    opts?: { kind?: "crash" | "user" },
+  ) => Promise<void>;
 };
 
 function isExplicitlyDisabled(): boolean {
@@ -204,6 +221,7 @@ export async function initCliTelemetry(opts: {
   if (!enabled) return;
 
   const Sentry = await import("@sentry/node-core/light");
+  const os = await import("node:os");
   const sentryClient = Sentry.init({
     dsn: SENTRY_DSN,
     release: opts.release,
@@ -225,12 +243,63 @@ export async function initCliTelemetry(opts: {
   });
   Sentry.setTag("cli_name", opts.cliName);
   if (opts.release) Sentry.setTag("cli_version", opts.release);
+  // Environment tags — `defaultIntegrations: false` strips Sentry's auto
+  // node-context, so attach the bits we care about manually (and keep
+  // hostname out of it).
+  Sentry.setTag("os", process.platform);
+  Sentry.setTag("arch", process.arch);
+  Sentry.setTag("node_version", process.version);
+  Sentry.setTag("ci", String(Boolean(process.env.CI)));
+  Sentry.setTag("tty", String(Boolean(process.stdin.isTTY)));
+  Sentry.setContext("runtime", {
+    name: "node",
+    version: process.version,
+  });
+  Sentry.setContext("os", {
+    name: process.platform,
+    version: os.release(),
+  });
+  Sentry.setContext("device", {
+    arch: process.arch,
+  });
   if (!sentryClient) {
     return;
   }
   return {
-    captureCliError: async (err: unknown) => {
+    attachInvocationContext(info: CliInvocationInfo) {
+      const argv = info.argv.map(scrubString);
+      const flagNames = info.argv
+        .filter((a) => a.startsWith("-"))
+        .map((a) => a.split("=")[0]);
+      if (info.command) Sentry.setTag("command", info.command);
+      if (info.subcommand) Sentry.setTag("subcommand", info.subcommand);
+      if (info.pm) Sentry.setTag("pm", info.pm);
+      Sentry.setContext("invocation", {
+        command: info.command,
+        subcommand: info.subcommand,
+        argv,
+        flag_names: flagNames,
+        argv_count: argv.length,
+        cwd: info.cwd ? scrubString(info.cwd) : undefined,
+      });
+      Sentry.addBreadcrumb({
+        category: "cli",
+        level: "info",
+        message: "cli invoked",
+        data: {
+          command: info.command,
+          pm: info.pm,
+          tty: Boolean(process.stdin.isTTY),
+          ci: Boolean(process.env.CI),
+        },
+      });
+    },
+    captureCliError: async (
+      err: unknown,
+      captureOpts?: { kind?: "crash" | "user" },
+    ) => {
       try {
+        Sentry.setTag("error_kind", captureOpts?.kind ?? "crash");
         sentryClient.captureException(err);
         await sentryClient.flush(2000);
       } catch {

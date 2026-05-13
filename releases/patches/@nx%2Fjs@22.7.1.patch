@@ -1,0 +1,29 @@
+diff --git a/src/executors/release-publish/release-publish.impl.js b/src/executors/release-publish/release-publish.impl.js
+index 84cd07a3805498580129b03e0f82c40badf94ba8..9d55afbb98332aba09a724211dac9c364c3326ef 100644
+--- a/src/executors/release-publish/release-publish.impl.js
++++ b/src/executors/release-publish/release-publish.impl.js
+@@ -377,7 +377,23 @@ Please update the local dependency on "${depName}" to be a valid semantic versio
+             if (stdoutData.error?.message && !stdoutData.error?.summary) {
+                 console.error(stdoutData.error.message);
+             }
+-            if (context.isVerbose) {
++            // Patched: pnpm sometimes emits {error:{...}} without summary/detail/code/message
++            // (or with empty/unknown fields). Without this, the executor logs a bare
++            // "pnpm publish error:" and swallows the actual failure. Surface raw stderr
++            // and the full parsed payload so failures are diagnosable from CI logs.
++            const hasRecognizedField = stdoutData.error?.summary ||
++                stdoutData.error?.detail ||
++                stdoutData.error?.code ||
++                stdoutData.error?.message;
++            if (!hasRecognizedField) {
++                const stderrStr = err.stderr?.toString() || '';
++                if (stderrStr.trim().length > 0) {
++                    console.error(stderrStr);
++                }
++                console.error(`${pm} publish stdout:`);
++                console.error(JSON.stringify(stdoutData, null, 2));
++            }
++            else if (context.isVerbose) {
+                 console.error(`${pm} publish stdout:`);
+                 console.error(JSON.stringify(stdoutData, null, 2));
+             }

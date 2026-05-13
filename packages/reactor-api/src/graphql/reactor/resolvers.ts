@@ -739,6 +739,41 @@ export async function renameDocument(
   }
 }
 
+export async function setPreferredEditor(
+  reactorClient: IReactorClient,
+  args: {
+    documentIdentifier: string;
+    preferredEditor?: string | null;
+    branch?: string | null;
+  },
+  signal?: AbortSignal,
+): Promise<ReturnType<typeof toGqlPhDocument>> {
+  const branch = fromInputMaybe(args.branch);
+  const preferredEditor = fromInputMaybe(args.preferredEditor) ?? null;
+
+  let result: PHDocument;
+  try {
+    result = await reactorClient.setPreferredEditor(
+      args.documentIdentifier,
+      preferredEditor,
+      branch,
+      signal,
+    );
+  } catch (error) {
+    throw new GraphQLError(
+      `Failed to set preferred editor: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+
+  try {
+    return toGqlPhDocument(result);
+  } catch (error) {
+    throw new GraphQLError(
+      `Failed to convert updated document to GraphQL: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+}
+
 export async function addRelationship(
   reactorClient: IReactorClient,
   args: {

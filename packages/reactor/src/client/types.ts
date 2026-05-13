@@ -120,6 +120,16 @@ export interface IDriveClient {
   ): Promise<Node>;
 
   /**
+   * Updates the preferred editor recorded in the document header meta for
+   * a node. Pass `null` to clear it.
+   */
+  setPreferredEditorOnNode(
+    nodeId: string,
+    preferredEditor: string | null,
+    signal?: AbortSignal,
+  ): Promise<PHDocument>;
+
+  /**
    * Moves a node to a different parent folder within the same drive.
    * Pass `undefined` to move the node to the drive root.
    */
@@ -376,6 +386,22 @@ export interface IReactorClient {
   rename(
     documentIdentifier: string,
     name: string,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<PHDocument>;
+
+  /**
+   * Updates the preferred editor in the document header meta and waits for completion.
+   *
+   * @param documentIdentifier - Target document id or slug
+   * @param preferredEditor - The new preferred editor, or `null` to clear it
+   * @param branch - Optional branch, defaults to "main"
+   * @param signal - Optional abort signal to cancel the request
+   * @returns The updated document.
+   */
+  setPreferredEditor(
+    documentIdentifier: string,
+    preferredEditor: string | null,
     branch?: string,
     signal?: AbortSignal,
   ): Promise<PHDocument>;

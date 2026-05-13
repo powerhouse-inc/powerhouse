@@ -35,6 +35,7 @@ import {
   generateId,
   replayDocument,
   setName,
+  setPreferredEditor,
 } from "@powerhousedao/shared/document-model";
 import { logger } from "document-model";
 import { conditional, constant, isDefined, isNot, isStrictEqual } from "remeda";
@@ -811,6 +812,25 @@ export async function renameDriveNode(
 
   const drive = await reactorClient.get<DocumentDriveDocument>(driveId);
   return drive.state.global.nodes.find((n: Node) => n.id === nodeId);
+}
+
+export async function setPreferredEditorOnNode(
+  nodeId: string,
+  preferredEditor: string | null,
+) {
+  const { isAllowedToCreateDocuments } = getUserPermissions();
+  if (!isAllowedToCreateDocuments) {
+    throw new Error("User is not allowed to modify documents");
+  }
+
+  const reactorClient = window.ph?.reactorClient;
+  if (!reactorClient) {
+    throw new Error("ReactorClient not initialized");
+  }
+
+  return reactorClient.execute(nodeId, "main", [
+    setPreferredEditor(preferredEditor),
+  ]);
 }
 
 export async function moveNodeById(args: {

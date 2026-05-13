@@ -642,6 +642,30 @@ export class ReactorClient implements IReactorClient {
   }
 
   /**
+   * Updates the preferred editor recorded in the document header meta.
+   * Pass `null` to clear it.
+   */
+  async setPreferredEditor(
+    documentIdentifier: string,
+    preferredEditor: string | null,
+    branch: string = "main",
+    signal?: AbortSignal,
+  ): Promise<PHDocument> {
+    this.logger.verbose(
+      "setPreferredEditor(@documentIdentifier, @preferredEditor, @branch)",
+      documentIdentifier,
+      preferredEditor,
+      branch,
+    );
+    return this.execute(
+      documentIdentifier,
+      branch,
+      [actions.setPreferredEditor(preferredEditor)],
+      signal,
+    );
+  }
+
+  /**
    * Adds multiple documents as children to another and waits for completion
    */
   async addRelationship(

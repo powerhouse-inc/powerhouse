@@ -4,6 +4,8 @@ import {
   type IPackageDiscoveryService,
   type DiscoveryEvent,
   type DiscoveryEventListener,
+  type FailedInstallation,
+  type FailedInstallationReason,
   type PendingInstallation,
 } from "@powerhousedao/reactor-browser";
 import type { RegistryClient } from "@powerhousedao/reactor-browser";
@@ -30,6 +32,9 @@ export class PackageDiscoveryService
   #pending = new Map<string, PendingInstallation>();
   #pendingMemo: PendingInstallation[] = [];
   #pendingSubscribers = new Set<() => void>();
+  #failed = new Map<string, FailedInstallation>();
+  #failedMemo: FailedInstallation[] = [];
+  #failedSubscribers = new Set<() => void>();
   #eventSubscribers = new Set<DiscoveryEventListener>();
   #dismissedStorage: BrowserLocalStorage<boolean>;
   #discoveredTypes = new Map<string, string[]>();
@@ -50,10 +55,12 @@ export class PackageDiscoveryService
   load(documentType: string): Promise<DocumentModelModule<any>> {
     const existing = this.#findModuleInLoadedPackages(documentType);
     if (existing) {
+      this.#clearFailed(documentType);
       return Promise.resolve(existing);
     }
 
     if (this.#dismissedStorage.has(documentType)) {
+      this.#recordFailure(documentType, "dismissed", [], null);
       return Promise.reject(
         new Error(`Document type "${documentType}" was dismissed`),
       );
@@ -94,6 +101,12 @@ export class PackageDiscoveryService
           this.#deferred.delete(documentType);
           this.#pending.delete(documentType);
         }
+        this.#recordFailure(
+          documentType,
+          "install-failed",
+          [packageName],
+          result.error,
+        );
       }
       this.#notifyPendingChanged();
       return;
@@ -112,11 +125,17 @@ export class PackageDiscoveryService
       const module = this.#findModuleInLoadedPackages(documentType);
       if (module) {
         entry.resolve(module);
+        this.#clearFailed(documentType);
       } else {
-        entry.reject(
-          new Error(
-            `Package "${packageName}" installed but module for "${documentType}" not found`,
-          ),
+        const error = new Error(
+          `Package "${packageName}" installed but module for "${documentType}" not found`,
+        );
+        entry.reject(error);
+        this.#recordFailure(
+          documentType,
+          "install-failed",
+          [packageName],
+          error,
         );
       }
       this.#deferred.delete(documentType);
@@ -140,6 +159,7 @@ export class PackageDiscoveryService
       this.#deferred.delete(documentType);
       this.#pending.delete(documentType);
       this.#discoveredTypes.delete(documentType);
+      this.#recordFailure(documentType, "dismissed", [packageName], null);
     }
 
     this.#emitEvent({
@@ -161,11 +181,33 @@ export class PackageDiscoveryService
     };
   }
 
+  getFailedInstallations(): FailedInstallation[] {
+    return this.#failedMemo;
+  }
+
+  subscribeFailed(listener: () => void): () => void {
+    this.#failedSubscribers.add(listener);
+    return () => {
+      this.#failedSubscribers.delete(listener);
+    };
+  }
+
   subscribeEvents(listener: DiscoveryEventListener): () => void {
     this.#eventSubscribers.add(listener);
     return () => {
       this.#eventSubscribers.delete(listener);
     };
+  }
+
+  async retryInstallation(documentType: string): Promise<void> {
+    this.#dismissedStorage.delete(documentType);
+    this.#clearFailed(documentType);
+    try {
+      await this.#discover(documentType);
+    } catch {
+      // failure has been recorded via #recordFailure; swallow so the
+      // caller (UI button) doesn't have to handle the rejection
+    }
   }
 
   async #discover(documentType: string): Promise<DocumentModelModule<any>> {
@@ -174,17 +216,19 @@ export class PackageDiscoveryService
       packageNames =
         await this.#registryClient.getPackagesByDocumentType(documentType);
     } catch (error) {
+      const normalized =
+        error instanceof Error ? error : new Error(String(error));
       this.#emitEvent({
         type: "registry-query-failed",
         documentType,
-        error: error instanceof Error ? error : new Error(String(error)),
+        error: normalized,
       });
-      return Promise.reject(
-        error instanceof Error ? error : new Error(String(error)),
-      );
+      this.#recordFailure(documentType, "registry-error", [], normalized);
+      return Promise.reject(normalized);
     }
 
     if (packageNames.length === 0) {
+      this.#recordFailure(documentType, "not-in-registry", [], null);
       return Promise.reject(
         new Error(`No packages found for document type "${documentType}"`),
       );
@@ -255,6 +299,35 @@ export class PackageDiscoveryService
     this.#pendingMemo = Array.from(this.#pending.values());
     for (const listener of this.#pendingSubscribers) {
       listener();
+    }
+  }
+
+  #notifyFailedChanged(): void {
+    this.#failedMemo = Array.from(this.#failed.values());
+    for (const listener of this.#failedSubscribers) {
+      listener();
+    }
+  }
+
+  #recordFailure(
+    documentType: string,
+    reason: FailedInstallationReason,
+    packageNames: string[],
+    error: Error | null,
+  ): void {
+    this.#failed.set(documentType, {
+      documentType,
+      reason,
+      packageNames,
+      error,
+    });
+    this.#emitEvent({ type: "load-failed", documentType, reason });
+    this.#notifyFailedChanged();
+  }
+
+  #clearFailed(documentType: string): void {
+    if (this.#failed.delete(documentType)) {
+      this.#notifyFailedChanged();
     }
   }
 

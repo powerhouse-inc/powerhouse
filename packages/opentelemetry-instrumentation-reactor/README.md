@@ -38,8 +38,12 @@ import { NodeSDK } from "@opentelemetry/sdk-node";
 
 const sdk = new NodeSDK({
   metricReader: new PeriodicExportingMetricReader({
-    exporter: new OTLPMetricExporter({ url: process.env.METRICS_ENDPOINT }),
-    exportIntervalMillis: 60_000,
+    exporter: new OTLPMetricExporter({
+      url: process.env.OTEL_EXPORTER_OTLP_ENDPOINT,
+    }),
+    exportIntervalMillis: Number(
+      process.env.OTEL_METRIC_EXPORT_INTERVAL ?? 60_000,
+    ),
   }),
 });
 
