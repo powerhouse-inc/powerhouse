@@ -16,9 +16,16 @@ export interface IDriveReadModel {
     signal?: AbortSignal,
   ): Promise<ReactorDriveNode | undefined>;
 
+  /**
+   * Lists nodes within a drive with optional filtering by parent folder.
+   *
+   * - `parentFolder === undefined` returns every node in the drive.
+   * - `parentFolder === null` returns only root-level nodes.
+   * - `parentFolder === <id>` returns only direct children of that folder.
+   */
   listChildren(
     driveId: string,
-    parentFolder: string | null,
+    parentFolder: string | null | undefined,
     paging?: PagingOptions,
     signal?: AbortSignal,
   ): Promise<PagedResults<ReactorDriveNode>>;

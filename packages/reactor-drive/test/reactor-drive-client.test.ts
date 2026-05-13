@@ -403,6 +403,53 @@ describe("ReactorDriveClient", () => {
     });
   });
 
+  it("listNodes returns all nodes in the drive when parentFolder is undefined", async () => {
+    const driveId = "drive-1";
+    await seed(driveId, [
+      { id: "root-folder", kind: "folder", name: "Root", parentFolder: null },
+      { id: "nested", kind: "folder", name: "Nested", parentFolder: "root-folder" },
+      {
+        id: "root-file",
+        kind: "file",
+        name: "a.md",
+        parentFolder: null,
+        documentType: "powerhouse/document-model",
+      },
+      {
+        id: "nested-file",
+        kind: "file",
+        name: "b.md",
+        parentFolder: "root-folder",
+        documentType: "powerhouse/document-model",
+      },
+    ]);
+    const { reactor } = createMockReactor();
+    const client = new ReactorDriveClient({ reactor, readModel: view });
+
+    const page = await client.listNodes(driveId);
+
+    expect(page.results.map((n) => n.id).sort()).toEqual([
+      "nested",
+      "nested-file",
+      "root-file",
+      "root-folder",
+    ]);
+  });
+
+  it("listNodes returns only root-level nodes when parentFolder is null", async () => {
+    const driveId = "drive-1";
+    await seed(driveId, [
+      { id: "root-folder", kind: "folder", name: "Root", parentFolder: null },
+      { id: "nested", kind: "folder", name: "Nested", parentFolder: "root-folder" },
+    ]);
+    const { reactor } = createMockReactor();
+    const client = new ReactorDriveClient({ reactor, readModel: view });
+
+    const page = await client.listNodes(driveId, null);
+
+    expect(page.results.map((n) => n.id)).toEqual(["root-folder"]);
+  });
+
   it("listNodes returns shaped legacy Node entries and paging", async () => {
     const driveId = "drive-1";
     await seed(driveId, [

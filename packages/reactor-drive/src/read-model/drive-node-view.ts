@@ -33,7 +33,7 @@ export class DriveNodeView implements IDriveReadModel {
 
   async listChildren(
     driveId: string,
-    parentFolder: string | null,
+    parentFolder: string | null | undefined,
     paging?: PagingOptions,
   ): Promise<PagedResults<ReactorDriveNode>> {
     const { offset, limit } = parsePagingOptions(paging, DEFAULT_LIMIT);
@@ -43,10 +43,11 @@ export class DriveNodeView implements IDriveReadModel {
       .selectAll()
       .where("driveId", "=", driveId);
 
-    query =
-      parentFolder === null
-        ? query.where("parentFolder", "is", null)
-        : query.where("parentFolder", "=", parentFolder);
+    if (parentFolder === null) {
+      query = query.where("parentFolder", "is", null);
+    } else if (parentFolder !== undefined) {
+      query = query.where("parentFolder", "=", parentFolder);
+    }
 
     const rows = await query
       .orderBy("createdAt", "asc")

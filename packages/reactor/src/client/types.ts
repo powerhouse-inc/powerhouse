@@ -161,8 +161,10 @@ export interface IDriveClient {
   ): Promise<Node>;
 
   /**
-   * Returns nodes in the drive, optionally filtered to a single parent
-   * folder. Pass `null` to list root-level nodes only.
+   * Returns nodes in the drive, optionally filtered by parent folder:
+   * - omit `parentFolder` (or pass `undefined`) to list every node in the drive.
+   * - pass `null` to list only root-level nodes.
+   * - pass a folder id to list only the direct children of that folder.
    *
    * Returns a paged result so callers can stream through drives with very
    * large node counts without materialising the whole list in memory.

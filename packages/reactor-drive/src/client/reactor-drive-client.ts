@@ -421,10 +421,9 @@ export class ReactorDriveClient implements IDriveClient {
     paging?: PagingOptions,
     signal?: AbortSignal,
   ): Promise<PagedResults<Node>> {
-    const effectiveParent = parentFolder === undefined ? null : parentFolder;
     const page = await this.readModel.listChildren(
       driveIdentifier,
-      effectiveParent,
+      parentFolder,
       paging,
       signal,
     );
