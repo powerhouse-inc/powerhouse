@@ -77,8 +77,6 @@
     "@renown/sdk": "workspace:*",
     "@sentry/react": "^10.17.0",
     "document-model": "workspace:*",
-    "graphql": "catalog:",
-    "graphql-request": "catalog:",
     "i18next": "^25.5.3",
     "kysely": "catalog:",
     "kysely-pglite-dialect": "catalog:",
