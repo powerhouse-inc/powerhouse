@@ -133,21 +133,12 @@ A slot can receive a list of custom controls. Each item needs a `key`.
 ```
 ## Replacing the toolbar container
 Use `toolbarContainer` to replace the outer toolbar container.
+The custom toolbar container receives the toolbar children and the resolved `toolbarClassName`.
 ```tsx
 <DocumentToolbar
   document={document}
-  toolbarContainer={({ children }) => (
-    <div className="bg-amber-300">{children}</div>
-  )}
-/>
-```
-The custom toolbar container should accept normal `div` props.
-A fuller version usually forwards `className` and the remaining props:
-```tsx
-<DocumentToolbar
-  document={document}
-  toolbarContainer={({ children, className, ...props }) => (
-    <div className={className} {...props}>
+  toolbarContainer={({ children, className }) => (
+    <div className={className}>
       {children}
     </div>
   )}
@@ -155,15 +146,15 @@ A fuller version usually forwards `className` and the remaining props:
 ```
 ## Replacing the controls container
 Use `controlsContainer` to replace the container used for each toolbar slot.
+The custom controls container receives the slot children and the resolvedv`controlsContainerClassName`.
 ```tsx
 <DocumentToolbar
   document={document}
-  controlsContainer={({ children }) => (
-    <div className="bg-cyan-300">{children}</div>
+  controlsContainer={({ children, className }) => (
+    <div className={className}>{children}</div>
   )}
 />
 ```
-The custom controls container should accept normal `div` props.
 ## Replacing a built-in control
 Use `componentOverrides` to replace individual built-in controls while keeping the default toolbar structure.
 ```tsx

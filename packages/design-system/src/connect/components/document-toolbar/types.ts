@@ -78,8 +78,8 @@ export type ToolbarControlComponent = (props: {
 /**
  * Component signature for toolbar container elements.
  *
- * Custom containers should behave like a normal `div` and pass through standard
- * `div` props such as `className`, event handlers, and ARIA attributes.
+ * Custom containers receive the children for the container and any props that
+ * `DocumentToolbar` passes to that container, such as `className`.
  */
 export type ContainerComponent = (
   props: ComponentProps<"div">,

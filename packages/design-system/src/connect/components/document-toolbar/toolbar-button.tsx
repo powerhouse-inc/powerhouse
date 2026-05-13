@@ -59,6 +59,7 @@ export function ToolbarUndoButton(props: ToolbarButtonProps) {
   return (
     <ToolbarButton
       data-testid="toolbar-undo-button"
+      aria-label="Undo"
       className={className}
       disabled={disabled}
       onClick={onClick}
@@ -91,6 +92,7 @@ export function ToolbarRedoButton(props: ToolbarButtonProps) {
   return (
     <ToolbarButton
       data-testid="toolbar-redo-button"
+      aria-label="Redo"
       className={className}
       disabled={disabled}
       onClick={onClick}
@@ -119,6 +121,7 @@ export function ToolbarDownloadButton(props: ToolbarButtonProps) {
   return (
     <ToolbarButton
       data-testid="toolbar-download-button"
+      aria-label="Download"
       className={className}
       onClick={onClick}
     >
@@ -153,6 +156,7 @@ export function ToolbarSwitchboardButton(props: ToolbarButtonProps) {
   return (
     <ToolbarButton
       data-testid="toolbar-switchboard-button"
+      aria-label="Open link in Switchboard"
       className={className}
       onClick={onClick}
     >
@@ -179,6 +183,7 @@ export function ToolbarHistoryButton(props: ToolbarButtonProps) {
   return (
     <ToolbarButton
       data-testid="toolbar-history-button"
+      aria-label="Open document revision history"
       className={className}
       onClick={onClick}
     >
@@ -209,6 +214,7 @@ export function ToolbarCloseButton(props: ToolbarButtonProps) {
   return (
     <ToolbarButton
       data-testid="toolbar-close-button"
+      aria-label="Close document"
       className={className}
       onClick={onClick}
     >
