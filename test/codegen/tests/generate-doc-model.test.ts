@@ -32,12 +32,6 @@ async function runDocumentModelTests(args: {
     testOutputParentDir,
     `${basename(inDirName)}-${basename(specDirName)}`,
   );
-  console.log({
-    outDir,
-    inDirName,
-    specDirName,
-    testOutputParentDir,
-  });
   await rmForce(outDir);
   await cpForce(inDirName, outDir);
   await loadDocumentModelsInDir(specDirName, outDir);

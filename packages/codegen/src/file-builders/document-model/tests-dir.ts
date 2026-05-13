@@ -16,6 +16,7 @@ import {
   formatSourceFileWithPrettier,
   getOrCreateSourceFile,
   getPreviousVersionSourceFile,
+  updateVersionedImports,
 } from "utils";
 
 export async function makeDocumentModelModulesOperationTestFiles(
@@ -56,6 +57,7 @@ export async function makeOperationModuleTestFile(
 
     if (previousVersionSourceFile) {
       sourceFile.replaceWithText(previousVersionSourceFile.getText());
+      updateVersionedImports({ sourceFile, version });
     } else {
       sourceFile.replaceWithText(
         ts`
@@ -182,7 +184,7 @@ export async function makeOperationModuleTestFile(
 export async function makeDocumentModelTestFile(
   args: DocumentModelFileMakerArgs,
 ) {
-  const { project, testsDirPath } = args;
+  const { project, version, testsDirPath } = args;
   const template = documentModelTestFileTemplate(args);
 
   const filePath = path.join(testsDirPath, "document-model.test.ts");
@@ -192,7 +194,10 @@ export async function makeDocumentModelTestFile(
     filePath,
   );
 
-  if (alreadyExists) return;
+  if (alreadyExists) {
+    updateVersionedImports({ sourceFile, version });
+    return;
+  }
 
   sourceFile.replaceWithText(template);
   await formatSourceFileWithPrettier(sourceFile);

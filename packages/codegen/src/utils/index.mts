@@ -10,4 +10,5 @@ export * from "./syntax-builders.js";
 export * from "./syntax-getters.js";
 export * from "./ts-morph-project.js";
 export * from "./unsafe-utils.js";
+export * from "./update-versioned-imports.js";
 export * from "./validation.js";
