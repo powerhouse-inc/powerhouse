@@ -146,6 +146,7 @@
     "react-toastify": "^10.0.4",
     "remeda": "catalog:",
     "tailwind-merge": "catalog:",
+    "type-fest": "catalog:",
     "usehooks-ts": "^3.1.1"
   }
 }
