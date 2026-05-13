@@ -135,20 +135,29 @@ export async function writeModuleFiles(projectDir = process.cwd()) {
 }
 
 export async function writeAiConfigFiles(projectDir = process.cwd()) {
-  await writeFileEnsuringDir(join(projectDir, "CLAUDE.md"), claudeTemplate);
-  await writeFileEnsuringDir(join(projectDir, "AGENTS.md"), agentsTemplate);
-  await writeFileEnsuringDir(join(projectDir, ".mcp.json"), mcpTemplate);
+  await writeFileEnsuringDir(
+    join(projectDir, "CLAUDE.md"),
+    claudeTemplate.trimStart(),
+  );
+  await writeFileEnsuringDir(
+    join(projectDir, "AGENTS.md"),
+    agentsTemplate.trimStart(),
+  );
+  await writeFileEnsuringDir(
+    join(projectDir, ".mcp.json"),
+    mcpTemplate.trimStart(),
+  );
   await writeFileEnsuringDir(
     join(projectDir, ".gemini/settings.json"),
-    geminiSettingsTemplate,
+    geminiSettingsTemplate.trimStart(),
   );
   await writeFileEnsuringDir(
     join(projectDir, ".cursor/mcp.json"),
-    cursorMcpTemplate,
+    cursorMcpTemplate.trimStart(),
   );
   await writeFileEnsuringDir(
     join(projectDir, ".claude/settings.local.json"),
-    claudeSettingsLocalTemplate,
+    claudeSettingsLocalTemplate.trimStart(),
   );
 }
 
