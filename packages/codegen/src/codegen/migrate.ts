@@ -93,6 +93,34 @@ function sortByKey<T extends Record<string, unknown>>(value: T): T {
   ) as T;
 }
 
+function isProtectedVersionSpec(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    (value.startsWith("workspace:") || value.startsWith("catalog:"))
+  );
+}
+
+// Keeps user-declared `workspace:*` / `catalog:` refs intact when the caller
+// would otherwise replace them with a hard pin during migration.
+function preserveProtected(
+  newValues: Record<string, string>,
+  existingSources: ReadonlyArray<
+    Partial<Record<string, string | undefined>> | undefined
+  >,
+): Record<string, string> {
+  const result: Record<string, string> = { ...newValues };
+  for (const key of Object.keys(newValues)) {
+    for (const source of existingSources) {
+      const existing = source?.[key];
+      if (isProtectedVersionSpec(existing)) {
+        result[key] = existing;
+        break;
+      }
+    }
+  }
+  return result;
+}
+
 function detectFeatures(
   projectDir: string,
 ): Array<keyof typeof FEATURE_DEPENDENCIES> {
@@ -159,15 +187,30 @@ export async function migrate(version: string, projectDir = process.cwd()) {
     ...mapValues(featurePeerExternal, (v) => v.dev),
   };
 
+  const existingDepSources = [
+    packageJson.dependencies,
+    packageJson.devDependencies,
+    packageJson.peerDependencies,
+  ];
+
   const peerDependencies = pipe(
     packageJson.peerDependencies ?? {},
     omit(managedDevNames),
-    merge({
-      ...fromKeys(managedPeerVersioned, () => fullyQualifiedVersion),
-      ...peerExternals,
-    }),
+    merge(
+      preserveProtected(
+        {
+          ...fromKeys(managedPeerVersioned, () => fullyQualifiedVersion),
+          ...peerExternals,
+        },
+        existingDepSources,
+      ),
+    ),
     mapValues((value, key) =>
-      workspacePackageNames.includes(key) ? fullyQualifiedVersion : value,
+      isProtectedVersionSpec(value)
+        ? value
+        : workspacePackageNames.includes(key)
+          ? fullyQualifiedVersion
+          : value,
     ),
     sortByKey,
   );
@@ -175,13 +218,22 @@ export async function migrate(version: string, projectDir = process.cwd()) {
   const devDependencies = pipe(
     merge(packageJson.dependencies ?? {}, packageJson.devDependencies ?? {}),
     omit(managedPeerNames),
-    merge({
-      ...fromKeys(managedDevVersioned, () => fullyQualifiedVersion),
-      ...externalDevDependencies,
-      ...peerDevPins,
-    }),
+    merge(
+      preserveProtected(
+        {
+          ...fromKeys(managedDevVersioned, () => fullyQualifiedVersion),
+          ...externalDevDependencies,
+          ...peerDevPins,
+        },
+        existingDepSources,
+      ),
+    ),
     mapValues((value, key) =>
-      workspacePackageNames.includes(key) ? fullyQualifiedVersion : value,
+      isProtectedVersionSpec(value)
+        ? value
+        : workspacePackageNames.includes(key)
+          ? fullyQualifiedVersion
+          : value,
     ),
     sortByKey,
   );
