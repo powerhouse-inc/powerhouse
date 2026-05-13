@@ -1,6 +1,6 @@
 import { Root } from "@powerhousedao/connect/components";
 import { connectConfig } from "@powerhousedao/connect/config";
-import { AtlasImport, Content } from "@powerhousedao/connect/pages";
+import { Content } from "@powerhousedao/connect/pages";
 import { Suspense } from "react";
 import type { RouteObject } from "react-router-dom";
 import { RouterProvider, createBrowserRouter } from "react-router-dom";
@@ -25,14 +25,6 @@ function createRoutes() {
       element: (
         <Suspense name="Drive">
           <Content />
-        </Suspense>
-      ),
-    },
-    {
-      path: "import/:documentId",
-      element: (
-        <Suspense name="AtlasImport">
-          <AtlasImport />
         </Suspense>
       ),
     },
