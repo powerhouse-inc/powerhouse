@@ -1,3 +1,14 @@
+## 6.0.0-dev.244 (2026-05-13)
+
+### 🩹 Fixes
+
+- **connect:** cache usePendingInstallations snapshot to prevent infinite re-render ([13afdd208](https://github.com/powerhouse-inc/powerhouse/commit/13afdd208))
+
+### ❤️ Thank You
+
+- Claude Opus 4.7 (1M context)
+- liberuum
+
 ## 6.0.0-dev.243 (2026-05-12)
 
 This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.

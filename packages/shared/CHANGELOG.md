@@ -1,3 +1,13 @@
+## 6.0.0-dev.244 (2026-05-13)
+
+### 🚀 Features
+
+- **document-model, reactor-api, reactor:** added SET_PREFERRED_EDITOR as a header operation ([1b798614e](https://github.com/powerhouse-inc/powerhouse/commit/1b798614e))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.0.0-dev.243 (2026-05-12)
 
 This was a version bump only for @powerhousedao/shared to align it with other projects, there were no code changes.

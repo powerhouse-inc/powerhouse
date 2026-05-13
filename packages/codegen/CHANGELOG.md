@@ -1,3 +1,13 @@
+## 6.0.0-dev.244 (2026-05-13)
+
+### 🩹 Fixes
+
+- **codegen:** workspace template syntax ([9e9c489fd](https://github.com/powerhouse-inc/powerhouse/commit/9e9c489fd))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.243 (2026-05-12)
 
 ### 🩹 Fixes

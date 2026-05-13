@@ -1,3 +1,23 @@
+## 6.0.0-dev.244 (2026-05-13)
+
+### 🚀 Features
+
+- **document-model, reactor-api, reactor:** added SET_PREFERRED_EDITOR as a header operation ([1b798614e](https://github.com/powerhouse-inc/powerhouse/commit/1b798614e))
+
+### 🩹 Fixes
+
+- **codegen:** workspace template syntax ([9e9c489fd](https://github.com/powerhouse-inc/powerhouse/commit/9e9c489fd))
+- **connect:** cache usePendingInstallations snapshot to prevent infinite re-render ([13afdd208](https://github.com/powerhouse-inc/powerhouse/commit/13afdd208))
+- **connect:** cache usePendingInstallations snapshot to prevent infinite re-render ([#2600](https://github.com/powerhouse-inc/powerhouse/pull/2600))
+- **reactor:** sync batch system needs no split envelopes across operations that share a timestamp ([b829016ef](https://github.com/powerhouse-inc/powerhouse/commit/b829016ef))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 4.7 (1M context)
+- liberuum
+
 ## 6.0.0-dev.243 (2026-05-12)
 
 ### 🩹 Fixes
