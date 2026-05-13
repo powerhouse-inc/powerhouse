@@ -114,7 +114,6 @@
     "cmd-ts": "catalog:",
     "enquirer": "catalog:",
     "jszip": "^3.10.1",
-    "kysely": "catalog:",
     "luxon": "catalog:",
     "mutative": "catalog:",
     "npm-package-arg": "catalog:",
@@ -133,6 +132,7 @@
     "@types/luxon": "catalog:",
     "@types/npm-package-arg": "catalog:",
     "@types/react": "catalog:",
+    "kysely": "catalog:",
     "react": "catalog:",
     "tsdown": "catalog:",
     "tsx": "catalog:"
