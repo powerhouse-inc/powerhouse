@@ -1,16 +1,39 @@
 import type {
   Action,
-  AddRelationshipActionInput,
   CreateDocumentAction,
   DeleteDocumentActionInput,
   Operation,
   PHDocument,
-  RemoveRelationshipActionInput,
-  UpdateRelationshipActionInput,
   UpgradeDocumentAction,
   UpgradeDocumentActionInput,
   UpgradeTransition,
 } from "@powerhousedao/shared/document-model";
+
+interface RelationshipActionShape {
+  sourceId: string;
+  targetId: string;
+  relationshipType: string;
+}
+
+type RelationshipJobResult = JobResult & {
+  operationsWithContext?: Array<{
+    operation: Operation;
+    context: {
+      documentId: string;
+      scope: string;
+      branch: string;
+      documentType: string;
+    };
+  }>;
+};
+
+interface RelationshipPostWriteArgs {
+  indexTxn: IOperationIndexTxn;
+  stores: ExecutionStores;
+  sourceDoc: PHDocument;
+  input: RelationshipActionShape;
+  job: Job;
+}
 import type { ILogger } from "document-model";
 import type { IOperationIndexTxn } from "../cache/operation-index-types.js";
 import { driveCollectionId } from "../cache/operation-index-types.js";
@@ -536,7 +559,7 @@ export class DocumentActionHandler {
     );
   }
 
-  private async executeAddRelationship(
+  private executeAddRelationship(
     job: Job,
     action: Action,
     startTime: number,
@@ -544,152 +567,33 @@ export class DocumentActionHandler {
     stores: ExecutionStores,
     sourceRemote: string = "",
     signal?: AbortSignal,
-  ): Promise<
-    JobResult & {
-      operationsWithContext?: Array<{
-        operation: Operation;
-        context: {
-          documentId: string;
-          scope: string;
-          branch: string;
-          documentType: string;
-        };
-      }>;
-    }
-  > {
-    if (job.scope !== "document") {
-      return buildErrorResult(
-        job,
-        new Error(
-          `ADD_RELATIONSHIP must be in "document" scope, got "${job.scope}"`,
-        ),
-        startTime,
-      );
-    }
-
-    const input = action.input as AddRelationshipActionInput;
-
-    if (!input.sourceId || !input.targetId || !input.relationshipType) {
-      return buildErrorResult(
-        job,
-        new Error(
-          "ADD_RELATIONSHIP action requires sourceId, targetId, and relationshipType in input",
-        ),
-        startTime,
-      );
-    }
-
-    if (input.sourceId === input.targetId) {
-      return buildErrorResult(
-        job,
-        new Error(
-          "ADD_RELATIONSHIP: sourceId and targetId cannot be the same (self-relationships not allowed)",
-        ),
-        startTime,
-      );
-    }
-
-    let sourceDoc: PHDocument;
-    try {
-      sourceDoc = await stores.writeCache.getState(
-        input.sourceId,
-        "document",
-        job.branch,
-        undefined,
-        signal,
-      );
-    } catch (error) {
-      return buildErrorResult(
-        job,
-        new Error(
-          `ADD_RELATIONSHIP: source document ${input.sourceId} not found: ${error instanceof Error ? error.message : String(error)}`,
-        ),
-        startTime,
-      );
-    }
-
-    const nextIndex = getNextIndexForScope(sourceDoc, job.scope);
-
-    const operation = createOperation(action, nextIndex, 0, {
-      documentId: input.sourceId,
-      scope: job.scope,
-      branch: job.branch,
-    });
-
-    const writeError = await this.writeOperationToStore(
-      input.sourceId,
-      sourceDoc.header.documentType,
-      job.scope,
-      job.branch,
-      operation,
+  ): Promise<RelationshipJobResult> {
+    return this.withRelationshipAction(
+      "ADD_RELATIONSHIP",
       job,
+      action,
       startTime,
+      indexTxn,
       stores,
+      sourceRemote,
       signal,
-    );
-    if (writeError !== null) {
-      return writeError;
-    }
-
-    sourceDoc.header.lastModifiedAtUtcIso =
-      operation.timestampUtcMs || new Date().toISOString();
-
-    updateDocumentRevision(sourceDoc, job.scope, operation.index);
-
-    sourceDoc.operations = {
-      ...sourceDoc.operations,
-      [job.scope]: [...(sourceDoc.operations[job.scope] ?? []), operation],
-    };
-
-    const scopeState = (sourceDoc.state as Record<string, unknown>)[job.scope];
-    const resultingStateObj: Record<string, unknown> = {
-      header: structuredClone(sourceDoc.header),
-      [job.scope]: scopeState === undefined ? {} : structuredClone(scopeState),
-    };
-    const resultingState = JSON.stringify(resultingStateObj);
-
-    stores.writeCache.putState(
-      input.sourceId,
-      job.scope,
-      job.branch,
-      operation.index,
-      sourceDoc,
-    );
-
-    indexTxn.write([
-      {
-        ...operation,
-        documentId: input.sourceId,
-        documentType: sourceDoc.header.documentType,
-        branch: job.branch,
-        scope: job.scope,
-        sourceRemote,
+      (input) =>
+        input.sourceId === input.targetId
+          ? new Error(
+              "ADD_RELATIONSHIP: sourceId and targetId cannot be the same (self-relationships not allowed)",
+            )
+          : null,
+      ({ indexTxn: txn, stores: s, sourceDoc, input, job: j }) => {
+        if (sourceDoc.header.documentType === "powerhouse/document-drive") {
+          const collectionId = driveCollectionId(j.branch, input.sourceId);
+          txn.addToCollection(collectionId, input.targetId);
+          s.collectionMembershipCache.invalidate(input.targetId);
+        }
       },
-    ]);
-
-    if (sourceDoc.header.documentType === "powerhouse/document-drive") {
-      const collectionId = driveCollectionId(job.branch, input.sourceId);
-      indexTxn.addToCollection(collectionId, input.targetId);
-      stores.collectionMembershipCache.invalidate(input.targetId);
-    }
-
-    stores.documentMetaCache.putDocumentMeta(input.sourceId, job.branch, {
-      state: sourceDoc.state.document,
-      documentType: sourceDoc.header.documentType,
-      documentScopeRevision: operation.index + 1,
-    });
-
-    return buildSuccessResult(
-      job,
-      operation,
-      input.sourceId,
-      sourceDoc.header.documentType,
-      resultingState,
-      startTime,
     );
   }
 
-  private async executeRemoveRelationship(
+  private executeRemoveRelationship(
     job: Job,
     action: Action,
     startTime: number,
@@ -697,142 +601,28 @@ export class DocumentActionHandler {
     stores: ExecutionStores,
     sourceRemote: string = "",
     signal?: AbortSignal,
-  ): Promise<
-    JobResult & {
-      operationsWithContext?: Array<{
-        operation: Operation;
-        context: {
-          documentId: string;
-          scope: string;
-          branch: string;
-          documentType: string;
-        };
-      }>;
-    }
-  > {
-    if (job.scope !== "document") {
-      return buildErrorResult(
-        job,
-        new Error(
-          `REMOVE_RELATIONSHIP must be in "document" scope, got "${job.scope}"`,
-        ),
-        startTime,
-      );
-    }
-
-    const input = action.input as RemoveRelationshipActionInput;
-
-    if (!input.sourceId || !input.targetId || !input.relationshipType) {
-      return buildErrorResult(
-        job,
-        new Error(
-          "REMOVE_RELATIONSHIP action requires sourceId, targetId, and relationshipType in input",
-        ),
-        startTime,
-      );
-    }
-
-    let sourceDoc: PHDocument;
-    try {
-      sourceDoc = await stores.writeCache.getState(
-        input.sourceId,
-        "document",
-        job.branch,
-        undefined,
-        signal,
-      );
-    } catch (error) {
-      return buildErrorResult(
-        job,
-        new Error(
-          `REMOVE_RELATIONSHIP: source document ${input.sourceId} not found: ${error instanceof Error ? error.message : String(error)}`,
-        ),
-        startTime,
-      );
-    }
-
-    const nextIndex = getNextIndexForScope(sourceDoc, job.scope);
-
-    const operation = createOperation(action, nextIndex, 0, {
-      documentId: input.sourceId,
-      scope: job.scope,
-      branch: job.branch,
-    });
-
-    const writeError = await this.writeOperationToStore(
-      input.sourceId,
-      sourceDoc.header.documentType,
-      job.scope,
-      job.branch,
-      operation,
+  ): Promise<RelationshipJobResult> {
+    return this.withRelationshipAction(
+      "REMOVE_RELATIONSHIP",
       job,
+      action,
       startTime,
+      indexTxn,
       stores,
+      sourceRemote,
       signal,
-    );
-    if (writeError !== null) {
-      return writeError;
-    }
-
-    sourceDoc.header.lastModifiedAtUtcIso =
-      operation.timestampUtcMs || new Date().toISOString();
-
-    updateDocumentRevision(sourceDoc, job.scope, operation.index);
-
-    sourceDoc.operations = {
-      ...sourceDoc.operations,
-      [job.scope]: [...(sourceDoc.operations[job.scope] ?? []), operation],
-    };
-
-    const scopeState = (sourceDoc.state as Record<string, unknown>)[job.scope];
-    const resultingStateObj: Record<string, unknown> = {
-      header: structuredClone(sourceDoc.header),
-      [job.scope]: scopeState === undefined ? {} : structuredClone(scopeState),
-    };
-    const resultingState = JSON.stringify(resultingStateObj);
-
-    stores.writeCache.putState(
-      input.sourceId,
-      job.scope,
-      job.branch,
-      operation.index,
-      sourceDoc,
-    );
-
-    indexTxn.write([
-      {
-        ...operation,
-        documentId: input.sourceId,
-        documentType: sourceDoc.header.documentType,
-        branch: job.branch,
-        scope: job.scope,
-        sourceRemote,
+      null,
+      ({ indexTxn: txn, stores: s, sourceDoc, input, job: j }) => {
+        if (sourceDoc.header.documentType === "powerhouse/document-drive") {
+          const collectionId = driveCollectionId(j.branch, input.sourceId);
+          txn.removeFromCollection(collectionId, input.targetId);
+          s.collectionMembershipCache.invalidate(input.targetId);
+        }
       },
-    ]);
-
-    if (sourceDoc.header.documentType === "powerhouse/document-drive") {
-      const collectionId = driveCollectionId(job.branch, input.sourceId);
-      indexTxn.removeFromCollection(collectionId, input.targetId);
-      stores.collectionMembershipCache.invalidate(input.targetId);
-    }
-
-    stores.documentMetaCache.putDocumentMeta(input.sourceId, job.branch, {
-      state: sourceDoc.state.document,
-      documentType: sourceDoc.header.documentType,
-      documentScopeRevision: operation.index + 1,
-    });
-
-    return buildSuccessResult(
-      job,
-      operation,
-      input.sourceId,
-      sourceDoc.header.documentType,
-      resultingState,
-      startTime,
     );
   }
 
-  private async executeUpdateRelationship(
+  private executeUpdateRelationship(
     job: Job,
     action: Action,
     startTime: number,
@@ -840,27 +630,62 @@ export class DocumentActionHandler {
     stores: ExecutionStores,
     sourceRemote: string = "",
     signal?: AbortSignal,
-  ): Promise<JobResult> {
+  ): Promise<RelationshipJobResult> {
+    return this.withRelationshipAction(
+      "UPDATE_RELATIONSHIP",
+      job,
+      action,
+      startTime,
+      indexTxn,
+      stores,
+      sourceRemote,
+      signal,
+      null,
+      null,
+    );
+  }
+
+  private async withRelationshipAction(
+    actionTypeName: string,
+    job: Job,
+    action: Action,
+    startTime: number,
+    indexTxn: IOperationIndexTxn,
+    stores: ExecutionStores,
+    sourceRemote: string,
+    signal: AbortSignal | undefined,
+    preValidate:
+      | ((input: RelationshipActionShape) => Error | null)
+      | null,
+    postWrite: ((args: RelationshipPostWriteArgs) => void) | null,
+  ): Promise<RelationshipJobResult> {
     if (job.scope !== "document") {
       return buildErrorResult(
         job,
         new Error(
-          `UPDATE_RELATIONSHIP must be in "document" scope, got "${job.scope}"`,
+          `${actionTypeName} must be in "document" scope, got "${job.scope}"`,
         ),
         startTime,
       );
     }
 
-    const input = action.input as UpdateRelationshipActionInput;
+    const input = action.input as RelationshipActionShape;
 
     if (!input.sourceId || !input.targetId || !input.relationshipType) {
       return buildErrorResult(
         job,
         new Error(
-          "UPDATE_RELATIONSHIP action requires sourceId, targetId, and relationshipType in input",
+          `${actionTypeName} action requires sourceId, targetId, and relationshipType in input`,
         ),
         startTime,
       );
+    }
+
+    if (preValidate !== null) {
+      const validationError = preValidate(input);
+      if (validationError !== null) {
+        return buildErrorResult(job, validationError, startTime);
+      }
     }
 
     let sourceDoc: PHDocument;
@@ -876,14 +701,13 @@ export class DocumentActionHandler {
       return buildErrorResult(
         job,
         new Error(
-          `UPDATE_RELATIONSHIP: source document ${input.sourceId} not found: ${error instanceof Error ? error.message : String(error)}`,
+          `${actionTypeName}: source document ${input.sourceId} not found: ${error instanceof Error ? error.message : String(error)}`,
         ),
         startTime,
       );
     }
 
     const nextIndex = getNextIndexForScope(sourceDoc, job.scope);
-
     const operation = createOperation(action, nextIndex, 0, {
       documentId: input.sourceId,
       scope: job.scope,
@@ -907,9 +731,7 @@ export class DocumentActionHandler {
 
     sourceDoc.header.lastModifiedAtUtcIso =
       operation.timestampUtcMs || new Date().toISOString();
-
     updateDocumentRevision(sourceDoc, job.scope, operation.index);
-
     sourceDoc.operations = {
       ...sourceDoc.operations,
       [job.scope]: [...(sourceDoc.operations[job.scope] ?? []), operation],
@@ -940,6 +762,10 @@ export class DocumentActionHandler {
         sourceRemote,
       },
     ]);
+
+    if (postWrite !== null) {
+      postWrite({ indexTxn, stores, sourceDoc, input, job });
+    }
 
     stores.documentMetaCache.putDocumentMeta(input.sourceId, job.branch, {
       state: sourceDoc.state.document,

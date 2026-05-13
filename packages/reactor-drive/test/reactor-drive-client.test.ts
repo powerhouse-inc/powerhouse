@@ -403,6 +403,36 @@ describe("ReactorDriveClient", () => {
     });
   });
 
+  it("setPreferredEditorOnNode delegates to reactor.setPreferredEditor on the main branch", async () => {
+    const { reactor, setPreferredEditor } = createMockReactor();
+    const client = new ReactorDriveClient({ reactor, readModel: view });
+
+    await client.setPreferredEditorOnNode("node-1", "editor-x");
+
+    expect(setPreferredEditor).toHaveBeenCalledTimes(1);
+    expect(setPreferredEditor).toHaveBeenCalledWith(
+      "node-1",
+      "editor-x",
+      "main",
+      undefined,
+    );
+  });
+
+  it("setPreferredEditorOnNode forwards a null editor and the AbortSignal", async () => {
+    const { reactor, setPreferredEditor } = createMockReactor();
+    const client = new ReactorDriveClient({ reactor, readModel: view });
+    const controller = new AbortController();
+
+    await client.setPreferredEditorOnNode("node-1", null, controller.signal);
+
+    expect(setPreferredEditor).toHaveBeenCalledWith(
+      "node-1",
+      null,
+      "main",
+      controller.signal,
+    );
+  });
+
   it("listNodes returns all nodes in the drive when parentFolder is undefined", async () => {
     const driveId = "drive-1";
     await seed(driveId, [

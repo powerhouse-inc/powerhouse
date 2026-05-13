@@ -129,12 +129,14 @@ const reactorDriveDocumentGlobalState: DocumentModelGlobalState = {
         global: {
           schema:
             "type ReactorDriveState {\n  name: String!\n  icon: String\n}",
+          // Double-encoded by convention: `initialValue` holds a JSON-encoded string that consumers parse with JSON.parse.
           initialValue: JSON.stringify(JSON.stringify(initialGlobalState)),
           examples: [],
         },
         local: {
           schema:
             "type ReactorDriveLocalState {\n  sharingType: String!\n  availableOffline: Boolean!\n}",
+          // Double-encoded by convention: `initialValue` holds a JSON-encoded string that consumers parse with JSON.parse.
           initialValue: JSON.stringify(JSON.stringify(initialLocalState)),
           examples: [],
         },

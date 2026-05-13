@@ -345,6 +345,16 @@ export class ReactorDriveClient implements IDriveClient {
       srcNodeId,
       signal,
     );
+
+    if (
+      targetParentFolderId !== undefined &&
+      subtree.some((n) => n.id === targetParentFolderId)
+    ) {
+      throw new Error(
+        `Cannot copy node ${srcNodeId} into itself or one of its descendants (target: ${targetParentFolderId})`,
+      );
+    }
+
     const idMap = new Map<string, string>();
     for (const node of subtree) {
       idMap.set(node.id, generateId());

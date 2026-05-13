@@ -98,18 +98,23 @@ function orderLegacyNodes(nodes: Node[]): Node[] {
   const visited = new Set<string>();
   const ordered: Node[] = [];
 
-  function visit(node: Node): void {
-    if (visited.has(node.id)) return;
-    if (node.parentFolder) {
-      const parent = byId.get(node.parentFolder);
-      if (parent) visit(parent);
+  for (const start of nodes) {
+    if (visited.has(start.id)) continue;
+    const chain: Node[] = [];
+    const seenInWalk = new Set<string>();
+    let current: Node | undefined = start;
+    while (current && !visited.has(current.id) && !seenInWalk.has(current.id)) {
+      seenInWalk.add(current.id);
+      chain.push(current);
+      const parentId = current.parentFolder;
+      current = parentId ? byId.get(parentId) : undefined;
     }
-    visited.add(node.id);
-    ordered.push(node);
-  }
-
-  for (const node of nodes) {
-    visit(node);
+    while (chain.length > 0) {
+      const node = chain.pop()!;
+      if (visited.has(node.id)) continue;
+      visited.add(node.id);
+      ordered.push(node);
+    }
   }
   return ordered;
 }
