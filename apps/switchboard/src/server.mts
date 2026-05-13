@@ -40,6 +40,7 @@ import {
 } from "document-model";
 import dotenv from "dotenv";
 import { Kysely, PostgresDialect } from "kysely";
+import { AtomicNodeFs } from "@powerhousedao/pglite-fs";
 import { ClosablePGliteDialect } from "./pglite-dialect.js";
 import { promises as fs } from "node:fs";
 import net from "node:net";
@@ -289,7 +290,9 @@ async function initServer(
         throw new Error("Reactor PGLite directory not resolved");
       }
       const { PGlite } = await loadPGliteModule(reactorPgliteMajor);
-      const pglite = new PGlite(reactorPgliteDir);
+      const pglite = new PGlite({
+        fs: new AtomicNodeFs(reactorPgliteDir, logger),
+      });
       const kysely = new Kysely<Database>({
         dialect: new ClosablePGliteDialect(pglite),
       });
@@ -374,7 +377,12 @@ async function initServer(
     const { PGlite: ReadModelPGlite } =
       await loadPGliteModule(readModelPgliteMajor);
     pgliteFactory = (connectionString) =>
-      new ReadModelPGlite(connectionString ?? readModelPgliteDir);
+      new ReadModelPGlite({
+        fs: new AtomicNodeFs(
+          connectionString ?? (readModelPgliteDir as string),
+          logger,
+        ),
+      });
   }
 
   const api = await initializeAndStartAPI(
