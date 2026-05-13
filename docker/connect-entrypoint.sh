@@ -21,6 +21,10 @@ if [ -n "$PH_REGISTRY_PACKAGES" ] || [ -n "$RUNTIME_URL" ]; then
   TMP=$(mktemp)
   jq --arg pkgs "$PH_REGISTRY_PACKAGES" --arg url "$RUNTIME_URL" "$JQ_EXPR" "$JSON_FILE" > "$TMP"
   mv "$TMP" "$JSON_FILE"
+  # mktemp creates the temp file mode 0600 and `mv` preserves it. Force
+  # world-readable so nginx workers can read it even if the pod runs as a
+  # uid different from the file owner.
+  chmod 644 "$JSON_FILE"
 fi
 
 echo "Testing nginx configuration..."
