@@ -32,13 +32,13 @@
     "@vitejs/plugin-react": "catalog:",
     "document-model": "workspace:*",
     "vite": "catalog:",
-    "vite-plugin-html": "catalog:",
-    "zod": "catalog:"
+    "vite-plugin-html": "catalog:"
   },
   "devDependencies": {
     "@sentry/vite-plugin": "^4.3.0",
     "tsdown": "catalog:",
-    "tsx": "catalog:"
+    "tsx": "catalog:",
+    "zod": "catalog:"
   },
   "peerDependencies": {
     "@sentry/vite-plugin": "^4.3.0"
