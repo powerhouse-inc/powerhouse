@@ -63,7 +63,7 @@ export async function tsMorphGenerateDocumentEditor({
     ...editorVariableNames,
   });
 
-  makeEditorModuleFile({
+  await makeEditorModuleFile({
     project,
     editorName,
     editorId,

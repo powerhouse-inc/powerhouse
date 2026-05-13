@@ -18,7 +18,7 @@ type MakeEditorModuleFileArgs = {
   legacyMultipleDocumentTypes?: string[];
 };
 /** Generates the `module.ts` file for a document editor or app */
-export function makeEditorModuleFile({
+export async function makeEditorModuleFile({
   project,
   editorDirPath,
   editorName,
@@ -48,6 +48,7 @@ export function makeEditorModuleFile({
     documentTypes,
   });
   sourceFile.replaceWithText(template);
+  await formatSourceFileWithPrettier(sourceFile);
 }
 
 export async function makeEditorsFile(args: {
