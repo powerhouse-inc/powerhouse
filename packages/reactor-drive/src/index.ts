@@ -4,11 +4,14 @@ export {
   REACTOR_DRIVE_FILE_EXTENSION,
 } from "./constants.js";
 export {
+  addFolderAction,
   reactorDriveActions,
+  removeFolderAction,
   setAvailableOfflineAction,
   setDriveIconAction,
   setDriveNameAction,
   setSharingTypeAction,
+  updateFolderAction,
 } from "./actions.js";
 export type {
   SetAvailableOfflineInput,
@@ -24,7 +27,8 @@ export {
 } from "./module.js";
 export { reactorDriveStateReducer } from "./reducer/drive.js";
 export type {
-  DriveContainsMetadata,
+  AddFolderActionInput,
+  DriveChildFileMetadata,
   ReactorDriveDocumentModelModule,
   ReactorDriveFileNode,
   ReactorDriveFolderNode,
@@ -34,6 +38,8 @@ export type {
   ReactorDriveNode,
   ReactorDriveNodeKind,
   ReactorDrivePHState,
+  RemoveFolderActionInput,
+  UpdateFolderActionInput,
 } from "./types.js";
 export type {
   DocumentNameTable,

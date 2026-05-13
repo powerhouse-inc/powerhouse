@@ -41,7 +41,7 @@ describe("migrateLegacyDriveState", () => {
     await pg.close();
   });
 
-  it("emits one ADD_RELATIONSHIP per legacy node, parents before children", async () => {
+  it("emits ADD_FOLDER for folders and ADD_RELATIONSHIP for files, parents before children", async () => {
     const { reactor, execute } = createReactor();
     const nodes: Node[] = [
       {
@@ -70,17 +70,18 @@ describe("migrateLegacyDriveState", () => {
     ];
     expect(executedDriveId).toBe(driveId);
     expect(branch).toBe("main");
-    expect(actions[0].type).toBe("ADD_RELATIONSHIP");
+    expect(actions[0].type).toBe("ADD_FOLDER");
     expect(actions[0].input).toMatchObject({
-      sourceId: driveId,
-      targetId: "folder-1",
-      relationshipType: DRIVE_CHILD_RELATIONSHIP_TYPE,
-      metadata: { kind: "folder", name: "Folder" },
+      folderId: "folder-1",
+      parentFolderId: null,
+      name: "Folder",
     });
+    expect(actions[1].type).toBe("ADD_RELATIONSHIP");
     expect(actions[1].input).toMatchObject({
-      sourceId: "folder-1",
+      sourceId: driveId,
       targetId: "file-1",
-      metadata: { kind: "file" },
+      relationshipType: DRIVE_CHILD_RELATIONSHIP_TYPE,
+      metadata: { kind: "file", parentFolderId: "folder-1" },
     });
   });
 
@@ -119,9 +120,12 @@ describe("migrateLegacyDriveState", () => {
     expect(result.skippedExisting).toBe(1);
     const [, , actions] = execute.mock.calls[0] as [string, string, Action[]];
     expect(actions).toHaveLength(1);
+    expect(actions[0].type).toBe("ADD_RELATIONSHIP");
     expect(actions[0].input).toMatchObject({
-      sourceId: "folder-1",
+      sourceId: driveId,
       targetId: "file-1",
+      relationshipType: DRIVE_CHILD_RELATIONSHIP_TYPE,
+      metadata: { kind: "file", parentFolderId: "folder-1" },
     });
   });
 

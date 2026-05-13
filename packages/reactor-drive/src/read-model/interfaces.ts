@@ -32,4 +32,11 @@ export interface IDriveReadModel {
     root: string,
     signal?: AbortSignal,
   ): Promise<ReactorDriveNode[]>;
+
+  /**
+   * Returns every node in the drive, unpaged. Intended for hydrating the
+   * legacy `state.global.nodes` representation when returning drive
+   * documents to legacy consumers.
+   */
+  listAll(driveId: string, signal?: AbortSignal): Promise<ReactorDriveNode[]>;
 }

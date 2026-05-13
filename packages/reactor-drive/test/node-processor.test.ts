@@ -4,8 +4,6 @@ import {
   ConsistencyTracker,
   createDocumentAction,
   removeRelationshipAction,
-  removeRelationshipSubtreeAction,
-  updateRelationshipAction,
   type IOperationIndex,
   type IWriteCache,
 } from "@powerhousedao/reactor";
@@ -19,6 +17,11 @@ import {
 import { Kysely, sql } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  addFolderAction,
+  removeFolderAction,
+  updateFolderAction,
+} from "../src/actions.js";
 import { DRIVE_CHILD_RELATIONSHIP_TYPE } from "../src/constants.js";
 import {
   NodeProcessor,
@@ -105,20 +108,16 @@ describe("NodeProcessor", () => {
     await pg.close();
   });
 
-  it("adds a folder via ADD_RELATIONSHIP with kind=folder metadata", async () => {
+  it("adds a folder via ADD_FOLDER", async () => {
     const driveId = "drive-1";
     const folderId = "folder-1";
     await processor.indexOperations([
       wrap(
-        addRelationshipAction(
-          driveId,
+        addFolderAction({
           folderId,
-          DRIVE_CHILD_RELATIONSHIP_TYPE,
-          {
-            kind: "folder",
-            name: "Reports",
-          },
-        ),
+          parentFolderId: null,
+          name: "Reports",
+        }),
         driveId,
       ),
     ]);
@@ -134,26 +133,58 @@ describe("NodeProcessor", () => {
     expect(row?.parentFolder).toBeNull();
   });
 
+  it("nests folders under a parent folder", async () => {
+    const driveId = "drive-1";
+    await processor.indexOperations([
+      wrap(
+        addFolderAction({
+          folderId: "parent",
+          parentFolderId: null,
+          name: "Parent",
+        }),
+        driveId,
+      ),
+      wrap(
+        addFolderAction({
+          folderId: "child",
+          parentFolderId: "parent",
+          name: "Child",
+        }),
+        driveId,
+      ),
+    ]);
+
+    const child = await db
+      .selectFrom("DriveNode")
+      .selectAll()
+      .where("id", "=", "child")
+      .executeTakeFirst();
+    expect(child?.parentFolder).toBe("parent");
+  });
+
   it("resolves sibling name collisions with deterministic suffixes", async () => {
     const driveId = "drive-1";
     await processor.indexOperations([
       wrap(
-        addRelationshipAction(driveId, "f1", DRIVE_CHILD_RELATIONSHIP_TYPE, {
-          kind: "folder",
+        addFolderAction({
+          folderId: "f1",
+          parentFolderId: null,
           name: "Notes",
         }),
         driveId,
       ),
       wrap(
-        addRelationshipAction(driveId, "f2", DRIVE_CHILD_RELATIONSHIP_TYPE, {
-          kind: "folder",
+        addFolderAction({
+          folderId: "f2",
+          parentFolderId: null,
           name: "Notes",
         }),
         driveId,
       ),
       wrap(
-        addRelationshipAction(driveId, "f3", DRIVE_CHILD_RELATIONSHIP_TYPE, {
-          kind: "folder",
+        addFolderAction({
+          folderId: "f3",
+          parentFolderId: null,
           name: "Notes",
         }),
         driveId,
@@ -172,32 +203,23 @@ describe("NodeProcessor", () => {
     ]);
   });
 
-  it("renames a folder via UPDATE_RELATIONSHIP", async () => {
+  it("renames a folder via UPDATE_FOLDER", async () => {
     const driveId = "drive-1";
     const folderId = "folder-1";
     await processor.indexOperations([
       wrap(
-        addRelationshipAction(
-          driveId,
+        addFolderAction({
           folderId,
-          DRIVE_CHILD_RELATIONSHIP_TYPE,
-          {
-            kind: "folder",
-            name: "Old",
-          },
-        ),
+          parentFolderId: null,
+          name: "Old",
+        }),
         driveId,
       ),
       wrap(
-        updateRelationshipAction(
-          driveId,
+        updateFolderAction({
           folderId,
-          DRIVE_CHILD_RELATIONSHIP_TYPE,
-          {
-            kind: "folder",
-            name: "New",
-          },
-        ),
+          name: "New",
+        }),
         driveId,
       ),
     ]);
@@ -211,31 +233,57 @@ describe("NodeProcessor", () => {
     expect(row?.requestedName).toBe("New");
   });
 
-  it("removes a single relationship row", async () => {
+  it("reparents a folder via UPDATE_FOLDER", async () => {
+    const driveId = "drive-1";
+    await processor.indexOperations([
+      wrap(
+        addFolderAction({
+          folderId: "parent",
+          parentFolderId: null,
+          name: "Parent",
+        }),
+        driveId,
+      ),
+      wrap(
+        addFolderAction({
+          folderId: "child",
+          parentFolderId: null,
+          name: "Child",
+        }),
+        driveId,
+      ),
+      wrap(
+        updateFolderAction({
+          folderId: "child",
+          parentFolderId: "parent",
+        }),
+        driveId,
+      ),
+    ]);
+
+    const row = await db
+      .selectFrom("DriveNode")
+      .selectAll()
+      .where("id", "=", "child")
+      .executeTakeFirst();
+    expect(row?.parentFolder).toBe("parent");
+  });
+
+  it("removes a folder via REMOVE_FOLDER", async () => {
     const driveId = "drive-1";
     const folderId = "folder-1";
     await processor.indexOperations([
       wrap(
-        addRelationshipAction(
-          driveId,
+        addFolderAction({
           folderId,
-          DRIVE_CHILD_RELATIONSHIP_TYPE,
-          {
-            kind: "folder",
-            name: "X",
-          },
-        ),
+          parentFolderId: null,
+          name: "X",
+        }),
         driveId,
       ),
-      wrap(
-        removeRelationshipAction(
-          driveId,
-          folderId,
-          DRIVE_CHILD_RELATIONSHIP_TYPE,
-        ),
-        driveId,
-      ),
+      wrap(removeFolderAction({ folderId }), driveId),
     ]);
+
     const row = await db
       .selectFrom("DriveNode")
       .selectAll()
@@ -244,44 +292,114 @@ describe("NodeProcessor", () => {
     expect(row).toBeUndefined();
   });
 
-  it("removes a subtree via REMOVE_RELATIONSHIP_SUBTREE", async () => {
+  it("removes a file via REMOVE_RELATIONSHIP", async () => {
     const driveId = "drive-1";
+    const fileId = "file-1";
+
+    await (
+      db as unknown as Kysely<{
+        DocumentSnapshot: { documentId: string; documentType: string };
+      }>
+    )
+      .insertInto("DocumentSnapshot")
+      .values({ documentId: fileId, documentType: "powerhouse/document-model" })
+      .execute();
+
     await processor.indexOperations([
       wrap(
-        addRelationshipAction(driveId, "f1", DRIVE_CHILD_RELATIONSHIP_TYPE, {
-          kind: "folder",
+        addRelationshipAction(driveId, fileId, DRIVE_CHILD_RELATIONSHIP_TYPE, {
+          kind: "file",
+          parentFolderId: null,
+        }),
+        driveId,
+      ),
+      wrap(
+        removeRelationshipAction(
+          driveId,
+          fileId,
+          DRIVE_CHILD_RELATIONSHIP_TYPE,
+        ),
+        driveId,
+      ),
+    ]);
+
+    const row = await db
+      .selectFrom("DriveNode")
+      .selectAll()
+      .where("id", "=", fileId)
+      .executeTakeFirst();
+    expect(row).toBeUndefined();
+  });
+
+  it("removes a subtree via batched REMOVE_RELATIONSHIP and REMOVE_FOLDER actions", async () => {
+    const driveId = "drive-1";
+
+    await (
+      db as unknown as Kysely<{
+        DocumentSnapshot: { documentId: string; documentType: string };
+      }>
+    )
+      .insertInto("DocumentSnapshot")
+      .values({
+        documentId: "file-1",
+        documentType: "powerhouse/document-model",
+      })
+      .execute();
+
+    await processor.indexOperations([
+      wrap(
+        addFolderAction({
+          folderId: "f1",
+          parentFolderId: null,
           name: "F1",
         }),
         driveId,
       ),
       wrap(
-        addRelationshipAction("f1", "f2", DRIVE_CHILD_RELATIONSHIP_TYPE, {
-          kind: "folder",
+        addFolderAction({
+          folderId: "f2",
+          parentFolderId: "f1",
           name: "F2",
         }),
         driveId,
       ),
       wrap(
-        addRelationshipAction("f2", "f3", DRIVE_CHILD_RELATIONSHIP_TYPE, {
-          kind: "folder",
+        addFolderAction({
+          folderId: "f3",
+          parentFolderId: "f2",
           name: "F3",
         }),
+        driveId,
+      ),
+      wrap(
+        addRelationshipAction(
+          driveId,
+          "file-1",
+          DRIVE_CHILD_RELATIONSHIP_TYPE,
+          {
+            kind: "file",
+            parentFolderId: "f2",
+          },
+        ),
         driveId,
       ),
     ]);
     expect(
       (await db.selectFrom("DriveNode").selectAll().execute()).length,
-    ).toBe(3);
+    ).toBe(4);
 
     await processor.indexOperations([
       wrap(
-        removeRelationshipSubtreeAction(
+        removeRelationshipAction(
           driveId,
-          "f1",
+          "file-1",
           DRIVE_CHILD_RELATIONSHIP_TYPE,
         ),
         driveId,
       ),
+      wrap(removeFolderAction({ folderId: "f3" }), driveId),
+      wrap(removeFolderAction({ folderId: "f2" }), driveId),
+      wrap(removeFolderAction({ folderId: "f1" }), driveId),
     ]);
     expect(
       (await db.selectFrom("DriveNode").selectAll().execute()).length,
@@ -314,6 +432,7 @@ describe("NodeProcessor", () => {
       wrap(
         addRelationshipAction(driveId, docId, DRIVE_CHILD_RELATIONSHIP_TYPE, {
           kind: "file",
+          parentFolderId: null,
         }),
         driveId,
       ),

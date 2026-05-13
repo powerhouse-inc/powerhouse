@@ -56,7 +56,6 @@ const documentScopeActions = [
   "ADD_RELATIONSHIP",
   "REMOVE_RELATIONSHIP",
   "UPDATE_RELATIONSHIP",
-  "REMOVE_RELATIONSHIP_SUBTREE",
 ];
 
 /**

@@ -44,6 +44,11 @@ export const reactorDriveStateReducer: StateReducer<ReactorDrivePHState> = (
       state.local.availableOffline = input.availableOffline;
       return state;
     }
+    case "ADD_FOLDER":
+    case "UPDATE_FOLDER":
+    case "REMOVE_FOLDER":
+      // Identity: folder ops are recorded for sync and materialized by NodeProcessor.
+      return state;
     default:
       return state;
   }

@@ -9,14 +9,18 @@ import type {
   CreateDocumentActionInput,
   OperationWithContext,
   RemoveRelationshipActionInput,
-  RemoveRelationshipSubtreeActionInput,
   SetNameActionInput,
-  UpdateRelationshipActionInput,
   UpgradeDocumentActionInput,
 } from "@powerhousedao/shared/document-model";
 import type { Kysely, Transaction } from "kysely";
 import { DRIVE_CHILD_RELATIONSHIP_TYPE } from "../constants.js";
 import type { ReactorDriveDatabase } from "../schema/tables.js";
+import type {
+  AddFolderActionInput,
+  DriveChildFileMetadata,
+  RemoveFolderActionInput,
+  UpdateFolderActionInput,
+} from "../types.js";
 import { resolveCollision } from "./utils/collisions.js";
 
 export type NodeProcessorDatabase = ReactorDriveDatabase & DocumentViewDatabase;
@@ -30,8 +34,9 @@ const NAME_ACTION_TYPES = new Set([
 const STRUCTURE_ACTION_TYPES = new Set([
   "ADD_RELATIONSHIP",
   "REMOVE_RELATIONSHIP",
-  "UPDATE_RELATIONSHIP",
-  "REMOVE_RELATIONSHIP_SUBTREE",
+  "ADD_FOLDER",
+  "UPDATE_FOLDER",
+  "REMOVE_FOLDER",
 ]);
 
 export class NodeProcessor extends BaseReadModel {
@@ -109,7 +114,7 @@ export class NodeProcessor extends BaseReadModel {
       .execute();
 
     for (const row of linkedRows) {
-      const resolved = await this.resolveFileName(
+      const resolved = await this.resolveSiblingName(
         trx,
         row.driveId,
         row.parentFolder,
@@ -139,7 +144,7 @@ export class NodeProcessor extends BaseReadModel {
     if (action.type === "ADD_RELATIONSHIP") {
       const input = action.input as AddRelationshipActionInput;
       if (input.relationshipType !== DRIVE_CHILD_RELATIONSHIP_TYPE) return;
-      await this.handleAddRelationship(trx, driveId, input);
+      await this.handleAddFileRelationship(trx, driveId, input);
       return;
     }
 
@@ -154,35 +159,47 @@ export class NodeProcessor extends BaseReadModel {
       return;
     }
 
-    if (action.type === "UPDATE_RELATIONSHIP") {
-      const input = action.input as UpdateRelationshipActionInput;
-      if (input.relationshipType !== DRIVE_CHILD_RELATIONSHIP_TYPE) return;
-      await this.handleUpdateRelationship(trx, driveId, input);
+    if (action.type === "ADD_FOLDER") {
+      await this.handleAddFolder(
+        trx,
+        driveId,
+        action.input as AddFolderActionInput,
+      );
       return;
     }
 
-    if (action.type === "REMOVE_RELATIONSHIP_SUBTREE") {
-      const input = action.input as RemoveRelationshipSubtreeActionInput;
-      if (input.relationshipType !== DRIVE_CHILD_RELATIONSHIP_TYPE) return;
-      await this.handleRemoveSubtree(trx, driveId, input.rootId);
+    if (action.type === "UPDATE_FOLDER") {
+      await this.handleUpdateFolder(
+        trx,
+        driveId,
+        action.input as UpdateFolderActionInput,
+      );
+      return;
+    }
+
+    if (action.type === "REMOVE_FOLDER") {
+      const input = action.input as RemoveFolderActionInput;
+      await trx
+        .deleteFrom("DriveNode")
+        .where("driveId", "=", driveId)
+        .where("id", "=", input.folderId)
+        .execute();
     }
   }
 
-  private async handleAddRelationship(
+  private async handleAddFileRelationship(
     trx: Transaction<NodeProcessorDatabase>,
     driveId: string,
     input: AddRelationshipActionInput,
   ): Promise<void> {
-    const parentFolder = input.sourceId === driveId ? null : input.sourceId;
-    const metadata = (input.metadata ?? { kind: "file" }) as
-      | { kind: "file" }
-      | { kind: "folder"; name: string };
+    const metadata = (input.metadata ?? { kind: "file", parentFolderId: null }) as
+      | DriveChildFileMetadata
+      | { kind: "file" };
+    const parentFolder =
+      "parentFolderId" in metadata ? (metadata.parentFolderId ?? null) : null;
 
-    const kind = metadata.kind;
     const requestedName =
-      kind === "folder"
-        ? metadata.name
-        : ((await this.lookupDocumentName(trx, input.targetId)) ?? "");
+      (await this.lookupDocumentName(trx, input.targetId)) ?? "";
 
     const resolved = await this.resolveSiblingName(
       trx,
@@ -192,10 +209,7 @@ export class NodeProcessor extends BaseReadModel {
       input.targetId,
     );
 
-    const documentType =
-      kind === "file"
-        ? await this.lookupDocumentType(trx, input.targetId)
-        : null;
+    const documentType = await this.lookupDocumentType(trx, input.targetId);
 
     const existing = await trx
       .selectFrom("DriveNode")
@@ -211,7 +225,7 @@ export class NodeProcessor extends BaseReadModel {
           parentFolder,
           name: resolved,
           requestedName,
-          kind,
+          kind: "file",
           documentType,
           updatedAt: new Date(),
         })
@@ -226,7 +240,7 @@ export class NodeProcessor extends BaseReadModel {
       .values({
         driveId,
         id: input.targetId,
-        kind,
+        kind: "file",
         name: resolved,
         requestedName,
         parentFolder,
@@ -235,74 +249,96 @@ export class NodeProcessor extends BaseReadModel {
       .execute();
   }
 
-  private async handleUpdateRelationship(
+  private async handleAddFolder(
     trx: Transaction<NodeProcessorDatabase>,
     driveId: string,
-    input: UpdateRelationshipActionInput,
+    input: AddFolderActionInput,
   ): Promise<void> {
-    const metadata = (input.metadata ?? {}) as {
-      kind?: "file" | "folder";
-      name?: string;
-    };
-    if (metadata.kind !== "folder" || typeof metadata.name !== "string") {
+    const parentFolder = input.parentFolderId ?? null;
+    const resolved = await this.resolveSiblingName(
+      trx,
+      driveId,
+      parentFolder,
+      input.name,
+      input.folderId,
+    );
+
+    const existing = await trx
+      .selectFrom("DriveNode")
+      .select("id")
+      .where("driveId", "=", driveId)
+      .where("id", "=", input.folderId)
+      .executeTakeFirst();
+
+    if (existing) {
+      await trx
+        .updateTable("DriveNode")
+        .set({
+          parentFolder,
+          name: resolved,
+          requestedName: input.name,
+          kind: "folder",
+          documentType: null,
+          updatedAt: new Date(),
+        })
+        .where("driveId", "=", driveId)
+        .where("id", "=", input.folderId)
+        .execute();
       return;
     }
 
+    await trx
+      .insertInto("DriveNode")
+      .values({
+        driveId,
+        id: input.folderId,
+        kind: "folder",
+        name: resolved,
+        requestedName: input.name,
+        parentFolder,
+        documentType: null,
+      })
+      .execute();
+  }
+
+  private async handleUpdateFolder(
+    trx: Transaction<NodeProcessorDatabase>,
+    driveId: string,
+    input: UpdateFolderActionInput,
+  ): Promise<void> {
     const row = await trx
       .selectFrom("DriveNode")
       .selectAll()
       .where("driveId", "=", driveId)
-      .where("id", "=", input.targetId)
+      .where("id", "=", input.folderId)
       .executeTakeFirst();
     if (!row) return;
+
+    const nextParentFolder =
+      input.parentFolderId === undefined
+        ? row.parentFolder
+        : (input.parentFolderId ?? null);
+    const nextRequestedName =
+      typeof input.name === "string" ? input.name : row.requestedName;
 
     const resolved = await this.resolveSiblingName(
       trx,
       driveId,
-      row.parentFolder,
-      metadata.name,
-      input.targetId,
+      nextParentFolder,
+      nextRequestedName,
+      input.folderId,
     );
 
     await trx
       .updateTable("DriveNode")
       .set({
+        parentFolder: nextParentFolder,
         name: resolved,
-        requestedName: metadata.name,
+        requestedName: nextRequestedName,
         updatedAt: new Date(),
       })
       .where("driveId", "=", driveId)
-      .where("id", "=", input.targetId)
-      .execute();
-  }
-
-  private async handleRemoveSubtree(
-    trx: Transaction<NodeProcessorDatabase>,
-    driveId: string,
-    rootId: string,
-  ): Promise<void> {
-    const toDelete = new Set<string>([rootId]);
-    let frontier: string[] = [rootId];
-    while (frontier.length > 0) {
-      const rows = await trx
-        .selectFrom("DriveNode")
-        .select("id")
-        .where("driveId", "=", driveId)
-        .where("parentFolder", "in", frontier)
-        .execute();
-      const next: string[] = [];
-      for (const row of rows) {
-        if (!toDelete.has(row.id)) {
-          toDelete.add(row.id);
-          next.push(row.id);
-        }
-      }
-      frontier = next;
-    }
-    await trx
-      .deleteFrom("DriveNode")
-      .where("driveId", "=", driveId)
-      .where("id", "in", Array.from(toDelete))
+      .where("id", "=", input.folderId)
       .execute();
   }
 
@@ -327,22 +363,6 @@ export class NodeProcessor extends BaseReadModel {
     return resolveCollision(
       requested,
       rows.map((r) => r.name),
-    );
-  }
-
-  private async resolveFileName(
-    trx: Transaction<NodeProcessorDatabase>,
-    driveId: string,
-    parentFolder: string | null,
-    requested: string,
-    excludeId: string,
-  ): Promise<string> {
-    return this.resolveSiblingName(
-      trx,
-      driveId,
-      parentFolder,
-      requested,
-      excludeId,
     );
   }
 

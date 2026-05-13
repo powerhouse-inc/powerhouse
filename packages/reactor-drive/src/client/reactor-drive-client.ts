@@ -1,8 +1,6 @@
 import {
   addRelationshipAction,
   removeRelationshipAction,
-  removeRelationshipSubtreeAction,
-  updateRelationshipAction,
   type IDriveClient,
   type IReactorClient,
   type PagedResults,
@@ -20,6 +18,7 @@ import {
   createPresignedHeader,
   generateId,
   replayDocument,
+  type Action,
   type PHDocument,
 } from "@powerhousedao/shared/document-model";
 import {
@@ -27,14 +26,18 @@ import {
   REACTOR_DRIVE_DOCUMENT_TYPE,
 } from "../constants.js";
 import {
+  addFolderAction,
+  removeFolderAction,
   setAvailableOfflineAction,
   setDriveIconAction,
   setDriveNameAction,
   setSharingTypeAction,
+  updateFolderAction,
 } from "../actions.js";
 import { reactorDriveCreateDocument } from "../module.js";
 import type { IDriveReadModel } from "../read-model/interfaces.js";
 import type {
+  DriveChildFileMetadata,
   ReactorDriveFileNode,
   ReactorDriveFolderNode,
   ReactorDriveNode,
@@ -46,8 +49,11 @@ export interface ReactorDriveClientArgs {
 }
 
 /**
- * Implementation of {@link IDriveClient} backed by the reactor's generic
- * relationship system and the drive-specific `NodeProcessor` projection.
+ * Implementation of {@link IDriveClient} backed by the reactor's relationship
+ * primitives and the drive-scoped folder actions. Folder structure lives in
+ * the operation log (ADD_FOLDER/UPDATE_FOLDER/REMOVE_FOLDER + ADD_RELATIONSHIP
+ * for files) and is materialised by `NodeProcessor` into the `DriveNode`
+ * table consumed via {@link IDriveReadModel}.
  */
 export class ReactorDriveClient implements IDriveClient {
   private readonly reactor: IReactorClient;
@@ -83,7 +89,7 @@ export class ReactorDriveClient implements IDriveClient {
       };
     }
     const created = await this.reactor.create(driveDoc, undefined, signal);
-    return this.toLegacyDriveDocument(created);
+    return this.toLegacyDriveDocument(created, created.header.id);
   }
 
   async addFile<TDocument extends PHDocument = PHDocument>(
@@ -92,22 +98,24 @@ export class ReactorDriveClient implements IDriveClient {
     parentFolder?: string,
     signal?: AbortSignal,
   ): Promise<TDocument> {
-    const created = await this.reactor.createDocumentInDrive<TDocument>(
-      driveIdentifier,
+    const created = await this.reactor.create<TDocument>(
       document,
-      parentFolder,
+      undefined,
       signal,
     );
-    const parent = parentFolder ?? driveIdentifier;
+    const metadata: DriveChildFileMetadata = {
+      kind: "file",
+      parentFolderId: parentFolder ?? null,
+    };
     await this.reactor.execute(
       driveIdentifier,
       "main",
       [
         addRelationshipAction(
-          parent,
+          driveIdentifier,
           document.header.id,
           DRIVE_CHILD_RELATIONSHIP_TYPE,
-          { kind: "file" },
+          metadata,
         ),
       ],
       signal,
@@ -122,13 +130,13 @@ export class ReactorDriveClient implements IDriveClient {
     signal?: AbortSignal,
   ): Promise<FolderNode> {
     const folderId = generateId();
-    const parent = parentFolder ?? driveIdentifier;
     await this.reactor.execute(
       driveIdentifier,
       "main",
       [
-        addRelationshipAction(parent, folderId, DRIVE_CHILD_RELATIONSHIP_TYPE, {
-          kind: "folder",
+        addFolderAction({
+          folderId,
+          parentFolderId: parentFolder ?? null,
           name,
         }),
       ],
@@ -151,7 +159,6 @@ export class ReactorDriveClient implements IDriveClient {
     if (!node) {
       throw new Error(`Node ${nodeId} not found in drive ${driveIdentifier}`);
     }
-    const parentId = node.parentFolder ?? driveIdentifier;
 
     if (node.kind === "folder") {
       const subtree = await this.readModel.getDescendants(
@@ -159,26 +166,36 @@ export class ReactorDriveClient implements IDriveClient {
         nodeId,
         signal,
       );
-      await this.reactor.execute(
-        driveIdentifier,
-        "main",
-        [
-          removeRelationshipSubtreeAction(
-            parentId,
-            nodeId,
+      const fileDescendants = subtree.filter(
+        (n): n is ReactorDriveFileNode => n.kind === "file",
+      );
+      const subFolders = subtree
+        .filter((n): n is ReactorDriveFolderNode => n.kind === "folder")
+        .filter((f) => f.id !== nodeId);
+      const deepestFirstFolders = this.orderDeepestFirst(subFolders, nodeId);
+
+      const batch: Action[] = [
+        ...fileDescendants.map((f) =>
+          removeRelationshipAction(
+            driveIdentifier,
+            f.id,
             DRIVE_CHILD_RELATIONSHIP_TYPE,
           ),
-        ],
-        signal,
-      );
-      for (const descendant of subtree) {
-        if (descendant.kind === "file") {
-          await this.reactor.deleteDocument(
-            descendant.id,
-            "cascade" as PropagationMode,
-            signal,
-          );
-        }
+        ),
+        ...deepestFirstFolders.map((f) =>
+          removeFolderAction({ folderId: f.id }),
+        ),
+        removeFolderAction({ folderId: nodeId }),
+      ];
+
+      await this.reactor.execute(driveIdentifier, "main", batch, signal);
+
+      for (const file of fileDescendants) {
+        await this.reactor.deleteDocument(
+          file.id,
+          "cascade" as PropagationMode,
+          signal,
+        );
       }
       return;
     }
@@ -188,7 +205,7 @@ export class ReactorDriveClient implements IDriveClient {
       "main",
       [
         removeRelationshipAction(
-          parentId,
+          driveIdentifier,
           nodeId,
           DRIVE_CHILD_RELATIONSHIP_TYPE,
         ),
@@ -212,18 +229,10 @@ export class ReactorDriveClient implements IDriveClient {
     if (node.kind === "file") {
       await this.reactor.rename(nodeId, name, "main", signal);
     } else {
-      const parentId = node.parentFolder ?? driveIdentifier;
       await this.reactor.execute(
         driveIdentifier,
         "main",
-        [
-          updateRelationshipAction(
-            parentId,
-            nodeId,
-            DRIVE_CHILD_RELATIONSHIP_TYPE,
-            { kind: "folder", name },
-          ),
-        ],
+        [updateFolderAction({ folderId: nodeId, name })],
         signal,
       );
     }
@@ -268,39 +277,50 @@ export class ReactorDriveClient implements IDriveClient {
         `Node ${srcNodeId} not found in drive ${driveIdentifier}`,
       );
     }
-    const oldParent = node.parentFolder ?? driveIdentifier;
-    const newParent = targetParentFolderId ?? driveIdentifier;
 
-    const metadata =
-      node.kind === "folder"
-        ? { kind: "folder", name: node.name }
-        : { kind: "file" };
-
-    await this.reactor.execute(
-      driveIdentifier,
-      "main",
-      [
-        removeRelationshipAction(
-          oldParent,
-          srcNodeId,
-          DRIVE_CHILD_RELATIONSHIP_TYPE,
-        ),
-        addRelationshipAction(
-          newParent,
-          srcNodeId,
-          DRIVE_CHILD_RELATIONSHIP_TYPE,
-          metadata,
-        ),
-      ],
-      signal,
-    );
+    if (node.kind === "folder") {
+      await this.reactor.execute(
+        driveIdentifier,
+        "main",
+        [
+          updateFolderAction({
+            folderId: srcNodeId,
+            parentFolderId: targetParentFolderId ?? null,
+          }),
+        ],
+        signal,
+      );
+    } else {
+      const metadata: DriveChildFileMetadata = {
+        kind: "file",
+        parentFolderId: targetParentFolderId ?? null,
+      };
+      await this.reactor.execute(
+        driveIdentifier,
+        "main",
+        [
+          removeRelationshipAction(
+            driveIdentifier,
+            srcNodeId,
+            DRIVE_CHILD_RELATIONSHIP_TYPE,
+          ),
+          addRelationshipAction(
+            driveIdentifier,
+            srcNodeId,
+            DRIVE_CHILD_RELATIONSHIP_TYPE,
+            metadata,
+          ),
+        ],
+        signal,
+      );
+    }
 
     const drive = await this.reactor.get<PHDocument>(
       driveIdentifier,
       undefined,
       signal,
     );
-    return this.toLegacyDriveDocument(drive);
+    return this.toLegacyDriveDocument(drive, driveIdentifier);
   }
 
   async copyNode(
@@ -332,23 +352,21 @@ export class ReactorDriveClient implements IDriveClient {
 
     for (const node of subtree) {
       const newId = idMap.get(node.id)!;
-      const sourceParent = node.parentFolder ?? driveIdentifier;
       const newParent =
         node.id === srcNodeId
-          ? (targetParentFolderId ?? driveIdentifier)
-          : (idMap.get(sourceParent) ?? sourceParent);
+          ? (targetParentFolderId ?? null)
+          : (idMap.get(node.parentFolder ?? "") ?? null);
 
       if (node.kind === "folder") {
         await this.reactor.execute(
           driveIdentifier,
           "main",
           [
-            addRelationshipAction(
-              newParent,
-              newId,
-              DRIVE_CHILD_RELATIONSHIP_TYPE,
-              { kind: "folder", name: node.name },
-            ),
+            addFolderAction({
+              folderId: newId,
+              parentFolderId: newParent,
+              name: node.name,
+            }),
           ],
           signal,
         );
@@ -358,20 +376,20 @@ export class ReactorDriveClient implements IDriveClient {
           undefined,
           signal,
         );
-        const module = await this.reactor.getDocumentModelModule(
+        const documentModelModule = await this.reactor.getDocumentModelModule(
           srcDoc.header.documentType,
         );
         const duplicated = replayDocument(
           srcDoc.initialState,
           srcDoc.operations,
-          module.reducer,
+          documentModelModule.reducer,
           createPresignedHeader(newId, srcDoc.header.documentType),
         );
         duplicated.header.name = node.name;
         await this.addFile(
           driveIdentifier,
           duplicated,
-          newParent === driveIdentifier ? undefined : newParent,
+          newParent ?? undefined,
           signal,
         );
       }
@@ -382,7 +400,7 @@ export class ReactorDriveClient implements IDriveClient {
       undefined,
       signal,
     );
-    return this.toLegacyDriveDocument(drive);
+    return this.toLegacyDriveDocument(drive, driveIdentifier);
   }
 
   async getNode(
@@ -440,13 +458,46 @@ export class ReactorDriveClient implements IDriveClient {
     return legacy;
   }
 
-  private toLegacyDriveDocument(doc: PHDocument): DocumentDriveDocument {
+  private async toLegacyDriveDocument(
+    doc: PHDocument,
+    driveId: string,
+  ): Promise<DocumentDriveDocument> {
     if (doc.header.documentType !== REACTOR_DRIVE_DOCUMENT_TYPE) {
       throw new Error(
         `Document ${doc.header.id} is not a reactor-drive document`,
       );
     }
-    return doc as unknown as DocumentDriveDocument;
+    const allNodes = await this.readModel.listAll(driveId);
+    const legacy = structuredClone(doc) as unknown as DocumentDriveDocument;
+    const existingGlobal = legacy.state
+      .global as Partial<DocumentDriveDocument["state"]["global"]>;
+    legacy.state.global = {
+      name: existingGlobal.name ?? "",
+      icon: existingGlobal.icon ?? null,
+      nodes: allNodes.map((n) => this.toLegacyNode(n)),
+    };
+    return legacy;
+  }
+
+  private orderDeepestFirst(
+    folders: ReactorDriveFolderNode[],
+    rootId: string,
+  ): ReactorDriveFolderNode[] {
+    const depthById = new Map<string, number>();
+    const compute = (id: string): number => {
+      if (id === rootId) return 0;
+      const cached = depthById.get(id);
+      if (cached !== undefined) return cached;
+      const folder = folders.find((f) => f.id === id);
+      if (!folder) return 0;
+      const parent = folder.parentFolder ?? rootId;
+      const depth = compute(parent) + 1;
+      depthById.set(id, depth);
+      return depth;
+    };
+    return folders
+      .slice()
+      .sort((a, b) => compute(b.id) - compute(a.id));
   }
 }
 

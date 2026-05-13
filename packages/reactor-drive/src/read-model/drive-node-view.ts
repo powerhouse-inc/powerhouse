@@ -62,6 +62,17 @@ export class DriveNodeView implements IDriveReadModel {
     };
   }
 
+  async listAll(driveId: string): Promise<ReactorDriveNode[]> {
+    const rows = await this.db
+      .selectFrom("DriveNode")
+      .selectAll()
+      .where("driveId", "=", driveId)
+      .orderBy("createdAt", "asc")
+      .orderBy("id", "asc")
+      .execute();
+    return rows.map(rowToNode);
+  }
+
   async getDescendants(
     driveId: string,
     root: string,

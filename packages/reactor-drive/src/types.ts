@@ -28,13 +28,30 @@ export type ReactorDriveDocumentModelModule =
   DocumentModelModule<ReactorDrivePHState>;
 
 /**
- * Discriminated union carried on the `drive/child` relationship metadata.
- * Files don't carry their name on the relationship — their name lives on the
- * child document's header.
+ * Metadata carried on the `drive/child` relationship for file children.
+ * The parentFolderId is null when the file lives directly under the drive root.
+ * Files don't carry their name here — it lives on the child document's header.
  */
-export type DriveContainsMetadata =
-  | { kind: "file" }
-  | { kind: "folder"; name: string };
+export type DriveChildFileMetadata = {
+  kind: "file";
+  parentFolderId: string | null;
+};
+
+export type AddFolderActionInput = {
+  folderId: string;
+  parentFolderId: string | null;
+  name: string;
+};
+
+export type UpdateFolderActionInput = {
+  folderId: string;
+  name?: string;
+  parentFolderId?: string | null;
+};
+
+export type RemoveFolderActionInput = {
+  folderId: string;
+};
 
 export type ReactorDriveNodeKind = "file" | "folder";
 

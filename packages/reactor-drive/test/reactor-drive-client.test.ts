@@ -21,11 +21,6 @@ function createMockReactor(overrides: Partial<IReactorClient> = {}) {
   const execute = vi.fn().mockResolvedValue(createJobInfo());
   const rename = vi.fn().mockResolvedValue(createJobInfo());
   const deleteDocument = vi.fn().mockResolvedValue(createJobInfo());
-  const createDocumentInDrive = vi
-    .fn()
-    .mockImplementation((_drive: unknown, doc: unknown) =>
-      Promise.resolve(doc),
-    );
   const create = vi
     .fn()
     .mockImplementation((doc: unknown) => Promise.resolve(doc));
@@ -36,7 +31,6 @@ function createMockReactor(overrides: Partial<IReactorClient> = {}) {
     execute,
     rename,
     deleteDocument,
-    createDocumentInDrive,
     create,
     get,
     setPreferredEditor,
@@ -48,7 +42,6 @@ function createMockReactor(overrides: Partial<IReactorClient> = {}) {
     execute,
     rename,
     deleteDocument,
-    createDocumentInDrive,
     create,
     get,
     setPreferredEditor,
@@ -101,7 +94,7 @@ describe("ReactorDriveClient", () => {
       .execute();
   }
 
-  it("addFolder issues a single ADD_RELATIONSHIP with folder metadata", async () => {
+  it("addFolder issues a single ADD_FOLDER targeting the drive", async () => {
     const { reactor, execute } = createMockReactor();
     const client = new ReactorDriveClient({ reactor, readModel: view });
 
@@ -119,31 +112,36 @@ describe("ReactorDriveClient", () => {
     expect(driveId).toBe("drive-1");
     expect(branch).toBe("main");
     expect(actions).toHaveLength(1);
-    expect(actions[0].type).toBe("ADD_RELATIONSHIP");
+    expect(actions[0].type).toBe("ADD_FOLDER");
     expect(actions[0].input).toMatchObject({
-      sourceId: "drive-1",
-      targetId: folder.id,
-      relationshipType: DRIVE_CHILD_RELATIONSHIP_TYPE,
-      metadata: { kind: "folder", name: "Notes" },
+      folderId: folder.id,
+      parentFolderId: null,
+      name: "Notes",
     });
   });
 
-  it("addFolder under a parentFolder targets the folder as source", async () => {
+  it("addFolder under a parentFolder carries the parent id in the action input", async () => {
     const { reactor, execute } = createMockReactor();
     const client = new ReactorDriveClient({ reactor, readModel: view });
 
     const folder = await client.addFolder("drive-1", "Sub", "parent-folder");
 
     expect(folder.parentFolder).toBe("parent-folder");
-    const [, , actions] = execute.mock.calls[0] as [string, string, Action[]];
+    const [driveId, , actions] = execute.mock.calls[0] as [
+      string,
+      string,
+      Action[],
+    ];
+    expect(driveId).toBe("drive-1");
     expect(actions[0].input).toMatchObject({
-      sourceId: "parent-folder",
-      targetId: folder.id,
+      folderId: folder.id,
+      parentFolderId: "parent-folder",
+      name: "Sub",
     });
   });
 
-  it("addFile creates the document in the drive and adds a file relationship", async () => {
-    const { reactor, execute, createDocumentInDrive } = createMockReactor();
+  it("addFile creates the document and adds a drive/child relationship with file metadata", async () => {
+    const { reactor, execute, create } = createMockReactor();
     const client = new ReactorDriveClient({ reactor, readModel: view });
     const doc = {
       header: { id: "file-1", documentType: "powerhouse/document-model" },
@@ -151,19 +149,37 @@ describe("ReactorDriveClient", () => {
 
     await client.addFile("drive-1", doc);
 
-    expect(createDocumentInDrive).toHaveBeenCalledWith(
-      "drive-1",
-      doc,
-      undefined,
-      undefined,
-    );
-    const [, , actions] = execute.mock.calls[0] as [string, string, Action[]];
+    expect(create).toHaveBeenCalledWith(doc, undefined, undefined);
+    const [driveId, , actions] = execute.mock.calls[0] as [
+      string,
+      string,
+      Action[],
+    ];
+    expect(driveId).toBe("drive-1");
     expect(actions[0].type).toBe("ADD_RELATIONSHIP");
     expect(actions[0].input).toMatchObject({
       sourceId: "drive-1",
       targetId: "file-1",
       relationshipType: DRIVE_CHILD_RELATIONSHIP_TYPE,
-      metadata: { kind: "file" },
+      metadata: { kind: "file", parentFolderId: null },
+    });
+  });
+
+  it("addFile under a parentFolder records parentFolderId in metadata", async () => {
+    const { reactor, execute } = createMockReactor();
+    const client = new ReactorDriveClient({ reactor, readModel: view });
+    const doc = {
+      header: { id: "file-1", documentType: "powerhouse/document-model" },
+    } as never;
+
+    await client.addFile("drive-1", doc, "parent-folder");
+
+    const [, , actions] = execute.mock.calls[0] as [string, string, Action[]];
+    expect(actions[0].input).toMatchObject({
+      sourceId: "drive-1",
+      targetId: "file-1",
+      relationshipType: DRIVE_CHILD_RELATIONSHIP_TYPE,
+      metadata: { kind: "file", parentFolderId: "parent-folder" },
     });
   });
 
@@ -197,7 +213,7 @@ describe("ReactorDriveClient", () => {
     expect(result.name).toBe("new");
   });
 
-  it("renameNode on a folder issues UPDATE_RELATIONSHIP and never calls rename", async () => {
+  it("renameNode on a folder issues UPDATE_FOLDER and never calls rename", async () => {
     const driveId = "drive-1";
     await seed(driveId, [
       { id: "folder-1", kind: "folder", name: "old", parentFolder: null },
@@ -217,12 +233,16 @@ describe("ReactorDriveClient", () => {
     const result = await client.renameNode(driveId, "folder-1", "new");
 
     expect(rename).not.toHaveBeenCalled();
-    const [, , actions] = execute.mock.calls[0] as [string, string, Action[]];
-    expect(actions[0].type).toBe("UPDATE_RELATIONSHIP");
+    const [executedDriveId, , actions] = execute.mock.calls[0] as [
+      string,
+      string,
+      Action[],
+    ];
+    expect(executedDriveId).toBe(driveId);
+    expect(actions[0].type).toBe("UPDATE_FOLDER");
     expect(actions[0].input).toMatchObject({
-      sourceId: driveId,
-      targetId: "folder-1",
-      metadata: { kind: "folder", name: "new" },
+      folderId: "folder-1",
+      name: "new",
     });
     expect(result.name).toBe("new");
   });
@@ -248,11 +268,12 @@ describe("ReactorDriveClient", () => {
     expect(actions[0].input).toMatchObject({
       sourceId: driveId,
       targetId: "file-1",
+      relationshipType: DRIVE_CHILD_RELATIONSHIP_TYPE,
     });
     expect(deleteDocument).toHaveBeenCalledWith("file-1", undefined, undefined);
   });
 
-  it("removeNode on a folder issues REMOVE_RELATIONSHIP_SUBTREE and cascade-deletes file descendants", async () => {
+  it("removeNode on a folder batches REMOVE_RELATIONSHIP per file + REMOVE_FOLDER deepest-first + REMOVE_FOLDER(root) and cascade-deletes files", async () => {
     const driveId = "drive-1";
     await seed(driveId, [
       { id: "folder", kind: "folder", name: "F", parentFolder: null },
@@ -277,12 +298,35 @@ describe("ReactorDriveClient", () => {
 
     await client.removeNode(driveId, "folder");
 
-    const [, , actions] = execute.mock.calls[0] as [string, string, Action[]];
-    expect(actions[0].type).toBe("REMOVE_RELATIONSHIP_SUBTREE");
-    expect(actions[0].input).toMatchObject({
-      sourceId: driveId,
-      rootId: "folder",
-    });
+    expect(execute).toHaveBeenCalledTimes(1);
+    const [executedDriveId, , actions] = execute.mock.calls[0] as [
+      string,
+      string,
+      Action[],
+    ];
+    expect(executedDriveId).toBe(driveId);
+
+    const removeRelationshipActions = actions.filter(
+      (a) => a.type === "REMOVE_RELATIONSHIP",
+    );
+    const removeFolderActions = actions.filter(
+      (a) => a.type === "REMOVE_FOLDER",
+    );
+    expect(removeRelationshipActions).toHaveLength(2);
+    expect(removeFolderActions).toHaveLength(2);
+
+    const fileTargets = new Set(
+      removeRelationshipActions.map(
+        (a) => (a.input as { targetId: string }).targetId,
+      ),
+    );
+    expect(fileTargets).toEqual(new Set(["file-1", "file-2"]));
+
+    const folderIds = removeFolderActions.map(
+      (a) => (a.input as { folderId: string }).folderId,
+    );
+    expect(folderIds).toEqual(["sub", "folder"]);
+
     const deletedIds = deleteDocument.mock.calls.map(
       (c: unknown[]) => c[0] as string,
     );
@@ -292,7 +336,7 @@ describe("ReactorDriveClient", () => {
     }
   });
 
-  it("moveNode emits REMOVE_RELATIONSHIP followed by ADD_RELATIONSHIP preserving folder metadata", async () => {
+  it("moveNode on a folder emits UPDATE_FOLDER with the new parentFolderId", async () => {
     const driveId = "drive-1";
     await seed(driveId, [
       { id: "folder", kind: "folder", name: "F", parentFolder: null },
@@ -301,23 +345,61 @@ describe("ReactorDriveClient", () => {
     const { reactor, execute, get } = createMockReactor();
     get.mockResolvedValue({
       header: { id: driveId, documentType: "powerhouse/reactor-drive" },
+      state: { global: { name: "Drive", icon: null } },
     });
     const client = new ReactorDriveClient({ reactor, readModel: view });
 
     await client.moveNode(driveId, "folder", "target");
+
+    const [executedDriveId, , actions] = execute.mock.calls[0] as [
+      string,
+      string,
+      Action[],
+    ];
+    expect(executedDriveId).toBe(driveId);
+    expect(actions).toHaveLength(1);
+    expect(actions[0].type).toBe("UPDATE_FOLDER");
+    expect(actions[0].input).toMatchObject({
+      folderId: "folder",
+      parentFolderId: "target",
+    });
+  });
+
+  it("moveNode on a file emits REMOVE_RELATIONSHIP + ADD_RELATIONSHIP both sourced from the drive", async () => {
+    const driveId = "drive-1";
+    await seed(driveId, [
+      {
+        id: "file-1",
+        kind: "file",
+        name: "doc.md",
+        parentFolder: null,
+        documentType: "powerhouse/document-model",
+      },
+      { id: "target", kind: "folder", name: "T", parentFolder: null },
+    ]);
+    const { reactor, execute, get } = createMockReactor();
+    get.mockResolvedValue({
+      header: { id: driveId, documentType: "powerhouse/reactor-drive" },
+      state: { global: { name: "Drive", icon: null } },
+    });
+    const client = new ReactorDriveClient({ reactor, readModel: view });
+
+    await client.moveNode(driveId, "file-1", "target");
 
     const [, , actions] = execute.mock.calls[0] as [string, string, Action[]];
     expect(actions).toHaveLength(2);
     expect(actions[0].type).toBe("REMOVE_RELATIONSHIP");
     expect(actions[0].input).toMatchObject({
       sourceId: driveId,
-      targetId: "folder",
+      targetId: "file-1",
+      relationshipType: DRIVE_CHILD_RELATIONSHIP_TYPE,
     });
     expect(actions[1].type).toBe("ADD_RELATIONSHIP");
     expect(actions[1].input).toMatchObject({
-      sourceId: "target",
-      targetId: "folder",
-      metadata: { kind: "folder", name: "F" },
+      sourceId: driveId,
+      targetId: "file-1",
+      relationshipType: DRIVE_CHILD_RELATIONSHIP_TYPE,
+      metadata: { kind: "file", parentFolderId: "target" },
     });
   });
 

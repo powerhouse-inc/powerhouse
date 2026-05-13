@@ -4,7 +4,6 @@ import type {
   CreateDocumentActionInput,
   DeleteDocumentActionInput,
   RemoveRelationshipActionInput,
-  RemoveRelationshipSubtreeActionInput,
   UpdateRelationshipActionInput,
   UpgradeDocumentActionInput,
 } from "@powerhousedao/shared/document-model";
@@ -105,31 +104,6 @@ export function updateRelationshipAction(
   return {
     id: generateId(),
     type: "UPDATE_RELATIONSHIP",
-    scope: "document",
-    timestampUtcMs: new Date().toISOString(),
-    input,
-  };
-}
-
-/**
- * Creates a REMOVE_RELATIONSHIP_SUBTREE action that removes a node's edge and
- * every descendant edge reachable via the same relationship type in one
- * atomic step.
- */
-export function removeRelationshipSubtreeAction(
-  sourceId: string,
-  rootId: string,
-  relationshipType: string,
-): Action {
-  const input: RemoveRelationshipSubtreeActionInput = {
-    sourceId,
-    rootId,
-    relationshipType,
-  };
-
-  return {
-    id: generateId(),
-    type: "REMOVE_RELATIONSHIP_SUBTREE",
     scope: "document",
     timestampUtcMs: new Date().toISOString(),
     input,

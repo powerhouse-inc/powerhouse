@@ -4,8 +4,10 @@ import {
 } from "@powerhousedao/reactor";
 import type { Node } from "@powerhousedao/shared/document-drive";
 import type { Action } from "@powerhousedao/shared/document-model";
+import { addFolderAction } from "../actions.js";
 import { DRIVE_CHILD_RELATIONSHIP_TYPE } from "../constants.js";
 import type { IDriveReadModel } from "../read-model/interfaces.js";
+import type { DriveChildFileMetadata } from "../types.js";
 
 export interface MigrateLegacyDriveStateArgs {
   reactor: IReactorClient;
@@ -23,16 +25,17 @@ export interface MigrateLegacyDriveStateResult {
 
 /**
  * Translates a legacy `document-drive` `state.global.nodes` array into the
- * relationship-action vocabulary used by the new reactor-drive module.
+ * action vocabulary used by the new reactor-drive module.
  *
- * For every legacy node not already present in the drive's projection a
- * single `ADD_RELATIONSHIP` action is emitted on the target drive. File
- * nodes assume the underlying PHDocument still exists under the same id —
- * the migration only re-links it into the new drive, it does not recreate
+ * Folder nodes are emitted as `ADD_FOLDER` actions targeting the drive
+ * document. File nodes are emitted as `ADD_RELATIONSHIP` actions on the drive
+ * with `drive/child` metadata carrying the parent folder id. File nodes
+ * assume the underlying PHDocument still exists under the same id — the
+ * migration only re-links it into the new drive, it does not recreate
  * documents.
  *
  * Re-running the migration is safe: existing `DriveNode` rows are skipped
- * so already-migrated edges are left untouched.
+ * so already-migrated nodes are left untouched.
  */
 export async function migrateLegacyDriveState(
   args: MigrateLegacyDriveStateArgs,
@@ -50,7 +53,7 @@ export async function migrateLegacyDriveState(
       skippedExisting += 1;
       continue;
     }
-    actions.push(toAddRelationshipAction(driveId, node));
+    actions.push(toAction(driveId, node));
   }
 
   if (actions.length === 0) {
@@ -61,14 +64,20 @@ export async function migrateLegacyDriveState(
   return { emittedActions: actions.length, skippedExisting };
 }
 
-function toAddRelationshipAction(driveId: string, node: Node): Action {
-  const parentId = node.parentFolder ?? driveId;
-  const metadata: Record<string, unknown> =
-    node.kind === "folder"
-      ? { kind: "folder", name: node.name }
-      : { kind: "file" };
+function toAction(driveId: string, node: Node): Action {
+  if (node.kind === "folder") {
+    return addFolderAction({
+      folderId: node.id,
+      parentFolderId: node.parentFolder ?? null,
+      name: node.name,
+    });
+  }
+  const metadata: DriveChildFileMetadata = {
+    kind: "file",
+    parentFolderId: node.parentFolder ?? null,
+  };
   return addRelationshipAction(
-    parentId,
+    driveId,
     node.id,
     DRIVE_CHILD_RELATIONSHIP_TYPE,
     metadata,
