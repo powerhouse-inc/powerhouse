@@ -60,7 +60,11 @@ export function deleteDocumentAction(documentId: string): Action {
 }
 
 /**
- * Creates an ADD_RELATIONSHIP action to establish a parent-child relationship.
+ * Creates an ADD_RELATIONSHIP action that records a directed edge from
+ * `sourceId` to `targetId` with an arbitrary `relationshipType` and optional
+ * `metadata`. The edge is opaque to the reactor — consumers (e.g. reactor-drive)
+ * define their own type strings such as `"drive/child"` and attach
+ * domain-specific metadata.
  */
 export function addRelationshipAction(
   sourceId: string,
