@@ -20,7 +20,7 @@ For today's purpose, you'll be using **Vetra Studio**, the builder platform thro
 
 ## Prerequisites
 
-- Powerhouse CLI installed: `pnpm install -g ph-cmd` or `npm install -g ph-cmd --legacy-peer-deps`
+- Powerhouse CLI installed: `pnpm install -g ph-cmd` or `npm install -g ph-cmd`
 - Node.js 24 and a package manager (pnpm or npm) installed
 - Visual Studio Code (or your preferred IDE)
 - Terminal/Command Prompt access
@@ -137,11 +137,32 @@ ph init
     ```
    ````
 
-Once the project is created, you will see the following output:
-`bash
-    Initialized empty Git repository in /Users/you/ph-projects/todo-tutorial/.git/
-    The installation is done!
-    `
+Once the project is created, you will see output like:
+```bash
+🚀 Initializing a new project...
+
+▶️ Creating directory for project "todo-tutorial"...
+
+✅ Project directory created
+
+▶️ Initializing git repository...
+
+✅ Git repository initialized
+
+▶️ Creating project boilerplate files...
+
+✅ Project boilerplate files created
+
+▶️ Installing project dependencies with npm...
+
+✅ Project dependencies installed
+
+▶️ Formatting boilerplate project files...
+
+✅ Boilerplate files formatted
+
+🎉 Successfully created project "todo-tutorial" 🎉
+```
 
 Navigate to the newly created project directory:
 `bash

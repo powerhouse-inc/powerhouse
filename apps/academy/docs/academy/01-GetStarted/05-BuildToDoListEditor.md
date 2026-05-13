@@ -21,7 +21,7 @@ This tutorial shows building from **generated scaffolding** (step-5) to **comple
 
 ### Compare your generated editor
 
-After running `ph generate --editor`:
+After running `ph generate editor`:
 
 ```bash
 # Compare generated scaffolding with step-5

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$comment": "Maps academy doc sections to the monorepo packages they are responsible for documenting. Used by PH Laura to scope code↔doc consistency checks. Update this file when new packages are added or doc ownership changes.",
+  "$comment": "Maps academy doc sections to the monorepo packages they are responsible for documenting. Used by ph-lora to scope code↔doc consistency checks. Update this file when new packages are added or doc ownership changes.",
   "sections": [
     {
       "id": "get-started",
@@ -147,5 +147,5 @@
     "packages/switchboard-gui",
     "apps/connect"
   ],
-  "$unmappedNote": "These packages exist in the monorepo but have no doc section currently responsible for them. PH Laura should flag these as documentation gaps."
+  "$unmappedNote": "These packages exist in the monorepo but have no doc section currently responsible for them. ph-lora should flag these as documentation gaps."
 }
