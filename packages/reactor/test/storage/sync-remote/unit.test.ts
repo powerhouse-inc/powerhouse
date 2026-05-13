@@ -3,20 +3,23 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { KyselySyncRemoteStorage } from "../../../src/storage/kysely/sync-remote-storage.js";
 import type { Database } from "../../../src/storage/kysely/types.js";
 import type { RemoteRecord } from "../../../src/sync/types.js";
-import { createTestSyncStorage } from "../../factories.js";
+import { createTestSyncStorage, testFsBackends } from "../../factories.js";
 
-describe("KyselySyncRemoteStorage", () => {
+describe.each(testFsBackends)("KyselySyncRemoteStorage [$name]", ({ backend }) => {
   let db: Kysely<Database>;
   let storage: KyselySyncRemoteStorage;
+  let cleanup: () => Promise<void>;
 
   beforeEach(async () => {
-    const setup = await createTestSyncStorage();
+    const setup = await createTestSyncStorage(backend);
     db = setup.db;
     storage = setup.syncRemoteStorage;
+    cleanup = setup.cleanup;
   });
 
   afterEach(async () => {
     await db.destroy();
+    await cleanup();
   });
 
   describe("list", () => {
