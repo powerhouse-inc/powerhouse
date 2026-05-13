@@ -6,6 +6,8 @@ import type {
   Operation,
   PHDocument,
   RemoveRelationshipActionInput,
+  RemoveRelationshipSubtreeActionInput,
+  UpdateRelationshipActionInput,
   UpgradeDocumentAction,
   UpgradeDocumentActionInput,
   UpgradeTransition,
@@ -102,6 +104,26 @@ export class DocumentActionHandler {
         );
       case "REMOVE_RELATIONSHIP":
         return this.executeRemoveRelationship(
+          job,
+          action,
+          startTime,
+          indexTxn,
+          stores,
+          sourceRemote,
+          signal,
+        );
+      case "UPDATE_RELATIONSHIP":
+        return this.executeUpdateRelationship(
+          job,
+          action,
+          startTime,
+          indexTxn,
+          stores,
+          sourceRemote,
+          signal,
+        );
+      case "REMOVE_RELATIONSHIP_SUBTREE":
+        return this.executeRemoveRelationshipSubtree(
           job,
           action,
           startTime,
@@ -804,6 +826,256 @@ export class DocumentActionHandler {
       indexTxn.removeFromCollection(collectionId, input.targetId);
       stores.collectionMembershipCache.invalidate(input.targetId);
     }
+
+    stores.documentMetaCache.putDocumentMeta(input.sourceId, job.branch, {
+      state: sourceDoc.state.document,
+      documentType: sourceDoc.header.documentType,
+      documentScopeRevision: operation.index + 1,
+    });
+
+    return buildSuccessResult(
+      job,
+      operation,
+      input.sourceId,
+      sourceDoc.header.documentType,
+      resultingState,
+      startTime,
+    );
+  }
+
+  private async executeUpdateRelationship(
+    job: Job,
+    action: Action,
+    startTime: number,
+    indexTxn: IOperationIndexTxn,
+    stores: ExecutionStores,
+    sourceRemote: string = "",
+    signal?: AbortSignal,
+  ): Promise<JobResult> {
+    if (job.scope !== "document") {
+      return buildErrorResult(
+        job,
+        new Error(
+          `UPDATE_RELATIONSHIP must be in "document" scope, got "${job.scope}"`,
+        ),
+        startTime,
+      );
+    }
+
+    const input = action.input as UpdateRelationshipActionInput;
+
+    if (!input.sourceId || !input.targetId || !input.relationshipType) {
+      return buildErrorResult(
+        job,
+        new Error(
+          "UPDATE_RELATIONSHIP action requires sourceId, targetId, and relationshipType in input",
+        ),
+        startTime,
+      );
+    }
+
+    let sourceDoc: PHDocument;
+    try {
+      sourceDoc = await stores.writeCache.getState(
+        input.sourceId,
+        "document",
+        job.branch,
+        undefined,
+        signal,
+      );
+    } catch (error) {
+      return buildErrorResult(
+        job,
+        new Error(
+          `UPDATE_RELATIONSHIP: source document ${input.sourceId} not found: ${error instanceof Error ? error.message : String(error)}`,
+        ),
+        startTime,
+      );
+    }
+
+    const nextIndex = getNextIndexForScope(sourceDoc, job.scope);
+
+    const operation = createOperation(action, nextIndex, 0, {
+      documentId: input.sourceId,
+      scope: job.scope,
+      branch: job.branch,
+    });
+
+    const writeError = await this.writeOperationToStore(
+      input.sourceId,
+      sourceDoc.header.documentType,
+      job.scope,
+      job.branch,
+      operation,
+      job,
+      startTime,
+      stores,
+      signal,
+    );
+    if (writeError !== null) {
+      return writeError;
+    }
+
+    sourceDoc.header.lastModifiedAtUtcIso =
+      operation.timestampUtcMs || new Date().toISOString();
+
+    updateDocumentRevision(sourceDoc, job.scope, operation.index);
+
+    sourceDoc.operations = {
+      ...sourceDoc.operations,
+      [job.scope]: [...(sourceDoc.operations[job.scope] ?? []), operation],
+    };
+
+    const scopeState = (sourceDoc.state as Record<string, unknown>)[job.scope];
+    const resultingStateObj: Record<string, unknown> = {
+      header: structuredClone(sourceDoc.header),
+      [job.scope]: scopeState === undefined ? {} : structuredClone(scopeState),
+    };
+    const resultingState = JSON.stringify(resultingStateObj);
+
+    stores.writeCache.putState(
+      input.sourceId,
+      job.scope,
+      job.branch,
+      operation.index,
+      sourceDoc,
+    );
+
+    indexTxn.write([
+      {
+        ...operation,
+        documentId: input.sourceId,
+        documentType: sourceDoc.header.documentType,
+        branch: job.branch,
+        scope: job.scope,
+        sourceRemote,
+      },
+    ]);
+
+    stores.documentMetaCache.putDocumentMeta(input.sourceId, job.branch, {
+      state: sourceDoc.state.document,
+      documentType: sourceDoc.header.documentType,
+      documentScopeRevision: operation.index + 1,
+    });
+
+    return buildSuccessResult(
+      job,
+      operation,
+      input.sourceId,
+      sourceDoc.header.documentType,
+      resultingState,
+      startTime,
+    );
+  }
+
+  private async executeRemoveRelationshipSubtree(
+    job: Job,
+    action: Action,
+    startTime: number,
+    indexTxn: IOperationIndexTxn,
+    stores: ExecutionStores,
+    sourceRemote: string = "",
+    signal?: AbortSignal,
+  ): Promise<JobResult> {
+    if (job.scope !== "document") {
+      return buildErrorResult(
+        job,
+        new Error(
+          `REMOVE_RELATIONSHIP_SUBTREE must be in "document" scope, got "${job.scope}"`,
+        ),
+        startTime,
+      );
+    }
+
+    const input = action.input as RemoveRelationshipSubtreeActionInput;
+
+    if (!input.sourceId || !input.rootId || !input.relationshipType) {
+      return buildErrorResult(
+        job,
+        new Error(
+          "REMOVE_RELATIONSHIP_SUBTREE action requires sourceId, rootId, and relationshipType in input",
+        ),
+        startTime,
+      );
+    }
+
+    let sourceDoc: PHDocument;
+    try {
+      sourceDoc = await stores.writeCache.getState(
+        input.sourceId,
+        "document",
+        job.branch,
+        undefined,
+        signal,
+      );
+    } catch (error) {
+      return buildErrorResult(
+        job,
+        new Error(
+          `REMOVE_RELATIONSHIP_SUBTREE: source document ${input.sourceId} not found: ${error instanceof Error ? error.message : String(error)}`,
+        ),
+        startTime,
+      );
+    }
+
+    const nextIndex = getNextIndexForScope(sourceDoc, job.scope);
+
+    const operation = createOperation(action, nextIndex, 0, {
+      documentId: input.sourceId,
+      scope: job.scope,
+      branch: job.branch,
+    });
+
+    const writeError = await this.writeOperationToStore(
+      input.sourceId,
+      sourceDoc.header.documentType,
+      job.scope,
+      job.branch,
+      operation,
+      job,
+      startTime,
+      stores,
+      signal,
+    );
+    if (writeError !== null) {
+      return writeError;
+    }
+
+    sourceDoc.header.lastModifiedAtUtcIso =
+      operation.timestampUtcMs || new Date().toISOString();
+
+    updateDocumentRevision(sourceDoc, job.scope, operation.index);
+
+    sourceDoc.operations = {
+      ...sourceDoc.operations,
+      [job.scope]: [...(sourceDoc.operations[job.scope] ?? []), operation],
+    };
+
+    const scopeState = (sourceDoc.state as Record<string, unknown>)[job.scope];
+    const resultingStateObj: Record<string, unknown> = {
+      header: structuredClone(sourceDoc.header),
+      [job.scope]: scopeState === undefined ? {} : structuredClone(scopeState),
+    };
+    const resultingState = JSON.stringify(resultingStateObj);
+
+    stores.writeCache.putState(
+      input.sourceId,
+      job.scope,
+      job.branch,
+      operation.index,
+      sourceDoc,
+    );
+
+    indexTxn.write([
+      {
+        ...operation,
+        documentId: input.sourceId,
+        documentType: sourceDoc.header.documentType,
+        branch: job.branch,
+        scope: job.scope,
+        sourceRemote,
+      },
+    ]);
 
     stores.documentMetaCache.putDocumentMeta(input.sourceId, job.branch, {
       state: sourceDoc.state.document,

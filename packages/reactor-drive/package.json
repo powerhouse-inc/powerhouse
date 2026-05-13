@@ -24,12 +24,15 @@
     "tsc": "tsc",
     "lint": "eslint",
     "build": "tsdown",
-    "test": "vitest --run"
+    "test": "vitest --run",
+    "bench": "vitest bench --run"
   },
   "dependencies": {
     "@powerhousedao/reactor": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
     "document-model": "workspace:*",
+    "graphql": "catalog:",
+    "graphql-tag": "catalog:",
     "kysely": "catalog:"
   },
   "devDependencies": {

@@ -65,6 +65,10 @@ export class KyselyDocumentIndexer
           await this.handleAddRelationship(trx, operation);
         } else if (actionType === "REMOVE_RELATIONSHIP") {
           await this.handleRemoveRelationship(trx, operation);
+        } else if (actionType === "UPDATE_RELATIONSHIP") {
+          await this.handleUpdateRelationship(trx, operation);
+        } else if (actionType === "REMOVE_RELATIONSHIP_SUBTREE") {
+          await this.handleRemoveRelationshipSubtree(trx, operation);
         }
       }
     });
@@ -620,5 +624,83 @@ export class KyselyDocumentIndexer
       .where("targetId", "=", input.targetId)
       .where("relationshipType", "=", input.relationshipType)
       .execute();
+  }
+
+  private async handleUpdateRelationship(
+    trx: Kysely<IndexerDatabase>,
+    operation: Operation,
+  ): Promise<void> {
+    const input = operation.action.input as {
+      sourceId: string;
+      targetId: string;
+      relationshipType: string;
+      metadata: Record<string, unknown> | null;
+    };
+
+    await trx
+      .updateTable("DocumentRelationship")
+      .set({
+        metadata: input.metadata,
+        updatedAt: new Date(),
+      })
+      .where("sourceId", "=", input.sourceId)
+      .where("targetId", "=", input.targetId)
+      .where("relationshipType", "=", input.relationshipType)
+      .execute();
+  }
+
+  private async handleRemoveRelationshipSubtree(
+    trx: Kysely<IndexerDatabase>,
+    operation: Operation,
+  ): Promise<void> {
+    const input = operation.action.input as {
+      sourceId: string;
+      rootId: string;
+      relationshipType: string;
+    };
+
+    // Walk the subtree iteratively (portable across SQL dialects). Starts at
+    // the rootId and follows outgoing edges of the given relationship type to
+    // collect every descendant node id. Then deletes every edge whose target
+    // is the rootId itself or any descendant.
+    const visited = new Set<string>([input.rootId]);
+    let frontier: string[] = [input.rootId];
+
+    while (frontier.length > 0) {
+      const rows = await trx
+        .selectFrom("DocumentRelationship")
+        .select("targetId")
+        .where("sourceId", "in", frontier)
+        .where("relationshipType", "=", input.relationshipType)
+        .execute();
+
+      const next: string[] = [];
+      for (const row of rows) {
+        if (!visited.has(row.targetId)) {
+          visited.add(row.targetId);
+          next.push(row.targetId);
+        }
+      }
+      frontier = next;
+    }
+
+    const allIds = Array.from(visited);
+
+    // Remove the edge from the immediate parent to the root.
+    await trx
+      .deleteFrom("DocumentRelationship")
+      .where("sourceId", "=", input.sourceId)
+      .where("targetId", "=", input.rootId)
+      .where("relationshipType", "=", input.relationshipType)
+      .execute();
+
+    // Remove all outgoing edges from any node in the subtree.
+    if (allIds.length > 0) {
+      await trx
+        .deleteFrom("DocumentRelationship")
+        .where("sourceId", "in", allIds)
+        .where("relationshipType", "=", input.relationshipType)
+        .execute();
+    }
   }
 }

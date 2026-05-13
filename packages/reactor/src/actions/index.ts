@@ -4,6 +4,8 @@ import type {
   CreateDocumentActionInput,
   DeleteDocumentActionInput,
   RemoveRelationshipActionInput,
+  RemoveRelationshipSubtreeActionInput,
+  UpdateRelationshipActionInput,
   UpgradeDocumentActionInput,
 } from "@powerhousedao/shared/document-model";
 import {
@@ -65,16 +67,69 @@ export function addRelationshipAction(
   sourceId: string,
   targetId: string,
   relationshipType: string = "child",
+  metadata?: Record<string, unknown>,
 ): Action {
   const input: AddRelationshipActionInput = {
     sourceId,
     targetId,
     relationshipType,
+    ...(metadata !== undefined ? { metadata } : {}),
   };
 
   return {
     id: generateId(),
     type: "ADD_RELATIONSHIP",
+    scope: "document",
+    timestampUtcMs: new Date().toISOString(),
+    input,
+  };
+}
+
+/**
+ * Creates an UPDATE_RELATIONSHIP action to replace a relationship's metadata
+ * without losing its createdAt ordering.
+ */
+export function updateRelationshipAction(
+  sourceId: string,
+  targetId: string,
+  relationshipType: string,
+  metadata: Record<string, unknown> | null,
+): Action {
+  const input: UpdateRelationshipActionInput = {
+    sourceId,
+    targetId,
+    relationshipType,
+    metadata,
+  };
+
+  return {
+    id: generateId(),
+    type: "UPDATE_RELATIONSHIP",
+    scope: "document",
+    timestampUtcMs: new Date().toISOString(),
+    input,
+  };
+}
+
+/**
+ * Creates a REMOVE_RELATIONSHIP_SUBTREE action that removes a node's edge and
+ * every descendant edge reachable via the same relationship type in one
+ * atomic step.
+ */
+export function removeRelationshipSubtreeAction(
+  sourceId: string,
+  rootId: string,
+  relationshipType: string,
+): Action {
+  const input: RemoveRelationshipSubtreeActionInput = {
+    sourceId,
+    rootId,
+    relationshipType,
+  };
+
+  return {
+    id: generateId(),
+    type: "REMOVE_RELATIONSHIP_SUBTREE",
     scope: "document",
     timestampUtcMs: new Date().toISOString(),
     input,

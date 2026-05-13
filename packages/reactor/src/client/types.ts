@@ -163,12 +163,16 @@ export interface IDriveClient {
   /**
    * Returns nodes in the drive, optionally filtered to a single parent
    * folder. Pass `null` to list root-level nodes only.
+   *
+   * Returns a paged result so callers can stream through drives with very
+   * large node counts without materialising the whole list in memory.
    */
   listNodes(
     driveIdentifier: string,
     parentFolder?: string | null,
+    paging?: PagingOptions,
     signal?: AbortSignal,
-  ): Promise<Node[]>;
+  ): Promise<PagedResults<Node>>;
 }
 
 /**

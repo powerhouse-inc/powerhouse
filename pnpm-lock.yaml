@@ -2045,6 +2045,12 @@ importers:
       document-model:
         specifier: workspace:*
         version: link:../document-model
+      graphql:
+        specifier: 'catalog:'
+        version: 16.12.0
+      graphql-tag:
+        specifier: 'catalog:'
+        version: 2.12.6(graphql@16.12.0)
       kysely:
         specifier: 'catalog:'
         version: 0.28.16

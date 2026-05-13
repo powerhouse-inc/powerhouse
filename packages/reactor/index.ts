@@ -8,6 +8,8 @@ export {
   deleteDocumentAction,
   documentActions,
   removeRelationshipAction,
+  removeRelationshipSubtreeAction,
+  updateRelationshipAction,
   upgradeDocumentAction,
 } from "./src/actions/index.js";
 
