@@ -37,6 +37,7 @@ import type { IReactor } from "../core/types.js";
 import { getSharedActionScope, signActions } from "../core/utils.js";
 import type { PagedResults, PagingOptions } from "../shared/types.js";
 import { JobStatus } from "../shared/types.js";
+import { parsePagingOptions } from "../shared/utils.js";
 import type { IDriveClient, IReactorClient } from "./types.js";
 
 /**
@@ -451,12 +452,12 @@ export class DriveClient implements IDriveClient {
         ? [...allNodes]
         : allNodes.filter((n) => (n.parentFolder ?? null) === parentFolder);
 
-    const effective: PagingOptions = paging ?? {
-      cursor: "",
-      limit: filtered.length,
-    };
-    const startIndex = effective.cursor ? Number(effective.cursor) || 0 : 0;
-    const endIndex = startIndex + effective.limit;
+    const { offset: startIndex, limit } = parsePagingOptions(
+      paging,
+      filtered.length,
+    );
+    const effective: PagingOptions = paging ?? { cursor: "", limit };
+    const endIndex = startIndex + limit;
     const slice = filtered.slice(startIndex, endIndex);
     const hasMore = endIndex < filtered.length;
 

@@ -46,6 +46,7 @@ export {
   type ParsedDriveUrl,
 } from "./src/shared/drive-url.js";
 export { createMutableShutdownStatus } from "./src/shared/factories.js";
+export { parsePagingOptions, type ParsedPaging } from "./src/shared/utils.js";
 export {
   JobStatus,
   PropagationMode,

@@ -442,4 +442,76 @@ describe("ReactorDriveClient", () => {
       /not found/,
     );
   });
+
+  describe("listNodes paging validation", () => {
+    it("rejects a non-integer cursor", async () => {
+      const { reactor } = createMockReactor();
+      const client = new ReactorDriveClient({ reactor, readModel: view });
+      await expect(
+        client.listNodes("drive-1", null, { cursor: "abc", limit: 10 }),
+      ).rejects.toThrow(/cursor/i);
+    });
+
+    it("rejects a negative cursor", async () => {
+      const { reactor } = createMockReactor();
+      const client = new ReactorDriveClient({ reactor, readModel: view });
+      await expect(
+        client.listNodes("drive-1", null, { cursor: "-5", limit: 10 }),
+      ).rejects.toThrow(/cursor/i);
+    });
+
+    it("rejects a fractional cursor", async () => {
+      const { reactor } = createMockReactor();
+      const client = new ReactorDriveClient({ reactor, readModel: view });
+      await expect(
+        client.listNodes("drive-1", null, { cursor: "1.5", limit: 10 }),
+      ).rejects.toThrow(/cursor/i);
+    });
+
+    it("rejects a limit of zero", async () => {
+      const { reactor } = createMockReactor();
+      const client = new ReactorDriveClient({ reactor, readModel: view });
+      await expect(
+        client.listNodes("drive-1", null, { cursor: "", limit: 0 }),
+      ).rejects.toThrow(/limit/i);
+    });
+
+    it("rejects a negative limit", async () => {
+      const { reactor } = createMockReactor();
+      const client = new ReactorDriveClient({ reactor, readModel: view });
+      await expect(
+        client.listNodes("drive-1", null, { cursor: "", limit: -1 }),
+      ).rejects.toThrow(/limit/i);
+    });
+
+    it("accepts an empty cursor with a positive limit", async () => {
+      const driveId = "drive-1";
+      await seed(driveId, [
+        { id: "folder", kind: "folder", name: "F", parentFolder: null },
+      ]);
+      const { reactor } = createMockReactor();
+      const client = new ReactorDriveClient({ reactor, readModel: view });
+      const page = await client.listNodes(driveId, null, {
+        cursor: "",
+        limit: 10,
+      });
+      expect(page.results).toHaveLength(1);
+    });
+
+    it("accepts a valid non-negative integer cursor", async () => {
+      const driveId = "drive-1";
+      await seed(driveId, [
+        { id: "f1", kind: "folder", name: "A", parentFolder: null },
+        { id: "f2", kind: "folder", name: "B", parentFolder: null },
+        { id: "f3", kind: "folder", name: "C", parentFolder: null },
+      ]);
+      const { reactor } = createMockReactor();
+      const client = new ReactorDriveClient({ reactor, readModel: view });
+      const page = await client.listNodes(driveId, null, {
+        cursor: "1",
+        limit: 10,
+      });
+      expect(page.results).toHaveLength(2);
+    });
+  });
 });

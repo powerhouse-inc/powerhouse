@@ -1,4 +1,8 @@
-import type { PagedResults, PagingOptions } from "@powerhousedao/reactor";
+import {
+  parsePagingOptions,
+  type PagedResults,
+  type PagingOptions,
+} from "@powerhousedao/reactor";
 import type { Kysely } from "kysely";
 import type { ReactorDriveDatabase } from "../schema/tables.js";
 import type {
@@ -32,8 +36,7 @@ export class DriveNodeView implements IDriveReadModel {
     parentFolder: string | null,
     paging?: PagingOptions,
   ): Promise<PagedResults<ReactorDriveNode>> {
-    const limit = paging?.limit ?? DEFAULT_LIMIT;
-    const offset = paging?.cursor ? parseInt(paging.cursor, 10) : 0;
+    const { offset, limit } = parsePagingOptions(paging, DEFAULT_LIMIT);
 
     let query = this.db
       .selectFrom("DriveNode")
