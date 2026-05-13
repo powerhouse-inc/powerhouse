@@ -70,6 +70,7 @@
     "@powerhousedao/vetra": "workspace:*",
     "@powerhousedao/reactor-api": "workspace:*",
     "@powerhousedao/reactor-attachments": "workspace:*",
+    "@powerhousedao/pglite-fs": "workspace:*",
     "@pyroscope/nodejs": "^0.4.5",
     "@renown/sdk": "workspace:*",
     "@sentry/node": "^9.6.1",

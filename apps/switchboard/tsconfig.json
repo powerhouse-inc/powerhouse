@@ -20,6 +20,9 @@
       "path": "../../packages/opentelemetry-instrumentation-reactor"
     },
     {
+      "path": "../../packages/pglite-fs"
+    },
+    {
       "path": "../../packages/reactor"
     },
     {
