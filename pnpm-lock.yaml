@@ -243,6 +243,9 @@ catalogs:
     tsx:
       specifier: 4.21.0
       version: 4.21.0
+    type-fest:
+      specifier: 5.6.0
+      version: 5.6.0
     vite:
       specifier: 8.0.8
       version: 8.0.8
@@ -1327,7 +1330,7 @@ importers:
         specifier: 'catalog:'
         version: 3.4.0
       type-fest:
-        specifier: ^5.6.0
+        specifier: 'catalog:'
         version: 5.6.0
       usehooks-ts:
         specifier: ^3.1.1
@@ -34519,7 +34522,7 @@ snapshots:
       statuses: 2.0.2
       strict-event-emitter: 0.5.1
       tough-cookie: 6.0.0
-      type-fest: 5.4.4
+      type-fest: 5.6.0
       until-async: 3.0.2
       yargs: 17.7.2
     optionalDependencies:
@@ -34544,7 +34547,7 @@ snapshots:
       statuses: 2.0.2
       strict-event-emitter: 0.5.1
       tough-cookie: 6.0.0
-      type-fest: 5.4.4
+      type-fest: 5.6.0
       until-async: 3.0.2
       yargs: 17.7.2
     optionalDependencies:
@@ -34570,7 +34573,7 @@ snapshots:
       statuses: 2.0.2
       strict-event-emitter: 0.5.1
       tough-cookie: 6.0.0
-      type-fest: 5.4.4
+      type-fest: 5.6.0
       until-async: 3.0.2
       yargs: 17.7.2
     optionalDependencies:
@@ -34596,7 +34599,7 @@ snapshots:
       statuses: 2.0.2
       strict-event-emitter: 0.5.1
       tough-cookie: 6.0.0
-      type-fest: 5.4.4
+      type-fest: 5.6.0
       until-async: 3.0.2
       yargs: 17.7.2
     optionalDependencies:
