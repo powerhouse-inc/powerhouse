@@ -1,10 +1,8 @@
 # Document Toolbar
 
-:::warning Work in Progress
-This documentation is still being written and may be incomplete.
-:::
+The `DocumentToolbar` renders a default set of document controls for common document actions: undo, redo, download, document name editing, revision history, opening in Switchboard, and closing the current document view.
 
-The Document Toolbar is a central component in Powerhouse Connect, appearing at the top of every document view. It provides quick access to a variety of tools and functions designed to streamline your workflow and enhance document management.
+The toolbar can be customized by enabling or disabling built-in controls, replacing individual controls, adding custom controls to toolbar slots, replacing the toolbar containers, applying custom styles, or replacing the entire toolbar contents with `children`.
 
 <figure className="image-container">
   <img
@@ -16,20 +14,334 @@ The Document Toolbar is a central component in Powerhouse Connect, appearing at 
   </figcaption>
 </figure>
 
-## Overview
+## Basic usage
 
-The toolbar is designed to be intuitive and context-aware, offering relevant options based on the document type and your current task. Its capabilities range from basic actions to more advanced document control features.
+```tsx
+import { DocumentToolbar } from "./document-toolbar";
 
-### Key functionalities in the future will include:
+export function MyDocumentPage({ document }) {
+  return <DocumentToolbar document={document} />;
+}
+```
 
-- **Switchboard API Access:** Access the Switchboard API via its logo in the toolbar. This opens the Apollo Studio Sandbox, pre-populating the DocumentID for your current document model. This feature is unavailable for locally stored documents.
-- **Navigation and Versioning:** Tools for managing [document versions](/academy/MasteryTrack/BuildingUserExperiences/DocumentTools/OperationHistory), such as undo/redo, and accessing the [revision history timeline](/academy/MasteryTrack/BuildingUserExperiences/DocumentTools/RevisionHistoryTimeline).
-- **Document Actions:** Buttons for common operations like exporting or deleting documents.
-- **Information Display:** Shows the document title and may include indicators for status (e.g., connectivity, errors) or active modes.
-- **Search and Filtering:** Integrated search capabilities to find assets or attachments within the document context.
-- **View Customization:** Options to switch between different views or display modes.
-- **Contextual Tools:** Depending on the document, you might find toggles, dropdowns for specific actions (e.g., "Sync Schema", "Fixed Income Purchase"), or buttons for settings and configurations.
+When no `document` prop is provided, the toolbar falls back to the currently selected document.
 
-The specific set of tools available on the toolbar can be configured and may evolve as new features are introduced. This section will detail the various components and options you may encounter.
+```tsx
+<DocumentToolbar />
+```
 
-_(Detailed information on each toolbar feature, such as "Export Button", "Title Display", "Search Functionality", "Toggle Switches", "Icon Buttons", etc., will follow here.)_
+## Built-in controls
+
+The default toolbar includes these controls:
+
+```ts
+["undo", "redo", "download", "name", "history", "switchboard", "close"]
+```
+
+The controls are arranged into three slots:
+
+```ts
+{
+  first: ["undo", "redo", "download"],
+  second: ["name"],
+  third: ["history", "switchboard", "close"],
+}
+```
+
+## Disabling controls
+
+Use `disabledControls` to remove specific built-in controls from the default toolbar.
+
+```tsx
+<DocumentToolbar
+  document={document}
+  disabledControls={["download", "switchboard"]}
+/>
+```
+
+## Enabling only specific controls
+
+Use `enabledControls` to render only a subset of the built-in controls.
+
+```tsx
+<DocumentToolbar
+  document={document}
+  enabledControls={["download", "switchboard"]}
+/>
+```
+
+## Combining enabled and disabled controls
+
+A control renders only when it is included in `enabledControls` and absent from `disabledControls`. When a control appears in both lists, `disabledControls` takes precedence.
+
+```tsx
+<DocumentToolbar
+  document={document}
+  enabledControls={["download", "switchboard", "close"]}
+  disabledControls={["download"]}
+/>
+```
+
+In this example, only `switchboard` and `close` render.
+
+## Adding a custom control to a slot
+
+Use `customControls` to add controls to a specific toolbar slot. Custom controls receive the current document when available.
+
+```tsx
+<DocumentToolbar
+  document={document}
+  customControls={{
+    first: {
+      component: ({ document }) => (
+        <button
+          onClick={() => {
+            alert(`custom control one in ${document?.header.name}`);
+          }}
+        >
+          custom one
+        </button>
+      ),
+    },
+  }}
+/>
+```
+
+## Adding a custom control at the end of a slot
+
+By default, custom controls render at the start of their slot. Use `position: "end"` to render a custom control after the built-in controls in that slot.
+
+```tsx
+<DocumentToolbar
+  document={document}
+  customControls={{
+    second: {
+      position: "end",
+      component: ({ document }) => (
+        <button
+          onClick={() => {
+            alert(`custom control two in ${document?.header.name}`);
+          }}
+        >
+          custom two
+        </button>
+      ),
+    },
+  }}
+/>
+```
+
+## Adding multiple custom controls to a slot
+
+A slot can receive a list of custom controls. Each item needs a `key`.
+
+```tsx
+<DocumentToolbar
+  document={document}
+  customControls={{
+    first: [
+      {
+        key: "custom-one",
+        component: ({ document }) => (
+          <button
+            onClick={() => {
+              alert(`custom control one in ${document?.header.name}`);
+            }}
+          >
+            custom one
+          </button>
+        ),
+      },
+      {
+        key: "custom-two",
+        position: "end",
+        component: ({ document }) => (
+          <button
+            onClick={() => {
+              alert(`custom control two in ${document?.header.name}`);
+            }}
+          >
+            custom two
+          </button>
+        ),
+      },
+    ],
+  }}
+/>
+```
+
+## Replacing the toolbar container
+
+Use `toolbarContainer` to replace the outer toolbar container. The custom toolbar container receives the toolbar children and the resolved `toolbarClassName`.
+
+```tsx
+<DocumentToolbar
+  document={document}
+  toolbarContainer={({ children, className }) => (
+    <div className={className}>
+      {children}
+    </div>
+  )}
+/>
+```
+
+## Replacing the controls container
+
+Use `controlsContainer` to replace the container used for each toolbar slot. The custom controls container receives the slot children and the resolved `controlsContainerClassName`.
+
+```tsx
+<DocumentToolbar
+  document={document}
+  controlsContainer={({ children, className }) => (
+    <div className={className}>{children}</div>
+  )}
+/>
+```
+
+## Replacing a built-in control
+
+Use `componentOverrides` to replace individual built-in controls while keeping the default toolbar structure. This is useful when you want to reuse the built-in control behavior or styling but change part of the rendering or click behavior.
+
+```tsx
+import { ToolbarDownloadButton } from "./toolbar-button";
+import type { PHDocument } from "@powerhousedao/shared/document-model";
+
+<DocumentToolbar
+  document={document}
+  componentOverrides={{
+    download: (props: { document?: PHDocument }) => (
+      <ToolbarDownloadButton
+        {...props}
+        onClick={() => alert(props.document?.header.name)}
+      >
+        <span>Download??</span>
+      </ToolbarDownloadButton>
+    ),
+  }}
+/>
+```
+
+The `name` control can also be replaced through `componentOverrides`.
+
+```tsx
+<DocumentToolbar
+  document={document}
+  componentOverrides={{
+    name: ({ document }) => (
+      <textarea defaultValue={document?.header.name ?? "no name"} />
+    ),
+  }}
+/>
+```
+
+## Replacing the entire toolbar contents
+
+Pass `children` when you want complete control over the toolbar contents. When `children` is provided, the built-in controls are not rendered.
+
+```tsx
+<DocumentToolbar document={document}>
+  <div>I've totally overridden the whole thing</div>
+</DocumentToolbar>
+```
+
+Props such as `enabledControls`, `disabledControls`, `customControls`, `componentOverrides`, `controlsContainer`, and `controlsContainerClassName` are not used in this mode. The props are typed so that the `children` mode is mutually exclusive with the default-toolbar customization props.
+
+## Custom styles
+
+Use `toolbarClassName` to add classes to the outer toolbar container. Use `controlsContainerClassName` to add classes to each controls container. The built-in toolbar components use `tailwind-merge`, so compatible Tailwind classes passed through these props can override default classes.
+
+```tsx
+<DocumentToolbar
+  document={document}
+  toolbarClassName="border-none bg-green-100"
+  controlsContainerClassName="rounded-lg border border-green-300 p-2"
+/>
+```
+
+## Custom control component shape
+
+Custom controls should match `ToolbarControlComponent`.
+
+```tsx
+import type { ToolbarControlComponent } from "./document-toolbar";
+
+const MyControl: ToolbarControlComponent = ({ document }) => {
+  return <button>{document?.header.name}</button>;
+};
+```
+
+## Toolbar button props
+
+The built-in toolbar button controls accept `ToolbarButtonProps`. Each toolbar button accepts:
+
+```ts
+{
+  document?: PHDocument;
+  children?: ReactNode;
+  className?: string;
+  onClick?: (document?: PHDocument) => void;
+}
+```
+
+Providing `children` replaces the default button contents. Providing `onClick` replaces the default button behavior.
+
+```tsx
+<DocumentToolbar document={document}>
+  <ToolbarDownloadButton document={document}>
+    Export
+  </ToolbarDownloadButton>
+</DocumentToolbar>
+
+<ToolbarHistoryButton
+  document={document}
+  onClick={(document) => {
+    console.log("Custom history action", document?.header.id);
+  }}
+/>
+```
+
+## Exported components
+
+```ts
+DocumentToolbar
+ToolbarButton
+ToolbarUndoButton
+ToolbarRedoButton
+ToolbarDownloadButton
+ToolbarSwitchboardButton
+ToolbarHistoryButton
+ToolbarCloseButton
+ToolbarName
+ToolbarInput
+ToolbarContainer
+ToolbarControlsContainer
+```
+
+The individual toolbar controls are exported so they can be reused when building custom toolbar layouts or custom control components.
+
+## Exported types
+
+```ts
+DocumentToolbarProps
+DocumentToolbarWithChildrenProps
+DocumentToolbarWithCustomControlsProps
+DocumentToolbarControlName
+ToolbarButtonProps
+ToolbarButtonClickHandler
+ToolbarControlComponent
+ToolbarControlComponents
+ContainerComponent
+ControlSlot
+ControlPosition
+CustomToolbarControl
+CustomToolbarControlList
+CustomToolbarControls
+```
+
+## Notes
+
+- `DocumentToolbar` falls back to the currently selected document when `document` is omitted.
+- Built-in undo and redo buttons automatically disable themselves when the corresponding action is unavailable.
+- The document name control supports inline renaming.
+- `children` mode replaces the toolbar contents completely.
+- `disabledControls` takes precedence over `enabledControls`.
