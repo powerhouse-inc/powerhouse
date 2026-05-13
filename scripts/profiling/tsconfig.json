@@ -1,20 +1,30 @@
 {
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
-    "types": ["node"],
+    "types": [
+      "node"
+    ],
     "resolveJsonModule": true,
     "noEmit": true,
     "moduleResolution": "NodeNext",
     "skipLibCheck": true
   },
-  "include": ["**/*.ts"],
-  "exclude": ["node_modules", "dist"],
+  "include": [
+    "**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ],
   "references": [
     {
       "path": "../../packages/document-model"
     },
     {
       "path": "../../packages/opentelemetry-instrumentation-reactor"
+    },
+    {
+      "path": "../../packages/pglite-fs"
     },
     {
       "path": "../../packages/reactor"

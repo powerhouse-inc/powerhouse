@@ -1745,6 +1745,9 @@ importers:
       '@powerhousedao/document-engineering':
         specifier: 'catalog:'
         version: 1.40.3(@types/express@4.17.25)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@5.9.3)
+      '@powerhousedao/pglite-fs':
+        specifier: workspace:*
+        version: link:../pglite-fs
       '@powerhousedao/reactor':
         specifier: workspace:*
         version: link:../reactor
@@ -2432,6 +2435,9 @@ importers:
       '@powerhousedao/opentelemetry-instrumentation-reactor':
         specifier: workspace:*
         version: link:../../packages/opentelemetry-instrumentation-reactor
+      '@powerhousedao/pglite-fs':
+        specifier: workspace:*
+        version: link:../../packages/pglite-fs
       '@powerhousedao/reactor':
         specifier: workspace:*
         version: link:../../packages/reactor
