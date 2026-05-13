@@ -145,7 +145,7 @@ catalogs:
       specifier: 13.0.4
       version: 13.0.4
     graphql:
-      specifier: 16.12.0
+      specifier: ^16
       version: 16.12.0
     graphql-codegen-typescript-validation-schema:
       specifier: 0.18.1
@@ -157,7 +157,7 @@ catalogs:
       specifier: 2.6.0
       version: 2.6.0
     graphql-tag:
-      specifier: 2.12.6
+      specifier: ^2
       version: 2.12.6
     graphql-ws:
       specifier: 6.0.7
@@ -495,12 +495,6 @@ importers:
       document-model:
         specifier: workspace:*
         version: link:../../packages/document-model
-      graphql:
-        specifier: 'catalog:'
-        version: 16.12.0
-      graphql-request:
-        specifier: 'catalog:'
-        version: 7.4.0(graphql@16.12.0)
       i18next:
         specifier: ^25.5.3
         version: 25.8.13(typescript@5.9.3)
@@ -1158,9 +1152,6 @@ importers:
       document-model:
         specifier: workspace:*
         version: link:../document-model
-      graphql:
-        specifier: 'catalog:'
-        version: 16.12.0
       graphql-codegen-typescript-validation-schema:
         specifier: 'catalog:'
         version: 0.18.1(graphql@16.12.0)(zod@4.3.6)
@@ -1204,6 +1195,9 @@ importers:
       '@types/npm-registry-fetch':
         specifier: ^8.0.9
         version: 8.0.9
+      graphql:
+        specifier: 'catalog:'
+        version: 16.12.0
       tsdown:
         specifier: 'catalog:'
         version: 0.21.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@tsdown/css@0.21.1)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(synckit@0.11.12)(typescript@5.9.3)
@@ -1605,9 +1599,6 @@ importers:
       document-model:
         specifier: workspace:*
         version: link:../document-model
-      graphql:
-        specifier: 'catalog:'
-        version: 16.12.0
       react:
         specifier: 'catalog:'
         version: 19.2.6
@@ -1639,6 +1630,9 @@ importers:
       '@types/react-dom':
         specifier: 'catalog:'
         version: 19.2.3(@types/react@19.2.14)
+      graphql:
+        specifier: 'catalog:'
+        version: 16.12.0
       tailwindcss:
         specifier: 'catalog:'
         version: 4.2.2
@@ -1787,18 +1781,12 @@ importers:
       fastify:
         specifier: ^5.8.5
         version: 5.8.5
-      graphql:
-        specifier: 'catalog:'
-        version: 16.12.0
       graphql-sse:
         specifier: 'catalog:'
         version: 2.6.0(graphql@16.12.0)
       graphql-subscriptions:
         specifier: ^3.0.0
         version: 3.0.0(graphql@16.12.0)
-      graphql-tag:
-        specifier: 'catalog:'
-        version: 2.12.6(graphql@16.12.0)
       graphql-type-json:
         specifier: ^0.3.2
         version: 0.3.2(graphql@16.12.0)
@@ -1872,6 +1860,12 @@ importers:
       '@types/ws':
         specifier: ^8.18.1
         version: 8.18.1
+      graphql:
+        specifier: 'catalog:'
+        version: 16.12.0
+      graphql-tag:
+        specifier: 'catalog:'
+        version: 2.12.6(graphql@16.12.0)
       msw:
         specifier: ^2.7.3
         version: 2.12.10(@types/node@25.2.3)(typescript@5.9.3)
@@ -1930,15 +1924,9 @@ importers:
       document-model:
         specifier: workspace:*
         version: link:../document-model
-      graphql:
-        specifier: 'catalog:'
-        version: 16.12.0
       graphql-request:
         specifier: 'catalog:'
         version: 7.4.0(graphql@16.12.0)
-      graphql-tag:
-        specifier: 'catalog:'
-        version: 2.12.6(graphql@16.12.0)
       kysely:
         specifier: 'catalog:'
         version: 0.28.16
@@ -2012,6 +2000,12 @@ importers:
       fast-deep-equal:
         specifier: 'catalog:'
         version: 3.1.3
+      graphql:
+        specifier: 'catalog:'
+        version: 16.12.0
+      graphql-tag:
+        specifier: 'catalog:'
+        version: 2.12.6(graphql@16.12.0)
       playwright:
         specifier: 'catalog:'
         version: 1.58.2

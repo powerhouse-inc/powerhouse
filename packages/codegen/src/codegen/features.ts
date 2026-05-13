@@ -29,14 +29,6 @@ function hasAnalyticsProcessor(processorsDir: string): boolean {
 
 export function detectFeatures(projectDir: string): Feature[] {
   const features: Feature[] = [];
-  const subgraphsDir = join(projectDir, "subgraphs");
-  const subgraphsStat = statSync(subgraphsDir, { throwIfNoEntry: false });
-  if (subgraphsStat?.isDirectory()) {
-    const hasSubgraph = readdirSync(subgraphsDir, {
-      withFileTypes: true,
-    }).some((entry) => entry.isDirectory());
-    if (hasSubgraph) features.push("subgraph");
-  }
   const processorsDir = join(projectDir, "processors");
   const processorsStat = statSync(processorsDir, { throwIfNoEntry: false });
   if (processorsStat?.isDirectory() && hasAnalyticsProcessor(processorsDir)) {
@@ -91,7 +83,11 @@ export async function syncFeatureDependencies(
         devDependencies[pkg] = pinVersion;
       }
     }
-    for (const [pkg, versionSpec] of Object.entries(spec.peerExternal)) {
+    const peerExternal = spec.peerExternal as Record<
+      string,
+      { peer: string; dev: string }
+    >;
+    for (const [pkg, versionSpec] of Object.entries(peerExternal)) {
       if (peerDependencies[pkg] === undefined) {
         peerDependencies[pkg] = versionSpec.peer;
         added.push(pkg);
