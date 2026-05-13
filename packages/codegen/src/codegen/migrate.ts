@@ -1,15 +1,14 @@
 import {
-  VERSIONED_DEPENDENCIES,
-  VERSIONED_DEV_DEPENDENCIES,
-} from "@powerhousedao/shared/clis";
-import console from "console";
-import {
-  externalDependencies,
   externalDevDependencies,
+  FEATURE_DEPENDENCIES,
   packageJsonExports,
   packageScripts,
-  writeAllGeneratedProjectFiles,
-} from "file-builders";
+  PEER_EXTERNAL_DEPENDENCIES,
+  VERSIONED_DEV_DEPENDENCIES,
+  VERSIONED_PEER_DEPENDENCIES,
+} from "@powerhousedao/shared/clis";
+import console from "console";
+import { writeAllGeneratedProjectFiles } from "file-builders";
 import { cpSync, mkdirSync, readdirSync, rmSync, statSync } from "fs";
 import npmFetch from "npm-registry-fetch";
 import { join } from "path";
@@ -88,6 +87,27 @@ export function fixLegacyImportPaths(
   }
 }
 
+function sortByKey<T extends Record<string, unknown>>(value: T): T {
+  return Object.fromEntries(
+    Object.entries(value).sort(([a], [b]) => a.localeCompare(b)),
+  ) as T;
+}
+
+function detectFeatures(
+  projectDir: string,
+): Array<keyof typeof FEATURE_DEPENDENCIES> {
+  const features: Array<keyof typeof FEATURE_DEPENDENCIES> = [];
+  const subgraphsDir = join(projectDir, "subgraphs");
+  const subgraphsStat = statSync(subgraphsDir, { throwIfNoEntry: false });
+  if (subgraphsStat?.isDirectory()) {
+    const hasSubgraph = readdirSync(subgraphsDir, {
+      withFileTypes: true,
+    }).some((entry) => entry.isDirectory());
+    if (hasSubgraph) features.push("subgraph");
+  }
+  return features;
+}
+
 export async function migrate(version: string, projectDir = process.cwd()) {
   const fullyQualifiedVersion =
     await getFullyQualifiedWorkspacePackageVersion(version);
@@ -102,40 +122,70 @@ export async function migrate(version: string, projectDir = process.cwd()) {
     map(WORKSPACE_PACKAGES, prop("manifest", "name")),
     isTruthy,
   );
-  const projectDependencyNames = [
-    ...VERSIONED_DEPENDENCIES,
-    ...keys(externalDependencies),
+
+  const features = detectFeatures(projectDir);
+  const featurePeerVersioned = features.flatMap(
+    (f) => FEATURE_DEPENDENCIES[f].peerVersioned as readonly string[],
+  );
+  const featurePeerExternal = features.reduce<
+    Record<string, { peer: string; dev: string }>
+  >((acc, f) => ({ ...acc, ...FEATURE_DEPENDENCIES[f].peerExternal }), {});
+
+  const managedPeerVersioned = [
+    ...VERSIONED_PEER_DEPENDENCIES,
+    ...featurePeerVersioned,
   ];
-  const projectDevDependencyNames = [
+  const managedPeerNames = [
+    ...managedPeerVersioned,
+    ...keys(PEER_EXTERNAL_DEPENDENCIES),
+    ...keys(featurePeerExternal),
+  ];
+  const managedDevVersioned = [
     ...VERSIONED_DEV_DEPENDENCIES,
-    ...keys(externalDevDependencies),
+    ...managedPeerVersioned,
   ];
-  const dependencies = pipe(
-    packageJson.dependencies ?? {},
-    // remove dev dependencies if they are in here
-    omit(projectDevDependencyNames),
+  const managedDevNames = [
+    ...managedDevVersioned,
+    ...keys(externalDevDependencies),
+    ...keys(featurePeerExternal),
+  ];
+
+  const peerExternals = {
+    ...mapValues(PEER_EXTERNAL_DEPENDENCIES, (v) => v.peer),
+    ...mapValues(featurePeerExternal, (v) => v.peer),
+  };
+  const peerDevPins = {
+    ...mapValues(PEER_EXTERNAL_DEPENDENCIES, (v) => v.dev),
+    ...mapValues(featurePeerExternal, (v) => v.dev),
+  };
+
+  const peerDependencies = pipe(
+    packageJson.peerDependencies ?? {},
+    omit(managedDevNames),
     merge({
-      // use the fully qualified version we just got for these
-      ...fromKeys(VERSIONED_DEPENDENCIES, () => fullyQualifiedVersion),
-      // use the versions defined for the other deps we need to control
-      ...externalDependencies,
+      ...fromKeys(managedPeerVersioned, () => fullyQualifiedVersion),
+      ...peerExternals,
     }),
-    // use the fully qualified version for other workspace deps the user may have added
     mapValues((value, key) =>
       workspacePackageNames.includes(key) ? fullyQualifiedVersion : value,
     ),
+    sortByKey,
   );
+
   const devDependencies = pipe(
-    packageJson.devDependencies ?? {},
-    omit(projectDependencyNames),
+    merge(packageJson.dependencies ?? {}, packageJson.devDependencies ?? {}),
+    omit(managedPeerNames),
     merge({
-      ...fromKeys(VERSIONED_DEV_DEPENDENCIES, () => fullyQualifiedVersion),
+      ...fromKeys(managedDevVersioned, () => fullyQualifiedVersion),
       ...externalDevDependencies,
+      ...peerDevPins,
     }),
     mapValues((value, key) =>
       workspacePackageNames.includes(key) ? fullyQualifiedVersion : value,
     ),
+    sortByKey,
   );
+
   console.log("Updating package.json...");
   const updatedPackageJson: PackageJson = {
     ...packageJson,
@@ -144,9 +194,12 @@ export async function migrate(version: string, projectDir = process.cwd()) {
     files: packageJson.files ?? ["/dist"],
     exports,
     scripts,
-    dependencies,
+    peerDependencies,
     devDependencies,
   } as PackageJson;
+  // Runtime `dependencies` block is no longer emitted — the bundled dist
+  // self-contains everything except the declared peers.
+  delete (updatedPackageJson as { dependencies?: unknown }).dependencies;
   await writePackage(projectDir, updatedPackageJson);
 
   console.log("Overwriting project root files...");
