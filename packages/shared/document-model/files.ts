@@ -1,4 +1,11 @@
-import type JSZip from "jszip";
+import {
+  strFromU8,
+  strToU8,
+  unzip,
+  zip,
+  type Unzipped,
+  type Zippable,
+} from "fflate";
 import type { PHDocument, PHDocumentHeader } from "./documents.js";
 import {
   filterDocumentOperationsResultingState,
@@ -22,29 +29,57 @@ import { validateOperations } from "./validation.js";
 
 const NON_DOMAIN_SCOPES = new Set(["auth", "document"]);
 
-async function loadJSZip() {
-  const { default: JSZip } = await import("jszip");
-  return JSZip;
+function zipAsync(data: Zippable): Promise<Uint8Array> {
+  return new Promise((resolve, reject) => {
+    zip(data, (err, out) => (err ? reject(err) : resolve(out)));
+  });
 }
 
-export async function createZip(document: PHDocument) {
-  const JSZip = await loadJSZip();
-  const zip = new JSZip();
+function unzipAsync(data: Uint8Array): Promise<Unzipped> {
+  return new Promise((resolve, reject) => {
+    unzip(data, (err, out) => (err ? reject(err) : resolve(out)));
+  });
+}
 
-  const header = document.header;
-  zip.file("header.json", JSON.stringify(header, null, 2));
-  zip.file("state.json", JSON.stringify(document.initialState || {}, null, 2));
-  zip.file("current-state.json", JSON.stringify(document.state || {}, null, 2));
-  zip.file(
-    "operations.json",
-    JSON.stringify(
+async function toUint8Array(input: FileInput): Promise<Uint8Array> {
+  if (input instanceof Uint8Array) return input;
+  if (input instanceof ArrayBuffer) return new Uint8Array(input);
+  if (typeof Blob !== "undefined" && input instanceof Blob) {
+    return new Uint8Array(await input.arrayBuffer());
+  }
+  if (Array.isArray(input)) return new Uint8Array(input);
+  if (typeof input === "string") {
+    // jszip's default for strings was base64 decoding — preserve that behaviour
+    // so callers passing base64 strings (e.g. from network APIs) keep working.
+    if (typeof atob === "function") {
+      const bin = atob(input);
+      const arr = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+      return arr;
+    }
+    return new Uint8Array(
+      (globalThis as { Buffer?: { from: (s: string, enc: string) => Uint8Array } }).Buffer!.from(
+        input,
+        "base64",
+      ),
+    );
+  }
+  throw new Error("Unsupported FileInput type");
+}
+
+function jsonEntry(value: unknown): Uint8Array {
+  return strToU8(JSON.stringify(value, null, 2));
+}
+
+export async function createZip(document: PHDocument): Promise<Uint8Array> {
+  return zipAsync({
+    "header.json": jsonEntry(document.header),
+    "state.json": jsonEntry(document.initialState || {}),
+    "current-state.json": jsonEntry(document.state || {}),
+    "operations.json": jsonEntry(
       filterDocumentOperationsResultingState(document.operations),
-      null,
-      2,
     ),
-  );
-
-  return zip;
+  });
 }
 
 /**
@@ -52,8 +87,9 @@ export async function createZip(document: PHDocument) {
  * Used when the full document is not available (e.g., in onOperations handler).
  * Creates a ZIP with minimal header and empty operations.
  */
-export async function createMinimalZip(data: MinimalBackupData) {
-  const JSZip = await loadJSZip();
+export async function createMinimalZip(
+  data: MinimalBackupData,
+): Promise<Uint8Array> {
   const now = new Date().toISOString();
   const header: PHDocumentHeader = {
     id: data.documentId,
@@ -67,51 +103,54 @@ export async function createMinimalZip(data: MinimalBackupData) {
     lastModifiedAtUtcIso: now,
   };
 
-  const zip = new JSZip();
-  zip.file("header.json", JSON.stringify(header, null, 2));
-  zip.file("state.json", JSON.stringify(data.state, null, 2));
-  zip.file("current-state.json", JSON.stringify(data.state, null, 2));
-  zip.file("operations.json", JSON.stringify({}, null, 2));
-  return zip;
+  return zipAsync({
+    "header.json": jsonEntry(header),
+    "state.json": jsonEntry(data.state),
+    "current-state.json": jsonEntry(data.state),
+    "operations.json": jsonEntry({}),
+  });
 }
 
 export async function baseSaveToFileHandle(
   document: PHDocument,
   input: FileSystemFileHandle,
 ) {
-  const zip = await createZip(document);
-  const blob = await zip.generateAsync({ type: "blob" });
+  const data = await createZip(document);
   const writable = await input.createWritable();
-  await writable.write(blob);
+  await writable.write(new Uint8Array(data));
   await writable.close();
 }
 
-async function loadFromZip<TState extends PHBaseState>(
-  zip: JSZip,
+function readEntry(files: Unzipped, name: string): string {
+  const entry = files[name];
+  if (!entry) {
+    throw new Error(`${name} not found in document zip`);
+  }
+  return strFromU8(entry);
+}
+
+async function loadFromZipData<TState extends PHBaseState>(
+  data: Uint8Array,
   reducer: Reducer<TState>,
   options?: ReplayDocumentOptions,
 ): Promise<PHDocument<TState>> {
-  const initialStateZip = zip.file("state.json");
-  if (!initialStateZip) {
+  const files = await unzipAsync(data);
+
+  if (!files["state.json"]) {
     throw new Error("Initial state not found");
   }
-  const initialStateStr = await initialStateZip.async("string");
-  const initialState = JSON.parse(initialStateStr) as TState;
+  const initialState = JSON.parse(readEntry(files, "state.json")) as TState;
 
-  const headerZip = zip.file("header.json");
-  if (!headerZip) {
+  if (!files["header.json"]) {
     throw new Error("Document header not found - file format may be outdated");
   }
-  const header = JSON.parse(
-    await headerZip.async("string"),
-  ) as PHDocumentHeader;
+  const header = JSON.parse(readEntry(files, "header.json")) as PHDocumentHeader;
 
-  const operationsZip = zip.file("operations.json");
-  if (!operationsZip) {
+  if (!files["operations.json"]) {
     throw new Error("Operations history not found");
   }
   const operations = JSON.parse(
-    await operationsZip.async("string"),
+    readEntry(files, "operations.json"),
   ) as DocumentOperations;
 
   const clearedOperations = garbageCollectDocumentOperations(operations);
@@ -146,10 +185,8 @@ export async function baseLoadFromInput<TState extends PHBaseState>(
   reducer: Reducer<TState>,
   options?: ReplayDocumentOptions,
 ): Promise<PHDocument<TState>> {
-  const JSZip = await loadJSZip();
-  const zip = new JSZip();
-  await zip.loadAsync(input);
-  return loadFromZip(zip, reducer, options);
+  const data = await toUint8Array(input);
+  return loadFromZipData(data, reducer, options);
 }
 
 export const documentModelLoadFromInput: LoadFromInput<DocumentModelPHState> = (

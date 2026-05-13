@@ -138,21 +138,21 @@ function getDocumentTypeIcon(
 }
 
 export async function downloadFile(document: PHDocument, fileName: string) {
-  const zip = await createZip(document);
-  zip
-    .generateAsync({ type: "blob" })
-    .then((blob) => {
-      const link = window.document.createElement("a");
-      link.style.display = "none";
-      link.href = URL.createObjectURL(blob);
-      link.download = fileName;
+  try {
+    const data = await createZip(document);
+    const blob = new Blob([new Uint8Array(data)], { type: "application/zip" });
+    const link = window.document.createElement("a");
+    link.style.display = "none";
+    link.href = URL.createObjectURL(blob);
+    link.download = fileName;
 
-      window.document.body.appendChild(link);
-      link.click();
+    window.document.body.appendChild(link);
+    link.click();
 
-      window.document.body.removeChild(link);
-    })
-    .catch(logger.error);
+    window.document.body.removeChild(link);
+  } catch (e) {
+    logger.error(e instanceof Error ? e.message : String(e));
+  }
 }
 
 async function getDocumentExtension(document: PHDocument): Promise<string> {

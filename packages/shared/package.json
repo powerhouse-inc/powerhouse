@@ -113,7 +113,7 @@
     "change-case": "catalog:",
     "cmd-ts": "catalog:",
     "enquirer": "catalog:",
-    "jszip": "^3.10.1",
+    "fflate": "^0.8.2",
     "luxon": "catalog:",
     "mutative": "catalog:",
     "npm-package-arg": "catalog:",
