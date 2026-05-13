@@ -73,17 +73,23 @@ export const PEER_EXTERNAL_DEPENDENCIES = {
   zod: { peer: "^4", dev: "4.3.6" },
 } as const satisfies Record<string, PeerSpec>;
 
+export const REACTOR_API_PACKAGE = "@powerhousedao/reactor-api";
+export const ANALYTICS_ENGINE_CORE_PACKAGE =
+  "@powerhousedao/analytics-engine-core";
+export const GRAPHQL_PACKAGE = "graphql";
+export const GRAPHQL_TAG_PACKAGE = "graphql-tag";
+
 // Per-feature deps added dynamically by codegen when required.
 export const FEATURE_DEPENDENCIES = {
   subgraph: {
-    peerVersioned: ["@powerhousedao/reactor-api"],
+    peerVersioned: [REACTOR_API_PACKAGE],
     peerExternal: {
-      graphql: { peer: "^16", dev: "16.12.0" },
-      "graphql-tag": { peer: "^2", dev: "2.12.6" },
+      [GRAPHQL_PACKAGE]: { peer: "^16", dev: "16.12.0" },
+      [GRAPHQL_TAG_PACKAGE]: { peer: "^2", dev: "2.12.6" },
     },
   },
   analyticsProcessor: {
-    peerVersioned: ["@powerhousedao/analytics-engine-core"],
+    peerVersioned: [ANALYTICS_ENGINE_CORE_PACKAGE],
     peerExternal: {},
   },
 } as const satisfies Record<
