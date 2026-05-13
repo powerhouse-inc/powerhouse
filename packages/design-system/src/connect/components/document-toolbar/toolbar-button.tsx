@@ -57,7 +57,12 @@ export function ToolbarUndoButton(props: ToolbarButtonProps) {
   const onClick = makeOnClick(document, onClickOverride, undo);
 
   return (
-    <ToolbarButton className={className} disabled={disabled} onClick={onClick}>
+    <ToolbarButton
+      data-testid="toolbar-undo-button"
+      className={className}
+      disabled={disabled}
+      onClick={onClick}
+    >
       {children}
     </ToolbarButton>
   );
@@ -84,7 +89,12 @@ export function ToolbarRedoButton(props: ToolbarButtonProps) {
   const disabled = !canRedo;
 
   return (
-    <ToolbarButton className={className} disabled={disabled} onClick={onClick}>
+    <ToolbarButton
+      data-testid="toolbar-redo-button"
+      className={className}
+      disabled={disabled}
+      onClick={onClick}
+    >
       {children}
     </ToolbarButton>
   );
@@ -107,7 +117,11 @@ export function ToolbarDownloadButton(props: ToolbarButtonProps) {
   const onClick = makeOnClick(document, onClickOverride, downloadDocument);
 
   return (
-    <ToolbarButton className={className} onClick={onClick}>
+    <ToolbarButton
+      data-testid="toolbar-download-button"
+      className={className}
+      onClick={onClick}
+    >
       {children}
     </ToolbarButton>
   );
@@ -137,7 +151,11 @@ export function ToolbarSwitchboardButton(props: ToolbarButtonProps) {
   });
 
   return (
-    <ToolbarButton className={className} onClick={onClick}>
+    <ToolbarButton
+      data-testid="toolbar-switchboard-button"
+      className={className}
+      onClick={onClick}
+    >
       {children}
     </ToolbarButton>
   );
@@ -159,7 +177,11 @@ export function ToolbarHistoryButton(props: ToolbarButtonProps) {
   const onClick = makeOnClick(document, onClickOverride, showRevisionHistory);
 
   return (
-    <ToolbarButton className={className} onClick={onClick}>
+    <ToolbarButton
+      data-testid="toolbar-history-button"
+      className={className}
+      onClick={onClick}
+    >
       {children}
     </ToolbarButton>
   );
@@ -185,7 +207,11 @@ export function ToolbarCloseButton(props: ToolbarButtonProps) {
   );
 
   return (
-    <ToolbarButton className={className} onClick={onClick}>
+    <ToolbarButton
+      data-testid="toolbar-close-button"
+      className={className}
+      onClick={onClick}
+    >
       {children}
     </ToolbarButton>
   );
