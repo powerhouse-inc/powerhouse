@@ -110,10 +110,11 @@ export type TestFsBackend = () => Promise<{
 /**
  * Default backend: pure in-memory PGLite, nothing to clean up.
  */
-export const memoryFsBackend: TestFsBackend = async () => ({
-  fs: new MemoryFS(),
-  cleanup: async () => {},
-});
+export const memoryFsBackend: TestFsBackend = () =>
+  Promise.resolve({
+    fs: new MemoryFS(),
+    cleanup: () => Promise.resolve(),
+  });
 
 /**
  * AtomicNodeFs against a fresh tempdir per test. The tempdir is removed in

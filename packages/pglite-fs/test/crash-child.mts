@@ -25,7 +25,7 @@ await pg.exec(
 process.stdout.write("ready\n");
 
 let i = 100;
-while (true) {
+for (;;) {
   await pg.exec(`INSERT INTO crash_t VALUES (${i}, 'looping-${i}')`);
   i++;
 }
