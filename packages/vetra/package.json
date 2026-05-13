@@ -66,16 +66,14 @@
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/design-system": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
-    "@powerhousedao/shared": "workspace:*",
     "change-case": "catalog:",
     "document-model": "workspace:*",
-    "kysely": "catalog:",
     "react": "catalog:",
-    "ts-morph": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@powerhousedao/builder-tools": "workspace:*",
+    "@powerhousedao/shared": "workspace:*",
     "@tailwindcss/cli": "catalog:",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",
@@ -84,8 +82,10 @@
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "catalog:",
+    "kysely": "catalog:",
     "react-dom": "catalog:",
     "tailwindcss": "catalog:",
+    "ts-morph": "catalog:",
     "tsdown": "catalog:",
     "vite": "catalog:",
     "vitest": "catalog:"
