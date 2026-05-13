@@ -303,8 +303,7 @@ describe("export pipeline: fetchDocumentOperations -> createZip -> baseLoadFromI
     const documentWithOps = { ...reactorDoc, operations };
 
     // Step 3: createZip (real production code)
-    const zip = await createZip(documentWithOps);
-    const buffer = await zip.generateAsync({ type: "arraybuffer" });
+    const buffer = await createZip(documentWithOps);
 
     // Step 4: baseLoadFromInput (real production code) — reimport the zip
     const imported = await baseLoadFromInput(buffer, countReducer);
@@ -341,8 +340,7 @@ describe("export pipeline: fetchDocumentOperations -> createZip -> baseLoadFromI
     );
     const documentWithOps = { ...reactorDoc, operations };
 
-    const zip = await createZip(documentWithOps);
-    const buffer = await zip.generateAsync({ type: "arraybuffer" });
+    const buffer = await createZip(documentWithOps);
     const imported = await baseLoadFromInput(buffer, countReducer);
 
     expect(imported.state.global.count).toBe(5);
@@ -533,8 +531,7 @@ describe("export pipeline with document-scope operations", () => {
     const initialState = extractInitialState(operations["document"] ?? []);
     const documentWithOps = { ...reactorDoc, operations, initialState };
 
-    const zip = await createZip(documentWithOps);
-    const buffer = await zip.generateAsync({ type: "arraybuffer" });
+    const buffer = await createZip(documentWithOps);
     const imported = await baseLoadFromInput(buffer, countReducer);
 
     expect(imported.state.global.count).toBe(3);
@@ -584,8 +581,7 @@ describe("export pipeline with document-scope operations", () => {
       clipboard: [],
     } as unknown as PHDocument;
 
-    const zip = await createZip(doc);
-    const buffer = await zip.generateAsync({ type: "arraybuffer" });
+    const buffer = await createZip(doc);
     const imported = await baseLoadFromInput(buffer, countReducer);
 
     expect(imported.state.global.count).toBe(3);
