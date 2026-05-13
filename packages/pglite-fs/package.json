@@ -33,6 +33,7 @@
   "devDependencies": {
     "@electric-sql/pglite": "catalog:",
     "tsdown": "catalog:",
+    "tsx": "catalog:",
     "vitest": "catalog:"
   }
 }

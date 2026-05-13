@@ -48,6 +48,7 @@
     "document-model": "workspace:*"
   },
   "devDependencies": {
+    "@powerhousedao/pglite-fs": "workspace:*",
     "@vitest/coverage-v8": "catalog:",
     "prettier": "catalog:",
     "tinybench": "^2.9.0",

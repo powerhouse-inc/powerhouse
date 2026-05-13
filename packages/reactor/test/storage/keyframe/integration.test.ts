@@ -2,22 +2,25 @@ import type { PHDocument } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { KyselyKeyframeStore } from "../../../src/storage/kysely/keyframe-store.js";
-import { createTestOperationStore } from "../../factories.js";
+import { createTestOperationStore, testFsBackends } from "../../factories.js";
 
-describe("KyselyKeyframeStore", () => {
+describe.each(testFsBackends)("KyselyKeyframeStore [$name]", ({ backend }) => {
   let keyframeStore: KyselyKeyframeStore;
   let db: any;
+  let cleanup: () => Promise<void>;
 
   beforeEach(async () => {
-    const setup = await createTestOperationStore();
+    const setup = await createTestOperationStore(backend);
     keyframeStore = setup.keyframeStore;
     db = setup.db;
+    cleanup = setup.cleanup;
   });
 
   afterEach(async () => {
     if (db) {
       await db.destroy();
     }
+    await cleanup();
   });
 
   function createMockDocument(): PHDocument {

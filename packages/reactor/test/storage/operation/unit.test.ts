@@ -17,20 +17,23 @@ import {
 } from "../../../src/storage/interfaces.js";
 import type { KyselyOperationStore } from "../../../src/storage/kysely/store.js";
 import type { Database as DatabaseSchema } from "../../../src/storage/kysely/types.js";
-import { createTestOperationStore } from "../../factories.js";
+import { createTestOperationStore, testFsBackends } from "../../factories.js";
 
-describe("KyselyOperationStore", () => {
+describe.each(testFsBackends)("KyselyOperationStore [$name]", ({ backend }) => {
   let db: Kysely<DatabaseSchema>;
   let store: KyselyOperationStore;
+  let cleanup: () => Promise<void>;
 
   beforeEach(async () => {
-    const setup = await createTestOperationStore();
+    const setup = await createTestOperationStore(backend);
     db = setup.db;
     store = setup.store;
+    cleanup = setup.cleanup;
   });
 
   afterEach(async () => {
     await db.destroy();
+    await cleanup();
   });
 
   describe("apply", () => {
