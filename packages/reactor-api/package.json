@@ -77,7 +77,6 @@
     "document-model": "workspace:*",
     "dotenv": "^16.4.5",
     "express": "4.21.1",
-    "graphql": "catalog:",
     "graphql-sse": "catalog:",
     "graphql-subscriptions": "^3.0.0",
     "graphql-type-json": "^0.3.2",
@@ -90,8 +89,7 @@
     "pg": "catalog:",
     "read-pkg": "catalog:",
     "ws": "^8.18.3",
-    "zod": "catalog:",
-    "graphql-tag": "catalog:"
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@graphql-codegen/cli": "catalog:",
@@ -105,11 +103,15 @@
     "@types/node": "catalog:",
     "@types/pg": "catalog:",
     "@types/ws": "^8.18.1",
+    "graphql": "catalog:",
+    "graphql-tag": "catalog:",
     "tsdown": "catalog:",
     "msw": "^2.7.3",
     "vitest": "catalog:"
   },
   "peerDependencies": {
+    "graphql": "^16",
+    "graphql-tag": "^2",
     "vite": "^8.0.0"
   },
   "peerDependenciesMeta": {

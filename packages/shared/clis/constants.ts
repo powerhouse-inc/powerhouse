@@ -65,29 +65,28 @@ export const VERSIONED_PEER_DEPENDENCIES = [
 
 type PeerSpec = { peer: string; dev: string };
 
-// External peerDependencies of every generated project.
-// `peer` is the consumer-facing range; `dev` is the exact build-tested pin.
-export const PEER_EXTERNAL_DEPENDENCIES = {
-  react: { peer: "^19", dev: "19.2.3" },
-  "react-dom": { peer: "^19", dev: "19.2.3" },
-  zod: { peer: "^4", dev: "4.3.6" },
-} as const satisfies Record<string, PeerSpec>;
-
 export const REACTOR_API_PACKAGE = "@powerhousedao/reactor-api";
 export const ANALYTICS_ENGINE_CORE_PACKAGE =
   "@powerhousedao/analytics-engine-core";
 export const GRAPHQL_PACKAGE = "graphql";
 export const GRAPHQL_TAG_PACKAGE = "graphql-tag";
 
+// External peerDependencies of every generated project.
+// `peer` is the consumer-facing range; `dev` is the exact build-tested pin.
+// graphql / graphql-tag are always-on because the workspace packages pulled
+// in by every `ph init` project (codegen, reactor-api, reactor-browser,
+// vetra-packages) declare them as peers — even projects without subgraphs
+// need them in scope so pnpm hoists a single graphql instance.
+export const PEER_EXTERNAL_DEPENDENCIES = {
+  [GRAPHQL_PACKAGE]: { peer: "^16", dev: "16.12.0" },
+  [GRAPHQL_TAG_PACKAGE]: { peer: "^2", dev: "2.12.6" },
+  react: { peer: "^19", dev: "19.2.3" },
+  "react-dom": { peer: "^19", dev: "19.2.3" },
+  zod: { peer: "^4", dev: "4.3.6" },
+} as const satisfies Record<string, PeerSpec>;
+
 // Per-feature deps added dynamically by codegen when required.
 export const FEATURE_DEPENDENCIES = {
-  subgraph: {
-    peerVersioned: [REACTOR_API_PACKAGE],
-    peerExternal: {
-      [GRAPHQL_PACKAGE]: { peer: "^16", dev: "16.12.0" },
-      [GRAPHQL_TAG_PACKAGE]: { peer: "^2", dev: "2.12.6" },
-    },
-  },
   analyticsProcessor: {
     peerVersioned: [ANALYTICS_ENGINE_CORE_PACKAGE],
     peerExternal: {},
@@ -99,7 +98,6 @@ export const FEATURE_DEPENDENCIES = {
 
 export const VERSIONED_DEPENDENCIES = [
   ...VERSIONED_PEER_DEPENDENCIES,
-  ...FEATURE_DEPENDENCIES.subgraph.peerVersioned,
   ...FEATURE_DEPENDENCIES.analyticsProcessor.peerVersioned,
 ];
 

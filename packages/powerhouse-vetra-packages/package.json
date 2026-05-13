@@ -97,7 +97,6 @@
     "clsx": "^2.1.1",
     "cm6-graphql": "^0.2.1",
     "document-model": "workspace:*",
-    "graphql": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
     "react-hook-form": "^7.56.1",
@@ -110,8 +109,12 @@
     "@tailwindcss/cli": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
+    "graphql": "catalog:",
     "tailwindcss": "catalog:",
     "tsdown": "catalog:",
     "tsx": "catalog:"
+  },
+  "peerDependencies": {
+    "graphql": "^16"
   }
 }
