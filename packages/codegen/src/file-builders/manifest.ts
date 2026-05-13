@@ -3,9 +3,8 @@ import type {
   Manifest,
   PowerhouseModule,
 } from "@powerhousedao/shared";
-import { fileExists } from "@powerhousedao/shared/clis";
+import { defaultManifest, fileExists } from "@powerhousedao/shared/clis";
 import { ManifestSchema } from "@powerhousedao/shared/document-model";
-import { defaultManifest } from "file-builders";
 import { loadJsonFile } from "load-json-file";
 import { join } from "path";
 import {

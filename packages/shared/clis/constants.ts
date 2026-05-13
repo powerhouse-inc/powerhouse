@@ -1,5 +1,6 @@
 import { homedir } from "node:os";
 import { join } from "node:path";
+import type { Manifest } from "../document-model/types.js";
 import type { PowerhouseConfig } from "./types.js";
 
 export const SERVICE_ACTIONS = [
@@ -56,20 +57,154 @@ export const HOME_DIR = homedir();
 
 export const POWERHOUSE_GLOBAL_DIR = join(HOME_DIR, PH_GLOBAL_DIR_NAME);
 
-export const VERSIONED_DEPENDENCIES = [
+// Workspace packages that go in peerDependencies of every generated project.
+export const VERSIONED_PEER_DEPENDENCIES = [
   "document-model",
-  "@powerhousedao/design-system",
-  "@powerhousedao/reactor-api",
   "@powerhousedao/reactor-browser",
-  "@powerhousedao/connect",
-  "@powerhousedao/shared",
-  "@powerhousedao/analytics-engine-core",
+];
+
+type PeerSpec = { peer: string; dev: string };
+
+// External peerDependencies of every generated project.
+// `peer` is the consumer-facing range; `dev` is the exact build-tested pin.
+export const PEER_EXTERNAL_DEPENDENCIES = {
+  react: { peer: "^19", dev: "19.2.3" },
+  "react-dom": { peer: "^19", dev: "19.2.3" },
+  zod: { peer: "^4", dev: "4.3.6" },
+} as const satisfies Record<string, PeerSpec>;
+
+// Per-feature deps added dynamically by codegen when required.
+export const FEATURE_DEPENDENCIES = {
+  subgraph: {
+    peerVersioned: ["@powerhousedao/reactor-api"],
+    peerExternal: {
+      graphql: { peer: "^16", dev: "16.12.0" },
+      "graphql-tag": { peer: "^2", dev: "^2.12.6" },
+    },
+  },
+  analyticsProcessor: {
+    peerVersioned: ["@powerhousedao/analytics-engine-core"],
+    peerExternal: {},
+  },
+} as const satisfies Record<
+  string,
+  { peerVersioned: readonly string[]; peerExternal: Record<string, PeerSpec> }
+>;
+
+export const VERSIONED_DEPENDENCIES = [
+  ...VERSIONED_PEER_DEPENDENCIES,
+  ...FEATURE_DEPENDENCIES.subgraph.peerVersioned,
+  ...FEATURE_DEPENDENCIES.analyticsProcessor.peerVersioned,
 ];
 
 export const VERSIONED_DEV_DEPENDENCIES = [
   "@powerhousedao/ph-cli",
   "@powerhousedao/reactor",
+  "@powerhousedao/shared",
+  "@powerhousedao/connect",
+  "@powerhousedao/design-system",
 ];
+
+export const packageJsonExports = {
+  ".": {
+    types: "./dist/types/index.d.ts",
+    browser: "./dist/browser/index.js",
+    node: "./dist/node/index.mjs",
+  },
+  "./document-models": {
+    types: "./dist/types/document-models/index.d.ts",
+    browser: "./dist/browser/document-models/index.js",
+    node: "./dist/node/document-models/index.mjs",
+  },
+  "./document-models/*": {
+    types: "./dist/types/document-models/*/index.d.ts",
+    browser: "./dist/browser/document-models/*/index.js",
+    node: "./dist/node/document-models/*/index.mjs",
+  },
+  "./editors": {
+    types: "./dist/types/editors/index.d.ts",
+    browser: "./dist/browser/editors/index.js",
+    node: "./dist/node/editors/index.mjs",
+  },
+  "./editors/*": {
+    types: "./dist/types/editors/*/editor.d.ts",
+    browser: "./dist/browser/editors/*/editor.js",
+    node: "./dist/node/editors/*/editor.mjs",
+  },
+  "./subgraphs": {
+    types: "./dist/types/subgraphs/index.d.ts",
+    browser: "./dist/browser/subgraphs/index.js",
+    node: "./dist/node/subgraphs/index.mjs",
+  },
+  "./processors": {
+    types: "./dist/types/processors/index.d.ts",
+    browser: "./dist/browser/processors/index.js",
+    node: "./dist/node/processors/index.mjs",
+  },
+  "./manifest": "./dist/powerhouse.manifest.json",
+  "./style.css": "./dist/style.css",
+} as const;
+
+export const packageScripts = {
+  "test:watch": "vitest",
+  lint: "eslint --config eslint.config.js --cache",
+  "lint:fix": "npm run lint -- --fix",
+  tsc: "tsc",
+  "tsc:watch": "tsc --watch",
+  generate: "ph-cli generate",
+  connect: "ph-cli connect",
+  build: "ph-cli build",
+  reactor: "ph-cli reactor",
+  service: "ph-cli service",
+  vetra: "ph-cli vetra",
+  "service-startup":
+    "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-startup.sh",
+  "service-unstartup":
+    "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-unstartup.sh",
+} as const;
+
+export const externalDependencies = {} as const;
+
+export const externalDevDependencies = {
+  "@electric-sql/pglite": "0.3.15",
+  "@electric-sql/pglite-tools": "0.2.20",
+  "@eslint/js": "^9.38.0",
+  "@powerhousedao/document-engineering": "1.40.3",
+  "@tailwindcss/cli": "^4.1.18",
+  "@tailwindcss/vite": "^4.1.18",
+  "@types/node": "^24.9.2",
+  "@types/react": "^19.2.3",
+  "@types/react-dom": "^19.2.3",
+  "@vitejs/plugin-react": "^6.0.1",
+  "@vitest/coverage-v8": "4.1.1",
+  eslint: "^9.38.0",
+  "eslint-config-prettier": "^10.1.8",
+  "eslint-plugin-prettier": "^5.5.4",
+  "eslint-plugin-react": "^7.37.5",
+  "eslint-plugin-react-hooks": "^7.0.1",
+  globals: "^16.4.0",
+  tailwindcss: "^4.1.16",
+  typescript: "^5.9.3",
+  "typescript-eslint": "^8.46.2",
+  vite: "^8.0.8",
+  "vite-tsconfig-paths": "6.1.1",
+  vitest: "4.1.1",
+} as const;
+
+export const defaultManifest: Manifest = {
+  name: "",
+  description: "",
+  category: "",
+  publisher: {
+    name: "",
+    url: "",
+  },
+  documentModels: [],
+  editors: [],
+  apps: [],
+  subgraphs: [],
+  processors: [],
+};
 
 const DEFAULT_DOCUMENT_MODELS_DIR = "./document-models";
 const DEFAULT_EDITORS_DIR = "./editors";
