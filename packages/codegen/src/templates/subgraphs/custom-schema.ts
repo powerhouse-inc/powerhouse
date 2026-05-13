@@ -1,3 +1,7 @@
+import {
+  GRAPHQL_PACKAGE,
+  GRAPHQL_TAG_PACKAGE,
+} from "@powerhousedao/shared/clis";
 import { ts } from "@tmpl/core";
 
 export const customSubgraphSchemaTemplate = (v: {
@@ -5,8 +9,8 @@ export const customSubgraphSchemaTemplate = (v: {
   camelCaseName: string;
 }) =>
   ts`
-import { gql } from "graphql-tag";
-import type { DocumentNode } from "graphql";
+import { gql } from "${GRAPHQL_TAG_PACKAGE}";
+import type { DocumentNode } from "${GRAPHQL_PACKAGE}";
 
 export const schema: DocumentNode = gql\`
 """

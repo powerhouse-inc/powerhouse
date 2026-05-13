@@ -1,8 +1,9 @@
+import { ANALYTICS_ENGINE_CORE_PACKAGE } from "@powerhousedao/shared/clis";
 import { ts } from "@tmpl/core";
 
 export const analyticsProcessorTemplate = (v: { pascalCaseName: string }) =>
   ts`
-import type { AnalyticsSeriesInput, AnalyticsPath, IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
+import type { AnalyticsSeriesInput, AnalyticsPath, IAnalyticsStore } from "${ANALYTICS_ENGINE_CORE_PACKAGE}";
 import type { OperationWithContext, IProcessor } from "@powerhousedao/reactor-browser";
 
 export class ${v.pascalCaseName} implements IProcessor {
