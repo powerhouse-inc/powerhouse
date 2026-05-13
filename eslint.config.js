@@ -239,6 +239,8 @@ const typescriptLanguageOptions = {
         "tools/scripts/merge-coverage.js",
         "test/scripts/analyze-ops.ts",
         "test/versioned-documents/vitest.config.ts",
+        "test/ph-lora/scripts/check-pr-drift.ts",
+        "test/ph-lora/scripts/validate-mapping.ts",
       ],
     },
     tsconfigRootDir: import.meta.dirname,

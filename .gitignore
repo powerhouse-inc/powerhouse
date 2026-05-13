@@ -19,6 +19,8 @@ storybook-static
 .ph
 CLAUDE.md
 .claude/*
+!.claude/commands/
+!.claude/commands/**
 !.claude/skills/
 coverage/
 coverage-reports/

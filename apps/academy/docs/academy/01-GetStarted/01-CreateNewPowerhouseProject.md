@@ -261,6 +261,22 @@ git ls-tree -r --name-only tutorial/step-1-initialize-with-ph-init
 git show tutorial/step-1-initialize-with-ph-init:package.json
 ````
 
+## ph install / ph add
+
+```bash
+ph install [dependencies...] [--registry <url>] [--local] [--allow-build <pkg>]
+```
+
+Aliases: `ph add`, `ph i`
+
+The install command adds Powerhouse dependencies to your project.
+
+By default it only registers the package in `powerhouse.config.json` with provider `"registry"` — Connect will load it from the registry CDN at runtime.
+
+With `--local`, the package is also installed into `node_modules` and marked as provider `"local"` — it will be bundled into `ph connect build` so the preview works without the registry being reachable.
+
+Resolution order for the registry URL: `--registry` flag > `PH_REGISTRY_URL` env > `powerhouse.config.json` > default
+
 ## Up next
 
 In the next tutorials, you will learn how to specify, add code and build an editor for your document model and export it to be used in your Powerhouse package.

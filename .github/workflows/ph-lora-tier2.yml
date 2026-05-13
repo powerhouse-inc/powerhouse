@@ -1,0 +1,95 @@
+name: ph-lora Tier 2 — doc drift classifier
+
+# Trigger disabled pending team sign-off — enable by restoring the pull_request trigger below.
+# on:
+#   pull_request:
+#     branches: ["main", "release/**"]
+#     types: [opened, reopened, synchronize]
+on:
+  workflow_dispatch:
+    inputs:
+      base_sha:
+        description: "Base commit SHA (for drift-check)"
+        required: false
+      head_sha:
+        description: "Head commit SHA (for drift-check)"
+        required: false
+      pr_number:
+        description: "PR number (for drift-check issue title)"
+        required: false
+
+concurrency:
+  group: ph-lora-tier2-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  # Structural check: every sourceFiles path in ph-lora-mapping.json must exist.
+  # This CAN block merges — a broken mapping means ph-lora is flying blind.
+  validate-mapping:
+    name: Validate ph-lora mapping
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install deps
+        run: pnpm install-ci
+
+      - name: Validate mapping sourceFiles
+        run: pnpm exec tsx test/ph-lora/scripts/validate-mapping.ts
+
+  # Advisory check: did code change without a corresponding doc update?
+  # Never blocks merges — opens a GitHub issue instead.
+  drift-check:
+    name: Check for doc drift
+    runs-on: ubuntu-latest
+    needs: validate-mapping
+    # Never block merges — this is advisory only
+    continue-on-error: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          # Full history needed for git diff across the PR
+          fetch-depth: 0
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install deps
+        run: pnpm install-ci
+
+      - name: Run drift classifier
+        run: pnpm exec tsx test/ph-lora/scripts/check-pr-drift.ts
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BASE_SHA: ${{ inputs.base_sha }}
+          HEAD_SHA: ${{ inputs.head_sha }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
