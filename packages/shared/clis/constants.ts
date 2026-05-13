@@ -79,7 +79,7 @@ export const FEATURE_DEPENDENCIES = {
     peerVersioned: ["@powerhousedao/reactor-api"],
     peerExternal: {
       graphql: { peer: "^16", dev: "16.12.0" },
-      "graphql-tag": { peer: "^2", dev: "^2.12.6" },
+      "graphql-tag": { peer: "^2", dev: "2.12.6" },
     },
   },
   analyticsProcessor: {
