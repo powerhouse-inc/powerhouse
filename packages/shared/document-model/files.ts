@@ -58,10 +58,11 @@ async function toUint8Array(input: FileInput): Promise<Uint8Array> {
       return arr;
     }
     return new Uint8Array(
-      (globalThis as { Buffer?: { from: (s: string, enc: string) => Uint8Array } }).Buffer!.from(
-        input,
-        "base64",
-      ),
+      (
+        globalThis as {
+          Buffer?: { from: (s: string, enc: string) => Uint8Array };
+        }
+      ).Buffer!.from(input, "base64"),
     );
   }
   throw new Error("Unsupported FileInput type");
@@ -144,7 +145,9 @@ async function loadFromZipData<TState extends PHBaseState>(
   if (!files["header.json"]) {
     throw new Error("Document header not found - file format may be outdated");
   }
-  const header = JSON.parse(readEntry(files, "header.json")) as PHDocumentHeader;
+  const header = JSON.parse(
+    readEntry(files, "header.json"),
+  ) as PHDocumentHeader;
 
   if (!files["operations.json"]) {
     throw new Error("Operations history not found");
