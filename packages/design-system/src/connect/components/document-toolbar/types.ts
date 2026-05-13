@@ -1,11 +1,6 @@
 import type { PHDocument } from "@powerhousedao/shared/document-model";
 import type { ComponentProps, ReactNode } from "react";
-import type {
-  ArrayElement,
-  MergeExclusive,
-  ObjectMerge,
-  Simplify,
-} from "type-fest";
+import type { ArrayElement, ObjectMerge, Simplify } from "type-fest";
 import type { documentToolbarControls } from "./constants.js";
 
 /**
@@ -284,12 +279,9 @@ export type DocumentToolbarWithCustomControlsProps = Simplify<
  * 1. Provide `children` to replace the toolbar contents completely.
  * 2. Omit `children` to use the built-in toolbar with optional customization.
  */
-export type DocumentToolbarProps = Simplify<
-  MergeExclusive<
-    DocumentToolbarWithChildrenProps,
-    DocumentToolbarWithCustomControlsProps
-  >
->;
+export type DocumentToolbarProps =
+  | DocumentToolbarWithChildrenProps
+  | DocumentToolbarWithCustomControlsProps;
 
 /**
  * Internal props used to render a single controls slot.
