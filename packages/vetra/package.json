@@ -75,9 +75,7 @@
     "@powerhousedao/design-system": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
-    "@toon-format/toon": "^2.2.0",
     "change-case": "catalog:",
-    "jsonpath-plus": "^10.3.0",
     "document-model": "workspace:*",
     "react": "catalog:",
     "zod": "catalog:"
