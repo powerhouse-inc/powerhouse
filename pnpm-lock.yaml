@@ -2834,7 +2834,16 @@ importers:
         version: 4.21.0
 
   test/versioned-documents:
-    dependencies:
+    devDependencies:
+      '@electric-sql/pglite':
+        specifier: 'catalog:'
+        version: 0.3.15
+      '@electric-sql/pglite-tools':
+        specifier: 'catalog:'
+        version: 0.2.20(@electric-sql/pglite@0.3.15)
+      '@eslint/js':
+        specifier: ^9.38.0
+        version: 9.39.4
       '@powerhousedao/analytics-engine-core':
         specifier: workspace:*
         version: link:../../packages/analytics-engine/core
@@ -2847,6 +2856,12 @@ importers:
       '@powerhousedao/document-engineering':
         specifier: 'catalog:'
         version: 1.40.3(@types/express@4.17.25)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@5.9.3)
+      '@powerhousedao/ph-cli':
+        specifier: workspace:*
+        version: link:../../clis/ph-cli
+      '@powerhousedao/reactor':
+        specifier: workspace:*
+        version: link:../../packages/reactor
       '@powerhousedao/reactor-api':
         specifier: workspace:*
         version: link:../../packages/reactor-api
@@ -2856,43 +2871,12 @@ importers:
       '@powerhousedao/shared':
         specifier: workspace:*
         version: link:../../packages/shared
-      document-model:
-        specifier: workspace:*
-        version: link:../../packages/document-model
-      graphql:
-        specifier: 'catalog:'
-        version: 16.12.0
-      graphql-tag:
-        specifier: 'catalog:'
-        version: 2.12.6(graphql@16.12.0)
-      react:
-        specifier: 'catalog:'
-        version: 19.2.6
-      react-dom:
-        specifier: 'catalog:'
-        version: 19.2.6(react@19.2.6)
-      zod:
-        specifier: 'catalog:'
-        version: 4.3.6
-    devDependencies:
-      '@electric-sql/pglite':
-        specifier: 'catalog:'
-        version: 0.3.15
-      '@electric-sql/pglite-tools':
-        specifier: 'catalog:'
-        version: 0.2.20(@electric-sql/pglite@0.3.15)
-      '@eslint/js':
-        specifier: ^9.38.0
-        version: 9.39.4
-      '@powerhousedao/ph-cli':
-        specifier: workspace:*
-        version: link:../../clis/ph-cli
-      '@powerhousedao/reactor':
-        specifier: workspace:*
-        version: link:../../packages/reactor
       '@tailwindcss/cli':
         specifier: 'catalog:'
         version: 4.2.2
+      '@tailwindcss/vite':
+        specifier: ^4.1.18
+        version: 4.2.2(vite@8.0.8(@types/node@25.2.3)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
       '@testing-library/jest-dom':
         specifier: ^6.9.1
         version: 6.9.1
@@ -2908,6 +2892,12 @@ importers:
       '@vitejs/plugin-react':
         specifier: 'catalog:'
         version: 6.0.1(vite@8.0.8(@types/node@25.2.3)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
+      '@vitest/coverage-v8':
+        specifier: 4.1.1
+        version: 4.1.1(@vitest/browser@4.1.1(msw@2.12.10(@types/node@25.2.3)(typescript@5.9.3))(vite@8.0.8(@types/node@25.2.3)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))(vitest@4.1.1))(vitest@4.1.1)
+      document-model:
+        specifier: workspace:*
+        version: link:../../packages/document-model
       eslint:
         specifier: ^9.38.0
         version: 9.39.4(jiti@2.6.1)
@@ -2926,6 +2916,18 @@ importers:
       globals:
         specifier: ^16.4.0
         version: 16.5.0
+      graphql:
+        specifier: 'catalog:'
+        version: 16.12.0
+      graphql-tag:
+        specifier: 'catalog:'
+        version: 2.12.6(graphql@16.12.0)
+      react:
+        specifier: 'catalog:'
+        version: 19.2.6
+      react-dom:
+        specifier: 'catalog:'
+        version: 19.2.6(react@19.2.6)
       tailwindcss:
         specifier: 'catalog:'
         version: 4.2.2
@@ -2947,6 +2949,9 @@ importers:
       vitest:
         specifier: 'catalog:'
         version: 4.1.1(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@4.1.1)(happy-dom@20.9.0)(jsdom@24.1.3)(msw@2.12.10(@types/node@25.2.3)(typescript@5.9.3))(vite@8.0.8(@types/node@25.2.3)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
+      zod:
+        specifier: 'catalog:'
+        version: 4.3.6
 
   test/vetra-e2e:
     dependencies:
@@ -27966,6 +27971,22 @@ snapshots:
       - utf-8-validate
       - vite
     optional: true
+
+  '@vitest/coverage-v8@4.1.1(@vitest/browser@4.1.1(msw@2.12.10(@types/node@25.2.3)(typescript@5.9.3))(vite@8.0.8(@types/node@25.2.3)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))(vitest@4.1.1))(vitest@4.1.1)':
+    dependencies:
+      '@bcoe/v8-coverage': 1.0.2
+      '@vitest/utils': 4.1.1
+      ast-v8-to-istanbul: 1.0.0
+      istanbul-lib-coverage: 3.2.2
+      istanbul-lib-report: 3.0.1
+      istanbul-reports: 3.2.0
+      magicast: 0.5.2
+      obug: 2.1.1
+      std-env: 4.0.0
+      tinyrainbow: 3.0.3
+      vitest: 4.1.1(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@4.1.1)(happy-dom@20.9.0)(jsdom@24.1.3)(msw@2.12.10(@types/node@25.2.3)(typescript@5.9.3))(vite@8.0.8(@types/node@25.2.3)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
+    optionalDependencies:
+      '@vitest/browser': 4.1.1(msw@2.12.10(@types/node@25.2.3)(typescript@5.9.3))(vite@8.0.8(@types/node@25.2.3)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))(vitest@4.1.1)
 
   '@vitest/coverage-v8@4.1.1(@vitest/browser@4.1.1(msw@2.12.10(@types/node@25.5.0)(typescript@5.9.3))(vite@8.0.10(@types/node@25.5.0)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))(vitest@4.1.1))(vitest@4.1.1)':
     dependencies:
