@@ -29,17 +29,13 @@ describe("AtomicNodeFs", () => {
     await pg1.close();
 
     expect(
-      await fs
-        .stat(path.join(dir, "snapshot.bin"))
-        .then((s) => s.isFile()),
+      await fs.stat(path.join(dir, "snapshot.bin")).then((s) => s.isFile()),
     ).toBe(true);
     expect(
-      await fs
-        .stat(path.join(dir, "snapshot.bin.tmp"))
-        .then(
-          () => true,
-          () => false,
-        ),
+      await fs.stat(path.join(dir, "snapshot.bin.tmp")).then(
+        () => true,
+        () => false,
+      ),
     ).toBe(false);
 
     const pg2 = new PGlite({ fs: new AtomicNodeFs(dir) });
@@ -93,17 +89,13 @@ describe("AtomicNodeFs", () => {
     await pgLegacy.close();
 
     expect(
-      await fs
-        .stat(path.join(dir, "PG_VERSION"))
-        .then((s) => s.isFile()),
+      await fs.stat(path.join(dir, "PG_VERSION")).then((s) => s.isFile()),
     ).toBe(true);
     expect(
-      await fs
-        .stat(path.join(dir, "snapshot.bin"))
-        .then(
-          () => true,
-          () => false,
-        ),
+      await fs.stat(path.join(dir, "snapshot.bin")).then(
+        () => true,
+        () => false,
+      ),
     ).toBe(false);
 
     // Step 2: reopen with AtomicNodeFs. Migration kicks in — loose files are
@@ -120,15 +112,11 @@ describe("AtomicNodeFs", () => {
     await pg2.close();
 
     expect(
-      await fs
-        .stat(path.join(dir, "snapshot.bin"))
-        .then((s) => s.isFile()),
+      await fs.stat(path.join(dir, "snapshot.bin")).then((s) => s.isFile()),
     ).toBe(true);
     // Legacy files preserved (manual cleanup by user once verified).
     expect(
-      await fs
-        .stat(path.join(dir, "PG_VERSION"))
-        .then((s) => s.isFile()),
+      await fs.stat(path.join(dir, "PG_VERSION")).then((s) => s.isFile()),
     ).toBe(true);
 
     // Step 3: reopen once more — this time loading from snapshot.bin rather

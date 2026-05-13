@@ -79,9 +79,7 @@ describe("AtomicNodeFs crash recovery", () => {
     // The pre-kill commits are in snapshot.bin. A torn snapshot.bin.tmp may
     // exist on disk depending on timing.
     expect(
-      await fs
-        .stat(path.join(dir, "snapshot.bin"))
-        .then((s) => s.isFile()),
+      await fs.stat(path.join(dir, "snapshot.bin")).then((s) => s.isFile()),
     ).toBe(true);
 
     // Reopen — initialSyncFs must clean the tmp and load cleanly without the
@@ -97,12 +95,10 @@ describe("AtomicNodeFs crash recovery", () => {
     ]);
 
     expect(
-      await fs
-        .stat(path.join(dir, "snapshot.bin.tmp"))
-        .then(
-          () => true,
-          () => false,
-        ),
+      await fs.stat(path.join(dir, "snapshot.bin.tmp")).then(
+        () => true,
+        () => false,
+      ),
     ).toBe(false);
 
     await pg.close();
