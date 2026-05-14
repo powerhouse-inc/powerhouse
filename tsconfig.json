@@ -54,6 +54,9 @@
     },
     {
       "path": "scripts/profiling"
+    },
+    {
+      "path": "scripts/release"
     }
   ],
   "files": []
