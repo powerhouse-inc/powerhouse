@@ -119,23 +119,8 @@ export async function delegateInit(
     );
   }
 
-  // pnpm 11 enforces `strict-dep-builds=true`, so the outer `pnpm dlx`
-  // download of ph-cli would otherwise prompt for build approval on the
-  // generated project's allowlisted transitive deps. Inject one
-  // `--allow-build` per package after `dlx` so dlx auto-approves the same
-  // set the boilerplate already trusts via pnpm-workspace.yaml.
-  if (pm === "pnpm" && resolved.args[0] === "dlx") {
-    const { BOILERPLATE_ALLOWED_BUILDS } =
-      await import("@powerhousedao/shared/clis");
-    const allowBuildFlags = BOILERPLATE_ALLOWED_BUILDS.map(
-      (pkg) => `--allow-build=${pkg}`,
-    );
-    resolved.args = [
-      resolved.args[0],
-      ...allowBuildFlags,
-      ...resolved.args.slice(1),
-    ];
-  }
+  const { injectPnpmAllowBuilds } = await import("@powerhousedao/shared/clis");
+  injectPnpmAllowBuilds(pm, resolved);
 
   const { command: cmd, args: cmdArgs } = resolved;
   const fullCmd = `${cmd} ${cmdArgs.join(" ")}`;
