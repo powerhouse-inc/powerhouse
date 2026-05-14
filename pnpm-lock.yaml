@@ -1125,6 +1125,9 @@ importers:
 
   packages/codegen:
     dependencies:
+      '@graphql-codegen/add':
+        specifier: 'catalog:'
+        version: 6.0.0(graphql@16.12.0)
       '@graphql-codegen/cli':
         specifier: 'catalog:'
         version: 6.1.1(@fastify/websocket@11.2.0)(@parcel/watcher@2.5.6)(@types/node@25.2.3)(graphql@16.12.0)(typescript@5.9.3)

@@ -1,9 +1,12 @@
 import {
   externalDevDependencies,
   FEATURE_DEPENDENCIES,
+  getPackageManagerAtPowerhouseProjectDirPath,
+  getPowerhouseProjectInstallCommand,
   packageJsonExports,
   packageScripts,
   PEER_EXTERNAL_DEPENDENCIES,
+  runCmd,
   VERSIONED_DEV_DEPENDENCIES,
   VERSIONED_PEER_DEPENDENCIES,
 } from "@powerhousedao/shared/clis";
@@ -242,9 +245,23 @@ export async function migrate(version: string, projectDir = process.cwd()) {
   const project = buildTsMorphProject(projectDir);
   console.log("Fixing legacy import paths...");
   fixLegacyImportPaths(project, packageJson.name);
+  console.log("Installing dependencies...");
+  await installProjectDependencies(projectDir);
   console.log("Re-generating code...");
   await generateAll(project);
   await project.save();
+}
+
+async function installProjectDependencies(projectDir: string) {
+  const agent = await getPackageManagerAtPowerhouseProjectDirPath(projectDir);
+  if (!agent) {
+    throw new Error(
+      "Failed to detect your package manager. Run install manually.",
+    );
+  }
+  const installCommand = await getPowerhouseProjectInstallCommand(agent);
+  console.log(`Installing dependencies with \`${agent}\``);
+  runCmd(installCommand, { cwd: projectDir });
 }
 
 function moveLegacyDocumentModels(projectDir: string) {
