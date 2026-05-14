@@ -1,0 +1,24 @@
+{
+  "name": "test-package-e2e",
+  "version": "0.0.0",
+  "private": true,
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "scripts": {
+    "publish-package": "tsx scripts/publish-package.ts",
+    "services:up": "docker compose -f docker/docker-compose.yml up -d --build",
+    "services:down": "docker compose -f docker/docker-compose.yml down -v",
+    "services:logs": "docker compose -f docker/docker-compose.yml logs -f",
+    "playwright": "playwright test",
+    "test": "tsx scripts/run.ts"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.55.0",
+    "@powerhousedao/e2e-utils": "workspace:*",
+    "@powerhousedao/ph-cli": "workspace:*",
+    "@powerhousedao/registry": "workspace:*",
+    "@types/node": "catalog:",
+    "tsx": "^4.19.2",
+    "typescript": "^5.9.3"
+  }
+}
