@@ -416,10 +416,23 @@ export class ReactorDriveClient implements IDriveClient {
 
     for (const node of subtree) {
       const newId = idMap.get(node.id)!;
-      const newParent =
-        node.id === srcNodeId
-          ? (targetParentFolderId ?? null)
-          : (idMap.get(node.parentFolder ?? "") ?? null);
+      let newParent: string | null;
+      if (node.id === srcNodeId) {
+        newParent = targetParentFolderId ?? null;
+      } else {
+        if (node.parentFolder == null) {
+          throw new Error(
+            `copyNode: descendant ${node.id} has no parentFolder`,
+          );
+        }
+        const mapped = idMap.get(node.parentFolder);
+        if (mapped === undefined) {
+          throw new Error(
+            `copyNode: descendant ${node.id} parent ${node.parentFolder} missing from idMap`,
+          );
+        }
+        newParent = mapped;
+      }
 
       if (node.kind === "folder") {
         driveActions.push(

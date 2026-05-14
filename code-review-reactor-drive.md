@@ -12,18 +12,6 @@ The shape and test coverage are good. The bulk of the surface is exercised by un
 
 ## Findings (highest severity = highest number)
 
-### 5. `document-action-handler.ts` declares types between import groups
-
-`packages/reactor/src/executor/document-action-handler.ts:12-36` defines `RelationshipActionShape`, `RelationshipJobResult`, and `RelationshipPostWriteArgs` between the first `import` block (lines 1-10) and the second (`import type { ILogger }` at line 37 onward). This compiles, but it's confusing for readers and tools that group imports. Move the type declarations below the imports.
-
-### 3. `NodeProcessor.applyNameOperation` does two queries where one PG UPSERT would suffice
-
-`node-processor.ts:393-412` selects then inserts-or-updates. Postgres / PGlite support `INSERT … ON CONFLICT (docId) DO UPDATE`. Same shape applies to `handleAddFileRelationship` and `handleAddFolder` (lines 214-249, 266-302) where existing-row checks precede the insert/update. A single upsert per call halves the round-trips and removes a race window inside the transaction (the SELECT is in the same transaction so the race is minimal, but the simpler shape is still preferable).
-
-### 2. `copyNode` uses `""` as a sentinel for "no parent" in `idMap.get(node.parentFolder ?? "")`
-
-`reactor-drive-client.ts:368`. Empty string is in the namespace of valid node ids; if any code path ever produced one, this would silently misroute. Use a separate `Map` lookup with a typed `string | null` key, or branch on `parentFolder == null` first.
-
 ### 1. Test coverage gaps
 
 - `getDescendants` against deep trees: integration tests cover up to depth 2.
