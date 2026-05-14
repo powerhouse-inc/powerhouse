@@ -5,9 +5,10 @@ import type { ReactorDriveNode } from "../types.js";
  * Drive-specific projection of the relationship graph. Reads from the
  * `DriveNode` and `DocumentName` tables maintained by `NodeProcessor`.
  *
- * All methods are pure reads; consumers responsible for read-after-write
- * consistency thread a `ConsistencyToken` to the underlying reactor read
- * model before calling these methods.
+ * All methods are eventually-consistent reads against the projection.
+ * Callers that need read-after-write consistency must coordinate at the
+ * client layer (e.g. via `IReactorClient.waitForConsistency`) before
+ * invoking these methods.
  */
 export interface IDriveReadModel {
   getNode(

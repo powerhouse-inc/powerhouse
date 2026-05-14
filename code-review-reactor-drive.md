@@ -12,16 +12,6 @@ The shape and test coverage are good. The bulk of the surface is exercised by un
 
 ## Findings (highest severity = highest number)
 
-### 15. Subgraph resolvers ignore `ReactorDriveResolverContext.consistencyToken`
-
-`packages/reactor-drive/src/subgraph/resolvers.ts:12-16` defines `consistencyToken?: ConsistencyToken` on the resolver context, and `IDriveReadModel`'s docstring (`packages/reactor-drive/src/read-model/interfaces.ts:7-11`) explicitly says "consumers responsible for read-after-write consistency thread a `ConsistencyToken` to the underlying reactor read model before calling these methods."
-
-But none of the resolvers do this:
-- `reactorDrive(args.id)` (line 66) calls `ctx.reactorClient.get<…>(args.id)` with no token.
-- `reactorDriveNode`, `reactorDriveDescendants`, `rootNodes`, `children` (lines 80-122) all hit `ctx.readModel` with no `waitForConsistency` step.
-
-Consequence: any caller that just mutated via a sibling mutation, captured a token, and then queried the subgraph will race the projection. This is exactly the bug ConsistencyToken exists to prevent. Either the resolvers must thread the token (probably by calling `await ctx.reactorClient.waitForConsistency(ctx.consistencyToken)` before reading the projection), or the field should be removed and the resolvers documented as eventually-consistent.
-
 ### 14. NodeProcessor doesn't clean up on `DELETE_DOCUMENT`
 
 `NodeProcessor.commitOperations` (`packages/reactor-drive/src/processors/node-processor.ts:64-79`) only reacts to the action sets `NAME_ACTION_TYPES` and `STRUCTURE_ACTION_TYPES`. `DELETE_DOCUMENT` is in neither — so deleting a file document directly via `reactor.deleteDocument` leaves both the `DriveNode` row and the `DocumentName` row orphaned.

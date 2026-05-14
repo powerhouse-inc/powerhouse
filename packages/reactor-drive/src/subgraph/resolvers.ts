@@ -1,5 +1,4 @@
 import type {
-  ConsistencyToken,
   IReactorClient,
   PagedResults,
   PagingOptions,
@@ -12,7 +11,6 @@ import type { ReactorDrivePHState, ReactorDriveNode } from "../types.js";
 export interface ReactorDriveResolverContext {
   reactorClient: IReactorClient;
   readModel: IDriveReadModel;
-  consistencyToken?: ConsistencyToken;
 }
 
 type PagingInput = { cursor?: string; limit?: number };
