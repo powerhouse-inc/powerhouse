@@ -1,3 +1,20 @@
+## 6.0.0-dev.248 (2026-05-14)
+
+### 🚀 Features
+
+- **shared:** replace jszip with fflate for tree-shakeable zip handling ([9a417aa98](https://github.com/powerhouse-inc/powerhouse/commit/9a417aa98))
+
+### 🩹 Fixes
+
+- **shared:** auto-detect base64 vs binary strings in toUint8Array ([1eca8c5b1](https://github.com/powerhouse-inc/powerhouse/commit/1eca8c5b1))
+- **use-local:** handle peer deps + use link: for transitive workspace refs ([4146d0df0](https://github.com/powerhouse-inc/powerhouse/commit/4146d0df0))
+- declare graphql/graphql-tag as peerDependencies to prevent dup instances ([4fec9d5b6](https://github.com/powerhouse-inc/powerhouse/commit/4fec9d5b6))
+- **codegen:** pin graphql-tag dev to exact version ([5f20fd406](https://github.com/powerhouse-inc/powerhouse/commit/5f20fd406))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.247 (2026-05-14)
 
 ### 🚀 Features

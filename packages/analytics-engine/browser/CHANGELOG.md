@@ -1,3 +1,17 @@
+## 6.0.0-dev.248 (2026-05-14)
+
+### 🚀 Features
+
+- **shared:** replace jszip with fflate for tree-shakeable zip handling ([9a417aa98](https://github.com/powerhouse-inc/powerhouse/commit/9a417aa98))
+
+### 🩹 Fixes
+
+- declare graphql/graphql-tag as peerDependencies to prevent dup instances ([4fec9d5b6](https://github.com/powerhouse-inc/powerhouse/commit/4fec9d5b6))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.247 (2026-05-14)
 
 ### 🚀 Features

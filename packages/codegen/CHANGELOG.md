@@ -1,3 +1,23 @@
+## 6.0.0-dev.248 (2026-05-14)
+
+### 🚀 Features
+
+- **shared:** replace jszip with fflate for tree-shakeable zip handling ([9a417aa98](https://github.com/powerhouse-inc/powerhouse/commit/9a417aa98))
+- **codegen,ph-cli:** sync feature peer deps on generate-processor / generate-subgraph ([b3a571d14](https://github.com/powerhouse-inc/powerhouse/commit/b3a571d14))
+- **codegen,ph-cli:** ensure correct codegen version before migrate ([da1d40c1a](https://github.com/powerhouse-inc/powerhouse/commit/da1d40c1a))
+
+### 🩹 Fixes
+
+- declare graphql/graphql-tag as peerDependencies to prevent dup instances ([4fec9d5b6](https://github.com/powerhouse-inc/powerhouse/commit/4fec9d5b6))
+- **codegen:** detect analytics processors during migrate ([438ce9259](https://github.com/powerhouse-inc/powerhouse/commit/438ce9259))
+- **codegen:** trim leading newlines from AI config templates ([252421976](https://github.com/powerhouse-inc/powerhouse/commit/252421976))
+- **codegen:** format editor module.ts with prettier on generation ([f66bac8ba](https://github.com/powerhouse-inc/powerhouse/commit/f66bac8ba))
+- **codegen:** preserve workspace:/catalog: version refs during migrate ([81657f46d](https://github.com/powerhouse-inc/powerhouse/commit/81657f46d))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.247 (2026-05-14)
 
 ### 🚀 Features
