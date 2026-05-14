@@ -2,6 +2,10 @@ import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import { documentModelDocumentModelModule } from "document-model";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  addRelationshipAction,
+  updateRelationshipAction,
+} from "../../src/actions/index.js";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import type { IReactor } from "../../src/core/types.js";
 import type { DocumentViewDatabase } from "../../src/read-models/types.js";
@@ -290,6 +294,105 @@ describe("Relationship Operations", () => {
 
       const outgoing = await documentIndexer.getOutgoing("parent-6", ["child"]);
       expect(outgoing.results).toHaveLength(0);
+    });
+  });
+
+  describe("updateRelationship", () => {
+    it("mutates DocumentRelationship.metadata while preserving createdAt", async () => {
+      const parentDoc = createDocModelDocument({ id: "parent-update-1" });
+      const childDoc = createDocModelDocument({ id: "child-update-1" });
+      await createDocument(parentDoc);
+      await createDocument(childDoc);
+
+      const addJob = await reactor.execute("parent-update-1", "main", [
+        addRelationshipAction("parent-update-1", "child-update-1", "child", {
+          revision: 1,
+        }),
+      ]);
+      await waitForJobCompletion(addJob.id);
+
+      const initial = await waitForOutgoingCount("parent-update-1", 1);
+      expect(initial[0].metadata).toEqual({ revision: 1 });
+      const originalCreatedAt = initial[0].createdAt;
+      const originalUpdatedAt = initial[0].updatedAt;
+
+      const updateJob = await reactor.execute("parent-update-1", "main", [
+        updateRelationshipAction(
+          "parent-update-1",
+          "child-update-1",
+          "child",
+          { revision: 2, note: "updated" },
+        ),
+      ]);
+      await waitForJobCompletion(updateJob.id);
+
+      await vi.waitUntil(
+        async () => {
+          const results = await documentIndexer.getOutgoing("parent-update-1", [
+            "child",
+          ]);
+          const row = results.results[0];
+          return (
+            row !== undefined &&
+            (row.metadata as { revision?: number } | undefined)?.revision === 2
+          );
+        },
+        { timeout: 5000 },
+      );
+
+      const after = await documentIndexer.getOutgoing("parent-update-1", [
+        "child",
+      ]);
+      expect(after.results).toHaveLength(1);
+      const row = after.results[0];
+      expect(row.metadata).toEqual({ revision: 2, note: "updated" });
+      expect(row.createdAt.getTime()).toBe(
+        new Date(originalCreatedAt).getTime(),
+      );
+      expect(row.updatedAt.getTime()).toBeGreaterThanOrEqual(
+        new Date(originalUpdatedAt).getTime(),
+      );
+    });
+
+    it("replaces metadata with null when the update payload is null", async () => {
+      const parentDoc = createDocModelDocument({ id: "parent-update-2" });
+      const childDoc = createDocModelDocument({ id: "child-update-2" });
+      await createDocument(parentDoc);
+      await createDocument(childDoc);
+
+      const addJob = await reactor.execute("parent-update-2", "main", [
+        addRelationshipAction("parent-update-2", "child-update-2", "child", {
+          parentFolderId: "folder-A",
+        }),
+      ]);
+      await waitForJobCompletion(addJob.id);
+      await waitForOutgoingCount("parent-update-2", 1);
+
+      const updateJob = await reactor.execute("parent-update-2", "main", [
+        updateRelationshipAction(
+          "parent-update-2",
+          "child-update-2",
+          "child",
+          null,
+        ),
+      ]);
+      await waitForJobCompletion(updateJob.id);
+
+      await vi.waitUntil(
+        async () => {
+          const results = await documentIndexer.getOutgoing("parent-update-2", [
+            "child",
+          ]);
+          return results.results[0]?.metadata === undefined;
+        },
+        { timeout: 5000 },
+      );
+
+      const after = await documentIndexer.getOutgoing("parent-update-2", [
+        "child",
+      ]);
+      expect(after.results).toHaveLength(1);
+      expect(after.results[0].metadata).toBeUndefined();
     });
   });
 

@@ -11,6 +11,7 @@ import {
   type IWriteCache,
   type ReactorModule,
 } from "@powerhousedao/reactor";
+import type { Node } from "@powerhousedao/shared/document-drive";
 import type {
   DocumentModelModule,
   PHDocument,
@@ -20,6 +21,7 @@ import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ReactorDriveClient } from "../src/client/reactor-drive-client.js";
+import { migrateLegacyDriveState } from "../src/migration/migrate-legacy-state.js";
 import {
   NodeProcessor,
   type NodeProcessorDatabase,
@@ -315,6 +317,129 @@ describe("ReactorDriveClient Integration", () => {
 
       const originalStillExists = await driveClient.getNode(driveId, source.id);
       expect(originalStillExists.id).toBe(source.id);
+    });
+
+    it("copies a deep folder chain preserving parent linkages at every level", async () => {
+      const depth = 6;
+      const folders: { id: string; name: string }[] = [];
+      let parentId: string | undefined;
+      for (let i = 0; i < depth; i++) {
+        const name = `L${i}`;
+        const folder = await driveClient.addFolder(driveId, name, parentId);
+        folders.push({ id: folder.id, name });
+        parentId = folder.id;
+      }
+      const leaf = await makeChildDocument("Leaf File");
+      await driveClient.addFile(driveId, leaf, folders[depth - 1].id);
+
+      const target = await driveClient.addFolder(driveId, "Target");
+      await driveClient.copyNode(driveId, folders[0].id, target.id);
+
+      let currentParent = target.id;
+      let walkedDepth = 0;
+      for (let i = 0; i < depth; i++) {
+        const page = await driveClient.listNodes(driveId, currentParent);
+        expect(page.results).toHaveLength(1);
+        const node = page.results[0];
+        expect(node.kind).toBe("folder");
+        expect(node.name).toBe(`L${i}`);
+        expect(node.id).not.toBe(folders[i].id);
+        expect(node.parentFolder).toBe(currentParent);
+        currentParent = node.id;
+        walkedDepth += 1;
+      }
+      expect(walkedDepth).toBe(depth);
+
+      const copiedLeafPage = await driveClient.listNodes(driveId, currentParent);
+      expect(copiedLeafPage.results).toHaveLength(1);
+      const copiedLeaf = copiedLeafPage.results[0];
+      expect(copiedLeaf.kind).toBe("file");
+      expect(copiedLeaf.id).not.toBe(leaf.header.id);
+      expect(copiedLeaf.parentFolder).toBe(currentParent);
+    });
+  });
+
+  describe("migrateLegacyDriveState", () => {
+    it("projects documentType and parent linkages through the real reactor", async () => {
+      const folderRootId = "legacy-folder-root";
+      const folderChildId = "legacy-folder-child";
+      const filePinned = await makeChildDocument("Pinned File");
+      const filePinnedId = filePinned.header.id;
+      const fileBareId = "legacy-bare-file";
+
+      await reactorClient.create(filePinned);
+
+      const legacyNodes: Node[] = [
+        {
+          id: folderRootId,
+          kind: "folder",
+          name: "Legacy Root",
+          parentFolder: null,
+        },
+        {
+          id: folderChildId,
+          kind: "folder",
+          name: "Legacy Child",
+          parentFolder: folderRootId,
+        },
+        {
+          id: filePinnedId,
+          kind: "file",
+          name: "Pinned File",
+          documentType: filePinned.header.documentType,
+          parentFolder: folderChildId,
+        },
+        {
+          id: fileBareId,
+          kind: "file",
+          name: "Bare File",
+          documentType: "powerhouse/budget",
+          parentFolder: folderRootId,
+        },
+      ];
+
+      const result = await migrateLegacyDriveState({
+        reactor: reactorClient,
+        readModel: new DriveNodeView(
+          schemaDb as unknown as Kysely<ReactorDriveDatabase>,
+        ),
+        driveId,
+        nodes: legacyNodes,
+      });
+
+      expect(result.emittedActions).toBe(legacyNodes.length);
+      expect(result.skippedExisting).toBe(0);
+
+      const projectedRoot = await driveClient.getNode(driveId, folderRootId);
+      expect(projectedRoot.kind).toBe("folder");
+      expect(projectedRoot.parentFolder).toBeNull();
+
+      const projectedChild = await driveClient.getNode(driveId, folderChildId);
+      expect(projectedChild.kind).toBe("folder");
+      expect(projectedChild.parentFolder).toBe(folderRootId);
+
+      const projectedPinned = await driveClient.getNode(driveId, filePinnedId);
+      expect(projectedPinned.kind).toBe("file");
+      const pinnedFile = projectedPinned as { documentType: string; parentFolder: string | null };
+      expect(pinnedFile.documentType).toBe(filePinned.header.documentType);
+      expect(pinnedFile.parentFolder).toBe(folderChildId);
+
+      const projectedBare = await driveClient.getNode(driveId, fileBareId);
+      expect(projectedBare.kind).toBe("file");
+      const bareFile = projectedBare as { documentType: string; parentFolder: string | null };
+      expect(bareFile.documentType).toBe("powerhouse/budget");
+      expect(bareFile.parentFolder).toBe(folderRootId);
+
+      const reRun = await migrateLegacyDriveState({
+        reactor: reactorClient,
+        readModel: new DriveNodeView(
+          schemaDb as unknown as Kysely<ReactorDriveDatabase>,
+        ),
+        driveId,
+        nodes: legacyNodes,
+      });
+      expect(reRun.emittedActions).toBe(0);
+      expect(reRun.skippedExisting).toBe(legacyNodes.length);
     });
   });
 });
