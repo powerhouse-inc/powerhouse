@@ -71,7 +71,8 @@ RUN ph connect build --base ${PH_CONNECT_BASE_PATH}
 # -----------------------------------------------------------------------------
 # Connect final stage - nginx
 # -----------------------------------------------------------------------------
-FROM nginx:alpine AS connect
+# Pinned for CVE-2026-42945 — see docker/Dockerfile for full context.
+FROM nginx:1.31.0-alpine AS connect
 
 # Install envsubst for config templating
 RUN apk add --no-cache gettext
