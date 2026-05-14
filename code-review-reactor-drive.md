@@ -12,20 +12,6 @@ The shape and test coverage are good. The bulk of the surface is exercised by un
 
 ## Findings (highest severity = highest number)
 
-### 12. `copyNode` is O(n) `reactor.execute` round-trips
-
-`packages/reactor-drive/src/client/reactor-drive-client.ts:362-406` iterates the entire subtree and issues a separate `reactor.execute` per folder and a separate `reactor.create + execute` per file. A folder with 100 descendants becomes ~200 sequential awaits. The queue serializes per-document, so this is fine for correctness, but it's slow and produces N log entries' worth of intermediate states that other observers see.
-
-Recommendation: build the full `Action[]` for all folders, fire them in one `execute`, then fan out the file copies (which inherently need per-document `create` calls but can still batch their `ADD_RELATIONSHIP` actions into a single drive-side `execute`).
-
-### 11. `DriveNodeView.getDescendants` walks the tree in JS — N queries per traversal
-
-`packages/reactor-drive/src/read-model/drive-node-view.ts:80-119` does a level-by-level BFS, issuing one `SELECT … WHERE parentFolder IN (…)` per depth level. For a deep tree this is N round-trips. The bench file targets `listChildren`, not `getDescendants`, so the cost is hidden.
-
-`getDescendants` is hot: `ReactorDriveClient.removeNode` and `copyNode` both call it on every operation. For correctness it's fine; for performance, a single recursive CTE is dramatically faster on Postgres and well-supported by PGlite.
-
-Recommendation: rewrite as `WITH RECURSIVE … SELECT * FROM DriveNode WHERE driveId = ? AND id IN (cte) …`. Keep the JS fallback if you must support a backend that doesn't support recursive CTEs.
-
 ### 10. `migrateLegacyDriveState` "safe to re-run" claim is true only after the projection catches up
 
 `packages/reactor-drive/src/migration/migrate-legacy-state.ts:30-39` says re-running is safe because existing rows are skipped. The skip predicate (`readModel.getNode`, line 51) reads the `DriveNode` projection — which is only populated by NodeProcessor after operations are applied. If a caller invokes `migrateLegacyDriveState` twice before NodeProcessor commits the first batch, the second run sees an empty projection and re-emits every `ADD_FOLDER` / `ADD_RELATIONSHIP` action. The projection's own idempotency in `handleAddFolder` / `handleAddFileRelationship` (`node-processor.ts:266-302`) absorbs the duplicate as an upsert, but the operation log now has duplicate entries — and `KyselyDocumentIndexer.handleAddRelationship` skips dup edges via its own pre-check (`document-indexer.ts:585-606`) so the indexer is fine, but the log is permanently bloated.

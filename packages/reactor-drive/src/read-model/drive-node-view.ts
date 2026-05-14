@@ -81,41 +81,57 @@ export class DriveNodeView implements IDriveReadModel {
     driveId: string,
     root: string,
   ): Promise<ReactorDriveNode[]> {
-    const visited = new Set<string>();
-    let frontier: string[] = [root];
-    const result: ReactorDriveNode[] = [];
-
-    const rootRow = await this.db
-      .selectFrom("DriveNode")
-      .selectAll()
-      .where("driveId", "=", driveId)
-      .where("id", "=", root)
-      .executeTakeFirst();
-    if (rootRow) {
-      result.push(rowToNode(rootRow));
-      visited.add(root);
-    }
-
-    while (frontier.length > 0) {
-      const rows = await this.db
-        .selectFrom("DriveNode")
-        .selectAll()
-        .where("driveId", "=", driveId)
-        .where("parentFolder", "in", frontier)
-        .execute();
-
-      const next: string[] = [];
-      for (const row of rows) {
-        if (!visited.has(row.id)) {
-          visited.add(row.id);
-          result.push(rowToNode(row));
-          if (row.kind === "folder") next.push(row.id);
-        }
-      }
-      frontier = next;
-    }
-
-    return result;
+    const rows = await this.db
+      .withRecursive("descendants", (qb) =>
+        qb
+          .selectFrom("DriveNode")
+          .select([
+            "driveId",
+            "id",
+            "kind",
+            "name",
+            "requestedName",
+            "parentFolder",
+            "documentType",
+            "createdAt",
+          ])
+          .where("driveId", "=", driveId)
+          .where("id", "=", root)
+          .unionAll(
+            qb
+              .selectFrom("DriveNode")
+              .innerJoin(
+                "descendants",
+                "DriveNode.parentFolder",
+                "descendants.id",
+              )
+              .where("DriveNode.driveId", "=", driveId)
+              .select([
+                "DriveNode.driveId",
+                "DriveNode.id",
+                "DriveNode.kind",
+                "DriveNode.name",
+                "DriveNode.requestedName",
+                "DriveNode.parentFolder",
+                "DriveNode.documentType",
+                "DriveNode.createdAt",
+              ]),
+          ),
+      )
+      .selectFrom("descendants")
+      .select([
+        "driveId",
+        "id",
+        "kind",
+        "name",
+        "requestedName",
+        "parentFolder",
+        "documentType",
+      ])
+      .orderBy("createdAt", "asc")
+      .orderBy("id", "asc")
+      .execute();
+    return rows.map(rowToNode);
   }
 }
 
