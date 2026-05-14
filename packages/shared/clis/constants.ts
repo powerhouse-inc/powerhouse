@@ -186,7 +186,7 @@ export const externalDevDependencies = {
   "@electric-sql/pglite": "0.3.15",
   "@electric-sql/pglite-tools": "0.2.20",
   "@eslint/js": "^9.38.0",
-  "@powerhousedao/document-engineering": "1.40.3",
+  "@powerhousedao/document-engineering": "1.40.5",
   "@tailwindcss/cli": "^4.1.18",
   "@tailwindcss/vite": "^4.1.18",
   "@types/node": "^24.9.2",
