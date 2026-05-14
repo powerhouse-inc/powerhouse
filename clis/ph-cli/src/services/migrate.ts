@@ -1,4 +1,7 @@
-import { fetchPackageVersionFromNpmRegistry } from "@powerhousedao/shared/clis";
+import {
+  fetchPackageVersionFromNpmRegistry,
+  injectPnpmAllowBuilds,
+} from "@powerhousedao/shared/clis";
 import { execSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -122,6 +125,8 @@ export async function startMigrate({
       `Failed to resolve execute command for package manager "${agent}".`,
     );
   }
+
+  injectPnpmAllowBuilds(agent, resolved);
 
   const command = `${resolved.command} ${resolved.args.join(" ")}`;
   if (debug) {
