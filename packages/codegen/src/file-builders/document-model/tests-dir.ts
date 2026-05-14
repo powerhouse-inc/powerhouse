@@ -160,7 +160,7 @@ export async function makeOperationModuleTestFile(
   describeCallBody.addStatements(testCasesToAdd);
 
   const GENERATE_MOCK_NAME = "generateMock";
-  const GENERATE_MOCK_MODULE_SPECIFIER = "@powerhousedao/codegen";
+  const GENERATE_MOCK_MODULE_SPECIFIER = "document-model";
 
   const generateMockImport = sourceFile.getImportDeclaration((i) =>
     i.getNamedImports().some((v) => v.getText().includes(GENERATE_MOCK_NAME)),
