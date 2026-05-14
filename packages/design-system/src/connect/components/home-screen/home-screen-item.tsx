@@ -17,7 +17,7 @@ export const HomeScreenItem = function HomeScreenItem(
   return (
     <div
       className={twMerge(
-        "hover-bg-transparent relative flex h-24 w-40 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-md p-2 text-center text-sm text-black dark:text-slate-50",
+        "hover-bg-transparent relative flex h-24 w-40 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-md p-2 text-center text-sm text-black",
         containerClassName,
         onClick && "cursor-pointer",
       )}
@@ -37,7 +37,7 @@ export const HomeScreenItem = function HomeScreenItem(
           {title}
         </h3>
         {description && (
-          <p className="text-gray-500 dark:text-slate-100">{description}</p>
+          <p className="text-gray-500">{description}</p>
         )}
       </div>
       {shareable && (
