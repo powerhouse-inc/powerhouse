@@ -1,7 +1,9 @@
 {
   "extends": "./tsconfig.options.json",
   "compilerOptions": {
-    "types": ["node"]
+    "types": [
+      "node"
+    ]
   },
   "references": [
     {
@@ -36,6 +38,9 @@
     },
     {
       "path": "test/lb-loadtest"
+    },
+    {
+      "path": "test/package-e2e"
     },
     {
       "path": "test/switchboard"
