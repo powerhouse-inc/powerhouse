@@ -425,7 +425,7 @@ const tailwindRules = {
   "better-tailwindcss/no-unknown-classes": [
     "error",
     {
-      ignore: ["custom-class", "hover-bg-transparent"],
+      ignore: ["custom-class", "hover-bg-transparent", "skeleton-loader"],
     },
   ],
 };
@@ -443,33 +443,39 @@ const tailwindConfig = [
       },
     },
   },
-  // {
-  //   files: ["apps/connect/**/*.{js,jsx,cjs,mjs,ts,tsx}"],
-  //   ...betterTailwindcss.configs["recommended-error"],
-  //   settings: {
-  //     "better-tailwindcss": {
-  //       cwd: "./apps/connect",
-  //     },
-  //   },
-  // },
-  // {
-  //   files: ["packages/powerhouse-vetra-packages/**/*.{js,jsx,cjs,mjs,ts,tsx}"],
-  //   ...betterTailwindcss.configs["recommended-error"],
-  //   settings: {
-  //     "better-tailwindcss": {
-  //       cwd: "./packages/powerhouse-vetra-packages",
-  //     },
-  //   },
-  // },
-  // {
-  //   files: ["packages/vetra/**/*.{js,jsx,cjs,mjs,ts,tsx}"],
-  //   ...betterTailwindcss.configs["recommended-error"],
-  //   settings: {
-  //     "better-tailwindcss": {
-  //       cwd: "./packages/vetra",
-  //     },
-  //   },
-  // },
+  {
+    files: ["apps/connect/**/*.{js,jsx,cjs,mjs,ts,tsx}"],
+    ...betterTailwindcss.configs["recommended-error"],
+    rules: tailwindRules,
+    settings: {
+      "better-tailwindcss": {
+        cwd: "./apps/connect",
+        entryPoint: "style.css",
+      },
+    },
+  },
+  {
+    files: ["packages/powerhouse-vetra-packages/**/*.{js,jsx,cjs,mjs,ts,tsx}"],
+    ...betterTailwindcss.configs["recommended-error"],
+    rules: tailwindRules,
+    settings: {
+      "better-tailwindcss": {
+        cwd: "./packages/powerhouse-vetra-packages",
+        entryPoint: "style.css",
+      },
+    },
+  },
+  {
+    files: ["packages/vetra/**/*.{js,jsx,cjs,mjs,ts,tsx}"],
+    ...betterTailwindcss.configs["recommended-error"],
+    rules: tailwindRules,
+    settings: {
+      "better-tailwindcss": {
+        cwd: "./packages/vetra",
+        entryPoint: "style.css",
+      },
+    },
+  },
 ];
 
 /** Main config */

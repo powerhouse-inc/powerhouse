@@ -119,7 +119,7 @@ function MissingModelDetailsModal(props: DetailsProps) {
                     </div>
                   ) : null}
                   {entry.error ? (
-                    <div className="mb-2 break-words font-mono text-xs text-red-700">
+                    <div className="mb-2 font-mono text-xs wrap-break-word text-red-700">
                       {entry.error.message}
                     </div>
                   ) : null}

@@ -42,14 +42,14 @@ export const ShareMenuItem: React.FC<ShareMenuItemProps> = ({ label, url }) => {
             className="w-[300px] truncate rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-800 underline outline-none"
           />
           {showTooltip && (
-            <div className="absolute left-0 top-full z-20 mt-1 max-w-md break-all rounded-lg bg-gray-800 px-3 py-2 text-xs text-white shadow-lg">
+            <div className="absolute top-full left-0 z-20 mt-1 max-w-md rounded-lg bg-gray-800 px-3 py-2 text-xs break-all text-white shadow-lg">
               {url}
             </div>
           )}
         </div>
         <button
           aria-label="Copy URL"
-          className="rounded p-1 transition-colors hover:bg-gray-100"
+          className="rounded-sm p-1 transition-colors hover:bg-gray-100"
           onClick={handleCopy}
         >
           <CopyIcon width={16} height={16} fill="#9CA3AF" />

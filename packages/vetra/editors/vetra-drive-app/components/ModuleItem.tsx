@@ -76,7 +76,7 @@ export const ModuleItem: React.FC<ModuleItemProps> = ({
         className,
       )}
     >
-      <div className="flex-shrink-0">
+      <div className="shrink-0">
         <IconComponent />
       </div>
       <div className="min-w-0 flex-1">

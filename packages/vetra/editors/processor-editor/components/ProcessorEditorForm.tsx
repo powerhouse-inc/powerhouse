@@ -128,7 +128,7 @@ export const ProcessorEditorForm: React.FC<ProcessorEditorFormProps> = ({
           value={processorName}
           onChange={(e) => setProcessorName(e.target.value)}
           disabled={isReadOnly}
-          className={`w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+          className={`w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none ${
             isReadOnly ? "cursor-not-allowed bg-gray-100" : ""
           }`}
           placeholder="Enter processor name"
@@ -148,7 +148,7 @@ export const ProcessorEditorForm: React.FC<ProcessorEditorFormProps> = ({
           value={processorType}
           onChange={(e) => setProcessorType(e.target.value)}
           disabled={isReadOnly}
-          className={`w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+          className={`w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none ${
             isReadOnly ? "cursor-not-allowed bg-gray-100" : ""
           }`}
         >
@@ -187,7 +187,7 @@ export const ProcessorEditorForm: React.FC<ProcessorEditorFormProps> = ({
                 }
                 setSelectedDocumentType("");
               }}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none"
             >
               <option value="">Select a document type to add</option>
               {availableDocumentTypes
@@ -277,7 +277,7 @@ export const ProcessorEditorForm: React.FC<ProcessorEditorFormProps> = ({
           <button
             onClick={handleConfirm}
             disabled={!canConfirm}
-            className="rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-gray-300"
+            className="rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-300"
           >
             Confirm
           </button>

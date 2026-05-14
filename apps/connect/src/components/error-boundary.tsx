@@ -102,10 +102,10 @@ function DetailedFallback({ error, resetErrorBoundary }: FallbackProps) {
         <p className="mb-4 text-sm text-gray-700">{errorMessage}</p>
         {hasDetails && (
           <details className="group">
-            <summary className="cursor-pointer select-none text-sm font-medium text-gray-700 underline hover:text-gray-700">
+            <summary className="cursor-pointer text-sm font-medium text-gray-700 underline select-none hover:text-gray-700">
               Show details
             </summary>
-            <pre className="mt-2 max-h-48 overflow-auto rounded bg-gray-100 p-3 text-xs">
+            <pre className="mt-2 max-h-48 overflow-auto rounded-sm bg-gray-100 p-3 text-xs">
               {errorDetails}
             </pre>
           </details>
@@ -113,7 +113,7 @@ function DetailedFallback({ error, resetErrorBoundary }: FallbackProps) {
         <PowerhouseButton
           type="button"
           onClick={resetErrorBoundary}
-          className="text-md mt-4 px-3 py-1.5 font-medium"
+          className="mt-4 px-3 py-1.5 text-base font-medium"
         >
           Try again
         </PowerhouseButton>
