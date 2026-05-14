@@ -3,6 +3,7 @@
 // in REACTOR_TEST_PG_* (defaults to localhost:5433 via `pnpm --filter
 // @powerhousedao/reactor docker:up`) and outbound access to PH_REGISTRY_URL.
 import { type ISyncManager, type ReactorModule } from "@powerhousedao/reactor";
+import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import { ConsoleLogger } from "document-model";
 import { existsSync, readFileSync } from "node:fs";
 import { register } from "node:module";
@@ -50,6 +51,8 @@ const TEST_TIMEOUT_MS = 300_000;
 const REGISTRY_URL =
   process.env.PH_REGISTRY_URL ?? "https://registry.dev.vetra.io/";
 
+const PINNED_KNOWLEDGE_NOTE_SPEC = "@powerhousedao/knowledge-note@1.0.32";
+
 const fixtureAvailable = existsSync(FIXTURE_DUMP_PATH);
 const describeIfFixture = fixtureAvailable ? describe : describe.skip;
 
@@ -70,11 +73,19 @@ describeIfFixture("hub-spoke catch-up", () => {
   let hubKysely: Kysely<unknown> | undefined;
   let hubPool: Pool | undefined;
   let httpLoader: HttpPackageLoader;
+  let pinnedModules: DocumentModelModule[] = [];
   const realFetch = globalThis.fetch.bind(globalThis);
 
   beforeAll(async () => {
     register(httpsHooksPath, import.meta.url);
     httpLoader = new HttpPackageLoader({ registryUrl: REGISTRY_URL });
+
+    pinnedModules = await httpLoader.loadDocumentModels(
+      PINNED_KNOWLEDGE_NOTE_SPEC,
+    );
+    logger.info(
+      `pinned ${pinnedModules.length} document model(s) from ${PINNED_KNOWLEDGE_NOTE_SPEC}`,
+    );
 
     await requireDockerComposePostgres(config);
 
@@ -102,6 +113,7 @@ describeIfFixture("hub-spoke catch-up", () => {
       logger,
       handle.kysely,
       httpLoader.documentModelLoader,
+      pinnedModules,
     );
   }, TEST_TIMEOUT_MS);
 
@@ -153,7 +165,11 @@ describeIfFixture("hub-spoke catch-up", () => {
         const spokes: ReactorModule[] = [];
         for (let i = 0; i < spokeCount; i++) {
           spokes.push(
-            await buildSpokeModule(logger, httpLoader.documentModelLoader),
+            await buildSpokeModule(
+              logger,
+              httpLoader.documentModelLoader,
+              pinnedModules,
+            ),
           );
         }
 
