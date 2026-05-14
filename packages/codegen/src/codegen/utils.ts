@@ -6,6 +6,12 @@ import { documentModelReducer } from "@powerhousedao/shared/document-model";
 import { baseLoadFromFile } from "document-model/node";
 import { readFile } from "node:fs/promises";
 
+export function sortByKey<T extends Record<string, unknown>>(value: T): T {
+  return Object.fromEntries(
+    Object.entries(value).sort(([a], [b]) => a.localeCompare(b)),
+  ) as T;
+}
+
 export async function loadDocumentModel(
   path: string,
 ): Promise<DocumentModelGlobalState> {

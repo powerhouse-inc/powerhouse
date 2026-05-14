@@ -6,6 +6,7 @@ import { readdirSync, readFileSync, statSync } from "fs";
 import { join } from "path";
 import { type PackageJson, readPackage } from "read-pkg";
 import { writePackage } from "write-package";
+import { sortByKey } from "./utils.js";
 
 export type Feature = keyof typeof FEATURE_DEPENDENCIES;
 
@@ -35,12 +36,6 @@ export function detectFeatures(projectDir: string): Feature[] {
     features.push("analyticsProcessor");
   }
   return features;
-}
-
-function sortByKey<T extends Record<string, unknown>>(value: T): T {
-  return Object.fromEntries(
-    Object.entries(value).sort(([a], [b]) => a.localeCompare(b)),
-  ) as T;
 }
 
 // Idempotently adds the peer + dev deps required by `features` to the
