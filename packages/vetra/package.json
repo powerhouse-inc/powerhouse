@@ -90,9 +90,5 @@
     "vite": "catalog:",
     "vitest": "catalog:"
   },
-  "optionalDependencies": {
-    "@powerhousedao/connect": "workspace:*",
-    "@powerhousedao/ph-cli": "workspace:*"
-  },
   "description": ""
 }
