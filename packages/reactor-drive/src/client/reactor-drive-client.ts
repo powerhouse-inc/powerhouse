@@ -4,6 +4,7 @@ import {
   removeRelationshipAction,
   upgradeDocumentAction,
   type BatchExecutionRequest,
+  type ExecutionJobPlan,
   type IDriveClient,
   type IReactorClient,
   type PagedResults,
@@ -409,6 +410,10 @@ export class ReactorDriveClient implements IDriveClient {
       idMap.set(node.id, generateId());
     }
 
+    const jobs: ExecutionJobPlan[] = [];
+    const driveActions: Action[] = [];
+    const fileCreateKeys: string[] = [];
+
     for (const node of subtree) {
       const newId = idMap.get(node.id)!;
       const newParent =
@@ -417,41 +422,101 @@ export class ReactorDriveClient implements IDriveClient {
           : (idMap.get(node.parentFolder ?? "") ?? null);
 
       if (node.kind === "folder") {
-        await this.reactor.execute(
-          driveIdentifier,
-          "main",
-          [
-            addFolderAction({
-              folderId: newId,
-              parentFolderId: newParent,
-              name: node.name,
-            }),
-          ],
-          signal,
+        driveActions.push(
+          addFolderAction({
+            folderId: newId,
+            parentFolderId: newParent,
+            name: node.name,
+          }),
         );
-      } else {
-        const srcDoc = await this.reactor.get<PHDocument>(
-          node.id,
-          undefined,
-          signal,
-        );
-        const documentModelModule = await this.reactor.getDocumentModelModule(
-          srcDoc.header.documentType,
-        );
-        const duplicated = replayDocument(
-          srcDoc.initialState,
-          srcDoc.operations,
-          documentModelModule.reducer,
-          createPresignedHeader(newId, srcDoc.header.documentType),
-        );
-        duplicated.header.name = node.name;
-        await this.addFile(
-          driveIdentifier,
-          duplicated,
-          newParent ?? undefined,
-          signal,
-        );
+        continue;
       }
+
+      const srcDoc = await this.reactor.get<PHDocument>(
+        node.id,
+        undefined,
+        signal,
+      );
+      const documentModelModule = await this.reactor.getDocumentModelModule(
+        srcDoc.header.documentType,
+      );
+      const duplicated = replayDocument(
+        srcDoc.initialState,
+        srcDoc.operations,
+        documentModelModule.reducer,
+        createPresignedHeader(newId, srcDoc.header.documentType),
+      );
+      duplicated.header.name = node.name;
+
+      const createInput: CreateDocumentActionInput = {
+        model: duplicated.header.documentType,
+        version: 0,
+        documentId: newId,
+        signing: {
+          signature: newId,
+          publicKey: duplicated.header.sig.publicKey,
+          nonce: duplicated.header.sig.nonce,
+          createdAtUtcIso: duplicated.header.createdAtUtcIso,
+          documentType: duplicated.header.documentType,
+        },
+        slug: duplicated.header.slug,
+        name: duplicated.header.name,
+        branch: duplicated.header.branch,
+        meta: duplicated.header.meta,
+        protocolVersions: duplicated.header.protocolVersions ?? {
+          "base-reducer": 2,
+        },
+      };
+
+      const createKey = `create:${newId}`;
+      jobs.push({
+        key: createKey,
+        documentId: newId,
+        scope: "document",
+        branch: "main",
+        actions: [
+          createDocumentAction(createInput),
+          upgradeDocumentAction({
+            documentId: newId,
+            model: duplicated.header.documentType,
+            fromVersion: 0,
+            toVersion: duplicated.state.document.version,
+            initialState: duplicated.state,
+          }),
+        ],
+        dependsOn: [],
+      });
+      fileCreateKeys.push(createKey);
+
+      const metadata: DriveChildFileMetadata = {
+        kind: "file",
+        parentFolderId: newParent,
+        documentType: duplicated.header.documentType,
+      };
+      driveActions.push(
+        addRelationshipAction(
+          driveIdentifier,
+          newId,
+          DRIVE_CHILD_RELATIONSHIP_TYPE,
+          metadata,
+        ),
+      );
+    }
+
+    if (driveActions.length > 0) {
+      jobs.push({
+        key: "drive",
+        documentId: driveIdentifier,
+        scope: "document",
+        branch: "main",
+        actions: driveActions,
+        dependsOn: fileCreateKeys,
+      });
+    }
+
+    if (jobs.length > 0) {
+      const request: BatchExecutionRequest = { jobs };
+      await this.reactor.executeBatch(request, signal);
     }
 
     const drive = await this.reactor.get<PHDocument>(
