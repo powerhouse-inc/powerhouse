@@ -24,7 +24,7 @@ export const CharacterCounter: React.FC<CharacterCounterProps> = ({
     remaining < 90 ? "normal" : remaining <= 100 ? "warning" : "error";
 
   return (
-    <div className="flex items-center text-xs leading-3">
+    <div className="flex items-center text-xs/3">
       <span className={counterVariants[state]}>{value.length}</span>
       <span className={maxLengthVariants[state]}>/{maxLength}</span>
     </div>

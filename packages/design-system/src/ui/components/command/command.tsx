@@ -9,7 +9,7 @@ const Command = React.forwardRef<
   <CommandPrimitive
     ref={ref}
     className={cn(
-      "**:[[cmdk-label]]:hidden flex size-full flex-col rounded-md",
+      "flex size-full flex-col rounded-md **:[[cmdk-label]]:hidden",
       className,
     )}
     {...props}
@@ -39,7 +39,7 @@ const CommandInput = React.forwardRef<
       name="Search"
       size={16}
       className={cn(
-        "pointer-events-none absolute left-2 top-3.5 text-gray-500 dark:text-gray-700",
+        "pointer-events-none absolute top-3.5 left-2 text-gray-500 dark:text-gray-700",
         "group-hover:text-gray-700 dark:group-hover:text-gray-500",
         "group-focus-within:text-gray-900! dark:group-focus-within:text-gray-50!",
       )}
@@ -47,7 +47,7 @@ const CommandInput = React.forwardRef<
     <CommandPrimitive.Input
       ref={ref}
       className={cn(
-        "flex w-full bg-transparent pb-2 pl-8 pr-3 pt-3 text-sm font-normal leading-5 outline-none",
+        "flex w-full bg-transparent pt-3 pr-3 pb-2 pl-8 text-sm/5 font-normal outline-none",
         "placeholder:text-gray-500 dark:placeholder:text-gray-700",
         "group-hover:placeholder:text-gray-700 dark:group-hover:placeholder:text-gray-500",
         "group-focus-within:placeholder:text-gray-700! dark:group-focus-within:placeholder:text-gray-300!",
@@ -67,9 +67,9 @@ const CommandList = React.forwardRef<
   <CommandPrimitive.List
     ref={ref}
     className={cn(
-      "max-h-[300px] overflow-y-auto overflow-x-hidden",
+      "max-h-75 overflow-x-hidden overflow-y-auto",
       "focus:outline-none",
-      "scrollbar-thin scrollbar-gutter-stable",
+      "scrollbar-thin",
       "scrollbar-track-transparent",
       "scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-300",
       "dark:scrollbar-thumb-charcoal-700 dark:hover:scrollbar-thumb-charcoal-700",
@@ -101,7 +101,7 @@ const CommandGroup = React.forwardRef<
     ref={ref}
     className={cn(
       "overflow-hidden px-0.5 py-1",
-      "[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium",
+      "**:[[cmdk-group-heading]]:px-2 **:[[cmdk-group-heading]]:py-1.5 **:[[cmdk-group-heading]]:text-xs **:[[cmdk-group-heading]]:font-medium",
       className,
     )}
     {...props}
@@ -116,9 +116,9 @@ const CommandItem = React.forwardRef<
   <CommandPrimitive.Item
     ref={ref}
     className={cn(
-      "relative flex select-none items-center justify-between",
-      "h-8 gap-2 rounded-md py-1.5 pl-1.5 pr-2.5",
-      "text-sm leading-4 outline-none",
+      "relative flex items-center justify-between select-none",
+      "h-8 gap-2 rounded-md py-1.5 pr-2.5 pl-1.5",
+      "text-sm/4 outline-none",
       "border-y-2 border-white dark:border-slate-600",
       "data-[disabled=true]:pointer-events-none",
       "[&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
@@ -136,6 +136,5 @@ export {
   CommandInput,
   CommandItem,
   CommandList,
-  CommandLoading
+  CommandLoading,
 };
-

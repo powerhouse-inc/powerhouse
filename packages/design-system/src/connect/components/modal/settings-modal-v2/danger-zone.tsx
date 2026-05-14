@@ -106,10 +106,10 @@ function Drive(props: ModifyDrivesProps & { drive: DocumentDriveDocument }) {
     >
       {icon}
       <div>
-        <span className="leading-4.5 block text-sm font-medium">
+        <span className="block text-sm/4.5 font-medium">
           {capitalCase(drive.header.name)}
         </span>
-        <div className="leading-4.5 flex items-baseline gap-x-2">
+        <div className="flex items-baseline gap-x-2 leading-4.5">
           <span className="text-sm text-gray-600">
             {capitalCase(getDriveSharingType(drive))} App
           </span>

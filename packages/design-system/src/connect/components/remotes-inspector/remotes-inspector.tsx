@@ -220,7 +220,7 @@ export function RemotesInspector({
           {addRemoteManual && (
             <div className="flex items-center gap-1">
               <input
-                className="w-[260px] rounded border border-gray-300 px-2 py-1.5 text-sm text-gray-900 placeholder:text-gray-400"
+                className="w-[260px] rounded-sm border border-gray-300 px-2 py-1.5 text-sm text-gray-900 placeholder:text-gray-400"
                 disabled={adding}
                 onChange={(e) => setManualUrl(e.target.value)}
                 onKeyDown={(e) => {
@@ -231,7 +231,7 @@ export function RemotesInspector({
                 value={manualUrl}
               />
               <button
-                className="flex items-center gap-1 rounded border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+                className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50"
                 disabled={adding || !manualUrl.trim()}
                 onClick={() => void handleAddManual()}
                 title="Register a remote drive in manual poll mode (no background polling)"
@@ -242,7 +242,7 @@ export function RemotesInspector({
             </div>
           )}
           <button
-            className="flex items-center gap-1 rounded border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+            className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50"
             disabled={loading}
             onClick={() => void handleRefresh()}
             type="button"
@@ -253,7 +253,7 @@ export function RemotesInspector({
         </div>
       </div>
       {addError && (
-        <div className="shrink-0 rounded border border-red-300 bg-red-50 px-3 py-1.5 text-xs text-red-700">
+        <div className="shrink-0 rounded-sm border border-red-300 bg-red-50 px-3 py-1.5 text-xs text-red-700">
           {addError}
         </div>
       )}
@@ -358,7 +358,7 @@ export function RemotesInspector({
                   </td>
                   <td className="border-l border-gray-300 px-3 py-2">
                     <button
-                      className="flex items-center gap-1 rounded bg-blue-50 px-2 py-1 text-xs text-blue-700 hover:bg-blue-100"
+                      className="flex items-center gap-1 rounded-sm bg-blue-50 px-2 py-1 text-xs text-blue-700 hover:bg-blue-100"
                       onClick={() => handleViewChannel(remote)}
                       type="button"
                     >
@@ -371,7 +371,7 @@ export function RemotesInspector({
                       <div className="flex items-center gap-1">
                         {triggerPull && (
                           <button
-                            className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-700 hover:bg-gray-200"
+                            className="rounded-sm bg-gray-100 px-2 py-1 text-xs text-gray-700 hover:bg-gray-200"
                             onClick={() => handlePull(remote)}
                             title="Trigger a single pull cycle for this remote"
                             type="button"
@@ -381,7 +381,7 @@ export function RemotesInspector({
                         )}
                         {removeRemote && (
                           <button
-                            className="rounded bg-red-50 px-2 py-1 text-xs text-red-700 hover:bg-red-100"
+                            className="rounded-sm bg-red-50 px-2 py-1 text-xs text-red-700 hover:bg-red-100"
                             onClick={() => void handleRemove(remote)}
                             type="button"
                           >

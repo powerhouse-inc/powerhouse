@@ -25,7 +25,7 @@ export const FormLabel: React.FC<FormLabelProps> = ({
     "inline-flex items-center text-sm font-medium",
     inline ? "leading-[22px]" : "leading-4",
     `text-gray-900 ${inline ? "dark:text-gray-400" : "dark:text-gray-50"}`,
-    hasError && "group-hover:!text-red-900 dark:group-hover:!text-red-900",
+    hasError && "group-hover:text-red-900! dark:group-hover:text-red-900!",
     hasError && inline && "text-red-800 dark:text-red-800",
     hasError && !inline && "text-red-900 dark:text-red-900",
     disabled &&
@@ -55,7 +55,7 @@ export const FormLabel: React.FC<FormLabelProps> = ({
           className={cn(
             "ml-1 text-gray-800 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-slate-50",
             hasError &&
-              `${inline ? "!text-red-800" : "!text-red-900"} group-hover:!text-red-900`,
+              `${inline ? "text-red-800!" : "text-red-900!"} group-hover:text-red-900!`,
           )}
         >
           *

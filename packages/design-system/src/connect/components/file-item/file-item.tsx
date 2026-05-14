@@ -120,8 +120,8 @@ export function FileItem(props: Props) {
         draggable={false}
       />
       {isReadMode && syncStatus && (
-        <div className="absolute bottom-[-2px] right-0 size-3 rounded-full bg-white">
-          <div className="absolute left-[-2px] top-[-2px]">
+        <div className="absolute right-0 bottom-[-2px] size-3 rounded-full bg-white">
+          <div className="absolute top-[-2px] left-[-2px]">
             <SyncStatusIcon
               overrideSyncIcons={{ SUCCESS: "CheckCircleFill" }}
               syncStatus={syncStatus}
@@ -133,7 +133,7 @@ export function FileItem(props: Props) {
   );
 
   const containerStyles = twMerge(
-    "group flex h-12 cursor-pointer select-none items-center rounded-lg bg-gray-200 px-2 text-gray-600 hover:text-gray-800",
+    "group flex h-12 cursor-pointer items-center rounded-lg bg-gray-200 px-2 text-gray-600 select-none hover:text-gray-800",
     isDragging ? "opacity-60" : "",
     className,
   );

@@ -5,6 +5,11 @@
 @import "./theme.css";
 @plugin "tailwind-scrollbar";
 
+@plugin 'tailwind-scrollbar' {
+    nocompatible: true;
+    preferredStrategy: 'pseudoelements';
+}
+
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {

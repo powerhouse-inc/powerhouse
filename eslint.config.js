@@ -418,10 +418,24 @@ const typescriptEsLintRecommendedConfig = [
   ...tseslint.configs.recommendedTypeChecked,
 ];
 
+/** @type {import("eslint").Linter.RulesRecord} */
+const tailwindRules = {
+  ...betterTailwindcss.configs["recommended-error"].rules,
+  "better-tailwindcss/enforce-consistent-line-wrapping": ["off"],
+  "better-tailwindcss/no-unknown-classes": [
+    "error",
+    {
+      ignore: ["custom-class", "hover-bg-transparent"],
+    },
+  ],
+};
+
 const tailwindConfig = [
   {
     files: ["packages/design-system/**/*.{js,jsx,cjs,mjs,ts,tsx}"],
+    ignores: ["packages/design-system/src/powerhouse/components/legacy/**"],
     ...betterTailwindcss.configs["recommended-error"],
+    rules: tailwindRules,
     settings: {
       "better-tailwindcss": {
         cwd: "./packages/design-system",

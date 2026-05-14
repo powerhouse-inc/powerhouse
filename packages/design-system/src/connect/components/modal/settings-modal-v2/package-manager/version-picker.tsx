@@ -87,7 +87,7 @@ export const VersionPicker: React.FC<VersionPickerProps> = (props) => {
         disabled={disabled || !hasAnyPickable}
         className={cn(
           "flex items-center justify-between gap-2 rounded-md border border-gray-300 bg-white px-2.5 py-1 text-xs font-medium text-gray-800 transition-colors",
-          "hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-900/20",
+          "hover:bg-gray-50 focus:ring-2 focus:ring-gray-900/20 focus:outline-none",
           "disabled:cursor-not-allowed disabled:opacity-60",
           className,
         )}
@@ -108,7 +108,7 @@ export const VersionPicker: React.FC<VersionPickerProps> = (props) => {
             <Icon
               name="Search"
               size={14}
-              className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400"
+              className="absolute top-1/2 left-2 -translate-y-1/2 text-gray-400"
             />
             <Input
               value={query}
@@ -126,7 +126,7 @@ export const VersionPicker: React.FC<VersionPickerProps> = (props) => {
           )}
           {filteredTags.length > 0 && (
             <div className="pb-1">
-              <p className="px-3 py-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
+              <p className="px-3 py-1 text-xs font-semibold tracking-wide text-gray-500 uppercase">
                 Tags
               </p>
               {filteredTags.map(([tag, ver]) => {
@@ -156,7 +156,7 @@ export const VersionPicker: React.FC<VersionPickerProps> = (props) => {
           )}
           {filteredVersions.length > 0 && (
             <div>
-              <p className="px-3 py-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
+              <p className="px-3 py-1 text-xs font-semibold tracking-wide text-gray-500 uppercase">
                 Versions
               </p>
               {filteredVersions.map((ver) => {

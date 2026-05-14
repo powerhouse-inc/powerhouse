@@ -7,9 +7,9 @@ import { forwardRef } from "react";
 const buttonVariants = cva(
   cn(
     "inline-flex items-center justify-center gap-2",
-    "whitespace-nowrap rounded-md text-sm font-medium",
+    "rounded-md text-sm font-medium whitespace-nowrap",
     "transition-colors",
-    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
+    "focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
     "disabled:pointer-events-none",
     "[&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   ),
@@ -17,9 +17,8 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default: "",
-        outline:
-          "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
+        outline: "border",
+        ghost: "",
       },
     },
     defaultVariants: {

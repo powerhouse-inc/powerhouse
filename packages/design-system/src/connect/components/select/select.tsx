@@ -141,7 +141,7 @@ function ItemContainer<TValue extends string>(
     >
       {icon}
       <div>
-        <p className="capitalize text-inherit">
+        <p className="text-inherit capitalize">
           {displayValue ?? value.toLowerCase()}
         </p>
         <p className="text-xs text-gray-600">{description}</p>

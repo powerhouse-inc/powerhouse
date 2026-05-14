@@ -145,7 +145,7 @@ const IdAutocompleteInputContainer = React.forwardRef<
         </ValueTransformer>
         <div
           className={cn(
-            "absolute right-3 top-1/2 flex size-4 -translate-y-1/2 items-center",
+            "absolute top-1/2 right-3 flex size-4 -translate-y-1/2 items-center",
             !isLoading &&
               !haveFetchError &&
               !selectedOption &&

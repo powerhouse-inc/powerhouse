@@ -63,8 +63,8 @@ export const Radio = React.forwardRef<
           <RadioGroupPrimitive.Indicator
             className={cn(
               "relative flex size-full items-center justify-center",
-              "after:absolute after:left-1/2 after:top-1/2 after:size-2.5",
-              "after:-translate-x-1/2 after:-translate-y-1/2",
+              "after:absolute after:top-1/2 after:left-1/2 after:size-2.5",
+              "after:-translate-1/2",
               "after:rounded-full after:bg-gray-800 after:content-['']",
               "dark:after:bg-gray-400",
               !disabled && [

@@ -43,7 +43,7 @@ export function DebugInspector({
           Postgres cluster at the chosen major version, then reload. Useful for
           testing version-detection and migration flows.
         </p>
-        <div className="mt-2 inline-flex items-center gap-2 rounded bg-gray-100 px-3 py-1 text-sm">
+        <div className="mt-2 inline-flex items-center gap-2 rounded-sm bg-gray-100 px-3 py-1 text-sm">
           <span className="text-gray-600">Current version:</span>
           <span className="font-semibold text-gray-900">
             {currentPgVersion === null
@@ -62,7 +62,7 @@ export function DebugInspector({
               type="button"
               disabled={running}
               onClick={() => setConfirmMajor(major)}
-              className="flex items-center gap-1 rounded border border-red-300 bg-red-50 px-3 py-1.5 text-sm text-red-700 hover:bg-red-100 disabled:opacity-50"
+              className="flex items-center gap-1 rounded-sm border border-red-300 bg-red-50 px-3 py-1.5 text-sm text-red-700 hover:bg-red-100 disabled:opacity-50"
             >
               {isPending ? `Resetting to PG${major}…` : `Reset to PG${major}`}
             </button>
@@ -71,7 +71,7 @@ export function DebugInspector({
       </div>
 
       {confirmMajor !== null && (
-        <div className="flex shrink-0 items-center gap-3 rounded border border-yellow-400 bg-yellow-50 px-3 py-2">
+        <div className="flex shrink-0 items-center gap-3 rounded-sm border border-yellow-400 bg-yellow-50 px-3 py-2">
           <span className="text-sm text-yellow-900">
             This will permanently delete all local reactor data and recreate an
             empty database under Postgres {confirmMajor}. The page will reload.
@@ -79,14 +79,14 @@ export function DebugInspector({
           <button
             type="button"
             onClick={() => handleReset(confirmMajor)}
-            className="rounded bg-yellow-600 px-3 py-1 text-sm text-white hover:bg-yellow-700"
+            className="rounded-sm bg-yellow-600 px-3 py-1 text-sm text-white hover:bg-yellow-700"
           >
             Confirm reset to PG{confirmMajor}
           </button>
           <button
             type="button"
             onClick={() => setConfirmMajor(null)}
-            className="rounded border border-gray-300 bg-white px-3 py-1 text-sm text-gray-600 hover:bg-gray-50"
+            className="rounded-sm border border-gray-300 bg-white px-3 py-1 text-sm text-gray-600 hover:bg-gray-50"
           >
             Cancel
           </button>
@@ -94,7 +94,7 @@ export function DebugInspector({
       )}
 
       {error && (
-        <div className="rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800">
+        <div className="rounded-sm border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800">
           {error}
         </div>
       )}

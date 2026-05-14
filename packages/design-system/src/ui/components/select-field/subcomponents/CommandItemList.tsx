@@ -64,7 +64,7 @@ export const CommandItemList: React.FC<FavoriteOptionsProps> = ({
               "cursor-pointer",
               "data-[selected=true]:bg-gray-100 dark:data-[selected=true]:bg-gray-900",
               opt.disabled &&
-                "!pointer-events-auto cursor-not-allowed hover:bg-transparent dark:hover:bg-transparent",
+                "pointer-events-auto! cursor-not-allowed hover:bg-transparent dark:hover:bg-transparent",
             )}
             role="option"
             aria-selected={isSelected}
@@ -92,7 +92,7 @@ export const CommandItemList: React.FC<FavoriteOptionsProps> = ({
                   )}
                 >
                   {isSelected && (
-                    <div className="absolute left-1/2 top-1/2 size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-gray-900 dark:bg-gray-400" />
+                    <div className="absolute top-1/2 left-1/2 size-2.5 -translate-1/2 rounded-full bg-gray-900 dark:bg-gray-400" />
                   )}
                 </div>
               ))}
@@ -111,7 +111,7 @@ export const CommandItemList: React.FC<FavoriteOptionsProps> = ({
             {renderIcon(opt.icon)}
             <span
               className={cn(
-                "flex-1 truncate text-sm font-normal leading-4",
+                "flex-1 truncate text-sm/4 font-normal",
                 "text-gray-700 dark:text-gray-500",
                 opt.disabled && "text-gray-600 dark:text-gray-600",
               )}

@@ -26,20 +26,22 @@ export const HomeScreenItem = function HomeScreenItem(
       <div className="mx-auto pb-2">
         {icon || (
           <div className="size-8 items-center justify-center rounded-lg bg-black pt-1">
-            <span className="text-6 w-6 text-white">
+            <span className="w-6 text-white">
               {title.slice(0, 1).toUpperCase()}
             </span>
           </div>
         )}
       </div>
       <div className="w-full max-w-full">
-        <h3 className="w-full max-w-full truncate px-2 text-slate-50">{title}</h3>
+        <h3 className="w-full max-w-full truncate px-2 text-slate-50">
+          {title}
+        </h3>
         {description && (
           <p className="text-gray-500 dark:text-slate-100">{description}</p>
         )}
       </div>
       {shareable && (
-        <div className="absolute left-2 top-0 mb-2">
+        <div className="absolute top-0 left-2 mb-2">
           <Icon name="PeopleFill" width={12} height={12} />
         </div>
       )}

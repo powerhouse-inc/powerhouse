@@ -31,7 +31,7 @@ const items = [
 ];
 
 const content = (
-  <DropdownMenuContent className="w-64 cursor-pointer rounded border-2 border-blue-600 bg-white">
+  <DropdownMenuContent className="w-64 cursor-pointer rounded-sm border-2 border-blue-600 bg-white">
     {items.map((item) => (
       <DropdownMenuItem
         className="px-2 hover:bg-gray-200"

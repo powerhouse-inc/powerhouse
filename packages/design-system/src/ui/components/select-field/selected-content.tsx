@@ -41,7 +41,7 @@ export const SelectedContent: React.FC<SelectedContentProps> = ({
         )}
       >
         {placeholder && (
-          <span className="text-sm font-normal leading-5 text-gray-600 dark:text-gray-500">
+          <span className="text-sm/5 font-normal text-gray-600 dark:text-gray-500">
             {placeholder}
           </span>
         )}
@@ -75,7 +75,7 @@ export const SelectedContent: React.FC<SelectedContentProps> = ({
           return !multiple ? (
             <React.Fragment key={value}>
               {renderIcon(option?.icon)}
-              <span className="truncate text-sm font-normal leading-5">
+              <span className="truncate text-sm/5 font-normal">
                 {option?.label}
               </span>
             </React.Fragment>
@@ -83,7 +83,7 @@ export const SelectedContent: React.FC<SelectedContentProps> = ({
             <span
               key={value}
               className={cn(
-                "text-sm font-normal leading-5",
+                "text-sm/5 font-normal",
                 index !== selectedValues.length - 1 && "mr-1",
               )}
             >

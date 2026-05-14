@@ -11,7 +11,7 @@ export const HomeScreen = function HomeScreen(props: HomeScreenProps) {
   return (
     <div
       className={twMerge(
-        "container relative mx-auto flex h-full flex-col",
+        "relative container mx-auto flex h-full flex-col",
         containerClassName,
       )}
     >

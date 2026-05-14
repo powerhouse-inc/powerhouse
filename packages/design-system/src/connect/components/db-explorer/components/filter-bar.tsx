@@ -224,14 +224,14 @@ function FilterClauseComponent({
       />
       {showValueInput && (
         <input
-          className="min-w-[150px] rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-900"
+          className="min-w-[150px] rounded-sm border border-gray-300 bg-white px-2 py-1 text-xs text-gray-900"
           type={inputType}
           value={clause.value}
           onChange={(e) => handleValueChange(e.target.value)}
         />
       )}
       <button
-        className="flex items-center justify-center rounded p-1 text-gray-500 hover:bg-gray-200 hover:text-gray-700"
+        className="flex items-center justify-center rounded-sm p-1 text-gray-500 hover:bg-gray-200 hover:text-gray-700"
         onClick={onRemove}
         title="Remove filter"
         type="button"
@@ -345,13 +345,13 @@ export function FilterBar({
           />
           <span>Filters</span>
           {hasFilters && (
-            <span className="rounded bg-blue-100 px-1.5 py-0.5 text-xs text-blue-700">
+            <span className="rounded-sm bg-blue-100 px-1.5 py-0.5 text-xs text-blue-700">
               {filters.clauses.length}
             </span>
           )}
         </button>
         <button
-          className="flex items-center gap-1 rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700 hover:bg-gray-100"
+          className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700 hover:bg-gray-100"
           onClick={handleAddFilter}
           type="button"
         >

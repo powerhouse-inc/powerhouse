@@ -87,7 +87,7 @@ export function FolderItem(props: {
     );
 
   const containerStyles = twMerge(
-    "group flex h-12 cursor-pointer select-none items-center rounded-lg bg-gray-200 px-2",
+    "group flex h-12 cursor-pointer items-center rounded-lg bg-gray-200 px-2 select-none",
     isDragging ? "opacity-60" : isDropTarget ? "bg-blue-100" : "",
     className,
   );

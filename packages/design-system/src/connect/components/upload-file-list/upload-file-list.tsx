@@ -47,7 +47,7 @@ export function UploadFileList(props: UploadFileListProps) {
           aria-expanded={!isCollapsed}
           aria-label={isCollapsed ? "Expand list" : "Collapse list"}
           onClick={() => setIsCollapsed((v) => !v)}
-          className="min-w-0 flex-1 text-left text-sm font-medium leading-4 text-gray-900 hover:opacity-80"
+          className="min-w-0 flex-1 text-left text-sm/4 font-medium text-gray-900 hover:opacity-80"
         >
           {computedTitle}
         </button>
@@ -62,7 +62,7 @@ export function UploadFileList(props: UploadFileListProps) {
           >
             <span
               className={twMerge(
-                "inline-block h-4 w-4 select-none transition-transform",
+                "inline-block size-4 transition-transform select-none",
                 isCollapsed ? "-rotate-90" : "rotate-0",
               )}
             >
@@ -78,7 +78,7 @@ export function UploadFileList(props: UploadFileListProps) {
               onClick={onClose}
               className="text-gray-900 hover:opacity-80"
             >
-              <span className="inline-block h-4 w-4 select-none">
+              <span className="inline-block size-4 select-none">
                 <Icon name="XmarkLight" size={16} aria-hidden="true" />
               </span>
             </button>
@@ -88,7 +88,7 @@ export function UploadFileList(props: UploadFileListProps) {
 
       {/* Body (collapsible) */}
       {!isCollapsed && (
-        <div className="mt-4 flex max-h-[404px] flex-col gap-4 overflow-y-auto overflow-x-visible px-2 py-2">
+        <div className="mt-4 flex max-h-[404px] flex-col gap-4 overflow-x-visible overflow-y-auto p-2">
           {items.map((item, idx) => (
             <UploadFileItem key={`${item.fileName}-${idx}`} {...item} />
           ))}

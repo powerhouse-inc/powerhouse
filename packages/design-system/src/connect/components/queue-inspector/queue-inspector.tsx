@@ -198,7 +198,7 @@ export function QueueInspector({
         <div className="flex items-center gap-2">
           <button
             className={twMerge(
-              "flex items-center gap-1 rounded border px-3 py-1.5 text-sm disabled:opacity-50",
+              "flex items-center gap-1 rounded-sm border px-3 py-1.5 text-sm disabled:opacity-50",
               state.isPaused
                 ? "border-green-300 bg-green-50 text-green-700 hover:bg-green-100"
                 : "border-yellow-300 bg-yellow-50 text-yellow-700 hover:bg-yellow-100",
@@ -214,7 +214,7 @@ export function QueueInspector({
             {state.isPaused ? "Resume" : "Pause"}
           </button>
           <button
-            className="flex items-center gap-1 rounded border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+            className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50"
             disabled={loading}
             onClick={() => void handleRefresh()}
             type="button"
@@ -299,7 +299,7 @@ export function QueueInspector({
                 >
                   <td className="px-3 py-2 text-xs">
                     <button
-                      className="flex items-center gap-1 rounded bg-blue-50 px-2 py-1 text-xs text-blue-700 hover:bg-blue-100"
+                      className="flex items-center gap-1 rounded-sm bg-blue-50 px-2 py-1 text-xs text-blue-700 hover:bg-blue-100"
                       onClick={() => setSelectedJob(job)}
                       type="button"
                     >
@@ -314,7 +314,7 @@ export function QueueInspector({
                   <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900">
                     <span
                       className={twMerge(
-                        "inline-block rounded px-1.5 py-0.5",
+                        "inline-block rounded-sm px-1.5 py-0.5",
                         job.kind === "mutation"
                           ? "bg-purple-100 text-purple-700"
                           : "bg-blue-100 text-blue-700",
@@ -349,7 +349,7 @@ export function QueueInspector({
                   <td className="border-l border-gray-300 px-3 py-2 text-xs">
                     <span
                       className={twMerge(
-                        "inline-flex items-center gap-1 rounded px-1.5 py-0.5",
+                        "inline-flex items-center gap-1 rounded-sm px-1.5 py-0.5",
                         job.status === "executing"
                           ? "bg-green-100 text-green-700"
                           : "bg-gray-100 text-gray-600",
