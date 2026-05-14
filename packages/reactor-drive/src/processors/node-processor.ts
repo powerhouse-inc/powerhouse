@@ -223,30 +223,6 @@ export class NodeProcessor extends BaseReadModel {
       input.targetId,
     );
 
-    const existing = await trx
-      .selectFrom("DriveNode")
-      .select("id")
-      .where("driveId", "=", driveId)
-      .where("id", "=", input.targetId)
-      .executeTakeFirst();
-
-    if (existing) {
-      await trx
-        .updateTable("DriveNode")
-        .set({
-          parentFolder,
-          name: resolved,
-          requestedName,
-          kind: "file",
-          documentType,
-          updatedAt: new Date(),
-        })
-        .where("driveId", "=", driveId)
-        .where("id", "=", input.targetId)
-        .execute();
-      return;
-    }
-
     await trx
       .insertInto("DriveNode")
       .values({
@@ -258,6 +234,16 @@ export class NodeProcessor extends BaseReadModel {
         parentFolder,
         documentType,
       })
+      .onConflict((oc) =>
+        oc.columns(["driveId", "id"]).doUpdateSet({
+          parentFolder,
+          name: resolved,
+          requestedName,
+          kind: "file",
+          documentType,
+          updatedAt: new Date(),
+        }),
+      )
       .execute();
   }
 
@@ -275,30 +261,6 @@ export class NodeProcessor extends BaseReadModel {
       input.folderId,
     );
 
-    const existing = await trx
-      .selectFrom("DriveNode")
-      .select("id")
-      .where("driveId", "=", driveId)
-      .where("id", "=", input.folderId)
-      .executeTakeFirst();
-
-    if (existing) {
-      await trx
-        .updateTable("DriveNode")
-        .set({
-          parentFolder,
-          name: resolved,
-          requestedName: input.name,
-          kind: "folder",
-          documentType: null,
-          updatedAt: new Date(),
-        })
-        .where("driveId", "=", driveId)
-        .where("id", "=", input.folderId)
-        .execute();
-      return;
-    }
-
     await trx
       .insertInto("DriveNode")
       .values({
@@ -310,6 +272,16 @@ export class NodeProcessor extends BaseReadModel {
         parentFolder,
         documentType: null,
       })
+      .onConflict((oc) =>
+        oc.columns(["driveId", "id"]).doUpdateSet({
+          parentFolder,
+          name: resolved,
+          requestedName: input.name,
+          kind: "folder",
+          documentType: null,
+          updatedAt: new Date(),
+        }),
+      )
       .execute();
   }
 
@@ -417,19 +389,12 @@ export class NodeProcessor extends BaseReadModel {
     docId: string,
     name: string,
   ): Promise<void> {
-    const existing = await trx
-      .selectFrom("DocumentName")
-      .select("docId")
-      .where("docId", "=", docId)
-      .executeTakeFirst();
-    if (existing) {
-      await trx
-        .updateTable("DocumentName")
-        .set({ name, updatedAt: new Date() })
-        .where("docId", "=", docId)
-        .execute();
-      return;
-    }
-    await trx.insertInto("DocumentName").values({ docId, name }).execute();
+    await trx
+      .insertInto("DocumentName")
+      .values({ docId, name })
+      .onConflict((oc) =>
+        oc.column("docId").doUpdateSet({ name, updatedAt: new Date() }),
+      )
+      .execute();
   }
 }
