@@ -1,0 +1,77 @@
+import type { Reducer, StateReducer } from "document-model";
+import { createReducer, isDocumentAction } from "document-model";
+import type { DocumentEditorPHState } from "document-models/document-editor/v1";
+
+import { documentEditorBaseOperationsOperations } from "../src/reducers/base-operations.js";
+
+import {
+  AddDocumentTypeInputSchema,
+  RemoveDocumentTypeInputSchema,
+  SetEditorNameInputSchema,
+  SetEditorStatusInputSchema,
+} from "./schema/zod.js";
+
+const stateReducer: StateReducer<DocumentEditorPHState> = (
+  state,
+  action,
+  dispatch,
+) => {
+  if (isDocumentAction(action)) {
+    return state;
+  }
+  switch (action.type) {
+    case "SET_EDITOR_NAME": {
+      SetEditorNameInputSchema().parse(action.input);
+
+      documentEditorBaseOperationsOperations.setEditorNameOperation(
+        (state as any)[action.scope],
+        action as any,
+        dispatch,
+      );
+
+      break;
+    }
+
+    case "ADD_DOCUMENT_TYPE": {
+      AddDocumentTypeInputSchema().parse(action.input);
+
+      documentEditorBaseOperationsOperations.addDocumentTypeOperation(
+        (state as any)[action.scope],
+        action as any,
+        dispatch,
+      );
+
+      break;
+    }
+
+    case "REMOVE_DOCUMENT_TYPE": {
+      RemoveDocumentTypeInputSchema().parse(action.input);
+
+      documentEditorBaseOperationsOperations.removeDocumentTypeOperation(
+        (state as any)[action.scope],
+        action as any,
+        dispatch,
+      );
+
+      break;
+    }
+
+    case "SET_EDITOR_STATUS": {
+      SetEditorStatusInputSchema().parse(action.input);
+
+      documentEditorBaseOperationsOperations.setEditorStatusOperation(
+        (state as any)[action.scope],
+        action as any,
+        dispatch,
+      );
+
+      break;
+    }
+
+    default:
+      return state;
+  }
+};
+
+export const reducer: Reducer<DocumentEditorPHState> =
+  createReducer(stateReducer);

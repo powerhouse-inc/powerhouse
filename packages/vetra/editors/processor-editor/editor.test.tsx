@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { utils } from "../../document-models/processor-module/utils.js";
+import { utils } from "../../document-models/processor-module/index.js";
 import { useSelectedProcessorModuleDocument } from "../hooks/useVetraDocument.js";
 import Editor from "./editor.js";
 
@@ -26,7 +26,6 @@ vi.mock("@powerhousedao/reactor-browser", () => ({
 }));
 
 describe("ProcessorModule Editor", () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockDispatch: (...args: any[]) => any;
   const document = utils.createDocument();
 

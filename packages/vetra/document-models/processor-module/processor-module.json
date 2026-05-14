@@ -1,26 +1,24 @@
 {
   "id": "powerhouse/processor",
   "name": "Processor Module",
-  "extension": ".phdm",
-  "description": "",
   "author": {
     "name": "Powerhouse",
     "website": "https://powerhouse.inc"
   },
+  "extension": ".phdm",
+  "description": "",
   "specifications": [
     {
-      "version": 1,
-      "changeLog": [],
       "state": {
-        "global": {
-          "schema": "type ProcessorModuleState {\n  name: String!\n  type: String!\n  documentTypes: [DocumentTypeItem!]!\n  status: StatusType!\n processorApps: [String!]!\n}\n\ntype DocumentTypeItem {\n  id: OID!\n  documentType: String!\n}\n\nenum StatusType {\n  DRAFT\n  CONFIRMED\n}",
-          "initialValue": "{\n  \"name\": \"\",\n  \"type\": \"\",\n  \"documentTypes\": [],\n  \"status\": \"DRAFT\",\n \"processorApps\": []\n}",
-          "examples": []
-        },
         "local": {
           "schema": "",
-          "initialValue": "",
-          "examples": []
+          "examples": [],
+          "initialValue": ""
+        },
+        "global": {
+          "schema": "type ProcessorModuleState {\n  name: String!\n  type: String!\n  documentTypes: [DocumentTypeItem!]!\n  status: StatusType!\n processorApps: [String!]!\n}\n\ntype DocumentTypeItem {\n  id: OID!\n  documentType: String!\n}\n\nenum StatusType {\n  DRAFT\n  CONFIRMED\n}",
+          "examples": [],
+          "initialValue": "{\n  \"name\": \"\",\n  \"type\": \"\",\n  \"documentTypes\": [],\n  \"status\": \"DRAFT\",\n \"processorApps\": []\n}"
         }
       },
       "modules": [
@@ -108,7 +106,9 @@
             }
           ]
         }
-      ]
+      ],
+      "version": 1,
+      "changeLog": []
     }
   ]
 }

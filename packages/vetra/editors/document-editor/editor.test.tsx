@@ -1,12 +1,16 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useSelectedDocumentEditorDocument } from "../../document-models/document-editor/hooks.js";
+import { useSelectedDocumentEditorDocument } from "../../document-models/document-editor/index.js";
 import Editor from "./editor.js";
 
-vi.mock("../../document-models/document-editor/hooks.js", () => ({
-  useSelectedDocumentEditorDocument: vi.fn(),
-}));
+vi.mock(
+  "../../document-models/document-editor/index.js",
+  async (importOriginal) => ({
+    ...(await importOriginal<object>()),
+    useSelectedDocumentEditorDocument: vi.fn(),
+  }),
+);
 
 vi.mock("../hooks/useAvailableDocumentTypes.js", () => ({
   useAvailableDocumentTypes: vi.fn(() => [
@@ -25,7 +29,6 @@ vi.mock("@powerhousedao/reactor-browser", () => ({
 }));
 
 describe("DocumentEditor Editor", () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockDispatch: (...args: any[]) => any;
 
   beforeEach(() => {
