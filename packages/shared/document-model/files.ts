@@ -41,6 +41,40 @@ function unzipAsync(data: Uint8Array): Promise<Unzipped> {
   });
 }
 
+const BASE64_RE = /^[A-Za-z0-9+/]+={0,2}$/;
+
+function isLikelyBase64(s: string): boolean {
+  // Base64 strings are length % 4 === 0, use only the base64 alphabet,
+  // and contain no bytes >= 0x80. A raw binary string (one char per byte)
+  // typically has bytes outside that alphabet.
+  if (s.length === 0 || s.length % 4 !== 0) return false;
+  return BASE64_RE.test(s);
+}
+
+function binaryStringToUint8Array(s: string): Uint8Array {
+  const arr = new Uint8Array(s.length);
+  for (let i = 0; i < s.length; i++) arr[i] = s.charCodeAt(i) & 0xff;
+  return arr;
+}
+
+function base64ToUint8Array(s: string): Uint8Array {
+  if (typeof atob === "function") {
+    const bin = atob(s);
+    return binaryStringToUint8Array(bin);
+  }
+  const BufferCtor = (
+    globalThis as {
+      Buffer?: { from: (s: string, enc: string) => Uint8Array };
+    }
+  ).Buffer;
+  if (!BufferCtor) {
+    throw new Error(
+      "Cannot decode base64 string: neither `atob` nor `Buffer` is available in this environment",
+    );
+  }
+  return BufferCtor.from(s, "base64");
+}
+
 async function toUint8Array(input: FileInput): Promise<Uint8Array> {
   if (input instanceof Uint8Array) return input;
   if (input instanceof ArrayBuffer) return new Uint8Array(input);
@@ -49,21 +83,11 @@ async function toUint8Array(input: FileInput): Promise<Uint8Array> {
   }
   if (Array.isArray(input)) return new Uint8Array(input);
   if (typeof input === "string") {
-    // jszip's default for strings was base64 decoding — preserve that behaviour
-    // so callers passing base64 strings (e.g. from network APIs) keep working.
-    if (typeof atob === "function") {
-      const bin = atob(input);
-      const arr = new Uint8Array(bin.length);
-      for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
-      return arr;
-    }
-    return new Uint8Array(
-      (
-        globalThis as {
-          Buffer?: { from: (s: string, enc: string) => Uint8Array };
-        }
-      ).Buffer!.from(input, "base64"),
-    );
+    // jszip's loadAsync accepted both raw binary strings and base64 strings
+    // with auto-detection. Preserve that so callers passing either keep working.
+    return isLikelyBase64(input)
+      ? base64ToUint8Array(input)
+      : binaryStringToUint8Array(input);
   }
   throw new Error("Unsupported FileInput type");
 }
