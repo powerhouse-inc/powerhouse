@@ -17,7 +17,7 @@ This tutorial step has a corresponding branch. After completing this step, your 
 
 ### Compare your generated code
 
-After running `ph generate TodoList.phdm.zip`, compare with the reference:
+After running `ph generate document-model --file TodoList.phdm.zip`, compare with the reference:
 
 ```bash
 # Compare all generated files with step-2
@@ -157,20 +157,47 @@ Your project should have the following structure in `document-models/todo-list/`
 
 ```
 document-models/todo-list/
-├── gen/                          # Auto-generated code (don't edit)
-│   ├── actions.ts
-│   ├── creators.ts              # Action creator functions
-│   ├── types.ts                 # TypeScript type definitions
-│   ├── reducer.ts
-│   └── todos/
-│       └── operations.ts        # Operation type definitions
-├── src/                          # Your custom implementation
-│   ├── reducers/
-│   │   └── todos.ts            # Reducer functions (to implement next)
-│   └── tests/
-│       └── todos.test.ts        # Test file scaffolding
+├── index.ts
 ├── todo-list.json               # Document model specification
-└── schema.graphql               # GraphQL schema
+├── v1/
+│   ├── index.ts
+│   ├── actions.ts
+│   ├── hooks.ts
+│   ├── module.ts
+│   ├── schema.graphql           # GraphQL schema
+│   ├── utils.ts
+│   ├── gen/                     # Auto-generated code (don't edit)
+│   │   ├── schema/
+│   │   │   └── index.ts
+│   │   ├── actions.ts
+│   │   ├── controller.ts
+│   │   ├── creators.ts
+│   │   ├── document-model.ts
+│   │   ├── document-schema.ts
+│   │   ├── document-type.ts
+│   │   ├── index.ts
+│   │   ├── ph-factories.ts
+│   │   ├── reducer.ts
+│   │   ├── types.ts
+│   │   ├── utils.ts
+│   │   └── todos/               # Per-module generated files
+│   │       ├── actions.ts
+│   │       ├── creators.ts
+│   │       ├── error.ts
+│   │       └── operations.ts
+│   ├── src/                     # Your custom implementation
+│   │   ├── index.ts
+│   │   ├── utils.ts
+│   │   └── reducers/
+│   │       └── todos.ts
+│   └── tests/
+│       ├── document-model.test.ts
+│       └── todos.test.ts
+└── upgrades/
+    ├── index.ts
+    ├── upgrade-manifest.ts
+    ├── v1.ts
+    └── versions.ts
 ```
 
 :::tip Check your work

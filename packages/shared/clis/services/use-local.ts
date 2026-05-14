@@ -72,12 +72,11 @@ export async function runUseLocal(monorepoPath: string, skipInstall?: boolean) {
       packageJson.peerDependencies,
     )) {
       if (version && ALL_POWERHOUSE_DEPENDENCIES.includes(name)) {
-        const newVersion = buildPnpmLink(name, monorepoPath);
-        packageJson.peerDependencies[name] = newVersion;
+        packageJson.peerDependencies[name] = "*";
         logVersionUpdate({
           name,
           version,
-          newVersion,
+          newVersion: "*",
         });
       }
     }
@@ -104,7 +103,7 @@ function buildPnpmLink(packageName: string, monorepoPath: string) {
   const packagePath = path
     .join(monorepoPath, packageDir, packageNameWithoutNamespace)
     .replace("analytics-engine-", "analytics-engine/");
-  const pnpmLink = `file:${packagePath}`;
+  const pnpmLink = `link:${packagePath}`;
 
   return pnpmLink;
 }

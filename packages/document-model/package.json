@@ -1,6 +1,6 @@
 {
   "name": "document-model",
-  "version": "6.0.0-dev.246",
+  "version": "6.0.0-dev.248",
   "license": "AGPL-3.0-only",
   "private": false,
   "files": [
@@ -41,17 +41,17 @@
     "@types/jest": "^29.5.14",
     "@types/mime": "^4.0.0",
     "@types/node": "catalog:",
+    "change-case": "catalog:",
     "jest": "^30.0.5",
+    "mutative": "^1.0.5",
     "tsdown": "catalog:",
     "tsx": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "zod": "catalog:"
   },
   "dependencies": {
     "@powerhousedao/shared": "workspace:*",
-    "change-case": "catalog:",
-    "mime": "^4.0.4",
-    "mutative": "^1.0.5",
-    "zod": "catalog:",
-    "jszip": "^3.10.1"
+    "jszip": "^3.10.1",
+    "mime": "^4.0.4"
   }
 }

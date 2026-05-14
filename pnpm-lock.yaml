@@ -145,7 +145,7 @@ catalogs:
       specifier: 13.0.4
       version: 13.0.4
     graphql:
-      specifier: 16.12.0
+      specifier: ^16
       version: 16.12.0
     graphql-codegen-typescript-validation-schema:
       specifier: 0.18.1
@@ -157,7 +157,7 @@ catalogs:
       specifier: 2.6.0
       version: 2.6.0
     graphql-tag:
-      specifier: 2.12.6
+      specifier: ^2
       version: 2.12.6
     graphql-ws:
       specifier: 6.0.7
@@ -495,12 +495,6 @@ importers:
       document-model:
         specifier: workspace:*
         version: link:../../packages/document-model
-      graphql:
-        specifier: 'catalog:'
-        version: 16.12.0
-      graphql-request:
-        specifier: 'catalog:'
-        version: 7.4.0(graphql@16.12.0)
       i18next:
         specifier: ^25.5.3
         version: 25.8.13(typescript@5.9.3)
@@ -785,21 +779,12 @@ importers:
       semver:
         specifier: 'catalog:'
         version: 7.7.4
-      ts-morph:
-        specifier: 'catalog:'
-        version: 27.0.2
       tsdown:
         specifier: 'catalog:'
         version: 0.21.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@tsdown/css@0.21.1)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(synckit@0.11.12)(typescript@5.9.3)
       vite:
         specifier: 'catalog:'
         version: 8.0.8(@types/node@25.2.3)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3)
-      write-package:
-        specifier: 'catalog:'
-        version: 7.2.0
-      zod:
-        specifier: 'catalog:'
-        version: 4.3.6
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
@@ -813,6 +798,15 @@ importers:
       copyfiles:
         specifier: 'catalog:'
         version: 2.4.1
+      ts-morph:
+        specifier: 'catalog:'
+        version: 27.0.2
+      write-package:
+        specifier: 'catalog:'
+        version: 7.2.0
+      zod:
+        specifier: 'catalog:'
+        version: 4.3.6
 
   clis/ph-cmd:
     dependencies:
@@ -1035,15 +1029,9 @@ importers:
       change-case:
         specifier: 'catalog:'
         version: 5.4.4
-      knex:
-        specifier: 'catalog:'
-        version: 3.1.0(pg@8.18.0)
       luxon:
         specifier: 'catalog:'
         version: 3.7.2
-      pg:
-        specifier: 'catalog:'
-        version: 8.18.0
     devDependencies:
       '@types/luxon':
         specifier: 'catalog:'
@@ -1051,6 +1039,12 @@ importers:
       '@types/pg':
         specifier: 'catalog:'
         version: 8.16.0
+      knex:
+        specifier: 'catalog:'
+        version: 3.1.0(pg@8.18.0)
+      pg:
+        specifier: 'catalog:'
+        version: 8.18.0
       tsdown:
         specifier: 'catalog:'
         version: 0.21.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@tsdown/css@0.21.1)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(synckit@0.11.12)(typescript@5.9.3)
@@ -1069,9 +1063,6 @@ importers:
       knex:
         specifier: 'catalog:'
         version: 3.1.0(pg@8.18.0)
-      luxon:
-        specifier: 'catalog:'
-        version: 3.7.2
       pg:
         specifier: 'catalog:'
         version: 8.18.0
@@ -1085,6 +1076,9 @@ importers:
       '@types/pg':
         specifier: 'catalog:'
         version: 8.16.0
+      luxon:
+        specifier: 'catalog:'
+        version: 3.7.2
       tsdown:
         specifier: 'catalog:'
         version: 0.21.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@tsdown/css@0.21.1)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(synckit@0.11.12)(typescript@5.9.3)
@@ -1115,9 +1109,6 @@ importers:
       vite-plugin-html:
         specifier: 'catalog:'
         version: 3.2.2(vite@8.0.8(@types/node@25.5.0)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
-      zod:
-        specifier: 'catalog:'
-        version: 4.3.6
     devDependencies:
       '@sentry/vite-plugin':
         specifier: ^4.3.0
@@ -1128,6 +1119,9 @@ importers:
       tsx:
         specifier: 'catalog:'
         version: 4.21.0
+      zod:
+        specifier: 'catalog:'
+        version: 4.3.6
 
   packages/codegen:
     dependencies:
@@ -1158,9 +1152,6 @@ importers:
       document-model:
         specifier: workspace:*
         version: link:../document-model
-      graphql:
-        specifier: 'catalog:'
-        version: 16.12.0
       graphql-codegen-typescript-validation-schema:
         specifier: 'catalog:'
         version: 0.18.1(graphql@16.12.0)(zod@4.3.6)
@@ -1204,6 +1195,9 @@ importers:
       '@types/npm-registry-fetch':
         specifier: ^8.0.9
         version: 8.0.9
+      graphql:
+        specifier: 'catalog:'
+        version: 16.12.0
       tsdown:
         specifier: 'catalog:'
         version: 0.21.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@tsdown/css@0.21.1)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(synckit@0.11.12)(typescript@5.9.3)
@@ -1287,9 +1281,6 @@ importers:
       '@radix-ui/react-visually-hidden':
         specifier: ^1.1.0
         version: 1.2.4(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
-      '@tanstack/react-query':
-        specifier: ^5.49.2
-        version: 5.90.21(react@19.2.6)
       '@tanstack/react-virtual':
         specifier: ^3.8.1
         version: 3.13.19(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
@@ -1399,6 +1390,9 @@ importers:
       '@tailwindcss/vite':
         specifier: 'catalog:'
         version: 4.2.2(vite@8.0.8(@types/node@25.5.0)(esbuild@0.25.12)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
+      '@tanstack/react-query':
+        specifier: ^5.49.2
+        version: 5.90.21(react@19.2.6)
       '@testing-library/dom':
         specifier: ^10.4.0
         version: 10.4.1
@@ -1468,21 +1462,12 @@ importers:
       '@powerhousedao/shared':
         specifier: workspace:*
         version: link:../shared
-      change-case:
-        specifier: 'catalog:'
-        version: 5.4.4
       jszip:
         specifier: ^3.10.1
         version: 3.10.1
       mime:
         specifier: ^4.0.4
         version: 4.1.0
-      mutative:
-        specifier: ^1.0.5
-        version: 1.3.0
-      zod:
-        specifier: 'catalog:'
-        version: 4.3.6
     devDependencies:
       '@types/jest':
         specifier: ^29.5.14
@@ -1493,9 +1478,15 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 25.2.3
+      change-case:
+        specifier: 'catalog:'
+        version: 5.4.4
       jest:
         specifier: ^30.0.5
         version: 30.2.0(@types/node@25.2.3)(babel-plugin-macros@3.1.0)(esbuild-register@3.6.0(esbuild@0.27.3))
+      mutative:
+        specifier: ^1.0.5
+        version: 1.3.0
       tsdown:
         specifier: 'catalog:'
         version: 0.21.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@tsdown/css@0.21.1)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(synckit@0.11.12)(typescript@5.9.3)
@@ -1505,6 +1496,9 @@ importers:
       vitest:
         specifier: 'catalog:'
         version: 4.1.1(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@4.1.1)(happy-dom@20.9.0)(jsdom@24.1.3)(msw@2.12.10(@types/node@25.2.3)(typescript@5.9.3))(vite@8.0.10(@types/node@25.2.3)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
+      zod:
+        specifier: 'catalog:'
+        version: 4.3.6
 
   packages/opentelemetry-instrumentation-reactor:
     dependencies:
@@ -1535,7 +1529,7 @@ importers:
         version: 4.1.1(@opentelemetry/api@1.9.1)(@types/node@25.5.0)(@vitest/browser-playwright@4.1.1)(happy-dom@20.9.0)(jsdom@24.1.3)(msw@2.12.10(@types/node@25.5.0)(typescript@5.9.3))(vite@8.0.10(@types/node@25.5.0)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
 
   packages/powerhouse-vetra-packages:
-    dependencies:
+    devDependencies:
       '@codemirror/autocomplete':
         specifier: 6.18.6
         version: 6.18.6
@@ -1587,9 +1581,18 @@ importers:
       '@radix-ui/react-tabs':
         specifier: ^1.1.9
         version: 1.1.13(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      '@tailwindcss/cli':
+        specifier: 'catalog:'
+        version: 4.2.2
       '@tanstack/react-virtual':
         specifier: ^3.8.1
         version: 3.13.19(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      '@types/react':
+        specifier: 'catalog:'
+        version: 19.2.14
+      '@types/react-dom':
+        specifier: 'catalog:'
+        version: 19.2.3(@types/react@19.2.14)
       change-case:
         specifier: 'catalog:'
         version: 5.4.4
@@ -1623,31 +1626,21 @@ importers:
       tailwind-merge:
         specifier: 'catalog:'
         version: 3.4.0
-      thememirror:
-        specifier: ^2.0.1
-        version: 2.0.1(@codemirror/language@6.11.0)(@codemirror/state@6.5.2)(@codemirror/view@6.36.7)
-      zod:
-        specifier: 'catalog:'
-        version: 4.3.6
-    devDependencies:
-      '@tailwindcss/cli':
-        specifier: 'catalog:'
-        version: 4.2.2
-      '@types/react':
-        specifier: 'catalog:'
-        version: 19.2.14
-      '@types/react-dom':
-        specifier: 'catalog:'
-        version: 19.2.3(@types/react@19.2.14)
       tailwindcss:
         specifier: 'catalog:'
         version: 4.2.2
+      thememirror:
+        specifier: ^2.0.1
+        version: 2.0.1(@codemirror/language@6.11.0)(@codemirror/state@6.5.2)(@codemirror/view@6.36.7)
       tsdown:
         specifier: 'catalog:'
         version: 0.21.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@tsdown/css@0.21.1)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(synckit@0.11.12)(typescript@5.9.3)
       tsx:
         specifier: 'catalog:'
         version: 4.21.0
+      zod:
+        specifier: 'catalog:'
+        version: 4.3.6
 
   packages/reactor:
     dependencies:
@@ -1787,18 +1780,12 @@ importers:
       fastify:
         specifier: ^5.8.5
         version: 5.8.5
-      graphql:
-        specifier: 'catalog:'
-        version: 16.12.0
       graphql-sse:
         specifier: 'catalog:'
         version: 2.6.0(graphql@16.12.0)
       graphql-subscriptions:
         specifier: ^3.0.0
         version: 3.0.0(graphql@16.12.0)
-      graphql-tag:
-        specifier: 'catalog:'
-        version: 2.12.6(graphql@16.12.0)
       graphql-type-json:
         specifier: ^0.3.2
         version: 0.3.2(graphql@16.12.0)
@@ -1872,6 +1859,12 @@ importers:
       '@types/ws':
         specifier: ^8.18.1
         version: 8.18.1
+      graphql:
+        specifier: 'catalog:'
+        version: 16.12.0
+      graphql-tag:
+        specifier: 'catalog:'
+        version: 2.12.6(graphql@16.12.0)
       msw:
         specifier: ^2.7.3
         version: 2.12.10(@types/node@25.2.3)(typescript@5.9.3)
@@ -1930,15 +1923,9 @@ importers:
       document-model:
         specifier: workspace:*
         version: link:../document-model
-      graphql:
-        specifier: 'catalog:'
-        version: 16.12.0
       graphql-request:
         specifier: 'catalog:'
         version: 7.4.0(graphql@16.12.0)
-      graphql-tag:
-        specifier: 'catalog:'
-        version: 2.12.6(graphql@16.12.0)
       kysely:
         specifier: 'catalog:'
         version: 0.28.16
@@ -2012,6 +1999,12 @@ importers:
       fast-deep-equal:
         specifier: 'catalog:'
         version: 3.1.3
+      graphql:
+        specifier: 'catalog:'
+        version: 16.12.0
+      graphql-tag:
+        specifier: 'catalog:'
+        version: 2.12.6(graphql@16.12.0)
       playwright:
         specifier: 'catalog:'
         version: 1.58.2
@@ -2101,9 +2094,6 @@ importers:
       '@modelcontextprotocol/sdk':
         specifier: 'catalog:'
         version: 1.29.0(zod@4.3.6)
-      '@openfeature/core':
-        specifier: 'catalog:'
-        version: 1.9.1
       '@openfeature/env-var-provider':
         specifier: 'catalog:'
         version: 0.3.1(@openfeature/server-sdk@1.19.0(@openfeature/core@1.9.1))
@@ -2129,6 +2119,9 @@ importers:
         specifier: 'catalog:'
         version: 4.3.6
     devDependencies:
+      '@openfeature/core':
+        specifier: 'catalog:'
+        version: 1.9.1
       '@types/node':
         specifier: 'catalog:'
         version: 25.2.3
@@ -2236,12 +2229,9 @@ importers:
       enquirer:
         specifier: 'catalog:'
         version: 2.4.1
-      jszip:
-        specifier: ^3.10.1
-        version: 3.10.1
-      kysely:
-        specifier: 'catalog:'
-        version: 0.28.16
+      fflate:
+        specifier: ^0.8.2
+        version: 0.8.2
       luxon:
         specifier: 'catalog:'
         version: 3.7.2
@@ -2291,6 +2281,9 @@ importers:
       '@types/react':
         specifier: 'catalog:'
         version: 19.2.14
+      kysely:
+        specifier: 'catalog:'
+        version: 0.28.16
       react:
         specifier: 'catalog:'
         version: 19.2.6
@@ -2361,15 +2354,9 @@ importers:
       document-model:
         specifier: workspace:*
         version: link:../document-model
-      kysely:
-        specifier: 'catalog:'
-        version: 0.28.16
       react:
         specifier: 'catalog:'
         version: 19.2.6
-      ts-morph:
-        specifier: 'catalog:'
-        version: 27.0.2
       zod:
         specifier: 'catalog:'
         version: 4.3.6
@@ -2401,12 +2388,18 @@ importers:
       '@vitejs/plugin-react':
         specifier: 'catalog:'
         version: 6.0.1(vite@8.0.8(@types/node@25.2.3)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
+      kysely:
+        specifier: 'catalog:'
+        version: 0.28.16
       react-dom:
         specifier: 'catalog:'
         version: 19.2.6(react@19.2.6)
       tailwindcss:
         specifier: 'catalog:'
         version: 4.2.2
+      ts-morph:
+        specifier: 'catalog:'
+        version: 27.0.2
       tsdown:
         specifier: 'catalog:'
         version: 0.21.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@tsdown/css@0.21.1)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(synckit@0.11.12)(typescript@5.9.3)
@@ -2416,13 +2409,6 @@ importers:
       vitest:
         specifier: 'catalog:'
         version: 4.1.1(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@4.1.1)(happy-dom@20.9.0)(jsdom@24.1.3)(msw@2.12.10(@types/node@25.2.3)(typescript@5.9.3))(vite@8.0.8(@types/node@25.2.3)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
-    optionalDependencies:
-      '@powerhousedao/connect':
-        specifier: workspace:*
-        version: link:../../apps/connect
-      '@powerhousedao/ph-cli':
-        specifier: workspace:*
-        version: link:../../clis/ph-cli
 
   scripts/profiling:
     dependencies:
@@ -2840,7 +2826,16 @@ importers:
         version: 4.21.0
 
   test/versioned-documents:
-    dependencies:
+    devDependencies:
+      '@electric-sql/pglite':
+        specifier: 'catalog:'
+        version: 0.3.15
+      '@electric-sql/pglite-tools':
+        specifier: 'catalog:'
+        version: 0.2.20(@electric-sql/pglite@0.3.15)
+      '@eslint/js':
+        specifier: ^9.38.0
+        version: 9.39.4
       '@powerhousedao/analytics-engine-core':
         specifier: workspace:*
         version: link:../../packages/analytics-engine/core
@@ -2853,6 +2848,12 @@ importers:
       '@powerhousedao/document-engineering':
         specifier: 'catalog:'
         version: 1.40.3(@types/express@4.17.25)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@5.9.3)
+      '@powerhousedao/ph-cli':
+        specifier: workspace:*
+        version: link:../../clis/ph-cli
+      '@powerhousedao/reactor':
+        specifier: workspace:*
+        version: link:../../packages/reactor
       '@powerhousedao/reactor-api':
         specifier: workspace:*
         version: link:../../packages/reactor-api
@@ -2862,43 +2863,12 @@ importers:
       '@powerhousedao/shared':
         specifier: workspace:*
         version: link:../../packages/shared
-      document-model:
-        specifier: workspace:*
-        version: link:../../packages/document-model
-      graphql:
-        specifier: 'catalog:'
-        version: 16.12.0
-      graphql-tag:
-        specifier: 'catalog:'
-        version: 2.12.6(graphql@16.12.0)
-      react:
-        specifier: 'catalog:'
-        version: 19.2.6
-      react-dom:
-        specifier: 'catalog:'
-        version: 19.2.6(react@19.2.6)
-      zod:
-        specifier: 'catalog:'
-        version: 4.3.6
-    devDependencies:
-      '@electric-sql/pglite':
-        specifier: 'catalog:'
-        version: 0.3.15
-      '@electric-sql/pglite-tools':
-        specifier: 'catalog:'
-        version: 0.2.20(@electric-sql/pglite@0.3.15)
-      '@eslint/js':
-        specifier: ^9.38.0
-        version: 9.39.4
-      '@powerhousedao/ph-cli':
-        specifier: workspace:*
-        version: link:../../clis/ph-cli
-      '@powerhousedao/reactor':
-        specifier: workspace:*
-        version: link:../../packages/reactor
       '@tailwindcss/cli':
         specifier: 'catalog:'
         version: 4.2.2
+      '@tailwindcss/vite':
+        specifier: ^4.1.18
+        version: 4.2.2(vite@8.0.8(@types/node@25.2.3)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
       '@testing-library/jest-dom':
         specifier: ^6.9.1
         version: 6.9.1
@@ -2914,6 +2884,12 @@ importers:
       '@vitejs/plugin-react':
         specifier: 'catalog:'
         version: 6.0.1(vite@8.0.8(@types/node@25.2.3)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
+      '@vitest/coverage-v8':
+        specifier: 4.1.1
+        version: 4.1.1(@vitest/browser@4.1.1(msw@2.12.10(@types/node@25.2.3)(typescript@5.9.3))(vite@8.0.8(@types/node@25.2.3)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))(vitest@4.1.1))(vitest@4.1.1)
+      document-model:
+        specifier: workspace:*
+        version: link:../../packages/document-model
       eslint:
         specifier: ^9.38.0
         version: 9.39.4(jiti@2.6.1)
@@ -2932,6 +2908,18 @@ importers:
       globals:
         specifier: ^16.4.0
         version: 16.5.0
+      graphql:
+        specifier: 'catalog:'
+        version: 16.12.0
+      graphql-tag:
+        specifier: 'catalog:'
+        version: 2.12.6(graphql@16.12.0)
+      react:
+        specifier: 'catalog:'
+        version: 19.2.6
+      react-dom:
+        specifier: 'catalog:'
+        version: 19.2.6(react@19.2.6)
       tailwindcss:
         specifier: 'catalog:'
         version: 4.2.2
@@ -2953,6 +2941,9 @@ importers:
       vitest:
         specifier: 'catalog:'
         version: 4.1.1(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@4.1.1)(happy-dom@20.9.0)(jsdom@24.1.3)(msw@2.12.10(@types/node@25.2.3)(typescript@5.9.3))(vite@8.0.8(@types/node@25.2.3)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
+      zod:
+        specifier: 'catalog:'
+        version: 4.3.6
 
   test/vetra-e2e:
     dependencies:
@@ -6236,21 +6227,25 @@ packages:
     resolution: {integrity: sha512-GdgPYMfbijBRFJs1absL/9QdSNLsTAGdyKykDf9CaVxEMZ92VB+pncpX9Vn/ZBCSeeWTLF+bSK3UM5v+loIObQ==}
     cpu: [arm64]
     os: [linux]
+    libc: [glibc]
 
   '@nx/nx-linux-arm64-musl@22.7.1':
     resolution: {integrity: sha512-HyBgPtY1hyNTk8683nt7F29jh3lVdS/zul9vS0NgKeCSoYL3GRM3nLoTPynoHUxyVP/tWYOE3ymvnk92qYwL4Q==}
     cpu: [arm64]
     os: [linux]
+    libc: [musl]
 
   '@nx/nx-linux-x64-gnu@22.7.1':
     resolution: {integrity: sha512-bQBgRiEsanNvKcDOjVAUPjvcp0iDLofYYUL2af2iuCDxreLOej+J6MeA5bWTLNly5ly1d4voKGTqa+OsouVyLg==}
     cpu: [x64]
     os: [linux]
+    libc: [glibc]
 
   '@nx/nx-linux-x64-musl@22.7.1':
     resolution: {integrity: sha512-gcco2GjcAztF/fRcAgFxtWxrWDnQdNmPaAN9FTt1+qQ9RUSLvdL8bQxKx4Kd9N9T+gXPlrWhMkBkKbbV09+X1Q==}
     cpu: [x64]
     os: [linux]
+    libc: [musl]
 
   '@nx/nx-win32-arm64-msvc@22.7.1':
     resolution: {integrity: sha512-IT9oEn0YQ83iPH7666aoPyTRsUzBIBJdBLMXeLX4I60fHPXWhUSGpfiLtIsgU2OfeOVb9hU9idwNh1wc4u9rWQ==}
@@ -6730,71 +6725,85 @@ packages:
     resolution: {integrity: sha512-bIkgp+AB+yZfvdKDfjFT7PycsRtih7+zCV5AbnkzfyvNvQ47rfssf8R1IbG++mx+rZ4YUCUu8EbP66HC3O5c5w==}
     cpu: [arm64]
     os: [linux]
+    libc: [glibc]
 
   '@oxc-resolver/binding-linux-arm64-gnu@5.3.0':
     resolution: {integrity: sha512-u2ndfeEUrW898eXM+qPxIN8TvTPjI90NDQBRgaxxkOfNw3xaotloeiZGz5+Yzlfxgvxr9DY9FdYkqhUhSnGhOw==}
     cpu: [arm64]
     os: [linux]
+    libc: [glibc]
 
   '@oxc-resolver/binding-linux-arm64-musl@11.19.0':
     resolution: {integrity: sha512-bOt5pKPcbidTSy64m2CfM0XcaCmxBEFclCMPuOPO08hh8QIFTiZVhFf/OxTFqyRwhq/tlzzKmXpMo7DfzbO5lQ==}
     cpu: [arm64]
     os: [linux]
+    libc: [musl]
 
   '@oxc-resolver/binding-linux-arm64-musl@5.3.0':
     resolution: {integrity: sha512-TzbjmFkcnESGuVItQ2diKacX8vu5G0bH3BHmIlmY4OSRLyoAlrJFwGKAHmh6C9+Amfcjo2rx8vdm7swzmsGC6Q==}
     cpu: [arm64]
     os: [linux]
+    libc: [musl]
 
   '@oxc-resolver/binding-linux-ppc64-gnu@11.19.0':
     resolution: {integrity: sha512-BymEPqVeLZzA/1kXow9U9rdniq1r5kk4u686Cx3ZU77YygR48NJI/2TyjM70vKHZffGx75ZShobcc1M5GXG3WA==}
     cpu: [ppc64]
     os: [linux]
+    libc: [glibc]
 
   '@oxc-resolver/binding-linux-riscv64-gnu@11.19.0':
     resolution: {integrity: sha512-aFgPTzZZY+XCYe4B+3A1S63xcIh2i136+2TPXWr9NOwXXTdMdBntb1J9fEgxXDnX82MjBknLUpJqAZHNTJzixA==}
     cpu: [riscv64]
     os: [linux]
+    libc: [glibc]
 
   '@oxc-resolver/binding-linux-riscv64-gnu@5.3.0':
     resolution: {integrity: sha512-NH3pjAqh8nuN29iRuRfTY42Vn03ctoR9VE8llfoUKUfhHUjFHYOXK5VSkhjj1usG8AeuesvqrQnLptCRQVTi/Q==}
     cpu: [riscv64]
     os: [linux]
+    libc: [glibc]
 
   '@oxc-resolver/binding-linux-riscv64-musl@11.19.0':
     resolution: {integrity: sha512-9WDGt7fV9GK97WrWE/VEDhMFv9m0ZXYn5NQ+16QvyT0ux8yGLAvyadi6viaTjEdJII/OaHBRYHcL+zUjmaWwmg==}
     cpu: [riscv64]
     os: [linux]
+    libc: [musl]
 
   '@oxc-resolver/binding-linux-s390x-gnu@11.19.0':
     resolution: {integrity: sha512-SY3di6tccocppAVal5Hev3D6D1N5Y6TCEypAvNCOiPqku2Y8U/aXfvGbthqdPNa72KYqjUR1vomOv6J9thHITA==}
     cpu: [s390x]
     os: [linux]
+    libc: [glibc]
 
   '@oxc-resolver/binding-linux-s390x-gnu@5.3.0':
     resolution: {integrity: sha512-tuZtkK9sJYh2MC2uhol1M/8IMTB6ZQ5jmqP2+k5XNXnOb/im94Y5uV/u2lXwVyIuKHZZHtr+0d1HrOiNahoKpw==}
     cpu: [s390x]
     os: [linux]
+    libc: [glibc]
 
   '@oxc-resolver/binding-linux-x64-gnu@11.19.0':
     resolution: {integrity: sha512-SV+4zBeCC3xjSE2wvhN45eyABoVRX3xryWBABFKfLwAWhF3wsB3bUF+CantYfQ/TLpasyvplRS9ovvFT9cb/0A==}
     cpu: [x64]
     os: [linux]
+    libc: [glibc]
 
   '@oxc-resolver/binding-linux-x64-gnu@5.3.0':
     resolution: {integrity: sha512-VzhPYmZCtoES/ThcPdGSmMop7JlwgqtSvlgtKCW15ByV2JKyl8kHAHnPSBfpIooXb0ehFnRdxFtL9qtAEWy01g==}
     cpu: [x64]
     os: [linux]
+    libc: [glibc]
 
   '@oxc-resolver/binding-linux-x64-musl@11.19.0':
     resolution: {integrity: sha512-LkbjO+r5Isl8Xl29pJYOCB/iSUIULFUJDGdMp+yJD3OgWtSa6VJta2iw7QXmpcoOkq18UIL09yWrlyjLDL0Hug==}
     cpu: [x64]
     os: [linux]
+    libc: [musl]
 
   '@oxc-resolver/binding-linux-x64-musl@5.3.0':
     resolution: {integrity: sha512-Hi39cWzul24rGljN4Vf1lxjXzQdCrdxO5oCT7KJP4ndSlqIUODJnfnMAP1YhcnIRvNvk+5E6sZtnEmFUd/4d8Q==}
     cpu: [x64]
     os: [linux]
+    libc: [musl]
 
   '@oxc-resolver/binding-openharmony-arm64@11.19.0':
     resolution: {integrity: sha512-Ud1gelL5slpEU5AjzBWQz1WheprOAl5CPnCKTWynvvdlBbAZXA6fPYLuCrlRo0uw+x3f37XJ71kirpSew8Zyvg==}
@@ -6868,36 +6877,42 @@ packages:
     engines: {node: '>= 10.0.0'}
     cpu: [arm]
     os: [linux]
+    libc: [glibc]
 
   '@parcel/watcher-linux-arm-musl@2.5.6':
     resolution: {integrity: sha512-Ve3gUCG57nuUUSyjBq/MAM0CzArtuIOxsBdQ+ftz6ho8n7s1i9E1Nmk/xmP323r2YL0SONs1EuwqBp2u1k5fxg==}
     engines: {node: '>= 10.0.0'}
     cpu: [arm]
     os: [linux]
+    libc: [musl]
 
   '@parcel/watcher-linux-arm64-glibc@2.5.6':
     resolution: {integrity: sha512-f2g/DT3NhGPdBmMWYoxixqYr3v/UXcmLOYy16Bx0TM20Tchduwr4EaCbmxh1321TABqPGDpS8D/ggOTaljijOA==}
     engines: {node: '>= 10.0.0'}
     cpu: [arm64]
     os: [linux]
+    libc: [glibc]
 
   '@parcel/watcher-linux-arm64-musl@2.5.6':
     resolution: {integrity: sha512-qb6naMDGlbCwdhLj6hgoVKJl2odL34z2sqkC7Z6kzir8b5W65WYDpLB6R06KabvZdgoHI/zxke4b3zR0wAbDTA==}
     engines: {node: '>= 10.0.0'}
     cpu: [arm64]
     os: [linux]
+    libc: [musl]
 
   '@parcel/watcher-linux-x64-glibc@2.5.6':
     resolution: {integrity: sha512-kbT5wvNQlx7NaGjzPFu8nVIW1rWqV780O7ZtkjuWaPUgpv2NMFpjYERVi0UYj1msZNyCzGlaCWEtzc+exjMGbQ==}
     engines: {node: '>= 10.0.0'}
     cpu: [x64]
     os: [linux]
+    libc: [glibc]
 
   '@parcel/watcher-linux-x64-musl@2.5.6':
     resolution: {integrity: sha512-1JRFeC+h7RdXwldHzTsmdtYR/Ku8SylLgTU/reMuqdVD7CtLwf0VR1FqeprZ0eHQkO0vqsbvFLXUmYm/uNKJBg==}
     engines: {node: '>= 10.0.0'}
     cpu: [x64]
     os: [linux]
+    libc: [musl]
 
   '@parcel/watcher-win32-arm64@2.5.6':
     resolution: {integrity: sha512-3ukyebjc6eGlw9yRt678DxVF7rjXatWiHvTXqphZLvo7aC5NdEgFufVwjFfY51ijYEWpXbqF5jtrK275z52D4Q==}
@@ -7842,144 +7857,168 @@ packages:
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [arm64]
     os: [linux]
+    libc: [glibc]
 
   '@rolldown/binding-linux-arm64-gnu@1.0.0-rc.16':
     resolution: {integrity: sha512-+tHktCHWV8BDQSjemUqm/Jl/TPk3QObCTIjmdDy/nlupcujZghmKK2962LYrqFpWu+ai01AN/REOH3NEpqvYQg==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [arm64]
     os: [linux]
+    libc: [glibc]
 
   '@rolldown/binding-linux-arm64-gnu@1.0.0-rc.17':
     resolution: {integrity: sha512-e6usGaHKW5BMNZOymS1UcEYGowQMWcgZ71Z17Sl/h2+ZziNJ1a9n3Zvcz6LdRyIW5572wBCTH/Z+bKuZouGk9Q==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [arm64]
     os: [linux]
+    libc: [glibc]
 
   '@rolldown/binding-linux-arm64-gnu@1.0.0-rc.8':
     resolution: {integrity: sha512-tOHgTOQa8G4Z3ULj4G3NYOGGJEsqPHR91dT72u63OtVsZ7B6wFJKOx+ZKv+pvwzxWz92/I2ycaqi2/Ll4l+rlg==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [arm64]
     os: [linux]
+    libc: [glibc]
 
   '@rolldown/binding-linux-arm64-musl@1.0.0-rc.15':
     resolution: {integrity: sha512-ZvRYMGrAklV9PEkgt4LQM6MjQX2P58HPAuecwYObY2DhS2t35R0I810bKi0wmaYORt6m/2Sm+Z+nFgb0WhXNcQ==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [arm64]
     os: [linux]
+    libc: [musl]
 
   '@rolldown/binding-linux-arm64-musl@1.0.0-rc.16':
     resolution: {integrity: sha512-3fPzdREH806oRLxpTWW1Gt4tQHs0TitZFOECB2xzCFLPKnSOy90gwA7P29cksYilFO6XVRY1kzga0cL2nRjKPg==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [arm64]
     os: [linux]
+    libc: [musl]
 
   '@rolldown/binding-linux-arm64-musl@1.0.0-rc.17':
     resolution: {integrity: sha512-b/CgbwAJpmrRLp02RPfhbudf5tZnN9nsPWK82znefso832etkem8H7FSZwxrOI9djcdTP7U6YfNhbRnh7djErg==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [arm64]
     os: [linux]
+    libc: [musl]
 
   '@rolldown/binding-linux-arm64-musl@1.0.0-rc.8':
     resolution: {integrity: sha512-oRbxcgDujCi2Yp1GTxoUFsIFlZsuPHU4OV4AzNc3/6aUmR4lfm9FK0uwQu82PJsuUwnF2jFdop3Ep5c1uK7Uxg==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [arm64]
     os: [linux]
+    libc: [musl]
 
   '@rolldown/binding-linux-ppc64-gnu@1.0.0-rc.15':
     resolution: {integrity: sha512-VDpgGBzgfg5hLg+uBpCLoFG5kVvEyafmfxGUV0UHLcL5irxAK7PKNeC2MwClgk6ZAiNhmo9FLhRYgvMmedLtnQ==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [ppc64]
     os: [linux]
+    libc: [glibc]
 
   '@rolldown/binding-linux-ppc64-gnu@1.0.0-rc.16':
     resolution: {integrity: sha512-EKwI1tSrLs7YVw+JPJT/G2dJQ1jl9qlTTTEG0V2Ok/RdOenRfBw2PQdLPyjhIu58ocdBfP7vIRN/pvMsPxs/AQ==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [ppc64]
     os: [linux]
+    libc: [glibc]
 
   '@rolldown/binding-linux-ppc64-gnu@1.0.0-rc.17':
     resolution: {integrity: sha512-4EII1iNGRUN5WwGbF/kOh/EIkoDN9HsupgLQoXfY+D1oyJm7/F4t5PYU5n8SWZgG0FEwakyM8pGgwcBYruGTlA==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [ppc64]
     os: [linux]
+    libc: [glibc]
 
   '@rolldown/binding-linux-ppc64-gnu@1.0.0-rc.8':
     resolution: {integrity: sha512-oaLRyUHw8kQE5M89RqrDJZ10GdmGJcMeCo8tvaE4ukOofqgjV84AbqBSH6tTPjeT2BHv+xlKj678GBuIb47lKA==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [ppc64]
     os: [linux]
+    libc: [glibc]
 
   '@rolldown/binding-linux-s390x-gnu@1.0.0-rc.15':
     resolution: {integrity: sha512-y1uXY3qQWCzcPgRJATPSOUP4tCemh4uBdY7e3EZbVwCJTY3gLJWnQABgeUetvED+bt1FQ01OeZwvhLS2bpNrAQ==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [s390x]
     os: [linux]
+    libc: [glibc]
 
   '@rolldown/binding-linux-s390x-gnu@1.0.0-rc.16':
     resolution: {integrity: sha512-Uknladnb3Sxqu6SEcqBldQyJUpk8NleooZEc0MbRBJ4inEhRYWZX0NJu12vNf2mqAq7gsofAxHrGghiUYjhaLQ==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [s390x]
     os: [linux]
+    libc: [glibc]
 
   '@rolldown/binding-linux-s390x-gnu@1.0.0-rc.17':
     resolution: {integrity: sha512-AH8oq3XqQo4IibpVXvPeLDI5pzkpYn0WiZAfT05kFzoJ6tQNzwRdDYQ45M8I/gslbodRZwW8uxLhbSBbkv96rA==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [s390x]
     os: [linux]
+    libc: [glibc]
 
   '@rolldown/binding-linux-s390x-gnu@1.0.0-rc.8':
     resolution: {integrity: sha512-1hjSKFrod5MwBBdLOOA0zpUuSfSDkYIY+QqcMcIU1WOtswZtZdUkcFcZza9b2HcAb0bnpmmyo0LZcaxLb2ov1g==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [s390x]
     os: [linux]
+    libc: [glibc]
 
   '@rolldown/binding-linux-x64-gnu@1.0.0-rc.15':
     resolution: {integrity: sha512-023bTPBod7J3Y/4fzAN6QtpkSABR0rigtrwaP+qSEabUh5zf6ELr9Nc7GujaROuPY3uwdSIXWrvhn1KxOvurWA==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [x64]
     os: [linux]
+    libc: [glibc]
 
   '@rolldown/binding-linux-x64-gnu@1.0.0-rc.16':
     resolution: {integrity: sha512-FIb8+uG49sZBtLTn+zt1AJ20TqVcqWeSIyoVt0or7uAWesgKaHbiBh6OpA/k9v0LTt+PTrb1Lao133kP4uVxkg==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [x64]
     os: [linux]
+    libc: [glibc]
 
   '@rolldown/binding-linux-x64-gnu@1.0.0-rc.17':
     resolution: {integrity: sha512-cLnjV3xfo7KslbU41Z7z8BH/E1y5mzUYzAqih1d1MDaIGZRCMqTijqLv76/P7fyHuvUcfGsIpqCdddbxLLK9rA==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [x64]
     os: [linux]
+    libc: [glibc]
 
   '@rolldown/binding-linux-x64-gnu@1.0.0-rc.8':
     resolution: {integrity: sha512-a1+F0aV4Wy9tT3o+cHl3XhOy6aFV+B8Ll+/JFj98oGkb6lGk3BNgrxd+80RwYRVd23oLGvj3LwluKYzlv1PEuw==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [x64]
     os: [linux]
+    libc: [glibc]
 
   '@rolldown/binding-linux-x64-musl@1.0.0-rc.15':
     resolution: {integrity: sha512-witB2O0/hU4CgfOOKUoeFgQ4GktPi1eEbAhaLAIpgD6+ZnhcPkUtPsoKKHRzmOoWPZue46IThdSgdo4XneOLYw==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [x64]
     os: [linux]
+    libc: [musl]
 
   '@rolldown/binding-linux-x64-musl@1.0.0-rc.16':
     resolution: {integrity: sha512-RuERhF9/EgWxZEXYWCOaViUWHIboceK4/ivdtQ3R0T44NjLkIIlGIAVAuCddFxsZ7vnRHtNQUrt2vR2n2slB2w==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [x64]
     os: [linux]
+    libc: [musl]
 
   '@rolldown/binding-linux-x64-musl@1.0.0-rc.17':
     resolution: {integrity: sha512-0phclDw1spsL7dUB37sIARuis2tAgomCJXAHZlpt8PXZ4Ba0dRP1e+66lsRqrfhISeN9bEGNjQs+T/Fbd7oYGw==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [x64]
     os: [linux]
+    libc: [musl]
 
   '@rolldown/binding-linux-x64-musl@1.0.0-rc.8':
     resolution: {integrity: sha512-bGyXCFU11seFrf7z8PcHSwGEiFVkZ9vs+auLacVOQrVsI8PFHJzzJROF3P6b0ODDmXr0m6Tj5FlDhcXVk0Jp8w==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [x64]
     os: [linux]
+    libc: [musl]
 
   '@rolldown/binding-openharmony-arm64@1.0.0-rc.15':
     resolution: {integrity: sha512-UCL68NJ0Ud5zRipXZE9dF5PmirzJE4E4BCIOOssEnM7wLDsxjc6Qb0sGDxTNRTP53I6MZpygyCpY8Aa8sPfKPg==}
@@ -8128,21 +8167,25 @@ packages:
     resolution: {integrity: sha512-P0QrGRPbTWu6RKWfN0bDtbnEps3rXH0MWIMreZABoUrVmNQKtXR6e73J3ub6a+di5s2+K0M2LJ9Bh2/H4UsDUA==}
     cpu: [arm64]
     os: [linux]
+    libc: [glibc]
 
   '@rspack/binding-linux-arm64-musl@1.7.11':
     resolution: {integrity: sha512-6ky7R43VMjWwmx3Yx7Jl7faLBBMAgMDt+/bN35RgwjiPgsIByz65EwytUVuW9rikB43BGHvA/eqlnjLrUzNBqw==}
     cpu: [arm64]
     os: [linux]
+    libc: [musl]
 
   '@rspack/binding-linux-x64-gnu@1.7.11':
     resolution: {integrity: sha512-cuOJMfCOvb2Wgsry5enXJ3iT1FGUjdPqtGUBVupQlEG4ntSYsQ2PtF4wIDVasR3wdxC5nQbipOrDiN/u6fYsdQ==}
     cpu: [x64]
     os: [linux]
+    libc: [glibc]
 
   '@rspack/binding-linux-x64-musl@1.7.11':
     resolution: {integrity: sha512-CoK37hva4AmHGh3VCsQXmGr40L36m1/AdnN5LEjUX6kx5rEH7/1nEBN6Ii72pejqDVvk9anEROmPDiPw10tpFg==}
     cpu: [x64]
     os: [linux]
+    libc: [musl]
 
   '@rspack/binding-wasm32-wasi@1.7.11':
     resolution: {integrity: sha512-OtrmnPUVJMxjNa3eDMfHyPdtlLRmmp/aIm0fQHlAOATbZvlGm12q7rhPW5BXTu1yh+1rQ1/uqvz+SzKEZXuJaQ==}
@@ -8699,24 +8742,28 @@ packages:
     engines: {node: '>=10'}
     cpu: [arm64]
     os: [linux]
+    libc: [glibc]
 
   '@swc/core-linux-arm64-musl@1.11.31':
     resolution: {integrity: sha512-Mztp5NZkyd5MrOAG+kl+QSn0lL4Uawd4CK4J7wm97Hs44N9DHGIG5nOz7Qve1KZo407Y25lTxi/PqzPKHo61zQ==}
     engines: {node: '>=10'}
     cpu: [arm64]
     os: [linux]
+    libc: [musl]
 
   '@swc/core-linux-x64-gnu@1.11.31':
     resolution: {integrity: sha512-DDVE0LZcXOWwOqFU1Xi7gdtiUg3FHA0vbGb3trjWCuI1ZtDZHEQYL4M3/2FjqKZtIwASrDvO96w91okZbXhvMg==}
     engines: {node: '>=10'}
     cpu: [x64]
     os: [linux]
+    libc: [glibc]
 
   '@swc/core-linux-x64-musl@1.11.31':
     resolution: {integrity: sha512-mJA1MzPPRIfaBUHZi0xJQ4vwL09MNWDeFtxXb0r4Yzpf0v5Lue9ymumcBPmw/h6TKWms+Non4+TDquAsweuKSw==}
     engines: {node: '>=10'}
     cpu: [x64]
     os: [linux]
+    libc: [musl]
 
   '@swc/core-win32-arm64-msvc@1.11.31':
     resolution: {integrity: sha512-RdtakUkNVAb/FFIMw3LnfNdlH1/ep6KgiPDRlmyUfd0WdIQ3OACmeBegEFNFTzi7gEuzy2Yxg4LWf4IUVk8/bg==}
@@ -8774,36 +8821,42 @@ packages:
     engines: {node: '>=10'}
     cpu: [arm64]
     os: [linux]
+    libc: [glibc]
 
   '@swc/html-linux-arm64-musl@1.15.24':
     resolution: {integrity: sha512-+7Xw69Y4p/LwhudMJZOQ++mKeXWTnh3vpNv5Ar+X1x8kfPBHKRXI3sRKf5JqE0oJqJXTgFP5xByzmO/KBee3sQ==}
     engines: {node: '>=10'}
     cpu: [arm64]
     os: [linux]
+    libc: [musl]
 
   '@swc/html-linux-ppc64-gnu@1.15.24':
     resolution: {integrity: sha512-ZKxckgQkOY2a54jiCnIBs5TkMNx7zvuKbe1WsM/WV0BiTfMfw5iMmtCKAIuYCz/PJRXVK0dY4VH3DS7jabBvwg==}
     engines: {node: '>=10'}
     cpu: [ppc64]
     os: [linux]
+    libc: [glibc]
 
   '@swc/html-linux-s390x-gnu@1.15.24':
     resolution: {integrity: sha512-y0WBjqDZALqOzasxrEOlgHq6SX34nAE4+0MATufmSoFEdiQIBYkm9m4C8XQNCNHv52ERCu/EPGK3Q8RfXaBLhQ==}
     engines: {node: '>=10'}
     cpu: [s390x]
     os: [linux]
+    libc: [glibc]
 
   '@swc/html-linux-x64-gnu@1.15.24':
     resolution: {integrity: sha512-U//u302yBSgh6vFfJmrw17Xm7k9a17m/E3AcHK4w12CZOFtsKHQnxE3i9uFWhNbW5F70w2A9QENml5b0Us8XMg==}
     engines: {node: '>=10'}
     cpu: [x64]
     os: [linux]
+    libc: [glibc]
 
   '@swc/html-linux-x64-musl@1.15.24':
     resolution: {integrity: sha512-U9gsAQCPiCROWKhLhSnW4JzkkOY6X4q0ZP/nA6UeKoahDdw4E8onPujtRSivt4ZxwdJKfAnsxeJY07V9YLZu9Q==}
     engines: {node: '>=10'}
     cpu: [x64]
     os: [linux]
+    libc: [musl]
 
   '@swc/html-win32-arm64-msvc@1.15.24':
     resolution: {integrity: sha512-AETh78z9ig4e1eAlx8a02BnIS5iNIJ7C43swQsxMraSDZvZuBxnvEXHqnt94jRlw7fzmJRRpJdVcInQ21u/xGA==}
@@ -8880,24 +8933,28 @@ packages:
     engines: {node: '>= 20'}
     cpu: [arm64]
     os: [linux]
+    libc: [glibc]
 
   '@tailwindcss/oxide-linux-arm64-musl@4.2.2':
     resolution: {integrity: sha512-oCfG/mS+/+XRlwNjnsNLVwnMWYH7tn/kYPsNPh+JSOMlnt93mYNCKHYzylRhI51X+TbR+ufNhhKKzm6QkqX8ag==}
     engines: {node: '>= 20'}
     cpu: [arm64]
     os: [linux]
+    libc: [musl]
 
   '@tailwindcss/oxide-linux-x64-gnu@4.2.2':
     resolution: {integrity: sha512-rTAGAkDgqbXHNp/xW0iugLVmX62wOp2PoE39BTCGKjv3Iocf6AFbRP/wZT/kuCxC9QBh9Pu8XPkv/zCZB2mcMg==}
     engines: {node: '>= 20'}
     cpu: [x64]
     os: [linux]
+    libc: [glibc]
 
   '@tailwindcss/oxide-linux-x64-musl@4.2.2':
     resolution: {integrity: sha512-XW3t3qwbIwiSyRCggeO2zxe3KWaEbM0/kW9e8+0XpBgyKU4ATYzcVSMKteZJ1iukJ3HgHBjbg9P5YPRCVUxlnQ==}
     engines: {node: '>= 20'}
     cpu: [x64]
     os: [linux]
+    libc: [musl]
 
   '@tailwindcss/oxide-wasm32-wasi@4.2.2':
     resolution: {integrity: sha512-eKSztKsmEsn1O5lJ4ZAfyn41NfG7vzCg496YiGtMDV86jz1q/irhms5O0VrY6ZwTUkFy/EKG3RfWgxSI3VbZ8Q==}
@@ -9489,41 +9546,49 @@ packages:
     resolution: {integrity: sha512-34gw7PjDGB9JgePJEmhEqBhWvCiiWCuXsL9hYphDF7crW7UgI05gyBAi6MF58uGcMOiOqSJ2ybEeCvHcq0BCmQ==}
     cpu: [arm64]
     os: [linux]
+    libc: [glibc]
 
   '@unrs/resolver-binding-linux-arm64-musl@1.11.1':
     resolution: {integrity: sha512-RyMIx6Uf53hhOtJDIamSbTskA99sPHS96wxVE/bJtePJJtpdKGXO1wY90oRdXuYOGOTuqjT8ACccMc4K6QmT3w==}
     cpu: [arm64]
     os: [linux]
+    libc: [musl]
 
   '@unrs/resolver-binding-linux-ppc64-gnu@1.11.1':
     resolution: {integrity: sha512-D8Vae74A4/a+mZH0FbOkFJL9DSK2R6TFPC9M+jCWYia/q2einCubX10pecpDiTmkJVUH+y8K3BZClycD8nCShA==}
     cpu: [ppc64]
     os: [linux]
+    libc: [glibc]
 
   '@unrs/resolver-binding-linux-riscv64-gnu@1.11.1':
     resolution: {integrity: sha512-frxL4OrzOWVVsOc96+V3aqTIQl1O2TjgExV4EKgRY09AJ9leZpEg8Ak9phadbuX0BA4k8U5qtvMSQQGGmaJqcQ==}
     cpu: [riscv64]
     os: [linux]
+    libc: [glibc]
 
   '@unrs/resolver-binding-linux-riscv64-musl@1.11.1':
     resolution: {integrity: sha512-mJ5vuDaIZ+l/acv01sHoXfpnyrNKOk/3aDoEdLO/Xtn9HuZlDD6jKxHlkN8ZhWyLJsRBxfv9GYM2utQ1SChKew==}
     cpu: [riscv64]
     os: [linux]
+    libc: [musl]
 
   '@unrs/resolver-binding-linux-s390x-gnu@1.11.1':
     resolution: {integrity: sha512-kELo8ebBVtb9sA7rMe1Cph4QHreByhaZ2QEADd9NzIQsYNQpt9UkM9iqr2lhGr5afh885d/cB5QeTXSbZHTYPg==}
     cpu: [s390x]
     os: [linux]
+    libc: [glibc]
 
   '@unrs/resolver-binding-linux-x64-gnu@1.11.1':
     resolution: {integrity: sha512-C3ZAHugKgovV5YvAMsxhq0gtXuwESUKc5MhEtjBpLoHPLYM+iuwSj3lflFwK3DPm68660rZ7G8BMcwSro7hD5w==}
     cpu: [x64]
     os: [linux]
+    libc: [glibc]
 
   '@unrs/resolver-binding-linux-x64-musl@1.11.1':
     resolution: {integrity: sha512-rV0YSoyhK2nZ4vEswT/QwqzqQXw5I6CjoaYMOX0TqBlWhojUf8P94mvI7nuJTeaCkkds3QE4+zS8Ko+GdXuZtA==}
     cpu: [x64]
     os: [linux]
+    libc: [musl]
 
   '@unrs/resolver-binding-wasm32-wasi@1.11.1':
     resolution: {integrity: sha512-5u4RkfxJm+Ng7IWgkzi3qrFOvLvQYnPBmjmZQ8+szTK/b31fQCnleNl1GgEt7nIsZRIf5PLhPwT0WM+q45x/UQ==}
@@ -12381,6 +12446,9 @@ packages:
     resolution: {integrity: sha512-7yAQpD2UMJzLi1Dqv7qFYnPbaPx7ZfFK6PiIxQ4PfkGPyNyl2Ugx+a/umUonmKqjhM4DnfbMvdX6otXq83soQQ==}
     engines: {node: ^12.20 || >= 14.13}
 
+  fflate@0.8.2:
+    resolution: {integrity: sha512-cPJU47OaAoCbg0pBvzsgpTPhmhqI5eJjh/JIu8tPj5q+T7iLvW/JAYUqmE7KOB4R1ZyEhzBaIQpQpardBF5z8A==}
+
   figures@3.2.0:
     resolution: {integrity: sha512-yaduQFRKLXYOGgEn6AZau90j3ggSOyiqXU0F9JZfeXYhNa+Jk4X+s45A2zg5jns87GAFa34BBm2kXw4XpNcbdg==}
     engines: {node: '>=8'}
@@ -14054,24 +14122,28 @@ packages:
     engines: {node: '>= 12.0.0'}
     cpu: [arm64]
     os: [linux]
+    libc: [glibc]
 
   lightningcss-linux-arm64-musl@1.32.0:
     resolution: {integrity: sha512-UpQkoenr4UJEzgVIYpI80lDFvRmPVg6oqboNHfoH4CQIfNA+HOrZ7Mo7KZP02dC6LjghPQJeBsvXhJod/wnIBg==}
     engines: {node: '>= 12.0.0'}
     cpu: [arm64]
     os: [linux]
+    libc: [musl]
 
   lightningcss-linux-x64-gnu@1.32.0:
     resolution: {integrity: sha512-V7Qr52IhZmdKPVr+Vtw8o+WLsQJYCTd8loIfpDaMRWGUZfBOYEJeyJIkqGIDMZPwPx24pUMfwSxxI8phr/MbOA==}
     engines: {node: '>= 12.0.0'}
     cpu: [x64]
     os: [linux]
+    libc: [glibc]
 
   lightningcss-linux-x64-musl@1.32.0:
     resolution: {integrity: sha512-bYcLp+Vb0awsiXg/80uCRezCYHNg1/l3mt0gzHnWV9XP1W5sKa5/TCdGWaR/zBM2PeF/HbsQv/j2URNOiVuxWg==}
     engines: {node: '>= 12.0.0'}
     cpu: [x64]
     os: [linux]
+    libc: [musl]
 
   lightningcss-win32-arm64-msvc@1.32.0:
     resolution: {integrity: sha512-8SbC8BR40pS6baCM8sbtYDSwEVQd4JlFTOlaD3gWGHfThTcABnNDBda6eTZeqbofalIJhFx0qKzgHJmcPTnGdw==}
@@ -27973,6 +28045,22 @@ snapshots:
       - vite
     optional: true
 
+  '@vitest/coverage-v8@4.1.1(@vitest/browser@4.1.1(msw@2.12.10(@types/node@25.2.3)(typescript@5.9.3))(vite@8.0.8(@types/node@25.2.3)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))(vitest@4.1.1))(vitest@4.1.1)':
+    dependencies:
+      '@bcoe/v8-coverage': 1.0.2
+      '@vitest/utils': 4.1.1
+      ast-v8-to-istanbul: 1.0.0
+      istanbul-lib-coverage: 3.2.2
+      istanbul-lib-report: 3.0.1
+      istanbul-reports: 3.2.0
+      magicast: 0.5.2
+      obug: 2.1.1
+      std-env: 4.0.0
+      tinyrainbow: 3.0.3
+      vitest: 4.1.1(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@4.1.1)(happy-dom@20.9.0)(jsdom@24.1.3)(msw@2.12.10(@types/node@25.2.3)(typescript@5.9.3))(vite@8.0.8(@types/node@25.2.3)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
+    optionalDependencies:
+      '@vitest/browser': 4.1.1(msw@2.12.10(@types/node@25.2.3)(typescript@5.9.3))(vite@8.0.8(@types/node@25.2.3)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))(vitest@4.1.1)
+
   '@vitest/coverage-v8@4.1.1(@vitest/browser@4.1.1(msw@2.12.10(@types/node@25.5.0)(typescript@5.9.3))(vite@8.0.10(@types/node@25.5.0)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))(vitest@4.1.1))(vitest@4.1.1)':
     dependencies:
       '@bcoe/v8-coverage': 1.0.2
@@ -31339,6 +31427,8 @@ snapshots:
     dependencies:
       node-domexception: 1.0.0
       web-streams-polyfill: 3.3.3
+
+  fflate@0.8.2: {}
 
   figures@3.2.0:
     dependencies:

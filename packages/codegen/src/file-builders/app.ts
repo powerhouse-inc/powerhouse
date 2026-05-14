@@ -110,7 +110,7 @@ export async function tsMorphGenerateApp({
     editorDirPath,
   });
 
-  makeEditorModuleFile({
+  await makeEditorModuleFile({
     project,
     editorName,
     editorId,

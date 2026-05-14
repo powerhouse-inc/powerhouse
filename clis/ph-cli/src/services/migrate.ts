@@ -1,4 +1,7 @@
-import { fetchPackageVersionFromNpmRegistry } from "@powerhousedao/shared/clis";
+import {
+  fetchPackageVersionFromNpmRegistry,
+  injectPnpmAllowBuilds,
+} from "@powerhousedao/shared/clis";
 import { execSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -18,6 +21,38 @@ function getBundledPhCliVersion(): string | undefined {
       // keep walking
     }
     dir = dirname(dir);
+  }
+}
+
+export function resolveCodegenVersion(
+  codegenMod: Record<string, unknown>,
+): string | undefined {
+  const getter = codegenMod.getCodegenVersion;
+  if (typeof getter === "function") {
+    const v = (getter as () => unknown)();
+    if (typeof v === "string") return v;
+  }
+  return undefined;
+}
+
+export function assertCodegenMatchesBundled(args: {
+  codegenVersion: string | undefined;
+  bundledVersion: string | undefined;
+  force: boolean;
+}): void {
+  const { codegenVersion, bundledVersion, force } = args;
+  if (force) return;
+  if (!codegenVersion) {
+    throw new Error(
+      `@powerhousedao/codegen is older than this ph-cli expects (no version export). ` +
+        `Reinstall ph-cli to bring a matching codegen, or re-run with --force.`,
+    );
+  }
+  if (bundledVersion && codegenVersion !== bundledVersion) {
+    throw new Error(
+      `@powerhousedao/codegen@${codegenVersion} does not match ph-cli@${bundledVersion}. ` +
+        `Reinstall to align versions, or re-run with --force.`,
+    );
   }
 }
 
@@ -61,8 +96,19 @@ export async function startMigrate({
 
   if (!targetVersion || force || targetVersion === bundledVersion) {
     if (debug) console.log(`[migrate] running migrate from bundled codegen`);
-    const { migrate } = await import("@powerhousedao/codegen");
-    await migrate(targetVersion ?? requested);
+    const codegenMod = await import("@powerhousedao/codegen");
+    const codegenVersion = resolveCodegenVersion(
+      codegenMod as unknown as Record<string, unknown>,
+    );
+    assertCodegenMatchesBundled({
+      codegenVersion,
+      bundledVersion,
+      force: Boolean(force),
+    });
+    console.log(
+      `Running migrate with @powerhousedao/codegen@${codegenVersion ?? "unknown"}`,
+    );
+    await codegenMod.migrate(targetVersion ?? requested);
     return;
   }
 
@@ -79,6 +125,8 @@ export async function startMigrate({
       `Failed to resolve execute command for package manager "${agent}".`,
     );
   }
+
+  injectPnpmAllowBuilds(agent, resolved);
 
   const command = `${resolved.command} ${resolved.args.join(" ")}`;
   if (debug) {

@@ -1,3 +1,47 @@
+## 6.0.0-dev.248 (2026-05-14)
+
+### 🚀 Features
+
+- **codegen,ph-cli:** ensure correct codegen version before migrate ([da1d40c1a](https://github.com/powerhouse-inc/powerhouse/commit/da1d40c1a))
+- **codegen,ph-cli:** sync feature peer deps on generate-processor / generate-subgraph ([b3a571d14](https://github.com/powerhouse-inc/powerhouse/commit/b3a571d14))
+- **shared:** replace jszip with fflate for tree-shakeable zip handling ([9a417aa98](https://github.com/powerhouse-inc/powerhouse/commit/9a417aa98))
+
+### 🩹 Fixes
+
+- declare graphql/graphql-tag as peerDependencies to prevent dup instances ([4fec9d5b6](https://github.com/powerhouse-inc/powerhouse/commit/4fec9d5b6))
+- **codegen:** preserve workspace:/catalog: version refs during migrate ([81657f46d](https://github.com/powerhouse-inc/powerhouse/commit/81657f46d))
+- **codegen:** format editor module.ts with prettier on generation ([f66bac8ba](https://github.com/powerhouse-inc/powerhouse/commit/f66bac8ba))
+- **codegen:** trim leading newlines from AI config templates ([252421976](https://github.com/powerhouse-inc/powerhouse/commit/252421976))
+- **codegen:** pin graphql-tag dev to exact version ([5f20fd406](https://github.com/powerhouse-inc/powerhouse/commit/5f20fd406))
+- **codegen:** detect analytics processors during migrate ([438ce9259](https://github.com/powerhouse-inc/powerhouse/commit/438ce9259))
+- **shared:** auto-detect base64 vs binary strings in toUint8Array ([1eca8c5b1](https://github.com/powerhouse-inc/powerhouse/commit/1eca8c5b1))
+- **use-local:** handle peer deps + use link: for transitive workspace refs ([4146d0df0](https://github.com/powerhouse-inc/powerhouse/commit/4146d0df0))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.247 (2026-05-14)
+
+### 🚀 Features
+
+- **academy:** tier 3 approach with gap reports ([e23cddbce](https://github.com/powerhouse-inc/powerhouse/commit/e23cddbce))
+- **pglite-fs:** implemented a fs-backed pglite backend with in-memory WAL ([736ae675b](https://github.com/powerhouse-inc/powerhouse/commit/736ae675b))
+- **pglite-fs:** adding crash tests, also adding permutations of reactor tests with new backend ([4747ba737](https://github.com/powerhouse-inc/powerhouse/commit/4747ba737))
+- **ph-lora:** tier 1 doc checker, mapping, gap report for react hooks ([47c6fc620](https://github.com/powerhouse-inc/powerhouse/commit/47c6fc620))
+- **ph-lora:** tier 2 CI, mapping validator, file-level sourceFiles, authorization gap report ([76ce10b41](https://github.com/powerhouse-inc/powerhouse/commit/76ce10b41))
+- **ph-lora:** claude commands ([d5950812a](https://github.com/powerhouse-inc/powerhouse/commit/d5950812a))
+- **ph-lora:** doc-fix command ([87c6ab98d](https://github.com/powerhouse-inc/powerhouse/commit/87c6ab98d))
+- **ph-lora:** doc-status and doc-clarity command ([1087fadb9](https://github.com/powerhouse-inc/powerhouse/commit/1087fadb9))
+- **ph-lora:** release-notes skill + v6.0.0 release notes ([22aa1e682](https://github.com/powerhouse-inc/powerhouse/commit/22aa1e682))
+- **ph-lora:** Claude Code doc-review skill suite + release-notes generator ([#2596](https://github.com/powerhouse-inc/powerhouse/pull/2596))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- CallmeT-ty @CallmeT-ty
+- Claude Sonnet 4.6
+
 ## 6.0.0-dev.246 (2026-05-13)
 
 ### 🚀 Features

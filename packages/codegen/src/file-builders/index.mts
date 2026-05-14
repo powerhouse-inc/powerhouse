@@ -2,7 +2,6 @@ export * from "./app.js";
 export * from "./boilerplate/generated-project-files.js";
 export * from "./boilerplate/package.json.js";
 export * from "./clis/generate-cli-docs.js";
-export * from "./constants.js";
 export * from "./document-editor.js";
 export * from "./document-model/document-model.js";
 export * from "./document-model/utils.js";

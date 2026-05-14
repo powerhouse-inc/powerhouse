@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-browser",
-  "version": "6.0.0-dev.246",
+  "version": "6.0.0-dev.248",
   "license": "AGPL-3.0-only",
   "type": "module",
   "repository": {
@@ -53,9 +53,7 @@
     "@tanstack/react-query": "^5.49.2",
     "change-case": "catalog:",
     "document-model": "workspace:*",
-    "graphql": "catalog:",
     "graphql-request": "catalog:",
-    "graphql-tag": "catalog:",
     "kysely": "catalog:",
     "kysely-pglite-dialect": "catalog:",
     "lodash.isequal": "^4.5.0",
@@ -82,6 +80,8 @@
     "@vitest/browser": "catalog:",
     "@vitest/browser-playwright": "catalog:",
     "fast-deep-equal": "catalog:",
+    "graphql": "catalog:",
+    "graphql-tag": "catalog:",
     "playwright": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
@@ -91,6 +91,8 @@
     "vitest-browser-react": "^1.0.1"
   },
   "peerDependencies": {
+    "graphql": "^16",
+    "graphql-tag": "^2",
     "react": ">=19.0.0",
     "react-dom": ">=19.0.0"
   }

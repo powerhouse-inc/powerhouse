@@ -8,18 +8,12 @@ A new `@powerhousedao/reactor-drive` package replaces the legacy `powerhouse/doc
 
 The shape and test coverage are good. The bulk of the surface is exercised by unit + integration tests and a small benchmark. The findings below are concentrated around two themes:
 
-1. The reactor core has grown a few hardcoded couplings to the new module (action-type strings, document-type string) that should be inverted before another module copies the pattern.
+1. The reactor core still hardcodes `"powerhouse/document-drive"` in `document-action-handler.ts` and never matches the new `"powerhouse/reactor-drive"`, so drive-collection membership and the associated sync paths skip reactor-drive children entirely.
 2. A handful of correctness/consistency edges — paging defaults, projection cleanup on document delete, consistency-token threading, documentType preservation — are off in ways the current tests don't catch.
 
 ---
 
 ## Findings (highest severity = highest number)
-
-### 20. Reactor core hardcodes reactor-drive's action types in `STRICT_ORDER_ACTION_TYPES`
-
-`packages/reactor/src/utils/reshuffle.ts:12-22` adds `ADD_FOLDER`, `UPDATE_FOLDER`, `REMOVE_FOLDER` to the strict-order set. These are reactor-drive-specific action types — the reactor core has no business knowing about them. This is a layering violation: every future document model that needs strict-order replay would have to land a PR in `@powerhousedao/reactor` to enroll its action types.
-
-Recommendation: invert the dependency. Either have document model modules declare which of their action types require strict logical-index ordering (e.g. a flag on the action definition, or a registry surface like `IDocumentModelRegistry.getStrictOrderActions(documentType)`), or default to strict-order semantics for all actions in the `document` scope and opt out from the reactor-drive side if needed. The current shape will rot.
 
 ### 19. `document-action-handler.ts` collection-membership update ignores `powerhouse/reactor-drive`
 

@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-mcp",
-  "version": "6.0.0-dev.246",
+  "version": "6.0.0-dev.248",
   "description": "MCP server for document model operations in the Powerhouse ecosystem. For document model creation tasks, consider using the document-model-creator agent which provides a more guided experience.",
   "type": "module",
   "repository": {
@@ -38,7 +38,6 @@
   "license": "AGPL-3.0-only",
   "dependencies": {
     "@modelcontextprotocol/sdk": "catalog:",
-    "@openfeature/core": "catalog:",
     "@openfeature/env-var-provider": "catalog:",
     "@openfeature/server-sdk": "catalog:",
     "@powerhousedao/reactor": "workspace:*",
@@ -49,6 +48,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@openfeature/core": "catalog:",
     "@types/node": "catalog:",
     "tsdown": "catalog:",
     "vitest": "catalog:"
