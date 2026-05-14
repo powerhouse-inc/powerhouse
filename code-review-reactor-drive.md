@@ -6,32 +6,11 @@ Scope: all modified + untracked files on the current branch (commits `d6b7c4f8c.
 
 A new `@powerhousedao/reactor-drive` package replaces the legacy `powerhouse/document-drive` model. Folder structure has moved out of the drive's `state.global.nodes` and into the event log as first-class `ADD_FOLDER` / `UPDATE_FOLDER` / `REMOVE_FOLDER` actions; files remain `ADD_RELATIONSHIP("drive/child", …)` edges from the drive to a child PHDocument. A new `NodeProcessor` (BaseReadModel) projects these into `DriveNode` + `DocumentName` tables; `DriveNodeView` reads them; `ReactorDriveClient` implements `IDriveClient`; a GraphQL subgraph fronts the projection. Supporting changes in `@powerhousedao/reactor` add `UPDATE_RELATIONSHIP`, refactor the relationship handlers into a single `withRelationshipAction` template, add `parsePagingOptions`, paginate the legacy `DriveClient.listNodes`, and deprecate `DocumentDriveState.nodes`.
 
-The shape and test coverage are good. The bulk of the surface is exercised by unit + integration tests and a small benchmark. The findings below are concentrated around two themes:
-
-1. The reactor core still hardcodes `"powerhouse/document-drive"` in `document-action-handler.ts` and never matches the new `"powerhouse/reactor-drive"`, so drive-collection membership and the associated sync paths skip reactor-drive children entirely.
-2. A handful of correctness/consistency edges — paging defaults, projection cleanup on document delete, consistency-token threading, documentType preservation — are off in ways the current tests don't catch.
+The shape and test coverage are good. The bulk of the surface is exercised by unit + integration tests and a small benchmark. The findings below are concentrated around correctness/consistency edges — projection cleanup on document delete, consistency-token threading, documentType preservation, cursor stability — that are off in ways the current tests don't catch.
 
 ---
 
 ## Findings (highest severity = highest number)
-
-### 19. `document-action-handler.ts` collection-membership update ignores `powerhouse/reactor-drive`
-
-`packages/reactor/src/executor/document-action-handler.ts:239`, `:587`, `:616` all gate on `documentType === "powerhouse/document-drive"` to (a) create the drive collection on CREATE_DOCUMENT, (b) `addToCollection` on ADD_RELATIONSHIP, (c) `removeFromCollection` + invalidate `collectionMembershipCache` on REMOVE_RELATIONSHIP. The new reactor-drive uses `"powerhouse/reactor-drive"` (see `packages/reactor-drive/src/constants.ts:1`), so none of these run.
-
-Consequence: every drive collection / membership cache lookup keyed on `driveCollectionId` is stale-by-design for reactor-drive children. `packages/reactor/src/sync/utils.ts:402` uses exactly this collection id to compute sync memberships, so reactor-drive children will not be tagged for drive-level sync channels. Search paths that resolve "documents in drive X" via `collectionMembershipCache.getCollectionsForDocuments` (see `packages/reactor/src/executor/simple-job-executor.ts:254`) will also miss them.
-
-Recommendation: drive these checks off a registry-supplied predicate ("is this document a drive container?") rather than a hardcoded string. As a stopgap, accept both legacy and reactor-drive types — but that just doubles the hardcoding.
-
-### 18. `ReactorDriveClient.listNodes` silently truncates to 100 results when called with no paging arg
-
-`packages/reactor-drive/src/client/reactor-drive-client.ts:428-446` forwards the (possibly undefined) `paging` arg to `DriveNodeView.listChildren`, which falls back to `DEFAULT_LIMIT = 100` (`packages/reactor-drive/src/read-model/drive-node-view.ts:15,39`). The legacy `DriveClient.listNodes` (`packages/reactor/src/client/drive-client.ts:455-457`) passes `filtered.length` as the default, so the no-paging call returns every node.
-
-This contradicts both the docstring on `IDriveClient.listNodes` ("Returns a paged result so callers can stream through drives with very large node counts" — i.e. paging is opt-in, not implicit) and the intent of commit `8897dd3` ("listNodes should match legacy behavior").
-
-The unit test at `packages/reactor-drive/test/reactor-drive-client.test.ts:436-467` ("listNodes returns all nodes in the drive when parentFolder is undefined") seeds 4 nodes — well under 100 — so it passes today and would not catch this regression at 101+ nodes.
-
-Recommendation: in `ReactorDriveClient.listNodes`, when `paging === undefined`, either delegate to a `listAll`-style path that returns everything, or compute total count first and pass that as the limit. Add a regression test that seeds >100 nodes and calls `listNodes` without paging.
 
 ### 17. `rowToNode` quietly lies about `FileNode.documentType` by coercing `null` to `""`
 
@@ -115,14 +94,6 @@ Two small consequences:
 
 Recommendation: in `executeUpdateRelationship`, optionally validate row existence before logging the operation (`writeCache`/indexer pre-check), and pass a `preValidate` rejecting `sourceId === targetId` for symmetry with ADD.
 
-### 7. `reactorDriveStateReducer` mutates state in place
-
-`packages/reactor-drive/src/reducer/drive.ts:27-46` does `state.global.name = input.name;` and similar direct assignments. This works only if `createReducer` (imported from `@powerhousedao/shared/document-model`) wraps the reducer in Immer's `produce` (the legacy document-drive reducer relies on this). Worth confirming. If it doesn't, you have action-state aliasing bugs that won't surface until a consumer keeps a reference to the previous state.
-
-The `SET_DRIVE_ICON` / `SET_SHARING_TYPE` / `SET_AVAILABLE_OFFLINE` paths are equally affected. The folder cases (`ADD_FOLDER`/`UPDATE_FOLDER`/`REMOVE_FOLDER`) just return state unchanged — the comment at line 50 correctly explains the projection runs elsewhere.
-
-Recommendation: explicitly confirm `createReducer`'s contract in a code comment, or rewrite to return `{ ...state, global: { ...state.global, name: input.name } }` to be safe regardless of the wrapper.
-
 ### 6. `addRelationshipAction`'s `relationshipType: "child"` default is misleading
 
 `packages/reactor/src/actions/index.ts:75` keeps the old default of `"child"`. With reactor-drive now declaring `DRIVE_CHILD_RELATIONSHIP_TYPE = "drive/child"` (`packages/reactor-drive/src/constants.ts:3`), the default is no longer meaningful for the most common caller. Callers who omit the type will create edges that NodeProcessor explicitly skips (`node-processor.ts:146`).
@@ -149,7 +120,6 @@ Recommendation: handle `DELETE_DOCUMENT` in NodeProcessor (#14) and include a `D
 
 ### 1. Test coverage gaps
 
-- `listNodes` regression at >100 nodes (see #18): no test exercises this.
 - `getDescendants` against deep trees: integration tests cover up to depth 2.
 - `migrateLegacyDriveState`: no test reads back the projected nodes to verify `documentType` (#16) and parent linkages after migration through the reactor.
 - `UPDATE_RELATIONSHIP`: unit-tested in `packages/reactor/test/executor/document-action-handler/unit.test.ts:422-524`, but there is no integration test exercising it end-to-end through `KyselyDocumentIndexer.handleUpdateRelationship` and the resulting `DocumentRelationship.metadata` mutation.
