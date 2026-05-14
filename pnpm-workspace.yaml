@@ -110,7 +110,6 @@ catalog:
   "type-fest": 5.6.0
 
 allowBuilds:
-  "@eslint/css": true
   vite: true
   vitest: true
   lightningcss: true
