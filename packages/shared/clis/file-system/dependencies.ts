@@ -75,6 +75,20 @@ export async function makeVersionedDependencies(args: {
   );
 }
 
+export async function makeVersionedDependenciesMap(args: {
+  names: readonly string[];
+  version?: string;
+  tag?: string;
+}): Promise<Record<string, string>> {
+  const entries = await Promise.all(
+    args.names.map(async (name) => {
+      const version = await parsePackageVersion({ name, ...args });
+      return [name, version] as const;
+    }),
+  );
+  return Object.fromEntries(entries);
+}
+
 async function makeVersionedDependency(args: {
   name: string;
   version?: string;

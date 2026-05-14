@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/vetra",
-  "version": "6.0.0-dev.247",
+  "version": "6.0.0-dev.248",
   "license": "AGPL-3.0-only",
   "type": "module",
   "sideEffects": false,
@@ -69,9 +69,7 @@
     "@powerhousedao/shared": "workspace:*",
     "change-case": "catalog:",
     "document-model": "workspace:*",
-    "kysely": "catalog:",
     "react": "catalog:",
-    "ts-morph": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
@@ -84,15 +82,13 @@
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "catalog:",
+    "kysely": "catalog:",
     "react-dom": "catalog:",
     "tailwindcss": "catalog:",
+    "ts-morph": "catalog:",
     "tsdown": "catalog:",
     "vite": "catalog:",
     "vitest": "catalog:"
-  },
-  "optionalDependencies": {
-    "@powerhousedao/connect": "workspace:*",
-    "@powerhousedao/ph-cli": "workspace:*"
   },
   "description": ""
 }

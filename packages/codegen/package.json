@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/codegen",
-  "version": "6.0.0-dev.247",
+  "version": "6.0.0-dev.248",
   "license": "AGPL-3.0-only",
   "private": false,
   "type": "module",
@@ -50,7 +50,6 @@
     "chalk": "catalog:",
     "change-case": "catalog:",
     "document-model": "workspace:*",
-    "graphql": "catalog:",
     "graphql-codegen-typescript-validation-schema": "catalog:",
     "load-json-file": "^7.0.1",
     "npm-registry-fetch": "^19.1.1",
@@ -67,6 +66,10 @@
     "@pnpm/find-workspace-packages": "^6.0.9",
     "@tmpl/core": "npm:@jsr/tmpl__core@^0.6.3",
     "@types/npm-registry-fetch": "^8.0.9",
+    "graphql": "catalog:",
     "tsdown": "catalog:"
+  },
+  "peerDependencies": {
+    "graphql": "^16"
   }
 }

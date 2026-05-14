@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/shared",
-  "version": "6.0.0-dev.247",
+  "version": "6.0.0-dev.248",
   "type": "module",
   "sideEffects": false,
   "publishConfig": {
@@ -113,8 +113,7 @@
     "change-case": "catalog:",
     "cmd-ts": "catalog:",
     "enquirer": "catalog:",
-    "jszip": "^3.10.1",
-    "kysely": "catalog:",
+    "fflate": "^0.8.2",
     "luxon": "catalog:",
     "mutative": "catalog:",
     "npm-package-arg": "catalog:",
@@ -133,6 +132,7 @@
     "@types/luxon": "catalog:",
     "@types/npm-package-arg": "catalog:",
     "@types/react": "catalog:",
+    "kysely": "catalog:",
     "react": "catalog:",
     "tsdown": "catalog:",
     "tsx": "catalog:"

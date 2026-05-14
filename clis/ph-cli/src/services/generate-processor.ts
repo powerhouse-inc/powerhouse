@@ -1,6 +1,8 @@
 import {
+  detectFeatures,
   generateAllProcessors,
   generateProcessor,
+  syncFeatureDependencies,
 } from "@powerhousedao/codegen";
 import {
   buildTsMorphProject,
@@ -47,4 +49,5 @@ export async function startGenerateProcessor(
     return;
   }
   await project.save();
+  await syncFeatureDependencies(detectFeatures(projectDir), projectDir);
 }
