@@ -203,12 +203,17 @@ async function main(): Promise<void> {
   // Step 1: Start switchboard
   console.log(blue("Starting switchboard...") + " ");
 
+  // This suite exercises the sync protocol, not on-disk durability. Forcing
+  // switchboard to use in-memory PGLite keeps AtomicNodeFs's per-query
+  // full-tree snapshot serialization out of the hot path so the test isn't
+  // gated on filesystem throughput.
   const switchboardProc = spawn("tsx", [SWITCHBOARD_SERVER_PATH], {
     stdio: ["ignore", "pipe", "pipe"],
     cwd: switchboardDataDir,
     env: {
       ...process.env,
       PORT: String(PORT),
+      PH_PGLITE_IN_MEMORY: "1",
     },
   });
 

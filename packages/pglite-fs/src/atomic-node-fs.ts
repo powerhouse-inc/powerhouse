@@ -29,23 +29,51 @@ export interface AtomicNodeFsLogger {
   warn(message: string): void;
 }
 
+export interface AtomicNodeFsOptions {
+  logger?: AtomicNodeFsLogger;
+  /**
+   * Coalesce `syncToFs` calls into a trailing-edge disk write at most every
+   * `flushIntervalMs` milliseconds. PGLite calls `syncToFs` after every
+   * non-transactional query (including each BEGIN/INSERT/COMMIT emitted by
+   * Kysely), so a synchronous full-tree snapshot per call caps write
+   * throughput at one query per snapshot duration. Deferred mode trades
+   * worst-case crash loss of up to `flushIntervalMs` of writes for sustained
+   * throughput. `closeFs` always drains pending writes durably before
+   * returning.
+   *
+   * Default `0` preserves the original per-call synchronous behavior.
+   */
+  flushIntervalMs?: number;
+}
+
 /**
  * PGLite Filesystem that holds the working data dir in Emscripten MEMFS and
- * atomically swaps a single-file on-disk snapshot on every `syncToFs`. A SIGKILL
+ * atomically swaps a single-file on-disk snapshot on `syncToFs`. A SIGKILL
  * mid-write leaves the previous snapshot intact, so the next startup loads
  * cleanly rather than aborting on torn WAL.
  *
- * Intended for local dev use — full-tree snapshots per non-transactional query
- * are fine at dev volume but won't scale to production write rates.
+ * Intended for local dev use — full-tree snapshots are fine at dev volume but
+ * won't scale to production write rates. For write-heavy workloads, pass
+ * `flushIntervalMs` to coalesce multiple PGLite syncs into one disk write.
  */
 export class AtomicNodeFs extends MemoryFS {
   private readonly hostDir: string;
   private readonly logger?: AtomicNodeFsLogger;
+  private readonly flushIntervalMs: number;
 
-  constructor(hostDir: string, logger?: AtomicNodeFsLogger) {
+  private dirty = false;
+  private flushTimer?: ReturnType<typeof setTimeout>;
+  private flushInFlight?: Promise<void>;
+
+  constructor(
+    hostDir: string,
+    optionsOrLogger?: AtomicNodeFsOptions | AtomicNodeFsLogger,
+  ) {
     super();
     this.hostDir = path.resolve(hostDir);
-    this.logger = logger;
+    const options = normalizeOptions(optionsOrLogger);
+    this.logger = options.logger;
+    this.flushIntervalMs = Math.max(0, options.flushIntervalMs ?? 0);
   }
 
   async initialSyncFs(): Promise<void> {
@@ -75,6 +103,54 @@ export class AtomicNodeFs extends MemoryFS {
   }
 
   async syncToFs(relaxedDurability?: boolean): Promise<void> {
+    if (this.flushIntervalMs === 0) {
+      await this.writeSnapshot(relaxedDurability ?? false);
+      return;
+    }
+    this.dirty = true;
+    this.scheduleDeferredFlush(relaxedDurability ?? false);
+  }
+
+  async closeFs(): Promise<void> {
+    if (this.flushTimer) {
+      clearTimeout(this.flushTimer);
+      this.flushTimer = undefined;
+    }
+    while (this.flushInFlight) {
+      await this.flushInFlight;
+    }
+    this.dirty = false;
+    await this.writeSnapshot(false);
+    await super.closeFs();
+  }
+
+  private scheduleDeferredFlush(relaxedDurability: boolean): void {
+    if (this.flushTimer || this.flushInFlight) return;
+    this.flushTimer = setTimeout(() => {
+      this.flushTimer = undefined;
+      this.flushInFlight = this.drainDirty(relaxedDurability)
+        .catch((err) => {
+          this.logger?.warn(
+            `AtomicNodeFs deferred flush failed: ${err instanceof Error ? err.message : String(err)}`,
+          );
+        })
+        .finally(() => {
+          this.flushInFlight = undefined;
+        });
+    }, this.flushIntervalMs);
+    // Don't keep the event loop alive solely for a pending flush; closeFs is
+    // responsible for draining before shutdown.
+    this.flushTimer.unref?.();
+  }
+
+  private async drainDirty(relaxedDurability: boolean): Promise<void> {
+    while (this.dirty) {
+      this.dirty = false;
+      await this.writeSnapshot(relaxedDurability);
+    }
+  }
+
+  private async writeSnapshot(relaxedDurability: boolean): Promise<void> {
     const memFs = this.pg!.Module.FS as MemFs;
     const bytes = serializeMemfs(memFs, PGDATA);
     const snapPath = path.join(this.hostDir, SNAPSHOT_NAME);
@@ -105,11 +181,25 @@ export class AtomicNodeFs extends MemoryFS {
       }
     }
   }
+}
 
-  async closeFs(): Promise<void> {
-    await this.syncToFs(false);
-    await super.closeFs();
+function normalizeOptions(
+  optionsOrLogger: AtomicNodeFsOptions | AtomicNodeFsLogger | undefined,
+): AtomicNodeFsOptions {
+  if (!optionsOrLogger) return {};
+  if (isLogger(optionsOrLogger)) {
+    return { logger: optionsOrLogger };
   }
+  return optionsOrLogger;
+}
+
+function isLogger(
+  value: AtomicNodeFsOptions | AtomicNodeFsLogger,
+): value is AtomicNodeFsLogger {
+  return (
+    "warn" in value &&
+    typeof (value as AtomicNodeFsLogger).warn === "function"
+  );
 }
 
 async function fileExists(p: string): Promise<boolean> {
