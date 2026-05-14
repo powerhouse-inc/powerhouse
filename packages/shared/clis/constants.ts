@@ -101,6 +101,19 @@ export const VERSIONED_DEPENDENCIES = [
   ...FEATURE_DEPENDENCIES.analyticsProcessor.peerVersioned,
 ];
 
+// Transitive dependencies whose postinstall scripts the generated project
+// trusts. Mirrors the `allowBuilds` map in the boilerplate's
+// pnpm-workspace.yaml and is also passed as `--allow-build` flags to
+// `pnpm dlx @powerhousedao/ph-cli init` so pnpm 11's strict-dep-builds
+// default doesn't prompt during the outer dlx download.
+export const BOILERPLATE_ALLOWED_BUILDS = [
+  "@apollo/protobufjs",
+  "@datadog/pprof",
+  "@parcel/watcher",
+  "esbuild",
+  "protobufjs",
+] as const;
+
 export const VERSIONED_DEV_DEPENDENCIES = [
   "@powerhousedao/ph-cli",
   "@powerhousedao/reactor",
