@@ -48,6 +48,7 @@ export async function runRegistry(args: RegistryCommandArgs) {
     publicUrl,
     authRenown,
     verdaccioSecret: verdaccioSecretArg,
+    localPackages,
   } = args;
   const storagePath = await resolveDir(storageDir);
   const cdnCachePath = await resolveDir(cdnCacheDir);
@@ -81,6 +82,11 @@ export async function runRegistry(args: RegistryCommandArgs) {
     .filter(Boolean)
     .map((endpoint) => ({ endpoint }));
 
+  const localPackagePatterns = localPackages
+    ?.split(",")
+    .map((p) => p.trim())
+    .filter(Boolean);
+
   const config: RegistryConfig = {
     port,
     storagePath,
@@ -88,6 +94,9 @@ export async function runRegistry(args: RegistryCommandArgs) {
     uplink,
     webEnabled,
     verdaccioSecret,
+    ...(localPackagePatterns?.length
+      ? { localPackagePatterns }
+      : {}),
     ...(renownEnabled && publicUrl ? { renown: { publicUrl } } : {}),
     ...(webhookConfigs?.length && {
       notify: { webhooks: webhookConfigs },
