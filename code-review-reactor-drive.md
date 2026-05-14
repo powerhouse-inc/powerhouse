@@ -12,14 +12,6 @@ The shape and test coverage are good. The bulk of the surface is exercised by un
 
 ## Findings (highest severity = highest number)
 
-### 14. NodeProcessor doesn't clean up on `DELETE_DOCUMENT`
-
-`NodeProcessor.commitOperations` (`packages/reactor-drive/src/processors/node-processor.ts:64-79`) only reacts to the action sets `NAME_ACTION_TYPES` and `STRUCTURE_ACTION_TYPES`. `DELETE_DOCUMENT` is in neither — so deleting a file document directly via `reactor.deleteDocument` leaves both the `DriveNode` row and the `DocumentName` row orphaned.
-
-`ReactorDriveClient.removeNode` (`reactor-drive-client.ts:153-216`) orchestrates this correctly today by issuing `REMOVE_RELATIONSHIP` first, but anything that bypasses the drive client (cascading deletes from other modules, sync, raw API clients, the cascade emitted inside `removeNode` itself for descendant files at line 193-199) won't.
-
-Recommendation: handle `DELETE_DOCUMENT` in NodeProcessor — at minimum, delete any `DriveNode` rows where `id = input.documentId`, and the matching `DocumentName` row.
-
 ### 13. `ReactorDriveClient.addFile` is non-transactional
 
 `packages/reactor-drive/src/client/reactor-drive-client.ts:95-124` does:
@@ -76,12 +68,6 @@ Recommendation: remove the default and require an explicit relationship type. Th
 
 `packages/reactor/src/executor/document-action-handler.ts:12-36` defines `RelationshipActionShape`, `RelationshipJobResult`, and `RelationshipPostWriteArgs` between the first `import` block (lines 1-10) and the second (`import type { ILogger }` at line 37 onward). This compiles, but it's confusing for readers and tools that group imports. Move the type declarations below the imports.
 
-### 4. `DocumentName` and `DriveNode` rows are never deleted by document deletion
-
-This is a corollary of finding 14 but applies to `DocumentName` as well. When a document is deleted (any path), its `DocumentName` row remains. Names are global per `docId`, not per drive, so this is mostly harmless storage growth — but it also means a deleted document's stale name could be inherited by a freshly created document that re-uses the same id (extremely unlikely with UUIDs but still).
-
-Recommendation: handle `DELETE_DOCUMENT` in NodeProcessor (#14) and include a `DELETE FROM DocumentName WHERE docId = ?`.
-
 ### 3. `NodeProcessor.applyNameOperation` does two queries where one PG UPSERT would suffice
 
 `node-processor.ts:393-412` selects then inserts-or-updates. Postgres / PGlite support `INSERT … ON CONFLICT (docId) DO UPDATE`. Same shape applies to `handleAddFileRelationship` and `handleAddFolder` (lines 214-249, 266-302) where existing-row checks precede the insert/update. A single upsert per call halves the round-trips and removes a race window inside the transaction (the SELECT is in the same transaction so the race is minimal, but the simpler shape is still preferable).
@@ -95,8 +81,6 @@ Recommendation: handle `DELETE_DOCUMENT` in NodeProcessor (#14) and include a `D
 - `getDescendants` against deep trees: integration tests cover up to depth 2.
 - `migrateLegacyDriveState`: no test reads back the projected nodes to verify `documentType` (#16) and parent linkages after migration through the reactor.
 - `UPDATE_RELATIONSHIP`: unit-tested in `packages/reactor/test/executor/document-action-handler/unit.test.ts:422-524`, but there is no integration test exercising it end-to-end through `KyselyDocumentIndexer.handleUpdateRelationship` and the resulting `DocumentRelationship.metadata` mutation.
-- Subgraph resolvers and `consistencyToken`: no test asserts the token is honored (it isn't, see #15).
-- `NodeProcessor` reaction to `DELETE_DOCUMENT`: not tested (it doesn't react, see #14).
 
 ---
 

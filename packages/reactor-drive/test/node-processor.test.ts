@@ -3,6 +3,7 @@ import {
   addRelationshipAction,
   ConsistencyTracker,
   createDocumentAction,
+  deleteDocumentAction,
   removeRelationshipAction,
   type IOperationIndex,
   type IWriteCache,
@@ -454,6 +455,135 @@ describe("NodeProcessor", () => {
     expect(
       (await db.selectFrom("DriveNode").selectAll().execute()).length,
     ).toBe(0);
+  });
+
+  it("removes DriveNode and DocumentName rows on DELETE_DOCUMENT", async () => {
+    const driveId = "drive-1";
+    const fileId = "file-1";
+
+    await processor.indexOperations([
+      wrap(
+        createDocumentAction({
+          model: "powerhouse/document-model",
+          version: 0,
+          documentId: fileId,
+          name: "Doc",
+        }),
+        fileId,
+      ),
+      wrap(
+        addRelationshipAction(driveId, fileId, DRIVE_CHILD_RELATIONSHIP_TYPE, {
+          kind: "file",
+          parentFolderId: null,
+          documentType: "powerhouse/document-model",
+        }),
+        driveId,
+      ),
+    ]);
+
+    expect(
+      await db
+        .selectFrom("DriveNode")
+        .selectAll()
+        .where("id", "=", fileId)
+        .executeTakeFirst(),
+    ).toBeDefined();
+    expect(
+      await db
+        .selectFrom("DocumentName")
+        .selectAll()
+        .where("docId", "=", fileId)
+        .executeTakeFirst(),
+    ).toBeDefined();
+
+    await processor.indexOperations([wrap(deleteDocumentAction(fileId), fileId)]);
+
+    expect(
+      await db
+        .selectFrom("DriveNode")
+        .selectAll()
+        .where("id", "=", fileId)
+        .executeTakeFirst(),
+    ).toBeUndefined();
+    expect(
+      await db
+        .selectFrom("DocumentName")
+        .selectAll()
+        .where("docId", "=", fileId)
+        .executeTakeFirst(),
+    ).toBeUndefined();
+  });
+
+  it("removes DriveNode rows in every drive that linked the deleted document", async () => {
+    const driveA = "drive-a";
+    const driveB = "drive-b";
+    const fileId = "file-shared";
+
+    await processor.indexOperations([
+      wrap(
+        createDocumentAction({
+          model: "powerhouse/document-model",
+          version: 0,
+          documentId: fileId,
+          name: "Shared",
+        }),
+        fileId,
+      ),
+      wrap(
+        addRelationshipAction(driveA, fileId, DRIVE_CHILD_RELATIONSHIP_TYPE, {
+          kind: "file",
+          parentFolderId: null,
+          documentType: "powerhouse/document-model",
+        }),
+        driveA,
+      ),
+      wrap(
+        addRelationshipAction(driveB, fileId, DRIVE_CHILD_RELATIONSHIP_TYPE, {
+          kind: "file",
+          parentFolderId: null,
+          documentType: "powerhouse/document-model",
+        }),
+        driveB,
+      ),
+    ]);
+
+    expect(
+      (
+        await db
+          .selectFrom("DriveNode")
+          .selectAll()
+          .where("id", "=", fileId)
+          .execute()
+      ).length,
+    ).toBe(2);
+
+    await processor.indexOperations([wrap(deleteDocumentAction(fileId), fileId)]);
+
+    expect(
+      (
+        await db
+          .selectFrom("DriveNode")
+          .selectAll()
+          .where("id", "=", fileId)
+          .execute()
+      ).length,
+    ).toBe(0);
+  });
+
+  it("is a noop for DELETE_DOCUMENT when no projection row exists", async () => {
+    const orphanId = "orphan-1";
+
+    await expect(
+      processor.indexOperations([wrap(deleteDocumentAction(orphanId), orphanId)]),
+    ).resolves.toBeUndefined();
+
+    expect(
+      await db
+        .selectFrom("DriveNode")
+        .selectAll()
+        .where("id", "=", orphanId)
+        .executeTakeFirst(),
+    ).toBeUndefined();
   });
 
   it("picks up document names from CREATE_DOCUMENT and propagates on SET_NAME", async () => {

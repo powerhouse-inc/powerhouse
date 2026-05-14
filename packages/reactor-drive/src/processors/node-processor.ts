@@ -7,6 +7,7 @@ import {
 import type {
   AddRelationshipActionInput,
   CreateDocumentActionInput,
+  DeleteDocumentActionInput,
   OperationWithContext,
   RemoveRelationshipActionInput,
   SetNameActionInput,
@@ -73,6 +74,10 @@ export class NodeProcessor extends BaseReadModel {
         }
         if (STRUCTURE_ACTION_TYPES.has(actionType)) {
           await this.applyStructureOperation(trx, item);
+          continue;
+        }
+        if (actionType === "DELETE_DOCUMENT") {
+          await this.applyDeleteDocument(trx, item);
         }
       }
     });
@@ -185,6 +190,17 @@ export class NodeProcessor extends BaseReadModel {
         .where("id", "=", input.folderId)
         .execute();
     }
+  }
+
+  private async applyDeleteDocument(
+    trx: Transaction<NodeProcessorDatabase>,
+    item: OperationWithContext,
+  ): Promise<void> {
+    const input = item.operation.action.input as DeleteDocumentActionInput;
+    const docId = input.documentId || item.context.documentId;
+
+    await trx.deleteFrom("DriveNode").where("id", "=", docId).execute();
+    await trx.deleteFrom("DocumentName").where("docId", "=", docId).execute();
   }
 
   private async handleAddFileRelationship(
