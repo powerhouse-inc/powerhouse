@@ -1,5 +1,8 @@
 {
   "extends": "./tsconfig.options.json",
+  "compilerOptions": {
+    "types": ["node"]
+  },
   "references": [
     {
       "path": "apps/academy"
@@ -8,49 +11,10 @@
       "path": "apps/connect"
     },
     {
-      "path": "apps/switchboard"
-    },
-    {
       "path": "clis/ph-cli"
     },
     {
       "path": "clis/ph-cmd"
-    },
-    {
-      "path": "packages/builder-tools"
-    },
-    {
-      "path": "packages/codegen"
-    },
-    {
-      "path": "packages/common"
-    },
-    {
-      "path": "packages/config"
-    },
-    {
-      "path": "packages/design-system"
-    },
-    {
-      "path": "packages/document-model"
-    },
-    {
-      "path": "packages/opentelemetry-instrumentation-reactor"
-    },
-    {
-      "path": "packages/pglite-fs"
-    },
-    {
-      "path": "packages/powerhouse-vetra-packages"
-    },
-    {
-      "path": "packages/reactor-api"
-    },
-    {
-      "path": "packages/reactor-attachments"
-    },
-    {
-      "path": "packages/reactor-browser"
     },
     {
       "path": "packages/reactor-drive"
@@ -59,61 +23,22 @@
       "path": "packages/reactor-hypercore"
     },
     {
-      "path": "packages/reactor-mcp"
-    },
-    {
-      "path": "packages/reactor"
-    },
-    {
-      "path": "packages/registry"
-    },
-    {
-      "path": "packages/renown"
-    },
-    {
-      "path": "packages/shared"
-    },
-    {
       "path": "packages/switchboard-gui"
-    },
-    {
-      "path": "packages/vetra"
     },
     {
       "path": "packages/analytics-engine/benchmarks"
     },
     {
-      "path": "packages/analytics-engine/browser"
-    },
-    {
       "path": "packages/analytics-engine/compat"
     },
     {
-      "path": "packages/analytics-engine/core"
-    },
-    {
-      "path": "packages/analytics-engine/graphql"
-    },
-    {
-      "path": "packages/analytics-engine/knex"
-    },
-    {
-      "path": "packages/analytics-engine/pg"
-    },
-    {
       "path": "test/codegen"
-    },
-    {
-      "path": "test/e2e-utils"
     },
     {
       "path": "test/lb-loadtest"
     },
     {
       "path": "test/switchboard"
-    },
-    {
-      "path": "test/test-client"
     },
     {
       "path": "test/test-connect"
@@ -123,9 +48,6 @@
     },
     {
       "path": "test/test-sync-queue"
-    },
-    {
-      "path": "test/versioned-documents"
     },
     {
       "path": "test/vetra-e2e"

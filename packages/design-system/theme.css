@@ -25,7 +25,6 @@
   --color-slate-700: hsl(204 9% 11%);
   --color-slate-800: hsl(195 9% 9%);
   --color-slate-900: hsl(195 6% 6%);
-  --color-slate-950: hsl(0 0% 0%);
   --color-blue-100: hsl(209 100% 90%);
   --color-blue-200: hsl(209 97% 85%);
   --color-blue-300: hsl(209 100% 80%);
@@ -104,7 +103,8 @@
     0px -1px 1px 0px rgba(0, 0, 0, 0.04) inset,
     0px 2px 0px 0px rgba(255, 255, 255, 0.25) inset,
     0px 4px 8px -4px rgba(0, 0, 0, 0.1);
-
+--shadow-charcoal: 1px 4px 15px rgba(74, 88, 115, 0.25);
+--shadow-inner: inset 0px 0px 2px rgba(255, 255, 255, 0.5);
   --animate-fade-in: fadeIn 0.3s ease-in-out;
   --animate-fade-out: fadeOut 0.1s ease-in-out;
   --animate-zoom-in: zoomIn 0.3s ease-in-out;

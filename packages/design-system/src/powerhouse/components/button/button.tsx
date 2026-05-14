@@ -39,7 +39,7 @@ export const PowerhouseButton = forwardRef(function PowerhouseButton(
   const colorAndSizeStyle = twJoin(colorStyles[color], sizeStyles[size]);
 
   const finalClassName = twMerge(
-    "flex items-center justify-center gap-2 border border-none outline-none transition disabled:cursor-not-allowed",
+    "flex items-center justify-center gap-2 border border-none transition outline-none disabled:cursor-not-allowed",
     colorAndSizeStyle,
     className,
   );

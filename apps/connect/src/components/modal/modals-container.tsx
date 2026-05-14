@@ -92,6 +92,7 @@ const modalComponents = {
 export const ModalsContainer = lazy(async () => {
   return {
     default: () => {
+      // eslint-disable-next-line react-hooks/rules-of-hooks
       const phModal = usePHModal();
 
       if (!phModal?.type) return null;

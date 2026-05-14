@@ -82,7 +82,7 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none"
           />
         </div>
 
@@ -99,7 +99,7 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
             rows={6}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            className="w-full resize-none rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full resize-none rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none"
           />
         </div>
       </div>
@@ -122,7 +122,7 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
               setCategory(newValue);
               onCategoryChange?.(newValue);
             }}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none"
           >
             <option value="">Not selected</option>
             <option value="Productivity">Productivity</option>
@@ -148,7 +148,7 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
             type="text"
             value={publisher}
             onChange={(e) => setPublisher(e.target.value)}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none"
           />
         </div>
 
@@ -165,7 +165,7 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
             type="text"
             value={publisherUrl}
             onChange={(e) => setPublisherUrl(e.target.value)}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none"
           />
         </div>
 
@@ -196,13 +196,13 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
                 }
               }}
               placeholder="Type a keyword and press Enter"
-              className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none"
             />
             <div className="flex min-h-[80px] flex-wrap gap-2 rounded-md border border-gray-300 p-3">
               {keywords.map((keyword) => (
                 <span
                   key={keyword.id}
-                  className="inline-flex items-center rounded border border-blue-300 bg-blue-100 px-2 py-0.5 text-xs text-blue-800"
+                  className="inline-flex items-center rounded-sm border border-blue-300 bg-blue-100 px-2 py-0.5 text-xs text-blue-800"
                 >
                   {keyword.label}
                   <button
@@ -236,7 +236,7 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
             type="text"
             value={githubRepository}
             onChange={(e) => setGithubRepository(e.target.value)}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none"
           />
         </div>
 
@@ -253,7 +253,7 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
             type="text"
             value={npmPackage}
             onChange={(e) => setNpmPackage(e.target.value)}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none"
           />
         </div>
 

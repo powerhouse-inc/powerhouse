@@ -585,6 +585,7 @@ export const startSwitchboard = async (
     if (options.identity?.requireExisting) {
       throw new Error(
         'Identity required but failed to initialize. Run "ph login" first.',
+        { cause: e },
       );
     }
   }

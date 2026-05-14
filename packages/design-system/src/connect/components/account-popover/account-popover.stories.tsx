@@ -35,7 +35,7 @@ export const LoggedIn: Story = {
   args: {
     children: (
       <div className="flex items-center gap-2">
-        <div className="h-8 w-8 rounded-full bg-gray-200" />
+        <div className="size-8 rounded-full bg-gray-200" />
         <div className="flex flex-col">
           <span className="text-sm font-medium">Willow.eth</span>
           <span className="text-xs text-gray-500">{`${address.slice(0, 6)}...${address.slice(-4)}`}</span>

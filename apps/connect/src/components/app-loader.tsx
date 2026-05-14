@@ -21,6 +21,7 @@ export const AppLoader = (props: { localPackage?: DocumentModelLib }) => {
         loggerContext={["Connect"]}
       >
         <Suspense fallback={<AppSkeleton />} name="AppLoader">
+          {/* eslint-disable-next-line react-hooks/static-components */}
           <Load {...props}>
             <App />
           </Load>

@@ -25,6 +25,12 @@ export function NodeInput(props: Props) {
 
   const ref = useRef<HTMLInputElement>(null);
 
+  function handleSubmit() {
+    if (value.length >= minLength) {
+      onSubmit(value);
+    }
+  }
+
   useOnClickOutside(ref as RefObject<HTMLElement>, handleSubmit);
 
   useEventListener("keyup", (e) => {
@@ -43,12 +49,6 @@ export function NodeInput(props: Props) {
       ref.current?.scroll({ left: 9999 });
     }, 100);
   }, []);
-
-  function handleSubmit() {
-    if (value.length >= minLength) {
-      onSubmit(value);
-    }
-  }
 
   return (
     <input

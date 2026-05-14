@@ -1,7 +1,7 @@
 import type { IconName } from "#design-system";
 import { Icon } from "#design-system";
 import type { Meta, StoryObj } from "@storybook/react";
-import { withForm } from "../decorators.js";
+import { WithForm } from "../decorators.js";
 import {
   getDefaultArgTypes,
   getValidationArgTypes,
@@ -20,7 +20,7 @@ const meta: Meta<typeof SelectField> = {
     },
   },
   decorators: [
-    withForm,
+    WithForm,
     (Story) => (
       <div style={{ maxWidth: "280px", margin: "1rem auto 0" }}>
         <Story />

@@ -47,7 +47,7 @@ export const ModuleAccordion: React.FC<ModuleAccordionProps> = ({
           e.stopPropagation();
           onAdd?.();
         }}
-        className="rounded p-1 transition-colors hover:bg-gray-200"
+        className="rounded-sm p-1 transition-colors hover:bg-gray-200"
       >
         <PlusIcon width={16} height={16} className="text-gray-600" />
       </button>

@@ -356,7 +356,7 @@ export async function addDocument(
     );
   } catch (e) {
     logger.error("Error adding document", e);
-    throw new Error("There was an error adding document");
+    throw new Error("There was an error adding document", { cause: e });
   }
 
   // Return a file node structure for compatibility

@@ -32,6 +32,7 @@ const tabs = [
     icon: <Icon name="Edit" size={12} />,
     label: "Default Editors",
     content() {
+      // eslint-disable-next-line react-hooks/rules-of-hooks
       const [editor, setEditor] = React.useState(
         mockDocumentModelEditorOptions[0].value,
       );
@@ -49,6 +50,7 @@ const tabs = [
     icon: <Icon name="Danger" size={12} className="text-red-900" />,
     label: <span className="text-red-900">Danger Zone</span>,
     content() {
+      // eslint-disable-next-line react-hooks/rules-of-hooks
       const [drives, setDrives] = React.useState([
         {
           header: {

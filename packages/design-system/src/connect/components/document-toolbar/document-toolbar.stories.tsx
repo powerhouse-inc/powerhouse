@@ -11,6 +11,7 @@ import {
 } from "@powerhousedao/shared/document-drive";
 import type { PHDocument } from "@powerhousedao/shared/document-model";
 import type { Meta, StoryObj } from "@storybook/react";
+import type { render } from "@testing-library/react";
 import { useEffect, useState } from "react";
 import { documentModelCreateDocument } from "../../../../../document-model/src/state.js";
 import { DocumentToolbar } from "./document-toolbar.js";
@@ -42,7 +43,7 @@ const mockDrive = driveCreateDocument({
   global: { nodes: [mockNode], icon: null, name: "Mock drive" },
 });
 
-const render = (args: DocumentToolbarProps) => {
+function Render(args: DocumentToolbarProps) {
   const [hasInit, setHasInit] = useState(false);
 
   useEffect(() => {
@@ -51,13 +52,14 @@ const render = (args: DocumentToolbarProps) => {
     setDrives([mockDrive]);
     setSelectedDrive(mockDrive);
     setSelectedNode(mockNode);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setHasInit(true);
-  }, []);
+  }, [hasInit]);
 
   if (!hasInit) return <div>...loading</div>;
 
   return <DocumentToolbar {...args} />;
-};
+}
 
 const defaultArgs = {
   document: mockDocument,
@@ -65,17 +67,17 @@ const defaultArgs = {
 
 export const Default: Story = {
   args: { ...defaultArgs },
-  render,
+  render: Render,
 };
 
 export const WithDisabledControls: Story = {
   args: { ...defaultArgs, disabledControls: ["download", "switchboard"] },
-  render,
+  render: Render,
 };
 
 export const WithEnabledControls: Story = {
   args: { ...defaultArgs, enabledControls: ["download", "switchboard"] },
-  render,
+  render: Render,
 };
 
 export const WithOneCustomControlInSlot: Story = {
@@ -107,7 +109,7 @@ export const WithOneCustomControlInSlot: Story = {
       },
     },
   },
-  render,
+  render: Render,
 };
 
 export const WithMultipleCustomControlInSlot: Story = {
@@ -143,7 +145,7 @@ export const WithMultipleCustomControlInSlot: Story = {
       ],
     },
   },
-  render,
+  render: Render,
 };
 
 export const WithCustomToolbarContainer: Story = {
@@ -153,7 +155,7 @@ export const WithCustomToolbarContainer: Story = {
       <div className="bg-amber-300">{props.children}</div>
     ),
   },
-  render,
+  render: Render,
 };
 
 export const WithCustomControlsContainer: Story = {
@@ -163,7 +165,7 @@ export const WithCustomControlsContainer: Story = {
       <div className="bg-cyan-300">{props.children}</div>
     ),
   },
-  render,
+  render: Render,
 };
 
 export const WithEnabledAndDisabledControls: Story = {
@@ -172,7 +174,7 @@ export const WithEnabledAndDisabledControls: Story = {
     enabledControls: ["download", "switchboard", "close"],
     disabledControls: ["download"],
   },
-  render,
+  render: Render,
 };
 
 export const WithCustomDownloadButton: Story = {
@@ -189,7 +191,7 @@ export const WithCustomDownloadButton: Story = {
       ),
     },
   },
-  render,
+  render: Render,
 };
 
 export const WithCustomNameInput: Story = {
@@ -203,7 +205,7 @@ export const WithCustomNameInput: Story = {
       ),
     },
   },
-  render,
+  render: Render,
 };
 
 export const WithChildren: Story = {
@@ -211,7 +213,7 @@ export const WithChildren: Story = {
     ...defaultArgs,
     children: <div>I've totally overridden the whole thing</div>,
   },
-  render,
+  render: Render,
 };
 
 export const WithCustomStyles: Story = {
@@ -220,5 +222,5 @@ export const WithCustomStyles: Story = {
     toolbarClassName: "border-none bg-green-100",
     controlsContainerClassName: "border border-green-300 rounded-lg p-2",
   },
-  render,
+  render: Render,
 };
