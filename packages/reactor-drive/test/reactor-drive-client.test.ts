@@ -161,7 +161,11 @@ describe("ReactorDriveClient", () => {
       sourceId: "drive-1",
       targetId: "file-1",
       relationshipType: DRIVE_CHILD_RELATIONSHIP_TYPE,
-      metadata: { kind: "file", parentFolderId: null },
+      metadata: {
+        kind: "file",
+        parentFolderId: null,
+        documentType: "powerhouse/document-model",
+      },
     });
   });
 
@@ -179,7 +183,11 @@ describe("ReactorDriveClient", () => {
       sourceId: "drive-1",
       targetId: "file-1",
       relationshipType: DRIVE_CHILD_RELATIONSHIP_TYPE,
-      metadata: { kind: "file", parentFolderId: "parent-folder" },
+      metadata: {
+        kind: "file",
+        parentFolderId: "parent-folder",
+        documentType: "powerhouse/document-model",
+      },
     });
   });
 
@@ -399,7 +407,11 @@ describe("ReactorDriveClient", () => {
       sourceId: driveId,
       targetId: "file-1",
       relationshipType: DRIVE_CHILD_RELATIONSHIP_TYPE,
-      metadata: { kind: "file", parentFolderId: "target" },
+      metadata: {
+        kind: "file",
+        parentFolderId: "target",
+        documentType: "powerhouse/document-model",
+      },
     });
   });
 

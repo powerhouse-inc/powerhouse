@@ -292,6 +292,54 @@ describe("NodeProcessor", () => {
     expect(row).toBeUndefined();
   });
 
+  it("projects documentType from ADD_RELATIONSHIP metadata without depending on DocumentSnapshot", async () => {
+    const driveId = "drive-1";
+    const fileId = "file-1";
+    const documentType = "powerhouse/budget";
+
+    await processor.indexOperations([
+      wrap(
+        addRelationshipAction(driveId, fileId, DRIVE_CHILD_RELATIONSHIP_TYPE, {
+          kind: "file",
+          parentFolderId: null,
+          documentType,
+        }),
+        driveId,
+      ),
+    ]);
+
+    const row = await db
+      .selectFrom("DriveNode")
+      .selectAll()
+      .where("id", "=", fileId)
+      .executeTakeFirst();
+    expect(row?.kind).toBe("file");
+    expect(row?.documentType).toBe(documentType);
+  });
+
+  it("rejects ADD_RELATIONSHIP for a drive/child file when metadata is missing documentType", async () => {
+    const driveId = "drive-1";
+    const fileId = "file-1";
+
+    await expect(
+      processor.indexOperations([
+        wrap(
+          addRelationshipAction(
+            driveId,
+            fileId,
+            DRIVE_CHILD_RELATIONSHIP_TYPE,
+            // intentionally missing documentType — runtime invalid even though TS would catch it
+            { kind: "file", parentFolderId: null } as unknown as Record<
+              string,
+              unknown
+            >,
+          ),
+          driveId,
+        ),
+      ]),
+    ).rejects.toThrow(/documentType/);
+  });
+
   it("removes a file via REMOVE_RELATIONSHIP", async () => {
     const driveId = "drive-1";
     const fileId = "file-1";
@@ -310,6 +358,7 @@ describe("NodeProcessor", () => {
         addRelationshipAction(driveId, fileId, DRIVE_CHILD_RELATIONSHIP_TYPE, {
           kind: "file",
           parentFolderId: null,
+          documentType: "powerhouse/document-model",
         }),
         driveId,
       ),
@@ -379,6 +428,7 @@ describe("NodeProcessor", () => {
           {
             kind: "file",
             parentFolderId: "f2",
+            documentType: "powerhouse/document-model",
           },
         ),
         driveId,
@@ -433,6 +483,7 @@ describe("NodeProcessor", () => {
         addRelationshipAction(driveId, docId, DRIVE_CHILD_RELATIONSHIP_TYPE, {
           kind: "file",
           parentFolderId: null,
+          documentType: "powerhouse/document-model",
         }),
         driveId,
       ),

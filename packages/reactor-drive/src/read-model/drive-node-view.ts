@@ -131,13 +131,18 @@ type DriveNodeRow = {
 
 function rowToNode(row: DriveNodeRow): ReactorDriveNode {
   if (row.kind === "file") {
+    if (row.documentType === null) {
+      throw new Error(
+        `DriveNode ${row.driveId}/${row.id}: file row has null documentType, which violates the schema CHECK constraint`,
+      );
+    }
     const node: ReactorDriveFileNode = {
       kind: "file",
       id: row.id,
       driveId: row.driveId,
       parentFolder: row.parentFolder,
       name: row.name,
-      documentType: row.documentType ?? "",
+      documentType: row.documentType,
     };
     return node;
   }

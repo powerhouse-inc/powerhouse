@@ -106,6 +106,7 @@ export class ReactorDriveClient implements IDriveClient {
     const metadata: DriveChildFileMetadata = {
       kind: "file",
       parentFolderId: parentFolder ?? null,
+      documentType: document.header.documentType,
     };
     await this.reactor.execute(
       driveIdentifier,
@@ -294,6 +295,7 @@ export class ReactorDriveClient implements IDriveClient {
       const metadata: DriveChildFileMetadata = {
         kind: "file",
         parentFolderId: targetParentFolderId ?? null,
+        documentType: node.documentType,
       };
       await this.reactor.execute(
         driveIdentifier,

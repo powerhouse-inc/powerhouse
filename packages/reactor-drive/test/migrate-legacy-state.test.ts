@@ -1,12 +1,28 @@
 import { MemoryFS, PGlite } from "@electric-sql/pglite";
-import type { IReactorClient, JobInfo } from "@powerhousedao/reactor";
+import {
+  ConsistencyTracker,
+  type IOperationIndex,
+  type IReactorClient,
+  type IWriteCache,
+  type JobInfo,
+} from "@powerhousedao/reactor";
 import type { Node } from "@powerhousedao/shared/document-drive";
-import type { Action } from "@powerhousedao/shared/document-model";
-import { Kysely } from "kysely";
+import {
+  generateId,
+  type Action,
+  type Operation,
+  type OperationContext,
+  type OperationWithContext,
+} from "@powerhousedao/shared/document-model";
+import { Kysely, sql } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DRIVE_CHILD_RELATIONSHIP_TYPE } from "../src/constants.js";
 import { migrateLegacyDriveState } from "../src/migration/migrate-legacy-state.js";
+import {
+  NodeProcessor,
+  type NodeProcessorDatabase,
+} from "../src/processors/node-processor.js";
 import { DriveNodeView } from "../src/read-model/drive-node-view.js";
 import type { ReactorDriveDatabase } from "../src/schema/tables.js";
 import { up as createDocumentNameTable } from "../src/schema/migrations/0002_document_name.js";
@@ -81,7 +97,11 @@ describe("migrateLegacyDriveState", () => {
       sourceId: driveId,
       targetId: "file-1",
       relationshipType: DRIVE_CHILD_RELATIONSHIP_TYPE,
-      metadata: { kind: "file", parentFolderId: "folder-1" },
+      metadata: {
+        kind: "file",
+        parentFolderId: "folder-1",
+        documentType: "powerhouse/document-model",
+      },
     });
   });
 
@@ -125,7 +145,11 @@ describe("migrateLegacyDriveState", () => {
       sourceId: driveId,
       targetId: "file-1",
       relationshipType: DRIVE_CHILD_RELATIONSHIP_TYPE,
-      metadata: { kind: "file", parentFolderId: "folder-1" },
+      metadata: {
+        kind: "file",
+        parentFolderId: "folder-1",
+        documentType: "powerhouse/document-model",
+      },
     });
   });
 
@@ -156,5 +180,88 @@ describe("migrateLegacyDriveState", () => {
     expect(result.emittedActions).toBe(0);
     expect(result.skippedExisting).toBe(1);
     expect(execute).not.toHaveBeenCalled();
+  });
+
+  it("preserves FileNode.documentType end-to-end through the NodeProcessor projection", async () => {
+    const processorDb = db as unknown as Kysely<NodeProcessorDatabase>;
+    await processorDb.schema
+      .createTable("ViewState")
+      .addColumn("readModelId", "text", (col) => col.primaryKey())
+      .addColumn("lastOrdinal", "integer", (col) => col.notNull().defaultTo(0))
+      .addColumn("lastOperationTimestamp", "timestamptz", (col) =>
+        col.notNull().defaultTo(sql`NOW()`),
+      )
+      .execute();
+    await processorDb.schema
+      .createTable("DocumentSnapshot")
+      .addColumn("documentId", "text", (col) => col.notNull())
+      .addColumn("documentType", "text", (col) => col.notNull())
+      .execute();
+
+    const operationIndex = {
+      getSinceOrdinal: vi.fn().mockResolvedValue({ results: [] }),
+    } as unknown as IOperationIndex;
+    const writeCache = {
+      getState: vi.fn(),
+      putState: vi.fn(),
+      invalidate: vi.fn().mockReturnValue(0),
+      clear: vi.fn(),
+      startup: vi.fn(),
+      shutdown: vi.fn(),
+    } as unknown as IWriteCache;
+    const tracker = new ConsistencyTracker();
+    const processor = new NodeProcessor(
+      processorDb,
+      operationIndex,
+      writeCache,
+      tracker,
+    );
+    await processor.init();
+
+    let nextOrdinal = 1;
+    const execute = vi.fn(async (docId: string, _branch: string, actions: Action[]) => {
+      const ops: OperationWithContext[] = actions.map((action) => {
+        const op: Operation = {
+          id: generateId(),
+          index: 0,
+          skip: 0,
+          timestampUtcMs: new Date().toISOString(),
+          hash: "",
+          action: action as unknown as Operation["action"],
+        };
+        const context: OperationContext = {
+          documentId: docId,
+          documentType: "powerhouse/reactor-drive",
+          scope: "document",
+          branch: "main",
+          ordinal: nextOrdinal++,
+        };
+        return { operation: op, context };
+      });
+      await processor.indexOperations(ops);
+      return { id: "job" } as unknown as JobInfo;
+    });
+    const reactor = { execute } as unknown as IReactorClient;
+
+    const fileNode: Node = {
+      id: "file-1",
+      kind: "file",
+      name: "doc.md",
+      documentType: "powerhouse/budget",
+      parentFolder: null,
+    };
+
+    await migrateLegacyDriveState({
+      reactor,
+      readModel: view,
+      driveId,
+      nodes: [fileNode],
+    });
+
+    const projected = await view.getNode(driveId, "file-1");
+    expect(projected?.kind).toBe("file");
+    expect(projected?.kind === "file" ? projected.documentType : null).toBe(
+      "powerhouse/budget",
+    );
   });
 });

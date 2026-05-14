@@ -18,6 +18,10 @@ export async function up(db: Kysely<unknown>): Promise<void> {
       col.notNull().defaultTo(sql`NOW()`),
     )
     .addPrimaryKeyConstraint("pk_drive_node", ["driveId", "id"])
+    .addCheckConstraint(
+      "chk_drive_node_document_type",
+      sql`(kind = 'file' AND "documentType" IS NOT NULL) OR (kind = 'folder' AND "documentType" IS NULL)`,
+    )
     .execute();
 
   await db.schema

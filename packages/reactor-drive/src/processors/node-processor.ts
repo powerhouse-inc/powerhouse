@@ -192,12 +192,9 @@ export class NodeProcessor extends BaseReadModel {
     driveId: string,
     input: AddRelationshipActionInput,
   ): Promise<void> {
-    const metadata = (input.metadata ?? {
-      kind: "file",
-      parentFolderId: null,
-    }) as DriveChildFileMetadata | { kind: "file" };
-    const parentFolder =
-      "parentFolderId" in metadata ? (metadata.parentFolderId ?? null) : null;
+    const metadata = this.parseFileMetadata(input);
+    const parentFolder = metadata.parentFolderId ?? null;
+    const documentType = metadata.documentType;
 
     const requestedName =
       (await this.lookupDocumentName(trx, input.targetId)) ?? "";
@@ -209,8 +206,6 @@ export class NodeProcessor extends BaseReadModel {
       requestedName,
       input.targetId,
     );
-
-    const documentType = await this.lookupDocumentType(trx, input.targetId);
 
     const existing = await trx
       .selectFrom("DriveNode")
@@ -379,16 +374,26 @@ export class NodeProcessor extends BaseReadModel {
     return row?.name;
   }
 
-  private async lookupDocumentType(
-    trx: Transaction<NodeProcessorDatabase>,
-    docId: string,
-  ): Promise<string | null> {
-    const row = await trx
-      .selectFrom("DocumentSnapshot")
-      .select("documentType")
-      .where("documentId", "=", docId)
-      .executeTakeFirst();
-    return row?.documentType ?? null;
+  private parseFileMetadata(
+    input: AddRelationshipActionInput,
+  ): DriveChildFileMetadata {
+    const metadata = input.metadata;
+    if (
+      !metadata ||
+      typeof metadata !== "object" ||
+      (metadata as { kind?: unknown }).kind !== "file" ||
+      typeof (metadata as { documentType?: unknown }).documentType !== "string"
+    ) {
+      throw new Error(
+        `ADD_RELATIONSHIP for target ${input.targetId}: missing or invalid drive/child file metadata (expected { kind: "file", parentFolderId, documentType })`,
+      );
+    }
+    const typed = metadata as DriveChildFileMetadata;
+    return {
+      kind: "file",
+      parentFolderId: typed.parentFolderId ?? null,
+      documentType: typed.documentType,
+    };
   }
 
   private async upsertDocumentName(

@@ -2,7 +2,7 @@ import {
   addRelationshipAction,
   type IReactorClient,
 } from "@powerhousedao/reactor";
-import type { Node } from "@powerhousedao/shared/document-drive";
+import type { FileNode, Node } from "@powerhousedao/shared/document-drive";
 import type { Action } from "@powerhousedao/shared/document-model";
 import { addFolderAction } from "../actions.js";
 import { DRIVE_CHILD_RELATIONSHIP_TYPE } from "../constants.js";
@@ -72,13 +72,15 @@ function toAction(driveId: string, node: Node): Action {
       name: node.name,
     });
   }
+  const fileNode = node as FileNode;
   const metadata: DriveChildFileMetadata = {
     kind: "file",
-    parentFolderId: node.parentFolder ?? null,
+    parentFolderId: fileNode.parentFolder ?? null,
+    documentType: fileNode.documentType,
   };
   return addRelationshipAction(
     driveId,
-    node.id,
+    fileNode.id,
     DRIVE_CHILD_RELATIONSHIP_TYPE,
     metadata,
   );

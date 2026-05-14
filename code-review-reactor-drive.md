@@ -12,24 +12,6 @@ The shape and test coverage are good. The bulk of the surface is exercised by un
 
 ## Findings (highest severity = highest number)
 
-### 17. `rowToNode` quietly lies about `FileNode.documentType` by coercing `null` to `""`
-
-`packages/reactor-drive/src/read-model/drive-node-view.ts:140` returns `documentType: row.documentType ?? ""` for file rows. The legacy `FileNode` declares `documentType: String!` (non-null in GraphQL; non-optional in the TS type at `packages/shared/document-drive/...`). Empty string is not a valid `documentType`; downstream consumers that switch on it will silently miss-route.
-
-This shows up in two places at once:
-- `NodeProcessor.lookupDocumentType` (`packages/reactor-drive/src/processors/node-processor.ts:381-391`) returns `null` when no `DocumentSnapshot` row exists for the file id. With the BFS ordering NodeProcessor uses, the snapshot should exist by the time `ADD_RELATIONSHIP` is processed for the new flow, but it definitely won't during legacy migration (#16) and isn't guaranteed under operation reorder.
-- `migrate-legacy-state.ts` emits `ADD_RELATIONSHIP` without forwarding the legacy `FileNode.documentType` (see #16) — those files materialize as `documentType: ""` permanently.
-
-Recommendation: store and surface the documentType authoritatively from the legacy node (or fail loudly), and either store `documentType` NOT NULL or have the view skip rows where it's missing.
-
-### 16. Migration discards `FileNode.documentType`
-
-`packages/reactor-drive/src/migration/migrate-legacy-state.ts:75-85`'s `toAction` builds the ADD_RELATIONSHIP metadata from `{ kind: "file", parentFolderId }` only — the legacy `FileNode.documentType` is dropped on the floor. NodeProcessor then tries to recover it via `lookupDocumentType` against `DocumentSnapshot`. For a freshly migrated drive whose child documents haven't been re-indexed (or whose snapshot rows live elsewhere), this returns null and the projection records `documentType: null`, which surfaces as `""` per #17.
-
-The integration tests pass because they create child documents through the reactor first, which populates `DocumentSnapshot` before `ADD_RELATIONSHIP` is processed. The migration test (`migrate-legacy-state.test.ts`) doesn't read back the projected node, so it never observes the loss.
-
-Recommendation: forward `documentType` either via the relationship metadata (e.g. `DriveChildFileMetadata.documentType?`) or via an explicit `MIGRATE_FILE_NODE` action. Add a migration test that asserts the projected file's `documentType` matches the legacy node.
-
 ### 15. Subgraph resolvers ignore `ReactorDriveResolverContext.consistencyToken`
 
 `packages/reactor-drive/src/subgraph/resolvers.ts:12-16` defines `consistencyToken?: ConsistencyToken` on the resolver context, and `IDriveReadModel`'s docstring (`packages/reactor-drive/src/read-model/interfaces.ts:7-11`) explicitly says "consumers responsible for read-after-write consistency thread a `ConsistencyToken` to the underlying reactor read model before calling these methods."
