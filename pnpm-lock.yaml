@@ -2358,9 +2358,6 @@ importers:
       '@powerhousedao/builder-tools':
         specifier: workspace:*
         version: link:../builder-tools
-      '@powerhousedao/ph-cli':
-        specifier: workspace:*
-        version: link:../../clis/ph-cli
       '@tailwindcss/cli':
         specifier: 'catalog:'
         version: 4.2.2

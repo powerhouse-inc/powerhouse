@@ -74,7 +74,6 @@
   },
   "devDependencies": {
     "@powerhousedao/builder-tools": "workspace:*",
-    "@powerhousedao/ph-cli": "workspace:*",
     "@tailwindcss/cli": "catalog:",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",
