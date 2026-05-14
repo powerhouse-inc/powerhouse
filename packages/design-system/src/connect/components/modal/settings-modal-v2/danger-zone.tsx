@@ -4,6 +4,8 @@ import type {
   SharingType,
 } from "@powerhousedao/shared/document-drive";
 import { capitalCase } from "change-case";
+import { useState } from "react";
+import { ConnectDropdownMenu } from "../../dropdown-menu/dropdown-menu.js";
 
 function getDriveSharingType(drive: DocumentDriveDocument): SharingType {
   if (typeof drive !== "object") return "LOCAL";
@@ -19,8 +21,6 @@ function getDriveSharingType(drive: DocumentDriveDocument): SharingType {
     ? "LOCAL"
     : (__sharingType as SharingType);
 }
-import { useState } from "react";
-import { ConnectDropdownMenu } from "../../dropdown-menu/dropdown-menu.js";
 
 type ModifyDrivesProps = {
   drives: DocumentDriveDocument[];
@@ -106,10 +106,10 @@ function Drive(props: ModifyDrivesProps & { drive: DocumentDriveDocument }) {
     >
       {icon}
       <div>
-        <span className="block text-sm font-medium leading-[18px]">
+        <span className="leading-4.5 block text-sm font-medium">
           {capitalCase(drive.header.name)}
         </span>
-        <div className="flex items-baseline gap-x-2 leading-[18px]">
+        <div className="leading-4.5 flex items-baseline gap-x-2">
           <span className="text-sm text-gray-600">
             {capitalCase(getDriveSharingType(drive))} App
           </span>
@@ -117,7 +117,7 @@ function Drive(props: ModifyDrivesProps & { drive: DocumentDriveDocument }) {
             href="https://www.powerhouse.inc/"
             target="_blank"
             rel="noopener noreferrer"
-            className="group flex items-center gap-x-2 text-sm text-slate-500 transition-colors hover:text-[#9896FF]"
+            className="group flex items-center gap-x-2 text-sm text-slate-500 transition-colors hover:text-purple-700"
           >
             By Powerhouse
             <svg

@@ -35,7 +35,7 @@ export function UploadFileList(props: UploadFileListProps) {
   return (
     <div
       className={twMerge(
-        "w-[358px] rounded-md border border-gray-100 bg-gray-50 p-4 shadow-[1px_4px_15px_rgba(74,88,115,0.25)]",
+        "w-89.5 rounded-md border border-gray-100 bg-gray-50 p-4 shadow-charcoal",
         className,
       )}
       {...delegatedProps}

@@ -126,7 +126,7 @@ export const VersionPicker: React.FC<VersionPickerProps> = (props) => {
           )}
           {filteredTags.length > 0 && (
             <div className="pb-1">
-              <p className="px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+              <p className="px-3 py-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
                 Tags
               </p>
               {filteredTags.map(([tag, ver]) => {
@@ -156,7 +156,7 @@ export const VersionPicker: React.FC<VersionPickerProps> = (props) => {
           )}
           {filteredVersions.length > 0 && (
             <div>
-              <p className="px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+              <p className="px-3 py-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
                 Versions
               </p>
               {filteredVersions.map((ver) => {

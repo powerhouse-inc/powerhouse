@@ -9,7 +9,7 @@ const Command = React.forwardRef<
   <CommandPrimitive
     ref={ref}
     className={cn(
-      "flex size-full flex-col rounded-md [&_[cmdk-label]]:hidden",
+      "**:[[cmdk-label]]:hidden flex size-full flex-col rounded-md",
       className,
     )}
     {...props}
@@ -41,16 +41,16 @@ const CommandInput = React.forwardRef<
       className={cn(
         "pointer-events-none absolute left-2 top-3.5 text-gray-500 dark:text-gray-700",
         "group-hover:text-gray-700 dark:group-hover:text-gray-500",
-        "group-focus-within:!text-gray-900 dark:group-focus-within:!text-gray-50",
+        "group-focus-within:text-gray-900! dark:group-focus-within:text-gray-50!",
       )}
     />
     <CommandPrimitive.Input
       ref={ref}
       className={cn(
-        "flex w-full bg-transparent pb-2 pl-8 pr-3 pt-3 text-[14px] font-normal leading-5 outline-none",
+        "flex w-full bg-transparent pb-2 pl-8 pr-3 pt-3 text-sm font-normal leading-5 outline-none",
         "placeholder:text-gray-500 dark:placeholder:text-gray-700",
         "group-hover:placeholder:text-gray-700 dark:group-hover:placeholder:text-gray-500",
-        "group-focus-within:placeholder:!text-gray-700 dark:group-focus-within:placeholder:!text-gray-300",
+        "group-focus-within:placeholder:text-gray-700! dark:group-focus-within:placeholder:text-gray-300!",
         "disabled:cursor-not-allowed",
         className,
       )}
@@ -118,7 +118,7 @@ const CommandItem = React.forwardRef<
     className={cn(
       "relative flex select-none items-center justify-between",
       "h-8 gap-2 rounded-md py-1.5 pl-1.5 pr-2.5",
-      "text-[14px] leading-4 outline-none",
+      "text-sm leading-4 outline-none",
       "border-y-2 border-white dark:border-slate-600",
       "data-[disabled=true]:pointer-events-none",
       "[&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
@@ -136,5 +136,6 @@ export {
   CommandInput,
   CommandItem,
   CommandList,
-  CommandLoading,
+  CommandLoading
 };
+

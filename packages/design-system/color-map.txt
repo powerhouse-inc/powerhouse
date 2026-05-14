@@ -1,0 +1,2 @@
+text-black -> dark:text-slate-50
+text-gray-500 -> dark:text-slate-100

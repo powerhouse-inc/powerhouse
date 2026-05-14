@@ -93,9 +93,9 @@ export function DropZone(props: DropZoneProps) {
       {children}
 
       {enable && isDropTarget && (
-        <div className="fixed inset-0 z-[1000] flex min-h-screen w-screen items-center justify-center bg-black/50">
-          <div className="rounded-[24px] bg-white p-6 shadow-[1px_4px_15px_rgba(74,88,115,0.25)]">
-            <div className="relative flex h-[130px] w-[400px] flex-col items-center justify-start overflow-visible rounded-lg border border-dashed border-black px-4 py-6">
+        <div className="z-1000 fixed inset-0 flex min-h-screen w-screen items-center justify-center bg-black/50">
+          <div className="rounded-3xl bg-white p-6 shadow-charcoal">
+            <div className="h-32.5 w-100 relative flex flex-col items-center justify-start overflow-visible rounded-lg border border-dashed border-black px-4 py-6">
               <div className="text-center text-base leading-5 text-zinc-500">
                 {title}
               </div>

@@ -22,7 +22,7 @@ export const PopoverContent = React.forwardRef<
           "data-[side=right]:animate-slide-in-from-left data-[side=top]:animate-slide-in-from-bottom",
           "w-(--radix-popover-trigger-width) z-50 border p-0 outline-none",
           "border-gray-300 bg-white dark:border-slate-500 dark:bg-slate-600",
-          "rounded-md shadow-[1px_4px_15px_0px_rgba(74,88,115,0.25)] dark:shadow-[1px_4px_15.3px_0px_#141921]",
+          "rounded-md shadow-sidebar",
         ],
         className,
       )}

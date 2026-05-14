@@ -2,11 +2,11 @@ import { cn, Icon } from "#design-system";
 import { useCommandState } from "cmdk";
 import React, { useEffect } from "react";
 import {
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
 } from "../command/command.js";
 import type { SelectProps } from "../enum-field/types.js";
 import { CommandItemList } from "./subcomponents/CommandItemList.js";
@@ -64,7 +64,7 @@ export const Content: React.FC<ContentProps> = ({
         />
       )}
       <CommandList ref={commandListRef} tabIndex={!searchable ? 0 : undefined}>
-        <CommandEmpty className="p-4 text-center text-[14px] font-normal leading-5 text-gray-700 dark:text-gray-400">
+        <CommandEmpty className="p-4 text-center text-sm font-normal leading-5 text-gray-700 dark:text-gray-400">
           No results found.
         </CommandEmpty>
         {multiple && cmdkSearch === "" && (
@@ -108,7 +108,7 @@ export const Content: React.FC<ContentProps> = ({
                         )}
                     </div>
                   )}
-                <span className="text-[14px] font-semibold leading-4 text-gray-900 dark:text-gray-50">
+                <span className="text-sm font-semibold leading-4 text-gray-900 dark:text-gray-50">
                   {selectedValues.length === enabledOptions.length
                     ? "Deselect All"
                     : "Select All"}

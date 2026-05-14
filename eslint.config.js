@@ -1,5 +1,6 @@
 // @ts-check
 import { default as eslint } from "@eslint/js";
+import betterTailwindcss from "eslint-plugin-better-tailwindcss";
 import eslintPluginPrettierRecommended from "eslint-plugin-prettier/recommended";
 import reactPlugin from "eslint-plugin-react";
 import reactHooksPlugin from "eslint-plugin-react-hooks";
@@ -71,6 +72,7 @@ const unsafeIgnoredFiles = [
   "**/external-packages.js",
   // Excluded from reactor's tsconfig.json, so ESLint's project service cannot parse it
   "packages/reactor/test/atlas/**/*",
+  "packages/reactor-api/src/packages/vite-loader.mts",
 ];
 
 /** All of the files that are ignored by eslint */
@@ -416,6 +418,46 @@ const typescriptEsLintRecommendedConfig = [
   ...tseslint.configs.recommendedTypeChecked,
 ];
 
+const tailwindConfig = [
+  {
+    files: ["packages/design-system/**/*.{js,jsx,cjs,mjs,ts,tsx}"],
+    ...betterTailwindcss.configs["recommended-error"],
+    settings: {
+      "better-tailwindcss": {
+        cwd: "./packages/design-system",
+        entryPoint: "style.css",
+      },
+    },
+  },
+  // {
+  //   files: ["apps/connect/**/*.{js,jsx,cjs,mjs,ts,tsx}"],
+  //   ...betterTailwindcss.configs["recommended-error"],
+  //   settings: {
+  //     "better-tailwindcss": {
+  //       cwd: "./apps/connect",
+  //     },
+  //   },
+  // },
+  // {
+  //   files: ["packages/powerhouse-vetra-packages/**/*.{js,jsx,cjs,mjs,ts,tsx}"],
+  //   ...betterTailwindcss.configs["recommended-error"],
+  //   settings: {
+  //     "better-tailwindcss": {
+  //       cwd: "./packages/powerhouse-vetra-packages",
+  //     },
+  //   },
+  // },
+  // {
+  //   files: ["packages/vetra/**/*.{js,jsx,cjs,mjs,ts,tsx}"],
+  //   ...betterTailwindcss.configs["recommended-error"],
+  //   settings: {
+  //     "better-tailwindcss": {
+  //       cwd: "./packages/vetra",
+  //     },
+  //   },
+  // },
+];
+
 /** Main config */
 export default defineConfig(
   ignored,
@@ -427,4 +469,5 @@ export default defineConfig(
   javascriptConfig,
   unsafeConfig,
   cliColdPathConfig,
+  tailwindConfig,
 );

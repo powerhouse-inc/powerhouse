@@ -15,7 +15,7 @@ export const HomeScreen = function HomeScreen(props: HomeScreenProps) {
         containerClassName,
       )}
     >
-      <div className="m-8 flex flex-wrap justify-center gap-4 pt-12">
+      <div className="m-8 flex flex-wrap justify-center gap-4 pt-12 dark:bg-slate-900">
         <HomeBackgroundImage />
         {children}
       </div>
