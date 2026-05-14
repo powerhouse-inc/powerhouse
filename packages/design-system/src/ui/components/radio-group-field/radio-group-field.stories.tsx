@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { withForm } from "../decorators.js";
+import { WithForm } from "../decorators.js";
 import {
   getDefaultArgTypes,
   getValidationArgTypes,
@@ -10,7 +10,7 @@ import { RadioGroupField } from "./radio-group-field.js";
 const meta = {
   title: "UI/RadioGroupField",
   component: RadioGroupField,
-  decorators: [withForm],
+  decorators: [WithForm],
   parameters: {
     layout: "centered",
     chromatic: {

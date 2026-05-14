@@ -77,6 +77,7 @@ export const ModuleItem: React.FC<ModuleItemProps> = ({
       )}
     >
       <div className="shrink-0">
+        {/* eslint-disable-next-line react-hooks/static-components */}
         <IconComponent />
       </div>
       <div className="min-w-0 flex-1">

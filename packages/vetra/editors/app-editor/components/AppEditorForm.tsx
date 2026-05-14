@@ -58,6 +58,7 @@ export const AppEditorForm = () => {
   // Reset confirmation state if status changes back to DRAFT
   useEffect(() => {
     if (status === "DRAFT") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsConfirmed(false);
     }
   }, [status]);

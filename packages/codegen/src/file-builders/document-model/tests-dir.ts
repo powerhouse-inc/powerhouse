@@ -75,7 +75,7 @@ export async function makeOperationModuleTestFile(
   const importNames = makeOperationImportNames(args);
   const namedImports = importNames.map((name) => ({ name }));
 
-  let actionsImportDeclaration = sourceFile
+  const actionsImportDeclaration = sourceFile
     .getImportDeclarations()
     .filter((i) => !i.isTypeOnly())
     .find((importDeclaration) =>
@@ -86,7 +86,7 @@ export async function makeOperationModuleTestFile(
     );
 
   if (!actionsImportDeclaration) {
-    actionsImportDeclaration = sourceFile.addImportDeclaration({
+    sourceFile.addImportDeclaration({
       namedImports,
       moduleSpecifier: versionImportPath,
     });

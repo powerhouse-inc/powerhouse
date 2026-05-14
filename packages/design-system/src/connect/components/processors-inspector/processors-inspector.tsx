@@ -148,6 +148,7 @@ export function ProcessorsInspector({
   }, [getProcessors]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadProcessors();
 
     const interval = setInterval(() => {

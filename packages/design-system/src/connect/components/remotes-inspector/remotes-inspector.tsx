@@ -127,6 +127,7 @@ export function RemotesInspector({
   }, [getRemotes]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadRemotes();
   }, [loadRemotes]);
 

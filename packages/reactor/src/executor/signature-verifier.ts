@@ -30,6 +30,7 @@ export class SignatureVerifier {
       }
 
       const publicKey = signer.app.key;
+
       let isValid = false;
 
       try {
@@ -85,6 +86,7 @@ export class SignatureVerifier {
       }
 
       const publicKey = signer.app.key;
+
       let isValid = false;
 
       try {

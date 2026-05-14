@@ -75,6 +75,7 @@ export async function startMigrate({
     if (!force) {
       throw new Error(
         `Failed to resolve "${requested}" from the npm registry: ${reason}\nRe-run with --force to migrate using the installed version.`,
+        { cause: error },
       );
     }
     if (debug) {

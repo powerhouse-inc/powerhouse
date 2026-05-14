@@ -2,6 +2,7 @@
 import type { PGlite } from "@electric-sql/pglite";
 import { getConfig } from "@powerhousedao/config/node";
 import { ReactorInstrumentation } from "@powerhousedao/opentelemetry-instrumentation-reactor";
+import { AtomicNodeFs } from "@powerhousedao/pglite-fs";
 import {
   ChannelScheme,
   EventBus,
@@ -40,15 +41,14 @@ import {
 } from "document-model";
 import dotenv from "dotenv";
 import { Kysely, PostgresDialect } from "kysely";
-import { AtomicNodeFs } from "@powerhousedao/pglite-fs";
-import { ClosablePGliteDialect } from "./pglite-dialect.js";
 import { promises as fs } from "node:fs";
-import net from "node:net";
 import { register } from "node:module";
+import net from "node:net";
 import path from "path";
 import { Pool } from "pg";
 import { registerAttachmentRoutes } from "./attachments/index.js";
 import { initFeatureFlags } from "./feature-flags.js";
+import { ClosablePGliteDialect } from "./pglite-dialect.js";
 import { migratePgliteDir } from "./pglite-migration.js";
 import {
   CURRENT_PG_MAJOR,
@@ -565,6 +565,7 @@ export const startSwitchboard = async (
     if (options.identity?.requireExisting) {
       throw new Error(
         'Identity required but failed to initialize. Run "ph login" first.',
+        { cause: e },
       );
     }
   }

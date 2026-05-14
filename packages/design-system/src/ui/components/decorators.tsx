@@ -23,7 +23,7 @@ interface StoryFormParameters {
   };
 }
 
-export const withForm: Decorator = (Story, context) => {
+export const WithForm: Decorator = (Story, context) => {
   const formRef = useRef<UseFormReturn>(null);
   const [showFormButtons, setShowFormButtons] = useState<boolean>(false);
   const [resetKey, setResetKey] = useState(0);

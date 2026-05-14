@@ -149,6 +149,7 @@ export function QueueInspector({
   }, [getQueueState]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadState();
 
     const interval = setInterval(() => {

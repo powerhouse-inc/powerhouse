@@ -2,12 +2,11 @@
 import { default as eslint } from "@eslint/js";
 import betterTailwindcss from "eslint-plugin-better-tailwindcss";
 import eslintPluginPrettierRecommended from "eslint-plugin-prettier/recommended";
-import reactPlugin from "eslint-plugin-react";
-import reactHooksPlugin from "eslint-plugin-react-hooks";
 import { defineConfig, globalIgnores } from "eslint/config";
 import globals from "globals";
 import { builtinModules } from "node:module";
 import tseslint from "typescript-eslint";
+import reactHooks from "eslint-plugin-react-hooks";
 
 /** These files are typically ignored by eslint by default, so there is no need to investigate why they are ignored. */
 const normalIgnoredFiles = [
@@ -164,6 +163,8 @@ const filesWithUnsafeRules = [
 /** Typescript rules that we have chosen to opt out of in general */
 /** @type {import("eslint").Linter.RulesRecord} */
 const typescriptRules = {
+  "no-useless-assignment": "warn",
+  "preserve-caught-error": "warn",
   "@typescript-eslint/consistent-type-imports": [
     "error",
     {
@@ -252,12 +253,6 @@ const typescriptLanguageOptions = {
   },
 };
 
-/** React plugins */
-const reactPlugins = {
-  react: reactPlugin,
-  "react-hooks": reactHooksPlugin,
-};
-
 /** React settings */
 const reactSettings = {
   react: {
@@ -274,9 +269,9 @@ const typescriptConfig = {
 
 /** React config for `.tsx` files */
 const reactConfig = {
+  ...reactHooks.configs.flat.recommended,
   files: typescriptReactFiles,
   settings: reactSettings,
-  plugins: reactPlugins,
 };
 
 /** Config for files that have unsafe rules enabled */

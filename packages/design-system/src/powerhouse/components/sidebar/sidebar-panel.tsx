@@ -37,7 +37,7 @@ export function SidebarPanel({
     return () => {
       observer.disconnect();
     };
-  }, [containerRef.current]);
+  }, []);
 
   return (
     <>

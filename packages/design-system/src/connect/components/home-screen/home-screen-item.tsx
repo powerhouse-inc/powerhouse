@@ -36,9 +36,7 @@ export const HomeScreenItem = function HomeScreenItem(
         <h3 className="w-full max-w-full truncate px-2 text-slate-50">
           {title}
         </h3>
-        {description && (
-          <p className="text-gray-500">{description}</p>
-        )}
+        {description && <p className="text-gray-500">{description}</p>}
       </div>
       {shareable && (
         <div className="absolute top-0 left-2 mb-2">

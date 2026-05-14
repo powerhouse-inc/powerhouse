@@ -7,7 +7,7 @@ import type {
   PropsWithoutRef,
   RefAttributes,
 } from "react";
-import { forwardRef, useCallback, useEffect, useState } from "react";
+import { forwardRef, useEffect, useState } from "react";
 import { Controller, useFormContext, useFormState } from "react-hook-form";
 import type {
   FieldErrorHandling,
@@ -131,74 +131,65 @@ export const withFieldValidation = <
             // React Hook "useCallback" cannot be called inside a callback.
             // React Hooks must be called in a React function component or a custom React Hook function.
 
-            const onBlurCallback = useCallback(
-              (event: FocusEvent<HTMLInputElement>) => {
-                if (showErrorOnBlur) {
-                  void trigger(name);
-                } else {
-                  onBlurController(); // default behavior
-                }
+            const onBlurCallback = (event: FocusEvent<HTMLInputElement>) => {
+              if (showErrorOnBlur) {
+                void trigger(name);
+              } else {
+                onBlurController(); // default behavior
+              }
 
-                // trigger parent onBlur
-                if (onBlurProp) {
-                  onBlurProp(event);
-                }
-              },
-              [onBlurController, showErrorOnBlur],
-            );
+              // trigger parent onBlur
+              if (onBlurProp) {
+                onBlurProp(event);
+              }
+            };
 
             // ignore eslint that flags an error here:
             // React Hook "useCallback" cannot be called inside a callback.
             // React Hooks must be called in a React function component or a custom React Hook function.
 
-            const onChangeCallback = useCallback(
-              (event: ChangeEvent<HTMLInputElement>) => {
-                // update value state
-                if (onChangeProp) {
-                  if (Object.hasOwn(event, "target")) {
-                    // it is probably an actual event
-                    setValue(name, event.target.value);
-                  } else {
-                    // it is a custom onChange and it pass the value directly
-                    setValue(name, event);
-                  }
-
-                  // the fields is controlled by the parent
-                  onChangeProp(event);
+            const onChangeCallback = (event: ChangeEvent<HTMLInputElement>) => {
+              // update value state
+              if (onChangeProp) {
+                if (Object.hasOwn(event, "target")) {
+                  // it is probably an actual event
+                  setValue(name, event.target.value);
                 } else {
-                  // sometimes the onChange is overridden by the parent and use the new value as parameter instead of event
-                  let value: unknown = event;
-                  if (
-                    event instanceof Event ||
-                    event.target instanceof HTMLElement
-                  ) {
-                    value = event.target.value;
-                  }
-                  setValue(name, value); // default behavior
+                  // it is a custom onChange and it pass the value directly
+                  setValue(name, event);
                 }
 
-                // now let's validate the field
+                // the fields is controlled by the parent
+                onChangeProp(event);
+              } else {
+                // sometimes the onChange is overridden by the parent and use the new value as parameter instead of event
+                let value: unknown = event;
                 if (
-                  showErrorOnChange === undefined &&
-                  showErrorOnBlur === undefined
+                  event instanceof Event ||
+                  event.target instanceof HTMLElement
                 ) {
-                  // use form validation mode...
-                  // if previously validated, then validate on change
-                  if (submitCount > 0) {
-                    void trigger(name);
-                  }
-                } else {
-                  // default validation behavior was overridden
-                  if (showErrorOnChange) {
-                    void trigger(name);
-                  }
+                  value = event.target.value;
                 }
-              },
-              // `internalValue` is the value of the field that is controlled by the form
-              // it is used to trigger the validation on change, so we need to add it to the dependencies
-              // otherwise the validation will not be triggered on change
-              [internalValue, showErrorOnChange, showErrorOnBlur, submitCount],
-            );
+                setValue(name, value); // default behavior
+              }
+
+              // now let's validate the field
+              if (
+                showErrorOnChange === undefined &&
+                showErrorOnBlur === undefined
+              ) {
+                // use form validation mode...
+                // if previously validated, then validate on change
+                if (submitCount > 0) {
+                  void trigger(name);
+                }
+              } else {
+                // default validation behavior was overridden
+                if (showErrorOnChange) {
+                  void trigger(name);
+                }
+              }
+            };
 
             // extract ref from rest
             const { ref: formFieldRef } = rest;
