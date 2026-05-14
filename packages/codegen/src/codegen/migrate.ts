@@ -30,6 +30,7 @@ import { buildTsMorphProject } from "utils";
 import { writePackage } from "write-package";
 import { detectFeatures } from "./features.js";
 import { generateAll } from "./generate.js";
+import { sortByKey } from "./utils.js";
 
 /* Uses the npm cli's fetch function to get the version for a specified tag */
 export async function getFullyQualifiedWorkspacePackageVersion(
@@ -86,12 +87,6 @@ export function fixLegacyImportPaths(
       }
     }
   }
-}
-
-function sortByKey<T extends Record<string, unknown>>(value: T): T {
-  return Object.fromEntries(
-    Object.entries(value).sort(([a], [b]) => a.localeCompare(b)),
-  ) as T;
 }
 
 function isProtectedVersionSpec(value: unknown): value is string {
