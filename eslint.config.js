@@ -20,6 +20,7 @@ const normalIgnoredFiles = [
   "**/build/",
   "**/.docusaurus/",
   "**/.ph/",
+  "**/.hotseat/",
   "**/prisma/",
   // config artifacts
   "**/babel.config.js",

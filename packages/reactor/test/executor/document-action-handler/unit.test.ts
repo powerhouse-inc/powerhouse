@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { IOperationIndexTxn } from "../../../src/cache/operation-index-types.js";
 import { driveCollectionId } from "../../../src/cache/operation-index-types.js";
 import type { IWriteCache } from "../../../src/cache/write/interfaces.js";
+import { DEFAULT_DRIVE_CONTAINER_TYPES } from "../../../src/core/drive-container-types.js";
 import { DocumentActionHandler } from "../../../src/executor/document-action-handler.js";
 import type { ExecutionStores } from "../../../src/executor/execution-scope.js";
 import type { Job } from "../../../src/queue/types.js";
@@ -80,6 +81,7 @@ function createHarness(
   const handler = new DocumentActionHandler(
     createTestRegistry(),
     createMockLogger(),
+    DEFAULT_DRIVE_CONTAINER_TYPES,
   );
   return {
     handler,
@@ -165,6 +167,35 @@ describe("DocumentActionHandler", () => {
       );
       expect(harness.documentMetaCache.putDocumentMeta).toHaveBeenCalledTimes(
         1,
+      );
+    });
+
+    it("also adds to the drive collection for a reactor-drive source", async () => {
+      harness = createHarness(
+        createSourceDoc({
+          id: "drive-rd",
+          documentType: "powerhouse/reactor-drive",
+        }),
+      );
+      const action = buildAction("ADD_RELATIONSHIP", {
+        sourceId: "drive-rd",
+        targetId: "doc-2",
+        relationshipType: "drive/child",
+      });
+      const job = buildJob({ documentId: "drive-rd", actions: [action] });
+
+      const result = await harness.handler.execute(
+        job,
+        action,
+        Date.now(),
+        harness.indexTxn,
+        harness.stores,
+      );
+
+      expect(result.success).toBe(true);
+      expect(harness.indexTxn.addToCollection).toHaveBeenCalledWith(
+        driveCollectionId("main", "drive-rd"),
+        "doc-2",
       );
     });
 
@@ -318,6 +349,35 @@ describe("DocumentActionHandler", () => {
         "doc-2",
       );
       expect(harness.collectionMembershipCache.invalidate).toHaveBeenCalledWith(
+        "doc-2",
+      );
+    });
+
+    it("also removes from the drive collection for a reactor-drive source", async () => {
+      harness = createHarness(
+        createSourceDoc({
+          id: "drive-rd",
+          documentType: "powerhouse/reactor-drive",
+        }),
+      );
+      const action = buildAction("REMOVE_RELATIONSHIP", {
+        sourceId: "drive-rd",
+        targetId: "doc-2",
+        relationshipType: "drive/child",
+      });
+      const job = buildJob({ documentId: "drive-rd", actions: [action] });
+
+      const result = await harness.handler.execute(
+        job,
+        action,
+        Date.now(),
+        harness.indexTxn,
+        harness.stores,
+      );
+
+      expect(result.success).toBe(true);
+      expect(harness.indexTxn.removeFromCollection).toHaveBeenCalledWith(
+        driveCollectionId("main", "drive-rd"),
         "doc-2",
       );
     });

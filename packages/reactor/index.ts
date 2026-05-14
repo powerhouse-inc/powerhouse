@@ -23,6 +23,7 @@ export {
 } from "./src/client/types.js";
 export { ReactorBuilder } from "./src/core/reactor-builder.js";
 export { ReactorClientBuilder } from "./src/core/reactor-client-builder.js";
+export { DEFAULT_DRIVE_CONTAINER_TYPES } from "./src/core/drive-container-types.js";
 export { Reactor } from "./src/core/reactor.js";
 export {
   type BatchLoadRequest,

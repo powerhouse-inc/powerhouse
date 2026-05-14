@@ -57,6 +57,7 @@ export class DocumentActionHandler {
   constructor(
     private registry: IDocumentModelRegistry,
     private logger: ILogger,
+    private driveContainerTypes: ReadonlySet<string>,
   ) {}
 
   async execute(
@@ -236,7 +237,7 @@ export class DocumentActionHandler {
       },
     ]);
 
-    if (document.header.documentType === "powerhouse/document-drive") {
+    if (this.driveContainerTypes.has(document.header.documentType)) {
       const collectionId = driveCollectionId(job.branch, document.header.id);
       indexTxn.createCollection(collectionId);
       indexTxn.addToCollection(collectionId, document.header.id);
@@ -584,7 +585,7 @@ export class DocumentActionHandler {
             )
           : null,
       ({ indexTxn: txn, stores: s, sourceDoc, input, job: j }) => {
-        if (sourceDoc.header.documentType === "powerhouse/document-drive") {
+        if (this.driveContainerTypes.has(sourceDoc.header.documentType)) {
           const collectionId = driveCollectionId(j.branch, input.sourceId);
           txn.addToCollection(collectionId, input.targetId);
           s.collectionMembershipCache.invalidate(input.targetId);
@@ -613,7 +614,7 @@ export class DocumentActionHandler {
       signal,
       null,
       ({ indexTxn: txn, stores: s, sourceDoc, input, job: j }) => {
-        if (sourceDoc.header.documentType === "powerhouse/document-drive") {
+        if (this.driveContainerTypes.has(sourceDoc.header.documentType)) {
           const collectionId = driveCollectionId(j.branch, input.sourceId);
           txn.removeFromCollection(collectionId, input.targetId);
           s.collectionMembershipCache.invalidate(input.targetId);
@@ -654,9 +655,7 @@ export class DocumentActionHandler {
     stores: ExecutionStores,
     sourceRemote: string,
     signal: AbortSignal | undefined,
-    preValidate:
-      | ((input: RelationshipActionShape) => Error | null)
-      | null,
+    preValidate: ((input: RelationshipActionShape) => Error | null) | null,
     postWrite: ((args: RelationshipPostWriteArgs) => void) | null,
   ): Promise<RelationshipJobResult> {
     if (job.scope !== "document") {

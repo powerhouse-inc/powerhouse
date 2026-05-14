@@ -437,7 +437,12 @@ describe("ReactorDriveClient", () => {
     const driveId = "drive-1";
     await seed(driveId, [
       { id: "root-folder", kind: "folder", name: "Root", parentFolder: null },
-      { id: "nested", kind: "folder", name: "Nested", parentFolder: "root-folder" },
+      {
+        id: "nested",
+        kind: "folder",
+        name: "Nested",
+        parentFolder: "root-folder",
+      },
       {
         id: "root-file",
         kind: "file",
@@ -470,7 +475,12 @@ describe("ReactorDriveClient", () => {
     const driveId = "drive-1";
     await seed(driveId, [
       { id: "root-folder", kind: "folder", name: "Root", parentFolder: null },
-      { id: "nested", kind: "folder", name: "Nested", parentFolder: "root-folder" },
+      {
+        id: "nested",
+        kind: "folder",
+        name: "Nested",
+        parentFolder: "root-folder",
+      },
     ]);
     const { reactor } = createMockReactor();
     const client = new ReactorDriveClient({ reactor, readModel: view });

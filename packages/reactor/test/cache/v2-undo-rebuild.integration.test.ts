@@ -11,6 +11,7 @@ import { DocumentMetaCache } from "../../src/cache/document-meta-cache.js";
 import { KyselyOperationIndex } from "../../src/cache/kysely-operation-index.js";
 import { KyselyWriteCache } from "../../src/cache/kysely-write-cache.js";
 import type { WriteCacheConfig } from "../../src/cache/write-cache-types.js";
+import { DEFAULT_DRIVE_CONTAINER_TYPES } from "../../src/core/drive-container-types.js";
 import type { IExecutionScope } from "../../src/executor/execution-scope.js";
 import { KyselyExecutionScope } from "../../src/executor/execution-scope.js";
 import { SimpleJobExecutor } from "../../src/executor/simple-job-executor.js";
@@ -212,6 +213,7 @@ describe.each(scopeVariants)(
         operationIndex,
         documentMetaCache,
         collectionMembershipCache,
+        DEFAULT_DRIVE_CONTAINER_TYPES,
         {},
         undefined,
         executionScope,

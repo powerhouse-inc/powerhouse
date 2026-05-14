@@ -1,6 +1,7 @@
 import { MemoryFS, PGlite } from "@electric-sql/pglite";
 import {
   ConsistencyTracker,
+  driveCollectionId,
   REACTOR_SCHEMA,
   ReactorBuilder,
   ReactorClientBuilder,
@@ -8,6 +9,7 @@ import {
   type IOperationIndex,
   type IReactorClient,
   type IWriteCache,
+  type ReactorModule,
 } from "@powerhousedao/reactor";
 import type {
   DocumentModelModule,
@@ -34,6 +36,7 @@ describe("ReactorDriveClient Integration", () => {
   let schemaDb: Kysely<NodeProcessorDatabase>;
   let driveClient: ReactorDriveClient;
   let reactorClient: IReactorClient;
+  let reactorModule: ReactorModule;
   let killReactor: () => void;
   let driveId: string;
 
@@ -44,7 +47,9 @@ describe("ReactorDriveClient Integration", () => {
     if (!result.success && result.error) {
       throw new Error(`Reactor migration failed: ${result.error.message}`);
     }
-    schemaDb = baseDb.withSchema(REACTOR_SCHEMA) as Kysely<NodeProcessorDatabase>;
+    schemaDb = baseDb.withSchema(
+      REACTOR_SCHEMA,
+    ) as Kysely<NodeProcessorDatabase>;
     await createDriveNodeTable(schemaDb as unknown as Kysely<unknown>);
     await createDocumentNameTable(schemaDb as unknown as Kysely<unknown>);
 
@@ -82,6 +87,7 @@ describe("ReactorDriveClient Integration", () => {
       .withReactorBuilder(reactorBuilder)
       .buildModule();
     reactorClient = built.client;
+    reactorModule = built.reactorModule!;
     killReactor = () => built.reactor.kill();
 
     driveClient = new ReactorDriveClient({
@@ -183,7 +189,11 @@ describe("ReactorDriveClient Integration", () => {
     it("moves a folder under a different parent folder", async () => {
       const folderA = await driveClient.addFolder(driveId, "A");
       const folderB = await driveClient.addFolder(driveId, "B");
-      const movable = await driveClient.addFolder(driveId, "Movable", folderA.id);
+      const movable = await driveClient.addFolder(
+        driveId,
+        "Movable",
+        folderA.id,
+      );
 
       await driveClient.moveNode(driveId, movable.id, folderB.id);
 
@@ -233,14 +243,44 @@ describe("ReactorDriveClient Integration", () => {
       await expect(driveClient.getNode(driveId, sub.id)).rejects.toThrow(
         /not found/,
       );
-      await expect(driveClient.getNode(driveId, fileA.header.id)).rejects.toThrow(
-        /not found/,
-      );
-      await expect(driveClient.getNode(driveId, fileB.header.id)).rejects.toThrow(
-        /not found/,
-      );
+      await expect(
+        driveClient.getNode(driveId, fileA.header.id),
+      ).rejects.toThrow(/not found/);
+      await expect(
+        driveClient.getNode(driveId, fileB.header.id),
+      ).rejects.toThrow(/not found/);
       await expect(reactorClient.get(fileA.header.id)).rejects.toThrow();
       await expect(reactorClient.get(fileB.header.id)).rejects.toThrow();
+    });
+  });
+
+  describe("collection membership", () => {
+    it("tags child documents with the drive's collection", async () => {
+      const doc = await makeChildDocument("Tagged File");
+      await driveClient.addFile(driveId, doc);
+
+      const expectedCollectionId = driveCollectionId("main", driveId);
+      const memberships =
+        await reactorModule.operationIndex.getCollectionsForDocuments([
+          doc.header.id,
+        ]);
+
+      expect(memberships[doc.header.id]).toContain(expectedCollectionId);
+    });
+
+    it("removes child membership when the file is removed", async () => {
+      const doc = await makeChildDocument("Transient File");
+      await driveClient.addFile(driveId, doc);
+      await driveClient.removeNode(driveId, doc.header.id);
+
+      const memberships =
+        await reactorModule.operationIndex.getCollectionsForDocuments([
+          doc.header.id,
+        ]);
+
+      expect(memberships[doc.header.id] ?? []).not.toContain(
+        driveCollectionId("main", driveId),
+      );
     });
   });
 

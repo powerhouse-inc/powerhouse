@@ -192,9 +192,10 @@ export class NodeProcessor extends BaseReadModel {
     driveId: string,
     input: AddRelationshipActionInput,
   ): Promise<void> {
-    const metadata = (input.metadata ?? { kind: "file", parentFolderId: null }) as
-      | DriveChildFileMetadata
-      | { kind: "file" };
+    const metadata = (input.metadata ?? {
+      kind: "file",
+      parentFolderId: null,
+    }) as DriveChildFileMetadata | { kind: "file" };
     const parentFolder =
       "parentFolderId" in metadata ? (metadata.parentFolderId ?? null) : null;
 

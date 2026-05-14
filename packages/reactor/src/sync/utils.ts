@@ -1,9 +1,6 @@
 import type { OperationWithContext } from "@powerhousedao/shared/document-model";
 import type { Operation } from "@powerhousedao/shared/document-model";
-import {
-  driveCollectionId,
-  type OperationIndexEntry,
-} from "../cache/operation-index-types.js";
+import { type OperationIndexEntry } from "../cache/operation-index-types.js";
 import type { JobWriteReadyEvent } from "../events/types.js";
 import type { PreparedBatch } from "./batch-aggregator.js";
 import type { IMailbox } from "./mailbox.js";
@@ -363,53 +360,6 @@ export function consolidateSyncOperations(
   }
 
   return result;
-}
-
-export function mergeCollectionMemberships(
-  events: JobWriteReadyEvent[],
-): Record<string, string[]> {
-  const mergedMemberships: Record<string, string[]> = {};
-
-  for (const event of events) {
-    if (event.collectionMemberships) {
-      for (const [docId, collections] of Object.entries(
-        event.collectionMemberships,
-      )) {
-        if (!(docId in mergedMemberships)) {
-          mergedMemberships[docId] = [];
-        }
-        for (const c of collections) {
-          if (!mergedMemberships[docId].includes(c)) {
-            mergedMemberships[docId].push(c);
-          }
-        }
-      }
-    }
-
-    for (const op of event.operations) {
-      const action = op.operation.action as {
-        type: string;
-        input?: { sourceId?: string; targetId?: string };
-      };
-      if (action.type !== "ADD_RELATIONSHIP") {
-        continue;
-      }
-      const input = action.input;
-      if (!input?.sourceId || !input.targetId) {
-        continue;
-      }
-
-      const collectionId = driveCollectionId(op.context.branch, input.sourceId);
-      if (!(input.targetId in mergedMemberships)) {
-        mergedMemberships[input.targetId] = [];
-      }
-      if (!mergedMemberships[input.targetId].includes(collectionId)) {
-        mergedMemberships[input.targetId].push(collectionId);
-      }
-    }
-  }
-
-  return mergedMemberships;
 }
 
 type ChunkableItem = {

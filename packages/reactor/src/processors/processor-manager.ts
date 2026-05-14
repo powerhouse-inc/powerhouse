@@ -20,11 +20,9 @@ import type {
 } from "../read-models/types.js";
 import type { IConsistencyTracker } from "../shared/consistency-tracker.js";
 import {
-  DRIVE_DOCUMENT_TYPE,
   createMinimalDriveHeader,
   extractDeletedDocumentId,
   extractDriveHeader,
-  isDriveCreation,
   isDriveDeletion,
   matchesFilter,
 } from "./utils.js";
@@ -48,9 +46,10 @@ export class ProcessorManager
   private processorsByDrive: Map<string, TrackedProcessor[]> = new Map();
   private factoryToProcessors: Map<string, Map<string, TrackedProcessor[]>> =
     new Map();
-  private knownDriveIds: Set<string> = new Set();
+  private knownDrives: Map<string, string> = new Map();
   private cursorCache: Map<string, ProcessorCursorRow> = new Map();
   private logger: ILogger;
+  private driveContainerTypes: ReadonlySet<string>;
 
   constructor(
     db: Kysely<DocumentViewDatabase>,
@@ -58,12 +57,14 @@ export class ProcessorManager
     writeCache: IWriteCache,
     consistencyTracker: IConsistencyTracker,
     logger: ILogger,
+    driveContainerTypes: ReadonlySet<string>,
   ) {
     super(db, operationIndex, writeCache, consistencyTracker, {
       readModelId: "processor-manager",
       rebuildStateOnInit: true,
     });
     this.logger = logger;
+    this.driveContainerTypes = driveContainerTypes;
   }
 
   override async init(): Promise<void> {
@@ -91,8 +92,8 @@ export class ProcessorManager
     this.factoryRegistry.set(identifier, factory);
     this.factoryToProcessors.set(identifier, new Map());
 
-    for (const driveId of this.knownDriveIds) {
-      const driveHeader = createMinimalDriveHeader(driveId);
+    for (const [driveId, documentType] of this.knownDrives) {
+      const driveHeader = createMinimalDriveHeader(driveId, documentType);
       await this.createProcessorsForDrive(
         driveId,
         identifier,
@@ -148,12 +149,12 @@ export class ProcessorManager
     operations: OperationWithContext[],
   ): Promise<void> {
     for (const op of operations) {
-      if (!isDriveCreation(op)) continue;
+      if (!this.isDriveCreation(op)) continue;
 
       const driveId = op.context.documentId;
-      if (this.knownDriveIds.has(driveId)) continue;
+      if (this.knownDrives.has(driveId)) continue;
 
-      this.knownDriveIds.add(driveId);
+      this.knownDrives.set(driveId, op.context.documentType);
 
       const driveHeader = extractDriveHeader(op);
       if (!driveHeader) continue;
@@ -169,6 +170,13 @@ export class ProcessorManager
     }
   }
 
+  private isDriveCreation(op: OperationWithContext): boolean {
+    return (
+      op.operation.action.type === "CREATE_DOCUMENT" &&
+      this.driveContainerTypes.has(op.context.documentType)
+    );
+  }
+
   private async detectAndCleanupDeletedDrives(
     operations: OperationWithContext[],
   ): Promise<void> {
@@ -176,30 +184,30 @@ export class ProcessorManager
       if (!isDriveDeletion(op)) continue;
 
       const driveId = extractDeletedDocumentId(op);
-      if (!driveId || !this.knownDriveIds.has(driveId)) continue;
+      if (!driveId || !this.knownDrives.has(driveId)) continue;
 
       if (!this.isDeletedDocumentADrive(driveId)) continue;
 
       await this.cleanupDriveProcessors(driveId);
-      this.knownDriveIds.delete(driveId);
+      this.knownDrives.delete(driveId);
     }
   }
 
   private async discoverExistingDrives(): Promise<void> {
     const drives = await this.db
       .selectFrom("DocumentSnapshot")
-      .select("documentId")
-      .where("documentType", "=", DRIVE_DOCUMENT_TYPE)
+      .select(["documentId", "documentType"])
+      .where("documentType", "in", [...this.driveContainerTypes])
       .where("isDeleted", "=", false)
       .execute();
 
     for (const drive of drives) {
-      this.knownDriveIds.add(drive.documentId);
+      this.knownDrives.set(drive.documentId, drive.documentType);
     }
   }
 
   private isDeletedDocumentADrive(documentId: string): boolean {
-    return this.knownDriveIds.has(documentId);
+    return this.knownDrives.has(documentId);
   }
 
   private async createProcessorsForDrive(

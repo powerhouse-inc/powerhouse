@@ -1,3 +1,4 @@
+import type { OperationWithContext } from "@powerhousedao/shared/document-model";
 import type { Mock } from "vitest";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type {
@@ -5,6 +6,8 @@ import type {
   JobWriteReadyEvent,
 } from "../../../src/events/types.js";
 import type { ILogger } from "document-model";
+import { driveCollectionId } from "../../../src/cache/operation-index-types.js";
+import { DEFAULT_DRIVE_CONTAINER_TYPES } from "../../../src/core/drive-container-types.js";
 import {
   BatchAggregator,
   type PreparedBatch,
@@ -38,7 +41,11 @@ describe("BatchAggregator", () => {
     } as unknown as ILogger;
 
     onBatchReady = vi.fn().mockResolvedValue(undefined);
-    aggregator = new BatchAggregator(logger, onBatchReady);
+    aggregator = new BatchAggregator(
+      logger,
+      DEFAULT_DRIVE_CONTAINER_TYPES,
+      onBatchReady,
+    );
   });
 
   afterEach(() => {
@@ -302,6 +309,120 @@ describe("BatchAggregator", () => {
       ]);
 
       expect(callOrder).toEqual(["job-1", "job-2", "job-3"]);
+    });
+  });
+
+  describe("collection membership merging", () => {
+    const makeAddRelationshipOp = (
+      documentType: string,
+      sourceId: string,
+      targetId: string,
+      branch: string = "main",
+    ): OperationWithContext =>
+      ({
+        operation: {
+          index: 0,
+          action: {
+            type: "ADD_RELATIONSHIP",
+            id: "action-1",
+            scope: "document",
+            timestampUtcMs: "2024-01-01T00:00:00.000Z",
+            input: { sourceId, targetId },
+          },
+          id: "op-1",
+          skip: 0,
+          timestampUtcMs: "2024-01-01T00:00:00.000Z",
+          hash: "h",
+        },
+        context: {
+          documentId: sourceId,
+          documentType,
+          scope: "document",
+          branch,
+        },
+      }) as unknown as OperationWithContext;
+
+    const makeWriteReadyWithOps = (
+      jobId: string,
+      ops: OperationWithContext[],
+    ): JobWriteReadyEvent => ({
+      jobId,
+      operations: ops,
+      jobMeta: { batchId: `batch-${jobId}`, batchJobIds: [jobId] },
+    });
+
+    it("tags target document with drive collection for container source", async () => {
+      const op = makeAddRelationshipOp(
+        "powerhouse/document-drive",
+        "drive-1",
+        "child-1",
+      );
+      const event = makeWriteReadyWithOps("job-1", [op]);
+
+      await aggregator.enqueueWriteReady(event);
+
+      expect(onBatchReady).toHaveBeenCalledTimes(1);
+      const batch = onBatchReady.mock.calls[0][0] as PreparedBatch;
+      expect(batch.collectionMemberships).toEqual({
+        "child-1": [driveCollectionId("main", "drive-1")],
+      });
+    });
+
+    it("also tags target for the configured reactor-drive container type", async () => {
+      const op = makeAddRelationshipOp(
+        "powerhouse/reactor-drive",
+        "drive-2",
+        "child-2",
+      );
+      const event = makeWriteReadyWithOps("job-2", [op]);
+
+      await aggregator.enqueueWriteReady(event);
+
+      const batch = onBatchReady.mock.calls[0][0] as PreparedBatch;
+      expect(batch.collectionMemberships).toEqual({
+        "child-2": [driveCollectionId("main", "drive-2")],
+      });
+    });
+
+    it("skips ADD_RELATIONSHIP operations whose source documentType is not a drive container", async () => {
+      const op = makeAddRelationshipOp(
+        "powerhouse/some-other-type",
+        "folder-1",
+        "child-3",
+      );
+      const event = makeWriteReadyWithOps("job-3", [op]);
+
+      await aggregator.enqueueWriteReady(event);
+
+      const batch = onBatchReady.mock.calls[0][0] as PreparedBatch;
+      expect(batch.collectionMemberships).toEqual({});
+    });
+
+    it("respects the custom drive container types set", async () => {
+      const customAggregator = new BatchAggregator(
+        logger,
+        new Set(["my-custom-drive"]),
+        onBatchReady,
+      );
+
+      const customOp = makeAddRelationshipOp(
+        "my-custom-drive",
+        "drive-custom",
+        "child-custom",
+      );
+      const legacyOp = makeAddRelationshipOp(
+        "powerhouse/document-drive",
+        "drive-legacy",
+        "child-legacy",
+      );
+      const event = makeWriteReadyWithOps("job-4", [customOp, legacyOp]);
+
+      await customAggregator.enqueueWriteReady(event);
+
+      const batch = onBatchReady.mock.calls[0][0] as PreparedBatch;
+      expect(batch.collectionMemberships).toEqual({
+        "child-custom": [driveCollectionId("main", "drive-custom")],
+      });
     });
   });
 });

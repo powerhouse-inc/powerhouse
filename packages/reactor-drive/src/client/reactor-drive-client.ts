@@ -478,8 +478,9 @@ export class ReactorDriveClient implements IDriveClient {
     }
     const allNodes = await this.readModel.listAll(driveId);
     const legacy = structuredClone(doc) as unknown as DocumentDriveDocument;
-    const existingGlobal = legacy.state
-      .global as Partial<DocumentDriveDocument["state"]["global"]>;
+    const existingGlobal = legacy.state.global as Partial<
+      DocumentDriveDocument["state"]["global"]
+    >;
     legacy.state.global = {
       name: existingGlobal.name ?? "",
       icon: existingGlobal.icon ?? null,
@@ -504,9 +505,7 @@ export class ReactorDriveClient implements IDriveClient {
       depthById.set(id, depth);
       return depth;
     };
-    return folders
-      .slice()
-      .sort((a, b) => compute(b.id) - compute(a.id));
+    return folders.slice().sort((a, b) => compute(b.id) - compute(a.id));
   }
 }
 

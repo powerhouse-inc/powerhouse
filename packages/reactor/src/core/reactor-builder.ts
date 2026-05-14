@@ -59,6 +59,7 @@ import { SyncBuilder } from "../sync/sync-builder.js";
 import type { JwtHandler } from "../sync/types.js";
 import { ChannelScheme } from "../sync/types.js";
 import { createDefaultDatabase } from "./create-default-database.js";
+import { DEFAULT_DRIVE_CONTAINER_TYPES } from "./drive-container-types.js";
 import { Reactor } from "./reactor.js";
 import type {
   Database,
@@ -89,6 +90,8 @@ export class ReactorBuilder {
   private jwtHandler?: JwtHandler;
   private documentModelLoader?: IDocumentModelLoader;
   private shutdownHooks: Array<() => Promise<void>> = [];
+  private driveContainerTypes: ReadonlySet<string> =
+    DEFAULT_DRIVE_CONTAINER_TYPES;
 
   withLogger(logger: ILogger): this {
     this.logger = logger;
@@ -132,6 +135,11 @@ export class ReactorBuilder {
 
   withWriteCacheConfig(config: Partial<WriteCacheConfig>): this {
     this.writeCacheConfig = config;
+    return this;
+  }
+
+  withDriveContainerTypes(types: string[]): this {
+    this.driveContainerTypes = new Set(types);
     return this;
   }
 
@@ -314,6 +322,7 @@ export class ReactorBuilder {
             operationIndex,
             documentMetaCache,
             collectionMembershipCache,
+            this.driveContainerTypes,
             this.executorConfig,
             this.signatureVerifier,
             executionScope,
@@ -382,6 +391,7 @@ export class ReactorBuilder {
       writeCache,
       processorManagerConsistencyTracker,
       this.logger!,
+      this.driveContainerTypes,
     );
 
     try {
@@ -425,6 +435,7 @@ export class ReactorBuilder {
         operationIndex,
         eventBus,
         database as unknown as Kysely<StorageDatabase>,
+        this.driveContainerTypes,
       );
       await syncModule.syncManager.startup();
     } else if (this.syncBuilder) {
@@ -434,6 +445,7 @@ export class ReactorBuilder {
         operationIndex,
         eventBus,
         database as unknown as Kysely<StorageDatabase>,
+        this.driveContainerTypes,
       );
       await syncModule.syncManager.startup();
     }

@@ -197,8 +197,7 @@ function isLogger(
   value: AtomicNodeFsOptions | AtomicNodeFsLogger,
 ): value is AtomicNodeFsLogger {
   return (
-    "warn" in value &&
-    typeof (value as AtomicNodeFsLogger).warn === "function"
+    "warn" in value && typeof (value as AtomicNodeFsLogger).warn === "function"
   );
 }
 

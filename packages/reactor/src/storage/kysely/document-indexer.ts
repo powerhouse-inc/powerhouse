@@ -646,5 +646,4 @@ export class KyselyDocumentIndexer
       .where("relationshipType", "=", input.relationshipType)
       .execute();
   }
-
 }

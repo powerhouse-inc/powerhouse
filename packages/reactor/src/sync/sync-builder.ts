@@ -58,6 +58,7 @@ export class SyncBuilder {
     operationIndex: IOperationIndex,
     eventBus: IEventBus,
     db: Kysely<Database>,
+    driveContainerTypes: ReadonlySet<string>,
   ): ISyncManager {
     const module = this.buildModule(
       reactor,
@@ -65,6 +66,7 @@ export class SyncBuilder {
       operationIndex,
       eventBus,
       db,
+      driveContainerTypes,
     );
     return module.syncManager;
   }
@@ -75,6 +77,7 @@ export class SyncBuilder {
     operationIndex: IOperationIndex,
     eventBus: IEventBus,
     db: Kysely<Database>,
+    driveContainerTypes: ReadonlySet<string>,
   ): SyncModule {
     if (!this.channelFactory) {
       throw new Error("Channel factory is required");
@@ -94,6 +97,7 @@ export class SyncBuilder {
       operationIndex,
       reactor,
       eventBus,
+      driveContainerTypes,
       this.config,
     );
 

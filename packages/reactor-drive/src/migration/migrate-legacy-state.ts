@@ -106,7 +106,7 @@ function orderLegacyNodes(nodes: Node[]): Node[] {
     while (current && !visited.has(current.id) && !seenInWalk.has(current.id)) {
       seenInWalk.add(current.id);
       chain.push(current);
-      const parentId = current.parentFolder;
+      const parentId: string | null | undefined = current.parentFolder;
       current = parentId ? byId.get(parentId) : undefined;
     }
     while (chain.length > 0) {

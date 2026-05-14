@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { KyselyOperationIndex } from "../../../src/cache/kysely-operation-index.js";
 import type { IOperationIndex } from "../../../src/cache/operation-index-types.js";
 import { driveCollectionId } from "../../../src/cache/operation-index-types.js";
+import { DEFAULT_DRIVE_CONTAINER_TYPES } from "../../../src/core/drive-container-types.js";
 import type { IReactor } from "../../../src/core/types.js";
 import { EventBus } from "../../../src/events/event-bus.js";
 import type { IEventBus } from "../../../src/events/interfaces.js";
@@ -63,6 +64,7 @@ describe("SyncManager Backfill", () => {
       operationIndex,
       mockReactor,
       eventBus,
+      DEFAULT_DRIVE_CONTAINER_TYPES,
     );
   });
 

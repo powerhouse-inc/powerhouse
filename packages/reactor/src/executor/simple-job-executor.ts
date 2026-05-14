@@ -76,6 +76,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     private operationIndex: IOperationIndex,
     private documentMetaCache: IDocumentMetaCache,
     private collectionMembershipCache: ICollectionMembershipCache,
+    private driveContainerTypes: ReadonlySet<string>,
     config: JobExecutorConfig,
     signatureVerifier?: SignatureVerificationHandler,
     executionScope?: IExecutionScope,
@@ -89,7 +90,11 @@ export class SimpleJobExecutor implements IJobExecutor {
       yieldDeadlineMs: config.yieldDeadlineMs ?? 50,
     };
     this.signatureVerifierModule = new SignatureVerifier(signatureVerifier);
-    this.documentActionHandler = new DocumentActionHandler(registry, logger);
+    this.documentActionHandler = new DocumentActionHandler(
+      registry,
+      logger,
+      driveContainerTypes,
+    );
     this.executionScope =
       executionScope ??
       new DefaultExecutionScope(
