@@ -1,26 +1,24 @@
 {
   "id": "powerhouse/package",
   "name": "Vetra Package",
-  "extension": ".phdm",
-  "description": "This document model defines the schema for PH package information.",
   "author": {
     "name": "Powerhouse",
     "website": "https://powerhouse.inc"
   },
+  "extension": ".phdm",
+  "description": "This document model defines the schema for PH package information.",
   "specifications": [
     {
-      "version": 1,
-      "changeLog": [],
       "state": {
-        "global": {
-          "schema": "type VetraPackageState {\n  name: String\n  description: String\n  category: String\n  author: Author!\n  keywords: [Keyword!]!\n  githubUrl: URL\n  npmUrl: URL\n}\n\ntype Author {\n  name: String\n  website: URL\n}\n\ntype Keyword {\n  id: OID!\n  label: String!\n}",
-          "initialValue": "{\n  \"name\": null,\n  \"description\": null,\n  \"category\": null,\n  \"author\": {\n    \"name\": null,\n    \"website\": null\n  },\n  \"keywords\": [],\n  \"githubUrl\": null,\n  \"npmUrl\": null\n}",
-          "examples": []
-        },
         "local": {
           "schema": "",
-          "initialValue": "",
-          "examples": []
+          "examples": [],
+          "initialValue": ""
+        },
+        "global": {
+          "schema": "type VetraPackageState {\n  name: String\n  description: String\n  category: String\n  author: Author!\n  keywords: [Keyword!]!\n  githubUrl: URL\n  npmUrl: URL\n}\n\ntype Author {\n  name: String\n  website: URL\n}\n\ntype Keyword {\n  id: OID!\n  label: String!\n}",
+          "examples": [],
+          "initialValue": "{\n  \"name\": null,\n  \"description\": null,\n  \"category\": null,\n  \"author\": {\n    \"name\": null,\n    \"website\": null\n  },\n  \"keywords\": [],\n  \"githubUrl\": null,\n  \"npmUrl\": null\n}"
         }
       },
       "modules": [
@@ -141,7 +139,9 @@
             }
           ]
         }
-      ]
+      ],
+      "version": 1,
+      "changeLog": []
     }
   ]
 }

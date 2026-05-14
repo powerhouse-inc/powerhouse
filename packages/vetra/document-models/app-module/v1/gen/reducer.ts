@@ -1,0 +1,103 @@
+import type { Reducer, StateReducer } from "document-model";
+import { createReducer, isDocumentAction } from "document-model";
+import type { AppModulePHState } from "document-models/app-module/v1";
+
+import { appModuleBaseOperationsOperations } from "../src/reducers/base-operations.js";
+import { appModuleDndOperationsOperations } from "../src/reducers/dnd-operations.js";
+
+import {
+  AddDocumentTypeInputSchema,
+  RemoveDocumentTypeInputSchema,
+  SetAppNameInputSchema,
+  SetAppStatusInputSchema,
+  SetDocumentTypesInputSchema,
+  SetDragAndDropEnabledInputSchema,
+} from "./schema/zod.js";
+
+const stateReducer: StateReducer<AppModulePHState> = (
+  state,
+  action,
+  dispatch,
+) => {
+  if (isDocumentAction(action)) {
+    return state;
+  }
+  switch (action.type) {
+    case "SET_APP_NAME": {
+      SetAppNameInputSchema().parse(action.input);
+
+      appModuleBaseOperationsOperations.setAppNameOperation(
+        (state as any)[action.scope],
+        action as any,
+        dispatch,
+      );
+
+      break;
+    }
+
+    case "SET_APP_STATUS": {
+      SetAppStatusInputSchema().parse(action.input);
+
+      appModuleBaseOperationsOperations.setAppStatusOperation(
+        (state as any)[action.scope],
+        action as any,
+        dispatch,
+      );
+
+      break;
+    }
+
+    case "ADD_DOCUMENT_TYPE": {
+      AddDocumentTypeInputSchema().parse(action.input);
+
+      appModuleBaseOperationsOperations.addDocumentTypeOperation(
+        (state as any)[action.scope],
+        action as any,
+        dispatch,
+      );
+
+      break;
+    }
+
+    case "REMOVE_DOCUMENT_TYPE": {
+      RemoveDocumentTypeInputSchema().parse(action.input);
+
+      appModuleBaseOperationsOperations.removeDocumentTypeOperation(
+        (state as any)[action.scope],
+        action as any,
+        dispatch,
+      );
+
+      break;
+    }
+
+    case "SET_DOCUMENT_TYPES": {
+      SetDocumentTypesInputSchema().parse(action.input);
+
+      appModuleBaseOperationsOperations.setDocumentTypesOperation(
+        (state as any)[action.scope],
+        action as any,
+        dispatch,
+      );
+
+      break;
+    }
+
+    case "SET_DRAG_AND_DROP_ENABLED": {
+      SetDragAndDropEnabledInputSchema().parse(action.input);
+
+      appModuleDndOperationsOperations.setDragAndDropEnabledOperation(
+        (state as any)[action.scope],
+        action as any,
+        dispatch,
+      );
+
+      break;
+    }
+
+    default:
+      return state;
+  }
+};
+
+export const reducer: Reducer<AppModulePHState> = createReducer(stateReducer);

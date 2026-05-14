@@ -1,0 +1,63 @@
+import type { DocumentModelGlobalState } from "document-model";
+
+export const documentModel: DocumentModelGlobalState = {
+  id: "powerhouse/subgraph",
+  name: "Subgraph Module",
+  author: {
+    name: "Powerhouse",
+    website: "https://powerhouse.inc",
+  },
+  extension: ".phdm",
+  description: "",
+  specifications: [
+    {
+      state: {
+        local: {
+          schema: "",
+          examples: [],
+          initialValue: "",
+        },
+        global: {
+          schema:
+            "type SubgraphModuleState {\n  name: String!\n  status: StatusType!\n}\n\nenum StatusType {\n  DRAFT\n  CONFIRMED\n}",
+          examples: [],
+          initialValue: '{\n  "name": "",\n  "status": "DRAFT"\n}',
+        },
+      },
+      modules: [
+        {
+          id: "8af5bda9-6fc7-4427-bfed-1d32d76a552f",
+          name: "base_operations",
+          description: "",
+          operations: [
+            {
+              id: "d7cd6b6b-01ea-42c8-97e2-288e04b50b42",
+              name: "SET_SUBGRAPH_NAME",
+              description: "",
+              schema: "input SetSubgraphNameInput {\n  name: String!\n}",
+              template: "",
+              reducer: "",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+            {
+              id: "5a20e641-dc36-428e-8924-ecb07f3f1b94",
+              name: "SET_SUBGRAPH_STATUS",
+              description: "",
+              schema:
+                "input SetSubgraphStatusInput {\n  status: StatusType!\n}",
+              template: "",
+              reducer: "",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+          ],
+        },
+      ],
+      version: 1,
+      changeLog: [],
+    },
+  ],
+};

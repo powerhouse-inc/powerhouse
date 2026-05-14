@@ -1,0 +1,84 @@
+scalar Unknown
+scalar DateTime
+scalar Attachment
+scalar Address
+scalar Amount_Tokens
+scalar EthereumAddress
+scalar EmailAddress
+scalar Amount_Percentage
+scalar Date
+scalar URL
+scalar Amount_Money
+scalar OLabel
+scalar Currency
+scalar PHID
+scalar OID
+scalar Amount_Fiat
+scalar Amount_Currency
+scalar Amount_Crypto
+scalar Amount
+scalar Upload
+
+type VetraPackageState {
+  name: String
+  description: String
+  category: String
+  author: Author!
+  keywords: [Keyword!]!
+  githubUrl: URL
+  npmUrl: URL
+}
+
+type Author {
+  name: String
+  website: URL
+}
+
+type Keyword {
+  id: OID!
+  label: String!
+}
+
+# base_operations
+
+input SetPackageNameInput {
+  name: String!
+}
+
+input SetPackageDescriptionInput {
+  description: String!
+}
+
+input SetPackageCategoryInput {
+  category: String!
+}
+
+input SetPackageAuthorInput {
+  name: OID
+  website: URL
+}
+
+input SetPackageAuthorNameInput {
+  name: String!
+}
+
+input SetPackageAuthorWebsiteInput {
+  website: URL!
+}
+
+input AddPackageKeywordInput {
+  id: String!
+  label: String!
+}
+
+input RemovePackageKeywordInput {
+  id: String!
+}
+
+input SetPackageGithubUrlInput {
+  url: URL!
+}
+
+input SetPackageNpmUrlInput {
+  url: URL!
+}

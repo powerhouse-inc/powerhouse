@@ -1,26 +1,24 @@
 {
   "id": "powerhouse/app",
   "name": "App Module",
-  "extension": ".phdm",
-  "description": "",
   "author": {
     "name": "Powerhouse",
     "website": "https://powerhouse.inc"
   },
+  "extension": ".phdm",
+  "description": "",
   "specifications": [
     {
-      "version": 1,
-      "changeLog": [],
       "state": {
-        "global": {
-          "schema": "type AppModuleState {\n  name: String!\n  status: StatusType!\n  allowedDocumentTypes: [String!]\n  isDragAndDropEnabled: Boolean!\n}\n\nenum StatusType {\n  DRAFT\n  CONFIRMED\n}",
-          "initialValue": "{\n  \"name\": \"\",\n  \"status\": \"DRAFT\",\n  \"allowedDocumentTypes\": null,\n  \"isDragAndDropEnabled\": true\n}",
-          "examples": []
-        },
         "local": {
           "schema": "",
-          "initialValue": "",
-          "examples": []
+          "examples": [],
+          "initialValue": ""
+        },
+        "global": {
+          "schema": "type AppModuleState {\n  name: String!\n  status: StatusType!\n  allowedDocumentTypes: [String!]\n  isDragAndDropEnabled: Boolean!\n}\n\nenum StatusType {\n  DRAFT\n  CONFIRMED\n}",
+          "examples": [],
+          "initialValue": "{\n  \"name\": \"\",\n  \"status\": \"DRAFT\",\n  \"allowedDocumentTypes\": null,\n  \"isDragAndDropEnabled\": true\n}"
         }
       },
       "modules": [
@@ -104,7 +102,9 @@
             }
           ]
         }
-      ]
+      ],
+      "version": 1,
+      "changeLog": []
     }
   ]
 }
