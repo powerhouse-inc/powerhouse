@@ -640,7 +640,7 @@ describe("ReactorDriveClient", () => {
       expect(page.results).toHaveLength(1);
     });
 
-    it("accepts a valid non-negative integer cursor", async () => {
+    it("accepts a keyset cursor returned by a prior page", async () => {
       const driveId = "drive-1";
       await seed(driveId, [
         { id: "f1", kind: "folder", name: "A", parentFolder: null },
@@ -649,11 +649,19 @@ describe("ReactorDriveClient", () => {
       ]);
       const { reactor } = createMockReactor();
       const client = new ReactorDriveClient({ reactor, readModel: view });
-      const page = await client.listNodes(driveId, null, {
-        cursor: "1",
+      const firstPage = await client.listNodes(driveId, null, {
+        cursor: "",
+        limit: 1,
+      });
+      expect(firstPage.results).toHaveLength(1);
+      expect(firstPage.nextCursor).toBeDefined();
+
+      const nextPage = await client.listNodes(driveId, null, {
+        cursor: firstPage.nextCursor!,
         limit: 10,
       });
-      expect(page.results).toHaveLength(2);
+      expect(nextPage.results).toHaveLength(2);
+      expect(nextPage.results.map((n) => n.id)).toEqual(["f2", "f3"]);
     });
   });
 });

@@ -168,3 +168,161 @@ describe("DriveNodeView.getDescendants (PGlite)", () => {
     expect(queryLog[0]).toMatch(/with\s+recursive/i);
   });
 });
+
+describe("DriveNodeView.listChildren keyset cursor (PGlite)", () => {
+  let pg: PGlite;
+  let db: Kysely<ReactorDriveDatabase>;
+  let view: DriveNodeView;
+
+  beforeEach(async () => {
+    pg = new PGlite({ fs: new MemoryFS() });
+    db = new Kysely<ReactorDriveDatabase>({ dialect: new PGliteDialect(pg) });
+    await createDriveNodeTable(db as unknown as Kysely<unknown>);
+    view = new DriveNodeView(db);
+  });
+
+  afterEach(async () => {
+    await db.destroy();
+    await pg.close();
+  });
+
+  async function insertFolderAt(
+    driveId: string,
+    id: string,
+    parentFolder: string | null,
+    name: string,
+    createdAt: Date,
+  ): Promise<void> {
+    await db
+      .insertInto("DriveNode")
+      .values({
+        driveId,
+        id,
+        kind: "folder",
+        name,
+        requestedName: name,
+        parentFolder,
+        documentType: null,
+        createdAt,
+        updatedAt: createdAt,
+      })
+      .execute();
+  }
+
+  it("issues a non-empty nextCursor only when more results exist", async () => {
+    const driveId = "drive-1";
+    const base = new Date("2024-01-01T00:00:00.000Z");
+    for (let i = 0; i < 3; i++) {
+      await insertFolderAt(
+        driveId,
+        `f${i}`,
+        null,
+        `F${i}`,
+        new Date(base.getTime() + i * 1000),
+      );
+    }
+
+    const fullPage = await view.listChildren(driveId, null, {
+      cursor: "",
+      limit: 10,
+    });
+    expect(fullPage.results).toHaveLength(3);
+    expect(fullPage.nextCursor).toBeUndefined();
+
+    const partial = await view.listChildren(driveId, null, {
+      cursor: "",
+      limit: 2,
+    });
+    expect(partial.results).toHaveLength(2);
+    expect(partial.nextCursor).toBeDefined();
+  });
+
+  it("paginates the full set when reads are interleaved with the cursor", async () => {
+    const driveId = "drive-1";
+    const base = new Date("2024-01-01T00:00:00.000Z");
+    for (let i = 0; i < 5; i++) {
+      await insertFolderAt(
+        driveId,
+        `f${i}`,
+        null,
+        `F${i}`,
+        new Date(base.getTime() + i * 1000),
+      );
+    }
+
+    const seen: string[] = [];
+    let cursor = "";
+    for (let i = 0; i < 5; i++) {
+      const page = await view.listChildren(driveId, null, { cursor, limit: 2 });
+      for (const node of page.results) seen.push(node.id);
+      if (page.nextCursor === undefined) break;
+      cursor = page.nextCursor;
+    }
+
+    expect(seen).toEqual(["f0", "f1", "f2", "f3", "f4"]);
+  });
+
+  it("does not duplicate or skip rows when a new earlier row is inserted between pages", async () => {
+    const driveId = "drive-1";
+    const base = new Date("2024-01-01T00:00:00.000Z");
+    for (let i = 0; i < 4; i++) {
+      await insertFolderAt(
+        driveId,
+        `f${i}`,
+        null,
+        `F${i}`,
+        new Date(base.getTime() + (i + 1) * 1000),
+      );
+    }
+
+    const first = await view.listChildren(driveId, null, {
+      cursor: "",
+      limit: 2,
+    });
+    expect(first.results.map((n) => n.id)).toEqual(["f0", "f1"]);
+    expect(first.nextCursor).toBeDefined();
+
+    await insertFolderAt(driveId, "fnew", null, "FNew", base);
+
+    const second = await view.listChildren(driveId, null, {
+      cursor: first.nextCursor!,
+      limit: 10,
+    });
+
+    expect(second.results.map((n) => n.id)).toEqual(["f2", "f3"]);
+  });
+
+  it("breaks ties on id when two rows share the same createdAt", async () => {
+    const driveId = "drive-1";
+    const sameTs = new Date("2024-01-01T00:00:00.000Z");
+    await insertFolderAt(driveId, "a", null, "A", sameTs);
+    await insertFolderAt(driveId, "b", null, "B", sameTs);
+    await insertFolderAt(driveId, "c", null, "C", sameTs);
+
+    const first = await view.listChildren(driveId, null, {
+      cursor: "",
+      limit: 2,
+    });
+    expect(first.results.map((n) => n.id)).toEqual(["a", "b"]);
+    expect(first.nextCursor).toBeDefined();
+
+    const second = await view.listChildren(driveId, null, {
+      cursor: first.nextCursor!,
+      limit: 10,
+    });
+    expect(second.results.map((n) => n.id)).toEqual(["c"]);
+  });
+
+  it("rejects a malformed cursor", async () => {
+    await expect(
+      view.listChildren("drive-1", null, { cursor: "not-base64!@#$", limit: 10 }),
+    ).rejects.toThrow(/cursor/i);
+  });
+
+  it("rejects a base64 payload that is not a keyset object", async () => {
+    const bogus = globalThis.btoa('"just a string"');
+    await expect(
+      view.listChildren("drive-1", null, { cursor: bogus, limit: 10 }),
+    ).rejects.toThrow(/cursor/i);
+  });
+});

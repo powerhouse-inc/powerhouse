@@ -12,18 +12,6 @@ The shape and test coverage are good. The bulk of the surface is exercised by un
 
 ## Findings (highest severity = highest number)
 
-### 10. `migrateLegacyDriveState` "safe to re-run" claim is true only after the projection catches up
-
-`packages/reactor-drive/src/migration/migrate-legacy-state.ts:30-39` says re-running is safe because existing rows are skipped. The skip predicate (`readModel.getNode`, line 51) reads the `DriveNode` projection — which is only populated by NodeProcessor after operations are applied. If a caller invokes `migrateLegacyDriveState` twice before NodeProcessor commits the first batch, the second run sees an empty projection and re-emits every `ADD_FOLDER` / `ADD_RELATIONSHIP` action. The projection's own idempotency in `handleAddFolder` / `handleAddFileRelationship` (`node-processor.ts:266-302`) absorbs the duplicate as an upsert, but the operation log now has duplicate entries — and `KyselyDocumentIndexer.handleAddRelationship` skips dup edges via its own pre-check (`document-indexer.ts:585-606`) so the indexer is fine, but the log is permanently bloated.
-
-Recommendation: document the consistency requirement (caller must `waitForConsistency` before re-running), or compute the existing set from the operation log instead of the projection, or both.
-
-### 9. Offset-based cursor in `listChildren` is shift-sensitive under concurrent writes
-
-`DriveNodeView.listChildren` (`drive-node-view.ts:34-67`) parses the cursor as a numeric offset and applies it as `.offset(offset).limit(limit + 1)`. Standard offset pagination has the well-known "row inserted at offset N during page traversal causes the next page to repeat row N" failure mode. For a drive that's actively being mutated by other clients while a UI pages through it, this means duplicates and skips.
-
-Recommendation: at least add a stable secondary sort and switch to a keyset cursor (`(createdAt, id) > (prevCreatedAt, prevId)`). The schema already has the right index (`idx_drive_node_parent_kind_id`, `0001_drive_node.ts:30-33`). The current `orderBy("createdAt", "asc").orderBy("id", "asc")` is half the work.
-
 ### 8. `KyselyDocumentIndexer.handleUpdateRelationship` silently no-ops on a missing row; `UPDATE_RELATIONSHIP` has no self-edge guard
 
 `packages/reactor/src/storage/kysely/document-indexer.ts:627-648` runs an unconditional `UPDATE` on `(sourceId, targetId, relationshipType)`. If no row exists, zero rows are updated and no error is raised. The handler in `document-action-handler.ts:625-646` (`executeUpdateRelationship`) doesn't pre-validate either, and it also doesn't carry over the `sourceId !== targetId` check that `executeAddRelationship` uses (`document-action-handler.ts:580-586`).
