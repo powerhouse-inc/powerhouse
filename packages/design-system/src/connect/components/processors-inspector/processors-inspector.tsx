@@ -148,6 +148,7 @@ export function ProcessorsInspector({
   }, [getProcessors]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadProcessors();
 
     const interval = setInterval(() => {
@@ -196,7 +197,7 @@ export function ProcessorsInspector({
         </h2>
         <div className="flex items-center gap-2">
           <button
-            className="flex items-center gap-1 rounded border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+            className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50"
             disabled={loading}
             onClick={() => void handleRefresh()}
             type="button"
@@ -286,7 +287,7 @@ export function ProcessorsInspector({
                 >
                   <td className="px-3 py-2 text-xs">
                     <button
-                      className="flex items-center gap-1 rounded bg-blue-50 px-2 py-1 text-xs text-blue-700 hover:bg-blue-100"
+                      className="flex items-center gap-1 rounded-sm bg-blue-50 px-2 py-1 text-xs text-blue-700 hover:bg-blue-100"
                       onClick={() => setSelectedProcessor(processor)}
                       type="button"
                     >
@@ -296,7 +297,7 @@ export function ProcessorsInspector({
                   <td className="border-l border-gray-300 px-3 py-2 text-xs">
                     <span
                       className={twMerge(
-                        "inline-flex items-center gap-1 rounded px-1.5 py-0.5",
+                        "inline-flex items-center gap-1 rounded-sm px-1.5 py-0.5",
                         processor.status === "active"
                           ? "bg-green-100 text-green-700"
                           : "bg-red-100 text-red-700",
@@ -365,7 +366,7 @@ export function ProcessorsInspector({
                   <td className="border-l border-gray-300 px-3 py-2 text-xs">
                     {processor.status === "errored" && onRetry && (
                       <button
-                        className="flex items-center gap-1 rounded bg-yellow-50 px-2 py-1 text-xs text-yellow-700 hover:bg-yellow-100 disabled:opacity-50"
+                        className="flex items-center gap-1 rounded-sm bg-yellow-50 px-2 py-1 text-xs text-yellow-700 hover:bg-yellow-100 disabled:opacity-50"
                         disabled={retryingId === processor.processorId}
                         onClick={() => void handleRetry(processor.processorId)}
                         type="button"

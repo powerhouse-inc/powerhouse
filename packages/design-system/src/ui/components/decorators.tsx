@@ -23,7 +23,7 @@ interface StoryFormParameters {
   };
 }
 
-export const withForm: Decorator = (Story, context) => {
+export const WithForm: Decorator = (Story, context) => {
   const formRef = useRef<UseFormReturn>(null);
   const [showFormButtons, setShowFormButtons] = useState<boolean>(false);
   const [resetKey, setResetKey] = useState(0);
@@ -109,7 +109,7 @@ export const withForm: Decorator = (Story, context) => {
       </Form>
 
       {!isDocs && (
-        <div className="absolute bottom-5 right-5 z-50">
+        <div className="absolute right-5 bottom-5 z-50">
           <div className="flex items-center gap-2">
             <Checkbox
               id={checkboxId}

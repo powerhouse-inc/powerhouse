@@ -71,6 +71,7 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
         } catch (error) {
           throw new Error(
             `Failed to parse resultingState for operation ${operation.id || "unknown"}: ${error instanceof Error ? error.message : String(error)}`,
+            { cause: error },
           );
         }
 

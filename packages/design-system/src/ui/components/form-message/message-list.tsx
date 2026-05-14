@@ -43,7 +43,7 @@ export const FormMessageList: React.FC<FormMessageListProps> = ({
             // Layout
             "relative pl-4",
             // Visual styles
-            "before:absolute before:left-0 before:top-[0.4em] before:size-2 before:rounded-full",
+            "before:absolute before:top-[0.4em] before:left-0 before:size-2 before:rounded-full",
             typeClasses[type],
           )}
         >

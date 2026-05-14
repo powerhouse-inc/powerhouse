@@ -41,6 +41,7 @@
     "build": "tsdown"
   },
   "dependencies": {
+    "@graphql-codegen/add": "catalog:",
     "@graphql-codegen/cli": "catalog:",
     "@graphql-codegen/typescript": "catalog:",
     "@powerhousedao/document-engineering": "catalog:",

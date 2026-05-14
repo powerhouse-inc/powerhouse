@@ -61,7 +61,7 @@ export function Module(props: Props) {
           <button
             aria-label="Delete module"
             tabIndex={-1}
-            className="absolute right-1 top-1 p-2 text-gray-800 transition-colors hover:text-gray-500"
+            className="absolute top-1 right-1 p-2 text-gray-800 transition-colors hover:text-gray-500"
             onClick={() => {
               deleteModule(module.id);
             }}

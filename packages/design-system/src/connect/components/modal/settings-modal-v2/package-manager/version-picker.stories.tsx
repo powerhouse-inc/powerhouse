@@ -34,7 +34,7 @@ function Wrapper(args: Args) {
   return (
     <div className="flex min-h-[300px] items-start justify-start p-6">
       <div className="w-72 rounded-md border border-gray-200 bg-white p-4">
-        <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
+        <p className="mb-1 text-xs font-semibold tracking-wide text-gray-500 uppercase">
           Current selection
         </p>
         <p className="mb-3 font-mono text-xs text-gray-800">

@@ -19,7 +19,7 @@ export const NewModuleItem: React.FC<NewModuleItemProps> = ({
       onClick={onClick}
       className={`flex w-full items-center gap-3 rounded-md bg-zinc-100 p-1 text-left transition-colors hover:bg-zinc-200 ${className}`}
     >
-      <div className="flex-shrink-0">
+      <div className="shrink-0">
         <AddNewIcon />
       </div>
       <div className="min-w-0 flex-1">

@@ -171,11 +171,13 @@ export function DBExplorer({
 
   // Load tables on mount
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadTables();
   }, [loadTables]);
 
   useEffect(() => {
     if (selectedTable) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       void loadTableData();
     }
   }, [selectedTable, pagination.offset, sort, filters, loadTableData]);
@@ -305,7 +307,7 @@ export function DBExplorer({
           <div className="flex shrink-0 flex-col gap-2 border-t border-gray-200 p-2">
             {onImportDb && (
               <button
-                className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100"
+                className="rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100"
                 onClick={handleImportClick}
                 type="button"
               >
@@ -314,7 +316,7 @@ export function DBExplorer({
             )}
             {onExportDb && (
               <button
-                className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100"
+                className="rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100"
                 onClick={handleExportClick}
                 type="button"
               >
@@ -333,7 +335,7 @@ export function DBExplorer({
                 </div>
                 {resetTargetMajor !== null && (
                   <button
-                    className="rounded border border-red-300 bg-red-50 px-3 py-1.5 text-sm text-red-700 hover:bg-red-100 disabled:opacity-50"
+                    className="rounded-sm border border-red-300 bg-red-50 px-3 py-1.5 text-sm text-red-700 hover:bg-red-100 disabled:opacity-50"
                     onClick={() => setPendingResetMajor(resetTargetMajor)}
                     disabled={resetting}
                     type="button"

@@ -3,6 +3,7 @@
   "compilerOptions": {
     "outDir": "./dist",
     "emitDeclarationOnly": true,
+    "types": ["node"],
     "paths": {
       "document-models": ["./document-models/index.ts"],
       "document-models/*": ["./document-models/*/index.ts"],

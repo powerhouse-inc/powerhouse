@@ -48,6 +48,7 @@ export async function resolveSwitchboardPort(
   }
 
   const enquirer = await import("enquirer");
+
   let confirmed = false;
   try {
     const answer = await enquirer.default.prompt<{ confirmed: boolean }>({

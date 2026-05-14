@@ -125,11 +125,11 @@ export const DocumentTimeline = (props: DocumentTimelineProps) => {
   return (
     <ConnectTooltipProvider delayDuration={0} skipDelayDuration={0}>
       <div className="relative h-[36px] w-full">
-        <div className="absolute left-[0px] z-[20] h-[17px] w-[6px] bg-white">
+        <div className="absolute left-0 z-20 h-[17px] w-[6px] bg-white">
           <div className="mt-[11px] h-[6px] w-[6px] rounded-tl-md bg-slate-50" />
         </div>
 
-        <div className="absolute right-[0px] top-[11px] z-[20] h-[6px] w-[6px] bg-white">
+        <div className="absolute top-[11px] right-0 z-20 h-[6px] w-[6px] bg-white">
           <div className="h-[6px] w-[6px] rounded-tr-md bg-slate-50" />
         </div>
         <div className="absolute inset-x-0 bottom-0 h-[25px] rounded-md bg-slate-50" />
@@ -148,7 +148,7 @@ export const DocumentTimeline = (props: DocumentTimelineProps) => {
           </div>
         </div>
         <div className="pointer-events-none absolute bottom-0 left-0 z-10 h-[25px] w-2 rounded-l-md bg-slate-50" />
-        <div className="pointer-events-none absolute bottom-0 right-0 z-10 h-[25px] w-2 rounded-r-md bg-slate-50" />
+        <div className="pointer-events-none absolute right-0 bottom-0 z-10 h-[25px] w-2 rounded-r-md bg-slate-50" />
       </div>
     </ConnectTooltipProvider>
   );

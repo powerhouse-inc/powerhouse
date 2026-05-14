@@ -60,7 +60,7 @@ export function FormattedJsonViewer(props: JsonViewProps<object>) {
                   // We must wrap anywhere because data can be of any length
                   // do not use hyphens, show the raw content
                   // apply one character of left padding and negative indent because of the string quotation mark
-                  className="wrap-anywhere hyphens-none pl-[1ch] indent-[-1ch]"
+                  className="pl-[1ch] indent-[-1ch] wrap-anywhere hyphens-none"
                   style={{
                     // calculate the line width from the width of the key in the json
                     maxWidth: `${60 - keyName.toString().length}ch`,

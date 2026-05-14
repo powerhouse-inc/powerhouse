@@ -28,7 +28,7 @@ export function ConnectionStateBadge({
     >
       {state}
       {failureCount > 0 && (
-        <span className="text-[10px] opacity-75">({failureCount})</span>
+        <span className="text-xs opacity-75">({failureCount})</span>
       )}
     </span>
   );

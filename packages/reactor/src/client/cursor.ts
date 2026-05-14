@@ -40,7 +40,7 @@ export function decodeCompositeCursor(cursor: string): Record<string, string> {
     return parsed as Record<string, string>;
   } catch (error) {
     if (error instanceof SyntaxError) {
-      throw new Error("Invalid composite cursor format");
+      throw new Error("Invalid composite cursor format", { cause: error });
     }
     throw error;
   }

@@ -38,7 +38,7 @@ export function UploadFileItemHeader(props: HeaderProps) {
 
   return (
     <div className="flex items-center gap-2" {...delegatedProps}>
-      <div className="flex h-9 w-7 flex-shrink-0 items-center justify-center">
+      <div className="flex h-9 w-7 shrink-0 items-center justify-center">
         <Icon
           name={getDocumentIcon(documentType)}
           size={48}
@@ -47,16 +47,16 @@ export function UploadFileItemHeader(props: HeaderProps) {
       </div>
 
       <div className="flex flex-1 flex-col gap-0.5">
-        <div className="text-xs font-medium leading-[18px] text-gray-900">
+        <div className="text-xs leading-[18px] font-medium text-gray-900">
           {fileName}
         </div>
-        <div className="text-xs font-medium leading-[18px] text-gray-500">
+        <div className="text-xs leading-[18px] font-medium text-gray-500">
           {fileSize}
         </div>
       </div>
 
       {onClose && (
-        <div className="flex h-9 w-[18px] flex-shrink-0 items-start justify-center">
+        <div className="flex h-9 w-[18px] shrink-0 items-start justify-center">
           <button
             type="button"
             onClick={onClose}

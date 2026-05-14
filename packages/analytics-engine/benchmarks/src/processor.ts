@@ -1,7 +1,7 @@
-import fs from "fs";
-import crc32 from "crc-32";
 import type { AnalyticsGranularity } from "@powerhousedao/analytics-engine-core";
 import { type AnalyticsQuery } from "@powerhousedao/analytics-engine-core";
+import crc32 from "crc-32";
+import fs from "fs";
 
 type QueryRecord = {
   crc: number;

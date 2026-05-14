@@ -53,9 +53,9 @@ export const CookieBanner = () => {
   }
 
   return (
-    <div className="absolute inset-0 z-[10000] backdrop-blur-sm">
+    <div className="absolute inset-0 z-10000 backdrop-blur-sm">
       <div className="absolute inset-0 bg-black opacity-15" />
-      <div className="absolute inset-x-0 bottom-0 flex justify-center bg-white px-10 pb-16 pt-10 shadow-lg">
+      <div className="absolute inset-x-0 bottom-0 flex justify-center bg-white px-10 pt-10 pb-16 shadow-lg">
         <PHCookieBanner
           className="max-w-[1024px]"
           cookies={cookiesInput}

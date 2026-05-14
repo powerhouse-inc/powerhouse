@@ -171,7 +171,7 @@ export function MailboxTable({
         </button>
         {operations.length > 0 && (
           <button
-            className="flex items-center gap-1 rounded bg-gray-100 px-2 py-1 text-xs text-gray-700 hover:bg-gray-200"
+            className="flex items-center gap-1 rounded-sm bg-gray-100 px-2 py-1 text-xs text-gray-700 hover:bg-gray-200"
             onClick={() => void handleCopyAll()}
             type="button"
           >
@@ -227,7 +227,7 @@ export function MailboxTable({
                   >
                     <td className="px-3 py-2 text-xs">
                       <button
-                        className="flex items-center gap-1 rounded bg-blue-50 px-2 py-1 text-xs text-blue-700 hover:bg-blue-100"
+                        className="flex items-center gap-1 rounded-sm bg-blue-50 px-2 py-1 text-xs text-blue-700 hover:bg-blue-100"
                         onClick={() => setSelectedOperation(op)}
                         type="button"
                       >

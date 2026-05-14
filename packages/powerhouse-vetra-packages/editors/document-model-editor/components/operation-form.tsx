@@ -1,5 +1,4 @@
 import type { ModuleSpecification } from "@powerhousedao/shared/document-model";
-import { useCallback } from "react";
 import { toConstantCase } from "../schemas/inputs.js";
 import { TextField } from "./text-field.js";
 
@@ -27,42 +26,28 @@ export function OperationForm({
 }: Props) {
   const isEdit = !!operation;
 
-  const handleSubmit = useCallback(
-    async (name: string) => {
-      if (isEdit && name === "") {
-        deleteOperation(operation.id);
-        return;
-      }
+  const handleSubmit = async (name: string) => {
+    if (isEdit && name === "") {
+      deleteOperation(operation.id);
+      return;
+    }
 
-      const formattedName = toConstantCase(name);
+    const formattedName = toConstantCase(name);
 
-      if (isEdit) {
-        if (formattedName !== operation.name) {
-          updateOperationName(operation.id, formattedName);
-        }
-      } else {
-        await onAddOperationAndInitialSchema(module.id, formattedName);
+    if (isEdit) {
+      if (formattedName !== operation.name) {
+        updateOperationName(operation.id, formattedName);
       }
-    },
-    [
-      isEdit,
-      operation?.id,
-      operation?.name,
-      module.id,
-      deleteOperation,
-      updateOperationName,
-      onAddOperationAndInitialSchema,
-    ],
-  );
+    } else {
+      await onAddOperationAndInitialSchema(module.id, formattedName);
+    }
+  };
 
-  const handleChange = useCallback(
-    (value: string) => {
-      if (isEdit && value === "") {
-        deleteOperation(operation.id);
-      }
-    },
-    [isEdit, operation?.id, deleteOperation],
-  );
+  const handleChange = (value: string) => {
+    if (isEdit && value === "") {
+      deleteOperation(operation.id);
+    }
+  };
 
   return (
     <TextField

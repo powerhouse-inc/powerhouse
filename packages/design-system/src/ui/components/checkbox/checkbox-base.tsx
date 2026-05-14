@@ -18,17 +18,17 @@ const CheckboxBase = React.forwardRef<
     ref={ref}
     className={cn(
       // Base styles
-      "peer size-4 shrink-0 rounded",
+      "peer size-4 shrink-0 rounded-sm",
       // Border & Shadow
-      "border-input border shadow-sm shadow-black/[.04]",
+      "border shadow-sm shadow-black/4",
       // Background & Ring
-      "ring-offset-background transition-shadow",
+      "transition-shadow",
       // Focus styles
-      "focus-visible:border-ring focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
+      "focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
       // Disabled state
       "disabled:cursor-not-allowed disabled:border-gray-700 disabled:data-[invalid=false]:data-[state=checked]:bg-gray-700 disabled:data-[invalid=false]:data-[state=indeterminate]:bg-gray-700 dark:disabled:data-[invalid=false]:data-[state=checked]:bg-gray-500 dark:disabled:data-[invalid=false]:data-[state=indeterminate]:bg-gray-500",
       // Checked & Indeterminate states
-      "data-[state]:border-gray-700 dark:data-[state]:border-gray-500",
+      "data-state:border-gray-700 dark:data-state:border-gray-500",
       "data-[state=checked]:bg-gray-900 data-[state=indeterminate]:bg-gray-900 dark:data-[state=checked]:bg-gray-400 dark:data-[state=indeterminate]:bg-gray-400",
       "data-[state=checked]:text-slate-50 data-[state=indeterminate]:text-slate-50 dark:data-[state=checked]:text-gray-900 dark:data-[state=indeterminate]:text-gray-900",
       // hover states
@@ -37,10 +37,10 @@ const CheckboxBase = React.forwardRef<
         "dark:group-hover:border-slate-50 dark:data-[state=checked]:group-hover:bg-slate-50 dark:data-[state=indeterminate]:group-hover:bg-slate-50",
       ],
       // Error state
-      "data-[invalid=true]:data-[state]:!border-red-800 data-[invalid=true]:data-[state=checked]:!bg-red-800 data-[invalid=true]:data-[state=indeterminate]:!bg-red-800",
-      "dark:data-[invalid=true]:data-[state]:!border-red-800 dark:data-[invalid=true]:data-[state=checked]:!bg-red-800 dark:data-[invalid=true]:data-[state=indeterminate]:!bg-red-800",
+      "data-[invalid=true]:data-state:border-red-800! data-[invalid=true]:data-[state=checked]:bg-red-800! data-[invalid=true]:data-[state=indeterminate]:bg-red-800!",
+      "dark:data-[invalid=true]:data-state:border-red-800! dark:data-[invalid=true]:data-[state=checked]:bg-red-800! dark:data-[invalid=true]:data-[state=indeterminate]:bg-red-800!",
       // error hover states
-      "data-[invalid=true]:group-hover:!border-red-900 data-[invalid=true]:data-[state=checked]:group-hover:!bg-red-900 data-[invalid=true]:data-[state=indeterminate]:group-hover:!bg-red-900",
+      "data-[invalid=true]:group-hover:border-red-900! data-[invalid=true]:data-[state=checked]:group-hover:bg-red-900! data-[invalid=true]:data-[state=indeterminate]:group-hover:bg-red-900!",
       className,
     )}
     checked={checked}

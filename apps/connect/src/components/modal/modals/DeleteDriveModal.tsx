@@ -16,6 +16,8 @@ export const DeleteDriveModal: React.FC = () => {
   const driveId = open ? phModal.driveId : undefined;
   const [drive] = useDriveById(driveId);
   const drives = useDrives();
+  const { t } = useTranslation();
+
   if (!drive) {
     return null;
   }
@@ -32,8 +34,6 @@ export const DeleteDriveModal: React.FC = () => {
       type: "connect-deleted",
     });
   }
-
-  const { t } = useTranslation();
 
   return (
     <ConnectDeleteDriveModal

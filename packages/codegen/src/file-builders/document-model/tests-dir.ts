@@ -75,7 +75,7 @@ export async function makeOperationModuleTestFile(
   const importNames = makeOperationImportNames(args);
   const namedImports = importNames.map((name) => ({ name }));
 
-  let actionsImportDeclaration = sourceFile
+  const actionsImportDeclaration = sourceFile
     .getImportDeclarations()
     .filter((i) => !i.isTypeOnly())
     .find((importDeclaration) =>
@@ -86,7 +86,7 @@ export async function makeOperationModuleTestFile(
     );
 
   if (!actionsImportDeclaration) {
-    actionsImportDeclaration = sourceFile.addImportDeclaration({
+    sourceFile.addImportDeclaration({
       namedImports,
       moduleSpecifier: versionImportPath,
     });
@@ -160,7 +160,7 @@ export async function makeOperationModuleTestFile(
   describeCallBody.addStatements(testCasesToAdd);
 
   const GENERATE_MOCK_NAME = "generateMock";
-  const GENERATE_MOCK_MODULE_SPECIFIER = "@powerhousedao/codegen";
+  const GENERATE_MOCK_MODULE_SPECIFIER = "document-model";
 
   const generateMockImport = sourceFile.getImportDeclaration((i) =>
     i.getNamedImports().some((v) => v.getText().includes(GENERATE_MOCK_NAME)),
