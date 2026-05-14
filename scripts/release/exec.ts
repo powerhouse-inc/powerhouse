@@ -17,8 +17,24 @@ import { spawn, type ChildProcess } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
+import chalk from "chalk";
+
 import { DEFAULT_OWNER_REPO, FatalError } from "./lib.js";
-import { echoCommand, echoDryRunSkip } from "./ui.js";
+
+// Inlined here (rather than imported from ui.ts) so the exec ↔ ui edge stays
+// one-way: ui needs runLocal for confirmAction, so exec must not need ui back.
+function echoCommand(cmd: string, args: string[]): void {
+  process.stdout.write(`  ${chalk.dim(`$ ${[cmd, ...args].join(" ")}`)}\n`);
+}
+
+function echoDryRunSkip(cmd: string, args: string[]): void {
+  process.stdout.write(
+    `  ${chalk.yellow("[DRY-RUN]")} would run: ${[cmd, ...args].join(" ")}\n`,
+  );
+  process.stdout.write(
+    `  ${chalk.dim("(skipped — script is in --dry-run mode)")}\n`,
+  );
+}
 
 // ---------- subprocess core ------------------------------------------------
 

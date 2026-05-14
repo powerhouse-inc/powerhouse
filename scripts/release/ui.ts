@@ -58,19 +58,6 @@ export function targetBox(...lines: string[]): void {
   process.stdout.write(`  ${chalk.dim(`└${horizontal}┘`)}\n`);
 }
 
-export function echoCommand(cmd: string, args: string[]): void {
-  process.stdout.write(`  ${chalk.dim(`$ ${[cmd, ...args].join(" ")}`)}\n`);
-}
-
-export function echoDryRunSkip(cmd: string, args: string[]): void {
-  process.stdout.write(
-    `  ${chalk.yellow("[DRY-RUN]")} would run: ${[cmd, ...args].join(" ")}\n`,
-  );
-  process.stdout.write(
-    `  ${chalk.dim("(skipped — script is in --dry-run mode)")}\n`,
-  );
-}
-
 export function restoreCursor(): void {
   process.stdout.write("\x1b[?25h");
 }
