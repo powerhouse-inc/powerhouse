@@ -69,7 +69,7 @@ export function deleteDocumentAction(documentId: string): Action {
 export function addRelationshipAction(
   sourceId: string,
   targetId: string,
-  relationshipType: string = "child",
+  relationshipType: string,
   metadata?: Record<string, unknown>,
 ): Action {
   const input: AddRelationshipActionInput = {

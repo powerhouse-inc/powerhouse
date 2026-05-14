@@ -12,22 +12,6 @@ The shape and test coverage are good. The bulk of the surface is exercised by un
 
 ## Findings (highest severity = highest number)
 
-### 8. `KyselyDocumentIndexer.handleUpdateRelationship` silently no-ops on a missing row; `UPDATE_RELATIONSHIP` has no self-edge guard
-
-`packages/reactor/src/storage/kysely/document-indexer.ts:627-648` runs an unconditional `UPDATE` on `(sourceId, targetId, relationshipType)`. If no row exists, zero rows are updated and no error is raised. The handler in `document-action-handler.ts:625-646` (`executeUpdateRelationship`) doesn't pre-validate either, and it also doesn't carry over the `sourceId !== targetId` check that `executeAddRelationship` uses (`document-action-handler.ts:580-586`).
-
-Two small consequences:
-1. A bug that submits `UPDATE_RELATIONSHIP` for a non-existent edge succeeds silently; the operation is logged but nothing changes.
-2. Self-edges can be created indirectly: `ADD_RELATIONSHIP(a, b, t)` then `UPDATE_RELATIONSHIP(a, a, t)` — wait, no, the update keys on `(sourceId, targetId, relationshipType)` so the prior row wouldn't match. But a sourceId === targetId edge could still be created by some other code path; UPDATE_RELATIONSHIP should symmetrically reject it.
-
-Recommendation: in `executeUpdateRelationship`, optionally validate row existence before logging the operation (`writeCache`/indexer pre-check), and pass a `preValidate` rejecting `sourceId === targetId` for symmetry with ADD.
-
-### 6. `addRelationshipAction`'s `relationshipType: "child"` default is misleading
-
-`packages/reactor/src/actions/index.ts:75` keeps the old default of `"child"`. With reactor-drive now declaring `DRIVE_CHILD_RELATIONSHIP_TYPE = "drive/child"` (`packages/reactor-drive/src/constants.ts:3`), the default is no longer meaningful for the most common caller. Callers who omit the type will create edges that NodeProcessor explicitly skips (`node-processor.ts:146`).
-
-Recommendation: remove the default and require an explicit relationship type. The compiler will catch every site.
-
 ### 5. `document-action-handler.ts` declares types between import groups
 
 `packages/reactor/src/executor/document-action-handler.ts:12-36` defines `RelationshipActionShape`, `RelationshipJobResult`, and `RelationshipPostWriteArgs` between the first `import` block (lines 1-10) and the second (`import type { ILogger }` at line 37 onward). This compiles, but it's confusing for readers and tools that group imports. Move the type declarations below the imports.
