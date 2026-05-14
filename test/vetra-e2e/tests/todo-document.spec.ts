@@ -25,7 +25,7 @@ import {
   stopRegistry,
   verifyPublish,
   writeNpmrc,
-} from "./helpers/registry.js";
+} from "@powerhousedao/e2e-utils";
 
 // Run serially to avoid conflicts with other tests that modify the shared Vetra drive
 test.describe.configure({ mode: "serial", timeout: 5 * 60 * 60 * 1000 });
