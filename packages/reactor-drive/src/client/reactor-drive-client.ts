@@ -1,6 +1,9 @@
 import {
   addRelationshipAction,
+  createDocumentAction,
   removeRelationshipAction,
+  upgradeDocumentAction,
+  type BatchExecutionRequest,
   type IDriveClient,
   type IReactorClient,
   type PagedResults,
@@ -19,6 +22,7 @@ import {
   generateId,
   replayDocument,
   type Action,
+  type CreateDocumentActionInput,
   type PHDocument,
 } from "@powerhousedao/shared/document-model";
 import {
@@ -98,30 +102,73 @@ export class ReactorDriveClient implements IDriveClient {
     parentFolder?: string,
     signal?: AbortSignal,
   ): Promise<TDocument> {
-    const created = await this.reactor.create<TDocument>(
-      document,
-      undefined,
-      signal,
-    );
+    const documentId = document.header.id;
+
+    const createInput: CreateDocumentActionInput = {
+      model: document.header.documentType,
+      version: 0,
+      documentId,
+      signing: {
+        signature: documentId,
+        publicKey: document.header.sig.publicKey,
+        nonce: document.header.sig.nonce,
+        createdAtUtcIso: document.header.createdAtUtcIso,
+        documentType: document.header.documentType,
+      },
+      slug: document.header.slug,
+      name: document.header.name,
+      branch: document.header.branch,
+      meta: document.header.meta,
+      protocolVersions: document.header.protocolVersions ?? {
+        "base-reducer": 2,
+      },
+    };
+
     const metadata: DriveChildFileMetadata = {
       kind: "file",
       parentFolderId: parentFolder ?? null,
       documentType: document.header.documentType,
     };
-    await this.reactor.execute(
-      driveIdentifier,
-      "main",
-      [
-        addRelationshipAction(
-          driveIdentifier,
-          document.header.id,
-          DRIVE_CHILD_RELATIONSHIP_TYPE,
-          metadata,
-        ),
+
+    const request: BatchExecutionRequest = {
+      jobs: [
+        {
+          key: "create",
+          documentId,
+          scope: "document",
+          branch: "main",
+          actions: [
+            createDocumentAction(createInput),
+            upgradeDocumentAction({
+              documentId,
+              model: document.header.documentType,
+              fromVersion: 0,
+              toVersion: document.state.document.version,
+              initialState: document.state,
+            }),
+          ],
+          dependsOn: [],
+        },
+        {
+          key: "link",
+          documentId: driveIdentifier,
+          scope: "document",
+          branch: "main",
+          actions: [
+            addRelationshipAction(
+              driveIdentifier,
+              documentId,
+              DRIVE_CHILD_RELATIONSHIP_TYPE,
+              metadata,
+            ),
+          ],
+          dependsOn: ["create"],
+        },
       ],
-      signal,
-    );
-    return created;
+    };
+
+    await this.reactor.executeBatch(request, signal);
+    return this.reactor.get<TDocument>(documentId, undefined, signal);
   }
 
   async addFolder(

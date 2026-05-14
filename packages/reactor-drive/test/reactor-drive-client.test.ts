@@ -1,5 +1,10 @@
 import { MemoryFS, PGlite } from "@electric-sql/pglite";
-import type { IReactorClient, JobInfo } from "@powerhousedao/reactor";
+import type {
+  BatchExecutionRequest,
+  BatchExecutionResult,
+  IReactorClient,
+  JobInfo,
+} from "@powerhousedao/reactor";
 import type { Action } from "@powerhousedao/shared/document-model";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
@@ -24,6 +29,9 @@ function createMockReactor(overrides: Partial<IReactorClient> = {}) {
   const create = vi
     .fn()
     .mockImplementation((doc: unknown) => Promise.resolve(doc));
+  const executeBatch = vi
+    .fn()
+    .mockResolvedValue({ jobs: {} } as BatchExecutionResult);
   const get = vi.fn();
   const setPreferredEditor = vi.fn().mockResolvedValue(createJobInfo());
 
@@ -32,6 +40,7 @@ function createMockReactor(overrides: Partial<IReactorClient> = {}) {
     rename,
     deleteDocument,
     create,
+    executeBatch,
     get,
     setPreferredEditor,
     ...overrides,
@@ -43,9 +52,27 @@ function createMockReactor(overrides: Partial<IReactorClient> = {}) {
     rename,
     deleteDocument,
     create,
+    executeBatch,
     get,
     setPreferredEditor,
   };
+}
+
+function makeFileDoc(id: string, documentType: string) {
+  return {
+    header: {
+      id,
+      documentType,
+      slug: id,
+      name: id,
+      branch: "main",
+      meta: {},
+      createdAtUtcIso: "2024-01-01T00:00:00.000Z",
+      sig: { publicKey: "pk", nonce: "nonce" },
+      protocolVersions: { "base-reducer": 2 },
+    },
+    state: { document: { version: 1 } },
+  } as never;
 }
 
 describe("ReactorDriveClient", () => {
@@ -140,24 +167,38 @@ describe("ReactorDriveClient", () => {
     });
   });
 
-  it("addFile creates the document and adds a drive/child relationship with file metadata", async () => {
-    const { reactor, execute, create } = createMockReactor();
-    const client = new ReactorDriveClient({ reactor, readModel: view });
-    const doc = {
+  it("addFile submits CREATE+UPGRADE and ADD_RELATIONSHIP as a single executeBatch with the link depending on create", async () => {
+    const { reactor, executeBatch, execute, create, get } = createMockReactor();
+    get.mockResolvedValue({
       header: { id: "file-1", documentType: "powerhouse/document-model" },
-    } as never;
+    });
+    const client = new ReactorDriveClient({ reactor, readModel: view });
+    const doc = makeFileDoc("file-1", "powerhouse/document-model");
 
     await client.addFile("drive-1", doc);
 
-    expect(create).toHaveBeenCalledWith(doc, undefined, undefined);
-    const [driveId, , actions] = execute.mock.calls[0] as [
-      string,
-      string,
-      Action[],
-    ];
-    expect(driveId).toBe("drive-1");
-    expect(actions[0].type).toBe("ADD_RELATIONSHIP");
-    expect(actions[0].input).toMatchObject({
+    expect(executeBatch).toHaveBeenCalledTimes(1);
+    expect(create).not.toHaveBeenCalled();
+    expect(execute).not.toHaveBeenCalled();
+
+    const [request] = executeBatch.mock.calls[0] as [BatchExecutionRequest];
+    expect(request.jobs).toHaveLength(2);
+
+    const createJob = request.jobs.find((j) => j.key === "create")!;
+    const linkJob = request.jobs.find((j) => j.key === "link")!;
+
+    expect(createJob.documentId).toBe("file-1");
+    expect(createJob.dependsOn).toEqual([]);
+    expect(createJob.actions.map((a) => a.type)).toEqual([
+      "CREATE_DOCUMENT",
+      "UPGRADE_DOCUMENT",
+    ]);
+
+    expect(linkJob.documentId).toBe("drive-1");
+    expect(linkJob.dependsOn).toEqual(["create"]);
+    expect(linkJob.actions).toHaveLength(1);
+    expect(linkJob.actions[0].type).toBe("ADD_RELATIONSHIP");
+    expect(linkJob.actions[0].input).toMatchObject({
       sourceId: "drive-1",
       targetId: "file-1",
       relationshipType: DRIVE_CHILD_RELATIONSHIP_TYPE,
@@ -170,16 +211,18 @@ describe("ReactorDriveClient", () => {
   });
 
   it("addFile under a parentFolder records parentFolderId in metadata", async () => {
-    const { reactor, execute } = createMockReactor();
-    const client = new ReactorDriveClient({ reactor, readModel: view });
-    const doc = {
+    const { reactor, executeBatch, get } = createMockReactor();
+    get.mockResolvedValue({
       header: { id: "file-1", documentType: "powerhouse/document-model" },
-    } as never;
+    });
+    const client = new ReactorDriveClient({ reactor, readModel: view });
+    const doc = makeFileDoc("file-1", "powerhouse/document-model");
 
     await client.addFile("drive-1", doc, "parent-folder");
 
-    const [, , actions] = execute.mock.calls[0] as [string, string, Action[]];
-    expect(actions[0].input).toMatchObject({
+    const [request] = executeBatch.mock.calls[0] as [BatchExecutionRequest];
+    const linkJob = request.jobs.find((j) => j.key === "link")!;
+    expect(linkJob.actions[0].input).toMatchObject({
       sourceId: "drive-1",
       targetId: "file-1",
       relationshipType: DRIVE_CHILD_RELATIONSHIP_TYPE,

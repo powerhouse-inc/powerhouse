@@ -12,16 +12,6 @@ The shape and test coverage are good. The bulk of the surface is exercised by un
 
 ## Findings (highest severity = highest number)
 
-### 13. `ReactorDriveClient.addFile` is non-transactional
-
-`packages/reactor-drive/src/client/reactor-drive-client.ts:95-124` does:
-1. `await this.reactor.create(document, …)` — creates the child PHDocument.
-2. `await this.reactor.execute(driveIdentifier, "main", [addRelationshipAction(…)], …)` — links it.
-
-If step 2 fails (drive document missing/branch typo/network blip/abort), step 1 is already committed: an orphaned PHDocument with no drive linkage. The legacy `DriveClient.addFile` (not shown here) had the same shape, so this isn't a regression — but the new flow is the right place to fix it.
-
-Recommendation: either compose both into a single `executeBatch` with a dependency edge (the pattern `removeFileNode` uses at `packages/reactor/src/client/drive-client.ts:488-510`), or document the caller-side compensation contract. At minimum, on failure of step 2, attempt `reactor.deleteDocument(document.header.id)` to roll back.
-
 ### 12. `copyNode` is O(n) `reactor.execute` round-trips
 
 `packages/reactor-drive/src/client/reactor-drive-client.ts:362-406` iterates the entire subtree and issues a separate `reactor.execute` per folder and a separate `reactor.create + execute` per file. A folder with 100 descendants becomes ~200 sequential awaits. The queue serializes per-document, so this is fine for correctness, but it's slow and produces N log entries' worth of intermediate states that other observers see.

@@ -11,7 +11,12 @@ import type {
   PHDocument,
 } from "@powerhousedao/shared/document-model";
 
-import type { BatchLoadRequest, BatchLoadResult } from "../core/types.js";
+import type {
+  BatchExecutionRequest,
+  BatchExecutionResult,
+  BatchLoadRequest,
+  BatchLoadResult,
+} from "../core/types.js";
 import type {
   JobInfo,
   PagedResults,
@@ -379,6 +384,21 @@ export interface IReactorClient {
     actions: Action[],
     signal?: AbortSignal,
   ): Promise<JobInfo>;
+
+  /**
+   * Applies multiple mutation jobs in dependency order and waits for all to
+   * complete. Actions on each job are signed by the client signer before
+   * dispatch. Throws on the first failed job; the others may still execute
+   * because dispatch is fire-and-await-all.
+   *
+   * @param request - Batch mutation request with per-job actions and dependsOn keys
+   * @param signal - Optional abort signal to cancel the request
+   * @returns The completed batch result (job ids keyed by plan key)
+   */
+  executeBatch(
+    request: BatchExecutionRequest,
+    signal?: AbortSignal,
+  ): Promise<BatchExecutionResult>;
 
   /**
    * Renames a document and waits for completion

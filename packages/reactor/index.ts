@@ -26,8 +26,11 @@ export { ReactorClientBuilder } from "./src/core/reactor-client-builder.js";
 export { DEFAULT_DRIVE_CONTAINER_TYPES } from "./src/core/drive-container-types.js";
 export { Reactor } from "./src/core/reactor.js";
 export {
+  type BatchExecutionRequest,
+  type BatchExecutionResult,
   type BatchLoadRequest,
   type BatchLoadResult,
+  type ExecutionJobPlan,
   type IReactor,
   type LoadJobPlan,
   type ReactorClientModule,
