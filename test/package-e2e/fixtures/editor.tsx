@@ -5,9 +5,7 @@ import { useState } from "react";
 export default function Editor() {
   const [document, dispatch] = useSelectedTodoDocument();
   const [newTitle, setNewTitle] = useState("");
-  if (!document) return null;
-
-  const todos = document.state.global.todos ?? [];
+  const todos = document.state.global.todos;
 
   const handleAdd = () => {
     const title = newTitle.trim();

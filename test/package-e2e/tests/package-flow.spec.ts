@@ -213,17 +213,17 @@ test("package-flow: drive + document + edits propagate via switchboard", async (
 
   // Poll Switchboard for the new operation. Sync is usually fast (<2s) but
   // give it a wide window for slower hosts.
-  const deadline = Date.now() + 30_000;
-  let finalOps = baselineOps;
-  while (Date.now() < deadline) {
-    finalOps = await getDocumentOperations(docId);
-    if (finalOps.length > baselineOps.length) break;
-    await page.waitForTimeout(500);
-  }
-  expect(
-    finalOps.length,
-    "Connect should have synced one more operation to Switchboard",
-  ).toBe(baselineOps.length + 1);
+  await expect
+    .poll(
+      async () => (await getDocumentOperations(docId)).length,
+      {
+        timeout: 30_000,
+        intervals: [500],
+        message: "Connect should have synced one more operation to Switchboard",
+      },
+    )
+    .toBe(baselineOps.length + 1);
+  const finalOps = await getDocumentOperations(docId);
   const lastOp = finalOps[finalOps.length - 1];
   expect(lastOp.action.type).toBe("ADD_TODO");
   const lastInput = lastOp.action.input as { title: string; completed: boolean };

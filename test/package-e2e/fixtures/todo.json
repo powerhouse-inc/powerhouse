@@ -15,7 +15,7 @@
           "changeLog": [],
           "state": {
             "global": {
-              "schema": "type TodoState {\n  todos: [Todo!]!\n}\n\ntype Todo {\n  id: String!\n  title: String!\n  completed: Boolean!\n}",
+              "schema": "type TodoState {\n  todos: [TodoItem!]!\n}\n\ntype TodoItem {\n  id: String!\n  title: String!\n  completed: Boolean!\n}",
               "initialValue": "{\"todos\":[]}",
               "examples": []
             },
@@ -59,7 +59,7 @@
                   "description": "",
                   "schema": "input UpdateTodoInput {\n  id: String!\n  title: String\n  completed: Boolean\n}",
                   "template": "",
-                  "reducer": "const todo = state.todos.find(t => t.id === action.input.id);\nif (todo) {\n  if (action.input.title !== undefined) todo.title = action.input.title;\n  if (action.input.completed !== undefined) todo.completed = action.input.completed;\n}",
+                  "reducer": "const todo = state.todos.find(t => t.id === action.input.id);\nif (todo) {\n  if (action.input.title != null) todo.title = action.input.title;\n  if (action.input.completed != null) todo.completed = action.input.completed;\n}",
                   "errors": [],
                   "examples": [],
                   "scope": "global"
