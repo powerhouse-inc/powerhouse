@@ -216,7 +216,7 @@ export class ProcessorManager
     factory: ProcessorFactory,
     driveHeader: PHDocumentHeader,
   ): Promise<void> {
-    let records: ProcessorRecord[] = [];
+    let records: ProcessorRecord[];
 
     try {
       records = await factory(driveHeader);

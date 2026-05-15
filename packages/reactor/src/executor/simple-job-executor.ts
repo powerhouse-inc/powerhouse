@@ -626,7 +626,7 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     const scope = job.scope;
 
-    let latestRevision = 0;
+    let latestRevision: number;
     try {
       const revisions = await stores.operationStore.getRevisions(
         job.documentId,
@@ -664,7 +664,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       }
     }
 
-    let conflictingOps: Operation[] = [];
+    let conflictingOps: Operation[];
     try {
       const conflictingResult = await stores.operationStore.getConflicting(
         job.documentId,

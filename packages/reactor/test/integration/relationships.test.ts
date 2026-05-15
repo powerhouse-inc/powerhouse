@@ -317,12 +317,10 @@ describe("Relationship Operations", () => {
       const originalUpdatedAt = initial[0].updatedAt;
 
       const updateJob = await reactor.execute("parent-update-1", "main", [
-        updateRelationshipAction(
-          "parent-update-1",
-          "child-update-1",
-          "child",
-          { revision: 2, note: "updated" },
-        ),
+        updateRelationshipAction("parent-update-1", "child-update-1", "child", {
+          revision: 2,
+          note: "updated",
+        }),
       ]);
       await waitForJobCompletion(updateJob.id);
 
@@ -333,7 +331,6 @@ describe("Relationship Operations", () => {
           ]);
           const row = results.results[0];
           return (
-            row !== undefined &&
             (row.metadata as { revision?: number } | undefined)?.revision === 2
           );
         },
