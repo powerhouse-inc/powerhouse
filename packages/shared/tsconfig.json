@@ -4,6 +4,7 @@
   "compilerOptions": {
     // output transpiled code in the dist file relative to this package's root
     "outDir": "./dist",
+    "tsBuildInfoFile": "./.tsbuild/tsconfig.tsbuildinfo",
     "customConditions": ["source"],
     "paths": {
       "types": ["./types/index.ts"],

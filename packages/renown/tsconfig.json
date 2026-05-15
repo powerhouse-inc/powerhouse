@@ -2,7 +2,8 @@
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
     "lib": ["DOM", "ESNext"],
-    "outDir": "./dist"
+    "outDir": "./dist",
+    "tsBuildInfoFile": "./.tsbuild/tsconfig.tsbuildinfo",
   },
   "include": ["**/*"],
   "references": [

@@ -24,6 +24,11 @@
     "composite": true,
     "incremental": true,
 
+    // Resolve workspace package imports to their .ts source via the "source"
+    // export condition. This bypasses dist/*.d.ts so `tsc --build` can typecheck
+    // cross-package without anything being built first.
+    "customConditions": ["source"],
+
     // Recommended Options
     "strict": true,
     "jsx": "react-jsx",

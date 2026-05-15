@@ -8,10 +8,12 @@
   ],
   "exports": {
     ".": {
+      "source": "./index.ts",
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
     "./document-models": {
+      "source": "./document-models/index.ts",
       "types": "./dist/document-models/index.d.ts",
       "import": "./dist/document-models/index.js"
     },
@@ -20,6 +22,7 @@
       "import": "./dist/document-models/*/index.js"
     },
     "./editors": {
+      "source": "./editors/index.ts",
       "types": "./dist/editors/index.d.ts",
       "import": "./dist/editors/index.js"
     },
@@ -28,10 +31,12 @@
       "import": "./dist/editors/*/index.js"
     },
     "./processors": {
+      "source": "./processors/index.ts",
       "types": "./dist/processors/index.d.ts",
       "import": "./dist/processors/index.js"
     },
     "./subgraphs": {
+      "source": "./subgraphs/index.ts",
       "types": "./dist/subgraphs/index.d.ts",
       "import": "./dist/subgraphs/index.js"
     },

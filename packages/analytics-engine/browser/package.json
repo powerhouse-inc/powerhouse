@@ -13,10 +13,12 @@
   "sideEffects": false,
   "exports": {
     ".": {
+      "source": "./index.ts",
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
     "./test-utils": {
+      "source": "./test-utils.ts",
       "types": "./dist/test-utils.d.ts",
       "import": "./dist/test-utils.js"
     }

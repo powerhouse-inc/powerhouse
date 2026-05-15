@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "tsc": "tsc",
+    "tsc": "tsc --build",
     "test": "pnpm test:ci",
     "test:ci": "CI=true pnpm --filter=document-model --filter=@powerhousedao/pglite-fs --filter=@powerhousedao/registry --filter=@powerhousedao/reactor-api --filter=@powerhousedao/reactor-hypercore --filter=@powerhousedao/reactor-mcp --filter=@powerhousedao/vetra --filter=@powerhousedao/versioned-documents --filter=@powerhousedao/switchboard --filter=@powerhousedao/connect --filter=@powerhousedao/design-system --filter=@powerhousedao/analytics-engine-core --filter=@powerhousedao/analytics-engine-graphql --filter=@powerhousedao/analytics-engine-knex --filter=@powerhousedao/load-test-connect --filter=ph-cmd --filter=@renown/sdk --no-bail run test",
     "test:codegen": "pnpm --filter=test-codegen run test",
