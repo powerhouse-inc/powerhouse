@@ -55,7 +55,6 @@ export async function tsMorphGenerateApp({
     documentModelsDirPath,
     editorsDirPath,
     editorDirPath,
-    editorComponentsDirPath,
   );
 
   const editorAlreadyCustomized = await makeAppComponent({
@@ -68,6 +67,8 @@ export async function tsMorphGenerateApp({
   // are assumed to be the user's responsibility too. Still register the editor in
   // editors.ts/index.ts and the manifest so the package knows about it.
   if (!editorAlreadyCustomized) {
+    await ensureDirectoriesExist(project, editorComponentsDirPath);
+
     await makeNavigationBreadcrumbsFile({
       project,
       editorComponentsDirPath,
