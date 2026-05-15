@@ -58,65 +58,71 @@ export async function tsMorphGenerateApp({
     editorComponentsDirPath,
   );
 
-  await makeNavigationBreadcrumbsFile({
-    project,
-    editorComponentsDirPath,
-  });
-
-  await makeCreateDocumentFile({
-    project,
-    editorComponentsDirPath,
-  });
-
-  await makeEmptyStateFile({
-    project,
-    editorComponentsDirPath,
-  });
-
-  await makeFoldersFile({
-    project,
-    editorComponentsDirPath,
-  });
-
-  await makeFolderTreeFile({
-    project,
-    editorComponentsDirPath,
-  });
-
-  await makeFilesFile({
-    project,
-    editorComponentsDirPath,
-  });
-
-  await makeDriveExplorerFile({
-    project,
-    editorComponentsDirPath,
-  });
-
-  await makeDriveContentsFile({
-    project,
-    editorComponentsDirPath,
-  });
-
-  await makeAppComponent({
+  const editorAlreadyCustomized = await makeAppComponent({
     project,
     editorDirPath,
   });
 
-  await makeAppConfigFile({
-    project,
-    allowedDocumentModelIds,
-    isDragAndDropEnabled,
-    editorDirPath,
-  });
+  // If the user already owns editor.tsx (it defines an `Editor` function), leave
+  // the rest of the standard scaffold alone — components, config.ts, and module.ts
+  // are assumed to be the user's responsibility too. Still register the editor in
+  // editors.ts/index.ts and the manifest so the package knows about it.
+  if (!editorAlreadyCustomized) {
+    await makeNavigationBreadcrumbsFile({
+      project,
+      editorComponentsDirPath,
+    });
 
-  await makeEditorModuleFile({
-    project,
-    editorName,
-    editorId,
-    editorDirPath,
-    documentModelId: "powerhouse/document-drive",
-  });
+    await makeCreateDocumentFile({
+      project,
+      editorComponentsDirPath,
+    });
+
+    await makeEmptyStateFile({
+      project,
+      editorComponentsDirPath,
+    });
+
+    await makeFoldersFile({
+      project,
+      editorComponentsDirPath,
+    });
+
+    await makeFolderTreeFile({
+      project,
+      editorComponentsDirPath,
+    });
+
+    await makeFilesFile({
+      project,
+      editorComponentsDirPath,
+    });
+
+    await makeDriveExplorerFile({
+      project,
+      editorComponentsDirPath,
+    });
+
+    await makeDriveContentsFile({
+      project,
+      editorComponentsDirPath,
+    });
+
+    await makeAppConfigFile({
+      project,
+      allowedDocumentModelIds,
+      isDragAndDropEnabled,
+      editorDirPath,
+    });
+
+    await makeEditorModuleFile({
+      project,
+      editorName,
+      editorId,
+      editorDirPath,
+      documentModelId: "powerhouse/document-drive",
+    });
+  }
 
   await makeEditorsFile({ project, editorsDirPath });
   await makeEditorsIndexFile({ project, editorsDirPath });
@@ -141,7 +147,7 @@ type MakeAppComponentArgs = {
 async function makeAppComponent({
   project,
   editorDirPath,
-}: MakeAppComponentArgs) {
+}: MakeAppComponentArgs): Promise<boolean> {
   const filePath = path.join(editorDirPath, "editor.tsx");
   const { alreadyExists, sourceFile } = getOrCreateSourceFile(
     project,
@@ -154,12 +160,13 @@ async function makeAppComponent({
       if (!editorFunction.isDefaultExport()) {
         editorFunction.setIsDefaultExport(true);
       }
-      return;
+      return true;
     }
   }
   const template = appEditorFileTemplate();
   sourceFile.replaceWithText(template);
   await formatSourceFileWithPrettier(sourceFile);
+  return false;
 }
 
 type MakeAppConfigFileArgs = {
