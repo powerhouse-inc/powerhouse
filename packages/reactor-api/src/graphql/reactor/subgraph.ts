@@ -10,7 +10,7 @@ import {
   matchesSearchFilter,
   toGqlDocumentChangeEvent,
 } from "./adapters.js";
-import { DRIVE_DOCUMENT_TYPE } from "./constants.js";
+import { isDriveContainerType } from "./constants.js";
 import type { Resolvers } from "./gen/graphql.js";
 import {
   ensureGlobalDocumentSubscription,
@@ -62,7 +62,7 @@ export class ReactorSubgraph extends BaseSubgraph {
   async #resolveDriveId(identifier: string): Promise<string | undefined> {
     try {
       const doc = await this.reactorClient.get(identifier);
-      if (doc.header.documentType === DRIVE_DOCUMENT_TYPE) {
+      if (isDriveContainerType(doc.header.documentType)) {
         return doc.header.id;
       }
       return undefined;
@@ -283,9 +283,10 @@ export class ReactorSubgraph extends BaseSubgraph {
           const result = await resolvers.createDocument(
             this.reactorClient,
             args,
+            this.graphqlManager.reactorDriveClient,
           );
 
-          if (result?.id && result.documentType === DRIVE_DOCUMENT_TYPE) {
+          if (result?.id && isDriveContainerType(result.documentType)) {
             this.graphqlManager.driveOwnershipCache.add(result.id);
           }
 
@@ -329,9 +330,10 @@ export class ReactorSubgraph extends BaseSubgraph {
           const result = await resolvers.createEmptyDocument(
             this.reactorClient,
             args,
+            this.graphqlManager.reactorDriveClient,
           );
 
-          if (result?.id && result.documentType === DRIVE_DOCUMENT_TYPE) {
+          if (result?.id && isDriveContainerType(result.documentType)) {
             this.graphqlManager.driveOwnershipCache.add(result.id);
           }
 
@@ -487,6 +489,7 @@ export class ReactorSubgraph extends BaseSubgraph {
           const result = await resolvers.deleteDocument(
             this.reactorClient,
             args,
+            this.graphqlManager.reactorDriveClient,
           );
 
           if (result && driveIdToInvalidate) {

@@ -646,6 +646,9 @@ importers:
       '@powerhousedao/reactor-attachments':
         specifier: workspace:*
         version: link:../../packages/reactor-attachments
+      '@powerhousedao/reactor-drive':
+        specifier: workspace:*
+        version: link:../../packages/reactor-drive
       '@powerhousedao/shared':
         specifier: workspace:*
         version: link:../../packages/shared
