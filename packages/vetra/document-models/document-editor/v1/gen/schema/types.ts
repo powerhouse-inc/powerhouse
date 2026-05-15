@@ -64,14 +64,25 @@ export type AddDocumentTypeInput = {
   id: Scalars["OID"]["input"];
 };
 
+/**
+ * Configuration for a document editor contributed by the package. The editor is
+ * registered against every document type listed in `documentTypes`; Connect picks
+ * the first matching editor when opening a document.
+ */
 export type DocumentEditorState = {
+  /** Document types this editor can edit. Each entry has a stable id so it can be removed individually. */
   documentTypes: Array<DocumentTypeItem>;
+  /** Display name of the editor. Also determines the generated folder name under `editors/`. */
   name: Scalars["String"]["output"];
+  /** Lifecycle status. While DRAFT the editor definition is editable and codegen is skipped; switching to CONFIRMED triggers scaffold generation. */
   status: StatusType;
 };
 
+/** A document type id (e.g. 'powerhouse/document-drive') attached to the editor with a stable entry id. */
 export type DocumentTypeItem = {
+  /** Document type id this editor handles (e.g. 'my-org/invoice'). */
   documentType: Scalars["String"]["output"];
+  /** Stable identifier for the entry; used to remove it. */
   id: Scalars["OID"]["output"];
 };
 
@@ -87,4 +98,9 @@ export type SetEditorStatusInput = {
   status: StatusType;
 };
 
+/**
+ * Lifecycle status of a module definition.
+ * - DRAFT: still being edited; codegen does not run.
+ * - CONFIRMED: locked in; codegen produces the corresponding scaffold.
+ */
 export type StatusType = "CONFIRMED" | "DRAFT";

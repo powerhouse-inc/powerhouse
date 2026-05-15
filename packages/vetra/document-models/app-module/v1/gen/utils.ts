@@ -33,7 +33,7 @@ export const initialGlobalState: AppModuleGlobalState = {
 export const initialLocalState: AppModuleLocalState = {};
 
 export const utils: DocumentModelUtils<AppModulePHState> = {
-  fileExtension: ".phdm",
+  fileExtension: ".app",
   createState(state) {
     return {
       ...defaultBaseState(),

@@ -64,13 +64,19 @@ export type AddPackageKeywordInput = {
   label: Scalars["String"]["input"];
 };
 
+/** Author/maintainer of the Vetra Package. */
 export type Author = {
+  /** Display name of the author or organization. */
   name: Maybe<Scalars["String"]["output"]>;
+  /** Author's website URL. */
   website: Maybe<Scalars["URL"]["output"]>;
 };
 
+/** A single search keyword attached to the package. */
 export type Keyword = {
+  /** Stable identifier for the keyword entry; used to remove it. */
   id: Scalars["OID"]["output"];
+  /** Display label for the keyword (e.g. 'invoicing', 'defi'). */
   label: Scalars["String"]["output"];
 };
 
@@ -111,12 +117,24 @@ export type SetPackageNpmUrlInput = {
   url: Scalars["URL"]["input"];
 };
 
+/**
+ * Package metadata used to publish a Vetra Reactor Package to npm and surface
+ * it inside Connect/Switchboard. All fields are optional so a package can be
+ * created empty and filled in incrementally during development.
+ */
 export type VetraPackageState = {
+  /** Author/maintainer information surfaced in the published package metadata. */
   author: Author;
+  /** Free-form category label used to group packages in directories (e.g. 'Finance', 'Productivity'). */
   category: Maybe<Scalars["String"]["output"]>;
+  /** One-paragraph summary of what the package provides. Shown on package listing pages. */
   description: Maybe<Scalars["String"]["output"]>;
+  /** Public source code URL (typically a GitHub repository). */
   githubUrl: Maybe<Scalars["URL"]["output"]>;
+  /** Search keywords associated with the package. Each keyword has a stable id so it can be removed individually. */
   keywords: Array<Keyword>;
+  /** Human-readable package name (e.g. 'Pizza Plaza'). Distinct from the npm package id. */
   name: Maybe<Scalars["String"]["output"]>;
+  /** Published npm package URL. Set once the package has been released. */
   npmUrl: Maybe<Scalars["URL"]["output"]>;
 };

@@ -34,7 +34,7 @@ export const initialGlobalState: ProcessorModuleGlobalState = {
 export const initialLocalState: ProcessorModuleLocalState = {};
 
 export const utils: DocumentModelUtils<ProcessorModulePHState> = {
-  fileExtension: ".phdm",
+  fileExtension: ".processor",
   createState(state) {
     return {
       ...defaultBaseState(),

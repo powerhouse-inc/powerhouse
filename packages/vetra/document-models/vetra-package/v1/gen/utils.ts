@@ -39,7 +39,7 @@ export const initialGlobalState: VetraPackageGlobalState = {
 export const initialLocalState: VetraPackageLocalState = {};
 
 export const utils: DocumentModelUtils<VetraPackagePHState> = {
-  fileExtension: ".phdm",
+  fileExtension: ".pkg",
   createState(state) {
     return {
       ...defaultBaseState(),

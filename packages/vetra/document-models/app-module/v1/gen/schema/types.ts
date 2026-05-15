@@ -63,10 +63,19 @@ export type AddDocumentTypeInput = {
   documentType: Scalars["String"]["input"];
 };
 
+/**
+ * Configuration for a Drive App contributed by the package. Drive apps render a
+ * custom view at the drive level (instead of, or alongside, the document file
+ * tree) and can opt into which document types they accept.
+ */
 export type AppModuleState = {
+  /** Document type ids this app handles. `null` means the app accepts any document type; an empty list means it accepts none. */
   allowedDocumentTypes: Maybe<Array<Scalars["String"]["output"]>>;
+  /** Whether the app surface accepts dropped files from the user. Defaults to true. */
   isDragAndDropEnabled: Scalars["Boolean"]["output"];
+  /** Display name of the drive app. Also used as the source for the generated folder name under `apps/`. */
   name: Scalars["String"]["output"];
+  /** Lifecycle status. While DRAFT the app definition is editable and codegen is skipped; switching to CONFIRMED triggers app scaffold generation. */
   status: StatusType;
 };
 
@@ -90,4 +99,9 @@ export type SetDragAndDropEnabledInput = {
   enabled: Scalars["Boolean"]["input"];
 };
 
+/**
+ * Lifecycle status of a module definition.
+ * - DRAFT: still being edited; codegen does not run.
+ * - CONFIRMED: locked in; codegen produces the corresponding scaffold.
+ */
 export type StatusType = "CONFIRMED" | "DRAFT";
