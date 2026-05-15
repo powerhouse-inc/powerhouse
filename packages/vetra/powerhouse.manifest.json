@@ -16,7 +16,7 @@
       "name": "Document Editor"
     },
     {
-      "id": "powerhouse/subgraph-module",
+      "id": "powerhouse/subgraph",
       "name": "Subgraph Module"
     },
     {
@@ -26,6 +26,12 @@
     {
       "id": "powerhouse/app",
       "name": "App Module"
+    }
+  ],
+  "apps": [
+    {
+      "id": "vetra-drive-app",
+      "name": "Vetra Drive App"
     }
   ],
   "editors": [
@@ -42,7 +48,7 @@
     {
       "id": "subgraph-module-editor",
       "name": "Subgraph Module Editor",
-      "documentTypes": ["powerhouse/subgraph-module"]
+      "documentTypes": ["powerhouse/subgraph"]
     },
     {
       "id": "processor-module-editor",
@@ -50,18 +56,12 @@
       "documentTypes": ["powerhouse/processor"]
     },
     {
-      "id": "app-module-editor",
-      "name": "App Module Editor",
+      "id": "app-editor",
+      "name": "App Editor",
       "documentTypes": ["powerhouse/app"]
     }
   ],
-  "apps": [
-    {
-      "id": "vetra-drive-app",
-      "name": "Vetra Drive App",
-      "app": "vetra-drive-app"
-    }
-  ],
+  "processors": [],
   "subgraphs": [],
-  "importScripts": []
+  "config": []
 }
