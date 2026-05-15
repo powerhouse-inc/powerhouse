@@ -34,6 +34,21 @@ function runWithEnv(
 async function main(): Promise<void> {
   let registry: ChildProcess | undefined;
   let bringDownDocker = false;
+
+  // Ctrl+C / SIGTERM would otherwise leave docker containers + the local
+  // registry running. Route them through the same teardown the finally
+  // block uses, then exit non-zero so CI fails loudly.
+  let shuttingDown = false;
+  const shutdown = (signal: NodeJS.Signals) => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    console.log(`\n[cleanup] received ${signal}; tearing down`);
+    teardown(bringDownDocker, registry);
+    process.exit(130);
+  };
+  process.on("SIGINT", shutdown);
+  process.on("SIGTERM", shutdown);
+
   try {
     step("1/6 Start local registry");
     // localPackages = no proxy to npmjs for these exact package names.
@@ -77,8 +92,8 @@ async function main(): Promise<void> {
     bringDownDocker = true;
 
     step("5/6 Wait for services to be healthy");
-    waitForHealthy("pkg-e2e-switchboard", 120_000);
-    waitForHealthy("pkg-e2e-connect", 120_000);
+    await waitForHealthy("pkg-e2e-switchboard", 120_000);
+    await waitForHealthy("pkg-e2e-connect", 120_000);
 
     step("6/6 Run Playwright spec");
     run(path.join(ROOT, "node_modules/.bin/playwright"), [
@@ -88,25 +103,35 @@ async function main(): Promise<void> {
 
     console.log("\n✅ test-package-e2e: all green\n");
   } finally {
-    if (bringDownDocker) {
-      console.log("\n[cleanup] docker compose down");
-      try {
-        execSync(`docker compose ${COMPOSE.join(" ")} down -v`, {
-          cwd: ROOT,
-          stdio: "inherit",
-        });
-      } catch (err) {
-        console.error("[cleanup] docker compose down failed:", err);
-      }
-    }
-    if (registry) {
-      console.log("[cleanup] stop registry");
-      stopRegistry(registry);
-    }
+    teardown(bringDownDocker, registry);
   }
 }
 
-function waitForHealthy(container: string, timeoutMs: number): void {
+function teardown(
+  bringDownDocker: boolean,
+  registry: ChildProcess | undefined,
+): void {
+  if (bringDownDocker) {
+    console.log("\n[cleanup] docker compose down");
+    try {
+      execSync(`docker compose ${COMPOSE.join(" ")} down -v`, {
+        cwd: ROOT,
+        stdio: "inherit",
+      });
+    } catch (err) {
+      console.error("[cleanup] docker compose down failed:", err);
+    }
+  }
+  if (registry) {
+    console.log("[cleanup] stop registry");
+    stopRegistry(registry);
+  }
+}
+
+async function waitForHealthy(
+  container: string,
+  timeoutMs: number,
+): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     const res = spawnSync("docker", [
@@ -126,8 +151,8 @@ function waitForHealthy(container: string, timeoutMs: number): void {
         `${container} reported unhealthy:\n${logs.stdout?.toString() ?? ""}`,
       );
     }
-    // Sleep 1s
-    spawnSync("sh", ["-c", "sleep 1"]);
+    // Async sleep so signal handlers run during the wait window.
+    await new Promise((resolve) => setTimeout(resolve, 1000));
   }
   throw new Error(`${container} did not become healthy within ${timeoutMs}ms`);
 }

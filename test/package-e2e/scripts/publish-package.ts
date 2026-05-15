@@ -118,33 +118,6 @@ async function main(): Promise<void> {
   fs.copyFileSync(path.join(FIXTURES, "todo.json"), zipDest);
   run(`${PH_CLI} generate doc --file ./todo.json`, PROJECT_DIR);
 
-  // 3b. Codegen on this branch ships a regression in the top-level
-  // `document-models/document-models.ts` aggregator: it references TodoV1
-  // without an import. Node-side loaders (`ImportPackageLoader`) never
-  // exercise that file, so Switchboard works; but Connect's browser bundle
-  // ReferenceErrors at runtime, which surfaces as "Failed to install
-  // package" in the console. Patch the file with the working form
-  // committed in test/versioned-documents.
-  const docModelsAggregator = path.join(
-    PROJECT_DIR,
-    "document-models/document-models.ts",
-  );
-  fs.writeFileSync(
-    docModelsAggregator,
-    "/**\n" +
-      " * WARNING: DO NOT EDIT\n" +
-      " * This file is auto-generated and updated by codegen\n" +
-      " *\n" +
-      " * Patched by test/package-e2e/scripts/publish-package.ts: the\n" +
-      " * codegen-emitted version on this branch is missing the import line\n" +
-      " * and ReferenceErrors at browser runtime.\n" +
-      " */\n" +
-      'import type { DocumentModelModule } from "document-model";\n' +
-      'import { Todo as TodoV1 } from "document-models/todo/v1";\n\n' +
-      "export const documentModels: DocumentModelModule<any>[] = [TodoV1];\n",
-    "utf-8",
-  );
-
   // 4. Generate the editor (boilerplate only) and swap in the fixture UI
   // that actually dispatches addTodo / updateTodo / removeTodo actions —
   // the generated editor only knows about the doc header.
@@ -171,21 +144,8 @@ async function main(): Promise<void> {
   }
 
   // 7. Quality gates per user spec: lint, typecheck, build.
-  // lint + tsc are advisory: codegen on this branch ships regressions we
-  // already patched around (the `document-models.ts` missing-import we
-  // overwrite above, plus a couple of nullable-handling issues in the
-  // inlined reducers). They surface as lint/tsc errors but the tsdown
-  // build still emits a working bundle.
-  try {
-    run("pnpm lint:fix", PROJECT_DIR);
-  } catch {
-    console.warn("\n⚠️  lint reported errors (likely codegen regressions); continuing.\n");
-  }
-  try {
-    run("pnpm tsc --noEmit", PROJECT_DIR);
-  } catch {
-    console.warn("\n⚠️  tsc reported errors (likely codegen regressions); continuing.\n");
-  }
+  run("pnpm lint:fix", PROJECT_DIR);
+  run("pnpm tsc --noEmit", PROJECT_DIR);
   run("pnpm build", PROJECT_DIR);
 
   // 8. Publish to local registry.

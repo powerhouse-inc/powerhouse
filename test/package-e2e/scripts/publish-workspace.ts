@@ -15,20 +15,36 @@ async function main(): Promise<void> {
   console.log(`\n=== publish-workspace → ${REGISTRY_URL} ===\n`);
   console.log(`Publishing ${PUBLISH_FILTERS.length} workspace packages.\n`);
 
-  // Authenticate against the local registry. Token goes into a workspace-root
-  // .npmrc so pnpm picks it up for the publish; we restore the original (or
-  // delete the file) in `finally`.
+  // pnpm 11 ignores NPM_CONFIG_USERCONFIG, so auth must land in the workspace
+  // .npmrc. Move any existing file to a backup first and route SIGINT/SIGTERM
+  // through the same restore path — that way a crash between write and the
+  // finally block leaves the original content at .npmrc.bak instead of
+  // silently clobbering the dev's settings.
   const token = await createTestUser();
   const npmrcPath = path.join(WORKSPACE_ROOT, ".npmrc");
-  const originalNpmrc = fs.existsSync(npmrcPath)
-    ? fs.readFileSync(npmrcPath, "utf-8")
-    : null;
+  const backupPath = `${npmrcPath}.publish-ws.bak`;
+  const hadExisting = fs.existsSync(npmrcPath);
+  if (hadExisting) fs.renameSync(npmrcPath, backupPath);
   fs.writeFileSync(
     npmrcPath,
-    `//localhost:8080/:_authToken=${token}\nregistry=${REGISTRY_URL}/\n` +
-      (originalNpmrc ? `\n${originalNpmrc}` : ""),
-    "utf-8",
+    `//localhost:8080/:_authToken=${token}\nregistry=${REGISTRY_URL}/\n`,
+    { mode: 0o600 },
   );
+
+  let restored = false;
+  const restore = () => {
+    if (restored) return;
+    restored = true;
+    try {
+      if (hadExisting) fs.renameSync(backupPath, npmrcPath);
+      else fs.unlinkSync(npmrcPath);
+    } catch {
+      /* best-effort */
+    }
+  };
+  process.on("SIGINT", restore);
+  process.on("SIGTERM", restore);
+  process.on("uncaughtException", restore);
 
   try {
     const filterArgs = PUBLISH_FILTERS.flatMap((p) => ["--filter", p]);
@@ -77,15 +93,7 @@ async function main(): Promise<void> {
     }
     console.log("\n✅ workspace packages published locally\n");
   } finally {
-    if (originalNpmrc === null) {
-      try {
-        fs.unlinkSync(npmrcPath);
-      } catch {
-        /* no-op */
-      }
-    } else {
-      fs.writeFileSync(npmrcPath, originalNpmrc, "utf-8");
-    }
+    restore();
   }
 }
 
