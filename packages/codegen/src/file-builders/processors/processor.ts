@@ -23,7 +23,9 @@ import { tsMorphGenerateRelationalDbProcessor } from "./relational-db.js";
  * present we leave the directory and surrounding wiring (factory-builders
  * file, manifest) untouched — the user owns it.
  */
-function isCustomizedProcessorDir(processorDir: ReturnType<Project["getDirectory"]>) {
+function isCustomizedProcessorDir(
+  processorDir: ReturnType<Project["getDirectory"]>,
+) {
   if (!processorDir) return false;
   if (processorDir.getSourceFile("processor.ts")) return false;
   const indexFile = processorDir.getSourceFile("index.ts");
