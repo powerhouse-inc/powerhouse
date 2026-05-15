@@ -2,8 +2,11 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import { getConfig } from "@powerhousedao/config/node";
-import type { DriveInput } from "@powerhousedao/shared/document-drive";
 import { parseForcePgVersion } from "./pglite-version.js";
+import type {
+  SwitchboardDriveDocumentType,
+  SwitchboardDriveInput,
+} from "./types.js";
 const phConfig = getConfig();
 const { switchboard } = phConfig;
 interface Config {
@@ -14,8 +17,20 @@ interface Config {
   mcp: boolean;
   migratePglite: boolean;
   forcePgVersion: 16 | 17 | null;
-  drive: DriveInput;
+  drive: SwitchboardDriveInput;
 }
+
+function parseDriveType(
+  raw: string | undefined,
+): SwitchboardDriveDocumentType | undefined {
+  if (!raw) return undefined;
+  if (raw === "powerhouse/document-drive" || raw === "powerhouse/reactor-drive")
+    return raw;
+  throw new Error(
+    `Invalid PH_DEFAULT_DRIVE_TYPE: ${raw}. Expected "powerhouse/document-drive" or "powerhouse/reactor-drive".`,
+  );
+}
+
 export const config: Config = {
   database: {
     // url: process.env.PH_SWITCHBOARD_DATABASE_URL ?? switchboard?.database?.url ?? "dev.db",
@@ -35,6 +50,7 @@ export const config: Config = {
   drive: {
     id: "powerhouse",
     slug: "powerhouse",
+    documentType: parseDriveType(process.env.PH_DEFAULT_DRIVE_TYPE),
     global: {
       name: "Powerhouse",
       icon: "https://ipfs.io/ipfs/QmcaTDBYn8X2psGaXe7iQ6qd8q6oqHLgxvMX9yXf7f9uP7",

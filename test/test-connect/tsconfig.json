@@ -1,16 +1,23 @@
 {
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
-    "types": ["node"],
+    "types": [
+      "node"
+    ],
     "outDir": "./dist"
   },
-  "include": ["**/*"],
+  "include": [
+    "**/*"
+  ],
   "references": [
     {
       "path": "../../packages/document-model"
     },
     {
       "path": "../../packages/reactor"
+    },
+    {
+      "path": "../../packages/reactor-drive"
     },
     {
       "path": "../../packages/shared"

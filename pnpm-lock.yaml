@@ -2741,6 +2741,9 @@ importers:
       '@powerhousedao/reactor':
         specifier: workspace:*
         version: link:../../packages/reactor
+      '@powerhousedao/reactor-drive':
+        specifier: workspace:*
+        version: link:../../packages/reactor-drive
       '@powerhousedao/shared':
         specifier: workspace:*
         version: link:../../packages/shared

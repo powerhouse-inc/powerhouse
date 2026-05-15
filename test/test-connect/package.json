@@ -26,6 +26,7 @@
   },
   "dependencies": {
     "@powerhousedao/reactor": "workspace:*",
+    "@powerhousedao/reactor-drive": "workspace:*",
     "@powerhousedao/load-test-client": "workspace:*",
     "document-model": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
