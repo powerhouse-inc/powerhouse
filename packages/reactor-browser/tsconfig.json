@@ -1,12 +1,20 @@
 {
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
-    "lib": ["ESNext", "dom", "dom.iterable"],
-    "outDir": "./dist",
-    "tsBuildInfoFile": "./.tsbuild/tsconfig.tsbuildinfo",
-    "types": ["@types/wicg-file-system-access", "vitest/globals"]
+    "lib": [
+      "ESNext",
+      "dom",
+      "dom.iterable"
+    ],
+    "outDir": "./.tsbuild",
+    "types": [
+      "@types/wicg-file-system-access",
+      "vitest/globals"
+    ]
   },
-  "include": ["**/*"],
+  "include": [
+    "**/*"
+  ],
   "references": [
     {
       "path": "../analytics-engine/browser"
@@ -26,5 +34,9 @@
     {
       "path": "../shared"
     }
+  ],
+  "exclude": [
+    "dist",
+    "node_modules"
   ]
 }

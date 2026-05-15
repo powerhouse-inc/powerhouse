@@ -4,8 +4,7 @@
     "types": [
       "node"
     ],
-    "outDir": "./dist",
-    "tsBuildInfoFile": "./.tsbuild/tsconfig.tsbuildinfo",
+    "outDir": "./.tsbuild",
   },
   "include": [
     "**/*"

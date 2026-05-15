@@ -1,8 +1,7 @@
 {
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
-    "outDir": "./dist",
-    "tsBuildInfoFile": "./.tsbuild/tsconfig.tsbuildinfo",
+    "outDir": "./.tsbuild",
     "customConditions": ["source"],
     "lib": ["ESNext", "dom", "dom.iterable"],
     "paths": {
@@ -13,6 +12,7 @@
     }
   },
   "include": ["**/*"],
+  "exclude": ["dist", "node_modules"],
   "references": [
     {
       "path": "../document-model"

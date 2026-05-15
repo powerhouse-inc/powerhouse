@@ -23,6 +23,7 @@
       "types": "./dist/test/index.d.ts"
     },
     "./node": {
+      "source": "./node.mts",
       "node": "./dist/node.mjs",
       "types": "./dist/node.d.mts"
     },
