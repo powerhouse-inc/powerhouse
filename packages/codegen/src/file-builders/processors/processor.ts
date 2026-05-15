@@ -17,6 +17,20 @@ import {
 import { tsMorphGenerateAnalyticsProcessor } from "./analytics.js";
 import { tsMorphGenerateRelationalDbProcessor } from "./relational-db.js";
 
+/**
+ * Detects a hand-customized processor directory using a layout that predates
+ * the current scaffold (class defined in index.ts, no processor.ts). When
+ * present we leave the directory and surrounding wiring (factory-builders
+ * file, manifest) untouched — the user owns it.
+ */
+function isCustomizedProcessorDir(processorDir: ReturnType<Project["getDirectory"]>) {
+  if (!processorDir) return false;
+  if (processorDir.getSourceFile("processor.ts")) return false;
+  const indexFile = processorDir.getSourceFile("index.ts");
+  if (!indexFile) return false;
+  return indexFile.getClasses().some((c) => c.isExported());
+}
+
 export async function tsMorphGenerateProcessor(args: {
   project: Project;
   processorName: string;
@@ -42,6 +56,10 @@ export async function tsMorphGenerateProcessor(args: {
   const processorsDirPath = processorsDir.getPath();
   const dirPath = path.join(processorsDirPath, kebabCaseName);
   await ensureDirectoriesExist(project, processorsDirPath, dirPath);
+
+  if (isCustomizedProcessorDir(project.getDirectory(dirPath))) {
+    return;
+  }
 
   if (processorType === "analytics") {
     await tsMorphGenerateAnalyticsProcessor({
