@@ -1,3 +1,24 @@
+## 6.0.0-dev.250 (2026-05-15)
+
+### 🚀 Features
+
+- **codegen:** prune stale manifest entries on generate all ([1cb8b6c3d](https://github.com/powerhouse-inc/powerhouse/commit/1cb8b6c3d))
+- **vetra:** give each document model a unique extension and add spec docs ([ce35255f6](https://github.com/powerhouse-inc/powerhouse/commit/ce35255f6))
+
+### 🩹 Fixes
+
+- **codegen:** skip drive-app scaffold when editor.tsx is customized ([9bac87284](https://github.com/powerhouse-inc/powerhouse/commit/9bac87284))
+- **codegen:** render document-types list in editor module docstring ([2012c6df1](https://github.com/powerhouse-inc/powerhouse/commit/2012c6df1))
+- **codegen:** skip processor scaffold when dir uses legacy index.ts layout ([293b60e52](https://github.com/powerhouse-inc/powerhouse/commit/293b60e52))
+- **codegen:** warn when skipping a processor scaffold due to legacy layout ([df2875241](https://github.com/powerhouse-inc/powerhouse/commit/df2875241))
+- **codegen:** prettier formatting on processor scaffold guard ([368a5463c](https://github.com/powerhouse-inc/powerhouse/commit/368a5463c))
+- **connect:** widen DocumentModelLib usage in BrowserPackageManager ([ac2b17d14](https://github.com/powerhouse-inc/powerhouse/commit/ac2b17d14))
+- **vetra:** normalize processor-module input schema indentation ([215133db5](https://github.com/powerhouse-inc/powerhouse/commit/215133db5))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.249 (2026-05-15)
 
 ### 🚀 Features

@@ -1,3 +1,13 @@
+## 6.0.0-dev.250 (2026-05-15)
+
+### 🩹 Fixes
+
+- **connect:** widen DocumentModelLib usage in BrowserPackageManager ([ac2b17d14](https://github.com/powerhouse-inc/powerhouse/commit/ac2b17d14))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.249 (2026-05-15)
 
 ### 🚀 Features
