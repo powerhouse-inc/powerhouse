@@ -42,7 +42,7 @@ function parseBareName(spec: string): string {
 }
 
 type PackageWithMeta = PackageMeta & {
-  loadedPackage: DocumentModelLib;
+  loadedPackage: DocumentModelLib<any>;
   spec?: string;
 };
 
@@ -64,11 +64,11 @@ const LOCAL_PACKAGE_NAME = "Local" as const;
 export class BrowserPackageManager implements IPackageManager {
   registryUrl: string | null;
   #storage: BrowserLocalStorage<PackageMeta>;
-  #packages: Map<string, DocumentModelLib> = new Map();
+  #packages: Map<string, DocumentModelLib<any>> = new Map();
   #subscribers = new Set<IPackagesListener>();
-  #packagesMemo: DocumentModelLib[] = [];
+  #packagesMemo: DocumentModelLib<any>[] = [];
   #stylesheets: Map<string, HTMLLinkElement> = new Map();
-  #localPackage: DocumentModelLib | undefined;
+  #localPackage: DocumentModelLib<any> | undefined;
 
   #cdnUrl: string | null;
   #localPackageVersion: string | undefined;
@@ -88,7 +88,10 @@ export class BrowserPackageManager implements IPackageManager {
     return `${base}/-/cdn`;
   }
 
-  async init(localPackage?: DocumentModelLib, localPackageVersion?: string) {
+  async init(
+    localPackage?: DocumentModelLib<any>,
+    localPackageVersion?: string,
+  ) {
     this.addLocalPackage(common.manifest.name, common, commonPkg.version);
     this.addLocalPackage(vetra.manifest.name, vetra, vetraPkg.version);
     if (localPackage) {
@@ -116,7 +119,7 @@ export class BrowserPackageManager implements IPackageManager {
 
   addLocalPackage(
     name: string,
-    loadedPackage: DocumentModelLib,
+    loadedPackage: DocumentModelLib<any>,
     version?: string,
   ) {
     this.#localPackageNames.add(name);
@@ -129,7 +132,7 @@ export class BrowserPackageManager implements IPackageManager {
     });
   }
 
-  updateLocalPackage(pkg: DocumentModelLib, version?: string) {
+  updateLocalPackage(pkg: DocumentModelLib<any>, version?: string) {
     console.debug("Updating local package:", pkg);
     this.#localPackage = pkg;
     this.#registerPackage({
@@ -306,7 +309,7 @@ export class BrowserPackageManager implements IPackageManager {
 
     const loadedPackage = (await import(
       /* @vite-ignore */ importUrl
-    )) as DocumentModelLib;
+    )) as DocumentModelLib<any>;
 
     return {
       name,
