@@ -88,7 +88,7 @@ export const documentModel: DocumentModelGlobalState = {
               description:
                 "Attach the processor to a drive app by name. The processor will run in the context of that app.",
               schema:
-                "input AddProcessorAppInput {\n processorApp: String! \n}",
+                "input AddProcessorAppInput {\n  processorApp: String!\n}",
               template: "",
               reducer: "",
               errors: [],
@@ -101,7 +101,7 @@ export const documentModel: DocumentModelGlobalState = {
               description:
                 "Detach the processor from a drive app by name. No-op if the app is not currently attached.",
               schema:
-                "input RemoveProcessorAppInput {\n processorApp: String! \n}",
+                "input RemoveProcessorAppInput {\n  processorApp: String!\n}",
               template: "",
               reducer: "",
               errors: [],

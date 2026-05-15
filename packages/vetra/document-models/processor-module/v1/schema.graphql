@@ -75,11 +75,11 @@ input RemoveDocumentTypeInput {
 }
 
 input AddProcessorAppInput {
- processorApp: String! 
+  processorApp: String!
 }
 
 input RemoveProcessorAppInput {
- processorApp: String! 
+  processorApp: String!
 }
 
 input SetProcessorStatusInput {
