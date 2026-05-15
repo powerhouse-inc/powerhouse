@@ -63,10 +63,13 @@ export async function pruneManifestSection(
   const manifestPath = join(projectDir, "powerhouse.manifest.json");
   if (!(await fileExists(manifestPath))) return;
   const manifest = await getOrCreateManifestFile(manifestPath);
+  const existing = manifest[kind];
+  // Nothing to prune if the section was never present.
+  if (existing === undefined) return;
   const validSet = new Set(validIds);
-  const filtered = (manifest[kind] ?? []).filter((entry) =>
-    validSet.has(entry.id),
-  );
+  const filtered = existing.filter((entry) => validSet.has(entry.id));
+  // Skip the write when nothing changed.
+  if (filtered.length === existing.length) return;
   await writeJsonFile(
     manifestPath,
     { ...manifest, [kind]: filtered },
