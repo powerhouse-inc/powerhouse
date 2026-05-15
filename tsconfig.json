@@ -1,7 +1,9 @@
 {
   "extends": "./tsconfig.options.json",
   "compilerOptions": {
-    "types": ["node"]
+    "types": [
+      "node"
+    ]
   },
   "references": [
     {
@@ -15,9 +17,6 @@
     },
     {
       "path": "clis/ph-cmd"
-    },
-    {
-      "path": "packages/reactor-drive"
     },
     {
       "path": "packages/reactor-hypercore"

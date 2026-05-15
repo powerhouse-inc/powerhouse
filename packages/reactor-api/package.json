@@ -61,6 +61,7 @@
     "@powerhousedao/pglite-fs": "workspace:*",
     "@powerhousedao/reactor": "workspace:*",
     "@powerhousedao/reactor-attachments": "workspace:*",
+    "@powerhousedao/reactor-drive": "workspace:*",
     "@powerhousedao/reactor-mcp": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
     "@renown/sdk": "workspace:*",

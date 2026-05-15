@@ -1,11 +1,20 @@
 {
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
-    "lib": ["ESNext", "dom", "dom.iterable"],
+    "lib": [
+      "ESNext",
+      "dom",
+      "dom.iterable"
+    ],
     "outDir": "./dist",
-    "types": ["@types/wicg-file-system-access", "vitest/globals"]
+    "types": [
+      "@types/wicg-file-system-access",
+      "vitest/globals"
+    ]
   },
-  "include": ["**/*"],
+  "include": [
+    "**/*"
+  ],
   "references": [
     {
       "path": "../analytics-engine/browser"
@@ -18,6 +27,9 @@
     },
     {
       "path": "../reactor"
+    },
+    {
+      "path": "../reactor-drive"
     },
     {
       "path": "../renown"

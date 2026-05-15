@@ -3,19 +3,40 @@
   "compilerOptions": {
     "outDir": "./dist",
     "emitDeclarationOnly": true,
-    "types": ["node"],
+    "types": [
+      "node"
+    ],
     "paths": {
-      "document-models": ["./document-models/index.ts"],
-      "document-models/*": ["./document-models/*/index.ts"],
-      "editors": ["./editors/index.ts"],
-      "editors/*": ["./editors/*/index.ts"],
-      "processors": ["./processors/index.ts"],
-      "processors/*": ["./processors/*/index.ts"],
-      "subgraphs": ["./subgraphs/index.ts"],
-      "subgraphs/*": ["./subgraphs/*/index.ts"]
+      "document-models": [
+        "./document-models/index.ts"
+      ],
+      "document-models/*": [
+        "./document-models/*/index.ts"
+      ],
+      "editors": [
+        "./editors/index.ts"
+      ],
+      "editors/*": [
+        "./editors/*/index.ts"
+      ],
+      "processors": [
+        "./processors/index.ts"
+      ],
+      "processors/*": [
+        "./processors/*/index.ts"
+      ],
+      "subgraphs": [
+        "./subgraphs/index.ts"
+      ],
+      "subgraphs/*": [
+        "./subgraphs/*/index.ts"
+      ]
     }
   },
-  "include": ["**/*", "./powerhouse.manifest.json"],
+  "include": [
+    "**/*",
+    "./powerhouse.manifest.json"
+  ],
   "references": [
     {
       "path": "../design-system"
@@ -25,6 +46,9 @@
     },
     {
       "path": "../reactor-browser"
+    },
+    {
+      "path": "../reactor-drive"
     },
     {
       "path": "../shared"

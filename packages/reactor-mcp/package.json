@@ -41,6 +41,7 @@
     "@openfeature/env-var-provider": "catalog:",
     "@openfeature/server-sdk": "catalog:",
     "@powerhousedao/reactor": "workspace:*",
+    "@powerhousedao/reactor-drive": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
     "change-case": "catalog:",
     "document-model": "workspace:*",
