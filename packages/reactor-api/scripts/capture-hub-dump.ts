@@ -2,15 +2,23 @@
  * Capture script for the hub-spoke catch-up integration test fixture.
  *
  * Reads a Postgres connection string from PH_REACTOR_DATABASE_URL (or first arg),
- * runs `pg_dump` against the `reactor` schema, and writes:
- *   - test/fixtures/hub-large-doc.dump          (binary pg_dump custom format)
- *   - test/fixtures/hub-large-doc.fixture.json  (sidecar metadata for assertions)
+ * runs `pg_dump` against the `reactor` schema, and writes a drive-type-specific
+ * pair of files under test/fixtures/:
+ *   - hub-large-doc.dump / hub-large-doc.fixture.json
+ *     (default; for powerhouse/document-drive)
+ *   - hub-large-doc-reactor-drive.dump / hub-large-doc-reactor-drive.fixture.json
+ *     (when --drive-type powerhouse/reactor-drive)
  *
  * Usage:
  *   PH_REACTOR_DATABASE_URL=postgres://user:pass@host:5432/reactor \
  *     pnpm --filter @powerhousedao/reactor-api capture-hub-dump
  *
- * Or pass the URL as the first argument:
+ *   # Reactor-drive variant:
+ *   PH_REACTOR_DATABASE_URL=postgres://... \
+ *     pnpm --filter @powerhousedao/reactor-api capture-hub-dump \
+ *       --drive-type powerhouse/reactor-drive
+ *
+ * Or pass the URL as the first positional arg:
  *   pnpm --filter @powerhousedao/reactor-api capture-hub-dump postgres://...
  *
  * If `pg_dump` is not installed on the host, capture the dump via docker exec
@@ -63,12 +71,40 @@ type FixtureMetadata = {
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const FIXTURES_DIR = path.resolve(__dirname, "../test/fixtures");
-const DUMP_PATH = path.join(FIXTURES_DIR, "hub-large-doc.dump");
-const METADATA_PATH = path.join(FIXTURES_DIR, "hub-large-doc.fixture.json");
+
+const FIXTURE_NAMES = {
+  "powerhouse/document-drive": {
+    dump: "hub-large-doc.dump",
+    metadata: "hub-large-doc.fixture.json",
+  },
+  "powerhouse/reactor-drive": {
+    dump: "hub-large-doc-reactor-drive.dump",
+    metadata: "hub-large-doc-reactor-drive.fixture.json",
+  },
+} as const;
+
+type CaptureDriveType = keyof typeof FIXTURE_NAMES;
+
+function parseDriveType(argv: string[]): CaptureDriveType {
+  const idx = argv.indexOf("--drive-type");
+  if (idx === -1) return "powerhouse/document-drive";
+
+  const value = argv[idx + 1];
+  if (!value || !(value in FIXTURE_NAMES)) {
+    throw new Error(
+      `--drive-type must be one of: ${Object.keys(FIXTURE_NAMES).join(", ")}`,
+    );
+  }
+  return value as CaptureDriveType;
+}
 
 function readConnectionString(): string {
-  const argv: (string | undefined)[] = process.argv;
-  const fromArg = argv[2];
+  const argv = process.argv.slice(2).filter((arg, i, arr) => {
+    if (arg === "--drive-type") return false;
+    if (arr[i - 1] === "--drive-type") return false;
+    return true;
+  });
+  const fromArg = argv[0];
   const fromEnv = process.env.PH_REACTOR_DATABASE_URL;
   const connStr = fromArg ?? fromEnv;
 
@@ -217,31 +253,40 @@ function formatBytes(bytes: number): string {
 }
 
 async function main(): Promise<void> {
+  const driveType = parseDriveType(process.argv);
   const connStr = readConnectionString();
   const skipDump = process.env.SKIP_DUMP === "1";
 
+  const dumpPath = path.join(FIXTURES_DIR, FIXTURE_NAMES[driveType].dump);
+  const metadataPath = path.join(
+    FIXTURES_DIR,
+    FIXTURE_NAMES[driveType].metadata,
+  );
+
   mkdirSync(FIXTURES_DIR, { recursive: true });
+
+  console.log(`Drive type: ${driveType}`);
 
   if (skipDump) {
     console.log(
-      `SKIP_DUMP=1 set; reusing existing dump at ${path.relative(process.cwd(), DUMP_PATH)} (host pg_dump skipped — use docker exec to refresh).`,
+      `SKIP_DUMP=1 set; reusing existing dump at ${path.relative(process.cwd(), dumpPath)} (host pg_dump skipped — use docker exec to refresh).`,
     );
   } else {
     console.log(
       `Capturing reactor schema dump from ${maskConnectionString(connStr)}`,
     );
-    await runPgDump(connStr, DUMP_PATH);
+    await runPgDump(connStr, dumpPath);
   }
 
   const metadata = await readMetadata(connStr);
-  writeFileSync(METADATA_PATH, JSON.stringify(metadata, null, 2) + "\n");
+  writeFileSync(metadataPath, JSON.stringify(metadata, null, 2) + "\n");
 
-  const dumpSize = statSync(DUMP_PATH).size;
+  const dumpSize = statSync(dumpPath).size;
   console.log(
-    `captured ${metadata.totalOpCount} ops across ${metadata.documents.length} docs to ${path.relative(process.cwd(), DUMP_PATH)} (${formatBytes(dumpSize)})`,
+    `captured ${metadata.totalOpCount} ops across ${metadata.documents.length} docs to ${path.relative(process.cwd(), dumpPath)} (${formatBytes(dumpSize)})`,
   );
   console.log(
-    `metadata sidecar: ${path.relative(process.cwd(), METADATA_PATH)}`,
+    `metadata sidecar: ${path.relative(process.cwd(), metadataPath)}`,
   );
 
   if (dumpSize > 25 * 1024 * 1024) {
