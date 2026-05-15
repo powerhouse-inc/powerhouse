@@ -20,7 +20,7 @@
     "types": ["node", "vite/client", "vitest/globals"],
     "lib": ["ESNext", "dom", "dom.iterable"],
     "declaration": true,
-    "declarationDir": "./dist/types",
+    "declarationDir": "./.tsbuild",
     "tsBuildInfoFile": "./.tsbuild/tsconfig.tsbuildinfo",
     "declarationMap": true,
     "emitDeclarationOnly": true,

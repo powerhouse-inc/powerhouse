@@ -1,10 +1,10 @@
 {
   "extends": "../../../tsconfig.options.json",
   "compilerOptions": {
-    "outDir": "./dist",
-    "tsBuildInfoFile": "./.tsbuild/tsconfig.tsbuildinfo",
+    "outDir": "./.tsbuild",
   },
   "include": ["**/*"],
+  "exclude": ["dist", "node_modules"],
   "references": [
     {
       "path": "../core"

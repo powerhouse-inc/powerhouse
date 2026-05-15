@@ -1,8 +1,7 @@
 {
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
-    "outDir": "./dist",
-    "tsBuildInfoFile": "./.tsbuild/tsconfig.tsbuildinfo",
+    "outDir": "./.tsbuild",
     "emitDeclarationOnly": true,
     "types": ["node"],
     "paths": {
@@ -17,6 +16,7 @@
     }
   },
   "include": ["**/*", "./powerhouse.manifest.json"],
+  "exclude": ["dist", "node_modules"],
   "references": [
     {
       "path": "../design-system"

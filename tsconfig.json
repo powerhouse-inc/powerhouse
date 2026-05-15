@@ -44,9 +44,6 @@
       "path": "test/test-connect"
     },
     {
-      "path": "test/test-consumer-project"
-    },
-    {
       "path": "test/test-sync-queue"
     },
     {

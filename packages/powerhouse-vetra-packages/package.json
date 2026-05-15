@@ -21,26 +21,31 @@
   ],
   "exports": {
     ".": {
+      "source": "./index.ts",
       "types": "./dist/index.d.ts",
       "browser": "./dist/browser/index.js",
       "node": "./dist/node/index.mjs"
     },
     "./document-models": {
+      "source": "./document-models/index.ts",
       "types": "./dist/document-models/index.d.ts",
       "browser": "./dist/browser/document-models/index.js",
       "node": "./dist/node/document-models/index.mjs"
     },
     "./document-models/*": {
+      "source": "./document-models/*/index.ts",
       "types": "./dist/document-models/*/index.d.ts",
       "browser": "./dist/browser/document-models/*/index.js",
       "node": "./dist/node/document-models/*/index.mjs"
     },
     "./editors": {
+      "source": "./editors/index.ts",
       "types": "./dist/editors/index.d.ts",
       "browser": "./dist/browser/editors/index.js",
       "node": "./dist/node/editors/index.mjs"
     },
     "./editors/*": {
+      "source": "./editors/*/index.ts",
       "types": "./dist/editors/*/index.d.ts",
       "browser": "./dist/browser/editors/*/index.js",
       "node": "./dist/node/editors/*/index.mjs"
