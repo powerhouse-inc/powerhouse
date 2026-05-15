@@ -38,27 +38,37 @@
     {
       "id": "vetra-package-editor",
       "name": "Vetra Package Editor",
-      "documentTypes": ["powerhouse/package"]
+      "documentTypes": [
+        "powerhouse/package"
+      ]
     },
     {
       "id": "document-editor-editor",
       "name": "Document Editor",
-      "documentTypes": ["powerhouse/document-editor"]
+      "documentTypes": [
+        "powerhouse/document-editor"
+      ]
     },
     {
       "id": "subgraph-module-editor",
       "name": "Subgraph Module Editor",
-      "documentTypes": ["powerhouse/subgraph"]
+      "documentTypes": [
+        "powerhouse/subgraph"
+      ]
     },
     {
       "id": "processor-module-editor",
       "name": "Processor Module Editor",
-      "documentTypes": ["powerhouse/processor"]
+      "documentTypes": [
+        "powerhouse/processor"
+      ]
     },
     {
       "id": "app-editor",
       "name": "App Editor",
-      "documentTypes": ["powerhouse/app"]
+      "documentTypes": [
+        "powerhouse/app"
+      ]
     }
   ],
   "processors": [],
