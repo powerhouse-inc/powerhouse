@@ -1,14 +1,15 @@
 import { buildTsMorphProject } from "@powerhousedao/codegen/utils";
 import type { VetraProcessorConfigType } from "@powerhousedao/config";
 import { VETRA_PROCESSOR_CONFIG_KEY } from "@powerhousedao/config";
+import { getConfig } from "@powerhousedao/config/node";
 import type {
   IProcessorHostModule,
+  ProcessorFactoryBuilder,
   ProcessorRecord,
 } from "@powerhousedao/reactor-browser";
 import type { PHDocumentHeader } from "@powerhousedao/shared/document-model";
-import { CodegenProcessor } from "./index.js";
 import { logger } from "./logger.js";
-import { getConfig } from "@powerhousedao/config/node";
+import { CodegenProcessor } from "./processor.js";
 
 /**
  * Determines if a drive header matches the Vetra drive criteria.
@@ -38,14 +39,14 @@ function isDriveVetra(
   return matchesPattern(driveHeader.slug) || matchesPattern(driveHeader.id);
 }
 
-export const codegenProcessorFactory =
-  (module: IProcessorHostModule) =>
-  (driveHeader: PHDocumentHeader): ProcessorRecord[] => {
+export const codegenFactoryBuilder: ProcessorFactoryBuilder = (
+  module: IProcessorHostModule,
+) => {
+  return (driveHeader: PHDocumentHeader): ProcessorRecord[] => {
     const config = getConfig();
     const cwd = process.cwd();
     /* Use one instance of ts-morph project, which handles race conditions */
     const project = buildTsMorphProject(cwd);
-    // Create the processor
     const processorsConfig = module.config ?? new Map<string, unknown>();
     const vetraConfig = processorsConfig.get(VETRA_PROCESSOR_CONFIG_KEY) as
       | VetraProcessorConfigType
@@ -87,3 +88,4 @@ export const codegenProcessorFactory =
       },
     ];
   };
+};

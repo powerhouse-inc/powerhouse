@@ -1,0 +1,91 @@
+import type { DocumentModelGlobalState } from "document-model";
+
+export const documentModel: DocumentModelGlobalState = {
+  id: "powerhouse/document-editor",
+  name: "Document Editor",
+  author: {
+    name: "Powerhouse",
+    website: "https://powerhouse.inc",
+  },
+  extension: ".editor",
+  description:
+    "Declares a document editor (a React UI for editing instances of one or more document models) shipped by a Vetra Reactor Package. Create one Document Editor document per editor, list the document types it can edit, then mark it CONFIRMED to trigger codegen of the editor scaffold under `editors/`. The boilerplate it produces is what you then customize.",
+  specifications: [
+    {
+      state: {
+        local: {
+          schema: "",
+          examples: [],
+          initialValue: "",
+        },
+        global: {
+          schema:
+            '"""\nConfiguration for a document editor contributed by the package. The editor is\nregistered against every document type listed in `documentTypes`; Connect picks\nthe first matching editor when opening a document.\n"""\ntype DocumentEditorState {\n  """Display name of the editor. Also determines the generated folder name under `editors/`."""\n  name: String!\n  """Document types this editor can edit. Each entry has a stable id so it can be removed individually."""\n  documentTypes: [DocumentTypeItem!]!\n  """Lifecycle status. While DRAFT the editor definition is editable and codegen is skipped; switching to CONFIRMED triggers scaffold generation."""\n  status: StatusType!\n}\n\n"""A document type id (e.g. \'powerhouse/document-drive\') attached to the editor with a stable entry id."""\ntype DocumentTypeItem {\n  """Stable identifier for the entry; used to remove it."""\n  id: OID!\n  """Document type id this editor handles (e.g. \'my-org/invoice\')."""\n  documentType: String!\n}\n\n"""\nLifecycle status of a module definition.\n- DRAFT: still being edited; codegen does not run.\n- CONFIRMED: locked in; codegen produces the corresponding scaffold.\n"""\nenum StatusType {\n  DRAFT\n  CONFIRMED\n}',
+          examples: [],
+          initialValue:
+            '{\n  "name": "",\n  "documentTypes": [],\n  "status": "DRAFT"\n}',
+        },
+      },
+      modules: [
+        {
+          id: "73f6d103-47cb-4074-a736-a3eaf5d079bf",
+          name: "base_operations",
+          description:
+            "Set the editor's identity, lifecycle status, and the document types it handles.",
+          operations: [
+            {
+              id: "50a16f00-d25a-4c97-9632-4ce3b951a402",
+              name: "SET_EDITOR_NAME",
+              description:
+                "Set the display name of the editor. Also determines the generated folder name under `editors/`.",
+              schema: "input SetEditorNameInput {\n  name: String!\n}",
+              template: "",
+              reducer: "",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+            {
+              id: "acee4272-f29e-4a19-aaf9-bae2cb6652ab",
+              name: "ADD_DOCUMENT_TYPE",
+              description:
+                "Register a document type this editor can edit. Caller supplies a stable id so the entry can be removed later.",
+              schema:
+                "input AddDocumentTypeInput {\n  id: OID!\n  documentType: String!\n}",
+              template: "",
+              reducer: "",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+            {
+              id: "6c549776-0fc3-4632-a6c7-8721fa6ee41c",
+              name: "REMOVE_DOCUMENT_TYPE",
+              description: "Remove a registered document type entry by its id.",
+              schema: "input RemoveDocumentTypeInput {\n  id: OID!\n}",
+              template: "",
+              reducer: "",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+            {
+              id: "e9aa7f08-553b-452f-a494-126ace6b15f7",
+              name: "SET_EDITOR_STATUS",
+              description:
+                "Move the editor between DRAFT and CONFIRMED. Codegen only runs once the status is CONFIRMED \u2014 leaving it DRAFT means no editor files are produced.",
+              schema: "input SetEditorStatusInput {\n  status: StatusType!\n}",
+              template: "",
+              reducer: "",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+          ],
+        },
+      ],
+      version: 1,
+      changeLog: [],
+    },
+  ],
+};

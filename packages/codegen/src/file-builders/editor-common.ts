@@ -38,8 +38,8 @@ export async function makeEditorModuleFile({
 
   const pascalCaseEditorName = pascalCase(editorName);
   const documentTypes = documentModelId
-    ? `["${documentModelId}"]`
-    : JSON.stringify(legacyMultipleDocumentTypes);
+    ? [documentModelId]
+    : (legacyMultipleDocumentTypes ?? []);
 
   const template = documentEditorModuleFileTemplate({
     editorName,

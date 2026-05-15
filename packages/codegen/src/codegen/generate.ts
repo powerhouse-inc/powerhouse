@@ -2,6 +2,7 @@ import { type DocumentModelGlobalState } from "@powerhousedao/shared/document-mo
 import type { ProcessorApps } from "@powerhousedao/shared/processors";
 import { kebabCase } from "change-case";
 import {
+  pruneManifestSection,
   tsMorphGenerateApp,
   tsMorphGenerateDocumentEditor,
   tsMorphGenerateDocumentModel,
@@ -44,6 +45,7 @@ export async function generateAllDocumentModels(project: Project) {
     "document-models",
   );
   const documentModelsDirPath = documentModelsDir.getPath();
+  const projectDir = documentModelsDir.getParentOrThrow().getPath();
   const documentModelStateFiles = pipe(
     readdirSync(documentModelsDirPath, { withFileTypes: true }),
     map(loadDocumentModelInDir),
@@ -53,6 +55,12 @@ export async function generateAllDocumentModels(project: Project) {
   for (const documentModelState of documentModelStateFiles) {
     await generateDocumentModel(documentModelState, project);
   }
+
+  await pruneManifestSection(
+    projectDir,
+    "documentModels",
+    documentModelStateFiles.map((s) => s.id),
+  );
 }
 export async function generateFromFile(filePath: string, project: Project) {
   // load document model spec from file
@@ -102,6 +110,7 @@ export async function generateEditor(
  */
 export async function generateAllEditors(project: Project) {
   const { directory: editorsDir } = getOrCreateDirectory(project, "editors");
+  const projectDir = editorsDir.getParentOrThrow().getPath();
 
   /* An editor's `id`, `name`, and `documentTypes` args can be found in the `module.ts` file */
   const editorsToAdd = pipe(
@@ -133,6 +142,12 @@ export async function generateAllEditors(project: Project) {
       project,
     );
   }
+
+  await pruneManifestSection(
+    projectDir,
+    "editors",
+    editorsToAdd.map((e) => e.id),
+  );
 }
 
 type GenerateAppArgs = {
@@ -167,6 +182,7 @@ export async function generateApp(args: GenerateAppArgs, project: Project) {
  */
 export async function generateAllApps(project: Project) {
   const { directory: editorsDir } = getOrCreateDirectory(project, "editors");
+  const projectDir = editorsDir.getParentOrThrow().getPath();
 
   /* An editor's `id`, `name`, and `documentTypes` args can be found in the `module.ts` file */
   const appsToAdd = pipe(
@@ -195,6 +211,12 @@ export async function generateAllApps(project: Project) {
       project,
     );
   }
+
+  await pruneManifestSection(
+    projectDir,
+    "apps",
+    appsToAdd.map((a) => a.id),
+  );
 }
 export async function generateSubgraph(subgraphName: string, project: Project) {
   await tsMorphGenerateSubgraph({ subgraphName, project });
@@ -206,6 +228,7 @@ export async function generateAllSubgraphs(project: Project) {
     project,
     "subgraphs",
   );
+  const projectDir = subgraphsDir.getParentOrThrow().getPath();
   /* The subgraph's name is found in the `index.ts` file */
   const subgraphNames = pipe(
     subgraphsDir.getDirectories(),
@@ -218,6 +241,12 @@ export async function generateAllSubgraphs(project: Project) {
   for (const subgraphName of subgraphNames) {
     await generateSubgraph(subgraphName, project);
   }
+
+  await pruneManifestSection(
+    projectDir,
+    "subgraphs",
+    subgraphNames.map((name) => kebabCase(name)),
+  );
 }
 
 export async function generateProcessor(
@@ -241,6 +270,7 @@ export async function generateAllProcessors(project: Project) {
     project,
     "processors",
   );
+  const projectDir = processorsDir.getParentOrThrow().getPath();
   const processorsToGenerate = pipe(
     processorsDir.getDirectories(),
     map((dir) => dir.getBaseName()),
@@ -250,6 +280,12 @@ export async function generateAllProcessors(project: Project) {
   for (const processorArgs of processorsToGenerate) {
     await generateProcessor(processorArgs, project);
   }
+
+  await pruneManifestSection(
+    projectDir,
+    "processors",
+    processorsToGenerate.map((p) => kebabCase(p.processorName)),
+  );
 }
 
 /* Runs each module type's generateAll{moduleType} function for the current project */

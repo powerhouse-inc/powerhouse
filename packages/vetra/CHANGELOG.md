@@ -1,3 +1,35 @@
+## 6.0.0-dev.250 (2026-05-15)
+
+### 🚀 Features
+
+- **codegen:** prune stale manifest entries on generate all ([1cb8b6c3d](https://github.com/powerhouse-inc/powerhouse/commit/1cb8b6c3d))
+- **vetra:** give each document model a unique extension and add spec docs ([ce35255f6](https://github.com/powerhouse-inc/powerhouse/commit/ce35255f6))
+
+### 🩹 Fixes
+
+- **vetra:** normalize processor-module input schema indentation ([215133db5](https://github.com/powerhouse-inc/powerhouse/commit/215133db5))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.249 (2026-05-15)
+
+### 🚀 Features
+
+- added release script ([20454f119](https://github.com/powerhouse-inc/powerhouse/commit/20454f119))
+- add tailwind eslint plugin ([#2612](https://github.com/powerhouse-inc/powerhouse/pull/2612))
+
+### 🩹 Fixes
+
+- **codegen:** install dependencies during migrate before regeneration ([ff107e29f](https://github.com/powerhouse-inc/powerhouse/commit/ff107e29f))
+
+### ❤️ Thank You
+
+- acaldas
+- Guillermo Puente @gpuente
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.248 (2026-05-14)
 
 ### 🚀 Features

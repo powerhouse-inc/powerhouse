@@ -16,7 +16,7 @@
       "name": "Document Editor"
     },
     {
-      "id": "powerhouse/subgraph-module",
+      "id": "powerhouse/subgraph",
       "name": "Subgraph Module"
     },
     {
@@ -28,40 +28,59 @@
       "name": "App Module"
     }
   ],
+  "apps": [
+    {
+      "id": "vetra-drive-app",
+      "name": "Vetra Drive App"
+    }
+  ],
   "editors": [
     {
       "id": "vetra-package-editor",
       "name": "Vetra Package Editor",
-      "documentTypes": ["powerhouse/package"]
+      "documentTypes": [
+        "powerhouse/package"
+      ]
     },
     {
       "id": "document-editor-editor",
       "name": "Document Editor",
-      "documentTypes": ["powerhouse/document-editor"]
+      "documentTypes": [
+        "powerhouse/document-editor"
+      ]
     },
     {
       "id": "subgraph-module-editor",
       "name": "Subgraph Module Editor",
-      "documentTypes": ["powerhouse/subgraph-module"]
+      "documentTypes": [
+        "powerhouse/subgraph"
+      ]
     },
     {
       "id": "processor-module-editor",
       "name": "Processor Module Editor",
-      "documentTypes": ["powerhouse/processor"]
+      "documentTypes": [
+        "powerhouse/processor"
+      ]
     },
     {
-      "id": "app-module-editor",
-      "name": "App Module Editor",
-      "documentTypes": ["powerhouse/app"]
+      "id": "app-editor",
+      "name": "App Editor",
+      "documentTypes": [
+        "powerhouse/app"
+      ]
     }
   ],
-  "apps": [
+  "processors": [
     {
-      "id": "vetra-drive-app",
-      "name": "Vetra Drive App",
-      "app": "vetra-drive-app"
+      "id": "codegen",
+      "name": "codegen"
+    },
+    {
+      "id": "vetra-read-model",
+      "name": "vetra-read-model"
     }
   ],
   "subgraphs": [],
-  "importScripts": []
+  "config": []
 }
