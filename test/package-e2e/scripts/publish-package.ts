@@ -90,7 +90,9 @@ async function main(): Promise<void> {
         `Expected something under ${workspaceRoot}.`,
     );
   }
-  console.log(`  ✓ ph-cli is the local workspace package (under ${workspaceRoot})\n`);
+  console.log(
+    `  ✓ ph-cli is the local workspace package (under ${workspaceRoot})\n`,
+  );
 
   fs.rmSync(PROJECT_PARENT, { recursive: true, force: true });
   fs.mkdirSync(PROJECT_PARENT, { recursive: true });
@@ -104,7 +106,10 @@ async function main(): Promise<void> {
   // 1. ph init <name> --pnpm [--dev|--staging]
   const tagFlag =
     TAG === "dev" ? "--dev" : TAG === "staging" ? "--staging" : "";
-  run(`${PH_CLI} init ${PROJECT_NAME} --pnpm ${tagFlag}`.trim(), PROJECT_PARENT);
+  run(
+    `${PH_CLI} init ${PROJECT_NAME} --pnpm ${tagFlag}`.trim(),
+    PROJECT_PARENT,
+  );
 
   // 2. Also write an .npmrc into the project itself so subsequent `pnpm`
   // invocations (lint / tsc / build / publish) authenticate and route to

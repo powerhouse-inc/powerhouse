@@ -13,6 +13,7 @@ const normalIgnoredFiles = [
   "**/node_modules/",
   "**/coverage/",
   "**/dist/",
+  "**/.tsbuild/",
   "**/ts-build/",
   "**/storybook-static/",
   "**/.vite/",
@@ -40,6 +41,11 @@ const normalIgnoredFiles = [
   "clis/ph-cmd/legacy/**",
   "**/coverage/",
   "**/playwright-report/",
+  // test/package-e2e runtime artifacts (registry storage, CDN cache) and
+  // fixtures that import from a generated project (not the workspace).
+  "test/package-e2e/.registry-storage/",
+  "test/package-e2e/.registry-cdn-cache/",
+  "test/package-e2e/fixtures/",
 ];
 
 /** These files need to be ignored for builds to pass, but they do not have clear reasons to be ignored.

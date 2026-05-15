@@ -1,5 +1,4 @@
-const SWITCHBOARD_URL =
-  process.env.SWITCHBOARD_URL ?? "http://localhost:4001";
+const SWITCHBOARD_URL = process.env.SWITCHBOARD_URL ?? "http://localhost:4001";
 
 export async function graphql<T>(
   path: string,
@@ -35,9 +34,16 @@ export async function createRemoteDrive(name: string): Promise<{
     DocumentDrive: { createDocument: { id: string; slug: string } };
   }>(
     "/graphql/document-drive",
-    `mutation Create($name: String!) {
-       DocumentDrive { createDocument(name: $name) { id slug } }
-     }`,
+    `
+      mutation Create($name: String!) {
+        DocumentDrive {
+          createDocument(name: $name) {
+            id
+            slug
+          }
+        }
+      }
+    `,
     { name },
   );
   const { id, slug } = data.DocumentDrive.createDocument;
@@ -59,20 +65,29 @@ export async function getDocumentOperations(
   documentId: string,
 ): Promise<DocumentOperationRecord[]> {
   const data = await graphql<{
-    documentOperations: { items: DocumentOperationRecord[]; totalCount: number };
+    documentOperations: {
+      items: DocumentOperationRecord[];
+      totalCount: number;
+    };
   }>(
     "/graphql",
-    `query Ops($id: String!) {
-       documentOperations(filter: { documentId: $id, scopes: ["global"] }) {
-         items {
-           index
-           hash
-           timestampUtcMs
-           action { type input scope }
-         }
-         totalCount
-       }
-     }`,
+    `
+      query Ops($id: String!) {
+        documentOperations(filter: { documentId: $id, scopes: ["global"] }) {
+          items {
+            index
+            hash
+            timestampUtcMs
+            action {
+              type
+              input
+              scope
+            }
+          }
+          totalCount
+        }
+      }
+    `,
     { id: documentId },
   );
   return data.documentOperations.items;

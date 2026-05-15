@@ -28,15 +28,12 @@ export default defineConfig({
             { name: "/:display-cookie-banner", value: "false" },
             {
               name: "/:acceptedCookies",
-              value:
-                '{"analytics":true,"marketing":false,"functional":false}',
+              value: '{"analytics":true,"marketing":false,"functional":false}',
             },
           ],
         },
       ],
     },
   },
-  projects: [
-    { name: "chromium", use: { ...devices["Desktop Chrome"] } },
-  ],
+  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
 });
