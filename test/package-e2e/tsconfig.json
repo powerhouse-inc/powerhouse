@@ -1,16 +1,9 @@
 {
+  "extends": "../../tsconfig.options.json",
   "compilerOptions": {
-    "target": "ES2022",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
+    "outDir": "./.tsbuild",
     "resolveJsonModule": true,
-    "noEmit": true,
-    "types": [
-      "node"
-    ]
+    "types": ["node"]
   },
   "include": [
     "scripts/**/*.ts",
@@ -18,14 +11,8 @@
     "playwright.config.ts"
   ],
   "references": [
-    {
-      "path": "../../clis/ph-cli"
-    },
-    {
-      "path": "../../packages/registry"
-    },
-    {
-      "path": "../e2e-utils"
-    }
+    { "path": "../../clis/ph-cli" },
+    { "path": "../../packages/registry" },
+    { "path": "../e2e-utils" }
   ]
 }

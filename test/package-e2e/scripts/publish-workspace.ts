@@ -42,9 +42,22 @@ async function main(): Promise<void> {
       /* best-effort */
     }
   };
-  process.on("SIGINT", restore);
-  process.on("SIGTERM", restore);
-  process.on("uncaughtException", restore);
+  // Installing a SIGINT/SIGTERM listener suppresses Node's default exit, so
+  // the handler must explicitly terminate — otherwise an interrupt restores
+  // .npmrc and then leaves the script running.
+  process.on("SIGINT", () => {
+    restore();
+    process.exit(130);
+  });
+  process.on("SIGTERM", () => {
+    restore();
+    process.exit(143);
+  });
+  process.on("uncaughtException", (err) => {
+    restore();
+    console.error(err);
+    process.exit(1);
+  });
 
   try {
     const filterArgs = PUBLISH_FILTERS.flatMap((p) => ["--filter", p]);
