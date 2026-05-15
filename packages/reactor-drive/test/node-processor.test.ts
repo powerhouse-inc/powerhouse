@@ -496,7 +496,9 @@ describe("NodeProcessor", () => {
         .executeTakeFirst(),
     ).toBeDefined();
 
-    await processor.indexOperations([wrap(deleteDocumentAction(fileId), fileId)]);
+    await processor.indexOperations([
+      wrap(deleteDocumentAction(fileId), fileId),
+    ]);
 
     expect(
       await db
@@ -557,7 +559,9 @@ describe("NodeProcessor", () => {
       ).length,
     ).toBe(2);
 
-    await processor.indexOperations([wrap(deleteDocumentAction(fileId), fileId)]);
+    await processor.indexOperations([
+      wrap(deleteDocumentAction(fileId), fileId),
+    ]);
 
     expect(
       (
@@ -574,7 +578,9 @@ describe("NodeProcessor", () => {
     const orphanId = "orphan-1";
 
     await expect(
-      processor.indexOperations([wrap(deleteDocumentAction(orphanId), orphanId)]),
+      processor.indexOperations([
+        wrap(deleteDocumentAction(orphanId), orphanId),
+      ]),
     ).resolves.toBeUndefined();
 
     expect(

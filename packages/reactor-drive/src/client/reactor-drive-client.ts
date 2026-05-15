@@ -453,7 +453,7 @@ export class ReactorDriveClient implements IDriveClient {
       const documentModelModule = await this.reactor.getDocumentModelModule(
         srcDoc.header.documentType,
       );
-      const duplicated = replayDocument(
+      const duplicated: PHDocument = replayDocument(
         srcDoc.initialState,
         srcDoc.operations,
         documentModelModule.reducer,

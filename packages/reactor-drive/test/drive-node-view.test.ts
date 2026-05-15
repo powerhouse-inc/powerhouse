@@ -93,7 +93,12 @@ describe("DriveNodeView.getDescendants (PGlite)", () => {
 
     await insertFolder(driveId, "folder-0", null, "Level 0");
     for (let i = 1; i < depth; i++) {
-      await insertFolder(driveId, `folder-${i}`, `folder-${i - 1}`, `Level ${i}`);
+      await insertFolder(
+        driveId,
+        `folder-${i}`,
+        `folder-${i - 1}`,
+        `Level ${i}`,
+      );
     }
     await insertFile(
       driveId,
@@ -315,7 +320,10 @@ describe("DriveNodeView.listChildren keyset cursor (PGlite)", () => {
 
   it("rejects a malformed cursor", async () => {
     await expect(
-      view.listChildren("drive-1", null, { cursor: "not-base64!@#$", limit: 10 }),
+      view.listChildren("drive-1", null, {
+        cursor: "not-base64!@#$",
+        limit: 10,
+      }),
     ).rejects.toThrow(/cursor/i);
   });
 

@@ -1,7 +1,4 @@
-import {
-  type PagedResults,
-  type PagingOptions,
-} from "@powerhousedao/reactor";
+import { type PagedResults, type PagingOptions } from "@powerhousedao/reactor";
 import type { Kysely } from "kysely";
 import type { ReactorDriveDatabase } from "../schema/tables.js";
 import type {
@@ -114,8 +111,12 @@ export class DriveNodeView implements IDriveReadModel {
     }
 
     if (cursor !== null) {
-      query = query.where(({ eb, refTuple, tuple }) =>
-        eb(refTuple("createdAt", "id"), ">", tuple(cursor.createdAt, cursor.id)),
+      query = query.where((eb) =>
+        eb(
+          eb.refTuple("createdAt", "id"),
+          ">",
+          eb.tuple(cursor.createdAt, cursor.id),
+        ),
       );
     }
 
@@ -132,8 +133,9 @@ export class DriveNodeView implements IDriveReadModel {
     return {
       results: sliced.map(rowToNode),
       options: { cursor: paging?.cursor ?? "", limit },
-      nextCursor:
-        hasMore && last ? encodeKeysetCursor(last.createdAt, last.id) : undefined,
+      nextCursor: hasMore
+        ? encodeKeysetCursor(last.createdAt, last.id)
+        : undefined,
     };
   }
 

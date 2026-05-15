@@ -109,7 +109,7 @@ describe("ReactorDriveClient Integration", () => {
     await pg.close();
   });
 
-  async function makeChildDocument(name: string): Promise<PHDocument> {
+  function makeChildDocument(name: string): PHDocument {
     const doc = documentModelDocumentModelModule.utils.createDocument();
     doc.header.name = name;
     return doc;
@@ -148,7 +148,7 @@ describe("ReactorDriveClient Integration", () => {
   describe("addFile", () => {
     it("adds a file under a parent folder", async () => {
       const folder = await driveClient.addFolder(driveId, "Inbox");
-      const doc = await makeChildDocument("File One");
+      const doc = makeChildDocument("File One");
       await driveClient.addFile(driveId, doc, folder.id);
 
       const fetched = await driveClient.getNode(driveId, doc.header.id);
@@ -173,7 +173,7 @@ describe("ReactorDriveClient Integration", () => {
     });
 
     it("renames a file via reactor.rename and updates the projection", async () => {
-      const doc = await makeChildDocument("Original");
+      const doc = makeChildDocument("Original");
       await driveClient.addFile(driveId, doc);
       const updated = await driveClient.renameNode(
         driveId,
@@ -206,7 +206,7 @@ describe("ReactorDriveClient Integration", () => {
     it("moves a file under a different parent folder", async () => {
       const folderA = await driveClient.addFolder(driveId, "A");
       const folderB = await driveClient.addFolder(driveId, "B");
-      const doc = await makeChildDocument("Movable File");
+      const doc = makeChildDocument("Movable File");
       await driveClient.addFile(driveId, doc, folderA.id);
 
       await driveClient.moveNode(driveId, doc.header.id, folderB.id);
@@ -218,7 +218,7 @@ describe("ReactorDriveClient Integration", () => {
 
   describe("removeNode", () => {
     it("removes a single file and deletes the underlying document", async () => {
-      const doc = await makeChildDocument("Doomed");
+      const doc = makeChildDocument("Doomed");
       await driveClient.addFile(driveId, doc);
 
       await driveClient.removeNode(driveId, doc.header.id);
@@ -232,8 +232,8 @@ describe("ReactorDriveClient Integration", () => {
     it("cascades through a folder with file and folder descendants", async () => {
       const root = await driveClient.addFolder(driveId, "Trash");
       const sub = await driveClient.addFolder(driveId, "Sub", root.id);
-      const fileA = await makeChildDocument("File A");
-      const fileB = await makeChildDocument("File B");
+      const fileA = makeChildDocument("File A");
+      const fileB = makeChildDocument("File B");
       await driveClient.addFile(driveId, fileA, root.id);
       await driveClient.addFile(driveId, fileB, sub.id);
 
@@ -258,7 +258,7 @@ describe("ReactorDriveClient Integration", () => {
 
   describe("collection membership", () => {
     it("tags child documents with the drive's collection", async () => {
-      const doc = await makeChildDocument("Tagged File");
+      const doc = makeChildDocument("Tagged File");
       await driveClient.addFile(driveId, doc);
 
       const expectedCollectionId = driveCollectionId("main", driveId);
@@ -271,7 +271,7 @@ describe("ReactorDriveClient Integration", () => {
     });
 
     it("removes child membership when the file is removed", async () => {
-      const doc = await makeChildDocument("Transient File");
+      const doc = makeChildDocument("Transient File");
       await driveClient.addFile(driveId, doc);
       await driveClient.removeNode(driveId, doc.header.id);
 
@@ -290,7 +290,7 @@ describe("ReactorDriveClient Integration", () => {
     it("copies a folder with descendants under a different parent", async () => {
       const source = await driveClient.addFolder(driveId, "Source");
       const child = await driveClient.addFolder(driveId, "Inner", source.id);
-      const file = await makeChildDocument("Inner File");
+      const file = makeChildDocument("Inner File");
       await driveClient.addFile(driveId, file, child.id);
       const target = await driveClient.addFolder(driveId, "Target");
 
@@ -329,7 +329,7 @@ describe("ReactorDriveClient Integration", () => {
         folders.push({ id: folder.id, name });
         parentId = folder.id;
       }
-      const leaf = await makeChildDocument("Leaf File");
+      const leaf = makeChildDocument("Leaf File");
       await driveClient.addFile(driveId, leaf, folders[depth - 1].id);
 
       const target = await driveClient.addFolder(driveId, "Target");
@@ -350,7 +350,10 @@ describe("ReactorDriveClient Integration", () => {
       }
       expect(walkedDepth).toBe(depth);
 
-      const copiedLeafPage = await driveClient.listNodes(driveId, currentParent);
+      const copiedLeafPage = await driveClient.listNodes(
+        driveId,
+        currentParent,
+      );
       expect(copiedLeafPage.results).toHaveLength(1);
       const copiedLeaf = copiedLeafPage.results[0];
       expect(copiedLeaf.kind).toBe("file");
@@ -363,7 +366,7 @@ describe("ReactorDriveClient Integration", () => {
     it("projects documentType and parent linkages through the real reactor", async () => {
       const folderRootId = "legacy-folder-root";
       const folderChildId = "legacy-folder-child";
-      const filePinned = await makeChildDocument("Pinned File");
+      const filePinned = makeChildDocument("Pinned File");
       const filePinnedId = filePinned.header.id;
       const fileBareId = "legacy-bare-file";
 
@@ -420,13 +423,19 @@ describe("ReactorDriveClient Integration", () => {
 
       const projectedPinned = await driveClient.getNode(driveId, filePinnedId);
       expect(projectedPinned.kind).toBe("file");
-      const pinnedFile = projectedPinned as { documentType: string; parentFolder: string | null };
+      const pinnedFile = projectedPinned as {
+        documentType: string;
+        parentFolder: string | null;
+      };
       expect(pinnedFile.documentType).toBe(filePinned.header.documentType);
       expect(pinnedFile.parentFolder).toBe(folderChildId);
 
       const projectedBare = await driveClient.getNode(driveId, fileBareId);
       expect(projectedBare.kind).toBe("file");
-      const bareFile = projectedBare as { documentType: string; parentFolder: string | null };
+      const bareFile = projectedBare as {
+        documentType: string;
+        parentFolder: string | null;
+      };
       expect(bareFile.documentType).toBe("powerhouse/budget");
       expect(bareFile.parentFolder).toBe(folderRootId);
 

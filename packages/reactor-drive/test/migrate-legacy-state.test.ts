@@ -219,28 +219,30 @@ describe("migrateLegacyDriveState", () => {
     await processor.init();
 
     let nextOrdinal = 1;
-    const execute = vi.fn(async (docId: string, _branch: string, actions: Action[]) => {
-      const ops: OperationWithContext[] = actions.map((action) => {
-        const op: Operation = {
-          id: generateId(),
-          index: 0,
-          skip: 0,
-          timestampUtcMs: new Date().toISOString(),
-          hash: "",
-          action: action as unknown as Operation["action"],
-        };
-        const context: OperationContext = {
-          documentId: docId,
-          documentType: "powerhouse/reactor-drive",
-          scope: "document",
-          branch: "main",
-          ordinal: nextOrdinal++,
-        };
-        return { operation: op, context };
-      });
-      await processor.indexOperations(ops);
-      return { id: "job" } as unknown as JobInfo;
-    });
+    const execute = vi.fn(
+      async (docId: string, _branch: string, actions: Action[]) => {
+        const ops: OperationWithContext[] = actions.map((action) => {
+          const op: Operation = {
+            id: generateId(),
+            index: 0,
+            skip: 0,
+            timestampUtcMs: new Date().toISOString(),
+            hash: "",
+            action: action as unknown as Operation["action"],
+          };
+          const context: OperationContext = {
+            documentId: docId,
+            documentType: "powerhouse/reactor-drive",
+            scope: "document",
+            branch: "main",
+            ordinal: nextOrdinal++,
+          };
+          return { operation: op, context };
+        });
+        await processor.indexOperations(ops);
+        return { id: "job" } as unknown as JobInfo;
+      },
+    );
     const reactor = { execute } as unknown as IReactorClient;
 
     const fileNode: Node = {
