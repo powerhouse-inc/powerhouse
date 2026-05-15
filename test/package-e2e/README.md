@@ -12,8 +12,16 @@ End-to-end test for the Powerhouse package creation flow with a remote Switchboa
 
 ## Run
 
+From this directory:
+
 ```bash
 pnpm test
 ```
 
-This is currently host-only (no CI wiring). See `scripts/run.ts` for the orchestrator.
+Or from the repo root:
+
+```bash
+pnpm test:e2e:package
+```
+
+Runs in CI as the `Run Package E2E Tests` job in `.github/workflows/e2e-tests.yml`. See `scripts/run.ts` for the orchestrator.

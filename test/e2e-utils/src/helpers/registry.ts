@@ -114,10 +114,13 @@ export function writeNpmrc(projectDir: string, token: string): void {
   const existing = fs.existsSync(npmrcPath)
     ? fs.readFileSync(npmrcPath, "utf-8")
     : "";
+  // ph init's .npmrc template ships without a trailing newline; concatenating
+  // directly would produce `@jsr:registry=https://npm.jsr.ioregistry=...`.
+  const separator = existing && !existing.endsWith("\n") ? "\n" : "";
   const additions =
     `registry=${REGISTRY_URL}/\n` +
     `//localhost:${REGISTRY_PORT}/:_authToken=${token}\n`;
-  fs.writeFileSync(npmrcPath, existing + additions, "utf-8");
+  fs.writeFileSync(npmrcPath, existing + separator + additions, "utf-8");
 }
 
 export function stopRegistry(child: ChildProcess): void {
