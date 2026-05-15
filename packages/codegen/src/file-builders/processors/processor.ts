@@ -58,6 +58,13 @@ export async function tsMorphGenerateProcessor(args: {
   await ensureDirectoriesExist(project, processorsDirPath, dirPath);
 
   if (isCustomizedProcessorDir(project.getDirectory(dirPath))) {
+    const relativePath = path.relative(
+      projectDir,
+      path.join(dirPath, "index.ts"),
+    );
+    console.warn(
+      `[codegen] Skipping processor scaffold for "${kebabCaseName}": legacy layout detected "${relativePath}"`,
+    );
     return;
   }
 
