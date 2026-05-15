@@ -32,6 +32,35 @@ export const powerhousePackageSchema = {
   },
 } as const;
 
+// Reusable shape for `connect.drives.sections.{remote,local}` — same three
+// affirmative-named toggles for each section. The plan §2.4 collapses the
+// legacy public+cloud sections into a single `remote`.
+const driveSectionSchema = {
+  type: "object",
+  additionalProperties: false,
+  description:
+    "Visibility and add/delete affordances for a drive section in the sidebar.",
+  properties: {
+    enabled: {
+      type: "boolean",
+      description: "When false, the section is hidden in the sidebar.",
+      default: true,
+    },
+    allowAdd: {
+      type: "boolean",
+      description:
+        "When false, the section's 'add drive' affordance is hidden.",
+      default: true,
+    },
+    allowDelete: {
+      type: "boolean",
+      description:
+        "When false, drives in this section cannot be deleted from the UI.",
+      default: true,
+    },
+  },
+} as const;
+
 export const phConnectRuntimeConfigSchema = {
   type: "object",
   additionalProperties: false,
@@ -71,6 +100,45 @@ export const phConnectRuntimeConfigSchema = {
         },
       },
     },
+    app: {
+      type: "object",
+      additionalProperties: false,
+      description: "Top-level Connect application behaviour.",
+      properties: {
+        logLevel: {
+          type: "string",
+          enum: ["debug", "info", "warn", "error"],
+          description:
+            "Log level applied by Connect's logger at boot. Affects browser-side output only.",
+          default: "info",
+        },
+        basePath: {
+          type: "string",
+          description:
+            "Base path Connect is mounted under (e.g. '/connect' for subpath deploys). Normalised at runtime to start and end with '/'. Defaults to the build-time BASE_URL.",
+          default: "/",
+        },
+      },
+    },
+    packages: {
+      type: "object",
+      additionalProperties: false,
+      description:
+        "Runtime behaviour for the Connect package manager (separate from top-level `packages[]`, which lists which packages to load).",
+      properties: {
+        externalEnabled: {
+          type: "boolean",
+          description:
+            "When false, Connect refuses to load any package that wasn't bundled at build time. Affirmative replacement for the legacy PH_CONNECT_EXTERNAL_PACKAGES_DISABLED env var.",
+          default: true,
+        },
+        registryUrl: {
+          type: "string",
+          description:
+            "CDN endpoint Connect fetches external packages from at runtime. Supports comma-separated URLs for multi-registry setups. Environment-specific — no schema default.",
+        },
+      },
+    },
     drives: {
       type: "object",
       additionalProperties: false,
@@ -79,12 +147,14 @@ export const phConnectRuntimeConfigSchema = {
         allowAddDrive: {
           type: "boolean",
           description:
-            "When false, the SPA hides the 'add drive' affordance. Defaults to true.",
+            "When false, the SPA hides the 'add drive' affordance entirely (top-level). Per-section overrides live in `sections.{remote,local}.allowAdd`.",
+          default: true,
         },
         defaultDrives: {
           type: "array",
           description:
             "Drives the SPA auto-connects to on first load. Each must specify a URL; name and icon are optional overrides.",
+          default: [],
           items: {
             type: "object",
             additionalProperties: false,
@@ -95,6 +165,44 @@ export const phConnectRuntimeConfigSchema = {
               icon: { type: ["string", "null"] },
             },
           },
+        },
+        preserveStrategy: {
+          type: "string",
+          enum: ["preserve-all", "preserve-by-url-and-detach"],
+          description:
+            "Strategy applied when defaultDrives change between deploys. 'preserve-all' keeps user-added drives untouched; 'preserve-by-url-and-detach' detaches removed default drives. No schema default — opt-in only.",
+        },
+        sections: {
+          type: "object",
+          additionalProperties: false,
+          description:
+            "Per-section visibility and affordance toggles. `remote` covers what was historically split into 'public' + 'cloud'; `local` is browser-local drives.",
+          properties: {
+            remote: driveSectionSchema,
+            local: driveSectionSchema,
+          },
+        },
+      },
+    },
+    renown: {
+      type: "object",
+      additionalProperties: false,
+      description: "Renown identity / authentication coordinates.",
+      properties: {
+        url: {
+          type: "string",
+          description: "Renown auth service URL.",
+          default: "https://www.renown.id",
+        },
+        networkId: {
+          type: "string",
+          description: "CAIP-2 network namespace (e.g. 'eip155').",
+          default: "eip155",
+        },
+        chainId: {
+          type: "number",
+          description: "CAIP-2 chain reference within the network namespace.",
+          default: 1,
         },
       },
     },

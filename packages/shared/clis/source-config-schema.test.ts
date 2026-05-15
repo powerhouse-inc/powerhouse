@@ -68,13 +68,66 @@ describe("source-config schema", () => {
     expect(props.packages.items?.properties).toHaveProperty("packageName");
   });
 
-  it("connect references the shared PHConnectRuntimeConfig shape (has branding + drives)", () => {
+  it("connect references the shared PHConnectRuntimeConfig shape (covers every documented section)", () => {
     const props = sourceConfigSchema.properties as unknown as Record<
       string,
       { properties?: Record<string, unknown> }
     >;
     expect(props.connect.properties).toHaveProperty("branding");
+    expect(props.connect.properties).toHaveProperty("app");
+    expect(props.connect.properties).toHaveProperty("packages");
     expect(props.connect.properties).toHaveProperty("drives");
+    expect(props.connect.properties).toHaveProperty("renown");
+  });
+
+  it("connect.drives.sections collapses public+cloud into a single 'remote' (plan §2.4)", () => {
+    const props = sourceConfigSchema.properties as unknown as Record<
+      string,
+      {
+        properties?: Record<
+          string,
+          {
+            properties?: Record<
+              string,
+              { properties?: Record<string, unknown> }
+            >;
+          }
+        >;
+      }
+    >;
+    const sections = props.connect.properties?.drives.properties?.sections;
+    expect(sections?.properties).toHaveProperty("remote");
+    expect(sections?.properties).toHaveProperty("local");
+    expect(sections?.properties).not.toHaveProperty("public");
+    expect(sections?.properties).not.toHaveProperty("cloud");
+  });
+
+  it("connect schema uses affirmative naming only (no `disable*` fields, plan §2.4)", () => {
+    // Recursively collect every property name under `connect.*` and reject
+    // any that starts with `disable`. Catches regressions where the legacy
+    // PH_CONNECT_DISABLE_* env-var shape leaks back into the JSON schema.
+    const collected: string[] = [];
+    function walk(node: unknown): void {
+      if (!node || typeof node !== "object") return;
+      const obj = node as Record<string, unknown>;
+      if (obj.properties && typeof obj.properties === "object") {
+        for (const [key, child] of Object.entries(
+          obj.properties as Record<string, unknown>,
+        )) {
+          collected.push(key);
+          walk(child);
+        }
+      }
+      if (obj.items) walk(obj.items);
+      if (Array.isArray(obj.oneOf)) for (const v of obj.oneOf) walk(v);
+    }
+    const props = sourceConfigSchema.properties as unknown as Record<
+      string,
+      unknown
+    >;
+    walk(props.connect);
+    const offenders = collected.filter((k) => /^disable/i.test(k));
+    expect(offenders).toEqual([]);
   });
 
   it("reactor.https accepts boolean OR keyPath/certPath object", () => {

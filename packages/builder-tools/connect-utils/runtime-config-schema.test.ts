@@ -90,12 +90,30 @@ describe("runtime-config schema", () => {
           appName: "Test",
           homeBackground: { avif: "/a.avif", png: "/a.png" },
         },
+        app: {
+          logLevel: "debug",
+          basePath: "/connect/",
+        },
+        packages: {
+          externalEnabled: false,
+          registryUrl: "https://registry.example/-/cdn/",
+        },
         drives: {
           allowAddDrive: false,
           defaultDrives: [
             { url: "https://drive.example", name: "Drive", icon: "/icon.png" },
             { url: "https://drive2.example", name: null, icon: null },
           ],
+          preserveStrategy: "preserve-all",
+          sections: {
+            remote: { enabled: true, allowAdd: false, allowDelete: false },
+            local: { enabled: false, allowAdd: false, allowDelete: false },
+          },
+        },
+        renown: {
+          url: "https://renown.example",
+          networkId: "eip155",
+          chainId: 1,
         },
       },
     });
