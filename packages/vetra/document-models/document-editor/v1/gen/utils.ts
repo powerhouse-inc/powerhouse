@@ -32,7 +32,7 @@ export const initialGlobalState: DocumentEditorGlobalState = {
 export const initialLocalState: DocumentEditorLocalState = {};
 
 export const utils: DocumentModelUtils<DocumentEditorPHState> = {
-  fileExtension: ".phdm",
+  fileExtension: ".editor",
   createState(state) {
     return {
       ...defaultBaseState(),

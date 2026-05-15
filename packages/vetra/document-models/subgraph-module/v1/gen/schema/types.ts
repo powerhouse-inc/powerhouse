@@ -67,9 +67,20 @@ export type SetSubgraphStatusInput = {
   status: StatusType;
 };
 
+/**
+ * Lifecycle status of a module definition.
+ * - DRAFT: still being edited; codegen does not run.
+ * - CONFIRMED: locked in; codegen produces the corresponding scaffold.
+ */
 export type StatusType = "CONFIRMED" | "DRAFT";
 
+/**
+ * Configuration for a GraphQL subgraph contributed by the package. The subgraph
+ * is served by Switchboard and stitched into the unified Powerhouse API.
+ */
 export type SubgraphModuleState = {
+  /** Display name of the subgraph. Also determines the generated folder name under `subgraphs/` and the route segment Switchboard mounts it at. */
   name: Scalars["String"]["output"];
+  /** Lifecycle status. While DRAFT the subgraph definition is editable and codegen is skipped; switching to CONFIRMED triggers scaffold generation. */
   status: StatusType;
 };

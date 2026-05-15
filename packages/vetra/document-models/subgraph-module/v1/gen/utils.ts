@@ -31,7 +31,7 @@ export const initialGlobalState: SubgraphModuleGlobalState = {
 export const initialLocalState: SubgraphModuleLocalState = {};
 
 export const utils: DocumentModelUtils<SubgraphModulePHState> = {
-  fileExtension: ".phdm",
+  fileExtension: ".subgraph",
   createState(state) {
     return {
       ...defaultBaseState(),

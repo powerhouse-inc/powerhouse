@@ -7,8 +7,9 @@ export const documentModel: DocumentModelGlobalState = {
     name: "Powerhouse",
     website: "https://powerhouse.inc",
   },
-  extension: ".phdm",
-  description: "",
+  extension: ".subgraph",
+  description:
+    "Declares a GraphQL subgraph (a slice of the Switchboard API contributed by the package) shipped by a Vetra Reactor Package. Create one Subgraph Module document per subgraph, then mark it CONFIRMED to trigger codegen of the subgraph scaffold under `subgraphs/` \u2014 the resolvers and schema you flesh out there are stitched into the Switchboard graph at runtime.",
   specifications: [
     {
       state: {
@@ -19,7 +20,7 @@ export const documentModel: DocumentModelGlobalState = {
         },
         global: {
           schema:
-            "type SubgraphModuleState {\n  name: String!\n  status: StatusType!\n}\n\nenum StatusType {\n  DRAFT\n  CONFIRMED\n}",
+            '"""\nConfiguration for a GraphQL subgraph contributed by the package. The subgraph\nis served by Switchboard and stitched into the unified Powerhouse API.\n"""\ntype SubgraphModuleState {\n  """Display name of the subgraph. Also determines the generated folder name under `subgraphs/` and the route segment Switchboard mounts it at."""\n  name: String!\n  """Lifecycle status. While DRAFT the subgraph definition is editable and codegen is skipped; switching to CONFIRMED triggers scaffold generation."""\n  status: StatusType!\n}\n\n"""\nLifecycle status of a module definition.\n- DRAFT: still being edited; codegen does not run.\n- CONFIRMED: locked in; codegen produces the corresponding scaffold.\n"""\nenum StatusType {\n  DRAFT\n  CONFIRMED\n}',
           examples: [],
           initialValue: '{\n  "name": "",\n  "status": "DRAFT"\n}',
         },
@@ -28,12 +29,13 @@ export const documentModel: DocumentModelGlobalState = {
         {
           id: "8af5bda9-6fc7-4427-bfed-1d32d76a552f",
           name: "base_operations",
-          description: "",
+          description: "Set the subgraph's identity and lifecycle status.",
           operations: [
             {
               id: "d7cd6b6b-01ea-42c8-97e2-288e04b50b42",
               name: "SET_SUBGRAPH_NAME",
-              description: "",
+              description:
+                "Set the display name of the subgraph. Also determines the generated folder under `subgraphs/` and the route segment Switchboard mounts it at.",
               schema: "input SetSubgraphNameInput {\n  name: String!\n}",
               template: "",
               reducer: "",
@@ -44,7 +46,8 @@ export const documentModel: DocumentModelGlobalState = {
             {
               id: "5a20e641-dc36-428e-8924-ecb07f3f1b94",
               name: "SET_SUBGRAPH_STATUS",
-              description: "",
+              description:
+                "Move the subgraph between DRAFT and CONFIRMED. Codegen only runs once the status is CONFIRMED.",
               schema:
                 "input SetSubgraphStatusInput {\n  status: StatusType!\n}",
               template: "",
