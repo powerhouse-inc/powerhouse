@@ -25,7 +25,6 @@ export interface RenownUser {
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Express {
-    // eslint-disable-next-line @typescript-eslint/no-empty-object-type, @typescript-eslint/no-empty-interface
     interface Request {
       renownUser?: RenownUser;
     }
@@ -106,7 +105,6 @@ export function createRenownAuthMiddleware(opts: RenownAuthOptions) {
     let verdaccioJwt: string;
     try {
       verdaccioJwt = await signPayload(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         { name: address, real_groups: groups, groups } as any,
         opts.verdaccioSecret,
         { expiresIn: "5m" },

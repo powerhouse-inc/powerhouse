@@ -65,16 +65,14 @@ async function main(): Promise<void> {
     // Publishes @powerhousedao/* + document-model + ph-cmd from the current
     // workspace so the docker containers below resolve the local code under
     // test, not whatever happens to be on npmjs at the `dev` tag.
-    run(
-      path.join(ROOT, "node_modules/.bin/tsx"),
-      [path.join(ROOT, "scripts/publish-workspace.ts")],
-    );
+    run(path.join(ROOT, "node_modules/.bin/tsx"), [
+      path.join(ROOT, "scripts/publish-workspace.ts"),
+    ]);
 
     step("3/6 Publish todo package to local registry");
-    run(
-      path.join(ROOT, "node_modules/.bin/tsx"),
-      [path.join(ROOT, "scripts/publish-package.ts")],
-    );
+    run(path.join(ROOT, "node_modules/.bin/tsx"), [
+      path.join(ROOT, "scripts/publish-package.ts"),
+    ]);
 
     step("4/6 Bring up Connect + Switchboard via docker compose");
     // The containers' /root/.npmrc has registry=http://host.docker.internal:8080,

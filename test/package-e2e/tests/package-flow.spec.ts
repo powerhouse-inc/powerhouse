@@ -21,7 +21,19 @@ test("package-flow: drive + document + edits propagate via switchboard", async (
   // ---- 1. Verify the published package was loaded into Switchboard. ----
   const models = await graphql<{
     documentModels: { items: { id: string; name: string }[] };
-  }>("/graphql", `{ documentModels { items { id name } } }`);
+  }>(
+    "/graphql",
+    `
+      {
+        documentModels {
+          items {
+            id
+            name
+          }
+        }
+      }
+    `,
+  );
   const todoModel = models.documentModels.items.find(
     (m) => m.id === "test/todo",
   );
@@ -40,13 +52,16 @@ test("package-flow: drive + document + edits propagate via switchboard", async (
     Todo: { createDocument: CreatedDoc };
   }>(
     "/graphql/todo",
-    `mutation CreateTodo($name: String!, $parent: String!) {
-       Todo {
-         createDocument(name: $name, parentIdentifier: $parent) {
-           id name
-         }
-       }
-     }`,
+    `
+      mutation CreateTodo($name: String!, $parent: String!) {
+        Todo {
+          createDocument(name: $name, parentIdentifier: $parent) {
+            id
+            name
+          }
+        }
+      }
+    `,
     { name: "Groceries", parent: drive.id },
   );
   const docId = created.Todo.createDocument.id;
@@ -57,9 +72,15 @@ test("package-flow: drive + document + edits propagate via switchboard", async (
   for (const [i, id] of todoIds.entries()) {
     await graphql(
       "/graphql/todo",
-      `mutation Add($docId: PHID!, $input: Todo_AddTodoInput!) {
-         Todo { addTodo(docId: $docId, input: $input) { id } }
-       }`,
+      `
+        mutation Add($docId: PHID!, $input: Todo_AddTodoInput!) {
+          Todo {
+            addTodo(docId: $docId, input: $input) {
+              id
+            }
+          }
+        }
+      `,
       { docId, input: { id, title: `Item ${i + 1}`, completed: false } },
     );
   }
@@ -69,9 +90,15 @@ test("package-flow: drive + document + edits propagate via switchboard", async (
   // Connect's editor runs in the browser.
   await graphql(
     "/graphql/todo",
-    `mutation Update($docId: PHID!, $input: Todo_UpdateTodoInput!) {
-       Todo { updateTodo(docId: $docId, input: $input) { id } }
-     }`,
+    `
+      mutation Update($docId: PHID!, $input: Todo_UpdateTodoInput!) {
+        Todo {
+          updateTodo(docId: $docId, input: $input) {
+            id
+          }
+        }
+      }
+    `,
     {
       docId,
       input: { id: "todo-2", completed: true },
@@ -79,9 +106,15 @@ test("package-flow: drive + document + edits propagate via switchboard", async (
   );
   await graphql(
     "/graphql/todo",
-    `mutation Remove($docId: PHID!, $input: Todo_RemoveTodoInput!) {
-       Todo { removeTodo(docId: $docId, input: $input) { id } }
-     }`,
+    `
+      mutation Remove($docId: PHID!, $input: Todo_RemoveTodoInput!) {
+        Todo {
+          removeTodo(docId: $docId, input: $input) {
+            id
+          }
+        }
+      }
+    `,
     { docId, input: { id: "todo-3" } },
   );
 
@@ -90,13 +123,10 @@ test("package-flow: drive + document + edits propagate via switchboard", async (
   // /graphql/todo subgraph must be readable via the operations query.
   const baselineOps = await getDocumentOperations(docId);
   const baselineTypes = baselineOps.map((o) => o.action.type);
-  expect(baselineTypes, "GraphQL-dispatched ops should be recorded in order").toEqual([
-    "ADD_TODO",
-    "ADD_TODO",
-    "ADD_TODO",
-    "UPDATE_TODO",
-    "REMOVE_TODO",
-  ]);
+  expect(
+    baselineTypes,
+    "GraphQL-dispatched ops should be recorded in order",
+  ).toEqual(["ADD_TODO", "ADD_TODO", "ADD_TODO", "UPDATE_TODO", "REMOVE_TODO"]);
 
   // Spot-check one input round-trips intact.
   const firstAdd = baselineOps[0].action.input as {
@@ -214,19 +244,19 @@ test("package-flow: drive + document + edits propagate via switchboard", async (
   // Poll Switchboard for the new operation. Sync is usually fast (<2s) but
   // give it a wide window for slower hosts.
   await expect
-    .poll(
-      async () => (await getDocumentOperations(docId)).length,
-      {
-        timeout: 30_000,
-        intervals: [500],
-        message: "Connect should have synced one more operation to Switchboard",
-      },
-    )
+    .poll(async () => (await getDocumentOperations(docId)).length, {
+      timeout: 30_000,
+      intervals: [500],
+      message: "Connect should have synced one more operation to Switchboard",
+    })
     .toBe(baselineOps.length + 1);
   const finalOps = await getDocumentOperations(docId);
   const lastOp = finalOps[finalOps.length - 1];
   expect(lastOp.action.type).toBe("ADD_TODO");
-  const lastInput = lastOp.action.input as { title: string; completed: boolean };
+  const lastInput = lastOp.action.input as {
+    title: string;
+    completed: boolean;
+  };
   expect(lastInput.title).toBe(uiTodoTitle);
   expect(lastInput.completed).toBe(false);
 
@@ -234,5 +264,7 @@ test("package-flow: drive + document + edits propagate via switchboard", async (
     `[test] UI-dispatched ADD_TODO("${uiTodoTitle}") synced to Switchboard ` +
       `(ops: ${baselineOps.length} → ${finalOps.length})`,
   );
-  console.log(`[test] switchboard: ${SWITCHBOARD_URL}, connect: ${CONNECT_URL}`);
+  console.log(
+    `[test] switchboard: ${SWITCHBOARD_URL}, connect: ${CONNECT_URL}`,
+  );
 });

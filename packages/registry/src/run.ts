@@ -94,9 +94,7 @@ export async function runRegistry(args: RegistryCommandArgs) {
     uplink,
     webEnabled,
     verdaccioSecret,
-    ...(localPackagePatterns?.length
-      ? { localPackagePatterns }
-      : {}),
+    ...(localPackagePatterns?.length ? { localPackagePatterns } : {}),
     ...(renownEnabled && publicUrl ? { renown: { publicUrl } } : {}),
     ...(webhookConfigs?.length && {
       notify: { webhooks: webhookConfigs },
