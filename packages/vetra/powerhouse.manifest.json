@@ -71,7 +71,16 @@
       ]
     }
   ],
-  "processors": [],
+  "processors": [
+    {
+      "id": "codegen",
+      "name": "codegen"
+    },
+    {
+      "id": "vetra-read-model",
+      "name": "vetra-read-model"
+    }
+  ],
   "subgraphs": [],
   "config": []
 }
