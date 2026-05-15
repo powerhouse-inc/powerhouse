@@ -1,3 +1,29 @@
+## 6.0.0-dev.249 (2026-05-15)
+
+### 🚀 Features
+
+- add tailwind eslint plugin ([#2612](https://github.com/powerhouse-inc/powerhouse/pull/2612))
+- added release script ([20454f119](https://github.com/powerhouse-inc/powerhouse/commit/20454f119))
+- added release script ([#2606](https://github.com/powerhouse-inc/powerhouse/pull/2606))
+
+### 🩹 Fixes
+
+- reactor tests are timing out on CI, we need less parallelization and higher timeouts ([7dc3580e2](https://github.com/powerhouse-inc/powerhouse/commit/7dc3580e2))
+- sync integration test should not use atomicfs ([75d0a1785](https://github.com/powerhouse-inc/powerhouse/commit/75d0a1785))
+- break circular import between exec.ts and ui.ts ([fe17e90ec](https://github.com/powerhouse-inc/powerhouse/commit/fe17e90ec))
+- pin the integration test package ([a2085a260](https://github.com/powerhouse-inc/powerhouse/commit/a2085a260))
+- **codegen:** install dependencies during migrate before regeneration ([ff107e29f](https://github.com/powerhouse-inc/powerhouse/commit/ff107e29f))
+- **codegen:** stop reordering document-model keys and fix generateMock import ([cd86c9b51](https://github.com/powerhouse-inc/powerhouse/commit/cd86c9b51))
+- **ph-cmd:** pass --allow-build to pnpm dlx during ph init ([d1ea8548c](https://github.com/powerhouse-inc/powerhouse/commit/d1ea8548c))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.248 (2026-05-14)
 
 ### 🚀 Features
