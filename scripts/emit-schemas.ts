@@ -14,6 +14,7 @@ import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { runtimeConfigSchema } from "@powerhousedao/builder-tools";
 import { sourceConfigSchema } from "@powerhousedao/shared/clis";
+import prettier from "prettier";
 
 const here = resolve(fileURLToPath(import.meta.url), "..");
 const repoRoot = resolve(here, "..");
@@ -33,6 +34,15 @@ const targets: { path: string; schema: unknown }[] = [
 ];
 
 for (const { path, schema } of targets) {
-  writeFileSync(path, `${JSON.stringify(schema, null, 2)}\n`, "utf-8");
+  const raw = `${JSON.stringify(schema, null, 2)}\n`;
+  // Run the JSON through prettier with the project config so the emitted
+  // artifact passes `prettier --check`. JSON.stringify always puts each array
+  // element on its own line; prettier collapses short arrays — without this
+  // pass the two disagree and the committed artifact fails the lint gate.
+  const formatted = await prettier.format(raw, {
+    ...(await prettier.resolveConfig(path)),
+    filepath: path,
+  });
+  writeFileSync(path, formatted, "utf-8");
   console.log(`wrote ${path}`);
 }

@@ -12,13 +12,7 @@
     },
     "logLevel": {
       "type": "string",
-      "enum": [
-        "debug",
-        "info",
-        "warn",
-        "error",
-        "verbose"
-      ],
+      "enum": ["debug", "info", "warn", "error", "verbose"],
       "description": "Log level for CLI commands and the reactor."
     },
     "documentModelsDir": {
@@ -70,10 +64,7 @@
             {
               "type": "object",
               "additionalProperties": false,
-              "required": [
-                "keyPath",
-                "certPath"
-              ],
+              "required": ["keyPath", "certPath"],
               "properties": {
                 "keyPath": {
                   "type": "string",
@@ -91,19 +82,12 @@
         "storage": {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "type"
-          ],
+          "required": ["type"],
           "description": "Reactor persistent storage backend.",
           "properties": {
             "type": {
               "type": "string",
-              "enum": [
-                "filesystem",
-                "memory",
-                "postgres",
-                "browser"
-              ]
+              "enum": ["filesystem", "memory", "postgres", "browser"]
             },
             "filesystemPath": {
               "type": "string",
@@ -120,9 +104,7 @@
     "auth": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "admins"
-      ],
+      "required": ["admins"],
       "description": "Authentication and authorisation settings.",
       "properties": {
         "enabled": {
@@ -166,9 +148,7 @@
     "studio": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "https"
-      ],
+      "required": ["https"],
       "description": "Connect Studio dev-server configuration.",
       "properties": {
         "port": {
@@ -195,9 +175,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "packageName"
-        ],
+        "required": ["packageName"],
         "properties": {
           "packageName": {
             "type": "string",
@@ -209,12 +187,7 @@
           },
           "provider": {
             "type": "string",
-            "enum": [
-              "npm",
-              "github",
-              "local",
-              "registry"
-            ],
+            "enum": ["npm", "github", "local", "registry"],
             "description": "Where Connect should resolve the package from at runtime."
           },
           "url": {
@@ -227,10 +200,7 @@
     "vetra": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "driveId",
-        "driveUrl"
-      ],
+      "required": ["driveId", "driveUrl"],
       "description": "Vetra integration coordinates.",
       "properties": {
         "driveId": {
@@ -283,6 +253,40 @@
             }
           }
         },
+        "app": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Top-level Connect application behaviour.",
+          "properties": {
+            "logLevel": {
+              "type": "string",
+              "enum": ["debug", "info", "warn", "error"],
+              "description": "Log level applied by Connect's logger at boot. Affects browser-side output only.",
+              "default": "info"
+            },
+            "basePath": {
+              "type": "string",
+              "description": "Base path Connect is mounted under (e.g. '/connect' for subpath deploys). Normalised at runtime to start and end with '/'. Defaults to the build-time BASE_URL.",
+              "default": "/"
+            }
+          }
+        },
+        "packages": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Runtime behaviour for the Connect package manager (separate from top-level `packages[]`, which lists which packages to load).",
+          "properties": {
+            "externalEnabled": {
+              "type": "boolean",
+              "description": "When false, Connect refuses to load any package that wasn't bundled at build time. Affirmative replacement for the legacy PH_CONNECT_EXTERNAL_PACKAGES_DISABLED env var.",
+              "default": true
+            },
+            "registryUrl": {
+              "type": "string",
+              "description": "CDN endpoint Connect fetches external packages from at runtime. Supports comma-separated URLs for multi-registry setups. Environment-specific — no schema default."
+            }
+          }
+        },
         "drives": {
           "type": "object",
           "additionalProperties": false,
@@ -290,35 +294,107 @@
           "properties": {
             "allowAddDrive": {
               "type": "boolean",
-              "description": "When false, the SPA hides the 'add drive' affordance. Defaults to true."
+              "description": "When false, the SPA hides the 'add drive' affordance entirely (top-level). Per-section overrides live in `sections.{remote,local}.allowAdd`.",
+              "default": true
             },
             "defaultDrives": {
               "type": "array",
               "description": "Drives the SPA auto-connects to on first load. Each must specify a URL; name and icon are optional overrides.",
+              "default": [],
               "items": {
                 "type": "object",
                 "additionalProperties": false,
-                "required": [
-                  "url"
-                ],
+                "required": ["url"],
                 "properties": {
                   "url": {
                     "type": "string"
                   },
                   "name": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
+                    "type": ["string", "null"]
                   },
                   "icon": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
+                    "type": ["string", "null"]
                   }
                 }
               }
+            },
+            "preserveStrategy": {
+              "type": "string",
+              "enum": ["preserve-all", "preserve-by-url-and-detach"],
+              "description": "Strategy applied when defaultDrives change between deploys. 'preserve-all' keeps user-added drives untouched; 'preserve-by-url-and-detach' detaches removed default drives. No schema default — opt-in only."
+            },
+            "sections": {
+              "type": "object",
+              "additionalProperties": false,
+              "description": "Per-section visibility and affordance toggles. `remote` covers what was historically split into 'public' + 'cloud'; `local` is browser-local drives.",
+              "properties": {
+                "remote": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "description": "Visibility and add/delete affordances for a drive section in the sidebar.",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean",
+                      "description": "When false, the section is hidden in the sidebar.",
+                      "default": true
+                    },
+                    "allowAdd": {
+                      "type": "boolean",
+                      "description": "When false, the section's 'add drive' affordance is hidden.",
+                      "default": true
+                    },
+                    "allowDelete": {
+                      "type": "boolean",
+                      "description": "When false, drives in this section cannot be deleted from the UI.",
+                      "default": true
+                    }
+                  }
+                },
+                "local": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "description": "Visibility and add/delete affordances for a drive section in the sidebar.",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean",
+                      "description": "When false, the section is hidden in the sidebar.",
+                      "default": true
+                    },
+                    "allowAdd": {
+                      "type": "boolean",
+                      "description": "When false, the section's 'add drive' affordance is hidden.",
+                      "default": true
+                    },
+                    "allowDelete": {
+                      "type": "boolean",
+                      "description": "When false, drives in this section cannot be deleted from the UI.",
+                      "default": true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "renown": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Renown identity / authentication coordinates.",
+          "properties": {
+            "url": {
+              "type": "string",
+              "description": "Renown auth service URL.",
+              "default": "https://www.renown.id"
+            },
+            "networkId": {
+              "type": "string",
+              "description": "CAIP-2 network namespace (e.g. 'eip155').",
+              "default": "eip155"
+            },
+            "chainId": {
+              "type": "number",
+              "description": "CAIP-2 chain reference within the network namespace.",
+              "default": 1
             }
           }
         }
