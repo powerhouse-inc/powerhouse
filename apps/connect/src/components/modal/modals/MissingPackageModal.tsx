@@ -2,7 +2,7 @@ import { useRegistryPackages } from "@powerhousedao/connect/hooks";
 import {
   PackageInstallModal,
   type PendingPackageInstallation,
-} from "@powerhousedao/design-system/connect/index";
+} from "@powerhousedao/design-system/connect";
 import {
   closePHModal,
   usePHModal,
