@@ -15,22 +15,27 @@
   ],
   "exports": {
     ".": {
+      "source": "./index.ts",
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
     "./analytics": {
+      "source": "./src/analytics/index.ts",
       "types": "./dist/src/analytics/index.d.ts",
       "import": "./dist/src/analytics/index.js"
     },
     "./graphql": {
+      "source": "./src/graphql/client.ts",
       "types": "./dist/src/graphql/client.d.ts",
       "import": "./dist/src/graphql/client.js"
     },
     "./relational": {
+      "source": "./src/relational/index.ts",
       "types": "./dist/src/relational/index.d.ts",
       "import": "./dist/src/relational/index.js"
     },
     "./renown": {
+      "source": "./src/renown/index.ts",
       "types": "./dist/src/renown/index.d.ts",
       "import": "./dist/src/renown/index.js"
     }

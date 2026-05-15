@@ -3,6 +3,7 @@
   "compilerOptions": {
     "types": ["node", "vitest/globals"],
     "outDir": "./dist",
+    "tsBuildInfoFile": "./.tsbuild/tsconfig.tsbuildinfo",
     "lib": ["ESNext", "dom", "dom.iterable"]
   },
   "include": [

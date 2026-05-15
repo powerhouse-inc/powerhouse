@@ -2,7 +2,8 @@
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
     "types": ["node"],
-    "outDir": "./dist"
+    "outDir": "./dist",
+    "tsBuildInfoFile": "./.tsbuild/tsconfig.tsbuildinfo",
   },
   "include": ["**/*"],
   "references": [

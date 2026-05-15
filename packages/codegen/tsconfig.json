@@ -2,6 +2,7 @@
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
     "outDir": "./dist",
+    "tsBuildInfoFile": "./.tsbuild/tsconfig.tsbuildinfo",
     "customConditions": ["source"],
     "lib": ["ESNext", "dom", "dom.iterable"],
     "paths": {

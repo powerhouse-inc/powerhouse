@@ -3,6 +3,7 @@
   "compilerOptions": {
     "lib": ["ESNext", "dom", "dom.iterable"],
     "outDir": "./dist",
+    "tsBuildInfoFile": "./.tsbuild/tsconfig.tsbuildinfo",
     "types": ["@types/wicg-file-system-access", "vitest/globals"]
   },
   "include": ["**/*"],

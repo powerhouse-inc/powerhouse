@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
     "composite": true,
+    "customConditions": ["source"],
     "rootDir": ".",
     // paths for easy access to project modules
     "paths": {
@@ -20,6 +21,7 @@
     "lib": ["ESNext", "dom", "dom.iterable"],
     "declaration": true,
     "declarationDir": "./dist/types",
+    "tsBuildInfoFile": "./.tsbuild/tsconfig.tsbuildinfo",
     "declarationMap": true,
     "emitDeclarationOnly": true,
     "incremental": true,
