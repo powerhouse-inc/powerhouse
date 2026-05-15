@@ -4,28 +4,45 @@
 # scaffolds a Powerhouse project and installs the package published to the
 # host registry (reached via host.docker.internal).
 #
+# Stages:
+#   scaffold           — toolchain + `ph init` against the workspace dev tag.
+#                        Depends only on workspace packages being published to
+#                        the local registry. Built in parallel with the host's
+#                        `publish-package.ts` (test/package-e2e/scripts/run.ts).
+#   package-installed  — scaffold + `ph install <todo-pkg>`. Needs the todo
+#                        package to be in the registry, so runs after publish.
+#   connect-builder    — runs `ph connect build` against package-installed.
+#   connect            — nginx image serving the connect bundle.
+#   switchboard        — node runtime serving switchboard against the same
+#                        package-installed scaffold.
+#
 # Build:
-#   docker build --target connect    -t test-pkg-e2e-connect    .
+#   docker build --target scaffold    -t test-pkg-e2e-scaffold    .
+#   docker build --target connect     -t test-pkg-e2e-connect     .
 #   docker build --target switchboard -t test-pkg-e2e-switchboard .
 
 # -----------------------------------------------------------------------------
-# Base: scaffold project + install the published package
+# scaffold: toolchain + `ph init`. Only depends on workspace packages.
 # -----------------------------------------------------------------------------
-FROM node:24-alpine AS base
+FROM node:24-alpine AS scaffold
 
 WORKDIR /app
 
-RUN apk add --no-cache python3 make g++ git bash curl \
+# python/make/g++ for native module compilation during pnpm install (e.g.
+# better-sqlite3). git for any git-based deps. curl for the switchboard
+# healthcheck. bash is not needed — `ash` handles the `case` statement below.
+RUN apk add --no-cache python3 make g++ git curl \
     && ln -sf /usr/bin/python3 /usr/bin/python
 
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME/bin:$PATH"
-RUN corepack enable && corepack prepare pnpm@latest --activate
+# Pin to skip corepack's `latest` lookup against the registry; ~10s faster
+# than `corepack prepare pnpm@latest --activate`.
+RUN corepack enable && corepack prepare pnpm@11.0.8 --activate
 
 # Channel for the project's @powerhousedao/* deps. Pass --build-arg TAG=staging
 # (or latest) to switch. "dev" matches publish-package.ts default.
 ARG TAG=dev
-ARG PACKAGE_NAME=test-todo-package
 ARG REGISTRY_URL=http://host.docker.internal:8080
 
 # Route every install through the local registry (which uplinks to npmjs).
@@ -44,10 +61,19 @@ RUN case "$TAG" in \
 
 WORKDIR /app/project
 
-# CACHEBUST invalidates just the install layer below, so a re-run picks up a
-# freshly published `test-todo-package@1.0.0` even though the version string
-# didn't change. Pass --build-arg CACHEBUST=$(date +%s) (or any unique
-# value) from the orchestrator. Earlier layers stay cached.
+# -----------------------------------------------------------------------------
+# package-installed: scaffold + `ph install <pkg>`. Needs the todo package
+# to already be published.
+# -----------------------------------------------------------------------------
+FROM scaffold AS package-installed
+
+ARG PACKAGE_NAME=test-todo-package
+ARG REGISTRY_URL=http://host.docker.internal:8080
+
+# CACHEBUST invalidates this layer, so a re-run picks up a freshly published
+# `test-todo-package@1.0.0` even though the version string didn't change.
+# Pass --build-arg CACHEBUST=$(date +%s) from the orchestrator. Scaffold
+# layers stay cached.
 ARG CACHEBUST=0
 RUN echo "cachebust=${CACHEBUST}" > /dev/null
 
@@ -62,7 +88,7 @@ RUN ph install "${PACKAGE_NAME}" --registry "${REGISTRY_URL}"
 # -----------------------------------------------------------------------------
 # Connect: build static assets and serve via nginx
 # -----------------------------------------------------------------------------
-FROM base AS connect-builder
+FROM package-installed AS connect-builder
 
 ARG PH_CONNECT_BASE_PATH="/"
 # powerhouse.config.json holds the container-side URL (host.docker.internal),
@@ -91,7 +117,7 @@ ENTRYPOINT ["/docker-entrypoint.sh"]
 # -----------------------------------------------------------------------------
 # Switchboard: node runtime
 # -----------------------------------------------------------------------------
-FROM base AS switchboard
+FROM package-installed AS switchboard
 
 # PH_REGISTRY_URL overrides powerhouse.config.json's packageRegistryUrl
 # (which `ph init` defaults to the public dev registry — `ph install` won't

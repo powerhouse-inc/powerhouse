@@ -1,4 +1,9 @@
-import { execSync, spawnSync, type ChildProcess } from "node:child_process";
+import {
+  execSync,
+  spawn,
+  spawnSync,
+  type ChildProcess,
+} from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { startRegistry, stopRegistry } from "@powerhousedao/e2e-utils";
@@ -29,6 +34,32 @@ function runWithEnv(
       `Command failed (${res.status ?? "signal"}): ${cmd} ${args.join(" ")}`,
     );
   }
+}
+
+function runAsync(
+  cmd: string,
+  args: string[],
+  cwd: string,
+  env: NodeJS.ProcessEnv,
+  label: string,
+): Promise<void> {
+  console.log(`[${label}] $ ${cmd} ${args.join(" ")}`);
+  return new Promise((resolve, reject) => {
+    const child = spawn(cmd, args, { cwd, stdio: "inherit", env });
+    child.on("error", reject);
+    child.on("exit", (code, signal) => {
+      if (code === 0) {
+        console.log(`[${label}] done`);
+        resolve();
+      } else {
+        reject(
+          new Error(
+            `[${label}] failed (${code ?? signal ?? "unknown"}): ${cmd} ${args.join(" ")}`,
+          ),
+        );
+      }
+    });
+  });
 }
 
 async function main(): Promise<void> {
@@ -69,9 +100,36 @@ async function main(): Promise<void> {
       path.join(ROOT, "scripts/publish-workspace.ts"),
     ]);
 
-    step("3/6 Publish todo package to local registry");
-    run(path.join(ROOT, "node_modules/.bin/tsx"), [
-      path.join(ROOT, "scripts/publish-package.ts"),
+    step("3/6 Publish todo package + pre-build scaffold image (parallel)");
+    // Once workspace packages are in the local registry, the Dockerfile's
+    // `scaffold` stage (toolchain + `ph init` with workspace deps) can build
+    // in parallel with publish-package.ts (which ph init's, lints, tscs,
+    // builds, and publishes the todo package). They take comparable wall
+    // time, so overlapping saves ~80-90s vs the previous sequential flow.
+    // Buildkit tags the cached scaffold image so the final docker compose
+    // build below reuses it.
+    await Promise.all([
+      runAsync(
+        path.join(ROOT, "node_modules/.bin/tsx"),
+        [path.join(ROOT, "scripts/publish-package.ts")],
+        ROOT,
+        process.env,
+        "publish-package",
+      ),
+      runAsync(
+        "docker",
+        [
+          "build",
+          "--target=scaffold",
+          "--tag=test-pkg-e2e-scaffold",
+          "-f",
+          path.join(ROOT, "docker/Dockerfile"),
+          ROOT,
+        ],
+        ROOT,
+        process.env,
+        "scaffold-build",
+      ),
     ]);
 
     step("4/6 Bring up Connect + Switchboard via docker compose");
@@ -82,8 +140,7 @@ async function main(): Promise<void> {
     //
     // CACHEBUST invalidates just the `ph install test-todo-package@1.0.0`
     // layer so it re-fetches the latest payload from the freshly-started
-    // registry. Layers before it stay cached, so re-runs only re-do install
-    // + downstream steps (~5-15s) instead of the whole image (~90s).
+    // registry. The scaffold stage we just built provides every prior layer.
     const env = { ...process.env, CACHEBUST: Date.now().toString() };
     runWithEnv("docker", ["compose", ...COMPOSE, "build"], ROOT, env);
     runWithEnv("docker", ["compose", ...COMPOSE, "up", "-d"], ROOT, env);
