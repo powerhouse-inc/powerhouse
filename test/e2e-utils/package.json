@@ -16,7 +16,10 @@
       "types": "./dist/helpers/index.d.mts",
       "import": "./dist/helpers/index.mjs"
     },
-    "./helpers/*": "./dist/helpers/*.mjs",
+    "./helpers/*": {
+      "source": "./src/helpers/*.ts",
+      "import": "./dist/helpers/*.mjs"
+    },
     "./types": {
       "source": "./src/types/index.ts",
       "types": "./dist/types/index.d.mts",
