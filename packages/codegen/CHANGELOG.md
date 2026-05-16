@@ -1,3 +1,13 @@
+## 6.0.0-dev.251 (2026-05-16)
+
+### 🩹 Fixes
+
+- **codegen:** guard FolderTree template against undefined selected drive ([026a74ad9](https://github.com/powerhouse-inc/powerhouse/commit/026a74ad9))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.250 (2026-05-15)
 
 ### 🚀 Features
