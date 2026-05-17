@@ -1,3 +1,7 @@
+## 6.0.0-dev.252 (2026-05-17)
+
+This was a version bump only for @powerhousedao/powerhouse-vetra-packages to align it with other projects, there were no code changes.
+
 ## 6.0.0-dev.251 (2026-05-16)
 
 ### 🩹 Fixes
