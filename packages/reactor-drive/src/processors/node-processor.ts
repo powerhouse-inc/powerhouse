@@ -14,7 +14,10 @@ import type {
   UpgradeDocumentActionInput,
 } from "@powerhousedao/shared/document-model";
 import type { Kysely, Transaction } from "kysely";
-import { DRIVE_CHILD_RELATIONSHIP_TYPE } from "../constants.js";
+import {
+  DRIVE_CHILD_RELATIONSHIP_TYPE,
+  REACTOR_DRIVE_DOCUMENT_TYPE,
+} from "../constants.js";
 import { runReactorDriveMigrations } from "../schema/migrations/migrator.js";
 import type { ReactorDriveDatabase } from "../schema/tables.js";
 import type {
@@ -162,6 +165,10 @@ export class NodeProcessor extends BaseReadModel {
     trx: Transaction<NodeProcessorDatabase>,
     item: OperationWithContext,
   ): Promise<void> {
+    if (item.context.documentType !== REACTOR_DRIVE_DOCUMENT_TYPE) {
+      return;
+    }
+
     const action = item.operation.action;
     const driveId = item.context.documentId;
 
