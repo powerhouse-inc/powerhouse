@@ -122,6 +122,14 @@ async function main(): Promise<void> {
           "build",
           "--target=scaffold",
           "--tag=test-pkg-e2e-scaffold",
+          // `host.docker.internal` is auto-defined by Docker Desktop but not
+          // by Linux Docker (GitHub Actions runners). The scaffold's
+          // `pnpm add -g ph-cmd@dev` + `ph init` need to reach the host
+          // registry, so route via the daemon's host-gateway. This mirrors
+          // the `extra_hosts:` set in docker-compose.yml (which only applies
+          // when building via `docker compose build`, not this raw `docker
+          // build`).
+          "--add-host=host.docker.internal:host-gateway",
           "-f",
           path.join(ROOT, "docker/Dockerfile"),
           ROOT,
