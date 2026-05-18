@@ -320,9 +320,6 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 25.2.3
-      '@types/picomatch':
-        specifier: ^4.0.3
-        version: 4.0.3
       '@types/semver':
         specifier: ^7.7.0
         version: 7.7.1
@@ -2411,7 +2408,7 @@ importers:
         version: 27.0.2
       tsdown:
         specifier: 'catalog:'
-        version: 0.21.1(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@tsdown/css@0.21.1)(oxc-resolver@11.19.0(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(synckit@0.11.12)(typescript@5.9.3)
+        version: 0.21.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@tsdown/css@0.21.1)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(synckit@0.11.12)(typescript@5.9.3)
       vite:
         specifier: 'catalog:'
         version: 8.0.8(@types/node@25.2.3)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3)
@@ -9347,9 +9344,6 @@ packages:
 
   '@types/pg@8.6.1':
     resolution: {integrity: sha512-1Kc4oAGzAl7uqUStZCDvaLFqZrW9qWSjXOmBfdgyBP5La7Us6Mg4GBvRlSoaZMhQF/zSj1C8CtKMBkoiT8eL8w==}
-
-  '@types/picomatch@4.0.3':
-    resolution: {integrity: sha512-iG0T6+nYJ9FAPmx9SsUlnwcq1ZVRuCXcVEvWnntoPlrOpwtSTKNDC9uVAxTsC3PUvJ+99n4RpAcNgBbHX3JSnQ==}
 
   '@types/prismjs@1.26.6':
     resolution: {integrity: sha512-vqlvI7qlMvcCBbVe0AKAb4f97//Hy0EBTaiW8AalRnG/xAN5zOiWWyrNqNXeq8+KAuvRewjCVY1+IPxk4RdNYw==}
@@ -27394,8 +27388,6 @@ snapshots:
       '@types/node': 25.5.0
       pg-protocol: 1.12.0
       pg-types: 2.2.0
-
-  '@types/picomatch@4.0.3': {}
 
   '@types/prismjs@1.26.6': {}
 
