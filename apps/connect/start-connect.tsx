@@ -1,6 +1,15 @@
 import type { DocumentModelLib } from "@powerhousedao/shared/document-model";
 import { createRoot } from "react-dom/client";
-import { AppLoader } from "./src/components/index.js";
+import { loadRuntimeConfig } from "./src/runtime-config.js";
+
+// Bootstrap the runtime config BEFORE the React tree imports. Any module that
+// imports start-connect.tsx — including the codegen-generated main.tsx —
+// suspends on this top-level await, so by the time the dynamic import of
+// AppLoader resolves, the ConfigLoader cache is warm and connect.config.ts
+// can read getRuntimeConfig() synchronously at module evaluation.
+await loadRuntimeConfig();
+
+const { AppLoader } = await import("./src/components/index.js");
 
 /* Starts your local dev server for Connect.
  *

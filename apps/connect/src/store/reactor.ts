@@ -1,6 +1,6 @@
 import {
   buildPHGlobalConfig,
-  phGlobalConfigFromEnv,
+  phGlobalConfig,
 } from "@powerhousedao/connect/config";
 import { toast } from "@powerhousedao/connect/services";
 import {
@@ -107,8 +107,8 @@ export async function createReactor(localPackage?: DocumentModelLib) {
 
   // initialize Renown
   const renown = await new RenownBuilder("connect", {
-    basename: phGlobalConfigFromEnv.routerBasename,
-    baseUrl: phGlobalConfigFromEnv.renownUrl,
+    basename: phGlobalConfig.routerBasename,
+    baseUrl: phGlobalConfig.renownUrl,
   })
     .withCrypto(renownCrypto)
     .build();
@@ -120,7 +120,7 @@ export async function createReactor(localPackage?: DocumentModelLib) {
 
   // initialize package manager
   const packageManager = new BrowserPackageManager(
-    phGlobalConfigFromEnv.routerBasename ?? "",
+    phGlobalConfig.routerBasename ?? "",
     typeof PH_PACKAGE_REGISTRY_URL === "undefined"
       ? null
       : PH_PACKAGE_REGISTRY_URL,
@@ -184,7 +184,7 @@ export async function createReactor(localPackage?: DocumentModelLib) {
           new RegistryClient(packageManager.cdnUrl),
           {
             mode: "immediate",
-            storageKey: phGlobalConfigFromEnv.routerBasename ?? "",
+            storageKey: phGlobalConfig.routerBasename ?? "",
           },
         )
       : new NoRegistryDiscoveryService(packageManager);
@@ -214,8 +214,8 @@ export async function createReactor(localPackage?: DocumentModelLib) {
   const documentCache = new DocumentCache(reactorClientModule.client);
 
   // dispatch the events to set the values in the window object
-  const basePath = phGlobalConfigFromEnv.basePath ?? "/";
-  const routerBasename = phGlobalConfigFromEnv.routerBasename ?? "/";
+  const basePath = phGlobalConfig.basePath ?? "/";
+  const routerBasename = phGlobalConfig.routerBasename ?? "/";
   const mergedGlobalConfig = buildPHGlobalConfig(
     basePath,
     routerBasename,
