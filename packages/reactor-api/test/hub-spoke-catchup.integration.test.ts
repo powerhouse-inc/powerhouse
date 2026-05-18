@@ -55,7 +55,9 @@ const TEST_TIMEOUT_MS = 300_000;
 const REGISTRY_URL =
   process.env.PH_REGISTRY_URL ?? "https://registry.dev.vetra.io/";
 
-const PINNED_KNOWLEDGE_NOTE_SPEC = "@powerhousedao/knowledge-note@1.0.32";
+const PINNED_KNOWLEDGE_NOTE_SPEC = "@powerhousedao/knowledge-note@1.0.39";
+
+const KNOWLEDGE_VAULT_DRIVE_ID = "8fbe8789-796a-46a4-ae7f-7afcd1c5bacf";
 
 describe.each(DRIVE_TYPES)(
   "hub-spoke catch-up [$driveType]",
@@ -112,7 +114,9 @@ describe.each(DRIVE_TYPES)(
       const fileMetadata = JSON.parse(
         readFileSync(FIXTURE_METADATA_PATH, "utf-8"),
       ) as FixtureMetadata;
-      const derived = await deriveFixtureMetadataFromDb(connStr, driveType);
+      const derived = await deriveFixtureMetadataFromDb(connStr, driveType, [
+        KNOWLEDGE_VAULT_DRIVE_ID,
+      ]);
       logger.info(
         `derived metadata: ${derived.documents.length} docs / ${derived.totalOpCount} ops (sidecar: ${fileMetadata.documents.length} docs / ${fileMetadata.totalOpCount} ops)`,
       );

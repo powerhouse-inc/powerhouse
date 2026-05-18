@@ -302,19 +302,33 @@ export type DerivedFixtureMetadata = {
  *
  * `driveType` selects which drive container type seeds the reachability set
  * (e.g. "powerhouse/document-drive" or "powerhouse/reactor-drive").
+ *
+ * `driveIds` optionally restricts the reachability seed to a specific subset
+ * of drives (matched after `driveType` filtering). When omitted, every drive
+ * of `driveType` seeds the set.
  */
 export async function deriveFixtureMetadataFromDb(
   connStr: string,
   driveType: string = "powerhouse/document-drive",
+  driveIds: string[] = [],
 ): Promise<DerivedFixtureMetadata> {
   const pool = new Pool({ connectionString: connStr });
   try {
-    const drives = await pool.query<{ documentId: string }>(
-      `SELECT DISTINCT "documentId"
-       FROM reactor."Operation"
-       WHERE "documentType" = $1`,
-      [driveType],
-    );
+    const drives =
+      driveIds.length > 0
+        ? await pool.query<{ documentId: string }>(
+            `SELECT DISTINCT "documentId"
+             FROM reactor."Operation"
+             WHERE "documentType" = $1
+               AND "documentId" = ANY($2::text[])`,
+            [driveType, driveIds],
+          )
+        : await pool.query<{ documentId: string }>(
+            `SELECT DISTINCT "documentId"
+             FROM reactor."Operation"
+             WHERE "documentType" = $1`,
+            [driveType],
+          );
     const driveCollectionIds = drives.rows.map(
       (r) => `drive.main.${r.documentId}`,
     );
