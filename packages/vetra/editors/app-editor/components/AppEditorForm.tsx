@@ -11,7 +11,7 @@ import {
   setDragAndDropEnabled,
 } from "@powerhousedao/vetra/document-models/app-module";
 import { useCallback, useEffect, useState } from "react";
-import { useSelectedAppModuleDocument } from "../../../document-models/app-module/hooks.js";
+import { useSelectedAppModuleDocument } from "../../../document-models/app-module/index.js";
 import { StatusPill } from "../../components/index.js";
 import { useDebounce } from "../../hooks/index.js";
 

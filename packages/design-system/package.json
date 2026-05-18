@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/design-system",
-  "version": "6.0.0-dev.249",
+  "version": "6.0.0-dev.253",
   "description": "",
   "files": [
     "dist",
@@ -25,6 +25,7 @@
   },
   "exports": {
     ".": {
+      "source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
@@ -33,19 +34,23 @@
       "import": "./dist/*.js"
     },
     "./ui": {
+      "source": "./src/ui/index.ts",
       "types": "./dist/ui/index.d.ts",
       "import": "./dist/ui/index.js"
     },
     "./ui/lib": {
+      "source": "./src/ui/lib/index.ts",
       "types": "./dist/ui/lib/index.d.ts",
       "import": "./dist/ui/lib/index.js"
     },
     "./ui/*": "./dist/ui/*",
     "./connect": {
+      "source": "./src/connect/index.ts",
       "types": "./dist/connect/index.d.ts",
       "import": "./dist/connect/index.js"
     },
     "./connect/toast": {
+      "source": "./src/connect/components/toast/toast.tsx",
       "types": "./dist/connect/components/toast/toast.d.ts",
       "import": "./dist/connect/components/toast/toast.js"
     },

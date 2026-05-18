@@ -17,7 +17,6 @@ vi.mock("@powerhousedao/reactor-browser", () => ({
 }));
 
 describe("SubgraphModule Editor", () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockDispatch: (...args: any[]) => any;
 
   beforeEach(() => {

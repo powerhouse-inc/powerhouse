@@ -1,7 +1,7 @@
 {
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
-    "outDir": "./dist",
+    "outDir": "./.tsbuild",
     "paths": {
       "react": ["./node_modules/preact/compat/"],
       "react-dom": ["./node_modules/preact/compat/"]
@@ -9,5 +9,6 @@
     "jsxImportSource": "preact",
     "jsx": "preserve"
   },
-  "include": ["**/*"]
+  "include": ["**/*"],
+  "exclude": ["dist", "node_modules"]
 }

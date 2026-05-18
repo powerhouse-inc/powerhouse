@@ -1,0 +1,131 @@
+import type { DocumentModelGlobalState } from "document-model";
+
+export const documentModel: DocumentModelGlobalState = {
+  id: "powerhouse/processor",
+  name: "Processor Module",
+  author: {
+    name: "Powerhouse",
+    website: "https://powerhouse.inc",
+  },
+  extension: ".processor",
+  description:
+    "Declares a processor (a server-side function that reacts to document operations to build read models, send notifications, sync to external systems, etc.) shipped by a Vetra Reactor Package. Create one Processor Module document per processor: pick the processor type, list the document types it subscribes to, attach it to any drive apps that should run it, and mark it CONFIRMED to trigger codegen of the processor scaffold under `processors/`.",
+  specifications: [
+    {
+      state: {
+        local: {
+          schema: "",
+          examples: [],
+          initialValue: "",
+        },
+        global: {
+          schema:
+            '"""\nConfiguration for a processor contributed by the package. A processor receives\noperations from documents of matching types and runs server-side logic (e.g.\nbuilding a read model, indexing, syncing to an external system).\n"""\ntype ProcessorModuleState {\n  """Display name of the processor. Also determines the generated folder name under `processors/`."""\n  name: String!\n  """Processor implementation kind (e.g. \'read-model\', \'relational-db\'). Determines which scaffold codegen emits."""\n  type: String!\n  """Document types this processor subscribes to. Each entry has a stable id so it can be removed individually."""\n  documentTypes: [DocumentTypeItem!]!\n  """Lifecycle status. While DRAFT the processor definition is editable and codegen is skipped; switching to CONFIRMED triggers scaffold generation."""\n  status: StatusType!\n  """Drive-app names this processor is attached to. The processor runs in the context of each listed app."""\n  processorApps: [String!]!\n}\n\n"""A document type id (e.g. \'my-org/invoice\') attached to the processor with a stable entry id."""\ntype DocumentTypeItem {\n  """Stable identifier for the entry; used to remove it."""\n  id: OID!\n  """Document type id this processor subscribes to."""\n  documentType: String!\n}\n\n"""\nLifecycle status of a module definition.\n- DRAFT: still being edited; codegen does not run.\n- CONFIRMED: locked in; codegen produces the corresponding scaffold.\n"""\nenum StatusType {\n  DRAFT\n  CONFIRMED\n}',
+          examples: [],
+          initialValue:
+            '{\n  "name": "",\n  "type": "",\n  "documentTypes": [],\n  "status": "DRAFT",\n "processorApps": []\n}',
+        },
+      },
+      modules: [
+        {
+          id: "91ad39c1-4e8b-4127-b3c8-e835b85e6360",
+          name: "base_operations",
+          description:
+            "Set the processor's identity, kind, lifecycle status, subscribed document types, and attached drive apps.",
+          operations: [
+            {
+              id: "6f3a5c90-39f2-4302-a073-6195a71c5054",
+              name: "SET_PROCESSOR_NAME",
+              description:
+                "Set the display name of the processor. Also determines the generated folder name under `processors/`.",
+              schema: "input SetProcessorNameInput {\n  name: String!\n}",
+              template: "",
+              reducer: "",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+            {
+              id: "b8f28bb4-c6ae-40e6-86fa-29ef14ff8667",
+              name: "SET_PROCESSOR_TYPE",
+              description:
+                "Set the processor implementation kind (e.g. 'read-model', 'relational-db'). Determines which scaffold codegen emits.",
+              schema: "input SetProcessorTypeInput {\n  type: String!\n}",
+              template: "",
+              reducer: "",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+            {
+              id: "fbbd7a71-c495-4efc-b8f6-1e57798dbbb4",
+              name: "ADD_DOCUMENT_TYPE",
+              description:
+                "Subscribe the processor to a document type. Caller supplies a stable id so the entry can be removed later.",
+              schema:
+                "input AddDocumentTypeInput {\n  id: OID!\n  documentType: String!\n}",
+              template: "",
+              reducer: "",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+            {
+              id: "544d413f-423c-4d97-9570-84a19bffeab9",
+              name: "REMOVE_DOCUMENT_TYPE",
+              description:
+                "Unsubscribe the processor from a document type by removing its entry id.",
+              schema: "input RemoveDocumentTypeInput {\n  id: OID!\n}",
+              template: "",
+              reducer: "",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+            {
+              id: "df5eb500-7308-498c-9b80-028878ee198b",
+              name: "ADD_PROCESSOR_APP",
+              description:
+                "Attach the processor to a drive app by name. The processor will run in the context of that app.",
+              schema:
+                "input AddProcessorAppInput {\n  processorApp: String!\n}",
+              template: "",
+              reducer: "",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+            {
+              id: "07e4168f-1a7b-41ef-953d-219028be7bb9",
+              name: "REMOVE_PROCESSOR_APP",
+              description:
+                "Detach the processor from a drive app by name. No-op if the app is not currently attached.",
+              schema:
+                "input RemoveProcessorAppInput {\n  processorApp: String!\n}",
+              template: "",
+              reducer: "",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+            {
+              id: "7b6706eb-5e25-4d64-829a-e3a251380fd1",
+              name: "SET_PROCESSOR_STATUS",
+              description:
+                "Move the processor between DRAFT and CONFIRMED. Codegen only runs once the status is CONFIRMED.",
+              schema:
+                "input SetProcessorStatusInput {\n  status: StatusType!\n}",
+              template: "",
+              reducer: "",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+          ],
+        },
+      ],
+      version: 1,
+      changeLog: [],
+    },
+  ],
+};

@@ -1,7 +1,7 @@
 import {
   PackageInstallModal,
   type PendingPackageInstallation,
-} from "@powerhousedao/design-system/connect/index";
+} from "@powerhousedao/design-system/connect";
 import { usePackageDiscoveryService } from "@powerhousedao/reactor-browser";
 import { usePendingInstallations } from "../hooks/usePendingInstallations.js";
 

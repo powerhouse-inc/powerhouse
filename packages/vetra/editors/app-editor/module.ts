@@ -1,4 +1,8 @@
-import type { EditorModule } from "@powerhousedao/shared/document-model";
+/**
+ * WARNING: DO NOT EDIT
+ * This file is auto-generated and updated by codegen
+ */
+import type { EditorModule } from "document-model";
 import { lazy } from "react";
 
 /** Document editor module for the "powerhouse/app" document type */

@@ -1,12 +1,16 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { useSelectedAppModuleDocument } from "../../document-models/app-module/hooks.js";
+import { useSelectedAppModuleDocument } from "../../document-models/app-module/index.js";
 import Editor from "./editor.js";
 
-vi.mock("../../document-models/app-module/hooks.js", () => ({
-  useSelectedAppModuleDocument: vi.fn(),
-}));
+vi.mock(
+  "../../document-models/app-module/index.js",
+  async (importOriginal) => ({
+    ...(await importOriginal<object>()),
+    useSelectedAppModuleDocument: vi.fn(),
+  }),
+);
 
 vi.mock("@powerhousedao/design-system/connect", () => ({
   DocumentToolbar: () => null,
@@ -38,7 +42,6 @@ vi.mock("@powerhousedao/reactor-browser", async (importOriginal) => {
 });
 
 describe("AppModule Editor", () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockDispatch: (...args: any[]) => any;
 
   beforeEach(() => {

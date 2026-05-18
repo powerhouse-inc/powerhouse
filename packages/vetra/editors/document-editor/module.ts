@@ -1,7 +1,12 @@
-import type { EditorModule } from "@powerhousedao/shared/document-model";
+/**
+ * WARNING: DO NOT EDIT
+ * This file is auto-generated and updated by codegen
+ */
+import type { EditorModule } from "document-model";
 import { lazy } from "react";
 
-export const DocumentEditor: EditorModule = {
+/** Document editor module for the "powerhouse/document-editor" document type */
+export const DocumentEditorEditor: EditorModule = {
   Component: lazy(() => import("./editor.js")),
   documentTypes: ["powerhouse/document-editor"],
   config: {

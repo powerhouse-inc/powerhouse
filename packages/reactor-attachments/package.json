@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-attachments",
-  "version": "6.0.0-dev.249",
+  "version": "6.0.0-dev.253",
   "license": "AGPL-3.0-only",
   "type": "module",
   "repository": {
@@ -15,6 +15,7 @@
   ],
   "exports": {
     ".": {
+      "source": "./index.ts",
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     }

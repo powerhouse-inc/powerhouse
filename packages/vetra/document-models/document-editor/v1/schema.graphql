@@ -1,0 +1,71 @@
+scalar Unknown
+scalar DateTime
+scalar Attachment
+scalar Address
+scalar Amount_Tokens
+scalar EthereumAddress
+scalar EmailAddress
+scalar Amount_Percentage
+scalar Date
+scalar URL
+scalar Amount_Money
+scalar OLabel
+scalar Currency
+scalar PHID
+scalar OID
+scalar Amount_Fiat
+scalar Amount_Currency
+scalar Amount_Crypto
+scalar Amount
+scalar Upload
+
+"""
+Configuration for a document editor contributed by the package. The editor is
+registered against every document type listed in `documentTypes`; Connect picks
+the first matching editor when opening a document.
+"""
+type DocumentEditorState {
+  """Display name of the editor. Also determines the generated folder name under `editors/`."""
+  name: String!
+  """Document types this editor can edit. Each entry has a stable id so it can be removed individually."""
+  documentTypes: [DocumentTypeItem!]!
+  """Lifecycle status. While DRAFT the editor definition is editable and codegen is skipped; switching to CONFIRMED triggers scaffold generation."""
+  status: StatusType!
+}
+
+"""A document type id (e.g. 'powerhouse/document-drive') attached to the editor with a stable entry id."""
+type DocumentTypeItem {
+  """Stable identifier for the entry; used to remove it."""
+  id: OID!
+  """Document type id this editor handles (e.g. 'my-org/invoice')."""
+  documentType: String!
+}
+
+"""
+Lifecycle status of a module definition.
+- DRAFT: still being edited; codegen does not run.
+- CONFIRMED: locked in; codegen produces the corresponding scaffold.
+"""
+enum StatusType {
+  DRAFT
+  CONFIRMED
+}
+
+# base_operations
+
+input SetEditorNameInput {
+  name: String!
+}
+
+input AddDocumentTypeInput {
+  id: OID!
+  documentType: String!
+}
+
+input RemoveDocumentTypeInput {
+  id: OID!
+}
+
+input SetEditorStatusInput {
+  status: StatusType!
+}

@@ -1,5 +1,5 @@
 import { cn } from "@powerhousedao/design-system";
-import { Checkbox } from "@powerhousedao/design-system/ui/components/checkbox/checkbox.js";
+import { Checkbox } from "@powerhousedao/design-system/ui";
 import { Kind } from "graphql";
 import {
   lazy,
