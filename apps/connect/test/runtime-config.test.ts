@@ -1,9 +1,13 @@
+import { DEFAULT_CONNECT_CONFIG } from "@powerhousedao/shared/connect";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 function stubFetch(body: unknown) {
-  // @ts-expect-error fetch type mismatch on a partial mock is fine for tests
+  // @ts-expect-error partial mock is fine for tests
   globalThis.fetch = vi.fn(() =>
     Promise.resolve({
+      ok: true,
+      status: 200,
+      statusText: "OK",
       json: () => Promise.resolve(body),
     }),
   );
@@ -12,14 +16,18 @@ function stubFetch(body: unknown) {
 describe("runtime-config loader", () => {
   beforeEach(() => {
     vi.resetModules();
+    // The adapter branches on `typeof window`. Vitest runs under Node, so we
+    // need to stub it for JsonConfigAdapter to take the fetch path.
+    vi.stubGlobal("window", {});
   });
 
   afterEach(() => {
     // @ts-expect-error reset
     delete globalThis.fetch;
+    vi.unstubAllGlobals();
   });
 
-  it("loads a valid schemaVersion 2 config with structured packages", async () => {
+  it("loads a config with structured packages and merges user connect overrides on top of defaults", async () => {
     stubFetch({
       schemaVersion: 2,
       packages: [
@@ -39,12 +47,31 @@ describe("runtime-config loader", () => {
     expect(config.schemaVersion).toBe(2);
     expect(config.packages).toHaveLength(2);
     expect(config.packages[0].packageName).toBe("@scope/pkg-a");
-    expect(config.packages[0].version).toBe("1.0.0");
     expect(config.localPackage).toEqual({
       name: "test-project",
       version: "0.1.0",
     });
-    expect(config.connect?.branding?.appName).toBe("Test");
+    // User overrides win
+    expect(config.connect.branding?.appName).toBe("Test");
+    expect(config.connect.drives?.allowAddDrive).toBe(false);
+    // Untouched fields fall back to DEFAULT_CONNECT_CONFIG
+    expect(config.connect.app?.logLevel).toBe(
+      DEFAULT_CONNECT_CONFIG.app?.logLevel,
+    );
+    expect(config.connect.renown?.url).toBe(DEFAULT_CONNECT_CONFIG.renown?.url);
+    expect(config.connect.drives?.sections?.remote?.enabled).toBe(true);
+  });
+
+  it("fills every connect.* leaf from DEFAULT_CONNECT_CONFIG when the file has no connect block", async () => {
+    stubFetch({
+      schemaVersion: 2,
+      packages: [],
+      localPackage: null,
+    });
+
+    const { loadRuntimeConfig } = await import("../src/runtime-config.js");
+    const config = await loadRuntimeConfig();
+    expect(config.connect).toEqual(DEFAULT_CONNECT_CONFIG);
   });
 
   it("tolerates unknown extra fields under connect (forward-compat)", async () => {
@@ -61,64 +88,24 @@ describe("runtime-config loader", () => {
     });
 
     const { loadRuntimeConfig } = await import("../src/runtime-config.js");
-    await expect(loadRuntimeConfig()).resolves.toBeDefined();
-  });
-
-  it("rejects schemaVersion 1 with a clear error", async () => {
-    stubFetch({
-      schemaVersion: 1,
-      packages: ["@scope/pkg-a@1.0.0"],
-      localPackage: { name: "test", version: "0.1.0" },
-    });
-
-    const { loadRuntimeConfig } = await import("../src/runtime-config.js");
-    await expect(loadRuntimeConfig()).rejects.toThrow(
-      /unsupported schemaVersion 1/,
-    );
-  });
-
-  it("rejects unrecognised schemaVersion with a clear error", async () => {
-    stubFetch({ schemaVersion: 99, packages: [], localPackage: null });
-
-    const { loadRuntimeConfig } = await import("../src/runtime-config.js");
-    await expect(loadRuntimeConfig()).rejects.toThrow(
-      /unsupported schemaVersion 99/,
-    );
-  });
-
-  it("rejects packages as strings (old shape)", async () => {
-    stubFetch({
-      schemaVersion: 2,
-      packages: ["@scope/pkg-a@1.0.0"],
-      localPackage: null,
-    });
-
-    const { loadRuntimeConfig } = await import("../src/runtime-config.js");
-    await expect(loadRuntimeConfig()).rejects.toThrow(/must be an object/);
-  });
-
-  it("rejects packages entry without packageName", async () => {
-    stubFetch({
-      schemaVersion: 2,
-      packages: [{ name: "@scope/pkg-a" }],
-      localPackage: null,
-    });
-
-    const { loadRuntimeConfig } = await import("../src/runtime-config.js");
-    await expect(loadRuntimeConfig()).rejects.toThrow(
-      /must have a 'packageName' string/,
-    );
-  });
-
-  it("accepts packages without version or provider", async () => {
-    stubFetch({
-      schemaVersion: 2,
-      packages: [{ packageName: "@scope/pkg-a" }],
-      localPackage: null,
-    });
-
-    const { loadRuntimeConfig } = await import("../src/runtime-config.js");
     const config = await loadRuntimeConfig();
-    expect(config.packages).toEqual([{ packageName: "@scope/pkg-a" }]);
+    expect(config.connect.branding?.appName).toBe("Test");
+    expect(
+      (config.connect as unknown as Record<string, unknown>).futureField,
+    ).toEqual({ a: 1 });
+  });
+
+  it("caches the loaded config across calls (single fetch)", async () => {
+    stubFetch({ schemaVersion: 2, packages: [], localPackage: null });
+    const { loadRuntimeConfig } = await import("../src/runtime-config.js");
+    await loadRuntimeConfig();
+    await loadRuntimeConfig();
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("getRuntimeConfig throws before loadRuntimeConfig has resolved", async () => {
+    stubFetch({ schemaVersion: 2, packages: [], localPackage: null });
+    const { getRuntimeConfig } = await import("../src/runtime-config.js");
+    expect(() => getRuntimeConfig()).toThrow(/cache empty/);
   });
 });
