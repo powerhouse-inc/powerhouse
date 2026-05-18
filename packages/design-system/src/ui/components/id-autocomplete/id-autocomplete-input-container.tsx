@@ -162,7 +162,11 @@ const IdAutocompleteInputContainer = React.forwardRef<
           {haveFetchError && (
             <TooltipProvider>
               <Tooltip content="Network error!">
-                <Icon name="Error" size={16} className={cn("text-red-900")} />
+                <Icon
+                  name="Error"
+                  size={16}
+                  className={cn("text-red-900 dark:text-red-400")}
+                />
               </Tooltip>
             </TooltipProvider>
           )}

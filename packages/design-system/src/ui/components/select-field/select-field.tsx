@@ -145,12 +145,12 @@ export const SelectFieldRaw = React.forwardRef<
               className={cn(
                 "flex h-9 w-full items-center justify-between px-3 py-2",
                 "rounded-md border border-gray-300 bg-white dark:border-charcoal-700 dark:bg-charcoal-900",
-                "hover:border-gray-300 hover:bg-gray-100",
+                "hover:border-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700",
                 "dark:hover:border-charcoal-700 dark:hover:bg-charcoal-800",
                 "focus:ring-1 focus:ring-gray-900 focus:ring-offset-0 focus:outline-none dark:focus:ring-charcoal-300",
                 "focus-visible:ring-1 focus-visible:ring-gray-900 focus-visible:ring-offset-0 dark:focus-visible:ring-charcoal-300",
                 disabled && [
-                  "pointer-events-auto! cursor-not-allowed bg-gray-50",
+                  "pointer-events-auto! cursor-not-allowed bg-gray-50 dark:bg-slate-800",
                   "hover:border-gray-300 hover:bg-gray-50 dark:hover:border-charcoal-700 dark:hover:bg-charcoal-900",
                 ],
                 className,

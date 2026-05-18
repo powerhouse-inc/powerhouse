@@ -60,15 +60,15 @@ export function CreateDocumentModal(props: CreateDocumentModalProps) {
     >
       <form
         name="create-document"
-        className="w-[400px] bg-white p-6 text-slate-300"
+        className="w-[400px] bg-white p-6 text-slate-300 dark:bg-slate-900"
         onSubmit={handleSubmit}
       >
-        <div className="border-b border-slate-50 pb-2 text-2xl font-bold text-gray-800">
+        <div className="border-b border-slate-50 pb-2 text-2xl font-bold text-gray-800 dark:border-slate-700 dark:text-slate-50">
           Create a new document
         </div>
         <div className="my-6">
           {!isValid && nodeName && (
-            <div className="mb-2 text-red-500">
+            <div className="mb-2 text-red-500 dark:text-red-400">
               Document name must be valid URL characters.
             </div>
           )}
@@ -89,7 +89,7 @@ export function CreateDocumentModal(props: CreateDocumentModalProps) {
             type="button"
             className={twMerge(
               buttonStyles,
-              "flex-1 bg-slate-50 text-slate-800",
+              "flex-1 bg-slate-50 text-slate-800 dark:bg-slate-800",
             )}
             onClick={handleCancel}
           >

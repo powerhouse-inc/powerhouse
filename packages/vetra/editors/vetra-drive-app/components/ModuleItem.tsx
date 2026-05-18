@@ -81,10 +81,10 @@ export const ModuleItem: React.FC<ModuleItemProps> = ({
         <IconComponent />
       </div>
       <div className="min-w-0 flex-1">
-        <h3 className="truncate text-sm font-medium text-gray-900">
+        <h3 className="truncate text-sm font-medium text-gray-900 dark:text-slate-50">
           {fileNode.name}
         </h3>
-        <p className="truncate text-xs text-gray-500">
+        <p className="truncate text-xs text-gray-500 dark:text-slate-100">
           {fileNode.documentType}
         </p>
       </div>
@@ -106,7 +106,10 @@ export const ModuleItem: React.FC<ModuleItemProps> = ({
               setIsDropdownMenuOpen(true);
             }}
           >
-            <Icon className="text-gray-600" name="VerticalDots" />
+            <Icon
+              className="text-gray-600 dark:text-slate-100"
+              name="VerticalDots"
+            />
           </button>
         </ConnectDropdownMenu>
       ) : null}

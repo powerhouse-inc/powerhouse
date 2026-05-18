@@ -157,20 +157,20 @@ export function ChannelInspector({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <button
-            className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-2 py-1 text-sm text-gray-700 hover:bg-gray-100"
+            className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-2 py-1 text-sm text-gray-700 hover:bg-gray-100 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-50 dark:hover:bg-slate-700"
             onClick={onBack}
             type="button"
           >
             <Icon className="rotate-90" name="ChevronDown" size={14} />
             Back
           </button>
-          <h2 className="text-lg font-semibold text-gray-900">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-50">
             Channel: {remoteName}
           </h2>
         </div>
         {onRefresh && (
           <button
-            className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100"
+            className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-50 dark:hover:bg-slate-700"
             onClick={onRefresh}
             type="button"
           >
@@ -181,11 +181,11 @@ export function ChannelInspector({
       </div>
 
       {connectionState && (
-        <div className="rounded-sm border border-gray-200 bg-white p-4">
-          <h3 className="mb-3 text-sm font-semibold text-gray-900">
+        <div className="rounded-sm border border-gray-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
+          <h3 className="mb-3 text-sm font-semibold text-gray-900 dark:text-slate-50">
             Connection State
           </h3>
-          <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
+          <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 dark:text-slate-100">
             <div className="flex items-center gap-2">
               <span>State:</span>
               <ConnectionStateBadge
@@ -205,14 +205,14 @@ export function ChannelInspector({
               <span
                 className={
                   connectionState.pushBlocked
-                    ? "text-red-600"
-                    : "text-green-600"
+                    ? "text-red-600 dark:text-red-400"
+                    : "text-green-600 dark:text-green-400"
                 }
               >
                 {connectionState.pushBlocked ? "Blocked" : "OK"}
               </span>
               {connectionState.pushFailureCount > 0 && (
-                <span className="ml-1 text-red-600">
+                <span className="ml-1 text-red-600 dark:text-red-400">
                   ({connectionState.pushFailureCount} failures)
                 </span>
               )}
@@ -222,15 +222,19 @@ export function ChannelInspector({
       )}
 
       {pollerControls && (
-        <div className="rounded-sm border border-gray-200 bg-white p-4">
-          <h3 className="mb-3 text-sm font-semibold text-gray-900">Poller</h3>
+        <div className="rounded-sm border border-gray-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
+          <h3 className="mb-3 text-sm font-semibold text-gray-900 dark:text-slate-50">
+            Poller
+          </h3>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="text-sm text-gray-600">
+              <div className="text-sm text-gray-600 dark:text-slate-100">
                 Status:{" "}
                 <span
                   className={
-                    pollerState.isPaused ? "text-yellow-600" : "text-green-600"
+                    pollerState.isPaused
+                      ? "text-yellow-600"
+                      : "text-green-600 dark:text-green-400"
                   }
                 >
                   {pollerState.isPaused ? "Paused" : "Running"}
@@ -238,13 +242,13 @@ export function ChannelInspector({
               </div>
               <div className="flex items-center gap-1">
                 <label
-                  className="text-sm text-gray-600"
+                  className="text-sm text-gray-600 dark:text-slate-100"
                   htmlFor="poll-interval"
                 >
                   Interval:
                 </label>
                 <input
-                  className="w-20 rounded-sm border border-gray-300 px-2 py-1 text-sm"
+                  className="w-20 rounded-sm border border-gray-300 px-2 py-1 text-sm dark:border-slate-600"
                   id="poll-interval"
                   min={100}
                   onChange={(e) => setIntervalMs(Number(e.target.value))}
@@ -256,9 +260,11 @@ export function ChannelInspector({
                   type="number"
                   value={intervalMs}
                 />
-                <span className="text-sm text-gray-500">ms</span>
+                <span className="text-sm text-gray-500 dark:text-slate-100">
+                  ms
+                </span>
                 <button
-                  className="ml-1 rounded-sm border border-gray-300 bg-white px-2 py-1 text-sm text-gray-700 hover:bg-gray-100"
+                  className="ml-1 rounded-sm border border-gray-300 bg-white px-2 py-1 text-sm text-gray-700 hover:bg-gray-100 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-50 dark:hover:bg-slate-700"
                   onClick={handleApplyInterval}
                   type="button"
                 >
@@ -269,7 +275,7 @@ export function ChannelInspector({
             <div className="flex gap-2">
               {pollerState.isPaused ? (
                 <button
-                  className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100"
+                  className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-50 dark:hover:bg-slate-700"
                   onClick={handleResume}
                   type="button"
                 >
@@ -277,7 +283,7 @@ export function ChannelInspector({
                 </button>
               ) : (
                 <button
-                  className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100"
+                  className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-50 dark:hover:bg-slate-700"
                   onClick={handlePause}
                   type="button"
                 >
@@ -285,7 +291,7 @@ export function ChannelInspector({
                 </button>
               )}
               <button
-                className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-50 dark:hover:bg-slate-700"
                 disabled={!pollerState.isPaused}
                 onClick={handlePollNow}
                 type="button"
@@ -297,26 +303,26 @@ export function ChannelInspector({
         </div>
       )}
 
-      <div className="rounded-sm border border-gray-200 bg-white p-4">
-        <h3 className="mb-3 text-sm font-semibold text-gray-900">
+      <div className="rounded-sm border border-gray-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
+        <h3 className="mb-3 text-sm font-semibold text-gray-900 dark:text-slate-50">
           Mailbox Processing
         </h3>
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3 text-sm text-gray-600">
+            <div className="flex items-center gap-3 text-sm text-gray-600 dark:text-slate-100">
               <span>
                 Inbox:{" "}
                 <span
                   className={
                     mailboxStates.inbox.isPaused
                       ? "text-yellow-600"
-                      : "text-green-600"
+                      : "text-green-600 dark:text-green-400"
                   }
                 >
                   {mailboxStates.inbox.isPaused ? "Paused" : "Active"}
                 </span>
               </span>
-              <span className="font-mono text-sm text-gray-500">
+              <span className="font-mono text-sm text-gray-500 dark:text-slate-100">
                 We ack'd (theirs): {channel.inbox.ackOrdinal} | Received:{" "}
                 {channel.inbox.latestOrdinal}
               </span>
@@ -324,7 +330,7 @@ export function ChannelInspector({
             <div className="flex gap-2">
               {mailboxStates.inbox.isPaused ? (
                 <button
-                  className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100"
+                  className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-50 dark:hover:bg-slate-700"
                   onClick={() => handleMailboxResume("inbox")}
                   type="button"
                 >
@@ -332,7 +338,7 @@ export function ChannelInspector({
                 </button>
               ) : (
                 <button
-                  className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100"
+                  className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-50 dark:hover:bg-slate-700"
                   onClick={() => handleMailboxPause("inbox")}
                   type="button"
                 >
@@ -340,7 +346,7 @@ export function ChannelInspector({
                 </button>
               )}
               <button
-                className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-50 dark:hover:bg-slate-700"
                 disabled={!mailboxStates.inbox.isPaused}
                 onClick={() => handleMailboxFlush("inbox")}
                 type="button"
@@ -350,20 +356,20 @@ export function ChannelInspector({
             </div>
           </div>
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3 text-sm text-gray-600">
+            <div className="flex items-center gap-3 text-sm text-gray-600 dark:text-slate-100">
               <span>
                 Outbox:{" "}
                 <span
                   className={
                     mailboxStates.outbox.isPaused
                       ? "text-yellow-600"
-                      : "text-green-600"
+                      : "text-green-600 dark:text-green-400"
                   }
                 >
                   {mailboxStates.outbox.isPaused ? "Paused" : "Active"}
                 </span>
               </span>
-              <span className="font-mono text-sm text-gray-500">
+              <span className="font-mono text-sm text-gray-500 dark:text-slate-100">
                 They ack'd (ours): {channel.outbox.ackOrdinal} | Sent:{" "}
                 {channel.outbox.latestOrdinal}
               </span>
@@ -371,7 +377,7 @@ export function ChannelInspector({
             <div className="flex gap-2">
               {mailboxStates.outbox.isPaused ? (
                 <button
-                  className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100"
+                  className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-50 dark:hover:bg-slate-700"
                   onClick={() => handleMailboxResume("outbox")}
                   type="button"
                 >
@@ -379,7 +385,7 @@ export function ChannelInspector({
                 </button>
               ) : (
                 <button
-                  className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100"
+                  className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-50 dark:hover:bg-slate-700"
                   onClick={() => handleMailboxPause("outbox")}
                   type="button"
                 >
@@ -387,7 +393,7 @@ export function ChannelInspector({
                 </button>
               )}
               <button
-                className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-50 dark:hover:bg-slate-700"
                 disabled={!mailboxStates.outbox.isPaused}
                 onClick={() => handleMailboxFlush("outbox")}
                 type="button"

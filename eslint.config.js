@@ -18,6 +18,7 @@ const normalIgnoredFiles = [
   "**/.vite/",
   "**/.nx/",
   "**/build/",
+  "**/.tsbuild/",
   "**/.docusaurus/",
   "**/.ph/",
   "**/prisma/",

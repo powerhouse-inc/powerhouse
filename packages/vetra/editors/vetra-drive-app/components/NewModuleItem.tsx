@@ -23,8 +23,12 @@ export const NewModuleItem: React.FC<NewModuleItemProps> = ({
         <AddNewIcon />
       </div>
       <div className="min-w-0 flex-1">
-        <h3 className="truncate text-sm font-medium text-gray-900">{title}</h3>
-        <p className="truncate text-xs text-gray-500">{subtitle}</p>
+        <h3 className="truncate text-sm font-medium text-gray-900 dark:text-slate-50">
+          {title}
+        </h3>
+        <p className="truncate text-xs text-gray-500 dark:text-slate-100">
+          {subtitle}
+        </p>
       </div>
     </button>
   );

@@ -41,7 +41,7 @@ export const Textarea = forwardRef<TextareaHandle, TextareaProps>(
       <textarea
         {...props}
         className={cn(
-          "min-h-10 w-full resize-none rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-800 placeholder:text-gray-600 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50",
+          "min-h-10 w-full resize-none rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-800 placeholder:text-gray-600 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-50",
           className,
         )}
         ref={textareaRef}

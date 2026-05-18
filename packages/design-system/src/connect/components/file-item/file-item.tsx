@@ -120,7 +120,7 @@ export function FileItem(props: Props) {
         draggable={false}
       />
       {isReadMode && syncStatus && (
-        <div className="absolute right-0 bottom-[-2px] size-3 rounded-full bg-white">
+        <div className="absolute right-0 bottom-[-2px] size-3 rounded-full bg-white dark:bg-slate-900">
           <div className="absolute top-[-2px] left-[-2px]">
             <SyncStatusIcon
               overrideSyncIcons={{ SUCCESS: "CheckCircleFill" }}
@@ -133,7 +133,7 @@ export function FileItem(props: Props) {
   );
 
   const containerStyles = twMerge(
-    "group flex h-12 cursor-pointer items-center rounded-lg bg-gray-200 px-2 text-gray-600 select-none hover:text-gray-800",
+    "group flex h-12 cursor-pointer items-center rounded-lg bg-gray-200 px-2 text-gray-600 select-none hover:text-gray-800 dark:bg-slate-600 dark:text-slate-100 dark:hover:text-slate-50",
     isDragging ? "opacity-60" : "",
     className,
   );
@@ -144,7 +144,7 @@ export function FileItem(props: Props) {
         <div className="max-h-6 truncate text-sm font-medium group-hover:text-gray-800">
           {fileNode.name}
         </div>
-        <div className="max-h-6 truncate text-xs font-medium text-gray-600 group-hover:text-gray-800">
+        <div className="max-h-6 truncate text-xs font-medium text-gray-600 group-hover:text-gray-800 dark:text-slate-100">
           {fileNode.documentType}
         </div>
       </div>
@@ -165,7 +165,10 @@ export function FileItem(props: Props) {
               setIsDropdownMenuOpen(true);
             }}
           >
-            <Icon className="text-gray-600" name="VerticalDots" />
+            <Icon
+              className="text-gray-600 dark:text-slate-100"
+              name="VerticalDots"
+            />
           </button>
         </ConnectDropdownMenu>
       ) : null}

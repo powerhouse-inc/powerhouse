@@ -74,7 +74,7 @@ export function FolderItem(props: {
 
   const content =
     isReadMode || !isAllowedToCreateDocuments ? (
-      <div className="ml-3 max-h-6 truncate font-medium text-gray-600 group-hover:text-gray-800">
+      <div className="ml-3 max-h-6 truncate font-medium text-gray-600 group-hover:text-gray-800 dark:text-slate-100">
         {folderNode.name}
       </div>
     ) : (
@@ -87,8 +87,12 @@ export function FolderItem(props: {
     );
 
   const containerStyles = twMerge(
-    "group flex h-12 cursor-pointer items-center rounded-lg bg-gray-200 px-2 select-none",
-    isDragging ? "opacity-60" : isDropTarget ? "bg-blue-100" : "",
+    "group flex h-12 cursor-pointer items-center rounded-lg bg-gray-200 px-2 select-none dark:bg-slate-600",
+    isDragging
+      ? "opacity-60"
+      : isDropTarget
+        ? "bg-blue-100 dark:bg-blue-900/30"
+        : "",
     className,
   );
 
@@ -123,7 +127,10 @@ export function FolderItem(props: {
                 setIsDropdownMenuOpen(true);
               }}
             >
-              <Icon className="text-gray-600" name="VerticalDots" />
+              <Icon
+                className="text-gray-600 dark:text-slate-100"
+                name="VerticalDots"
+              />
             </button>
           </ConnectDropdownMenu>
         ) : null}

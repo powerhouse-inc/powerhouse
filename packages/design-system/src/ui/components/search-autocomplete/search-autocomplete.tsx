@@ -89,7 +89,7 @@ export const SearchAutocomplete: React.FC<SearchAutocompleteProps> = (
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           disabled={disabled || selectingValue !== null}
-          className="max-w-xs text-gray-700"
+          className="max-w-xs text-gray-700 dark:text-slate-50"
         />
         <button
           onClick={handleSubmit}
@@ -112,7 +112,7 @@ export const SearchAutocomplete: React.FC<SearchAutocompleteProps> = (
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
             disabled={disabled}
-            className="max-w-xs text-gray-700"
+            className="max-w-xs text-gray-700 dark:text-slate-50"
           />
         </PopoverAnchor>
         <PopoverContent
@@ -147,27 +147,27 @@ export const SearchAutocomplete: React.FC<SearchAutocompleteProps> = (
               return (
                 <div
                   key={option.value}
-                  className="flex items-center justify-between gap-2 rounded-md px-2 py-1.5 hover:bg-gray-100"
+                  className="flex items-center justify-between gap-2 rounded-md px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-slate-700"
                 >
                   {renderOption ? (
                     <div className="min-w-0 flex-1">{renderOption(option)}</div>
                   ) : (
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-gray-900">
+                      <p className="truncate text-sm font-medium text-gray-900 dark:text-slate-50">
                         {option.label}
                       </p>
                       {option.version && (
-                        <p className="truncate text-xs text-gray-500">
+                        <p className="truncate text-xs text-gray-500 dark:text-slate-100">
                           v{option.version}
                         </p>
                       )}
                       {option.description && (
-                        <p className="truncate text-xs text-gray-500">
+                        <p className="truncate text-xs text-gray-500 dark:text-slate-100">
                           {option.description}
                         </p>
                       )}
                       {option.meta && (
-                        <p className="truncate text-xs text-gray-400">
+                        <p className="truncate text-xs text-gray-400 dark:text-slate-200">
                           {option.meta}
                         </p>
                       )}
@@ -178,7 +178,7 @@ export const SearchAutocomplete: React.FC<SearchAutocompleteProps> = (
                       {selectingContent}
                     </div>
                   ) : option.disabled ? (
-                    <span className="shrink-0 rounded-md bg-gray-100 px-3 py-1 text-xs font-medium text-gray-500">
+                    <span className="shrink-0 rounded-md bg-gray-100 px-3 py-1 text-xs font-medium text-gray-500 dark:bg-slate-700 dark:text-slate-100">
                       {option.disabledLabel ?? "Unavailable"}
                     </span>
                   ) : (
@@ -196,14 +196,22 @@ export const SearchAutocomplete: React.FC<SearchAutocompleteProps> = (
           </div>
         </PopoverContent>
       </Popover>
-      {loading && <p className="mt-1 text-xs text-gray-500">Searching...</p>}
-      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+      {loading && (
+        <p className="mt-1 text-xs text-gray-500 dark:text-slate-100">
+          Searching...
+        </p>
+      )}
+      {error && (
+        <p className="mt-1 text-xs text-red-600 dark:text-red-400">{error}</p>
+      )}
       {!loading &&
         !error &&
         query.trim() &&
         results.length === 0 &&
         !isOpen && (
-          <p className="mt-1 text-xs text-gray-500">No results found</p>
+          <p className="mt-1 text-xs text-gray-500 dark:text-slate-100">
+            No results found
+          </p>
         )}
     </div>
   );

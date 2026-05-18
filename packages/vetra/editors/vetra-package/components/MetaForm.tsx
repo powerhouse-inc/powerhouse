@@ -73,7 +73,7 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
         <div>
           <label
             htmlFor="package-name"
-            className="mb-2 block text-sm font-medium text-gray-700"
+            className="mb-2 block text-sm font-medium text-gray-700 dark:text-slate-50"
           >
             Name
           </label>
@@ -82,7 +82,7 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-slate-600"
           />
         </div>
 
@@ -90,7 +90,7 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
         <div>
           <label
             htmlFor="package-description"
-            className="mb-2 block text-sm font-medium text-gray-700"
+            className="mb-2 block text-sm font-medium text-gray-700 dark:text-slate-50"
           >
             Description
           </label>
@@ -99,7 +99,7 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
             rows={6}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            className="w-full resize-none rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            className="w-full resize-none rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-slate-600"
           />
         </div>
       </div>
@@ -110,7 +110,7 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
         <div>
           <label
             htmlFor="package-category"
-            className="mb-2 block text-sm font-medium text-gray-700"
+            className="mb-2 block text-sm font-medium text-gray-700 dark:text-slate-50"
           >
             Category
           </label>
@@ -122,7 +122,7 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
               setCategory(newValue);
               onCategoryChange?.(newValue);
             }}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-slate-600"
           >
             <option value="">Not selected</option>
             <option value="Productivity">Productivity</option>
@@ -139,7 +139,7 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
         <div>
           <label
             htmlFor="package-publisher"
-            className="mb-2 block text-sm font-medium text-gray-700"
+            className="mb-2 block text-sm font-medium text-gray-700 dark:text-slate-50"
           >
             Publisher
           </label>
@@ -148,7 +148,7 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
             type="text"
             value={publisher}
             onChange={(e) => setPublisher(e.target.value)}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-slate-600"
           />
         </div>
 
@@ -156,7 +156,7 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
         <div>
           <label
             htmlFor="package-publisher-url"
-            className="mb-2 block text-sm font-medium text-gray-700"
+            className="mb-2 block text-sm font-medium text-gray-700 dark:text-slate-50"
           >
             Publisher URL
           </label>
@@ -165,7 +165,7 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
             type="text"
             value={publisherUrl}
             onChange={(e) => setPublisherUrl(e.target.value)}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-slate-600"
           />
         </div>
 
@@ -173,7 +173,7 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
         <div>
           <label
             htmlFor="package-keywords"
-            className="mb-2 block text-sm font-medium text-gray-700"
+            className="mb-2 block text-sm font-medium text-gray-700 dark:text-slate-50"
           >
             Keywords
           </label>
@@ -196,13 +196,13 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
                 }
               }}
               placeholder="Type a keyword and press Enter"
-              className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-slate-600"
             />
-            <div className="flex min-h-[80px] flex-wrap gap-2 rounded-md border border-gray-300 p-3">
+            <div className="flex min-h-[80px] flex-wrap gap-2 rounded-md border border-gray-300 p-3 dark:border-slate-600">
               {keywords.map((keyword) => (
                 <span
                   key={keyword.id}
-                  className="inline-flex items-center rounded-sm border border-blue-300 bg-blue-100 px-2 py-0.5 text-xs text-blue-800"
+                  className="inline-flex items-center rounded-sm border border-blue-300 bg-blue-100 px-2 py-0.5 text-xs text-blue-800 dark:border-blue-700 dark:bg-blue-900/30"
                 >
                   {keyword.label}
                   <button
@@ -210,7 +210,7 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
                       setKeywords(keywords.filter((k) => k.id !== keyword.id));
                       onRemoveKeyword?.(keyword.id);
                     }}
-                    className="ml-1 text-blue-600 hover:text-blue-800 focus:outline-none"
+                    className="ml-1 text-blue-600 hover:text-blue-800 focus:outline-none dark:text-blue-400"
                   >
                     ×
                   </button>
@@ -227,7 +227,7 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
         <div>
           <label
             htmlFor="package-github"
-            className="mb-2 block text-sm font-medium text-gray-700"
+            className="mb-2 block text-sm font-medium text-gray-700 dark:text-slate-50"
           >
             Github Repository
           </label>
@@ -236,7 +236,7 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
             type="text"
             value={githubRepository}
             onChange={(e) => setGithubRepository(e.target.value)}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-slate-600"
           />
         </div>
 
@@ -244,7 +244,7 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
         <div>
           <label
             htmlFor="package-npm"
-            className="mb-2 block text-sm font-medium text-gray-700"
+            className="mb-2 block text-sm font-medium text-gray-700 dark:text-slate-50"
           >
             NPM-package
           </label>
@@ -253,7 +253,7 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
             type="text"
             value={npmPackage}
             onChange={(e) => setNpmPackage(e.target.value)}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-slate-600"
           />
         </div>
 
@@ -261,7 +261,7 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
         <div>
           <label
             htmlFor="package-version"
-            className="mb-2 block text-sm font-medium text-gray-700"
+            className="mb-2 block text-sm font-medium text-gray-700 dark:text-slate-50"
           >
             Version
           </label>
@@ -270,7 +270,7 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
             type="text"
             placeholder="1.0.0-dev"
             readOnly
-            className="w-full cursor-not-allowed rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-gray-500"
+            className="w-full cursor-not-allowed rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-gray-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
           />
         </div>
 
@@ -278,7 +278,7 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
         <div>
           <label
             htmlFor="package-license"
-            className="mb-2 block text-sm font-medium text-gray-700"
+            className="mb-2 block text-sm font-medium text-gray-700 dark:text-slate-50"
           >
             License
           </label>
@@ -287,7 +287,7 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
             type="text"
             placeholder="AGPL-3.0-only"
             readOnly
-            className="w-full cursor-not-allowed rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-gray-500"
+            className="w-full cursor-not-allowed rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-gray-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
           />
         </div>
 
@@ -295,7 +295,7 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
         <div>
           <label
             htmlFor="package-install"
-            className="mb-2 block text-sm font-medium text-gray-700"
+            className="mb-2 block text-sm font-medium text-gray-700 dark:text-slate-50"
           >
             Install with:
           </label>
@@ -304,7 +304,7 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
             type="text"
             placeholder="@powerhousedao/todo-demo-package"
             readOnly
-            className="w-full cursor-not-allowed rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-gray-500"
+            className="w-full cursor-not-allowed rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-gray-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
           />
         </div>
       </div>

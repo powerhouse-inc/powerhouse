@@ -118,7 +118,7 @@ const CommandItem = React.forwardRef<
     className={cn(
       "relative flex items-center justify-between select-none",
       "h-8 gap-2 rounded-md py-1.5 pr-2.5 pl-1.5",
-      "text-sm/4 text-gray-900 outline-none",
+      "text-sm/4 text-gray-900 outline-none dark:text-slate-50",
       "border-y-2 border-white dark:border-slate-600",
       "data-[disabled=true]:pointer-events-none",
       "[&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",

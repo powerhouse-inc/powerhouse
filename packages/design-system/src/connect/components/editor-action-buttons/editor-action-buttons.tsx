@@ -21,7 +21,7 @@ export function EditorActionButtons(props: EditorActionButtonsProps) {
     <div className="flex items-center gap-x-2">
       {onSwitchboardLinkClick && (
         <button
-          className="grid size-8 place-items-center rounded-lg border border-gray-200 bg-white text-gray-900 disabled:cursor-not-allowed disabled:text-gray-500"
+          className="grid size-8 place-items-center rounded-lg border border-gray-200 bg-white text-gray-900 disabled:cursor-not-allowed disabled:text-gray-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50"
           onClick={onSwitchboardLinkClick}
           disabled={!onSwitchboardLinkClick}
         >
@@ -30,7 +30,7 @@ export function EditorActionButtons(props: EditorActionButtonsProps) {
       )}
       {onShowRevisionHistory && (
         <button
-          className="grid size-8 place-items-center rounded-lg border border-gray-200 bg-white text-gray-900 disabled:cursor-not-allowed disabled:text-gray-500"
+          className="grid size-8 place-items-center rounded-lg border border-gray-200 bg-white text-gray-900 disabled:cursor-not-allowed disabled:text-gray-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50"
           onClick={onShowRevisionHistory}
           disabled={!onShowRevisionHistory}
         >
@@ -39,7 +39,7 @@ export function EditorActionButtons(props: EditorActionButtonsProps) {
       )}
       {onShowTimeline && (
         <button
-          className="grid size-8 place-items-center rounded-lg border border-gray-200 bg-white text-gray-900 disabled:cursor-not-allowed disabled:text-gray-500"
+          className="grid size-8 place-items-center rounded-lg border border-gray-200 bg-white text-gray-900 disabled:cursor-not-allowed disabled:text-gray-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50"
           onClick={onShowTimeline}
           disabled={!onShowTimeline}
         >
@@ -47,7 +47,7 @@ export function EditorActionButtons(props: EditorActionButtonsProps) {
         </button>
       )}
       <button
-        className="grid size-8 place-items-center rounded-lg border border-gray-200 bg-white text-gray-900"
+        className="grid size-8 place-items-center rounded-lg border border-gray-200 bg-white text-gray-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50"
         onClick={onClose}
       >
         <Icon name="XmarkLight" size={16} />

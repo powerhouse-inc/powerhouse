@@ -23,7 +23,7 @@ export const UserExperiencesColumn: React.FC<UserExperiencesColumnProps> = ({
 }) => {
   return (
     <div>
-      <h3 className="mb-4 text-sm font-normal text-gray-700">
+      <h3 className="mb-4 text-sm font-normal text-gray-700 dark:text-slate-50">
         2. User Experiences
       </h3>
       <div className="rounded-md border border-zinc-200 bg-zinc-50">

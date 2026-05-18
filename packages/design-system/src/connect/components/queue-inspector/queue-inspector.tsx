@@ -195,14 +195,16 @@ export function QueueInspector({
   return (
     <div className="flex h-full flex-col gap-2">
       <div className="flex shrink-0 items-center justify-between">
-        <h2 className="text-lg font-semibold text-gray-900">Queue Inspector</h2>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-50">
+          Queue Inspector
+        </h2>
         <div className="flex items-center gap-2">
           <button
             className={twMerge(
               "flex items-center gap-1 rounded-sm border px-3 py-1.5 text-sm disabled:opacity-50",
               state.isPaused
-                ? "border-green-300 bg-green-50 text-green-700 hover:bg-green-100"
-                : "border-yellow-300 bg-yellow-50 text-yellow-700 hover:bg-yellow-100",
+                ? "border-green-300 bg-green-50 text-green-700 hover:bg-green-100 dark:text-green-400"
+                : "border-yellow-300 bg-yellow-50 text-yellow-700 hover:bg-yellow-100 dark:border-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400 dark:hover:bg-yellow-900/30",
             )}
             disabled={actionInProgress}
             onClick={() => void handlePauseResume()}
@@ -215,7 +217,7 @@ export function QueueInspector({
             {state.isPaused ? "Resume" : "Pause"}
           </button>
           <button
-            className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+            className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-50 dark:hover:bg-slate-700"
             disabled={loading}
             onClick={() => void handleRefresh()}
             type="button"
@@ -226,7 +228,7 @@ export function QueueInspector({
         </div>
       </div>
 
-      <div className="flex shrink-0 items-center gap-4 rounded-lg bg-gray-100 px-4 py-2 text-sm">
+      <div className="flex shrink-0 items-center gap-4 rounded-lg bg-gray-100 px-4 py-2 text-sm dark:bg-slate-700">
         <div className="flex items-center gap-2">
           <span
             className={twMerge(
@@ -234,21 +236,21 @@ export function QueueInspector({
               state.isPaused ? "bg-yellow-500" : "bg-green-500",
             )}
           />
-          <span className="font-medium text-gray-700">
+          <span className="font-medium text-gray-700 dark:text-slate-50">
             {state.isPaused ? "Paused" : "Running"}
           </span>
         </div>
-        <div className="text-gray-600">
+        <div className="text-gray-600 dark:text-slate-100">
           Pending: <span className="font-medium">{state.totalPending}</span>
         </div>
-        <div className="text-gray-600">
+        <div className="text-gray-600 dark:text-slate-100">
           Executing: <span className="font-medium">{state.totalExecuting}</span>
         </div>
       </div>
 
-      <div className="max-h-full overflow-auto rounded-lg border border-gray-300">
+      <div className="max-h-full overflow-auto rounded-lg border border-gray-300 dark:border-slate-600">
         <table className="w-full border-collapse">
-          <thead className="sticky top-0 bg-gray-100">
+          <thead className="sticky top-0 bg-gray-100 dark:bg-slate-700">
             <tr>
               {COLUMNS.map((column, index) => {
                 const isActive = sort?.column === column.key;
@@ -258,8 +260,9 @@ export function QueueInspector({
                   <th
                     key={column.key}
                     className={twMerge(
-                      "group cursor-pointer px-3 py-2 text-left text-xs font-medium text-gray-600 hover:bg-gray-200 hover:text-gray-900",
-                      index > 0 && "border-l border-gray-300",
+                      "group cursor-pointer px-3 py-2 text-left text-xs font-medium text-gray-600 hover:bg-gray-200 hover:text-gray-900 dark:text-slate-100 dark:hover:bg-slate-600 dark:hover:text-slate-50",
+                      index > 0 &&
+                        "border-l border-gray-300 dark:border-slate-600",
                     )}
                     onClick={() => handleSort(column.key)}
                     style={{ width: column.width }}
@@ -277,7 +280,7 @@ export function QueueInspector({
             {loading && sortedJobs.length === 0 ? (
               <tr>
                 <td
-                  className="px-3 py-8 text-center text-sm text-gray-500"
+                  className="px-3 py-8 text-center text-sm text-gray-500 dark:text-slate-100"
                   colSpan={COLUMNS.length}
                 >
                   Loading...
@@ -286,7 +289,7 @@ export function QueueInspector({
             ) : sortedJobs.length === 0 ? (
               <tr>
                 <td
-                  className="px-3 py-8 text-center text-sm text-gray-500"
+                  className="px-3 py-8 text-center text-sm text-gray-500 dark:text-slate-100"
                   colSpan={COLUMNS.length}
                 >
                   No jobs in queue
@@ -296,64 +299,64 @@ export function QueueInspector({
               sortedJobs.map((job) => (
                 <tr
                   key={job.id}
-                  className="odd:bg-white even:bg-gray-50 hover:bg-blue-50"
+                  className="odd:bg-white even:bg-gray-50 hover:bg-blue-50 dark:hover:bg-blue-900/20"
                 >
                   <td className="px-3 py-2 text-xs">
                     <button
-                      className="flex items-center gap-1 rounded-sm bg-blue-50 px-2 py-1 text-xs text-blue-700 hover:bg-blue-100"
+                      className="flex items-center gap-1 rounded-sm bg-blue-50 px-2 py-1 text-xs text-blue-700 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/30"
                       onClick={() => setSelectedJob(job)}
                       type="button"
                     >
                       View
                     </button>
                   </td>
-                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900">
+                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-600 dark:text-slate-50">
                     <span className="block truncate" title={job.id}>
                       {truncateId(job.id)}
                     </span>
                   </td>
-                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900">
+                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-600 dark:text-slate-50">
                     <span
                       className={twMerge(
                         "inline-block rounded-sm px-1.5 py-0.5",
                         job.kind === "mutation"
                           ? "bg-purple-100 text-purple-700"
-                          : "bg-blue-100 text-blue-700",
+                          : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
                       )}
                     >
                       {job.kind}
                     </span>
                   </td>
-                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900">
+                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-600 dark:text-slate-50">
                     <span className="block truncate" title={job.documentId}>
                       {truncateId(job.documentId)}
                     </span>
                   </td>
-                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900">
+                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-600 dark:text-slate-50">
                     <span className="block truncate" title={job.scope}>
                       {job.scope}
                     </span>
                   </td>
-                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900">
+                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-600 dark:text-slate-50">
                     <span className="block truncate" title={job.branch}>
                       {job.branch}
                     </span>
                   </td>
-                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900">
+                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-600 dark:text-slate-50">
                     <span className="block truncate" title={job.createdAt}>
                       {formatDate(job.createdAt)}
                     </span>
                   </td>
-                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900">
+                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-600 dark:text-slate-50">
                     {job.retryCount ?? 0}
                   </td>
-                  <td className="border-l border-gray-300 px-3 py-2 text-xs">
+                  <td className="border-l border-gray-300 px-3 py-2 text-xs dark:border-slate-600">
                     <span
                       className={twMerge(
                         "inline-flex items-center gap-1 rounded-sm px-1.5 py-0.5",
                         job.status === "executing"
-                          ? "bg-green-100 text-green-700"
-                          : "bg-gray-100 text-gray-600",
+                          ? "bg-green-100 text-green-700 dark:text-green-400"
+                          : "bg-gray-100 text-gray-600 dark:bg-slate-700 dark:text-slate-100",
                       )}
                     >
                       {job.status === "executing" && (
@@ -369,7 +372,7 @@ export function QueueInspector({
         </table>
       </div>
 
-      <div className="shrink-0 text-sm text-gray-600">
+      <div className="shrink-0 text-sm text-gray-600 dark:text-slate-100">
         Showing {sortedJobs.length} job(s)
       </div>
 

@@ -47,19 +47,31 @@ function getDefaultOptions(type: ExtendedTypeOptions): ToastOptions {
       case "connect-warning":
         options.type = "warning";
         options.icon = (
-          <Icon className="text-gray-600" name="WarningFill" size={24} />
+          <Icon
+            className="text-gray-600 dark:text-slate-100"
+            name="WarningFill"
+            size={24}
+          />
         );
         break;
       case "connect-loading":
         options.type = "default";
         options.icon = (
-          <Icon className="text-gray-600" name="ClockFill" size={24} />
+          <Icon
+            className="text-gray-600 dark:text-slate-100"
+            name="ClockFill"
+            size={24}
+          />
         );
         break;
       case "connect-deleted":
         options.type = "error";
         options.icon = (
-          <Icon className="text-red-800" name="TrashFill" size={24} />
+          <Icon
+            className="text-red-800 dark:text-red-400"
+            name="TrashFill"
+            size={24}
+          />
         );
         break;
     }
@@ -79,7 +91,7 @@ export function toast(content: ToastContent, options?: ConnectToastOptions) {
 
 const CloseButton: ToastContainerProps["closeButton"] = ({ closeToast }) => (
   <button
-    className="flex items-center text-gray-500 hover:text-gray-600"
+    className="flex items-center text-gray-500 hover:text-gray-600 dark:text-slate-100 dark:hover:text-slate-100"
     onClick={closeToast}
   >
     <Icon name="XmarkLight" size={16} />

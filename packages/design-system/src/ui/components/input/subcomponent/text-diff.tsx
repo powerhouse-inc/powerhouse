@@ -37,7 +37,13 @@ export const TextDiff = ({
       : undefined;
 
   return (
-    <span className={cn("leading-[18px] text-gray-700", bgColor, className)}>
+    <span
+      className={cn(
+        "leading-[18px] text-gray-700 dark:text-slate-50",
+        bgColor,
+        className,
+      )}
+    >
       {wordsDiff.map((word, index) => {
         return word.added ? (
           viewMode === "addition" || viewMode === "mixed" ? (

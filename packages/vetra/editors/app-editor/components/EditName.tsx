@@ -40,18 +40,21 @@ export function EditAppModuleName() {
         onSubmit={onSubmitSetName}
       >
         <input
-          className="p-1 text-lg font-semibold text-gray-900"
+          className="p-1 text-lg font-semibold text-gray-900 dark:text-slate-50"
           type="text"
           name="name"
           defaultValue={appModuleDocumentName}
           autoFocus
         />
         <div className="flex gap-2">
-          <button type="submit" className="text-sm text-gray-600">
+          <button
+            type="submit"
+            className="text-sm text-gray-600 dark:text-slate-100"
+          >
             Save
           </button>
           <button
-            className="text-sm text-red-800"
+            className="text-sm text-red-800 dark:text-red-400"
             onClick={onClickCancelEditAppModuleName}
           >
             Cancel
@@ -62,11 +65,11 @@ export function EditAppModuleName() {
 
   return (
     <div className="flex items-center justify-between">
-      <h2 className="text-lg font-semibold text-gray-900">
+      <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-50">
         {appModuleDocumentName}
       </h2>
       <button
-        className="text-sm text-gray-600"
+        className="text-sm text-gray-600 dark:text-slate-100"
         onClick={onClickEditAppModuleName}
       >
         Edit Name

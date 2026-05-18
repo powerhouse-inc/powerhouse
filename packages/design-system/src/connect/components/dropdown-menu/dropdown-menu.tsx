@@ -36,14 +36,14 @@ export function ConnectDropdownMenu<TItemId extends string>(
       </DropdownMenuTrigger>
       <DropdownMenuContent
         className={twMerge(
-          "cursor-pointer rounded-2xl border border-gray-200 bg-white text-sm font-medium text-slate-500 shadow-lg",
+          "cursor-pointer rounded-2xl border border-gray-200 bg-white text-sm font-medium text-slate-500 shadow-lg dark:border-slate-700 dark:bg-slate-900",
           menuClassName,
         )}
       >
         {items.map(({ id, label, icon, className }) => (
           <DropdownMenuItem
             className={twMerge(
-              "flex items-center px-5 py-2 outline-none first-of-type:rounded-t-2xl first-of-type:pt-3 last-of-type:rounded-b-2xl last-of-type:pb-3 hover:bg-slate-50",
+              "flex items-center px-5 py-2 outline-none first-of-type:rounded-t-2xl first-of-type:pt-3 last-of-type:rounded-b-2xl last-of-type:pb-3 hover:bg-slate-50 dark:hover:bg-slate-800",
               className,
             )}
             key={id}

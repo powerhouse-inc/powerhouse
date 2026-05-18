@@ -15,7 +15,7 @@ export const SidebarLogin: React.FC<SidebarLoginProps> = ({ onLogin }) => {
     <AccountPopover content={content}>
       <div
         className={twMerge(
-          "group/sidebar-footer flex w-full items-baseline justify-start text-sm/10 font-semibold text-gray-600",
+          "group/sidebar-footer flex w-full items-baseline justify-start text-sm/10 font-semibold text-gray-600 dark:text-slate-100",
           onLogin ? "cursor-pointer" : "cursor-wait",
         )}
       >

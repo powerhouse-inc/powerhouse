@@ -61,13 +61,13 @@ export function ConnectConfirmationModal(props: ConfirmationModalProps) {
       <div
         {...mergeClassNameProps(
           containerProps,
-          "w-[400px] bg-white p-6 text-slate-300",
+          "w-[400px] bg-white p-6 text-slate-300 dark:bg-slate-900",
         )}
       >
         <div
           {...mergeClassNameProps(
             headerProps,
-            "border-b border-slate-50 pb-2 text-2xl font-bold text-gray-800",
+            "border-b border-slate-50 pb-2 text-2xl font-bold text-gray-800 dark:border-slate-700 dark:text-slate-50",
           )}
         >
           {header}
@@ -75,7 +75,7 @@ export function ConnectConfirmationModal(props: ConfirmationModalProps) {
         <div
           {...mergeClassNameProps(
             bodyProps,
-            "my-6 rounded-md bg-slate-50 p-4 text-center",
+            "my-6 rounded-md bg-slate-50 p-4 text-center dark:bg-slate-800",
           )}
         >
           {body}
@@ -91,7 +91,10 @@ export function ConnectConfirmationModal(props: ConfirmationModalProps) {
             onClick={onCancel}
             {...mergeClassNameProps(
               cancelButtonProps,
-              twMerge(buttonStyles, "flex-1 bg-slate-50 text-slate-800"),
+              twMerge(
+                buttonStyles,
+                "flex-1 bg-slate-50 text-slate-800 dark:bg-slate-800",
+              ),
             )}
           >
             {cancelLabel}

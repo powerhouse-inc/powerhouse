@@ -52,7 +52,7 @@ export const ConnectSearchBar: React.FC<ConnectSearchBarProps> = (props) => {
     <FilterItem className="gap-x-1" item={selectedItemFilter} />
   ) : (
     filterLabel && (
-      <div className="mr-2 text-sm font-semibold text-slate-200">
+      <div className="mr-2 text-sm font-semibold text-slate-200 dark:text-gray-400">
         {filterLabel}
       </div>
     )
@@ -67,7 +67,7 @@ export const ConnectSearchBar: React.FC<ConnectSearchBarProps> = (props) => {
       <Icon className="mr-3" name="Search" />
       <input
         className={twMerge(
-          "flex h-[52px] min-w-0 flex-1 items-center rounded-xl border border-gray-200 bg-gray-50 px-4 text-sm text-slate-200 outline-none",
+          "flex h-[52px] min-w-0 flex-1 items-center rounded-xl border border-gray-200 bg-gray-50 px-4 text-sm text-slate-200 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-gray-400",
         )}
         onChange={handleChange}
         placeholder={placeholder}
@@ -77,10 +77,10 @@ export const ConnectSearchBar: React.FC<ConnectSearchBarProps> = (props) => {
         <DropdownMenuTrigger className="ml-3 flex h-full flex-row items-center outline-none">
           {filterLabelContent} <Icon name="ChevronDown" />
         </DropdownMenuTrigger>
-        <DropdownMenuContent className="rounded-xl border border-gray-100 bg-gray-50 p-2">
+        <DropdownMenuContent className="rounded-xl border border-gray-100 bg-gray-50 p-2 dark:border-slate-700 dark:bg-slate-800">
           {items.map((item) => (
             <DropdownMenuItem
-              className="h-10 cursor-pointer overflow-hidden rounded-lg hover:bg-gray-100"
+              className="h-10 cursor-pointer overflow-hidden rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700"
               id={item.id}
               key={item.id}
               onSelect={() => onFilterSelect(item.id)}

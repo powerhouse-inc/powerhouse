@@ -49,7 +49,7 @@ export function Module(props: Props) {
     toggleNoInputRequired,
   } = props;
   return (
-    <div className="relative rounded-3xl bg-gray-100 p-6">
+    <div className="relative rounded-3xl bg-gray-100 p-6 dark:bg-slate-700">
       <div className="mb-2 w-1/2 pr-6">
         <ModuleForm
           modules={modules}
@@ -61,7 +61,7 @@ export function Module(props: Props) {
           <button
             aria-label="Delete module"
             tabIndex={-1}
-            className="absolute top-1 right-1 p-2 text-gray-800 transition-colors hover:text-gray-500"
+            className="absolute top-1 right-1 p-2 text-gray-800 transition-colors hover:text-gray-500 dark:text-slate-50 dark:hover:text-slate-100"
             onClick={() => {
               deleteModule(module.id);
             }}

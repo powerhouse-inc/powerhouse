@@ -108,9 +108,9 @@ export function Operation(props: Props) {
             type="checkbox"
             checked={noInputRequired}
             onChange={(e) => handleToggleNoInput(e.target.checked)}
-            className="size-4 rounded-sm border-gray-300"
+            className="size-4 rounded-sm border-gray-300 dark:border-slate-600"
           />
-          <span className="text-sm text-gray-700">
+          <span className="text-sm text-gray-700 dark:text-slate-50">
             Operation with no inputs
           </span>
         </label>
@@ -126,7 +126,7 @@ export function Operation(props: Props) {
       </div>
 
       <div style={{ gridArea: "errors" }}>
-        <h3 className="my-2 text-sm font-medium text-gray-700">
+        <h3 className="my-2 text-sm font-medium text-gray-700 dark:text-slate-50">
           Reducer Exceptions
         </h3>
         <OperationErrors

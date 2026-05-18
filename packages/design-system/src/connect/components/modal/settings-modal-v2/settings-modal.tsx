@@ -34,8 +34,10 @@ export function SettingsModal(props: Props) {
     <button type="button" onClick={() => setSelectedTab(tab.id)} key={tab.id}>
       <div
         className={twMerge(
-          "flex h-9 w-48 cursor-pointer items-center gap-x-2 rounded-md pl-3 hover:bg-slate-50",
-          selectedTab === tab.id ? "bg-slate-50" : "bg-transparent",
+          "flex h-9 w-48 cursor-pointer items-center gap-x-2 rounded-md pl-3 hover:bg-slate-50 dark:hover:bg-slate-800",
+          selectedTab === tab.id
+            ? "bg-slate-50 dark:bg-slate-800"
+            : "bg-transparent",
         )}
       >
         {tab.icon}
@@ -71,7 +73,7 @@ export function SettingsModal(props: Props) {
       }}
       {...restProps}
     >
-      <div className="flex justify-between border-b border-slate-50 p-4">
+      <div className="flex justify-between border-b border-slate-50 p-4 dark:border-slate-700">
         <h1 className="text-center text-xl font-semibold">{title}</h1>
         <button
           type="button"
@@ -83,7 +85,7 @@ export function SettingsModal(props: Props) {
       </div>
       <div className="flex flex-1">
         <div className="flex flex-col gap-y-1 p-3 pt-6">{tabsContent}</div>
-        <div className="m-6 flex h-full flex-1 flex-col overflow-hidden rounded-lg border border-slate-50 bg-white">
+        <div className="m-6 flex h-full flex-1 flex-col overflow-hidden rounded-lg border border-slate-50 bg-white dark:border-slate-700 dark:bg-slate-900">
           {typeof SelectedTabComponent === "function" ? (
             <SelectedTabComponent />
           ) : (
