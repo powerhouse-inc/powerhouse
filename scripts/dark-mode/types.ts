@@ -26,3 +26,5 @@ export type LightToDarkRecord = Record<ClassName, ClassName>;
  * Runtime lookup map from light-mode classes to fully-prefixed dark-mode classes.
  */
 export type LightToDarkMap = Map<string, ClassNameWithDarkPrefix>;
+
+export type ClassesMap = Map<ClassName, ClassName>;

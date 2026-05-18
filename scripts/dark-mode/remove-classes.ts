@@ -1,4 +1,4 @@
-import { entries, flatMap, forEach, keys, map, pipe, unique } from "remeda";
+import { difference, flatMap, forEach, map, pipe } from "remeda";
 import type { StringLiteral } from "ts-morph";
 import { findFilesWithClasses } from "./find-files-with-classes.js";
 import {
@@ -8,37 +8,31 @@ import {
   makeTsMorphProject,
   maybeUpdateStringLiteral,
 } from "./ts-morph.js";
-import type { ClassesMap, ClassName } from "./types.js";
+import type { ClassNameList } from "./types.js";
 import {
-  getClassFromMap,
   makeClassNameListFromString,
   makeClassNameStringFromList,
 } from "./utils.js";
 
-const replaceClass = (m: ClassesMap) => (c: ClassName) =>
-  getClassFromMap(m, c) ?? c;
-
-const maybeReplaceClasses = (m: ClassesMap) => (s: StringLiteral) =>
+const removeClasses = (toRemove: ClassNameList) => (s: StringLiteral) =>
   pipe(
     s,
     getStringLiteralText,
     makeClassNameListFromString,
-    map(replaceClass(m)),
-    unique(),
+    difference(toRemove),
     makeClassNameStringFromList,
     maybeUpdateStringLiteral(s),
   );
 
-const classesToReplace: Record<ClassName, ClassName> = {} as const;
+const classesToRemove: ClassNameList = [];
 const project = makeTsMorphProject();
-const files = await findFilesWithClasses(keys(classesToReplace));
-const classesMap = new Map(entries(classesToReplace));
+const files = await findFilesWithClasses(classesToRemove);
 
 pipe(
   files,
   map(addFileToProcess(project)),
   flatMap(getStringLiterals),
-  forEach(maybeReplaceClasses(classesMap)),
+  forEach(removeClasses(classesToRemove)),
 );
 
 await project.save();

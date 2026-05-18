@@ -22,6 +22,7 @@ import { findFilesWithClasses } from "./find-files-with-classes.js";
 import { allMappings } from "./mappings.js";
 import { getStringLiteralText, maybeUpdateStringLiteral } from "./ts-morph.js";
 import type {
+  ClassesMap,
   ClassName,
   ClassNameList,
   ClassNameWithDarkPrefix,
@@ -147,3 +148,5 @@ export const findDarkModeCandidates = async (
 ): Promise<FilePath[]> => {
   return findFilesWithClasses(keys(allMappings), cwd);
 };
+
+export const getClassFromMap = (m: ClassesMap, c: ClassName) => m.get(c);
