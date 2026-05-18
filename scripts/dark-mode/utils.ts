@@ -1,15 +1,19 @@
 import {
+  concat,
   conditional,
   constant,
-  entries,
+  difference,
   filter,
+  flat,
+  flatMap,
   hasAtLeast,
+  identity,
+  isArray,
+  isEmpty,
   isEmptyish,
   isNot,
-  isString,
+  isTruthy,
   join,
-  keys,
-  mapValues,
   pipe,
   reduce,
   split,
@@ -18,72 +22,141 @@ import {
 } from "remeda";
 import type { StringLiteral } from "ts-morph";
 import { darkPrefix } from "./constants.js";
-import { findFilesWithClasses } from "./find-files-with-classes.js";
-import { allMappings } from "./mappings.js";
 import { getStringLiteralText, maybeUpdateStringLiteral } from "./ts-morph.js";
 import type {
-  ClassesMap,
   ClassName,
   ClassNameList,
-  ClassNameWithDarkPrefix,
-  FilePath,
-  LightToDarkMap,
-  LightToDarkRecord,
+  ClassNameMap,
+  DarkPrefix,
 } from "./types.js";
 
 /**
- * Adds the configured {@link darkPrefix} to a Tailwind class name.
+ * Add an item or list of items to the end of an array.
+ * Useful for preserving order as per formatter / linter requirements
  */
-export const addDarkPrefixToClass = (c: ClassName): ClassNameWithDarkPrefix =>
-  `${darkPrefix}${c}` as const;
-
-/**
- * Builds the runtime lookup map used by the migration.
- *
- * The input maps light-mode classes to unprefixed dark-mode equivalents. The
- * returned map stores the same light-mode keys with {@link darkPrefix}-prefixed values.
- */
-export const makeLightToDarkMap = (r: LightToDarkRecord) =>
-  pipe(r, mapValues(addDarkPrefixToClass), entries(), (es) => new Map(es));
-
-/**
- * Checks whether a class name has a configured dark-mode replacement.
- */
-export const hasMappedLightClass = (m: LightToDarkMap) => (c: ClassName) =>
-  m.has(c);
-
-/**
- * Returns the configured dark-mode class for a light-mode class, if present.
- */
-export const getDarkClassForLightClass =
-  (m: LightToDarkMap) =>
-  (c: ClassName): ClassNameWithDarkPrefix | undefined =>
-    m.get(c);
-
-/**
- * Checks whether a string literal contains at least one light-mode class that
- * this migration knows how to convert.
- */
-export const hasLightMode = (m: LightToDarkMap) => (s: StringLiteral) =>
-  pipe(
-    s,
-    getStringLiteralText,
-    makeClassNameListFromString,
-    filter(hasMappedLightClass(m)),
-    hasAtLeast(1),
-  );
+const concatToEnd =
+  <T>(itemOrItems: T | T[]) =>
+  (array: T[]) =>
+    concat(array, isArray(itemOrItems) ? itemOrItems : [itemOrItems]);
 
 /**
  * Splits a whitespace-delimited class string into individual class names.
  */
 export const makeClassNameListFromString = (c: ClassName): ClassNameList =>
-  pipe(c.trim(), split(/\s+/), filter(isNot(isEmptyish)));
+  pipe(
+    c.trim(),
+    split(/\s+/),
+    filter((c) => c !== " "),
+    filter(isNot(isEmptyish)),
+  );
 
 /**
  * Joins individual class names back into a whitespace-delimited class string.
  */
 export const makeClassNameStringFromList = (cs: ClassNameList): ClassName =>
-  join(cs, " ");
+  pipe(
+    cs,
+    filter((c) => c !== " "),
+    filter(isNot(isEmpty)),
+    join(" "),
+  );
+
+export const hasClass = (m: ClassNameMap) => (c: ClassName) => m.has(c);
+
+/**
+ * Checks whether a string literal contains at least one light-mode class that
+ * this migration knows how to convert.
+ */
+export const hasClasses = (m: ClassNameMap) => (s: StringLiteral) =>
+  pipe(
+    s,
+    getStringLiteralText,
+    makeClassNameListFromString,
+    filter(hasClass(m)),
+    hasAtLeast(1),
+  );
+
+export const getClasses =
+  (m: ClassNameMap) =>
+  (c: ClassName): ClassNameList =>
+    pipe([m.get(c)], flat(), filter(isTruthy));
+
+/**
+ * Adds mapped dark-mode classes for every matching light-mode class in a class
+ * list.
+ *
+ * Generated classes are appended to preserve the class ordering expected by the
+ * formatter/linter.
+ */
+export const addClasses = (m: ClassNameMap) => (cs: ClassNameList) =>
+  reduce(
+    cs,
+    (acc, curr) =>
+      pipe(
+        curr,
+        getClasses(m),
+        // add dark classes at the end of the list if found
+        // to preserve the ordering desired by the linter / formatter
+        conditional([isTruthy, concatToEnd(acc)], constant(acc)),
+      ),
+    cs,
+  );
+
+export const replaceClass = (m: ClassNameMap) => (c: ClassName) =>
+  pipe(c, getClasses(m), conditional([hasAtLeast(1), identity()], constant(c)));
+
+export const replaceClasses = (m: ClassNameMap) => (cs: ClassNameList) =>
+  flatMap(cs, replaceClass(m));
+
+export const getStringLiteralClassNameList = (s: StringLiteral) =>
+  pipe(s, getStringLiteralText, makeClassNameListFromString);
+
+export const updateClassesForStringLiteral =
+  (s: StringLiteral) => (cs: ClassNameList) =>
+    pipe(
+      cs,
+      unique(),
+      makeClassNameStringFromList,
+      maybeUpdateStringLiteral(s),
+    );
+
+/**
+ * Adds missing generated dark-mode classes to a string literal, then updates
+ * the AST node only if the literal value actually changed.
+ */
+export const addClassesToStringLiteral =
+  (m: ClassNameMap) => (s: StringLiteral) =>
+    pipe(
+      s,
+      getStringLiteralClassNameList,
+      addClasses(m),
+      updateClassesForStringLiteral(s),
+    );
+
+export const replaceClassesForStringLiteral =
+  (m: ClassNameMap) => (s: StringLiteral) =>
+    pipe(
+      s,
+      getStringLiteralClassNameList,
+      replaceClasses(m),
+      updateClassesForStringLiteral(s),
+    );
+
+export const removeClassesFromStringLiteral =
+  (toRemove: ClassNameList) => (s: StringLiteral) =>
+    pipe(
+      s,
+      getStringLiteralClassNameList,
+      difference(toRemove),
+      updateClassesForStringLiteral(s),
+    );
+
+/**
+ * Adds the configured {@link darkPrefix} to a Tailwind class name.
+ */
+export const addDarkPrefixToClass = <C extends ClassName>(
+  c: C,
+): `${DarkPrefix}${C}` => `${darkPrefix}${c}` as const;
 
 /**
  * Checks whether a string literal already contains an explicit dark-mode class.
@@ -94,59 +167,7 @@ export const makeClassNameStringFromList = (cs: ClassNameList): ClassName =>
 export const hasDarkModeAlready = (s: StringLiteral) =>
   pipe(
     s,
-    getStringLiteralText,
-    makeClassNameListFromString,
+    getStringLiteralClassNameList,
     filter(startsWith(darkPrefix)),
     isNot(isEmptyish),
   );
-
-/**
- * Adds mapped dark-mode classes for every matching light-mode class in a class
- * list.
- *
- * Generated classes are appended to preserve the class ordering expected by the
- * formatter/linter.
- */
-export const addDarkModeClasses = (m: LightToDarkMap) => (cs: ClassNameList) =>
-  reduce(
-    cs,
-    (acc, curr) =>
-      pipe(
-        curr,
-        getDarkClassForLightClass(m),
-        // add dark classes at the end of the list if found
-        // to preserve the ordering desired by the linter / formatter
-        conditional([isString, (cn) => [...acc, cn]], constant(acc)),
-      ),
-    cs,
-  );
-
-/**
- * Adds missing generated dark-mode classes to a string literal, then updates
- * the AST node only if the literal value actually changed.
- */
-export const maybeAddNewClasses = (m: LightToDarkMap) => (s: StringLiteral) =>
-  pipe(
-    s,
-    getStringLiteralText,
-    makeClassNameListFromString,
-    addDarkModeClasses(m),
-    unique(),
-    makeClassNameStringFromList,
-    maybeUpdateStringLiteral(s),
-  );
-
-/**
- * Finds candidate files that contain at least one mapped Tailwind class.
- *
- * Uses ripgrep content search first so ts-morph only opens files that are
- * likely to require migration.
- */
-
-export const findDarkModeCandidates = async (
-  cwd = process.cwd(),
-): Promise<FilePath[]> => {
-  return findFilesWithClasses(keys(allMappings), cwd);
-};
-
-export const getClassFromMap = (m: ClassesMap, c: ClassName) => m.get(c);

@@ -1,5 +1,5 @@
 import path from "node:path";
-import { isStrictEqual, when } from "remeda";
+import { flatMap, isStrictEqual, map, pipe, when } from "remeda";
 import type { SourceFile, StringLiteral } from "ts-morph";
 import { Project, SyntaxKind } from "ts-morph";
 import type { ClassName, FilePath } from "./types.js";
@@ -14,7 +14,6 @@ export const getStringLiterals = (f: SourceFile) =>
  * Returns the raw text value of a string literal node.
  */
 export const getStringLiteralText = (s: StringLiteral) => s.getLiteralValue();
-
 /**
  * Updates a string literal only when the new value differs from its current value.
  */
@@ -44,3 +43,7 @@ export const makeTsMorphProject = () =>
     skipFileDependencyResolution: true,
     skipLoadingLibFiles: true,
   });
+
+export const getStringLiteralsFromFiles =
+  (project: Project) => (files: FilePath[]) =>
+    pipe(files, map(addFileToProcess(project)), flatMap(getStringLiterals));

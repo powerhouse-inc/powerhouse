@@ -1,21 +1,19 @@
-import { filter, flatMap, forEach, isNot, map, pipe } from "remeda";
+import { entries, filter, forEach, isNot, keys, mapValues, pipe } from "remeda";
+import { findFilesWithClasses } from "./find-files-with-classes.js";
 import { allMappings } from "./mappings.js";
+import { getStringLiteralsFromFiles, makeTsMorphProject } from "./ts-morph.js";
 import {
-  addFileToProcess,
-  getStringLiterals,
-  makeTsMorphProject,
-} from "./ts-morph.js";
-import {
-  findDarkModeCandidates,
+  addClassesToStringLiteral,
+  addDarkPrefixToClass,
+  hasClasses,
   hasDarkModeAlready,
-  hasLightMode,
-  makeLightToDarkMap,
-  maybeAddNewClasses,
 } from "./utils.js";
 
 const project = makeTsMorphProject();
-const files = await findDarkModeCandidates();
-const lightToDarkMap = makeLightToDarkMap(allMappings);
+const files = await findFilesWithClasses(keys(allMappings));
+const lightToDarkMap = new Map(
+  entries(mapValues(allMappings, addDarkPrefixToClass)),
+);
 
 /**
  * Migrates candidate string literals by adding generated dark-mode classes when:
@@ -26,11 +24,10 @@ const lightToDarkMap = makeLightToDarkMap(allMappings);
  */
 pipe(
   files,
-  map(addFileToProcess(project)),
-  flatMap(getStringLiterals),
+  getStringLiteralsFromFiles(project),
   filter(isNot(hasDarkModeAlready)),
-  filter(hasLightMode(lightToDarkMap)),
-  forEach(maybeAddNewClasses(lightToDarkMap)),
+  filter(hasClasses(lightToDarkMap)),
+  forEach(addClassesToStringLiteral(lightToDarkMap)),
 );
 
 await project.save();
