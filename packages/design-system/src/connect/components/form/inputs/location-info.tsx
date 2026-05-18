@@ -13,7 +13,7 @@ export function LocationInfo(props: LocationInfoProps) {
     <div
       {...divProps}
       className={twMerge(
-        "my-3 flex items-center gap-2 rounded-xl border border-gray-100 p-3 text-gray-800 shadow-sm",
+        "my-3 flex items-center gap-2 rounded-xl border border-gray-100 bg-white p-3 text-gray-800 shadow-sm",
         className,
       )}
     >

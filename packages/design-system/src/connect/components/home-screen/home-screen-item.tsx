@@ -33,7 +33,7 @@ export const HomeScreenItem = function HomeScreenItem(
         )}
       </div>
       <div className="w-full max-w-full">
-        <h3 className="w-full max-w-full truncate px-2 text-slate-50">
+        <h3 className="w-full max-w-full truncate px-2 text-gray-900">
           {title}
         </h3>
         {description && <p className="text-gray-500">{description}</p>}

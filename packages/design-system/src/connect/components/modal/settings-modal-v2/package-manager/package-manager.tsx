@@ -30,7 +30,7 @@ export const PackageManager: React.FC<Props> = (props) => {
   return (
     <div
       className={twMerge(
-        "flex h-full flex-1 flex-col rounded-lg p-3",
+        "flex h-full flex-1 flex-col rounded-lg bg-white p-3",
         className,
       )}
     >
