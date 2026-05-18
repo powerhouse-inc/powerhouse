@@ -6,6 +6,8 @@ import type { PHConnectRuntimeConfig } from "@powerhousedao/shared/clis";
 import {
   applyEnvSeeding,
   buildRuntimeConfig,
+  DEFAULT_CONNECT_CONFIG,
+  deepMerge,
 } from "@powerhousedao/shared/connect";
 import { RUNTIME_CONFIG_SCHEMA_URL } from "../runtime-config-schema.js";
 
@@ -58,9 +60,16 @@ export function phConfigPlugin(options: PhConfigPluginOptions): Plugin {
     );
   }
 
+  // Layer the merge so the dist file is fully self-describing (task 6):
+  //   DEFAULT_CONNECT_CONFIG  (base — fills in any field neither source nor env supplied)
+  //     < env-var seeds       (legacy compat, applied above via applyEnvSeeding)
+  //     < source.connect      (user's hand-edited overrides, already on top of seeds)
+  //
+  // The CLI flag layer added by `ph connect build --flag value` (task 9)
+  // will compose on top of this via the same deep-merge.
   const source = {
     packages: options.packages,
-    connect: seededConnect,
+    connect: deepMerge(DEFAULT_CONNECT_CONFIG, seededConnect),
   };
 
   const runtimeConfig = buildRuntimeConfig(source, localPackage);

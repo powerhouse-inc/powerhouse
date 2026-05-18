@@ -47,7 +47,8 @@ describe("deepMerge", () => {
   });
 
   it("treats null in patch as an explicit set", () => {
-    const base = { branding: { homeBackground: { avif: "/a" } } };
+    type Base = { branding: { homeBackground: { avif: string } | null } };
+    const base: Base = { branding: { homeBackground: { avif: "/a" } } };
     const patch = { branding: { homeBackground: null } };
     expect(deepMerge(base, patch)).toEqual({
       branding: { homeBackground: null },
