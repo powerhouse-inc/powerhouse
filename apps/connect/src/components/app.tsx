@@ -1,11 +1,10 @@
 import { Analytics, Router } from "@powerhousedao/connect/components";
-
 import { SentryProvider } from "@powerhousedao/connect/context";
-import { useTheme } from "@powerhousedao/connect/hooks";
 import {
   DocumentEditorDebugTools,
   serviceWorkerManager,
 } from "@powerhousedao/connect/utils";
+import { useTheme } from "@powerhousedao/reactor-browser";
 import { useEffect } from "react";
 import { ToastContainer } from "../services/toast.js";
 import { MissingModelBanner } from "./missing-model-banner.js";

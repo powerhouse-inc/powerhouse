@@ -1,4 +1,3 @@
-export * from "./useTheme.js";
 export * from "./useAcceptedCookies.js";
 export * from "./useCheckLatestVersion.js";
 export * from "./useClientErrorHandler.js";

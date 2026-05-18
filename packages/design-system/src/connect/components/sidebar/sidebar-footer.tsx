@@ -1,4 +1,5 @@
 import { Icon, SidebarFooter } from "#design-system";
+import { useTheme } from "@powerhousedao/reactor-browser";
 import type { ComponentProps } from "react";
 import { twMerge } from "tailwind-merge";
 import { SidebarLogin } from "./sidebar-login.js";
@@ -33,6 +34,7 @@ export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
   etherscanUrl = "",
   ...props
 }) => {
+  const { theme, setTheme } = useTheme();
   return (
     <SidebarFooter
       {...props}
@@ -93,6 +95,17 @@ export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
           Settings
         </span>
       </button>
+      <div className="text-xs">
+        <button onClick={() => setTheme("light")}>
+          light{theme === "light" ? " ✅" : ""}
+        </button>
+        <button onClick={() => setTheme("dark")}>
+          dark{theme === "dark" ? " ✅" : ""}
+        </button>
+        <button onClick={() => setTheme("system")}>
+          system{theme === "system" ? " ✅" : ""}
+        </button>
+      </div>
     </SidebarFooter>
   );
 };
