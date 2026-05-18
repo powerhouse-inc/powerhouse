@@ -6,6 +6,11 @@ await build({
     "constants.ts",
     "analytics/index.ts",
     "connect/index.ts",
+    // Config loader + single JSON adapter. node:fs is dynamically imported
+    // inside the adapter's read/write methods so neither file appears in the
+    // browser bundle's static import graph.
+    "connect/config-loader.ts",
+    "connect/json-adapter.ts",
     "document-model/index.ts",
     "document-model/utils.ts",
     "document-model/mock.ts",
