@@ -14,9 +14,7 @@ async function applyReactorDriveMigrations(
     "public",
   );
   if (!result.success && result.error) {
-    throw new Error(
-      `Reactor drive migrations failed: ${result.error.message}`,
-    );
+    throw new Error(`Reactor drive migrations failed: ${result.error.message}`);
   }
 }
 
