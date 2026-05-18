@@ -3,16 +3,16 @@
 // in REACTOR_TEST_PG_* (defaults to localhost:5433 via `pnpm --filter
 // @powerhousedao/reactor docker:up`) and outbound access to PH_REGISTRY_URL.
 import { type ISyncManager, type ReactorModule } from "@powerhousedao/reactor";
+import { httpsHooksPath } from "@powerhousedao/reactor-api/https-hooks";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import { ConsoleLogger } from "document-model";
+import type { Kysely } from "kysely";
 import { existsSync, readFileSync } from "node:fs";
 import { register } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Pool } from "pg";
-import type { Kysely } from "kysely";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import { httpsHooksPath } from "@powerhousedao/reactor-api/https-hooks";
 import { HttpPackageLoader } from "../src/packages/http-loader.js";
 import { createResolverBridge } from "./utils/gql-resolver-bridge.js";
 import {
@@ -106,9 +106,7 @@ describe.each(DRIVE_TYPES)(
       await restoreFromDump(connStr, FIXTURE_DUMP_PATH, dbName);
       const purged = await purgeDeletedDocuments(connStr);
       if (purged.length > 0) {
-        logger.info(
-          `purged ${purged.length} deleted document(s) from test DB`,
-        );
+        logger.info(`purged ${purged.length} deleted document(s) from test DB`);
       }
 
       const fileMetadata = JSON.parse(

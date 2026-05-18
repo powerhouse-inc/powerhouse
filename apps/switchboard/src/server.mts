@@ -14,17 +14,6 @@ import {
   type Database,
 } from "@powerhousedao/reactor";
 import {
-  DriveNodeView,
-  NodeProcessor,
-  ReactorDriveClient,
-  createDocumentNameTable,
-  createDriveNodeTable,
-  createReactorDriveResolvers,
-  reactorDriveDocumentModelModule,
-  reactorDriveSubgraphTypeDefs,
-  type ReactorDriveDatabase,
-} from "@powerhousedao/reactor-drive";
-import {
   HttpPackageLoader,
   ImportPackageLoader,
   PackageManagementService,
@@ -39,6 +28,17 @@ import {
   createViteLogger,
   startViteServer,
 } from "@powerhousedao/reactor-api/vite";
+import {
+  DriveNodeView,
+  NodeProcessor,
+  ReactorDriveClient,
+  createDocumentNameTable,
+  createDriveNodeTable,
+  createReactorDriveResolvers,
+  reactorDriveDocumentModelModule,
+  reactorDriveSubgraphTypeDefs,
+  type ReactorDriveDatabase,
+} from "@powerhousedao/reactor-drive";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import { documentModels as vetraDocumentModels } from "@powerhousedao/vetra";
@@ -344,7 +344,11 @@ async function initServer(
     ) as unknown as Kysely<ReactorDriveDatabase>;
 
     builder.withReadModelFactory(
-      async ({ operationIndex, writeCache, processorManagerConsistencyTracker }) => {
+      async ({
+        operationIndex,
+        writeCache,
+        processorManagerConsistencyTracker,
+      }) => {
         await createDriveNodeTable(
           reactorDriveSchemaDb as unknown as Kysely<unknown>,
         );
@@ -548,8 +552,7 @@ async function initServer(
       throw new Error("Cannot create default drive without Renown identity");
     }
 
-    const driveType =
-      options.drive.documentType ?? "powerhouse/document-drive";
+    const driveType = options.drive.documentType ?? "powerhouse/document-drive";
     if (driveType === "powerhouse/reactor-drive") {
       defaultDriveUrl = await addDefaultReactorDrive(
         client,
