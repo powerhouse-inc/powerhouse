@@ -1,3 +1,26 @@
+## 6.0.2-staging.9 (2026-05-18)
+
+### 🚀 Features
+
+- **reactor-api:** main integration tests now run on both reactor-drive and document-drive, includes reshuffle fix ([4f370a63f](https://github.com/powerhouse-inc/powerhouse/commit/4f370a63f))
+- add dark mode script ([#2619](https://github.com/powerhouse-inc/powerhouse/pull/2619))
+- single-document contention integration tests are switchable between document-drive and reactor-drive ([68b59b492](https://github.com/powerhouse-inc/powerhouse/commit/68b59b492))
+- **reactor-drive:** initial commit ([d6b7c4f8c](https://github.com/powerhouse-inc/powerhouse/commit/d6b7c4f8c))
+
+### 🩹 Fixes
+
+- wiring up reactor-drive dependency ([8c22b1658](https://github.com/powerhouse-inc/powerhouse/commit/8c22b1658))
+- **powerhouse-vetra-packages:** emit dts via tsc --build ([065c592ae](https://github.com/powerhouse-inc/powerhouse/commit/065c592ae))
+- **merge:** restore main contents on release branch (keep only version bumps and changelogs) ([6b981a6f1](https://github.com/powerhouse-inc/powerhouse/commit/6b981a6f1))
+- **deps:** drop orphan catalog refs in analytics-engine lost in main merge ([c16fa9085](https://github.com/powerhouse-inc/powerhouse/commit/c16fa9085))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Guillermo Puente @gpuente
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.2-staging.8 (2026-05-11)
 
 This was a version bump only for @powerhousedao/powerhouse-vetra-packages to align it with other projects, there were no code changes.
