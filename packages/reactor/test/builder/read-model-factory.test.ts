@@ -8,8 +8,9 @@ class StubReadModel implements IReadModel {
   readonly name = "stub-read-model";
   readonly receivedBatches: OperationWithContext[][] = [];
 
-  async indexOperations(operations: OperationWithContext[]): Promise<void> {
+  indexOperations(operations: OperationWithContext[]): Promise<void> {
     this.receivedBatches.push(operations);
+    return Promise.resolve();
   }
 }
 

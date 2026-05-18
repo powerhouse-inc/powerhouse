@@ -701,7 +701,19 @@ export class SimpleJobExecutor implements IJobExecutor {
       }
     }
 
+    const incomingActionIds = new Set(job.operations.map((op) => op.action.id));
+
     const nonSupersededOps = conflictingOps.filter((op) => {
+      // A local op at an index below the incoming batch's lowest index with no
+      // overlapping action.id is a predecessor of the incoming ops, not a
+      // concurrent conflict. Including it would force a reshuffle that
+      // re-inserts identical history at new indices, which cascades when many
+      // ops share timestamps (bulk imports). Local ops whose action.id matches
+      // an incoming op are kept so dedup + reshuffle can remap them correctly
+      // (e.g. cross-reactor reshuffle rebroadcast).
+      if (op.index < minIncomingIndex && !incomingActionIds.has(op.action.id)) {
+        return false;
+      }
       for (const laterOp of allOpsFromMinConflictingIndex) {
         if (laterOp.index > op.index && laterOp.skip > 0) {
           const logicalIndex = laterOp.index - laterOp.skip;
@@ -759,17 +771,26 @@ export class SimpleJobExecutor implements IJobExecutor {
       };
     }
 
-    const reshuffledOperations = reshuffleByTimestamp(
-      {
-        index: latestRevision,
-        skip: skipCount,
-      },
-      existingOpsToReshuffle,
-      incomingOpsToApply.map((operation) => ({
-        ...operation,
-        id: operation.id,
-      })),
-    );
+    const reshuffledOperations =
+      existingOpsToReshuffle.length === 0 && skipCount === 0
+        ? incomingOpsToApply
+            .slice()
+            .sort((a, b) => a.index - b.index)
+            .map((operation, i) => ({
+              ...operation,
+              index: latestRevision + i,
+            }))
+        : reshuffleByTimestamp(
+            {
+              index: latestRevision,
+              skip: skipCount,
+            },
+            existingOpsToReshuffle,
+            incomingOpsToApply.map((operation) => ({
+              ...operation,
+              id: operation.id,
+            })),
+          );
 
     for (const operation of reshuffledOperations) {
       if (operation.action.type === "NOOP") {

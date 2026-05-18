@@ -218,6 +218,11 @@ export class DocumentActionHandler {
 
     updateDocumentRevision(document, job.scope, operation.index);
 
+    document.operations = {
+      ...document.operations,
+      [job.scope]: [...(document.operations[job.scope] ?? []), operation],
+    };
+
     stores.writeCache.putState(
       document.header.id,
       job.scope,
@@ -352,6 +357,11 @@ export class DocumentActionHandler {
     }
 
     updateDocumentRevision(document, job.scope, operation.index);
+
+    document.operations = {
+      ...document.operations,
+      [job.scope]: [...(document.operations[job.scope] ?? []), operation],
+    };
 
     stores.writeCache.putState(
       documentId,
@@ -524,6 +534,11 @@ export class DocumentActionHandler {
     }
 
     updateDocumentRevision(document, job.scope, operation.index);
+
+    document.operations = {
+      ...document.operations,
+      [job.scope]: [...(document.operations[job.scope] ?? []), operation],
+    };
 
     stores.writeCache.putState(
       documentId,

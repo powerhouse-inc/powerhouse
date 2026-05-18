@@ -299,14 +299,16 @@ export type DerivedFixtureMetadata = {
  * Returns only documents that belong to at least one live drive's collection
  * (or are themselves live drives), since spokes only subscribe via drive
  * remotes — anything outside a live drive's collection cannot converge.
+ *
+ * `driveType` selects which drive container type seeds the reachability set
+ * (e.g. "powerhouse/document-drive" or "powerhouse/reactor-drive").
  */
 export async function deriveFixtureMetadataFromDb(
   connStr: string,
+  driveType: string = "powerhouse/document-drive",
 ): Promise<DerivedFixtureMetadata> {
   const pool = new Pool({ connectionString: connStr });
   try {
-    const driveType = "powerhouse/document-drive";
-
     const drives = await pool.query<{ documentId: string }>(
       `SELECT DISTINCT "documentId"
        FROM reactor."Operation"

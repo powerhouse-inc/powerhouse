@@ -114,7 +114,7 @@ describe.each(DRIVE_TYPES)(
       const fileMetadata = JSON.parse(
         readFileSync(FIXTURE_METADATA_PATH, "utf-8"),
       ) as FixtureMetadata;
-      const derived = await deriveFixtureMetadataFromDb(connStr);
+      const derived = await deriveFixtureMetadataFromDb(connStr, driveType);
       logger.info(
         `derived metadata: ${derived.documents.length} docs / ${derived.totalOpCount} ops (sidecar: ${fileMetadata.documents.length} docs / ${fileMetadata.totalOpCount} ops)`,
       );

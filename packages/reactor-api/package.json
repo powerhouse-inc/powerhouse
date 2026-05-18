@@ -38,7 +38,8 @@
     "codegen": "graphql-codegen --config codegen.ts && prettier --write src/graphql/reactor/gen/*.ts && eslint --fix src/graphql/reactor/gen/*.ts --no-warn-ignored",
     "codegen:watch": "graphql-codegen --config codegen.ts --watch",
     "dev": "tsx src/dev.ts",
-    "capture-hub-dump": "tsx scripts/capture-hub-dump.ts"
+    "capture-hub-dump": "tsx scripts/capture-hub-dump.ts",
+    "convert-hub-dump": "tsx scripts/convert-hub-dump.ts"
   },
   "publishConfig": {
     "access": "public"
