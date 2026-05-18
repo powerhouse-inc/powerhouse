@@ -314,6 +314,8 @@ export function TableView({
       <div
         className={twMerge(
           "max-h-full overflow-auto rounded-lg border border-gray-300 transition-opacity dark:border-slate-600",
+          "scrollbar-thin scrollbar-track-transparent scrollbar-thumb-rounded-md",
+          "scrollbar-thumb-gray-300 dark:scrollbar-thumb-slate-600",
           loading && "pointer-events-none opacity-50",
         )}
       >
@@ -364,7 +366,7 @@ export function TableView({
               rows.map((row, rowIndex) => (
                 <tr
                   key={rowIndex}
-                  className="odd:bg-white even:bg-gray-50 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                  className="odd:bg-white even:bg-gray-50 hover:bg-blue-50 dark:odd:bg-slate-900 dark:even:bg-slate-800 dark:hover:bg-blue-900/20"
                 >
                   <td className="p-2 text-center">
                     <button

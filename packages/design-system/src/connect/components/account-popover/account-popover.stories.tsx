@@ -37,7 +37,7 @@ export const LoggedIn: Story = {
       <div className="flex items-center gap-2">
         <div className="size-8 rounded-full bg-gray-200 dark:bg-slate-600" />
         <div className="flex flex-col">
-          <span className="text-sm font-medium">Willow.eth</span>
+          <span className="text-sm font-medium text-gray-900 dark:text-slate-50">Willow.eth</span>
           <span className="text-xs text-gray-500 dark:text-slate-100">{`${address.slice(0, 6)}...${address.slice(-4)}`}</span>
         </div>
       </div>
