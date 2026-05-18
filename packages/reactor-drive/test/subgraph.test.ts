@@ -4,9 +4,8 @@ import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { DriveNodeView } from "../src/read-model/drive-node-view.js";
+import { runReactorDriveMigrations } from "../src/schema/migrations/migrator.js";
 import type { ReactorDriveDatabase } from "../src/schema/tables.js";
-import { up as createDocumentNameTable } from "../src/schema/migrations/0002_document_name.js";
-import { up as createDriveNodeTable } from "../src/schema/migrations/0001_drive_node.js";
 import {
   createReactorDriveResolvers,
   type ReactorDriveResolverContext,
@@ -26,8 +25,15 @@ describe("reactor-drive subgraph", () => {
     db = new Kysely<ReactorDriveDatabase>({
       dialect: new PGliteDialect(pg),
     });
-    await createDriveNodeTable(db as unknown as Kysely<unknown>);
-    await createDocumentNameTable(db as unknown as Kysely<unknown>);
+    const migrationResult = await runReactorDriveMigrations(
+      db as unknown as Kysely<unknown>,
+      "public",
+    );
+    if (!migrationResult.success && migrationResult.error) {
+      throw new Error(
+        `Reactor drive migrations failed: ${migrationResult.error.message}`,
+      );
+    }
     view = new DriveNodeView(db);
     resolvers = createReactorDriveResolvers();
     ctx = {

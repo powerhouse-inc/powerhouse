@@ -4,6 +4,7 @@ import { sql } from "kysely";
 export async function up(db: Kysely<unknown>): Promise<void> {
   await db.schema
     .createTable("DriveNode")
+    .ifNotExists()
     .addColumn("driveId", "text", (col) => col.notNull())
     .addColumn("id", "text", (col) => col.notNull())
     .addColumn("kind", "text", (col) => col.notNull())
@@ -26,12 +27,14 @@ export async function up(db: Kysely<unknown>): Promise<void> {
 
   await db.schema
     .createIndex("idx_drive_node_parent_name")
+    .ifNotExists()
     .on("DriveNode")
     .columns(["driveId", "parentFolder", "name"])
     .execute();
 
   await db.schema
     .createIndex("idx_drive_node_parent_kind_id")
+    .ifNotExists()
     .on("DriveNode")
     .columns(["driveId", "parentFolder", "kind", "id"])
     .execute();

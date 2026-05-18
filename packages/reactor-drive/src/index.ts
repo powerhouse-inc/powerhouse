@@ -46,8 +46,11 @@ export type {
   DriveNodeTable,
   ReactorDriveDatabase,
 } from "./schema/tables.js";
-export { up as createDriveNodeTable } from "./schema/migrations/0001_drive_node.js";
-export { up as createDocumentNameTable } from "./schema/migrations/0002_document_name.js";
+export {
+  getReactorDriveMigrationStatus,
+  runReactorDriveMigrations,
+  type ReactorDriveMigrationResult,
+} from "./schema/migrations/migrator.js";
 export { resolveCollision } from "./processors/utils/collisions.js";
 export { NodeProcessor } from "./processors/node-processor.js";
 export type { IDriveReadModel } from "./read-model/interfaces.js";

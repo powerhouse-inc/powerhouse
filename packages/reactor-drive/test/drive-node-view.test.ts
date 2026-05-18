@@ -3,8 +3,22 @@ import { Kysely, type LogEvent } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { DriveNodeView } from "../src/read-model/drive-node-view.js";
-import { up as createDriveNodeTable } from "../src/schema/migrations/0001_drive_node.js";
+import { runReactorDriveMigrations } from "../src/schema/migrations/migrator.js";
 import type { ReactorDriveDatabase } from "../src/schema/tables.js";
+
+async function applyReactorDriveMigrations(
+  db: Kysely<ReactorDriveDatabase>,
+): Promise<void> {
+  const result = await runReactorDriveMigrations(
+    db as unknown as Kysely<unknown>,
+    "public",
+  );
+  if (!result.success && result.error) {
+    throw new Error(
+      `Reactor drive migrations failed: ${result.error.message}`,
+    );
+  }
+}
 
 describe("DriveNodeView.getDescendants (PGlite)", () => {
   let pg: PGlite;
@@ -23,7 +37,7 @@ describe("DriveNodeView.getDescendants (PGlite)", () => {
         }
       },
     });
-    await createDriveNodeTable(db as unknown as Kysely<unknown>);
+    await applyReactorDriveMigrations(db);
     view = new DriveNodeView(db);
   });
 
@@ -182,7 +196,7 @@ describe("DriveNodeView.listChildren keyset cursor (PGlite)", () => {
   beforeEach(async () => {
     pg = new PGlite({ fs: new MemoryFS() });
     db = new Kysely<ReactorDriveDatabase>({ dialect: new PGliteDialect(pg) });
-    await createDriveNodeTable(db as unknown as Kysely<unknown>);
+    await applyReactorDriveMigrations(db);
     view = new DriveNodeView(db);
   });
 

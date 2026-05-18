@@ -28,8 +28,6 @@ import {
   NodeProcessor,
   type NodeProcessorDatabase,
 } from "../src/processors/node-processor.js";
-import { up as createDocumentNameTable } from "../src/schema/migrations/0002_document_name.js";
-import { up as createDriveNodeTable } from "../src/schema/migrations/0001_drive_node.js";
 
 let nextOrdinal = 1;
 
@@ -85,9 +83,6 @@ describe("NodeProcessor", () => {
       .addColumn("documentType", "text", (col) => col.notNull())
       .execute();
 
-    await createDriveNodeTable(db as unknown as Kysely<unknown>);
-    await createDocumentNameTable(db as unknown as Kysely<unknown>);
-
     const operationIndex = {
       getSinceOrdinal: vi.fn().mockResolvedValue({ results: [] }),
     } as unknown as IOperationIndex;
@@ -100,7 +95,13 @@ describe("NodeProcessor", () => {
       shutdown: vi.fn(),
     } as unknown as IWriteCache;
     const tracker = new ConsistencyTracker();
-    processor = new NodeProcessor(db, operationIndex, writeCache, tracker);
+    processor = new NodeProcessor(
+      db as unknown as Kysely<unknown>,
+      "public",
+      operationIndex,
+      writeCache,
+      tracker,
+    );
     await processor.init();
   });
 

@@ -29,8 +29,6 @@ import {
 import { DriveNodeView } from "../src/read-model/drive-node-view.js";
 import type { ReactorDriveDatabase } from "../src/schema/tables.js";
 import { reactorDriveDocumentModelModule } from "../src/module.js";
-import { up as createDocumentNameTable } from "../src/schema/migrations/0002_document_name.js";
-import { up as createDriveNodeTable } from "../src/schema/migrations/0001_drive_node.js";
 
 describe("ReactorDriveClient Integration", () => {
   let pg: PGlite;
@@ -52,8 +50,6 @@ describe("ReactorDriveClient Integration", () => {
     schemaDb = baseDb.withSchema(
       REACTOR_SCHEMA,
     ) as Kysely<NodeProcessorDatabase>;
-    await createDriveNodeTable(schemaDb as unknown as Kysely<unknown>);
-    await createDocumentNameTable(schemaDb as unknown as Kysely<unknown>);
 
     const operationIndex = {
       getSinceOrdinal: vi.fn().mockResolvedValue({ results: [] }),
@@ -69,7 +65,8 @@ describe("ReactorDriveClient Integration", () => {
     const tracker = new ConsistencyTracker();
 
     const nodeProcessor = new NodeProcessor(
-      schemaDb,
+      baseDb,
+      REACTOR_SCHEMA,
       operationIndex,
       writeCache,
       tracker,

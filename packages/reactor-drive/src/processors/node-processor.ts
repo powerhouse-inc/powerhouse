@@ -15,6 +15,7 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import type { Kysely, Transaction } from "kysely";
 import { DRIVE_CHILD_RELATIONSHIP_TYPE } from "../constants.js";
+import { runReactorDriveMigrations } from "../schema/migrations/migrator.js";
 import type { ReactorDriveDatabase } from "../schema/tables.js";
 import type {
   AddFolderActionInput,
@@ -42,15 +43,21 @@ const STRUCTURE_ACTION_TYPES = new Set([
 
 export class NodeProcessor extends BaseReadModel {
   private readonly driveDb: Kysely<NodeProcessorDatabase>;
+  private readonly baseDb: Kysely<unknown>;
+  private readonly schema: string;
 
   constructor(
-    db: Kysely<NodeProcessorDatabase>,
+    baseDb: Kysely<unknown>,
+    schema: string,
     operationIndex: IOperationIndex,
     writeCache: IWriteCache,
     consistencyTracker: IConsistencyTracker,
   ) {
+    const scopedDb = baseDb.withSchema(
+      schema,
+    ) as unknown as Kysely<NodeProcessorDatabase>;
     super(
-      db as unknown as Kysely<DocumentViewDatabase>,
+      scopedDb as unknown as Kysely<DocumentViewDatabase>,
       operationIndex,
       writeCache,
       consistencyTracker,
@@ -59,7 +66,19 @@ export class NodeProcessor extends BaseReadModel {
         rebuildStateOnInit: false,
       },
     );
-    this.driveDb = db;
+    this.driveDb = scopedDb;
+    this.baseDb = baseDb;
+    this.schema = schema;
+  }
+
+  override async init(): Promise<void> {
+    const result = await runReactorDriveMigrations(this.baseDb, this.schema);
+    if (!result.success && result.error) {
+      throw new Error(
+        `Reactor drive migrations failed: ${result.error.message}`,
+      );
+    }
+    await super.init();
   }
 
   protected override async commitOperations(

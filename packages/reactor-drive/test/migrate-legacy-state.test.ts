@@ -24,9 +24,8 @@ import {
   type NodeProcessorDatabase,
 } from "../src/processors/node-processor.js";
 import { DriveNodeView } from "../src/read-model/drive-node-view.js";
+import { runReactorDriveMigrations } from "../src/schema/migrations/migrator.js";
 import type { ReactorDriveDatabase } from "../src/schema/tables.js";
-import { up as createDocumentNameTable } from "../src/schema/migrations/0002_document_name.js";
-import { up as createDriveNodeTable } from "../src/schema/migrations/0001_drive_node.js";
 
 function createReactor() {
   const execute = vi
@@ -47,8 +46,15 @@ describe("migrateLegacyDriveState", () => {
     db = new Kysely<ReactorDriveDatabase>({
       dialect: new PGliteDialect(pg),
     });
-    await createDriveNodeTable(db as unknown as Kysely<unknown>);
-    await createDocumentNameTable(db as unknown as Kysely<unknown>);
+    const migrationResult = await runReactorDriveMigrations(
+      db as unknown as Kysely<unknown>,
+      "public",
+    );
+    if (!migrationResult.success && migrationResult.error) {
+      throw new Error(
+        `Reactor drive migrations failed: ${migrationResult.error.message}`,
+      );
+    }
     view = new DriveNodeView(db);
   });
 
@@ -211,7 +217,8 @@ describe("migrateLegacyDriveState", () => {
     } as unknown as IWriteCache;
     const tracker = new ConsistencyTracker();
     const processor = new NodeProcessor(
-      processorDb,
+      processorDb as unknown as Kysely<unknown>,
+      "public",
       operationIndex,
       writeCache,
       tracker,

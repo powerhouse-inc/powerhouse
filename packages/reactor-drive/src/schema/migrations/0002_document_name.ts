@@ -4,6 +4,7 @@ import { sql } from "kysely";
 export async function up(db: Kysely<unknown>): Promise<void> {
   await db.schema
     .createTable("DocumentName")
+    .ifNotExists()
     .addColumn("docId", "text", (col) => col.primaryKey())
     .addColumn("name", "text", (col) => col.notNull())
     .addColumn("updatedAt", "timestamptz", (col) =>

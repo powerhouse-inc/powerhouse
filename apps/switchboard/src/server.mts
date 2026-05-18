@@ -32,8 +32,6 @@ import {
   DriveNodeView,
   NodeProcessor,
   ReactorDriveClient,
-  createDocumentNameTable,
-  createDriveNodeTable,
   createReactorDriveResolvers,
   reactorDriveDocumentModelModule,
   reactorDriveSubgraphTypeDefs,
@@ -349,14 +347,9 @@ async function initServer(
         writeCache,
         processorManagerConsistencyTracker,
       }) => {
-        await createDriveNodeTable(
-          reactorDriveSchemaDb as unknown as Kysely<unknown>,
-        );
-        await createDocumentNameTable(
-          reactorDriveSchemaDb as unknown as Kysely<unknown>,
-        );
         const nodeProcessor = new NodeProcessor(
-          reactorDriveSchemaDb as never,
+          baseKysely as unknown as Kysely<unknown>,
+          REACTOR_SCHEMA,
           operationIndex,
           writeCache,
           processorManagerConsistencyTracker,
