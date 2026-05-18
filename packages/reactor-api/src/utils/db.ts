@@ -114,14 +114,37 @@ export type PgliteFactory = (
   connectionString: string | undefined,
 ) => PGliteType;
 
-export function getDbClient(
-  connectionString: string | undefined = undefined,
-  pgliteFactory?: PgliteFactory,
-): {
+interface DbClient {
   db: Db;
   knex: Knex;
   pglite: PGliteType | undefined;
-} {
+}
+
+/**
+ * Cache of DB clients keyed by connection string. Reactor-api's read-model
+ * layer wires analytics, attachments, and document-permissions as separate
+ * consumers but they all target the same logical database (one postgres
+ * instance, many schemas). With a real postgres URL each consumer could
+ * safely open its own pool; with PGlite, two `new PGlite(samePath)` calls
+ * mean two embedded postgres processes contending for the same data dir,
+ * which races shutdown syncs and silently loses writes. Caching by
+ * connection string returns the same knex/PGlite pair to every consumer
+ * so writes coexist in one MemoryFS and one atomic snapshot.
+ *
+ * Stale entries (PGlite already closed by a prior teardown) are evicted
+ * on read so tests and re-init paths get a fresh client.
+ */
+const dbClientCache = new Map<string, DbClient>();
+
+export function getDbClient(
+  connectionString: string | undefined = undefined,
+  pgliteFactory?: PgliteFactory,
+): DbClient {
+  const cacheKey = connectionString ?? "<in-memory>";
+  const cached = dbClientCache.get(cacheKey);
+  if (cached && !cached.pglite?.closed) return cached;
+  if (cached) dbClientCache.delete(cacheKey);
+
   const isPg = connectionString && isPG(connectionString);
   const client = isPg ? "pg" : (ClientPgLite as typeof knex.Client);
   const pgliteInstance: PGliteType | undefined = isPg
@@ -154,7 +177,13 @@ export function getDbClient(
     }),
   });
 
-  return { db: kyselyInstance, knex: knexInstance, pglite: pgliteInstance };
+  const dbClient: DbClient = {
+    db: kyselyInstance,
+    knex: knexInstance,
+    pglite: pgliteInstance,
+  };
+  dbClientCache.set(cacheKey, dbClient);
+  return dbClient;
 }
 
 export const initAnalyticsStoreSql = [

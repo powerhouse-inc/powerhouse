@@ -594,7 +594,14 @@ export const startSwitchboard = async (
     return await initServer(serverPort, options, renown);
   } catch (e) {
     Sentry.captureException(e);
-    logger.error("App crashed: @error", e);
+    // The default logger only substitutes `@token` references in the
+    // message; passing an Error as a positional replacement drops it
+    // silently. Stringify here so the actual cause and stack reach stderr.
+    const detail =
+      e instanceof Error
+        ? `${e.name}: ${e.message}\n${e.stack ?? ""}`
+        : String(e);
+    logger.error(`App crashed: ${detail}`);
     throw e;
   }
 };

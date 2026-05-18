@@ -312,9 +312,10 @@ function setupEventListeners(
                   return result as unknown as ReactorProcessorRecord[];
                 } catch (e) {
                   const logger = defaultLogger;
+                  const detail =
+                    e instanceof Error ? `${e.name}: ${e.message}` : String(e);
                   logger.error(
-                    `Error creating processor for drive ${driveHeader.id}:`,
-                    e,
+                    `Error creating processor for drive ${driveHeader.id}: ${detail}`,
                   );
                   return [];
                 }
@@ -647,9 +648,10 @@ async function _setupAPI(
                 const result = await driveFactory(driveHeader);
                 return result as unknown as ReactorProcessorRecord[];
               } catch (e) {
+                const detail =
+                  e instanceof Error ? `${e.name}: ${e.message}` : String(e);
                 logger.error(
-                  `Error creating processor for drive ${driveHeader.id}:`,
-                  e,
+                  `Error creating processor for drive ${driveHeader.id}: ${detail}`,
                 );
 
                 return [];
@@ -781,7 +783,11 @@ function buildApiDispose(args: {
       try {
         await close();
       } catch (error) {
-        logger.error("API dispose: db closer failed:", error);
+        const detail =
+          error instanceof Error
+            ? `${error.name}: ${error.message}`
+            : String(error);
+        logger.error(`API dispose: db closer failed: ${detail}`);
       }
     }
   };
