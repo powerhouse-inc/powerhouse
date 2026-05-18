@@ -2,6 +2,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { DEFAULT_CONNECT_CONFIG } from "@powerhousedao/shared/connect";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RUNTIME_CONFIG_SCHEMA_URL } from "../runtime-config-schema.js";
 import { phConfigPlugin } from "./ph-config.js";
@@ -66,7 +67,9 @@ describe("phConfigPlugin", () => {
       name: "test-project",
       version: "0.1.0",
     });
-    expect(parsed.connect).toEqual({});
+    // Even with no source `connect` block, the emitter populates every
+    // field from DEFAULT_CONNECT_CONFIG so the dist file is self-describing.
+    expect(parsed.connect).toEqual(DEFAULT_CONNECT_CONFIG);
   });
 
   it("emits connect section from source config", () => {
@@ -92,9 +95,12 @@ describe("phConfigPlugin", () => {
     generateBundle.call(ctx);
 
     const parsed = JSON.parse(emitted[0].source) as Record<string, unknown>;
+    // User overrides are layered on top of DEFAULT_CONNECT_CONFIG, so the
+    // expected output is the defaults with the two overridden leaves replaced.
     expect(parsed.connect).toEqual({
-      branding: { appName: "Test App" },
-      drives: { allowAddDrive: false },
+      ...DEFAULT_CONNECT_CONFIG,
+      branding: { ...DEFAULT_CONNECT_CONFIG.branding, appName: "Test App" },
+      drives: { ...DEFAULT_CONNECT_CONFIG.drives, allowAddDrive: false },
     });
   });
 
