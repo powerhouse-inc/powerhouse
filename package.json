@@ -16,7 +16,7 @@
     "test:pg": "pnpm --filter=@powerhousedao/analytics-engine-pg run test",
     "test:coverage": "pnpm vitest run --coverage",
     "simulate-ci-workflow": "pnpm clean && pnpm install-ci && pnpm check-ts-references && pnpm build && pnpm typecheck && pnpm rebuild --recursive && pnpm --filter=@powerhousedao/versioned-documents --no-bail run build && pnpm -r --workspace-concurrency=1 lint && pnpm test:ci && pnpm test:codegen && pnpm test:e2e:vetra && pnpm build:storybook && pnpm check-circular-imports",
-    "lint": "NODE_OPTIONS=--max-old-space-size=8192 eslint --config eslint.config.js --quiet --fix --cache --cache-strategy content",
+    "lint": "NODE_OPTIONS=--max-old-space-size=8192 eslint --config eslint.config.js --fix --quiet --cache --cache-strategy content",
     "install-ci": "pnpm i --frozen-lockfile",
     "build": "pnpm --filter=@powerhousedao/config --filter=@renown/sdk --filter=@powerhousedao/common --filter=@powerhousedao/builder-tools --filter=@powerhousedao/codegen --filter=document-model --filter=@powerhousedao/design-system --filter=@powerhousedao/powerhouse-vetra-packages --filter=@powerhousedao/pglite-fs --filter=@powerhousedao/reactor-api --filter=@powerhousedao/reactor-attachments --filter=@powerhousedao/reactor-browser --filter=@powerhousedao/reactor --filter=@powerhousedao/reactor-hypercore --filter=@powerhousedao/reactor-mcp --filter=@powerhousedao/opentelemetry-instrumentation-reactor --filter=@powerhousedao/registry --filter=@powerhousedao/shared --filter=@powerhousedao/switchboard-gui --filter=@powerhousedao/vetra --filter=@powerhousedao/analytics-engine-browser --filter=@powerhousedao/analytics-engine-core --filter=@powerhousedao/analytics-engine-graphql --filter=@powerhousedao/analytics-engine-knex --filter=@powerhousedao/analytics-engine-pg --filter=@powerhousedao/connect --filter=@powerhousedao/switchboard --filter=@powerhousedao/ph-cli --filter=ph-cmd --filter=@powerhousedao/load-test-client --filter=@powerhousedao/load-test-connect --filter=@powerhousedao/e2e-utils --no-bail run build",
     "typecheck": "tsc --build",
@@ -29,7 +29,8 @@
     "check-circular-imports": "dpdm -T ./**/* --no-tree --no-warning --exit-code circular:1",
     "check-ts-references": "pnpm update-ts-references --check",
     "knip": "knip",
-    "postinstall": "pnpm update-ts-references"
+    "postinstall": "pnpm update-ts-references",
+    "add-tailwind-darkmode-classes": "tsx scripts/add-tailwind-darkmode-classes.ts"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.8.1",
@@ -42,6 +43,7 @@
     "@swc-node/register": "~1.10.9",
     "@swc/core": "~1.11.1",
     "@types/node": "catalog:",
+    "@types/picomatch": "^4.0.3",
     "@types/semver": "^7.7.0",
     "@types/yargs": "^17.0.33",
     "dpdm": "^4.2.0",
@@ -58,8 +60,11 @@
     "nx": "22.7.1",
     "prettier": "catalog:",
     "read-pkg": "catalog:",
+    "remeda": "catalog:",
     "rimraf": "^6.0.1",
     "semver": "catalog:",
+    "ts-morph": "catalog:",
+    "type-fest": "catalog:",
     "tsx": "catalog:",
     "typescript": "6.0.3",
     "typescript-eslint": "^8.59.3",

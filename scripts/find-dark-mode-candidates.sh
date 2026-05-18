@@ -22,25 +22,20 @@ rg -n \
   --glob '!**/.nx/**' \
   '\b(?:bg|text|border|ring|shadow|divide|outline|fill|stroke|placeholder|caret|accent|from|via|to)-[^\s"`'"'"'}]+' \
   . \
-  | awk -F: '
+  | cut -d: -f1 \
+  | sort -u \
+  | awk '
     BEGIN {
-      print "# Dark Mode Style Candidates\n"
-      print "This report lists places in the codebase that may need dark-mode review."
-      print "It includes Tailwind classes related to colors, borders, shadows, rings, fills, strokes, gradients, and similar visual styling.\n"
+      print "export const darkModeCandidateFiles = ["
     }
 
     {
-      file = $1
-      line = $2
-
-      text = $0
-      sub(file ":" line ":", "", text)
-
-      if (file != currentFile) {
-        currentFile = file
-        print "\n## `" file "`\n"
-      }
-
-      print "- **Line " line "**: `" text "`"
+      gsub(/\\/,"\\\\")
+      gsub(/"/,"\\\"")
+      print "  \"" $0 "\","
     }
-  ' > dark-mode-candidates.md
+
+    END {
+      print "];"
+    }
+  ' > scripts/dark-mode-candidate-files.ts
