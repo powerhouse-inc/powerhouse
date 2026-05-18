@@ -186,6 +186,7 @@
   ],
   "unmappedPackages": [
     "packages/reactor-attachments",
+    "packages/reactor-drive",
     "packages/reactor-hypercore",
     "packages/reactor-mcp",
     "packages/registry",
