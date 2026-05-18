@@ -38,7 +38,7 @@ export const SettingsModalOld: React.FC<SettingsModalOldProps> = (props) => {
       }}
       {...restProps}
     >
-      <div className="w-[432px] p-4 text-gray-900">
+      <div className="w-[432px] bg-white p-4 text-gray-900">
         <div className="flex justify-between">
           <h1 className="text-center text-xl font-bold">{title}</h1>
           <button

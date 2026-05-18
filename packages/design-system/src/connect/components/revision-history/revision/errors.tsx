@@ -25,7 +25,7 @@ export function Errors(props: ErrorsProps) {
   const content = (
     <span
       className={twMerge(
-        "flex w-fit items-center rounded-lg border border-gray-200 px-2 py-1 text-xs",
+        "flex w-fit items-center rounded-lg border border-gray-200 bg-white px-2 py-1 text-xs",
         color,
         hasErrors && "cursor-pointer",
       )}
