@@ -1,0 +1,15 @@
+{
+  "name": "dark-mode",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "description": "",
+  "license": "ISC",
+  "devDependencies": {
+    "remeda": "catalog:",
+    "type-fest": "catalog:",
+    "ts-morph": "catalog:",
+    "@types/node": "catalog:",
+    "execa": "catalog:"
+  }
+}

@@ -1,7 +1,9 @@
 {
   "extends": "./tsconfig.options.json",
   "compilerOptions": {
-    "types": ["node"]
+    "types": [
+      "node"
+    ]
   },
   "references": [
     {
@@ -48,6 +50,9 @@
     },
     {
       "path": "test/vetra-e2e"
+    },
+    {
+      "path": "scripts/dark-mode"
     },
     {
       "path": "scripts/profiling"
