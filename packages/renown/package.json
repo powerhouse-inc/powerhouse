@@ -1,6 +1,6 @@
 {
   "name": "@renown/sdk",
-  "version": "6.0.0-dev.250",
+  "version": "6.0.0-dev.253",
   "description": "",
   "license": "AGPL-3.0-only",
   "private": false,
@@ -14,11 +14,13 @@
   },
   "exports": {
     ".": {
+      "source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
     },
     "./node": {
+      "source": "./src/node.ts",
       "types": "./dist/node.d.ts",
       "import": "./dist/node.js",
       "default": "./dist/node.js"

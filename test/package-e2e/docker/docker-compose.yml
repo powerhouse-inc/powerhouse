@@ -1,0 +1,69 @@
+# docker-compose for the consumer side of the package-e2e flow.
+# The npm registry runs on the host (started by the orchestrator); containers
+# reach it via host.docker.internal:8080.
+#
+# Bring up after publish-package.ts has populated the host registry:
+#   docker compose -f docker/docker-compose.yml up --build -d
+
+services:
+  switchboard:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: switchboard
+      args:
+        TAG: ${PH_TAG:-dev}
+        PACKAGE_NAME: ${PH_PKG_NAME:-test-todo-package}
+        REGISTRY_URL: http://host.docker.internal:8080
+        CACHEBUST: ${CACHEBUST:-0}
+      # `host.docker.internal` is auto-defined by Docker Desktop (Mac/Win) but
+      # not by Linux Docker. The build steps `pnpm add -g ph-cmd@dev` /
+      # `ph install` need it to reach the host registry, so route via the
+      # daemon's host-gateway. Compose v2+ honors extra_hosts during build.
+      extra_hosts:
+        - "host.docker.internal:host-gateway"
+    image: test-pkg-e2e-switchboard
+    container_name: pkg-e2e-switchboard
+    ports:
+      - "4001:4001"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:4001/d/powerhouse || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 20s
+
+  connect:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: connect
+      args:
+        TAG: ${PH_TAG:-dev}
+        PACKAGE_NAME: ${PH_PKG_NAME:-test-todo-package}
+        REGISTRY_URL: http://host.docker.internal:8080
+        # Browser-side URL — the same registry, reached from the host where
+        # Playwright runs. Baked into ph-packages.json by the connect-builder.
+        BROWSER_REGISTRY_URL: http://localhost:8080
+        PH_CONNECT_BASE_PATH: "/"
+        CACHEBUST: ${CACHEBUST:-0}
+      # See switchboard service for rationale.
+      extra_hosts:
+        - "host.docker.internal:host-gateway"
+    image: test-pkg-e2e-connect
+    container_name: pkg-e2e-connect
+    ports:
+      - "3001:3001"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      switchboard:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:3001/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 5s

@@ -2,7 +2,7 @@
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
     "types": ["node", "vitest/globals"],
-    "outDir": "./dist",
+    "outDir": "./.tsbuild",
     "lib": ["ESNext", "dom", "dom.iterable"]
   },
   "include": [

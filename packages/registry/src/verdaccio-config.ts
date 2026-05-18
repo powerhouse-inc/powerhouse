@@ -36,20 +36,35 @@ export function buildVerdaccioConfig(config: RegistryConfig) {
         cache: true,
       },
     },
-    packages: {
-      "@powerhousedao/*": {
+    // Verdaccio matches packages config top-to-bottom (first match wins),
+    // so local-only globs must come first. We also skip emitting the
+    // default proxied entries when a glob with the same key is in the
+    // local-only list — otherwise the value would be overwritten but the
+    // iteration position would still be the default's earlier slot.
+    packages: (() => {
+      const local = config.localPackagePatterns ?? [];
+      const localSet = new Set(local);
+      const access = {
         access: "$all",
         publish: "$authenticated",
         unpublish: "$authenticated",
-        proxy: "npmjs",
-      },
-      "**": {
-        access: "$all",
-        publish: "$authenticated",
-        unpublish: "$authenticated",
-        proxy: "npmjs",
-      },
-    },
+      };
+      const entries: [string, Record<string, unknown>][] = [];
+      // Locals first — no proxy means verdaccio resolves them from local
+      // storage only, so re-publishing a version that exists on npmjs
+      // doesn't 409.
+      for (const pattern of local) {
+        entries.push([pattern, { ...access }]);
+      }
+      // Defaults follow, skipping any glob the caller already overrode.
+      if (!localSet.has("@powerhousedao/*")) {
+        entries.push(["@powerhousedao/*", { ...access, proxy: "npmjs" }]);
+      }
+      if (!localSet.has("**")) {
+        entries.push(["**", { ...access, proxy: "npmjs" }]);
+      }
+      return Object.fromEntries(entries);
+    })(),
     web: {
       enable: config.webEnabled !== false,
       title: "Powerhouse Registry",

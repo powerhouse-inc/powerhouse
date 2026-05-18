@@ -12,7 +12,7 @@ type Props = {
 export function DefaultEditor(props: Props) {
   const { className, ...rest } = props;
   return (
-    <div className={twMerge("rounded-lg p-3", className)}>
+    <div className={twMerge("rounded-lg bg-white p-3", className)}>
       <DefaultEditorSelect {...rest} />
     </div>
   );

@@ -59,7 +59,10 @@ export function ConnectConfirmationModal(props: ConfirmationModalProps) {
       {...restProps}
     >
       <div
-        {...mergeClassNameProps(containerProps, "w-[400px] p-6 text-slate-300")}
+        {...mergeClassNameProps(
+          containerProps,
+          "w-[400px] bg-white p-6 text-slate-300",
+        )}
       >
         <div
           {...mergeClassNameProps(

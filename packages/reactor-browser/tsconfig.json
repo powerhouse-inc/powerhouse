@@ -6,7 +6,7 @@
       "dom",
       "dom.iterable"
     ],
-    "outDir": "./dist",
+    "outDir": "./.tsbuild",
     "types": [
       "@types/wicg-file-system-access",
       "vitest/globals"
@@ -37,5 +37,9 @@
     {
       "path": "../shared"
     }
+  ],
+  "exclude": [
+    "dist",
+    "node_modules"
   ]
 }

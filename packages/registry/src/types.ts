@@ -44,6 +44,10 @@ export interface RegistryConfig {
   verdaccioSecret?: string;
   /** Enable Renown JWT auth in front of verdaccio. */
   renown?: RenownAuthConfig;
+  /** Glob patterns served locally only — no npmjs uplink proxy. Lets you
+   *  re-publish a workspace package whose version already exists on npmjs
+   *  without bumping (verdaccio would otherwise reject with 409). */
+  localPackagePatterns?: string[];
 }
 
 export interface RegistryCommandArgs {
@@ -63,4 +67,7 @@ export interface RegistryCommandArgs {
   publicUrl?: string;
   authRenown?: boolean;
   verdaccioSecret?: string;
+  /** Comma-separated globs (e.g. "@powerhousedao/*,document-model,ph-cmd")
+   *  served locally only — no npmjs uplink proxy. */
+  localPackages?: string;
 }

@@ -4,10 +4,14 @@
     "types": [
       "node"
     ],
-    "outDir": "./dist"
+    "outDir": "./.tsbuild"
   },
   "include": [
     "**/*"
+  ],
+  "exclude": [
+    "dist",
+    "node_modules"
   ],
   "references": [
     {

@@ -1,7 +1,7 @@
 {
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
-    "outDir": "./dist",
+    "outDir": "./.tsbuild",
     "emitDeclarationOnly": true,
     "types": [
       "node"
@@ -36,6 +36,10 @@
   "include": [
     "**/*",
     "./powerhouse.manifest.json"
+  ],
+  "exclude": [
+    "dist",
+    "node_modules"
   ],
   "references": [
     {

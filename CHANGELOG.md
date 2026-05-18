@@ -1,3 +1,22 @@
+## 6.0.0-dev.253 (2026-05-18)
+
+This was a version bump only, there were no code changes.
+
+## 6.0.0-dev.252 (2026-05-17)
+
+This was a version bump only, there were no code changes.
+
+## 6.0.0-dev.251 (2026-05-16)
+
+### 🩹 Fixes
+
+- surface and fix imports broken by missing source resolution ([50022703b](https://github.com/powerhouse-inc/powerhouse/commit/50022703b))
+- **codegen:** guard FolderTree template against undefined selected drive ([026a74ad9](https://github.com/powerhouse-inc/powerhouse/commit/026a74ad9))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.250 (2026-05-15)
 
 ### 🚀 Features

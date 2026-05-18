@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-api",
-  "version": "6.0.0-dev.250",
+  "version": "6.0.0-dev.253",
   "description": "",
   "type": "module",
   "repository": {
@@ -9,14 +9,17 @@
   },
   "exports": {
     ".": {
+      "source": "./index.mts",
       "types": "./dist/index.d.mts",
       "import": "./dist/index.mjs"
     },
     "./vite": {
+      "source": "./src/packages/vite-loader.mts",
       "types": "./dist/vite-loader.d.mts",
       "import": "./dist/src/packages/vite-loader.mjs"
     },
     "./https-hooks": {
+      "source": "./src/packages/https-hooks.mts",
       "types": "./dist/https-hooks.d.mts",
       "import": "./dist/src/packages/https-hooks.mjs"
     },
