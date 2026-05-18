@@ -128,7 +128,7 @@ export class RemoteReservationStore implements IReservationStore {
 
   // Sweeping is the server's responsibility; clients have no authority to
   // delete reservations on a remote switchboard.
-  deleteExpired(_now?: Date): Promise<number> {
+  deleteExpired(): Promise<number> {
     return Promise.reject(
       new Error("RemoteReservationStore.deleteExpired is not supported"),
     );

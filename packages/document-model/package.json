@@ -13,18 +13,22 @@
   "type": "module",
   "exports": {
     ".": {
+      "source": "./index.ts",
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
     },
     "./test": {
+      "source": "./test/index.ts",
       "import": "./dist/test/index.js",
       "types": "./dist/test/index.d.ts"
     },
     "./node": {
+      "source": "./node.mts",
       "node": "./dist/node.mjs",
       "types": "./dist/node.d.mts"
     },
     "./core": {
+      "source": "./index.ts",
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
     }
@@ -41,17 +45,17 @@
     "@types/jest": "^29.5.14",
     "@types/mime": "^4.0.0",
     "@types/node": "catalog:",
+    "change-case": "catalog:",
     "jest": "^30.0.5",
+    "mutative": "^1.0.5",
     "tsdown": "catalog:",
     "tsx": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "zod": "catalog:"
   },
   "dependencies": {
     "@powerhousedao/shared": "workspace:*",
-    "change-case": "catalog:",
-    "mime": "^4.0.4",
-    "mutative": "^1.0.5",
-    "zod": "catalog:",
-    "jszip": "^3.10.1"
+    "jszip": "^3.10.1",
+    "mime": "^4.0.4"
   }
 }

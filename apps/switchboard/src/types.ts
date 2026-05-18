@@ -3,6 +3,21 @@ import type { IRenown } from "@renown/sdk";
 import type { DriveInput } from "@powerhousedao/shared/document-drive";
 import type { ILogger } from "document-model";
 
+/**
+ * Drive container document type chosen for the boot-time default drive. The
+ * legacy `powerhouse/document-drive` keeps the existing behavior; the newer
+ * `powerhouse/reactor-drive` is wired through `addDefaultReactorDrive` and
+ * uses the relationship-based child graph.
+ */
+export type SwitchboardDriveDocumentType =
+  | "powerhouse/document-drive"
+  | "powerhouse/reactor-drive";
+
+/** A {@link DriveInput} extended with the optional drive-container type. */
+export type SwitchboardDriveInput = DriveInput & {
+  documentType?: SwitchboardDriveDocumentType;
+};
+
 export type StorageOptions = {
   type: "filesystem" | "memory" | "postgres" | "browser";
   filesystemPath?: string;
@@ -36,7 +51,7 @@ export type StartServerOptions = {
   strictPort?: boolean;
   dev?: boolean;
   dbPath?: string;
-  drive?: DriveInput;
+  drive?: SwitchboardDriveInput;
   packages?: string[];
   remoteDrives?: string[];
   https?:

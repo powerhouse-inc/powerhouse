@@ -40,17 +40,17 @@ This tool will be fundamental on your journey when creating, building, and runni
 
 When installing or using the Powerhouse CLI commands you are able to make use of the dev & staging branches. These branches contain more experimental features then the latest stable release the PH CLI uses by default. They can be used to get access to a bugfix or features under development.
 
-| Command                                                                 | Description                                           |
-| ----------------------------------------------------------------------- | ----------------------------------------------------- |
-| **pnpm install -g ph-cmd** or **npm install -g ph-cmd **                | Install latest stable version                         |
-| **pnpm install -g ph-cmd@dev** or **npm install -g ph-cmd@dev**         | Install development version                           |
-| **pnpm install -g ph-cmd@staging** or **npm install -g ph-cmd@staging** | Install staging version                               |
-| **ph init**                                                             | Use latest stable version of the boilerplate          |
-| **ph init --dev**                                                       | Use development version of the boilerplate            |
-| **ph init --staging**                                                   | Use staging version of the boilerplate                |
-| **ph use**                                                              | Switch all dependencies to latest production versions |
-| **ph use dev**                                                          | Switch all dependencies to development versions       |
-| **ph use prod**                                                         | Switch all dependencies to production versions        |
+| Command                                                                 | Description                                       |
+| ----------------------------------------------------------------------- | ------------------------------------------------- |
+| **pnpm install -g ph-cmd** or **npm install -g ph-cmd **                | Install latest stable version                     |
+| **pnpm install -g ph-cmd@dev** or **npm install -g ph-cmd@dev**         | Install development version                       |
+| **pnpm install -g ph-cmd@staging** or **npm install -g ph-cmd@staging** | Install staging version                           |
+| **ph init**                                                             | Use latest stable version of the boilerplate      |
+| **ph init --dev**                                                       | Use development version of the boilerplate        |
+| **ph init --staging**                                                   | Use staging version of the boilerplate            |
+| **ph use latest**                                                       | Switch all dependencies to latest stable versions |
+| **ph use dev**                                                          | Switch all dependencies to development versions   |
+| **ph use staging**                                                      | Switch all dependencies to staging versions       |
 
 Please be aware that these versions can contain bugs and experimental features that aren't fully tested.
 
@@ -111,15 +111,14 @@ This process ensures a clean slate by removing both the CLI tool and its configu
 The use command allows you to switch between different environments for your Powerhouse project dependencies.
 
 ```bash
-ph use <environment> [localPath]
+ph use <tag>
 ```
 
-**Available Environments**
+**Available Tags**
 
 - latest - Uses the latest stable version of all Powerhouse packages.
 - dev - Uses development versions of the packages.
-- prod - Uses production versions of the packages.
-- local - Uses local versions of the packages from a specified path.
+- staging - Uses staging versions of the packages.
 
 **Examples**
 
@@ -135,10 +134,10 @@ ph use latest
 ph use dev
 ```
 
-#### Use local versions from a specific path
+#### Use local monorepo packages from a specific path
 
 ```bash
-ph use local /path/to/local/packages
+ph use-local /path/to/local/packages
 ```
 
 #### Use a specific package manager
@@ -259,10 +258,7 @@ Powerhouse provides several code generation tools to streamline development:
     Generates the basic structure for new Document Models with the command `ph init` based on the boilerplate.
 
     ### Editor generator
-    Creates template code for Document Model editors with the command `ph generate --editor <name> --document-types <documenttype>`
-
-    ### Drive editor generator
-    Builds scaffolding for custom Drive interfaces with the command `ph generate --drive-editor <name>`
+    Creates template code for Document Model editors with the command `ph generate editor --name <name> --document-type <documenttype>`
 
     ### Subgraph generator
     Creates GraphQL subgraph templates for data access automatically upon `ph reactor`
@@ -287,5 +283,5 @@ The Analytics Engine is a system that allows tracking and analyzing operations a
 Generate an analytics processor using:
 
 ```bash
-ph generate --processor-type analytics
+ph generate processor --type analytics
 ```

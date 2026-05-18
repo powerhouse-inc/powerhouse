@@ -16,6 +16,7 @@ import {
   formatSourceFileWithPrettier,
   getOrCreateSourceFile,
   getPreviousVersionSourceFile,
+  updateVersionedImports,
 } from "utils";
 
 export async function makeDocumentModelModulesOperationTestFiles(
@@ -56,6 +57,7 @@ export async function makeOperationModuleTestFile(
 
     if (previousVersionSourceFile) {
       sourceFile.replaceWithText(previousVersionSourceFile.getText());
+      updateVersionedImports({ sourceFile, version });
     } else {
       sourceFile.replaceWithText(
         ts`
@@ -73,7 +75,7 @@ export async function makeOperationModuleTestFile(
   const importNames = makeOperationImportNames(args);
   const namedImports = importNames.map((name) => ({ name }));
 
-  let actionsImportDeclaration = sourceFile
+  const actionsImportDeclaration = sourceFile
     .getImportDeclarations()
     .filter((i) => !i.isTypeOnly())
     .find((importDeclaration) =>
@@ -84,7 +86,7 @@ export async function makeOperationModuleTestFile(
     );
 
   if (!actionsImportDeclaration) {
-    actionsImportDeclaration = sourceFile.addImportDeclaration({
+    sourceFile.addImportDeclaration({
       namedImports,
       moduleSpecifier: versionImportPath,
     });
@@ -158,7 +160,7 @@ export async function makeOperationModuleTestFile(
   describeCallBody.addStatements(testCasesToAdd);
 
   const GENERATE_MOCK_NAME = "generateMock";
-  const GENERATE_MOCK_MODULE_SPECIFIER = "@powerhousedao/codegen";
+  const GENERATE_MOCK_MODULE_SPECIFIER = "document-model";
 
   const generateMockImport = sourceFile.getImportDeclaration((i) =>
     i.getNamedImports().some((v) => v.getText().includes(GENERATE_MOCK_NAME)),
@@ -182,7 +184,7 @@ export async function makeOperationModuleTestFile(
 export async function makeDocumentModelTestFile(
   args: DocumentModelFileMakerArgs,
 ) {
-  const { project, testsDirPath } = args;
+  const { project, version, testsDirPath } = args;
   const template = documentModelTestFileTemplate(args);
 
   const filePath = path.join(testsDirPath, "document-model.test.ts");
@@ -192,7 +194,10 @@ export async function makeDocumentModelTestFile(
     filePath,
   );
 
-  if (alreadyExists) return;
+  if (alreadyExists) {
+    updateVersionedImports({ sourceFile, version });
+    return;
+  }
 
   sourceFile.replaceWithText(template);
   await formatSourceFileWithPrettier(sourceFile);

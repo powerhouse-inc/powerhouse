@@ -42,7 +42,7 @@ export function ObjectInspectorModal({
       open={open}
       title={title}
     >
-      <div className="flex h-full w-full flex-col">
+      <div className="flex size-full flex-col bg-white">
         <div className="flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3">
           <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
           <button

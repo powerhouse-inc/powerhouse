@@ -1,5 +1,6 @@
 import { homedir } from "node:os";
 import { join } from "node:path";
+import type { Manifest } from "../document-model/types.js";
 import type { PowerhouseConfig } from "./types.js";
 
 export const SERVICE_ACTIONS = [
@@ -56,20 +57,171 @@ export const HOME_DIR = homedir();
 
 export const POWERHOUSE_GLOBAL_DIR = join(HOME_DIR, PH_GLOBAL_DIR_NAME);
 
-export const VERSIONED_DEPENDENCIES = [
+// Workspace packages that go in peerDependencies of every generated project.
+export const VERSIONED_PEER_DEPENDENCIES = [
   "document-model",
-  "@powerhousedao/design-system",
-  "@powerhousedao/reactor-api",
   "@powerhousedao/reactor-browser",
-  "@powerhousedao/connect",
-  "@powerhousedao/shared",
-  "@powerhousedao/analytics-engine-core",
 ];
+
+type PeerSpec = { peer: string; dev: string };
+
+export const REACTOR_API_PACKAGE = "@powerhousedao/reactor-api";
+export const ANALYTICS_ENGINE_CORE_PACKAGE =
+  "@powerhousedao/analytics-engine-core";
+export const GRAPHQL_PACKAGE = "graphql";
+export const GRAPHQL_TAG_PACKAGE = "graphql-tag";
+
+// External peerDependencies of every generated project.
+// `peer` is the consumer-facing range; `dev` is the exact build-tested pin.
+// graphql / graphql-tag are always-on because the workspace packages pulled
+// in by every `ph init` project (codegen, reactor-api, reactor-browser,
+// vetra-packages) declare them as peers — even projects without subgraphs
+// need them in scope so pnpm hoists a single graphql instance.
+export const PEER_EXTERNAL_DEPENDENCIES = {
+  [GRAPHQL_PACKAGE]: { peer: "^16", dev: "16.12.0" },
+  [GRAPHQL_TAG_PACKAGE]: { peer: "^2", dev: "2.12.6" },
+  react: { peer: "^19", dev: "19.2.3" },
+  "react-dom": { peer: "^19", dev: "19.2.3" },
+  zod: { peer: "^4", dev: "4.3.6" },
+} as const satisfies Record<string, PeerSpec>;
+
+// Per-feature deps added dynamically by codegen when required.
+export const FEATURE_DEPENDENCIES = {
+  analyticsProcessor: {
+    peerVersioned: [ANALYTICS_ENGINE_CORE_PACKAGE],
+    peerExternal: {},
+  },
+} as const satisfies Record<
+  string,
+  { peerVersioned: readonly string[]; peerExternal: Record<string, PeerSpec> }
+>;
+
+export const VERSIONED_DEPENDENCIES = [
+  ...VERSIONED_PEER_DEPENDENCIES,
+  ...FEATURE_DEPENDENCIES.analyticsProcessor.peerVersioned,
+];
+
+// Transitive dependencies whose postinstall scripts the generated project
+// trusts. Mirrors the `allowBuilds` map in the boilerplate's
+// pnpm-workspace.yaml and is also passed as `--allow-build` flags to
+// `pnpm dlx @powerhousedao/ph-cli init` so pnpm 11's strict-dep-builds
+// default doesn't prompt during the outer dlx download.
+export const BOILERPLATE_ALLOWED_BUILDS = [
+  "@apollo/protobufjs",
+  "@datadog/pprof",
+  "@parcel/watcher",
+  "esbuild",
+  "protobufjs",
+] as const;
 
 export const VERSIONED_DEV_DEPENDENCIES = [
   "@powerhousedao/ph-cli",
   "@powerhousedao/reactor",
+  "@powerhousedao/shared",
+  "@powerhousedao/connect",
+  "@powerhousedao/design-system",
 ];
+
+export const packageJsonExports = {
+  ".": {
+    types: "./dist/types/index.d.ts",
+    browser: "./dist/browser/index.js",
+    node: "./dist/node/index.mjs",
+  },
+  "./document-models": {
+    types: "./dist/types/document-models/index.d.ts",
+    browser: "./dist/browser/document-models/index.js",
+    node: "./dist/node/document-models/index.mjs",
+  },
+  "./document-models/*": {
+    types: "./dist/types/document-models/*/index.d.ts",
+    browser: "./dist/browser/document-models/*/index.js",
+    node: "./dist/node/document-models/*/index.mjs",
+  },
+  "./editors": {
+    types: "./dist/types/editors/index.d.ts",
+    browser: "./dist/browser/editors/index.js",
+    node: "./dist/node/editors/index.mjs",
+  },
+  "./editors/*": {
+    types: "./dist/types/editors/*/editor.d.ts",
+    browser: "./dist/browser/editors/*/editor.js",
+    node: "./dist/node/editors/*/editor.mjs",
+  },
+  "./subgraphs": {
+    types: "./dist/types/subgraphs/index.d.ts",
+    browser: "./dist/browser/subgraphs/index.js",
+    node: "./dist/node/subgraphs/index.mjs",
+  },
+  "./processors": {
+    types: "./dist/types/processors/index.d.ts",
+    browser: "./dist/browser/processors/index.js",
+    node: "./dist/node/processors/index.mjs",
+  },
+  "./manifest": "./dist/powerhouse.manifest.json",
+  "./style.css": "./dist/style.css",
+} as const;
+
+export const packageScripts = {
+  "test:watch": "vitest",
+  lint: "eslint --config eslint.config.js --cache",
+  "lint:fix": "npm run lint -- --fix",
+  tsc: "tsc",
+  "tsc:watch": "tsc --watch",
+  generate: "ph-cli generate",
+  connect: "ph-cli connect",
+  build: "ph-cli build",
+  reactor: "ph-cli reactor",
+  service: "ph-cli service",
+  vetra: "ph-cli vetra",
+  "service-startup":
+    "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-startup.sh",
+  "service-unstartup":
+    "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-unstartup.sh",
+} as const;
+
+export const externalDependencies = {} as const;
+
+export const externalDevDependencies = {
+  "@electric-sql/pglite": "0.3.15",
+  "@electric-sql/pglite-tools": "0.2.20",
+  "@eslint/js": "^9.38.0",
+  "@powerhousedao/document-engineering": "1.40.5",
+  "@tailwindcss/cli": "^4.1.18",
+  "@tailwindcss/vite": "^4.1.18",
+  "@types/node": "^24.9.2",
+  "@types/react": "^19.2.3",
+  "@types/react-dom": "^19.2.3",
+  "@vitejs/plugin-react": "^6.0.1",
+  "@vitest/coverage-v8": "4.1.1",
+  eslint: "^9.38.0",
+  "eslint-config-prettier": "^10.1.8",
+  "eslint-plugin-prettier": "^5.5.4",
+  "eslint-plugin-react": "^7.37.5",
+  "eslint-plugin-react-hooks": "^7.0.1",
+  globals: "^16.4.0",
+  tailwindcss: "^4.1.16",
+  typescript: "^5.9.3",
+  "typescript-eslint": "^8.46.2",
+  vite: "^8.0.8",
+  "vite-tsconfig-paths": "6.1.1",
+  vitest: "4.1.1",
+} as const;
+
+export const defaultManifest: Manifest = {
+  name: "",
+  description: "",
+  category: "",
+  publisher: {
+    name: "",
+    url: "",
+  },
+  documentModels: [],
+  editors: [],
+  apps: [],
+  subgraphs: [],
+  processors: [],
+};
 
 const DEFAULT_DOCUMENT_MODELS_DIR = "./document-models";
 const DEFAULT_EDITORS_DIR = "./editors";

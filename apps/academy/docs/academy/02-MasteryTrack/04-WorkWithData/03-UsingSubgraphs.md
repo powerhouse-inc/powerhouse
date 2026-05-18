@@ -42,7 +42,7 @@ Open your project and start your terminal.
 The Powerhouse Vetra toolkit provides a command-line utility to create new subgraphs easily.
 
 ```bash title="Run the following command to generate a new subgraph"
-ph generate --subgraph search-todos
+ph generate subgraph --name search-todos
 ```
 
 ```bash title="Expected Output"

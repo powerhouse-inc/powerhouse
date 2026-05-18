@@ -1,7 +1,7 @@
 {
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
-    "outDir": "./dist",
+    "outDir": "./.tsbuild",
     "types": [
       "node",
       "vite/client",
@@ -30,6 +30,12 @@
       ],
       "@powerhousedao/vetra/processors/*": [
         "./processors/*/index.ts"
+      ],
+      "document-models": [
+        "./document-models/index.ts"
+      ],
+      "document-models/*": [
+        "./document-models/*/index.ts"
       ]
     }
   },

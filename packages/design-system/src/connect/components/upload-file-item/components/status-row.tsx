@@ -83,7 +83,7 @@ export function UploadFileItemStatusRow(props: StatusRowProps) {
       </div>
 
       {status === "uploading" && (
-        <div className="text-xs font-medium leading-[18px] text-gray-900">
+        <div className="text-xs leading-[18px] font-medium text-gray-900">
           {Math.round(progress)}%
         </div>
       )}

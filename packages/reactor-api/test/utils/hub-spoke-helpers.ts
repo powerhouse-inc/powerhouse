@@ -14,6 +14,7 @@ import {
   type IReactor,
   type ReactorModule,
 } from "@powerhousedao/reactor";
+import { reactorDriveDocumentModelModule } from "@powerhousedao/reactor-drive";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import { documentModelDocumentModelModule } from "document-model";
 import type {
@@ -46,6 +47,7 @@ export type FixtureMetadata = {
 const REGISTERED_DOCUMENT_MODELS = [
   documentModelDocumentModelModule,
   driveDocumentModelModule,
+  reactorDriveDocumentModelModule,
 ] as unknown as DocumentModelModule[];
 
 export function getRegisteredDocumentModelTypes(): string[] {
@@ -69,10 +71,12 @@ export async function buildHubModule(
   logger: ConsoleLogger,
   kysely: Kysely<Database>,
   documentModelLoader?: IDocumentModelLoader,
+  extraModules: DocumentModelModule[] = [],
 ): Promise<ReactorModule> {
   const eventBus = new EventBus();
   const modelRegistry = new DocumentModelRegistry();
-  modelRegistry.registerModules(...REGISTERED_DOCUMENT_MODELS);
+  const allModules = [...REGISTERED_DOCUMENT_MODELS, ...extraModules];
+  modelRegistry.registerModules(...allModules);
   const resolver = buildResolver(modelRegistry, documentModelLoader);
   const queue = new InMemoryQueue(eventBus, resolver);
 
@@ -81,7 +85,7 @@ export async function buildHubModule(
     .withQueue(queue)
     .withKysely(kysely)
     .withMigrationStrategy("none")
-    .withDocumentModels(REGISTERED_DOCUMENT_MODELS)
+    .withDocumentModels(allModules)
     .withSync(
       new SyncBuilder().withChannelFactory(
         new GqlResponseChannelFactory(logger),
@@ -98,17 +102,19 @@ export async function buildHubModule(
 export async function buildSpokeModule(
   logger: ConsoleLogger,
   documentModelLoader?: IDocumentModelLoader,
+  extraModules: DocumentModelModule[] = [],
 ): Promise<ReactorModule> {
   const eventBus = new EventBus();
   const modelRegistry = new DocumentModelRegistry();
-  modelRegistry.registerModules(...REGISTERED_DOCUMENT_MODELS);
+  const allModules = [...REGISTERED_DOCUMENT_MODELS, ...extraModules];
+  modelRegistry.registerModules(...allModules);
   const resolver = buildResolver(modelRegistry, documentModelLoader);
   const queue = new InMemoryQueue(eventBus, resolver);
 
   const builder = new ReactorBuilder()
     .withEventBus(eventBus)
     .withQueue(queue)
-    .withDocumentModels(REGISTERED_DOCUMENT_MODELS)
+    .withDocumentModels(allModules)
     .withSync(
       new SyncBuilder().withChannelFactory(
         new GqlRequestChannelFactory(logger, undefined, queue),

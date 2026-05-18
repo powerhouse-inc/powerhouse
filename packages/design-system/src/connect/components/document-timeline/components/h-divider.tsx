@@ -29,6 +29,7 @@ export const HDivider = (props: HDividerProps) => {
   useEffect(() => {
     // Force close and re-open if already open to refresh content
     if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setOpen(false);
       setTimeout(() => hasContent && setOpen(true), 50);
     }
@@ -86,7 +87,7 @@ export const HDivider = (props: HDividerProps) => {
       >
         <div
           className={twMerge(
-            "mx-0.5 flex h-[25px] w-1.5 cursor-pointer flex-col items-center justify-center rounded-[2px] hover:bg-blue-300",
+            "mx-0.5 flex h-6.25 w-1.5 cursor-pointer flex-col items-center justify-center rounded-xs hover:bg-blue-300",
             isSelected && "bg-blue-300",
             className,
           )}

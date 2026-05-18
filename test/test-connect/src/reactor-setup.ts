@@ -4,6 +4,7 @@ import {
   ReactorBuilder,
   type ReactorModule,
 } from "@powerhousedao/reactor";
+import { reactorDriveDocumentModelModule } from "@powerhousedao/reactor-drive";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import { documentModelDocumentModelModule, type ILogger } from "document-model";
 import type { ConnectTestConfig } from "./types.js";
@@ -15,6 +16,7 @@ export async function createReactorWithSync(
   const builder = new ReactorBuilder()
     .withDocumentModels([
       driveDocumentModelModule,
+      reactorDriveDocumentModelModule,
       documentModelDocumentModelModule,
     ])
     .withChannelScheme(ChannelScheme.CONNECT)

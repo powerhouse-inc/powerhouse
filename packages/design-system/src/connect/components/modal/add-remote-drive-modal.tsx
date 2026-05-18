@@ -44,7 +44,7 @@ export function AddRemoteDriveModal(props: AddRemoteDriveModal) {
       <div
         {...containerProps}
         className={twMerge(
-          "min-w-[408px] max-w-[408px] rounded-2xl p-6",
+          "max-w-[408px] min-w-[408px] rounded-2xl bg-white p-6",
           containerProps?.className,
         )}
       >

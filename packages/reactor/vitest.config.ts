@@ -7,6 +7,11 @@ export default defineConfig({
   test: {
     include: ["test/**/*.test.ts"],
     globals: true,
+    // PGLite WASM cold boot + 14 migrations in beforeEach can exceed the
+    // default 10s hookTimeout on CI runners under coverage instrumentation,
+    // especially for AtomicNodeFs-backed tests that also do disk snapshot I/O.
+    hookTimeout: 30_000,
+    testTimeout: 30_000,
     alias: {
       "#": new URL("./src/", import.meta.url).pathname,
     },
@@ -24,6 +29,7 @@ export default defineConfig({
         "**/vitest.config.ts",
         "**/run-migrations.ts",
         "**/logging/**",
+        "**/migrations/**",
         "**/*-factory.ts",
         "**/*-builder.ts",
         "**/*passthrough*.ts",
@@ -32,7 +38,7 @@ export default defineConfig({
         "**/tsdown.config.ts",
       ],
     },
-    maxWorkers: 6,
+    maxWorkers: 4,
   },
   plugins: [],
 });

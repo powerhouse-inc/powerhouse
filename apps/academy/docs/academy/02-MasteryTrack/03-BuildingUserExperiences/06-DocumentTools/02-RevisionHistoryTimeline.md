@@ -46,7 +46,8 @@ For custom Drive-apps, you need to handle timeline items fetching and user inter
 1. First, import the necessary utilities from the Powerhouse common package:
 
 ```typescript
-import { useTimelineItems, getRevisionFromDate } from "@powerhousedao/common";
+import { useTimelineItems } from "@powerhousedao/reactor-browser/analytics";
+import { getRevisionFromDate } from "@powerhousedao/reactor-browser";
 ```
 
 2. Fetch timeline items using the `useTimelineItems` hook:
@@ -67,14 +68,9 @@ const [selectedTimelineItem, setSelectedTimelineItem] =
 
 ```typescript
 <DocumentToolbar
-  timelineButtonVisible={editorModule.config.timelineEnabled}
-  timelineItems={timelineItems.data}
-  onTimelineItemClick={setSelectedTimelineItem}
   // ... other props
 />
 ```
-
-> **Note**: The `timelineButtonVisible` prop should be set based on the `timelineEnabled` setting in the editor module's configuration. This ensures the timeline button is only shown when the feature is enabled for that specific document type.
 
 5. Pass the required context values to your editor component:
 

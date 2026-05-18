@@ -1,3 +1,4 @@
+import { REACTOR_API_PACKAGE } from "@powerhousedao/shared/clis";
 import { ts } from "@tmpl/core";
 
 export const customSubgraphResolversTemplate = (v: {
@@ -5,7 +6,7 @@ export const customSubgraphResolversTemplate = (v: {
   camelCaseName: string;
 }) =>
   ts`
-import { type ISubgraph } from "@powerhousedao/reactor-api";
+import { type ISubgraph } from "${REACTOR_API_PACKAGE}";
 
 export const getResolvers = (subgraph: ISubgraph): Record<string, unknown> => {
   const reactor = subgraph.reactorClient;

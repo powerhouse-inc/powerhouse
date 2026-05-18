@@ -25,6 +25,7 @@ export function TextInputVariant(props: TextInputProps) {
   });
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setState({ ...state, value: props.value || "" });
   }, [props.value]);
 

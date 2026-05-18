@@ -1,10 +1,6 @@
 import type { OperationWithContext } from "@powerhousedao/shared/document-model";
 import type { Operation } from "@powerhousedao/shared/document-model";
-import {
-  driveCollectionId,
-  type OperationIndexEntry,
-} from "../cache/operation-index-types.js";
-import type { JobWriteReadyEvent } from "../events/types.js";
+import { type OperationIndexEntry } from "../cache/operation-index-types.js";
 import type { PreparedBatch } from "./batch-aggregator.js";
 import type { IMailbox } from "./mailbox.js";
 import { SyncOperation } from "./sync-operation.js";
@@ -182,6 +178,51 @@ export function batchOperationsByDocument(
   return batches;
 }
 
+/**
+ * Splits a sorted page of operations into a safe-to-emit prefix and a
+ * deferred tail containing the trailing run that shares the same
+ * (documentId, branch, scope, timestampUtcMs) as the last operation.
+ *
+ * The page is assumed to be sorted by (documentId, scope, ordinal), so a
+ * same-(docId, scope, ts) run is contiguous and lives at the end of any
+ * page that contains its last member. Holding that tail back lets callers
+ * prepend it to the next page so a single producer-side execute() call
+ * never gets split across two outbound envelopes.
+ */
+export function splitTrailingSameTimestampRun(
+  operations: OperationWithContext[],
+): { emit: OperationWithContext[]; carry: OperationWithContext[] } {
+  if (operations.length === 0) {
+    return { emit: [], carry: [] };
+  }
+
+  const last = operations[operations.length - 1];
+  const lastDocId = last.context.documentId;
+  const lastBranch = last.context.branch;
+  const lastScope = last.context.scope;
+  const lastTs = last.operation.timestampUtcMs;
+
+  let carryStart = operations.length;
+  for (let i = operations.length - 1; i >= 0; i--) {
+    const op = operations[i];
+    if (
+      op.context.documentId === lastDocId &&
+      op.context.branch === lastBranch &&
+      op.context.scope === lastScope &&
+      op.operation.timestampUtcMs === lastTs
+    ) {
+      carryStart = i;
+    } else {
+      break;
+    }
+  }
+
+  return {
+    emit: operations.slice(0, carryStart),
+    carry: operations.slice(carryStart),
+  };
+}
+
 export function getMaxOrdinal(operations: OperationWithContext[]): number {
   return operations.reduce(
     (maxOrdinal, operation) => Math.max(maxOrdinal, operation.context.ordinal),
@@ -318,53 +359,6 @@ export function consolidateSyncOperations(
   }
 
   return result;
-}
-
-export function mergeCollectionMemberships(
-  events: JobWriteReadyEvent[],
-): Record<string, string[]> {
-  const mergedMemberships: Record<string, string[]> = {};
-
-  for (const event of events) {
-    if (event.collectionMemberships) {
-      for (const [docId, collections] of Object.entries(
-        event.collectionMemberships,
-      )) {
-        if (!(docId in mergedMemberships)) {
-          mergedMemberships[docId] = [];
-        }
-        for (const c of collections) {
-          if (!mergedMemberships[docId].includes(c)) {
-            mergedMemberships[docId].push(c);
-          }
-        }
-      }
-    }
-
-    for (const op of event.operations) {
-      const action = op.operation.action as {
-        type: string;
-        input?: { sourceId?: string; targetId?: string };
-      };
-      if (action.type !== "ADD_RELATIONSHIP") {
-        continue;
-      }
-      const input = action.input;
-      if (!input?.sourceId || !input.targetId) {
-        continue;
-      }
-
-      const collectionId = driveCollectionId(op.context.branch, input.sourceId);
-      if (!(input.targetId in mergedMemberships)) {
-        mergedMemberships[input.targetId] = [];
-      }
-      if (!mergedMemberships[input.targetId].includes(collectionId)) {
-        mergedMemberships[input.targetId].push(collectionId);
-      }
-    }
-  }
-
-  return mergedMemberships;
 }
 
 type ChunkableItem = {

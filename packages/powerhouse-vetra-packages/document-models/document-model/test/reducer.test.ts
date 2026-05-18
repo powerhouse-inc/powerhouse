@@ -5,6 +5,7 @@ import {
   deriveOperationId,
   generateId,
   setName,
+  setPreferredEditor,
   type Action,
   type CreateChildDocumentInput,
 } from "@powerhousedao/shared/document-model";
@@ -123,6 +124,46 @@ describe("Base reducer", () => {
     );
     const newDocument = wrappedEmptyReducer(document, setName("Document"));
     expect(newDocument.header.name).toBe("Document");
+  });
+
+  it("should create SET_PREFERRED_EDITOR action", () => {
+    const action = setPreferredEditor("custom-editor");
+    expect(action).toStrictEqual({
+      id: action.id,
+      timestampUtcMs: action.timestampUtcMs,
+      type: "SET_PREFERRED_EDITOR",
+      input: { preferredEditor: "custom-editor" },
+      scope: "header",
+    });
+  });
+
+  it("should throw on invalid SET_PREFERRED_EDITOR input", () => {
+    expect(() => setPreferredEditor(123 as unknown as string)).toThrow();
+  });
+
+  it("should set preferred editor in header meta", async () => {
+    const document = baseCreateDocument<TestPHState>(
+      defaultPHDocumentCreateState,
+    );
+    const newDocument = wrappedEmptyReducer(
+      document,
+      setPreferredEditor("custom-editor"),
+    );
+    expect(newDocument.header.meta?.preferredEditor).toBe("custom-editor");
+  });
+
+  it("should clear preferred editor when passed null", async () => {
+    const document = baseCreateDocument<TestPHState>(
+      defaultPHDocumentCreateState,
+    );
+    const withEditor = wrappedEmptyReducer(
+      document,
+      setPreferredEditor("custom-editor"),
+    );
+    expect(withEditor.header.meta?.preferredEditor).toBe("custom-editor");
+
+    const cleared = wrappedEmptyReducer(withEditor, setPreferredEditor(null));
+    expect(cleared.header.meta?.preferredEditor).toBeUndefined();
   });
 
   it("should throw error on invalid base action", async () => {

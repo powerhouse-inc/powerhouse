@@ -1,14 +1,24 @@
 {
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
-    "outDir": "./dist",
-    "types": ["vitest/globals"]
+    "outDir": "./.tsbuild",
+    "types": [
+      "vitest/globals"
+    ]
   },
-  "include": ["**/*"],
-  "exclude": ["dist", "node_modules"],
+  "include": [
+    "**/*"
+  ],
+  "exclude": [
+    "dist",
+    "node_modules"
+  ],
   "references": [
     {
       "path": "../document-model"
+    },
+    {
+      "path": "../pglite-fs"
     },
     {
       "path": "../shared"

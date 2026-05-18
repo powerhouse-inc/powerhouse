@@ -65,12 +65,13 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
           );
         }
 
-        let fullState: Record<string, unknown> = {};
+        let fullState: Record<string, unknown>;
         try {
           fullState = JSON.parse(resultingState) as Record<string, unknown>;
         } catch (error) {
           throw new Error(
             `Failed to parse resultingState for operation ${operation.id || "unknown"}: ${error instanceof Error ? error.message : String(error)}`,
+            { cause: error },
           );
         }
 

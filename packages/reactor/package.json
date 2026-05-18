@@ -10,6 +10,7 @@
   "sideEffects": false,
   "exports": {
     ".": {
+      "source": "./index.ts",
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     }
@@ -48,6 +49,7 @@
     "document-model": "workspace:*"
   },
   "devDependencies": {
+    "@powerhousedao/pglite-fs": "workspace:*",
     "@vitest/coverage-v8": "catalog:",
     "prettier": "catalog:",
     "tinybench": "^2.9.0",

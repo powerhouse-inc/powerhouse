@@ -78,7 +78,7 @@ export const PackageManagerListItem = (props: {
   return (
     <li
       className={twMerge(
-        "relative flex flex-col items-start rounded-md border border-gray-200 p-3 text-sm leading-5 shadow-sm",
+        "relative flex flex-col items-start rounded-md border border-gray-200 bg-white p-3 text-sm/5 shadow-sm",
         className,
       )}
     >
@@ -147,7 +147,7 @@ export const PackageManagerListItem = (props: {
         open={isDropdownMenuOpen}
       >
         <button
-          className="group absolute right-3 top-3"
+          className="group absolute top-3 right-3"
           onClick={(e) => {
             e.stopPropagation();
             setIsDropdownMenuOpen(true);
@@ -365,9 +365,9 @@ const PackageSubSection: React.FC<{
 }> = ({ title, count, children }) => {
   return (
     <div>
-      <h4 className="mb-2 flex items-baseline gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+      <h4 className="mb-2 flex items-baseline gap-2 text-xs font-semibold tracking-wide text-gray-500 uppercase">
         <span>{title}</span>
-        <span className="font-medium normal-case tracking-normal text-gray-400">
+        <span className="font-medium tracking-normal text-gray-400 normal-case">
           ({count})
         </span>
       </h4>

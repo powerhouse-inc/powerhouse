@@ -115,7 +115,7 @@ The `data-editor` value comes from the `id` property in your editor module confi
 
 ```typescript
 // editors/my-editor/module.ts
-import type { EditorModule } from "@powerhousedao/reactor-browser";
+import type { EditorModule } from "document-model";
 
 export const MyEditor: EditorModule = {
   config: {

@@ -4,7 +4,7 @@
     "types": [
       "node"
     ],
-    "outDir": "./dist"
+    "outDir": "./.tsbuild",
   },
   "include": [
     "**/*"

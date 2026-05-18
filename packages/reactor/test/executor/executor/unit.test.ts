@@ -1,6 +1,7 @@
 import { documentModelDocumentModelModule } from "document-model";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { IWriteCache } from "../../../src/cache/write/interfaces.js";
+import { DEFAULT_DRIVE_CONTAINER_TYPES } from "../../../src/core/drive-container-types.js";
 import { SimpleJobExecutor } from "../../../src/executor/simple-job-executor.js";
 import type { Job } from "../../../src/queue/types.js";
 import type { IDocumentModelRegistry } from "../../../src/registry/interfaces.js";
@@ -97,6 +98,7 @@ describe("SimpleJobExecutor", () => {
       mockOperationIndex,
       mockDocumentMetaCache,
       mockCollectionMembershipCache,
+      DEFAULT_DRIVE_CONTAINER_TYPES,
       {},
     );
   });
@@ -259,6 +261,7 @@ describe("SimpleJobExecutor", () => {
         } as any,
         mockDocumentMetaCache,
         createMockCollectionMembershipCache(),
+        DEFAULT_DRIVE_CONTAINER_TYPES,
         {},
       );
 
@@ -291,6 +294,121 @@ describe("SimpleJobExecutor", () => {
       expect((result.error as DocumentNotFoundError).documentId).toBe(
         "missing-doc",
       );
+    });
+
+    it("should apply SET_PREFERRED_EDITOR and persist header.meta.preferredEditor", async () => {
+      const job: Job = {
+        kind: "mutation",
+        id: "job-set-preferred-editor",
+        documentId: "doc-1",
+        scope: "header",
+        branch: "main",
+        actions: [
+          {
+            id: "action-set-preferred-editor",
+            type: "SET_PREFERRED_EDITOR",
+            scope: "header",
+            timestampUtcMs: "2024-06-15T12:30:00.000Z",
+            input: { preferredEditor: "custom-editor" },
+          },
+        ],
+        operations: [],
+        createdAt: new Date().toISOString(),
+        queueHint: [],
+        errorHistory: [],
+        meta: {
+          batchId: "test",
+          batchJobIds: ["job-set-preferred-editor"],
+        },
+      };
+
+      const result = await executor.executeJob(job);
+
+      expect(result.success).toBe(true);
+      expect(result.operations?.length).toBe(1);
+      expect(result.operations?.[0].action.type).toBe("SET_PREFERRED_EDITOR");
+
+      const withContext = result.operationsWithContext?.[0];
+      expect(withContext?.context.scope).toBe("header");
+      const resultingState = JSON.parse(
+        withContext?.context.resultingState ?? "{}",
+      );
+      expect(resultingState.header?.meta?.preferredEditor).toBe(
+        "custom-editor",
+      );
+    });
+
+    it("should clear header.meta.preferredEditor when SET_PREFERRED_EDITOR input is null", async () => {
+      mockWriteCache.getState = vi.fn().mockImplementation((docId) =>
+        Promise.resolve({
+          header: {
+            id: docId,
+            documentType: "powerhouse/document-model",
+            revision: { document: 1 },
+            meta: { preferredEditor: "custom-editor" },
+          },
+          operations: {
+            document: [
+              {
+                index: 0,
+                action: {
+                  type: "CREATE_DOCUMENT",
+                  id: "create-action",
+                  scope: "document",
+                  timestampUtcMs: "2024-01-01T00:00:00.000Z",
+                  input: {
+                    documentId: docId,
+                    model: "powerhouse/document-model",
+                  },
+                },
+              },
+            ],
+            global: [],
+            local: [],
+          },
+          state: {
+            global: {},
+            local: {},
+            document: {
+              isDeleted: false,
+            },
+          },
+        }),
+      );
+
+      const job: Job = {
+        kind: "mutation",
+        id: "job-clear-preferred-editor",
+        documentId: "doc-1",
+        scope: "header",
+        branch: "main",
+        actions: [
+          {
+            id: "action-clear-preferred-editor",
+            type: "SET_PREFERRED_EDITOR",
+            scope: "header",
+            timestampUtcMs: "2024-06-15T12:31:00.000Z",
+            input: { preferredEditor: null },
+          },
+        ],
+        operations: [],
+        createdAt: new Date().toISOString(),
+        queueHint: [],
+        errorHistory: [],
+        meta: {
+          batchId: "test",
+          batchJobIds: ["job-clear-preferred-editor"],
+        },
+      };
+
+      const result = await executor.executeJob(job);
+
+      expect(result.success).toBe(true);
+      const withContext = result.operationsWithContext?.[0];
+      const resultingState = JSON.parse(
+        withContext?.context.resultingState ?? "{}",
+      );
+      expect(resultingState.header?.meta?.preferredEditor).toBeUndefined();
     });
   });
 
@@ -1770,6 +1888,7 @@ describe("SimpleJobExecutor", () => {
         } as any,
         createMockDocumentMetaCache(),
         createMockCollectionMembershipCache(),
+        DEFAULT_DRIVE_CONTAINER_TYPES,
         {},
       );
 

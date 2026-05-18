@@ -7,7 +7,7 @@ import { documentModelDocumentModelModule } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { KyselyWriteCache } from "../../../src/cache/kysely-write-cache.js";
 import type { WriteCacheConfig } from "../../../src/cache/write-cache-types.js";
-import { ModuleNotFoundError } from "../../../src/registry/implementation.js";
+import { ModuleNotFoundError } from "../../../src/registry/errors.js";
 import type { IDocumentModelRegistry } from "../../../src/registry/interfaces.js";
 import type {
   IKeyframeStore,

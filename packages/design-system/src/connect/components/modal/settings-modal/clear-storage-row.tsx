@@ -15,7 +15,7 @@ export const ClearStorageSettingsRow: React.FC<ClearStorageSettingsRowProps> = (
   return (
     <SettingsRow {...restProps}>
       <PowerhouseButton
-        className="h-auto min-h-9 rounded border border-solid border-gray-300 bg-white px-3 py-0 text-sm text-red-800 hover:border-gray-500 hover:bg-white hover:text-red-900"
+        className="h-auto min-h-9 rounded-sm border border-solid border-gray-300 bg-white px-3 py-0 text-sm text-red-800 hover:border-gray-500 hover:bg-white hover:text-red-900"
         icon={<Icon name="Trash" size={18} />}
         iconPosition="right"
         onClick={onClearStorage}

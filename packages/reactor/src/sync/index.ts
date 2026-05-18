@@ -75,6 +75,7 @@ export {
   consolidateSyncOperations,
   createIdleHealth,
   filterOperations,
+  splitTrailingSameTimestampRun,
   trimMailboxFromAckOrdinal,
 } from "./utils.js";
 

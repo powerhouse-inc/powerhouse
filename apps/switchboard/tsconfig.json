@@ -1,7 +1,7 @@
 {
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
-    "outDir": "./dist",
+    "outDir": "./.tsbuild",
     "lib": [
       "ESNext"
     ]
@@ -20,6 +20,9 @@
       "path": "../../packages/opentelemetry-instrumentation-reactor"
     },
     {
+      "path": "../../packages/pglite-fs"
+    },
+    {
       "path": "../../packages/reactor"
     },
     {
@@ -27,6 +30,9 @@
     },
     {
       "path": "../../packages/reactor-attachments"
+    },
+    {
+      "path": "../../packages/reactor-drive"
     },
     {
       "path": "../../packages/renown"

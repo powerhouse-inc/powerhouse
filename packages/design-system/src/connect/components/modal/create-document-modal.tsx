@@ -60,7 +60,7 @@ export function CreateDocumentModal(props: CreateDocumentModalProps) {
     >
       <form
         name="create-document"
-        className="w-[400px] p-6 text-slate-300"
+        className="w-[400px] bg-white p-6 text-slate-300"
         onSubmit={handleSubmit}
       >
         <div className="border-b border-slate-50 pb-2 text-2xl font-bold text-gray-800">

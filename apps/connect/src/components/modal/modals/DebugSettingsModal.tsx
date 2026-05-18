@@ -34,7 +34,7 @@ export const DebugSettingsModal: React.FC = () => {
         className: "rounded-2xl",
       }}
     >
-      <div className="w-[700px] rounded-2xl p-6">
+      <div className="w-[700px] rounded-2xl bg-white p-6">
         <div className="mb-6 flex justify-between">
           <div className="text-xl font-bold">Debug Tools</div>
           <button id="close-modal" onClick={() => closePHModal()}>

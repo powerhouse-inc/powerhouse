@@ -11,7 +11,12 @@ import type {
   PHDocument,
 } from "@powerhousedao/shared/document-model";
 
-import type { BatchLoadRequest, BatchLoadResult } from "../core/types.js";
+import type {
+  BatchExecutionRequest,
+  BatchExecutionResult,
+  BatchLoadRequest,
+  BatchLoadResult,
+} from "../core/types.js";
 import type {
   JobInfo,
   PagedResults,
@@ -120,6 +125,16 @@ export interface IDriveClient {
   ): Promise<Node>;
 
   /**
+   * Updates the preferred editor recorded in the document header meta for
+   * a node. Pass `null` to clear it.
+   */
+  setPreferredEditorOnNode(
+    nodeId: string,
+    preferredEditor: string | null,
+    signal?: AbortSignal,
+  ): Promise<PHDocument>;
+
+  /**
    * Moves a node to a different parent folder within the same drive.
    * Pass `undefined` to move the node to the drive root.
    */
@@ -151,14 +166,20 @@ export interface IDriveClient {
   ): Promise<Node>;
 
   /**
-   * Returns nodes in the drive, optionally filtered to a single parent
-   * folder. Pass `null` to list root-level nodes only.
+   * Returns nodes in the drive, optionally filtered by parent folder:
+   * - omit `parentFolder` (or pass `undefined`) to list every node in the drive.
+   * - pass `null` to list only root-level nodes.
+   * - pass a folder id to list only the direct children of that folder.
+   *
+   * Returns a paged result so callers can stream through drives with very
+   * large node counts without materialising the whole list in memory.
    */
   listNodes(
     driveIdentifier: string,
     parentFolder?: string | null,
+    paging?: PagingOptions,
     signal?: AbortSignal,
-  ): Promise<Node[]>;
+  ): Promise<PagedResults<Node>>;
 }
 
 /**
@@ -365,6 +386,21 @@ export interface IReactorClient {
   ): Promise<JobInfo>;
 
   /**
+   * Applies multiple mutation jobs in dependency order and waits for all to
+   * complete. Actions on each job are signed by the client signer before
+   * dispatch. Throws on the first failed job; the others may still execute
+   * because dispatch is fire-and-await-all.
+   *
+   * @param request - Batch mutation request with per-job actions and dependsOn keys
+   * @param signal - Optional abort signal to cancel the request
+   * @returns The completed batch result (job ids keyed by plan key)
+   */
+  executeBatch(
+    request: BatchExecutionRequest,
+    signal?: AbortSignal,
+  ): Promise<BatchExecutionResult>;
+
+  /**
    * Renames a document and waits for completion
    *
    * @param documentIdentifier - Target document id or slug
@@ -376,6 +412,22 @@ export interface IReactorClient {
   rename(
     documentIdentifier: string,
     name: string,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<PHDocument>;
+
+  /**
+   * Updates the preferred editor in the document header meta and waits for completion.
+   *
+   * @param documentIdentifier - Target document id or slug
+   * @param preferredEditor - The new preferred editor, or `null` to clear it
+   * @param branch - Optional branch, defaults to "main"
+   * @param signal - Optional abort signal to cancel the request
+   * @returns The updated document.
+   */
+  setPreferredEditor(
+    documentIdentifier: string,
+    preferredEditor: string | null,
     branch?: string,
     signal?: AbortSignal,
   ): Promise<PHDocument>;

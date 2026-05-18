@@ -56,6 +56,7 @@ export function AddRemoteDriveForm(props: AddPublicDriveFormProps) {
   }, [url]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setHasConfirmedUrl(false);
     if (debouncedUrl === "") return;
     fetchPublicDrive().catch(console.error);

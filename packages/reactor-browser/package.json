@@ -15,22 +15,27 @@
   ],
   "exports": {
     ".": {
+      "source": "./index.ts",
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
     "./analytics": {
+      "source": "./src/analytics/index.ts",
       "types": "./dist/src/analytics/index.d.ts",
       "import": "./dist/src/analytics/index.js"
     },
     "./graphql": {
+      "source": "./src/graphql/client.ts",
       "types": "./dist/src/graphql/client.d.ts",
       "import": "./dist/src/graphql/client.js"
     },
     "./relational": {
+      "source": "./src/relational/index.ts",
       "types": "./dist/src/relational/index.d.ts",
       "import": "./dist/src/relational/index.js"
     },
     "./renown": {
+      "source": "./src/renown/index.ts",
       "types": "./dist/src/renown/index.d.ts",
       "import": "./dist/src/renown/index.js"
     }
@@ -48,14 +53,13 @@
     "@powerhousedao/analytics-engine-browser": "workspace:*",
     "@powerhousedao/analytics-engine-core": "workspace:*",
     "@powerhousedao/reactor": "workspace:*",
+    "@powerhousedao/reactor-drive": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
     "@renown/sdk": "workspace:*",
     "@tanstack/react-query": "^5.49.2",
     "change-case": "catalog:",
     "document-model": "workspace:*",
-    "graphql": "catalog:",
     "graphql-request": "catalog:",
-    "graphql-tag": "catalog:",
     "kysely": "catalog:",
     "kysely-pglite-dialect": "catalog:",
     "lodash.isequal": "^4.5.0",
@@ -82,6 +86,8 @@
     "@vitest/browser": "catalog:",
     "@vitest/browser-playwright": "catalog:",
     "fast-deep-equal": "catalog:",
+    "graphql": "catalog:",
+    "graphql-tag": "catalog:",
     "playwright": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
@@ -91,6 +97,8 @@
     "vitest-browser-react": "^1.0.1"
   },
   "peerDependencies": {
+    "graphql": "^16",
+    "graphql-tag": "^2",
     "react": ">=19.0.0",
     "react-dom": ">=19.0.0"
   }

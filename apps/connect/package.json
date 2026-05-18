@@ -20,10 +20,12 @@
   ],
   "exports": {
     ".": {
+      "source": "./start-connect.tsx",
       "types": "./dist/start-connect.d.ts",
       "import": "./dist/start-connect.js"
     },
     "./main.js": {
+      "source": "./main.tsx",
       "types": "./dist/main.d.ts",
       "import": "./dist/main.js"
     },
@@ -77,8 +79,6 @@
     "@renown/sdk": "workspace:*",
     "@sentry/react": "^10.17.0",
     "document-model": "workspace:*",
-    "graphql": "catalog:",
-    "graphql-request": "catalog:",
     "i18next": "^25.5.3",
     "kysely": "catalog:",
     "kysely-pglite-dialect": "catalog:",

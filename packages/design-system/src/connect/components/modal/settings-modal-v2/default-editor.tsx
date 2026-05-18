@@ -12,7 +12,7 @@ type Props = {
 export function DefaultEditor(props: Props) {
   const { className, ...rest } = props;
   return (
-    <div className={twMerge("rounded-lg p-3", className)}>
+    <div className={twMerge("rounded-lg bg-white p-3", className)}>
       <DefaultEditorSelect {...rest} />
     </div>
   );
@@ -32,7 +32,7 @@ export function DefaultEditorSelect(props: Props) {
         Default Editor Selection
       </h3>
       <SelectFieldRaw
-        className={twMerge("min-w-36 max-w-fit", className)}
+        className={twMerge("max-w-fit min-w-36", className)}
         name="default-editor"
         required
         value={documentModelEditor}

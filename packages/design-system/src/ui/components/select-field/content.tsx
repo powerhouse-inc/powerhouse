@@ -64,7 +64,7 @@ export const Content: React.FC<ContentProps> = ({
         />
       )}
       <CommandList ref={commandListRef} tabIndex={!searchable ? 0 : undefined}>
-        <CommandEmpty className="p-4 text-center text-[14px] font-normal leading-5 text-gray-700 dark:text-gray-400">
+        <CommandEmpty className="p-4 text-center text-sm/5 font-normal text-gray-700 dark:text-gray-400">
           No results found.
         </CommandEmpty>
         {multiple && cmdkSearch === "" && (
@@ -108,7 +108,7 @@ export const Content: React.FC<ContentProps> = ({
                         )}
                     </div>
                   )}
-                <span className="text-[14px] font-semibold leading-4 text-gray-900 dark:text-gray-50">
+                <span className="text-sm/4 font-semibold text-gray-900 dark:text-gray-50">
                   {selectedValues.length === enabledOptions.length
                     ? "Deselect All"
                     : "Select All"}

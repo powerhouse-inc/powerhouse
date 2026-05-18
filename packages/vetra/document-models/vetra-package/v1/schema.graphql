@@ -1,0 +1,102 @@
+scalar Unknown
+scalar DateTime
+scalar Attachment
+scalar Address
+scalar Amount_Tokens
+scalar EthereumAddress
+scalar EmailAddress
+scalar Amount_Percentage
+scalar Date
+scalar URL
+scalar Amount_Money
+scalar OLabel
+scalar Currency
+scalar PHID
+scalar OID
+scalar Amount_Fiat
+scalar Amount_Currency
+scalar Amount_Crypto
+scalar Amount
+scalar Upload
+
+"""
+Package metadata used to publish a Vetra Reactor Package to npm and surface
+it inside Connect/Switchboard. All fields are optional so a package can be
+created empty and filled in incrementally during development.
+"""
+type VetraPackageState {
+  """Human-readable package name (e.g. 'Pizza Plaza'). Distinct from the npm package id."""
+  name: String
+  """One-paragraph summary of what the package provides. Shown on package listing pages."""
+  description: String
+  """Free-form category label used to group packages in directories (e.g. 'Finance', 'Productivity')."""
+  category: String
+  """Author/maintainer information surfaced in the published package metadata."""
+  author: Author!
+  """Search keywords associated with the package. Each keyword has a stable id so it can be removed individually."""
+  keywords: [Keyword!]!
+  """Public source code URL (typically a GitHub repository)."""
+  githubUrl: URL
+  """Published npm package URL. Set once the package has been released."""
+  npmUrl: URL
+}
+
+"""Author/maintainer of the Vetra Package."""
+type Author {
+  """Display name of the author or organization."""
+  name: String
+  """Author's website URL."""
+  website: URL
+}
+
+"""A single search keyword attached to the package."""
+type Keyword {
+  """Stable identifier for the keyword entry; used to remove it."""
+  id: OID!
+  """Display label for the keyword (e.g. 'invoicing', 'defi')."""
+  label: String!
+}
+
+# base_operations
+
+input SetPackageNameInput {
+  name: String!
+}
+
+input SetPackageDescriptionInput {
+  description: String!
+}
+
+input SetPackageCategoryInput {
+  category: String!
+}
+
+input SetPackageAuthorInput {
+  name: OID
+  website: URL
+}
+
+input SetPackageAuthorNameInput {
+  name: String!
+}
+
+input SetPackageAuthorWebsiteInput {
+  website: URL!
+}
+
+input AddPackageKeywordInput {
+  id: String!
+  label: String!
+}
+
+input RemovePackageKeywordInput {
+  id: String!
+}
+
+input SetPackageGithubUrlInput {
+  url: URL!
+}
+
+input SetPackageNpmUrlInput {
+  url: URL!
+}

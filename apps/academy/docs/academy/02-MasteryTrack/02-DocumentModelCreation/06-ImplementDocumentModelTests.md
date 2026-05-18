@@ -25,7 +25,7 @@ This suite tests each operation, verifying not only that the `items` array is co
 
 ```typescript
 import { describe, it, expect } from "vitest";
-import { generateMock } from "@powerhousedao/codegen";
+import { generateMock } from "document-model";
 import type {
   AddTodoItemInput,
   DeleteTodoItemInput,

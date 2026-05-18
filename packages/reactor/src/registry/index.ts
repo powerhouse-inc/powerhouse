@@ -4,12 +4,16 @@ export {
 } from "./document-model-resolver.js";
 export type { IDocumentModelResolver } from "./document-model-resolver.js";
 export {
-  DocumentModelRegistry,
+  DowngradeNotSupportedError,
   DuplicateManifestError,
   DuplicateModuleError,
   InvalidModuleError,
+  InvalidUpgradeStepError,
+  ManifestNotFoundError,
+  MissingUpgradeTransitionError,
   ModuleNotFoundError,
-} from "./implementation.js";
+} from "./errors.js";
+export { DocumentModelRegistry } from "./implementation.js";
 export type {
   IDocumentModelLoader,
   IDocumentModelRegistry,

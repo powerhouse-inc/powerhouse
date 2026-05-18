@@ -10,6 +10,7 @@
   },
   "exports": {
     ".": {
+      "source": "./src/index.ts",
       "types": "./dist/index.d.mts",
       "import": "./dist/index.mjs"
     }
@@ -26,6 +27,7 @@
   },
   "dependencies": {
     "@powerhousedao/reactor": "workspace:*",
+    "@powerhousedao/reactor-drive": "workspace:*",
     "@powerhousedao/load-test-client": "workspace:*",
     "document-model": "workspace:*",
     "@powerhousedao/shared": "workspace:*",

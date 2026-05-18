@@ -66,7 +66,7 @@ export function FolderTree() {
   const [selectedDrive] = useSelectedDrive();
   const nodes = useNodesInSelectedDrive();
   const selectedNode = useSelectedNode();
-  const driveName = selectedDrive.header.name;
+  const driveName = selectedDrive?.header.name ?? "";
   // Transform Node[] to hierarchical SidebarNode structure
   const sidebarNodes = useMemo(
     () => transformNodesToSidebarNodes(nodes || [], driveName),
@@ -83,7 +83,7 @@ export function FolderTree() {
   };
   // Map selectedNodeId to activeNodeId (use "root" when undefined)
   const activeNodeId =
-    !selectedNode || selectedNode.id === selectedDrive.header.id
+    !selectedNode || selectedNode.id === selectedDrive?.header.id
       ? "root"
       : selectedNode.id;
 

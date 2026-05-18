@@ -268,9 +268,9 @@ export function RelatedDocument({ documentId }: { documentId: string }) {
 ```typescript
 import { showCreateDocumentModal } from "@powerhousedao/reactor-browser";
 
-export function CreateNewButton() {
+export function CreateNewButton({ documentType }: { documentType: string }) {
   return (
-    <button onClick={() => showCreateDocumentModal()}>
+    <button onClick={() => showCreateDocumentModal(documentType)}>
       Create New Document
     </button>
   );

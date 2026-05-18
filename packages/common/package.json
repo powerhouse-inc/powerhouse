@@ -12,14 +12,17 @@
   },
   "exports": {
     ".": {
+      "source": "./index.ts",
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
     "./utils": {
+      "source": "./utils/index.ts",
       "types": "./dist/utils/index.d.ts",
       "import": "./dist/utils/index.js"
     },
     "./analytics": {
+      "source": "./drive-analytics.ts",
       "types": "./dist/drive-analytics.d.ts",
       "import": "./dist/drive-analytics.js"
     }

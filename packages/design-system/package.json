@@ -25,6 +25,7 @@
   },
   "exports": {
     ".": {
+      "source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
@@ -33,19 +34,23 @@
       "import": "./dist/*.js"
     },
     "./ui": {
+      "source": "./src/ui/index.ts",
       "types": "./dist/ui/index.d.ts",
       "import": "./dist/ui/index.js"
     },
     "./ui/lib": {
+      "source": "./src/ui/lib/index.ts",
       "types": "./dist/ui/lib/index.d.ts",
       "import": "./dist/ui/lib/index.js"
     },
     "./ui/*": "./dist/ui/*",
     "./connect": {
+      "source": "./src/connect/index.ts",
       "types": "./dist/connect/index.d.ts",
       "import": "./dist/connect/index.js"
     },
     "./connect/toast": {
+      "source": "./src/connect/components/toast/toast.tsx",
       "types": "./dist/connect/components/toast/toast.d.ts",
       "import": "./dist/connect/components/toast/toast.js"
     },
@@ -93,6 +98,7 @@
     "@storybook/types": "^8.6.18",
     "@tailwindcss/cli": "catalog:",
     "@tailwindcss/vite": "catalog:",
+    "@tanstack/react-query": "^5.49.2",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.0.1",
@@ -131,7 +137,6 @@
     "@radix-ui/react-tabs": "^1.1.1",
     "@radix-ui/react-tooltip": "^1.1.3",
     "@radix-ui/react-visually-hidden": "^1.1.0",
-    "@tanstack/react-query": "^5.49.2",
     "@tanstack/react-virtual": "^3.8.1",
     "@uiw/react-json-view": "2.0.0-alpha.42",
     "change-case": "catalog:",
@@ -146,6 +151,7 @@
     "react-toastify": "^10.0.4",
     "remeda": "catalog:",
     "tailwind-merge": "catalog:",
+    "type-fest": "catalog:",
     "usehooks-ts": "^3.1.1"
   }
 }

@@ -85,7 +85,7 @@ export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
         onClick={onClickSettings}
       >
         <Icon className="text-gray-600" name="Settings" />
-        <span className="hidden text-sm font-semibold leading-6 text-gray-800">
+        <span className="hidden text-sm/6 font-semibold text-gray-800">
           Settings
         </span>
       </button>

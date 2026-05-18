@@ -46,10 +46,12 @@ export class GraphQLClient {
     return result.data;
   }
 
-  async findDrives(): Promise<DriveInfo[]> {
+  async findDrives(
+    type: string = "powerhouse/document-drive",
+  ): Promise<DriveInfo[]> {
     const data = await this.request<{
       findDocuments: { items: DriveInfo[] };
-    }>(FIND_DRIVES_QUERY);
+    }>(FIND_DRIVES_QUERY, { type });
 
     return data.findDocuments.items;
   }

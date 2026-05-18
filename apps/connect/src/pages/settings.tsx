@@ -4,7 +4,7 @@ const Settings = () => {
   return (
     <div className="px-8 py-4">
       <div className="mb-8 flex items-center justify-between">
-        <h4 className="text-3xl font-bold leading-normal">Settings</h4>
+        <h4 className="text-3xl/normal font-bold">Settings</h4>
         <NavLink to="/">
           <svg
             className="rotate-45"
@@ -19,22 +19,20 @@ const Settings = () => {
         </NavLink>
       </div>
       <div className="mb-8">
-        <h5 className="text-2xl leading-relaxed">General</h5>
+        <h5 className="text-2xl/relaxed">General</h5>
       </div>
       <div className="mb-8">
-        <h5 className="mb-8 text-2xl leading-relaxed">Budget Statements</h5>
+        <h5 className="mb-8 text-2xl/relaxed">Budget Statements</h5>
         <div className="rounded-2xl bg-slate-50 py-24 text-center">
-          <h5 className="text-2xl leading-relaxed">
-            Google Sheet Intergration
-          </h5>
+          <h5 className="text-2xl/relaxed">Google Sheet Intergration</h5>
         </div>
       </div>
       <div className="mb-8">
-        <h5 className="text-2xl leading-relaxed">Document Models</h5>
+        <h5 className="text-2xl/relaxed">Document Models</h5>
       </div>
 
       <div className="mb-8">
-        <h5 className="text-2xl leading-relaxed">LDF Applications</h5>
+        <h5 className="text-2xl/relaxed">LDF Applications</h5>
       </div>
     </div>
   );

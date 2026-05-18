@@ -3,16 +3,28 @@ set -e
 
 envsubst '${PORT},${PH_CONNECT_BASE_PATH}' < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf
 
-DIST_DIR="/var/www/html/project"
+JSON_FILE="/var/www/html/project/ph-packages.json"
 
-# Resolve registry URL: PH_PACKAGE_REGISTRY_URL > PH_REGISTRY_URL > default
-export PH_PACKAGE_REGISTRY_URL="${PH_PACKAGE_REGISTRY_URL:-${PH_REGISTRY_URL:-https://registry.dev.vetra.io}}"
+# Runtime URL override. Unset means keep the build-baked registryUrl from
+# ph-packages.json (set at build time via PH_CONNECT_PACKAGES_REGISTRY).
+RUNTIME_URL="${PH_PACKAGE_REGISTRY_URL:-${PH_REGISTRY_URL:-}}"
 
-# Write ph-packages.json from PH_PACKAGES env var if set
-if [ -n "$PH_REGISTRY_PACKAGES" ]; then
-  # Convert comma-separated string to JSON array
-  JSON_ARRAY=$(echo "$PH_REGISTRY_PACKAGES" | tr ',' '\n' | sed 's/.*/"&"/' | paste -sd ',' - | sed 's/^/[/;s/$/]/')
-  echo "{\"packages\":${JSON_ARRAY}}" > "${DIST_DIR}/ph-packages.json"
+# Merge runtime overrides into ph-packages.json — never overwrite, so
+# build-baked fields (localPackage, registryUrl when not overridden) survive.
+if [ -n "$PH_REGISTRY_PACKAGES" ] || [ -n "$RUNTIME_URL" ]; then
+  [ -f "$JSON_FILE" ] || echo '{"packages":[],"localPackage":null,"registryUrl":null}' > "$JSON_FILE"
+
+  JQ_EXPR='.'
+  [ -n "$PH_REGISTRY_PACKAGES" ] && JQ_EXPR="${JQ_EXPR} | .packages = (\$pkgs | split(\",\"))"
+  [ -n "$RUNTIME_URL" ] && JQ_EXPR="${JQ_EXPR} | .registryUrl = \$url"
+
+  TMP=$(mktemp)
+  jq --arg pkgs "$PH_REGISTRY_PACKAGES" --arg url "$RUNTIME_URL" "$JQ_EXPR" "$JSON_FILE" > "$TMP"
+  mv "$TMP" "$JSON_FILE"
+  # mktemp creates the temp file mode 0600 and `mv` preserves it. Force
+  # world-readable so nginx workers can read it even if the pod runs as a
+  # uid different from the file owner.
+  chmod 644 "$JSON_FILE"
 fi
 
 echo "Testing nginx configuration..."

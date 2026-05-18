@@ -1,0 +1,200 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$comment": "Maps academy doc sections to the monorepo packages they are responsible for documenting. Used by ph-lora to scope code↔doc consistency checks. Update this file when new packages are added or doc ownership changes. `packages` is used by Tier 2 (change-detection prefix match). `sourceFiles` is used by Tier 3 agents to load only the relevant source — a path ending in .ts is a single file; a path without extension is a directory (load all .ts files inside it). Keep sourceFiles tight: the tighter the list, the cheaper the Tier 3 run.",
+  "sections": [
+    {
+      "id": "get-started",
+      "label": "Get Started",
+      "docPath": "docs/academy/01-GetStarted",
+      "packages": ["clis/ph-cmd", "clis/ph-cli", "packages/vetra"],
+      "sourceFiles": [
+        "clis/ph-cmd/src/commands",
+        "clis/ph-cmd/src/cli.ts",
+        "clis/ph-cli/src/commands",
+        "clis/ph-cli/src/cli.ts"
+      ],
+      "checkFocus": "CLI commands (ph init, ph install, ph add, ph generate and its subcommands), package install steps, generated project structure"
+    },
+    {
+      "id": "mastery-builder-environment",
+      "label": "Mastery Track — Builder Environment",
+      "docPath": "docs/academy/02-MasteryTrack/01-BuilderEnvironment",
+      "packages": ["clis/ph-cmd", "packages/vetra"],
+      "sourceFiles": ["clis/ph-cmd/src/commands", "clis/ph-cmd/src/cli.ts"],
+      "checkFocus": "Vetra Studio setup steps, CLI prerequisites, ph-cmd version requirements"
+    },
+    {
+      "id": "mastery-document-model-creation",
+      "label": "Mastery Track — Document Model Creation",
+      "docPath": "docs/academy/02-MasteryTrack/02-DocumentModelCreation",
+      "packages": [
+        "packages/document-model",
+        "packages/codegen",
+        "packages/builder-tools"
+      ],
+      "sourceFiles": ["packages/document-model/src", "packages/codegen/src"],
+      "checkFocus": "Document model schema format, codegen output shape, reducer function signatures, generated file paths"
+    },
+    {
+      "id": "mastery-building-user-experiences",
+      "label": "Mastery Track — Building User Experiences",
+      "docPath": "docs/academy/02-MasteryTrack/03-BuildingUserExperiences",
+      "packages": [
+        "packages/reactor-browser",
+        "packages/design-system",
+        "packages/common"
+      ],
+      "sourceFiles": [
+        "packages/reactor-browser/src/hooks",
+        "packages/design-system/src"
+      ],
+      "checkFocus": "React hooks API, editor component props, drive-app interfaces, CSS customization surface"
+    },
+    {
+      "id": "mastery-work-with-data",
+      "label": "Mastery Track — Work With Data",
+      "docPath": "docs/academy/02-MasteryTrack/04-WorkWithData",
+      "packages": [
+        "packages/reactor",
+        "packages/reactor-api",
+        "packages/analytics-engine",
+        "packages/shared"
+      ],
+      "sourceFiles": [
+        "packages/reactor/src/processors",
+        "packages/reactor/src/read-models",
+        "packages/reactor-api/src/graphql",
+        "packages/analytics-engine/core",
+        "packages/analytics-engine/graphql"
+      ],
+      "checkFocus": "Processor interface, subgraph API, analytics engine query syntax, GraphQL schema shape"
+    },
+    {
+      "id": "mastery-launch",
+      "label": "Mastery Track — Launch",
+      "docPath": "docs/academy/02-MasteryTrack/05-Launch",
+      "packages": ["clis/ph-cmd", "apps/switchboard", "packages/vetra"],
+      "sourceFiles": ["clis/ph-cmd/src/commands", "apps/switchboard/src"],
+      "checkFocus": "Deploy commands, Docker image names, environment variable names, switchboard config format"
+    },
+    {
+      "id": "example-usecases",
+      "label": "Example Use Cases",
+      "docPath": "docs/academy/03-ExampleUsecases",
+      "packages": [
+        "packages/document-model",
+        "packages/codegen",
+        "packages/reactor-browser",
+        "packages/common"
+      ],
+      "sourceFiles": [
+        "packages/document-model/src",
+        "packages/reactor-browser/src/hooks",
+        "packages/codegen/src"
+      ],
+      "checkFocus": "End-to-end tutorial steps, generated file names, reducer signatures, editor component API"
+    },
+    {
+      "id": "api-references-cli",
+      "label": "API References — Powerhouse CLI",
+      "docPath": "docs/academy/04-APIReferences/00-PowerhouseCLI.md",
+      "packages": ["clis/ph-cmd", "clis/ph-cli"],
+      "sourceFiles": [
+        "clis/ph-cmd/src/commands",
+        "clis/ph-cmd/src/cli.ts",
+        "clis/ph-cli/src/commands",
+        "clis/ph-cli/src/cli.ts"
+      ],
+      "checkFocus": "Every documented command, flag, and argument against actual CLI help output"
+    },
+    {
+      "id": "api-references-react-hooks",
+      "label": "API References — React Hooks",
+      "docPath": "docs/academy/04-APIReferences/01-ReactHooks.md",
+      "packages": ["packages/reactor-browser"],
+      "sourceFiles": [
+        "packages/reactor-browser/src/hooks",
+        "packages/reactor-browser/index.ts"
+      ],
+      "checkFocus": "Hook names, parameter types, return types — compare docs against exported TypeScript signatures"
+    },
+    {
+      "id": "api-references-reactor-client",
+      "label": "API References — Reactor Client",
+      "docPath": "docs/academy/04-APIReferences/02-ReactorClient.md",
+      "packages": ["packages/reactor-browser", "packages/reactor"],
+      "sourceFiles": [
+        "packages/reactor-browser/src/reactor.ts",
+        "packages/reactor/src/client"
+      ],
+      "checkFocus": "IReactorClient interface methods, parameter and return types"
+    },
+    {
+      "id": "api-references-relational-database",
+      "label": "API References — Relational Database",
+      "docPath": "docs/academy/04-APIReferences/04-RelationalDatabase.md",
+      "packages": ["packages/reactor-browser"],
+      "sourceFiles": ["packages/reactor-browser/src/relational"],
+      "checkFocus": "Relational DB helper API, query types, hook signatures"
+    },
+    {
+      "id": "api-references-renown-sdk",
+      "label": "API References — Renown SDK",
+      "docPath": "docs/academy/04-APIReferences/renown-sdk",
+      "packages": ["packages/renown"],
+      "sourceFiles": ["packages/renown/src"],
+      "checkFocus": "SDK method names, auth flow steps, hook and component exports"
+    },
+    {
+      "id": "api-references-migration-guides",
+      "label": "API References — Migration Guides",
+      "docPath": "docs/academy/04-APIReferences",
+      "packages": [
+        "packages/document-model",
+        "packages/reactor",
+        "packages/reactor-api",
+        "packages/shared"
+      ],
+      "sourceFiles": [
+        "packages/document-model/src",
+        "packages/reactor/src/client",
+        "packages/reactor-api/src"
+      ],
+      "checkFocus": "Breaking change descriptions, before/after code samples, removed or renamed exports"
+    },
+    {
+      "id": "component-library",
+      "label": "Component Library",
+      "docPath": "docs/academy/06-ComponentLibrary",
+      "packages": [
+        "packages/design-system",
+        "packages/reactor-browser",
+        "packages/codegen"
+      ],
+      "sourceFiles": ["packages/design-system/src"],
+      "checkFocus": "Component names, scalar types, prop interfaces"
+    },
+    {
+      "id": "architecture",
+      "label": "Architecture",
+      "docPath": "docs/academy/05-Architecture",
+      "packages": [],
+      "sourceFiles": [],
+      "checkFocus": "Conceptual only — skip mechanical checks. Flag if referenced package names or system names no longer match reality.",
+      "skipMechanicalCheck": true
+    }
+  ],
+  "unmappedPackages": [
+    "packages/reactor-attachments",
+    "packages/reactor-drive",
+    "packages/reactor-hypercore",
+    "packages/reactor-mcp",
+    "packages/registry",
+    "packages/config",
+    "packages/opentelemetry-instrumentation-reactor",
+    "packages/powerhouse-vetra-packages",
+    "packages/switchboard-gui",
+    "apps/connect"
+  ],
+  "$unmappedNote": "These packages exist in the monorepo but have no doc section currently responsible for them. ph-lora should flag these as documentation gaps."
+}

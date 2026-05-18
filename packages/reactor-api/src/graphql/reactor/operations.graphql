@@ -273,6 +273,20 @@ mutation RenameDocument(
   }
 }
 
+mutation SetPreferredEditor(
+  $documentIdentifier: String!
+  $preferredEditor: String
+  $branch: String
+) {
+  setPreferredEditor(
+    documentIdentifier: $documentIdentifier
+    preferredEditor: $preferredEditor
+    branch: $branch
+  ) {
+    ...PHDocumentFields
+  }
+}
+
 mutation AddRelationship(
   $sourceIdentifier: String!
   $targetIdentifier: String!

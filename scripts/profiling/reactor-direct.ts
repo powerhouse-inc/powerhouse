@@ -23,6 +23,7 @@
  */
 
 import { PGlite } from "@electric-sql/pglite";
+import { AtomicNodeFs } from "@powerhousedao/pglite-fs";
 import { metrics } from "@opentelemetry/api";
 import { OTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-http";
 import {
@@ -481,7 +482,9 @@ async function createDatabase(
   }
 
   console.log(`  Using PGlite with file storage: ${dbPath}`);
-  return new Kysely({ dialect: new PGliteDialect(new PGlite(dbPath)) });
+  return new Kysely({
+    dialect: new PGliteDialect(new PGlite({ fs: new AtomicNodeFs(dbPath) })),
+  });
 }
 
 async function main() {

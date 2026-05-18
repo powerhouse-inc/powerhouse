@@ -391,7 +391,6 @@ export class KyselyWriteCache implements IWriteCache {
       startRevision = keyframe.revision;
       documentType = keyframe.document.header.documentType;
     } else {
-      document = undefined;
       startRevision = -1;
       const createOpResult = await this.operationStore.getSince(
         documentId,
@@ -520,6 +519,7 @@ export class KyselyWriteCache implements IWriteCache {
         // Wrap errors with context to include document ID for debugging
         throw new Error(
           `Failed to rebuild document ${documentId}: ${err instanceof Error ? err.message : String(err)}`,
+          { cause: err },
         );
       }
     } while (hasMorePages);
@@ -588,6 +588,7 @@ export class KyselyWriteCache implements IWriteCache {
       // Wrap errors with context to include document ID for debugging
       throw new Error(
         `Failed to rebuild document ${documentId}: ${err instanceof Error ? err.message : String(err)}`,
+        { cause: err },
       );
     }
 

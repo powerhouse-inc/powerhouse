@@ -4,6 +4,7 @@ import type {
   CreateDocumentActionInput,
   DeleteDocumentActionInput,
   RemoveRelationshipActionInput,
+  UpdateRelationshipActionInput,
   UpgradeDocumentActionInput,
 } from "@powerhousedao/shared/document-model";
 import {
@@ -59,22 +60,54 @@ export function deleteDocumentAction(documentId: string): Action {
 }
 
 /**
- * Creates an ADD_RELATIONSHIP action to establish a parent-child relationship.
+ * Creates an ADD_RELATIONSHIP action that records a directed edge from
+ * `sourceId` to `targetId` with an arbitrary `relationshipType` and optional
+ * `metadata`. The edge is opaque to the reactor — consumers (e.g. reactor-drive)
+ * define their own type strings such as `"drive/child"` and attach
+ * domain-specific metadata.
  */
 export function addRelationshipAction(
   sourceId: string,
   targetId: string,
-  relationshipType: string = "child",
+  relationshipType: string,
+  metadata?: Record<string, unknown>,
 ): Action {
   const input: AddRelationshipActionInput = {
     sourceId,
     targetId,
     relationshipType,
+    ...(metadata !== undefined ? { metadata } : {}),
   };
 
   return {
     id: generateId(),
     type: "ADD_RELATIONSHIP",
+    scope: "document",
+    timestampUtcMs: new Date().toISOString(),
+    input,
+  };
+}
+
+/**
+ * Creates an UPDATE_RELATIONSHIP action to replace a relationship's metadata
+ * without losing its createdAt ordering.
+ */
+export function updateRelationshipAction(
+  sourceId: string,
+  targetId: string,
+  relationshipType: string,
+  metadata: Record<string, unknown> | null,
+): Action {
+  const input: UpdateRelationshipActionInput = {
+    sourceId,
+    targetId,
+    relationshipType,
+    metadata,
+  };
+
+  return {
+    id: generateId(),
+    type: "UPDATE_RELATIONSHIP",
     scope: "document",
     timestampUtcMs: new Date().toISOString(),
     input,

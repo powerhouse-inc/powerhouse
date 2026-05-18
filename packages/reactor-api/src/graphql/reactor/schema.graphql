@@ -431,6 +431,14 @@ type Mutation {
     branch: String
   ): PHDocument!
 
+  # Update the preferred editor recorded in the document header meta.
+  # Pass null/omit to clear it.
+  setPreferredEditor(
+    documentIdentifier: String!
+    preferredEditor: String
+    branch: String
+  ): PHDocument!
+
   # Add a relationship between two documents
   addRelationship(
     sourceIdentifier: String!

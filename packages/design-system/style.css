@@ -5,6 +5,11 @@
 @import "./theme.css";
 @plugin "tailwind-scrollbar";
 
+@plugin 'tailwind-scrollbar' {
+    nocompatible: true;
+    preferredStrategy: 'pseudoelements';
+}
+
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
@@ -86,23 +91,23 @@ input[type="number"] {
   }
 
   .ph-default-styles h1 {
-    @apply mb-4 mt-6 font-sans text-[32px] font-bold leading-[120%] text-[#343839];
+    @apply mb-4 mt-6 font-sans text-3xl font-bold leading-tight text-gray-900;
   }
 
   .ph-default-styles h2 {
-    @apply mb-3 mt-5 font-sans text-2xl font-bold leading-[120%] text-[#343839];
+    @apply mb-3 mt-5 font-sans text-2xl font-bold leading-tight text-gray-900;
   }
 
   .ph-default-styles h3 {
-    @apply mb-2 mt-4 font-sans text-xl font-bold leading-[120%] text-[#343839];
+    @apply mb-2 mt-4 font-sans text-xl font-bold leading-tight text-gray-900;
   }
 
   .ph-default-styles p {
-    @apply font-sans text-base font-normal leading-[120%] text-[#343839];
+    @apply font-sans text-base font-normal leading-tight text-gray-900;
   }
 
   .ph-default-styles small {
-    @apply font-sans text-sm font-normal leading-[100%] text-[#474d4e];
+    @apply font-sans text-sm font-normal leading-none text-gray-700;
   }
 
   /* Default styles for text input fields and textareas based on Storybook */
@@ -123,7 +128,7 @@ input[type="number"] {
     /* py-[7px] (textarea) / py-2 (input), px-3 */
     /* w-full */
     /* For some default spacing */
-    @apply mb-[10px] box-border w-full rounded-md border border-[#ced4da] bg-white px-3 py-[7px] font-sans text-sm font-normal leading-5 text-[#343839];
+    @apply mb-2.5 box-border w-full rounded-md border border-slate-100 bg-white px-3 py-1.75 font-sans text-sm font-normal leading-5 text-gray-900;
   }
 
   .ph-default-styles textarea {
@@ -146,17 +151,17 @@ input[type="number"] {
   /* Default styles for anchor/links */
   .ph-default-styles a {
     /* Example link color - match your design system */
-    @apply text-[#007bff] no-underline;
+    @apply text-blue-900 no-underline;
   }
 
   .ph-default-styles a:hover {
     /* Darker shade for hover */
-    @apply text-[#0056b3] underline;
+    @apply text-blue-900 brightness-50 underline;
   }
 
   .ph-default-styles a:focus {
     /* Example focus ring */
-    @apply outline-none ring-2 ring-[#007bff]/50 ring-offset-2;
+    @apply outline-none ring-2 ring-blue-900/50 ring-offset-2;
   }
 
   /* Default styles for lists */
@@ -169,12 +174,12 @@ input[type="number"] {
   .ph-default-styles label {
     /* font-medium or similar */
     /* Match other text colors */
-    @apply block font-sans font-medium text-[#343839];
+    @apply block font-sans font-medium text-gray-900;
   }
 
   /* Default styles for horizontal rules */
   .ph-default-styles hr {
     /* A common light grey border color */
-    @apply my-4 h-px border-0 bg-[#ced4da];
+    @apply my-4 h-px border-0 bg-slate-100;
   }
 }

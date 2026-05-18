@@ -25,9 +25,11 @@ function mockResponse(
     ok: status >= 200 && status < 300,
     body: options.body ?? null,
     headers: new Headers(options.headers ?? {}),
-    json: async () => options.json,
-    text: async () =>
-      options.json !== undefined ? JSON.stringify(options.json) : "",
+    json: () => Promise.resolve(options.json),
+    text: () =>
+      Promise.resolve(
+        options.json !== undefined ? JSON.stringify(options.json) : "",
+      ),
   } as unknown as Response;
 }
 

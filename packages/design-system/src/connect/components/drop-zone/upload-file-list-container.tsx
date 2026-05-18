@@ -43,7 +43,7 @@ export function UploadFileListContainer(props: UploadFileListContainerProps) {
 
   return (
     <div
-      className={twMerge("fixed bottom-4 right-4 z-[1001]", className)}
+      className={twMerge("fixed right-4 bottom-4 z-1001", className)}
       {...delegatedProps}
     >
       <UploadFileList items={items} onClose={handleClose} />

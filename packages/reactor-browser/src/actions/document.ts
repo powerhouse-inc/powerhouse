@@ -35,6 +35,7 @@ import {
   generateId,
   replayDocument,
   setName,
+  setPreferredEditor,
 } from "@powerhousedao/shared/document-model";
 import { logger } from "document-model";
 import { conditional, constant, isDefined, isNot, isStrictEqual } from "remeda";
@@ -137,21 +138,21 @@ function getDocumentTypeIcon(
 }
 
 export async function downloadFile(document: PHDocument, fileName: string) {
-  const zip = await createZip(document);
-  zip
-    .generateAsync({ type: "blob" })
-    .then((blob) => {
-      const link = window.document.createElement("a");
-      link.style.display = "none";
-      link.href = URL.createObjectURL(blob);
-      link.download = fileName;
+  try {
+    const data = await createZip(document);
+    const blob = new Blob([new Uint8Array(data)], { type: "application/zip" });
+    const link = window.document.createElement("a");
+    link.style.display = "none";
+    link.href = URL.createObjectURL(blob);
+    link.download = fileName;
 
-      window.document.body.appendChild(link);
-      link.click();
+    window.document.body.appendChild(link);
+    link.click();
 
-      window.document.body.removeChild(link);
-    })
-    .catch(logger.error);
+    window.document.body.removeChild(link);
+  } catch (e) {
+    logger.error(e instanceof Error ? e.message : String(e));
+  }
 }
 
 async function getDocumentExtension(document: PHDocument): Promise<string> {
@@ -355,7 +356,7 @@ export async function addDocument(
     );
   } catch (e) {
     logger.error("Error adding document", e);
-    throw new Error("There was an error adding document");
+    throw new Error("There was an error adding document", { cause: e });
   }
 
   // Return a file node structure for compatibility
@@ -811,6 +812,25 @@ export async function renameDriveNode(
 
   const drive = await reactorClient.get<DocumentDriveDocument>(driveId);
   return drive.state.global.nodes.find((n: Node) => n.id === nodeId);
+}
+
+export async function setPreferredEditorOnNode(
+  nodeId: string,
+  preferredEditor: string | null,
+) {
+  const { isAllowedToCreateDocuments } = getUserPermissions();
+  if (!isAllowedToCreateDocuments) {
+    throw new Error("User is not allowed to modify documents");
+  }
+
+  const reactorClient = window.ph?.reactorClient;
+  if (!reactorClient) {
+    throw new Error("ReactorClient not initialized");
+  }
+
+  return reactorClient.execute(nodeId, "main", [
+    setPreferredEditor(preferredEditor),
+  ]);
 }
 
 export async function moveNodeById(args: {

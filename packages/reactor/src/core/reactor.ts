@@ -39,7 +39,7 @@ import type {
   ViewFilter,
 } from "../shared/types.js";
 import { JobStatus } from "../shared/types.js";
-import { matchesScope } from "../shared/utils.js";
+import { matchesScope, throwIfAborted } from "../shared/utils.js";
 import type {
   IDocumentIndexer,
   IDocumentView,
@@ -168,9 +168,7 @@ export class Reactor implements IReactor {
       paging,
     );
 
-    if (signal?.aborted) {
-      throw new AbortError();
-    }
+    throwIfAborted(signal, () => new AbortError());
 
     const modules = this.documentModelRegistry.getAllModules();
     const filteredModels = modules.filter(
@@ -273,9 +271,7 @@ export class Reactor implements IReactor {
       signal,
     );
 
-    if (signal?.aborted) {
-      throw new AbortError();
-    }
+    throwIfAborted(signal, () => new AbortError());
 
     return relationships.results.map((rel) => rel.targetId);
   }
@@ -294,9 +290,7 @@ export class Reactor implements IReactor {
       signal,
     );
 
-    if (signal?.aborted) {
-      throw new AbortError();
-    }
+    throwIfAborted(signal, () => new AbortError());
 
     return relationships.results.map((rel) => rel.sourceId);
   }
@@ -325,9 +319,7 @@ export class Reactor implements IReactor {
       signal,
     );
 
-    if (signal?.aborted) {
-      throw new AbortError();
-    }
+    throwIfAborted(signal, () => new AbortError());
 
     const allScopes = Object.keys(revisions.revision);
     const result: Record<string, PagedResults<Operation>> = {};
@@ -337,9 +329,7 @@ export class Reactor implements IReactor {
         continue;
       }
 
-      if (signal?.aborted) {
-        throw new AbortError();
-      }
+      throwIfAborted(signal, () => new AbortError());
 
       const scopeResult = await this.operationStore.getSince(
         documentId,
@@ -439,9 +429,7 @@ export class Reactor implements IReactor {
       throw new Error("No search criteria provided");
     }
 
-    if (signal?.aborted) {
-      throw new AbortError();
-    }
+    throwIfAborted(signal, () => new AbortError());
 
     return results;
   }
@@ -460,9 +448,7 @@ export class Reactor implements IReactor {
     );
     const createdAtUtcIso = new Date().toISOString();
 
-    if (signal?.aborted) {
-      throw new AbortError();
-    }
+    throwIfAborted(signal, () => new AbortError());
 
     const createInput: CreateDocumentActionInput = {
       model: document.header.documentType,
@@ -544,9 +530,7 @@ export class Reactor implements IReactor {
     this.logger.verbose("deleteDocument(@id)", id);
     const createdAtUtcIso = new Date().toISOString();
 
-    if (signal?.aborted) {
-      throw new AbortError();
-    }
+    throwIfAborted(signal, () => new AbortError());
 
     let action = deleteDocumentAction(id);
 
@@ -605,9 +589,7 @@ export class Reactor implements IReactor {
       actions,
     );
 
-    if (signal?.aborted) {
-      throw new AbortError();
-    }
+    throwIfAborted(signal, () => new AbortError());
 
     const createdAtUtcIso = new Date().toISOString();
     const scope = getSharedActionScope(actions);
@@ -645,9 +627,7 @@ export class Reactor implements IReactor {
 
     await this.queue.enqueue(job);
 
-    if (signal?.aborted) {
-      throw new AbortError();
-    }
+    throwIfAborted(signal, () => new AbortError());
 
     return jobInfo;
   }
@@ -667,9 +647,7 @@ export class Reactor implements IReactor {
       operations,
     );
 
-    if (signal?.aborted) {
-      throw new AbortError();
-    }
+    throwIfAborted(signal, () => new AbortError());
 
     if (operations.length === 0) {
       throw new Error("load requires at least one operation");
@@ -711,9 +689,7 @@ export class Reactor implements IReactor {
 
     await this.queue.enqueue(job);
 
-    if (signal?.aborted) {
-      throw new AbortError();
-    }
+    throwIfAborted(signal, () => new AbortError());
 
     return jobInfo;
   }
@@ -725,9 +701,7 @@ export class Reactor implements IReactor {
   ): Promise<BatchExecutionResult> {
     this.logger.verbose("executeBatch(@count jobs)", request.jobs.length);
 
-    if (signal?.aborted) {
-      throw new AbortError();
-    }
+    throwIfAborted(signal, () => new AbortError());
     validateBatchRequest(request.jobs);
     for (const jobPlan of request.jobs) {
       validateActionScopes(jobPlan);
@@ -766,9 +740,7 @@ export class Reactor implements IReactor {
     const enqueuedKeys: string[] = [];
     try {
       for (const key of sortedKeys) {
-        if (signal?.aborted) {
-          throw new AbortError();
-        }
+        throwIfAborted(signal, () => new AbortError());
         const jobPlan = request.jobs.find((j) => j.key === key)!;
         const jobId = planKeyToJobId.get(key)!;
         const queueHint = jobPlan.dependsOn.map(
@@ -821,9 +793,7 @@ export class Reactor implements IReactor {
   ): Promise<BatchLoadResult> {
     this.logger.verbose("loadBatch(@count jobs)", request.jobs.length);
 
-    if (signal?.aborted) {
-      throw new AbortError();
-    }
+    throwIfAborted(signal, () => new AbortError());
     validateBatchLoadRequest(request.jobs);
     for (const jobPlan of request.jobs) {
       validateOperationScopes(jobPlan);
@@ -862,9 +832,7 @@ export class Reactor implements IReactor {
     const enqueuedKeys: string[] = [];
     try {
       for (const key of sortedKeys) {
-        if (signal?.aborted) {
-          throw new AbortError();
-        }
+        throwIfAborted(signal, () => new AbortError());
         const jobPlan = request.jobs.find((j) => j.key === key)!;
         const jobId = planKeyToJobId.get(key)!;
         const queueHint = [
@@ -927,9 +895,7 @@ export class Reactor implements IReactor {
       branch,
     );
 
-    if (signal?.aborted) {
-      throw new AbortError();
-    }
+    throwIfAborted(signal, () => new AbortError());
 
     let actions: Action[] = [
       addRelationshipAction(sourceId, targetId, relationshipType),
@@ -958,9 +924,7 @@ export class Reactor implements IReactor {
       branch,
     );
 
-    if (signal?.aborted) {
-      throw new AbortError();
-    }
+    throwIfAborted(signal, () => new AbortError());
 
     let actions: Action[] = [
       removeRelationshipAction(sourceId, targetId, relationshipType),
@@ -976,9 +940,7 @@ export class Reactor implements IReactor {
   getJobStatus(jobId: string, signal?: AbortSignal): Promise<JobInfo> {
     this.logger.verbose("getJobStatus(@jobId)", jobId);
 
-    if (signal?.aborted) {
-      throw new AbortError();
-    }
+    throwIfAborted(signal, () => new AbortError());
 
     const jobInfo = this.jobTracker.getJobStatus(jobId);
 

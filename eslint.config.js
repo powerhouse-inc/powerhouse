@@ -1,18 +1,19 @@
 // @ts-check
 import { default as eslint } from "@eslint/js";
+import betterTailwindcss from "eslint-plugin-better-tailwindcss";
 import eslintPluginPrettierRecommended from "eslint-plugin-prettier/recommended";
-import reactPlugin from "eslint-plugin-react";
-import reactHooksPlugin from "eslint-plugin-react-hooks";
 import { defineConfig, globalIgnores } from "eslint/config";
 import globals from "globals";
 import { builtinModules } from "node:module";
 import tseslint from "typescript-eslint";
+import reactHooks from "eslint-plugin-react-hooks";
 
 /** These files are typically ignored by eslint by default, so there is no need to investigate why they are ignored. */
 const normalIgnoredFiles = [
   "**/node_modules/",
   "**/coverage/",
   "**/dist/",
+  "**/.tsbuild/",
   "**/ts-build/",
   "**/storybook-static/",
   "**/.vite/",
@@ -20,6 +21,7 @@ const normalIgnoredFiles = [
   "**/build/",
   "**/.docusaurus/",
   "**/.ph/",
+  "**/.hotseat/",
   "**/prisma/",
   // config artifacts
   "**/babel.config.js",
@@ -40,6 +42,11 @@ const normalIgnoredFiles = [
   "clis/ph-cmd/legacy/**",
   "**/coverage/",
   "**/playwright-report/",
+  // test/package-e2e runtime artifacts (registry storage, CDN cache) and
+  // fixtures that import from a generated project (not the workspace).
+  "test/package-e2e/.registry-storage/",
+  "test/package-e2e/.registry-cdn-cache/",
+  "test/package-e2e/fixtures/",
 ];
 
 /** These files need to be ignored for builds to pass, but they do not have clear reasons to be ignored.
@@ -71,6 +78,7 @@ const unsafeIgnoredFiles = [
   "**/external-packages.js",
   // Excluded from reactor's tsconfig.json, so ESLint's project service cannot parse it
   "packages/reactor/test/atlas/**/*",
+  "packages/reactor-api/src/packages/vite-loader.mts",
 ];
 
 /** All of the files that are ignored by eslint */
@@ -162,6 +170,8 @@ const filesWithUnsafeRules = [
 /** Typescript rules that we have chosen to opt out of in general */
 /** @type {import("eslint").Linter.RulesRecord} */
 const typescriptRules = {
+  "no-useless-assignment": "warn",
+  "preserve-caught-error": "warn",
   "@typescript-eslint/consistent-type-imports": [
     "error",
     {
@@ -239,6 +249,8 @@ const typescriptLanguageOptions = {
         "tools/scripts/merge-coverage.js",
         "test/scripts/analyze-ops.ts",
         "test/versioned-documents/vitest.config.ts",
+        "test/ph-lora/scripts/check-pr-drift.ts",
+        "test/ph-lora/scripts/validate-mapping.ts",
       ],
     },
     tsconfigRootDir: import.meta.dirname,
@@ -246,12 +258,6 @@ const typescriptLanguageOptions = {
       jsx: true,
     },
   },
-};
-
-/** React plugins */
-const reactPlugins = {
-  react: reactPlugin,
-  "react-hooks": reactHooksPlugin,
 };
 
 /** React settings */
@@ -270,9 +276,9 @@ const typescriptConfig = {
 
 /** React config for `.tsx` files */
 const reactConfig = {
+  ...reactHooks.configs.flat.recommended,
   files: typescriptReactFiles,
   settings: reactSettings,
-  plugins: reactPlugins,
 };
 
 /** Config for files that have unsafe rules enabled */
@@ -414,6 +420,66 @@ const typescriptEsLintRecommendedConfig = [
   ...tseslint.configs.recommendedTypeChecked,
 ];
 
+/** @type {import("eslint").Linter.RulesRecord} */
+const tailwindRules = {
+  ...betterTailwindcss.configs["recommended-error"].rules,
+  "better-tailwindcss/enforce-consistent-line-wrapping": ["off"],
+  "better-tailwindcss/no-unknown-classes": [
+    "error",
+    {
+      ignore: ["custom-class", "hover-bg-transparent", "skeleton-loader"],
+    },
+  ],
+};
+
+const tailwindConfig = [
+  {
+    files: ["packages/design-system/**/*.{js,jsx,cjs,mjs,ts,tsx}"],
+    ignores: ["packages/design-system/src/powerhouse/components/legacy/**"],
+    ...betterTailwindcss.configs["recommended-error"],
+    rules: tailwindRules,
+    settings: {
+      "better-tailwindcss": {
+        cwd: "./packages/design-system",
+        entryPoint: "style.css",
+      },
+    },
+  },
+  {
+    files: ["apps/connect/**/*.{js,jsx,cjs,mjs,ts,tsx}"],
+    ...betterTailwindcss.configs["recommended-error"],
+    rules: tailwindRules,
+    settings: {
+      "better-tailwindcss": {
+        cwd: "./apps/connect",
+        entryPoint: "style.css",
+      },
+    },
+  },
+  {
+    files: ["packages/powerhouse-vetra-packages/**/*.{js,jsx,cjs,mjs,ts,tsx}"],
+    ...betterTailwindcss.configs["recommended-error"],
+    rules: tailwindRules,
+    settings: {
+      "better-tailwindcss": {
+        cwd: "./packages/powerhouse-vetra-packages",
+        entryPoint: "style.css",
+      },
+    },
+  },
+  {
+    files: ["packages/vetra/**/*.{js,jsx,cjs,mjs,ts,tsx}"],
+    ...betterTailwindcss.configs["recommended-error"],
+    rules: tailwindRules,
+    settings: {
+      "better-tailwindcss": {
+        cwd: "./packages/vetra",
+        entryPoint: "style.css",
+      },
+    },
+  },
+];
+
 /** Main config */
 export default defineConfig(
   ignored,
@@ -425,4 +491,5 @@ export default defineConfig(
   javascriptConfig,
   unsafeConfig,
   cliColdPathConfig,
+  tailwindConfig,
 );

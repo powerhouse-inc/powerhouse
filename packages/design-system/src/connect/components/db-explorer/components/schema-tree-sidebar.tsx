@@ -61,7 +61,7 @@ function TreeItem({
       >
         {hasChildren ? (
           <button
-            className="flex h-4 w-4 shrink-0 items-center justify-center text-gray-500 hover:text-gray-700"
+            className="flex size-4 shrink-0 items-center justify-center text-gray-500 hover:text-gray-700"
             onClick={handleChevronClick}
             type="button"
           >
@@ -80,7 +80,7 @@ function TreeItem({
         {icon && <span className="shrink-0 text-gray-500">{icon}</span>}
         <span className="min-w-0 flex-1 truncate text-gray-700">{label}</span>
         {selected && (
-          <span className="ml-auto h-2 w-2 shrink-0 rounded-full bg-blue-500" />
+          <span className="ml-auto size-2 shrink-0 rounded-full bg-blue-500" />
         )}
       </div>
       {expanded && children}

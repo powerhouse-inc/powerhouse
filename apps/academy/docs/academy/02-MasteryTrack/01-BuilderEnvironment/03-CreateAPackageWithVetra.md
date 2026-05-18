@@ -1,5 +1,19 @@
 # Create a package with Vetra
 
+:::info[What is a Package?]
+A **Powerhouse Package** is a distributable unit that bundles one or more document models, editors, and optional reactor modules into a single installable artifact. Once published to the Vetra registry, a package can be installed in any Vetra Cloud environment — extending Connect with new document types and editors, and extending Switchboard with the corresponding reactor logic.
+:::
+
+<figure className="image-container">
+  <img
+    src={require("./images/vetra-cloud-create-a-package.png").default}
+    alt="Create a Package"
+  />
+  <figcaption>The five steps to build and publish a package to the Vetra ecosystem.</figcaption>
+</figure>
+
+On Vetra Cloud you'll find these five steps as a quick reference for creating and publishing a package. This guide walks you through each step in detail — from installing the CLI and scaffolding your project, to building document models and editors, and finally publishing your package to the Vetra registry so others can install it in their environments.
+
 :::warning
 **This tutorial is a summary for builders that are already familiar with building document models**.  
 It provides a summary from initial setup up to publishing a distributable package.
@@ -14,10 +28,9 @@ Please start with the [**Get Started**](/) Chapter or [**Document Model Creation
 - `ph init`: Initializes a new Powerhouse project or sets up the local environment.
 - `ph vetra --interactive`: Launches Vetra Studio in interactive mode for package development.
 - `ph vetra --interactive --watch`: Launches Vetra Studio with dynamic reloading for document-models and editors.
-- `pnpm build` or `npm run build`: Builds the project for production.
+- `ph build`: Builds the project for production.
 - `pnpm run test` or `npm test`: Runs unit tests.
-- `npm login`: Logs into your NPM account.
-- `npm publish`: Publishes your package to NPM.
+- `ph publish`: Publishes your package to the Vetra registry.
 - `ph install @your-org-ph/your-package-name`: Installs a published package into a local Powerhouse environment.
 
 </details>
@@ -38,7 +51,7 @@ Or if you're using npm:
 npm install -g ph-cmd
 ```
 
-:::info **Prerequisites**
+:::info[Prerequisites]
 See the [Prerequisites](/academy/MasteryTrack/BuilderEnvironment/Prerequisites) guide for detailed installation instructions for Node.js 24, package managers (pnpm or npm), and Git if you haven't set them up yet.
 :::
 
@@ -47,27 +60,27 @@ See the [Prerequisites](/academy/MasteryTrack/BuilderEnvironment/Prerequisites) 
 Before creating a specific project, or if you're setting up your environment for the first time, initialize the Powerhouse environment. This command prepares your local setup, including a local Reactor configuration.
 
 ```bash
-ph init
+ph init my-package
 ```
 
-If you are starting a new project to be packaged, this command will also prompt you for a project name. This name will be used for your package.
+Replace `my-package` with your desired package name. If you run `ph init` without a name you will be prompted for one.
 
 <details>
 <summary> How to make use of different branches? </summary>
 
 When installing or using the Powerhouse CLI commands you are able to make use of the dev & staging branches. These branches contain more experimental features than the latest stable release the PH CLI uses by default. They can be used to get access to a bugfix or features under development.
 
-| Command                                                                 | Description                                           |
-| ----------------------------------------------------------------------- | ----------------------------------------------------- |
-| **pnpm install -g ph-cmd** or **npm install -g ph-cmd**                 | Install latest stable version                         |
-| **pnpm install -g ph-cmd@dev** or **npm install -g ph-cmd@dev**         | Install development version                           |
-| **pnpm install -g ph-cmd@staging** or **npm install -g ph-cmd@staging** | Install staging version                               |
-| **ph init**                                                             | Use latest stable version of the boilerplate          |
-| **ph init --dev**                                                       | Use development version of the boilerplate            |
-| **ph init --staging**                                                   | Use staging version of the boilerplate                |
-| **ph use**                                                              | Switch all dependencies to latest production versions |
-| **ph use dev**                                                          | Switch all dependencies to development versions       |
-| **ph use prod**                                                         | Switch all dependencies to production versions        |
+| Command                                                                 | Description                                       |
+| ----------------------------------------------------------------------- | ------------------------------------------------- |
+| **pnpm install -g ph-cmd** or **npm install -g ph-cmd**                 | Install latest stable version                     |
+| **pnpm install -g ph-cmd@dev** or **npm install -g ph-cmd@dev**         | Install development version                       |
+| **pnpm install -g ph-cmd@staging** or **npm install -g ph-cmd@staging** | Install staging version                           |
+| **ph init**                                                             | Use latest stable version of the boilerplate      |
+| **ph init --dev**                                                       | Use development version of the boilerplate        |
+| **ph init --staging**                                                   | Use staging version of the boilerplate            |
+| **ph use latest**                                                       | Switch all dependencies to latest stable versions |
+| **ph use dev**                                                          | Switch all dependencies to development versions   |
+| **ph use staging**                                                      | Switch all dependencies to staging versions       |
 
 Please be aware that these versions can contain bugs and experimental features that aren't fully tested.
 
@@ -100,7 +113,7 @@ In watch mode:
 - Adding `--watch` to your command enables dynamic loading for document-models and editors in Vetra studio and switchboard.
 - When enabled, the system will watch for changes in these directories and reload them dynamically.
 
-:::warning Be Aware
+:::warning[Be Aware]
 When you are building your document model the code can break the Vetra Studio environment.
 A full overview of the Vetra Studio commands can be found in the [Powerhouse CLI](/academy/APIReferences/PowerhouseCLI#vetra)
 :::
@@ -138,7 +151,7 @@ This command typically opens Connect in your browser at `http://localhost:3000/`
 
 Vetra Studio integrates deeply with Claude through MCP (Model Context Protocol). This is where AI comes into the mix and you get the chance to have greater control and direction over what your LLM is coding for you.
 
-:::info Specification Driven Design & Development
+:::info[Specification Driven Design & Development]
 Vetra embraces **Specification Driven Design & Development** —an approach where your structured specification documents become the shared language between you and AI agents. You communicate intent through precise specs that are machine-readable and executable.
 
 <details>
@@ -180,6 +193,23 @@ A specialized AI agent that guides users through document model creation with re
 
 </details>
 :::
+
+#### 0. Configure the Reactor MCP
+
+Add the following to your Claude MCP settings (`~/.claude/mcp.json` for Claude Code, or the MCP servers section in Claude Desktop):
+
+```json
+{
+  "mcpServers": {
+    "reactor-mcp": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "http://localhost:4001/mcp"]
+    }
+  }
+}
+```
+
+This only needs to be done once. Make sure `ph vetra` is running before starting a Claude session that uses the MCP.
 
 #### 1. Start the Reactor MCP:
 
@@ -270,7 +300,7 @@ Once your schema and operations are defined in Connect, export the specification
 Use the Powerhouse CLI to process an exported `.phdm.zip` file and generate the necessary boilerplate code for your document model.
 
 ```bash
-ph generate YourModelName.phdm.zip
+ph generate document-model --file YourModelName.phdm.zip
 ```
 
 This command creates a new directory under `document-models/YourModelName/` containing:
@@ -307,11 +337,11 @@ This command creates a new directory under `document-models/YourModelName/` cont
 A document editor provides the user interface for interacting with your document model. Generate an editor template:
 
 ```bash
-ph generate --editor YourModelName --document-types powerhouse/YourModelName
+ph generate editor --name YourModelName --document-type powerhouse/YourModelName
 ```
 
-- The `--editor YourModelName` flag specifies the document model this editor is for.
-- The `--document-types powerhouse/YourModelName` flag links the editor to the specific document type defined in your model specification.
+- The `--name YourModelName` flag specifies the document model this editor is for.
+- The `--document-type powerhouse/YourModelName` flag links the editor to the specific document type defined in your model specification.
 
 This creates a template file, typically at `editors/your-model-name/editor.tsx`.
 
@@ -366,7 +396,7 @@ Create a new document of your defined type. Interact with your editor, test all 
 
 </details>
 
-:::tip Best Practices
+:::tip[Best Practices]
 
 **Working with MCP and Claude**
 
@@ -619,13 +649,7 @@ Update your project's main `index.js` or entry point to export your document mod
 Compile and optimize your project for production:
 
 ```bash
-pnpm build
-```
-
-Or with npm:
-
-```bash
-npm run build
+ph build
 ```
 
 This command typically creates a `dist/` or `build/` directory with the compiled assets. Ensure your `package.json`'s `files` array includes this directory and other necessary assets like `manifest.json`, `document-models`, and `editors` if they are not part of the build output but need to be in the package.
@@ -657,9 +681,9 @@ To share your package with others or deploy it to different environments, publis
 
 2.  **Publish the package:**
     ```bash
-    npm publish
+    ph publish
     ```
-    If your package is scoped and public, NPM will use the `publishConfig` from your `package.json`. If not set there, you might need `npm publish --access public`.
+    This publishes your package to the Vetra registry, making it available to install in any Vetra Cloud environment.
 
 ### 4.7. Using your published package
 

@@ -4,9 +4,10 @@ import {
 } from "@powerhousedao/reactor";
 import type { PHDocument } from "@powerhousedao/shared/document-model";
 import { useMemo } from "react";
+import { isDefined } from "remeda";
 import { buildDocumentSubgraphUrl } from "../utils/index.js";
 import { useRenown, useSyncList, useUser } from "./connect.js";
-import { useSelectedDrive } from "./selected-drive.js";
+import { useSelectedDriveSafe } from "./selected-drive.js";
 
 /**
  * Hook that returns a function to generate a document's switchboard URL.
@@ -22,16 +23,20 @@ import { useSelectedDrive } from "./selected-drive.js";
 export function useGetSwitchboardLink(
   document: PHDocument | undefined,
 ): (() => Promise<string>) | null {
-  const [drive] = useSelectedDrive();
+  const [drive] = useSelectedDriveSafe();
   const remotes = useSyncList();
 
   const isRemoteDrive = useMemo(() => {
+    if (!isDefined(drive)) return false;
+
     return remotes.some(
       (remote) =>
         remote.collectionId === driveCollectionId("main", drive.header.id),
     );
   }, [remotes, drive]);
   const remoteUrl = useMemo(() => {
+    if (!isDefined(drive)) return null;
+
     try {
       const remote = remotes.find(
         (remote) =>

@@ -483,13 +483,18 @@ export class DocumentModelSubgraph extends BaseSubgraph {
                 preferredEditor,
                 initialState: initialState ?? {},
               },
+              this.graphqlManager.reactorDriveClient,
             );
           } else {
-            createdDoc = await createEmptyDocumentResolver(this.reactorClient, {
-              documentType,
-              parentIdentifier,
-              name,
-            });
+            createdDoc = await createEmptyDocumentResolver(
+              this.reactorClient,
+              {
+                documentType,
+                parentIdentifier,
+                name,
+              },
+              this.graphqlManager.reactorDriveClient,
+            );
           }
 
           // Auto-ownership: set creator as document owner
@@ -544,10 +549,14 @@ export class DocumentModelSubgraph extends BaseSubgraph {
             );
           }
 
-          const result = await createEmptyDocumentResolver(this.reactorClient, {
-            documentType,
-            parentIdentifier,
-          });
+          const result = await createEmptyDocumentResolver(
+            this.reactorClient,
+            {
+              documentType,
+              parentIdentifier,
+            },
+            this.graphqlManager.reactorDriveClient,
+          );
 
           // Auto-ownership: set creator as document owner
           if (this.authorizationService && ctx.user?.address && result?.id) {

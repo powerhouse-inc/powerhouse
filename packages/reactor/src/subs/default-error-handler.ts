@@ -23,10 +23,3 @@ export class DefaultSubscriptionErrorHandler implements ISubscriptionErrorHandle
     }
   }
 }
-
-/**
- * Creates a default subscription error handler instance
- */
-export function createDefaultSubscriptionErrorHandler(): ISubscriptionErrorHandler {
-  return new DefaultSubscriptionErrorHandler();
-}

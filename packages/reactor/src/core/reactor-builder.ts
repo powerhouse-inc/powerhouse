@@ -9,7 +9,9 @@ import { CollectionMembershipCache } from "../cache/collection-membership-cache.
 import { DocumentMetaCache } from "../cache/document-meta-cache.js";
 import { KyselyOperationIndex } from "../cache/kysely-operation-index.js";
 import { KyselyWriteCache } from "../cache/kysely-write-cache.js";
+import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type { WriteCacheConfig } from "../cache/write-cache-types.js";
+import type { IWriteCache } from "../cache/write/interfaces.js";
 import { EventBus } from "../events/event-bus.js";
 import type { IEventBus } from "../events/interfaces.js";
 import {
@@ -36,7 +38,10 @@ import {
 } from "../registry/document-model-resolver.js";
 import { DocumentModelRegistry } from "../registry/implementation.js";
 import type { IDocumentModelLoader } from "../registry/interfaces.js";
-import { ConsistencyTracker } from "../shared/consistency-tracker.js";
+import {
+  ConsistencyTracker,
+  type IConsistencyTracker,
+} from "../shared/consistency-tracker.js";
 import type { SignatureVerificationHandler } from "../signer/types.js";
 import {
   KyselyDocumentIndexer,
@@ -59,6 +64,7 @@ import { SyncBuilder } from "../sync/sync-builder.js";
 import type { JwtHandler } from "../sync/types.js";
 import { ChannelScheme } from "../sync/types.js";
 import { createDefaultDatabase } from "./create-default-database.js";
+import { DEFAULT_DRIVE_CONTAINER_TYPES } from "./drive-container-types.js";
 import { Reactor } from "./reactor.js";
 import type {
   Database,
@@ -68,12 +74,33 @@ import type {
   SyncModule,
 } from "./types.js";
 
+/**
+ * Dependencies provided to read-model factories registered via
+ * `withReadModelFactory`. These are constructed inside `buildModule()`, which
+ * is why factory-based registration is needed for read models that depend on
+ * them (`BaseReadModel` subclasses, in particular).
+ */
+export interface ReadModelFactoryDeps {
+  operationIndex: IOperationIndex;
+  writeCache: IWriteCache;
+  processorManagerConsistencyTracker: IConsistencyTracker;
+}
+
+/**
+ * Factory that builds a pre-ready read model from internal reactor
+ * dependencies once they are available. Awaited during `buildModule()`.
+ */
+export type ReadModelFactory = (
+  deps: ReadModelFactoryDeps,
+) => IReadModel | Promise<IReadModel>;
+
 export class ReactorBuilder {
   private logger?: ILogger;
   private documentModels: DocumentModelModule<any>[] = [];
   private upgradeManifests: UpgradeManifest<readonly number[]>[] = [];
   private features: ReactorFeatures = { legacyStorageEnabled: false };
   private readModels: IReadModel[] = [];
+  private readModelFactories: ReadModelFactory[] = [];
   private executorManager: IJobExecutorManager | undefined;
   private executorConfig: JobExecutorConfig = {};
   private writeCacheConfig?: Partial<WriteCacheConfig>;
@@ -89,6 +116,8 @@ export class ReactorBuilder {
   private jwtHandler?: JwtHandler;
   private documentModelLoader?: IDocumentModelLoader;
   private shutdownHooks: Array<() => Promise<void>> = [];
+  private driveContainerTypes: ReadonlySet<string> =
+    DEFAULT_DRIVE_CONTAINER_TYPES;
 
   withLogger(logger: ILogger): this {
     this.logger = logger;
@@ -115,6 +144,18 @@ export class ReactorBuilder {
     return this;
   }
 
+  /**
+   * Register a factory that builds a pre-ready read model after the reactor's
+   * internal `operationIndex`, `writeCache`, and processor-manager consistency
+   * tracker are constructed. Use this for read models (e.g. `BaseReadModel`
+   * subclasses) that need those dependencies and therefore cannot be built
+   * before calling `buildModule()`.
+   */
+  withReadModelFactory(factory: ReadModelFactory): this {
+    this.readModelFactories.push(factory);
+    return this;
+  }
+
   withReadModelCoordinator(readModelCoordinator: IReadModelCoordinator): this {
     this.readModelCoordinator = readModelCoordinator;
     return this;
@@ -132,6 +173,11 @@ export class ReactorBuilder {
 
   withWriteCacheConfig(config: Partial<WriteCacheConfig>): this {
     this.writeCacheConfig = config;
+    return this;
+  }
+
+  withDriveContainerTypes(types: string[]): this {
+    this.driveContainerTypes = new Set(types);
     return this;
   }
 
@@ -314,6 +360,7 @@ export class ReactorBuilder {
             operationIndex,
             documentMetaCache,
             collectionMembershipCache,
+            this.driveContainerTypes,
             this.executorConfig,
             this.signatureVerifier,
             executionScope,
@@ -382,12 +429,22 @@ export class ReactorBuilder {
       writeCache,
       processorManagerConsistencyTracker,
       this.logger!,
+      this.driveContainerTypes,
     );
 
     try {
       await processorManager.init();
     } catch (error) {
       console.error("Error initializing processor manager", error);
+    }
+
+    for (const factory of this.readModelFactories) {
+      const readModel = await factory({
+        operationIndex,
+        writeCache,
+        processorManagerConsistencyTracker,
+      });
+      readModelInstances.push(readModel);
     }
 
     const readModelCoordinator = this.readModelCoordinator
@@ -425,6 +482,7 @@ export class ReactorBuilder {
         operationIndex,
         eventBus,
         database as unknown as Kysely<StorageDatabase>,
+        this.driveContainerTypes,
       );
       await syncModule.syncManager.startup();
     } else if (this.syncBuilder) {
@@ -434,6 +492,7 @@ export class ReactorBuilder {
         operationIndex,
         eventBus,
         database as unknown as Kysely<StorageDatabase>,
+        this.driveContainerTypes,
       );
       await syncModule.syncManager.startup();
     }

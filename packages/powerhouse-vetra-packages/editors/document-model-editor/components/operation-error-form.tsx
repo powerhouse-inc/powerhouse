@@ -1,9 +1,9 @@
-import { pascalCase } from "change-case";
 import type {
-  OperationErrorSpecification,
   ModuleSpecification,
+  OperationErrorSpecification,
 } from "@powerhousedao/shared/document-model";
-import { useCallback, useRef } from "react";
+import { pascalCase } from "change-case";
+import { useRef } from "react";
 import { TextField } from "./text-field.js";
 
 type Props = {
@@ -38,41 +38,27 @@ export function OperationErrorForm({
     .map((o) => o.name)
     .filter((n) => n !== null);
 
-  const handleSubmit = useCallback(
-    (name: string) => {
-      if (isEdit && name === "") {
-        deleteOperationError(error.id);
-        return;
-      }
+  const handleSubmit = (name: string) => {
+    if (isEdit && name === "") {
+      deleteOperationError(error.id);
+      return;
+    }
 
-      const formattedName = pascalCase(name);
+    const formattedName = pascalCase(name);
 
-      if (isEdit) {
-        setOperationErrorName(operation.id, error.id, formattedName);
-      } else {
-        onAddOperationError(operation.id, formattedName);
-      }
-      onSubmit?.();
-    },
-    [
-      isEdit,
-      error?.id,
-      operation.id,
-      deleteOperationError,
-      setOperationErrorName,
-      onAddOperationError,
-      onSubmit,
-    ],
-  );
+    if (isEdit) {
+      setOperationErrorName(operation.id, error.id, formattedName);
+    } else {
+      onAddOperationError(operation.id, formattedName);
+    }
+    onSubmit?.();
+  };
 
-  const handleChange = useCallback(
-    (value: string) => {
-      if (isEdit && value === "") {
-        deleteOperationError(error.id);
-      }
-    },
-    [isEdit, error?.id, deleteOperationError],
-  );
+  const handleChange = (value: string) => {
+    if (isEdit && value === "") {
+      deleteOperationError(error.id);
+    }
+  };
 
   return (
     <TextField

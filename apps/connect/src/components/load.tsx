@@ -14,7 +14,9 @@ export async function loadComponent(localPackage?: DocumentModelLib) {
   await createReactor(localPackage);
   return {
     default: ({ children }: { children?: ReactNode }) => {
+      // eslint-disable-next-line react-hooks/rules-of-hooks
       useSetSentryUser();
+      // eslint-disable-next-line react-hooks/rules-of-hooks
       useCheckLatestVersion();
       return children;
     },

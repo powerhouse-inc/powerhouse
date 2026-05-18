@@ -13,6 +13,7 @@
   "sideEffects": false,
   "exports": {
     ".": {
+      "source": "./index.ts",
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     }
@@ -26,12 +27,12 @@
   },
   "dependencies": {
     "knex": "catalog:",
-    "luxon": "catalog:",
     "pg": "catalog:",
     "@powerhousedao/analytics-engine-core": "workspace:*",
     "@powerhousedao/analytics-engine-knex": "workspace:*"
   },
   "devDependencies": {
+    "luxon": "catalog:",
     "tsdown": "catalog:",
     "@types/luxon": "catalog:",
     "@types/node": "catalog:",

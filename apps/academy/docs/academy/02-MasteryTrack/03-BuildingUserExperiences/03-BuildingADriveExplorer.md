@@ -486,7 +486,6 @@ This component acts as a wrapper for the document editor. When a user selects a 
 ```typescript
 import {
 useDriveContext,
-exportDocument,
 type User,
 type DriveEditorContext,
 } from "@powerhousedao/reactor-browser";
@@ -499,7 +498,8 @@ type PHDocument,
 type EditorModule,
 type Operation,
 } from "document-model";
-import { useTimelineItems, getRevisionFromDate } from "@powerhousedao/common";
+import { useTimelineItems } from "@powerhousedao/reactor-browser/analytics";
+import { getRevisionFromDate } from "@powerhousedao/reactor-browser";
 import {
 DocumentToolbar,
 RevisionHistory,
@@ -538,13 +538,6 @@ const { dispatch, error, document } = useDocumentEditorProps({
    user,
 });
 
-const onExport = useCallback(async () => {
-   if (document) {
-      const ext = documentModelModule.documentModel.extension;
-      await exportDocument(document, title, ext);
-   }
-}, [document?.revision.global, document?.revision.local]);
-
 const loadingContent = (
    <div className="flex-1 flex justify-center items-center h-full">
       <DefaultEditorLoader />
@@ -569,13 +562,7 @@ return showRevisionHistory ? (
    <Suspense fallback={loadingContent}>
       <DocumentToolbar
       onClose={onClose}
-      onExport={onExport}
-      onShowRevisionHistory={() => setShowRevisionHistory(true)}
       onSwitchboardLinkClick={() => {}}
-      title={title}
-      timelineButtonVisible
-      timelineItems={timelineItems.data}
-      onTimelineItemClick={setSelectedTimelineItem}
       />
       <EditorComponent
       context={{

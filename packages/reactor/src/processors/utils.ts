@@ -2,15 +2,6 @@ import type { OperationWithContext } from "@powerhousedao/shared/document-model"
 import type { ProcessorFilter } from "@powerhousedao/shared/processors";
 import type { PHDocumentHeader } from "@powerhousedao/shared/document-model";
 
-export const DRIVE_DOCUMENT_TYPE = "powerhouse/document-drive";
-
-export function isDriveCreation(op: OperationWithContext): boolean {
-  return (
-    op.operation.action.type === "CREATE_DOCUMENT" &&
-    op.context.documentType === DRIVE_DOCUMENT_TYPE
-  );
-}
-
 export function isDriveDeletion(op: OperationWithContext): boolean {
   return op.operation.action.type === "DELETE_DOCUMENT";
 }
@@ -34,10 +25,13 @@ export function extractDeletedDocumentId(
   return input.documentId ?? op.context.documentId;
 }
 
-export function createMinimalDriveHeader(driveId: string): PHDocumentHeader {
+export function createMinimalDriveHeader(
+  driveId: string,
+  documentType: string,
+): PHDocumentHeader {
   return {
     id: driveId,
-    documentType: DRIVE_DOCUMENT_TYPE,
+    documentType,
     sig: {
       publicKey: {},
       nonce: "",

@@ -35,8 +35,8 @@ const TooltipContent = forwardRef<
         // Padding & Shadow
         "px-3 py-1.5 shadow-md",
         // Animations
-        "data-[state=open]:animate-fade-in data-[state=open]:animate-zoom-in",
-        "data-[state=closed]:animate-fade-out data-[state=closed]:animate-zoom-out",
+        "data-[state=open]:animate-zoom-in",
+        "data-[state=closed]:animate-zoom-out",
         // Slide animations based on position
         "data-[side=bottom]:animate-slide-in-from-top",
         "data-[side=left]:animate-slide-in-from-right",

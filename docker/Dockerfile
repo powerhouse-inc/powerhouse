@@ -45,7 +45,7 @@ FROM nginx:alpine AS connect
 # directories so the built-in `nginx` user (UID 101) can write the
 # rendered config, the pid file, and runtime caches. Pod can then run
 # with runAsNonRoot: true, runAsUser: 101.
-RUN apk add --no-cache gettext && \
+RUN apk add --no-cache gettext jq && \
     chown -R nginx:nginx /etc/nginx /var/cache/nginx /var/log/nginx && \
     touch /var/run/nginx.pid && chown nginx:nginx /var/run/nginx.pid
 
@@ -86,7 +86,7 @@ RUN corepack enable && corepack prepare pnpm@latest --activate \
 ARG TAG=latest
 ARG GIT_SHA=unknown
 RUN echo '{"name":"app","version":"1.0.0","type":"module","private":true}' > package.json \
- && printf 'allowBuilds:\n  "@apollo/protobufjs": true\n  "@parcel/watcher": true\n  esbuild: true\n  protobufjs: true\n' > pnpm-workspace.yaml \
+ && printf 'allowBuilds:\n  "@apollo/protobufjs": true\n  "@parcel/watcher": true\n  esbuild: true\n  protobufjs: true\n  "@datadog/pprof": true\n' > pnpm-workspace.yaml \
  && pnpm add --shamefully-hoist @powerhousedao/switchboard@$TAG
 
 COPY docker/switchboard-entrypoint.sh /app/entrypoint.sh

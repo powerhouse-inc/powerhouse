@@ -1,3 +1,7 @@
+import {
+  GRAPHQL_PACKAGE,
+  REACTOR_API_PACKAGE,
+} from "@powerhousedao/shared/clis";
 import { ts } from "@tmpl/core";
 
 export const subgraphIndexFileTemplate = (v: {
@@ -5,8 +9,8 @@ export const subgraphIndexFileTemplate = (v: {
   kebabCaseName: string;
 }) =>
   ts`
-import { BaseSubgraph } from "@powerhousedao/reactor-api";
-import type { DocumentNode } from "graphql";
+import { BaseSubgraph } from "${REACTOR_API_PACKAGE}";
+import type { DocumentNode } from "${GRAPHQL_PACKAGE}";
 import { schema } from "./schema.js";
 import { getResolvers } from "./resolvers.js";
 

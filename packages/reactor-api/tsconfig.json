@@ -1,7 +1,7 @@
 {
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
-    "outDir": "./dist",
+    "outDir": "./.tsbuild",
     "types": [
       "node"
     ]
@@ -26,10 +26,16 @@
       "path": "../document-model"
     },
     {
+      "path": "../pglite-fs"
+    },
+    {
       "path": "../reactor"
     },
     {
       "path": "../reactor-attachments"
+    },
+    {
+      "path": "../reactor-drive"
     },
     {
       "path": "../reactor-mcp"

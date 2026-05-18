@@ -35,7 +35,9 @@ import {
 } from "../actions/index.js";
 import type { IReactor } from "../core/types.js";
 import { getSharedActionScope, signActions } from "../core/utils.js";
+import type { PagedResults, PagingOptions } from "../shared/types.js";
 import { JobStatus } from "../shared/types.js";
+import { parsePagingOptions } from "../shared/utils.js";
 import type { IDriveClient, IReactorClient } from "./types.js";
 
 /**
@@ -282,6 +284,24 @@ export class DriveClient implements IDriveClient {
     return node;
   }
 
+  async setPreferredEditorOnNode(
+    nodeId: string,
+    preferredEditor: string | null,
+    signal?: AbortSignal,
+  ): Promise<PHDocument> {
+    this.logger.verbose(
+      "drives.setPreferredEditorOnNode(@nodeId, @preferredEditor)",
+      nodeId,
+      preferredEditor,
+    );
+    return this.client.setPreferredEditor(
+      nodeId,
+      preferredEditor,
+      "main",
+      signal,
+    );
+  }
+
   async moveNode(
     driveIdentifier: string,
     srcNodeId: string,
@@ -412,23 +432,41 @@ export class DriveClient implements IDriveClient {
   async listNodes(
     driveIdentifier: string,
     parentFolder?: string | null,
+    paging?: PagingOptions,
     signal?: AbortSignal,
-  ): Promise<Node[]> {
+  ): Promise<PagedResults<Node>> {
     this.logger.verbose(
-      "drives.listNodes(@driveIdentifier, @parentFolder)",
+      "drives.listNodes(@driveIdentifier, @parentFolder, @paging)",
       driveIdentifier,
       parentFolder,
+      paging,
     );
     const drive = await this.client.get<DocumentDriveDocument>(
       driveIdentifier,
       undefined,
       signal,
     );
-    const nodes = drive.state.global.nodes;
-    if (parentFolder === undefined) {
-      return [...nodes];
-    }
-    return nodes.filter((n) => (n.parentFolder ?? null) === parentFolder);
+    const allNodes = drive.state.global.nodes;
+    const filtered =
+      parentFolder === undefined
+        ? [...allNodes]
+        : allNodes.filter((n) => (n.parentFolder ?? null) === parentFolder);
+
+    const { offset: startIndex, limit } = parsePagingOptions(
+      paging,
+      filtered.length,
+    );
+    const effective: PagingOptions = paging ?? { cursor: "", limit };
+    const endIndex = startIndex + limit;
+    const slice = filtered.slice(startIndex, endIndex);
+    const hasMore = endIndex < filtered.length;
+
+    return {
+      results: slice,
+      options: effective,
+      ...(hasMore ? { nextCursor: String(endIndex) } : {}),
+      totalCount: filtered.length,
+    };
   }
 
   private async removeFileNode(

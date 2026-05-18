@@ -1,6 +1,7 @@
 import type { SignatureVerificationHandler } from "@powerhousedao/reactor";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { IWriteCache } from "../../src/cache/write/interfaces.js";
+import { DEFAULT_DRIVE_CONTAINER_TYPES } from "../../src/core/drive-container-types.js";
 import { SimpleJobExecutor } from "../../src/executor/simple-job-executor.js";
 import type { Job } from "../../src/queue/types.js";
 import type { IDocumentModelRegistry } from "../../src/registry/interfaces.js";
@@ -156,6 +157,7 @@ describe("SimpleJobExecutor mutation signature verification", () => {
       mockOperationIndex,
       mockDocumentMetaCache,
       mockCollectionMembershipCache,
+      DEFAULT_DRIVE_CONTAINER_TYPES,
       {},
       verificationHandler,
     );

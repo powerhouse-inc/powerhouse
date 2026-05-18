@@ -5,6 +5,7 @@ import type { Plugin } from "vite";
 export type PhPackagesPluginOptions = {
   packages: string[];
   projectRoot?: string;
+  registryUrl?: string | null;
 };
 
 function readProjectPackageInfo(
@@ -33,6 +34,7 @@ export function phPackagesPlugin(options: PhPackagesPluginOptions): Plugin {
     {
       packages: options.packages,
       localPackage,
+      registryUrl: options.registryUrl ?? null,
     },
     null,
     2,

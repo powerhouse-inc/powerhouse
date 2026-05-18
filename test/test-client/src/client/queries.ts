@@ -1,6 +1,6 @@
 export const FIND_DRIVES_QUERY = `
-  query FindDrives {
-    findDocuments(search: { type: "powerhouse/document-drive" }) {
+  query FindDrives($type: String!) {
+    findDocuments(search: { type: $type }) {
       items {
         id
         name

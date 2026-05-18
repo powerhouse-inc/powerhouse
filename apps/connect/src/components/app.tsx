@@ -7,6 +7,7 @@ import {
 } from "@powerhousedao/connect/utils";
 import { useEffect } from "react";
 import { ToastContainer } from "../services/toast.js";
+import { MissingModelBanner } from "./missing-model-banner.js";
 import { PackageInstallPrompt } from "./package-install-prompt.js";
 
 export const App = () => {
@@ -51,6 +52,7 @@ export const App = () => {
   return (
     <SentryProvider>
       <ToastContainer position="bottom-right" />
+      <MissingModelBanner />
       <Router />
       <PackageInstallPrompt />
       <Analytics />

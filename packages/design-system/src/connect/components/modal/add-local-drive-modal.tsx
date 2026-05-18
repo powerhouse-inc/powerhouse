@@ -38,7 +38,7 @@ export function AddLocalDriveModal(props: AddLocalDriveModal) {
       <div
         {...containerProps}
         className={twMerge(
-          "max-w-[408px] rounded-2xl p-6",
+          "max-w-[408px] rounded-2xl bg-white p-6",
           containerProps?.className,
         )}
       >

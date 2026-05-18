@@ -1165,6 +1165,29 @@ export type SetNameOperation = IOperation & {
   type: Scalars["String"]["output"];
 };
 
+export type Set_PreferredEditor = "SET_PREFERRED_EDITOR";
+
+export type SetPreferredEditorActionInput = {
+  preferredEditor: Scalars["String"]["input"] | null;
+};
+
+export type SchemaSetPreferredEditorAction = {
+  id: Scalars["String"]["output"];
+  timestampUtcMs: Scalars["DateTime"]["output"];
+  input: SetPreferredEditorActionInput;
+  type: Set_PreferredEditor;
+  scope: "header";
+};
+
+export type SetPreferredEditorOperation = IOperation & {
+  __typename?: "SetPreferredEditorOperation";
+  hash: Scalars["String"]["output"];
+  index: Scalars["Int"]["output"];
+  input: SetPreferredEditorActionInput;
+  timestamp: Scalars["DateTime"]["output"];
+  type: Scalars["String"]["output"];
+};
+
 export type Undo = "UNDO";
 
 export type UndoActionInput = { count: Scalars["Int"]["input"] };
@@ -1197,6 +1220,10 @@ export type RedoAction = Action & {
 export type SetNameAction = Action & {
   type: "SET_NAME";
   input: SchemaSetNameAction["input"];
+};
+export type SetPreferredEditorAction = Action & {
+  type: "SET_PREFERRED_EDITOR";
+  input: SchemaSetPreferredEditorAction["input"];
 };
 export type UndoAction = Action & {
   type: "UNDO";
@@ -1252,6 +1279,13 @@ export type RemoveRelationshipActionInput = {
   relationshipType: string;
 };
 
+export type UpdateRelationshipActionInput = {
+  sourceId: string;
+  targetId: string;
+  relationshipType: string;
+  metadata: Record<string, unknown> | null;
+};
+
 export type CreateDocumentAction = Action & {
   type: "CREATE_DOCUMENT";
   input: CreateDocumentActionInput;
@@ -1277,11 +1311,17 @@ export type RemoveRelationshipAction = Action & {
   input: RemoveRelationshipActionInput;
 };
 
+export type UpdateRelationshipAction = Action & {
+  type: "UPDATE_RELATIONSHIP";
+  input: UpdateRelationshipActionInput;
+};
+
 export type DocumentAction =
   | LoadStateAction
   | PruneAction
   | RedoAction
   | SetNameAction
+  | SetPreferredEditorAction
   | UndoAction
   | NOOPAction;
 

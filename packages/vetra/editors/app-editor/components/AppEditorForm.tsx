@@ -11,7 +11,7 @@ import {
   setDragAndDropEnabled,
 } from "@powerhousedao/vetra/document-models/app-module";
 import { useCallback, useEffect, useState } from "react";
-import { useSelectedAppModuleDocument } from "../../../document-models/app-module/hooks.js";
+import { useSelectedAppModuleDocument } from "../../../document-models/app-module/index.js";
 import { StatusPill } from "../../components/index.js";
 import { useDebounce } from "../../hooks/index.js";
 
@@ -58,6 +58,7 @@ export const AppEditorForm = () => {
   // Reset confirmation state if status changes back to DRAFT
   useEffect(() => {
     if (status === "DRAFT") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsConfirmed(false);
     }
   }, [status]);
@@ -148,7 +149,7 @@ export const AppEditorForm = () => {
           value={appName}
           onChange={(e) => handleSetAppName(e.target.value)}
           disabled={isReadOnly}
-          className={`w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+          className={`w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none ${
             isReadOnly ? "cursor-not-allowed bg-gray-100" : ""
           }`}
           placeholder="Enter app name"
@@ -167,7 +168,7 @@ export const AppEditorForm = () => {
           {!isReadOnly && (
             <select
               onChange={(e) => handleDocumentTypeSelection(e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none"
             >
               <option>Select a document type to add</option>
               <option>--- Vetra drive document types ---</option>
@@ -220,7 +221,7 @@ export const AppEditorForm = () => {
 
       {/* Drag and Drop Settings */}
       <div>
-        <h3 className="text-md mb-4 font-medium text-gray-900">
+        <h3 className="mb-4 text-base font-medium text-gray-900">
           Drag and Drop Settings
         </h3>
 
@@ -233,7 +234,7 @@ export const AppEditorForm = () => {
               checked={isDragAndDropEnabled}
               onChange={(e) => onDragAndDropToggle(e.target.checked)}
               disabled={isReadOnly}
-              className={`mr-2 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 ${
+              className={`mr-2 size-4 rounded-sm border-gray-300 text-blue-600 focus:ring-blue-500 ${
                 isReadOnly ? "cursor-not-allowed" : ""
               }`}
             />
@@ -250,7 +251,7 @@ export const AppEditorForm = () => {
           <button
             onClick={handleConfirm}
             disabled={!appName.trim()}
-            className="rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-gray-300"
+            className="rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-300"
           >
             Confirm
           </button>

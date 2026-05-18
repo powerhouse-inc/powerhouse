@@ -5,14 +5,17 @@
   "main": "dist/index.mjs",
   "exports": {
     ".": {
+      "source": "./src/index.mts",
       "types": "./dist/index.d.mts",
       "import": "./dist/index.mjs"
     },
     "./server": {
+      "source": "./src/server.mts",
       "types": "./dist/server.d.mts",
       "import": "./dist/server.mjs"
     },
     "./utils": {
+      "source": "./src/utils.mts",
       "types": "./dist/utils.d.mts",
       "import": "./dist/utils.mjs"
     }
@@ -70,6 +73,8 @@
     "@powerhousedao/vetra": "workspace:*",
     "@powerhousedao/reactor-api": "workspace:*",
     "@powerhousedao/reactor-attachments": "workspace:*",
+    "@powerhousedao/reactor-drive": "workspace:*",
+    "@powerhousedao/pglite-fs": "workspace:*",
     "@pyroscope/nodejs": "^0.4.5",
     "@renown/sdk": "workspace:*",
     "@sentry/node": "^9.6.1",

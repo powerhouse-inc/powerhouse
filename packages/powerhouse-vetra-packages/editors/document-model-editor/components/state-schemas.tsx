@@ -1,5 +1,5 @@
 import { cn } from "@powerhousedao/design-system";
-import { Checkbox } from "@powerhousedao/design-system/ui/components/checkbox/checkbox.js";
+import { Checkbox } from "@powerhousedao/design-system/ui";
 import { Kind } from "graphql";
 import {
   lazy,
@@ -186,7 +186,7 @@ function StateEditor({
           <Checkbox
             value={syncWithSchema}
             onChange={setSyncWithSchema}
-            className="mb-2 w-fit whitespace-nowrap rounded-md border border-gray-200 bg-gray-50 pl-2 text-sm font-medium text-gray-800 transition-colors hover:bg-gray-100 hover:text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+            className="mb-2 w-fit rounded-md border border-gray-200 bg-gray-50 pl-2 text-sm font-medium whitespace-nowrap text-gray-800 transition-colors hover:bg-gray-100 hover:text-gray-900 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
             label={
               <div className="flex items-center gap-2 py-2 pr-2">
                 Sync with schema{" "}

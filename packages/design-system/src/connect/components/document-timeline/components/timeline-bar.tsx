@@ -86,7 +86,7 @@ export const TimelineBar: React.FC<TimelineBarProps> = ({
           name="TimelineCaret"
           color="#4EA9FF"
           size={10}
-          className="absolute left-[-2px] top-[-11px] z-40"
+          className="absolute top-[-11px] left-[-2px] z-40"
         />
       )}
       {noChanges ? (

@@ -3,11 +3,13 @@ import { getConfig } from "@powerhousedao/config/node";
 import { loadConnectEnv, setConnectEnv } from "@powerhousedao/shared/connect";
 import tailwind from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
+import { realpathSync } from "node:fs";
 import { join } from "node:path";
 import {
   createLogger,
   esmExternalRequirePlugin,
   loadEnv,
+  searchForWorkspaceRoot,
   type HtmlTagDescriptor,
   type InlineConfig,
   type PluginOption,
@@ -286,6 +288,25 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     "react-dom/client",
   ];
 
+  // pnpm `link:` deps (e.g. a downstream project linking @powerhousedao/*
+  // packages from a sibling monorepo checkout) live outside Vite's
+  // auto-detected workspace root. Their `node_modules/.pnpm/...` assets
+  // then 403 through `/@fs/`, returning a 760-byte HTML body where the
+  // binary should be — which breaks PGlite at startup with "Invalid FS
+  // bundle size: 760 !== 4939170". Resolve key linked packages back to
+  // their real workspace roots and allow Vite to serve from there.
+  const linkedRoots = ["@powerhousedao/reactor-browser", "@electric-sql/pglite"]
+    .map((pkg) => {
+      try {
+        return searchForWorkspaceRoot(
+          realpathSync(join(options.dirname, "node_modules", pkg)),
+        );
+      } catch {
+        return null;
+      }
+    })
+    .filter((p): p is string => p !== null);
+
   const config: InlineConfig = {
     configFile: false,
     mode,
@@ -293,14 +314,15 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
       watch: {
         ignored: ["**/backup-documents/**", "**/.ph/**"],
       },
+      fs: {
+        allow: [searchForWorkspaceRoot(options.dirname), ...linkedRoots],
+      },
     },
     resolve: {
       dedupe: ["react", "react-dom"],
       tsconfigPaths: true,
     },
-    define: {
-      PH_PACKAGE_REGISTRY_URL: `"${phPackageRegistryUrl}"`,
-    },
+    define: {},
     customLogger,
     envPrefix: ["PH_CONNECT_"],
     optimizeDeps: {
@@ -320,6 +342,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
       phPackagesPlugin({
         packages: phPackages,
         projectRoot: options.dirname,
+        registryUrl: phPackageRegistryUrl,
       }),
       phBundledPackagesPlugin({
         packages: localPackagesFromConfig,

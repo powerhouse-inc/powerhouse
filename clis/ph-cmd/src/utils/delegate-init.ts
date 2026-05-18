@@ -119,6 +119,9 @@ export async function delegateInit(
     );
   }
 
+  const { injectPnpmAllowBuilds } = await import("@powerhousedao/shared/clis");
+  injectPnpmAllowBuilds(pm, resolved);
+
   const { command: cmd, args: cmdArgs } = resolved;
   const fullCmd = `${cmd} ${cmdArgs.join(" ")}`;
 

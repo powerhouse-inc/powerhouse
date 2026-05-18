@@ -30,7 +30,8 @@ export class SignatureVerifier {
       }
 
       const publicKey = signer.app.key;
-      let isValid = false;
+
+      let isValid: boolean;
 
       try {
         const tempOperation: Operation = {
@@ -85,7 +86,8 @@ export class SignatureVerifier {
       }
 
       const publicKey = signer.app.key;
-      let isValid = false;
+
+      let isValid: boolean;
 
       try {
         isValid = await this.verifier(operation, publicKey);

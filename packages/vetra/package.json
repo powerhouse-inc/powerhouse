@@ -16,10 +16,12 @@
   ],
   "exports": {
     ".": {
+      "source": "./index.ts",
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
     "./document-models": {
+      "source": "./document-models/index.ts",
       "types": "./dist/document-models/index.d.ts",
       "import": "./dist/document-models/index.js"
     },
@@ -32,10 +34,12 @@
       "import": "./dist/editors/*/index.js"
     },
     "./editors": {
+      "source": "./editors/index.ts",
       "types": "./dist/editors/index.d.ts",
       "import": "./dist/editors/index.js"
     },
     "./processors": {
+      "source": "./processors/index.ts",
       "types": "./dist/processors/index.d.ts",
       "import": "./dist/processors/index.js"
     },
@@ -69,9 +73,7 @@
     "@powerhousedao/shared": "workspace:*",
     "change-case": "catalog:",
     "document-model": "workspace:*",
-    "kysely": "catalog:",
     "react": "catalog:",
-    "ts-morph": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
@@ -84,15 +86,14 @@
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "catalog:",
+    "kysely": "catalog:",
     "react-dom": "catalog:",
     "tailwindcss": "catalog:",
+    "ts-morph": "catalog:",
     "tsdown": "catalog:",
     "vite": "catalog:",
+    "vite-tsconfig-paths": "catalog:",
     "vitest": "catalog:"
-  },
-  "optionalDependencies": {
-    "@powerhousedao/connect": "workspace:*",
-    "@powerhousedao/ph-cli": "workspace:*"
   },
   "description": ""
 }

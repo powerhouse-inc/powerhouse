@@ -3,6 +3,7 @@ import type { Operation } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { IWriteCache } from "../../src/cache/write/interfaces.js";
+import { DEFAULT_DRIVE_CONTAINER_TYPES } from "../../src/core/drive-container-types.js";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import type { IReactor } from "../../src/core/types.js";
 import { SimpleJobExecutor } from "../../src/executor/simple-job-executor.js";
@@ -109,6 +110,7 @@ describe("SimpleJobExecutor load jobs", () => {
       mockOperationIndex,
       mockDocumentMetaCache,
       mockCollectionMembershipCache,
+      DEFAULT_DRIVE_CONTAINER_TYPES,
       {},
       undefined,
     );

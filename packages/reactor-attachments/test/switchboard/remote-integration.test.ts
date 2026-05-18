@@ -56,7 +56,7 @@ async function handle(
       fileName?: string;
       extension?: string | null;
     };
-    if (!body?.mimeType || !body.fileName) {
+    if (!body.mimeType || !body.fileName) {
       sendJson(res, 400, { error: "missing fields" });
       return;
     }

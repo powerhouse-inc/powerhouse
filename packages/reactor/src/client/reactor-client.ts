@@ -14,6 +14,8 @@ import {
   upgradeDocumentAction,
 } from "../actions/index.js";
 import type {
+  BatchExecutionRequest,
+  BatchExecutionResult,
   BatchLoadRequest,
   BatchLoadResult,
   ExecutionJobPlan,
@@ -618,6 +620,39 @@ export class ReactorClient implements IReactorClient {
     );
   }
 
+  async executeBatch(
+    request: BatchExecutionRequest,
+    signal?: AbortSignal,
+  ): Promise<BatchExecutionResult> {
+    this.logger.verbose("executeBatch(@count jobs)", request.jobs.length);
+
+    const signedJobs: ExecutionJobPlan[] = await Promise.all(
+      request.jobs.map(async (job) => ({
+        ...job,
+        actions: await signActions(job.actions, this.signer, signal),
+      })),
+    );
+
+    const batchResult = await this.reactor.executeBatch(
+      { jobs: signedJobs },
+      signal,
+    );
+
+    const completedJobs = await Promise.all(
+      Object.values(batchResult.jobs).map((job) =>
+        this.waitForJob(job, signal),
+      ),
+    );
+
+    for (const job of completedJobs) {
+      if (job.status === JobStatus.FAILED) {
+        throw new Error(job.error?.message);
+      }
+    }
+
+    return batchResult;
+  }
+
   /**
    * Renames a document and waits for completion
    */
@@ -637,6 +672,30 @@ export class ReactorClient implements IReactorClient {
       documentIdentifier,
       branch,
       [actions.setName(name)],
+      signal,
+    );
+  }
+
+  /**
+   * Updates the preferred editor recorded in the document header meta.
+   * Pass `null` to clear it.
+   */
+  async setPreferredEditor(
+    documentIdentifier: string,
+    preferredEditor: string | null,
+    branch: string = "main",
+    signal?: AbortSignal,
+  ): Promise<PHDocument> {
+    this.logger.verbose(
+      "setPreferredEditor(@documentIdentifier, @preferredEditor, @branch)",
+      documentIdentifier,
+      preferredEditor,
+      branch,
+    );
+    return this.execute(
+      documentIdentifier,
+      branch,
+      [actions.setPreferredEditor(preferredEditor)],
       signal,
     );
   }

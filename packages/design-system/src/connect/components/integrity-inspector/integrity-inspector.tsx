@@ -113,7 +113,7 @@ export function IntegrityInspector({
             Document ID
           </label>
           <input
-            className="rounded border border-gray-300 px-3 py-1.5 text-sm outline-none focus:border-blue-400"
+            className="rounded-sm border border-gray-300 px-3 py-1.5 text-sm outline-none focus:border-blue-400"
             onChange={(e) => setDocumentId(e.target.value)}
             placeholder="Enter document ID"
             type="text"
@@ -125,7 +125,7 @@ export function IntegrityInspector({
             Branch (optional)
           </label>
           <input
-            className="rounded border border-gray-300 px-3 py-1.5 text-sm outline-none focus:border-blue-400"
+            className="rounded-sm border border-gray-300 px-3 py-1.5 text-sm outline-none focus:border-blue-400"
             onChange={(e) => setBranch(e.target.value)}
             placeholder="main"
             type="text"
@@ -134,7 +134,7 @@ export function IntegrityInspector({
         </div>
         <div className="flex gap-2">
           <button
-            className="flex items-center gap-1 rounded border border-blue-300 bg-blue-50 px-3 py-1.5 text-sm text-blue-700 hover:bg-blue-100 disabled:opacity-50"
+            className="flex items-center gap-1 rounded-sm border border-blue-300 bg-blue-50 px-3 py-1.5 text-sm text-blue-700 hover:bg-blue-100 disabled:opacity-50"
             disabled={
               !documentId.trim() ||
               status === "running" ||
@@ -147,7 +147,7 @@ export function IntegrityInspector({
             Validate
           </button>
           <button
-            className="flex items-center gap-1 rounded border border-yellow-300 bg-yellow-50 px-3 py-1.5 text-sm text-yellow-700 hover:bg-yellow-100 disabled:opacity-50"
+            className="flex items-center gap-1 rounded-sm border border-yellow-300 bg-yellow-50 px-3 py-1.5 text-sm text-yellow-700 hover:bg-yellow-100 disabled:opacity-50"
             disabled={
               !documentId.trim() ||
               status === "running" ||
@@ -160,7 +160,7 @@ export function IntegrityInspector({
             Rebuild Keyframes
           </button>
           <button
-            className="flex items-center gap-1 rounded border border-yellow-300 bg-yellow-50 px-3 py-1.5 text-sm text-yellow-700 hover:bg-yellow-100 disabled:opacity-50"
+            className="flex items-center gap-1 rounded-sm border border-yellow-300 bg-yellow-50 px-3 py-1.5 text-sm text-yellow-700 hover:bg-yellow-100 disabled:opacity-50"
             disabled={
               !documentId.trim() ||
               status === "running" ||
@@ -176,14 +176,14 @@ export function IntegrityInspector({
       </div>
 
       {confirmAction && (
-        <div className="flex shrink-0 items-center gap-3 rounded border border-yellow-400 bg-yellow-50 px-3 py-2">
+        <div className="flex shrink-0 items-center gap-3 rounded-sm border border-yellow-400 bg-yellow-50 px-3 py-2">
           <span className="text-sm text-yellow-800">
             {confirmAction === "keyframes"
               ? "This will delete all keyframes for this document. Continue?"
               : "This will invalidate all cached snapshots for this document. Continue?"}
           </span>
           <button
-            className="rounded bg-yellow-600 px-3 py-1 text-sm text-white hover:bg-yellow-700"
+            className="rounded-sm bg-yellow-600 px-3 py-1 text-sm text-white hover:bg-yellow-700"
             onClick={() => {
               if (confirmAction === "keyframes") {
                 void handleRebuildKeyframes();
@@ -196,7 +196,7 @@ export function IntegrityInspector({
             Confirm
           </button>
           <button
-            className="rounded border border-gray-300 bg-white px-3 py-1 text-sm text-gray-600 hover:bg-gray-50"
+            className="rounded-sm border border-gray-300 bg-white px-3 py-1 text-sm text-gray-600 hover:bg-gray-50"
             onClick={() => setConfirmAction(null)}
             type="button"
           >
@@ -219,7 +219,7 @@ export function IntegrityInspector({
         )}
 
         {status === "error" && error && (
-          <div className="rounded bg-red-50 p-3 text-sm text-red-700">
+          <div className="rounded-sm bg-red-50 p-3 text-sm text-red-700">
             {error}
           </div>
         )}

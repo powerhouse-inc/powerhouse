@@ -119,14 +119,13 @@ Remote drives enable collaborative development by syncing specifications across 
 
 **Key Commands:**
 
-- `ph init --remote-drive <url>` - Create a NEW project connected to a remote drive
-- `ph checkout --remote-drive <url>` - Clone an EXISTING project from a remote drive
+- `ph init --remote-drive <url>` - Create or connect to a project using a remote drive
 - `ph vetra --watch` - Start development with a preview drive for testing local changes
 
 **Workflows:**
 
 - **Project Owner**: `ph init --remote-drive` → Create GitHub repo → Push → `ph vetra --watch` to configure
-- **Collaborator**: `ph checkout --remote-drive` → `ph vetra --watch` to start developing
+- **Collaborator**: `ph init --remote-drive <url>` → `ph vetra --watch` to start developing
 
 **Preview Drive (`--watch` mode):**
 

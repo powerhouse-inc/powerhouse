@@ -69,6 +69,12 @@ export const vetraArgs = {
     defaultValue: () => false,
     defaultValueIsSerializable: true,
   }),
+  dbPath: option({
+    type: optional(string),
+    long: "db-path",
+    description:
+      "Database path or connection string. Use a `postgres://` URL for Postgres; otherwise treated as a PGlite filesystem path. Leave unset for in-memory PGlite.",
+  }),
   ...commonArgs,
   ...commonServerArgs,
   ...vetraSwitchboardArgs,

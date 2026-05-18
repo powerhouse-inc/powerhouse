@@ -27,6 +27,7 @@ import {
   loadStateOperation,
   redoOperation,
   setNameOperation,
+  setPreferredEditorOperation,
   undoOperation,
   undoOperationV2,
   type DocumentOperations,
@@ -221,6 +222,8 @@ function _baseReducer<TState extends PHBaseState = PHBaseState>(
     // TODO: This needs to be changed to a HEADER scope action if it's changing the header.
     case "SET_NAME":
       return setNameOperation(document, parsedAction.input);
+    case "SET_PREFERRED_EDITOR":
+      return setPreferredEditorOperation(document, parsedAction.input);
     case "PRUNE":
       return pruneOperation(document, parsedAction.input, wrappedReducer);
     case "LOAD_STATE":
@@ -570,13 +573,16 @@ export function baseReducer<TState extends PHBaseState = PHBaseState>(
       // and remove skip number from action/operation
       const actionScopeOps = newDocument.operations[_action.scope];
       if (!actionScopeOps) {
-        throw new Error(`No operations found for scope: ${_action.scope}`);
+        throw new Error(`No operations found for scope: ${_action.scope}`, {
+          cause: error,
+        });
       }
       const lastOperationIndex = actionScopeOps.length - 1;
       const draftScopeOps = draft.operations[_action.scope];
       if (!draftScopeOps) {
         throw new Error(
           `No operations found in draft for scope: ${_action.scope}`,
+          { cause: error },
         );
       }
       draftScopeOps[lastOperationIndex].error = (error as Error).message;
@@ -589,7 +595,9 @@ export function baseReducer<TState extends PHBaseState = PHBaseState>(
         });
         const documentScopeOps = document.operations[_action.scope];
         if (!documentScopeOps) {
-          throw new Error(`No operations found for scope: ${_action.scope}`);
+          throw new Error(`No operations found for scope: ${_action.scope}`, {
+            cause: error,
+          });
         }
         draft.operations = castDraft({
           ...document.operations,

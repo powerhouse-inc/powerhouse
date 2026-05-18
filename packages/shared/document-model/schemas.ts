@@ -34,6 +34,7 @@ import type {
   SchemaPruneAction,
   SchemaRedoAction,
   SchemaSetNameAction,
+  SchemaSetPreferredEditorAction,
   SchemaUndoAction,
   ScopeState,
   SetAuthorNameInput,
@@ -79,6 +80,8 @@ export const RedoSchema = z.enum(["REDO"]);
 
 export const Set_NameSchema = z.enum(["SET_NAME"]);
 
+export const Set_PreferredEditorSchema = z.enum(["SET_PREFERRED_EDITOR"]);
+
 export const UndoSchema = z.enum(["UNDO"]);
 
 export function OperationScopeSchema(): z.ZodString {
@@ -91,6 +94,7 @@ export function DocumentActionSchema() {
     PruneActionSchema(),
     RedoActionSchema(),
     SetNameActionSchema(),
+    SetPreferredEditorActionSchema(),
     UndoActionSchema(),
   ]);
 }
@@ -183,6 +187,22 @@ export function SetNameActionSchema(): z.ZodObject<
     input: SetNameActionInputSchema(),
     type: Set_NameSchema,
     scope: z.literal("global"),
+  });
+}
+
+export function SetPreferredEditorActionInputSchema() {
+  return z.object({ preferredEditor: z.string().nullable() });
+}
+
+export function SetPreferredEditorActionSchema(): z.ZodObject<
+  Properties<SchemaSetPreferredEditorAction>
+> {
+  return z.object({
+    id: z.string(),
+    timestampUtcMs: z.string().datetime(),
+    input: SetPreferredEditorActionInputSchema(),
+    type: Set_PreferredEditorSchema,
+    scope: z.literal("header"),
   });
 }
 
@@ -404,11 +424,11 @@ export function DocumentModelGlobalStateSchema(): z.ZodObject<
 > {
   return z.object({
     __typename: z.literal("DocumentModelGlobalState").optional(),
-    author: AuthorSchema(),
-    description: z.string(),
-    extension: z.string(),
     id: z.string(),
     name: z.string(),
+    author: AuthorSchema(),
+    extension: z.string(),
+    description: z.string(),
     specifications: z.array(DocumentSpecificationSchema()),
   });
 }
@@ -418,19 +438,19 @@ export function DocumentSpecificationSchema(): z.ZodObject<
 > {
   return z.object({
     __typename: z.literal("DocumentSpecification").optional(),
-    changeLog: z.array(z.string()),
-    modules: z.array(ModuleSchema()),
     state: ScopeStateSchema(),
+    modules: z.array(ModuleSchema()),
     version: z.number().int(),
+    changeLog: z.array(z.string()),
   });
 }
 
 export function ModuleSchema(): z.ZodObject<Properties<ModuleSpecification>> {
   return z.object({
     __typename: z.literal("ModuleSpecification").optional(),
-    description: z.string().nullable(),
     id: z.string(),
     name: z.string(),
+    description: z.string().nullable(),
     operations: z.array(OperationSpecificationSchema()),
   });
 }
@@ -449,14 +469,14 @@ export function OperationSpecificationSchema(): z.ZodObject<
 > {
   return z.object({
     __typename: z.literal("OperationSpecification").optional(),
-    description: z.string().nullable(),
-    errors: z.array(OperationErrorSchema()),
-    examples: z.array(CodeExampleSchema()),
     id: z.string(),
     name: z.string().nullable(),
-    reducer: z.string().nullable(),
+    description: z.string().nullable(),
     schema: z.string().nullable(),
     template: z.string().nullable(),
+    reducer: z.string().nullable(),
+    errors: z.array(OperationErrorSchema()),
+    examples: z.array(CodeExampleSchema()),
     scope: OperationScopeSchema(),
   });
 }
@@ -466,10 +486,10 @@ export function OperationErrorSchema(): z.ZodObject<
 > {
   return z.object({
     __typename: z.literal("OperationErrorSpecification").optional(),
-    code: z.string().nullable(),
-    description: z.string().nullable(),
     id: z.string(),
     name: z.string().nullable(),
+    code: z.string().nullable(),
+    description: z.string().nullable(),
     template: z.string().nullable(),
   });
 }
@@ -704,16 +724,16 @@ export function SetStateSchemaInputSchema(): z.ZodObject<
 export function StateSchema(): z.ZodObject<Properties<State>> {
   return z.object({
     __typename: z.literal("State").optional(),
+    schema: z.string(),
     examples: z.array(CodeExampleSchema()),
     initialValue: z.string(),
-    schema: z.string(),
   });
 }
 
 export function ScopeStateSchema(): z.ZodObject<Properties<ScopeState>> {
   return z.object({
-    global: StateSchema(),
     local: StateSchema(),
+    global: StateSchema(),
   });
 }
 

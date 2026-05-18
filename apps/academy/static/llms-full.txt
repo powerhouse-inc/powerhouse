@@ -1,7 +1,7 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-05-04T17:18:56.487Z
-> Total Documents: 85
+> Generated: 2026-05-12T12:21:11.234Z
+> Total Documents: 86
 > Source: https://powerhouse.academy/llms-full.txt
 
 
@@ -518,6 +518,22 @@ git ls-tree -r --name-only tutorial/step-1-initialize-with-ph-init
 # View a specific config file from step-1
 git show tutorial/step-1-initialize-with-ph-init:package.json
 ````
+
+## ph install / ph add
+
+```bash
+ph install [dependencies...] [--registry <url>] [--local] [--allow-build <pkg>]
+```
+
+Aliases: `ph add`, `ph i`
+
+The install command adds Powerhouse dependencies to your project.
+
+By default it only registers the package in `powerhouse.config.json` with provider `"registry"` — Connect will load it from the registry CDN at runtime.
+
+With `--local`, the package is also installed into `node_modules` and marked as provider `"local"` — it will be bundled into `ph connect build` so the preview works without the registry being reachable.
+
+Resolution order for the registry URL: `--registry` flag > `PH_REGISTRY_URL` env > `powerhouse.config.json` > default
 
 ## Up next
 
@@ -2288,17 +2304,17 @@ This tool will be fundamental on your journey when creating, building, and runni
 
 When installing or using the Powerhouse CLI commands you can use the dev & staging branches. These branches contain more experimental features than the latest stable release the PH CLI uses by default. They can be used to get access to a bug fix or features under development.
 
-| Command                            | Description                                           |
-| ---------------------------------- | ----------------------------------------------------- |
-| **pnpm install -g ph-cmd**         | Install latest stable version                         |
-| **pnpm install -g ph-cmd@dev**     | Install development version                           |
-| **pnpm install -g ph-cmd@staging** | Install staging version                               |
-| **ph init**                        | Use latest stable version of the boilerplate          |
-| **ph init --dev**                  | Use development version of the boilerplate            |
-| **ph init --staging**              | Use staging version of the boilerplate                |
-| **ph use**                         | Switch all dependencies to latest production versions |
-| **ph use dev**                     | Switch all dependencies to development versions       |
-| **ph use prod**                    | Switch all dependencies to production versions        |
+| Command                            | Description                                       |
+| ---------------------------------- | ------------------------------------------------- |
+| **pnpm install -g ph-cmd**         | Install latest stable version                     |
+| **pnpm install -g ph-cmd@dev**     | Install development version                       |
+| **pnpm install -g ph-cmd@staging** | Install staging version                           |
+| **ph init**                        | Use latest stable version of the boilerplate      |
+| **ph init --dev**                  | Use development version of the boilerplate        |
+| **ph init --staging**              | Use staging version of the boilerplate            |
+| **ph use latest**                  | Switch all dependencies to latest stable versions |
+| **ph use dev**                     | Switch all dependencies to development versions   |
+| **ph use staging**                 | Switch all dependencies to staging versions       |
 
 Please be aware that these versions can contain bugs and experimental features that aren't fully tested.
 
@@ -2509,14 +2525,13 @@ Remote drives enable collaborative development by syncing specifications across 
 
 **Key Commands:**
 
-- `ph init --remote-drive <url>` - Create a NEW project connected to a remote drive
-- `ph checkout --remote-drive <url>` - Clone an EXISTING project from a remote drive
+- `ph init --remote-drive <url>` - Create or connect to a project using a remote drive
 - `ph vetra --watch` - Start development with a preview drive for testing local changes
 
 **Workflows:**
 
 - **Project Owner**: `ph init --remote-drive` → Create GitHub repo → Push → `ph vetra --watch` to configure
-- **Collaborator**: `ph checkout --remote-drive` → `ph vetra --watch` to start developing
+- **Collaborator**: `ph init --remote-drive <url>` → `ph vetra --watch` to start developing
 
 **Preview Drive (`--watch` mode):**
 
@@ -2537,6 +2552,20 @@ The preview drive allows you to safely test changes before they affect the share
 
 > Source: https://powerhouse.academy/academy/MasteryTrack/BuilderEnvironment/CreateAPackageWithVetra
 
+**INFO:**
+A **Powerhouse Package** is a distributable unit that bundles one or more document models, editors, and optional reactor modules into a single installable artifact. Once published to the Vetra registry, a package can be installed in any Vetra Cloud environment — extending Connect with new document types and editors, and extending Switchboard with the corresponding reactor logic.
+
+
+<figure className="image-container">
+  <img
+    src={require("./images/vetra-cloud-create-a-package.png").default}
+    alt="Create a Package"
+  />
+  <figcaption>The five steps to build and publish a package to the Vetra ecosystem.</figcaption>
+</figure>
+
+On Vetra Cloud you'll find these five steps as a quick reference for creating and publishing a package. This guide walks you through each step in detail — from installing the CLI and scaffolding your project, to building document models and editors, and finally publishing your package to the Vetra registry so others can install it in their environments.
+
 **WARNING:**
 **This tutorial is a summary for builders that are already familiar with building document models**.  
 It provides a summary from initial setup up to publishing a distributable package.
@@ -2551,10 +2580,9 @@ Please start with the [**Get Started**](/) Chapter or [**Document Model Creation
 - `ph init`: Initializes a new Powerhouse project or sets up the local environment.
 - `ph vetra --interactive`: Launches Vetra Studio in interactive mode for package development.
 - `ph vetra --interactive --watch`: Launches Vetra Studio with dynamic reloading for document-models and editors.
-- `pnpm build` or `npm run build`: Builds the project for production.
+- `ph build`: Builds the project for production.
 - `pnpm run test` or `npm test`: Runs unit tests.
-- `npm login`: Logs into your NPM account.
-- `npm publish`: Publishes your package to NPM.
+- `ph publish`: Publishes your package to the Vetra registry.
 - `ph install @your-org-ph/your-package-name`: Installs a published package into a local Powerhouse environment.
 
 </details>
@@ -2584,27 +2612,27 @@ See the [Prerequisites](/academy/MasteryTrack/BuilderEnvironment/Prerequisites) 
 Before creating a specific project, or if you're setting up your environment for the first time, initialize the Powerhouse environment. This command prepares your local setup, including a local Reactor configuration.
 
 ```bash
-ph init
+ph init my-package
 ```
 
-If you are starting a new project to be packaged, this command will also prompt you for a project name. This name will be used for your package.
+Replace `my-package` with your desired package name. If you run `ph init` without a name you will be prompted for one.
 
 <details>
 <summary> How to make use of different branches? </summary>
 
 When installing or using the Powerhouse CLI commands you are able to make use of the dev & staging branches. These branches contain more experimental features than the latest stable release the PH CLI uses by default. They can be used to get access to a bugfix or features under development.
 
-| Command                                                                 | Description                                           |
-| ----------------------------------------------------------------------- | ----------------------------------------------------- |
-| **pnpm install -g ph-cmd** or **npm install -g ph-cmd**                 | Install latest stable version                         |
-| **pnpm install -g ph-cmd@dev** or **npm install -g ph-cmd@dev**         | Install development version                           |
-| **pnpm install -g ph-cmd@staging** or **npm install -g ph-cmd@staging** | Install staging version                               |
-| **ph init**                                                             | Use latest stable version of the boilerplate          |
-| **ph init --dev**                                                       | Use development version of the boilerplate            |
-| **ph init --staging**                                                   | Use staging version of the boilerplate                |
-| **ph use**                                                              | Switch all dependencies to latest production versions |
-| **ph use dev**                                                          | Switch all dependencies to development versions       |
-| **ph use prod**                                                         | Switch all dependencies to production versions        |
+| Command                                                                 | Description                                       |
+| ----------------------------------------------------------------------- | ------------------------------------------------- |
+| **pnpm install -g ph-cmd** or **npm install -g ph-cmd**                 | Install latest stable version                     |
+| **pnpm install -g ph-cmd@dev** or **npm install -g ph-cmd@dev**         | Install development version                       |
+| **pnpm install -g ph-cmd@staging** or **npm install -g ph-cmd@staging** | Install staging version                           |
+| **ph init**                                                             | Use latest stable version of the boilerplate      |
+| **ph init --dev**                                                       | Use development version of the boilerplate        |
+| **ph init --staging**                                                   | Use staging version of the boilerplate            |
+| **ph use latest**                                                       | Switch all dependencies to latest stable versions |
+| **ph use dev**                                                          | Switch all dependencies to development versions   |
+| **ph use staging**                                                      | Switch all dependencies to staging versions       |
 
 Please be aware that these versions can contain bugs and experimental features that aren't fully tested.
 
@@ -2718,6 +2746,23 @@ A specialized AI agent that guides users through document model creation with re
 </details>
 
 
+#### 0. Configure the Reactor MCP
+
+Add the following to your Claude MCP settings (`~/.claude/mcp.json` for Claude Code, or the MCP servers section in Claude Desktop):
+
+```json
+{
+  "mcpServers": {
+    "reactor-mcp": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "http://localhost:4001/mcp"]
+    }
+  }
+}
+```
+
+This only needs to be done once. Make sure `ph vetra` is running before starting a Claude session that uses the MCP.
+
 #### 1. Start the Reactor MCP:
 
 Make sure you are in the same directory as your project.
@@ -2807,7 +2852,7 @@ Once your schema and operations are defined in Connect, export the specification
 Use the Powerhouse CLI to process an exported `.phdm.zip` file and generate the necessary boilerplate code for your document model.
 
 ```bash
-ph generate YourModelName.phdm.zip
+ph generate document-model --file YourModelName.phdm.zip
 ```
 
 This command creates a new directory under `document-models/YourModelName/` containing:
@@ -2844,11 +2889,11 @@ This command creates a new directory under `document-models/YourModelName/` cont
 A document editor provides the user interface for interacting with your document model. Generate an editor template:
 
 ```bash
-ph generate --editor YourModelName --document-types powerhouse/YourModelName
+ph generate editor --name YourModelName --document-type powerhouse/YourModelName
 ```
 
-- The `--editor YourModelName` flag specifies the document model this editor is for.
-- The `--document-types powerhouse/YourModelName` flag links the editor to the specific document type defined in your model specification.
+- The `--name YourModelName` flag specifies the document model this editor is for.
+- The `--document-type powerhouse/YourModelName` flag links the editor to the specific document type defined in your model specification.
 
 This creates a template file, typically at `editors/your-model-name/editor.tsx`.
 
@@ -3156,13 +3201,7 @@ Update your project's main `index.js` or entry point to export your document mod
 Compile and optimize your project for production:
 
 ```bash
-pnpm build
-```
-
-Or with npm:
-
-```bash
-npm run build
+ph build
 ```
 
 This command typically creates a `dist/` or `build/` directory with the compiled assets. Ensure your `package.json`'s `files` array includes this directory and other necessary assets like `manifest.json`, `document-models`, and `editors` if they are not part of the build output but need to be in the package.
@@ -3194,9 +3233,9 @@ To share your package with others or deploy it to different environments, publis
 
 2.  **Publish the package:**
     ```bash
-    npm publish
+    ph publish
     ```
-    If your package is scoped and public, NPM will use the `publishConfig` from your `package.json`. If not set there, you might need `npm publish --access public`.
+    This publishes your package to the Vetra registry, making it available to install in any Vetra Cloud environment.
 
 ### 4.7. Using your published package
 
@@ -3209,6 +3248,112 @@ ph install @your-org-ph/your-package-name
 This command makes the document models and editors defined in your package available within that Powerhouse instance.
 
 Congratulations! You've successfully created, packaged, and published a Powerhouse Document Model. This enables modularity, reusability, and collaboration within the Powerhouse ecosystem.
+
+---
+
+
+## Vetra Cloud
+
+> Source: https://powerhouse.academy/academy/MasteryTrack/BuilderEnvironment/VetraCloud
+
+Vetra Cloud is the hosted infrastructure layer for Powerhouse applications. It lets you spin up a personal cloud environment that runs **Powerhouse Connect** (the user-facing document editor) and **Powerhouse Switchboard** (the backend GraphQL server) — and extend them with packages from the Vetra registry.
+
+---
+
+## Getting Started
+
+### 1. Connect Your Wallet
+
+Navigate to the **Cloud** section in Vetra and authenticate with your Ethereum wallet via **Renown**. Renown lets Connect sign operations on behalf of your on-chain identity without exposing your private key.
+
+<figure className="image-container">
+  <img
+    src={require("./images/vetra-cloud-connect-wallet.png").default}
+    alt="Connect Wallet via Renown"
+  />
+  <figcaption>Connect your Ethereum wallet via Renown to authenticate with Vetra.</figcaption>
+</figure>
+
+---
+
+### 2. Create an Environment
+
+After authenticating, create a new environment by giving it a name. Each environment gets its own subdomain (e.g. `my-env.vetra.io`) and runs its own isolated set of services.
+
+<figure className="image-container">
+  <img
+    src={require("./images/vetra-cloud-create-environment.png").default}
+    alt="Create Environment"
+  />
+  <figcaption>Give your environment a name to get a dedicated subdomain and isolated set of services.</figcaption>
+</figure>
+
+---
+
+### 3. Configure Services
+
+Inside your environment you can enable and configure three services:
+
+| Service                    | Description                                                    |
+| -------------------------- | -------------------------------------------------------------- |
+| **Powerhouse Connect**     | The document-editor UI served at `connect.<env>.vetra.io`      |
+| **Powerhouse Switchboard** | The GraphQL API server at `switchboard.<env>.vetra.io/graphql` |
+| **Powerhouse Fusion**      | Optional data-fusion layer (disabled by default)               |
+
+Use the **Size** dropdown to pick the compute tier for each service and toggle it on or off with the switch on the right.
+
+<figure className="image-container">
+  <img
+    src={require("./images/vetra-cloud-services.png").default}
+    alt="Services overview"
+  />
+  <figcaption>Enable and configure Connect, Switchboard, and Fusion services for your environment.</figcaption>
+</figure>
+
+---
+
+### 4. Select a Version
+
+Each service shows its currently pinned version. Click **Change version** (or **Update All** when updates are available) to pin Connect and Switchboard to a specific release.
+
+<figure className="image-container">
+  <img
+    src={require("./images/vetra-cloud-available-updates.png").default}
+    alt="Available updates"
+  />
+  <figcaption>Pin each service to a specific version or apply all available updates at once.</figcaption>
+</figure>
+
+---
+
+### 5. Install Packages
+
+Packages extend Connect and Switchboard with additional document models, editors, and reactor modules. Click **+ Add package** in the **Installed Packages** section, then search for a package by name.
+
+Available packages include community and official Powerhouse packages such as:
+
+- `@powerhousedao/builder-profile`
+- `@powerhousedao/contributor-billing`
+- `@powerhousedao/knowledge-note`
+- `@arbitrum/arbgrants`
+
+<figure className="image-container">
+  <img
+    src={require("./images/vetra-cloud-add-package.png").default}
+    alt="Add Package"
+  />
+  <figcaption>Search and select a package from the Vetra registry to install into your environment.</figcaption>
+</figure>
+
+Once you select a package, a **Pending change** banner appears at the bottom. Click **Approve** to apply the change and redeploy your environment.
+
+---
+
+## Next Steps
+
+Once your environment is running you can point your local `ph` CLI at it, or share the Connect URL with collaborators so they can start working with your document models right away.
+
+To publish your own packages to the registry, see the [Publishing Packages](../docs/02-PublishingPackages/index.md) guide.
 
 ---
 
@@ -3257,17 +3402,17 @@ This tool will be fundamental on your journey when creating, building, and runni
 
 When installing or using the Powerhouse CLI commands you are able to make use of the dev & staging branches. These branches contain more experimental features then the latest stable release the PH CLI uses by default. They can be used to get access to a bugfix or features under development.
 
-| Command                                                                 | Description                                           |
-| ----------------------------------------------------------------------- | ----------------------------------------------------- |
-| **pnpm install -g ph-cmd** or **npm install -g ph-cmd **                | Install latest stable version                         |
-| **pnpm install -g ph-cmd@dev** or **npm install -g ph-cmd@dev**         | Install development version                           |
-| **pnpm install -g ph-cmd@staging** or **npm install -g ph-cmd@staging** | Install staging version                               |
-| **ph init**                                                             | Use latest stable version of the boilerplate          |
-| **ph init --dev**                                                       | Use development version of the boilerplate            |
-| **ph init --staging**                                                   | Use staging version of the boilerplate                |
-| **ph use**                                                              | Switch all dependencies to latest production versions |
-| **ph use dev**                                                          | Switch all dependencies to development versions       |
-| **ph use prod**                                                         | Switch all dependencies to production versions        |
+| Command                                                                 | Description                                       |
+| ----------------------------------------------------------------------- | ------------------------------------------------- |
+| **pnpm install -g ph-cmd** or **npm install -g ph-cmd **                | Install latest stable version                     |
+| **pnpm install -g ph-cmd@dev** or **npm install -g ph-cmd@dev**         | Install development version                       |
+| **pnpm install -g ph-cmd@staging** or **npm install -g ph-cmd@staging** | Install staging version                           |
+| **ph init**                                                             | Use latest stable version of the boilerplate      |
+| **ph init --dev**                                                       | Use development version of the boilerplate        |
+| **ph init --staging**                                                   | Use staging version of the boilerplate            |
+| **ph use latest**                                                       | Switch all dependencies to latest stable versions |
+| **ph use dev**                                                          | Switch all dependencies to development versions   |
+| **ph use staging**                                                      | Switch all dependencies to staging versions       |
 
 Please be aware that these versions can contain bugs and experimental features that aren't fully tested.
 
@@ -3328,15 +3473,14 @@ This process ensures a clean slate by removing both the CLI tool and its configu
 The use command allows you to switch between different environments for your Powerhouse project dependencies.
 
 ```bash
-ph use <environment> [localPath]
+ph use <tag>
 ```
 
-**Available Environments**
+**Available Tags**
 
 - latest - Uses the latest stable version of all Powerhouse packages.
 - dev - Uses development versions of the packages.
-- prod - Uses production versions of the packages.
-- local - Uses local versions of the packages from a specified path.
+- staging - Uses staging versions of the packages.
 
 **Examples**
 
@@ -3352,10 +3496,10 @@ ph use latest
 ph use dev
 ```
 
-#### Use local versions from a specific path
+#### Use local monorepo packages from a specific path
 
 ```bash
-ph use local /path/to/local/packages
+ph use-local /path/to/local/packages
 ```
 
 #### Use a specific package manager
@@ -3476,10 +3620,7 @@ Powerhouse provides several code generation tools to streamline development:
     Generates the basic structure for new Document Models with the command `ph init` based on the boilerplate.
 
     ### Editor generator
-    Creates template code for Document Model editors with the command `ph generate --editor <name> --document-types <documenttype>`
-
-    ### Drive editor generator
-    Builds scaffolding for custom Drive interfaces with the command `ph generate --drive-editor <name>`
+    Creates template code for Document Model editors with the command `ph generate editor --name <name> --document-type <documenttype>`
 
     ### Subgraph generator
     Creates GraphQL subgraph templates for data access automatically upon `ph reactor`
@@ -3504,7 +3645,7 @@ The Analytics Engine is a system that allows tracking and analyzing operations a
 Generate an analytics processor using:
 
 ```bash
-ph generate --processor-type analytics
+ph generate processor --type analytics
 ```
 
 ---
@@ -4257,13 +4398,13 @@ If you're using the Connect workflow and need to manually generate code:
 The core command to invoke the Document Model Generator is:
 
 ```bash
-ph generate <YourModelName.phd>
+ph generate document-model --file <YourModelName.phd>
 ```
 
 Replace `<YourModelName.phd>` with the actual filename of your exported document model specification. For instance, if your exported file is named `TodoList.phd`, the command would be:
 
 ```bash
-ph generate TodoList.phd
+ph generate document-model --file TodoList.phd
 ```
 
 When executed, this command reads and parses the specification file and generates a set of files and directories within your Powerhouse project.
@@ -4312,7 +4453,7 @@ When your document model needs to evolve over time—adding new fields, operatio
 Versioning is enabled by default. Simply run:
 
 ```bash
-ph generate TodoList.phd
+ph generate document-model --file TodoList.phd
 ```
 
 ### Versioned Folder Structure
@@ -4403,7 +4544,7 @@ This approach is useful when working with Connect's Document Model Editor or whe
 2. **Run the Generator Command:**
 
    ```bash
-   ph generate TodoList.phd
+   ph generate document-model --file TodoList.phd
    ```
 
 3. **Explore the Generated Files:**
@@ -5247,7 +5388,7 @@ document-models/
     │   ├── gen/                     # Auto-generated code (DO NOT EDIT)
     │   │   ├── reducer.ts
     │   │   ├── creators.ts
-    │   │   ├── schema/types.ts      # V1 TypeScript types
+    │   │   ├── types.ts             # V1 TypeScript types
     │   │   └── ...
     │   ├── src/
     │   │   └── reducers/            # Your v1 reducer implementations
@@ -5256,7 +5397,7 @@ document-models/
     │
     ├── v2/                          # Version 2
     │   ├── gen/
-    │   │   └── schema/types.ts      # V2 TypeScript types (includes 'title')
+    │   │   └── types.ts             # V2 TypeScript types (includes 'title')
     │   ├── src/
     │   │   └── reducers/
     │   └── module.ts                # Exports DocumentModelModule with version: 2
@@ -5865,9 +6006,9 @@ export function RelatedDocument({ documentId }: { documentId: string }) {
 ```typescript
 
 
-export function CreateNewButton() {
+export function CreateNewButton({ documentType }: { documentType: string }) {
   return (
-    <button onClick={() => showCreateDocumentModal()}>
+    <button onClick={() => showCreateDocumentModal(documentType)}>
       Create New Document
     </button>
   );
@@ -6760,7 +6901,6 @@ This component acts as a wrapper for the document editor. When a user selects a 
 ```typescript
 
 useDriveContext,
-exportDocument,
 type User,
 type DriveEditorContext,
 } from "@powerhousedao/reactor-browser";
@@ -6812,13 +6952,6 @@ const { dispatch, error, document } = useDocumentEditorProps({
    user,
 });
 
-const onExport = useCallback(async () => {
-   if (document) {
-      const ext = documentModelModule.documentModel.extension;
-      await exportDocument(document, title, ext);
-   }
-}, [document?.revision.global, document?.revision.local]);
-
 const loadingContent = (
    <div className="flex-1 flex justify-center items-center h-full">
       <DefaultEditorLoader />
@@ -6843,13 +6976,7 @@ return showRevisionHistory ? (
    <Suspense fallback={loadingContent}>
       <DocumentToolbar
       onClose={onClose}
-      onExport={onExport}
-      onShowRevisionHistory={() => setShowRevisionHistory(true)}
       onSwitchboardLinkClick={() => {}}
-      title={title}
-      timelineButtonVisible
-      timelineItems={timelineItems.data}
-      onTimelineItemClick={setSelectedTimelineItem}
       />
       <EditorComponent
       context={{
@@ -7352,6 +7479,7 @@ For custom Drive-apps, you need to handle timeline items fetching and user inter
 
 ```typescript
 
+
 ```
 
 2. Fetch timeline items using the `useTimelineItems` hook:
@@ -7372,14 +7500,9 @@ const [selectedTimelineItem, setSelectedTimelineItem] =
 
 ```typescript
 <DocumentToolbar
-  timelineButtonVisible={editorModule.config.timelineEnabled}
-  timelineItems={timelineItems.data}
-  onTimelineItemClick={setSelectedTimelineItem}
   // ... other props
 />
 ```
-
-> **Note**: The `timelineButtonVisible` prop should be set based on the `timelineEnabled` setting in the editor module's configuration. This ensures the timeline button is only shown when the feature is enabled for that specific document type.
 
 5. Pass the required context values to your editor component:
 
@@ -10609,7 +10732,7 @@ Open your project and start your terminal.
 The Powerhouse Vetra toolkit provides a command-line utility to create new subgraphs easily.
 
 ```bash title="Run the following command to generate a new subgraph"
-ph generate --subgraph search-todos
+ph generate subgraph --name search-todos
 ```
 
 ```bash title="Expected Output"
@@ -11522,7 +11645,7 @@ The code examples below import from `@powerhousedao/reactor-browser`, which re-e
 To generate a relational database processor, run the following command:
 
 ```bash
-ph generate --processor todo-indexer --processor-type relationalDb --document-types powerhouse/todo-list
+ph generate processor --name todo-indexer --type relationalDb --document-types powerhouse/todo-list
 ```
 
 **Breaking down this command:**
@@ -11589,7 +11712,7 @@ export async function down(db: IRelationalDb<any>): Promise<void> {
 After defining your database schema, generate TypeScript types for type-safe queries and better IDE support:
 
 ```bash
-ph generate --migration-file processors/todo-indexer/migrations.ts
+ph generate migration-file --path processors/todo-indexer/migrations.ts
 ```
 
 **Why Generate Types?**
@@ -11758,7 +11881,7 @@ export class TodoIndexerProcessor extends RelationalDbProcessor<DB> {
 Generate a new subgraph to expose your processor data:
 
 ```bash
-ph generate --subgraph todo
+ph generate subgraph --name todo
 ```
 
 **What is a Subgraph?**
@@ -12246,17 +12369,17 @@ Key commands include:
 
 When using the Powerhouse CLI, you can access dev & staging branches for experimental features or bugfixes under development.
 
-| Command                            | Description                                           |
-| ---------------------------------- | ----------------------------------------------------- |
-| **pnpm install -g ph-cmd**         | Install latest stable version                         |
-| **pnpm install -g ph-cmd@dev**     | Install development version                           |
-| **pnpm install -g ph-cmd@staging** | Install staging version                               |
-| **ph init**                        | Use latest stable version of the boilerplate          |
-| **ph init --dev**                  | Use development version of the boilerplate            |
-| **ph init --staging**              | Use staging version of the boilerplate                |
-| **ph use**                         | Switch all dependencies to latest production versions |
-| **ph use dev**                     | Switch all dependencies to development versions       |
-| **ph use prod**                    | Switch all dependencies to production versions        |
+| Command                            | Description                                       |
+| ---------------------------------- | ------------------------------------------------- |
+| **pnpm install -g ph-cmd**         | Install latest stable version                     |
+| **pnpm install -g ph-cmd@dev**     | Install development version                       |
+| **pnpm install -g ph-cmd@staging** | Install staging version                           |
+| **ph init**                        | Use latest stable version of the boilerplate      |
+| **ph init --dev**                  | Use development version of the boilerplate        |
+| **ph init --staging**              | Use staging version of the boilerplate            |
+| **ph use latest**                  | Switch all dependencies to latest stable versions |
+| **ph use dev**                     | Switch all dependencies to development versions   |
+| **ph use staging**                 | Switch all dependencies to staging versions       |
 
 Please be aware that these versions can contain bugs and experimental features that aren't fully tested.
 
@@ -13394,14 +13517,14 @@ After starting, you can access:
 
 ### Connect Environment Variables
 
-| Variable                | Description                                            | Default  |
-| ----------------------- | ------------------------------------------------------ | -------- |
-| `PORT`                  | Port the server listens on                             | `4000`   |
-| `PH_CONNECT_BASE_PATH`  | Base URL path for the application                      | `/`      |
-| `PH_PACKAGES`           | Comma-separated list of packages to install at startup | `""`     |
-| `PH_CONNECT_SENTRY_DSN` | Sentry DSN for error tracking                          | `""`     |
-| `PH_CONNECT_SENTRY_ENV` | Sentry environment name                                | `""`     |
-| `DATABASE_URL`          | PostgreSQL connection string                           | Required |
+| Variable                | Description                                         | Default  |
+| ----------------------- | --------------------------------------------------- | -------- |
+| `PORT`                  | Port the server listens on                          | `3001`   |
+| `PH_CONNECT_BASE_PATH`  | Base URL path for the application                   | `/`      |
+| `PH_REGISTRY_PACKAGES`  | Comma-separated list of packages to load at startup | `""`     |
+| `PH_CONNECT_SENTRY_DSN` | Sentry DSN for error tracking                       | `""`     |
+| `PH_CONNECT_SENTRY_ENV` | Sentry environment name                             | `""`     |
+| `DATABASE_URL`          | PostgreSQL connection string                        | Required |
 
 #### Feature Flags
 
@@ -13436,7 +13559,7 @@ After starting, you can access:
 
 | Variable                      | Description                                            | Default    |
 | ----------------------------- | ------------------------------------------------------ | ---------- |
-| `PORT`                        | Port the server listens on                             | `4001`     |
+| `PORT`                        | Port the server listens on                             | `3000`     |
 | `PH_SWITCHBOARD_PORT`         | Alias for PORT                                         | `$PORT`    |
 | `DATABASE_URL`                | PostgreSQL or SQLite connection string                 | `"dev.db"` |
 | `PH_SWITCHBOARD_DATABASE_URL` | Alias for DATABASE_URL                                 | `"dev.db"` |
@@ -13462,14 +13585,14 @@ After starting, you can access:
 
 ## Installing Custom Packages
 
-Both Connect and Switchboard support installing custom Powerhouse packages at container startup using the `PH_PACKAGES` environment variable.
+Connect loads custom packages via the `PH_REGISTRY_PACKAGES` environment variable (written to a registry config at startup). Switchboard installs packages via `PH_PACKAGES`.
 
 ```yaml
 services:
   connect:
     image: ghcr.io/powerhouse-inc/powerhouse/connect:dev
     environment:
-      - PH_PACKAGES=@powerhousedao/todo-demo-package,@powerhousedao/another-package
+      - PH_REGISTRY_PACKAGES=@powerhousedao/todo-demo-package,@powerhousedao/another-package
 ```
 
 Packages are installed using the `ph install` command before the service starts.
@@ -13487,7 +13610,7 @@ The Connect image is based on Alpine Linux and includes:
 
 At startup, the entrypoint script:
 
-1. Installs any packages specified in `PH_PACKAGES`
+1. Loads any packages specified in `PH_REGISTRY_PACKAGES`
 2. Builds the Connect frontend with `ph connect build`
 3. Configures and starts Nginx to serve the built files
 
@@ -13503,8 +13626,8 @@ The Switchboard image is based on Node.js 24 and includes:
 At startup, the entrypoint script:
 
 1. Installs any packages specified in `PH_PACKAGES`
-2. Runs Prisma database migrations (if using PostgreSQL)
-3. Starts the Switchboard server with `ph switchboard`
+2. Runs Prisma database migrations (if `PH_REACTOR_DATABASE_URL` is set)
+3. Starts the Switchboard server via Node.js
 
 ## Production Considerations
 
@@ -17588,6 +17711,8 @@ and real-time processing with a "Vetra" drive or connection to remote drives.
 
 **Environment:** `PH_CONNECT_DRIVES_PRESERVE_STRATEGY`
 **Default:** `preserve-by-url-and-detach`
+**Host** - Expose the server to the network. Pass an IP (e.g. 0.0.0.0) to bind to a specific address. - Usage: `--host <str>`
+
 **Watch Timeout** - Amount of time to wait before a file is considered changed - Usage: `--watch-timeout <number>`
 
 **Environment:** `PH_WATCH_TIMEOUT`
@@ -17618,8 +17743,6 @@ and real-time processing with a "Vetra" drive or connection to remote drives.
 **Force** - Force dep pre-optimization regardless of whether deps have changed. - Usage: `--force`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
-
-**Host** - Expose the server to the network - Usage: `--host`
 
 **Open** - Open browser on startup - Usage: `--open`
 
@@ -17679,6 +17802,8 @@ your project.
 
 **Environment:** `PH_CONNECT_DRIVES_PRESERVE_STRATEGY`
 **Default:** `preserve-by-url-and-detach`
+**Host** - Expose the server to the network. Pass an IP (e.g. 0.0.0.0) to bind to a specific address. - Usage: `--host <str>`
+
 **Watch Timeout** - Amount of time to wait before a file is considered changed - Usage: `--watch-timeout <number>`
 
 **Environment:** `PH_WATCH_TIMEOUT`
@@ -17692,8 +17817,6 @@ your project.
 **Force** - Force dep pre-optimization regardless of whether deps have changed. - Usage: `--force`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
-
-**Host** - Expose the server to the network - Usage: `--host`
 
 **Open** - Open browser on startup - Usage: `--open`
 
@@ -17784,6 +17907,8 @@ NOTE: You must run `ph connect build` first
 
 **Environment:** `PH_CONNECT_DRIVES_PRESERVE_STRATEGY`
 **Default:** `preserve-by-url-and-detach`
+**Host** - Expose the server to the network. Pass an IP (e.g. 0.0.0.0) to bind to a specific address. - Usage: `--host <str>`
+
 **Watch Timeout** - Amount of time to wait before a file is considered changed - Usage: `--watch-timeout <number>`
 
 **Environment:** `PH_WATCH_TIMEOUT`
@@ -17797,8 +17922,6 @@ NOTE: You must run `ph connect build` first
 **Force** - Force dep pre-optimization regardless of whether deps have changed. - Usage: `--force`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
-
-**Host** - Expose the server to the network - Usage: `--host`
 
 **Open** - Open browser on startup - Usage: `--open`
 
@@ -17926,6 +18049,14 @@ It reads the powerhouse.config.json file and shows the packages that are current
 Run migrations
 
 
+---
+
+## Parameters
+
+### Arguments
+**Version** - The version to migrate to. Accepts a valid semver version or `staging`, `dev`, `latest`. - Usage: `[version]`
+
+
 ### Options
 **Version** - The version to migrate to. Accepts a valid semver version or `staging`, `dev`, `latest`. - Usage: `--version, -v <str>`
 
@@ -17933,6 +18064,8 @@ Run migrations
 
 
 ### Flags
+**Force** - Run migrate from the bundled codegen even if the target version cannot be resolved from the npm registry or differs from the installed ph-cli version. - Usage: `--force, -f`
+
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`
@@ -18063,6 +18196,8 @@ Resolution order for the registry URL:
 
 ### Options
 **Registry** - Registry URL to install from (overrides config and environment) - Usage: `--registry <str>`
+
+**Allow Build** - A list of package names that are allowed to run postinstall scripts during installation. - Usage: `--allow-build <str>`
 
 **Package Manager** - Specify the package manager to use for your project. Can be one of: `npm`, `pnpm`, `yarn`, or `bun`. Defaults to your environment package manager. - Usage: `--package-manager, -p <value>`
 
@@ -18212,7 +18347,7 @@ function dispatch(
 
 Returns the ID of the currently selected document.
 
-```typescript
+```typescript check
 function useSelectedDocumentId(): string | undefined;
 ```
 
@@ -19041,7 +19176,7 @@ function showDeleteNodeModal(nodeOrId: Node | string): void;
 
 Returns whether the revision history panel is visible.
 
-```typescript
+```typescript check
 function useRevisionHistoryVisible(): boolean | undefined;
 ```
 
@@ -19277,7 +19412,7 @@ function setIsExternalControlsEnabled(enabled: boolean | undefined): void;
 
 Gets whether drag and drop is enabled for a given drive editor.
 
-```typescript
+```typescript check
 function useIsDragAndDropEnabled(): boolean | undefined;
 ```
 
@@ -20769,7 +20904,7 @@ The returned hook accepts:
 ### Hook Name and Signature
 
 ```typescript
-function useRelationalDb<Schema>(): IRelationalDb<Schema>;
+function useRelationalDb<Schema>(): IRelationalDbState<Schema>;
 ```
 
 ### Description
@@ -20813,7 +20948,7 @@ function DatabaseOperations() {
 
 ```typescript
 {
-  db: EnhancedKysely<Schema> | null; // Enhanced Kysely instance with live capabilities
+  db: RelationalDbWithLive<Schema> | null; // Enhanced Kysely instance with live capabilities
   isLoading: boolean; // True while database is initializing
   error: Error | null; // Any initialization error
 }
@@ -20841,13 +20976,20 @@ function DatabaseOperations() {
 ### Hook Name and Signature
 
 ```typescript
-function useRelationalQuery<Schema, T, TParams>(
+function useRelationalQuery<Schema, T = unknown, TParams = undefined>(
+  ProcessorClass: RelationalDbProcessorClass<Schema>,
+  driveId: string,
   queryCallback: (
-    db: EnhancedKysely<Schema>,
+    db: IRelationalQueryBuilder<Schema>,
     parameters?: TParams,
   ) => QueryCallbackReturnType,
   parameters?: TParams,
-): QueryResult<T>;
+  options?: useRelationalQueryOptions,
+): {
+  isLoading: boolean;
+  error: Error | undefined;
+  result: LiveQueryResults<T> | null;
+};
 ```
 
 ### Description
@@ -20861,6 +21003,8 @@ Lower-level hook for creating live queries with manual control over the query ca
 
 function UserCount() {
   const { result, isLoading, error } = useRelationalQuery<MyDatabase, { count: number }>(
+    MyProcessorClass,
+    driveId,
     (db) => {
       return db
         .selectFrom('users')
@@ -20878,8 +21022,11 @@ function UserCount() {
 
 ### Parameters
 
+- `ProcessorClass` - The processor class with the relational DB schema
+- `driveId` - The drive ID to scope the query
 - `queryCallback` - Function that receives the database instance and optional parameters
 - `parameters` - Optional parameters for the query
+- `options` - Optional `useRelationalQueryOptions` (e.g. `hashNamespace`)
 
 ### Return Value
 
@@ -20904,6 +21051,14 @@ function UserCount() {
 
 </details>
 
+### 4. useRelationalQueryOptions
+
+```typescript
+export type useRelationalQueryOptions = { hashNamespace?: boolean };
+```
+
+_Description pending — see source._
+
 ## Advanced Patterns
 
 ### Working with Dynamic Parameters
@@ -20920,12 +21075,13 @@ You need to create queries that update automatically when search terms, filters,
 The `createProcessorQuery` hook automatically handles parameter changes and memoizes them using deep comparison:
 
 ```typescript
-function useSearchResults() {
+function useSearchResults(driveId: string) {
   const [searchTerm, setSearchTerm] = useState("");
   const [category, setCategory] = useState("all");
 
   // Query automatically updates when searchTerm or category changes
   const result = useTypedQuery(
+    driveId,
     (db, params) => {
       let query = db.selectFrom("products").selectAll();
 
@@ -20969,8 +21125,8 @@ You need to write complex SQL queries that are easier to express in raw SQL than
 You can return raw SQL queries from your callback:
 
 ```typescript
-function useCustomUserStats() {
-  return useTypedQuery(() => {
+function useCustomUserStats(driveId: string) {
+  return useTypedQuery(driveId, () => {
     return {
       sql: `
         SELECT 
@@ -20987,8 +21143,13 @@ function useCustomUserStats() {
 }
 
 // With parameters
-function useUserPostsByDateRange(startDate: string, endDate: string) {
+function useUserPostsByDateRange(
+  driveId: string,
+  startDate: string,
+  endDate: string,
+) {
   return useTypedQuery(
+    driveId,
     (db, params) => {
       return {
         sql: `
@@ -21028,8 +21189,8 @@ You need to fetch related data from multiple tables with complex relationships.
 Use Kysely's join capabilities within your query callbacks:
 
 ```typescript
-function useUsersWithPosts() {
-  return useTypedQuery((db) => {
+function useUsersWithPosts(driveId: string) {
+  return useTypedQuery(driveId, (db) => {
     return db
       .selectFrom("users")
       .leftJoin("posts", "users.id", "posts.author_id")
@@ -21045,8 +21206,9 @@ function useUsersWithPosts() {
 }
 
 // More complex example with multiple joins and aggregations
-function useUserDashboardData(userId: number) {
+function useUserDashboardData(driveId: string, userId: number) {
   return useTypedQuery(
+    driveId,
     (db, params) => {
       return db
         .selectFrom("users")
@@ -21123,27 +21285,30 @@ Create focused, reusable hooks for different data access patterns:
 
 ```typescript
 // ✅ Good - Focused, reusable hooks
-export function useUsers() {
-  return useTypedQuery((db) => db.selectFrom("users").selectAll().compile());
+export function useUsers(driveId: string) {
+  return useTypedQuery(driveId, (db) =>
+    db.selectFrom("users").selectAll().compile(),
+  );
 }
 
-export function useUserById(id: number) {
+export function useUserById(driveId: string, id: number) {
   return useTypedQuery(
+    driveId,
     (db, params) =>
       db.selectFrom("users").selectAll().where("id", "=", params.id).compile(),
     { id },
   );
 }
 
-export function useActiveUsers() {
-  return useTypedQuery((db) =>
+export function useActiveUsers(driveId: string) {
+  return useTypedQuery(driveId, (db) =>
     db.selectFrom("users").selectAll().where("active", "=", true).compile(),
   );
 }
 
 // ❌ Avoid - Too generic or complex
-export function useEverything() {
-  return useTypedQuery((db) =>
+export function useEverything(driveId: string) {
+  return useTypedQuery(driveId, (db) =>
     db
       .selectFrom("users")
       .leftJoin("posts", "users.id", "posts.author_id")
@@ -21208,8 +21373,8 @@ function BadUserList() {
 
 ```typescript
 // ✅ Good - Focused query
-function useUserNames() {
-  return useTypedQuery((db) =>
+function useUserNames(driveId: string) {
+  return useTypedQuery(driveId, (db) =>
     db
       .selectFrom("users")
       .select(["id", "name"]) // Only what you need
@@ -21218,8 +21383,9 @@ function useUserNames() {
 }
 
 // ✅ Good - Stable parameters
-function useUsersByStatus(status: string) {
+function useUsersByStatus(driveId: string, status: string) {
   return useTypedQuery(
+    driveId,
     (db, params) =>
       db
         .selectFrom("users")
@@ -21231,8 +21397,8 @@ function useUsersByStatus(status: string) {
 }
 
 // ❌ Avoid - Unnecessary data
-function useEverythingAboutUsers() {
-  return useTypedQuery((db) =>
+function useEverythingAboutUsers(driveId: string) {
+  return useTypedQuery(driveId, (db) =>
     db
       .selectFrom("users")
       .leftJoin("posts", "users.id", "posts.author_id")
@@ -21262,10 +21428,11 @@ Check that your parameters are actually changing in content, not just reference:
 ```typescript
 // ✅ Good - Parameters change in content
 const [userId, setUserId] = useState(1);
-const result = useUserById(userId); // Updates when userId changes
+const result = useUserById(driveId, userId); // Updates when userId changes
 
 // ❌ Common mistake - Same content, different objects
 const result = useTypedQuery(
+  driveId,
   (db, params) => /* query */,
   { userId: user.id } // New object every render, but same content
 );
@@ -21273,6 +21440,7 @@ const result = useTypedQuery(
 // ✅ Better - Extract stable values
 const userId = user.id;
 const result = useTypedQuery(
+  driveId,
   (db, params) => /* query */,
   { userId } // Stable parameter
 );
@@ -21301,17 +21469,17 @@ Make sure your callback returns the correct type:
 
 ```typescript
 // ✅ Good - Returns QueryCallbackReturnType
-const result = useTypedQuery((db) => {
+const result = useTypedQuery(driveId, (db) => {
   return db.selectFrom("users").selectAll().compile(); // Has sql property
 });
 
 // ❌ Error - Missing .compile()
-const result = useTypedQuery((db) => {
+const result = useTypedQuery(driveId, (db) => {
   return db.selectFrom("users").selectAll(); // No sql property
 });
 
 // ✅ Good - Raw SQL format
-const result = useTypedQuery(() => {
+const result = useTypedQuery(driveId, () => {
   return {
     sql: "SELECT * FROM users",
     parameters: [],
@@ -21336,8 +21504,9 @@ Check for unstable parameters or overly complex queries:
 
 ```typescript
 // ❌ Problem - New object every render
-function BadComponent({ user }) {
+function BadComponent({ driveId, user }) {
   const result = useTypedQuery(
+    driveId,
     (db, params) => /* query */,
     {
       filter: { status: 'active', dept: user.department } // New object each render
@@ -21346,21 +21515,23 @@ function BadComponent({ user }) {
 }
 
 // ✅ Solution - Stable parameters
-function GoodComponent({ user }) {
+function GoodComponent({ driveId, user }) {
   const filter = useMemo(() => ({
     status: 'active',
     dept: user.department
   }), [user.department]);
 
   const result = useTypedQuery(
+    driveId,
     (db, params) => /* query */,
     { filter }
   );
 }
 
 // ✅ Even better - Direct values
-function BetterComponent({ user }) {
+function BetterComponent({ driveId, user }) {
   const result = useTypedQuery(
+    driveId,
     (db, params) => /* query */,
     {
       status: 'active',
@@ -29302,59 +29473,42 @@ yarn cache clean --force
 
 > Source: https://powerhouse.academy/academy/LLMDocs
 
-The Powerhouse Academy provides a comprehensive, LLM-optimized documentation file that combines all academy content into a single, structured markdown file.
+The Powerhouse Academy follows the [llms.txt standard](https://llmstxt.org) to provide machine-readable documentation for LLMs and AI coding tools.
 
-## Download
+## Files
 
-[**Download academy_LLM_docs.md**](/academy_LLM_docs.md) (1.1MB)
+| File                            | Purpose                                                                 | Size  |
+| ------------------------------- | ----------------------------------------------------------------------- | ----- |
+| [llms.txt](/llms.txt)           | Navigation index — links to every doc page with a short description     | ~22KB |
+| [llms-full.txt](/llms-full.txt) | All documentation concatenated into one file for full-context ingestion | ~1MB  |
 
-## Overview
+### llms.txt
 
-| **What's Included**                                               | **LLM Optimization Features**                                   |
-| ----------------------------------------------------------------- | --------------------------------------------------------------- |
-| **95+ documentation files** combined into one structured document | **Structured headings** with semantic hierarchy                 |
-| **Complete academy content** from all categories:                 | **Internal linking** with generated anchors                     |
-| • Get Started tutorials                                           | **Category organization** following site structure              |
-| • Mastery Track guides                                            | **Enhanced code blocks** with context                           |
-| • Example Use Cases                                               | **Semantic markers** for tips, warnings, and important sections |
-| • API References                                                  | **Cross-references** and relationship mapping                   |
-| • Architecture documentation                                      |                                                                 |
-| • Component Library docs                                          |                                                                 |
+A concise index that follows the [llms.txt spec](https://llmstxt.org): an H1 title, a summary blockquote, and H2 sections with links to every page. Ideal for tools that fetch context on demand.
 
-## Programmatic Access
+### llms-full.txt
+
+The complete academy content in a single markdown file. Use this when you want to load the full documentation into a context window at once (e.g. pasting a URL into Claude or ChatGPT).
+
+## Programmatic access
 
 ```bash
-# Direct download via curl
-curl -O https://academy.vetra.io/academy_LLM_docs.md
+# Index (llms.txt)
+curl https://powerhouse.academy/llms.txt
 
-# Wget
-wget https://academy.vetra.io/academy_LLM_docs.md
+# Full content (llms-full.txt)
+curl https://powerhouse.academy/llms-full.txt
 ```
 
-For integration questions or custom format needs, please reach out via our [community channels](https://discord.gg/pwQJwgaQKd).
+## Regenerating the files
 
-## Ask Your LLM
+The files are generated from the academy source docs by the script at `scripts/generate-llm-docs.ts`. Run it with:
 
-Get instant help with common Powerhouse Academy questions:
+```bash
+npm run generate:llm-docs
+```
 
-
-<LLMRedirect 
-  prompt="How do I create a document model in Powerhouse?"
-  title="Creating Document Models"
-  description="Learn about document model creation and setup"
-/>
-
-<LLMRedirect 
-  prompt="What is the Powerhouse architecture and how does it work?"
-  title="Understanding Powerhouse Architecture" 
-  description="Get an overview of the system design and core concepts"
-/>
-
-<LLMRedirect 
-  prompt="How do I build a React editor for my document model?"
-  title="Building Document Editors"
-  description="Step-by-step guidance for creating custom editors"
-/>
+This writes both `static/llms.txt` and `static/llms-full.txt`, which Docusaurus serves at the site root. The legacy `academy_LLM_docs.md` path is also kept for backward compatibility.
 
 ---
 

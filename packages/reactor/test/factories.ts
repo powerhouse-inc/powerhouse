@@ -1,4 +1,8 @@
-import { PGlite } from "@electric-sql/pglite";
+import { MemoryFS, PGlite } from "@electric-sql/pglite";
+import { AtomicNodeFs } from "@powerhousedao/pglite-fs";
+import { promises as fsp } from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import type {
   Action,
   DocumentModelModule,
@@ -92,18 +96,70 @@ export function createTestContext(
 }
 
 /**
+ * Backend factory used by the test stores. Returning a fresh `MemoryFS` (or
+ * `AtomicNodeFs`) instance per call means each test gets its own isolated
+ * PGLite filesystem. `cleanup` is invoked from the test's `afterEach` after
+ * `db.destroy()` so any host-disk artifacts (snapshot files for AtomicNodeFs)
+ * are removed.
+ */
+export type TestFsBackend = () => Promise<{
+  fs: MemoryFS;
+  cleanup: () => Promise<void>;
+}>;
+
+/**
+ * Default backend: pure in-memory PGLite, nothing to clean up.
+ */
+export const memoryFsBackend: TestFsBackend = () =>
+  Promise.resolve({
+    fs: new MemoryFS(),
+    cleanup: () => Promise.resolve(),
+  });
+
+/**
+ * AtomicNodeFs against a fresh tempdir per test. The tempdir is removed in
+ * `cleanup` after the PGLite instance has been closed.
+ */
+export const atomicNodeFsBackend: TestFsBackend = async () => {
+  const dir = await fsp.mkdtemp(path.join(os.tmpdir(), "reactor-atomic-"));
+  return {
+    fs: new AtomicNodeFs(dir),
+    cleanup: async () => {
+      await fsp.rm(dir, { recursive: true, force: true });
+    },
+  };
+};
+
+/**
+ * All backends to permute over. Use in `describe.each(testFsBackends)` for any
+ * storage-layer test that wants to verify behavior is identical regardless of
+ * how PGLite's MEMFS is backed.
+ */
+export const testFsBackends: Array<{ name: string; backend: TestFsBackend }> = [
+  { name: "MemoryFS", backend: memoryFsBackend },
+  { name: "AtomicNodeFs", backend: atomicNodeFsBackend },
+];
+
+/**
  * Creates a real PGLite-backed KyselyOperationStore for testing.
  * Returns the database instance, operation store, and keyframe store.
  *
- * @returns Object containing db, store, and keyframeStore instances
+ * @param backend optional FS backend factory. Defaults to `memoryFsBackend`.
+ * @returns Object containing db, store, keyframeStore, and cleanup function.
+ *   The caller must `await db.destroy()` and then `await cleanup()` in
+ *   `afterEach`.
  */
-export async function createTestOperationStore(): Promise<{
+export async function createTestOperationStore(
+  backend: TestFsBackend = memoryFsBackend,
+): Promise<{
   db: Kysely<DatabaseSchema>;
   store: KyselyOperationStore;
   keyframeStore: KyselyKeyframeStore;
+  cleanup: () => Promise<void>;
 }> {
+  const { fs, cleanup } = await backend();
   const baseDb = new Kysely<DatabaseSchema>({
-    dialect: new PGliteDialect(new PGlite()),
+    dialect: new PGliteDialect(new PGlite({ fs })),
   });
 
   const result = await runMigrations(baseDb, REACTOR_SCHEMA);
@@ -115,7 +171,7 @@ export async function createTestOperationStore(): Promise<{
   const store = new KyselyOperationStore(db);
   const keyframeStore = new KyselyKeyframeStore(db);
 
-  return { db, store, keyframeStore };
+  return { db, store, keyframeStore, cleanup };
 }
 
 /**
@@ -756,16 +812,23 @@ export function createMockDocumentIndexer(): IDocumentIndexer {
  * Creates a real PGLite-backed sync storage for testing.
  * Returns the database instance, sync remote storage, and sync cursor storage.
  *
- * @returns Object containing db, syncRemoteStorage, and syncCursorStorage instances
+ * @param backend optional FS backend factory. Defaults to `memoryFsBackend`.
+ * @returns Object containing db, sync*Storage, and cleanup function.
+ *   The caller must `await db.destroy()` and then `await cleanup()` in
+ *   `afterEach`.
  */
-export async function createTestSyncStorage(): Promise<{
+export async function createTestSyncStorage(
+  backend: TestFsBackend = memoryFsBackend,
+): Promise<{
   db: Kysely<DatabaseSchema>;
   syncRemoteStorage: KyselySyncRemoteStorage;
   syncCursorStorage: KyselySyncCursorStorage;
   syncDeadLetterStorage: KyselySyncDeadLetterStorage;
+  cleanup: () => Promise<void>;
 }> {
+  const { fs, cleanup } = await backend();
   const baseDb = new Kysely<DatabaseSchema>({
-    dialect: new PGliteDialect(new PGlite()),
+    dialect: new PGliteDialect(new PGlite({ fs })),
   });
 
   const result = await runMigrations(baseDb, REACTOR_SCHEMA);
@@ -778,7 +841,13 @@ export async function createTestSyncStorage(): Promise<{
   const syncCursorStorage = new KyselySyncCursorStorage(db);
   const syncDeadLetterStorage = new KyselySyncDeadLetterStorage(db);
 
-  return { db, syncRemoteStorage, syncCursorStorage, syncDeadLetterStorage };
+  return {
+    db,
+    syncRemoteStorage,
+    syncCursorStorage,
+    syncDeadLetterStorage,
+    cleanup,
+  };
 }
 
 /**

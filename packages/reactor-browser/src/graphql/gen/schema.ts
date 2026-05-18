@@ -177,6 +177,7 @@ export type Mutation = {
   readonly pushSyncEnvelopes: Scalars["Boolean"]["output"];
   readonly removeRelationship: PhDocument;
   readonly renameDocument: PhDocument;
+  readonly setPreferredEditor: PhDocument;
   readonly touchChannel: TouchChannelResult;
 };
 
@@ -242,6 +243,12 @@ export type MutationRenameDocumentArgs = {
   branch?: InputMaybe<Scalars["String"]["input"]>;
   documentIdentifier: Scalars["String"]["input"];
   name: Scalars["String"]["input"];
+};
+
+export type MutationSetPreferredEditorArgs = {
+  branch?: InputMaybe<Scalars["String"]["input"]>;
+  documentIdentifier: Scalars["String"]["input"];
+  preferredEditor?: InputMaybe<Scalars["String"]["input"]>;
 };
 
 export type MutationTouchChannelArgs = {
@@ -943,6 +950,28 @@ export type RenameDocumentMutation = {
   };
 };
 
+export type SetPreferredEditorMutationVariables = Exact<{
+  documentIdentifier: Scalars["String"]["input"];
+  preferredEditor?: InputMaybe<Scalars["String"]["input"]>;
+  branch?: InputMaybe<Scalars["String"]["input"]>;
+}>;
+
+export type SetPreferredEditorMutation = {
+  readonly setPreferredEditor: {
+    readonly id: string;
+    readonly slug?: string | null | undefined;
+    readonly name: string;
+    readonly documentType: string;
+    readonly state: NonNullable<unknown>;
+    readonly createdAtUtcIso: string | Date;
+    readonly lastModifiedAtUtcIso: string | Date;
+    readonly revisionsList: ReadonlyArray<{
+      readonly scope: string;
+      readonly revision: number;
+    }>;
+  };
+};
+
 export type AddRelationshipMutationVariables = Exact<{
   sourceIdentifier: Scalars["String"]["input"];
   targetIdentifier: Scalars["String"]["input"];
@@ -1488,6 +1517,22 @@ export const RenameDocumentDocument = gql`
   }
   ${PhDocumentFieldsFragmentDoc}
 `;
+export const SetPreferredEditorDocument = gql`
+  mutation SetPreferredEditor(
+    $documentIdentifier: String!
+    $preferredEditor: String
+    $branch: String
+  ) {
+    setPreferredEditor(
+      documentIdentifier: $documentIdentifier
+      preferredEditor: $preferredEditor
+      branch: $branch
+    ) {
+      ...PHDocumentFields
+    }
+  }
+  ${PhDocumentFieldsFragmentDoc}
+`;
 export const AddRelationshipDocument = gql`
   mutation AddRelationship(
     $sourceIdentifier: String!
@@ -1930,6 +1975,24 @@ export function getSdk(
             signal,
           }),
         "RenameDocument",
+        "mutation",
+        variables,
+      );
+    },
+    SetPreferredEditor(
+      variables: SetPreferredEditorMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<SetPreferredEditorMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<SetPreferredEditorMutation>({
+            document: SetPreferredEditorDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "SetPreferredEditor",
         "mutation",
         variables,
       );

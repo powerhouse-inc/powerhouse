@@ -4,7 +4,7 @@ exports[`Modal Component > should match snapshot 1`] = `
 <div
   aria-describedby="radix-_r_2_"
   aria-labelledby="radix-_r_1_"
-  class="data-[state=closed]:animate-zoom-out data-[state=open]:animate-zoom-in bg-white rounded-3xl"
+  class="bg-white data-[state=closed]:animate-zoom-out data-[state=open]:animate-zoom-in rounded-3xl"
   data-state="open"
   data-testid="delete-modal"
   id="radix-_r_0_"
@@ -27,7 +27,7 @@ exports[`Modal Component > should match snapshot 1`] = `
     </p>
   </span>
   <div
-    class="p-6 text-slate-300 w-[450px]"
+    class="bg-white p-6 text-slate-300 w-[450px]"
   >
     <div
       class="border-b border-slate-50 pb-2 text-2xl font-bold text-gray-800"

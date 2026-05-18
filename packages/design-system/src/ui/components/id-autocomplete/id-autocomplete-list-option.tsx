@@ -65,7 +65,7 @@ const ReloadButton: React.FC<{
         className={cn(
           "text-gray-500 dark:text-gray-600",
           isLoadingSelectedOption && "animate-spin",
-          isFetchSelectedOptionSync && "animate-in fade-in duration-500",
+          isFetchSelectedOptionSync && "animate-fade-in duration-500",
         )}
       />
     </button>
@@ -103,7 +103,7 @@ const IdAutocompleteListOption: React.FC<IdAutocompleteListOptionProps> = ({
     <div className={cn("flex w-full items-center")}>
       <span
         className={cn(
-          "truncate text-xs leading-5",
+          "truncate text-xs/5",
           asPlaceholder
             ? "text-gray-400 dark:text-gray-700"
             : "text-gray-500 dark:text-gray-600",
@@ -124,7 +124,7 @@ const IdAutocompleteListOption: React.FC<IdAutocompleteListOptionProps> = ({
         <div className={cn("flex min-w-0 grow flex-col gap-[-2px]")}>
           <span
             className={cn(
-              "truncate text-sm font-bold leading-5",
+              "truncate text-sm/5 font-bold",
               asPlaceholder
                 ? "text-gray-400 dark:text-gray-700"
                 : "text-gray-900 dark:text-gray-300",
@@ -138,7 +138,7 @@ const IdAutocompleteListOption: React.FC<IdAutocompleteListOptionProps> = ({
               target="_blank"
               rel="noopener noreferrer"
               className={cn(
-                "truncate text-xs leading-5 text-blue-900 hover:underline focus-visible:outline-none",
+                "truncate text-xs/5 text-blue-900 hover:underline focus-visible:outline-none",
               )}
             >
               {path.text}
@@ -146,7 +146,7 @@ const IdAutocompleteListOption: React.FC<IdAutocompleteListOptionProps> = ({
           ) : (
             <span
               className={cn(
-                "truncate text-xs leading-5",
+                "truncate text-xs/5",
                 asPlaceholder
                   ? "text-gray-400 dark:text-gray-700"
                   : "text-gray-500 dark:text-gray-600",
@@ -169,7 +169,7 @@ const IdAutocompleteListOption: React.FC<IdAutocompleteListOptionProps> = ({
         <div className={cn("flex max-w-full items-center")}>
           <span
             className={cn(
-              "truncate text-xs leading-5",
+              "truncate text-xs/5",
               asPlaceholder
                 ? "text-gray-400 dark:text-gray-700"
                 : "text-gray-500 dark:text-gray-600",
@@ -183,7 +183,7 @@ const IdAutocompleteListOption: React.FC<IdAutocompleteListOptionProps> = ({
         <div className={cn("flex flex-col")}>
           <p
             className={cn(
-              "line-clamp-2 text-xs leading-5",
+              "line-clamp-2 text-xs/5",
               asPlaceholder
                 ? "text-gray-400 dark:text-gray-700"
                 : "text-gray-900 dark:text-gray-300",
@@ -199,7 +199,7 @@ const IdAutocompleteListOption: React.FC<IdAutocompleteListOptionProps> = ({
           <div className={cn("flex max-w-full items-center justify-end")}>
             <span
               className={cn(
-                "truncate text-xs leading-5",
+                "truncate text-xs/5",
                 asPlaceholder
                   ? "text-gray-400 dark:text-gray-700"
                   : "text-gray-500 dark:text-gray-600",

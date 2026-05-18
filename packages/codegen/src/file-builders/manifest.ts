@@ -3,9 +3,8 @@ import type {
   Manifest,
   PowerhouseModule,
 } from "@powerhousedao/shared";
-import { fileExists } from "@powerhousedao/shared/clis";
+import { defaultManifest, fileExists } from "@powerhousedao/shared/clis";
 import { ManifestSchema } from "@powerhousedao/shared/document-model";
-import { defaultManifest } from "file-builders";
 import { loadJsonFile } from "load-json-file";
 import { join } from "path";
 import {
@@ -25,7 +24,7 @@ export async function getOrCreateManifestFile(
 ): Promise<Manifest> {
   const hasManifestFile = await fileExists(manifestPath);
   if (!hasManifestFile) {
-    await writeJsonFile(manifestPath, defaultManifest);
+    await writeJsonFile(manifestPath, defaultManifest, { indent: 2 });
   }
   const manifestFile = await loadJsonFile(manifestPath);
   return ManifestSchema.parse(manifestFile);
@@ -47,6 +46,34 @@ function makeUpdatedConfig(
     filter(({ name }) => !isIncludedIn(name, map(newConfig, prop("name")))),
     concat(newConfig),
     uniqueBy(prop("name")),
+  );
+}
+
+/**
+ * Removes entries from a manifest module list whose id is not in `validIds`.
+ * Used by `generateAll<X>` to prune entries that no longer correspond to any
+ * directory in the project (e.g. a module that was renamed or deleted). No-op
+ * if the manifest file doesn't exist yet.
+ */
+export async function pruneManifestSection(
+  projectDir: string,
+  kind: "documentModels" | "editors" | "apps" | "processors" | "subgraphs",
+  validIds: readonly string[],
+): Promise<void> {
+  const manifestPath = join(projectDir, "powerhouse.manifest.json");
+  if (!(await fileExists(manifestPath))) return;
+  const manifest = await getOrCreateManifestFile(manifestPath);
+  const existing = manifest[kind];
+  // Nothing to prune if the section was never present.
+  if (existing === undefined) return;
+  const validSet = new Set(validIds);
+  const filtered = existing.filter((entry) => validSet.has(entry.id));
+  // Skip the write when nothing changed.
+  if (filtered.length === existing.length) return;
+  await writeJsonFile(
+    manifestPath,
+    { ...manifest, [kind]: filtered },
+    { indent: 2 },
   );
 }
 
@@ -81,6 +108,6 @@ export async function createOrUpdateManifest(
     ),
     config: makeUpdatedConfig(existingManifest.config, manifestData.config),
   };
-  await writeJsonFile(manifestPath, updatedManifest);
+  await writeJsonFile(manifestPath, updatedManifest, { indent: 2 });
   return updatedManifest;
 }

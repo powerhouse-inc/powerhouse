@@ -232,7 +232,7 @@ The returned hook accepts:
 ### Hook Name and Signature
 
 ```typescript
-function useRelationalDb<Schema>(): IRelationalDb<Schema>;
+function useRelationalDb<Schema>(): IRelationalDbState<Schema>;
 ```
 
 ### Description
@@ -276,7 +276,7 @@ function DatabaseOperations() {
 
 ```typescript
 {
-  db: EnhancedKysely<Schema> | null; // Enhanced Kysely instance with live capabilities
+  db: RelationalDbWithLive<Schema> | null; // Enhanced Kysely instance with live capabilities
   isLoading: boolean; // True while database is initializing
   error: Error | null; // Any initialization error
 }
@@ -304,13 +304,20 @@ function DatabaseOperations() {
 ### Hook Name and Signature
 
 ```typescript
-function useRelationalQuery<Schema, T, TParams>(
+function useRelationalQuery<Schema, T = unknown, TParams = undefined>(
+  ProcessorClass: RelationalDbProcessorClass<Schema>,
+  driveId: string,
   queryCallback: (
-    db: EnhancedKysely<Schema>,
+    db: IRelationalQueryBuilder<Schema>,
     parameters?: TParams,
   ) => QueryCallbackReturnType,
   parameters?: TParams,
-): QueryResult<T>;
+  options?: useRelationalQueryOptions,
+): {
+  isLoading: boolean;
+  error: Error | undefined;
+  result: LiveQueryResults<T> | null;
+};
 ```
 
 ### Description
@@ -324,6 +331,8 @@ import { useRelationalQuery } from '@powerhousedao/reactor-browser/relational';
 
 function UserCount() {
   const { result, isLoading, error } = useRelationalQuery<MyDatabase, { count: number }>(
+    MyProcessorClass,
+    driveId,
     (db) => {
       return db
         .selectFrom('users')
@@ -341,8 +350,11 @@ function UserCount() {
 
 ### Parameters
 
+- `ProcessorClass` - The processor class with the relational DB schema
+- `driveId` - The drive ID to scope the query
 - `queryCallback` - Function that receives the database instance and optional parameters
 - `parameters` - Optional parameters for the query
+- `options` - Optional `useRelationalQueryOptions` (e.g. `hashNamespace`)
 
 ### Return Value
 
@@ -367,6 +379,14 @@ function UserCount() {
 
 </details>
 
+### 4. useRelationalQueryOptions
+
+```typescript
+export type useRelationalQueryOptions = { hashNamespace?: boolean };
+```
+
+_Description pending — see source._
+
 ## Advanced Patterns
 
 ### Working with Dynamic Parameters
@@ -383,12 +403,13 @@ You need to create queries that update automatically when search terms, filters,
 The `createProcessorQuery` hook automatically handles parameter changes and memoizes them using deep comparison:
 
 ```typescript
-function useSearchResults() {
+function useSearchResults(driveId: string) {
   const [searchTerm, setSearchTerm] = useState("");
   const [category, setCategory] = useState("all");
 
   // Query automatically updates when searchTerm or category changes
   const result = useTypedQuery(
+    driveId,
     (db, params) => {
       let query = db.selectFrom("products").selectAll();
 
@@ -432,8 +453,8 @@ You need to write complex SQL queries that are easier to express in raw SQL than
 You can return raw SQL queries from your callback:
 
 ```typescript
-function useCustomUserStats() {
-  return useTypedQuery(() => {
+function useCustomUserStats(driveId: string) {
+  return useTypedQuery(driveId, () => {
     return {
       sql: `
         SELECT 
@@ -450,8 +471,13 @@ function useCustomUserStats() {
 }
 
 // With parameters
-function useUserPostsByDateRange(startDate: string, endDate: string) {
+function useUserPostsByDateRange(
+  driveId: string,
+  startDate: string,
+  endDate: string,
+) {
   return useTypedQuery(
+    driveId,
     (db, params) => {
       return {
         sql: `
@@ -491,8 +517,8 @@ You need to fetch related data from multiple tables with complex relationships.
 Use Kysely's join capabilities within your query callbacks:
 
 ```typescript
-function useUsersWithPosts() {
-  return useTypedQuery((db) => {
+function useUsersWithPosts(driveId: string) {
+  return useTypedQuery(driveId, (db) => {
     return db
       .selectFrom("users")
       .leftJoin("posts", "users.id", "posts.author_id")
@@ -508,8 +534,9 @@ function useUsersWithPosts() {
 }
 
 // More complex example with multiple joins and aggregations
-function useUserDashboardData(userId: number) {
+function useUserDashboardData(driveId: string, userId: number) {
   return useTypedQuery(
+    driveId,
     (db, params) => {
       return db
         .selectFrom("users")
@@ -586,27 +613,30 @@ Create focused, reusable hooks for different data access patterns:
 
 ```typescript
 // ✅ Good - Focused, reusable hooks
-export function useUsers() {
-  return useTypedQuery((db) => db.selectFrom("users").selectAll().compile());
+export function useUsers(driveId: string) {
+  return useTypedQuery(driveId, (db) =>
+    db.selectFrom("users").selectAll().compile(),
+  );
 }
 
-export function useUserById(id: number) {
+export function useUserById(driveId: string, id: number) {
   return useTypedQuery(
+    driveId,
     (db, params) =>
       db.selectFrom("users").selectAll().where("id", "=", params.id).compile(),
     { id },
   );
 }
 
-export function useActiveUsers() {
-  return useTypedQuery((db) =>
+export function useActiveUsers(driveId: string) {
+  return useTypedQuery(driveId, (db) =>
     db.selectFrom("users").selectAll().where("active", "=", true).compile(),
   );
 }
 
 // ❌ Avoid - Too generic or complex
-export function useEverything() {
-  return useTypedQuery((db) =>
+export function useEverything(driveId: string) {
+  return useTypedQuery(driveId, (db) =>
     db
       .selectFrom("users")
       .leftJoin("posts", "users.id", "posts.author_id")
@@ -671,8 +701,8 @@ function BadUserList() {
 
 ```typescript
 // ✅ Good - Focused query
-function useUserNames() {
-  return useTypedQuery((db) =>
+function useUserNames(driveId: string) {
+  return useTypedQuery(driveId, (db) =>
     db
       .selectFrom("users")
       .select(["id", "name"]) // Only what you need
@@ -681,8 +711,9 @@ function useUserNames() {
 }
 
 // ✅ Good - Stable parameters
-function useUsersByStatus(status: string) {
+function useUsersByStatus(driveId: string, status: string) {
   return useTypedQuery(
+    driveId,
     (db, params) =>
       db
         .selectFrom("users")
@@ -694,8 +725,8 @@ function useUsersByStatus(status: string) {
 }
 
 // ❌ Avoid - Unnecessary data
-function useEverythingAboutUsers() {
-  return useTypedQuery((db) =>
+function useEverythingAboutUsers(driveId: string) {
+  return useTypedQuery(driveId, (db) =>
     db
       .selectFrom("users")
       .leftJoin("posts", "users.id", "posts.author_id")
@@ -725,10 +756,11 @@ Check that your parameters are actually changing in content, not just reference:
 ```typescript
 // ✅ Good - Parameters change in content
 const [userId, setUserId] = useState(1);
-const result = useUserById(userId); // Updates when userId changes
+const result = useUserById(driveId, userId); // Updates when userId changes
 
 // ❌ Common mistake - Same content, different objects
 const result = useTypedQuery(
+  driveId,
   (db, params) => /* query */,
   { userId: user.id } // New object every render, but same content
 );
@@ -736,6 +768,7 @@ const result = useTypedQuery(
 // ✅ Better - Extract stable values
 const userId = user.id;
 const result = useTypedQuery(
+  driveId,
   (db, params) => /* query */,
   { userId } // Stable parameter
 );
@@ -764,17 +797,17 @@ Make sure your callback returns the correct type:
 
 ```typescript
 // ✅ Good - Returns QueryCallbackReturnType
-const result = useTypedQuery((db) => {
+const result = useTypedQuery(driveId, (db) => {
   return db.selectFrom("users").selectAll().compile(); // Has sql property
 });
 
 // ❌ Error - Missing .compile()
-const result = useTypedQuery((db) => {
+const result = useTypedQuery(driveId, (db) => {
   return db.selectFrom("users").selectAll(); // No sql property
 });
 
 // ✅ Good - Raw SQL format
-const result = useTypedQuery(() => {
+const result = useTypedQuery(driveId, () => {
   return {
     sql: "SELECT * FROM users",
     parameters: [],
@@ -799,8 +832,9 @@ Check for unstable parameters or overly complex queries:
 
 ```typescript
 // ❌ Problem - New object every render
-function BadComponent({ user }) {
+function BadComponent({ driveId, user }) {
   const result = useTypedQuery(
+    driveId,
     (db, params) => /* query */,
     {
       filter: { status: 'active', dept: user.department } // New object each render
@@ -809,21 +843,23 @@ function BadComponent({ user }) {
 }
 
 // ✅ Solution - Stable parameters
-function GoodComponent({ user }) {
+function GoodComponent({ driveId, user }) {
   const filter = useMemo(() => ({
     status: 'active',
     dept: user.department
   }), [user.department]);
 
   const result = useTypedQuery(
+    driveId,
     (db, params) => /* query */,
     { filter }
   );
 }
 
 // ✅ Even better - Direct values
-function BetterComponent({ user }) {
+function BetterComponent({ driveId, user }) {
   const result = useTypedQuery(
+    driveId,
     (db, params) => /* query */,
     {
       status: 'active',

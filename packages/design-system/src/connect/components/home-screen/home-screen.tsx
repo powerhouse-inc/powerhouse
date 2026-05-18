@@ -11,11 +11,11 @@ export const HomeScreen = function HomeScreen(props: HomeScreenProps) {
   return (
     <div
       className={twMerge(
-        "container relative mx-auto flex h-full flex-col",
+        "relative container mx-auto flex h-full flex-col",
         containerClassName,
       )}
     >
-      <div className="m-8 flex flex-wrap justify-center gap-4 pt-12">
+      <div className="m-8 flex flex-wrap justify-center gap-4 bg-white pt-12">
         <HomeBackgroundImage />
         {children}
       </div>

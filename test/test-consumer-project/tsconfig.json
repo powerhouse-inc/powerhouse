@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "outDir": "./dist",
+    "outDir": "./.tsbuild",
     "rootDir": ".",
     "module": "nodenext",
     "target": "esnext",
