@@ -136,7 +136,7 @@ async function startLocalVetraSwitchboard(args: VetraArgs, logger?: ILogger) {
         processorConfig,
         basePath: undefined,
         keypairPath: undefined,
-        dbPath: undefined,
+        dbPath: args.dbPath,
         useIdentity: undefined,
         migrate: undefined,
         migrateStatus: undefined,

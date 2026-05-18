@@ -171,12 +171,12 @@ async function initServer(
   const readModelPath = dbPath || ".ph/read-storage";
 
   const reactorDbUrl =
+    options.dbPath ??
     process.env.PH_REACTOR_DATABASE_URL ??
     process.env.PH_SWITCHBOARD_DATABASE_URL;
+  const reactorPath = reactorDbUrl || "./.ph/reactor-storage";
   const reactorPgliteDir =
-    !reactorDbUrl || !isPostgresUrl(reactorDbUrl)
-      ? "./.ph/reactor-storage"
-      : null;
+    !reactorDbUrl || !isPostgresUrl(reactorDbUrl) ? reactorPath : null;
   const readModelPgliteDir =
     !dbPath || !isPostgresUrl(dbPath) ? readModelPath : null;
 
@@ -665,7 +665,7 @@ export const startSwitchboard = async (
     renown = await initRenown(options.identity);
   } catch (e) {
     logger.warn("Failed to initialize ConnectCrypto: @error", e);
-    if (options.identity?.requireExisting) {
+    if (options.identity.requireExisting) {
       throw new Error(
         'Identity required but failed to initialize. Run "ph login" first.',
         { cause: e },
