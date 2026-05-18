@@ -32,6 +32,7 @@
     "knip": "knip",
     "postinstall": "pnpm update-ts-references",
     "add-dark-mode": "tsx scripts/dark-mode/main.ts",
+    "add-classes": "tsx scripts/dark-mode/add-classes.ts",
     "replace-classes": "tsx scripts/dark-mode/replace-classes.ts",
     "remove-classes": "tsx scripts/dark-mode/remove-classes.ts"
   },
