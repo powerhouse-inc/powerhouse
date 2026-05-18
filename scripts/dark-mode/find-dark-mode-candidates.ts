@@ -21,7 +21,7 @@ const ignoredDirs = [
   ".test-output",
   "test",
   "flaky",
-  "scripts"
+  "scripts",
 ] as const;
 
 const excludeGlobs = ignoredDirs.flatMap(

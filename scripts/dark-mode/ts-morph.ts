@@ -1,6 +1,7 @@
 import path from "node:path";
 import { isStrictEqual, when } from "remeda";
-import { Project, SourceFile, StringLiteral, SyntaxKind } from "ts-morph";
+import type { SourceFile, StringLiteral } from "ts-morph";
+import { Project, SyntaxKind } from "ts-morph";
 import type { ClassName, FilePath } from "./types.js";
 
 /**
