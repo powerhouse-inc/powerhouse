@@ -42,7 +42,11 @@ const CopyIcon = ({
               "opacity-0 transition-opacity duration-500 group-hover:opacity-100",
           )}
         >
-          <Icon name="Copy" size={16} className={cn("text-gray-500")} />
+          <Icon
+            name="Copy"
+            size={16}
+            className={cn("text-gray-500 dark:text-slate-100")}
+          />
         </button>
       </Tooltip>
     </TooltipProvider>

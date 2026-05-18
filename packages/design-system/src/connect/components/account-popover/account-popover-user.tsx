@@ -33,7 +33,7 @@ export const AccountPopoverUser: FC<AccountPopoverUserProps> = ({
   }, []);
 
   return (
-    <div className="flex flex-col divide-y divide-gray-200 text-gray-900">
+    <div className="flex flex-col divide-y divide-gray-200 text-gray-900 dark:text-slate-50">
       <div className="px-3 py-2">
         {username && <div className="text-sm font-medium">{username}</div>}
         <div className="mt-1 flex items-center gap-2">
@@ -66,7 +66,7 @@ export const AccountPopoverUser: FC<AccountPopoverUserProps> = ({
             href={etherscanUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-2 text-sm text-gray-900 hover:text-gray-600"
+            className="flex items-center gap-2 text-sm text-gray-900 hover:text-gray-600 dark:text-slate-50 dark:hover:text-slate-100"
           >
             <Icon name="Ethscan" size={14} />
             View on Etherscan
@@ -77,7 +77,7 @@ export const AccountPopoverUser: FC<AccountPopoverUserProps> = ({
         <button
           onClick={onDisconnect}
           className={twMerge(
-            "flex w-full items-center gap-2 text-sm text-red-900",
+            "flex w-full items-center gap-2 text-sm text-red-900 dark:text-red-400",
             onDisconnect
               ? "cursor-pointer hover:text-red-700"
               : "pointer-events-none cursor-wait",

@@ -16,7 +16,7 @@ export function Tabs({
     >
       <div className="flex w-full shrink-0 justify-between">
         {/* <EditorUndoRedoButtons {...props} /> */}
-        <List className="flex w-full gap-x-2 rounded-xl bg-slate-50 p-1 text-sm font-semibold text-gray-600 outline-none">
+        <List className="flex w-full gap-x-2 rounded-xl bg-slate-50 p-1 text-sm font-semibold text-gray-600 outline-none dark:bg-slate-800 dark:text-slate-100">
           {React.Children.map(children, (child, i) => {
             if (!React.isValidElement(child)) return;
             const { label, disabled } = child.props as TabContentProps;
@@ -33,7 +33,7 @@ export function Tabs({
           })}
         </List>
       </div>
-      <div className="mt-3 min-h-0 flex-1 rounded-md bg-white">
+      <div className="mt-3 min-h-0 flex-1 rounded-md bg-white dark:bg-slate-900">
         {React.Children.map(children, (child, i) => {
           if (!React.isValidElement(child)) return;
           const { label } = child.props as TabContentProps;

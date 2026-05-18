@@ -21,7 +21,7 @@ export function Address(props: AddressProps) {
     <CodePopover
       content={<FormattedJsonViewer value={{ address }} />}
       trigger={
-        <span className="flex w-fit cursor-pointer items-center gap-1 rounded-lg bg-gray-100 p-1 text-xs text-slate-100">
+        <span className="flex w-fit cursor-pointer items-center gap-1 rounded-lg bg-gray-100 p-1 text-xs text-slate-100 dark:bg-slate-700 dark:text-gray-500">
           <ENSAvatar
             address={address}
             chainId={chainId}

@@ -30,7 +30,7 @@ export const PowerhouseButton = forwardRef(function PowerhouseButton(
 
   const colorStyles = {
     light:
-      "bg-gray-200 text-gray-600 hover:text-gray-700 hover:border-gray-300 active:border-slate-100 active:text-gray-600 disabled:text-gray-400",
+      "bg-gray-200 text-gray-600 hover:text-gray-700 hover:border-gray-300 active:border-slate-100 active:text-gray-600 disabled:text-gray-400 dark:bg-slate-600 dark:text-slate-50 dark:hover:text-white",
     dark: "bg-gray-800 text-slate-50 hover:bg-slate-800 active:border-slate-700 disabled:bg-gray-300 disabled:text-slate-100",
     red: "bg-red-900 text-slate-50 hover:opacity-80 active:border-red-800 disabled:text-red-400 disabled:opacity-100",
     blue: "bg-blue-900 text-slate-50 hover:opacity-80 active:border-blue-800 disabled:text-blue-400 disabled:opacity-100",

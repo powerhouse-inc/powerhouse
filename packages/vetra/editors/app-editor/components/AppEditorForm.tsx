@@ -128,7 +128,9 @@ export const AppEditorForm = () => {
   return (
     <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-medium text-gray-900">App Configuration</h2>
+        <h2 className="text-lg font-medium text-gray-900 dark:text-slate-50">
+          App Configuration
+        </h2>
         <StatusPill
           status={status === "CONFIRMED" ? "confirmed" : "draft"}
           label={status === "CONFIRMED" ? "Confirmed" : "Draft"}
@@ -139,7 +141,7 @@ export const AppEditorForm = () => {
       <div>
         <label
           htmlFor="app-name"
-          className="mb-2 block text-sm font-medium text-gray-700"
+          className="mb-2 block text-sm font-medium text-gray-700 dark:text-slate-50"
         >
           App Name
         </label>
@@ -150,7 +152,7 @@ export const AppEditorForm = () => {
           onChange={(e) => handleSetAppName(e.target.value)}
           disabled={isReadOnly}
           className={`w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none ${
-            isReadOnly ? "cursor-not-allowed bg-gray-100" : ""
+            isReadOnly ? "cursor-not-allowed bg-gray-100 dark:bg-slate-700" : ""
           }`}
           placeholder="Enter app name"
         />
@@ -160,7 +162,7 @@ export const AppEditorForm = () => {
       <div>
         <label
           htmlFor="document-types"
-          className="mb-2 block text-sm font-medium text-gray-700"
+          className="mb-2 block text-sm font-medium text-gray-700 dark:text-slate-50"
         >
           Document Types
         </label>
@@ -168,7 +170,7 @@ export const AppEditorForm = () => {
           {!isReadOnly && (
             <select
               onChange={(e) => handleDocumentTypeSelection(e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-slate-600"
             >
               <option>Select a document type to add</option>
               <option>--- Vetra drive document types ---</option>
@@ -201,11 +203,13 @@ export const AppEditorForm = () => {
             {selectedDocumentTypes.length > 0 ? (
               selectedDocumentTypes.map((type) => (
                 <div key={type} className="flex items-center py-1">
-                  <span className="text-sm text-gray-700">{type}</span>
+                  <span className="text-sm text-gray-700 dark:text-slate-50">
+                    {type}
+                  </span>
                   {!isReadOnly && (
                     <button
                       onClick={() => handleRemoveDocumentType(type)}
-                      className="ml-2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                      className="ml-2 text-gray-400 hover:text-gray-600 focus:outline-none dark:text-slate-200 dark:hover:text-slate-100"
                     >
                       ×
                     </button>
@@ -213,7 +217,9 @@ export const AppEditorForm = () => {
                 </div>
               ))
             ) : (
-              <span className="text-sm text-gray-700">All documents (*)</span>
+              <span className="text-sm text-gray-700 dark:text-slate-50">
+                All documents (*)
+              </span>
             )}
           </div>
         </div>
@@ -221,7 +227,7 @@ export const AppEditorForm = () => {
 
       {/* Drag and Drop Settings */}
       <div>
-        <h3 className="mb-4 text-base font-medium text-gray-900">
+        <h3 className="mb-4 text-base font-medium text-gray-900 dark:text-slate-50">
           Drag and Drop Settings
         </h3>
 
@@ -238,7 +244,7 @@ export const AppEditorForm = () => {
                 isReadOnly ? "cursor-not-allowed" : ""
               }`}
             />
-            <span className="text-sm font-medium text-gray-700">
+            <span className="text-sm font-medium text-gray-700 dark:text-slate-50">
               Enable drag and drop
             </span>
           </label>

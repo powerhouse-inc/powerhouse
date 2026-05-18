@@ -14,7 +14,7 @@ export const PaginationButton: React.FC<PaginationButtonProps> = ({
   ...props
 }) => {
   const className = twMerge(
-    "h-8 min-w-8 border border-solid border-gray-300 bg-white px-3 py-1 text-xs text-gray-900 hover:bg-gray-100",
+    "h-8 min-w-8 border border-solid border-gray-300 bg-white px-3 py-1 text-xs text-gray-900 hover:bg-gray-100 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-50 dark:hover:bg-slate-700",
     !active && "border-0",
   );
 

@@ -51,7 +51,7 @@ export function AddDriveModal(props: AddDriveModalProps) {
       <div
         {...containerProps}
         className={twMerge(
-          "w-[408px] rounded-2xl bg-white p-6",
+          "w-[408px] rounded-2xl bg-white p-6 dark:bg-slate-900",
           containerProps?.className,
         )}
       >

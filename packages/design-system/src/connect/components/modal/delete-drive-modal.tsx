@@ -19,7 +19,7 @@ export const ConnectDeleteDriveModal: React.FC<ConnectDeleteDriveModalProps> = (
 
   return (
     <ConnectConfirmationModal
-      bodyProps={{ className: "p-0 bg-white my-0" }}
+      bodyProps={{ className: "p-0 bg-white my-0 dark:bg-slate-900" }}
       containerProps={{ className: "w-[450px]" }}
       continueButtonProps={{
         disabled: inputName !== driveName,
@@ -31,7 +31,7 @@ export const ConnectDeleteDriveModal: React.FC<ConnectDeleteDriveModalProps> = (
       {...confirmationModalProps}
     >
       <div>
-        <div className="my-6 rounded-md bg-slate-50 p-4 text-center">
+        <div className="my-6 rounded-md bg-slate-50 p-4 text-center dark:bg-slate-800">
           {body}
         </div>
         <div>

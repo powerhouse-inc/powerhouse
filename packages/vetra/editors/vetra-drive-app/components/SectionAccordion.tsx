@@ -29,7 +29,9 @@ export const SectionAccordion: React.FC<SectionAccordionProps> = ({
           isOpen ? "rotate-90" : ""
         }`}
       />
-      <h2 className="text-base font-semibold text-gray-800">{title}</h2>
+      <h2 className="text-base font-semibold text-gray-800 dark:text-slate-50">
+        {title}
+      </h2>
       {actionButton && <div className="ml-auto">{actionButton}</div>}
     </div>
   );

@@ -70,7 +70,7 @@ export const FormLabel: React.FC<FormLabelProps> = ({
               size={16}
               className={cn(
                 "ml-1 cursor-pointer text-gray-600 hover:text-gray-500 dark:text-gray-500 dark:hover:text-gray-500",
-                disabled && "text-gray-500",
+                disabled && "text-gray-500 dark:text-slate-100",
               )}
             />
           </Tooltip>

@@ -43,7 +43,7 @@ const TokenForm = () => {
   const submitDisabled = formData.name === "";
 
   return (
-    <div className="bg-white p-5">
+    <div className="bg-white p-5 dark:bg-slate-900">
       <span className="mb-4 mt-8 font-semibold">Create new token</span>
       <form
         onSubmit={handleSubmit}
@@ -52,7 +52,7 @@ const TokenForm = () => {
         <div className="flex-1 flex-col">
           <label
             htmlFor="name"
-            className="block text-sm font-semibold text-black"
+            className="block text-sm font-semibold text-black dark:text-slate-50"
           >
             Name
           </label>
@@ -62,13 +62,13 @@ const TokenForm = () => {
             name="name"
             value={formData.name}
             onChange={handleChange}
-            className="mt-1 w-full rounded-md border border-gray-300 p-2"
+            className="mt-1 w-full rounded-md border border-gray-300 p-2 dark:border-slate-600"
           />
         </div>
         <div className="flex-1 flex-col">
           <label
             htmlFor="duration"
-            className="block text-sm font-semibold text-black"
+            className="block text-sm font-semibold text-black dark:text-slate-50"
           >
             Duration
           </label>
@@ -78,7 +78,7 @@ const TokenForm = () => {
             aria-placeholder="Select Duration"
             value={formData.duration}
             onChange={handleChange}
-            className="mt-1 w-full rounded-md border border-gray-300 p-2"
+            className="mt-1 w-full rounded-md border border-gray-300 p-2 dark:border-slate-600"
           >
             <option value="3600">1 Hour</option>
             <option value="86400">1 Day</option>
@@ -91,7 +91,7 @@ const TokenForm = () => {
         <div className="flex-1 flex-col">
           <label
             htmlFor="allowedOrigin"
-            className="block text-sm font-semibold text-black"
+            className="block text-sm font-semibold text-black dark:text-slate-50"
           >
             Allowed Origin
           </label>
@@ -102,7 +102,7 @@ const TokenForm = () => {
             placeholder="*"
             value={formData.allowedOrigin}
             onChange={handleChange}
-            className="mt-1 w-full rounded-md border border-gray-300 p-2"
+            className="mt-1 w-full rounded-md border border-gray-300 p-2 dark:border-slate-600"
           />
         </div>
         <div className="flex h-full flex-col items-end">
@@ -122,15 +122,15 @@ const TokenForm = () => {
           <div className="outline-hidden focus:outline-hidden fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overflow-x-hidden">
             <div className="relative mx-auto my-6 w-auto max-w-3xl">
               {/*content*/}
-              <div className="outline-hidden focus:outline-hidden relative flex w-full flex-col rounded-lg border-0 bg-white shadow-lg">
+              <div className="outline-hidden focus:outline-hidden relative flex w-full flex-col rounded-lg border-0 bg-white shadow-lg dark:bg-slate-900">
                 {/*header*/}
                 <div className="border-blueGray-200 flex items-start justify-between rounded-t border-b border-solid p-5">
                   <h3 className="text-3xl font-semibold">API Token</h3>
                   <button
-                    className="outline-hidden focus:outline-hidden float-right ml-auto border-0 bg-transparent p-1 text-3xl font-semibold leading-none text-black opacity-5"
+                    className="outline-hidden focus:outline-hidden float-right ml-auto border-0 bg-transparent p-1 text-3xl font-semibold leading-none text-black opacity-5 dark:text-slate-50"
                     onClick={() => setShowModal(false)}
                   >
-                    <span className="outline-hidden focus:outline-hidden block h-6 w-6 bg-transparent text-2xl text-black opacity-5">
+                    <span className="outline-hidden focus:outline-hidden block h-6 w-6 bg-transparent text-2xl text-black opacity-5 dark:text-slate-50">
                       ×
                     </span>
                   </button>
@@ -144,7 +144,7 @@ const TokenForm = () => {
                 {/*footer*/}
                 <div className="border-blueGray-200 flex items-center justify-end rounded-b border-t border-solid p-6">
                   <button
-                    className="background-transparent outline-hidden focus:outline-hidden mb-1 mr-1 px-6 py-2 text-sm font-bold uppercase text-red-500 transition-all duration-150 ease-linear"
+                    className="background-transparent outline-hidden focus:outline-hidden mb-1 mr-1 px-6 py-2 text-sm font-bold uppercase text-red-500 transition-all duration-150 ease-linear dark:text-red-400"
                     type="button"
                     onClick={() => setShowModal(false)}
                   >

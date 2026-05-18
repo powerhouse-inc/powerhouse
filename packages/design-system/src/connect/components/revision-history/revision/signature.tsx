@@ -14,7 +14,7 @@ export function Signature(props: SignatureProps) {
   return (
     <CodePopover
       trigger={
-        <span className="flex w-fit cursor-pointer items-center gap-1 rounded-lg border border-gray-200 bg-white px-2 py-1">
+        <span className="flex w-fit cursor-pointer items-center gap-1 rounded-lg border border-gray-200 bg-white px-2 py-1 dark:border-slate-700 dark:bg-slate-900">
           <VerificationStatus signatures={signatures} />{" "}
           <Icon className="text-gray-300" name="InfoSquare" size={16} />
         </span>
@@ -38,9 +38,9 @@ function VerificationStatus(props: SignatureProps) {
   const verificationStatusText = `${verifiedSignaturesCount}/${signatureCount} ${signatureText} verified`;
   const color =
     verifiedSignaturesCount === 0
-      ? "text-red-800"
+      ? "text-red-800 dark:text-red-400"
       : verifiedSignaturesCount === signatureCount
-        ? "text-green-700"
+        ? "text-green-700 dark:text-green-400"
         : "text-orange-700";
 
   return <span className={`text-xs ${color}`}>{verificationStatusText}</span>;

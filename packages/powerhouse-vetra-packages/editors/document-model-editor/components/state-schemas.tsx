@@ -172,7 +172,7 @@ function StateEditor({
             customLinter={customLinter}
           />
           {schemaErrors.length > 0 && (
-            <p className="mt-2 text-sm text-red-600">
+            <p className="mt-2 text-sm text-red-600 dark:text-red-400">
               {schemaErrors[0].message}
             </p>
           )}
@@ -186,7 +186,7 @@ function StateEditor({
           <Checkbox
             value={syncWithSchema}
             onChange={setSyncWithSchema}
-            className="mb-2 w-fit rounded-md border border-gray-200 bg-gray-50 pl-2 text-sm font-medium whitespace-nowrap text-gray-800 transition-colors hover:bg-gray-100 hover:text-gray-900 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+            className="mb-2 w-fit rounded-md border border-gray-200 bg-gray-50 pl-2 text-sm font-medium whitespace-nowrap text-gray-800 transition-colors hover:bg-gray-100 hover:text-gray-900 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-50 dark:hover:bg-slate-700 dark:hover:text-slate-50"
             label={
               <div className="flex items-center gap-2 py-2 pr-2">
                 Sync with schema{" "}
@@ -213,7 +213,10 @@ function StateEditor({
             updateDocumentInModel={handleInitialStateUpdate}
           />
           {initialValueErrors.map((error, index) => (
-            <p key={index} className="mt-2 text-sm text-red-600">
+            <p
+              key={index}
+              className="mt-2 text-sm text-red-600 dark:text-red-400"
+            >
               {error instanceof StateValidationError ? (
                 <StateValidationErrorMessage error={error} />
               ) : (

@@ -14,11 +14,11 @@ export function Skip(props: SkipProps) {
 
   return (
     <article className="grid grid-cols-[1fr,auto,1fr] items-center py-2">
-      <div className="h-px rounded-full bg-slate-100" />
-      <div className="mx-3 text-xs text-slate-100">
+      <div className="h-px rounded-full bg-slate-100 dark:bg-slate-700" />
+      <div className="mx-3 text-xs text-slate-100 dark:text-gray-500">
         [Skipped Revision {skippedRevisions}]
       </div>
-      <div className="h-px rounded-full bg-slate-100" />
+      <div className="h-px rounded-full bg-slate-100 dark:bg-slate-700" />
     </article>
   );
 }

@@ -21,6 +21,13 @@ export function Divider({ className, size = "sm", margin = "md" }: Props) {
   const sizeClass = getSize();
   const marginClass = getMargin();
   return (
-    <div className={cn("bg-gray-200", sizeClass, marginClass, className)} />
+    <div
+      className={cn(
+        "bg-gray-200 dark:bg-slate-600",
+        sizeClass,
+        marginClass,
+        className,
+      )}
+    />
   );
 }

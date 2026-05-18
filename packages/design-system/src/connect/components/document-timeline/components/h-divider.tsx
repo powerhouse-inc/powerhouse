@@ -88,7 +88,7 @@ export const HDivider = (props: HDividerProps) => {
         <div
           className={twMerge(
             "mx-0.5 flex h-6.25 w-1.5 cursor-pointer flex-col items-center justify-center rounded-xs hover:bg-blue-300",
-            isSelected && "bg-blue-300",
+            isSelected && "bg-blue-300 dark:bg-blue-700",
             className,
           )}
           onClick={onClick}

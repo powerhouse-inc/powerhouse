@@ -36,7 +36,7 @@ export default function Header() {
     }
   };
   return (
-    <header className="fixed top-0 h-14 w-full bg-orange-100 text-black">
+    <header className="fixed top-0 h-14 w-full bg-orange-100 text-black dark:text-slate-50">
       <nav className="flex h-14 flex-row items-center justify-between">
         <div className="flex items-start">
           <SwitchboardLink href="/">
@@ -58,7 +58,7 @@ export default function Header() {
               id="graphqlPlayground"
               name="graphqlPlayground"
               aria-placeholder="Select GraphQL Playground"
-              className="w-full rounded-md border border-gray-300 p-2"
+              className="w-full rounded-md border border-gray-300 p-2 dark:border-slate-600"
               onChange={selectGraphQLPlayground}
             >
               <option value="">GraphQL Playgrounds</option>

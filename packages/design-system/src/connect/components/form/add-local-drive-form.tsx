@@ -38,7 +38,10 @@ export function AddLocalDriveForm(props: AddLocalDriveFormProps) {
     >
       <div className="flex flex-col gap-4">
         <div>
-          <Label htmlFor="name" className="text-sm font-medium text-gray-800">
+          <Label
+            htmlFor="name"
+            className="text-sm font-medium text-gray-800 dark:text-slate-50"
+          >
             Drive Name
           </Label>
           <FormInput
@@ -52,7 +55,7 @@ export function AddLocalDriveForm(props: AddLocalDriveFormProps) {
         <div>
           <Label
             htmlFor="driveApp"
-            className="text-sm font-medium text-gray-800"
+            className="text-sm font-medium text-gray-800 dark:text-slate-50"
           >
             Drive App
           </Label>
@@ -61,7 +64,7 @@ export function AddLocalDriveForm(props: AddLocalDriveFormProps) {
         <div>
           <Label
             htmlFor="sharingType"
-            className="text-sm font-medium text-gray-800"
+            className="text-sm font-medium text-gray-800 dark:text-slate-50"
           >
             Location
           </Label>

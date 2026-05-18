@@ -25,7 +25,7 @@ export function Disclosure(props: DisclosureProps) {
     <div className={twMerge(containerClassName)}>
       <div
         className={twMerge(
-          "flex cursor-pointer justify-between text-gray-500",
+          "flex cursor-pointer justify-between text-gray-500 dark:text-slate-100",
           toggleClassName,
         )}
         onClick={onOpenChange}

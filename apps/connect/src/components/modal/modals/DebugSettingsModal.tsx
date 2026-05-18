@@ -34,7 +34,7 @@ export const DebugSettingsModal: React.FC = () => {
         className: "rounded-2xl",
       }}
     >
-      <div className="w-[700px] rounded-2xl bg-white p-6">
+      <div className="w-[700px] rounded-2xl bg-white p-6 dark:bg-slate-900">
         <div className="mb-6 flex justify-between">
           <div className="text-xl font-bold">Debug Tools</div>
           <button id="close-modal" onClick={() => closePHModal()}>
@@ -51,7 +51,7 @@ export const DebugSettingsModal: React.FC = () => {
             const label = shortGitSha(sha);
             return url ? (
               <a
-                className="ml-2 font-mono text-xs font-normal text-blue-600 hover:underline"
+                className="ml-2 font-mono text-xs font-normal text-blue-600 hover:underline dark:text-blue-400"
                 href={url}
                 target="_blank"
                 rel="noreferrer noopener"
@@ -61,7 +61,7 @@ export const DebugSettingsModal: React.FC = () => {
               </a>
             ) : (
               <span
-                className="ml-2 font-mono text-xs font-normal text-gray-500"
+                className="ml-2 font-mono text-xs font-normal text-gray-500 dark:text-slate-100"
                 title={sha}
               >
                 ({label})
@@ -104,7 +104,7 @@ export const DebugSettingsModal: React.FC = () => {
               Set invalid app version:
             </label>
             <FormInput
-              containerClassName="p-1 bg-white border border-gray-200 rounded-md text-sm"
+              containerClassName="p-1 bg-white border border-gray-200 rounded-md text-sm dark:bg-slate-900 dark:border-slate-700"
               inputClassName="text-xs font-normal"
               id="appVersion"
               icon={

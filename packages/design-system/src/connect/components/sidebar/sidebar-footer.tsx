@@ -1,4 +1,5 @@
 import { Icon, SidebarFooter } from "#design-system";
+import { useTheme } from "@powerhousedao/reactor-browser";
 import type { ComponentProps } from "react";
 import { twMerge } from "tailwind-merge";
 import { SidebarLogin } from "./sidebar-login.js";
@@ -33,11 +34,12 @@ export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
   etherscanUrl = "",
   ...props
 }) => {
+  const { theme, setTheme } = useTheme();
   return (
     <SidebarFooter
       {...props}
       className={twMerge(
-        "flex flex-col gap-2 border-t border-gray-300 px-2 py-4",
+        "flex flex-col gap-2 border-t border-gray-300 px-2 py-4 dark:border-slate-600",
         className,
       )}
     >
@@ -48,7 +50,11 @@ export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
           className="flex w-full cursor-pointer items-center justify-center outline-none"
           onClick={onHomeClick}
         >
-          <Icon className="text-gray-600" name="ConnectSmall" size={24} />
+          <Icon
+            className="text-gray-600 dark:text-slate-100"
+            name="ConnectSmall"
+            size={24}
+          />
         </button>
       )}
       {showDebug && onDebugClick && (
@@ -59,7 +65,7 @@ export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
           className="mt-3 flex w-full cursor-pointer items-center justify-center outline-none"
           onClick={onDebugClick}
         >
-          <Icon className="text-gray-600" name="Tube" />
+          <Icon className="text-gray-600 dark:text-slate-100" name="Tube" />
         </button>
       )}
       <div className={onHomeClick ? "mt-3" : ""}>
@@ -84,11 +90,22 @@ export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
         )}
         onClick={onClickSettings}
       >
-        <Icon className="text-gray-600" name="Settings" />
-        <span className="hidden text-sm/6 font-semibold text-gray-800">
+        <Icon className="text-gray-600 dark:text-slate-100" name="Settings" />
+        <span className="hidden text-sm/6 font-semibold text-gray-800 dark:text-slate-50">
           Settings
         </span>
       </button>
+      <div className="text-xs">
+        <button onClick={() => setTheme("light")}>
+          light{theme === "light" ? " ✅" : ""}
+        </button>
+        <button onClick={() => setTheme("dark")}>
+          dark{theme === "dark" ? " ✅" : ""}
+        </button>
+        <button onClick={() => setTheme("system")}>
+          system{theme === "system" ? " ✅" : ""}
+        </button>
+      </div>
     </SidebarFooter>
   );
 };

@@ -7,7 +7,13 @@ const filterItems: ConnectSearchBarProps["filterItems"] = [
   {
     id: "project",
     label: ".project",
-    icon: <Icon className="text-red-700" name="Project" size={16} />,
+    icon: (
+      <Icon
+        className="text-red-700 dark:text-red-400"
+        name="Project"
+        size={16}
+      />
+    ),
   },
   {
     id: "budget",
@@ -17,12 +23,24 @@ const filterItems: ConnectSearchBarProps["filterItems"] = [
   {
     id: "profile",
     label: ".profile",
-    icon: <Icon className="text-blue-900" name="Person" size={16} />,
+    icon: (
+      <Icon
+        className="text-blue-900 dark:text-blue-400"
+        name="Person"
+        size={16}
+      />
+    ),
   },
   {
     id: "legal",
     label: ".legal",
-    icon: <Icon className="text-green-900" name="Briefcase" size={16} />,
+    icon: (
+      <Icon
+        className="text-green-900 dark:text-green-400"
+        name="Briefcase"
+        size={16}
+      />
+    ),
   },
   {
     id: "atlas",

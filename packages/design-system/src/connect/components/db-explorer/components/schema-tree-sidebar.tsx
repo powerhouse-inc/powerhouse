@@ -53,15 +53,15 @@ function TreeItem({
     <div>
       <div
         className={twMerge(
-          "flex cursor-pointer items-center gap-1 py-1 pr-2 text-sm hover:bg-gray-100",
-          selected && "bg-blue-50",
+          "flex cursor-pointer items-center gap-1 py-1 pr-2 text-sm hover:bg-gray-100 dark:hover:bg-slate-700",
+          selected && "bg-blue-50 dark:bg-blue-900/20",
         )}
         style={{ paddingLeft: depth * INDENT_PX + 4 }}
         onClick={onClick}
       >
         {hasChildren ? (
           <button
-            className="flex size-4 shrink-0 items-center justify-center text-gray-500 hover:text-gray-700"
+            className="flex size-4 shrink-0 items-center justify-center text-gray-500 hover:text-gray-700 dark:text-slate-100 dark:hover:text-slate-100"
             onClick={handleChevronClick}
             type="button"
           >
@@ -77,8 +77,14 @@ function TreeItem({
         ) : (
           <span className="w-4 shrink-0" />
         )}
-        {icon && <span className="shrink-0 text-gray-500">{icon}</span>}
-        <span className="min-w-0 flex-1 truncate text-gray-700">{label}</span>
+        {icon && (
+          <span className="shrink-0 text-gray-500 dark:text-slate-100">
+            {icon}
+          </span>
+        )}
+        <span className="min-w-0 flex-1 truncate text-gray-700 dark:text-slate-50">
+          {label}
+        </span>
         {selected && (
           <span className="ml-auto size-2 shrink-0 rounded-full bg-blue-500" />
         )}
@@ -102,12 +108,14 @@ function ColumnItem({
 
   return (
     <div
-      className="flex items-center gap-1 py-0.5 pr-2 text-xs text-gray-500"
+      className="flex items-center gap-1 py-0.5 pr-2 text-xs text-gray-500 dark:text-slate-100"
       style={{ paddingLeft: depth * INDENT_PX + 4 }}
     >
       <span className="w-4 shrink-0" />
       <span className="truncate">{column.name}</span>
-      <span className="ml-auto shrink-0 text-gray-400">({typeLabel})</span>
+      <span className="ml-auto shrink-0 text-gray-400 dark:text-slate-200">
+        ({typeLabel})
+      </span>
     </div>
   );
 }
@@ -163,7 +171,7 @@ export function SchemaTreeSidebar({
             <span className="truncate">{schema}</span>
             {onRefresh && (
               <button
-                className="ml-auto p-0.5 text-gray-400 hover:text-gray-600"
+                className="ml-auto p-0.5 text-gray-400 hover:text-gray-600 dark:text-slate-200 dark:hover:text-slate-100"
                 onClick={handleRefreshClick}
                 type="button"
                 disabled={loading}

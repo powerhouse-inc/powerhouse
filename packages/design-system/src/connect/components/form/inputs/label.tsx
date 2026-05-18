@@ -8,7 +8,10 @@ export function Label(props: LabelProps) {
   return (
     <label
       {...labelProps}
-      className={twMerge("block font-semibold text-gray-500", className)}
+      className={twMerge(
+        "block font-semibold text-gray-500 dark:text-slate-100",
+        className,
+      )}
     >
       {children}
     </label>
