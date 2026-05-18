@@ -39,10 +39,7 @@ const makeClassSearchPattern = (classes: readonly string[]) => {
 };
 
 const mapKeys = keys(allMappings);
-console.log({ mapKeys });
 const searchPattern = makeClassSearchPattern(mapKeys);
-
-console.log({ searchPattern });
 
 /**
 
