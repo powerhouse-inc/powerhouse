@@ -39,7 +39,14 @@ RUN ph connect build --base ${PH_CONNECT_BASE_PATH}
 # ============================================================
 # Connect target: nginx serving static files (runs as non-root)
 # ============================================================
-FROM nginx:alpine AS connect
+# Pinned to 1.31.0-alpine for CVE-2026-42945 (heap buffer overflow
+# in ngx_http_rewrite_module — affects 0.6.27 through 1.30.0,
+# fixed in 1.31.0 / 1.30.1). Our SPA-fallback config doesn't hit
+# the trigger pattern (rewrite + PCRE captures + "?" replacement
+# + followed by rewrite/if/set), so we weren't exploitable in
+# practice — but `nginx:alpine` is a moving tag that could regress
+# on any rebuild. Pinning prevents that.
+FROM nginx:1.31.0-alpine AS connect
 
 # Install envsubst for config templating, and chown the nginx runtime
 # directories so the built-in `nginx` user (UID 101) can write the

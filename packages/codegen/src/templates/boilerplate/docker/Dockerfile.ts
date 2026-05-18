@@ -71,7 +71,9 @@ RUN ph connect build --base \${PH_CONNECT_BASE_PATH}
 # -----------------------------------------------------------------------------
 # Connect final stage - nginx
 # -----------------------------------------------------------------------------
-FROM nginx:alpine AS connect
+# Pinned for CVE-2026-42945 (nginx ngx_http_rewrite_module heap buffer
+# overflow — affects 0.6.27 through 1.30.0, fixed in 1.31.0 / 1.30.1).
+FROM nginx:1.31.0-alpine AS connect
 
 # Install envsubst for config templating
 RUN apk add --no-cache gettext
