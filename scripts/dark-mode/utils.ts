@@ -1,7 +1,6 @@
 import {
   conditional,
   constant,
-  endsWith,
   entries,
   filter,
   hasAtLeast,
@@ -9,6 +8,7 @@ import {
   isNot,
   isString,
   join,
+  keys,
   mapValues,
   pipe,
   reduce,
@@ -18,12 +18,13 @@ import {
 } from "remeda";
 import type { StringLiteral } from "ts-morph";
 import { darkPrefix } from "./constants.js";
+import { findFilesWithClasses } from "./find-files-with-classes.js";
+import { allMappings } from "./mappings.js";
 import { getStringLiteralText, maybeUpdateStringLiteral } from "./ts-morph.js";
 import type {
   ClassName,
   ClassNameList,
   ClassNameWithDarkPrefix,
-  ExcludePatterns,
   FilePath,
   LightToDarkMap,
   LightToDarkRecord,
@@ -135,11 +136,14 @@ export const maybeAddNewClasses = (m: LightToDarkMap) => (s: StringLiteral) =>
   );
 
 /**
- * Checks whether a file path should be processed by this migration.
- * */
-export const shouldProcess = (ex: ExcludePatterns) => (fp: FilePath) =>
-  pipe(
-    ex,
-    filter((e) => endsWith(fp, e)),
-    isEmptyish,
-  );
+ * Finds candidate files that contain at least one mapped Tailwind class.
+ *
+ * Uses ripgrep content search first so ts-morph only opens files that are
+ * likely to require migration.
+ */
+
+export const findDarkModeCandidates = async (
+  cwd = process.cwd(),
+): Promise<FilePath[]> => {
+  return findFilesWithClasses(keys(allMappings), cwd);
+};

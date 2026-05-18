@@ -1,5 +1,4 @@
 import { mergeAll } from "remeda";
-import { makeLightToDarkMap } from "./utils.js";
 
 /**
  * Light-to-dark mappings for text color classes.
@@ -104,5 +103,3 @@ export const hover = {
 } as const;
 
 export const allMappings = mergeAll([text, border, bg, hover]);
-
-export const lightToDarkMap = makeLightToDarkMap(allMappings);

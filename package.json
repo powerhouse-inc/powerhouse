@@ -31,7 +31,8 @@
     "check-ts-references": "pnpm update-ts-references --check",
     "knip": "knip",
     "postinstall": "pnpm update-ts-references",
-    "add-dark-mode": "tsx scripts/dark-mode/main.ts"
+    "add-dark-mode": "tsx scripts/dark-mode/main.ts",
+    "replace-classes": "tsx scripts/dark-mode/replace-classes.ts"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.8.1",

@@ -1,7 +1,4 @@
-import type { darkPrefix, excludePatterns } from "./constants.js";
-
-/** File exclusion patterns accepted by {@link shouldProcess}. */
-export type ExcludePatterns = typeof excludePatterns;
+import type { darkPrefix } from "./constants.js";
 
 /** Absolute or relative path to a source file. */
 export type FilePath = string;

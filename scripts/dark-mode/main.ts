@@ -1,21 +1,21 @@
 import { filter, flatMap, forEach, isNot, map, pipe } from "remeda";
-import { excludePatterns } from "./constants.js";
-import { findDarkModeCandidates } from "./find-dark-mode-candidates.js";
-import { lightToDarkMap } from "./mappings.js";
+import { allMappings } from "./mappings.js";
 import {
   addFileToProcess,
   getStringLiterals,
   makeTsMorphProject,
 } from "./ts-morph.js";
 import {
+  findDarkModeCandidates,
   hasDarkModeAlready,
   hasLightMode,
+  makeLightToDarkMap,
   maybeAddNewClasses,
-  shouldProcess,
 } from "./utils.js";
 
 const project = makeTsMorphProject();
 const files = await findDarkModeCandidates();
+const lightToDarkMap = makeLightToDarkMap(allMappings);
 
 /**
  * Migrates candidate string literals by adding generated dark-mode classes when:
@@ -26,7 +26,6 @@ const files = await findDarkModeCandidates();
  */
 pipe(
   files,
-  filter(shouldProcess(excludePatterns)),
   map(addFileToProcess(project)),
   flatMap(getStringLiterals),
   filter(isNot(hasDarkModeAlready)),
