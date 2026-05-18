@@ -36,7 +36,7 @@ export function ConnectDropdownMenu<TItemId extends string>(
       </DropdownMenuTrigger>
       <DropdownMenuContent
         className={twMerge(
-          "cursor-pointer rounded-2xl border border-gray-200 bg-white text-sm font-medium text-slate-500 shadow-lg dark:border-slate-700 dark:bg-slate-900",
+          "cursor-pointer rounded-2xl border border-gray-200 bg-white text-sm font-medium text-slate-500 shadow-lg dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50",
           menuClassName,
         )}
       >

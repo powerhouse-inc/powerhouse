@@ -141,10 +141,10 @@ export function FileItem(props: Props) {
   const content = isReadMode ? (
     <div className="flex w-52 items-center justify-between">
       <div className="mr-2 truncate group-hover:mr-0">
-        <div className="max-h-6 truncate text-sm font-medium group-hover:text-gray-800">
+        <div className="max-h-6 truncate text-sm font-medium group-hover:text-gray-800 dark:group-hover:text-slate-50">
           {fileNode.name}
         </div>
-        <div className="max-h-6 truncate text-xs font-medium text-gray-600 group-hover:text-gray-800 dark:text-slate-100">
+        <div className="max-h-6 truncate text-xs font-medium text-gray-600 group-hover:text-gray-800 dark:text-slate-100 dark:group-hover:text-slate-50">
           {fileNode.documentType}
         </div>
       </div>

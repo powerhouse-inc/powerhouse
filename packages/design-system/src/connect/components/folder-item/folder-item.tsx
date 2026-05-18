@@ -74,7 +74,7 @@ export function FolderItem(props: {
 
   const content =
     isReadMode || !isAllowedToCreateDocuments ? (
-      <div className="ml-3 max-h-6 truncate font-medium text-gray-600 group-hover:text-gray-800 dark:text-slate-100">
+      <div className="ml-3 max-h-6 truncate font-medium text-gray-600 group-hover:text-gray-800 dark:text-slate-100 dark:group-hover:text-slate-50">
         {folderNode.name}
       </div>
     ) : (

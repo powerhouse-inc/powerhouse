@@ -64,7 +64,7 @@ export const ConnectSearchBar: React.FC<ConnectSearchBarProps> = (props) => {
 
   return (
     <div className={cn("flex items-center", className)}>
-      <Icon className="mr-3" name="Search" />
+      <Icon className="mr-3 text-gray-600 dark:text-slate-200" name="Search" />
       <input
         className={twMerge(
           "flex h-[52px] min-w-0 flex-1 items-center rounded-xl border border-gray-200 bg-gray-50 px-4 text-sm text-slate-200 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-gray-400",

@@ -259,7 +259,7 @@ export function RemotesInspector({
         </div>
       )}
 
-      <div className="max-h-full overflow-auto rounded-lg border border-gray-300 dark:border-slate-600">
+      <div className="max-h-full overflow-auto rounded-lg border border-gray-300 dark:border-slate-600 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-rounded-md scrollbar-thumb-gray-300 dark:scrollbar-thumb-slate-600">
         <table className="w-full border-collapse">
           <thead className="sticky top-0 bg-gray-100 dark:bg-slate-700">
             <tr>
@@ -318,7 +318,7 @@ export function RemotesInspector({
               sortedRemotes.map((remote) => (
                 <tr
                   key={remote.id}
-                  className="odd:bg-white even:bg-gray-50 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                  className="odd:bg-white even:bg-gray-50 hover:bg-blue-50 dark:odd:bg-slate-900 dark:even:bg-slate-800 dark:hover:bg-blue-900/20"
                 >
                   <td className="px-3 py-2 text-xs text-gray-900 dark:text-slate-50">
                     <span className="block truncate" title={remote.id}>

@@ -88,7 +88,7 @@ export function DriveSettingsModal(props: DriveSettingsModalProps) {
         )}
       >
         <div className="flex justify-between">
-          <h1 className="text-xl font-bold">Drive settings</h1>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-slate-50">Drive settings</h1>
           <button
             className="flex size-8 items-center justify-center rounded-md bg-gray-100 text-gray-500 outline-none hover:text-gray-900 dark:bg-slate-700 dark:text-slate-100 dark:hover:text-slate-50"
             onClick={handleCancel}
