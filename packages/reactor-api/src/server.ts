@@ -477,7 +477,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     );
     dbClosers.push(...makeDbClosers(knex, pglite));
     // Run document permission migrations
-    await runMigrations(db as Kysely<unknown>);
+    await runMigrations(db as Kysely<unknown>, logger);
     logger.info("Document permission migrations completed");
     documentPermissionService = new DocumentPermissionService(
       db as Kysely<DocumentPermissionDatabase>,
@@ -508,7 +508,9 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   const attachments = await new AttachmentBuilder(
     attachmentDb,
     attachmentStoragePath,
-  ).build();
+  )
+    .withLogger(logger)
+    .build();
   logger.info("Attachment service initialized");
 
   // Initialize package manager

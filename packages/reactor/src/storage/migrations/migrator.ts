@@ -1,5 +1,6 @@
 import { Migrator, sql } from "kysely";
-import type { MigrationProvider, Kysely } from "kysely";
+import type { Migration, MigrationProvider, Kysely } from "kysely";
+import type { ILogger } from "document-model";
 import type { MigrationResult } from "./types.js";
 
 export const REACTOR_SCHEMA = "reactor";
@@ -18,7 +19,12 @@ import * as migration012 from "./012_add_source_remote_column.js";
 import * as migration013 from "./013_create_sync_dead_letters_table.js";
 import * as migration014 from "./014_create_processor_cursor_table.js";
 
-const migrations = {
+const NOOP_MIGRATION: Migration = {
+  async up() {},
+  async down() {},
+};
+
+const migrations: Record<string, Migration> = {
   "001_create_operation_table": migration001,
   "002_create_keyframe_table": migration002,
   "003_create_document_table": migration003,
@@ -36,15 +42,55 @@ const migrations = {
 };
 
 class ProgrammaticMigrationProvider implements MigrationProvider {
+  constructor(private readonly entries: Record<string, Migration>) {}
   getMigrations() {
-    return Promise.resolve(migrations);
+    return Promise.resolve(this.entries);
   }
+}
+
+async function readExecutedMigrationNames(
+  db: Kysely<any>,
+  schema: string,
+): Promise<string[]> {
+  try {
+    const result = await sql<{ name: string }>`
+      SELECT name FROM ${sql.id(schema)}.kysely_migration
+    `.execute(db);
+    return result.rows.map((row) => row.name);
+  } catch {
+    return [];
+  }
+}
+
+// Stub out recorded names we no longer ship so a downgrade doesn't trip Kysely's missing-migration guard.
+async function buildMigrationSet(
+  db: Kysely<any>,
+  schema: string,
+  logger: Pick<ILogger, "warn">,
+): Promise<Record<string, Migration>> {
+  const executedNames = await readExecutedMigrationNames(db, schema);
+  const entries: Record<string, Migration> = { ...migrations };
+  const stubbed: string[] = [];
+  for (const name of executedNames) {
+    if (!(name in entries)) {
+      entries[name] = NOOP_MIGRATION;
+      stubbed.push(name);
+    }
+  }
+  if (stubbed.length > 0) {
+    logger.warn(
+      `[reactor] Stubbing ${stubbed.length} recorded migration(s) not shipped by this version (likely a downgrade): ${stubbed.join(", ")}`,
+    );
+  }
+  return entries;
 }
 
 export async function runMigrations(
   db: Kysely<any>,
   schema: string = REACTOR_SCHEMA,
+  logger?: Pick<ILogger, "warn">,
 ): Promise<MigrationResult> {
+  const log = logger ?? console;
   try {
     await sql`CREATE SCHEMA IF NOT EXISTS ${sql.id(schema)}`.execute(db);
   } catch (error) {
@@ -56,9 +102,12 @@ export async function runMigrations(
     };
   }
 
+  const scopedDb = db.withSchema(schema);
+  const entries = await buildMigrationSet(scopedDb, schema, log);
+
   const migrator = new Migrator({
-    db: db.withSchema(schema),
-    provider: new ProgrammaticMigrationProvider(),
+    db: scopedDb,
+    provider: new ProgrammaticMigrationProvider(entries),
     migrationTableSchema: schema,
   });
 
@@ -95,9 +144,11 @@ export async function getMigrationStatus(
   db: Kysely<any>,
   schema: string = REACTOR_SCHEMA,
 ) {
+  const scopedDb = db.withSchema(schema);
+  const entries = await buildMigrationSet(scopedDb, schema, console);
   const migrator = new Migrator({
-    db: db.withSchema(schema),
-    provider: new ProgrammaticMigrationProvider(),
+    db: scopedDb,
+    provider: new ProgrammaticMigrationProvider(entries),
     migrationTableSchema: schema,
   });
 

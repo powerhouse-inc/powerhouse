@@ -11,6 +11,7 @@ import { DirectAttachmentUploadFactory } from "./direct/direct-attachment-upload
 import {
   runAttachmentMigrations,
   ATTACHMENT_SCHEMA,
+  type MigrationLogger,
 } from "./storage/migrations/migrator.js";
 import { NullAttachmentTransport } from "./null-attachment-transport.js";
 
@@ -25,6 +26,7 @@ export class AttachmentBuilder {
   private transport: IAttachmentTransport = new NullAttachmentTransport();
   private customUploadFactory?: IAttachmentUploadFactory;
   private maxUploadBytes?: number;
+  private logger?: MigrationLogger;
 
   constructor(
     private readonly db: Kysely<any>,
@@ -46,8 +48,17 @@ export class AttachmentBuilder {
     return this;
   }
 
+  withLogger(logger: MigrationLogger): this {
+    this.logger = logger;
+    return this;
+  }
+
   async build(): Promise<AttachmentBuildResult> {
-    const result = await runAttachmentMigrations(this.db, ATTACHMENT_SCHEMA);
+    const result = await runAttachmentMigrations(
+      this.db,
+      ATTACHMENT_SCHEMA,
+      this.logger,
+    );
     if (!result.success && result.error) {
       throw result.error;
     }

@@ -239,7 +239,11 @@ export class ReactorBuilder {
     const baseDatabase = this.kyselyInstance ?? (await createDefaultDatabase());
 
     if (this.migrationStrategy === "auto") {
-      const result = await runMigrations(baseDatabase, REACTOR_SCHEMA);
+      const result = await runMigrations(
+        baseDatabase,
+        REACTOR_SCHEMA,
+        this.logger,
+      );
       if (!result.success && result.error) {
         throw new Error(`Database migration failed: ${result.error.message}`);
       }
