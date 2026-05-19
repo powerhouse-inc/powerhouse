@@ -19,16 +19,23 @@
  * message rather than discarded. The full stack is gated by log level so
  * production logs across apps stay readable.
  */
+import type { MockInstance } from "vitest";
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { ConsoleLogger } from "../src/logger.js";
 
+type ConsoleFn = (...args: unknown[]) => void;
+
 describe("ConsoleLogger error formatting", () => {
-  let errorSpy: ReturnType<typeof vi.spyOn>;
-  let debugSpy: ReturnType<typeof vi.spyOn>;
+  let errorSpy: MockInstance<ConsoleFn>;
+  let debugSpy: MockInstance<ConsoleFn>;
 
   beforeEach(() => {
-    errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    debugSpy = vi.spyOn(console, "debug").mockImplementation(() => {});
+    errorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {}) as unknown as MockInstance<ConsoleFn>;
+    debugSpy = vi
+      .spyOn(console, "debug")
+      .mockImplementation(() => {}) as unknown as MockInstance<ConsoleFn>;
   });
 
   afterEach(() => {
