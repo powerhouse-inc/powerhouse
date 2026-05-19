@@ -19,7 +19,10 @@ import type {
 } from "../../../src/executor/interfaces.js";
 import { bucketFor } from "../../../src/executor/worker-pool-router.js";
 import { WorkerPoolJobExecutorManager } from "../../../src/executor/worker-pool-job-executor-manager.js";
-import type { JobWriteReadyPayload } from "../../../src/executor/worker/protocol.js";
+import type {
+  JobWriteReadyPayload,
+  ModelManifestEntry,
+} from "../../../src/executor/worker/protocol.js";
 import { InMemoryJobTracker } from "../../../src/job-tracker/in-memory-job-tracker.js";
 import { InMemoryQueue } from "../../../src/queue/queue.js";
 import type { Job } from "../../../src/queue/types.js";
@@ -86,6 +89,16 @@ class FakeWorker implements IExecutorWorker {
   async shutdown(graceful: boolean): Promise<void> {
     this.shutdownCalls++;
     this.shutdownGracefulHistory.push(graceful);
+  }
+
+  loadModelCalls: ModelManifestEntry[] = [];
+  loadModelImpl?: (entry: ModelManifestEntry) => Promise<void>;
+
+  async loadModel(entry: ModelManifestEntry): Promise<void> {
+    this.loadModelCalls.push(entry);
+    if (this.loadModelImpl) {
+      await this.loadModelImpl(entry);
+    }
   }
 
   isIdle(): boolean {
@@ -672,6 +685,73 @@ describe("WorkerPoolJobExecutorManager", () => {
       );
       await manager.start(2);
       expect(manager.getStatus().activeJobs).toBe(0);
+      await manager.stop(true);
+    });
+  });
+
+  describe("loadModel broadcast", () => {
+    const entry: ModelManifestEntry = {
+      documentType: "ph/test-model",
+      version: "1.0.0",
+      spec: {
+        module: { packageName: "ph/test-model", exportName: "documentModel" },
+      },
+    };
+
+    it("invokes loadModel on every worker in parallel", async () => {
+      const manager = buildManager((i) => new FakeWorker({ index: i }));
+      await manager.start(3);
+      await manager.loadModel(entry);
+      for (const w of createdWorkers) {
+        expect(w.loadModelCalls).toEqual([entry]);
+      }
+      await manager.stop(true);
+    });
+
+    it("resolves silently when no workers are running", async () => {
+      const manager = buildManager((i) => new FakeWorker({ index: i }));
+      await expect(manager.loadModel(entry)).resolves.toBeUndefined();
+    });
+
+    it("treats DuplicateModuleError responses as success", async () => {
+      const manager = buildManager((i) => {
+        const w = new FakeWorker({ index: i });
+        if (i === 0) {
+          const dup = new Error(
+            "Document model module already registered for type: ph/test-model",
+          );
+          dup.name = "DuplicateModuleError";
+          const wrapper = new Error("worker 0 reported duplicate");
+          (wrapper as { cause?: unknown }).cause = dup;
+          w.loadModelImpl = async () => {
+            throw wrapper;
+          };
+        }
+        return w;
+      });
+      await manager.start(3);
+      await expect(manager.loadModel(entry)).resolves.toBeUndefined();
+      await manager.stop(true);
+    });
+
+    it("rejects when a worker fails to load the model", async () => {
+      const manager = buildManager((i) => {
+        const w = new FakeWorker({ index: i });
+        if (i === 1) {
+          w.loadModelImpl = async () => {
+            throw new Error("worker-1 explosion");
+          };
+        }
+        return w;
+      });
+      await manager.start(3);
+      await expect(manager.loadModel(entry)).rejects.toThrow(
+        "worker-1 explosion",
+      );
+      // every worker still saw the broadcast attempt
+      for (const w of createdWorkers) {
+        expect(w.loadModelCalls).toEqual([entry]);
+      }
       await manager.stop(true);
     });
   });

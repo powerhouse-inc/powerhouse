@@ -55,6 +55,22 @@ export class WorkerInitFailedError extends Error {
   }
 }
 
+export class WorkerLoadModelFailedError extends Error {
+  readonly name = "WorkerLoadModelFailedError";
+  constructor(
+    workerId: string,
+    readonly documentType: string,
+    readonly version: string,
+    reason: string,
+    options?: { cause?: unknown },
+  ) {
+    super(
+      `worker ${workerId} failed to load model ${documentType}@${version}: ${reason}`,
+      options,
+    );
+  }
+}
+
 export class WorkerShutdownTimeoutError extends Error {
   readonly name = "WorkerShutdownTimeoutError";
   constructor(

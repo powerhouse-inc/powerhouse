@@ -25,6 +25,7 @@ import {
   WorkerBusyError,
   WorkerExitedError,
   WorkerInitFailedError,
+  WorkerLoadModelFailedError,
   WorkerShutdownTimeoutError,
 } from "./errors.js";
 import type {
@@ -32,6 +33,8 @@ import type {
   HeartbeatMessage,
   LogMessage,
   MetricsMessage,
+  ModelLoadFailedMessage,
+  ModelLoadedMessage,
   ModelManifestEntry,
   ResultMessage,
   SignatureVerifierSpec,
@@ -80,6 +83,13 @@ type PendingEntry =
     }
   | {
       kind: "shutdown";
+      resolve: () => void;
+      reject: (err: Error) => void;
+    }
+  | {
+      kind: "load-model";
+      documentType: string;
+      version: string;
       resolve: () => void;
       reject: (err: Error) => void;
     };
@@ -310,6 +320,86 @@ export class WorkerHandle implements IExecutorWorker {
     await this.forceTerminate(null);
   }
 
+  public loadModel(
+    entry: ModelManifestEntry,
+    signal?: AbortSignal,
+  ): Promise<void> {
+    if (this.phase === "terminated") {
+      return Promise.reject(
+        this.lastExitError ??
+          new WorkerExitedError(this.workerId, -1, this.lastCorrelationId),
+      );
+    }
+    if (this.phase !== "ready") {
+      return Promise.reject(
+        new WorkerInitFailedError(
+          this.workerId,
+          `worker not ready (phase=${this.phase})`,
+        ),
+      );
+    }
+
+    const correlationId = this.nextCorrelationId();
+    let abortListener: (() => void) | null = null;
+    const detachSignal = () => {
+      if (signal && abortListener) {
+        signal.removeEventListener("abort", abortListener);
+        abortListener = null;
+      }
+    };
+
+    const promise = new Promise<void>((resolve, reject) => {
+      this.pending.set(correlationId, {
+        kind: "load-model",
+        documentType: entry.documentType,
+        version: entry.version,
+        resolve: () => {
+          detachSignal();
+          resolve();
+        },
+        reject: (err) => {
+          detachSignal();
+          reject(err);
+        },
+      });
+    });
+
+    if (signal) {
+      if (signal.aborted) {
+        this.failPending(
+          correlationId,
+          new WorkerLoadModelFailedError(
+            this.workerId,
+            entry.documentType,
+            entry.version,
+            "aborted before dispatch",
+          ),
+        );
+        return promise;
+      }
+      abortListener = () => {
+        this.failPending(
+          correlationId,
+          new WorkerLoadModelFailedError(
+            this.workerId,
+            entry.documentType,
+            entry.version,
+            "caller signal",
+          ),
+        );
+      };
+      signal.addEventListener("abort", abortListener, { once: true });
+    }
+
+    this.transport.postMessage({
+      type: "load-model",
+      correlationId,
+      model: entry,
+    });
+
+    return promise;
+  }
+
   public isIdle(): boolean {
     return this.inFlight === null && this.phase === "ready";
   }
@@ -337,7 +427,10 @@ export class WorkerHandle implements IExecutorWorker {
         this.handleResult(msg);
         return;
       case "model-loaded":
+        this.handleModelLoaded(msg);
+        return;
       case "model-load-failed":
+        this.handleModelLoadFailed(msg);
         return;
       case "log":
         this.handleLog(msg);
@@ -400,6 +493,32 @@ export class WorkerHandle implements IExecutorWorker {
         shutdownEntry.resolve();
       }
     }
+  }
+
+  private handleModelLoaded(msg: ModelLoadedMessage): void {
+    const entry = this.pending.get(msg.correlationId);
+    if (!entry || entry.kind !== "load-model") {
+      return;
+    }
+    this.pending.delete(msg.correlationId);
+    entry.resolve();
+  }
+
+  private handleModelLoadFailed(msg: ModelLoadFailedMessage): void {
+    const entry = this.pending.get(msg.correlationId);
+    if (!entry || entry.kind !== "load-model") {
+      return;
+    }
+    this.pending.delete(msg.correlationId);
+    entry.reject(
+      new WorkerLoadModelFailedError(
+        this.workerId,
+        msg.documentType,
+        msg.version,
+        msg.error.message,
+        { cause: fromErrorInfo(msg.error) },
+      ),
+    );
   }
 
   private handleLog(msg: LogMessage): void {
@@ -476,6 +595,15 @@ export class WorkerHandle implements IExecutorWorker {
         entry.resolve();
       } else if (entry.kind === "init") {
         entry.reject(new WorkerInitFailedError(this.workerId, "worker exited"));
+      } else if (entry.kind === "load-model") {
+        entry.reject(
+          new WorkerLoadModelFailedError(
+            this.workerId,
+            entry.documentType,
+            entry.version,
+            "worker exited before responding",
+          ),
+        );
       } else {
         entry.reject(
           new WorkerExitedError(this.workerId, 0, this.lastCorrelationId),

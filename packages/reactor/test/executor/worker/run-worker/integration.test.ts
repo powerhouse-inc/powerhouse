@@ -9,9 +9,14 @@ import { PGlite } from "@electric-sql/pglite";
 import { MessageChannel } from "node:worker_threads";
 import { afterEach, describe, expect, it } from "vitest";
 import type { Database } from "../../../../src/core/types.js";
-import { runWorker } from "../../../../src/executor/worker/run-worker.js";
+import {
+  runWorker,
+  type RunWorkerOverrides,
+} from "../../../../src/executor/worker/run-worker.js";
 import type {
   InitMessage,
+  ModelLoadFailedMessage,
+  ModelLoadedMessage,
   ReadyMessage,
   ResultMessage,
   WorkerMessage,
@@ -53,7 +58,10 @@ afterEach(async () => {
   harnesses.length = 0;
 });
 
-async function startInProcessWorker(): Promise<Harness> {
+async function startInProcessWorker(
+  loadFactory: NonNullable<RunWorkerOverrides["loadFactory"]> = async () =>
+    driveDocumentModelModule,
+): Promise<Harness> {
   const pglite = new PGlite();
   const baseDatabase = new Kysely<Database>({
     dialect: new PGliteDialect(pglite),
@@ -77,9 +85,7 @@ async function startInProcessWorker(): Promise<Harness> {
         },
       };
     },
-    async loadFactory() {
-      return driveDocumentModelModule;
-    },
+    loadFactory,
   });
 
   harnesses.push(harness);
@@ -107,7 +113,17 @@ function waitForMessage<T extends WorkerMessage>(
   });
 }
 
-function makeInit(): InitMessage {
+function makeInit(
+  models: InitMessage["models"] = [
+    {
+      documentType: "powerhouse/document-drive",
+      version: "1.0.0",
+      spec: {
+        module: { packageName: "ignored", exportName: "documentModel" },
+      },
+    },
+  ],
+): InitMessage {
   return {
     type: "init",
     correlationId: "corr-init",
@@ -123,15 +139,7 @@ function makeInit(): InitMessage {
     signatureVerifier: {
       module: { packageName: "ignored", exportName: "factory" },
     },
-    models: [
-      {
-        documentType: "powerhouse/document-drive",
-        version: "1.0.0",
-        spec: {
-          module: { packageName: "ignored", exportName: "documentModel" },
-        },
-      },
-    ],
+    models,
   };
 }
 
@@ -347,5 +355,93 @@ describe("runWorker in-process execution", () => {
     const result = await resultPromise;
     expect(result.result.success).toBe(false);
     expect(result.writeReady).toBeUndefined();
+  });
+
+  it("registers a new document model via load-model and acknowledges with model-loaded", async () => {
+    const calls: string[] = [];
+    const h = await startInProcessWorker(async (spec) => {
+      const name =
+        "packageName" in spec.module
+          ? spec.module.packageName
+          : spec.module.filePath;
+      calls.push(`${name}#${spec.module.exportName}`);
+      return driveDocumentModelModule;
+    });
+
+    // Boot with no models so the load-model call is the first registration
+    // for `powerhouse/document-drive`.
+    const init = makeInit([]);
+    const ready = waitForMessage(
+      h.port1,
+      (m): m is ReadyMessage => m.type === "ready",
+    );
+    h.port1.postMessage(init);
+    await ready;
+
+    const loaded = waitForMessage(
+      h.port1,
+      (m): m is ModelLoadedMessage => m.type === "model-loaded",
+    );
+
+    h.port1.postMessage({
+      type: "load-model",
+      correlationId: "corr-load-1",
+      model: {
+        documentType: "powerhouse/document-drive",
+        version: "1.0.0",
+        spec: {
+          module: { packageName: "ph/drive", exportName: "documentModel" },
+        },
+      },
+    });
+
+    const ack = await loaded;
+    expect(ack.correlationId).toBe("corr-load-1");
+    expect(ack.documentType).toBe("powerhouse/document-drive");
+    expect(calls.some((c) => c.startsWith("ph/drive#"))).toBe(true);
+  });
+
+  it("posts model-load-failed when the factory throws", async () => {
+    let initCalls = 0;
+    const h = await startInProcessWorker(async (spec) => {
+      if (
+        "packageName" in spec.module &&
+        spec.module.packageName === "ph/broken-model"
+      ) {
+        throw new Error("synthetic load failure");
+      }
+      initCalls++;
+      return driveDocumentModelModule;
+    });
+
+    const init = makeInit();
+    const ready = waitForMessage(
+      h.port1,
+      (m): m is ReadyMessage => m.type === "ready",
+    );
+    h.port1.postMessage(init);
+    await ready;
+    expect(initCalls).toBeGreaterThan(0);
+
+    const failed = waitForMessage(
+      h.port1,
+      (m): m is ModelLoadFailedMessage => m.type === "model-load-failed",
+    );
+    h.port1.postMessage({
+      type: "load-model",
+      correlationId: "corr-load-bad",
+      model: {
+        documentType: "ph/broken",
+        version: "1.0.0",
+        spec: {
+          module: { packageName: "ph/broken-model", exportName: "documentModel" },
+        },
+      },
+    });
+
+    const result = await failed;
+    expect(result.correlationId).toBe("corr-load-bad");
+    expect(result.documentType).toBe("ph/broken");
+    expect(result.error.message).toContain("synthetic load failure");
   });
 });

@@ -1,3 +1,4 @@
+import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import { ConsoleLogger } from "document-model";
 import type { Kysely } from "kysely";
 import type { MessagePort } from "node:worker_threads";
@@ -5,6 +6,7 @@ import type { Database } from "../../core/types.js";
 import type { Job } from "../../queue/types.js";
 import {
   buildWorkerExecutor,
+  defaultLoadFactory,
   type BuildWorkerExecutorOptions,
   type WorkerExecutorStack,
 } from "./build-worker-executor.js";
@@ -13,6 +15,7 @@ import type {
   DbConfig,
   FactorySpec,
   InitMessage,
+  LoadModelMessage,
   ParentMessage,
   WorkerMessage,
 } from "./protocol.js";
@@ -102,6 +105,8 @@ export function runWorker(
   let initConfig: InitMessage | null = null;
   let executorStack: WorkerExecutorStack | null = null;
   let database: WorkerDatabaseHandle | null = null;
+  const activeLoadFactory: NonNullable<BuildWorkerExecutorOptions["loadFactory"]> =
+    overrides.loadFactory ?? defaultLoadFactory;
 
   function post(msg: WorkerMessage): void {
     parentPort.postMessage(msg);
@@ -150,7 +155,7 @@ export function runWorker(
       init: msg,
       database: database.kysely,
       logger: new ConsoleLogger([`reactor-worker:${msg.workerId}`]),
-      loadFactory: overrides.loadFactory,
+      loadFactory: activeLoadFactory,
     });
     initCompleted = true;
     logger.info("worker initialized", msg.workerId);
@@ -191,6 +196,50 @@ export function runWorker(
         error: errorToInfo(error),
       });
     }
+  }
+
+  async function handleLoadModel(msg: LoadModelMessage): Promise<void> {
+    const stack = executorStack;
+    if (!stack) {
+      post({
+        type: "model-load-failed",
+        correlationId: msg.correlationId,
+        documentType: msg.model.documentType,
+        version: msg.model.version,
+        error: errorToInfo(new Error("load-model received before init")),
+      });
+      return;
+    }
+    let module: DocumentModelModule;
+    try {
+      module = (await activeLoadFactory(msg.model.spec)) as DocumentModelModule;
+    } catch (error) {
+      post({
+        type: "model-load-failed",
+        correlationId: msg.correlationId,
+        documentType: msg.model.documentType,
+        version: msg.model.version,
+        error: errorToInfo(error),
+      });
+      return;
+    }
+    const [result] = stack.registry.registerModules(module);
+    if (result.status === "error") {
+      post({
+        type: "model-load-failed",
+        correlationId: msg.correlationId,
+        documentType: msg.model.documentType,
+        version: msg.model.version,
+        error: errorToInfo(result.error),
+      });
+      return;
+    }
+    post({
+      type: "model-loaded",
+      correlationId: msg.correlationId,
+      documentType: msg.model.documentType,
+      version: msg.model.version,
+    });
   }
 
   async function shutdownDatabase(): Promise<void> {
@@ -257,7 +306,15 @@ export function runWorker(
       }
 
       case "load-model": {
-        logger.warn("load-model received (no-op stub)", msg.correlationId);
+        handleLoadModel(msg).catch((err: unknown) => {
+          post({
+            type: "model-load-failed",
+            correlationId: msg.correlationId,
+            documentType: msg.model.documentType,
+            version: msg.model.version,
+            error: errorToInfo(err),
+          });
+        });
         break;
       }
 

@@ -483,7 +483,7 @@ export class ReactorBuilder {
         const factory =
           this.workerFactory ??
           this.createDefaultWorkerFactory(this.workerPoolConfig);
-        executorManager = new WorkerPoolJobExecutorManager(
+        const poolManager = new WorkerPoolJobExecutorManager(
           factory,
           eventBus,
           queue,
@@ -493,7 +493,11 @@ export class ReactorBuilder {
           collectionMembershipCache,
           this.executorConfig.jobTimeoutMs,
         );
+        executorManager = poolManager;
         executorStartCount = this.workerPoolConfig.numWorkers;
+        if (resolver instanceof DocumentModelResolver) {
+          resolver.setBroadcastHook((entry) => poolManager.loadModel(entry));
+        }
       } else {
         executorManager = new SimpleJobExecutorManager(
           () =>

@@ -30,7 +30,10 @@ import {
 } from "./job-result-handler.js";
 import type { ExecutorManagerStatus } from "./types.js";
 import { bucketFor } from "./worker-pool-router.js";
-import type { JobWriteReadyPayload } from "./worker/protocol.js";
+import type {
+  JobWriteReadyPayload,
+  ModelManifestEntry,
+} from "./worker/protocol.js";
 
 /**
  * Factory invoked once per worker at `start()` time. The index is the
@@ -177,6 +180,39 @@ export class WorkerPoolJobExecutorManager implements IJobExecutorManager {
    */
   getExecutors(): IJobExecutor[] {
     return [];
+  }
+
+  /**
+   * Broadcasts a `load-model` request to every running worker in parallel.
+   * Rejects with the first worker's failure if any worker rejects (after
+   * waiting for all in-flight broadcasts to settle). Workers that already
+   * have the model registered respond with a `DuplicateModuleError`-rooted
+   * failure; those are treated as success on the broadcast level so that
+   * a model registered on some workers but not others still converges.
+   */
+  async loadModel(entry: ModelManifestEntry): Promise<void> {
+    if (this.workers.length === 0) {
+      return;
+    }
+    const results = await Promise.allSettled(
+      this.workers.map((w) => w.loadModel(entry)),
+    );
+    const failures = results
+      .filter((r): r is PromiseRejectedResult => r.status === "rejected")
+      .filter((r) => !isDuplicateModuleFailure(r.reason));
+    if (failures.length === 0) {
+      return;
+    }
+    for (const f of failures) {
+      this.logger.error(
+        "worker failed to load model @entry: @error",
+        entry,
+        f.reason,
+      );
+    }
+    throw failures[0].reason instanceof Error
+      ? failures[0].reason
+      : new Error(String(failures[0].reason));
   }
 
   getStatus(): ExecutorManagerStatus {
@@ -342,6 +378,19 @@ export class WorkerPoolJobExecutorManager implements IJobExecutorManager {
       }
     }
   }
+}
+
+function isDuplicateModuleFailure(reason: unknown): boolean {
+  if (!(reason instanceof Error)) {
+    return false;
+  }
+  if (reason.name === "DuplicateModuleError") {
+    return true;
+  }
+  const cause = (reason as { cause?: unknown }).cause;
+  return (
+    cause instanceof Error && (cause as Error).name === "DuplicateModuleError"
+  );
 }
 
 function extractMembershipTarget(

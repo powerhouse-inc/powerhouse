@@ -70,6 +70,8 @@ class FakeWorker implements IExecutorWorker {
     this.shutdownCalls++;
   }
 
+  async loadModel(): Promise<void> {}
+
   isIdle(): boolean {
     return true;
   }

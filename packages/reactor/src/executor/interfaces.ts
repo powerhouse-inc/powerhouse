@@ -1,6 +1,9 @@
 import type { Job } from "../queue/types.js";
 import type { ExecutorManagerStatus, JobResult } from "./types.js";
-import type { JobWriteReadyPayload } from "./worker/protocol.js";
+import type {
+  JobWriteReadyPayload,
+  ModelManifestEntry,
+} from "./worker/protocol.js";
 
 /**
  * Snapshot of the single in-flight slot maintained by an {@link IExecutorWorker}.
@@ -68,6 +71,13 @@ export interface IExecutorWorker {
    * the worker is terminated immediately.
    */
   shutdown(graceful: boolean, graceMs?: number): Promise<void>;
+
+  /**
+   * Register an additional document model on the running worker. Resolves
+   * when the worker replies with `model-loaded`; rejects when it replies
+   * with `model-load-failed` or the worker exits before answering.
+   */
+  loadModel(entry: ModelManifestEntry, signal?: AbortSignal): Promise<void>;
 
   /** True when no job is currently in flight. */
   isIdle(): boolean;
