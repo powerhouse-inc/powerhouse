@@ -178,7 +178,10 @@ export class InteractiveManager {
       await processor(queuedStrands);
       logger.info("✅ Code generation completed");
     } catch (error) {
-      logger.error("❌ Error during interactive queue processing:", error);
+      logger.error(
+        "❌ Error during interactive queue processing: @error",
+        error,
+      );
       throw error;
     } finally {
       this.processingConfirmation = false;

@@ -2,11 +2,11 @@
 import { default as eslint } from "@eslint/js";
 import betterTailwindcss from "eslint-plugin-better-tailwindcss";
 import eslintPluginPrettierRecommended from "eslint-plugin-prettier/recommended";
+import reactHooks from "eslint-plugin-react-hooks";
 import { defineConfig, globalIgnores } from "eslint/config";
 import globals from "globals";
 import { builtinModules } from "node:module";
 import tseslint from "typescript-eslint";
-import reactHooks from "eslint-plugin-react-hooks";
 
 /** These files are typically ignored by eslint by default, so there is no need to investigate why they are ignored. */
 const normalIgnoredFiles = [
@@ -401,13 +401,7 @@ const cliColdPathRules = {
  *   like a substitution that won't happen; encourage explicit tokens or
  *   inline interpolation.
  */
-const LOGGER_METHODS = new Set([
-  "verbose",
-  "debug",
-  "info",
-  "warn",
-  "error",
-]);
+const LOGGER_METHODS = new Set(["verbose", "debug", "info", "warn", "error"]);
 
 /** Heuristic: callee object identifier ends in "logger" (case-insensitive),
  *  or callee is `<...>.logger.<method>(...)`. */
@@ -456,7 +450,7 @@ const loggerMissingTokenArgsRule = {
     schema: [],
     messages: {
       missing:
-        "logger.{{method}} message has {{tokens}} @token(s) but only {{args}} replacement arg(s) — missing slots render as \"null\".",
+        'logger.{{method}} message has {{tokens}} @token(s) but only {{args}} replacement arg(s) — missing slots render as "null".',
     },
   },
   create(context) {

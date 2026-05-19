@@ -64,7 +64,7 @@ export async function setupMcpServer(
         await server.connect(transport);
         await transport.handleRequest(req, res, body);
       } catch (error) {
-        logger.error("Error handling MCP request:", error);
+        logger.error("Error handling MCP request: @error", error);
         if (!res.headersSent) {
           res
             .writeHead(500, { "Content-Type": "application/json" })

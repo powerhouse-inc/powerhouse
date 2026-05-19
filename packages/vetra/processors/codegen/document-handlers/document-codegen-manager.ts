@@ -148,7 +148,10 @@ export class DocumentCodegenManager {
             },
           );
         } catch (error) {
-          logger.error("❌ Error during interactive batch processing:", error);
+          logger.error(
+            "❌ Error during interactive batch processing: @error",
+            error,
+          );
         } finally {
           // Clean up the timer reference
           this.debounceTimers.delete("interactive");

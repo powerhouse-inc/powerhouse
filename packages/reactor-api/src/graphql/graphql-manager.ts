@@ -283,7 +283,10 @@ export class GraphQLManager {
         models.length,
       );
     } catch (error) {
-      this.logger.error("Failed to regenerate document model subgraphs", error);
+      this.logger.error(
+        "Failed to regenerate document model subgraphs: @error",
+        error,
+      );
       throw error;
     }
   }
@@ -436,7 +439,10 @@ export class GraphQLManager {
       await this.gatewayAdapter.updateSupergraph();
       this.logger.debug("Updated Apollo Gateway supergraph");
     } catch (error) {
-      this.logger.error("Failed to update Apollo Gateway supergraph", error);
+      this.logger.error(
+        "Failed to update Apollo Gateway supergraph: @error",
+        error,
+      );
     }
 
     // Refresh the supergraph-level SSE handler so it picks up
