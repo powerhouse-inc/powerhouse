@@ -65,6 +65,7 @@
     "knip": "catalog:",
     "nx": "22.7.1",
     "oxlint": "^1.65.0",
+    "oxlint-tsgolint": "^0.23.0",
     "prettier": "catalog:",
     "read-pkg": "catalog:",
     "remeda": "catalog:",

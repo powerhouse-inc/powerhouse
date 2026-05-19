@@ -1,0 +1,644 @@
+{
+  "totals": {
+    "eslint": 760,
+    "oxlint": 749,
+    "overlap": 621,
+    "only_eslint": 139,
+    "only_oxlint": 141
+  },
+  "by_rule": {
+    "only_eslint": [
+      {
+        "rule": "prettier/prettier",
+        "severity_max": "error",
+        "errors": 1,
+        "warnings": 0,
+        "total": 1,
+        "sample": [
+          {
+            "file": "eslint-plugins/cli-cold-path.js",
+            "line": 42,
+            "message": "Replace `⏎········(name)·=>·src·===·name·||·src.startsWith(name·+·\"/\"),⏎······` with `(name)·=>·src·===·name·||·src.startsWith(name·+·\"/\")`"
+          }
+        ]
+      },
+      {
+        "rule": "@typescript-eslint/no-unsafe-assignment",
+        "severity_max": "error",
+        "errors": 1,
+        "warnings": 0,
+        "total": 1,
+        "sample": [
+          {
+            "file": "test/test-consumer-project/vite.config.ts",
+            "line": 5,
+            "message": "Unsafe assignment of an error typed value."
+          }
+        ]
+      },
+      {
+        "rule": "@typescript-eslint/no-unsafe-call",
+        "severity_max": "error",
+        "errors": 1,
+        "warnings": 0,
+        "total": 1,
+        "sample": [
+          {
+            "file": "test/test-consumer-project/vite.config.ts",
+            "line": 5,
+            "message": "Unsafe call of a type that could not be resolved."
+          }
+        ]
+      },
+      {
+        "rule": "@typescript-eslint/no-unused-vars",
+        "severity_max": "warn",
+        "errors": 0,
+        "warnings": 50,
+        "total": 50,
+        "sample": [
+          {
+            "file": "packages/analytics-engine/browser/test/utils.ts",
+            "line": 3,
+            "message": "'system' is defined but never used."
+          },
+          {
+            "file": "packages/analytics-engine/core/test/Subscriptions.test.ts",
+            "line": 14,
+            "message": "'source' is defined but never used."
+          }
+        ]
+      },
+      {
+        "rule": "react-hooks/exhaustive-deps",
+        "severity_max": "warn",
+        "errors": 0,
+        "warnings": 32,
+        "total": 32,
+        "sample": [
+          {
+            "file": "apps/connect/src/components/app-skeleton.tsx",
+            "line": 57,
+            "message": "React Hook useEffect has a missing dependency: 'delay'. Either include it or remove the dependency array."
+          },
+          {
+            "file": "apps/connect/src/components/modal/modals/settings/about.tsx",
+            "line": 84,
+            "message": "The 'drives' logical expression could make the dependencies of useMemo Hook (at line 94) change on every render. Move it inside the useMemo callback. Alternatively, wrap the initialization of 'drives'"
+          }
+        ]
+      },
+      {
+        "rule": "@typescript-eslint/no-misused-promises",
+        "severity_max": "warn",
+        "errors": 0,
+        "warnings": 14,
+        "total": 14,
+        "sample": [
+          {
+            "file": "packages/reactor-api/test/gateway/gateway-adapter-contract.ts",
+            "line": 246,
+            "message": "Promise returned in function argument where a void return was expected."
+          },
+          {
+            "file": "packages/registry/tests/renown-middleware.test.ts",
+            "line": 24,
+            "message": "Promise returned in function argument where a void return was expected."
+          }
+        ]
+      },
+      {
+        "rule": "@typescript-eslint/no-floating-promises",
+        "severity_max": "warn",
+        "errors": 0,
+        "warnings": 10,
+        "total": 10,
+        "sample": [
+          {
+            "file": "apps/academy/scripts/generate-combined-cli-docs.ts",
+            "line": 190,
+            "message": "Promises must be awaited, end with a call to .catch, end with a call to .then with a rejection handler or be explicitly marked as ignored with the `void` operator."
+          },
+          {
+            "file": "apps/academy/scripts/generate-llm-docs.ts",
+            "line": 336,
+            "message": "Promises must be awaited, end with a call to .catch, end with a call to .then with a rejection handler or be explicitly marked as ignored with the `void` operator."
+          }
+        ]
+      },
+      {
+        "rule": "no-useless-assignment",
+        "severity_max": "warn",
+        "errors": 0,
+        "warnings": 8,
+        "total": 8,
+        "sample": [
+          {
+            "file": "clis/ph-cli/src/commands/publish.ts",
+            "line": 119,
+            "message": "The value assigned to 'confirmed' is not used in subsequent statements."
+          },
+          {
+            "file": "clis/ph-cli/src/utils/resolve-switchboard-port.ts",
+            "line": 52,
+            "message": "The value assigned to 'confirmed' is not used in subsequent statements."
+          }
+        ]
+      },
+      {
+        "rule": "@typescript-eslint/no-unnecessary-condition",
+        "severity_max": "warn",
+        "errors": 0,
+        "warnings": 8,
+        "total": 8,
+        "sample": [
+          {
+            "file": "packages/codegen/src/utils/validation.ts",
+            "line": 191,
+            "message": "Unnecessary conditional, the types have no overlap."
+          },
+          {
+            "file": "packages/reactor-api/src/server.ts",
+            "line": 300,
+            "message": "Unnecessary conditional, the types have no overlap."
+          }
+        ]
+      },
+      {
+        "rule": "preserve-caught-error",
+        "severity_max": "warn",
+        "errors": 0,
+        "warnings": 5,
+        "total": 5,
+        "sample": [
+          {
+            "file": "packages/reactor-api/test/utils/postgres-test-db.ts",
+            "line": 48,
+            "message": "There is no `cause` attached to the symptom error being thrown."
+          },
+          {
+            "file": "scripts/profiling/pyroscope-analyse.ts",
+            "line": 250,
+            "message": "There is no `cause` attached to the symptom error being thrown."
+          }
+        ]
+      },
+      {
+        "rule": "@typescript-eslint/no-empty-object-type",
+        "severity_max": "warn",
+        "errors": 0,
+        "warnings": 4,
+        "total": 4,
+        "sample": [
+          {
+            "file": "packages/design-system/src/connect/components/sidebar/sidebar-header.tsx",
+            "line": 5,
+            "message": "An interface declaring no members is equivalent to its supertype."
+          },
+          {
+            "file": "packages/reactor-api/src/graphql/reactor/gen/graphql.ts",
+            "line": 2149,
+            "message": "The `{}` (\"empty object\") type allows any non-nullish value, including literals like `0` and `\"\"`.\n- If that's what you want, disable this lint rule with an inline comment or configure the 'allowObjec"
+          }
+        ]
+      },
+      {
+        "rule": "@typescript-eslint/require-await",
+        "severity_max": "warn",
+        "errors": 0,
+        "warnings": 2,
+        "total": 2,
+        "sample": [
+          {
+            "file": "apps/academy/scripts/generate-combined-cli-docs.ts",
+            "line": 9,
+            "message": "Async function 'generateCombinedCliDocs' has no 'await' expression."
+          },
+          {
+            "file": "apps/academy/scripts/generate-llm-docs.ts",
+            "line": 85,
+            "message": "Async function 'collectDocFiles' has no 'await' expression."
+          }
+        ]
+      },
+      {
+        "rule": "react-hooks/incompatible-library",
+        "severity_max": "warn",
+        "errors": 0,
+        "warnings": 2,
+        "total": 2,
+        "sample": [
+          {
+            "file": "packages/design-system/src/connect/components/revision-history/timeline/timeline.tsx",
+            "line": 28,
+            "message": "Compilation Skipped: Use of incompatible library\n\nThis API returns functions which cannot be memoized without leading to stale UI. To prevent this, by default React Compiler will skip memoizing this c"
+          },
+          {
+            "file": "packages/powerhouse-vetra-packages/editors/generic-drive-explorer/components/file-content-view.tsx",
+            "line": 26,
+            "message": "Compilation Skipped: Use of incompatible library\n\nThis API returns functions which cannot be memoized without leading to stale UI. To prevent this, by default React Compiler will skip memoizing this c"
+          }
+        ]
+      },
+      {
+        "rule": "@typescript-eslint/no-duplicate-type-constituents",
+        "severity_max": "warn",
+        "errors": 0,
+        "warnings": 1,
+        "total": 1,
+        "sample": [
+          {
+            "file": "packages/analytics-engine/browser/backup/index.d.ts",
+            "line": 829,
+            "message": "Union type constituent is duplicated with SQLiteCompatibleType | number[]."
+          }
+        ]
+      }
+    ],
+    "only_oxlint": [
+      {
+        "rule": "unicorn/no-useless-spread",
+        "severity_max": "error",
+        "errors": 15,
+        "warnings": 0,
+        "total": 15,
+        "sample": [
+          {
+            "file": "packages/design-system/src/ui/components/with-field-validation/with-field-validation.tsx",
+            "line": 73,
+            "message": "Using a spread operator here creates a new array unnecessarily."
+          },
+          {
+            "file": "packages/reactor/src/sync/sync-status-tracker.ts",
+            "line": 187,
+            "message": "Using a spread operator here creates a new array unnecessarily."
+          }
+        ]
+      },
+      {
+        "rule": "unicorn/no-empty-file",
+        "severity_max": "error",
+        "errors": 14,
+        "warnings": 0,
+        "total": 14,
+        "sample": [
+          {
+            "file": "apps/connect/src/store/utils.ts",
+            "line": 1,
+            "message": "Empty files are not allowed."
+          },
+          {
+            "file": "packages/powerhouse-vetra-packages/document-models/document-model/index.ts",
+            "line": 1,
+            "message": "Empty files are not allowed."
+          }
+        ]
+      },
+      {
+        "rule": "no-unsafe-optional-chaining",
+        "severity_max": "error",
+        "errors": 10,
+        "warnings": 0,
+        "total": 10,
+        "sample": [
+          {
+            "file": "packages/reactor/test/sync/channels/gql-req-channel/unit.test.ts",
+            "line": 747,
+            "message": "Unsafe usage of optional chaining"
+          },
+          {
+            "file": "packages/reactor/test/sync/channels/gql-req-channel/unit.test.ts",
+            "line": 1203,
+            "message": "Unsafe usage of optional chaining"
+          }
+        ]
+      },
+      {
+        "rule": "unicorn/no-useless-fallback-in-spread",
+        "severity_max": "error",
+        "errors": 8,
+        "warnings": 0,
+        "total": 8,
+        "sample": [
+          {
+            "file": "packages/document-model/src/state.ts",
+            "line": 53,
+            "message": "Empty fallbacks in spreads are unnecessary"
+          },
+          {
+            "file": "packages/shared/document-model/state.ts",
+            "line": 150,
+            "message": "Empty fallbacks in spreads are unnecessary"
+          }
+        ]
+      },
+      {
+        "rule": "@typescript-eslint/no-useless-default-assignment",
+        "severity_max": "error",
+        "errors": 6,
+        "warnings": 0,
+        "total": 6,
+        "sample": [
+          {
+            "file": "packages/reactor-api/src/utils/db.ts",
+            "line": 118,
+            "message": "Using `= undefined` to make a parameter optional adds unnecessary runtime logic. Use the `?` optional syntax instead."
+          },
+          {
+            "file": "packages/design-system/src/powerhouse/components/pagination/pagination.tsx",
+            "line": 30,
+            "message": "Default value is useless because the property has type `PageItem[]` (not nullish). This default assignment will never be used."
+          }
+        ]
+      },
+      {
+        "rule": "unicorn/no-new-array",
+        "severity_max": "error",
+        "errors": 5,
+        "warnings": 0,
+        "total": 5,
+        "sample": [
+          {
+            "file": "packages/reactor/src/sync/utils.ts",
+            "line": 382,
+            "message": "Do not use `new Array(singleArgument)`."
+          },
+          {
+            "file": "packages/reactor/src/cache/buffer/ring-buffer.ts",
+            "line": 21,
+            "message": "Do not use `new Array(singleArgument)`."
+          }
+        ]
+      },
+      {
+        "rule": "promise/no-callback-in-promise",
+        "severity_max": "error",
+        "errors": 5,
+        "warnings": 0,
+        "total": 5,
+        "sample": [
+          {
+            "file": "packages/reactor-api/src/graphql/gateway/adapter-http-express.ts",
+            "line": 224,
+            "message": "Avoid calling back inside of a promise"
+          },
+          {
+            "file": "packages/builder-tools/connect-utils/vite-plugins/favicon.ts",
+            "line": 17,
+            "message": "Avoid calling back inside of a promise"
+          }
+        ]
+      },
+      {
+        "rule": "@typescript-eslint/require-array-sort-compare",
+        "severity_max": "error",
+        "errors": 5,
+        "warnings": 0,
+        "total": 5,
+        "sample": [
+          {
+            "file": "packages/analytics-engine/browser/test/BrowserAnalyticsStore.test.ts",
+            "line": 134,
+            "message": "Require 'compare' argument."
+          },
+          {
+            "file": "packages/analytics-engine/browser/test/Integration.test.ts",
+            "line": 188,
+            "message": "Require 'compare' argument."
+          }
+        ]
+      },
+      {
+        "rule": "react-hooks/rules-of-hooks",
+        "severity_max": "error",
+        "errors": 4,
+        "warnings": 0,
+        "total": 4,
+        "sample": [
+          {
+            "file": "packages/reactor-api/src/graphql/gateway/adapter-gateway-mercurius.ts",
+            "line": 123,
+            "message": "React Hook \"useServer\" cannot be called in a class component. React Hooks must be called in a React function component or a custom React Hook function."
+          },
+          {
+            "file": "packages/reactor-api/src/graphql/gateway/adapter-gateway-apollo.ts",
+            "line": 153,
+            "message": "React Hook \"useServer\" cannot be called in a class component. React Hooks must be called in a React function component or a custom React Hook function."
+          }
+        ]
+      },
+      {
+        "rule": "@typescript-eslint/no-meaningless-void-operator",
+        "severity_max": "error",
+        "errors": 3,
+        "warnings": 0,
+        "total": 3,
+        "sample": [
+          {
+            "file": "apps/connect/src/components/editors.tsx",
+            "line": 53,
+            "message": "void operator shouldn't be used on void; it should convey that a return value is being ignored"
+          },
+          {
+            "file": "packages/reactor/src/queue/queue.ts",
+            "line": 236,
+            "message": "void operator shouldn't be used on void; it should convey that a return value is being ignored"
+          }
+        ]
+      },
+      {
+        "rule": "react/no-children-prop",
+        "severity_max": "error",
+        "errors": 2,
+        "warnings": 0,
+        "total": 2,
+        "sample": [
+          {
+            "file": "apps/connect/src/components/app-skeleton.tsx",
+            "line": 96,
+            "message": "Avoid passing children using a prop."
+          },
+          {
+            "file": "apps/connect/src/components/app-loader.tsx",
+            "line": 18,
+            "message": "Avoid passing children using a prop."
+          }
+        ]
+      },
+      {
+        "rule": "react/jsx-props-no-spread-multi",
+        "severity_max": "error",
+        "errors": 1,
+        "warnings": 0,
+        "total": 1,
+        "sample": [
+          {
+            "file": "packages/design-system/src/powerhouse/components/icon-components/PeopleFill.tsx",
+            "line": 5,
+            "message": "Prop 'props' is spread multiple times."
+          }
+        ]
+      },
+      {
+        "rule": "unicorn/no-useless-length-check",
+        "severity_max": "error",
+        "errors": 1,
+        "warnings": 0,
+        "total": 1,
+        "sample": [
+          {
+            "file": "packages/reactor-api/src/graphql/document-model-subgraph.ts",
+            "line": 235,
+            "message": "Found a useless array length check"
+          }
+        ]
+      },
+      {
+        "rule": "@typescript-eslint/no-unnecessary-parameter-property-assignment",
+        "severity_max": "error",
+        "errors": 1,
+        "warnings": 0,
+        "total": 1,
+        "sample": [
+          {
+            "file": "packages/codegen/src/ts-morph-generator/core/TSMorphCodeGenerator.ts",
+            "line": 40,
+            "message": "Assignment of parameter property is unnecessary"
+          }
+        ]
+      },
+      {
+        "rule": "@typescript-eslint/tsconfig-error",
+        "severity_max": "error",
+        "errors": 1,
+        "warnings": 0,
+        "total": 1,
+        "sample": [
+          {
+            "file": "apps/academy/tsconfig.json",
+            "line": 5,
+            "message": "Invalid tsconfig"
+          }
+        ]
+      },
+      {
+        "rule": "react-hooks/exhaustive-deps",
+        "severity_max": "warn",
+        "errors": 0,
+        "warnings": 49,
+        "total": 49,
+        "sample": [
+          {
+            "file": "packages/powerhouse-vetra-packages/editors/document-model-editor/components/code-editors/hooks.ts",
+            "line": 40,
+            "message": "React Hook useEffect has a missing dependency: 'viewRef'"
+          },
+          {
+            "file": "packages/powerhouse-vetra-packages/editors/document-model-editor/components/code-editors/hooks.ts",
+            "line": 69,
+            "message": "React Hook useEffect has missing dependencies: 'compartments.pasteHandler', 'timeoutRef', 'view', 'compartments.focusHandler', and 'compartments.updateListener'"
+          }
+        ]
+      },
+      {
+        "rule": "@typescript-eslint/no-unnecessary-condition",
+        "severity_max": "warn",
+        "errors": 0,
+        "warnings": 4,
+        "total": 4,
+        "sample": [
+          {
+            "file": "packages/reactor-api/src/server.ts",
+            "line": 299,
+            "message": "This condition will always return the same value since the types have no overlap."
+          },
+          {
+            "file": "packages/shared/connect/env-config.ts",
+            "line": 499,
+            "message": "This condition will always return the same value since the types have no overlap."
+          }
+        ]
+      },
+      {
+        "rule": "@typescript-eslint/no-floating-promises",
+        "severity_max": "warn",
+        "errors": 0,
+        "warnings": 2,
+        "total": 2,
+        "sample": [
+          {
+            "file": "packages/switchboard-gui/src/hooks/useAuth.ts",
+            "line": 203,
+            "message": "Promises must be awaited, add void operator to ignore."
+          },
+          {
+            "file": "packages/switchboard-gui/src/hooks/useAuth.ts",
+            "line": 224,
+            "message": "Promises must be awaited, add void operator to ignore."
+          }
+        ]
+      },
+      {
+        "rule": "@typescript-eslint/no-base-to-string",
+        "severity_max": "warn",
+        "errors": 0,
+        "warnings": 2,
+        "total": 2,
+        "sample": [
+          {
+            "file": "packages/analytics-engine/knex/src/KnexQueryExecutor.ts",
+            "line": 24,
+            "message": "'query' will use Object's default stringification format ('[object Object]') when stringified."
+          },
+          {
+            "file": "packages/analytics-engine/knex/src/KnexAnalyticsStore.ts",
+            "line": 256,
+            "message": "'baseQuery' will use Object's default stringification format ('[object Object]') when stringified."
+          }
+        ]
+      },
+      {
+        "rule": "@typescript-eslint/no-empty-object-type",
+        "severity_max": "warn",
+        "errors": 0,
+        "warnings": 1,
+        "total": 1,
+        "sample": [
+          {
+            "file": "packages/design-system/src/connect/components/sidebar/sidebar-header.tsx",
+            "line": 7,
+            "message": "Do not use an empty interface declaration."
+          }
+        ]
+      },
+      {
+        "rule": "no-unused-vars",
+        "severity_max": "warn",
+        "errors": 0,
+        "warnings": 1,
+        "total": 1,
+        "sample": [
+          {
+            "file": "packages/switchboard-gui/src/hooks/useAuth.ts",
+            "line": 158,
+            "message": "Catch parameter 'e' is caught but never used."
+          }
+        ]
+      },
+      {
+        "rule": "@typescript-eslint/require-await",
+        "severity_max": "warn",
+        "errors": 0,
+        "warnings": 1,
+        "total": 1,
+        "sample": [
+          {
+            "file": "mcr.config.js",
+            "line": 53,
+            "message": "Function has no 'await' expression."
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,6 +1,13 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "plugins": ["typescript", "react", "unicorn", "import", "promise"],
+  "jsPlugins": [
+    { "name": "logger", "specifier": "./eslint-plugins/logger.js" },
+    { "name": "cli-cold-path", "specifier": "./eslint-plugins/cli-cold-path.js" }
+  ],
+  "options": {
+    "typeAware": true
+  },
   "categories": {
     "correctness": "error",
     "suspicious": "off",
@@ -40,14 +47,68 @@
     "import/no-unassigned-import": "off",
     "import/no-named-as-default-member": "off",
     "import/no-named-as-default": "off",
-    "preserve-caught-error": "off"
+    "preserve-caught-error": "off",
+
+    "typescript/consistent-type-imports": ["error", {
+      "prefer": "type-imports",
+      "disallowTypeAnnotations": true,
+      "fixStyle": "separate-type-imports"
+    }],
+    "typescript/no-misused-promises": "warn",
+    "typescript/no-floating-promises": "warn",
+    "typescript/no-empty-object-type": "warn",
+    "typescript/no-duplicate-type-constituents": "warn",
+    "typescript/require-await": "warn",
+    "typescript/no-unnecessary-condition": "warn",
+    "typescript/restrict-template-expressions": ["warn", { "allowNumber": true }],
+    "typescript/no-unnecessary-type-assertion": "off",
+    "typescript/no-unnecessary-type-parameters": "off",
+    "typescript/no-base-to-string": "warn",
+    "typescript/no-unsafe-declaration-merging": "off",
+    "typescript/no-unsafe-assignment": "off",
+    "typescript/no-unsafe-member-access": "off",
+    "typescript/no-unsafe-call": "off",
+    "typescript/no-unsafe-return": "off",
+    "typescript/no-unsafe-argument": "off",
+    "typescript/await-thenable": "off",
+    "typescript/no-require-imports": "off",
+    "typescript/unbound-method": "off",
+    "typescript/no-namespace": "off",
+
+    "logger/missing-token-args": "error",
+    "logger/extra-args-without-token": "warn"
   },
   "overrides": [
+    {
+      "files": [
+        "clis/ph-cli/src/cli.ts",
+        "clis/ph-cmd/src/cli.ts",
+        "clis/ph-cli/src/commands/*.ts",
+        "clis/ph-cmd/src/commands/*.ts"
+      ],
+      "rules": {
+        "cli-cold-path/allowed-static-imports": ["error", {
+          "allow": [
+            "cmd-ts",
+            "@powerhousedao/shared/clis/args",
+            "@powerhousedao/shared/clis/constants",
+            "@powerhousedao/shared/clis/utils",
+            "@powerhousedao/shared/clis/telemetry",
+            "@powerhousedao/shared/clis/command-names",
+            "@powerhousedao/shared/constants",
+            "@powerhousedao/shared/processors"
+          ],
+          "message": "Do not import modules statically on the CLI commands."
+        }]
+      }
+    },
     {
       "files": ["**/*.test.ts", "**/*.test.tsx", "**/*.bench.ts", "**/__tests__/**", "**/test/**"],
       "rules": {
         "typescript/no-unused-vars": "off",
-        "no-empty": "off"
+        "no-empty": "off",
+        "typescript/no-floating-promises": "off",
+        "typescript/no-misused-promises": "off"
       }
     }
   ],
