@@ -230,16 +230,194 @@
     <main>
       <h1>tsgo + oxlint migration</h1>
       <p class="lead">
-        Replacing <code>tsc</code> and <code>eslint</code> with the Rust/Go
-        ports (<code>tsgo</code> from
-        <code>@typescript/native-preview</code> and <code>oxlint</code>) where
-        the tradeoffs work — and keeping the originals where they don't.
+        Migrating the entire lint + format + typecheck stack from
+        <code>tsc</code> / <code>eslint</code> / <code>prettier</code> /
+        <code>eslint-plugin-better-tailwindcss</code> to the Rust + Go
+        ports — <code>tsgo</code>, <code>oxlint</code>, <code>oxfmt</code>,
+        and <code>oxlint-tailwindcss</code> — with the goal of near 100%
+        rule parity. ESLint is now vestigial (registers plugins only so
+        legacy <code>eslint-disable</code> comments resolve).
       </p>
       <div class="pillrow">
         <span class="pill">monorepo: powerhouse</span>
         <span class="pill">~2268 TS files</span>
         <span class="pill">node 24 · pnpm 11</span>
         <span class="pill">branch: worktree-migrate-tsgo-oxlint</span>
+      </div>
+
+      <h2>Tool-by-tool migration</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Old</th>
+            <th>New</th>
+            <th>Equivalence</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>tsc --build</code></td>
+            <td><code>tsgo --build tsconfig.tsgo.json</code> (advisory)</td>
+            <td>
+              <span class="badge warn">partial</span>
+              ~4.8× faster cold. Preview release (7.0.0-dev). One config
+              tweak: <code>apps/academy</code> excluded because its
+              docusaurus tsconfig still uses the removed
+              <code>baseUrl</code> option (tsgo doesn't honor
+              <code>ignoreDeprecations</code>). tsc remains authoritative
+              until tsgo hits 1.0.
+            </td>
+          </tr>
+          <tr>
+            <td><code>eslint</code> (core)</td>
+            <td><code>oxlint</code> (native Rust rules)</td>
+            <td>
+              <span class="badge ok">equivalent</span>
+              Covers all of ESLint core, <code>react-hooks</code>
+              (rules-of-hooks, exhaustive-deps),
+              <code>unicorn/*</code>, <code>import/*</code>,
+              <code>promise/*</code>, plus the
+              <code>no-useless-assignment</code> nursery rule.
+            </td>
+          </tr>
+          <tr>
+            <td><code>typescript-eslint</code> (type-aware)</td>
+            <td><code>oxlint --type-aware</code> via <code>oxlint-tsgolint</code></td>
+            <td>
+              <span class="badge ok">equivalent</span>
+              All type-aware rules used here are supported
+              (<code>no-floating-promises</code>,
+              <code>no-misused-promises</code>,
+              <code>require-await</code>,
+              <code>no-unnecessary-condition</code>,
+              <code>restrict-template-expressions</code>,
+              <code>consistent-type-imports</code>,
+              <code>no-base-to-string</code>, etc.). Rule ids accept both
+              <code>@typescript-eslint/X</code> and <code>typescript/X</code>.
+            </td>
+          </tr>
+          <tr>
+            <td>Custom ESLint plugins: <code>logger/*</code>, <code>cli-cold-path/*</code></td>
+            <td>Same rules loaded via <code>jsPlugins</code></td>
+            <td>
+              <span class="badge ok">equivalent</span>
+              Extracted into <code>eslint-plugins/</code> as ESLint v9
+              plugin modules; same source of truth. No source code
+              changes required.
+            </td>
+          </tr>
+          <tr>
+            <td><code>eslint-plugin-react-hooks</code> v7 compiler rules</td>
+            <td>v7 jsPlugin aliased as <code>react-hooks-extra/*</code></td>
+            <td>
+              <span class="badge warn">rename required</span>
+              oxlint reserves <code>react-hooks</code> for the native
+              plugin. The three v7 rules (<code>set-state-in-effect</code>,
+              <code>incompatible-library</code>,
+              <code>static-components</code>) move under the
+              <code>react-hooks-extra</code> prefix. Codemod
+              (<code>benchmarks/migrate-disable-comments.mjs</code>)
+              renamed 25 inline disable comments across 17 files.
+            </td>
+          </tr>
+          <tr>
+            <td><code>eslint-plugin-better-tailwindcss</code></td>
+            <td><code>oxlint-tailwindcss</code> (native plugin)</td>
+            <td>
+              <span class="badge ok">equivalent</span>
+              Same 8 rules from <code>recommended-error</code>, scoped to
+              the same 4 packages via an <code>overrides</code> block.
+              Requires <code>build:css</code> to run first (the plugin
+              loads <code>dist/style.css</code> via package exports). 44
+              unknown-class findings — identical to old setup.
+            </td>
+          </tr>
+          <tr>
+            <td><code>prettier</code> + <code>eslint-plugin-prettier</code></td>
+            <td><code>oxfmt --write</code> / <code>--check</code></td>
+            <td>
+              <span class="badge warn">near-equivalent</span>
+              <code>.oxfmtrc.json</code> auto-migrated from
+              <code>.prettierrc.json</code>. Output diverges on exactly
+              one stylistic point across 2270 files: oxfmt
+              parenthesizes <code>infer T</code> in conditional types.
+              Markdown / MDX excluded (oxfmt mangles MDX JSX comments).
+              <code>oxfmt --check</code> chained into <code>lint:ox</code>
+              so formatting drift fails the lint script.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>Differences — what didn't carry over</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Loss</th>
+            <th>Impact</th>
+            <th>Mitigation</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>preserve-caught-error</code> (ESLint 10 core)</td>
+            <td>5 findings on this repo. No oxlint equivalent.</td>
+            <td>Accepted gap. Could be loaded via <code>jsPlugins</code> pointing at <code>@eslint/js</code> if needed.</td>
+          </tr>
+          <tr>
+            <td>Markdown / MDX formatting</td>
+            <td>oxfmt corrupts MDX JSX comment syntax.</td>
+            <td>md/mdx excluded from oxfmt; run prettier explicitly for those if desired (no longer gated by CI).</td>
+          </tr>
+          <tr>
+            <td>VSCode integration via ESLint extension</td>
+            <td>Lint diagnostics no longer appear under the ESLint vendor in the editor.</td>
+            <td>Install <code>oxc.oxc-vscode</code> for native diagnostics.</td>
+          </tr>
+          <tr>
+            <td>tsgo as authoritative typecheck</td>
+            <td>tsgo is preview (7.0.0-dev) and excludes <code>apps/academy</code> due to a baseUrl deprecation.</td>
+            <td>Kept tsc as the merge gate. tsgo runs as a fast advisory pre-check.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>Net new coverage from oxlint</h2>
+      <p class="muted" style="margin-top: 0">
+        Rules ESLint did not have enabled that oxlint surfaces by default —
+        81 real errors found by the migration.
+      </p>
+      <div class="grid cards" style="margin-bottom: 18px">
+        <div class="card">
+          <div class="label">unicorn/no-useless-spread</div>
+          <div class="val">15</div>
+          <div class="delta bad">errors</div>
+        </div>
+        <div class="card">
+          <div class="label">unicorn/no-empty-file</div>
+          <div class="val">14</div>
+          <div class="delta bad">errors</div>
+        </div>
+        <div class="card">
+          <div class="label">no-unsafe-optional-chaining</div>
+          <div class="val">10</div>
+          <div class="delta bad">errors (real bugs)</div>
+        </div>
+        <div class="card">
+          <div class="label">react-hooks/rules-of-hooks</div>
+          <div class="val">4</div>
+          <div class="delta bad">errors (real hook bugs)</div>
+        </div>
+        <div class="card">
+          <div class="label">react-hooks-extra/set-state-in-effect</div>
+          <div class="val">13</div>
+          <div class="delta warn">v7 compiler rule</div>
+        </div>
+        <div class="card">
+          <div class="label">others</div>
+          <div class="val">38</div>
+          <div class="delta bad">unicorn / promise / typescript / react</div>
+        </div>
       </div>
 
       <h2>Headline numbers</h2>
