@@ -1,5 +1,5 @@
 import type { Type } from "cmd-ts";
-import { number, option, optional, string } from "cmd-ts";
+import { number, option, optional, positional, string } from "cmd-ts";
 import {
   DEFAULT_CONNECT_OUTDIR,
   DEFAULT_CONNECT_PREVIEW_PORT,
@@ -146,8 +146,47 @@ export const connectPreviewArgs = {
   ...commonServerArgs,
 };
 
+// `ph connect config [key] [value]` — set, get, or list runtime config.
+//
+// Mode matrix:
+//   ph connect config                          → list (print effective merged config)
+//   ph connect config <key>                    → get one value at the dotted key
+//   ph connect config <key> <value>            → set + dual-write to source + dist
+//   ph connect config --json '{"…":"…"}'      → bulk set + dual-write
+//
+// `--dist-dir` lets Docker / non-default deployments point at a custom dist
+// location. Falls back to PH_CONNECT_OUTDIR env, then to the standard
+// `.ph/connect-build/dist/` path inside the project root.
+export const connectConfigArgs = {
+  key: positional({
+    type: optional(string),
+    displayName: "key",
+    description:
+      'Dotted path inside connect.* (e.g. "connect.renown.url"). Omit for list mode.',
+  }),
+  value: positional({
+    type: optional(string),
+    displayName: "value",
+    description:
+      "New value for the path. Parsed as JSON when possible (so 'true', '42', '\"x\"' coerce correctly); otherwise treated as a string. Omit to get-only.",
+  }),
+  json: option({
+    type: optional(string),
+    long: "json",
+    description:
+      'Bulk override — partial connect.* blob, e.g. --json \'{"renown":{"url":"..."}}\'. Mutually exclusive with a positional key/value.',
+  }),
+  distDir: option({
+    type: optional(string),
+    long: "dist-dir",
+    description:
+      "Path to the directory containing the dist powerhouse.config.json. Defaults to the PH_CONNECT_OUTDIR env or `.ph/connect-build/dist/`.",
+  }),
+};
+
 export const connectArgs = {
   ...connectStudioArgs,
   ...connectBuildArgs,
   ...connectPreviewArgs,
+  ...connectConfigArgs,
 };

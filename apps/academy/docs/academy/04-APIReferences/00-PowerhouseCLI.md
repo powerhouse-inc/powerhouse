@@ -479,7 +479,7 @@ and real-time processing with a "Vetra" drive or connection to remote drives.
 
 
 ## Connect
-Powerhouse Connect commands. Use with `studio`, `build` or `preview`. Defaults to `studio` if not specified.
+Powerhouse Connect commands. Use with `studio`, `build`, `preview`, or `config`. Defaults to `studio` if not specified.
 
 ## Connect Studio
 The studio command starts the Connect Studio, a development environment for building
@@ -563,6 +563,30 @@ external packages included
 **Out Dir** - Output directory - Usage: `--outDir <str>`
 
 **Default:** `.ph/connect-build/dist/`
+**Json** - Inline JSON override for the runtime connect.* block, e.g. '\{"renown":\{"url":"..."\}\}'. Validated against the runtime schema; deep-merged on top of env seeds and source powerhouse.config.json. Individual --flag values beat --json on collision. - Usage: `--json <str>`
+
+**Renown Url** - Override connect.renown.url. - Usage: `--renown-url <str>`
+
+**Renown Network Id** - Override connect.renown.networkId. - Usage: `--renown-network-id <str>`
+
+**Renown Chain Id** - Override connect.renown.chainId. - Usage: `--renown-chain-id <number>`
+
+**Allow Add Drive** - Override connect.drives.allowAddDrive (top-level add-drive toggle). - Usage: `--allow-add-drive <value>`
+
+**External Packages** - Override connect.packages.externalEnabled. - Usage: `--external-packages <value>`
+
+**Remote Drives Enabled** - Override connect.drives.sections.remote.enabled (the unified cloud+public section). - Usage: `--remote-drives-enabled <value>`
+
+**Remote Drives Allow Add** - Override connect.drives.sections.remote.allowAdd. - Usage: `--remote-drives-allow-add <value>`
+
+**Remote Drives Allow Delete** - Override connect.drives.sections.remote.allowDelete. - Usage: `--remote-drives-allow-delete <value>`
+
+**Local Drives Enabled** - Override connect.drives.sections.local.enabled. - Usage: `--local-drives-enabled <value>`
+
+**Local Drives Allow Add** - Override connect.drives.sections.local.allowAdd. - Usage: `--local-drives-allow-add <value>`
+
+**Local Drives Allow Delete** - Override connect.drives.sections.local.allowDelete. - Usage: `--local-drives-allow-delete <value>`
+
 **Base** - Base path for the app - Usage: `--base <str>`
 
 **Environment:** `PH_CONNECT_BASE_PATH`

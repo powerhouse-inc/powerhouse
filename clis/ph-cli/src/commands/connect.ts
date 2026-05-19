@@ -1,5 +1,6 @@
 import {
   connectBuildArgs,
+  connectConfigArgs,
   connectPreviewArgs,
   connectStudioArgs,
 } from "@powerhousedao/shared/clis/args";
@@ -59,12 +60,34 @@ NOTE: You must run \`ph connect build\` first
   },
 });
 
+export const config = command({
+  name: "config",
+  description: `Read or update Connect's runtime configuration (powerhouse.config.json).
+
+Modes:
+  ph connect config                       List the effective connect.* block (defaults < source).
+  ph connect config <key>                 Get the value at the dotted path (e.g. connect.renown.url).
+  ph connect config <key> <value>         Set the value and dual-write to source + dist.
+  ph connect config --json '{"…":"…"}'   Bulk set + dual-write.
+
+Writes go to:
+  - <project>/powerhouse.config.json (source — picked up by the next build)
+  - <dist-dir>/powerhouse.config.json (if it exists — the currently-served SPA picks it up on refresh)
+`,
+  args: connectConfigArgs,
+  handler: async (args) => {
+    const { runConnectConfig } = await import("../services/connect-config.js");
+    await runConnectConfig(args);
+  },
+});
+
 export const connect = subcommands({
   name: "connect",
-  description: `Powerhouse Connect commands. Use with \`studio\`, \`build\` or \`preview\`. Defaults to \`studio\` if not specified.`,
+  description: `Powerhouse Connect commands. Use with \`studio\`, \`build\`, \`preview\`, or \`config\`. Defaults to \`studio\` if not specified.`,
   cmds: {
     studio,
     build,
     preview,
+    config,
   },
 });

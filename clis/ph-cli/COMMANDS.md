@@ -342,7 +342,7 @@ show help<br><br>
 
 
 ## Connect
-Powerhouse Connect commands. Use with `studio`, `build` or `preview`. Defaults to `studio` if not specified.
+Powerhouse Connect commands. Use with `studio`, `build`, `preview`, or `config`. Defaults to `studio` if not specified.
 ## Connect Studio
 The studio command starts the Connect Studio, a development environment for building
 and testing Powerhouse applications. It provides a visual interface for working with
@@ -439,6 +439,54 @@ external packages included
 Output directory<br><br>
 **usage:** `--outDir <str>`<br>
 **default**: `.ph/connect-build/dist/`
+#### Json <br>
+Inline JSON override for the runtime connect.* block, e.g. '{"renown":{"url":"..."}}'. Validated against the runtime schema; deep-merged on top of env seeds and source powerhouse.config.json. Individual --flag values beat --json on collision.<br><br>
+**usage:** `--json <str>`<br>
+
+#### Renown Url <br>
+Override connect.renown.url.<br><br>
+**usage:** `--renown-url <str>`<br>
+
+#### Renown Network Id <br>
+Override connect.renown.networkId.<br><br>
+**usage:** `--renown-network-id <str>`<br>
+
+#### Renown Chain Id <br>
+Override connect.renown.chainId.<br><br>
+**usage:** `--renown-chain-id <number>`<br>
+
+#### Allow Add Drive <br>
+Override connect.drives.allowAddDrive (top-level add-drive toggle).<br><br>
+**usage:** `--allow-add-drive <value>`<br>
+
+#### External Packages <br>
+Override connect.packages.externalEnabled.<br><br>
+**usage:** `--external-packages <value>`<br>
+
+#### Remote Drives Enabled <br>
+Override connect.drives.sections.remote.enabled (the unified cloud+public section).<br><br>
+**usage:** `--remote-drives-enabled <value>`<br>
+
+#### Remote Drives Allow Add <br>
+Override connect.drives.sections.remote.allowAdd.<br><br>
+**usage:** `--remote-drives-allow-add <value>`<br>
+
+#### Remote Drives Allow Delete <br>
+Override connect.drives.sections.remote.allowDelete.<br><br>
+**usage:** `--remote-drives-allow-delete <value>`<br>
+
+#### Local Drives Enabled <br>
+Override connect.drives.sections.local.enabled.<br><br>
+**usage:** `--local-drives-enabled <value>`<br>
+
+#### Local Drives Allow Add <br>
+Override connect.drives.sections.local.allowAdd.<br><br>
+**usage:** `--local-drives-allow-add <value>`<br>
+
+#### Local Drives Allow Delete <br>
+Override connect.drives.sections.local.allowDelete.<br><br>
+**usage:** `--local-drives-allow-delete <value>`<br>
+
 #### Base <br>
 Base path for the app<br><br>
 **usage:** `--base <str>`<br>

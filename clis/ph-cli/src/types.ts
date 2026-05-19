@@ -2,6 +2,7 @@ import type { ParsedCmdResult } from "@powerhousedao/shared/clis";
 import type { accessToken } from "./commands/access-token.js";
 import type { build } from "./commands/build.js";
 import type {
+  config as connectConfigCmd,
   connect,
   build as connectBuild,
   preview,
@@ -44,6 +45,7 @@ export type BuildArgs = ParsedCmdResult<typeof build>;
 export type ConnectStudioArgs = ParsedCmdResult<typeof studio>;
 export type ConnectBuildArgs = ParsedCmdResult<typeof connectBuild>;
 export type ConnectPreviewArgs = ParsedCmdResult<typeof preview>;
+export type ConnectConfigArgs = ParsedCmdResult<typeof connectConfigCmd>;
 export type ConnectArgs = ParsedCmdResult<typeof connect>;
 export type AccessTokenArgs = ParsedCmdResult<typeof accessToken>;
 export type InspectArgs = ParsedCmdResult<typeof inspect>;

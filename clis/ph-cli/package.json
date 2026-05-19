@@ -42,6 +42,7 @@
     "@powerhousedao/switchboard": "workspace:*",
     "@renown/sdk": "workspace:*",
     "@tsdown/css": "catalog:",
+    "ajv": "^8.18.0",
     "chalk": "catalog:",
     "change-case": "catalog:",
     "cmd-ts": "catalog:",
