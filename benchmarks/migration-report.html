@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>tsgo + oxlint migration report</title>
+<style>
+  :root {
+    --bg: #0e1116;
+    --panel: #151a22;
+    --panel-2: #1c2230;
+    --fg: #e6edf3;
+    --muted: #8b96a6;
+    --accent: #7ee787;
+    --accent-2: #79c0ff;
+    --warn: #f1c062;
+    --bad: #ff7b72;
+    --border: #2a3140;
+  }
+  * { box-sizing: border-box; }
+  html, body { background: var(--bg); color: var(--fg); margin: 0; padding: 0;
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, system-ui, sans-serif; }
+  main { max-width: 1080px; margin: 0 auto; padding: 48px 28px 96px; }
+  h1 { font-size: 32px; margin: 0 0 6px; letter-spacing: -0.02em; }
+  h2 { font-size: 22px; margin: 48px 0 14px; letter-spacing: -0.01em; }
+  h3 { font-size: 17px; margin: 28px 0 8px; color: var(--accent-2); }
+  p, li { color: var(--fg); }
+  .lead { color: var(--muted); font-size: 16px; margin-bottom: 28px; }
+  .grid { display: grid; gap: 14px; }
+  .grid.cards { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; }
+  .card .label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; }
+  .card .val { font-size: 26px; font-weight: 600; margin-top: 4px; }
+  .card .delta { font-size: 13px; color: var(--accent); margin-top: 4px; }
+  .card .delta.warn { color: var(--warn); }
+  .card .delta.bad { color: var(--bad); }
+  table { width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border); font-size: 14px; }
+  th { background: var(--panel-2); color: var(--muted); font-weight: 500; text-transform: uppercase; font-size: 11px; letter-spacing: 0.08em; }
+  tr:last-child td { border-bottom: none; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .bar-cell { padding: 6px 14px; }
+  .bar { background: var(--panel-2); border-radius: 4px; height: 18px; position: relative; overflow: hidden; }
+  .bar > span { display: block; height: 100%; background: linear-gradient(90deg, #79c0ff, #7ee787); }
+  .bar.slow > span { background: linear-gradient(90deg, #ff7b72, #f1c062); }
+  .badge { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; vertical-align: middle; }
+  .badge.ok { background: rgba(126,231,135,.15); color: var(--accent); }
+  .badge.warn { background: rgba(241,192,98,.15); color: var(--warn); }
+  .badge.bad { background: rgba(255,123,114,.15); color: var(--bad); }
+  code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; }
+  code { background: var(--panel-2); padding: 1px 6px; border-radius: 4px; color: var(--accent-2); }
+  pre { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; overflow-x: auto; }
+  ul { padding-left: 22px; }
+  li { margin: 4px 0; }
+  .muted { color: var(--muted); }
+  .pillrow { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0 0; }
+  .pill { background: var(--panel-2); padding: 4px 10px; border-radius: 999px; font-size: 12px; color: var(--muted); border: 1px solid var(--border); }
+  footer { margin-top: 64px; color: var(--muted); font-size: 12px; border-top: 1px solid var(--border); padding-top: 16px; }
+  .row2 { display: grid; grid-template-columns: 1.4fr 1fr; gap: 18px; }
+  @media (max-width: 760px) { .row2 { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>tsgo + oxlint migration</h1>
+  <p class="lead">
+    Replacing <code>tsc</code> and <code>eslint</code> with the Rust/Go ports
+    (<code>tsgo</code> from <code>@typescript/native-preview</code> and
+    <code>oxlint</code>) where the tradeoffs work — and keeping the originals
+    where they don't.
+  </p>
+  <div class="pillrow">
+    <span class="pill">monorepo: powerhouse</span>
+    <span class="pill">~2268 TS files</span>
+    <span class="pill">node 24 · pnpm 11</span>
+    <span class="pill">branch: worktree-migrate-tsgo-oxlint</span>
+  </div>
+
+  <h2>Headline numbers</h2>
+  <div class="grid cards">
+    <div class="card">
+      <div class="label">Cold typecheck</div>
+      <div class="val">19.3s → 4.0s</div>
+      <div class="delta">~4.8× faster (tsgo)</div>
+    </div>
+    <div class="card">
+      <div class="label">Cold lint</div>
+      <div class="val">63.8s → 0.64s</div>
+      <div class="delta">~100× faster (oxlint)</div>
+    </div>
+    <div class="card">
+      <div class="label">Warm typecheck</div>
+      <div class="val">1.0s → 0.14s</div>
+      <div class="delta">~7× faster</div>
+    </div>
+    <div class="card">
+      <div class="label">Warm lint</div>
+      <div class="val">1.4s → 0.55s</div>
+      <div class="delta">~2.5× faster</div>
+    </div>
+  </div>
+
+  <h2>Benchmarks</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Tool</th><th>Version</th><th>Mode</th>
+        <th class="num">Elapsed</th><th>Relative</th><th>Notes</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>tsc</td><td>6.0.3</td><td>cold</td><td class="num">19.33s</td>
+        <td class="bar-cell"><div class="bar slow"><span style="width:100%"></span></div></td>
+        <td>Authoritative</td></tr>
+      <tr><td>tsgo</td><td>7.0.0-dev.20260518.1</td><td>cold</td><td class="num">4.03s</td>
+        <td class="bar-cell"><div class="bar"><span style="width:20.8%"></span></div></td>
+        <td>Excludes apps/academy (see breaking changes)</td></tr>
+      <tr><td>tsc</td><td>6.0.3</td><td>warm</td><td class="num">1.04s</td>
+        <td class="bar-cell"><div class="bar slow"><span style="width:100%"></span></div></td>
+        <td>Incremental tsbuildinfo</td></tr>
+      <tr><td>tsgo</td><td>7.0.0-dev.20260518.1</td><td>warm</td><td class="num">0.14s</td>
+        <td class="bar-cell"><div class="bar"><span style="width:13.5%"></span></div></td>
+        <td>Incremental tsbuildinfo</td></tr>
+      <tr><td>eslint</td><td>10.3.0 + typescript-eslint</td><td>cold</td><td class="num">63.80s</td>
+        <td class="bar-cell"><div class="bar slow"><span style="width:100%"></span></div></td>
+        <td>Authoritative; type-aware</td></tr>
+      <tr><td>oxlint</td><td>1.65.0</td><td>cold</td><td class="num">0.64s</td>
+        <td class="bar-cell"><div class="bar"><span style="width:1%"></span></div></td>
+        <td>Correctness only; 18 threads</td></tr>
+      <tr><td>eslint</td><td>10.3.0</td><td>warm (cache)</td><td class="num">1.37s</td>
+        <td class="bar-cell"><div class="bar slow"><span style="width:100%"></span></div></td><td>—</td></tr>
+      <tr><td>oxlint</td><td>1.65.0</td><td>warm</td><td class="num">0.55s</td>
+        <td class="bar-cell"><div class="bar"><span style="width:40%"></span></div></td><td>No cache; just re-scans</td></tr>
+    </tbody>
+  </table>
+  <p class="muted">
+    Bars show time relative to the baseline tool in each (cold/warm)
+    comparison. Runs on darwin 25.4.0 (Apple Silicon), Node 24, pnpm 11.0.8.
+  </p>
+
+  <h2>What changed</h2>
+  <div class="row2">
+    <div class="card">
+      <h3 style="margin-top:0">Files added</h3>
+      <ul>
+        <li><code>tsconfig.tsgo.json</code> — references list for tsgo (omits <code>apps/academy</code>)</li>
+        <li><code>.oxlintrc.json</code> — oxlint config tuned for this codebase</li>
+        <li><code>benchmarks/run.sh</code> + <code>results.json</code></li>
+      </ul>
+      <h3>Scripts added</h3>
+      <ul>
+        <li><code>pnpm typecheck:tsgo</code></li>
+        <li><code>pnpm lint:ox</code> / <code>pnpm lint:ox:fix</code></li>
+      </ul>
+      <h3>CI</h3>
+      <p>Both new tools run as <em>advisory</em> pre-checks in
+        <code>.github/workflows/check-commit.yml</code> with
+        <code>continue-on-error: true</code>. They give sub-second feedback;
+        the authoritative tsc/eslint passes still gate merges.</p>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">Kept as-is</h3>
+      <ul>
+        <li><code>tsc --build</code> — authoritative typecheck</li>
+        <li><code>eslint</code> — type-aware rules, prettier formatting, custom plugins (<code>logger/*</code>, <code>cli-cold-path/*</code>), <code>better-tailwindcss</code></li>
+        <li><code>prettier</code> — formatting (oxlint does not format)</li>
+      </ul>
+      <p class="muted">This is intentionally a hybrid migration. The Rust/Go
+        tools cover the fast path; the JS originals remain authoritative for
+        anything they don't yet support.</p>
+    </div>
+  </div>
+
+  <h2>Breaking changes &amp; caveats</h2>
+
+  <h3>tsgo (TypeScript 7 native preview)</h3>
+  <table>
+    <thead><tr><th>Issue</th><th>Impact</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><code>baseUrl</code> compiler option fully removed in TS 7</td>
+        <td><code>apps/academy</code> extends <code>@docusaurus/tsconfig</code> which still sets <code>baseUrl: "."</code>. <code>ignoreDeprecations: "6.0"</code> does <em>not</em> silence this in tsgo.</td>
+        <td><span class="badge warn">workaround</span> Excluded from <code>tsconfig.tsgo.json</code>. Long-term: wait for <code>@docusaurus/tsconfig</code> update or shim a local override.</td>
+      </tr>
+      <tr>
+        <td>Preview release (<code>7.0.0-dev</code>)</td>
+        <td>API surface still moving; some <code>tsc</code> flags / edge cases may not be honored.</td>
+        <td><span class="badge warn">advisory only</span> tsc remains authoritative.</td>
+      </tr>
+      <tr>
+        <td>Editor support</td>
+        <td>VSCode integration is via <code>@typescript/native-preview</code> extension, not the bundled TS Server.</td>
+        <td><span class="badge">informational</span></td>
+      </tr>
+      <tr>
+        <td>Build cache</td>
+        <td>tsgo writes its own <code>.tsbuild/tsconfig.tsbuildinfo</code> alongside tsc's — different format, no interop.</td>
+        <td><span class="badge ok">handled</span> Already in <code>.gitignore</code> patterns.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>oxlint</h3>
+  <table>
+    <thead><tr><th>Issue</th><th>Impact</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>No plugin API (yet)</td>
+        <td>The repo's custom rules — <code>logger/missing-token-args</code>, <code>logger/extra-args-without-token</code>, <code>cli-cold-path/allowed-static-imports</code> — cannot run under oxlint.</td>
+        <td><span class="badge bad">unsupported</span> ESLint remains authoritative for these.</td>
+      </tr>
+      <tr>
+        <td>No type-aware rules</td>
+        <td>Most <code>typescript-eslint/*</code> rules used here are type-aware: <code>no-floating-promises</code>, <code>no-misused-promises</code>, <code>require-await</code>, <code>no-unnecessary-condition</code>, <code>restrict-template-expressions</code>, <code>consistent-type-imports</code>, etc. Oxlint cannot evaluate them.</td>
+        <td><span class="badge bad">unsupported</span> ESLint remains authoritative.</td>
+      </tr>
+      <tr>
+        <td>No <code>eslint-plugin-better-tailwindcss</code></td>
+        <td>Tailwind class validation and ordering rules for design-system / connect / vetra packages.</td>
+        <td><span class="badge bad">unsupported</span> ESLint keeps these.</td>
+      </tr>
+      <tr>
+        <td>No <code>eslint-plugin-prettier</code></td>
+        <td>Oxlint does not format. Prettier still runs via ESLint, husky, and editor save.</td>
+        <td><span class="badge">expected</span></td>
+      </tr>
+      <tr>
+        <td><code>settings.react.version: "detect"</code> not accepted</td>
+        <td>Oxlint config schema expects a literal version string or omitted.</td>
+        <td><span class="badge ok">handled</span> Setting removed.</td>
+      </tr>
+      <tr>
+        <td>Rule-name divergence</td>
+        <td>Oxlint groups rules by plugin (e.g. <code>typescript/no-unused-vars</code>, <code>react-hooks/exhaustive-deps</code>). ESLint config IDs do not map 1:1.</td>
+        <td><span class="badge warn">migration cost</span> Documented in <code>.oxlintrc.json</code>.</td>
+      </tr>
+      <tr>
+        <td>Pre-existing findings surfaced</td>
+        <td>66 correctness errors + 171 warnings on first run — rules ESLint does not have or has disabled.</td>
+        <td><span class="badge warn">triage</span> See breakdown below.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Oxlint findings to triage</h3>
+  <table>
+    <thead><tr><th>Rule</th><th>Count</th><th>Severity</th><th>Likely action</th></tr></thead>
+    <tbody>
+      <tr><td><code>unicorn/no-useless-spread</code></td><td class="num">15</td><td>error</td><td>Fix — usually a real issue</td></tr>
+      <tr><td><code>unicorn/no-empty-file</code></td><td class="num">14</td><td>error</td><td>Triage — many are intentional placeholders</td></tr>
+      <tr><td><code>no-unsafe-optional-chaining</code></td><td class="num">10</td><td>error</td><td>Fix — real bugs</td></tr>
+      <tr><td><code>unicorn/no-useless-fallback-in-spread</code></td><td class="num">8</td><td>error</td><td>Fix or auto-fix</td></tr>
+      <tr><td><code>unicorn/no-new-array</code></td><td class="num">5</td><td>error</td><td>Fix</td></tr>
+      <tr><td><code>promise/no-callback-in-promise</code></td><td class="num">5</td><td>error</td><td>Review</td></tr>
+      <tr><td><code>react-hooks/rules-of-hooks</code></td><td class="num">4</td><td>error</td><td>Fix — real bugs ESLint also flags</td></tr>
+      <tr><td><code>react/no-children-prop</code></td><td class="num">2</td><td>error</td><td>Fix</td></tr>
+      <tr><td>others</td><td class="num">3</td><td>error</td><td>—</td></tr>
+      <tr><td><code>typescript/no-unused-vars</code></td><td class="num">116</td><td>warn</td><td>Cleanup over time</td></tr>
+      <tr><td><code>react-hooks/exhaustive-deps</code></td><td class="num">55</td><td>warn</td><td>Already an ESLint warning</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Recommended rollout</h2>
+  <ol>
+    <li><strong>Now (this PR)</strong> — tsgo + oxlint installed, scripts added, CI runs them as advisory. Zero blast radius.</li>
+    <li><strong>Next sprint</strong> — fix the 66 oxlint correctness errors, then flip oxlint to blocking in CI.</li>
+    <li><strong>2–3 months</strong> — when tsgo hits 1.0 and <code>@docusaurus/tsconfig</code> drops <code>baseUrl</code>, swap <code>pnpm typecheck</code> to tsgo and keep tsc only for the CI authoritative gate.</li>
+    <li><strong>Later</strong> — evaluate <a href="https://biomejs.dev">Biome</a> or <a href="https://dprint.dev">dprint</a> to replace prettier for formatting once oxlint covers the lint cases.</li>
+  </ol>
+
+  <h2>Reproducing</h2>
+  <pre>pnpm install
+pnpm typecheck         # tsc (baseline)
+pnpm typecheck:tsgo    # tsgo
+pnpm lint              # eslint (baseline)
+pnpm lint:ox           # oxlint
+bash benchmarks/run.sh # full run; results in benchmarks/results.json.jsonl</pre>
+
+  <footer>
+    Generated on the <code>worktree-migrate-tsgo-oxlint</code> branch.
+    Commits: baseline harness → tsgo → oxlint → benchmarks → CI → report.
+  </footer>
+</main>
+</body>
+</html>
