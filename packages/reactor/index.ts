@@ -8,6 +8,7 @@ export {
   deleteDocumentAction,
   documentActions,
   removeRelationshipAction,
+  updateRelationshipAction,
   upgradeDocumentAction,
 } from "./src/actions/index.js";
 
@@ -20,12 +21,20 @@ export {
   type IDriveClient,
   type IReactorClient,
 } from "./src/client/types.js";
-export { ReactorBuilder } from "./src/core/reactor-builder.js";
+export {
+  ReactorBuilder,
+  type ReadModelFactory,
+  type ReadModelFactoryDeps,
+} from "./src/core/reactor-builder.js";
 export { ReactorClientBuilder } from "./src/core/reactor-client-builder.js";
+export { DEFAULT_DRIVE_CONTAINER_TYPES } from "./src/core/drive-container-types.js";
 export { Reactor } from "./src/core/reactor.js";
 export {
+  type BatchExecutionRequest,
+  type BatchExecutionResult,
   type BatchLoadRequest,
   type BatchLoadResult,
+  type ExecutionJobPlan,
   type IReactor,
   type LoadJobPlan,
   type ReactorClientModule,
@@ -45,6 +54,7 @@ export {
   type ParsedDriveUrl,
 } from "./src/shared/drive-url.js";
 export { createMutableShutdownStatus } from "./src/shared/factories.js";
+export { parsePagingOptions, type ParsedPaging } from "./src/shared/utils.js";
 export {
   JobStatus,
   PropagationMode,

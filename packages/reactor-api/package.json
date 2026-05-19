@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-api",
-  "version": "6.0.0-dev.253",
+  "version": "6.0.0-dev.254",
   "description": "",
   "type": "module",
   "repository": {
@@ -41,7 +41,8 @@
     "codegen": "graphql-codegen --config codegen.ts && prettier --write src/graphql/reactor/gen/*.ts && eslint --fix src/graphql/reactor/gen/*.ts --no-warn-ignored",
     "codegen:watch": "graphql-codegen --config codegen.ts --watch",
     "dev": "tsx src/dev.ts",
-    "capture-hub-dump": "tsx scripts/capture-hub-dump.ts"
+    "capture-hub-dump": "tsx scripts/capture-hub-dump.ts",
+    "convert-hub-dump": "tsx scripts/convert-hub-dump.ts"
   },
   "publishConfig": {
     "access": "public"
@@ -64,6 +65,7 @@
     "@powerhousedao/pglite-fs": "workspace:*",
     "@powerhousedao/reactor": "workspace:*",
     "@powerhousedao/reactor-attachments": "workspace:*",
+    "@powerhousedao/reactor-drive": "workspace:*",
     "@powerhousedao/reactor-mcp": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
     "@renown/sdk": "workspace:*",

@@ -9,6 +9,10 @@ import {
   getMigrationStatus,
   REACTOR_SCHEMA,
 } from "@powerhousedao/reactor";
+import {
+  getReactorDriveMigrationStatus,
+  runReactorDriveMigrations,
+} from "@powerhousedao/reactor-drive";
 import { getConfig } from "@powerhousedao/config/node";
 
 function isPostgresUrl(url: string): boolean {
@@ -44,8 +48,8 @@ async function main() {
       console.log("\nChecking migration status...");
       const migrations = await getMigrationStatus(db, REACTOR_SCHEMA);
 
-      console.log("\nMigration Status:");
-      console.log("=================");
+      console.log("\nReactor Migration Status:");
+      console.log("=========================");
 
       for (const migration of migrations) {
         const status = migration.executedAt
@@ -53,8 +57,23 @@ async function main() {
           : "[--] Pending";
         console.log(`${status} - ${migration.name}`);
       }
+
+      const driveMigrations = await getReactorDriveMigrationStatus(
+        db,
+        REACTOR_SCHEMA,
+      );
+
+      console.log("\nReactor-Drive Migration Status:");
+      console.log("===============================");
+
+      for (const migration of driveMigrations) {
+        const status = migration.executedAt
+          ? `[OK] Executed at ${migration.executedAt.toISOString()}`
+          : "[--] Pending";
+        console.log(`${status} - ${migration.name}`);
+      }
     } else {
-      console.log("\nRunning migrations...");
+      console.log("\nRunning reactor migrations...");
       const result = await runMigrations(db, REACTOR_SCHEMA);
 
       if (!result.success) {
@@ -63,12 +82,36 @@ async function main() {
       }
 
       if (result.migrationsExecuted.length === 0) {
-        console.log("No migrations to run - database is up to date");
+        console.log("No reactor migrations to run - database is up to date");
       } else {
         console.log(
-          `Successfully executed ${result.migrationsExecuted.length} migration(s):`,
+          `Successfully executed ${result.migrationsExecuted.length} reactor migration(s):`,
         );
         for (const name of result.migrationsExecuted) {
+          console.log(`  - ${name}`);
+        }
+      }
+
+      console.log("\nRunning reactor-drive migrations...");
+      const driveResult = await runReactorDriveMigrations(db, REACTOR_SCHEMA);
+
+      if (!driveResult.success) {
+        console.error(
+          "Reactor-drive migration failed:",
+          driveResult.error?.message,
+        );
+        process.exit(1);
+      }
+
+      if (driveResult.migrationsExecuted.length === 0) {
+        console.log(
+          "No reactor-drive migrations to run - database is up to date",
+        );
+      } else {
+        console.log(
+          `Successfully executed ${driveResult.migrationsExecuted.length} reactor-drive migration(s):`,
+        );
+        for (const name of driveResult.migrationsExecuted) {
           console.log(`  - ${name}`);
         }
       }

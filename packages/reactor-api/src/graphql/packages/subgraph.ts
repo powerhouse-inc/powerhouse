@@ -37,20 +37,20 @@ export class PackagesSubgraph extends BaseSubgraph {
             this.packageManagementService,
           );
         } catch (error) {
-          this.logger.error("Error in installedPackages:", error);
+          this.logger.error("Error in installedPackages: @error", error);
           throw error;
         }
       },
 
       installedPackage: async (_parent: unknown, args: { name: string }) => {
-        this.logger.debug("installedPackage", args);
+        this.logger.debug("installedPackage(@args)", args);
         try {
           return await resolvers.installedPackage(
             this.packageManagementService,
             args,
           );
         } catch (error) {
-          this.logger.error("Error in installedPackage:", error);
+          this.logger.error("Error in installedPackage: @error", error);
           throw error;
         }
       },
@@ -66,7 +66,7 @@ export class PackagesSubgraph extends BaseSubgraph {
         args: { name: string; registryUrl?: string | null },
         ctx: Context,
       ) => {
-        this.logger.debug("installPackage", args);
+        this.logger.debug("installPackage(@args)", args);
         try {
           return await resolvers.installPackage(
             this.packageManagementService,
@@ -74,7 +74,7 @@ export class PackagesSubgraph extends BaseSubgraph {
             ctx,
           );
         } catch (error) {
-          this.logger.error("Error in installPackage:", error);
+          this.logger.error("Error in installPackage: @error", error);
           throw error;
         }
       },
@@ -84,7 +84,7 @@ export class PackagesSubgraph extends BaseSubgraph {
         args: { name: string },
         ctx: Context,
       ) => {
-        this.logger.debug("uninstallPackage", args);
+        this.logger.debug("uninstallPackage(@args)", args);
         try {
           return await resolvers.uninstallPackage(
             this.packageManagementService,
@@ -92,7 +92,7 @@ export class PackagesSubgraph extends BaseSubgraph {
             ctx,
           );
         } catch (error) {
-          this.logger.error("Error in uninstallPackage:", error);
+          this.logger.error("Error in uninstallPackage: @error", error);
           throw error;
         }
       },

@@ -19,9 +19,6 @@
       "path": "clis/ph-cmd"
     },
     {
-      "path": "packages/reactor-drive"
-    },
-    {
       "path": "packages/reactor-hypercore"
     },
     {
@@ -38,6 +35,9 @@
     },
     {
       "path": "test/lb-loadtest"
+    },
+    {
+      "path": "test/package-e2e"
     },
     {
       "path": "test/switchboard"

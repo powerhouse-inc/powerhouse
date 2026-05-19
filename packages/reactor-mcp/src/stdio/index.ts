@@ -1,5 +1,6 @@
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { ReactorBuilder, ReactorClientBuilder } from "@powerhousedao/reactor";
+import { reactorDriveDocumentModelModule } from "@powerhousedao/reactor-drive";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
@@ -17,6 +18,7 @@ export interface IMcpOptions {
 const baseDocumentModels: DocumentModelModule<any>[] = [
   documentModelDocumentModelModule,
   driveDocumentModelModule,
+  reactorDriveDocumentModelModule,
 ];
 
 async function createReactorClient(documentModels: DocumentModelModule[]) {

@@ -1,0 +1,10 @@
+.project/
+.registry-storage/
+.registry-cdn-cache/
+.published.json
+.fake-home/
+node_modules/
+test-results/
+playwright-report/
+pnpm-publish-summary.json
+

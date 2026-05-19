@@ -4,4 +4,5 @@ export * from "./document.js";
 export * from "./drive.js";
 export * from "./folder.js";
 export * from "./navigation.js";
+export * from "./registry.js";
 export * from "./wait.js";

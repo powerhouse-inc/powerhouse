@@ -1,3 +1,44 @@
+## 6.0.0-dev.254 (2026-05-19)
+
+### 🚀 Features
+
+- single-document contention integration tests are switchable between document-drive and reactor-drive ([68b59b492](https://github.com/powerhouse-inc/powerhouse/commit/68b59b492))
+- prepping hub-spoke integration test ([497e70408](https://github.com/powerhouse-inc/powerhouse/commit/497e70408))
+- add dark mode script ([#2619](https://github.com/powerhouse-inc/powerhouse/pull/2619))
+- **e2e-utils:** share local-registry helper across e2e tests ([c3821fccd](https://github.com/powerhouse-inc/powerhouse/commit/c3821fccd))
+- **reactor-api:** main integration tests now run on both reactor-drive and document-drive, includes reshuffle fix ([4f370a63f](https://github.com/powerhouse-inc/powerhouse/commit/4f370a63f))
+- **reactor-drive:** initial commit ([d6b7c4f8c](https://github.com/powerhouse-inc/powerhouse/commit/d6b7c4f8c))
+- **registry:** --local-packages flag to bypass npmjs uplink ([f295ab989](https://github.com/powerhouse-inc/powerhouse/commit/f295ab989))
+- **vetra:** allow passing db-path through vetra command ([39c62d961](https://github.com/powerhouse-inc/powerhouse/commit/39c62d961))
+
+### 🩹 Fixes
+
+- add missing bg and text styles ([#2620](https://github.com/powerhouse-inc/powerhouse/pull/2620))
+- wiring up reactor-drive dependency ([8c22b1658](https://github.com/powerhouse-inc/powerhouse/commit/8c22b1658))
+- whoops, node-processor was not filtering properly ([6be70a29f](https://github.com/powerhouse-inc/powerhouse/commit/6be70a29f))
+- update to the latest knowledge-note dump and package ([eaf7ea34a](https://github.com/powerhouse-inc/powerhouse/commit/eaf7ea34a))
+- **builder-tools:** we have to expose pglite in a special way to use ph vetra with use-local ([fa323dc8b](https://github.com/powerhouse-inc/powerhouse/commit/fa323dc8b))
+- **package-e2e:** unblock strict quality gates and harden cleanup ([db9b91d78](https://github.com/powerhouse-inc/powerhouse/commit/db9b91d78))
+- **package-e2e:** address PR review feedback ([0ac1bcaed](https://github.com/powerhouse-inc/powerhouse/commit/0ac1bcaed))
+- **package-e2e:** add host-gateway to parallel scaffold build ([de3a54fe5](https://github.com/powerhouse-inc/powerhouse/commit/de3a54fe5))
+- **powerhouse-vetra-packages:** emit dts via tsc --build ([065c592ae](https://github.com/powerhouse-inc/powerhouse/commit/065c592ae))
+- **reactor-drive:** fix cursor issue ([6ae17779f](https://github.com/powerhouse-inc/powerhouse/commit/6ae17779f))
+- **reactor-drive:** since ADD_RELATIONSHIP and CREATE_DOCUMENT are allowed top race, the documentType should be on the relationship action ([9795cd755](https://github.com/powerhouse-inc/powerhouse/commit/9795cd755))
+- **reactor-drive:** remove unused consistency token field from subgraph ([301503c38](https://github.com/powerhouse-inc/powerhouse/commit/301503c38))
+- **reactor-drive:** delete is now handled by the node processor ([60d0b6404](https://github.com/powerhouse-inc/powerhouse/commit/60d0b6404))
+- **reactor-drive:** fix issue where reshuffle could make paging change ([5f19f68f6](https://github.com/powerhouse-inc/powerhouse/commit/5f19f68f6))
+- **reactor-drive:** do not guard against enpty folder names, throw ([582827331](https://github.com/powerhouse-inc/powerhouse/commit/582827331))
+
+### 🔥 Performance
+
+- **package-e2e:** parallelize docker scaffold build with publish-package ([71ac1d884](https://github.com/powerhouse-inc/powerhouse/commit/71ac1d884))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.253 (2026-05-18)
 
 This was a version bump only, there were no code changes.

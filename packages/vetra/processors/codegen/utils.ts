@@ -14,7 +14,7 @@ export function debounce<T extends (...args: any[]) => any>(
       try {
         await func(...args);
       } catch (error) {
-        logger.error(`Error in debounced function:`, error);
+        logger.error(`Error in debounced function: @error`, error);
       }
     }, delay);
   };

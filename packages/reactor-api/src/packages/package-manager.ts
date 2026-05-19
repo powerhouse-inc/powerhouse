@@ -4,6 +4,7 @@ import type {
   ProcessorFactoryBuilder,
   SubgraphClass,
 } from "@powerhousedao/reactor-api";
+import { reactorDriveDocumentModelModule } from "@powerhousedao/reactor-drive";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import { childLogger, documentModelDocumentModelModule } from "document-model";
@@ -80,7 +81,7 @@ export class PackageManager implements IPackageManager {
     try {
       this.subscribePackages(packages);
     } catch (error) {
-      this.logger.error("Failed to subscribe to packages", error);
+      this.logger.error("Failed to subscribe to packages: @error", error);
     }
 
     return {
@@ -108,6 +109,10 @@ export class PackageManager implements IPackageManager {
 
     documentModelModuleMap.set("document-model", [
       documentModelDocumentModelModule as unknown as DocumentModelModule,
+    ]);
+
+    documentModelModuleMap.set("reactor-drive", [
+      reactorDriveDocumentModelModule as unknown as DocumentModelModule,
     ]);
 
     for (const pkg of packages) {

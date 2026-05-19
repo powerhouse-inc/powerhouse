@@ -6,6 +6,7 @@ import { AtomicNodeFs } from "@powerhousedao/pglite-fs";
 import {
   ChannelScheme,
   EventBus,
+  REACTOR_SCHEMA,
   ReactorBuilder,
   ReactorClientBuilder,
   driveCollectionId,
@@ -27,6 +28,15 @@ import {
   createViteLogger,
   startViteServer,
 } from "@powerhousedao/reactor-api/vite";
+import {
+  DriveNodeView,
+  NodeProcessor,
+  ReactorDriveClient,
+  createReactorDriveResolvers,
+  reactorDriveDocumentModelModule,
+  reactorDriveSubgraphTypeDefs,
+  type ReactorDriveDatabase,
+} from "@powerhousedao/reactor-drive";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import { documentModels as vetraDocumentModels } from "@powerhousedao/vetra";
@@ -59,7 +69,11 @@ import {
 } from "./pglite-version.js";
 import { getRenownSignerConfig, initRenown } from "./renown.js";
 import type { StartServerOptions, SwitchboardReactor } from "./types.js";
-import { addDefaultDrive, isPostgresUrl } from "./utils.mjs";
+import {
+  addDefaultDrive,
+  addDefaultReactorDrive,
+  isPostgresUrl,
+} from "./utils.mjs";
 
 const defaultLogger = childLogger(["switchboard"]);
 
@@ -157,12 +171,12 @@ async function initServer(
   const readModelPath = dbPath || ".ph/read-storage";
 
   const reactorDbUrl =
+    options.dbPath ??
     process.env.PH_REACTOR_DATABASE_URL ??
     process.env.PH_SWITCHBOARD_DATABASE_URL;
+  const reactorPath = reactorDbUrl || "./.ph/reactor-storage";
   const reactorPgliteDir =
-    !reactorDbUrl || !isPostgresUrl(reactorDbUrl)
-      ? "./.ph/reactor-storage"
-      : null;
+    !reactorDbUrl || !isPostgresUrl(reactorDbUrl) ? reactorPath : null;
   const readModelPgliteDir =
     !dbPath || !isPostgresUrl(dbPath) ? readModelPath : null;
 
@@ -241,6 +255,8 @@ async function initServer(
     current: undefined,
   };
 
+  let driveNodeView: DriveNodeView | undefined;
+
   // HTTP registry package loading
   const configPath =
     options.configFile ?? path.join(process.cwd(), "powerhouse.config.json");
@@ -272,6 +288,7 @@ async function initServer(
         getUniqueDocumentModels([
           documentModelDocumentModelModule,
           driveDocumentModelModule,
+          reactorDriveDocumentModelModule as unknown as DocumentModelModule,
           ...vetraDocumentModels,
           ...documentModels,
         ]),
@@ -286,15 +303,15 @@ async function initServer(
       logger.info(`Reactor maxSkipThreshold set to ${maxSkipThreshold}`);
     }
 
+    let baseKysely: Kysely<Database>;
     if (reactorDbUrl && isPostgresUrl(reactorDbUrl)) {
       const connectionString = reactorDbUrl.includes("?")
         ? reactorDbUrl
         : `${reactorDbUrl}?sslmode=disable`;
       const pool = new Pool({ connectionString });
-      const kysely = new Kysely<Database>({
+      baseKysely = new Kysely<Database>({
         dialect: new PostgresDialect({ pool }),
       });
-      builder.withKysely(kysely);
       logger.info("Using PostgreSQL for reactor storage");
     } else {
       if (!reactorPgliteDir || reactorPgliteMajor === null) {
@@ -309,16 +326,38 @@ async function initServer(
               flushIntervalMs: PGLITE_FLUSH_INTERVAL_MS,
             }),
           });
-      const kysely = new Kysely<Database>({
+      baseKysely = new Kysely<Database>({
         dialect: new ClosablePGliteDialect(pglite),
       });
-      builder.withKysely(kysely);
       logger.info(
         PGLITE_IN_MEMORY
           ? `Using in-memory PGlite (PG${reactorPgliteMajor}) for reactor storage [PH_PGLITE_IN_MEMORY=1]`
           : `Using PGlite (PG${reactorPgliteMajor}) for reactor storage at ${reactorPgliteDir}`,
       );
     }
+    builder.withKysely(baseKysely);
+
+    const reactorDriveSchemaDb = baseKysely.withSchema(
+      REACTOR_SCHEMA,
+    ) as unknown as Kysely<ReactorDriveDatabase>;
+
+    builder.withReadModelFactory(
+      async ({
+        operationIndex,
+        writeCache,
+        processorManagerConsistencyTracker,
+      }) => {
+        const nodeProcessor = new NodeProcessor(
+          baseKysely as unknown as Kysely<unknown>,
+          REACTOR_SCHEMA,
+          operationIndex,
+          writeCache,
+          processorManagerConsistencyTracker,
+        );
+        await nodeProcessor.init();
+        return nodeProcessor;
+      },
+    );
 
     builder.withShutdownHook(async () => {
       if (apiRef.current) await apiRef.current.dispose();
@@ -348,7 +387,13 @@ async function initServer(
       reactorLogger.info("Reactor metrics instrumentation started");
     }
 
-    return module;
+    driveNodeView = new DriveNodeView(reactorDriveSchemaDb);
+    const reactorDriveClient = new ReactorDriveClient({
+      reactor: module.client,
+      readModel: driveNodeView,
+    });
+
+    return { module, reactorDriveClient };
   };
 
   let defaultDriveUrl: undefined | string = undefined;
@@ -469,13 +514,51 @@ async function initServer(
       });
   }
 
+  if (driveNodeView) {
+    graphqlManager.setAdditionalContextFields({
+      readModel: driveNodeView,
+    });
+
+    const reactorDriveSubgraph = {
+      name: "reactor-drive",
+      path: graphqlManager.getBasePath(),
+      resolvers: createReactorDriveResolvers(),
+      typeDefs: reactorDriveSubgraphTypeDefs,
+      reactorClient: client,
+      relationalDb: undefined as never,
+    };
+
+    void graphqlManager
+      .registerSubgraphInstance(reactorDriveSubgraph, "graphql", false)
+      .then(() => graphqlManager.updateRouter())
+      .catch((error: unknown) => {
+        logger.error(
+          "Failed to register reactor-drive subgraph: @error",
+          error,
+        );
+      });
+  }
+
   // Create default drive if provided
   if (options.drive) {
     if (!renown) {
       throw new Error("Cannot create default drive without Renown identity");
     }
 
-    defaultDriveUrl = await addDefaultDrive(client, options.drive, serverPort);
+    const driveType = options.drive.documentType ?? "powerhouse/document-drive";
+    if (driveType === "powerhouse/reactor-drive") {
+      defaultDriveUrl = await addDefaultReactorDrive(
+        client,
+        options.drive,
+        serverPort,
+      );
+    } else {
+      defaultDriveUrl = await addDefaultDrive(
+        client,
+        options.drive,
+        serverPort,
+      );
+    }
   }
 
   // add vite middleware after express app is initialized if applicable
@@ -582,7 +665,7 @@ export const startSwitchboard = async (
     renown = await initRenown(options.identity);
   } catch (e) {
     logger.warn("Failed to initialize ConnectCrypto: @error", e);
-    if (options.identity?.requireExisting) {
+    if (options.identity.requireExisting) {
       throw new Error(
         'Identity required but failed to initialize. Run "ph login" first.',
         { cause: e },

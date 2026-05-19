@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-drive",
-  "version": "6.0.0-dev.253",
+  "version": "6.0.0-dev.254",
   "license": "AGPL-3.0-only",
   "type": "module",
   "repository": {
@@ -25,12 +25,15 @@
     "tsc": "tsc",
     "lint": "eslint",
     "build": "tsdown",
-    "test": "vitest --run"
+    "test": "vitest --run",
+    "bench": "vitest bench --run"
   },
   "dependencies": {
     "@powerhousedao/reactor": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
     "document-model": "workspace:*",
+    "graphql": "catalog:",
+    "graphql-tag": "catalog:",
     "kysely": "catalog:"
   },
   "devDependencies": {

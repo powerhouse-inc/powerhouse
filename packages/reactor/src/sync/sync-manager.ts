@@ -108,6 +108,7 @@ export class SyncManager implements ISyncManager {
     operationIndex: IOperationIndex,
     reactor: IReactor,
     eventBus: IEventBus,
+    driveContainerTypes: ReadonlySet<string>,
     config: Partial<SyncManagerConfig> = {},
   ) {
     this.logger = logger;
@@ -125,8 +126,10 @@ export class SyncManager implements ISyncManager {
     );
     this.syncAwaiter = new SyncAwaiter(eventBus);
     this.isShutdown = false;
-    this.batchAggregator = new BatchAggregator(logger, (batch) =>
-      this.processCompleteBatch(batch),
+    this.batchAggregator = new BatchAggregator(
+      logger,
+      driveContainerTypes,
+      (batch) => this.processCompleteBatch(batch),
     );
     this.syncStatusTracker = new SyncStatusTracker();
   }

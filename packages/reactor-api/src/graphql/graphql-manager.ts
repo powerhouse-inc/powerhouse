@@ -1,5 +1,6 @@
 import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import type {
+  IDriveClient,
   IReactorClient,
   IRelationalDb,
   ISyncManager,
@@ -121,6 +122,13 @@ export class GraphQLManager {
 
   private readonly subgraphHandlerCache = new Map<string, FetchHandler>();
 
+  /**
+   * Optional reactor-drive client. When the switchboard is configured with a
+   * reactor-drive container, this is provided and the resolvers dispatch to
+   * it for reactor-drive parents.
+   */
+  readonly reactorDriveClient?: IDriveClient;
+
   constructor(
     private readonly path: string,
     private readonly httpServer: http.Server,
@@ -137,7 +145,9 @@ export class GraphQLManager {
     private readonly featureFlags: GraphqlManagerFeatureFlags = DefaultFeatureFlags,
     private readonly port: number = 4001,
     private readonly authorizationService?: AuthorizationService,
+    reactorDriveClient?: IDriveClient,
   ) {
+    this.reactorDriveClient = reactorDriveClient;
     if (this.authConfig) {
       this.authService = new AuthService(this.authConfig);
     }
@@ -273,7 +283,10 @@ export class GraphQLManager {
         models.length,
       );
     } catch (error) {
-      this.logger.error("Failed to regenerate document model subgraphs", error);
+      this.logger.error(
+        "Failed to regenerate document model subgraphs: @error",
+        error,
+      );
       throw error;
     }
   }
@@ -426,7 +439,10 @@ export class GraphQLManager {
       await this.gatewayAdapter.updateSupergraph();
       this.logger.debug("Updated Apollo Gateway supergraph");
     } catch (error) {
-      this.logger.error("Failed to update Apollo Gateway supergraph", error);
+      this.logger.error(
+        "Failed to update Apollo Gateway supergraph: @error",
+        error,
+      );
     }
 
     // Refresh the supergraph-level SSE handler so it picks up

@@ -35,6 +35,9 @@
       "path": "../reactor-attachments"
     },
     {
+      "path": "../reactor-drive"
+    },
+    {
       "path": "../reactor-mcp"
     },
     {

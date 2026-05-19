@@ -35,7 +35,7 @@ export class AuthSubgraph extends BaseSubgraph {
         _parent: unknown,
         args: { documentId: string },
       ) => {
-        this.logger.debug("documentAccess", args);
+        this.logger.debug("documentAccess(@args)", args);
         if (!this.documentPermissionService) {
           throw new GraphQLError("DocumentPermissionService not available");
         }
@@ -45,7 +45,7 @@ export class AuthSubgraph extends BaseSubgraph {
             args,
           );
         } catch (error) {
-          this.logger.error("Error in documentAccess:", error);
+          this.logger.error("Error in documentAccess: @error", error);
           throw error;
         }
       },
@@ -70,7 +70,7 @@ export class AuthSubgraph extends BaseSubgraph {
             ctx.user.address,
           );
         } catch (error) {
-          this.logger.error("Error in userDocumentPermissions:", error);
+          this.logger.error("Error in userDocumentPermissions: @error", error);
           throw error;
         }
       },
@@ -83,26 +83,26 @@ export class AuthSubgraph extends BaseSubgraph {
         try {
           return await resolvers.groups(this.documentPermissionService);
         } catch (error) {
-          this.logger.error("Error in groups:", error);
+          this.logger.error("Error in groups: @error", error);
           throw error;
         }
       },
 
       group: async (_parent: unknown, args: { id: number }) => {
-        this.logger.debug("group", args);
+        this.logger.debug("group(@args)", args);
         if (!this.documentPermissionService) {
           throw new GraphQLError("DocumentPermissionService not available");
         }
         try {
           return await resolvers.group(this.documentPermissionService, args);
         } catch (error) {
-          this.logger.error("Error in group:", error);
+          this.logger.error("Error in group: @error", error);
           throw error;
         }
       },
 
       userGroups: async (_parent: unknown, args: { userAddress: string }) => {
-        this.logger.debug("userGroups", args);
+        this.logger.debug("userGroups(@args)", args);
         if (!this.documentPermissionService) {
           throw new GraphQLError("DocumentPermissionService not available");
         }
@@ -112,7 +112,7 @@ export class AuthSubgraph extends BaseSubgraph {
             args,
           );
         } catch (error) {
-          this.logger.error("Error in userGroups:", error);
+          this.logger.error("Error in userGroups: @error", error);
           throw error;
         }
       },
@@ -121,7 +121,7 @@ export class AuthSubgraph extends BaseSubgraph {
         _parent: unknown,
         args: { documentId: string; operationType: string },
       ) => {
-        this.logger.debug("operationPermissions", args);
+        this.logger.debug("operationPermissions(@args)", args);
         if (!this.documentPermissionService) {
           throw new GraphQLError("DocumentPermissionService not available");
         }
@@ -131,7 +131,7 @@ export class AuthSubgraph extends BaseSubgraph {
             args,
           );
         } catch (error) {
-          this.logger.error("Error in operationPermissions:", error);
+          this.logger.error("Error in operationPermissions: @error", error);
           throw error;
         }
       },
@@ -141,7 +141,7 @@ export class AuthSubgraph extends BaseSubgraph {
         args: { documentId: string; operationType: string },
         ctx: { user?: { address: string } },
       ) => {
-        this.logger.debug("canExecuteOperation", args);
+        this.logger.debug("canExecuteOperation(@args)", args);
         if (!this.documentPermissionService) {
           throw new GraphQLError("DocumentPermissionService not available");
         }
@@ -152,7 +152,7 @@ export class AuthSubgraph extends BaseSubgraph {
             ctx.user?.address,
           );
         } catch (error) {
-          this.logger.error("Error in canExecuteOperation:", error);
+          this.logger.error("Error in canExecuteOperation: @error", error);
           throw error;
         }
       },
@@ -164,7 +164,7 @@ export class AuthSubgraph extends BaseSubgraph {
           user?: { address: string };
         },
       ) => {
-        this.logger.debug("documentProtection", args);
+        this.logger.debug("documentProtection(@args)", args);
         if (!this.documentPermissionService) {
           throw new GraphQLError("DocumentPermissionService not available");
         }
@@ -179,7 +179,7 @@ export class AuthSubgraph extends BaseSubgraph {
             args,
           );
         } catch (error) {
-          this.logger.error("Error in documentProtection:", error);
+          this.logger.error("Error in documentProtection: @error", error);
           throw error;
         }
       },
@@ -194,7 +194,7 @@ export class AuthSubgraph extends BaseSubgraph {
           isAdmin?: (address: string) => boolean;
         },
       ) => {
-        this.logger.debug("setDocumentProtection", args);
+        this.logger.debug("setDocumentProtection(@args)", args);
         if (!this.documentPermissionService) {
           throw new GraphQLError("DocumentPermissionService not available");
         }
@@ -208,7 +208,7 @@ export class AuthSubgraph extends BaseSubgraph {
             isGlobalAdmin,
           );
         } catch (error) {
-          this.logger.error("Error in setDocumentProtection:", error);
+          this.logger.error("Error in setDocumentProtection: @error", error);
           throw error;
         }
       },
@@ -221,7 +221,7 @@ export class AuthSubgraph extends BaseSubgraph {
           isAdmin?: (address: string) => boolean;
         },
       ) => {
-        this.logger.debug("transferDocumentOwnership", args);
+        this.logger.debug("transferDocumentOwnership(@args)", args);
         if (!this.documentPermissionService) {
           throw new GraphQLError("DocumentPermissionService not available");
         }
@@ -235,7 +235,10 @@ export class AuthSubgraph extends BaseSubgraph {
             isGlobalAdmin,
           );
         } catch (error) {
-          this.logger.error("Error in transferDocumentOwnership:", error);
+          this.logger.error(
+            "Error in transferDocumentOwnership: @error",
+            error,
+          );
           throw error;
         }
       },
@@ -248,7 +251,7 @@ export class AuthSubgraph extends BaseSubgraph {
           isAdmin?: (address: string) => boolean;
         },
       ) => {
-        this.logger.debug("grantDocumentPermission", args);
+        this.logger.debug("grantDocumentPermission(@args)", args);
         if (!this.documentPermissionService) {
           throw new GraphQLError("DocumentPermissionService not available");
         }
@@ -265,7 +268,7 @@ export class AuthSubgraph extends BaseSubgraph {
             isGlobalAdmin,
           );
         } catch (error) {
-          this.logger.error("Error in grantDocumentPermission:", error);
+          this.logger.error("Error in grantDocumentPermission: @error", error);
           throw error;
         }
       },
@@ -278,7 +281,7 @@ export class AuthSubgraph extends BaseSubgraph {
           isAdmin?: (address: string) => boolean;
         },
       ) => {
-        this.logger.debug("revokeDocumentPermission", args);
+        this.logger.debug("revokeDocumentPermission(@args)", args);
         if (!this.documentPermissionService) {
           throw new GraphQLError("DocumentPermissionService not available");
         }
@@ -291,7 +294,7 @@ export class AuthSubgraph extends BaseSubgraph {
             isGlobalAdmin,
           );
         } catch (error) {
-          this.logger.error("Error in revokeDocumentPermission:", error);
+          this.logger.error("Error in revokeDocumentPermission: @error", error);
           throw error;
         }
       },
@@ -301,7 +304,7 @@ export class AuthSubgraph extends BaseSubgraph {
         _parent: unknown,
         args: { name: string; description?: string | null },
       ) => {
-        this.logger.debug("createGroup", args);
+        this.logger.debug("createGroup(@args)", args);
         if (!this.documentPermissionService) {
           throw new GraphQLError("DocumentPermissionService not available");
         }
@@ -311,13 +314,13 @@ export class AuthSubgraph extends BaseSubgraph {
             args,
           );
         } catch (error) {
-          this.logger.error("Error in createGroup:", error);
+          this.logger.error("Error in createGroup: @error", error);
           throw error;
         }
       },
 
       deleteGroup: async (_parent: unknown, args: { id: number }) => {
-        this.logger.debug("deleteGroup", args);
+        this.logger.debug("deleteGroup(@args)", args);
         if (!this.documentPermissionService) {
           throw new GraphQLError("DocumentPermissionService not available");
         }
@@ -327,7 +330,7 @@ export class AuthSubgraph extends BaseSubgraph {
             args,
           );
         } catch (error) {
-          this.logger.error("Error in deleteGroup:", error);
+          this.logger.error("Error in deleteGroup: @error", error);
           throw error;
         }
       },
@@ -336,7 +339,7 @@ export class AuthSubgraph extends BaseSubgraph {
         _parent: unknown,
         args: { userAddress: string; groupId: number },
       ) => {
-        this.logger.debug("addUserToGroup", args);
+        this.logger.debug("addUserToGroup(@args)", args);
         if (!this.documentPermissionService) {
           throw new GraphQLError("DocumentPermissionService not available");
         }
@@ -346,7 +349,7 @@ export class AuthSubgraph extends BaseSubgraph {
             args,
           );
         } catch (error) {
-          this.logger.error("Error in addUserToGroup:", error);
+          this.logger.error("Error in addUserToGroup: @error", error);
           throw error;
         }
       },
@@ -355,7 +358,7 @@ export class AuthSubgraph extends BaseSubgraph {
         _parent: unknown,
         args: { userAddress: string; groupId: number },
       ) => {
-        this.logger.debug("removeUserFromGroup", args);
+        this.logger.debug("removeUserFromGroup(@args)", args);
         if (!this.documentPermissionService) {
           throw new GraphQLError("DocumentPermissionService not available");
         }
@@ -365,7 +368,7 @@ export class AuthSubgraph extends BaseSubgraph {
             args,
           );
         } catch (error) {
-          this.logger.error("Error in removeUserFromGroup:", error);
+          this.logger.error("Error in removeUserFromGroup: @error", error);
           throw error;
         }
       },
@@ -379,7 +382,7 @@ export class AuthSubgraph extends BaseSubgraph {
           isAdmin?: (address: string) => boolean;
         },
       ) => {
-        this.logger.debug("grantGroupPermission", args);
+        this.logger.debug("grantGroupPermission(@args)", args);
         if (!this.documentPermissionService) {
           throw new GraphQLError("DocumentPermissionService not available");
         }
@@ -396,7 +399,7 @@ export class AuthSubgraph extends BaseSubgraph {
             isGlobalAdmin,
           );
         } catch (error) {
-          this.logger.error("Error in grantGroupPermission:", error);
+          this.logger.error("Error in grantGroupPermission: @error", error);
           throw error;
         }
       },
@@ -409,7 +412,7 @@ export class AuthSubgraph extends BaseSubgraph {
           isAdmin?: (address: string) => boolean;
         },
       ) => {
-        this.logger.debug("revokeGroupPermission", args);
+        this.logger.debug("revokeGroupPermission(@args)", args);
         if (!this.documentPermissionService) {
           throw new GraphQLError("DocumentPermissionService not available");
         }
@@ -422,7 +425,7 @@ export class AuthSubgraph extends BaseSubgraph {
             isGlobalAdmin,
           );
         } catch (error) {
-          this.logger.error("Error in revokeGroupPermission:", error);
+          this.logger.error("Error in revokeGroupPermission: @error", error);
           throw error;
         }
       },
@@ -440,7 +443,7 @@ export class AuthSubgraph extends BaseSubgraph {
           isAdmin?: (address: string) => boolean;
         },
       ) => {
-        this.logger.debug("grantOperationPermission", args);
+        this.logger.debug("grantOperationPermission(@args)", args);
         if (!this.documentPermissionService) {
           throw new GraphQLError("DocumentPermissionService not available");
         }
@@ -453,7 +456,7 @@ export class AuthSubgraph extends BaseSubgraph {
             isGlobalAdmin,
           );
         } catch (error) {
-          this.logger.error("Error in grantOperationPermission:", error);
+          this.logger.error("Error in grantOperationPermission: @error", error);
           throw error;
         }
       },
@@ -470,7 +473,7 @@ export class AuthSubgraph extends BaseSubgraph {
           isAdmin?: (address: string) => boolean;
         },
       ) => {
-        this.logger.debug("revokeOperationPermission", args);
+        this.logger.debug("revokeOperationPermission(@args)", args);
         if (!this.documentPermissionService) {
           throw new GraphQLError("DocumentPermissionService not available");
         }
@@ -483,7 +486,10 @@ export class AuthSubgraph extends BaseSubgraph {
             isGlobalAdmin,
           );
         } catch (error) {
-          this.logger.error("Error in revokeOperationPermission:", error);
+          this.logger.error(
+            "Error in revokeOperationPermission: @error",
+            error,
+          );
           throw error;
         }
       },
@@ -496,7 +502,7 @@ export class AuthSubgraph extends BaseSubgraph {
           isAdmin?: (address: string) => boolean;
         },
       ) => {
-        this.logger.debug("grantGroupOperationPermission", args);
+        this.logger.debug("grantGroupOperationPermission(@args)", args);
         if (!this.documentPermissionService) {
           throw new GraphQLError("DocumentPermissionService not available");
         }
@@ -509,7 +515,10 @@ export class AuthSubgraph extends BaseSubgraph {
             isGlobalAdmin,
           );
         } catch (error) {
-          this.logger.error("Error in grantGroupOperationPermission:", error);
+          this.logger.error(
+            "Error in grantGroupOperationPermission: @error",
+            error,
+          );
           throw error;
         }
       },
@@ -522,7 +531,7 @@ export class AuthSubgraph extends BaseSubgraph {
           isAdmin?: (address: string) => boolean;
         },
       ) => {
-        this.logger.debug("revokeGroupOperationPermission", args);
+        this.logger.debug("revokeGroupOperationPermission(@args)", args);
         if (!this.documentPermissionService) {
           throw new GraphQLError("DocumentPermissionService not available");
         }
@@ -535,7 +544,10 @@ export class AuthSubgraph extends BaseSubgraph {
             isGlobalAdmin,
           );
         } catch (error) {
-          this.logger.error("Error in revokeGroupOperationPermission:", error);
+          this.logger.error(
+            "Error in revokeGroupOperationPermission: @error",
+            error,
+          );
           throw error;
         }
       },
