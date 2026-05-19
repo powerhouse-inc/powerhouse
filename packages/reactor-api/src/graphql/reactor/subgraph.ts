@@ -252,7 +252,7 @@ export class ReactorSubgraph extends BaseSubgraph {
             hasMore,
           };
         } catch (error) {
-          this.logger.error("Error in pollSyncEnvelopes(@args): @Error", error);
+          this.logger.error("Error in pollSyncEnvelopes(@args): @Error", args, error);
           throw error;
         }
       },
@@ -301,7 +301,7 @@ export class ReactorSubgraph extends BaseSubgraph {
 
           return result;
         } catch (error) {
-          this.logger.error("Error in createDocument(@args): @Error", error);
+          this.logger.error("Error in createDocument(@args): @Error", args, error);
           throw error;
         }
       },
@@ -348,10 +348,7 @@ export class ReactorSubgraph extends BaseSubgraph {
 
           return result;
         } catch (error) {
-          this.logger.error(
-            "Error in createEmptyDocument(@args): @Error",
-            error,
-          );
+          this.logger.error("Error in createEmptyDocument(@args): @Error", args, error);
           throw error;
         }
       },
@@ -374,7 +371,7 @@ export class ReactorSubgraph extends BaseSubgraph {
 
           return await resolvers.mutateDocument(this.reactorClient, args);
         } catch (error) {
-          this.logger.error("Error in mutateDocument(@args): @Error", error);
+          this.logger.error("Error in mutateDocument(@args): @Error", args, error);
           throw error;
         }
       },
@@ -395,10 +392,7 @@ export class ReactorSubgraph extends BaseSubgraph {
 
           return await resolvers.mutateDocumentAsync(this.reactorClient, args);
         } catch (error) {
-          this.logger.error(
-            "Error in mutateDocumentAsync(@args): @Error",
-            error,
-          );
+          this.logger.error("Error in mutateDocumentAsync(@args): @Error", args, error);
           throw error;
         }
       },
@@ -410,7 +404,7 @@ export class ReactorSubgraph extends BaseSubgraph {
 
           return await resolvers.renameDocument(this.reactorClient, args);
         } catch (error) {
-          this.logger.error("Error in renameDocument(@args): @Error", error);
+          this.logger.error("Error in renameDocument(@args): @Error", args, error);
           throw error;
         }
       },
@@ -422,10 +416,7 @@ export class ReactorSubgraph extends BaseSubgraph {
 
           return await resolvers.setPreferredEditor(this.reactorClient, args);
         } catch (error) {
-          this.logger.error(
-            "Error in setPreferredEditor(@args): @Error",
-            error,
-          );
+          this.logger.error("Error in setPreferredEditor(@args): @Error", args, error);
           throw error;
         }
       },
@@ -437,7 +428,7 @@ export class ReactorSubgraph extends BaseSubgraph {
 
           return await resolvers.addRelationship(this.reactorClient, args);
         } catch (error) {
-          this.logger.error("Error in addRelationship(@args): @Error", error);
+          this.logger.error("Error in addRelationship(@args): @Error", args, error);
           throw error;
         }
       },
@@ -449,10 +440,7 @@ export class ReactorSubgraph extends BaseSubgraph {
 
           return await resolvers.removeRelationship(this.reactorClient, args);
         } catch (error) {
-          this.logger.error(
-            "Error in removeRelationship(@args): @Error",
-            error,
-          );
+          this.logger.error("Error in removeRelationship(@args): @Error", args, error);
           throw error;
         }
       },
@@ -498,7 +486,7 @@ export class ReactorSubgraph extends BaseSubgraph {
 
           return result;
         } catch (error) {
-          this.logger.error("Error in deleteDocument(@args): @Error", error);
+          this.logger.error("Error in deleteDocument(@args): @Error", args, error);
           throw error;
         }
       },
@@ -512,7 +500,7 @@ export class ReactorSubgraph extends BaseSubgraph {
           }
           return await resolvers.deleteDocuments(this.reactorClient, args);
         } catch (error) {
-          this.logger.error("Error in deleteDocuments(@args): @Error", error);
+          this.logger.error("Error in deleteDocuments(@args): @Error", args, error);
           throw error;
         }
       },
@@ -538,7 +526,7 @@ export class ReactorSubgraph extends BaseSubgraph {
         try {
           return await resolvers.touchChannel(this.syncManager, args);
         } catch (error) {
-          this.logger.error("Error in touchChannel(@args): @Error", error);
+          this.logger.error("Error in touchChannel(@args): @Error", args, error);
           throw error;
         }
       },
@@ -583,7 +571,7 @@ export class ReactorSubgraph extends BaseSubgraph {
             mutableArgs,
           );
         } catch (error) {
-          this.logger.error("Error in pushSyncEnvelopes(@args): @Error", error);
+          this.logger.error("Error in pushSyncEnvelopes(@args): @Error", args, error);
           throw error;
         }
       },
@@ -595,7 +583,7 @@ export class ReactorSubgraph extends BaseSubgraph {
         subscribe: withFilter(
           // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
           (() => {
-            this.logger.debug("documentChanges(@args) subscription started");
+            this.logger.debug("documentChanges subscription started");
             ensureGlobalDocumentSubscription(this.reactorClient);
 
             return getPubSub().asyncIterableIterator<DocumentChangesPayload>(

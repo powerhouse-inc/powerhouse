@@ -131,6 +131,9 @@ describe("ConsoleLogger error formatting", () => {
 
   it("renders 'null' for an unmatched @token", () => {
     const logger = new ConsoleLogger();
+    // Intentionally under-provisioned to assert the "null" fallback —
+    // the lint rule would otherwise flag this as a missing replacement.
+    // eslint-disable-next-line logger/missing-token-args
     logger.error("missing: @thing");
     expect(lastErr()).toContain("missing: null");
   });
