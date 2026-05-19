@@ -9,10 +9,33 @@ const dtf = new Intl.DateTimeFormat(undefined, {
   fractionalSecondDigits: 2,
 });
 
+const stringify = (value: unknown, includeStack: boolean): string => {
+  if (value === null || value === undefined) return "null";
+  if (typeof value === "string") return value;
+  if (value instanceof Error) {
+    const base = `${value.name}: ${value.message}`;
+    return includeStack && value.stack ? `${base}\n${value.stack}` : base;
+  }
+  if (typeof value === "object") {
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return String(value);
+    }
+  }
+  if (typeof value === "function") {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
+    const name = (value as Function).name;
+    return name ? `${name}()` : "anonymous()";
+  }
+  return String(value);
+};
+
 const formatMessage = (
   tagString: string,
   message: string,
   replacements: any[],
+  includeStack: boolean,
 ): [string, Record<string, any>] => {
   const meta: Record<string, any> = {};
   const uniqueTokens: string[] = [];
@@ -33,22 +56,14 @@ const formatMessage = (
 
   // replace
   for (const [key, value] of Object.entries(meta)) {
-    let stringValue;
-    if (!value) {
-      stringValue = "null";
-    } else if (typeof value === "string") {
-      stringValue = value;
-    } else if (typeof value === "object") {
-      stringValue = JSON.stringify(value);
-    } else if (typeof value === "function") {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
-      const name = (value as Function).name;
-      stringValue = name ? `${name}()` : "anonymous()";
-    } else {
-      stringValue = String(value);
-    }
+    message = message.replaceAll(`@${key}`, stringify(value, includeStack));
+  }
 
-    message = message.replaceAll(`@${key}`, stringValue);
+  // Any replacements past the unique-token count would otherwise be
+  // silently dropped — append them so positional Errors still surface.
+  const extras = replacements.slice(uniqueTokens.length);
+  if (extras.length > 0) {
+    message = `${message} ${extras.map((v) => stringify(v, includeStack)).join(" ")}`;
   }
 
   if (tagString.length > 0) {
@@ -104,12 +119,19 @@ export class ConsoleLogger implements ILogger {
     return logger;
   }
 
+  // Errors get full stacks only at debug/verbose; at info/warn/error we
+  // emit `name: message` to keep production logs readable.
+  get #includeStack(): boolean {
+    return this.#level <= LOG_LEVELS.debug;
+  }
+
   verbose(message: string, ...replacements: any[]): void {
     if (this.#level <= LOG_LEVELS.verbose) {
       const [formattedMessage, meta] = formatMessage(
         this.#tagString,
         message,
         replacements,
+        this.#includeStack,
       );
 
       console.debug(`[${meta["timestamp"]}] ${formattedMessage}`);
@@ -122,6 +144,7 @@ export class ConsoleLogger implements ILogger {
         this.#tagString,
         message,
         replacements,
+        this.#includeStack,
       );
 
       console.debug(`[${meta["timestamp"]}] ${formattedMessage}`);
@@ -134,6 +157,7 @@ export class ConsoleLogger implements ILogger {
         this.#tagString,
         message,
         replacements,
+        this.#includeStack,
       );
 
       console.info(`[${meta["timestamp"]}] ${formattedMessage}`);
@@ -146,6 +170,7 @@ export class ConsoleLogger implements ILogger {
         this.#tagString,
         message,
         replacements,
+        this.#includeStack,
       );
 
       console.warn(`[${meta["timestamp"]}] ${formattedMessage}`);
@@ -158,6 +183,7 @@ export class ConsoleLogger implements ILogger {
         this.#tagString,
         message,
         replacements,
+        this.#includeStack,
       );
 
       console.error(`[${meta["timestamp"]}] ${formattedMessage}`);
