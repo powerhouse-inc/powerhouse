@@ -13,6 +13,7 @@ import type {
 } from "../executor/worker/protocol.js";
 import { WorkerHandle } from "../executor/worker/worker-handle.js";
 import { createThreadTransport } from "../executor/worker/transport.js";
+import { workerEntryPath } from "../executor/worker/index.js";
 import { WorkerPoolJobExecutorManager } from "../executor/worker-pool-job-executor-manager.js";
 import type { WorkerFactory } from "../executor/worker-pool-job-executor-manager.js";
 import { CollectionMembershipCache } from "../cache/collection-membership-cache.js";
@@ -689,13 +690,12 @@ export class ReactorBuilder {
     const db = this.workerDbConfig!;
     const signatureVerifier = this.workerSignatureVerifierSpec!;
     const models = this.resolvedModelManifest ?? [];
-    const entryUrl = new URL("../executor/worker/entry.js", import.meta.url);
     const logger = this.logger!;
     return (index: number) =>
       new WorkerHandle({
         workerId: `reactor-worker-${index}`,
         index,
-        transport: createThreadTransport(entryUrl),
+        transport: createThreadTransport(workerEntryPath),
         initPayload: {
           poolConfig,
           db,

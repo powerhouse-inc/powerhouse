@@ -19,6 +19,7 @@ import type {
 } from "../../../src/executor/interfaces.js";
 import { bucketFor } from "../../../src/executor/worker-pool-router.js";
 import { WorkerPoolJobExecutorManager } from "../../../src/executor/worker-pool-job-executor-manager.js";
+import { WorkerExitedError } from "../../../src/executor/worker/errors.js";
 import type {
   JobWriteReadyPayload,
   ModelManifestEntry,
@@ -687,6 +688,130 @@ describe("WorkerPoolJobExecutorManager", () => {
       expect(manager.getStatus().activeJobs).toBe(0);
       await manager.stop(true);
     });
+  });
+
+  describe("worker transport crash recovery", () => {
+    it(
+      "retries the in-flight job, replaces the dead worker, and dispatches " +
+        "to the replacement",
+      async () => {
+        const writeReadyEvents: JobWriteReadyEvent[] = [];
+        const failedEvents: JobFailedEvent[] = [];
+        eventBus.subscribe(
+          ReactorEventTypes.JOB_WRITE_READY,
+          (_t: number, data: JobWriteReadyEvent) => {
+            writeReadyEvents.push(data);
+          },
+        );
+        eventBus.subscribe(
+          ReactorEventTypes.JOB_FAILED,
+          (_t: number, data: JobFailedEvent) => {
+            failedEvents.push(data);
+          },
+        );
+
+        const retrySpy = vi.spyOn(queue, "retryJob");
+
+        let callCount = 0;
+        const manager = buildManager((i) => {
+          callCount++;
+          if (callCount === 1) {
+            return new FakeWorker({
+              index: i,
+              executeImpl: async () => {
+                throw new WorkerExitedError(`worker-${i}`, 1, "corr-1");
+              },
+            });
+          }
+          return new FakeWorker({
+            index: i,
+            outcome: (job) => ({
+              result: { job, success: true, duration: 1 },
+              writeReady: makeWriteReady(job),
+            }),
+          });
+        });
+
+        await manager.start(1);
+
+        await queue.enqueue(
+          createTestJob({
+            id: "crash-job",
+            documentId: "doc-crash",
+            retryCount: 0,
+            maxRetries: 3,
+          }),
+        );
+        await flush(150);
+
+        expect(retrySpy).toHaveBeenCalledWith(
+          "crash-job",
+          expect.objectContaining({ message: expect.stringContaining("exit") }),
+        );
+
+        expect(callCount).toBe(2);
+        const replacement = createdWorkers[1];
+        expect(replacement.startCalls).toBe(1);
+        expect(replacement.executeCalls.map((j) => j.id)).toEqual([
+          "crash-job",
+        ]);
+
+        expect(failedEvents.some((e) => e.jobId === "crash-job")).toBe(false);
+        expect(writeReadyEvents.some((e) => e.jobId === "crash-job")).toBe(
+          true,
+        );
+
+        await manager.stop(true);
+      },
+    );
+
+    it(
+      "treats WorkerExitedError as transport (no JOB_FAILED) while a " +
+        "generic execute() throw still emits JOB_FAILED",
+      async () => {
+        const failedEvents: JobFailedEvent[] = [];
+        eventBus.subscribe(
+          ReactorEventTypes.JOB_FAILED,
+          (_t: number, data: JobFailedEvent) => {
+            failedEvents.push(data);
+          },
+        );
+
+        let callCount = 0;
+        const manager = buildManager((i) => {
+          callCount++;
+          if (callCount === 1) {
+            return new FakeWorker({
+              index: i,
+              executeImpl: async () => {
+                throw new WorkerExitedError(`worker-${i}`, 137, null);
+              },
+            });
+          }
+          return new FakeWorker({
+            index: i,
+            outcome: (job) => ({
+              result: { job, success: true, duration: 1 },
+            }),
+          });
+        });
+
+        await manager.start(1);
+        await queue.enqueue(
+          createTestJob({
+            id: "transport-job",
+            retryCount: 0,
+            maxRetries: 3,
+          }),
+        );
+        await flush(150);
+
+        expect(
+          failedEvents.some((e) => e.jobId === "transport-job"),
+        ).toBe(false);
+        await manager.stop(true);
+      },
+    );
   });
 
   describe("loadModel broadcast", () => {

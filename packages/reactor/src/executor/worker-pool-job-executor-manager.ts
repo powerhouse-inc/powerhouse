@@ -29,6 +29,11 @@ import {
   type IJobResultHandler,
 } from "./job-result-handler.js";
 import type { ExecutorManagerStatus } from "./types.js";
+import {
+  WorkerAbortTimeoutError,
+  WorkerExitedError,
+  WorkerInitFailedError,
+} from "./worker/errors.js";
 import { bucketFor } from "./worker-pool-router.js";
 import type {
   JobWriteReadyPayload,
@@ -275,6 +280,10 @@ export class WorkerPoolJobExecutorManager implements IJobExecutorManager {
       const errorInfo = toErrorInfo(
         error instanceof Error ? error : String(error),
       );
+      if (isWorkerTransportError(error)) {
+        await this.handleWorkerTransportFailure(worker, handle.job, errorInfo);
+        return;
+      }
       handle.fail(errorInfo);
       this.activeJobs--;
       this.jobTracker.markFailed(handle.job.id, errorInfo, handle.job);
@@ -363,6 +372,84 @@ export class WorkerPoolJobExecutorManager implements IJobExecutorManager {
     }
   }
 
+  /**
+   * Handle a worker-transport failure (worker exited / init failed / abort
+   * timed out) detected while `worker.execute` was in flight. Re-enqueues
+   * the in-flight job via `queue.retryJob` so it is retried on a healthy
+   * worker, then replaces the dead worker with a fresh handle and resumes
+   * dispatch on the same bucket. Does NOT emit JOB_FAILED — the job is
+   * not failed, only the worker is.
+   */
+  private async handleWorkerTransportFailure(
+    dead: IExecutorWorker,
+    job: Job,
+    errorInfo: ReturnType<typeof toErrorInfo>,
+  ): Promise<void> {
+    this.logger.warn(
+      "worker transport error during execute; retrying job @jobId on a replacement worker: @error",
+      { jobId: job.id, workerId: dead.workerId },
+      errorInfo.message,
+    );
+
+    this.activeJobs--;
+
+    // Replace the dead worker BEFORE re-enqueuing the job. Otherwise
+    // `queue.retryJob` emits JOB_AVAILABLE, the subscriber re-runs
+    // `tryDispatchAll`, and the still-in-the-array dead worker picks up
+    // the retried job — looping until heap exhaustion.
+    await this.replaceWorker(dead);
+
+    try {
+      await this.queue.retryJob(job.id, errorInfo);
+    } catch (error) {
+      this.logger.error(
+        "failed to re-enqueue job after worker transport error: @Error",
+        error,
+      );
+    }
+  }
+
+  /**
+   * Replace a dead worker at its existing pool index with a fresh handle
+   * produced by `workerFactory`. Awaits `start()` on the replacement so it
+   * is ready before dispatch resumes. On replacement failure the slot is
+   * left empty (the index becomes a hole that subsequent retries will
+   * route to no worker) and the error is logged — the manager keeps
+   * running so other buckets continue to make progress.
+   */
+  private async replaceWorker(dead: IExecutorWorker): Promise<void> {
+    const deadIndex = dead.index;
+    if (this.workers[deadIndex] !== dead) {
+      return;
+    }
+
+    let fresh: IExecutorWorker;
+    try {
+      fresh = this.workerFactory(deadIndex);
+    } catch (error) {
+      this.logger.error(
+        "workerFactory threw while replacing dead worker at index @index: @Error",
+        deadIndex,
+        error,
+      );
+      return;
+    }
+
+    try {
+      await fresh.start();
+    } catch (error) {
+      this.logger.error(
+        "replacement worker at index @index failed to start: @Error",
+        deadIndex,
+        error,
+      );
+      return;
+    }
+
+    this.workers[deadIndex] = fresh;
+    await this.tryDispatchFor(fresh);
+  }
+
   private async flushDeferredJobs(documentId: string): Promise<void> {
     const jobs = this.deferredJobs.get(documentId);
     if (!jobs || jobs.length === 0) {
@@ -378,6 +465,14 @@ export class WorkerPoolJobExecutorManager implements IJobExecutorManager {
       }
     }
   }
+}
+
+function isWorkerTransportError(error: unknown): boolean {
+  return (
+    error instanceof WorkerExitedError ||
+    error instanceof WorkerInitFailedError ||
+    error instanceof WorkerAbortTimeoutError
+  );
 }
 
 function isDuplicateModuleFailure(reason: unknown): boolean {
