@@ -57,6 +57,18 @@ jobs:
       - name: Check tsconfig references
         run: pnpm check-ts-references
 
+      # Fast advisory pre-checks: tsgo + oxlint catch most issues in
+      # seconds before we spend minutes on the authoritative pass.
+      # Non-blocking until parity is established.
+      - name: Fast typecheck (tsgo, advisory)
+        continue-on-error: true
+        run: pnpm typecheck:tsgo
+
+      - name: Fast lint (oxlint, advisory)
+        if: ${{ steps.diff.outputs.files != '' }}
+        continue-on-error: true
+        run: pnpm lint:ox
+
       - name: Build
         run: pnpm build
 
