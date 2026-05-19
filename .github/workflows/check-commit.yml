@@ -62,13 +62,16 @@ jobs:
         continue-on-error: true
         run: pnpm typecheck:tsgo
 
-      # Primary lint: oxlint covers typescript-eslint type-aware rules,
-      # react-hooks, custom logger/cli-cold-path plugins, and core lint.
-      # eslint below now only enforces prettier + better-tailwindcss.
+      # Primary lint: oxlint with type-aware + custom plugins covers
+      # everything except Tailwind class validation. ESLint below now
+      # only runs eslint-plugin-better-tailwindcss.
       - name: Lint (oxlint)
         if: ${{ steps.diff.outputs.files != '' }}
-        continue-on-error: true
         run: pnpm lint:ox
+
+      # Formatting: oxfmt replaces prettier (--check fails CI on drift).
+      - name: Format check (oxfmt)
+        run: pnpm format:check
 
       - name: Build
         run: pnpm build

@@ -1,14 +1,14 @@
 // @ts-check
-// Minimal config: ESLint only registers plugins (no rules) so that
-// existing inline `eslint-disable <rule>` comments resolve. All linting
-// and formatting now happens via oxlint + oxfmt:
+// Slim config: ESLint runs eslint-plugin-better-tailwindcss only (oxlint-
+// tailwindcss can't load this monorepo's design-system CSS pre-build —
+// it relies on the package `exports` field which points at dist). All
+// other linting + formatting moved to oxlint + oxfmt.
 //
-//   pnpm lint:ox    oxlint (rules, type-aware, custom plugins, tailwind)
-//   pnpm format     oxfmt  (replaces prettier)
-//
-// This file remains only to satisfy inline disable comments left in
-// source from the previous ESLint setup. Delete once those are cleaned up.
+// Plugins registered with no rules are kept here so that existing
+// inline `eslint-disable <rule>` comments referencing them still
+// resolve.
 
+import betterTailwindcss from "eslint-plugin-better-tailwindcss";
 import reactHooks from "eslint-plugin-react-hooks";
 import { defineConfig, globalIgnores } from "eslint/config";
 import tseslint from "typescript-eslint";
@@ -86,9 +86,69 @@ const registrations = {
   },
 };
 
+const tailwindRules = {
+  ...betterTailwindcss.configs["recommended-error"].rules,
+  "better-tailwindcss/enforce-consistent-line-wrapping": ["off"],
+  "better-tailwindcss/no-unknown-classes": [
+    "error",
+    {
+      ignore: ["custom-class", "hover-bg-transparent", "skeleton-loader"],
+    },
+  ],
+};
+
+const tailwindConfig = [
+  {
+    files: ["packages/design-system/**/*.{js,jsx,cjs,mjs,ts,tsx}"],
+    ignores: ["packages/design-system/src/powerhouse/components/legacy/**"],
+    ...betterTailwindcss.configs["recommended-error"],
+    rules: tailwindRules,
+    settings: {
+      "better-tailwindcss": {
+        cwd: "./packages/design-system",
+        entryPoint: "style.css",
+      },
+    },
+  },
+  {
+    files: ["apps/connect/**/*.{js,jsx,cjs,mjs,ts,tsx}"],
+    ...betterTailwindcss.configs["recommended-error"],
+    rules: tailwindRules,
+    settings: {
+      "better-tailwindcss": {
+        cwd: "./apps/connect",
+        entryPoint: "style.css",
+      },
+    },
+  },
+  {
+    files: ["packages/powerhouse-vetra-packages/**/*.{js,jsx,cjs,mjs,ts,tsx}"],
+    ...betterTailwindcss.configs["recommended-error"],
+    rules: tailwindRules,
+    settings: {
+      "better-tailwindcss": {
+        cwd: "./packages/powerhouse-vetra-packages",
+        entryPoint: "style.css",
+      },
+    },
+  },
+  {
+    files: ["packages/vetra/**/*.{js,jsx,cjs,mjs,ts,tsx}"],
+    ...betterTailwindcss.configs["recommended-error"],
+    rules: tailwindRules,
+    settings: {
+      "better-tailwindcss": {
+        cwd: "./packages/vetra",
+        entryPoint: "style.css",
+      },
+    },
+  },
+];
+
 export default defineConfig(
   globalIgnores(ignoredFiles),
   parser,
   registrations,
+  ...tailwindConfig,
   { linterOptions: { reportUnusedDisableDirectives: "off" } },
 );

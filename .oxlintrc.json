@@ -7,18 +7,11 @@
       "name": "cli-cold-path",
       "specifier": "./eslint-plugins/cli-cold-path.js"
     },
-    "oxlint-tailwindcss"
-  ],
-  "settings": {
-    "tailwindcss": {
-      "entryPoint": [
-        "packages/design-system/style.css",
-        "apps/connect/style.css",
-        "packages/powerhouse-vetra-packages/style.css",
-        "packages/vetra/style.css"
-      ]
+    {
+      "name": "react-hooks-extra",
+      "specifier": "eslint-plugin-react-hooks"
     }
-  },
+  ],
   "options": {
     "typeAware": true
   },
@@ -62,6 +55,10 @@
     "import/no-named-as-default-member": "off",
     "import/no-named-as-default": "off",
     "preserve-caught-error": "off",
+    "no-useless-assignment": "warn",
+    "react-hooks-extra/set-state-in-effect": "warn",
+    "react-hooks-extra/incompatible-library": "warn",
+    "react-hooks-extra/static-components": "warn",
 
     "typescript/consistent-type-imports": [
       "error",
@@ -98,28 +95,6 @@
     "logger/missing-token-args": "error",
     "logger/extra-args-without-token": "warn",
 
-    "tailwindcss/no-unknown-classes": [
-      "error",
-      {
-        "allowlist": ["custom-class", "hover-bg-transparent", "skeleton-loader"]
-      }
-    ],
-    "tailwindcss/no-duplicate-classes": "error",
-    "tailwindcss/no-conflicting-classes": "error",
-    "tailwindcss/no-deprecated-classes": "error",
-    "tailwindcss/no-unnecessary-whitespace": "error",
-    "tailwindcss/no-dark-without-light": "warn",
-    "tailwindcss/no-contradicting-variants": "warn",
-    "tailwindcss/enforce-canonical": "warn",
-    "tailwindcss/enforce-sort-order": "warn",
-    "tailwindcss/enforce-shorthand": "warn",
-    "tailwindcss/enforce-consistent-important-position": "warn",
-    "tailwindcss/enforce-negative-arbitrary-values": "warn",
-    "tailwindcss/enforce-consistent-variable-syntax": "warn",
-    "tailwindcss/consistent-variant-order": "warn",
-    "tailwindcss/no-hardcoded-colors": "off",
-    "tailwindcss/no-unnecessary-arbitrary-value": "warn",
-    "tailwindcss/enforce-consistent-line-wrapping": "off"
   },
   "overrides": [
     {

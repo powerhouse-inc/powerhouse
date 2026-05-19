@@ -65,24 +65,40 @@
     },
     {
       "tool": "oxlint",
-      "version": "1.65.0 + tsgolint + jsPlugins",
+      "version": "1.65.0 + tsgolint + jsPlugins + react-hooks v7",
       "mode": "cold (full ruleset)",
-      "elapsed_s": 3.0,
+      "elapsed_s": 6.0,
       "rc": 1,
-      "note": "type-aware + custom plugins + react-hooks + unicorn + import + promise — 749 findings"
+      "note": "type-aware + custom plugins + react-hooks v7 compiler rules + no-useless-assignment nursery — 797 findings"
     },
     {
       "tool": "eslint (slim)",
-      "version": "10.3.0 (prettier + better-tailwindcss only)",
+      "version": "10.3.0 (better-tailwindcss only)",
       "mode": "cold",
-      "elapsed_s": 16.0,
+      "elapsed_s": 10.0,
       "rc": 0,
-      "note": "type-aware + react-hooks + custom rules moved to oxlint"
+      "note": "Tailwind class validation only; prettier replaced by oxfmt"
+    },
+    {
+      "tool": "oxfmt",
+      "version": "0.50.0",
+      "mode": "--check",
+      "elapsed_s": 2.0,
+      "rc": 0,
+      "note": "Replaces prettier; .oxfmtrc migrated from .prettierrc"
     }
   ],
   "speedup_cold": {
     "tsgo_vs_tsc": 4.8,
-    "oxlint_full_vs_eslint_full": 21.27,
-    "slim_eslint_vs_full_eslint": 4.0
+    "oxlint_full_vs_eslint_full": 10.6,
+    "slim_eslint_vs_full_eslint": 6.4,
+    "combined_lint_format_vs_eslint": 5.3
+  },
+  "rule_coverage_vs_original_eslint": {
+    "overlap": 629,
+    "only_eslint_total": 131,
+    "only_eslint_genuinely_missing": 8,
+    "only_oxlint_total": 181,
+    "only_oxlint_new_errors": 81
   }
 }

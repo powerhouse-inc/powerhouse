@@ -1,10 +1,10 @@
 {
   "totals": {
     "eslint": 760,
-    "oxlint": 749,
-    "overlap": 621,
-    "only_eslint": 139,
-    "only_oxlint": 141
+    "oxlint": 797,
+    "overlap": 629,
+    "only_eslint": 131,
+    "only_oxlint": 181
   },
   "by_rule": {
     "only_eslint": [
@@ -16,9 +16,9 @@
         "total": 1,
         "sample": [
           {
-            "file": "eslint-plugins/cli-cold-path.js",
-            "line": 42,
-            "message": "Replace `⏎········(name)·=>·src·===·name·||·src.startsWith(name·+·\"/\"),⏎······` with `(name)·=>·src·===·name·||·src.startsWith(name·+·\"/\")`"
+            "file": "packages/reactor-api/src/services/auth.service.ts",
+            "line": 7,
+            "message": "Replace `(infer·T)` with `infer·T`"
           }
         ]
       },
@@ -123,25 +123,6 @@
             "file": "apps/academy/scripts/generate-llm-docs.ts",
             "line": 336,
             "message": "Promises must be awaited, end with a call to .catch, end with a call to .then with a rejection handler or be explicitly marked as ignored with the `void` operator."
-          }
-        ]
-      },
-      {
-        "rule": "no-useless-assignment",
-        "severity_max": "warn",
-        "errors": 0,
-        "warnings": 8,
-        "total": 8,
-        "sample": [
-          {
-            "file": "clis/ph-cli/src/commands/publish.ts",
-            "line": 119,
-            "message": "The value assigned to 'confirmed' is not used in subsequent statements."
-          },
-          {
-            "file": "clis/ph-cli/src/utils/resolve-switchboard-port.ts",
-            "line": 52,
-            "message": "The value assigned to 'confirmed' is not used in subsequent statements."
           }
         ]
       },
@@ -283,12 +264,12 @@
         "total": 14,
         "sample": [
           {
-            "file": "apps/connect/src/store/utils.ts",
+            "file": "packages/powerhouse-vetra-packages/document-models/document-model/index.ts",
             "line": 1,
             "message": "Empty files are not allowed."
           },
           {
-            "file": "packages/powerhouse-vetra-packages/document-models/document-model/index.ts",
+            "file": "apps/connect/src/store/utils.ts",
             "line": 1,
             "message": "Empty files are not allowed."
           }
@@ -340,14 +321,14 @@
         "total": 6,
         "sample": [
           {
-            "file": "packages/reactor-api/src/utils/db.ts",
-            "line": 118,
-            "message": "Using `= undefined` to make a parameter optional adds unnecessary runtime logic. Use the `?` optional syntax instead."
-          },
-          {
             "file": "packages/design-system/src/powerhouse/components/pagination/pagination.tsx",
             "line": 30,
             "message": "Default value is useless because the property has type `PageItem[]` (not nullish). This default assignment will never be used."
+          },
+          {
+            "file": "packages/design-system/src/powerhouse/components/sidebar/sidebar.tsx",
+            "line": 23,
+            "message": "Default value is useless because the property has type `string` (not nullish). This default assignment will never be used."
           }
         ]
       },
@@ -378,13 +359,13 @@
         "total": 5,
         "sample": [
           {
-            "file": "packages/reactor-api/src/graphql/gateway/adapter-http-express.ts",
-            "line": 224,
+            "file": "packages/builder-tools/connect-utils/vite-plugins/favicon.ts",
+            "line": 17,
             "message": "Avoid calling back inside of a promise"
           },
           {
             "file": "packages/builder-tools/connect-utils/vite-plugins/favicon.ts",
-            "line": 17,
+            "line": 21,
             "message": "Avoid calling back inside of a promise"
           }
         ]
@@ -529,14 +510,33 @@
         "total": 49,
         "sample": [
           {
-            "file": "packages/powerhouse-vetra-packages/editors/document-model-editor/components/code-editors/hooks.ts",
-            "line": 40,
-            "message": "React Hook useEffect has a missing dependency: 'viewRef'"
+            "file": "packages/powerhouse-vetra-packages/editors/document-model-editor/components/code-editors/json-editor.tsx",
+            "line": 62,
+            "message": "React Hook useEffect has missing dependencies: 'editorRef', 'focusHandlerCompartment.current', 'pasteHandlerCompartment.current', 'doc', 'viewRef', 'readonly', 'timeoutRef', 'updateListenerCompartment"
           },
           {
             "file": "packages/powerhouse-vetra-packages/editors/document-model-editor/components/code-editors/hooks.ts",
-            "line": 69,
-            "message": "React Hook useEffect has missing dependencies: 'compartments.pasteHandler', 'timeoutRef', 'view', 'compartments.focusHandler', and 'compartments.updateListener'"
+            "line": 40,
+            "message": "React Hook useEffect has a missing dependency: 'viewRef'"
+          }
+        ]
+      },
+      {
+        "rule": "react-hooks-extra/set-state-in-effect",
+        "severity_max": "warn",
+        "errors": 0,
+        "warnings": 36,
+        "total": 36,
+        "sample": [
+          {
+            "file": "packages/design-system/src/connect/components/modal/settings-modal-v2/package-manager/package-manager-input.tsx",
+            "line": 60,
+            "message": "Error: Calling setState synchronously within an effect can trigger cascading renders\n\nEffects are intended to synchronize state between React and external systems such as manually updating the DOM, st"
+          },
+          {
+            "file": "packages/design-system/src/connect/components/processors-inspector/processors-inspector.tsx",
+            "line": 152,
+            "message": "Error: Calling setState synchronously within an effect can trigger cascading renders\n\nEffects are intended to synchronize state between React and external systems such as manually updating the DOM, st"
           }
         ]
       },
@@ -548,14 +548,52 @@
         "total": 4,
         "sample": [
           {
-            "file": "packages/reactor-api/src/server.ts",
-            "line": 299,
+            "file": "packages/codegen/src/utils/validation.ts",
+            "line": 190,
             "message": "This condition will always return the same value since the types have no overlap."
           },
           {
             "file": "packages/shared/connect/env-config.ts",
             "line": 499,
             "message": "This condition will always return the same value since the types have no overlap."
+          }
+        ]
+      },
+      {
+        "rule": "react-hooks-extra/incompatible-library",
+        "severity_max": "warn",
+        "errors": 0,
+        "warnings": 2,
+        "total": 2,
+        "sample": [
+          {
+            "file": "packages/powerhouse-vetra-packages/editors/generic-drive-explorer/components/file-content-view.tsx",
+            "line": 26,
+            "message": "Compilation Skipped: Use of incompatible library\n\nThis API returns functions which cannot be memoized without leading to stale UI. To prevent this, by default React Compiler will skip memoizing this c"
+          },
+          {
+            "file": "packages/design-system/src/connect/components/revision-history/timeline/timeline.tsx",
+            "line": 28,
+            "message": "Compilation Skipped: Use of incompatible library\n\nThis API returns functions which cannot be memoized without leading to stale UI. To prevent this, by default React Compiler will skip memoizing this c"
+          }
+        ]
+      },
+      {
+        "rule": "react-hooks-extra/static-components",
+        "severity_max": "warn",
+        "errors": 0,
+        "warnings": 2,
+        "total": 2,
+        "sample": [
+          {
+            "file": "packages/vetra/editors/vetra-drive-app/components/ModuleItem.tsx",
+            "line": 81,
+            "message": "Error: Cannot create components during render\n\nComponents created during render will reset their state each time they are created. Declare components outside of render.\n\n/Users/acaldas/dev/powerhouse/"
+          },
+          {
+            "file": "apps/connect/src/components/app-loader.tsx",
+            "line": 25,
+            "message": "Error: Cannot create components during render\n\nComponents created during render will reset their state each time they are created. Declare components outside of render.\n\n/Users/acaldas/dev/powerhouse/"
           }
         ]
       },

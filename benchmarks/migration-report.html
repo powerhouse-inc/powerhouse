@@ -250,21 +250,35 @@
           <div class="delta">~4.8× faster (tsgo)</div>
         </div>
         <div class="card">
-          <div class="label">Cold lint (full)</div>
-          <div class="val">63.8s → 3.0s</div>
+          <div class="label">Cold lint (oxlint, full ruleset)</div>
+          <div class="val">63.8s → 6.0s</div>
           <div class="delta">
-            ~21× faster (oxlint w/ type-aware + js plugins)
+            ~10× faster (type-aware + custom + react-hooks v7)
           </div>
         </div>
         <div class="card">
-          <div class="label">Slim ESLint (prettier + tailwind)</div>
-          <div class="val">15s</div>
-          <div class="delta">parallelizable with oxlint</div>
+          <div class="label">Slim ESLint (tailwind only)</div>
+          <div class="val">10s</div>
+          <div class="delta">parallel with oxlint → ~10s total</div>
+        </div>
+        <div class="card">
+          <div class="label">Format (oxfmt vs prettier)</div>
+          <div class="val">~2s</div>
+          <div class="delta">replaces prettier; 88 files reformatted</div>
         </div>
         <div class="card">
           <div class="label">Findings parity</div>
-          <div class="val">621 / 760</div>
-          <div class="delta">82% overlap; deltas analyzed below</div>
+          <div class="val">629 / 760</div>
+          <div class="delta">
+            83% overlap; only-eslint shrunk to ~8 genuinely-missing
+          </div>
+        </div>
+        <div class="card">
+          <div class="label">Net new errors oxlint surfaces</div>
+          <div class="val">+81</div>
+          <div class="delta bad">
+            unicorn + correctness rules ESLint didn't enable
+          </div>
         </div>
       </div>
 
@@ -345,17 +359,27 @@
             <td>oxlint</td>
             <td>1.65 + tsgolint + jsPlugins</td>
             <td>cold</td>
-            <td class="num">3.00s</td>
+            <td class="num">6.00s</td>
             <td class="bar-cell">
-              <div class="bar"><span style="width: 4.7%"></span></div>
+              <div class="bar"><span style="width: 9.4%"></span></div>
             </td>
-            <td>Type-aware + custom plugins (full parity)</td>
+            <td>Type-aware + custom + react-hooks v7 (full ruleset)</td>
+          </tr>
+          <tr>
+            <td>oxfmt</td>
+            <td>0.50</td>
+            <td>full repo --check</td>
+            <td class="num">~2s</td>
+            <td class="bar-cell">
+              <div class="bar"><span style="width: 3%"></span></div>
+            </td>
+            <td>Replaces prettier; .oxfmtrc migrated from .prettierrc</td>
           </tr>
           <tr>
             <td>eslint (slim)</td>
-            <td>10.3.0</td>
+            <td>10.3.0 (better-tailwindcss only)</td>
             <td>cold</td>
-            <td class="num">16.0s</td>
+            <td class="num">10.0s</td>
             <td class="bar-cell">
               <div class="bar slow"><span style="width: 25%"></span></div>
             </td>
@@ -397,27 +421,35 @@
       </p>
       <div class="grid cards" style="margin-bottom: 18px">
         <div class="card">
-          <div class="label">ESLint total</div>
+          <div class="label">ESLint total (original config)</div>
           <div class="val">760</div>
         </div>
         <div class="card">
-          <div class="label">oxlint total</div>
-          <div class="val">749</div>
+          <div class="label">oxlint total (final config)</div>
+          <div class="val">797</div>
         </div>
         <div class="card">
           <div class="label">Overlap</div>
-          <div class="val">621</div>
-          <div class="delta">~82%</div>
+          <div class="val">629</div>
+          <div class="delta">~83%</div>
         </div>
         <div class="card">
           <div class="label">Only ESLint</div>
-          <div class="val">139</div>
-          <div class="delta warn">3 errors, 136 warnings</div>
+          <div class="val">131</div>
+          <div class="delta warn">3 errors, 128 warnings</div>
         </div>
         <div class="card">
           <div class="label">Only oxlint</div>
-          <div class="val">141</div>
-          <div class="delta bad">81 errors, 60 warnings</div>
+          <div class="val">181</div>
+          <div class="delta bad">81 errors, 100 warnings</div>
+        </div>
+        <div class="card">
+          <div class="label">Genuinely missing in oxlint</div>
+          <div class="val">~8</div>
+          <div class="delta warn">
+            1 prettier · 5 preserve-caught-error · 1 unsafe-* · 1
+            no-duplicate-type-constituents
+          </div>
         </div>
       </div>
 
@@ -656,11 +688,15 @@
         </tbody>
       </table>
       <p class="muted">
-        Summary: of the 139 "only ESLint" findings, <strong>~16</strong> are
-        genuinely unique to ESLint (1 prettier + 8 no-useless-assignment + 5
-        preserve-caught-error + 2 react-hooks/incompatible-library); the other
-        ~123 are the same logical issues oxlint also reports, just at a slightly
-        different line or under a renamed rule.
+        Summary: of the 131 "only ESLint" findings, <strong>~8</strong> are
+        genuinely unique to ESLint (1 prettier — now handled by oxfmt; 5
+        preserve-caught-error; 1 no-duplicate-type-constituents reported under
+        a different name by oxlint; 1 unsafe-assignment edge case). The other
+        ~123 are the same logical issues oxlint also reports at a slightly
+        different line or under a renamed rule. <code>no-useless-assignment</code>
+        (8) and <code>react-hooks/incompatible-library</code> (2) — previously
+        listed as missing — are now both supported by oxlint (nursery rule
+        and react-hooks v7 jsPlugin respectively).
       </p>
 
       <h2>What changed</h2>
@@ -673,41 +709,51 @@
               <code>apps/academy</code>)
             </li>
             <li>
-              <code>.oxlintrc.json</code> — oxlint config tuned for this
-              codebase
+              <code>.oxlintrc.json</code> — oxlint config (type-aware, custom
+              plugins, react-hooks v7 via jsPlugins)
             </li>
-            <li><code>benchmarks/run.sh</code> + <code>results.json</code></li>
+            <li>
+              <code>.oxfmtrc.json</code> — migrated from
+              <code>.prettierrc.json</code>
+            </li>
+            <li>
+              <code>eslint-plugins/{logger,cli-cold-path}.js</code> — custom
+              rules as standalone ESLint v9 plugin modules
+            </li>
+            <li><code>benchmarks/{run.sh, diff.mjs, results.json}</code></li>
           </ul>
           <h3>Scripts added</h3>
           <ul>
             <li><code>pnpm typecheck:tsgo</code></li>
             <li><code>pnpm lint:ox</code> / <code>pnpm lint:ox:fix</code></li>
+            <li>
+              <code>pnpm format</code> / <code>pnpm format:check</code> (oxfmt)
+            </li>
           </ul>
           <h3>CI</h3>
           <p>
-            Both new tools run as <em>advisory</em> pre-checks in
-            <code>.github/workflows/check-commit.yml</code> with
-            <code>continue-on-error: true</code>. They give sub-second feedback;
-            the authoritative tsc/eslint passes still gate merges.
+            tsgo runs as advisory pre-check. oxlint is now the primary lint
+            gate; <code>oxfmt --check</code> gates formatting; slim ESLint runs
+            only <code>eslint-plugin-better-tailwindcss</code>.
           </p>
         </div>
         <div class="card">
           <h3 style="margin-top: 0">Kept in ESLint</h3>
           <ul>
             <li>
-              <code>eslint-plugin-prettier</code> — formatting (oxlint does not
-              format)
-            </li>
-            <li>
               <code>eslint-plugin-better-tailwindcss</code> — Tailwind class
-              validation in <code>design-system</code> / <code>connect</code> /
-              <code>vetra</code> packages
+              validation. <strong>Blocker for full migration:</strong> the
+              native <code>oxlint-tailwindcss</code> plugin needs to load each
+              workspace's compiled <code>dist/style.css</code> via the package
+              <code>exports</code> field, which doesn't exist pre-build. The
+              ESLint plugin uses <code>cwd</code>-based loading so it works
+              without a build.
             </li>
             <li>
               Plugin registrations (no rules enabled) for
               <code>@typescript-eslint</code>, <code>react-hooks</code>,
               <code>logger</code> so existing inline
-              <code>eslint-disable</code> comments resolve
+              <code>eslint-disable</code> comments resolve.
             </li>
           </ul>
           <h3>Moved to oxlint</h3>
@@ -716,9 +762,16 @@
               typescript-eslint type-aware rules (via
               <code>oxlint-tsgolint</code>)
             </li>
-            <li><code>react-hooks/*</code></li>
             <li>
-              eslint core, <code>unicorn/*</code>, <code>import/*</code>,
+              <code>react-hooks/*</code> (core) + <code>react-hooks v7</code>
+              compiler rules via jsPlugins
+              (<code>set-state-in-effect</code>,
+              <code>incompatible-library</code>, <code>static-components</code>)
+            </li>
+            <li>
+              eslint core (incl.
+              <code>no-useless-assignment</code> nursery),
+              <code>unicorn/*</code>, <code>import/*</code>,
               <code>promise/*</code>
             </li>
             <li>
@@ -730,6 +783,76 @@
       </div>
 
       <h2>Breaking changes &amp; caveats</h2>
+
+      <h3>oxfmt (replaces prettier)</h3>
+      <table>
+        <thead><tr><th>Issue</th><th>Impact</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Markdown / MDX</td>
+            <td>
+              oxfmt corrupts MDX JSX-comment syntax
+              (<code>{/* ... */}</code> → <code>{/_ ... _/}</code>),
+              breaking academy docs and other generated MD files.
+            </td>
+            <td><span class="badge warn">handled</span> <code>**/*.md</code> and <code>**/*.mdx</code> in <code>.oxfmtrc</code> ignore list. Markdown formatting still runs via prettier if desired (not gated by CI).</td>
+          </tr>
+          <tr>
+            <td>Output divergence from prettier</td>
+            <td>
+              Found one stylistic difference: oxfmt parenthesizes
+              <code>infer T</code> in conditional types where prettier does not.
+              No other differences observed across 2270 files.
+            </td>
+            <td><span class="badge ok">accepted</span></td>
+          </tr>
+          <tr>
+            <td>Editor integration</td>
+            <td>
+              VSCode "Format on Save" via the prettier extension still works
+              if prettier remains in <code>devDependencies</code>; for native
+              oxfmt experience, install <code>oxc.oxc-vscode</code> and set
+              the formatter to oxfmt.
+            </td>
+            <td><span class="badge">informational</span></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>oxlint-tailwindcss (native plugin) — not adopted</h3>
+      <table>
+        <thead><tr><th>Issue</th><th>Impact</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>pnpm <code>exports</code> field resolution pre-build</td>
+            <td>
+              The native plugin loads each workspace's design system at lint time
+              by following <code>@import</code> chains through
+              <code>package.json#exports</code>. This repo's design-system maps
+              <code>./style.css</code> → <code>./dist/style.css</code>, which
+              doesn't exist until <code>pnpm build</code>. Without it the plugin
+              falls back to slow retry per file → <strong>38s on apps/connect/src
+              alone, ~84s on full repo.</strong>
+            </td>
+            <td>
+              <span class="badge bad">blocker</span> Reverted; kept
+              <code>eslint-plugin-better-tailwindcss</code> (uses cwd-based
+              loading, no exports needed). To migrate, add a
+              <code>"source": "./src/style.css"</code> or
+              <code>"style": "./style.css"</code> export so the plugin can
+              resolve pre-build.
+            </td>
+          </tr>
+          <tr>
+            <td>Tailwind v3 support</td>
+            <td>
+              <code>oxlint-tailwindcss</code> targets Tailwind v4 exclusively.
+              This repo uses v4 so not an issue here.
+            </td>
+            <td><span class="badge ok">not blocking</span></td>
+          </tr>
+        </tbody>
+      </table>
 
       <h3>tsgo (TypeScript 7 native preview)</h3>
       <table>
@@ -827,26 +950,54 @@
           </tr>
           <tr>
             <td><code>eslint-plugin-better-tailwindcss</code></td>
-            <td>Not in oxlint's tested-plugin list. Stays in ESLint.</td>
-            <td><span class="badge warn">eslint owns</span></td>
-          </tr>
-          <tr>
-            <td><code>eslint-plugin-prettier</code></td>
             <td>
-              Oxlint does not format. Stays in ESLint by design — keeps
-              formatting violations gating CI.
+              Could load via <code>jsPlugins</code> (fix landed Oct 2025),
+              but the native <code>oxlint-tailwindcss</code> plugin can't
+              resolve pre-build CSS here — see Tailwind caveats above.
+              Stays in slim ESLint for now.
             </td>
             <td><span class="badge warn">eslint owns</span></td>
           </tr>
           <tr>
-            <td>Rules missing entirely from oxlint</td>
+            <td>Formatting</td>
             <td>
-              <code>no-useless-assignment</code> (8 findings),
-              <code>preserve-caught-error</code> (5 findings, new in ESLint 10),
-              <code>react-hooks/incompatible-library</code> (2 findings),
-              <code>react-hooks/set-state-in-effect</code>,
-              <code>react-hooks/static-components</code>. None of these are
-              gating today.
+              <code>oxlint</code> does not format. Replaced
+              <code>eslint-plugin-prettier</code> with <code>oxfmt</code>
+              directly — no more lint/format wrapper.
+            </td>
+            <td><span class="badge ok">handled by oxfmt</span></td>
+          </tr>
+          <tr>
+            <td><code>no-useless-assignment</code></td>
+            <td>
+              Available in oxlint <code>eslint</code> plugin, nursery
+              category. Enabled as warn. Same 8 findings as ESLint.
+            </td>
+            <td><span class="badge ok">migrated</span></td>
+          </tr>
+          <tr>
+            <td>
+              <code>react-hooks v7</code> compiler rules
+              (<code>set-state-in-effect</code>,
+              <code>incompatible-library</code>,
+              <code>static-components</code>)
+            </td>
+            <td>
+              oxc maintainers explicitly chose not to implement these
+              natively (depend on React Compiler integration). Loaded
+              instead via <code>jsPlugins</code> using the official
+              <code>eslint-plugin-react-hooks</code> package, aliased to
+              <code>react-hooks-extra</code> to avoid collision with
+              oxlint's built-in <code>react-hooks</code>.
+            </td>
+            <td><span class="badge ok">migrated via jsPlugins</span></td>
+          </tr>
+          <tr>
+            <td><code>preserve-caught-error</code></td>
+            <td>
+              New ESLint 10 core rule. No oxlint equivalent and no tracking
+              issue. 5 findings on this repo. Could be loaded via
+              <code>jsPlugins</code> against <code>@eslint/js</code>.
             </td>
             <td><span class="badge warn">accepted gap</span></td>
           </tr>
@@ -952,24 +1103,27 @@
       <h2>Recommended rollout</h2>
       <ol>
         <li>
-          <strong>Now (this PR)</strong> — tsgo + oxlint installed, scripts
-          added, CI runs them as advisory. Zero blast radius.
+          <strong>Now (this PR)</strong> — tsgo as advisory pre-check, oxlint
+          + oxfmt as blocking. Slim ESLint runs only better-tailwindcss.
         </li>
         <li>
-          <strong>Next sprint</strong> — fix the 66 oxlint correctness errors,
-          then flip oxlint to blocking in CI.
+          <strong>Next sprint</strong> — triage the 81 oxlint correctness
+          errors (mostly real bugs: <code>react-hooks/rules-of-hooks</code>,
+          <code>no-unsafe-optional-chaining</code>, <code>unicorn/*</code>),
+          then flip oxlint's nursery-tier rules from warn to error.
+        </li>
+        <li>
+          <strong>Migrate Tailwind to native plugin</strong> — add a
+          <code>"source"</code> export to each workspace's design-system
+          package pointing at <code>src/style.css</code>, then swap
+          <code>eslint-plugin-better-tailwindcss</code> for
+          <code>oxlint-tailwindcss</code>. Drops the last ESLint dependency.
         </li>
         <li>
           <strong>2–3 months</strong> — when tsgo hits 1.0 and
           <code>@docusaurus/tsconfig</code> drops <code>baseUrl</code>, swap
-          <code>pnpm typecheck</code> to tsgo and keep tsc only for the CI
+          <code>pnpm typecheck</code> to tsgo and keep tsc only as the CI
           authoritative gate.
-        </li>
-        <li>
-          <strong>Later</strong> — evaluate
-          <a href="https://biomejs.dev">Biome</a> or
-          <a href="https://dprint.dev">dprint</a> to replace prettier for
-          formatting once oxlint covers the lint cases.
         </li>
       </ol>
 
@@ -978,9 +1132,12 @@
 pnpm install
 pnpm typecheck         # tsc (baseline)
 pnpm typecheck:tsgo    # tsgo
-pnpm lint              # eslint (baseline)
-pnpm lint:ox           # oxlint
-bash benchmarks/run.sh # full run; results in benchmarks/results.json.jsonl</pre
+pnpm lint              # eslint (better-tailwindcss only)
+pnpm lint:ox           # oxlint (full ruleset: type-aware + jsPlugins)
+pnpm format            # oxfmt --write .
+pnpm format:check      # oxfmt --check .
+bash benchmarks/run.sh # full run; results in benchmarks/results.json.jsonl
+node benchmarks/diff.mjs  # ESLint vs oxlint findings diff</pre
       >
 
       <footer>
