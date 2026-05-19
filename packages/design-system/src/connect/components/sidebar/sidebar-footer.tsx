@@ -34,7 +34,7 @@ export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
   etherscanUrl = "",
   ...props
 }) => {
-  const { theme, setTheme } = useTheme();
+  const { theme, isSystem, setTheme } = useTheme();
   return (
     <SidebarFooter
       {...props}
@@ -97,13 +97,13 @@ export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
       </button>
       <div className="text-xs">
         <button onClick={() => setTheme("light")}>
-          light{theme === "light" ? " ✅" : ""}
+          light{!isSystem && theme === "light" ? " ✅" : ""}
         </button>
         <button onClick={() => setTheme("dark")}>
-          dark{theme === "dark" ? " ✅" : ""}
+          dark{!isSystem && theme === "dark" ? " ✅" : ""}
         </button>
         <button onClick={() => setTheme("system")}>
-          system{theme === "system" ? " ✅" : ""}
+          system{isSystem ? " ✅" : ""}
         </button>
       </div>
     </SidebarFooter>

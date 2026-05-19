@@ -4,6 +4,7 @@ import {
   ConnectSidebar,
   HomeScreen,
 } from "@powerhousedao/design-system/connect";
+import { initTheme } from "@powerhousedao/reactor-browser";
 import {
   useEffect,
   useState,
@@ -47,6 +48,9 @@ const Loader = ({ delay = LOADER_DELAY }: { delay?: number }) => {
   const showInitialLoader =
     typeof document !== "undefined" &&
     document.body.getAttribute("data-show-loader") === "true";
+  if (!isSSR) {
+    initTheme();
+  }
 
   const [showLoading, setShowLoading] = useState(!delay || showInitialLoader);
 

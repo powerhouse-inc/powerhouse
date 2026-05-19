@@ -1965,6 +1965,9 @@ importers:
       slug:
         specifier: ^11.0.0
         version: 11.0.1
+      usehooks-ts:
+        specifier: ^3.1.1
+        version: 3.1.1(react@19.2.6)
       zod:
         specifier: 'catalog:'
         version: 4.3.6
@@ -2032,6 +2035,9 @@ importers:
       tsdown:
         specifier: 'catalog:'
         version: 0.21.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@tsdown/css@0.21.1)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(synckit@0.11.12)(typescript@5.9.3)
+      type-fest:
+        specifier: 'catalog:'
+        version: 5.6.0
       vite:
         specifier: 'catalog:'
         version: 8.0.8(@types/node@25.5.0)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3)

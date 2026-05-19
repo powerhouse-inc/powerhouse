@@ -5,6 +5,7 @@ import {
   detectReactorPgMajor,
   seedPendingPgVersion,
 } from "@powerhousedao/connect/utils";
+import { initTheme } from "@powerhousedao/reactor-browser";
 import type { DocumentModelLib } from "document-model";
 import { type ReactNode } from "react";
 
@@ -14,6 +15,7 @@ export async function loadComponent(localPackage?: DocumentModelLib) {
   await createReactor(localPackage);
   return {
     default: ({ children }: { children?: ReactNode }) => {
+      initTheme();
       // eslint-disable-next-line react-hooks/rules-of-hooks
       useSetSentryUser();
       // eslint-disable-next-line react-hooks/rules-of-hooks
