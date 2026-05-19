@@ -5,6 +5,10 @@ import type {
 import type { ILogger } from "document-model";
 import { ConsoleLogger } from "document-model";
 import type { Kysely } from "kysely";
+import type {
+  ModelManifestEntry,
+  WorkerPoolConfig,
+} from "../executor/worker/protocol.js";
 import { CollectionMembershipCache } from "../cache/collection-membership-cache.js";
 import { DocumentMetaCache } from "../cache/document-meta-cache.js";
 import { KyselyOperationIndex } from "../cache/kysely-operation-index.js";
@@ -94,6 +98,14 @@ export type ReadModelFactory = (
   deps: ReadModelFactoryDeps,
 ) => IReadModel | Promise<IReadModel>;
 
+/**
+ * Describes a document-model package the worker should import at runtime.
+ * Either a bare-specifier package or an absolute file path.
+ */
+export type DocumentModelSpecInput =
+  | { packageName: string; version: string }
+  | { filePath: string };
+
 export class ReactorBuilder {
   private logger?: ILogger;
   private documentModels: DocumentModelModule<any>[] = [];
@@ -118,6 +130,9 @@ export class ReactorBuilder {
   private shutdownHooks: Array<() => Promise<void>> = [];
   private driveContainerTypes: ReadonlySet<string> =
     DEFAULT_DRIVE_CONTAINER_TYPES;
+  private documentModelSpecs: DocumentModelSpecInput[] = [];
+  private workerPoolConfig?: WorkerPoolConfig;
+  private resolvedModelManifest?: ModelManifestEntry[];
 
   withLogger(logger: ILogger): this {
     this.logger = logger;
@@ -244,6 +259,24 @@ export class ReactorBuilder {
     return this;
   }
 
+  withDocumentModelSpecs(specs: DocumentModelSpecInput[]): this {
+    this.documentModelSpecs = specs;
+    return this;
+  }
+
+  /**
+   * Stores the worker-pool configuration used for mutual-exclusion validation
+   * at build time. Full wiring is completed in P3.4.
+   */
+  withWorkerPool(config: WorkerPoolConfig): this {
+    this.workerPoolConfig = config;
+    return this;
+  }
+
+  getResolvedModelManifest(): ModelManifestEntry[] | undefined {
+    return this.resolvedModelManifest;
+  }
+
   async build(): Promise<IReactor> {
     const module = await this.buildModule();
     return module.reactor;
@@ -252,6 +285,45 @@ export class ReactorBuilder {
   async buildModule(): Promise<ReactorModule> {
     if (!this.logger) {
       this.logger = new ConsoleLogger(["reactor"]);
+    }
+
+    if (this.workerPoolConfig?.enabled) {
+      if (this.documentModels.length > 0) {
+        throw new Error(
+          "workerPool.enabled requires withDocumentModelSpecs; remove withDocumentModels() in worker-pool mode.",
+        );
+      }
+      if (this.documentModelSpecs.length === 0) {
+        throw new Error(
+          "workerPool.enabled requires at least one spec registered via withDocumentModelSpecs.",
+        );
+      }
+    }
+
+    if (this.documentModelSpecs.length > 0) {
+      this.resolvedModelManifest = this.documentModelSpecs.map((input) => {
+        if ("filePath" in input) {
+          const entry: ModelManifestEntry = {
+            documentType: "<unresolved>",
+            version: "<unresolved>",
+            spec: {
+              module: { filePath: input.filePath, exportName: "documentModel" },
+            },
+          };
+          return entry;
+        }
+        const entry: ModelManifestEntry = {
+          documentType: "<unresolved>",
+          version: input.version,
+          spec: {
+            module: {
+              packageName: input.packageName,
+              exportName: "documentModel",
+            },
+          },
+        };
+        return entry;
+      });
     }
 
     const documentModelRegistry = new DocumentModelRegistry();
