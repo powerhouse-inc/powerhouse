@@ -57,6 +57,19 @@ jobs:
       - name: Check tsconfig references
         run: pnpm check-ts-references
 
+      # Fast advisory typecheck via tsgo. tsc remains authoritative below.
+      - name: Fast typecheck (tsgo, advisory)
+        continue-on-error: true
+        run: pnpm typecheck:tsgo
+
+      # Primary lint: oxlint (type-aware + custom plugins + native
+      # oxlint-tailwindcss) followed by oxfmt --check for formatting.
+      # The lint:ox script also runs build:css first because the native
+      # Tailwind plugin needs compiled dist/style.css files to resolve.
+      - name: Lint + format check (oxlint + oxfmt)
+        if: ${{ steps.diff.outputs.files != '' }}
+        run: pnpm lint
+
       - name: Build
         run: pnpm build
 

@@ -1,0 +1,230 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "react", "unicorn", "import", "promise"],
+  "jsPlugins": [
+    { "name": "logger", "specifier": "./lint-plugins/logger.js" },
+    {
+      "name": "cli-cold-path",
+      "specifier": "./lint-plugins/cli-cold-path.js"
+    },
+    {
+      "name": "react-hooks-extra",
+      "specifier": "eslint-plugin-react-hooks"
+    },
+    "oxlint-tailwindcss"
+  ],
+  "settings": {
+    "tailwindcss": {
+      "entryPoint": [
+        "packages/design-system/style.css",
+        "apps/connect/style.css",
+        "packages/powerhouse-vetra-packages/style.css",
+        "packages/vetra/style.css"
+      ]
+    }
+  },
+  "options": {
+    "typeAware": true
+  },
+  "categories": {
+    "correctness": "error",
+    "suspicious": "off",
+    "perf": "off",
+    "restriction": "off",
+    "pedantic": "off",
+    "style": "off",
+    "nursery": "off"
+  },
+  "env": {
+    "browser": true,
+    "node": true,
+    "es2024": true
+  },
+  "rules": {
+    "no-unused-vars": "off",
+    "typescript/no-unused-vars": "warn",
+    "typescript/no-explicit-any": "off",
+    "no-constant-condition": "off",
+    "no-empty": "warn",
+    "no-await-in-loop": "off",
+    "no-underscore-dangle": "off",
+    "no-shadow": "off",
+    "react/react-in-jsx-scope": "off",
+    "react/jsx-key": "error",
+    "react-hooks/rules-of-hooks": "error",
+    "react-hooks/exhaustive-deps": "warn",
+    "unicorn/no-array-sort": "off",
+    "unicorn/consistent-function-scoping": "off",
+    "unicorn/prefer-set-has": "off",
+    "unicorn/prefer-add-event-listener": "off",
+    "unicorn/require-module-specifiers": "off",
+    "unicorn/no-array-reverse": "off",
+    "unicorn/prefer-array-find": "off",
+    "promise/always-return": "off",
+    "promise/no-multiple-resolved": "off",
+    "import/no-unassigned-import": "off",
+    "import/no-named-as-default-member": "off",
+    "import/no-named-as-default": "off",
+    "preserve-caught-error": "warn",
+    "no-useless-assignment": "warn",
+    "react-hooks-extra/set-state-in-effect": "warn",
+    "react-hooks-extra/incompatible-library": "warn",
+    "react-hooks-extra/static-components": "warn",
+
+    "typescript/consistent-type-imports": [
+      "error",
+      {
+        "prefer": "type-imports",
+        "disallowTypeAnnotations": true,
+        "fixStyle": "separate-type-imports"
+      }
+    ],
+    "typescript/no-misused-promises": "warn",
+    "typescript/no-floating-promises": "warn",
+    "typescript/no-empty-object-type": "warn",
+    "typescript/no-duplicate-type-constituents": "warn",
+    "typescript/require-await": "warn",
+    "typescript/no-unnecessary-condition": "warn",
+    "typescript/restrict-template-expressions": [
+      "warn",
+      { "allowNumber": true }
+    ],
+    "typescript/no-unnecessary-type-assertion": "off",
+    "typescript/no-unnecessary-type-parameters": "off",
+    "typescript/no-base-to-string": "warn",
+    "typescript/no-unsafe-declaration-merging": "off",
+    "typescript/no-unsafe-assignment": "off",
+    "typescript/no-unsafe-member-access": "off",
+    "typescript/no-unsafe-call": "off",
+    "typescript/no-unsafe-return": "off",
+    "typescript/no-unsafe-argument": "off",
+    "typescript/await-thenable": "off",
+    "typescript/no-require-imports": "off",
+    "typescript/unbound-method": "off",
+    "typescript/no-namespace": "off",
+
+    "logger/missing-token-args": "error",
+    "logger/extra-args-without-token": "warn",
+
+    "tailwindcss/no-unknown-classes": "off",
+    "tailwindcss/no-duplicate-classes": "off",
+    "tailwindcss/no-conflicting-classes": "off",
+    "tailwindcss/no-deprecated-classes": "off",
+    "tailwindcss/no-unnecessary-whitespace": "off",
+    "tailwindcss/no-dark-without-light": "off",
+    "tailwindcss/no-contradicting-variants": "off",
+    "tailwindcss/enforce-canonical": "off",
+    "tailwindcss/enforce-sort-order": "off",
+    "tailwindcss/enforce-shorthand": "off",
+    "tailwindcss/enforce-consistent-important-position": "off",
+    "tailwindcss/enforce-negative-arbitrary-values": "off",
+    "tailwindcss/enforce-consistent-variable-syntax": "off",
+    "tailwindcss/consistent-variant-order": "off",
+    "tailwindcss/no-hardcoded-colors": "off",
+    "tailwindcss/no-unnecessary-arbitrary-value": "off",
+    "tailwindcss/enforce-consistent-line-wrapping": "off"
+  },
+  "overrides": [
+    {
+      "files": [
+        "packages/design-system/**/*.{js,jsx,cjs,mjs,ts,tsx}",
+        "apps/connect/**/*.{js,jsx,cjs,mjs,ts,tsx}",
+        "packages/powerhouse-vetra-packages/**/*.{js,jsx,cjs,mjs,ts,tsx}",
+        "packages/vetra/**/*.{js,jsx,cjs,mjs,ts,tsx}"
+      ],
+      "rules": {
+        "tailwindcss/no-unknown-classes": ["error", { "allowlist": ["custom-class", "hover-bg-transparent", "skeleton-loader"] }],
+        "tailwindcss/no-duplicate-classes": "error",
+        "tailwindcss/no-conflicting-classes": "error",
+        "tailwindcss/no-unnecessary-whitespace": "error",
+        "tailwindcss/enforce-sort-order": "error",
+        "tailwindcss/enforce-shorthand": "error",
+        "tailwindcss/enforce-consistent-important-position": "error",
+        "tailwindcss/enforce-consistent-variable-syntax": "error"
+      }
+    },
+    {
+      "files": [
+        "clis/ph-cli/src/cli.ts",
+        "clis/ph-cmd/src/cli.ts",
+        "clis/ph-cli/src/commands/*.ts",
+        "clis/ph-cmd/src/commands/*.ts"
+      ],
+      "rules": {
+        "cli-cold-path/allowed-static-imports": [
+          "error",
+          {
+            "allow": [
+              "cmd-ts",
+              "@powerhousedao/shared/clis/args",
+              "@powerhousedao/shared/clis/constants",
+              "@powerhousedao/shared/clis/utils",
+              "@powerhousedao/shared/clis/telemetry",
+              "@powerhousedao/shared/clis/command-names",
+              "@powerhousedao/shared/constants",
+              "@powerhousedao/shared/processors"
+            ],
+            "message": "Do not import modules statically on the CLI commands."
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "**/*.test.ts",
+        "**/*.test.tsx",
+        "**/*.bench.ts",
+        "**/__tests__/**",
+        "**/test/**"
+      ],
+      "rules": {
+        "typescript/no-unused-vars": "off",
+        "no-empty": "off",
+        "typescript/no-floating-promises": "off",
+        "typescript/no-misused-promises": "off"
+      }
+    }
+  ],
+  "ignorePatterns": [
+    "**/node_modules/",
+    "**/coverage/",
+    "**/dist/",
+    "**/.tsbuild/",
+    "**/ts-build/",
+    "**/storybook-static/",
+    "**/.vite/",
+    "**/.nx/",
+    "**/build/",
+    "**/.docusaurus/",
+    "**/.ph/",
+    "**/.hotseat/",
+    "**/prisma/",
+    "**/*.d.ts",
+    "**/babel.config.js",
+    "commitlint.config.cjs",
+    "benchmarks/sanity-violations.tsx",
+    "**/.out/",
+    "**/test-output/",
+    "**/.test-output/",
+    "**/test-projects/",
+    "**/flaky/",
+    "apps/connect/lib/",
+    "apps/switchboard-lb/test/integration/*.js",
+    "clis/ph-cli/src/commands/migrations/templates/",
+    "clis/ph-cmd/legacy/",
+    "**/playwright-report/",
+    "test/package-e2e/.registry-storage/",
+    "test/package-e2e/.registry-cdn-cache/",
+    "test/package-e2e/fixtures/",
+    "**/.storybook/",
+    "**/*.bench.ts",
+    "packages/codegen/src/codegen/.hygen/",
+    "apps/connect/src/vite-env.d.ts",
+    "tools/scripts/release.ts",
+    "releases/release.ts",
+    "**/external-packages.js",
+    "packages/reactor/test/atlas/",
+    "packages/reactor-api/src/packages/vite-loader.mts",
+    "**/gen/"
+  ]
+}

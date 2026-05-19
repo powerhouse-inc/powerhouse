@@ -23,7 +23,7 @@
   "sideEffects": false,
   "scripts": {
     "tsc": "tsc",
-    "lint": "eslint",
+    "lint": "oxlint --type-aware",
     "build": "tsdown"
   },
   "dependencies": {

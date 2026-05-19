@@ -2,13 +2,9 @@
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
     "outDir": "./.tsbuild",
-    "types": [
-      "vitest/globals"
-    ]
+    "types": ["vitest/globals"]
   },
-  "include": [
-    "**/*"
-  ],
+  "include": ["**/*"],
   "references": [
     {
       "path": "../document-model"
@@ -20,8 +16,5 @@
       "path": "../shared"
     }
   ],
-  "exclude": [
-    "dist",
-    "node_modules"
-  ]
+  "exclude": ["dist", "node_modules"]
 }

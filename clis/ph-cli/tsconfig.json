@@ -2,7 +2,7 @@
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
     "types": ["node", "vitest/globals"],
-    "outDir": "./.tsbuild",
+    "outDir": "./.tsbuild"
   },
   "include": ["**/*"],
   "exclude": ["dist", "node_modules"],

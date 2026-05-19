@@ -36,7 +36,7 @@
   "sideEffects": false,
   "scripts": {
     "tsc": "tsc",
-    "lint": "eslint",
+    "lint": "oxlint --type-aware",
     "test": "vitest --run",
     "test:watch": "vitest watch",
     "build": "tsx ./build.ts"

@@ -2,13 +2,9 @@
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
     "outDir": "./.tsbuild",
-    "lib": [
-      "ESNext"
-    ]
+    "lib": ["ESNext"]
   },
-  "include": [
-    "**/*"
-  ],
+  "include": ["**/*"],
   "references": [
     {
       "path": "../../packages/config"

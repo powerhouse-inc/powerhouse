@@ -25,13 +25,21 @@ custom view at the drive level (instead of, or alongside, the document file
 tree) and can opt into which document types they accept.
 """
 type AppModuleState {
-  """Display name of the drive app. Also used as the source for the generated folder name under `apps/`."""
+  """
+  Display name of the drive app. Also used as the source for the generated folder name under `apps/`.
+  """
   name: String!
-  """Lifecycle status. While DRAFT the app definition is editable and codegen is skipped; switching to CONFIRMED triggers app scaffold generation."""
+  """
+  Lifecycle status. While DRAFT the app definition is editable and codegen is skipped; switching to CONFIRMED triggers app scaffold generation.
+  """
   status: StatusType!
-  """Document type ids this app handles. `null` means the app accepts any document type; an empty list means it accepts none."""
+  """
+  Document type ids this app handles. `null` means the app accepts any document type; an empty list means it accepts none.
+  """
   allowedDocumentTypes: [String!]
-  """Whether the app surface accepts dropped files from the user. Defaults to true."""
+  """
+  Whether the app surface accepts dropped files from the user. Defaults to true.
+  """
   isDragAndDropEnabled: Boolean!
 }
 

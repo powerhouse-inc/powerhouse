@@ -1,0 +1,25 @@
+{
+  "extends": "./tsconfig.options.json",
+  "compilerOptions": {
+    "types": ["node"]
+  },
+  "references": [
+    { "path": "apps/connect" },
+    { "path": "clis/ph-cli" },
+    { "path": "clis/ph-cmd" },
+    { "path": "packages/reactor-hypercore" },
+    { "path": "packages/switchboard-gui" },
+    { "path": "packages/analytics-engine/benchmarks" },
+    { "path": "packages/analytics-engine/compat" },
+    { "path": "test/codegen" },
+    { "path": "test/lb-loadtest" },
+    { "path": "test/package-e2e" },
+    { "path": "test/switchboard" },
+    { "path": "test/test-connect" },
+    { "path": "test/test-sync-queue" },
+    { "path": "test/vetra-e2e" },
+    { "path": "scripts/profiling" },
+    { "path": "scripts/release" }
+  ],
+  "files": []
+}

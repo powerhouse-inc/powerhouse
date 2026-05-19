@@ -1,0 +1,7 @@
+
+/Users/acaldas/dev/powerhouse/monorepo/.claude/worktrees/migrate-tsgo-oxlint/test/test-consumer-project/vite.config.ts
+  5:9   error  Unsafe assignment of an error typed value         @typescript-eslint/no-unsafe-assignment
+  5:33  error  Unsafe call of a type that could not be resolved  @typescript-eslint/no-unsafe-call
+
+✖ 2 problems (2 errors, 0 warnings)
+

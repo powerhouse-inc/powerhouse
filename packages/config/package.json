@@ -29,7 +29,7 @@
   "scripts": {
     "build": "tsdown",
     "tsc": "tsc",
-    "lint": "eslint"
+    "lint": "oxlint --type-aware"
   },
   "dependencies": {
     "@powerhousedao/shared": "workspace:*"

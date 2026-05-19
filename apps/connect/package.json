@@ -30,7 +30,10 @@
       "import": "./dist/main.js"
     },
     "./assets/*": "./assets/*",
-    "./style.css": "./dist/style.css"
+    "./style.css": [
+      "./dist/style.css",
+      "./style.css"
+    ]
   },
   "sideEffects": [
     "./dist/main.js",
@@ -50,7 +53,7 @@
   "homepage": "https://github.com/powerhouse-inc/powerhouse#readme",
   "scripts": {
     "tsc": "tsc",
-    "lint": "eslint",
+    "lint": "oxlint --type-aware",
     "test": "vitest --run",
     "dev": "vite dev",
     "build": "pnpm run build:bundle && pnpm run build:css",

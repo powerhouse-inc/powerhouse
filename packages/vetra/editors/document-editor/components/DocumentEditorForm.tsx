@@ -103,19 +103,19 @@ export const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
 
   // Update local state when initial values change
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    // eslint-disable-next-line react-hooks-extra/set-state-in-effect
     setEditorName(initialEditorName);
   }, [initialEditorName]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    // eslint-disable-next-line react-hooks-extra/set-state-in-effect
     setDocumentTypes(initialDocumentTypes);
   }, [initialDocumentTypes]);
 
   // Reset confirmation state if status changes back to DRAFT
   useEffect(() => {
     if (status === "DRAFT") {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+      // eslint-disable-next-line react-hooks-extra/set-state-in-effect
       setIsConfirmed(false);
     }
   }, [status]);

@@ -21,8 +21,8 @@
   ],
   "scripts": {
     "tsc": "tsc",
-    "build": "tsdown",
-    "lint": "eslint"
+    "lint": "oxlint --type-aware",
+    "build": "tsdown"
   },
   "publishConfig": {
     "access": "public"

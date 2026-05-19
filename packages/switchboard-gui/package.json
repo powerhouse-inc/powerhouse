@@ -11,7 +11,7 @@
   "types": "./dist/src/index.d.ts",
   "scripts": {
     "tsc": "tsc",
-    "lint": "eslint",
+    "lint": "oxlint --type-aware",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"

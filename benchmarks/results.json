@@ -1,0 +1,104 @@
+{
+  "machine": "darwin 25.4.0",
+  "node": "24",
+  "pnpm": "11.0.8",
+  "scope": "full monorepo (~2268 files)",
+  "results": [
+    {
+      "tool": "tsc",
+      "version": "6.0.3 (TypeScript 6)",
+      "mode": "cold",
+      "elapsed_s": 19.33,
+      "rc": 0
+    },
+    {
+      "tool": "tsc",
+      "version": "6.0.3 (TypeScript 6)",
+      "mode": "warm",
+      "elapsed_s": 1.04,
+      "rc": 0
+    },
+    {
+      "tool": "tsgo",
+      "version": "7.0.0-dev.20260518.1",
+      "mode": "cold",
+      "elapsed_s": 4.03,
+      "rc": 0,
+      "note": "via tsconfig.tsgo.json (excludes apps/academy)"
+    },
+    {
+      "tool": "tsgo",
+      "version": "7.0.0-dev.20260518.1",
+      "mode": "warm",
+      "elapsed_s": 0.14,
+      "rc": 0
+    },
+    {
+      "tool": "eslint",
+      "version": "10.3.0 + typescript-eslint",
+      "mode": "cold",
+      "elapsed_s": 63.8,
+      "rc": 1,
+      "note": "2 pre-existing errors in test/test-consumer-project/vite.config.ts"
+    },
+    {
+      "tool": "eslint",
+      "version": "10.3.0 + typescript-eslint",
+      "mode": "warm",
+      "elapsed_s": 1.37,
+      "rc": 1
+    },
+    {
+      "tool": "oxlint",
+      "version": "1.65.0 (correctness only)",
+      "mode": "cold",
+      "elapsed_s": 0.64,
+      "rc": 1,
+      "note": "initial run; pre-existing issues surfaced"
+    },
+    {
+      "tool": "oxlint",
+      "version": "1.65.0 (correctness only)",
+      "mode": "warm",
+      "elapsed_s": 0.55,
+      "rc": 1
+    },
+    {
+      "tool": "oxlint",
+      "version": "1.65.0 + tsgolint + jsPlugins + react-hooks v7",
+      "mode": "cold (full ruleset)",
+      "elapsed_s": 6.0,
+      "rc": 1,
+      "note": "type-aware + custom plugins + react-hooks v7 compiler rules + no-useless-assignment nursery — 797 findings"
+    },
+    {
+      "tool": "oxlint + oxfmt --check",
+      "version": "1.65 + tsgolint + jsPlugins + native tailwindcss (scoped)",
+      "mode": "cold (full lint + format check)",
+      "elapsed_s": 14.0,
+      "rc": 1,
+      "note": "Includes build:css (~2s) + oxlint full (~12s) + oxfmt --check (~1s). Tailwind plugin scoped to the 4 packages that use it (matches old better-tailwindcss config)."
+    },
+    {
+      "tool": "oxfmt",
+      "version": "0.50.0",
+      "mode": "--check",
+      "elapsed_s": 2.0,
+      "rc": 0,
+      "note": "Replaces prettier; .oxfmtrc migrated from .prettierrc"
+    }
+  ],
+  "speedup_cold": {
+    "tsgo_vs_tsc": 4.8,
+    "oxlint_full_vs_eslint_full": 10.6,
+    "slim_eslint_vs_full_eslint": 6.4,
+    "combined_lint_format_vs_eslint": 5.3
+  },
+  "rule_coverage_vs_original_eslint": {
+    "overlap": 629,
+    "only_eslint_total": 131,
+    "only_eslint_genuinely_missing": 8,
+    "only_oxlint_total": 181,
+    "only_oxlint_new_errors": 81
+  }
+}

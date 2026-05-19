@@ -171,13 +171,13 @@ export function DBExplorer({
 
   // Load tables on mount
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    // eslint-disable-next-line react-hooks-extra/set-state-in-effect
     void loadTables();
   }, [loadTables]);
 
   useEffect(() => {
     if (selectedTable) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+      // eslint-disable-next-line react-hooks-extra/set-state-in-effect
       void loadTableData();
     }
   }, [selectedTable, pagination.offset, sort, filters, loadTableData]);

@@ -2,19 +2,10 @@
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
     "outDir": "./.tsbuild",
-    "types": [
-      "node"
-    ]
+    "types": ["node"]
   },
-  "include": [
-    "**/*"
-  ],
-  "exclude": [
-    "dist",
-    "node_modules",
-    "storage",
-    "cdn-cache"
-  ],
+  "include": ["**/*"],
+  "exclude": ["dist", "node_modules", "storage", "cdn-cache"],
   "references": [
     {
       "path": "../renown"

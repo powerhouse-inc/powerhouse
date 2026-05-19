@@ -2,53 +2,23 @@
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
     "outDir": "./.tsbuild",
-    "types": [
-      "node",
-      "vite/client",
-      "vitest/globals"
-    ],
-    "lib": [
-      "ESNext",
-      "dom",
-      "dom.iterable"
-    ],
+    "types": ["node", "vite/client", "vitest/globals"],
+    "lib": ["ESNext", "dom", "dom.iterable"],
     "paths": {
-      "@powerhousedao/vetra/document-models": [
-        "./document-models/index.ts"
-      ],
+      "@powerhousedao/vetra/document-models": ["./document-models/index.ts"],
       "@powerhousedao/vetra/document-models/*": [
         "./document-models/*/index.ts"
       ],
-      "@powerhousedao/vetra/editors": [
-        "./editors/index.ts"
-      ],
-      "@powerhousedao/vetra/editors/*": [
-        "./editors/*/index.ts"
-      ],
-      "@powerhousedao/vetra/processors": [
-        "./processors/index.ts"
-      ],
-      "@powerhousedao/vetra/processors/*": [
-        "./processors/*/index.ts"
-      ],
-      "document-models": [
-        "./document-models/index.ts"
-      ],
-      "document-models/*": [
-        "./document-models/*/index.ts"
-      ]
+      "@powerhousedao/vetra/editors": ["./editors/index.ts"],
+      "@powerhousedao/vetra/editors/*": ["./editors/*/index.ts"],
+      "@powerhousedao/vetra/processors": ["./processors/index.ts"],
+      "@powerhousedao/vetra/processors/*": ["./processors/*/index.ts"],
+      "document-models": ["./document-models/index.ts"],
+      "document-models/*": ["./document-models/*/index.ts"]
     }
   },
-  "include": [
-    "**/*",
-    "./powerhouse.manifest.json"
-  ],
-  "exclude": [
-    "dist",
-    "node_modules",
-    ".ph",
-    "index.html"
-  ],
+  "include": ["**/*", "./powerhouse.manifest.json"],
+  "exclude": ["dist", "node_modules", ".ph", "index.html"],
   "references": [
     {
       "path": "../builder-tools"

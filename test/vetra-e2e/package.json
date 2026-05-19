@@ -47,7 +47,6 @@
     "./style.css": "./dist/style.css"
   },
   "scripts": {
-    "lint": "eslint . --cache",
     "lint:fix": "eslint . --fix --cache",
     "typecheck": "tsc --noEmit",
     "generate": "ph-cli generate",

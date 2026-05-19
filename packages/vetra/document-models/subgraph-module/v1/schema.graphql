@@ -24,9 +24,13 @@ Configuration for a GraphQL subgraph contributed by the package. The subgraph
 is served by Switchboard and stitched into the unified Powerhouse API.
 """
 type SubgraphModuleState {
-  """Display name of the subgraph. Also determines the generated folder name under `subgraphs/` and the route segment Switchboard mounts it at."""
+  """
+  Display name of the subgraph. Also determines the generated folder name under `subgraphs/` and the route segment Switchboard mounts it at.
+  """
   name: String!
-  """Lifecycle status. While DRAFT the subgraph definition is editable and codegen is skipped; switching to CONFIRMED triggers scaffold generation."""
+  """
+  Lifecycle status. While DRAFT the subgraph definition is editable and codegen is skipped; switching to CONFIRMED triggers scaffold generation.
+  """
   status: StatusType!
 }
 

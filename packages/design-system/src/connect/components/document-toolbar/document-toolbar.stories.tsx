@@ -52,7 +52,7 @@ function Render(args: DocumentToolbarProps) {
     setDrives([mockDrive]);
     setSelectedDrive(mockDrive);
     setSelectedNode(mockNode);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    // eslint-disable-next-line react-hooks-extra/set-state-in-effect
     setHasInit(true);
   }, [hasInit]);
 

@@ -1,0 +1,8 @@
+{"name":"tsc","mode":"cold","rc":0,"elapsed":19.33}
+{"name":"tsc","mode":"warm","rc":0,"elapsed":1.04}
+{"name":"tsgo","mode":"cold","rc":2,"elapsed":4.03}
+{"name":"tsgo","mode":"warm","rc":2,"elapsed":0.14}
+{"name":"eslint","mode":"cold","rc":1,"elapsed":63.80}
+{"name":"eslint","mode":"warm","rc":1,"elapsed":1.37}
+{"name":"oxlint","mode":"cold","rc":1,"elapsed":0.64}
+{"name":"oxlint","mode":"warm","rc":1,"elapsed":0.55}
