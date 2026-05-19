@@ -134,6 +134,14 @@ export {
   type JobStartedEvent,
 } from "./src/executor/types.js";
 
+// Executor Worker Utilities
+export {
+  createForwardingLogger,
+  errorToInfo,
+  sanitizeArg,
+  workerEntryPath,
+} from "./src/executor/worker/index.js";
+
 // Executor Worker Protocol
 export type {
   AbortMessage,

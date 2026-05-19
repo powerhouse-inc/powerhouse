@@ -356,6 +356,9 @@ export type ModelLoadFailedMessage = {
  * {@link SanitizedArg} so callers cannot accidentally ship non-clonable
  * values across the boundary.
  *
+ * The sanitizer in `./sanitize.ts` enforces the {@link SanitizedArg}
+ * invariant on the producer side before each message is posted.
+ *
  * @see Wire Protocol Reference wiki page
  *   (Powerhouse board wiki id: 64c03e51-1aa4-4fa9-93d8-daa45642484d)
  */
