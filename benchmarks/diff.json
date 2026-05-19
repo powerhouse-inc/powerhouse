@@ -1,10 +1,10 @@
 {
   "totals": {
     "eslint": 760,
-    "oxlint": 797,
-    "overlap": 629,
-    "only_eslint": 131,
-    "only_oxlint": 181
+    "oxlint": 826,
+    "overlap": 634,
+    "only_eslint": 126,
+    "only_oxlint": 205
   },
   "by_rule": {
     "only_eslint": [
@@ -146,25 +146,6 @@
         ]
       },
       {
-        "rule": "preserve-caught-error",
-        "severity_max": "warn",
-        "errors": 0,
-        "warnings": 5,
-        "total": 5,
-        "sample": [
-          {
-            "file": "packages/reactor-api/test/utils/postgres-test-db.ts",
-            "line": 48,
-            "message": "There is no `cause` attached to the symptom error being thrown."
-          },
-          {
-            "file": "scripts/profiling/pyroscope-analyse.ts",
-            "line": 250,
-            "message": "There is no `cause` attached to the symptom error being thrown."
-          }
-        ]
-      },
-      {
         "rule": "@typescript-eslint/no-empty-object-type",
         "severity_max": "warn",
         "errors": 0,
@@ -238,6 +219,25 @@
     ],
     "only_oxlint": [
       {
+        "rule": "tailwindcss/no-unknown-classes",
+        "severity_max": "error",
+        "errors": 44,
+        "warnings": 0,
+        "total": 44,
+        "sample": [
+          {
+            "file": "packages/design-system/src/powerhouse/components/legacy/editorWorksheet.tsx",
+            "line": 11,
+            "message": "\"editor-worksheet\" is not a valid Tailwind class."
+          },
+          {
+            "file": "packages/design-system/src/powerhouse/components/legacy/editorWorksheet.tsx",
+            "line": 12,
+            "message": "\"editor-worksheet--page\" is not a valid Tailwind class."
+          }
+        ]
+      },
+      {
         "rule": "unicorn/no-useless-spread",
         "severity_max": "error",
         "errors": 15,
@@ -264,12 +264,12 @@
         "total": 14,
         "sample": [
           {
-            "file": "packages/powerhouse-vetra-packages/document-models/document-model/index.ts",
+            "file": "apps/connect/src/store/utils.ts",
             "line": 1,
             "message": "Empty files are not allowed."
           },
           {
-            "file": "apps/connect/src/store/utils.ts",
+            "file": "packages/powerhouse-vetra-packages/editors/document-model-editor/index.ts",
             "line": 1,
             "message": "Empty files are not allowed."
           }
@@ -283,13 +283,13 @@
         "total": 10,
         "sample": [
           {
-            "file": "packages/reactor/test/sync/channels/gql-req-channel/unit.test.ts",
-            "line": 747,
+            "file": "packages/analytics-engine/core/test/AnalyticsTimeSlicer.spec.ts",
+            "line": 342,
             "message": "Unsafe usage of optional chaining"
           },
           {
-            "file": "packages/reactor/test/sync/channels/gql-req-channel/unit.test.ts",
-            "line": 1203,
+            "file": "packages/analytics-engine/core/test/AnalyticsTimeSlicer.spec.ts",
+            "line": 408,
             "message": "Unsafe usage of optional chaining"
           }
         ]
@@ -359,13 +359,13 @@
         "total": 5,
         "sample": [
           {
-            "file": "packages/builder-tools/connect-utils/vite-plugins/favicon.ts",
-            "line": 17,
+            "file": "packages/reactor-api/src/graphql/gateway/adapter-http-express.ts",
+            "line": 224,
             "message": "Avoid calling back inside of a promise"
           },
           {
             "file": "packages/builder-tools/connect-utils/vite-plugins/favicon.ts",
-            "line": 21,
+            "line": 17,
             "message": "Avoid calling back inside of a promise"
           }
         ]
@@ -378,14 +378,33 @@
         "total": 5,
         "sample": [
           {
-            "file": "packages/analytics-engine/browser/test/BrowserAnalyticsStore.test.ts",
-            "line": 134,
+            "file": "packages/analytics-engine/pg/test/Integration.test.ts",
+            "line": 201,
             "message": "Require 'compare' argument."
           },
           {
-            "file": "packages/analytics-engine/browser/test/Integration.test.ts",
-            "line": 188,
+            "file": "packages/analytics-engine/pg/test/AnalyticsStore.test.ts",
+            "line": 145,
             "message": "Require 'compare' argument."
+          }
+        ]
+      },
+      {
+        "rule": "tailwindcss/enforce-shorthand",
+        "severity_max": "error",
+        "errors": 4,
+        "warnings": 0,
+        "total": 4,
+        "sample": [
+          {
+            "file": "packages/design-system/src/connect/components/upload-file-item/components/header.tsx",
+            "line": 63,
+            "message": "\"w-[18px]\", \"h-[18px]\" can be simplified to \"size-[18px]\"."
+          },
+          {
+            "file": "packages/design-system/src/connect/components/document-timeline/document-timeline.tsx",
+            "line": 129,
+            "message": "\"w-[6px]\", \"h-[6px]\" can be simplified to \"size-[6px]\"."
           }
         ]
       },
@@ -461,20 +480,6 @@
         ]
       },
       {
-        "rule": "unicorn/no-useless-length-check",
-        "severity_max": "error",
-        "errors": 1,
-        "warnings": 0,
-        "total": 1,
-        "sample": [
-          {
-            "file": "packages/reactor-api/src/graphql/document-model-subgraph.ts",
-            "line": 235,
-            "message": "Found a useless array length check"
-          }
-        ]
-      },
-      {
         "rule": "@typescript-eslint/no-unnecessary-parameter-property-assignment",
         "severity_max": "error",
         "errors": 1,
@@ -485,6 +490,20 @@
             "file": "packages/codegen/src/ts-morph-generator/core/TSMorphCodeGenerator.ts",
             "line": 40,
             "message": "Assignment of parameter property is unnecessary"
+          }
+        ]
+      },
+      {
+        "rule": "unicorn/no-useless-length-check",
+        "severity_max": "error",
+        "errors": 1,
+        "warnings": 0,
+        "total": 1,
+        "sample": [
+          {
+            "file": "packages/reactor-api/src/graphql/document-model-subgraph.ts",
+            "line": 235,
+            "message": "Found a useless array length check"
           }
         ]
       },
@@ -510,14 +529,14 @@
         "total": 49,
         "sample": [
           {
-            "file": "packages/powerhouse-vetra-packages/editors/document-model-editor/components/code-editors/json-editor.tsx",
-            "line": 62,
-            "message": "React Hook useEffect has missing dependencies: 'editorRef', 'focusHandlerCompartment.current', 'pasteHandlerCompartment.current', 'doc', 'viewRef', 'readonly', 'timeoutRef', 'updateListenerCompartment"
-          },
-          {
             "file": "packages/powerhouse-vetra-packages/editors/document-model-editor/components/code-editors/hooks.ts",
             "line": 40,
             "message": "React Hook useEffect has a missing dependency: 'viewRef'"
+          },
+          {
+            "file": "packages/powerhouse-vetra-packages/editors/document-model-editor/components/code-editors/hooks.ts",
+            "line": 69,
+            "message": "React Hook useEffect has missing dependencies: 'compartments.pasteHandler', 'timeoutRef', 'view', 'compartments.focusHandler', and 'compartments.updateListener'"
           }
         ]
       },
@@ -525,17 +544,17 @@
         "rule": "react-hooks-extra/set-state-in-effect",
         "severity_max": "warn",
         "errors": 0,
-        "warnings": 36,
-        "total": 36,
+        "warnings": 13,
+        "total": 13,
         "sample": [
           {
-            "file": "packages/design-system/src/connect/components/modal/settings-modal-v2/package-manager/package-manager-input.tsx",
-            "line": 60,
+            "file": "packages/design-system/src/ui/components/id-autocomplete/use-id-autocomplete.ts",
+            "line": 242,
             "message": "Error: Calling setState synchronously within an effect can trigger cascading renders\n\nEffects are intended to synchronize state between React and external systems such as manually updating the DOM, st"
           },
           {
-            "file": "packages/design-system/src/connect/components/processors-inspector/processors-inspector.tsx",
-            "line": 152,
+            "file": "packages/design-system/src/ui/components/id-autocomplete/use-id-autocomplete.ts",
+            "line": 264,
             "message": "Error: Calling setState synchronously within an effect can trigger cascading renders\n\nEffects are intended to synchronize state between React and external systems such as manually updating the DOM, st"
           }
         ]
@@ -544,12 +563,12 @@
         "rule": "@typescript-eslint/no-unnecessary-condition",
         "severity_max": "warn",
         "errors": 0,
-        "warnings": 4,
-        "total": 4,
+        "warnings": 5,
+        "total": 5,
         "sample": [
           {
-            "file": "packages/codegen/src/utils/validation.ts",
-            "line": 190,
+            "file": "packages/reactor-api/src/server.ts",
+            "line": 299,
             "message": "This condition will always return the same value since the types have no overlap."
           },
           {
@@ -575,25 +594,6 @@
             "file": "packages/design-system/src/connect/components/revision-history/timeline/timeline.tsx",
             "line": 28,
             "message": "Compilation Skipped: Use of incompatible library\n\nThis API returns functions which cannot be memoized without leading to stale UI. To prevent this, by default React Compiler will skip memoizing this c"
-          }
-        ]
-      },
-      {
-        "rule": "react-hooks-extra/static-components",
-        "severity_max": "warn",
-        "errors": 0,
-        "warnings": 2,
-        "total": 2,
-        "sample": [
-          {
-            "file": "packages/vetra/editors/vetra-drive-app/components/ModuleItem.tsx",
-            "line": 81,
-            "message": "Error: Cannot create components during render\n\nComponents created during render will reset their state each time they are created. Declare components outside of render.\n\n/Users/acaldas/dev/powerhouse/"
-          },
-          {
-            "file": "apps/connect/src/components/app-loader.tsx",
-            "line": 25,
-            "message": "Error: Cannot create components during render\n\nComponents created during render will reset their state each time they are created. Declare components outside of render.\n\n/Users/acaldas/dev/powerhouse/"
           }
         ]
       },

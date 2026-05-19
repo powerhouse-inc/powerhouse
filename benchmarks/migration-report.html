@@ -366,11 +366,6 @@
         </thead>
         <tbody>
           <tr>
-            <td><code>preserve-caught-error</code> (ESLint 10 core)</td>
-            <td>5 findings on this repo. No oxlint equivalent.</td>
-            <td>Accepted gap. Could be loaded via <code>jsPlugins</code> pointing at <code>@eslint/js</code> if needed.</td>
-          </tr>
-          <tr>
             <td>Markdown / MDX formatting</td>
             <td>oxfmt corrupts MDX JSX comment syntax.</td>
             <td>md/mdx excluded from oxfmt; run prettier explicitly for those if desired (no longer gated by CI).</td>
@@ -630,10 +625,10 @@
         </div>
         <div class="card">
           <div class="label">Genuinely missing in oxlint</div>
-          <div class="val">~8</div>
-          <div class="delta warn">
-            1 prettier · 5 preserve-caught-error · 1 unsafe-* · 1
-            no-duplicate-type-constituents
+          <div class="val">0</div>
+          <div class="delta">
+            every rule has an oxlint equivalent; remaining only-ESLint
+            findings are line-mismatched twins of overlapping rules
           </div>
         </div>
       </div>
@@ -847,8 +842,9 @@
             <td class="num">0</td>
             <td class="num">5</td>
             <td>
-              <strong>Genuinely missing in oxlint:</strong> ESLint 10's new
-              rule, no oxlint equivalent
+              Now in overlap: oxlint has the rule in <code>eslint</code>
+              plugin <code>suspicious</code> category (added v1.16);
+              enabled explicitly as warn.
             </td>
           </tr>
           <tr>
@@ -873,15 +869,18 @@
         </tbody>
       </table>
       <p class="muted">
-        Summary: of the 131 "only ESLint" findings, <strong>~8</strong> are
-        genuinely unique to ESLint (1 prettier — now handled by oxfmt; 5
-        preserve-caught-error; 1 no-duplicate-type-constituents reported under
-        a different name by oxlint; 1 unsafe-assignment edge case). The other
-        ~123 are the same logical issues oxlint also reports at a slightly
-        different line or under a renamed rule. <code>no-useless-assignment</code>
-        (8) and <code>react-hooks/incompatible-library</code> (2) — previously
-        listed as missing — are now both supported by oxlint (nursery rule
-        and react-hooks v7 jsPlugin respectively).
+        Summary: <strong>every rule from the old ESLint config has an
+        oxlint equivalent enabled</strong>. The 126 remaining "only ESLint"
+        findings are all the same logical issues oxlint also reports —
+        just at a slightly different line, or under a renamed rule
+        (e.g. <code>@typescript-eslint/no-redundant-type-constituents</code>
+        vs oxlint's <code>typescript/no-redundant-type-constituents</code>),
+        or in a file we deliberately ignore (<code>**/*.d.ts</code>).
+        Recently closed gaps: <code>no-useless-assignment</code> (oxlint
+        nursery, enabled), <code>preserve-caught-error</code> (oxlint
+        <code>eslint</code> plugin v1.16, enabled),
+        <code>react-hooks/incompatible-library</code> (loaded via
+        jsPlugin alias).
       </p>
 
       <h2>What changed</h2>

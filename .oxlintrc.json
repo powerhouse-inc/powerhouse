@@ -65,7 +65,7 @@
     "import/no-unassigned-import": "off",
     "import/no-named-as-default-member": "off",
     "import/no-named-as-default": "off",
-    "preserve-caught-error": "off",
+    "preserve-caught-error": "warn",
     "no-useless-assignment": "warn",
     "react-hooks-extra/set-state-in-effect": "warn",
     "react-hooks-extra/incompatible-library": "warn",
