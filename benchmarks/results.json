@@ -1,0 +1,11 @@
+{
+  "machine": "darwin 25.4.0",
+  "node": "24",
+  "pnpm": "11.0.8",
+  "results": [
+    { "tool": "tsc",    "version": "6.0.3 (TypeScript 6)", "mode": "cold", "elapsed_s": 23, "rc": 0 },
+    { "tool": "tsc",    "version": "6.0.3 (TypeScript 6)", "mode": "warm (incremental)", "elapsed_s": 1, "rc": 0 },
+    { "tool": "eslint", "version": "10.3.0",  "mode": "cold", "elapsed_s": 72, "rc": 1, "note": "2 pre-existing errors in test-consumer-project/vite.config.ts" },
+    { "tool": "eslint", "version": "10.3.0",  "mode": "warm (cache)", "elapsed_s": 1, "rc": 1 }
+  ]
+}
