@@ -286,5 +286,4 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
       }
     }
   }
-
 }

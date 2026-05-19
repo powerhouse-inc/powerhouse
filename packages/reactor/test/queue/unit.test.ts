@@ -7,7 +7,11 @@ import type { JobFailedEvent } from "../../src/events/types.js";
 import { ReactorEventTypes } from "../../src/events/types.js";
 import type { IQueue } from "../../src/queue/interfaces.js";
 import { InMemoryQueue } from "../../src/queue/queue.js";
-import type { Job, JobAvailableEvent, JobRoutingMeta } from "../../src/queue/types.js";
+import type {
+  Job,
+  JobAvailableEvent,
+  JobRoutingMeta,
+} from "../../src/queue/types.js";
 import { QueueEventTypes } from "../../src/queue/types.js";
 import {
   DocumentModelResolver,
@@ -1526,7 +1530,11 @@ describe("InMemoryQueue", () => {
         branch: "main",
       });
       // Predicate must not receive the full Job (no extra fields)
-      expect(Object.keys(capturedMetas[0])).toEqual(["documentId", "scope", "branch"]);
+      expect(Object.keys(capturedMetas[0])).toEqual([
+        "documentId",
+        "scope",
+        "branch",
+      ]);
     });
 
     it("should preserve FIFO order within a bucket", async () => {
@@ -1583,7 +1591,11 @@ describe("InMemoryQueue", () => {
     });
 
     it("should skip dep-blocked heads", async () => {
-      const blocked = createTestJob({ id: "job-blocked", documentId: "doc-1", queueHint: ["nonexistent"] });
+      const blocked = createTestJob({
+        id: "job-blocked",
+        documentId: "doc-1",
+        queueHint: ["nonexistent"],
+      });
       const ready = createTestJob({ id: "job-ready", documentId: "doc-2" });
 
       await queue.enqueue(blocked);

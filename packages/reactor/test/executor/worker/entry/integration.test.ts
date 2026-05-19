@@ -65,10 +65,7 @@ function waitForMessage<T extends WorkerMessage>(
   });
 }
 
-function waitForExit(
-  worker: Worker,
-  timeoutMs = 5000,
-): Promise<number> {
+function waitForExit(worker: Worker, timeoutMs = 5000): Promise<number> {
   return new Promise<number>((resolve, reject) => {
     const timer = setTimeout(() => {
       reject(new Error(`Worker did not exit within ${timeoutMs}ms`));
@@ -167,7 +164,10 @@ describe("entry worker integration", () => {
     );
     const exitPromise = waitForExit(worker);
 
-    worker.postMessage({ type: "__test_throw", reason: "synthetic test error" });
+    worker.postMessage({
+      type: "__test_throw",
+      reason: "synthetic test error",
+    });
 
     const [log, exitCode] = await Promise.all([logPromise, exitPromise]);
     expect(log.level).toBe("error");

@@ -100,7 +100,13 @@ describe("JobResultHandler", () => {
 
     logger = createMockLogger();
 
-    handler = new JobResultHandler(queue, jobTracker, eventBus, resolver, logger);
+    handler = new JobResultHandler(
+      queue,
+      jobTracker,
+      eventBus,
+      resolver,
+      logger,
+    );
 
     deferJobMock = vi.fn();
     flushDeferredForMock = vi.fn().mockResolvedValue(undefined);
@@ -108,8 +114,13 @@ describe("JobResultHandler", () => {
 
   function callbacks() {
     return {
-      deferJob: deferJobMock as unknown as (documentId: string, job: Job) => void,
-      flushDeferredFor: flushDeferredForMock as unknown as (documentId: string) => Promise<void>,
+      deferJob: deferJobMock as unknown as (
+        documentId: string,
+        job: Job,
+      ) => void,
+      flushDeferredFor: flushDeferredForMock as unknown as (
+        documentId: string,
+      ) => Promise<void>,
     };
   }
 
@@ -246,7 +257,10 @@ describe("JobResultHandler", () => {
 
   describe("DocumentDeletedError", () => {
     it("marks failed, emits JOB_FAILED, and calls handle.fail()", async () => {
-      const error = new DocumentDeletedError("deleted-doc", "2024-01-01T00:00:00Z");
+      const error = new DocumentDeletedError(
+        "deleted-doc",
+        "2024-01-01T00:00:00Z",
+      );
       const job = createTestJob({ documentId: "deleted-doc", maxRetries: 3 });
       const handle = createTestHandle(job);
       const result: JobResult = { success: false, job, error };
@@ -266,7 +280,10 @@ describe("JobResultHandler", () => {
     });
 
     it("does not consume a retry for DocumentDeletedError", async () => {
-      const error = new DocumentDeletedError("deleted-doc", "2024-01-01T00:00:00Z");
+      const error = new DocumentDeletedError(
+        "deleted-doc",
+        "2024-01-01T00:00:00Z",
+      );
       const job = createTestJob({ retryCount: 0, maxRetries: 5 });
       const handle = createTestHandle(job);
       const result: JobResult = { success: false, job, error };
@@ -361,7 +378,11 @@ describe("JobResultHandler", () => {
 
     it("returns the single error directly when no prior error history", async () => {
       const error = new Error("sole failure");
-      const job = createTestJob({ retryCount: 0, maxRetries: 0, errorHistory: [] });
+      const job = createTestJob({
+        retryCount: 0,
+        maxRetries: 0,
+        errorHistory: [],
+      });
       const handle = createTestHandle(job);
       const result: JobResult = { success: false, job, error };
 

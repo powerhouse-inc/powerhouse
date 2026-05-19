@@ -58,7 +58,7 @@ export function sanitizeArg(
   }
 
   if (typeof value === "object") {
-    const proto = Object.getPrototypeOf(value);
+    const proto: object | null = Object.getPrototypeOf(value) as object | null;
     if (proto !== Object.prototype && proto !== null) {
       const ctorName =
         (value as { constructor?: { name?: string } }).constructor?.name ||

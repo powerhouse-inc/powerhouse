@@ -27,9 +27,10 @@ export function createForwardingLogger(
     args: unknown[],
   ): void {
     const sanitizedArgs = args.map((a) => sanitizeArg(a));
-    const finalArgs = tags.length > 0
-      ? [sanitizeArg({ tags }), ...sanitizedArgs]
-      : sanitizedArgs;
+    const finalArgs =
+      tags.length > 0
+        ? [sanitizeArg({ tags }), ...sanitizedArgs]
+        : sanitizedArgs;
     safePost({
       type: "log",
       level: wireLevel,

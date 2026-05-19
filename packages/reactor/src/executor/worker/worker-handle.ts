@@ -13,10 +13,7 @@
 
 import type { ILogger } from "document-model";
 import { randomUUID } from "node:crypto";
-import type {
-  IExecutorWorker,
-  WorkerInFlightSnapshot,
-} from "../interfaces.js";
+import type { IExecutorWorker, WorkerInFlightSnapshot } from "../interfaces.js";
 import type { JobResult } from "../types.js";
 import type { Job } from "../../queue/types.js";
 import { fromErrorInfo } from "./error-info.js";
@@ -38,10 +35,7 @@ import type {
   WorkerMessage,
   WorkerPoolConfig,
 } from "./protocol.js";
-import type {
-  IWorkerTransport,
-  WorkerTransportListener,
-} from "./transport.js";
+import type { IWorkerTransport, WorkerTransportListener } from "./transport.js";
 
 const DEFAULT_ABORT_GRACE_MS = 5_000;
 const DEFAULT_SHUTDOWN_GRACE_MS = 5_000;
@@ -87,12 +81,7 @@ type PendingEntry =
       reject: (err: Error) => void;
     };
 
-type Phase =
-  | "fresh"
-  | "starting"
-  | "ready"
-  | "shutting-down"
-  | "terminated";
+type Phase = "fresh" | "starting" | "ready" | "shutting-down" | "terminated";
 
 export class WorkerHandle implements IExecutorWorker {
   readonly workerId: string;
@@ -111,8 +100,11 @@ export class WorkerHandle implements IExecutorWorker {
   private lastCorrelationId: string | null = null;
   private abortTimer: NodeJS.Timeout | null = null;
   private lastHeartbeatAt: number | null = null;
-  private lastMetrics: { counters: Record<string, number>; gauges: Record<string, number>; timestamp: number } | null =
-    null;
+  private lastMetrics: {
+    counters: Record<string, number>;
+    gauges: Record<string, number>;
+    timestamp: number;
+  } | null = null;
 
   private readonly onMessage: WorkerTransportListener<"message">;
   private readonly onError: WorkerTransportListener<"error">;
@@ -292,9 +284,7 @@ export class WorkerHandle implements IExecutorWorker {
     let timer: NodeJS.Timeout | null = null;
     const timeout = new Promise<void>((_, reject) => {
       timer = setTimeout(() => {
-        reject(
-          new WorkerShutdownTimeoutError(this.workerId, effectiveGrace),
-        );
+        reject(new WorkerShutdownTimeoutError(this.workerId, effectiveGrace));
       }, effectiveGrace);
     });
 
@@ -474,9 +464,7 @@ export class WorkerHandle implements IExecutorWorker {
       } else if (entry.kind === "shutdown") {
         entry.resolve();
       } else if (entry.kind === "init") {
-        entry.reject(
-          new WorkerInitFailedError(this.workerId, "worker exited"),
-        );
+        entry.reject(new WorkerInitFailedError(this.workerId, "worker exited"));
       } else {
         entry.reject(
           new WorkerExitedError(this.workerId, 0, this.lastCorrelationId),

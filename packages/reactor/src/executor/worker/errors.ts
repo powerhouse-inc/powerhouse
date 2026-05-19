@@ -57,7 +57,10 @@ export class WorkerInitFailedError extends Error {
 
 export class WorkerShutdownTimeoutError extends Error {
   readonly name = "WorkerShutdownTimeoutError";
-  constructor(workerId: string, readonly graceMs: number) {
+  constructor(
+    workerId: string,
+    readonly graceMs: number,
+  ) {
     super(
       `worker ${workerId} did not drain within ${graceMs}ms; force-terminating`,
     );

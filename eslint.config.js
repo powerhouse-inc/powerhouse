@@ -5,8 +5,11 @@ import eslintPluginPrettierRecommended from "eslint-plugin-prettier/recommended"
 import { defineConfig, globalIgnores } from "eslint/config";
 import globals from "globals";
 import { builtinModules } from "node:module";
+import path from "node:path";
 import tseslint from "typescript-eslint";
 import reactHooks from "eslint-plugin-react-hooks";
+
+const repoRoot = import.meta.dirname;
 
 /** These files are typically ignored by eslint by default, so there is no need to investigate why they are ignored. */
 const normalIgnoredFiles = [
@@ -79,6 +82,8 @@ const unsafeIgnoredFiles = [
   // Excluded from reactor's tsconfig.json, so ESLint's project service cannot parse it
   "packages/reactor/test/atlas/**/*",
   "packages/reactor-api/src/packages/vite-loader.mts",
+  // Bootstrap .mjs for worker entry test; not part of TypeScript project service
+  "packages/reactor/test/executor/worker/entry/worker-bootstrap.mjs",
 ];
 
 /** All of the files that are ignored by eslint */
@@ -440,7 +445,7 @@ const tailwindConfig = [
     rules: tailwindRules,
     settings: {
       "better-tailwindcss": {
-        cwd: "./packages/design-system",
+        cwd: path.join(repoRoot, "packages/design-system"),
         entryPoint: "style.css",
       },
     },
@@ -451,7 +456,7 @@ const tailwindConfig = [
     rules: tailwindRules,
     settings: {
       "better-tailwindcss": {
-        cwd: "./apps/connect",
+        cwd: path.join(repoRoot, "apps/connect"),
         entryPoint: "style.css",
       },
     },
@@ -462,7 +467,7 @@ const tailwindConfig = [
     rules: tailwindRules,
     settings: {
       "better-tailwindcss": {
-        cwd: "./packages/powerhouse-vetra-packages",
+        cwd: path.join(repoRoot, "packages/powerhouse-vetra-packages"),
         entryPoint: "style.css",
       },
     },
@@ -473,7 +478,7 @@ const tailwindConfig = [
     rules: tailwindRules,
     settings: {
       "better-tailwindcss": {
-        cwd: "./packages/vetra",
+        cwd: path.join(repoRoot, "packages/vetra"),
         entryPoint: "style.css",
       },
     },

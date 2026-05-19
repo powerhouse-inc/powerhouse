@@ -17,14 +17,17 @@ import {
 import { AtomicTransaction } from "../txn.js";
 import type { Database, InsertableOperation, OperationRow } from "./types.js";
 
-class _UniqueConstraintContext {
+class _UniqueConstraintContext extends Error {
   constructor(
     readonly documentId: string,
     readonly scope: string,
     readonly branch: string,
     readonly revision: number,
     readonly stagedOps: InsertableOperation[],
-  ) {}
+  ) {
+    super("unique constraint");
+    this.name = "UniqueConstraintContext";
+  }
 }
 
 export class KyselyOperationStore implements IOperationStore {
@@ -211,7 +214,10 @@ export class KyselyOperationStore implements IOperationStore {
     try {
       await trx.insertInto("Operation").values(operations).execute();
     } catch (error: unknown) {
-      if (error instanceof Error && error.message.includes("unique constraint")) {
+      if (
+        error instanceof Error &&
+        error.message.includes("unique constraint")
+      ) {
         throw new _UniqueConstraintContext(
           documentId,
           scope,

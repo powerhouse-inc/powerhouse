@@ -383,7 +383,12 @@ describe.each(testFsBackends)("KyselyOperationStore [$name]", ({ backend }) => {
         parentFolder: null,
       });
       // Deliberately use the same opId for both documents
-      const sharedOpId = deriveOperationId(doc1Id, scope, branch, sharedAction.id);
+      const sharedOpId = deriveOperationId(
+        doc1Id,
+        scope,
+        branch,
+        sharedAction.id,
+      );
 
       // First document uses sharedOpId at index 0, skip 0
       await store.apply(doc1Id, documentType, scope, branch, 0, (txn) => {

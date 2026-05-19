@@ -63,9 +63,7 @@ export class FakeWorkerTransport implements IWorkerTransport {
     event: E,
     listener: WorkerTransportListener<E>,
   ): void {
-    (this.listeners[event] as Set<WorkerTransportListener<E>>).delete(
-      listener,
-    );
+    (this.listeners[event] as Set<WorkerTransportListener<E>>).delete(listener);
   }
 
   async terminate(): Promise<number> {

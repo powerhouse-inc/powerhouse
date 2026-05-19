@@ -133,6 +133,9 @@ export function handleParentMessage(msg: ParentMessage): void {
   }
 }
 
-(parentPort as NonNullable<typeof parentPort>).on("message", handleParentMessage);
+(parentPort as NonNullable<typeof parentPort>).on(
+  "message",
+  handleParentMessage,
+);
 
 export { initConfig, initCompleted, workerId };
