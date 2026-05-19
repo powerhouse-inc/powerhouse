@@ -23,14 +23,14 @@ export const SubgraphEditorForm: React.FC<SubgraphEditorFormProps> = ({
 
   // Update local state when initialSubgraphName changes
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    // eslint-disable-next-line react-hooks-extra/set-state-in-effect
     setSubgraphName(initialSubgraphName);
   }, [initialSubgraphName]);
 
   // Reset confirmation state if status changes back to DRAFT
   useEffect(() => {
     if (status === "DRAFT") {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+      // eslint-disable-next-line react-hooks-extra/set-state-in-effect
       setIsConfirmed(false);
     }
   }, [status]);

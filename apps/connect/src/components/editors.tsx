@@ -96,7 +96,7 @@ export const DocumentEditor: React.FC<Props> = (props) => {
 
   useEffect(() => {
     if (editorError && editorError.documentId !== documentId) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+      // eslint-disable-next-line react-hooks-extra/set-state-in-effect
       setEditorError(undefined);
     }
   }, [editorError, documentId]);

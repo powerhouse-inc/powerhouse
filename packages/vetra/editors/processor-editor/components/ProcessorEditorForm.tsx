@@ -54,29 +54,29 @@ export const ProcessorEditorForm: React.FC<ProcessorEditorFormProps> = ({
 
   // Update local state when initial values change
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    // eslint-disable-next-line react-hooks-extra/set-state-in-effect
     setProcessorName(initialProcessorName);
   }, [initialProcessorName]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    // eslint-disable-next-line react-hooks-extra/set-state-in-effect
     setProcessorType(initialProcessorType);
   }, [initialProcessorType]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    // eslint-disable-next-line react-hooks-extra/set-state-in-effect
     setDocumentTypes(initialDocumentTypes);
   }, [initialDocumentTypes]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    // eslint-disable-next-line react-hooks-extra/set-state-in-effect
     setProcessorApps(initialProcessorApps);
   }, [initialProcessorApps]);
 
   // Reset confirmation state if status changes back to DRAFT
   useEffect(() => {
     if (status === "DRAFT") {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+      // eslint-disable-next-line react-hooks-extra/set-state-in-effect
       setIsConfirmed(false);
     }
   }, [status]);

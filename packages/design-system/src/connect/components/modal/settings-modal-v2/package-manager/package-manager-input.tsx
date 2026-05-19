@@ -56,7 +56,7 @@ function PackageResultCard(props: PackageResultCardProps) {
   useEffect(() => {
     if (!typedTag) return;
     if (option.distTags && typedTag in option.distTags) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+      // eslint-disable-next-line react-hooks-extra/set-state-in-effect
       setSelected({ kind: "tag", value: typedTag });
     } else if (option.versions?.includes(typedTag)) {
       setSelected({ kind: "version", value: typedTag });
