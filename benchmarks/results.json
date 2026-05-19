@@ -2,10 +2,19 @@
   "machine": "darwin 25.4.0",
   "node": "24",
   "pnpm": "11.0.8",
+  "scope": "full monorepo (~2268 files)",
   "results": [
-    { "tool": "tsc",    "version": "6.0.3 (TypeScript 6)", "mode": "cold", "elapsed_s": 23, "rc": 0 },
-    { "tool": "tsc",    "version": "6.0.3 (TypeScript 6)", "mode": "warm (incremental)", "elapsed_s": 1, "rc": 0 },
-    { "tool": "eslint", "version": "10.3.0",  "mode": "cold", "elapsed_s": 72, "rc": 1, "note": "2 pre-existing errors in test-consumer-project/vite.config.ts" },
-    { "tool": "eslint", "version": "10.3.0",  "mode": "warm (cache)", "elapsed_s": 1, "rc": 1 }
-  ]
+    { "tool": "tsc",    "version": "6.0.3 (TypeScript 6)",          "mode": "cold",            "elapsed_s": 19.33, "rc": 0 },
+    { "tool": "tsc",    "version": "6.0.3 (TypeScript 6)",          "mode": "warm",            "elapsed_s": 1.04,  "rc": 0 },
+    { "tool": "tsgo",   "version": "7.0.0-dev.20260518.1",          "mode": "cold",            "elapsed_s": 4.03,  "rc": 0, "note": "via tsconfig.tsgo.json (excludes apps/academy)" },
+    { "tool": "tsgo",   "version": "7.0.0-dev.20260518.1",          "mode": "warm",            "elapsed_s": 0.14,  "rc": 0 },
+    { "tool": "eslint", "version": "10.3.0 + typescript-eslint",    "mode": "cold",            "elapsed_s": 63.80, "rc": 1, "note": "2 pre-existing errors in test/test-consumer-project/vite.config.ts" },
+    { "tool": "eslint", "version": "10.3.0 + typescript-eslint",    "mode": "warm",            "elapsed_s": 1.37,  "rc": 1 },
+    { "tool": "oxlint", "version": "1.65.0",                        "mode": "cold",            "elapsed_s": 0.64,  "rc": 1, "note": "66 correctness errors + 171 warnings — pre-existing issues surfaced; see migration-report.html" },
+    { "tool": "oxlint", "version": "1.65.0",                        "mode": "warm",            "elapsed_s": 0.55,  "rc": 1 }
+  ],
+  "speedup_cold": {
+    "tsgo_vs_tsc":    4.80,
+    "oxlint_vs_eslint": 99.69
+  }
 }

@@ -49,8 +49,8 @@ bench tsc warm "pnpm typecheck"
 if [ -x "node_modules/.bin/tsgo" ]; then
   echo "=== TSGO ==="
   clean_tsbuild
-  bench tsgo cold "node_modules/.bin/tsgo --build"
-  bench tsgo warm "node_modules/.bin/tsgo --build"
+  bench tsgo cold "node_modules/.bin/tsgo --build tsconfig.tsgo.json"
+  bench tsgo warm "node_modules/.bin/tsgo --build tsconfig.tsgo.json"
 fi
 
 echo "=== ESLint baseline ==="

@@ -1,0 +1,2840 @@
+
+  ! react-hooks(exhaustive-deps): React Hook useEffect has missing dependencies: 'editorRef', 'focusHandlerCompartment.current', 'pasteHandlerCompartment.current', 'doc', 'viewRef', 'readonly', 'timeoutRef', 'updateListenerCompartment.current', and 'updateDocumentInModel'
+    ,-[packages/powerhouse-vetra-packages/editors/document-model-editor/components/code-editors/json-editor.tsx:66:6]
+ 38 |   useEffect(() => {
+ 39 |     if (!viewRef.current) {
+    :          ^^^^^^^
+ 40 |       viewRef.current = new EditorView({
+ 41 |         state: EditorState.create({
+ 42 |           doc,
+    :           ^^^
+ 43 |           extensions: [
+ 44 |             ...baseEditorExtensions,
+ 45 |             keymap.of(baseKeymap),
+ 46 |             ayuLight,
+ 47 |             jsonLanguage,
+ 48 |             json(),
+ 49 |             linter(jsonParseLinter()),
+ 50 |             updateListenerCompartment.current.of(
+    :             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 51 |               makeUpdateHandler(readonly, timeoutRef, updateDocumentInModel),
+    :                                 ^^^^^^^^  ^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^
+ 52 |             ),
+ 53 |             focusHandlerCompartment.current.of(
+    :             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 54 |               makeFocusHandler(readonly, timeoutRef, updateDocumentInModel),
+ 55 |             ),
+ 56 |             pasteHandlerCompartment.current.of(
+    :             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 57 |               makePasteHandler(readonly, timeoutRef, updateDocumentInModel),
+ 58 |             ),
+ 59 |             EditorState.readOnly.of(readonly),
+ 60 |           ],
+ 61 |         }),
+ 62 |         parent: editorRef.current!,
+    :                 ^^^^^^^^^
+ 63 |       });
+ 64 |       forceLinting(viewRef.current);
+ 65 |     }
+ 66 |   }, []);
+    :      ^^
+ 67 | 
+    `----
+  help: Either include it or remove the dependency array.
+
+  ! react-hooks(exhaustive-deps): React Hook useEffect has a missing dependency: 'viewRef'
+    ,-[packages/powerhouse-vetra-packages/editors/document-model-editor/components/code-editors/hooks.ts:45:6]
+ 39 |     return () => {
+ 40 |       if (viewRef.current) {
+    :           ^^^|^^^
+    :              `-- useEffect uses `viewRef` here
+ 41 |         viewRef.current.destroy();
+ 42 |         viewRef.current = null;
+ 43 |       }
+ 44 |     };
+ 45 |   }, []);
+    :      ^^
+ 46 | }
+    `----
+  help: Either include it or remove the dependency array.
+
+  ! react-hooks(exhaustive-deps): React Hook useEffect has missing dependencies: 'compartments.pasteHandler', 'timeoutRef', 'view', 'compartments.focusHandler', and 'compartments.updateListener'
+    ,-[packages/powerhouse-vetra-packages/editors/document-model-editor/components/code-editors/hooks.ts:75:6]
+ 59 |   useEffect(() => {
+ 60 |     if (!view) return;
+    :          ^^^^
+ 61 |     view.dispatch({
+ 62 |       effects: [
+ 63 |         compartments.updateListener.reconfigure(
+    :         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 64 |           makeUpdateHandler(readonly, timeoutRef, updateDocumentInModel),
+    :                                       ^^^^^^^^^^
+ 65 |         ),
+ 66 |         compartments.focusHandler.reconfigure(
+    :         ^^^^^^^^^^^^^^^^^^^^^^^^^
+ 67 |           makeFocusHandler(readonly, timeoutRef, updateDocumentInModel),
+ 68 |         ),
+ 69 |         compartments.pasteHandler.reconfigure(
+    :         ^^^^^^^^^^^^^^^^^^^^^^^^^
+ 70 |           makePasteHandler(readonly, timeoutRef, updateDocumentInModel),
+ 71 |         ),
+ 72 |       ],
+ 73 |     });
+ 74 |     forceLinting(view);
+ 75 |   }, [readonly, updateDocumentInModel]);
+    :      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 76 | }
+    `----
+  help: Either include it or remove the dependency array.
+
+  ! react-hooks(exhaustive-deps): React Hook useEffect has missing dependencies: 'view', and 'view.state.doc'
+    ,-[packages/powerhouse-vetra-packages/editors/document-model-editor/components/code-editors/hooks.ts:89:6]
+ 79 |   useEffect(() => {
+ 80 |     if (!view) return;
+    :          ^^^^
+ 81 |     const currentDoc = view.state.doc.toString();
+    :                        ^^^^^^^^^^^^^^
+ 82 |     if (currentDoc !== doc) {
+ 83 |       view.dispatch({
+ 84 |         changes: { from: 0, to: currentDoc.length, insert: doc },
+ 85 |         annotations: [Transaction.userEvent.of("external")],
+ 86 |       });
+ 87 |       forceLinting(view);
+ 88 |     }
+ 89 |   }, [doc]);
+    :      ^^^^^
+ 90 | }
+    `----
+  help: Either include it or remove the dependency array.
+
+  ! react-hooks(exhaustive-deps): React Hook useCallback has a missing dependency: 'setModelName'
+     ,-[packages/powerhouse-vetra-packages/editors/document-model-editor/components/model-metadata-form.tsx:107:5]
+  72 |       }
+  73 |       setModelName(newName);
+     :       ^^^^^^|^^^^^
+     :             `-- useCallback uses `setModelName` here
+  74 | 
+  75 |       const hasExistingSchema = !!globalStateSchema;
+  76 | 
+  77 |       if (!hasExistingSchema) {
+  78 |         const initialSchemaDoc = makeInitialSchemaDoc(newName, "global");
+  79 |         setStateSchema(initialSchemaDoc, "global");
+  80 |         return;
+  81 |       }
+  82 |       const newSchema = renameSchemaType(
+  83 |         globalStateSchema,
+  84 |         name,
+  85 |         newName,
+  86 |         "global",
+  87 |       );
+  88 |       setStateSchema(newSchema, "global");
+  89 | 
+  90 |       if (localStateSchema) {
+  91 |         const newLocalStateSchema = renameSchemaType(
+  92 |           localStateSchema,
+  93 |           name,
+  94 |           newName,
+  95 |           "local",
+  96 |         );
+  97 |         setStateSchema(newLocalStateSchema, "local");
+  98 |       }
+  99 |       handleModelNameChange({
+ 100 |         oldName: name,
+ 101 |         newName,
+ 102 |         globalStateSchema,
+ 103 |         localStateSchema,
+ 104 |         setStateSchema,
+ 105 |       });
+ 106 |     },
+ 107 |     [name, globalStateSchema, localStateSchema, setStateSchema],
+     :     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 108 |   );
+     `----
+  help: Either include it or remove the dependency array.
+
+  ! eslint(no-unused-vars): Variable 'onDownloadDocument' is declared but never used. Unused variables should start with a '_'.
+    ,-[packages/design-system/src/connect/components/editor-action-buttons/editor-action-buttons.tsx:14:5]
+ 13 |     onSwitchboardLinkClick,
+ 14 |     onDownloadDocument,
+    :     ^^^^^^^^^|^^^^^^^^
+    :              `-- 'onDownloadDocument' is declared here
+ 15 |     onClose,
+    `----
+  help: Consider removing this declaration.
+
+  ! react-hooks(exhaustive-deps): React Hook useEffect has missing dependencies: 'doc', 'sharedSchema', 'pasteHandlerCompartment.current', 'readonly', 'customLinter', 'updateDocumentInModel', 'updateListenerCompartment.current', 'timeoutRef', 'viewRef', 'editorRef', and 'focusHandlerCompartment.current'
+    ,-[packages/powerhouse-vetra-packages/editors/document-model-editor/components/code-editors/graphql-editor.tsx:75:6]
+ 47 |   useEffect(() => {
+ 48 |     if (!viewRef.current) {
+    :          ^^^^^^^
+ 49 |       const schema = buildSchema(sharedSchema);
+    :                                  ^^^^^^^^^^^^
+ 50 |       viewRef.current = new EditorView({
+ 51 |         state: EditorState.create({
+ 52 |           doc,
+    :           ^^^
+ 53 |           extensions: [
+ 54 |             ...baseEditorExtensions,
+ 55 |             keymap.of(baseKeymap),
+ 56 |             ayuLight,
+ 57 |             graphqlCompartment.current.of(graphql(schema)),
+ 58 |             linterCompartment.current.of(makeLinter(schema, customLinter)),
+    :                                                             ^^^^^^^^^^^^
+ 59 |             updateListenerCompartment.current.of(
+    :             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 60 |               makeUpdateHandler(readonly, timeoutRef, updateDocumentInModel),
+    :                                 ^^^^^^^^  ^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^
+ 61 |             ),
+ 62 |             focusHandlerCompartment.current.of(
+    :             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 63 |               makeFocusHandler(readonly, timeoutRef, updateDocumentInModel),
+ 64 |             ),
+ 65 |             pasteHandlerCompartment.current.of(
+    :             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 66 |               makePasteHandler(readonly, timeoutRef, updateDocumentInModel),
+ 67 |             ),
+ 68 |             EditorState.readOnly.of(readonly),
+ 69 |           ],
+ 70 |         }),
+ 71 |         parent: editorRef.current!,
+    :                 ^^^^^^^^^
+ 72 |       });
+ 73 |       forceLinting(viewRef.current);
+ 74 |     }
+ 75 |   }, []);
+    :      ^^
+ 76 | 
+    `----
+  help: Either include it or remove the dependency array.
+
+  ! react-hooks(exhaustive-deps): React Hook useEffect has a missing dependency: 'viewRef'
+    ,-[packages/powerhouse-vetra-packages/editors/document-model-editor/components/code-editors/graphql-editor.tsx:98:6]
+ 80 |   useEffect(() => {
+ 81 |     const view = viewRef.current;
+    :                  ^^^|^^^
+    :                     `-- useEffect uses `viewRef` here
+ 82 |     if (!view) return;
+ 83 | 
+ 84 |     try {
+ 85 |       const newSchema = buildSchema(sharedSchema);
+ 86 |       view.dispatch({
+ 87 |         effects: [
+ 88 |           graphqlCompartment.current.reconfigure(graphql(newSchema)),
+ 89 |           linterCompartment.current.reconfigure(
+ 90 |             makeLinter(newSchema, customLinter),
+ 91 |           ),
+ 92 |         ],
+ 93 |       });
+ 94 |       forceLinting(view);
+ 95 |     } catch (error) {
+ 96 |       console.debug("in schema update", error);
+ 97 |     }
+ 98 |   }, [sharedSchema, customLinter]);
+    :      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 99 | 
+    `----
+  help: Either include it or remove the dependency array.
+
+  ! eslint(no-unused-vars): Parameter 'dispatch' is declared but never used. Unused parameters should start with a '_'.
+   ,-[packages/vetra/document-models/document-editor/v1/src/reducers/base-operations.ts:5:43]
+ 4 |   {
+ 5 |     setEditorNameOperation(state, action, dispatch) {
+   :                                           ^^^^|^^^
+   :                                               `-- 'dispatch' is declared here
+ 6 |       const trimmedName = action.input.name.trim();
+   `----
+  help: Consider removing this parameter.
+
+  ! eslint(no-unused-vars): Parameter 'dispatch' is declared but never used. Unused parameters should start with a '_'.
+    ,-[packages/vetra/document-models/document-editor/v1/src/reducers/base-operations.ts:12:45]
+ 11 |     },
+ 12 |     addDocumentTypeOperation(state, action, dispatch) {
+    :                                             ^^^^|^^^
+    :                                                 `-- 'dispatch' is declared here
+ 13 |       // Check for duplicate ID
+    `----
+  help: Consider removing this parameter.
+
+  ! eslint(no-unused-vars): Parameter 'dispatch' is declared but never used. Unused parameters should start with a '_'.
+    ,-[packages/vetra/document-models/document-editor/v1/src/reducers/base-operations.ts:28:48]
+ 27 |     },
+ 28 |     removeDocumentTypeOperation(state, action, dispatch) {
+    :                                                ^^^^|^^^
+    :                                                    `-- 'dispatch' is declared here
+ 29 |       state.documentTypes = state.documentTypes.filter(
+    `----
+  help: Consider removing this parameter.
+
+  ! eslint(no-unused-vars): Parameter 'dispatch' is declared but never used. Unused parameters should start with a '_'.
+    ,-[packages/vetra/document-models/document-editor/v1/src/reducers/base-operations.ts:33:45]
+ 32 |     },
+ 33 |     setEditorStatusOperation(state, action, dispatch) {
+    :                                             ^^^^|^^^
+    :                                                 `-- 'dispatch' is declared here
+ 34 |       state.status = action.input.status;
+    `----
+  help: Consider removing this parameter.
+
+  ! react-hooks(exhaustive-deps): React Hook useEffect has a missing dependency: 'defaultValue'
+     ,-[packages/design-system/src/ui/components/id-autocomplete/use-id-autocomplete.ts:256:6]
+ 251 |       shouldFetchOptions.current = false;
+ 252 |       setSelectedValue(value ?? defaultValue ?? "");
+     :                                 ^^^^^^|^^^^^
+     :                                       `-- useEffect uses `defaultValue` here
+ 253 |       setSelectedOption(undefined);
+ 254 |     }
+ 255 |     isInternalChange.current = false;
+ 256 |   }, [value]);
+     :      ^^^^^^^
+ 257 | 
+     `----
+  help: Either include it or remove the dependency array.
+
+  ! react-hooks(exhaustive-deps): React Hook useEffect has missing dependencies: 'initialOptions.length', 'initialOptions', and 'selectedValue'
+     ,-[packages/design-system/src/ui/components/id-autocomplete/use-id-autocomplete.ts:267:6]
+ 258 |   useEffect(() => {
+ 259 |     if (initialOptions?.length && selectedValue) {
+     :         ^^^^^^^^^^^^^^            ^^^^^^^^^^^^^
+ 260 |       const matchingOption = initialOptions.find(
+     :                              ^^^^^^^^^^^^^^
+ 261 |         (opt) => opt.value === selectedValue,
+ 262 |       );
+ 263 |       if (matchingOption) {
+ 264 |         setSelectedOption(matchingOption);
+ 265 |       }
+ 266 |     }
+ 267 |   }, []);
+     :      ^^
+ 268 | 
+     `----
+  help: Either include it or remove the dependency array.
+
+  ! eslint(no-unused-vars): Catch parameter 'error' is caught but never used.
+     ,-[packages/powerhouse-vetra-packages/editors/document-model-editor/utils/helpers.ts:100:12]
+  99 |     return JSON.parse(json) as Record<string, Serializable>;
+ 100 |   } catch (error) {
+     :            ^^|^^
+     :              `-- 'error' is declared here
+ 101 |     return null;
+     `----
+  help: Consider handling this error.
+
+  ! eslint(no-unused-vars): Catch parameter 'error' is caught but never used.
+    ,-[packages/powerhouse-vetra-packages/editors/document-model-editor/context/schema-context.tsx:77:12]
+ 76 |     return parse(sdl);
+ 77 |   } catch (error) {
+    :            ^^|^^
+    :              `-- 'error' is declared here
+ 78 |     return null;
+    `----
+  help: Consider handling this error.
+
+  ! react-hooks(exhaustive-deps): React Hook useEffect has a missing dependency: 'open'
+    ,-[packages/design-system/src/connect/components/document-timeline/components/h-divider.tsx:36:6]
+ 30 |     // Force close and re-open if already open to refresh content
+ 31 |     if (open) {
+    :         ^^|^
+    :           `-- useEffect uses `open` here
+ 32 |       // eslint-disable-next-line react-hooks/set-state-in-effect
+ 33 |       setOpen(false);
+ 34 |       setTimeout(() => hasContent && setOpen(true), 50);
+ 35 |     }
+ 36 |   }, [title, subtitle, timestamp, hasContent]);
+    :      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 37 | 
+    `----
+  help: Either include it or remove the dependency array.
+
+  ! eslint(no-unused-vars): Type 'render' is imported but never used.
+    ,-[packages/design-system/src/connect/components/document-toolbar/document-toolbar.stories.tsx:14:15]
+ 13 | import type { Meta, StoryObj } from "@storybook/react";
+ 14 | import type { render } from "@testing-library/react";
+    :               ^^^|^^
+    :                  `-- 'render' is imported here
+ 15 | import { useEffect, useState } from "react";
+    `----
+  help: Consider removing this import.
+
+  ! react-hooks(exhaustive-deps): React Hook useEffect has a missing dependency: 'onComplete'
+     ,-[packages/design-system/src/powerhouse/components/package-animation/package-animation.tsx:397:6]
+ 385 |             isRunning.current = false;
+ 386 |             onComplete?.();
+     :             ^^^^^|^^^^
+     :                  `-- useEffect uses `onComplete` here
+ 387 |           }
+ 388 |         }, HOLD_LAST_FRAME);
+ 389 |       }
+ 390 |     };
+ 391 | 
+ 392 |     timerRef.current = setTimeout(tick, FRAME_DURATION);
+ 393 |     return () => {
+ 394 |       isRunning.current = false;
+ 395 |       if (timerRef.current) clearTimeout(timerRef.current);
+ 396 |     };
+ 397 |   }, [animate, loop]);
+     :      ^^^^^^^^^^^^^^^
+ 398 | 
+     `----
+  help: Either include it or remove the dependency array.
+
+  x unicorn(no-useless-fallback-in-spread): Empty fallbacks in spreads are unnecessary
+    ,-[packages/document-model/src/state.ts:53:49]
+ 52 |     },
+ 53 |     local: { ...documentModelInitialLocalState, ...(state?.local ?? {}) },
+    :                                                 ^^^^^^^^^^^^^^^^^^^^^^^
+ 54 |   };
+    `----
+  help: Spreading falsy values in object literals won't add any unexpected properties, so it's unnecessary to add an empty object as fallback.
+
+  ! eslint(no-unused-vars): Variable 'defaultValues' is declared but never used. Unused variables should start with a '_'.
+    ,-[packages/design-system/src/ui/components/with-field-validation/with-field-validation.tsx:59:42]
+ 58 |         control,
+ 59 |         formState: { errors: formErrors, defaultValues },
+    :                                          ^^^^^^|^^^^^^
+    :                                                `-- 'defaultValues' is declared here
+ 60 |         trigger,
+    `----
+  help: Consider removing this declaration.
+
+  ! react-hooks(exhaustive-deps): React Hook useEffect has missing dependencies: 'submitCount', 'trigger', and 'name'
+    ,-[packages/design-system/src/ui/components/with-field-validation/with-field-validation.tsx:89:10]
+ 82 |       useEffect(() => {
+ 83 |         if (submitCount > 0) {
+    :             ^^^^^^^^^^^
+ 84 |           void trigger(name);
+    :                ^^^^^^^ ^^^^
+ 85 |         }
+ 86 |         // we should trigger a re-validation after the form is submitted, the errors are shown
+ 87 |         // and the required prop is changed. Other deps can not be added, otherwise a revalidation
+ 88 |         // will be triggered unnecessarily
+ 89 |       }, [props.required]);
+    :          ^^^^^^^^^^^^^^^^
+ 90 | 
+    `----
+  help: Either include it or remove the dependency array.
+
+  ! react-hooks(exhaustive-deps): React Hook useEffect has missing dependencies: 'initialized', and 'setValue'
+     ,-[packages/design-system/src/ui/components/with-field-validation/with-field-validation.tsx:107:10]
+ 100 |       useEffect(() => {
+ 101 |         if (initialized) {
+     :             ^^^^^^^^^^^
+ 102 |           setValue(name, value);
+     :           ^^^^^^^^
+ 103 |         }
+ 104 |         setInitialized(true);
+ 105 |         // initialized can not be in the dependencies because it would cause
+ 106 |         // a change of the value on initial render
+ 107 |       }, [name, value]);
+     :          ^^^^^^^^^^^^^
+ 108 | 
+     `----
+  help: Either include it or remove the dependency array.
+
+  x unicorn(no-useless-spread): Using a spread operator here creates a new array unnecessarily.
+    ,-[packages/design-system/src/ui/components/with-field-validation/with-field-validation.tsx:73:9]
+ 72 |       const errors = [
+ 73 |         ...(formErrors[name]?.types
+    :         ^^^
+ 74 |           ? (Object.values(formErrors[name].types ?? []) as string[])
+    `----
+  help: This expression returns a new array. Spreading it into an array expression to create a new array is redundant.
+
+  ! eslint(no-unused-vars): Catch parameter 'e' is caught but never used.
+     ,-[packages/powerhouse-vetra-packages/editors/document-model-editor/components/text-field.tsx:110:16]
+ 109 |         }
+ 110 |       } catch (e) {
+     :                |
+     :                `-- 'e' is declared here
+ 111 |         // Allow blur to proceed even if validation fails
+     `----
+  help: Consider handling this error.
+
+  ! react-hooks(exhaustive-deps): React hook useMemo depends on `mergedTimelineItems`, which changes every render
+    ,-[packages/design-system/src/connect/components/document-timeline/document-timeline.tsx:71:7]
+ 58 | 
+ 59 |   const mergedTimelineItems = [...timeline, defaultTimeLineItem];
+    :         ^^^^^^^^^|^^^^^^^^^
+    :                  `-- `mergedTimelineItems` is declared here
+ 60 |   const [unselectedItems, selectedItems] = useMemo(() => {
+ 61 |     const indexSelected = mergedTimelineItems.findIndex(
+ 62 |       (item) => item.id === selectedItem,
+ 63 |     );
+ 64 | 
+ 65 |     return indexSelected === -1
+ 66 |       ? [mergedTimelineItems, []]
+ 67 |       : [
+ 68 |           mergedTimelineItems.slice(0, indexSelected),
+ 69 |           mergedTimelineItems.slice(indexSelected),
+ 70 |         ];
+ 71 |   }, [mergedTimelineItems, selectedItem]);
+    :       ^^^^^^^^^|^^^^^^^^^
+    :                `-- it will always cause this hook to re-evaluate
+ 72 | 
+    `----
+  help: Try memoizing this variable with `useRef` or `useCallback`.
+
+  ! react-hooks(exhaustive-deps): React hook useCallback depends on `handleClick`, which changes every render
+    ,-[packages/design-system/src/connect/components/document-timeline/document-timeline.tsx:49:9]
+ 48 | 
+ 49 |   const handleClick = (item: TimelineItem) => {
+    :         ^^^^^|^^^^^
+    :              `-- `handleClick` is declared here
+ 50 |     if (item.id === selectedItem || item.id === defaultTimeLineItem.id) {
+    `----
+     ,-[packages/design-system/src/connect/components/document-timeline/document-timeline.tsx:104:6]
+ 103 |     },
+ 104 |     [handleClick, selectedItem],
+     :      ^^^^^|^^^^^
+     :           `-- it will always cause this hook to re-evaluate
+ 105 |   );
+     `----
+  help: Try memoizing this variable with `useRef` or `useCallback`.
+
+  ! eslint(no-unused-vars): Parameter 'dispatch' is declared but never used. Unused parameters should start with a '_'.
+    ,-[packages/vetra/document-models/processor-module/v1/src/reducers/base-operations.ts:9:46]
+  8 |   {
+  9 |     setProcessorNameOperation(state, action, dispatch) {
+    :                                              ^^^^|^^^
+    :                                                  `-- 'dispatch' is declared here
+ 10 |       const trimmedName = action.input.name.trim();
+    `----
+  help: Consider removing this parameter.
+
+  ! eslint(no-unused-vars): Parameter 'dispatch' is declared but never used. Unused parameters should start with a '_'.
+    ,-[packages/vetra/document-models/processor-module/v1/src/reducers/base-operations.ts:16:46]
+ 15 |     },
+ 16 |     setProcessorTypeOperation(state, action, dispatch) {
+    :                                              ^^^^|^^^
+    :                                                  `-- 'dispatch' is declared here
+ 17 |       const trimmedType = action.input.type.trim();
+    `----
+  help: Consider removing this parameter.
+
+  ! eslint(no-unused-vars): Parameter 'dispatch' is declared but never used. Unused parameters should start with a '_'.
+    ,-[packages/vetra/document-models/processor-module/v1/src/reducers/base-operations.ts:23:45]
+ 22 |     },
+ 23 |     addDocumentTypeOperation(state, action, dispatch) {
+    :                                             ^^^^|^^^
+    :                                                 `-- 'dispatch' is declared here
+ 24 |       // Check for duplicate ID
+    `----
+  help: Consider removing this parameter.
+
+  ! eslint(no-unused-vars): Parameter 'dispatch' is declared but never used. Unused parameters should start with a '_'.
+    ,-[packages/vetra/document-models/processor-module/v1/src/reducers/base-operations.ts:39:48]
+ 38 |     },
+ 39 |     removeDocumentTypeOperation(state, action, dispatch) {
+    :                                                ^^^^|^^^
+    :                                                    `-- 'dispatch' is declared here
+ 40 |       state.documentTypes = state.documentTypes.filter(
+    `----
+  help: Consider removing this parameter.
+
+  ! eslint(no-unused-vars): Parameter 'dispatch' is declared but never used. Unused parameters should start with a '_'.
+    ,-[packages/vetra/document-models/processor-module/v1/src/reducers/base-operations.ts:44:48]
+ 43 |     },
+ 44 |     setProcessorStatusOperation(state, action, dispatch) {
+    :                                                ^^^^|^^^
+    :                                                    `-- 'dispatch' is declared here
+ 45 |       state.status = action.input.status;
+    `----
+  help: Consider removing this parameter.
+
+  ! eslint(no-unused-vars): Parameter 'dispatch' is declared but never used. Unused parameters should start with a '_'.
+   ,-[packages/vetra/document-models/subgraph-module/v1/src/reducers/base-operations.ts:5:45]
+ 4 |   {
+ 5 |     setSubgraphNameOperation(state, action, dispatch) {
+   :                                             ^^^^|^^^
+   :                                                 `-- 'dispatch' is declared here
+ 6 |       const trimmedName = action.input.name.trim();
+   `----
+  help: Consider removing this parameter.
+
+  ! eslint(no-unused-vars): Parameter 'dispatch' is declared but never used. Unused parameters should start with a '_'.
+    ,-[packages/vetra/document-models/subgraph-module/v1/src/reducers/base-operations.ts:12:47]
+ 11 |     },
+ 12 |     setSubgraphStatusOperation(state, action, dispatch) {
+    :                                               ^^^^|^^^
+    :                                                   `-- 'dispatch' is declared here
+ 13 |       state.status = action.input.status;
+    `----
+  help: Consider removing this parameter.
+
+  ! eslint(no-unused-vars): Parameter 'dispatch' is declared but never used. Unused parameters should start with a '_'.
+   ,-[packages/vetra/document-models/vetra-package/v1/src/reducers/base-operations.ts:5:44]
+ 4 |   {
+ 5 |     setPackageNameOperation(state, action, dispatch) {
+   :                                            ^^^^|^^^
+   :                                                `-- 'dispatch' is declared here
+ 6 |       state.name = action.input.name;
+   `----
+  help: Consider removing this parameter.
+
+  ! eslint(no-unused-vars): Parameter 'dispatch' is declared but never used. Unused parameters should start with a '_'.
+   ,-[packages/vetra/document-models/vetra-package/v1/src/reducers/base-operations.ts:8:51]
+ 7 |     },
+ 8 |     setPackageDescriptionOperation(state, action, dispatch) {
+   :                                                   ^^^^|^^^
+   :                                                       `-- 'dispatch' is declared here
+ 9 |       state.description = action.input.description;
+   `----
+  help: Consider removing this parameter.
+
+  ! eslint(no-unused-vars): Parameter 'dispatch' is declared but never used. Unused parameters should start with a '_'.
+    ,-[packages/vetra/document-models/vetra-package/v1/src/reducers/base-operations.ts:11:48]
+ 10 |     },
+ 11 |     setPackageCategoryOperation(state, action, dispatch) {
+    :                                                ^^^^|^^^
+    :                                                    `-- 'dispatch' is declared here
+ 12 |       state.category = action.input.category;
+    `----
+  help: Consider removing this parameter.
+
+  ! eslint(no-unused-vars): Parameter 'dispatch' is declared but never used. Unused parameters should start with a '_'.
+    ,-[packages/vetra/document-models/vetra-package/v1/src/reducers/base-operations.ts:14:46]
+ 13 |     },
+ 14 |     setPackageAuthorOperation(state, action, dispatch) {
+    :                                              ^^^^|^^^
+    :                                                  `-- 'dispatch' is declared here
+ 15 |       state.author = {
+    `----
+  help: Consider removing this parameter.
+
+  ! eslint(no-unused-vars): Parameter 'dispatch' is declared but never used. Unused parameters should start with a '_'.
+    ,-[packages/vetra/document-models/vetra-package/v1/src/reducers/base-operations.ts:20:50]
+ 19 |     },
+ 20 |     setPackageAuthorNameOperation(state, action, dispatch) {
+    :                                                  ^^^^|^^^
+    :                                                      `-- 'dispatch' is declared here
+ 21 |       state.author.name = action.input.name;
+    `----
+  help: Consider removing this parameter.
+
+  ! eslint(no-unused-vars): Parameter 'dispatch' is declared but never used. Unused parameters should start with a '_'.
+    ,-[packages/vetra/document-models/vetra-package/v1/src/reducers/base-operations.ts:23:53]
+ 22 |     },
+ 23 |     setPackageAuthorWebsiteOperation(state, action, dispatch) {
+    :                                                     ^^^^|^^^
+    :                                                         `-- 'dispatch' is declared here
+ 24 |       state.author.website = action.input.website;
+    `----
+  help: Consider removing this parameter.
+
+  ! eslint(no-unused-vars): Parameter 'dispatch' is declared but never used. Unused parameters should start with a '_'.
+    ,-[packages/vetra/document-models/vetra-package/v1/src/reducers/base-operations.ts:26:47]
+ 25 |     },
+ 26 |     addPackageKeywordOperation(state, action, dispatch) {
+    :                                               ^^^^|^^^
+    :                                                   `-- 'dispatch' is declared here
+ 27 |       // Check for duplicate ID
+    `----
+  help: Consider removing this parameter.
+
+  ! eslint(no-unused-vars): Parameter 'dispatch' is declared but never used. Unused parameters should start with a '_'.
+    ,-[packages/vetra/document-models/vetra-package/v1/src/reducers/base-operations.ts:37:50]
+ 36 |     },
+ 37 |     removePackageKeywordOperation(state, action, dispatch) {
+    :                                                  ^^^^|^^^
+    :                                                      `-- 'dispatch' is declared here
+ 38 |       state.keywords = state.keywords.filter(
+    `----
+  help: Consider removing this parameter.
+
+  ! eslint(no-unused-vars): Parameter 'dispatch' is declared but never used. Unused parameters should start with a '_'.
+    ,-[packages/vetra/document-models/vetra-package/v1/src/reducers/base-operations.ts:42:49]
+ 41 |     },
+ 42 |     setPackageGithubUrlOperation(state, action, dispatch) {
+    :                                                 ^^^^|^^^
+    :                                                     `-- 'dispatch' is declared here
+ 43 |       state.githubUrl = action.input.url;
+    `----
+  help: Consider removing this parameter.
+
+  ! eslint(no-unused-vars): Parameter 'dispatch' is declared but never used. Unused parameters should start with a '_'.
+    ,-[packages/vetra/document-models/vetra-package/v1/src/reducers/base-operations.ts:45:46]
+ 44 |     },
+ 45 |     setPackageNpmUrlOperation(state, action, dispatch) {
+    :                                              ^^^^|^^^
+    :                                                  `-- 'dispatch' is declared here
+ 46 |       state.npmUrl = action.input.url;
+    `----
+  help: Consider removing this parameter.
+
+  ! react-hooks(exhaustive-deps): React hook useMemo depends on `availableOperators`, which changes every render
+     ,-[packages/design-system/src/connect/components/db-explorer/components/filter-bar.tsx:133:6]
+ 110 |   const column = columns.find((c) => c.name === clause.column);
+ 111 |   const availableOperators = column
+     :         ^^^^^^^^^|^^^^^^^^
+     :                  `-- `availableOperators` is declared here
+ 112 |     ? getAvailableOperators(column)
+ 113 |     : (["=", "!="] as FilterOperator[]);
+ 114 |   const inputType = column ? getInputType(column, clause.operator) : "text";
+ 115 |   const showValueInput =
+ 116 |     clause.operator !== "IS NULL" && clause.operator !== "IS NOT NULL";
+ 117 | 
+ 118 |   const columnItems = useMemo(
+ 119 |     (): Array<{ value: string; displayValue: string }> =>
+ 120 |       columns.map((col) => ({
+ 121 |         value: col.name,
+ 122 |         displayValue: col.name,
+ 123 |       })),
+ 124 |     [columns],
+ 125 |   );
+ 126 | 
+ 127 |   const operatorItems = useMemo(
+ 128 |     (): Array<{ value: FilterOperator; displayValue: string }> =>
+ 129 |       availableOperators.map((op) => ({
+ 130 |         value: op,
+ 131 |         displayValue: op,
+ 132 |       })),
+ 133 |     [availableOperators],
+     :      ^^^^^^^^^|^^^^^^^^
+     :               `-- it will always cause this hook to re-evaluate
+ 134 |   );
+     `----
+  help: Try memoizing this variable with `useRef` or `useCallback`.
+
+  x unicorn(no-useless-spread): Using a spread operator here creates a new array unnecessarily.
+     ,-[packages/reactor/src/sync/sync-status-tracker.ts:187:29]
+ 186 | 
+ 187 |     for (const callback of [...this.callbacks]) {
+     :                             ^^^
+ 188 |       callback(documentId, status);
+     `----
+  help: `for…of` can iterate over iterable, it's unnecessary to convert to an array.
+
+  x unicorn(no-new-array): Do not use `new Array(singleArgument)`.
+     ,-[packages/reactor/src/sync/utils.ts:382:16]
+ 381 |   const parent = items.map((_, i) => i);
+ 382 |   const rank = new Array<number>(items.length).fill(0);
+     :                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 383 | 
+     `----
+  help: It's not clear whether the argument is meant to be the length of the array or the only element. If the argument is the array's length, consider using `Array.from({ length: n })`. If the argument is the only element, use `[element]`.
+
+  x unicorn(no-useless-spread): Using a spread operator here creates a new object unnecessarily.
+    ,-[test/versioned-documents/document-models/todo/v1/src/tests/document-model.test.ts:51:5]
+ 50 |   wrongState.state.global = {
+ 51 |     ...{ notWhat: "you want" },
+    :     ^^^
+ 52 |   };
+    `----
+  help: Consider removing the spread operator.
+
+  x unicorn(no-useless-spread): Using a spread operator here creates a new object unnecessarily.
+    ,-[test/versioned-documents/document-models/todo/v1/src/tests/document-model.test.ts:65:5]
+ 64 |   wrongInitialState.initialState.global = {
+ 65 |     ...{ notWhat: "you want" },
+    :     ^^^
+ 66 |   };
+    `----
+  help: Consider removing the spread operator.
+
+  x unicorn(no-useless-spread): Using a spread operator here creates a new object unnecessarily.
+    ,-[test/versioned-documents/document-models/todo/v2/src/tests/document-model.test.ts:51:5]
+ 50 |   wrongState.state.global = {
+ 51 |     ...{ notWhat: "you want" },
+    :     ^^^
+ 52 |   };
+    `----
+  help: Consider removing the spread operator.
+
+  x unicorn(no-useless-spread): Using a spread operator here creates a new object unnecessarily.
+    ,-[test/versioned-documents/document-models/todo/v2/src/tests/document-model.test.ts:65:5]
+ 64 |   wrongInitialState.initialState.global = {
+ 65 |     ...{ notWhat: "you want" },
+    :     ^^^
+ 66 |   };
+    `----
+  help: Consider removing the spread operator.
+
+  ! react-hooks(exhaustive-deps): React Hook useEffect has missing dependencies: 'children.props.value', 'children.props.name', and 'children.props'
+     ,-[packages/design-system/src/ui/components/value-transformer/value-transformer.tsx:116:6]
+ 101 |     // if the field is not touched by the user
+ 102 |     const value = (children.props as { value: unknown }).value;
+     :                    ^^^^^^^^^^^^^^
+ 103 |     const transformedValue = _applyTransformers(transformers, value, "all");
+ 104 | 
+ 105 |     if (!deepEqual(transformedValue, value)) {
+ 106 |       if (typeof setValue === "function") {
+ 107 |         setValue((children.props as { name: string }).name, transformedValue);
+     :                   ^^^^^^^^^^^^^^
+ 108 |       } else {
+ 109 |         // if setValue is not available, then we're not inside a form context
+ 110 |         // so we need to update the value using onChange if available
+ 111 |         (children.props as React.HTMLAttributes<HTMLInputElement>).onChange?.({
+     :          ^^^^^^^^^^^^^^
+ 112 |           target: { value: transformedValue },
+ 113 |         } as React.ChangeEvent<HTMLInputElement>);
+ 114 |       }
+ 115 |     }
+ 116 |   }, [transformers, setValue]);
+     :      ^^^^^^^^^^^^^^^^^^^^^^^^
+ 117 | 
+     `----
+  help: Either include it or remove the dependency array.
+
+  x react(jsx-props-no-spread-multi): Prop 'props' is spread multiple times.
+   ,-[packages/design-system/src/powerhouse/components/icon-components/PeopleFill.tsx:5:7]
+ 4 |     <svg
+ 5 |       {...props}
+   :       ^^^^^^^^^^
+ 6 |       {...props}
+   :       ^^^^^^^^^^
+ 7 |       viewBox="0 0 12 12"
+   `----
+  help: Remove all but one spread.
+
+  ! eslint(no-unused-vars): Variable 'replaceButtonProps' is declared but never used. Unused variables should start with a '_'.
+    ,-[packages/design-system/src/connect/components/modal/replace-duplicate-modal.tsx:43:5]
+ 42 |     containerProps = {},
+ 43 |     replaceButtonProps = {},
+    :     ^^^^^^^^^|^^^^^^^^
+    :              `-- 'replaceButtonProps' is declared here
+ 44 |     duplicateButtonProps = {},
+    `----
+  help: Consider removing this declaration.
+
+  ! eslint(no-unused-vars): Parameter 'dispatch' is declared but never used. Unused parameters should start with a '_'.
+   ,-[packages/vetra/document-models/app-module/v1/src/reducers/dnd-operations.ts:5:51]
+ 4 |   {
+ 5 |     setDragAndDropEnabledOperation(state, action, dispatch) {
+   :                                                   ^^^^|^^^
+   :                                                       `-- 'dispatch' is declared here
+ 6 |       state.isDragAndDropEnabled = action.input.enabled;
+   `----
+  help: Consider removing this parameter.
+
+  ! eslint(no-unused-vars): Parameter 'dispatch' is declared but never used. Unused parameters should start with a '_'.
+   ,-[packages/vetra/document-models/app-module/v1/src/reducers/base-operations.ts:5:40]
+ 4 |   {
+ 5 |     setAppNameOperation(state, action, dispatch) {
+   :                                        ^^^^|^^^
+   :                                            `-- 'dispatch' is declared here
+ 6 |       const trimmedName = action.input.name.trim();
+   `----
+  help: Consider removing this parameter.
+
+  ! eslint(no-unused-vars): Parameter 'dispatch' is declared but never used. Unused parameters should start with a '_'.
+    ,-[packages/vetra/document-models/app-module/v1/src/reducers/base-operations.ts:12:42]
+ 11 |     },
+ 12 |     setAppStatusOperation(state, action, dispatch) {
+    :                                          ^^^^|^^^
+    :                                              `-- 'dispatch' is declared here
+ 13 |       state.status = action.input.status;
+    `----
+  help: Consider removing this parameter.
+
+  ! eslint(no-unused-vars): Parameter 'dispatch' is declared but never used. Unused parameters should start with a '_'.
+    ,-[packages/vetra/document-models/app-module/v1/src/reducers/base-operations.ts:15:45]
+ 14 |     },
+ 15 |     addDocumentTypeOperation(state, action, dispatch) {
+    :                                             ^^^^|^^^
+    :                                                 `-- 'dispatch' is declared here
+ 16 |       const existingAllowedDocumentTypes = state.allowedDocumentTypes ?? [];
+    `----
+  help: Consider removing this parameter.
+
+  ! eslint(no-unused-vars): Parameter 'dispatch' is declared but never used. Unused parameters should start with a '_'.
+    ,-[packages/vetra/document-models/app-module/v1/src/reducers/base-operations.ts:24:48]
+ 23 |     },
+ 24 |     removeDocumentTypeOperation(state, action, dispatch) {
+    :                                                ^^^^|^^^
+    :                                                    `-- 'dispatch' is declared here
+ 25 |       const existingAllowedDocumentTypes = state.allowedDocumentTypes;
+    `----
+  help: Consider removing this parameter.
+
+  ! eslint(no-unused-vars): Parameter 'dispatch' is declared but never used. Unused parameters should start with a '_'.
+    ,-[packages/vetra/document-models/app-module/v1/src/reducers/base-operations.ts:32:46]
+ 31 |     },
+ 32 |     setDocumentTypesOperation(state, action, dispatch) {
+    :                                              ^^^^|^^^
+    :                                                  `-- 'dispatch' is declared here
+ 33 |       state.allowedDocumentTypes = action.input.documentTypes;
+    `----
+  help: Consider removing this parameter.
+
+  x unicorn(no-useless-spread): Using a spread operator here creates a new object unnecessarily.
+    ,-[test/versioned-documents/document-models/todo/v2/tests/document-model.test.ts:51:5]
+ 50 |   wrongState.state.global = {
+ 51 |     ...{ notWhat: "you want" },
+    :     ^^^
+ 52 |   };
+    `----
+  help: Consider removing the spread operator.
+
+  x unicorn(no-useless-spread): Using a spread operator here creates a new object unnecessarily.
+    ,-[test/versioned-documents/document-models/todo/v2/tests/document-model.test.ts:65:5]
+ 64 |   wrongInitialState.initialState.global = {
+ 65 |     ...{ notWhat: "you want" },
+    :     ^^^
+ 66 |   };
+    `----
+  help: Consider removing the spread operator.
+
+  x unicorn(no-useless-spread): Using a spread operator here creates a new object unnecessarily.
+    ,-[test/versioned-documents/document-models/todo/v1/tests/document-model.test.ts:51:5]
+ 50 |   wrongState.state.global = {
+ 51 |     ...{ notWhat: "you want" },
+    :     ^^^
+ 52 |   };
+    `----
+  help: Consider removing the spread operator.
+
+  x unicorn(no-useless-spread): Using a spread operator here creates a new object unnecessarily.
+    ,-[test/versioned-documents/document-models/todo/v1/tests/document-model.test.ts:65:5]
+ 64 |   wrongInitialState.initialState.global = {
+ 65 |     ...{ notWhat: "you want" },
+    :     ^^^
+ 66 |   };
+    `----
+  help: Consider removing the spread operator.
+
+  ! eslint(no-unused-vars): Identifier 'PROCESSOR_APPS' is imported but never used.
+   ,-[packages/vetra/processors/codegen/document-handlers/generators/constants.ts:1:10]
+ 1 | import { PROCESSOR_APPS } from "@powerhousedao/shared/processors";
+   :          ^^^^^^^|^^^^^^
+   :                 `-- 'PROCESSOR_APPS' is imported here
+ 2 | 
+   `----
+  help: Consider removing this import.
+
+  ! react-hooks(exhaustive-deps): React Hook useEffect has a missing dependency: 'state'
+    ,-[packages/design-system/src/powerhouse/components/legacy/textInputVariant.tsx:30:6]
+ 28 |     // eslint-disable-next-line react-hooks/set-state-in-effect
+ 29 |     setState({ ...state, value: props.value || "" });
+    :                   ^^|^^
+    :                     `-- useEffect uses `state` here
+ 30 |   }, [props.value]);
+    :      ^^^^^^^^^^^^^
+ 31 | 
+    `----
+  help: Either include it or remove the dependency array.
+
+  ! react-hooks(exhaustive-deps): React Hook useEffect has a missing dependency: 'setDebouncedUrl'
+    ,-[packages/design-system/src/connect/components/form/add-remote-drive-form.tsx:56:6]
+ 54 |   useEffect(() => {
+ 55 |     setDebouncedUrl(url);
+    :     ^^^^^^^|^^^^^^^
+    :            `-- useEffect uses `setDebouncedUrl` here
+ 56 |   }, [url]);
+    :      ^^^^^
+ 57 | 
+    `----
+  help: Either include it or remove the dependency array.
+
+  ! react-hooks(exhaustive-deps): React Hook useEffect has a missing dependency: 'requestPublicDrive'
+    ,-[packages/design-system/src/connect/components/form/add-remote-drive-form.tsx:83:6]
+ 65 |       try {
+ 66 |         const { id, name } = await requestPublicDrive(debouncedUrl);
+    :                                    ^^^^^^^^^|^^^^^^^^
+    :                                             `-- useEffect uses `requestPublicDrive` here
+ 67 |         setPublicDriveDetails({
+ 68 |           id,
+ 69 |           name,
+ 70 |           sharingType,
+ 71 |           location: "SWITCHBOARD",
+ 72 |           availableOffline: true,
+ 73 |         });
+ 74 |         setValue("availableOffline", true);
+ 75 |         setIsUrlValid(true);
+ 76 |         setErrorMessage("");
+ 77 |       } catch (error) {
+ 78 |         setPublicDriveDetails(undefined);
+ 79 |         setIsUrlValid(false);
+ 80 |         setErrorMessage((error as Error).message);
+ 81 |       }
+ 82 |     }
+ 83 |   }, [debouncedUrl, setValue, sharingType]);
+    :      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 84 | 
+    `----
+  help: Either include it or remove the dependency array.
+
+  ! react-hooks(exhaustive-deps): The ref's value `.current` is accessed directly in the effect cleanup function.
+    ,-[packages/design-system/src/connect/components/modal/read-required-modal.tsx:73:23]
+ 72 |     return () => {
+ 73 |       const element = contentRef.current;
+    :                       ^^^^^^^^^^^^^^^^^^
+ 74 | 
+    `----
+  help: The ref value will likely have changed by the time this effect cleanup function runs. If this ref points to a node rendered by react, copy it to a variable inside the effect and use that variable in the cleanup function.
+
+  x unicorn(no-empty-file): Empty files are not allowed.
+   ,-[apps/connect/src/store/utils.ts:1:1]
+ 1 | ,-> // import { connectConfig }from '#connect-config';
+ 2 | |   
+ 3 | `-> // import { atomWithStorage as _atomWithStorage } from 'jotai/utils';
+ 4 |     // import type { SyncStorage } from 'jotai/vanilla/utils/atomWithStorage';
+   `----
+  help: Delete this file or add some code to it.
+
+  ! eslint(no-unused-vars): Variable 'credential' is declared but never used. Unused variables should start with a '_'.
+    ,-[apps/connect/src/store/user.ts:12:15]
+ 11 |       // saves the user info except the credential
+ 12 |       const { credential, ...rest } = user;
+    :               ^^^^^|^^^^
+    :                    `-- 'credential' is declared here
+ 13 |       sentryUser = { id: rest.did, username: rest.ens?.name, ...rest };
+    `----
+  help: Consider removing this declaration.
+
+  ! eslint(no-unused-vars): Type 'ModuleSpecification' is imported but never used.
+   ,-[packages/codegen/src/name-builders/get-variable-names.ts:5:3]
+ 4 |   DocumentSpecification,
+ 5 |   ModuleSpecification,
+   :   ^^^^^^^^^|^^^^^^^^^
+   :            `-- 'ModuleSpecification' is imported here
+ 6 |   OperationErrorSpecification,
+   `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Function 'getErrorsFromOperations' is declared but never used.
+     ,-[packages/codegen/src/name-builders/get-variable-names.ts:157:10]
+ 156 | 
+ 157 | function getErrorsFromOperations(operations: OperationSpecification[]) {
+     :          ^^^^^^^^^^^|^^^^^^^^^^^
+     :                     `-- 'getErrorsFromOperations' is declared here
+ 158 |   return operations.flatMap(getErrorsFromOperation);
+     `----
+  help: Consider removing this declaration.
+
+  ! eslint(no-unused-vars): Parameter 'getParentIds' is declared but never used. Unused parameters should start with a '_'.
+     ,-[packages/reactor-api/src/services/authorization.service.ts:153:5]
+ 152 |     userAddress?: string,
+ 153 |     getParentIds?: GetParentIdsFn,
+     :     ^^^^^^|^^^^^
+     :           `-- 'getParentIds' is declared here
+ 154 |   ): Promise<boolean> {
+     `----
+  help: Consider removing this parameter.
+
+  ! eslint(no-unused-vars): Type 'IReactorClient' is imported but never used.
+   ,-[packages/reactor-api/src/graphql/reactor/adapters.ts:4:8]
+ 3 |   type DocumentChangeEvent,
+ 4 |   type IReactorClient,
+   :        ^^^^^^^|^^^^^^
+   :               `-- 'IReactorClient' is imported here
+ 5 |   type PagedResults,
+   `----
+  help: Consider removing this import.
+
+  x unicorn(no-empty-file): Empty files are not allowed.
+   ,-[packages/powerhouse-vetra-packages/document-models/document-model/index.ts:1:1]
+   `----
+  help: Delete this file or add some code to it.
+
+  x unicorn(no-empty-file): Empty files are not allowed.
+   ,-[packages/powerhouse-vetra-packages/editors/document-model-editor/index.ts:1:1]
+   `----
+  help: Delete this file or add some code to it.
+
+  ! react-hooks(exhaustive-deps): React Hook useEffect has a missing dependency: 'defaultValue'
+    ,-[packages/design-system/src/ui/components/select-field/use-select-field.ts:41:6]
+ 34 |     }
+ 35 |     const newValue = value ?? defaultValue ?? [];
+    :                               ^^^^^^|^^^^^
+    :                                     `-- useEffect uses `defaultValue` here
+ 36 |     if (newValue === "") {
+ 37 |       setSelectedValues([]);
+ 38 |     } else {
+ 39 |       setSelectedValues(Array.isArray(newValue) ? newValue : [newValue]);
+ 40 |     }
+ 41 |   }, [value]);
+    :      ^^^^^^^
+ 42 | 
+    `----
+  help: Either include it or remove the dependency array.
+
+  ! react-hooks(exhaustive-deps): React Hook useCallback has unnecessary dependency: options
+    ,-[packages/design-system/src/ui/components/select-field/use-select-field.ts:65:5]
+ 64 |     },
+ 65 |     [multiple, selectedValues, options, onChange],
+    :     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 66 |   );
+    `----
+  help: Either include it or remove the dependency array.
+
+  ! react-hooks(exhaustive-deps): React Hook useEffect has missing dependencies: 'selectedValues', 'selectedValues.length', and 'onChange'
+     ,-[packages/design-system/src/ui/components/select-field/use-select-field.ts:105:6]
+  94 | 
+  95 |     if (!multiple && selectedValues.length > 1) {
+     :                      ^^^^^^^^^^^^^^
+  96 |       isInternalChange.current = true;
+  97 |       setSelectedValues([selectedValues[0]]);
+     :                          ^^^^^^^^^^^^^^
+  98 |       onChange?.(selectedValues[0]);
+     :       ^^^^^^^^
+  99 |       return;
+ 100 |     }
+ 101 |     if (selectedValues.length > 0) {
+ 102 |       isInternalChange.current = true;
+ 103 |       onChange?.(multiple ? [selectedValues[0]] : selectedValues[0]);
+ 104 |     }
+ 105 |   }, [multiple]);
+     :      ^^^^^^^^^^
+ 106 | 
+     `----
+  help: Either include it or remove the dependency array.
+
+  ! eslint(no-unused-vars): Type 'FilterClause' is imported but never used.
+    ,-[packages/design-system/src/connect/components/db-explorer/db-explorer.tsx:12:8]
+ 11 |   type FilterGroup,
+ 12 |   type FilterClause,
+    :        ^^^^^^|^^^^^
+    :              `-- 'FilterClause' is imported here
+ 13 |   type PaginationState,
+    `----
+  help: Consider removing this import.
+
+  ! react-hooks(exhaustive-deps): React hook useCallback depends on `columns`, which changes every render
+     ,-[packages/design-system/src/connect/components/db-explorer/db-explorer.tsx:145:5]
+  97 | 
+  98 |   const columns = tables.find((t) => t.name === selectedTable)?.columns ?? [];
+     :         ^^^|^^^
+     :            `-- `columns` is declared here
+  99 | 
+ 100 |   const loadTableData = useCallback(async () => {
+ 101 |     if (!selectedTable) return;
+ 102 | 
+ 103 |     setLoading(true);
+ 104 |     const data = await getTableRows(selectedTable, {
+ 105 |       schema,
+ 106 |       limit: pagination.limit,
+ 107 |       offset: pagination.offset,
+ 108 |       sort,
+ 109 |       filters,
+ 110 |     });
+ 111 |     setTableData(data);
+ 112 |     setPagination((prev) => ({ ...prev, total: data.total }));
+ 113 |     setLoading(false);
+ 114 |   }, [
+ 115 |     selectedTable,
+ 116 |     schema,
+ 117 |     pagination.limit,
+ 118 |     pagination.offset,
+ 119 |     sort,
+ 120 |     filters,
+ 121 |     getTableRows,
+ 122 |   ]);
+ 123 | 
+ 124 |   const handleCopyAll = useCallback(async (): Promise<string> => {
+ 125 |     if (!selectedTable) return "";
+ 126 | 
+ 127 |     // Fetch all rows by using total as limit (or a large number if unknown)
+ 128 |     const limit = pagination.total ?? 1000000;
+ 129 |     const data = await getTableRows(selectedTable, {
+ 130 |       schema,
+ 131 |       limit,
+ 132 |       offset: 0,
+ 133 |       sort,
+ 134 |       filters,
+ 135 |     });
+ 136 | 
+ 137 |     return rowsToCsv(data.rows, columns);
+ 138 |   }, [
+ 139 |     selectedTable,
+ 140 |     schema,
+ 141 |     pagination.total,
+ 142 |     sort,
+ 143 |     filters,
+ 144 |     getTableRows,
+ 145 |     columns,
+     :     ^^^|^^^
+     :        `-- it will always cause this hook to re-evaluate
+ 146 |   ]);
+     `----
+  help: Try memoizing this variable with `useRef` or `useCallback`.
+
+  ! eslint(no-unused-vars): Variable 'location' is declared but never used. Unused variables should start with a '_'.
+    ,-[packages/design-system/src/connect/components/form/inputs/drive-app.tsx:10:11]
+  9 | export function DriveApp(props: DriveAppProps) {
+ 10 |   const { location, className, ...divProps } = props;
+    :           ^^^^|^^^
+    :               `-- 'location' is declared here
+ 11 | 
+    `----
+  help: Consider removing this declaration.
+
+  ! eslint(no-unused-vars): Variable 'description' is declared but never used. Unused variables should start with a '_'.
+    ,-[packages/design-system/src/connect/components/sidebar/sidebar-item.tsx:13:24]
+ 12 | export const SidebarItem = function SidebarItem(props: SidebarItemProps) {
+ 13 |   const { icon, title, description, containerClassName, active, onClick } =
+    :                        ^^^^^|^^^^^
+    :                             `-- 'description' is declared here
+ 14 |     props;
+    `----
+  help: Consider removing this declaration.
+
+  ! eslint(no-unused-vars): Parameter 'maxWidth' is declared but never used. Unused parameters should start with a '_'.
+    ,-[packages/design-system/src/powerhouse/components/sidebar/sidebar.tsx:23:3]
+ 22 | export function Sidebar({
+ 23 |   maxWidth = "304px",
+    :   ^^^^|^^^
+    :       `-- 'maxWidth' is declared here
+ 24 |   minWidth = "80px",
+    `----
+  help: Consider removing this parameter.
+
+  ! eslint(no-unused-vars): Variable 'node' is declared but never used. Unused variables should start with a '_'.
+    ,-[packages/design-system/src/connect/components/drop-zone/drop-zone.tsx:32:5]
+ 31 |     subtitle = "to drop them in the currently selected folder.",
+ 32 |     node,
+    :     ^^|^
+    :       `-- 'node' is declared here
+ 33 |     enable = true,
+    `----
+  help: Consider removing this declaration.
+
+  ! eslint(no-unused-vars): Variable 'acceptedFileExtensions' is declared but never used. Unused variables should start with a '_'.
+    ,-[packages/design-system/src/connect/components/drop-zone/drop-zone.tsx:38:5]
+ 37 |     driveId,
+ 38 |     acceptedFileExtensions = [".zip", ".phd", ".phdm"],
+    :     ^^^^^^^^^^^|^^^^^^^^^^
+    :                `-- 'acceptedFileExtensions' is declared here
+ 39 |     className,
+    `----
+  help: Consider removing this declaration.
+
+  ! react-hooks(exhaustive-deps): React Hook useEffect has a missing dependency: 'clearConflictedUploads'
+    ,-[packages/design-system/src/connect/components/drop-zone/drop-zone.tsx:61:6]
+ 59 |   useEffect(() => {
+ 60 |     clearConflictedUploads();
+    :     ^^^^^^^^^^^|^^^^^^^^^^
+    :                `-- useEffect uses `clearConflictedUploads` here
+ 61 |   }, []);
+    :      ^^
+ 62 | 
+    `----
+  help: Either include it or remove the dependency array.
+
+  ! react-hooks(exhaustive-deps): React Hook useEffect has a missing dependency: 'state'
+    ,-[packages/design-system/src/powerhouse/components/legacy/textInput.tsx:29:6]
+ 27 |     // eslint-disable-next-line react-hooks/set-state-in-effect
+ 28 |     setState({ ...state, value: props.value || "" });
+    :                   ^^|^^
+    :                     `-- useEffect uses `state` here
+ 29 |   }, [props]);
+    :      ^^^^^^^
+ 30 | 
+    `----
+  help: Either include it or remove the dependency array.
+
+  x unicorn(no-useless-spread): `Set` accepts an iterable, so it's unnecessary to convert the iterable to an array.
+     ,-[packages/reactor/src/core/reactor-builder.ts:380:16]
+ 379 |     const readModelInstances: IReadModel[] = Array.from(
+ 380 |       new Set([...this.readModels]),
+     :                ^^^
+ 381 |     );
+     `----
+  help: Consider removing the spread operator.
+
+  x unicorn(no-new-array): Do not use `new Array(singleArgument)`.
+    ,-[packages/reactor/src/cache/buffer/ring-buffer.ts:21:19]
+ 20 |     this.capacity = capacity;
+ 21 |     this.buffer = new Array<T>(capacity);
+    :                   ^^^^^^^^^^^^^^^^^^^^^^
+ 22 |   }
+    `----
+  help: It's not clear whether the argument is meant to be the length of the array or the only element. If the argument is the array's length, consider using `Array.from({ length: n })`. If the argument is the only element, use `[element]`.
+
+  x unicorn(no-new-array): Do not use `new Array(singleArgument)`.
+    ,-[packages/reactor/src/cache/buffer/ring-buffer.ts:63:19]
+ 62 |   clear(): void {
+ 63 |     this.buffer = new Array<T>(this.capacity);
+    :                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 64 |     this.head = 0;
+    `----
+  help: It's not clear whether the argument is meant to be the length of the array or the only element. If the argument is the array's length, consider using `Array.from({ length: n })`. If the argument is the only element, use `[element]`.
+
+  ! eslint(no-unused-vars): Catch parameter 'error' is caught but never used.
+    ,-[packages/reactor-browser/src/graphql/fetchers.ts:22:12]
+ 21 |     return phDocumentFromQuery(document, documentSchema);
+ 22 |   } catch (error) {
+    :            ^^|^^
+    :              `-- 'error' is declared here
+ 23 |     return undefined;
+    `----
+  help: Consider handling this error.
+
+  ! react-hooks(exhaustive-deps): React Hook useCallback has a missing dependency: 'queryCallback'
+    ,-[packages/reactor-browser/src/relational/utils/createProcessorQuery.ts:91:57]
+ 90 |     // Memoize the callback to prevent infinite loops, updating when parameters change
+ 91 |     const memoizedCallback = useCallback(queryCallback, [stableParams]);
+    :                                          ^^^^^^|^^^^^^  ^^^^^^^^^^^^^^
+    :                                                `-- useCallback uses `queryCallback` here
+ 92 | 
+    `----
+  help: Either include it or remove the dependency array.
+
+  ! eslint(no-unused-vars): Variable 'release' is declared but never used. Unused variables should start with a '_'.
+    ,-[apps/connect/src/hooks/useInitSentry.ts:24:9]
+ 23 | async function initSentry() {
+ 24 |   const release = connectConfig.sentry;
+    :         ^^^|^^^
+    :            `-- 'release' is declared here
+ 25 | 
+    `----
+  help: Consider removing this declaration.
+
+  ! react-hooks(exhaustive-deps): React Hook useEffect has missing dependencies: 'registryUrl', 'setRegistryPackagesMap', and 'packageManager'
+    ,-[apps/connect/src/hooks/useRegistryPackages.ts:37:11]
+ 36 |     async function refreshPackages() {
+ 37 |       if (registryUrl === null || !packageManager) return;
+    :           ^^^^^^^^^^^              ^^^^^^^^^^^^^^
+ 38 | 
+ 39 |       const packageInfos = await getPackages(registryUrl);
+ 40 | 
+ 41 |       setRegistryPackagesMap((oldPackages) => {
+    :       ^^^^^^^^^^^^^^^^^^^^^^
+ 42 |         const newRegistryPackages: RegistryPackageMap = {
+    `----
+    ,-[apps/connect/src/hooks/useRegistryPackages.ts:90:6]
+ 89 |     refreshPackages().catch(console.error);
+ 90 |   }, []);
+    :      ^^
+ 91 | 
+    `----
+  help: Either include it or remove the dependency array.
+
+  ! react-hooks(exhaustive-deps): React Hook useEffect has missing dependencies: 'setRegistryPackagesMap', and 'packageManager'
+     ,-[apps/connect/src/hooks/useRegistryPackages.ts:121:6]
+  92 |   useEffect(() => {
+  93 |     if (!packageManager) return;
+     :          ^^^^^^^^^^^^^^
+  94 | 
+  95 |     if (packageManagerPackages?.length) {
+  96 |       for (const packageManagerPackage of packageManagerPackages) {
+  97 |         setRegistryPackagesMap((existingRegistryPackages) => {
+     :         ^^^^^^^^^^^^^^^^^^^^^^
+  98 |           const packageName = packageManagerPackage.manifest.name;
+  99 |           const existingPackage = existingRegistryPackages[packageName];
+ 100 |           const newRegistryPackages = { ...existingRegistryPackages };
+ 101 |           const version = packageManager.getPackageVersion(packageName);
+ 102 |           if (existingPackage) {
+ 103 |             newRegistryPackages[packageName] = {
+ 104 |               ...existingPackage,
+ 105 |               version: version ?? existingPackage.version,
+ 106 |             };
+ 107 |           } else {
+ 108 |             const packageSource = packageManager.getPackageSource(packageName);
+ 109 |             const status = getPackageStatusFromPackageSource(packageSource);
+ 110 |             const newRegistryPackage = makeRegistryPackageFromDocumentModelLib(
+ 111 |               packageManagerPackage,
+ 112 |               status,
+ 113 |               version,
+ 114 |             );
+ 115 |             newRegistryPackages[packageName] = newRegistryPackage;
+ 116 |           }
+ 117 |           return newRegistryPackages;
+ 118 |         });
+ 119 |       }
+ 120 |     }
+ 121 |   }, [packageManagerPackages]);
+     :      ^^^^^^^^^^^^^^^^^^^^^^^^
+ 122 | 
+     `----
+  help: Either include it or remove the dependency array.
+
+  x react-hooks(rules-of-hooks): React Hook "useServer" cannot be called in a class component. React Hooks must be called in a React function component or a custom React Hook function.
+    ,-[packages/reactor-api/src/graphql/gateway/adapter-gateway-mercurius.ts:45:14]
+ 44 | 
+ 45 | export class MercuriusGatewayAdapter implements IGatewayAdapter<Context> {
+    :              ^^^^^^^^^^^|^^^^^^^^^^^
+    :                         `-- Class component is defined here.
+ 46 |   readonly #logger: ILogger;
+    `----
+     ,-[packages/reactor-api/src/graphql/gateway/adapter-gateway-mercurius.ts:123:12]
+ 122 |         // Fastify-specific and not applicable here.
+ 123 | ,->     return useServer(
+ 124 | |         {
+ 125 | |           schema,
+ 126 | |           context: async (ctx: { connectionParams?: Record<string, unknown> }) =>
+ 127 | |             contextFactory(ctx.connectionParams ?? {}),
+ 128 | |         },
+ 129 | |         wsServer,
+ 130 | |->     );
+     : `---- Hook is called here
+ 131 |       }
+     `----
+
+  ! eslint(no-unused-vars): Parameter 'options' is declared but never used. Unused parameters should start with a '_'.
+    ,-[packages/reactor-browser/src/relational/hooks/useRelationalQuery.ts:48:3]
+ 47 |   parameters?: TParams,
+ 48 |   options?: useRelationalQueryOptions,
+    :   ^^^|^^^
+    :      `-- 'options' is declared here
+ 49 | ) {
+    `----
+  help: Consider removing this parameter.
+
+  ! react-hooks(exhaustive-deps): React Hook useEffect has a missing dependency: 'executeLiveQuery'
+     ,-[packages/reactor-browser/src/relational/hooks/useRelationalQuery.ts:121:6]
+ 108 | 
+ 109 |     const liveQueryPromise = executeLiveQuery(sql, queryParameters);
+     :                              ^^^^^^^^|^^^^^^^
+     :                                      `-- useEffect uses `executeLiveQuery` here
+ 110 | 
+ 111 |     return () => {
+ 112 |       if (retryTimeoutRef.current) {
+ 113 |         clearTimeout(retryTimeoutRef.current);
+ 114 |       }
+ 115 |       void liveQueryPromise.then((live) => {
+ 116 |         if (live?.unsubscribe) {
+ 117 |           live.unsubscribe();
+ 118 |         }
+ 119 |       });
+ 120 |     };
+ 121 |   }, [relationalDb.db, ProcessorClass, driveId, queryCallback, parameters]);
+     :      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 122 | 
+     `----
+  help: Either include it or remove the dependency array.
+
+  x unicorn(no-useless-length-check): Found a useless array length check
+     ,-[packages/reactor-api/src/graphql/document-model-subgraph.ts:235:17]
+ 234 |             const fields = uniqueFields[memberType] ?? [];
+ 235 |             if (fields.length > 0 && fields.some((f) => f in obj)) {
+     :                 ^^^^^^^^^^^^^^^^^
+ 236 |               return `${documentName}_${memberType}`;
+     `----
+  help: The non-empty check is useless as `Array#some()` returns `false` for an empty array.
+
+  ! eslint(no-unused-vars): Variable 'doc' is declared but never used. Unused variables should start with a '_'.
+     ,-[packages/reactor-browser/src/actions/document.ts:579:11]
+ 578 | 
+ 579 |     const doc = await reactor.get(documentId);
+     :           ^|^
+     :            `-- 'doc' is declared here
+ 580 |     console.log("Document created, starting upload of operations");
+     `----
+  help: Consider removing this declaration.
+
+  ! eslint(no-unused-vars): Variable 'drive' is declared but never used. Unused variables should start with a '_'.
+     ,-[packages/reactor-browser/src/actions/document.ts:712:9]
+ 711 |   // Get the drive document and add folder action
+ 712 |   const drive = await reactorClient.get<DocumentDriveDocument>(driveId);
+     :         ^^|^^
+     :           `-- 'drive' is declared here
+ 713 |   const folderId = generateId();
+     `----
+  help: Consider removing this declaration.
+
+  ! eslint(no-unused-vars): Variable 'label' is declared but never used. Unused variables should start with a '_'.
+    ,-[packages/design-system/src/connect/components/tabs/tab-content.tsx:10:11]
+  9 | export function TabContent(props: TabContentProps) {
+ 10 |   const { label, children } = props;
+    :           ^^|^^
+    :             `-- 'label' is declared here
+ 11 | 
+    `----
+  help: Consider removing this declaration.
+
+  x typescript(no-unnecessary-parameter-property-assignment): Assignment of parameter property is unnecessary
+    ,-[packages/codegen/src/ts-morph-generator/core/TSMorphCodeGenerator.ts:40:5]
+ 39 |     };
+ 40 |     this.packageName = packageName;
+    :     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 41 |     this.forceUpdate = options.forceUpdate ?? false;
+    `----
+  help: Remove the unnecessary assignment
+
+  ! react-hooks(exhaustive-deps): React Hook useEffect has missing dependencies: 'driveId', and 'switchboardUrl'
+    ,-[packages/reactor-browser/src/hooks/init-graphql-reactor-client.ts:36:6]
+ 32 | 
+ 33 |     initGraphQLReactorClientWithDocumentCache(switchboardUrl, driveId)
+    :                                               ^^^^^^^^^^^^^^  ^^^^^^^
+ 34 |       .then(() => setHasInit(true))
+ 35 |       .catch(console.error);
+ 36 |   }, [hasInit]);
+    :      ^^^^^^^^^
+ 37 | 
+    `----
+  help: Either include it or remove the dependency array.
+
+  x react-hooks(rules-of-hooks): React Hook "useServer" cannot be called in a class component. React Hooks must be called in a React function component or a custom React Hook function.
+    ,-[packages/reactor-api/src/graphql/gateway/adapter-gateway-apollo.ts:44:14]
+ 43 | 
+ 44 | export class ApolloGatewayAdapter implements IGatewayAdapter<Context> {
+    :              ^^^^^^^^^^|^^^^^^^^^
+    :                        `-- Class component is defined here.
+ 45 |   readonly #logger: ILogger;
+    `----
+     ,-[packages/reactor-api/src/graphql/gateway/adapter-gateway-apollo.ts:153:12]
+ 152 |       ): WsDisposer {
+ 153 | ,->     return useServer(
+ 154 | |         {
+ 155 | |           schema,
+ 156 | |           context: async (ctx: {
+ 157 | |             connectionParams?: Record<string, unknown>;
+ 158 | |           }) => {
+ 159 | |             const connectionParams = (ctx.connectionParams ?? {}) as Record<
+ 160 | |               string,
+ 161 | |               unknown
+ 162 | |             >;
+ 163 | |             return contextFactory(connectionParams);
+ 164 | |           },
+ 165 | |         },
+ 166 | |         wsServer,
+ 167 | |->     );
+     : `---- Hook is called here
+ 168 |       }
+     `----
+
+  x unicorn(no-useless-fallback-in-spread): Empty fallbacks in spreads are unnecessary
+     ,-[packages/shared/document-model/state.ts:150:5]
+ 149 |     ...defaultGlobalState(),
+ 150 |     ...(state || {}),
+     :     ^^^^^^^^^^^^^^^^
+ 151 |   } as DocumentModelGlobalState;
+     `----
+  help: Spreading falsy values in object literals won't add any unexpected properties, so it's unnecessary to add an empty object as fallback.
+
+  x unicorn(no-useless-fallback-in-spread): Empty fallbacks in spreads are unnecessary
+     ,-[packages/shared/document-model/state.ts:159:5]
+ 158 |     ...defaultLocalState(),
+ 159 |     ...(state || {}),
+     :     ^^^^^^^^^^^^^^^^
+ 160 |   } as DocumentModelLocalState;
+     `----
+  help: Spreading falsy values in object literals won't add any unexpected properties, so it's unnecessary to add an empty object as fallback.
+
+  x promise(no-callback-in-promise): Avoid calling back inside of a promise
+     ,-[packages/reactor-api/src/graphql/gateway/adapter-http-express.ts:224:14]
+ 223 |       })
+ 224 |       .catch(next);
+     :              ^^^^
+ 225 |   }
+     `----
+  help: Use `then` and `catch` directly
+
+  ! eslint(no-unused-vars): Variable 'dataTypeID' is declared but never used. Unused variables should start with a '_'.
+    ,-[packages/analytics-engine/browser/src/PgLiteExecutor.ts:20:23]
+ 19 |         // todo: switch on dataTypeID
+ 20 |         const { name, dataTypeID } = fields[j];
+    :                       ^^^^^|^^^^
+    :                            `-- 'dataTypeID' is declared here
+ 21 |         value[name] = row[name];
+    `----
+  help: Consider removing this declaration.
+
+  x unicorn(no-new-array): Do not use `new Array(singleArgument)`.
+    ,-[packages/analytics-engine/browser/src/PgLiteExecutor.ts:14:20]
+ 13 |     const { fields, rows } = returnValue;
+ 14 |     const values = new Array(rows.length);
+    :                    ^^^^^^^^^^^^^^^^^^^^^^
+ 15 |     for (let i = 0, iLen = values.length; i < iLen; i++) {
+    `----
+  help: It's not clear whether the argument is meant to be the length of the array or the only element. If the argument is the array's length, consider using `Array.from({ length: n })`. If the argument is the only element, use `[element]`.
+
+  ! eslint(no-unused-vars): Variable 'storeOptions' is declared but never used. Unused variables should start with a '_'.
+    ,-[packages/reactor-browser/src/analytics/hooks/analytics-query.ts:64:9]
+ 63 |   const { mutationFn, ...mutationOptions } = options;
+ 64 |   const storeOptions = useAnalyticsStoreOptions();
+    :         ^^^^^^|^^^^^
+    :               `-- 'storeOptions' is declared here
+ 65 | 
+    `----
+  help: Consider removing this declaration.
+
+  ! react-hooks(exhaustive-deps): React Hook useEffect has a missing dependency: 'queryClient'
+     ,-[packages/reactor-browser/src/analytics/hooks/analytics-query.ts:142:6]
+ 122 |       invalidateTimeout = setTimeout(() => {
+ 123 |         queryClient
+     :         ^^^^^|^^^^^
+     :              `-- useEffect uses `queryClient` here
+ 124 |           .invalidateQueries({
+ 125 |             queryKey: ["analytics", "query", query],
+ 126 |           })
+ 127 |           .catch((e) => {
+ 128 |             console.error(e);
+ 129 |           });
+ 130 |       }, DEBOUNCE_INTERVAL);
+ 131 |     };
+ 132 | 
+ 133 |     sources.forEach((path) => {
+ 134 |       const unsub = store.subscribeToSource(path, debouncedInvalidate);
+ 135 |       subscriptions.push(unsub);
+ 136 |     });
+ 137 | 
+ 138 |     // Unsubscribes from store when component unmounts or dependencies change
+ 139 |     return () => {
+ 140 |       subscriptions.forEach((unsub) => unsub());
+ 141 |     };
+ 142 |   }, [query, store, sources]);
+     :      ^^^^^^^^^^^^^^^^^^^^^^^
+ 143 | 
+     `----
+  help: Either include it or remove the dependency array.
+
+  ! react-hooks(exhaustive-deps): React hook useEffect depends on `sources`, which changes every render
+     ,-[packages/reactor-browser/src/analytics/hooks/analytics-query.ts:142:21]
+ 103 |   const queryClient = useQueryClient();
+ 104 |   const sources = options?.sources ?? [];
+     :         ^^^|^^^
+     :            `-- `sources` is declared here
+ 105 | 
+ 106 |   const result = useAnalyticsQueryWrapper({
+ 107 |     queryKey: ["analytics", "query", query],
+ 108 |     queryFn: ({ engine }) => engine.execute(query),
+ 109 |     ...options,
+ 110 |   });
+ 111 | 
+ 112 |   useEffect(() => {
+ 113 |     if (!sources.length || !store) {
+ 114 |       return;
+ 115 |     }
+ 116 | 
+ 117 |     const subscriptions = new Array<() => void>();
+ 118 |     // Debounce invalidateQueries so it's not called too frequently
+ 119 |     let invalidateTimeout: ReturnType<typeof setTimeout> | null = null;
+ 120 |     const debouncedInvalidate = () => {
+ 121 |       if (invalidateTimeout) clearTimeout(invalidateTimeout);
+ 122 |       invalidateTimeout = setTimeout(() => {
+ 123 |         queryClient
+ 124 |           .invalidateQueries({
+ 125 |             queryKey: ["analytics", "query", query],
+ 126 |           })
+ 127 |           .catch((e) => {
+ 128 |             console.error(e);
+ 129 |           });
+ 130 |       }, DEBOUNCE_INTERVAL);
+ 131 |     };
+ 132 | 
+ 133 |     sources.forEach((path) => {
+ 134 |       const unsub = store.subscribeToSource(path, debouncedInvalidate);
+ 135 |       subscriptions.push(unsub);
+ 136 |     });
+ 137 | 
+ 138 |     // Unsubscribes from store when component unmounts or dependencies change
+ 139 |     return () => {
+ 140 |       subscriptions.forEach((unsub) => unsub());
+ 141 |     };
+ 142 |   }, [query, store, sources]);
+     :                     ^^^|^^^
+     :                        `-- it will always cause this hook to re-evaluate
+ 143 | 
+     `----
+  help: Try memoizing this variable with `useRef` or `useCallback`.
+
+  ! eslint(no-unused-vars): Parameter 'path' is declared but never used. Unused parameters should start with a '_'.
+     ,-[packages/shared/document-model/files.ts:233:3]
+ 232 | export function writeFileBrowser(
+ 233 |   path: string,
+     :   ^^|^
+     :     `-- 'path' is declared here
+ 234 |   name: string,
+     `----
+  help: Consider removing this parameter.
+
+  ! eslint(no-unused-vars): Parameter 'name' is declared but never used. Unused parameters should start with a '_'.
+     ,-[packages/shared/document-model/files.ts:234:3]
+ 233 |   path: string,
+ 234 |   name: string,
+     :   ^^|^
+     :     `-- 'name' is declared here
+ 235 |   stream: Uint8Array,
+     `----
+  help: Consider removing this parameter.
+
+  ! eslint(no-unused-vars): Parameter 'stream' is declared but never used. Unused parameters should start with a '_'.
+     ,-[packages/shared/document-model/files.ts:235:3]
+ 234 |   name: string,
+ 235 |   stream: Uint8Array,
+     :   ^^^|^^
+     :      `-- 'stream' is declared here
+ 236 | ): Promise<string> {
+     `----
+  help: Consider removing this parameter.
+
+  ! eslint(no-unused-vars): Parameter 'path' is declared but never used. Unused parameters should start with a '_'.
+     ,-[packages/shared/document-model/files.ts:240:33]
+ 239 | 
+ 240 | export function readFileBrowser(path: string) {
+     :                                 ^^|^
+     :                                   `-- 'path' is declared here
+ 241 |   throw FileSystemError;
+     `----
+  help: Consider removing this parameter.
+
+  ! eslint(no-unused-vars): Parameter 'url' is declared but never used. Unused parameters should start with a '_'.
+     ,-[packages/shared/document-model/files.ts:245:3]
+ 244 | export function fetchFileBrowser(
+ 245 |   url: string,
+     :   ^|^
+     :    `-- 'url' is declared here
+ 246 | ): Promise<{ data: Buffer; mimeType?: string }> {
+     `----
+  help: Consider removing this parameter.
+
+  ! eslint(no-unused-vars): Variable 'resultingState' is declared but never used. Unused variables should start with a '_'.
+      ,-[packages/shared/document-model/documents.ts:1197:17]
+ 1196 |       [scope]: operations.map((op) => {
+ 1197 |         const { resultingState, ...restProps } = op;
+      :                 ^^^^^^^|^^^^^^
+      :                        `-- 'resultingState' is declared here
+ 1198 | 
+      `----
+  help: Consider removing this declaration.
+
+  x unicorn(no-useless-spread): Using a spread operator here creates a new array unnecessarily.
+     ,-[packages/shared/document-model/documents.ts:508:9]
+ 507 |       [scope]: [
+ 508 |         ...scopeOps.map((operation, index) => {
+     :         ^^^
+ 509 |           return {
+     `----
+  help: `scopeOps.map` returns a new array. Spreading it into an array expression to create a new array is redundant.
+
+  ! eslint(no-unused-vars): Parameter 'state' is declared but never used. Unused parameters should start with a '_'.
+     ,-[packages/shared/document-model/reducers.ts:594:31]
+ 593 |   {
+ 594 |     addChangeLogItemOperation(state, action) {
+     :                               ^^|^^
+     :                                 `-- 'state' is declared here
+ 595 |       throw new Error(
+     `----
+  help: Consider removing this parameter.
+
+  ! eslint(no-unused-vars): Parameter 'action' is declared but never used. Unused parameters should start with a '_'.
+     ,-[packages/shared/document-model/reducers.ts:594:38]
+ 593 |   {
+ 594 |     addChangeLogItemOperation(state, action) {
+     :                                      ^^^|^^
+     :                                         `-- 'action' is declared here
+ 595 |       throw new Error(
+     `----
+  help: Consider removing this parameter.
+
+  ! eslint(no-unused-vars): Parameter 'state' is declared but never used. Unused parameters should start with a '_'.
+     ,-[packages/shared/document-model/reducers.ts:600:34]
+ 599 | 
+ 600 |     updateChangeLogItemOperation(state, action) {
+     :                                  ^^|^^
+     :                                    `-- 'state' is declared here
+ 601 |       throw new Error(
+     `----
+  help: Consider removing this parameter.
+
+  ! eslint(no-unused-vars): Parameter 'action' is declared but never used. Unused parameters should start with a '_'.
+     ,-[packages/shared/document-model/reducers.ts:600:41]
+ 599 | 
+ 600 |     updateChangeLogItemOperation(state, action) {
+     :                                         ^^^|^^
+     :                                            `-- 'action' is declared here
+ 601 |       throw new Error(
+     `----
+  help: Consider removing this parameter.
+
+  ! eslint(no-unused-vars): Parameter 'state' is declared but never used. Unused parameters should start with a '_'.
+     ,-[packages/shared/document-model/reducers.ts:606:34]
+ 605 | 
+ 606 |     deleteChangeLogItemOperation(state, action) {
+     :                                  ^^|^^
+     :                                    `-- 'state' is declared here
+ 607 |       throw new Error(
+     `----
+  help: Consider removing this parameter.
+
+  ! eslint(no-unused-vars): Parameter 'action' is declared but never used. Unused parameters should start with a '_'.
+     ,-[packages/shared/document-model/reducers.ts:606:41]
+ 605 | 
+ 606 |     deleteChangeLogItemOperation(state, action) {
+     :                                         ^^^|^^
+     :                                            `-- 'action' is declared here
+ 607 |       throw new Error(
+     `----
+  help: Consider removing this parameter.
+
+  ! eslint(no-unused-vars): Parameter 'state' is declared but never used. Unused parameters should start with a '_'.
+     ,-[packages/shared/document-model/reducers.ts:612:36]
+ 611 | 
+ 612 |     reorderChangeLogItemsOperation(state, action) {
+     :                                    ^^|^^
+     :                                      `-- 'state' is declared here
+ 613 |       throw new Error(
+     `----
+  help: Consider removing this parameter.
+
+  ! eslint(no-unused-vars): Parameter 'action' is declared but never used. Unused parameters should start with a '_'.
+     ,-[packages/shared/document-model/reducers.ts:612:43]
+ 611 | 
+ 612 |     reorderChangeLogItemsOperation(state, action) {
+     :                                           ^^^|^^
+     :                                              `-- 'action' is declared here
+ 613 |       throw new Error(
+     `----
+  help: Consider removing this parameter.
+
+  ! eslint(no-unused-vars): Parameter 'action' is declared but never used. Unused parameters should start with a '_'.
+     ,-[packages/shared/document-model/reducers.ts:618:39]
+ 617 | 
+ 618 |     releaseNewVersionOperation(state, action) {
+     :                                       ^^^|^^
+     :                                          `-- 'action' is declared here
+ 619 |       const latestSpec = state.specifications[state.specifications.length - 1];
+     `----
+  help: Consider removing this parameter.
+
+  x eslint(no-unsafe-optional-chaining): Unsafe usage of optional chaining
+     ,-[packages/reactor/test/sync/channels/gql-req-channel/unit.test.ts:747:12]
+ 746 |         const pushCall = mockFetch.mock.calls.find((call) =>
+ 747 |           (call[1]?.body as string).includes("pushSyncEnvelopes"),
+     :            ^^^^^^^^^^^^^
+ 748 |         );
+     `----
+  help: If this short-circuits with 'undefined' the evaluation will throw TypeError
+
+  x eslint(no-unsafe-optional-chaining): Unsafe usage of optional chaining
+      ,-[packages/reactor/test/sync/channels/gql-req-channel/unit.test.ts:1203:12]
+ 1202 |         const touchChannelCalls = mockFetch.mock.calls.filter((call) =>
+ 1203 |           (call[1]?.body as string).includes("touchChannel"),
+      :            ^^^^^^^^^^^^^
+ 1204 |         );
+      `----
+  help: If this short-circuits with 'undefined' the evaluation will throw TypeError
+
+  x eslint(no-unsafe-optional-chaining): Unsafe usage of optional chaining
+      ,-[packages/reactor/test/sync/channels/gql-req-channel/unit.test.ts:1276:12]
+ 1275 |         const touchChannelCalls = mockFetch.mock.calls.filter((call) =>
+ 1276 |           (call[1]?.body as string).includes("touchChannel"),
+      :            ^^^^^^^^^^^^^
+ 1277 |         );
+      `----
+  help: If this short-circuits with 'undefined' the evaluation will throw TypeError
+
+  x eslint(no-unsafe-optional-chaining): Unsafe usage of optional chaining
+      ,-[packages/reactor/test/sync/channels/gql-req-channel/unit.test.ts:1996:10]
+ 1995 |       const pushCallsBefore = mockFetch.mock.calls.filter((call) =>
+ 1996 |         (call[1]?.body as string).includes("pushSyncEnvelopes"),
+      :          ^^^^^^^^^^^^^
+ 1997 |       ).length;
+      `----
+  help: If this short-circuits with 'undefined' the evaluation will throw TypeError
+
+  x eslint(no-unsafe-optional-chaining): Unsafe usage of optional chaining
+      ,-[packages/reactor/test/sync/channels/gql-req-channel/unit.test.ts:2004:12]
+ 2003 |         const pushCallsAfter = mockFetch.mock.calls.filter((call) =>
+ 2004 |           (call[1]?.body as string).includes("pushSyncEnvelopes"),
+      :            ^^^^^^^^^^^^^
+ 2005 |         ).length;
+      `----
+  help: If this short-circuits with 'undefined' the evaluation will throw TypeError
+
+  x eslint(no-unsafe-optional-chaining): Unsafe usage of optional chaining
+      ,-[packages/reactor/test/sync/channels/gql-req-channel/unit.test.ts:2250:12]
+ 2249 |         const touchChannelCalls = mockFetch.mock.calls.filter((call) =>
+ 2250 |           (call[1]?.body as string).includes("touchChannel"),
+      :            ^^^^^^^^^^^^^
+ 2251 |         );
+      `----
+  help: If this short-circuits with 'undefined' the evaluation will throw TypeError
+
+  x promise(no-callback-in-promise): Avoid calling back inside of a promise
+    ,-[packages/builder-tools/connect-utils/vite-plugins/favicon.ts:17:35]
+ 16 |           .then((resolved) => {
+ 17 |             if (!resolved) return next();
+    :                                   ^^^^^^
+ 18 |             res.setHeader("Content-Type", "image/x-icon");
+    `----
+  help: Use `then` and `catch` directly
+
+  x promise(no-callback-in-promise): Avoid calling back inside of a promise
+    ,-[packages/builder-tools/connect-utils/vite-plugins/favicon.ts:21:24]
+ 20 |           })
+ 21 |           .catch(() => next());
+    :                        ^^^^^^
+ 22 |       });
+    `----
+  help: Use `then` and `catch` directly
+
+  ! react-hooks(exhaustive-deps): React Hook useCallback has a missing dependency: 'dispatch'
+    ,-[packages/vetra/editors/app-editor/components/AppEditorForm.tsx:44:5]
+ 41 |       console.log("onNameChange", name);
+ 42 |       dispatch(setAppName({ name }));
+    :       ^^^^|^^^
+    :           `-- useCallback uses `dispatch` here
+ 43 |     },
+ 44 |     [documentName],
+    :     ^^^^^^^^^^^^^^
+ 45 |   );
+    `----
+  help: Either include it or remove the dependency array.
+
+  x eslint(no-unsafe-optional-chaining): Unsafe usage of optional chaining
+     ,-[packages/analytics-engine/core/test/AnalyticsTimeSlicer.spec.ts:342:13]
+ 341 |     expect(period?.end).toEqual(DateTime.utc(2021, 2, 1));
+ 342 |     expect((period?.end as DateTime).zoneName).toBe("UTC");
+     :             ^^^^^^^^^^^
+ 343 |   });
+     `----
+  help: If this short-circuits with 'undefined' the evaluation will throw TypeError
+
+  x eslint(no-unsafe-optional-chaining): Unsafe usage of optional chaining
+     ,-[packages/analytics-engine/core/test/AnalyticsTimeSlicer.spec.ts:408:13]
+ 407 |     expect(period?.end).toEqual(DateTime.utc(2021, 9, 6));
+ 408 |     expect((period?.end as DateTime).zoneName).toBe("UTC");
+     :             ^^^^^^^^^^^
+ 409 |   });
+     `----
+  help: If this short-circuits with 'undefined' the evaluation will throw TypeError
+
+  x eslint(no-unsafe-optional-chaining): Unsafe usage of optional chaining
+     ,-[packages/analytics-engine/core/test/AnalyticsTimeSlicer.spec.ts:459:13]
+ 458 |     expect(period?.end).toEqual(DateTime.utc(2021, 1, 2));
+ 459 |     expect((period?.end as DateTime).zoneName).toBe("UTC");
+     :             ^^^^^^^^^^^
+ 460 |   });
+     `----
+  help: If this short-circuits with 'undefined' the evaluation will throw TypeError
+
+  x eslint(no-unsafe-optional-chaining): Unsafe usage of optional chaining
+     ,-[packages/analytics-engine/core/test/AnalyticsTimeSlicer.spec.ts:524:13]
+ 523 |     expect(period?.end).toEqual(DateTime.utc(2021, 1, 1, 6));
+ 524 |     expect((period?.end as DateTime).zoneName).toBe("UTC");
+     :             ^^^^^^^^^^^
+ 525 |   });
+     `----
+  help: If this short-circuits with 'undefined' the evaluation will throw TypeError
+
+  ! eslint(no-unused-vars): Identifier 'useCallback' is imported but never used.
+   ,-[packages/reactor-browser/src/hooks/connection-state.ts:2:10]
+ 1 | import type { ConnectionStateSnapshot } from "@powerhousedao/reactor";
+ 2 | import { useCallback, useEffect, useRef, useState } from "react";
+   :          ^^^^^|^^^^^
+   :               `-- 'useCallback' is imported here
+ 3 | import { useSync } from "./reactor.js";
+   `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Parameter 'index' is declared but never used. Unused parameters should start with a '_'.
+     ,-[packages/analytics-engine/core/src/AnalyticsDiscretizer.ts:172:53]
+ 171 |       const subdimension = remainingDimensions[0] as string;
+ 172 |       Object.keys(node).forEach((subdimensionValue, index, arr) => {
+     :                                                     ^^|^^
+     :                                                       `-- 'index' is declared here
+ 173 |         const newDimensionValues = { ...dimensionValues };
+     `----
+  help: Consider removing this parameter.
+
+  ! eslint(no-unused-vars): Parameter 'arr' is declared but never used. Unused parameters should start with a '_'.
+     ,-[packages/analytics-engine/core/src/AnalyticsDiscretizer.ts:172:60]
+ 171 |       const subdimension = remainingDimensions[0] as string;
+ 172 |       Object.keys(node).forEach((subdimensionValue, index, arr) => {
+     :                                                            ^|^
+     :                                                             `-- 'arr' is declared here
+ 173 |         const newDimensionValues = { ...dimensionValues };
+     `----
+  help: Consider removing this parameter.
+
+  ! eslint(no-unused-vars): Parameter 'dispatch' is declared but never used. Unused parameters should start with a '_'.
+    ,-[packages/shared/document-drive/src/reducers/drive.ts:11:40]
+ 10 | export const driveReducer: DocumentDriveDriveOperations = {
+ 11 |   setDriveNameOperation(state, action, dispatch) {
+    :                                        ^^^^|^^^
+    :                                            `-- 'dispatch' is declared here
+ 12 |     state.name = action.input.name;
+    `----
+  help: Consider removing this parameter.
+
+  ! eslint(no-unused-vars): Parameter 'dispatch' is declared but never used. Unused parameters should start with a '_'.
+    ,-[packages/shared/document-drive/src/reducers/drive.ts:14:40]
+ 13 |   },
+ 14 |   setDriveIconOperation(state, action, dispatch) {
+    :                                        ^^^^|^^^
+    :                                            `-- 'dispatch' is declared here
+ 15 |     state.icon = action.input.icon;
+    `----
+  help: Consider removing this parameter.
+
+  ! eslint(no-unused-vars): Parameter 'dispatch' is declared but never used. Unused parameters should start with a '_'.
+    ,-[packages/shared/document-drive/src/reducers/drive.ts:17:42]
+ 16 |   },
+ 17 |   setSharingTypeOperation(state, action, dispatch) {
+    :                                          ^^^^|^^^
+    :                                              `-- 'dispatch' is declared here
+ 18 |     state.sharingType = action.input.type;
+    `----
+  help: Consider removing this parameter.
+
+  ! eslint(no-unused-vars): Parameter 'dispatch' is declared but never used. Unused parameters should start with a '_'.
+    ,-[packages/shared/document-drive/src/reducers/drive.ts:20:47]
+ 19 |   },
+ 20 |   setAvailableOfflineOperation(state, action, dispatch) {
+    :                                               ^^^^|^^^
+    :                                                   `-- 'dispatch' is declared here
+ 21 |     state.availableOffline = action.input.availableOffline;
+    `----
+  help: Consider removing this parameter.
+
+  ! eslint(no-unused-vars): Parameter 'dispatch' is declared but never used. Unused parameters should start with a '_'.
+    ,-[packages/shared/document-drive/src/reducers/drive.ts:23:39]
+ 22 |   },
+ 23 |   addListenerOperation(state, action, dispatch) {
+    :                                       ^^^^|^^^
+    :                                           `-- 'dispatch' is declared here
+ 24 |     const { listener: input } = action.input;
+    `----
+  help: Consider removing this parameter.
+
+  ! eslint(no-unused-vars): Parameter 'dispatch' is declared but never used. Unused parameters should start with a '_'.
+    ,-[packages/shared/document-drive/src/reducers/drive.ts:50:42]
+ 49 |   },
+ 50 |   removeListenerOperation(state, action, dispatch) {
+    :                                          ^^^^|^^^
+    :                                              `-- 'dispatch' is declared here
+ 51 |     state.listeners = state.listeners.filter(
+    `----
+  help: Consider removing this parameter.
+
+  ! eslint(no-unused-vars): Parameter 'dispatch' is declared but never used. Unused parameters should start with a '_'.
+    ,-[packages/shared/document-drive/src/reducers/drive.ts:55:38]
+ 54 |   },
+ 55 |   addTriggerOperation(state, action, dispatch) {
+    :                                      ^^^^|^^^
+    :                                          `-- 'dispatch' is declared here
+ 56 |     const { trigger: input } = action.input;
+    `----
+  help: Consider removing this parameter.
+
+  ! eslint(no-unused-vars): Parameter 'dispatch' is declared but never used. Unused parameters should start with a '_'.
+    ,-[packages/shared/document-drive/src/reducers/drive.ts:68:41]
+ 67 |   },
+ 68 |   removeTriggerOperation(state, action, dispatch) {
+    :                                         ^^^^|^^^
+    :                                             `-- 'dispatch' is declared here
+ 69 |     state.triggers = state.triggers.filter(
+    `----
+  help: Consider removing this parameter.
+
+  ! eslint(no-unused-vars): Catch parameter 'e' is caught but never used.
+     ,-[packages/switchboard-gui/src/hooks/useAuth.ts:158:14]
+ 157 |       setSessions(data.sessions);
+ 158 |     } catch (e) {
+     :              |
+     :              `-- 'e' is declared here
+ 159 |       setAddress("");
+     `----
+  help: Consider handling this error.
+
+  ! react-hooks(exhaustive-deps): React Hook useEffect has missing dependencies: 'gqlToken', and 'setGqlToken'
+    ,-[packages/switchboard-gui/src/hooks/useAuth.ts:77:6]
+ 73 |     const localToken = localStorage.getItem("token");
+ 74 |     if (localToken && !gqlToken) {
+    :                        ^^^^^^^^
+ 75 |       setGqlToken(localToken);
+    :       ^^^^^^^^^^^
+ 76 |     }
+ 77 |   }, []);
+    :      ^^
+ 78 | 
+    `----
+  help: Either include it or remove the dependency array.
+
+  x unicorn(no-useless-spread): Using a spread operator here creates a new object unnecessarily.
+     ,-[packages/shared/document-drive/src/reducers/node.ts:118:13]
+ 117 |             ...node,
+ 118 |             ...{
+     :             ^^^
+ 119 |               name: handleTargetNameCollisions({
+     `----
+  help: Consider removing the spread operator.
+
+  x unicorn(no-useless-spread): Using a spread operator here creates a new object unnecessarily.
+     ,-[packages/shared/document-drive/src/reducers/node.ts:147:13]
+ 146 |             ...node,
+ 147 |             ...{
+     :             ^^^
+ 148 |               name: handleTargetNameCollisions({
+     `----
+  help: Consider removing the spread operator.
+
+  ! eslint(no-unused-vars): Parameter 'dataSources' is declared but never used. Unused parameters should start with a '_'.
+   ,-[packages/analytics-engine/graphql/src/AnalyticsResolvers.ts:5:36]
+ 4 |   Query: {
+ 5 |     analytics: (_: any, __: any, { dataSources }: any) => {
+   :                                    ^^^^^|^^^^^
+   :                                         `-- 'dataSources' is declared here
+ 6 |       return {};
+   `----
+  help: Consider removing this parameter.
+
+  ! eslint(no-unused-vars): Parameter 'parent' is declared but never used. Unused parameters should start with a '_'.
+    ,-[packages/analytics-engine/graphql/src/AnalyticsResolvers.ts:27:21]
+ 26 |     },
+ 27 |     metrics: async (parent: any, { filter }: any, { dataSources }: any) => {
+    :                     ^^^|^^
+    :                        `-- 'parent' is declared here
+ 28 |       return [
+    `----
+  help: Consider removing this parameter.
+
+  ! eslint(no-unused-vars): Parameter 'filter' is declared but never used. Unused parameters should start with a '_'.
+    ,-[packages/analytics-engine/graphql/src/AnalyticsResolvers.ts:27:36]
+ 26 |     },
+ 27 |     metrics: async (parent: any, { filter }: any, { dataSources }: any) => {
+    :                                    ^^^|^^
+    :                                       `-- 'filter' is declared here
+ 28 |       return [
+    `----
+  help: Consider removing this parameter.
+
+  ! eslint(no-unused-vars): Parameter 'dataSources' is declared but never used. Unused parameters should start with a '_'.
+    ,-[packages/analytics-engine/graphql/src/AnalyticsResolvers.ts:27:53]
+ 26 |     },
+ 27 |     metrics: async (parent: any, { filter }: any, { dataSources }: any) => {
+    :                                                     ^^^^^|^^^^^
+    :                                                          `-- 'dataSources' is declared here
+ 28 |       return [
+    `----
+  help: Consider removing this parameter.
+
+  ! eslint(no-unused-vars): Parameter 'filter' is declared but never used. Unused parameters should start with a '_'.
+    ,-[packages/analytics-engine/graphql/src/AnalyticsResolvers.ts:45:34]
+ 44 |     },
+ 45 |     dimensions: async (_: any, { filter }: any, { dataSources }: any) => {
+    :                                  ^^^|^^
+    :                                     `-- 'filter' is declared here
+ 46 |       const queryEngine: AnalyticsModel = dataSources.db.Analytics;
+    `----
+  help: Consider removing this parameter.
+
+  ! eslint(no-unused-vars): Parameter 'filter' is declared but never used. Unused parameters should start with a '_'.
+    ,-[packages/analytics-engine/graphql/src/AnalyticsResolvers.ts:49:34]
+ 48 |     },
+ 49 |     currencies: async (_: any, { filter }: any, { dataSources }: any) => {
+    :                                  ^^^|^^
+    :                                     `-- 'filter' is declared here
+ 50 |       return ["DAI", "FTE", "GUSD", "MKR", "USDC", "USDP", "USDT"];
+    `----
+  help: Consider removing this parameter.
+
+  ! eslint(no-unused-vars): Parameter 'dataSources' is declared but never used. Unused parameters should start with a '_'.
+    ,-[packages/analytics-engine/graphql/src/AnalyticsResolvers.ts:49:51]
+ 48 |     },
+ 49 |     currencies: async (_: any, { filter }: any, { dataSources }: any) => {
+    :                                                   ^^^^^|^^^^^
+    :                                                        `-- 'dataSources' is declared here
+ 50 |       return ["DAI", "FTE", "GUSD", "MKR", "USDC", "USDP", "USDT"];
+    `----
+  help: Consider removing this parameter.
+
+  x promise(no-callback-in-promise): Avoid calling back inside of a promise
+     ,-[packages/reactor-browser/src/hooks/use-drive-system-info.ts:111:9]
+ 110 |         cache.set(systemUrl, next);
+ 111 |         setState(next);
+     :         ^^^^^^^^^^^^^^
+ 112 |       })
+     `----
+  help: Use `then` and `catch` directly
+
+  x promise(no-callback-in-promise): Avoid calling back inside of a promise
+     ,-[packages/reactor-browser/src/hooks/use-drive-system-info.ts:119:9]
+ 118 |         cache.set(systemUrl, next);
+ 119 |         setState(next);
+     :         ^^^^^^^^^^^^^^
+ 120 |       });
+     `----
+  help: Use `then` and `catch` directly
+
+  ! react-hooks(exhaustive-deps): React hook useMemo depends on `drives`, which changes every render
+    ,-[apps/connect/src/components/modal/modals/settings/about.tsx:94:6]
+ 83 | function ConnectedDrives() {
+ 84 |   const drives = useDrives() ?? [];
+    :         ^^^|^^
+    :            `-- `drives` is declared here
+ 85 |   const remotes = useSyncList();
+ 86 | 
+ 87 |   const remoteDrives = useMemo(
+ 88 |     () =>
+ 89 |       drives.filter((d) =>
+ 90 |         remotes.some(
+ 91 |           (r) => r.collectionId === driveCollectionId("main", d.header.id),
+ 92 |         ),
+ 93 |       ),
+ 94 |     [drives, remotes],
+    :      ^^^|^^
+    :         `-- it will always cause this hook to re-evaluate
+ 95 |   );
+    `----
+  help: Try memoizing this variable with `useRef` or `useCallback`.
+
+  ! eslint(no-unused-vars): Parameter 'i' is declared but never used. Unused parameters should start with a '_'.
+    ,-[packages/design-system/src/connect/components/tabs/tabs.tsx:20:49]
+ 19 |         <List className="flex w-full gap-x-2 rounded-xl bg-slate-50 p-1 text-sm font-semibold text-gray-600 outline-none">
+ 20 |           {React.Children.map(children, (child, i) => {
+    :                                                 |
+    :                                                 `-- 'i' is declared here
+ 21 |             if (!React.isValidElement(child)) return;
+    `----
+  help: Consider removing this parameter.
+
+  ! eslint(no-unused-vars): Parameter 'resultCurrency' is declared but never used. Unused parameters should start with a '_'.
+     ,-[packages/analytics-engine/core/src/AnalyticsQueryEngine.ts:161:5]
+ 160 |     operator: CompoundOperator,
+ 161 |     resultCurrency?: AnalyticsPath,
+     :     ^^^^^^^|^^^^^^
+     :            `-- 'resultCurrency' is declared here
+ 162 |   ) {
+     `----
+  help: Consider removing this parameter.
+
+  ! eslint(no-unused-vars): Variable 'onOpenSwitchboardLink' is declared but never used. Unused variables should start with a '_'.
+    ,-[apps/connect/src/components/document-editor-container.tsx:14:9]
+ 13 |   // TODO: unused
+ 14 |   const onOpenSwitchboardLink = useMemo(() => {
+    :         ^^^^^^^^^^|^^^^^^^^^^
+    :                   `-- 'onOpenSwitchboardLink' is declared here
+ 15 |     return async () => {
+    `----
+  help: Consider removing this declaration.
+
+  ! eslint(no-unused-vars): Variable 'onClose' is declared but never used. Unused variables should start with a '_'.
+    ,-[apps/connect/src/components/document-editor-container.tsx:20:9]
+ 19 | 
+ 20 |   const onClose = useCallback(() => {
+    :         ^^^|^^^
+    :            `-- 'onClose' is declared here
+ 21 |     setSelectedNode(parentFolder);
+    `----
+  help: Consider removing this declaration.
+
+  ! react-hooks(exhaustive-deps): React Hook useCallback has an unnecessary dependency: setSelectedNode.
+    ,-[apps/connect/src/components/document-editor-container.tsx:22:21]
+ 21 |     setSelectedNode(parentFolder);
+ 22 |   }, [parentFolder, setSelectedNode]);
+    :                     ^^^^^^^^^^^^^^^
+ 23 | 
+    `----
+  help: Consider removing it from the dependency array. Outer scope values aren't valid dependencies because mutating them doesn't re-render the component.
+
+  ! react-hooks(exhaustive-deps): React Hook useMemo has unnecessary dependency: onRefresh
+    ,-[apps/connect/src/components/modal/modals/SettingsModal.tsx:45:5]
+ 44 |     ],
+ 45 |     [onRefresh],
+    :     ^^^^^^^^^^^
+ 46 |   );
+    `----
+  help: Either include it or remove the dependency array.
+
+  ! react-hooks(exhaustive-deps): React hook useMemo depends on `onRefresh`, which changes every render
+    ,-[apps/connect/src/components/modal/modals/SettingsModal.tsx:14:12]
+ 13 |   const open = phModal?.type === "settings";
+ 14 |   function onRefresh() {
+    :            ^^^^|^^^^
+    :                `-- `onRefresh` is declared here
+ 15 |     window.location.reload();
+    `----
+    ,-[apps/connect/src/components/modal/modals/SettingsModal.tsx:45:6]
+ 44 |     ],
+ 45 |     [onRefresh],
+    :      ^^^^|^^^^
+    :          `-- it will always cause this hook to re-evaluate
+ 46 |   );
+    `----
+  help: Try memoizing this variable with `useRef` or `useCallback`.
+
+  ! eslint(no-unused-vars): Variable 'hasChanges' is declared but never used. Unused variables should start with a '_'.
+    ,-[packages/design-system/scripts/create-icon-components.ts:21:7]
+ 20 | // Check if there are changes in the icons directory
+ 21 | const hasChanges = () => {
+    :       ^^^^^|^^^^
+    :            `-- 'hasChanges' is declared here
+ 22 |   try {
+    `----
+  help: Consider removing this declaration.
+
+  ! react-hooks(exhaustive-deps): React Hook useEffect has a missing dependency: 'auth'
+    ,-[packages/switchboard-gui/src/components/header/header.tsx:24:6]
+ 16 |   useEffect(() => {
+ 17 |     auth.checkAuthValidity();
+    :     ^^|^
+    :       `-- useEffect uses `auth` here
+ 18 |     auth
+ 19 |       .getDrives()
+ 20 |       .then((drives) => {
+ 21 |         setDrives(drives);
+ 22 |       })
+ 23 |       .catch(console.error);
+ 24 |   }, [gqlToken, address]);
+    :      ^^^^^^^^^^^^^^^^^^^
+ 25 | 
+    `----
+  help: Either include it or remove the dependency array.
+
+  ! eslint(no-unused-vars): Parameter 'system' is declared but never used. Unused parameters should start with a '_'.
+    ,-[packages/analytics-engine/core/src/AnalyticsProfiler.ts:81:8]
+ 80 | 
+ 81 |   push(system: string) {
+    :        ^^^|^^
+    :           `-- 'system' is declared here
+ 82 |     //
+    `----
+  help: Consider removing this parameter.
+
+  x unicorn(no-empty-file): Empty files are not allowed.
+   ,-[packages/reactor-browser/src/analytics/store/browser.ts:1:1]
+   `----
+  help: Delete this file or add some code to it.
+
+  x react-hooks(rules-of-hooks): React Hook "useDocumentOfType" is called conditionally. React Hooks must be called in the exact same order in every component render.
+    ,-[packages/reactor-browser/src/hooks/selected-document.ts:60:10]
+ 59 |   }
+ 60 |   return useDocumentOfType<TDocument, TAction>(documentId, documentType);
+    :          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^|^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    :                                         `-- This Hook call is not reachable on every render path.
+ 61 | }
+    `----
+  help: Move the Hook call before the condition, or call it unconditionally and branch inside the Hook/effect instead.
+
+  x unicorn(no-empty-file): Empty files are not allowed.
+   ,-[packages/analytics-engine/browser/test/vitest.setup.ts:1:1]
+   `----
+  help: Delete this file or add some code to it.
+
+  x unicorn(no-useless-fallback-in-spread): Empty fallbacks in spreads are unnecessary
+     ,-[packages/design-system/src/ui/components/form/form.tsx:162:25]
+ 161 |       if (resetOnSuccessfulSubmit && methods.formState.isSubmitSuccessful) {
+ 162 |         methods.reset({ ...(defaultValues ?? {}) });
+     :                         ^^^^^^^^^^^^^^^^^^^^^^^^
+ 163 |       }
+     `----
+  help: Spreading falsy values in object literals won't add any unexpected properties, so it's unnecessary to add an empty object as fallback.
+
+  x unicorn(no-empty-file): Empty files are not allowed.
+   ,-[packages/reactor-browser/src/analytics/store/memory.ts:1:1]
+   `----
+  help: Delete this file or add some code to it.
+
+  x unicorn(no-empty-file): Empty files are not allowed.
+   ,-[packages/analytics-engine/graphql/test/vitest.setup.ts:1:1]
+   `----
+  help: Delete this file or add some code to it.
+
+  ! eslint(no-unused-vars): Parameter 'driveHeader' is declared but never used. Unused parameters should start with a '_'.
+    ,-[packages/vetra/processors/vetra-read-model/factory.ts:14:17]
+ 13 | ) => {
+ 14 |   return async (driveHeader: PHDocumentHeader): Promise<ProcessorRecord[]> => {
+    :                 ^^^^^|^^^^^
+    :                      `-- 'driveHeader' is declared here
+ 15 |     // Create namespace (same as legacy - all vetra packages share one namespace)
+    `----
+  help: Consider removing this parameter.
+
+  ! eslint(no-unused-vars): Catch parameter 'e' is caught but never used.
+    ,-[packages/shared/clis/file-system/directory-exists.ts:10:12]
+  9 |     if (stats.isDirectory()) return true;
+ 10 |   } catch (e) {
+    :            |
+    :            `-- 'e' is declared here
+ 11 |     return false;
+    `----
+  help: Consider handling this error.
+
+  x unicorn(no-empty-file): Empty files are not allowed.
+   ,-[packages/analytics-engine/core/test/vitest.setup.ts:1:1]
+   `----
+  help: Delete this file or add some code to it.
+
+  ! eslint(no-unused-vars): Identifier 'clsx' is imported but never used.
+   ,-[apps/academy/src/components/HomepageFeatures/index.tsx:1:8]
+ 1 | import clsx from "clsx";
+   :        ^^|^
+   :          `-- 'clsx' is imported here
+ 2 | import Heading from "@theme/Heading";
+   `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Function 'Feature' is declared but never used.
+    ,-[apps/academy/src/components/HomepageFeatures/index.tsx:48:10]
+ 47 | 
+ 48 | function Feature({ title, imageSrc, description, docPath }: FeatureItem) {
+    :          ^^^|^^^
+    :             `-- 'Feature' is declared here
+ 49 |   return (
+    `----
+  help: Consider removing this declaration.
+
+  ! eslint(no-unused-vars): Parameter 'driveHeader' is declared but never used. Unused parameters should start with a '_'.
+    ,-[packages/shared/processors/drive-analytics/index.ts:9:4]
+  8 |   (module: { analyticsStore: IAnalyticsStore }) =>
+  9 |   (driveHeader: PHDocumentHeader): ProcessorRecord[] => {
+    :    ^^^^^|^^^^^
+    :         `-- 'driveHeader' is declared here
+ 10 |     return [
+    `----
+  help: Consider removing this parameter.
+
+  ! eslint(no-unused-vars): Variable 'logger' is declared but never used. Unused variables should start with a '_'.
+    ,-[packages/reactor-api/src/packages/util.ts:19:7]
+ 18 | 
+ 19 | const logger = childLogger(["reactor-api", "packages/util"]);
+    :       ^^^|^^
+    :          `-- 'logger' is declared here
+ 20 | 
+    `----
+  help: Consider removing this declaration.
+
+  ! eslint(no-unused-vars): Catch parameter 'e' is caught but never used.
+    ,-[clis/ph-cli/src/commands/list.ts:43:14]
+ 42 |       });
+ 43 |     } catch (e) {
+    :              |
+    :              `-- 'e' is declared here
+ 44 |       console.log("No packages found in the project");
+    `----
+  help: Consider handling this error.
+
+  x unicorn(no-useless-spread): Using a spread operator here creates a new array unnecessarily.
+     ,-[packages/reactor/test/sync/sync-manager/unit.test.ts:261:30]
+ 260 |         if (subs) {
+ 261 |           for (const sub of [...subs]) {
+     :                              ^^^
+ 262 |             await sub(type, data);
+     `----
+  help: `for…of` can iterate over iterable, it's unnecessary to convert to an array.
+
+  x unicorn(no-empty-file): Empty files are not allowed.
+   ,-[packages/analytics-engine/pg/test/vitest.setup.ts:1:1]
+   `----
+  help: Delete this file or add some code to it.
+
+  ! eslint(no-unused-vars): Variable 'logger' is declared but never used. Unused variables should start with a '_'.
+    ,-[packages/reactor-browser/src/analytics/context.tsx:17:7]
+ 16 | 
+ 17 | const logger = childLogger(["reactor-browser", "analytics", "provider"]);
+    :       ^^^|^^
+    :          `-- 'logger' is declared here
+ 18 | 
+    `----
+  help: Consider removing this declaration.
+
+  ! eslint(no-unused-vars): Parameter 'props' is declared but never used. Unused parameters should start with a '_'.
+     ,-[packages/reactor-browser/src/analytics/context.tsx:107:6]
+ 106 |   queryClient = defaultQueryClient,
+ 107 |   ...props
+     :      ^^|^^
+     :        `-- 'props' is declared here
+ 108 | }: AnalyticsProviderProps) {
+     `----
+  help: Consider removing this parameter.
+
+  ! react-hooks(exhaustive-deps): React Hook useEffect has a missing dependency: 'mutate'
+     ,-[packages/reactor-browser/src/analytics/context.tsx:99:6]
+  97 |   useEffect(() => {
+  98 |     mutate();
+     :     ^^^|^^
+     :        `-- useEffect uses `mutate` here
+  99 |   }, []);
+     :      ^^
+ 100 | 
+     `----
+  help: Either include it or remove the dependency array.
+
+  ! eslint(no-unused-vars): Type alias 'AggregateResults' is declared but never used.
+    ,-[packages/analytics-engine/compat/src/query-list.ts:46:6]
+ 45 | type AggregateEntry = { [i: string]: number };
+ 46 | type AggregateResults = { src: AggregateEntry; target: AggregateEntry };
+    :      ^^^^^^^^|^^^^^^^
+    :              `-- 'AggregateResults' is declared here
+ 47 | 
+    `----
+  help: Consider removing this declaration.
+
+  ! eslint(no-unused-vars): Function 'aggregate' is declared but never used.
+    ,-[packages/analytics-engine/compat/src/query-list.ts:48:10]
+ 47 | 
+ 48 | function aggregate(results: ExecutionResults[]) {
+    :          ^^^^|^^^^
+    :              `-- 'aggregate' is declared here
+ 49 |   const totals: AggregateEntry = {
+    `----
+  help: Consider removing this declaration.
+
+  ! react-hooks(exhaustive-deps): React Hook useCallback has an unnecessary dependency: showCreateDocumentModal.
+    ,-[packages/vetra/editors/vetra-drive-app/editor.tsx:65:6]
+ 64 |     },
+ 65 |     [showCreateDocumentModal, documentModels?.length],
+    :      ^^^^^^^^^^^^^^^^^^^^^^^
+ 66 |   );
+    `----
+  help: Consider removing it from the dependency array. Outer scope values aren't valid dependencies because mutating them doesn't re-render the component.
+
+  ! react-hooks(exhaustive-deps): React Hook useCallback has a missing dependency: 'documentModels'
+    ,-[packages/vetra/editors/vetra-drive-app/editor.tsx:65:5]
+ 56 |     (documentType: string) => {
+ 57 |       const documentModel = documentModels?.find(
+    :                             ^^^^^^^|^^^^^^
+    :                                    `-- useCallback uses `documentModels` here
+ 58 |         (model) => model.documentModel.global.id === documentType,
+ 59 |       );
+ 60 | 
+ 61 |       if (documentModel) {
+ 62 |         showCreateDocumentModal(documentModel.documentModel.global.id);
+ 63 |       }
+ 64 |     },
+ 65 |     [showCreateDocumentModal, documentModels?.length],
+    :     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 66 |   );
+    `----
+  help: Either include it or remove the dependency array.
+
+  ! react-hooks(exhaustive-deps): React Hook useCallback has unnecessary dependency: documentModels.length
+    ,-[packages/vetra/editors/vetra-drive-app/editor.tsx:65:5]
+ 64 |     },
+ 65 |     [showCreateDocumentModal, documentModels?.length],
+    :     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 66 |   );
+    `----
+  help: Either include it or remove the dependency array.
+
+  ! eslint(no-unused-vars): Variable 'callback' is declared but never used. Unused variables should start with a '_'.
+    ,-[packages/reactor-mcp/src/server.ts:73:11]
+ 72 | 
+ 73 |   const { callback, ...toolSchema } = reactorProvider.tools.getDocumentModels;
+    :           ^^^^|^^^
+    :               `-- 'callback' is declared here
+ 74 |   // server.registerTool("getDocumentModels", toolSchema, callback);
+    `----
+  help: Consider removing this declaration.
+
+  ! eslint(no-unused-vars): Variable 'toolSchema' is declared but never used. Unused variables should start with a '_'.
+    ,-[packages/reactor-mcp/src/server.ts:73:24]
+ 72 | 
+ 73 |   const { callback, ...toolSchema } = reactorProvider.tools.getDocumentModels;
+    :                        ^^^^^|^^^^
+    :                             `-- 'toolSchema' is declared here
+ 74 |   // server.registerTool("getDocumentModels", toolSchema, callback);
+    `----
+  help: Consider removing this declaration.
+
+  x unicorn(no-empty-file): Empty files are not allowed.
+   ,-[packages/reactor-browser/src/context/index.ts:1:1]
+   `----
+  help: Delete this file or add some code to it.
+
+  x unicorn(no-empty-file): Empty files are not allowed.
+   ,-[packages/reactor-api/src/graphql/system/types.ts:1:1]
+   `----
+  help: Delete this file or add some code to it.
+
+  ! eslint(no-unused-vars): Catch parameter 'e' is caught but never used.
+    ,-[packages/shared/clis/file-system/file-exists.ts:10:12]
+  9 |     if (stats.isFile()) return true;
+ 10 |   } catch (e) {
+    :            |
+    :            `-- 'e' is declared here
+ 11 |     return false;
+    `----
+  help: Consider handling this error.
+
+  x unicorn(no-empty-file): Empty files are not allowed.
+   ,-[apps/connect/src/context/processor-manager.tsx:1:1]
+   `----
+  help: Delete this file or add some code to it.
+
+  ! react-hooks(exhaustive-deps): React Hook useCallback has a missing dependency: 'dispatch'
+    ,-[packages/vetra/editors/vetra-package/editor.tsx:35:5]
+ 32 | 
+ 33 |       dispatch(setPackageName({ name }));
+    :       ^^^^|^^^
+    :           `-- useCallback uses `dispatch` here
+ 34 |     },
+ 35 |     [document.state.global.name],
+    :     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 36 |   );
+    `----
+  help: Either include it or remove the dependency array.
+
+  ! react-hooks(exhaustive-deps): React Hook useCallback has a missing dependency: 'dispatch'
+    ,-[packages/vetra/editors/vetra-package/editor.tsx:45:5]
+ 42 | 
+ 43 |       dispatch(setPackageDescription({ description }));
+    :       ^^^^|^^^
+    :           `-- useCallback uses `dispatch` here
+ 44 |     },
+ 45 |     [document.state.global.description],
+    :     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 46 |   );
+    `----
+  help: Either include it or remove the dependency array.
+
+  ! react-hooks(exhaustive-deps): React Hook useCallback has a missing dependency: 'dispatch'
+    ,-[packages/vetra/editors/vetra-package/editor.tsx:55:5]
+ 52 | 
+ 53 |       dispatch(setPackageCategory({ category }));
+    :       ^^^^|^^^
+    :           `-- useCallback uses `dispatch` here
+ 54 |     },
+ 55 |     [document.state.global.category],
+    :     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 56 |   );
+    `----
+  help: Either include it or remove the dependency array.
+
+  ! react-hooks(exhaustive-deps): React Hook useCallback has a missing dependency: 'dispatch'
+    ,-[packages/vetra/editors/vetra-package/editor.tsx:65:5]
+ 62 | 
+ 63 |       dispatch(setPackageAuthorName({ name }));
+    :       ^^^^|^^^
+    :           `-- useCallback uses `dispatch` here
+ 64 |     },
+ 65 |     [document.state.global.author.name],
+    :     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 66 |   );
+    `----
+  help: Either include it or remove the dependency array.
+
+  ! react-hooks(exhaustive-deps): React Hook useCallback has a missing dependency: 'dispatch'
+    ,-[packages/vetra/editors/vetra-package/editor.tsx:75:5]
+ 72 | 
+ 73 |       dispatch(setPackageAuthorWebsite({ website }));
+    :       ^^^^|^^^
+    :           `-- useCallback uses `dispatch` here
+ 74 |     },
+ 75 |     [document.state.global.author.website],
+    :     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 76 |   );
+    `----
+  help: Either include it or remove the dependency array.
+
+  ! react-hooks(exhaustive-deps): React Hook useCallback has a missing dependency: 'dispatch'
+    ,-[packages/vetra/editors/vetra-package/editor.tsx:85:5]
+ 82 | 
+ 83 |       dispatch(setPackageGithubUrl({ url }));
+    :       ^^^^|^^^
+    :           `-- useCallback uses `dispatch` here
+ 84 |     },
+ 85 |     [document.state.global.githubUrl],
+    :     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 86 |   );
+    `----
+  help: Either include it or remove the dependency array.
+
+  ! react-hooks(exhaustive-deps): React Hook useCallback has a missing dependency: 'dispatch'
+    ,-[packages/vetra/editors/vetra-package/editor.tsx:95:5]
+ 92 | 
+ 93 |       dispatch(setPackageNpmUrl({ url }));
+    :       ^^^^|^^^
+    :           `-- useCallback uses `dispatch` here
+ 94 |     },
+ 95 |     [document.state.global.npmUrl],
+    :     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 96 |   );
+    `----
+  help: Either include it or remove the dependency array.
+
+  ! react-hooks(exhaustive-deps): React Hook useCallback has a missing dependency: 'dispatch'
+     ,-[packages/vetra/editors/vetra-package/editor.tsx:100:6]
+  98 |   const onAddKeyword = useCallback((keyword: { id: string; label: string }) => {
+  99 |     dispatch(addPackageKeyword(keyword));
+     :     ^^^^|^^^
+     :         `-- useCallback uses `dispatch` here
+ 100 |   }, []);
+     :      ^^
+ 101 | 
+     `----
+  help: Either include it or remove the dependency array.
+
+  ! react-hooks(exhaustive-deps): React Hook useCallback has a missing dependency: 'dispatch'
+     ,-[packages/vetra/editors/vetra-package/editor.tsx:104:6]
+ 102 |   const onRemoveKeyword = useCallback((id: string) => {
+ 103 |     dispatch(removePackageKeyword({ id }));
+     :     ^^^^|^^^
+     :         `-- useCallback uses `dispatch` here
+ 104 |   }, []);
+     :      ^^
+ 105 | 
+     `----
+  help: Either include it or remove the dependency array.
+
+  ! eslint(no-unused-vars): Catch parameter 'error' is caught but never used.
+     ,-[packages/builder-tools/connect-utils/helpers.ts:170:12]
+ 169 |     return JSON.parse(fileContents) as PowerhouseConfig;
+ 170 |   } catch (error) {
+     :            ^^|^^
+     :              `-- 'error' is declared here
+ 171 |     console.error(`Error reading file: ${filePath}`);
+     `----
+  help: Consider handling this error.
+
+  x react-hooks(rules-of-hooks): React Hook "use" cannot be called in an async function.
+    ,-[test/vetra-e2e/tests/helpers/fixtures.ts:13:5]
+ 12 |   autoTestFixture: [
+ 13 |     async ({ context }, use) => {
+    :     ^^|^^
+    :       `-- This function is async.
+ 14 |       const isChromium = test.info().project.name === "chromium";
+    `----
+    ,-[test/vetra-e2e/tests/helpers/fixtures.ts:33:13]
+ 32 | 
+ 33 |       await use("autoTestFixture");
+    :             ^^^^^^^^^^^|^^^^^^^^^^
+    :                        `-- Hook is called here
+ 34 | 
+    `----
+
+  x unicorn(no-empty-file): Empty files are not allowed.
+   ,-[test/versioned-documents/subgraphs/index.ts:1:1]
+ 1 | ,-> /**
+ 2 | |    * WARNING: DO NOT EDIT
+ 3 | |    * This file is auto-generated and updated by codegen
+ 4 | `->  */
+   `----
+  help: Delete this file or add some code to it.
+
+  x unicorn(no-new-array): Do not use `new Array(singleArgument)`.
+    ,-[apps/connect/src/components/dots-loader.tsx:15:17]
+ 14 | 
+ 15 |   return <span>{new Array(dots).fill(".").join("")}</span>;
+    :                 ^^^^^^^^^^^^^^^
+ 16 | };
+    `----
+  help: It's not clear whether the argument is meant to be the length of the array or the only element. If the argument is the array's length, consider using `Array.from({ length: n })`. If the argument is the only element, use `[element]`.
+
+  ! react-hooks(exhaustive-deps): React Hook useEffect has a missing dependency: 'delay'
+    ,-[apps/connect/src/components/app-skeleton.tsx:57:6]
+ 53 |       setShowLoading(true);
+ 54 |     }, delay);
+    :        ^^|^^
+    :          `-- useEffect uses `delay` here
+ 55 | 
+ 56 |     return () => clearTimeout(id);
+ 57 |   }, []);
+    :      ^^
+ 58 | 
+    `----
+  help: Either include it or remove the dependency array.
+
+  x react(no-children-prop): Avoid passing children using a prop.
+    ,-[apps/connect/src/components/app-skeleton.tsx:96:9]
+ 95 |         }
+ 96 |         children={props.children ?? null}
+    :         ^^^^^^^^
+ 97 |       />
+    `----
+  help: The canonical way to pass children in React is to use JSX elements
+
+  ! eslint(no-unused-vars): Variable 'connectBasePath' is declared but never used. Unused variables should start with a '_'.
+    ,-[clis/ph-cli/src/services/connect-preview.ts:10:5]
+  9 |     outDir,
+ 10 |     connectBasePath,
+    :     ^^^^^^^|^^^^^^^
+    :            `-- 'connectBasePath' is declared here
+ 11 |     port,
+    `----
+  help: Consider removing this declaration.
+
+  x react(no-children-prop): Avoid passing children using a prop.
+    ,-[apps/connect/src/components/app-loader.tsx:18:24]
+ 17 |         fallbackRender={(props) => (
+ 18 |           <AppSkeleton children={<DetailedFallback {...props} />} />
+    :                        ^^^^^^^^
+ 19 |         )}
+    `----
+  help: The canonical way to pass children in React is to use JSX elements
+
+  x unicorn(no-useless-fallback-in-spread): Empty fallbacks in spreads are unnecessary
+    ,-[apps/switchboard/src/install-packages.mts:27:5]
+ 26 |   const installedDependencies: Record<string, string> = {
+ 27 |     ...(packageJson.dependencies || {}),
+    :     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 28 |     ...(packageJson.devDependencies || {}),
+    `----
+  help: Spreading falsy values in object literals won't add any unexpected properties, so it's unnecessary to add an empty object as fallback.
+
+  x unicorn(no-useless-fallback-in-spread): Empty fallbacks in spreads are unnecessary
+    ,-[apps/switchboard/src/install-packages.mts:28:5]
+ 27 |     ...(packageJson.dependencies || {}),
+ 28 |     ...(packageJson.devDependencies || {}),
+    :     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 29 |   };
+    `----
+  help: Spreading falsy values in object literals won't add any unexpected properties, so it's unnecessary to add an empty object as fallback.
+
+  x unicorn(no-useless-fallback-in-spread): Empty fallbacks in spreads are unnecessary
+    ,-[packages/codegen/src/codegen/features.ts:63:5]
+ 62 |   const peerDependencies = {
+ 63 |     ...(packageJson.peerDependencies ?? {}),
+    :     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 64 |   } as Record<string, string>;
+    `----
+  help: Spreading falsy values in object literals won't add any unexpected properties, so it's unnecessary to add an empty object as fallback.
+
+  x unicorn(no-useless-fallback-in-spread): Empty fallbacks in spreads are unnecessary
+    ,-[packages/codegen/src/codegen/features.ts:66:5]
+ 65 |   const devDependencies = {
+ 66 |     ...(packageJson.devDependencies ?? {}),
+    :     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 67 |   } as Record<string, string>;
+    `----
+  help: Spreading falsy values in object literals won't add any unexpected properties, so it's unnecessary to add an empty object as fallback.
+
+  ! eslint(no-unused-vars): Interface 'SidebarItem' is declared but never used.
+    ,-[apps/academy/scripts/generate-llm-docs.ts:17:11]
+ 16 | 
+ 17 | interface SidebarItem {
+    :           ^^^^^|^^^^^
+    :                `-- 'SidebarItem' is declared here
+ 18 |   type: string;
+    `----
+  help: Consider removing this declaration.
+
+  ! eslint(no-unused-vars): Variable 'wallFnMap' is declared but never used. Unused variables should start with a '_'.
+     ,-[scripts/profiling/pyroscope-analyse.ts:443:11]
+ 442 | 
+ 443 |     const wallFnMap = new Map(wall.functions.map((f) => [f.name, f]));
+     :           ^^^^|^^^^
+     :               `-- 'wallFnMap' is declared here
+ 444 |     const cpuFnMap = new Map(cpu.functions.map((f) => [f.name, f]));
+     `----
+  help: Consider removing this declaration.
+
+  x unicorn(no-empty-file): Empty files are not allowed.
+   ,-[packages/common/utils/mock.ts:1:1]
+   `----
+  help: Delete this file or add some code to it.
+
+  ! eslint(no-unused-vars): Parameter 'on' is declared but never used. Unused parameters should start with a '_'.
+   ,-[apps/connect/cypress.config.ts:7:21]
+ 6 |     supportFile: "cypress/support/e2e.ts",
+ 7 |     setupNodeEvents(on, config) {
+   :                     ^|
+   :                      `-- 'on' is declared here
+ 8 |       // implement node event listeners here
+   `----
+  help: Consider removing this parameter.
+
+  ! eslint(no-unused-vars): Parameter 'config' is declared but never used. Unused parameters should start with a '_'.
+   ,-[apps/connect/cypress.config.ts:7:25]
+ 6 |     supportFile: "cypress/support/e2e.ts",
+ 7 |     setupNodeEvents(on, config) {
+   :                         ^^^|^^
+   :                            `-- 'config' is declared here
+ 8 |       // implement node event listeners here
+   `----
+  help: Consider removing this parameter.
+
+  ! eslint(no-unused-vars): Type 'DocumentDriveDocument' is imported but never used.
+   ,-[apps/switchboard/src/utils.mts:6:15]
+ 5 | } from "@powerhousedao/reactor-drive";
+ 6 | import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
+   :               ^^^^^^^^^^|^^^^^^^^^^
+   :                         `-- 'DocumentDriveDocument' is imported here
+ 7 | import {
+   `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'generateId' is imported but never used.
+    ,-[apps/switchboard/src/utils.mts:12:10]
+ 11 | import type { DriveInput } from "@powerhousedao/shared/document-drive";
+ 12 | import { generateId } from "@powerhousedao/shared/document-model";
+    :          ^^^^^|^^^^
+    :               `-- 'generateId' is imported here
+ 13 | 
+    `----
+  help: Consider removing this import.
+
+Found 171 warnings and 66 errors.
+Finished in 276ms on 2268 files with 107 rules using 18 threads.
