@@ -54,7 +54,7 @@
       "types": "./dist/connect/components/toast/toast.d.ts",
       "import": "./dist/connect/components/toast/toast.js"
     },
-    "./style.css": "./dist/style.css",
+    "./style.css": ["./dist/style.css", "./style.css"],
     "./theme.css": "./theme.css"
   },
   "scripts": {

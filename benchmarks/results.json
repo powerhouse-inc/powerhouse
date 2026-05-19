@@ -72,12 +72,12 @@
       "note": "type-aware + custom plugins + react-hooks v7 compiler rules + no-useless-assignment nursery — 797 findings"
     },
     {
-      "tool": "eslint (slim)",
-      "version": "10.3.0 (better-tailwindcss only)",
-      "mode": "cold",
-      "elapsed_s": 10.0,
-      "rc": 0,
-      "note": "Tailwind class validation only; prettier replaced by oxfmt"
+      "tool": "oxlint + oxfmt --check",
+      "version": "1.65 + tsgolint + jsPlugins + native tailwindcss",
+      "mode": "cold (full lint + format check, after build:css)",
+      "elapsed_s": 28.0,
+      "rc": 1,
+      "note": "Includes build:css (~4s) + oxlint full (~22s) + oxfmt --check (~2s). Replaces full eslint+prettier pipeline."
     },
     {
       "tool": "oxfmt",

@@ -62,16 +62,13 @@ jobs:
         continue-on-error: true
         run: pnpm typecheck:tsgo
 
-      # Primary lint: oxlint with type-aware + custom plugins covers
-      # everything except Tailwind class validation. ESLint below now
-      # only runs eslint-plugin-better-tailwindcss.
-      - name: Lint (oxlint)
+      # Primary lint: oxlint (type-aware + custom plugins + native
+      # oxlint-tailwindcss) followed by oxfmt --check for formatting.
+      # The lint:ox script also runs build:css first because the native
+      # Tailwind plugin needs compiled dist/style.css files to resolve.
+      - name: Lint + format check (oxlint + oxfmt)
         if: ${{ steps.diff.outputs.files != '' }}
         run: pnpm lint:ox
-
-      # Formatting: oxfmt replaces prettier (--check fails CI on drift).
-      - name: Format check (oxfmt)
-        run: pnpm format:check
 
       - name: Build
         run: pnpm build

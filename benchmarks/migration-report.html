@@ -250,34 +250,34 @@
           <div class="delta">~4.8× faster (tsgo)</div>
         </div>
         <div class="card">
-          <div class="label">Cold lint (oxlint, full ruleset)</div>
-          <div class="val">63.8s → 6.0s</div>
+          <div class="label">Full lint+format (oxlint + oxfmt)</div>
+          <div class="val">64s → 28s</div>
           <div class="delta">
-            ~10× faster (type-aware + custom + react-hooks v7)
+            ~2.3× faster, includes Tailwind class validation
           </div>
         </div>
         <div class="card">
-          <div class="label">Slim ESLint (tailwind only)</div>
-          <div class="val">10s</div>
-          <div class="delta">parallel with oxlint → ~10s total</div>
+          <div class="label">oxlint without Tailwind plugin</div>
+          <div class="val">~6s</div>
+          <div class="delta">type-aware + custom plugins + react-hooks v7</div>
         </div>
         <div class="card">
-          <div class="label">Format (oxfmt vs prettier)</div>
-          <div class="val">~2s</div>
-          <div class="delta">replaces prettier; 88 files reformatted</div>
+          <div class="label">ESLint dropped from runtime</div>
+          <div class="val">0</div>
+          <div class="delta">
+            kept as vestigial registrations for legacy disable comments
+          </div>
         </div>
         <div class="card">
           <div class="label">Findings parity</div>
           <div class="val">629 / 760</div>
-          <div class="delta">
-            83% overlap; only-eslint shrunk to ~8 genuinely-missing
-          </div>
+          <div class="delta">83% overlap; ~8 genuinely missing</div>
         </div>
         <div class="card">
           <div class="label">Net new errors oxlint surfaces</div>
-          <div class="val">+81</div>
+          <div class="val">+139</div>
           <div class="delta bad">
-            unicorn + correctness rules ESLint didn't enable
+            unicorn + correctness + native Tailwind rules
           </div>
         </div>
       </div>
@@ -738,22 +738,15 @@
           </p>
         </div>
         <div class="card">
-          <h3 style="margin-top: 0">Kept in ESLint</h3>
+          <h3 style="margin-top: 0">ESLint — vestigial only</h3>
           <ul>
             <li>
-              <code>eslint-plugin-better-tailwindcss</code> — Tailwind class
-              validation. <strong>Blocker for full migration:</strong> the
-              native <code>oxlint-tailwindcss</code> plugin needs to load each
-              workspace's compiled <code>dist/style.css</code> via the package
-              <code>exports</code> field, which doesn't exist pre-build. The
-              ESLint plugin uses <code>cwd</code>-based loading so it works
-              without a build.
-            </li>
-            <li>
-              Plugin registrations (no rules enabled) for
-              <code>@typescript-eslint</code>, <code>react-hooks</code>,
-              <code>logger</code> so existing inline
-              <code>eslint-disable</code> comments resolve.
+              No rules enabled. Plugins registered
+              (<code>@typescript-eslint</code>, <code>react-hooks</code>,
+              <code>logger</code>) so existing inline
+              <code>eslint-disable</code> comments resolve. Delete once
+              source files no longer reference those rule names in disable
+              comments.
             </li>
           </ul>
           <h3>Moved to oxlint</h3>
@@ -777,6 +770,23 @@
             <li>
               Custom <code>logger/*</code> +
               <code>cli-cold-path/*</code> (loaded via <code>jsPlugins</code>)
+            </li>
+            <li>
+              <code>tailwindcss/*</code> via native
+              <code>oxlint-tailwindcss</code> — 23 rules including
+              <code>no-unknown-classes</code>,
+              <code>no-conflicting-classes</code>,
+              <code>enforce-canonical</code>,
+              <code>enforce-sort-order</code>. Requires
+              <code>build:css</code> first.
+            </li>
+          </ul>
+          <h3>Moved to oxfmt</h3>
+          <ul>
+            <li>
+              Formatting (replaces prettier). <code>oxfmt --check</code> is
+              chained into <code>lint:ox</code> so formatting drift fails
+              the lint script with non-zero exit.
             </li>
           </ul>
         </div>
@@ -819,29 +829,42 @@
         </tbody>
       </table>
 
-      <h3>oxlint-tailwindcss (native plugin) — not adopted</h3>
+      <h3>oxlint-tailwindcss (native plugin) — adopted</h3>
       <table>
         <thead><tr><th>Issue</th><th>Impact</th><th>Status</th></tr></thead>
         <tbody>
           <tr>
             <td>pnpm <code>exports</code> field resolution pre-build</td>
             <td>
-              The native plugin loads each workspace's design system at lint time
-              by following <code>@import</code> chains through
-              <code>package.json#exports</code>. This repo's design-system maps
+              The native plugin loads each workspace's design system by
+              following <code>@import</code> chains through
+              <code>package.json#exports</code>. This repo's
+              design-system / vetra / connect / powerhouse-vetra-packages map
               <code>./style.css</code> → <code>./dist/style.css</code>, which
-              doesn't exist until <code>pnpm build</code>. Without it the plugin
-              falls back to slow retry per file → <strong>38s on apps/connect/src
-              alone, ~84s on full repo.</strong>
+              doesn't exist until <code>build:css</code> runs. Without it the
+              plugin falls into a slow retry path: 38s on apps/connect/src
+              alone, ~84s on full repo.
             </td>
             <td>
-              <span class="badge bad">blocker</span> Reverted; kept
-              <code>eslint-plugin-better-tailwindcss</code> (uses cwd-based
-              loading, no exports needed). To migrate, add a
-              <code>"source": "./src/style.css"</code> or
-              <code>"style": "./style.css"</code> export so the plugin can
-              resolve pre-build.
+              <span class="badge ok">resolved</span> <code>pnpm lint:ox</code>
+              now runs <code>pnpm build:css</code> first (~4s, builds the four
+              Tailwind dist files in parallel). Full lint+format then takes
+              ~28s on full repo, with the native plugin enabled. Also added
+              array-fallback exports
+              (<code>"./style.css": ["./dist/style.css", "./style.css"]</code>)
+              as a hint, though Node's exports resolution does not actually
+              honor array fallback for missing files — the build:css step is
+              the real fix.
             </td>
+          </tr>
+          <tr>
+            <td>Stricter than <code>better-tailwindcss</code></td>
+            <td>
+              Native plugin surfaces 58 unknown-class errors vs ~44 from
+              the previous setup, plus enforce-canonical / sort-order /
+              variant-order warnings that better-tailwindcss did not emit.
+            </td>
+            <td><span class="badge warn">triage</span></td>
           </tr>
           <tr>
             <td>Tailwind v3 support</td>
@@ -1100,6 +1123,37 @@
         </tbody>
       </table>
 
+      <h2>Sanity checks</h2>
+      <p class="muted" style="margin-top: 0">
+        File: <code>benchmarks/sanity-violations.tsx</code> contains one
+        violation per rule that used to fire under the old ESLint config.
+        Run <code>node_modules/.bin/oxlint --type-aware
+        benchmarks/sanity-violations.tsx --no-ignore</code> to verify.
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>Rule (old ESLint)</th>
+            <th>oxlint result</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><code>@typescript-eslint/no-floating-promises</code></td><td><span class="badge ok">caught</span></td><td>type-aware via tsgolint</td></tr>
+          <tr><td><code>@typescript-eslint/require-await</code></td><td><span class="badge ok">caught</span></td><td>type-aware</td></tr>
+          <tr><td><code>@typescript-eslint/no-unnecessary-condition</code></td><td><span class="badge ok">caught</span></td><td>fires when file is in tsconfig include; 285 hits in real codebase</td></tr>
+          <tr><td><code>no-unsafe-optional-chaining</code></td><td><span class="badge ok">caught</span></td><td>10 hits in real codebase</td></tr>
+          <tr><td><code>react-hooks/rules-of-hooks</code></td><td><span class="badge ok">caught</span></td><td>native oxlint react-hooks</td></tr>
+          <tr><td><code>react-hooks/exhaustive-deps</code></td><td><span class="badge ok">caught</span></td><td>native</td></tr>
+          <tr><td><code>logger/missing-token-args</code></td><td><span class="badge ok">caught</span></td><td>custom jsPlugin from <code>eslint-plugins/logger.js</code></td></tr>
+          <tr><td><code>@typescript-eslint/consistent-type-imports</code></td><td><span class="badge ok">caught</span></td><td>native</td></tr>
+          <tr><td><code>no-unused-vars</code></td><td><span class="badge ok">caught</span></td><td>native</td></tr>
+          <tr><td><code>no-useless-assignment</code></td><td><span class="badge ok">caught</span></td><td>nursery rule we explicitly enabled</td></tr>
+          <tr><td><code>tailwindcss/no-unknown-classes</code></td><td><span class="badge ok">caught</span></td><td>native <code>oxlint-tailwindcss</code></td></tr>
+          <tr><td>formatting drift (prettier)</td><td><span class="badge ok">caught via oxfmt</span></td><td><code>oxfmt --check</code> exits non-zero; chained into <code>lint:ox</code></td></tr>
+        </tbody>
+      </table>
+
       <h2>Recommended rollout</h2>
       <ol>
         <li>
@@ -1113,11 +1167,11 @@
           then flip oxlint's nursery-tier rules from warn to error.
         </li>
         <li>
-          <strong>Migrate Tailwind to native plugin</strong> — add a
-          <code>"source"</code> export to each workspace's design-system
-          package pointing at <code>src/style.css</code>, then swap
-          <code>eslint-plugin-better-tailwindcss</code> for
-          <code>oxlint-tailwindcss</code>. Drops the last ESLint dependency.
+          <strong>Done — native Tailwind plugin in use.</strong>
+          <code>oxlint-tailwindcss</code> is loaded via <code>jsPlugins</code>;
+          <code>pnpm lint:ox</code> runs <code>build:css</code> first so the
+          compiled <code>dist/style.css</code> files exist for the plugin to
+          resolve.
         </li>
         <li>
           <strong>2–3 months</strong> — when tsgo hits 1.0 and

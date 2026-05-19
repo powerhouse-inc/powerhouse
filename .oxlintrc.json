@@ -10,8 +10,19 @@
     {
       "name": "react-hooks-extra",
       "specifier": "eslint-plugin-react-hooks"
-    }
+    },
+    "oxlint-tailwindcss"
   ],
+  "settings": {
+    "tailwindcss": {
+      "entryPoint": [
+        "packages/design-system/style.css",
+        "apps/connect/style.css",
+        "packages/powerhouse-vetra-packages/style.css",
+        "packages/vetra/style.css"
+      ]
+    }
+  },
   "options": {
     "typeAware": true
   },
@@ -95,6 +106,23 @@
     "logger/missing-token-args": "error",
     "logger/extra-args-without-token": "warn",
 
+    "tailwindcss/no-unknown-classes": ["error", { "allowlist": ["custom-class", "hover-bg-transparent", "skeleton-loader"] }],
+    "tailwindcss/no-duplicate-classes": "error",
+    "tailwindcss/no-conflicting-classes": "error",
+    "tailwindcss/no-deprecated-classes": "error",
+    "tailwindcss/no-unnecessary-whitespace": "error",
+    "tailwindcss/no-dark-without-light": "warn",
+    "tailwindcss/no-contradicting-variants": "warn",
+    "tailwindcss/enforce-canonical": "warn",
+    "tailwindcss/enforce-sort-order": "warn",
+    "tailwindcss/enforce-shorthand": "warn",
+    "tailwindcss/enforce-consistent-important-position": "warn",
+    "tailwindcss/enforce-negative-arbitrary-values": "warn",
+    "tailwindcss/enforce-consistent-variable-syntax": "warn",
+    "tailwindcss/consistent-variant-order": "warn",
+    "tailwindcss/no-hardcoded-colors": "off",
+    "tailwindcss/no-unnecessary-arbitrary-value": "warn",
+    "tailwindcss/enforce-consistent-line-wrapping": "off"
   },
   "overrides": [
     {
@@ -156,6 +184,7 @@
     "**/*.d.ts",
     "**/babel.config.js",
     "commitlint.config.cjs",
+    "benchmarks/sanity-violations.tsx",
     "**/.out/",
     "**/test-output/",
     "**/.test-output/",
