@@ -1,5 +1,8 @@
+import renownShortDark from "#assets/renown-short-dark.png";
+import renownShortHoverDark from "#assets/renown-short-hover-dark.png";
 import renownShortHover from "#assets/renown-short-hover.png";
 import renownShort from "#assets/renown-short.png";
+import { useTheme } from "@powerhousedao/reactor-browser";
 import { twMerge } from "tailwind-merge";
 import { AccountPopoverLogin } from "../account-popover/account-popover-login.js";
 import { AccountPopover } from "../account-popover/account-popover.js";
@@ -10,6 +13,10 @@ export interface SidebarLoginProps {
 
 export const SidebarLogin: React.FC<SidebarLoginProps> = ({ onLogin }) => {
   const content = <AccountPopoverLogin onLogin={onLogin} />;
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
+  const src = isDark ? renownShortDark : renownShort;
+  const hoverSrc = isDark ? renownShortHoverDark : renownShortHover;
 
   return (
     <AccountPopover content={content}>
@@ -24,7 +31,7 @@ export const SidebarLogin: React.FC<SidebarLoginProps> = ({ onLogin }) => {
           height={42}
           loading="lazy"
           className="group-hover/sidebar-footer:hidden"
-          src={renownShort}
+          src={src}
           alt="Renown Login"
         />
         <img
@@ -32,7 +39,7 @@ export const SidebarLogin: React.FC<SidebarLoginProps> = ({ onLogin }) => {
           height={42}
           loading="lazy"
           className="hidden group-hover/sidebar-footer:block"
-          src={renownShortHover}
+          src={hoverSrc}
           alt="Renown Login Hover"
         />
       </div>
