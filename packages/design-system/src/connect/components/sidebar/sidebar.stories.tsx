@@ -1,4 +1,5 @@
 import { Icon } from "#design-system";
+import { initTheme } from "@powerhousedao/reactor-browser";
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import type { Meta, StoryObj } from "@storybook/react";
 import { fn } from "@storybook/test";
@@ -24,6 +25,7 @@ const user = {
 } as const;
 
 const Wrapper = (args: Args) => {
+  initTheme();
   return (
     <ConnectTooltipProvider>
       <div className="relative h-screen">

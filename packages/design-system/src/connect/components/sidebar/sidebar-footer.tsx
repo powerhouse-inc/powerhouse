@@ -2,6 +2,7 @@ import { Icon, SidebarFooter } from "#design-system";
 import { useTheme } from "@powerhousedao/reactor-browser";
 import type { ComponentProps } from "react";
 import { twMerge } from "tailwind-merge";
+import { ThemeSwitch } from "../theme-switch.js";
 import { SidebarLogin } from "./sidebar-login.js";
 import { SidebarUser } from "./sidebar-user.js";
 
@@ -95,17 +96,7 @@ export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
           Settings
         </span>
       </button>
-      <div className="text-xs">
-        <button onClick={() => setTheme("light")}>
-          light{!isSystem && theme === "light" ? " ✅" : ""}
-        </button>
-        <button onClick={() => setTheme("dark")}>
-          dark{!isSystem && theme === "dark" ? " ✅" : ""}
-        </button>
-        <button onClick={() => setTheme("system")}>
-          system{isSystem ? " ✅" : ""}
-        </button>
-      </div>
+      <ThemeSwitch />
     </SidebarFooter>
   );
 };
