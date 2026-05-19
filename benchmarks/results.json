@@ -73,11 +73,11 @@
     },
     {
       "tool": "oxlint + oxfmt --check",
-      "version": "1.65 + tsgolint + jsPlugins + native tailwindcss",
-      "mode": "cold (full lint + format check, after build:css)",
-      "elapsed_s": 28.0,
+      "version": "1.65 + tsgolint + jsPlugins + native tailwindcss (scoped)",
+      "mode": "cold (full lint + format check)",
+      "elapsed_s": 14.0,
       "rc": 1,
-      "note": "Includes build:css (~4s) + oxlint full (~22s) + oxfmt --check (~2s). Replaces full eslint+prettier pipeline."
+      "note": "Includes build:css (~2s) + oxlint full (~12s) + oxfmt --check (~1s). Tailwind plugin scoped to the 4 packages that use it (matches old better-tailwindcss config)."
     },
     {
       "tool": "oxfmt",

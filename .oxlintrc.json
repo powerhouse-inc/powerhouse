@@ -106,25 +106,43 @@
     "logger/missing-token-args": "error",
     "logger/extra-args-without-token": "warn",
 
-    "tailwindcss/no-unknown-classes": ["error", { "allowlist": ["custom-class", "hover-bg-transparent", "skeleton-loader"] }],
-    "tailwindcss/no-duplicate-classes": "error",
-    "tailwindcss/no-conflicting-classes": "error",
-    "tailwindcss/no-deprecated-classes": "error",
-    "tailwindcss/no-unnecessary-whitespace": "error",
-    "tailwindcss/no-dark-without-light": "warn",
-    "tailwindcss/no-contradicting-variants": "warn",
-    "tailwindcss/enforce-canonical": "warn",
-    "tailwindcss/enforce-sort-order": "warn",
-    "tailwindcss/enforce-shorthand": "warn",
-    "tailwindcss/enforce-consistent-important-position": "warn",
-    "tailwindcss/enforce-negative-arbitrary-values": "warn",
-    "tailwindcss/enforce-consistent-variable-syntax": "warn",
-    "tailwindcss/consistent-variant-order": "warn",
+    "tailwindcss/no-unknown-classes": "off",
+    "tailwindcss/no-duplicate-classes": "off",
+    "tailwindcss/no-conflicting-classes": "off",
+    "tailwindcss/no-deprecated-classes": "off",
+    "tailwindcss/no-unnecessary-whitespace": "off",
+    "tailwindcss/no-dark-without-light": "off",
+    "tailwindcss/no-contradicting-variants": "off",
+    "tailwindcss/enforce-canonical": "off",
+    "tailwindcss/enforce-sort-order": "off",
+    "tailwindcss/enforce-shorthand": "off",
+    "tailwindcss/enforce-consistent-important-position": "off",
+    "tailwindcss/enforce-negative-arbitrary-values": "off",
+    "tailwindcss/enforce-consistent-variable-syntax": "off",
+    "tailwindcss/consistent-variant-order": "off",
     "tailwindcss/no-hardcoded-colors": "off",
-    "tailwindcss/no-unnecessary-arbitrary-value": "warn",
+    "tailwindcss/no-unnecessary-arbitrary-value": "off",
     "tailwindcss/enforce-consistent-line-wrapping": "off"
   },
   "overrides": [
+    {
+      "files": [
+        "packages/design-system/**/*.{js,jsx,cjs,mjs,ts,tsx}",
+        "apps/connect/**/*.{js,jsx,cjs,mjs,ts,tsx}",
+        "packages/powerhouse-vetra-packages/**/*.{js,jsx,cjs,mjs,ts,tsx}",
+        "packages/vetra/**/*.{js,jsx,cjs,mjs,ts,tsx}"
+      ],
+      "rules": {
+        "tailwindcss/no-unknown-classes": ["error", { "allowlist": ["custom-class", "hover-bg-transparent", "skeleton-loader"] }],
+        "tailwindcss/no-duplicate-classes": "error",
+        "tailwindcss/no-conflicting-classes": "error",
+        "tailwindcss/no-unnecessary-whitespace": "error",
+        "tailwindcss/enforce-sort-order": "error",
+        "tailwindcss/enforce-shorthand": "error",
+        "tailwindcss/enforce-consistent-important-position": "error",
+        "tailwindcss/enforce-consistent-variable-syntax": "error"
+      }
+    },
     {
       "files": [
         "clis/ph-cli/src/cli.ts",
