@@ -1,4 +1,5 @@
 import { Icon } from "#design-system";
+import { useTheme } from "@powerhousedao/reactor-browser";
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
 import type {
   ClearIndicatorProps,
@@ -6,7 +7,6 @@ import type {
   MenuListProps,
 } from "react-select";
 import Select, { components } from "react-select";
-import { useIsDarkMode } from "../../hooks/use-is-dark-mode.js";
 
 type SelectProps = ComponentPropsWithoutRef<typeof Select>;
 
@@ -61,7 +61,8 @@ function MenuList(
 export function Combobox(props: Props) {
   const invalid = props["aria-invalid"] === "true";
   const { addItemButtonProps, ...rest } = props;
-  const dark = useIsDarkMode();
+  const { theme } = useTheme();
+  const dark = theme === "dark";
 
   return (
     <Select
@@ -171,42 +172,20 @@ export function Combobox(props: Props) {
         colors: {
           ...theme.colors,
           primary: dark ? "var(--color-slate-700)" : "var(--color-slate-100)",
-          primary25: dark
-            ? "var(--color-slate-800)"
-            : "var(--color-slate-50)",
-          primary50: dark
-            ? "var(--color-slate-700)"
-            : "var(--color-slate-100)",
-          primary75: dark
-            ? "var(--color-slate-700)"
-            : "var(--color-slate-100)",
+          primary25: dark ? "var(--color-slate-800)" : "var(--color-slate-50)",
+          primary50: dark ? "var(--color-slate-700)" : "var(--color-slate-100)",
+          primary75: dark ? "var(--color-slate-700)" : "var(--color-slate-100)",
           danger: dark ? "var(--color-red-400)" : "var(--color-red-900)",
-          dangerLight: dark
-            ? "var(--color-red-900)"
-            : "var(--color-red-100)",
+          dangerLight: dark ? "var(--color-red-900)" : "var(--color-red-100)",
           neutral0: dark ? "var(--color-slate-800)" : "var(--color-white)",
           neutral5: dark ? "var(--color-slate-800)" : "var(--color-gray-50)",
-          neutral10: dark
-            ? "var(--color-slate-700)"
-            : "var(--color-gray-100)",
-          neutral20: dark
-            ? "var(--color-slate-600)"
-            : "var(--color-gray-200)",
-          neutral30: dark
-            ? "var(--color-slate-600)"
-            : "var(--color-gray-300)",
-          neutral40: dark
-            ? "var(--color-slate-400)"
-            : "var(--color-gray-400)",
-          neutral50: dark
-            ? "var(--color-slate-300)"
-            : "var(--color-gray-500)",
-          neutral60: dark
-            ? "var(--color-slate-200)"
-            : "var(--color-gray-600)",
-          neutral70: dark
-            ? "var(--color-slate-100)"
-            : "var(--color-gray-700)",
+          neutral10: dark ? "var(--color-slate-700)" : "var(--color-gray-100)",
+          neutral20: dark ? "var(--color-slate-600)" : "var(--color-gray-200)",
+          neutral30: dark ? "var(--color-slate-600)" : "var(--color-gray-300)",
+          neutral40: dark ? "var(--color-slate-400)" : "var(--color-gray-400)",
+          neutral50: dark ? "var(--color-slate-300)" : "var(--color-gray-500)",
+          neutral60: dark ? "var(--color-slate-200)" : "var(--color-gray-600)",
+          neutral70: dark ? "var(--color-slate-100)" : "var(--color-gray-700)",
           neutral80: dark ? "var(--color-slate-50)" : "var(--color-gray-800)",
           neutral90: dark ? "var(--color-slate-50)" : "var(--color-gray-900)",
         },

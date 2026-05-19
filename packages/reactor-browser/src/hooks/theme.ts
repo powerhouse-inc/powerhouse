@@ -54,10 +54,10 @@ const handleMqSchemeChange = clientOnly((e: MediaQueryListEvent) => {
 
 const getThemeSnapshot = clientOnly(
   () => getStoredTheme() ?? "system",
-  "light",
+  "light" as ThemeWithSystem,
 );
 
-const getServerSideThemeSnapshot = () => "light";
+const getServerSideThemeSnapshot = () => "light" as ThemeWithSystem;
 
 export const setTheme = clientOnly((themeWithSystem: ThemeWithSystem) => {
   const isSystem = themeWithSystem === "system";

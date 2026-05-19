@@ -56,7 +56,10 @@ export const CookieBanner: React.FC<CookieBannerProps> = (props) => {
               onChange={handleOnChange}
               type="checkbox"
             />
-            <label className="cursor-pointer select-none text-gray-900 dark:text-slate-50" htmlFor={cookie.id}>
+            <label
+              className="cursor-pointer text-gray-900 select-none dark:text-slate-50"
+              htmlFor={cookie.id}
+            >
               {cookie.label}
             </label>
           </div>

@@ -182,7 +182,7 @@ export function MailboxTable({
       </div>
 
       {!collapsed && (
-        <div className="overflow-auto rounded-lg border border-gray-300 dark:border-slate-600 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-rounded-md scrollbar-thumb-gray-300 dark:scrollbar-thumb-slate-600">
+        <div className="scrollbar-thin overflow-auto rounded-lg border border-gray-300 scrollbar-thumb-gray-300 scrollbar-thumb-rounded-md scrollbar-track-transparent dark:border-slate-600 dark:scrollbar-thumb-slate-600">
           <table className="w-full border-collapse">
             <thead className="sticky top-0 bg-gray-100 dark:bg-slate-700">
               <tr>

@@ -314,7 +314,7 @@ export function TableView({
       <div
         className={twMerge(
           "max-h-full overflow-auto rounded-lg border border-gray-300 transition-opacity dark:border-slate-600",
-          "scrollbar-thin scrollbar-track-transparent scrollbar-thumb-rounded-md",
+          "scrollbar-thin scrollbar-thumb-rounded-md scrollbar-track-transparent",
           "scrollbar-thumb-gray-300 dark:scrollbar-thumb-slate-600",
           loading && "pointer-events-none opacity-50",
         )}
