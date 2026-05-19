@@ -30,7 +30,8 @@
     "migrate": "tsx src/storage/migrations/run-migrations.ts",
     "migrate:status": "tsx src/storage/migrations/run-migrations.ts status",
     "docker:up": "docker compose up -d",
-    "docker:down": "docker compose down"
+    "docker:down": "docker compose down",
+    "lint": "oxlint --type-aware"
   },
   "publishConfig": {
     "access": "public"

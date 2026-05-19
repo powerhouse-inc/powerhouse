@@ -28,7 +28,8 @@
   },
   "scripts": {
     "build": "tsdown",
-    "tsc": "tsc"
+    "tsc": "tsc",
+    "lint": "oxlint --type-aware"
   },
   "peerDependencies": {
     "@playwright/test": "^1.41.2"

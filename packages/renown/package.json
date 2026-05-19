@@ -40,7 +40,8 @@
   ],
   "scripts": {
     "build": "tsdown",
-    "tsc": "tsc"
+    "tsc": "tsc",
+    "lint": "oxlint --type-aware"
   },
   "devDependencies": {
     "tsdown": "catalog:",

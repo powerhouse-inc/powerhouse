@@ -21,6 +21,7 @@
   ],
   "scripts": {
     "tsc": "tsc",
+    "lint": "oxlint --type-aware",
     "build": "tsdown"
   },
   "publishConfig": {

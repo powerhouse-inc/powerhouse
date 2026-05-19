@@ -69,6 +69,7 @@
   },
   "scripts": {
     "tsc": "tsc",
+    "lint": "oxlint --type-aware",
     "build:css": "pnpm exec tailwindcss -i ./style.css -o ./dist/style.css",
     "test": "vitest --run",
     "build": "tsx ./build && pnpm build:css",

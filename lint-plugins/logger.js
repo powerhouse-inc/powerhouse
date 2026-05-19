@@ -1,5 +1,16 @@
-// Standalone ESLint v9-compatible plugin extracted from eslint.config.js
-// so both ESLint and oxlint (via jsPlugins) can load the same rules.
+// Oxlint JS plugin: logger call-shape rules.
+// Uses `@oxlint/plugins` for type-checked definePlugin / defineRule helpers
+// and the `createOnce` API so the rule is initialized once per process
+// instead of per file.
+//
+// Docs: https://oxc.rs/docs/guide/usage/linter/js-plugins
+//
+// The ConsoleLogger in `document-model` substitutes `@token` placeholders
+// in the message string with positional args (one per unique token, in
+// first-appearance order). Extra args past the unique-token count are
+// appended; missing args render as `"null"`.
+
+import { defineRule, definePlugin } from "@oxlint/plugins";
 
 const LOGGER_METHODS = new Set(["verbose", "debug", "info", "warn", "error"]);
 
@@ -37,7 +48,7 @@ const countUniqueTokens = (msg) => {
   return seen.size;
 };
 
-const missingTokenArgs = {
+const missingTokenArgs = defineRule({
   meta: {
     type: "problem",
     schema: [],
@@ -46,7 +57,7 @@ const missingTokenArgs = {
         'logger.{{method}} message has {{tokens}} @token(s) but only {{args}} replacement arg(s) — missing slots render as "null".',
     },
   },
-  create(context) {
+  createOnce(context) {
     return {
       CallExpression(node) {
         if (!isLoggerCallee(node.callee)) return;
@@ -68,9 +79,9 @@ const missingTokenArgs = {
       },
     };
   },
-};
+});
 
-const extraArgsWithoutToken = {
+const extraArgsWithoutToken = defineRule({
   meta: {
     type: "suggestion",
     schema: [],
@@ -79,7 +90,7 @@ const extraArgsWithoutToken = {
         "logger.{{method}} passes {{args}} arg(s) but the message has no @token placeholders — extras are appended at runtime; consider adding @tokens or inlining the value.",
     },
   },
-  create(context) {
+  createOnce(context) {
     return {
       CallExpression(node) {
         if (!isLoggerCallee(node.callee)) return;
@@ -100,12 +111,12 @@ const extraArgsWithoutToken = {
       },
     };
   },
-};
+});
 
-export default {
+export default definePlugin({
   meta: { name: "logger" },
   rules: {
     "missing-token-args": missingTokenArgs,
     "extra-args-without-token": extraArgsWithoutToken,
   },
-};
+});

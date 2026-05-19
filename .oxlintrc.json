@@ -2,10 +2,10 @@
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "plugins": ["typescript", "react", "unicorn", "import", "promise"],
   "jsPlugins": [
-    { "name": "logger", "specifier": "./eslint-plugins/logger.js" },
+    { "name": "logger", "specifier": "./lint-plugins/logger.js" },
     {
       "name": "cli-cold-path",
-      "specifier": "./eslint-plugins/cli-cold-path.js"
+      "specifier": "./lint-plugins/cli-cold-path.js"
     },
     {
       "name": "react-hooks-extra",

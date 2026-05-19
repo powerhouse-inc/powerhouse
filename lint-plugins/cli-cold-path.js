@@ -1,12 +1,16 @@
-// Standalone ESLint v9-compatible plugin: allowlist-only static imports
-// for CLI cold paths. Extracted from eslint.config.js so both ESLint and
-// oxlint (jsPlugins) can consume the same source of truth.
+// Oxlint JS plugin: allowlist-only static imports for CLI cold paths.
+// Uses `@oxlint/plugins` for type-checked definePlugin / defineRule helpers
+// and the `createOnce` API so the rule is initialized once per process
+// instead of per file.
+//
+// Docs: https://oxc.rs/docs/guide/usage/linter/js-plugins
 
 import { builtinModules } from "node:module";
+import { defineRule, definePlugin } from "@oxlint/plugins";
 
 const builtinSet = new Set(builtinModules);
 
-const allowedStaticImports = {
+const allowedStaticImports = defineRule({
   meta: {
     type: "problem",
     schema: [
@@ -24,11 +28,10 @@ const allowedStaticImports = {
         "{{message}} (`{{source}}` is not in the allow list; use `await import(...)` inside the command handler method)",
     },
   },
-  create(context) {
-    const opts = context.options[0] ?? {};
-    const allow = opts.allow ?? [];
-    const message = opts.message ?? "Static import not allowed here.";
-    const isAllowedSource = (src) => {
+  createOnce(context) {
+    // Options aren't available at createOnce top-level — they're per-file.
+    // Read them lazily inside the visitor.
+    const isAllowedSource = (src, allow) => {
       if (src.startsWith("node:")) return true;
       if (builtinSet.has(src)) return true;
       if (
@@ -48,8 +51,11 @@ const allowedStaticImports = {
           node.specifiers.length === 0 ||
           node.specifiers.some((s) => s.importKind !== "type");
         if (!hasValueSpecifier) return;
+        const opts = context.options?.[0] ?? {};
+        const allow = opts.allow ?? [];
+        const message = opts.message ?? "Static import not allowed here.";
         const src = String(node.source.value);
-        if (isAllowedSource(src)) return;
+        if (isAllowedSource(src, allow)) return;
         context.report({
           node: node.source,
           messageId: "notAllowed",
@@ -58,11 +64,11 @@ const allowedStaticImports = {
       },
     };
   },
-};
+});
 
-export default {
+export default definePlugin({
   meta: { name: "cli-cold-path" },
   rules: {
     "allowed-static-imports": allowedStaticImports,
   },
-};
+});

@@ -53,6 +53,7 @@
   "homepage": "https://github.com/powerhouse-inc/powerhouse#readme",
   "scripts": {
     "tsc": "tsc",
+    "lint": "oxlint --type-aware",
     "test": "vitest --run",
     "dev": "vite dev",
     "build": "pnpm run build:bundle && pnpm run build:css",

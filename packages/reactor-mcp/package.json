@@ -25,6 +25,7 @@
   "scripts": {
     "build": "tsdown",
     "tsc": "tsc",
+    "lint": "oxlint --type-aware",
     "test": "vitest --run",
     "test:run": "vitest --run",
     "test:watch": "vitest",
