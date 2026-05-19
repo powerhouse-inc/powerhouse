@@ -1,4 +1,7 @@
-import type { IReactorClient } from "@powerhousedao/reactor";
+import type {
+  IReactorClient,
+  ReactorClientModule,
+} from "@powerhousedao/reactor";
 import type { IRenown } from "@renown/sdk";
 import type { DriveInput } from "@powerhousedao/shared/document-drive";
 import type { ILogger } from "document-model";
@@ -41,6 +44,22 @@ export type IdentityOptions = {
 };
 
 export type StartServerOptions = {
+  /**
+   * Pre-built ReactorClientModule (typically from
+   * `@powerhousedao/reactor#ReactorClientBuilder.buildModule`). When set, the
+   * switchboard reuses the caller's reactor instead of building its own,
+   * and the caller owns the reactor's lifecycle. The API, GraphQL manager,
+   * MCP, attachments, package management subgraph, and registry HTTP loader
+   * are still configured around it.
+   */
+  reactor?: ReactorClientModule;
+  /**
+   * Registry URL for the HttpPackageLoader. Enables `PackagesSubgraph`
+   * (install/uninstall mutations) plus dynamic package resolution.
+   * Falls back to PH_REGISTRY_URL env, then `packageRegistryUrl` in the
+   * powerhouse config file.
+   */
+  registryUrl?: string;
   configFile?: string;
   port?: number;
   /**
@@ -116,4 +135,11 @@ export type SwitchboardReactor = {
    * port when the requested port was in use and fallback kicked in.
    */
   port: number;
+  /**
+   * Tear down the HTTP server, GraphQL manager, attachments, MCP, and (when
+   * the switchboard built it) the reactor itself. When a caller-provided
+   * `reactor` was passed to `startSwitchboard`, the caller owns the reactor
+   * lifecycle and this method only tears down what the switchboard added.
+   */
+  shutdown: () => Promise<void>;
 };
