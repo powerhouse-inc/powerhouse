@@ -44,12 +44,14 @@
     "kysely": "catalog:",
     "kysely-pglite-dialect": "catalog:",
     "@electric-sql/pglite": "catalog:",
+    "pg": "catalog:",
     "@sindresorhus/fnv1a": "catalog:",
     "@powerhousedao/shared": "workspace:*",
     "document-model": "workspace:*"
   },
   "devDependencies": {
     "@powerhousedao/pglite-fs": "workspace:*",
+    "@types/pg": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "prettier": "catalog:",
     "tinybench": "^2.9.0",

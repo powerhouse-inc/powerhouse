@@ -407,7 +407,11 @@ export class ReactorBuilder {
       }
     }
 
-    const baseDatabase = this.kyselyInstance ?? (await createDefaultDatabase());
+    const baseDatabase =
+      this.kyselyInstance ??
+      (this.workerPoolConfig?.enabled && this.workerDbConfig
+        ? await this.createPostgresDatabase(this.workerDbConfig)
+        : await createDefaultDatabase());
 
     if (this.migrationStrategy === "auto") {
       const result = await runMigrations(baseDatabase, REACTOR_SCHEMA);
@@ -696,6 +700,33 @@ export class ReactorBuilder {
         },
         logger,
       });
+  }
+
+  /**
+   * Builds the parent Kysely instance against a real Postgres server using
+   * the same {@link DbConfig} the workers receive at init. Used in the
+   * worker-pool path so the parent reactor and each worker thread share
+   * storage; PGlite cannot be shared across threads.
+   */
+  private async createPostgresDatabase(
+    config: DbConfig,
+  ): Promise<Kysely<Database>> {
+    const { Kysely, PostgresDialect } = await import("kysely");
+    const pgModule = await import("pg");
+    const Pool = pgModule.default?.Pool ?? pgModule.Pool;
+    const pool = new Pool({
+      host: config.host,
+      port: config.port,
+      database: config.database,
+      user: config.user,
+      password: config.password,
+      ssl: config.ssl ? { rejectUnauthorized: false } : undefined,
+      application_name: config.applicationName,
+      max: config.poolSize,
+    });
+    return new Kysely<Database>({
+      dialect: new PostgresDialect({ pool }),
+    });
   }
 
   private attachSignalHandlers(module: ReactorModule): void {

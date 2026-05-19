@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import type { DocumentModelSpecInput } from "../../src/core/reactor-builder.js";
 import type {
@@ -264,6 +264,55 @@ describe("ReactorBuilder", () => {
         expect(module.executorManager).toBe(customManager);
       } finally {
         await module.reactor.kill();
+      }
+    });
+
+    it("routes parent database through createPostgresDatabase when workerPool.enabled and workerDbConfig is set", async () => {
+      const proto = ReactorBuilder.prototype as unknown as {
+        createPostgresDatabase: (config: DbConfig) => Promise<unknown>;
+      };
+      const spy = vi
+        .spyOn(proto, "createPostgresDatabase")
+        .mockRejectedValue(new Error("postgres-was-called"));
+
+      try {
+        const factory = (index: number) => new FakeWorker(index);
+        const builder = new ReactorBuilder()
+          .withDocumentModelSpecs(TEST_SPECS)
+          .withWorkerPool(WORKER_POOL_ENABLED)
+          .withWorkerFactory(factory)
+          .withWorkerDbConfig(TEST_DB_CONFIG);
+
+        await expect(builder.buildModule()).rejects.toThrow(
+          /postgres-was-called/,
+        );
+        expect(spy).toHaveBeenCalledWith(TEST_DB_CONFIG);
+      } finally {
+        spy.mockRestore();
+      }
+    });
+
+    it("uses PGlite default when workerPool.enabled but no workerDbConfig (custom factory path)", async () => {
+      const proto = ReactorBuilder.prototype as unknown as {
+        createPostgresDatabase: (config: DbConfig) => Promise<unknown>;
+      };
+      const spy = vi.spyOn(proto, "createPostgresDatabase");
+
+      try {
+        const factory = (index: number) => new FakeWorker(index);
+        const builder = new ReactorBuilder()
+          .withDocumentModelSpecs(TEST_SPECS)
+          .withWorkerPool(WORKER_POOL_ENABLED)
+          .withWorkerFactory(factory);
+
+        const module = await builder.buildModule();
+        try {
+          expect(spy).not.toHaveBeenCalled();
+        } finally {
+          await module.reactor.kill();
+        }
+      } finally {
+        spy.mockRestore();
       }
     });
 
