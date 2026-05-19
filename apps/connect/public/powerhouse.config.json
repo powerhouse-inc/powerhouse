@@ -3,5 +3,31 @@
   "schemaVersion": 2,
   "packages": [],
   "localPackage": null,
-  "connect": {}
+  "connect": {
+    "app": {
+      "basePath": "/",
+      "logLevel": "info"
+    },
+    "drives": {
+      "allowAddDrive": true,
+      "defaultDrives": [],
+      "sections": {
+        "remote": {
+          "enabled": true,
+          "allowAdd": true,
+          "allowDelete": true
+        },
+        "local": {
+          "enabled": true,
+          "allowAdd": true,
+          "allowDelete": true
+        }
+      }
+    },
+    "renown": {
+      "url": "https://www.renown.id",
+      "networkId": "eip155",
+      "chainId": 1
+    }
+  }
 }

@@ -3,7 +3,7 @@ import { expect } from "@playwright/test";
 
 export const TIMEOUTS = {
   DEFAULT: 5000,
-  ASYNC_CONTENT: 10000, // For drives loaded via PH_CONNECT_DEFAULT_DRIVES_URL
+  ASYNC_CONTENT: 10000, // For drives loaded async (configured via connect.drives.defaultDrives in powerhouse.config.json)
   ANIMATION: 300,
   FORM_SUBMIT: 10000,
 } as const;
