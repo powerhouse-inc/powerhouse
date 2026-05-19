@@ -62,7 +62,7 @@ const typescriptRules = {
   ],
 };
 
-/** Language options for typescript files 
+/** Language options for typescript files
 @type {import("eslint").Linter.LanguageOptions} */
 const typescriptLanguageOptions = {
   sourceType: "module",

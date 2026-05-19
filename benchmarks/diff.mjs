@@ -52,7 +52,8 @@ const offsetToLine = (file, offset) => {
     }
     fileLineCache.set(file, lineIdx);
   }
-  let lo = 0, hi = lineIdx.length - 1;
+  let lo = 0,
+    hi = lineIdx.length - 1;
   while (lo < hi) {
     const mid = (lo + hi + 1) >> 1;
     if (lineIdx[mid] <= offset) lo = mid;
@@ -77,7 +78,9 @@ const normalizeRule = (rawCode) => {
 };
 
 const oxlintFindings = [];
-const oxlintArr = Array.isArray(oxlintRaw) ? oxlintRaw : oxlintRaw.diagnostics ?? [];
+const oxlintArr = Array.isArray(oxlintRaw)
+  ? oxlintRaw
+  : (oxlintRaw.diagnostics ?? []);
 for (const d of oxlintArr) {
   const file = d.filename ?? d.file ?? "";
   // oxlint filenames are already relative to the cwd
@@ -100,7 +103,8 @@ for (const d of oxlintArr) {
 // shadows the core rule).
 const altRules = (rule) => {
   const out = [rule];
-  if (rule.startsWith("@typescript-eslint/")) out.push(rule.slice("@typescript-eslint/".length));
+  if (rule.startsWith("@typescript-eslint/"))
+    out.push(rule.slice("@typescript-eslint/".length));
   else if (!rule.includes("/")) out.push(`@typescript-eslint/${rule}`);
   return out;
 };
@@ -112,9 +116,15 @@ for (const f of eslintFindings) for (const k of keys(f)) eslintIndex.add(k);
 const oxlintIndex = new Set();
 for (const f of oxlintFindings) for (const k of keys(f)) oxlintIndex.add(k);
 
-const onlyEslint = eslintFindings.filter((f) => !keys(f).some((k) => oxlintIndex.has(k)));
-const onlyOxlint = oxlintFindings.filter((f) => !keys(f).some((k) => eslintIndex.has(k)));
-const both = eslintFindings.filter((f) => keys(f).some((k) => oxlintIndex.has(k)));
+const onlyEslint = eslintFindings.filter(
+  (f) => !keys(f).some((k) => oxlintIndex.has(k)),
+);
+const onlyOxlint = oxlintFindings.filter(
+  (f) => !keys(f).some((k) => eslintIndex.has(k)),
+);
+const both = eslintFindings.filter((f) =>
+  keys(f).some((k) => oxlintIndex.has(k)),
+);
 
 const groupBy = (arr, k) => {
   const m = new Map();
@@ -129,13 +139,17 @@ const groupBy = (arr, k) => {
 const summarize = (arr, label) => {
   const errs = arr.filter((f) => f.severity === "error");
   const warns = arr.filter((f) => f.severity === "warn");
-  console.log(`\n=== ${label}: ${arr.length} total (${errs.length} errors, ${warns.length} warnings) ===`);
+  console.log(
+    `\n=== ${label}: ${arr.length} total (${errs.length} errors, ${warns.length} warnings) ===`,
+  );
   for (const sev of ["error", "warn"]) {
     const bucket = arr.filter((f) => f.severity === sev);
     if (!bucket.length) continue;
     const byRule = groupBy(bucket, "rule");
     console.log(`  ${sev.toUpperCase()} (${bucket.length}):`);
-    const rows = [...byRule.entries()].sort((a, b) => b[1].length - a[1].length);
+    const rows = [...byRule.entries()].sort(
+      (a, b) => b[1].length - a[1].length,
+    );
     for (const [rule, items] of rows) {
       console.log(`    ${String(items.length).padStart(4)} ${rule}`);
     }
@@ -162,11 +176,19 @@ const out = {
     only_eslint: [...groupBy(onlyEslint, "rule").entries()]
       .map(([rule, items]) => ({
         rule,
-        severity_max: items.some((i) => i.severity === "error") ? "error" : "warn",
+        severity_max: items.some((i) => i.severity === "error")
+          ? "error"
+          : "warn",
         errors: items.filter((i) => i.severity === "error").length,
         warnings: items.filter((i) => i.severity === "warn").length,
         total: items.length,
-        sample: items.slice(0, 2).map((i) => ({ file: i.file, line: i.line, message: i.message.slice(0, 200) })),
+        sample: items
+          .slice(0, 2)
+          .map((i) => ({
+            file: i.file,
+            line: i.line,
+            message: i.message.slice(0, 200),
+          })),
       }))
       .sort((a, b) => {
         const sev = (s) => (s === "error" ? 0 : 1);
@@ -175,11 +197,19 @@ const out = {
     only_oxlint: [...groupBy(onlyOxlint, "rule").entries()]
       .map(([rule, items]) => ({
         rule,
-        severity_max: items.some((i) => i.severity === "error") ? "error" : "warn",
+        severity_max: items.some((i) => i.severity === "error")
+          ? "error"
+          : "warn",
         errors: items.filter((i) => i.severity === "error").length,
         warnings: items.filter((i) => i.severity === "warn").length,
         total: items.length,
-        sample: items.slice(0, 2).map((i) => ({ file: i.file, line: i.line, message: i.message.slice(0, 200) })),
+        sample: items
+          .slice(0, 2)
+          .map((i) => ({
+            file: i.file,
+            line: i.line,
+            message: i.message.slice(0, 200),
+          })),
       }))
       .sort((a, b) => {
         const sev = (s) => (s === "error" ? 0 : 1);

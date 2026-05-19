@@ -3,8 +3,22 @@
   "plugins": ["typescript", "react", "unicorn", "import", "promise"],
   "jsPlugins": [
     { "name": "logger", "specifier": "./eslint-plugins/logger.js" },
-    { "name": "cli-cold-path", "specifier": "./eslint-plugins/cli-cold-path.js" }
+    {
+      "name": "cli-cold-path",
+      "specifier": "./eslint-plugins/cli-cold-path.js"
+    },
+    "oxlint-tailwindcss"
   ],
+  "settings": {
+    "tailwindcss": {
+      "entryPoint": [
+        "packages/design-system/style.css",
+        "apps/connect/style.css",
+        "packages/powerhouse-vetra-packages/style.css",
+        "packages/vetra/style.css"
+      ]
+    }
+  },
   "options": {
     "typeAware": true
   },
@@ -49,18 +63,24 @@
     "import/no-named-as-default": "off",
     "preserve-caught-error": "off",
 
-    "typescript/consistent-type-imports": ["error", {
-      "prefer": "type-imports",
-      "disallowTypeAnnotations": true,
-      "fixStyle": "separate-type-imports"
-    }],
+    "typescript/consistent-type-imports": [
+      "error",
+      {
+        "prefer": "type-imports",
+        "disallowTypeAnnotations": true,
+        "fixStyle": "separate-type-imports"
+      }
+    ],
     "typescript/no-misused-promises": "warn",
     "typescript/no-floating-promises": "warn",
     "typescript/no-empty-object-type": "warn",
     "typescript/no-duplicate-type-constituents": "warn",
     "typescript/require-await": "warn",
     "typescript/no-unnecessary-condition": "warn",
-    "typescript/restrict-template-expressions": ["warn", { "allowNumber": true }],
+    "typescript/restrict-template-expressions": [
+      "warn",
+      { "allowNumber": true }
+    ],
     "typescript/no-unnecessary-type-assertion": "off",
     "typescript/no-unnecessary-type-parameters": "off",
     "typescript/no-base-to-string": "warn",
@@ -76,7 +96,30 @@
     "typescript/no-namespace": "off",
 
     "logger/missing-token-args": "error",
-    "logger/extra-args-without-token": "warn"
+    "logger/extra-args-without-token": "warn",
+
+    "tailwindcss/no-unknown-classes": [
+      "error",
+      {
+        "allowlist": ["custom-class", "hover-bg-transparent", "skeleton-loader"]
+      }
+    ],
+    "tailwindcss/no-duplicate-classes": "error",
+    "tailwindcss/no-conflicting-classes": "error",
+    "tailwindcss/no-deprecated-classes": "error",
+    "tailwindcss/no-unnecessary-whitespace": "error",
+    "tailwindcss/no-dark-without-light": "warn",
+    "tailwindcss/no-contradicting-variants": "warn",
+    "tailwindcss/enforce-canonical": "warn",
+    "tailwindcss/enforce-sort-order": "warn",
+    "tailwindcss/enforce-shorthand": "warn",
+    "tailwindcss/enforce-consistent-important-position": "warn",
+    "tailwindcss/enforce-negative-arbitrary-values": "warn",
+    "tailwindcss/enforce-consistent-variable-syntax": "warn",
+    "tailwindcss/consistent-variant-order": "warn",
+    "tailwindcss/no-hardcoded-colors": "off",
+    "tailwindcss/no-unnecessary-arbitrary-value": "warn",
+    "tailwindcss/enforce-consistent-line-wrapping": "off"
   },
   "overrides": [
     {
@@ -87,23 +130,32 @@
         "clis/ph-cmd/src/commands/*.ts"
       ],
       "rules": {
-        "cli-cold-path/allowed-static-imports": ["error", {
-          "allow": [
-            "cmd-ts",
-            "@powerhousedao/shared/clis/args",
-            "@powerhousedao/shared/clis/constants",
-            "@powerhousedao/shared/clis/utils",
-            "@powerhousedao/shared/clis/telemetry",
-            "@powerhousedao/shared/clis/command-names",
-            "@powerhousedao/shared/constants",
-            "@powerhousedao/shared/processors"
-          ],
-          "message": "Do not import modules statically on the CLI commands."
-        }]
+        "cli-cold-path/allowed-static-imports": [
+          "error",
+          {
+            "allow": [
+              "cmd-ts",
+              "@powerhousedao/shared/clis/args",
+              "@powerhousedao/shared/clis/constants",
+              "@powerhousedao/shared/clis/utils",
+              "@powerhousedao/shared/clis/telemetry",
+              "@powerhousedao/shared/clis/command-names",
+              "@powerhousedao/shared/constants",
+              "@powerhousedao/shared/processors"
+            ],
+            "message": "Do not import modules statically on the CLI commands."
+          }
+        ]
       }
     },
     {
-      "files": ["**/*.test.ts", "**/*.test.tsx", "**/*.bench.ts", "**/__tests__/**", "**/test/**"],
+      "files": [
+        "**/*.test.ts",
+        "**/*.test.tsx",
+        "**/*.bench.ts",
+        "**/__tests__/**",
+        "**/test/**"
+      ],
       "rules": {
         "typescript/no-unused-vars": "off",
         "no-empty": "off",

@@ -25,35 +25,61 @@ it inside Connect/Switchboard. All fields are optional so a package can be
 created empty and filled in incrementally during development.
 """
 type VetraPackageState {
-  """Human-readable package name (e.g. 'Pizza Plaza'). Distinct from the npm package id."""
+  """
+  Human-readable package name (e.g. 'Pizza Plaza'). Distinct from the npm package id.
+  """
   name: String
-  """One-paragraph summary of what the package provides. Shown on package listing pages."""
+  """
+  One-paragraph summary of what the package provides. Shown on package listing pages.
+  """
   description: String
-  """Free-form category label used to group packages in directories (e.g. 'Finance', 'Productivity')."""
+  """
+  Free-form category label used to group packages in directories (e.g. 'Finance', 'Productivity').
+  """
   category: String
-  """Author/maintainer information surfaced in the published package metadata."""
+  """
+  Author/maintainer information surfaced in the published package metadata.
+  """
   author: Author!
-  """Search keywords associated with the package. Each keyword has a stable id so it can be removed individually."""
+  """
+  Search keywords associated with the package. Each keyword has a stable id so it can be removed individually.
+  """
   keywords: [Keyword!]!
-  """Public source code URL (typically a GitHub repository)."""
+  """
+  Public source code URL (typically a GitHub repository).
+  """
   githubUrl: URL
-  """Published npm package URL. Set once the package has been released."""
+  """
+  Published npm package URL. Set once the package has been released.
+  """
   npmUrl: URL
 }
 
-"""Author/maintainer of the Vetra Package."""
+"""
+Author/maintainer of the Vetra Package.
+"""
 type Author {
-  """Display name of the author or organization."""
+  """
+  Display name of the author or organization.
+  """
   name: String
-  """Author's website URL."""
+  """
+  Author's website URL.
+  """
   website: URL
 }
 
-"""A single search keyword attached to the package."""
+"""
+A single search keyword attached to the package.
+"""
 type Keyword {
-  """Stable identifier for the keyword entry; used to remove it."""
+  """
+  Stable identifier for the keyword entry; used to remove it.
+  """
   id: OID!
-  """Display label for the keyword (e.g. 'invoicing', 'defi')."""
+  """
+  Display label for the keyword (e.g. 'invoicing', 'defi').
+  """
   label: String!
 }
 

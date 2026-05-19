@@ -4,7 +4,7 @@ import {
 } from "@renown/sdk";
 
 type VerifiedCredential =
-  Awaited<ReturnType<typeof verifyAuthBearerToken>> extends false | infer T
+  Awaited<ReturnType<typeof verifyAuthBearerToken>> extends false | (infer T)
     ? T
     : never;
 export interface AuthConfig {

@@ -1,32 +1,18 @@
 // @ts-check
-// Slimmed config: ESLint is responsible only for the things oxlint
-// cannot do — Prettier formatting and tailwind class validation. All
-// other rules (typescript-eslint type-aware, react-hooks, custom
-// logger/cli-cold-path plugins, eslint core) run via oxlint.
+// Minimal config: ESLint only registers plugins (no rules) so that
+// existing inline `eslint-disable <rule>` comments resolve. All linting
+// and formatting now happens via oxlint + oxfmt:
 //
-// Run `pnpm lint:ox` first for the fast pass; this ESLint config is the
-// formatter/tailwind gate.
+//   pnpm lint:ox    oxlint (rules, type-aware, custom plugins, tailwind)
+//   pnpm format     oxfmt  (replaces prettier)
+//
+// This file remains only to satisfy inline disable comments left in
+// source from the previous ESLint setup. Delete once those are cleaned up.
 
-import betterTailwindcss from "eslint-plugin-better-tailwindcss";
-import eslintPluginPrettierRecommended from "eslint-plugin-prettier/recommended";
 import reactHooks from "eslint-plugin-react-hooks";
-import loggerPlugin from "./eslint-plugins/logger.js";
 import { defineConfig, globalIgnores } from "eslint/config";
 import tseslint from "typescript-eslint";
-
-// Parser only — no rules. typescript-eslint's recommended rules are now
-// enforced by oxlint with type-aware linting.
-const typescriptParserConfig = {
-  files: ["**/*.ts", "**/*.tsx", "**/*.mts", "**/*.cts"],
-  languageOptions: {
-    parser: tseslint.parser,
-    parserOptions: {
-      ecmaVersion: "latest",
-      sourceType: "module",
-      ecmaFeatures: { jsx: true },
-    },
-  },
-};
+import loggerPlugin from "./eslint-plugins/logger.js";
 
 const ignoredFiles = [
   "**/node_modules/",
@@ -71,70 +57,19 @@ const ignoredFiles = [
   "packages/reactor-api/src/packages/vite-loader.mts",
 ];
 
-const tailwindRules = {
-  ...betterTailwindcss.configs["recommended-error"].rules,
-  "better-tailwindcss/enforce-consistent-line-wrapping": ["off"],
-  "better-tailwindcss/no-unknown-classes": [
-    "error",
-    {
-      ignore: ["custom-class", "hover-bg-transparent", "skeleton-loader"],
+const parser = {
+  files: ["**/*.ts", "**/*.tsx", "**/*.mts", "**/*.cts"],
+  languageOptions: {
+    parser: tseslint.parser,
+    parserOptions: {
+      ecmaVersion: "latest",
+      sourceType: "module",
+      ecmaFeatures: { jsx: true },
     },
-  ],
+  },
 };
 
-const tailwindConfig = [
-  {
-    files: ["packages/design-system/**/*.{js,jsx,cjs,mjs,ts,tsx}"],
-    ignores: ["packages/design-system/src/powerhouse/components/legacy/**"],
-    ...betterTailwindcss.configs["recommended-error"],
-    rules: tailwindRules,
-    settings: {
-      "better-tailwindcss": {
-        cwd: "./packages/design-system",
-        entryPoint: "style.css",
-      },
-    },
-  },
-  {
-    files: ["apps/connect/**/*.{js,jsx,cjs,mjs,ts,tsx}"],
-    ...betterTailwindcss.configs["recommended-error"],
-    rules: tailwindRules,
-    settings: {
-      "better-tailwindcss": {
-        cwd: "./apps/connect",
-        entryPoint: "style.css",
-      },
-    },
-  },
-  {
-    files: ["packages/powerhouse-vetra-packages/**/*.{js,jsx,cjs,mjs,ts,tsx}"],
-    ...betterTailwindcss.configs["recommended-error"],
-    rules: tailwindRules,
-    settings: {
-      "better-tailwindcss": {
-        cwd: "./packages/powerhouse-vetra-packages",
-        entryPoint: "style.css",
-      },
-    },
-  },
-  {
-    files: ["packages/vetra/**/*.{js,jsx,cjs,mjs,ts,tsx}"],
-    ...betterTailwindcss.configs["recommended-error"],
-    rules: tailwindRules,
-    settings: {
-      "better-tailwindcss": {
-        cwd: "./packages/vetra",
-        entryPoint: "style.css",
-      },
-    },
-  },
-];
-
-// Register plugins (but enable no rules) so existing inline
-// `eslint-disable <rule>` comments resolve. ESLint errors on disable
-// directives that reference unknown rules; the actual checks run via
-// oxlint.
-const pluginsRegistrationOnly = {
+const registrations = {
   files: [
     "**/*.ts",
     "**/*.tsx",
@@ -153,13 +88,7 @@ const pluginsRegistrationOnly = {
 
 export default defineConfig(
   globalIgnores(ignoredFiles),
-  typescriptParserConfig,
-  pluginsRegistrationOnly,
-  // Prettier: runs prettier as an ESLint rule. Formatting-only.
-  eslintPluginPrettierRecommended,
-  // Tailwind class validation for packages that use Tailwind.
-  ...tailwindConfig,
-  // Disable per-config noise from unused-disable directives that reference
-  // rules now lived in oxlint (react-hooks, logger, cli-cold-path).
+  parser,
+  registrations,
   { linterOptions: { reportUnusedDisableDirectives: "off" } },
 );

@@ -1,16 +1,10 @@
 {
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
-    "outDir": "./.tsbuild",
+    "outDir": "./.tsbuild"
   },
-  "include": [
-    "**/*"
-  ],
-  "exclude": [
-    "dist",
-    "node_modules",
-    "legacy"
-  ],
+  "include": ["**/*"],
+  "exclude": ["dist", "node_modules", "legacy"],
   "references": [
     {
       "path": "../../packages/codegen"

@@ -1,14 +1,10 @@
 {
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
-    "types": [
-      "node"
-    ],
-    "outDir": "./.tsbuild",
+    "types": ["node"],
+    "outDir": "./.tsbuild"
   },
-  "include": [
-    "**/*"
-  ],
+  "include": ["**/*"],
   "references": [
     {
       "path": "../../packages/document-model"

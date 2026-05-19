@@ -5,13 +5,13 @@ auth:
     file: ./htpasswd
 
 packages:
-  '@*/*':
+  "@*/*":
     access: $all
     publish: $all
     unpublish: $all
     proxy: npmjs
 
-  '**':
+  "**":
     access: $all
     publish: $all
     unpublish: $all
