@@ -10,11 +10,14 @@
     { "tool": "tsgo",   "version": "7.0.0-dev.20260518.1",          "mode": "warm",            "elapsed_s": 0.14,  "rc": 0 },
     { "tool": "eslint", "version": "10.3.0 + typescript-eslint",    "mode": "cold",            "elapsed_s": 63.80, "rc": 1, "note": "2 pre-existing errors in test/test-consumer-project/vite.config.ts" },
     { "tool": "eslint", "version": "10.3.0 + typescript-eslint",    "mode": "warm",            "elapsed_s": 1.37,  "rc": 1 },
-    { "tool": "oxlint", "version": "1.65.0",                        "mode": "cold",            "elapsed_s": 0.64,  "rc": 1, "note": "66 correctness errors + 171 warnings — pre-existing issues surfaced; see migration-report.html" },
-    { "tool": "oxlint", "version": "1.65.0",                        "mode": "warm",            "elapsed_s": 0.55,  "rc": 1 }
+    { "tool": "oxlint", "version": "1.65.0 (correctness only)",     "mode": "cold",            "elapsed_s": 0.64,  "rc": 1, "note": "initial run; pre-existing issues surfaced" },
+    { "tool": "oxlint", "version": "1.65.0 (correctness only)",     "mode": "warm",            "elapsed_s": 0.55,  "rc": 1 },
+    { "tool": "oxlint", "version": "1.65.0 + tsgolint + jsPlugins", "mode": "cold (full ruleset)", "elapsed_s": 3.0, "rc": 1, "note": "type-aware + custom plugins + react-hooks + unicorn + import + promise — 749 findings" },
+    { "tool": "eslint (slim)", "version": "10.3.0 (prettier + better-tailwindcss only)", "mode": "cold", "elapsed_s": 16.0, "rc": 0, "note": "type-aware + react-hooks + custom rules moved to oxlint" }
   ],
   "speedup_cold": {
     "tsgo_vs_tsc":    4.80,
-    "oxlint_vs_eslint": 99.69
+    "oxlint_full_vs_eslint_full":   21.27,
+    "slim_eslint_vs_full_eslint":    4.0
   }
 }

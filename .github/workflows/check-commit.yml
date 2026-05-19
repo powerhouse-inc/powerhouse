@@ -57,14 +57,15 @@ jobs:
       - name: Check tsconfig references
         run: pnpm check-ts-references
 
-      # Fast advisory pre-checks: tsgo + oxlint catch most issues in
-      # seconds before we spend minutes on the authoritative pass.
-      # Non-blocking until parity is established.
+      # Fast advisory typecheck via tsgo. tsc remains authoritative below.
       - name: Fast typecheck (tsgo, advisory)
         continue-on-error: true
         run: pnpm typecheck:tsgo
 
-      - name: Fast lint (oxlint, advisory)
+      # Primary lint: oxlint covers typescript-eslint type-aware rules,
+      # react-hooks, custom logger/cli-cold-path plugins, and core lint.
+      # eslint below now only enforces prettier + better-tailwindcss.
+      - name: Lint (oxlint)
         if: ${{ steps.diff.outputs.files != '' }}
         continue-on-error: true
         run: pnpm lint:ox

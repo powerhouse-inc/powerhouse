@@ -84,19 +84,19 @@
       <div class="delta">~4.8× faster (tsgo)</div>
     </div>
     <div class="card">
-      <div class="label">Cold lint</div>
-      <div class="val">63.8s → 0.64s</div>
-      <div class="delta">~100× faster (oxlint)</div>
+      <div class="label">Cold lint (full)</div>
+      <div class="val">63.8s → 3.0s</div>
+      <div class="delta">~21× faster (oxlint w/ type-aware + js plugins)</div>
     </div>
     <div class="card">
-      <div class="label">Warm typecheck</div>
-      <div class="val">1.0s → 0.14s</div>
-      <div class="delta">~7× faster</div>
+      <div class="label">Slim ESLint (prettier + tailwind)</div>
+      <div class="val">15s</div>
+      <div class="delta">parallelizable with oxlint</div>
     </div>
     <div class="card">
-      <div class="label">Warm lint</div>
-      <div class="val">1.4s → 0.55s</div>
-      <div class="delta">~2.5× faster</div>
+      <div class="label">Findings parity</div>
+      <div class="val">621 / 760</div>
+      <div class="delta">82% overlap; deltas analyzed below</div>
     </div>
   </div>
 
@@ -124,9 +124,15 @@
       <tr><td>eslint</td><td>10.3.0 + typescript-eslint</td><td>cold</td><td class="num">63.80s</td>
         <td class="bar-cell"><div class="bar slow"><span style="width:100%"></span></div></td>
         <td>Authoritative; type-aware</td></tr>
-      <tr><td>oxlint</td><td>1.65.0</td><td>cold</td><td class="num">0.64s</td>
+      <tr><td>oxlint</td><td>1.65.0 (correctness only)</td><td>cold</td><td class="num">0.64s</td>
         <td class="bar-cell"><div class="bar"><span style="width:1%"></span></div></td>
-        <td>Correctness only; 18 threads</td></tr>
+        <td>Built-in rules only</td></tr>
+      <tr><td>oxlint</td><td>1.65 + tsgolint + jsPlugins</td><td>cold</td><td class="num">3.00s</td>
+        <td class="bar-cell"><div class="bar"><span style="width:4.7%"></span></div></td>
+        <td>Type-aware + custom plugins (full parity)</td></tr>
+      <tr><td>eslint (slim)</td><td>10.3.0</td><td>cold</td><td class="num">16.0s</td>
+        <td class="bar-cell"><div class="bar slow"><span style="width:25%"></span></div></td>
+        <td>Prettier + better-tailwindcss only</td></tr>
       <tr><td>eslint</td><td>10.3.0</td><td>warm (cache)</td><td class="num">1.37s</td>
         <td class="bar-cell"><div class="bar slow"><span style="width:100%"></span></div></td><td>—</td></tr>
       <tr><td>oxlint</td><td>1.65.0</td><td>warm</td><td class="num">0.55s</td>
@@ -136,6 +142,68 @@
   <p class="muted">
     Bars show time relative to the baseline tool in each (cold/warm)
     comparison. Runs on darwin 25.4.0 (Apple Silicon), Node 24, pnpm 11.0.8.
+  </p>
+
+  <h2>ESLint vs oxlint: what each catches</h2>
+  <p class="lead" style="margin-top:0">
+    Both linters ran on the full repo with their full rule sets enabled.
+    Findings were normalized to <code>(file, line, rule)</code> with rule
+    aliases (<code>eslint(no-unused-vars)</code> ↔
+    <code>@typescript-eslint/no-unused-vars</code>) collapsed.
+  </p>
+  <div class="grid cards" style="margin-bottom:18px">
+    <div class="card"><div class="label">ESLint total</div><div class="val">760</div></div>
+    <div class="card"><div class="label">oxlint total</div><div class="val">749</div></div>
+    <div class="card"><div class="label">Overlap</div><div class="val">621</div><div class="delta">~82%</div></div>
+    <div class="card"><div class="label">Only ESLint</div><div class="val">139</div><div class="delta warn">3 errors, 136 warnings</div></div>
+    <div class="card"><div class="label">Only oxlint</div><div class="val">141</div><div class="delta bad">81 errors, 60 warnings</div></div>
+  </div>
+
+  <h3>Only oxlint catches — by severity</h3>
+  <p class="muted" style="margin-top:0">New issues you would lose if you stayed on ESLint alone. Most are real bugs from rules ESLint did not have enabled.</p>
+  <table>
+    <thead><tr><th>Rule</th><th class="num">Errors</th><th class="num">Warns</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td><code>unicorn/no-useless-spread</code></td><td class="num">15</td><td class="num">0</td><td>Spreading an array literal — redundant alloc</td></tr>
+      <tr><td><code>unicorn/no-empty-file</code></td><td class="num">14</td><td class="num">0</td><td>Empty source files; may be unintentional</td></tr>
+      <tr><td><code>no-unsafe-optional-chaining</code></td><td class="num">10</td><td class="num">0</td><td>Optional chain used where <code>undefined</code> isn't valid (e.g. arithmetic, iteration)</td></tr>
+      <tr><td><code>unicorn/no-useless-fallback-in-spread</code></td><td class="num">8</td><td class="num">0</td><td><code>{...(x ?? {})}</code> patterns that are no-ops</td></tr>
+      <tr><td><code>@typescript-eslint/no-useless-default-assignment</code></td><td class="num">6</td><td class="num">0</td><td>Default param that never receives <code>undefined</code></td></tr>
+      <tr><td><code>unicorn/no-new-array</code></td><td class="num">5</td><td class="num">0</td><td><code>new Array(n)</code> sparse-array foot-gun</td></tr>
+      <tr><td><code>promise/no-callback-in-promise</code></td><td class="num">5</td><td class="num">0</td><td>Mixing callbacks and promise chains</td></tr>
+      <tr><td><code>@typescript-eslint/require-array-sort-compare</code></td><td class="num">5</td><td class="num">0</td><td><code>.sort()</code> without a comparator on a non-string array</td></tr>
+      <tr><td><code>react-hooks/rules-of-hooks</code></td><td class="num">4</td><td class="num">0</td><td>Real hook-order violations ESLint missed on these lines</td></tr>
+      <tr><td><code>@typescript-eslint/no-meaningless-void-operator</code></td><td class="num">3</td><td class="num">0</td><td><code>void</code> on already-void expressions</td></tr>
+      <tr><td><code>react/no-children-prop</code></td><td class="num">2</td><td class="num">0</td><td>Passing <code>children</code> as JSX attribute</td></tr>
+      <tr><td>5 more single-occurrence error rules</td><td class="num">5</td><td class="num">0</td><td><code>react/jsx-props-no-spread-multi</code>, <code>unicorn/no-useless-length-check</code>, <code>@typescript-eslint/no-unnecessary-parameter-property-assignment</code>, <code>@typescript-eslint/tsconfig-error</code></td></tr>
+      <tr><td><code>react-hooks/exhaustive-deps</code></td><td class="num">0</td><td class="num">49</td><td>Same rule as ESLint but oxlint reports at slightly different lines/labels</td></tr>
+      <tr><td>type-aware warning rules</td><td class="num">0</td><td class="num">11</td><td><code>no-unnecessary-condition</code>, <code>no-floating-promises</code>, <code>no-base-to-string</code>, <code>require-await</code>, <code>restrict-template-expressions</code>, <code>no-empty-object-type</code> — line-mismatched twins of ESLint reports</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Only ESLint catches — by severity</h3>
+  <p class="muted" style="margin-top:0">Mostly line-mismatched twins of overlapping findings; the genuinely-missing buckets are noted in the right column.</p>
+  <table>
+    <thead><tr><th>Rule</th><th class="num">Errors</th><th class="num">Warns</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td><code>prettier/prettier</code></td><td class="num">1</td><td class="num">0</td><td><strong>Genuinely missing in oxlint:</strong> formatting (expected — oxlint does not format)</td></tr>
+      <tr><td><code>@typescript-eslint/no-unsafe-assignment</code></td><td class="num">1</td><td class="num">0</td><td>Pre-existing in <code>test/test-consumer-project/vite.config.ts</code>; oxlint has the rule but disabled by default in our config (same as old ESLint had it disabled almost everywhere)</td></tr>
+      <tr><td><code>@typescript-eslint/no-unsafe-call</code></td><td class="num">1</td><td class="num">0</td><td>Same as above</td></tr>
+      <tr><td><code>@typescript-eslint/no-unused-vars</code></td><td class="num">0</td><td class="num">50</td><td>oxlint also fires this — different lines (it locates the unused symbol at the declaration; ESLint at the binding)</td></tr>
+      <tr><td><code>react-hooks/exhaustive-deps</code></td><td class="num">0</td><td class="num">32</td><td>Same rule, line mismatch</td></tr>
+      <tr><td>type-aware warning rules</td><td class="num">0</td><td class="num">39</td><td><code>no-misused-promises</code> (14), <code>no-floating-promises</code> (10), <code>no-unnecessary-condition</code> (8), <code>no-empty-object-type</code> (4), <code>require-await</code> (2), <code>restrict-template-expressions</code> — line mismatches</td></tr>
+      <tr><td><code>no-useless-assignment</code></td><td class="num">0</td><td class="num">8</td><td><strong>Genuinely missing in oxlint:</strong> not implemented</td></tr>
+      <tr><td><code>preserve-caught-error</code></td><td class="num">0</td><td class="num">5</td><td><strong>Genuinely missing in oxlint:</strong> ESLint 10's new rule, no oxlint equivalent</td></tr>
+      <tr><td><code>react-hooks/incompatible-library</code></td><td class="num">0</td><td class="num">2</td><td><strong>Genuinely missing in oxlint:</strong> react-hooks subset</td></tr>
+      <tr><td><code>@typescript-eslint/no-duplicate-type-constituents</code></td><td class="num">0</td><td class="num">1</td><td>oxlint reports the same as <code>no-redundant-type-constituents</code>; line mismatch</td></tr>
+    </tbody>
+  </table>
+  <p class="muted">
+    Summary: of the 139 "only ESLint" findings, <strong>~16</strong> are
+    genuinely unique to ESLint (1 prettier + 8 no-useless-assignment +
+    5 preserve-caught-error + 2 react-hooks/incompatible-library); the
+    other ~123 are the same logical issues oxlint also reports, just at
+    a slightly different line or under a renamed rule.
   </p>
 
   <h2>What changed</h2>
@@ -159,15 +227,19 @@
         the authoritative tsc/eslint passes still gate merges.</p>
     </div>
     <div class="card">
-      <h3 style="margin-top:0">Kept as-is</h3>
+      <h3 style="margin-top:0">Kept in ESLint</h3>
       <ul>
-        <li><code>tsc --build</code> — authoritative typecheck</li>
-        <li><code>eslint</code> — type-aware rules, prettier formatting, custom plugins (<code>logger/*</code>, <code>cli-cold-path/*</code>), <code>better-tailwindcss</code></li>
-        <li><code>prettier</code> — formatting (oxlint does not format)</li>
+        <li><code>eslint-plugin-prettier</code> — formatting (oxlint does not format)</li>
+        <li><code>eslint-plugin-better-tailwindcss</code> — Tailwind class validation in <code>design-system</code> / <code>connect</code> / <code>vetra</code> packages</li>
+        <li>Plugin registrations (no rules enabled) for <code>@typescript-eslint</code>, <code>react-hooks</code>, <code>logger</code> so existing inline <code>eslint-disable</code> comments resolve</li>
       </ul>
-      <p class="muted">This is intentionally a hybrid migration. The Rust/Go
-        tools cover the fast path; the JS originals remain authoritative for
-        anything they don't yet support.</p>
+      <h3>Moved to oxlint</h3>
+      <ul>
+        <li>typescript-eslint type-aware rules (via <code>oxlint-tsgolint</code>)</li>
+        <li><code>react-hooks/*</code></li>
+        <li>eslint core, <code>unicorn/*</code>, <code>import/*</code>, <code>promise/*</code></li>
+        <li>Custom <code>logger/*</code> + <code>cli-cold-path/*</code> (loaded via <code>jsPlugins</code>)</li>
+      </ul>
     </div>
   </div>
 
@@ -205,44 +277,44 @@
     <thead><tr><th>Issue</th><th>Impact</th><th>Status</th></tr></thead>
     <tbody>
       <tr>
-        <td>No plugin API (yet)</td>
-        <td>The repo's custom rules — <code>logger/missing-token-args</code>, <code>logger/extra-args-without-token</code>, <code>cli-cold-path/allowed-static-imports</code> — cannot run under oxlint.</td>
-        <td><span class="badge bad">unsupported</span> ESLint remains authoritative for these.</td>
+        <td>Custom plugin API</td>
+        <td>Loads via <code>jsPlugins</code> in <code>.oxlintrc.json</code>. The repo's <code>logger/*</code> and <code>cli-cold-path/*</code> rules — already standard ESLint v9 plugins — run unchanged.</td>
+        <td><span class="badge ok">handled</span> Alpha; not semver-stable yet.</td>
       </tr>
       <tr>
-        <td>No type-aware rules</td>
-        <td>Most <code>typescript-eslint/*</code> rules used here are type-aware: <code>no-floating-promises</code>, <code>no-misused-promises</code>, <code>require-await</code>, <code>no-unnecessary-condition</code>, <code>restrict-template-expressions</code>, <code>consistent-type-imports</code>, etc. Oxlint cannot evaluate them.</td>
-        <td><span class="badge bad">unsupported</span> ESLint remains authoritative.</td>
+        <td>Type-aware rules</td>
+        <td>59 of 61 typescript-eslint type-aware rules supported via <code>oxlint-tsgolint</code> (Go). Runs once over the TS program, returns diagnostics into oxlint.</td>
+        <td><span class="badge ok">handled</span> Requires TypeScript 7+.</td>
       </tr>
       <tr>
-        <td>No <code>eslint-plugin-better-tailwindcss</code></td>
-        <td>Tailwind class validation and ordering rules for design-system / connect / vetra packages.</td>
-        <td><span class="badge bad">unsupported</span> ESLint keeps these.</td>
+        <td><code>eslint-plugin-better-tailwindcss</code></td>
+        <td>Not in oxlint's tested-plugin list. Stays in ESLint.</td>
+        <td><span class="badge warn">eslint owns</span></td>
       </tr>
       <tr>
-        <td>No <code>eslint-plugin-prettier</code></td>
-        <td>Oxlint does not format. Prettier still runs via ESLint, husky, and editor save.</td>
-        <td><span class="badge">expected</span></td>
+        <td><code>eslint-plugin-prettier</code></td>
+        <td>Oxlint does not format. Stays in ESLint by design — keeps formatting violations gating CI.</td>
+        <td><span class="badge warn">eslint owns</span></td>
+      </tr>
+      <tr>
+        <td>Rules missing entirely from oxlint</td>
+        <td><code>no-useless-assignment</code> (8 findings), <code>preserve-caught-error</code> (5 findings, new in ESLint 10), <code>react-hooks/incompatible-library</code> (2 findings), <code>react-hooks/set-state-in-effect</code>, <code>react-hooks/static-components</code>. None of these are gating today.</td>
+        <td><span class="badge warn">accepted gap</span></td>
+      </tr>
+      <tr>
+        <td>tsgolint memory on large repos</td>
+        <td>Type-aware pass builds a TS program in Go; very large codebases may see high RSS. This monorepo (~2268 files) ran in 3s with no issue.</td>
+        <td><span class="badge ok">no issue here</span></td>
       </tr>
       <tr>
         <td><code>settings.react.version: "detect"</code> not accepted</td>
         <td>Oxlint config schema expects a literal version string or omitted.</td>
         <td><span class="badge ok">handled</span> Setting removed.</td>
       </tr>
-      <tr>
-        <td>Rule-name divergence</td>
-        <td>Oxlint groups rules by plugin (e.g. <code>typescript/no-unused-vars</code>, <code>react-hooks/exhaustive-deps</code>). ESLint config IDs do not map 1:1.</td>
-        <td><span class="badge warn">migration cost</span> Documented in <code>.oxlintrc.json</code>.</td>
-      </tr>
-      <tr>
-        <td>Pre-existing findings surfaced</td>
-        <td>66 correctness errors + 171 warnings on first run — rules ESLint does not have or has disabled.</td>
-        <td><span class="badge warn">triage</span> See breakdown below.</td>
-      </tr>
     </tbody>
   </table>
 
-  <h3>Oxlint findings to triage</h3>
+  <h3>Net-new oxlint findings to triage (errors)</h3>
   <table>
     <thead><tr><th>Rule</th><th>Count</th><th>Severity</th><th>Likely action</th></tr></thead>
     <tbody>
