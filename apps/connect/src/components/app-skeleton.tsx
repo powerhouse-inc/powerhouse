@@ -1,8 +1,8 @@
 import { getBasePath } from "@powerhousedao/connect/utils";
 import {
-  AnimatedLoader,
   ConnectSidebar,
   HomeScreen,
+  LogoAnimation,
 } from "@powerhousedao/design-system/connect";
 import { initTheme } from "@powerhousedao/reactor-browser";
 import {
@@ -67,7 +67,7 @@ const Loader = ({ delay = LOADER_DELAY }: { delay?: number }) => {
       className={`skeleton-loader absolute inset-0 z-10 flex items-center justify-center ${showLoading ? "" : "hidden"}`}
     >
       <div className="animate-pulse overflow-hidden rounded-full shadow-lg">
-        <AnimatedLoader />
+        <LogoAnimation />
       </div>
       {isSSR ? (
         <script

@@ -182,4 +182,18 @@
       transform: translateX(0);
     }
   }
+
+    @keyframes brickDrop {
+    0%   { opacity: 0; transform: translateY(-10px); }
+    58%  { opacity: 1; transform: translateY(1.2px); }
+    78%  { transform: translateY(-0.4px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+
+    @keyframes brickFall {
+    0%   { opacity: 1; transform: translateY(0); }
+    20%  { opacity: 1; transform: translateY(-1.2px); }
+    40%  { transform: translateY(0.4px); }
+    100% { opacity: 0; transform: translateY(12px); }
+  }
 }

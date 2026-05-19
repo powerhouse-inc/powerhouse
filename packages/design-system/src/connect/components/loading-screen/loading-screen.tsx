@@ -1,11 +1,10 @@
-import type { Size } from "#design-system";
 import { twMerge } from "tailwind-merge";
-import { AnimatedLoader } from "../animated-loader/animated-loader.js";
+import { LogoAnimation } from "../logo-animation.js";
 
 export interface LoadingScreenProps {
   showLoadingScreen: boolean;
   loadingComponent?: React.ReactNode;
-  size?: Size;
+  size?: number;
   className?: string;
 }
 
@@ -24,7 +23,7 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = (props) => {
         className,
       )}
     >
-      <AnimatedLoader size={size} />
+      <LogoAnimation size={size} />
     </div>
   );
 };
