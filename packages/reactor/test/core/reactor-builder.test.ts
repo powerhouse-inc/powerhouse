@@ -52,21 +52,27 @@ class FakeWorker implements IExecutorWorker {
     this.workerId = `fake-${index}`;
   }
 
-  async start(): Promise<void> {
+  start(): Promise<void> {
     this.startCalls++;
+    return Promise.resolve();
   }
 
-  async execute(_job: Job): Promise<WorkerExecutionOutcome> {
-    return { result: { job: _job, success: true, duration: 1 } };
+  execute(_job: Job): Promise<WorkerExecutionOutcome> {
+    return Promise.resolve({
+      result: { job: _job, success: true, duration: 1 },
+    });
   }
 
   abort(): void {}
 
-  async shutdown(): Promise<void> {
+  shutdown(): Promise<void> {
     this.shutdownCalls++;
+    return Promise.resolve();
   }
 
-  async loadModel(): Promise<void> {}
+  loadModel(): Promise<void> {
+    return Promise.resolve();
+  }
 
   isIdle(): boolean {
     return true;
@@ -157,9 +163,7 @@ describe("ReactorBuilder", () => {
         .withWorkerPool(WORKER_POOL_ENABLED)
         .withWorkerSignatureVerifierSpec(TEST_VERIFIER_SPEC);
 
-      await expect(builder.buildModule()).rejects.toThrow(
-        /withWorkerDbConfig/,
-      );
+      await expect(builder.buildModule()).rejects.toThrow(/withWorkerDbConfig/);
     });
 
     it("rejects when enabled and withWorkerSignatureVerifierSpec is missing", async () => {
@@ -234,11 +238,13 @@ describe("ReactorBuilder", () => {
 
       const customManagerCalls = { start: 0, stop: 0 };
       const customManager = {
-        async start() {
+        start(): Promise<void> {
           customManagerCalls.start++;
+          return Promise.resolve();
         },
-        async stop() {
+        stop(): Promise<void> {
           customManagerCalls.stop++;
+          return Promise.resolve();
         },
         getExecutors() {
           return [];

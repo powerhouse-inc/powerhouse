@@ -15,10 +15,10 @@ describe("createForwardingLogger", () => {
     it("debug posts level: 'debug'", () => {
       const { post, messages } = captureMessages();
       const logger = createForwardingLogger(post);
-      logger.debug("test message", "arg1");
+      logger.debug("test message: @arg", "arg1");
       expect(messages).toHaveLength(1);
       expect(messages[0]!.level).toBe("debug");
-      expect(messages[0]!.message).toBe("test message");
+      expect(messages[0]!.message).toBe("test message: @arg");
       expect(messages[0]!.args).toEqual(["arg1"]);
     });
 
@@ -82,7 +82,7 @@ describe("createForwardingLogger", () => {
       const { post, messages } = captureMessages();
       const logger = createForwardingLogger(post);
       const err = new Error("oops");
-      logger.info("with error", err);
+      logger.info("with error: @err", err);
       expect(() => structuredClone(messages[0])).not.toThrow();
     });
 
@@ -91,7 +91,7 @@ describe("createForwardingLogger", () => {
       const logger = createForwardingLogger(post);
       const obj: Record<string, unknown> = { x: 1 };
       obj["self"] = obj;
-      logger.info("circular", obj);
+      logger.info("circular: @obj", obj);
       expect(() => structuredClone(messages[0])).not.toThrow();
     });
 
@@ -101,7 +101,7 @@ describe("createForwardingLogger", () => {
       class Foo {
         value = 42;
       }
-      logger.info("class", new Foo());
+      logger.info("class: @foo", new Foo());
       expect(() => structuredClone(messages[0])).not.toThrow();
     });
 
@@ -110,7 +110,7 @@ describe("createForwardingLogger", () => {
       const logger = createForwardingLogger(post);
       const cause = new TypeError("inner");
       const err = new Error("outer", { cause });
-      logger.error("err arg", err);
+      logger.error("err arg: @err", err);
       expect(() => structuredClone(messages[0])).not.toThrow();
     });
   });
@@ -137,7 +137,7 @@ describe("createForwardingLogger", () => {
     it("parent messages are not affected by child tags", () => {
       const { post, messages } = captureMessages();
       const parent = createForwardingLogger(post);
-      const _child = parent.child(["tag"]);
+      parent.child(["tag"]);
       parent.info("parent msg");
       expect(messages[0]!.args).toEqual([]);
     });

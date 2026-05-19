@@ -6,7 +6,7 @@ import {
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import { PGlite } from "@electric-sql/pglite";
-import { MessageChannel } from "node:worker_threads";
+import { MessageChannel, type MessagePort } from "node:worker_threads";
 import { afterEach, describe, expect, it } from "vitest";
 import type { Database } from "../../../../src/core/types.js";
 import {
@@ -32,8 +32,8 @@ import { driveCollectionId } from "../../../../src/cache/operation-index-types.j
 import type { Database as StorageDatabase } from "../../../../src/storage/kysely/types.js";
 
 type Harness = {
-  port1: import("node:worker_threads").MessagePort;
-  port2: import("node:worker_threads").MessagePort;
+  port1: MessagePort;
+  port2: MessagePort;
   database: Kysely<Database>;
   pglite: PGlite;
 };
@@ -59,8 +59,8 @@ afterEach(async () => {
 });
 
 async function startInProcessWorker(
-  loadFactory: NonNullable<RunWorkerOverrides["loadFactory"]> = async () =>
-    driveDocumentModelModule,
+  loadFactory: NonNullable<RunWorkerOverrides["loadFactory"]> = () =>
+    Promise.resolve(driveDocumentModelModule),
 ): Promise<Harness> {
   const pglite = new PGlite();
   const baseDatabase = new Kysely<Database>({
@@ -77,13 +77,13 @@ async function startInProcessWorker(
   };
 
   runWorker(channel.port2, {
-    async createDatabase() {
-      return {
+    createDatabase() {
+      return Promise.resolve({
         kysely: baseDatabase,
-        async shutdown() {
-          // owned by the test harness; no-op on worker shutdown
+        shutdown() {
+          return Promise.resolve();
         },
-      };
+      });
     },
     loadFactory,
   });
@@ -93,7 +93,7 @@ async function startInProcessWorker(
 }
 
 function waitForMessage<T extends WorkerMessage>(
-  port: import("node:worker_threads").MessagePort,
+  port: MessagePort,
   predicate: (msg: WorkerMessage) => msg is T,
   timeoutMs = 5000,
 ): Promise<T> {
@@ -359,13 +359,13 @@ describe("runWorker in-process execution", () => {
 
   it("registers a new document model via load-model and acknowledges with model-loaded", async () => {
     const calls: string[] = [];
-    const h = await startInProcessWorker(async (spec) => {
+    const h = await startInProcessWorker((spec) => {
       const name =
         "packageName" in spec.module
           ? spec.module.packageName
           : spec.module.filePath;
       calls.push(`${name}#${spec.module.exportName}`);
-      return driveDocumentModelModule;
+      return Promise.resolve(driveDocumentModelModule);
     });
 
     // Boot with no models so the load-model call is the first registration
@@ -403,15 +403,15 @@ describe("runWorker in-process execution", () => {
 
   it("posts model-load-failed when the factory throws", async () => {
     let initCalls = 0;
-    const h = await startInProcessWorker(async (spec) => {
+    const h = await startInProcessWorker((spec) => {
       if (
         "packageName" in spec.module &&
         spec.module.packageName === "ph/broken-model"
       ) {
-        throw new Error("synthetic load failure");
+        return Promise.reject(new Error("synthetic load failure"));
       }
       initCalls++;
-      return driveDocumentModelModule;
+      return Promise.resolve(driveDocumentModelModule);
     });
 
     const init = makeInit();
@@ -434,7 +434,10 @@ describe("runWorker in-process execution", () => {
         documentType: "ph/broken",
         version: "1.0.0",
         spec: {
-          module: { packageName: "ph/broken-model", exportName: "documentModel" },
+          module: {
+            packageName: "ph/broken-model",
+            exportName: "documentModel",
+          },
         },
       },
     });

@@ -350,16 +350,11 @@ export class WorkerPoolJobExecutorManager implements IJobExecutorManager {
     try {
       await this.eventBus.emit(ReactorEventTypes.JOB_WRITE_READY, event);
     } catch (error) {
-      this.logger.error(
-        "Failed to emit JOB_WRITE_READY event: @Error",
-        error,
-      );
+      this.logger.error("Failed to emit JOB_WRITE_READY event: @Error", error);
     }
   }
 
-  private invalidateMembershipsFor(
-    operations: OperationWithContext[],
-  ): void {
+  private invalidateMembershipsFor(operations: OperationWithContext[]): void {
     for (const op of operations) {
       const actionType = op.operation.action.type;
       if (!MEMBERSHIP_INVALIDATING_ACTIONS.has(actionType)) {
@@ -488,9 +483,7 @@ function isDuplicateModuleFailure(reason: unknown): boolean {
   );
 }
 
-function extractMembershipTarget(
-  op: OperationWithContext,
-): string | undefined {
+function extractMembershipTarget(op: OperationWithContext): string | undefined {
   const actionType = op.operation.action.type;
   const input = op.operation.action.input as
     | { targetId?: string; documentId?: string }

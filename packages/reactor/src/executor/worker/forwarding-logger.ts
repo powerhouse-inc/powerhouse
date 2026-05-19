@@ -48,7 +48,9 @@ export function createForwardingLogger(
     warn: (message, ...args) => emit("warn", message, args),
     error: (message, ...args) => emit("error", message, args),
     errorHandler: ((...data: unknown[]) => {
-      emit("error", String(data[0] ?? ""), data.slice(1));
+      const first = data[0];
+      const head = typeof first === "string" ? first : "";
+      emit("error", head, data.slice(1));
     }) as LoggerErrorHandler,
     child: (childTags) =>
       createForwardingLogger(post, level, [...tags, ...childTags]),

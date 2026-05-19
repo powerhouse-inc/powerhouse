@@ -66,14 +66,14 @@ export class FakeWorkerTransport implements IWorkerTransport {
     (this.listeners[event] as Set<WorkerTransportListener<E>>).delete(listener);
   }
 
-  async terminate(): Promise<number> {
+  terminate(): Promise<number> {
     this.terminateCalls += 1;
     if (this.terminated) {
-      return 0;
+      return Promise.resolve(0);
     }
     this.terminated = true;
     queueMicrotask(() => this.emit("exit", 0));
-    return 0;
+    return Promise.resolve(0);
   }
 
   // --- test helpers ---

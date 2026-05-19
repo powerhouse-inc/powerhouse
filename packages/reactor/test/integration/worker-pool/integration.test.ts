@@ -42,8 +42,9 @@ class FakeWorker implements IExecutorWorker {
     this.executeImpl = opts.executeImpl;
   }
 
-  async start(): Promise<void> {
+  start(): Promise<void> {
     this.startCalls++;
+    return Promise.resolve();
   }
 
   async execute(job: Job): Promise<WorkerExecutionOutcome> {
@@ -66,11 +67,14 @@ class FakeWorker implements IExecutorWorker {
 
   abort(): void {}
 
-  async shutdown(): Promise<void> {
+  shutdown(): Promise<void> {
     this.shutdownCalls++;
+    return Promise.resolve();
   }
 
-  async loadModel(): Promise<void> {}
+  loadModel(): Promise<void> {
+    return Promise.resolve();
+  }
 
   isIdle(): boolean {
     return true;
@@ -223,13 +227,14 @@ describe("Worker pool integration through ReactorBuilder", () => {
     const factory: WorkerFactory = (index) =>
       new FakeWorker({
         index,
-        executeImpl: async (job) => ({
-          result: { job, success: true, duration: 1 },
-          writeReady: {
-            operations: [op],
-            jobMeta: job.meta,
-          } as JobWriteReadyPayload,
-        }),
+        executeImpl: (job) =>
+          Promise.resolve({
+            result: { job, success: true, duration: 1 },
+            writeReady: {
+              operations: [op],
+              jobMeta: job.meta,
+            } as JobWriteReadyPayload,
+          }),
       });
     const module = await buildReactor(poolConfig(1), factory);
 

@@ -72,7 +72,7 @@ function waitForExit(worker: Worker, timeoutMs = 5000): Promise<number> {
     }, timeoutMs);
     worker.once("exit", (code) => {
       clearTimeout(timer);
-      resolve(code ?? -1);
+      resolve(code);
     });
   });
 }

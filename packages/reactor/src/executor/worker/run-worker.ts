@@ -59,7 +59,7 @@ async function defaultCreateDatabase(
 ): Promise<WorkerDatabaseHandle> {
   const { Kysely, PostgresDialect } = await import("kysely");
   const pgModule = await import("pg");
-  const Pool = pgModule.default?.Pool ?? pgModule.Pool;
+  const Pool = pgModule.default.Pool;
   const pool = new Pool({
     host: config.host,
     port: config.port,
@@ -105,8 +105,9 @@ export function runWorker(
   let initConfig: InitMessage | null = null;
   let executorStack: WorkerExecutorStack | null = null;
   let database: WorkerDatabaseHandle | null = null;
-  const activeLoadFactory: NonNullable<BuildWorkerExecutorOptions["loadFactory"]> =
-    overrides.loadFactory ?? defaultLoadFactory;
+  const activeLoadFactory: NonNullable<
+    BuildWorkerExecutorOptions["loadFactory"]
+  > = overrides.loadFactory ?? defaultLoadFactory;
 
   function post(msg: WorkerMessage): void {
     parentPort.postMessage(msg);
@@ -158,7 +159,7 @@ export function runWorker(
       loadFactory: activeLoadFactory,
     });
     initCompleted = true;
-    logger.info("worker initialized", msg.workerId);
+    logger.info("worker initialized: @workerId", msg.workerId);
     post({
       type: "ready",
       correlationId: msg.correlationId,
@@ -166,10 +167,7 @@ export function runWorker(
     });
   }
 
-  async function handleExecute(
-    correlationId: string,
-    job: Job,
-  ): Promise<void> {
+  async function handleExecute(correlationId: string, job: Job): Promise<void> {
     if (!executorStack) {
       post({
         type: "result",
@@ -286,8 +284,8 @@ export function runWorker(
       }
 
       case "shutdown": {
-        logger.info("worker shutting down", workerId);
-        shutdownDatabase().finally(() => {
+        logger.info("worker shutting down: @workerId", workerId);
+        void shutdownDatabase().finally(() => {
           post({
             type: "log",
             level: "info",
@@ -301,7 +299,10 @@ export function runWorker(
       }
 
       case "abort": {
-        logger.warn("abort received (no-op stub)", msg.correlationId);
+        logger.warn(
+          "abort received (no-op stub): @correlationId",
+          msg.correlationId,
+        );
         break;
       }
 
@@ -321,7 +322,11 @@ export function runWorker(
       default: {
         const raw = msg as Record<string, unknown>;
         if (raw["type"] === "__test_throw") {
-          const reason = String(raw["reason"] ?? "synthetic uncaughtException");
+          const rawReason = raw["reason"];
+          const reason =
+            typeof rawReason === "string"
+              ? rawReason
+              : "synthetic uncaughtException";
           setTimeout(() => {
             throw new Error(reason);
           }, 0);
@@ -350,8 +355,9 @@ export function runWorker(
       return workerId;
     },
   };
-  (parentPort as unknown as { __reactorWorkerHarness?: unknown })
-    .__reactorWorkerHarness = harness;
+  (
+    parentPort as unknown as { __reactorWorkerHarness?: unknown }
+  ).__reactorWorkerHarness = harness;
 }
 
 export type FactorySpecForTesting = FactorySpec;

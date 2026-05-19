@@ -340,8 +340,7 @@ export class ReactorBuilder {
           "workerPool.enabled requires at least one spec registered via withDocumentModelSpecs.",
         );
       }
-      const needsDefaultFactory =
-        !this.executorManager && !this.workerFactory;
+      const needsDefaultFactory = !this.executorManager && !this.workerFactory;
       if (needsDefaultFactory && !this.workerDbConfig) {
         throw new Error(
           "workerPool.enabled requires withWorkerDbConfig (or a custom withWorkerFactory / withExecutor).",
@@ -717,7 +716,7 @@ export class ReactorBuilder {
   ): Promise<Kysely<Database>> {
     const { Kysely, PostgresDialect } = await import("kysely");
     const pgModule = await import("pg");
-    const Pool = pgModule.default?.Pool ?? pgModule.Pool;
+    const Pool = pgModule.default.Pool;
     const pool = new Pool({
       host: config.host,
       port: config.port,

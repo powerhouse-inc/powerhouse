@@ -297,7 +297,7 @@ export class WorkerHandle implements IExecutorWorker {
       graceMs: effectiveGrace,
     });
 
-    let timer: NodeJS.Timeout | null = null;
+    let timer!: NodeJS.Timeout;
     const timeout = new Promise<void>((_, reject) => {
       timer = setTimeout(() => {
         reject(new WorkerShutdownTimeoutError(this.workerId, effectiveGrace));
@@ -312,9 +312,7 @@ export class WorkerHandle implements IExecutorWorker {
         err,
       );
     } finally {
-      if (timer) {
-        clearTimeout(timer);
-      }
+      clearTimeout(timer);
     }
 
     await this.forceTerminate(null);
@@ -489,7 +487,7 @@ export class WorkerHandle implements IExecutorWorker {
       const shutdownEntry = [...this.pending.values()].find(
         (e) => e.kind === "shutdown",
       );
-      if (shutdownEntry && shutdownEntry.kind === "shutdown") {
+      if (shutdownEntry) {
         shutdownEntry.resolve();
       }
     }
@@ -522,7 +520,7 @@ export class WorkerHandle implements IExecutorWorker {
   }
 
   private handleLog(msg: LogMessage): void {
-    const args = msg.args ?? [];
+    const args = msg.args;
     switch (msg.level) {
       case "debug":
         this.logger.debug(msg.message, ...args);

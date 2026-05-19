@@ -70,7 +70,9 @@ export type BuildWorkerExecutorOptions = {
 export async function defaultLoadFactory(spec: FactorySpec): Promise<unknown> {
   const ref = spec.module;
   const specifier =
-    "filePath" in ref ? new URL(`file://${ref.filePath}`).href : ref.packageName;
+    "filePath" in ref
+      ? new URL(`file://${ref.filePath}`).href
+      : ref.packageName;
   const mod = (await import(specifier)) as Record<string, unknown>;
   const exported = mod[ref.exportName];
   if (typeof exported === "function") {

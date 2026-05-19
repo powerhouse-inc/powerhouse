@@ -39,10 +39,29 @@ export function toErrorInfo(err: unknown, depth = 0): ErrorInfo {
     return {
       name: typeof record.name === "string" ? record.name : "Error",
       message:
-        typeof record.message === "string" ? record.message : String(err),
+        typeof record.message === "string"
+          ? record.message
+          : safeStringify(err),
     };
   }
-  return { name: "Error", message: String(err) };
+  return { name: "Error", message: safeStringify(err) };
+}
+
+function safeStringify(value: unknown): string {
+  if (value === null || value === undefined) {
+    return String(value);
+  }
+  if (typeof value === "string") {
+    return value;
+  }
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return "[unserializable]";
+  }
 }
 
 export function fromErrorInfo(info: ErrorInfo): Error {

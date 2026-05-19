@@ -29,9 +29,7 @@ export function hashDocumentId(documentId: string): number {
 
 export function bucketFor(documentId: string, numWorkers: number): number {
   if (numWorkers < 1) {
-    throw new Error(
-      `bucketFor: numWorkers must be >= 1 (got ${numWorkers})`,
-    );
+    throw new Error(`bucketFor: numWorkers must be >= 1 (got ${numWorkers})`);
   }
   return hashDocumentId(documentId) % numWorkers;
 }

@@ -46,7 +46,9 @@ class FakeWorker implements IExecutorWorker {
   shutdownGracefulHistory: boolean[] = [];
   executeCalls: Job[] = [];
   private inFlight: WorkerInFlightSnapshot | null = null;
-  private outcome: WorkerExecutionOutcome | ((job: Job) => WorkerExecutionOutcome);
+  private outcome:
+    | WorkerExecutionOutcome
+    | ((job: Job) => WorkerExecutionOutcome);
   private executeImpl?: (job: Job) => Promise<WorkerExecutionOutcome>;
   private startImpl?: () => Promise<void>;
   private idle = true;
@@ -87,9 +89,10 @@ class FakeWorker implements IExecutorWorker {
 
   abort(): void {}
 
-  async shutdown(graceful: boolean): Promise<void> {
+  shutdown(graceful: boolean): Promise<void> {
     this.shutdownCalls++;
     this.shutdownGracefulHistory.push(graceful);
+    return Promise.resolve();
   }
 
   loadModelCalls: ModelManifestEntry[] = [];
@@ -111,10 +114,7 @@ class FakeWorker implements IExecutorWorker {
   }
 }
 
-function makeOpContext(
-  documentId: string,
-  scope = "global",
-): OperationContext {
+function makeOpContext(documentId: string, scope = "global"): OperationContext {
   return {
     documentId,
     documentType: "test/type",
@@ -174,13 +174,13 @@ function makeMembershipCache(
       invalidatedIds.push(documentId);
       data.delete(documentId);
     },
-    async getCollectionsForDocuments(documentIds: string[]) {
+    getCollectionsForDocuments(documentIds: string[]) {
       lookups.push([...documentIds]);
       const out: Record<string, string[]> = {};
       for (const id of documentIds) {
         out[id] = data.get(id) ?? [];
       }
-      return out;
+      return Promise.resolve(out);
     },
   };
 }
@@ -195,8 +195,7 @@ function findJobForBucket(bucket: number, numWorkers: number): string {
   throw new Error(`no documentId found for bucket ${bucket}/${numWorkers}`);
 }
 
-const flush = async (ms = 30) =>
-  new Promise<void>((r) => setTimeout(r, ms));
+const flush = async (ms = 30) => new Promise<void>((r) => setTimeout(r, ms));
 
 describe("WorkerPoolJobExecutorManager", () => {
   let eventBus: EventBus;
@@ -254,9 +253,7 @@ describe("WorkerPoolJobExecutorManager", () => {
     });
 
     it("throws when already running", async () => {
-      const manager = buildManager(
-        (i) => new FakeWorker({ index: i }),
-      );
+      const manager = buildManager((i) => new FakeWorker({ index: i }));
       await manager.start(1);
       await expect(manager.start(1)).rejects.toThrow(/already running/i);
       await manager.stop(false);
@@ -499,12 +496,14 @@ describe("WorkerPoolJobExecutorManager", () => {
         (i) =>
           new FakeWorker({
             index: i,
-            executeImpl: async (job) => {
+            executeImpl: (job) => {
               if (firstCall) {
                 firstCall = false;
-                throw new Error("explosion");
+                return Promise.reject(new Error("explosion"));
               }
-              return { result: { job, success: true, duration: 1 } };
+              return Promise.resolve({
+                result: { job, success: true, duration: 1 },
+              });
             },
           }),
       );
@@ -536,9 +535,7 @@ describe("WorkerPoolJobExecutorManager", () => {
       await queue.enqueue(createTestJob({ id: "post-throw-job" }));
       await flush(100);
       expect(
-        createdWorkers[0].executeCalls.some(
-          (j) => j.id === "post-throw-job",
-        ),
+        createdWorkers[0].executeCalls.some((j) => j.id === "post-throw-job"),
       ).toBe(true);
       await manager.stop(true);
     });
@@ -551,21 +548,25 @@ describe("WorkerPoolJobExecutorManager", () => {
         (i) =>
           new FakeWorker({
             index: i,
-            executeImpl: async (job) => {
+            executeImpl: (job) => {
               if (job.scope === "document") {
                 created.add(job.documentId);
-                return { result: { job, success: true, duration: 1 } };
+                return Promise.resolve({
+                  result: { job, success: true, duration: 1 },
+                });
               }
               if (!created.has(job.documentId)) {
-                return {
+                return Promise.resolve({
                   result: {
                     job,
                     success: false,
                     error: new DocumentNotFoundError(job.documentId),
                   },
-                };
+                });
               }
-              return { result: { job, success: true, duration: 1 } };
+              return Promise.resolve({
+                result: { job, success: true, duration: 1 },
+              });
             },
           }),
       );
@@ -718,9 +719,10 @@ describe("WorkerPoolJobExecutorManager", () => {
           if (callCount === 1) {
             return new FakeWorker({
               index: i,
-              executeImpl: async () => {
-                throw new WorkerExitedError(`worker-${i}`, 1, "corr-1");
-              },
+              executeImpl: () =>
+                Promise.reject(
+                  new WorkerExitedError(`worker-${i}`, 1, "corr-1"),
+                ),
             });
           }
           return new FakeWorker({
@@ -783,9 +785,8 @@ describe("WorkerPoolJobExecutorManager", () => {
           if (callCount === 1) {
             return new FakeWorker({
               index: i,
-              executeImpl: async () => {
-                throw new WorkerExitedError(`worker-${i}`, 137, null);
-              },
+              executeImpl: () =>
+                Promise.reject(new WorkerExitedError(`worker-${i}`, 137, null)),
             });
           }
           return new FakeWorker({
@@ -806,9 +807,9 @@ describe("WorkerPoolJobExecutorManager", () => {
         );
         await flush(150);
 
-        expect(
-          failedEvents.some((e) => e.jobId === "transport-job"),
-        ).toBe(false);
+        expect(failedEvents.some((e) => e.jobId === "transport-job")).toBe(
+          false,
+        );
         await manager.stop(true);
       },
     );
@@ -848,9 +849,7 @@ describe("WorkerPoolJobExecutorManager", () => {
           dup.name = "DuplicateModuleError";
           const wrapper = new Error("worker 0 reported duplicate");
           (wrapper as { cause?: unknown }).cause = dup;
-          w.loadModelImpl = async () => {
-            throw wrapper;
-          };
+          w.loadModelImpl = () => Promise.reject(wrapper);
         }
         return w;
       });
@@ -863,9 +862,8 @@ describe("WorkerPoolJobExecutorManager", () => {
       const manager = buildManager((i) => {
         const w = new FakeWorker({ index: i });
         if (i === 1) {
-          w.loadModelImpl = async () => {
-            throw new Error("worker-1 explosion");
-          };
+          w.loadModelImpl = () =>
+            Promise.reject(new Error("worker-1 explosion"));
         }
         return w;
       });
