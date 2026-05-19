@@ -12,6 +12,7 @@ import {
   driveCollectionId,
   parseDriveUrl,
   type Database,
+  type ReactorClientModule,
 } from "@powerhousedao/reactor";
 import {
   HttpPackageLoader,
@@ -174,9 +175,15 @@ async function initServer(
     options.dbPath ??
     process.env.PH_REACTOR_DATABASE_URL ??
     process.env.PH_SWITCHBOARD_DATABASE_URL;
+  // When the caller passes in a reactor, the reactor-side PGLite dir is
+  // unused — the caller owns its own storage. Only the read-model dir is
+  // still needed by reactor-api itself.
   const reactorPath = reactorDbUrl || "./.ph/reactor-storage";
-  const reactorPgliteDir =
-    !reactorDbUrl || !isPostgresUrl(reactorDbUrl) ? reactorPath : null;
+  const reactorPgliteDir = options.reactor
+    ? null
+    : !reactorDbUrl || !isPostgresUrl(reactorDbUrl)
+      ? reactorPath
+      : null;
   const readModelPgliteDir =
     !dbPath || !isPostgresUrl(dbPath) ? readModelPath : null;
 
@@ -254,6 +261,13 @@ async function initServer(
   const apiRef: { current: { dispose: () => Promise<void> } | undefined } = {
     current: undefined,
   };
+  // Captured during initializeClient so the returned `shutdown()` can call
+  // `module.reactor.kill().completed` — the IReactor lifecycle entry. The
+  // IReactorClient surface returned by `initializeAndStartAPI` does not
+  // expose `kill`.
+  const clientModuleRef: { current: ReactorClientModule | undefined } = {
+    current: undefined,
+  };
 
   let driveNodeView: DriveNodeView | undefined;
 
@@ -261,7 +275,10 @@ async function initServer(
   const configPath =
     options.configFile ?? path.join(process.cwd(), "powerhouse.config.json");
   const config = getConfig(configPath);
-  const registryUrl = process.env.PH_REGISTRY_URL ?? config.packageRegistryUrl;
+  const registryUrl =
+    options.registryUrl ??
+    process.env.PH_REGISTRY_URL ??
+    config.packageRegistryUrl;
   const registryPackages = process.env.PH_REGISTRY_PACKAGES;
   const dynamicModelLoading =
     options.dynamicModelLoading ?? process.env.DYNAMIC_MODEL_LOADING === "true";
@@ -281,6 +298,34 @@ async function initServer(
 
   const reactorLogger = logger.child(["reactor"]);
   const initializeClient = async (documentModels: DocumentModelModule[]) => {
+    // When the caller hands us a pre-built reactor module, reuse it
+    // instead of constructing one. The caller owns the reactor lifecycle.
+    if (options.reactor) {
+      // Wire the api dispose into the caller's reactor lifecycle so
+      // /graphql, MCP, attachments, etc. drain when the caller stops it.
+      const original = options.reactor.reactor;
+      const previousKill = original.kill.bind(original);
+      original.kill = () => {
+        const apiDispose = apiRef.current?.dispose();
+        const inner = previousKill();
+        return {
+          completed: Promise.all([apiDispose, inner.completed]).then(
+            () => undefined,
+          ),
+        };
+      };
+      if (options.reactor.reactorModule) {
+        const instrumentation = new ReactorInstrumentation(
+          options.reactor.reactorModule,
+        );
+        instrumentation.start();
+        reactorLogger.info(
+          "Reactor metrics instrumentation started (using caller-provided reactor)",
+        );
+      }
+      clientModuleRef.current = options.reactor;
+      return { module: options.reactor };
+    }
     const eventBus = new EventBus();
     const builder = new ReactorBuilder()
       .withEventBus(eventBus)
@@ -393,6 +438,7 @@ async function initServer(
       readModel: driveNodeView,
     });
 
+    clientModuleRef.current = module;
     return { module, reactorDriveClient };
   };
 
@@ -614,6 +660,24 @@ async function initServer(
     reactor: client,
     renown,
     port: serverPort,
+    /**
+     * When the switchboard built the reactor itself, kill it — that also
+     * drains the api via the shutdown hook the builder registered. When
+     * the caller passed in their own reactor, only dispose the api; the
+     * caller stops the reactor.
+     */
+    shutdown: async () => {
+      if (options.reactor) {
+        await apiRef.current?.dispose();
+        return;
+      }
+      const reactorModule = clientModuleRef.current?.reactorModule;
+      if (reactorModule) {
+        await reactorModule.reactor.kill().completed;
+      } else {
+        await apiRef.current?.dispose();
+      }
+    },
   };
 }
 
