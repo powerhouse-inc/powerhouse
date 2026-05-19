@@ -6,9 +6,15 @@ import type { ILogger } from "document-model";
 import { ConsoleLogger } from "document-model";
 import type { Kysely } from "kysely";
 import type {
+  DbConfig,
   ModelManifestEntry,
+  SignatureVerifierSpec,
   WorkerPoolConfig,
 } from "../executor/worker/protocol.js";
+import { WorkerHandle } from "../executor/worker/worker-handle.js";
+import { createThreadTransport } from "../executor/worker/transport.js";
+import { WorkerPoolJobExecutorManager } from "../executor/worker-pool-job-executor-manager.js";
+import type { WorkerFactory } from "../executor/worker-pool-job-executor-manager.js";
 import { CollectionMembershipCache } from "../cache/collection-membership-cache.js";
 import { DocumentMetaCache } from "../cache/document-meta-cache.js";
 import { KyselyOperationIndex } from "../cache/kysely-operation-index.js";
@@ -133,6 +139,9 @@ export class ReactorBuilder {
   private documentModelSpecs: DocumentModelSpecInput[] = [];
   private workerPoolConfig?: WorkerPoolConfig;
   private resolvedModelManifest?: ModelManifestEntry[];
+  private workerDbConfig?: DbConfig;
+  private workerSignatureVerifierSpec?: SignatureVerifierSpec;
+  private workerFactory?: WorkerFactory;
 
   withLogger(logger: ILogger): this {
     this.logger = logger;
@@ -265,11 +274,43 @@ export class ReactorBuilder {
   }
 
   /**
-   * Stores the worker-pool configuration used for mutual-exclusion validation
-   * at build time. Full wiring is completed in P3.4.
+   * Stores the worker-pool configuration. When `config.enabled === true` the
+   * builder constructs a {@link WorkerPoolJobExecutorManager} in place of the
+   * in-process {@link SimpleJobExecutorManager}.
    */
   withWorkerPool(config: WorkerPoolConfig): this {
     this.workerPoolConfig = config;
+    return this;
+  }
+
+  /**
+   * Postgres connection info forwarded to each worker so it can open its own
+   * pool. Required when `workerPool.enabled === true` unless a custom
+   * `withWorkerFactory` or `withExecutor` is provided.
+   */
+  withWorkerDbConfig(db: DbConfig): this {
+    this.workerDbConfig = db;
+    return this;
+  }
+
+  /**
+   * Factory spec the worker imports to instantiate its signature verifier.
+   * Required when `workerPool.enabled === true` unless a custom
+   * `withWorkerFactory` or `withExecutor` is provided.
+   */
+  withWorkerSignatureVerifierSpec(spec: SignatureVerifierSpec): this {
+    this.workerSignatureVerifierSpec = spec;
+    return this;
+  }
+
+  /**
+   * Inject a custom {@link WorkerFactory}. When set, the builder skips
+   * default thread-transport wiring and hands the factory directly to the
+   * pool manager. Use this in tests or to plug in a different transport
+   * (e.g. a child-process adapter).
+   */
+  withWorkerFactory(factory: WorkerFactory): this {
+    this.workerFactory = factory;
     return this;
   }
 
@@ -296,6 +337,18 @@ export class ReactorBuilder {
       if (this.documentModelSpecs.length === 0) {
         throw new Error(
           "workerPool.enabled requires at least one spec registered via withDocumentModelSpecs.",
+        );
+      }
+      const needsDefaultFactory =
+        !this.executorManager && !this.workerFactory;
+      if (needsDefaultFactory && !this.workerDbConfig) {
+        throw new Error(
+          "workerPool.enabled requires withWorkerDbConfig (or a custom withWorkerFactory / withExecutor).",
+        );
+      }
+      if (needsDefaultFactory && !this.workerSignatureVerifierSpec) {
+        throw new Error(
+          "workerPool.enabled requires withWorkerSignatureVerifierSpec (or a custom withWorkerFactory / withExecutor).",
         );
       }
     }
@@ -420,33 +473,51 @@ export class ReactorBuilder {
     );
 
     let executorManager = this.executorManager;
+    let executorStartCount = this.executorConfig.maxConcurrency ?? 1;
     if (!executorManager) {
-      executorManager = new SimpleJobExecutorManager(
-        () =>
-          new SimpleJobExecutor(
-            this.logger!,
-            documentModelRegistry,
-            operationStore,
-            eventBus,
-            writeCache,
-            operationIndex,
-            documentMetaCache,
-            collectionMembershipCache,
-            this.driveContainerTypes,
-            this.executorConfig,
-            this.signatureVerifier,
-            executionScope,
-          ),
-        eventBus,
-        queue,
-        jobTracker,
-        this.logger,
-        resolver,
-        this.executorConfig.jobTimeoutMs,
-      );
+      if (this.workerPoolConfig?.enabled) {
+        const factory =
+          this.workerFactory ??
+          this.createDefaultWorkerFactory(this.workerPoolConfig);
+        executorManager = new WorkerPoolJobExecutorManager(
+          factory,
+          eventBus,
+          queue,
+          jobTracker,
+          this.logger,
+          resolver,
+          collectionMembershipCache,
+          this.executorConfig.jobTimeoutMs,
+        );
+        executorStartCount = this.workerPoolConfig.numWorkers;
+      } else {
+        executorManager = new SimpleJobExecutorManager(
+          () =>
+            new SimpleJobExecutor(
+              this.logger!,
+              documentModelRegistry,
+              operationStore,
+              eventBus,
+              writeCache,
+              operationIndex,
+              documentMetaCache,
+              collectionMembershipCache,
+              this.driveContainerTypes,
+              this.executorConfig,
+              this.signatureVerifier,
+              executionScope,
+            ),
+          eventBus,
+          queue,
+          jobTracker,
+          this.logger,
+          resolver,
+          this.executorConfig.jobTimeoutMs,
+        );
+      }
     }
 
-    await executorManager.start(this.executorConfig.maxConcurrency ?? 1);
+    await executorManager.start(executorStartCount);
 
     const readModelInstances: IReadModel[] = Array.from(
       new Set([...this.readModels]),
@@ -597,6 +668,34 @@ export class ReactorBuilder {
     }
 
     return module;
+  }
+
+  /**
+   * Default {@link WorkerFactory} used when `workerPool.enabled` is set and
+   * the caller did not inject `withWorkerFactory`. Each worker spawns a real
+   * `node:worker_threads` Worker pointing at the compiled `worker/entry.js`.
+   */
+  private createDefaultWorkerFactory(
+    poolConfig: WorkerPoolConfig,
+  ): WorkerFactory {
+    const db = this.workerDbConfig!;
+    const signatureVerifier = this.workerSignatureVerifierSpec!;
+    const models = this.resolvedModelManifest ?? [];
+    const entryUrl = new URL("../executor/worker/entry.js", import.meta.url);
+    const logger = this.logger!;
+    return (index: number) =>
+      new WorkerHandle({
+        workerId: `reactor-worker-${index}`,
+        index,
+        transport: createThreadTransport(entryUrl),
+        initPayload: {
+          poolConfig,
+          db,
+          signatureVerifier,
+          models,
+        },
+        logger,
+      });
   }
 
   private attachSignalHandlers(module: ReactorModule): void {
