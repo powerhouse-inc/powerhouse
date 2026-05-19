@@ -30,6 +30,16 @@ const hasFilesType = (types: readonly string[]) =>
 const isFileDrop = (event: React.DragEvent<Element>) =>
   allPass(event.dataTransfer.types, [isArray, hasAtLeast(1), hasFilesType]);
 
+/* Marker attribute editors set on their root element to opt out of the
+ * outer DropZone, so they can handle arbitrary file drops themselves. */
+export const EDITOR_FILE_DROP_OPT_OUT_ATTR = "data-accepts-files";
+
+const isInsideEditorFileDropOptOut = (event: React.DragEvent<Element>) => {
+  const target = event.target;
+  if (!(target instanceof Element)) return false;
+  return target.closest(`[${EDITOR_FILE_DROP_OPT_OUT_ATTR}]`) !== null;
+};
+
 const hasAllowedExtension = (file: File) =>
   pipe(
     file,
@@ -61,6 +71,7 @@ export function useDropFile(
   function handleDragEvent(event: React.DragEvent<Element>, cb?: () => void) {
     if (!isDragAndDropEnabled) return;
     if (!isFileDrop(event)) return;
+    if (isInsideEditorFileDropOptOut(event)) return;
     event.preventDefault();
     event.stopPropagation();
     cb?.();
