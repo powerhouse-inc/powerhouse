@@ -230,13 +230,16 @@
     <main>
       <h1>tsgo + oxlint migration</h1>
       <p class="lead">
-        Migrating the entire lint + format + typecheck stack from
+        Migrated the entire lint + format + typecheck stack from
         <code>tsc</code> / <code>eslint</code> / <code>prettier</code> /
         <code>eslint-plugin-better-tailwindcss</code> to the Rust + Go
         ports — <code>tsgo</code>, <code>oxlint</code>, <code>oxfmt</code>,
-        and <code>oxlint-tailwindcss</code> — with the goal of near 100%
-        rule parity. ESLint is now vestigial (registers plugins only so
-        legacy <code>eslint-disable</code> comments resolve).
+        and <code>oxlint-tailwindcss</code> — with near 100% rule parity.
+        ESLint and Prettier (and 7 ESLint plugins) are fully removed
+        from the dependency tree. The two custom rules (logger,
+        cli-cold-path) live in <code>lint-plugins/</code> using oxlint's
+        native plugin API (<code>definePlugin</code> +
+        <code>defineRule</code> + <code>createOnce</code>).
       </p>
       <div class="pillrow">
         <span class="pill">monorepo: powerhouse</span>
@@ -298,12 +301,15 @@
           </tr>
           <tr>
             <td>Custom ESLint plugins: <code>logger/*</code>, <code>cli-cold-path/*</code></td>
-            <td>Same rules loaded via <code>jsPlugins</code></td>
+            <td>Native oxlint plugins in <code>lint-plugins/</code></td>
             <td>
               <span class="badge ok">equivalent</span>
-              Extracted into <code>eslint-plugins/</code> as ESLint v9
-              plugin modules; same source of truth. No source code
-              changes required.
+              Rewritten using <code>definePlugin</code> +
+              <code>defineRule</code> + <code>createOnce</code> from
+              <code>@oxlint/plugins</code> — runs once per process
+              instead of per file (stateless rules). Loaded via
+              <code>jsPlugins</code>. Same diagnostics, same source of
+              truth.
             </td>
           </tr>
           <tr>
@@ -440,10 +446,11 @@
           <div class="delta">type-aware + custom plugins + react-hooks v7</div>
         </div>
         <div class="card">
-          <div class="label">ESLint dropped from runtime</div>
-          <div class="val">0</div>
+          <div class="label">ESLint / Prettier removed</div>
+          <div class="val">−8 deps</div>
           <div class="delta">
-            kept as vestigial registrations for legacy disable comments
+            eslint, prettier (root), 6 eslint-plugin-*, typescript-eslint;
+            +1463 / −31 lines net
           </div>
         </div>
         <div class="card">
@@ -883,48 +890,92 @@
           <h3 style="margin-top: 0">Files added</h3>
           <ul>
             <li>
-              <code>tsconfig.tsgo.json</code> — references list for tsgo (omits
-              <code>apps/academy</code>)
+              <code>tsconfig.tsgo.json</code> — references list for tsgo
+              (omits <code>apps/academy</code>)
             </li>
             <li>
-              <code>.oxlintrc.json</code> — oxlint config (type-aware, custom
-              plugins, react-hooks v7 via jsPlugins)
+              <code>.oxlintrc.json</code> — oxlint config (type-aware,
+              custom plugins, react-hooks v7 + native tailwindcss via
+              jsPlugins)
             </li>
             <li>
               <code>.oxfmtrc.json</code> — migrated from
               <code>.prettierrc.json</code>
             </li>
             <li>
-              <code>eslint-plugins/{logger,cli-cold-path}.js</code> — custom
-              rules as standalone ESLint v9 plugin modules
+              <code>lint-plugins/{logger,cli-cold-path}.js</code> — custom
+              rules using <code>@oxlint/plugins</code>'
+              <code>definePlugin</code> + <code>defineRule</code> +
+              <code>createOnce</code> API
             </li>
-            <li><code>benchmarks/{run.sh, diff.mjs, results.json}</code></li>
-          </ul>
-          <h3>Scripts added</h3>
-          <ul>
-            <li><code>pnpm typecheck:tsgo</code></li>
-            <li><code>pnpm lint:ox</code> / <code>pnpm lint:ox:fix</code></li>
             <li>
-              <code>pnpm format</code> / <code>pnpm format:check</code> (oxfmt)
+              <code>benchmarks/{run.sh, diff.mjs, results.json,
+              migrate-disable-comments.mjs, sanity-violations.tsx}</code>
+            </li>
+          </ul>
+          <h3>Files deleted</h3>
+          <ul>
+            <li><code>eslint.config.js</code></li>
+            <li><code>.prettierrc.json</code></li>
+          </ul>
+          <h3>devDependencies dropped</h3>
+          <p class="muted" style="margin-top: 4px">
+            Across root + 26 workspace package.json files:
+            <code>eslint</code>, <code>@eslint/js</code>,
+            <code>typescript-eslint</code>,
+            <code>eslint-config-prettier</code>,
+            <code>eslint-plugin-prettier</code>,
+            <code>eslint-plugin-better-tailwindcss</code>,
+            <code>eslint-plugin-react</code>, and root-level
+            <code>prettier</code>. Kept:
+            <code>eslint-plugin-react-hooks</code> (loaded by oxlint via
+            <code>jsPlugins</code> for React Compiler rules) and
+            <code>prettier</code> in <code>packages/codegen</code>
+            (runtime use to format generated code).
+          </p>
+          <h3>Scripts</h3>
+          <ul>
+            <li>
+              Root: <code>pnpm lint</code> /
+              <code>pnpm lint:fix</code> (oxlint + oxfmt chained)
+            </li>
+            <li>
+              Each of 25 workspaces:
+              <code>"lint": "oxlint --type-aware"</code>
+              for ergonomic per-package linting
+              (e.g. <code>pnpm --filter=design-system lint</code>)
+            </li>
+            <li>
+              <code>pnpm typecheck:tsgo</code>,
+              <code>pnpm format</code>, <code>pnpm format:check</code>,
+              <code>pnpm build:css</code>
             </li>
           </ul>
           <h3>CI</h3>
           <p>
-            tsgo runs as advisory pre-check. oxlint is now the primary lint
-            gate; <code>oxfmt --check</code> gates formatting; slim ESLint runs
-            only <code>eslint-plugin-better-tailwindcss</code>.
+            tsgo runs as advisory pre-check. <code>pnpm lint</code> is
+            the single blocking lint+format gate.
+            <code>simulate-ci-workflow</code> calls the root
+            <code>pnpm lint</code> (single-process full-repo scan).
           </p>
         </div>
         <div class="card">
-          <h3 style="margin-top: 0">ESLint — vestigial only</h3>
+          <h3 style="margin-top: 0">No ESLint left at all</h3>
           <ul>
             <li>
-              No rules enabled. Plugins registered
-              (<code>@typescript-eslint</code>, <code>react-hooks</code>,
-              <code>logger</code>) so existing inline
-              <code>eslint-disable</code> comments resolve. Delete once
-              source files no longer reference those rule names in disable
-              comments.
+              All <code>eslint-disable</code> comments in source still
+              resolve — oxlint accepts both
+              <code>eslint-disable</code> and <code>oxlint-disable</code>
+              prefixes, and treats <code>@typescript-eslint/X</code> as
+              a synonym for <code>typescript/X</code>.
+            </li>
+            <li>
+              Only the three v7 React Compiler rules
+              (<code>set-state-in-effect</code>,
+              <code>incompatible-library</code>,
+              <code>static-components</code>) needed renaming to
+              <code>react-hooks-extra/*</code> in disable comments —
+              codemod did 25 replacements across 17 files.
             </li>
           </ul>
           <h3>Moved to oxlint</h3>
@@ -1400,7 +1451,7 @@ react-hooks/static-components      → react-hooks-extra/static-components</pre>
           <tr><td><code>no-unsafe-optional-chaining</code></td><td><span class="badge ok">caught</span></td><td>10 hits in real codebase</td></tr>
           <tr><td><code>react-hooks/rules-of-hooks</code></td><td><span class="badge ok">caught</span></td><td>native oxlint react-hooks</td></tr>
           <tr><td><code>react-hooks/exhaustive-deps</code></td><td><span class="badge ok">caught</span></td><td>native</td></tr>
-          <tr><td><code>logger/missing-token-args</code></td><td><span class="badge ok">caught</span></td><td>custom jsPlugin from <code>eslint-plugins/logger.js</code></td></tr>
+          <tr><td><code>logger/missing-token-args</code></td><td><span class="badge ok">caught</span></td><td>custom plugin from <code>lint-plugins/logger.js</code> (oxlint native API)</td></tr>
           <tr><td><code>@typescript-eslint/consistent-type-imports</code></td><td><span class="badge ok">caught</span></td><td>native</td></tr>
           <tr><td><code>no-unused-vars</code></td><td><span class="badge ok">caught</span></td><td>native</td></tr>
           <tr><td><code>no-useless-assignment</code></td><td><span class="badge ok">caught</span></td><td>nursery rule we explicitly enabled</td></tr>
@@ -1412,40 +1463,45 @@ react-hooks/static-components      → react-hooks-extra/static-components</pre>
       <h2>Recommended rollout</h2>
       <ol>
         <li>
-          <strong>Now (this PR)</strong> — tsgo as advisory pre-check, oxlint
-          + oxfmt as blocking. Slim ESLint runs only better-tailwindcss.
+          <strong>Now (this PR)</strong> — tsgo as advisory pre-check;
+          oxlint + oxfmt as the single blocking lint+format gate; ESLint
+          and Prettier fully removed.
         </li>
         <li>
           <strong>Next sprint</strong> — triage the 81 oxlint correctness
           errors (mostly real bugs: <code>react-hooks/rules-of-hooks</code>,
           <code>no-unsafe-optional-chaining</code>, <code>unicorn/*</code>),
-          then flip oxlint's nursery-tier rules from warn to error.
+          then flip <code>no-useless-assignment</code> from warn to error
+          once it leaves nursery.
         </li>
         <li>
-          <strong>Done — native Tailwind plugin in use.</strong>
-          <code>oxlint-tailwindcss</code> is loaded via <code>jsPlugins</code>;
-          <code>pnpm lint:ox</code> runs <code>build:css</code> first so the
-          compiled <code>dist/style.css</code> files exist for the plugin to
-          resolve.
+          <strong>Optional</strong> — sweep the ~65 stale
+          <code>eslint-disable</code> directives surfaced by
+          <code>oxlint --report-unused-disable-directives</code> (mostly
+          <code>@typescript-eslint/no-unsafe-*</code> on rules already
+          disabled in the new config).
         </li>
         <li>
           <strong>2–3 months</strong> — when tsgo hits 1.0 and
-          <code>@docusaurus/tsconfig</code> drops <code>baseUrl</code>, swap
-          <code>pnpm typecheck</code> to tsgo and keep tsc only as the CI
-          authoritative gate.
+          <code>@docusaurus/tsconfig</code> drops <code>baseUrl</code>,
+          swap <code>pnpm typecheck</code> to tsgo and keep tsc only as
+          the CI authoritative gate.
         </li>
       </ol>
 
       <h2>Reproducing</h2>
       <pre>
 pnpm install
-pnpm typecheck         # tsc (baseline)
-pnpm typecheck:tsgo    # tsgo
-pnpm lint              # eslint (better-tailwindcss only)
-pnpm lint:ox           # oxlint (full ruleset: type-aware + jsPlugins)
-pnpm format            # oxfmt --write .
-pnpm format:check      # oxfmt --check .
-bash benchmarks/run.sh # full run; results in benchmarks/results.json.jsonl
+pnpm typecheck             # tsc (authoritative)
+pnpm typecheck:tsgo        # tsgo (fast advisory)
+pnpm lint                  # build:css + oxlint --type-aware + oxfmt --check
+pnpm lint:fix              # same, with autofixes + reformat
+pnpm --filter=&lt;pkg&gt; lint    # lint a single workspace
+pnpm format                # oxfmt --write .
+pnpm format:check          # oxfmt --check .
+bash benchmarks/run.sh     # full benchmark run
+node benchmarks/diff.mjs   # ESLint vs oxlint findings diff
+node benchmarks/migrate-disable-comments.mjs --dry  # disable-comment codemod
 node benchmarks/diff.mjs  # ESLint vs oxlint findings diff</pre
       >
 
