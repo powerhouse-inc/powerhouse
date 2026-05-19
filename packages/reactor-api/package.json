@@ -35,7 +35,6 @@
   "scripts": {
     "tsc": "tsc",
     "build": "tsdown",
-    "lint": "eslint",
     "test": "vitest --run",
     "bench": "vitest bench",
     "codegen": "graphql-codegen --config codegen.ts && prettier --write src/graphql/reactor/gen/*.ts && eslint --fix src/graphql/reactor/gen/*.ts --no-warn-ignored",

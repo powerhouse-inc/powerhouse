@@ -28,8 +28,7 @@
   },
   "scripts": {
     "build": "tsdown",
-    "tsc": "tsc",
-    "lint": "eslint"
+    "tsc": "tsc"
   },
   "dependencies": {
     "@powerhousedao/shared": "workspace:*"

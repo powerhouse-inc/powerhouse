@@ -25,7 +25,6 @@
   "scripts": {
     "build": "tsdown",
     "tsc": "tsc",
-    "lint": "eslint",
     "test": "vitest --run",
     "test:run": "vitest --run",
     "test:watch": "vitest",

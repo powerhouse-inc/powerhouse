@@ -11,7 +11,6 @@
   "types": "./dist/src/index.d.ts",
   "scripts": {
     "tsc": "tsc",
-    "lint": "eslint",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"

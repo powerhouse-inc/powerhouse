@@ -28,8 +28,7 @@
   },
   "scripts": {
     "build": "tsdown",
-    "tsc": "tsc",
-    "lint": "eslint"
+    "tsc": "tsc"
   },
   "peerDependencies": {
     "@playwright/test": "^1.41.2"

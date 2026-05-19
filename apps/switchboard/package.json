@@ -33,7 +33,6 @@
   "scripts": {
     "tsc": "tsc",
     "test": "vitest run",
-    "lint": "eslint",
     "build": "tsdown && pnpm run install-packages",
     "start": "node dist/index.mjs",
     "start:profile": "mkdir -p .prof && node --cpu-prof --cpu-prof-dir=.prof dist/index.mjs",

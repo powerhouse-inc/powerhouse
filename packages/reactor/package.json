@@ -22,7 +22,6 @@
     "build": "tsdown",
     "test": "vitest run --coverage --printConsoleTrace=true --silent=false",
     "test:watch": "vitest --coverage",
-    "lint": "eslint",
     "bench": "vitest bench --run",
     "bench:sync": "node --import tsx bench/two-reactor-sync.bench.ts",
     "clean": "rimraf dist",

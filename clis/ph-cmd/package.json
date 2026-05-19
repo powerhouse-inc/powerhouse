@@ -22,7 +22,6 @@
   ],
   "scripts": {
     "tsc": "tsc",
-    "lint": "eslint",
     "generate-docs": "bun run scripts/generate-commands-docs.ts",
     "build": "tsdown",
     "postbuild": "bun generate-docs",

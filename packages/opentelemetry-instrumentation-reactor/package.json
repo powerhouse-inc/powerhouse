@@ -21,8 +21,7 @@
   ],
   "scripts": {
     "tsc": "tsc",
-    "build": "tsdown",
-    "lint": "eslint"
+    "build": "tsdown"
   },
   "publishConfig": {
     "access": "public"

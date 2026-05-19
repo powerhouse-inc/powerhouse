@@ -68,7 +68,7 @@ jobs:
       # Tailwind plugin needs compiled dist/style.css files to resolve.
       - name: Lint + format check (oxlint + oxfmt)
         if: ${{ steps.diff.outputs.files != '' }}
-        run: pnpm lint:ox
+        run: pnpm lint
 
       - name: Build
         run: pnpm build

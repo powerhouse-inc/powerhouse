@@ -36,7 +36,6 @@
   },
   "scripts": {
     "tsc": "tsc",
-    "lint": "eslint",
     "copy-hygen": "rm -rf dist/src/codegen/.hygen && cp -r src/codegen/.hygen dist/src/codegen/",
     "build": "tsdown"
   },

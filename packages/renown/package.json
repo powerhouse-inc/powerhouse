@@ -40,8 +40,7 @@
   ],
   "scripts": {
     "build": "tsdown",
-    "tsc": "tsc",
-    "lint": "eslint"
+    "tsc": "tsc"
   },
   "devDependencies": {
     "tsdown": "catalog:",
