@@ -759,14 +759,17 @@ function buildApiDispose(args: {
     try {
       await graphqlManager.shutdown();
     } catch (error) {
-      logger.error("API dispose: graphqlManager.shutdown failed:", error);
+      logger.error(
+        "API dispose: graphqlManager.shutdown failed: @error",
+        error,
+      );
     }
 
     try {
       for (const client of wsServer.clients) client.terminate();
       await new Promise<void>((resolve) => wsServer.close(() => resolve()));
     } catch (error) {
-      logger.error("API dispose: wsServer.close failed:", error);
+      logger.error("API dispose: wsServer.close failed: @error", error);
     }
 
     if (httpServer.listening) {
@@ -778,7 +781,7 @@ function buildApiDispose(args: {
           httpServer.close((err) => (err ? reject(err) : resolve())),
         );
       } catch (error) {
-        logger.error("API dispose: httpServer.close failed:", error);
+        logger.error("API dispose: httpServer.close failed: @error", error);
       }
     }
 
@@ -786,7 +789,7 @@ function buildApiDispose(args: {
       try {
         await close();
       } catch (error) {
-        logger.error("API dispose: db closer failed:", error);
+        logger.error("API dispose: db closer failed: @error", error);
       }
     }
   };

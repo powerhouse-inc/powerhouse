@@ -81,7 +81,7 @@ export class PackageManager implements IPackageManager {
     try {
       this.subscribePackages(packages);
     } catch (error) {
-      this.logger.error("Failed to subscribe to packages", error);
+      this.logger.error("Failed to subscribe to packages: @error", error);
     }
 
     return {

@@ -1,3 +1,8 @@
+/* eslint-disable logger/extra-args-without-token --
+ * This file deliberately exercises the no-@token + positional-Error
+ * call shape to assert the runtime appends the extras. The lint rule
+ * would otherwise flag every test case here.
+ */
 /**
  * Pins the `ConsoleLogger` token-substitution + Error-handling contract.
  *
@@ -140,11 +145,7 @@ describe("ConsoleLogger error formatting", () => {
 
   it("appends multiple trailing Error replacements", () => {
     const logger = new ConsoleLogger();
-    logger.error(
-      "two failures:",
-      new Error("first"),
-      new Error("second"),
-    );
+    logger.error("two failures:", new Error("first"), new Error("second"));
     const out = lastErr();
     expect(out).toContain("Error: first");
     expect(out).toContain("Error: second");

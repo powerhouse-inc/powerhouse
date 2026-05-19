@@ -355,7 +355,7 @@ export async function addDocument(
       parentFolder,
     );
   } catch (e) {
-    logger.error("Error adding document", e);
+    logger.error("Error adding document: @error", e);
     throw new Error("There was an error adding document", { cause: e });
   }
 

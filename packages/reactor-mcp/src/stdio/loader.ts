@@ -79,7 +79,7 @@ export class VitePackageLoader implements IPackageLoader {
     const vite = await this.initVite();
 
     await access(this.fullPath);
-    this.logger.verbose("Loading document models from", this.fullPath);
+    this.logger.verbose("Loading document models from @path", this.fullPath);
 
     try {
       const localDMs = (await vite.ssrLoadModule(this.fullPath)) as Record<

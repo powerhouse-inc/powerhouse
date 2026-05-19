@@ -6,7 +6,7 @@ export function openRenown(documentId?: string) {
   const renown = window.ph?.renown;
   let renownUrl = renown?.baseUrl;
   if (!renownUrl) {
-    logger.warn("Renown instance not found, falling back to: ", RENOWN_URL);
+    logger.warn("Renown instance not found, falling back to: @url", RENOWN_URL);
     renownUrl = RENOWN_URL;
   }
 
