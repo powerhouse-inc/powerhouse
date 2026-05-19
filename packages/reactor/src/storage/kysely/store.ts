@@ -15,7 +15,17 @@ import {
   type OperationFilter,
 } from "../interfaces.js";
 import { AtomicTransaction } from "../txn.js";
-import type { Database, OperationRow } from "./types.js";
+import type { Database, InsertableOperation, OperationRow } from "./types.js";
+
+class _UniqueConstraintContext {
+  constructor(
+    readonly documentId: string,
+    readonly scope: string,
+    readonly branch: string,
+    readonly revision: number,
+    readonly stagedOps: InsertableOperation[],
+  ) {}
+}
 
 export class KyselyOperationStore implements IOperationStore {
   private trx?: Transaction<Database>;
@@ -40,22 +50,14 @@ export class KyselyOperationStore implements IOperationStore {
     revision: number,
     fn: (txn: AtomicTxn) => void | Promise<void>,
     signal?: AbortSignal,
-  ): Promise<void> {
+  ): Promise<Operation[]> {
     if (this.trx) {
-      await this.executeApply(
-        this.trx,
-        documentId,
-        documentType,
-        scope,
-        branch,
-        revision,
-        fn,
-        signal,
-      );
-    } else {
-      await this.db.transaction().execute(async (trx) => {
-        await this.executeApply(
-          trx,
+      let executeResult: Operation[] | null = null;
+      let uniqueCtx: _UniqueConstraintContext | null = null;
+
+      try {
+        executeResult = await this.executeApply(
+          this.trx,
           documentId,
           documentType,
           scope,
@@ -64,8 +66,78 @@ export class KyselyOperationStore implements IOperationStore {
           fn,
           signal,
         );
-      });
+      } catch (error) {
+        if (error instanceof _UniqueConstraintContext) {
+          uniqueCtx = error;
+        } else {
+          throw error;
+        }
+      }
+
+      if (uniqueCtx !== null) {
+        return this.resolveUniqueConstraint(uniqueCtx);
+      }
+
+      return executeResult!;
+    } else {
+      let transactionResult: Operation[] | null = null;
+      let uniqueCtx: _UniqueConstraintContext | null = null;
+
+      try {
+        transactionResult = await this.db.transaction().execute(async (trx) => {
+          return this.executeApply(
+            trx,
+            documentId,
+            documentType,
+            scope,
+            branch,
+            revision,
+            fn,
+            signal,
+          );
+        });
+      } catch (error) {
+        if (error instanceof _UniqueConstraintContext) {
+          uniqueCtx = error;
+        } else {
+          throw error;
+        }
+      }
+
+      if (uniqueCtx !== null) {
+        return this.resolveUniqueConstraint(uniqueCtx);
+      }
+
+      return transactionResult!;
     }
+  }
+
+  private async resolveUniqueConstraint(
+    ctx: _UniqueConstraintContext,
+  ): Promise<Operation[]> {
+    let replayOps: Operation[] | null = null;
+
+    try {
+      replayOps = await this.findIdempotentReplay(
+        this.db,
+        ctx.documentId,
+        ctx.scope,
+        ctx.branch,
+        ctx.revision,
+        ctx.stagedOps,
+      );
+    } catch {
+      // Lookup failed; propagate original error below
+    }
+
+    if (replayOps !== null) {
+      return replayOps;
+    }
+
+    const op = ctx.stagedOps[0];
+    throw new DuplicateOperationError(
+      `${op.opId} at index ${op.index} with skip ${op.skip}`,
+    );
   }
 
   private async executeApply(
@@ -77,8 +149,24 @@ export class KyselyOperationStore implements IOperationStore {
     revision: number,
     fn: (txn: AtomicTxn) => void | Promise<void>,
     signal?: AbortSignal,
-  ): Promise<void> {
+  ): Promise<Operation[]> {
     throwIfAborted(signal);
+
+    const atomicTxn = new AtomicTransaction(
+      documentId,
+      documentType,
+      scope,
+      branch,
+      revision,
+    );
+
+    await fn(atomicTxn);
+
+    const operations = atomicTxn.getOperations();
+
+    if (operations.length === 0) {
+      return [];
+    }
 
     const latestOp = await trx
       .selectFrom("Operation")
@@ -92,44 +180,100 @@ export class KyselyOperationStore implements IOperationStore {
 
     const currentRevision = latestOp ? latestOp.index : -1;
     if (currentRevision !== revision - 1) {
+      let replayOps: Operation[] | null = null;
+
+      try {
+        replayOps = await this.findIdempotentReplay(
+          trx,
+          documentId,
+          scope,
+          branch,
+          revision,
+          operations,
+        );
+      } catch {
+        // Lookup failed; propagate original error below
+      }
+
+      if (replayOps !== null) {
+        return replayOps;
+      }
+
       throw new RevisionMismatchError(currentRevision + 1, revision);
     }
 
-    const atomicTxn = new AtomicTransaction(
-      documentId,
-      documentType,
-      scope,
-      branch,
-      revision,
-    );
-    await fn(atomicTxn);
+    let prevOpId = latestOp?.opId || "";
+    for (const op of operations) {
+      op.prevOpId = prevOpId;
+      prevOpId = op.opId;
+    }
 
-    const operations = atomicTxn.getOperations();
-
-    if (operations.length > 0) {
-      let prevOpId = latestOp?.opId || "";
-      for (const op of operations) {
-        op.prevOpId = prevOpId;
-        prevOpId = op.opId;
+    try {
+      await trx.insertInto("Operation").values(operations).execute();
+    } catch (error: unknown) {
+      if (error instanceof Error && error.message.includes("unique constraint")) {
+        throw new _UniqueConstraintContext(
+          documentId,
+          scope,
+          branch,
+          revision,
+          operations,
+        );
       }
 
-      try {
-        await trx.insertInto("Operation").values(operations).execute();
-      } catch (error: unknown) {
-        if (error instanceof Error) {
-          if (error.message.includes("unique constraint")) {
-            const op = operations[0];
-            throw new DuplicateOperationError(
-              `${op.opId} at index ${op.index} with skip ${op.skip}`,
-            );
-          }
+      throw error;
+    }
 
-          throw error;
-        }
+    return operations.map((op) => ({
+      index: op.index,
+      timestampUtcMs: op.timestampUtcMs.toISOString(),
+      hash: op.hash,
+      skip: op.skip,
+      error: op.error || undefined,
+      id: op.opId,
+      action: JSON.parse(op.action as string) as Operation["action"],
+    }));
+  }
 
-        throw error;
+  private async findIdempotentReplay(
+    executor: Kysely<Database> | Transaction<Database>,
+    documentId: string,
+    scope: string,
+    branch: string,
+    revision: number,
+    stagedOps: InsertableOperation[],
+  ): Promise<Operation[] | null> {
+    const minIndex = revision;
+    const maxIndex = revision + stagedOps.length - 1;
+
+    const storedRows = await executor
+      .selectFrom("Operation")
+      .selectAll()
+      .where("documentId", "=", documentId)
+      .where("scope", "=", scope)
+      .where("branch", "=", branch)
+      .where("index", ">=", minIndex)
+      .where("index", "<=", maxIndex)
+      .orderBy("index", "asc")
+      .execute();
+
+    if (storedRows.length !== stagedOps.length) {
+      return null;
+    }
+
+    for (let i = 0; i < stagedOps.length; i++) {
+      const staged = stagedOps[i];
+      const stored = storedRows[i];
+      if (
+        stored.opId !== staged.opId ||
+        stored.index !== staged.index ||
+        stored.skip !== staged.skip
+      ) {
+        return null;
       }
     }
+
+    return storedRows.map((row) => this.rowToOperation(row));
   }
 
   async getSince(

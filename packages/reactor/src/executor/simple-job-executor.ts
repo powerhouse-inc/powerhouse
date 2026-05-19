@@ -514,8 +514,9 @@ export class SimpleJobExecutor implements IJobExecutor {
       header: updatedDocument.header,
     });
 
+    let storedOperations: Operation[];
     try {
-      await stores.operationStore.apply(
+      storedOperations = await stores.operationStore.apply(
         job.documentId,
         document.header.documentType,
         scope,
@@ -545,22 +546,24 @@ export class SimpleJobExecutor implements IJobExecutor {
       };
     }
 
+    const storedOperation = storedOperations[0];
+
     updatedDocument.header.revision = {
       ...updatedDocument.header.revision,
-      [scope]: newOperation.index + 1,
+      [scope]: storedOperation.index + 1,
     };
 
     stores.writeCache.putState(
       job.documentId,
       scope,
       job.branch,
-      newOperation.index,
+      storedOperation.index,
       updatedDocument,
     );
 
     indexTxn.write([
       {
-        ...newOperation,
+        ...storedOperation,
         documentId: job.documentId,
         documentType: document.header.documentType,
         branch: job.branch,
@@ -572,10 +575,10 @@ export class SimpleJobExecutor implements IJobExecutor {
     return {
       job,
       success: true,
-      operations: [newOperation],
+      operations: [storedOperation],
       operationsWithContext: [
         {
-          operation: newOperation,
+          operation: storedOperation,
           context: {
             documentId: job.documentId,
             scope,
