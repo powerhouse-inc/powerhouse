@@ -1,5 +1,6 @@
 import type { Job } from "../queue/types.js";
 import type { ExecutorManagerStatus, JobResult } from "./types.js";
+import type { JobWriteReadyPayload } from "./worker/protocol.js";
 
 /**
  * Snapshot of the single in-flight slot maintained by an {@link IExecutorWorker}.
@@ -7,6 +8,19 @@ import type { ExecutorManagerStatus, JobResult } from "./types.js";
 export type WorkerInFlightSnapshot = {
   correlationId: string;
   jobId: string;
+};
+
+/**
+ * Outcome of a worker-side job execution.
+ *
+ * `result` mirrors the in-process `JobResult` exactly. `writeReady` carries
+ * the operations + jobMeta the parent needs to emit `JOB_WRITE_READY`, and is
+ * present only when the worker produced operations. It is absent on failure
+ * and on success-with-no-operations.
+ */
+export type WorkerExecutionOutcome = {
+  result: JobResult;
+  writeReady?: JobWriteReadyPayload;
 };
 
 /**
@@ -33,11 +47,13 @@ export interface IExecutorWorker {
   start(): Promise<void>;
 
   /**
-   * Dispatch a job to the worker and resolve with its `result` payload.
-   * Rejects with a transport-level error if the worker exits, aborts, or
-   * times out before producing a result.
+   * Dispatch a job to the worker and resolve with its outcome — the
+   * `JobResult` and, on success-with-operations, a `writeReady` payload
+   * the parent will enrich and re-emit. Rejects with a transport-level
+   * error if the worker exits, aborts, or times out before producing a
+   * result.
    */
-  execute(job: Job, signal?: AbortSignal): Promise<JobResult>;
+  execute(job: Job, signal?: AbortSignal): Promise<WorkerExecutionOutcome>;
 
   /**
    * Request cancellation of the in-flight job (if any). The handle posts an

@@ -13,8 +13,11 @@
 
 import type { ILogger } from "document-model";
 import { randomUUID } from "node:crypto";
-import type { IExecutorWorker, WorkerInFlightSnapshot } from "../interfaces.js";
-import type { JobResult } from "../types.js";
+import type {
+  IExecutorWorker,
+  WorkerExecutionOutcome,
+  WorkerInFlightSnapshot,
+} from "../interfaces.js";
 import type { Job } from "../../queue/types.js";
 import { fromErrorInfo } from "./error-info.js";
 import {
@@ -72,7 +75,7 @@ type PendingEntry =
   | {
       kind: "execute";
       jobId: string;
-      resolve: (result: JobResult) => void;
+      resolve: (outcome: WorkerExecutionOutcome) => void;
       reject: (err: Error) => void;
     }
   | {
@@ -158,7 +161,10 @@ export class WorkerHandle implements IExecutorWorker {
     this.phase = "ready";
   }
 
-  public execute(job: Job, signal?: AbortSignal): Promise<JobResult> {
+  public execute(
+    job: Job,
+    signal?: AbortSignal,
+  ): Promise<WorkerExecutionOutcome> {
     if (this.phase === "terminated") {
       return Promise.reject(
         this.lastExitError ??
@@ -189,13 +195,13 @@ export class WorkerHandle implements IExecutorWorker {
       }
     };
 
-    const promise = new Promise<JobResult>((resolve, reject) => {
+    const promise = new Promise<WorkerExecutionOutcome>((resolve, reject) => {
       this.pending.set(correlationId, {
         kind: "execute",
         jobId: job.id,
-        resolve: (result) => {
+        resolve: (outcome) => {
           detachSignal();
-          resolve(result);
+          resolve(outcome);
         },
         reject: (err) => {
           detachSignal();
@@ -372,14 +378,19 @@ export class WorkerHandle implements IExecutorWorker {
       this.abortTimer = null;
     }
 
-    const result: JobResult = msg.error
+    const outcome: WorkerExecutionOutcome = msg.error
       ? {
-          ...msg.result,
-          success: false,
-          error: fromErrorInfo(msg.error),
+          result: {
+            ...msg.result,
+            success: false,
+            error: fromErrorInfo(msg.error),
+          },
         }
-      : msg.result;
-    entry.resolve(result);
+      : {
+          result: msg.result,
+          writeReady: msg.writeReady,
+        };
+    entry.resolve(outcome);
 
     if (this.phase === "shutting-down") {
       const shutdownEntry = [...this.pending.values()].find(

@@ -140,8 +140,8 @@ describe("WorkerHandle", () => {
       const job2 = createTestJob({ id: "job-b" });
       const r1 = await handle.execute(job1);
       const r2 = await handle.execute(job2);
-      expect(r1.success).toBe(true);
-      expect(r2.success).toBe(true);
+      expect(r1.result.success).toBe(true);
+      expect(r2.result.success).toBe(true);
 
       const executes = transport
         .getSentMessages()
@@ -193,11 +193,11 @@ describe("WorkerHandle", () => {
           stack: "BoomError: boom\n    at x",
         },
       });
-      const result = await pending;
-      expect(result.success).toBe(false);
-      expect(result.error?.name).toBe("BoomError");
-      expect(result.error?.message).toBe("boom");
-      expect(result.error?.stack).toContain("BoomError: boom");
+      const outcome = await pending;
+      expect(outcome.result.success).toBe(false);
+      expect(outcome.result.error?.name).toBe("BoomError");
+      expect(outcome.result.error?.message).toBe("boom");
+      expect(outcome.result.error?.stack).toContain("BoomError: boom");
     });
 
     it("rejects after the worker exits abnormally", async () => {
@@ -277,8 +277,8 @@ describe("WorkerHandle", () => {
         result: { job, success: true },
       });
 
-      const result = await pending;
-      expect(result.success).toBe(true);
+      const outcome = await pending;
+      expect(outcome.result.success).toBe(true);
       await shutdownPromise;
       expect(transport.terminateCalls).toBeGreaterThan(0);
     });
