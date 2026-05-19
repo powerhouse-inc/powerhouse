@@ -83,6 +83,17 @@ export const QueueEventTypes = {
 } as const;
 
 /**
+ * Minimal projection of a Job used by IQueue.dequeueNextMatching predicates.
+ * Exposes only the routing-relevant fields so routing logic (e.g. hash(documentId) % numWorkers)
+ * can live outside the queue without leaking the full Job.
+ */
+export type JobRoutingMeta = {
+  documentId: string;
+  scope: string;
+  branch: string;
+};
+
+/**
  * Event data for job available events
  */
 export type JobAvailableEvent = {

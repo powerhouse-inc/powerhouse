@@ -44,7 +44,7 @@ export class HypercoreOperationStore implements IOperationStore {
     revision: number,
     fn: (txn: AtomicTxn) => void | Promise<void>,
     signal?: AbortSignal,
-  ): Promise<void> {
+  ): Promise<Operation[]> {
     const prevLock = this.applyLock;
     let releaseLock: () => void;
     this.applyLock = new Promise<void>((resolve) => {
@@ -54,7 +54,7 @@ export class HypercoreOperationStore implements IOperationStore {
     await prevLock;
 
     try {
-      await this.executeApply(
+      return await this.executeApply(
         documentId,
         documentType,
         scope,
@@ -76,7 +76,7 @@ export class HypercoreOperationStore implements IOperationStore {
     revision: number,
     fn: (txn: AtomicTxn) => void | Promise<void>,
     signal?: AbortSignal,
-  ): Promise<void> {
+  ): Promise<Operation[]> {
     if (signal?.aborted) {
       throw new Error("Operation aborted");
     }
@@ -101,7 +101,7 @@ export class HypercoreOperationStore implements IOperationStore {
 
     const operations = atomicTxn.getOperations();
     if (operations.length === 0) {
-      return;
+      return [];
     }
 
     for (const op of operations) {
@@ -148,6 +148,8 @@ export class HypercoreOperationStore implements IOperationStore {
     await batch.put(ORDINAL_COUNTER_KEY, nextOrdinal);
 
     await batch.flush();
+
+    return operations.map((op) => this.toOperation(op));
   }
 
   async getSince(

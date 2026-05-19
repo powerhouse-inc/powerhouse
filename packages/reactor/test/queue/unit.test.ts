@@ -7,7 +7,7 @@ import type { JobFailedEvent } from "../../src/events/types.js";
 import { ReactorEventTypes } from "../../src/events/types.js";
 import type { IQueue } from "../../src/queue/interfaces.js";
 import { InMemoryQueue } from "../../src/queue/queue.js";
-import type { Job, JobAvailableEvent } from "../../src/queue/types.js";
+import type { Job, JobAvailableEvent, JobRoutingMeta } from "../../src/queue/types.js";
 import { QueueEventTypes } from "../../src/queue/types.js";
 import {
   DocumentModelResolver,
@@ -1484,6 +1484,133 @@ describe("InMemoryQueue", () => {
     it("should return undefined for non-existent job", () => {
       const q = queue as InMemoryQueue;
       expect(q.getJob("nonexistent")).toBeUndefined();
+    });
+  });
+
+  describe("dequeueNextMatching", () => {
+    it("should return null when the queue is empty", async () => {
+      const result = await queue.dequeueNextMatching(() => true);
+      expect(result).toBeNull();
+    });
+
+    it("should return null when predicate matches nothing", async () => {
+      const job = createTestJob({ id: "job-1", documentId: "doc-1" });
+      await queue.enqueue(job);
+
+      const result = await queue.dequeueNextMatching(() => false);
+      expect(result).toBeNull();
+      expect(await queue.totalSize()).toBe(1);
+    });
+
+    it("should return the matching job and pass only JobRoutingMeta to the predicate", async () => {
+      const job = createTestJob({
+        id: "job-1",
+        documentId: "doc-1",
+        scope: "global",
+        branch: "main",
+      });
+      await queue.enqueue(job);
+
+      const capturedMetas: JobRoutingMeta[] = [];
+      const result = await queue.dequeueNextMatching((meta) => {
+        capturedMetas.push(meta);
+        return true;
+      });
+
+      expect(result).not.toBeNull();
+      expect(result!.job.id).toBe("job-1");
+      expect(capturedMetas).toHaveLength(1);
+      expect(capturedMetas[0]).toEqual({
+        documentId: "doc-1",
+        scope: "global",
+        branch: "main",
+      });
+      // Predicate must not receive the full Job (no extra fields)
+      expect(Object.keys(capturedMetas[0])).toEqual(["documentId", "scope", "branch"]);
+    });
+
+    it("should preserve FIFO order within a bucket", async () => {
+      const job1 = createTestJob({ id: "job-1" });
+      const job2 = createTestJob({ id: "job-2" });
+
+      await queue.enqueue(job1);
+      await queue.enqueue(job2);
+
+      const first = await queue.dequeueNextMatching(() => true);
+      expect(first!.job.id).toBe("job-1");
+
+      // Complete job-1 to release the per-doc gate
+      await queue.completeJob("job-1");
+
+      const second = await queue.dequeueNextMatching(() => true);
+      expect(second!.job.id).toBe("job-2");
+    });
+
+    it("should return the first matching head across buckets in queue insertion order", async () => {
+      const jobA = createTestJob({ id: "job-a", documentId: "doc-a" });
+      const jobB = createTestJob({ id: "job-b", documentId: "doc-b" });
+
+      await queue.enqueue(jobA);
+      await queue.enqueue(jobB);
+
+      // Only match doc-b
+      const result = await queue.dequeueNextMatching(
+        (meta) => meta.documentId === "doc-b",
+      );
+      expect(result!.job.id).toBe("job-b");
+
+      // doc-a job is still in queue
+      expect(await queue.size("doc-a", "global", "main")).toBe(1);
+    });
+
+    it("should skip gated docs (document currently executing) even when predicate matches", async () => {
+      const job1 = createTestJob({ id: "job-1", documentId: "doc-1" });
+      const job2 = createTestJob({ id: "job-2", documentId: "doc-1" });
+      const job3 = createTestJob({ id: "job-3", documentId: "doc-2" });
+
+      await queue.enqueue(job1);
+      await queue.enqueue(job2);
+      await queue.enqueue(job3);
+
+      // Dequeue job-1 to put doc-1 into executing state
+      const executing = await queue.dequeueNext();
+      expect(executing!.job.id).toBe("job-1");
+
+      // Now doc-1 is executing; dequeueNextMatching should skip job-2 (gated)
+      // and return job-3 (different doc, not gated)
+      const result = await queue.dequeueNextMatching(() => true);
+      expect(result!.job.id).toBe("job-3");
+    });
+
+    it("should skip dep-blocked heads", async () => {
+      const blocked = createTestJob({ id: "job-blocked", documentId: "doc-1", queueHint: ["nonexistent"] });
+      const ready = createTestJob({ id: "job-ready", documentId: "doc-2" });
+
+      await queue.enqueue(blocked);
+      await queue.enqueue(ready);
+
+      const result = await queue.dequeueNextMatching(() => true);
+      expect(result!.job.id).toBe("job-ready");
+    });
+
+    it("should return null when paused", async () => {
+      const q = queue as InMemoryQueue;
+      const job = createTestJob({ id: "job-1" });
+      await queue.enqueue(job);
+
+      q.pause();
+
+      const result = await queue.dequeueNextMatching(() => true);
+      expect(result).toBeNull();
+    });
+
+    it("should reject when signal is already aborted", async () => {
+      const controller = new AbortController();
+      controller.abort();
+
+      await expect(
+        queue.dequeueNextMatching(() => true, controller.signal),
+      ).rejects.toThrow("Operation aborted");
     });
   });
 });
