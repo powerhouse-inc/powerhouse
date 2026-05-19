@@ -25,6 +25,86 @@ describe("ENV_SEEDING_RULES", () => {
       { url: "https://b.com", name: null, icon: null },
     ]);
   });
+
+  // Task 9: expanded rules — verify path + parser for every §B audit MIGRATE env.
+  it.each([
+    ["PH_CONNECT_BASE_PATH", "app.basePath", "/foo", "/foo"],
+    ["PH_CONNECT_LOG_LEVEL", "app.logLevel", "debug", "debug"],
+    [
+      "PH_CONNECT_EXTERNAL_PACKAGES_DISABLED",
+      "packages.externalEnabled",
+      "true",
+      false,
+    ],
+    [
+      "PH_CONNECT_DRIVES_PRESERVE_STRATEGY",
+      "drives.preserveStrategy",
+      "preserve-all",
+      "preserve-all",
+    ],
+    [
+      "PH_CONNECT_CLOUD_DRIVES_ENABLED",
+      "drives.sections.remote.enabled",
+      "true",
+      true,
+    ],
+    [
+      "PH_CONNECT_DISABLE_ADD_CLOUD_DRIVES",
+      "drives.sections.remote.allowAdd",
+      "true",
+      false,
+    ],
+    [
+      "PH_CONNECT_DISABLE_DELETE_CLOUD_DRIVES",
+      "drives.sections.remote.allowDelete",
+      "true",
+      false,
+    ],
+    [
+      "PH_CONNECT_LOCAL_DRIVES_ENABLED",
+      "drives.sections.local.enabled",
+      "false",
+      false,
+    ],
+    [
+      "PH_CONNECT_DISABLE_ADD_LOCAL_DRIVES",
+      "drives.sections.local.allowAdd",
+      "false",
+      true,
+    ],
+    [
+      "PH_CONNECT_DISABLE_DELETE_LOCAL_DRIVES",
+      "drives.sections.local.allowDelete",
+      "false",
+      true,
+    ],
+    ["PH_CONNECT_RENOWN_URL", "renown.url", "https://x", "https://x"],
+    ["PH_CONNECT_RENOWN_NETWORK_ID", "renown.networkId", "eip155", "eip155"],
+    ["PH_CONNECT_RENOWN_CHAIN_ID", "renown.chainId", "42", 42],
+  ])("registers %s -> %s with the right parser", (envVar, path, raw, want) => {
+    const rule = ENV_SEEDING_RULES.find((r) => r.envVar === envVar);
+    expect(rule).toBeDefined();
+    expect(rule?.path).toBe(path);
+    expect(rule?.parse(raw)).toEqual(want);
+  });
+
+  it("orders CLOUD before PUBLIC so CLOUD wins on the remote.* collapse", () => {
+    const cloudIdx = ENV_SEEDING_RULES.findIndex(
+      (r) => r.envVar === "PH_CONNECT_CLOUD_DRIVES_ENABLED",
+    );
+    const publicIdx = ENV_SEEDING_RULES.findIndex(
+      (r) => r.envVar === "PH_CONNECT_PUBLIC_DRIVES_ENABLED",
+    );
+    expect(cloudIdx).toBeGreaterThanOrEqual(0);
+    expect(publicIdx).toBeGreaterThan(cloudIdx);
+  });
+
+  it("RENOWN_CHAIN_ID parser throws on non-numeric values", () => {
+    const rule = ENV_SEEDING_RULES.find(
+      (r) => r.envVar === "PH_CONNECT_RENOWN_CHAIN_ID",
+    );
+    expect(() => rule?.parse("not-a-number")).toThrow(/Cannot parse/);
+  });
 });
 
 describe("applyEnvSeeding", () => {

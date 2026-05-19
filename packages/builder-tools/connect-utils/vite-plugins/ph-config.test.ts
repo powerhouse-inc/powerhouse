@@ -104,6 +104,46 @@ describe("phConfigPlugin", () => {
     });
   });
 
+  it("cliConnectOverride beats source.connect in the dist emit (task 9)", () => {
+    const plugin = phConfigPlugin({
+      packages: [],
+      projectRoot,
+      connect: {
+        renown: { url: "https://source.renown" },
+        drives: { allowAddDrive: true },
+      },
+      cliConnectOverride: {
+        renown: { url: "https://cli.renown", chainId: 42 },
+        drives: { allowAddDrive: false },
+      },
+    });
+    const emitted: { source: string }[] = [];
+    const ctx = {
+      emitFile(file: { type: string; fileName: string; source: string }) {
+        if (file.type === "asset") emitted.push({ source: file.source });
+      },
+    };
+    const generateBundle = plugin.generateBundle as (
+      this: unknown,
+      ...args: unknown[]
+    ) => void;
+    generateBundle.call(ctx);
+    const parsed = JSON.parse(emitted[0].source) as Record<string, unknown>;
+    const connect = parsed.connect as Record<string, Record<string, unknown>>;
+
+    // CLI wins on collision with source
+    expect(connect.renown.url).toBe("https://cli.renown");
+    expect(connect.drives.allowAddDrive).toBe(false);
+
+    // CLI-only fields are present (deep-merged into source/default tree)
+    expect(connect.renown.chainId).toBe(42);
+
+    // Source fields untouched by CLI remain populated from defaults
+    expect(connect.renown.networkId).toBe(
+      DEFAULT_CONNECT_CONFIG.renown?.networkId,
+    );
+  });
+
   it("dev middleware intercepts /powerhouse.config.json with the filtered content", () => {
     const plugin = phConfigPlugin({
       packages: [

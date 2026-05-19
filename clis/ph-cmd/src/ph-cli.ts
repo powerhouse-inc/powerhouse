@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { getPowerhouseProjectInfo } from "@powerhousedao/shared/clis";
-import { execSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { resolveCommand } from "package-manager-detector";
 
 export async function executePhCliCommand(phCliCommand: string) {
@@ -25,15 +25,19 @@ export async function executePhCliCommand(phCliCommand: string) {
     );
   }
   const { command, args } = resolveExecuteLocalCommandResult;
-  const cmd = `${command} ${args.join(" ")}`;
-  try {
-    execSync(cmd, { stdio: "inherit", cwd: projectPath });
-  } catch (err) {
-    // propagate normal non-zero exits but throw on abnormal exits to ensure the error is reported
-    const e = err as { status?: number | null; signal?: NodeJS.Signals | null };
-    if (typeof e.status === "number" && !e.signal) {
-      process.exit(e.status);
-    }
-    throw err;
+  // spawn (not execSync via a shell-joined string) so args containing shell
+  // metacharacters survive intact — e.g. `ph connect build --json '{"a":"b"}'`
+  // would otherwise lose its quotes when re-parsed by the shell.
+  const result = spawnSync(command, args, {
+    stdio: "inherit",
+    cwd: projectPath,
+    shell: false,
+  });
+  if (result.error) throw result.error;
+  if (result.signal) {
+    throw new Error(`${command} terminated by signal ${result.signal}`);
+  }
+  if (typeof result.status === "number" && result.status !== 0) {
+    process.exit(result.status);
   }
 }

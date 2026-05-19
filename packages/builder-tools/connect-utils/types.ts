@@ -1,4 +1,5 @@
 import type { PowerhouseConfig } from "@powerhousedao/config";
+import type { PHConnectRuntimeConfig } from "@powerhousedao/shared/clis";
 import type { CommonServerOptions } from "vite";
 
 export type IConnectOptions = {
@@ -7,6 +8,14 @@ export type IConnectOptions = {
   envDir?: string;
   powerhouseConfig?: PowerhouseConfig;
   watchTimeout?: number;
+  /**
+   * CLI-supplied connect override. Final (highest precedence) layer of the
+   * runtime-config deep-merge ladder applied by `phConfigPlugin`. Forwarded
+   * from `ph connect build`'s `--json` + individual `--flag` parsing.
+   *
+   * Order: DEFAULT_CONNECT_CONFIG < env-seeds < source.connect < cliConnectOverride.
+   */
+  cliConnectOverride?: PHConnectRuntimeConfig;
 };
 
 export type ConnectCommonOptions = {

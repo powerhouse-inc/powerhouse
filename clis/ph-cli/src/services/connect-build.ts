@@ -1,11 +1,13 @@
 import { getConnectBaseViteConfig } from "@powerhousedao/builder-tools";
 import { getConfig } from "@powerhousedao/shared/clis";
+import type { PHConnectRuntimeConfig } from "@powerhousedao/shared/clis";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import type { InlineConfig } from "vite";
 import { build, mergeConfig } from "vite";
 import type { ConnectBuildArgs } from "../types.js";
 import { assignEnvVars } from "../utils/assign-env-vars.js";
+import { buildCliConnectOverride } from "../utils/cli-connect-override.js";
 import { runBuild } from "./build.js";
 
 export async function runConnectBuild(args: ConnectBuildArgs) {
@@ -19,6 +21,12 @@ export async function runConnectBuild(args: ConnectBuildArgs) {
   // node_modules — the Vite plugin that bundles them needs them on disk.
   assertLocalPackagesInstalled(dirname);
 
+  // Build the CLI override layer (--json + individual flags) once here so a
+  // bad payload fails before we waste a build. The result feeds the highest
+  // precedence layer in the Vite plugin's deep-merge ladder.
+  const cliConnectOverride: PHConnectRuntimeConfig | undefined =
+    buildCliConnectOverride(args);
+
   await runBuild({
     outDir: "dist",
     debug,
@@ -27,6 +35,7 @@ export async function runConnectBuild(args: ConnectBuildArgs) {
   const baseConfig = getConnectBaseViteConfig({
     mode,
     dirname,
+    cliConnectOverride,
   });
 
   const buildConfig: InlineConfig = {

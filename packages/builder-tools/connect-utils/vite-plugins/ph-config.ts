@@ -16,6 +16,12 @@ export type PhConfigPluginOptions = {
   projectRoot?: string;
   connect?: PHConnectRuntimeConfig;
   /**
+   * CLI-supplied connect override (final merge layer, beats source + env).
+   * Forwarded from `ph connect build`'s `--json` + individual `--flag` parsing.
+   * See clis/ph-cli/src/utils/cli-connect-override.ts.
+   */
+  cliConnectOverride?: PHConnectRuntimeConfig;
+  /**
    * Explicitly-set runtime env vars (not schema defaults). Used to seed
    * powerhouse.config.json fields when an env var is set and the field is
    * absent from the source config. Defaults to `process.env`, but callers
@@ -60,16 +66,18 @@ export function phConfigPlugin(options: PhConfigPluginOptions): Plugin {
     );
   }
 
-  // Layer the merge so the dist file is fully self-describing (task 6):
-  //   DEFAULT_CONNECT_CONFIG  (base — fills in any field neither source nor env supplied)
+  // Precedence ladder (lowest → highest) for the emitted connect.* block:
+  //   DEFAULT_CONNECT_CONFIG  (base — fills in any field nothing else supplied)
   //     < env-var seeds       (legacy compat, applied above via applyEnvSeeding)
-  //     < source.connect      (user's hand-edited overrides, already on top of seeds)
-  //
-  // The CLI flag layer added by `ph connect build --flag value` (task 9)
-  // will compose on top of this via the same deep-merge.
+  //     < source.connect      (user's hand-edited powerhouse.config.json, already on top of seeds)
+  //     < cliConnectOverride  (task 9: `ph connect build --json` + individual flags)
+  const withDefaults = deepMerge(DEFAULT_CONNECT_CONFIG, seededConnect);
+  const mergedConnect = options.cliConnectOverride
+    ? deepMerge(withDefaults, options.cliConnectOverride)
+    : withDefaults;
   const source = {
     packages: options.packages,
-    connect: deepMerge(DEFAULT_CONNECT_CONFIG, seededConnect),
+    connect: mergedConnect,
   };
 
   const runtimeConfig = buildRuntimeConfig(source, localPackage);

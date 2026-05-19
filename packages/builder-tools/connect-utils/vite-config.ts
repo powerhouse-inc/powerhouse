@@ -335,6 +335,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
         packages: phPackages,
         projectRoot: options.dirname,
         connect: phConfig.connect,
+        cliConnectOverride: options.cliConnectOverride,
         // Pass only explicitly-set runtime env vars (not schema defaults) so
         // env→file seeding only fires for values the operator actually set.
         // setConnectEnv(env) above writes schema defaults into process.env,

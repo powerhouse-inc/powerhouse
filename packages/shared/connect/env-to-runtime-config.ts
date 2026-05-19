@@ -24,7 +24,15 @@ export type EnvSeedingRule = {
   parse: (value: string) => unknown;
 };
 
+const parseBool = (v: string): boolean => v.toLowerCase() === "true";
 const invertBool = (v: string): boolean => v.toLowerCase() !== "true";
+const parseNumber = (v: string): number => {
+  const n = Number(v);
+  if (Number.isNaN(n)) {
+    throw new Error(`Cannot parse '${v}' as number`);
+  }
+  return n;
+};
 
 const parseDefaultDrivesUrl = (
   v: string,
@@ -35,15 +43,25 @@ const parseDefaultDrivesUrl = (
     .filter(Boolean)
     .map((url) => ({ url, name: null, icon: null }));
 
-// Initial Cat 2 entries — covers the three fields acaldas's PR review
-// table called out (DISABLE_ADD_DRIVE, DEFAULT_DRIVES_URL, PACKAGES).
-// PH_CONNECT_PACKAGES is already wired through the build pipeline into
-// the top-level `packages[]` array, so it's not re-seeded here.
+// One entry per §B MIGRATE env var from CONNECT-ENV-AUDIT.md.
 //
-// Other Cat 2 fields from CONNECT-CONFIG.md §13.3 (drive section toggles,
-// editor lists, UI flags, etc.) follow the same pattern and will be added
-// here in subsequent commits as their schema fields land.
+// Applied in order with "set if absent" semantics (see applyEnvSeeding). That
+// means earlier rules win when two rules write the same path — used here for
+// the CLOUD+PUBLIC → `remote` collapse: PH_CONNECT_CLOUD_* is listed before
+// PH_CONNECT_PUBLIC_*, so if an operator sets both, CLOUD wins. This matches
+// the audit's §B.2.7 note that CLOUD is the more recently coined name and
+// PUBLIC predates the unified section semantics.
 export const ENV_SEEDING_RULES: readonly EnvSeedingRule[] = [
+  // connect.app
+  { envVar: "PH_CONNECT_BASE_PATH", path: "app.basePath", parse: String },
+  { envVar: "PH_CONNECT_LOG_LEVEL", path: "app.logLevel", parse: String },
+  // connect.packages
+  {
+    envVar: "PH_CONNECT_EXTERNAL_PACKAGES_DISABLED",
+    path: "packages.externalEnabled",
+    parse: invertBool,
+  },
+  // connect.drives (top-level)
   {
     envVar: "PH_CONNECT_DISABLE_ADD_DRIVE",
     path: "drives.allowAddDrive",
@@ -53,6 +71,70 @@ export const ENV_SEEDING_RULES: readonly EnvSeedingRule[] = [
     envVar: "PH_CONNECT_DEFAULT_DRIVES_URL",
     path: "drives.defaultDrives",
     parse: parseDefaultDrivesUrl,
+  },
+  {
+    envVar: "PH_CONNECT_DRIVES_PRESERVE_STRATEGY",
+    path: "drives.preserveStrategy",
+    parse: String,
+  },
+  // connect.drives.sections.remote — CLOUD first (wins on collision), PUBLIC as legacy alias
+  {
+    envVar: "PH_CONNECT_CLOUD_DRIVES_ENABLED",
+    path: "drives.sections.remote.enabled",
+    parse: parseBool,
+  },
+  {
+    envVar: "PH_CONNECT_DISABLE_ADD_CLOUD_DRIVES",
+    path: "drives.sections.remote.allowAdd",
+    parse: invertBool,
+  },
+  {
+    envVar: "PH_CONNECT_DISABLE_DELETE_CLOUD_DRIVES",
+    path: "drives.sections.remote.allowDelete",
+    parse: invertBool,
+  },
+  {
+    envVar: "PH_CONNECT_PUBLIC_DRIVES_ENABLED",
+    path: "drives.sections.remote.enabled",
+    parse: parseBool,
+  },
+  {
+    envVar: "PH_CONNECT_DISABLE_ADD_PUBLIC_DRIVES",
+    path: "drives.sections.remote.allowAdd",
+    parse: invertBool,
+  },
+  {
+    envVar: "PH_CONNECT_DISABLE_DELETE_PUBLIC_DRIVES",
+    path: "drives.sections.remote.allowDelete",
+    parse: invertBool,
+  },
+  // connect.drives.sections.local
+  {
+    envVar: "PH_CONNECT_LOCAL_DRIVES_ENABLED",
+    path: "drives.sections.local.enabled",
+    parse: parseBool,
+  },
+  {
+    envVar: "PH_CONNECT_DISABLE_ADD_LOCAL_DRIVES",
+    path: "drives.sections.local.allowAdd",
+    parse: invertBool,
+  },
+  {
+    envVar: "PH_CONNECT_DISABLE_DELETE_LOCAL_DRIVES",
+    path: "drives.sections.local.allowDelete",
+    parse: invertBool,
+  },
+  // connect.renown
+  { envVar: "PH_CONNECT_RENOWN_URL", path: "renown.url", parse: String },
+  {
+    envVar: "PH_CONNECT_RENOWN_NETWORK_ID",
+    path: "renown.networkId",
+    parse: String,
+  },
+  {
+    envVar: "PH_CONNECT_RENOWN_CHAIN_ID",
+    path: "renown.chainId",
+    parse: parseNumber,
   },
 ];
 
