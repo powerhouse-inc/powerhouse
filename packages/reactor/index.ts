@@ -134,6 +134,34 @@ export {
   type JobStartedEvent,
 } from "./src/executor/types.js";
 
+// Executor Worker Protocol
+export type {
+  AbortMessage,
+  DbConfig,
+  DocumentModelSpec,
+  ErrorInfo as WorkerErrorInfo,
+  ExecuteMessage,
+  FactorySpec,
+  HeartbeatMessage,
+  InitMessage,
+  JobWriteReadyPayload,
+  LoadModelMessage,
+  LogMessage,
+  MetricsMessage,
+  ModelLoadFailedMessage,
+  ModelLoadedMessage,
+  ModelManifestEntry,
+  ModuleRef,
+  ParentMessage,
+  ReadyMessage,
+  ResultMessage,
+  SanitizedArg,
+  ShutdownMessage,
+  SignatureVerifierSpec,
+  WorkerMessage,
+  WorkerPoolConfig,
+} from "./src/executor/worker/protocol.js";
+
 // Document Model Registry
 export {
   DocumentModelRegistry,
