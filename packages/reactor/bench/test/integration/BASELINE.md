@@ -91,3 +91,51 @@ Each row is one (workers, jobs/sec, p50, p95, p99, k6 reqs, k6 fail%) tuple.
   warmup. Bench k6 over-fires by design (so we measure executor ceiling,
   not request handling); to isolate per-worker scaling we should also rerun
   at VUS≈workers (no queue backlog) to capture realistic per-job latency.
+| 4 | 148.56 | 10000.00 | 10000.00 | 10000.00 | — | — |
+| 4 | 152.12 | 10000.00 | 10000.00 | 10000.00 | — | — |
+
+### Per-worker observability (2026-05-20, post-instrumentation)
+
+Phase-0 acceptance failure (1.74×) prompted adding `worker.id` attributes to
+the executor metrics (`reactor.executor.processed`,
+`reactor.executor.job.duration`) so we can attribute throughput to individual
+worker threads instead of reasoning about aggregate jobs/sec only.
+
+Mechanism: both `SimpleJobExecutorManager` and `WorkerPoolJobExecutorManager`
+now emit `JobExecutorEventTypes.JOB_STARTED/JOB_COMPLETED/JOB_FAILED`
+carrying an optional `workerId` (`reactor-worker-<n>` for the pool,
+`in-process-<n>` for the in-process manager). `@powerhousedao/opentelemetry-instrumentation-reactor`
+subscribes to these and tags the counter / histogram. Changes are additive —
+existing external consumers of those executor events keep working because the
+field is optional and no payload was removed.
+
+While adding this we also fixed an emission-order bug in the worker-pool
+manager: `JOB_WRITE_READY` was awaited before `JOB_COMPLETED` was emitted,
+which let the read-model coordinator fire `JOB_READ_READY` (and its
+instrumentation cleanup) before `JOB_COMPLETED` arrived, dropping the
+executor-duration histogram entirely. `JOB_COMPLETED` is now emitted first
+(matching the in-process manager) and the histogram populates.
+
+#### Workers=4, VUS=32, DURATION=30s, NUM_DRIVES=8
+
+Per-worker jobs completed, `sum by (worker_id) (increase(reactor_executor_processed_total{job_success="true"}[2m]))`:
+
+| worker_id         | jobs completed |
+| ----------------- | -------------- |
+| reactor-worker-0  | ~5322          |
+| reactor-worker-1  | ~4450          |
+| reactor-worker-2  | ~2622          |
+| reactor-worker-3  | (none in slice) |
+
+p50 executor duration is uniform at ~2.5 ms across the workers that did
+work — i.e. the per-job cost is identical, the disparity is purely *job
+count*. Combined with the flat 4w↔8w aggregate throughput, this confirms
+the original hypothesis: sticky-by-`documentId` routing across only 8 drives
+clusters the load onto a subset of workers, so adding more workers can't
+help.
+
+Next experiment: rerun the matrix with `NUM_DRIVES≫workers` (e.g. 64, 256)
+so the FNV-of-documentId distribution can spread evenly across workers.
+That should let us see whether the scaling ceiling is the routing topology
+or something downstream (Postgres pool, parent-event-loop fan-in on
+WRITE_READY).

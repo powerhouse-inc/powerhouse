@@ -28,7 +28,13 @@ import {
   toErrorInfo,
   type IJobResultHandler,
 } from "./job-result-handler.js";
-import type { ExecutorManagerStatus } from "./types.js";
+import {
+  JobExecutorEventTypes,
+  type ExecutorManagerStatus,
+  type JobCompletedEvent,
+  type JobFailedEvent,
+  type JobStartedEvent,
+} from "./types.js";
 import {
   WorkerAbortTimeoutError,
   WorkerExitedError,
@@ -272,6 +278,16 @@ export class WorkerPoolJobExecutorManager implements IJobExecutorManager {
       .emit(ReactorEventTypes.JOB_RUNNING, runningEvent)
       .catch(() => {});
 
+    const workerId = worker.workerId;
+    const startedEvent: JobStartedEvent = {
+      job: handle.job,
+      startedAt: new Date().toISOString(),
+      workerId,
+    };
+    this.eventBus
+      .emit(JobExecutorEventTypes.JOB_STARTED, startedEvent)
+      .catch(() => {});
+
     const signal = AbortSignal.timeout(this.jobTimeoutMs);
     let outcome: WorkerExecutionOutcome;
     try {
@@ -294,16 +310,45 @@ export class WorkerPoolJobExecutorManager implements IJobExecutorManager {
           job: handle.job,
         })
         .catch(() => {});
+      const failedEvent: JobFailedEvent = {
+        job: handle.job,
+        error: errorInfo.message,
+        willRetry: false,
+        retryCount: 0,
+        workerId,
+      };
+      this.eventBus
+        .emit(JobExecutorEventTypes.JOB_FAILED, failedEvent)
+        .catch(() => {});
       await this.tryDispatchFor(worker);
       return;
     }
 
-    if (outcome.result.success && outcome.writeReady) {
-      await this.emitWriteReady(handle.job, outcome.writeReady);
-    }
-
     if (outcome.result.success) {
       this.totalJobsProcessed++;
+      const completedEvent: JobCompletedEvent = {
+        job: handle.job,
+        result: outcome.result,
+        workerId,
+      };
+      this.eventBus
+        .emit(JobExecutorEventTypes.JOB_COMPLETED, completedEvent)
+        .catch(() => {});
+    } else {
+      const failedEvent: JobFailedEvent = {
+        job: handle.job,
+        error: outcome.result.error?.message ?? "unknown",
+        willRetry: false,
+        retryCount: 0,
+        workerId,
+      };
+      this.eventBus
+        .emit(JobExecutorEventTypes.JOB_FAILED, failedEvent)
+        .catch(() => {});
+    }
+
+    if (outcome.result.success && outcome.writeReady) {
+      await this.emitWriteReady(handle.job, outcome.writeReady);
     }
 
     await this.resultHandler.handleResult(handle, outcome.result, {

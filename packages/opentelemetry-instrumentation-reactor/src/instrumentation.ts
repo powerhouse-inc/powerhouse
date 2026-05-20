@@ -1,9 +1,15 @@
-import { ReactorEventTypes, SyncEventTypes } from "@powerhousedao/reactor";
+import {
+  JobExecutorEventTypes,
+  ReactorEventTypes,
+  SyncEventTypes,
+} from "@powerhousedao/reactor";
 import type {
   DeadLetterAddedEvent,
   IEventBus,
   IJobExecutorManager,
   IQueue,
+  JobCompletedEvent,
+  JobFailedEvent as ExecutorJobFailedEvent,
   JobPendingEvent,
   JobReadReadyEvent,
   JobRunningEvent,
@@ -40,6 +46,8 @@ export class ReactorInstrumentation {
     this.subscribeJobWriteReady(eventBus);
     this.subscribeJobReadReady(eventBus);
     this.subscribeJobFailed(eventBus);
+    this.subscribeExecutorJobCompleted(eventBus);
+    this.subscribeExecutorJobFailed(eventBus);
     this.subscribeDeadLetterAdded(eventBus);
     this.registerObservableGauges(queue, executorManager, syncModule);
   }
@@ -97,22 +105,11 @@ export class ReactorInstrumentation {
         ReactorEventTypes.JOB_WRITE_READY,
         (_type, event) => {
           if (!this.metrics) return;
-          const runningTs = this.runningTimestamps.get(event.jobId);
-          if (runningTs !== undefined) {
-            this.metrics.executorJobDuration.record(
-              performance.now() - runningTs,
-              { "job.success": "true" },
-            );
-          }
-          this.metrics.executorTotalProcessed.add(1, {
-            "job.success": "true",
-          });
           this.metrics.executorOperationsGenerated.add(event.operations.length);
           this.metrics.eventbusEventsEmitted.add(1, {
             "event.type": "JOB_WRITE_READY",
           });
           this.writeReadyTimestamps.set(event.jobId, performance.now());
-          this.runningTimestamps.delete(event.jobId);
         },
       ),
     );
@@ -154,9 +151,6 @@ export class ReactorInstrumentation {
         (_type, event) => {
           if (!this.metrics) return;
           this.metrics.queueJobsFailed.add(1);
-          this.metrics.executorTotalProcessed.add(1, {
-            "job.success": "false",
-          });
           const pendingTs = this.pendingTimestamps.get(event.jobId);
           if (pendingTs !== undefined) {
             this.metrics.jobTotalDuration.record(
@@ -168,6 +162,62 @@ export class ReactorInstrumentation {
             "event.type": "JOB_FAILED",
           });
           this.cleanup(event.jobId);
+        },
+      ),
+    );
+  }
+
+  private subscribeExecutorJobCompleted(eventBus: IEventBus): void {
+    this.unsubscribes.push(
+      eventBus.subscribe<JobCompletedEvent>(
+        JobExecutorEventTypes.JOB_COMPLETED,
+        (_type, event) => {
+          if (!this.metrics) return;
+          const workerId = event.workerId ?? "unknown";
+          const jobId = event.job.id;
+          const runningTs = this.runningTimestamps.get(jobId);
+          if (runningTs !== undefined) {
+            this.metrics.executorJobDuration.record(
+              performance.now() - runningTs,
+              { "job.success": "true", "worker.id": workerId },
+            );
+            this.runningTimestamps.delete(jobId);
+          }
+          this.metrics.executorTotalProcessed.add(1, {
+            "job.success": "true",
+            "worker.id": workerId,
+          });
+          this.metrics.eventbusEventsEmitted.add(1, {
+            "event.type": "EXECUTOR_JOB_COMPLETED",
+          });
+        },
+      ),
+    );
+  }
+
+  private subscribeExecutorJobFailed(eventBus: IEventBus): void {
+    this.unsubscribes.push(
+      eventBus.subscribe<ExecutorJobFailedEvent>(
+        JobExecutorEventTypes.JOB_FAILED,
+        (_type, event) => {
+          if (!this.metrics) return;
+          const workerId = event.workerId ?? "unknown";
+          const jobId = event.job.id;
+          const runningTs = this.runningTimestamps.get(jobId);
+          if (runningTs !== undefined) {
+            this.metrics.executorJobDuration.record(
+              performance.now() - runningTs,
+              { "job.success": "false", "worker.id": workerId },
+            );
+            this.runningTimestamps.delete(jobId);
+          }
+          this.metrics.executorTotalProcessed.add(1, {
+            "job.success": "false",
+            "worker.id": workerId,
+          });
+          this.metrics.eventbusEventsEmitted.add(1, {
+            "event.type": "EXECUTOR_JOB_FAILED",
+          });
         },
       ),
     );

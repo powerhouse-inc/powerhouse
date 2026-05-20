@@ -13,7 +13,14 @@ import {
   toErrorInfo,
   type IJobResultHandler,
 } from "./job-result-handler.js";
-import type { ExecutorManagerStatus, JobResult } from "./types.js";
+import {
+  JobExecutorEventTypes,
+  type ExecutorManagerStatus,
+  type JobCompletedEvent,
+  type JobFailedEvent,
+  type JobResult,
+  type JobStartedEvent,
+} from "./types.js";
 
 export type JobExecutorFactory = () => IJobExecutor;
 
@@ -169,6 +176,16 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
     // Find an available executor (simple round-robin)
     const executorIndex = this.totalJobsProcessed % this.executors.length;
     const executor = this.executors[executorIndex];
+    const workerId = `in-process-${executorIndex}`;
+
+    const startedEvent: JobStartedEvent = {
+      job: handle.job,
+      startedAt: new Date().toISOString(),
+      workerId,
+    };
+    this.eventBus
+      .emit(JobExecutorEventTypes.JOB_STARTED, startedEvent)
+      .catch(() => {});
 
     // execute the job with a timeout signal; race ensures the timeout fires
     // even if the executor hangs on a call that does not check the signal
@@ -207,6 +224,17 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
         })
         .catch(() => {});
 
+      const failedEvent: JobFailedEvent = {
+        job: handle.job,
+        error: errorInfo.message,
+        willRetry: false,
+        retryCount: 0,
+        workerId,
+      };
+      this.eventBus
+        .emit(JobExecutorEventTypes.JOB_FAILED, failedEvent)
+        .catch(() => {});
+
       await this.checkForMoreJobs();
       return;
     }
@@ -214,6 +242,28 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
     // handle the result
     if (result.success) {
       this.totalJobsProcessed++;
+    }
+
+    if (result.success) {
+      const completedEvent: JobCompletedEvent = {
+        job: handle.job,
+        result,
+        workerId,
+      };
+      this.eventBus
+        .emit(JobExecutorEventTypes.JOB_COMPLETED, completedEvent)
+        .catch(() => {});
+    } else {
+      const failedEvent: JobFailedEvent = {
+        job: handle.job,
+        error: result.error?.message ?? "unknown",
+        willRetry: false,
+        retryCount: 0,
+        workerId,
+      };
+      this.eventBus
+        .emit(JobExecutorEventTypes.JOB_FAILED, failedEvent)
+        .catch(() => {});
     }
 
     await this.resultHandler.handleResult(handle, result, {
