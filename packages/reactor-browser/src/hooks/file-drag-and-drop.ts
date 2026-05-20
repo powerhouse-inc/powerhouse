@@ -71,7 +71,13 @@ export function useDropFile(
   function handleDragEvent(event: React.DragEvent<Element>, cb?: () => void) {
     if (!isDragAndDropEnabled) return;
     if (!isFileDrop(event)) return;
-    if (isInsideEditorFileDropOptOut(event)) return;
+    if (isInsideEditorFileDropOptOut(event)) {
+      // Hide the DropZone overlay while the cursor is over an editor that
+      // opts in to its own file drops, so the overlay doesn't strand the
+      // user covering the opt-out region.
+      unsetTarget();
+      return;
+    }
     event.preventDefault();
     event.stopPropagation();
     cb?.();
