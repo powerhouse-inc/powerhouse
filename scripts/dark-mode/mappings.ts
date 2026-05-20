@@ -8,12 +8,13 @@ import { mergeAll } from "remeda";
  */
 const text = {
   "text-black": "text-slate-50",
-  "text-gray-500": "text-slate-100",
   "text-gray-900": "text-slate-50",
   "text-gray-800": "text-slate-50",
   "text-gray-700": "text-slate-50",
   "text-gray-600": "text-slate-100",
   "text-gray-400": "text-slate-200",
+  "text-slate-100": "text-gray-500",
+  "text-slate-200": "text-gray-400",
   "text-red-900": "text-red-400",
   "text-red-800": "text-red-400",
   "text-red-700": "text-red-400",
@@ -28,8 +29,6 @@ const text = {
   "text-blue-900": "text-blue-400",
   "text-blue-700": "text-blue-400",
   "text-blue-600": "text-blue-400",
-  "text-slate-100": "text-gray-500",
-  "text-slate-200": "text-gray-400",
 } as const;
 
 /**
@@ -100,6 +99,22 @@ export const hover = {
   "hover:bg-yellow-100": "hover:bg-yellow-900/30",
   "hover:bg-blue-50": "hover:bg-blue-900/20",
   "hover:bg-blue-100": "hover:bg-blue-900/30",
+} as const;
+
+const updatedMappings = {
+  "text-black": "text-slate-50",
+  "text-gray-900": "text-slate-50",
+  "text-gray-800": "text-slate-50",
+  "text-gray-700": "text-slate-50",
+  "text-gray-600": "text-slate-100",
+  "text-gray-400": "text-slate-200",
+  "text-slate-100": "text-gray-500",
+  "text-slate-200": "text-gray-400",
+  "hover:text-gray-900": "hover:text-slate-50",
+  "hover:text-gray-800": "hover:text-slate-50",
+  "hover:text-gray-700": "hover:text-slate-100",
+  "hover:text-gray-600": "hover:text-slate-100",
+  "hover:text-gray-500": "hover:text-slate-100",
 } as const;
 
 export const allMappings = mergeAll([text, border, bg, hover]);
