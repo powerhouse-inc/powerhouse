@@ -140,6 +140,8 @@ async function startLocalVetraSwitchboard(args: VetraArgs, logger?: ILogger) {
         useIdentity: undefined,
         migrate: undefined,
         migrateStatus: undefined,
+        reset: undefined,
+        yes: undefined,
         requireIdentity: undefined,
       },
       logger,
