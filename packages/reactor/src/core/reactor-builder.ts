@@ -11,9 +11,6 @@ import type {
   SignatureVerifierSpec,
   WorkerPoolConfig,
 } from "../executor/worker/protocol.js";
-import { WorkerHandle } from "../executor/worker/worker-handle.js";
-import { createThreadTransport } from "../executor/worker/transport.js";
-import { workerEntryPath } from "../executor/worker/index.js";
 import { WorkerPoolJobExecutorManager } from "../executor/worker-pool-job-executor-manager.js";
 import type { WorkerFactory } from "../executor/worker-pool-job-executor-manager.js";
 import { CollectionMembershipCache } from "../cache/collection-membership-cache.js";
@@ -482,7 +479,7 @@ export class ReactorBuilder {
       if (this.workerPoolConfig?.enabled) {
         const factory =
           this.workerFactory ??
-          this.createDefaultWorkerFactory(this.workerPoolConfig);
+          (await this.createDefaultWorkerFactory(this.workerPoolConfig));
         const poolManager = new WorkerPoolJobExecutorManager(
           factory,
           eventBus,
@@ -683,9 +680,15 @@ export class ReactorBuilder {
    * the caller did not inject `withWorkerFactory`. Each worker spawns a real
    * `node:worker_threads` Worker pointing at the compiled `worker/entry.js`.
    */
-  private createDefaultWorkerFactory(
+  private async createDefaultWorkerFactory(
     poolConfig: WorkerPoolConfig,
-  ): WorkerFactory {
+  ): Promise<WorkerFactory> {
+    const [{ WorkerHandle }, { createThreadTransport }, { workerEntryPath }] =
+      await Promise.all([
+        import("../executor/worker/worker-handle.js"),
+        import("../executor/worker/transport.js"),
+        import("../executor/worker/index.js"),
+      ]);
     const db = this.workerDbConfig!;
     const signatureVerifier = this.workerSignatureVerifierSpec!;
     const models = this.resolvedModelManifest ?? [];

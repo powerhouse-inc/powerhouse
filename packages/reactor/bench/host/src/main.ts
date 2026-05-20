@@ -50,9 +50,7 @@ type State = {
 };
 
 async function buildReactor(signer: ISigner): Promise<State> {
-  const builder = new ReactorBuilder().withSignatureVerifier(
-    async () => true,
-  );
+  const builder = new ReactorBuilder().withSignatureVerifier(async () => true);
 
   if (REACTOR_WORKERS > 0) {
     const modelFile = path.resolve(__dirname, "./document-model.mjs");
@@ -160,11 +158,7 @@ function readJson(req: http.IncomingMessage): Promise<unknown> {
   });
 }
 
-function send(
-  res: http.ServerResponse,
-  status: number,
-  body: unknown,
-): void {
+function send(res: http.ServerResponse, status: number, body: unknown): void {
   const payload = JSON.stringify(body);
   res.writeHead(status, {
     "Content-Type": "application/json",
@@ -221,11 +215,9 @@ async function handle(
     }
     const action = setDriveName({ name: body.name ?? `lt-${Date.now()}` });
     const signed = await signAction(state.signer, action);
-    const info = await state.module.reactor.execute(
-      body.driveId,
-      "main",
-      [signed],
-    );
+    const info = await state.module.reactor.execute(body.driveId, "main", [
+      signed,
+    ]);
     send(res, 200, { jobId: info.id });
     return;
   }
