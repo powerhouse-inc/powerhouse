@@ -48,6 +48,70 @@ import { BrowserPackageManager } from "../package-manager.js";
 import { loadPackagesConfig } from "../packages.config.js";
 import { createProcessorHostModule } from "./processor-host-module.js";
 
+/**
+ * Subscribe to the `/__packages` SSE channel exposed by ph-clint's
+ * static-mode `connect-server.js`. On each `packages-changed` event the
+ * server sends the full live list; we diff against what the packageManager
+ * already has loaded and call `addPackage`/`removePackage` to converge.
+ *
+ * Best-effort — silently no-ops when the SSE endpoint doesn't exist
+ * (e.g. running under vite dev, or hosted somewhere without this protocol).
+ */
+function subscribeToPackagesChannel(packageManager: IPackageManager): void {
+  if (typeof window === "undefined" || typeof EventSource === "undefined") {
+    return;
+  }
+  let source: EventSource;
+  try {
+    source = new EventSource("/__packages");
+  } catch (err) {
+    console.debug("[Connect] /__packages subscribe failed:", err);
+    return;
+  }
+  source.addEventListener("packages-changed", (event) => {
+    try {
+      const payload = JSON.parse((event as MessageEvent).data) as {
+        packages?: unknown;
+      };
+      if (!Array.isArray(payload.packages)) return;
+      const next = payload.packages.filter(
+        (p): p is string => typeof p === "string",
+      );
+      const current = new Set(
+        packageManager.packages.map((p) => p.manifest.name),
+      );
+      const nextSet = new Set(next);
+      for (const name of current) {
+        if (!nextSet.has(name)) packageManager.removePackage(name);
+      }
+      for (const spec of next) {
+        if (current.has(spec)) continue;
+        packageManager.addPackage(spec).then(
+          (result) => {
+            if (result.type === "error") {
+              console.error(
+                `[Connect] /__packages addPackage(${spec}) failed:`,
+                result.error,
+              );
+            }
+          },
+          (err: unknown) => {
+            console.error(
+              `[Connect] /__packages addPackage(${spec}) threw:`,
+              err,
+            );
+          },
+        );
+      }
+    } catch (err) {
+      console.error("[Connect] /__packages event parse failed:", err);
+    }
+  });
+  source.addEventListener("error", () => {
+    // EventSource auto-reconnects; nothing to do.
+  });
+}
+
 export async function clearReactorStorage() {
   await window.ph?.reactorClientModule?.pg?.close();
 
@@ -142,6 +206,13 @@ export async function createReactor(localPackage?: DocumentModelLib) {
   packagesResult.map((r) => {
     if (r.type === "error") console.error(r.error);
   });
+
+  // Subscribe to the static-mode `/__packages` SSE channel so live publishes
+  // (e.g. ph-clint's publish-reload trigger pushing a new list) flow into the
+  // running tab without a page reload. The channel only exists in static
+  // hosting; failures are silently ignored when running in vite dev or any
+  // host that doesn't speak this protocol.
+  subscribeToPackagesChannel(packageManager);
 
   // get document models to set in the reactor (all versions)
   const documentModelModules = packageManager.packages
