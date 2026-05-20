@@ -1,5 +1,5 @@
 import type { Node } from "@powerhousedao/shared";
-import type { DragEvent } from "react";
+import { act, type DragEvent } from "react";
 import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import { renderHook } from "vitest-browser-react";
 import { setIsDragAndDropEnabled } from "../src/hooks/config/editor.js";
@@ -33,7 +33,11 @@ function fakeEvent(opts: {
   return { event, preventDefault, stopPropagation };
 }
 
-function mountHook(): { handlers: Handlers; container: HTMLElement } {
+function mountHook(): {
+  handlers: Handlers;
+  container: HTMLElement;
+  result: { current: Handlers };
+} {
   const container = document.createElement("div");
   document.body.appendChild(container);
   const noop = async (): Promise<void> => {
@@ -44,7 +48,7 @@ function mountHook(): { handlers: Handlers; container: HTMLElement } {
       noop as (file: File, parent: Node | undefined) => Promise<void>,
     ),
   );
-  return { handlers: result.current, container };
+  return { handlers: result.current, container, result };
 }
 
 describe("useDropFile", () => {
@@ -100,6 +104,26 @@ describe("useDropFile", () => {
 
     expect(preventDefault).not.toHaveBeenCalled();
     expect(stopPropagation).not.toHaveBeenCalled();
+  });
+
+  it("clears the drop target when the cursor enters an opt-out region", async () => {
+    const outside = document.createElement("div");
+    document.body.appendChild(outside);
+    const editor = document.createElement("div");
+    editor.setAttribute("data-accepts-files", "");
+    document.body.appendChild(editor);
+
+    const { result } = mountHook();
+
+    await act(async () => {
+      result.current.onDragOver(fakeEvent({ target: outside }).event);
+    });
+    expect(result.current.isDropTarget).toBe(true);
+
+    await act(async () => {
+      result.current.onDragOver(fakeEvent({ target: editor }).event);
+    });
+    expect(result.current.isDropTarget).toBe(false);
   });
 
   it("still claims drops outside any opted-out editor", () => {
