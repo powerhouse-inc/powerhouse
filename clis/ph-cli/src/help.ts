@@ -556,6 +556,19 @@ Migration Options:
   --migrate-status        Show current migration status and exit. Lists all migrations
                         and indicates which have been applied.
 
+Recovery Options:
+  --reset                 Wipe the local PGlite switchboard storage and exit. After
+                        confirmation, deletes .ph/reactor-storage and .ph/read-storage
+                        so the next \`ph switchboard\` run re-creates them from scratch.
+                        Refuses to run when PH_REACTOR_DATABASE_URL / DATABASE_URL
+                        point at a Postgres URL — for those, reset the database
+                        manually. Interactive runs require typing the word "reset"
+                        to confirm; non-interactive runs must pass --yes.
+
+  -y, --yes               Skip the interactive confirmation prompt for --reset.
+                        Required when running --reset in CI or other non-interactive
+                        contexts.
+
 Examples:
   $ ph switchboard                           # Start switchboard with default settings
   $ ph switchboard --port 5000               # Use custom port 5000
@@ -568,6 +581,8 @@ Examples:
   $ ph switchboard --migrate                 # Run migrations and exit
   $ ph switchboard --migrate-status          # Check migration status
   $ ph switchboard --db-path postgresql://... --migrate  # Migrate specific database
+  $ ph switchboard --reset                   # Wipe local PGlite storage (with prompt)
+  $ ph switchboard --reset --yes             # Wipe local PGlite storage (no prompt)
 `;
 
 /**
