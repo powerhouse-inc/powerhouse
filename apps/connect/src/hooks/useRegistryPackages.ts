@@ -78,6 +78,10 @@ export function useRegistryPackages() {
               documentTypes: packageInfo.documentTypes.length
                 ? packageInfo.documentTypes
                 : existingPackage.documentTypes,
+              status: promoteStatus(
+                existingPackage.status,
+                packageManager.getPackageSource(packageInfo.name),
+              ),
             };
           }
         }
@@ -103,6 +107,10 @@ export function useRegistryPackages() {
             newRegistryPackages[packageName] = {
               ...existingPackage,
               version: version ?? existingPackage.version,
+              status: promoteStatus(
+                existingPackage.status,
+                packageManager.getPackageSource(packageName),
+              ),
             };
           } else {
             const packageSource = packageManager.getPackageSource(packageName);
@@ -207,6 +215,22 @@ function makeRegistryPackageFromPackageInfo(
     documentTypes: packageInfo.manifest?.documentModels?.map((d) => d.id) ?? [],
     status,
   };
+}
+
+/**
+ * When refreshing a cached entry, promote `"available"` to whatever the
+ * packageManager now reports — the cached `"available"` was almost certainly
+ * recorded before `packageManager.addPackages()` finished on a prior session.
+ * Never downgrade an already-installed entry, and never overwrite a deliberate
+ * `"dismissed"` choice.
+ */
+function promoteStatus(
+  cachedStatus: RegistryPackageStatus,
+  packageSource: RegistryPackageSource | null,
+): RegistryPackageStatus {
+  if (cachedStatus !== "available") return cachedStatus;
+  if (packageSource === null) return cachedStatus;
+  return getPackageStatusFromPackageSource(packageSource);
 }
 
 function getPackageStatusFromPackageSource(
