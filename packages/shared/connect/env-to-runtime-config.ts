@@ -45,12 +45,11 @@ const parseDefaultDrivesUrl = (
 
 // One entry per §B MIGRATE env var from CONNECT-ENV-AUDIT.md.
 //
-// Applied in order with "set if absent" semantics (see applyEnvSeeding). That
-// means earlier rules win when two rules write the same path — used here for
-// the CLOUD+PUBLIC → `remote` collapse: PH_CONNECT_CLOUD_* is listed before
-// PH_CONNECT_PUBLIC_*, so if an operator sets both, CLOUD wins. This matches
-// the audit's §B.2.7 note that CLOUD is the more recently coined name and
-// PUBLIC predates the unified section semantics.
+// Applied in order with "set if absent" semantics (see applyEnvSeeding). The
+// audit's §2.4 decision collapsed the CLOUD section into the unified `remote`
+// section; the CLOUD env-var variants were removed in task 14 (§2.3 REMOVE).
+// PUBLIC keeps its env-var aliases as the legacy operator-facing name for the
+// same JSON path under `drives.sections.remote.*`.
 export const ENV_SEEDING_RULES: readonly EnvSeedingRule[] = [
   // connect.app
   { envVar: "PH_CONNECT_BASE_PATH", path: "app.basePath", parse: String },
@@ -77,22 +76,8 @@ export const ENV_SEEDING_RULES: readonly EnvSeedingRule[] = [
     path: "drives.preserveStrategy",
     parse: String,
   },
-  // connect.drives.sections.remote — CLOUD first (wins on collision), PUBLIC as legacy alias
-  {
-    envVar: "PH_CONNECT_CLOUD_DRIVES_ENABLED",
-    path: "drives.sections.remote.enabled",
-    parse: parseBool,
-  },
-  {
-    envVar: "PH_CONNECT_DISABLE_ADD_CLOUD_DRIVES",
-    path: "drives.sections.remote.allowAdd",
-    parse: invertBool,
-  },
-  {
-    envVar: "PH_CONNECT_DISABLE_DELETE_CLOUD_DRIVES",
-    path: "drives.sections.remote.allowDelete",
-    parse: invertBool,
-  },
+  // connect.drives.sections.remote — PUBLIC env vars are the legacy alias for
+  // the unified remote section (CLOUD removed per §2.4 audit decision).
   {
     envVar: "PH_CONNECT_PUBLIC_DRIVES_ENABLED",
     path: "drives.sections.remote.enabled",

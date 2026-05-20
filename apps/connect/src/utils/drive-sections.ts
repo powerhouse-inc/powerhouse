@@ -15,12 +15,14 @@ type AllNodeOptions =
 // Enables debug options for the drive
 const connectDebug = localStorage.getItem("CONNECT_DEBUG") === "true";
 
+// task 14 §2.4: the CLOUD section was collapsed into the unified `remote`
+// section. The legacy "PUBLIC" label is kept as the operator-facing name for
+// the remote section (matches PH_CONNECT_PUBLIC_DRIVES_* env-var aliases).
 const DriveSections: {
   sharingType: SharingType;
   label: ReactNode;
 }[] = [
   { sharingType: "PUBLIC", label: "Public Drives" },
-  { sharingType: "CLOUD", label: "Secure Cloud Drives" },
   { sharingType: "LOCAL", label: "My Local Drives" },
 ] as const;
 
@@ -66,11 +68,6 @@ export function getNodeOptions() {
   return {
     LOCAL: {
       DRIVE: getDriveNodeOptions("LOCAL"),
-      FOLDER: getFolderNodeOptions(),
-      FILE: getFileNodeOptions(),
-    },
-    CLOUD: {
-      DRIVE: getDriveNodeOptions("CLOUD"),
       FOLDER: getFolderNodeOptions(),
       FILE: getFileNodeOptions(),
     },

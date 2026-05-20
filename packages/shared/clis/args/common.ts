@@ -250,6 +250,5 @@ export const commonServerArgs = {
     description: "Amount of time to wait before a file is considered changed",
     defaultValue: () => DEFAULT_TIMEOUT,
     defaultValueIsSerializable: true,
-    env: "PH_WATCH_TIMEOUT" as const,
   }),
 };

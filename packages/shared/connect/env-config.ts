@@ -28,12 +28,6 @@ const numberString = z.union([z.number(), z.string()]).transform((val) => {
  */
 const buildEnvSchema = z.object({
   /**
-   * Path to powerhouse config file
-   * @default "powerhouse.config.json"
-   */
-  PH_CONFIG_PATH: z.string().optional(),
-
-  /**
    * Comma-separated list of package names to load
    * @example "package1,package2"
    */
@@ -49,12 +43,6 @@ const buildEnvSchema = z.object({
    * @default false
    */
   PH_DISABLE_LOCAL_PACKAGE: booleanString.default(false),
-
-  /**
-   * Amount of time to wait before a file is considered changed
-   * @default 300
-   */
-  PH_WATCH_TIMEOUT: numberString.default(300),
 
   /**
    * Sentry authentication token for uploading source maps
@@ -95,24 +83,6 @@ const appConfigSchema = z.object({
     .default("info"),
 
   /**
-   * Whether app requires hard refresh on updates
-   * @default true
-   */
-  PH_CONNECT_REQUIRES_HARD_REFRESH: booleanString.default(true),
-
-  /**
-   * Show warning when app version is outdated
-   * @default false
-   */
-  PH_CONNECT_WARN_OUTDATED_APP: booleanString.default(false),
-
-  /**
-   * Enable studio mode features
-   * @default false
-   */
-  PH_CONNECT_STUDIO_MODE: booleanString.default(false),
-
-  /**
    * Base path for the Connect router, defaults to import.meta.env.BASE_URL
    */
   PH_CONNECT_BASE_PATH: z.string().optional(),
@@ -145,21 +115,9 @@ const appConfigSchema = z.object({
   PH_CONNECT_DRIVES_PRESERVE_STRATEGY: z.string().optional(),
 
   /**
-   * Interval in milliseconds to check for version updates
-   * @default 3600000 (1 hour)
-   */
-  PH_CONNECT_VERSION_CHECK_INTERVAL: numberString.default(60 * 60 * 1000),
-
-  /**
    * CLI version number
    */
   PH_CONNECT_CLI_VERSION: z.string().optional(),
-
-  /**
-   * Chunk size for file upload operations
-   * @default 50
-   */
-  PH_CONNECT_FILE_UPLOAD_OPERATIONS_CHUNK_SIZE: numberString.default(50),
 });
 
 // ============================================================================
@@ -179,37 +137,6 @@ const featureFlagsSchema = z.object({
    * See CONNECT-CONFIG.md §13.
    */
   PH_CONNECT_DISABLE_ADD_DRIVE: booleanString.default(false),
-
-  /**
-   * Show search bar in the UI
-   * @default false
-   */
-  PH_CONNECT_SEARCH_BAR_ENABLED: booleanString.default(false),
-
-  /**
-   * Hide document model selection in settings
-   * @default true
-   */
-  PH_CONNECT_HIDE_DOCUMENT_MODEL_SELECTION_SETTINGS:
-    booleanString.default(true),
-
-  /**
-   * Comma-separated list of enabled editor types
-   * Use "*" to enable all editors
-   * @example "editor1,editor2" or "*"
-   */
-  PH_CONNECT_ENABLED_EDITORS: z.string().optional(),
-
-  /**
-   * Comma-separated list of disabled editor types
-   * @default "powerhouse/document-drive"
-   */
-  PH_CONNECT_DISABLED_EDITORS: z.string().default("powerhouse/document-drive"),
-
-  /**
-   * Google Analytics tracking ID
-   */
-  PH_CONNECT_GA_TRACKING_ID: z.string().optional(),
 
   /**
    * Disable loading of external packages
@@ -245,24 +172,6 @@ const drivesConfigSchema = z.object({
   PH_CONNECT_DISABLE_DELETE_PUBLIC_DRIVES: booleanString.default(false),
 
   /**
-   * Enable cloud drives section
-   * @default true
-   */
-  PH_CONNECT_CLOUD_DRIVES_ENABLED: booleanString.default(true),
-
-  /**
-   * Allow adding cloud drives
-   * @default true
-   */
-  PH_CONNECT_DISABLE_ADD_CLOUD_DRIVES: booleanString.default(false),
-
-  /**
-   * Allow deleting cloud drives
-   * @default true
-   */
-  PH_CONNECT_DISABLE_DELETE_CLOUD_DRIVES: booleanString.default(false),
-
-  /**
    * Enable local drives section
    * @default true
    */
@@ -288,25 +197,17 @@ const drivesConfigSchema = z.object({
 /**
  * Analytics processor configuration schema
  */
-const analyticsProcessorsConfigSchema = z.object({
-  /**
-   * Enable analytics
-   * @default true
-   */
-  PH_CONNECT_ANALYTICS_ENABLED: booleanString.default(true),
-
-  /**
-   * Name of the analytics database
-   * Defaults to basename + ":analytics"
-   */
-  PH_CONNECT_ANALYTICS_DATABASE_NAME: z.string().optional(),
-
-  /**
-   * Disable analytics database worker
-   * @default false
-   */
-  PH_CONNECT_ANALYTICS_DATABASE_WORKER_DISABLED: booleanString.default(true),
-
+/**
+ * Analytics processor configuration schema. The toggles for the analytics
+ * subsystem itself (PH_CONNECT_ANALYTICS_ENABLED, _DATABASE_NAME,
+ * _DATABASE_WORKER_DISABLED) and the processor on/off flags
+ * (PH_CONNECT_PROCESSORS_ENABLED, _EXTERNAL_PROCESSORS_ENABLED,
+ * _RELATIONAL_PROCESSORS_ENABLED, _EXTERNAL_RELATIONAL_PROCESSORS_ENABLED)
+ * were removed in §2.3 of the audit — they had no gating consumer in Connect.
+ * What remains is the small set of analytics-specific flags that still
+ * influence the processor wiring downstream.
+ */
+const processorsConfigSchema = z.object({
   /**
    * Enable diff analytics tracking
    * @default false
@@ -325,45 +226,6 @@ const analyticsProcessorsConfigSchema = z.object({
    */
   PH_CONNECT_EXTERNAL_ANALYTICS_PROCESSORS_ENABLED: booleanString.default(true),
 });
-
-/**
- * Relational DB processor configuration schema
- */
-const relationalProcessorsConfigSchema = z.object({
-  /**
-   * Enable relational processors
-   * @default true
-   */
-  PH_CONNECT_RELATIONAL_PROCESSORS_ENABLED: booleanString.default(true),
-
-  /**
-   * Enable external relational processors
-   * @default true
-   */
-  PH_CONNECT_EXTERNAL_RELATIONAL_PROCESSORS_ENABLED:
-    booleanString.default(true),
-});
-
-/**
- * External processors configuration schema
- */
-const processorsBaseConfigSchema = z.object({
-  /**
-   * Enable processors
-   * @default true
-   */
-  PH_CONNECT_PROCESSORS_ENABLED: booleanString.default(true),
-
-  /**
-   * Enable external processors
-   * @default true
-   */
-  PH_CONNECT_EXTERNAL_PROCESSORS_ENABLED: booleanString.default(true),
-});
-
-const processorsConfigSchema = processorsBaseConfigSchema
-  .extend(analyticsProcessorsConfigSchema.shape)
-  .extend(relationalProcessorsConfigSchema.shape);
 
 // ============================================================================
 // Sentry Configuration
@@ -626,7 +488,7 @@ export function loadBuildEnv(options: LoadEnvOptions = {}): ConnectBuildEnv {
  * setConnectEnv({
  *   PH_CONNECT_LOG_LEVEL: "debug",
  *   PH_CONNECT_VERSION: "1.2.3",
- *   PH_CONNECT_STUDIO_MODE: true,
+ *   PH_CONNECT_SENTRY_DSN: "https://…",
  * });
  * ```
  */

@@ -15,7 +15,6 @@ export const DEFAULT_CONNECT_OUTDIR = ".ph/connect-build/dist/" as const;
 export function commonConnectOptionsToEnv(options: ConnectCommonOptions) {
   const {
     base,
-    configFile,
     defaultDrivesUrl,
     drivesPreserveStrategy,
     disableLocalPackage,
@@ -27,11 +26,6 @@ export function commonConnectOptionsToEnv(options: ConnectCommonOptions) {
     });
   }
 
-  if (configFile) {
-    setConnectEnv({
-      PH_CONFIG_PATH: configFile,
-    });
-  }
   if (defaultDrivesUrl) {
     setConnectEnv({
       PH_CONNECT_DEFAULT_DRIVES_URL: defaultDrivesUrl.join(","),
