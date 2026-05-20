@@ -23,6 +23,7 @@ export {
 } from "./src/client/types.js";
 export {
   ReactorBuilder,
+  type DocumentModelSpecInput,
   type ReadModelFactory,
   type ReadModelFactoryDeps,
 } from "./src/core/reactor-builder.js";

@@ -759,6 +759,14 @@ Run database migrations and exit<br><br>
 Show migration status and exit<br><br>
 **usage:** `--migrate-status`<br>
 
+#### Reset <br>
+Wipe the local PGlite switchboard storage after confirmation, then exit<br><br>
+**usage:** `--reset`<br>
+
+#### Yes <br>
+Skip the interactive confirmation prompt for --reset (required for non-interactive use)<br><br>
+**usage:** `--yes, -y`<br>
+
 #### Mcp <br>
 enable Mcp route at /mcp<br><br>
 **usage:** `--mcp`<br>

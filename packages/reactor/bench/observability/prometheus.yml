@@ -1,0 +1,10 @@
+# Prometheus config for the reactor-bench dev stack. The 2s scrape interval
+# is tuned for fast feedback during k6 runs, not for long-term retention.
+global:
+  scrape_interval: 2s
+  evaluation_interval: 2s
+
+scrape_configs:
+  - job_name: reactor-bench
+    static_configs:
+      - targets: ["bench-host:9090"]

@@ -1,0 +1,31 @@
+{
+  "name": "@powerhousedao/reactor-bench-host",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "HTTP shim around @powerhousedao/reactor for the D1 throughput benchmark.",
+  "main": "src/main.ts",
+  "scripts": {
+    "start": "node --import tsx src/main.ts",
+    "tsc": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@opentelemetry/api": "^1.9.0",
+    "@opentelemetry/exporter-prometheus": "^0.57.2",
+    "@opentelemetry/resources": "^1.29.0",
+    "@opentelemetry/sdk-metrics": "^1.29.0",
+    "@opentelemetry/semantic-conventions": "^1.29.0",
+    "@powerhousedao/opentelemetry-instrumentation-reactor": "workspace:*",
+    "@powerhousedao/reactor": "workspace:*",
+    "@powerhousedao/shared": "workspace:*",
+    "@renown/sdk": "workspace:*",
+    "document-model": "workspace:*",
+    "kysely": "catalog:",
+    "pg": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@types/pg": "catalog:",
+    "tsx": "catalog:"
+  }
+}
