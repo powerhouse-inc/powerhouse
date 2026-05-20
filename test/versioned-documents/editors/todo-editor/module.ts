@@ -8,7 +8,7 @@ import { lazy } from "react";
 /** Document editor module for the "["powerhouse/document-drive"]" document type */
 export const TodoEditor: EditorModule = {
   Component: lazy(() => import("./editor.js")),
-  documentTypes: ["powerhouse/document-drive"],
+  documentTypes: ["test/todo"],
   config: {
     id: "todo-editor",
     name: "TodoEditor",
