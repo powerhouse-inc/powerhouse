@@ -274,3 +274,127 @@ These are testable with the existing OTel signals: `reactor.readmodel.index.dura
 should rise sharply with workers if (1) is the bottleneck; Postgres
 `pg_stat_activity` should show pool waits if (2) is. Worth a separate
 investigation rather than another matrix run.
+
+## Matrix run (NUM_DRIVES=64, VUS=128, DURATION=60s)
+
+Previous sweeps at VUS=32 showed worker utilization at ~10% with queue
+depth ~17 — k6's request rate (32 VUs × ~65 ms avg = ~420 req/s) was
+matching reactor throughput almost exactly, so we were measuring k6, not
+the executor. Quadrupling VUs should push past that and let the queue
+backlog so the worker pool actually becomes the limiter.
+
+| workers | jobs/sec | p50 (ms) | p95 (ms) | p99 (ms) | k6 reqs | k6 fail% |
+| ------- | -------- | -------- | -------- | -------- | ------- | -------- |
+| 0 | 29.99 | 10000.00 | 10000.00 | 10000.00 | — | — |
+| 1 | 63.91 | 10000.00 | 10000.00 | 10000.00 | — | — |
+| 1 | 55.50 | 10000.00 | 10000.00 | 10000.00 | — | — |
+| 2 | 104.75 | 10000.00 | 10000.00 | 10000.00 | — | — |
+| 4 | 116.82 | 10000.00 | 10000.00 | 10000.00 | — | — |
+| 8 | 162.56 | 10000.00 | 10000.00 | 10000.00 | — | — |
+
+Scaling ratios (using the complete sweep, not the orphan workers=1 row from the
+aborted prior run): 4w/1w = 2.11x, 8w/1w = 2.93x. Worse than VUS=32 in
+absolute terms (162 vs ~400 at workers=8) and still below the 3.0x target.
+
+### Notes on this sweep (2026-05-20, NUM_DRIVES=64, VUS=128)
+
+All k6 percentiles are pinned at the 10s request timeout, so `jobs/sec` is
+HTTP-success-derived and excludes timed-out requests. The reactor itself
+likely processed more than k6 saw; query Prometheus for the truth.
+
+#### Per-worker distribution, workers=8
+
+Pulled from `reactor_executor_job_duration_count{job_success="true"}` deltas
+over the 85s workers=8 window (steady state, drives created by 19:25:10,
+sweep ended 19:26:59):
+
+```
+worker_id            delta   rate/s   % of total
+reactor-worker-0      1514   17.81     13.5%
+reactor-worker-1      1498   17.62     13.4%
+reactor-worker-2      1277   15.02     11.4%
+reactor-worker-3      1244   14.64     11.1%
+reactor-worker-4      1446   17.01     12.9%
+reactor-worker-5      1576   18.54     14.1%
+reactor-worker-6      1121   13.19     10.0%
+reactor-worker-7      1509   17.75     13.5%
+TOTAL                11185  131.59     8 workers
+max/min spread = 1.41x
+```
+
+Routing distribution is excellent. All 8 workers got work; no idle workers.
+The shortfall versus k6's reported 162 jobs/s is the slow Prometheus pull
+window catching the tail of the run after k6 ended.
+
+#### Diagnosis: dispatch path is the bottleneck, not executor compute
+
+Pipeline metrics over the workers=8 window:
+
+- queue depth at end: 577,359 jobs (unbounded growth)
+- avg `executor_active_jobs` gauge: 44 (with only 8 workers — see prior
+  notes on the gauge counting in-flight dispatch slots, not strictly
+  workers)
+- total executor compute = sum delta of `reactor_executor_job_duration_sum`
+  = 17.9s across 8 workers × 85s = **2.6% utilization**
+- per-job executor time = 17.9s / 11185 = **1.6 ms** (same as VUS=32)
+
+So with 577k jobs sitting in the queue and workers 97.4% idle, the workers
+are not slow — they are *starved*. Something between `queue has work` and
+`worker receives next job` is throttling the system to ~130 jobs/s total
+regardless of worker count.
+
+Per-worker throughput collapsed from ~50 jobs/s (VUS=32, NUM_DRIVES=64) to
+~16 jobs/s (VUS=128, NUM_DRIVES=64). Adding 4x more offered load *reduced*
+per-worker throughput by 3x. The executor's per-job compute is unchanged,
+so the dispatch latency per job grew by roughly the same factor.
+
+The actual dispatch hot path per worker (worker-pool-job-executor-manager.ts
+`tryDispatchFor`, lines 247-365) runs serially as:
+
+```
+isIdle? -> queue.dequeueNextMatching(predicate)
+        -> handle.start; emit JOB_RUNNING; emit JOB_STARTED
+        -> await worker.execute(job)              // ~1.6 ms compute
+        -> emit JOB_COMPLETED
+        -> await emitWriteReady(payload)          // line 351
+        -> await resultHandler.handleResult(...)  // line 354
+        -> recurse tryDispatchFor(worker)
+```
+
+`IQueue` is an in-memory `Map<queueKey, Job[]>` (one entry per
+`documentId:scope:branch`); with 64 documents the dispatch scan is trivial.
+The cost is in the two awaits *after* compute that gate the next dequeue.
+
+`emitWriteReady` cascades through the coordinator, which calls
+`indexOperations` for every pre-ready read model, then emits JOB_READ_READY
+(which instrumentation also subscribes to). `resultHandler.handleResult`
+calls `queue.completeJob`, flushes deferred jobs, and emits more events.
+Both runs synchronously hold the worker idle.
+
+If per-worker tail latency is ~60 ms (1.6 ms compute + ~58 ms read-model
+indexing + result handling), per-worker throughput is ~16 jobs/s, which
+matches what we observed. The aggregate 130 jobs/s = 8 workers x 16.
+
+#### Next probe
+
+Add per-stage timers inside `tryDispatchFor` (or use OTel spans):
+
+- `t_dequeue` = `dequeueNextMatching` duration
+- `t_execute` = `worker.execute` duration (already have this)
+- `t_writeready` = `emitWriteReady` duration
+- `t_handle` = `resultHandler.handleResult` duration
+
+Record them as histograms tagged with `worker.id`. With those four
+numbers we can rank the post-compute serial path and know exactly which
+read-model or sync subscriber to attack first.
+
+#### Acceptance criterion status
+
+Phase 0 / D1 target was 4w/1w >= 3.0x. We measured:
+- VUS=32 NUM_DRIVES=8:  4w/1w = 0.99x (routing imbalance)
+- VUS=32 NUM_DRIVES=64: 4w/1w = ~1.0x (k6-bound at 400 jobs/s)
+- VUS=128 NUM_DRIVES=64: 4w/1w = 2.11x (dispatch-bound, system overloaded)
+
+None of these are clean baselines. To get a defensible D1 number we need
+to lift the dispatch bottleneck so workers can actually run at their
+1.6 ms/job ceiling; only then will the worker count be the limiter.

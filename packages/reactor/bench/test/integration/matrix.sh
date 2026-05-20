@@ -59,7 +59,7 @@ run_one() {
 
   export REACTOR_WORKERS="${W}"
 
-  docker compose up -d --build --wait --wait-timeout 240 postgres bench-host
+  docker compose up -d --wait --wait-timeout 240 postgres bench-host
   docker compose --profile loadtest run --rm \
     -e BENCH_URL=http://bench-host:8080 \
     -e VUS="${VUS}" \
