@@ -119,7 +119,7 @@ export function Breadcrumb(props: BreadcrumbProps) {
   const { isDropTarget, ...dropProps } = useDropNode(id);
 
   const containerStyles = twMerge(
-    "cursor-pointer transition-colors last-of-type:text-gray-800 hover:text-gray-800 dark:hover:text-slate-50",
+    "cursor-pointer transition-colors last-of-type:text-gray-800 hover:text-gray-800 dark:text-slate-200 last-of-type:dark:text-slate-100 dark:hover:text-slate-50",
     isDragging
       ? "opacity-60"
       : isDropTarget
