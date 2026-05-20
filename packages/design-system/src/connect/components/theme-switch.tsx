@@ -28,7 +28,7 @@ export function ThemeSwitch() {
     <div
       role="radiogroup"
       aria-label="Theme"
-      className="flex w-fit flex-col items-center gap-4 rounded-xl bg-slate-50 p-3 dark:bg-slate-800"
+      className="flex w-fit flex-col items-center gap-4 rounded-xl bg-slate-50 dark:bg-slate-800"
     >
       {OPTIONS.map(({ value, Icon, label }) => (
         <div
@@ -48,7 +48,7 @@ export function ThemeSwitch() {
               : "text-gray-500 dark:text-slate-200",
           )}
         >
-          <Icon size={20} strokeWidth={2.5} aria-hidden="true" />
+          <Icon size={24} strokeWidth={2} aria-hidden="true" />
         </div>
       ))}
     </div>

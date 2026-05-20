@@ -1,11 +1,10 @@
 import { Icon, SidebarFooter } from "#design-system";
-import { useTheme } from "@powerhousedao/reactor-browser";
+import { Settings } from "lucide-react";
 import type { ComponentProps } from "react";
 import { twMerge } from "tailwind-merge";
 import { ThemeSwitch } from "../theme-switch.js";
 import { SidebarLogin } from "./sidebar-login.js";
 import { SidebarUser } from "./sidebar-user.js";
-
 export interface ConnectSidebarFooterProps extends ComponentProps<
   typeof SidebarFooter
 > {
@@ -35,12 +34,11 @@ export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
   etherscanUrl = "",
   ...props
 }) => {
-  const { theme, isSystem, setTheme } = useTheme();
   return (
     <SidebarFooter
       {...props}
       className={twMerge(
-        "flex flex-col gap-2 border-t border-gray-300 px-2 py-4 dark:border-slate-600",
+        "flex flex-col items-center gap-3 border-t border-gray-300 px-2 py-4 dark:border-slate-600",
         className,
       )}
     >
@@ -48,7 +46,7 @@ export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
         <button
           aria-label="Home"
           type="button"
-          className="flex w-full cursor-pointer items-center justify-center outline-none"
+          className="cursor-pointer"
           onClick={onHomeClick}
         >
           <Icon
@@ -63,7 +61,7 @@ export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
           aria-label="Debug Settings"
           type="button"
           id="connect-debug-button"
-          className="mt-3 flex w-full cursor-pointer items-center justify-center outline-none"
+          className="cursor-pointer"
           onClick={onDebugClick}
         >
           <Icon className="text-gray-600 dark:text-slate-100" name="Tube" />
@@ -85,13 +83,14 @@ export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
       <button
         aria-label="Settings"
         type="button"
-        className={twMerge(
-          "mt-3 flex w-full items-center justify-center outline-none",
-          onClickSettings ? "cursor-pointer" : "cursor-wait",
-        )}
+        className={twMerge(onClickSettings ? "cursor-pointer" : "cursor-wait")}
         onClick={onClickSettings}
       >
-        <Icon className="text-gray-600 dark:text-slate-100" name="Settings" />
+        <Settings
+          className="text-gray-600 dark:text-slate-100"
+          size={24}
+          strokeWidth={2}
+        />
         <span className="hidden text-sm/6 font-semibold text-gray-800 dark:text-slate-50">
           Settings
         </span>
