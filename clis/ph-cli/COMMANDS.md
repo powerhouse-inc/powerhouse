@@ -1,4 +1,4 @@
-# Powerhouse CLI Commands (6.0.0-dev.254)<br>
+# Powerhouse CLI Commands (6.0.0-dev.255)<br>
 This document provides detailed information about the available commands in the Powerhouse CLI.<br><br>
 The Powerhouse CLI (ph-cli) is a command-line interface tool that provides essential commands for managing Powerhouse projects. The tool and it's commands are fundamental for creating, building, and running Document Models as a builder in studio mode.<br>
 ## Table of Contents
@@ -758,6 +758,14 @@ Run database migrations and exit<br><br>
 #### Migrate Status <br>
 Show migration status and exit<br><br>
 **usage:** `--migrate-status`<br>
+
+#### Reset <br>
+Wipe the local PGlite switchboard storage after confirmation, then exit<br><br>
+**usage:** `--reset`<br>
+
+#### Yes <br>
+Skip the interactive confirmation prompt for --reset (required for non-interactive use)<br><br>
+**usage:** `--yes, -y`<br>
 
 #### Mcp <br>
 enable Mcp route at /mcp<br><br>

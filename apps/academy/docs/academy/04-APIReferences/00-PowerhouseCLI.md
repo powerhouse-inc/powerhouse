@@ -847,6 +847,10 @@ models, processors, and real-time updates.
 
 **Migrate Status** - Show migration status and exit - Usage: `--migrate-status`
 
+**Reset** - Wipe the local PGlite switchboard storage after confirmation, then exit - Usage: `--reset`
+
+**Yes** - Skip the interactive confirmation prompt for --reset (required for non-interactive use) - Usage: `--yes, -y`
+
 **Mcp** - enable Mcp route at /mcp - Usage: `--mcp`
 
 **Default:** `true`

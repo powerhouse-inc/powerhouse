@@ -1,3 +1,14 @@
+## 6.0.0-dev.255 (2026-05-20)
+
+### 🩹 Fixes
+
+- **reactor-browser:** stop sync before deleting drive document ([9fec21bf5](https://github.com/powerhouse-inc/powerhouse/commit/9fec21bf5))
+- **reactor-browser:** hide DropZone overlay over editor opt-out regions ([725d185fd](https://github.com/powerhouse-inc/powerhouse/commit/725d185fd))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.254 (2026-05-19)
 
 ### 🚀 Features
