@@ -48,7 +48,7 @@ export function ThemeSwitch() {
               : "text-gray-500 dark:text-slate-200",
           )}
         >
-          <Icon size={20} strokeWidth={1.75} aria-hidden="true" />
+          <Icon size={20} strokeWidth={2.5} aria-hidden="true" />
         </div>
       ))}
     </div>
