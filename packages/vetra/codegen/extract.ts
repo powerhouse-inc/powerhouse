@@ -34,22 +34,22 @@ import {
   createAppModuleDocument,
   type AppModuleDocument,
   type AppModuleGlobalState,
-} from "../document-models/app-module/gen/index.js";
+} from "../document-models/app-module/v1/gen/index.js";
 import {
   createDocumentEditorDocument,
   type DocumentEditorDocument,
   type DocumentEditorGlobalState,
-} from "../document-models/document-editor/gen/index.js";
+} from "../document-models/document-editor/v1/gen/index.js";
 import {
   createProcessorModuleDocument,
   type ProcessorModuleDocument,
   type ProcessorModuleGlobalState,
-} from "../document-models/processor-module/gen/index.js";
+} from "../document-models/processor-module/v1/gen/index.js";
 import {
   createSubgraphModuleDocument,
   type SubgraphModuleDocument,
   type SubgraphModuleGlobalState,
-} from "../document-models/subgraph-module/gen/index.js";
+} from "../document-models/subgraph-module/v1/gen/index.js";
 
 /* Builds a `powerhouse/document-editor` document for each editor in the
  * project's `editors/` directory. Drive editors (powerhouse/document-drive)
