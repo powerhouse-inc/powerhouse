@@ -398,3 +398,8 @@ Phase 0 / D1 target was 4w/1w >= 3.0x. We measured:
 None of these are clean baselines. To get a defensible D1 number we need
 to lift the dispatch bottleneck so workers can actually run at their
 1.6 ms/job ceiling; only then will the worker count be the limiter.
+| 0 | 6.66 | 10000.00 | 10000.00 | 10000.00 | — | — |
+| 1 | 21.87 | 10000.00 | 10000.00 | 10000.00 | — | — |
+| 2 | 21.34 | 10000.00 | 10000.00 | 10000.00 | — | — |
+| 4 | 20.08 | 10000.00 | 10000.00 | 10000.00 | — | — |
+| 8 | 16.85 | 10000.00 | 10000.00 | 10000.00 | — | — |
