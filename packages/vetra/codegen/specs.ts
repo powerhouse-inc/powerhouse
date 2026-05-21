@@ -130,7 +130,10 @@ export function specDir(projectDir: string, documentType: string): string {
   return join(projectDir, SPECS_DIRNAME, getSpecEntry(documentType).subdir);
 }
 
-/** Deterministic path for a doc-type + display name (without the `.phd` zip wrapper). */
+/**
+ * Deterministic path for a doc-type + display name.
+ * Format: `<projectDir>/<specsDir>/<subdir>/<kebab-name>.<ext>.phd`.
+ */
 export function specPath(
   projectDir: string,
   documentType: string,

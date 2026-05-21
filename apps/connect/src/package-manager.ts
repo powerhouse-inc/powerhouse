@@ -239,7 +239,6 @@ export class BrowserPackageManager implements IPackageManager {
       console.debug(
         `[Connect][PackageManager] "${bareName}" version bump ${currentVersion} → ${requestedVersion}; refetching`,
       );
-      this.#unmountStylesheet(bareName);
     }
     try {
       const packageWithMeta = await this.#loadPackage(packageSpec);
@@ -249,6 +248,12 @@ export class BrowserPackageManager implements IPackageManager {
       packageWithMeta.name = bareName;
       if (hasTagOrVersion) {
         packageWithMeta.spec = packageSpec;
+      }
+      // Swap stylesheets only once the new package is in hand. If `#loadPackage`
+      // throws above, the old stylesheet stays mounted and the UI keeps
+      // rendering the previous version instead of unstyled markup.
+      if (existingPackage) {
+        this.#unmountStylesheet(bareName);
       }
       this.#registerPackage(packageWithMeta);
 
