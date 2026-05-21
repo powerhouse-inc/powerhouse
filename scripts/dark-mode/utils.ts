@@ -9,7 +9,6 @@ import {
   hasAtLeast,
   identity,
   isArray,
-  isEmpty,
   isEmptyish,
   isNot,
   isTruthy,
@@ -57,7 +56,7 @@ export const makeClassNameStringFromList = (cs: ClassNameList): ClassName =>
   pipe(
     cs,
     filter((c) => c !== " "),
-    filter(isNot(isEmpty)),
+    filter(isNot(isEmptyish)),
     join(" "),
   );
 
