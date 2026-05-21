@@ -46,8 +46,8 @@ export function buildVerdaccioConfig(config: RegistryConfig) {
       const localSet = new Set(local);
       const access = {
         access: "$all",
-        publish: "$anonymous",
-        unpublish: "$anonymous",
+        publish: "$authenticated",
+        unpublish: "$authenticated",
       };
       const entries: [string, Record<string, unknown>][] = [];
       // Locals first — no proxy means verdaccio resolves them from local
