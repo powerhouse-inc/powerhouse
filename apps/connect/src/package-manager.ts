@@ -179,6 +179,23 @@ export class BrowserPackageManager implements IPackageManager {
     return "registry-install";
   }
 
+  /**
+   * Return the registry-installed packages keyed by their storage name (which
+   * is the registry spec, e.g. "@powerhousedao/clint-common"), with the
+   * installed version when known. Excludes bundled (common) packages, the
+   * local project package, and packages resolved out of `/node_modules/`.
+   */
+  getRegistryPackages(): { name: string; version: string | undefined }[] {
+    const out: { name: string; version: string | undefined }[] = [];
+    for (const [name, meta] of this.#storage) {
+      if (this.#localPackageNames.has(name)) continue;
+      if (name === LOCAL_PACKAGE_NAME) continue;
+      if (meta.importUrl === `/node_modules/${name}`) continue;
+      out.push({ name, version: meta.version });
+    }
+    return out;
+  }
+
   getPackageVersion(packageName: string): string | undefined {
     if (packageName === this.#localPackage?.manifest.name) {
       return this.#localPackageVersion;
@@ -201,13 +218,28 @@ export class BrowserPackageManager implements IPackageManager {
 
     const existingPackage = this.#packages.get(bareName);
     if (existingPackage) {
+      const requestedVersion = hasTagOrVersion
+        ? packageSpec.slice(bareName.length + 1)
+        : undefined;
+      const currentVersion = this.#storage.get(bareName)?.version;
+      const isLocal = this.#localPackageNames.has(bareName);
+      const sameVersion =
+        !requestedVersion ||
+        !currentVersion ||
+        requestedVersion === currentVersion;
+      if (isLocal || sameVersion) {
+        console.debug(
+          `[Connect][PackageManager] "${bareName}" already loaded; skipping re-fetch`,
+        );
+        return {
+          type: "success",
+          package: existingPackage,
+        };
+      }
       console.debug(
-        `[Connect][PackageManager] "${bareName}" already loaded; skipping re-fetch`,
+        `[Connect][PackageManager] "${bareName}" version bump ${currentVersion} → ${requestedVersion}; refetching`,
       );
-      return {
-        type: "success",
-        package: existingPackage,
-      };
+      this.#unmountStylesheet(bareName);
     }
     try {
       const packageWithMeta = await this.#loadPackage(packageSpec);

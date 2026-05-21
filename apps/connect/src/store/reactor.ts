@@ -68,32 +68,89 @@ function subscribeToPackagesChannel(packageManager: IPackageManager): void {
     console.debug("[Connect] /__packages subscribe failed:", err);
     return;
   }
+  let firstEvent = true;
   source.addEventListener("packages-changed", (event) => {
     try {
-      const payload = JSON.parse((event as MessageEvent).data) as {
+      const payload = JSON.parse((event as MessageEvent<string>).data) as {
         packages?: unknown;
       };
       if (!Array.isArray(payload.packages)) return;
       const next = payload.packages.filter(
         (p): p is string => typeof p === "string",
       );
-      const current = new Set(
-        packageManager.packages.map((p) => p.manifest.name),
+      // Split each incoming spec into (bareName, version). The server may
+      // send either bare names ("@scope/pkg") or version-qualified specs
+      // ("@scope/pkg@1.2.3"). parseBareName-style logic: for scoped specs
+      // the first `@` belongs to the scope, so version starts after the
+      // last `@` only when that `@` is past index 0.
+      const parseBare = (
+        spec: string,
+      ): { bareName: string; version?: string } => {
+        const at = spec.startsWith("@")
+          ? spec.lastIndexOf("@")
+          : spec.indexOf("@");
+        if (at > 0) {
+          return { bareName: spec.slice(0, at), version: spec.slice(at + 1) };
+        }
+        return { bareName: spec };
+      };
+
+      // Diff against the registry-tracked subset only. Bundled "common"
+      // packages and the project's local package never appear in the
+      // server's list and removing them on every event would wipe the
+      // drive editors and break the AddDrive modal.
+      const currentByName = new Map(
+        packageManager
+          .getRegistryPackages()
+          .map(({ name, version }) => [name, version]),
       );
-      const nextSet = new Set(next);
-      for (const name of current) {
-        if (!nextSet.has(name)) packageManager.removePackage(name);
+      const nextByName = new Map<string, string | undefined>();
+      for (const spec of next) {
+        const { bareName, version } = parseBare(spec);
+        nextByName.set(bareName, version);
+      }
+
+      const isFirst = firstEvent;
+      firstEvent = false;
+
+      for (const name of currentByName.keys()) {
+        if (!nextByName.has(name)) {
+          packageManager.removePackage(name);
+          if (!isFirst) {
+            toast(`Removed package ${name}`, { type: "connect-deleted" });
+          }
+        }
       }
       for (const spec of next) {
-        if (current.has(spec)) continue;
-        packageManager.addPackage(spec).then(
+        const { bareName, version } = parseBare(spec);
+        const currentVersion = currentByName.get(bareName);
+        const isKnown = currentByName.has(bareName);
+        // Skip when the package is already present at the same version (or
+        // when no version info is available on either side to compare).
+        if (
+          isKnown &&
+          (!version || !currentVersion || version === currentVersion)
+        ) {
+          continue;
+        }
+        const isUpdate = isKnown;
+        Promise.resolve(packageManager.addPackage(spec)).then(
           (result) => {
             if (result.type === "error") {
               console.error(
                 `[Connect] /__packages addPackage(${spec}) failed:`,
                 result.error,
               );
+              return;
             }
+            if (isFirst) return;
+            const name = result.package.manifest.name;
+            toast(
+              isUpdate
+                ? `Updated package ${name}`
+                : `Installed package ${name}`,
+              { type: "connect-success" },
+            );
           },
           (err: unknown) => {
             console.error(
