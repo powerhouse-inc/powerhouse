@@ -27,7 +27,7 @@ import type {
   ClassName,
   ClassNameList,
   ClassNameMap,
-  DarkPrefix,
+  ClassNameSet,
 } from "./types.js";
 
 /**
@@ -61,20 +61,22 @@ export const makeClassNameStringFromList = (cs: ClassNameList): ClassName =>
     join(" "),
   );
 
-export const hasClass = (m: ClassNameMap) => (c: ClassName) => m.has(c);
+export const hasClass = (m: ClassNameMap | ClassNameSet) => (c: ClassName) =>
+  m.has(c);
 
 /**
  * Checks whether a string literal contains at least one light-mode class that
  * this migration knows how to convert.
  */
-export const hasClasses = (m: ClassNameMap) => (s: StringLiteral) =>
-  pipe(
-    s,
-    getStringLiteralText,
-    makeClassNameListFromString,
-    filter(hasClass(m)),
-    hasAtLeast(1),
-  );
+export const hasClasses =
+  (m: ClassNameMap | ClassNameSet) => (s: StringLiteral) =>
+    pipe(
+      s,
+      getStringLiteralText,
+      makeClassNameListFromString,
+      filter(hasClass(m)),
+      hasAtLeast(1),
+    );
 
 export const getClasses =
   (m: ClassNameMap) =>
@@ -151,12 +153,23 @@ export const removeClassesFromStringLiteral =
       updateClassesForStringLiteral(s),
     );
 
-/**
- * Adds the configured {@link darkPrefix} to a Tailwind class name.
- */
-export const addDarkPrefixToClass = <C extends ClassName>(
+export const withPrefix = <C extends ClassName, P extends `${string}:`>(
+  p: P,
   c: C,
-): `${DarkPrefix}${C}` => `${darkPrefix}${c}` as const;
+) => `${p}${c}` as const;
+
+export const withSuffix = <C extends ClassName, S extends string>(s: S, c: C) =>
+  `${c}${s}` as const;
+
+export const addSuffix =
+  <C extends ClassName, S extends string>(s: S) =>
+  (c: C) =>
+    withSuffix(s, c);
+
+export const addPrefix =
+  <C extends ClassName, P extends `${string}:`>(p: P) =>
+  (c: C) =>
+    withPrefix(p, c);
 
 /**
  * Checks whether a string literal already contains an explicit dark-mode class.

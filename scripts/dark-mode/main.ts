@@ -4,7 +4,7 @@ import { allMappings } from "./mappings.js";
 import { getStringLiteralsFromFiles, makeTsMorphProject } from "./ts-morph.js";
 import {
   addClassesToStringLiteral,
-  addDarkPrefixToClass,
+  addPrefix,
   hasClasses,
   hasDarkModeAlready,
 } from "./utils.js";
@@ -12,7 +12,7 @@ import {
 const project = makeTsMorphProject();
 const files = await findFilesWithClasses(keys(allMappings));
 const lightToDarkMap = new Map(
-  entries(mapValues(allMappings, addDarkPrefixToClass)),
+  entries(mapValues(allMappings, addPrefix("dark:"))),
 );
 
 /**

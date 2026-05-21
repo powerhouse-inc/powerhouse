@@ -15,5 +15,8 @@ export type ClassNameRecord = Record<ClassName, ClassName | ClassNameList>;
 /** A map of class names to other class names. */
 export type ClassNameMap = Map<ClassName, ClassName | ClassNameList>;
 
+/** A set of class names. */
+export type ClassNameSet = Set<ClassName>;
+
 /** Literal type for the configured {@link darkPrefix}. */
 export type DarkPrefix = typeof darkPrefix;

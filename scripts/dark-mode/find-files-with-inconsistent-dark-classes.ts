@@ -1,10 +1,8 @@
 import {
-  entries,
   filter,
   flat,
   flatMap,
   groupBy,
-  invert,
   isNot,
   keys,
   mapValues,
@@ -17,19 +15,17 @@ import { findFilesWithClasses } from "./find-files-with-classes.js";
 import { allMappings } from "./mappings.js";
 import { getStringLiteralsFromFiles, makeTsMorphProject } from "./ts-morph.js";
 import {
-  addDarkPrefixToClass,
+  addPrefix,
   getStringLiteralClassNameList,
   hasClasses,
   hasDarkModeAlready,
 } from "./utils.js";
 
-const darkToLightMap = new Map(
-  entries(invert(mapValues(allMappings, addDarkPrefixToClass))),
-);
+const testSet = new Set(values(mapValues(allMappings, addPrefix("dark:"))));
 const allFilesWithDarkPrefixClasses = await findFilesWithClasses(["dark:"]);
 const project = makeTsMorphProject();
-const colorsToChange = [
-  // "slate",
+const colors = [
+  "slate",
   // "red",
   // "green",
   // "blue",
@@ -46,14 +42,12 @@ const result = pipe(
   allFilesWithDarkPrefixClasses,
   getStringLiteralsFromFiles(project),
   filter(hasDarkModeAlready),
-  filter(isNot(hasClasses(darkToLightMap))),
+  filter(isNot(hasClasses(testSet))),
   flatMap((s) => ({
     s,
     file: s.getSourceFile().getFilePath(),
-    classNames: filter(
-      getStringLiteralClassNameList(s),
-      (cn) =>
-        startsWith(cn, "dark:") && colorsToChange.some((e) => cn.includes(e)),
+    classNames: filter(getStringLiteralClassNameList(s), (cn) =>
+      startsWith(cn, "dark:"),
     ),
   })),
   groupBy((v) => v.file),

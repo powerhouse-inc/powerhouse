@@ -4,7 +4,10 @@ import { getStringLiteralsFromFiles, makeTsMorphProject } from "./ts-morph.js";
 import type { ClassNameList } from "./types.js";
 import { removeClassesFromStringLiteral } from "./utils.js";
 
-const classesToRemove: ClassNameList = [];
+const classesToRemove: ClassNameList = [
+  "dark:text-gray-500",
+  "dark:text-gray-400",
+];
 const project = makeTsMorphProject();
 const files = await findFilesWithClasses(classesToRemove);
 

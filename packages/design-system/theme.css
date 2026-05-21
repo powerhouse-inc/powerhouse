@@ -15,16 +15,16 @@
   --color-gray-700: hsl(189 5% 29%);
   --color-gray-800: hsl(200 4% 26%);
   --color-gray-900: hsl(192 5% 21%);
-  --color-slate-50: hsl(210 20% 96%);
-  --color-slate-100: hsl(210 9% 74%);
-  --color-slate-200: hsl(210 9% 48%);
-  --color-slate-300: hsl(210 9% 39%);
-  --color-slate-400: hsl(210 9% 30%);
-  --color-slate-500: hsl(207 8% 21%);
-  --color-slate-600: hsl(210 9% 13%);
-  --color-slate-700: hsl(204 9% 11%);
-  --color-slate-800: hsl(195 9% 9%);
-  --color-slate-900: hsl(195 6% 6%);
+  --color-slate-50: hsl(210 20% 99%);
+  --color-slate-100: hsl(210 12% 96%);
+  --color-slate-200: hsl(210 10% 94%);
+  --color-slate-300: hsl(210 9% 85%);
+  --color-slate-400: hsl(210 9% 78%);
+  --color-slate-500: hsl(207 8% 63%);
+  --color-slate-600: hsl(210 9% 44%);
+  --color-slate-700: hsl(204 9% 29%);
+  --color-slate-800: hsl(195 9% 26%);
+  --color-slate-900: hsl(195 6% 21%);
   --color-blue-100: hsl(209 100% 90%);
   --color-blue-200: hsl(209 97% 85%);
   --color-blue-300: hsl(209 100% 80%);
@@ -103,8 +103,8 @@
     0px -1px 1px 0px rgba(0, 0, 0, 0.04) inset,
     0px 2px 0px 0px rgba(255, 255, 255, 0.25) inset,
     0px 4px 8px -4px rgba(0, 0, 0, 0.1);
---shadow-charcoal: 1px 4px 15px rgba(74, 88, 115, 0.25);
---shadow-inner: inset 0px 0px 2px rgba(255, 255, 255, 0.5);
+  --shadow-charcoal: 1px 4px 15px rgba(74, 88, 115, 0.25);
+  --shadow-inner: inset 0px 0px 2px rgba(255, 255, 255, 0.5);
   --animate-fade-in: fadeIn 0.3s ease-in-out;
   --animate-fade-out: fadeOut 0.1s ease-in-out;
   --animate-zoom-in: zoomIn 0.3s ease-in-out;
@@ -183,17 +183,39 @@
     }
   }
 
-    @keyframes brickDrop {
-    0%   { opacity: 0; transform: translateY(-10px); }
-    58%  { opacity: 1; transform: translateY(1.2px); }
-    78%  { transform: translateY(-0.4px); }
-    100% { opacity: 1; transform: translateY(0); }
+  @keyframes brickDrop {
+    0% {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    58% {
+      opacity: 1;
+      transform: translateY(1.2px);
+    }
+    78% {
+      transform: translateY(-0.4px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 
-    @keyframes brickFall {
-    0%   { opacity: 1; transform: translateY(0); }
-    20%  { opacity: 1; transform: translateY(-1.2px); }
-    40%  { transform: translateY(0.4px); }
-    100% { opacity: 0; transform: translateY(12px); }
+  @keyframes brickFall {
+    0% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    20% {
+      opacity: 1;
+      transform: translateY(-1.2px);
+    }
+    40% {
+      transform: translateY(0.4px);
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(12px);
+    }
   }
 }
