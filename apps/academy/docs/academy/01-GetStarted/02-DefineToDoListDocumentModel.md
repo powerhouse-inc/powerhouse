@@ -17,7 +17,7 @@ This tutorial step has a corresponding branch. After completing this step, your 
 
 ### Compare your generated code
 
-After running `ph generate document-model --file TodoList.phdm.zip`, compare with the reference:
+After running `ph generate document-model --document TodoList.phdm.zip`, compare with the reference:
 
 ```bash
 # Compare all generated files with step-2
