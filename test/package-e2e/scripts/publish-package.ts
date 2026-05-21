@@ -121,7 +121,7 @@ async function main(): Promise<void> {
   // complete reducer implementations — no manual swap needed for the model.
   const zipDest = path.join(PROJECT_DIR, "todo.json");
   fs.copyFileSync(path.join(FIXTURES, "todo.json"), zipDest);
-  run(`${PH_CLI} generate doc --file ./todo.json`, PROJECT_DIR);
+  run(`${PH_CLI} generate doc --document ./todo.json`, PROJECT_DIR);
 
   // 4. Generate the editor (boilerplate only) and swap in the fixture UI
   // that actually dispatches addTodo / updateTodo / removeTodo actions —
