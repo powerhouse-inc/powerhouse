@@ -34,7 +34,7 @@ describe("attachment routes through the real Express middleware stack", () => {
     storagePath = await mkdtemp(join(tmpdir(), "switchboard-attach-int-"));
     attachments = await new AttachmentBuilder(kysely, storagePath).build();
 
-    const { adapter } = createHttpAdapter("express");
+    const { adapter } = await createHttpAdapter("express");
     // Install bodyParser.json + cors -- the production middleware stack that
     // drained JSON request bodies before the upload handler could read them.
     adapter.setupMiddleware({});
