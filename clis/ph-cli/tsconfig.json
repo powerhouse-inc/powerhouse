@@ -1,11 +1,19 @@
 {
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
-    "types": ["node", "vitest/globals"],
-    "outDir": "./.tsbuild",
+    "types": [
+      "node",
+      "vitest/globals"
+    ],
+    "outDir": "./.tsbuild"
   },
-  "include": ["**/*"],
-  "exclude": ["dist", "node_modules"],
+  "include": [
+    "**/*"
+  ],
+  "exclude": [
+    "dist",
+    "node_modules"
+  ],
   "references": [
     {
       "path": "../../apps/switchboard"
@@ -33,6 +41,9 @@
     },
     {
       "path": "../../packages/shared"
+    },
+    {
+      "path": "../../packages/vetra"
     }
   ]
 }
