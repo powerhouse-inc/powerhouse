@@ -408,10 +408,7 @@ export const documentModelOperationReducer: DocumentModelOperationOperations = {
     const targetOp = findOperationOrThrow(state, action.input.id);
     const latestSpec = state.specifications[state.specifications.length - 1];
     const allowedScopes = Object.keys(latestSpec.state);
-    if (
-      action.input.scope &&
-      !allowedScopes.includes(action.input.scope)
-    ) {
+    if (action.input.scope && !allowedScopes.includes(action.input.scope)) {
       throw new Error(`Invalid scope: ${action.input.scope}`);
     }
     targetOp.scope = action.input.scope || "global";
