@@ -158,6 +158,17 @@ export type DbConfig = {
   ssl?: boolean;
   applicationName?: string;
   poolSize?: number;
+  /**
+   * Maximum time (ms) a caller will wait to acquire a connection from the
+   * pool before pg.Pool throws. When omitted, pg defaults to 0 (unlimited
+   * wait), which hides acquire-starvation as silent latency.
+   */
+  connectionTimeoutMillis?: number;
+  /**
+   * How long (ms) an idle connection stays open before pg closes it. When
+   * omitted, pg defaults to 10000.
+   */
+  idleTimeoutMillis?: number;
 };
 
 /**

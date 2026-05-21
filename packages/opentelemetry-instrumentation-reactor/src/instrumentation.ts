@@ -14,6 +14,7 @@ import type {
   JobReadReadyEvent,
   JobRunningEvent,
   JobWriteReadyEvent,
+  PoolInstrumentation,
   ReactorJobFailedEvent,
   ReadModelBatchCompletedEvent,
   ReadModelIndexedEvent,
@@ -42,7 +43,7 @@ export class ReactorInstrumentation {
 
   start(): void {
     this.metrics = createMetrics();
-    const { eventBus, queue, executorManager, syncModule } = this.module;
+    const { eventBus, queue, executorManager, syncModule, pools } = this.module;
 
     this.subscribeJobPending(eventBus);
     this.subscribeJobRunning(eventBus);
@@ -60,6 +61,7 @@ export class ReactorInstrumentation {
       this.module.readModelCoordinator,
       syncModule,
     );
+    this.registerPoolInstrumentation(pools);
   }
 
   stop(): void {
@@ -365,6 +367,49 @@ export class ReactorInstrumentation {
     };
     this.metrics.syncRemotes.addCallback(remotesCb);
     this.observableCallbacks.push([this.metrics.syncRemotes, remotesCb]);
+  }
+
+  private registerPoolInstrumentation(pools: PoolInstrumentation[]): void {
+    if (!this.metrics || pools.length === 0) return;
+
+    for (const pool of pools) {
+      const attrs = { pool: pool.name };
+      const unsub = pool.onAcquire((durationMs) => {
+        if (!this.metrics) return;
+        this.metrics.dbPoolAcquireWaitDuration.record(durationMs, attrs);
+      });
+      this.unsubscribes.push(unsub);
+    }
+
+    const sizeCb: ObservableCallback = (result) => {
+      if (!this.metrics) return;
+      for (const pool of pools) {
+        const stats = pool.getStats();
+        result.observe(stats.size, { pool: pool.name });
+      }
+    };
+    this.metrics.dbPoolSize.addCallback(sizeCb);
+    this.observableCallbacks.push([this.metrics.dbPoolSize, sizeCb]);
+
+    const idleCb: ObservableCallback = (result) => {
+      if (!this.metrics) return;
+      for (const pool of pools) {
+        const stats = pool.getStats();
+        result.observe(stats.idle, { pool: pool.name });
+      }
+    };
+    this.metrics.dbPoolIdle.addCallback(idleCb);
+    this.observableCallbacks.push([this.metrics.dbPoolIdle, idleCb]);
+
+    const waitingCb: ObservableCallback = (result) => {
+      if (!this.metrics) return;
+      for (const pool of pools) {
+        const stats = pool.getStats();
+        result.observe(stats.waiting, { pool: pool.name });
+      }
+    };
+    this.metrics.dbPoolWaiting.addCallback(waitingCb);
+    this.observableCallbacks.push([this.metrics.dbPoolWaiting, waitingCb]);
   }
 
   private cleanup(jobId: string): void {

@@ -59,6 +59,10 @@ import { KyselyKeyframeStore } from "../storage/kysely/keyframe-store.js";
 import { KyselyOperationStore } from "../storage/kysely/store.js";
 import type { Database as StorageDatabase } from "../storage/kysely/types.js";
 import {
+  instrumentPgPool,
+  type PoolInstrumentation,
+} from "../storage/pool-instrumentation.js";
+import {
   REACTOR_SCHEMA,
   runMigrations,
 } from "../storage/migrations/migrator.js";
@@ -140,6 +144,7 @@ export class ReactorBuilder {
   private workerDbConfig?: DbConfig;
   private workerSignatureVerifierSpec?: SignatureVerifierSpec;
   private workerFactory?: WorkerFactory;
+  private instrumentedPools: PoolInstrumentation[] = [];
 
   withLogger(logger: ILogger): this {
     this.logger = logger;
@@ -225,6 +230,18 @@ export class ReactorBuilder {
 
   withKysely(kysely: Kysely<Database>): this {
     this.kyselyInstance = kysely;
+    return this;
+  }
+
+  /**
+   * Register an externally-constructed pg.Pool's {@link PoolInstrumentation}
+   * so it surfaces through {@link ReactorModule.pools}. Use this when the
+   * caller built the pool itself (e.g. the in-process bench host wiring) so
+   * pool acquire-wait and pool-stat metrics still emit. The builder also
+   * registers any pool it constructs internally via {@link createPostgresDatabase}.
+   */
+  withInstrumentedPool(instrumentation: PoolInstrumentation): this {
+    this.instrumentedPools.push(instrumentation);
     return this;
   }
 
@@ -666,6 +683,7 @@ export class ReactorBuilder {
       processorManagerConsistencyTracker,
       syncModule,
       reactor,
+      pools: this.instrumentedPools,
     };
 
     if (this.signalHandlersEnabled) {
@@ -712,7 +730,10 @@ export class ReactorBuilder {
    * Builds the parent Kysely instance against a real Postgres server using
    * the same {@link DbConfig} the workers receive at init. Used in the
    * worker-pool path so the parent reactor and each worker thread share
-   * storage; PGlite cannot be shared across threads.
+   * storage; PGlite cannot be shared across threads. The constructed pool
+   * is wrapped with {@link instrumentPgPool} and the resulting
+   * {@link PoolInstrumentation} is pushed onto {@link instrumentedPools} so
+   * the reactor module exposes acquire-wait and pool-stat surfaces.
    */
   private async createPostgresDatabase(
     config: DbConfig,
@@ -729,7 +750,12 @@ export class ReactorBuilder {
       ssl: config.ssl ? { rejectUnauthorized: false } : undefined,
       application_name: config.applicationName,
       max: config.poolSize,
+      connectionTimeoutMillis: config.connectionTimeoutMillis,
+      idleTimeoutMillis: config.idleTimeoutMillis,
     });
+    this.instrumentedPools.push(
+      instrumentPgPool(pool, config.applicationName ?? "reactor-host"),
+    );
     return new Kysely<Database>({
       dialect: new PostgresDialect({ pool }),
     });

@@ -9,6 +9,7 @@
 // k6 talks to /create + /mutate; Prometheus scrapes the metrics exporter.
 import "./observability.js";
 import {
+  instrumentPgPool,
   JobStatus,
   ReactorBuilder,
   type Database,
@@ -40,6 +41,18 @@ const DB_PORT = parseInt(process.env.REACTOR_DB_PORT ?? "5432", 10);
 const DB_NAME = process.env.REACTOR_DB_NAME ?? "reactor";
 const DB_USER = process.env.REACTOR_DB_USER ?? "reactor";
 const DB_PASSWORD = process.env.REACTOR_DB_PASSWORD ?? "reactor";
+const DB_POOL_SIZE_HOST = parseInt(
+  process.env.REACTOR_DB_POOL_SIZE_HOST ?? "16",
+  10,
+);
+const DB_POOL_SIZE_WORKER = parseInt(
+  process.env.REACTOR_DB_POOL_SIZE_WORKER ?? "2",
+  10,
+);
+const DB_ACQUIRE_TIMEOUT_MS = parseInt(
+  process.env.REACTOR_DB_ACQUIRE_TIMEOUT_MS ?? "5000",
+  10,
+);
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -51,6 +64,22 @@ type State = {
 
 async function buildReactor(signer: ISigner): Promise<State> {
   const builder = new ReactorBuilder().withSignatureVerifier(async () => true);
+
+  const hostPool = new pg.Pool({
+    host: DB_HOST,
+    port: DB_PORT,
+    database: DB_NAME,
+    user: DB_USER,
+    password: DB_PASSWORD,
+    application_name: "reactor-bench-host",
+    max: DB_POOL_SIZE_HOST,
+    connectionTimeoutMillis: DB_ACQUIRE_TIMEOUT_MS,
+  });
+  const hostPoolInstrumentation = instrumentPgPool(hostPool, "host");
+  const hostKysely = new Kysely<Database>({
+    dialect: new PostgresDialect({ pool: hostPool }),
+  });
+  builder.withKysely(hostKysely).withInstrumentedPool(hostPoolInstrumentation);
 
   if (REACTOR_WORKERS > 0) {
     const modelFile = path.resolve(__dirname, "./document-model.mjs");
@@ -78,7 +107,8 @@ async function buildReactor(signer: ISigner): Promise<State> {
         user: DB_USER,
         password: DB_PASSWORD,
         applicationName: "reactor-bench-worker",
-        poolSize: 2,
+        poolSize: DB_POOL_SIZE_WORKER,
+        connectionTimeoutMillis: DB_ACQUIRE_TIMEOUT_MS,
       })
       .withWorkerSignatureVerifierSpec({
         module: {
@@ -87,24 +117,10 @@ async function buildReactor(signer: ISigner): Promise<State> {
         },
       });
   } else {
-    const pool = new pg.Pool({
-      host: DB_HOST,
-      port: DB_PORT,
-      database: DB_NAME,
-      user: DB_USER,
-      password: DB_PASSWORD,
-      application_name: "reactor-bench-host",
-      max: 4,
-    });
-    const kysely = new Kysely<Database>({
-      dialect: new PostgresDialect({ pool }),
-    });
-    builder
-      .withKysely(kysely)
-      .withDocumentModels([
-        documentModelDocumentModelModule,
-        driveDocumentModelModule,
-      ]);
+    builder.withDocumentModels([
+      documentModelDocumentModelModule,
+      driveDocumentModelModule,
+    ]);
   }
 
   const module = await builder.buildModule();

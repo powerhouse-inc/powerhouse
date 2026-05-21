@@ -69,6 +69,8 @@ async function defaultCreateDatabase(
     ssl: config.ssl ? { rejectUnauthorized: false } : undefined,
     application_name: config.applicationName ?? workerId,
     max: config.poolSize,
+    connectionTimeoutMillis: config.connectionTimeoutMillis,
+    idleTimeoutMillis: config.idleTimeoutMillis,
   });
   const kysely = new Kysely<Database>({
     dialect: new PostgresDialect({ pool }),

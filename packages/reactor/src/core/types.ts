@@ -43,6 +43,7 @@ import type {
   DocumentIndexerDatabase,
   Database as StorageDatabase,
 } from "../storage/kysely/types.js";
+import type { PoolInstrumentation } from "../storage/pool-instrumentation.js";
 import type { IReactorSubscriptionManager } from "../subs/types.js";
 import type { IChannelFactory, ISyncManager } from "../sync/interfaces.js";
 
@@ -454,6 +455,13 @@ export interface ReactorModule {
   processorManagerConsistencyTracker: IConsistencyTracker;
   syncModule: SyncModule | undefined;
   reactor: IReactor;
+  /**
+   * Instrumented pg.Pool handles registered with the builder, either by
+   * createPostgresDatabase or by withInstrumentedPool. Empty when no pg
+   * pool is in use (e.g. PGlite tests). Observers iterate the array to
+   * record per-pool acquire-wait and stat metrics.
+   */
+  pools: PoolInstrumentation[];
 }
 
 /**

@@ -213,6 +213,11 @@ export {
 export { KyselyDocumentIndexer } from "./src/storage/kysely/document-indexer.js";
 export { KyselyKeyframeStore } from "./src/storage/kysely/keyframe-store.js";
 export { KyselyOperationStore } from "./src/storage/kysely/store.js";
+export {
+  instrumentPgPool,
+  type PoolInstrumentation,
+  type PoolStats,
+} from "./src/storage/pool-instrumentation.js";
 export type {
   DocumentIndexerDatabase,
   OperationTable,
