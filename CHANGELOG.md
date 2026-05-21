@@ -1,3 +1,13 @@
+# 6.0.0 (2026-05-21)
+
+### 🩹 Fixes
+
+- **reactor-api:** resolve linked packages via dist/node/<sub>/index.mjs ([499ef50b7](https://github.com/powerhouse-inc/powerhouse/commit/499ef50b7))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.256 (2026-05-21)
 
 ### 🚀 Features
