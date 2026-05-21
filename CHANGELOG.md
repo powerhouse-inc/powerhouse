@@ -1,3 +1,26 @@
+## 6.0.0-dev.256 (2026-05-21)
+
+### 🚀 Features
+
+- **reactor-browser:** add useEditorFileDrop hook and DropZone opt-out ([8c6ebf73a](https://github.com/powerhouse-inc/powerhouse/commit/8c6ebf73a))
+
+### 🩹 Fixes
+
+- add @tokens to logger calls across packages ([b70070ae2](https://github.com/powerhouse-inc/powerhouse/commit/b70070ae2))
+- prettier wrap + properly type vi.spyOn mocks in logger tests ([363795fc3](https://github.com/powerhouse-inc/powerhouse/commit/363795fc3))
+- **document-model:** surface Error values in logger output ([310a45398](https://github.com/powerhouse-inc/powerhouse/commit/310a45398))
+- **ph-cli:** whoops, missed a refactor ([f43138c68](https://github.com/powerhouse-inc/powerhouse/commit/f43138c68))
+- **reactor-api:** pass args to logger.error calls in reactor subgraph ([b34dcf7dc](https://github.com/powerhouse-inc/powerhouse/commit/b34dcf7dc))
+- **reactor-api:** share one DB client per connection string ([8a8030ee0](https://github.com/powerhouse-inc/powerhouse/commit/8a8030ee0))
+- **reactor-browser:** hide DropZone overlay over editor opt-out regions ([725d185fd](https://github.com/powerhouse-inc/powerhouse/commit/725d185fd))
+- **reactor-browser:** stop sync before deleting drive document ([9fec21bf5](https://github.com/powerhouse-inc/powerhouse/commit/9fec21bf5))
+- **switchboard:** give users a one-shot recovery path out of broken switchboard DB state ([5fecb0fe8](https://github.com/powerhouse-inc/powerhouse/commit/5fecb0fe8))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+
 ## 6.0.0-dev.255 (2026-05-20)
 
 ### 🩹 Fixes
