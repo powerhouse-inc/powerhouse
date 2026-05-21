@@ -72,6 +72,10 @@ export class ReadModelCoordinator implements IReadModelCoordinator {
     }
   }
 
+  getChainDepth(): number {
+    return this.chains.size;
+  }
+
   private handleWriteReady(event: JobWriteReadyEvent): void {
     if (event.operations.length === 0) {
       return;

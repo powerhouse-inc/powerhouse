@@ -628,6 +628,7 @@ export function createMockReadModelCoordinator(
     start: vi.fn(),
     stop: vi.fn(),
     drain: vi.fn().mockResolvedValue(undefined),
+    getChainDepth: vi.fn().mockReturnValue(0),
     ...overrides,
   };
 }

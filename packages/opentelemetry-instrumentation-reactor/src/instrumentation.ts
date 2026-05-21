@@ -15,6 +15,7 @@ import type {
   JobRunningEvent,
   JobWriteReadyEvent,
   ReactorJobFailedEvent,
+  IReadModelCoordinator,
   ReactorModule,
   SyncModule,
   Unsubscribe,
@@ -49,7 +50,12 @@ export class ReactorInstrumentation {
     this.subscribeExecutorJobCompleted(eventBus);
     this.subscribeExecutorJobFailed(eventBus);
     this.subscribeDeadLetterAdded(eventBus);
-    this.registerObservableGauges(queue, executorManager, syncModule);
+    this.registerObservableGauges(
+      queue,
+      executorManager,
+      this.module.readModelCoordinator,
+      syncModule,
+    );
   }
 
   stop(): void {
@@ -243,6 +249,7 @@ export class ReactorInstrumentation {
   private registerObservableGauges(
     queue: IQueue,
     executorManager: IJobExecutorManager,
+    readModelCoordinator: IReadModelCoordinator,
     syncModule: SyncModule | undefined,
   ): void {
     if (!this.metrics) return;
@@ -286,6 +293,16 @@ export class ReactorInstrumentation {
     this.observableCallbacks.push([
       this.metrics.executorActiveJobs,
       activeJobsCb,
+    ]);
+
+    const chainDepthCb: ObservableCallback = (result) => {
+      if (!this.metrics) return;
+      result.observe(readModelCoordinator.getChainDepth());
+    };
+    this.metrics.readmodelCoordinatorChainDepth.addCallback(chainDepthCb);
+    this.observableCallbacks.push([
+      this.metrics.readmodelCoordinatorChainDepth,
+      chainDepthCb,
     ]);
 
     const remotesCb: ObservableCallback = (result) => {

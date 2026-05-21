@@ -69,6 +69,14 @@ export function createMetrics() {
         unit: "ms",
       },
     ),
+    readmodelCoordinatorChainDepth: meter.createObservableGauge(
+      "reactor.readmodel.coordinator.chain_depth",
+      {
+        description:
+          "In-flight per-queueKey projection chains in the coordinator",
+        unit: "{chain}",
+      },
+    ),
 
     // Event bus metrics
     eventbusEventsEmitted: meter.createCounter(

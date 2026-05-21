@@ -44,4 +44,10 @@ export interface IReadModelCoordinator {
    * Intended for test fixtures and explicit shutdown.
    */
   drain(): Promise<void>;
+
+  /**
+   * Current number of in-flight per-queueKey projection chains.
+   * Used as a backpressure signal by observability gauges.
+   */
+  getChainDepth(): number;
 }
