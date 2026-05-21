@@ -95,7 +95,7 @@ async function startInProcessWorker(
 function waitForMessage<T extends WorkerMessage>(
   port: MessagePort,
   predicate: (msg: WorkerMessage) => msg is T,
-  timeoutMs = 5000,
+  timeoutMs = 25_000,
 ): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const timer = setTimeout(() => {

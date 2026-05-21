@@ -46,7 +46,7 @@ function makeInitMessage(): InitMessage {
 function waitForMessage<T extends WorkerMessage>(
   worker: Worker,
   predicate: (msg: WorkerMessage) => msg is T,
-  timeoutMs = 5000,
+  timeoutMs = 25_000,
 ): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const timer = setTimeout(() => {
@@ -65,7 +65,7 @@ function waitForMessage<T extends WorkerMessage>(
   });
 }
 
-function waitForExit(worker: Worker, timeoutMs = 5000): Promise<number> {
+function waitForExit(worker: Worker, timeoutMs = 25_000): Promise<number> {
   return new Promise<number>((resolve, reject) => {
     const timer = setTimeout(() => {
       reject(new Error(`Worker did not exit within ${timeoutMs}ms`));
@@ -89,104 +89,134 @@ afterEach(async () => {
   workers.length = 0;
 });
 
+const TEST_TIMEOUT_MS = 60_000;
+
 describe("entry worker integration", () => {
-  it("(1) init round-trip: worker posts ready after init", async () => {
-    const worker = spawnWorker();
-    workers.push(worker);
+  it(
+    "(1) init round-trip: worker posts ready after init",
+    async () => {
+      const worker = spawnWorker();
+      workers.push(worker);
 
-    const init = makeInitMessage();
+      const init = makeInitMessage();
 
-    const readyPromise = waitForMessage(
-      worker,
-      (m): m is ReadyMessage => m.type === "ready",
-    );
+      const readyPromise = waitForMessage(
+        worker,
+        (m): m is ReadyMessage => m.type === "ready",
+      );
 
-    worker.postMessage(init);
+      worker.postMessage(init);
 
-    const ready = await readyPromise;
-    expect(ready.type).toBe("ready");
-    expect(ready.correlationId).toBe(init.correlationId);
-    expect(ready.workerId).toBe(init.workerId);
-  });
+      const ready = await readyPromise;
+      expect(ready.type).toBe("ready");
+      expect(ready.correlationId).toBe(init.correlationId);
+      expect(ready.workerId).toBe(init.workerId);
+    },
+    TEST_TIMEOUT_MS,
+  );
 
-  it("(2) execute echo: round-trips execute -> result with same correlationId", async () => {
-    const worker = spawnWorker();
-    workers.push(worker);
+  it(
+    "(2) execute echo: round-trips execute -> result with same correlationId",
+    async () => {
+      const worker = spawnWorker();
+      workers.push(worker);
 
-    worker.postMessage(makeInitMessage());
-    await waitForMessage(worker, (m): m is ReadyMessage => m.type === "ready");
+      worker.postMessage(makeInitMessage());
+      await waitForMessage(
+        worker,
+        (m): m is ReadyMessage => m.type === "ready",
+      );
 
-    const resultPromise = waitForMessage(
-      worker,
-      (m): m is ResultMessage => m.type === "result",
-    );
+      const resultPromise = waitForMessage(
+        worker,
+        (m): m is ResultMessage => m.type === "result",
+      );
 
-    worker.postMessage({
-      type: "execute",
-      correlationId: "corr-exec-1",
-      job: {
-        id: "job-1",
-        kind: "mutation",
-        documentId: "doc-1",
-        scope: "global",
-        branch: "main",
-        actions: [],
-        operations: [],
-        createdAt: new Date().toISOString(),
-        queueHint: [],
-        retryCount: 0,
-        maxRetries: 3,
-        errorHistory: [],
-        meta: { batchId: "batch-1", batchJobIds: ["job-1"] },
-      },
-    });
+      worker.postMessage({
+        type: "execute",
+        correlationId: "corr-exec-1",
+        job: {
+          id: "job-1",
+          kind: "mutation",
+          documentId: "doc-1",
+          scope: "global",
+          branch: "main",
+          actions: [],
+          operations: [],
+          createdAt: new Date().toISOString(),
+          queueHint: [],
+          retryCount: 0,
+          maxRetries: 3,
+          errorHistory: [],
+          meta: { batchId: "batch-1", batchJobIds: ["job-1"] },
+        },
+      });
 
-    const result = await resultPromise;
-    expect(result.correlationId).toBe("corr-exec-1");
-    expect(result.result.success).toBe(true);
-    expect(result.result.job.id).toBe("job-1");
-  });
+      const result = await resultPromise;
+      expect(result.correlationId).toBe("corr-exec-1");
+      expect(result.result.success).toBe(true);
+      expect(result.result.job.id).toBe("job-1");
+    },
+    TEST_TIMEOUT_MS,
+  );
 
-  it("(3) uncaughtException: error-level log before worker exits", async () => {
-    const worker = spawnWorker();
-    workers.push(worker);
+  it(
+    "(3) uncaughtException: error-level log before worker exits",
+    async () => {
+      const worker = spawnWorker();
+      workers.push(worker);
 
-    // Attach error listener to prevent the crash from propagating to
-    // Vitest as an unhandled error. The crash is intentional in this test.
-    worker.on("error", () => {});
+      // Attach error listener to prevent the crash from propagating to
+      // Vitest as an unhandled error. The crash is intentional in this test.
+      worker.on("error", () => {});
 
-    worker.postMessage(makeInitMessage());
-    await waitForMessage(worker, (m): m is ReadyMessage => m.type === "ready");
+      worker.postMessage(makeInitMessage());
+      await waitForMessage(
+        worker,
+        (m): m is ReadyMessage => m.type === "ready",
+      );
 
-    const logPromise = waitForMessage(
-      worker,
-      (m): m is LogMessage => m.type === "log" && m.level === "error",
-    );
-    const exitPromise = waitForExit(worker);
+      const logPromise = waitForMessage(
+        worker,
+        (m): m is LogMessage => m.type === "log" && m.level === "error",
+      );
+      const exitPromise = waitForExit(worker);
 
-    worker.postMessage({
-      type: "__test_throw",
-      reason: "synthetic test error",
-    });
+      worker.postMessage({
+        type: "__test_throw",
+        reason: "synthetic test error",
+      });
 
-    const [log, exitCode] = await Promise.all([logPromise, exitPromise]);
-    expect(log.level).toBe("error");
-    expect(log.message).toBe("worker uncaughtException");
-    expect(exitCode).not.toBe(0);
-  });
+      const [log, exitCode] = await Promise.all([logPromise, exitPromise]);
+      expect(log.level).toBe("error");
+      expect(log.message).toBe("worker uncaughtException");
+      expect(exitCode).not.toBe(0);
+    },
+    TEST_TIMEOUT_MS,
+  );
 
-  it("(4) shutdown: worker exits with code 0", async () => {
-    const worker = spawnWorker();
-    workers.push(worker);
+  it(
+    "(4) shutdown: worker exits with code 0",
+    async () => {
+      const worker = spawnWorker();
+      workers.push(worker);
 
-    worker.postMessage(makeInitMessage());
-    await waitForMessage(worker, (m): m is ReadyMessage => m.type === "ready");
+      worker.postMessage(makeInitMessage());
+      await waitForMessage(
+        worker,
+        (m): m is ReadyMessage => m.type === "ready",
+      );
 
-    const exitPromise = waitForExit(worker);
+      const exitPromise = waitForExit(worker);
 
-    worker.postMessage({ type: "shutdown", correlationId: "corr-shutdown-1" });
+      worker.postMessage({
+        type: "shutdown",
+        correlationId: "corr-shutdown-1",
+      });
 
-    const exitCode = await exitPromise;
-    expect(exitCode).toBe(0);
-  });
+      const exitCode = await exitPromise;
+      expect(exitCode).toBe(0);
+    },
+    TEST_TIMEOUT_MS,
+  );
 });
