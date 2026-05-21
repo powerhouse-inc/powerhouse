@@ -1,7 +1,7 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-05-12T12:21:11.234Z
-> Total Documents: 86
+> Generated: 2026-05-21T15:36:34.222Z
+> Total Documents: 87
 > Source: https://powerhouse.academy/llms-full.txt
 
 
@@ -278,7 +278,7 @@ For today's purpose, you'll be using **Vetra Studio**, the builder platform thro
 
 ## Prerequisites
 
-- Powerhouse CLI installed: `pnpm install -g ph-cmd` or `npm install -g ph-cmd --legacy-peer-deps`
+- Powerhouse CLI installed: `pnpm install -g ph-cmd` or `npm install -g ph-cmd`
 - Node.js 24 and a package manager (pnpm or npm) installed
 - Visual Studio Code (or your preferred IDE)
 - Terminal/Command Prompt access
@@ -395,11 +395,32 @@ ph init
     ```
    ````
 
-Once the project is created, you will see the following output:
-`bash
-    Initialized empty Git repository in /Users/you/ph-projects/todo-tutorial/.git/
-    The installation is done!
-    `
+Once the project is created, you will see output like:
+```bash
+🚀 Initializing a new project...
+
+▶️ Creating directory for project "todo-tutorial"...
+
+✅ Project directory created
+
+▶️ Initializing git repository...
+
+✅ Git repository initialized
+
+▶️ Creating project boilerplate files...
+
+✅ Project boilerplate files created
+
+▶️ Installing project dependencies with npm...
+
+✅ Project dependencies installed
+
+▶️ Formatting boilerplate project files...
+
+✅ Boilerplate files formatted
+
+🎉 Successfully created project "todo-tutorial" 🎉
+```
 
 Navigate to the newly created project directory:
 `bash
@@ -563,7 +584,7 @@ This tutorial step has a corresponding branch. After completing this step, your 
 
 ### Compare your generated code
 
-After running `ph generate TodoList.phdm.zip`, compare with the reference:
+After running `ph generate document-model --file TodoList.phdm.zip`, compare with the reference:
 
 ```bash
 # Compare all generated files with step-2
@@ -703,20 +724,47 @@ Your project should have the following structure in `document-models/todo-list/`
 
 ```
 document-models/todo-list/
-├── gen/                          # Auto-generated code (don't edit)
-│   ├── actions.ts
-│   ├── creators.ts              # Action creator functions
-│   ├── types.ts                 # TypeScript type definitions
-│   ├── reducer.ts
-│   └── todos/
-│       └── operations.ts        # Operation type definitions
-├── src/                          # Your custom implementation
-│   ├── reducers/
-│   │   └── todos.ts            # Reducer functions (to implement next)
-│   └── tests/
-│       └── todos.test.ts        # Test file scaffolding
+├── index.ts
 ├── todo-list.json               # Document model specification
-└── schema.graphql               # GraphQL schema
+├── v1/
+│   ├── index.ts
+│   ├── actions.ts
+│   ├── hooks.ts
+│   ├── module.ts
+│   ├── schema.graphql           # GraphQL schema
+│   ├── utils.ts
+│   ├── gen/                     # Auto-generated code (don't edit)
+│   │   ├── schema/
+│   │   │   └── index.ts
+│   │   ├── actions.ts
+│   │   ├── controller.ts
+│   │   ├── creators.ts
+│   │   ├── document-model.ts
+│   │   ├── document-schema.ts
+│   │   ├── document-type.ts
+│   │   ├── index.ts
+│   │   ├── ph-factories.ts
+│   │   ├── reducer.ts
+│   │   ├── types.ts
+│   │   ├── utils.ts
+│   │   └── todos/               # Per-module generated files
+│   │       ├── actions.ts
+│   │       ├── creators.ts
+│   │       ├── error.ts
+│   │       └── operations.ts
+│   ├── src/                     # Your custom implementation
+│   │   ├── index.ts
+│   │   ├── utils.ts
+│   │   └── reducers/
+│   │       └── todos.ts
+│   └── tests/
+│       ├── document-model.test.ts
+│       └── todos.test.ts
+└── upgrades/
+    ├── index.ts
+    ├── upgrade-manifest.ts
+    ├── v1.ts
+    └── versions.ts
 ```
 
 **TIP:**
@@ -1452,7 +1500,7 @@ This tutorial shows building from **generated scaffolding** (step-5) to **comple
 
 ### Compare your generated editor
 
-After running `ph generate --editor`:
+After running `ph generate editor`:
 
 ```bash
 # Compare generated scaffolding with step-5
@@ -7311,11 +7359,9 @@ export function Editor() {
 
 > Source: https://powerhouse.academy/academy/MasteryTrack/BuildingUserExperiences/DocumentTools/DocumentToolbar
 
-**WARNING:**
-This documentation is still being written and may be incomplete.
+The `DocumentToolbar` renders a default set of document controls for common document actions: undo, redo, download, document name editing, revision history, opening in Switchboard, and closing the current document view.
 
-
-The Document Toolbar is a central component in Powerhouse Connect, appearing at the top of every document view. It provides quick access to a variety of tools and functions designed to streamline your workflow and enhance document management.
+The toolbar can be customized by enabling or disabling built-in controls, replacing individual controls, adding custom controls to toolbar slots, replacing the toolbar containers, applying custom styles, or replacing the entire toolbar contents with `children`.
 
 <figure className="image-container">
   <img
@@ -7327,23 +7373,336 @@ The Document Toolbar is a central component in Powerhouse Connect, appearing at 
   </figcaption>
 </figure>
 
-## Overview
+## Basic usage
 
-The toolbar is designed to be intuitive and context-aware, offering relevant options based on the document type and your current task. Its capabilities range from basic actions to more advanced document control features.
+```tsx
 
-### Key functionalities in the future will include:
 
-- **Switchboard API Access:** Access the Switchboard API via its logo in the toolbar. This opens the Apollo Studio Sandbox, pre-populating the DocumentID for your current document model. This feature is unavailable for locally stored documents.
-- **Navigation and Versioning:** Tools for managing [document versions](/academy/MasteryTrack/BuildingUserExperiences/DocumentTools/OperationHistory), such as undo/redo, and accessing the [revision history timeline](/academy/MasteryTrack/BuildingUserExperiences/DocumentTools/RevisionHistoryTimeline).
-- **Document Actions:** Buttons for common operations like exporting or deleting documents.
-- **Information Display:** Shows the document title and may include indicators for status (e.g., connectivity, errors) or active modes.
-- **Search and Filtering:** Integrated search capabilities to find assets or attachments within the document context.
-- **View Customization:** Options to switch between different views or display modes.
-- **Contextual Tools:** Depending on the document, you might find toggles, dropdowns for specific actions (e.g., "Sync Schema", "Fixed Income Purchase"), or buttons for settings and configurations.
+export function MyDocumentPage({ document }) {
+  return <DocumentToolbar document={document} />;
+}
+```
 
-The specific set of tools available on the toolbar can be configured and may evolve as new features are introduced. This section will detail the various components and options you may encounter.
+When no `document` prop is provided, the toolbar falls back to the currently selected document.
 
-_(Detailed information on each toolbar feature, such as "Export Button", "Title Display", "Search Functionality", "Toggle Switches", "Icon Buttons", etc., will follow here.)_
+```tsx
+<DocumentToolbar />
+```
+
+## Built-in controls
+
+The default toolbar includes these controls:
+
+```ts
+["undo", "redo", "download", "name", "history", "switchboard", "close"]
+```
+
+The controls are arranged into three slots:
+
+```ts
+{
+  first: ["undo", "redo", "download"],
+  second: ["name"],
+  third: ["history", "switchboard", "close"],
+}
+```
+
+## Disabling controls
+
+Use `disabledControls` to remove specific built-in controls from the default toolbar.
+
+```tsx
+<DocumentToolbar
+  document={document}
+  disabledControls={["download", "switchboard"]}
+/>
+```
+
+## Enabling only specific controls
+
+Use `enabledControls` to render only a subset of the built-in controls.
+
+```tsx
+<DocumentToolbar
+  document={document}
+  enabledControls={["download", "switchboard"]}
+/>
+```
+
+## Combining enabled and disabled controls
+
+A control renders only when it is included in `enabledControls` and absent from `disabledControls`. When a control appears in both lists, `disabledControls` takes precedence.
+
+```tsx
+<DocumentToolbar
+  document={document}
+  enabledControls={["download", "switchboard", "close"]}
+  disabledControls={["download"]}
+/>
+```
+
+In this example, only `switchboard` and `close` render.
+
+## Adding a custom control to a slot
+
+Use `customControls` to add controls to a specific toolbar slot. Custom controls receive the current document when available.
+
+```tsx
+<DocumentToolbar
+  document={document}
+  customControls={{
+    first: {
+      component: ({ document }) => (
+        <button
+          onClick={() => {
+            alert(`custom control one in ${document?.header.name}`);
+          }}
+        >
+          custom one
+        </button>
+      ),
+    },
+  }}
+/>
+```
+
+## Adding a custom control at the end of a slot
+
+By default, custom controls render at the start of their slot. Use `position: "end"` to render a custom control after the built-in controls in that slot.
+
+```tsx
+<DocumentToolbar
+  document={document}
+  customControls={{
+    second: {
+      position: "end",
+      component: ({ document }) => (
+        <button
+          onClick={() => {
+            alert(`custom control two in ${document?.header.name}`);
+          }}
+        >
+          custom two
+        </button>
+      ),
+    },
+  }}
+/>
+```
+
+## Adding multiple custom controls to a slot
+
+A slot can receive a list of custom controls. Each item needs a `key`.
+
+```tsx
+<DocumentToolbar
+  document={document}
+  customControls={{
+    first: [
+      {
+        key: "custom-one",
+        component: ({ document }) => (
+          <button
+            onClick={() => {
+              alert(`custom control one in ${document?.header.name}`);
+            }}
+          >
+            custom one
+          </button>
+        ),
+      },
+      {
+        key: "custom-two",
+        position: "end",
+        component: ({ document }) => (
+          <button
+            onClick={() => {
+              alert(`custom control two in ${document?.header.name}`);
+            }}
+          >
+            custom two
+          </button>
+        ),
+      },
+    ],
+  }}
+/>
+```
+
+## Replacing the toolbar container
+
+Use `toolbarContainer` to replace the outer toolbar container. The custom toolbar container receives the toolbar children and the resolved `toolbarClassName`.
+
+```tsx
+<DocumentToolbar
+  document={document}
+  toolbarContainer={({ children, className }) => (
+    <div className={className}>
+      {children}
+    </div>
+  )}
+/>
+```
+
+## Replacing the controls container
+
+Use `controlsContainer` to replace the container used for each toolbar slot. The custom controls container receives the slot children and the resolved `controlsContainerClassName`.
+
+```tsx
+<DocumentToolbar
+  document={document}
+  controlsContainer={({ children, className }) => (
+    <div className={className}>{children}</div>
+  )}
+/>
+```
+
+## Replacing a built-in control
+
+Use `componentOverrides` to replace individual built-in controls while keeping the default toolbar structure. This is useful when you want to reuse the built-in control behavior or styling but change part of the rendering or click behavior.
+
+```tsx
+
+
+<DocumentToolbar
+  document={document}
+  componentOverrides={{
+    download: (props: { document?: PHDocument }) => (
+      <ToolbarDownloadButton
+        {...props}
+        onClick={() => alert(props.document?.header.name)}
+      >
+        <span>Download??</span>
+      </ToolbarDownloadButton>
+    ),
+  }}
+/>
+```
+
+The `name` control can also be replaced through `componentOverrides`.
+
+```tsx
+<DocumentToolbar
+  document={document}
+  componentOverrides={{
+    name: ({ document }) => (
+      <textarea defaultValue={document?.header.name ?? "no name"} />
+    ),
+  }}
+/>
+```
+
+## Replacing the entire toolbar contents
+
+Pass `children` when you want complete control over the toolbar contents. When `children` is provided, the built-in controls are not rendered.
+
+```tsx
+<DocumentToolbar document={document}>
+  <div>I've totally overridden the whole thing</div>
+</DocumentToolbar>
+```
+
+Props such as `enabledControls`, `disabledControls`, `customControls`, `componentOverrides`, `controlsContainer`, and `controlsContainerClassName` are not used in this mode. The props are typed so that the `children` mode is mutually exclusive with the default-toolbar customization props.
+
+## Custom styles
+
+Use `toolbarClassName` to add classes to the outer toolbar container. Use `controlsContainerClassName` to add classes to each controls container. The built-in toolbar components use `tailwind-merge`, so compatible Tailwind classes passed through these props can override default classes.
+
+```tsx
+<DocumentToolbar
+  document={document}
+  toolbarClassName="border-none bg-green-100"
+  controlsContainerClassName="rounded-lg border border-green-300 p-2"
+/>
+```
+
+## Custom control component shape
+
+Custom controls should match `ToolbarControlComponent`.
+
+```tsx
+
+
+const MyControl: ToolbarControlComponent = ({ document }) => {
+  return <button>{document?.header.name}</button>;
+};
+```
+
+## Toolbar button props
+
+The built-in toolbar button controls accept `ToolbarButtonProps`. Each toolbar button accepts:
+
+```ts
+{
+  document?: PHDocument;
+  children?: ReactNode;
+  className?: string;
+  onClick?: (document?: PHDocument) => void;
+}
+```
+
+Providing `children` replaces the default button contents. Providing `onClick` replaces the default button behavior.
+
+```tsx
+<DocumentToolbar document={document}>
+  <ToolbarDownloadButton document={document}>
+    Export
+  </ToolbarDownloadButton>
+</DocumentToolbar>
+
+<ToolbarHistoryButton
+  document={document}
+  onClick={(document) => {
+    console.log("Custom history action", document?.header.id);
+  }}
+/>
+```
+
+## Exported components
+
+```ts
+DocumentToolbar
+ToolbarButton
+ToolbarUndoButton
+ToolbarRedoButton
+ToolbarDownloadButton
+ToolbarSwitchboardButton
+ToolbarHistoryButton
+ToolbarCloseButton
+ToolbarName
+ToolbarInput
+ToolbarContainer
+ToolbarControlsContainer
+```
+
+The individual toolbar controls are exported so they can be reused when building custom toolbar layouts or custom control components.
+
+## Exported types
+
+```ts
+DocumentToolbarProps
+DocumentToolbarWithChildrenProps
+DocumentToolbarWithCustomControlsProps
+DocumentToolbarControlName
+ToolbarButtonProps
+ToolbarButtonClickHandler
+ToolbarControlComponent
+ToolbarControlComponents
+ContainerComponent
+ControlSlot
+ControlPosition
+CustomToolbarControl
+CustomToolbarControlList
+CustomToolbarControls
+```
+
+## Notes
+
+- `DocumentToolbar` falls back to the currently selected document when `document` is omitted.
+- Built-in undo and redo buttons automatically disable themselves when the corresponding action is unavailable.
+- The document name control supports inline renaming.
+- `children` mode replaces the toolbar contents completely.
+- `disabledControls` takes precedence over `enabledControls`.
 
 ---
 
@@ -17691,6 +18050,8 @@ and real-time processing with a "Vetra" drive or connection to remote drives.
 **Default:** `3001`
 **Remote Drive** - URL of remote drive to connect to (skips switchboard initialization) - Usage: `--remote-drive <str>`
 
+**Db Path** - Database path or connection string. Use a `postgres://` URL for Postgres; otherwise treated as a PGlite filesystem path. Leave unset for in-memory PGlite. - Usage: `--db-path <str>`
+
 **Base** - Base path for the app - Usage: `--base <str>`
 
 **Environment:** `PH_CONNECT_BASE_PATH`
@@ -18102,6 +18463,10 @@ models, processors, and real-time updates.
 **Migrate** - Run database migrations and exit - Usage: `--migrate`
 
 **Migrate Status** - Show migration status and exit - Usage: `--migrate-status`
+
+**Reset** - Wipe the local PGlite switchboard storage after confirmation, then exit - Usage: `--reset`
+
+**Yes** - Skip the interactive confirmation prompt for --reset (required for non-interactive use) - Usage: `--yes, -y`
 
 **Mcp** - enable Mcp route at /mcp - Usage: `--mcp`
 
@@ -26938,6 +27303,179 @@ Coming soon to **https://academy.vetra.io**
 - Inspector Modal guide
 - Updated hooks documentation
 - Vetra Studio usage guides
+
+---
+
+
+## Powerhouse v6.0.0 🚀
+
+> Source: https://powerhouse.academy/academy/ReleaseNotes/v6.0.0
+
+## ✨ Highlights
+
+1. **Redesigned Reactor with sync reliability** - Complete rewrite of the write model, sync pipeline, and job system
+2. **Vetra Package Ecosystem** - Private npm-compatible registry with `ph publish`, `ph install`, `ph unpublish`, and runtime package loading
+3. **Reactor Attachments** - New package for document-linked file storage
+4. **Switchboard Load Balancer** - Built-in `switchboard-lb` for multi-node deployments
+5. **Full Observability** - OpenTelemetry, Sentry source maps, Prometheus exporter
+
+This is the **first production release of the 6.x line**, replacing 5.3.6. It is a breaking major release — existing Powerhouse projects must run `ph migrate 6.0.0` to upgrade.
+
+## ⚠️ Upgrading from 5.x
+
+The canonical way to upgrade an existing Powerhouse project is a single command:
+
+| Command                | Description                                                                |
+| ---------------------- | -------------------------------------------------------------------------- |
+| `ph migrate 6.0.0`     | Migrate to a specific version (recommended)                                |
+| `ph migrate latest`    | Migrate to whatever npm currently tags `latest`                            |
+| `ph migrate --force`   | Skip the codegen-version match check (registry unreachable / local build)  |
+| `ph migrate --debug`   | Print resolution decisions and the re-execution command                    |
+
+This is **not just a dependency bump**. `ph migrate` runs codegen against the new layout and applies every structural change required by 6.x:
+
+- **Restructures document models** to the versioned `v1/` layout
+- **Updates `package.json`** — exports, scripts, peer/dev dependencies; workspace pins to the target version
+- **Overwrites root config files** (tsconfig, eslint, vitest, build configs)
+- **Rewrites legacy import paths**
+- **Deletes `src/subgraphs/`** (now generated at runtime by Switchboard)
+- **Reinstalls dependencies** with your detected package manager
+- **Re-runs codegen** to regenerate everything
+
+Before running, confirm Node 24:
+
+```bash
+node --version   # must be >= 24.0.0
+```
+
+If Node is older: `nvm install 24 && nvm use 24` first.
+
+## ⚙️ Redesigned Reactor
+
+The reactor's core write model was rearchitected to unify transactions with execution context. The sync pipeline gained per-document quarantine (instead of blocking entire remotes), a persistent dead-letter store, buffered batched mailboxes, abort signals on GQL channels, and cursor-based paging for large sync batches.
+
+Key additions:
+
+- **DocumentIntegrityService** - validates and rebuilds document keyframes/snapshots
+- **Sync paging** - `getOperations` now pages across scopes
+- **Job timeout** via abort signals propagated through the entire job pipeline
+- **Exponential backoff + jitter** on retries
+- **`test-sync-queue` CLI app** for detecting sync drift on large drives
+
+## 📦 Vetra Package Ecosystem
+
+A full end-to-end package ecosystem now powers Powerhouse apps. A private npm-compatible registry (Verdaccio-backed) hosts packages, and the CLI, Connect, and Switchboard all integrate with it.
+
+| Command                                       | Description                                              |
+| --------------------------------------------- | -------------------------------------------------------- |
+| `ph publish`                                  | Publish a built package to the Powerhouse registry       |
+| `ph install @your-org/your-package`           | Install from the registry (Powerhouse registry default)  |
+| `ph unpublish @your-org/your-package@1.0.0`   | Unpublish and purge the CDN cache                        |
+
+**Dynamic loading:** Connect and Switchboard load processors and subgraphs at runtime from the HTTP registry — no rebuild required when new packages are published.
+
+**Auto-discovery:** Connect automatically finds and installs the correct package when it encounters an unknown document type.
+
+**Version picker:** The Connect UI lets users choose specific dist-tag versions when installing packages.
+
+## 📎 Reactor Attachments
+
+New `reactor-attachments` package provides document-linked file storage, integrated directly into the reactor and switchboard.
+
+- Upload reservations + direct upload to storage
+- Switchboard transport implementation
+- `HEAD` support, soft-delete, and case-insensitive hash indexing
+- `Attachment-Metadata` headers
+
+## ⚖️ Switchboard Load Balancer
+
+New `switchboard-lb` package provides HTTP load balancing for multi-node Switchboard deployments:
+
+- Least-connections proxying of upstream routes
+- Request pinning across restarts
+- Rewrite to drive-id header for deterministic routing
+
+## 📊 Observability
+
+OpenTelemetry, Sentry, and Prometheus are first-class citizens in 6.x.
+
+```bash
+# Enable OTel metrics export from Switchboard
+OTEL_EXPORTER_OTLP_ENDPOINT=http://tempo:4318 ph switchboard start
+
+# Prometheus metrics (opt-in)
+PROMETHEUS_METRICS=true ph switchboard start
+```
+
+- New `opentelemetry-instrumentation-reactor` package for distributed tracing across reactor internals
+- Sentry source maps uploaded in CI and releases tagged automatically
+- OTel spans bridged to Sentry for unified error correlation
+- Opt-out error reporting for `ph-cli` and `ph-cmd` via config
+
+## 🪝 `useDocumentSafe` Hook
+
+Replaces the pattern of calling `useDocument` and catching thrown errors — error and loading state are now first-class values.
+
+```typescript
+
+
+function MyEditor({ documentId }: { documentId: string }) {
+  const { document, error, isLoading } = useDocumentSafe(documentId);
+  if (isLoading) return <Spinner />;
+  if (error) return <ErrorBanner error={error} />;
+  return <Editor document={document} />;
+}
+```
+
+## 🛡️ Per-Document Authentication
+
+- **Signature verification** on Switchboard — operations must carry a valid app-key signature
+- **Per-document protection model** — configure which documents require authentication
+- `ph login` / `ph logout` / `ph access-token` flow implemented in the Renown SDK and forwarded by the CLI
+
+## 🤖 `ph code` — AI Agent Harness
+
+```bash
+ph code
+```
+
+New subcommand that wires Mastra and ph-clint into the CLI for AI-powered code assistance scoped to your Powerhouse project.
+
+## 🛠️ Codegen Improvements
+
+- **Versioned reducers by default** — reducers are version-stamped at generation time
+- **`satisfies DocumentModelModule`** instead of type casts
+- **CI/CD + Docker templates** scaffolded by `ph init` for new projects
+- **Vitest coverage** scaffolded with reducer threshold checks
+- **Separate `ph generate` commands** for reducers, editors, and processors
+- **AGENTS.md template** with editor drag-and-drop guidance and reducer testing playbook
+
+## 🖥️ Connect Improvements
+
+- Processor inspector panel showing live processor state
+- Offline preview for locally installed packages
+- PGlite migration banner for DB version transitions
+- Dump & import for local PGlite database
+- Version picker UI for dist-tag selection
+- Git hash display in settings/URL for build traceability
+- JSON viewer in operations tooltip
+- Retry on startup for default drives with backoff
+
+## ⚠️ Breaking Changes
+
+> Most of these are handled automatically by `ph migrate 6.0.0`. If you upgrade by hand, address each one explicitly.
+
+| Change                                  | Handled by `ph migrate`? |
+| --------------------------------------- | ------------------------ |
+| Node.js 24 minimum                      | ❌ Manual (`nvm install 24 && nvm use 24`) |
+| Versioned document model layout (`v1/`) | ✅ Automatic              |
+| Generated subgraphs removed             | ✅ Automatic              |
+| `DriveEditor` rename                    | ❌ Manual (follow TypeScript guidance) |
+| `package.json` shape changed            | ✅ Automatic              |
+
+## 📚 Documentation
+
+Updated documentation now lives at **https://academy.vetra.io** — including the Vetra Package Ecosystem guide, observability setup, runtime package loading, and the per-document authentication model.
 
 ---
 

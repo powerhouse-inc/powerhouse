@@ -4,6 +4,264 @@ Welcome to the Powerhouse release notes! This page contains the complete changel
 
 ---
 
+## 🚀 **v6.0.0** — Jan–May 2026
+
+> ⚠️ **Major breaking release.** First production release of the 6.x line, replacing 5.3.6. Existing Powerhouse projects **must** run `ph migrate 6.0.0` to upgrade — see [Upgrade Guide](#upgrade-guide) below before bumping any dependencies by hand.
+
+### ✨ Highlights
+
+1. **Redesigned Reactor with sync reliability** — Complete rewrite of the write model, sync pipeline, and job system with quarantine, dead letters, paging, and FIFO batching
+2. **Vetra Package Ecosystem** — Private npm-compatible registry, `ph publish/install/unpublish`, and dynamic package loading at runtime in Connect and Switchboard
+3. **Reactor Attachments** — New `reactor-attachments` package for document-linked file storage with reservations, direct upload, and soft-delete
+4. **Switchboard Load Balancer** — Built-in `switchboard-lb` for multi-node deployments with least-conn routing and drive-id-based pinning
+5. **Full Observability** — OpenTelemetry metrics, Sentry source map uploads, Prometheus exporter, and OTel-to-Sentry span bridging
+
+### Upgrade Guide
+
+The canonical way to upgrade an existing Powerhouse project to 6.0.0 is a single command:
+
+```bash
+ph migrate 6.0.0
+# or, equivalently:
+ph migrate latest
+```
+
+This is not just a dependency bump — `ph migrate` runs codegen against the new layout and applies every structural change required by 6.x. Specifically, it:
+
+- **Restructures document models to the versioned layout** — `document-models/<name>/{src,gen}` is moved to `document-models/<name>/v1/{src,gen}`. Legacy flat files (`actions.ts`, `hooks.ts`, `module.ts`, `index.ts`, `utils.ts`, `schema.graphql`) at each model's root are removed; they're regenerated under `v1/gen/`.
+- **Updates `package.json`** — refreshes `exports`, `scripts`, `peerDependencies`, and `devDependencies`. Workspace packages are pinned to the target version (`6.0.0`). The runtime `dependencies` block is dropped — the bundled `dist` self-contains everything except declared peers.
+- **Overwrites root config files** (tsconfig, build config, eslint config, vitest config, etc.).
+- **Rewrites legacy import paths** — old `package-name/...` and unversioned `document-models/foo/...` import shapes are converted to the new layout.
+- **Deletes the old `src/subgraphs/` directory** — subgraphs are now generated and loaded at runtime by Switchboard.
+- **Reinstalls dependencies** with your detected package manager.
+- **Re-runs codegen** to regenerate everything from the updated specs.
+
+Flags:
+
+- `--version <ver>` / positional version — `latest`, `staging`, `dev`, or a specific semver. Defaults to `latest`.
+- `--force` — skip the codegen-version match check; useful if the npm registry is unreachable or you're testing a local build.
+- `--debug` — print resolution decisions and the re-execution command.
+
+Before running, also confirm:
+
+```bash
+node --version   # must be >= 24.0.0 (see Breaking Changes below)
+```
+
+If Node is older: `nvm install 24 && nvm use 24` first.
+
+### New Features
+
+#### Reactor — Rewritten Write Model & Sync Engine
+
+The reactor's core write model was fundamentally rearchitected to unify transactions with execution context. The sync pipeline gained per-document quarantine (instead of blocking entire remotes), a persistent dead-letter store, buffered batched mailboxes, abort signals on GQL channels, and cursor-based paging for large sync batches.
+
+Key additions:
+
+- **DocumentIntegrityService** — validates and rebuilds document keyframes/snapshots
+- **Sync paging** — `getOperations` now pages across scopes
+- **Job timeout** via abort signals propagated through the entire job pipeline
+- **Yield utilities** for cooperative scheduling in the job executor
+- **Exponential backoff + jitter** on retries
+- **`test-sync-queue` CLI app** for detecting sync drift on large drives
+
+```bash
+# New profiling script for direct reactor performance testing
+npx tsx profiling/reactor-direct.ts --docs 1000 --otel
+```
+
+#### Vetra Package Ecosystem
+
+A full end-to-end package ecosystem now powers Powerhouse apps. A private npm-compatible registry (Verdaccio-backed) hosts packages, and the CLI, Connect, and Switchboard all integrate with it.
+
+New CLI commands:
+
+```bash
+# Publish a built package to the Powerhouse registry
+ph publish
+
+# Install from the registry (uses Powerhouse registry by default)
+ph install @your-org/your-package
+
+# Unpublish a package and purge the CDN cache
+ph unpublish @your-org/your-package@1.0.0
+```
+
+**Dynamic loading:** Connect and Switchboard load processors and subgraphs at runtime from the HTTP registry — no rebuild required when new packages are published.
+
+**Auto-discovery:** Connect automatically finds and installs the correct package when it encounters an unknown document type.
+
+**Version picker:** The Connect UI lets users choose specific dist-tag versions when installing packages.
+
+```json
+// powerhouse.config.json
+{
+  "registry": "https://your-registry-url"
+}
+```
+
+#### Reactor Attachments
+
+New `reactor-attachments` package provides document-linked file storage, integrated directly into the reactor and switchboard.
+
+Features:
+
+- Upload reservations + direct upload to storage
+- Switchboard transport implementation
+- `HEAD` support, soft-delete, and case-insensitive hash indexing
+- `Attachment-Metadata` headers
+
+#### Switchboard Load Balancer
+
+New `switchboard-lb` package provides HTTP load balancing for multi-node Switchboard deployments:
+
+- **M1:** Least-connections proxying of upstream routes
+- **M2:** Request pinning across restarts
+- **M3:** Rewrite to drive-id header for deterministic routing
+
+#### OpenTelemetry & Sentry Observability
+
+```bash
+# Enable OTel metrics export from Switchboard
+OTEL_EXPORTER_OTLP_ENDPOINT=http://tempo:4318 ph switchboard start
+
+# Prometheus metrics (opt-in)
+PROMETHEUS_METRICS=true ph switchboard start
+```
+
+- New `opentelemetry-instrumentation-reactor` package for distributed tracing across reactor internals
+- Sentry source maps uploaded in CI and releases tagged automatically
+- OTel spans bridged to Sentry for unified error correlation
+- Opt-out error reporting for `ph-cli` and `ph-cmd` via config
+- Lightweight Sentry SDK replaces full SDK in CLI
+
+#### `useDocumentSafe` Hook
+
+```typescript
+import { useDocumentSafe } from "@powerhousedao/reactor-browser";
+
+function MyEditor({ documentId }: { documentId: string }) {
+  const { document, error, isLoading } = useDocumentSafe(documentId);
+  if (isLoading) return <Spinner />;
+  if (error) return <ErrorBanner error={error} />;
+  return <Editor document={document} />;
+}
+```
+
+Replaces the pattern of calling `useDocument` and catching thrown errors — now surfaces error and loading state as first-class values.
+
+#### `ph code` Subcommand — AI Agent Harness
+
+```bash
+# Launch an AI-assisted code generation session
+ph code
+```
+
+New subcommand that wires Mastra and ph-clint into the CLI for AI-powered code assistance scoped to your Powerhouse project.
+
+#### Per-Document Authentication
+
+- **Signature verification** on Switchboard: operations must carry a valid app-key signature
+- **Per-document protection model**: configure which documents require authentication
+- `ph login` / `ph logout` / `ph access-token` login flow now implemented in the Renown SDK and forwarded by the CLI
+
+#### Codegen Improvements
+
+- **Versioned reducers by default** — reducers are version-stamped at generation time
+- **`satisfies DocumentModelModule`** instead of type casts
+- **CI/CD + Docker templates** scaffolded by `ph init` for new projects
+- **Vitest coverage** scaffolded with reducer threshold checks
+- **Separate `ph generate` commands** for reducers, editors, and processors
+- **AGENTS.md template** with editor drag-and-drop guidance and reducer testing playbook
+- **E2E codegen tests** for processor and subgraph generation
+
+#### Connect Improvements
+
+- **Processor inspector** panel showing live processor state
+- **Offline preview** for locally installed packages (bundled into Connect)
+- **PGlite migration banner** for DB version transitions
+- **Dump & import** for local PGlite database
+- **Version picker** UI for dist-tag selection
+- **Git hash display** in settings/URL for build traceability
+- **Drive info** shown in settings menu
+- **JSON viewer** in operations tooltip
+- **Retry on startup** for default drives with backoff
+
+#### Reactor MCP
+
+The `reactor-mcp` package now creates a fresh `McpServer` per `/mcp` request, fixing concurrent transport collision when multiple clients connect simultaneously.
+
+### Improvements
+
+- **tsdown** replaces the previous build toolchain across all packages: `analytics-engine`, `builder-tools`, `ph-cli`, `ph-cmd`, `registry`, `shared`, `design-system`
+- **Separate node/browser processor bundles** — processors now publish distinct `node` and `browser` entrypoints
+- **Tree-shaking** — `sideEffects: false` added to generated package boilerplate; pglite, jszip, and renown crypto are now lazy-loaded
+- **Document cache** made compatible with GraphQL clients directly
+- **Remote document controller** in `reactor-browser` for server-driven document state
+- **Single batch query** in `reactor-browser` for pulling operations on remote controllers
+- **Switchboard**: dynamic model loading behind `DYNAMIC_MODEL_LOADING` env var; OTel provider registration ordering enforced
+- **Registry**: SSE + webhook publish notifications; npm uplink for transparent CDN fallback; Renown JWT auth in front of Verdaccio
+- **`ph-cmd`** now delegates `init` and all forwarded commands to the versioned `ph-cli` binary — version pinning works correctly
+- **`ph migrate`** now runs against the target codegen version with `--force` flag available
+- **`ph install`**: `--allow-build` flag supported; prompts for dist-tag on prerelease publish
+
+### Bug Fixes
+
+- Reactor: orphan reshuffle and cross-batch FIFO bugs fixed; documents with out-of-order `ADD_RELATIONSHIP` now correctly backfilled
+- Reactor: deleted documents no longer returned by queries; jobs targeting deleted documents are not retried
+- Reactor: GQL channel now correctly handles abort signals, backpressure, and dead-letter placement
+- Connect: PGlite idb cleared on storage wipe to avoid flush race; duplicate document models deduplicated by type+version
+- Switchboard: falls back to a free port on `EADDRINUSE` and propagates to Vetra
+- Switchboard: `migrate` command now honors correct env vars
+- Registry: concurrent tarball extraction prevented; correct package version resolved on CDN
+- ph-cli: lazy-loaded for faster startup; `PH_REGISTRY_URL` env takes precedence over config
+- Design system: static asset paths fixed post-tsdown migration; icons path corrected
+
+### ⚠️ Breaking Changes
+
+> Most of these are handled automatically by `ph migrate 6.0.0`. If you choose to migrate by hand, address each one explicitly.
+
+**Node.js 24 is now the minimum supported version.** _(must be handled manually — `ph migrate` will not change your Node installation.)_
+
+```bash
+node --version  # must be >= 24.0.0
+nvm install 24 && nvm use 24
+```
+
+**Versioned document model layout.** _(handled by `ph migrate`.)_
+
+All document models now live under a `vN/` subdirectory. The legacy unversioned layout is no longer supported:
+
+```
+# Before (5.x)                       # After (6.x)
+document-models/<name>/              document-models/<name>/
+  src/                                 v1/
+  gen/                                   src/
+  actions.ts                             gen/
+  hooks.ts                             <name>.json
+  module.ts
+  index.ts
+  utils.ts
+  schema.graphql
+  <name>.json
+```
+
+Imports like `../../document-models/foo/something` are rewritten to `document-models/foo` and resolve through the versioned export.
+
+**Generated subgraphs are runtime-only.** _(handled by `ph migrate`.)_
+
+```bash
+rm -rf src/subgraphs/
+```
+
+**`DriveEditor` was renamed.** _(must be handled manually — search your codebase and update per TypeScript guidance.)_
+
+**`package.json` shape changed.** _(handled by `ph migrate`.)_
+
+The runtime `dependencies` block is no longer emitted on Powerhouse-project package manifests — the bundled `dist` self-contains everything except declared peers.
+
+---
+
 ## 🚀 **v5.3.0**
 
 ### ✨ Highlights

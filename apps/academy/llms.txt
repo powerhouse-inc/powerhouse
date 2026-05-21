@@ -29,7 +29,7 @@
 - [Build document editors](https://powerhouse.academy/academy/MasteryTrack/BuildingUserExperiences/BuildingDocumentEditors): At Powerhouse, frontend development for document editors follows a simple and familiar flow, leveraging the power and flexibility of React.
 - [Build a Drive-app](https://powerhouse.academy/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer): Drive-apps enhance how contributors and organizations interact with document models. They create an 'app-like' experience by providing a custom interf
 - [CSS Customization for Connect Integration](https://powerhouse.academy/academy/MasteryTrack/BuildingUserExperiences/CSSCustomization): When your editor runs inside Connect, it's rendered within a specific container hierarchy. Understanding this structure allows you to customize your e
-- [Document Toolbar](https://powerhouse.academy/academy/MasteryTrack/BuildingUserExperiences/DocumentTools/DocumentToolbar): This documentation is still being written and may be incomplete.
+- [Document Toolbar](https://powerhouse.academy/academy/MasteryTrack/BuildingUserExperiences/DocumentTools/DocumentToolbar): The DocumentToolbar renders a default set of document controls for common document actions: undo, redo, download, document name editing, revision hist
 - [Operations history](https://powerhouse.academy/academy/MasteryTrack/BuildingUserExperiences/DocumentTools/OperationHistory): A document model in Powerhouse is the core unit for managing business data. Each document (such as an invoice, contributor agreement, or scope of work
 - [Revision history timeline](https://powerhouse.academy/academy/MasteryTrack/BuildingUserExperiences/DocumentTools/RevisionHistoryTimeline): The history timeline feature enables users to view document history and navigate through different revisions of a document. This guide explains how to
 - [Inspector Modal](https://powerhouse.academy/academy/MasteryTrack/BuildingUserExperiences/DocumentTools/InspectorModal): The Inspector Modal is a development and debugging tool in Connect that provides visibility into the internal state of your application. It allows you
@@ -104,6 +104,7 @@
 ## Release Notes
 
 - [Powerhouse v5.3.0 🚀](https://powerhouse.academy/academy/ReleaseNotes/v5.3.0): 1. Authentication & Permissions - CLI authentication and document-level permissions 2. Improved Code Generation - TS Morph and templates for faster, m
+- [Powerhouse v6.0.0 🚀](https://powerhouse.academy/academy/ReleaseNotes/v6.0.0): 1. Redesigned Reactor with sync reliability - Complete rewrite of the write model, sync pipeline, and job system 2. Vetra Package Ecosystem - Private 
 
 ## Miscellaneous
 

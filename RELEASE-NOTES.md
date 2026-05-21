@@ -2,6 +2,8 @@
 
 ## 🚀 **v6.0.0** — Jan–May 2026
 
+> ⚠️ **Major breaking release.** First production release of the 6.x line, replacing 5.3.6. Existing Powerhouse projects **must** run `ph migrate 6.0.0` to upgrade — see [🔧 Upgrade Guide](#-upgrade-guide) below before bumping any dependencies by hand.
+
 ### ✨ Highlights
 
 1. **Redesigned Reactor with sync reliability** — Complete rewrite of the write model, sync pipeline, and job system with quarantine, dead letters, paging, and FIFO batching
@@ -9,6 +11,42 @@
 3. **Reactor Attachments** — New `reactor-attachments` package for document-linked file storage with reservations, direct upload, and soft-delete
 4. **Switchboard Load Balancer** — Built-in `switchboard-lb` for multi-node deployments with least-conn routing and drive-id-based pinning
 5. **Full Observability** — OpenTelemetry metrics, Sentry source map uploads, Prometheus exporter, and OTel-to-Sentry span bridging
+
+---
+
+### 🔧 Upgrade Guide
+
+The canonical way to upgrade an existing Powerhouse project to 6.0.0 is a single command:
+
+```bash
+ph migrate 6.0.0
+# or, equivalently:
+ph migrate latest
+```
+
+This is **not just a dependency bump** — `ph migrate` runs codegen against the new layout and applies every structural change required by 6.x. Specifically, it:
+
+- **Restructures document models to the versioned layout** — `document-models/<name>/{src,gen}` is moved to `document-models/<name>/v1/{src,gen}`. Legacy flat files (`actions.ts`, `hooks.ts`, `module.ts`, `index.ts`, `utils.ts`, `schema.graphql`) at each model's root are removed; they're regenerated under `v1/gen/`.
+- **Updates `package.json`** — refreshes `exports`, `scripts`, `peerDependencies`, and `devDependencies`. Workspace packages are pinned to the target version (`6.0.0`). The runtime `dependencies` block is dropped — the bundled `dist` self-contains everything except declared peers.
+- **Overwrites root config files** via `writeAllGeneratedProjectFiles` (tsconfig, build config, eslint config, vitest config, etc.).
+- **Rewrites legacy import paths** — old `package-name/...` and unversioned `document-models/foo/...` import shapes are converted to the new layout.
+- **Deletes the old `src/subgraphs/` directory** — subgraphs are now generated and loaded at runtime by Switchboard.
+- **Reinstalls dependencies** with your detected package manager.
+- **Re-runs codegen** (`generateAll`) to regenerate everything from the updated specs.
+
+**Flags:**
+
+- `--version <ver>` / positional version — `latest`, `staging`, `dev`, or a specific semver. Defaults to `latest`.
+- `--force` — skip the codegen-version match check; useful if the npm registry is unreachable or you're testing a local build.
+- `--debug` — print resolution decisions and the re-execution command.
+
+**Before running, also confirm:**
+
+```bash
+node --version   # must be >= 24.0.0 (see Breaking Changes below)
+```
+
+If Node is older: `nvm install 24 && nvm use 24` first.
 
 ---
 
@@ -187,7 +225,9 @@ The `reactor-mcp` package now creates a fresh `McpServer` per `/mcp` request, fi
 
 ### ⚠️ BREAKING CHANGES
 
-**Node.js 24 is now the minimum supported version.**
+> Most of these are handled automatically by `ph migrate 6.0.0`. If you choose to migrate by hand, address each one explicitly.
+
+**Node.js 24 is now the minimum supported version.** _(must be handled manually — `ph migrate` will not change your Node installation.)_
 
 ```bash
 # Check your Node version
@@ -197,13 +237,41 @@ node --version  # must be >= 24.0.0
 nvm install 24 && nvm use 24
 ```
 
-**`DriveEditor` renamed** — a bulk rename was applied across all packages. Search your codebase for old `DriveEditor` references and update as directed by TypeScript.
+**Versioned document model layout.** _(handled by `ph migrate`.)_
 
-**Generated subgraph code should be deleted** — subgraphs are now generated and loaded at runtime. Delete any `src/subgraphs/` directory in your project to avoid conflicts.
+All document models now live under a `vN/` subdirectory. The legacy unversioned layout is no longer supported:
+
+```
+# Before (5.x)                       # After (6.x)
+document-models/<name>/              document-models/<name>/
+  src/                                 v1/
+  gen/                                   src/
+  actions.ts                             gen/
+  hooks.ts                             <name>.json
+  module.ts
+  index.ts
+  utils.ts
+  schema.graphql
+  <name>.json
+```
+
+Imports like `../../document-models/foo/something` are rewritten to `document-models/foo` and resolve through the versioned export.
+
+**Generated subgraphs are runtime-only.** _(handled by `ph migrate`.)_
+
+Subgraphs are now generated and loaded at runtime. Any committed `src/subgraphs/` directory must go:
 
 ```bash
 rm -rf src/subgraphs/
 ```
+
+**`DriveEditor` was renamed.** _(must be handled manually — search your codebase and update per TypeScript guidance.)_
+
+A bulk rename was applied across all packages. After upgrading, your editor / TypeScript will flag any remaining references.
+
+**`package.json` shape changed.** _(handled by `ph migrate`.)_
+
+The runtime `dependencies` block is no longer emitted on Powerhouse-project package manifests — the bundled `dist` self-contains everything except declared peers. `exports`, `scripts`, `peerDependencies`, and `devDependencies` are all refreshed.
 
 ## 🚀 **v5.3.0**
 
