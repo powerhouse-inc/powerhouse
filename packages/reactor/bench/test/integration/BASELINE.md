@@ -408,3 +408,91 @@ to lift the dispatch bottleneck so workers can actually run at their
 | 2 | 21.57 | 10000.00 | 10000.00 | 10000.00 | — | — |
 | 4 | 20.45 | 10000.00 | 10000.00 | 10000.00 | — | — |
 | 8 | 16.39 | 10000.00 | 10000.00 | 10000.00 | — | — |
+| 0 | 16.55 | 10000.00 | 10000.00 | 10000.00 | — | — |
+| 1 | 55.00 | 10000.00 | 10000.00 | 10000.00 | — | — |
+| 2 | 105.84 | 10000.00 | 10000.00 | 10000.00 | — | — |
+| 4 | 119.50 | 10000.00 | 10000.00 | 10000.00 | — | — |
+| 8 | 103.15 | 10000.00 | 10000.00 | 10000.00 | — | — |
+
+### Notes on this sweep (Run 7, 2026-05-21, NUM_DRIVES=64, VUS=128)
+
+Run 7 ships the pool-sizing + acquire-instrumentation sub-feature: host pool
+bumped from `max=4` to `max=16`, `connectionTimeoutMillis=5000` threaded
+through `DbConfig`, and four new metrics added (`reactor.db.pool.*`).
+Compared to the prior sweep at the same VUS / drives / duration:
+
+| workers | Run 6 | Run 7 | factor |
+| ------- | ----- | ----- | ------ |
+| 0 | 6.66 | 16.55 | 2.5x |
+| 1 | 21.87 | 55.00 | 2.5x |
+| 2 | 21.34 | 105.84 | 5.0x |
+| 4 | 20.08 | 119.50 | 6.0x |
+| 8 | 16.85 | 103.15 | 6.1x |
+
+Throughput inverts between workers=4 and workers=8 — the host pool saturates
+again at the new ceiling (avg `pool.waiting` = 90 callers at workers=8 with
+16 slots; acquire p50 climbs from 2.7 ms at workers=2 to 162.8 ms at
+workers=8). Executor rate at workers=8 is ~1154 jobs/s, i.e. 12x the
+projection rate; the constraint has fully moved to the host's read-model
+coordinator and its single 16-connection pool. Full write-up plus per-stage
+numbers in the Run 7 wiki page (69dc9be3-43a0-44d0-8e13-e054b00c80e2).
+Headline numbers in this table are the matrix script's `jobs/sec` —
+`queue.completed` rate over the 60s window, equivalent to projection rate.
+
+## Run 8 matrix (host pool sweep, NUM_DRIVES=64, VUS=128, DURATION=60s)
+
+| pool | workers | jobs/sec | p50 (ms) | p95 (ms) | p99 (ms) | k6 reqs | k6 fail% |
+| ---- | ------- | -------- | -------- | -------- | -------- | ------- | -------- |
+| 16 | 4 | 115.08 | 10000.00 | 10000.00 | 10000.00 | — | — |
+| 16 | 8 | 101.33 | 10000.00 | 10000.00 | 10000.00 | — | — |
+| 32 | 4 | 120.65 | 10000.00 | 10000.00 | 10000.00 | — | — |
+| 32 | 8 | 104.55 | 10000.00 | 10000.00 | 10000.00 | — | — |
+| 64 | 4 | 119.75 | 10000.00 | 10000.00 | 10000.00 | — | — |
+| 64 | 8 | 101.43 | 10000.00 | 10000.00 | 10000.00 | — | — |
+| 96 | 4 | 119.99 | 10000.00 | 10000.00 | 10000.00 | — | — |
+| 96 | 8 | 101.68 | 10000.00 | 10000.00 | 10000.00 | — | — |
+
+### Notes on this sweep (Run 8, 2026-05-21, NUM_DRIVES=64, VUS=128, workers in {4, 8})
+
+Throughput is flat across the pool sweep — quadrupling host pool size
+(16 → 96) at workers=8 moves `queue.completed` from 101 to 102 jobs/sec.
+Pool was the binding constraint in Run 7 only because it was undersized;
+sizing it past ~52 connections at workers=4 (~74 at workers=8) leaves
+idle slots and zero waiters but does not unlock more projection
+throughput. Per-op index p50 collapses from 262 ms at pool=16 to 43 ms at
+pool=96 (workers=8), confirming the pool was real cost — but executor
+rate stays 11x ahead of projection rate at every cell, so the next
+binding constraint sits below the pool boundary inside the read-model
+coordinator's per-op work. Full write-up in the Run 8 wiki page
+(b83f8c53-5278-41ad-b5fa-6564e358ce56). Production guidance: set
+`REACTOR_DB_POOL_SIZE_HOST=64` by default.
+
+## Run 9 matrix (NUM_DRIVES sweep, VUS=128, DURATION=60s, pool=96)
+
+| drives | workers | jobs/sec | p50 (ms) | p95 (ms) | p99 (ms) | k6 reqs | k6 fail% |
+| ------ | ------- | -------- | -------- | -------- | -------- | ------- | -------- |
+| 64 | 4 | 121.02 | 10000.00 | 10000.00 | 10000.00 | — | — |
+| 64 | 8 | 102.37 | 10000.00 | 10000.00 | 10000.00 | — | — |
+| 128 | 4 | 118.15 | 10000.00 | 10000.00 | 10000.00 | — | — |
+| 128 | 8 | 117.43 | 10000.00 | 10000.00 | 10000.00 | — | — |
+| 256 | 4 | 114.99 | 10000.00 | 10000.00 | 10000.00 | — | — |
+| 256 | 8 | 114.53 | 10000.00 | 10000.00 | 10000.00 | — | — |
+
+### Notes on this sweep (Run 9, 2026-05-21, VUS=128, pool=96, workers in {4, 8})
+
+Throughput is flat across the 4x drive-count sweep at both worker counts —
+mean 132.7 jobs/s, max-min spread 30. Chain depth scales linearly with
+NUM_DRIVES (33 -> 173 at workers=4, 62 -> 252 at workers=8), so the
+coordinator IS running more chains concurrently — but per-op index p50
+balloons from 42 ms to 1181 ms at workers=8 NUM_DRIVES=256 to absorb the
+added concurrency. Total work per second is fixed; growing drive count
+just spreads it thinner across more chains. The pool re-saturates at
+NUM_DRIVES=256 (407 callers queued at workers=8) but throughput doesn't
+drop with it — the pool was never the constraint past Run 7's 4->16 jump,
+it's a follower. This is the signature of a single-threaded
+bandwidth-limited resource on the host side, most likely the Node.js
+event loop or a shared Kysely transaction. Full write-up in the Run 9
+wiki page (19a11753-d38b-4c5f-b3b0-ad6e50ac7487). Next sub-feature:
+host-side event-loop instrumentation (perf_hooks.monitorEventLoopDelay)
+to settle the host-CPU-bound hypothesis before further architectural
+investment.
