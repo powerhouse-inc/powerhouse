@@ -15,6 +15,8 @@ import type {
   JobRunningEvent,
   JobWriteReadyEvent,
   ReactorJobFailedEvent,
+  ReadModelBatchCompletedEvent,
+  ReadModelIndexedEvent,
   IReadModelCoordinator,
   ReactorModule,
   SyncModule,
@@ -50,6 +52,8 @@ export class ReactorInstrumentation {
     this.subscribeExecutorJobCompleted(eventBus);
     this.subscribeExecutorJobFailed(eventBus);
     this.subscribeDeadLetterAdded(eventBus);
+    this.subscribeReadModelBatchCompleted(eventBus);
+    this.subscribeReadModelIndexed(eventBus);
     this.registerObservableGauges(
       queue,
       executorManager,
@@ -223,6 +227,55 @@ export class ReactorInstrumentation {
           });
           this.metrics.eventbusEventsEmitted.add(1, {
             "event.type": "EXECUTOR_JOB_FAILED",
+          });
+        },
+      ),
+    );
+  }
+
+  private subscribeReadModelBatchCompleted(eventBus: IEventBus): void {
+    this.unsubscribes.push(
+      eventBus.subscribe<ReadModelBatchCompletedEvent>(
+        ReactorEventTypes.READMODEL_BATCH_COMPLETED,
+        (_type, event) => {
+          if (!this.metrics) return;
+          this.metrics.readmodelCoordinatorChainWaitDuration.record(
+            event.chainWaitDurationMs,
+          );
+          this.metrics.readmodelCoordinatorBatchSize.record(event.batchSize);
+          this.metrics.readmodelCoordinatorStageDuration.record(
+            event.preReadyDurationMs,
+            { stage: "pre_ready" },
+          );
+          this.metrics.readmodelCoordinatorStageDuration.record(
+            event.emitDurationMs,
+            { stage: "emit" },
+          );
+          this.metrics.readmodelCoordinatorStageDuration.record(
+            event.postReadyDurationMs,
+            { stage: "post_ready" },
+          );
+          this.metrics.eventbusEventsEmitted.add(1, {
+            "event.type": "READMODEL_BATCH_COMPLETED",
+          });
+        },
+      ),
+    );
+  }
+
+  private subscribeReadModelIndexed(eventBus: IEventBus): void {
+    this.unsubscribes.push(
+      eventBus.subscribe<ReadModelIndexedEvent>(
+        ReactorEventTypes.READMODEL_INDEXED,
+        (_type, event) => {
+          if (!this.metrics) return;
+          this.metrics.readmodelIndexingDuration.record(event.durationMs, {
+            "read_model.name": event.readModelName,
+            stage: event.stage,
+            "indexing.success": event.success ? "true" : "false",
+          });
+          this.metrics.eventbusEventsEmitted.add(1, {
+            "event.type": "READMODEL_INDEXED",
           });
         },
       ),

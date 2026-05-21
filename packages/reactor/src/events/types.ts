@@ -51,7 +51,21 @@ export const ReactorEventTypes = {
   JOB_WRITE_READY: 10003,
   JOB_READ_READY: 10004,
   JOB_FAILED: 10005,
+  READMODEL_BATCH_COMPLETED: 10006,
+  READMODEL_INDEXED: 10007,
 } as const;
+
+/**
+ * Stage within ReadModelCoordinator.runChain. Used as a dimension on
+ * stage-attribution events and histograms.
+ */
+export type ReadModelStage = "pre_ready" | "emit" | "post_ready";
+
+/**
+ * Stage in which an individual read model ran. The emit stage does not
+ * involve a read model so it is excluded from this discriminant.
+ */
+export type ReadModelIndexingStage = "pre_ready" | "post_ready";
 
 /**
  * Event emitted when a job is registered and waiting to be executed.
@@ -111,4 +125,33 @@ export type JobFailedEvent = {
   jobId: string;
   error: Error;
   job?: Job;
+};
+
+/**
+ * Event emitted once per batch processed by ReadModelCoordinator.runChain,
+ * after all three projection stages complete. Carries per-stage wall times,
+ * the chain wait time, and the batch size so projection cost can be
+ * attributed by an observer.
+ */
+export type ReadModelBatchCompletedEvent = {
+  jobId: string;
+  batchSize: number;
+  chainWaitDurationMs: number;
+  preReadyDurationMs: number;
+  emitDurationMs: number;
+  postReadyDurationMs: number;
+};
+
+/**
+ * Event emitted once per individual read model per batch and stage, after
+ * that read model's indexOperations call resolves (or rejects). Lets
+ * observers attribute projection cost to a specific read model.
+ */
+export type ReadModelIndexedEvent = {
+  jobId: string;
+  readModelName: string;
+  stage: ReadModelIndexingStage;
+  durationMs: number;
+  operationCount: number;
+  success: boolean;
 };

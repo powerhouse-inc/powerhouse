@@ -77,6 +77,37 @@ export function createMetrics() {
         unit: "{chain}",
       },
     ),
+    readmodelCoordinatorStageDuration: meter.createHistogram(
+      "reactor.readmodel.coordinator.stage.duration",
+      {
+        description:
+          "Wall time per stage in ReadModelCoordinator.runChain (pre_ready, emit, post_ready)",
+        unit: "ms",
+      },
+    ),
+    readmodelIndexingDuration: meter.createHistogram(
+      "reactor.readmodel.indexing.duration",
+      {
+        description:
+          "Per-read-model indexing duration within a coordinator chain",
+        unit: "ms",
+      },
+    ),
+    readmodelCoordinatorBatchSize: meter.createHistogram(
+      "reactor.readmodel.coordinator.batch.size",
+      {
+        description: "Operations per batch processed by the coordinator chain",
+        unit: "{operation}",
+      },
+    ),
+    readmodelCoordinatorChainWaitDuration: meter.createHistogram(
+      "reactor.readmodel.coordinator.chain.wait_duration",
+      {
+        description:
+          "Time a batch sat in the per-queueKey chain before runChain started",
+        unit: "ms",
+      },
+    ),
 
     // Event bus metrics
     eventbusEventsEmitted: meter.createCounter(

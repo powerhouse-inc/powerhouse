@@ -95,6 +95,10 @@ export {
   type JobRunningEvent,
   type JobWriteReadyEvent,
   type JobFailedEvent as ReactorJobFailedEvent,
+  type ReadModelBatchCompletedEvent,
+  type ReadModelIndexedEvent,
+  type ReadModelStage,
+  type ReadModelIndexingStage,
   type Unsubscribe,
 } from "./src/events/types.js";
 
