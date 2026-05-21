@@ -58,9 +58,12 @@ const filesToInspect = unique(keys(result));
 const classesToChange = unique(
   flatMap(flat(values(result)), (v) => v.classNames),
 );
+const charcoalClasses = filter(classesToChange, (c) => c.includes("charcoal"));
+
 console.log({
   filesToInspect,
   classesToChange,
+  charcoalClasses,
   filesToInspectLength: filesToInspect.length,
   classesToChangeLength: classesToChange.length,
 });

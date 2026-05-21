@@ -134,7 +134,7 @@ const IdAutocomplete = React.forwardRef<HTMLInputElement, IdAutocompleteProps>(
               shouldFilter={false}
               value={commandValue}
               onValueChange={handleCommandValue}
-              className={cn("bg-gray-100 dark:bg-charcoal-900")}
+              className={cn("bg-gray-100 dark:bg-slate-900")}
             >
               <PopoverAnchor asChild={true}>
                 <IdAutocompleteInputContainer
