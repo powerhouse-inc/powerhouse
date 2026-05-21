@@ -56,6 +56,10 @@ export class TestReadModelCoordinator implements IReadModelCoordinator {
     this.isPaused = false;
   }
 
+  async drain(): Promise<void> {
+    return;
+  }
+
   async flush(): Promise<void> {
     const queuedEvents = [...this.operationQueue];
     this.operationQueue = [];

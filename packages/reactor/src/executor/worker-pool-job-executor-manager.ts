@@ -348,7 +348,15 @@ export class WorkerPoolJobExecutorManager implements IJobExecutorManager {
     }
 
     if (outcome.result.success && outcome.writeReady) {
-      await this.emitWriteReady(handle.job, outcome.writeReady);
+      void this.emitWriteReady(handle.job, outcome.writeReady).catch(
+        (error) => {
+          this.logger.error(
+            "emitWriteReady failed for job @jobId: @Error",
+            { jobId: handle.job.id },
+            error,
+          );
+        },
+      );
     }
 
     await this.resultHandler.handleResult(handle, outcome.result, {

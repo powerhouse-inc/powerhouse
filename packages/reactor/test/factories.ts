@@ -627,6 +627,7 @@ export function createMockReadModelCoordinator(
     readModels: [],
     start: vi.fn(),
     stop: vi.fn(),
+    drain: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   };
 }
