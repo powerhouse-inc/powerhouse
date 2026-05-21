@@ -51,6 +51,18 @@ export type StartServerOptions = {
    * and the caller owns the reactor's lifecycle. The API, GraphQL manager,
    * MCP, attachments, package management subgraph, and registry HTTP loader
    * are still configured around it.
+   *
+   * Lifecycle contract: switchboard does NOT wire itself into the caller's
+   * reactor shutdown. Callers must invoke `shutdown()` on the returned
+   * `SwitchboardReactor` from their own teardown (and SIGINT handlers) to
+   * drain `/graphql`, MCP, attachments, etc. Killing the caller's reactor
+   * alone will not release these resources.
+   *
+   * Setup contract: the reactor must have switchboard's expected wiring
+   * already applied — channel scheme, document models, signal handlers,
+   * etc. Use `applySwitchboardReactorDefaults` from this module to apply
+   * the same defaults switchboard uses internally; opt out of individual
+   * pieces as needed.
    */
   reactor?: ReactorClientModule;
   /**
@@ -136,10 +148,16 @@ export type SwitchboardReactor = {
    */
   port: number;
   /**
-   * Tear down the HTTP server, GraphQL manager, attachments, MCP, and (when
-   * the switchboard built it) the reactor itself. When a caller-provided
-   * `reactor` was passed to `startSwitchboard`, the caller owns the reactor
-   * lifecycle and this method only tears down what the switchboard added.
+   * Drain switchboard-owned resources: HTTP server, GraphQL manager,
+   * attachments, MCP, packages subgraph, and the read-model DB. This does
+   * NOT kill the reactor — in owned-reactor mode the reactor lifecycle is
+   * handled by its own SIGINT signal handlers, which then drain the api via
+   * the shutdown hook switchboard registered on the builder. In
+   * caller-provided mode the caller owns the reactor lifecycle separately.
+   *
+   * Callers using a caller-provided reactor must invoke this from their own
+   * teardown / SIGINT path so api resources are released; killing the
+   * reactor alone won't release them.
    */
   shutdown: () => Promise<void>;
 };

@@ -4,7 +4,6 @@ import { getConfig } from "@powerhousedao/config/node";
 import { ReactorInstrumentation } from "@powerhousedao/opentelemetry-instrumentation-reactor";
 import { AtomicNodeFs } from "@powerhousedao/pglite-fs";
 import {
-  ChannelScheme,
   EventBus,
   REACTOR_SCHEMA,
   ReactorBuilder,
@@ -12,14 +11,12 @@ import {
   driveCollectionId,
   parseDriveUrl,
   type Database,
-  type ReactorClientModule,
 } from "@powerhousedao/reactor";
 import {
   HttpPackageLoader,
   ImportPackageLoader,
   PackageManagementService,
   PackagesSubgraph,
-  getUniqueDocumentModels,
   initializeAndStartAPI,
   type IPackageLoader,
 } from "@powerhousedao/reactor-api";
@@ -34,22 +31,15 @@ import {
   NodeProcessor,
   ReactorDriveClient,
   createReactorDriveResolvers,
-  reactorDriveDocumentModelModule,
   reactorDriveSubgraphTypeDefs,
   type ReactorDriveDatabase,
 } from "@powerhousedao/reactor-drive";
-import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
-import { documentModels as vetraDocumentModels } from "@powerhousedao/vetra";
 import { processorFactory as vetraProcessorFactory } from "@powerhousedao/vetra/processors";
+import { applySwitchboardReactorDefaults } from "./builder-defaults.mjs";
 import type { IRenown } from "@renown/sdk/node";
 import * as Sentry from "@sentry/node";
-import {
-  childLogger,
-  documentModelDocumentModelModule,
-  setLogLevel,
-  type ILogger,
-} from "document-model";
+import { childLogger, setLogLevel, type ILogger } from "document-model";
 import dotenv from "dotenv";
 import { Kysely, PostgresDialect } from "kysely";
 import { promises as fs } from "node:fs";
@@ -149,6 +139,49 @@ async function resolveServerPort(
   // Couldn't find a free port in the window; let the caller surface the
   // original EADDRINUSE when the real bind attempts runs.
   return requested;
+}
+
+async function createReactorKysely(opts: {
+  reactorDbUrl: string | undefined;
+  reactorPgliteDir: string | null;
+  reactorPgliteMajor: SupportedPgMajor | null;
+  inMemory: boolean;
+  flushIntervalMs: number;
+  logger: ILogger;
+}): Promise<Kysely<Database>> {
+  const {
+    reactorDbUrl,
+    reactorPgliteDir,
+    reactorPgliteMajor,
+    inMemory,
+    flushIntervalMs,
+    logger,
+  } = opts;
+
+  if (reactorDbUrl && isPostgresUrl(reactorDbUrl)) {
+    const connectionString = reactorDbUrl.includes("?")
+      ? reactorDbUrl
+      : `${reactorDbUrl}?sslmode=disable`;
+    const pool = new Pool({ connectionString });
+    logger.info("Using PostgreSQL for reactor storage");
+    return new Kysely<Database>({ dialect: new PostgresDialect({ pool }) });
+  }
+
+  if (!reactorPgliteDir || reactorPgliteMajor === null) {
+    throw new Error("Reactor PGLite directory not resolved");
+  }
+  const { PGlite } = await loadPGliteModule(reactorPgliteMajor);
+  const pglite = inMemory
+    ? new PGlite()
+    : new PGlite({
+        fs: new AtomicNodeFs(reactorPgliteDir, { logger, flushIntervalMs }),
+      });
+  logger.info(
+    inMemory
+      ? `Using in-memory PGlite (PG${reactorPgliteMajor}) for reactor storage [PH_PGLITE_IN_MEMORY=1]`
+      : `Using PGlite (PG${reactorPgliteMajor}) for reactor storage at ${reactorPgliteDir}`,
+  );
+  return new Kysely<Database>({ dialect: new ClosablePGliteDialect(pglite) });
 }
 
 async function initServer(
@@ -261,14 +294,6 @@ async function initServer(
   const apiRef: { current: { dispose: () => Promise<void> } | undefined } = {
     current: undefined,
   };
-  // Captured during initializeClient so the returned `shutdown()` can call
-  // `module.reactor.kill().completed` — the IReactor lifecycle entry. The
-  // IReactorClient surface returned by `initializeAndStartAPI` does not
-  // expose `kill`.
-  const clientModuleRef: { current: ReactorClientModule | undefined } = {
-    current: undefined,
-  };
-
   let driveNodeView: DriveNodeView | undefined;
 
   // HTTP registry package loading
@@ -299,21 +324,10 @@ async function initServer(
   const reactorLogger = logger.child(["reactor"]);
   const initializeClient = async (documentModels: DocumentModelModule[]) => {
     // When the caller hands us a pre-built reactor module, reuse it
-    // instead of constructing one. The caller owns the reactor lifecycle.
+    // instead of constructing one. The caller owns the reactor lifecycle
+    // and must call `switchboard.shutdown()` from their own teardown to
+    // drain /graphql, MCP, attachments, etc.
     if (options.reactor) {
-      // Wire the api dispose into the caller's reactor lifecycle so
-      // /graphql, MCP, attachments, etc. drain when the caller stops it.
-      const original = options.reactor.reactor;
-      const previousKill = original.kill.bind(original);
-      original.kill = () => {
-        const apiDispose = apiRef.current?.dispose();
-        const inner = previousKill();
-        return {
-          completed: Promise.all([apiDispose, inner.completed]).then(
-            () => undefined,
-          ),
-        };
-      };
       if (options.reactor.reactorModule) {
         const instrumentation = new ReactorInstrumentation(
           options.reactor.reactorModule,
@@ -323,70 +337,46 @@ async function initServer(
           "Reactor metrics instrumentation started (using caller-provided reactor)",
         );
       }
-      clientModuleRef.current = options.reactor;
       return { module: options.reactor };
     }
-    const eventBus = new EventBus();
-    const builder = new ReactorBuilder()
-      .withEventBus(eventBus)
-      .withDocumentModels(
-        getUniqueDocumentModels([
-          documentModelDocumentModelModule,
-          driveDocumentModelModule,
-          reactorDriveDocumentModelModule as unknown as DocumentModelModule,
-          ...vetraDocumentModels,
-          ...documentModels,
-        ]),
-      )
-      .withChannelScheme(ChannelScheme.SWITCHBOARD)
-      .withSignalHandlers()
-      .withLogger(reactorLogger);
+
+    const baseKysely = await createReactorKysely({
+      reactorDbUrl,
+      reactorPgliteDir,
+      reactorPgliteMajor,
+      inMemory: PGLITE_IN_MEMORY,
+      flushIntervalMs: PGLITE_FLUSH_INTERVAL_MS,
+      logger,
+    });
 
     const maxSkipThreshold = parseInt(process.env.MAX_SKIP_THRESHOLD ?? "", 10);
-    if (!isNaN(maxSkipThreshold) && maxSkipThreshold > 0) {
-      builder.withExecutorConfig({ maxSkipThreshold });
+    const hasSkipThreshold = !isNaN(maxSkipThreshold) && maxSkipThreshold > 0;
+    if (hasSkipThreshold) {
       logger.info(`Reactor maxSkipThreshold set to ${maxSkipThreshold}`);
     }
 
-    let baseKysely: Kysely<Database>;
-    if (reactorDbUrl && isPostgresUrl(reactorDbUrl)) {
-      const connectionString = reactorDbUrl.includes("?")
-        ? reactorDbUrl
-        : `${reactorDbUrl}?sslmode=disable`;
-      const pool = new Pool({ connectionString });
-      baseKysely = new Kysely<Database>({
-        dialect: new PostgresDialect({ pool }),
-      });
-      logger.info("Using PostgreSQL for reactor storage");
-    } else {
-      if (!reactorPgliteDir || reactorPgliteMajor === null) {
-        throw new Error("Reactor PGLite directory not resolved");
-      }
-      const { PGlite } = await loadPGliteModule(reactorPgliteMajor);
-      const pglite = PGLITE_IN_MEMORY
-        ? new PGlite()
-        : new PGlite({
-            fs: new AtomicNodeFs(reactorPgliteDir, {
-              logger,
-              flushIntervalMs: PGLITE_FLUSH_INTERVAL_MS,
-            }),
-          });
-      baseKysely = new Kysely<Database>({
-        dialect: new ClosablePGliteDialect(pglite),
-      });
-      logger.info(
-        PGLITE_IN_MEMORY
-          ? `Using in-memory PGlite (PG${reactorPgliteMajor}) for reactor storage [PH_PGLITE_IN_MEMORY=1]`
-          : `Using PGlite (PG${reactorPgliteMajor}) for reactor storage at ${reactorPgliteDir}`,
-      );
-    }
-    builder.withKysely(baseKysely);
+    const reactorBuilder = new ReactorBuilder()
+      .withEventBus(new EventBus())
+      .withKysely(baseKysely);
 
-    const reactorDriveSchemaDb = baseKysely.withSchema(
-      REACTOR_SCHEMA,
-    ) as unknown as Kysely<ReactorDriveDatabase>;
+    const clientBuilder = new ReactorClientBuilder().withReactorBuilder(
+      reactorBuilder,
+    );
 
-    builder.withReadModelFactory(
+    applySwitchboardReactorDefaults(reactorBuilder, clientBuilder, {
+      documentModels,
+      executorConfig: hasSkipThreshold ? { maxSkipThreshold } : undefined,
+      documentModelLoader:
+        httpLoader && dynamicModelLoading
+          ? httpLoader.documentModelLoader
+          : undefined,
+      logger: reactorLogger,
+      signer: renown
+        ? getRenownSignerConfig(renown, options.identity?.requireSignatures)
+        : undefined,
+    });
+
+    reactorBuilder.withReadModelFactory(
       async ({
         operationIndex,
         writeCache,
@@ -404,25 +394,9 @@ async function initServer(
       },
     );
 
-    builder.withShutdownHook(async () => {
+    reactorBuilder.withShutdownHook(async () => {
       if (apiRef.current) await apiRef.current.dispose();
     });
-
-    if (httpLoader && dynamicModelLoading) {
-      builder.withDocumentModelLoader(httpLoader.documentModelLoader);
-    }
-
-    const clientBuilder = new ReactorClientBuilder().withReactorBuilder(
-      builder,
-    );
-
-    if (renown) {
-      const signerConfig = getRenownSignerConfig(
-        renown,
-        options.identity?.requireSignatures,
-      );
-      clientBuilder.withSigner(signerConfig);
-    }
 
     const module = await clientBuilder.buildModule();
 
@@ -432,13 +406,15 @@ async function initServer(
       reactorLogger.info("Reactor metrics instrumentation started");
     }
 
+    const reactorDriveSchemaDb = baseKysely.withSchema(
+      REACTOR_SCHEMA,
+    ) as unknown as Kysely<ReactorDriveDatabase>;
     driveNodeView = new DriveNodeView(reactorDriveSchemaDb);
     const reactorDriveClient = new ReactorDriveClient({
       reactor: module.client,
       readModel: driveNodeView,
     });
 
-    clientModuleRef.current = module;
     return { module, reactorDriveClient };
   };
 
@@ -660,27 +636,23 @@ async function initServer(
     reactor: client,
     renown,
     port: serverPort,
-    /**
-     * When the switchboard built the reactor itself, kill it — that also
-     * drains the api via the shutdown hook the builder registered. When
-     * the caller passed in their own reactor, only dispose the api; the
-     * caller stops the reactor.
-     */
-    shutdown: async () => {
-      if (options.reactor) {
-        await apiRef.current?.dispose();
-        return;
-      }
-      const reactorModule = clientModuleRef.current?.reactorModule;
-      if (reactorModule) {
-        await reactorModule.reactor.kill().completed;
-      } else {
-        await apiRef.current?.dispose();
-      }
-    },
+    shutdown: () => api.dispose(),
   };
 }
 
+/**
+ * Boot the switchboard HTTP/GraphQL/MCP stack on top of a reactor.
+ *
+ * If `options.reactor` is provided, the switchboard reuses it instead of
+ * building its own — the caller then owns the reactor's lifecycle and is
+ * responsible for invoking `SwitchboardReactor.shutdown()` from their own
+ * teardown / SIGINT path. The switchboard will not reach into the caller's
+ * reactor; killing the reactor alone leaves the api/GraphQL/MCP resources
+ * dangling until the process exits.
+ *
+ * When `options.reactor` is omitted, the switchboard builds and owns the
+ * reactor, and `shutdown()` tears both down in one call.
+ */
 export const startSwitchboard = async (
   options: StartServerOptions = {},
 ): Promise<SwitchboardReactor> => {
@@ -747,6 +719,10 @@ export const startSwitchboard = async (
 };
 
 export * from "./types.js";
+export {
+  applySwitchboardReactorDefaults,
+  type SwitchboardReactorDefaultsOptions,
+} from "./builder-defaults.mjs";
 
 if (import.meta.main) {
   await startSwitchboard();
