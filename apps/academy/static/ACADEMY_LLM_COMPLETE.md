@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-05-21T17:02:10.019Z
+> Generated: 2026-05-21T17:03:34.846Z
 > Total Documents: 86
 > Source: https://powerhouse.academy/llms-full.txt
 
