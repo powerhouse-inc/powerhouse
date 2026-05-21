@@ -14,37 +14,37 @@ import { join } from "node:path";
  * don't pull in `hooks.ts`, which depends on `@powerhousedao/reactor-browser`
  * (a browser-only module that breaks Node-side spec tooling). */
 import appModuleSpec from "../document-models/app-module/app-module.json" with { type: "json" };
-import { actions as appModuleActions } from "../document-models/app-module/actions.js";
+import { actions as appModuleActions } from "../document-models/app-module/v1/actions.js";
 import {
   appModuleDocumentType,
   createAppModuleDocument,
   reducer as appModuleReducer,
   utils as appModuleUtils,
-} from "../document-models/app-module/gen/index.js";
+} from "../document-models/app-module/v1/gen/index.js";
 import documentEditorSpec from "../document-models/document-editor/document-editor.json" with { type: "json" };
-import { actions as documentEditorActions } from "../document-models/document-editor/actions.js";
+import { actions as documentEditorActions } from "../document-models/document-editor/v1/actions.js";
 import {
   createDocumentEditorDocument,
   documentEditorDocumentType,
   reducer as documentEditorReducer,
   utils as documentEditorUtils,
-} from "../document-models/document-editor/gen/index.js";
+} from "../document-models/document-editor/v1/gen/index.js";
 import processorModuleSpec from "../document-models/processor-module/processor-module.json" with { type: "json" };
-import { actions as processorModuleActions } from "../document-models/processor-module/actions.js";
+import { actions as processorModuleActions } from "../document-models/processor-module/v1/actions.js";
 import {
   createProcessorModuleDocument,
   processorModuleDocumentType,
   reducer as processorModuleReducer,
   utils as processorModuleUtils,
-} from "../document-models/processor-module/gen/index.js";
+} from "../document-models/processor-module/v1/gen/index.js";
 import subgraphModuleSpec from "../document-models/subgraph-module/subgraph-module.json" with { type: "json" };
-import { actions as subgraphModuleActions } from "../document-models/subgraph-module/actions.js";
+import { actions as subgraphModuleActions } from "../document-models/subgraph-module/v1/actions.js";
 import {
   createSubgraphModuleDocument,
   subgraphModuleDocumentType,
   reducer as subgraphModuleReducer,
   utils as subgraphModuleUtils,
-} from "../document-models/subgraph-module/gen/index.js";
+} from "../document-models/subgraph-module/v1/gen/index.js";
 
 export const SPECS_DIRNAME = "specs";
 

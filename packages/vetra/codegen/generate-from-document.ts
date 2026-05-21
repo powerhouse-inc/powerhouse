@@ -27,16 +27,16 @@ import type { Project } from "ts-morph";
 
 /* Import from gen/ directly to bypass the top-level barrel's `hooks.ts`,
  * which pulls in browser-only `@powerhousedao/reactor-browser`. */
-import type { AppModuleDocument } from "../document-models/app-module/gen/index.js";
+import type { AppModuleDocument } from "../document-models/app-module/v1/gen/index.js";
 import type {
   DocumentEditorDocument,
   DocumentTypeItem as EditorDocumentTypeItem,
-} from "../document-models/document-editor/gen/index.js";
+} from "../document-models/document-editor/v1/gen/index.js";
 import type {
   DocumentTypeItem as ProcessorDocumentTypeItem,
   ProcessorModuleDocument,
-} from "../document-models/processor-module/gen/index.js";
-import type { SubgraphModuleDocument } from "../document-models/subgraph-module/gen/index.js";
+} from "../document-models/processor-module/v1/gen/index.js";
+import type { SubgraphModuleDocument } from "../document-models/subgraph-module/v1/gen/index.js";
 import type { DocumentModelDocument } from "@powerhousedao/shared/document-model";
 
 export async function generateDocumentModelFromDocument(
