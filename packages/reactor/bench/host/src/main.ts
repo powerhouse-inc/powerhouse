@@ -32,6 +32,10 @@ import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import pg from "pg";
+import {
+  registerEventLoopInstrumentation,
+  type EventLoopInstrumentation,
+} from "./eventLoopInstrumentation.js";
 import { makeBenchSigner } from "./keypair.js";
 
 const PORT = parseInt(process.env.PORT ?? "8080", 10);
@@ -257,6 +261,8 @@ async function main(): Promise<void> {
   console.log(
     `[bench-host] starting (REACTOR_WORKERS=${REACTOR_WORKERS}, DB=${DB_HOST}:${DB_PORT}/${DB_NAME})`,
   );
+  const eventLoopInstrumentation: EventLoopInstrumentation =
+    registerEventLoopInstrumentation();
   const { signer } = await makeBenchSigner();
   const state = await buildReactor(signer);
   const server = await startHttp(state);
@@ -265,6 +271,7 @@ async function main(): Promise<void> {
     console.log(`[bench-host] received ${signal}, shutting down`);
     server.close();
     state.instrumentation.stop();
+    eventLoopInstrumentation.stop();
     try {
       const status = state.module.reactor.kill();
       await status.completed;
