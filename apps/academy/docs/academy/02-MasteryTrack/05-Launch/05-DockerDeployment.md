@@ -146,45 +146,39 @@ After starting, you can access:
 - **Connect**: http://localhost:3000
 - **Switchboard**: http://localhost:4000
 
-## Environment Variables
+## Configuring Connect at runtime
 
-### Connect Environment Variables
+Connect's runtime behavior is driven by `powerhouse.config.json` (the same file the build uses). For a Docker deployment you have three options:
 
-| Variable                | Description                                         | Default  |
-| ----------------------- | --------------------------------------------------- | -------- |
-| `PORT`                  | Port the server listens on                          | `3001`   |
-| `PH_CONNECT_BASE_PATH`  | Base URL path for the application                   | `/`      |
-| `PH_REGISTRY_PACKAGES`  | Comma-separated list of packages to load at startup | `""`     |
-| `PH_CONNECT_SENTRY_DSN` | Sentry DSN for error tracking                       | `""`     |
-| `PH_CONNECT_SENTRY_ENV` | Sentry environment name                             | `""`     |
-| `DATABASE_URL`          | PostgreSQL connection string                        | Required |
+1. **Mount your own `powerhouse.config.json`** as a Kubernetes ConfigMap / Secret (or a bind-mounted file) at `/var/www/html/project/powerhouse.config.json`. The SPA fetches it from `/powerhouse.config.json` on every page load, so post-deploy edits are visible after a refresh.
+2. **Set env vars on the container**. The entrypoint reads them at container start and seeds the dist `powerhouse.config.json` (set-if-absent — a mounted file's values always win).
+3. **Edit the file at build time** via `ph connect build --json '{...}'` or individual `--flag`s, baking the values into the image.
 
-#### Feature Flags
+For the full configuration model, precedence ladder, and the complete list of `connect.*` fields, see the [Configure Environment](./04-ConfigureEnvironment.md) guide.
 
-| Variable                                            | Description                        | Default   |
-| --------------------------------------------------- | ---------------------------------- | --------- |
-| `PH_CONNECT_DEFAULT_DRIVES_URL`                     | Default drives URL to load         | `""`      |
-| `PH_CONNECT_ENABLED_EDITORS`                        | Enabled editor types (`*` for all) | `"*"`     |
-| `PH_CONNECT_DISABLED_EDITORS`                       | Disabled editor types              | `""`      |
-| `PH_CONNECT_PUBLIC_DRIVES_ENABLED`                  | Enable public drives               | `"true"`  |
-| `PH_CONNECT_CLOUD_DRIVES_ENABLED`                   | Enable cloud drives                | `"true"`  |
-| `PH_CONNECT_LOCAL_DRIVES_ENABLED`                   | Enable local drives                | `"true"`  |
-| `PH_CONNECT_SEARCH_BAR_ENABLED`                     | Enable search bar                  | `"false"` |
-| `PH_CONNECT_DISABLE_ADD_PUBLIC_DRIVES`              | Disable adding public drives       | `"false"` |
-| `PH_CONNECT_DISABLE_ADD_CLOUD_DRIVES`               | Disable adding cloud drives        | `"false"` |
-| `PH_CONNECT_DISABLE_ADD_LOCAL_DRIVES`               | Disable adding local drives        | `"false"` |
-| `PH_CONNECT_DISABLE_DELETE_PUBLIC_DRIVES`           | Disable deleting public drives     | `"false"` |
-| `PH_CONNECT_DISABLE_DELETE_CLOUD_DRIVES`            | Disable deleting cloud drives      | `"false"` |
-| `PH_CONNECT_DISABLE_DELETE_LOCAL_DRIVES`            | Disable deleting local drives      | `"false"` |
-| `PH_CONNECT_HIDE_DOCUMENT_MODEL_SELECTION_SETTINGS` | Hide document model selection      | `"true"`  |
+### Connect container env vars
 
-#### Renown Authentication
+These are the env vars the connect Dockerfile / entrypoint still consumes. The runtime-configuration ones (drive sections, renown, base path, etc.) are listed in [Configure Environment](./04-ConfigureEnvironment.md#build-time-env-var-seeds) — they all behave as set-if-absent seeds at container start.
 
-| Variable                       | Description                       | Default                    |
-| ------------------------------ | --------------------------------- | -------------------------- |
-| `PH_CONNECT_RENOWN_URL`        | Renown authentication service URL | `"https://auth.renown.id"` |
-| `PH_CONNECT_RENOWN_NETWORK_ID` | Renown network identifier         | `"eip155"`                 |
-| `PH_CONNECT_RENOWN_CHAIN_ID`   | Renown chain ID                   | `1`                        |
+#### Container shape and secrets
+
+| Variable                | Description                                                                       | Default  |
+| ----------------------- | --------------------------------------------------------------------------------- | -------- |
+| `PORT`                  | Port the nginx server listens on                                                  | `3001`   |
+| `PH_CONNECT_BASE_PATH`  | Base URL path (consumed by nginx envsubst AND seeded into `connect.app.basePath`) | `/`      |
+| `PH_CONNECT_SENTRY_DSN` | Sentry DSN for error tracking                                                     | `""`     |
+| `PH_CONNECT_SENTRY_ENV` | Sentry environment name                                                           | `""`     |
+| `DATABASE_URL`          | PostgreSQL connection string (for Switchboard, not Connect)                       | Required |
+
+#### Renown authentication (seed into `connect.renown.*`)
+
+| Variable                       | JSON path                  | Default                   |
+| ------------------------------ | -------------------------- | ------------------------- |
+| `PH_CONNECT_RENOWN_URL`        | `connect.renown.url`       | `"https://www.renown.id"` |
+| `PH_CONNECT_RENOWN_NETWORK_ID` | `connect.renown.networkId` | `"eip155"`                |
+| `PH_CONNECT_RENOWN_CHAIN_ID`   | `connect.renown.chainId`   | `1`                       |
+
+For drive sections, default-drives URL, allow-add/allow-delete toggles, and the rest of the `connect.*` block, prefer editing `powerhouse.config.json` directly. The legacy env-var aliases (`PH_CONNECT_DEFAULT_DRIVES_URL`, `PH_CONNECT_PUBLIC_DRIVES_ENABLED`, `PH_CONNECT_DISABLE_ADD_*`, `PH_CONNECT_DISABLE_DELETE_*`, etc.) still work as set-if-absent seeds.
 
 ### Switchboard Environment Variables
 

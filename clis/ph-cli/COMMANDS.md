@@ -265,7 +265,7 @@ Expose the server to the network. Pass an IP (e.g. 0.0.0.0) to bind to a specifi
 #### Watch Timeout <br>
 Amount of time to wait before a file is considered changed<br><br>
 **usage:** `--watch-timeout <number>`<br>
-**env**: `PH_WATCH_TIMEOUT`<br>**default**: `300`
+**default**: `300`
 #### Https Key File <br>
 path to the ssl key file<br><br>
 **usage:** `--https-key-file <str>`<br>
@@ -390,7 +390,7 @@ Expose the server to the network. Pass an IP (e.g. 0.0.0.0) to bind to a specifi
 #### Watch Timeout <br>
 Amount of time to wait before a file is considered changed<br><br>
 **usage:** `--watch-timeout <number>`<br>
-**env**: `PH_WATCH_TIMEOUT`<br>**default**: `300`
+**default**: `300`
 
 ### flags
 #### Ignore Local <br>
@@ -487,6 +487,18 @@ Override connect.drives.sections.local.allowAdd.<br><br>
 Override connect.drives.sections.local.allowDelete.<br><br>
 **usage:** `--local-drives-allow-delete <value>`<br>
 
+#### Packages Registry <br>
+Override connect.packages.registryUrl.<br><br>
+**usage:** `--packages-registry <str>`<br>
+
+#### App Name <br>
+Override connect.branding.appName.<br><br>
+**usage:** `--app-name <str>`<br>
+
+#### Home Background <br>
+Override connect.branding.homeBackground. Pass an empty string ("") to set null.<br><br>
+**usage:** `--home-background <str>`<br>
+
 #### Base <br>
 Base path for the app<br><br>
 **usage:** `--base <str>`<br>
@@ -574,7 +586,7 @@ Expose the server to the network. Pass an IP (e.g. 0.0.0.0) to bind to a specifi
 #### Watch Timeout <br>
 Amount of time to wait before a file is considered changed<br><br>
 **usage:** `--watch-timeout <number>`<br>
-**env**: `PH_WATCH_TIMEOUT`<br>**default**: `300`
+**default**: `300`
 
 ### flags
 #### Ignore Local <br>

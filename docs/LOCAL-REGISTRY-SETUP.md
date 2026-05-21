@@ -348,11 +348,11 @@ curl http://localhost:8080/-/ping
 
 ### Connect
 
-| Variable                                | Description                                                                              |
-| --------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `PH_CONNECT_PACKAGES_REGISTRY`          | Registry URL. Overrides `powerhouse.config.json packageRegistryUrl`.                     |
-| `PH_PACKAGES`                           | Comma-separated package names to auto-load. Overrides `powerhouse.config.json packages`. |
-| `PH_CONNECT_EXTERNAL_PACKAGES_DISABLED` | Set to `true` to disable external package loading.                                       |
+| Variable                                | Description                                                                                                                                                     |
+| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PH_CONNECT_PACKAGES_REGISTRY`          | Registry URL. Overrides `powerhouse.config.json packageRegistryUrl`.                                                                                            |
+| `PH_PACKAGES`                           | Comma-separated package names to auto-load. Overrides `powerhouse.config.json packages`.                                                                        |
+| `PH_CONNECT_EXTERNAL_PACKAGES_DISABLED` | Set to `true` to disable external package loading. _Legacy env-var alias for `connect.packages.externalEnabled: false` in `powerhouse.config.json` (inverted)._ |
 
 ### Switchboard
 

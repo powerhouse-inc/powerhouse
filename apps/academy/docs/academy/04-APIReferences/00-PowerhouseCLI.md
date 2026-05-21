@@ -428,7 +428,6 @@ and real-time processing with a "Vetra" drive or connection to remote drives.
 
 **Watch Timeout** - Amount of time to wait before a file is considered changed - Usage: `--watch-timeout <number>`
 
-**Environment:** `PH_WATCH_TIMEOUT`
 **Default:** `300`
 **Https Key File** - path to the ssl key file - Usage: `--https-key-file <str>`
 
@@ -523,7 +522,6 @@ your project.
 
 **Watch Timeout** - Amount of time to wait before a file is considered changed - Usage: `--watch-timeout <number>`
 
-**Environment:** `PH_WATCH_TIMEOUT`
 **Default:** `300`
 
 
@@ -586,6 +584,12 @@ external packages included
 **Local Drives Allow Add** - Override connect.drives.sections.local.allowAdd. - Usage: `--local-drives-allow-add <value>`
 
 **Local Drives Allow Delete** - Override connect.drives.sections.local.allowDelete. - Usage: `--local-drives-allow-delete <value>`
+
+**Packages Registry** - Override connect.packages.registryUrl. - Usage: `--packages-registry <str>`
+
+**App Name** - Override connect.branding.appName. - Usage: `--app-name <str>`
+
+**Home Background** - Override connect.branding.homeBackground. Pass an empty string ("") to set null. - Usage: `--home-background <str>`
 
 **Base** - Base path for the app - Usage: `--base <str>`
 
@@ -660,7 +664,6 @@ NOTE: You must run `ph connect build` first
 
 **Watch Timeout** - Amount of time to wait before a file is considered changed - Usage: `--watch-timeout <number>`
 
-**Environment:** `PH_WATCH_TIMEOUT`
 **Default:** `300`
 
 
