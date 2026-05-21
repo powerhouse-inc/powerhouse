@@ -651,7 +651,11 @@ async function initServer(
  * dangling until the process exits.
  *
  * When `options.reactor` is omitted, the switchboard builds and owns the
- * reactor, and `shutdown()` tears both down in one call.
+ * reactor. `shutdown()` on the returned handle only drains the api (HTTP
+ * server, GraphQL, MCP, attachments); the reactor itself is torn down by
+ * its own signal handlers (`withSignalHandlers`), which call `kill()` and
+ * trigger the `withShutdownHook` chain that disposes the api. Programmatic
+ * full teardown isn't currently exposed — wire it via SIGINT/SIGTERM.
  */
 export const startSwitchboard = async (
   options: StartServerOptions = {},
