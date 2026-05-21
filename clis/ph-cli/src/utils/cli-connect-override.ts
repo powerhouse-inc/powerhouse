@@ -15,11 +15,9 @@
 // value.
 
 import type { PHConnectRuntimeConfig } from "@powerhousedao/shared/clis";
-import {
-  deepMerge,
-  parseDefaultDrivesUrl,
-} from "@powerhousedao/shared/connect";
-import type { ConnectBuildArgs } from "../types.js";
+import { deepMerge } from "@powerhousedao/shared/connect";
+import type { ConnectBuildArgs, ConnectStudioArgs } from "../types.js";
+import { parseDefaultDrivesUrl } from "./parse-default-drives.js";
 
 type PlainObject = Record<string, unknown>;
 
@@ -253,4 +251,38 @@ export function buildCliConnectOverride(args: ConnectBuildArgs): {
         );
 
   return { connectOverride, packageRegistryUrl };
+}
+
+/**
+ * Parallel of `buildCliConnectOverride` for `ph connect studio` / `ph vetra`.
+ * Studio only exposes the 4 commonArgs flags (`--base`, `--log-level`,
+ * `--default-drives-url`, `--drive-preserve-strategy`); each is gated through
+ * `wasFlagExplicitlyPassed` so cmd-ts defaults don't leak into the override.
+ *
+ * `callerOverride` is supplied by wrappers around studio (notably `ph vetra`,
+ * which sets default drives + preserveStrategy directly) and deep-merges on
+ * top of the user-flag override, so caller choices stick even when the user
+ * didn't type the corresponding flag.
+ */
+export function buildStudioConnectOverride(
+  args: ConnectStudioArgs,
+  callerOverride: PHConnectRuntimeConfig | undefined,
+): PHConnectRuntimeConfig | undefined {
+  const flagOverride = buildConnectFlagPatch({
+    basePath: wasFlagExplicitlyPassed("base")
+      ? args.connectBasePath
+      : undefined,
+    logLevel: wasFlagExplicitlyPassed("log-level") ? args.logLevel : undefined,
+    defaultDrivesUrl: wasFlagExplicitlyPassed("default-drives-url")
+      ? args.defaultDrivesUrl
+      : undefined,
+    drivesPreserveStrategy: wasFlagExplicitlyPassed("drive-preserve-strategy")
+      ? args.drivesPreserveStrategy
+      : undefined,
+  }) as PHConnectRuntimeConfig;
+
+  const hasFlag = Object.keys(flagOverride).length > 0;
+  if (!hasFlag) return callerOverride;
+  if (callerOverride === undefined) return flagOverride;
+  return deepMerge(flagOverride, callerOverride);
 }

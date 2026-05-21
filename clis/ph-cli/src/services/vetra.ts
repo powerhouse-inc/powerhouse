@@ -12,6 +12,7 @@ import {
   configureVetraGithubUrl,
   sleep,
 } from "../utils/configure-vetra-github-url.js";
+import { parseDefaultDrivesUrl } from "../utils/parse-default-drives.js";
 import { resolveSwitchboardPort } from "../utils/resolve-switchboard-port.js";
 import { runConnectStudio } from "./connect-studio.js";
 import { startSwitchboard } from "./switchboard.js";
@@ -281,13 +282,24 @@ export async function startVetra(args: VetraArgs) {
 
       const customViteLogger = createViteLogger(green);
 
+      // Programmatic override forwarded to the Connect runtime config —
+      // vetra always sets these regardless of what the user typed on the
+      // command line. We pass it as the explicit third arg to
+      // runConnectStudio so it survives the `wasFlagExplicitlyPassed`
+      // gating (the user didn't pass --default-drives-url; vetra is setting
+      // it itself).
+      const vetraDrivesOverride = {
+        drives: {
+          defaultDrives: parseDefaultDrivesUrl(
+            previewDriveUrl ? [driveUrl, previewDriveUrl].join(",") : driveUrl,
+          ),
+          preserveStrategy: "preserve-all" as const,
+        },
+      };
+
       await runConnectStudio(
         {
           ...args,
-          defaultDrivesUrl: previewDriveUrl
-            ? [driveUrl, previewDriveUrl].join(",")
-            : driveUrl,
-          drivesPreserveStrategy: "preserve-all",
           port: connectPort,
           disableLocalPackages,
           debug,
@@ -300,6 +312,7 @@ export async function startVetra(args: VetraArgs) {
           watchTimeout: watchTimeout,
         },
         customViteLogger,
+        vetraDrivesOverride,
       );
     }
   } catch (error) {

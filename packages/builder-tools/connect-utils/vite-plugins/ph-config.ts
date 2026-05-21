@@ -4,7 +4,6 @@ import type { Plugin } from "vite";
 import type { PowerhousePackage } from "@powerhousedao/config";
 import type { PHConnectRuntimeConfig } from "@powerhousedao/shared/clis";
 import {
-  applyEnvSeeding,
   buildRuntimeConfig,
   DEFAULT_CONNECT_CONFIG,
   deepMerge,
@@ -17,25 +16,17 @@ export type PhConfigPluginOptions = {
   connect?: PHConnectRuntimeConfig;
   /**
    * Project-wide package registry URL — the effective value (CLI override
-   * `??` env `??` source) the caller has already resolved. Copied verbatim
-   * into the emitted runtime config (no namespace change); the SPA reads
+   * `??` source) the caller has already resolved. Copied verbatim into the
+   * emitted runtime config (no namespace change); the SPA reads
    * `runtimeConfig.packageRegistryUrl` directly.
    */
   packageRegistryUrl?: string;
   /**
-   * CLI-supplied connect override (final merge layer, beats source + env).
+   * CLI-supplied connect override (final merge layer, beats source).
    * Forwarded from `ph connect build`'s `--json` + individual `--flag` parsing.
    * See clis/ph-cli/src/utils/cli-connect-override.ts.
    */
   cliConnectOverride?: PHConnectRuntimeConfig;
-  /**
-   * Explicitly-set runtime env vars (not schema defaults). Used to seed
-   * powerhouse.config.json fields when an env var is set and the field is
-   * absent from the source config. Defaults to `process.env`, but callers
-   * should pass a filtered map when `process.env` has been polluted with
-   * schema defaults (see vite-config.ts).
-   */
-  explicitRuntimeEnv?: Readonly<Record<string, string | undefined>>;
 };
 
 function readProjectPackageInfo(
@@ -61,24 +52,16 @@ export function phConfigPlugin(options: PhConfigPluginOptions): Plugin {
   const projectRoot = options.projectRoot ?? process.cwd();
   const localPackage = readProjectPackageInfo(projectRoot);
 
-  const { connect: seededConnect, seeded } = applyEnvSeeding(
-    options.connect ?? {},
-    options.explicitRuntimeEnv ?? process.env,
-  );
-
-  for (const report of seeded) {
-    console.warn(
-      `[ph-config] Seeded powerhouse.config.json connect.${report.path} from ${report.envVar}. ` +
-        `This env var is deprecated — set the field directly in powerhouse.config.json.`,
-    );
-  }
-
   // Precedence ladder (lowest → highest) for the emitted connect.* block:
   //   DEFAULT_CONNECT_CONFIG  (base — fills in any field nothing else supplied)
-  //     < env-var seeds       (legacy compat, applied above via applyEnvSeeding)
-  //     < source.connect      (user's hand-edited powerhouse.config.json, already on top of seeds)
-  //     < cliConnectOverride  (task 9: `ph connect build --json` + individual flags)
-  const withDefaults = deepMerge(DEFAULT_CONNECT_CONFIG, seededConnect);
+  //     < source.connect      (user's hand-edited powerhouse.config.json)
+  //     < cliConnectOverride  (`ph connect build --json` + individual flags)
+  //
+  // Env vars are NOT a layer in this ladder. The Connect SPA's runtime
+  // configuration is exclusively set via `powerhouse.config.json` or CLI
+  // overrides (`ph connect build --<field>` / `ph connect config --<field>`).
+  const sourceConnect = options.connect ?? {};
+  const withDefaults = deepMerge(DEFAULT_CONNECT_CONFIG, sourceConnect);
   const mergedConnect = options.cliConnectOverride
     ? deepMerge(withDefaults, options.cliConnectOverride)
     : withDefaults;

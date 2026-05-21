@@ -12,17 +12,20 @@ import {
 import { logger } from "document-model";
 import { getRuntimeConfig } from "./runtime-config.js";
 
-// KEEP env vars stay in env: sentry config, version stamps, ga tracking,
-// processor toggles, search/UI flags, etc. Anything NOT in the runtime
-// schema (CONNECT-CONFIG.md §0.4 + CONNECT-ENV-AUDIT.md §A) reads from env
-// at build-evaluation time, exactly as before.
+// KEEP env vars only: sentry config, version stamps, analytics toggles.
+// Anything in the Connect runtime schema (PHConnectRuntimeConfig) is read
+// from `runtime` below — env vars are NOT a layer for runtime values
+// anymore. To change a runtime value use `ph connect build --<field>`,
+// `ph connect config --<field>`, or edit `powerhouse.config.json` directly.
 export const env = loadRuntimeEnv({
   processEnv: import.meta.env,
 });
 
-// MIGRATE fields come from the runtime JSON, not env. start-connect.tsx's
-// top-level await guarantees the loader cache is warm by the time this
-// module evaluates, so getRuntimeConfig() resolves synchronously.
+// Runtime fields come from the JSON, not env. start-connect.tsx's top-level
+// await guarantees the loader cache is warm by the time this module
+// evaluates, so getRuntimeConfig() resolves synchronously. The cache merges
+// DEFAULT_CONNECT_CONFIG into whatever the file declared, so every leaf
+// under `runtime.*` is guaranteed defined.
 const runtime = getRuntimeConfig().connect;
 
 function getRouterBasenameFromBasePath(basePath: string) {
@@ -45,7 +48,7 @@ function getBuiltInDefaults(): Omit<
     isEditorReadModeEnabled: false,
     isExternalControlsEnabled: false,
     version: env.PH_CONNECT_VERSION,
-    logLevel: runtime.app?.logLevel ?? env.PH_CONNECT_LOG_LEVEL,
+    logLevel: runtime.app?.logLevel,
     requiresHardRefresh: true,
     warnOutdatedApp: false,
     studioMode: false,
@@ -54,9 +57,7 @@ function getBuiltInDefaults(): Omit<
     fileUploadOperationsChunkSize: 50,
     gaTrackingId: undefined,
     defaultDrivesUrl: runtime.drives?.defaultDrives?.[0]?.url,
-    drivesPreserveStrategy:
-      runtime.drives?.preserveStrategy ??
-      env.PH_CONNECT_DRIVES_PRESERVE_STRATEGY,
+    drivesPreserveStrategy: runtime.drives?.preserveStrategy,
     enabledEditors: undefined,
     disabledEditors: ["powerhouse/document-drive"],
 
@@ -69,45 +70,29 @@ function getBuiltInDefaults(): Omit<
     isRelationalProcessorsEnabled: true,
     isExternalRelationalProcessorsEnabled: true,
 
-    renownUrl: runtime.renown?.url ?? env.PH_CONNECT_RENOWN_URL,
-    renownNetworkId:
-      runtime.renown?.networkId ?? env.PH_CONNECT_RENOWN_NETWORK_ID,
-    renownChainId: runtime.renown?.chainId ?? env.PH_CONNECT_RENOWN_CHAIN_ID,
+    renownUrl: runtime.renown?.url,
+    renownNetworkId: runtime.renown?.networkId,
+    renownChainId: runtime.renown?.chainId,
     sentryRelease: env.PH_CONNECT_SENTRY_RELEASE,
     sentryDsn: env.PH_CONNECT_SENTRY_DSN,
     sentryEnv: env.PH_CONNECT_SENTRY_ENV,
     isDiffAnalyticsEnabled: env.PH_CONNECT_DIFF_ANALYTICS_ENABLED,
     isDriveAnalyticsEnabled: env.PH_CONNECT_DRIVE_ANALYTICS_ENABLED,
-    isPublicDrivesEnabled:
-      runtime.drives?.sections?.remote?.enabled ??
-      env.PH_CONNECT_PUBLIC_DRIVES_ENABLED,
+    isPublicDrivesEnabled: runtime.drives?.sections?.remote?.enabled,
     isCloudDrivesEnabled: runtime.drives?.sections?.remote?.enabled ?? true,
-    isLocalDrivesEnabled:
-      runtime.drives?.sections?.local?.enabled ??
-      env.PH_CONNECT_LOCAL_DRIVES_ENABLED,
+    isLocalDrivesEnabled: runtime.drives?.sections?.local?.enabled,
     isSentryTracingEnabled: env.PH_CONNECT_SENTRY_TRACING_ENABLED,
     isDocumentModelSelectionSettingsEnabled: false,
-    isAddDriveEnabled:
-      runtime.drives?.allowAddDrive ?? !env.PH_CONNECT_DISABLE_ADD_DRIVE,
-    isAddPublicDrivesEnabled:
-      runtime.drives?.sections?.remote?.allowAdd ??
-      !env.PH_CONNECT_DISABLE_ADD_PUBLIC_DRIVES,
-    isDeletePublicDrivesEnabled:
-      runtime.drives?.sections?.remote?.allowDelete ??
-      !env.PH_CONNECT_DISABLE_DELETE_PUBLIC_DRIVES,
+    isAddDriveEnabled: runtime.drives?.allowAddDrive,
+    isAddPublicDrivesEnabled: runtime.drives?.sections?.remote?.allowAdd,
+    isDeletePublicDrivesEnabled: runtime.drives?.sections?.remote?.allowDelete,
     isAddCloudDrivesEnabled: runtime.drives?.sections?.remote?.allowAdd ?? true,
     isDeleteCloudDrivesEnabled:
       runtime.drives?.sections?.remote?.allowDelete ?? true,
-    isAddLocalDrivesEnabled:
-      runtime.drives?.sections?.local?.allowAdd ??
-      !env.PH_CONNECT_DISABLE_ADD_LOCAL_DRIVES,
-    isDeleteLocalDrivesEnabled:
-      runtime.drives?.sections?.local?.allowDelete ??
-      !env.PH_CONNECT_DISABLE_DELETE_LOCAL_DRIVES,
+    isAddLocalDrivesEnabled: runtime.drives?.sections?.local?.allowAdd,
+    isDeleteLocalDrivesEnabled: runtime.drives?.sections?.local?.allowDelete,
     isAnalyticsDatabaseWorkerEnabled: false,
-    isExternalPackagesEnabled:
-      runtime.packages?.externalEnabled ??
-      !env.PH_CONNECT_EXTERNAL_PACKAGES_DISABLED,
+    isExternalPackagesEnabled: runtime.packages?.externalEnabled,
   };
 }
 
@@ -148,10 +133,12 @@ export const defaultPHAppConfig: PHAppConfig = {
   isDragAndDropEnabled: phGlobalConfig.isDragAndDropEnabled,
 };
 
-// Set log level from the resolved runtime config (with env fallback for the
-// boot window between schema-default and operator override).
-const RESOLVED_LOG_LEVEL = runtime.app?.logLevel ?? env.PH_CONNECT_LOG_LEVEL;
-setLogLevel(RESOLVED_LOG_LEVEL);
+// Set log level from the runtime config (DEFAULT_CONNECT_CONFIG provides a
+// fallback, so this is always defined).
+const RESOLVED_LOG_LEVEL = runtime.app?.logLevel;
+if (RESOLVED_LOG_LEVEL) {
+  setLogLevel(RESOLVED_LOG_LEVEL);
+}
 logger.debug("Setting log level to @level.", RESOLVED_LOG_LEVEL);
 
 // Normalize the base path to ensure it starts and ends with a forward slash
@@ -177,9 +164,7 @@ export const connectConfig = {
   warnOutdatedApp: false,
   appVersionCheckInterval: 60 * 60 * 1000,
   routerBasename: PH_CONNECT_BASE_PATH,
-  externalPackagesEnabled:
-    runtime.packages?.externalEnabled ??
-    !env.PH_CONNECT_EXTERNAL_PACKAGES_DISABLED,
+  externalPackagesEnabled: runtime.packages?.externalEnabled,
   processors: {
     enabled: true,
     externalProcessorsEnabled: true,
@@ -197,9 +182,9 @@ export const connectConfig = {
     externalProcessorsEnabled: true,
   },
   renown: {
-    url: runtime.renown?.url ?? env.PH_CONNECT_RENOWN_URL,
-    networkId: runtime.renown?.networkId ?? env.PH_CONNECT_RENOWN_NETWORK_ID,
-    chainId: runtime.renown?.chainId ?? env.PH_CONNECT_RENOWN_CHAIN_ID,
+    url: runtime.renown?.url,
+    networkId: runtime.renown?.networkId,
+    chainId: runtime.renown?.chainId,
   },
   sentry: {
     release: env.PH_CONNECT_SENTRY_RELEASE,
@@ -212,33 +197,18 @@ export const connectConfig = {
     showDocumentModelSelectionSetting: false,
   },
   drives: {
-    addDriveEnabled:
-      runtime.drives?.allowAddDrive ?? !env.PH_CONNECT_DISABLE_ADD_DRIVE,
-    preserveStrategy:
-      runtime.drives?.preserveStrategy ??
-      env.PH_CONNECT_DRIVES_PRESERVE_STRATEGY,
+    addDriveEnabled: runtime.drives?.allowAddDrive,
+    preserveStrategy: runtime.drives?.preserveStrategy,
     sections: {
       LOCAL: {
-        enabled:
-          runtime.drives?.sections?.local?.enabled ??
-          env.PH_CONNECT_LOCAL_DRIVES_ENABLED,
-        allowAdd:
-          runtime.drives?.sections?.local?.allowAdd ??
-          !env.PH_CONNECT_DISABLE_ADD_LOCAL_DRIVES,
-        allowDelete:
-          runtime.drives?.sections?.local?.allowDelete ??
-          !env.PH_CONNECT_DISABLE_DELETE_LOCAL_DRIVES,
+        enabled: runtime.drives?.sections?.local?.enabled,
+        allowAdd: runtime.drives?.sections?.local?.allowAdd,
+        allowDelete: runtime.drives?.sections?.local?.allowDelete,
       },
       PUBLIC: {
-        enabled:
-          runtime.drives?.sections?.remote?.enabled ??
-          env.PH_CONNECT_PUBLIC_DRIVES_ENABLED,
-        allowAdd:
-          runtime.drives?.sections?.remote?.allowAdd ??
-          !env.PH_CONNECT_DISABLE_ADD_PUBLIC_DRIVES,
-        allowDelete:
-          runtime.drives?.sections?.remote?.allowDelete ??
-          !env.PH_CONNECT_DISABLE_DELETE_PUBLIC_DRIVES,
+        enabled: runtime.drives?.sections?.remote?.enabled,
+        allowAdd: runtime.drives?.sections?.remote?.allowAdd,
+        allowDelete: runtime.drives?.sections?.remote?.allowDelete,
       },
     },
   },

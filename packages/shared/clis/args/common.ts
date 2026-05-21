@@ -95,7 +95,6 @@ export const disableLocalPackages = flag({
   long: "ignore-local",
   description: "Do not load local packages from this project",
   defaultValue: () => false,
-  env: "PH_DISABLE_LOCAL_PACKAGE" as const,
 });
 
 export const httpsKeyFile = option({
@@ -159,7 +158,6 @@ export const defaultDrivesUrl = option({
   type: optional(string),
   long: "default-drives-url",
   description: "The default drives url to use in connect",
-  env: "PH_CONNECT_DEFAULT_DRIVES_URL" as const,
   defaultValue: () => "",
 });
 
@@ -176,7 +174,6 @@ export const connectBasePath = option({
   long: "base",
   type: string,
   description: "Base path for the app",
-  env: "PH_CONNECT_BASE_PATH" as const,
   defaultValue: () => "/",
 });
 
@@ -186,7 +183,6 @@ export const drivesPreserveStrategy = option({
   description: "The preservation strategy to use on default drives",
   defaultValue: () => "preserve-by-url-and-detach" as const,
   defaultValueIsSerializable: true,
-  env: "PH_CONNECT_DRIVES_PRESERVE_STRATEGY" as const,
 });
 
 export const force = flag({

@@ -428,7 +428,6 @@ and real-time processing with a "Vetra" drive or connection to remote drives.
 
 **Base** - Base path for the app - Usage: `--base <str>`
 
-**Environment:** `PH_CONNECT_BASE_PATH`
 **Log Level** - Log level for the application - Usage: `--log-level <value>`
 
 **Environment:** `PH_CONNECT_LOG_LEVEL`
@@ -441,10 +440,8 @@ and real-time processing with a "Vetra" drive or connection to remote drives.
 **Environment:** `PH_LOCAL_PACKAGE`
 **Default Drives Url** - The default drives url to use in connect - Usage: `--default-drives-url <str>`
 
-**Environment:** `PH_CONNECT_DEFAULT_DRIVES_URL`
 **Drive Preserve Strategy** - The preservation strategy to use on default drives - Usage: `--drive-preserve-strategy <value>`
 
-**Environment:** `PH_CONNECT_DRIVES_PRESERVE_STRATEGY`
 **Default:** `preserve-by-url-and-detach`
 **Host** - Expose the server to the network. Pass an IP (e.g. 0.0.0.0) to bind to a specific address. - Usage: `--host <str>`
 
@@ -475,7 +472,6 @@ and real-time processing with a "Vetra" drive or connection to remote drives.
 **Default:** `false`
 **Ignore Local** - Do not load local packages from this project - Usage: `--ignore-local`
 
-**Environment:** `PH_DISABLE_LOCAL_PACKAGE`
 **Force** - Force dep pre-optimization regardless of whether deps have changed. - Usage: `--force`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
@@ -522,7 +518,6 @@ your project.
 **Default:** `3000`
 **Base** - Base path for the app - Usage: `--base <str>`
 
-**Environment:** `PH_CONNECT_BASE_PATH`
 **Log Level** - Log level for the application - Usage: `--log-level <value>`
 
 **Environment:** `PH_CONNECT_LOG_LEVEL`
@@ -535,10 +530,8 @@ your project.
 **Environment:** `PH_LOCAL_PACKAGE`
 **Default Drives Url** - The default drives url to use in connect - Usage: `--default-drives-url <str>`
 
-**Environment:** `PH_CONNECT_DEFAULT_DRIVES_URL`
 **Drive Preserve Strategy** - The preservation strategy to use on default drives - Usage: `--drive-preserve-strategy <value>`
 
-**Environment:** `PH_CONNECT_DRIVES_PRESERVE_STRATEGY`
 **Default:** `preserve-by-url-and-detach`
 **Host** - Expose the server to the network. Pass an IP (e.g. 0.0.0.0) to bind to a specific address. - Usage: `--host <str>`
 
@@ -552,7 +545,6 @@ your project.
 ### Flags
 **Ignore Local** - Do not load local packages from this project - Usage: `--ignore-local`
 
-**Environment:** `PH_DISABLE_LOCAL_PACKAGE`
 **Force** - Force dep pre-optimization regardless of whether deps have changed. - Usage: `--force`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
@@ -615,7 +607,6 @@ external packages included
 
 **Base** - Base path for the app - Usage: `--base <str>`
 
-**Environment:** `PH_CONNECT_BASE_PATH`
 **Log Level** - Log level for the application - Usage: `--log-level <value>`
 
 **Environment:** `PH_CONNECT_LOG_LEVEL`
@@ -628,10 +619,8 @@ external packages included
 **Environment:** `PH_LOCAL_PACKAGE`
 **Default Drives Url** - The default drives url to use in connect - Usage: `--default-drives-url <str>`
 
-**Environment:** `PH_CONNECT_DEFAULT_DRIVES_URL`
 **Drive Preserve Strategy** - The preservation strategy to use on default drives - Usage: `--drive-preserve-strategy <value>`
 
-**Environment:** `PH_CONNECT_DRIVES_PRESERVE_STRATEGY`
 **Default:** `preserve-by-url-and-detach`
 
 
@@ -640,7 +629,6 @@ external packages included
 ### Flags
 **Ignore Local** - Do not load local packages from this project - Usage: `--ignore-local`
 
-**Environment:** `PH_DISABLE_LOCAL_PACKAGE`
 **Force** - Force dep pre-optimization regardless of whether deps have changed. - Usage: `--force`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
@@ -664,7 +652,6 @@ NOTE: You must run `ph connect build` first
 **Default:** `.ph/connect-build/dist/`
 **Base** - Base path for the app - Usage: `--base <str>`
 
-**Environment:** `PH_CONNECT_BASE_PATH`
 **Log Level** - Log level for the application - Usage: `--log-level <value>`
 
 **Environment:** `PH_CONNECT_LOG_LEVEL`
@@ -677,10 +664,8 @@ NOTE: You must run `ph connect build` first
 **Environment:** `PH_LOCAL_PACKAGE`
 **Default Drives Url** - The default drives url to use in connect - Usage: `--default-drives-url <str>`
 
-**Environment:** `PH_CONNECT_DEFAULT_DRIVES_URL`
 **Drive Preserve Strategy** - The preservation strategy to use on default drives - Usage: `--drive-preserve-strategy <value>`
 
-**Environment:** `PH_CONNECT_DRIVES_PRESERVE_STRATEGY`
 **Default:** `preserve-by-url-and-detach`
 **Host** - Expose the server to the network. Pass an IP (e.g. 0.0.0.0) to bind to a specific address. - Usage: `--host <str>`
 
@@ -694,7 +679,6 @@ NOTE: You must run `ph connect build` first
 ### Flags
 **Ignore Local** - Do not load local packages from this project - Usage: `--ignore-local`
 
-**Environment:** `PH_DISABLE_LOCAL_PACKAGE`
 **Force** - Force dep pre-optimization regardless of whether deps have changed. - Usage: `--force`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
@@ -883,7 +867,6 @@ models, processors, and real-time updates.
 
 **Ignore Local** - Do not load local packages from this project - Usage: `--ignore-local`
 
-**Environment:** `PH_DISABLE_LOCAL_PACKAGE`
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Use Identity** - enable identity using keypair from ph login (uses ~/.ph/keypair.json) - Usage: `--use-identity`

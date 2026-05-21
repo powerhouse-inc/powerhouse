@@ -1,10 +1,6 @@
 import type { PowerhouseConfig } from "@powerhousedao/config";
 import { getConfig } from "@powerhousedao/config/node";
-import {
-  loadConnectEnv,
-  loadRuntimeEnvWithExplicit,
-  setConnectEnv,
-} from "@powerhousedao/shared/connect";
+import { loadConnectEnv, setConnectEnv } from "@powerhousedao/shared/connect";
 import tailwind from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { realpathSync } from "node:fs";
@@ -192,12 +188,8 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
   const mode = options.mode;
   const envDir = options.envDir ?? options.dirname;
   const fileEnv = loadEnv(mode, envDir, "PH_");
-  const { explicit: explicitRuntimeEnv } = loadRuntimeEnvWithExplicit({
-    processEnv: process.env,
-    fileEnv,
-  });
 
-  // Load and validate environment with priority: process.env > options > fileEnv > defaults
+  // Load and validate environment with priority: process.env > fileEnv > defaults
   const env = loadConnectEnv({
     processEnv: process.env,
     fileEnv,
@@ -285,9 +277,11 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     );
   }
 
-  // hide warnings unless LOG_LEVEL is set to debug
+  // hide warnings unless LOG_LEVEL is set to debug, or the source config
+  // declares connect.app.logLevel = "debug"
   const isDebug =
-    process.env.LOG_LEVEL === "debug" || env.PH_CONNECT_LOG_LEVEL === "debug";
+    process.env.LOG_LEVEL === "debug" ||
+    phConfig.connect?.app?.logLevel === "debug";
   const customLogger = isDebug
     ? undefined
     : viteLogger({
@@ -366,13 +360,6 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
         connect: phConfig.connect,
         packageRegistryUrl: phPackageRegistryUrl ?? undefined,
         cliConnectOverride: options.cliConnectOverride,
-        // Pass only explicitly-set runtime env vars (not schema defaults) so
-        // env→file seeding only fires for values the operator actually set.
-        // setConnectEnv(env) above writes schema defaults into process.env,
-        // which would otherwise cause defaulted values to seed the file.
-        explicitRuntimeEnv: Object.fromEntries(
-          Object.entries(explicitRuntimeEnv).map(([k, v]) => [k, String(v)]),
-        ),
       }),
       phBundledPackagesPlugin({
         packages: localPackagesFromConfig,

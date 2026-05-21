@@ -2,12 +2,10 @@ import { getConnectBaseViteConfig } from "@powerhousedao/builder-tools";
 import type { InlineConfig } from "vite";
 import { mergeConfig, preview } from "vite";
 import type { ConnectPreviewArgs } from "../types.js";
-import { assignEnvVars } from "../utils/assign-env-vars.js";
 
 export async function runConnectPreview(args: ConnectPreviewArgs) {
   const {
     outDir,
-    connectBasePath,
     port,
     host,
     open,
@@ -16,8 +14,6 @@ export async function runConnectPreview(args: ConnectPreviewArgs) {
     printUrls,
     bindCLIShortcuts,
   } = args;
-
-  assignEnvVars(args);
 
   const mode = "production";
 

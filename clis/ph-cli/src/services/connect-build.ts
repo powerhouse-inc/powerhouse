@@ -5,13 +5,11 @@ import { join } from "node:path";
 import type { InlineConfig } from "vite";
 import { build, mergeConfig } from "vite";
 import type { ConnectBuildArgs } from "../types.js";
-import { assignEnvVars } from "../utils/assign-env-vars.js";
 import { buildCliConnectOverride } from "../utils/cli-connect-override.js";
 import { runBuild } from "./build.js";
 
 export async function runConnectBuild(args: ConnectBuildArgs) {
   const { outDir, debug } = args;
-  assignEnvVars(args);
 
   const mode = "production";
   const dirname = process.cwd();
