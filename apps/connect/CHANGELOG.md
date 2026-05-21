@@ -1,3 +1,21 @@
+## 6.0.0-dev.257 (2026-05-21)
+
+### 🚀 Features
+
+- **connect:** remount editor on package version bump ([4fe72d93f](https://github.com/powerhouse-inc/powerhouse/commit/4fe72d93f))
+- **connect:** subscribe to /__packages SSE for live package updates ([5cb41a7e4](https://github.com/powerhouse-inc/powerhouse/commit/5cb41a7e4))
+- **vetra:** moved schema projection to ph-rupert-cli ([49f627e7b](https://github.com/powerhouse-inc/powerhouse/commit/49f627e7b))
+- **vetra,ph-cli:** add @powerhousedao/vetra/codegen subexport for agent-driven codegen ([9689be87e](https://github.com/powerhouse-inc/powerhouse/commit/9689be87e))
+
+### 🩹 Fixes
+
+- address PR review for connect package-manager + vetra specPath doc ([4f330f16e](https://github.com/powerhouse-inc/powerhouse/commit/4f330f16e))
+- **connect:** version-aware /__packages diff with toasts and refetch ([36f2e641d](https://github.com/powerhouse-inc/powerhouse/commit/36f2e641d))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.256 (2026-05-21)
 
 ### 🩹 Fixes

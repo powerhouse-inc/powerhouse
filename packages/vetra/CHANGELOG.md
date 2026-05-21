@@ -1,3 +1,21 @@
+## 6.0.0-dev.257 (2026-05-21)
+
+### 🚀 Features
+
+- **spec:** reject invalid actions atomically in addActions ([c12a4d6c5](https://github.com/powerhouse-inc/powerhouse/commit/c12a4d6c5))
+- **vetra:** moved schema projection to ph-rupert-cli ([49f627e7b](https://github.com/powerhouse-inc/powerhouse/commit/49f627e7b))
+- **vetra,ph-cli:** add @powerhousedao/vetra/codegen subexport for agent-driven codegen ([9689be87e](https://github.com/powerhouse-inc/powerhouse/commit/9689be87e))
+
+### 🩹 Fixes
+
+- **vetra:** repo-wide typecheck — keep ts-morph external + use existing types ([10f0a8488](https://github.com/powerhouse-inc/powerhouse/commit/10f0a8488))
+- address PR review for connect package-manager + vetra specPath doc ([4f330f16e](https://github.com/powerhouse-inc/powerhouse/commit/4f330f16e))
+- **vetra:** update codegen imports to v1 document-model layout ([ecdc2b23e](https://github.com/powerhouse-inc/powerhouse/commit/ecdc2b23e))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.256 (2026-05-21)
 
 ### 🩹 Fixes

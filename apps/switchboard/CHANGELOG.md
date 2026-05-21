@@ -1,3 +1,15 @@
+## 6.0.0-dev.257 (2026-05-21)
+
+### 🚀 Features
+
+- **switchboard:** accept caller-provided reactor + expose shutdown ([1e0958656](https://github.com/powerhouse-inc/powerhouse/commit/1e0958656))
+- **vetra:** moved schema projection to ph-rupert-cli ([49f627e7b](https://github.com/powerhouse-inc/powerhouse/commit/49f627e7b))
+- **vetra,ph-cli:** add @powerhousedao/vetra/codegen subexport for agent-driven codegen ([9689be87e](https://github.com/powerhouse-inc/powerhouse/commit/9689be87e))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.256 (2026-05-21)
 
 ### 🩹 Fixes
