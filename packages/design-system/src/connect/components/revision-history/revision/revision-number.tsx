@@ -27,7 +27,7 @@ export function RevisionNumber(props: RevisionNumberProps) {
           Revision {revisionNumber}.
           <a>
             <Icon
-              className="cursor-pointer text-slate-100 dark:text-gray-500"
+              className="cursor-pointer text-slate-100 dark:text-slate-500"
               name="Ellipsis"
               size={14}
             />

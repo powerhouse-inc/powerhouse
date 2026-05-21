@@ -31,7 +31,7 @@ const TooltipContent = forwardRef<
         // Base styles
         "z-50 overflow-hidden rounded-md text-sm",
         // Colors & Border
-        "border border-gray-200 bg-white text-gray-900 dark:border-gray-900 dark:bg-slate-900 dark:text-gray-200",
+        "border border-gray-200 bg-white text-gray-900 dark:border-slate-900 dark:bg-slate-900 dark:text-slate-200",
         // Padding & Shadow
         "px-3 py-1.5 shadow-md",
         // Animations

@@ -10,7 +10,7 @@ const counterVariants = {
 };
 
 const maxLengthVariants = {
-  normal: "text-gray-300 dark:text-gray-700",
+  normal: "text-gray-300 dark:text-slate-700",
   warning: "text-yellow-400 dark:text-yellow-900",
   error: "text-red-400 dark:text-red-900",
 };

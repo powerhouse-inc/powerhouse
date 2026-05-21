@@ -41,7 +41,7 @@ export const SelectedContent: React.FC<SelectedContentProps> = ({
         )}
       >
         {placeholder && (
-          <span className="text-sm/5 font-normal text-gray-600 dark:text-gray-500">
+          <span className="text-sm/5 font-normal text-gray-600 dark:text-slate-500">
             {placeholder}
           </span>
         )}
@@ -49,13 +49,13 @@ export const SelectedContent: React.FC<SelectedContentProps> = ({
           <Icon
             name="CaretSort"
             size={16}
-            className="cursor-pointer text-gray-700 dark:text-gray-400"
+            className="cursor-pointer text-gray-700 dark:text-slate-400"
           />
         ) : (
           <Icon
             name="ChevronDown"
             size={16}
-            className="cursor-pointer text-gray-700 dark:text-gray-400"
+            className="cursor-pointer text-gray-700 dark:text-slate-400"
           />
         )}
       </div>
@@ -66,7 +66,7 @@ export const SelectedContent: React.FC<SelectedContentProps> = ({
     <div className="flex w-full items-center justify-between gap-2">
       <div
         className={cn(
-          "max-w-full truncate text-gray-900 dark:text-gray-50",
+          "max-w-full truncate text-gray-900 dark:text-slate-50",
           !multiple && "flex items-center gap-2",
         )}
       >
@@ -107,7 +107,7 @@ export const SelectedContent: React.FC<SelectedContentProps> = ({
             <Icon
               name="XmarkLight"
               size={16}
-              className="cursor-pointer text-gray-700 dark:text-gray-400"
+              className="cursor-pointer text-gray-700 dark:text-slate-400"
             />
           </div>
         )}
@@ -115,13 +115,13 @@ export const SelectedContent: React.FC<SelectedContentProps> = ({
           <Icon
             name="CaretSort"
             size={16}
-            className="cursor-pointer text-gray-700 dark:text-gray-400"
+            className="cursor-pointer text-gray-700 dark:text-slate-400"
           />
         ) : (
           <Icon
             name="ChevronDown"
             size={16}
-            className="cursor-pointer text-gray-700 dark:text-gray-400"
+            className="cursor-pointer text-gray-700 dark:text-slate-400"
           />
         )}
       </div>

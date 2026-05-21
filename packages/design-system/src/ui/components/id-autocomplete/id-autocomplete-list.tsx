@@ -83,7 +83,7 @@ const IdAutocompleteList: React.FC<IdAutocompleteListProps> = ({
               onSelect={() => toggleOption?.(opt.value)}
               className={cn(
                 "h-full cursor-pointer border-y-0 p-0",
-                "data-[selected=true]:bg-gray-100 dark:data-[selected=true]:bg-gray-900",
+                "data-[selected=true]:bg-gray-100 dark:data-[selected=true]:bg-slate-900",
               )}
               role="option"
               aria-selected={isSelected}

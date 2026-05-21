@@ -156,7 +156,7 @@ const IdAutocompleteInputContainer = React.forwardRef<
             <Icon
               name="Reload"
               size={16}
-              className={cn("animate-spin text-gray-500 dark:text-gray-600")}
+              className={cn("animate-spin text-gray-500 dark:text-slate-600")}
             />
           )}
           {haveFetchError && (
@@ -183,7 +183,7 @@ const IdAutocompleteInputContainer = React.forwardRef<
                         setTimeout(() => setHasCopied(false), 2000);
                       })
                       .catch((error) => {
-                        console.error("Failed to copy value: ", error);
+                        console.error("Failed to copy value:", error);
                       });
                   }}
                   className={cn(
@@ -195,7 +195,7 @@ const IdAutocompleteInputContainer = React.forwardRef<
                   <Icon
                     name="Copy"
                     size={16}
-                    className={cn("text-gray-500 dark:text-gray-600")}
+                    className={cn("text-gray-500 dark:text-slate-600")}
                   />
                 </button>
               </Tooltip>

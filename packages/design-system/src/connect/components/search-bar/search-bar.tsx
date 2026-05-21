@@ -52,7 +52,7 @@ export const ConnectSearchBar: React.FC<ConnectSearchBarProps> = (props) => {
     <FilterItem className="gap-x-1" item={selectedItemFilter} />
   ) : (
     filterLabel && (
-      <div className="mr-2 text-sm font-semibold text-slate-200 dark:text-gray-400">
+      <div className="mr-2 text-sm font-semibold text-slate-200 dark:text-slate-400">
         {filterLabel}
       </div>
     )
@@ -67,7 +67,7 @@ export const ConnectSearchBar: React.FC<ConnectSearchBarProps> = (props) => {
       <Icon className="mr-3 text-gray-600 dark:text-slate-200" name="Search" />
       <input
         className={twMerge(
-          "flex h-[52px] min-w-0 flex-1 items-center rounded-xl border border-gray-200 bg-gray-50 px-4 text-sm text-slate-200 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-gray-400",
+          "flex h-[52px] min-w-0 flex-1 items-center rounded-xl border border-gray-200 bg-gray-50 px-4 text-sm text-slate-200 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400",
         )}
         onChange={handleChange}
         placeholder={placeholder}

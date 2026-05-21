@@ -20,7 +20,7 @@ export function LocationInfo(props: LocationInfoProps) {
       {locationInfo.icon}
       <div>
         <p>{locationInfo.title}</p>
-        <p className="text-xs text-slate-200 dark:text-gray-400">
+        <p className="text-xs text-slate-200 dark:text-slate-400">
           {locationInfo.description}
         </p>
       </div>
