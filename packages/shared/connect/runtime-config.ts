@@ -7,6 +7,7 @@ import type {
 export type RuntimePowerhouseConfig = {
   schemaVersion: 2;
   packages: PowerhousePackage[];
+  packageRegistryUrl?: string;
   localPackage: { name: string; version: string } | null;
   connect: PHConnectRuntimeConfig;
 };
@@ -53,13 +54,20 @@ export const DEFAULT_CONNECT_CONFIG: PHConnectRuntimeConfig = {
 };
 
 export function buildRuntimeConfig(
-  source: Pick<PowerhouseConfig, "packages" | "connect">,
+  source: Pick<PowerhouseConfig, "packages" | "connect" | "packageRegistryUrl">,
   projectInfo: { name: string; version: string } | null,
 ): RuntimePowerhouseConfig {
-  return {
+  const result: RuntimePowerhouseConfig = {
     schemaVersion: 2,
     packages: source.packages ?? [],
     localPackage: projectInfo,
     connect: source.connect ?? {},
   };
+  if (
+    typeof source.packageRegistryUrl === "string" &&
+    source.packageRegistryUrl !== ""
+  ) {
+    result.packageRegistryUrl = source.packageRegistryUrl;
+  }
+  return result;
 }

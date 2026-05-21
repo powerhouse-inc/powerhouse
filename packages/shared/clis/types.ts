@@ -64,7 +64,6 @@ export type PHConnectApp = {
 
 export type PHConnectPackages = {
   externalEnabled?: boolean;
-  registryUrl?: string;
 };
 
 export type PHConnectRenown = {

@@ -222,8 +222,13 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
 
   const phPackages = envPhPackages ?? packagesFromConfig;
 
+  // Precedence (highest → lowest): `ph connect build --packages-registry`
+  // CLI override > source-config `packageRegistryUrl`. The resolved value
+  // flows both into the CSP header (script-src allowance for the registry
+  // CDN) and into the emitted runtime config so the SPA reads the same
+  // value.
   const phPackageRegistryUrl =
-    env.PH_CONNECT_PACKAGES_REGISTRY ?? phConfig.packageRegistryUrl ?? null;
+    options.cliPackageRegistryUrl ?? phConfig.packageRegistryUrl ?? null;
 
   const authToken = env.PH_SENTRY_AUTH_TOKEN;
   const org = env.PH_SENTRY_ORG;
@@ -359,6 +364,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
         packages: phPackages,
         projectRoot: options.dirname,
         connect: phConfig.connect,
+        packageRegistryUrl: phPackageRegistryUrl ?? undefined,
         cliConnectOverride: options.cliConnectOverride,
         // Pass only explicitly-set runtime env vars (not schema defaults) so
         // env→file seeding only fires for values the operator actually set.

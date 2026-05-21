@@ -242,9 +242,7 @@ export async function createReactor(localPackage?: DocumentModelLib) {
   // initialize package manager
   const packageManager = new BrowserPackageManager(
     phGlobalConfig.routerBasename ?? "",
-    typeof PH_PACKAGE_REGISTRY_URL === "undefined"
-      ? null
-      : PH_PACKAGE_REGISTRY_URL,
+    runtimeConfig.packageRegistryUrl ?? null,
   );
   setVetraPackageManager(packageManager);
   await packageManager.init(localPackage, runtimeConfig.localPackage?.version);

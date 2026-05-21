@@ -73,8 +73,11 @@ describe("buildCliConnectOverride", () => {
     process.argv = originalArgv;
   });
 
-  it("returns undefined when no --json and no flags are set", () => {
-    expect(buildCliConnectOverride(mk({}))).toBeUndefined();
+  it("returns undefined overrides when no --json and no flags are set", () => {
+    expect(buildCliConnectOverride(mk({}))).toEqual({
+      connectOverride: undefined,
+      packageRegistryUrl: undefined,
+    });
   });
 
   it("packs individual flags into the right paths", () => {
@@ -89,19 +92,22 @@ describe("buildCliConnectOverride", () => {
       }),
     );
     expect(result).toEqual({
-      renown: { url: "https://x", chainId: 42 },
-      packages: { externalEnabled: false },
-      drives: {
-        allowAddDrive: false,
-        sections: {
-          remote: { enabled: true },
-          local: { allowDelete: false },
+      connectOverride: {
+        renown: { url: "https://x", chainId: 42 },
+        packages: { externalEnabled: false },
+        drives: {
+          allowAddDrive: false,
+          sections: {
+            remote: { enabled: true },
+            local: { allowDelete: false },
+          },
         },
       },
+      packageRegistryUrl: undefined,
     });
   });
 
-  it("packs the 3 new flags (packages-registry, app-name, home-background)", () => {
+  it("routes --packages-registry to top-level packageRegistryUrl", () => {
     const result = buildCliConnectOverride(
       mk({
         packagesRegistry: "https://registry.example",
@@ -110,35 +116,49 @@ describe("buildCliConnectOverride", () => {
       }),
     );
     expect(result).toEqual({
-      packages: { registryUrl: "https://registry.example" },
-      branding: {
-        appName: "Custom App",
-        homeBackground: "https://bg.example/img.png",
+      connectOverride: {
+        branding: {
+          appName: "Custom App",
+          homeBackground: "https://bg.example/img.png",
+        },
       },
+      packageRegistryUrl: "https://registry.example",
     });
   });
 
   it("home-background empty string sets branding.homeBackground to null", () => {
     const result = buildCliConnectOverride(mk({ homeBackground: "" }));
-    expect(result).toEqual({ branding: { homeBackground: null } });
+    expect(result).toEqual({
+      connectOverride: { branding: { homeBackground: null } },
+      packageRegistryUrl: undefined,
+    });
   });
 
   it("does NOT leak commonArgs flag defaults when not explicitly passed", () => {
     // process.argv has no --base, --log-level, etc. Their cmd-ts defaults
     // (`/`, `info`, etc.) must not appear in the override.
-    expect(buildCliConnectOverride(mk({}))).toBeUndefined();
+    expect(buildCliConnectOverride(mk({}))).toEqual({
+      connectOverride: undefined,
+      packageRegistryUrl: undefined,
+    });
   });
 
   it("forwards --base into cliConnectOverride when explicitly passed", () => {
     process.argv = ["node", "cli", "--base", "/subpath"];
     const result = buildCliConnectOverride(mk({ connectBasePath: "/subpath" }));
-    expect(result).toEqual({ app: { basePath: "/subpath" } });
+    expect(result).toEqual({
+      connectOverride: { app: { basePath: "/subpath" } },
+      packageRegistryUrl: undefined,
+    });
   });
 
   it("forwards --log-level into cliConnectOverride when explicitly passed", () => {
     process.argv = ["node", "cli", "--log-level", "debug"];
     const result = buildCliConnectOverride(mk({ logLevel: "debug" }));
-    expect(result).toEqual({ app: { logLevel: "debug" } });
+    expect(result).toEqual({
+      connectOverride: { app: { logLevel: "debug" } },
+      packageRegistryUrl: undefined,
+    });
   });
 
   it("parses --default-drives-url comma-list when explicitly passed", () => {
@@ -152,12 +172,15 @@ describe("buildCliConnectOverride", () => {
       mk({ defaultDrivesUrl: "https://a.com, https://b.com" }),
     );
     expect(result).toEqual({
-      drives: {
-        defaultDrives: [
-          { url: "https://a.com", name: null, icon: null },
-          { url: "https://b.com", name: null, icon: null },
-        ],
+      connectOverride: {
+        drives: {
+          defaultDrives: [
+            { url: "https://a.com", name: null, icon: null },
+            { url: "https://b.com", name: null, icon: null },
+          ],
+        },
       },
+      packageRegistryUrl: undefined,
     });
   });
 
@@ -166,14 +189,45 @@ describe("buildCliConnectOverride", () => {
     const result = buildCliConnectOverride(
       mk({ drivesPreserveStrategy: "preserve-all" }),
     );
-    expect(result).toEqual({ drives: { preserveStrategy: "preserve-all" } });
+    expect(result).toEqual({
+      connectOverride: { drives: { preserveStrategy: "preserve-all" } },
+      packageRegistryUrl: undefined,
+    });
   });
 
   it("parses --json as a partial connect.* blob", () => {
     const result = buildCliConnectOverride(
       mk({ json: '{"renown":{"url":"https://from-json"}}' }),
     );
-    expect(result).toEqual({ renown: { url: "https://from-json" } });
+    expect(result).toEqual({
+      connectOverride: { renown: { url: "https://from-json" } },
+      packageRegistryUrl: undefined,
+    });
+  });
+
+  it("--json top-level packageRegistryUrl routes to the top-level override", () => {
+    const result = buildCliConnectOverride(
+      mk({
+        json: '{"packageRegistryUrl":"https://from-json","renown":{"url":"https://x"}}',
+      }),
+    );
+    expect(result).toEqual({
+      connectOverride: { renown: { url: "https://x" } },
+      packageRegistryUrl: "https://from-json",
+    });
+  });
+
+  it("--packages-registry flag beats --json's top-level packageRegistryUrl", () => {
+    const result = buildCliConnectOverride(
+      mk({
+        json: '{"packageRegistryUrl":"https://from-json"}',
+        packagesRegistry: "https://from-flag",
+      }),
+    );
+    expect(result).toEqual({
+      connectOverride: undefined,
+      packageRegistryUrl: "https://from-flag",
+    });
   });
 
   it("individual flags beat --json on collision", () => {
@@ -185,7 +239,10 @@ describe("buildCliConnectOverride", () => {
     );
     // url overridden by flag, networkId comes from json (no flag override)
     expect(result).toEqual({
-      renown: { url: "https://from-flag", networkId: "from-json" },
+      connectOverride: {
+        renown: { url: "https://from-flag", networkId: "from-json" },
+      },
+      packageRegistryUrl: undefined,
     });
   });
 
@@ -208,6 +265,9 @@ describe("buildCliConnectOverride", () => {
     const result = buildCliConnectOverride(
       mk({ json: undefined, renownUrl: "https://x" }),
     );
-    expect(result).toEqual({ renown: { url: "https://x" } });
+    expect(result).toEqual({
+      connectOverride: { renown: { url: "https://x" } },
+      packageRegistryUrl: undefined,
+    });
   });
 });

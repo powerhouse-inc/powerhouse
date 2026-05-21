@@ -16,6 +16,12 @@ export type IConnectOptions = {
    * Order: DEFAULT_CONNECT_CONFIG < env-seeds < source.connect < cliConnectOverride.
    */
   cliConnectOverride?: PHConnectRuntimeConfig;
+  /**
+   * CLI override for the top-level `packageRegistryUrl`. Set when the user
+   * passes `--packages-registry` to `ph connect build`; wins over the source
+   * value in the emitted runtime config.
+   */
+  cliPackageRegistryUrl?: string;
 };
 
 export type ConnectCommonOptions = {

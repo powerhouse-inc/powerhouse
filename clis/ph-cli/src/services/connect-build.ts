@@ -1,6 +1,5 @@
 import { getConnectBaseViteConfig } from "@powerhousedao/builder-tools";
 import { getConfig } from "@powerhousedao/shared/clis";
-import type { PHConnectRuntimeConfig } from "@powerhousedao/shared/clis";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import type { InlineConfig } from "vite";
@@ -21,11 +20,11 @@ export async function runConnectBuild(args: ConnectBuildArgs) {
   // node_modules — the Vite plugin that bundles them needs them on disk.
   assertLocalPackagesInstalled(dirname);
 
-  // Build the CLI override layer (--json + individual flags) once here so a
-  // bad payload fails before we waste a build. The result feeds the highest
-  // precedence layer in the Vite plugin's deep-merge ladder.
-  const cliConnectOverride: PHConnectRuntimeConfig | undefined =
-    buildCliConnectOverride(args);
+  // Build the CLI override layers (--json + individual flags) once here so a
+  // bad payload fails before we waste a build. `--packages-registry` lands
+  // at the top-level `packageRegistryUrl` (mirrors source-config shape);
+  // every other flag feeds the connect-block precedence ladder.
+  const { connectOverride, packageRegistryUrl } = buildCliConnectOverride(args);
 
   await runBuild({
     outDir: "dist",
@@ -35,7 +34,8 @@ export async function runConnectBuild(args: ConnectBuildArgs) {
   const baseConfig = getConnectBaseViteConfig({
     mode,
     dirname,
-    cliConnectOverride,
+    cliConnectOverride: connectOverride,
+    cliPackageRegistryUrl: packageRegistryUrl,
   });
 
   const buildConfig: InlineConfig = {

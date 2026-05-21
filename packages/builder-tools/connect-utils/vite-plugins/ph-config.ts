@@ -16,6 +16,13 @@ export type PhConfigPluginOptions = {
   projectRoot?: string;
   connect?: PHConnectRuntimeConfig;
   /**
+   * Project-wide package registry URL — the effective value (CLI override
+   * `??` env `??` source) the caller has already resolved. Copied verbatim
+   * into the emitted runtime config (no namespace change); the SPA reads
+   * `runtimeConfig.packageRegistryUrl` directly.
+   */
+  packageRegistryUrl?: string;
+  /**
    * CLI-supplied connect override (final merge layer, beats source + env).
    * Forwarded from `ph connect build`'s `--json` + individual `--flag` parsing.
    * See clis/ph-cli/src/utils/cli-connect-override.ts.
@@ -77,6 +84,7 @@ export function phConfigPlugin(options: PhConfigPluginOptions): Plugin {
     : withDefaults;
   const source = {
     packages: options.packages,
+    packageRegistryUrl: options.packageRegistryUrl,
     connect: mergedConnect,
   };
 

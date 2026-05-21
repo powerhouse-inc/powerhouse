@@ -132,11 +132,6 @@ export const phConnectRuntimeConfigSchema = {
             "When false, Connect refuses to load any package that wasn't bundled at build time. Affirmative replacement for the legacy PH_CONNECT_EXTERNAL_PACKAGES_DISABLED env var.",
           default: true,
         },
-        registryUrl: {
-          type: "string",
-          description:
-            "CDN endpoint Connect fetches external packages from at runtime. Supports comma-separated URLs for multi-registry setups. Environment-specific — no schema default.",
-        },
       },
     },
     drives: {

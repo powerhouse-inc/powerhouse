@@ -214,7 +214,7 @@ export const sourceConfigSchema = {
     packageRegistryUrl: {
       type: "string",
       description:
-        "Registry endpoint used by `ph install` / `ph publish`. Build-time only — does not ship to the runtime config.",
+        "Project-wide package registry endpoint. Used by `ph install` / `ph publish` / `ph registry-login` and Switchboard, and copied verbatim into the runtime config so the Connect SPA's Package Manager UI reads the same registry.",
     },
     connect: {
       ...phConnectRuntimeConfigSchema,

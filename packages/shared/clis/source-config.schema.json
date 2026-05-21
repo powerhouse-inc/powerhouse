@@ -213,7 +213,7 @@
     },
     "packageRegistryUrl": {
       "type": "string",
-      "description": "Registry endpoint used by `ph install` / `ph publish`. Build-time only — does not ship to the runtime config."
+      "description": "Project-wide package registry endpoint. Used by `ph install` / `ph publish` / `ph registry-login` and Switchboard, and copied verbatim into the runtime config so the Connect SPA's Package Manager UI reads the same registry."
     },
     "connect": {
       "type": "object",
@@ -280,10 +280,6 @@
               "type": "boolean",
               "description": "When false, Connect refuses to load any package that wasn't bundled at build time. Affirmative replacement for the legacy PH_CONNECT_EXTERNAL_PACKAGES_DISABLED env var.",
               "default": true
-            },
-            "registryUrl": {
-              "type": "string",
-              "description": "CDN endpoint Connect fetches external packages from at runtime. Supports comma-separated URLs for multi-registry setups. Environment-specific — no schema default."
             }
           }
         },

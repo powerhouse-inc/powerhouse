@@ -104,6 +104,7 @@ describe("runtime-config schema", () => {
         },
         { packageName: "@scope/b", provider: "local" },
       ],
+      packageRegistryUrl: "https://registry.example/-/cdn/",
       projectRoot,
       connect: {
         branding: {
@@ -116,7 +117,6 @@ describe("runtime-config schema", () => {
         },
         packages: {
           externalEnabled: false,
-          registryUrl: "https://registry.example/-/cdn/",
         },
         drives: {
           allowAddDrive: false,

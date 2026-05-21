@@ -43,6 +43,10 @@
         }
       }
     },
+    "packageRegistryUrl": {
+      "type": "string",
+      "description": "Project-wide package registry endpoint. Copied verbatim from the source `powerhouse.config.json` top-level field — the SPA's Package Manager UI reads this directly."
+    },
     "localPackage": {
       "description": "Identity of the consumer project itself, captured at build time. null for Docker images and other generic deploys with no host project.",
       "oneOf": [
@@ -129,10 +133,6 @@
               "type": "boolean",
               "description": "When false, Connect refuses to load any package that wasn't bundled at build time. Affirmative replacement for the legacy PH_CONNECT_EXTERNAL_PACKAGES_DISABLED env var.",
               "default": true
-            },
-            "registryUrl": {
-              "type": "string",
-              "description": "CDN endpoint Connect fetches external packages from at runtime. Supports comma-separated URLs for multi-registry setups. Environment-specific — no schema default."
             }
           }
         },

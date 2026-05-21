@@ -52,6 +52,11 @@ export const runtimeConfigSchema = {
         "Powerhouse packages this Connect instance loads at runtime.",
       items: powerhousePackageSchema,
     },
+    packageRegistryUrl: {
+      type: "string",
+      description:
+        "Project-wide package registry endpoint. Copied verbatim from the source `powerhouse.config.json` top-level field — the SPA's Package Manager UI reads this directly.",
+    },
     localPackage: {
       description:
         "Identity of the consumer project itself, captured at build time. null for Docker images and other generic deploys with no host project.",

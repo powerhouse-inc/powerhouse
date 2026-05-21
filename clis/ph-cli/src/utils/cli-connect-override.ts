@@ -36,7 +36,9 @@ type PlainObject = Record<string, unknown>;
  * values.
  */
 export type ConnectFlagInput = {
-  // 15 strict-optional flags from connectRuntimeOverrideArgs.
+  // 14 strict-optional flags from connectRuntimeOverrideArgs (excluding
+  // `packagesRegistry`, which is a top-level runtime field — see
+  // `buildCliConnectOverride`).
   json?: string | undefined;
   renownUrl?: string | undefined;
   renownNetworkId?: string | undefined;
@@ -49,7 +51,6 @@ export type ConnectFlagInput = {
   localDrivesEnabled?: boolean | undefined;
   localDrivesAllowAdd?: boolean | undefined;
   localDrivesAllowDelete?: boolean | undefined;
-  packagesRegistry?: string | undefined;
   appName?: string | undefined;
   homeBackground?: string | undefined;
   // 4 commonArgs flags. Callers must apply `wasFlagExplicitlyPassed`
@@ -139,7 +140,6 @@ export function buildConnectFlagPatch(args: ConnectFlagInput): PlainObject {
 
   const packages: PlainObject = {};
   setIfDefined(packages, "externalEnabled", args.externalPackages);
-  setIfDefined(packages, "registryUrl", args.packagesRegistry);
   if (Object.keys(packages).length > 0) out.packages = packages;
 
   // --home-background: empty string is the explicit "set null" form
@@ -179,22 +179,30 @@ export function buildConnectFlagPatch(args: ConnectFlagInput): PlainObject {
 }
 
 /**
- * Combine `--json` and the individual flag values into a single connect
- * override for `ph connect build`. Returns undefined when neither was
- * provided so the Vite plugin can skip the final merge layer entirely.
+ * Combine `--json` and the individual flag values into the two override
+ * inputs `ph connect build` forwards to the Vite plugin:
+ *
+ *   - `connectOverride`: a partial `connect.*` patch (deep-merged at the top
+ *     of the runtime-config precedence ladder).
+ *   - `packageRegistryUrl`: a separate top-level override; mirrors the
+ *     source-config top-level field (the SPA reads it directly).
+ *
+ * `--packages-registry` and `--json` containing a top-level
+ * `packageRegistryUrl` both flow into `packageRegistryUrl`; the flag wins on
+ * collision. Returns `undefined` for whichever override was not supplied.
  *
  * The 4 commonArgs flags (`--base`, `--log-level`, `--default-drives-url`,
  * `--drive-preserve-strategy`) are gated through `wasFlagExplicitlyPassed`
  * because they carry cmd-ts defaults that would otherwise leak into the
  * override on every build.
  */
-export function buildCliConnectOverride(
-  args: ConnectBuildArgs,
-): PHConnectRuntimeConfig | undefined {
+export function buildCliConnectOverride(args: ConnectBuildArgs): {
+  connectOverride: PHConnectRuntimeConfig | undefined;
+  packageRegistryUrl: string | undefined;
+} {
   const fromJson = parseJsonOverride(args.json);
 
   const input: ConnectFlagInput = {
-    // 15 strict-optional flags pass through unchanged.
     renownUrl: args.renownUrl,
     renownNetworkId: args.renownNetworkId,
     renownChainId: args.renownChainId,
@@ -206,7 +214,6 @@ export function buildCliConnectOverride(
     localDrivesEnabled: args.localDrivesEnabled,
     localDrivesAllowAdd: args.localDrivesAllowAdd,
     localDrivesAllowDelete: args.localDrivesAllowDelete,
-    packagesRegistry: args.packagesRegistry,
     appName: args.appName,
     homeBackground: args.homeBackground,
     // 4 commonArgs flags — only forward when the user explicitly passed them.
@@ -223,12 +230,27 @@ export function buildCliConnectOverride(
   };
 
   const fromFlags = buildConnectFlagPatch(input);
-  const hasJson = Object.keys(fromJson).length > 0;
+  // Top-level `packageRegistryUrl` can come from --json (top-level) or from
+  // --packages-registry. The flag wins on collision.
+  const jsonRegistry =
+    typeof fromJson.packageRegistryUrl === "string"
+      ? (fromJson.packageRegistryUrl as string)
+      : undefined;
+  const packageRegistryUrl = args.packagesRegistry ?? jsonRegistry;
+  // Strip the top-level field from the JSON patch before deep-merging into
+  // the connect partial — it isn't a `connect.*` field.
+  const jsonConnect = { ...fromJson };
+  delete jsonConnect.packageRegistryUrl;
+
+  const hasJsonConnect = Object.keys(jsonConnect).length > 0;
   const hasFlags = Object.keys(fromFlags).length > 0;
-  if (!hasJson && !hasFlags) return undefined;
-  // Individual flags merge on top of --json so a flag beats a colliding json value.
-  return deepMerge(
-    fromJson as PHConnectRuntimeConfig,
-    fromFlags as PHConnectRuntimeConfig,
-  );
+  const connectOverride =
+    !hasJsonConnect && !hasFlags
+      ? undefined
+      : deepMerge(
+          jsonConnect as PHConnectRuntimeConfig,
+          fromFlags as PHConnectRuntimeConfig,
+        );
+
+  return { connectOverride, packageRegistryUrl };
 }

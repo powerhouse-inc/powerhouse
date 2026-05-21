@@ -101,13 +101,6 @@ const appConfigSchema = z.object({
    * (set-if-absent semantics). See CONNECT-CONFIG.md §13.
    */
   PH_CONNECT_PACKAGES: z.string().optional(),
-  /**
-   * URL(s) of the packages registry CDN endpoint.
-   * Supports comma-separated URLs for multiple registries.
-   * @example "http://localhost:8080/-/cdn/"
-   * @example "https://registry.powerhouse.io/-/cdn/,http://localhost:8080/-/cdn/"
-   */
-  PH_CONNECT_PACKAGES_REGISTRY: z.string().optional(),
 
   /**
    * Strategy for preserving drives

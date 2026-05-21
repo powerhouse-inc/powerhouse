@@ -9,21 +9,23 @@
 //
 // Dual-write semantics for set / bulk-set:
 //   - Source `powerhouse.config.json` (project root) gets the connect.* patch
-//     deep-merged in. This is what the next `ph connect build` will respect.
+//     deep-merged into `connect.*`. `--packages-registry` lands at the
+//     top-level `packageRegistryUrl` field (project-wide setting, also read
+//     by `ph install` / `ph publish` / Switchboard).
 //   - Dist `powerhouse.config.json` (default `.ph/connect-build/dist/`) gets
-//     the same patch deep-merged in. This is what the currently-served SPA
-//     sees on its next /powerhouse.config.json fetch (page refresh).
+//     the same connect.* patch deep-merged in, and the same top-level
+//     `packageRegistryUrl` if set. The runtime schema mirrors the source
+//     schema, so the field lives at the same path in both files.
 //
 // The dist write is skipped silently if the dist file doesn't exist — that's
 // the "config-only-before-first-build" workflow, not an error.
 //
-// The 15 field flags + the 4 commonArgs flags (base, log-level,
-// default-drives-url, drive-preserve-strategy) come from the same source as
-// `ph connect build`'s flags, so the two commands share identical CLI
-// surfaces. The 4 commonArgs flags carry cmd-ts defaults; we gate them
-// through `wasFlagExplicitlyPassed` for the same reason `buildCliConnectOverride`
-// does — to avoid leaking default values into a write the user didn't
-// request.
+// Field flags + the 4 commonArgs flags (base, log-level, default-drives-url,
+// drive-preserve-strategy) come from the same source as `ph connect build`'s
+// flags, so the two commands share identical CLI surfaces. The 4 commonArgs
+// flags carry cmd-ts defaults; we gate them through `wasFlagExplicitlyPassed`
+// for the same reason `buildCliConnectOverride` does — to avoid leaking
+// default values into a write the user didn't request.
 
 import {
   ConfigLoader,
@@ -137,7 +139,6 @@ function argsToFlagInput(args: ConnectConfigArgs): ConnectFlagInput {
     localDrivesEnabled: args.localDrivesEnabled,
     localDrivesAllowAdd: args.localDrivesAllowAdd,
     localDrivesAllowDelete: args.localDrivesAllowDelete,
-    packagesRegistry: args.packagesRegistry,
     appName: args.appName,
     homeBackground: args.homeBackground,
     basePath: wasFlagExplicitlyPassed("base")
@@ -172,10 +173,19 @@ export async function runConnectConfig(args: ConnectConfigArgs): Promise<void> {
   const hasGet = args.get !== undefined;
   const hasJson = args.json !== undefined;
   const hasFieldFlag = hasAnyFieldFlag(flagInput);
+  // `--packages-registry` is a top-level field, not part of the connect-flag
+  // patch. Track it separately so the set-mode write puts it in the right
+  // place and the mutex counts it as a "field flag".
+  const explicitRegistry = args.packagesRegistry;
+  const hasExplicitRegistry = explicitRegistry !== undefined;
 
-  // Mutex: get / json / any field flag are mutually exclusive. Exactly one
-  // mode (or none → list) per call.
-  const modeCount = [hasGet, hasJson, hasFieldFlag].filter(Boolean).length;
+  // Mutex: get / json / (any field flag OR --packages-registry) are mutually
+  // exclusive. Exactly one mode (or none → list) per call.
+  const modeCount = [
+    hasGet,
+    hasJson,
+    hasFieldFlag || hasExplicitRegistry,
+  ].filter(Boolean).length;
   if (modeCount > 1) {
     throw new Error(
       "ph connect config: --get, --json, and individual field flags are mutually exclusive. Use one mode per invocation.",
@@ -198,6 +208,18 @@ export async function runConnectConfig(args: ConnectConfigArgs): Promise<void> {
         "ph connect config --get: key cannot be empty. Pass a dotted path inside connect.* (e.g. --get connect.renown.url).",
       );
     }
+    // `packageRegistryUrl` is a top-level field — look it up on the raw
+    // source object, not inside `effectiveConnect`.
+    if (normalized === "packageRegistryUrl") {
+      const value = source.packageRegistryUrl;
+      if (value === undefined) {
+        throw new Error(
+          `ph connect config --get: no value at key "${normalized}". Run \`ph connect config\` (no args) to see the available paths.`,
+        );
+      }
+      printJson(value);
+      return;
+    }
     const value = getAtPath(effectiveConnect(source), normalized);
     if (value === undefined) {
       throw new Error(
@@ -208,19 +230,36 @@ export async function runConnectConfig(args: ConnectConfigArgs): Promise<void> {
     return;
   }
 
-  // Set / bulk-set mode. Build the patch from --json (Ajv-validated) or from
-  // field flags (shape is guaranteed by cmd-ts type coercion).
-  const patch = hasJson
-    ? (validateConnectPatch(args.json!) as ConnectPartial)
-    : (buildConnectFlagPatch(flagInput) as ConnectPartial);
+  // Set / bulk-set mode. Build the connect-side patch from --json (Ajv-
+  // validated) or from field flags (shape is guaranteed by cmd-ts type
+  // coercion). `--packages-registry` is handled separately as a top-level
+  // field; if `--json` carries a top-level `packageRegistryUrl`, route that
+  // the same way and strip it from the connect-side patch.
+  let topLevelRegistry: string | undefined = explicitRegistry;
+  let patch: ConnectPartial;
+  if (hasJson) {
+    const validated = validateConnectPatch(args.json!) as Record<
+      string,
+      unknown
+    >;
+    if (typeof validated.packageRegistryUrl === "string") {
+      topLevelRegistry = topLevelRegistry ?? validated.packageRegistryUrl;
+    }
+    const connectOnly = { ...validated };
+    delete connectOnly.packageRegistryUrl;
+    patch = connectOnly as ConnectPartial;
+  } else {
+    patch = buildConnectFlagPatch(flagInput) as ConnectPartial;
+  }
 
-  if (Object.keys(patch).length === 0) {
+  if (Object.keys(patch).length === 0 && topLevelRegistry === undefined) {
     throw new Error(
       "ph connect config: nothing to set. Pass at least one field flag (e.g. --renown-url <url>) or --json with a non-empty payload.",
     );
   }
 
-  // Build the next source: take what's there, deep-merge patch under .connect.
+  // Build the next source: top-level packageRegistryUrl (if set) +
+  // connect.* deep-merge.
   const currentConnect =
     source.connect &&
     typeof source.connect === "object" &&
@@ -231,18 +270,27 @@ export async function runConnectConfig(args: ConnectConfigArgs): Promise<void> {
     currentConnect,
     patch as PHConnectRuntimeConfig,
   );
-  const nextSource = { ...source, connect: nextConnect };
+  const nextSource: Record<string, unknown> = {
+    ...source,
+    connect: nextConnect,
+  };
+  if (topLevelRegistry !== undefined) {
+    nextSource.packageRegistryUrl = topLevelRegistry;
+  }
 
   await writeSourceRaw(sourcePath, nextSource);
 
-  // Dual-write to dist if it exists. The dist file has a full schema (with
-  // $schema, schemaVersion, packages, localPackage) that we preserve — we
-  // only deep-merge the connect.* block.
+  // Dual-write to dist if it exists. Same shape as source: connect.* block
+  // is deep-merged; top-level `packageRegistryUrl` is set in place.
   if (existsSync(distPath)) {
     const distLoader = new ConfigLoader(
       new JsonConfigAdapter({ path: distPath }),
     );
-    await distLoader.write({ connect: patch });
+    const distPatch: Record<string, unknown> = { connect: patch };
+    if (topLevelRegistry !== undefined) {
+      distPatch.packageRegistryUrl = topLevelRegistry;
+    }
+    await distLoader.write(distPatch);
   }
 
   process.stdout.write(

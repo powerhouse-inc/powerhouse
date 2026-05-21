@@ -52,12 +52,6 @@ describe("buildConnectFlagPatch — 19 field flags", () => {
     });
   });
 
-  it("packagesRegistry → packages.registryUrl", () => {
-    expect(
-      buildConnectFlagPatch({ packagesRegistry: "https://registry.example" }),
-    ).toEqual({ packages: { registryUrl: "https://registry.example" } });
-  });
-
   it("appName → branding.appName", () => {
     expect(buildConnectFlagPatch({ appName: "Custom App" })).toEqual({
       branding: { appName: "Custom App" },
