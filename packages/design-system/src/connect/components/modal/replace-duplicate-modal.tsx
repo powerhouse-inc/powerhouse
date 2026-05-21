@@ -64,7 +64,10 @@ export function ConnectReplaceDuplicateModal(
       {...restProps}
     >
       <div
-        {...mergeClassNameProps(containerProps, "w-[450px] p-6 text-slate-300")}
+        {...mergeClassNameProps(
+          containerProps,
+          "w-[450px] bg-white p-6 text-slate-300",
+        )}
       >
         <div className="flex items-center justify-between border-b border-slate-50 pb-2">
           <div

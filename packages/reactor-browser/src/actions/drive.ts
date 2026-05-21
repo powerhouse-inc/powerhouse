@@ -1,4 +1,8 @@
-import { driveCollectionId, type PollBehavior } from "@powerhousedao/reactor";
+import {
+  driveCollectionId,
+  PropagationMode,
+  type PollBehavior,
+} from "@powerhousedao/reactor";
 import {
   driveCreateDocument,
   setAvailableOffline,
@@ -106,7 +110,20 @@ export async function deleteDrive(driveId: string) {
   if (!reactorClient) {
     throw new Error("ReactorClient not initialized");
   }
-  await reactorClient.deleteDocument(driveId);
+
+  const sync =
+    window.ph?.reactorClientModule?.reactorModule?.syncModule?.syncManager;
+  if (sync) {
+    const collectionId = driveCollectionId("main", driveId);
+    const remotes = sync
+      .list()
+      .filter((remote) => remote.collectionId === collectionId);
+    for (const remote of remotes) {
+      await sync.remove(remote.name);
+    }
+  }
+
+  await reactorClient.deleteDocument(driveId, PropagationMode.Cascade);
 }
 
 export async function renameDrive(

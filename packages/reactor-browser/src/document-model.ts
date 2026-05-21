@@ -1,3 +1,5 @@
+import { reactorDriveDocumentModelModule } from "@powerhousedao/reactor-drive";
+import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import type {
   DocumentModelModule,
   DocumentModelPHState,
@@ -10,6 +12,10 @@ export const baseDocumentModelsMap: Record<
 > = {
   DocumentModel:
     documentModelDocumentModelModule as DocumentModelModule<DocumentModelPHState>,
+  DocumentDrive:
+    driveDocumentModelModule as unknown as DocumentModelModule<DocumentModelPHState>,
+  ReactorDrive:
+    reactorDriveDocumentModelModule as unknown as DocumentModelModule<DocumentModelPHState>,
 };
 
 export const baseDocumentModels = Object.values(baseDocumentModelsMap);

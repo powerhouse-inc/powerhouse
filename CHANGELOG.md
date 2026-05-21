@@ -1,3 +1,124 @@
+## 6.0.0-dev.257 (2026-05-21)
+
+### 🚀 Features
+
+- **connect:** subscribe to /__packages SSE for live package updates ([5cb41a7e4](https://github.com/powerhouse-inc/powerhouse/commit/5cb41a7e4))
+- **connect:** remount editor on package version bump ([4fe72d93f](https://github.com/powerhouse-inc/powerhouse/commit/4fe72d93f))
+- **registry:** default to anonymous publish/unpublish ([5ca697fb7](https://github.com/powerhouse-inc/powerhouse/commit/5ca697fb7))
+- **spec:** reject invalid actions atomically in addActions ([c12a4d6c5](https://github.com/powerhouse-inc/powerhouse/commit/c12a4d6c5))
+- **switchboard:** accept caller-provided reactor + expose shutdown ([1e0958656](https://github.com/powerhouse-inc/powerhouse/commit/1e0958656))
+- **vetra:** moved schema projection to ph-rupert-cli ([49f627e7b](https://github.com/powerhouse-inc/powerhouse/commit/49f627e7b))
+- **vetra,ph-cli:** add @powerhousedao/vetra/codegen subexport for agent-driven codegen ([9689be87e](https://github.com/powerhouse-inc/powerhouse/commit/9689be87e))
+
+### 🩹 Fixes
+
+- address PR review for connect package-manager + vetra specPath doc ([4f330f16e](https://github.com/powerhouse-inc/powerhouse/commit/4f330f16e))
+- **connect:** version-aware /__packages diff with toasts and refetch ([36f2e641d](https://github.com/powerhouse-inc/powerhouse/commit/36f2e641d))
+- **package-e2e:** use renamed --document flag for ph generate doc ([e3bbd1b49](https://github.com/powerhouse-inc/powerhouse/commit/e3bbd1b49))
+- **vetra:** update codegen imports to v1 document-model layout ([ecdc2b23e](https://github.com/powerhouse-inc/powerhouse/commit/ecdc2b23e))
+- **vetra:** repo-wide typecheck — keep ts-morph external + use existing types ([10f0a8488](https://github.com/powerhouse-inc/powerhouse/commit/10f0a8488))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.256 (2026-05-21)
+
+### 🚀 Features
+
+- **reactor-browser:** add useEditorFileDrop hook and DropZone opt-out ([8c6ebf73a](https://github.com/powerhouse-inc/powerhouse/commit/8c6ebf73a))
+
+### 🩹 Fixes
+
+- add @tokens to logger calls across packages ([b70070ae2](https://github.com/powerhouse-inc/powerhouse/commit/b70070ae2))
+- prettier wrap + properly type vi.spyOn mocks in logger tests ([363795fc3](https://github.com/powerhouse-inc/powerhouse/commit/363795fc3))
+- **document-model:** surface Error values in logger output ([310a45398](https://github.com/powerhouse-inc/powerhouse/commit/310a45398))
+- **ph-cli:** whoops, missed a refactor ([f43138c68](https://github.com/powerhouse-inc/powerhouse/commit/f43138c68))
+- **reactor-api:** pass args to logger.error calls in reactor subgraph ([b34dcf7dc](https://github.com/powerhouse-inc/powerhouse/commit/b34dcf7dc))
+- **reactor-api:** share one DB client per connection string ([8a8030ee0](https://github.com/powerhouse-inc/powerhouse/commit/8a8030ee0))
+- **reactor-browser:** hide DropZone overlay over editor opt-out regions ([725d185fd](https://github.com/powerhouse-inc/powerhouse/commit/725d185fd))
+- **reactor-browser:** stop sync before deleting drive document ([9fec21bf5](https://github.com/powerhouse-inc/powerhouse/commit/9fec21bf5))
+- **switchboard:** give users a one-shot recovery path out of broken switchboard DB state ([5fecb0fe8](https://github.com/powerhouse-inc/powerhouse/commit/5fecb0fe8))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+
+## 6.0.0-dev.255 (2026-05-20)
+
+### 🩹 Fixes
+
+- **ph-cli:** whoops, missed a refactor ([f43138c68](https://github.com/powerhouse-inc/powerhouse/commit/f43138c68))
+- **reactor-browser:** hide DropZone overlay over editor opt-out regions ([725d185fd](https://github.com/powerhouse-inc/powerhouse/commit/725d185fd))
+- **reactor-browser:** stop sync before deleting drive document ([9fec21bf5](https://github.com/powerhouse-inc/powerhouse/commit/9fec21bf5))
+- **switchboard:** give users a one-shot recovery path out of broken switchboard DB state ([5fecb0fe8](https://github.com/powerhouse-inc/powerhouse/commit/5fecb0fe8))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+
+## 6.0.0-dev.254 (2026-05-19)
+
+### 🚀 Features
+
+- single-document contention integration tests are switchable between document-drive and reactor-drive ([68b59b492](https://github.com/powerhouse-inc/powerhouse/commit/68b59b492))
+- prepping hub-spoke integration test ([497e70408](https://github.com/powerhouse-inc/powerhouse/commit/497e70408))
+- add dark mode script ([#2619](https://github.com/powerhouse-inc/powerhouse/pull/2619))
+- **e2e-utils:** share local-registry helper across e2e tests ([c3821fccd](https://github.com/powerhouse-inc/powerhouse/commit/c3821fccd))
+- **reactor-api:** main integration tests now run on both reactor-drive and document-drive, includes reshuffle fix ([4f370a63f](https://github.com/powerhouse-inc/powerhouse/commit/4f370a63f))
+- **reactor-drive:** initial commit ([d6b7c4f8c](https://github.com/powerhouse-inc/powerhouse/commit/d6b7c4f8c))
+- **registry:** --local-packages flag to bypass npmjs uplink ([f295ab989](https://github.com/powerhouse-inc/powerhouse/commit/f295ab989))
+- **vetra:** allow passing db-path through vetra command ([39c62d961](https://github.com/powerhouse-inc/powerhouse/commit/39c62d961))
+
+### 🩹 Fixes
+
+- add missing bg and text styles ([#2620](https://github.com/powerhouse-inc/powerhouse/pull/2620))
+- wiring up reactor-drive dependency ([8c22b1658](https://github.com/powerhouse-inc/powerhouse/commit/8c22b1658))
+- whoops, node-processor was not filtering properly ([6be70a29f](https://github.com/powerhouse-inc/powerhouse/commit/6be70a29f))
+- update to the latest knowledge-note dump and package ([eaf7ea34a](https://github.com/powerhouse-inc/powerhouse/commit/eaf7ea34a))
+- **builder-tools:** we have to expose pglite in a special way to use ph vetra with use-local ([fa323dc8b](https://github.com/powerhouse-inc/powerhouse/commit/fa323dc8b))
+- **package-e2e:** unblock strict quality gates and harden cleanup ([db9b91d78](https://github.com/powerhouse-inc/powerhouse/commit/db9b91d78))
+- **package-e2e:** address PR review feedback ([0ac1bcaed](https://github.com/powerhouse-inc/powerhouse/commit/0ac1bcaed))
+- **package-e2e:** add host-gateway to parallel scaffold build ([de3a54fe5](https://github.com/powerhouse-inc/powerhouse/commit/de3a54fe5))
+- **powerhouse-vetra-packages:** emit dts via tsc --build ([065c592ae](https://github.com/powerhouse-inc/powerhouse/commit/065c592ae))
+- **reactor-drive:** fix cursor issue ([6ae17779f](https://github.com/powerhouse-inc/powerhouse/commit/6ae17779f))
+- **reactor-drive:** since ADD_RELATIONSHIP and CREATE_DOCUMENT are allowed top race, the documentType should be on the relationship action ([9795cd755](https://github.com/powerhouse-inc/powerhouse/commit/9795cd755))
+- **reactor-drive:** remove unused consistency token field from subgraph ([301503c38](https://github.com/powerhouse-inc/powerhouse/commit/301503c38))
+- **reactor-drive:** delete is now handled by the node processor ([60d0b6404](https://github.com/powerhouse-inc/powerhouse/commit/60d0b6404))
+- **reactor-drive:** fix issue where reshuffle could make paging change ([5f19f68f6](https://github.com/powerhouse-inc/powerhouse/commit/5f19f68f6))
+- **reactor-drive:** do not guard against enpty folder names, throw ([582827331](https://github.com/powerhouse-inc/powerhouse/commit/582827331))
+
+### 🔥 Performance
+
+- **package-e2e:** parallelize docker scaffold build with publish-package ([71ac1d884](https://github.com/powerhouse-inc/powerhouse/commit/71ac1d884))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Ryan Wolhuter @ryanwolhuter
+
+## 6.0.0-dev.253 (2026-05-18)
+
+This was a version bump only, there were no code changes.
+
+## 6.0.0-dev.252 (2026-05-17)
+
+This was a version bump only, there were no code changes.
+
+## 6.0.0-dev.251 (2026-05-16)
+
+### 🩹 Fixes
+
+- surface and fix imports broken by missing source resolution ([50022703b](https://github.com/powerhouse-inc/powerhouse/commit/50022703b))
+- **codegen:** guard FolderTree template against undefined selected drive ([026a74ad9](https://github.com/powerhouse-inc/powerhouse/commit/026a74ad9))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.250 (2026-05-15)
 
 ### 🚀 Features

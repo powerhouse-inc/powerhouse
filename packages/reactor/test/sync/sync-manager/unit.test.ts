@@ -2,6 +2,7 @@ import type { OperationWithContext } from "@powerhousedao/shared/document-model"
 import { ConsoleLogger } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { IOperationIndex } from "../../../src/cache/operation-index-types.js";
+import { DEFAULT_DRIVE_CONTAINER_TYPES } from "../../../src/core/drive-container-types.js";
 import type { IReactor } from "../../../src/core/types.js";
 import type { IEventBus } from "../../../src/events/interfaces.js";
 import { ReactorEventTypes } from "../../../src/events/types.js";
@@ -273,6 +274,7 @@ describe("SyncManager - Unit Tests", () => {
       mockOperationIndex,
       mockReactor,
       mockEventBus,
+      DEFAULT_DRIVE_CONTAINER_TYPES,
     );
   });
 
@@ -3990,6 +3992,7 @@ describe("SyncManager - Unit Tests", () => {
         mockOperationIndex,
         mockReactor,
         mockEventBus,
+        DEFAULT_DRIVE_CONTAINER_TYPES,
         { maxDeadLettersPerRemote: maxLimit },
       );
 
@@ -4052,6 +4055,7 @@ describe("SyncManager - Unit Tests", () => {
         mockOperationIndex,
         mockReactor,
         mockEventBus,
+        DEFAULT_DRIVE_CONTAINER_TYPES,
         { maxDeadLettersPerRemote: maxLimit },
       );
 
@@ -4114,6 +4118,7 @@ describe("SyncManager - Unit Tests", () => {
         mockOperationIndex,
         mockReactor,
         mockEventBus,
+        DEFAULT_DRIVE_CONTAINER_TYPES,
         { maxDeadLettersPerRemote: maxLimit },
       );
 

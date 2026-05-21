@@ -8,12 +8,18 @@ export default defineConfig({
     "editors/*/index.ts",
     "processors/index.ts",
     "processors/*/index.ts",
+    "codegen/index.ts",
     "powerhouse.manifest.json",
   ],
   platform: "neutral",
   outDir: "dist",
   deps: {
-    neverBundle: [/^node:/],
+    // Keep external module types as plain imports in the emitted dts so
+    // consumers reference the same class identities they get when importing
+    // those modules directly. Bundling `ts-morph`'s `Project` into a vetra
+    // chunk would otherwise produce `Project` vs `Project$1` clashes in
+    // downstream code that mixes vetra/codegen helpers with raw ts-morph.
+    neverBundle: [/^node:/, "ts-morph"],
   },
   clean: true,
   dts: true,

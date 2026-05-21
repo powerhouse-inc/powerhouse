@@ -374,15 +374,24 @@ importers:
       read-pkg:
         specifier: 'catalog:'
         version: 10.1.0
+      remeda:
+        specifier: 'catalog:'
+        version: 2.33.7
       rimraf:
         specifier: ^6.0.1
         version: 6.1.3
       semver:
         specifier: 'catalog:'
         version: 7.7.4
+      ts-morph:
+        specifier: 'catalog:'
+        version: 27.0.2
       tsx:
         specifier: 'catalog:'
         version: 4.21.0
+      type-fest:
+        specifier: 'catalog:'
+        version: 5.6.0
       typescript:
         specifier: 6.0.3
         version: 6.0.3
@@ -652,6 +661,9 @@ importers:
       '@powerhousedao/reactor-attachments':
         specifier: workspace:*
         version: link:../../packages/reactor-attachments
+      '@powerhousedao/reactor-drive':
+        specifier: workspace:*
+        version: link:../../packages/reactor-drive
       '@powerhousedao/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -746,6 +758,9 @@ importers:
       '@powerhousedao/switchboard':
         specifier: workspace:*
         version: link:../../apps/switchboard
+      '@powerhousedao/vetra':
+        specifier: workspace:*
+        version: link:../../packages/vetra
       '@renown/sdk':
         specifier: workspace:*
         version: link:../../packages/renown
@@ -1584,6 +1599,9 @@ importers:
       '@powerhousedao/reactor-browser':
         specifier: workspace:*
         version: link:../reactor-browser
+      '@powerhousedao/reactor-drive':
+        specifier: workspace:*
+        version: link:../reactor-drive
       '@powerhousedao/shared':
         specifier: workspace:*
         version: link:../shared
@@ -1762,6 +1780,9 @@ importers:
       '@powerhousedao/reactor-attachments':
         specifier: workspace:*
         version: link:../reactor-attachments
+      '@powerhousedao/reactor-drive':
+        specifier: workspace:*
+        version: link:../reactor-drive
       '@powerhousedao/reactor-mcp':
         specifier: workspace:*
         version: link:../reactor-mcp
@@ -1923,6 +1944,9 @@ importers:
       '@powerhousedao/reactor':
         specifier: workspace:*
         version: link:../reactor
+      '@powerhousedao/reactor-drive':
+        specifier: workspace:*
+        version: link:../reactor-drive
       '@powerhousedao/shared':
         specifier: workspace:*
         version: link:../shared
@@ -2053,6 +2077,12 @@ importers:
       document-model:
         specifier: workspace:*
         version: link:../document-model
+      graphql:
+        specifier: 'catalog:'
+        version: 16.12.0
+      graphql-tag:
+        specifier: 'catalog:'
+        version: 2.12.6(graphql@16.12.0)
       kysely:
         specifier: 'catalog:'
         version: 0.28.16
@@ -2112,6 +2142,9 @@ importers:
       '@powerhousedao/reactor':
         specifier: workspace:*
         version: link:../reactor
+      '@powerhousedao/reactor-drive':
+        specifier: workspace:*
+        version: link:../reactor-drive
       '@powerhousedao/shared':
         specifier: workspace:*
         version: link:../shared
@@ -2654,6 +2687,30 @@ importers:
         specifier: 'catalog:'
         version: 4.21.0
 
+  test/package-e2e:
+    devDependencies:
+      '@playwright/test':
+        specifier: ^1.55.0
+        version: 1.58.2
+      '@powerhousedao/e2e-utils':
+        specifier: workspace:*
+        version: link:../e2e-utils
+      '@powerhousedao/ph-cli':
+        specifier: workspace:*
+        version: link:../../clis/ph-cli
+      '@powerhousedao/registry':
+        specifier: workspace:*
+        version: link:../../packages/registry
+      '@types/node':
+        specifier: 'catalog:'
+        version: 25.2.3
+      tsx:
+        specifier: ^4.19.2
+        version: 4.21.0
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
   test/switchboard:
     devDependencies:
       '@modelcontextprotocol/sdk':
@@ -2735,6 +2792,9 @@ importers:
       '@powerhousedao/reactor':
         specifier: workspace:*
         version: link:../../packages/reactor
+      '@powerhousedao/reactor-drive':
+        specifier: workspace:*
+        version: link:../../packages/reactor-drive
       '@powerhousedao/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -9640,6 +9700,7 @@ packages:
 
   '@ungap/structured-clone@1.3.0':
     resolution: {integrity: sha512-WmoN8qaIAo7WTYWbAZuG8PYEhn5fkz7dZrqTBZ7dtt//lL2Gwms1IcnQ5yHqjDfX8Ft5j4YzDM23f87zBfDe9g==}
+    deprecated: Potential CWE-502 - Update to 1.3.1 or higher
 
   '@unrs/resolver-binding-android-arm-eabi@1.11.1':
     resolution: {integrity: sha512-ppLRUgHVaGRWUx0R0Ut06Mjo9gBaBkg3v/8AxusGLhsIotbBLuRk51rAzqLC8gq6NyyAojEXglNjzf6R948DNw==}

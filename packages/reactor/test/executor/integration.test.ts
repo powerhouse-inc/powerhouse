@@ -11,6 +11,7 @@ import { KyselyOperationIndex } from "../../src/cache/kysely-operation-index.js"
 import { KyselyWriteCache } from "../../src/cache/kysely-write-cache.js";
 import { driveCollectionId } from "../../src/cache/operation-index-types.js";
 import type { WriteCacheConfig } from "../../src/cache/write-cache-types.js";
+import { DEFAULT_DRIVE_CONTAINER_TYPES } from "../../src/core/drive-container-types.js";
 import type { IEventBus } from "../../src/events/interfaces.js";
 import {
   ReactorEventTypes,
@@ -215,6 +216,7 @@ describe.each(scopeVariants)(
         operationIndex,
         documentMetaCache,
         collectionMembershipCache,
+        DEFAULT_DRIVE_CONTAINER_TYPES,
         {},
         undefined,
         executionScope,

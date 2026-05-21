@@ -20,6 +20,9 @@ union Node = FolderNode | FileNode
 type DocumentDriveState {
   name: String!
   nodes: [Node!]!
+    @deprecated(
+      reason: "Use the reactor-drive subgraph (`reactorDrive.rootNodes`, `ReactorDriveFolderNode.children`) for paged listings. This field materialises the full child catalogue and does not scale beyond a few thousand entries."
+    )
   icon: String
 }
 

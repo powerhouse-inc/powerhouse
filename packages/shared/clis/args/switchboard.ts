@@ -60,6 +60,19 @@ export const switchboardArgs = {
     long: "migrate-status",
     description: "Show migration status and exit",
   }),
+  reset: flag({
+    type: optional(boolean),
+    long: "reset",
+    description:
+      "Wipe the local PGlite switchboard storage after confirmation, then exit",
+  }),
+  yes: flag({
+    type: optional(boolean),
+    long: "yes",
+    short: "y",
+    description:
+      "Skip the interactive confirmation prompt for --reset (required for non-interactive use)",
+  }),
   mcp: flag({
     type: boolean,
     long: "mcp",

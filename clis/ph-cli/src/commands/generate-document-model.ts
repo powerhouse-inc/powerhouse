@@ -6,16 +6,16 @@ export const generateDocumentModelCmd = command({
   aliases: ["doc"],
   description: "Generate a document model",
   args: {
-    file: option({
+    document: option({
       type: optional(File),
-      long: "file",
-      short: "f",
-      description: "Path to the file to generate the document model from",
+      long: "document",
+      short: "d",
+      description:
+        "Path to a document model spec (.phd or .json) to generate from",
     }),
     dir: option({
       type: optional(Directory),
       long: "dir",
-      short: "d",
       description:
         "Name of the directory of an existing document model to re-generate",
     }),
@@ -24,6 +24,12 @@ export const generateDocumentModelCmd = command({
       short: "a",
       description:
         "Re-generate all existing document models in the current project",
+    }),
+    extract: flag({
+      long: "extract",
+      short: "x",
+      description:
+        "Write a powerhouse/document-model spec for each existing document model into specs/document-models/",
     }),
     ...debugArgs,
   },

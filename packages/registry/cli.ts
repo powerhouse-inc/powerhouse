@@ -120,6 +120,14 @@ export const registryCommand = command({
       defaultValue: () => process.env.PH_REGISTRY_VERDACCIO_SECRET,
       defaultValueIsSerializable: true,
     }),
+    localPackages: option({
+      long: "local-packages",
+      type: optional(string),
+      description:
+        "Comma-separated globs (e.g. '@powerhousedao/*,document-model,ph-cmd') served locally only — no npmjs uplink proxy. Lets you re-publish a workspace package whose version already exists on npmjs without bumping.",
+      defaultValue: () => process.env.PH_REGISTRY_LOCAL_PACKAGES,
+      defaultValueIsSerializable: true,
+    }),
   },
   handler: async (args) => {
     console.log(args);

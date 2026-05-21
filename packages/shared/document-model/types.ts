@@ -1279,6 +1279,13 @@ export type RemoveRelationshipActionInput = {
   relationshipType: string;
 };
 
+export type UpdateRelationshipActionInput = {
+  sourceId: string;
+  targetId: string;
+  relationshipType: string;
+  metadata: Record<string, unknown> | null;
+};
+
 export type CreateDocumentAction = Action & {
   type: "CREATE_DOCUMENT";
   input: CreateDocumentActionInput;
@@ -1302,6 +1309,11 @@ export type AddRelationshipAction = Action & {
 export type RemoveRelationshipAction = Action & {
   type: "REMOVE_RELATIONSHIP";
   input: RemoveRelationshipActionInput;
+};
+
+export type UpdateRelationshipAction = Action & {
+  type: "UPDATE_RELATIONSHIP";
+  input: UpdateRelationshipActionInput;
 };
 
 export type DocumentAction =

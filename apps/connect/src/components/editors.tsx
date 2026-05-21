@@ -13,6 +13,8 @@ import {
   useFallbackEditorModule,
   useRevisionHistoryVisible,
   useSelectedTimelineItem,
+  useVetraPackageManager,
+  useVetraPackages,
 } from "@powerhousedao/reactor-browser";
 import type { PHDocument } from "@powerhousedao/shared/document-model";
 import { redo, undo } from "@powerhousedao/shared/document-model";
@@ -60,6 +62,19 @@ export const DocumentEditor: React.FC<Props> = (props) => {
   const preferredEditorModule = useEditorModuleById(preferredEditor);
   const fallbackEditorModule = useFallbackEditorModule(documentType);
   const editorModule = preferredEditorModule ?? fallbackEditorModule;
+  const vetraPackages = useVetraPackages();
+  const packageManager = useVetraPackageManager();
+  const owningPackageName = editorModule
+    ? vetraPackages.find((pkg) => pkg.editors.includes(editorModule))?.manifest
+        .name
+    : undefined;
+  const owningPackageVersion =
+    owningPackageName && packageManager
+      ? packageManager.getPackageVersion(owningPackageName)
+      : undefined;
+  const editorBundleKey = owningPackageName
+    ? `${owningPackageName}@${owningPackageVersion ?? "unknown"}`
+    : (editorModule?.config.id ?? "no-editor");
   const isLoadingDocument = !document;
   const isLoadingEditor =
     editorModule &&
@@ -211,7 +226,7 @@ export const DocumentEditor: React.FC<Props> = (props) => {
           >
             {!editorError?.error && (
               <EditorComponent
-                key={documentId}
+                key={`${editorBundleKey}:${documentId}`}
                 context={{
                   readMode: !!selectedTimelineItem,
                   selectedTimelineRevision: getRevisionFromDate(

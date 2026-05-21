@@ -32,6 +32,9 @@
       "path": "../../packages/reactor-attachments"
     },
     {
+      "path": "../../packages/reactor-drive"
+    },
+    {
       "path": "../../packages/renown"
     },
     {

@@ -42,7 +42,10 @@ async function main() {
       .withDocumentModels(documentModels)
       .withChannelScheme(ChannelScheme.SWITCHBOARD);
 
-    return new ReactorClientBuilder().withReactorBuilder(builder).buildModule();
+    const module = await new ReactorClientBuilder()
+      .withReactorBuilder(builder)
+      .buildModule();
+    return { module };
   };
 
   // Start the API

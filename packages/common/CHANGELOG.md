@@ -1,3 +1,59 @@
+## 6.0.0-dev.257 (2026-05-21)
+
+### 🚀 Features
+
+- **vetra:** moved schema projection to ph-rupert-cli ([49f627e7b](https://github.com/powerhouse-inc/powerhouse/commit/49f627e7b))
+- **vetra,ph-cli:** add @powerhousedao/vetra/codegen subexport for agent-driven codegen ([9689be87e](https://github.com/powerhouse-inc/powerhouse/commit/9689be87e))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.256 (2026-05-21)
+
+### 🩹 Fixes
+
+- add @tokens to logger calls across packages ([b70070ae2](https://github.com/powerhouse-inc/powerhouse/commit/b70070ae2))
+- **reactor-api:** pass args to logger.error calls in reactor subgraph ([b34dcf7dc](https://github.com/powerhouse-inc/powerhouse/commit/b34dcf7dc))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.255 (2026-05-20)
+
+This was a version bump only for @powerhousedao/common to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.254 (2026-05-19)
+
+### 🚀 Features
+
+- **reactor-api:** main integration tests now run on both reactor-drive and document-drive, includes reshuffle fix ([4f370a63f](https://github.com/powerhouse-inc/powerhouse/commit/4f370a63f))
+- add dark mode script ([#2619](https://github.com/powerhouse-inc/powerhouse/pull/2619))
+- single-document contention integration tests are switchable between document-drive and reactor-drive ([68b59b492](https://github.com/powerhouse-inc/powerhouse/commit/68b59b492))
+- **reactor-drive:** initial commit ([d6b7c4f8c](https://github.com/powerhouse-inc/powerhouse/commit/d6b7c4f8c))
+
+### 🩹 Fixes
+
+- wiring up reactor-drive dependency ([8c22b1658](https://github.com/powerhouse-inc/powerhouse/commit/8c22b1658))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Ryan Wolhuter @ryanwolhuter
+
+## 6.0.0-dev.253 (2026-05-18)
+
+This was a version bump only for @powerhousedao/common to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.252 (2026-05-17)
+
+This was a version bump only for @powerhousedao/common to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.251 (2026-05-16)
+
+This was a version bump only for @powerhousedao/common to align it with other projects, there were no code changes.
+
 ## 6.0.0-dev.250 (2026-05-15)
 
 This was a version bump only for @powerhousedao/common to align it with other projects, there were no code changes.

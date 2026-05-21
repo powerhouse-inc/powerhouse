@@ -1,0 +1,18 @@
+{
+  "extends": "../../tsconfig.options.json",
+  "compilerOptions": {
+    "outDir": "./.tsbuild",
+    "resolveJsonModule": true,
+    "types": ["node"]
+  },
+  "include": [
+    "scripts/**/*.ts",
+    "tests/**/*.ts",
+    "playwright.config.ts"
+  ],
+  "references": [
+    { "path": "../../clis/ph-cli" },
+    { "path": "../../packages/registry" },
+    { "path": "../e2e-utils" }
+  ]
+}

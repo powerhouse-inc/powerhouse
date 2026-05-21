@@ -1,6 +1,7 @@
 import {
   consolidateSyncOperations,
   envelopesToSyncOperations,
+  type IDriveClient,
   type IReactorClient,
   type ISyncManager,
   type JobInfo,
@@ -19,7 +20,30 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import { GraphQLError } from "graphql";
 
-import { DRIVE_DOCUMENT_TYPE } from "./constants.js";
+import { isDriveContainerType } from "./constants.js";
+
+const REACTOR_DRIVE_DOCUMENT_TYPE = "powerhouse/reactor-drive";
+
+/**
+ * Returns the drive client to use for the given drive-container parent type.
+ * Throws when the parent is a reactor-drive container but no
+ * `reactorDriveClient` was provided.
+ */
+function pickDriveClient(
+  reactorClient: IReactorClient,
+  driveContainerType: string,
+  reactorDriveClient: IDriveClient | undefined,
+): IDriveClient {
+  if (driveContainerType === REACTOR_DRIVE_DOCUMENT_TYPE) {
+    if (!reactorDriveClient) {
+      throw new GraphQLError(
+        "Reactor-drive parent encountered but no reactorDriveClient is configured on this switchboard",
+      );
+    }
+    return reactorDriveClient;
+  }
+  return reactorClient.drives;
+}
 
 export const MAX_OPERATIONS_PER_ENVELOPE = 25;
 export const MAX_OPERATIONS_PER_PAGE = 100;
@@ -428,6 +452,7 @@ export async function createDocument(
     document: unknown;
     parentIdentifier?: string | null;
   },
+  reactorDriveClient?: IDriveClient,
 ): Promise<ReturnType<typeof toGqlPhDocument>> {
   // Validate that document is a PHDocument
   if (!args.document || typeof args.document !== "object") {
@@ -447,8 +472,13 @@ export async function createDocument(
   try {
     if (parentIdentifier) {
       const parent = await reactorClient.get(parentIdentifier);
-      if (parent.header.documentType === DRIVE_DOCUMENT_TYPE) {
-        result = await reactorClient.drives.addFile(parentIdentifier, document);
+      if (isDriveContainerType(parent.header.documentType)) {
+        const driveClient = pickDriveClient(
+          reactorClient,
+          parent.header.documentType,
+          reactorDriveClient,
+        );
+        result = await driveClient.addFile(parentIdentifier, document);
       } else {
         result = await reactorClient.create(document, parentIdentifier);
       }
@@ -477,6 +507,7 @@ export async function createEmptyDocument(
     parentIdentifier?: string | null;
     name?: string | null;
   },
+  reactorDriveClient?: IDriveClient,
 ): Promise<ReturnType<typeof toGqlPhDocument>> {
   const parentIdentifier = fromInputMaybe(args.parentIdentifier);
   const name = fromInputMaybe(args.name);
@@ -485,7 +516,7 @@ export async function createEmptyDocument(
   try {
     if (parentIdentifier) {
       const parent = await reactorClient.get(parentIdentifier);
-      if (parent.header.documentType === DRIVE_DOCUMENT_TYPE) {
+      if (isDriveContainerType(parent.header.documentType)) {
         const module = await reactorClient.getDocumentModelModule(
           args.documentType,
         );
@@ -493,7 +524,12 @@ export async function createEmptyDocument(
         if (name) {
           document.header.name = name;
         }
-        result = await reactorClient.drives.addFile(parentIdentifier, document);
+        const driveClient = pickDriveClient(
+          reactorClient,
+          parent.header.documentType,
+          reactorDriveClient,
+        );
+        result = await driveClient.addFile(parentIdentifier, document);
       } else {
         result = await reactorClient.createEmpty(args.documentType, {
           parentIdentifier,
@@ -527,6 +563,7 @@ export async function createDocumentWithInitialState(
     preferredEditor?: string | null;
     initialState: Record<string, Record<string, unknown>>;
   },
+  reactorDriveClient?: IDriveClient,
 ): Promise<ReturnType<typeof toGqlPhDocument>> {
   const parentIdentifier = fromInputMaybe(args.parentIdentifier);
   const name = fromInputMaybe(args.name);
@@ -577,9 +614,14 @@ export async function createDocumentWithInitialState(
       );
     }
 
-    if (parent.header.documentType === DRIVE_DOCUMENT_TYPE) {
+    if (isDriveContainerType(parent.header.documentType)) {
+      const driveClient = pickDriveClient(
+        reactorClient,
+        parent.header.documentType,
+        reactorDriveClient,
+      );
       try {
-        result = await reactorClient.drives.addFile(parentIdentifier, document);
+        result = await driveClient.addFile(parentIdentifier, document);
       } catch (error) {
         throw new GraphQLError(
           `Failed to create document in drive: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -890,6 +932,7 @@ export async function deleteDocument(
     identifier: string;
     propagate?: GqlPropagationMode | null;
   },
+  reactorDriveClient?: IDriveClient,
 ): Promise<boolean> {
   const propagate = toReactorPropagationMode(args.propagate);
 
@@ -898,14 +941,16 @@ export async function deleteDocument(
       args.identifier,
       "child",
     );
-    const driveParent = incoming.results.find(
-      (p) => p.header.documentType === "powerhouse/document-drive",
+    const driveParent = incoming.results.find((p) =>
+      isDriveContainerType(p.header.documentType),
     );
     if (driveParent) {
-      await reactorClient.drives.removeNode(
-        driveParent.header.id,
-        args.identifier,
+      const driveClient = pickDriveClient(
+        reactorClient,
+        driveParent.header.documentType,
+        reactorDriveClient,
       );
+      await driveClient.removeNode(driveParent.header.id, args.identifier);
     } else {
       await reactorClient.deleteDocument(args.identifier, propagate);
     }

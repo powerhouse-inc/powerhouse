@@ -14,6 +14,7 @@ import {
   type IReactor,
   type ReactorModule,
 } from "@powerhousedao/reactor";
+import { reactorDriveDocumentModelModule } from "@powerhousedao/reactor-drive";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import { documentModelDocumentModelModule } from "document-model";
 import type {
@@ -46,6 +47,7 @@ export type FixtureMetadata = {
 const REGISTERED_DOCUMENT_MODELS = [
   documentModelDocumentModelModule,
   driveDocumentModelModule,
+  reactorDriveDocumentModelModule,
 ] as unknown as DocumentModelModule[];
 
 export function getRegisteredDocumentModelTypes(): string[] {

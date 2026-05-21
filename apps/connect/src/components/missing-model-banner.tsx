@@ -84,7 +84,7 @@ function MissingModelDetailsModal(props: DetailsProps) {
       }}
       contentProps={{ className: "rounded-3xl" }}
     >
-      <div className="w-[520px] max-w-[90vw] p-6">
+      <div className="w-[520px] max-w-[90vw] bg-white p-6">
         <div className="border-b border-slate-100 pb-2 text-2xl font-bold text-gray-800">
           Missing document models
         </div>

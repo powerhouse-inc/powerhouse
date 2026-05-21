@@ -65,7 +65,7 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
           );
         }
 
-        let fullState: Record<string, unknown> = {};
+        let fullState: Record<string, unknown>;
         try {
           fullState = JSON.parse(resultingState) as Record<string, unknown>;
         } catch (error) {

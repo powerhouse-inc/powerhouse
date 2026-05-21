@@ -16,10 +16,13 @@ await build({
   outDir: join("dist", "node"),
 });
 
-// Emit dts via tsc; flags live in tsconfig.json.
+// Emit dts via tsc; flags live in tsconfig.json. `--build` so the project
+// references' .tsbuild outputs get emitted first — otherwise tsc reports
+// TS6305 (Output file has not been built from source file) for every
+// cross-package import and the cascade hides real type errors.
 console.log("\n▶ Emitting types via tsc...");
 try {
-  execSync("tsc", { stdio: "inherit" });
+  execSync("tsc --build", { stdio: "inherit" });
   console.log("✔ Types emitted to", join("dist", "types"));
 } catch {
   console.warn(

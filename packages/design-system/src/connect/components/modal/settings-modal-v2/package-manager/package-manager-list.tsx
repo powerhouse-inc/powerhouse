@@ -78,7 +78,7 @@ export const PackageManagerListItem = (props: {
   return (
     <li
       className={twMerge(
-        "relative flex flex-col items-start rounded-md border border-gray-200 p-3 text-sm/5 shadow-sm",
+        "relative flex flex-col items-start rounded-md border border-gray-200 bg-white p-3 text-sm/5 shadow-sm",
         className,
       )}
     >

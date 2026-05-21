@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-browser",
-  "version": "6.0.0-dev.250",
+  "version": "6.0.0-dev.257",
   "license": "AGPL-3.0-only",
   "type": "module",
   "repository": {
@@ -53,6 +53,7 @@
     "@powerhousedao/analytics-engine-browser": "workspace:*",
     "@powerhousedao/analytics-engine-core": "workspace:*",
     "@powerhousedao/reactor": "workspace:*",
+    "@powerhousedao/reactor-drive": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
     "@renown/sdk": "workspace:*",
     "@tanstack/react-query": "^5.49.2",

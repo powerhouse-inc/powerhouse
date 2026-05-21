@@ -65,6 +65,8 @@ export class KyselyDocumentIndexer
           await this.handleAddRelationship(trx, operation);
         } else if (actionType === "REMOVE_RELATIONSHIP") {
           await this.handleRemoveRelationship(trx, operation);
+        } else if (actionType === "UPDATE_RELATIONSHIP") {
+          await this.handleUpdateRelationship(trx, operation);
         }
       }
     });
@@ -616,6 +618,29 @@ export class KyselyDocumentIndexer
 
     await trx
       .deleteFrom("DocumentRelationship")
+      .where("sourceId", "=", input.sourceId)
+      .where("targetId", "=", input.targetId)
+      .where("relationshipType", "=", input.relationshipType)
+      .execute();
+  }
+
+  private async handleUpdateRelationship(
+    trx: Kysely<IndexerDatabase>,
+    operation: Operation,
+  ): Promise<void> {
+    const input = operation.action.input as {
+      sourceId: string;
+      targetId: string;
+      relationshipType: string;
+      metadata: Record<string, unknown> | null;
+    };
+
+    await trx
+      .updateTable("DocumentRelationship")
+      .set({
+        metadata: input.metadata,
+        updatedAt: new Date(),
+      })
       .where("sourceId", "=", input.sourceId)
       .where("targetId", "=", input.targetId)
       .where("relationshipType", "=", input.relationshipType)

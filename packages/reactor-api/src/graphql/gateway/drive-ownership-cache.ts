@@ -1,14 +1,17 @@
-import type { IReactorClient } from "@powerhousedao/reactor";
-import { DRIVE_DOCUMENT_TYPE } from "../reactor/constants.js";
+import {
+  DEFAULT_DRIVE_CONTAINER_TYPES,
+  type IReactorClient,
+} from "@powerhousedao/reactor";
 
 /**
  * In-memory record of which drives this switchboard instance owns.
  *
- * Populated at startup by walking the reactor for documents of type
- * `powerhouse/document-drive`. Mutated explicitly by resolver hooks
- * after successful drive create / delete operations. Read by the
- * drive-validation fetch middleware to short-circuit wrong-shard
- * requests with a structured 421 response.
+ * Populated at startup by walking the reactor for documents whose type is
+ * listed in `DEFAULT_DRIVE_CONTAINER_TYPES` (both legacy `document-drive`
+ * and `reactor-drive`). Mutated explicitly by resolver hooks after
+ * successful drive create / delete operations. Read by the drive-validation
+ * fetch middleware to short-circuit wrong-shard requests with a structured
+ * 421 response.
  */
 export class DriveOwnershipCache {
   private readonly drives = new Set<string>();
@@ -17,15 +20,17 @@ export class DriveOwnershipCache {
 
   async init(): Promise<void> {
     this.drives.clear();
-    let page = await this.reactorClient.find({ type: DRIVE_DOCUMENT_TYPE });
-    while (true) {
-      for (const drive of page.results) {
-        this.drives.add(drive.header.id);
+    for (const driveType of DEFAULT_DRIVE_CONTAINER_TYPES) {
+      let page = await this.reactorClient.find({ type: driveType });
+      while (true) {
+        for (const drive of page.results) {
+          this.drives.add(drive.header.id);
+        }
+        if (!page.next) {
+          break;
+        }
+        page = await page.next();
       }
-      if (!page.next) {
-        return;
-      }
-      page = await page.next();
     }
   }
 

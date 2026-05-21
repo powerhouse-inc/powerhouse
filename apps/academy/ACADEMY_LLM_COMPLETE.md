@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-05-21T16:36:43.762Z
+> Generated: 2026-05-21T17:02:10.019Z
 > Total Documents: 86
 > Source: https://powerhouse.academy/llms-full.txt
 
@@ -584,7 +584,7 @@ This tutorial step has a corresponding branch. After completing this step, your 
 
 ### Compare your generated code
 
-After running `ph generate document-model --file TodoList.phdm.zip`, compare with the reference:
+After running `ph generate document-model --document TodoList.phdm.zip`, compare with the reference:
 
 ```bash
 # Compare all generated files with step-2
@@ -2900,7 +2900,7 @@ Once your schema and operations are defined in Connect, export the specification
 Use the Powerhouse CLI to process an exported `.phdm.zip` file and generate the necessary boilerplate code for your document model.
 
 ```bash
-ph generate document-model --file YourModelName.phdm.zip
+ph generate document-model --document YourModelName.phdm.zip
 ```
 
 This command creates a new directory under `document-models/YourModelName/` containing:
@@ -4446,13 +4446,13 @@ If you're using the Connect workflow and need to manually generate code:
 The core command to invoke the Document Model Generator is:
 
 ```bash
-ph generate document-model --file <YourModelName.phd>
+ph generate document-model --document <YourModelName.phd>
 ```
 
 Replace `<YourModelName.phd>` with the actual filename of your exported document model specification. For instance, if your exported file is named `TodoList.phd`, the command would be:
 
 ```bash
-ph generate document-model --file TodoList.phd
+ph generate document-model --document TodoList.phd
 ```
 
 When executed, this command reads and parses the specification file and generates a set of files and directories within your Powerhouse project.
@@ -4501,7 +4501,7 @@ When your document model needs to evolve over time—adding new fields, operatio
 Versioning is enabled by default. Simply run:
 
 ```bash
-ph generate document-model --file TodoList.phd
+ph generate document-model --document TodoList.phd
 ```
 
 ### Versioned Folder Structure
@@ -4592,7 +4592,7 @@ This approach is useful when working with Connect's Document Model Editor or whe
 2. **Run the Generator Command:**
 
    ```bash
-   ph generate document-model --file TodoList.phd
+   ph generate document-model --document TodoList.phd
    ```
 
 3. **Explore the Generated Files:**
@@ -13668,27 +13668,27 @@ Overrides apply at dist-emit time and are baked into the dist file — operators
 
 Every `connect.*` field has a dedicated flag. Both `ph connect config` and `ph connect build` accept the same set.
 
-| `connect.*` JSON path | Flag | Type |
-|---|---|---|
-| `connect.app.basePath` | `--base` | string |
-| `connect.app.logLevel` | `--log-level` | `debug \| info \| warn \| error` |
-| `connect.packages.externalEnabled` | `--external-packages` | boolean |
-| `connect.packages.registryUrl` | `--packages-registry` | string |
-| `connect.branding.appName` | `--app-name` | string |
-| `connect.branding.homeBackground` | `--home-background` | string (pass `""` to set `null`) |
-| `connect.drives.allowAddDrive` | `--allow-add-drive` | boolean |
-| `connect.drives.defaultDrives` | `--default-drives-url` | comma-list → array of `{url, name, icon}` |
-| `connect.drives.preserveStrategy` | `--drive-preserve-strategy` | `preserve-all \| preserve-by-url-and-detach` |
-| `connect.drives.sections.remote.enabled` | `--remote-drives-enabled` | boolean |
-| `connect.drives.sections.remote.allowAdd` | `--remote-drives-allow-add` | boolean |
-| `connect.drives.sections.remote.allowDelete` | `--remote-drives-allow-delete` | boolean |
-| `connect.drives.sections.local.enabled` | `--local-drives-enabled` | boolean |
-| `connect.drives.sections.local.allowAdd` | `--local-drives-allow-add` | boolean |
-| `connect.drives.sections.local.allowDelete` | `--local-drives-allow-delete` | boolean |
-| `connect.renown.url` | `--renown-url` | string |
-| `connect.renown.networkId` | `--renown-network-id` | string |
-| `connect.renown.chainId` | `--renown-chain-id` | number |
-| _(bulk, any subset of fields)_ | `--json '{...}'` | partial `connect.*` JSON blob |
+| `connect.*` JSON path                        | Flag                           | Type                                         |
+| -------------------------------------------- | ------------------------------ | -------------------------------------------- |
+| `connect.app.basePath`                       | `--base`                       | string                                       |
+| `connect.app.logLevel`                       | `--log-level`                  | `debug \| info \| warn \| error`             |
+| `connect.packages.externalEnabled`           | `--external-packages`          | boolean                                      |
+| `connect.packages.registryUrl`               | `--packages-registry`          | string                                       |
+| `connect.branding.appName`                   | `--app-name`                   | string                                       |
+| `connect.branding.homeBackground`            | `--home-background`            | string (pass `""` to set `null`)             |
+| `connect.drives.allowAddDrive`               | `--allow-add-drive`            | boolean                                      |
+| `connect.drives.defaultDrives`               | `--default-drives-url`         | comma-list → array of `{url, name, icon}`    |
+| `connect.drives.preserveStrategy`            | `--drive-preserve-strategy`    | `preserve-all \| preserve-by-url-and-detach` |
+| `connect.drives.sections.remote.enabled`     | `--remote-drives-enabled`      | boolean                                      |
+| `connect.drives.sections.remote.allowAdd`    | `--remote-drives-allow-add`    | boolean                                      |
+| `connect.drives.sections.remote.allowDelete` | `--remote-drives-allow-delete` | boolean                                      |
+| `connect.drives.sections.local.enabled`      | `--local-drives-enabled`       | boolean                                      |
+| `connect.drives.sections.local.allowAdd`     | `--local-drives-allow-add`     | boolean                                      |
+| `connect.drives.sections.local.allowDelete`  | `--local-drives-allow-delete`  | boolean                                      |
+| `connect.renown.url`                         | `--renown-url`                 | string                                       |
+| `connect.renown.networkId`                   | `--renown-network-id`          | string                                       |
+| `connect.renown.chainId`                     | `--renown-chain-id`            | number                                       |
+| _(bulk, any subset of fields)_               | `--json '{...}'`               | partial `connect.*` JSON blob                |
 
 Plus `ph connect config --get <connect.path>` to read a single value, `ph connect config --dist-dir <path>` to point at a non-default dist location (overrides `PH_CONNECT_OUTDIR`).
 
@@ -17971,6 +17971,8 @@ Re-generate all modules in the current project
 
 
 ### Flags
+**Extract** - Instead of generating code, write a spec for every module into specs/ (one-shot migration to documents-as-source-of-truth) - Usage: `--extract, -x`
+
 **Help** - show help - Usage: `--help, -h`
 
 
@@ -17979,13 +17981,15 @@ Generate a document model
 
 
 ### Options
-**File** - Path to the file to generate the document model from - Usage: `--file, -f <file>`
+**Document** - Path to a document model spec (.phd or .json) to generate from - Usage: `--document, -d <file>`
 
-**Dir** - Name of the directory of an existing document model to re-generate - Usage: `--dir, -d <dir>`
+**Dir** - Name of the directory of an existing document model to re-generate - Usage: `--dir <dir>`
 
 
 ### Flags
 **All** - Re-generate all existing document models in the current project - Usage: `--all, -a`
+
+**Extract** - Write a powerhouse/document-model spec for each existing document model into specs/document-models/ - Usage: `--extract, -x`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
@@ -18001,11 +18005,15 @@ Generate a document editor
 
 **Document Type** - The document type for the new editor - Usage: `--document-type, -t <str>`
 
-**Dir** - Name of the directory of an existing editor to re-generate - Usage: `--dir, -d <dir>`
+**Document** - Path to a powerhouse/document-editor spec file (.phd or .json) to drive codegen - Usage: `--document, -d <file>`
+
+**Dir** - Name of the directory of an existing editor to re-generate - Usage: `--dir <dir>`
 
 
 ### Flags
 **All** - Re-generate all existing editors in the current project - Usage: `--all, -a`
+
+**Extract** - Write a powerhouse/document-editor spec for each existing editor into specs/editors/ - Usage: `--extract, -x`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
@@ -18021,7 +18029,9 @@ Generate a drive app
 
 **Document Types** - The document types allowed by the new app - Usage: `--document-types <str>, -t=<str>`
 
-**Dir** - Name of the directory of an existing app to re-generate - Usage: `--dir, -d <dir>`
+**Document** - Path to a powerhouse/app spec file (.phd or .json) to drive codegen - Usage: `--document, -d <file>`
+
+**Dir** - Name of the directory of an existing app to re-generate - Usage: `--dir <dir>`
 
 
 ### Flags
@@ -18029,6 +18039,8 @@ Generate a drive app
 
 **Default:** `false`
 **All** - Re-generate all existing apps in the current project - Usage: `--all, -a`
+
+**Extract** - Write a powerhouse/app spec for each existing drive app into specs/apps/ - Usage: `--extract, -x`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
@@ -18051,11 +18063,15 @@ Generate a processor
 **Apps** - Whether the processor will run in switchboard (nodejs), connect (browser), or both - Usage: `--apps <value>`
 
 **Default:** `switchboard,connect`
-**Dir** - Name of the directory of an existing processor to re-generate - Usage: `--dir, -d <dir>`
+**Document** - Path to a powerhouse/processor spec file (.phd or .json) to drive codegen - Usage: `--document, -d <file>`
+
+**Dir** - Name of the directory of an existing processor to re-generate - Usage: `--dir <dir>`
 
 
 ### Flags
 **All** - Re-generate all existing processors in the current project - Usage: `--all, -a`
+
+**Extract** - Write a powerhouse/processor spec for each existing processor into specs/processors/ - Usage: `--extract, -x`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
@@ -18069,11 +18085,15 @@ Generate a subgraph
 ### Options
 **Name** - The name of the subgraph to generate - Usage: `--name, -n <str>`
 
-**Dir** - Name of the directory of an existing subgraph to re-generate - Usage: `--dir, -d <dir>`
+**Document** - Path to a powerhouse/subgraph spec file (.phd or .json) to drive codegen - Usage: `--document, -d <file>`
+
+**Dir** - Name of the directory of an existing subgraph to re-generate - Usage: `--dir <dir>`
 
 
 ### Flags
 **All** - Re-generate all existing subgraphs in the current project - Usage: `--all, -a`
+
+**Extract** - Write a powerhouse/subgraph spec for each existing subgraph into specs/subgraphs/ - Usage: `--extract, -x`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
@@ -18116,6 +18136,8 @@ and real-time processing with a "Vetra" drive or connection to remote drives.
 
 **Default:** `3001`
 **Remote Drive** - URL of remote drive to connect to (skips switchboard initialization) - Usage: `--remote-drive <str>`
+
+**Db Path** - Database path or connection string. Use a `postgres://` URL for Postgres; otherwise treated as a PGlite filesystem path. Leave unset for in-memory PGlite. - Usage: `--db-path <str>`
 
 **Base** - Base path for the app - Usage: `--base <str>`
 
@@ -18555,6 +18577,10 @@ models, processors, and real-time updates.
 **Migrate** - Run database migrations and exit - Usage: `--migrate`
 
 **Migrate Status** - Show migration status and exit - Usage: `--migrate-status`
+
+**Reset** - Wipe the local PGlite switchboard storage after confirmation, then exit - Usage: `--reset`
+
+**Yes** - Skip the interactive confirmation prompt for --reset (required for non-interactive use) - Usage: `--yes, -y`
 
 **Mcp** - enable Mcp route at /mcp - Usage: `--mcp`
 

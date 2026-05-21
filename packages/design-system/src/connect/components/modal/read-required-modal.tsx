@@ -92,7 +92,10 @@ export function ReadRequiredModal(props: ReadRequiredModalProps) {
       {...restProps}
     >
       <div
-        {...mergeClassNameProps(containerProps, "w-[500px] p-6 text-slate-300")}
+        {...mergeClassNameProps(
+          containerProps,
+          "w-[500px] bg-white p-6 text-slate-300",
+        )}
       >
         <div
           {...mergeClassNameProps(

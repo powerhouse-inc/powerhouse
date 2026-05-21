@@ -309,8 +309,8 @@ describe("DriveClient Integration Tests", () => {
       const drive = await createDrive();
       await client.drives.addFolder(drive.header.id, "A");
       await client.drives.addFolder(drive.header.id, "B");
-      const nodes = await client.drives.listNodes(drive.header.id);
-      expect(nodes.length).toBe(2);
+      const page = await client.drives.listNodes(drive.header.id);
+      expect(page.results.length).toBe(2);
     });
 
     it("filters by parentFolder when a folder id is provided", async () => {
@@ -320,8 +320,8 @@ describe("DriveClient Integration Tests", () => {
       await client.drives.addFolder(drive.header.id, "Outside");
 
       const inside = await client.drives.listNodes(drive.header.id, folder.id);
-      expect(inside.length).toBe(1);
-      expect(inside[0].name).toBe("Inside");
+      expect(inside.results.length).toBe(1);
+      expect(inside.results[0].name).toBe("Inside");
     });
 
     it("filters root nodes when null is supplied", async () => {
@@ -330,8 +330,8 @@ describe("DriveClient Integration Tests", () => {
       await client.drives.addFolder(drive.header.id, "Inside", folder.id);
 
       const root = await client.drives.listNodes(drive.header.id, null);
-      expect(root.length).toBe(1);
-      expect(root[0].id).toBe(folder.id);
+      expect(root.results.length).toBe(1);
+      expect(root.results[0].id).toBe(folder.id);
     });
   });
 

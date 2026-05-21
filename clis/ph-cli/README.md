@@ -97,51 +97,53 @@ ph connect --config-file ./my-config.js
 
 ### `ph generate`
 
-Generate code from document models with various options. This command supports multiple generation types including editors, processors, subgraphs, and import scripts.
+`ph generate` is a router; pass a subcommand to generate a specific
+module type. See `ph generate <subcommand> --help` for the full option
+list per subcommand.
 
-#### Options:
+#### Subcommands:
 
-- `-i, --interactive`: Run the command in interactive mode
-- `--editors <type>`: Path to the editors directory
-- `-e, --editor <type>`: Editor Name
-- `--file <path>`: File path to document model
-- `--processors <type>`: Path to the processors directory
-- `-p, --processor <type>`: Processor Name
-- `--processor-type <type>`: Processor Type (relationalDb/analytics)
-- `-s, --subgraph <type>`: Subgraph Name
-- `--document-models <type>`: Path to the document models directory
-- `--document-types <type>`: Supported document types by the editor
-- `-is, --import-script <type>`: Import Script Name
-- `-sf, --skip-format`: Skip formatting the generated code
-- `-w, --watch`: Watch the generated code
-- `-d, --drive-editor <name>`: Generate a drive editor with the specified name
+- `document-model` (alias `doc`) — generate from a `.phd`/`.json` spec
+- `editor` — generate a document editor
+- `app` — generate a drive app
+- `processor` — generate a reactor processor
+- `subgraph` — generate a GraphQL subgraph
+- `migration-file` — generate migrations for a relational-db processor
+- `all` — re-generate every module in the project
+
+Most subcommands share these options:
+
+- `-d, --document <path>`: Path to a document-model spec (`.phd` or `.json`)
+- `--dir <dir>`: Existing module directory to re-generate
+- `-a, --all`: Re-generate every existing module of this type
+- `-x, --extract`: (document-model only) Write a `powerhouse/document-model` spec for each existing model into `specs/document-models/`
 
 #### Examples:
 
 ```bash
-# Generate code from a specific file
-ph generate path/to/model.json
+# Generate a document model from a spec file
+ph generate document-model --document path/to/model.phd
 
-# Generate in interactive mode
-ph generate -i
+# Re-generate all existing document models in the project
+ph generate document-model --all
 
-# Generate a drive editor
-ph generate --drive-editor myEditor
+# Generate an editor for a given document type
+ph generate editor --name myEditor --document-type powerhouse/todo
 
-# Generate an editor with specific document types
-ph generate --editor myEditor --document-types "type1,type2"
+# Generate a drive app
+ph generate app --name myApp
 
 # Generate a processor
-ph generate --processor myProcessor --processor-type relationalDb
+ph generate processor --name myProcessor --processor-type relationalDb
 
 # Generate a subgraph
-ph generate --subgraph mySubgraph --file path/to/model.json
+ph generate subgraph --name mySubgraph
 
-# Generate an import script
-ph generate --import-script myImportScript
+# Generate migration files for a relational-db processor
+ph generate migration-file --processor myProcessor
 
-# Watch mode for continuous generation
-ph generate --watch
+# Re-generate everything in the project
+ph generate all
 ```
 
 ### `ph install` (or `ph add`, `ph i`)

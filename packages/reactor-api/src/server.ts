@@ -4,6 +4,7 @@ import { PostgresAnalyticsStore } from "@powerhousedao/analytics-engine-pg";
 import { getConfig } from "@powerhousedao/config/node";
 import type {
   IDocumentModelRegistry,
+  IDriveClient,
   IReadModel,
   IReactorClient,
   IProcessorManager as IReactorProcessorManager,
@@ -199,6 +200,7 @@ async function setupGraphQLManager(
   enableDocumentModelSubgraphs?: boolean,
   port?: number,
   authorizationService?: AuthorizationService,
+  reactorDriveClient?: IDriveClient,
 ): Promise<GraphQLManager> {
   const graphqlManager = new GraphQLManager(
     config.basePath,
@@ -221,6 +223,7 @@ async function setupGraphQLManager(
     },
     port,
     authorizationService,
+    reactorDriveClient,
   );
 
   await graphqlManager.init(subgraphs.core, authFetchMiddleware);
@@ -568,6 +571,7 @@ async function _setupAPI(
   authorizationService?: AuthorizationService,
   documentModelRegistry?: IDocumentModelRegistry,
   dbClosers: Array<() => Promise<void>> = [],
+  reactorDriveClient?: IDriveClient,
 ): Promise<API> {
   const hostModule: IProcessorHostModule = {
     relationalDb,
@@ -697,6 +701,7 @@ async function _setupAPI(
     options.enableDocumentModelSubgraphs,
     port,
     authorizationService,
+    reactorDriveClient,
   );
 
   // Set up event listeners
@@ -754,14 +759,17 @@ function buildApiDispose(args: {
     try {
       await graphqlManager.shutdown();
     } catch (error) {
-      logger.error("API dispose: graphqlManager.shutdown failed:", error);
+      logger.error(
+        "API dispose: graphqlManager.shutdown failed: @error",
+        error,
+      );
     }
 
     try {
       for (const client of wsServer.clients) client.terminate();
       await new Promise<void>((resolve) => wsServer.close(() => resolve()));
     } catch (error) {
-      logger.error("API dispose: wsServer.close failed:", error);
+      logger.error("API dispose: wsServer.close failed: @error", error);
     }
 
     if (httpServer.listening) {
@@ -773,7 +781,7 @@ function buildApiDispose(args: {
           httpServer.close((err) => (err ? reject(err) : resolve())),
         );
       } catch (error) {
-        logger.error("API dispose: httpServer.close failed:", error);
+        logger.error("API dispose: httpServer.close failed: @error", error);
       }
     }
 
@@ -781,7 +789,7 @@ function buildApiDispose(args: {
       try {
         await close();
       } catch (error) {
-        logger.error("API dispose: db closer failed:", error);
+        logger.error("API dispose: db closer failed: @error", error);
       }
     }
   };
@@ -797,10 +805,20 @@ function buildApiDispose(args: {
  *
  * @returns The API server components along with the created client instances.
  */
+/**
+ * Result of a client initializer. `reactorDriveClient` is optionally returned
+ * alongside the reactor module so resolvers can dispatch reactor-drive parent
+ * ops to it; legacy switchboards omit it.
+ */
+export interface ClientInitializerResult {
+  module: ReactorClientModule;
+  reactorDriveClient?: IDriveClient;
+}
+
 export async function initializeAndStartAPI(
   clientInitializer: (
     documentModels: DocumentModelModule[],
-  ) => Promise<ReactorClientModule>,
+  ) => Promise<ClientInitializerResult>,
   options: Options,
   processorApp: ProcessorApp,
 ): Promise<
@@ -827,7 +845,8 @@ export async function initializeAndStartAPI(
 
   const { documentModels, processors, subgraphs } = await packages.init();
 
-  const reactorClientModule = await clientInitializer(documentModels);
+  const { module: reactorClientModule, reactorDriveClient } =
+    await clientInitializer(documentModels);
 
   // Extract client and syncManager from the module
   const reactorClient = reactorClientModule.client;
@@ -878,6 +897,7 @@ export async function initializeAndStartAPI(
     authorizationService,
     documentModelRegistry,
     dbClosers,
+    reactorDriveClient,
   );
 
   return {

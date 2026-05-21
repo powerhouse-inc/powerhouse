@@ -25,6 +25,31 @@ const DURATION = 15_000;
 const MUTATION_INTERVAL = 1_000;
 const DRAIN_MS = 30_000;
 
+const VALID_DRIVE_TYPES = [
+  "powerhouse/document-drive",
+  "powerhouse/reactor-drive",
+] as const;
+type DriveType = (typeof VALID_DRIVE_TYPES)[number];
+const DEFAULT_DRIVE_TYPE: DriveType = "powerhouse/document-drive";
+
+function parseDriveType(argv: string[]): DriveType {
+  const idx = argv.indexOf("--drive-type");
+  if (idx === -1) return DEFAULT_DRIVE_TYPE;
+
+  const value = argv[idx + 1];
+  if (!value) {
+    throw new Error(
+      `--drive-type requires a value. Expected one of: ${VALID_DRIVE_TYPES.join(", ")}`,
+    );
+  }
+  if (!VALID_DRIVE_TYPES.includes(value as DriveType)) {
+    throw new Error(
+      `Invalid --drive-type: ${value}. Expected one of: ${VALID_DRIVE_TYPES.join(", ")}`,
+    );
+  }
+  return value as DriveType;
+}
+
 interface ChildState {
   label: string;
   proc: ChildProcess;
@@ -140,12 +165,13 @@ async function waitForSwitchboard(
 
 async function createDocument(
   client: GraphQLClient,
+  driveType: DriveType,
 ): Promise<{ driveId: string; documentId: string }> {
-  const drives = await client.findDrives();
+  const drives = await client.findDrives(driveType);
   let driveId: string;
 
   if (drives.length === 0) {
-    const drive = await client.createEmptyDocument("powerhouse/document-drive");
+    const drive = await client.createEmptyDocument(driveType);
     driveId = drive.id;
   } else {
     driveId = drives[0].id;
@@ -180,6 +206,8 @@ function waitForExit(child: ChildState, timeoutMs: number): Promise<void> {
 }
 
 async function main(): Promise<void> {
+  const driveType = parseDriveType(process.argv.slice(2));
+
   const url = `http://localhost:${PORT}/graphql`;
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "ph-integration-"));
   const runDir = path.join(tmpDir, "logs");
@@ -194,6 +222,7 @@ async function main(): Promise<void> {
 
   const totalDuration = DURATION + DRAIN_MS;
   console.log(bold(blue("=== Sync Integration Test ===")));
+  console.log(`  Drive:    ${driveType}`);
   console.log(`  Clients:  ${CLIENT_COUNT}`);
   console.log(`  Duration: ${DURATION / 1000}s (+ ${DRAIN_MS / 1000}s drain)`);
   console.log(`  Rate:     1 op/sec`);
@@ -214,6 +243,7 @@ async function main(): Promise<void> {
       ...process.env,
       PORT: String(PORT),
       PH_PGLITE_IN_MEMORY: "1",
+      PH_DEFAULT_DRIVE_TYPE: driveType,
     },
   });
 
@@ -272,7 +302,7 @@ async function main(): Promise<void> {
   let documentId: string;
 
   try {
-    const result = await createDocument(gqlClient);
+    const result = await createDocument(gqlClient, driveType);
     driveId = result.driveId;
     documentId = result.documentId;
   } catch (error) {

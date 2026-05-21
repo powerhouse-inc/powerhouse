@@ -21,6 +21,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { KyselyOperationIndex } from "../../src/cache/kysely-operation-index.js";
 import type { IOperationIndex } from "../../src/cache/operation-index-types.js";
 import type { IWriteCache } from "../../src/cache/write/interfaces.js";
+import { DEFAULT_DRIVE_CONTAINER_TYPES } from "../../src/core/drive-container-types.js";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import type { Database, ReactorModule } from "../../src/core/types.js";
 import { ProcessorManager } from "../../src/processors/processor-manager.js";
@@ -619,6 +620,7 @@ describe("ProcessorManager Standalone Tests", () => {
       mockWriteCache,
       consistencyTracker,
       logger,
+      DEFAULT_DRIVE_CONTAINER_TYPES,
     );
 
     await processorManager.init();
@@ -675,6 +677,7 @@ describe("ProcessorManager Standalone Tests", () => {
         mockWriteCache,
         consistencyTracker,
         logger,
+        DEFAULT_DRIVE_CONTAINER_TYPES,
       );
       await restartedManager.init();
 
@@ -691,6 +694,135 @@ describe("ProcessorManager Standalone Tests", () => {
         .getAll()
         .filter((p) => p.driveId === driveId);
       expect(driveProcessors).toHaveLength(1);
+    });
+
+    it("should discover drives of all configured container types", async () => {
+      const legacyDriveId = generateId();
+      const reactorDriveId = generateId();
+
+      await db
+        .insertInto("DocumentSnapshot")
+        .values([
+          {
+            id: generateId(),
+            documentId: legacyDriveId,
+            slug: "legacy",
+            name: "Legacy Drive",
+            scope: "global",
+            branch: "main",
+            content: JSON.stringify({}),
+            documentType: "powerhouse/document-drive",
+            lastOperationIndex: 0,
+            lastOperationHash: "hash-0",
+            identifiers: JSON.stringify({}),
+            metadata: JSON.stringify({}),
+          },
+          {
+            id: generateId(),
+            documentId: reactorDriveId,
+            slug: "reactor",
+            name: "Reactor Drive",
+            scope: "global",
+            branch: "main",
+            content: JSON.stringify({}),
+            documentType: "powerhouse/reactor-drive",
+            lastOperationIndex: 0,
+            lastOperationHash: "hash-0",
+            identifiers: JSON.stringify({}),
+            metadata: JSON.stringify({}),
+          },
+        ])
+        .execute();
+
+      await db
+        .updateTable("ViewState")
+        .set({ lastOrdinal: 10 })
+        .where("readModelId", "=", "processor-manager")
+        .execute();
+
+      const consistencyTracker = new ConsistencyTracker();
+      const logger = new ConsoleLogger(["test"]);
+      const restartedManager = new ProcessorManager(
+        db as unknown as Kysely<DocumentViewDatabase>,
+        operationIndex,
+        mockWriteCache,
+        consistencyTracker,
+        logger,
+        DEFAULT_DRIVE_CONTAINER_TYPES,
+      );
+      await restartedManager.init();
+
+      const seenHeaders: PHDocumentHeader[] = [];
+      const factory: ProcessorFactory = (header) => {
+        seenHeaders.push(header);
+        return [];
+      };
+      await restartedManager.registerFactory("test-factory", factory);
+
+      expect(seenHeaders).toHaveLength(2);
+      const headerMap = new Map(seenHeaders.map((h) => [h.id, h.documentType]));
+      expect(headerMap.get(legacyDriveId)).toBe("powerhouse/document-drive");
+      expect(headerMap.get(reactorDriveId)).toBe("powerhouse/reactor-drive");
+    });
+
+    it("should ignore documents whose type is outside the configured set", async () => {
+      const driveId = generateId();
+      const otherId = generateId();
+
+      await db
+        .insertInto("DocumentSnapshot")
+        .values([
+          {
+            id: generateId(),
+            documentId: driveId,
+            slug: "drive",
+            name: "Drive",
+            scope: "global",
+            branch: "main",
+            content: JSON.stringify({}),
+            documentType: "powerhouse/document-drive",
+            lastOperationIndex: 0,
+            lastOperationHash: "hash-0",
+            identifiers: JSON.stringify({}),
+            metadata: JSON.stringify({}),
+          },
+          {
+            id: generateId(),
+            documentId: otherId,
+            slug: "other",
+            name: "Other Doc",
+            scope: "global",
+            branch: "main",
+            content: JSON.stringify({}),
+            documentType: "powerhouse/document-model",
+            lastOperationIndex: 0,
+            lastOperationHash: "hash-0",
+            identifiers: JSON.stringify({}),
+            metadata: JSON.stringify({}),
+          },
+        ])
+        .execute();
+
+      const consistencyTracker = new ConsistencyTracker();
+      const logger = new ConsoleLogger(["test"]);
+      const restartedManager = new ProcessorManager(
+        db as unknown as Kysely<DocumentViewDatabase>,
+        operationIndex,
+        mockWriteCache,
+        consistencyTracker,
+        logger,
+        DEFAULT_DRIVE_CONTAINER_TYPES,
+      );
+      await restartedManager.init();
+
+      const seenIds: string[] = [];
+      const factory: ProcessorFactory = (header) => {
+        seenIds.push(header.id);
+        return [];
+      };
+      await restartedManager.registerFactory("test-factory", factory);
+
+      expect(seenIds).toEqual([driveId]);
     });
   });
 
@@ -967,6 +1099,7 @@ describe("ProcessorManager Standalone Tests", () => {
         mockWriteCache,
         consistencyTracker,
         logger,
+        DEFAULT_DRIVE_CONTAINER_TYPES,
       );
       await restartedManager.init();
 
