@@ -1,13 +1,19 @@
-import { describe, expect, it } from "vitest";
-import { buildCliConnectOverride } from "../src/utils/cli-connect-override.js";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import {
+  buildCliConnectOverride,
+  wasFlagExplicitlyPassed,
+} from "../src/utils/cli-connect-override.js";
 import type { ConnectBuildArgs } from "../src/types.js";
 
 function mk(partial: Partial<ConnectBuildArgs>): ConnectBuildArgs {
-  // Minimal stub — only the runtime-override fields the helper reads matter.
-  // The rest of ConnectBuildArgs is shaped but irrelevant for this unit.
+  // Minimal stub — covers every field buildCliConnectOverride reads. The 4
+  // commonArgs flags carry cmd-ts defaults at runtime; we set those defaults
+  // here so the explicit-set gating (which inspects process.argv) governs
+  // whether they reach the override.
   return {
     outDir: "dist",
     json: undefined,
+    // 15 strict-optional flags from connectRuntimeOverrideArgs.
     renownUrl: undefined,
     renownNetworkId: undefined,
     renownChainId: undefined,
@@ -19,11 +25,54 @@ function mk(partial: Partial<ConnectBuildArgs>): ConnectBuildArgs {
     localDrivesEnabled: undefined,
     localDrivesAllowAdd: undefined,
     localDrivesAllowDelete: undefined,
+    packagesRegistry: undefined,
+    appName: undefined,
+    homeBackground: undefined,
+    // 4 commonArgs flags with their cmd-ts defaults applied.
+    connectBasePath: "/",
+    logLevel: "info",
+    defaultDrivesUrl: "",
+    drivesPreserveStrategy: "preserve-by-url-and-detach",
     ...partial,
   } as ConnectBuildArgs;
 }
 
+describe("wasFlagExplicitlyPassed", () => {
+  let originalArgv: string[];
+  beforeEach(() => {
+    originalArgv = process.argv;
+  });
+  afterEach(() => {
+    process.argv = originalArgv;
+  });
+
+  it("returns true for `--flag value` form", () => {
+    process.argv = ["node", "cli", "--base", "/foo"];
+    expect(wasFlagExplicitlyPassed("base")).toBe(true);
+  });
+
+  it("returns true for `--flag=value` form", () => {
+    process.argv = ["node", "cli", "--base=/foo"];
+    expect(wasFlagExplicitlyPassed("base")).toBe(true);
+  });
+
+  it("returns false when flag is absent", () => {
+    process.argv = ["node", "cli", "--other-flag", "x"];
+    expect(wasFlagExplicitlyPassed("base")).toBe(false);
+  });
+});
+
 describe("buildCliConnectOverride", () => {
+  let originalArgv: string[];
+  beforeEach(() => {
+    originalArgv = process.argv;
+    // Default: pretend no flags passed (commonArgs defaults shouldn't leak).
+    process.argv = ["node", "cli"];
+  });
+  afterEach(() => {
+    process.argv = originalArgv;
+  });
+
   it("returns undefined when no --json and no flags are set", () => {
     expect(buildCliConnectOverride(mk({}))).toBeUndefined();
   });
@@ -50,6 +99,74 @@ describe("buildCliConnectOverride", () => {
         },
       },
     });
+  });
+
+  it("packs the 3 new flags (packages-registry, app-name, home-background)", () => {
+    const result = buildCliConnectOverride(
+      mk({
+        packagesRegistry: "https://registry.example",
+        appName: "Custom App",
+        homeBackground: "https://bg.example/img.png",
+      }),
+    );
+    expect(result).toEqual({
+      packages: { registryUrl: "https://registry.example" },
+      branding: {
+        appName: "Custom App",
+        homeBackground: "https://bg.example/img.png",
+      },
+    });
+  });
+
+  it("home-background empty string sets branding.homeBackground to null", () => {
+    const result = buildCliConnectOverride(mk({ homeBackground: "" }));
+    expect(result).toEqual({ branding: { homeBackground: null } });
+  });
+
+  it("does NOT leak commonArgs flag defaults when not explicitly passed", () => {
+    // process.argv has no --base, --log-level, etc. Their cmd-ts defaults
+    // (`/`, `info`, etc.) must not appear in the override.
+    expect(buildCliConnectOverride(mk({}))).toBeUndefined();
+  });
+
+  it("forwards --base into cliConnectOverride when explicitly passed", () => {
+    process.argv = ["node", "cli", "--base", "/subpath"];
+    const result = buildCliConnectOverride(mk({ connectBasePath: "/subpath" }));
+    expect(result).toEqual({ app: { basePath: "/subpath" } });
+  });
+
+  it("forwards --log-level into cliConnectOverride when explicitly passed", () => {
+    process.argv = ["node", "cli", "--log-level", "debug"];
+    const result = buildCliConnectOverride(mk({ logLevel: "debug" }));
+    expect(result).toEqual({ app: { logLevel: "debug" } });
+  });
+
+  it("parses --default-drives-url comma-list when explicitly passed", () => {
+    process.argv = [
+      "node",
+      "cli",
+      "--default-drives-url",
+      "https://a.com, https://b.com",
+    ];
+    const result = buildCliConnectOverride(
+      mk({ defaultDrivesUrl: "https://a.com, https://b.com" }),
+    );
+    expect(result).toEqual({
+      drives: {
+        defaultDrives: [
+          { url: "https://a.com", name: null, icon: null },
+          { url: "https://b.com", name: null, icon: null },
+        ],
+      },
+    });
+  });
+
+  it("forwards --drive-preserve-strategy when explicitly passed", () => {
+    process.argv = ["node", "cli", "--drive-preserve-strategy", "preserve-all"];
+    const result = buildCliConnectOverride(
+      mk({ drivesPreserveStrategy: "preserve-all" }),
+    );
+    expect(result).toEqual({ drives: { preserveStrategy: "preserve-all" } });
   });
 
   it("parses --json as a partial connect.* blob", () => {

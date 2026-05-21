@@ -1,23 +1,68 @@
-// Builds a `connectOverride` partial from `ph connect build` CLI flags. This
-// is the top of the precedence ladder for the runtime config emitted into
-// `dist/powerhouse.config.json`:
+// Builds a `connectOverride` partial from CLI flags. Shared by:
 //
-//   DEFAULT_CONNECT_CONFIG  <  env-var seeds  <  source connect.*  <  --json  <  individual --flag
+//   - `ph connect build` — uses `buildCliConnectOverride` to produce the
+//     `cliConnectOverride` patch the Vite plugin applies at the top of the
+//     precedence ladder:
+//
+//       DEFAULT_CONNECT_CONFIG  <  env-var seeds  <  source connect.*  <  --json  <  individual --flag
+//
+//   - `ph connect config` — uses `buildConnectFlagPatch` (the per-field
+//     partial builder) to translate flag-set values into the patch that
+//     gets dual-written to source + dist `powerhouse.config.json`.
 //
 // `--json` parses as a partial `connect.*` blob and merges in first; then any
 // individual --flag values merge on top, so a flag beats a conflicting --json
-// value. The whole result is passed to the Vite plugin as `cliConnectOverride`
-// and applied as the final deep-merge layer.
+// value.
 
 import type { PHConnectRuntimeConfig } from "@powerhousedao/shared/clis";
-import { deepMerge } from "@powerhousedao/shared/connect";
+import {
+  deepMerge,
+  parseDefaultDrivesUrl,
+} from "@powerhousedao/shared/connect";
 import type { ConnectBuildArgs } from "../types.js";
 
 type PlainObject = Record<string, unknown>;
 
 /**
+ * Structural input shape consumed by `buildConnectFlagPatch`. Every property
+ * is strict-optional — `undefined` means "user did not pass this flag" and
+ * the path is excluded from the patch.
+ *
+ * Callers with cmd-ts-typed args where some flags have built-in defaults
+ * (e.g. the 4 commonArgs flags `--base` / `--log-level` /
+ * `--default-drives-url` / `--drive-preserve-strategy`) must filter through
+ * `wasFlagExplicitlyPassed` BEFORE building this input — otherwise default
+ * values like `"info"` will silently clobber source `powerhouse.config.json`
+ * values.
+ */
+export type ConnectFlagInput = {
+  // 15 strict-optional flags from connectRuntimeOverrideArgs.
+  json?: string | undefined;
+  renownUrl?: string | undefined;
+  renownNetworkId?: string | undefined;
+  renownChainId?: number | undefined;
+  allowAddDrive?: boolean | undefined;
+  externalPackages?: boolean | undefined;
+  remoteDrivesEnabled?: boolean | undefined;
+  remoteDrivesAllowAdd?: boolean | undefined;
+  remoteDrivesAllowDelete?: boolean | undefined;
+  localDrivesEnabled?: boolean | undefined;
+  localDrivesAllowAdd?: boolean | undefined;
+  localDrivesAllowDelete?: boolean | undefined;
+  packagesRegistry?: string | undefined;
+  appName?: string | undefined;
+  homeBackground?: string | undefined;
+  // 4 commonArgs flags. Callers must apply `wasFlagExplicitlyPassed`
+  // filtering (see above).
+  basePath?: string | undefined;
+  logLevel?: string | undefined;
+  defaultDrivesUrl?: string | undefined;
+  drivesPreserveStrategy?: string | undefined;
+};
+
+/**
  * Parse the `--json` payload (if any). Throws on malformed JSON or on a
- * non-object root with a clear, build-time-visible error.
+ * non-object root with a clear, command-line-visible error.
  */
 function parseJsonOverride(raw: string | undefined): PlainObject {
   if (raw === undefined || raw === "") return {};
@@ -27,16 +72,24 @@ function parseJsonOverride(raw: string | undefined): PlainObject {
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     throw new Error(
-      `ph connect build --json: invalid JSON (${msg}). Expected a partial 'connect.*' blob, e.g. --json '{"renown":{"url":"..."}}'.`,
+      `--json: invalid JSON (${msg}). Expected a partial 'connect.*' blob, e.g. --json '{"renown":{"url":"..."}}'.`,
       { cause: e },
     );
   }
   if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
     throw new Error(
-      `ph connect build --json: payload must be a JSON object, got ${typeof parsed}.`,
+      `--json: payload must be a JSON object, got ${typeof parsed}.`,
     );
   }
   return parsed as PlainObject;
+}
+
+/**
+ * Re-exported for `runConnectConfig` so the same JSON validation runs for
+ * both `build --json` and `config --json`.
+ */
+export function parseConnectJsonArg(raw: string | undefined): PlainObject {
+  return parseJsonOverride(raw);
 }
 
 function setIfDefined<V>(
@@ -48,11 +101,35 @@ function setIfDefined<V>(
 }
 
 /**
- * Build the override partial from individual CLI flags. Only includes paths
- * the user explicitly set (undefined = unset, exclude).
+ * Detect whether the user literally typed `--<longName>` on the command
+ * line. Used to gate the 4 commonArgs flags through `cliConnectOverride` —
+ * those flags have cmd-ts defaults, so their parsed value is always
+ * defined, and a naive merge would silently clobber source values with the
+ * default on every build.
+ *
+ * Handles both `--flag value` and `--flag=value` forms.
  */
-function buildFlagOverride(args: ConnectBuildArgs): PlainObject {
+export function wasFlagExplicitlyPassed(longName: string): boolean {
+  const dashed = `--${longName}`;
+  return process.argv.some(
+    (arg) => arg === dashed || arg.startsWith(`${dashed}=`),
+  );
+}
+
+/**
+ * Build a `connect.*` partial from the 19 field flags. Only includes paths
+ * the user explicitly set (undefined values are excluded).
+ *
+ * Single source of truth for the flag → JSON-path mapping; consumed by both
+ * `ph connect build` and `ph connect config`.
+ */
+export function buildConnectFlagPatch(args: ConnectFlagInput): PlainObject {
   const out: PlainObject = {};
+
+  const app: PlainObject = {};
+  setIfDefined(app, "basePath", args.basePath);
+  setIfDefined(app, "logLevel", args.logLevel);
+  if (Object.keys(app).length > 0) out.app = app;
 
   const renown: PlainObject = {};
   setIfDefined(renown, "url", args.renownUrl);
@@ -62,10 +139,25 @@ function buildFlagOverride(args: ConnectBuildArgs): PlainObject {
 
   const packages: PlainObject = {};
   setIfDefined(packages, "externalEnabled", args.externalPackages);
+  setIfDefined(packages, "registryUrl", args.packagesRegistry);
   if (Object.keys(packages).length > 0) out.packages = packages;
+
+  // --home-background: empty string is the explicit "set null" form
+  // (cmd-ts can't pass `null` directly through a string option).
+  const branding: PlainObject = {};
+  setIfDefined(branding, "appName", args.appName);
+  if (args.homeBackground !== undefined) {
+    branding.homeBackground =
+      args.homeBackground === "" ? null : args.homeBackground;
+  }
+  if (Object.keys(branding).length > 0) out.branding = branding;
 
   const drives: PlainObject = {};
   setIfDefined(drives, "allowAddDrive", args.allowAddDrive);
+  setIfDefined(drives, "preserveStrategy", args.drivesPreserveStrategy);
+  if (args.defaultDrivesUrl !== undefined && args.defaultDrivesUrl !== "") {
+    drives.defaultDrives = parseDefaultDrivesUrl(args.defaultDrivesUrl);
+  }
 
   const remote: PlainObject = {};
   setIfDefined(remote, "enabled", args.remoteDrivesEnabled);
@@ -88,14 +180,49 @@ function buildFlagOverride(args: ConnectBuildArgs): PlainObject {
 
 /**
  * Combine `--json` and the individual flag values into a single connect
- * override. Returns undefined when neither was provided so the Vite plugin
- * can skip the final merge layer entirely.
+ * override for `ph connect build`. Returns undefined when neither was
+ * provided so the Vite plugin can skip the final merge layer entirely.
+ *
+ * The 4 commonArgs flags (`--base`, `--log-level`, `--default-drives-url`,
+ * `--drive-preserve-strategy`) are gated through `wasFlagExplicitlyPassed`
+ * because they carry cmd-ts defaults that would otherwise leak into the
+ * override on every build.
  */
 export function buildCliConnectOverride(
   args: ConnectBuildArgs,
 ): PHConnectRuntimeConfig | undefined {
   const fromJson = parseJsonOverride(args.json);
-  const fromFlags = buildFlagOverride(args);
+
+  const input: ConnectFlagInput = {
+    // 15 strict-optional flags pass through unchanged.
+    renownUrl: args.renownUrl,
+    renownNetworkId: args.renownNetworkId,
+    renownChainId: args.renownChainId,
+    allowAddDrive: args.allowAddDrive,
+    externalPackages: args.externalPackages,
+    remoteDrivesEnabled: args.remoteDrivesEnabled,
+    remoteDrivesAllowAdd: args.remoteDrivesAllowAdd,
+    remoteDrivesAllowDelete: args.remoteDrivesAllowDelete,
+    localDrivesEnabled: args.localDrivesEnabled,
+    localDrivesAllowAdd: args.localDrivesAllowAdd,
+    localDrivesAllowDelete: args.localDrivesAllowDelete,
+    packagesRegistry: args.packagesRegistry,
+    appName: args.appName,
+    homeBackground: args.homeBackground,
+    // 4 commonArgs flags — only forward when the user explicitly passed them.
+    basePath: wasFlagExplicitlyPassed("base")
+      ? args.connectBasePath
+      : undefined,
+    logLevel: wasFlagExplicitlyPassed("log-level") ? args.logLevel : undefined,
+    defaultDrivesUrl: wasFlagExplicitlyPassed("default-drives-url")
+      ? args.defaultDrivesUrl
+      : undefined,
+    drivesPreserveStrategy: wasFlagExplicitlyPassed("drive-preserve-strategy")
+      ? args.drivesPreserveStrategy
+      : undefined,
+  };
+
+  const fromFlags = buildConnectFlagPatch(input);
   const hasJson = Object.keys(fromJson).length > 0;
   const hasFlags = Object.keys(fromFlags).length > 0;
   if (!hasJson && !hasFlags) return undefined;

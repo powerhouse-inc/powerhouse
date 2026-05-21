@@ -1,11 +1,18 @@
 import type { Type } from "cmd-ts";
-import { number, option, optional, positional, string } from "cmd-ts";
+import { number, option, optional, string } from "cmd-ts";
 import {
   DEFAULT_CONNECT_OUTDIR,
   DEFAULT_CONNECT_PREVIEW_PORT,
   DEFAULT_CONNECT_STUDIO_PORT,
 } from "../constants.js";
-import { commonArgs, commonServerArgs } from "./common.js";
+import {
+  commonArgs,
+  commonServerArgs,
+  connectBasePath,
+  defaultDrivesUrl,
+  drivesPreserveStrategy,
+  logLevel,
+} from "./common.js";
 
 // cmd-ts's built-in `boolean` is intended for `flag()` (presence/absence). With
 // `option()` we need to parse the next argv as a value, but cmd-ts's `boolean`
@@ -113,6 +120,22 @@ const connectRuntimeOverrideArgs = {
     long: "local-drives-allow-delete",
     description: "Override connect.drives.sections.local.allowDelete.",
   }),
+  packagesRegistry: option({
+    type: optional(string),
+    long: "packages-registry",
+    description: "Override connect.packages.registryUrl.",
+  }),
+  appName: option({
+    type: optional(string),
+    long: "app-name",
+    description: "Override connect.branding.appName.",
+  }),
+  homeBackground: option({
+    type: optional(string),
+    long: "home-background",
+    description:
+      'Override connect.branding.homeBackground. Pass an empty string ("") to set null.',
+  }),
 };
 
 export const connectBuildArgs = {
@@ -146,35 +169,35 @@ export const connectPreviewArgs = {
   ...commonServerArgs,
 };
 
-// `ph connect config [key] [value]` — set, get, or list runtime config.
+// `ph connect config` — read, set, or list the runtime config under the
+// `connect.*` block of the dist `powerhouse.config.json`.
 //
-// Mode matrix:
-//   ph connect config                          → list (print effective merged config)
-//   ph connect config <key>                    → get one value at the dotted key
-//   ph connect config <key> <value>            → set + dual-write to source + dist
-//   ph connect config --json '{"…":"…"}'      → bulk set + dual-write
+// Mode matrix (exactly one mode per invocation; mutex enforced in
+// `runConnectConfig`):
 //
-// `--dist-dir` lets Docker / non-default deployments point at a custom dist
-// location. Falls back to PH_CONNECT_OUTDIR env, then to the standard
-// `.ph/connect-build/dist/` path inside the project root.
+//   ph connect config                       → list (print effective merged config)
+//   ph connect config --get <dotted.path>   → get one value at the dotted key
+//   ph connect config --<field> <value>     → set + dual-write to source + dist
+//   ph connect config --json '{"…":"…"}'   → bulk set + dual-write
+//
+// The 15 field flags below come from `connectRuntimeOverrideArgs`, so
+// `config` and `build` share an identical surface for runtime fields. The 4
+// flags imported individually from `common.ts` (`connectBasePath` /
+// `logLevel` / `defaultDrivesUrl` / `drivesPreserveStrategy`) extend that to
+// 19-flag coverage. `--dist-dir` lets Docker / non-default deployments point
+// at a custom dist location; falls back to PH_CONNECT_OUTDIR env, then to
+// the standard `.ph/connect-build/dist/` path.
+//
+// NOTE: the 4 commonArgs flags have built-in cmd-ts defaults
+// (e.g. logLevel="info"), so always parse as defined. The service detects
+// "user explicitly passed this flag" via process.argv inspection — see
+// `clis/ph-cli/src/utils/cli-connect-override.ts:wasFlagExplicitlyPassed`.
 export const connectConfigArgs = {
-  key: positional({
+  get: option({
     type: optional(string),
-    displayName: "key",
+    long: "get",
     description:
-      'Dotted path inside connect.* (e.g. "connect.renown.url"). Omit for list mode.',
-  }),
-  value: positional({
-    type: optional(string),
-    displayName: "value",
-    description:
-      "New value for the path. Parsed as JSON when possible (so 'true', '42', '\"x\"' coerce correctly); otherwise treated as a string. Omit to get-only.",
-  }),
-  json: option({
-    type: optional(string),
-    long: "json",
-    description:
-      'Bulk override — partial connect.* blob, e.g. --json \'{"renown":{"url":"..."}}\'. Mutually exclusive with a positional key/value.',
+      'Dotted path inside connect.* (e.g. "connect.renown.url") to read the effective value. Mutually exclusive with the set modes.',
   }),
   distDir: option({
     type: optional(string),
@@ -182,6 +205,11 @@ export const connectConfigArgs = {
     description:
       "Path to the directory containing the dist powerhouse.config.json. Defaults to the PH_CONNECT_OUTDIR env or `.ph/connect-build/dist/`.",
   }),
+  ...connectRuntimeOverrideArgs,
+  connectBasePath,
+  logLevel,
+  defaultDrivesUrl,
+  drivesPreserveStrategy,
 };
 
 export const connectArgs = {

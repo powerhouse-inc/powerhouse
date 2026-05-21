@@ -1,11 +1,11 @@
 // `ph connect config` — read or update Connect's runtime configuration.
 //
-// Three modes, dispatched by which positionals / flags the operator passes:
+// Mode dispatch (exactly one mode per invocation; mutex enforced below):
 //
-//   ph connect config                  → list mode: print effective merged config
-//   ph connect config <key>            → get mode: print value at the dotted key
-//   ph connect config <key> <value>    → set mode: dual-write to source + dist
-//   ph connect config --json '{...}'   → bulk set mode: dual-write
+//   ph connect config                              → list mode (print effective merged config)
+//   ph connect config --get <dotted.path>          → get mode (print one value)
+//   ph connect config --<field> <value>            → set mode (dual-write source + dist)
+//   ph connect config --json '{...}'               → bulk-set mode (dual-write)
 //
 // Dual-write semantics for set / bulk-set:
 //   - Source `powerhouse.config.json` (project root) gets the connect.* patch
@@ -16,6 +16,14 @@
 //
 // The dist write is skipped silently if the dist file doesn't exist — that's
 // the "config-only-before-first-build" workflow, not an error.
+//
+// The 15 field flags + the 4 commonArgs flags (base, log-level,
+// default-drives-url, drive-preserve-strategy) come from the same source as
+// `ph connect build`'s flags, so the two commands share identical CLI
+// surfaces. The 4 commonArgs flags carry cmd-ts defaults; we gate them
+// through `wasFlagExplicitlyPassed` for the same reason `buildCliConnectOverride`
+// does — to avoid leaking default values into a write the user didn't
+// request.
 
 import {
   ConfigLoader,
@@ -28,8 +36,12 @@ import { existsSync } from "node:fs";
 import { isAbsolute, join, resolve } from "node:path";
 import type { ConnectConfigArgs } from "../types.js";
 import {
+  buildConnectFlagPatch,
+  type ConnectFlagInput,
+  wasFlagExplicitlyPassed,
+} from "../utils/cli-connect-override.js";
+import {
   normalizeKey,
-  validateConnectKeyValue,
   validateConnectPatch,
 } from "../utils/connect-config-validation.js";
 
@@ -106,55 +118,107 @@ function printJson(value: unknown): void {
   process.stdout.write(`${JSON.stringify(value, null, 2)}\n`);
 }
 
+/**
+ * Translate the parsed `ph connect config` args into the structural
+ * `ConnectFlagInput` consumed by `buildConnectFlagPatch`. The 4 commonArgs
+ * flags are gated through `wasFlagExplicitlyPassed` — their cmd-ts default
+ * values must not leak into a write the user didn't request.
+ */
+function argsToFlagInput(args: ConnectConfigArgs): ConnectFlagInput {
+  return {
+    renownUrl: args.renownUrl,
+    renownNetworkId: args.renownNetworkId,
+    renownChainId: args.renownChainId,
+    allowAddDrive: args.allowAddDrive,
+    externalPackages: args.externalPackages,
+    remoteDrivesEnabled: args.remoteDrivesEnabled,
+    remoteDrivesAllowAdd: args.remoteDrivesAllowAdd,
+    remoteDrivesAllowDelete: args.remoteDrivesAllowDelete,
+    localDrivesEnabled: args.localDrivesEnabled,
+    localDrivesAllowAdd: args.localDrivesAllowAdd,
+    localDrivesAllowDelete: args.localDrivesAllowDelete,
+    packagesRegistry: args.packagesRegistry,
+    appName: args.appName,
+    homeBackground: args.homeBackground,
+    basePath: wasFlagExplicitlyPassed("base")
+      ? args.connectBasePath
+      : undefined,
+    logLevel: wasFlagExplicitlyPassed("log-level") ? args.logLevel : undefined,
+    defaultDrivesUrl: wasFlagExplicitlyPassed("default-drives-url")
+      ? args.defaultDrivesUrl
+      : undefined,
+    drivesPreserveStrategy: wasFlagExplicitlyPassed("drive-preserve-strategy")
+      ? args.drivesPreserveStrategy
+      : undefined,
+  };
+}
+
+/**
+ * Whether any field flag (any of the 19) was passed. Distinguishes the
+ * single-field-set mode from list mode when neither `--get` nor `--json` is
+ * present.
+ */
+function hasAnyFieldFlag(input: ConnectFlagInput): boolean {
+  // Object.values doesn't include json (which isn't in ConnectFlagInput here).
+  return Object.values(input).some((v) => v !== undefined);
+}
+
 export async function runConnectConfig(args: ConnectConfigArgs): Promise<void> {
   const cwd = process.cwd();
   const sourcePath = resolveSourcePath(cwd);
   const distPath = resolveDistPath(cwd, args.distDir);
 
-  // Validate args combinations.
-  if (
-    args.json !== undefined &&
-    (args.key !== undefined || args.value !== undefined)
-  ) {
+  const flagInput = argsToFlagInput(args);
+  const hasGet = args.get !== undefined;
+  const hasJson = args.json !== undefined;
+  const hasFieldFlag = hasAnyFieldFlag(flagInput);
+
+  // Mutex: get / json / any field flag are mutually exclusive. Exactly one
+  // mode (or none → list) per call.
+  const modeCount = [hasGet, hasJson, hasFieldFlag].filter(Boolean).length;
+  if (modeCount > 1) {
     throw new Error(
-      "ph connect config: --json is mutually exclusive with positional <key> [value]. Use one or the other.",
+      "ph connect config: --get, --json, and individual field flags are mutually exclusive. Use one mode per invocation.",
     );
   }
 
   const source = await readSourceRaw(sourcePath);
 
   // List mode.
-  if (
-    args.json === undefined &&
-    args.key === undefined &&
-    args.value === undefined
-  ) {
+  if (modeCount === 0) {
     printJson(effectiveConnect(source));
     return;
   }
 
-  // Get mode (key without value, no --json).
-  if (
-    args.json === undefined &&
-    args.key !== undefined &&
-    args.value === undefined
-  ) {
-    const normalized = normalizeKey(args.key);
+  // Get mode.
+  if (hasGet) {
+    const normalized = normalizeKey(args.get!);
+    if (!normalized) {
+      throw new Error(
+        "ph connect config --get: key cannot be empty. Pass a dotted path inside connect.* (e.g. --get connect.renown.url).",
+      );
+    }
     const value = getAtPath(effectiveConnect(source), normalized);
     if (value === undefined) {
       throw new Error(
-        `ph connect config: no value at key "${normalized}". Run \`ph connect config\` (no args) to see the available paths.`,
+        `ph connect config --get: no value at key "${normalized}". Run \`ph connect config\` (no args) to see the available paths.`,
       );
     }
     printJson(value);
     return;
   }
 
-  // Set / bulk-set mode.
-  const patch =
-    args.json !== undefined
-      ? validateConnectPatch(args.json)
-      : validateConnectKeyValue(args.key!, args.value!);
+  // Set / bulk-set mode. Build the patch from --json (Ajv-validated) or from
+  // field flags (shape is guaranteed by cmd-ts type coercion).
+  const patch = hasJson
+    ? (validateConnectPatch(args.json!) as ConnectPartial)
+    : (buildConnectFlagPatch(flagInput) as ConnectPartial);
+
+  if (Object.keys(patch).length === 0) {
+    throw new Error(
+      "ph connect config: nothing to set. Pass at least one field flag (e.g. --renown-url <url>) or --json with a non-empty payload.",
+    );
+  }
 
   // Build the next source: take what's there, deep-merge patch under .connect.
   const currentConnect =

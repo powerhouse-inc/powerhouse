@@ -34,7 +34,13 @@ const parseNumber = (v: string): number => {
   return n;
 };
 
-const parseDefaultDrivesUrl = (
+/**
+ * Comma-separated URL string → array of `{url, name: null, icon: null}`
+ * entries suitable for `connect.drives.defaultDrives`. Exported so the same
+ * transform can run at the env-seed layer (via the rule's `parse` field) AND
+ * at the `cliConnectOverride` layer (via `--default-drives-url`).
+ */
+export const parseDefaultDrivesUrl = (
   v: string,
 ): Array<{ url: string; name: null; icon: null }> =>
   v
