@@ -1,3 +1,36 @@
+## 6.0.0-dev.257 (2026-05-21)
+
+### 🚀 Features
+
+- **vetra:** moved schema projection to ph-rupert-cli ([49f627e7b](https://github.com/powerhouse-inc/powerhouse/commit/49f627e7b))
+- **vetra,ph-cli:** add @powerhousedao/vetra/codegen subexport for agent-driven codegen ([9689be87e](https://github.com/powerhouse-inc/powerhouse/commit/9689be87e))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.256 (2026-05-21)
+
+### 🩹 Fixes
+
+- **reactor-browser:** hide DropZone overlay over editor opt-out regions ([725d185fd](https://github.com/powerhouse-inc/powerhouse/commit/725d185fd))
+- add @tokens to logger calls across packages ([b70070ae2](https://github.com/powerhouse-inc/powerhouse/commit/b70070ae2))
+- **reactor-api:** pass args to logger.error calls in reactor subgraph ([b34dcf7dc](https://github.com/powerhouse-inc/powerhouse/commit/b34dcf7dc))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.255 (2026-05-20)
+
+### 🩹 Fixes
+
+- **reactor-browser:** hide DropZone overlay over editor opt-out regions ([725d185fd](https://github.com/powerhouse-inc/powerhouse/commit/725d185fd))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.254 (2026-05-19)
 
 ### 🚀 Features

@@ -233,6 +233,46 @@ export function validateModuleOperation(
   return errors;
 }
 
+/**
+ * Find a module in the latest specification by id, or throw. Reducers that
+ * mutate-by-id should call this up front so an unknown id fails loudly
+ * instead of silently no-opping.
+ */
+export function findModuleOrThrow(
+  state: DocumentModelGlobalState,
+  moduleId: string,
+): ModuleSpecification {
+  const latestSpec = state.specifications[state.specifications.length - 1];
+  const mod = latestSpec?.modules.find((m) => m.id === moduleId);
+  if (!mod) {
+    throw new Error(
+      `Module "${moduleId}" not found in the latest specification`,
+    );
+  }
+  return mod;
+}
+
+/**
+ * Find an operation in the latest specification by id, or throw. Same
+ * rationale as findModuleOrThrow — reducers that target an operation must
+ * fail loudly when the operation doesn't exist.
+ */
+export function findOperationOrThrow(
+  state: DocumentModelGlobalState,
+  operationId: string,
+): OperationSpecification {
+  const latestSpec = state.specifications[state.specifications.length - 1];
+  if (latestSpec) {
+    for (const mod of latestSpec.modules) {
+      const op = mod.operations.find((o) => o.id === operationId);
+      if (op) return op;
+    }
+  }
+  throw new Error(
+    `Operation "${operationId}" not found in the latest specification`,
+  );
+}
+
 export function validateOperations(operations: DocumentOperations) {
   const errors: ValidationError[] = [];
   const scopes = Object.keys(operations);

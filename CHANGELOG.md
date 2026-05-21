@@ -1,3 +1,64 @@
+## 6.0.0-dev.257 (2026-05-21)
+
+### 🚀 Features
+
+- **connect:** subscribe to /__packages SSE for live package updates ([5cb41a7e4](https://github.com/powerhouse-inc/powerhouse/commit/5cb41a7e4))
+- **connect:** remount editor on package version bump ([4fe72d93f](https://github.com/powerhouse-inc/powerhouse/commit/4fe72d93f))
+- **registry:** default to anonymous publish/unpublish ([5ca697fb7](https://github.com/powerhouse-inc/powerhouse/commit/5ca697fb7))
+- **spec:** reject invalid actions atomically in addActions ([c12a4d6c5](https://github.com/powerhouse-inc/powerhouse/commit/c12a4d6c5))
+- **switchboard:** accept caller-provided reactor + expose shutdown ([1e0958656](https://github.com/powerhouse-inc/powerhouse/commit/1e0958656))
+- **vetra:** moved schema projection to ph-rupert-cli ([49f627e7b](https://github.com/powerhouse-inc/powerhouse/commit/49f627e7b))
+- **vetra,ph-cli:** add @powerhousedao/vetra/codegen subexport for agent-driven codegen ([9689be87e](https://github.com/powerhouse-inc/powerhouse/commit/9689be87e))
+
+### 🩹 Fixes
+
+- address PR review for connect package-manager + vetra specPath doc ([4f330f16e](https://github.com/powerhouse-inc/powerhouse/commit/4f330f16e))
+- **connect:** version-aware /__packages diff with toasts and refetch ([36f2e641d](https://github.com/powerhouse-inc/powerhouse/commit/36f2e641d))
+- **package-e2e:** use renamed --document flag for ph generate doc ([e3bbd1b49](https://github.com/powerhouse-inc/powerhouse/commit/e3bbd1b49))
+- **vetra:** update codegen imports to v1 document-model layout ([ecdc2b23e](https://github.com/powerhouse-inc/powerhouse/commit/ecdc2b23e))
+- **vetra:** repo-wide typecheck — keep ts-morph external + use existing types ([10f0a8488](https://github.com/powerhouse-inc/powerhouse/commit/10f0a8488))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.256 (2026-05-21)
+
+### 🚀 Features
+
+- **reactor-browser:** add useEditorFileDrop hook and DropZone opt-out ([8c6ebf73a](https://github.com/powerhouse-inc/powerhouse/commit/8c6ebf73a))
+
+### 🩹 Fixes
+
+- add @tokens to logger calls across packages ([b70070ae2](https://github.com/powerhouse-inc/powerhouse/commit/b70070ae2))
+- prettier wrap + properly type vi.spyOn mocks in logger tests ([363795fc3](https://github.com/powerhouse-inc/powerhouse/commit/363795fc3))
+- **document-model:** surface Error values in logger output ([310a45398](https://github.com/powerhouse-inc/powerhouse/commit/310a45398))
+- **ph-cli:** whoops, missed a refactor ([f43138c68](https://github.com/powerhouse-inc/powerhouse/commit/f43138c68))
+- **reactor-api:** pass args to logger.error calls in reactor subgraph ([b34dcf7dc](https://github.com/powerhouse-inc/powerhouse/commit/b34dcf7dc))
+- **reactor-api:** share one DB client per connection string ([8a8030ee0](https://github.com/powerhouse-inc/powerhouse/commit/8a8030ee0))
+- **reactor-browser:** hide DropZone overlay over editor opt-out regions ([725d185fd](https://github.com/powerhouse-inc/powerhouse/commit/725d185fd))
+- **reactor-browser:** stop sync before deleting drive document ([9fec21bf5](https://github.com/powerhouse-inc/powerhouse/commit/9fec21bf5))
+- **switchboard:** give users a one-shot recovery path out of broken switchboard DB state ([5fecb0fe8](https://github.com/powerhouse-inc/powerhouse/commit/5fecb0fe8))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+
+## 6.0.0-dev.255 (2026-05-20)
+
+### 🩹 Fixes
+
+- **ph-cli:** whoops, missed a refactor ([f43138c68](https://github.com/powerhouse-inc/powerhouse/commit/f43138c68))
+- **reactor-browser:** hide DropZone overlay over editor opt-out regions ([725d185fd](https://github.com/powerhouse-inc/powerhouse/commit/725d185fd))
+- **reactor-browser:** stop sync before deleting drive document ([9fec21bf5](https://github.com/powerhouse-inc/powerhouse/commit/9fec21bf5))
+- **switchboard:** give users a one-shot recovery path out of broken switchboard DB state ([5fecb0fe8](https://github.com/powerhouse-inc/powerhouse/commit/5fecb0fe8))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+
 ## 6.0.0-dev.254 (2026-05-19)
 
 ### 🚀 Features

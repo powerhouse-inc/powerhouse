@@ -1,3 +1,38 @@
+## 6.0.0-dev.257 (2026-05-21)
+
+### 🚀 Features
+
+- **spec:** reject invalid actions atomically in addActions ([c12a4d6c5](https://github.com/powerhouse-inc/powerhouse/commit/c12a4d6c5))
+- **vetra:** moved schema projection to ph-rupert-cli ([49f627e7b](https://github.com/powerhouse-inc/powerhouse/commit/49f627e7b))
+- **vetra,ph-cli:** add @powerhousedao/vetra/codegen subexport for agent-driven codegen ([9689be87e](https://github.com/powerhouse-inc/powerhouse/commit/9689be87e))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.256 (2026-05-21)
+
+### 🩹 Fixes
+
+- **switchboard:** give users a one-shot recovery path out of broken switchboard DB state ([5fecb0fe8](https://github.com/powerhouse-inc/powerhouse/commit/5fecb0fe8))
+- add @tokens to logger calls across packages ([b70070ae2](https://github.com/powerhouse-inc/powerhouse/commit/b70070ae2))
+- **reactor-api:** pass args to logger.error calls in reactor subgraph ([b34dcf7dc](https://github.com/powerhouse-inc/powerhouse/commit/b34dcf7dc))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+
+## 6.0.0-dev.255 (2026-05-20)
+
+### 🩹 Fixes
+
+- **switchboard:** give users a one-shot recovery path out of broken switchboard DB state ([5fecb0fe8](https://github.com/powerhouse-inc/powerhouse/commit/5fecb0fe8))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.0.0-dev.254 (2026-05-19)
 
 ### 🚀 Features

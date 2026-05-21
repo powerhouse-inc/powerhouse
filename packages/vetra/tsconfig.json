@@ -2,6 +2,7 @@
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
     "outDir": "./.tsbuild",
+    "resolveJsonModule": true,
     "types": [
       "node",
       "vite/client",
@@ -41,7 +42,8 @@
   },
   "include": [
     "**/*",
-    "./powerhouse.manifest.json"
+    "./powerhouse.manifest.json",
+    "./document-models/**/*.json"
   ],
   "exclude": [
     "dist",

@@ -752,6 +752,9 @@ importers:
       '@powerhousedao/switchboard':
         specifier: workspace:*
         version: link:../../apps/switchboard
+      '@powerhousedao/vetra':
+        specifier: workspace:*
+        version: link:../../packages/vetra
       '@renown/sdk':
         specifier: workspace:*
         version: link:../../packages/renown

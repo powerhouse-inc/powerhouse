@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/ph-cli",
-  "version": "6.0.0-dev.254",
+  "version": "6.0.0-dev.257",
   "description": "",
   "license": "AGPL-3.0-only",
   "type": "module",
@@ -40,6 +40,7 @@
     "@powerhousedao/reactor": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
     "@powerhousedao/switchboard": "workspace:*",
+    "@powerhousedao/vetra": "workspace:*",
     "@renown/sdk": "workspace:*",
     "@tsdown/css": "catalog:",
     "chalk": "catalog:",

@@ -156,7 +156,7 @@ Options:
                         
   -e, --editor <name>    Name of the editor to generate or use.
                         
-  --file <path>          Specific file path to the document model.
+  -d, --document <path>  Path to a document model spec (.phd or .json) to generate from.
                         
   --processors <path>    Path to the directory where processors should be generated or found.
                         
