@@ -8,6 +8,8 @@ async function tryNodeSuggestedPaths<T>(
   subPath: string,
 ): Promise<T | null> {
   const suggestedPaths = [
+    `${packageName}/dist/node/${subPath}/index.mjs`,
+    `${packageName}/dist/node/${subPath}.mjs`,
     `${packageName}/dist/${subPath}/index.js`,
     `${packageName}/dist/${subPath}.js`,
   ];
@@ -36,6 +38,8 @@ async function tryImportMetaResolve<T>(
 
     const packageRoot = path.dirname(new URL(resolvedUrl).pathname);
     const pathsToTry = [
+      path.join(packageRoot, "dist", "node", subPath, "index.mjs"),
+      path.join(packageRoot, "dist", "node", `${subPath}.mjs`),
       path.join(packageRoot, "dist", subPath, "index.js"),
       path.join(packageRoot, "dist", `${subPath}.js`),
       path.join(packageRoot, subPath, "index.js"),
@@ -80,6 +84,8 @@ async function resolveSymlinkedPaths(
         const realPath = fs.realpathSync(nodeModulesPath);
 
         workspacePatterns.push(
+          path.join(realPath, "dist", "node", subPath, "index.mjs"),
+          path.join(realPath, "dist", "node", `${subPath}.mjs`),
           path.join(realPath, "dist", subPath, "index.js"),
           path.join(realPath, "dist", `${subPath}.js`),
           path.join(realPath, subPath, "index.js"),
@@ -109,6 +115,23 @@ function getCommonWorkspacePaths(
   const workspacePatterns: string[] = [];
   for (const root of commonRoots) {
     workspacePatterns.push(
+      path.join(
+        root,
+        "packages",
+        packageBaseName || packageName,
+        "dist",
+        "node",
+        subPath,
+        "index.mjs",
+      ),
+      path.join(
+        root,
+        "packages",
+        packageBaseName || packageName,
+        "dist",
+        "node",
+        `${subPath}.mjs`,
+      ),
       path.join(
         root,
         "packages",
