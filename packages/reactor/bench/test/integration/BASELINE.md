@@ -496,3 +496,44 @@ wiki page (19a11753-d38b-4c5f-b3b0-ad6e50ac7487). Next sub-feature:
 host-side event-loop instrumentation (perf_hooks.monitorEventLoopDelay)
 to settle the host-CPU-bound hypothesis before further architectural
 investment.
+
+## Run 10 matrix (host event-loop discrimination, VUS=128, DURATION=60s, pool=96)
+
+| drives | workers | jobs/sec | p50 (ms) | p95 (ms) | p99 (ms) | loop.delay.p99 (ms) | loop.util | cpu.util |
+| ------ | ------- | -------- | -------- | -------- | -------- | ------------------- | --------- | -------- |
+| 64 | 8 | 101.00 | 10000.00 | 10000.00 | 10000.00 | 46.70 | 0.993 | 3.418 |
+| 256 | 8 | 118.00 | 10000.00 | 10000.00 | 10000.00 | 43.97 | 0.997 | 3.264 |
+
+Notes on Run 10: host event loop is the binding constraint. `eventloop.util`
+sits at 0.993 / 0.997 in both cells — the loop is pinned at 99 %+ before
+drive count even rises. `cpu.util ≈ 3.3 cores` total = ~1.0 main loop
+(saturated, single-threaded) + ~2.3 cores across 8 worker threads (~0.3 each).
+The workers have headroom; the main loop does not.
+
+Three corroborating signals:
+
+1. Pool acquire wait p50 jumps 2.5 ms → 558.8 ms going from 64 → 256 drives,
+   on the **same** 96-connection pool. The pool itself isn't slow; the
+   `pool.connect()` resolve callback is sitting on the event-loop queue
+   behind everything else. Acquire-wait at high drive count is a loop
+   pressure proxy, not a pool sizing problem. (Run 8's pool-is-fine
+   conclusion still holds.)
+2. Coordinator `pre_ready` p50 grew 17× (58 ms → 1006 ms) and `post_ready`
+   p50 grew 3.2× (320 ms → 1032 ms) at 4× more drives, while `emit` (the
+   tight synchronous write step) stayed at 2.5 ms. Everything that has to
+   yield pays the loop-queue tax; the one stage that doesn't yield does not.
+3. Total-job-duration p99 saturates the 10 s histogram bucket in both cells.
+   Executor rate is 1228+ jobs/s but queue completion is ~120 jobs/s — the
+   executor produces operations ~10× faster than the coordinator chains can
+   index them under loop pressure.
+
+The Run 9 falsification branch "eventloop utilization high at NUM_DRIVES=64
+already (≥90 %)" is confirmed (99.3 % at 64). The flat Run 9 throughput
+curve was over-determined — the host wall was already up before that run
+started.
+
+Next sub-feature is moving projection out of the host loop (worker thread or
+separate process). Multi-process projection workers sharded by queueKey is
+the strongest long-term shape; a single projection process is the cheapest
+prototype. Larger host pool, per-read-model isolated pools, and sub-document
+partitioning are now all ruled out — none of them attack the loop.
