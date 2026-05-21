@@ -9,6 +9,7 @@
 import type {
   Action,
   DocumentModelGlobalState,
+  OperationSpecification,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
 import { camelCase } from "change-case";
@@ -146,13 +147,13 @@ export function addActions(
   let current = doc;
   for (let i = 0; i < built.length; i++) {
     const action = built[i];
-    current = entry.reducer(current, action) as PHDocument;
+    current = entry.reducer(current, action);
     /* The base reducer wraps custom reducers in try/catch and records any
      * throw as `operation.error` instead of propagating. For an atomic
      * batch apply that's the wrong shape — surface the error so callers
      * (and `saveSpec`) bail out before persisting a half-applied doc. */
     const scope = action.scope ?? "global";
-    const ops = (current.operations as Record<string, Array<{ error?: string }>>)[scope];
+    const ops = current.operations[scope];
     const last = ops?.[ops.length - 1];
     if (last?.error) {
       const failures: ActionValidationError[] = [
@@ -235,13 +236,11 @@ function collectActionErrors(
     return errors;
   }
   const latest = specs[specs.length - 1];
-  let operation: { name?: string; scope?: string } | undefined;
+  let operation: OperationSpecification | undefined;
   for (const module of latest.modules ?? []) {
-    const found = (module.operations ?? []).find(
-      (op: { name?: string }) => op.name === item.type,
-    );
+    const found = (module.operations ?? []).find((op) => op.name === item.type);
     if (found) {
-      operation = found as { name?: string; scope?: string };
+      operation = found;
       break;
     }
   }
