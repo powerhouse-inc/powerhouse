@@ -174,7 +174,7 @@ export const AppEditorForm = () => {
           {!isReadOnly && (
             <select
               onChange={(e) => handleDocumentTypeSelection(e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-slate-600"
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-slate-600"
             >
               <option>Select a document type to add</option>
               <option>--- Vetra drive document types ---</option>

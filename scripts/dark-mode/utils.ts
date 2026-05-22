@@ -2,6 +2,7 @@ import {
   conditional,
   constant,
   difference,
+  dropLast,
   filter,
   flat,
   flatMap,
@@ -11,6 +12,7 @@ import {
   isNot,
   isTruthy,
   join,
+  map,
   pipe,
   reduce,
   split,
@@ -71,27 +73,6 @@ export const getClasses =
   (c: ClassName): ClassNameList =>
     pipe([m.get(c)], flat(), filter(isTruthy));
 
-/**
- * Adds mapped dark-mode classes for every matching light-mode class in a class
- * list.
- *
- * Generated classes are appended to preserve the class ordering expected by the
- * formatter/linter.
- */
-export const addClasses = (m: ClassNameMap) => (cs: ClassNameList) =>
-  reduce(
-    cs,
-    (acc, curr) =>
-      pipe(
-        curr,
-        getClasses(m),
-        // add dark classes at the end of the list if found
-        // to preserve the ordering desired by the linter / formatter
-        conditional([isTruthy, (cs) => [...acc, ...cs]], constant(acc)),
-      ),
-    cs,
-  );
-
 export const replaceClass = (m: ClassNameMap) => (c: ClassName) =>
   pipe(c, getClasses(m), conditional([hasAtLeast(1), identity()], constant(c)));
 
@@ -119,7 +100,7 @@ export const addClassesToStringLiteral =
     pipe(
       s,
       getStringLiteralClassNameList,
-      addClasses(m),
+      updateClasses(m),
       updateClassesForStringLiteral(s),
     );
 
@@ -172,3 +153,19 @@ export const hasDarkModeAlready = (s: StringLiteral) =>
     filter(startsWith(darkPrefix)),
     isNot(isEmptyish),
   );
+
+export const dropLastPartOfClassName = (c: ClassName) =>
+  pipe(c, split("-"), dropLast(2), join("-"));
+
+export const matchClasses = (m: ClassNameMap, cs: ClassNameList) =>
+  pipe(cs, flatMap(getClasses(m)), unique());
+
+export const updateClasses = (m: ClassNameMap) => (cs: ClassNameList) => {
+  const matches = matchClasses(m, cs);
+  const withLastDropped = pipe(matches, map(dropLastPartOfClassName), unique());
+  const withUpdatedClassesRemoved = filter(
+    cs,
+    (c) => !withLastDropped.some((l) => c.startsWith(l)),
+  );
+  return unique([...withUpdatedClassesRemoved, ...matches]);
+};

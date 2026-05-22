@@ -1,13 +1,8 @@
-import { entries, filter, forEach, isNot, keys, mapValues, pipe } from "remeda";
+import { entries, filter, forEach, keys, mapValues, pipe } from "remeda";
 import { findFilesWithClasses } from "./find-files-with-classes.js";
 import { allMappings } from "./mappings.js";
 import { getStringLiteralsFromFiles, makeTsMorphProject } from "./ts-morph.js";
-import {
-  addClassesToStringLiteral,
-  addPrefix,
-  hasClasses,
-  hasDarkModeAlready,
-} from "./utils.js";
+import { addClassesToStringLiteral, addPrefix, hasClasses } from "./utils.js";
 
 const project = makeTsMorphProject();
 const files = await findFilesWithClasses(keys(allMappings));
@@ -25,7 +20,6 @@ const lightToDarkMap = new Map(
 pipe(
   files,
   getStringLiteralsFromFiles(project),
-  filter(isNot(hasDarkModeAlready)),
   filter(hasClasses(lightToDarkMap)),
   forEach(addClassesToStringLiteral(lightToDarkMap)),
 );

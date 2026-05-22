@@ -1,7 +1,7 @@
 import { setName } from "@powerhousedao/shared/document-model";
+import { useSelectedAppModuleDocument } from "@powerhousedao/vetra/document-models/app-module";
 import type { FormEventHandler, MouseEventHandler } from "react";
 import { useState } from "react";
-import { useSelectedAppModuleDocument } from "@powerhousedao/vetra/document-models/app-module";
 
 /** Displays the name of the selected AppModule document and allows editing it */
 export function EditAppModuleName() {
@@ -40,7 +40,7 @@ export function EditAppModuleName() {
         onSubmit={onSubmitSetName}
       >
         <input
-          className="p-1 text-lg font-semibold text-gray-900 dark:text-slate-50"
+          className="p-1 text-lg font-semibold text-gray-900 placeholder:text-gray-700 dark:text-slate-50"
           type="text"
           name="name"
           defaultValue={appModuleDocumentName}

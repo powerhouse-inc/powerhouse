@@ -24,7 +24,7 @@ function DocumentTypeSelectUI(
   return (
     <select
       id="supported-document-types"
-      className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-slate-600"
+      className="w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-slate-600 dark:text-slate-50"
       {...props}
     >
       <option value="">Select a document type</option>
@@ -158,7 +158,7 @@ export const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
           onChange={(e) => setEditorName(e.target.value)}
           disabled={isReadOnly}
           className={twMerge(
-            "w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-slate-600",
+            "w-full rounded-md border border-gray-300 px-3 py-2 placeholder:text-gray-700 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-slate-600",
             isReadOnly
               ? "cursor-not-allowed bg-gray-100 dark:bg-slate-700"
               : "",
