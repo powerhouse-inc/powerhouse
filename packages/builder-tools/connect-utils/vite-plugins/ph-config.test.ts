@@ -11,7 +11,7 @@ function makeProjectRoot(pkg: { name?: string; version?: string }): string {
   const dir = mkdtempSync(join(tmpdir(), "ph-config-test-"));
   writeFileSync(
     join(dir, "package.json"),
-    JSON.stringify(pkg ?? {}, null, 2),
+    JSON.stringify(pkg, null, 2),
     "utf-8",
   );
   return dir;
@@ -243,6 +243,58 @@ describe("phConfigPlugin", () => {
     expect(parsed.localPackage).toBeNull();
 
     rmSync(root, { recursive: true, force: true });
+  });
+
+  it("emits packageRegistryUrl at the top level of the runtime config", () => {
+    const plugin = phConfigPlugin({
+      packages: [],
+      projectRoot,
+      packageRegistryUrl: "https://registry.example.com",
+    });
+
+    const emitted: { source: string }[] = [];
+    const ctx = {
+      emitFile(file: { type: string; fileName: string; source: string }) {
+        if (file.type === "asset") emitted.push({ source: file.source });
+      },
+    };
+    (plugin.generateBundle as (this: unknown, ...args: unknown[]) => void).call(
+      ctx,
+    );
+
+    const parsed = JSON.parse(emitted[0].source) as Record<string, unknown>;
+    expect(parsed.packageRegistryUrl).toBe("https://registry.example.com");
+    expect(
+      (parsed.connect as Record<string, unknown>).packageRegistryUrl,
+    ).toBeUndefined();
+  });
+
+  it("emits byte-identical content across repeated generateBundle calls", () => {
+    const plugin = phConfigPlugin({
+      packages: [
+        { packageName: "@scope/x", version: "1.0.0", provider: "registry" },
+      ],
+      projectRoot,
+      packageRegistryUrl: "https://registry.example.com",
+      connect: { branding: { appName: "Snapshot" } },
+    });
+
+    const collect = () => {
+      const out: string[] = [];
+      const ctx = {
+        emitFile(file: { type: string; fileName: string; source: string }) {
+          if (file.type === "asset") out.push(file.source);
+        },
+      };
+      (
+        plugin.generateBundle as (this: unknown, ...args: unknown[]) => void
+      ).call(ctx);
+      return out;
+    };
+
+    const first = collect();
+    const second = collect();
+    expect(second).toEqual(first);
   });
 
   it("does not leak source-side fields into the emitted config", () => {

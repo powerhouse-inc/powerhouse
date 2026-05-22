@@ -9,7 +9,8 @@ export default defineConfig({
     include: [
       "clis/source-config-schema.test.ts",
       "connect/config-loader.test.ts",
-      "connect/env-to-runtime-config.test.ts",
+      "connect/env-config.test.ts",
+      "connect/entrypoint-seed.test.ts",
     ],
     globals: true,
   },

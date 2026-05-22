@@ -1,5 +1,6 @@
 import { buildPowerhouseConfigTemplate } from "@powerhousedao/codegen/templates";
 import { DEFAULT_CONNECT_CONFIG } from "@powerhousedao/shared/connect";
+import { DEFAULT_REGISTRY_URL } from "@powerhousedao/shared/registry";
 import { describe, expect, test } from "bun:test";
 
 type Plain = Record<string, unknown>;
@@ -70,7 +71,13 @@ describe("buildPowerhouseConfigTemplate", () => {
     expect(parsed.studio).toEqual({ port: 3000 });
     expect(parsed.reactor).toEqual({ port: 4001 });
     expect(parsed.packages).toEqual([]);
-    expect(typeof parsed.packageRegistryUrl).toBe("string");
+    expect(parsed.packageRegistryUrl).toBe(DEFAULT_REGISTRY_URL);
+  });
+
+  test("connect block equals DEFAULT_CONNECT_CONFIG exactly (no extras, no drift)", async () => {
+    const out = await buildPowerhouseConfigTemplate({});
+    const parsed = JSON.parse(out) as Plain;
+    expect(parsed.connect).toEqual(DEFAULT_CONNECT_CONFIG as Plain);
   });
 
   test("omits `vetra` when no remoteDrive provided", async () => {

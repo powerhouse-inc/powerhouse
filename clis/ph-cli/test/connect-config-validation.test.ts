@@ -213,4 +213,30 @@ describe("validateConnectPatch (--json path)", () => {
       /must be number/,
     );
   });
+
+  it("accepts a top-level packageRegistryUrl alongside a connect.* blob", () => {
+    // packageRegistryUrl is a top-level runtime field, not part of the
+    // connect schema. The validator must strip it before checking
+    // additionalProperties on the connect-only blob.
+    expect(
+      validateConnectPatch(
+        '{"packageRegistryUrl":"https://reg.example","renown":{"url":"https://x"}}',
+      ),
+    ).toEqual({
+      packageRegistryUrl: "https://reg.example",
+      renown: { url: "https://x" },
+    });
+  });
+
+  it("accepts a payload that is only a top-level packageRegistryUrl", () => {
+    expect(
+      validateConnectPatch('{"packageRegistryUrl":"https://reg.example"}'),
+    ).toEqual({ packageRegistryUrl: "https://reg.example" });
+  });
+
+  it("still rejects unknown top-level keys other than packageRegistryUrl", () => {
+    expect(() =>
+      validateConnectPatch('{"unrelatedKey":"x","renown":{"url":"y"}}'),
+    ).toThrow(/must NOT have additional properties/);
+  });
 });

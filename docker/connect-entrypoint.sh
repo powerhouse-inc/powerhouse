@@ -51,7 +51,7 @@ envsubst '${PORT},${PH_CONNECT_BASE_PATH},${PH_CONNECT_BASE_PREFIX}' < /etc/ngin
 # is read-only the write fails loudly — correct behavior, since operator-
 # managed configs should not be re-seeded by the entrypoint.
 
-DIST_DIR="/var/www/html/project"
+DIST_DIR="${DIST_DIR:-/var/www/html/project}"
 RUNTIME_FILE="${DIST_DIR}/powerhouse.config.json"
 
 # Apply a JSON value at a given dotted path inside the runtime file, but

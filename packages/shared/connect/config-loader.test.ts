@@ -197,6 +197,23 @@ describe("ConfigLoader", () => {
     expect(written.connect.renown?.url).toBe("https://www.renown.id");
   });
 
+  it("passes top-level packageRegistryUrl through unchanged on read and write", async () => {
+    const adapter = new InMemoryAdapter({
+      schemaVersion: 2,
+      packages: [],
+      localPackage: null,
+      packageRegistryUrl: "https://registry.example.com",
+      connect: {},
+    });
+    const loader = new ConfigLoader(adapter);
+    const result = await loader.read();
+    expect(result.packageRegistryUrl).toBe("https://registry.example.com");
+
+    await loader.write({ connect: { app: { logLevel: "debug" } } });
+    const written = adapter.writes[0];
+    expect(written.packageRegistryUrl).toBe("https://registry.example.com");
+  });
+
   it("accepts a custom defaults object for tests / specialised consumers", async () => {
     const adapter = new InMemoryAdapter({ connect: {} });
     const customDefaults = {

@@ -115,8 +115,15 @@ export function validateConnectKeyValue(
 
 /**
  * Validate a `--json` bulk override. Returns the parsed partial.
+ *
+ * `packageRegistryUrl` is a top-level runtime field (not part of the
+ * `connect.*` schema). If present in the payload, it is extracted before
+ * validation so the connect-only blob can be checked against the schema,
+ * then re-attached on the returned object so the caller can route it.
  */
-export function validateConnectPatch(raw: string): ConnectPartial {
+export function validateConnectPatch(raw: string): ConnectPartial & {
+  packageRegistryUrl?: unknown;
+} {
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
@@ -132,10 +139,25 @@ export function validateConnectPatch(raw: string): ConnectPartial {
       `ph connect config --json: payload must be a JSON object, got ${typeof parsed}.`,
     );
   }
-  if (!validateConnect(parsed)) {
+  // Extract `packageRegistryUrl` (top-level field, not in the connect schema)
+  // before validating, so a payload like `{"packageRegistryUrl":"…"}` doesn't
+  // fail the `additionalProperties: false` check on the connect schema.
+  const top = parsed as PlainObject;
+  const hasPackageRegistryUrl = Object.prototype.hasOwnProperty.call(
+    top,
+    "packageRegistryUrl",
+  );
+  const packageRegistryUrl = top.packageRegistryUrl;
+  const connectOnly: PlainObject = { ...top };
+  delete connectOnly.packageRegistryUrl;
+  if (!validateConnect(connectOnly)) {
     throw new Error(
       `ph connect config --json: validation failed:\n${formatErrors(validateConnect.errors)}`,
     );
   }
-  return parsed as ConnectPartial;
+  return hasPackageRegistryUrl
+    ? ({ ...connectOnly, packageRegistryUrl } as ConnectPartial & {
+        packageRegistryUrl?: unknown;
+      })
+    : (connectOnly as ConnectPartial);
 }

@@ -1,0 +1,310 @@
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { runConnectConfig } from "../src/services/connect-config.js";
+import type { ConnectConfigArgs } from "../src/types.js";
+
+function mk(partial: Partial<ConnectConfigArgs>): ConnectConfigArgs {
+  return {
+    get: undefined,
+    distDir: undefined,
+    json: undefined,
+    renownUrl: undefined,
+    renownNetworkId: undefined,
+    renownChainId: undefined,
+    allowAddDrive: undefined,
+    externalPackages: undefined,
+    remoteDrivesEnabled: undefined,
+    remoteDrivesAllowAdd: undefined,
+    remoteDrivesAllowDelete: undefined,
+    localDrivesEnabled: undefined,
+    localDrivesAllowAdd: undefined,
+    localDrivesAllowDelete: undefined,
+    packagesRegistry: undefined,
+    appName: undefined,
+    homeBackground: undefined,
+    connectBasePath: "/",
+    logLevel: "info",
+    defaultDrivesUrl: "",
+    drivesPreserveStrategy: "preserve-by-url-and-detach",
+    ...partial,
+  } as ConnectConfigArgs;
+}
+
+const SOURCE_FILE = "powerhouse.config.json";
+const DEFAULT_DIST = ".ph/connect-build/dist";
+
+function readJson(path: string): Record<string, unknown> {
+  return JSON.parse(readFileSync(path, "utf-8")) as Record<string, unknown>;
+}
+
+describe("ph connect config", () => {
+  let tmpDir: string;
+  let originalArgv: string[];
+  let stdoutChunks: string[];
+
+  beforeEach(() => {
+    tmpDir = mkdtempSync(join(tmpdir(), "ph-connect-config-test-"));
+    originalArgv = process.argv;
+    process.argv = ["node", "ph", "connect", "config"];
+    vi.spyOn(process, "cwd").mockReturnValue(tmpDir);
+    stdoutChunks = [];
+    vi.spyOn(process.stdout, "write").mockImplementation((chunk: unknown) => {
+      stdoutChunks.push(String(chunk));
+      return true;
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    process.argv = originalArgv;
+    rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  function writeSource(content: Record<string, unknown>): void {
+    writeFileSync(
+      join(tmpDir, SOURCE_FILE),
+      JSON.stringify(content, null, 2),
+      "utf-8",
+    );
+  }
+
+  function writeDist(content: Record<string, unknown>): void {
+    const distDir = join(tmpDir, DEFAULT_DIST);
+    mkdirSync(distDir, { recursive: true });
+    writeFileSync(
+      join(distDir, SOURCE_FILE),
+      JSON.stringify(content, null, 2),
+      "utf-8",
+    );
+  }
+
+  // ---------------- List mode ----------------
+
+  describe("list mode (scenario 14)", () => {
+    it("prints the effective connect.* block (defaults + source)", async () => {
+      writeSource({ connect: { branding: { appName: "List Test" } } });
+      await runConnectConfig(mk({}));
+      const printed = JSON.parse(stdoutChunks.join("")) as Record<
+        string,
+        Record<string, unknown>
+      >;
+      // Source override visible
+      expect(printed.branding.appName).toBe("List Test");
+      // Default fields still present
+      expect(printed.app).toBeDefined();
+      expect(printed.renown).toBeDefined();
+      expect(printed.drives).toBeDefined();
+    });
+
+    it("works even when no source file exists (full defaults)", async () => {
+      await runConnectConfig(mk({}));
+      const printed = JSON.parse(stdoutChunks.join("")) as Record<
+        string,
+        Record<string, unknown>
+      >;
+      expect(printed.branding).toBeDefined();
+      expect(printed.app).toBeDefined();
+    });
+  });
+
+  // ---------------- Get mode ----------------
+
+  describe("get mode (scenarios 15, 16)", () => {
+    it("returns a connect.* leaf value via dotted path", async () => {
+      writeSource({ connect: { renown: { url: "https://gotten.example" } } });
+      await runConnectConfig(mk({ get: "connect.renown.url" }));
+      expect(stdoutChunks.join("")).toBe(
+        `${JSON.stringify("https://gotten.example", null, 2)}\n`,
+      );
+    });
+
+    it("accepts paths without the leading `connect.` prefix", async () => {
+      writeSource({ connect: { renown: { url: "https://gotten.example" } } });
+      await runConnectConfig(mk({ get: "renown.url" }));
+      expect(stdoutChunks.join("")).toBe(
+        `${JSON.stringify("https://gotten.example", null, 2)}\n`,
+      );
+    });
+
+    it("returns top-level packageRegistryUrl", async () => {
+      writeSource({
+        packageRegistryUrl: "https://registry.example",
+        connect: {},
+      });
+      await runConnectConfig(mk({ get: "packageRegistryUrl" }));
+      expect(stdoutChunks.join("")).toBe(
+        `${JSON.stringify("https://registry.example", null, 2)}\n`,
+      );
+    });
+
+    it("throws a clear error for empty key", async () => {
+      writeSource({ connect: {} });
+      await expect(runConnectConfig(mk({ get: "" }))).rejects.toThrow(
+        /key cannot be empty/,
+      );
+    });
+
+    it("throws a clear error for an unknown path", async () => {
+      writeSource({ connect: {} });
+      await expect(
+        runConnectConfig(mk({ get: "no.such.path" })),
+      ).rejects.toThrow(/no value at key "no\.such\.path"/);
+    });
+  });
+
+  // ---------------- Set mode ----------------
+
+  describe("set mode — single field (scenario 17)", () => {
+    it("dual-writes a connect.* field into source and dist", async () => {
+      writeSource({ connect: { branding: { appName: "Before" } } });
+      writeDist({ schemaVersion: 2, packages: [], connect: {} });
+
+      await runConnectConfig(mk({ renownUrl: "https://written.example" }));
+
+      const source = readJson(join(tmpDir, SOURCE_FILE));
+      expect(
+        (source.connect as Record<string, Record<string, unknown>>).renown.url,
+      ).toBe("https://written.example");
+      // Pre-existing source fields preserved
+      expect(
+        (source.connect as Record<string, Record<string, unknown>>).branding
+          .appName,
+      ).toBe("Before");
+
+      const dist = readJson(join(tmpDir, DEFAULT_DIST, SOURCE_FILE));
+      expect(
+        (dist.connect as Record<string, Record<string, unknown>>).renown.url,
+      ).toBe("https://written.example");
+    });
+
+    it("source-only write succeeds when no dist file exists (scenario 21)", async () => {
+      writeSource({ connect: {} });
+      await runConnectConfig(mk({ renownUrl: "https://no-dist" }));
+
+      const source = readJson(join(tmpDir, SOURCE_FILE));
+      expect(
+        (source.connect as Record<string, Record<string, unknown>>).renown.url,
+      ).toBe("https://no-dist");
+
+      expect(existsSync(join(tmpDir, DEFAULT_DIST, SOURCE_FILE))).toBe(false);
+    });
+  });
+
+  describe("set mode — top-level packageRegistryUrl (scenario 18)", () => {
+    it("writes packageRegistryUrl at the top level on both files", async () => {
+      writeSource({ connect: {} });
+      writeDist({ schemaVersion: 2, packages: [], connect: {} });
+
+      await runConnectConfig(mk({ packagesRegistry: "https://reg.example" }));
+
+      const source = readJson(join(tmpDir, SOURCE_FILE));
+      expect(source.packageRegistryUrl).toBe("https://reg.example");
+      expect(
+        (source.connect as Record<string, unknown>).packageRegistryUrl,
+      ).toBeUndefined();
+
+      const dist = readJson(join(tmpDir, DEFAULT_DIST, SOURCE_FILE));
+      expect(dist.packageRegistryUrl).toBe("https://reg.example");
+    });
+  });
+
+  // ---------------- JSON bulk-set mode ----------------
+
+  describe("bulk-set mode --json (scenarios 19, 20)", () => {
+    it("deep-merges a connect.* JSON patch into both files", async () => {
+      writeSource({ connect: { branding: { appName: "Keep" } } });
+      writeDist({ schemaVersion: 2, packages: [], connect: {} });
+
+      await runConnectConfig(
+        mk({
+          json: JSON.stringify({
+            renown: { url: "https://json-set" },
+          }),
+        }),
+      );
+
+      const source = readJson(join(tmpDir, SOURCE_FILE));
+      const sourceConnect = source.connect as Record<
+        string,
+        Record<string, unknown>
+      >;
+      // Patched leaf landed
+      expect(sourceConnect.renown.url).toBe("https://json-set");
+      // Pre-existing siblings preserved
+      expect(sourceConnect.branding.appName).toBe("Keep");
+
+      const dist = readJson(join(tmpDir, DEFAULT_DIST, SOURCE_FILE));
+      expect(
+        (dist.connect as Record<string, Record<string, unknown>>).renown.url,
+      ).toBe("https://json-set");
+    });
+
+    it("routes top-level packageRegistryUrl in --json to the top level and strips it from connect.*", async () => {
+      writeSource({ connect: {} });
+
+      await runConnectConfig(
+        mk({
+          json: JSON.stringify({
+            packageRegistryUrl: "https://json-reg",
+            renown: { url: "https://json-renown" },
+          }),
+        }),
+      );
+
+      const source = readJson(join(tmpDir, SOURCE_FILE));
+      expect(source.packageRegistryUrl).toBe("https://json-reg");
+      const sourceConnect = source.connect as Record<
+        string,
+        Record<string, unknown>
+      >;
+      expect(sourceConnect.renown.url).toBe("https://json-renown");
+      // Must NOT have leaked into connect.* block
+      expect(sourceConnect.packageRegistryUrl).toBeUndefined();
+    });
+  });
+
+  // ---------------- Error cases ----------------
+
+  describe("error cases (scenarios 22, 23)", () => {
+    it("rejects combining --get with --json", async () => {
+      writeSource({ connect: {} });
+      await expect(
+        runConnectConfig(
+          mk({ get: "renown.url", json: '{"renown":{"url":"x"}}' }),
+        ),
+      ).rejects.toThrow(/mutually exclusive/);
+    });
+
+    it("rejects combining --get with a field flag", async () => {
+      writeSource({ connect: {} });
+      await expect(
+        runConnectConfig(mk({ get: "renown.url", renownUrl: "https://x" })),
+      ).rejects.toThrow(/mutually exclusive/);
+    });
+
+    it("rejects combining --json with a field flag", async () => {
+      writeSource({ connect: {} });
+      await expect(
+        runConnectConfig(
+          mk({ json: '{"renown":{"url":"x"}}', renownUrl: "https://y" }),
+        ),
+      ).rejects.toThrow(/mutually exclusive/);
+    });
+
+    it("rejects empty --json patch as nothing-to-set", async () => {
+      writeSource({ connect: {} });
+      await expect(runConnectConfig(mk({ json: "{}" }))).rejects.toThrow(
+        /nothing to set/,
+      );
+    });
+  });
+});
