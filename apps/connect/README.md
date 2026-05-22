@@ -58,6 +58,10 @@ pnpm docker:run # Run the Docker container
 
 Connect will be available at: `http://localhost:4000/develop/powerhouse/connect`
 
+## Runtime configuration
+
+Connect's runtime settings (renown URL, package registry, default drives, log level, etc.) live in `powerhouse.config.json` rather than environment variables. See [RUNTIME-CONFIG.md](./RUNTIME-CONFIG.md) for the full overview of how values are set, merged, and read by the SPA.
+
 ## Troubleshooting
 
 - For a complete list of _Electron Forge_ options and requirements, visit the [official docs](https://github.com/electron-userland/electron-forge#usage).
