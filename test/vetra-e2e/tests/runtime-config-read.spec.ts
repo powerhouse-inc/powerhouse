@@ -9,6 +9,7 @@
 // http://localhost:3001/powerhouse.config.json — `pnpm vetra --watch` is
 // started by playwright.config.ts's webServer.
 
+import type { Page } from "@playwright/test";
 import { expect, test } from "./helpers/fixtures.js";
 
 type RuntimeConfig = {
@@ -42,9 +43,7 @@ type RuntimeConfig = {
   };
 };
 
-async function fetchRuntimeConfig(
-  page: import("@playwright/test").Page,
-): Promise<RuntimeConfig> {
+async function fetchRuntimeConfig(page: Page): Promise<RuntimeConfig> {
   const res = await page.request.get("/powerhouse.config.json");
   expect(res.ok()).toBe(true);
   return (await res.json()) as RuntimeConfig;
