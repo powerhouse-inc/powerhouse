@@ -4,7 +4,6 @@
 // (packages/builder-tools/connect-utils/runtime-config-schema.ts).
 //
 // When a shared shape changes, edit it here — both schemas pick it up.
-// See CONNECT-CONFIG.md §12.7 for the architecture rationale.
 
 export const powerhousePackageSchema = {
   type: "object",
@@ -32,9 +31,9 @@ export const powerhousePackageSchema = {
   },
 } as const;
 
-// Reusable shape for `connect.drives.sections.{remote,local}` — same three
-// affirmative-named toggles for each section. The plan §2.4 collapses the
-// legacy public+cloud sections into a single `remote`.
+// Reusable shape for `connect.drives.sections.{remote,local}` — three
+// affirmative-named toggles per section. The legacy public+cloud sections
+// have been collapsed into a single `remote`.
 const driveSectionSchema = {
   type: "object",
   additionalProperties: false,

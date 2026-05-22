@@ -80,7 +80,7 @@ describe("source-config schema", () => {
     expect(props.connect.properties).toHaveProperty("renown");
   });
 
-  it("connect.drives.sections collapses public+cloud into a single 'remote' (plan §2.4)", () => {
+  it("connect.drives.sections collapses public+cloud into a single 'remote'", () => {
     const props = sourceConfigSchema.properties as unknown as Record<
       string,
       {
@@ -102,10 +102,10 @@ describe("source-config schema", () => {
     expect(sections?.properties).not.toHaveProperty("cloud");
   });
 
-  it("connect schema uses affirmative naming only (no `disable*` fields, plan §2.4)", () => {
+  it("connect schema uses affirmative naming only (no `disable*` fields)", () => {
     // Recursively collect every property name under `connect.*` and reject
     // any that starts with `disable`. Catches regressions where the legacy
-    // PH_CONNECT_DISABLE_* env-var shape leaks back into the JSON schema.
+    // `disable*` field shape leaks back into the JSON schema.
     const collected: string[] = [];
     function walk(node: unknown): void {
       if (!node || typeof node !== "object") return;

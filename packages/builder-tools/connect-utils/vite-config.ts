@@ -198,8 +198,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
   // set the resolved env to process.env so it's loaded by vite
   setConnectEnv(env);
 
-  // load powerhouse config (always project-root powerhouse.config.json; the
-  // PH_CONFIG_PATH env var was removed in task 14 §2.3)
+  // Source config is always the project-root powerhouse.config.json.
   const phConfigPath = join(options.dirname, "powerhouse.config.json");
 
   const phConfig = options.powerhouseConfig ?? getConfig(phConfigPath);
@@ -334,9 +333,8 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
       dedupe: ["react", "react-dom"],
       tsconfigPaths: true,
     },
-    // PH_PACKAGE_REGISTRY_URL and PH_CONNECT_EXPLICIT_ENV Vite define globals
-    // were removed in task 14 §2.3 — Connect reads packageRegistryUrl from the
-    // runtime config now, and the env-to-runtime bridge was retired in task 8.
+    // Connect reads its runtime config (including packageRegistryUrl) from
+    // the emitted /powerhouse.config.json; no build-time `define` globals.
     define: {},
     customLogger,
     envPrefix: ["PH_CONNECT_"],

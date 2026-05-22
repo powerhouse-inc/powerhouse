@@ -27,21 +27,21 @@ envsubst '${PORT},${PH_CONNECT_BASE_PATH},${PH_CONNECT_BASE_PREFIX}' < /etc/ngin
 # Env -> powerhouse.config.json seeding (set-if-absent)
 # ============================================================
 #
-# The seed table below MUST stay in sync with ENV_SEEDING_RULES in
-# packages/shared/connect/env-to-runtime-config.ts. That TypeScript module is
-# the source of truth and drives the build-time seeding inside the Vite
-# plugin; this shell version exists because the runtime image ships nginx +
-# jq only. We considered shipping `ph-cli` in the runtime image so the
-# entrypoint could call `ph connect config <key> <value>`, but a quick
-# experiment showed it ballooned the image from 126 MB -> 4.63 GB (ph-cli's
-# transitive deps include monaco-editor, walletconnect, opentelemetry, etc.,
-# none of which the runtime needs); rejected. See CONNECT-CONFIG-PLAN.md §11
-# for the full breakdown.
+# Connect's SPA does not read env vars for runtime config — env vars are no
+# longer a layer in the runtime-config precedence ladder inside the JS/TS
+# build. What this entrypoint does is different: it writes operator-supplied
+# env values into the powerhouse.config.json file at container start, the
+# equivalent of running `ph connect config --<field>` on the dist file. The
+# SPA then reads the file as usual. We considered shipping `ph-cli` in the
+# runtime image so the entrypoint could call `ph connect config` directly,
+# but a quick experiment showed it ballooned the image from 126 MB to 4.63 GB
+# (ph-cli's transitive deps include monaco-editor, walletconnect,
+# opentelemetry, etc., none of which the runtime needs); rejected.
 #
 # Semantics: set-if-absent. If the operator pre-mounted a config file with a
 # value at `connect.foo.bar`, env vars never overwrite it. Within this table,
 # the first rule whose env var is set wins on collision — so CLOUD-before-
-# PUBLIC means CLOUD wins, matching the TS rule order.
+# PUBLIC means CLOUD wins.
 #
 # Implementation note: we write to a sibling tmp file then `cat tmp > file`
 # (truncate-and-write) instead of `mv tmp file`. `mv` would replace the

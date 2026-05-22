@@ -7,8 +7,6 @@
 // Shared field shapes (PowerhousePackage, PHConnectRuntimeConfig) are imported
 // from `@powerhousedao/shared/connect` so the source schema and the runtime
 // schema (in builder-tools/connect-utils) stay in sync by construction.
-//
-// See CONNECT-CONFIG.md §12.7 and §12.8 for architecture and hosting.
 
 import {
   phConnectRuntimeConfigSchema,

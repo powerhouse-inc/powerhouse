@@ -164,11 +164,10 @@ describe("runtime-config schema", () => {
     ).toThrow(/surpriseField/);
   });
 
-  // Task 6: the emitter must populate every connect.* leaf with its default
-  // so the dist file is fully self-describing. The "all defaults populated"
-  // property is the guarantee task 8 relies on when it rewrites Connect to
-  // read fields directly from the JSON without fallback guards.
-  it("populates every DEFAULT_CONNECT_CONFIG field when source has no connect block (task 6)", () => {
+  // The emitter must populate every connect.* leaf with its default so the
+  // dist file is fully self-describing — the SPA reads fields directly
+  // without env-fallback guards.
+  it("populates every DEFAULT_CONNECT_CONFIG field when source has no connect block", () => {
     const config = emitPluginOutput({
       packages: [],
       projectRoot,
@@ -178,7 +177,7 @@ describe("runtime-config schema", () => {
     expect(config.connect).toEqual(DEFAULT_CONNECT_CONFIG);
   });
 
-  it("preserves user overrides while filling in defaults for unspecified leaves (task 6)", () => {
+  it("preserves user overrides while filling in defaults for unspecified leaves", () => {
     const config = emitPluginOutput({
       packages: [],
       projectRoot,

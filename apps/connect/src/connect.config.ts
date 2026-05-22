@@ -32,10 +32,10 @@ function getRouterBasenameFromBasePath(basePath: string) {
   return basePath.endsWith("/") ? basePath : basePath + "/";
 }
 
-// Hardcoded literal defaults for fields whose env-var source was removed in
-// task 14 (§2.3 REMOVE list). The fields themselves stay on PHGlobalConfig so
-// the wired-but-dead SW/hook consumers keep typechecking; the values match
-// the defaults the removed Zod schemas used to provide.
+// Hardcoded literal defaults for `PHGlobalConfig` fields whose env-var
+// source was removed. The fields stay on the type so wired-but-dead SW /
+// hook consumers keep typechecking; values mirror the previous Zod
+// defaults.
 function getBuiltInDefaults(): Omit<
   PHGlobalConfig,
   "basePath" | "routerBasename"
@@ -146,17 +146,16 @@ const PH_CONNECT_BASE_PATH = normalizeBasePath(
   runtime.app?.basePath ?? import.meta.env.BASE_URL,
 );
 
-// Analytics database name. Operator override via env was removed in task 14
-// (§2.3) — this is now the deterministic default based on the base path.
+// Analytics database name — derived deterministically from the base path.
 const PH_CONNECT_ANALYTICS_DATABASE_NAME = `${PH_CONNECT_BASE_PATH.replace(
   /\//g,
   "",
 )}:analytics`;
 
-// task 14 §2.4: CLOUD section collapsed into the unified `remote` section
-// (PH_CONNECT_CLOUD_DRIVES_* env vars removed). PUBLIC keeps its existing
-// string identifier in the legacy connectConfig.drives.sections map to avoid
-// rippling through downstream UI components — both PUBLIC and the
+// The CLOUD section was collapsed into the unified `remote` section. PUBLIC
+// keeps its existing string identifier in the legacy
+// connectConfig.drives.sections map to avoid rippling through downstream UI
+// components — both PUBLIC and the
 // soon-to-be-removed CLOUD readers point at runtime.drives.sections.remote.
 export const connectConfig = {
   appVersion: env.PH_CONNECT_VERSION,

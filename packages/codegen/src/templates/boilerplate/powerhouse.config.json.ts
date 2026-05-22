@@ -14,9 +14,7 @@ type BuildPowerhouseConfigTemplateArgs = {
  * The `connect` block is populated from `DEFAULT_CONNECT_CONFIG` so every
  * runtime field is present in the scaffolded file. Dev consumers that read
  * the source config directly (notably `ph vetra`, which has no dist file)
- * see fully-defined values instead of `undefined`. The constant is the
- * single source of truth — task 6's dist emitter and this template merge
- * the same defaults.
+ * see fully-defined values instead of `undefined`.
  */
 // Kept `async` for callsite signature compatibility (callers already
 // `await` the result). The body is synchronous.

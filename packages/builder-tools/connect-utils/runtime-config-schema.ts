@@ -2,13 +2,10 @@
 // artifact emitted into the build output and fetched by the Connect SPA at
 // boot.
 //
-// This is a strict SUBSET of the source PowerhouseConfig schema (see
-// CONNECT-CONFIG.md §4.3) plus two runtime-only fields (schemaVersion,
-// localPackage). Field shapes shared with the source schema
-// (PowerhousePackage, PHConnectRuntimeConfig) are imported from the shared
-// fragments module so the two schemas stay in sync by construction.
-//
-// See CONNECT-CONFIG.md §12.7 and §12.8 for architecture and hosting.
+// A strict SUBSET of the source PowerhouseConfig schema plus two runtime-only
+// fields (schemaVersion, localPackage). Field shapes shared with the source
+// schema (PowerhousePackage, PHConnectRuntimeConfig) are imported from the
+// shared fragments module so the two schemas stay in sync by construction.
 
 import {
   phConnectRuntimeConfigSchema,
@@ -21,8 +18,7 @@ export const RUNTIME_CONFIG_SCHEMA_ID =
 // GitHub-hosted schema URL. Points at the JSON artifact committed alongside
 // this TS module. Currently tracks the `main` branch — schema edits go live
 // for editors as soon as they merge. Migrate to a `schema-v<N>` tag pinned
-// to schemaVersion if/when stability across edits becomes a concern. See
-// CONNECT-CONFIG.md §12.8.2 for the versioning trade-offs.
+// to schemaVersion if/when stability across edits becomes a concern.
 export const RUNTIME_CONFIG_SCHEMA_URL =
   "https://raw.githubusercontent.com/powerhouse-inc/powerhouse/main/packages/builder-tools/connect-utils/runtime-config.schema.json";
 

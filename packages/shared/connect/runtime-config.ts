@@ -21,10 +21,8 @@ export type RuntimePowerhouseConfig = {
  * (studio port, switchboard port, reactor.*, auth.*) live in the source
  * config but are not Connect's business and not represented here.
  *
- * Single source of truth for defaults across:
- *   - Connect's runtime read (via ConfigLoader merge)
- *   - the dist emitter (task 6, when it walks the schema)
- *   - the codegen scaffold template (task 13)
+ * Single source of truth for defaults across Connect's runtime read (via
+ * ConfigLoader merge), the dist emitter, and the codegen scaffold template.
  */
 export const DEFAULT_CONNECT_CONFIG: PHConnectRuntimeConfig = {
   branding: {

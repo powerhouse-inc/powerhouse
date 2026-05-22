@@ -128,8 +128,7 @@ export class ConfigLoader {
 
   /**
    * Returns the cached config synchronously. Throws if `read()` has not
-   * resolved yet — matches Connect's existing `getRuntimeConfig()` shape
-   * so the SPA wiring (task 7) is a drop-in.
+   * resolved yet — matches Connect's `getRuntimeConfig()` shape.
    */
   getCached(): ConfigShape {
     if (!this.cache) {

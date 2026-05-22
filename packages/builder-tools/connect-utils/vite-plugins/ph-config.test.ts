@@ -104,7 +104,7 @@ describe("phConfigPlugin", () => {
     });
   });
 
-  it("cliConnectOverride beats source.connect in the dist emit (task 9)", () => {
+  it("cliConnectOverride beats source.connect in the dist emit", () => {
     const plugin = phConfigPlugin({
       packages: [],
       projectRoot,

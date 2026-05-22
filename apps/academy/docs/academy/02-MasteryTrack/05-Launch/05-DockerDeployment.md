@@ -158,27 +158,41 @@ For the full configuration model, precedence ladder, and the complete list of `c
 
 ### Connect container env vars
 
-These are the env vars the connect Dockerfile / entrypoint still consumes. The runtime-configuration ones (drive sections, renown, base path, etc.) are listed in [Configure Environment](./04-ConfigureEnvironment.md#build-time-env-var-seeds) — they all behave as set-if-absent seeds at container start.
+Connect's SPA reads runtime configuration from `/powerhouse.config.json`, never from env vars at runtime. The container entrypoint, however, can translate operator-supplied env vars into edits to that file at startup (set-if-absent) — equivalent to pre-running `ph connect config --<field>` on the dist file. The SPA then reads the file as usual.
 
 #### Container shape and secrets
 
 | Variable                | Description                                                                       | Default  |
 | ----------------------- | --------------------------------------------------------------------------------- | -------- |
 | `PORT`                  | Port the nginx server listens on                                                  | `3001`   |
-| `PH_CONNECT_BASE_PATH`  | Base URL path (consumed by nginx envsubst AND seeded into `connect.app.basePath`) | `/`      |
+| `PH_CONNECT_BASE_PATH`  | nginx base URL path (also written into `connect.app.basePath` by the entrypoint)  | `/`      |
 | `PH_CONNECT_SENTRY_DSN` | Sentry DSN for error tracking                                                     | `""`     |
 | `PH_CONNECT_SENTRY_ENV` | Sentry environment name                                                           | `""`     |
 | `DATABASE_URL`          | PostgreSQL connection string (for Switchboard, not Connect)                       | Required |
 
-#### Renown authentication (seed into `connect.renown.*`)
+#### Entrypoint config edits (set-if-absent)
 
-| Variable                       | JSON path                  | Default                   |
-| ------------------------------ | -------------------------- | ------------------------- |
-| `PH_CONNECT_RENOWN_URL`        | `connect.renown.url`       | `"https://www.renown.id"` |
-| `PH_CONNECT_RENOWN_NETWORK_ID` | `connect.renown.networkId` | `"eip155"`                |
-| `PH_CONNECT_RENOWN_CHAIN_ID`   | `connect.renown.chainId`   | `1`                       |
+If set, these env vars cause the container entrypoint to write the corresponding value into the dist `powerhouse.config.json` before nginx starts. They behave as set-if-absent: a value already present in the mounted/baked config file is never overwritten.
 
-For drive sections, default-drives URL, allow-add/allow-delete toggles, and the rest of the `connect.*` block, prefer editing `powerhouse.config.json` directly. The legacy env-var aliases (`PH_CONNECT_DEFAULT_DRIVES_URL`, `PH_CONNECT_PUBLIC_DRIVES_ENABLED`, `PH_CONNECT_DISABLE_ADD_*`, `PH_CONNECT_DISABLE_DELETE_*`, etc.) still work as set-if-absent seeds.
+| Variable                                  | JSON path                                            | Notes                              |
+| ----------------------------------------- | ---------------------------------------------------- | ---------------------------------- |
+| `PH_CONNECT_BASE_PATH`                    | `connect.app.basePath`                               | also drives nginx routing          |
+| `PH_CONNECT_LOG_LEVEL`                    | `connect.app.logLevel`                               |                                    |
+| `PH_CONNECT_EXTERNAL_PACKAGES_DISABLED`   | `connect.packages.externalEnabled`                   | inverted                           |
+| `PH_CONNECT_DISABLE_ADD_DRIVE`            | `connect.drives.allowAddDrive`                       | inverted                           |
+| `PH_CONNECT_DEFAULT_DRIVES_URL`           | `connect.drives.defaultDrives[]`                     | comma-separated URLs               |
+| `PH_CONNECT_DRIVES_PRESERVE_STRATEGY`     | `connect.drives.preserveStrategy`                    |                                    |
+| `PH_CONNECT_PUBLIC_DRIVES_ENABLED`        | `connect.drives.sections.remote.enabled`             |                                    |
+| `PH_CONNECT_DISABLE_ADD_PUBLIC_DRIVES`    | `connect.drives.sections.remote.allowAdd`            | inverted                           |
+| `PH_CONNECT_DISABLE_DELETE_PUBLIC_DRIVES` | `connect.drives.sections.remote.allowDelete`         | inverted                           |
+| `PH_CONNECT_LOCAL_DRIVES_ENABLED`         | `connect.drives.sections.local.enabled`              |                                    |
+| `PH_CONNECT_DISABLE_ADD_LOCAL_DRIVES`     | `connect.drives.sections.local.allowAdd`             | inverted                           |
+| `PH_CONNECT_DISABLE_DELETE_LOCAL_DRIVES`  | `connect.drives.sections.local.allowDelete`          | inverted                           |
+| `PH_CONNECT_RENOWN_URL`                   | `connect.renown.url`                                 |                                    |
+| `PH_CONNECT_RENOWN_NETWORK_ID`            | `connect.renown.networkId`                           |                                    |
+| `PH_CONNECT_RENOWN_CHAIN_ID`              | `connect.renown.chainId`                             |                                    |
+
+For any other `connect.*` field (branding, etc.), edit `powerhouse.config.json` directly before building the image, or run `ph connect config --<field>` against the mounted dist file.
 
 ### Switchboard Environment Variables
 

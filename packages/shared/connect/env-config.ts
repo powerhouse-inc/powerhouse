@@ -54,7 +54,7 @@ const buildEnvSchema = z.object({
  * Connect runtime values (anything in `PHConnectRuntimeConfig`) are NOT
  * settable from env vars. They live in `powerhouse.config.json` and are
  * overridden via `ph connect build --<field>` or `ph connect config
- * --<field>` — see CONNECT-CONFIG.md.
+ * --<field>`.
  *
  * What stays env-driven below is non-runtime: build metadata, Sentry
  * credentials, analytics processor toggles, etc.

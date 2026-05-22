@@ -186,20 +186,22 @@ Connect loads packages from the registry at runtime via the CDN.
 
 ### Running Connect directly (`pnpm dev`)
 
-When running Connect directly from `apps/connect`, the registry URL is configured via environment variables (the vite.config.ts in this directory doesn't read `powerhouse.config.json`):
+When running Connect directly from `apps/connect`, the registry URL is read from `apps/connect/public/powerhouse.config.json` at the top level (`packageRegistryUrl`). Set or update that file before starting:
+
+```jsonc
+// apps/connect/public/powerhouse.config.json
+{
+  "packageRegistryUrl": "http://localhost:8080"
+  // …
+}
+```
 
 ```bash
 cd apps/connect
-PH_CONNECT_PACKAGES_REGISTRY="http://localhost:8080" pnpm dev
-```
-
-To also auto-load specific packages on startup:
-
-```bash
-PH_CONNECT_PACKAGES_REGISTRY="http://localhost:8080" \
-PH_PACKAGES="@your-scope/your-package" \
 pnpm dev
 ```
+
+To auto-load specific packages on startup, also set them in the same file under `packages[]`.
 
 Once Connect is running, open it in the browser and go to **Settings > Package Manager** to see and install available packages from the registry.
 
@@ -212,10 +214,7 @@ cd your-project  # must have a powerhouse.config.json with packageRegistryUrl
 ph connect studio
 ```
 
-**Resolution order:**
-
-- Registry URL: `PH_CONNECT_PACKAGES_REGISTRY` env > `powerhouse.config.json packageRegistryUrl` > null
-- Packages: `PH_PACKAGES` env > `powerhouse.config.json packages` array
+**Resolution order for the registry URL:** CLI override (`--packages-registry` on `ph connect build`) > top-level `packageRegistryUrl` in `powerhouse.config.json` > null. Env vars are not a source for Connect's runtime configuration.
 
 ## 6. Start Switchboard with the Registry
 
@@ -348,11 +347,7 @@ curl http://localhost:8080/-/ping
 
 ### Connect
 
-| Variable                                | Description                                                                                                                                                     |
-| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `PH_CONNECT_PACKAGES_REGISTRY`          | Registry URL. Overrides `powerhouse.config.json packageRegistryUrl`.                                                                                            |
-| `PH_PACKAGES`                           | Comma-separated package names to auto-load. Overrides `powerhouse.config.json packages`.                                                                        |
-| `PH_CONNECT_EXTERNAL_PACKAGES_DISABLED` | Set to `true` to disable external package loading. _Legacy env-var alias for `connect.packages.externalEnabled: false` in `powerhouse.config.json` (inverted)._ |
+Connect's runtime configuration is read from `powerhouse.config.json`, not from env vars. Set the registry URL via the top-level `packageRegistryUrl` field, or pass `--packages-registry <url>` to `ph connect build`. The `packages[]` array in the same file controls auto-loaded packages. `PH_PACKAGES` (comma-separated names) is still honoured as a build-time override for the package list.
 
 ### Switchboard
 
