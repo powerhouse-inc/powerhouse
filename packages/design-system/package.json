@@ -144,7 +144,7 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.0.4",
     "date-fns": "catalog:",
-    "diff": "^8.0.3",
+    "diff": "^8.0.4",
     "react-hook-form": "^7.53.0",
     "react-json-view-lite": "^2.5.0",
     "react-select": "^5.8.0",
