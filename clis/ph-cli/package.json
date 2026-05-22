@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/ph-cli",
-  "version": "6.0.0-dev.257",
+  "version": "6.1.0-dev.0",
   "description": "",
   "license": "AGPL-3.0-only",
   "type": "module",
@@ -42,6 +42,7 @@
     "@powerhousedao/switchboard": "workspace:*",
     "@powerhousedao/vetra": "workspace:*",
     "@renown/sdk": "workspace:*",
+    "@sentry/node-core": "^10.52.0",
     "@tsdown/css": "catalog:",
     "chalk": "catalog:",
     "change-case": "catalog:",
@@ -53,6 +54,7 @@
     "package-manager-detector": "catalog:",
     "pg": "catalog:",
     "read-pkg": "catalog:",
+    "rolldown": "catalog:",
     "semver": "catalog:",
     "tsdown": "catalog:",
     "vite": "catalog:"

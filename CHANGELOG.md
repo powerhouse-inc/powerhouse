@@ -1,3 +1,27 @@
+## 6.1.0-dev.0 (2026-05-22)
+
+### 🩹 Fixes
+
+- **codegen:** fix drive editor typo on codegen boilerplate ([5548db528](https://github.com/powerhouse-inc/powerhouse/commit/5548db528))
+- **ph-cli,ph-cmd,shared:** make sentry/core an optional peer dependency of shared ([fc8446e18](https://github.com/powerhouse-inc/powerhouse/commit/fc8446e18))
+- **reactor-api:** moved fastify and mercurius to be optional peer dependencies ([f02aeec8c](https://github.com/powerhouse-inc/powerhouse/commit/f02aeec8c))
+- **shared,ph-cli:** made rolldown an optional peer dependency ([13db8e511](https://github.com/powerhouse-inc/powerhouse/commit/13db8e511))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.258 (2026-05-22)
+
+### 🩹 Fixes
+
+- **reactor-api:** resolve linked packages via dist/node/<sub>/index.mjs ([b543e9a90](https://github.com/powerhouse-inc/powerhouse/commit/b543e9a90))
+- **reactor-api:** lazily import gateway adapter ([c8a9a06f8](https://github.com/powerhouse-inc/powerhouse/commit/c8a9a06f8))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.257 (2026-05-21)
 
 ### 🚀 Features
