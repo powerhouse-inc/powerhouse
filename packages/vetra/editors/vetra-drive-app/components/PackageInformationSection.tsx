@@ -20,7 +20,7 @@ export const PackageInformationSection: React.FC<
 }) => {
   const createpackageContent = (
     <button
-      className="my-2 h-[200px] w-full rounded-md border border-dashed border-zinc-200 bg-zinc-50"
+      className="my-2 h-50 w-full rounded-md border border-dashed border-gray-200 bg-gray-50 dark:border-slate-700 dark:bg-slate-800"
       onClick={onAddPackageDocument}
     >
       Click to create package manifest
@@ -34,7 +34,7 @@ export const PackageInformationSection: React.FC<
           e.stopPropagation();
           onOpenPackageDocument();
         }}
-        className="flex items-center justify-center rounded-sm p-1 text-gray-600 transition-colors hover:bg-zinc-200 hover:text-gray-800 dark:text-slate-100 dark:hover:text-slate-50"
+        className="flex items-center justify-center rounded-sm bg-gray-50 p-1 text-gray-600 transition-colors hover:bg-gray-200 hover:text-gray-800 dark:bg-slate-700 dark:text-slate-100 dark:hover:text-slate-50"
         aria-label="Open package document"
       >
         <Icon name="Moved" size={16} />

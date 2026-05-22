@@ -17,7 +17,7 @@ export const NewModuleItem: React.FC<NewModuleItemProps> = ({
   return (
     <button
       onClick={onClick}
-      className={`flex w-full items-center gap-3 rounded-md bg-zinc-100 p-1 text-left transition-colors hover:bg-zinc-200 ${className}`}
+      className={`flex w-full items-center gap-3 rounded-md bg-gray-100 p-1 text-left transition-colors hover:bg-gray-200 ${className}`}
     >
       <div className="shrink-0">
         <AddNewIcon />

@@ -21,7 +21,7 @@ export const SectionAccordion: React.FC<SectionAccordionProps> = ({
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   const header = (
-    <div className="flex items-center gap-2 rounded-md border border-zinc-200 bg-zinc-50 px-4 py-2 transition-colors hover:bg-zinc-100">
+    <div className="flex items-center gap-2 rounded-md border border-gray-200 bg-gray-50 px-4 py-2 transition-colors hover:bg-gray-100">
       <ChevronIcon
         width={16}
         height={16}

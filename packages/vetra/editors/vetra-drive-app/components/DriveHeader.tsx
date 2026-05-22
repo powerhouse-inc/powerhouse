@@ -79,7 +79,7 @@ export const DriveHeader: React.FC<DriveHeaderProps> = ({
   return (
     <div className="bg-gray-50 px-6 py-4 dark:bg-slate-800">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 text-gray-900 dark:text-slate-50">
           <VetraIcon width={20} height={20} />
           <h1 className="text-lg font-semibold text-gray-900 dark:text-slate-50">
             Vetra Studio Drive
@@ -88,10 +88,10 @@ export const DriveHeader: React.FC<DriveHeaderProps> = ({
             <button
               aria-label="Drive information"
               aria-expanded={isInfoMenuOpen}
-              className="rounded-full p-1 transition-colors hover:bg-gray-100 dark:hover:bg-slate-700"
+              className="rounded-full p-1 text-gray-500 transition-colors hover:bg-gray-100 dark:text-slate-100 dark:hover:bg-slate-700"
               onClick={toggleInfoMenu}
             >
-              <InfoIcon className="text-gray-500 dark:text-slate-100" />
+              <InfoIcon className="" />
             </button>
             {isInfoMenuOpen && (
               <div
@@ -108,10 +108,10 @@ export const DriveHeader: React.FC<DriveHeaderProps> = ({
               <button
                 aria-label="Share drive"
                 aria-expanded={isShareMenuOpen}
-                className="rounded-full p-1 transition-colors hover:bg-gray-100 dark:hover:bg-slate-700"
+                className="rounded-full p-1 text-gray-900 transition-colors hover:bg-gray-100 dark:text-slate-50 dark:hover:bg-slate-700"
                 onClick={toggleShareMenu}
               >
-                <ShareIcon width={16} height={16} stroke="#343839" />
+                <ShareIcon width={16} height={16} />
               </button>
               {isShareMenuOpen && (
                 <div
@@ -134,7 +134,7 @@ export const DriveHeader: React.FC<DriveHeaderProps> = ({
           rel="noopener noreferrer"
           className="flex items-center gap-2 text-sm text-gray-900 underline transition-colors hover:text-gray-700 dark:text-slate-50 dark:hover:text-slate-100"
         >
-          <ExternalLinkIcon fill="#111827" />
+          <ExternalLinkIcon />
           Vetra Academy
         </a>
       </div>

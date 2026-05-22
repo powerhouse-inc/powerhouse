@@ -14,9 +14,9 @@ const meta: Meta<typeof DropZone> = {
     subtitle: "to drop them in the currently selected folder.",
     enable: true,
     children: (
-      <div className="flex h-screen items-center justify-center bg-zinc-50">
-        <div className="rounded-lg border border-zinc-200 bg-white p-8 shadow-sm dark:bg-slate-900">
-          <div className="text-sm text-zinc-600">
+      <div className="flex h-screen items-center justify-center bg-gray-50">
+        <div className="rounded-lg border border-gray-200 bg-white p-8 shadow-sm dark:bg-slate-900">
+          <div className="text-sm text-gray-600">
             Drag files over this page to trigger the DropZone overlay.
           </div>
         </div>
