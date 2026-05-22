@@ -22,7 +22,7 @@ export function Tabs({
             const { label, disabled } = child.props as TabContentProps;
             return (
               <Trigger
-                className="flex h-7 flex-1 items-center justify-center rounded-lg transition duration-300 data-disabled:cursor-not-allowed data-disabled:text-gray-400 data-[state='active']:bg-gray-50 data-[state='active']:text-gray-900"
+                className="flex h-7 flex-1 items-center justify-center rounded-lg transition duration-300 data-disabled:cursor-not-allowed data-disabled:text-gray-400 data-[state='active']:bg-gray-50 data-[state='active']:text-gray-900 dark:data-disabled:text-slate-500 dark:data-[state='active']:bg-slate-900 dark:data-[state='active']:text-slate-50"
                 key={label as string}
                 value={label as string}
                 disabled={disabled ?? false}

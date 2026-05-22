@@ -25,8 +25,8 @@ export const ConnectDeleteDriveModal: React.FC<ConnectDeleteDriveModalProps> = (
         disabled: inputName !== driveName,
         className:
           inputName !== driveName
-            ? "bg-red-600 hover:scale-100 cursor-not-allowed active:opacity-100"
-            : "bg-red-900",
+            ? "bg-red-600 hover:scale-100 cursor-not-allowed active:opacity-100 dark:bg-red-300"
+            : "bg-red-900 dark:bg-red-50",
       }}
       {...confirmationModalProps}
     >

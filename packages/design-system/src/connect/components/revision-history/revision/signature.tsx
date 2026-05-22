@@ -16,7 +16,11 @@ export function Signature(props: SignatureProps) {
       trigger={
         <span className="flex w-fit cursor-pointer items-center gap-1 rounded-lg border border-gray-200 bg-white px-2 py-1 dark:border-slate-700 dark:bg-slate-900">
           <VerificationStatus signatures={signatures} />{" "}
-          <Icon className="text-gray-300" name="InfoSquare" size={16} />
+          <Icon
+            className="text-gray-300 dark:text-slate-600"
+            name="InfoSquare"
+            size={16}
+          />
         </span>
       }
       content={<FormattedJsonViewer value={signatures} collapsed={1} />}
@@ -41,7 +45,7 @@ function VerificationStatus(props: SignatureProps) {
       ? "text-red-800 dark:text-red-400"
       : verifiedSignaturesCount === signatureCount
         ? "text-green-700 dark:text-green-400"
-        : "text-orange-700";
+        : "text-orange-700 dark:text-orange-400";
 
   return <span className={`text-xs ${color}`}>{verificationStatusText}</span>;
 }

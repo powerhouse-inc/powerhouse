@@ -51,7 +51,7 @@ export const CookieBanner: React.FC<CookieBannerProps> = (props) => {
           <div className="cursor-pointer" key={i}>
             <input
               checked={cookie.value}
-              className="mr-1 size-3 cursor-pointer rounded-sm border-2 border-gray-900 accent-gray-900 focus:outline-none"
+              className="mr-1 size-3 cursor-pointer rounded-sm border-2 border-gray-900 accent-gray-900 focus:outline-none dark:border-slate-50"
               id={cookie.id}
               onChange={handleOnChange}
               type="checkbox"

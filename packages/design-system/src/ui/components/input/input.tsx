@@ -21,7 +21,7 @@ const inputBaseStyles = cn(
   "focus:bg-gray-50 dark:focus:bg-slate-900 dark:focus-visible:ring-slate-300 dark:focus-visible:ring-offset-slate-900",
   // Disabled state
   "disabled:cursor-not-allowed",
-  "disabled:border-gray-300 disabled:bg-gray-50 disabled:text-gray-700",
+  "disabled:border-gray-300 disabled:bg-gray-50 disabled:text-gray-700 dark:disabled:border-slate-600 dark:disabled:bg-slate-900 dark:disabled:text-slate-200",
   "disabled:dark:border-charcoal-800 disabled:dark:bg-charcoal-900 disabled:dark:text-gray-300",
 );
 

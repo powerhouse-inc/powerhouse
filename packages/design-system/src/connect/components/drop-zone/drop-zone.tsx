@@ -2,10 +2,10 @@ import { Icon } from "#design-system";
 import { setSelectedNode, useDropFile } from "@powerhousedao/reactor-browser";
 import type { Node } from "@powerhousedao/shared/document-drive";
 import {
-    type ComponentPropsWithoutRef,
-    type ReactNode,
-    useEffect,
-    useState,
+  type ComponentPropsWithoutRef,
+  type ReactNode,
+  useEffect,
+  useState,
 } from "react";
 import { twMerge } from "tailwind-merge";
 import { ConnectReplaceDuplicateModal } from "../modal/replace-duplicate-modal.js";
@@ -93,13 +93,13 @@ export function DropZone(props: DropZoneProps) {
       {children}
 
       {enable && isDropTarget && (
-        <div className="fixed inset-0 z-1000 flex min-h-screen w-screen items-center justify-center bg-black/50">
+        <div className="fixed inset-0 z-1000 flex min-h-screen w-screen items-center justify-center bg-black/50 dark:bg-slate-900/50">
           <div className="rounded-3xl bg-white p-6 shadow-charcoal dark:bg-slate-900">
             <div className="relative flex h-32.5 w-100 flex-col items-center justify-start overflow-visible rounded-lg border border-dashed border-black px-4 py-6">
-              <div className="text-center text-base/5 text-gray-500">
+              <div className="text-center text-base/5 text-gray-500 dark:text-slate-400">
                 {title}
               </div>
-              <div className="text-center text-base/5 text-gray-500">
+              <div className="text-center text-base/5 text-gray-500 dark:text-slate-400">
                 {subtitle}
               </div>
 

@@ -74,9 +74,9 @@ export default function Header() {
           )}
         </div>
         <div className="flex flex-row gap-2">
-          <div className="flex items-center text-orange-300">
+          <div className="flex items-center text-orange-300 dark:text-orange-400">
             <SwitchboardLink
-              className="flex flex-row items-center gap-2 rounded-2xl bg-orange-200 px-4 py-2 text-orange-400"
+              className="flex flex-row items-center gap-2 rounded-2xl bg-orange-200 px-4 py-2 text-orange-400 dark:bg-orange-700 dark:text-orange-400"
               href="/user"
             >
               <span>
@@ -89,7 +89,7 @@ export default function Header() {
               </span>
             </SwitchboardLink>
           </div>
-          <div className="my-auto pr-2 text-orange-300">
+          <div className="my-auto pr-2 text-orange-300 dark:text-orange-400">
             <Link
               href="https://github.com/powerhouse-inc/switchboard-boilerplate"
               target="_blank"

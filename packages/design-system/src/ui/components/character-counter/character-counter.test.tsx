@@ -21,7 +21,9 @@ describe("CharacterCounter", () => {
     expect(screen.getByText("5")).toHaveClass(
       "text-gray-500 dark:text-slate-100",
     );
-    expect(screen.getByText("/10")).toHaveClass("text-gray-300");
+    expect(screen.getByText("/10")).toHaveClass(
+      "text-gray-300 dark:text-slate-600",
+    );
   });
 
   it("should show warning state when between 90% and 100% of max length", () => {
@@ -29,7 +31,9 @@ describe("CharacterCounter", () => {
     expect(screen.getByText("9")).toHaveClass(
       "text-yellow-900 dark:text-yellow-400",
     );
-    expect(screen.getByText("/10")).toHaveClass("text-yellow-400");
+    expect(screen.getByText("/10")).toHaveClass(
+      "text-yellow-400 dark:text-yellow-400",
+    );
   });
 
   it("should show error state when at or exceeding max length", () => {
@@ -37,7 +41,9 @@ describe("CharacterCounter", () => {
     expect(screen.getByText("11")).toHaveClass(
       "text-red-900 dark:text-red-400",
     );
-    expect(screen.getByText("/10")).toHaveClass("text-red-400");
+    expect(screen.getByText("/10")).toHaveClass(
+      "text-red-400 dark:text-red-400",
+    );
   });
 
   it("should handle empty string value", () => {

@@ -46,7 +46,7 @@ describe("Radio Component", () => {
     );
     const radio = screen.getByRole("radio");
     expect(radio).toHaveAttribute("aria-invalid", "true");
-    expect(radio).toHaveClass("border-red-700");
+    expect(radio).toHaveClass("border-red-700 dark:border-red-200");
   });
 
   it("should apply disabled styles and attributes", () => {

@@ -6,7 +6,8 @@ export type ConnectionStateBadgeProps = {
 };
 
 const stateStyles: Record<string, string> = {
-  connected: "bg-green-100 text-green-800",
+  connected:
+    "bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-400",
   connecting: "bg-blue-100 text-blue-800 dark:bg-blue-900/30",
   reconnecting:
     "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",

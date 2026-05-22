@@ -61,7 +61,7 @@ export function SyncStatusIcon(props: SyncStatusIconProps) {
       <Icon
         size={16}
         {...iconProps}
-        className={twMerge("text-orange-900", className)}
+        className={twMerge("text-orange-900 dark:text-orange-400", className)}
         name={icons[CONFLICT]}
       />
     ),

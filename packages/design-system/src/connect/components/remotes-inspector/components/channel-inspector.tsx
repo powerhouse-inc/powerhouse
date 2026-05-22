@@ -233,7 +233,7 @@ export function ChannelInspector({
                 <span
                   className={
                     pollerState.isPaused
-                      ? "text-yellow-600"
+                      ? "text-yellow-600 dark:text-yellow-400"
                       : "text-green-600 dark:text-green-400"
                   }
                 >
@@ -315,7 +315,7 @@ export function ChannelInspector({
                 <span
                   className={
                     mailboxStates.inbox.isPaused
-                      ? "text-yellow-600"
+                      ? "text-yellow-600 dark:text-yellow-400"
                       : "text-green-600 dark:text-green-400"
                   }
                 >
@@ -362,7 +362,7 @@ export function ChannelInspector({
                 <span
                   className={
                     mailboxStates.outbox.isPaused
-                      ? "text-yellow-600"
+                      ? "text-yellow-600 dark:text-yellow-400"
                       : "text-green-600 dark:text-green-400"
                   }
                 >

@@ -35,7 +35,7 @@ export const FormInput = forwardRef(function FormInput(
       <div
         className={twMerge(
           "mb-1 flex gap-2 rounded-md border border-gray-200 bg-gray-50 p-3 text-black placeholder:text-gray-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-50",
-          isError && "border-red-900",
+          isError && "border-red-900 dark:border-red-50",
           containerClassName,
         )}
       >

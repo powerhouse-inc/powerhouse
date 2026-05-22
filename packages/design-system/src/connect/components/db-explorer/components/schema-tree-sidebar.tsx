@@ -86,7 +86,7 @@ function TreeItem({
           {label}
         </span>
         {selected && (
-          <span className="ml-auto size-2 shrink-0 rounded-full bg-blue-500" />
+          <span className="ml-auto size-2 shrink-0 rounded-full bg-blue-500 dark:bg-blue-400" />
         )}
       </div>
       {expanded && children}

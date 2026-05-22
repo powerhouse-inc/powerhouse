@@ -25,7 +25,7 @@ const lightToDarkMap = new Map(
 pipe(
   files,
   getStringLiteralsFromFiles(project),
-  // filter(isNot(hasDarkModeAlready)),
+  filter(isNot(hasDarkModeAlready)),
   filter(hasClasses(lightToDarkMap)),
   forEach(addClassesToStringLiteral(lightToDarkMap)),
 );

@@ -79,7 +79,7 @@ export const AccountPopoverUser: FC<AccountPopoverUserProps> = ({
           className={twMerge(
             "flex w-full items-center gap-2 text-sm text-red-900 dark:text-red-400",
             onDisconnect
-              ? "cursor-pointer hover:text-red-700"
+              ? "cursor-pointer hover:text-red-700 dark:hover:text-red-400"
               : "pointer-events-none cursor-wait",
           )}
           type="button"

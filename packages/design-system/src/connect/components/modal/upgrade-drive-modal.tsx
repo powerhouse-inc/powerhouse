@@ -60,7 +60,10 @@ export function ConnectUpgradeDriveModal(props: ConnectUpgradeDriveModalProps) {
             {cancelLabel}
           </button>
           <button
-            className={twMerge(buttonStyles, "flex-1 bg-gray-800 text-gray-50")}
+            className={twMerge(
+              buttonStyles,
+              "flex-1 bg-gray-800 text-gray-50 dark:bg-slate-100 dark:text-slate-900",
+            )}
             onClick={onContinue}
           >
             {continueLabel}

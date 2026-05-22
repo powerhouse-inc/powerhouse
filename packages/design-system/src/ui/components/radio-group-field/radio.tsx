@@ -45,11 +45,11 @@ export const Radio = React.forwardRef<
             "aspect-square size-4 rounded-full border border-gray-800 dark:border-slate-400",
             "hover:border-gray-900 dark:hover:border-slate-50",
             disabled && [
-              "cursor-not-allowed border-gray-600 hover:border-gray-600",
+              "cursor-not-allowed border-gray-600 hover:border-gray-600 dark:border-slate-300 dark:hover:border-slate-300",
               "dark:border-slate-600 dark:hover:border-slate-600",
             ],
             hasError && [
-              "border-red-700 hover:border-red-900",
+              "border-red-700 hover:border-red-900 dark:border-red-200 dark:hover:border-red-50",
               "dark:border-red-700 dark:hover:border-red-900",
             ],
             className,
@@ -65,13 +65,16 @@ export const Radio = React.forwardRef<
               "relative flex size-full items-center justify-center",
               "after:absolute after:top-1/2 after:left-1/2 after:size-2.5",
               "after:-translate-1/2",
-              "after:rounded-full after:bg-gray-800 after:content-['']",
+              "after:rounded-full after:bg-gray-800 after:content-[''] dark:after:bg-slate-100",
               "dark:after:bg-slate-400",
               !disabled && [
-                "group-hover:after:bg-gray-900",
+                "group-hover:after:bg-gray-900 dark:group-hover:after:bg-slate-50",
                 "dark:group-hover:after:bg-slate-50",
               ],
-              disabled && ["after:bg-gray-600", "dark:after:bg-slate-600"],
+              disabled && [
+                "after:bg-gray-600 dark:after:bg-slate-300",
+                "dark:after:bg-slate-600",
+              ],
             )}
           />
         </RadioGroupPrimitive.Item>

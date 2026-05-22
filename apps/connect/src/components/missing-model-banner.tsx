@@ -28,7 +28,7 @@ export function MissingModelBanner() {
 
   return (
     <>
-      <div className="flex items-center justify-between gap-3 bg-amber-100 px-4 py-2 text-sm text-amber-900">
+      <div className="flex items-center justify-between gap-3 bg-amber-100 px-4 py-2 text-sm text-amber-900 dark:bg-amber-800 dark:text-amber-400">
         <span>
           {failed.length === 1
             ? "1 document type couldn't load (missing model)."
@@ -134,10 +134,10 @@ function MissingModelDetailsModal(props: DetailsProps) {
                           : "No registry is configured; nothing to retry against."
                       }
                       className={twMerge(
-                        "min-h-[32px] rounded-xl px-3 py-1 text-sm font-semibold text-white transition-all hover:scale-105",
+                        "min-h-[32px] rounded-xl px-3 py-1 text-sm font-semibold text-white transition-all hover:scale-105 dark:text-slate-900",
                         retryDisabled
-                          ? "cursor-not-allowed bg-gray-300 hover:scale-100"
-                          : "bg-gray-800 active:opacity-75",
+                          ? "cursor-not-allowed bg-gray-300 hover:scale-100 dark:bg-slate-600"
+                          : "bg-gray-800 active:opacity-75 dark:bg-slate-100",
                       )}
                     >
                       {isRetrying ? "Retrying..." : "Try install again"}

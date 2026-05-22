@@ -112,7 +112,7 @@ function PackageResultCard(props: PackageResultCardProps) {
           <button
             onClick={() => handleSelect(installSpec)}
             disabled={isSelecting}
-            className="rounded-md bg-gray-900 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-gray-800 disabled:opacity-50"
+            className="rounded-md bg-gray-900 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-gray-800 disabled:opacity-50 dark:bg-slate-50 dark:text-slate-900 dark:hover:bg-slate-100"
           >
             {isSelecting ? "..." : selectLabel}
           </button>

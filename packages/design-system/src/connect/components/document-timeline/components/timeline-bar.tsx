@@ -92,17 +92,17 @@ export const TimelineBar: React.FC<TimelineBarProps> = ({
       {noChanges ? (
         <div
           className={twMerge(
-            "flex h-[25px] w-1.5 cursor-pointer flex-col items-center justify-center rounded-[2px] hover:bg-blue-300",
+            "flex h-[25px] w-1.5 cursor-pointer flex-col items-center justify-center rounded-[2px] hover:bg-blue-300 dark:hover:bg-blue-600",
             className,
           )}
           data-timestamp={timestamp}
           onClick={onClick}
         >
-          <div className="size-[3px] rounded-full bg-gray-500" />
+          <div className="size-[3px] rounded-full bg-gray-500 dark:bg-slate-400" />
         </div>
       ) : (
         <ConnectTooltip
-          className="rounded-md bg-gray-900 text-white"
+          className="rounded-md bg-gray-900 text-white dark:bg-slate-50 dark:text-slate-900"
           content={tooltipContent}
           open={open}
           onOpenChange={setOpen}
@@ -112,7 +112,7 @@ export const TimelineBar: React.FC<TimelineBarProps> = ({
         >
           <div
             className={twMerge(
-              "flex h-[25px] w-1.5 cursor-pointer flex-col items-center justify-center rounded-[2px] hover:bg-blue-300",
+              "flex h-[25px] w-1.5 cursor-pointer flex-col items-center justify-center rounded-[2px] hover:bg-blue-300 dark:hover:bg-blue-600",
               className,
               isSelected && "bg-blue-300 dark:bg-blue-700",
             )}
@@ -122,7 +122,7 @@ export const TimelineBar: React.FC<TimelineBarProps> = ({
             <div className="flex h-3 w-0.5 items-end">
               <div
                 className={twMerge(
-                  "h-3 w-0.5 rounded-t-full bg-green-600",
+                  "h-3 w-0.5 rounded-t-full bg-green-600 dark:bg-green-300",
                   addBarHeight,
                 )}
               ></div>
@@ -130,7 +130,7 @@ export const TimelineBar: React.FC<TimelineBarProps> = ({
             <div className="flex h-3 w-0.5 items-start">
               <div
                 className={twMerge(
-                  "h-3 w-0.5 rounded-b-full bg-red-600",
+                  "h-3 w-0.5 rounded-b-full bg-red-600 dark:bg-red-300",
                   delBarHeight,
                 )}
               ></div>

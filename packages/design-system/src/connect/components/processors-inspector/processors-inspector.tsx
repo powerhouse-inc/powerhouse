@@ -213,11 +213,11 @@ export function ProcessorsInspector({
           Total: <span className="font-medium">{processors.length}</span>
         </div>
         <div className="flex items-center gap-2 text-gray-600 dark:text-slate-100">
-          <span className="size-2 rounded-full bg-green-500" />
+          <span className="size-2 rounded-full bg-green-500 dark:bg-green-400" />
           Active: <span className="font-medium">{activeCount}</span>
         </div>
         <div className="flex items-center gap-2 text-gray-600 dark:text-slate-100">
-          <span className="size-2 rounded-full bg-red-500" />
+          <span className="size-2 rounded-full bg-red-500 dark:bg-red-400" />
           Errored: <span className="font-medium">{erroredCount}</span>
         </div>
       </div>
@@ -283,7 +283,7 @@ export function ProcessorsInspector({
                     "hover:bg-blue-50 dark:hover:bg-blue-900/20",
                     processor.status === "errored"
                       ? "bg-red-50 dark:bg-red-900/20"
-                      : "odd:bg-white even:bg-gray-50",
+                      : "odd:bg-white even:bg-gray-50 dark:odd:bg-slate-900 dark:even:bg-slate-900",
                   )}
                 >
                   <td className="px-3 py-2 text-xs">
@@ -305,10 +305,10 @@ export function ProcessorsInspector({
                       )}
                     >
                       {processor.status === "active" && (
-                        <span className="inline-block size-1.5 rounded-full bg-green-500" />
+                        <span className="inline-block size-1.5 rounded-full bg-green-500 dark:bg-green-400" />
                       )}
                       {processor.status === "errored" && (
-                        <span className="inline-block size-1.5 rounded-full bg-red-500" />
+                        <span className="inline-block size-1.5 rounded-full bg-red-500 dark:bg-red-400" />
                       )}
                       {processor.status}
                     </span>

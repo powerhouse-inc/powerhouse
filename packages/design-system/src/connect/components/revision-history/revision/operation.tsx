@@ -14,7 +14,11 @@ export function Operation(props: OperationProps) {
       trigger={
         <span className="flex cursor-pointer items-center gap-2 text-xs text-gray-900 dark:text-slate-50">
           {operationType}
-          <Icon className="text-gray-300" name="Braces" size={16} />
+          <Icon
+            className="text-gray-300 dark:text-slate-600"
+            name="Braces"
+            size={16}
+          />
         </span>
       }
     />

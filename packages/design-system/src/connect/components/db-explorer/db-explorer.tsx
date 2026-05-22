@@ -273,7 +273,8 @@ export function DBExplorer({
         onCancel={handleImportCancel}
         onContinue={() => void handleImportConfirm()}
         continueButtonProps={{
-          className: "bg-red-900 text-white hover:bg-red-800",
+          className:
+            "bg-red-900 text-white hover:bg-red-800 dark:bg-red-50 dark:text-slate-900 dark:hover:bg-red-100",
         }}
       />
 
@@ -287,7 +288,8 @@ export function DBExplorer({
         onCancel={() => setPendingResetMajor(null)}
         onContinue={() => void handleResetConfirm()}
         continueButtonProps={{
-          className: "bg-red-900 text-white hover:bg-red-800",
+          className:
+            "bg-red-900 text-white hover:bg-red-800 dark:bg-red-50 dark:text-slate-900 dark:hover:bg-red-100",
         }}
       />
 

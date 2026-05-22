@@ -94,7 +94,7 @@ export const SearchAutocomplete: React.FC<SearchAutocompleteProps> = (
         <button
           onClick={handleSubmit}
           disabled={disabled || !query.trim() || selectingValue !== null}
-          className="h-9 rounded-md bg-gray-900 px-4 text-sm font-semibold text-white transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+          className="h-9 rounded-md bg-gray-900 px-4 text-sm font-semibold text-white transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-slate-50 dark:text-slate-900 dark:hover:bg-slate-100"
         >
           {selectLabel}
         </button>
@@ -185,7 +185,7 @@ export const SearchAutocomplete: React.FC<SearchAutocompleteProps> = (
                     <button
                       onClick={() => void handleSelect(option.value)}
                       disabled={selectingValue === option.value}
-                      className="shrink-0 rounded-md bg-gray-900 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-gray-800 disabled:opacity-50"
+                      className="shrink-0 rounded-md bg-gray-900 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-gray-800 disabled:opacity-50 dark:bg-slate-50 dark:text-slate-900 dark:hover:bg-slate-100"
                     >
                       {selectingValue === option.value ? "..." : selectLabel}
                     </button>

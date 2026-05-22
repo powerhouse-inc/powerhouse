@@ -82,7 +82,7 @@ export const MigrationBanner: React.FC = () => {
           type="button"
           disabled={migrating}
           onClick={handleMigrate}
-          className="rounded-sm bg-gray-900 px-3 py-1 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
+          className="rounded-sm bg-gray-900 px-3 py-1 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50 dark:bg-slate-50 dark:text-slate-900 dark:hover:bg-slate-100"
         >
           {migrating ? "Migrating…" : "Migrate now"}
         </button>

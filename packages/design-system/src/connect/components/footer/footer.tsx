@@ -8,7 +8,7 @@ export const Footer: React.FC<React.HTMLAttributes<HTMLElement>> = ({
     <footer
       {...mergeClassNameProps(
         props,
-        "flex items-center gap-x-6 text-xs font-medium text-charcoal-300",
+        "flex items-center gap-x-6 text-xs font-medium text-charcoal-300 dark:text-slate-600",
       )}
     >
       {children}

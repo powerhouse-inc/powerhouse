@@ -25,8 +25,8 @@ export const HomeScreenItem = function HomeScreenItem(
     >
       <div className="mx-auto pb-2">
         {icon || (
-          <div className="size-8 items-center justify-center rounded-lg bg-black pt-1">
-            <span className="w-6 text-white">
+          <div className="size-8 items-center justify-center rounded-lg bg-black pt-1 dark:bg-slate-50">
+            <span className="w-6 text-white dark:text-slate-900">
               {title.slice(0, 1).toUpperCase()}
             </span>
           </div>

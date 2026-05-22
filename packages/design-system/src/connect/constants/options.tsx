@@ -63,15 +63,33 @@ export const locationInfoByLocation = {
 export const debugNodeOptionsMap = {
   ADD_TRIGGER: {
     label: "Add Trigger",
-    icon: <Icon className="text-orange-900" name="Plus" size={16} />,
+    icon: (
+      <Icon
+        className="text-orange-900 dark:text-orange-400"
+        name="Plus"
+        size={16}
+      />
+    ),
   },
   REMOVE_TRIGGER: {
     label: "Remove Trigger",
-    icon: <Icon className="text-orange-900" name="Xmark" size={16} />,
+    icon: (
+      <Icon
+        className="text-orange-900 dark:text-orange-400"
+        name="Xmark"
+        size={16}
+      />
+    ),
   },
   ADD_INVALID_TRIGGER: {
     label: "Add Trigger",
-    icon: <Icon className="text-orange-900" name="Exclamation" size={16} />,
+    icon: (
+      <Icon
+        className="text-orange-900 dark:text-orange-400"
+        name="Exclamation"
+        size={16}
+      />
+    ),
   },
 } as const;
 

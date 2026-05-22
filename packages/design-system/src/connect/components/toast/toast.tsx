@@ -41,7 +41,11 @@ function getDefaultOptions(type: ExtendedTypeOptions): ToastOptions {
       case "connect-success":
         options.type = "success";
         options.icon = (
-          <Icon className="text-green-800" name="CheckCircleFill" size={24} />
+          <Icon
+            className="text-green-800 dark:text-green-400"
+            name="CheckCircleFill"
+            size={24}
+          />
         );
         break;
       case "connect-warning":

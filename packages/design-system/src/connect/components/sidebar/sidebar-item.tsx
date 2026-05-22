@@ -29,9 +29,9 @@ export const SidebarItem = function SidebarItem(props: SidebarItemProps) {
         onClick={onClick}
       >
         {active ? (
-          <div className="absolute top-1/2 left-0 h-10 w-1 -translate-y-1/2 rounded-r-sm bg-violet-400" />
+          <div className="absolute top-1/2 left-0 h-10 w-1 -translate-y-1/2 rounded-r-sm bg-violet-400 dark:bg-violet-500" />
         ) : (
-          <div className="absolute top-1/2 left-0 h-6 w-1 -translate-y-1/2 rounded-r-sm bg-gray-300 opacity-0 transition-opacity group-hover/sidebar-item:opacity-100" />
+          <div className="absolute top-1/2 left-0 h-6 w-1 -translate-y-1/2 rounded-r-sm bg-gray-300 opacity-0 transition-opacity group-hover/sidebar-item:opacity-100 dark:bg-slate-600" />
         )}
         <div className="mx-auto py-4">
           {icon || (

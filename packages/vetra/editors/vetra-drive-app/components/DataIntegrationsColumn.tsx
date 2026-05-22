@@ -30,13 +30,13 @@ export const DataIntegrationsColumn: React.FC<DataIntegrationsColumnProps> = ({
       <h3 className="mb-4 text-sm font-normal text-gray-700 dark:text-slate-50">
         3. Data Integrations
       </h3>
-      <div className="rounded-md border border-gray-200 bg-gray-50">
+      <div className="rounded-md border border-gray-200 bg-gray-50 dark:border-slate-700 dark:bg-slate-900">
         <ModuleAccordion
           title="Subgraphs"
           count={subgraphs.length}
           onAdd={onAddSubgraph || (() => console.log("Add subgraph clicked"))}
           defaultOpen={true}
-          headerClassName="m-4 bg-gray-100 hover:bg-gray-200 border border-gray-200 rounded-md"
+          headerClassName="m-4 bg-gray-100 hover:bg-gray-200 border border-gray-200 rounded-md dark:bg-slate-800 dark:hover:bg-slate-700 dark:border-slate-700"
         >
           <ModuleList
             items={subgraphs}
@@ -51,7 +51,7 @@ export const DataIntegrationsColumn: React.FC<DataIntegrationsColumnProps> = ({
           count={processors.length}
           onAdd={onAddProcessor || (() => console.log("Add processor clicked"))}
           defaultOpen={true}
-          headerClassName="m-4 bg-gray-100 hover:bg-gray-200 border border-gray-200 rounded-md"
+          headerClassName="m-4 bg-gray-100 hover:bg-gray-200 border border-gray-200 rounded-md dark:bg-slate-800 dark:hover:bg-slate-700 dark:border-slate-700"
         >
           <ModuleList
             items={processors}
@@ -69,7 +69,7 @@ export const DataIntegrationsColumn: React.FC<DataIntegrationsColumnProps> = ({
             (() => console.log("Add codegen processor clicked"))
           }
           defaultOpen={true}
-          headerClassName="m-4 bg-gray-100 hover:bg-gray-200 border border-gray-200 rounded-md"
+          headerClassName="m-4 bg-gray-100 hover:bg-gray-200 border border-gray-200 rounded-md dark:bg-slate-800 dark:hover:bg-slate-700 dark:border-slate-700"
         >
           <ModuleList
             items={codegenProcessors}

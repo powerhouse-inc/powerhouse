@@ -18,7 +18,13 @@ const filterItems: ConnectSearchBarProps["filterItems"] = [
   {
     id: "budget",
     label: ".budget",
-    icon: <Icon className="text-purple-900" name="BarChart" size={16} />,
+    icon: (
+      <Icon
+        className="text-purple-900 dark:text-purple-400"
+        name="BarChart"
+        size={16}
+      />
+    ),
   },
   {
     id: "profile",
@@ -45,7 +51,13 @@ const filterItems: ConnectSearchBarProps["filterItems"] = [
   {
     id: "atlas",
     label: ".Atlas",
-    icon: <Icon className="text-orange-900" name="Globe" size={16} />,
+    icon: (
+      <Icon
+        className="text-orange-900 dark:text-orange-400"
+        name="Globe"
+        size={16}
+      />
+    ),
   },
 ];
 

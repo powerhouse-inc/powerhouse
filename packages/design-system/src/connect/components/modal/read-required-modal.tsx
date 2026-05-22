@@ -128,9 +128,9 @@ export function ReadRequiredModal(props: ReadRequiredModalProps) {
               continueButtonProps,
               twMerge(
                 buttonStyles,
-                "flex-1 bg-gray-800 text-gray-50",
+                "flex-1 bg-gray-800 text-gray-50 dark:bg-slate-100 dark:text-slate-900",
                 disableClose &&
-                  "cursor-not-allowed bg-gray-300 hover:scale-100",
+                  "cursor-not-allowed bg-gray-300 hover:scale-100 dark:bg-slate-600",
               ),
             )}
           >

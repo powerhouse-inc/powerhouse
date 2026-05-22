@@ -233,7 +233,9 @@ export function QueueInspector({
           <span
             className={twMerge(
               "size-2 rounded-full",
-              state.isPaused ? "bg-yellow-500" : "bg-green-500",
+              state.isPaused
+                ? "bg-yellow-500 dark:bg-yellow-400"
+                : "bg-green-500 dark:bg-green-400",
             )}
           />
           <span className="font-medium text-gray-700 dark:text-slate-50">
@@ -320,7 +322,7 @@ export function QueueInspector({
                       className={twMerge(
                         "inline-block rounded-sm px-1.5 py-0.5",
                         job.kind === "mutation"
-                          ? "bg-purple-100 text-purple-700"
+                          ? "bg-purple-100 text-purple-700 dark:bg-purple-800 dark:text-purple-400"
                           : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
                       )}
                     >
@@ -360,7 +362,7 @@ export function QueueInspector({
                       )}
                     >
                       {job.status === "executing" && (
-                        <span className="inline-block size-1.5 animate-pulse rounded-full bg-green-500" />
+                        <span className="inline-block size-1.5 animate-pulse rounded-full bg-green-500 dark:bg-green-400" />
                       )}
                       {job.status}
                     </span>

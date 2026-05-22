@@ -183,7 +183,7 @@ export function IntegrityInspector({
               : "This will invalidate all cached snapshots for this document. Continue?"}
           </span>
           <button
-            className="rounded-sm bg-yellow-600 px-3 py-1 text-sm text-white hover:bg-yellow-700"
+            className="rounded-sm bg-yellow-600 px-3 py-1 text-sm text-white hover:bg-yellow-700 dark:bg-yellow-300 dark:text-slate-900 dark:hover:bg-yellow-200"
             onClick={() => {
               if (confirmAction === "keyframes") {
                 void handleRebuildKeyframes();
@@ -246,7 +246,9 @@ function ValidationResultView({ result }: { result: ValidationResult }) {
         <span
           className={twMerge(
             "size-3 rounded-full",
-            result.isConsistent ? "bg-green-500" : "bg-red-500",
+            result.isConsistent
+              ? "bg-green-500 dark:bg-green-400"
+              : "bg-red-500 dark:bg-red-400",
           )}
         />
         <span className="text-sm font-medium">
@@ -287,7 +289,10 @@ function ValidationResultView({ result }: { result: ValidationResult }) {
             </thead>
             <tbody>
               {result.keyframeIssues.map((issue, i) => (
-                <tr key={`kf-${i}`} className="odd:bg-white even:bg-gray-50">
+                <tr
+                  key={`kf-${i}`}
+                  className="odd:bg-white even:bg-gray-50 dark:odd:bg-slate-900 dark:even:bg-slate-900"
+                >
                   <td className="px-2 py-1">{issue.scope}</td>
                   <td className="border-l border-gray-300 px-2 py-1 dark:border-slate-600">
                     {issue.branch}
@@ -332,7 +337,10 @@ function ValidationResultView({ result }: { result: ValidationResult }) {
             </thead>
             <tbody>
               {result.snapshotIssues.map((issue, i) => (
-                <tr key={`snap-${i}`} className="odd:bg-white even:bg-gray-50">
+                <tr
+                  key={`snap-${i}`}
+                  className="odd:bg-white even:bg-gray-50 dark:odd:bg-slate-900 dark:even:bg-slate-900"
+                >
                   <td className="px-2 py-1">{issue.scope}</td>
                   <td className="border-l border-gray-300 px-2 py-1 dark:border-slate-600">
                     {issue.branch}
@@ -357,7 +365,7 @@ function RebuildResultView({ result }: { result: RebuildResult }) {
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-2">
-        <span className="size-3 rounded-full bg-green-500" />
+        <span className="size-3 rounded-full bg-green-500 dark:bg-green-400" />
         <span className="text-sm font-medium">Rebuild complete</span>
       </div>
       <div className="text-xs text-gray-500 dark:text-slate-100">

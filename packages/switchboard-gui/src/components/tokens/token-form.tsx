@@ -137,7 +137,7 @@ const TokenForm = () => {
                 </div>
                 {/*body*/}
                 <div className="relative flex-auto p-6">
-                  <div className="text-gray-500 my-4 break-words text-lg leading-relaxed">
+                  <div className="text-gray-500 my-4 break-words text-lg leading-relaxed dark:text-slate-400">
                     {token}
                   </div>
                 </div>
@@ -154,7 +154,7 @@ const TokenForm = () => {
               </div>
             </div>
           </div>
-          <div className="fixed inset-0 z-40 bg-black opacity-25"></div>
+          <div className="fixed inset-0 z-40 bg-black opacity-25 dark:bg-slate-50"></div>
         </>
       ) : null}
     </div>

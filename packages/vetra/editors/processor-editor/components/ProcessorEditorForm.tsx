@@ -285,7 +285,7 @@ export const ProcessorEditorForm: React.FC<ProcessorEditorFormProps> = ({
           <button
             onClick={handleConfirm}
             disabled={!canConfirm}
-            className="rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-300"
+            className="rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-300 dark:bg-blue-300 dark:text-slate-900 dark:hover:bg-blue-200 dark:disabled:bg-slate-600"
           >
             Confirm
           </button>

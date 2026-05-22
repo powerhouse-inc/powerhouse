@@ -30,9 +30,9 @@ export const TextDiff = ({
   const bgColor =
     diffMode === "sentences" && hasChanges
       ? viewMode === "addition"
-        ? "bg-green-600/30"
+        ? "bg-green-600/30 dark:bg-green-600/30"
         : viewMode === "removal"
-          ? "bg-red-600/30"
+          ? "bg-red-600/30 dark:bg-red-300/30"
           : undefined
       : undefined;
 
@@ -50,7 +50,7 @@ export const TextDiff = ({
             <span
               className={cn(
                 (diffMode === "words" || viewMode === "mixed") &&
-                  "bg-green-600/30",
+                  "bg-green-600/30 dark:bg-green-600/30",
                 childrenClassName,
               )}
               key={`${word.value}-${index}`}
@@ -63,7 +63,7 @@ export const TextDiff = ({
             <span
               className={cn(
                 (diffMode === "words" || viewMode === "mixed") &&
-                  "bg-red-600/30",
+                  "bg-red-600/30 dark:bg-red-300/30",
                 childrenClassName,
               )}
               key={`${word.value}-${index}`}
