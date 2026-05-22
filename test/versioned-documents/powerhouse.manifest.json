@@ -17,7 +17,7 @@
 			"id": "todo-editor",
 			"name": "TodoEditor",
 			"documentTypes": [
-				"powerhousedao/document-drive"
+				"powerhouse/document-drive"
 			]
 		}
 	],
