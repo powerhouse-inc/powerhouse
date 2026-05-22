@@ -212,7 +212,7 @@ async function setupGraphQLManager(
     syncManager,
     logger,
     httpAdapter,
-    createGatewayAdapter("apollo", logger),
+    await createGatewayAdapter("apollo", logger),
     {
       enabled: auth?.enabled ?? false,
       admins: auth?.admins ?? [],
@@ -379,7 +379,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   dbClosers: Array<() => Promise<void>>;
 }> {
   const port = options.port ?? DEFAULT_PORT;
-  const { adapter: httpAdapter } = createHttpAdapter("express");
+  const { adapter: httpAdapter } = await createHttpAdapter("express");
 
   // Setup auth configuration
   let admins: string[] = [];

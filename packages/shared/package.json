@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/shared",
-  "version": "6.0.0-dev.257",
+  "version": "6.1.0-dev.0",
   "type": "module",
   "sideEffects": false,
   "publishConfig": {
@@ -108,7 +108,6 @@
     }
   },
   "dependencies": {
-    "@sentry/node-core": "^10.52.0",
     "@sindresorhus/fnv1a": "catalog:",
     "chalk": "catalog:",
     "change-case": "catalog:",
@@ -121,7 +120,6 @@
     "package-directory": "^8.1.0",
     "package-manager-detector": "catalog:",
     "remeda": "catalog:",
-    "rolldown": "catalog:",
     "safe-stable-stringify": "^2.4.3",
     "sha1-uint8array": "^0.10.7",
     "write-package": "catalog:",
@@ -129,14 +127,28 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@sentry/node-core": "^10.52.0",
     "@types/bun": "catalog:",
     "@types/luxon": "catalog:",
     "@types/npm-package-arg": "catalog:",
     "@types/react": "catalog:",
     "kysely": "catalog:",
     "react": "catalog:",
+    "rolldown": "catalog:",
     "tsdown": "catalog:",
     "tsx": "catalog:",
     "vitest": "catalog:"
+  },
+  "peerDependencies": {
+    "@sentry/node-core": "^10.52.0",
+    "rolldown": "catalog:"
+  },
+  "peerDependenciesMeta": {
+    "@sentry/node-core": {
+      "optional": true
+    },
+    "rolldown": {
+      "optional": true
+    }
   }
 }

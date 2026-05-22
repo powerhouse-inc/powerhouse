@@ -1,3 +1,19 @@
+## 6.1.0-dev.0 (2026-05-22)
+
+### 🩹 Fixes
+
+- **shared,ph-cli:** made rolldown an optional peer dependency ([13db8e511](https://github.com/powerhouse-inc/powerhouse/commit/13db8e511))
+- **reactor-api:** moved fastify and mercurius to be optional peer dependencies ([f02aeec8c](https://github.com/powerhouse-inc/powerhouse/commit/f02aeec8c))
+- **ph-cli,ph-cmd,shared:** make sentry/core an optional peer dependency of shared ([fc8446e18](https://github.com/powerhouse-inc/powerhouse/commit/fc8446e18))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.258 (2026-05-22)
+
+This was a version bump only for @powerhousedao/analytics-engine-browser to align it with other projects, there were no code changes.
+
 ## 6.0.0-dev.257 (2026-05-21)
 
 ### 🚀 Features

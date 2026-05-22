@@ -252,9 +252,7 @@ function collectActionErrors(
   const creatorName = camelCase(item.type);
   const creator = entry.actions[creatorName];
   if (!creator) {
-    errors.push(
-      `No action creator found (looked up as "${creatorName}" in the actions module)`,
-    );
+    errors.push(`No action creator found.`);
   } else {
     try {
       creator(item.input);

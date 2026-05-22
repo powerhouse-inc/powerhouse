@@ -764,6 +764,9 @@ importers:
       '@renown/sdk':
         specifier: workspace:*
         version: link:../../packages/renown
+      '@sentry/node-core':
+        specifier: ^10.52.0
+        version: 10.53.1(@opentelemetry/api@1.9.1)(@opentelemetry/core@2.5.1(@opentelemetry/api@1.9.1))(@opentelemetry/exporter-trace-otlp-http@0.200.0(@opentelemetry/api@1.9.1))(@opentelemetry/instrumentation@0.200.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.0.0(@opentelemetry/api@1.9.1))(@opentelemetry/semantic-conventions@1.40.0)
       '@tsdown/css':
         specifier: 'catalog:'
         version: 0.21.1(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(jiti@2.6.1)(postcss@8.5.8)(tsdown@0.21.1)(tsx@4.21.0)(yaml@2.8.3)
@@ -803,6 +806,9 @@ importers:
       remeda:
         specifier: 'catalog:'
         version: 2.33.7
+      rolldown:
+        specifier: 'catalog:'
+        version: 1.0.0-rc.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
       semver:
         specifier: 'catalog:'
         version: 7.7.4
@@ -840,6 +846,9 @@ importers:
       '@powerhousedao/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@sentry/node-core':
+        specifier: ^10.52.0
+        version: 10.53.1(@opentelemetry/api@1.9.1)(@opentelemetry/core@2.5.1(@opentelemetry/api@1.9.1))(@opentelemetry/exporter-trace-otlp-http@0.200.0(@opentelemetry/api@1.9.1))(@opentelemetry/instrumentation@0.200.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.0.0(@opentelemetry/api@1.9.1))(@opentelemetry/semantic-conventions@1.40.0)
       chalk:
         specifier: 'catalog:'
         version: 5.6.2
@@ -1659,6 +1668,9 @@ importers:
       react-i18next:
         specifier: 'catalog:'
         version: 16.5.4(i18next@25.8.13(typescript@5.9.3))(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@5.9.3)
+      rolldown:
+        specifier: 'catalog:'
+        version: 1.0.0-rc.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
       tailwind-merge:
         specifier: 'catalog:'
         version: 3.4.0
@@ -1744,18 +1756,6 @@ importers:
       '@electric-sql/pglite':
         specifier: 'catalog:'
         version: 0.3.15
-      '@fastify/cors':
-        specifier: ^11.0.1
-        version: 11.2.0
-      '@fastify/formbody':
-        specifier: ^8.0.1
-        version: 8.0.2
-      '@fastify/middie':
-        specifier: ^9.3.2
-        version: 9.3.2
-      '@mercuriusjs/gateway':
-        specifier: ^5.2.0
-        version: 5.2.0(@fastify/websocket@11.2.0(bufferutil@4.1.0)(utf-8-validate@6.0.6))(bufferutil@4.1.0)(crossws@0.3.5)(utf-8-validate@6.0.6)
       '@originjs/vite-plugin-commonjs':
         specifier: ^1.0.3
         version: 1.0.3
@@ -1816,9 +1816,6 @@ importers:
       express:
         specifier: 4.21.1
         version: 4.21.1
-      fastify:
-        specifier: ^5.8.5
-        version: 5.8.5
       graphql-sse:
         specifier: 'catalog:'
         version: 2.6.0(graphql@16.12.0)
@@ -1843,9 +1840,6 @@ importers:
       kysely-knex:
         specifier: 'catalog:'
         version: 0.2.0(knex@3.1.0(pg@8.18.0))(kysely@0.28.16)
-      mercurius:
-        specifier: ^16.8.0
-        version: 16.8.0(bufferutil@4.1.0)(graphql@16.12.0)(utf-8-validate@6.0.6)
       path-to-regexp:
         specifier: ^8.4.0
         version: 8.4.1
@@ -1865,6 +1859,15 @@ importers:
         specifier: 'catalog:'
         version: 4.3.6
     devDependencies:
+      '@fastify/cors':
+        specifier: ^11.0.1
+        version: 11.2.0
+      '@fastify/formbody':
+        specifier: ^8.0.1
+        version: 8.0.2
+      '@fastify/middie':
+        specifier: ^9.3.2
+        version: 9.3.2
       '@graphql-codegen/cli':
         specifier: 'catalog:'
         version: 6.1.1(@fastify/websocket@11.2.0(bufferutil@4.1.0)(utf-8-validate@6.0.6))(@parcel/watcher@2.5.6)(@types/node@25.2.3)(bufferutil@4.1.0)(crossws@0.3.5)(encoding@0.1.13)(graphql@16.12.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
@@ -1880,6 +1883,9 @@ importers:
       '@graphql-codegen/typescript-resolvers':
         specifier: 'catalog:'
         version: 5.1.5(encoding@0.1.13)(graphql@16.12.0)
+      '@mercuriusjs/gateway':
+        specifier: ^5.2.0
+        version: 5.2.0(@fastify/websocket@11.2.0(bufferutil@4.1.0)(utf-8-validate@6.0.6))(bufferutil@4.1.0)(crossws@0.3.5)(utf-8-validate@6.0.6)
       '@types/body-parser':
         specifier: ^1.19.5
         version: 1.19.6
@@ -1898,12 +1904,18 @@ importers:
       '@types/ws':
         specifier: ^8.18.1
         version: 8.18.1
+      fastify:
+        specifier: ^5.8.5
+        version: 5.8.5
       graphql:
         specifier: 'catalog:'
         version: 16.12.0
       graphql-tag:
         specifier: 'catalog:'
         version: 2.12.6(graphql@16.12.0)
+      mercurius:
+        specifier: ^16.8.0
+        version: 16.8.0(bufferutil@4.1.0)(graphql@16.12.0)(utf-8-validate@6.0.6)
       msw:
         specifier: ^2.7.3
         version: 2.12.10(@types/node@25.2.3)(typescript@5.9.3)
@@ -2256,9 +2268,6 @@ importers:
 
   packages/shared:
     dependencies:
-      '@sentry/node-core':
-        specifier: ^10.52.0
-        version: 10.53.1(@opentelemetry/api@1.9.1)(@opentelemetry/core@2.5.1(@opentelemetry/api@1.9.1))(@opentelemetry/exporter-trace-otlp-http@0.200.0(@opentelemetry/api@1.9.1))(@opentelemetry/instrumentation@0.200.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.0.0(@opentelemetry/api@1.9.1))(@opentelemetry/semantic-conventions@1.40.0)
       '@sindresorhus/fnv1a':
         specifier: 'catalog:'
         version: 3.1.0
@@ -2295,9 +2304,6 @@ importers:
       remeda:
         specifier: 'catalog:'
         version: 2.33.7
-      rolldown:
-        specifier: 'catalog:'
-        version: 1.0.0-rc.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
       safe-stable-stringify:
         specifier: ^2.4.3
         version: 2.5.0
@@ -2314,6 +2320,9 @@ importers:
         specifier: 'catalog:'
         version: 4.3.6
     devDependencies:
+      '@sentry/node-core':
+        specifier: ^10.52.0
+        version: 10.53.1(@opentelemetry/api@1.9.1)(@opentelemetry/core@2.5.1(@opentelemetry/api@1.9.1))(@opentelemetry/exporter-trace-otlp-http@0.200.0(@opentelemetry/api@1.9.1))(@opentelemetry/instrumentation@0.200.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.0.0(@opentelemetry/api@1.9.1))(@opentelemetry/semantic-conventions@1.40.0)
       '@types/bun':
         specifier: 'catalog:'
         version: 1.3.8
@@ -2332,6 +2341,9 @@ importers:
       react:
         specifier: 'catalog:'
         version: 19.2.6
+      rolldown:
+        specifier: 'catalog:'
+        version: 1.0.0-rc.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
       tsdown:
         specifier: 'catalog:'
         version: 0.21.1(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@tsdown/css@0.21.1)(oxc-resolver@11.19.0(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(synckit@0.11.12)(typescript@5.9.3)

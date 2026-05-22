@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/powerhouse-vetra-packages",
-  "version": "6.0.0-dev.257",
+  "version": "6.1.0-dev.0",
   "description": "",
   "keywords": [],
   "author": "",
@@ -116,6 +116,7 @@
     "react-dom": "catalog:",
     "react-hook-form": "^7.56.1",
     "react-i18next": "catalog:",
+    "rolldown": "catalog:",
     "tailwind-merge": "catalog:",
     "tailwindcss": "catalog:",
     "thememirror": "^2.0.1",
