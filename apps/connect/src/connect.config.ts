@@ -198,18 +198,27 @@ export const connectConfig = {
   drives: {
     addDriveEnabled: runtime.drives?.allowAddDrive,
     preserveStrategy: runtime.drives?.preserveStrategy,
-    sections: {
-      LOCAL: {
-        enabled: runtime.drives?.sections?.local?.enabled,
-        allowAdd: runtime.drives?.sections?.local?.allowAdd,
-        allowDelete: runtime.drives?.sections?.local?.allowDelete,
-      },
-      PUBLIC: {
+    // The legacy `SharingType` enum still includes a "CLOUD" variant.
+    // Connect collapsed CLOUD into the unified remote section, so both CLOUD
+    // and PUBLIC map to the same `runtime.drives.sections.remote` object —
+    // the alias keeps `sections[sharingType]` lookups type-safe for every
+    // SharingType value.
+    sections: (() => {
+      const remote = {
         enabled: runtime.drives?.sections?.remote?.enabled,
         allowAdd: runtime.drives?.sections?.remote?.allowAdd,
         allowDelete: runtime.drives?.sections?.remote?.allowDelete,
-      },
-    },
+      };
+      return {
+        LOCAL: {
+          enabled: runtime.drives?.sections?.local?.enabled,
+          allowAdd: runtime.drives?.sections?.local?.allowAdd,
+          allowDelete: runtime.drives?.sections?.local?.allowDelete,
+        },
+        PUBLIC: remote,
+        CLOUD: remote,
+      };
+    })(),
   },
   gaTrackingId: undefined,
   phCliVersion: env.PH_CONNECT_CLI_VERSION,
