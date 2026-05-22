@@ -1,5 +1,5 @@
-import React from "react";
-import { useState } from "react";
+import React, { useState } from "react";
+import { twMerge } from "tailwind-merge";
 import { ChevronIcon } from "../icons/ChevronIcon.js";
 import { Accordion } from "./Accordion.js";
 
@@ -25,9 +25,10 @@ export const SectionAccordion: React.FC<SectionAccordionProps> = ({
       <ChevronIcon
         width={16}
         height={16}
-        className={`text-gray-600 transition-transform duration-300 ${
-          isOpen ? "rotate-90" : ""
-        }`}
+        className={twMerge(
+          "text-gray-600 transition-transform duration-300 dark:text-slate-300",
+          isOpen ? "rotate-90" : "",
+        )}
       />
       <h2 className="text-base font-semibold text-gray-800 dark:text-slate-50">
         {title}

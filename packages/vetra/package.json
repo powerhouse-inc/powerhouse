@@ -74,7 +74,8 @@
     "change-case": "catalog:",
     "document-model": "workspace:*",
     "react": "catalog:",
-    "zod": "catalog:"
+    "zod": "catalog:",
+    "tailwind-merge": "catalog:"
   },
   "devDependencies": {
     "@powerhousedao/builder-tools": "workspace:*",

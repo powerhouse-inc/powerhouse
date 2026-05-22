@@ -11,6 +11,7 @@ import {
   setDragAndDropEnabled,
 } from "@powerhousedao/vetra/document-models/app-module";
 import { useCallback, useEffect, useState } from "react";
+import { twMerge } from "tailwind-merge";
 import { useSelectedAppModuleDocument } from "../../../document-models/app-module/index.js";
 import { StatusPill } from "../../components/index.js";
 import { useDebounce } from "../../hooks/index.js";
@@ -151,9 +152,12 @@ export const AppEditorForm = () => {
           value={appName}
           onChange={(e) => handleSetAppName(e.target.value)}
           disabled={isReadOnly}
-          className={`w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none ${
-            isReadOnly ? "cursor-not-allowed bg-gray-100 dark:bg-slate-700" : ""
-          }`}
+          className={twMerge(
+            "w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-slate-600",
+            isReadOnly
+              ? "cursor-not-allowed bg-gray-100 dark:bg-slate-700"
+              : "",
+          )}
           placeholder="Enter app name"
         />
       </div>
@@ -240,9 +244,10 @@ export const AppEditorForm = () => {
               checked={isDragAndDropEnabled}
               onChange={(e) => onDragAndDropToggle(e.target.checked)}
               disabled={isReadOnly}
-              className={`mr-2 size-4 rounded-sm border-gray-300 text-blue-600 focus:ring-blue-500 ${
-                isReadOnly ? "cursor-not-allowed" : ""
-              }`}
+              className={twMerge(
+                "mr-2 size-4 rounded-sm border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-slate-600 dark:text-blue-400",
+                isReadOnly ? "cursor-not-allowed" : "",
+              )}
             />
             <span className="text-sm font-medium text-gray-700 dark:text-slate-50">
               Enable drag and drop

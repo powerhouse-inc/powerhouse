@@ -4,6 +4,7 @@ import {
   type ProcessorApps,
 } from "@powerhousedao/shared/processors";
 import { useEffect, useState } from "react";
+import { twMerge } from "tailwind-merge";
 import type { DocumentTypeItem } from "../../../document-models/processor-module/index.js";
 import { StatusPill } from "../../components/index.js";
 import { useAvailableDocumentTypes, useDebounce } from "../../hooks/index.js";
@@ -133,9 +134,12 @@ export const ProcessorEditorForm: React.FC<ProcessorEditorFormProps> = ({
           value={processorName}
           onChange={(e) => setProcessorName(e.target.value)}
           disabled={isReadOnly}
-          className={`w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none ${
-            isReadOnly ? "cursor-not-allowed bg-gray-100 dark:bg-slate-700" : ""
-          }`}
+          className={twMerge(
+            "w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-slate-600",
+            isReadOnly
+              ? "cursor-not-allowed bg-gray-100 dark:bg-slate-700"
+              : "",
+          )}
           placeholder="Enter processor name"
         />
       </div>
@@ -153,9 +157,12 @@ export const ProcessorEditorForm: React.FC<ProcessorEditorFormProps> = ({
           value={processorType}
           onChange={(e) => setProcessorType(e.target.value)}
           disabled={isReadOnly}
-          className={`w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none ${
-            isReadOnly ? "cursor-not-allowed bg-gray-100 dark:bg-slate-700" : ""
-          }`}
+          className={twMerge(
+            "w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-slate-600",
+            isReadOnly
+              ? "cursor-not-allowed bg-gray-100 dark:bg-slate-700"
+              : "",
+          )}
         >
           <option value="">Select type...</option>
           <option value="analytics">Analytics</option>

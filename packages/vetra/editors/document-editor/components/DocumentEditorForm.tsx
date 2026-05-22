@@ -1,4 +1,5 @@
 import { Suspense, useEffect, useState } from "react";
+import { twMerge } from "tailwind-merge";
 import type {
   AddDocumentTypeInput,
   DocumentTypeItem,
@@ -156,9 +157,12 @@ export const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
           value={editorName}
           onChange={(e) => setEditorName(e.target.value)}
           disabled={isReadOnly}
-          className={`w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none ${
-            isReadOnly ? "cursor-not-allowed bg-gray-100 dark:bg-slate-700" : ""
-          }`}
+          className={twMerge(
+            "w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-slate-600",
+            isReadOnly
+              ? "cursor-not-allowed bg-gray-100 dark:bg-slate-700"
+              : "",
+          )}
         />
       </div>
 

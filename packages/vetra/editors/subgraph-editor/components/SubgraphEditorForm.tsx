@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { twMerge } from "tailwind-merge";
 import { StatusPill } from "../../components/index.js";
 import { useDebounce } from "../../hooks/index.js";
 
@@ -71,9 +72,12 @@ export const SubgraphEditorForm: React.FC<SubgraphEditorFormProps> = ({
           value={subgraphName}
           onChange={(e) => setSubgraphName(e.target.value)}
           disabled={isReadOnly}
-          className={`w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none ${
-            isReadOnly ? "cursor-not-allowed bg-gray-100 dark:bg-slate-700" : ""
-          }`}
+          className={twMerge(
+            "w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-slate-600",
+            isReadOnly
+              ? "cursor-not-allowed bg-gray-100 dark:bg-slate-700"
+              : "",
+          )}
           placeholder="Enter subgraph name"
         />
       </div>
