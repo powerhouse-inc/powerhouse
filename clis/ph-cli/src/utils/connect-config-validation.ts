@@ -19,6 +19,7 @@
 import { phConnectRuntimeConfigSchema } from "@powerhousedao/shared/connect";
 import type { PHConnectRuntimeConfig } from "@powerhousedao/shared/clis";
 import AjvNs from "ajv";
+import { isPlainObject, stringToPath } from "remeda";
 
 type PlainObject = Record<string, unknown>;
 type ConnectPartial = Partial<PHConnectRuntimeConfig>;
@@ -39,15 +40,6 @@ const Ajv = ((AjvNs as unknown as { default?: AjvCtor }).default ??
 const ajv = new Ajv({ allErrors: true, strict: false });
 const validateConnect: AjvValidate = ajv.compile(phConnectRuntimeConfigSchema);
 
-function isPlainObject(v: unknown): v is PlainObject {
-  return (
-    typeof v === "object" &&
-    v !== null &&
-    !Array.isArray(v) &&
-    Object.getPrototypeOf(v) === Object.prototype
-  );
-}
-
 /**
  * Parse the CLI-supplied value. Tries JSON first so `true`, `42`, `"a"`,
  * `null`, `[1,2]` coerce; falls back to the raw string for unquoted text.
@@ -65,28 +57,6 @@ export function parseCliValue(raw: string): unknown {
   } catch {
     return raw;
   }
-}
-
-/**
- * Returns a new object with `value` set at the dotted path. Creates
- * intermediate objects as needed. Does not mutate the input.
- */
-function setPath(
-  obj: PlainObject,
-  dotted: string,
-  value: unknown,
-): PlainObject {
-  const parts = dotted.split(".");
-  const root: PlainObject = { ...obj };
-  let cur: PlainObject = root;
-  for (let i = 0; i < parts.length - 1; i++) {
-    const key = parts[i];
-    const next = cur[key];
-    cur[key] = isPlainObject(next) ? { ...next } : {};
-    cur = cur[key] as PlainObject;
-  }
-  cur[parts[parts.length - 1]] = value;
-  return root;
 }
 
 /**
@@ -127,7 +97,14 @@ export function validateConnectKeyValue(
     );
   }
   const parsed = parseCliValue(rawValue);
-  const stub = setPath({}, normalized, parsed);
+  // Build a nested-stub object from the dotted path so Ajv can validate
+  // the value's shape against the schema (e.g. "renown.url" + parsed →
+  // { renown: { url: parsed } }). Remeda's `setPath` requires the path
+  // to exist; this is the sparse-creation case, so we fold the parts.
+  const stub = stringToPath(normalized).reduceRight<unknown>(
+    (acc, key) => ({ [String(key)]: acc }),
+    parsed,
+  ) as PlainObject;
   if (!validateConnect(stub)) {
     throw new Error(
       `ph connect config: validation failed for key="${normalized}" value=${JSON.stringify(parsed)} (parsed as ${typeof parsed}):\n${formatErrors(validateConnect.errors)}`,

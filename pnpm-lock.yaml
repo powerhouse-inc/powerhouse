@@ -800,6 +800,9 @@ importers:
       read-pkg:
         specifier: 'catalog:'
         version: 10.1.0
+      remeda:
+        specifier: 'catalog:'
+        version: 2.33.7
       semver:
         specifier: 'catalog:'
         version: 7.7.4

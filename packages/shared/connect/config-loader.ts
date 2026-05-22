@@ -11,6 +11,7 @@
 // They're not Connect's concern, but a write-back round-trip preserves
 // them so editing tools don't accidentally drop them.
 
+import { isPlainObject } from "remeda";
 import type { PHConnectRuntimeConfig } from "../clis/types.js";
 import { DEFAULT_CONNECT_CONFIG } from "./runtime-config.js";
 
@@ -50,15 +51,6 @@ export interface ConfigAdapter {
   write(next: ConfigShape): Promise<void>;
   /** Human-readable description used in errors and logs. */
   readonly source: string;
-}
-
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    !Array.isArray(value) &&
-    Object.getPrototypeOf(value) === Object.prototype
-  );
 }
 
 /**

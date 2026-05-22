@@ -27,25 +27,27 @@
 // for the same reason `buildCliConnectOverride` does — to avoid leaking
 // default values into a write the user didn't request.
 
+import type { PHConnectRuntimeConfig } from "@powerhousedao/shared/clis";
 import {
   ConfigLoader,
   DEFAULT_CONNECT_CONFIG,
   JsonConfigAdapter,
   deepMerge,
 } from "@powerhousedao/shared/connect";
-import type { PHConnectRuntimeConfig } from "@powerhousedao/shared/clis";
 import { existsSync } from "node:fs";
 import { isAbsolute, join, resolve } from "node:path";
+import { stringToPath } from "remeda";
 import type { ConnectConfigArgs } from "../types.js";
 import {
   buildConnectFlagPatch,
-  type ConnectFlagInput,
   wasFlagExplicitlyPassed,
+  type ConnectFlagInput,
 } from "../utils/cli-connect-override.js";
 import {
   normalizeKey,
   validateConnectPatch,
 } from "../utils/connect-config-validation.js";
+import { getAtPath } from "../utils/get-at-path.js";
 
 type ConnectPartial = Partial<PHConnectRuntimeConfig>;
 
@@ -62,13 +64,6 @@ function resolveDistPath(cwd: string, distDirArg: string | undefined): string {
   const dir = fromArg ?? fromEnv ?? DEFAULT_DIST_SUBPATH;
   const abs = isAbsolute(dir) ? dir : resolve(cwd, dir);
   return join(abs, SOURCE_FILE);
-}
-
-function getAtPath(obj: unknown, dotted: string): unknown {
-  return dotted.split(".").reduce<unknown>((acc, key) => {
-    if (acc === null || typeof acc !== "object") return undefined;
-    return (acc as Record<string, unknown>)[key];
-  }, obj);
 }
 
 /**
@@ -220,7 +215,7 @@ export async function runConnectConfig(args: ConnectConfigArgs): Promise<void> {
       printJson(value);
       return;
     }
-    const value = getAtPath(effectiveConnect(source), normalized);
+    const value = getAtPath(effectiveConnect(source), stringToPath(normalized));
     if (value === undefined) {
       throw new Error(
         `ph connect config --get: no value at key "${normalized}". Run \`ph connect config\` (no args) to see the available paths.`,
