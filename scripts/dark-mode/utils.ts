@@ -1,5 +1,4 @@
 import {
-  concat,
   conditional,
   constant,
   difference,
@@ -8,7 +7,6 @@ import {
   flatMap,
   hasAtLeast,
   identity,
-  isArray,
   isEmptyish,
   isNot,
   isTruthy,
@@ -28,15 +26,6 @@ import type {
   ClassNameMap,
   ClassNameSet,
 } from "./types.js";
-
-/**
- * Add an item or list of items to the end of an array.
- * Useful for preserving order as per formatter / linter requirements
- */
-const concatToEnd =
-  <T>(itemOrItems: T | T[]) =>
-  (array: T[]) =>
-    concat(array, isArray(itemOrItems) ? itemOrItems : [itemOrItems]);
 
 /**
  * Splits a whitespace-delimited class string into individual class names.
@@ -98,7 +87,7 @@ export const addClasses = (m: ClassNameMap) => (cs: ClassNameList) =>
         getClasses(m),
         // add dark classes at the end of the list if found
         // to preserve the ordering desired by the linter / formatter
-        conditional([isTruthy, concatToEnd(acc)], constant(acc)),
+        conditional([isTruthy, (cs) => [...acc, ...cs]], constant(acc)),
       ),
     cs,
   );

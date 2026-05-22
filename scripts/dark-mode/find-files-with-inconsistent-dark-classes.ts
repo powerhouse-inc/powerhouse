@@ -24,19 +24,6 @@ import {
 const testSet = new Set(values(mapValues(allMappings, addPrefix("dark:"))));
 const allFilesWithDarkPrefixClasses = await findFilesWithClasses(["dark:"]);
 const project = makeTsMorphProject();
-const colors = [
-  "slate",
-  // "red",
-  // "green",
-  // "blue",
-  // "yellow",
-  // "orange",
-  // "black",
-  // "white",
-  // "transparent",
-  "gray",
-  "charcoal",
-];
 
 const result = pipe(
   allFilesWithDarkPrefixClasses,
