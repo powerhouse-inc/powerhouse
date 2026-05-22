@@ -81,6 +81,7 @@ export class ReadModelCoordinator implements IReadModelCoordinator {
 
   private handleWriteReady(event: JobWriteReadyEvent): void {
     if (event.operations.length === 0) {
+      void this.emitEmptyReadReady(event);
       return;
     }
 
@@ -94,6 +95,30 @@ export class ReadModelCoordinator implements IReadModelCoordinator {
       if (this.chains.get(key) === current) {
         this.chains.delete(key);
       }
+    });
+  }
+
+  private async emitEmptyReadReady(event: JobWriteReadyEvent): Promise<void> {
+    const readyEvent: JobReadReadyEvent = {
+      jobId: event.jobId,
+      operations: event.operations,
+    };
+    try {
+      await this.eventBus.emit(ReactorEventTypes.JOB_READ_READY, readyEvent);
+    } catch (error) {
+      this.logger.error(
+        "JOB_READ_READY emit failed for job @jobId: @Error",
+        { jobId: event.jobId },
+        error,
+      );
+    }
+    this.emitBatchCompleted({
+      jobId: event.jobId,
+      batchSize: 0,
+      chainWaitDurationMs: 0,
+      preReadyDurationMs: 0,
+      emitDurationMs: 0,
+      postReadyDurationMs: 0,
     });
   }
 

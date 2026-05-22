@@ -34,6 +34,11 @@ import { InMemoryJobTracker } from "../job-tracker/in-memory-job-tracker.js";
 import { ProcessorManager } from "../processors/processor-manager.js";
 import type { IQueue } from "../queue/interfaces.js";
 import { InMemoryQueue } from "../queue/queue.js";
+import { ProjectionShardManager } from "../projection/projection-shard-manager.js";
+import type {
+  BuiltInReadModelKind,
+  ProjectionWorkerFactory,
+} from "../projection/index.js";
 import { ReadModelCoordinator } from "../read-models/coordinator.js";
 import { KyselyDocumentView } from "../read-models/document-view.js";
 import type {
@@ -114,6 +119,27 @@ export type DocumentModelSpecInput =
   | { packageName: string; version: string }
   | { filePath: string };
 
+/**
+ * Caller-facing config for {@link ReactorBuilder.withProjectionShards}.
+ * When set, the builder replaces the in-process
+ * {@link ReadModelCoordinator} with a {@link ProjectionShardManager} that
+ * fans JOB_WRITE_READY events to N projection workers sharded by
+ * documentId.
+ *
+ * @see Sharded projection workers sub-feature brief
+ *   (Powerhouse board wiki id: eb26f01f-8f68-4918-a6f6-ac7a4679b533)
+ */
+export type ProjectionShardBuilderConfig = {
+  shardCount: number;
+  preReadyKinds: BuiltInReadModelKind[];
+  postReadyKinds: BuiltInReadModelKind[];
+  poolSize?: number;
+  initTimeoutMs?: number;
+  shutdownGraceMs?: number;
+  drainTimeoutMs?: number;
+  chainDepthReportIntervalMs?: number;
+};
+
 export class ReactorBuilder {
   private logger?: ILogger;
   private documentModels: DocumentModelModule<any>[] = [];
@@ -144,6 +170,8 @@ export class ReactorBuilder {
   private workerDbConfig?: DbConfig;
   private workerSignatureVerifierSpec?: SignatureVerifierSpec;
   private workerFactory?: WorkerFactory;
+  private projectionShardConfig?: ProjectionShardBuilderConfig;
+  private projectionWorkerFactory?: ProjectionWorkerFactory;
   private instrumentedPools: PoolInstrumentation[] = [];
 
   withLogger(logger: ILogger): this {
@@ -326,6 +354,33 @@ export class ReactorBuilder {
    */
   withWorkerFactory(factory: WorkerFactory): this {
     this.workerFactory = factory;
+    return this;
+  }
+
+  /**
+   * Configure N sharded projection workers. When set, the builder replaces
+   * the default in-process {@link ReadModelCoordinator} with a
+   * {@link ProjectionShardManager}. The same `DbConfig` registered via
+   * {@link withWorkerDbConfig} is reused for the projection workers'
+   * connection info; only the `poolSize` is overridden by
+   * {@link ProjectionShardBuilderConfig.poolSize}.
+   *
+   * Requires {@link withWorkerDbConfig} (the projection workers need
+   * connection info to open their own pools). The same model manifest
+   * resolved from {@link withDocumentModelSpecs} is forwarded.
+   */
+  withProjectionShards(config: ProjectionShardBuilderConfig): this {
+    this.projectionShardConfig = config;
+    return this;
+  }
+
+  /**
+   * Inject a custom {@link ProjectionWorkerFactory}. When set, the builder
+   * skips default thread-transport wiring for the projection shards and
+   * hands the factory directly to {@link ProjectionShardManager}.
+   */
+  withProjectionWorkerFactory(factory: ProjectionWorkerFactory): this {
+    this.projectionWorkerFactory = factory;
     return this;
   }
 
@@ -614,10 +669,15 @@ export class ReactorBuilder {
 
     const readModelCoordinator = this.readModelCoordinator
       ? this.readModelCoordinator
-      : new ReadModelCoordinator(eventBus, readModelInstances, [
-          subscriptionNotificationReadModel,
-          processorManager,
-        ]);
+      : this.projectionShardConfig
+        ? await this.createProjectionShardManager(
+            this.projectionShardConfig,
+            eventBus,
+          )
+        : new ReadModelCoordinator(eventBus, readModelInstances, [
+            subscriptionNotificationReadModel,
+            processorManager,
+          ]);
 
     const reactor = new Reactor(
       this.logger,
@@ -691,6 +751,59 @@ export class ReactorBuilder {
     }
 
     return module;
+  }
+
+  /**
+   * Constructs a {@link ProjectionShardManager} bound to the host event
+   * bus. Builds the default thread-transport factory unless one was
+   * injected via {@link withProjectionWorkerFactory}. Calls
+   * `manager.startup()` so all N workers reach READY before the reactor
+   * is returned to the caller.
+   */
+  private async createProjectionShardManager(
+    config: ProjectionShardBuilderConfig,
+    eventBus: IEventBus,
+  ): Promise<IReadModelCoordinator> {
+    if (!this.workerDbConfig) {
+      throw new Error(
+        "withProjectionShards requires withWorkerDbConfig; projection workers need connection info to open their own pools.",
+      );
+    }
+    const models = this.resolvedModelManifest ?? [];
+    const db: DbConfig = {
+      ...this.workerDbConfig,
+      poolSize: config.poolSize ?? this.workerDbConfig.poolSize,
+      applicationName: "reactor-projection-shard",
+    };
+    const factory =
+      this.projectionWorkerFactory ??
+      (await this.createDefaultProjectionWorkerFactory());
+    const manager = new ProjectionShardManager({
+      shardCount: config.shardCount,
+      db,
+      models,
+      preReadyKinds: config.preReadyKinds,
+      postReadyKinds: config.postReadyKinds,
+      factory,
+      logger: this.logger!,
+      hostBus: eventBus,
+      initTimeoutMs: config.initTimeoutMs,
+      shutdownGraceMs: config.shutdownGraceMs,
+      drainTimeoutMs: config.drainTimeoutMs,
+      chainDepthReportIntervalMs: config.chainDepthReportIntervalMs,
+    });
+    await manager.startup();
+    this.shutdownHooks.push(() => manager.shutdown());
+    return manager;
+  }
+
+  private async createDefaultProjectionWorkerFactory(): Promise<ProjectionWorkerFactory> {
+    const [{ createProjectionThreadTransport }, { projectionWorkerEntryPath }] =
+      await Promise.all([
+        import("../projection/transport.js"),
+        import("../projection/projection-worker/index.js"),
+      ]);
+    return () => createProjectionThreadTransport(projectionWorkerEntryPath);
   }
 
   /**

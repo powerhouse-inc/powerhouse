@@ -53,8 +53,16 @@ const DB_POOL_SIZE_WORKER = parseInt(
   process.env.REACTOR_DB_POOL_SIZE_WORKER ?? "2",
   10,
 );
+const DB_POOL_SIZE_PROJECTION = parseInt(
+  process.env.REACTOR_DB_POOL_SIZE_PROJECTION ?? "16",
+  10,
+);
 const DB_ACQUIRE_TIMEOUT_MS = parseInt(
   process.env.REACTOR_DB_ACQUIRE_TIMEOUT_MS ?? "5000",
+  10,
+);
+const N_PROJECTION_SHARDS = parseInt(
+  process.env.N_PROJECTION_SHARDS ?? "0",
   10,
 );
 
@@ -120,6 +128,14 @@ async function buildReactor(signer: ISigner): Promise<State> {
           exportName: "createVerifier",
         },
       });
+    if (N_PROJECTION_SHARDS > 0) {
+      builder.withProjectionShards({
+        shardCount: N_PROJECTION_SHARDS,
+        preReadyKinds: ["document-view", "document-indexer"],
+        postReadyKinds: [],
+        poolSize: DB_POOL_SIZE_PROJECTION,
+      });
+    }
   } else {
     builder.withDocumentModels([
       documentModelDocumentModelModule,
@@ -259,7 +275,7 @@ async function startHttp(state: State): Promise<http.Server> {
 
 async function main(): Promise<void> {
   console.log(
-    `[bench-host] starting (REACTOR_WORKERS=${REACTOR_WORKERS}, DB=${DB_HOST}:${DB_PORT}/${DB_NAME})`,
+    `[bench-host] starting (REACTOR_WORKERS=${REACTOR_WORKERS}, N_PROJECTION_SHARDS=${N_PROJECTION_SHARDS}, DB=${DB_HOST}:${DB_PORT}/${DB_NAME})`,
   );
   const eventLoopInstrumentation: EventLoopInstrumentation =
     registerEventLoopInstrumentation();

@@ -49,32 +49,28 @@ export function registerEventLoopInstrumentation(): EventLoopInstrumentation {
   const delayP50 = meter.createObservableGauge(
     "reactor.host.eventloop.delay.p50",
     {
-      description:
-        "Event-loop callback delay p50 over the prior scrape window",
+      description: "Event-loop callback delay p50 over the prior scrape window",
       unit: "ms",
     },
   );
   const delayP95 = meter.createObservableGauge(
     "reactor.host.eventloop.delay.p95",
     {
-      description:
-        "Event-loop callback delay p95 over the prior scrape window",
+      description: "Event-loop callback delay p95 over the prior scrape window",
       unit: "ms",
     },
   );
   const delayP99 = meter.createObservableGauge(
     "reactor.host.eventloop.delay.p99",
     {
-      description:
-        "Event-loop callback delay p99 over the prior scrape window",
+      description: "Event-loop callback delay p99 over the prior scrape window",
       unit: "ms",
     },
   );
   const delayMax = meter.createObservableGauge(
     "reactor.host.eventloop.delay.max",
     {
-      description:
-        "Event-loop callback delay max over the prior scrape window",
+      description: "Event-loop callback delay max over the prior scrape window",
       unit: "ms",
     },
   );
