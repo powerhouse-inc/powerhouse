@@ -119,7 +119,6 @@
     "package-directory": "^8.1.0",
     "package-manager-detector": "catalog:",
     "remeda": "catalog:",
-    "rolldown": "catalog:",
     "safe-stable-stringify": "^2.4.3",
     "sha1-uint8array": "^0.10.7",
     "write-package": "catalog:",
@@ -134,14 +133,19 @@
     "@types/react": "catalog:",
     "kysely": "catalog:",
     "react": "catalog:",
+    "rolldown": "catalog:",
     "tsdown": "catalog:",
     "tsx": "catalog:"
   },
   "peerDependencies": {
-    "@sentry/node-core": "^10.52.0"
+    "@sentry/node-core": "^10.52.0",
+    "rolldown": "catalog:"
   },
   "peerDependenciesMeta": {
     "@sentry/node-core": {
+      "optional": true
+    },
+    "rolldown": {
       "optional": true
     }
   }

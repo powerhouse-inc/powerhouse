@@ -794,6 +794,9 @@ importers:
       read-pkg:
         specifier: 'catalog:'
         version: 10.1.0
+      rolldown:
+        specifier: 'catalog:'
+        version: 1.0.0-rc.8(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
       semver:
         specifier: 'catalog:'
         version: 7.7.4
@@ -1650,6 +1653,9 @@ importers:
       react-i18next:
         specifier: 'catalog:'
         version: 16.5.4(i18next@25.8.13(typescript@5.9.3))(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@5.9.3)
+      rolldown:
+        specifier: 'catalog:'
+        version: 1.0.0-rc.8(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
       tailwind-merge:
         specifier: 'catalog:'
         version: 3.4.0
@@ -2283,9 +2289,6 @@ importers:
       remeda:
         specifier: 'catalog:'
         version: 2.33.7
-      rolldown:
-        specifier: 'catalog:'
-        version: 1.0.0-rc.8(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
       safe-stable-stringify:
         specifier: ^2.4.3
         version: 2.5.0
@@ -2323,6 +2326,9 @@ importers:
       react:
         specifier: 'catalog:'
         version: 19.2.6
+      rolldown:
+        specifier: 'catalog:'
+        version: 1.0.0-rc.8(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
       tsdown:
         specifier: 'catalog:'
         version: 0.21.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@tsdown/css@0.21.1)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(synckit@0.11.12)(typescript@5.9.3)
