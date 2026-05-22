@@ -1,3 +1,16 @@
+## 6.1.0-dev.0 (2026-05-22)
+
+### 🩹 Fixes
+
+- **codegen:** fix drive editor typo on codegen boilerplate ([5548db528](https://github.com/powerhouse-inc/powerhouse/commit/5548db528))
+- **ph-cli,ph-cmd,shared:** make sentry/core an optional peer dependency of shared ([fc8446e18](https://github.com/powerhouse-inc/powerhouse/commit/fc8446e18))
+- **reactor-api:** moved fastify and mercurius to be optional peer dependencies ([f02aeec8c](https://github.com/powerhouse-inc/powerhouse/commit/f02aeec8c))
+- **shared,ph-cli:** made rolldown an optional peer dependency ([13db8e511](https://github.com/powerhouse-inc/powerhouse/commit/13db8e511))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.258 (2026-05-22)
 
 ### 🩹 Fixes
