@@ -107,7 +107,6 @@
     }
   },
   "dependencies": {
-    "@sentry/node-core": "^10.52.0",
     "@sindresorhus/fnv1a": "catalog:",
     "chalk": "catalog:",
     "change-case": "catalog:",
@@ -128,6 +127,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@sentry/node-core": "^10.52.0",
     "@types/bun": "catalog:",
     "@types/luxon": "catalog:",
     "@types/npm-package-arg": "catalog:",
@@ -136,5 +136,13 @@
     "react": "catalog:",
     "tsdown": "catalog:",
     "tsx": "catalog:"
+  },
+  "peerDependencies": {
+    "@sentry/node-core": "^10.52.0"
+  },
+  "peerDependenciesMeta": {
+    "@sentry/node-core": {
+      "optional": true
+    }
   }
 }

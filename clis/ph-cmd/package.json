@@ -35,6 +35,7 @@
   "author": "",
   "dependencies": {
     "@powerhousedao/shared": "workspace:*",
+    "@sentry/node-core": "^10.52.0",
     "chalk": "catalog:",
     "cmd-ts": "catalog:",
     "package-manager-detector": "catalog:",
