@@ -104,7 +104,7 @@ export function FolderItem(props: {
       <div {...dragProps} {...dropProps} className={containerStyles}>
         <div className="flex items-center overflow-hidden">
           <div className="p-1">
-            <div className="relative">
+            <div className="relative text-gray-600 dark:text-slate-100">
               <Icon name="FolderClose" size={24} />
             </div>
           </div>

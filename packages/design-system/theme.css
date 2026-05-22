@@ -99,6 +99,7 @@
   --color-charcoal-800: hsl(221 17% 26%);
   --color-charcoal-900: hsl(220 17% 17%);
   --color-transparent: transparent;
+  --color-converter: hsl(200, 4%, 44%);
   --shadow-modal:
     0px 0px 24px 4px rgba(0, 0, 0, 0.05),
     0px 44px 48px -12px rgba(0, 0, 0, 0.15), 0px 2px 8px 0px rgba(0, 0, 0, 0.05);
