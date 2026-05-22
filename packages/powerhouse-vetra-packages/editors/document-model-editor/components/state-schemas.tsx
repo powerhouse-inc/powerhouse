@@ -141,7 +141,9 @@ function StateEditor({
   return (
     <div className="grid grid-cols-2 gap-4">
       <div>
-        <h3 className="mb-2 text-lg capitalize">{scope} state schema *</h3>
+        <h3 className="mb-2 text-lg text-gray-800 capitalize dark:text-slate-100">
+          {scope} state schema *
+        </h3>
         <Button
           onClick={handleToggleStandardLib}
           className="mb-2 flex w-fit items-center gap-2"
@@ -156,11 +158,11 @@ function StateEditor({
             width="24"
             height="24"
             viewBox="0 0 24 24"
-            fill="none"
+            fill="currentColor"
           >
             <path
               d="M11.9883 6.01172C11.4363 6.01172 10.9883 6.45972 10.9883 7.01172V13.0117H6.98828L11.9883 18.0117L16.9883 13.0117H12.9883V7.01172C12.9883 6.45972 12.5403 6.01172 11.9883 6.01172Z"
-              fill="black"
+              fill="currentColor"
             />
           </svg>
         </Button>
@@ -180,32 +182,35 @@ function StateEditor({
       </div>
       <div>
         <div className="flex flex-col items-end">
-          <h3 className="mb-2 text-right text-lg capitalize">
+          <h3 className="mb-2 text-right text-lg text-gray-800 capitalize dark:text-slate-100">
             {scope} state initial value *
           </h3>
-          <Checkbox
-            value={syncWithSchema}
-            onChange={setSyncWithSchema}
-            className="mb-2 w-fit rounded-md border border-gray-200 bg-gray-50 pl-2 text-sm font-medium whitespace-nowrap text-gray-800 transition-colors hover:bg-gray-100 hover:text-gray-900 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-50 dark:hover:bg-slate-700 dark:hover:text-slate-50"
-            label={
-              <div className="flex items-center gap-2 py-2 pr-2">
-                Sync with schema{" "}
-                <svg
-                  className="inline-block"
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 16 16"
-                  fill="none"
-                >
-                  <path
-                    d="M8.00521 1.99219C6.63588 1.99219 5.32788 2.45152 4.27588 3.28419C3.98721 3.51219 3.94321 3.93285 4.17188 4.22151C4.40054 4.51018 4.82055 4.55418 5.10921 4.32552C5.92721 3.67819 6.93921 3.32552 8.00521 3.32552C10.5825 3.32552 12.6719 5.41485 12.6719 7.99218H11.3385L13.3385 10.6588L15.3385 7.99218H14.0052C14.0052 4.67818 11.3192 1.99219 8.00521 1.99219ZM2.67188 5.32552L0.671875 7.99218H2.00521C2.00521 11.3062 4.69121 13.9922 8.00521 13.9922C9.37521 13.9922 10.6825 13.5335 11.7345 12.7002C12.0232 12.4722 12.0672 12.0515 11.8385 11.7628C11.6099 11.4742 11.1899 11.4302 10.9012 11.6588C10.0825 12.3068 9.07188 12.6588 8.00521 12.6588C5.42788 12.6588 3.33854 10.5695 3.33854 7.99218H4.67188L2.67188 5.32552Z"
-                    fill="#343839"
-                  />
-                </svg>
-              </div>
-            }
-          />
+          <label className="mb-2 flex w-fit items-center gap-2 rounded-md border border-gray-200 bg-gray-50 p-2 text-sm font-medium whitespace-nowrap text-gray-800 transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 dark:hover:bg-slate-500! dark:hover:text-slate-50!">
+            <input
+              type="checkbox"
+              className=""
+              value={syncWithSchema.toString()}
+              onChange={(e) => {
+                setSyncWithSchema(
+                  e.currentTarget.value === "true" ? true : false,
+                );
+              }}
+            />
+            Sync with schema{" "}
+            <svg
+              className="inline-block"
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 16 16"
+              fill="none"
+            >
+              <path
+                d="M8.00521 1.99219C6.63588 1.99219 5.32788 2.45152 4.27588 3.28419C3.98721 3.51219 3.94321 3.93285 4.17188 4.22151C4.40054 4.51018 4.82055 4.55418 5.10921 4.32552C5.92721 3.67819 6.93921 3.32552 8.00521 3.32552C10.5825 3.32552 12.6719 5.41485 12.6719 7.99218H11.3385L13.3385 10.6588L15.3385 7.99218H14.0052C14.0052 4.67818 11.3192 1.99219 8.00521 1.99219ZM2.67188 5.32552L0.671875 7.99218H2.00521C2.00521 11.3062 4.69121 13.9922 8.00521 13.9922C9.37521 13.9922 10.6825 13.5335 11.7345 12.7002C12.0232 12.4722 12.0672 12.0515 11.8385 11.7628C11.6099 11.4742 11.1899 11.4302 10.9012 11.6588C10.0825 12.3068 9.07188 12.6588 8.00521 12.6588C5.42788 12.6588 3.33854 10.5695 3.33854 7.99218H4.67188L2.67188 5.32552Z"
+                fill="currentColor"
+              />
+            </svg>
+          </label>
         </div>
         <Suspense>
           <JSONEditor
@@ -275,7 +280,9 @@ export default function StateSchemas({
       <TabsContent value="local" tabIndex={-1}>
         {!localStateSchema ? (
           <div className="">
-            <h3 className="mb-2 text-lg capitalize">local state schema *</h3>
+            <h3 className="mb-2 text-lg text-gray-800 capitalize dark:text-slate-100">
+              local state schema *
+            </h3>
             <Button onClick={handleAddLocalState}>Add local state</Button>
           </div>
         ) : (

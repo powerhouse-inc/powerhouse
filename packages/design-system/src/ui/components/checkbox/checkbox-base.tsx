@@ -52,7 +52,7 @@ const CheckboxBase = React.forwardRef<
         <svg
           width="9"
           height="9"
-          viewBox="0 9"
+          viewBox="0 0 9 9"
           fill="currentcolor"
           xmlns="http://www.w3.org/2000/svg"
         >
@@ -66,7 +66,7 @@ const CheckboxBase = React.forwardRef<
         <svg
           width="9"
           height="9"
-          viewBox="0 9"
+          viewBox="0 0 9 9"
           fill="currentcolor"
           xmlns="http://www.w3.org/2000/svg"
         >

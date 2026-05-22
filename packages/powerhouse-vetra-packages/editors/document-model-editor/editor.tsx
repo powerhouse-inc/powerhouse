@@ -361,7 +361,9 @@ export default function Editor() {
               />
             </Suspense>
             <Divider />
-            <h3 className="mb-6 text-lg capitalize">{scope} Operations</h3>
+            <h3 className="mb-6 text-lg text-gray-800 capitalize dark:text-slate-100">
+              {scope} Operations
+            </h3>
             <Modules
               modules={modules.map((module) => ({
                 ...module,
