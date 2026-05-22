@@ -1,6 +1,3 @@
-import HomeBgAvif from "#assets/home-bg.avif";
-import HomeBgPng from "#assets/home-bg.png";
-
 export const HomeBackgroundImage = () => (
   <div className="pointer-events-none fixed top-0 z-0 size-full bg-white dark:bg-slate-900">
     <svg viewBox="0 0 1858 1256" fill="none" xmlns="http://www.w3.org/2000/svg">
