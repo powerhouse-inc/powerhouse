@@ -4,7 +4,7 @@ How runtime values reach the Connect SPA, where they're defined, who can change 
 
 ## TL;DR
 
-Connect's runtime configuration lives in a single JSON file: `powerhouse.config.json`. The file exists in two places — a hand-edited *source* in the project root, and a built *dist* that Connect actually serves at runtime. The SPA reads it once at boot via `fetch()` and never looks at environment variables for its own settings. Operators set values by editing the source file, passing CLI flags, running `ph connect config`, or — at deploy time — setting environment variables that a Docker entrypoint translates into the dist file.
+Connect's runtime configuration lives in a single JSON file: `powerhouse.config.json`. The file exists in two places — a hand-edited _source_ in the project root, and a built _dist_ that Connect actually serves at runtime. The SPA reads it once at boot via `fetch()` and never looks at environment variables for its own settings. Operators set values by editing the source file, passing CLI flags, running `ph connect config`, or — at deploy time — setting environment variables that a Docker entrypoint translates into the dist file.
 
 ```
 ┌──────────── ways to set a value ────────────┐
@@ -62,7 +62,7 @@ The defaults for the `connect.*` block are defined once in `packages/shared/conn
 
 ## Setting values — the precedence ladder
 
-When `ph connect build` runs, the *dist* `powerhouse.config.json` is produced by deep-merging in this order (lowest → highest):
+When `ph connect build` runs, the _dist_ `powerhouse.config.json` is produced by deep-merging in this order (lowest → highest):
 
 ```
 DEFAULT_CONNECT_CONFIG  <  source.connect  <  CLI flag overrides
@@ -78,13 +78,13 @@ Each layer can supply a partial value; missing leaves fall back to the layer bel
 
 ### The five ways to feed a value into a layer
 
-| Way | Lands in | When to use |
-|---|---|---|
-| `ph init` template | source file | Initial scaffold; gives every project a working default |
-| Manual edit of `<project>/powerhouse.config.json` | source file | Local dev tweaks; checked into git |
-| `ph connect config --<field> <value>` (or `--json '{...}'`) | source **and** dist (dual-write) | Quick CLI edit that takes effect on next refresh, without rebuilding |
-| `ph connect build --<field> <value>` (or `--json '{...}'`) | dist (CLI override layer) | One-off override at build time, e.g. CI baking a different `--base` |
-| Docker entrypoint env vars (`PH_CONNECT_RENOWN_URL`, etc.) | dist file at container start, **set-if-absent** | Per-deployment knobs without rebuilding the image |
+| Way                                                         | Lands in                                        | When to use                                                          |
+| ----------------------------------------------------------- | ----------------------------------------------- | -------------------------------------------------------------------- |
+| `ph init` template                                          | source file                                     | Initial scaffold; gives every project a working default              |
+| Manual edit of `<project>/powerhouse.config.json`           | source file                                     | Local dev tweaks; checked into git                                   |
+| `ph connect config --<field> <value>` (or `--json '{...}'`) | source **and** dist (dual-write)                | Quick CLI edit that takes effect on next refresh, without rebuilding |
+| `ph connect build --<field> <value>` (or `--json '{...}'`)  | dist (CLI override layer)                       | One-off override at build time, e.g. CI baking a different `--base`  |
+| Docker entrypoint env vars (`PH_CONNECT_RENOWN_URL`, etc.)  | dist file at container start, **set-if-absent** | Per-deployment knobs without rebuilding the image                    |
 
 Two special-case writers also exist:
 
@@ -96,6 +96,7 @@ Two special-case writers also exist:
 **Manual edit.** The source `powerhouse.config.json` lives in the project root next to `package.json`. It carries top-level keys for other tooling too (`studio.port`, `reactor.*`, `auth.*`, `documentModelsDir`, etc.); those keys pass through Connect's loader untouched.
 
 **`ph connect config`.** Three modes (mutually exclusive):
+
 - No args → list mode: prints the effective `connect.*` block (defaults + source).
 - `--get <dotted.path>` → prints a single value (also works for top-level `--get packageRegistryUrl`).
 - `--<field> <value>` or `--json '{...}'` → set mode: Ajv-validates the patch and dual-writes to source and dist (dist is skipped silently if no build has happened yet).
@@ -124,7 +125,7 @@ createRoot(document.getElementById("root")!).render(<AppLoader />);
 Two ordering tricks:
 
 1. **Top-level await** on `loadRuntimeConfig()` blocks module evaluation until the fetch resolves.
-2. **Dynamic import** of `AppLoader` so any module that calls `getRuntimeConfig()` at import time (synchronous read from the cache) only runs *after* step 1.
+2. **Dynamic import** of `AppLoader` so any module that calls `getRuntimeConfig()` at import time (synchronous read from the cache) only runs _after_ step 1.
 
 Together these prevent a cache-empty race where the SPA would have to fall back to defaults or throw.
 
@@ -144,14 +145,14 @@ const loader = new ConfigLoader(
 
 Downstream consumers inside the SPA:
 
-| File | Reads |
-|---|---|
-| `apps/connect/src/connect.config.ts` | Re-exports the cached config behind getters (`getConnectConfig()`) so the rest of the SPA reads typed accessors instead of dotted paths |
-| `apps/connect/src/hooks/useRegistryPackages.ts` | `getRuntimeConfig().packageRegistryUrl` |
-| `apps/connect/src/store/reactor.ts` | Passes `packageRegistryUrl` to `BrowserPackageManager` |
-| Renown auth flow | Reads `connect.renown.*` |
-| Drives sidebar | Reads `connect.drives.*` |
-| Router | Reads `connect.app.basePath` |
+| File                                            | Reads                                                                                                                                   |
+| ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/connect/src/connect.config.ts`            | Re-exports the cached config behind getters (`getConnectConfig()`) so the rest of the SPA reads typed accessors instead of dotted paths |
+| `apps/connect/src/hooks/useRegistryPackages.ts` | `getRuntimeConfig().packageRegistryUrl`                                                                                                 |
+| `apps/connect/src/store/reactor.ts`             | Passes `packageRegistryUrl` to `BrowserPackageManager`                                                                                  |
+| Renown auth flow                                | Reads `connect.renown.*`                                                                                                                |
+| Drives sidebar                                  | Reads `connect.drives.*`                                                                                                                |
+| Router                                          | Reads `connect.app.basePath`                                                                                                            |
 
 A hard refresh in the browser tears down the module graph; the next module evaluation runs `loadRuntimeConfig()` again and the SPA picks up whatever the dist file holds now. This is the path operators use after `ph connect config --renown-url X`: write the new value, refresh the tab.
 
