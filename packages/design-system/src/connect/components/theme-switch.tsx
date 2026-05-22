@@ -19,8 +19,8 @@ export function ThemeSwitch() {
 
   function isActive(value: Theme) {
     if (value === "system" && isSystem) return true;
-    if (value === "dark" && theme === "dark") return true;
-    if (value === "light" && theme === "light") return true;
+    if (!isSystem && value === "dark" && theme === "dark") return true;
+    if (!isSystem && value === "light" && theme === "light") return true;
     return false;
   }
 
