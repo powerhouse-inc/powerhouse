@@ -1,3 +1,14 @@
+## 6.0.0-dev.258 (2026-05-22)
+
+### 🩹 Fixes
+
+- **reactor-api:** resolve linked packages via dist/node/<sub>/index.mjs ([b543e9a90](https://github.com/powerhouse-inc/powerhouse/commit/b543e9a90))
+- **reactor-api:** lazily import gateway adapter ([c8a9a06f8](https://github.com/powerhouse-inc/powerhouse/commit/c8a9a06f8))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.257 (2026-05-21)
 
 ### 🚀 Features
