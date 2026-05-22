@@ -114,7 +114,7 @@ export const bg = {
   "bg-black": "bg-slate-50",
   "bg-black/50": "bg-slate-900/50",
   "bg-white/90": "bg-slate-900/90",
-  "bg-slate-900/50": "bg-slate-50/50",
+  "bg-slate-900/50": "bg-slate-900/80",
   "bg-red-600/30": "bg-red-300/30",
   "bg-green-600/30": "bg-green-600/30",
   "bg-gray-50": "bg-slate-900",
