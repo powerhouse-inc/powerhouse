@@ -84,7 +84,7 @@ export const ModuleItem: React.FC<ModuleItemProps> = ({
         <h3 className="truncate text-sm font-medium text-gray-900 dark:text-slate-50">
           {fileNode.name}
         </h3>
-        <p className="truncate text-xs text-gray-500 dark:text-slate-100">
+        <p className="truncate text-xs text-gray-500 dark:text-slate-400">
           {fileNode.documentType}
         </p>
       </div>
@@ -107,7 +107,7 @@ export const ModuleItem: React.FC<ModuleItemProps> = ({
             }}
           >
             <Icon
-              className="text-gray-600 dark:text-slate-100"
+              className="text-gray-600 dark:text-slate-300"
               name="VerticalDots"
             />
           </button>

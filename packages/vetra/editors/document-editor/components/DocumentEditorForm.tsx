@@ -147,7 +147,7 @@ export const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
       <div>
         <label
           htmlFor="editor-name"
-          className="mb-2 block text-sm font-medium text-gray-700 dark:text-slate-50"
+          className="mb-2 block text-sm font-medium text-gray-700 dark:text-slate-200"
         >
           Editor Name
         </label>
@@ -158,9 +158,9 @@ export const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
           onChange={(e) => setEditorName(e.target.value)}
           disabled={isReadOnly}
           className={twMerge(
-            "w-full rounded-md border border-gray-300 px-3 py-2 placeholder:text-gray-700 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-slate-600",
+            "w-full rounded-md border border-gray-300 px-3 py-2 placeholder:text-gray-700 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-slate-600 dark:placeholder:text-slate-200",
             isReadOnly
-              ? "cursor-not-allowed bg-gray-100 dark:bg-slate-700"
+              ? "cursor-not-allowed bg-gray-100 dark:bg-slate-800"
               : "",
           )}
         />
@@ -170,7 +170,7 @@ export const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
       <div>
         <label
           htmlFor="supported-document-types"
-          className="mb-2 block text-sm font-medium text-gray-700 dark:text-slate-50"
+          className="mb-2 block text-sm font-medium text-gray-700 dark:text-slate-200"
         >
           Supported Document Types
         </label>
@@ -188,7 +188,7 @@ export const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
           <div className="space-y-1">
             {documentTypes.map((type) => (
               <div key={type.id} className="flex items-center py-1">
-                <span className="text-sm text-gray-700 dark:text-slate-50">
+                <span className="text-sm text-gray-700 dark:text-slate-200">
                   {type.documentType}
                 </span>
                 {!isReadOnly && (
@@ -197,7 +197,7 @@ export const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
                       setDocumentTypes([]);
                       onRemoveDocumentType?.({ id: type.id });
                     }}
-                    className="ml-2 text-gray-400 hover:text-gray-600 focus:outline-none dark:text-slate-200 dark:hover:text-slate-100"
+                    className="ml-2 text-gray-400 hover:text-gray-600 focus:outline-none dark:text-slate-500 dark:hover:text-slate-300"
                   >
                     ×
                   </button>

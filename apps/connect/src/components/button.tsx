@@ -7,7 +7,7 @@ const Button: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement>> = ({
   return (
     <button
       className={twMerge(
-        "rounded-md bg-gray-500/20 px-4 py-1.5 text-gray-500 shadow-button hover:bg-slate-100 hover:shadow-none dark:text-slate-100 dark:hover:bg-slate-700",
+        "rounded-md bg-gray-500/20 px-4 py-1.5 text-gray-500 shadow-button hover:bg-slate-100 hover:shadow-none dark:text-slate-400 dark:hover:bg-slate-800",
         className,
       )}
       {...props}

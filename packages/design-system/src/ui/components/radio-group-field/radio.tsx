@@ -42,7 +42,7 @@ export const Radio = React.forwardRef<
           aria-invalid={hasError}
           className={cn(
             "group peer",
-            "aspect-square size-4 rounded-full border border-gray-800 dark:border-slate-400",
+            "aspect-square size-4 rounded-full border border-gray-800 dark:border-slate-100",
             "hover:border-gray-900 dark:hover:border-slate-50",
             disabled && [
               "cursor-not-allowed border-gray-600 hover:border-gray-600 dark:border-slate-300 dark:hover:border-slate-300",

@@ -35,7 +35,7 @@ export const SidebarItem = function SidebarItem(props: SidebarItemProps) {
         )}
         <div className="mx-auto py-4">
           {icon || (
-            <div className="flex size-8 items-center justify-center rounded-lg bg-black dark:bg-slate-100">
+            <div className="flex size-8 items-center justify-center rounded-lg bg-black dark:bg-slate-50">
               <span className="text-sm font-medium text-white dark:text-slate-900">
                 {title.slice(0, 1).toUpperCase()}
               </span>

@@ -50,7 +50,7 @@ export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
           onClick={onHomeClick}
         >
           <Icon
-            className="text-gray-600 dark:text-slate-100"
+            className="text-gray-600 dark:text-slate-300"
             name="ConnectSmall"
             size={24}
           />
@@ -64,7 +64,7 @@ export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
           className="cursor-pointer"
           onClick={onDebugClick}
         >
-          <Icon className="text-gray-600 dark:text-slate-100" name="Tube" />
+          <Icon className="text-gray-600 dark:text-slate-300" name="Tube" />
         </button>
       )}
       <div className={onHomeClick ? "mt-3" : ""}>
@@ -87,11 +87,11 @@ export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
         onClick={onClickSettings}
       >
         <Settings
-          className="text-gray-600 dark:text-slate-100"
+          className="text-gray-600 dark:text-slate-300"
           size={24}
           strokeWidth={2}
         />
-        <span className="hidden text-sm/6 font-semibold text-gray-800 dark:text-slate-50">
+        <span className="hidden text-sm/6 font-semibold text-gray-800 dark:text-slate-100">
           Settings
         </span>
       </button>

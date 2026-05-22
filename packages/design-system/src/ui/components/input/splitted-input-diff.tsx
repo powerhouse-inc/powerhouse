@@ -45,7 +45,7 @@ const CopyIcon = ({
           <Icon
             name="Copy"
             size={16}
-            className={cn("text-gray-500 dark:text-slate-100")}
+            className={cn("text-gray-500 dark:text-slate-400")}
           />
         </button>
       </Tooltip>

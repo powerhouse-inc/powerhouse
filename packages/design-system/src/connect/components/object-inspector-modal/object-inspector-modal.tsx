@@ -48,7 +48,7 @@ export function ObjectInspectorModal({
             {title}
           </h2>
           <button
-            className="flex size-6 cursor-pointer items-center justify-center rounded-md text-gray-500 outline-none hover:text-gray-900 dark:text-slate-100 dark:hover:text-slate-50"
+            className="flex size-6 cursor-pointer items-center justify-center rounded-md text-gray-500 outline-none hover:text-gray-900 dark:text-slate-400 dark:hover:text-slate-50"
             onClick={() => onOpenChange(false)}
             type="button"
           >
@@ -60,7 +60,7 @@ export function ObjectInspectorModal({
           {serializableObject ? (
             <JsonViewer data={serializableObject} />
           ) : (
-            <p className="text-gray-500 dark:text-slate-100">
+            <p className="text-gray-500 dark:text-slate-400">
               No data to display
             </p>
           )}

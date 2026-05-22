@@ -41,10 +41,10 @@ export const ModuleAccordion: React.FC<ModuleAccordionProps> = ({
             isOpen ? "rotate-90" : "",
           )}
         />
-        <span className="text-sm font-medium text-gray-700 dark:text-slate-50">
+        <span className="text-sm font-medium text-gray-700 dark:text-slate-200">
           {title}
         </span>
-        <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-slate-700 dark:text-slate-100">
+        <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-slate-800 dark:text-slate-300">
           {count}
         </span>
       </div>
@@ -53,12 +53,12 @@ export const ModuleAccordion: React.FC<ModuleAccordionProps> = ({
           e.stopPropagation();
           onAdd?.();
         }}
-        className="rounded-sm p-1 transition-colors hover:bg-gray-200 dark:hover:bg-slate-600"
+        className="rounded-sm p-1 transition-colors hover:bg-gray-200 dark:hover:bg-slate-700"
       >
         <PlusIcon
           width={16}
           height={16}
-          className="text-gray-600 dark:text-slate-100"
+          className="text-gray-600 dark:text-slate-300"
         />
       </button>
     </div>

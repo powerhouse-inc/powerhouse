@@ -42,7 +42,7 @@ export function UploadFileItemHeader(props: HeaderProps) {
         <Icon
           name={getDocumentIcon(documentType)}
           size={48}
-          className="text-gray-600 dark:text-slate-100"
+          className="text-gray-600 dark:text-slate-300"
         />
       </div>
 
@@ -50,7 +50,7 @@ export function UploadFileItemHeader(props: HeaderProps) {
         <div className="text-xs leading-[18px] font-medium text-gray-900 dark:text-slate-50">
           {fileName}
         </div>
-        <div className="text-xs leading-[18px] font-medium text-gray-500 dark:text-slate-100">
+        <div className="text-xs leading-[18px] font-medium text-gray-500 dark:text-slate-400">
           {fileSize}
         </div>
       </div>
@@ -60,7 +60,7 @@ export function UploadFileItemHeader(props: HeaderProps) {
           <button
             type="button"
             onClick={onClose}
-            className="flex h-[18px] w-[18px] items-center justify-center text-gray-600 hover:text-gray-800 dark:text-slate-100 dark:hover:text-slate-50"
+            className="flex h-[18px] w-[18px] items-center justify-center text-gray-600 hover:text-gray-800 dark:text-slate-300 dark:hover:text-slate-100"
             aria-label="Close"
           >
             <Icon name="XmarkLight" size={18} />

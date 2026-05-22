@@ -309,7 +309,7 @@ export function DBExplorer({
           <div className="flex shrink-0 flex-col gap-2 border-t border-gray-200 p-2 dark:border-slate-700">
             {onImportDb && (
               <button
-                className="rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-50 dark:hover:bg-slate-700"
+                className="rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
                 onClick={handleImportClick}
                 type="button"
               >
@@ -318,7 +318,7 @@ export function DBExplorer({
             )}
             {onExportDb && (
               <button
-                className="rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-50 dark:hover:bg-slate-700"
+                className="rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
                 onClick={handleExportClick}
                 type="button"
               >
@@ -327,7 +327,7 @@ export function DBExplorer({
             )}
             {pgVersionControl && (
               <div className="flex flex-col gap-1 border-t border-gray-200 pt-2 dark:border-slate-700">
-                <div className="flex items-center justify-between text-xs text-gray-600 dark:text-slate-100">
+                <div className="flex items-center justify-between text-xs text-gray-600 dark:text-slate-300">
                   <span>Postgres version</span>
                   <span className="font-semibold text-gray-900 dark:text-slate-50">
                     {pgVersionControl.currentPgVersion === null
@@ -337,7 +337,7 @@ export function DBExplorer({
                 </div>
                 {resetTargetMajor !== null && (
                   <button
-                    className="rounded-sm border border-red-300 bg-red-50 px-3 py-1.5 text-sm text-red-700 hover:bg-red-100 disabled:opacity-50 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30"
+                    className="rounded-sm border border-red-300 bg-red-50 px-3 py-1.5 text-sm text-red-700 hover:bg-red-100 disabled:opacity-50 dark:border-red-600 dark:bg-red-900 dark:text-red-100 dark:hover:bg-red-800"
                     onClick={() => setPendingResetMajor(resetTargetMajor)}
                     disabled={resetting}
                     type="button"
@@ -355,11 +355,11 @@ export function DBExplorer({
 
       <div className="flex-1 overflow-auto p-4">
         {!selectedTable ? (
-          <div className="text-sm text-gray-500 dark:text-slate-100">
+          <div className="text-sm text-gray-500 dark:text-slate-400">
             Select a table to view data
           </div>
         ) : !tableData && loading ? (
-          <div className="text-sm text-gray-500 dark:text-slate-100">
+          <div className="text-sm text-gray-500 dark:text-slate-400">
             Loading...
           </div>
         ) : tableData ? (

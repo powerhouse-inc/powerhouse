@@ -51,7 +51,7 @@ export function AddRemoteDriveModal(props: AddRemoteDriveModal) {
         <div className="flex justify-between">
           <h1 className="text-xl font-bold">Add drive</h1>
           <button
-            className="flex size-8 items-center justify-center rounded-md bg-gray-100 text-gray-500 outline-none hover:text-gray-900 dark:bg-slate-700 dark:text-slate-100 dark:hover:text-slate-50"
+            className="flex size-8 items-center justify-center rounded-md bg-gray-100 text-gray-500 outline-none hover:text-gray-900 dark:bg-slate-800 dark:text-slate-400 dark:hover:text-slate-50"
             onClick={handleCancel}
             tabIndex={-1}
           >

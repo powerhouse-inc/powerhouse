@@ -20,8 +20,8 @@ const PackageDetail: React.FC<{ label: string; value: ReactNode }> = ({
 }) => {
   return (
     <div className="flex items-start gap-2 text-sm">
-      <p className="text-gray-600 dark:text-slate-100">{label}:</p>
-      <p className="text-gray-600 dark:text-slate-100">{value}</p>
+      <p className="text-gray-600 dark:text-slate-300">{label}:</p>
+      <p className="text-gray-600 dark:text-slate-300">{value}</p>
     </div>
   );
 };
@@ -55,7 +55,7 @@ export const PackageManagerListItem = (props: {
     id: "install",
     label: "Install",
     icon: <Icon name="DownloadFile" />,
-    className: "text-gray-800 dark:text-slate-50",
+    className: "text-gray-800 dark:text-slate-100",
   } as const;
 
   const uninstallDropdownItem = {
@@ -94,7 +94,7 @@ export const PackageManagerListItem = (props: {
             onChange={setSelected}
           />
         ) : registryPackage.version ? (
-          <span className="text-xs font-normal text-gray-500 dark:text-slate-100">
+          <span className="text-xs font-normal text-gray-500 dark:text-slate-400">
             v{registryPackage.version}
           </span>
         ) : null}
@@ -156,7 +156,7 @@ export const PackageManagerListItem = (props: {
           }}
         >
           <Icon
-            className="text-gray-600 group-hover:text-gray-900 dark:text-slate-100"
+            className="text-gray-600 group-hover:text-gray-900 dark:text-slate-300 dark:group-hover:text-slate-50"
             name="VerticalDots"
           />
         </button>
@@ -333,18 +333,18 @@ const PackageSection: React.FC<{
           onClick={toggle}
           aria-expanded={!collapsed}
           aria-controls={contentId}
-          className="flex w-full items-center gap-2 pb-2 text-left text-base font-semibold text-gray-900 hover:text-gray-700 dark:text-slate-50 dark:hover:text-slate-100"
+          className="flex w-full items-center gap-2 pb-2 text-left text-base font-semibold text-gray-900 hover:text-gray-700 dark:text-slate-50 dark:hover:text-slate-200"
         >
           <Icon
             name="ChevronDown"
             size={16}
             className={twMerge(
-              "shrink-0 text-gray-500 transition-transform dark:text-slate-100",
+              "shrink-0 text-gray-500 transition-transform dark:text-slate-400",
               collapsed && "-rotate-90",
             )}
           />
           <span>{title}</span>
-          <span className="text-xs font-medium text-gray-500 dark:text-slate-100">
+          <span className="text-xs font-medium text-gray-500 dark:text-slate-400">
             {count}
           </span>
         </button>
@@ -352,7 +352,7 @@ const PackageSection: React.FC<{
       {!collapsed && (
         <div id={contentId}>
           {isEmpty ? (
-            <p className="text-sm text-gray-500 dark:text-slate-100">
+            <p className="text-sm text-gray-500 dark:text-slate-400">
               {emptyText}
             </p>
           ) : (
@@ -371,9 +371,9 @@ const PackageSubSection: React.FC<{
 }> = ({ title, count, children }) => {
   return (
     <div>
-      <h4 className="mb-2 flex items-baseline gap-2 text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-slate-100">
+      <h4 className="mb-2 flex items-baseline gap-2 text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-slate-400">
         <span>{title}</span>
-        <span className="font-medium tracking-normal text-gray-400 normal-case dark:text-slate-200">
+        <span className="font-medium tracking-normal text-gray-400 normal-case dark:text-slate-500">
           ({count})
         </span>
       </h4>

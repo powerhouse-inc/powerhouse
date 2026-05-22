@@ -39,7 +39,7 @@ export const TextDiff = ({
   return (
     <span
       className={cn(
-        "leading-[18px] text-gray-700 dark:text-slate-50",
+        "leading-[18px] text-gray-700 dark:text-slate-200",
         bgColor,
         className,
       )}

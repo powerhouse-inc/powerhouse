@@ -40,7 +40,7 @@ export function EditAppModuleName() {
         onSubmit={onSubmitSetName}
       >
         <input
-          className="p-1 text-lg font-semibold text-gray-900 placeholder:text-gray-700 dark:text-slate-50"
+          className="p-1 text-lg font-semibold text-gray-900 placeholder:text-gray-700 dark:text-slate-50 dark:placeholder:text-slate-200"
           type="text"
           name="name"
           defaultValue={appModuleDocumentName}
@@ -49,12 +49,12 @@ export function EditAppModuleName() {
         <div className="flex gap-2">
           <button
             type="submit"
-            className="text-sm text-gray-600 dark:text-slate-100"
+            className="text-sm text-gray-600 dark:text-slate-300"
           >
             Save
           </button>
           <button
-            className="text-sm text-red-800 dark:text-red-400"
+            className="text-sm text-red-800 dark:text-red-100"
             onClick={onClickCancelEditAppModuleName}
           >
             Cancel
@@ -69,7 +69,7 @@ export function EditAppModuleName() {
         {appModuleDocumentName}
       </h2>
       <button
-        className="text-sm text-gray-600 dark:text-slate-100"
+        className="text-sm text-gray-600 dark:text-slate-300"
         onClick={onClickEditAppModuleName}
       >
         Edit Name

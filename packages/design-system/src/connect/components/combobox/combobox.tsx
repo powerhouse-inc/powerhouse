@@ -48,7 +48,7 @@ function MenuList(
       {props.children}
       {hasAddItemButton ? (
         <button
-          className="w-full px-2 py-3 hover:bg-slate-50 dark:hover:bg-slate-800"
+          className="w-full px-2 py-3 hover:bg-slate-50 dark:hover:bg-slate-900"
           onClick={onClick}
         >
           {label}

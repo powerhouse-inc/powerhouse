@@ -31,7 +31,7 @@ export function DocumentStateViewer({
 
   if (scopes.length === 0) {
     return (
-      <div className="text-sm text-gray-500 dark:text-slate-100">
+      <div className="text-sm text-gray-500 dark:text-slate-400">
         No state data
       </div>
     );
@@ -47,7 +47,7 @@ export function DocumentStateViewer({
         >
           <div
             className={twMerge(
-              "-mt-2 rounded-md border border-gray-300 bg-gray-50 p-3 font-mono text-sm dark:border-slate-600 dark:bg-slate-800",
+              "-mt-2 rounded-md border border-gray-300 bg-gray-50 p-3 font-mono text-sm dark:border-slate-600 dark:bg-slate-900",
               className,
             )}
           >

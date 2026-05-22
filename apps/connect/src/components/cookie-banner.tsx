@@ -64,7 +64,7 @@ export const CookieBanner = () => {
           submitLabel={t("cookieBanner.accept")}
           rejectLabel={t("cookieBanner.reject")}
         >
-          <p className="font-semibold text-gray-500 dark:text-slate-100">
+          <p className="font-semibold text-gray-500 dark:text-slate-400">
             <Trans
               key={"cookieBanner.message"}
               i18nKey="cookieBanner.message"

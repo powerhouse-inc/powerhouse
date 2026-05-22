@@ -144,7 +144,7 @@ const TokenForm = () => {
                 {/*footer*/}
                 <div className="border-blueGray-200 flex items-center justify-end rounded-b border-t border-solid p-6">
                   <button
-                    className="background-transparent outline-hidden focus:outline-hidden mb-1 mr-1 px-6 py-2 text-sm font-bold uppercase text-red-500 transition-all duration-150 ease-linear dark:text-red-400"
+                    className="background-transparent outline-hidden focus:outline-hidden mb-1 mr-1 px-6 py-2 text-sm font-bold uppercase text-red-500 transition-all duration-150 ease-linear dark:text-red-100"
                     type="button"
                     onClick={() => setShowModal(false)}
                   >

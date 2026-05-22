@@ -30,7 +30,7 @@ export const NewModuleItem: React.FC<NewModuleItemProps> = ({
         <h3 className="truncate text-sm font-medium text-gray-900 dark:text-slate-50">
           {title}
         </h3>
-        <p className="truncate text-xs text-gray-500 dark:text-slate-100">
+        <p className="truncate text-xs text-gray-500 dark:text-slate-400">
           {subtitle}
         </p>
       </div>

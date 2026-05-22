@@ -31,7 +31,7 @@ export const ConnectDeleteDriveModal: React.FC<ConnectDeleteDriveModalProps> = (
       {...confirmationModalProps}
     >
       <div>
-        <div className="my-6 rounded-md bg-slate-50 p-4 text-center dark:bg-slate-800">
+        <div className="my-6 rounded-md bg-slate-50 p-4 text-center dark:bg-slate-900">
           {body}
         </div>
         <div>

@@ -40,7 +40,7 @@ export function ToolbarInput(props: {
     <NodeInput
       defaultValue={defaultValue}
       className={twMerge(
-        "text-center text-sm font-medium text-gray-500 dark:text-slate-100",
+        "text-center text-sm font-medium text-gray-500 dark:text-slate-400",
         className,
       )}
       aria-label={ariaLabel}

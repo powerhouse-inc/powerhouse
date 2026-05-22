@@ -41,7 +41,7 @@ export const SelectedContent: React.FC<SelectedContentProps> = ({
         )}
       >
         {placeholder && (
-          <span className="text-sm/5 font-normal text-gray-600 dark:text-slate-500">
+          <span className="text-sm/5 font-normal text-gray-600 dark:text-slate-300">
             {placeholder}
           </span>
         )}
@@ -49,13 +49,13 @@ export const SelectedContent: React.FC<SelectedContentProps> = ({
           <Icon
             name="CaretSort"
             size={16}
-            className="cursor-pointer text-gray-700 dark:text-slate-400"
+            className="cursor-pointer text-gray-700 dark:text-slate-200"
           />
         ) : (
           <Icon
             name="ChevronDown"
             size={16}
-            className="cursor-pointer text-gray-700 dark:text-slate-400"
+            className="cursor-pointer text-gray-700 dark:text-slate-200"
           />
         )}
       </div>
@@ -107,7 +107,7 @@ export const SelectedContent: React.FC<SelectedContentProps> = ({
             <Icon
               name="XmarkLight"
               size={16}
-              className="cursor-pointer text-gray-700 dark:text-slate-400"
+              className="cursor-pointer text-gray-700 dark:text-slate-200"
             />
           </div>
         )}
@@ -115,13 +115,13 @@ export const SelectedContent: React.FC<SelectedContentProps> = ({
           <Icon
             name="CaretSort"
             size={16}
-            className="cursor-pointer text-gray-700 dark:text-slate-400"
+            className="cursor-pointer text-gray-700 dark:text-slate-200"
           />
         ) : (
           <Icon
             name="ChevronDown"
             size={16}
-            className="cursor-pointer text-gray-700 dark:text-slate-400"
+            className="cursor-pointer text-gray-700 dark:text-slate-200"
           />
         )}
       </div>

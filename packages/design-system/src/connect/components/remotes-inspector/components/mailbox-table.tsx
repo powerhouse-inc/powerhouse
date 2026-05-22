@@ -155,7 +155,7 @@ export function MailboxTable({
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
         <button
-          className="flex items-center gap-2 text-left text-sm font-medium text-gray-700 hover:text-gray-900 dark:text-slate-50 dark:hover:text-slate-50"
+          className="flex items-center gap-2 text-left text-sm font-medium text-gray-700 hover:text-gray-900 dark:text-slate-200 dark:hover:text-slate-50"
           onClick={onToggleCollapse}
           type="button"
         >
@@ -171,7 +171,7 @@ export function MailboxTable({
         </button>
         {operations.length > 0 && (
           <button
-            className="flex items-center gap-1 rounded-sm bg-gray-100 px-2 py-1 text-xs text-gray-700 hover:bg-gray-200 dark:bg-slate-700 dark:text-slate-50 dark:hover:bg-slate-600"
+            className="flex items-center gap-1 rounded-sm bg-gray-100 px-2 py-1 text-xs text-gray-700 hover:bg-gray-200 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
             onClick={() => void handleCopyAll()}
             type="button"
           >
@@ -182,9 +182,9 @@ export function MailboxTable({
       </div>
 
       {!collapsed && (
-        <div className="scrollbar-thin overflow-auto rounded-lg border border-gray-300 scrollbar-thumb-gray-300 scrollbar-thumb-rounded-md scrollbar-track-transparent dark:border-slate-600 dark:scrollbar-thumb-slate-600">
+        <div className="scrollbar-thin overflow-auto rounded-lg border border-gray-300 scrollbar-thumb-gray-300 scrollbar-thumb-rounded-md scrollbar-track-transparent dark:scrollbar-thumb-slate-600 dark:border-slate-600">
           <table className="w-full border-collapse">
-            <thead className="sticky top-0 bg-gray-100 dark:bg-slate-700">
+            <thead className="sticky top-0 bg-gray-100 dark:bg-slate-800">
               <tr>
                 {columns.map((column, index) => {
                   const isActive = sort?.column === column.key;
@@ -194,7 +194,7 @@ export function MailboxTable({
                     <th
                       key={column.key}
                       className={twMerge(
-                        "group cursor-pointer px-3 py-2 text-left text-xs font-medium text-gray-600 hover:bg-gray-200 hover:text-gray-900 dark:text-slate-100 dark:hover:bg-slate-600 dark:hover:text-slate-50",
+                        "group cursor-pointer px-3 py-2 text-left text-xs font-medium text-gray-600 hover:bg-gray-200 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-slate-50",
                         index > 0 &&
                           "border-l border-gray-300 dark:border-slate-600",
                       )}
@@ -214,7 +214,7 @@ export function MailboxTable({
               {sortedOps.length === 0 ? (
                 <tr>
                   <td
-                    className="px-3 py-4 text-center text-sm text-gray-500 dark:text-slate-100"
+                    className="px-3 py-4 text-center text-sm text-gray-500 dark:text-slate-400"
                     colSpan={columns.length}
                   >
                     No operations
@@ -224,11 +224,11 @@ export function MailboxTable({
                 sortedOps.map((op) => (
                   <tr
                     key={op.id}
-                    className="odd:bg-white even:bg-gray-50 hover:bg-blue-50 dark:odd:bg-slate-900 dark:even:bg-slate-800 dark:hover:bg-blue-900/20"
+                    className="odd:bg-white even:bg-gray-50 hover:bg-blue-50 dark:odd:bg-slate-900 dark:even:bg-slate-900 dark:hover:bg-blue-900"
                   >
                     <td className="px-3 py-2 text-xs">
                       <button
-                        className="flex items-center gap-1 rounded-sm bg-blue-50 px-2 py-1 text-xs text-blue-700 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/30"
+                        className="flex items-center gap-1 rounded-sm bg-blue-50 px-2 py-1 text-xs text-blue-700 hover:bg-blue-100 dark:bg-blue-900 dark:text-blue-100 dark:hover:bg-blue-800"
                         onClick={() => setSelectedOperation(op)}
                         type="button"
                       >
@@ -256,7 +256,7 @@ export function MailboxTable({
                     {mailboxType === "deadLetter" ? (
                       <td className="border-l border-gray-300 px-3 py-2 text-xs dark:border-slate-600">
                         <span
-                          className="block truncate text-red-600 dark:text-red-400"
+                          className="block truncate text-red-600 dark:text-red-100"
                           title={getErrorMessage(op.error)}
                         >
                           {getErrorMessage(op.error) || "Unknown error"}

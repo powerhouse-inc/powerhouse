@@ -133,7 +133,7 @@ export function FileItem(props: Props) {
   );
 
   const containerStyles = twMerge(
-    "group flex h-12 cursor-pointer items-center rounded-lg bg-gray-200 px-2 text-gray-600 select-none hover:text-gray-800 dark:bg-slate-600 dark:text-slate-100 dark:hover:text-slate-50",
+    "group flex h-12 cursor-pointer items-center rounded-lg bg-gray-200 px-2 text-gray-700 select-none hover:text-gray-800 dark:bg-slate-700 dark:text-slate-200 dark:hover:text-slate-100",
     isDragging ? "opacity-60" : "",
     className,
   );
@@ -141,10 +141,10 @@ export function FileItem(props: Props) {
   const content = isReadMode ? (
     <div className="flex w-52 items-center justify-between">
       <div className="mr-2 truncate group-hover:mr-0">
-        <div className="max-h-6 truncate text-sm font-medium group-hover:text-gray-800 dark:group-hover:text-slate-50">
+        <div className="max-h-6 truncate text-sm font-medium text-gray-700 group-hover:text-gray-800 dark:text-slate-200 dark:group-hover:text-slate-100">
           {fileNode.name}
         </div>
-        <div className="max-h-6 truncate text-xs font-medium text-gray-600 group-hover:text-gray-800 dark:text-slate-100 dark:group-hover:text-slate-50">
+        <div className="max-h-6 truncate text-xs font-medium text-gray-700 group-hover:text-gray-800 dark:text-slate-200 dark:group-hover:text-slate-100">
           {fileNode.documentType}
         </div>
       </div>
@@ -166,7 +166,7 @@ export function FileItem(props: Props) {
             }}
           >
             <Icon
-              className="text-gray-600 dark:text-slate-100"
+              className="text-gray-700 dark:text-slate-200"
               name="VerticalDots"
             />
           </button>

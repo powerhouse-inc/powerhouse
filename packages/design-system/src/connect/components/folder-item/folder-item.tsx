@@ -74,7 +74,7 @@ export function FolderItem(props: {
 
   const content =
     isReadMode || !isAllowedToCreateDocuments ? (
-      <div className="ml-3 max-h-6 truncate font-medium text-gray-600 group-hover:text-gray-800 dark:text-slate-100 dark:group-hover:text-slate-50">
+      <div className="ml-3 max-h-6 truncate font-medium text-gray-700 group-hover:text-gray-800 dark:text-slate-200 dark:group-hover:text-slate-100">
         {folderNode.name}
       </div>
     ) : (
@@ -87,11 +87,11 @@ export function FolderItem(props: {
     );
 
   const containerStyles = twMerge(
-    "group flex h-12 cursor-pointer items-center rounded-lg bg-gray-200 px-2 select-none dark:bg-slate-600",
+    "group flex h-12 cursor-pointer items-center rounded-lg bg-gray-200 px-2 select-none dark:bg-slate-700",
     isDragging
       ? "opacity-60"
       : isDropTarget
-        ? "bg-blue-100 dark:bg-blue-900/30"
+        ? "bg-blue-100 dark:bg-blue-800"
         : "",
     className,
   );
@@ -104,7 +104,7 @@ export function FolderItem(props: {
       <div {...dragProps} {...dropProps} className={containerStyles}>
         <div className="flex items-center overflow-hidden">
           <div className="p-1">
-            <div className="relative text-gray-600 dark:text-slate-100">
+            <div className="relative text-gray-700 dark:text-slate-200">
               <Icon name="FolderClose" size={24} />
             </div>
           </div>
@@ -128,7 +128,7 @@ export function FolderItem(props: {
               }}
             >
               <Icon
-                className="text-gray-600 dark:text-slate-100"
+                className="text-gray-700 dark:text-slate-200"
                 name="VerticalDots"
               />
             </button>

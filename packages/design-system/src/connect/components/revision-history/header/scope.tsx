@@ -14,11 +14,11 @@ export function Scope(props: Props) {
   return (
     <ConnectSelect
       absolutePositionMenu
-      containerClassName="bg-slate-50 text-gray-500 rounded-lg w-fit text-xs z-10 dark:bg-slate-800 dark:text-slate-100"
+      containerClassName="bg-slate-50 text-gray-500 rounded-lg w-fit text-xs z-10 dark:bg-slate-900 dark:text-slate-400"
       id="scope select"
-      itemClassName="py-2 text-gray-500 grid grid-cols-[auto,auto] gap-1 dark:text-slate-100"
+      itemClassName="py-2 text-gray-500 grid grid-cols-[auto,auto] gap-1 dark:text-slate-400"
       items={items}
-      menuClassName="min-w-0 text-gray-500 dark:text-slate-100"
+      menuClassName="min-w-0 text-gray-500 dark:text-slate-400"
       onChange={onChange}
       value={value}
     />

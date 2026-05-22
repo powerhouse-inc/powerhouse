@@ -86,8 +86,8 @@ export const VersionPicker: React.FC<VersionPickerProps> = (props) => {
       <PopoverTrigger
         disabled={disabled || !hasAnyPickable}
         className={cn(
-          "flex items-center justify-between gap-2 rounded-md border border-gray-300 bg-white px-2.5 py-1 text-xs font-medium text-gray-800 transition-colors dark:border-slate-600 dark:bg-slate-900 dark:text-slate-50",
-          "hover:bg-gray-50 focus:ring-2 focus:ring-gray-900/20 focus:outline-none dark:hover:bg-slate-800",
+          "flex items-center justify-between gap-2 rounded-md border border-gray-300 bg-white px-2.5 py-1 text-xs font-medium text-gray-800 transition-colors dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100",
+          "hover:bg-gray-50 focus:ring-2 focus:ring-gray-900/20 focus:outline-none dark:hover:bg-slate-900",
           "disabled:cursor-not-allowed disabled:opacity-60",
           className,
         )}
@@ -97,7 +97,7 @@ export const VersionPicker: React.FC<VersionPickerProps> = (props) => {
         <Icon
           name="ChevronDown"
           size={12}
-          className="shrink-0 text-gray-500 dark:text-slate-100"
+          className="shrink-0 text-gray-500 dark:text-slate-400"
         />
       </PopoverTrigger>
       <PopoverContent
@@ -112,7 +112,7 @@ export const VersionPicker: React.FC<VersionPickerProps> = (props) => {
             <Icon
               name="Search"
               size={14}
-              className="absolute top-1/2 left-2 -translate-y-1/2 text-gray-400 dark:text-slate-200"
+              className="absolute top-1/2 left-2 -translate-y-1/2 text-gray-400 dark:text-slate-500"
             />
             <Input
               value={query}
@@ -124,13 +124,13 @@ export const VersionPicker: React.FC<VersionPickerProps> = (props) => {
         </div>
         <div className="max-h-60 overflow-y-auto py-1">
           {filteredTags.length === 0 && filteredVersions.length === 0 && (
-            <p className="px-3 py-4 text-center text-xs text-gray-500 dark:text-slate-100">
+            <p className="px-3 py-4 text-center text-xs text-gray-500 dark:text-slate-400">
               No matches.
             </p>
           )}
           {filteredTags.length > 0 && (
             <div className="pb-1">
-              <p className="px-3 py-1 text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-slate-100">
+              <p className="px-3 py-1 text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-slate-400">
                 Tags
               </p>
               {filteredTags.map(([tag, ver]) => {
@@ -147,15 +147,15 @@ export const VersionPicker: React.FC<VersionPickerProps> = (props) => {
                     }}
                     className={cn(
                       "flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-xs transition-colors",
-                      "hover:bg-gray-100 dark:hover:bg-slate-700",
+                      "hover:bg-gray-100 dark:hover:bg-slate-800",
                       isSelected &&
-                        "bg-gray-100 font-semibold dark:bg-slate-700",
+                        "bg-gray-100 font-semibold dark:bg-slate-800",
                     )}
                   >
                     <span className="truncate text-gray-900 dark:text-slate-50">
                       {tag}
                     </span>
-                    <span className="truncate text-gray-500 dark:text-slate-100">
+                    <span className="truncate text-gray-500 dark:text-slate-400">
                       {ver}
                     </span>
                   </button>
@@ -165,7 +165,7 @@ export const VersionPicker: React.FC<VersionPickerProps> = (props) => {
           )}
           {filteredVersions.length > 0 && (
             <div>
-              <p className="px-3 py-1 text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-slate-100">
+              <p className="px-3 py-1 text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-slate-400">
                 Versions
               </p>
               {filteredVersions.map((ver) => {
@@ -182,9 +182,9 @@ export const VersionPicker: React.FC<VersionPickerProps> = (props) => {
                     }}
                     className={cn(
                       "flex w-full items-center px-3 py-1.5 text-left text-xs transition-colors",
-                      "hover:bg-gray-100 dark:hover:bg-slate-700",
+                      "hover:bg-gray-100 dark:hover:bg-slate-800",
                       isSelected &&
-                        "bg-gray-100 font-semibold dark:bg-slate-700",
+                        "bg-gray-100 font-semibold dark:bg-slate-800",
                     )}
                   >
                     <span className="truncate text-gray-900 dark:text-slate-50">

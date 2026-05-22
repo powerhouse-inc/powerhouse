@@ -156,7 +156,7 @@ const IdAutocompleteInputContainer = React.forwardRef<
             <Icon
               name="Reload"
               size={16}
-              className={cn("animate-spin text-gray-500 dark:text-slate-600")}
+              className={cn("animate-spin text-gray-500 dark:text-slate-400")}
             />
           )}
           {haveFetchError && (
@@ -195,7 +195,7 @@ const IdAutocompleteInputContainer = React.forwardRef<
                   <Icon
                     name="Copy"
                     size={16}
-                    className={cn("text-gray-500 dark:text-slate-600")}
+                    className={cn("text-gray-500 dark:text-slate-400")}
                   />
                 </button>
               </Tooltip>

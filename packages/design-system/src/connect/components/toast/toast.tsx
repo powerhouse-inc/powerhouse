@@ -42,7 +42,7 @@ function getDefaultOptions(type: ExtendedTypeOptions): ToastOptions {
         options.type = "success";
         options.icon = (
           <Icon
-            className="text-green-800 dark:text-green-400"
+            className="text-green-800 dark:text-green-100"
             name="CheckCircleFill"
             size={24}
           />
@@ -52,7 +52,7 @@ function getDefaultOptions(type: ExtendedTypeOptions): ToastOptions {
         options.type = "warning";
         options.icon = (
           <Icon
-            className="text-gray-600 dark:text-slate-100"
+            className="text-gray-600 dark:text-slate-300"
             name="WarningFill"
             size={24}
           />
@@ -62,7 +62,7 @@ function getDefaultOptions(type: ExtendedTypeOptions): ToastOptions {
         options.type = "default";
         options.icon = (
           <Icon
-            className="text-gray-600 dark:text-slate-100"
+            className="text-gray-600 dark:text-slate-300"
             name="ClockFill"
             size={24}
           />
@@ -72,7 +72,7 @@ function getDefaultOptions(type: ExtendedTypeOptions): ToastOptions {
         options.type = "error";
         options.icon = (
           <Icon
-            className="text-red-800 dark:text-red-400"
+            className="text-red-800 dark:text-red-100"
             name="TrashFill"
             size={24}
           />
@@ -95,7 +95,7 @@ export function toast(content: ToastContent, options?: ConnectToastOptions) {
 
 const CloseButton: ToastContainerProps["closeButton"] = ({ closeToast }) => (
   <button
-    className="flex items-center text-gray-500 hover:text-gray-600 dark:text-slate-100 dark:hover:text-slate-100"
+    className="flex items-center text-gray-500 hover:text-gray-600 dark:text-slate-400 dark:hover:text-slate-300"
     onClick={closeToast}
   >
     <Icon name="XmarkLight" size={16} />

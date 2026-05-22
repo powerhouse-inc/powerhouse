@@ -101,7 +101,7 @@ export function RevisionHistory(props: Props) {
           onCopyDocId={onCopyDocId}
         />
         {PaginationComponent}
-        <div className="mt-4 flex justify-center rounded-md bg-slate-50 p-4 dark:bg-slate-800">
+        <div className="mt-4 flex justify-center rounded-md bg-slate-50 p-4 dark:bg-slate-900">
           {visibleOperations.length > 0 ? (
             <div className="grid grid-cols-[minmax(min-content,1018px)]">
               <Timeline
@@ -111,7 +111,7 @@ export function RevisionHistory(props: Props) {
               />
             </div>
           ) : (
-            <h3 className="my-40 text-gray-600 dark:text-slate-100">
+            <h3 className="my-40 text-gray-600 dark:text-slate-300">
               This document has no recorded operations yet.
             </h3>
           )}

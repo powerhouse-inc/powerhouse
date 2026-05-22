@@ -38,11 +38,11 @@ export const About: React.FC = () => {
       <ConnectedDrives />
       <div className="bg-white p-3 dark:bg-slate-900">
         <h2 className="mb-2 font-semibold">Inspector</h2>
-        <p className="mb-3 text-sm font-normal text-gray-600 dark:text-slate-100">
+        <p className="mb-3 text-sm font-normal text-gray-600 dark:text-slate-300">
           Explore the local database and sync state for debugging.
         </p>
         <button
-          className="flex items-center gap-x-2 rounded-md border border-gray-300 bg-transparent px-3 py-1 text-sm font-medium text-gray-900 transition-colors hover:bg-gray-100 dark:border-slate-600 dark:text-slate-50 dark:hover:bg-slate-700"
+          className="flex items-center gap-x-2 rounded-md border border-gray-300 bg-transparent px-3 py-1 text-sm font-medium text-gray-900 transition-colors hover:bg-gray-100 dark:border-slate-600 dark:text-slate-50 dark:hover:bg-slate-800"
           onClick={onOpenInspector}
           type="button"
         >
@@ -98,7 +98,7 @@ function ConnectedDrives() {
     <div className="my-4 bg-white p-3 dark:bg-slate-900">
       <h2 className="mb-2 font-semibold">Connected drives</h2>
       {remoteDrives.length === 0 ? (
-        <p className="text-sm font-normal text-gray-600 dark:text-slate-100">
+        <p className="text-sm font-normal text-gray-600 dark:text-slate-300">
           No connected remote drives.
         </p>
       ) : (
@@ -117,27 +117,27 @@ function DriveAboutEntry({ drive }: { drive: DocumentDriveDocument }) {
   const name = drive.state.global.name || drive.header.name;
 
   return (
-    <li className="text-sm text-gray-700 dark:text-slate-50">
+    <li className="text-sm text-gray-700 dark:text-slate-200">
       <div className="flex items-baseline gap-2">
         <span className="font-medium">{name}</span>
         {info.status === "ready" && (
-          <span className="text-xs text-gray-500 dark:text-slate-100">
+          <span className="text-xs text-gray-500 dark:text-slate-400">
             {info.host}
           </span>
         )}
       </div>
       {info.status === "loading" && (
-        <div className="mt-1 text-xs text-gray-400 dark:text-slate-200">
+        <div className="mt-1 text-xs text-gray-400 dark:text-slate-500">
           Loading…
         </div>
       )}
       {info.status === "error" && (
-        <div className="mt-1 text-xs text-red-600 dark:text-red-400">
+        <div className="mt-1 text-xs text-red-600 dark:text-red-100">
           Could not load system info
         </div>
       )}
       {info.status === "ready" && (
-        <div className="mt-1 text-xs text-gray-600 dark:text-slate-100">
+        <div className="mt-1 text-xs text-gray-600 dark:text-slate-300">
           <div>
             <span className="font-medium">Version:</span> {info.version}
           </div>
@@ -162,7 +162,7 @@ function DriveAboutEntry({ drive }: { drive: DocumentDriveDocument }) {
         </div>
       )}
       {info.status === "local" && (
-        <div className="mt-1 text-xs text-gray-400 dark:text-slate-200">
+        <div className="mt-1 text-xs text-gray-400 dark:text-slate-500">
           Local drive — N/A
         </div>
       )}

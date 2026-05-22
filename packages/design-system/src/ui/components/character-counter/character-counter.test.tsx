@@ -19,7 +19,7 @@ describe("CharacterCounter", () => {
   it("should show normal state when under 90% of max length", () => {
     render(<CharacterCounter maxLength={10} value="Hello" />);
     expect(screen.getByText("5")).toHaveClass(
-      "text-gray-500 dark:text-slate-100",
+      "text-gray-500 dark:text-slate-400",
     );
     expect(screen.getByText("/10")).toHaveClass(
       "text-gray-300 dark:text-slate-600",
@@ -29,10 +29,10 @@ describe("CharacterCounter", () => {
   it("should show warning state when between 90% and 100% of max length", () => {
     render(<CharacterCounter maxLength={10} value="Hello Wor" />);
     expect(screen.getByText("9")).toHaveClass(
-      "text-yellow-900 dark:text-yellow-400",
+      "text-yellow-900 dark:text-yellow-100",
     );
     expect(screen.getByText("/10")).toHaveClass(
-      "text-yellow-400 dark:text-yellow-400",
+      "text-yellow-400 dark:text-yellow-100",
     );
   });
 
@@ -42,7 +42,7 @@ describe("CharacterCounter", () => {
       "text-red-900 dark:text-red-400",
     );
     expect(screen.getByText("/10")).toHaveClass(
-      "text-red-400 dark:text-red-400",
+      "text-red-400 dark:text-red-100",
     );
   });
 
@@ -50,7 +50,7 @@ describe("CharacterCounter", () => {
     render(<CharacterCounter maxLength={10} value="" />);
     expect(screen.getByText("0")).toBeInTheDocument();
     expect(screen.getByText("0")).toHaveClass(
-      "text-gray-500 dark:text-slate-100",
+      "text-gray-500 dark:text-slate-400",
     );
   });
 });

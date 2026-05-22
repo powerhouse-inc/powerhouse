@@ -94,11 +94,11 @@ export function PackageInstallModal(props: PackageInstallModalProps) {
       }}
       {...restProps}
     >
-      <div className="w-[460px] bg-white p-6 text-slate-300 dark:bg-slate-900">
-        <div className="border-b border-slate-50 pb-2 text-2xl font-bold text-gray-800 dark:border-slate-700 dark:text-slate-50">
+      <div className="w-[460px] bg-white p-6 text-slate-300 dark:bg-slate-900 dark:text-slate-600">
+        <div className="border-b border-slate-50 pb-2 text-2xl font-bold text-gray-800 dark:border-slate-900 dark:text-slate-100">
           {grouped.length === 1 ? "Package Required" : "Packages Required"}
         </div>
-        <div className="my-4 text-sm text-gray-600 dark:text-slate-100">
+        <div className="my-4 text-sm text-gray-600 dark:text-slate-300">
           {grouped.length === 1
             ? "A document requires a package that is not installed."
             : "Documents require packages that are not installed."}
@@ -109,12 +109,12 @@ export function PackageInstallModal(props: PackageInstallModalProps) {
             return (
               <div
                 key={packageName}
-                className="rounded-xl bg-slate-50 p-4 dark:bg-slate-800"
+                className="rounded-xl bg-slate-50 p-4 dark:bg-slate-900"
               >
-                <div className="mb-1 text-sm font-semibold text-gray-800 dark:text-slate-50">
+                <div className="mb-1 text-sm font-semibold text-gray-800 dark:text-slate-100">
                   {packageName}
                 </div>
-                <div className="mb-3 text-xs text-gray-500 dark:text-slate-100">
+                <div className="mb-3 text-xs text-gray-500 dark:text-slate-400">
                   Required for document type
                   {documentTypes.length > 1 ? "s" : ""}:{" "}
                   {documentTypes.join(", ")}
@@ -126,7 +126,7 @@ export function PackageInstallModal(props: PackageInstallModalProps) {
                     disabled={installing}
                     className={twMerge(
                       buttonStyles,
-                      "border border-slate-200 bg-white text-slate-800 dark:border-slate-600 dark:bg-slate-900",
+                      "border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900",
                       installing && "cursor-not-allowed opacity-50",
                     )}
                   >

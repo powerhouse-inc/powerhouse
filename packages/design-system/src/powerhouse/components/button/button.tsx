@@ -30,10 +30,10 @@ export const PowerhouseButton = forwardRef(function PowerhouseButton(
 
   const colorStyles = {
     light:
-      "bg-gray-200 text-gray-600 hover:text-gray-700 hover:border-gray-300 active:border-slate-100 active:text-gray-600 disabled:text-gray-400 dark:bg-slate-600 dark:text-slate-50 dark:hover:text-white",
+      "bg-gray-200 text-gray-700 hover:text-gray-800 hover:border-gray-300 active:border-slate-100 active:text-gray-700 disabled:text-gray-400 dark:bg-slate-700 dark:text-slate-200 dark:hover:text-slate-100 dark:hover:border-slate-600 dark:active:border-slate-800 dark:active:text-slate-200 dark:disabled:text-slate-500",
     dark: "bg-gray-800 text-slate-50 hover:bg-slate-800 active:border-slate-700 disabled:bg-gray-300 disabled:text-slate-100 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-100 dark:active:border-slate-200 dark:disabled:bg-slate-600 dark:disabled:text-slate-800",
-    red: "bg-red-900 text-slate-50 hover:opacity-80 active:border-red-800 disabled:text-red-400 disabled:opacity-100 dark:bg-red-50 dark:text-slate-900 dark:active:border-red-100 dark:disabled:text-red-400",
-    blue: "bg-blue-900 text-slate-50 hover:opacity-80 active:border-blue-800 disabled:text-blue-400 disabled:opacity-100 dark:bg-blue-50 dark:text-slate-900 dark:active:border-blue-100 dark:disabled:text-blue-400",
+    red: "bg-red-900 text-slate-50 hover:opacity-80 active:border-red-800 disabled:text-red-400 disabled:opacity-100 dark:bg-red-50 dark:text-slate-900 dark:active:border-red-100 dark:disabled:text-red-100",
+    blue: "bg-blue-900 text-slate-50 hover:opacity-80 active:border-blue-800 disabled:text-blue-400 disabled:opacity-100 dark:bg-blue-50 dark:text-slate-900 dark:active:border-blue-100 dark:disabled:text-blue-100",
   };
 
   const colorAndSizeStyle = twJoin(colorStyles[color], sizeStyles[size]);

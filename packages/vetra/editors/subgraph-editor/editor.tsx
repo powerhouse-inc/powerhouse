@@ -26,7 +26,7 @@ export default function Editor() {
   }, [dispatch]);
 
   return (
-    <div className="bg-gray-50 p-6 dark:bg-slate-800">
+    <div className="bg-gray-50 p-6 dark:bg-slate-900">
       <DocumentToolbar />
       <SubgraphEditorForm
         subgraphName={document.state.global.name ?? ""}

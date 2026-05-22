@@ -12,14 +12,14 @@ export function EditorUndoRedoButtons(props: EditorUndoRedoButtonsProps) {
   const buttonStyles =
     "w-8 h-8 rounded-lg flex justify-center items-center rounded border border-gray-200 bg-white dark:border-slate-700 dark:bg-slate-900";
   return (
-    <div className="flex gap-x-2 text-gray-500 dark:text-slate-100">
+    <div className="flex gap-x-2 text-gray-500 dark:text-slate-400">
       <button className={buttonStyles} disabled={!canUndo} onClick={undo}>
         <Icon
           className={twMerge(
             "-scale-x-100",
             canUndo
               ? "text-gray-900 active:opacity-50 dark:text-slate-50"
-              : "text-gray-500 dark:text-slate-100",
+              : "text-gray-500 dark:text-slate-400",
           )}
           name="RedoArrow"
           size={18}
@@ -30,7 +30,7 @@ export function EditorUndoRedoButtons(props: EditorUndoRedoButtonsProps) {
           className={twMerge(
             canRedo
               ? "text-gray-900 active:opacity-50 dark:text-slate-50"
-              : "text-gray-500 dark:text-slate-100",
+              : "text-gray-500 dark:text-slate-400",
           )}
           name="RedoArrow"
           size={18}

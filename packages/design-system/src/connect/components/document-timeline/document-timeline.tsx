@@ -126,13 +126,13 @@ export const DocumentTimeline = (props: DocumentTimelineProps) => {
     <ConnectTooltipProvider delayDuration={0} skipDelayDuration={0}>
       <div className="relative h-[36px] w-full">
         <div className="absolute left-0 z-20 h-[17px] w-[6px] bg-white dark:bg-slate-900">
-          <div className="mt-[11px] h-[6px] w-[6px] rounded-tl-md bg-slate-50 dark:bg-slate-800" />
+          <div className="mt-[11px] h-[6px] w-[6px] rounded-tl-md bg-slate-50 dark:bg-slate-900" />
         </div>
 
         <div className="absolute top-[11px] right-0 z-20 h-[6px] w-[6px] bg-white dark:bg-slate-900">
-          <div className="h-[6px] w-[6px] rounded-tr-md bg-slate-50 dark:bg-slate-800" />
+          <div className="h-[6px] w-[6px] rounded-tr-md bg-slate-50 dark:bg-slate-900" />
         </div>
-        <div className="absolute inset-x-0 bottom-0 h-[25px] rounded-md bg-slate-50 dark:bg-slate-800" />
+        <div className="absolute inset-x-0 bottom-0 h-[25px] rounded-md bg-slate-50 dark:bg-slate-900" />
 
         <div className="absolute inset-x-0 bottom-0 h-[36px]">
           <div
@@ -141,14 +141,14 @@ export const DocumentTimeline = (props: DocumentTimelineProps) => {
           >
             <div className="ml-auto flex h-[36px] w-max items-end px-2 pb-0">
               <div className="flex">{unselectedContent}</div>
-              <div className="flex rounded-sm bg-blue-200 dark:bg-blue-800">
+              <div className="flex rounded-sm bg-blue-200 dark:bg-blue-700">
                 {selectedContent}
               </div>
             </div>
           </div>
         </div>
-        <div className="pointer-events-none absolute bottom-0 left-0 z-10 h-[25px] w-2 rounded-l-md bg-slate-50 dark:bg-slate-800" />
-        <div className="pointer-events-none absolute right-0 bottom-0 z-10 h-[25px] w-2 rounded-r-md bg-slate-50 dark:bg-slate-800" />
+        <div className="pointer-events-none absolute bottom-0 left-0 z-10 h-[25px] w-2 rounded-l-md bg-slate-50 dark:bg-slate-900" />
+        <div className="pointer-events-none absolute right-0 bottom-0 z-10 h-[25px] w-2 rounded-r-md bg-slate-50 dark:bg-slate-900" />
       </div>
     </ConnectTooltipProvider>
   );

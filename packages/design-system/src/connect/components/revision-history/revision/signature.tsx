@@ -42,10 +42,10 @@ function VerificationStatus(props: SignatureProps) {
   const verificationStatusText = `${verifiedSignaturesCount}/${signatureCount} ${signatureText} verified`;
   const color =
     verifiedSignaturesCount === 0
-      ? "text-red-800 dark:text-red-400"
+      ? "text-red-800 dark:text-red-100"
       : verifiedSignaturesCount === signatureCount
-        ? "text-green-700 dark:text-green-400"
-        : "text-orange-700 dark:text-orange-400";
+        ? "text-green-700 dark:text-green-100"
+        : "text-orange-700 dark:text-orange-100";
 
   return <span className={`text-xs ${color}`}>{verificationStatusText}</span>;
 }

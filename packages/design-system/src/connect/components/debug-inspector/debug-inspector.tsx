@@ -40,13 +40,13 @@ export function DebugInspector({
         <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-50">
           PGlite data dir
         </h2>
-        <p className="mt-1 text-sm text-gray-600 dark:text-slate-100">
+        <p className="mt-1 text-sm text-gray-600 dark:text-slate-300">
           Kill the reactor, delete the local IndexedDB, initialize a fresh
           Postgres cluster at the chosen major version, then reload. Useful for
           testing version-detection and migration flows.
         </p>
-        <div className="mt-2 inline-flex items-center gap-2 rounded-sm bg-gray-100 px-3 py-1 text-sm dark:bg-slate-700">
-          <span className="text-gray-600 dark:text-slate-100">
+        <div className="mt-2 inline-flex items-center gap-2 rounded-sm bg-gray-100 px-3 py-1 text-sm dark:bg-slate-800">
+          <span className="text-gray-600 dark:text-slate-300">
             Current version:
           </span>
           <span className="font-semibold text-gray-900 dark:text-slate-50">
@@ -66,7 +66,7 @@ export function DebugInspector({
               type="button"
               disabled={running}
               onClick={() => setConfirmMajor(major)}
-              className="flex items-center gap-1 rounded-sm border border-red-300 bg-red-50 px-3 py-1.5 text-sm text-red-700 hover:bg-red-100 disabled:opacity-50 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30"
+              className="flex items-center gap-1 rounded-sm border border-red-300 bg-red-50 px-3 py-1.5 text-sm text-red-700 hover:bg-red-100 disabled:opacity-50 dark:border-red-600 dark:bg-red-900 dark:text-red-100 dark:hover:bg-red-800"
             >
               {isPending ? `Resetting to PG${major}…` : `Reset to PG${major}`}
             </button>
@@ -75,8 +75,8 @@ export function DebugInspector({
       </div>
 
       {confirmMajor !== null && (
-        <div className="flex shrink-0 items-center gap-3 rounded-sm border border-yellow-400 bg-yellow-50 px-3 py-2 dark:border-yellow-700 dark:bg-yellow-900/20">
-          <span className="text-sm text-yellow-900 dark:text-yellow-400">
+        <div className="flex shrink-0 items-center gap-3 rounded-sm border border-yellow-400 bg-yellow-50 px-3 py-2 dark:border-yellow-500 dark:bg-yellow-900">
+          <span className="text-sm text-yellow-900 dark:text-yellow-100">
             This will permanently delete all local reactor data and recreate an
             empty database under Postgres {confirmMajor}. The page will reload.
           </span>
@@ -90,7 +90,7 @@ export function DebugInspector({
           <button
             type="button"
             onClick={() => setConfirmMajor(null)}
-            className="rounded-sm border border-gray-300 bg-white px-3 py-1 text-sm text-gray-600 hover:bg-gray-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
+            className="rounded-sm border border-gray-300 bg-white px-3 py-1 text-sm text-gray-600 hover:bg-gray-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-900"
           >
             Cancel
           </button>
@@ -98,7 +98,7 @@ export function DebugInspector({
       )}
 
       {error && (
-        <div className="rounded-sm border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
+        <div className="rounded-sm border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-600 dark:bg-red-900 dark:text-red-100">
           {error}
         </div>
       )}

@@ -42,18 +42,18 @@ export function ConnectUpgradeDriveModal(props: ConnectUpgradeDriveModalProps) {
       }}
       {...restProps}
     >
-      <div className="w-[400px] bg-white p-6 text-slate-300 dark:bg-slate-900">
-        <div className="border-b border-slate-50 pb-2 text-2xl font-bold text-gray-800 dark:border-slate-700 dark:text-slate-50">
+      <div className="w-[400px] bg-white p-6 text-slate-300 dark:bg-slate-900 dark:text-slate-600">
+        <div className="border-b border-slate-50 pb-2 text-2xl font-bold text-gray-800 dark:border-slate-900 dark:text-slate-100">
           {header}
         </div>
-        <div className="my-6 rounded-md bg-slate-50 p-4 text-center dark:bg-slate-800">
+        <div className="my-6 rounded-md bg-slate-50 p-4 text-center dark:bg-slate-900">
           {body}
         </div>
         <div className="mt-8 flex justify-between gap-3">
           <button
             className={twMerge(
               buttonStyles,
-              "flex-1 bg-slate-50 text-slate-800 dark:bg-slate-800",
+              "flex-1 bg-slate-50 text-slate-800 dark:bg-slate-900",
             )}
             onClick={() => onOpenChange?.(false)}
           >

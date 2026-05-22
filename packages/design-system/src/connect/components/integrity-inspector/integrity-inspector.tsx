@@ -109,11 +109,11 @@ export function IntegrityInspector({
 
       <div className="flex shrink-0 items-end gap-3">
         <div className="flex flex-1 flex-col gap-1">
-          <label className="text-xs font-medium text-gray-600 dark:text-slate-100">
+          <label className="text-xs font-medium text-gray-600 dark:text-slate-300">
             Document ID
           </label>
           <input
-            className="rounded-sm border border-gray-300 px-3 py-1.5 text-sm outline-none focus:border-blue-400 dark:border-slate-600"
+            className="rounded-sm border border-gray-300 px-3 py-1.5 text-sm outline-none focus:border-blue-400 dark:border-slate-600 dark:focus:border-blue-500"
             onChange={(e) => setDocumentId(e.target.value)}
             placeholder="Enter document ID"
             type="text"
@@ -121,11 +121,11 @@ export function IntegrityInspector({
           />
         </div>
         <div className="flex w-40 flex-col gap-1">
-          <label className="text-xs font-medium text-gray-600 dark:text-slate-100">
+          <label className="text-xs font-medium text-gray-600 dark:text-slate-300">
             Branch (optional)
           </label>
           <input
-            className="rounded-sm border border-gray-300 px-3 py-1.5 text-sm outline-none focus:border-blue-400 dark:border-slate-600"
+            className="rounded-sm border border-gray-300 px-3 py-1.5 text-sm outline-none focus:border-blue-400 dark:border-slate-600 dark:focus:border-blue-500"
             onChange={(e) => setBranch(e.target.value)}
             placeholder="main"
             type="text"
@@ -134,7 +134,7 @@ export function IntegrityInspector({
         </div>
         <div className="flex gap-2">
           <button
-            className="flex items-center gap-1 rounded-sm border border-blue-300 bg-blue-50 px-3 py-1.5 text-sm text-blue-700 hover:bg-blue-100 disabled:opacity-50 dark:border-blue-700 dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/30"
+            className="flex items-center gap-1 rounded-sm border border-blue-300 bg-blue-50 px-3 py-1.5 text-sm text-blue-700 hover:bg-blue-100 disabled:opacity-50 dark:border-blue-600 dark:bg-blue-900 dark:text-blue-100 dark:hover:bg-blue-800"
             disabled={
               !documentId.trim() ||
               status === "running" ||
@@ -147,7 +147,7 @@ export function IntegrityInspector({
             Validate
           </button>
           <button
-            className="flex items-center gap-1 rounded-sm border border-yellow-300 bg-yellow-50 px-3 py-1.5 text-sm text-yellow-700 hover:bg-yellow-100 disabled:opacity-50 dark:border-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400 dark:hover:bg-yellow-900/30"
+            className="flex items-center gap-1 rounded-sm border border-yellow-300 bg-yellow-50 px-3 py-1.5 text-sm text-yellow-700 hover:bg-yellow-100 disabled:opacity-50 dark:border-yellow-600 dark:bg-yellow-900 dark:text-yellow-100 dark:hover:bg-yellow-800"
             disabled={
               !documentId.trim() ||
               status === "running" ||
@@ -160,7 +160,7 @@ export function IntegrityInspector({
             Rebuild Keyframes
           </button>
           <button
-            className="flex items-center gap-1 rounded-sm border border-yellow-300 bg-yellow-50 px-3 py-1.5 text-sm text-yellow-700 hover:bg-yellow-100 disabled:opacity-50 dark:border-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400 dark:hover:bg-yellow-900/30"
+            className="flex items-center gap-1 rounded-sm border border-yellow-300 bg-yellow-50 px-3 py-1.5 text-sm text-yellow-700 hover:bg-yellow-100 disabled:opacity-50 dark:border-yellow-600 dark:bg-yellow-900 dark:text-yellow-100 dark:hover:bg-yellow-800"
             disabled={
               !documentId.trim() ||
               status === "running" ||
@@ -176,8 +176,8 @@ export function IntegrityInspector({
       </div>
 
       {confirmAction && (
-        <div className="flex shrink-0 items-center gap-3 rounded-sm border border-yellow-400 bg-yellow-50 px-3 py-2 dark:border-yellow-700 dark:bg-yellow-900/20">
-          <span className="text-sm text-yellow-800 dark:text-yellow-400">
+        <div className="flex shrink-0 items-center gap-3 rounded-sm border border-yellow-400 bg-yellow-50 px-3 py-2 dark:border-yellow-500 dark:bg-yellow-900">
+          <span className="text-sm text-yellow-800 dark:text-yellow-100">
             {confirmAction === "keyframes"
               ? "This will delete all keyframes for this document. Continue?"
               : "This will invalidate all cached snapshots for this document. Continue?"}
@@ -196,7 +196,7 @@ export function IntegrityInspector({
             Confirm
           </button>
           <button
-            className="rounded-sm border border-gray-300 bg-white px-3 py-1 text-sm text-gray-600 hover:bg-gray-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
+            className="rounded-sm border border-gray-300 bg-white px-3 py-1 text-sm text-gray-600 hover:bg-gray-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-900"
             onClick={() => setConfirmAction(null)}
             type="button"
           >
@@ -207,19 +207,19 @@ export function IntegrityInspector({
 
       <div className="min-h-0 flex-1 overflow-auto rounded-lg border border-gray-300 p-4 dark:border-slate-600">
         {status === "idle" && (
-          <div className="flex h-full items-center justify-center text-sm text-gray-400 dark:text-slate-200">
+          <div className="flex h-full items-center justify-center text-sm text-gray-400 dark:text-slate-500">
             Enter a document ID and run an action
           </div>
         )}
 
         {status === "running" && (
-          <div className="flex h-full items-center justify-center text-sm text-gray-500 dark:text-slate-100">
+          <div className="flex h-full items-center justify-center text-sm text-gray-500 dark:text-slate-400">
             Running...
           </div>
         )}
 
         {status === "error" && error && (
-          <div className="rounded-sm bg-red-50 p-3 text-sm text-red-700 dark:bg-red-900/20 dark:text-red-400">
+          <div className="rounded-sm bg-red-50 p-3 text-sm text-red-700 dark:bg-red-900 dark:text-red-100">
             {error}
           </div>
         )}
@@ -258,31 +258,31 @@ function ValidationResultView({ result }: { result: ValidationResult }) {
         </span>
       </div>
 
-      <div className="text-xs text-gray-500 dark:text-slate-100">
+      <div className="text-xs text-gray-500 dark:text-slate-400">
         Document: {result.documentId}
       </div>
 
       {result.keyframeIssues.length > 0 && (
         <div className="flex flex-col gap-1">
-          <h3 className="text-sm font-medium text-gray-700 dark:text-slate-50">
+          <h3 className="text-sm font-medium text-gray-700 dark:text-slate-200">
             Keyframe Issues
           </h3>
           <table className="w-full border-collapse text-xs">
             <thead>
-              <tr className="bg-gray-100 dark:bg-slate-700">
-                <th className="px-2 py-1 text-left font-medium text-gray-600 dark:text-slate-100">
+              <tr className="bg-gray-100 dark:bg-slate-800">
+                <th className="px-2 py-1 text-left font-medium text-gray-600 dark:text-slate-300">
                   Scope
                 </th>
-                <th className="border-l border-gray-300 px-2 py-1 text-left font-medium text-gray-600 dark:border-slate-600 dark:text-slate-100">
+                <th className="border-l border-gray-300 px-2 py-1 text-left font-medium text-gray-600 dark:border-slate-600 dark:text-slate-300">
                   Branch
                 </th>
-                <th className="border-l border-gray-300 px-2 py-1 text-left font-medium text-gray-600 dark:border-slate-600 dark:text-slate-100">
+                <th className="border-l border-gray-300 px-2 py-1 text-left font-medium text-gray-600 dark:border-slate-600 dark:text-slate-300">
                   Revision
                 </th>
-                <th className="border-l border-gray-300 px-2 py-1 text-left font-medium text-gray-600 dark:border-slate-600 dark:text-slate-100">
+                <th className="border-l border-gray-300 px-2 py-1 text-left font-medium text-gray-600 dark:border-slate-600 dark:text-slate-300">
                   Keyframe Hash
                 </th>
-                <th className="border-l border-gray-300 px-2 py-1 text-left font-medium text-gray-600 dark:border-slate-600 dark:text-slate-100">
+                <th className="border-l border-gray-300 px-2 py-1 text-left font-medium text-gray-600 dark:border-slate-600 dark:text-slate-300">
                   Replayed Hash
                 </th>
               </tr>
@@ -315,22 +315,22 @@ function ValidationResultView({ result }: { result: ValidationResult }) {
 
       {result.snapshotIssues.length > 0 && (
         <div className="flex flex-col gap-1">
-          <h3 className="text-sm font-medium text-gray-700 dark:text-slate-50">
+          <h3 className="text-sm font-medium text-gray-700 dark:text-slate-200">
             Snapshot Issues
           </h3>
           <table className="w-full border-collapse text-xs">
             <thead>
-              <tr className="bg-gray-100 dark:bg-slate-700">
-                <th className="px-2 py-1 text-left font-medium text-gray-600 dark:text-slate-100">
+              <tr className="bg-gray-100 dark:bg-slate-800">
+                <th className="px-2 py-1 text-left font-medium text-gray-600 dark:text-slate-300">
                   Scope
                 </th>
-                <th className="border-l border-gray-300 px-2 py-1 text-left font-medium text-gray-600 dark:border-slate-600 dark:text-slate-100">
+                <th className="border-l border-gray-300 px-2 py-1 text-left font-medium text-gray-600 dark:border-slate-600 dark:text-slate-300">
                   Branch
                 </th>
-                <th className="border-l border-gray-300 px-2 py-1 text-left font-medium text-gray-600 dark:border-slate-600 dark:text-slate-100">
+                <th className="border-l border-gray-300 px-2 py-1 text-left font-medium text-gray-600 dark:border-slate-600 dark:text-slate-300">
                   Snapshot Hash
                 </th>
-                <th className="border-l border-gray-300 px-2 py-1 text-left font-medium text-gray-600 dark:border-slate-600 dark:text-slate-100">
+                <th className="border-l border-gray-300 px-2 py-1 text-left font-medium text-gray-600 dark:border-slate-600 dark:text-slate-300">
                   Replayed Hash
                 </th>
               </tr>
@@ -368,16 +368,16 @@ function RebuildResultView({ result }: { result: RebuildResult }) {
         <span className="size-3 rounded-full bg-green-500 dark:bg-green-400" />
         <span className="text-sm font-medium">Rebuild complete</span>
       </div>
-      <div className="text-xs text-gray-500 dark:text-slate-100">
+      <div className="text-xs text-gray-500 dark:text-slate-400">
         Document: {result.documentId}
       </div>
       {result.keyframesDeleted > 0 && (
-        <div className="text-sm text-gray-700 dark:text-slate-50">
+        <div className="text-sm text-gray-700 dark:text-slate-200">
           Keyframes deleted: {result.keyframesDeleted}
         </div>
       )}
       {result.scopesInvalidated > 0 && (
-        <div className="text-sm text-gray-700 dark:text-slate-50">
+        <div className="text-sm text-gray-700 dark:text-slate-200">
           Scopes invalidated: {result.scopesInvalidated}
         </div>
       )}

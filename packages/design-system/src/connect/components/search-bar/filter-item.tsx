@@ -21,7 +21,7 @@ export const FilterItem: React.FC<FilterItemProps> = (props) => {
       )}
     >
       {item.icon}
-      <div className="text-sm font-semibold text-slate-200 dark:text-slate-400">
+      <div className="text-sm font-semibold text-slate-200 dark:text-slate-700">
         {item.label}
       </div>
     </div>

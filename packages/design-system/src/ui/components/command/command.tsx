@@ -28,9 +28,9 @@ const CommandInput = React.forwardRef<
       "group relative flex items-center border-b",
       "border-b-gray-300 dark:border-b-slate-900",
       "hover:border-b-gray-300 dark:hover:border-b-slate-800",
-      "hover:bg-gray-100 dark:hover:bg-slate-900",
+      "hover:bg-gray-100 dark:hover:bg-slate-800",
       "focus-within:border-b-gray-300 dark:focus-within:border-b-slate-800",
-      "focus-within:bg-gray-100 dark:focus-within:bg-slate-900",
+      "focus-within:bg-gray-100 dark:focus-within:bg-slate-800",
       wrapperClassName,
     )}
     cmdk-input-wrapper=""
@@ -39,8 +39,8 @@ const CommandInput = React.forwardRef<
       name="Search"
       size={16}
       className={cn(
-        "pointer-events-none absolute top-3.5 left-2 text-gray-500 dark:text-slate-700",
-        "group-hover:text-gray-700 dark:group-hover:text-slate-500",
+        "pointer-events-none absolute top-3.5 left-2 text-gray-500 dark:text-slate-400",
+        "group-hover:text-gray-700 dark:group-hover:text-slate-200",
         "group-focus-within:text-gray-900! dark:group-focus-within:text-slate-50!",
       )}
     />
@@ -48,7 +48,7 @@ const CommandInput = React.forwardRef<
       ref={ref}
       className={cn(
         "flex w-full bg-transparent pt-3 pr-3 pb-2 pl-8 text-sm/5 font-normal outline-none",
-        "placeholder:text-gray-500 dark:placeholder:text-slate-700",
+        "placeholder:text-gray-500 dark:placeholder:text-slate-400",
         "group-hover:placeholder:text-gray-700 dark:group-hover:placeholder:text-slate-500",
         "group-focus-within:placeholder:text-gray-700! dark:group-focus-within:placeholder:text-slate-300!",
         "disabled:cursor-not-allowed",

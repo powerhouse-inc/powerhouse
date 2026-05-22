@@ -13,8 +13,8 @@ export function Errors(props: ErrorsProps) {
   const hasErrors = !!errors?.length;
 
   const color = hasErrors
-    ? "text-red-800 dark:text-red-400"
-    : "text-green-700 dark:text-green-400";
+    ? "text-red-800 dark:text-red-100"
+    : "text-green-700 dark:text-green-100";
 
   const icon = hasErrors ? (
     <Icon name="Exclamation" size={16} />

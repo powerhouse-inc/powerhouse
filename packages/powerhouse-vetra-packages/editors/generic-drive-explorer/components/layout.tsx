@@ -66,7 +66,7 @@ DriveLayout.ContentSection = function DriveLayoutContentSection({
   return (
     <div className={cn(className)} {...containerProps} {...props}>
       {title && (
-        <div className="mb-4 text-base font-semibold text-gray-600 dark:text-slate-100">
+        <div className="mb-4 text-base font-semibold text-gray-600 dark:text-slate-300">
           {title}
         </div>
       )}

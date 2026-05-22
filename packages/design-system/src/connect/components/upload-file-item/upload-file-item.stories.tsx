@@ -49,7 +49,7 @@ const Template: Story = {
   args: {},
   decorators: [
     (Story) => (
-      <div className="flex h-screen w-[338px] items-center justify-center bg-gray-50 p-8 dark:bg-slate-800">
+      <div className="flex h-screen w-[338px] items-center justify-center bg-gray-50 p-8 dark:bg-slate-900">
         <Story />
       </div>
     ),

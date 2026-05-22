@@ -51,7 +51,7 @@ export const DebugSettingsModal: React.FC = () => {
             const label = shortGitSha(sha);
             return url ? (
               <a
-                className="ml-2 font-mono text-xs font-normal text-blue-600 hover:underline dark:text-blue-400"
+                className="ml-2 font-mono text-xs font-normal text-blue-600 hover:underline dark:text-blue-100"
                 href={url}
                 target="_blank"
                 rel="noreferrer noopener"
@@ -61,7 +61,7 @@ export const DebugSettingsModal: React.FC = () => {
               </a>
             ) : (
               <span
-                className="ml-2 font-mono text-xs font-normal text-gray-500 dark:text-slate-100"
+                className="ml-2 font-mono text-xs font-normal text-gray-500 dark:text-slate-400"
                 title={sha}
               >
                 ({label})

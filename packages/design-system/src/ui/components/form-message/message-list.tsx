@@ -27,9 +27,9 @@ export const FormMessageList: React.FC<FormMessageListProps> = ({
   }
 
   const typeClasses: Record<FormMessageType, string> = {
-    error: "before:bg-red-900 dark:before:bg-red-900",
-    info: "before:bg-blue-900 dark:before:bg-blue-900",
-    warning: "before:bg-orange-900 dark:before:bg-orange-900",
+    error: "before:bg-red-900 dark:before:bg-red-50",
+    info: "before:bg-blue-900 dark:before:bg-blue-50",
+    warning: "before:bg-orange-900 dark:before:bg-orange-50",
   };
 
   return (

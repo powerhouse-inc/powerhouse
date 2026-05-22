@@ -29,10 +29,10 @@ export const AllIcons: Story = {
               <div className="flex size-10 items-center justify-center">
                 <Icon
                   name={name}
-                  className="text-gray-700 dark:text-slate-50"
+                  className="text-gray-700 dark:text-slate-200"
                 />
               </div>
-              <span className="text-xs text-gray-600 dark:text-slate-100">
+              <span className="text-xs text-gray-600 dark:text-slate-300">
                 {name}
               </span>
             </div>

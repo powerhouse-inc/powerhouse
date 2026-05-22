@@ -20,7 +20,7 @@ export const InputDiff = ({
   return (
     <div
       className={cn(
-        "flex w-full items-center rounded-md font-sans text-sm/5 font-normal text-gray-700 dark:text-slate-50",
+        "flex w-full items-center rounded-md font-sans text-sm/5 font-normal text-gray-700 dark:text-slate-200",
         "cursor-not-allowed border border-gray-300 bg-transparent px-3 dark:border-slate-600",
         !multiline && ellipsis && "truncate [&>span]:truncate",
         hasPadding && "items-start py-2",

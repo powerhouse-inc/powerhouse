@@ -28,7 +28,7 @@ export function ThemeSwitch() {
     <div
       role="radiogroup"
       aria-label="Theme"
-      className="flex w-fit flex-col items-center gap-4 rounded-xl bg-slate-50 dark:bg-slate-800"
+      className="flex w-fit flex-col items-center gap-4 rounded-xl bg-slate-50 dark:bg-slate-900"
     >
       {OPTIONS.map(({ value, Icon, label }) => (
         <div
@@ -45,7 +45,7 @@ export function ThemeSwitch() {
             "flex size-fit cursor-pointer content-center items-center transition-colors",
             isActive(value)
               ? "text-gray-900 dark:text-slate-50"
-              : "text-gray-500 dark:text-slate-200",
+              : "text-gray-500 dark:text-slate-400",
           )}
         >
           <Icon size={24} strokeWidth={2} aria-hidden="true" />

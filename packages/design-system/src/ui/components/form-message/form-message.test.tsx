@@ -21,13 +21,13 @@ describe("FormMessage", () => {
   it("applies correct classes for info type", () => {
     render(<FormMessage type="info">Info message</FormMessage>);
     const message = screen.getByText("Info message");
-    expect(message).toHaveClass("text-blue-900 dark:text-blue-400");
+    expect(message).toHaveClass("text-blue-900 dark:text-blue-100");
   });
 
   it("applies correct classes for warning type", () => {
     render(<FormMessage type="warning">Warning message</FormMessage>);
     const message = screen.getByText("Warning message");
-    expect(message).toHaveClass("text-yellow-900 dark:text-yellow-400");
+    expect(message).toHaveClass("text-yellow-900 dark:text-yellow-100");
   });
 
   it("renders with custom props", () => {

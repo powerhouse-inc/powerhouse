@@ -15,8 +15,8 @@ const IconRenderer: React.FC<{
         className={cn(
           "shrink-0",
           asPlaceholder
-            ? "text-gray-400 dark:text-slate-700"
-            : "text-gray-900 dark:text-slate-300",
+            ? "text-gray-400 dark:text-slate-500"
+            : "text-gray-900 dark:text-slate-50",
         )}
       />
     );
@@ -63,7 +63,7 @@ const ReloadButton: React.FC<{
         name={isFetchSelectedOptionSync ? "Checkmark" : "Reload"}
         size={16}
         className={cn(
-          "text-gray-500 dark:text-slate-600",
+          "text-gray-500 dark:text-slate-400",
           isLoadingSelectedOption && "animate-spin",
           isFetchSelectedOptionSync && "animate-fade-in duration-500",
         )}
@@ -105,8 +105,8 @@ const IdAutocompleteListOption: React.FC<IdAutocompleteListOptionProps> = ({
         className={cn(
           "truncate text-xs/5",
           asPlaceholder
-            ? "text-gray-400 dark:text-slate-700"
-            : "text-gray-500 dark:text-slate-600",
+            ? "text-gray-400 dark:text-slate-500"
+            : "text-gray-500 dark:text-slate-400",
         )}
       >
         {value}
@@ -126,8 +126,8 @@ const IdAutocompleteListOption: React.FC<IdAutocompleteListOptionProps> = ({
             className={cn(
               "truncate text-sm/5 font-bold",
               asPlaceholder
-                ? "text-gray-400 dark:text-slate-700"
-                : "text-gray-900 dark:text-slate-300",
+                ? "text-gray-400 dark:text-slate-500"
+                : "text-gray-900 dark:text-slate-50",
             )}
           >
             {title}
@@ -138,7 +138,7 @@ const IdAutocompleteListOption: React.FC<IdAutocompleteListOptionProps> = ({
               target="_blank"
               rel="noopener noreferrer"
               className={cn(
-                "truncate text-xs/5 text-blue-900 hover:underline focus-visible:outline-none dark:text-blue-400",
+                "truncate text-xs/5 text-blue-900 hover:underline focus-visible:outline-none dark:text-blue-100",
               )}
             >
               {path.text}
@@ -148,8 +148,8 @@ const IdAutocompleteListOption: React.FC<IdAutocompleteListOptionProps> = ({
               className={cn(
                 "truncate text-xs/5",
                 asPlaceholder
-                  ? "text-gray-400 dark:text-slate-700"
-                  : "text-gray-500 dark:text-slate-600",
+                  ? "text-gray-400 dark:text-slate-500"
+                  : "text-gray-500 dark:text-slate-400",
               )}
             >
               {typeof path === "object" ? path.text : path}
@@ -171,8 +171,8 @@ const IdAutocompleteListOption: React.FC<IdAutocompleteListOptionProps> = ({
             className={cn(
               "truncate text-xs/5",
               asPlaceholder
-                ? "text-gray-400 dark:text-slate-700"
-                : "text-gray-500 dark:text-slate-600",
+                ? "text-gray-400 dark:text-slate-500"
+                : "text-gray-500 dark:text-slate-400",
             )}
           >
             {value}
@@ -185,8 +185,8 @@ const IdAutocompleteListOption: React.FC<IdAutocompleteListOptionProps> = ({
             className={cn(
               "line-clamp-2 text-xs/5",
               asPlaceholder
-                ? "text-gray-400 dark:text-slate-700"
-                : "text-gray-900 dark:text-slate-300",
+                ? "text-gray-400 dark:text-slate-500"
+                : "text-gray-900 dark:text-slate-50",
             )}
           >
             {description}
@@ -201,8 +201,8 @@ const IdAutocompleteListOption: React.FC<IdAutocompleteListOptionProps> = ({
               className={cn(
                 "truncate text-xs/5",
                 asPlaceholder
-                  ? "text-gray-400 dark:text-slate-700"
-                  : "text-gray-500 dark:text-slate-600",
+                  ? "text-gray-400 dark:text-slate-500"
+                  : "text-gray-500 dark:text-slate-400",
               )}
             >
               {extraProps.agentType}

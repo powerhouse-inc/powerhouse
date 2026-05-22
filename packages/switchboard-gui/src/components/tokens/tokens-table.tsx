@@ -7,47 +7,47 @@ export const TokensTable = () => {
   return (
     <div className="overflow-x-auto">
       <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50 dark:bg-slate-800">
+        <thead className="bg-gray-50 dark:bg-slate-900">
           <tr>
             <th
               scope="col"
-              className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-slate-100"
+              className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-slate-400"
             >
               Name
             </th>
             <th
               scope="col"
-              className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-slate-100"
+              className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-slate-400"
             >
               Type
             </th>
             <th
               scope="col"
-              className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-slate-100"
+              className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-slate-400"
             >
               Token
             </th>
             <th
               scope="col"
-              className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-slate-100"
+              className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-slate-400"
             >
               Expires At
             </th>
             <th
               scope="col"
-              className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-slate-100"
+              className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-slate-400"
             >
               Allowed Origins
             </th>
             <th
               scope="col"
-              className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-slate-100"
+              className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-slate-400"
             >
               Status
             </th>
             <th
               scope="col"
-              className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-slate-100"
+              className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-slate-400"
             >
               Actions
             </th>
@@ -80,7 +80,7 @@ export const TokensTable = () => {
                 {session.revokedAt ? null : (
                   <button
                     onClick={() => revokeSession(session.id)}
-                    className="text-red-600 hover:text-red-900 dark:text-red-400"
+                    className="text-red-600 hover:text-red-900 dark:text-red-100 dark:hover:text-red-400"
                   >
                     Revoke
                   </button>

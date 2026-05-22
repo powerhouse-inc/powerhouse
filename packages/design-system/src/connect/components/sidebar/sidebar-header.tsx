@@ -19,7 +19,7 @@ export const ConnectSidebarHeader: React.FC<ConnectSidebarHeaderProps> = ({
     <SidebarHeader
       {...props}
       className={twMerge(
-        "flex justify-center gap-4 border-b border-gray-300 py-4 text-gray-500 dark:border-slate-400 dark:text-slate-200",
+        "flex justify-center gap-4 border-b border-gray-300 py-4 text-gray-500 dark:border-slate-600 dark:text-slate-400",
         className,
       )}
     >

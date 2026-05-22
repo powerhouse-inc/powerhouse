@@ -42,13 +42,13 @@ export const SettingsModalOld: React.FC<SettingsModalOldProps> = (props) => {
         <div className="flex justify-between">
           <h1 className="text-center text-xl font-bold">{title}</h1>
           <button
-            className="flex size-8 items-center justify-center rounded-md bg-gray-100 text-gray-500 outline-none hover:text-gray-900 dark:bg-slate-700 dark:text-slate-100 dark:hover:text-slate-50"
+            className="flex size-8 items-center justify-center rounded-md bg-gray-100 text-gray-500 outline-none hover:text-gray-900 dark:bg-slate-800 dark:text-slate-400 dark:hover:text-slate-50"
             onClick={() => onOpenChange?.(false)}
           >
             <Icon name="XmarkLight" size={24} />
           </button>
         </div>
-        <div className="mt-8 flex min-h-[50px] items-center justify-center rounded-md bg-slate-50 p-3 text-xs font-medium text-gray-600 dark:bg-slate-800 dark:text-slate-100">
+        <div className="mt-8 flex min-h-[50px] items-center justify-center rounded-md bg-slate-50 p-3 text-xs font-medium text-gray-600 dark:bg-slate-900 dark:text-slate-300">
           {body}
         </div>
         <div className="mt-4 flex flex-col gap-y-4">{children}</div>

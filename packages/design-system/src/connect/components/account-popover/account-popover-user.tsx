@@ -66,7 +66,7 @@ export const AccountPopoverUser: FC<AccountPopoverUserProps> = ({
             href={etherscanUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-2 text-sm text-gray-900 hover:text-gray-600 dark:text-slate-50 dark:hover:text-slate-100"
+            className="flex items-center gap-2 text-sm text-gray-900 hover:text-gray-600 dark:text-slate-50 dark:hover:text-slate-300"
           >
             <Icon name="Ethscan" size={14} />
             View on Etherscan
@@ -79,7 +79,7 @@ export const AccountPopoverUser: FC<AccountPopoverUserProps> = ({
           className={twMerge(
             "flex w-full items-center gap-2 text-sm text-red-900 dark:text-red-400",
             onDisconnect
-              ? "cursor-pointer hover:text-red-700 dark:hover:text-red-400"
+              ? "cursor-pointer hover:text-red-700 dark:hover:text-red-100"
               : "pointer-events-none cursor-wait",
           )}
           type="button"
