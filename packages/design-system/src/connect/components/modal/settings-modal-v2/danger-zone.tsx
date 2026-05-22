@@ -44,9 +44,13 @@ export function DangerZone(props: Props) {
         className,
       )}
     >
-      <h2 className="mb-4 font-semibold">Modify Drives</h2>
+      <h2 className="mb-4 font-semibold text-gray-800 dark:text-slate-100">
+        Modify Drives
+      </h2>
       <ModifyDrives {...rest} />
-      <h2 className="my-4 font-semibold">Local Storage</h2>
+      <h2 className="my-4 font-semibold text-gray-800 dark:text-slate-100">
+        Local Storage
+      </h2>
       <LocalStorage {...rest} />
     </div>
   );
@@ -105,7 +109,7 @@ function Drive(props: ModifyDrivesProps & { drive: DocumentDriveDocument }) {
   return (
     <div
       className={cn(
-        "mb-4 flex w-96 items-center gap-2 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 shadow-sm last-of-type:mb-0 dark:border-slate-700 dark:bg-slate-900",
+        "mb-4 flex w-96 items-center gap-2 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-gray-800 shadow-sm last-of-type:mb-0 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100",
         className,
       )}
     >
@@ -115,7 +119,7 @@ function Drive(props: ModifyDrivesProps & { drive: DocumentDriveDocument }) {
           {capitalCase(drive.header.name)}
         </span>
         <div className="flex items-baseline gap-x-2 leading-4.5">
-          <span className="text-sm text-gray-600 dark:text-slate-300">
+          <span className="text-sm text-gray-700 dark:text-slate-200">
             {capitalCase(getDriveSharingType(drive))} App
           </span>
           <a

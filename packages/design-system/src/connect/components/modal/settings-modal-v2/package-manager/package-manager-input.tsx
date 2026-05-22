@@ -78,12 +78,12 @@ function PackageResultCard(props: PackageResultCardProps) {
           {baseName}
         </p>
         {option.description && (
-          <p className="truncate text-xs text-gray-500 dark:text-slate-400">
+          <p className="truncate text-xs text-gray-700 dark:text-slate-200">
             {option.description}
           </p>
         )}
         {option.meta && (
-          <p className="truncate text-xs text-gray-400 dark:text-slate-500">
+          <p className="truncate text-xs text-gray-700 dark:text-slate-200">
             {option.meta}
           </p>
         )}

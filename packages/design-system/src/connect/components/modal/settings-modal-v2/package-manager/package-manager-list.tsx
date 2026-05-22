@@ -327,24 +327,24 @@ const PackageSection: React.FC<{
 
   return (
     <section className="mb-6">
-      <h3 className="sticky top-0 z-10 mb-3 border-b border-gray-200 bg-white dark:border-slate-700 dark:bg-slate-900">
+      <h3 className="sticky top-0 z-10 mb-3 border-b border-gray-200 bg-white text-gray-800 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
         <button
           type="button"
           onClick={toggle}
           aria-expanded={!collapsed}
           aria-controls={contentId}
-          className="flex w-full items-center gap-2 pb-2 text-left text-base font-semibold text-gray-900 hover:text-gray-700 dark:text-slate-50 dark:hover:text-slate-200"
+          className="flex w-full items-center gap-2 pb-2 text-left text-base font-semibold text-gray-800 hover:text-gray-700 dark:text-slate-100 dark:hover:text-slate-200"
         >
           <Icon
             name="ChevronDown"
             size={16}
             className={twMerge(
-              "shrink-0 text-gray-500 transition-transform dark:text-slate-400",
+              "shrink-0 text-gray-600 transition-transform dark:text-slate-300",
               collapsed && "-rotate-90",
             )}
           />
           <span>{title}</span>
-          <span className="text-xs font-medium text-gray-500 dark:text-slate-400">
+          <span className="text-xs font-medium text-gray-600 dark:text-slate-300">
             {count}
           </span>
         </button>
@@ -352,7 +352,7 @@ const PackageSection: React.FC<{
       {!collapsed && (
         <div id={contentId}>
           {isEmpty ? (
-            <p className="text-sm text-gray-500 dark:text-slate-400">
+            <p className="text-sm text-gray-600 dark:text-slate-300">
               {emptyText}
             </p>
           ) : (
@@ -371,9 +371,9 @@ const PackageSubSection: React.FC<{
 }> = ({ title, count, children }) => {
   return (
     <div>
-      <h4 className="mb-2 flex items-baseline gap-2 text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-slate-400">
+      <h4 className="mb-2 flex items-baseline gap-2 text-xs font-semibold tracking-wide text-gray-600 uppercase dark:text-slate-300">
         <span>{title}</span>
-        <span className="font-medium tracking-normal text-gray-400 normal-case dark:text-slate-500">
+        <span className="font-medium tracking-normal text-gray-500 normal-case dark:text-slate-400">
           ({count})
         </span>
       </h4>
