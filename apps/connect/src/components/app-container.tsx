@@ -4,7 +4,7 @@ import {
   useAppModuleById,
   useDefaultAppModule,
   useSelectedDocumentId,
-  useSelectedDrive,
+  useSelectedDriveSafe,
 } from "@powerhousedao/reactor-browser";
 import { Suspense } from "react";
 import { DocumentEditorContainer } from "./document-editor-container.js";
@@ -12,11 +12,15 @@ import { EditorLoader } from "./editor-loader.js";
 import { ErrorBoundary } from "./error-boundary.js";
 
 export function AppContainer() {
-  const [selectedDrive] = useSelectedDrive();
+  const [selectedDrive] = useSelectedDriveSafe();
   const selectedDocumentId = useSelectedDocumentId();
 
-  const app = useAppModuleById(selectedDrive.header.meta?.preferredEditor);
+  const app = useAppModuleById(selectedDrive?.header.meta?.preferredEditor);
   const defaultApp = useDefaultAppModule();
+
+  if (!selectedDrive) {
+    return <EditorLoader />;
+  }
 
   const AppComponent =
     app?.Component ?? defaultApp?.Component ?? GenericDriveExplorer.Component;
