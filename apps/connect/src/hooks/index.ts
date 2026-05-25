@@ -4,6 +4,7 @@ export * from "./useClientErrorHandler.js";
 export * from "./useCookieBanner.js";
 export * from "./useFailedInstallations.js";
 export * from "./useInitSentry.js";
+export * from "./useIsEmbedded.js";
 export * from "./usePendingInstallations.js";
 export * from "./useRegistryPackages.js";
 export * from "./useUndoRedoShortcuts.js";
