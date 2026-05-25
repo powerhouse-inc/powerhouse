@@ -37,7 +37,9 @@ export const About: React.FC = () => {
       <AppGitHash />
       <ConnectedDrives />
       <div className="bg-white p-3 dark:bg-slate-900">
-        <h2 className="mb-2 font-semibold">Inspector</h2>
+        <h2 className="mb-2 font-semibold text-gray-700 dark:text-slate-200">
+          Inspector
+        </h2>
         <p className="mb-3 text-sm font-normal text-gray-600 dark:text-slate-300">
           Explore the local database and sync state for debugging.
         </p>
@@ -96,7 +98,9 @@ function ConnectedDrives() {
 
   return (
     <div className="my-4 bg-white p-3 dark:bg-slate-900">
-      <h2 className="mb-2 font-semibold">Connected drives</h2>
+      <h2 className="mb-2 font-semibold text-gray-700 dark:text-slate-200">
+        Connected drives
+      </h2>
       {remoteDrives.length === 0 ? (
         <p className="text-sm font-normal text-gray-600 dark:text-slate-300">
           No connected remote drives.

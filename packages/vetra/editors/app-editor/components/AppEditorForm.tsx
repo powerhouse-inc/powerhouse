@@ -153,7 +153,7 @@ export const AppEditorForm = () => {
           onChange={(e) => handleSetAppName(e.target.value)}
           disabled={isReadOnly}
           className={twMerge(
-            "w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-slate-600",
+            "w-full rounded-md border border-gray-300 px-3 py-2 placeholder:text-gray-400 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-slate-600 dark:placeholder:text-slate-500",
             isReadOnly
               ? "cursor-not-allowed bg-gray-100 dark:bg-slate-800"
               : "",

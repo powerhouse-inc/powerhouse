@@ -5,7 +5,6 @@ type SystemTheme = Theme;
 type StoredTheme = "light" | "dark" | "system";
 
 const STORED_THEME_KEY = "ph:theme" as const;
-
 const UPDATE_STORED_THEME = "ph:updateStoredTheme" as const;
 const STORED_THEME_UPDATED = "ph:storedThemeUpdated" as const;
 const SYSTEM_THEME_UPDATED = "ph:systemThemeUpdated" as const;

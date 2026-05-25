@@ -268,7 +268,12 @@ export const ProcessorEditorForm: React.FC<ProcessorEditorFormProps> = ({
                       }
                     }}
                   />
-                  <label htmlFor={processorApp}>{processorApp}</label>
+                  <label
+                    htmlFor={processorApp}
+                    className="text-gray-700 dark:text-slate-200"
+                  >
+                    {processorApp}
+                  </label>
                 </div>
               ))}
             </>

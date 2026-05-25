@@ -259,7 +259,7 @@ export function RemotesInspector({
         </div>
       )}
 
-      <div className="scrollbar-thin max-h-full overflow-auto rounded-lg border border-gray-300 scrollbar-thumb-gray-300 scrollbar-thumb-rounded-md scrollbar-track-transparent dark:scrollbar-thumb-slate-600 dark:border-slate-600">
+      <div className="scrollbar-thin max-h-full overflow-auto rounded-lg border border-gray-300 scrollbar-thumb-gray-300 scrollbar-thumb-rounded-md scrollbar-track-transparent dark:border-slate-600 dark:scrollbar-thumb-slate-600">
         <table className="w-full border-collapse">
           <thead className="sticky top-0 bg-gray-100 dark:bg-slate-800">
             <tr>
