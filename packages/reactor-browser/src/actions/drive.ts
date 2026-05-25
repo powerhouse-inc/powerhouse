@@ -47,7 +47,9 @@ export async function waitForDocumentReady(
 
   return new Promise<void>((resolve, reject) => {
     let settled = false;
+    // eslint-disable-next-line prefer-const
     let unsubscribe: (() => void) | undefined;
+    // eslint-disable-next-line prefer-const
     let timer: ReturnType<typeof setTimeout> | undefined;
     let abortHandler: (() => void) | undefined;
 
@@ -81,15 +83,11 @@ export async function waitForDocumentReady(
 
     if (signal) {
       if (signal.aborted) {
-        settle(() =>
-          reject(new DOMException("Aborted", "AbortError")),
-        );
+        settle(() => reject(new DOMException("Aborted", "AbortError")));
         return;
       }
       abortHandler = () => {
-        settle(() =>
-          reject(new DOMException("Aborted", "AbortError")),
-        );
+        settle(() => reject(new DOMException("Aborted", "AbortError")));
       };
       signal.addEventListener("abort", abortHandler);
     }
