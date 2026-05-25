@@ -1,114 +1,154 @@
-import { useSyncExternalStore } from "react";
-import { doNothing } from "remeda";
-import type { IsUndefined } from "type-fest";
-export type Theme = "light" | "dark";
-type ThemeWithSystem = "light" | "dark" | "system";
+import { useEffect, useSyncExternalStore } from "react";
 
-const updateThemeEventName = "ph:themeUpdated";
+type Theme = "light" | "dark";
+type SystemTheme = Theme;
+type StoredTheme = "light" | "dark" | "system";
 
-const STORAGE_KEY = "ph:theme" as const;
+const STORED_THEME_KEY = "ph:theme" as const;
 
+const UPDATE_STORED_THEME = "ph:updateStoredTheme" as const;
+const STORED_THEME_UPDATED = "ph:storedThemeUpdated" as const;
+const SYSTEM_THEME_UPDATED = "ph:systemThemeUpdated" as const;
 const isServer = typeof window === "undefined";
-const getIsServer = () => isServer;
 
-const clientOnly =
-  <Args extends readonly unknown[], Return, TFallback>(
-    fn: (
-      ...args: Args
-    ) => Return | IsUndefined<TFallback> extends true ? undefined : TFallback,
-    fallback?: TFallback,
-  ) =>
-  (...args: Args) =>
-    getIsServer() ? (fallback as TFallback) : fn(...args);
+type UpdateStoredThemeEvent = CustomEvent<{ storedTheme: StoredTheme }>;
+type StoredThemeUpdatedEvent = CustomEvent<{ storedTheme: StoredTheme }>;
+type SystemThemeUpdatedEvent = CustomEvent<{ systemTheme: SystemTheme }>;
 
-const getStoredTheme = clientOnly(
-  () => (localStorage.getItem(STORAGE_KEY) as Theme | null) ?? undefined,
-);
-
-const setStoredTheme = clientOnly((theme: Theme) =>
-  localStorage.setItem(STORAGE_KEY, theme),
-);
-
-const removeStoredTheme = clientOnly(() =>
-  localStorage.removeItem(STORAGE_KEY),
-);
-
-const getWindowColorSchemeMq = clientOnly(() =>
-  window.matchMedia("(prefers-color-scheme: dark)"),
-);
-
-const getThemeFromMq = clientOnly(() =>
-  getWindowColorSchemeMq()?.matches ? "dark" : "light",
-);
-
-const toggleDark = clientOnly((isDark: boolean) =>
-  document.documentElement.classList.toggle("dark", isDark),
-);
-
-const handleMqSchemeChange = clientOnly((e: MediaQueryListEvent) => {
-  const isSystem = getStoredTheme() === undefined;
-  const isDark = e.matches;
-  if (!isSystem) return;
-  toggleDark(isDark);
-});
-
-const getThemeSnapshot = clientOnly(
-  () => getStoredTheme() ?? "system",
-  "light" as ThemeWithSystem,
-);
-
-const getServerSideThemeSnapshot = () => "light" as ThemeWithSystem;
-
-export const setTheme = clientOnly((themeWithSystem: ThemeWithSystem) => {
-  const isSystem = themeWithSystem === "system";
-
-  if (isSystem) removeStoredTheme();
-  else setStoredTheme(themeWithSystem);
-
-  const themeFromMq = getThemeFromMq();
-  const theme = isSystem ? themeFromMq : themeWithSystem;
-  const isDark = theme === "dark";
-
-  const themeUpdatedEvent = new CustomEvent(updateThemeEventName, {
-    detail: theme,
-  });
-
-  toggleDark(isDark);
-  window.dispatchEvent(themeUpdatedEvent);
-});
-
-const subscribeToTheme = clientOnly((onStoreChange: () => void) => {
-  window.addEventListener(updateThemeEventName, onStoreChange);
-  return () => {
-    window.removeEventListener(updateThemeEventName, onStoreChange);
-  };
-}, doNothing());
-
-export const initTheme = () => {
-  const mq = getWindowColorSchemeMq();
-  const storedTheme = getStoredTheme();
-  const themeFromMq = getThemeFromMq();
-  const theme = storedTheme ?? themeFromMq;
-  const isDark = theme === "dark";
-  toggleDark(isDark);
-  if (!isServer) {
-    mq.addEventListener("change", handleMqSchemeChange);
-  }
+type ThemeWindowEvents = {
+  [UPDATE_STORED_THEME]: UpdateStoredThemeEvent;
+  [STORED_THEME_UPDATED]: StoredThemeUpdatedEvent;
+  [SYSTEM_THEME_UPDATED]: SystemThemeUpdatedEvent;
 };
 
-export const useTheme = () => {
-  const themeWithSystem = useSyncExternalStore(
-    subscribeToTheme,
-    getThemeSnapshot,
-    getServerSideThemeSnapshot,
+declare global {
+  interface WindowEventMap extends ThemeWindowEvents {}
+}
+
+function setStoredTheme(storedTheme: StoredTheme) {
+  if (isServer) return;
+  localStorage.setItem(STORED_THEME_KEY, storedTheme);
+}
+
+function setTheme(storedTheme: StoredTheme) {
+  if (isServer) return;
+  const updateStoredThemeEvent = new CustomEvent(UPDATE_STORED_THEME, {
+    detail: {
+      storedTheme,
+    },
+  });
+  window.dispatchEvent(updateStoredThemeEvent);
+}
+
+function handleUpdateStoredTheme(event: UpdateStoredThemeEvent) {
+  if (isServer) return;
+  const storedTheme = event.detail.storedTheme;
+  setStoredTheme(storedTheme);
+  const storedThemeUpdatedEvent = new CustomEvent(STORED_THEME_UPDATED, {
+    detail: { storedTheme },
+  });
+  window.dispatchEvent(storedThemeUpdatedEvent);
+}
+
+function getStoredTheme() {
+  if (isServer) return undefined;
+  const storedTheme = localStorage.getItem(STORED_THEME_KEY) ?? undefined;
+  return storedTheme as StoredTheme;
+}
+
+function getPrefersDarkMediaQuery() {
+  if (isServer) return;
+  const prefersDarkMediaQuery = window.matchMedia(
+    "(prefers-color-scheme: dark)",
+  );
+  return prefersDarkMediaQuery;
+}
+
+function getPrefersDark() {
+  if (isServer) return false;
+  const prefersDark = getPrefersDarkMediaQuery();
+  if (prefersDark?.matches) return true;
+  return false;
+}
+
+function getSystemTheme(): SystemTheme {
+  if (isServer) return "light";
+  const prefersDark = getPrefersDark();
+  if (prefersDark) return "dark";
+  return "light";
+}
+
+function handleSystemThemeChange(event: MediaQueryListEvent) {
+  const isDark = event.matches;
+  const systemTheme = isDark ? "dark" : "light";
+  const systemThemeUpdatedEvent = new CustomEvent(SYSTEM_THEME_UPDATED, {
+    detail: { systemTheme },
+  });
+  window.dispatchEvent(systemThemeUpdatedEvent);
+}
+
+function toggleDark(isDark: boolean) {
+  if (isServer) return;
+  document.documentElement.classList.toggle("dark", isDark);
+}
+
+export function initTheme() {
+  if (isServer) return;
+
+  useEffect(() => {
+    window.addEventListener(UPDATE_STORED_THEME, handleUpdateStoredTheme);
+    const prefersDarkMediaQuery = getPrefersDarkMediaQuery();
+    prefersDarkMediaQuery?.addEventListener("change", handleSystemThemeChange);
+    return () => {
+      window.removeEventListener(UPDATE_STORED_THEME, handleUpdateStoredTheme);
+      prefersDarkMediaQuery?.removeEventListener(
+        "change",
+        handleSystemThemeChange,
+      );
+    };
+  }, []);
+}
+
+function subscribeToStoredTheme(onStoreChange: () => void) {
+  if (isServer) return () => {};
+  window.addEventListener(STORED_THEME_UPDATED, onStoreChange);
+  return () => {
+    window.removeEventListener(STORED_THEME_UPDATED, onStoreChange);
+  };
+}
+
+function subscribeToSystemTheme(onStoreChange: () => void) {
+  if (isServer) return () => {};
+  window.addEventListener(SYSTEM_THEME_UPDATED, onStoreChange);
+  return () => {
+    window.removeEventListener(SYSTEM_THEME_UPDATED, onStoreChange);
+  };
+}
+
+export function useTheme() {
+  const storedTheme = useSyncExternalStore(
+    subscribeToStoredTheme,
+    () => getStoredTheme(),
+    () => "system" as const,
+  );
+  const systemTheme = useSyncExternalStore(
+    subscribeToSystemTheme,
+    () => getSystemTheme(),
+    () => "light" as const,
   );
 
-  const isSystem = themeWithSystem === "system";
-  const theme = isSystem ? getThemeFromMq() : themeWithSystem;
+  const isSystem = storedTheme === undefined || storedTheme === "system";
+
+  const theme = isSystem ? systemTheme : storedTheme;
+  const isDark = theme === "dark";
+
+  useEffect(() => {
+    toggleDark(isDark);
+  }, [isDark]);
 
   return {
     theme,
     isSystem,
     setTheme,
   } as const;
-};
+}
