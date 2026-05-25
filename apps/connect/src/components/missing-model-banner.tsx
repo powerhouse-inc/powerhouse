@@ -85,7 +85,7 @@ function MissingModelDetailsModal(props: DetailsProps) {
       contentProps={{ className: "rounded-3xl" }}
     >
       <div className="w-[520px] max-w-[90vw] bg-white p-6 dark:bg-slate-800">
-        <div className="border-b border-slate-100 pb-2 text-2xl font-bold text-gray-800 dark:border-slate-800 dark:text-slate-100">
+        <div className="border-b border-slate-100 pb-2 text-2xl font-bold text-gray-800 dark:border-slate-500 dark:text-slate-100">
           Missing document models
         </div>
         <div className="my-4 text-sm text-gray-600 dark:text-slate-300">
@@ -152,7 +152,7 @@ function MissingModelDetailsModal(props: DetailsProps) {
           <button
             type="button"
             onClick={onClose}
-            className="min-h-[36px] rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-800"
+            className="min-h-[36px] rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50 dark:border-slate-500 dark:bg-slate-800 dark:hover:bg-slate-800"
           >
             Close
           </button>

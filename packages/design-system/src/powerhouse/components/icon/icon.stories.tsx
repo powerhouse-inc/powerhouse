@@ -24,7 +24,7 @@ export const AllIcons: Story = {
           {iconNames.map((name) => (
             <div
               key={name}
-              className="flex flex-col items-center gap-2 rounded-lg border border-gray-200 p-4 dark:border-slate-700"
+              className="flex flex-col items-center gap-2 rounded-lg border border-gray-200 p-4 dark:border-slate-500"
             >
               <div className="flex size-10 items-center justify-center">
                 <Icon

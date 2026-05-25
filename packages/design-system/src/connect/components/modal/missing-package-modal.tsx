@@ -126,7 +126,7 @@ export function PackageInstallModal(props: PackageInstallModalProps) {
                     disabled={installing}
                     className={twMerge(
                       buttonStyles,
-                      "border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-800",
+                      "border border-slate-200 bg-white text-slate-800 dark:border-slate-500 dark:bg-slate-800",
                       installing && "cursor-not-allowed opacity-50",
                     )}
                   >

@@ -37,7 +37,7 @@ export const AccountPopoverLogin: FC<AccountPopoverLoginProps> = ({
       <button
         onClick={allowLogin ? handleLogin : undefined}
         className={twMerge(
-          "mt-4 flex h-7 w-full cursor-pointer items-center justify-center rounded-lg border border-gray-300 bg-transparent text-sm text-gray-900 active:opacity-70 dark:border-slate-600 dark:text-slate-50",
+          "mt-4 flex h-7 w-full cursor-pointer items-center justify-center rounded-lg border border-gray-300 bg-transparent text-sm text-gray-900 active:opacity-70 dark:border-slate-500 dark:text-slate-50",
           allowLogin ? "cursor-pointer" : "cursor-wait",
         )}
         type="button"

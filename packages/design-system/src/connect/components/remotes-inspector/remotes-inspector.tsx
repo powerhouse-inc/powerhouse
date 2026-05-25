@@ -221,7 +221,7 @@ export function RemotesInspector({
           {addRemoteManual && (
             <div className="flex items-center gap-1">
               <input
-                className="w-[260px] rounded-sm border border-gray-300 px-2 py-1.5 text-sm text-gray-900 placeholder:text-gray-400 dark:border-slate-600 dark:text-slate-50 dark:placeholder:text-slate-500"
+                className="w-[260px] rounded-sm border border-gray-300 px-2 py-1.5 text-sm text-gray-900 placeholder:text-gray-400 dark:border-slate-500 dark:text-slate-50 dark:placeholder:text-slate-500"
                 disabled={adding}
                 onChange={(e) => setManualUrl(e.target.value)}
                 onKeyDown={(e) => {
@@ -232,7 +232,7 @@ export function RemotesInspector({
                 value={manualUrl}
               />
               <button
-                className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 dark:border-slate-500 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
                 disabled={adding || !manualUrl.trim()}
                 onClick={() => void handleAddManual()}
                 title="Register a remote drive in manual poll mode (no background polling)"
@@ -243,7 +243,7 @@ export function RemotesInspector({
             </div>
           )}
           <button
-            className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+            className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 dark:border-slate-500 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
             disabled={loading}
             onClick={() => void handleRefresh()}
             type="button"
@@ -259,7 +259,7 @@ export function RemotesInspector({
         </div>
       )}
 
-      <div className="scrollbar-thin max-h-full overflow-auto rounded-lg border border-gray-300 scrollbar-thumb-gray-300 scrollbar-thumb-rounded-md scrollbar-track-transparent dark:border-slate-600 dark:scrollbar-thumb-slate-600">
+      <div className="scrollbar-thin max-h-full overflow-auto rounded-lg border border-gray-300 scrollbar-thumb-gray-300 scrollbar-thumb-rounded-md scrollbar-track-transparent dark:border-slate-500 dark:scrollbar-thumb-slate-600">
         <table className="w-full border-collapse">
           <thead className="sticky top-0 bg-gray-100 dark:bg-slate-700">
             <tr>
@@ -277,7 +277,7 @@ export function RemotesInspector({
                     className={twMerge(
                       "group px-3 py-2 text-left text-xs font-medium text-gray-600 dark:text-slate-300",
                       index > 0 &&
-                        "border-l border-gray-300 dark:border-slate-600",
+                        "border-l border-gray-300 dark:border-slate-500",
                       isSortable &&
                         "cursor-pointer hover:bg-gray-200 hover:text-gray-900 dark:hover:bg-slate-600 dark:hover:text-slate-50",
                     )}
@@ -325,12 +325,12 @@ export function RemotesInspector({
                       {truncateId(remote.id)}
                     </span>
                   </td>
-                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-600 dark:text-slate-50">
+                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-500 dark:text-slate-50">
                     <span className="block truncate" title={remote.name}>
                       {remote.name}
                     </span>
                   </td>
-                  <td className="border-l border-gray-300 px-3 py-2 dark:border-slate-600">
+                  <td className="border-l border-gray-300 px-3 py-2 dark:border-slate-500">
                     {connectionStates?.get(remote.name) ? (
                       <ConnectionStateBadge
                         failureCount={
@@ -344,7 +344,7 @@ export function RemotesInspector({
                       </span>
                     )}
                   </td>
-                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-600 dark:text-slate-50">
+                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-500 dark:text-slate-50">
                     <span
                       className="block truncate"
                       title={remote.collectionId}
@@ -352,7 +352,7 @@ export function RemotesInspector({
                       {remote.collectionId}
                     </span>
                   </td>
-                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-600 dark:text-slate-50">
+                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-500 dark:text-slate-50">
                     <span
                       className="block truncate"
                       title={formatFilter(remote.filter)}
@@ -360,7 +360,7 @@ export function RemotesInspector({
                       {formatFilter(remote.filter)}
                     </span>
                   </td>
-                  <td className="border-l border-gray-300 px-3 py-2 dark:border-slate-600">
+                  <td className="border-l border-gray-300 px-3 py-2 dark:border-slate-500">
                     <button
                       className="flex items-center gap-1 rounded-sm bg-blue-50 px-2 py-1 text-xs text-blue-700 hover:bg-blue-100 dark:bg-blue-900 dark:text-blue-100 dark:hover:bg-blue-800"
                       onClick={() => handleViewChannel(remote)}
@@ -371,7 +371,7 @@ export function RemotesInspector({
                     </button>
                   </td>
                   {hasRowActions && (
-                    <td className="border-l border-gray-300 px-3 py-2 dark:border-slate-600">
+                    <td className="border-l border-gray-300 px-3 py-2 dark:border-slate-500">
                       <div className="flex items-center gap-1">
                         {triggerPull && (
                           <button

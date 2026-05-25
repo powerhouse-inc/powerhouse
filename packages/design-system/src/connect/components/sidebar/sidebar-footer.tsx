@@ -38,7 +38,7 @@ export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
     <SidebarFooter
       {...props}
       className={twMerge(
-        "flex flex-col items-center gap-3 border-t border-gray-300 px-2 py-4 dark:border-slate-600",
+        "flex flex-col items-center gap-3 border-t border-gray-300 px-2 py-4 dark:border-slate-500",
         className,
       )}
     >

@@ -19,7 +19,7 @@ import {
 
 const classesToReplace: ClassNameRecord = pipe(
   {
-    "border-slate-900": "border-slate-500",
+    "border-slate-600": "border-slate-500",
   },
   makeAncillaryClasses,
   mapKeys(addPrefix("dark:")),
