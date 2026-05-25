@@ -36,7 +36,7 @@ export const About: React.FC = () => {
       />
       <AppGitHash />
       <ConnectedDrives />
-      <div className="bg-white p-3 dark:bg-slate-900">
+      <div className="bg-white p-3 dark:bg-slate-800">
         <h2 className="mb-2 font-semibold text-gray-700 dark:text-slate-200">
           Inspector
         </h2>
@@ -44,7 +44,7 @@ export const About: React.FC = () => {
           Explore the local database and sync state for debugging.
         </p>
         <button
-          className="flex items-center gap-x-2 rounded-md border border-gray-300 bg-transparent px-3 py-1 text-sm font-medium text-gray-900 transition-colors hover:bg-gray-100 dark:border-slate-600 dark:text-slate-50 dark:hover:bg-slate-800"
+          className="flex items-center gap-x-2 rounded-md border border-gray-300 bg-transparent px-3 py-1 text-sm font-medium text-gray-900 transition-colors hover:bg-gray-100 dark:border-slate-600 dark:text-slate-50 dark:hover:bg-slate-700"
           onClick={onOpenInspector}
           type="button"
         >
@@ -61,7 +61,7 @@ function AppGitHash() {
   const url = getGitUrl();
   const label = shortGitSha(sha);
   return (
-    <div className="bg-white p-3 text-sm dark:bg-slate-900">
+    <div className="bg-white p-3 text-sm dark:bg-slate-800">
       <span className="font-semibold">Git hash: </span>
       {url ? (
         <a
@@ -97,7 +97,7 @@ function ConnectedDrives() {
   );
 
   return (
-    <div className="my-4 bg-white p-3 dark:bg-slate-900">
+    <div className="my-4 bg-white p-3 dark:bg-slate-800">
       <h2 className="mb-2 font-semibold text-gray-700 dark:text-slate-200">
         Connected drives
       </h2>

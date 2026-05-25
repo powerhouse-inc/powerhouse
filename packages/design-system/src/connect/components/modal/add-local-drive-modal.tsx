@@ -38,7 +38,7 @@ export function AddLocalDriveModal(props: AddLocalDriveModal) {
       <div
         {...containerProps}
         className={twMerge(
-          "max-w-[408px] rounded-2xl bg-white p-6 dark:bg-slate-900",
+          "max-w-[408px] rounded-2xl bg-white p-6 dark:bg-slate-800",
           containerProps?.className,
         )}
       >
@@ -47,7 +47,7 @@ export function AddLocalDriveModal(props: AddLocalDriveModal) {
             Create new drive{" "}
           </h1>
           <button
-            className="flex size-8 items-center justify-center rounded-md bg-gray-100 text-gray-500 outline-none hover:text-gray-900 dark:bg-slate-800 dark:text-slate-400 dark:hover:text-slate-50"
+            className="flex size-8 items-center justify-center rounded-md bg-gray-100 text-gray-500 outline-none hover:text-gray-900 dark:bg-slate-700 dark:text-slate-400 dark:hover:text-slate-50"
             onClick={handleCancel}
             tabIndex={-1}
           >

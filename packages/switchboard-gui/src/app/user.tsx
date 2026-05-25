@@ -31,7 +31,7 @@ const User = () => {
   }
   return (
     <div className="flex flex-col gap-8 pt-14">
-      <div className="my-auto flex flex-row items-center gap-4 bg-white px-5 dark:bg-slate-900">
+      <div className="my-auto flex flex-row items-center gap-4 bg-white px-5 dark:bg-slate-800">
         <div className="flex border-b-4 border-orange-600 py-2 text-orange-500 dark:border-orange-300 dark:text-orange-100">
           API Tokens
         </div>
@@ -52,7 +52,7 @@ const User = () => {
         </div>
       </div>
       <TokenForm />
-      <div className="flex-flex-col gap-4 bg-white p-5 dark:bg-slate-900">
+      <div className="flex-flex-col gap-4 bg-white p-5 dark:bg-slate-800">
         <div className="mb-4 font-semibold">Existing Tokens</div>
         <TokensTable />
       </div>

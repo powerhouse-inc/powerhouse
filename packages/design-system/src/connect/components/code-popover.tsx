@@ -81,7 +81,7 @@ export function CodePopover(props: {
             bottom: -10_000,
             left: 24,
           }}
-          className="z-50 rounded-lg border border-gray-200 bg-white p-2 text-xs shadow-tooltip outline-none dark:border-slate-700 dark:bg-slate-900"
+          className="z-50 rounded-lg border border-gray-200 bg-white p-2 text-xs shadow-tooltip outline-none dark:border-slate-700 dark:bg-slate-800"
         >
           {content}
         </Content>

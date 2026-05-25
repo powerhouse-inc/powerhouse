@@ -45,7 +45,7 @@ export function DebugInspector({
           Postgres cluster at the chosen major version, then reload. Useful for
           testing version-detection and migration flows.
         </p>
-        <div className="mt-2 inline-flex items-center gap-2 rounded-sm bg-gray-100 px-3 py-1 text-sm dark:bg-slate-800">
+        <div className="mt-2 inline-flex items-center gap-2 rounded-sm bg-gray-100 px-3 py-1 text-sm dark:bg-slate-700">
           <span className="text-gray-600 dark:text-slate-300">
             Current version:
           </span>
@@ -90,7 +90,7 @@ export function DebugInspector({
           <button
             type="button"
             onClick={() => setConfirmMajor(null)}
-            className="rounded-sm border border-gray-300 bg-white px-3 py-1 text-sm text-gray-600 hover:bg-gray-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-900"
+            className="rounded-sm border border-gray-300 bg-white px-3 py-1 text-sm text-gray-600 hover:bg-gray-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-800"
           >
             Cancel
           </button>

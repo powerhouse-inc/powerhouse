@@ -7,7 +7,7 @@ export const TokensTable = () => {
   return (
     <div className="overflow-x-auto">
       <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50 dark:bg-slate-900">
+        <thead className="bg-gray-50 dark:bg-slate-800">
           <tr>
             <th
               scope="col"
@@ -53,7 +53,7 @@ export const TokensTable = () => {
             </th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-200 bg-white dark:bg-slate-900">
+        <tbody className="divide-y divide-gray-200 bg-white dark:bg-slate-800">
           {sessions?.map((session, index) => (
             <tr key={index}>
               <td className="whitespace-nowrap px-6 py-4">{session.name}</td>

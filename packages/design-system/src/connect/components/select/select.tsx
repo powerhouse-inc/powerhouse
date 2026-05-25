@@ -67,7 +67,7 @@ export const ConnectSelect = /* @__PURE__ */ fixedForwardRef(function Select<
   return (
     <div
       className={twMerge(
-        "border border-gray-200 bg-gray-50 text-gray-800 transition-[border-radius] dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100",
+        "border border-gray-200 bg-gray-50 text-gray-800 transition-[border-radius] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100",
         absolutePositionMenu && "relative",
         containerClassName,
       )}

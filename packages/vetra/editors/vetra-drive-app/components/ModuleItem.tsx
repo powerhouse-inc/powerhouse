@@ -72,7 +72,7 @@ export const ModuleItem: React.FC<ModuleItemProps> = ({
     <div
       onClick={() => onClick(fileNode)}
       className={cn(
-        "group flex w-full cursor-pointer items-center gap-3 rounded-md bg-gray-100 p-1 text-left transition-colors hover:bg-gray-200 dark:bg-slate-800 dark:hover:bg-slate-700",
+        "group flex w-full cursor-pointer items-center gap-3 rounded-md bg-gray-100 p-1 text-left transition-colors hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600",
         className,
       )}
     >

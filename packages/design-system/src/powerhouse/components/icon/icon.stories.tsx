@@ -18,7 +18,7 @@ export const AllIcons: Story = {
   },
   render: () => {
     return (
-      <div className="bg-white p-8 dark:bg-slate-900">
+      <div className="bg-white p-8 dark:bg-slate-800">
         <h2 className="mb-6 text-xl font-semibold">All Available Icons</h2>
         <div className="flex flex-wrap">
           {iconNames.map((name) => (

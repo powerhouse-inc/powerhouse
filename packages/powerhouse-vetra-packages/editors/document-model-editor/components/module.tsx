@@ -49,7 +49,7 @@ export function Module(props: Props) {
     toggleNoInputRequired,
   } = props;
   return (
-    <div className="relative rounded-3xl bg-gray-100 p-6 dark:bg-slate-800">
+    <div className="relative rounded-3xl bg-gray-100 p-6 dark:bg-slate-700">
       <div className="mb-2 w-1/2 pr-6">
         <ModuleForm
           modules={modules}

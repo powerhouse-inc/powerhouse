@@ -31,7 +31,7 @@ export const Default: Story = {
 
 export const WithCustomClass: Story = {
   args: {
-    className: "bg-gray-100 dark:bg-slate-800",
+    className: "bg-gray-100 dark:bg-slate-700",
   },
 };
 

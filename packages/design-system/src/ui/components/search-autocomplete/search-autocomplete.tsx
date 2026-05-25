@@ -147,7 +147,7 @@ export const SearchAutocomplete: React.FC<SearchAutocompleteProps> = (
               return (
                 <div
                   key={option.value}
-                  className="flex items-center justify-between gap-2 rounded-md px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-slate-800"
+                  className="flex items-center justify-between gap-2 rounded-md px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-slate-700"
                 >
                   {renderOption ? (
                     <div className="min-w-0 flex-1">{renderOption(option)}</div>
@@ -178,7 +178,7 @@ export const SearchAutocomplete: React.FC<SearchAutocompleteProps> = (
                       {selectingContent}
                     </div>
                   ) : option.disabled ? (
-                    <span className="shrink-0 rounded-md bg-gray-100 px-3 py-1 text-xs font-medium text-gray-500 dark:bg-slate-800 dark:text-slate-400">
+                    <span className="shrink-0 rounded-md bg-gray-100 px-3 py-1 text-xs font-medium text-gray-500 dark:bg-slate-700 dark:text-slate-400">
                       {option.disabledLabel ?? "Unavailable"}
                     </span>
                   ) : (

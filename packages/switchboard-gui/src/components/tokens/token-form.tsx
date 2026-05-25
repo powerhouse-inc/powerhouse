@@ -43,7 +43,7 @@ const TokenForm = () => {
   const submitDisabled = formData.name === "";
 
   return (
-    <div className="bg-white p-5 dark:bg-slate-900">
+    <div className="bg-white p-5 dark:bg-slate-800">
       <span className="mb-4 mt-8 font-semibold">Create new token</span>
       <form
         onSubmit={handleSubmit}
@@ -122,7 +122,7 @@ const TokenForm = () => {
           <div className="outline-hidden focus:outline-hidden fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overflow-x-hidden">
             <div className="relative mx-auto my-6 w-auto max-w-3xl">
               {/*content*/}
-              <div className="outline-hidden focus:outline-hidden relative flex w-full flex-col rounded-lg border-0 bg-white shadow-lg dark:bg-slate-900">
+              <div className="outline-hidden focus:outline-hidden relative flex w-full flex-col rounded-lg border-0 bg-white shadow-lg dark:bg-slate-800">
                 {/*header*/}
                 <div className="border-blueGray-200 flex items-start justify-between rounded-t border-b border-solid p-5">
                   <h3 className="text-3xl font-semibold">API Token</h3>

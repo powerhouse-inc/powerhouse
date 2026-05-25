@@ -196,7 +196,7 @@ export function IntegrityInspector({
             Confirm
           </button>
           <button
-            className="rounded-sm border border-gray-300 bg-white px-3 py-1 text-sm text-gray-600 hover:bg-gray-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-900"
+            className="rounded-sm border border-gray-300 bg-white px-3 py-1 text-sm text-gray-600 hover:bg-gray-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-800"
             onClick={() => setConfirmAction(null)}
             type="button"
           >
@@ -269,7 +269,7 @@ function ValidationResultView({ result }: { result: ValidationResult }) {
           </h3>
           <table className="w-full border-collapse text-xs">
             <thead>
-              <tr className="bg-gray-100 dark:bg-slate-800">
+              <tr className="bg-gray-100 dark:bg-slate-700">
                 <th className="px-2 py-1 text-left font-medium text-gray-600 dark:text-slate-300">
                   Scope
                 </th>
@@ -291,7 +291,7 @@ function ValidationResultView({ result }: { result: ValidationResult }) {
               {result.keyframeIssues.map((issue, i) => (
                 <tr
                   key={`kf-${i}`}
-                  className="odd:bg-white even:bg-gray-50 dark:odd:bg-slate-900 dark:even:bg-slate-900"
+                  className="odd:bg-white even:bg-gray-50 dark:odd:bg-slate-800 dark:even:bg-slate-800"
                 >
                   <td className="px-2 py-1">{issue.scope}</td>
                   <td className="border-l border-gray-300 px-2 py-1 dark:border-slate-600">
@@ -320,7 +320,7 @@ function ValidationResultView({ result }: { result: ValidationResult }) {
           </h3>
           <table className="w-full border-collapse text-xs">
             <thead>
-              <tr className="bg-gray-100 dark:bg-slate-800">
+              <tr className="bg-gray-100 dark:bg-slate-700">
                 <th className="px-2 py-1 text-left font-medium text-gray-600 dark:text-slate-300">
                   Scope
                 </th>
@@ -339,7 +339,7 @@ function ValidationResultView({ result }: { result: ValidationResult }) {
               {result.snapshotIssues.map((issue, i) => (
                 <tr
                   key={`snap-${i}`}
-                  className="odd:bg-white even:bg-gray-50 dark:odd:bg-slate-900 dark:even:bg-slate-900"
+                  className="odd:bg-white even:bg-gray-50 dark:odd:bg-slate-800 dark:even:bg-slate-800"
                 >
                   <td className="px-2 py-1">{issue.scope}</td>
                   <td className="border-l border-gray-300 px-2 py-1 dark:border-slate-600">

@@ -87,7 +87,7 @@ export const AppSkeleton: React.FC<PropsWithChildren> = (props) => {
   const isSSR = typeof window === "undefined";
   const isHomeScreen = !isSSR && window.location.pathname === getBasePath();
   return (
-    <div className="flex h-screen overflow-hidden bg-white dark:bg-slate-900">
+    <div className="flex h-screen overflow-hidden bg-white dark:bg-slate-800">
       <ConnectSidebar
         className="animate-pulse"
         onLogin={undefined}

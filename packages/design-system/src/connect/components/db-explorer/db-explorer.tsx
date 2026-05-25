@@ -309,7 +309,7 @@ export function DBExplorer({
           <div className="flex shrink-0 flex-col gap-2 border-t border-gray-200 p-2 dark:border-slate-700">
             {onImportDb && (
               <button
-                className="rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+                className="rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
                 onClick={handleImportClick}
                 type="button"
               >
@@ -318,7 +318,7 @@ export function DBExplorer({
             )}
             {onExportDb && (
               <button
-                className="rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+                className="rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
                 onClick={handleExportClick}
                 type="button"
               >

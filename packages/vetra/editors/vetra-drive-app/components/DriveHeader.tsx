@@ -77,7 +77,7 @@ export const DriveHeader: React.FC<DriveHeaderProps> = ({
   }, [driveUrl]);
 
   return (
-    <div className="bg-gray-50 px-6 py-4 dark:bg-slate-900">
+    <div className="bg-gray-50 px-6 py-4 dark:bg-slate-800">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-gray-900 dark:text-slate-50">
           <VetraIcon width={20} height={20} />
@@ -88,7 +88,7 @@ export const DriveHeader: React.FC<DriveHeaderProps> = ({
             <button
               aria-label="Drive information"
               aria-expanded={isInfoMenuOpen}
-              className="rounded-full p-1 text-gray-500 transition-colors hover:bg-gray-100 dark:text-slate-400 dark:hover:bg-slate-800"
+              className="rounded-full p-1 text-gray-500 transition-colors hover:bg-gray-100 dark:text-slate-400 dark:hover:bg-slate-700"
               onClick={toggleInfoMenu}
             >
               <InfoIcon className="" />
@@ -96,7 +96,7 @@ export const DriveHeader: React.FC<DriveHeaderProps> = ({
             {isInfoMenuOpen && (
               <div
                 role="menu"
-                className="absolute top-full left-0 z-10 mt-2 flex flex-col items-start gap-2 rounded-lg bg-white p-3 shadow-lg dark:bg-slate-900"
+                className="absolute top-full left-0 z-10 mt-2 flex flex-col items-start gap-2 rounded-lg bg-white p-3 shadow-lg dark:bg-slate-800"
               >
                 <DriveInfoItem label="Name" value={driveName} />
                 <DriveInfoItem label="Drive ID" value={driveId} />
@@ -108,7 +108,7 @@ export const DriveHeader: React.FC<DriveHeaderProps> = ({
               <button
                 aria-label="Share drive"
                 aria-expanded={isShareMenuOpen}
-                className="rounded-full p-1 text-gray-900 transition-colors hover:bg-gray-100 dark:text-slate-50 dark:hover:bg-slate-800"
+                className="rounded-full p-1 text-gray-900 transition-colors hover:bg-gray-100 dark:text-slate-50 dark:hover:bg-slate-700"
                 onClick={toggleShareMenu}
               >
                 <ShareIcon width={16} height={16} />
@@ -116,7 +116,7 @@ export const DriveHeader: React.FC<DriveHeaderProps> = ({
               {isShareMenuOpen && (
                 <div
                   role="menu"
-                  className="absolute top-full left-0 z-10 mt-2 flex w-max flex-col gap-4 rounded-lg bg-white p-4 shadow-lg dark:bg-slate-900"
+                  className="absolute top-full left-0 z-10 mt-2 flex w-max flex-col gap-4 rounded-lg bg-white p-4 shadow-lg dark:bg-slate-800"
                 >
                   <ShareMenuItem label="Copy the Drive URL" url={driveUrl} />
                   <ShareMenuItem

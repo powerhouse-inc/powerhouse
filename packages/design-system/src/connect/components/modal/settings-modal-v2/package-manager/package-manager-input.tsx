@@ -72,7 +72,7 @@ function PackageResultCard(props: PackageResultCardProps) {
   const isDisabled = option.disabled === true;
 
   return (
-    <div className="flex items-start justify-between gap-3 rounded-md p-2 hover:bg-gray-50 dark:hover:bg-slate-900">
+    <div className="flex items-start justify-between gap-3 rounded-md p-2 hover:bg-gray-50 dark:hover:bg-slate-800">
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium text-gray-900 dark:text-slate-50">
           {baseName}
@@ -105,7 +105,7 @@ function PackageResultCard(props: PackageResultCardProps) {
             {selectingContent}
           </div>
         ) : isDisabled ? (
-          <span className="rounded-md bg-gray-100 px-3 py-1 text-xs font-medium text-gray-500 dark:bg-slate-800 dark:text-slate-400">
+          <span className="rounded-md bg-gray-100 px-3 py-1 text-xs font-medium text-gray-500 dark:bg-slate-700 dark:text-slate-400">
             {option.disabledLabel ?? "Unavailable"}
           </span>
         ) : (

@@ -72,7 +72,7 @@ export default function Editor() {
   );
 
   return (
-    <div className="bg-gray-50 p-6 dark:bg-slate-900">
+    <div className="bg-gray-50 p-6 dark:bg-slate-800">
       <DocumentToolbar />
       <ProcessorEditorForm
         onNameChange={onNameChange}

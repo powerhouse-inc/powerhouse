@@ -94,7 +94,7 @@ function DetailedFallback({ error, resetErrorBoundary }: FallbackProps) {
 
   return (
     <div className="z-10 mx-auto flex max-w-[80%] flex-1 items-center justify-center p-6">
-      <div className="w-full max-w-lg rounded-lg border border-gray-500 bg-white p-6 shadow-sm dark:border-slate-400 dark:bg-slate-900">
+      <div className="w-full max-w-lg rounded-lg border border-gray-500 bg-white p-6 shadow-sm dark:border-slate-400 dark:bg-slate-800">
         <div className="mb-3 flex items-center gap-2">
           <Icon name="Error" className="size-5 shrink-0" />
           <h1 className="text-lg font-semibold">Something went wrong</h1>
@@ -107,7 +107,7 @@ function DetailedFallback({ error, resetErrorBoundary }: FallbackProps) {
             <summary className="cursor-pointer text-sm font-medium text-gray-700 underline select-none hover:text-gray-700 dark:text-slate-200 dark:hover:text-slate-200">
               Show details
             </summary>
-            <pre className="mt-2 max-h-48 overflow-auto rounded-sm bg-gray-100 p-3 text-xs dark:bg-slate-800">
+            <pre className="mt-2 max-h-48 overflow-auto rounded-sm bg-gray-100 p-3 text-xs dark:bg-slate-700">
               {errorDetails}
             </pre>
           </details>

@@ -101,7 +101,7 @@ export const Primary: Story = {
   },
   decorators: [
     (Story) => (
-      <div className="h-dvh bg-gray-50 dark:bg-slate-900">
+      <div className="h-dvh bg-gray-50 dark:bg-slate-800">
         <Story />
       </div>
     ),

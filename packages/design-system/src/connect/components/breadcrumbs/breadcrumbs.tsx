@@ -54,7 +54,7 @@ export function Breadcrumbs() {
             type="button"
             aria-label="Back to home"
             title="Back to home"
-            className="flex items-center justify-center rounded-md p-1 text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-800 dark:text-slate-200 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+            className="flex items-center justify-center rounded-md p-1 text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-800 dark:text-slate-200 dark:hover:bg-slate-700 dark:hover:text-slate-100"
             onClick={() => setSelectedDrive(undefined)}
           >
             <Icon name="ArrowLeft" size={14} />
@@ -92,7 +92,7 @@ export function Breadcrumbs() {
         ) : (
           <button
             type="button"
-            className="ml-1 flex items-center justify-center gap-2 rounded-md bg-gray-50 px-2 py-1.5 text-gray-700 transition-colors hover:bg-gray-200 hover:text-gray-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-700 dark:hover:text-slate-100"
+            className="ml-1 flex items-center justify-center gap-2 rounded-md bg-gray-50 px-2 py-1.5 text-gray-700 transition-colors hover:bg-gray-200 hover:text-gray-800 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-600 dark:hover:text-slate-100"
             onClick={onAddNew}
           >
             <Icon name="Plus" size={14} />

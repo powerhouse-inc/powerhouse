@@ -1,5 +1,5 @@
 export const HomeBackgroundImage = () => (
-  <div className="pointer-events-none fixed top-0 z-0 size-full bg-white dark:bg-slate-900">
+  <div className="pointer-events-none fixed top-0 z-0 size-full bg-white dark:bg-slate-800">
     <svg
       width="1858"
       height="1256"

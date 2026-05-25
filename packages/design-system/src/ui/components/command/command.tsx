@@ -28,9 +28,9 @@ const CommandInput = React.forwardRef<
       "group relative flex items-center border-b",
       "border-b-gray-300 dark:border-b-slate-900",
       "hover:border-b-gray-300 dark:hover:border-b-slate-800",
-      "hover:bg-gray-100 dark:hover:bg-slate-800",
+      "hover:bg-gray-100 dark:hover:bg-slate-700",
       "focus-within:border-b-gray-300 dark:focus-within:border-b-slate-800",
-      "focus-within:bg-gray-100 dark:focus-within:bg-slate-800",
+      "focus-within:bg-gray-100 dark:focus-within:bg-slate-700",
       wrapperClassName,
     )}
     cmdk-input-wrapper=""

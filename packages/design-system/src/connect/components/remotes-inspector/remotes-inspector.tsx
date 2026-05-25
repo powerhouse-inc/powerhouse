@@ -232,7 +232,7 @@ export function RemotesInspector({
                 value={manualUrl}
               />
               <button
-                className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+                className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
                 disabled={adding || !manualUrl.trim()}
                 onClick={() => void handleAddManual()}
                 title="Register a remote drive in manual poll mode (no background polling)"
@@ -243,7 +243,7 @@ export function RemotesInspector({
             </div>
           )}
           <button
-            className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+            className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
             disabled={loading}
             onClick={() => void handleRefresh()}
             type="button"
@@ -261,7 +261,7 @@ export function RemotesInspector({
 
       <div className="scrollbar-thin max-h-full overflow-auto rounded-lg border border-gray-300 scrollbar-thumb-gray-300 scrollbar-thumb-rounded-md scrollbar-track-transparent dark:border-slate-600 dark:scrollbar-thumb-slate-600">
         <table className="w-full border-collapse">
-          <thead className="sticky top-0 bg-gray-100 dark:bg-slate-800">
+          <thead className="sticky top-0 bg-gray-100 dark:bg-slate-700">
             <tr>
               {columns.map((column, index) => {
                 const isActive = sort?.column === column.key;
@@ -279,7 +279,7 @@ export function RemotesInspector({
                       index > 0 &&
                         "border-l border-gray-300 dark:border-slate-600",
                       isSortable &&
-                        "cursor-pointer hover:bg-gray-200 hover:text-gray-900 dark:hover:bg-slate-700 dark:hover:text-slate-50",
+                        "cursor-pointer hover:bg-gray-200 hover:text-gray-900 dark:hover:bg-slate-600 dark:hover:text-slate-50",
                     )}
                     onClick={() => isSortable && handleSort(column.key)}
                     style={{ width: column.width }}
@@ -318,7 +318,7 @@ export function RemotesInspector({
               sortedRemotes.map((remote) => (
                 <tr
                   key={remote.id}
-                  className="odd:bg-white even:bg-gray-50 hover:bg-blue-50 dark:odd:bg-slate-900 dark:even:bg-slate-900 dark:hover:bg-blue-900"
+                  className="odd:bg-white even:bg-gray-50 hover:bg-blue-50 dark:odd:bg-slate-800 dark:even:bg-slate-800 dark:hover:bg-blue-900"
                 >
                   <td className="px-3 py-2 text-xs text-gray-900 dark:text-slate-50">
                     <span className="block truncate" title={remote.id}>
@@ -375,7 +375,7 @@ export function RemotesInspector({
                       <div className="flex items-center gap-1">
                         {triggerPull && (
                           <button
-                            className="rounded-sm bg-gray-100 px-2 py-1 text-xs text-gray-700 hover:bg-gray-200 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                            className="rounded-sm bg-gray-100 px-2 py-1 text-xs text-gray-700 hover:bg-gray-200 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
                             onClick={() => handlePull(remote)}
                             title="Trigger a single pull cycle for this remote"
                             type="button"

@@ -86,8 +86,8 @@ export const VersionPicker: React.FC<VersionPickerProps> = (props) => {
       <PopoverTrigger
         disabled={disabled || !hasAnyPickable}
         className={cn(
-          "flex items-center justify-between gap-2 rounded-md border border-gray-300 bg-white px-2.5 py-1 text-xs font-medium text-gray-800 transition-colors dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100",
-          "hover:bg-gray-50 focus:ring-2 focus:ring-gray-900/20 focus:outline-none dark:hover:bg-slate-900",
+          "flex items-center justify-between gap-2 rounded-md border border-gray-300 bg-white px-2.5 py-1 text-xs font-medium text-gray-800 transition-colors dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100",
+          "hover:bg-gray-50 focus:ring-2 focus:ring-gray-900/20 focus:outline-none dark:hover:bg-slate-800",
           "disabled:cursor-not-allowed disabled:opacity-60",
           className,
         )}
@@ -147,9 +147,9 @@ export const VersionPicker: React.FC<VersionPickerProps> = (props) => {
                     }}
                     className={cn(
                       "flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-xs transition-colors",
-                      "hover:bg-gray-100 dark:hover:bg-slate-800",
+                      "hover:bg-gray-100 dark:hover:bg-slate-700",
                       isSelected &&
-                        "bg-gray-100 font-semibold dark:bg-slate-800",
+                        "bg-gray-100 font-semibold dark:bg-slate-700",
                     )}
                   >
                     <span className="truncate text-gray-900 dark:text-slate-50">
@@ -182,9 +182,9 @@ export const VersionPicker: React.FC<VersionPickerProps> = (props) => {
                     }}
                     className={cn(
                       "flex w-full items-center px-3 py-1.5 text-left text-xs transition-colors",
-                      "hover:bg-gray-100 dark:hover:bg-slate-800",
+                      "hover:bg-gray-100 dark:hover:bg-slate-700",
                       isSelected &&
-                        "bg-gray-100 font-semibold dark:bg-slate-800",
+                        "bg-gray-100 font-semibold dark:bg-slate-700",
                     )}
                   >
                     <span className="truncate text-gray-900 dark:text-slate-50">

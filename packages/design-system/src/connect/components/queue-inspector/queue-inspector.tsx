@@ -217,7 +217,7 @@ export function QueueInspector({
             {state.isPaused ? "Resume" : "Pause"}
           </button>
           <button
-            className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+            className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
             disabled={loading}
             onClick={() => void handleRefresh()}
             type="button"
@@ -228,7 +228,7 @@ export function QueueInspector({
         </div>
       </div>
 
-      <div className="flex shrink-0 items-center gap-4 rounded-lg bg-gray-100 px-4 py-2 text-sm dark:bg-slate-800">
+      <div className="flex shrink-0 items-center gap-4 rounded-lg bg-gray-100 px-4 py-2 text-sm dark:bg-slate-700">
         <div className="flex items-center gap-2">
           <span
             className={twMerge(
@@ -252,7 +252,7 @@ export function QueueInspector({
 
       <div className="max-h-full overflow-auto rounded-lg border border-gray-300 dark:border-slate-600">
         <table className="w-full border-collapse">
-          <thead className="sticky top-0 bg-gray-100 dark:bg-slate-800">
+          <thead className="sticky top-0 bg-gray-100 dark:bg-slate-700">
             <tr>
               {COLUMNS.map((column, index) => {
                 const isActive = sort?.column === column.key;
@@ -262,7 +262,7 @@ export function QueueInspector({
                   <th
                     key={column.key}
                     className={twMerge(
-                      "group cursor-pointer px-3 py-2 text-left text-xs font-medium text-gray-600 hover:bg-gray-200 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-slate-50",
+                      "group cursor-pointer px-3 py-2 text-left text-xs font-medium text-gray-600 hover:bg-gray-200 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-slate-600 dark:hover:text-slate-50",
                       index > 0 &&
                         "border-l border-gray-300 dark:border-slate-600",
                     )}
@@ -301,7 +301,7 @@ export function QueueInspector({
               sortedJobs.map((job) => (
                 <tr
                   key={job.id}
-                  className="odd:bg-white even:bg-gray-50 hover:bg-blue-50 dark:odd:bg-slate-900 dark:even:bg-slate-900 dark:hover:bg-blue-900"
+                  className="odd:bg-white even:bg-gray-50 hover:bg-blue-50 dark:odd:bg-slate-800 dark:even:bg-slate-800 dark:hover:bg-blue-900"
                 >
                   <td className="px-3 py-2 text-xs">
                     <button
@@ -358,7 +358,7 @@ export function QueueInspector({
                         "inline-flex items-center gap-1 rounded-sm px-1.5 py-0.5",
                         job.status === "executing"
                           ? "bg-green-100 text-green-700 dark:bg-green-800 dark:text-green-100"
-                          : "bg-gray-100 text-gray-600 dark:bg-slate-800 dark:text-slate-300",
+                          : "bg-gray-100 text-gray-600 dark:bg-slate-700 dark:text-slate-300",
                       )}
                     >
                       {job.status === "executing" && (

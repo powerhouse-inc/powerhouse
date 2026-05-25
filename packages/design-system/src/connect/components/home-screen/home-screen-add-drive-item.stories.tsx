@@ -14,7 +14,7 @@ const Template: Story = {
   args: {},
   decorators: [
     (Story) => (
-      <div className="grid h-48 w-96 place-items-center bg-white dark:bg-slate-900">
+      <div className="grid h-48 w-96 place-items-center bg-white dark:bg-slate-800">
         <Story />
       </div>
     ),

@@ -8,13 +8,14 @@ import {
   flatMap,
   hasAtLeast,
   identity,
+  isDefined,
   isEmptyish,
   isNot,
-  isTruthy,
   join,
   map,
+  mapKeys,
+  mapValues,
   pipe,
-  reduce,
   split,
   startsWith,
   unique,
@@ -71,7 +72,7 @@ export const hasClasses =
 export const getClasses =
   (m: ClassNameMap) =>
   (c: ClassName): ClassNameList =>
-    pipe([m.get(c)], flat(), filter(isTruthy));
+    pipe([m.get(c)], flat(), filter(isDefined));
 
 export const replaceClass = (m: ClassNameMap) => (c: ClassName) =>
   pipe(c, getClasses(m), conditional([hasAtLeast(1), identity()], constant(c)));
@@ -168,4 +169,93 @@ export const updateClasses = (m: ClassNameMap) => (cs: ClassNameList) => {
     (c) => !withLastDropped.some((l) => c.startsWith(l)),
   );
   return unique([...withUpdatedClassesRemoved, ...matches]);
+};
+
+export const makeAncillaryClasses = (mappings: Record<string, string>) => {
+  const hover: Record<string, string> = pipe(
+    mappings,
+    mapKeys(addPrefix("hover:")),
+    mapValues(addPrefix("hover:")),
+  );
+  const group: Record<string, string> = pipe(
+    mappings,
+    mapKeys(addPrefix("group-hover:")),
+    mapValues(addPrefix("group-hover:")),
+  );
+
+  const placeholder: Record<string, string> = pipe(
+    mappings,
+
+    mapKeys(addPrefix("placeholder:")),
+    mapValues(addPrefix("placeholder:")),
+  );
+
+  const focus: Record<string, string> = pipe(
+    mappings,
+    mapKeys(addPrefix("focus:")),
+    mapValues(addPrefix("focus:")),
+  );
+
+  const focusWithin: Record<string, string> = pipe(
+    mappings,
+    mapKeys(addPrefix("focus-within:")),
+    mapValues(addPrefix("focus-within:")),
+  );
+
+  const focusVisible: Record<string, string> = pipe(
+    mappings,
+    mapKeys(addPrefix("focus-visible:")),
+    mapValues(addPrefix("focus-visible:")),
+  );
+
+  const even: Record<string, string> = pipe(
+    mappings,
+    mapKeys(addPrefix("even:")),
+    mapValues(addPrefix("even:")),
+  );
+
+  const odd: Record<string, string> = pipe(
+    mappings,
+    mapKeys(addPrefix("odd:")),
+    mapValues(addPrefix("odd:")),
+  );
+
+  const before: Record<string, string> = pipe(
+    mappings,
+    mapKeys(addPrefix("before:")),
+    mapValues(addPrefix("before:")),
+  );
+
+  const after: Record<string, string> = pipe(
+    mappings,
+    mapKeys(addPrefix("after:")),
+    mapValues(addPrefix("after:")),
+  );
+
+  const active: Record<string, string> = pipe(
+    mappings,
+    mapKeys(addPrefix("active:")),
+    mapValues(addPrefix("active:")),
+  );
+
+  const disabled: Record<string, string> = pipe(
+    mappings,
+    mapKeys(addPrefix("disabled:")),
+    mapValues(addPrefix("disabled:")),
+  );
+
+  return {
+    ...mappings,
+    ...hover,
+    ...group,
+    ...placeholder,
+    ...focus,
+    ...focusWithin,
+    ...even,
+    ...odd,
+    ...before,
+    ...after,
+    ...active,
+    ...disabled,
+  };
 };

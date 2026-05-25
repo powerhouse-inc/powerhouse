@@ -21,7 +21,7 @@ export const Default: Story = {
     const [, setArgs] = useArgs<typeof args>();
 
     return (
-      <div className="bg-white dark:bg-slate-900">
+      <div className="bg-white dark:bg-slate-800">
         <Modal
           {...args}
           onOpenChange={(open) => {

@@ -53,7 +53,7 @@ function TreeItem({
     <div>
       <div
         className={twMerge(
-          "flex cursor-pointer items-center gap-1 py-1 pr-2 text-sm hover:bg-gray-100 dark:hover:bg-slate-800",
+          "flex cursor-pointer items-center gap-1 py-1 pr-2 text-sm hover:bg-gray-100 dark:hover:bg-slate-700",
           selected && "bg-blue-50 dark:bg-blue-900",
         )}
         style={{ paddingLeft: depth * INDENT_PX + 4 }}

@@ -35,7 +35,7 @@ export const LoggedIn: Story = {
   args: {
     children: (
       <div className="flex items-center gap-2">
-        <div className="size-8 rounded-full bg-gray-200 dark:bg-slate-700" />
+        <div className="size-8 rounded-full bg-gray-200 dark:bg-slate-600" />
         <div className="flex flex-col">
           <span className="text-sm font-medium text-gray-900 dark:text-slate-50">
             Willow.eth

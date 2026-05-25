@@ -185,7 +185,7 @@ function StateEditor({
           <h3 className="mb-2 text-right text-lg text-gray-800 capitalize dark:text-slate-100">
             {scope} state initial value *
           </h3>
-          <label className="mb-2 flex w-fit items-center gap-2 rounded-md border border-gray-200 bg-gray-50 p-2 text-sm font-medium whitespace-nowrap text-gray-800 transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none dark:hover:bg-slate-500! dark:hover:text-slate-50! dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
+          <label className="mb-2 flex w-fit items-center gap-2 rounded-md border border-gray-200 bg-gray-50 p-2 text-sm font-medium whitespace-nowrap text-gray-800 transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-500! dark:hover:text-slate-50!">
             <input
               type="checkbox"
               className=""

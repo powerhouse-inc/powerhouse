@@ -197,7 +197,7 @@ export function ProcessorsInspector({
         </h2>
         <div className="flex items-center gap-2">
           <button
-            className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+            className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
             disabled={loading}
             onClick={() => void handleRefresh()}
             type="button"
@@ -208,7 +208,7 @@ export function ProcessorsInspector({
         </div>
       </div>
 
-      <div className="flex shrink-0 items-center gap-4 rounded-lg bg-gray-100 px-4 py-2 text-sm dark:bg-slate-800">
+      <div className="flex shrink-0 items-center gap-4 rounded-lg bg-gray-100 px-4 py-2 text-sm dark:bg-slate-700">
         <div className="text-gray-600 dark:text-slate-300">
           Total: <span className="font-medium">{processors.length}</span>
         </div>
@@ -230,7 +230,7 @@ export function ProcessorsInspector({
 
       <div className="max-h-full overflow-auto rounded-lg border border-gray-300 dark:border-slate-600">
         <table className="w-full border-collapse">
-          <thead className="sticky top-0 bg-gray-100 dark:bg-slate-800">
+          <thead className="sticky top-0 bg-gray-100 dark:bg-slate-700">
             <tr>
               {COLUMNS.map((column, index) => {
                 const isActive = sort?.column === column.key;
@@ -240,7 +240,7 @@ export function ProcessorsInspector({
                   <th
                     key={column.key}
                     className={twMerge(
-                      "group cursor-pointer px-3 py-2 text-left text-xs font-medium text-gray-600 hover:bg-gray-200 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-slate-50",
+                      "group cursor-pointer px-3 py-2 text-left text-xs font-medium text-gray-600 hover:bg-gray-200 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-slate-600 dark:hover:text-slate-50",
                       index > 0 &&
                         "border-l border-gray-300 dark:border-slate-600",
                     )}
@@ -283,7 +283,7 @@ export function ProcessorsInspector({
                     "hover:bg-blue-50 dark:hover:bg-blue-900",
                     processor.status === "errored"
                       ? "bg-red-50 dark:bg-red-900"
-                      : "odd:bg-white even:bg-gray-50 dark:odd:bg-slate-900 dark:even:bg-slate-900",
+                      : "odd:bg-white even:bg-gray-50 dark:odd:bg-slate-800 dark:even:bg-slate-800",
                   )}
                 >
                   <td className="px-3 py-2 text-xs">

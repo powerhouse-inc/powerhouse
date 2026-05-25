@@ -101,7 +101,7 @@ export function RevisionHistory(props: Props) {
           onCopyDocId={onCopyDocId}
         />
         {PaginationComponent}
-        <div className="mt-4 flex justify-center rounded-md bg-slate-50 p-4 dark:bg-slate-900">
+        <div className="mt-4 flex justify-center rounded-md bg-slate-50 p-4 dark:bg-slate-800">
           {visibleOperations.length > 0 ? (
             <div className="grid grid-cols-[minmax(min-content,1018px)]">
               <Timeline
