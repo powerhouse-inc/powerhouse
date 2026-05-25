@@ -86,7 +86,7 @@ export const VersionPicker: React.FC<VersionPickerProps> = (props) => {
       <PopoverTrigger
         disabled={disabled || !hasAnyPickable}
         className={cn(
-          "flex items-center justify-between gap-2 rounded-md border border-gray-300 bg-white px-2.5 py-1 text-xs font-medium text-gray-800 transition-colors dark:border-slate-500 dark:bg-slate-800 dark:text-slate-100",
+          "flex items-center justify-between gap-2 rounded-md border border-gray-300 bg-white px-2.5 py-1 text-xs font-medium text-gray-800 transition-colors dark:border-slate-500 dark:text-slate-100 dark:bg-slate-600",
           "hover:bg-gray-50 focus:ring-2 focus:ring-gray-900/20 focus:outline-none dark:hover:bg-slate-800",
           "disabled:cursor-not-allowed disabled:opacity-60",
           className,
@@ -107,7 +107,7 @@ export const VersionPicker: React.FC<VersionPickerProps> = (props) => {
         className="w-56 p-0"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
-        <div className="border-b border-gray-200 p-2 dark:border-slate-500">
+        <div className="border-b border-gray-200 p-2 dark:border-slate-500 dark:bg-slate-600">
           <div className="relative">
             <Icon
               name="Search"

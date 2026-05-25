@@ -18,7 +18,7 @@ type Story = StoryObj<typeof AccountPopover>;
 export const LoggedOut: Story = {
   args: {
     children: (
-      <div className="flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 dark:border-slate-500">
+      <div className="flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 dark:border-slate-500 dark:bg-slate-600">
         <Icon name="Settings" className="text-gray-600 dark:text-slate-300" />
         <span className="text-sm font-medium">Connect</span>
       </div>

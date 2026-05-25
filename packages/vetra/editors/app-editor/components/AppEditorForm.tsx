@@ -153,7 +153,7 @@ export const AppEditorForm = () => {
           onChange={(e) => handleSetAppName(e.target.value)}
           disabled={isReadOnly}
           className={twMerge(
-            "w-full rounded-md border border-gray-300 px-3 py-2 text-slate-50 placeholder:text-gray-400 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-slate-500 dark:placeholder:text-slate-400",
+            "w-full rounded-md border border-gray-300 px-3 py-2 text-slate-50 placeholder:text-gray-400 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-slate-500 dark:placeholder:text-slate-400 dark:bg-slate-600",
             isReadOnly
               ? "cursor-not-allowed bg-gray-100 dark:bg-slate-700"
               : "",
@@ -174,7 +174,7 @@ export const AppEditorForm = () => {
           {!isReadOnly && (
             <select
               onChange={(e) => handleDocumentTypeSelection(e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-slate-500 dark:text-slate-50"
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-slate-500 dark:text-slate-50 dark:bg-slate-600"
             >
               <option>Select a document type to add</option>
               <option>--- Vetra drive document types ---</option>
@@ -245,7 +245,7 @@ export const AppEditorForm = () => {
               onChange={(e) => onDragAndDropToggle(e.target.checked)}
               disabled={isReadOnly}
               className={twMerge(
-                "mr-2 size-4 rounded-sm border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-slate-500 dark:text-blue-100",
+                "mr-2 size-4 rounded-sm border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-slate-500 dark:text-blue-100 dark:bg-slate-600",
                 isReadOnly ? "cursor-not-allowed" : "",
               )}
             />

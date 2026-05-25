@@ -217,7 +217,7 @@ export function QueueInspector({
             {state.isPaused ? "Resume" : "Pause"}
           </button>
           <button
-            className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 dark:border-slate-500 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+            className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 dark:border-slate-500 dark:text-slate-200 dark:hover:bg-slate-700 dark:bg-slate-600"
             disabled={loading}
             onClick={() => void handleRefresh()}
             type="button"
@@ -250,7 +250,7 @@ export function QueueInspector({
         </div>
       </div>
 
-      <div className="max-h-full overflow-auto rounded-lg border border-gray-300 dark:border-slate-500">
+      <div className="max-h-full overflow-auto rounded-lg border border-gray-300 dark:border-slate-500 dark:bg-slate-600">
         <table className="w-full border-collapse">
           <thead className="sticky top-0 bg-gray-100 dark:bg-slate-700">
             <tr>
@@ -264,7 +264,7 @@ export function QueueInspector({
                     className={twMerge(
                       "group cursor-pointer px-3 py-2 text-left text-xs font-medium text-gray-600 hover:bg-gray-200 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-slate-600 dark:hover:text-slate-50",
                       index > 0 &&
-                        "border-l border-gray-300 dark:border-slate-500",
+                        "border-l border-gray-300 dark:border-slate-500 dark:bg-slate-600",
                     )}
                     onClick={() => handleSort(column.key)}
                     style={{ width: column.width }}
@@ -312,12 +312,12 @@ export function QueueInspector({
                       View
                     </button>
                   </td>
-                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-500 dark:text-slate-50">
+                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-500 dark:text-slate-50 dark:bg-slate-600">
                     <span className="block truncate" title={job.id}>
                       {truncateId(job.id)}
                     </span>
                   </td>
-                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-500 dark:text-slate-50">
+                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-500 dark:text-slate-50 dark:bg-slate-600">
                     <span
                       className={twMerge(
                         "inline-block rounded-sm px-1.5 py-0.5",
@@ -329,30 +329,30 @@ export function QueueInspector({
                       {job.kind}
                     </span>
                   </td>
-                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-500 dark:text-slate-50">
+                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-500 dark:text-slate-50 dark:bg-slate-600">
                     <span className="block truncate" title={job.documentId}>
                       {truncateId(job.documentId)}
                     </span>
                   </td>
-                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-500 dark:text-slate-50">
+                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-500 dark:text-slate-50 dark:bg-slate-600">
                     <span className="block truncate" title={job.scope}>
                       {job.scope}
                     </span>
                   </td>
-                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-500 dark:text-slate-50">
+                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-500 dark:text-slate-50 dark:bg-slate-600">
                     <span className="block truncate" title={job.branch}>
                       {job.branch}
                     </span>
                   </td>
-                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-500 dark:text-slate-50">
+                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-500 dark:text-slate-50 dark:bg-slate-600">
                     <span className="block truncate" title={job.createdAt}>
                       {formatDate(job.createdAt)}
                     </span>
                   </td>
-                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-500 dark:text-slate-50">
+                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-500 dark:text-slate-50 dark:bg-slate-600">
                     {job.retryCount ?? 0}
                   </td>
-                  <td className="border-l border-gray-300 px-3 py-2 text-xs dark:border-slate-500">
+                  <td className="border-l border-gray-300 px-3 py-2 text-xs dark:border-slate-500 dark:bg-slate-600">
                     <span
                       className={twMerge(
                         "inline-flex items-center gap-1 rounded-sm px-1.5 py-0.5",

@@ -232,7 +232,7 @@ export function TableView({
           </span>
           {rows.length > 0 && (
             <button
-              className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-500 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+              className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-500 dark:text-slate-200 dark:hover:bg-slate-700 dark:bg-slate-600"
               disabled={loading || copying}
               onClick={handleCopyAll}
               title="Copy all rows as CSV"
@@ -247,7 +247,7 @@ export function TableView({
         {total !== null && total > limit && (
           <div className="flex gap-1">
             <button
-              className="rounded-sm border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-500 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+              className="rounded-sm border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-500 dark:text-slate-200 dark:hover:bg-slate-700 dark:bg-slate-600"
               disabled={currentPage === 0}
               onClick={() => goToPage(0)}
               type="button"
@@ -255,7 +255,7 @@ export function TableView({
               First
             </button>
             <button
-              className="rounded-sm border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-500 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+              className="rounded-sm border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-500 dark:text-slate-200 dark:hover:bg-slate-700 dark:bg-slate-600"
               disabled={currentPage === 0}
               onClick={() => goToPage(currentPage - 1)}
               type="button"
@@ -276,7 +276,7 @@ export function TableView({
                   "min-w-8 rounded-sm border px-2 py-1 text-xs",
                   page === currentPage
                     ? "border-blue-500 bg-blue-50 text-blue-700 dark:border-blue-400 dark:bg-blue-900 dark:text-blue-100"
-                    : "border-gray-300 bg-white text-gray-700 hover:bg-gray-100 dark:border-slate-500 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700",
+                    : "border-gray-300 bg-white text-gray-700 hover:bg-gray-100 dark:border-slate-500 dark:text-slate-200 dark:hover:bg-slate-700 dark:bg-slate-600",
                 )}
                 onClick={() => goToPage(page)}
                 type="button"
@@ -292,7 +292,7 @@ export function TableView({
             )}
 
             <button
-              className="rounded-sm border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-500 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+              className="rounded-sm border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-500 dark:text-slate-200 dark:hover:bg-slate-700 dark:bg-slate-600"
               disabled={currentPage >= totalPages - 1}
               onClick={() => goToPage(currentPage + 1)}
               type="button"
@@ -300,7 +300,7 @@ export function TableView({
               <Icon className="-rotate-90" name="ChevronDown" size={14} />
             </button>
             <button
-              className="rounded-sm border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-500 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+              className="rounded-sm border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-500 dark:text-slate-200 dark:hover:bg-slate-700 dark:bg-slate-600"
               disabled={currentPage >= totalPages - 1}
               onClick={() => goToPage(totalPages - 1)}
               type="button"
@@ -313,7 +313,7 @@ export function TableView({
 
       <div
         className={twMerge(
-          "max-h-full overflow-auto rounded-lg border border-gray-300 transition-opacity dark:border-slate-500",
+          "max-h-full overflow-auto rounded-lg border border-gray-300 transition-opacity dark:border-slate-500 dark:bg-slate-600",
           "scrollbar-thin scrollbar-thumb-rounded-md scrollbar-track-transparent",
           "scrollbar-thumb-gray-300 dark:scrollbar-thumb-slate-600",
           loading && "pointer-events-none opacity-50",
@@ -335,7 +335,7 @@ export function TableView({
                     className={twMerge(
                       "group px-3 py-2 text-left text-xs font-medium text-gray-600 dark:text-slate-300",
                       index > 0 &&
-                        "border-l border-gray-300 dark:border-slate-500",
+                        "border-l border-gray-300 dark:border-slate-500 dark:bg-slate-600",
                       onSort &&
                         "cursor-pointer hover:bg-gray-200 hover:text-gray-900 dark:hover:bg-slate-600 dark:hover:text-slate-50",
                     )}
@@ -387,7 +387,7 @@ export function TableView({
                       className={twMerge(
                         "px-3 py-2 text-xs text-gray-900 dark:text-slate-50",
                         colIndex > 0 &&
-                          "border-l border-gray-300 dark:border-slate-500",
+                          "border-l border-gray-300 dark:border-slate-500 dark:bg-slate-600",
                       )}
                     >
                       <span

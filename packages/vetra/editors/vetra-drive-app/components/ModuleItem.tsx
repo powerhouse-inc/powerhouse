@@ -94,7 +94,7 @@ export const ModuleItem: React.FC<ModuleItemProps> = ({
           onItemClick={onDropdownMenuOptionClick}
           onOpenChange={setIsDropdownMenuOpen}
           open={isDropdownMenuOpen}
-          menuClassName="border-gray-200 dark:border-slate-500"
+          menuClassName="border-gray-200 dark:border-slate-500 dark:bg-slate-600"
         >
           <button
             className={cn(

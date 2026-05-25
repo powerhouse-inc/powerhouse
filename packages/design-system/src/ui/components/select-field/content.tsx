@@ -144,7 +144,7 @@ export const Content: React.FC<ContentProps> = ({
           />
 
           {favoriteOptions.length > 0 && (
-            <div className="my-1 border-b border-gray-300 dark:border-slate-500" />
+            <div className="my-1 border-b border-gray-300 dark:border-slate-500 dark:bg-slate-600" />
           )}
           <CommandItemList
             options={options}

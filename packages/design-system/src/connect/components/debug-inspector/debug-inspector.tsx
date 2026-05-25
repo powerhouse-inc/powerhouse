@@ -90,7 +90,7 @@ export function DebugInspector({
           <button
             type="button"
             onClick={() => setConfirmMajor(null)}
-            className="rounded-sm border border-gray-300 bg-white px-3 py-1 text-sm text-gray-600 hover:bg-gray-50 dark:border-slate-500 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-800"
+            className="rounded-sm border border-gray-300 bg-white px-3 py-1 text-sm text-gray-600 hover:bg-gray-50 dark:border-slate-500 dark:text-slate-300 dark:hover:bg-slate-800 dark:bg-slate-600"
           >
             Cancel
           </button>

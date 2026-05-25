@@ -135,7 +135,7 @@ export const ProcessorEditorForm: React.FC<ProcessorEditorFormProps> = ({
           onChange={(e) => setProcessorName(e.target.value)}
           disabled={isReadOnly}
           className={twMerge(
-            "w-full rounded-md border border-gray-300 px-3 py-2 placeholder:text-gray-700 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-slate-500 dark:placeholder:text-slate-200",
+            "w-full rounded-md border border-gray-300 px-3 py-2 placeholder:text-gray-700 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-slate-500 dark:placeholder:text-slate-200 dark:bg-slate-600",
             isReadOnly
               ? "cursor-not-allowed bg-gray-100 dark:bg-slate-700"
               : "",
@@ -158,7 +158,7 @@ export const ProcessorEditorForm: React.FC<ProcessorEditorFormProps> = ({
           onChange={(e) => setProcessorType(e.target.value)}
           disabled={isReadOnly}
           className={twMerge(
-            "w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-slate-500 dark:text-slate-50",
+            "w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-slate-500 dark:text-slate-50 dark:bg-slate-600",
             isReadOnly
               ? "cursor-not-allowed bg-gray-100 dark:bg-slate-700"
               : "",
@@ -199,7 +199,7 @@ export const ProcessorEditorForm: React.FC<ProcessorEditorFormProps> = ({
                 }
                 setSelectedDocumentType("");
               }}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-slate-500 dark:text-slate-50"
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-slate-500 dark:text-slate-50 dark:bg-slate-600"
             >
               <option value="">Select a document type to add</option>
               {availableDocumentTypes

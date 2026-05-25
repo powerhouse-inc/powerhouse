@@ -58,7 +58,7 @@ export default function Header() {
               id="graphqlPlayground"
               name="graphqlPlayground"
               aria-placeholder="Select GraphQL Playground"
-              className="w-full rounded-md border border-gray-300 p-2 dark:border-slate-500"
+              className="w-full rounded-md border border-gray-300 p-2 dark:border-slate-500 dark:bg-slate-600"
               onChange={selectGraphQLPlayground}
             >
               <option value="">GraphQL Playgrounds</option>

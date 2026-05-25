@@ -14,7 +14,7 @@ export function Signature(props: SignatureProps) {
   return (
     <CodePopover
       trigger={
-        <span className="flex w-fit cursor-pointer items-center gap-1 rounded-lg border border-gray-200 bg-white px-2 py-1 dark:border-slate-500 dark:bg-slate-800">
+        <span className="flex w-fit cursor-pointer items-center gap-1 rounded-lg border border-gray-200 bg-white px-2 py-1 dark:border-slate-500 dark:bg-slate-600">
           <VerificationStatus signatures={signatures} />{" "}
           <Icon
             className="text-gray-300 dark:text-slate-600"

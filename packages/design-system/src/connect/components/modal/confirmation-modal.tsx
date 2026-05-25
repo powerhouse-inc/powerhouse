@@ -67,7 +67,7 @@ export function ConnectConfirmationModal(props: ConfirmationModalProps) {
         <div
           {...mergeClassNameProps(
             headerProps,
-            "border-b border-slate-50 pb-2 text-2xl font-bold text-gray-800 dark:border-slate-500 dark:text-slate-100",
+            "border-b border-slate-50 pb-2 text-2xl font-bold text-gray-800 dark:border-slate-500 dark:text-slate-100 dark:bg-slate-600",
           )}
         >
           {header}

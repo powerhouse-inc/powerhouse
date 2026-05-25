@@ -47,7 +47,7 @@ export function DocumentStateViewer({
         >
           <div
             className={twMerge(
-              "-mt-2 rounded-md border border-gray-300 bg-gray-50 p-3 font-mono text-sm dark:border-slate-500 dark:bg-slate-800",
+              "-mt-2 rounded-md border border-gray-300 bg-gray-50 p-3 font-mono text-sm dark:border-slate-500 dark:bg-slate-600",
               className,
             )}
           >

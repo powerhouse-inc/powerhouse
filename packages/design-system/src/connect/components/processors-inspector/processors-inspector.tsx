@@ -197,7 +197,7 @@ export function ProcessorsInspector({
         </h2>
         <div className="flex items-center gap-2">
           <button
-            className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 dark:border-slate-500 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+            className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 dark:border-slate-500 dark:text-slate-200 dark:hover:bg-slate-700 dark:bg-slate-600"
             disabled={loading}
             onClick={() => void handleRefresh()}
             type="button"
@@ -228,7 +228,7 @@ export function ProcessorsInspector({
         </div>
       )}
 
-      <div className="max-h-full overflow-auto rounded-lg border border-gray-300 dark:border-slate-500">
+      <div className="max-h-full overflow-auto rounded-lg border border-gray-300 dark:border-slate-500 dark:bg-slate-600">
         <table className="w-full border-collapse">
           <thead className="sticky top-0 bg-gray-100 dark:bg-slate-700">
             <tr>
@@ -242,7 +242,7 @@ export function ProcessorsInspector({
                     className={twMerge(
                       "group cursor-pointer px-3 py-2 text-left text-xs font-medium text-gray-600 hover:bg-gray-200 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-slate-600 dark:hover:text-slate-50",
                       index > 0 &&
-                        "border-l border-gray-300 dark:border-slate-500",
+                        "border-l border-gray-300 dark:border-slate-500 dark:bg-slate-600",
                     )}
                     onClick={() => handleSort(column.key)}
                     style={{ width: column.width }}
@@ -295,7 +295,7 @@ export function ProcessorsInspector({
                       View
                     </button>
                   </td>
-                  <td className="border-l border-gray-300 px-3 py-2 text-xs dark:border-slate-500">
+                  <td className="border-l border-gray-300 px-3 py-2 text-xs dark:border-slate-500 dark:bg-slate-600">
                     <span
                       className={twMerge(
                         "inline-flex items-center gap-1 rounded-sm px-1.5 py-0.5",
@@ -313,7 +313,7 @@ export function ProcessorsInspector({
                       {processor.status}
                     </span>
                   </td>
-                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-500 dark:text-slate-50">
+                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-500 dark:text-slate-50 dark:bg-slate-600">
                     <span
                       className="block truncate"
                       title={processor.processorId}
@@ -321,7 +321,7 @@ export function ProcessorsInspector({
                       {truncateId(processor.processorId)}
                     </span>
                   </td>
-                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-500 dark:text-slate-50">
+                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-500 dark:text-slate-50 dark:bg-slate-600">
                     <span
                       className="block truncate"
                       title={processor.factoryId}
@@ -329,18 +329,18 @@ export function ProcessorsInspector({
                       {truncateId(processor.factoryId)}
                     </span>
                   </td>
-                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-500 dark:text-slate-50">
+                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-500 dark:text-slate-50 dark:bg-slate-600">
                     <span className="block truncate" title={processor.driveId}>
                       {truncateId(processor.driveId)}
                     </span>
                   </td>
-                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-500 dark:text-slate-50">
+                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-500 dark:text-slate-50 dark:bg-slate-600">
                     {processor.processorIndex}
                   </td>
-                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-500 dark:text-slate-50">
+                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-500 dark:text-slate-50 dark:bg-slate-600">
                     {processor.lastOrdinal}
                   </td>
-                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-500 dark:text-slate-50">
+                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-500 dark:text-slate-50 dark:bg-slate-600">
                     {processor.lastError ? (
                       <span
                         className="block truncate text-red-600 dark:text-red-100"
@@ -354,7 +354,7 @@ export function ProcessorsInspector({
                       </span>
                     )}
                   </td>
-                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-500 dark:text-slate-50">
+                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-500 dark:text-slate-50 dark:bg-slate-600">
                     {processor.lastErrorTimestamp ? (
                       <span
                         className="block truncate"
@@ -368,7 +368,7 @@ export function ProcessorsInspector({
                       </span>
                     )}
                   </td>
-                  <td className="border-l border-gray-300 px-3 py-2 text-xs dark:border-slate-500">
+                  <td className="border-l border-gray-300 px-3 py-2 text-xs dark:border-slate-500 dark:bg-slate-600">
                     {processor.status === "errored" && onRetry && (
                       <button
                         className="flex items-center gap-1 rounded-sm bg-yellow-50 px-2 py-1 text-xs text-yellow-700 hover:bg-yellow-100 disabled:opacity-50 dark:bg-yellow-900 dark:text-yellow-100 dark:hover:bg-yellow-800"

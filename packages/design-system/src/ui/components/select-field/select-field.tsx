@@ -144,14 +144,14 @@ export const SelectFieldRaw = React.forwardRef<
               aria-expanded={isPopoverOpen}
               className={cn(
                 "flex h-9 w-full items-center justify-between px-3 py-2",
-                "rounded-md border border-gray-300 bg-white dark:border-slate-500 dark:bg-slate-800",
-                "hover:border-gray-300 hover:bg-gray-100 dark:hover:border-slate-500 dark:hover:bg-slate-700",
-                "dark:hover:border-slate-500 dark:hover:bg-slate-700",
+                "rounded-md border border-gray-300 bg-white dark:border-slate-500 dark:bg-slate-600",
+                "hover:border-gray-300 hover:bg-gray-100 dark:hover:border-slate-500 dark:hover:bg-slate-600",
+                "dark:hover:border-slate-500 dark:hover:bg-slate-600",
                 "focus:ring-1 focus:ring-gray-900 focus:ring-offset-0 focus:outline-none dark:focus:ring-slate-300",
                 "focus-visible:ring-1 focus-visible:ring-gray-900 focus-visible:ring-offset-0 dark:focus-visible:ring-slate-300",
                 disabled && [
                   "pointer-events-auto! cursor-not-allowed bg-gray-50 dark:bg-slate-800",
-                  "hover:border-gray-300 hover:bg-gray-50 dark:hover:border-slate-500 dark:hover:bg-slate-800",
+                  "hover:border-gray-300 hover:bg-gray-50 dark:hover:border-slate-500 dark:hover:bg-slate-600",
                 ],
                 className,
               )}

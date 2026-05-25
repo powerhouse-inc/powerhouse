@@ -1,21 +1,34 @@
-import { entries, filter, forEach, keys, pipe } from "remeda";
+import {
+  entries,
+  filter,
+  forEach,
+  keys,
+  mapKeys,
+  mapValues,
+  pipe,
+} from "remeda";
 import { findFilesWithClasses } from "./find-files-with-classes.js";
 import { getStringLiteralsFromFiles, makeTsMorphProject } from "./ts-morph.js";
 import type { ClassNameRecord } from "./types.js";
-import { addClassesToStringLiteral, hasClasses } from "./utils.js";
+import {
+  addClassesToStringLiteral,
+  addPrefix,
+  hasClasses,
+  makeAncillaryClasses,
+} from "./utils.js";
 
 const project = makeTsMorphProject();
-const classesToAdd: ClassNameRecord = {} as const;
+const classesToAdd: ClassNameRecord = pipe(
+  {
+    "border-slate-500": "bg-slate-600",
+  },
+  makeAncillaryClasses,
+  mapKeys(addPrefix("dark:")),
+  mapValues(addPrefix("dark:")),
+);
 const files = await findFilesWithClasses(keys(classesToAdd));
 const classesMap = new Map(entries(classesToAdd));
 
-/**
- * Migrates candidate string literals by adding generated dark-mode classes when:
- *
- * - the file is not excluded,
- * - the literal does not already contain an explicit `dark:` class,
- * - and the literal contains at least one configured light-mode class.
- */
 pipe(
   files,
   getStringLiteralsFromFiles(project),

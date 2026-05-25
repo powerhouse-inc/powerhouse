@@ -293,7 +293,7 @@ export function DBExplorer({
         }}
       />
 
-      <div className="flex w-64 shrink-0 flex-col border-r border-gray-200 dark:border-slate-500">
+      <div className="flex w-64 shrink-0 flex-col border-r border-gray-200 dark:border-slate-500 dark:bg-slate-600">
         <div className="flex-1 overflow-auto">
           <SchemaTreeSidebar
             schema={schema}
@@ -306,10 +306,10 @@ export function DBExplorer({
         </div>
 
         {(onImportDb || onExportDb || pgVersionControl) && (
-          <div className="flex shrink-0 flex-col gap-2 border-t border-gray-200 p-2 dark:border-slate-500">
+          <div className="flex shrink-0 flex-col gap-2 border-t border-gray-200 p-2 dark:border-slate-500 dark:bg-slate-600">
             {onImportDb && (
               <button
-                className="rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 dark:border-slate-500 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                className="rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 dark:border-slate-500 dark:text-slate-200 dark:hover:bg-slate-700 dark:bg-slate-600"
                 onClick={handleImportClick}
                 type="button"
               >
@@ -318,7 +318,7 @@ export function DBExplorer({
             )}
             {onExportDb && (
               <button
-                className="rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 dark:border-slate-500 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                className="rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 dark:border-slate-500 dark:text-slate-200 dark:hover:bg-slate-700 dark:bg-slate-600"
                 onClick={handleExportClick}
                 type="button"
               >
@@ -326,7 +326,7 @@ export function DBExplorer({
               </button>
             )}
             {pgVersionControl && (
-              <div className="flex flex-col gap-1 border-t border-gray-200 pt-2 dark:border-slate-500">
+              <div className="flex flex-col gap-1 border-t border-gray-200 pt-2 dark:border-slate-500 dark:bg-slate-600">
                 <div className="flex items-center justify-between text-xs text-gray-600 dark:text-slate-300">
                   <span>Postgres version</span>
                   <span className="font-semibold text-gray-900 dark:text-slate-50">
