@@ -20,7 +20,7 @@ export const PackageInformationSection: React.FC<
 }) => {
   const createpackageContent = (
     <button
-      className="my-2 h-50 w-full rounded-md border border-dashed border-gray-200 bg-gray-50 dark:border-slate-500 dark:text-slate-100 dark:bg-slate-600"
+      className="my-2 h-50 w-full rounded-md border border-dashed border-gray-200 bg-gray-50 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
       onClick={onAddPackageDocument}
     >
       Click to create package manifest

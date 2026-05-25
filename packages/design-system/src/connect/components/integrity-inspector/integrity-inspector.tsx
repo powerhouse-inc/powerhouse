@@ -113,7 +113,7 @@ export function IntegrityInspector({
             Document ID
           </label>
           <input
-            className="rounded-sm border border-gray-300 px-3 py-1.5 text-sm outline-none focus:border-blue-400 dark:border-slate-500 dark:focus:border-blue-500 dark:bg-slate-600"
+            className="rounded-sm border border-gray-300 px-3 py-1.5 text-sm outline-none focus:border-blue-400 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 dark:focus:border-blue-500"
             onChange={(e) => setDocumentId(e.target.value)}
             placeholder="Enter document ID"
             type="text"
@@ -125,7 +125,7 @@ export function IntegrityInspector({
             Branch (optional)
           </label>
           <input
-            className="rounded-sm border border-gray-300 px-3 py-1.5 text-sm outline-none focus:border-blue-400 dark:border-slate-500 dark:focus:border-blue-500 dark:bg-slate-600"
+            className="rounded-sm border border-gray-300 px-3 py-1.5 text-sm outline-none focus:border-blue-400 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 dark:focus:border-blue-500"
             onChange={(e) => setBranch(e.target.value)}
             placeholder="main"
             type="text"
@@ -196,7 +196,7 @@ export function IntegrityInspector({
             Confirm
           </button>
           <button
-            className="rounded-sm border border-gray-300 bg-white px-3 py-1 text-sm text-gray-600 hover:bg-gray-50 dark:border-slate-500 dark:text-slate-300 dark:hover:bg-slate-800 dark:bg-slate-600"
+            className="rounded-sm border border-gray-300 bg-white px-3 py-1 text-sm text-gray-600 hover:bg-gray-50 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 dark:hover:bg-slate-800"
             onClick={() => setConfirmAction(null)}
             type="button"
           >
@@ -205,7 +205,7 @@ export function IntegrityInspector({
         </div>
       )}
 
-      <div className="min-h-0 flex-1 overflow-auto rounded-lg border border-gray-300 p-4 dark:border-slate-500 dark:bg-slate-600">
+      <div className="min-h-0 flex-1 overflow-auto rounded-lg border border-gray-300 p-4 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
         {status === "idle" && (
           <div className="flex h-full items-center justify-center text-sm text-gray-400 dark:text-slate-500">
             Enter a document ID and run an action
@@ -273,16 +273,16 @@ function ValidationResultView({ result }: { result: ValidationResult }) {
                 <th className="px-2 py-1 text-left font-medium text-gray-600 dark:text-slate-300">
                   Scope
                 </th>
-                <th className="border-l border-gray-300 px-2 py-1 text-left font-medium text-gray-600 dark:border-slate-500 dark:text-slate-300 dark:bg-slate-600">
+                <th className="border-l border-gray-300 px-2 py-1 text-left font-medium text-gray-600 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
                   Branch
                 </th>
-                <th className="border-l border-gray-300 px-2 py-1 text-left font-medium text-gray-600 dark:border-slate-500 dark:text-slate-300 dark:bg-slate-600">
+                <th className="border-l border-gray-300 px-2 py-1 text-left font-medium text-gray-600 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
                   Revision
                 </th>
-                <th className="border-l border-gray-300 px-2 py-1 text-left font-medium text-gray-600 dark:border-slate-500 dark:text-slate-300 dark:bg-slate-600">
+                <th className="border-l border-gray-300 px-2 py-1 text-left font-medium text-gray-600 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
                   Keyframe Hash
                 </th>
-                <th className="border-l border-gray-300 px-2 py-1 text-left font-medium text-gray-600 dark:border-slate-500 dark:text-slate-300 dark:bg-slate-600">
+                <th className="border-l border-gray-300 px-2 py-1 text-left font-medium text-gray-600 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
                   Replayed Hash
                 </th>
               </tr>
@@ -294,16 +294,16 @@ function ValidationResultView({ result }: { result: ValidationResult }) {
                   className="odd:bg-white even:bg-gray-50 dark:odd:bg-slate-800 dark:even:bg-slate-800"
                 >
                   <td className="px-2 py-1">{issue.scope}</td>
-                  <td className="border-l border-gray-300 px-2 py-1 dark:border-slate-500 dark:bg-slate-600">
+                  <td className="border-l border-gray-300 px-2 py-1 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
                     {issue.branch}
                   </td>
-                  <td className="border-l border-gray-300 px-2 py-1 dark:border-slate-500 dark:bg-slate-600">
+                  <td className="border-l border-gray-300 px-2 py-1 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
                     {issue.revision}
                   </td>
-                  <td className="border-l border-gray-300 px-2 py-1 font-mono dark:border-slate-500 dark:bg-slate-600">
+                  <td className="border-l border-gray-300 px-2 py-1 font-mono dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
                     {issue.keyframeHash}
                   </td>
-                  <td className="border-l border-gray-300 px-2 py-1 font-mono dark:border-slate-500 dark:bg-slate-600">
+                  <td className="border-l border-gray-300 px-2 py-1 font-mono dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
                     {issue.replayedHash}
                   </td>
                 </tr>
@@ -324,13 +324,13 @@ function ValidationResultView({ result }: { result: ValidationResult }) {
                 <th className="px-2 py-1 text-left font-medium text-gray-600 dark:text-slate-300">
                   Scope
                 </th>
-                <th className="border-l border-gray-300 px-2 py-1 text-left font-medium text-gray-600 dark:border-slate-500 dark:text-slate-300 dark:bg-slate-600">
+                <th className="border-l border-gray-300 px-2 py-1 text-left font-medium text-gray-600 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
                   Branch
                 </th>
-                <th className="border-l border-gray-300 px-2 py-1 text-left font-medium text-gray-600 dark:border-slate-500 dark:text-slate-300 dark:bg-slate-600">
+                <th className="border-l border-gray-300 px-2 py-1 text-left font-medium text-gray-600 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
                   Snapshot Hash
                 </th>
-                <th className="border-l border-gray-300 px-2 py-1 text-left font-medium text-gray-600 dark:border-slate-500 dark:text-slate-300 dark:bg-slate-600">
+                <th className="border-l border-gray-300 px-2 py-1 text-left font-medium text-gray-600 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
                   Replayed Hash
                 </th>
               </tr>
@@ -342,13 +342,13 @@ function ValidationResultView({ result }: { result: ValidationResult }) {
                   className="odd:bg-white even:bg-gray-50 dark:odd:bg-slate-800 dark:even:bg-slate-800"
                 >
                   <td className="px-2 py-1">{issue.scope}</td>
-                  <td className="border-l border-gray-300 px-2 py-1 dark:border-slate-500 dark:bg-slate-600">
+                  <td className="border-l border-gray-300 px-2 py-1 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
                     {issue.branch}
                   </td>
-                  <td className="border-l border-gray-300 px-2 py-1 font-mono dark:border-slate-500 dark:bg-slate-600">
+                  <td className="border-l border-gray-300 px-2 py-1 font-mono dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
                     {issue.snapshotHash}
                   </td>
-                  <td className="border-l border-gray-300 px-2 py-1 font-mono dark:border-slate-500 dark:bg-slate-600">
+                  <td className="border-l border-gray-300 px-2 py-1 font-mono dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
                     {issue.replayedHash}
                   </td>
                 </tr>

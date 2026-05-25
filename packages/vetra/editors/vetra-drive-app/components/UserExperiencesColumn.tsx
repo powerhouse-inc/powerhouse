@@ -26,13 +26,13 @@ export const UserExperiencesColumn: React.FC<UserExperiencesColumnProps> = ({
       <h3 className="mb-4 text-sm font-normal text-gray-700 dark:text-slate-200">
         2. User Experiences
       </h3>
-      <div className="rounded-md border border-gray-200 bg-gray-50 dark:border-slate-500 dark:bg-slate-600">
+      <div className="rounded-md border border-gray-200 bg-gray-50 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
         <ModuleAccordion
           title="Editors"
           count={editors.length}
           onAdd={onAddEditor || (() => console.log("Add editor clicked"))}
           defaultOpen={true}
-          headerClassName="m-4 bg-gray-100 hover:bg-gray-200 border border-gray-200 rounded-md dark:hover:bg-slate-600 dark:border-slate-500 dark:bg-slate-600"
+          headerClassName="m-4 bg-gray-100 hover:bg-gray-200 border border-gray-200 rounded-md dark:hover:bg-slate-600 dark:border-slate-500 dark:bg-slate-600 dark:hover:text-slate-100 dark:text-slate-100"
         >
           <ModuleList
             items={editors}
@@ -47,7 +47,7 @@ export const UserExperiencesColumn: React.FC<UserExperiencesColumnProps> = ({
           count={apps.length}
           onAdd={onAddApp || (() => console.log("Add app clicked"))}
           defaultOpen={true}
-          headerClassName="m-4 bg-gray-100 hover:bg-gray-200 border border-gray-200 rounded-md dark:hover:bg-slate-600 dark:border-slate-500 dark:bg-slate-600"
+          headerClassName="m-4 bg-gray-100 hover:bg-gray-200 border border-gray-200 rounded-md dark:hover:bg-slate-600 dark:border-slate-500 dark:bg-slate-600 dark:hover:text-slate-100 dark:text-slate-100"
         >
           <ModuleList
             items={apps}

@@ -135,7 +135,7 @@ export const ProcessorEditorForm: React.FC<ProcessorEditorFormProps> = ({
           onChange={(e) => setProcessorName(e.target.value)}
           disabled={isReadOnly}
           className={twMerge(
-            "w-full rounded-md border border-gray-300 px-3 py-2 placeholder:text-gray-700 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-slate-500 dark:placeholder:text-slate-200 dark:bg-slate-600",
+            "w-full rounded-md border border-gray-300 px-3 py-2 placeholder:text-gray-700 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 dark:placeholder:text-slate-200",
             isReadOnly
               ? "cursor-not-allowed bg-gray-100 dark:bg-slate-700"
               : "",
@@ -158,7 +158,7 @@ export const ProcessorEditorForm: React.FC<ProcessorEditorFormProps> = ({
           onChange={(e) => setProcessorType(e.target.value)}
           disabled={isReadOnly}
           className={twMerge(
-            "w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-slate-500 dark:text-slate-50 dark:bg-slate-600",
+            "w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100",
             isReadOnly
               ? "cursor-not-allowed bg-gray-100 dark:bg-slate-700"
               : "",
@@ -199,7 +199,7 @@ export const ProcessorEditorForm: React.FC<ProcessorEditorFormProps> = ({
                 }
                 setSelectedDocumentType("");
               }}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-slate-500 dark:text-slate-50 dark:bg-slate-600"
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
             >
               <option value="">Select a document type to add</option>
               {availableDocumentTypes
@@ -297,7 +297,7 @@ export const ProcessorEditorForm: React.FC<ProcessorEditorFormProps> = ({
           <button
             onClick={handleConfirm}
             disabled={!canConfirm}
-            className="rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-300 dark:bg-blue-300 dark:text-slate-900 dark:hover:bg-blue-200 dark:disabled:bg-slate-600"
+            className="rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-300 dark:bg-blue-300 dark:text-slate-900 dark:hover:bg-blue-200 dark:disabled:bg-slate-600 dark:disabled:text-slate-100"
           >
             Confirm
           </button>

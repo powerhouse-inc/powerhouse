@@ -136,7 +136,7 @@ export function FileItem(props: Props) {
   );
 
   const containerStyles = twMerge(
-    "group flex h-12 cursor-pointer items-center rounded-lg bg-gray-200 px-2 text-gray-700 select-none hover:text-gray-800 dark:bg-slate-600 dark:text-slate-200 dark:hover:text-slate-100",
+    "group flex h-12 cursor-pointer items-center rounded-lg bg-gray-200 px-2 text-gray-700 select-none hover:text-gray-800 dark:bg-slate-600 dark:text-slate-100 dark:hover:text-slate-100",
     isDragging ? "opacity-60" : "",
     className,
   );
@@ -203,7 +203,7 @@ export function FileItem(props: Props) {
 
 function DefaultFileIcon() {
   return (
-    <div className="text-white dark:text-slate-900">
+    <div className="text-white dark:text-slate-800!">
       <svg
         width="32"
         height="40"

@@ -171,7 +171,7 @@ export function MailboxTable({
         </button>
         {operations.length > 0 && (
           <button
-            className="flex items-center gap-1 rounded-sm bg-gray-100 px-2 py-1 text-xs text-gray-700 hover:bg-gray-200 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
+            className="flex items-center gap-1 rounded-sm bg-gray-100 px-2 py-1 text-xs text-gray-700 hover:bg-gray-200 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600 dark:hover:text-slate-100"
             onClick={() => void handleCopyAll()}
             type="button"
           >
@@ -182,7 +182,7 @@ export function MailboxTable({
       </div>
 
       {!collapsed && (
-        <div className="scrollbar-thin overflow-auto rounded-lg border border-gray-300 scrollbar-thumb-gray-300 scrollbar-thumb-rounded-md scrollbar-track-transparent dark:border-slate-500 dark:scrollbar-thumb-slate-600 dark:bg-slate-600">
+        <div className="scrollbar-thin overflow-auto rounded-lg border border-gray-300 scrollbar-thumb-gray-300 scrollbar-thumb-rounded-md scrollbar-track-transparent dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 dark:scrollbar-thumb-slate-600">
           <table className="w-full border-collapse">
             <thead className="sticky top-0 bg-gray-100 dark:bg-slate-700">
               <tr>
@@ -194,9 +194,9 @@ export function MailboxTable({
                     <th
                       key={column.key}
                       className={twMerge(
-                        "group cursor-pointer px-3 py-2 text-left text-xs font-medium text-gray-600 hover:bg-gray-200 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-slate-600 dark:hover:text-slate-50",
+                        "group cursor-pointer px-3 py-2 text-left text-xs font-medium text-gray-600 hover:bg-gray-200 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-slate-600 dark:hover:text-slate-100",
                         index > 0 &&
-                          "border-l border-gray-300 dark:border-slate-500 dark:bg-slate-600",
+                          "border-l border-gray-300 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100",
                       )}
                       onClick={() => handleSort(column.key)}
                       style={{ width: column.width }}
@@ -235,17 +235,17 @@ export function MailboxTable({
                         View
                       </button>
                     </td>
-                    <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-500 dark:text-slate-50 dark:bg-slate-600">
+                    <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
                       <span className="block truncate" title={op.documentId}>
                         {truncateId(op.documentId)}
                       </span>
                     </td>
-                    <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-500 dark:text-slate-50 dark:bg-slate-600">
+                    <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
                       <span className="block truncate" title={op.branch}>
                         {op.branch}
                       </span>
                     </td>
-                    <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-500 dark:text-slate-50 dark:bg-slate-600">
+                    <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
                       <span
                         className="block truncate"
                         title={op.scopes.join(", ")}
@@ -254,7 +254,7 @@ export function MailboxTable({
                       </span>
                     </td>
                     {mailboxType === "deadLetter" ? (
-                      <td className="border-l border-gray-300 px-3 py-2 text-xs dark:border-slate-500 dark:bg-slate-600">
+                      <td className="border-l border-gray-300 px-3 py-2 text-xs dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
                         <span
                           className="block truncate text-red-600 dark:text-red-100"
                           title={getErrorMessage(op.error)}
@@ -264,13 +264,13 @@ export function MailboxTable({
                       </td>
                     ) : (
                       <>
-                        <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-500 dark:text-slate-50 dark:bg-slate-600">
+                        <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
                           <span className="flex items-center gap-1">
                             {getStatusIcon(op.status)}
                             {getStatusLabel(op.status)}
                           </span>
                         </td>
-                        <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-500 dark:text-slate-50 dark:bg-slate-600">
+                        <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
                           {op.operations.length}
                         </td>
                       </>

@@ -42,7 +42,7 @@ const User = () => {
             }}
             href={"/"}
           >
-            <div className="flex flex-row items-center rounded-sm text-orange-400 hover:bg-gray-300 dark:text-orange-100 dark:hover:bg-slate-600">
+            <div className="flex flex-row items-center rounded-sm text-orange-400 hover:bg-gray-300 dark:text-orange-100 dark:hover:bg-slate-600 dark:hover:text-slate-100">
               <div className="w-20">Sign Out</div>{" "}
               <div className="w-8">
                 <ArrowRightStartOnRectangleIcon className="text-orange-500 dark:text-orange-100" />

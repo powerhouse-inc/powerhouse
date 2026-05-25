@@ -20,7 +20,7 @@ import {
 const project = makeTsMorphProject();
 const classesToAdd: ClassNameRecord = pipe(
   {
-    "border-slate-500": "bg-slate-600",
+    "bg-slate-600": "text-slate-100",
   },
   makeAncillaryClasses,
   mapKeys(addPrefix("dark:")),

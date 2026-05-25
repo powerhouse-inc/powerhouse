@@ -95,7 +95,9 @@ export const SplittedInputDiff = ({
             )}
           </div>
           <div
-            className={cn("mx-3 h-[34px] w-px bg-gray-300 dark:bg-slate-600")}
+            className={cn(
+              "mx-3 h-[34px] w-px bg-gray-300 dark:bg-slate-600 dark:text-slate-100",
+            )}
           />
           <div
             className={cn(

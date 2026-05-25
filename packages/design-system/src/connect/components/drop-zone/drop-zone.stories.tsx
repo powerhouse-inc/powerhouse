@@ -15,7 +15,7 @@ const meta: Meta<typeof DropZone> = {
     enable: true,
     children: (
       <div className="flex h-screen items-center justify-center bg-gray-50 dark:bg-slate-800">
-        <div className="rounded-lg border border-gray-200 bg-white p-8 shadow-sm dark:border-slate-500 dark:bg-slate-600">
+        <div className="rounded-lg border border-gray-200 bg-white p-8 shadow-sm dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
           <div className="text-sm text-gray-600 dark:text-slate-300">
             Drag files over this page to trigger the DropZone overlay.
           </div>

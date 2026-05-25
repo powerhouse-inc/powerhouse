@@ -26,7 +26,7 @@ export function ToolbarButton(props: ComponentProps<"button">) {
       {...rest}
       disabled={disabled}
       className={twMerge(
-        "grid size-fit place-items-center rounded-lg border border-gray-200 bg-white p-1 text-gray-900 dark:border-slate-500 dark:text-slate-50 dark:bg-slate-600",
+        "grid size-fit place-items-center rounded-lg border border-gray-200 bg-white p-1 text-gray-900 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100",
         disabled
           ? "cursor-not-allowed text-gray-500 dark:text-slate-400"
           : "cursor-pointer active:opacity-70",

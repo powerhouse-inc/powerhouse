@@ -72,7 +72,7 @@ export const ModuleItem: React.FC<ModuleItemProps> = ({
     <div
       onClick={() => onClick(fileNode)}
       className={cn(
-        "group flex w-full cursor-pointer items-center gap-3 rounded-md bg-gray-100 p-1 text-left transition-colors hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600",
+        "group flex w-full cursor-pointer items-center gap-3 rounded-md bg-gray-100 p-1 text-left transition-colors hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 dark:hover:text-slate-100",
         className,
       )}
     >
@@ -94,7 +94,7 @@ export const ModuleItem: React.FC<ModuleItemProps> = ({
           onItemClick={onDropdownMenuOptionClick}
           onOpenChange={setIsDropdownMenuOpen}
           open={isDropdownMenuOpen}
-          menuClassName="border-gray-200 dark:border-slate-500 dark:bg-slate-600"
+          menuClassName="border-gray-200 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
         >
           <button
             className={cn(

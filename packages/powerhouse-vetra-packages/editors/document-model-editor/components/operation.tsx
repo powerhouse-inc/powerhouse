@@ -108,7 +108,7 @@ export function Operation(props: Props) {
             type="checkbox"
             checked={noInputRequired}
             onChange={(e) => handleToggleNoInput(e.target.checked)}
-            className="size-4 rounded-sm border-gray-300 dark:border-slate-500 dark:bg-slate-600"
+            className="size-4 rounded-sm border-gray-300 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
           />
           <span className="text-sm text-gray-700 dark:text-slate-200">
             Operation with no inputs

@@ -64,7 +64,7 @@ export function Timeline(props: TimelineProps) {
 
   return (
     <div
-      className="border-l border-slate-100 dark:border-slate-500 dark:bg-slate-600"
+      className="border-l border-slate-100 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
       ref={parentRef}
       style={{
         height: `${rowVirtualizer.getTotalSize()}px`,

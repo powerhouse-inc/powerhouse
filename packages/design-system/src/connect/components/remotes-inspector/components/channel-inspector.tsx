@@ -157,7 +157,7 @@ export function ChannelInspector({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <button
-            className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-2 py-1 text-sm text-gray-700 hover:bg-gray-100 dark:border-slate-500 dark:text-slate-200 dark:hover:bg-slate-700 dark:bg-slate-600"
+            className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-2 py-1 text-sm text-gray-700 hover:bg-gray-100 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 dark:hover:bg-slate-700"
             onClick={onBack}
             type="button"
           >
@@ -170,7 +170,7 @@ export function ChannelInspector({
         </div>
         {onRefresh && (
           <button
-            className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 dark:border-slate-500 dark:text-slate-200 dark:hover:bg-slate-700 dark:bg-slate-600"
+            className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 dark:hover:bg-slate-700"
             onClick={onRefresh}
             type="button"
           >
@@ -181,7 +181,7 @@ export function ChannelInspector({
       </div>
 
       {connectionState && (
-        <div className="rounded-sm border border-gray-200 bg-white p-4 dark:border-slate-500 dark:bg-slate-600">
+        <div className="rounded-sm border border-gray-200 bg-white p-4 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
           <h3 className="mb-3 text-sm font-semibold text-gray-900 dark:text-slate-50">
             Connection State
           </h3>
@@ -222,7 +222,7 @@ export function ChannelInspector({
       )}
 
       {pollerControls && (
-        <div className="rounded-sm border border-gray-200 bg-white p-4 dark:border-slate-500 dark:bg-slate-600">
+        <div className="rounded-sm border border-gray-200 bg-white p-4 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
           <h3 className="mb-3 text-sm font-semibold text-gray-900 dark:text-slate-50">
             Poller
           </h3>
@@ -248,7 +248,7 @@ export function ChannelInspector({
                   Interval:
                 </label>
                 <input
-                  className="w-20 rounded-sm border border-gray-300 px-2 py-1 text-sm dark:border-slate-500 dark:bg-slate-600"
+                  className="w-20 rounded-sm border border-gray-300 px-2 py-1 text-sm dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
                   id="poll-interval"
                   min={100}
                   onChange={(e) => setIntervalMs(Number(e.target.value))}
@@ -264,7 +264,7 @@ export function ChannelInspector({
                   ms
                 </span>
                 <button
-                  className="ml-1 rounded-sm border border-gray-300 bg-white px-2 py-1 text-sm text-gray-700 hover:bg-gray-100 dark:border-slate-500 dark:text-slate-200 dark:hover:bg-slate-700 dark:bg-slate-600"
+                  className="ml-1 rounded-sm border border-gray-300 bg-white px-2 py-1 text-sm text-gray-700 hover:bg-gray-100 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 dark:hover:bg-slate-700"
                   onClick={handleApplyInterval}
                   type="button"
                 >
@@ -275,7 +275,7 @@ export function ChannelInspector({
             <div className="flex gap-2">
               {pollerState.isPaused ? (
                 <button
-                  className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 dark:border-slate-500 dark:text-slate-200 dark:hover:bg-slate-700 dark:bg-slate-600"
+                  className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 dark:hover:bg-slate-700"
                   onClick={handleResume}
                   type="button"
                 >
@@ -283,7 +283,7 @@ export function ChannelInspector({
                 </button>
               ) : (
                 <button
-                  className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 dark:border-slate-500 dark:text-slate-200 dark:hover:bg-slate-700 dark:bg-slate-600"
+                  className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 dark:hover:bg-slate-700"
                   onClick={handlePause}
                   type="button"
                 >
@@ -291,7 +291,7 @@ export function ChannelInspector({
                 </button>
               )}
               <button
-                className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-500 dark:text-slate-200 dark:hover:bg-slate-700 dark:bg-slate-600"
+                className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 dark:hover:bg-slate-700"
                 disabled={!pollerState.isPaused}
                 onClick={handlePollNow}
                 type="button"
@@ -303,7 +303,7 @@ export function ChannelInspector({
         </div>
       )}
 
-      <div className="rounded-sm border border-gray-200 bg-white p-4 dark:border-slate-500 dark:bg-slate-600">
+      <div className="rounded-sm border border-gray-200 bg-white p-4 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
         <h3 className="mb-3 text-sm font-semibold text-gray-900 dark:text-slate-50">
           Mailbox Processing
         </h3>
@@ -330,7 +330,7 @@ export function ChannelInspector({
             <div className="flex gap-2">
               {mailboxStates.inbox.isPaused ? (
                 <button
-                  className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 dark:border-slate-500 dark:text-slate-200 dark:hover:bg-slate-700 dark:bg-slate-600"
+                  className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 dark:hover:bg-slate-700"
                   onClick={() => handleMailboxResume("inbox")}
                   type="button"
                 >
@@ -338,7 +338,7 @@ export function ChannelInspector({
                 </button>
               ) : (
                 <button
-                  className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 dark:border-slate-500 dark:text-slate-200 dark:hover:bg-slate-700 dark:bg-slate-600"
+                  className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 dark:hover:bg-slate-700"
                   onClick={() => handleMailboxPause("inbox")}
                   type="button"
                 >
@@ -346,7 +346,7 @@ export function ChannelInspector({
                 </button>
               )}
               <button
-                className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-500 dark:text-slate-200 dark:hover:bg-slate-700 dark:bg-slate-600"
+                className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 dark:hover:bg-slate-700"
                 disabled={!mailboxStates.inbox.isPaused}
                 onClick={() => handleMailboxFlush("inbox")}
                 type="button"
@@ -377,7 +377,7 @@ export function ChannelInspector({
             <div className="flex gap-2">
               {mailboxStates.outbox.isPaused ? (
                 <button
-                  className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 dark:border-slate-500 dark:text-slate-200 dark:hover:bg-slate-700 dark:bg-slate-600"
+                  className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 dark:hover:bg-slate-700"
                   onClick={() => handleMailboxResume("outbox")}
                   type="button"
                 >
@@ -385,7 +385,7 @@ export function ChannelInspector({
                 </button>
               ) : (
                 <button
-                  className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 dark:border-slate-500 dark:text-slate-200 dark:hover:bg-slate-700 dark:bg-slate-600"
+                  className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 dark:hover:bg-slate-700"
                   onClick={() => handleMailboxPause("outbox")}
                   type="button"
                 >
@@ -393,7 +393,7 @@ export function ChannelInspector({
                 </button>
               )}
               <button
-                className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-500 dark:text-slate-200 dark:hover:bg-slate-700 dark:bg-slate-600"
+                className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 dark:hover:bg-slate-700"
                 disabled={!mailboxStates.outbox.isPaused}
                 onClick={() => handleMailboxFlush("outbox")}
                 type="button"

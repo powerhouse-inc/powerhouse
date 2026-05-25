@@ -69,7 +69,7 @@ export function ConnectReplaceDuplicateModal(
           "w-[450px] bg-white p-6 text-slate-300 dark:bg-slate-800 dark:text-slate-600",
         )}
       >
-        <div className="flex items-center justify-between border-b border-slate-50 pb-2 dark:border-slate-500 dark:bg-slate-600">
+        <div className="flex items-center justify-between border-b border-slate-50 pb-2 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
           <div
             {...mergeClassNameProps(
               headerProps,

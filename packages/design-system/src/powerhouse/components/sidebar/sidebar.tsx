@@ -32,7 +32,7 @@ export function Sidebar({
     <div
       {...props}
       className={twMerge(
-        `group z-1 flex h-full flex-col bg-slate-50 dark:bg-slate-800`,
+        `group z-1 flex h-full flex-col bg-slate-50 dark:bg-slate-700`,
         className,
       )}
       ref={ref}

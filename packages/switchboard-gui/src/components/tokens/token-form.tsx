@@ -62,7 +62,7 @@ const TokenForm = () => {
             name="name"
             value={formData.name}
             onChange={handleChange}
-            className="mt-1 w-full rounded-md border border-gray-300 p-2 dark:border-slate-500 dark:bg-slate-600"
+            className="mt-1 w-full rounded-md border border-gray-300 p-2 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
           />
         </div>
         <div className="flex-1 flex-col">
@@ -78,7 +78,7 @@ const TokenForm = () => {
             aria-placeholder="Select Duration"
             value={formData.duration}
             onChange={handleChange}
-            className="mt-1 w-full rounded-md border border-gray-300 p-2 dark:border-slate-500 dark:bg-slate-600"
+            className="mt-1 w-full rounded-md border border-gray-300 p-2 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
           >
             <option value="3600">1 Hour</option>
             <option value="86400">1 Day</option>
@@ -102,7 +102,7 @@ const TokenForm = () => {
             placeholder="*"
             value={formData.allowedOrigin}
             onChange={handleChange}
-            className="mt-1 w-full rounded-md border border-gray-300 p-2 dark:border-slate-500 dark:bg-slate-600"
+            className="mt-1 w-full rounded-md border border-gray-300 p-2 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
           />
         </div>
         <div className="flex h-full flex-col items-end">

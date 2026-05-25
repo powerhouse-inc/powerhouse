@@ -11,17 +11,17 @@ const inputBaseStyles = cn(
   // Base styles
   "flex h-9 w-full rounded-md text-sm/5 font-normal text-gray-900 dark:text-slate-50",
   // Border & Background
-  "border border-gray-300 bg-white dark:border-slate-500 dark:bg-slate-600",
+  "border border-gray-300 bg-white dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100",
   // Padding
   "px-3 py-2",
   // Placeholder
   "font-sans placeholder:text-gray-500 dark:placeholder:text-slate-400",
   // Focus styles
   "focus-visible:ring-1 focus-visible:ring-gray-900 focus-visible:ring-offset-0 focus-visible:ring-offset-white focus-visible:outline-none",
-  "focus:bg-gray-50 dark:focus-visible:ring-slate-300 dark:focus-visible:ring-offset-slate-900 dark:focus:bg-slate-800",
+  "focus:bg-gray-50 dark:focus:bg-slate-800 dark:focus-visible:ring-slate-300 dark:focus-visible:ring-offset-slate-900",
   // Disabled state
   "disabled:cursor-not-allowed",
-  "disabled:border-gray-300 disabled:bg-gray-50 disabled:text-gray-700 dark:disabled:border-slate-500 dark:disabled:text-slate-200 dark:disabled:bg-slate-600",
+  "disabled:border-gray-300 disabled:bg-gray-50 disabled:text-gray-700 dark:disabled:border-slate-500 dark:disabled:bg-slate-600 dark:disabled:text-slate-100",
   "disabled:dark:border-charcoal-800 disabled:dark:bg-charcoal-900 disabled:dark:text-gray-300",
 );
 

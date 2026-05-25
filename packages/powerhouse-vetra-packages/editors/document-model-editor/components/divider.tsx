@@ -23,7 +23,7 @@ export function Divider({ className, size = "sm", margin = "md" }: Props) {
   return (
     <div
       className={cn(
-        "bg-gray-200 dark:bg-slate-600",
+        "bg-gray-200 dark:bg-slate-600 dark:text-slate-100",
         sizeClass,
         marginClass,
         className,

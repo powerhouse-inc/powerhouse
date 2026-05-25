@@ -100,7 +100,7 @@ export function ReadRequiredModal(props: ReadRequiredModalProps) {
         <div
           {...mergeClassNameProps(
             headerProps,
-            "border-b border-slate-50 pb-2 text-2xl font-bold text-gray-800 dark:border-slate-500 dark:text-slate-100 dark:bg-slate-600",
+            "border-b border-slate-50 pb-2 text-2xl font-bold text-gray-800 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100",
           )}
         >
           {header}
@@ -130,7 +130,7 @@ export function ReadRequiredModal(props: ReadRequiredModalProps) {
                 buttonStyles,
                 "flex-1 bg-gray-800 text-gray-50 dark:bg-slate-100 dark:text-slate-900",
                 disableClose &&
-                  "cursor-not-allowed bg-gray-300 hover:scale-100 dark:bg-slate-600",
+                  "cursor-not-allowed bg-gray-300 hover:scale-100 dark:bg-slate-600 dark:text-slate-100",
               ),
             )}
           >
