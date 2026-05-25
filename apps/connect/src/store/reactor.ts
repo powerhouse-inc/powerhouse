@@ -342,31 +342,39 @@ export async function createReactor(localPackage?: DocumentModelLib) {
   setDrives(drives);
   setFeatures(features);
 
-  // If the URL pins a remote drive, register it and wait for its initial
-  // sync to materialize the drive document before selecting it. Without
-  // this, setSelectedDrive(driveSlug) below resolves to undefined and
-  // rewrites the URL to "/".
+  // When the URL pins a drive slug, default drives and any URL-supplied
+  // remote drive must be materialized before setSelectedDrive runs —
+  // otherwise the slug is unknown and the URL gets rewritten to "/".
+  const driveResolutionRequired = Boolean(driveSlug);
+
+  const defaultDrivesConfig = getDefaultDrivesFromEnv();
+  if (defaultDrivesConfig.length > 0) {
+    await addDefaultDrivesForNewReactor(
+      defaultDrivesConfig,
+      driveResolutionRequired
+        ? { awaitInitialSync: true, initialSyncTimeoutMs: 15_000 }
+        : undefined,
+    );
+  }
+
   const remoteUrl = getDriveUrl();
   if (remoteUrl) {
     try {
       await addRemoteDrive(remoteUrl, undefined, {
-        awaitInitialSync: true,
+        awaitInitialSync: driveResolutionRequired,
         initialSyncTimeoutMs: 15_000,
       });
-      await refreshReactorDataClient(reactorClientModule.client);
     } catch (error) {
       console.error(`Failed to add remote drive from ${remoteUrl}:`, error);
     }
   }
 
+  if (driveResolutionRequired) {
+    await refreshReactorDataClient(reactorClientModule.client);
+  }
+
   setSelectedDrive(driveSlug);
   setSelectedNode(nodeSlug);
-
-  // Add default drives for new reactor (after window.ph is set up)
-  const defaultDrivesConfig = getDefaultDrivesFromEnv();
-  if (defaultDrivesConfig.length > 0) {
-    await addDefaultDrivesForNewReactor(defaultDrivesConfig);
-  }
 
   // Subscribe via ReactorClient interface
   const reactorClient = reactorClientModule.client;

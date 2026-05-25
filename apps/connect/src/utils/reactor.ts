@@ -103,9 +103,12 @@ export function getDefaultDrivesFromEnv(): string[] {
  * dev server is ready before the switchboard has finished binding its port.
  *
  * @param defaultDriveUrls - Array of drive REST endpoint URLs (e.g., "https://example.com/d/powerhouse")
+ * @param options - Forwarded to addRemoteDrive. Pass `awaitInitialSync: true`
+ *   when the URL pins a drive slug that must resolve before selection.
  */
 export async function addDefaultDrivesForNewReactor(
   defaultDriveUrls: string[],
+  options?: { awaitInitialSync?: boolean; initialSyncTimeoutMs?: number },
 ): Promise<void> {
   const MAX_ATTEMPTS = 3;
   const BACKOFF_MS = 2000;
@@ -113,7 +116,7 @@ export async function addDefaultDrivesForNewReactor(
   for (const url of defaultDriveUrls) {
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
       try {
-        await addRemoteDrive(url);
+        await addRemoteDrive(url, undefined, options);
         break;
       } catch (error) {
         if (attempt === MAX_ATTEMPTS) {
