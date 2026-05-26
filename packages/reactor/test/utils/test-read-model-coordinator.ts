@@ -56,8 +56,8 @@ export class TestReadModelCoordinator implements IReadModelCoordinator {
     this.isPaused = false;
   }
 
-  async drain(): Promise<void> {
-    return;
+  drain(): Promise<void> {
+    return Promise.resolve();
   }
 
   getChainDepth(): number {

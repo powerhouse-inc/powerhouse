@@ -75,7 +75,9 @@ type State = {
 };
 
 async function buildReactor(signer: ISigner): Promise<State> {
-  const builder = new ReactorBuilder().withSignatureVerifier(async () => true);
+  const builder = new ReactorBuilder().withSignatureVerifier(() =>
+    Promise.resolve(true),
+  );
 
   const hostPool = new pg.Pool({
     host: DB_HOST,
@@ -99,11 +101,13 @@ async function buildReactor(signer: ISigner): Promise<State> {
     const specs: DocumentModelSpecInput[] = [{ filePath: modelFile }];
     builder
       .withDocumentModelLoader({
-        load: async (documentType: string) => {
+        load: (documentType: string) => {
           if (documentType === "powerhouse/document-drive") {
-            return driveDocumentModelModule;
+            return Promise.resolve(driveDocumentModelModule);
           }
-          throw new Error(`bench-host has no loader for ${documentType}`);
+          return Promise.reject(
+            new Error(`bench-host has no loader for ${documentType}`),
+          );
         },
       })
       .withDocumentModelSpecs(specs)

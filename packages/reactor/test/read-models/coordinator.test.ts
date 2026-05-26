@@ -320,12 +320,13 @@ describe("ReadModelCoordinator", () => {
       const readModel = createMockReadModel();
 
       const indexed: string[] = [];
-      readModel.indexOperations = vi.fn().mockImplementation(async (ops) => {
+      readModel.indexOperations = vi.fn().mockImplementation((ops) => {
         const opId = ops[0].operation.id;
         if (opId === "op-fail") {
-          throw new Error("boom");
+          return Promise.reject(new Error("boom"));
         }
         indexed.push(opId);
+        return Promise.resolve();
       });
 
       const coordinator = new ReadModelCoordinator(eventBus, [readModel], []);
