@@ -327,7 +327,7 @@ const PackageSection: React.FC<{
 
   return (
     <section className="mb-6">
-      <h3 className="sticky top-0 z-10 mb-3 border-b border-gray-200 bg-white text-gray-800 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100">
+      <h3 className="sticky top-0 z-10 mb-3 border-b border-gray-200 bg-white text-gray-800 dark:border-slate-600! dark:bg-slate-800 dark:text-slate-100">
         <button
           type="button"
           onClick={toggle}

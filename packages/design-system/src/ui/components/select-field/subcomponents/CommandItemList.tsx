@@ -26,14 +26,14 @@ const renderIcon = (
       <Icon
         name={IconComponent}
         size={16}
-        className={cn("text-gray-700 dark:text-slate-200")}
+        className={cn("text-gray-700 dark:text-slate-200!")}
       />
     );
   }
   return (
     IconComponent && (
       <IconComponent
-        className={cn("size-4", "text-gray-700 dark:text-slate-200")}
+        className={cn("size-4", "text-gray-700 dark:text-slate-200!")}
       />
     )
   );
@@ -62,9 +62,9 @@ export const CommandItemList: React.FC<FavoriteOptionsProps> = ({
             disabled={opt.disabled}
             className={cn(
               "cursor-pointer",
-              "data-[selected=true]:bg-gray-100 dark:data-[selected=true]:bg-slate-500",
+              "data-[selected=true]:bg-gray-100 dark:data-[selected=true]:bg-slate-500!",
               opt.disabled &&
-                "pointer-events-auto! cursor-not-allowed hover:bg-transparent dark:hover:bg-slate-500",
+                "pointer-events-auto! cursor-not-allowed hover:bg-transparent dark:hover:bg-slate-500!",
             )}
             role="option"
             aria-selected={isSelected}
@@ -74,9 +74,9 @@ export const CommandItemList: React.FC<FavoriteOptionsProps> = ({
                 <div
                   className={cn(
                     "flex size-4 items-center justify-center rounded-md border",
-                    "border-gray-700 dark:border-slate-200",
+                    "border-gray-700 dark:border-slate-200!",
                     isSelected &&
-                      "bg-gray-900 text-slate-50 dark:bg-slate-50 dark:text-slate-900",
+                      "bg-gray-900 text-slate-50 dark:bg-slate-50! dark:text-slate-900!",
                   )}
                 >
                   {isSelected && <Icon name="Checkmark" size={16} />}
@@ -86,13 +86,13 @@ export const CommandItemList: React.FC<FavoriteOptionsProps> = ({
                   className={cn(
                     "relative size-4 rounded-full border",
                     isSelected
-                      ? "border-gray-900 dark:border-slate-50"
-                      : "border-gray-800 dark:border-slate-100",
-                    "bg-transparent dark:bg-transparent",
+                      ? "border-gray-900 dark:border-slate-50!"
+                      : "border-gray-800 dark:border-slate-100!",
+                    "bg-transparent",
                   )}
                 >
                   {isSelected && (
-                    <div className="absolute top-1/2 left-1/2 size-2.5 -translate-1/2 rounded-full bg-gray-900 dark:bg-slate-50" />
+                    <div className="absolute top-1/2 left-1/2 size-2.5 -translate-1/2 rounded-full bg-gray-900 dark:bg-slate-50!" />
                   )}
                 </div>
               ))}
@@ -103,7 +103,7 @@ export const CommandItemList: React.FC<FavoriteOptionsProps> = ({
                     <Icon
                       name="Checkmark"
                       size={16}
-                      className="text-gray-900 dark:text-slate-50"
+                      className="text-gray-900 dark:text-slate-50!"
                     />
                   )}
                 </div>
@@ -112,8 +112,8 @@ export const CommandItemList: React.FC<FavoriteOptionsProps> = ({
             <span
               className={cn(
                 "flex-1 truncate text-sm/4 font-normal",
-                "text-gray-700 dark:text-slate-200",
-                opt.disabled && "text-gray-600 dark:text-slate-300",
+                "text-gray-700 dark:text-slate-200!",
+                opt.disabled && "text-gray-600 dark:text-slate-300!",
               )}
             >
               {opt.label}
@@ -125,7 +125,7 @@ export const CommandItemList: React.FC<FavoriteOptionsProps> = ({
                     <Icon
                       name="Checkmark"
                       size={16}
-                      className="text-gray-900 dark:text-slate-50"
+                      className="text-gray-900 dark:text-slate-50!"
                     />
                   )}
                 </div>
