@@ -48,6 +48,127 @@ import { BrowserPackageManager } from "../package-manager.js";
 import { loadPackagesConfig } from "../packages.config.js";
 import { createProcessorHostModule } from "./processor-host-module.js";
 
+/**
+ * Subscribe to the `/__packages` SSE channel exposed by ph-clint's
+ * static-mode `connect-server.js`. On each `packages-changed` event the
+ * server sends the full live list; we diff against what the packageManager
+ * already has loaded and call `addPackage`/`removePackage` to converge.
+ *
+ * Best-effort — silently no-ops when the SSE endpoint doesn't exist
+ * (e.g. running under vite dev, or hosted somewhere without this protocol).
+ */
+function subscribeToPackagesChannel(packageManager: IPackageManager): void {
+  if (typeof window === "undefined" || typeof EventSource === "undefined") {
+    return;
+  }
+  let source: EventSource;
+  try {
+    source = new EventSource("/__packages");
+  } catch (err) {
+    console.debug("[Connect] /__packages subscribe failed:", err);
+    return;
+  }
+  let firstEvent = true;
+  source.addEventListener("packages-changed", (event) => {
+    try {
+      const payload = JSON.parse((event as MessageEvent<string>).data) as {
+        packages?: unknown;
+      };
+      if (!Array.isArray(payload.packages)) return;
+      const next = payload.packages.filter(
+        (p): p is string => typeof p === "string",
+      );
+      // Split each incoming spec into (bareName, version). The server may
+      // send either bare names ("@scope/pkg") or version-qualified specs
+      // ("@scope/pkg@1.2.3"). parseBareName-style logic: for scoped specs
+      // the first `@` belongs to the scope, so version starts after the
+      // last `@` only when that `@` is past index 0.
+      const parseBare = (
+        spec: string,
+      ): { bareName: string; version?: string } => {
+        const at = spec.startsWith("@")
+          ? spec.lastIndexOf("@")
+          : spec.indexOf("@");
+        if (at > 0) {
+          return { bareName: spec.slice(0, at), version: spec.slice(at + 1) };
+        }
+        return { bareName: spec };
+      };
+
+      // Diff against the registry-tracked subset only. Bundled "common"
+      // packages and the project's local package never appear in the
+      // server's list and removing them on every event would wipe the
+      // drive editors and break the AddDrive modal.
+      const currentByName = new Map(
+        packageManager
+          .getRegistryPackages()
+          .map(({ name, version }) => [name, version]),
+      );
+      const nextByName = new Map<string, string | undefined>();
+      for (const spec of next) {
+        const { bareName, version } = parseBare(spec);
+        nextByName.set(bareName, version);
+      }
+
+      const isFirst = firstEvent;
+      firstEvent = false;
+
+      for (const name of currentByName.keys()) {
+        if (!nextByName.has(name)) {
+          packageManager.removePackage(name);
+          if (!isFirst) {
+            toast(`Removed package ${name}`, { type: "connect-deleted" });
+          }
+        }
+      }
+      for (const spec of next) {
+        const { bareName, version } = parseBare(spec);
+        const currentVersion = currentByName.get(bareName);
+        const isKnown = currentByName.has(bareName);
+        // Skip when the package is already present at the same version (or
+        // when no version info is available on either side to compare).
+        if (
+          isKnown &&
+          (!version || !currentVersion || version === currentVersion)
+        ) {
+          continue;
+        }
+        const isUpdate = isKnown;
+        Promise.resolve(packageManager.addPackage(spec)).then(
+          (result) => {
+            if (result.type === "error") {
+              console.error(
+                `[Connect] /__packages addPackage(${spec}) failed:`,
+                result.error,
+              );
+              return;
+            }
+            if (isFirst) return;
+            const name = result.package.manifest.name;
+            toast(
+              isUpdate
+                ? `Updated package ${name}`
+                : `Installed package ${name}`,
+              { type: "connect-success" },
+            );
+          },
+          (err: unknown) => {
+            console.error(
+              `[Connect] /__packages addPackage(${spec}) threw:`,
+              err,
+            );
+          },
+        );
+      }
+    } catch (err) {
+      console.error("[Connect] /__packages event parse failed:", err);
+    }
+  });
+  source.addEventListener("error", () => {
+    // EventSource auto-reconnects; nothing to do.
+  });
+}
+
 export async function clearReactorStorage() {
   await window.ph?.reactorClientModule?.pg?.close();
 
@@ -143,6 +264,13 @@ export async function createReactor(localPackage?: DocumentModelLib) {
     if (r.type === "error") console.error(r.error);
   });
 
+  // Subscribe to the static-mode `/__packages` SSE channel so live publishes
+  // (e.g. ph-clint's publish-reload trigger pushing a new list) flow into the
+  // running tab without a page reload. The channel only exists in static
+  // hosting; failures are silently ignored when running in vite dev or any
+  // host that doesn't speak this protocol.
+  subscribeToPackagesChannel(packageManager);
+
   // get document models to set in the reactor (all versions)
   const documentModelModules = packageManager.packages
     .flatMap((pkg) => pkg.documentModels)
@@ -212,25 +340,41 @@ export async function createReactor(localPackage?: DocumentModelLib) {
   setDocumentCache(documentCache);
   setRenown(renown);
   setDrives(drives);
-  setSelectedDrive(driveSlug);
-  setSelectedNode(nodeSlug);
   setFeatures(features);
 
-  // Add default drives for new reactor (after window.ph is set up)
+  // When the URL pins a drive slug, default drives and any URL-supplied
+  // remote drive must be materialized before setSelectedDrive runs —
+  // otherwise the slug is unknown and the URL gets rewritten to "/".
+  const driveResolutionRequired = Boolean(driveSlug);
+
   const defaultDrivesConfig = getDefaultDrivesFromEnv();
   if (defaultDrivesConfig.length > 0) {
-    await addDefaultDrivesForNewReactor(defaultDrivesConfig);
+    await addDefaultDrivesForNewReactor(
+      defaultDrivesConfig,
+      driveResolutionRequired
+        ? { awaitInitialSync: true, initialSyncTimeoutMs: 15_000 }
+        : undefined,
+    );
   }
 
-  // if remoteUrl is set and drive not already existing add remote drive and open it
   const remoteUrl = getDriveUrl();
   if (remoteUrl) {
     try {
-      await addRemoteDrive(remoteUrl);
+      await addRemoteDrive(remoteUrl, undefined, {
+        awaitInitialSync: driveResolutionRequired,
+        initialSyncTimeoutMs: 15_000,
+      });
     } catch (error) {
       console.error(`Failed to add remote drive from ${remoteUrl}:`, error);
     }
   }
+
+  if (driveResolutionRequired) {
+    await refreshReactorDataClient(reactorClientModule.client);
+  }
+
+  setSelectedDrive(driveSlug);
+  setSelectedNode(nodeSlug);
 
   // Subscribe via ReactorClient interface
   const reactorClient = reactorClientModule.client;

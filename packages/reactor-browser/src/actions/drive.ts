@@ -1,4 +1,10 @@
-import { driveCollectionId, type PollBehavior } from "@powerhousedao/reactor";
+import {
+  DocumentChangeType,
+  driveCollectionId,
+  PropagationMode,
+  type IReactorClient,
+  type PollBehavior,
+} from "@powerhousedao/reactor";
 import {
   driveCreateDocument,
   setAvailableOffline,
@@ -10,9 +16,93 @@ import {
 import type { PHDocument } from "@powerhousedao/shared/document-model";
 import { getUserPermissions } from "../utils/user.js";
 
+const DEFAULT_INITIAL_SYNC_TIMEOUT_MS = 30_000;
+
 export type AddRemoteDriveOptions = {
   pollBehavior?: PollBehavior;
+  /**
+   * When true, wait for the drive document to be materialized locally
+   * (i.e. queryable via the reactor) before resolving. Without this,
+   * `addRemoteDrive` returns as soon as the remote is registered with
+   * the sync manager, before initial backfill delivers the drive.
+   */
+  awaitInitialSync?: boolean;
+  /** Timeout for the initial-sync wait. Defaults to 30s. */
+  initialSyncTimeoutMs?: number;
+  signal?: AbortSignal;
 };
+
+/**
+ * Resolves once a document with the given id is queryable through the
+ * reactor client. Subscribes to Created events filtered by id and
+ * short-circuits if the document already exists.
+ */
+export async function waitForDocumentReady(
+  reactorClient: IReactorClient,
+  documentId: string,
+  options?: { timeoutMs?: number; signal?: AbortSignal },
+): Promise<void> {
+  const timeoutMs = options?.timeoutMs ?? DEFAULT_INITIAL_SYNC_TIMEOUT_MS;
+  const signal = options?.signal;
+
+  return new Promise<void>((resolve, reject) => {
+    let settled = false;
+    // eslint-disable-next-line prefer-const
+    let unsubscribe: (() => void) | undefined;
+    // eslint-disable-next-line prefer-const
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let abortHandler: (() => void) | undefined;
+
+    const settle = (action: () => void) => {
+      if (settled) return;
+      settled = true;
+      unsubscribe?.();
+      if (timer) clearTimeout(timer);
+      if (abortHandler && signal) {
+        signal.removeEventListener("abort", abortHandler);
+      }
+      action();
+    };
+
+    unsubscribe = reactorClient.subscribe({ ids: [documentId] }, (event) => {
+      if (event.type === DocumentChangeType.Created) {
+        settle(() => resolve());
+      }
+    });
+
+    reactorClient
+      .find({ ids: [documentId] })
+      .then((existing) => {
+        if (existing.results.length > 0) {
+          settle(() => resolve());
+        }
+      })
+      .catch(() => {
+        // Ignore: the subscription will still resolve if the document arrives.
+      });
+
+    if (signal) {
+      if (signal.aborted) {
+        settle(() => reject(new DOMException("Aborted", "AbortError")));
+        return;
+      }
+      abortHandler = () => {
+        settle(() => reject(new DOMException("Aborted", "AbortError")));
+      };
+      signal.addEventListener("abort", abortHandler);
+    }
+
+    timer = setTimeout(() => {
+      settle(() =>
+        reject(
+          new Error(
+            `Timed out after ${timeoutMs}ms waiting for document ${documentId}`,
+          ),
+        ),
+      );
+    }, timeoutMs);
+  });
+}
 
 export async function addDrive(input: DriveInput, preferredEditor?: string) {
   const { isAllowedToCreateDocuments } = getUserPermissions();
@@ -72,24 +162,31 @@ export async function addRemoteDrive(
   const existingRemote = sync
     .list()
     .find((remote) => remote.collectionId === collectionId);
-  if (existingRemote) {
-    return resolvedDriveId;
+
+  if (!existingRemote) {
+    const remoteName = crypto.randomUUID();
+    await sync.add(
+      remoteName,
+      collectionId,
+      {
+        type: "gql",
+        parameters: {
+          url: driveInfo.graphqlEndpoint,
+        },
+      },
+      undefined,
+      options?.pollBehavior
+        ? { pollBehavior: options.pollBehavior }
+        : undefined,
+    );
   }
 
-  const remoteName = crypto.randomUUID();
-
-  await sync.add(
-    remoteName,
-    collectionId,
-    {
-      type: "gql",
-      parameters: {
-        url: driveInfo.graphqlEndpoint,
-      },
-    },
-    undefined,
-    options?.pollBehavior ? { pollBehavior: options.pollBehavior } : undefined,
-  );
+  if (options?.awaitInitialSync) {
+    await waitForDocumentReady(reactorClient, resolvedDriveId, {
+      timeoutMs: options.initialSyncTimeoutMs,
+      signal: options.signal,
+    });
+  }
 
   return resolvedDriveId;
 }
@@ -104,7 +201,20 @@ export async function deleteDrive(driveId: string) {
   if (!reactorClient) {
     throw new Error("ReactorClient not initialized");
   }
-  await reactorClient.deleteDocument(driveId);
+
+  const sync =
+    window.ph?.reactorClientModule?.reactorModule?.syncModule?.syncManager;
+  if (sync) {
+    const collectionId = driveCollectionId("main", driveId);
+    const remotes = sync
+      .list()
+      .filter((remote) => remote.collectionId === collectionId);
+    for (const remote of remotes) {
+      await sync.remove(remote.name);
+    }
+  }
+
+  await reactorClient.deleteDocument(driveId, PropagationMode.Cascade);
 }
 
 export async function renameDrive(

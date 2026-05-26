@@ -100,7 +100,11 @@ import type {
   UpdateOperationExampleAction,
   UpdateStateExampleAction,
 } from "./types.js";
-import { validateOperationName } from "./validation.js";
+import {
+  findModuleOrThrow,
+  findOperationOrThrow,
+  validateOperationName,
+} from "./validation.js";
 
 function sorter<TItem extends { id: string }>(
   order: string[],
@@ -182,22 +186,14 @@ export const documentModelModuleReducer: DocumentModelModuleOperations = {
 export const documentModelOperationErrorReducer: DocumentModelOperationErrorOperations =
   {
     addOperationErrorOperation(state, action) {
-      const latestSpec = state.specifications[state.specifications.length - 1];
-      for (let i = 0; i < latestSpec.modules.length; i++) {
-        for (let j = 0; j < latestSpec.modules[i].operations.length; j++) {
-          if (
-            latestSpec.modules[i].operations[j].id == action.input.operationId
-          ) {
-            latestSpec.modules[i].operations[j].errors.push({
-              id: action.input.id,
-              name: action.input.errorName || "",
-              code: action.input.errorCode || "",
-              description: action.input.errorDescription || "",
-              template: action.input.errorTemplate || "",
-            });
-          }
-        }
-      }
+      const targetOp = findOperationOrThrow(state, action.input.operationId);
+      targetOp.errors.push({
+        id: action.input.id,
+        name: action.input.errorName || "",
+        code: action.input.errorCode || "",
+        description: action.input.errorDescription || "",
+        template: action.input.errorTemplate || "",
+      });
     },
 
     setOperationErrorCodeOperation(state, action) {
@@ -379,23 +375,18 @@ export const documentModelOperationExampleReducer: DocumentModelOperationExample
 export const documentModelOperationReducer: DocumentModelOperationOperations = {
   addOperationOperation(state, action) {
     validateOperationName(action.input.name, state);
-
-    const latestSpec = state.specifications[state.specifications.length - 1];
-    for (let i = 0; i < latestSpec.modules.length; i++) {
-      if (latestSpec.modules[i].id == action.input.moduleId) {
-        latestSpec.modules[i].operations.push({
-          id: action.input.id,
-          name: action.input.name,
-          description: action.input.description || "",
-          schema: action.input.schema || "",
-          template: action.input.template || action.input.description || "",
-          reducer: action.input.reducer || "",
-          errors: [],
-          examples: [],
-          scope: action.input.scope || "global",
-        });
-      }
-    }
+    const targetModule = findModuleOrThrow(state, action.input.moduleId);
+    targetModule.operations.push({
+      id: action.input.id,
+      name: action.input.name,
+      description: action.input.description || "",
+      schema: action.input.schema || "",
+      template: action.input.template || action.input.description || "",
+      reducer: action.input.reducer || "",
+      errors: [],
+      examples: [],
+      scope: action.input.scope || "global",
+    });
   },
 
   setOperationNameOperation(state, action) {
@@ -414,15 +405,13 @@ export const documentModelOperationReducer: DocumentModelOperationOperations = {
   },
 
   setOperationScopeOperation(state, action) {
+    const targetOp = findOperationOrThrow(state, action.input.id);
     const latestSpec = state.specifications[state.specifications.length - 1];
-    for (let i = 0; i < latestSpec.modules.length; i++) {
-      for (let j = 0; j < latestSpec.modules[i].operations.length; j++) {
-        if (latestSpec.modules[i].operations[j].id == action.input.id) {
-          latestSpec.modules[i].operations[j].scope =
-            action.input.scope || "global";
-        }
-      }
+    const allowedScopes = Object.keys(latestSpec.state);
+    if (action.input.scope && !allowedScopes.includes(action.input.scope)) {
+      throw new Error(`Invalid scope: ${action.input.scope}`);
     }
+    targetOp.scope = action.input.scope || "global";
   },
 
   setOperationSchemaOperation(state, action) {

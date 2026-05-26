@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-api",
-  "version": "6.0.0-dev.254",
+  "version": "6.1.0-dev.4",
   "description": "",
   "type": "module",
   "repository": {
@@ -69,13 +69,7 @@
     "@powerhousedao/reactor-mcp": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
     "@renown/sdk": "workspace:*",
-    "@fastify/cors": "^11.0.1",
-    "@mercuriusjs/gateway": "^5.2.0",
-    "mercurius": "^16.8.0",
-    "@fastify/formbody": "^8.0.1",
-    "@fastify/middie": "^9.3.2",
     "body-parser": "^1.20.3",
-    "fastify": "^5.8.5",
     "change-case": "catalog:",
     "cors": "^2.8.5",
     "devcert": "^1.2.2",
@@ -97,6 +91,12 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@fastify/cors": "^11.0.1",
+    "@fastify/formbody": "^8.0.1",
+    "@fastify/middie": "^9.3.2",
+    "@mercuriusjs/gateway": "^5.2.0",
+    "fastify": "^5.8.5",
+    "mercurius": "^16.8.0",
     "@graphql-codegen/cli": "catalog:",
     "@graphql-codegen/typescript": "catalog:",
     "@graphql-codegen/typescript-generic-sdk": "catalog:",
@@ -115,11 +115,35 @@
     "vitest": "catalog:"
   },
   "peerDependencies": {
+    "@fastify/cors": "^11.0.1",
+    "@fastify/formbody": "^8.0.1",
+    "@fastify/middie": "^9.3.2",
+    "@mercuriusjs/gateway": "^5.2.0",
+    "fastify": "^5.8.5",
     "graphql": "^16",
     "graphql-tag": "^2",
+    "mercurius": "^16.8.0",
     "vite": "^8.0.0"
   },
   "peerDependenciesMeta": {
+    "@fastify/cors": {
+      "optional": true
+    },
+    "@fastify/formbody": {
+      "optional": true
+    },
+    "@fastify/middie": {
+      "optional": true
+    },
+    "@mercuriusjs/gateway": {
+      "optional": true
+    },
+    "fastify": {
+      "optional": true
+    },
+    "mercurius": {
+      "optional": true
+    },
     "vite": {
       "optional": true
     }

@@ -29,6 +29,13 @@ export interface IPackageManager extends IDocumentModelLoader {
   subscribe(handler: IPackagesListener): IPackageListerUnsubscribe;
   getPackageSource: (packageName: string) => RegistryPackageSource | null;
   getPackageVersion: (packageName: string) => string | undefined;
+  /**
+   * Registry-installed packages keyed by their storage name (the registry
+   * spec, e.g. "@powerhousedao/clint-common"). Used by callers that need to
+   * diff against an external source of truth such as the publish-reload
+   * channel's `/__packages` SSE feed.
+   */
+  getRegistryPackages: () => { name: string; version: string | undefined }[];
   addLocalPackage: (
     name: string,
     loadedPackage: DocumentModelLib,

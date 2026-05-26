@@ -239,6 +239,8 @@ Re-generate all modules in the current project
 
 
 ### Flags
+**Extract** - Instead of generating code, write a spec for every module into specs/ (one-shot migration to documents-as-source-of-truth) - Usage: `--extract, -x`
+
 **Help** - show help - Usage: `--help, -h`
 
 
@@ -248,15 +250,17 @@ Generate a document model
 
 
 ### Options
-**File** - Path to the file to generate the document model from - Usage: `--file, -f <file>`
+**Document** - Path to a document model spec (.phd or .json) to generate from - Usage: `--document, -d <file>`
 
-**Dir** - Name of the directory of an existing document model to re-generate - Usage: `--dir, -d <dir>`
+**Dir** - Name of the directory of an existing document model to re-generate - Usage: `--dir <dir>`
 
 
 
 
 ### Flags
 **All** - Re-generate all existing document models in the current project - Usage: `--all, -a`
+
+**Extract** - Write a powerhouse/document-model spec for each existing document model into specs/document-models/ - Usage: `--extract, -x`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
@@ -273,13 +277,17 @@ Generate a document editor
 
 **Document Type** - The document type for the new editor - Usage: `--document-type, -t <str>`
 
-**Dir** - Name of the directory of an existing editor to re-generate - Usage: `--dir, -d <dir>`
+**Document** - Path to a powerhouse/document-editor spec file (.phd or .json) to drive codegen - Usage: `--document, -d <file>`
+
+**Dir** - Name of the directory of an existing editor to re-generate - Usage: `--dir <dir>`
 
 
 
 
 ### Flags
 **All** - Re-generate all existing editors in the current project - Usage: `--all, -a`
+
+**Extract** - Write a powerhouse/document-editor spec for each existing editor into specs/editors/ - Usage: `--extract, -x`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
@@ -296,7 +304,9 @@ Generate a drive app
 
 **Document Types** - The document types allowed by the new app - Usage: `--document-types <str>, -t=<str>`
 
-**Dir** - Name of the directory of an existing app to re-generate - Usage: `--dir, -d <dir>`
+**Document** - Path to a powerhouse/app spec file (.phd or .json) to drive codegen - Usage: `--document, -d <file>`
+
+**Dir** - Name of the directory of an existing app to re-generate - Usage: `--dir <dir>`
 
 
 
@@ -306,6 +316,8 @@ Generate a drive app
 
 **Default:** `false`
 **All** - Re-generate all existing apps in the current project - Usage: `--all, -a`
+
+**Extract** - Write a powerhouse/app spec for each existing drive app into specs/apps/ - Usage: `--extract, -x`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
@@ -329,13 +341,17 @@ Generate a processor
 **Apps** - Whether the processor will run in switchboard (nodejs), connect (browser), or both - Usage: `--apps <value>`
 
 **Default:** `switchboard,connect`
-**Dir** - Name of the directory of an existing processor to re-generate - Usage: `--dir, -d <dir>`
+**Document** - Path to a powerhouse/processor spec file (.phd or .json) to drive codegen - Usage: `--document, -d <file>`
+
+**Dir** - Name of the directory of an existing processor to re-generate - Usage: `--dir <dir>`
 
 
 
 
 ### Flags
 **All** - Re-generate all existing processors in the current project - Usage: `--all, -a`
+
+**Extract** - Write a powerhouse/processor spec for each existing processor into specs/processors/ - Usage: `--extract, -x`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
@@ -350,13 +366,17 @@ Generate a subgraph
 ### Options
 **Name** - The name of the subgraph to generate - Usage: `--name, -n <str>`
 
-**Dir** - Name of the directory of an existing subgraph to re-generate - Usage: `--dir, -d <dir>`
+**Document** - Path to a powerhouse/subgraph spec file (.phd or .json) to drive codegen - Usage: `--document, -d <file>`
+
+**Dir** - Name of the directory of an existing subgraph to re-generate - Usage: `--dir <dir>`
 
 
 
 
 ### Flags
 **All** - Re-generate all existing subgraphs in the current project - Usage: `--all, -a`
+
+**Extract** - Write a powerhouse/subgraph spec for each existing subgraph into specs/subgraphs/ - Usage: `--extract, -x`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
@@ -846,6 +866,10 @@ models, processors, and real-time updates.
 **Migrate** - Run database migrations and exit - Usage: `--migrate`
 
 **Migrate Status** - Show migration status and exit - Usage: `--migrate-status`
+
+**Reset** - Wipe the local PGlite switchboard storage after confirmation, then exit - Usage: `--reset`
+
+**Yes** - Skip the interactive confirmation prompt for --reset (required for non-interactive use) - Usage: `--yes, -y`
 
 **Mcp** - enable Mcp route at /mcp - Usage: `--mcp`
 

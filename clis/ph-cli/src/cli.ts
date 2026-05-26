@@ -8,6 +8,10 @@ import { run } from "cmd-ts";
 import { phCliHelp } from "./commands/ph-cli-help.js";
 import { phCli } from "./commands/ph-cli.js";
 import { getVersion } from "./get-version.js";
+import {
+  isUnrecoverableDbError,
+  printDbRecoveryHint,
+} from "./utils/db-error-hint.js";
 
 let sentryClient: TelemetryClient | undefined = undefined;
 
@@ -77,6 +81,9 @@ await main().catch(async (error) => {
   }
   if (error instanceof Error) {
     console.error(error.message);
+    if (isUnrecoverableDbError(error)) {
+      printDbRecoveryHint(error);
+    }
     process.exit(1);
   } else {
     throw error;

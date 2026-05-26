@@ -1,3 +1,85 @@
+## 6.1.0-dev.4 (2026-05-26)
+
+### 🚀 Features
+
+- **document-model:** validate operation name format in reducer ([e917b20e6](https://github.com/powerhouse-inc/powerhouse/commit/e917b20e6))
+- **reactor-browser:** await initial sync option for addRemoteDrive ([b255cdb75](https://github.com/powerhouse-inc/powerhouse/commit/b255cdb75))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.1.0-dev.3 (2026-05-25)
+
+This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.
+
+## 6.1.0-dev.2 (2026-05-24)
+
+This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.
+
+## 6.1.0-dev.1 (2026-05-23)
+
+This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.
+
+## 6.1.0-dev.0 (2026-05-22)
+
+### 🩹 Fixes
+
+- **shared,ph-cli:** made rolldown an optional peer dependency ([13db8e511](https://github.com/powerhouse-inc/powerhouse/commit/13db8e511))
+- **reactor-api:** moved fastify and mercurius to be optional peer dependencies ([f02aeec8c](https://github.com/powerhouse-inc/powerhouse/commit/f02aeec8c))
+- **ph-cli,ph-cmd,shared:** make sentry/core an optional peer dependency of shared ([fc8446e18](https://github.com/powerhouse-inc/powerhouse/commit/fc8446e18))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.258 (2026-05-22)
+
+This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.257 (2026-05-21)
+
+### 🚀 Features
+
+- **vetra:** moved schema projection to ph-rupert-cli ([49f627e7b](https://github.com/powerhouse-inc/powerhouse/commit/49f627e7b))
+- **vetra,ph-cli:** add @powerhousedao/vetra/codegen subexport for agent-driven codegen ([9689be87e](https://github.com/powerhouse-inc/powerhouse/commit/9689be87e))
+
+### 🩹 Fixes
+
+- **connect:** version-aware /__packages diff with toasts and refetch ([36f2e641d](https://github.com/powerhouse-inc/powerhouse/commit/36f2e641d))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.256 (2026-05-21)
+
+### 🚀 Features
+
+- **reactor-browser:** add useEditorFileDrop hook and DropZone opt-out ([8c6ebf73a](https://github.com/powerhouse-inc/powerhouse/commit/8c6ebf73a))
+
+### 🩹 Fixes
+
+- **reactor-browser:** stop sync before deleting drive document ([9fec21bf5](https://github.com/powerhouse-inc/powerhouse/commit/9fec21bf5))
+- **reactor-browser:** hide DropZone overlay over editor opt-out regions ([725d185fd](https://github.com/powerhouse-inc/powerhouse/commit/725d185fd))
+- add @tokens to logger calls across packages ([b70070ae2](https://github.com/powerhouse-inc/powerhouse/commit/b70070ae2))
+- **reactor-api:** pass args to logger.error calls in reactor subgraph ([b34dcf7dc](https://github.com/powerhouse-inc/powerhouse/commit/b34dcf7dc))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.255 (2026-05-20)
+
+### 🩹 Fixes
+
+- **reactor-browser:** stop sync before deleting drive document ([9fec21bf5](https://github.com/powerhouse-inc/powerhouse/commit/9fec21bf5))
+- **reactor-browser:** hide DropZone overlay over editor opt-out regions ([725d185fd](https://github.com/powerhouse-inc/powerhouse/commit/725d185fd))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.254 (2026-05-19)
 
 ### 🚀 Features

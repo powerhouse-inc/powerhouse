@@ -1,5 +1,6 @@
 import { connectConfig } from "@powerhousedao/connect/config";
 import { useSyncExternalStore } from "react";
+import { getIsEmbedded } from "./useIsEmbedded.js";
 
 const namespace = connectConfig.routerBasename;
 
@@ -10,6 +11,7 @@ const listeners = new Set<() => void>();
 let bannerShown = getInitial();
 
 function getInitial(): boolean {
+  if (getIsEmbedded()) return false;
   try {
     const value = localStorage.getItem(COOKIE_BANNER_KEY_STORAGE);
     return value !== "false";

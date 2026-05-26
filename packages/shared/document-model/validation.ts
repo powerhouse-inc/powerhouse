@@ -1,4 +1,4 @@
-import { pascalCase } from "change-case";
+import { constantCase, pascalCase } from "change-case";
 import type { DocumentOperations } from "./operations.js";
 import type {
   DocumentModelGlobalState,
@@ -22,6 +22,17 @@ export const RESERVED_OPERATION_NAMES = [
 ] as const;
 
 export type ReservedOperationName = (typeof RESERVED_OPERATION_NAMES)[number];
+
+/**
+ * Operation names become the literal action `type` string at runtime and the
+ * key for codegen's action union. They must be SCREAMING_SNAKE_CASE so the
+ * generated TypeScript is valid.
+ */
+export const OPERATION_NAME_PATTERN = /^[A-Z][A-Z0-9_]*$/;
+
+export function isValidOperationNameFormat(name: string): boolean {
+  return OPERATION_NAME_PATTERN.test(name);
+}
 
 /**
  * Check if name conflicts with base reducer actions (case-insensitive).
@@ -67,6 +78,19 @@ export function validateOperationName(
   excludeOperationId?: string,
 ): void {
   if (!name) return; // Empty names handled by existing validation
+
+  if (!isValidOperationNameFormat(name)) {
+    const suggestion = constantCase(name);
+    const hint =
+      suggestion &&
+      suggestion !== name &&
+      isValidOperationNameFormat(suggestion)
+        ? ` Did you mean "${suggestion}"?`
+        : "";
+    throw new Error(
+      `Operation name "${name}" is invalid. Names must be SCREAMING_SNAKE_CASE (matching ${OPERATION_NAME_PATTERN.source}).${hint}`,
+    );
+  }
 
   const upperName = name.toUpperCase();
 
@@ -231,6 +255,46 @@ export function validateModuleOperation(
   }
 
   return errors;
+}
+
+/**
+ * Find a module in the latest specification by id, or throw. Reducers that
+ * mutate-by-id should call this up front so an unknown id fails loudly
+ * instead of silently no-opping.
+ */
+export function findModuleOrThrow(
+  state: DocumentModelGlobalState,
+  moduleId: string,
+): ModuleSpecification {
+  const latestSpec = state.specifications[state.specifications.length - 1];
+  const mod = latestSpec?.modules.find((m) => m.id === moduleId);
+  if (!mod) {
+    throw new Error(
+      `Module "${moduleId}" not found in the latest specification`,
+    );
+  }
+  return mod;
+}
+
+/**
+ * Find an operation in the latest specification by id, or throw. Same
+ * rationale as findModuleOrThrow — reducers that target an operation must
+ * fail loudly when the operation doesn't exist.
+ */
+export function findOperationOrThrow(
+  state: DocumentModelGlobalState,
+  operationId: string,
+): OperationSpecification {
+  const latestSpec = state.specifications[state.specifications.length - 1];
+  if (latestSpec) {
+    for (const mod of latestSpec.modules) {
+      const op = mod.operations.find((o) => o.id === operationId);
+      if (op) return op;
+    }
+  }
+  throw new Error(
+    `Operation "${operationId}" not found in the latest specification`,
+  );
 }
 
 export function validateOperations(operations: DocumentOperations) {

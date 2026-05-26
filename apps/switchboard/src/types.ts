@@ -1,4 +1,7 @@
-import type { IReactorClient } from "@powerhousedao/reactor";
+import type {
+  IReactorClient,
+  ReactorClientModule,
+} from "@powerhousedao/reactor";
 import type { IRenown } from "@renown/sdk";
 import type { DriveInput } from "@powerhousedao/shared/document-drive";
 import type { ILogger } from "document-model";
@@ -41,6 +44,34 @@ export type IdentityOptions = {
 };
 
 export type StartServerOptions = {
+  /**
+   * Pre-built ReactorClientModule (typically from
+   * `@powerhousedao/reactor#ReactorClientBuilder.buildModule`). When set, the
+   * switchboard reuses the caller's reactor instead of building its own,
+   * and the caller owns the reactor's lifecycle. The API, GraphQL manager,
+   * MCP, attachments, package management subgraph, and registry HTTP loader
+   * are still configured around it.
+   *
+   * Lifecycle contract: switchboard does NOT wire itself into the caller's
+   * reactor shutdown. Callers must invoke `shutdown()` on the returned
+   * `SwitchboardReactor` from their own teardown (and SIGINT handlers) to
+   * drain `/graphql`, MCP, attachments, etc. Killing the caller's reactor
+   * alone will not release these resources.
+   *
+   * Setup contract: the reactor must have switchboard's expected wiring
+   * already applied — channel scheme, document models, signal handlers,
+   * etc. Use `applySwitchboardReactorDefaults` from this module to apply
+   * the same defaults switchboard uses internally; opt out of individual
+   * pieces as needed.
+   */
+  reactor?: ReactorClientModule;
+  /**
+   * Registry URL for the HttpPackageLoader. Enables `PackagesSubgraph`
+   * (install/uninstall mutations) plus dynamic package resolution.
+   * Falls back to PH_REGISTRY_URL env, then `packageRegistryUrl` in the
+   * powerhouse config file.
+   */
+  registryUrl?: string;
   configFile?: string;
   port?: number;
   /**
@@ -116,4 +147,17 @@ export type SwitchboardReactor = {
    * port when the requested port was in use and fallback kicked in.
    */
   port: number;
+  /**
+   * Drain switchboard-owned resources: HTTP server, GraphQL manager,
+   * attachments, MCP, packages subgraph, and the read-model DB. This does
+   * NOT kill the reactor — in owned-reactor mode the reactor lifecycle is
+   * handled by its own SIGINT signal handlers, which then drain the api via
+   * the shutdown hook switchboard registered on the builder. In
+   * caller-provided mode the caller owns the reactor lifecycle separately.
+   *
+   * Callers using a caller-provided reactor must invoke this from their own
+   * teardown / SIGINT path so api resources are released; killing the
+   * reactor alone won't release them.
+   */
+  shutdown: () => Promise<void>;
 };

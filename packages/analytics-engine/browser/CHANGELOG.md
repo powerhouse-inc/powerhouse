@@ -1,3 +1,61 @@
+## 6.1.0-dev.4 (2026-05-26)
+
+This was a version bump only for @powerhousedao/analytics-engine-browser to align it with other projects, there were no code changes.
+
+## 6.1.0-dev.3 (2026-05-25)
+
+This was a version bump only for @powerhousedao/analytics-engine-browser to align it with other projects, there were no code changes.
+
+## 6.1.0-dev.2 (2026-05-24)
+
+This was a version bump only for @powerhousedao/analytics-engine-browser to align it with other projects, there were no code changes.
+
+## 6.1.0-dev.1 (2026-05-23)
+
+This was a version bump only for @powerhousedao/analytics-engine-browser to align it with other projects, there were no code changes.
+
+## 6.1.0-dev.0 (2026-05-22)
+
+### 🩹 Fixes
+
+- **shared,ph-cli:** made rolldown an optional peer dependency ([13db8e511](https://github.com/powerhouse-inc/powerhouse/commit/13db8e511))
+- **reactor-api:** moved fastify and mercurius to be optional peer dependencies ([f02aeec8c](https://github.com/powerhouse-inc/powerhouse/commit/f02aeec8c))
+- **ph-cli,ph-cmd,shared:** make sentry/core an optional peer dependency of shared ([fc8446e18](https://github.com/powerhouse-inc/powerhouse/commit/fc8446e18))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.258 (2026-05-22)
+
+This was a version bump only for @powerhousedao/analytics-engine-browser to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.257 (2026-05-21)
+
+### 🚀 Features
+
+- **vetra:** moved schema projection to ph-rupert-cli ([49f627e7b](https://github.com/powerhouse-inc/powerhouse/commit/49f627e7b))
+- **vetra,ph-cli:** add @powerhousedao/vetra/codegen subexport for agent-driven codegen ([9689be87e](https://github.com/powerhouse-inc/powerhouse/commit/9689be87e))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.256 (2026-05-21)
+
+### 🩹 Fixes
+
+- add @tokens to logger calls across packages ([b70070ae2](https://github.com/powerhouse-inc/powerhouse/commit/b70070ae2))
+- **reactor-api:** pass args to logger.error calls in reactor subgraph ([b34dcf7dc](https://github.com/powerhouse-inc/powerhouse/commit/b34dcf7dc))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.255 (2026-05-20)
+
+This was a version bump only for @powerhousedao/analytics-engine-browser to align it with other projects, there were no code changes.
+
 ## 6.0.0-dev.254 (2026-05-19)
 
 ### 🚀 Features

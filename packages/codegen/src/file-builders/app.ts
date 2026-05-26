@@ -133,7 +133,7 @@ export async function tsMorphGenerateApp({
         {
           name: editorName,
           id: editorId,
-          documentTypes: ["powerhousedao/document-drive"],
+          documentTypes: ["powerhouse/document-drive"],
         },
       ],
     },

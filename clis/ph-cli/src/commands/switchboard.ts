@@ -20,9 +20,16 @@ This command:
     if (args.debug) {
       console.log(args);
     }
-    const { basePath, dbPath, migrate, migrateStatus } = args;
+    const { basePath, dbPath, migrate, migrateStatus, reset, yes } = args;
     if (basePath) {
       process.env.BASE_PATH = basePath;
+    }
+
+    if (reset) {
+      const { resetSwitchboardDatabase } =
+        await import("../services/switchboard-reset.js");
+      await resetSwitchboardDatabase({ dbPath, yes });
+      process.exit(0);
     }
 
     if (migrate || migrateStatus) {

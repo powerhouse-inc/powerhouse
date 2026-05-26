@@ -114,14 +114,42 @@ export type PgliteFactory = (
   connectionString: string | undefined,
 ) => PGliteType;
 
-export function getDbClient(
-  connectionString: string | undefined = undefined,
-  pgliteFactory?: PgliteFactory,
-): {
+export interface DbClient {
   db: Db;
   knex: Knex;
   pglite: PGliteType | undefined;
-} {
+}
+
+/**
+ * Cache of DB clients keyed by connection string. Reactor-api's read-model
+ * layer wires analytics, attachments, and document-permissions as separate
+ * consumers but they all target the same logical database (one postgres
+ * instance, many schemas). Without caching:
+ *   - PGlite: two `new PGlite(samePath)` calls mean two embedded postgres
+ *     processes contending for the same data dir, racing shutdown syncs
+ *     and silently losing writes — a correctness bug.
+ *   - Postgres: each consumer opens an independent pool against the same
+ *     backend — wasteful but correct.
+ * Caching by connection string returns the same knex/PGlite pair to every
+ * consumer so writes coexist in one MemoryFS and one atomic snapshot, and
+ * postgres callers get connection-pool dedup for free.
+ *
+ * Entries are evicted from inside the wrapped `knex.destroy()` below, so a
+ * teardown + re-init in the same process (tests, hot-reloads) constructs
+ * a fresh client instead of returning a closed pool.
+ */
+const IN_MEMORY_CACHE_KEY = Symbol("getDbClient:in-memory");
+type CacheKey = string | typeof IN_MEMORY_CACHE_KEY;
+const dbClientCache = new Map<CacheKey, DbClient>();
+
+export function getDbClient(
+  connectionString: string | undefined = undefined,
+  pgliteFactory?: PgliteFactory,
+): DbClient {
+  const cacheKey: CacheKey = connectionString ?? IN_MEMORY_CACHE_KEY;
+  const cached = dbClientCache.get(cacheKey);
+  if (cached) return cached;
+
   const isPg = connectionString && isPG(connectionString);
   const client = isPg ? "pg" : (ClientPgLite as typeof knex.Client);
   const pgliteInstance: PGliteType | undefined = isPg
@@ -154,7 +182,32 @@ export function getDbClient(
     }),
   });
 
-  return { db: kyselyInstance, knex: knexInstance, pglite: pgliteInstance };
+  const dbClient: DbClient = {
+    db: kyselyInstance,
+    knex: knexInstance,
+    pglite: pgliteInstance,
+  };
+
+  // Wrap knex.destroy so closing the client also drops the cache entry.
+  // Works for both PGlite (which has a `closed` flag) and raw Postgres
+  // pools (which don't), and keeps the Map from accumulating dead entries
+  // when callers cycle through many distinct paths. `destroy` lives on
+  // the Knex prototype as a read-only method, so use defineProperty to
+  // shadow it on this instance.
+  const originalDestroy = knexInstance.destroy.bind(knexInstance);
+  Object.defineProperty(knexInstance, "destroy", {
+    configurable: true,
+    writable: true,
+    value: async (...args: unknown[]) => {
+      if (dbClientCache.get(cacheKey) === dbClient) {
+        dbClientCache.delete(cacheKey);
+      }
+      return originalDestroy(...(args as []));
+    },
+  });
+
+  dbClientCache.set(cacheKey, dbClient);
+  return dbClient;
 }
 
 export const initAnalyticsStoreSql = [
