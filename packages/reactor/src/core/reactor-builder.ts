@@ -34,7 +34,6 @@ import { InMemoryJobTracker } from "../job-tracker/in-memory-job-tracker.js";
 import { ProcessorManager } from "../processors/processor-manager.js";
 import type { IQueue } from "../queue/interfaces.js";
 import { InMemoryQueue } from "../queue/queue.js";
-import { ProjectionShardManager } from "../projection/projection-shard-manager.js";
 import type {
   BuiltInReadModelKind,
   ProjectionWorkerFactory,
@@ -788,6 +787,8 @@ export class ReactorBuilder {
       poolInstrumentations.push(forwarder);
       this.instrumentedPools.push(forwarder);
     }
+    const { ProjectionShardManager } =
+      await import("../projection/projection-shard-manager.js");
     const manager = new ProjectionShardManager({
       shardCount: config.shardCount,
       db,
