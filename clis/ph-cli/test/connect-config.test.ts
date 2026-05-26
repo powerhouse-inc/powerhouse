@@ -307,4 +307,32 @@ describe("ph connect config", () => {
       );
     });
   });
+
+  // ---------------- --base rejection ----------------
+
+  describe("--base is rejected (build-time-only field)", () => {
+    it("throws with an actionable message when --base is explicitly passed", async () => {
+      writeSource({ connect: {} });
+      process.argv = ["node", "ph", "connect", "config", "--base", "/foo"];
+      await expect(
+        runConnectConfig(mk({ connectBasePath: "/foo" })),
+      ).rejects.toThrow(/--base is a build-time field/);
+    });
+
+    it("does NOT trigger when --base was not passed (cmd-ts default present in args)", async () => {
+      writeSource({ connect: {} });
+      // process.argv has no --base; the default "/" in args must not trigger
+      // the rejection.
+      await runConnectConfig(mk({ renownUrl: "https://ok" }));
+      const source = readJson(join(tmpDir, SOURCE_FILE));
+      expect(
+        (
+          (source.connect as Record<string, unknown>).renown as Record<
+            string,
+            unknown
+          >
+        ).url,
+      ).toBe("https://ok");
+    });
+  });
 });

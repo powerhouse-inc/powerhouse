@@ -117,9 +117,10 @@ function printJson(value: unknown): void {
 
 /**
  * Translate the parsed `ph connect config` args into the structural
- * `ConnectFlagInput` consumed by `buildConnectFlagPatch`. The 4 commonArgs
- * flags are gated through `wasFlagExplicitlyPassed` — their cmd-ts default
- * values must not leak into a write the user didn't request.
+ * `ConnectFlagInput` consumed by `buildConnectFlagPatch`. Common-args flags
+ * with cmd-ts defaults are gated through `wasFlagExplicitlyPassed` so the
+ * defaults don't leak into a write the user didn't request. `--base` is
+ * not translated here — it's rejected up front by `runConnectConfig`.
  */
 function argsToFlagInput(args: ConnectConfigArgs): ConnectFlagInput {
   return {
@@ -136,9 +137,9 @@ function argsToFlagInput(args: ConnectConfigArgs): ConnectFlagInput {
     localDrivesAllowDelete: args.localDrivesAllowDelete,
     appName: args.appName,
     homeBackground: args.homeBackground,
-    basePath: wasFlagExplicitlyPassed("base")
-      ? args.connectBasePath
-      : undefined,
+    sentryDsn: args.sentryDsn,
+    sentryEnv: args.sentryEnv,
+    sentryTracingEnabled: args.sentryTracingEnabled,
     logLevel: wasFlagExplicitlyPassed("log-level") ? args.logLevel : undefined,
     defaultDrivesUrl: wasFlagExplicitlyPassed("default-drives-url")
       ? args.defaultDrivesUrl
@@ -160,6 +161,16 @@ function hasAnyFieldFlag(input: ConnectFlagInput): boolean {
 }
 
 export async function runConnectConfig(args: ConnectConfigArgs): Promise<void> {
+  // `--base` is a build-time field (baked into the Vite bundle's asset URLs
+  // and the nginx config template), so writing it post-build leaves the
+  // layers disagreeing and the SPA's assets 404. The flag stays declared so
+  // cmd-ts parses it; we reject explicit use here with an actionable error.
+  if (wasFlagExplicitlyPassed("base")) {
+    throw new Error(
+      "ph connect config: --base is a build-time field; run `ph connect build --base <value>` and redeploy the container (or restart with PH_CONNECT_BASE_PATH=<value> set in the environment).",
+    );
+  }
+
   const cwd = process.cwd();
   const sourcePath = resolveSourcePath(cwd);
   const distPath = resolveDistPath(cwd, args.distDir);

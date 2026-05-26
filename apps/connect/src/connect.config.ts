@@ -117,7 +117,9 @@ export function buildPHGlobalConfig(
 }
 
 function getPHGlobalConfigFromRuntime(): PHGlobalConfig {
-  const basePath = runtime.app?.basePath ?? import.meta.env.BASE_URL;
+  // ConfigLoader merges DEFAULT_CONNECT_CONFIG at boot, so basePath is
+  // always defined; the `?? "/"` is a defensive guard for typecheck.
+  const basePath = runtime.app?.basePath ?? "/";
   const routerBasename = getRouterBasenameFromBasePath(basePath);
   return buildPHGlobalConfig(basePath, routerBasename, runtime);
 }
@@ -141,10 +143,8 @@ if (RESOLVED_LOG_LEVEL) {
 }
 logger.debug("Setting log level to @level.", RESOLVED_LOG_LEVEL);
 
-// Normalize the base path to ensure it starts and ends with a forward slash
-const PH_CONNECT_BASE_PATH = normalizeBasePath(
-  runtime.app?.basePath ?? import.meta.env.BASE_URL,
-);
+// Normalize the base path to ensure it starts and ends with a forward slash.
+const PH_CONNECT_BASE_PATH = normalizeBasePath(runtime.app?.basePath ?? "/");
 
 // Analytics database name — derived deterministically from the base path.
 const PH_CONNECT_ANALYTICS_DATABASE_NAME = `${PH_CONNECT_BASE_PATH.replace(

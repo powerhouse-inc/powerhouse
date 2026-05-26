@@ -101,7 +101,9 @@ Two special-case writers also exist:
 - `--get <dotted.path>` → prints a single value (also works for top-level `--get packageRegistryUrl`).
 - `--<field> <value>` or `--json '{...}'` → set mode: Ajv-validates the patch and dual-writes to source and dist (dist is skipped silently if no build has happened yet).
 
-**`ph connect build` flags.** Same 19 flag names as `ph connect config`. The 4 flags inherited from `commonArgs` (`--base`, `--log-level`, `--default-drives-url`, `--drive-preserve-strategy`) carry cmd-ts defaults, so they're gated through `wasFlagExplicitlyPassed` — if the user didn't type the flag, the source value wins. CLI flags beat source.
+**`ph connect build` flags.** The full flag matrix — `--base` IS available here (build-time field). The 4 flags inherited from `commonArgs` (`--base`, `--log-level`, `--default-drives-url`, `--drive-preserve-strategy`) carry cmd-ts defaults, so they're gated through `wasFlagExplicitlyPassed` — if the user didn't type the flag, the source value wins. CLI flags beat source.
+
+**`--base` is build-time only.** `ph connect build --base /foo` writes `connect.app.basePath` AND bakes the value into the Vite bundle's asset URLs AND templates the nginx config. `ph connect config --base /foo` would only write the first one, leaving the SPA's router and the deployed assets disagreeing — so `ph connect config` rejects `--base` up front with an actionable error pointing at `ph connect build --base`.
 
 **Docker entrypoint.** `docker/connect-entrypoint.sh` runs at container start and accepts a single env var, `PH_CONNECT_CONFIG_JSON`, carrying a full `powerhouse.config.json` payload (same shape as `ph connect config --json '{...}'`). It deep-merges that JSON into the dist file with **set-if-absent semantics**: any path already populated (by the build, by CLI flags, or by a mounted ConfigMap) wins; env-supplied values only fill gaps. This is the only env-var path still active — the SPA itself does not read env vars. Operators get the deployment-time knob without env vars leaking into runtime behaviour.
 
