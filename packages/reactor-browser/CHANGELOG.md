@@ -1,3 +1,14 @@
+## 6.1.0-dev.4 (2026-05-26)
+
+### 🚀 Features
+
+- **document-model:** validate operation name format in reducer ([e917b20e6](https://github.com/powerhouse-inc/powerhouse/commit/e917b20e6))
+- **reactor-browser:** await initial sync option for addRemoteDrive ([b255cdb75](https://github.com/powerhouse-inc/powerhouse/commit/b255cdb75))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.1.0-dev.3 (2026-05-25)
 
 This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.
