@@ -123,7 +123,7 @@ const connectRuntimeOverrideArgs = {
   packagesRegistry: option({
     type: optional(string),
     long: "packages-registry",
-    description: "Override connect.packages.registryUrl.",
+    description: "Override the top-level packageRegistryUrl.",
   }),
   appName: option({
     type: optional(string),

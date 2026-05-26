@@ -599,7 +599,7 @@ external packages included
 
 **Local Drives Allow Delete** - Override connect.drives.sections.local.allowDelete. - Usage: `--local-drives-allow-delete <value>`
 
-**Packages Registry** - Override connect.packages.registryUrl. - Usage: `--packages-registry <str>`
+**Packages Registry** - Override the top-level packageRegistryUrl. - Usage: `--packages-registry <str>`
 
 **App Name** - Override connect.branding.appName. - Usage: `--app-name <str>`
 

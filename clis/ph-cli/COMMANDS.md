@@ -532,7 +532,7 @@ Override connect.drives.sections.local.allowDelete.<br><br>
 **usage:** `--local-drives-allow-delete <value>`<br>
 
 #### Packages Registry <br>
-Override connect.packages.registryUrl.<br><br>
+Override the top-level packageRegistryUrl.<br><br>
 **usage:** `--packages-registry <str>`<br>
 
 #### App Name <br>
