@@ -1,4 +1,5 @@
 export * from "./analytics.js";
+export * from "./openpanel.js";
 export * from "./app-container.js";
 export * from "./app-loader.js";
 export * from "./app-skeleton.js";

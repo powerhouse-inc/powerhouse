@@ -1,4 +1,4 @@
-import { Analytics, Router } from "@powerhousedao/connect/components";
+import { Analytics, OpenPanel, Router } from "@powerhousedao/connect/components";
 
 import { SentryProvider } from "@powerhousedao/connect/context";
 import {
@@ -56,6 +56,7 @@ export const App = () => {
       <Router />
       <PackageInstallPrompt />
       <Analytics />
+      <OpenPanel />
     </SentryProvider>
   );
 };
