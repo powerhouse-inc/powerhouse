@@ -164,6 +164,26 @@ export type ProjectionChainDepthMessage = {
 };
 
 /**
+ * Snapshot of one shard's pg.Pool acquire-wait samples and pool-stat
+ * counters. The shard owns its real pg.Pool; the host's
+ * {@link PoolInstrumentation} is a forwarder driven by these messages.
+ */
+export type ProjectionPoolAcquireSamplesMessage = {
+  type: "pool-acquire-samples";
+  shardId: string;
+  /** Stable identifier matching the host-side instrumentation name. */
+  poolName: string;
+  /** Epoch milliseconds the worker generated the batch. */
+  timestamp: number;
+  /** Acquire-wait durations (ms) accumulated since the previous batch. */
+  durations: number[];
+  /** Most recent pg.Pool counter snapshot at batch send time. */
+  size: number;
+  idle: number;
+  waiting: number;
+};
+
+/**
  * Acknowledges that a `drain` request has flushed all in-flight chains.
  */
 export type ProjectionDrainedMessage = {
@@ -192,6 +212,7 @@ export type ProjectionWorkerMessage =
   | ProjectionReadModelIndexedMessage
   | ProjectionBatchCompletedMessage
   | ProjectionChainDepthMessage
+  | ProjectionPoolAcquireSamplesMessage
   | ProjectionDrainedMessage
   | ProjectionLogMessage;
 

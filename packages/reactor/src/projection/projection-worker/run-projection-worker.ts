@@ -11,6 +11,10 @@ import type {
   ReadModelBatchCompletedEvent,
   ReadModelIndexedEvent,
 } from "../../events/types.js";
+import {
+  instrumentPgPool,
+  type PoolInstrumentation,
+} from "../../storage/pool-instrumentation.js";
 import type {
   ProjectionInitMessage,
   ProjectionParentMessage,
@@ -21,12 +25,19 @@ import {
   type ProjectionStack,
 } from "./build-projection-stack.js";
 
+const POOL_SAMPLE_INTERVAL_MS = 1_000;
+
 /**
  * Closeable handle around the worker's Postgres pool. Decoupled from the
  * default factory so tests can swap in PGlite via `RunProjectionWorkerOverrides`.
+ *
+ * When the worker owns a real pg.Pool, the handle exposes a
+ * {@link PoolInstrumentation} so the run loop can forward acquire-wait
+ * samples to the host. Tests that swap in PGlite leave this undefined.
  */
 export type ProjectionWorkerDatabaseHandle = {
   kysely: Kysely<Database>;
+  poolInstrumentation?: PoolInstrumentation;
   shutdown(): Promise<void>;
 };
 
@@ -58,11 +69,13 @@ async function defaultCreateDatabase(
     connectionTimeoutMillis: config.connectionTimeoutMillis,
     idleTimeoutMillis: config.idleTimeoutMillis,
   });
+  const poolInstrumentation = instrumentPgPool(pool, shardId);
   const kysely = new Kysely<Database>({
     dialect: new PostgresDialect({ pool }),
   });
   return {
     kysely,
+    poolInstrumentation,
     async shutdown(): Promise<void> {
       try {
         await kysely.destroy();
@@ -93,9 +106,49 @@ export function runProjectionWorker(
   let database: ProjectionWorkerDatabaseHandle | null = null;
   let depthTimer: NodeJS.Timeout | null = null;
   let lastReportedDepth = -1;
+  let poolSampleTimer: NodeJS.Timeout | null = null;
+  let pendingPoolSamples: number[] = [];
+  let detachPoolListener: (() => void) | null = null;
 
   function post(msg: ProjectionWorkerMessage): void {
     parentPort.postMessage(msg);
+  }
+
+  function startPoolReporter(instrumentation: PoolInstrumentation): void {
+    detachPoolListener = instrumentation.onAcquire((durationMs) => {
+      pendingPoolSamples.push(durationMs);
+    });
+    poolSampleTimer = setInterval(() => {
+      if (pendingPoolSamples.length === 0) {
+        return;
+      }
+      const durations = pendingPoolSamples;
+      pendingPoolSamples = [];
+      const stats = instrumentation.getStats();
+      post({
+        type: "pool-acquire-samples",
+        shardId,
+        poolName: instrumentation.name,
+        timestamp: Date.now(),
+        durations,
+        size: stats.size,
+        idle: stats.idle,
+        waiting: stats.waiting,
+      });
+    }, POOL_SAMPLE_INTERVAL_MS);
+    poolSampleTimer.unref();
+  }
+
+  function stopPoolReporter(): void {
+    if (detachPoolListener) {
+      detachPoolListener();
+      detachPoolListener = null;
+    }
+    if (poolSampleTimer) {
+      clearInterval(poolSampleTimer);
+      poolSampleTimer = null;
+    }
+    pendingPoolSamples = [];
   }
 
   const logger = createForwardingLogger((msg) => post({ ...msg, shardId }));
@@ -210,6 +263,9 @@ export function runProjectionWorker(
     });
     initCompleted = true;
     startDepthReporter(msg.chainDepthReportIntervalMs);
+    if (database.poolInstrumentation) {
+      startPoolReporter(database.poolInstrumentation);
+    }
     logger.info("projection worker initialized: @shardId", msg.shardId);
     post({ type: "ready", correlationId: msg.correlationId, shardId });
   }
@@ -242,6 +298,7 @@ export function runProjectionWorker(
 
   async function shutdownStack(): Promise<void> {
     stopDepthReporter();
+    stopPoolReporter();
     if (stack) {
       try {
         await stack.drain();

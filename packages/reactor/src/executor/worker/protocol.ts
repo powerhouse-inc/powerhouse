@@ -414,6 +414,28 @@ export type MetricsMessage = {
 };
 
 /**
+ * Snapshot of one worker pool's acquire-wait samples and pool-stat counters,
+ * forwarded periodically so the host can re-record into the shared
+ * pg.Pool histogram and observable gauges. The worker owns the real
+ * pg.Pool; the host's {@link PoolInstrumentation} is a forwarder driven
+ * by these messages.
+ */
+export type PoolAcquireSamplesMessage = {
+  type: "pool-acquire-samples";
+  workerId: string;
+  /** Stable identifier matching the host-side instrumentation name (e.g. "worker-0"). */
+  poolName: string;
+  /** Epoch milliseconds the worker generated the batch. */
+  timestamp: number;
+  /** Acquire-wait durations (ms) accumulated since the previous batch. */
+  durations: number[];
+  /** Most recent pg.Pool counter snapshot at batch send time. */
+  size: number;
+  idle: number;
+  waiting: number;
+};
+
+/**
  * Union of all messages a worker may send to the parent.
  *
  * @see Wire Protocol Reference wiki page
@@ -426,4 +448,5 @@ export type WorkerMessage =
   | ModelLoadFailedMessage
   | LogMessage
   | HeartbeatMessage
-  | MetricsMessage;
+  | MetricsMessage
+  | PoolAcquireSamplesMessage;

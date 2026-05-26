@@ -28,6 +28,7 @@ import {
   WorkerLoadModelFailedError,
   WorkerShutdownTimeoutError,
 } from "./errors.js";
+import type { ForwardingPoolInstrumentation } from "../../storage/pool-instrumentation.js";
 import type {
   DbConfig,
   HeartbeatMessage,
@@ -36,6 +37,7 @@ import type {
   ModelLoadFailedMessage,
   ModelLoadedMessage,
   ModelManifestEntry,
+  PoolAcquireSamplesMessage,
   ResultMessage,
   SignatureVerifierSpec,
   WorkerMessage,
@@ -67,6 +69,13 @@ export type WorkerHandleOptions = {
   abortGraceMs?: number;
   /** Default grace period applied to graceful `shutdown` when not overridden. */
   defaultShutdownGraceMs?: number;
+  /**
+   * Forwarding instrumentation the host registers per worker. The handle
+   * pumps `pool-acquire-samples` messages into this object so the host's
+   * OpenTelemetry instrumentation records acquire-wait latencies as if the
+   * worker's pool were local.
+   */
+  poolInstrumentation?: ForwardingPoolInstrumentation;
 };
 
 type PendingEntry =
@@ -105,6 +114,7 @@ export class WorkerHandle implements IExecutorWorker {
   private readonly logger: ILogger;
   private readonly abortGraceMs: number;
   private readonly defaultShutdownGraceMs: number;
+  private readonly poolInstrumentation?: ForwardingPoolInstrumentation;
 
   private readonly pending = new Map<string, PendingEntry>();
   private inFlight: { correlationId: string; jobId: string } | null = null;
@@ -132,6 +142,7 @@ export class WorkerHandle implements IExecutorWorker {
     this.abortGraceMs = options.abortGraceMs ?? DEFAULT_ABORT_GRACE_MS;
     this.defaultShutdownGraceMs =
       options.defaultShutdownGraceMs ?? DEFAULT_SHUTDOWN_GRACE_MS;
+    this.poolInstrumentation = options.poolInstrumentation;
 
     this.onMessage = (msg) => this.handleMessage(msg);
     this.onError = (err) => this.handleTransportError(err);
@@ -439,11 +450,26 @@ export class WorkerHandle implements IExecutorWorker {
       case "metrics":
         this.handleMetrics(msg);
         return;
+      case "pool-acquire-samples":
+        this.handlePoolAcquireSamples(msg);
+        return;
       default: {
         const exhaustive: never = msg;
         void exhaustive;
       }
     }
+  }
+
+  private handlePoolAcquireSamples(msg: PoolAcquireSamplesMessage): void {
+    if (!this.poolInstrumentation) {
+      return;
+    }
+    this.poolInstrumentation.updateStats({
+      size: msg.size,
+      idle: msg.idle,
+      waiting: msg.waiting,
+    });
+    this.poolInstrumentation.pushSamples(msg.durations);
   }
 
   private handleReady(correlationId: string): void {

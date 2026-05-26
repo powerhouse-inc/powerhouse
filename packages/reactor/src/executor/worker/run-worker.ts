@@ -5,6 +5,10 @@ import type { MessagePort } from "node:worker_threads";
 import type { Database } from "../../core/types.js";
 import type { Job } from "../../queue/types.js";
 import {
+  instrumentPgPool,
+  type PoolInstrumentation,
+} from "../../storage/pool-instrumentation.js";
+import {
   buildWorkerExecutor,
   defaultLoadFactory,
   type BuildWorkerExecutorOptions,
@@ -21,12 +25,20 @@ import type {
 } from "./protocol.js";
 import { errorToInfo } from "./sanitize.js";
 
+const POOL_SAMPLE_INTERVAL_MS = 1_000;
+
 /**
  * Closeable handle around the parent's Postgres pool the worker owns.
  * Decoupled so tests can substitute a PGlite-backed Kysely.
+ *
+ * When the worker owns a real pg.Pool, the handle exposes a
+ * {@link PoolInstrumentation} so the run-loop can subscribe to acquire-wait
+ * samples and forward them to the host. Tests that swap in PGlite leave
+ * this undefined; pool metrics simply do not emit in that path.
  */
 export type WorkerDatabaseHandle = {
   kysely: Kysely<Database>;
+  poolInstrumentation?: PoolInstrumentation;
   shutdown(): Promise<void>;
 };
 
@@ -72,11 +84,13 @@ async function defaultCreateDatabase(
     connectionTimeoutMillis: config.connectionTimeoutMillis,
     idleTimeoutMillis: config.idleTimeoutMillis,
   });
+  const poolInstrumentation = instrumentPgPool(pool, workerId);
   const kysely = new Kysely<Database>({
     dialect: new PostgresDialect({ pool }),
   });
   return {
     kysely,
+    poolInstrumentation,
     async shutdown(): Promise<void> {
       try {
         await kysely.destroy();
@@ -107,6 +121,9 @@ export function runWorker(
   let initConfig: InitMessage | null = null;
   let executorStack: WorkerExecutorStack | null = null;
   let database: WorkerDatabaseHandle | null = null;
+  let poolSampleTimer: NodeJS.Timeout | null = null;
+  let pendingPoolSamples: number[] = [];
+  let detachPoolListener: (() => void) | null = null;
   const activeLoadFactory: NonNullable<
     BuildWorkerExecutorOptions["loadFactory"]
   > = overrides.loadFactory ?? defaultLoadFactory;
@@ -116,6 +133,43 @@ export function runWorker(
   }
 
   const logger = createForwardingLogger(post);
+
+  function startPoolReporter(instrumentation: PoolInstrumentation): void {
+    detachPoolListener = instrumentation.onAcquire((durationMs) => {
+      pendingPoolSamples.push(durationMs);
+    });
+    poolSampleTimer = setInterval(() => {
+      if (pendingPoolSamples.length === 0) {
+        return;
+      }
+      const durations = pendingPoolSamples;
+      pendingPoolSamples = [];
+      const stats = instrumentation.getStats();
+      post({
+        type: "pool-acquire-samples",
+        workerId,
+        poolName: instrumentation.name,
+        timestamp: Date.now(),
+        durations,
+        size: stats.size,
+        idle: stats.idle,
+        waiting: stats.waiting,
+      });
+    }, POOL_SAMPLE_INTERVAL_MS);
+    poolSampleTimer.unref();
+  }
+
+  function stopPoolReporter(): void {
+    if (detachPoolListener) {
+      detachPoolListener();
+      detachPoolListener = null;
+    }
+    if (poolSampleTimer) {
+      clearInterval(poolSampleTimer);
+      poolSampleTimer = null;
+    }
+    pendingPoolSamples = [];
+  }
 
   process.on("uncaughtException", (err: unknown) => {
     try {
@@ -160,6 +214,9 @@ export function runWorker(
       logger: new ConsoleLogger([`reactor-worker:${msg.workerId}`]),
       loadFactory: activeLoadFactory,
     });
+    if (database.poolInstrumentation) {
+      startPoolReporter(database.poolInstrumentation);
+    }
     initCompleted = true;
     logger.info("worker initialized: @workerId", msg.workerId);
     post({
@@ -243,6 +300,7 @@ export function runWorker(
   }
 
   async function shutdownDatabase(): Promise<void> {
+    stopPoolReporter();
     if (database) {
       await database.shutdown();
     }

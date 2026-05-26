@@ -537,3 +537,13 @@ separate process). Multi-process projection workers sharded by queueKey is
 the strongest long-term shape; a single projection process is the cheapest
 prototype. Larger host pool, per-read-model isolated pools, and sub-document
 partitioning are now all ruled out — none of them attack the loop.
+
+## Run 11 matrix (sharded projection sweep, VUS=128, DURATION=60s, workers=8, pool_host=32, pool_proj=16)
+
+| drives | shards | jobs/sec | p50 (ms) | p95 (ms) | p99 (ms) | loop.delay.p99 (ms) | loop.util | cpu.util | chain.depth | acq.p50 (ms) |
+| ------ | ------ | -------- | -------- | -------- | -------- | ------------------- | --------- | -------- | ----------- | ------------ |
+| 64 | 1 | 1246.40 | 10000.00 | 10000.00 | 10000.00 | 32.63 | 0.967 | 4.010 | 6.50 | 2.50 |
+| 64 | 2 | 1221.87 | 10000.00 | 10000.00 | 10000.00 | 35.05 | 0.968 | 4.114 | 5.63 | 2.50 |
+| 64 | 4 | 1096.50 | 10000.00 | 10000.00 | 10000.00 | 31.03 | 0.977 | 4.155 | 5.33 | 2.50 |
+| 64 | 8 | 1064.87 | 10000.00 | 10000.00 | 10000.00 | 33.11 | 0.976 | 4.379 | 5.23 | 2.50 |
+| 256 | 4 | 958.24 | 10000.00 | 10000.00 | 10000.00 | 22.41 | 0.989 | 4.113 | 4.80 | 2.50 |

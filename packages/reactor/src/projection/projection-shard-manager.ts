@@ -14,6 +14,7 @@ import type {
   IReadModel,
   IReadModelCoordinator,
 } from "../read-models/interfaces.js";
+import type { ForwardingPoolInstrumentation } from "../storage/pool-instrumentation.js";
 import type {
   BuiltInReadModelKind,
   ChainDepthReport,
@@ -22,6 +23,7 @@ import type {
   ProjectionDrainedMessage,
   ProjectionInitMessage,
   ProjectionParentMessage,
+  ProjectionPoolAcquireSamplesMessage,
   ProjectionWorkerMessage,
 } from "./protocol.js";
 import type { IProjectionTransport } from "./transport.js";
@@ -54,6 +56,13 @@ export type ProjectionShardManagerConfig = {
   shutdownGraceMs?: number;
   drainTimeoutMs?: number;
   chainDepthReportIntervalMs?: number;
+  /**
+   * Host-side forwarding instrumentations indexed by shard index. The
+   * manager routes each shard's `pool-acquire-samples` message to the
+   * matching forwarder so the host's OpenTelemetry instrumentation records
+   * acquire-wait latencies as if each shard's pg.Pool were local.
+   */
+  poolInstrumentations?: ForwardingPoolInstrumentation[];
 };
 
 type ShardState = {
@@ -63,6 +72,7 @@ type ShardState = {
   ready: boolean;
   lastDepth: number;
   lastDepthAt: number;
+  poolInstrumentation?: ForwardingPoolInstrumentation;
   onMessage: (msg: ProjectionWorkerMessage) => void;
   onError: (err: Error) => void;
   onExit: (code: number) => void;
@@ -138,6 +148,7 @@ export class ProjectionShardManager implements IReadModelCoordinator {
         ready: false,
         lastDepth: 0,
         lastDepthAt: 0,
+        poolInstrumentation: this.config.poolInstrumentations?.[i],
         onMessage: (msg) => this.handleWorkerMessage(state, msg),
         onError: (err) => this.handleTransportError(state, err),
         onExit: (code) => this.handleTransportExit(state, code),
@@ -360,6 +371,9 @@ export class ProjectionShardManager implements IReadModelCoordinator {
         shard.lastDepth = msg.depth;
         shard.lastDepthAt = msg.timestamp;
         return;
+      case "pool-acquire-samples":
+        this.handlePoolAcquireSamples(shard, msg);
+        return;
       case "drained":
         this.handleDrained(msg);
         return;
@@ -372,6 +386,21 @@ export class ProjectionShardManager implements IReadModelCoordinator {
         return;
       }
     }
+  }
+
+  private handlePoolAcquireSamples(
+    shard: ShardState,
+    msg: ProjectionPoolAcquireSamplesMessage,
+  ): void {
+    if (!shard.poolInstrumentation) {
+      return;
+    }
+    shard.poolInstrumentation.updateStats({
+      size: msg.size,
+      idle: msg.idle,
+      waiting: msg.waiting,
+    });
+    shard.poolInstrumentation.pushSamples(msg.durations);
   }
 
   private handleReady(shard: ShardState, correlationId: string): void {

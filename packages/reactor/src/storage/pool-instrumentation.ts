@@ -73,3 +73,52 @@ export function instrumentPgPool(
     },
   };
 }
+
+/**
+ * Host-side {@link PoolInstrumentation} that re-emits acquire-wait samples
+ * and pool-stat snapshots forwarded from a worker thread. The worker owns
+ * the real pg.Pool; this object lets the host's OpenTelemetry instrumentation
+ * subscribe to those events as if the pool were local.
+ *
+ * The host wires one of these per worker (one per executor worker, one per
+ * projection shard). The worker batches acquire-wait durations and periodic
+ * stats over its existing transport; the host pumps them in via
+ * {@link pushSamples} / {@link updateStats}.
+ */
+export type ForwardingPoolInstrumentation = PoolInstrumentation & {
+  pushSamples(durations: number[]): void;
+  updateStats(stats: PoolStats): void;
+};
+
+export function createForwardingPoolInstrumentation(
+  name: string,
+): ForwardingPoolInstrumentation {
+  const listeners = new Set<(durationMs: number) => void>();
+  let stats: PoolStats = { size: 0, idle: 0, waiting: 0 };
+  return {
+    name,
+    getStats(): PoolStats {
+      return stats;
+    },
+    onAcquire(listener: (durationMs: number) => void): () => void {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+    pushSamples(durations: number[]): void {
+      for (const durationMs of durations) {
+        for (const listener of listeners) {
+          try {
+            listener(durationMs);
+          } catch {
+            // listener failures must not break sample forwarding
+          }
+        }
+      }
+    },
+    updateStats(next: PoolStats): void {
+      stats = next;
+    },
+  };
+}

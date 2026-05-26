@@ -64,7 +64,9 @@ import { KyselyKeyframeStore } from "../storage/kysely/keyframe-store.js";
 import { KyselyOperationStore } from "../storage/kysely/store.js";
 import type { Database as StorageDatabase } from "../storage/kysely/types.js";
 import {
+  createForwardingPoolInstrumentation,
   instrumentPgPool,
+  type ForwardingPoolInstrumentation,
   type PoolInstrumentation,
 } from "../storage/pool-instrumentation.js";
 import {
@@ -778,6 +780,14 @@ export class ReactorBuilder {
     const factory =
       this.projectionWorkerFactory ??
       (await this.createDefaultProjectionWorkerFactory());
+    const poolInstrumentations: ForwardingPoolInstrumentation[] = [];
+    for (let i = 0; i < config.shardCount; i++) {
+      const forwarder = createForwardingPoolInstrumentation(
+        `projection-shard-${i}`,
+      );
+      poolInstrumentations.push(forwarder);
+      this.instrumentedPools.push(forwarder);
+    }
     const manager = new ProjectionShardManager({
       shardCount: config.shardCount,
       db,
@@ -791,6 +801,7 @@ export class ReactorBuilder {
       shutdownGraceMs: config.shutdownGraceMs,
       drainTimeoutMs: config.drainTimeoutMs,
       chainDepthReportIntervalMs: config.chainDepthReportIntervalMs,
+      poolInstrumentations,
     });
     await manager.startup();
     this.shutdownHooks.push(() => manager.shutdown());
@@ -824,9 +835,12 @@ export class ReactorBuilder {
     const signatureVerifier = this.workerSignatureVerifierSpec!;
     const models = this.resolvedModelManifest ?? [];
     const logger = this.logger!;
-    return (index: number) =>
-      new WorkerHandle({
-        workerId: `reactor-worker-${index}`,
+    return (index: number) => {
+      const workerId = `reactor-worker-${index}`;
+      const poolInstrumentation = createForwardingPoolInstrumentation(workerId);
+      this.instrumentedPools.push(poolInstrumentation);
+      return new WorkerHandle({
+        workerId,
         index,
         transport: createThreadTransport(workerEntryPath),
         initPayload: {
@@ -836,7 +850,9 @@ export class ReactorBuilder {
           models,
         },
         logger,
+        poolInstrumentation,
       });
+    };
   }
 
   /**

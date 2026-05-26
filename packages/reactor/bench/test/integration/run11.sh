@@ -85,7 +85,7 @@ run_one() {
   ELU_AVG="$(query_prom "avg_over_time(reactor_host_eventloop_utilization[${WIN}])")"
   ELD_P99_AVG="$(query_prom "avg_over_time(reactor_host_eventloop_delay_p99[${WIN}])")"
   CPU_AVG="$(query_prom "avg_over_time(reactor_host_cpu_utilization[${WIN}])")"
-  CHAIN_AVG="$(query_prom "avg_over_time(reactor_readmodel_chain_depth[${WIN}])")"
+  CHAIN_AVG="$(query_prom "avg_over_time(reactor_readmodel_coordinator_chain_depth[${WIN}])")"
   ACQ_P50="$(query_prom "histogram_quantile(0.5, sum by (le) (rate(reactor_db_pool_acquire_wait_duration_bucket[${WIN}])))")"
 
   local fmt
