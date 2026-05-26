@@ -1,4 +1,7 @@
+import { useTheme } from "@powerhousedao/reactor-browser";
 import { JsonView, type JsonViewProps } from "@uiw/react-json-view";
+import { darkTheme } from "@uiw/react-json-view/dark";
+import { lightTheme } from "@uiw/react-json-view/light";
 import { isStrictEqual, isString } from "remeda";
 import { Icon } from "../../powerhouse/index.js";
 
@@ -11,8 +14,15 @@ import { Icon } from "../../powerhouse/index.js";
  * Formats very long text fields so that they are first truncated, and then if expanded word wrap applies
  */
 export function FormattedJsonViewer(props: JsonViewProps<object>) {
+  const { theme } = useTheme();
+  const style = theme === "light" ? lightTheme : darkTheme;
   return (
-    <JsonView displayDataTypes={false} displayObjectSize={false} {...props}>
+    <JsonView
+      displayDataTypes={false}
+      displayObjectSize={false}
+      style={style}
+      {...props}
+    >
       <JsonView.Copied
         render={({ onClick, ...props }) => {
           if ((props as { "data-copied": boolean })["data-copied"]) {
