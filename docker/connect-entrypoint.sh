@@ -24,129 +24,71 @@ export PH_CONNECT_BASE_PATH PH_CONNECT_BASE_PREFIX
 envsubst '${PORT},${PH_CONNECT_BASE_PATH},${PH_CONNECT_BASE_PREFIX}' < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf
 
 # ============================================================
-# Env -> powerhouse.config.json seeding (set-if-absent)
+# powerhouse.config.json seeding (set-if-absent)
 # ============================================================
 #
-# Connect's SPA does not read env vars for runtime config — env vars are no
-# longer a layer in the runtime-config precedence ladder inside the JS/TS
-# build. What this entrypoint does is different: it writes operator-supplied
-# env values into the powerhouse.config.json file at container start, the
-# equivalent of running `ph connect config --<field>` on the dist file. The
-# SPA then reads the file as usual. We considered shipping `ph-cli` in the
-# runtime image so the entrypoint could call `ph connect config` directly,
-# but a quick experiment showed it ballooned the image from 126 MB to 4.63 GB
-# (ph-cli's transitive deps include monaco-editor, walletconnect,
-# opentelemetry, etc., none of which the runtime needs); rejected.
+# Operators inject runtime config via a single env var, PH_CONNECT_CONFIG_JSON,
+# carrying the JSON they want stamped onto the dist file. Same shape and same
+# semantics as `ph connect config --json '{...}'`. The entrypoint deep-merges
+# it into the dist `powerhouse.config.json` with **set-if-absent** semantics:
+# any path that already has a value (from the build, from CLI flags during
+# build, or from a mounted ConfigMap) wins — env-supplied values only fill
+# gaps. The SPA then reads the file as usual.
 #
-# Semantics: set-if-absent. If the operator pre-mounted a config file with a
-# value at `connect.foo.bar`, env vars never overwrite it. Within this table,
-# the first rule whose env var is set wins on collision — so CLOUD-before-
-# PUBLIC means CLOUD wins.
+# Backward incompatible: the old PH_CONNECT_* per-field env vars
+# (PH_CONNECT_LOG_LEVEL, PH_CONNECT_DISABLE_ADD_DRIVE, PH_CONNECT_RENOWN_*,
+# etc.) no longer have any effect. Migrate to PH_CONNECT_CONFIG_JSON.
 #
 # Implementation note: we write to a sibling tmp file then `cat tmp > file`
 # (truncate-and-write) instead of `mv tmp file`. `mv` would replace the
 # inode and fails with "Resource busy" when the file is bind-mounted as a
-# single file (the standard Kubernetes ConfigMap / Secret projection).
-# `cat >` preserves the inode so it works through bind mounts. If the file
-# is read-only the write fails loudly — correct behavior, since operator-
-# managed configs should not be re-seeded by the entrypoint.
+# single file (Kubernetes ConfigMap / Secret projection). `cat >` preserves
+# the inode so it works through bind mounts. If the file is read-only the
+# write fails loudly — correct behavior, since operator-managed configs
+# should not be re-seeded by the entrypoint.
 
 DIST_DIR="${DIST_DIR:-/var/www/html/project}"
 RUNTIME_FILE="${DIST_DIR}/powerhouse.config.json"
 
-# Apply a JSON value at a given dotted path inside the runtime file, but
-# only if that path is currently null/missing. PATH_JSON is a JSON array
-# like '["connect","drives","allowAddDrive"]'; VALUE_JSON is any JSON
-# scalar/array/object literal.
-seed_path_if_absent() {
-  PATH_JSON="$1"
-  VALUE_JSON="$2"
-  jq --argjson p "$PATH_JSON" --argjson v "$VALUE_JSON" '
-    if (getpath($p) == null) then setpath($p; $v) else . end
+if [ -f "$RUNTIME_FILE" ] && [ -n "${PH_CONNECT_CONFIG_JSON:-}" ]; then
+  # Validate up front so misconfigs fail loudly instead of silently dropping
+  # the entire operator payload.
+  if ! printf '%s' "$PH_CONNECT_CONFIG_JSON" | jq -e . >/dev/null 2>&1; then
+    echo "[ph-config] PH_CONNECT_CONFIG_JSON is not valid JSON; aborting" >&2
+    exit 1
+  fi
+  if ! printf '%s' "$PH_CONNECT_CONFIG_JSON" | jq -e 'type == "object"' >/dev/null 2>&1; then
+    echo "[ph-config] PH_CONNECT_CONFIG_JSON must be a JSON object; aborting" >&2
+    exit 1
+  fi
+
+  # Deep-merge with set-if-absent semantics. Recurses into objects on both
+  # sides; arrays and primitives are leaves (only written when target is
+  # null/missing — matches the previous per-field set-if-absent contract).
+  #
+  # Note: we use `== null` rather than `// null`. The `//` alternative
+  # operator treats `false` as "absent" and would clobber pre-existing
+  # `false` booleans (e.g. drives.sections.remote.enabled: false).
+  jq --argjson op "$PH_CONNECT_CONFIG_JSON" '
+    def seed($a; $b):
+      if ($b | type) == "object" then
+        reduce ($b | keys[]) as $k (
+          $a;
+          if .[$k] == null then
+            .[$k] = $b[$k]
+          elif (.[$k] | type) == "object" and ($b[$k] | type) == "object" then
+            .[$k] = seed(.[$k]; $b[$k])
+          else
+            .  # already set; leave alone
+          end
+        )
+      else
+        if . == null then $b else . end
+      end;
+    seed(.; $op)
   ' "$RUNTIME_FILE" > "${RUNTIME_FILE}.tmp"
   cat "${RUNTIME_FILE}.tmp" > "$RUNTIME_FILE"
   rm -f "${RUNTIME_FILE}.tmp"
-}
-
-# Per-type wrappers around seed_path_if_absent. Each one short-circuits
-# silently when the env var is unset/empty (matches the TS rule semantics).
-
-# seed_string PATH_JSON VALUE
-seed_string() {
-  [ -z "$2" ] && return 0
-  JSON_VALUE=$(jq -n --arg v "$2" '$v')
-  seed_path_if_absent "$1" "$JSON_VALUE"
-}
-
-# seed_bool PATH_JSON VALUE [invert]
-# Unknown values coerce to false (matches `parseBool = v => v.toLowerCase() === "true"`).
-seed_bool() {
-  [ -z "$2" ] && return 0
-  case "$2" in
-    [Tt][Rr][Uu][Ee]) BOOL="true"  ;;
-    *)                BOOL="false" ;;
-  esac
-  if [ "$3" = "invert" ]; then
-    if [ "$BOOL" = "true" ]; then BOOL="false"; else BOOL="true"; fi
-  fi
-  seed_path_if_absent "$1" "$BOOL"
-}
-
-# seed_number PATH_JSON VALUE
-seed_number() {
-  [ -z "$2" ] && return 0
-  case "$2" in
-    ''|*[!0-9]*)
-      echo "[ph-config] invalid number '$2' for $1; skipping" >&2
-      return 0
-      ;;
-  esac
-  seed_path_if_absent "$1" "$2"
-}
-
-# seed_default_drives_url PATH_JSON VALUE
-# Comma-separated URL list -> array of {url, name: null, icon: null}.
-seed_default_drives_url() {
-  [ -z "$2" ] && return 0
-  DRIVES_JSON=$(printf '%s' "$2" | jq -R -c '
-    split(",")
-    | map(gsub("^\\s+|\\s+$"; ""))
-    | map(select(length > 0))
-    | map({ url: ., name: null, icon: null })
-  ')
-  seed_path_if_absent "$1" "$DRIVES_JSON"
-}
-
-if [ -f "$RUNTIME_FILE" ]; then
-  # connect.app
-  seed_string '["connect","app","basePath"]' "$PH_CONNECT_BASE_PATH"
-  seed_string '["connect","app","logLevel"]' "$PH_CONNECT_LOG_LEVEL"
-
-  # connect.packages
-  seed_bool '["connect","packages","externalEnabled"]' "$PH_CONNECT_EXTERNAL_PACKAGES_DISABLED" invert
-
-  # connect.drives (top-level)
-  seed_bool '["connect","drives","allowAddDrive"]' "$PH_CONNECT_DISABLE_ADD_DRIVE" invert
-  seed_default_drives_url '["connect","drives","defaultDrives"]' "$PH_CONNECT_DEFAULT_DRIVES_URL"
-  seed_string '["connect","drives","preserveStrategy"]' "$PH_CONNECT_DRIVES_PRESERVE_STRATEGY"
-
-  # connect.drives.sections.remote — CLOUD listed first, wins on collision; PUBLIC kept as legacy alias.
-  seed_bool '["connect","drives","sections","remote","enabled"]'     "$PH_CONNECT_CLOUD_DRIVES_ENABLED"
-  seed_bool '["connect","drives","sections","remote","allowAdd"]'    "$PH_CONNECT_DISABLE_ADD_CLOUD_DRIVES" invert
-  seed_bool '["connect","drives","sections","remote","allowDelete"]' "$PH_CONNECT_DISABLE_DELETE_CLOUD_DRIVES" invert
-  seed_bool '["connect","drives","sections","remote","enabled"]'     "$PH_CONNECT_PUBLIC_DRIVES_ENABLED"
-  seed_bool '["connect","drives","sections","remote","allowAdd"]'    "$PH_CONNECT_DISABLE_ADD_PUBLIC_DRIVES" invert
-  seed_bool '["connect","drives","sections","remote","allowDelete"]' "$PH_CONNECT_DISABLE_DELETE_PUBLIC_DRIVES" invert
-
-  # connect.drives.sections.local
-  seed_bool '["connect","drives","sections","local","enabled"]'     "$PH_CONNECT_LOCAL_DRIVES_ENABLED"
-  seed_bool '["connect","drives","sections","local","allowAdd"]'    "$PH_CONNECT_DISABLE_ADD_LOCAL_DRIVES" invert
-  seed_bool '["connect","drives","sections","local","allowDelete"]' "$PH_CONNECT_DISABLE_DELETE_LOCAL_DRIVES" invert
-
-  # connect.renown
-  seed_string '["connect","renown","url"]'        "$PH_CONNECT_RENOWN_URL"
-  seed_string '["connect","renown","networkId"]'  "$PH_CONNECT_RENOWN_NETWORK_ID"
-  seed_number '["connect","renown","chainId"]'    "$PH_CONNECT_RENOWN_CHAIN_ID"
 fi
 
 echo "Testing nginx configuration..."

@@ -14,7 +14,7 @@ Connect's runtime configuration lives in a single JSON file: `powerhouse.config.
   ph connect config --<field> <value>         │
   ph connect build --<field> <value>          │
   ph install --registry <url>                 │
-  docker entrypoint env vars (deploy-time)    │
+  PH_CONNECT_CONFIG_JSON env (deploy-time)    │
                                               │
 └──────────────────────┬───────────────────────┘
                        │
@@ -84,7 +84,7 @@ Each layer can supply a partial value; missing leaves fall back to the layer bel
 | Manual edit of `<project>/powerhouse.config.json`           | source file                                     | Local dev tweaks; checked into git                                   |
 | `ph connect config --<field> <value>` (or `--json '{...}'`) | source **and** dist (dual-write)                | Quick CLI edit that takes effect on next refresh, without rebuilding |
 | `ph connect build --<field> <value>` (or `--json '{...}'`)  | dist (CLI override layer)                       | One-off override at build time, e.g. CI baking a different `--base`  |
-| Docker entrypoint env vars (`PH_CONNECT_RENOWN_URL`, etc.)  | dist file at container start, **set-if-absent** | Per-deployment knobs without rebuilding the image                    |
+| Docker entrypoint env var `PH_CONNECT_CONFIG_JSON`          | dist file at container start, **set-if-absent** | Per-deployment knobs without rebuilding the image                    |
 
 Two special-case writers also exist:
 
@@ -103,7 +103,15 @@ Two special-case writers also exist:
 
 **`ph connect build` flags.** Same 19 flag names as `ph connect config`. The 4 flags inherited from `commonArgs` (`--base`, `--log-level`, `--default-drives-url`, `--drive-preserve-strategy`) carry cmd-ts defaults, so they're gated through `wasFlagExplicitlyPassed` — if the user didn't type the flag, the source value wins. CLI flags beat source.
 
-**Docker entrypoint.** `docker/connect-entrypoint.sh` runs at container start and uses `jq` to translate operator-set env vars into nested paths in the dist file, with **set-if-absent semantics**: if a value is already present (because it came from the build or a mounted ConfigMap), env vars don't overwrite it. This is the only env-var path still active — the SPA itself does not read env vars. Operators get the deployment-time knob without env vars leaking into runtime behaviour.
+**Docker entrypoint.** `docker/connect-entrypoint.sh` runs at container start and accepts a single env var, `PH_CONNECT_CONFIG_JSON`, carrying a full `powerhouse.config.json` payload (same shape as `ph connect config --json '{...}'`). It deep-merges that JSON into the dist file with **set-if-absent semantics**: any path already populated (by the build, by CLI flags, or by a mounted ConfigMap) wins; env-supplied values only fill gaps. This is the only env-var path still active — the SPA itself does not read env vars. Operators get the deployment-time knob without env vars leaking into runtime behaviour.
+
+```bash
+docker run \
+  -e PH_CONNECT_CONFIG_JSON='{"connect":{"renown":{"url":"https://renown.staging"},"app":{"logLevel":"debug"}}}' \
+  connect:latest
+```
+
+Invalid JSON (parse error or non-object payload) aborts startup with a clear stderr message rather than silently dropping the operator payload. The shell layer keeps `PH_CONNECT_BASE_PATH` separate because nginx needs it for URL templating before any JSON is touched.
 
 ## How Connect reads the file at boot
 
@@ -177,7 +185,7 @@ Edit the project's `powerhouse.config.json`, set `"packageRegistryUrl": "https:/
 `ph connect config --default-drives-url https://drive-a, https://drive-b`. The CSV is parsed into `connect.drives.defaultDrives[]` objects.
 
 **"I'm deploying the docker image to a new environment and need to override renown."**
-Set `PH_CONNECT_RENOWN_URL=https://renown.staging.example` on the container. The entrypoint script writes it into the dist file before nginx starts; the SPA serves the new value on the very first request.
+Set `PH_CONNECT_CONFIG_JSON='{"connect":{"renown":{"url":"https://renown.staging.example"}}}'` on the container. The entrypoint script deep-merges the JSON into the dist file before nginx starts (set-if-absent); the SPA serves the new value on the very first request.
 
 **"I want to verify what Connect will actually use without booting it."**
 `ph connect config` (no args) prints the effective `connect.*` block (defaults merged with source). `ph connect config --get connect.renown.url` prints a single value.
@@ -211,7 +219,7 @@ packages/codegen/src/templates/boilerplate/powerhouse.config.json.ts
   └ `ph init` boilerplate template
 
 docker/connect-entrypoint.sh
-  └ env → dist seeding (jq, set-if-absent)
+  └ PH_CONNECT_CONFIG_JSON → dist seeding (jq deep-merge, set-if-absent)
 ```
 
 ## Design principle, in one line

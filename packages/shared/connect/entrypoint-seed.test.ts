@@ -1,7 +1,8 @@
 // Integration test for `docker/connect-entrypoint.sh`'s env → file seeding.
-// Verifies the operator-facing contract: env vars are translated into the
-// runtime `powerhouse.config.json` only when the corresponding nested path is
-// absent in the file (set-if-absent semantics).
+// Verifies the operator-facing contract: the entrypoint reads a single
+// `PH_CONNECT_CONFIG_JSON` env var, deep-merges it into the dist
+// `powerhouse.config.json`, and only writes paths that are currently
+// null/missing in the file (set-if-absent semantics).
 //
 // The test patches the script in a tmpdir to skip the nginx/envsubst calls
 // (which require nginx + an /etc/nginx config that don't exist outside the
@@ -84,7 +85,7 @@ const NEEDS_JQ = (() => {
 })();
 
 describe.skipIf(NEEDS_JQ)(
-  "docker/connect-entrypoint.sh env → file seeding",
+  "docker/connect-entrypoint.sh PH_CONNECT_CONFIG_JSON seeding",
   () => {
     let workDir: string;
     let distDir: string;
@@ -108,7 +109,7 @@ describe.skipIf(NEEDS_JQ)(
       writeFileSync(runtimeFile, JSON.stringify(content, null, 2), "utf-8");
     }
 
-    it("translates each env var into the right nested path on a clean file (scenarios 39, 41, 43)", () => {
+    it("deep-merges a full PH_CONNECT_CONFIG_JSON into a clean file", () => {
       seedFile({
         schemaVersion: 2,
         packages: [],
@@ -116,23 +117,33 @@ describe.skipIf(NEEDS_JQ)(
         connect: {},
       });
 
+      const payload = {
+        connect: {
+          app: { basePath: "/sub", logLevel: "debug" },
+          renown: {
+            url: "https://renown.from-env",
+            networkId: "eip155",
+            chainId: 137,
+          },
+          drives: {
+            preserveStrategy: "preserve-all",
+            defaultDrives: [
+              { url: "https://a.example", name: null, icon: null },
+              { url: "https://b.example", name: null, icon: null },
+            ],
+          },
+        },
+      };
+
       const res = runEntrypoint({
         scriptPath,
         distDir,
-        env: {
-          PH_CONNECT_RENOWN_URL: "https://renown.from-env",
-          PH_CONNECT_RENOWN_NETWORK_ID: "eip155",
-          PH_CONNECT_RENOWN_CHAIN_ID: "137",
-          PH_CONNECT_BASE_PATH: "/sub",
-          PH_CONNECT_LOG_LEVEL: "debug",
-          PH_CONNECT_DEFAULT_DRIVES_URL: "https://a.example, https://b.example",
-          PH_CONNECT_DRIVES_PRESERVE_STRATEGY: "preserve-all",
-        },
+        env: { PH_CONNECT_CONFIG_JSON: JSON.stringify(payload) },
       });
       expect(res.status).toBe(0);
 
-      const config = readConfig(runtimeFile) as Record<string, Plain>;
-      const connect = config.connect as Record<string, Plain>;
+      const connect = (readConfig(runtimeFile) as { connect: Plain })
+        .connect as Record<string, Plain>;
       expect((connect.renown as Plain).url).toBe("https://renown.from-env");
       expect((connect.renown as Plain).networkId).toBe("eip155");
       expect((connect.renown as Plain).chainId).toBe(137);
@@ -145,7 +156,7 @@ describe.skipIf(NEEDS_JQ)(
       ]);
     });
 
-    it("does NOT overwrite a value the file already has (scenario 40, set-if-absent)", () => {
+    it("does NOT overwrite values the file already has (set-if-absent)", () => {
       seedFile({
         schemaVersion: 2,
         packages: [],
@@ -156,32 +167,32 @@ describe.skipIf(NEEDS_JQ)(
         },
       });
 
+      const payload = {
+        connect: {
+          renown: { url: "https://hostile.example", chainId: 137 },
+          app: { basePath: "/hostile", logLevel: "trace" },
+        },
+      };
+
       const res = runEntrypoint({
         scriptPath,
         distDir,
-        env: {
-          PH_CONNECT_RENOWN_URL: "https://hostile.from-env",
-          PH_CONNECT_BASE_PATH: "/hostile",
-          PH_CONNECT_LOG_LEVEL: "trace",
-        },
+        env: { PH_CONNECT_CONFIG_JSON: JSON.stringify(payload) },
       });
       expect(res.status).toBe(0);
 
-      const config = readConfig(runtimeFile) as Record<string, Plain>;
-      const connect = config.connect as Record<string, Plain>;
+      const connect = (readConfig(runtimeFile) as { connect: Plain })
+        .connect as Record<string, Plain>;
       // Pre-existing values preserved
       expect((connect.renown as Plain).url).toBe("https://kept.example");
+      expect((connect.renown as Plain).networkId).toBe("eip155");
       expect((connect.app as Plain).basePath).toBe("/kept");
       expect((connect.app as Plain).logLevel).toBe("warn");
+      // Net-new leaves get filled in
+      expect((connect.renown as Plain).chainId).toBe(137);
     });
 
-    it("leaves operator-meaningful fields untouched when no env vars are set (scenario 42)", () => {
-      // Note: the entrypoint always stamps `connect.app.basePath` to the
-      // value of `PH_CONNECT_BASE_PATH` (which defaults to "/"). That's a
-      // no-op semantically — `DEFAULT_CONNECT_CONFIG.app.basePath` is also
-      // "/". The assertion here is: operator-meaningful pre-existing fields
-      // (renown.url etc.) survive untouched when no `PH_CONNECT_*` env was
-      // set.
+    it("is a no-op when PH_CONNECT_CONFIG_JSON is unset", () => {
       const baseline = {
         schemaVersion: 2,
         packages: [],
@@ -195,20 +206,103 @@ describe.skipIf(NEEDS_JQ)(
       const res = runEntrypoint({ scriptPath, distDir, env: {} });
       expect(res.status).toBe(0);
 
-      const config = readConfig(runtimeFile) as Record<string, Plain>;
-      expect(config.schemaVersion).toBe(2);
-      expect(config.packages).toEqual([]);
-      expect(config.localPackage).toBeNull();
-      expect((config.connect as Plain).renown).toEqual({
-        url: "https://baseline.example",
-      });
-      // Only the basePath-default got stamped (matches DEFAULT_CONNECT_CONFIG).
-      expect(
-        ((config.connect as Plain).app as Plain | undefined)?.basePath,
-      ).toBe("/");
+      // File is byte-identical: env-var-less boot is fully passive.
+      expect(readConfig(runtimeFile)).toEqual(baseline);
     });
 
-    it("invert-bool env vars correctly flip the meaning when seeding absent fields", () => {
+    it("fills in nested-object gaps without clobbering sibling leaves", () => {
+      // Sections.remote.enabled pre-set; .allowAdd and .allowDelete absent.
+      // The operator JSON sets all three; only the missing two are written.
+      seedFile({
+        schemaVersion: 2,
+        packages: [],
+        localPackage: null,
+        connect: {
+          drives: {
+            sections: {
+              remote: { enabled: false },
+            },
+          },
+        },
+      });
+
+      const payload = {
+        connect: {
+          drives: {
+            sections: {
+              remote: { enabled: true, allowAdd: false, allowDelete: false },
+              local: { enabled: true, allowAdd: true, allowDelete: true },
+            },
+          },
+        },
+      };
+
+      const res = runEntrypoint({
+        scriptPath,
+        distDir,
+        env: { PH_CONNECT_CONFIG_JSON: JSON.stringify(payload) },
+      });
+      expect(res.status).toBe(0);
+
+      const connect = (readConfig(runtimeFile) as { connect: Plain })
+        .connect as Record<string, Plain>;
+      const sections = (connect.drives as Plain).sections as Record<
+        string,
+        Plain
+      >;
+      const remote = sections.remote as Plain;
+      const local = sections.local as Plain;
+      // Pre-existing flag kept
+      expect(remote.enabled).toBe(false);
+      // Net-new sibling leaves filled
+      expect(remote.allowAdd).toBe(false);
+      expect(remote.allowDelete).toBe(false);
+      // Entire missing subtree filled
+      expect(local).toEqual({
+        enabled: true,
+        allowAdd: true,
+        allowDelete: true,
+      });
+    });
+
+    it("aborts when PH_CONNECT_CONFIG_JSON is not valid JSON", () => {
+      seedFile({
+        schemaVersion: 2,
+        packages: [],
+        localPackage: null,
+        connect: {},
+      });
+
+      const res = runEntrypoint({
+        scriptPath,
+        distDir,
+        env: { PH_CONNECT_CONFIG_JSON: "{ this is not json " },
+      });
+      expect(res.status).not.toBe(0);
+      expect(res.stderr).toMatch(/not valid JSON/);
+      // The file must remain unchanged on abort.
+      const after = readConfig(runtimeFile) as Record<string, Plain>;
+      expect(after.connect).toEqual({});
+    });
+
+    it("aborts when PH_CONNECT_CONFIG_JSON is JSON but not an object", () => {
+      seedFile({
+        schemaVersion: 2,
+        packages: [],
+        localPackage: null,
+        connect: {},
+      });
+
+      const res = runEntrypoint({
+        scriptPath,
+        distDir,
+        env: { PH_CONNECT_CONFIG_JSON: '"a string is not allowed"' },
+      });
+      expect(res.status).not.toBe(0);
+      expect(res.stderr).toMatch(/must be a JSON object/);
+    });
+
+    it("ignores legacy per-field env vars (PH_CONNECT_RENOWN_URL, PH_CONNECT_DISABLE_*) — they are no longer wired", () => {
       seedFile({
         schemaVersion: 2,
         packages: [],
@@ -220,22 +314,18 @@ describe.skipIf(NEEDS_JQ)(
         scriptPath,
         distDir,
         env: {
-          // Disable env → allowAddDrive becomes false (inverted truth)
+          PH_CONNECT_RENOWN_URL: "https://legacy.example",
           PH_CONNECT_DISABLE_ADD_DRIVE: "true",
-          // Disable env left at "false" → allowAddPublicDrives stays true
-          PH_CONNECT_DISABLE_ADD_PUBLIC_DRIVES: "false",
+          PH_CONNECT_LOG_LEVEL: "debug",
+          // No PH_CONNECT_CONFIG_JSON → nothing should get stamped.
         },
       });
       expect(res.status).toBe(0);
 
-      const connect = (readConfig(runtimeFile) as { connect: Plain })
-        .connect as Record<string, Plain>;
-      expect((connect.drives as Plain).allowAddDrive).toBe(false);
-      const sections = (connect.drives as Plain).sections as Record<
-        string,
-        Plain
-      >;
-      expect((sections.remote as Plain).allowAdd).toBe(true);
+      const config = readConfig(runtimeFile) as Record<string, Plain>;
+      // connect.* is still the empty object we seeded; legacy env vars no
+      // longer leak in.
+      expect(config.connect).toEqual({});
     });
   },
 );
