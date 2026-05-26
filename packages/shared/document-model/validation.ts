@@ -1,4 +1,4 @@
-import { pascalCase } from "change-case";
+import { constantCase, pascalCase } from "change-case";
 import type { DocumentOperations } from "./operations.js";
 import type {
   DocumentModelGlobalState,
@@ -22,6 +22,17 @@ export const RESERVED_OPERATION_NAMES = [
 ] as const;
 
 export type ReservedOperationName = (typeof RESERVED_OPERATION_NAMES)[number];
+
+/**
+ * Operation names become the literal action `type` string at runtime and the
+ * key for codegen's action union. They must be SCREAMING_SNAKE_CASE so the
+ * generated TypeScript is valid.
+ */
+export const OPERATION_NAME_PATTERN = /^[A-Z][A-Z0-9_]*$/;
+
+export function isValidOperationNameFormat(name: string): boolean {
+  return OPERATION_NAME_PATTERN.test(name);
+}
 
 /**
  * Check if name conflicts with base reducer actions (case-insensitive).
@@ -67,6 +78,19 @@ export function validateOperationName(
   excludeOperationId?: string,
 ): void {
   if (!name) return; // Empty names handled by existing validation
+
+  if (!isValidOperationNameFormat(name)) {
+    const suggestion = constantCase(name);
+    const hint =
+      suggestion &&
+      suggestion !== name &&
+      isValidOperationNameFormat(suggestion)
+        ? ` Did you mean "${suggestion}"?`
+        : "";
+    throw new Error(
+      `Operation name "${name}" is invalid. Names must be SCREAMING_SNAKE_CASE (matching ${OPERATION_NAME_PATTERN.source}).${hint}`,
+    );
+  }
 
   const upperName = name.toUpperCase();
 

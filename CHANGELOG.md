@@ -1,3 +1,33 @@
+## 6.1.0-dev.4 (2026-05-26)
+
+### 🚀 Features
+
+- **connect:** wait for remote drive sync before selecting via URL ([8693d7652](https://github.com/powerhouse-inc/powerhouse/commit/8693d7652))
+- **connect:** suppress chrome when rendered inside an embed ([ab6ada257](https://github.com/powerhouse-inc/powerhouse/commit/ab6ada257))
+- **document-model:** validate operation name format in reducer ([e917b20e6](https://github.com/powerhouse-inc/powerhouse/commit/e917b20e6))
+- **reactor-browser:** await initial sync option for addRemoteDrive ([b255cdb75](https://github.com/powerhouse-inc/powerhouse/commit/b255cdb75))
+
+### 🩹 Fixes
+
+- **builder-tools:** include @powerhousedao/connect in connect-utils linkedRoots ([2865fa07f](https://github.com/powerhouse-inc/powerhouse/commit/2865fa07f))
+- **connect:** materialize default drives before URL slug resolution ([516618fc7](https://github.com/powerhouse-inc/powerhouse/commit/516618fc7))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.1.0-dev.3 (2026-05-25)
+
+This was a version bump only, there were no code changes.
+
+## 6.1.0-dev.2 (2026-05-24)
+
+This was a version bump only, there were no code changes.
+
+## 6.1.0-dev.1 (2026-05-23)
+
+This was a version bump only, there were no code changes.
+
 ## 6.1.0-dev.0 (2026-05-22)
 
 ### 🩹 Fixes

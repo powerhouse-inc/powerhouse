@@ -1,4 +1,5 @@
 import { getBasePath } from "@powerhousedao/connect/utils";
+import { getIsEmbedded } from "@powerhousedao/connect/hooks";
 import {
   AnimatedLoader,
   ConnectSidebar,
@@ -80,15 +81,21 @@ const Loader = ({ delay = LOADER_DELAY }: { delay?: number }) => {
 export const AppSkeleton: React.FC<PropsWithChildren> = (props) => {
   const isSSR = typeof window === "undefined";
   const isHomeScreen = !isSSR && window.location.pathname === getBasePath();
+  /* Match Root's behavior: when Connect is rendered inside an embed (e.g. the
+   * vetra-studio BUILD iframe), suppress the sidebar during the Suspense
+   * fallback so the loading state matches the loaded state. */
+  const isEmbedded = !isSSR && getIsEmbedded();
   return (
     <div className="flex h-screen overflow-hidden">
-      <ConnectSidebar
-        className="animate-pulse"
-        onLogin={undefined}
-        onDisconnect={undefined}
-        onClickSettings={undefined}
-        address={undefined}
-      />
+      {!isEmbedded && (
+        <ConnectSidebar
+          className="animate-pulse"
+          onLogin={undefined}
+          onDisconnect={undefined}
+          onClickSettings={undefined}
+          address={undefined}
+        />
+      )}
       <HomeScreen
         containerClassName={
           isSSR || !isHomeScreen ? "hidden home-screen" : undefined
