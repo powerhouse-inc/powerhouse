@@ -61,7 +61,7 @@ function TreeItem({
       >
         {hasChildren ? (
           <button
-            className="flex size-4 shrink-0 items-center justify-center text-gray-500 hover:text-gray-700 dark:text-slate-400 dark:hover:text-slate-200"
+            className="flex size-4 shrink-0 items-center justify-center text-gray-500 hover:text-gray-700 dark:text-slate-200 dark:hover:text-slate-100"
             onClick={handleChevronClick}
             type="button"
           >
@@ -108,12 +108,12 @@ function ColumnItem({
 
   return (
     <div
-      className="flex items-center gap-1 py-0.5 pr-2 text-xs text-gray-500 dark:text-slate-400"
+      className="flex items-center gap-1 py-0.5 pr-2 text-xs text-gray-500 dark:text-slate-200"
       style={{ paddingLeft: depth * INDENT_PX + 4 }}
     >
       <span className="w-4 shrink-0" />
       <span className="truncate">{column.name}</span>
-      <span className="ml-auto shrink-0 text-gray-400 dark:text-slate-500">
+      <span className="ml-auto shrink-0 text-gray-400 dark:text-slate-200">
         ({typeLabel})
       </span>
     </div>
@@ -171,7 +171,7 @@ export function SchemaTreeSidebar({
             <span className="truncate">{schema}</span>
             {onRefresh && (
               <button
-                className="ml-auto p-0.5 text-gray-400 hover:text-gray-600 dark:text-slate-500 dark:hover:text-slate-300"
+                className="ml-auto p-0.5 text-gray-400 hover:text-gray-600 dark:text-slate-200 dark:hover:text-slate-100"
                 onClick={handleRefreshClick}
                 type="button"
                 disabled={loading}

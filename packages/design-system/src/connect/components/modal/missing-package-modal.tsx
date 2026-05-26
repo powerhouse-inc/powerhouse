@@ -94,7 +94,7 @@ export function PackageInstallModal(props: PackageInstallModalProps) {
       }}
       {...restProps}
     >
-      <div className="w-[460px] bg-white p-6 text-slate-300 dark:bg-slate-800 dark:text-slate-600">
+      <div className="w-[460px] rounded-xl bg-white p-6 text-slate-300 dark:bg-slate-800 dark:text-slate-600">
         <div className="border-b border-slate-50 pb-2 text-2xl font-bold text-gray-800 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
           {grouped.length === 1 ? "Package Required" : "Packages Required"}
         </div>

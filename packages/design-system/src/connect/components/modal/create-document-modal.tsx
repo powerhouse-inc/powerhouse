@@ -1,12 +1,10 @@
-import { Icon, Modal, PowerhouseButton } from "#design-system";
+import { Icon, Modal } from "#design-system";
 import { isValidName } from "@powerhousedao/shared/document-drive";
 import type { ComponentPropsWithoutRef } from "react";
 import { useCallback, useState } from "react";
 import { twMerge } from "tailwind-merge";
 import { FormInput } from "../form-input/form-input.js";
-
-const buttonStyles =
-  "min-h-[48px] min-w-[142px] text-base font-semibold py-3 px-6 rounded-xl outline-none active:opacity-75 hover:scale-105 transform transition-all";
+import { ModalButton } from "./modal-button.js";
 
 export type CreateDocumentModalProps = ComponentPropsWithoutRef<
   typeof Modal
@@ -60,10 +58,10 @@ export function CreateDocumentModal(props: CreateDocumentModalProps) {
     >
       <form
         name="create-document"
-        className="w-[400px] bg-white p-6 text-slate-300 dark:bg-slate-800 dark:text-slate-600"
+        className="w-100 rounded-xl bg-white p-6 text-slate-300 dark:bg-slate-800 dark:text-slate-600"
         onSubmit={handleSubmit}
       >
-        <div className="border-b border-slate-50 pb-2 text-2xl font-bold text-gray-800 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
+        <div className="pb-2 text-2xl font-bold text-gray-800 dark:text-slate-100">
           Create a new document
         </div>
         <div className="my-6">
@@ -85,26 +83,12 @@ export function CreateDocumentModal(props: CreateDocumentModalProps) {
           />
         </div>
         <div className="mt-8 flex justify-between gap-3">
-          <button
-            type="button"
-            className={twMerge(
-              buttonStyles,
-              "flex-1 bg-slate-50 text-slate-800 dark:bg-slate-800",
-            )}
-            onClick={handleCancel}
-          >
+          <ModalButton variant="cancel" type="button" onClick={handleCancel}>
             Cancel
-          </button>
-          <PowerhouseButton
-            type="submit"
-            className={twMerge(
-              buttonStyles,
-              "flex-1 bg-gray-800 text-gray-50 dark:bg-slate-100 dark:text-slate-900",
-            )}
-            disabled={!isValid}
-          >
+          </ModalButton>
+          <ModalButton variant="confirm" type="submit" disabled={!isValid}>
             Create
-          </PowerhouseButton>
+          </ModalButton>
         </div>
       </form>
     </Modal>

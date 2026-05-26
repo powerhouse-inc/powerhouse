@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { AddLocalDriveModal } from "./add-local-drive-modal.js";
 
 const meta = {
-  title: "Connect/Components/Create Drive Modal",
+  title: "Connect/Components/Add Local Drive Modal",
   component: AddLocalDriveModal,
 } satisfies Meta<typeof AddLocalDriveModal>;
 

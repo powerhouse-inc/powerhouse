@@ -67,7 +67,7 @@ export function InspectorModal({
       <div
         {...containerProps}
         className={twMerge(
-          "flex size-full flex-col bg-white dark:bg-slate-800",
+          "flex size-full flex-col",
           containerProps?.className,
         )}
       >

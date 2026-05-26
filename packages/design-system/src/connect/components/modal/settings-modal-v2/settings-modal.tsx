@@ -73,7 +73,7 @@ export function SettingsModal(props: Props) {
       }}
       {...restProps}
     >
-      <div className="flex justify-between border-b border-slate-50 p-4 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
+      <div className="flex justify-between rounded-t-xl border-b border-slate-50 p-4 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
         <h1 className="text-center text-xl font-semibold text-gray-900 dark:text-slate-50">
           {title}
         </h1>

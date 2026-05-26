@@ -2,9 +2,7 @@ import type { DivProps } from "#design-system";
 import { Icon, mergeClassNameProps, Modal } from "#design-system";
 import type { ComponentPropsWithoutRef } from "react";
 import { twMerge } from "tailwind-merge";
-
-const buttonStyles =
-  "min-h-[48px] min-w-[142px] text-base font-semibold py-3 px-6 rounded-xl outline-none active:opacity-75 hover:scale-105 transform transition-all";
+import { ModalButton } from "./modal-button.js";
 
 type ButtonProps = ComponentPropsWithoutRef<"button">;
 
@@ -66,10 +64,10 @@ export function ConnectReplaceDuplicateModal(
       <div
         {...mergeClassNameProps(
           containerProps,
-          "w-[450px] bg-white p-6 text-slate-300 dark:bg-slate-800 dark:text-slate-600",
+          "w-[450px] bg-white p-6 text-slate-300 dark:bg-slate-800 dark:text-slate-600 rounded-xl",
         )}
       >
-        <div className="flex items-center justify-between border-b border-slate-50 pb-2 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
+        <div className="flex items-center justify-between pb-2 dark:bg-slate-600 dark:text-slate-100">
           <div
             {...mergeClassNameProps(
               headerProps,
@@ -89,25 +87,20 @@ export function ConnectReplaceDuplicateModal(
         <div
           {...mergeClassNameProps(
             bodyProps,
-            "my-6 rounded-md bg-slate-50 p-4 text-center dark:bg-slate-800",
+            "my-6 rounded-md bg-slate-50 p-4 text-center dark:bg-slate-800 text-gray-800 dark:text-slate-100",
           )}
         >
           {message || defaultMessage}
           {children}
         </div>
         <div {...mergeClassNameProps(buttonContainerProps, "mt-8 flex")}>
-          <button
+          <ModalButton
+            variant="confirm"
             onClick={onDuplicate}
-            {...mergeClassNameProps(
-              duplicateButtonProps,
-              twMerge(
-                buttonStyles,
-                "flex-1 bg-gray-800 text-gray-50 dark:bg-slate-100 dark:text-slate-900",
-              ),
-            )}
+            {...duplicateButtonProps}
           >
             {duplicateLabel}
-          </button>
+          </ModalButton>
         </div>
       </div>
     </Modal>

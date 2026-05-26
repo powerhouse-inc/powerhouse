@@ -9,7 +9,6 @@ import {
   rowsToCsv,
   type ColumnInfo,
   type FilterGroup,
-  type FilterClause,
   type PaginationState,
   type SortOptions,
 } from "./components/table-view.js";
@@ -18,9 +17,9 @@ import {
 export type { TableInfo } from "./components/schema-tree-sidebar.js";
 export type {
   ColumnInfo,
-  SortOptions,
-  FilterGroup,
   FilterClause,
+  FilterGroup,
+  SortOptions,
 } from "./components/table-view.js";
 
 export type GetTableRowsOptions = {

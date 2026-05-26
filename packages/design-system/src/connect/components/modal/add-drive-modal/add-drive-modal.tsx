@@ -42,16 +42,13 @@ export function AddDriveModal(props: AddDriveModalProps) {
       overlayProps={{
         className: "items-start pt-[15vh]",
       }}
-      contentProps={{
-        className: "rounded-2xl",
-      }}
       onOpenChange={onOpenChange}
       open={open}
     >
       <div
         {...containerProps}
         className={twMerge(
-          "w-[408px] rounded-2xl bg-white p-6 dark:bg-slate-800",
+          "w-102 rounded-2xl bg-white p-6 dark:bg-slate-800",
           containerProps?.className,
         )}
       >
