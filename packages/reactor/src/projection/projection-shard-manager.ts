@@ -1,6 +1,5 @@
 import { childLogger, type ILogger } from "document-model";
 import { randomUUID } from "node:crypto";
-import { bucketFor } from "../executor/worker-pool-router.js";
 import type { IEventBus } from "../events/interfaces.js";
 import {
   ReactorEventTypes,
@@ -32,6 +31,21 @@ const DEFAULT_INIT_TIMEOUT_MS = 30_000;
 const DEFAULT_SHUTDOWN_GRACE_MS = 5_000;
 const DEFAULT_DRAIN_TIMEOUT_MS = 30_000;
 const DEFAULT_CHAIN_DEPTH_REPORT_INTERVAL_MS = 250;
+
+const FNV_OFFSET_BASIS = 0x811c9dc5;
+const FNV_PRIME = 0x01000193;
+
+function bucketFor(documentId: string, numWorkers: number): number {
+  if (numWorkers < 1) {
+    throw new Error(`bucketFor: numWorkers must be >= 1 (got ${numWorkers})`);
+  }
+  let hash = FNV_OFFSET_BASIS;
+  for (let i = 0; i < documentId.length; i++) {
+    hash ^= documentId.charCodeAt(i);
+    hash = Math.imul(hash, FNV_PRIME);
+  }
+  return (hash >>> 0) % numWorkers;
+}
 
 /**
  * Factory that builds one projection-worker transport. Mirrors

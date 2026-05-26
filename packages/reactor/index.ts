@@ -28,12 +28,11 @@ export {
   type ReadModelFactory,
   type ReadModelFactoryDeps,
 } from "./src/core/reactor-builder.js";
-export {
-  ProjectionShardManager,
-  type BuiltInReadModelKind,
-  type IProjectionTransport,
-  type ProjectionShardManagerConfig,
-  type ProjectionWorkerFactory,
+export type {
+  BuiltInReadModelKind,
+  IProjectionTransport,
+  ProjectionShardManagerConfig,
+  ProjectionWorkerFactory,
 } from "./src/projection/index.js";
 export { ReactorClientBuilder } from "./src/core/reactor-client-builder.js";
 export { DEFAULT_DRIVE_CONTAINER_TYPES } from "./src/core/drive-container-types.js";
