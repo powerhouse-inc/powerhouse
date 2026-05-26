@@ -75,7 +75,7 @@ export const Content: React.FC<ContentProps> = ({
               disabled={false}
               className={cn(
                 "cursor-pointer",
-                "data-[selected=true]:bg-gray-100 dark:data-[selected=true]:bg-slate-900",
+                "data-[selected=true]:bg-gray-100 dark:data-[selected=true]:bg-slate-600",
               )}
               role="option"
               aria-selected={selectedValues.length === enabledOptions.length}

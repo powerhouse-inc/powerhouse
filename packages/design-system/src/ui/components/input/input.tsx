@@ -18,11 +18,10 @@ const inputBaseStyles = cn(
   "font-sans placeholder:text-gray-500 dark:placeholder:text-slate-400",
   // Focus styles
   "focus-visible:ring-1 focus-visible:ring-gray-900 focus-visible:ring-offset-0 focus-visible:ring-offset-white focus-visible:outline-none",
-  "focus:bg-gray-50 dark:focus:bg-slate-800 dark:focus-visible:ring-slate-300 dark:focus-visible:ring-offset-slate-900",
+  "focus:bg-gray-50 dark:focus:bg-slate-700 dark:focus-visible:ring-slate-400 dark:focus-visible:ring-offset-slate-800",
   // Disabled state
   "disabled:cursor-not-allowed",
-  "disabled:border-gray-300 disabled:bg-gray-50 disabled:text-gray-700 dark:disabled:border-slate-500 dark:disabled:bg-slate-600 dark:disabled:text-slate-100",
-  "disabled:dark:border-charcoal-800 disabled:dark:bg-charcoal-900 disabled:dark:text-gray-300",
+  "disabled:border-gray-300 disabled:bg-gray-50 disabled:text-gray-700 dark:disabled:border-slate-500 dark:disabled:bg-slate-700 dark:disabled:placeholder:text-slate-400",
 );
 
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
