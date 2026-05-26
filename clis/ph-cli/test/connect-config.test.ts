@@ -31,6 +31,9 @@ function mk(partial: Partial<ConnectConfigArgs>): ConnectConfigArgs {
     packagesRegistry: undefined,
     appName: undefined,
     homeBackground: undefined,
+    sentryDsn: undefined,
+    sentryEnv: undefined,
+    sentryTracingEnabled: undefined,
     connectBasePath: "/",
     logLevel: "info",
     defaultDrivesUrl: "",
@@ -333,6 +336,51 @@ describe("ph connect config", () => {
           >
         ).url,
       ).toBe("https://ok");
+    });
+  });
+
+  // ---------------- --sentry-* writes ----------------
+
+  describe("sentry overrides", () => {
+    it("writes connect.sentry.dsn / env / tracing into both files", async () => {
+      writeSource({ connect: {} });
+      writeDist({ schemaVersion: 2, packages: [], connect: {} });
+
+      await runConnectConfig(
+        mk({
+          sentryDsn: "https://example@sentry.io/1",
+          sentryEnv: "staging",
+          sentryTracingEnabled: true,
+        }),
+      );
+
+      const source = readJson(join(tmpDir, SOURCE_FILE));
+      const sentry = (source.connect as Record<string, Record<string, unknown>>)
+        .sentry;
+      expect(sentry.dsn).toBe("https://example@sentry.io/1");
+      expect(sentry.env).toBe("staging");
+      expect(sentry.tracing).toBe(true);
+
+      const dist = readJson(join(tmpDir, DEFAULT_DIST, SOURCE_FILE));
+      const distSentry = (
+        dist.connect as Record<string, Record<string, unknown>>
+      ).sentry;
+      expect(distSentry.dsn).toBe("https://example@sentry.io/1");
+    });
+
+    it("--sentry-dsn '' sets the DSN to null (disables Sentry)", async () => {
+      writeSource({
+        connect: { sentry: { dsn: "https://existing", env: "prod" } },
+      });
+
+      await runConnectConfig(mk({ sentryDsn: "" }));
+
+      const source = readJson(join(tmpDir, SOURCE_FILE));
+      const sentry = (source.connect as Record<string, Record<string, unknown>>)
+        .sentry;
+      expect(sentry.dsn).toBeNull();
+      // Sibling preserved
+      expect(sentry.env).toBe("prod");
     });
   });
 });

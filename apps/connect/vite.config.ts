@@ -13,6 +13,9 @@ export default defineConfig({
   define: {
     CONNECT_VERSION: JSON.stringify(version),
     CONNECT_GIT_SHA: JSON.stringify(gitSha),
+    // Sentry release stays build-time so it always matches the sourcemap
+    // upload tag the release workflow used.
+    PH_CONNECT_SENTRY_RELEASE: JSON.stringify(version),
   },
   envPrefix: ["PH_CONNECT_"],
   optimizeDeps: {

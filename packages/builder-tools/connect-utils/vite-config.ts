@@ -224,7 +224,12 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
   const authToken = env.PH_SENTRY_AUTH_TOKEN;
   const org = env.PH_SENTRY_ORG;
   const project = env.PH_SENTRY_PROJECT;
-  const release = env.PH_CONNECT_SENTRY_RELEASE || env.PH_CONNECT_VERSION;
+  // Release tag derived from the workspace version so it matches the
+  // sourcemap upload tag CI uses.
+  const release =
+    process.env.WORKSPACE_VERSION ??
+    process.env.npm_package_version ??
+    env.PH_CONNECT_VERSION;
   const uploadSentrySourcemaps = authToken && org && project;
 
   const connectHtmlTags = getConnectHtmlTags({
@@ -333,9 +338,9 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
       dedupe: ["react", "react-dom"],
       tsconfigPaths: true,
     },
-    // Connect reads its runtime config (including packageRegistryUrl) from
-    // the emitted /powerhouse.config.json; no build-time `define` globals.
-    define: {},
+    define: {
+      PH_CONNECT_SENTRY_RELEASE: JSON.stringify(release || "unknown"),
+    },
     customLogger,
     envPrefix: ["PH_CONNECT_"],
     optimizeDeps: {

@@ -72,12 +72,22 @@ export type PHConnectRenown = {
   chainId?: number;
 };
 
+export type PHConnectSentry = {
+  /** Sentry DSN URL. `null` disables Sentry entirely. */
+  dsn?: string | null;
+  /** Sentry environment label. */
+  env?: string;
+  /** Enable Sentry performance tracing. */
+  tracing?: boolean;
+};
+
 export type PHConnectRuntimeConfig = {
   branding?: PHConnectBranding;
   app?: PHConnectApp;
   packages?: PHConnectPackages;
   drives?: PHConnectDrives;
   renown?: PHConnectRenown;
+  sentry?: PHConnectSentry;
 };
 
 export type PowerhouseConfig = {

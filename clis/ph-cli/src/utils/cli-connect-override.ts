@@ -34,7 +34,7 @@ type PlainObject = Record<string, unknown>;
  * values.
  */
 export type ConnectFlagInput = {
-  // 14 strict-optional flags from connectRuntimeOverrideArgs (excluding
+  // Strict-optional flags from connectRuntimeOverrideArgs (excluding
   // `packagesRegistry`, which is a top-level runtime field — see
   // `buildCliConnectOverride`).
   json?: string | undefined;
@@ -51,7 +51,10 @@ export type ConnectFlagInput = {
   localDrivesAllowDelete?: boolean | undefined;
   appName?: string | undefined;
   homeBackground?: string | undefined;
-  // 4 commonArgs flags. Callers must apply `wasFlagExplicitlyPassed`
+  sentryDsn?: string | undefined;
+  sentryEnv?: string | undefined;
+  sentryTracingEnabled?: boolean | undefined;
+  // commonArgs flags. Callers must apply `wasFlagExplicitlyPassed`
   // filtering (see above).
   basePath?: string | undefined;
   logLevel?: string | undefined;
@@ -150,6 +153,16 @@ export function buildConnectFlagPatch(args: ConnectFlagInput): PlainObject {
   }
   if (Object.keys(branding).length > 0) out.branding = branding;
 
+  // --sentry-dsn: empty string is the explicit "set null" form (disables
+  // Sentry). Same pattern as --home-background.
+  const sentry: PlainObject = {};
+  if (args.sentryDsn !== undefined) {
+    sentry.dsn = args.sentryDsn === "" ? null : args.sentryDsn;
+  }
+  setIfDefined(sentry, "env", args.sentryEnv);
+  setIfDefined(sentry, "tracing", args.sentryTracingEnabled);
+  if (Object.keys(sentry).length > 0) out.sentry = sentry;
+
   const drives: PlainObject = {};
   setIfDefined(drives, "allowAddDrive", args.allowAddDrive);
   setIfDefined(drives, "preserveStrategy", args.drivesPreserveStrategy);
@@ -214,7 +227,10 @@ export function buildCliConnectOverride(args: ConnectBuildArgs): {
     localDrivesAllowDelete: args.localDrivesAllowDelete,
     appName: args.appName,
     homeBackground: args.homeBackground,
-    // 4 commonArgs flags — only forward when the user explicitly passed them.
+    sentryDsn: args.sentryDsn,
+    sentryEnv: args.sentryEnv,
+    sentryTracingEnabled: args.sentryTracingEnabled,
+    // commonArgs flags — only forward when the user explicitly passed them.
     basePath: wasFlagExplicitlyPassed("base")
       ? args.connectBasePath
       : undefined,

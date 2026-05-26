@@ -543,6 +543,18 @@ Override connect.branding.appName.<br><br>
 Override connect.branding.homeBackground. Pass an empty string ("") to set null.<br><br>
 **usage:** `--home-background <str>`<br>
 
+#### Sentry Dsn <br>
+Override connect.sentry.dsn (Sentry DSN URL). Pass an empty string ("") to set null and disable Sentry.<br><br>
+**usage:** `--sentry-dsn <str>`<br>
+
+#### Sentry Env <br>
+Override connect.sentry.env (Sentry environment label).<br><br>
+**usage:** `--sentry-env <str>`<br>
+
+#### Sentry Tracing Enabled <br>
+Override connect.sentry.tracing (Sentry performance tracing).<br><br>
+**usage:** `--sentry-tracing-enabled <value>`<br>
+
 #### Base <br>
 Base path for the app<br><br>
 **usage:** `--base <str>`<br>

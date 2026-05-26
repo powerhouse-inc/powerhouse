@@ -605,6 +605,12 @@ external packages included
 
 **Home Background** - Override connect.branding.homeBackground. Pass an empty string ("") to set null. - Usage: `--home-background <str>`
 
+**Sentry Dsn** - Override connect.sentry.dsn (Sentry DSN URL). Pass an empty string ("") to set null and disable Sentry. - Usage: `--sentry-dsn <str>`
+
+**Sentry Env** - Override connect.sentry.env (Sentry environment label). - Usage: `--sentry-env <str>`
+
+**Sentry Tracing Enabled** - Override connect.sentry.tracing (Sentry performance tracing). - Usage: `--sentry-tracing-enabled <value>`
+
 **Base** - Base path for the app - Usage: `--base <str>`
 
 **Log Level** - Log level for the application - Usage: `--log-level <value>`

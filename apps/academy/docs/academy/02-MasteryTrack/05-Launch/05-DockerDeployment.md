@@ -167,9 +167,9 @@ Connect's SPA reads runtime configuration from `/powerhouse.config.json`, never 
 | `PORT`                   | Port the nginx server listens on                            | `3001`   |
 | `PH_CONNECT_BASE_PATH`   | nginx base URL path                                         | `/`      |
 | `PH_CONNECT_CONFIG_JSON` | Runtime config JSON to merge into the dist file (see below) | _unset_  |
-| `PH_CONNECT_SENTRY_DSN`  | Sentry DSN for error tracking                               | `""`     |
-| `PH_CONNECT_SENTRY_ENV`  | Sentry environment name                                     | `""`     |
 | `DATABASE_URL`           | PostgreSQL connection string (for Switchboard, not Connect) | Required |
+
+Sentry (DSN, environment label, tracing flag) is no longer set via per-field env vars — those live in `connect.sentry.*` of `powerhouse.config.json` and ride through `PH_CONNECT_CONFIG_JSON` like every other runtime field. See the example below.
 
 #### `PH_CONNECT_CONFIG_JSON` (set-if-absent)
 
@@ -188,6 +188,11 @@ docker run \
         "sections": {
           "remote": { "enabled": true, "allowAdd": false }
         }
+      },
+      "sentry": {
+        "dsn": "https://prod-key@sentry.io/1",
+        "env": "prod",
+        "tracing": true
       }
     }
   }' \
@@ -198,7 +203,7 @@ The schema for the JSON object lives at `packages/builder-tools/connect-utils/ru
 
 **Invalid input behaviour:** malformed JSON or a non-object payload aborts container startup with a clear stderr message rather than silently dropping the operator's intent.
 
-**Migration from per-field env vars:** the previous `PH_CONNECT_LOG_LEVEL`, `PH_CONNECT_DISABLE_ADD_DRIVE`, `PH_CONNECT_RENOWN_URL`, `PH_CONNECT_DEFAULT_DRIVES_URL`, and similar per-field variables are no longer wired. Wrap their values into a single `PH_CONNECT_CONFIG_JSON` payload using the JSON paths shown above.
+**Migration from per-field env vars:** the previous `PH_CONNECT_LOG_LEVEL`, `PH_CONNECT_DISABLE_ADD_DRIVE`, `PH_CONNECT_RENOWN_URL`, `PH_CONNECT_DEFAULT_DRIVES_URL`, `PH_CONNECT_SENTRY_DSN`, `PH_CONNECT_SENTRY_ENV`, `PH_CONNECT_SENTRY_TRACING_ENABLED`, and similar per-field variables are no longer wired. Wrap their values into a single `PH_CONNECT_CONFIG_JSON` payload using the JSON paths shown above. The Sentry **release** tag is build-time only — it stamps into the bundle via Vite's `define` from `WORKSPACE_VERSION` so it always matches the sourcemap upload tag CI used.
 
 ### Switchboard Environment Variables
 

@@ -393,6 +393,28 @@
               "default": 1
             }
           }
+        },
+        "sentry": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Sentry error-tracking coordinates. Set `dsn` to enable Sentry; leave `dsn` null to disable. The Sentry release tag stays build-time (stamped via Vite's `define` from WORKSPACE_VERSION) so it always matches the sourcemaps uploaded by CI.",
+          "properties": {
+            "dsn": {
+              "type": ["string", "null"],
+              "description": "Sentry DSN URL. `null` disables Sentry entirely; the SPA never loads the Sentry SDK chunk.",
+              "default": null
+            },
+            "env": {
+              "type": "string",
+              "description": "Sentry environment label, surfaced as the `environment` tag on every event.",
+              "default": "dev"
+            },
+            "tracing": {
+              "type": "boolean",
+              "description": "Enable Sentry performance tracing.",
+              "default": false
+            }
+          }
         }
       }
     }

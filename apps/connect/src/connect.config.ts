@@ -12,14 +12,15 @@ import {
 import { logger } from "document-model";
 import { getRuntimeConfig } from "./runtime-config.js";
 
-// KEEP env vars only: sentry config, version stamps, analytics toggles.
-// Anything in the Connect runtime schema (PHConnectRuntimeConfig) is read
-// from `runtime` below — env vars are NOT a layer for runtime values
-// anymore. To change a runtime value use `ph connect build --<field>`,
-// `ph connect config --<field>`, or edit `powerhouse.config.json` directly.
+// Env vars are reserved for version stamps and analytics processor toggles.
+// Everything in the Connect runtime schema (PHConnectRuntimeConfig) is read
+// from `runtime` below. The Sentry release tag is stamped at build time via
+// Vite's `define` so it always matches the sourcemap upload tag CI used.
 export const env = loadRuntimeEnv({
   processEnv: import.meta.env,
 });
+
+declare const PH_CONNECT_SENTRY_RELEASE: string;
 
 // Runtime fields come from the JSON, not env. start-connect.tsx's top-level
 // await guarantees the loader cache is warm by the time this module
@@ -73,15 +74,15 @@ function getBuiltInDefaults(): Omit<
     renownUrl: runtime.renown?.url,
     renownNetworkId: runtime.renown?.networkId,
     renownChainId: runtime.renown?.chainId,
-    sentryRelease: env.PH_CONNECT_SENTRY_RELEASE,
-    sentryDsn: env.PH_CONNECT_SENTRY_DSN,
-    sentryEnv: env.PH_CONNECT_SENTRY_ENV,
+    sentryRelease: PH_CONNECT_SENTRY_RELEASE,
+    sentryDsn: runtime.sentry?.dsn ?? undefined,
+    sentryEnv: runtime.sentry?.env,
     isDiffAnalyticsEnabled: env.PH_CONNECT_DIFF_ANALYTICS_ENABLED,
     isDriveAnalyticsEnabled: env.PH_CONNECT_DRIVE_ANALYTICS_ENABLED,
     isPublicDrivesEnabled: runtime.drives?.sections?.remote?.enabled,
     isCloudDrivesEnabled: runtime.drives?.sections?.remote?.enabled ?? true,
     isLocalDrivesEnabled: runtime.drives?.sections?.local?.enabled,
-    isSentryTracingEnabled: env.PH_CONNECT_SENTRY_TRACING_ENABLED,
+    isSentryTracingEnabled: runtime.sentry?.tracing,
     isDocumentModelSelectionSettingsEnabled: false,
     isAddDriveEnabled: runtime.drives?.allowAddDrive,
     isAddPublicDrivesEnabled: runtime.drives?.sections?.remote?.allowAdd,
@@ -186,10 +187,11 @@ export const connectConfig = {
     chainId: runtime.renown?.chainId,
   },
   sentry: {
-    release: env.PH_CONNECT_SENTRY_RELEASE,
-    dsn: env.PH_CONNECT_SENTRY_DSN,
-    env: env.PH_CONNECT_SENTRY_ENV,
-    tracing: env.PH_CONNECT_SENTRY_TRACING_ENABLED,
+    release: PH_CONNECT_SENTRY_RELEASE,
+    // `dsn: null` (default) means Sentry is disabled — useInitSentry bails.
+    dsn: runtime.sentry?.dsn ?? null,
+    env: runtime.sentry?.env,
+    tracing: runtime.sentry?.tracing ?? false,
   },
   content: {
     showSearchBar: false,

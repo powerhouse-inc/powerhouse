@@ -136,6 +136,23 @@ const connectRuntimeOverrideArgs = {
     description:
       'Override connect.branding.homeBackground. Pass an empty string ("") to set null.',
   }),
+  sentryDsn: option({
+    type: optional(string),
+    long: "sentry-dsn",
+    description:
+      'Override connect.sentry.dsn (Sentry DSN URL). Pass an empty string ("") to set null and disable Sentry.',
+  }),
+  sentryEnv: option({
+    type: optional(string),
+    long: "sentry-env",
+    description: "Override connect.sentry.env (Sentry environment label).",
+  }),
+  sentryTracingEnabled: option({
+    type: optional(cliBoolean),
+    long: "sentry-tracing-enabled",
+    description:
+      "Override connect.sentry.tracing (Sentry performance tracing).",
+  }),
 };
 
 export const connectBuildArgs = {

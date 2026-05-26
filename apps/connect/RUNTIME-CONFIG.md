@@ -53,7 +53,8 @@ Schema lives in `packages/builder-tools/connect-utils/runtime-config-schema.ts`.
     "app":       { "logLevel": "info", "basePath": "/" },
     "renown":    { "url": "...", "networkId": "eip155", "chainId": 1 },
     "drives":    { "allowAddDrive": true, "defaultDrives": [...], "preserveStrategy": "...", "sections": {...} },
-    "packages":  { "externalEnabled": true }
+    "packages":  { "externalEnabled": true },
+    "sentry":    { "dsn": null, "env": "dev", "tracing": false }
   }
 }
 ```
@@ -188,6 +189,19 @@ Edit the project's `powerhouse.config.json`, set `"packageRegistryUrl": "https:/
 
 **"I'm deploying the docker image to a new environment and need to override renown."**
 Set `PH_CONNECT_CONFIG_JSON='{"connect":{"renown":{"url":"https://renown.staging.example"}}}'` on the container. The entrypoint script deep-merges the JSON into the dist file before nginx starts (set-if-absent); the SPA serves the new value on the very first request.
+
+**"I need a different Sentry DSN per environment."**
+Sentry config lives in `connect.sentry.*` of `powerhouse.config.json`. The DSN, environment label, and tracing flag are all runtime — one Docker image serves staging + prod by switching the env-supplied JSON:
+
+```bash
+docker run -e PH_CONNECT_CONFIG_JSON='{
+  "connect": {
+    "sentry": { "dsn": "https://prod-key@sentry.io/1", "env": "prod", "tracing": true }
+  }
+}' connect:latest
+```
+
+`dsn: null` (the default) disables Sentry — the SPA never loads the Sentry SDK chunk. The Sentry **release** tag, in contrast, stays build-time (stamped via Vite's `define` from `WORKSPACE_VERSION`) so it always matches the sourcemap upload tag CI used.
 
 **"I want to verify what Connect will actually use without booting it."**
 `ph connect config` (no args) prints the effective `connect.*` block (defaults merged with source). `ph connect config --get connect.renown.url` prints a single value.

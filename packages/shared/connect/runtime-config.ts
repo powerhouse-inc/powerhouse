@@ -49,6 +49,14 @@ export const DEFAULT_CONNECT_CONFIG: PHConnectRuntimeConfig = {
     networkId: "eip155",
     chainId: 1,
   },
+  sentry: {
+    // `dsn: null` is the disabled-Sentry state — the SPA never loads the
+    // Sentry SDK chunk. Override via `ph connect config --sentry-dsn ...`
+    // or by including `connect.sentry.dsn` in PH_CONNECT_CONFIG_JSON.
+    dsn: null,
+    env: "dev",
+    tracing: false,
+  },
 };
 
 export function buildRuntimeConfig(

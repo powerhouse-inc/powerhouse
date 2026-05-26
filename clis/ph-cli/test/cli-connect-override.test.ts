@@ -13,7 +13,7 @@ function mk(partial: Partial<ConnectBuildArgs>): ConnectBuildArgs {
   return {
     outDir: "dist",
     json: undefined,
-    // 15 strict-optional flags from connectRuntimeOverrideArgs.
+    // strict-optional flags from connectRuntimeOverrideArgs.
     renownUrl: undefined,
     renownNetworkId: undefined,
     renownChainId: undefined,
@@ -28,7 +28,10 @@ function mk(partial: Partial<ConnectBuildArgs>): ConnectBuildArgs {
     packagesRegistry: undefined,
     appName: undefined,
     homeBackground: undefined,
-    // 4 commonArgs flags with their cmd-ts defaults applied.
+    sentryDsn: undefined,
+    sentryEnv: undefined,
+    sentryTracingEnabled: undefined,
+    // commonArgs flags with their cmd-ts defaults applied.
     connectBasePath: "/",
     logLevel: "info",
     defaultDrivesUrl: "",
@@ -267,6 +270,34 @@ describe("buildCliConnectOverride", () => {
     );
     expect(result).toEqual({
       connectOverride: { renown: { url: "https://x" } },
+      packageRegistryUrl: undefined,
+    });
+  });
+
+  it("routes --sentry-dsn / --sentry-env / --sentry-tracing-enabled into connect.sentry", () => {
+    const result = buildCliConnectOverride(
+      mk({
+        sentryDsn: "https://example@sentry.io/1",
+        sentryEnv: "staging",
+        sentryTracingEnabled: true,
+      }),
+    );
+    expect(result).toEqual({
+      connectOverride: {
+        sentry: {
+          dsn: "https://example@sentry.io/1",
+          env: "staging",
+          tracing: true,
+        },
+      },
+      packageRegistryUrl: undefined,
+    });
+  });
+
+  it("--sentry-dsn '' (empty string) sets dsn null to disable Sentry", () => {
+    const result = buildCliConnectOverride(mk({ sentryDsn: "" }));
+    expect(result).toEqual({
+      connectOverride: { sentry: { dsn: null } },
       packageRegistryUrl: undefined,
     });
   });

@@ -92,9 +92,13 @@ export function useInitSentry() {
       return;
     }
 
+    // Sentry is disabled when `dsn` is null, undefined, or an empty
+    // string — covers both the new schema default (`null`) and any
+    // hand-edited config that omits the DSN.
     if (
       clientStarted ||
-      !connectConfig.sentry.dsn ||
+      connectConfig.sentry.dsn === null ||
+      connectConfig.sentry.dsn === undefined ||
       connectConfig.sentry.dsn === ""
     ) {
       return;

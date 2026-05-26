@@ -2,9 +2,9 @@
 // `powerhouse.config.json`, not from env vars. If any of these keys come back
 // into the env schema, the migration to file-based runtime config is broken.
 //
-// (Build metadata, Sentry, and analytics-processor toggles remain env-driven
-// and ARE expected to be present in the schema — see the positive assertion
-// at the bottom.)
+// (Build metadata and analytics-processor toggles remain env-driven and ARE
+// expected to be present in the schema — see the positive assertion at the
+// bottom.)
 
 import { describe, expect, it } from "vitest";
 import { connectEnvSchema, runtimeEnvSchema } from "./env-config.js";
@@ -27,17 +27,16 @@ const REMOVED_RUNTIME_KEYS = [
   "PH_CONNECT_RENOWN_CHAIN_ID",
   "PH_CONNECT_PACKAGES_REGISTRY",
   "PH_DISABLE_LOCAL_PACKAGE",
+  "PH_CONNECT_SENTRY_DSN",
+  "PH_CONNECT_SENTRY_ENV",
+  "PH_CONNECT_SENTRY_RELEASE",
+  "PH_CONNECT_SENTRY_TRACING_ENABLED",
 ] as const;
 
 const KEPT_KEYS = [
   // Build metadata
   "PH_CONNECT_VERSION",
   "PH_CONNECT_CLI_VERSION",
-  // Sentry
-  "PH_CONNECT_SENTRY_DSN",
-  "PH_CONNECT_SENTRY_ENV",
-  "PH_CONNECT_SENTRY_RELEASE",
-  "PH_CONNECT_SENTRY_TRACING_ENABLED",
   // Analytics processors
   "PH_CONNECT_DIFF_ANALYTICS_ENABLED",
   "PH_CONNECT_DRIVE_ANALYTICS_ENABLED",
@@ -65,7 +64,7 @@ describe("env-config regression guard", () => {
     }
   });
 
-  it("still includes the kept env keys (Sentry, build metadata, analytics)", () => {
+  it("still includes the kept env keys (build metadata, analytics, sourcemap-upload credentials)", () => {
     const schemaKeys = new Set(Object.keys(connectEnvSchema.shape));
     for (const kept of KEPT_KEYS) {
       expect(schemaKeys.has(kept)).toBe(true);

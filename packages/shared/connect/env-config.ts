@@ -102,52 +102,17 @@ const processorsConfigSchema = z.object({
 });
 
 // ============================================================================
-// Sentry Configuration
-// ============================================================================
-
-/**
- * Sentry error tracking configuration schema
- */
-const sentryConfigSchema = z.object({
-  /**
-   * Sentry release identifier
-   * Defaults to app version
-   */
-  PH_CONNECT_SENTRY_RELEASE: z.string().optional(),
-
-  /**
-   * Sentry DSN for error reporting
-   */
-  PH_CONNECT_SENTRY_DSN: z.string().optional(),
-
-  /**
-   * Sentry environment name
-   * @default "prod"
-   */
-  PH_CONNECT_SENTRY_ENV: z.string().default("dev"),
-
-  /**
-   * Enable Sentry performance tracing
-   * @default false
-   */
-  PH_CONNECT_SENTRY_TRACING_ENABLED: booleanString.default(false),
-});
-
-// ============================================================================
 // Combined Schemas
 // ============================================================================
 
 /**
- * Complete runtime environment schema (all PH_CONNECT_* vars).
- *
- * Only build-metadata / Sentry / analytics-processor toggles live here.
- * Connect runtime config (renown, drives, branding, app, packages.externalEnabled)
- * is sourced exclusively from `powerhouse.config.json` and CLI overrides —
- * never from env.
+ * Complete runtime environment schema (all PH_CONNECT_* vars). Only
+ * build-metadata + analytics-processor toggles live here; all Connect
+ * runtime config lives in `powerhouse.config.json`.
  */
-export const runtimeEnvSchema = appConfigSchema
-  .extend(processorsConfigSchema.shape)
-  .extend(sentryConfigSchema.shape);
+export const runtimeEnvSchema = appConfigSchema.extend(
+  processorsConfigSchema.shape,
+);
 
 /**
  * Complete environment schema (build + runtime)
