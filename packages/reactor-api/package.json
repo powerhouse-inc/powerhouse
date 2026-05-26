@@ -84,10 +84,10 @@
     "knex-pglite": "catalog:",
     "kysely": "catalog:",
     "kysely-knex": "catalog:",
-    "path-to-regexp": "^8.4.0",
+    "path-to-regexp": "^8.4.2",
     "pg": "catalog:",
     "read-pkg": "catalog:",
-    "ws": "^8.18.3",
+    "ws": "^8.20.1",
     "zod": "catalog:"
   },
   "devDependencies": {
