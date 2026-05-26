@@ -356,6 +356,37 @@ const processorsConfigSchema = processorsBaseConfigSchema
   .extend(relationalProcessorsConfigSchema.shape);
 
 // ============================================================================
+// OpenPanel Configuration
+// ============================================================================
+
+/**
+ * OpenPanel analytics configuration schema
+ */
+const openPanelConfigSchema = z.object({
+  /**
+   * OpenPanel client ID. When unset, the OpenPanel subsystem is a no-op.
+   */
+  PH_CONNECT_OPENPANEL_CLIENT_ID: z.string().optional(),
+
+  /**
+   * OpenPanel API URL override. Defaults to the OpenPanel cloud when unset.
+   */
+  PH_CONNECT_OPENPANEL_API_URL: z.string().optional(),
+
+  /**
+   * Track UI events via the useOpenPanel() hook
+   * @default true
+   */
+  PH_CONNECT_OPENPANEL_TRACK_UI_EVENTS: booleanString.default(true),
+
+  /**
+   * Track document operations via the OpenPanel processor
+   * @default true
+   */
+  PH_CONNECT_OPENPANEL_TRACK_OPERATIONS: booleanString.default(true),
+});
+
+// ============================================================================
 // Sentry Configuration
 // ============================================================================
 
@@ -425,6 +456,7 @@ export const runtimeEnvSchema = appConfigSchema
   .extend(featureFlagsSchema.shape)
   .extend(drivesConfigSchema.shape)
   .extend(processorsConfigSchema.shape)
+  .extend(openPanelConfigSchema.shape)
   .extend(sentryConfigSchema.shape)
   .extend(renownConfigSchema.shape);
 
