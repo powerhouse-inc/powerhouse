@@ -88,7 +88,8 @@
     "react-i18next": "^16.0.0",
     "react-router-dom": "^6.11.2",
     "tailwind-merge": "catalog:",
-    "usehooks-ts": "^3.1.1"
+    "usehooks-ts": "^3.1.1",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@tailwindcss/cli": "catalog:",
