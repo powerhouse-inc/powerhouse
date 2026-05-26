@@ -89,7 +89,7 @@ export function RevisionHistory(props: Props) {
 
   return (
     <ConnectTooltipProvider>
-      <div className="p-6">
+      <div className="p-6 dark:bg-slate-800">
         <Header
           docId={documentId}
           onChangeScope={onChangeScope}
