@@ -101,18 +101,40 @@ import type {
   UpdateStateExampleAction,
 } from "./types.js";
 import {
+  assertModuleIdUnique,
+  assertOperationIdUnique,
   findModuleOrThrow,
+  findOperationErrorOrThrow,
+  findOperationExampleOrThrow,
   findOperationOrThrow,
   validateOperationName,
 } from "./validation.js";
 
-function sorter<TItem extends { id: string }>(
+/**
+ * Reorder `items` by the position of their id in `order`. Ids not listed in
+ * `order` keep their relative position after the listed ones. Throws if `order`
+ * references an id that isn't present, so a stale or mistyped id fails loudly
+ * instead of silently producing an arbitrary order.
+ */
+function orderBy<TItem extends { id: string }>(
+  items: TItem[],
   order: string[],
-): (a: TItem, b: TItem) => number {
-  const mapping: Record<string, number> = {};
-  order.forEach((key, index) => (mapping[key] = index));
-  return (a: TItem, b: TItem) =>
-    (mapping[b.id] || 999999) - (mapping[a.id] || 999999);
+): TItem[] {
+  const ids = new Set(items.map((item) => item.id));
+  for (const id of order) {
+    if (!ids.has(id)) {
+      throw new Error(`Cannot reorder: unknown id "${id}"`);
+    }
+  }
+  const rank = new Map(order.map((id, index) => [id, index]));
+  return items
+    .map((item, index) => ({ item, index }))
+    .sort((a, b) => {
+      const ra = rank.get(a.item.id) ?? Number.MAX_SAFE_INTEGER;
+      const rb = rank.get(b.item.id) ?? Number.MAX_SAFE_INTEGER;
+      return ra - rb || a.index - b.index;
+    })
+    .map(({ item }) => item);
 }
 
 export const documentModelHeaderReducer: DocumentModelHeaderOperations = {
@@ -144,6 +166,7 @@ export const documentModelHeaderReducer: DocumentModelHeaderOperations = {
 };
 export const documentModelModuleReducer: DocumentModelModuleOperations = {
   addModuleOperation(state, action) {
+    assertModuleIdUnique(state, action.input.id);
     const latestSpec = state.specifications[state.specifications.length - 1];
     latestSpec.modules.push({
       id: action.input.id,
@@ -154,24 +177,17 @@ export const documentModelModuleReducer: DocumentModelModuleOperations = {
   },
 
   setModuleNameOperation(state, action) {
-    const latestSpec = state.specifications[state.specifications.length - 1];
-    for (let i = 0; i < latestSpec.modules.length; i++) {
-      if (latestSpec.modules[i].id === action.input.id) {
-        latestSpec.modules[i].name = action.input.name || "";
-      }
-    }
+    const targetModule = findModuleOrThrow(state, action.input.id);
+    targetModule.name = action.input.name || "";
   },
 
   setModuleDescriptionOperation(state, action) {
-    const latestSpec = state.specifications[state.specifications.length - 1];
-    for (let i = 0; i < latestSpec.modules.length; i++) {
-      if (latestSpec.modules[i].id === action.input.id) {
-        latestSpec.modules[i].description = action.input.description || "";
-      }
-    }
+    const targetModule = findModuleOrThrow(state, action.input.id);
+    targetModule.description = action.input.description || "";
   },
 
   deleteModuleOperation(state, action) {
+    findModuleOrThrow(state, action.input.id);
     const latestSpec = state.specifications[state.specifications.length - 1];
     latestSpec.modules = latestSpec.modules.filter(
       (m) => m.id != action.input.id,
@@ -180,7 +196,7 @@ export const documentModelModuleReducer: DocumentModelModuleOperations = {
 
   reorderModulesOperation(state, action) {
     const latestSpec = state.specifications[state.specifications.length - 1];
-    latestSpec.modules.sort(sorter(action.input.order));
+    latestSpec.modules = orderBy(latestSpec.modules, action.input.order);
   },
 };
 export const documentModelOperationErrorReducer: DocumentModelOperationErrorOperations =
@@ -197,184 +213,75 @@ export const documentModelOperationErrorReducer: DocumentModelOperationErrorOper
     },
 
     setOperationErrorCodeOperation(state, action) {
-      const latestSpec = state.specifications[state.specifications.length - 1];
-      for (let i = 0; i < latestSpec.modules.length; i++) {
-        for (let j = 0; j < latestSpec.modules[i].operations.length; j++) {
-          for (
-            let k = 0;
-            k < latestSpec.modules[i].operations[j].errors.length;
-            k++
-          ) {
-            if (
-              latestSpec.modules[i].operations[j].errors[k].id ==
-              action.input.id
-            ) {
-              latestSpec.modules[i].operations[j].errors[k].code =
-                action.input.errorCode || "";
-            }
-          }
-        }
-      }
+      const error = findOperationErrorOrThrow(state, action.input.id);
+      error.code = action.input.errorCode || "";
     },
 
     setOperationErrorNameOperation(state, action) {
-      const latestSpec = state.specifications[state.specifications.length - 1];
-      for (let i = 0; i < latestSpec.modules.length; i++) {
-        for (let j = 0; j < latestSpec.modules[i].operations.length; j++) {
-          for (
-            let k = 0;
-            k < latestSpec.modules[i].operations[j].errors.length;
-            k++
-          ) {
-            if (
-              latestSpec.modules[i].operations[j].errors[k].id ==
-              action.input.id
-            ) {
-              latestSpec.modules[i].operations[j].errors[k].name =
-                action.input.errorName || "";
-            }
-          }
-        }
-      }
+      const error = findOperationErrorOrThrow(state, action.input.id);
+      error.name = action.input.errorName || "";
     },
 
     setOperationErrorDescriptionOperation(state, action) {
-      const latestSpec = state.specifications[state.specifications.length - 1];
-      for (let i = 0; i < latestSpec.modules.length; i++) {
-        for (let j = 0; j < latestSpec.modules[i].operations.length; j++) {
-          for (
-            let k = 0;
-            k < latestSpec.modules[i].operations[j].errors.length;
-            k++
-          ) {
-            if (
-              latestSpec.modules[i].operations[j].errors[k].id ==
-              action.input.id
-            ) {
-              latestSpec.modules[i].operations[j].errors[k].description =
-                action.input.errorDescription || "";
-            }
-          }
-        }
-      }
+      const error = findOperationErrorOrThrow(state, action.input.id);
+      error.description = action.input.errorDescription || "";
     },
 
     setOperationErrorTemplateOperation(state, action) {
-      const latestSpec = state.specifications[state.specifications.length - 1];
-      for (let i = 0; i < latestSpec.modules.length; i++) {
-        for (let j = 0; j < latestSpec.modules[i].operations.length; j++) {
-          for (
-            let k = 0;
-            k < latestSpec.modules[i].operations[j].errors.length;
-            k++
-          ) {
-            if (
-              latestSpec.modules[i].operations[j].errors[k].id ==
-              action.input.id
-            ) {
-              latestSpec.modules[i].operations[j].errors[k].template =
-                action.input.errorTemplate || "";
-            }
-          }
-        }
-      }
+      const error = findOperationErrorOrThrow(state, action.input.id);
+      error.template = action.input.errorTemplate || "";
     },
 
     deleteOperationErrorOperation(state, action) {
+      findOperationErrorOrThrow(state, action.input.id);
       const latestSpec = state.specifications[state.specifications.length - 1];
-      for (let i = 0; i < latestSpec.modules.length; i++) {
-        for (let j = 0; j < latestSpec.modules[i].operations.length; j++) {
-          latestSpec.modules[i].operations[j].errors = latestSpec.modules[
-            i
-          ].operations[j].errors.filter((e) => e.id != action.input.id);
+      for (const mod of latestSpec.modules) {
+        for (const op of mod.operations) {
+          op.errors = op.errors.filter((e) => e.id != action.input.id);
         }
       }
     },
 
     reorderOperationErrorsOperation(state, action) {
-      const latestSpec = state.specifications[state.specifications.length - 1];
-      for (let i = 0; i < latestSpec.modules.length; i++) {
-        for (let j = 0; j < latestSpec.modules[i].operations.length; j++) {
-          if (
-            latestSpec.modules[i].operations[j].id == action.input.operationId
-          ) {
-            latestSpec.modules[i].operations[j].errors.sort(
-              sorter(action.input.order),
-            );
-          }
-        }
-      }
+      const targetOp = findOperationOrThrow(state, action.input.operationId);
+      targetOp.errors = orderBy(targetOp.errors, action.input.order);
     },
   };
 
 export const documentModelOperationExampleReducer: DocumentModelOperationExampleOperations =
   {
     addOperationExampleOperation(state, action) {
-      const latestSpec = state.specifications[state.specifications.length - 1];
-      for (let i = 0; i < latestSpec.modules.length; i++) {
-        for (let j = 0; j < latestSpec.modules[i].operations.length; j++) {
-          if (
-            latestSpec.modules[i].operations[j].id == action.input.operationId
-          ) {
-            latestSpec.modules[i].operations[j].examples.push({
-              id: action.input.id,
-              value: action.input.example,
-            });
-          }
-        }
-      }
+      const targetOp = findOperationOrThrow(state, action.input.operationId);
+      targetOp.examples.push({
+        id: action.input.id,
+        value: action.input.example,
+      });
     },
 
     updateOperationExampleOperation(state, action) {
-      const latestSpec = state.specifications[state.specifications.length - 1];
-      for (let i = 0; i < latestSpec.modules.length; i++) {
-        for (let j = 0; j < latestSpec.modules[i].operations.length; j++) {
-          for (
-            let k = 0;
-            k < latestSpec.modules[i].operations[j].examples.length;
-            k++
-          ) {
-            if (
-              latestSpec.modules[i].operations[j].examples[k].id ==
-              action.input.id
-            ) {
-              latestSpec.modules[i].operations[j].examples[k].value =
-                action.input.example;
-            }
-          }
-        }
-      }
+      const example = findOperationExampleOrThrow(state, action.input.id);
+      example.value = action.input.example;
     },
 
     deleteOperationExampleOperation(state, action) {
+      findOperationExampleOrThrow(state, action.input.id);
       const latestSpec = state.specifications[state.specifications.length - 1];
-      for (let i = 0; i < latestSpec.modules.length; i++) {
-        for (let j = 0; j < latestSpec.modules[i].operations.length; j++) {
-          latestSpec.modules[i].operations[j].examples = latestSpec.modules[
-            i
-          ].operations[j].examples.filter((e) => e.id != action.input.id);
+      for (const mod of latestSpec.modules) {
+        for (const op of mod.operations) {
+          op.examples = op.examples.filter((e) => e.id != action.input.id);
         }
       }
     },
 
     reorderOperationExamplesOperation(state, action) {
-      const latestSpec = state.specifications[state.specifications.length - 1];
-      for (let i = 0; i < latestSpec.modules.length; i++) {
-        for (let j = 0; j < latestSpec.modules[i].operations.length; j++) {
-          if (
-            latestSpec.modules[i].operations[j].id == action.input.operationId
-          ) {
-            latestSpec.modules[i].operations[j].examples.sort(
-              sorter(action.input.order),
-            );
-          }
-        }
-      }
+      const targetOp = findOperationOrThrow(state, action.input.operationId);
+      targetOp.examples = orderBy(targetOp.examples, action.input.order);
     },
   };
 export const documentModelOperationReducer: DocumentModelOperationOperations = {
   addOperationOperation(state, action) {
     validateOperationName(action.input.name, state);
+    assertOperationIdUnique(state, action.input.id);
     const targetModule = findModuleOrThrow(state, action.input.moduleId);
     targetModule.operations.push({
       id: action.input.id,
@@ -393,15 +300,8 @@ export const documentModelOperationReducer: DocumentModelOperationOperations = {
     if (action.input.name) {
       validateOperationName(action.input.name, state, action.input.id);
     }
-
-    const latestSpec = state.specifications[state.specifications.length - 1];
-    for (let i = 0; i < latestSpec.modules.length; i++) {
-      for (let j = 0; j < latestSpec.modules[i].operations.length; j++) {
-        if (latestSpec.modules[i].operations[j].id == action.input.id) {
-          latestSpec.modules[i].operations[j].name = action.input.name || "";
-        }
-      }
-    }
+    const targetOp = findOperationOrThrow(state, action.input.id);
+    targetOp.name = action.input.name || "";
   },
 
   setOperationScopeOperation(state, action) {
@@ -415,95 +315,67 @@ export const documentModelOperationReducer: DocumentModelOperationOperations = {
   },
 
   setOperationSchemaOperation(state, action) {
-    const latestSpec = state.specifications[state.specifications.length - 1];
-    for (let i = 0; i < latestSpec.modules.length; i++) {
-      for (let j = 0; j < latestSpec.modules[i].operations.length; j++) {
-        if (latestSpec.modules[i].operations[j].id == action.input.id) {
-          latestSpec.modules[i].operations[j].schema =
-            action.input.schema || "";
-        }
-      }
-    }
+    const targetOp = findOperationOrThrow(state, action.input.id);
+    targetOp.schema = action.input.schema || "";
   },
 
   setOperationDescriptionOperation(state, action) {
-    const latestSpec = state.specifications[state.specifications.length - 1];
-    for (let i = 0; i < latestSpec.modules.length; i++) {
-      for (let j = 0; j < latestSpec.modules[i].operations.length; j++) {
-        if (latestSpec.modules[i].operations[j].id == action.input.id) {
-          latestSpec.modules[i].operations[j].description =
-            action.input.description || "";
-        }
-      }
-    }
+    const targetOp = findOperationOrThrow(state, action.input.id);
+    targetOp.description = action.input.description || "";
   },
 
   setOperationTemplateOperation(state, action) {
-    const latestSpec = state.specifications[state.specifications.length - 1];
-    for (let i = 0; i < latestSpec.modules.length; i++) {
-      for (let j = 0; j < latestSpec.modules[i].operations.length; j++) {
-        if (latestSpec.modules[i].operations[j].id == action.input.id) {
-          latestSpec.modules[i].operations[j].template =
-            action.input.template || "";
-        }
-      }
-    }
+    const targetOp = findOperationOrThrow(state, action.input.id);
+    targetOp.template = action.input.template || "";
   },
 
   setOperationReducerOperation(state, action) {
-    const latestSpec = state.specifications[state.specifications.length - 1];
-    for (let i = 0; i < latestSpec.modules.length; i++) {
-      for (let j = 0; j < latestSpec.modules[i].operations.length; j++) {
-        if (latestSpec.modules[i].operations[j].id == action.input.id) {
-          latestSpec.modules[i].operations[j].reducer =
-            action.input.reducer || "";
-        }
-      }
-    }
+    const targetOp = findOperationOrThrow(state, action.input.id);
+    targetOp.reducer = action.input.reducer || "";
   },
 
   moveOperationOperation(state, action) {
-    const moveOperations: OperationSpecification[] = [];
+    // Resolve the destination first: a missing target module must abort the
+    // move, not silently drop the operation it was removed from its source.
+    const targetModule = findModuleOrThrow(state, action.input.newModuleId);
     const latestSpec = state.specifications[state.specifications.length - 1];
 
-    // Filter and collect
-    for (let i = 0; i < latestSpec.modules.length; i++) {
-      latestSpec.modules[i].operations = latestSpec.modules[
-        i
-      ].operations.filter((operation) => {
+    let moved: OperationSpecification | undefined;
+    for (const mod of latestSpec.modules) {
+      mod.operations = mod.operations.filter((operation) => {
         if (operation.id == action.input.operationId) {
-          moveOperations.push(operation);
+          moved = operation;
           return false;
         }
-
         return true;
       });
     }
 
-    // Inject in target modules
-    for (let i = 0; i < latestSpec.modules.length; i++) {
-      if (latestSpec.modules[i].id == action.input.newModuleId) {
-        latestSpec.modules[i].operations.push(...moveOperations);
-      }
+    if (!moved) {
+      throw new Error(
+        `Operation "${action.input.operationId}" not found in the latest specification`,
+      );
     }
+
+    targetModule.operations.push(moved);
   },
 
   deleteOperationOperation(state, action) {
+    findOperationOrThrow(state, action.input.id);
     const latestSpec = state.specifications[state.specifications.length - 1];
-    for (let i = 0; i < latestSpec.modules.length; i++) {
-      latestSpec.modules[i].operations = latestSpec.modules[
-        i
-      ].operations.filter((operation) => operation.id != action.input.id);
+    for (const mod of latestSpec.modules) {
+      mod.operations = mod.operations.filter(
+        (operation) => operation.id != action.input.id,
+      );
     }
   },
 
   reorderModuleOperationsOperation(state, action) {
-    const latestSpec = state.specifications[state.specifications.length - 1];
-    for (let i = 0; i < latestSpec.modules.length; i++) {
-      if (latestSpec.modules[i].id == action.input.moduleId) {
-        latestSpec.modules[i].operations.sort(sorter(action.input.order));
-      }
-    }
+    const targetModule = findModuleOrThrow(state, action.input.moduleId);
+    targetModule.operations = orderBy(
+      targetModule.operations,
+      action.input.order,
+    );
   },
 };
 export const documentModelStateSchemaReducer: DocumentModelStateOperations = {
@@ -547,34 +419,38 @@ export const documentModelStateSchemaReducer: DocumentModelStateOperations = {
     const examples =
       latestSpec.state[action.input.scope as keyof ScopeState].examples;
 
-    for (let i = 0; i < examples.length; i++) {
-      if (examples[i].id == action.input.id) {
-        examples[i].value = action.input.newExample;
-      }
+    const example = examples.find((e) => e.id == action.input.id);
+    if (!example) {
+      throw new Error(
+        `State example "${action.input.id}" not found in scope "${action.input.scope}"`,
+      );
     }
+    example.value = action.input.newExample;
   },
 
   deleteStateExampleOperation(state, action) {
     const latestSpec = state.specifications[state.specifications.length - 1];
-    if (Object.keys(latestSpec.state).includes(action.input.scope)) {
-      latestSpec.state[action.input.scope as keyof ScopeState].examples =
-        latestSpec.state[
-          action.input.scope as keyof ScopeState
-        ].examples.filter((e) => e.id != action.input.id);
-    } else {
+    if (!Object.keys(latestSpec.state).includes(action.input.scope)) {
       throw new Error(`Invalid scope: ${action.input.scope}`);
     }
+    const scopeState = latestSpec.state[action.input.scope as keyof ScopeState];
+    if (!scopeState.examples.some((e) => e.id == action.input.id)) {
+      throw new Error(
+        `State example "${action.input.id}" not found in scope "${action.input.scope}"`,
+      );
+    }
+    scopeState.examples = scopeState.examples.filter(
+      (e) => e.id != action.input.id,
+    );
   },
 
   reorderStateExamplesOperation(state, action) {
     const latestSpec = state.specifications[state.specifications.length - 1];
-    if (Object.keys(latestSpec.state).includes(action.input.scope)) {
-      latestSpec.state[action.input.scope as keyof ScopeState].examples.sort(
-        sorter(action.input.order),
-      );
-    } else {
+    if (!Object.keys(latestSpec.state).includes(action.input.scope)) {
       throw new Error(`Invalid scope: ${action.input.scope}`);
     }
+    const scopeState = latestSpec.state[action.input.scope as keyof ScopeState];
+    scopeState.examples = orderBy(scopeState.examples, action.input.order);
   },
 };
 
