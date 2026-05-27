@@ -102,6 +102,8 @@ import type {
 } from "./types.js";
 import {
   assertModuleIdUnique,
+  assertOperationErrorIdUnique,
+  assertOperationExampleIdUnique,
   assertOperationIdUnique,
   findModuleOrThrow,
   findOperationErrorOrThrow,
@@ -203,6 +205,7 @@ export const documentModelOperationErrorReducer: DocumentModelOperationErrorOper
   {
     addOperationErrorOperation(state, action) {
       const targetOp = findOperationOrThrow(state, action.input.operationId);
+      assertOperationErrorIdUnique(state, action.input.id);
       targetOp.errors.push({
         id: action.input.id,
         name: action.input.errorName || "",
@@ -252,6 +255,7 @@ export const documentModelOperationExampleReducer: DocumentModelOperationExample
   {
     addOperationExampleOperation(state, action) {
       const targetOp = findOperationOrThrow(state, action.input.operationId);
+      assertOperationExampleIdUnique(state, action.input.id);
       targetOp.examples.push({
         id: action.input.id,
         value: action.input.example,
@@ -340,24 +344,29 @@ export const documentModelOperationReducer: DocumentModelOperationOperations = {
     const targetModule = findModuleOrThrow(state, action.input.newModuleId);
     const latestSpec = state.specifications[state.specifications.length - 1];
 
-    let moved: OperationSpecification | undefined;
+    const moved: OperationSpecification[] = [];
     for (const mod of latestSpec.modules) {
       mod.operations = mod.operations.filter((operation) => {
         if (operation.id == action.input.operationId) {
-          moved = operation;
+          moved.push(operation);
           return false;
         }
         return true;
       });
     }
 
-    if (!moved) {
+    if (moved.length === 0) {
       throw new Error(
         `Operation "${action.input.operationId}" not found in the latest specification`,
       );
     }
+    if (moved.length > 1) {
+      throw new Error(
+        `Operation "${action.input.operationId}" is duplicated in the latest specification`,
+      );
+    }
 
-    targetModule.operations.push(moved);
+    targetModule.operations.push(moved[0]);
   },
 
   deleteOperationOperation(state, action) {

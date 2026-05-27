@@ -301,46 +301,59 @@ export function findOperationOrThrow(
 
 /**
  * Find an operation error by id across all operations in the latest
- * specification, or throw. Same rationale as findOperationOrThrow.
+ * specification, or throw. Throws on a duplicate id too: setters act on a
+ * single error, so an ambiguous id must fail loudly rather than mutate an
+ * arbitrary match.
  */
 export function findOperationErrorOrThrow(
   state: DocumentModelGlobalState,
   errorId: string,
 ): OperationErrorSpecification {
   const latestSpec = state.specifications[state.specifications.length - 1];
-  if (latestSpec) {
-    for (const mod of latestSpec.modules) {
-      for (const op of mod.operations) {
-        const error = op.errors.find((e) => e.id === errorId);
-        if (error) return error;
-      }
-    }
+  const matches =
+    latestSpec?.modules.flatMap((mod) =>
+      mod.operations.flatMap((op) => op.errors.filter((e) => e.id === errorId)),
+    ) ?? [];
+  if (matches.length === 0) {
+    throw new Error(
+      `Operation error "${errorId}" not found in the latest specification`,
+    );
   }
-  throw new Error(
-    `Operation error "${errorId}" not found in the latest specification`,
-  );
+  if (matches.length > 1) {
+    throw new Error(
+      `Operation error "${errorId}" is duplicated in the latest specification`,
+    );
+  }
+  return matches[0];
 }
 
 /**
  * Find an operation example (code example) by id across all operations in the
- * latest specification, or throw.
+ * latest specification, or throw. Throws on a duplicate id for the same reason
+ * as findOperationErrorOrThrow.
  */
 export function findOperationExampleOrThrow(
   state: DocumentModelGlobalState,
   exampleId: string,
 ): CodeExample {
   const latestSpec = state.specifications[state.specifications.length - 1];
-  if (latestSpec) {
-    for (const mod of latestSpec.modules) {
-      for (const op of mod.operations) {
-        const example = op.examples.find((e) => e.id === exampleId);
-        if (example) return example;
-      }
-    }
+  const matches =
+    latestSpec?.modules.flatMap((mod) =>
+      mod.operations.flatMap((op) =>
+        op.examples.filter((e) => e.id === exampleId),
+      ),
+    ) ?? [];
+  if (matches.length === 0) {
+    throw new Error(
+      `Operation example "${exampleId}" not found in the latest specification`,
+    );
   }
-  throw new Error(
-    `Operation example "${exampleId}" not found in the latest specification`,
-  );
+  if (matches.length > 1) {
+    throw new Error(
+      `Operation example "${exampleId}" is duplicated in the latest specification`,
+    );
+  }
+  return matches[0];
 }
 
 /**
@@ -354,7 +367,9 @@ export function assertModuleIdUnique(
 ): void {
   const latestSpec = state.specifications[state.specifications.length - 1];
   if (latestSpec?.modules.some((m) => m.id === id)) {
-    throw new Error(`Module "${id}" already exists in the latest specification`);
+    throw new Error(
+      `Module "${id}" already exists in the latest specification`,
+    );
   }
 }
 
@@ -373,6 +388,46 @@ export function assertOperationIdUnique(
   if (exists) {
     throw new Error(
       `Operation "${id}" already exists in the latest specification`,
+    );
+  }
+}
+
+/**
+ * Assert no operation error in the latest specification already uses `id`.
+ * Error ids are targeted document-wide by the setter/delete reducers, so the id
+ * must be unique to keep those operations unambiguous.
+ */
+export function assertOperationErrorIdUnique(
+  state: DocumentModelGlobalState,
+  id: string,
+): void {
+  const latestSpec = state.specifications[state.specifications.length - 1];
+  const exists = latestSpec?.modules.some((m) =>
+    m.operations.some((o) => o.errors.some((e) => e.id === id)),
+  );
+  if (exists) {
+    throw new Error(
+      `Operation error "${id}" already exists in the latest specification`,
+    );
+  }
+}
+
+/**
+ * Assert no operation example in the latest specification already uses `id`.
+ * Example ids are targeted document-wide by the update/delete reducers, so the
+ * id must be unique to keep those operations unambiguous.
+ */
+export function assertOperationExampleIdUnique(
+  state: DocumentModelGlobalState,
+  id: string,
+): void {
+  const latestSpec = state.specifications[state.specifications.length - 1];
+  const exists = latestSpec?.modules.some((m) =>
+    m.operations.some((o) => o.examples.some((e) => e.id === id)),
+  );
+  if (exists) {
+    throw new Error(
+      `Operation example "${id}" already exists in the latest specification`,
     );
   }
 }
