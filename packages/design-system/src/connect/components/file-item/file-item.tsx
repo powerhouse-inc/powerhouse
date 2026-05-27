@@ -203,7 +203,7 @@ export function FileItem(props: Props) {
 
 function DefaultFileIcon() {
   return (
-    <div className="text-white dark:text-slate-800!">
+    <div className="text-white dark:text-slate-800">
       <svg
         width="32"
         height="40"

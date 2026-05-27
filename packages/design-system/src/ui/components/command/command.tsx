@@ -41,7 +41,7 @@ const CommandInput = React.forwardRef<
       className={cn(
         "pointer-events-none absolute top-3.5 left-2 text-gray-500 dark:text-slate-400",
         "group-hover:text-gray-700 dark:group-hover:text-slate-200",
-        "group-focus-within:text-gray-900! dark:group-focus-within:text-slate-50!",
+        "group-focus-within:text-gray-900! dark:group-focus-within:text-slate-50",
       )}
     />
     <CommandPrimitive.Input
@@ -50,7 +50,7 @@ const CommandInput = React.forwardRef<
         "flex w-full bg-transparent pt-3 pr-3 pb-2 pl-8 text-sm/5 font-normal outline-none",
         "placeholder:text-gray-500 dark:placeholder:text-slate-400",
         "group-hover:placeholder:text-gray-700 dark:group-hover:placeholder:text-slate-500",
-        "group-focus-within:placeholder:text-gray-700! dark:group-focus-within:placeholder:text-slate-300!",
+        "group-focus-within:placeholder:text-gray-700! dark:group-focus-within:placeholder:text-slate-300",
         "disabled:cursor-not-allowed",
         className,
       )}

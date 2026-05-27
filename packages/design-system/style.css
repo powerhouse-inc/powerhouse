@@ -1,7 +1,7 @@
 @import "react-toastify/dist/ReactToastify.css";
 @import "react-json-view-lite/dist/index.css";
 
-@import "tailwindcss";
+@reference "tailwindcss";
 @import "./theme.css";
 @plugin "tailwind-scrollbar";
 

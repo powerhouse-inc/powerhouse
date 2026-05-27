@@ -1,2 +1,2 @@
-@import "tailwindcss";
+@reference "tailwindcss";
 @import "@powerhousedao/design-system/theme.css";
