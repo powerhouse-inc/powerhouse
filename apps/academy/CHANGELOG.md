@@ -1,3 +1,42 @@
+## 6.1.0-dev.5 (2026-05-27)
+
+### 🚀 Features
+
+- **reactor:** benchmark for workers ([8ff51da2f](https://github.com/powerhouse-inc/powerhouse/commit/8ff51da2f))
+- **reactor:** multi-worker integration test -- eep ([b8b9566cf](https://github.com/powerhouse-inc/powerhouse/commit/b8b9566cf))
+- **reactor:** added workerhandle, parent-side ipc wrapper ([b1955e3a6](https://github.com/powerhouse-inc/powerhouse/commit/b1955e3a6))
+- **reactor:** worker protocol ([c1bb0bd30](https://github.com/powerhouse-inc/powerhouse/commit/c1bb0bd30))
+
+### 🩹 Fixes
+
+- ci needs to run integration tests serially, not in parallel ([d97b73622](https://github.com/powerhouse-inc/powerhouse/commit/d97b73622))
+- do not double run hub-spoke and make sure postgres is running in integration tests ([6a26a7377](https://github.com/powerhouse-inc/powerhouse/commit/6a26a7377))
+- swap never bundle for reactor-api so that subgraphs are properly detected ([7ee0fdb5b](https://github.com/powerhouse-inc/powerhouse/commit/7ee0fdb5b))
+- **reactor:** fix linting issues ([7e0a4af8d](https://github.com/powerhouse-inc/powerhouse/commit/7e0a4af8d))
+- add hub-spoke test in test:integration ([5ab8c0b36](https://github.com/powerhouse-inc/powerhouse/commit/5ab8c0b36))
+- **reactor:** a number of linter and import errors needed fixed due to node imports ([060babc30](https://github.com/powerhouse-inc/powerhouse/commit/060babc30))
+- **reactor:** grr path resolution fixes, tailwind fixes, linter fixes ([0eb6ad89f](https://github.com/powerhouse-inc/powerhouse/commit/0eb6ad89f))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
+## 6.1.0-dev.4 (2026-05-26)
+
+This was a version bump only for @powerhousedao/academy to align it with other projects, there were no code changes.
+
+## 6.1.0-dev.3 (2026-05-25)
+
+This was a version bump only for @powerhousedao/academy to align it with other projects, there were no code changes.
+
+## 6.1.0-dev.2 (2026-05-24)
+
+This was a version bump only for @powerhousedao/academy to align it with other projects, there were no code changes.
+
+## 6.1.0-dev.1 (2026-05-23)
+
+This was a version bump only for @powerhousedao/academy to align it with other projects, there were no code changes.
+
 ## 6.1.0-dev.0 (2026-05-22)
 
 ### 🩹 Fixes

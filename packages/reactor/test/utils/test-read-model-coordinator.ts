@@ -56,6 +56,14 @@ export class TestReadModelCoordinator implements IReadModelCoordinator {
     this.isPaused = false;
   }
 
+  drain(): Promise<void> {
+    return Promise.resolve();
+  }
+
+  getChainDepth(): number {
+    return this.operationQueue.length;
+  }
+
   async flush(): Promise<void> {
     const queuedEvents = [...this.operationQueue];
     this.operationQueue = [];

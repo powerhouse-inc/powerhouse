@@ -6,7 +6,10 @@ import reactHooks from "eslint-plugin-react-hooks";
 import { defineConfig, globalIgnores } from "eslint/config";
 import globals from "globals";
 import { builtinModules } from "node:module";
+import path from "node:path";
 import tseslint from "typescript-eslint";
+
+const repoRoot = import.meta.dirname;
 
 /** These files are typically ignored by eslint by default, so there is no need to investigate why they are ignored. */
 const normalIgnoredFiles = [
@@ -36,6 +39,7 @@ const normalIgnoredFiles = [
   // k6 scripts run in Goja, not Node — workspace globals (__ENV, console)
   // and rules aren't applicable.
   "apps/switchboard-lb/test/integration/*.js",
+  "packages/reactor/bench/test/integration/*.js",
   "clis/ph-cli/src/commands/migrations/templates",
   // Stale code intentionally kept out of the active source tree (excluded
   // from tsconfig too); not type-checkable with the project service.
@@ -79,6 +83,8 @@ const unsafeIgnoredFiles = [
   // Excluded from reactor's tsconfig.json, so ESLint's project service cannot parse it
   "packages/reactor/test/atlas/**/*",
   "packages/reactor-api/src/packages/vite-loader.mts",
+  // Bootstrap .mjs for worker entry test; not part of TypeScript project service
+  "packages/reactor/test/executor/worker/entry/worker-bootstrap.mjs",
 ];
 
 /** All of the files that are ignored by eslint */
@@ -579,7 +585,7 @@ const tailwindConfig = [
     rules: tailwindRules,
     settings: {
       "better-tailwindcss": {
-        cwd: "./packages/design-system",
+        cwd: path.join(repoRoot, "packages/design-system"),
         entryPoint: "style.css",
       },
     },
@@ -590,7 +596,7 @@ const tailwindConfig = [
     rules: tailwindRules,
     settings: {
       "better-tailwindcss": {
-        cwd: "./apps/connect",
+        cwd: path.join(repoRoot, "apps/connect"),
         entryPoint: "style.css",
       },
     },
@@ -601,7 +607,7 @@ const tailwindConfig = [
     rules: tailwindRules,
     settings: {
       "better-tailwindcss": {
-        cwd: "./packages/powerhouse-vetra-packages",
+        cwd: path.join(repoRoot, "packages/powerhouse-vetra-packages"),
         entryPoint: "style.css",
       },
     },
@@ -612,7 +618,7 @@ const tailwindConfig = [
     rules: tailwindRules,
     settings: {
       "better-tailwindcss": {
-        cwd: "./packages/vetra",
+        cwd: path.join(repoRoot, "packages/vetra"),
         entryPoint: "style.css",
       },
     },

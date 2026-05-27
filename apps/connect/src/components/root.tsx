@@ -1,8 +1,10 @@
 import { Sidebar } from "@powerhousedao/connect/components";
+import { useIsEmbedded } from "@powerhousedao/connect/hooks";
 import { Suspense } from "react";
 import { Outlet } from "react-router-dom";
 
 export function Root() {
+  const isEmbedded = useIsEmbedded();
   return (
     <div className="h-screen">
       <div
@@ -11,7 +13,7 @@ export function Root() {
         tabIndex={0}
       >
         <Suspense name="Root">
-          <Sidebar />
+          {!isEmbedded && <Sidebar />}
           <div className="relative flex-1 overflow-auto">
             <Outlet />
           </div>

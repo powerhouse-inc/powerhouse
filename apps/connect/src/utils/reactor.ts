@@ -100,9 +100,12 @@ export function getDefaultDrives(
  * dev server is ready before the switchboard has finished binding its port.
  *
  * @param drives - Array of drive objects with url, optional name and icon
+ * @param options - Forwarded to addRemoteDrive. Pass `awaitInitialSync: true`
+ *   when the URL pins a drive slug that must resolve before selection.
  */
 export async function addDefaultDrivesForNewReactor(
   drives: PHConnectDefaultDrive[],
+  options?: { awaitInitialSync?: boolean; initialSyncTimeoutMs?: number },
 ): Promise<void> {
   const MAX_ATTEMPTS = 3;
   const BACKOFF_MS = 2000;
@@ -110,7 +113,7 @@ export async function addDefaultDrivesForNewReactor(
   for (const drive of drives) {
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
       try {
-        const driveId = await addRemoteDrive(drive.url);
+        const driveId = await addRemoteDrive(drive.url, undefined, options);
         if (drive.name || drive.icon) {
           await setDriveMetadata(driveId, {
             name: drive.name,

@@ -4,6 +4,7 @@ import {
   documentModelReducer,
   getAllOperationNames,
   isReservedOperationName,
+  isValidOperationNameFormat,
   RESERVED_OPERATION_NAMES,
   setOperationName,
   setStateSchema,
@@ -493,7 +494,7 @@ describe("DocumentModel Validation Error", () => {
         );
         testDoc = documentModelReducer(
           testDoc,
-          addOperation({ id: "op-2", moduleId: "mod-1", name: "update_user" }),
+          addOperation({ id: "op-2", moduleId: "mod-1", name: "UPDATE_USER" }),
         );
 
         const names = getAllOperationNames(testDoc.state.global);
@@ -529,10 +530,10 @@ describe("DocumentModel Validation Error", () => {
           /reserved/,
         );
         expect(() =>
-          validateOperationName("set_name", doc.state.global),
+          validateOperationName("SET_NAME", doc.state.global),
         ).toThrow(/reserved/);
         expect(() =>
-          validateOperationName("Load_State", doc.state.global),
+          validateOperationName("LOAD_STATE", doc.state.global),
         ).toThrow(/reserved/);
       });
 
@@ -551,7 +552,7 @@ describe("DocumentModel Validation Error", () => {
         ).toThrow(/already used/);
       });
 
-      it("should throw error for duplicate names (different case)", () => {
+      it("rejects non-canonical case before reaching duplicate check", () => {
         let testDoc = documentModelReducer(
           doc,
           addModule({ id: "mod-1", name: "TestModule" }),
@@ -563,10 +564,10 @@ describe("DocumentModel Validation Error", () => {
 
         expect(() =>
           validateOperationName("create_user", testDoc.state.global),
-        ).toThrow(/already used/);
+        ).toThrow(/invalid/i);
         expect(() =>
           validateOperationName("Create_User", testDoc.state.global),
-        ).toThrow(/already used/);
+        ).toThrow(/invalid/i);
       });
 
       it("should not throw for valid unique names", () => {
@@ -605,6 +606,47 @@ describe("DocumentModel Validation Error", () => {
       it("should not throw for empty names", () => {
         expect(() => validateOperationName("", doc.state.global)).not.toThrow();
       });
+
+      it("should throw error for names that aren't SCREAMING_SNAKE_CASE", () => {
+        expect(() =>
+          validateOperationName("Add Workout", doc.state.global),
+        ).toThrow(/invalid/i);
+        expect(() =>
+          validateOperationName("addWorkout", doc.state.global),
+        ).toThrow(/invalid/i);
+        expect(() =>
+          validateOperationName("add-workout", doc.state.global),
+        ).toThrow(/invalid/i);
+        expect(() =>
+          validateOperationName("_LEADING_UNDERSCORE", doc.state.global),
+        ).toThrow(/invalid/i);
+      });
+
+      it("should suggest a SCREAMING_SNAKE_CASE replacement when possible", () => {
+        expect(() =>
+          validateOperationName("Add Workout", doc.state.global),
+        ).toThrow(/Did you mean "ADD_WORKOUT"\?/);
+        expect(() =>
+          validateOperationName("addWorkout", doc.state.global),
+        ).toThrow(/Did you mean "ADD_WORKOUT"\?/);
+      });
+    });
+
+    describe("isValidOperationNameFormat", () => {
+      it("accepts SCREAMING_SNAKE_CASE", () => {
+        expect(isValidOperationNameFormat("ADD")).toBe(true);
+        expect(isValidOperationNameFormat("ADD_WORKOUT")).toBe(true);
+        expect(isValidOperationNameFormat("ADD_WORKOUT_V2")).toBe(true);
+      });
+
+      it("rejects anything else", () => {
+        expect(isValidOperationNameFormat("Add Workout")).toBe(false);
+        expect(isValidOperationNameFormat("addWorkout")).toBe(false);
+        expect(isValidOperationNameFormat("add_workout")).toBe(false);
+        expect(isValidOperationNameFormat("_ADD")).toBe(false);
+        expect(isValidOperationNameFormat("1ADD")).toBe(false);
+        expect(isValidOperationNameFormat("ADD-WORKOUT")).toBe(false);
+      });
     });
 
     describe("addOperation reducer validation", () => {
@@ -630,9 +672,27 @@ describe("DocumentModel Validation Error", () => {
 
         const result2 = documentModelReducer(
           testDoc,
-          addOperation({ id: "op-2", moduleId: "mod-1", name: "set_name" }),
+          addOperation({ id: "op-2", moduleId: "mod-1", name: "SET_NAME" }),
         );
         expect(getLastOperationError(result2)).toMatch(/reserved/);
+      });
+
+      it("should record error when adding operation with invalid name format", () => {
+        const testDoc = documentModelReducer(
+          doc,
+          addModule({ id: "mod-1", name: "TestModule" }),
+        );
+
+        const result = documentModelReducer(
+          testDoc,
+          addOperation({
+            id: "op-1",
+            moduleId: "mod-1",
+            name: "Add Workout",
+          }),
+        );
+        expect(getLastOperationError(result)).toMatch(/invalid/i);
+        expect(getLastOperationError(result)).toMatch(/ADD_WORKOUT/);
       });
 
       it("should record error when adding operation with duplicate name", () => {

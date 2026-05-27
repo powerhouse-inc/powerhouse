@@ -3,9 +3,7 @@ import {
   isPostgresUrl,
   resolveResetPaths,
 } from "../src/services/switchboard-reset.js";
-import {
-  isUnrecoverableDbError,
-} from "../src/utils/db-error-hint.js";
+import { isUnrecoverableDbError } from "../src/utils/db-error-hint.js";
 
 describe("isPostgresUrl", () => {
   it("detects postgres:// and postgresql://", () => {
@@ -38,19 +36,15 @@ describe("resolveResetPaths", () => {
   });
 
   it("flags a configured Postgres URL via PH_REACTOR_DATABASE_URL", () => {
-    const paths = resolveResetPaths(
-      {},
-      { PH_REACTOR_DATABASE_URL: "postgresql://x/y" } as NodeJS.ProcessEnv,
-    );
+    const paths = resolveResetPaths({}, {
+      PH_REACTOR_DATABASE_URL: "postgresql://x/y",
+    } as NodeJS.ProcessEnv);
     expect(paths.reactorDir).toBeNull();
     expect(paths.postgresUrl).toBe("postgresql://x/y");
   });
 
   it("honors a custom dbPath that is a local directory", () => {
-    const paths = resolveResetPaths(
-      { dbPath: "/tmp/custom-pglite" },
-      {},
-    );
+    const paths = resolveResetPaths({ dbPath: "/tmp/custom-pglite" }, {});
     expect(paths.reactorDir).toBe("/tmp/custom-pglite");
     expect(paths.readModelDir).toBe("/tmp/custom-pglite");
     expect(paths.postgresUrl).toBeNull();
@@ -60,13 +54,15 @@ describe("resolveResetPaths", () => {
 describe("isUnrecoverableDbError", () => {
   it("matches the reactor-builder migration failure message", () => {
     const err = new Error(
-      "Database migration failed: relation \"operations\" already exists",
+      'Database migration failed: relation "operations" already exists',
     );
     expect(isUnrecoverableDbError(err)).toBe(true);
   });
 
   it("matches a wrapped cause", () => {
-    const inner = new Error("Unsupported PGLite data dir at ./.ph/x: PG_VERSION=16");
+    const inner = new Error(
+      "Unsupported PGLite data dir at ./.ph/x: PG_VERSION=16",
+    );
     const outer = new Error("App crashed", { cause: inner });
     expect(isUnrecoverableDbError(outer)).toBe(true);
   });

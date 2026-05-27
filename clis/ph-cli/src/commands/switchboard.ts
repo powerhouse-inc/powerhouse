@@ -26,9 +26,8 @@ This command:
     }
 
     if (reset) {
-      const { resetSwitchboardDatabase } = await import(
-        "../services/switchboard-reset.js"
-      );
+      const { resetSwitchboardDatabase } =
+        await import("../services/switchboard-reset.js");
       await resetSwitchboardDatabase({ dbPath, yes });
       process.exit(0);
     }

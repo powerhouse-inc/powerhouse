@@ -76,6 +76,14 @@ export interface IOperationStore {
    * The provided revision must match the current head; otherwise a
    * {@link RevisionMismatchError} is thrown.
    *
+   * Returns the stored {@link Operation} rows for the operations that were
+   * appended. On an idempotent replay — detected when a
+   * {@link RevisionMismatchError} or {@link DuplicateOperationError} occurs and
+   * a stored row at the same `(documentId, scope, branch, index)` already has
+   * a matching `opId`, `index`, and `skip` — the previously-stored rows are
+   * returned instead of throwing. If no matching stored row is found, the
+   * original error is propagated unchanged.
+   *
    * @param documentId - The document id
    * @param documentType - The document type identifier
    * @param scope - The operation scope (e.g. "global", "local")
@@ -83,6 +91,7 @@ export interface IOperationStore {
    * @param revision - Expected current revision (optimistic lock)
    * @param fn - Callback that stages operations via {@link AtomicTxn}
    * @param signal - Optional abort signal to cancel the request
+   * @returns The stored operations; empty array when no operations were staged
    */
   apply(
     documentId: string,
@@ -92,7 +101,7 @@ export interface IOperationStore {
     revision: number,
     fn: (txn: AtomicTxn) => void | Promise<void>,
     signal?: AbortSignal,
-  ): Promise<void>;
+  ): Promise<Operation[]>;
 
   /**
    * Returns operations for a document/scope/branch whose index is greater

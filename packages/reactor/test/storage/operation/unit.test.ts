@@ -224,6 +224,202 @@ describe.each(testFsBackends)("KyselyOperationStore [$name]", ({ backend }) => {
     });
   });
 
+  describe("apply idempotency", () => {
+    it("(a) clean apply path returns the inserted operation", async () => {
+      const documentId = generateId();
+      const scope = "global";
+      const branch = "main";
+      const documentType = "powerhouse/document-drive";
+      const action = addFolder({
+        id: generateId(),
+        name: "Folder A",
+        parentFolder: null,
+      });
+      const opId = deriveOperationId(documentId, scope, branch, action.id);
+
+      const result = await store.apply(
+        documentId,
+        documentType,
+        scope,
+        branch,
+        0,
+        (txn) => {
+          txn.addOperations({
+            index: 0,
+            timestampUtcMs: new Date().toISOString(),
+            hash: "hash-a",
+            skip: 0,
+            id: opId,
+            action,
+          });
+        },
+      );
+
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe(opId);
+      expect(result[0].index).toBe(0);
+      expect(result[0].skip).toBe(0);
+    });
+
+    it("(b) retry with matching opId returns stored row without inserting a duplicate", async () => {
+      const documentId = generateId();
+      const scope = "global";
+      const branch = "main";
+      const documentType = "powerhouse/document-drive";
+      const action = addFolder({
+        id: generateId(),
+        name: "Folder B",
+        parentFolder: null,
+      });
+      const opId = deriveOperationId(documentId, scope, branch, action.id);
+      const op = {
+        index: 0,
+        timestampUtcMs: new Date().toISOString(),
+        hash: "hash-b",
+        skip: 0,
+        id: opId,
+        action,
+      };
+
+      // First apply succeeds
+      const first = await store.apply(
+        documentId,
+        documentType,
+        scope,
+        branch,
+        0,
+        (txn) => {
+          txn.addOperations(op);
+        },
+      );
+      expect(first).toHaveLength(1);
+      expect(first[0].id).toBe(opId);
+
+      // Retry with the same revision and opId — should return stored row
+      const second = await store.apply(
+        documentId,
+        documentType,
+        scope,
+        branch,
+        0,
+        (txn) => {
+          txn.addOperations(op);
+        },
+      );
+      expect(second).toHaveLength(1);
+      expect(second[0].id).toBe(opId);
+
+      // No duplicate row should have been inserted
+      const stored = await store.getSince(documentId, scope, branch, -1);
+      expect(stored.results).toHaveLength(1);
+    });
+
+    it("(c) genuine concurrent-write conflict surfaces RevisionMismatchError unchanged", async () => {
+      const documentId = generateId();
+      const scope = "global";
+      const branch = "main";
+      const documentType = "powerhouse/document-drive";
+
+      const firstAction = addFolder({
+        id: generateId(),
+        name: "Folder C1",
+        parentFolder: null,
+      });
+      const firstOpId = deriveOperationId(
+        documentId,
+        scope,
+        branch,
+        firstAction.id,
+      );
+
+      // First apply advances head to index 0
+      await store.apply(documentId, documentType, scope, branch, 0, (txn) => {
+        txn.addOperations({
+          index: 0,
+          timestampUtcMs: new Date().toISOString(),
+          hash: "hash-c1",
+          skip: 0,
+          id: firstOpId,
+          action: firstAction,
+        });
+      });
+
+      // Different action with a different opId at the same stale revision
+      const conflictAction = addFolder({
+        id: generateId(),
+        name: "Folder C2",
+        parentFolder: null,
+      });
+      const conflictOpId = deriveOperationId(
+        documentId,
+        scope,
+        branch,
+        conflictAction.id,
+      );
+
+      await expect(
+        store.apply(documentId, documentType, scope, branch, 0, (txn) => {
+          txn.addOperations({
+            index: 0,
+            timestampUtcMs: new Date().toISOString(),
+            hash: "hash-c2",
+            skip: 0,
+            id: conflictOpId,
+            action: conflictAction,
+          });
+        }),
+      ).rejects.toThrow(RevisionMismatchError);
+    });
+
+    it("(d) DuplicateOperationError with mismatched opId for the target document propagates unchanged", async () => {
+      const doc1Id = generateId();
+      const doc2Id = generateId();
+      const scope = "global";
+      const branch = "main";
+      const documentType = "powerhouse/document-drive";
+      const sharedAction = addFolder({
+        id: generateId(),
+        name: "Folder D",
+        parentFolder: null,
+      });
+      // Deliberately use the same opId for both documents
+      const sharedOpId = deriveOperationId(
+        doc1Id,
+        scope,
+        branch,
+        sharedAction.id,
+      );
+
+      // First document uses sharedOpId at index 0, skip 0
+      await store.apply(doc1Id, documentType, scope, branch, 0, (txn) => {
+        txn.addOperations({
+          index: 0,
+          timestampUtcMs: new Date().toISOString(),
+          hash: "hash-d",
+          skip: 0,
+          id: sharedOpId,
+          action: sharedAction,
+        });
+      });
+
+      // Second document tries to insert the same (opId, index, skip) tuple —
+      // triggers the unique_operation_instance constraint with no matching
+      // stored row in doc2's history.
+      await expect(
+        store.apply(doc2Id, documentType, scope, branch, 0, (txn) => {
+          txn.addOperations({
+            index: 0,
+            timestampUtcMs: new Date().toISOString(),
+            hash: "hash-d2",
+            skip: 0,
+            id: sharedOpId,
+            action: sharedAction,
+          });
+        }),
+      ).rejects.toThrow(DuplicateOperationError);
+    });
+  });
+
   describe("getSince", () => {
     it("should get operations since a given revision", async () => {
       const documentId = generateId();

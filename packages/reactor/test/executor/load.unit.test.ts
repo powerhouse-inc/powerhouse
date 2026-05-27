@@ -122,12 +122,15 @@ describe("SimpleJobExecutor load jobs", () => {
       .fn()
       .mockImplementation(
         async (_docId, _docType, _scope, _branch, _rev, fn) => {
+          const ops: Operation[] = [];
           const txn = {
             addOperations: (operation: Operation) => {
               order.push(operation.action.id);
+              ops.push(operation);
             },
           };
           await fn(txn as any);
+          return ops;
         },
       );
     mockOperationStore.getRevisions = vi.fn().mockResolvedValue({

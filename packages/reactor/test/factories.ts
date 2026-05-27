@@ -512,7 +512,28 @@ export function createMockOperationStore(
   overrides: Partial<IOperationStore> = {},
 ): IOperationStore {
   return {
-    apply: vi.fn().mockResolvedValue(undefined),
+    apply: vi
+      .fn()
+      .mockImplementation(
+        async (
+          _documentId: string,
+          _documentType: string,
+          _scope: string,
+          _branch: string,
+          _revision: number,
+          fn: (txn: {
+            addOperations: (...ops: Operation[]) => void;
+          }) => void | Promise<void>,
+        ) => {
+          const ops: Operation[] = [];
+          await fn({
+            addOperations: (...operations: Operation[]) => {
+              ops.push(...operations);
+            },
+          });
+          return ops;
+        },
+      ),
     get: vi.fn().mockResolvedValue({
       operation: {
         index: 0,
@@ -606,6 +627,8 @@ export function createMockReadModelCoordinator(
     readModels: [],
     start: vi.fn(),
     stop: vi.fn(),
+    drain: vi.fn().mockResolvedValue(undefined),
+    getChainDepth: vi.fn().mockReturnValue(0),
     ...overrides,
   };
 }

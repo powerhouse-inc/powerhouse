@@ -1,0 +1,103 @@
+# Local benchmark stack for the reactor worker-pool D1 baseline.
+#
+# Mirrors the layout of apps/switchboard-lb/docker-compose.yml:
+#   default services  -> bench-host + postgres
+#   --profile loadtest    -> k6 driver (one-shot)
+#   --profile observability -> prometheus + grafana
+#
+# Build context is the monorepo root so the Dockerfile can pull in the full
+# pnpm workspace. Run from packages/reactor/bench via the wrapper scripts.
+
+name: reactor-bench
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    command:
+      [
+        "postgres",
+        "-c",
+        "max_connections=${POSTGRES_MAX_CONNECTIONS:-256}",
+      ]
+    environment:
+      POSTGRES_DB: reactor
+      POSTGRES_USER: reactor
+      POSTGRES_PASSWORD: reactor
+    ports:
+      - "127.0.0.1:5444:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U reactor -d reactor"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+
+  bench-host:
+    build:
+      context: ../../../
+      dockerfile: packages/reactor/bench/host/Dockerfile
+    environment:
+      PORT: "8080"
+      PROM_PORT: "9090"
+      REACTOR_WORKERS: "${REACTOR_WORKERS:-0}"
+      REACTOR_DB_HOST: postgres
+      REACTOR_DB_PORT: "5432"
+      REACTOR_DB_NAME: reactor
+      REACTOR_DB_USER: reactor
+      REACTOR_DB_PASSWORD: reactor
+      REACTOR_DB_POOL_SIZE_HOST: "${REACTOR_DB_POOL_SIZE_HOST:-16}"
+      REACTOR_DB_POOL_SIZE_WORKER: "${REACTOR_DB_POOL_SIZE_WORKER:-2}"
+      REACTOR_DB_POOL_SIZE_PROJECTION: "${REACTOR_DB_POOL_SIZE_PROJECTION:-16}"
+      REACTOR_DB_ACQUIRE_TIMEOUT_MS: "${REACTOR_DB_ACQUIRE_TIMEOUT_MS:-5000}"
+      N_PROJECTION_SHARDS: "${N_PROJECTION_SHARDS:-0}"
+      OTEL_SERVICE_NAME: reactor-bench
+    ports:
+      - "127.0.0.1:8088:8080"
+      - "127.0.0.1:9092:9090"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O-", "http://localhost:8080/healthz"]
+      interval: 2s
+      timeout: 2s
+      retries: 60
+
+  loadtest:
+    image: grafana/k6:0.55.0
+    profiles: ["loadtest"]
+    depends_on:
+      bench-host:
+        condition: service_healthy
+    environment:
+      BENCH_URL: "http://bench-host:8080"
+      NUM_DRIVES: "${NUM_DRIVES:-8}"
+      VUS: "${VUS:-32}"
+      DURATION: "${DURATION:-60s}"
+    volumes:
+      - ./test/integration/baseline.js:/baseline.js:ro
+    command: ["run", "/baseline.js"]
+
+  prometheus:
+    image: prom/prometheus:v2.55.0
+    profiles: ["observability"]
+    ports:
+      - "127.0.0.1:9091:9090"
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    depends_on:
+      - bench-host
+
+  grafana:
+    image: grafana/grafana:11.3.0
+    profiles: ["observability"]
+    ports:
+      - "127.0.0.1:3002:3000"
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: "Admin"
+      GF_AUTH_DISABLE_LOGIN_FORM: "true"
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - prometheus

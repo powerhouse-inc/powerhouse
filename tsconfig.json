@@ -37,6 +37,9 @@
       "path": "packages/analytics-engine/compat"
     },
     {
+      "path": "packages/reactor/bench/host"
+    },
+    {
       "path": "test/codegen"
     },
     {

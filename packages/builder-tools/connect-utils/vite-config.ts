@@ -48,7 +48,7 @@ export function getConnectHtmlTags(
       tag: "meta",
       attrs: {
         "http-equiv": "Content-Security-Policy",
-        content: `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://esm.sh${registryUrl ? " " + registryUrl : ""}; object-src 'none'; base-uri 'self';`,
+        content: `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://esm.sh${registryUrl ? " " + registryUrl : ""}; worker-src 'self' blob:; object-src 'none'; base-uri 'self';`,
       },
       injectTo,
     },
@@ -311,7 +311,11 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
   // binary should be — which breaks PGlite at startup with "Invalid FS
   // bundle size: 760 !== 4939170". Resolve key linked packages back to
   // their real workspace roots and allow Vite to serve from there.
-  const linkedRoots = ["@powerhousedao/reactor-browser", "@electric-sql/pglite"]
+  const linkedRoots = [
+    "@powerhousedao/reactor-browser",
+    "@powerhousedao/connect",
+    "@electric-sql/pglite",
+  ]
     .map((pkg) => {
       try {
         return searchForWorkspaceRoot(
