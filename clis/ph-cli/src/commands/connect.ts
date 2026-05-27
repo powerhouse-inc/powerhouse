@@ -64,11 +64,11 @@ export const config = command({
   name: "config",
   description: `Read or update Connect's runtime configuration (powerhouse.config.json).
 
-Modes:
+Modes (mutually exclusive — --get, --json, and field flags cannot be combined):
   ph connect config                       List the effective connect.* block (defaults < source).
-  ph connect config <key>                 Get the value at the dotted path (e.g. connect.renown.url).
-  ph connect config <key> <value>         Set the value and dual-write to source + dist.
-  ph connect config --json '{"…":"…"}'   Bulk set + dual-write.
+  ph connect config --get <dotted.path>   Get the value at the dotted path (e.g. --get connect.renown.url).
+  ph connect config --<field> <value>     Set a single field and dual-write to source + dist (e.g. --renown-url https://renown.id).
+  ph connect config --json '{"…":"…"}'   Bulk-set multiple fields and dual-write.
 
 Writes go to:
   - <project>/powerhouse.config.json (source — picked up by the next build)
