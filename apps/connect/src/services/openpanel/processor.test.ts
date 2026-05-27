@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { ProcessorRecord } from "@powerhousedao/shared/processors";
 import { buildDefaultProperties, loadEvents } from "./events.js";
 import { createOpenPanelProcessorFactory } from "./factory.js";
 import { OpenPanelProcessor } from "./processor.js";
@@ -40,13 +41,11 @@ function makeOp(
 }
 
 /** Create a fresh fake client with vi.fn() spies. */
-function makeFakeClient(): OpenPanelTracker & {
-  track: ReturnType<typeof vi.fn>;
-  flush: ReturnType<typeof vi.fn>;
-} {
+function makeFakeClient() {
   return {
-    track: vi.fn().mockResolvedValue(undefined),
-    flush: vi.fn(),
+    track: vi.fn().mockResolvedValue(undefined) as unknown as
+      ((name: string, properties?: Record<string, unknown>) => unknown) & ReturnType<typeof vi.fn>,
+    flush: vi.fn() as unknown as (() => void) & ReturnType<typeof vi.fn>,
   };
 }
 
@@ -288,7 +287,7 @@ describe("createOpenPanelProcessorFactory", () => {
     const expectedDocTypes = Array.from(events.lookupMap.keys()).sort();
 
     const factory = createOpenPanelProcessorFactory({ client, events });
-    const [record] = factory({} as any);
+    const [record] = factory({} as any) as ProcessorRecord[];
 
     expect(record.filter.documentType?.slice().sort()).toEqual(expectedDocTypes);
   });
@@ -298,7 +297,7 @@ describe("createOpenPanelProcessorFactory", () => {
     const events = loadEvents();
 
     const factory = createOpenPanelProcessorFactory({ client, events });
-    const [record] = factory({} as any);
+    const [record] = factory({} as any) as ProcessorRecord[];
 
     expect(record.startFrom).toBe("current");
   });
@@ -312,7 +311,7 @@ describe("createOpenPanelProcessorFactory", () => {
       events,
       startFrom: "beginning",
     });
-    const [record] = factory({} as any);
+    const [record] = factory({} as any) as ProcessorRecord[];
 
     expect(record.startFrom).toBe("beginning");
   });
@@ -322,7 +321,7 @@ describe("createOpenPanelProcessorFactory", () => {
     const events = loadEvents();
 
     const factory = createOpenPanelProcessorFactory({ client, events });
-    const [record] = factory({} as any);
+    const [record] = factory({} as any) as ProcessorRecord[];
 
     expect(record.processor).toBeInstanceOf(OpenPanelProcessor);
   });
@@ -342,7 +341,7 @@ describe("createOpenPanelProcessorFactory", () => {
       events,
       onError,
     });
-    const [record] = factory({} as any);
+    const [record] = factory({} as any) as ProcessorRecord[];
 
     const op = makeOp("powerhouse/document-drive", "ADD_FOLDER");
     await record.processor.onOperations([op as any]);
