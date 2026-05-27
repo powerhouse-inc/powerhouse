@@ -271,10 +271,6 @@ export function DBExplorer({
         continueLabel="Replace Data"
         onCancel={handleImportCancel}
         onContinue={() => void handleImportConfirm()}
-        continueButtonProps={{
-          className:
-            "bg-red-900 text-white hover:bg-red-800 dark:bg-red-50 dark:text-slate-900 dark:hover:bg-red-100",
-        }}
       />
 
       <ConnectConfirmationModal
@@ -286,10 +282,6 @@ export function DBExplorer({
         continueLabel={`Reset to PG${pendingResetMajor ?? ""}`}
         onCancel={() => setPendingResetMajor(null)}
         onContinue={() => void handleResetConfirm()}
-        continueButtonProps={{
-          className:
-            "bg-red-900 text-white hover:bg-red-800 dark:bg-red-50 dark:text-slate-900 dark:hover:bg-red-100",
-        }}
       />
 
       <div className="flex w-64 shrink-0 flex-col border-r border-gray-200 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">

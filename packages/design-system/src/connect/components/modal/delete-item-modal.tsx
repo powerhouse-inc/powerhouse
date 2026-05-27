@@ -17,10 +17,6 @@ export function ConnectDeleteItemModal(props: ConnectDeleteItemModalProps) {
   return (
     <ConnectConfirmationModal
       {...restProps}
-      containerProps={{ className: "w-[450px]" }}
-      continueButtonProps={{
-        className: "bg-red-900 dark:bg-red-50",
-      }}
       continueLabel={deleteLabel}
       onContinue={onDelete}
     />

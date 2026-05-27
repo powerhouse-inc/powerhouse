@@ -22,7 +22,6 @@ export function DownloadDocumentWithErrorsModal() {
   return (
     <ConnectConfirmationModal
       header={t("modals.downloadDocumentWithErrors.title")}
-      title={t("modals.downloadDocumentWithErrors.title")}
       body={
         <div>
           <p>{t("modals.downloadDocumentWithErrors.body")}</p>

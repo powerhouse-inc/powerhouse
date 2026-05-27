@@ -1,6 +1,5 @@
-import type { ComponentPropsWithoutRef, ReactNode } from "react";
 import { Modal } from "#design-system";
-import { twMerge } from "tailwind-merge";
+import type { ComponentPropsWithoutRef, ReactNode } from "react";
 import { ModalButton } from "./modal-button.js";
 
 type ModalProps = ComponentPropsWithoutRef<typeof Modal>;
