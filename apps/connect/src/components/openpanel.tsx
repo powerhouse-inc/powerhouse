@@ -76,6 +76,13 @@ export function OpenPanel(): null {
 
   const enabled = analytics && !!connectConfig.openPanel.clientId;
 
+  // Derive processorManager here so the init effect depends on its identity
+  // directly rather than on the reactorClientModule wrapper object.
+  // If useReactorClientModule() returns a new wrapper reference on re-renders
+  // but the processorManager inside is stable, this prevents unnecessary
+  // teardown/rebuild cycles (and the buffer clears that come with them).
+  const processorManager = reactorClientModule?.reactorModule?.processorManager;
+
   // -------------------------------------------------------------------------
   // Init effect — build client, set window global, register factory
   // -------------------------------------------------------------------------
@@ -83,7 +90,6 @@ export function OpenPanel(): null {
     if (!enabled) return;
 
     let cancelled = false;
-    const processorManager = reactorClientModule?.reactorModule?.processorManager;
 
     void (async () => {
       let builtClient: OpenPanelClient | undefined;
@@ -143,7 +149,7 @@ export function OpenPanel(): null {
       window.openPanel = undefined;
       setClient(undefined);
     };
-  }, [enabled, reactorClientModule]);
+  }, [enabled, processorManager]);
 
   // -------------------------------------------------------------------------
   // Identify effect — detect login/logout transitions

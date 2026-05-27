@@ -4,7 +4,7 @@ import type { OpenPanel } from "@openpanel/web";
 import {
   clearOpenPanelBuffer,
   drainOpenPanelBuffer,
-} from "../../hooks/useOpenPanel.js";
+} from "./buffer.js";
 import type { OpenPanelConfig } from "./types.js";
 
 let client: OpenPanel | undefined;
