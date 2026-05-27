@@ -153,7 +153,9 @@ describe("OpenPanel component", () => {
     render(<OpenPanel />);
 
     await waitFor(() => {
-      expect(mockGetOpenPanelClient).toHaveBeenCalledWith(mockConnectConfig.openPanel);
+      expect(mockGetOpenPanelClient).toHaveBeenCalledWith(
+        mockConnectConfig.openPanel,
+      );
       expect(mockProcessorManager.registerFactory).toHaveBeenCalledWith(
         "openpanel",
         expect.any(Function),
@@ -238,7 +240,9 @@ describe("OpenPanel component", () => {
     rerender(<OpenPanel />);
 
     await waitFor(() => {
-      expect(mockProcessorManager.unregisterFactory).toHaveBeenCalledWith("openpanel");
+      expect(mockProcessorManager.unregisterFactory).toHaveBeenCalledWith(
+        "openpanel",
+      );
       expect(mockResetOpenPanelClient).toHaveBeenCalled();
     });
   });

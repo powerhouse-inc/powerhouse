@@ -39,9 +39,7 @@ export function loadEvents(raw: unknown = rawEvents): {
 } {
   const result = EventMappingsSchema.safeParse(raw);
   if (!result.success) {
-    throw new Error(
-      `Invalid OpenPanel events.json: ${result.error.message}`,
-    );
+    throw new Error(`Invalid OpenPanel events.json: ${result.error.message}`);
   }
 
   const mappings = result.data as readonly OpenPanelEventMapping[];
@@ -71,8 +69,7 @@ export function loadEvents(raw: unknown = rawEvents): {
 // Module-level loaded state (defaults from events.json)
 // ---------------------------------------------------------------------------
 
-const { mappings: defaultMappings, lookupMap: defaultLookupMap } =
-  loadEvents();
+const { mappings: defaultMappings, lookupMap: defaultLookupMap } = loadEvents();
 
 /** Validated mapping array from the bundled events.json. */
 export const eventMappings: readonly OpenPanelEventMapping[] = defaultMappings;

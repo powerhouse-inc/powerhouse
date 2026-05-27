@@ -1,10 +1,7 @@
 // Type-only import — does not pull the runtime SDK into the bundle.
 import type { OpenPanel } from "@openpanel/web";
 
-import {
-  clearOpenPanelBuffer,
-  drainOpenPanelBuffer,
-} from "./buffer.js";
+import { clearOpenPanelBuffer, drainOpenPanelBuffer } from "./buffer.js";
 import type { OpenPanelConfig } from "./types.js";
 
 let client: OpenPanel | undefined;

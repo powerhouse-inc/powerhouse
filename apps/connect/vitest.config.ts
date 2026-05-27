@@ -14,10 +14,7 @@ export default defineConfig({
     conditions: ["source", "import", "module", "browser", "default"],
   },
   test: {
-    include: [
-      "test/**/*.test.{ts,tsx}",
-      "src/**/*.test.{ts,tsx}",
-    ],
+    include: ["test/**/*.test.{ts,tsx}", "src/**/*.test.{ts,tsx}"],
     globals: true,
   },
 });

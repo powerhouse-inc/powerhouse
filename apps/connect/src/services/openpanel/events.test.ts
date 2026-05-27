@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import type { OperationWithContext } from "@powerhousedao/shared/document-model";
 import type { OpenPanelEventMapping } from "./types.js";
 import {
   buildDefaultProperties,
@@ -17,7 +18,7 @@ function makeOp(
   documentType: string,
   actionType: string,
   overrides: { documentId?: string; scope?: string; branch?: string } = {},
-) {
+): OperationWithContext {
   return {
     operation: {
       id: "test-op-id",
@@ -38,7 +39,7 @@ function makeOp(
       branch: overrides.branch ?? "main",
       ordinal: 1,
     },
-  };
+  } as unknown as OperationWithContext;
 }
 
 // ---------------------------------------------------------------------------
@@ -189,12 +190,12 @@ describe("deriveEventName", () => {
       alias: "drive.folder.added",
     };
     const op = makeOp("powerhouse/document-drive", "ADD_FOLDER");
-    expect(deriveEventName(aliasedMapping, op as any)).toBe("drive.folder.added");
+    expect(deriveEventName(aliasedMapping, op)).toBe("drive.folder.added");
   });
 
   it("derives the event name from documentType and actionType when no alias", () => {
     const op = makeOp("powerhouse/document-drive", "ADD_FOLDER");
-    expect(deriveEventName(mapping, op as any)).toBe(
+    expect(deriveEventName(mapping, op)).toBe(
       "powerhouse.document-drive.add_folder",
     );
   });
@@ -205,9 +206,7 @@ describe("deriveEventName", () => {
       actionTypes: ["SET_NAME"],
     };
     const op = makeOp("sky/atlas-scope", "SET_NAME");
-    expect(deriveEventName(scopeMapping, op as any)).toBe(
-      "sky.atlas-scope.set_name",
-    );
+    expect(deriveEventName(scopeMapping, op)).toBe("sky.atlas-scope.set_name");
   });
 });
 
@@ -223,10 +222,17 @@ describe("buildDefaultProperties", () => {
       branch: "main",
     });
 
-    const props = buildDefaultProperties(op as any);
+    const props = buildDefaultProperties(op);
 
     expect(Object.keys(props).sort()).toEqual(
-      ["actionType", "app", "branch", "documentId", "documentType", "scope"].sort(),
+      [
+        "actionType",
+        "app",
+        "branch",
+        "documentId",
+        "documentType",
+        "scope",
+      ].sort(),
     );
   });
 
@@ -237,7 +243,7 @@ describe("buildDefaultProperties", () => {
       branch: "main",
     });
 
-    const props = buildDefaultProperties(op as any);
+    const props = buildDefaultProperties(op);
 
     expect(props.documentType).toBe("powerhouse/document-drive");
     expect(props.actionType).toBe("ADD_FOLDER");
