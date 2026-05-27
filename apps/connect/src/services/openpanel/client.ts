@@ -1,4 +1,3 @@
-// Type-only import — does not pull the runtime SDK into the bundle.
 import type { OpenPanel } from "@openpanel/web";
 
 import { clearOpenPanelBuffer, drainOpenPanelBuffer } from "./buffer.js";
@@ -9,9 +8,8 @@ let client: OpenPanel | undefined;
 /**
  * Returns the cached `OpenPanel` singleton, building it on first call.
  *
- * If `config.clientId` is empty the function returns `undefined` **without**
- * importing `@openpanel/web`, allowing the bundler to tree-shake the SDK out
- * of the production bundle entirely.
+ * When `config.clientId` is empty it returns `undefined` without importing
+ * `@openpanel/web`, so the bundler can tree-shake the SDK out of production.
  */
 export async function getOpenPanelClient(
   config: OpenPanelConfig,
@@ -24,8 +22,7 @@ export async function getOpenPanelClient(
     return client;
   }
 
-  // Dynamic import is intentional: keeps @openpanel/web out of the initial
-  // chunk and enables tree-shaking when clientId is absent.
+  // Dynamic import keeps @openpanel/web out of the initial chunk.
   const { OpenPanel: OpenPanelClass } = await import("@openpanel/web");
 
   client = new OpenPanelClass({
@@ -33,20 +30,16 @@ export async function getOpenPanelClient(
     ...(config.apiUrl ? { apiUrl: config.apiUrl } : {}),
   });
 
-  // Drain any events that were buffered before the client was ready.
-  // This runs exactly once (the early `if (client) return client` guards
-  // subsequent calls), so the buffer is never double-drained.
+  // Runs once (the `if (client)` guard above), so the buffer is never
+  // double-drained.
   drainOpenPanelBuffer(client);
 
   return client;
 }
 
 /**
- * Clears the cached singleton so the next `getOpenPanelClient()` call builds
- * a fresh instance.  Call this on consent revocation or during tests.
- *
- * Also clears the pre-init buffer so that events queued before the client was
- * ready are discarded — they must not be replayed after consent is revoked.
+ * Clears the cached singleton and the pre-init buffer. Call on consent
+ * revocation or during tests; buffered events are discarded, not replayed.
  */
 export function resetOpenPanelClient(): void {
   client = undefined;

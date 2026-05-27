@@ -4,10 +4,6 @@ import { z } from "zod";
 import type { OpenPanelEventMapping } from "./types.js";
 import rawEvents from "./events.json" with { type: "json" };
 
-// ---------------------------------------------------------------------------
-// Zod schema
-// ---------------------------------------------------------------------------
-
 const EventMappingSchema = z
   .object({
     documentType: z.string().min(1),
@@ -18,20 +14,10 @@ const EventMappingSchema = z
 
 const EventMappingsSchema = z.array(EventMappingSchema).readonly();
 
-// ---------------------------------------------------------------------------
-// Loader
-// ---------------------------------------------------------------------------
-
 /**
- * Parses and validates the event mapping table.
- *
- * - Accepts an optional `raw` override so tests can inject crafted or invalid
- *   data without touching the filesystem.
- * - Throws on zod validation failures.
- * - Throws on duplicate `(documentType, actionType)` pairs, both within a
- *   single entry and across entries that share the same `documentType`.
- *
- * @returns The validated mapping array and the O(1) lookup map.
+ * Parses and validates the event mapping table, returning the validated array
+ * and an O(1) lookup map. Accepts a `raw` override for tests. Throws on zod
+ * failures and on duplicate `(documentType, actionType)` pairs.
  */
 export function loadEvents(raw: unknown = rawEvents): {
   mappings: readonly OpenPanelEventMapping[];
@@ -65,10 +51,6 @@ export function loadEvents(raw: unknown = rawEvents): {
   return { mappings, lookupMap };
 }
 
-// ---------------------------------------------------------------------------
-// Module-level loaded state (defaults from events.json)
-// ---------------------------------------------------------------------------
-
 const { mappings: defaultMappings, lookupMap: defaultLookupMap } = loadEvents();
 
 /** Validated mapping array from the bundled events.json. */
@@ -80,20 +62,10 @@ export const eventLookupMap: Map<
   Map<string, OpenPanelEventMapping>
 > = defaultLookupMap;
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
 /**
- * Normalizes a document-type string into a safe event-name segment.
- *
- * - Lowercases the string.
- * - Replaces `/` with `.`.
- * - Strips any character that is not `[a-z0-9._-]`.
- *
- * Examples:
- * - `powerhouse/document-drive` → `powerhouse.document-drive`
- * - `sky/atlas-scope`           → `sky.atlas-scope`
+ * Normalizes a document type into a safe event-name segment: lowercased, `/`
+ * replaced with `.`, and any character outside `[a-z0-9._-]` stripped.
+ * e.g. `powerhouse/document-drive` → `powerhouse.document-drive`.
  */
 export function normalize(documentType: string): string {
   return documentType
@@ -103,10 +75,8 @@ export function normalize(documentType: string): string {
 }
 
 /**
- * Derives the OpenPanel event name for a given mapping and operation.
- *
- * Returns `mapping.alias` when present; otherwise produces the deterministic
- * form `${normalize(documentType)}.${actionType.toLowerCase()}`.
+ * Derives the OpenPanel event name: `mapping.alias` when present, otherwise
+ * `${normalize(documentType)}.${actionType.toLowerCase()}`.
  */
 export function deriveEventName(
   mapping: OpenPanelEventMapping,
@@ -118,18 +88,7 @@ export function deriveEventName(
   return `${normalize(op.context.documentType)}.${op.operation.action.type.toLowerCase()}`;
 }
 
-/**
- * Builds the six default properties attached to every OpenPanel event.
- *
- * | Property       | Source                           |
- * |----------------|----------------------------------|
- * | documentType   | op.context.documentType          |
- * | actionType     | op.operation.action.type         |
- * | documentId     | op.context.documentId            |
- * | scope          | op.context.scope                 |
- * | branch         | op.context.branch                |
- * | app            | "connect" (constant)             |
- */
+/** Builds the default properties attached to every OpenPanel event. */
 export function buildDefaultProperties(op: OperationWithContext): {
   documentType: string;
   actionType: string;

@@ -1,5 +1,3 @@
-// Type-only import — removed at compile time; keeps the SDK out of the
-// initial bundle when clientId is absent.
 import type { OpenPanel as OpenPanelClient } from "@openpanel/web";
 import { connectConfig } from "@powerhousedao/connect/config";
 import { useAcceptedCookies } from "@powerhousedao/connect/hooks";
@@ -18,19 +16,11 @@ import { useEffect, useRef, useState } from "react";
 
 import { buildTraits } from "./openpanel-traits.js";
 
-// ---------------------------------------------------------------------------
-// Window global — read by the card-6 useOpenPanel() hook
-// ---------------------------------------------------------------------------
-
 declare global {
   interface Window {
     openPanel?: OpenPanelClient;
   }
 }
-
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
 
 /**
  * `OpenPanel` is a `null`-rendering component that manages the full lifecycle
@@ -78,17 +68,8 @@ export function OpenPanel(): null {
   const prevUserRef = useRef<ReturnType<typeof useUser>>(undefined);
 
   const enabled = analytics && !!connectConfig.openPanel.clientId;
-
-  // Derive processorManager here so the init effect depends on its identity
-  // directly rather than on the reactorClientModule wrapper object.
-  // If useReactorClientModule() returns a new wrapper reference on re-renders
-  // but the processorManager inside is stable, this prevents unnecessary
-  // teardown/rebuild cycles (and the buffer clears that come with them).
   const processorManager = reactorClientModule?.reactorModule?.processorManager;
 
-  // -------------------------------------------------------------------------
-  // Init effect — build client, set window global, register factory
-  // -------------------------------------------------------------------------
   useEffect(() => {
     if (!enabled) return;
 
@@ -162,15 +143,7 @@ export function OpenPanel(): null {
     };
   }, [enabled, processorManager]);
 
-  // -------------------------------------------------------------------------
-  // Identify effect — detect login/logout transitions
-  // -------------------------------------------------------------------------
-  //
-  // `prevUserRef.current` is only updated when the subsystem is ACTIVE
-  // (enabled + client present).  This is intentional: if the component
-  // renders with a user already logged in but the client hasn't been built
-  // yet, the ref stays `undefined` so that the first active run sees the
-  // `undefined → defined` transition and calls `identify`.
+  // detect login/logout transitions
   useEffect(() => {
     if (!enabled || !client) return;
 

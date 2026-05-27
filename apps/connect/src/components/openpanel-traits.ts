@@ -13,8 +13,6 @@ import type { User } from "@renown/sdk";
  *
  * Mirror the Sentry pattern in `store/user.ts`: destructure off `credential`
  * first, then assemble the trait payload from the remainder.
- *
- * @see Brief: OpenPanel Analytics in Connect — *Identity Traits* table.
  */
 export function buildTraits(user: User): Record<string, unknown> {
   // Destructure credential off so it can never accidentally make it into the

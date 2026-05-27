@@ -4,39 +4,21 @@ import type { IProcessor } from "@powerhousedao/shared/processors";
 import { buildDefaultProperties, deriveEventName } from "./events.js";
 import type { OpenPanelEventMapping } from "./types.js";
 
-// ---------------------------------------------------------------------------
-// Client abstraction
-// ---------------------------------------------------------------------------
-
 /**
- * Minimal structural type for the injected analytics client.
- *
- * Using a structural interface (rather than importing `OpenPanel` from
- * `@openpanel/web` directly) keeps the SDK out of the runtime import graph
- * when no client is provided and makes test fakes trivial.  The real
- * `OpenPanel` instance satisfies this type structurally.
+ * Minimal structural type for the injected analytics client. Keeps
+ * `@openpanel/web` out of the runtime import graph and makes test fakes
+ * trivial; the real `OpenPanel` instance satisfies it structurally.
  */
 export type OpenPanelTracker = {
   track: (name: string, properties?: Record<string, unknown>) => unknown;
   flush?: () => void;
 };
 
-// ---------------------------------------------------------------------------
-// Processor
-// ---------------------------------------------------------------------------
-
 /**
- * `OpenPanelProcessor` is a read-only reactor `IProcessor` that translates
- * matching document operations into OpenPanel analytics events.
- *
- * - Only operations whose `(documentType, actionType)` pair appears in the
- *   injected lookup map are forwarded; everything else is silently skipped.
- * - Each fired event carries the six default properties (`documentType`,
- *   `actionType`, `documentId`, `scope`, `branch`, `app: "connect"`).
- * - Per-operation errors (including rejected promises from `client.track`)
- *   are forwarded to `onError` and never thrown back to the manager.
- * - `onDisconnect` optional-chains `client.flush?.()` so the SDK can drain
- *   its internal queue before the processor is removed.
+ * Read-only reactor `IProcessor` that translates matching document operations
+ * into OpenPanel analytics events. Operations whose `(documentType, actionType)`
+ * pair is absent from the lookup map are skipped; per-operation errors are
+ * routed to `onError` and never thrown back to the manager.
  */
 export class OpenPanelProcessor implements IProcessor {
   constructor(

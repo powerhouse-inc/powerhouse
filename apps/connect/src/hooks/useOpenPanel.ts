@@ -4,15 +4,8 @@ import {
   track,
 } from "../services/openpanel/buffer.js";
 
-// Re-export the buffer helpers so external callers that already imported
-// from this path continue to work without changes.
 export { clearOpenPanelBuffer, drainOpenPanelBuffer, track };
 
-// ---------------------------------------------------------------------------
-// Hook
-// ---------------------------------------------------------------------------
-
-/** Stable return value — created once at module load. */
 const openPanelApi = { track } as const;
 
 /**
