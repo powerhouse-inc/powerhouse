@@ -12,7 +12,12 @@
     "storage": "memory"
   },
   "packages": [
-   
+
   ],
-  "packageRegistryUrl": "http://localhost:8080"
+  "packageRegistryUrl": "http://localhost:8080",
+  "connect": {
+    "branding": {
+      "appName": "Vetra E2E"
+    }
+  }
 }

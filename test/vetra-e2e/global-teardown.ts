@@ -142,9 +142,13 @@ async function globalTeardown() {
     removeDirectory(path.join(vetraE2ERoot, ".registry-cdn-cache"));
     console.log("✅ Removed registry storage directories");
 
-    // Remove build output
+    // Remove build outputs
     removeDirectory(path.join(vetraE2ERoot, "dist"));
-    console.log("✅ Removed dist directory");
+    // dist-connect is the isolated outDir used by the connect-preview
+    // Playwright project so `ph connect build` doesn't collide with the
+    // package `pnpm build` that runs inside todo-document.spec.ts.
+    removeDirectory(path.join(vetraE2ERoot, "dist-connect"));
+    console.log("✅ Removed dist directories");
 
     // Remove .npmrc (created for registry auth during tests)
     const npmrcPath = path.join(vetraE2ERoot, ".npmrc");
