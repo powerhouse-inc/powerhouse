@@ -41,10 +41,7 @@ export type OpenPanelTracker = {
 export class OpenPanelProcessor implements IProcessor {
   constructor(
     private readonly client: OpenPanelTracker,
-    private readonly lookupMap: Map<
-      string,
-      Map<string, OpenPanelEventMapping>
-    >,
+    private readonly lookupMap: Map<string, Map<string, OpenPanelEventMapping>>,
     private readonly onError: (
       err: unknown,
       op?: OperationWithContext,

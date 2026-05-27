@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import type {
+  OperationWithContext,
+  PHDocumentHeader,
+} from "@powerhousedao/shared/document-model";
 import type { ProcessorRecord } from "@powerhousedao/shared/processors";
 import { buildDefaultProperties, loadEvents } from "./events.js";
 import { createOpenPanelProcessorFactory } from "./factory.js";
@@ -16,7 +20,7 @@ function makeOp(
   documentType: string,
   actionType: string,
   overrides: { documentId?: string; scope?: string; branch?: string } = {},
-) {
+): OperationWithContext {
   return {
     operation: {
       id: "test-op-id",
@@ -37,14 +41,17 @@ function makeOp(
       branch: overrides.branch ?? "main",
       ordinal: 1,
     },
-  };
+  } as unknown as OperationWithContext;
 }
 
 /** Create a fresh fake client with vi.fn() spies. */
 function makeFakeClient() {
   return {
-    track: vi.fn().mockResolvedValue(undefined) as unknown as
-      ((name: string, properties?: Record<string, unknown>) => unknown) & ReturnType<typeof vi.fn>,
+    track: vi.fn().mockResolvedValue(undefined) as unknown as ((
+      name: string,
+      properties?: Record<string, unknown>,
+    ) => unknown) &
+      ReturnType<typeof vi.fn>,
     flush: vi.fn() as unknown as (() => void) & ReturnType<typeof vi.fn>,
   };
 }
@@ -67,7 +74,7 @@ describe("OpenPanelProcessor — mapping selection", () => {
 
   it("calls track for a mapped (documentType, actionType)", async () => {
     const op = makeOp("powerhouse/document-drive", "ADD_FOLDER");
-    await processor.onOperations([op as any]);
+    await processor.onOperations([op]);
     expect(client.track).toHaveBeenCalledTimes(1);
   });
 
@@ -77,29 +84,29 @@ describe("OpenPanelProcessor — mapping selection", () => {
       makeOp("powerhouse/document-drive", "ADD_FILE"),
       makeOp("powerhouse/document-model", "SET_MODEL_NAME"),
     ];
-    await processor.onOperations(ops as any[]);
+    await processor.onOperations(ops);
     expect(client.track).toHaveBeenCalledTimes(3);
   });
 
   it("does NOT call track for an unmapped actionType on a known documentType", async () => {
     // REMOVE_FOLDER was pruned from powerhouse/document-drive in events.json
     const op = makeOp("powerhouse/document-drive", "REMOVE_FOLDER");
-    await processor.onOperations([op as any]);
+    await processor.onOperations([op]);
     expect(client.track).not.toHaveBeenCalled();
   });
 
   it("does NOT call track for an entirely unknown documentType", async () => {
     const op = makeOp("unknown/document-type", "ADD_FOLDER");
-    await processor.onOperations([op as any]);
+    await processor.onOperations([op]);
     expect(client.track).not.toHaveBeenCalled();
   });
 
   it("skips unmapped ops while still tracking mapped ones in the same batch", async () => {
     const ops = [
       makeOp("powerhouse/document-drive", "REMOVE_FOLDER"), // unmapped
-      makeOp("powerhouse/document-drive", "ADD_FILE"),      // mapped
+      makeOp("powerhouse/document-drive", "ADD_FILE"), // mapped
     ];
-    await processor.onOperations(ops as any[]);
+    await processor.onOperations(ops);
     expect(client.track).toHaveBeenCalledTimes(1);
   });
 });
@@ -118,11 +125,11 @@ describe("OpenPanelProcessor — default properties", () => {
       branch: "main",
     });
 
-    await processor.onOperations([op as any]);
+    await processor.onOperations([op]);
 
     expect(client.track).toHaveBeenCalledWith(
       expect.any(String),
-      buildDefaultProperties(op as any),
+      buildDefaultProperties(op),
     );
   });
 
@@ -131,9 +138,12 @@ describe("OpenPanelProcessor — default properties", () => {
     const processor = new OpenPanelProcessor(client, realLookupMap);
     const op = makeOp("powerhouse/document-drive", "ADD_FILE");
 
-    await processor.onOperations([op as any]);
+    await processor.onOperations([op]);
 
-    const [, payload] = client.track.mock.calls[0];
+    const [, payload] = client.track.mock.calls[0] as [
+      string,
+      Record<string, unknown>,
+    ];
     expect(payload).toMatchObject({ app: "connect" });
   });
 });
@@ -157,9 +167,12 @@ describe("OpenPanelProcessor — alias override", () => {
     const processor = new OpenPanelProcessor(client, customLookupMap);
     const op = makeOp("test/doc", "ACTION_A");
 
-    await processor.onOperations([op as any]);
+    await processor.onOperations([op]);
 
-    expect(client.track).toHaveBeenCalledWith("drive.folder.added", expect.any(Object));
+    expect(client.track).toHaveBeenCalledWith(
+      "drive.folder.added",
+      expect.any(Object),
+    );
   });
 
   it("uses the derived name when no alias is set", async () => {
@@ -167,7 +180,7 @@ describe("OpenPanelProcessor — alias override", () => {
     const processor = new OpenPanelProcessor(client, realLookupMap);
     const op = makeOp("powerhouse/document-drive", "ADD_FOLDER");
 
-    await processor.onOperations([op as any]);
+    await processor.onOperations([op]);
 
     expect(client.track).toHaveBeenCalledWith(
       "powerhouse.document-drive.add_folder",
@@ -196,10 +209,13 @@ describe("OpenPanelProcessor — SDK error handling", () => {
       makeOp("powerhouse/document-drive", "ADD_FILE"),
     ];
 
-    await expect(processor.onOperations(ops as any[])).resolves.toBeUndefined();
+    await expect(processor.onOperations(ops)).resolves.toBeUndefined();
     // onError called once per op that threw
     expect(onError).toHaveBeenCalledTimes(2);
-    expect(onError).toHaveBeenCalledWith(thrownError, expect.objectContaining({ context: expect.any(Object) }));
+    expect(onError).toHaveBeenCalledWith(
+      thrownError,
+      expect.objectContaining({ context: expect.any(Object) as unknown }),
+    );
   });
 
   it("forwards a rejected promise from track to onError and continues", async () => {
@@ -215,7 +231,7 @@ describe("OpenPanelProcessor — SDK error handling", () => {
       makeOp("powerhouse/document-drive", "ADD_FILE"),
     ];
 
-    await expect(processor.onOperations(ops as any[])).resolves.toBeUndefined();
+    await expect(processor.onOperations(ops)).resolves.toBeUndefined();
     expect(onError).toHaveBeenCalledTimes(2);
     expect(onError).toHaveBeenCalledWith(rejectedError, expect.any(Object));
   });
@@ -233,11 +249,11 @@ describe("OpenPanelProcessor — SDK error handling", () => {
     const processor = new OpenPanelProcessor(client, realLookupMap, onError);
 
     const ops = [
-      makeOp("powerhouse/document-drive", "ADD_FOLDER"),  // throws
-      makeOp("powerhouse/document-drive", "ADD_FILE"),    // succeeds
+      makeOp("powerhouse/document-drive", "ADD_FOLDER"), // throws
+      makeOp("powerhouse/document-drive", "ADD_FILE"), // succeeds
     ];
 
-    await processor.onOperations(ops as any[]);
+    await processor.onOperations(ops);
 
     expect(onError).toHaveBeenCalledTimes(1);
     expect(client.track).toHaveBeenCalledTimes(2);
@@ -276,7 +292,7 @@ describe("createOpenPanelProcessorFactory", () => {
     const events = loadEvents();
 
     const factory = createOpenPanelProcessorFactory({ client, events });
-    const records = factory({} as any);
+    const records = factory({} as unknown as PHDocumentHeader);
 
     expect(records).toHaveLength(1);
   });
@@ -287,9 +303,13 @@ describe("createOpenPanelProcessorFactory", () => {
     const expectedDocTypes = Array.from(events.lookupMap.keys()).sort();
 
     const factory = createOpenPanelProcessorFactory({ client, events });
-    const [record] = factory({} as any) as ProcessorRecord[];
+    const [record] = factory(
+      {} as unknown as PHDocumentHeader,
+    ) as ProcessorRecord[];
 
-    expect(record.filter.documentType?.slice().sort()).toEqual(expectedDocTypes);
+    expect(record.filter.documentType?.slice().sort()).toEqual(
+      expectedDocTypes,
+    );
   });
 
   it("startFrom defaults to 'current'", () => {
@@ -297,7 +317,9 @@ describe("createOpenPanelProcessorFactory", () => {
     const events = loadEvents();
 
     const factory = createOpenPanelProcessorFactory({ client, events });
-    const [record] = factory({} as any) as ProcessorRecord[];
+    const [record] = factory(
+      {} as unknown as PHDocumentHeader,
+    ) as ProcessorRecord[];
 
     expect(record.startFrom).toBe("current");
   });
@@ -311,7 +333,9 @@ describe("createOpenPanelProcessorFactory", () => {
       events,
       startFrom: "beginning",
     });
-    const [record] = factory({} as any) as ProcessorRecord[];
+    const [record] = factory(
+      {} as unknown as PHDocumentHeader,
+    ) as ProcessorRecord[];
 
     expect(record.startFrom).toBe("beginning");
   });
@@ -321,7 +345,9 @@ describe("createOpenPanelProcessorFactory", () => {
     const events = loadEvents();
 
     const factory = createOpenPanelProcessorFactory({ client, events });
-    const [record] = factory({} as any) as ProcessorRecord[];
+    const [record] = factory(
+      {} as unknown as PHDocumentHeader,
+    ) as ProcessorRecord[];
 
     expect(record.processor).toBeInstanceOf(OpenPanelProcessor);
   });
@@ -341,10 +367,12 @@ describe("createOpenPanelProcessorFactory", () => {
       events,
       onError,
     });
-    const [record] = factory({} as any) as ProcessorRecord[];
+    const [record] = factory(
+      {} as unknown as PHDocumentHeader,
+    ) as ProcessorRecord[];
 
     const op = makeOp("powerhouse/document-drive", "ADD_FOLDER");
-    await record.processor.onOperations([op as any]);
+    await record.processor.onOperations([op]);
 
     expect(onError).toHaveBeenCalledWith(thrownError, expect.any(Object));
   });

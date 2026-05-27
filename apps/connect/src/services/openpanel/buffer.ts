@@ -126,10 +126,7 @@ export function clearOpenPanelBuffer(): void {
  * - If the client is not yet initialised the event is queued in the
  *   module-level buffer (FIFO, cap 200, drop-oldest policy).
  */
-export function track(
-  name: string,
-  props?: Record<string, unknown>,
-): void {
+export function track(name: string, props?: Record<string, unknown>): void {
   if (activeClient) {
     forward(activeClient, name, props);
     return;

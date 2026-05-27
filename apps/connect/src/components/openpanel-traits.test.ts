@@ -43,7 +43,9 @@ describe("buildTraits", () => {
   // ------------------------------------------------------------------
 
   it("never includes credential even when set", () => {
-    const user = makeUser({ credential: { proof: "jwt" } as unknown as User["credential"] });
+    const user = makeUser({
+      credential: { proof: "jwt" } as unknown as User["credential"],
+    });
     const traits = buildTraits(user);
 
     expect("credential" in traits).toBe(false);

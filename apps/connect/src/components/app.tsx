@@ -1,4 +1,8 @@
-import { Analytics, OpenPanel, Router } from "@powerhousedao/connect/components";
+import {
+  Analytics,
+  OpenPanel,
+  Router,
+} from "@powerhousedao/connect/components";
 
 import { SentryProvider } from "@powerhousedao/connect/context";
 import {

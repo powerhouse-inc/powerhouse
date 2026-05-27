@@ -10,7 +10,10 @@ import {
   getOpenPanelClient,
   resetOpenPanelClient,
 } from "@powerhousedao/connect/services";
-import { useReactorClientModule, useUser } from "@powerhousedao/reactor-browser";
+import {
+  useReactorClientModule,
+  useUser,
+} from "@powerhousedao/reactor-browser";
 import { useEffect, useRef, useState } from "react";
 
 import { buildTraits } from "./openpanel-traits.js";
@@ -127,7 +130,10 @@ export function OpenPanel(): null {
               );
           }
         } catch (err) {
-          console.warn("[OpenPanel] Failed to register processor factory:", err);
+          console.warn(
+            "[OpenPanel] Failed to register processor factory:",
+            err,
+          );
         }
       }
     })();
@@ -140,9 +146,14 @@ export function OpenPanel(): null {
       prevUserRef.current = undefined;
 
       if (connectConfig.openPanel.trackOperations && processorManager) {
-        void processorManager.unregisterFactory("openpanel").catch((err: unknown) =>
-          console.warn("[OpenPanel] Failed to unregister processor factory:", err),
-        );
+        void processorManager
+          .unregisterFactory("openpanel")
+          .catch((err: unknown) =>
+            console.warn(
+              "[OpenPanel] Failed to unregister processor factory:",
+              err,
+            ),
+          );
       }
 
       resetOpenPanelClient();
@@ -170,7 +181,10 @@ export function OpenPanel(): null {
       // Login: undefined → defined (or client became available with user
       // already logged in — prevUserRef is undefined in both cases).
       try {
-        void client.identify({ profileId: user.did, properties: buildTraits(user) });
+        void client.identify({
+          profileId: user.did,
+          properties: buildTraits(user),
+        });
       } catch (err) {
         console.warn("[OpenPanel] Failed to identify user:", err);
       }

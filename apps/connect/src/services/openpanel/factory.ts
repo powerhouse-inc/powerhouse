@@ -1,6 +1,9 @@
 import type { OperationWithContext } from "@powerhousedao/shared/document-model";
 import type { PHDocumentHeader } from "@powerhousedao/shared/document-model";
-import type { ProcessorFactory, ProcessorRecord } from "@powerhousedao/shared/processors";
+import type {
+  ProcessorFactory,
+  ProcessorRecord,
+} from "@powerhousedao/shared/processors";
 
 import { OpenPanelProcessor, type OpenPanelTracker } from "./processor.js";
 import type { OpenPanelEventMapping } from "./types.js";
