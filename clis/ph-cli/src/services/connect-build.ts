@@ -14,14 +14,24 @@ export async function runConnectBuild(args: ConnectBuildArgs) {
   const mode = "production";
   const dirname = process.cwd();
 
+  // Build has no read mode; a bare positional `<key>` is a user error. The
+  // 2-positional `<key> <value>` form is handled inside buildCliConnectOverride
+  // so it layers on top of --json + flags like any other override input.
+  if (args.keyPositional !== undefined && args.valuePositional === undefined) {
+    throw new Error(
+      "ph connect build: positional override requires both <key> and <value> (e.g. `ph connect build connect.renown.url https://renown.staging`). To read a value, use `ph connect config <key>`.",
+    );
+  }
+
   // Fail fast if any package marked as provider: "local" is missing from
   // node_modules — the Vite plugin that bundles them needs them on disk.
   assertLocalPackagesInstalled(dirname);
 
-  // Build the CLI override layers (--json + individual flags) once here so a
-  // bad payload fails before we waste a build. `--packages-registry` lands
-  // at the top-level `packageRegistryUrl` (mirrors source-config shape);
-  // every other flag feeds the connect-block precedence ladder.
+  // Build the CLI override layers (--json + individual flags + positional)
+  // once here so a bad payload fails before we waste a build.
+  // `--packages-registry` lands at the top-level `packageRegistryUrl`
+  // (mirrors source-config shape); every other flag feeds the connect-block
+  // precedence ladder.
   const { connectOverride, packageRegistryUrl } = buildCliConnectOverride(args);
 
   await runBuild({

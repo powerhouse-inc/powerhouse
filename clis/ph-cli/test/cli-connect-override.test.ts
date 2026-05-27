@@ -31,6 +31,8 @@ function mk(partial: Partial<ConnectBuildArgs>): ConnectBuildArgs {
     sentryDsn: undefined,
     sentryEnv: undefined,
     sentryTracingEnabled: undefined,
+    keyPositional: undefined,
+    valuePositional: undefined,
     // commonArgs flags with their cmd-ts defaults applied.
     connectBasePath: "/",
     logLevel: "info",
@@ -299,6 +301,122 @@ describe("buildCliConnectOverride", () => {
     expect(result).toEqual({
       connectOverride: { sentry: { dsn: null } },
       packageRegistryUrl: undefined,
+    });
+  });
+
+  describe("positional <key> <value>", () => {
+    it("packs a positional <key> <value> pair into the connect override", () => {
+      const result = buildCliConnectOverride(
+        mk({
+          keyPositional: "connect.renown.url",
+          valuePositional: "https://renown.staging",
+        }),
+      );
+      expect(result).toEqual({
+        connectOverride: { renown: { url: "https://renown.staging" } },
+        packageRegistryUrl: undefined,
+      });
+    });
+
+    it("coerces a positional bool value", () => {
+      const result = buildCliConnectOverride(
+        mk({
+          keyPositional: "connect.drives.allowAddDrive",
+          valuePositional: "false",
+        }),
+      );
+      expect(result).toEqual({
+        connectOverride: { drives: { allowAddDrive: false } },
+        packageRegistryUrl: undefined,
+      });
+    });
+
+    it("coerces a positional number value", () => {
+      const result = buildCliConnectOverride(
+        mk({
+          keyPositional: "connect.renown.chainId",
+          valuePositional: "137",
+        }),
+      );
+      expect(result).toEqual({
+        connectOverride: { renown: { chainId: 137 } },
+        packageRegistryUrl: undefined,
+      });
+    });
+
+    it("positional override wins over a colliding flag", () => {
+      const result = buildCliConnectOverride(
+        mk({
+          renownUrl: "https://from-flag",
+          keyPositional: "connect.renown.url",
+          valuePositional: "https://from-positional",
+        }),
+      );
+      expect(result).toEqual({
+        connectOverride: { renown: { url: "https://from-positional" } },
+        packageRegistryUrl: undefined,
+      });
+    });
+
+    it("positional override wins over a colliding --json field", () => {
+      const result = buildCliConnectOverride(
+        mk({
+          json: '{"renown":{"url":"https://from-json"}}',
+          keyPositional: "connect.renown.url",
+          valuePositional: "https://from-positional",
+        }),
+      );
+      expect(result).toEqual({
+        connectOverride: { renown: { url: "https://from-positional" } },
+        packageRegistryUrl: undefined,
+      });
+    });
+
+    it("positional packageRegistryUrl routes to top-level + wins over --packages-registry flag and --json", () => {
+      const result = buildCliConnectOverride(
+        mk({
+          packagesRegistry: "https://from-flag",
+          json: '{"packageRegistryUrl":"https://from-json"}',
+          keyPositional: "packageRegistryUrl",
+          valuePositional: "https://from-positional",
+        }),
+      );
+      expect(result).toEqual({
+        connectOverride: undefined,
+        packageRegistryUrl: "https://from-positional",
+      });
+    });
+
+    it("validates the positional value against the schema (rejects wrong type)", () => {
+      expect(() =>
+        buildCliConnectOverride(
+          mk({
+            keyPositional: "connect.renown.chainId",
+            valuePositional: "abc",
+          }),
+        ),
+      ).toThrow(/validation failed/);
+    });
+
+    it("rejects an empty positional key", () => {
+      expect(() =>
+        buildCliConnectOverride(
+          mk({ keyPositional: "", valuePositional: "x" }),
+        ),
+      ).toThrow(/cannot be empty/);
+    });
+
+    it("ignores positional when only <key> is set (build's 1-positional case is handled upstream in runConnectBuild)", () => {
+      // buildCliConnectOverride is reached only after runConnectBuild's guard;
+      // when called directly with only keyPositional, no positional override is
+      // produced — `valuePositional === undefined` short-circuits the branch.
+      const result = buildCliConnectOverride(
+        mk({ keyPositional: "connect.renown.url" }),
+      );
+      expect(result).toEqual({
+        connectOverride: undefined,
+        packageRegistryUrl: undefined,
+      });
     });
   });
 });

@@ -70,33 +70,43 @@ ph service restart
 
 ### Via `ph connect config`
 
-The CLI provides flag-based read/write access to every `connect.*` field. The same flag set works on `ph connect build` and `ph connect config` — pick whichever fits your workflow (build-time vs. live edit on a deployed dist).
+The CLI provides positional, flag, and bulk-JSON read/write access to every `connect.*` field. The same surface works on `ph connect build` and `ph connect config` — pick whichever fits your workflow (build-time vs. live edit on a deployed dist).
 
 ```bash
 # Show the effective connect.* block (list mode)
 ph connect config
 
-# Read a single value
+# Read a single value — positional <key>, or equivalently --get
+ph connect config connect.renown.url
 ph connect config --get connect.renown.url
 
-# Set a single value
+# Set a single value — positional <key> <value>, or equivalently a per-field flag
+ph connect config connect.renown.url "https://renown.staging.example"
+ph connect config connect.renown.chainId 137
+ph connect config connect.drives.allowAddDrive false
 ph connect config --renown-url "https://renown.staging.example"
 ph connect config --renown-chain-id 137
 ph connect config --allow-add-drive false
 
-# Bulk update via JSON patch (for fields outside the flag set or multi-field changes)
+# Bulk update via JSON patch (required for arrays/objects; useful for multi-field changes)
 ph connect config --json '{"renown":{"url":"https://x"},"drives":{"sections":{"remote":{"enabled":false}}}}'
 ```
 
-Writes are dual-target: the source `powerhouse.config.json` is updated (next build picks it up) and, if the dist file exists, it is patched as well (the currently-served SPA picks up the change on its next refresh). Invalid types fail loudly before any write; `--json` payloads are additionally Ajv-validated against the runtime schema.
+Positional `<value>` is JSON-parsed first (so `137` → number, `false` → boolean) then schema-validated against the path. Strings without quotes pass through as bare strings. Arrays and objects should go through `--json` instead.
 
-Mutually exclusive: `--get`, `--json`, and any field flag can't be combined in one call — pick exactly one mode per invocation.
+Writes are dual-target: the source `powerhouse.config.json` is updated (next build picks it up) and, if the dist file exists, it is patched as well (the currently-served SPA picks up the change on its next refresh). Invalid types fail loudly before any write; both positional and `--json` payloads are Ajv-validated against the runtime schema.
 
-### At build time via flags
+Mutually exclusive: positional `<key>` / `<key> <value>`, `--get`, `--json`, and any field flag can't be combined in one call — pick exactly one mode per invocation.
 
-`ph connect build` accepts the same field flags (and `--json`) to bake values into the dist:
+### At build time via positional / flags / JSON
+
+`ph connect build` accepts the same positional `<key> <value>` pair, per-field flags, and `--json` to bake values into the dist:
 
 ```bash
+# Positional override (single field)
+ph connect build connect.renown.url https://renown.staging.example
+
+# Per-field flags (combinable)
 ph connect build \
   --renown-url https://renown.staging.example \
   --renown-chain-id 137 \

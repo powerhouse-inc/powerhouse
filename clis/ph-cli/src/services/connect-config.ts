@@ -3,8 +3,10 @@
 // Mode dispatch (exactly one mode per invocation; mutex enforced below):
 //
 //   ph connect config                              → list mode (print effective merged config)
-//   ph connect config --get <dotted.path>          → get mode (print one value)
-//   ph connect config --<field> <value>            → set mode (dual-write source + dist)
+//   ph connect config <key>                        → get mode (positional)
+//   ph connect config --get <dotted.path>          → get mode (flag form, equivalent)
+//   ph connect config <key> <value>                → set mode (positional, dual-write source + dist)
+//   ph connect config --<field> <value>            → set mode (flag form)
 //   ph connect config --json '{...}'               → bulk-set mode (dual-write)
 //
 // Dual-write semantics for set / bulk-set:
@@ -45,6 +47,8 @@ import {
 } from "../utils/cli-connect-override.js";
 import {
   normalizeKey,
+  parseCliValue,
+  validateConnectKeyValue,
   validateConnectPatch,
 } from "../utils/connect-config-validation.js";
 import { getAtPath } from "../utils/get-at-path.js";
@@ -157,7 +161,12 @@ function argsToFlagInput(args: ConnectConfigArgs): ConnectFlagInput {
  */
 function hasAnyFieldFlag(input: ConnectFlagInput): boolean {
   // Object.values doesn't include json (which isn't in ConnectFlagInput here).
-  return Object.values(input).some((v) => v !== undefined);
+  // Cast to a generic record so the `!== undefined` predicate is type-aware:
+  // ConnectFlagInput's optional properties narrow `v` in a way TS thinks
+  // excludes `undefined`, even though at runtime any of them can be unset.
+  return Object.values(input as Record<string, unknown>).some(
+    (v) => v !== undefined,
+  );
 }
 
 export async function runConnectConfig(args: ConnectConfigArgs): Promise<void> {
@@ -184,17 +193,27 @@ export async function runConnectConfig(args: ConnectConfigArgs): Promise<void> {
   // place and the mutex counts it as a "field flag".
   const explicitRegistry = args.packagesRegistry;
   const hasExplicitRegistry = explicitRegistry !== undefined;
+  // Positional pair: 1 positional = get, 2 = set. cmd-ts assigns the first
+  // positional to `keyPositional` and the second to `valuePositional`, so a
+  // standalone <value> isn't representable here.
+  const hasPositionalKey = args.keyPositional !== undefined;
+  const hasPositionalValue = args.valuePositional !== undefined;
+  const hasPositional = hasPositionalKey;
 
-  // Mutex: get / json / (any field flag OR --packages-registry) are mutually
-  // exclusive. Exactly one mode (or none → list) per call.
+  // Mutex: positional / --get / --json / (any field flag OR
+  // --packages-registry) are mutually exclusive. Exactly one mode (or none →
+  // list) per call. Counting positional as a single mode regardless of arity:
+  // a `<key>` alone is a get, `<key> <value>` is a set, both occupy the same
+  // "positional mode" slot vs. the other forms.
   const modeCount = [
+    hasPositional,
     hasGet,
     hasJson,
     hasFieldFlag || hasExplicitRegistry,
   ].filter(Boolean).length;
   if (modeCount > 1) {
     throw new Error(
-      "ph connect config: --get, --json, and individual field flags are mutually exclusive. Use one mode per invocation.",
+      "ph connect config: positional <key>/<value>, --get, --json, and individual field flags are mutually exclusive. Use one mode per invocation.",
     );
   }
 
@@ -206,12 +225,14 @@ export async function runConnectConfig(args: ConnectConfigArgs): Promise<void> {
     return;
   }
 
-  // Get mode.
-  if (hasGet) {
-    const normalized = normalizeKey(args.get!);
+  // Get mode (either positional `<key>` alone or `--get <key>`).
+  if (hasGet || (hasPositional && !hasPositionalValue)) {
+    const rawKey = hasGet ? args.get! : args.keyPositional!;
+    const sourceLabel = hasGet ? "--get" : "<key>";
+    const normalized = normalizeKey(rawKey);
     if (!normalized) {
       throw new Error(
-        "ph connect config --get: key cannot be empty. Pass a dotted path inside connect.* (e.g. --get connect.renown.url).",
+        `ph connect config ${sourceLabel}: key cannot be empty. Pass a dotted path inside connect.* (e.g. connect.renown.url).`,
       );
     }
     // `packageRegistryUrl` is a top-level field — look it up on the raw
@@ -220,7 +241,7 @@ export async function runConnectConfig(args: ConnectConfigArgs): Promise<void> {
       const value = source.packageRegistryUrl;
       if (value === undefined) {
         throw new Error(
-          `ph connect config --get: no value at key "${normalized}". Run \`ph connect config\` (no args) to see the available paths.`,
+          `ph connect config ${sourceLabel}: no value at key "${normalized}". Run \`ph connect config\` (no args) to see the available paths.`,
         );
       }
       printJson(value);
@@ -229,21 +250,46 @@ export async function runConnectConfig(args: ConnectConfigArgs): Promise<void> {
     const value = getAtPath(effectiveConnect(source), stringToPath(normalized));
     if (value === undefined) {
       throw new Error(
-        `ph connect config --get: no value at key "${normalized}". Run \`ph connect config\` (no args) to see the available paths.`,
+        `ph connect config ${sourceLabel}: no value at key "${normalized}". Run \`ph connect config\` (no args) to see the available paths.`,
       );
     }
     printJson(value);
     return;
   }
 
-  // Set / bulk-set mode. Build the connect-side patch from --json (Ajv-
-  // validated) or from field flags (shape is guaranteed by cmd-ts type
-  // coercion). `--packages-registry` is handled separately as a top-level
-  // field; if `--json` carries a top-level `packageRegistryUrl`, route that
-  // the same way and strip it from the connect-side patch.
+  // Set / bulk-set mode. Build the connect-side patch from positional
+  // `<key> <value>` (Ajv-validated against the schema at that path), --json
+  // (Ajv-validated as a partial connect.* blob), or individual field flags
+  // (shape guaranteed by cmd-ts type coercion). `--packages-registry` is a
+  // top-level field; if positional `<key>` is `packageRegistryUrl` or --json
+  // carries it, route that to the top-level write.
   let topLevelRegistry: string | undefined = explicitRegistry;
   let patch: ConnectPartial;
-  if (hasJson) {
+  if (hasPositional && hasPositionalValue) {
+    const normalized = normalizeKey(args.keyPositional!);
+    if (!normalized) {
+      throw new Error(
+        "ph connect config <key>: key cannot be empty. Pass a dotted path inside connect.* (e.g. connect.renown.url).",
+      );
+    }
+    // Top-level: positional `packageRegistryUrl <value>` writes the top-level
+    // field instead of a connect.* path.
+    if (normalized === "packageRegistryUrl") {
+      const parsed = parseCliValue(args.valuePositional!);
+      if (typeof parsed !== "string") {
+        throw new Error(
+          `ph connect config: packageRegistryUrl must be a string (got ${typeof parsed}).`,
+        );
+      }
+      topLevelRegistry = parsed;
+      patch = {};
+    } else {
+      patch = validateConnectKeyValue(
+        normalized,
+        args.valuePositional!,
+      ) as ConnectPartial;
+    }
+  } else if (hasJson) {
     const validated = validateConnectPatch(args.json!) as Record<
       string,
       unknown

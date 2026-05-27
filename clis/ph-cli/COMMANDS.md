@@ -476,7 +476,15 @@ show help<br><br>
 
 ## Connect Build
 The Connect build command creates a production build with the project's local and
-external packages included
+external packages included.
+
+Runtime-config overrides (all combinable — last wins on collision):
+  ph connect build                                    Build with the current source config.
+  ph connect build <key> <value>                      Build with a positional override applied (e.g. ph connect build connect.renown.url https://renown.staging).
+  ph connect build --<field> <value>                  Build with a per-field flag override (e.g. --renown-url https://renown.staging).
+  ph connect build --json '{"…":"…"}'                Build with a bulk override.
+
+Build has no read mode; passing only <key> without <value> errors out (use `ph connect config <key>` to read).
 
 ### options
 #### Out Dir <br>
@@ -579,6 +587,16 @@ The default drives url to use in connect<br><br>
 The preservation strategy to use on default drives<br><br>
 **usage:** `--drive-preserve-strategy <value>`<br>
 **default**: `preserve-by-url-and-detach`
+
+### arguments
+#### Key <br>
+Dotted path inside the runtime config (e.g. connect.renown.url). Pair with <value> to set; pass alone to `ph connect config` to read.<br><br>
+**usage:** `[key]`<br>
+
+#### Value <br>
+Value to set at <key>. Coerced against the runtime schema (string, bool, number, enum). Arrays and objects require --json instead.<br><br>
+**usage:** `[value]`<br>
+
 
 ### flags
 #### Ignore Local <br>

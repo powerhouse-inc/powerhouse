@@ -34,6 +34,8 @@ function mk(partial: Partial<ConnectConfigArgs>): ConnectConfigArgs {
     sentryDsn: undefined,
     sentryEnv: undefined,
     sentryTracingEnabled: undefined,
+    keyPositional: undefined,
+    valuePositional: undefined,
     connectBasePath: "/",
     logLevel: "info",
     defaultDrivesUrl: "",
@@ -381,6 +383,167 @@ describe("ph connect config", () => {
       expect(sentry.dsn).toBeNull();
       // Sibling preserved
       expect(sentry.env).toBe("prod");
+    });
+  });
+
+  describe("positional <key> / <key> <value>", () => {
+    it("positional <key> alone reads the effective value (get mode)", async () => {
+      writeSource({
+        connect: { renown: { url: "https://renown.staging" } },
+      });
+
+      await runConnectConfig(mk({ keyPositional: "connect.renown.url" }));
+
+      expect(stdoutChunks.join("")).toContain("https://renown.staging");
+    });
+
+    it("positional <key> on packageRegistryUrl reads the top-level field", async () => {
+      writeSource({
+        packageRegistryUrl: "https://my.registry",
+        connect: {},
+      });
+
+      await runConnectConfig(mk({ keyPositional: "packageRegistryUrl" }));
+
+      expect(stdoutChunks.join("")).toContain("https://my.registry");
+    });
+
+    it("positional <key> with empty key throws", async () => {
+      writeSource({ connect: {} });
+      await expect(runConnectConfig(mk({ keyPositional: "" }))).rejects.toThrow(
+        /key cannot be empty/,
+      );
+    });
+
+    it("positional <key> <value> sets a string field and dual-writes", async () => {
+      writeSource({ connect: {} });
+      writeDist({ connect: {} });
+
+      await runConnectConfig(
+        mk({
+          keyPositional: "connect.renown.url",
+          valuePositional: "https://renown.staging",
+        }),
+      );
+
+      const source = readJson(join(tmpDir, SOURCE_FILE));
+      expect(
+        (source.connect as Record<string, Record<string, unknown>>).renown.url,
+      ).toBe("https://renown.staging");
+      const dist = readJson(join(tmpDir, DEFAULT_DIST, SOURCE_FILE));
+      expect(
+        (dist.connect as Record<string, Record<string, unknown>>).renown.url,
+      ).toBe("https://renown.staging");
+    });
+
+    it("positional <key> <value> coerces a boolean", async () => {
+      writeSource({ connect: {} });
+
+      await runConnectConfig(
+        mk({
+          keyPositional: "connect.drives.allowAddDrive",
+          valuePositional: "false",
+        }),
+      );
+
+      const source = readJson(join(tmpDir, SOURCE_FILE));
+      expect(
+        (source.connect as Record<string, Record<string, unknown>>).drives
+          .allowAddDrive,
+      ).toBe(false);
+    });
+
+    it("positional <key> <value> coerces a number", async () => {
+      writeSource({ connect: {} });
+
+      await runConnectConfig(
+        mk({
+          keyPositional: "connect.renown.chainId",
+          valuePositional: "137",
+        }),
+      );
+
+      const source = readJson(join(tmpDir, SOURCE_FILE));
+      expect(
+        (source.connect as Record<string, Record<string, unknown>>).renown
+          .chainId,
+      ).toBe(137);
+    });
+
+    it("positional <key> <value> validates against the schema (rejects wrong type)", async () => {
+      writeSource({ connect: {} });
+      await expect(
+        runConnectConfig(
+          mk({
+            keyPositional: "connect.renown.chainId",
+            valuePositional: "abc",
+          }),
+        ),
+      ).rejects.toThrow(/validation failed/);
+    });
+
+    it("positional <key> <value> rejects an unknown dotted path", async () => {
+      writeSource({ connect: {} });
+      await expect(
+        runConnectConfig(
+          mk({
+            keyPositional: "connect.doesNotExist",
+            valuePositional: "x",
+          }),
+        ),
+      ).rejects.toThrow(/validation failed/);
+    });
+
+    it("positional <key> <value> writes packageRegistryUrl at the top level", async () => {
+      writeSource({ connect: {} });
+
+      await runConnectConfig(
+        mk({
+          keyPositional: "packageRegistryUrl",
+          valuePositional: "https://my.registry",
+        }),
+      );
+
+      const source = readJson(join(tmpDir, SOURCE_FILE));
+      expect(source.packageRegistryUrl).toBe("https://my.registry");
+    });
+
+    it("mutex: positional + --get throws", async () => {
+      writeSource({ connect: {} });
+      await expect(
+        runConnectConfig(
+          mk({
+            keyPositional: "connect.renown.url",
+            get: "connect.renown.networkId",
+          }),
+        ),
+      ).rejects.toThrow(/mutually exclusive/);
+    });
+
+    it("mutex: positional + --json throws", async () => {
+      writeSource({ connect: {} });
+      await expect(
+        runConnectConfig(
+          mk({
+            keyPositional: "connect.renown.url",
+            valuePositional: "https://x",
+            json: '{"renown":{"url":"https://y"}}',
+          }),
+        ),
+      ).rejects.toThrow(/mutually exclusive/);
+    });
+
+    it("mutex: positional + field flag throws", async () => {
+      writeSource({ connect: {} });
+      await expect(
+        runConnectConfig(
+          mk({
+            keyPositional: "connect.renown.url",
+            valuePositional: "https://x",
+            renownUrl: "https://y",
+          }),
+        ),
+      ).rejects.toThrow(/mutually exclusive/);
     });
   });
 });

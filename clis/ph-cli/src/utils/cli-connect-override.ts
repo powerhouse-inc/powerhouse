@@ -17,6 +17,11 @@
 import type { PHConnectRuntimeConfig } from "@powerhousedao/shared/clis";
 import { deepMerge } from "@powerhousedao/shared/connect";
 import type { ConnectBuildArgs, ConnectStudioArgs } from "../types.js";
+import {
+  normalizeKey,
+  parseCliValue,
+  validateConnectKeyValue,
+} from "./connect-config-validation.js";
 import { parseDefaultDrivesUrl } from "./parse-default-drives.js";
 
 type PlainObject = Record<string, unknown>;
@@ -244,13 +249,45 @@ export function buildCliConnectOverride(args: ConnectBuildArgs): {
   };
 
   const fromFlags = buildConnectFlagPatch(input);
-  // Top-level `packageRegistryUrl` can come from --json (top-level) or from
-  // --packages-registry. The flag wins on collision.
+
+  // Positional `<key> <value>` override (only set when both are present;
+  // `runConnectBuild` rejects the 1-positional case up front because build
+  // has no read mode). Layered on top of --json + flags so a positional
+  // override wins on collision — matches the user's literal command line.
+  let positionalRegistry: string | undefined;
+  let fromPositional: PlainObject = {};
+  if (args.keyPositional !== undefined && args.valuePositional !== undefined) {
+    const normalized = normalizeKey(args.keyPositional);
+    if (!normalized) {
+      throw new Error(
+        "ph connect build: positional <key> cannot be empty. Pass a dotted path inside connect.* (e.g. connect.renown.url).",
+      );
+    }
+    if (normalized === "packageRegistryUrl") {
+      const parsed = parseCliValue(args.valuePositional);
+      if (typeof parsed !== "string") {
+        throw new Error(
+          `ph connect build: positional packageRegistryUrl must be a string (got ${typeof parsed}).`,
+        );
+      }
+      positionalRegistry = parsed;
+    } else {
+      fromPositional = validateConnectKeyValue(
+        normalized,
+        args.valuePositional,
+      );
+    }
+  }
+
+  // Top-level `packageRegistryUrl` can come from --json (top-level),
+  // --packages-registry flag, or positional `packageRegistryUrl <value>`.
+  // Precedence (highest → lowest): positional > flag > --json.
   const jsonRegistry =
     typeof fromJson.packageRegistryUrl === "string"
       ? (fromJson.packageRegistryUrl as string)
       : undefined;
-  const packageRegistryUrl = args.packagesRegistry ?? jsonRegistry;
+  const packageRegistryUrl =
+    positionalRegistry ?? args.packagesRegistry ?? jsonRegistry;
   // Strip the top-level field from the JSON patch before deep-merging into
   // the connect partial — it isn't a `connect.*` field.
   const jsonConnect = { ...fromJson };
@@ -258,12 +295,16 @@ export function buildCliConnectOverride(args: ConnectBuildArgs): {
 
   const hasJsonConnect = Object.keys(jsonConnect).length > 0;
   const hasFlags = Object.keys(fromFlags).length > 0;
+  const hasPositional = Object.keys(fromPositional).length > 0;
   const connectOverride =
-    !hasJsonConnect && !hasFlags
+    !hasJsonConnect && !hasFlags && !hasPositional
       ? undefined
       : deepMerge(
-          jsonConnect as PHConnectRuntimeConfig,
-          fromFlags as PHConnectRuntimeConfig,
+          deepMerge(
+            jsonConnect as PHConnectRuntimeConfig,
+            fromFlags as PHConnectRuntimeConfig,
+          ),
+          fromPositional as PHConnectRuntimeConfig,
         );
 
   return { connectOverride, packageRegistryUrl };

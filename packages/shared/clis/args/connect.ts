@@ -1,5 +1,5 @@
 import type { Type } from "cmd-ts";
-import { number, option, optional, string } from "cmd-ts";
+import { number, option, optional, positional, string } from "cmd-ts";
 import {
   DEFAULT_CONNECT_OUTDIR,
   DEFAULT_CONNECT_PREVIEW_PORT,
@@ -155,6 +155,26 @@ const connectRuntimeOverrideArgs = {
   }),
 };
 
+// Positional pair shared by `ph connect build` and `ph connect config`. Both
+// commands accept `<key> <value>` to set a single runtime-config field; `config`
+// additionally accepts `<key>` alone for read-mode (`build` rejects the
+// 1-positional case because it has no read semantics). Both are optional in the
+// parser; the handler enforces the per-command shape.
+const connectPositionalArgs = {
+  keyPositional: positional({
+    type: optional(string),
+    displayName: "key",
+    description:
+      "Dotted path inside the runtime config (e.g. connect.renown.url). Pair with <value> to set; pass alone to `ph connect config` to read.",
+  }),
+  valuePositional: positional({
+    type: optional(string),
+    displayName: "value",
+    description:
+      "Value to set at <key>. Coerced against the runtime schema (string, bool, number, enum). Arrays and objects require --json instead.",
+  }),
+};
+
 export const connectBuildArgs = {
   outDir: option({
     type: string,
@@ -164,6 +184,7 @@ export const connectBuildArgs = {
     defaultValueIsSerializable: true,
   }),
   ...connectRuntimeOverrideArgs,
+  ...connectPositionalArgs,
   ...commonArgs,
 };
 
@@ -193,17 +214,21 @@ export const connectPreviewArgs = {
 // `runConnectConfig`):
 //
 //   ph connect config                       → list (print effective merged config)
-//   ph connect config --get <dotted.path>   → get one value at the dotted key
-//   ph connect config --<field> <value>     → set + dual-write to source + dist
+//   ph connect config <key>                 → get one value at the dotted key (positional)
+//   ph connect config --get <dotted.path>   → same as positional <key> (kept for backward compat)
+//   ph connect config <key> <value>         → set + dual-write to source + dist (positional)
+//   ph connect config --<field> <value>     → set + dual-write via per-field flag
 //   ph connect config --json '{"…":"…"}'   → bulk set + dual-write
 //
 // The 15 field flags below come from `connectRuntimeOverrideArgs`, so
 // `config` and `build` share an identical surface for runtime fields. The 4
 // flags imported individually from `common.ts` (`connectBasePath` /
 // `logLevel` / `defaultDrivesUrl` / `drivesPreserveStrategy`) extend that to
-// 19-flag coverage. `--dist-dir` lets Docker / non-default deployments point
-// at a custom dist location; falls back to PH_CONNECT_OUTDIR env, then to
-// the standard `.ph/connect-build/dist/` path.
+// 19-flag coverage. The positional `<key>`/`<value>` pair is also shared with
+// `ph connect build` so both commands accept the same set-mode grammar.
+// `--dist-dir` lets Docker / non-default deployments point at a custom dist
+// location; falls back to PH_CONNECT_OUTDIR env, then to the standard
+// `.ph/connect-build/dist/` path.
 //
 // NOTE: the 4 commonArgs flags have built-in cmd-ts defaults
 // (e.g. logLevel="info"), so always parse as defined. The service detects
@@ -214,7 +239,7 @@ export const connectConfigArgs = {
     type: optional(string),
     long: "get",
     description:
-      'Dotted path inside connect.* (e.g. "connect.renown.url") to read the effective value. Mutually exclusive with the set modes.',
+      'Dotted path inside connect.* (e.g. "connect.renown.url") to read the effective value. Mutually exclusive with the set modes. Equivalent to `ph connect config <key>` (positional).',
   }),
   distDir: option({
     type: optional(string),
@@ -223,6 +248,7 @@ export const connectConfigArgs = {
       "Path to the directory containing the dist powerhouse.config.json. Defaults to the PH_CONNECT_OUTDIR env or `.ph/connect-build/dist/`.",
   }),
   ...connectRuntimeOverrideArgs,
+  ...connectPositionalArgs,
   connectBasePath,
   logLevel,
   defaultDrivesUrl,

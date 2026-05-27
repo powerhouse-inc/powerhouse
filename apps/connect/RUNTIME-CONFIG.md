@@ -96,13 +96,14 @@ Two special-case writers also exist:
 
 **Manual edit.** The source `powerhouse.config.json` lives in the project root next to `package.json`. It carries top-level keys for other tooling too (`studio.port`, `reactor.*`, `auth.*`, `documentModelsDir`, etc.); those keys pass through Connect's loader untouched.
 
-**`ph connect config`.** Three modes (mutually exclusive):
+**`ph connect config`.** Four modes (mutually exclusive — positional, `--get`, `--json`, and field flags cannot be combined):
 
 - No args → list mode: prints the effective `connect.*` block (defaults + source).
-- `--get <dotted.path>` → prints a single value (also works for top-level `--get packageRegistryUrl`).
-- `--<field> <value>` or `--json '{...}'` → set mode: Ajv-validates the patch and dual-writes to source and dist (dist is skipped silently if no build has happened yet).
+- `<key>` (positional) or `--get <dotted.path>` → prints a single value at the dotted path (also works for top-level `packageRegistryUrl`).
+- `<key> <value>` (positional) or `--<field> <value>` → set mode: Ajv-validates the value against the schema at that path and dual-writes to source and dist (dist is skipped silently if no build has happened yet). Coercion is JSON-aware — `true`/`false`/numbers parse correctly; arrays and objects should go through `--json` instead.
+- `--json '{...}'` → bulk-set mode: validates the full patch and dual-writes.
 
-**`ph connect build` flags.** The full flag matrix — `--base` IS available here (build-time field). The 4 flags inherited from `commonArgs` (`--base`, `--log-level`, `--default-drives-url`, `--drive-preserve-strategy`) carry cmd-ts defaults, so they're gated through `wasFlagExplicitlyPassed` — if the user didn't type the flag, the source value wins. CLI flags beat source.
+**`ph connect build` overrides.** Three combinable forms (last wins on collision): `<key> <value>` positional, `--<field> <value>` per-field flag, or `--json '{...}'` bulk. The same shared spec drives both `build` and `config`, so the positional grammar matches. **`--base` IS available here** (build-time field). The 4 flags inherited from `commonArgs` (`--base`, `--log-level`, `--default-drives-url`, `--drive-preserve-strategy`) carry cmd-ts defaults, so they're gated through `wasFlagExplicitlyPassed` — if the user didn't type the flag, the source value wins. CLI overrides beat source. Build has no read mode; passing only `<key>` without `<value>` errors with a pointer to `ph connect config <key>`.
 
 **`--base` is build-time only.** `ph connect build --base /foo` writes `connect.app.basePath` AND bakes the value into the Vite bundle's asset URLs AND templates the nginx config. `ph connect config --base /foo` would only write the first one, leaving the SPA's router and the deployed assets disagreeing — so `ph connect config` rejects `--base` up front with an actionable error pointing at `ph connect build --base`.
 
@@ -204,7 +205,7 @@ docker run -e PH_CONNECT_CONFIG_JSON='{
 `dsn: null` (the default) disables Sentry — the SPA never loads the Sentry SDK chunk. The Sentry **release** tag, in contrast, stays build-time (stamped via Vite's `define` from `WORKSPACE_VERSION`) so it always matches the sourcemap upload tag CI used.
 
 **"I want to verify what Connect will actually use without booting it."**
-`ph connect config` (no args) prints the effective `connect.*` block (defaults merged with source). `ph connect config --get connect.renown.url` prints a single value.
+`ph connect config` (no args) prints the effective `connect.*` block (defaults merged with source). `ph connect config connect.renown.url` (or the equivalent `--get connect.renown.url`) prints a single value.
 
 ## Reference: key files
 
