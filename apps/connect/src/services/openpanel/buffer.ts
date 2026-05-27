@@ -49,18 +49,24 @@ function defaultOnError(err: unknown): void {
  * Forward a single event to the active client, swallowing any throw.
  * Errors are routed to `errorHandler` if set, otherwise `defaultOnError`.
  *
- * Uses `Promise.resolve().catch()` so that both synchronous throws and
- * rejected-promise returns from `client.track` are captured — a plain
- * try/catch only handles the synchronous case.
+ * The outer try/catch handles synchronous throws from `client.track`.
+ * The inner `.catch()` handles rejected promises returned by `client.track`.
+ * Both failure modes are needed: `Promise.resolve().catch()` alone cannot
+ * catch a synchronous throw because the argument is evaluated before the
+ * promise wrapper is applied.
  */
 function forward(
   client: OpenPanelTracker,
   name: string,
   props: Record<string, unknown> | undefined,
 ): void {
-  Promise.resolve(client.track(name, props)).catch((err) =>
-    (errorHandler ?? defaultOnError)(err),
-  );
+  try {
+    Promise.resolve(client.track(name, props)).catch((err) =>
+      (errorHandler ?? defaultOnError)(err),
+    );
+  } catch (err) {
+    (errorHandler ?? defaultOnError)(err);
+  }
 }
 
 // ---------------------------------------------------------------------------
