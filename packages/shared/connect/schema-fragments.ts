@@ -77,25 +77,9 @@ export const phConnectRuntimeConfigSchema = {
             "Browser tab title and any in-app brand text. Defaults to 'Powerhouse Connect'.",
         },
         homeBackground: {
+          type: ["string", "null"],
           description:
-            "Optional hero image on the empty home screen. Provide AVIF for the modern path and a PNG/JPG fallback.",
-          oneOf: [
-            { type: "null" },
-            {
-              type: "object",
-              additionalProperties: false,
-              properties: {
-                avif: {
-                  type: "string",
-                  description: "URL or path to AVIF asset (preferred).",
-                },
-                png: {
-                  type: "string",
-                  description: "URL or path to PNG/JPG fallback.",
-                },
-              },
-            },
-          ],
+            "Hero image on the empty home screen. URL or path to override; null or omitted uses the bundled default image.",
         },
       },
     },

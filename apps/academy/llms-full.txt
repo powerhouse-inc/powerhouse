@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-05-27T17:47:31.739Z
+> Generated: 2026-05-27T20:36:48.976Z
 > Total Documents: 86
 > Source: https://powerhouse.academy/llms-full.txt
 
@@ -13685,7 +13685,7 @@ Every `connect.*` field has a dedicated flag. Both `ph connect config` and `ph c
 | `connect.packages.externalEnabled`           | `--external-packages`          | boolean                                      |
 | `connect.packages.registryUrl`               | `--packages-registry`          | string                                       |
 | `connect.branding.appName`                   | `--app-name`                   | string                                       |
-| `connect.branding.homeBackground`            | `--home-background`            | string (pass `""` to set `null`)             |
+| `connect.branding.homeBackground`            | `--home-background`            | string (pass `""` to reset to bundled image) |
 | `connect.drives.allowAddDrive`               | `--allow-add-drive`            | boolean                                      |
 | `connect.drives.defaultDrives`               | `--default-drives-url`         | comma-list → array of `{url, name, icon}`    |
 | `connect.drives.preserveStrategy`            | `--drive-preserve-strategy`    | `preserve-all \| preserve-by-url-and-detach` |
@@ -18340,7 +18340,7 @@ Build has no read mode; passing only <key> without <value> errors out (use `ph c
 
 **App Name** - Override connect.branding.appName. - Usage: `--app-name <str>`
 
-**Home Background** - Override connect.branding.homeBackground. Pass an empty string ("") to set null. - Usage: `--home-background <str>`
+**Home Background** - Override connect.branding.homeBackground. URL or path to an image; pass an empty string ("") to reset to the bundled default. - Usage: `--home-background <str>`
 
 **Sentry Dsn** - Override connect.sentry.dsn (Sentry DSN URL). Pass an empty string ("") to set null and disable Sentry. - Usage: `--sentry-dsn <str>`
 

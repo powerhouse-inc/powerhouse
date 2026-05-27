@@ -109,7 +109,7 @@ describe("runtime-config schema", () => {
       connect: {
         branding: {
           appName: "Test",
-          homeBackground: { avif: "/a.avif", png: "/a.png" },
+          homeBackground: "/a.png",
         },
         app: {
           logLevel: "debug",

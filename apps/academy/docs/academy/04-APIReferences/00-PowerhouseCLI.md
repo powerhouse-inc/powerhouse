@@ -611,7 +611,7 @@ Build has no read mode; passing only <key> without <value> errors out (use `ph c
 
 **App Name** - Override connect.branding.appName. - Usage: `--app-name <str>`
 
-**Home Background** - Override connect.branding.homeBackground. Pass an empty string ("") to set null. - Usage: `--home-background <str>`
+**Home Background** - Override connect.branding.homeBackground. URL or path to an image; pass an empty string ("") to reset to the bundled default. - Usage: `--home-background <str>`
 
 **Sentry Dsn** - Override connect.sentry.dsn (Sentry DSN URL). Pass an empty string ("") to set null and disable Sentry. - Usage: `--sentry-dsn <str>`
 

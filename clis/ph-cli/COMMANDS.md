@@ -548,7 +548,7 @@ Override connect.branding.appName.<br><br>
 **usage:** `--app-name <str>`<br>
 
 #### Home Background <br>
-Override connect.branding.homeBackground. Pass an empty string ("") to set null.<br><br>
+Override connect.branding.homeBackground. URL or path to an image; pass an empty string ("") to reset to the bundled default.<br><br>
 **usage:** `--home-background <str>`<br>
 
 #### Sentry Dsn <br>

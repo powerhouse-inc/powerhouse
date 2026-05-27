@@ -132,7 +132,7 @@ Every `connect.*` field has a dedicated flag. Both `ph connect config` and `ph c
 | `connect.packages.externalEnabled`           | `--external-packages`          | boolean                                      |
 | `connect.packages.registryUrl`               | `--packages-registry`          | string                                       |
 | `connect.branding.appName`                   | `--app-name`                   | string                                       |
-| `connect.branding.homeBackground`            | `--home-background`            | string (pass `""` to set `null`)             |
+| `connect.branding.homeBackground`            | `--home-background`            | string (pass `""` to reset to bundled image) |
 | `connect.drives.allowAddDrive`               | `--allow-add-drive`            | boolean                                      |
 | `connect.drives.defaultDrives`               | `--default-drives-url`         | comma-list → array of `{url, name, icon}`    |
 | `connect.drives.preserveStrategy`            | `--drive-preserve-strategy`    | `preserve-all \| preserve-by-url-and-detach` |

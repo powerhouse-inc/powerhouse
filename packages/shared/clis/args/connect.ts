@@ -134,7 +134,7 @@ const connectRuntimeOverrideArgs = {
     type: optional(string),
     long: "home-background",
     description:
-      'Override connect.branding.homeBackground. Pass an empty string ("") to set null.',
+      'Override connect.branding.homeBackground. URL or path to an image; pass an empty string ("") to reset to the bundled default.',
   }),
   sentryDsn: option({
     type: optional(string),

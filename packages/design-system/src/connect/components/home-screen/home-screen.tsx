@@ -4,7 +4,7 @@ import { HomeBackgroundImage } from "./home-background-image.js";
 type HomeScreenProps = {
   readonly children: React.ReactNode;
   readonly containerClassName?: string;
-  readonly homeBackground?: { avif?: string; png?: string } | null;
+  readonly homeBackground?: string | null;
 };
 
 export const HomeScreen = function HomeScreen(props: HomeScreenProps) {
@@ -17,12 +17,7 @@ export const HomeScreen = function HomeScreen(props: HomeScreenProps) {
       )}
     >
       <div className="m-8 flex flex-wrap justify-center gap-4 bg-white pt-12 dark:bg-slate-900">
-        {homeBackground !== null && (
-          <HomeBackgroundImage
-            avifSrc={homeBackground?.avif}
-            pngSrc={homeBackground?.png}
-          />
-        )}
+        <HomeBackgroundImage src={homeBackground ?? undefined} />
         {children}
       </div>
     </div>

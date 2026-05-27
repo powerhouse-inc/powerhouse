@@ -30,7 +30,7 @@ export type PowerhousePackage = {
 
 export type PHConnectBranding = {
   appName?: string;
-  homeBackground?: { avif?: string; png?: string } | null;
+  homeBackground?: string | null;
 };
 
 export type PHConnectDefaultDrive = {
