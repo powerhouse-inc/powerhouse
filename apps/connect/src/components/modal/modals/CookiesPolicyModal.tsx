@@ -22,7 +22,7 @@ export const CookiesPolicyModal: React.FC = () => {
           }}
         />
       }
-      bodyProps={{ className: "text-left" }}
+      bodyClassName="text-left"
       closeLabel="Close"
       onContinue={() => closePHModal()}
       overlayProps={{ style: { zIndex: 10000 } }}

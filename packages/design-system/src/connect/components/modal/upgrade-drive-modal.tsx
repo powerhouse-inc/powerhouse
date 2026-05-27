@@ -1,7 +1,6 @@
 import type { ComponentPropsWithoutRef } from "react";
 
 import { Modal } from "#design-system";
-import { twMerge } from "tailwind-merge";
 import { ModalButton } from "./modal-button.js";
 
 export type ConnectUpgradeDriveModalProps = ComponentPropsWithoutRef<
@@ -29,10 +28,7 @@ export function ConnectUpgradeDriveModal(props: ConnectUpgradeDriveModalProps) {
 
   return (
     <Modal
-      contentProps={{
-        ...contentProps,
-        className: twMerge("rounded-3xl", contentProps?.className),
-      }}
+      contentProps={contentProps}
       onOpenChange={onOpenChange}
       overlayProps={{
         ...overlayProps,

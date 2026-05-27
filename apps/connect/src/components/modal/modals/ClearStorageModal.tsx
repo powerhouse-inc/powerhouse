@@ -38,7 +38,6 @@ export function ClearStorageModal() {
     <ConnectConfirmationModal
       open={open}
       header={t("modals.connectSettings.clearStorage.confirmation.title")}
-      title={t("modals.connectSettings.clearStorage.confirmation.title")}
       body={t("modals.connectSettings.clearStorage.confirmation.body")}
       cancelLabel={t("common.cancel")}
       continueLabel={t(
@@ -49,9 +48,7 @@ export function ClearStorageModal() {
       onOpenChange={(status: boolean) => {
         if (!status) return closePHModal();
       }}
-      continueButtonProps={{
-        disabled: loading,
-      }}
+      continueDisabled={loading}
     />
   );
 }

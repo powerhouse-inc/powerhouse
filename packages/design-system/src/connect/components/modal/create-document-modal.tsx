@@ -2,7 +2,6 @@ import { Icon, Modal } from "#design-system";
 import { isValidName } from "@powerhousedao/shared/document-drive";
 import type { ComponentPropsWithoutRef } from "react";
 import { useCallback, useState } from "react";
-import { twMerge } from "tailwind-merge";
 import { FormInput } from "../form-input/form-input.js";
 import { ModalButton } from "./modal-button.js";
 
@@ -45,10 +44,7 @@ export function CreateDocumentModal(props: CreateDocumentModalProps) {
 
   return (
     <Modal
-      contentProps={{
-        ...contentProps,
-        className: twMerge("rounded-3xl", contentProps?.className),
-      }}
+      contentProps={contentProps}
       onOpenChange={onOpenChange}
       overlayProps={{
         ...overlayProps,

@@ -31,7 +31,7 @@ const FormItem = React.forwardRef<
 
   return (
     <FormItemContext.Provider value={{ id }}>
-      <div ref={ref} className={twMerge("", className)} {...props} />
+      <div ref={ref} className={className} {...props} />
     </FormItemContext.Provider>
   );
 });
@@ -85,7 +85,10 @@ const FormDescription = React.forwardRef<
     <p
       ref={ref}
       id={formDescriptionId}
-      className={twMerge("text-sm text-gray-600 dark:text-slate-300", className)}
+      className={twMerge(
+        "text-sm text-gray-600 dark:text-slate-300",
+        className,
+      )}
       {...props}
     />
   );

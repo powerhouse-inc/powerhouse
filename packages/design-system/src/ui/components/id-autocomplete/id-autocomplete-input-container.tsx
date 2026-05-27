@@ -157,7 +157,9 @@ const IdAutocompleteInputContainer = React.forwardRef<
             <Icon
               name="Reload"
               size={16}
-              className={twMerge("animate-spin text-gray-500 dark:text-slate-400")}
+              className={twMerge(
+                "animate-spin text-gray-500 dark:text-slate-400",
+              )}
             />
           )}
           {haveFetchError && (

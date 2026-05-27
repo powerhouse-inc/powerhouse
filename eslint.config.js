@@ -581,7 +581,7 @@ const tailwindConfig = [
     settings: {
       "better-tailwindcss": {
         cwd: "./packages/design-system",
-        entryPoint: "style.css",
+        entryPoint: "storybook.css",
       },
     },
   },
@@ -592,7 +592,7 @@ const tailwindConfig = [
     settings: {
       "better-tailwindcss": {
         cwd: "./apps/connect",
-        entryPoint: "style.css",
+        entryPoint: "app.css",
       },
     },
   },
@@ -602,8 +602,8 @@ const tailwindConfig = [
     rules: tailwindRules,
     settings: {
       "better-tailwindcss": {
-        cwd: "./packages/powerhouse-vetra-packages",
-        entryPoint: "style.css",
+        cwd: "./packages/design-system",
+        entryPoint: "storybook.css",
       },
     },
   },
@@ -613,8 +613,8 @@ const tailwindConfig = [
     rules: tailwindRules,
     settings: {
       "better-tailwindcss": {
-        cwd: "./packages/vetra",
-        entryPoint: "style.css",
+        cwd: "./packages/design-system",
+        entryPoint: "storybook.css",
       },
     },
   },

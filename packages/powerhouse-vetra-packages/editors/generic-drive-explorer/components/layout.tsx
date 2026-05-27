@@ -33,7 +33,11 @@ DriveLayout.Header = function DriveLayoutHeader({
   ...props
 }: BaseProps) {
   return (
-    <div className={twMerge("flex-0", className)} {...containerProps} {...props}>
+    <div
+      className={twMerge("flex-0", className)}
+      {...containerProps}
+      {...props}
+    >
       {children}
     </div>
   );
@@ -82,7 +86,11 @@ DriveLayout.Footer = function DriveLayoutFooter({
   ...props
 }: BaseProps) {
   return (
-    <div className={twMerge("flex-0", className)} {...containerProps} {...props}>
+    <div
+      className={twMerge("flex-0", className)}
+      {...containerProps}
+      {...props}
+    >
       {children}
     </div>
   );

@@ -47,7 +47,9 @@ const Checkbox = React.forwardRef<HTMLButtonElement, CheckboxProps>(
 
     return (
       <div className={twMerge("flex flex-col gap-2")}>
-        <div className={twMerge("group flex items-center space-x-2", className)}>
+        <div
+          className={twMerge("group flex items-center space-x-2", className)}
+        >
           <CheckboxBase
             id={id}
             name={name}

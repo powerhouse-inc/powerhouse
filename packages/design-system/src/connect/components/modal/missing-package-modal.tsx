@@ -84,10 +84,7 @@ export function PackageInstallModal(props: PackageInstallModalProps) {
         }
         onOpenChange?.(isOpen);
       }}
-      contentProps={{
-        ...contentProps,
-        className: twMerge("rounded-3xl", contentProps?.className),
-      }}
+      contentProps={contentProps}
       overlayProps={{
         ...overlayProps,
         className: overlayProps?.className,

@@ -42,7 +42,7 @@ export function Modal(props: Props) {
             {...delegated}
             {...contentProps}
             className={twMerge(
-              "rounded-2xl bg-white data-[state=closed]:animate-zoom-out data-[state=open]:animate-zoom-in dark:bg-slate-800",
+              "overflow-hidden rounded-3xl bg-white data-[state=closed]:animate-zoom-out data-[state=open]:animate-zoom-in",
               contentProps?.className,
             )}
           >
