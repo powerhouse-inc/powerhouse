@@ -48,7 +48,7 @@ export function getConnectHtmlTags(
       tag: "meta",
       attrs: {
         "http-equiv": "Content-Security-Policy",
-        content: `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://esm.sh${registryUrl ? " " + registryUrl : ""}; object-src 'none'; base-uri 'self';`,
+        content: `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://esm.sh${registryUrl ? " " + registryUrl : ""}; worker-src 'self' blob:; object-src 'none'; base-uri 'self';`,
       },
       injectTo,
     },
