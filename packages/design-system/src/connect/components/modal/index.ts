@@ -1,6 +1,4 @@
 export * from "./add-drive-modal/add-drive-modal.js";
-export * from "./add-local-drive-modal.js";
-export * from "./add-remote-drive-modal.js";
 export * from "./confirmation-modal.js";
 export * from "./create-document-modal.js";
 export * from "./delete-drive-modal.js";
