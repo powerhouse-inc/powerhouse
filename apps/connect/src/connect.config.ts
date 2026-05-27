@@ -64,7 +64,9 @@ function getBuiltInDefaults(): Omit<
 
     /* Processors */
     isExternalProcessorsEnabled: true,
-    isAnalyticsEnabled: true,
+    // Analytics off by default; flip to true (or wire a runtime-config field)
+    // when we want analytics enabled out of the box.
+    isAnalyticsEnabled: false,
     isAnalyticsExternalProcessorsEnabled:
       env.PH_CONNECT_EXTERNAL_ANALYTICS_PROCESSORS_ENABLED,
     analyticsDatabaseName: undefined,
