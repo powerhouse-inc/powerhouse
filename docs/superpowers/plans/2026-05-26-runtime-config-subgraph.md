@@ -13,13 +13,16 @@
 ## File Structure
 
 **Created:**
+
 - `docs/superpowers/specs/2026-05-26-runtime-config-subgraph-design.md` — contract spec (already written; see Task 1 verification)
 - `docs/superpowers/plans/2026-05-26-runtime-config-subgraph.md` — this file
 
 **Modified:**
+
 - `RUNTIME-CONFIG-SUBGRAPH-PLAN.md` — updated for post-#2645 reality (already done before this plan; see Task 0)
 
 **Not modified:**
+
 - Any source code under `packages/shared/connect/`
 - Any source code under `packages/builder-tools/connect-utils/`
 - `docker/connect-entrypoint.sh`
@@ -29,6 +32,7 @@
 ## Task 0: Master plan update (already complete)
 
 **Files:**
+
 - Modify: `RUNTIME-CONFIG-SUBGRAPH-PLAN.md`
 
 The original draft was written against pre-#2645 entrypoint mechanics (flat `PH_CONNECT_*` env vars). The master plan has been rewritten to reflect the single `PH_CONNECT_CONFIG_JSON` env var contract.
@@ -40,6 +44,7 @@ The original draft was written against pre-#2645 entrypoint mechanics (flat `PH_
 ## Task 1: Contract spec written
 
 **Files:**
+
 - Create: `docs/superpowers/specs/2026-05-26-runtime-config-subgraph-design.md`
 
 - [x] **Step 1: Write the contract spec** — names the three monorepo contracts (`DEFAULT_CONNECT_CONFIG`, `runtimeConfigSchema`, `PH_CONNECT_CONFIG_JSON` entrypoint behavior), tells future contributors how to change them safely, and explicitly disclaims source-code changes for this work.
@@ -49,6 +54,7 @@ The original draft was written against pre-#2645 entrypoint mechanics (flat `PH_
 ## Task 2: Verify `DEFAULT_CONNECT_CONFIG` export contract
 
 **Files:**
+
 - Inspect: `packages/shared/connect/runtime-config.ts`
 - Inspect: `packages/shared/connect/index.ts`
 - Inspect: `packages/shared/package.json` (`exports`)
@@ -78,6 +84,7 @@ Top-level keys expected on `DEFAULT_CONNECT_CONFIG`: `branding`, `app`, `package
 ## Task 3: Verify `runtimeConfigSchema` export contract
 
 **Files:**
+
 - Inspect: `packages/builder-tools/connect-utils/runtime-config-schema.ts`
 - Inspect: `packages/builder-tools/index.mts`
 - Inspect: `packages/builder-tools/package.json` (`exports`)
@@ -111,6 +118,7 @@ Expected: file exists, non-empty.
 ## Task 4: Verify entrypoint contract still holds
 
 **Files:**
+
 - Run: `packages/shared/connect/entrypoint-seed.test.ts`
 
 - [ ] **Step 1: Run the entrypoint integration test.**
@@ -120,9 +128,10 @@ pnpm --filter @powerhousedao/shared test -- entrypoint-seed
 ```
 
 Expected: all seven test cases pass, including:
+
 - "deep-merges a full PH_CONNECT_CONFIG_JSON into a clean file"
 - "does NOT overwrite values the file already has (set-if-absent)"
-- "ignores legacy per-field env vars (PH_CONNECT_RENOWN_URL, PH_CONNECT_DISABLE_*) — they are no longer wired"
+- "ignores legacy per-field env vars (PH*CONNECT_RENOWN_URL, PH_CONNECT_DISABLE*\*) — they are no longer wired"
 
 If the legacy-env-vars test fails, someone re-introduced flat env var handling — the subgraph design must change before landing.
 

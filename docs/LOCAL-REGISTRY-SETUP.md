@@ -191,7 +191,7 @@ When running Connect directly from `apps/connect`, the registry URL is read from
 ```jsonc
 // apps/connect/public/powerhouse.config.json
 {
-  "packageRegistryUrl": "http://localhost:8080"
+  "packageRegistryUrl": "http://localhost:8080",
   // …
 }
 ```
