@@ -1,11 +1,11 @@
 import { PGlite } from "@electric-sql/pglite";
+import type { API } from "@powerhousedao/reactor-api";
+import { createHttpAdapter } from "@powerhousedao/reactor-api";
 import {
   AttachmentBuilder,
   type AttachmentBuildResult,
   createRemoteAttachmentService,
 } from "@powerhousedao/reactor-attachments";
-import type { API } from "@powerhousedao/reactor-api";
-import { createHttpAdapter } from "@powerhousedao/reactor-api";
 import type { IRenown } from "@renown/sdk/node";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
@@ -85,7 +85,9 @@ describe("deriveAttachmentServiceConfig", () => {
 
     const { jwtHandler } = deriveAttachmentServiceConfig({}, 4001, renown);
     expect(jwtHandler).toBeDefined();
-    await expect(jwtHandler!("http://localhost:4001/x")).resolves.toBeUndefined();
+    await expect(
+      jwtHandler!("http://localhost:4001/x"),
+    ).resolves.toBeUndefined();
   });
 });
 
