@@ -48,7 +48,7 @@ import { initFeatureFlags } from "../feature-flags.js";
 import { NoRegistryDiscoveryService } from "../no-registry-discovery.js";
 import { PackageDiscoveryService } from "../package-discovery.js";
 import { BrowserPackageManager } from "../package-manager.js";
-import { loadRuntimeConfig } from "../runtime-config.js";
+import { getRuntimeConfig } from "../runtime-config.js";
 import { createProcessorHostModule } from "./processor-host-module.js";
 
 /**
@@ -234,10 +234,12 @@ export async function createReactor(localPackage?: DocumentModelLib) {
     .withCrypto(renownCrypto)
     .build();
 
-  // load runtime config from powerhouse.config.json (replaceable post-build).
-  // Cached: loadComponent() already called this and applied branding before
-  // we got here; this returns the same cached value.
-  const runtimeConfig = await loadRuntimeConfig();
+  // Read the runtime config from cache. loadComponent() awaited
+  // loadRuntimeConfig() before calling createReactor, so the cache is warm;
+  // using the sync getter matches the convention used by connect.config.ts,
+  // useRegistryPackages, and pages/content.tsx — and throws loudly if a
+  // future caller violates the boot ordering.
+  const runtimeConfig = getRuntimeConfig();
 
   // initialize package manager
   const packageManager = new BrowserPackageManager(
