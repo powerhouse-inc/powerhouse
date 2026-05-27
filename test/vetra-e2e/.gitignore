@@ -18,3 +18,4 @@ projects-import.js
 downloads/
 storage/
 htpasswd
+.registry-cdn-cache/
