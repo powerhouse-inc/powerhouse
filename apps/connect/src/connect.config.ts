@@ -140,6 +140,7 @@ export const connectConfig = {
   openPanel: {
     clientId: env.PH_CONNECT_OPENPANEL_CLIENT_ID ?? "",
     apiUrl: env.PH_CONNECT_OPENPANEL_API_URL,
+    // Intentionally dormant — no call sites gate on this yet; UI-event tracking is future work.
     trackUiEvents: env.PH_CONNECT_OPENPANEL_TRACK_UI_EVENTS,
     trackOperations: env.PH_CONNECT_OPENPANEL_TRACK_OPERATIONS,
   },

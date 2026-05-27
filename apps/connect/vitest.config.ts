@@ -12,8 +12,6 @@ export default defineConfig({
     // @powerhousedao/reactor-browser) via their TypeScript source files
     // rather than requiring their `dist/` to exist first.
     conditions: ["source", "import", "module", "browser", "default"],
-    // Honour @powerhousedao/connect/* path aliases from tsconfig.json.
-    tsconfigPaths: true,
   },
   test: {
     include: [
