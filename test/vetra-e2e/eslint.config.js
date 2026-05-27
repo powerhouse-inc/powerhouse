@@ -20,6 +20,8 @@ export default tseslint.config(
     "node_modules/",
     "dist/",
     ".ph/",
+    ".tsbuild/",
+    "ts-build/",
     "eslint.config.js",
     "coverage/",
   ]),

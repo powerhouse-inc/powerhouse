@@ -61,10 +61,14 @@ describe("SimpleJobExecutor mutation signature verification", () => {
       .fn()
       .mockImplementation(
         async (_docId, _docType, _scope, _branch, _rev, fn) => {
+          const ops: any[] = [];
           const txn = {
-            addOperations: vi.fn(),
+            addOperations: (...operations: any[]) => {
+              ops.push(...operations);
+            },
           };
           await fn(txn as never);
+          return ops;
         },
       );
 

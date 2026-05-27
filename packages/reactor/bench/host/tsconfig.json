@@ -1,0 +1,39 @@
+{
+  "extends": "../../../../tsconfig.options.json",
+  "compilerOptions": {
+    "outDir": "./.tsbuild",
+    "noEmit": true,
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "emitDeclarationOnly": false,
+    "incremental": false,
+    "types": [
+      "node"
+    ]
+  },
+  "include": [
+    "src/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    ".tsbuild"
+  ],
+  "references": [
+    {
+      "path": "../.."
+    },
+    {
+      "path": "../../../document-model"
+    },
+    {
+      "path": "../../../opentelemetry-instrumentation-reactor"
+    },
+    {
+      "path": "../../../renown"
+    },
+    {
+      "path": "../../../shared"
+    }
+  ]
+}

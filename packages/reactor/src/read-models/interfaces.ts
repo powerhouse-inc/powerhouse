@@ -38,4 +38,16 @@ export interface IReadModelCoordinator {
    * Stop listening and clean up subscriptions.
    */
   stop(): void;
+
+  /**
+   * Resolves when every per-queueKey projection chain has flushed.
+   * Intended for test fixtures and explicit shutdown.
+   */
+  drain(): Promise<void>;
+
+  /**
+   * Current number of in-flight per-queueKey projection chains.
+   * Used as a backpressure signal by observability gauges.
+   */
+  getChainDepth(): number;
 }

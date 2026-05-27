@@ -70,9 +70,7 @@ function createHarness(
   const documentMetaCache = createMockDocumentMetaCache();
   const collectionMembershipCache = createMockCollectionMembershipCache();
   const stores: ExecutionStores = {
-    operationStore: createMockOperationStore({
-      apply: vi.fn().mockResolvedValue(undefined),
-    }),
+    operationStore: createMockOperationStore(),
     operationIndex: {} as ExecutionStores["operationIndex"],
     writeCache: writeCache as unknown as IWriteCache,
     documentMetaCache,

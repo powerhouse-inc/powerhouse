@@ -23,9 +23,17 @@ export {
 } from "./src/client/types.js";
 export {
   ReactorBuilder,
+  type DocumentModelSpecInput,
+  type ProjectionShardBuilderConfig,
   type ReadModelFactory,
   type ReadModelFactoryDeps,
 } from "./src/core/reactor-builder.js";
+export type {
+  BuiltInReadModelKind,
+  IProjectionTransport,
+  ProjectionShardManagerConfig,
+  ProjectionWorkerFactory,
+} from "./src/projection/index.js";
 export { ReactorClientBuilder } from "./src/core/reactor-client-builder.js";
 export { DEFAULT_DRIVE_CONTAINER_TYPES } from "./src/core/drive-container-types.js";
 export { Reactor } from "./src/core/reactor.js";
@@ -94,6 +102,10 @@ export {
   type JobRunningEvent,
   type JobWriteReadyEvent,
   type JobFailedEvent as ReactorJobFailedEvent,
+  type ReadModelBatchCompletedEvent,
+  type ReadModelIndexedEvent,
+  type ReadModelStage,
+  type ReadModelIndexingStage,
   type Unsubscribe,
 } from "./src/events/types.js";
 
@@ -134,6 +146,42 @@ export {
   type JobStartedEvent,
 } from "./src/executor/types.js";
 
+// Executor Worker Utilities
+export {
+  createForwardingLogger,
+  errorToInfo,
+  sanitizeArg,
+  workerEntryPath,
+} from "./src/executor/worker/index.js";
+
+// Executor Worker Protocol
+export type {
+  AbortMessage,
+  DbConfig,
+  DocumentModelSpec,
+  ErrorInfo as WorkerErrorInfo,
+  ExecuteMessage,
+  FactorySpec,
+  HeartbeatMessage,
+  InitMessage,
+  JobWriteReadyPayload,
+  LoadModelMessage,
+  LogMessage,
+  MetricsMessage,
+  ModelLoadFailedMessage,
+  ModelLoadedMessage,
+  ModelManifestEntry,
+  ModuleRef,
+  ParentMessage,
+  ReadyMessage,
+  ResultMessage,
+  SanitizedArg,
+  ShutdownMessage,
+  SignatureVerifierSpec,
+  WorkerMessage,
+  WorkerPoolConfig,
+} from "./src/executor/worker/protocol.js";
+
 // Document Model Registry
 export {
   DocumentModelRegistry,
@@ -172,6 +220,11 @@ export {
 export { KyselyDocumentIndexer } from "./src/storage/kysely/document-indexer.js";
 export { KyselyKeyframeStore } from "./src/storage/kysely/keyframe-store.js";
 export { KyselyOperationStore } from "./src/storage/kysely/store.js";
+export {
+  instrumentPgPool,
+  type PoolInstrumentation,
+  type PoolStats,
+} from "./src/storage/pool-instrumentation.js";
 export type {
   DocumentIndexerDatabase,
   OperationTable,

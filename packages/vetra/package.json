@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/vetra",
-  "version": "6.1.0-dev.4",
+  "version": "6.1.0-dev.5",
   "license": "AGPL-3.0-only",
   "type": "module",
   "sideEffects": false,
@@ -26,6 +26,7 @@
       "import": "./dist/document-models/index.js"
     },
     "./document-models/*": {
+      "source": "./document-models/*/index.ts",
       "types": "./dist/document-models/*/index.d.ts",
       "import": "./dist/document-models/*/index.js"
     },
@@ -44,6 +45,7 @@
       "import": "./dist/processors/index.js"
     },
     "./codegen": {
+      "source": "./codegen/index.ts",
       "types": "./dist/codegen/index.d.ts",
       "import": "./dist/codegen/index.js"
     },

@@ -189,7 +189,7 @@ export class DocumentActionHandler {
 
     const document = createDocumentFromAction(action as CreateDocumentAction);
 
-    const operation = createOperation(action, 0, skip, {
+    let operation = createOperation(action, 0, skip, {
       documentId: document.header.id,
       scope: job.scope,
       branch: job.branch,
@@ -201,7 +201,7 @@ export class DocumentActionHandler {
     };
     const resultingState = JSON.stringify(resultingStateObj);
 
-    const writeError = await this.writeOperationToStore(
+    const writeResult = await this.writeOperationToStore(
       document.header.id,
       document.header.documentType,
       job.scope,
@@ -212,9 +212,10 @@ export class DocumentActionHandler {
       stores,
       signal,
     );
-    if (writeError !== null) {
-      return writeError;
+    if (!Array.isArray(writeResult)) {
+      return writeResult;
     }
+    operation = writeResult[0];
 
     updateDocumentRevision(document, job.scope, operation.index);
 
@@ -327,7 +328,7 @@ export class DocumentActionHandler {
 
     const nextIndex = getNextIndexForScope(document, job.scope);
 
-    const operation = createOperation(action, nextIndex, 0, {
+    let operation = createOperation(action, nextIndex, 0, {
       documentId,
       scope: job.scope,
       branch: job.branch,
@@ -341,7 +342,7 @@ export class DocumentActionHandler {
     };
     const resultingState = JSON.stringify(resultingStateObj);
 
-    const writeError = await this.writeOperationToStore(
+    const writeResult = await this.writeOperationToStore(
       documentId,
       document.header.documentType,
       job.scope,
@@ -352,9 +353,10 @@ export class DocumentActionHandler {
       stores,
       signal,
     );
-    if (writeError !== null) {
-      return writeError;
+    if (!Array.isArray(writeResult)) {
+      return writeResult;
     }
+    operation = writeResult[0];
 
     updateDocumentRevision(document, job.scope, operation.index);
 
@@ -506,7 +508,7 @@ export class DocumentActionHandler {
       );
     }
 
-    const operation = createOperation(action, nextIndex, skip, {
+    let operation = createOperation(action, nextIndex, skip, {
       documentId,
       scope: job.scope,
       branch: job.branch,
@@ -518,7 +520,7 @@ export class DocumentActionHandler {
     };
     const resultingState = JSON.stringify(resultingStateObj);
 
-    const writeError = await this.writeOperationToStore(
+    const writeResult = await this.writeOperationToStore(
       documentId,
       document.header.documentType,
       job.scope,
@@ -529,9 +531,10 @@ export class DocumentActionHandler {
       stores,
       signal,
     );
-    if (writeError !== null) {
-      return writeError;
+    if (!Array.isArray(writeResult)) {
+      return writeResult;
     }
+    operation = writeResult[0];
 
     updateDocumentRevision(document, job.scope, operation.index);
 
@@ -722,13 +725,13 @@ export class DocumentActionHandler {
     }
 
     const nextIndex = getNextIndexForScope(sourceDoc, job.scope);
-    const operation = createOperation(action, nextIndex, 0, {
+    let operation = createOperation(action, nextIndex, 0, {
       documentId: input.sourceId,
       scope: job.scope,
       branch: job.branch,
     });
 
-    const writeError = await this.writeOperationToStore(
+    const writeResult = await this.writeOperationToStore(
       input.sourceId,
       sourceDoc.header.documentType,
       job.scope,
@@ -739,9 +742,10 @@ export class DocumentActionHandler {
       stores,
       signal,
     );
-    if (writeError !== null) {
-      return writeError;
+    if (!Array.isArray(writeResult)) {
+      return writeResult;
     }
+    operation = writeResult[0];
 
     sourceDoc.header.lastModifiedAtUtcIso =
       operation.timestampUtcMs || new Date().toISOString();
@@ -807,9 +811,11 @@ export class DocumentActionHandler {
     startTime: number,
     stores: ExecutionStores,
     signal?: AbortSignal,
-  ): Promise<JobResult | null> {
+  ): Promise<Operation[] | JobResult> {
+    let storedOperations: Operation[];
+
     try {
-      await stores.operationStore.apply(
+      storedOperations = await stores.operationStore.apply(
         documentId,
         documentType,
         scope,
@@ -820,7 +826,6 @@ export class DocumentActionHandler {
         },
         signal,
       );
-      return null;
     } catch (error) {
       this.logger.error(
         "Error writing @Operation to IOperationStore: @Error",
@@ -839,5 +844,7 @@ export class DocumentActionHandler {
         duration: Date.now() - startTime,
       };
     }
+
+    return storedOperations;
   }
 }

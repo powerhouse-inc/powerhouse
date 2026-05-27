@@ -34,6 +34,10 @@ const nodeNeverBundle = [
   "@powerhousedao/connect",
   // published code would never need the cli
   "@powerhousedao/ph-cli",
+  // the reactor-api host must provide a single class identity for
+  // BaseSubgraph/BaseProcessor — inlining a copy here breaks the
+  // prototype-chain check the package loader uses to detect subgraphs.
+  "@powerhousedao/reactor-api",
   // react is resolved from esm.sh
   "react",
   "react-dom",
@@ -58,7 +62,7 @@ const nodeNeverBundle = [
   "@electric-sql/pglite-tools",
 ];
 
-const browserNeverBundle = [...nodeNeverBundle, "@powerhousedao/reactor-api"];
+const browserNeverBundle = nodeNeverBundle;
 
 const copy = [{ from: "powerhouse.manifest.json", to: "dist" }];
 

@@ -4,6 +4,7 @@ packages:
   - "packages/*"
   - "packages/analytics-engine/*"
   - "packages/reactor/test/atlas"
+  - "packages/reactor/bench/host"
   - "test/*"
   - "scripts/*"
   - "!releases"

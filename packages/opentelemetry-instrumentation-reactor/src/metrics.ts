@@ -69,6 +69,68 @@ export function createMetrics() {
         unit: "ms",
       },
     ),
+    readmodelCoordinatorChainDepth: meter.createObservableGauge(
+      "reactor.readmodel.coordinator.chain_depth",
+      {
+        description:
+          "In-flight per-queueKey projection chains in the coordinator",
+        unit: "{chain}",
+      },
+    ),
+    readmodelCoordinatorStageDuration: meter.createHistogram(
+      "reactor.readmodel.coordinator.stage.duration",
+      {
+        description:
+          "Wall time per stage in ReadModelCoordinator.runChain (pre_ready, emit, post_ready)",
+        unit: "ms",
+      },
+    ),
+    readmodelIndexingDuration: meter.createHistogram(
+      "reactor.readmodel.indexing.duration",
+      {
+        description:
+          "Per-read-model indexing duration within a coordinator chain",
+        unit: "ms",
+      },
+    ),
+    readmodelCoordinatorBatchSize: meter.createHistogram(
+      "reactor.readmodel.coordinator.batch.size",
+      {
+        description: "Operations per batch processed by the coordinator chain",
+        unit: "{operation}",
+      },
+    ),
+    readmodelCoordinatorChainWaitDuration: meter.createHistogram(
+      "reactor.readmodel.coordinator.chain.wait_duration",
+      {
+        description:
+          "Time a batch sat in the per-queueKey chain before runChain started",
+        unit: "ms",
+      },
+    ),
+
+    // Postgres pool metrics
+    dbPoolAcquireWaitDuration: meter.createHistogram(
+      "reactor.db.pool.acquire.wait_duration",
+      {
+        description:
+          "Time spent waiting for a pg.Pool to hand out a client (pool.connect resolve latency)",
+        unit: "ms",
+      },
+    ),
+    dbPoolSize: meter.createObservableGauge("reactor.db.pool.size", {
+      description: "pg.Pool totalCount — connections currently open",
+      unit: "{connection}",
+    }),
+    dbPoolIdle: meter.createObservableGauge("reactor.db.pool.idle", {
+      description: "pg.Pool idleCount — open connections not currently in use",
+      unit: "{connection}",
+    }),
+    dbPoolWaiting: meter.createObservableGauge("reactor.db.pool.waiting", {
+      description:
+        "pg.Pool waitingCount — callers queued waiting to acquire a connection",
+      unit: "{request}",
+    }),
 
     // Event bus metrics
     eventbusEventsEmitted: meter.createCounter(

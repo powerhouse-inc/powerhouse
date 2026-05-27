@@ -109,6 +109,67 @@ describe("DocumentModelResolver", () => {
     ).resolves.not.toThrow();
   });
 
+  it("should broadcast via the hook after a successful load when the loader exposes a spec", async () => {
+    const module = createMockModule("test/type");
+    const entry = {
+      documentType: "test/type",
+      version: "1.0.0",
+      spec: {
+        module: { packageName: "test/type", exportName: "documentModel" },
+      },
+    };
+    const resolveSpec = vi.fn().mockResolvedValue(entry);
+    loader = {
+      load: vi.fn().mockResolvedValue(module),
+      resolveSpec,
+    };
+    const localResolver = new DocumentModelResolver(registry, loader);
+    const hook = vi.fn().mockResolvedValue(undefined);
+    localResolver.setBroadcastHook(hook);
+
+    await localResolver.ensureModelLoaded("test/type");
+
+    expect(resolveSpec).toHaveBeenCalledWith("test/type");
+    expect(hook).toHaveBeenCalledWith(entry);
+  });
+
+  it("should skip broadcast when the loader does not expose a spec", async () => {
+    const module = createMockModule("test/type");
+    vi.mocked(loader.load).mockResolvedValue(module);
+    const hook = vi.fn().mockResolvedValue(undefined);
+    resolver.setBroadcastHook(hook);
+
+    await resolver.ensureModelLoaded("test/type");
+
+    expect(hook).not.toHaveBeenCalled();
+  });
+
+  it("should reject the initial load when the broadcast hook rejects", async () => {
+    const module = createMockModule("test/type");
+    const entry = {
+      documentType: "test/type",
+      version: "1.0.0",
+      spec: {
+        module: { packageName: "test/type", exportName: "documentModel" },
+      },
+    };
+    loader = {
+      load: vi.fn().mockResolvedValue(module),
+      resolveSpec: vi.fn().mockResolvedValue(entry),
+    };
+    const localResolver = new DocumentModelResolver(registry, loader);
+    localResolver.setBroadcastHook(() => Promise.reject(new Error("boom")));
+
+    await expect(localResolver.ensureModelLoaded("test/type")).rejects.toThrow(
+      "boom",
+    );
+    // module is registered on the parent regardless of broadcast outcome, so
+    // a subsequent call short-circuits on the registry hit.
+    await expect(
+      localResolver.ensureModelLoaded("test/type"),
+    ).resolves.toBeUndefined();
+  });
+
   it("should propagate non-ModuleNotFoundError from registry.getModule", async () => {
     const errorRegistry: IDocumentModelRegistry = {
       ...registry,

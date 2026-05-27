@@ -12,6 +12,8 @@ const ignoredFiles = [
   "**/node_modules/",
   "**/dist/",
   "**/.ph/",
+  "**/.tsbuild/",
+  "**/ts-build/",
   "**/storybook-static/",
   "**/.vite/",
 ];

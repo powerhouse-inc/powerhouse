@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-api",
-  "version": "6.1.0-dev.4",
+  "version": "6.1.0-dev.5",
   "description": "",
   "type": "module",
   "repository": {
@@ -37,6 +37,7 @@
     "build": "tsdown",
     "lint": "eslint",
     "test": "vitest --run",
+    "test:integration": "RUN_HUB_SPOKE_INTEGRATION=1 vitest --run test/hub-spoke-catchup.integration.test.ts",
     "bench": "vitest bench",
     "codegen": "graphql-codegen --config codegen.ts && prettier --write src/graphql/reactor/gen/*.ts && eslint --fix src/graphql/reactor/gen/*.ts --no-warn-ignored",
     "codegen:watch": "graphql-codegen --config codegen.ts --watch",

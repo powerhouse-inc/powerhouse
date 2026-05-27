@@ -1,14 +1,24 @@
-import { ReactorEventTypes, SyncEventTypes } from "@powerhousedao/reactor";
+import {
+  JobExecutorEventTypes,
+  ReactorEventTypes,
+  SyncEventTypes,
+} from "@powerhousedao/reactor";
 import type {
   DeadLetterAddedEvent,
   IEventBus,
   IJobExecutorManager,
   IQueue,
+  JobCompletedEvent,
+  JobFailedEvent as ExecutorJobFailedEvent,
   JobPendingEvent,
   JobReadReadyEvent,
   JobRunningEvent,
   JobWriteReadyEvent,
+  PoolInstrumentation,
   ReactorJobFailedEvent,
+  ReadModelBatchCompletedEvent,
+  ReadModelIndexedEvent,
+  IReadModelCoordinator,
   ReactorModule,
   SyncModule,
   Unsubscribe,
@@ -33,15 +43,25 @@ export class ReactorInstrumentation {
 
   start(): void {
     this.metrics = createMetrics();
-    const { eventBus, queue, executorManager, syncModule } = this.module;
+    const { eventBus, queue, executorManager, syncModule, pools } = this.module;
 
     this.subscribeJobPending(eventBus);
     this.subscribeJobRunning(eventBus);
     this.subscribeJobWriteReady(eventBus);
     this.subscribeJobReadReady(eventBus);
     this.subscribeJobFailed(eventBus);
+    this.subscribeExecutorJobCompleted(eventBus);
+    this.subscribeExecutorJobFailed(eventBus);
     this.subscribeDeadLetterAdded(eventBus);
-    this.registerObservableGauges(queue, executorManager, syncModule);
+    this.subscribeReadModelBatchCompleted(eventBus);
+    this.subscribeReadModelIndexed(eventBus);
+    this.registerObservableGauges(
+      queue,
+      executorManager,
+      this.module.readModelCoordinator,
+      syncModule,
+    );
+    this.registerPoolInstrumentation(pools);
   }
 
   stop(): void {
@@ -97,22 +117,11 @@ export class ReactorInstrumentation {
         ReactorEventTypes.JOB_WRITE_READY,
         (_type, event) => {
           if (!this.metrics) return;
-          const runningTs = this.runningTimestamps.get(event.jobId);
-          if (runningTs !== undefined) {
-            this.metrics.executorJobDuration.record(
-              performance.now() - runningTs,
-              { "job.success": "true" },
-            );
-          }
-          this.metrics.executorTotalProcessed.add(1, {
-            "job.success": "true",
-          });
           this.metrics.executorOperationsGenerated.add(event.operations.length);
           this.metrics.eventbusEventsEmitted.add(1, {
             "event.type": "JOB_WRITE_READY",
           });
           this.writeReadyTimestamps.set(event.jobId, performance.now());
-          this.runningTimestamps.delete(event.jobId);
         },
       ),
     );
@@ -154,9 +163,6 @@ export class ReactorInstrumentation {
         (_type, event) => {
           if (!this.metrics) return;
           this.metrics.queueJobsFailed.add(1);
-          this.metrics.executorTotalProcessed.add(1, {
-            "job.success": "false",
-          });
           const pendingTs = this.pendingTimestamps.get(event.jobId);
           if (pendingTs !== undefined) {
             this.metrics.jobTotalDuration.record(
@@ -168,6 +174,111 @@ export class ReactorInstrumentation {
             "event.type": "JOB_FAILED",
           });
           this.cleanup(event.jobId);
+        },
+      ),
+    );
+  }
+
+  private subscribeExecutorJobCompleted(eventBus: IEventBus): void {
+    this.unsubscribes.push(
+      eventBus.subscribe<JobCompletedEvent>(
+        JobExecutorEventTypes.JOB_COMPLETED,
+        (_type, event) => {
+          if (!this.metrics) return;
+          const workerId = event.workerId ?? "unknown";
+          const jobId = event.job.id;
+          const runningTs = this.runningTimestamps.get(jobId);
+          if (runningTs !== undefined) {
+            this.metrics.executorJobDuration.record(
+              performance.now() - runningTs,
+              { "job.success": "true", "worker.id": workerId },
+            );
+            this.runningTimestamps.delete(jobId);
+          }
+          this.metrics.executorTotalProcessed.add(1, {
+            "job.success": "true",
+            "worker.id": workerId,
+          });
+          this.metrics.eventbusEventsEmitted.add(1, {
+            "event.type": "EXECUTOR_JOB_COMPLETED",
+          });
+        },
+      ),
+    );
+  }
+
+  private subscribeExecutorJobFailed(eventBus: IEventBus): void {
+    this.unsubscribes.push(
+      eventBus.subscribe<ExecutorJobFailedEvent>(
+        JobExecutorEventTypes.JOB_FAILED,
+        (_type, event) => {
+          if (!this.metrics) return;
+          const workerId = event.workerId ?? "unknown";
+          const jobId = event.job.id;
+          const runningTs = this.runningTimestamps.get(jobId);
+          if (runningTs !== undefined) {
+            this.metrics.executorJobDuration.record(
+              performance.now() - runningTs,
+              { "job.success": "false", "worker.id": workerId },
+            );
+            this.runningTimestamps.delete(jobId);
+          }
+          this.metrics.executorTotalProcessed.add(1, {
+            "job.success": "false",
+            "worker.id": workerId,
+          });
+          this.metrics.eventbusEventsEmitted.add(1, {
+            "event.type": "EXECUTOR_JOB_FAILED",
+          });
+        },
+      ),
+    );
+  }
+
+  private subscribeReadModelBatchCompleted(eventBus: IEventBus): void {
+    this.unsubscribes.push(
+      eventBus.subscribe<ReadModelBatchCompletedEvent>(
+        ReactorEventTypes.READMODEL_BATCH_COMPLETED,
+        (_type, event) => {
+          if (!this.metrics) return;
+          this.metrics.readmodelCoordinatorChainWaitDuration.record(
+            event.chainWaitDurationMs,
+          );
+          this.metrics.readmodelCoordinatorBatchSize.record(event.batchSize);
+          this.metrics.readmodelCoordinatorStageDuration.record(
+            event.preReadyDurationMs,
+            { stage: "pre_ready" },
+          );
+          this.metrics.readmodelCoordinatorStageDuration.record(
+            event.emitDurationMs,
+            { stage: "emit" },
+          );
+          this.metrics.readmodelCoordinatorStageDuration.record(
+            event.postReadyDurationMs,
+            { stage: "post_ready" },
+          );
+          this.metrics.eventbusEventsEmitted.add(1, {
+            "event.type": "READMODEL_BATCH_COMPLETED",
+          });
+        },
+      ),
+    );
+  }
+
+  private subscribeReadModelIndexed(eventBus: IEventBus): void {
+    this.unsubscribes.push(
+      eventBus.subscribe<ReadModelIndexedEvent>(
+        ReactorEventTypes.READMODEL_INDEXED,
+        (_type, event) => {
+          if (!this.metrics) return;
+          this.metrics.readmodelIndexingDuration.record(event.durationMs, {
+            "read_model.name": event.readModelName,
+            stage: event.stage,
+            "indexing.success": event.success ? "true" : "false",
+          });
+          this.metrics.eventbusEventsEmitted.add(1, {
+            "event.type": "READMODEL_INDEXED",
+          });
         },
       ),
     );
@@ -193,6 +304,7 @@ export class ReactorInstrumentation {
   private registerObservableGauges(
     queue: IQueue,
     executorManager: IJobExecutorManager,
+    readModelCoordinator: IReadModelCoordinator,
     syncModule: SyncModule | undefined,
   ): void {
     if (!this.metrics) return;
@@ -238,6 +350,16 @@ export class ReactorInstrumentation {
       activeJobsCb,
     ]);
 
+    const chainDepthCb: ObservableCallback = (result) => {
+      if (!this.metrics) return;
+      result.observe(readModelCoordinator.getChainDepth());
+    };
+    this.metrics.readmodelCoordinatorChainDepth.addCallback(chainDepthCb);
+    this.observableCallbacks.push([
+      this.metrics.readmodelCoordinatorChainDepth,
+      chainDepthCb,
+    ]);
+
     const remotesCb: ObservableCallback = (result) => {
       if (!this.metrics) return;
       const count = syncModule?.syncManager.list().length ?? 0;
@@ -245,6 +367,49 @@ export class ReactorInstrumentation {
     };
     this.metrics.syncRemotes.addCallback(remotesCb);
     this.observableCallbacks.push([this.metrics.syncRemotes, remotesCb]);
+  }
+
+  private registerPoolInstrumentation(pools: PoolInstrumentation[]): void {
+    if (!this.metrics || pools.length === 0) return;
+
+    for (const pool of pools) {
+      const attrs = { pool: pool.name };
+      const unsub = pool.onAcquire((durationMs) => {
+        if (!this.metrics) return;
+        this.metrics.dbPoolAcquireWaitDuration.record(durationMs, attrs);
+      });
+      this.unsubscribes.push(unsub);
+    }
+
+    const sizeCb: ObservableCallback = (result) => {
+      if (!this.metrics) return;
+      for (const pool of pools) {
+        const stats = pool.getStats();
+        result.observe(stats.size, { pool: pool.name });
+      }
+    };
+    this.metrics.dbPoolSize.addCallback(sizeCb);
+    this.observableCallbacks.push([this.metrics.dbPoolSize, sizeCb]);
+
+    const idleCb: ObservableCallback = (result) => {
+      if (!this.metrics) return;
+      for (const pool of pools) {
+        const stats = pool.getStats();
+        result.observe(stats.idle, { pool: pool.name });
+      }
+    };
+    this.metrics.dbPoolIdle.addCallback(idleCb);
+    this.observableCallbacks.push([this.metrics.dbPoolIdle, idleCb]);
+
+    const waitingCb: ObservableCallback = (result) => {
+      if (!this.metrics) return;
+      for (const pool of pools) {
+        const stats = pool.getStats();
+        result.observe(stats.waiting, { pool: pool.name });
+      }
+    };
+    this.metrics.dbPoolWaiting.addCallback(waitingCb);
+    this.observableCallbacks.push([this.metrics.dbPoolWaiting, waitingCb]);
   }
 
   private cleanup(jobId: string): void {

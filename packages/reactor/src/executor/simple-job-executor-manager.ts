@@ -6,14 +6,21 @@ import type { IQueue } from "../queue/interfaces.js";
 import type { IJobExecutionHandle, Job } from "../queue/types.js";
 import { QueueEventTypes } from "../queue/types.js";
 import type { IDocumentModelResolver } from "../registry/document-model-resolver.js";
-import { ModuleNotFoundError } from "../registry/errors.js";
-import {
-  DocumentDeletedError,
-  DocumentNotFoundError,
-} from "../shared/errors.js";
-import type { ErrorInfo } from "../shared/types.js";
+import { DocumentNotFoundError } from "../shared/errors.js";
 import type { IJobExecutor, IJobExecutorManager } from "./interfaces.js";
-import type { ExecutorManagerStatus, JobResult } from "./types.js";
+import {
+  JobResultHandler,
+  toErrorInfo,
+  type IJobResultHandler,
+} from "./job-result-handler.js";
+import {
+  JobExecutorEventTypes,
+  type ExecutorManagerStatus,
+  type JobCompletedEvent,
+  type JobFailedEvent,
+  type JobResult,
+  type JobStartedEvent,
+} from "./types.js";
 
 export type JobExecutorFactory = () => IJobExecutor;
 
@@ -28,6 +35,7 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
   private totalJobsProcessed = 0;
   private unsubscribe?: () => void;
   private deferredJobs = new Map<string, Job[]>();
+  private resultHandler: IJobResultHandler;
 
   private jobTimeoutMs: number;
 
@@ -41,6 +49,13 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
     jobTimeoutMs: number = 30_000,
   ) {
     this.jobTimeoutMs = jobTimeoutMs;
+    this.resultHandler = new JobResultHandler(
+      queue,
+      jobTracker,
+      eventBus,
+      resolver,
+      logger,
+    );
   }
 
   async start(numExecutors: number): Promise<void> {
@@ -96,7 +111,7 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
     // Fail any deferred jobs that were never flushed
     for (const [, jobs] of this.deferredJobs) {
       for (const job of jobs) {
-        const errorInfo = this.toErrorInfo(
+        const errorInfo = toErrorInfo(
           new DocumentNotFoundError(job.documentId),
         );
         this.jobTracker.markFailed(job.id, errorInfo, job);
@@ -161,6 +176,16 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
     // Find an available executor (simple round-robin)
     const executorIndex = this.totalJobsProcessed % this.executors.length;
     const executor = this.executors[executorIndex];
+    const workerId = `in-process-${executorIndex}`;
+
+    const startedEvent: JobStartedEvent = {
+      job: handle.job,
+      startedAt: new Date().toISOString(),
+      workerId,
+    };
+    this.eventBus
+      .emit(JobExecutorEventTypes.JOB_STARTED, startedEvent)
+      .catch(() => {});
 
     // execute the job with a timeout signal; race ensures the timeout fires
     // even if the executor hangs on a call that does not check the signal
@@ -183,7 +208,7 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
         abortPromise,
       ]);
     } catch (error) {
-      const errorInfo = this.toErrorInfo(
+      const errorInfo = toErrorInfo(
         error instanceof Error ? error : String(error),
       );
 
@@ -199,127 +224,56 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
         })
         .catch(() => {});
 
+      const failedEvent: JobFailedEvent = {
+        job: handle.job,
+        error: errorInfo.message,
+        willRetry: false,
+        retryCount: 0,
+        workerId,
+      };
+      this.eventBus
+        .emit(JobExecutorEventTypes.JOB_FAILED, failedEvent)
+        .catch(() => {});
+
       await this.checkForMoreJobs();
       return;
     }
 
     // handle the result
     if (result.success) {
-      handle.complete();
       this.totalJobsProcessed++;
-
-      if (this.hasCreateDocumentAction(handle.job)) {
-        await this.flushDeferredJobs(handle.job.documentId);
-      }
-    } else {
-      // Attempt model recovery before exhausting retries
-      if (result.error && ModuleNotFoundError.isError(result.error)) {
-        let modelLoaded = false;
-        try {
-          await this.resolver.ensureModelLoaded(result.error.documentType);
-          modelLoaded = true;
-        } catch {
-          // Model could not be loaded, fall through to normal failure path
-        }
-
-        if (modelLoaded) {
-          const errorInfo = this.toErrorInfo(result.error);
-          try {
-            await this.queue.retryJob(handle.job.id, errorInfo);
-            this.activeJobs--;
-            await this.checkForMoreJobs();
-            return;
-          } catch {
-            // Fall through to normal failure path
-          }
-        }
-      }
-
-      // DocumentNotFoundError: defer the job instead of failing immediately.
-      // A CREATE_DOCUMENT job may arrive later and unblock it.
-      if (result.error && DocumentNotFoundError.isError(result.error)) {
-        const job = handle.job;
-
-        handle.defer();
-        this.activeJobs--;
-
-        const docId = job.documentId;
-        const existing = this.deferredJobs.get(docId) ?? [];
-        existing.push(job);
-        this.deferredJobs.set(docId, existing);
-
-        await this.checkForMoreJobs();
-        return;
-      }
-
-      if (result.error && DocumentDeletedError.isError(result.error)) {
-        const errorInfo = this.toErrorInfo(result.error);
-        this.jobTracker.markFailed(handle.job.id, errorInfo, handle.job);
-        this.eventBus
-          .emit(ReactorEventTypes.JOB_FAILED, {
-            jobId: handle.job.id,
-            error: result.error,
-            job: handle.job,
-          })
-          .catch(() => {});
-        handle.fail(errorInfo);
-        this.activeJobs--;
-        await this.checkForMoreJobs();
-        return;
-      }
-
-      // Handle retry logic
-      const retryCount = handle.job.retryCount || 0;
-      const maxRetries = handle.job.maxRetries || 0;
-
-      if (retryCount < maxRetries) {
-        const currentErrorInfo = result.error
-          ? this.toErrorInfo(result.error)
-          : this.toErrorInfo("Unknown error");
-
-        try {
-          await this.queue.retryJob(handle.job.id, currentErrorInfo);
-        } catch (error) {
-          const retryErrorInfo = this.toErrorInfo(
-            error instanceof Error ? error : "Failed to retry job",
-          );
-
-          this.jobTracker.markFailed(handle.job.id, retryErrorInfo, handle.job);
-
-          this.eventBus
-            .emit(ReactorEventTypes.JOB_FAILED, {
-              jobId: handle.job.id,
-              error: result.error ?? new Error(retryErrorInfo.message),
-              job: handle.job,
-            })
-            .catch(() => {});
-
-          handle.fail(retryErrorInfo);
-        }
-      } else {
-        const currentErrorInfo = result.error
-          ? this.toErrorInfo(result.error)
-          : this.toErrorInfo("Unknown error");
-
-        const fullErrorInfo = this.formatErrorHistory(
-          handle.job.errorHistory,
-          currentErrorInfo,
-          retryCount + 1,
-        );
-
-        this.jobTracker.markFailed(handle.job.id, fullErrorInfo, handle.job);
-
-        this.eventBus
-          .emit(ReactorEventTypes.JOB_FAILED, {
-            jobId: handle.job.id,
-            error: result.error ?? new Error(fullErrorInfo.message),
-            job: handle.job,
-          })
-          .catch(() => {});
-
-        handle.fail(fullErrorInfo);
-      }
     }
+
+    if (result.success) {
+      const completedEvent: JobCompletedEvent = {
+        job: handle.job,
+        result,
+        workerId,
+      };
+      this.eventBus
+        .emit(JobExecutorEventTypes.JOB_COMPLETED, completedEvent)
+        .catch(() => {});
+    } else {
+      const failedEvent: JobFailedEvent = {
+        job: handle.job,
+        error: result.error?.message ?? "unknown",
+        willRetry: false,
+        retryCount: 0,
+        workerId,
+      };
+      this.eventBus
+        .emit(JobExecutorEventTypes.JOB_FAILED, failedEvent)
+        .catch(() => {});
+    }
+
+    await this.resultHandler.handleResult(handle, result, {
+      deferJob: (documentId, job) => {
+        const existing = this.deferredJobs.get(documentId) ?? [];
+        existing.push(job);
+        this.deferredJobs.set(documentId, existing);
+      },
+      flushDeferredFor: (documentId) => this.flushDeferredJobs(documentId),
+    });
 
     this.activeJobs--;
     await this.checkForMoreJobs();
@@ -367,33 +321,6 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
     }
   }
 
-  private toErrorInfo(error: Error | string): ErrorInfo {
-    if (error instanceof Error) {
-      return {
-        message: error.message,
-        stack: error.stack || new Error().stack || "",
-      };
-    }
-    return {
-      message: error,
-      stack: new Error().stack || "",
-    };
-  }
-
-  private hasCreateDocumentAction(job: Job): boolean {
-    for (const action of job.actions) {
-      if (action.type === "CREATE_DOCUMENT") {
-        return true;
-      }
-    }
-    for (const operation of job.operations) {
-      if (operation.action.type === "CREATE_DOCUMENT") {
-        return true;
-      }
-    }
-    return false;
-  }
-
   private async flushDeferredJobs(documentId: string): Promise<void> {
     const jobs = this.deferredJobs.get(documentId);
     if (!jobs || jobs.length === 0) {
@@ -408,30 +335,5 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
         this.logger.error("Error re-enqueuing deferred job: @Error", error);
       }
     }
-  }
-
-  private formatErrorHistory(
-    errorHistory: ErrorInfo[],
-    currentError: ErrorInfo,
-    totalAttempts: number,
-  ): ErrorInfo {
-    const allErrors = [...errorHistory, currentError];
-
-    if (allErrors.length === 1) {
-      return currentError;
-    }
-
-    const messageLines = [`Job failed after ${totalAttempts} attempts:`];
-    const stackLines: string[] = [];
-
-    allErrors.forEach((error, index) => {
-      messageLines.push(`[Attempt ${index + 1}] ${error.message}`);
-      stackLines.push(`[Attempt ${index + 1}] Stack trace:\n${error.stack}`);
-    });
-
-    return {
-      message: messageLines.join("\n"),
-      stack: stackLines.join("\n\n"),
-    };
   }
 }

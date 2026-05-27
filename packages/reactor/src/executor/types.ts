@@ -75,11 +75,20 @@ export const JobExecutorEventTypes = {
 export type JobStartedEvent = {
   job: Job;
   startedAt: string;
+  /**
+   * Identifier of the executor that took the job. For the worker pool this is
+   * the thread-worker id (e.g. "reactor-worker-3"); for the in-process simple
+   * manager it is "in-process-<index>". Optional for backwards compatibility
+   * with consumers built before the field was added.
+   */
+  workerId?: string;
 };
 
 export type JobCompletedEvent = {
   job: Job;
   result: JobResult;
+  /** See {@link JobStartedEvent.workerId}. */
+  workerId?: string;
 };
 
 export type JobFailedEvent = {
@@ -87,6 +96,8 @@ export type JobFailedEvent = {
   error: string;
   willRetry: boolean;
   retryCount: number;
+  /** See {@link JobStartedEvent.workerId}. */
+  workerId?: string;
 };
 
 export type ExecutorStartedEvent = {

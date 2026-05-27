@@ -5,7 +5,12 @@ import type { IDocumentModelResolver } from "../registry/document-model-resolver
 import type { ErrorInfo } from "../shared/types.js";
 import type { IQueue } from "./interfaces.js";
 import { JobExecutionHandle } from "./job-execution-handle.js";
-import type { IJobExecutionHandle, Job, JobAvailableEvent } from "./types.js";
+import type {
+  IJobExecutionHandle,
+  Job,
+  JobAvailableEvent,
+  JobRoutingMeta,
+} from "./types.js";
 import { JobQueueState, QueueEventTypes } from "./types.js";
 
 /**
@@ -294,6 +299,72 @@ export class InMemoryQueue implements IQueue {
 
           return Promise.resolve(handle);
         }
+      }
+    }
+
+    return Promise.resolve(null);
+  }
+
+  dequeueNextMatching(
+    predicate: (meta: JobRoutingMeta) => boolean,
+    signal?: AbortSignal,
+  ): Promise<IJobExecutionHandle | null> {
+    if (signal?.aborted) {
+      return Promise.reject(new Error("Operation aborted"));
+    }
+
+    if (this.isPausedFlag) {
+      return Promise.resolve(null);
+    }
+
+    for (const [queueKey, queue] of this.queues.entries()) {
+      if (queue.length > 0) {
+        const job = this.getNextJobWithMetDependencies(queue);
+        if (!job) {
+          continue;
+        }
+
+        if (this.isDocumentExecuting(job.documentId)) {
+          continue;
+        }
+
+        const meta: JobRoutingMeta = {
+          documentId: job.documentId,
+          scope: job.scope,
+          branch: job.branch,
+        };
+
+        if (!predicate(meta)) {
+          continue;
+        }
+
+        const jobIdx = queue.indexOf(job);
+        queue.splice(jobIdx, 1);
+
+        this.jobIdToQueueKey.delete(job.id);
+
+        this.markJobExecuting(job);
+
+        if (queue.length === 0) {
+          this.queues.delete(queueKey);
+        }
+
+        const handle = new JobExecutionHandle(job, JobQueueState.READY, {
+          onStart: () => {
+            // Job is now running
+          },
+          onComplete: () => {
+            void this.completeJob(job.id);
+          },
+          onFail: (error: ErrorInfo) => {
+            void this.failJob(job.id, error);
+          },
+          onDefer: () => {
+            void this.deferJob(job.id);
+          },
+        });
+
+        return Promise.resolve(handle);
       }
     }
 

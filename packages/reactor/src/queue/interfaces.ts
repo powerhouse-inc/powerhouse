@@ -1,5 +1,5 @@
 import type { ErrorInfo } from "../shared/types.js";
-import type { IJobExecutionHandle, Job } from "./types.js";
+import type { IJobExecutionHandle, Job, JobRoutingMeta } from "./types.js";
 
 /**
  * Interface for a job queue that manages write operations.
@@ -37,6 +37,22 @@ export interface IQueue {
    * @returns Promise that resolves to the next job execution handle or null if no jobs available
    */
   dequeueNext(signal?: AbortSignal): Promise<IJobExecutionHandle | null>;
+
+  /**
+   * Get the next available job whose routing metadata satisfies the predicate.
+   * Walks ready sub-queue heads in queue insertion order, skips heads whose document
+   * is currently executing (same isDocumentExecuting gate as dequeueNext), and returns
+   * the first head for which predicate returns true.
+   * Returns null when paused, when nothing matches, or when the queue is empty.
+   * Rejects if signal is already aborted.
+   * @param predicate - Filter applied to JobRoutingMeta of each candidate head
+   * @param signal - Optional abort signal to cancel the request
+   * @returns Promise that resolves to the first matching job execution handle or null
+   */
+  dequeueNextMatching(
+    predicate: (meta: JobRoutingMeta) => boolean,
+    signal?: AbortSignal,
+  ): Promise<IJobExecutionHandle | null>;
 
   /**
    * Get the current size of the queue for a specific document/scope/branch.
