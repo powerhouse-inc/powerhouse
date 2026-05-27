@@ -1,6 +1,7 @@
 import { css } from "@tmpl/core";
 
 export const styleTemplate = css`
+  @import "@powerhousedao/design-system/theme.css";
   @custom-variant dark (&:where(.dark, .dark *));
   @import "tailwindcss";
   @import "@powerhousedao/connect/style.css";

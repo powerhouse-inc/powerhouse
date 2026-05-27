@@ -48,7 +48,7 @@
       "import": "./dist/codegen/index.js"
     },
     "./manifest": "./dist/powerhouse.manifest.json",
-    "./style.css": "./dist/style.css",
+    "./style.css": "./style.css",
     "./package.json": "./package.json"
   },
   "scripts": {
@@ -59,9 +59,8 @@
     "test:document-models": "vitest run document-models",
     "test:editors": "vitest run editors",
     "test:processors": "vitest run processors",
-    "build": "pnpm run build:bundle && pnpm run build:css",
+    "build": "pnpm run build:bundle",
     "build:bundle": "tsdown",
-    "build:css": "pnpm exec tailwindcss -i ./style.css -o ./dist/style.css",
     "generate": "ph-cli generate",
     "reactor": "ph-cli reactor",
     "service": "ph-cli service",
