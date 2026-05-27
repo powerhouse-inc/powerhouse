@@ -1,7 +1,7 @@
 import type { ComponentPropsWithoutRef } from "react";
 
 import type { DivProps } from "#design-system";
-import { mergeClassNameProps, Modal } from "#design-system";
+import { Modal } from "#design-system";
 import { useEffect, useRef, useState } from "react";
 import { twMerge } from "tailwind-merge";
 
@@ -39,6 +39,12 @@ export function ReadRequiredModal(props: ReadRequiredModalProps) {
     buttonContainerProps = {},
     ...restProps
   } = props;
+
+  const { className: containerClassName, ...restContainerProps } = containerProps;
+  const { className: headerClassName, ...restHeaderProps } = headerProps;
+  const { className: bodyClassName, ...restBodyProps } = bodyProps;
+  const { className: buttonContainerClassName, ...restButtonContainerProps } = buttonContainerProps;
+  const { className: continueButtonClassName, ...restContinueButtonProps } = continueButtonProps;
 
   const [disableClose, setDisableClose] = useState(true);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -92,47 +98,47 @@ export function ReadRequiredModal(props: ReadRequiredModalProps) {
       {...restProps}
     >
       <div
-        {...mergeClassNameProps(
-          containerProps,
+        className={twMerge(
           "w-[500px] bg-white p-6 text-slate-300 dark:bg-slate-800 dark:text-slate-600",
+          containerClassName,
         )}
+        {...restContainerProps}
       >
         <div
-          {...mergeClassNameProps(
-            headerProps,
+          className={twMerge(
             "border-b border-slate-50 pb-2 text-2xl font-bold text-gray-800 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100",
+            headerClassName,
           )}
+          {...restHeaderProps}
         >
           {header}
         </div>
         <div
           ref={contentRef}
-          {...mergeClassNameProps(
-            bodyProps,
+          className={twMerge(
             "my-6 max-h-[245px] overflow-scroll rounded-md bg-slate-50 p-4 text-center dark:bg-slate-800",
+            bodyClassName,
           )}
+          {...restBodyProps}
         >
           {body}
           {children}
         </div>
         <div
-          {...mergeClassNameProps(
-            buttonContainerProps,
-            "mt-8 flex justify-between gap-3",
-          )}
+          className={twMerge("mt-8 flex justify-between gap-3", buttonContainerClassName)}
+          {...restButtonContainerProps}
         >
           <button
             disabled={disableClose}
             onClick={onContinue}
-            {...mergeClassNameProps(
-              continueButtonProps,
-              twMerge(
-                buttonStyles,
-                "flex-1 bg-gray-800 text-gray-50 dark:bg-slate-100 dark:text-slate-900",
-                disableClose &&
-                  "cursor-not-allowed bg-gray-300 hover:scale-100 dark:bg-slate-600 dark:text-slate-100",
-              ),
+            className={twMerge(
+              buttonStyles,
+              "flex-1 bg-gray-800 text-gray-50 dark:bg-slate-100 dark:text-slate-900",
+              disableClose &&
+                "cursor-not-allowed bg-gray-300 hover:scale-100 dark:bg-slate-600 dark:text-slate-100",
+              continueButtonClassName,
             )}
+            {...restContinueButtonProps}
           >
             {closeLabel}
           </button>

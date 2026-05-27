@@ -1,4 +1,4 @@
-import { cn } from "#design-system";
+import { twMerge } from "tailwind-merge";
 import * as CheckboxPrimitive from "@radix-ui/react-checkbox";
 import * as React from "react";
 
@@ -16,7 +16,7 @@ const CheckboxBase = React.forwardRef<
 >(({ className, checked, invalid, ...props }, ref) => (
   <CheckboxPrimitive.Root
     ref={ref}
-    className={cn(
+    className={twMerge(
       // Base styles
       "peer size-4 shrink-0 rounded-sm",
       // Border & Shadow

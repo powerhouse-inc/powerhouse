@@ -1,5 +1,5 @@
 import type { WithDifference } from "#design-system";
-import { cn } from "#design-system";
+import { twMerge } from "tailwind-merge";
 import { diffSentences, diffWords } from "diff";
 import { useMemo } from "react";
 
@@ -38,7 +38,7 @@ export const TextDiff = ({
 
   return (
     <span
-      className={cn(
+      className={twMerge(
         "leading-[18px] text-gray-700 dark:text-slate-200",
         bgColor,
         className,
@@ -48,7 +48,7 @@ export const TextDiff = ({
         return word.added ? (
           viewMode === "addition" || viewMode === "mixed" ? (
             <span
-              className={cn(
+              className={twMerge(
                 (diffMode === "words" || viewMode === "mixed") &&
                   "bg-green-600/30 dark:bg-green-600/30",
                 childrenClassName,
@@ -61,7 +61,7 @@ export const TextDiff = ({
         ) : word.removed ? (
           viewMode === "removal" || viewMode === "mixed" ? (
             <span
-              className={cn(
+              className={twMerge(
                 (diffMode === "words" || viewMode === "mixed") &&
                   "bg-red-600/30 dark:bg-red-300/30",
                 childrenClassName,
@@ -74,7 +74,7 @@ export const TextDiff = ({
         ) : (
           <span
             key={`${word.value}-${index}`}
-            className={cn(childrenClassName)}
+            className={twMerge(childrenClassName)}
           >
             {word.value}
           </span>

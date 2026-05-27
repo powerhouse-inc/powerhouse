@@ -1,4 +1,4 @@
-import { cn } from "#design-system";
+import { twMerge } from "tailwind-merge";
 import React, { useId } from "react";
 import type { InputBaseProps } from "../../types.js";
 import { FormLabel } from "../form-label/form-label.js";
@@ -46,8 +46,8 @@ const Checkbox = React.forwardRef<HTMLButtonElement, CheckboxProps>(
     };
 
     return (
-      <div className={cn("flex flex-col gap-2")}>
-        <div className={cn("group flex items-center space-x-2", className)}>
+      <div className={twMerge("flex flex-col gap-2")}>
+        <div className={twMerge("group flex items-center space-x-2", className)}>
           <CheckboxBase
             id={id}
             name={name}
@@ -66,7 +66,7 @@ const Checkbox = React.forwardRef<HTMLButtonElement, CheckboxProps>(
             disabled={disabled}
             hasError={hasError}
             description={description}
-            className={cn(!disabled && "group-hover:cursor-pointer")}
+            className={twMerge(!disabled && "group-hover:cursor-pointer")}
             inline
           >
             {label}

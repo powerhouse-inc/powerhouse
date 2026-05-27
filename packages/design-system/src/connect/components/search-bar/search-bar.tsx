@@ -1,5 +1,4 @@
 import {
-  cn,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -63,7 +62,7 @@ export const ConnectSearchBar: React.FC<ConnectSearchBarProps> = (props) => {
   }
 
   return (
-    <div className={cn("flex items-center", className)}>
+    <div className={twMerge("flex items-center", className)}>
       <Icon className="mr-3 text-gray-600 dark:text-slate-300" name="Search" />
       <input
         className={twMerge(

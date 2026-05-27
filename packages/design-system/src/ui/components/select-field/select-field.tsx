@@ -1,4 +1,4 @@
-import { cn } from "#design-system";
+import { twMerge } from "tailwind-merge";
 import React, { useCallback, useId } from "react";
 import type { FieldErrorHandling, InputBaseProps } from "../../types.js";
 import { Button } from "../button/button.js";
@@ -142,7 +142,7 @@ export const SelectFieldRaw = React.forwardRef<
               }
               aria-required={required}
               aria-expanded={isPopoverOpen}
-              className={cn(
+              className={twMerge(
                 "flex h-9 w-full items-center justify-between px-3 py-2",
                 "rounded-md border border-gray-300 bg-white dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100",
                 "hover:border-gray-300 hover:bg-gray-100 dark:hover:border-slate-500 dark:hover:bg-slate-600 dark:hover:text-slate-100",

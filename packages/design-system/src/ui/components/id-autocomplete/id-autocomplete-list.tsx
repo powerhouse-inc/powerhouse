@@ -1,4 +1,4 @@
-import { cn } from "#design-system";
+import { twMerge } from "tailwind-merge";
 import { useCommandState } from "cmdk";
 import React, { useEffect } from "react";
 import {
@@ -52,12 +52,12 @@ const IdAutocompleteList: React.FC<IdAutocompleteListProps> = ({
 
   return (
     <CommandList ref={commandListRef}>
-      <CommandEmpty className={cn("h-full p-1")}>
+      <CommandEmpty className={twMerge("h-full p-1")}>
         {renderOption ? (
           renderOption(defaultOption, {
             asPlaceholder: true,
             showValue: true,
-            className: cn("pb-0"),
+            className: twMerge("pb-0"),
           })
         ) : (
           <IdAutocompleteListOption
@@ -68,11 +68,11 @@ const IdAutocompleteList: React.FC<IdAutocompleteListProps> = ({
             value={defaultOption.value}
             description={defaultOption.description}
             asPlaceholder
-            className={cn("pb-0")}
+            className={twMerge("pb-0")}
           />
         )}
       </CommandEmpty>
-      <CommandGroup className={cn("px-1")}>
+      <CommandGroup className={twMerge("px-1")}>
         {options.map((opt) => {
           const isSelected = selectedValue === opt.value;
 
@@ -81,7 +81,7 @@ const IdAutocompleteList: React.FC<IdAutocompleteListProps> = ({
               key={opt.value}
               value={opt.value}
               onSelect={() => toggleOption?.(opt.value)}
-              className={cn(
+              className={twMerge(
                 "h-full cursor-pointer border-y-0 p-0",
                 "data-[selected=true]:bg-gray-100 dark:data-[selected=true]:bg-slate-900",
               )}

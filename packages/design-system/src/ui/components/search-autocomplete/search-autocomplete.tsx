@@ -1,4 +1,4 @@
-import { cn } from "#design-system";
+import { twMerge } from "tailwind-merge";
 import React, { useCallback, useState } from "react";
 import { Input } from "../input/input.js";
 import { Popover, PopoverAnchor, PopoverContent } from "../popover/popover.js";
@@ -82,7 +82,7 @@ export const SearchAutocomplete: React.FC<SearchAutocompleteProps> = (
   // Fallback: plain text input + submit when no fetchOptions
   if (!fetchOptions) {
     return (
-      <div className={cn("flex items-center gap-2", className)}>
+      <div className={twMerge("flex items-center gap-2", className)}>
         <Input
           value={query}
           onChange={handleInputChange}
@@ -103,7 +103,7 @@ export const SearchAutocomplete: React.FC<SearchAutocompleteProps> = (
   }
 
   return (
-    <div className={cn("relative", className)}>
+    <div className={twMerge("relative", className)}>
       <Popover open={isOpen && results.length > 0} onOpenChange={setIsOpen}>
         <PopoverAnchor asChild>
           <Input

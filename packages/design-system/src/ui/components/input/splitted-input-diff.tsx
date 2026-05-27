@@ -1,4 +1,5 @@
-import { cn, Icon } from "#design-system";
+import { Icon } from "#design-system";
+import { twMerge } from "tailwind-merge";
 import { useCallback, useState } from "react";
 import { useMediaQuery } from "usehooks-ts";
 import type { WithDifference } from "../../types.js";
@@ -36,7 +37,7 @@ const CopyIcon = ({
         <button
           type="button"
           onClick={copy}
-          className={cn(
+          className={twMerge(
             "focus-visible:outline-none [&_svg]:pointer-events-none",
             hasHover &&
               "opacity-0 transition-opacity duration-500 group-hover:opacity-100",
@@ -45,7 +46,7 @@ const CopyIcon = ({
           <Icon
             name="Copy"
             size={16}
-            className={cn("text-gray-500 dark:text-slate-400")}
+            className={twMerge("text-gray-500 dark:text-slate-400")}
           />
         </button>
       </Tooltip>
@@ -70,11 +71,11 @@ export const SplittedInputDiff = ({
   const hasHover = useMediaQuery("(hover: hover) and (pointer: fine)");
 
   return (
-    <InputDiff className={cn("group")}>
+    <InputDiff className={twMerge("group")}>
       {viewMode === "mixed" ? (
         <>
           <div
-            className={cn(
+            className={twMerge(
               "flex flex-1 items-center gap-2 truncate [&>span]:truncate",
             )}
           >
@@ -83,7 +84,7 @@ export const SplittedInputDiff = ({
               value={value}
               viewMode="removal"
               diffMode={diffMode}
-              className={cn("flex-1")}
+              className={twMerge("flex-1")}
             />
             {showCopyIcon && baseValue !== undefined && baseValue !== "" && (
               <CopyIcon
@@ -95,12 +96,12 @@ export const SplittedInputDiff = ({
             )}
           </div>
           <div
-            className={cn(
+            className={twMerge(
               "mx-3 h-[34px] w-px bg-gray-300 dark:bg-slate-600 dark:text-slate-100",
             )}
           />
           <div
-            className={cn(
+            className={twMerge(
               "flex flex-1 items-center gap-2 truncate [&>span]:truncate",
             )}
           >
@@ -109,7 +110,7 @@ export const SplittedInputDiff = ({
               value={value}
               viewMode="addition"
               diffMode={diffMode}
-              className={cn("flex-1")}
+              className={twMerge("flex-1")}
             />
             {showCopyIcon && value !== "" && (
               <CopyIcon
@@ -123,7 +124,7 @@ export const SplittedInputDiff = ({
         </>
       ) : (
         <div
-          className={cn(
+          className={twMerge(
             "flex flex-1 items-center gap-2 truncate [&>span]:truncate",
           )}
         >
@@ -132,7 +133,7 @@ export const SplittedInputDiff = ({
             value={value}
             viewMode={viewMode}
             diffMode={diffMode}
-            className={cn("flex-1")}
+            className={twMerge("flex-1")}
           />
           {showCopyIcon &&
             ((viewMode === "removal" &&

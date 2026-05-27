@@ -1,4 +1,5 @@
-import { cn, Icon } from "@powerhousedao/design-system";
+import { Icon } from "@powerhousedao/design-system";
+import { twMerge } from "tailwind-merge";
 import {
   ConnectDropdownMenu,
   fileNodeDropdownOptions,
@@ -71,7 +72,7 @@ export const ModuleItem: React.FC<ModuleItemProps> = ({
   return (
     <div
       onClick={() => onClick(fileNode)}
-      className={cn(
+      className={twMerge(
         "group flex w-full cursor-pointer items-center gap-3 rounded-md bg-gray-100 p-1 text-left transition-colors hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 dark:hover:text-slate-100",
         className,
       )}
@@ -97,7 +98,7 @@ export const ModuleItem: React.FC<ModuleItemProps> = ({
           menuClassName="border-gray-200 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
         >
           <button
-            className={cn(
+            className={twMerge(
               "hidden group-hover:block",
               isDropdownMenuOpen && "block",
             )}

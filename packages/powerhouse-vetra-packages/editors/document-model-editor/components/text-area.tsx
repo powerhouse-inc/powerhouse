@@ -1,6 +1,6 @@
 import * as React from "react";
 import { forwardRef, useImperativeHandle, useRef, useCallback } from "react";
-import { cn } from "../utils/style.js";
+import { twMerge } from "tailwind-merge";
 
 export interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {}
 
@@ -40,7 +40,7 @@ export const Textarea = forwardRef<TextareaHandle, TextareaProps>(
     return (
       <textarea
         {...props}
-        className={cn(
+        className={twMerge(
           "min-h-10 w-full resize-none rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-800 placeholder:text-gray-600 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 dark:placeholder:text-slate-300",
           className,
         )}

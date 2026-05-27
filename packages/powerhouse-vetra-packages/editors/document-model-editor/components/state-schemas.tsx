@@ -1,4 +1,4 @@
-import { cn } from "@powerhousedao/design-system";
+import { twMerge } from "tailwind-merge";
 import { Checkbox } from "@powerhousedao/design-system/ui";
 import { Kind } from "graphql";
 import {
@@ -150,7 +150,7 @@ function StateEditor({
         >
           {showStandardLib ? "Hide" : "Show"} standard library
           <svg
-            className={cn(
+            className={twMerge(
               "inline-block transition-transform",
               showStandardLib ? "rotate-180" : "rotate-0",
             )}

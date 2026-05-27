@@ -5,7 +5,7 @@ import type { ControllerProps, FieldPath, FieldValues } from "react-hook-form";
 import { Controller, FormProvider } from "react-hook-form";
 import { FormFieldContext, FormItemContext } from "../context/form-context.js";
 import { useFormField } from "../hooks/useFormField.js";
-import { cn } from "../utils/style.js";
+import { twMerge } from "tailwind-merge";
 import { Label } from "./label.js";
 
 const Form = FormProvider;
@@ -31,7 +31,7 @@ const FormItem = React.forwardRef<
 
   return (
     <FormItemContext.Provider value={{ id }}>
-      <div ref={ref} className={cn("", className)} {...props} />
+      <div ref={ref} className={twMerge("", className)} {...props} />
     </FormItemContext.Provider>
   );
 });
@@ -46,7 +46,7 @@ const FormLabel = React.forwardRef<
   return (
     <Label
       ref={ref}
-      className={cn(error && "text-red-900 dark:text-red-400", className)}
+      className={twMerge(error && "text-red-900 dark:text-red-400", className)}
       htmlFor={formItemId}
       {...props}
     />
@@ -85,7 +85,7 @@ const FormDescription = React.forwardRef<
     <p
       ref={ref}
       id={formDescriptionId}
-      className={cn("text-sm text-gray-600 dark:text-slate-300", className)}
+      className={twMerge("text-sm text-gray-600 dark:text-slate-300", className)}
       {...props}
     />
   );
@@ -107,7 +107,7 @@ const FormMessage = React.forwardRef<
     <p
       ref={ref}
       id={formMessageId}
-      className={cn(
+      className={twMerge(
         "text-sm font-medium text-red-800 dark:text-red-100",
         className,
       )}

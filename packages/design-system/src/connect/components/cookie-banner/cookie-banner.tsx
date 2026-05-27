@@ -1,4 +1,5 @@
-import { mergeClassNameProps, PowerhouseButton } from "#design-system";
+import { PowerhouseButton } from "#design-system";
+import { twMerge } from "tailwind-merge";
 import { useState } from "react";
 
 export type CookieInput = {
@@ -26,6 +27,7 @@ export const CookieBanner: React.FC<CookieBannerProps> = (props) => {
     rejectLabel,
     onSubmit = () => {},
     onReject = () => {},
+    className,
     ...divProps
   } = props;
 
@@ -44,7 +46,13 @@ export const CookieBanner: React.FC<CookieBannerProps> = (props) => {
   const buttonStyles = "min-w-64 h-8 text-base";
 
   return (
-    <div {...mergeClassNameProps(divProps, "flex flex-col items-center")}>
+    <div
+      className={twMerge(
+        "flex flex-col items-center",
+        typeof className === "string" && className,
+      )}
+      {...divProps}
+    >
       <div className="text-center">{children}</div>
       <div className="my-8 flex gap-x-16 text-sm font-medium">
         {cookiesValue.map((cookie, i) => (

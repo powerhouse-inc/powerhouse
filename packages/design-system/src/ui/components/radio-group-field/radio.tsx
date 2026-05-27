@@ -1,4 +1,4 @@
-import { cn } from "#design-system";
+import { twMerge } from "tailwind-merge";
 import * as RadioGroupPrimitive from "@radix-ui/react-radio-group";
 import React, { useId } from "react";
 import { FormLabel } from "../form-label/form-label.js";
@@ -40,7 +40,7 @@ export const Radio = React.forwardRef<
         <RadioGroupPrimitive.Item
           aria-disabled={disabled}
           aria-invalid={hasError}
-          className={cn(
+          className={twMerge(
             "group peer",
             "aspect-square size-4 rounded-full border border-gray-800 dark:border-slate-100",
             "hover:border-gray-900 dark:hover:border-slate-50",
@@ -61,7 +61,7 @@ export const Radio = React.forwardRef<
           ref={ref}
         >
           <RadioGroupPrimitive.Indicator
-            className={cn(
+            className={twMerge(
               "relative flex size-full items-center justify-center",
               "after:absolute after:top-1/2 after:left-1/2 after:size-2.5",
               "after:-translate-1/2",
@@ -79,7 +79,7 @@ export const Radio = React.forwardRef<
           />
         </RadioGroupPrimitive.Item>
         <FormLabel
-          className={cn(
+          className={twMerge(
             !disabled &&
               !hasError && [
                 "cursor-pointer",

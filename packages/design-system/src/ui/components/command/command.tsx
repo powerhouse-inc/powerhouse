@@ -1,4 +1,5 @@
-import { cn, Icon } from "#design-system";
+import { Icon } from "#design-system";
+import { twMerge } from "tailwind-merge";
 import { Command as CommandPrimitive } from "cmdk";
 import React from "react";
 
@@ -8,7 +9,7 @@ const Command = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <CommandPrimitive
     ref={ref}
-    className={cn(
+    className={twMerge(
       "flex size-full flex-col rounded-md **:[[cmdk-label]]:hidden",
       className,
     )}
@@ -24,7 +25,7 @@ const CommandInput = React.forwardRef<
   }
 >(({ wrapperClassName, className, ...props }, ref) => (
   <div
-    className={cn(
+    className={twMerge(
       "group relative flex items-center border-b",
       "border-b-gray-300 dark:border-b-slate-900",
       "hover:border-b-gray-300 dark:hover:border-b-slate-800",
@@ -38,7 +39,7 @@ const CommandInput = React.forwardRef<
     <Icon
       name="Search"
       size={16}
-      className={cn(
+      className={twMerge(
         "pointer-events-none absolute top-3.5 left-2 text-gray-500 dark:text-slate-400",
         "group-hover:text-gray-700 dark:group-hover:text-slate-200",
         "group-focus-within:text-gray-900! dark:group-focus-within:text-slate-50",
@@ -46,7 +47,7 @@ const CommandInput = React.forwardRef<
     />
     <CommandPrimitive.Input
       ref={ref}
-      className={cn(
+      className={twMerge(
         "flex w-full bg-transparent pt-3 pr-3 pb-2 pl-8 text-sm/5 font-normal outline-none",
         "placeholder:text-gray-500 dark:placeholder:text-slate-400",
         "group-hover:placeholder:text-gray-700 dark:group-hover:placeholder:text-slate-500",
@@ -66,7 +67,7 @@ const CommandList = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <CommandPrimitive.List
     ref={ref}
-    className={cn(
+    className={twMerge(
       "max-h-75 overflow-x-hidden overflow-y-auto",
       "focus:outline-none",
       "scrollbar-thin",
@@ -99,7 +100,7 @@ const CommandGroup = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <CommandPrimitive.Group
     ref={ref}
-    className={cn(
+    className={twMerge(
       "overflow-hidden px-0.5 py-1",
       "**:[[cmdk-group-heading]]:px-2 **:[[cmdk-group-heading]]:py-1.5 **:[[cmdk-group-heading]]:text-xs **:[[cmdk-group-heading]]:font-medium",
       className,
@@ -115,7 +116,7 @@ const CommandItem = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <CommandPrimitive.Item
     ref={ref}
-    className={cn(
+    className={twMerge(
       "relative flex items-center justify-between select-none",
       "h-8 gap-2 rounded-md py-1.5 pr-2.5 pl-1.5",
       "text-sm/4 text-gray-900 outline-none dark:text-slate-50",

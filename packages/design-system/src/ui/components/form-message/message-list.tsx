@@ -1,4 +1,4 @@
-import { cn } from "#design-system";
+import { twMerge } from "tailwind-merge";
 import type { FormMessageType } from "./form-message.js";
 import { FormMessage } from "./form-message.js";
 
@@ -33,13 +33,13 @@ export const FormMessageList: React.FC<FormMessageListProps> = ({
   };
 
   return (
-    <ul className={cn("flex flex-col gap-1", className)} {...props}>
+    <ul className={twMerge("flex flex-col gap-1", className)} {...props}>
       {messages.map((message) => (
         <FormMessage
           key={message}
           as="li"
           type={type}
-          className={cn(
+          className={twMerge(
             // Layout
             "relative pl-4",
             // Visual styles

@@ -1,5 +1,5 @@
 import type { TransformerType } from "#design-system";
-import { cn } from "#design-system";
+import { twMerge } from "tailwind-merge";
 import { sharedValueTransformers } from "#design-system/ui/lib";
 import { Command } from "cmdk";
 import React, { useId, useMemo, useRef } from "react";
@@ -134,7 +134,7 @@ const IdAutocomplete = React.forwardRef<HTMLInputElement, IdAutocompleteProps>(
               shouldFilter={false}
               value={commandValue}
               onValueChange={handleCommandValue}
-              className={cn("bg-gray-100 dark:bg-slate-700")}
+              className={twMerge("bg-gray-100 dark:bg-slate-700")}
             >
               <PopoverAnchor asChild={true}>
                 <IdAutocompleteInputContainer
@@ -183,7 +183,7 @@ const IdAutocomplete = React.forwardRef<HTMLInputElement, IdAutocompleteProps>(
                         ? handleFetchSelectedOption
                         : undefined,
                       isFetchSelectedOptionSync,
-                      className: cn("rounded-t-none pt-2"),
+                      className: twMerge("rounded-t-none pt-2"),
                     },
                   )
                 ) : (
@@ -208,7 +208,7 @@ const IdAutocomplete = React.forwardRef<HTMLInputElement, IdAutocompleteProps>(
                         : undefined
                     }
                     isFetchSelectedOptionSync={isFetchSelectedOptionSync}
-                    className={cn("rounded-t-none pt-2")}
+                    className={twMerge("rounded-t-none pt-2")}
                   />
                 ))}
               <PopoverContent

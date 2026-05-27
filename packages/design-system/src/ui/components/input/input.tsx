@@ -1,10 +1,6 @@
-import type { ClassValue } from "clsx";
-import clsx from "clsx";
 import * as React from "react";
 import { twMerge } from "tailwind-merge";
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
+
 export type InputProps = React.InputHTMLAttributes<HTMLInputElement>;
 
 const inputBaseStyles = twMerge(
@@ -29,7 +25,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
     return (
       <input
         type={type}
-        className={cn(inputBaseStyles, className)}
+        className={twMerge(inputBaseStyles, className)}
         ref={ref}
         {...props}
       />

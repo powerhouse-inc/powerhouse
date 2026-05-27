@@ -1,4 +1,4 @@
-import { cn } from "#design-system";
+import { twMerge } from "tailwind-merge";
 import * as PopoverPrimitive from "@radix-ui/react-popover";
 import React from "react";
 
@@ -14,7 +14,7 @@ export const PopoverContent = React.forwardRef<
     <PopoverPrimitive.Content
       align={align}
       sideOffset={sideOffset}
-      className={cn(
+      className={twMerge(
         [
           "data-[state=closed]:animate-fade-out data-[state=open]:animate-fade-in",
           "data-[state=closed]:animate-zoom-out data-[state=open]:animate-zoom-in",

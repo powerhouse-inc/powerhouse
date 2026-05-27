@@ -141,7 +141,6 @@
     "@uiw/react-json-view": "2.0.0-alpha.42",
     "change-case": "catalog:",
     "class-variance-authority": "^0.7.0",
-    "clsx": "^2.1.1",
     "cmdk": "^1.0.4",
     "date-fns": "catalog:",
     "diff": "^8.0.3",

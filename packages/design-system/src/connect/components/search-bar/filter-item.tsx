@@ -1,4 +1,4 @@
-import { mergeClassNameProps } from "#design-system";
+import { twMerge } from "tailwind-merge";
 
 export type FilterItemType = {
   id: string;
@@ -11,14 +11,15 @@ export interface FilterItemProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 export const FilterItem: React.FC<FilterItemProps> = (props) => {
-  const { item, ...containerProps } = props;
+  const { item, className, ...containerProps } = props;
 
   return (
     <div
-      {...mergeClassNameProps(
-        containerProps,
+      className={twMerge(
         "flex h-full flex-row items-center justify-between gap-x-4 px-2",
+        typeof className === "string" && className,
       )}
+      {...containerProps}
     >
       {item.icon}
       <div className="text-sm font-semibold text-slate-200 dark:text-slate-700">

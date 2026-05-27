@@ -1,4 +1,4 @@
-import { cn } from "@powerhousedao/design-system";
+import { twMerge } from "tailwind-merge";
 import type { BaseProps } from "../utils/types.js";
 
 export function DriveLayout({ children, className, ...props }: BaseProps) {
@@ -17,7 +17,7 @@ DriveLayout.Container = function DriveLayoutContainer({
 }: BaseProps) {
   return (
     <div
-      className={cn("flex grow flex-col overflow-auto", className)}
+      className={twMerge("flex grow flex-col overflow-auto", className)}
       {...containerProps}
       {...props}
     >
@@ -33,7 +33,7 @@ DriveLayout.Header = function DriveLayoutHeader({
   ...props
 }: BaseProps) {
   return (
-    <div className={cn("flex-0", className)} {...containerProps} {...props}>
+    <div className={twMerge("flex-0", className)} {...containerProps} {...props}>
       {children}
     </div>
   );
@@ -47,7 +47,7 @@ DriveLayout.Content = function DriveLayoutContent({
 }: BaseProps) {
   return (
     <div
-      className={cn("mb-5 flex-1 px-4", className)}
+      className={twMerge("mb-5 flex-1 px-4", className)}
       {...containerProps}
       {...props}
     >
@@ -64,7 +64,7 @@ DriveLayout.ContentSection = function DriveLayoutContentSection({
   ...props
 }: BaseProps & { title?: string }) {
   return (
-    <div className={cn(className)} {...containerProps} {...props}>
+    <div className={twMerge(className)} {...containerProps} {...props}>
       {title && (
         <div className="mb-4 text-base font-semibold text-gray-600 dark:text-slate-300">
           {title}
@@ -82,7 +82,7 @@ DriveLayout.Footer = function DriveLayoutFooter({
   ...props
 }: BaseProps) {
   return (
-    <div className={cn("flex-0", className)} {...containerProps} {...props}>
+    <div className={twMerge("flex-0", className)} {...containerProps} {...props}>
       {children}
     </div>
   );

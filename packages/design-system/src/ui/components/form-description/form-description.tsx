@@ -1,4 +1,4 @@
-import { cn } from "#design-system";
+import { twMerge } from "tailwind-merge";
 
 export interface FormDescriptionProps extends React.PropsWithChildren {
   as?: React.ElementType;
@@ -14,7 +14,7 @@ const FormDescription: React.FC<FormDescriptionProps> = ({
 
   return (
     <Component
-      className={cn(
+      className={twMerge(
         "font-sans text-sm/5 font-normal text-gray-600 dark:text-slate-300",
         className,
       )}

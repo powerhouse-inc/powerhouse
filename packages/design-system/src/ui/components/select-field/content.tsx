@@ -1,4 +1,5 @@
-import { cn, Icon } from "#design-system";
+import { Icon } from "#design-system";
+import { twMerge } from "tailwind-merge";
 import { useCommandState } from "cmdk";
 import React, { useEffect } from "react";
 import {
@@ -73,7 +74,7 @@ export const Content: React.FC<ContentProps> = ({
               value="select-all"
               onSelect={toggleAll}
               disabled={false}
-              className={cn(
+              className={twMerge(
                 "cursor-pointer",
                 "data-[selected=true]:bg-gray-100 dark:data-[selected=true]:bg-slate-600",
               )}
@@ -83,7 +84,7 @@ export const Content: React.FC<ContentProps> = ({
               <div className="flex w-full items-center gap-2">
                 {selectionIcon === "auto" && (
                   <div
-                    className={cn(
+                    className={twMerge(
                       "flex size-4 items-center justify-center rounded-md border",
                       "border-gray-700 dark:border-slate-200",
                       selectedValues.length === enabledOptions.length &&

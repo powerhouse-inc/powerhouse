@@ -1,7 +1,7 @@
 import type { ComponentPropsWithoutRef } from "react";
 
 import type { DivProps } from "#design-system";
-import { mergeClassNameProps, Modal } from "#design-system";
+import { Modal } from "#design-system";
 import { twMerge } from "tailwind-merge";
 import { ModalButton } from "./modal-button.js";
 
@@ -46,6 +46,11 @@ export function ConnectConfirmationModal(props: ConfirmationModalProps) {
     ...restProps
   } = props;
 
+  const { className: containerClassName, ...restContainerProps } = containerProps;
+  const { className: headerClassName, ...restHeaderProps } = headerProps;
+  const { className: bodyClassName, ...restBodyProps } = bodyProps;
+  const { className: buttonContainerClassName, ...restButtonContainerProps } = buttonContainerProps;
+
   return (
     <Modal
       contentProps={{
@@ -60,33 +65,34 @@ export function ConnectConfirmationModal(props: ConfirmationModalProps) {
       {...restProps}
     >
       <div
-        {...mergeClassNameProps(
-          containerProps,
+        className={twMerge(
           "w-[400px] bg-white p-6 text-slate-300 dark:bg-slate-800 dark:text-slate-600 rounded-xl",
+          containerClassName,
         )}
+        {...restContainerProps}
       >
         <div
-          {...mergeClassNameProps(
-            headerProps,
+          className={twMerge(
             "pb-2 text-2xl font-bold text-gray-800 dark:text-slate-100",
+            headerClassName,
           )}
+          {...restHeaderProps}
         >
           {header}
         </div>
         <div
-          {...mergeClassNameProps(
-            bodyProps,
+          className={twMerge(
             "my-6 rounded-md bg-slate-50 p-4 text-center dark:bg-slate-800 text-gray-800 dark:text-slate-100",
+            bodyClassName,
           )}
+          {...restBodyProps}
         >
           {body}
           {children}
         </div>
         <div
-          {...mergeClassNameProps(
-            buttonContainerProps,
-            "mt-8 flex justify-between gap-3",
-          )}
+          className={twMerge("mt-8 flex justify-between gap-3", buttonContainerClassName)}
+          {...restButtonContainerProps}
         >
           <ModalButton variant="cancel" onClick={onCancel}>
             {cancelLabel}

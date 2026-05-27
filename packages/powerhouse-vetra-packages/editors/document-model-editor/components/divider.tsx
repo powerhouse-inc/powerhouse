@@ -1,4 +1,4 @@
-import { cn } from "@powerhousedao/design-system";
+import { twMerge } from "tailwind-merge";
 
 type Props = {
   className?: string;
@@ -22,7 +22,7 @@ export function Divider({ className, size = "sm", margin = "md" }: Props) {
   const marginClass = getMargin();
   return (
     <div
-      className={cn(
+      className={twMerge(
         "bg-gray-200 dark:bg-slate-600 dark:text-slate-100",
         sizeClass,
         marginClass,
