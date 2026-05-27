@@ -236,8 +236,19 @@ export const documentModelOperationErrorReducer: DocumentModelOperationErrorOper
     },
 
     deleteOperationErrorOperation(state, action) {
-      findOperationErrorOrThrow(state, action.input.id);
+      // Tolerate duplicate ids here: the filter removes every copy, so delete
+      // is the recovery path for a document that already holds duplicates.
       const latestSpec = state.specifications[state.specifications.length - 1];
+      const exists = latestSpec.modules.some((mod) =>
+        mod.operations.some((op) =>
+          op.errors.some((e) => e.id === action.input.id),
+        ),
+      );
+      if (!exists) {
+        throw new Error(
+          `Operation error "${action.input.id}" not found in the latest specification`,
+        );
+      }
       for (const mod of latestSpec.modules) {
         for (const op of mod.operations) {
           op.errors = op.errors.filter((e) => e.id != action.input.id);
@@ -268,8 +279,19 @@ export const documentModelOperationExampleReducer: DocumentModelOperationExample
     },
 
     deleteOperationExampleOperation(state, action) {
-      findOperationExampleOrThrow(state, action.input.id);
+      // Tolerate duplicate ids here: the filter removes every copy, so delete
+      // is the recovery path for a document that already holds duplicates.
       const latestSpec = state.specifications[state.specifications.length - 1];
+      const exists = latestSpec.modules.some((mod) =>
+        mod.operations.some((op) =>
+          op.examples.some((e) => e.id === action.input.id),
+        ),
+      );
+      if (!exists) {
+        throw new Error(
+          `Operation example "${action.input.id}" not found in the latest specification`,
+        );
+      }
       for (const mod of latestSpec.modules) {
         for (const op of mod.operations) {
           op.examples = op.examples.filter((e) => e.id != action.input.id);
@@ -339,34 +361,33 @@ export const documentModelOperationReducer: DocumentModelOperationOperations = {
   },
 
   moveOperationOperation(state, action) {
-    // Resolve the destination first: a missing target module must abort the
-    // move, not silently drop the operation it was removed from its source.
+    // Validate fully before mutating: resolve the destination module and the
+    // operation to move first, so a missing/ambiguous target aborts the move
+    // without having already removed the operation from its source module.
     const targetModule = findModuleOrThrow(state, action.input.newModuleId);
     const latestSpec = state.specifications[state.specifications.length - 1];
 
-    const moved: OperationSpecification[] = [];
-    for (const mod of latestSpec.modules) {
-      mod.operations = mod.operations.filter((operation) => {
-        if (operation.id == action.input.operationId) {
-          moved.push(operation);
-          return false;
-        }
-        return true;
-      });
-    }
-
-    if (moved.length === 0) {
+    const matches = latestSpec.modules.flatMap((mod) =>
+      mod.operations.filter((op) => op.id === action.input.operationId),
+    );
+    if (matches.length === 0) {
       throw new Error(
         `Operation "${action.input.operationId}" not found in the latest specification`,
       );
     }
-    if (moved.length > 1) {
+    if (matches.length > 1) {
       throw new Error(
         `Operation "${action.input.operationId}" is duplicated in the latest specification`,
       );
     }
+    const moved = matches[0];
 
-    targetModule.operations.push(moved[0]);
+    for (const mod of latestSpec.modules) {
+      mod.operations = mod.operations.filter(
+        (op) => op.id !== action.input.operationId,
+      );
+    }
+    targetModule.operations.push(moved);
   },
 
   deleteOperationOperation(state, action) {
