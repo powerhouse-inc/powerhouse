@@ -51,11 +51,13 @@ export const connectStudioArgs = {
 // These flags occupy the top of the precedence ladder for the runtime config
 // emitted into `dist/powerhouse.config.json`:
 //
-//   DEFAULT_CONNECT_CONFIG  <  env-var seeds  <  source connect.*  <  --json  <  individual --flag
+//   DEFAULT_CONNECT_CONFIG  <  source connect.*  <  --json  <  individual --flag
 //
 // `--json` accepts a partial `connect.*` blob (e.g. `{"renown":{"url":"..."}}`).
 // Individual flags merge on top of `--json` inside the same CLI layer, so they
-// win on collision.
+// win on collision. Env vars are NOT part of this build-time merge; they only
+// seed the dist file at container start (set-if-absent) via the Docker
+// entrypoint.
 const connectRuntimeOverrideArgs = {
   json: option({
     type: optional(string),
