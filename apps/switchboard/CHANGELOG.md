@@ -1,3 +1,13 @@
+## 6.1.0-dev.7 (2026-05-28)
+
+### 🩹 Fixes
+
+- **switchboard,reactor-bench,profiling:** migrate Sentry 9->10 and OpenTelemetry v1->v2 ([5e5c1ef9e](https://github.com/powerhouse-inc/powerhouse/commit/5e5c1ef9e))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.1.0-dev.6 (2026-05-28)
 
 ### 🚀 Features

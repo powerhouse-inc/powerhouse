@@ -1,3 +1,13 @@
+## 6.1.0-dev.7 (2026-05-28)
+
+### 🚀 Features
+
+- **ph-cli:** add `ph init --template <path>` fast path ([ea9c646c9](https://github.com/powerhouse-inc/powerhouse/commit/ea9c646c9))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.1.0-dev.6 (2026-05-28)
 
 ### 🚀 Features

@@ -1,3 +1,21 @@
+## 6.1.0-dev.7 (2026-05-28)
+
+### 🚀 Features
+
+- **ph-cli:** add `ph init --template <path>` fast path ([ea9c646c9](https://github.com/powerhouse-inc/powerhouse/commit/ea9c646c9))
+
+### 🩹 Fixes
+
+- **codegen:** dedup react/date-fns/vite/rolldown in generated projects ([dc94b0934](https://github.com/powerhouse-inc/powerhouse/commit/dc94b0934))
+- **document-model:** throw on missing target id in reducers ([f58102b98](https://github.com/powerhouse-inc/powerhouse/commit/f58102b98))
+- **document-model:** fail on duplicate ids in error/example/move reducers ([dfd2f02f5](https://github.com/powerhouse-inc/powerhouse/commit/dfd2f02f5))
+- **document-model:** let delete recover duplicates, validate move first ([56e28e55d](https://github.com/powerhouse-inc/powerhouse/commit/56e28e55d))
+- **switchboard,reactor-bench,profiling:** migrate Sentry 9->10 and OpenTelemetry v1->v2 ([5e5c1ef9e](https://github.com/powerhouse-inc/powerhouse/commit/5e5c1ef9e))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.1.0-dev.6 (2026-05-28)
 
 ### 🚀 Features

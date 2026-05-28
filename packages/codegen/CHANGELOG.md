@@ -1,3 +1,17 @@
+## 6.1.0-dev.7 (2026-05-28)
+
+### 🚀 Features
+
+- **ph-cli:** add `ph init --template <path>` fast path ([ea9c646c9](https://github.com/powerhouse-inc/powerhouse/commit/ea9c646c9))
+
+### 🩹 Fixes
+
+- **codegen:** dedup react/date-fns/vite/rolldown in generated projects ([dc94b0934](https://github.com/powerhouse-inc/powerhouse/commit/dc94b0934))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.1.0-dev.6 (2026-05-28)
 
 ### 🚀 Features
