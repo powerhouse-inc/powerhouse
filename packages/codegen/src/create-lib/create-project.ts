@@ -19,12 +19,12 @@ type CreateProjectArgs = {
   skipInstall?: boolean;
   /**
    * Path to an existing scaffolded project to clone instead of generating +
-   * resolving deps from scratch. The template's source + pnpm-lock.yaml are
+   * resolving deps from scratch. The clone's source + pnpm-lock.yaml are
    * copied (node_modules is not — it's rebuilt from the lockfile via the warm
    * pnpm store with `pnpm install --frozen-lockfile --offline`). Requires
    * packageManager === "pnpm".
    */
-  template?: string;
+  clone?: string;
 };
 export async function createProject({
   name,
@@ -34,7 +34,7 @@ export async function createProject({
   remoteDrive,
   skipGitInit,
   skipInstall,
-  template,
+  clone,
 }: CreateProjectArgs) {
   const appPath = path.join(process.cwd(), name);
 
@@ -46,11 +46,11 @@ export async function createProject({
   }
 
   try {
-    if (template) {
-      await createProjectFromTemplate({
+    if (clone) {
+      await createProjectFromClone({
         name,
         appPath,
-        template,
+        clone,
         packageManager,
         skipGitInit,
         skipInstall,
@@ -112,19 +112,20 @@ export async function createProject({
 }
 
 /**
- * Fast path for `ph init --template <path>`: copy an already-scaffolded
- * project's source + lockfile (NOT node_modules), re-apply the per-project
+ * Fast path for `ph init --clone <path>`: copy an already-scaffolded project's
+ * source + lockfile (NOT node_modules), re-apply the per-project
  * customizations, then rebuild node_modules with
  * `pnpm install --frozen-lockfile --offline`. pnpm materializes the tree from
  * the warm store via clone/hardlink — far faster and ~0 extra disk vs a fresh
  * resolve+install, and the lockfile guarantees an identical dependency set.
- * Requires the template's packages to be present in the local pnpm store
- * (which is the case in an image where the template was scaffolded at build).
+ * Requires the cloned project's packages to be present in the local pnpm
+ * store (which is the case in an image where the source was scaffolded at
+ * build).
  */
-async function createProjectFromTemplate(args: {
+async function createProjectFromClone(args: {
   name: string;
   appPath: string;
-  template: string;
+  clone: string;
   packageManager: string;
   skipGitInit?: boolean;
   skipInstall?: boolean;
@@ -133,45 +134,40 @@ async function createProjectFromTemplate(args: {
   const {
     name,
     appPath,
-    template,
+    clone,
     packageManager,
     skipGitInit,
     skipInstall,
     remoteDrive,
   } = args;
-  // The template path materializes deps from the template's pnpm-lock.yaml via
-  // `pnpm install --frozen-lockfile --offline`. Other package managers have no
-  // equivalent offline-from-pnpm-lockfile mode, so require pnpm explicitly
-  // instead of silently switching.
+  // The clone path materializes deps from the source project's pnpm-lock.yaml
+  // via `pnpm install --frozen-lockfile --offline`. Other package managers
+  // have no equivalent offline-from-pnpm-lockfile mode, so require pnpm
+  // explicitly instead of silently switching.
   if (packageManager !== "pnpm") {
     console.error(
-      `⛔ --template requires --pnpm (got "${packageManager}"). The fast path materializes deps from the template's pnpm-lock.yaml.`,
+      `⛔ --clone requires --pnpm (got "${packageManager}"). The fast path materializes deps from the cloned project's pnpm-lock.yaml.`,
     );
     process.exit(1);
   }
-  const templatePath = path.resolve(process.cwd(), template);
-  if (
-    !fs.existsSync(templatePath) ||
-    !fs.statSync(templatePath).isDirectory()
-  ) {
+  const clonePath = path.resolve(process.cwd(), clone);
+  if (!fs.existsSync(clonePath) || !fs.statSync(clonePath).isDirectory()) {
     console.error(
-      `⛔ Template "${template}" not found (resolved to "${templatePath}"). Pass a path to an existing scaffolded project.`,
+      `⛔ Clone source "${clone}" not found (resolved to "${clonePath}"). Pass a path to an existing scaffolded project.`,
     );
     process.exit(1);
   }
-  if (!fs.existsSync(path.join(templatePath, "pnpm-lock.yaml"))) {
+  if (!fs.existsSync(path.join(clonePath, "pnpm-lock.yaml"))) {
     console.error(
-      `⛔ Template "${template}" has no pnpm-lock.yaml. --template requires a pnpm project scaffolded with a committed lockfile.`,
+      `⛔ Clone source "${clone}" has no pnpm-lock.yaml. --clone requires a pnpm project scaffolded with a committed lockfile.`,
     );
     process.exit(1);
   }
 
   // Copy source + lockfile only; node_modules is rebuilt from the store below,
-  // and the template's .git is irrelevant (we re-init fresh).
-  console.log(
-    chalk.blue(`▶️ Creating project from template "${template}"...\n`),
-  );
-  fs.cpSync(templatePath, appPath, {
+  // and the source's .git is irrelevant (we re-init fresh).
+  console.log(chalk.blue(`▶️ Cloning project from "${clone}"...\n`));
+  fs.cpSync(clonePath, appPath, {
     recursive: true,
     filter: (src) => {
       const base = path.basename(src);
@@ -185,7 +181,7 @@ async function createProjectFromTemplate(args: {
       );
     },
   });
-  console.log(chalk.green(`✅ Template files copied\n`));
+  console.log(chalk.green(`✅ Project files cloned\n`));
 
   if (!skipGitInit) {
     console.log(chalk.blue(`▶️ Initializing git repository...\n`));
@@ -207,6 +203,6 @@ async function createProjectFromTemplate(args: {
   }
 
   console.log(
-    chalk.bold(`🎉 Successfully created project "${name}" from template 🎉\n`),
+    chalk.bold(`🎉 Successfully cloned project "${name}" from "${clone}" 🎉\n`),
   );
 }
