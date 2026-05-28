@@ -1,4 +1,5 @@
 import React from "react";
+import { twMerge } from "tailwind-merge";
 
 interface VetraIconProps {
   width?: number;
@@ -18,7 +19,7 @@ export const VetraIcon: React.FC<VetraIconProps> = ({
       height={height}
       viewBox="0 0 23 22"
       fill="none"
-      className={className}
+      className={twMerge(className, "text-gray-50 dark:text-slate-800")}
       xmlns="http://www.w3.org/2000/svg"
     >
       <path

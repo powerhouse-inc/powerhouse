@@ -1,4 +1,5 @@
 import React from "react";
+import { twMerge } from "tailwind-merge";
 
 interface EditorIconProps {
   width?: number;
@@ -17,13 +18,13 @@ export const EditorIcon: React.FC<EditorIconProps> = ({
       height={height}
       viewBox="0 0 40 42"
       fill="none"
-      className={className}
+      className={twMerge(className, "text-gray-50 dark:text-slate-800")}
       xmlns="http://www.w3.org/2000/svg"
     >
       <g filter="url(#filter0_di_2102_4406)">
         <path
           d="M4 6C4 2.68629 6.68629 0 10 0L28 0L36 8V34C36 37.3137 33.3137 40 30 40H10C6.68629 40 4 37.3137 4 34V6Z"
-          fill="#F3F5F7"
+          fill="currentColor"
         />
         <path
           d="M10 0.75H27.6895L35.25 8.31055V34C35.25 36.8995 32.8995 39.25 30 39.25H10C7.10051 39.25 4.75 36.8995 4.75 34V6C4.75 3.10051 7.10051 0.75 10 0.75Z"

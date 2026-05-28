@@ -1,4 +1,5 @@
 import React from "react";
+import { twMerge } from "tailwind-merge";
 
 interface SubgraphIconProps {
   width?: number;
@@ -17,13 +18,13 @@ export const SubgraphIcon: React.FC<SubgraphIconProps> = ({
       height={height}
       viewBox="0 0 40 42"
       fill="none"
-      className={className}
+      className={twMerge(className, "text-gray-50 dark:text-slate-800")}
       xmlns="http://www.w3.org/2000/svg"
     >
       <g filter="url(#filter0_di_2184_4816)">
         <path
           d="M0 6C0 2.68629 2.68629 0 6 0L24 0L32 8V34C32 37.3137 29.3137 40 26 40H6C2.68629 40 0 37.3137 0 34V6Z"
-          fill="#F3F5F7"
+          fill="currentColor"
         />
         <path
           d="M6 0.75H23.6895L31.25 8.31055V34C31.25 36.8995 28.8995 39.25 26 39.25H6C3.10051 39.25 0.75 36.8995 0.75 34V6C0.75 3.10051 3.10051 0.75 6 0.75Z"
