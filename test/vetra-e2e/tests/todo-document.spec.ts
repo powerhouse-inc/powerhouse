@@ -559,8 +559,9 @@ test("Change registry URL at runtime and install from new registry", async () =>
   // The "Installed Packages" section is a collapsible PackageSection; it
   // starts collapsed so the row isn't in the DOM yet. Click the section
   // header to expand before looking for the row.
-  const installedSectionToggle = settingsModal
-    .getByRole("button", { name: /^Installed Packages/i });
+  const installedSectionToggle = settingsModal.getByRole("button", {
+    name: /^Installed Packages/i,
+  });
   await expect(installedSectionToggle).toBeVisible({ timeout: 10_000 });
   await installedSectionToggle.click();
 
