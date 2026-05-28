@@ -78,6 +78,7 @@ describe("source-config schema", () => {
     expect(props.connect.properties).toHaveProperty("packages");
     expect(props.connect.properties).toHaveProperty("drives");
     expect(props.connect.properties).toHaveProperty("renown");
+    expect(props.connect.properties).toHaveProperty("sentry");
   });
 
   it("connect.drives.sections collapses public+cloud into a single 'remote'", () => {
