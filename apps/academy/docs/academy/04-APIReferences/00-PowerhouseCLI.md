@@ -65,7 +65,7 @@ Initialize a new project
 
 **Remote Drive** - Remote drive identifier. - Usage: `--remote-drive, -r <str>`
 
-**Template** - Path to an existing scaffolded project to clone instead of resolving deps from scratch. Install runs offline from the template's pnpm-lock.yaml (requires --pnpm; --version/--tag are ignored). - Usage: `--template <str>`
+**Clone** - Path to an existing scaffolded project to clone instead of resolving deps from scratch. Install runs offline from the cloned project's pnpm-lock.yaml (requires --pnpm; --version/--tag are ignored). - Usage: `--clone <str>`
 
 
 
@@ -158,7 +158,7 @@ Initialize a new global project
 
 **Remote Drive** - Remote drive identifier. - Usage: `--remote-drive, -r <str>`
 
-**Template** - Path to an existing scaffolded project to clone instead of resolving deps from scratch. Install runs offline from the template's pnpm-lock.yaml (requires --pnpm; --version/--tag are ignored). - Usage: `--template <str>`
+**Clone** - Path to an existing scaffolded project to clone instead of resolving deps from scratch. Install runs offline from the cloned project's pnpm-lock.yaml (requires --pnpm; --version/--tag are ignored). - Usage: `--clone <str>`
 
 
 
