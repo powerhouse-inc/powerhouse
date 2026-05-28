@@ -3,7 +3,7 @@
 // first side-effecting module in main.ts.
 import { metrics } from "@opentelemetry/api";
 import { PrometheusExporter } from "@opentelemetry/exporter-prometheus";
-import { Resource } from "@opentelemetry/resources";
+import { resourceFromAttributes } from "@opentelemetry/resources";
 import { MeterProvider } from "@opentelemetry/sdk-metrics";
 import { ATTR_SERVICE_NAME } from "@opentelemetry/semantic-conventions";
 
@@ -24,7 +24,7 @@ const exporter = new PrometheusExporter(
 );
 
 const provider = new MeterProvider({
-  resource: new Resource({
+  resource: resourceFromAttributes({
     [ATTR_SERVICE_NAME]: SERVICE_NAME,
     "reactor.workers": WORKERS,
   }),
