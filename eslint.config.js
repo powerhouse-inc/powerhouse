@@ -597,7 +597,7 @@ const tailwindConfig = [
     settings: {
       "better-tailwindcss": {
         cwd: path.join(repoRoot, "apps/connect"),
-        entryPoint: "app.css",
+        entryPoint: "style.css",
       },
     },
   },

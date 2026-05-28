@@ -39,7 +39,7 @@ export const InspectorModal: React.FC = () => {
         schema: REACTOR_SCHEMA,
         getTables,
         getTableRows,
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
         getDefaultSort,
         pageSize: DEFAULT_PAGE_SIZE,
         onExportDb,
