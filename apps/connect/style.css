@@ -1,3 +1,4 @@
+@layer external-packages;
 @import "@powerhousedao/design-system/theme.css";
 @import "tailwindcss";
 @source "../../packages/design-system/src/**/*.{tsx,ts}";
