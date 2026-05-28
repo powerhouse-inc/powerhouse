@@ -1,10 +1,28 @@
+/* Declare the external-packages layer first so it has the lowest priority in the
+   cascade. Any CSS injected by dynamically loaded packages (via the package
+   manager) is placed into this layer, preventing it from overriding connect,
+   design-system, vetra, or powerhouse-vetra-packages styles. */
 @layer external-packages;
+/* Pull in the design-system's Tailwind theme extension (theme block with all
+   color, font, and spacing tokens) so they are available before Tailwind
+   generates utility classes below. Also defines the dark-mode custom variant. */
 @import "@powerhousedao/design-system/theme.css";
+
+/* Generate all Tailwind base styles and utility classes, extended by the
+   design-system theme tokens imported above. */
 @import "tailwindcss";
+
+/* Tell Tailwind's scanner to look for utility class usage in these packages so
+   their classes are included in the compiled output. Tailwind does not scan
+   node_modules by default, so each workspace package needs an explicit @source. */
 @source "../../packages/design-system/src/**/*.{tsx,ts}";
 @source "../../packages/powerhouse-vetra-packages/**/*.{tsx,ts}";
 @source "../../packages/vetra/**/*.{tsx,ts}";
+
+/* Third-party overrides and component-level styles from the design-system
+   (e.g. react-toastify, scrollbar plugin, form element resets). */
 @import "@powerhousedao/design-system/style.css";
-/* @import "@powerhousedao/document-engineering/style.css"; */
+
+/* Component styles for powerhouse-vetra-packages and vetra. */
 @import "@powerhousedao/powerhouse-vetra-packages/style.css";
 @import "@powerhousedao/vetra/style.css";
