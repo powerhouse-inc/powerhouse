@@ -2784,24 +2784,6 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
-  test/ph-init-bench:
-    devDependencies:
-      '@powerhousedao/e2e-utils':
-        specifier: workspace:*
-        version: link:../e2e-utils
-      '@powerhousedao/registry':
-        specifier: workspace:*
-        version: link:../../packages/registry
-      '@types/node':
-        specifier: 'catalog:'
-        version: 25.2.3
-      tsx:
-        specifier: ^4.19.2
-        version: 4.21.0
-      typescript:
-        specifier: ^5.9.3
-        version: 5.9.3
-
   test/switchboard:
     devDependencies:
       '@modelcontextprotocol/sdk':
