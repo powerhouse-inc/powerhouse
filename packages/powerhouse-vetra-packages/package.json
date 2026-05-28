@@ -17,7 +17,8 @@
     "access": "public"
   },
   "files": [
-    "dist"
+    "dist",
+    "style.css"
   ],
   "exports": {
     ".": {
