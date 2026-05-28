@@ -25,7 +25,7 @@ export class RemoteAttachmentUpload implements IAttachmentUpload {
     this.options = options;
     this.remoteUrl = config.remoteUrl;
     this.jwtHandler = config.jwtHandler;
-    this.fetchFn = config.fetchFn ?? globalThis.fetch;
+    this.fetchFn = (config.fetchFn ?? globalThis.fetch).bind(globalThis);
   }
 
   async send(

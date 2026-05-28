@@ -35,7 +35,7 @@ export class RemoteReservationStore implements IReservationStore {
   constructor(config: SwitchboardClientConfig) {
     this.remoteUrl = config.remoteUrl;
     this.jwtHandler = config.jwtHandler;
-    this.fetchFn = config.fetchFn ?? globalThis.fetch;
+    this.fetchFn = (config.fetchFn ?? globalThis.fetch).bind(globalThis);
   }
 
   async create(options: ReserveAttachmentOptions): Promise<Reservation> {
