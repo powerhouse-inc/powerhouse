@@ -55,5 +55,11 @@ export const initArgs = {
     short: "r",
     description: "Remote drive identifier.",
   }),
+  template: option({
+    type: optional(string),
+    long: "template",
+    description:
+      "Path to an existing scaffolded project to clone instead of resolving deps from scratch. Install runs offline from the template's pnpm-lock.yaml (requires --pnpm; --version/--tag are ignored).",
+  }),
   ...debugArgs,
 };

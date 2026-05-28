@@ -38,6 +38,10 @@ Specify the exact semver release version to use for your project.<br><br>
 Remote drive identifier.<br><br>
 **usage:** `--remote-drive, -r <str>`<br>
 
+#### Template <br>
+Path to an existing scaffolded project to clone instead of resolving deps from scratch. Install runs offline from the template's pnpm-lock.yaml (requires --pnpm; --version/--tag are ignored).<br><br>
+**usage:** `--template <str>`<br>
+
 
 ### flags
 #### Npm <br>
@@ -149,6 +153,10 @@ Specify the exact semver release version to use for your project.<br><br>
 #### Remote Drive <br>
 Remote drive identifier.<br><br>
 **usage:** `--remote-drive, -r <str>`<br>
+
+#### Template <br>
+Path to an existing scaffolded project to clone instead of resolving deps from scratch. Install runs offline from the template's pnpm-lock.yaml (requires --pnpm; --version/--tag are ignored).<br><br>
+**usage:** `--template <str>`<br>
 
 
 ### flags

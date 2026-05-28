@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-05-12T12:21:11.234Z
+> Generated: 2026-05-28T06:17:12.090Z
 > Total Documents: 86
 > Source: https://powerhouse.academy/llms-full.txt
 
@@ -278,7 +278,7 @@ For today's purpose, you'll be using **Vetra Studio**, the builder platform thro
 
 ## Prerequisites
 
-- Powerhouse CLI installed: `pnpm install -g ph-cmd` or `npm install -g ph-cmd --legacy-peer-deps`
+- Powerhouse CLI installed: `pnpm install -g ph-cmd` or `npm install -g ph-cmd`
 - Node.js 24 and a package manager (pnpm or npm) installed
 - Visual Studio Code (or your preferred IDE)
 - Terminal/Command Prompt access
@@ -395,11 +395,32 @@ ph init
     ```
    ````
 
-Once the project is created, you will see the following output:
-`bash
-    Initialized empty Git repository in /Users/you/ph-projects/todo-tutorial/.git/
-    The installation is done!
-    `
+Once the project is created, you will see output like:
+```bash
+🚀 Initializing a new project...
+
+▶️ Creating directory for project "todo-tutorial"...
+
+✅ Project directory created
+
+▶️ Initializing git repository...
+
+✅ Git repository initialized
+
+▶️ Creating project boilerplate files...
+
+✅ Project boilerplate files created
+
+▶️ Installing project dependencies with npm...
+
+✅ Project dependencies installed
+
+▶️ Formatting boilerplate project files...
+
+✅ Boilerplate files formatted
+
+🎉 Successfully created project "todo-tutorial" 🎉
+```
 
 Navigate to the newly created project directory:
 `bash
@@ -563,7 +584,7 @@ This tutorial step has a corresponding branch. After completing this step, your 
 
 ### Compare your generated code
 
-After running `ph generate TodoList.phdm.zip`, compare with the reference:
+After running `ph generate document-model --document TodoList.phdm.zip`, compare with the reference:
 
 ```bash
 # Compare all generated files with step-2
@@ -703,20 +724,47 @@ Your project should have the following structure in `document-models/todo-list/`
 
 ```
 document-models/todo-list/
-├── gen/                          # Auto-generated code (don't edit)
-│   ├── actions.ts
-│   ├── creators.ts              # Action creator functions
-│   ├── types.ts                 # TypeScript type definitions
-│   ├── reducer.ts
-│   └── todos/
-│       └── operations.ts        # Operation type definitions
-├── src/                          # Your custom implementation
-│   ├── reducers/
-│   │   └── todos.ts            # Reducer functions (to implement next)
-│   └── tests/
-│       └── todos.test.ts        # Test file scaffolding
+├── index.ts
 ├── todo-list.json               # Document model specification
-└── schema.graphql               # GraphQL schema
+├── v1/
+│   ├── index.ts
+│   ├── actions.ts
+│   ├── hooks.ts
+│   ├── module.ts
+│   ├── schema.graphql           # GraphQL schema
+│   ├── utils.ts
+│   ├── gen/                     # Auto-generated code (don't edit)
+│   │   ├── schema/
+│   │   │   └── index.ts
+│   │   ├── actions.ts
+│   │   ├── controller.ts
+│   │   ├── creators.ts
+│   │   ├── document-model.ts
+│   │   ├── document-schema.ts
+│   │   ├── document-type.ts
+│   │   ├── index.ts
+│   │   ├── ph-factories.ts
+│   │   ├── reducer.ts
+│   │   ├── types.ts
+│   │   ├── utils.ts
+│   │   └── todos/               # Per-module generated files
+│   │       ├── actions.ts
+│   │       ├── creators.ts
+│   │       ├── error.ts
+│   │       └── operations.ts
+│   ├── src/                     # Your custom implementation
+│   │   ├── index.ts
+│   │   ├── utils.ts
+│   │   └── reducers/
+│   │       └── todos.ts
+│   └── tests/
+│       ├── document-model.test.ts
+│       └── todos.test.ts
+└── upgrades/
+    ├── index.ts
+    ├── upgrade-manifest.ts
+    ├── v1.ts
+    └── versions.ts
 ```
 
 **TIP:**
@@ -1452,7 +1500,7 @@ This tutorial shows building from **generated scaffolding** (step-5) to **comple
 
 ### Compare your generated editor
 
-After running `ph generate --editor`:
+After running `ph generate editor`:
 
 ```bash
 # Compare generated scaffolding with step-5
@@ -2852,7 +2900,7 @@ Once your schema and operations are defined in Connect, export the specification
 Use the Powerhouse CLI to process an exported `.phdm.zip` file and generate the necessary boilerplate code for your document model.
 
 ```bash
-ph generate document-model --file YourModelName.phdm.zip
+ph generate document-model --document YourModelName.phdm.zip
 ```
 
 This command creates a new directory under `document-models/YourModelName/` containing:
@@ -4398,13 +4446,13 @@ If you're using the Connect workflow and need to manually generate code:
 The core command to invoke the Document Model Generator is:
 
 ```bash
-ph generate document-model --file <YourModelName.phd>
+ph generate document-model --document <YourModelName.phd>
 ```
 
 Replace `<YourModelName.phd>` with the actual filename of your exported document model specification. For instance, if your exported file is named `TodoList.phd`, the command would be:
 
 ```bash
-ph generate document-model --file TodoList.phd
+ph generate document-model --document TodoList.phd
 ```
 
 When executed, this command reads and parses the specification file and generates a set of files and directories within your Powerhouse project.
@@ -4453,7 +4501,7 @@ When your document model needs to evolve over time—adding new fields, operatio
 Versioning is enabled by default. Simply run:
 
 ```bash
-ph generate document-model --file TodoList.phd
+ph generate document-model --document TodoList.phd
 ```
 
 ### Versioned Folder Structure
@@ -4544,7 +4592,7 @@ This approach is useful when working with Connect's Document Model Editor or whe
 2. **Run the Generator Command:**
 
    ```bash
-   ph generate document-model --file TodoList.phd
+   ph generate document-model --document TodoList.phd
    ```
 
 3. **Explore the Generated Files:**
@@ -7311,11 +7359,9 @@ export function Editor() {
 
 > Source: https://powerhouse.academy/academy/MasteryTrack/BuildingUserExperiences/DocumentTools/DocumentToolbar
 
-**WARNING:**
-This documentation is still being written and may be incomplete.
+The `DocumentToolbar` renders a default set of document controls for common document actions: undo, redo, download, document name editing, revision history, opening in Switchboard, and closing the current document view.
 
-
-The Document Toolbar is a central component in Powerhouse Connect, appearing at the top of every document view. It provides quick access to a variety of tools and functions designed to streamline your workflow and enhance document management.
+The toolbar can be customized by enabling or disabling built-in controls, replacing individual controls, adding custom controls to toolbar slots, replacing the toolbar containers, applying custom styles, or replacing the entire toolbar contents with `children`.
 
 <figure className="image-container">
   <img
@@ -7327,23 +7373,336 @@ The Document Toolbar is a central component in Powerhouse Connect, appearing at 
   </figcaption>
 </figure>
 
-## Overview
+## Basic usage
 
-The toolbar is designed to be intuitive and context-aware, offering relevant options based on the document type and your current task. Its capabilities range from basic actions to more advanced document control features.
+```tsx
 
-### Key functionalities in the future will include:
 
-- **Switchboard API Access:** Access the Switchboard API via its logo in the toolbar. This opens the Apollo Studio Sandbox, pre-populating the DocumentID for your current document model. This feature is unavailable for locally stored documents.
-- **Navigation and Versioning:** Tools for managing [document versions](/academy/MasteryTrack/BuildingUserExperiences/DocumentTools/OperationHistory), such as undo/redo, and accessing the [revision history timeline](/academy/MasteryTrack/BuildingUserExperiences/DocumentTools/RevisionHistoryTimeline).
-- **Document Actions:** Buttons for common operations like exporting or deleting documents.
-- **Information Display:** Shows the document title and may include indicators for status (e.g., connectivity, errors) or active modes.
-- **Search and Filtering:** Integrated search capabilities to find assets or attachments within the document context.
-- **View Customization:** Options to switch between different views or display modes.
-- **Contextual Tools:** Depending on the document, you might find toggles, dropdowns for specific actions (e.g., "Sync Schema", "Fixed Income Purchase"), or buttons for settings and configurations.
+export function MyDocumentPage({ document }) {
+  return <DocumentToolbar document={document} />;
+}
+```
 
-The specific set of tools available on the toolbar can be configured and may evolve as new features are introduced. This section will detail the various components and options you may encounter.
+When no `document` prop is provided, the toolbar falls back to the currently selected document.
 
-_(Detailed information on each toolbar feature, such as "Export Button", "Title Display", "Search Functionality", "Toggle Switches", "Icon Buttons", etc., will follow here.)_
+```tsx
+<DocumentToolbar />
+```
+
+## Built-in controls
+
+The default toolbar includes these controls:
+
+```ts
+["undo", "redo", "download", "name", "history", "switchboard", "close"]
+```
+
+The controls are arranged into three slots:
+
+```ts
+{
+  first: ["undo", "redo", "download"],
+  second: ["name"],
+  third: ["history", "switchboard", "close"],
+}
+```
+
+## Disabling controls
+
+Use `disabledControls` to remove specific built-in controls from the default toolbar.
+
+```tsx
+<DocumentToolbar
+  document={document}
+  disabledControls={["download", "switchboard"]}
+/>
+```
+
+## Enabling only specific controls
+
+Use `enabledControls` to render only a subset of the built-in controls.
+
+```tsx
+<DocumentToolbar
+  document={document}
+  enabledControls={["download", "switchboard"]}
+/>
+```
+
+## Combining enabled and disabled controls
+
+A control renders only when it is included in `enabledControls` and absent from `disabledControls`. When a control appears in both lists, `disabledControls` takes precedence.
+
+```tsx
+<DocumentToolbar
+  document={document}
+  enabledControls={["download", "switchboard", "close"]}
+  disabledControls={["download"]}
+/>
+```
+
+In this example, only `switchboard` and `close` render.
+
+## Adding a custom control to a slot
+
+Use `customControls` to add controls to a specific toolbar slot. Custom controls receive the current document when available.
+
+```tsx
+<DocumentToolbar
+  document={document}
+  customControls={{
+    first: {
+      component: ({ document }) => (
+        <button
+          onClick={() => {
+            alert(`custom control one in ${document?.header.name}`);
+          }}
+        >
+          custom one
+        </button>
+      ),
+    },
+  }}
+/>
+```
+
+## Adding a custom control at the end of a slot
+
+By default, custom controls render at the start of their slot. Use `position: "end"` to render a custom control after the built-in controls in that slot.
+
+```tsx
+<DocumentToolbar
+  document={document}
+  customControls={{
+    second: {
+      position: "end",
+      component: ({ document }) => (
+        <button
+          onClick={() => {
+            alert(`custom control two in ${document?.header.name}`);
+          }}
+        >
+          custom two
+        </button>
+      ),
+    },
+  }}
+/>
+```
+
+## Adding multiple custom controls to a slot
+
+A slot can receive a list of custom controls. Each item needs a `key`.
+
+```tsx
+<DocumentToolbar
+  document={document}
+  customControls={{
+    first: [
+      {
+        key: "custom-one",
+        component: ({ document }) => (
+          <button
+            onClick={() => {
+              alert(`custom control one in ${document?.header.name}`);
+            }}
+          >
+            custom one
+          </button>
+        ),
+      },
+      {
+        key: "custom-two",
+        position: "end",
+        component: ({ document }) => (
+          <button
+            onClick={() => {
+              alert(`custom control two in ${document?.header.name}`);
+            }}
+          >
+            custom two
+          </button>
+        ),
+      },
+    ],
+  }}
+/>
+```
+
+## Replacing the toolbar container
+
+Use `toolbarContainer` to replace the outer toolbar container. The custom toolbar container receives the toolbar children and the resolved `toolbarClassName`.
+
+```tsx
+<DocumentToolbar
+  document={document}
+  toolbarContainer={({ children, className }) => (
+    <div className={className}>
+      {children}
+    </div>
+  )}
+/>
+```
+
+## Replacing the controls container
+
+Use `controlsContainer` to replace the container used for each toolbar slot. The custom controls container receives the slot children and the resolved `controlsContainerClassName`.
+
+```tsx
+<DocumentToolbar
+  document={document}
+  controlsContainer={({ children, className }) => (
+    <div className={className}>{children}</div>
+  )}
+/>
+```
+
+## Replacing a built-in control
+
+Use `componentOverrides` to replace individual built-in controls while keeping the default toolbar structure. This is useful when you want to reuse the built-in control behavior or styling but change part of the rendering or click behavior.
+
+```tsx
+
+
+<DocumentToolbar
+  document={document}
+  componentOverrides={{
+    download: (props: { document?: PHDocument }) => (
+      <ToolbarDownloadButton
+        {...props}
+        onClick={() => alert(props.document?.header.name)}
+      >
+        <span>Download??</span>
+      </ToolbarDownloadButton>
+    ),
+  }}
+/>
+```
+
+The `name` control can also be replaced through `componentOverrides`.
+
+```tsx
+<DocumentToolbar
+  document={document}
+  componentOverrides={{
+    name: ({ document }) => (
+      <textarea defaultValue={document?.header.name ?? "no name"} />
+    ),
+  }}
+/>
+```
+
+## Replacing the entire toolbar contents
+
+Pass `children` when you want complete control over the toolbar contents. When `children` is provided, the built-in controls are not rendered.
+
+```tsx
+<DocumentToolbar document={document}>
+  <div>I've totally overridden the whole thing</div>
+</DocumentToolbar>
+```
+
+Props such as `enabledControls`, `disabledControls`, `customControls`, `componentOverrides`, `controlsContainer`, and `controlsContainerClassName` are not used in this mode. The props are typed so that the `children` mode is mutually exclusive with the default-toolbar customization props.
+
+## Custom styles
+
+Use `toolbarClassName` to add classes to the outer toolbar container. Use `controlsContainerClassName` to add classes to each controls container. The built-in toolbar components use `tailwind-merge`, so compatible Tailwind classes passed through these props can override default classes.
+
+```tsx
+<DocumentToolbar
+  document={document}
+  toolbarClassName="border-none bg-green-100"
+  controlsContainerClassName="rounded-lg border border-green-300 p-2"
+/>
+```
+
+## Custom control component shape
+
+Custom controls should match `ToolbarControlComponent`.
+
+```tsx
+
+
+const MyControl: ToolbarControlComponent = ({ document }) => {
+  return <button>{document?.header.name}</button>;
+};
+```
+
+## Toolbar button props
+
+The built-in toolbar button controls accept `ToolbarButtonProps`. Each toolbar button accepts:
+
+```ts
+{
+  document?: PHDocument;
+  children?: ReactNode;
+  className?: string;
+  onClick?: (document?: PHDocument) => void;
+}
+```
+
+Providing `children` replaces the default button contents. Providing `onClick` replaces the default button behavior.
+
+```tsx
+<DocumentToolbar document={document}>
+  <ToolbarDownloadButton document={document}>
+    Export
+  </ToolbarDownloadButton>
+</DocumentToolbar>
+
+<ToolbarHistoryButton
+  document={document}
+  onClick={(document) => {
+    console.log("Custom history action", document?.header.id);
+  }}
+/>
+```
+
+## Exported components
+
+```ts
+DocumentToolbar
+ToolbarButton
+ToolbarUndoButton
+ToolbarRedoButton
+ToolbarDownloadButton
+ToolbarSwitchboardButton
+ToolbarHistoryButton
+ToolbarCloseButton
+ToolbarName
+ToolbarInput
+ToolbarContainer
+ToolbarControlsContainer
+```
+
+The individual toolbar controls are exported so they can be reused when building custom toolbar layouts or custom control components.
+
+## Exported types
+
+```ts
+DocumentToolbarProps
+DocumentToolbarWithChildrenProps
+DocumentToolbarWithCustomControlsProps
+DocumentToolbarControlName
+ToolbarButtonProps
+ToolbarButtonClickHandler
+ToolbarControlComponent
+ToolbarControlComponents
+ContainerComponent
+ControlSlot
+ControlPosition
+CustomToolbarControl
+CustomToolbarControlList
+CustomToolbarControls
+```
+
+## Notes
+
+- `DocumentToolbar` falls back to the currently selected document when `document` is omitted.
+- Built-in undo and redo buttons automatically disable themselves when the corresponding action is unavailable.
+- The document name control supports inline renaming.
+- `children` mode replaces the toolbar contents completely.
+- `disabledControls` takes precedence over `enabledControls`.
 
 ---
 
@@ -17390,6 +17749,8 @@ Initialize a new project
 
 **Remote Drive** - Remote drive identifier. - Usage: `--remote-drive, -r <str>`
 
+**Template** - Path to an existing scaffolded project to clone instead of resolving deps from scratch. Install runs offline from the template's pnpm-lock.yaml (requires --pnpm; --version/--tag are ignored). - Usage: `--template <str>`
+
 
 ### Flags
 **Npm** - Use 'npm' as package manager - Usage: `--npm`
@@ -17470,6 +17831,8 @@ Initialize a new global project
 
 **Remote Drive** - Remote drive identifier. - Usage: `--remote-drive, -r <str>`
 
+**Template** - Path to an existing scaffolded project to clone instead of resolving deps from scratch. Install runs offline from the template's pnpm-lock.yaml (requires --pnpm; --version/--tag are ignored). - Usage: `--template <str>`
+
 
 ### Flags
 **Npm** - Use 'npm' as package manager - Usage: `--npm`
@@ -17545,6 +17908,8 @@ Re-generate all modules in the current project
 
 
 ### Flags
+**Extract** - Instead of generating code, write a spec for every module into specs/ (one-shot migration to documents-as-source-of-truth) - Usage: `--extract, -x`
+
 **Help** - show help - Usage: `--help, -h`
 
 
@@ -17553,13 +17918,15 @@ Generate a document model
 
 
 ### Options
-**File** - Path to the file to generate the document model from - Usage: `--file, -f <file>`
+**Document** - Path to a document model spec (.phd or .json) to generate from - Usage: `--document, -d <file>`
 
-**Dir** - Name of the directory of an existing document model to re-generate - Usage: `--dir, -d <dir>`
+**Dir** - Name of the directory of an existing document model to re-generate - Usage: `--dir <dir>`
 
 
 ### Flags
 **All** - Re-generate all existing document models in the current project - Usage: `--all, -a`
+
+**Extract** - Write a powerhouse/document-model spec for each existing document model into specs/document-models/ - Usage: `--extract, -x`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
@@ -17575,11 +17942,15 @@ Generate a document editor
 
 **Document Type** - The document type for the new editor - Usage: `--document-type, -t <str>`
 
-**Dir** - Name of the directory of an existing editor to re-generate - Usage: `--dir, -d <dir>`
+**Document** - Path to a powerhouse/document-editor spec file (.phd or .json) to drive codegen - Usage: `--document, -d <file>`
+
+**Dir** - Name of the directory of an existing editor to re-generate - Usage: `--dir <dir>`
 
 
 ### Flags
 **All** - Re-generate all existing editors in the current project - Usage: `--all, -a`
+
+**Extract** - Write a powerhouse/document-editor spec for each existing editor into specs/editors/ - Usage: `--extract, -x`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
@@ -17595,7 +17966,9 @@ Generate a drive app
 
 **Document Types** - The document types allowed by the new app - Usage: `--document-types <str>, -t=<str>`
 
-**Dir** - Name of the directory of an existing app to re-generate - Usage: `--dir, -d <dir>`
+**Document** - Path to a powerhouse/app spec file (.phd or .json) to drive codegen - Usage: `--document, -d <file>`
+
+**Dir** - Name of the directory of an existing app to re-generate - Usage: `--dir <dir>`
 
 
 ### Flags
@@ -17603,6 +17976,8 @@ Generate a drive app
 
 **Default:** `false`
 **All** - Re-generate all existing apps in the current project - Usage: `--all, -a`
+
+**Extract** - Write a powerhouse/app spec for each existing drive app into specs/apps/ - Usage: `--extract, -x`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
@@ -17625,11 +18000,15 @@ Generate a processor
 **Apps** - Whether the processor will run in switchboard (nodejs), connect (browser), or both - Usage: `--apps <value>`
 
 **Default:** `switchboard,connect`
-**Dir** - Name of the directory of an existing processor to re-generate - Usage: `--dir, -d <dir>`
+**Document** - Path to a powerhouse/processor spec file (.phd or .json) to drive codegen - Usage: `--document, -d <file>`
+
+**Dir** - Name of the directory of an existing processor to re-generate - Usage: `--dir <dir>`
 
 
 ### Flags
 **All** - Re-generate all existing processors in the current project - Usage: `--all, -a`
+
+**Extract** - Write a powerhouse/processor spec for each existing processor into specs/processors/ - Usage: `--extract, -x`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
@@ -17643,11 +18022,15 @@ Generate a subgraph
 ### Options
 **Name** - The name of the subgraph to generate - Usage: `--name, -n <str>`
 
-**Dir** - Name of the directory of an existing subgraph to re-generate - Usage: `--dir, -d <dir>`
+**Document** - Path to a powerhouse/subgraph spec file (.phd or .json) to drive codegen - Usage: `--document, -d <file>`
+
+**Dir** - Name of the directory of an existing subgraph to re-generate - Usage: `--dir <dir>`
 
 
 ### Flags
 **All** - Re-generate all existing subgraphs in the current project - Usage: `--all, -a`
+
+**Extract** - Write a powerhouse/subgraph spec for each existing subgraph into specs/subgraphs/ - Usage: `--extract, -x`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
@@ -17690,6 +18073,8 @@ and real-time processing with a "Vetra" drive or connection to remote drives.
 
 **Default:** `3001`
 **Remote Drive** - URL of remote drive to connect to (skips switchboard initialization) - Usage: `--remote-drive <str>`
+
+**Db Path** - Database path or connection string. Use a `postgres://` URL for Postgres; otherwise treated as a PGlite filesystem path. Leave unset for in-memory PGlite. - Usage: `--db-path <str>`
 
 **Base** - Base path for the app - Usage: `--base <str>`
 
@@ -18102,6 +18487,10 @@ models, processors, and real-time updates.
 **Migrate** - Run database migrations and exit - Usage: `--migrate`
 
 **Migrate Status** - Show migration status and exit - Usage: `--migrate-status`
+
+**Reset** - Wipe the local PGlite switchboard storage after confirmation, then exit - Usage: `--reset`
+
+**Yes** - Skip the interactive confirmation prompt for --reset (required for non-interactive use) - Usage: `--yes, -y`
 
 **Mcp** - enable Mcp route at /mcp - Usage: `--mcp`
 
