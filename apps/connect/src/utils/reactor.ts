@@ -111,15 +111,10 @@ export async function addDefaultDrivesForNewReactor(
   const BACKOFF_MS = 2000;
 
   for (const drive of drives) {
+    let driveId: string | undefined;
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
       try {
-        const driveId = await addRemoteDrive(drive.url, undefined, options);
-        if (drive.name || drive.icon) {
-          await setDriveMetadata(driveId, {
-            name: drive.name,
-            icon: drive.icon,
-          });
-        }
+        driveId = await addRemoteDrive(drive.url, undefined, options);
         break;
       } catch (error) {
         if (attempt === MAX_ATTEMPTS) {
@@ -134,6 +129,20 @@ export async function addDefaultDrivesForNewReactor(
           );
           await new Promise((resolve) => setTimeout(resolve, delay));
         }
+      }
+    }
+
+    if (driveId && (drive.name || drive.icon)) {
+      try {
+        await setDriveMetadata(driveId, {
+          name: drive.name,
+          icon: drive.icon,
+        });
+      } catch (error) {
+        console.warn(
+          `Default drive ${drive.url} was added but metadata update failed:`,
+          error,
+        );
       }
     }
   }
