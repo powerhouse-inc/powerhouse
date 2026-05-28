@@ -20,8 +20,8 @@ import {
 const cliBoolean: Type<string, boolean> = {
   from: (input) => {
     const v = input.toLowerCase();
-    if (v === "true" || v === "1") return Promise.resolve(true);
-    if (v === "false" || v === "0") return Promise.resolve(false);
+    if (v === "true") return Promise.resolve(true);
+    if (v === "false") return Promise.resolve(false);
     return Promise.reject(
       new Error(
         `Expected 'true' or 'false' (case-insensitive), got '${input}'.`,
