@@ -1,0 +1,537 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Sidebar Component > Loading State > should match snapshot in loading state 1`] = `
+<DocumentFragment>
+  <aside
+    class="group peer relative flex h-svh max-h-screen flex-col bg-gray-50 shadow-lg transition-[width] duration-75 ease-linear dark:bg-slate-600"
+  >
+    <header
+      class="flex items-center justify-between gap-2 border-b border-gray-300 bg-gray-50 p-4 dark:border-gray-800 dark:bg-slate-600"
+    >
+      <div
+        class="flex items-center gap-2 truncate"
+      >
+        <svg
+          fill="none"
+          style="width: 16px; height: 16px;"
+          viewBox="0 0 24 24"
+        >
+          <path
+            d="M1.88134 8.65644V18.3251H0V7.09336C0 6.19326 1.03474 5.68003 1.75748 6.22134L10.6938 12.912C10.9698 13.1179 11.1313 13.4409 11.1313 13.784V18.3235H9.24992V14.174L1.88134 8.65644Z"
+            fill="currentcolor"
+          />
+          <path
+            d="M22.0605 18.3251V8.65599L14.4616 14.1738V18.3251H12.5215V13.7854C12.5215 13.4422 12.688 13.1193 12.9726 12.9133L22.1882 6.22233C22.9335 5.67944 24.0006 6.19269 24.0006 7.09283V18.3251H22.0605Z"
+            fill="currentcolor"
+          />
+        </svg>
+        <div
+          class="truncate text-sm font-semibold text-gray-700 dark:text-gray-300"
+        >
+          Test Sidebar
+        </div>
+      </div>
+      <div
+        class="flex items-center gap-2 select-none"
+      >
+        <div
+          class="w-[26px] rounded-lg bg-slate-50 p-1 text-center text-xs text-slate-100 dark:bg-gray-900 dark:text-slate-200 hover:bg-slate-100 hover:text-slate-200 dark:hover:bg-gray-600 dark:hover:text-slate-50"
+          role="button"
+          tabindex="0"
+        >
+          1
+        </div>
+        <div
+          class="w-[26px] rounded-lg bg-slate-50 p-1 text-center text-xs text-slate-100 dark:bg-gray-900 dark:text-slate-200 hover:bg-slate-100 hover:text-slate-200 dark:hover:bg-gray-600 dark:hover:text-slate-50"
+          role="button"
+          tabindex="0"
+        >
+          2
+        </div>
+      </div>
+    </header>
+    <div
+      class="flex flex-1 flex-col gap-1 overflow-y-auto"
+    >
+      <div
+        aria-label="Loading sidebar content"
+        class="flex-1 overflow-hidden p-2"
+        role="status"
+      >
+        <div
+          class="flex flex-col gap-2"
+        >
+          <div
+            class="flex items-center px-2"
+          >
+            <div
+              class="flex h-8 w-full items-center gap-2 px-2 py-1"
+              style="padding-left: 8px;"
+            >
+              <div
+                class="flex size-4 min-w-4 items-center justify-center"
+              >
+                <div
+                  class="size-4 min-w-4 animate-pulse rounded-sm bg-gray-200 dark:bg-gray-600"
+                />
+              </div>
+              <div
+                class="h-4 animate-pulse rounded-sm bg-gray-200 dark:bg-gray-600 w-32"
+              />
+            </div>
+          </div>
+          <div
+            class="flex items-center px-2"
+          >
+            <div
+              class="flex h-8 w-full items-center gap-2 px-2 py-1"
+              style="padding-left: 32px;"
+            >
+              <div
+                class="flex size-4 min-w-4 items-center justify-center"
+              >
+                <div
+                  class="size-4 min-w-4 animate-pulse rounded-sm bg-gray-200 dark:bg-gray-600"
+                />
+              </div>
+              <div
+                class="h-4 animate-pulse rounded-sm bg-gray-200 dark:bg-gray-600 w-28"
+              />
+            </div>
+          </div>
+          <div
+            class="flex items-center px-2"
+          >
+            <div
+              class="flex h-8 w-full items-center gap-2 px-2 py-1"
+              style="padding-left: 32px;"
+            >
+              <div
+                class="flex size-4 min-w-4 items-center justify-center"
+              >
+                <div
+                  class="size-4 min-w-4 animate-pulse rounded-sm bg-gray-200 dark:bg-gray-600"
+                />
+              </div>
+              <div
+                class="h-4 animate-pulse rounded-sm bg-gray-200 dark:bg-gray-600 w-36"
+              />
+            </div>
+          </div>
+          <div
+            class="flex items-center px-2"
+          >
+            <div
+              class="flex h-8 w-full items-center gap-2 px-2 py-1"
+              style="padding-left: 56px;"
+            >
+              <div
+                class="flex size-4 min-w-4 items-center justify-center"
+              >
+                <div
+                  class="size-4 min-w-4 animate-pulse rounded-sm bg-gray-200 dark:bg-gray-600"
+                />
+              </div>
+              <div
+                class="h-4 animate-pulse rounded-sm bg-gray-200 dark:bg-gray-600 w-24"
+              />
+            </div>
+          </div>
+          <div
+            class="flex items-center px-2"
+          >
+            <div
+              class="flex h-8 w-full items-center gap-2 px-2 py-1"
+              style="padding-left: 56px;"
+            >
+              <div
+                class="flex size-4 min-w-4 items-center justify-center"
+              >
+                <div
+                  class="size-4 min-w-4 animate-pulse rounded-sm bg-gray-200 dark:bg-gray-600"
+                />
+              </div>
+              <div
+                class="h-4 animate-pulse rounded-sm bg-gray-200 dark:bg-gray-600 w-30"
+              />
+            </div>
+          </div>
+          <div
+            class="flex items-center px-2"
+          >
+            <div
+              class="flex h-8 w-full items-center gap-2 px-2 py-1"
+              style="padding-left: 8px;"
+            >
+              <div
+                class="flex size-4 min-w-4 items-center justify-center"
+              >
+                <div
+                  class="size-4 min-w-4 animate-pulse rounded-sm bg-gray-200 dark:bg-gray-600"
+                />
+              </div>
+              <div
+                class="h-4 animate-pulse rounded-sm bg-gray-200 dark:bg-gray-600 w-40"
+              />
+            </div>
+          </div>
+          <div
+            class="flex items-center px-2"
+          >
+            <div
+              class="flex h-8 w-full items-center gap-2 px-2 py-1"
+              style="padding-left: 32px;"
+            >
+              <div
+                class="flex size-4 min-w-4 items-center justify-center"
+              >
+                <div
+                  class="size-4 min-w-4 animate-pulse rounded-sm bg-gray-200 dark:bg-gray-600"
+                />
+              </div>
+              <div
+                class="h-4 animate-pulse rounded-sm bg-gray-200 dark:bg-gray-600 w-26"
+              />
+            </div>
+          </div>
+          <div
+            class="flex items-center px-2"
+          >
+            <div
+              class="flex h-8 w-full items-center gap-2 px-2 py-1"
+              style="padding-left: 32px;"
+            >
+              <div
+                class="flex size-4 min-w-4 items-center justify-center"
+              >
+                <div
+                  class="size-4 min-w-4 animate-pulse rounded-sm bg-gray-200 dark:bg-gray-600"
+                />
+              </div>
+              <div
+                class="h-4 animate-pulse rounded-sm bg-gray-200 dark:bg-gray-600 w-34"
+              />
+            </div>
+          </div>
+          <div
+            class="flex items-center px-2"
+          >
+            <div
+              class="flex h-8 w-full items-center gap-2 px-2 py-1"
+              style="padding-left: 56px;"
+            >
+              <div
+                class="flex size-4 min-w-4 items-center justify-center"
+              >
+                <div
+                  class="size-4 min-w-4 animate-pulse rounded-sm bg-gray-200 dark:bg-gray-600"
+                />
+              </div>
+              <div
+                class="h-4 animate-pulse rounded-sm bg-gray-200 dark:bg-gray-600 w-22"
+              />
+            </div>
+          </div>
+          <div
+            class="flex items-center px-2"
+          >
+            <div
+              class="flex h-8 w-full items-center gap-2 px-2 py-1"
+              style="padding-left: 8px;"
+            >
+              <div
+                class="flex size-4 min-w-4 items-center justify-center"
+              >
+                <div
+                  class="size-4 min-w-4 animate-pulse rounded-sm bg-gray-200 dark:bg-gray-600"
+                />
+              </div>
+              <div
+                class="h-4 animate-pulse rounded-sm bg-gray-200 dark:bg-gray-600 w-38"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div
+      class="flex w-full gap-2 border-t border-gray-300 p-2 dark:border-gray-800"
+    >
+      <div
+        class="relative flex-1"
+      >
+        <input
+          class="flex h-9 rounded-md text-sm/5 font-normal text-gray-900 border border-gray-300 bg-white dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 px-3 py-2 font-sans placeholder:text-gray-500 dark:placeholder:text-slate-400 focus-visible:ring-1 focus-visible:ring-gray-900 focus-visible:ring-offset-0 focus-visible:ring-offset-white focus-visible:outline-none focus:bg-gray-50 dark:focus:bg-slate-700 dark:focus-visible:ring-slate-400 dark:focus-visible:ring-offset-slate-800 disabled:cursor-not-allowed disabled:border-gray-300 disabled:bg-gray-50 disabled:text-gray-700 dark:disabled:border-slate-500 dark:disabled:bg-slate-700 dark:disabled:placeholder:text-slate-400 w-full appearance-none pl-8 [&::-webkit-search-cancel-button]:hidden"
+          placeholder="Search"
+          style="padding-right: 16px;"
+          tabindex="1"
+          type="search"
+          value=""
+        />
+        <svg
+          class="absolute top-1/2 left-2 -translate-y-1/2 text-gray-700 dark:text-gray-50"
+          fill="currentcolor"
+          height="16"
+          viewBox="0 0 24 24"
+          width="16"
+        >
+          <path
+            d="M10.0137 1.95312C5.59537 1.95312 2.01367 5.53513 2.01367 9.95314C2.01367 14.3712 5.59537 17.9532 10.0137 17.9532C11.8504 17.9532 13.5913 17.3222 14.9416 16.2822L19.2949 20.6722C19.6855 21.0622 20.3419 21.0622 20.7325 20.6722C21.123 20.2812 21.123 19.6252 20.7325 19.2342L16.349 14.8741C17.3898 13.5241 18.0137 11.7901 18.0137 9.95314C18.0137 5.53513 14.432 1.95312 10.0137 1.95312ZM10.0137 3.95313C13.3274 3.95313 16.0137 6.63914 16.0137 9.95314C16.0137 13.2672 13.3274 15.9532 10.0137 15.9532C6.69997 15.9532 4.01367 13.2672 4.01367 9.95314C4.01367 6.63914 6.69997 3.95313 10.0137 3.95313Z"
+          />
+        </svg>
+      </div>
+    </div>
+    <div
+      class="group/sidebar-resizer absolute top-0 right-0 h-full w-[10px] translate-x-1/2 cursor-ew-resize select-none"
+    >
+      <div
+        class="relative h-full w-px translate-x-[5px] transition-colors group-hover/sidebar-resizer:bg-gray-500 dark:group-hover/sidebar-resizer:bg-gray-600"
+      >
+        <button
+          class="absolute top-14 right-0 size-4 translate-x-1/2 rounded-full bg-gray-500 dark:bg-gray-900 opacity-0 transition-opacity group-hover/sidebar-resizer:opacity-100"
+          type="button"
+        >
+          <svg
+            class="min-w-4 text-gray-50 dark:text-gray-500 -rotate-180"
+            fill="currentcolor"
+            style="width: 16px; height: 16px;"
+            viewBox="0 0 24 24"
+          >
+            <path
+              d="M10 16L10 12.8L10 11.2L10 8L14 12L10 16Z"
+            />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </aside>
+</DocumentFragment>
+`;
+
+exports[`Sidebar Component > should match snapshot 1`] = `
+<DocumentFragment>
+  <aside
+    class="group peer relative flex h-svh max-h-screen flex-col bg-gray-50 shadow-lg transition-[width] duration-75 ease-linear dark:bg-slate-600"
+  >
+    <header
+      class="flex items-center justify-between gap-2 border-b border-gray-300 bg-gray-50 p-4 dark:border-gray-800 dark:bg-slate-600"
+    >
+      <div
+        class="flex items-center gap-2 truncate"
+      >
+        <svg
+          fill="none"
+          style="width: 16px; height: 16px;"
+          viewBox="0 0 24 24"
+        >
+          <path
+            d="M1.88134 8.65644V18.3251H0V7.09336C0 6.19326 1.03474 5.68003 1.75748 6.22134L10.6938 12.912C10.9698 13.1179 11.1313 13.4409 11.1313 13.784V18.3235H9.24992V14.174L1.88134 8.65644Z"
+            fill="currentcolor"
+          />
+          <path
+            d="M22.0605 18.3251V8.65599L14.4616 14.1738V18.3251H12.5215V13.7854C12.5215 13.4422 12.688 13.1193 12.9726 12.9133L22.1882 6.22233C22.9335 5.67944 24.0006 6.19269 24.0006 7.09283V18.3251H22.0605Z"
+            fill="currentcolor"
+          />
+        </svg>
+        <div
+          class="truncate text-sm font-semibold text-gray-700 dark:text-gray-300"
+        >
+          Test Sidebar
+        </div>
+      </div>
+      <div
+        class="flex items-center gap-2 select-none"
+      >
+        <div
+          class="w-[26px] rounded-lg bg-slate-50 p-1 text-center text-xs text-slate-100 dark:bg-gray-900 dark:text-slate-200 hover:bg-slate-100 hover:text-slate-200 dark:hover:bg-gray-600 dark:hover:text-slate-50"
+          role="button"
+          tabindex="0"
+        >
+          1
+        </div>
+        <div
+          class="w-[26px] rounded-lg bg-slate-50 p-1 text-center text-xs text-slate-100 dark:bg-gray-900 dark:text-slate-200 hover:bg-slate-100 hover:text-slate-200 dark:hover:bg-gray-600 dark:hover:text-slate-50"
+          role="button"
+          tabindex="0"
+        >
+          2
+        </div>
+      </div>
+    </header>
+    <div
+      class="flex flex-1 flex-col gap-1 overflow-y-auto"
+    >
+      <div
+        class="flex-1 overflow-hidden"
+      >
+        <div>
+          <div
+            class="group/sidebar-item-wrapper flex w-full items-center pb-2"
+            data-state="closed"
+            style="padding-left: 0px;"
+          >
+            <div
+              class="group/sidebar-item relative flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-gray-700 select-none hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-charcoal-900 hover:pr-6"
+              data-testid="sidebar-item"
+              id="sidebar-item-1"
+              tabindex="0"
+            >
+              <div
+                class="flex max-w-full items-center gap-2"
+              >
+                <div
+                  class="-m-2 -mr-1 h-full rounded-md py-2 pr-1 pl-2 hover:bg-gray-200"
+                >
+                  <svg
+                    class="min-w-4 -rotate-90 text-gray-700 dark:text-gray-400"
+                    fill="currentcolor"
+                    height="16"
+                    viewBox="0 0 16 16"
+                    width="16"
+                  >
+                    <path
+                      clip-rule="evenodd"
+                      d="M4.28221 5.22951C3.98888 4.9235 3.51331 4.9235 3.21999 5.22951C2.92667 5.53552 2.92667 6.03168 3.21999 6.33769L7.46885 10.7704C7.47802 10.78 7.48736 10.7892 7.49688 10.7982C7.50402 10.8049 7.51125 10.8115 7.51858 10.8179C7.81368 11.0756 8.25385 11.0598 8.53115 10.7705L12.78 6.33777C13.0733 6.03175 13.0733 5.5356 12.78 5.22958C12.4867 4.92357 12.0111 4.92357 11.7178 5.22958L8.00004 9.10822L4.28221 5.22951Z"
+                      fill-rule="evenodd"
+                    />
+                  </svg>
+                </div>
+                <div
+                  class="truncate text-sm leading-5"
+                >
+                  Node 1
+                </div>
+                <div
+                  class="absolute top-1/2 flex -translate-y-1/2 items-center justify-center right-2 invisible text-gray-300 group-hover/sidebar-item:visible hover:text-gray-700 dark:text-gray-700 dark:hover:text-gray-50"
+                >
+                  <svg
+                    fill="none"
+                    height="16"
+                    viewBox="0 0 16 16"
+                    width="16"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      clip-rule="evenodd"
+                      d="M11.017 1.212C10.8087 1.00372 10.471 1.00372 10.2627 1.212C10.0545 1.42028 10.0545 1.75796 10.2627 1.96624L10.9593 2.66279L5.7873 6.54177L4.60589 5.36036C4.39761 5.15208 4.05992 5.15208 3.85164 5.36036C3.64336 5.56864 3.64336 5.90632 3.85164 6.1146L5.36014 7.6231L6.49157 8.75454C6.49156 8.75455 6.49154 8.75457 6.49153 8.75458L3.00313 12.243C2.79485 12.4513 2.79485 12.7889 3.00313 12.9972C3.21141 13.2055 3.5491 13.2055 3.75738 12.9972L7.24577 9.50883C7.24579 9.50882 7.24581 9.5088 7.24582 9.50878L8.37712 10.6401L9.88562 12.1486C10.0939 12.3569 10.4316 12.3569 10.6399 12.1486C10.8481 11.9403 10.8481 11.6026 10.6399 11.3943L9.45845 10.2129L13.3374 5.04094L14.034 5.73748C14.2423 5.94576 14.5799 5.94576 14.7882 5.73748C14.9965 5.5292 14.9965 5.19151 14.7882 4.98323L13.6569 3.85186L12.1484 2.34337L11.017 1.212ZM6.54921 7.30368L11.7212 3.42469L12.5755 4.27903L8.69654 9.45101L6.54921 7.30368Z"
+                      fill="currentcolor"
+                      fill-rule="evenodd"
+                    />
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div
+            class="group/sidebar-item-wrapper flex w-full items-center pb-2"
+            data-state="closed"
+            style="padding-left: 0px;"
+          >
+            <div
+              class="group/sidebar-item relative flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-gray-700 select-none hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-charcoal-900 hover:pr-6"
+              data-testid="sidebar-item"
+              id="sidebar-item-2"
+              tabindex="0"
+            >
+              <div
+                class="flex max-w-full items-center gap-2"
+              >
+                <div
+                  class="-m-2 -mr-1 h-full rounded-md py-2 pr-1 pl-2 hover:bg-gray-200"
+                >
+                  <svg
+                    class="min-w-4 -rotate-90 text-gray-300 dark:text-gray-700"
+                    fill="currentcolor"
+                    height="16"
+                    viewBox="0 0 16 16"
+                    width="16"
+                  >
+                    <path
+                      clip-rule="evenodd"
+                      d="M4.28221 5.22951C3.98888 4.9235 3.51331 4.9235 3.21999 5.22951C2.92667 5.53552 2.92667 6.03168 3.21999 6.33769L7.46885 10.7704C7.47802 10.78 7.48736 10.7892 7.49688 10.7982C7.50402 10.8049 7.51125 10.8115 7.51858 10.8179C7.81368 11.0756 8.25385 11.0598 8.53115 10.7705L12.78 6.33777C13.0733 6.03175 13.0733 5.5356 12.78 5.22958C12.4867 4.92357 12.0111 4.92357 11.7178 5.22958L8.00004 9.10822L4.28221 5.22951Z"
+                      fill-rule="evenodd"
+                    />
+                  </svg>
+                </div>
+                <div
+                  class="truncate text-sm leading-5"
+                >
+                  Node 2
+                </div>
+                <div
+                  class="absolute top-1/2 flex -translate-y-1/2 items-center justify-center right-2 invisible text-gray-300 group-hover/sidebar-item:visible hover:text-gray-700 dark:text-gray-700 dark:hover:text-gray-50"
+                >
+                  <svg
+                    fill="none"
+                    height="16"
+                    viewBox="0 0 16 16"
+                    width="16"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      clip-rule="evenodd"
+                      d="M11.017 1.212C10.8087 1.00372 10.471 1.00372 10.2627 1.212C10.0545 1.42028 10.0545 1.75796 10.2627 1.96624L10.9593 2.66279L5.7873 6.54177L4.60589 5.36036C4.39761 5.15208 4.05992 5.15208 3.85164 5.36036C3.64336 5.56864 3.64336 5.90632 3.85164 6.1146L5.36014 7.6231L6.49157 8.75454C6.49156 8.75455 6.49154 8.75457 6.49153 8.75458L3.00313 12.243C2.79485 12.4513 2.79485 12.7889 3.00313 12.9972C3.21141 13.2055 3.5491 13.2055 3.75738 12.9972L7.24577 9.50883C7.24579 9.50882 7.24581 9.5088 7.24582 9.50878L8.37712 10.6401L9.88562 12.1486C10.0939 12.3569 10.4316 12.3569 10.6399 12.1486C10.8481 11.9403 10.8481 11.6026 10.6399 11.3943L9.45845 10.2129L13.3374 5.04094L14.034 5.73748C14.2423 5.94576 14.5799 5.94576 14.7882 5.73748C14.9965 5.5292 14.9965 5.19151 14.7882 4.98323L13.6569 3.85186L12.1484 2.34337L11.017 1.212ZM6.54921 7.30368L11.7212 3.42469L12.5755 4.27903L8.69654 9.45101L6.54921 7.30368Z"
+                      fill="currentcolor"
+                      fill-rule="evenodd"
+                    />
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div
+      class="flex w-full gap-2 border-t border-gray-300 p-2 dark:border-gray-800"
+    >
+      <div
+        class="relative flex-1"
+      >
+        <input
+          class="flex h-9 rounded-md text-sm/5 font-normal text-gray-900 border border-gray-300 bg-white dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 px-3 py-2 font-sans placeholder:text-gray-500 dark:placeholder:text-slate-400 focus-visible:ring-1 focus-visible:ring-gray-900 focus-visible:ring-offset-0 focus-visible:ring-offset-white focus-visible:outline-none focus:bg-gray-50 dark:focus:bg-slate-700 dark:focus-visible:ring-slate-400 dark:focus-visible:ring-offset-slate-800 disabled:cursor-not-allowed disabled:border-gray-300 disabled:bg-gray-50 disabled:text-gray-700 dark:disabled:border-slate-500 dark:disabled:bg-slate-700 dark:disabled:placeholder:text-slate-400 w-full appearance-none pl-8 [&::-webkit-search-cancel-button]:hidden"
+          placeholder="Search"
+          style="padding-right: 16px;"
+          tabindex="1"
+          type="search"
+          value=""
+        />
+        <svg
+          class="absolute top-1/2 left-2 -translate-y-1/2 text-gray-700 dark:text-gray-50"
+          fill="currentcolor"
+          height="16"
+          viewBox="0 0 24 24"
+          width="16"
+        >
+          <path
+            d="M10.0137 1.95312C5.59537 1.95312 2.01367 5.53513 2.01367 9.95314C2.01367 14.3712 5.59537 17.9532 10.0137 17.9532C11.8504 17.9532 13.5913 17.3222 14.9416 16.2822L19.2949 20.6722C19.6855 21.0622 20.3419 21.0622 20.7325 20.6722C21.123 20.2812 21.123 19.6252 20.7325 19.2342L16.349 14.8741C17.3898 13.5241 18.0137 11.7901 18.0137 9.95314C18.0137 5.53513 14.432 1.95312 10.0137 1.95312ZM10.0137 3.95313C13.3274 3.95313 16.0137 6.63914 16.0137 9.95314C16.0137 13.2672 13.3274 15.9532 10.0137 15.9532C6.69997 15.9532 4.01367 13.2672 4.01367 9.95314C4.01367 6.63914 6.69997 3.95313 10.0137 3.95313Z"
+          />
+        </svg>
+      </div>
+    </div>
+    <div
+      class="group/sidebar-resizer absolute top-0 right-0 h-full w-[10px] translate-x-1/2 cursor-ew-resize select-none"
+    >
+      <div
+        class="relative h-full w-px translate-x-[5px] transition-colors group-hover/sidebar-resizer:bg-gray-500 dark:group-hover/sidebar-resizer:bg-gray-600"
+      >
+        <button
+          class="absolute top-14 right-0 size-4 translate-x-1/2 rounded-full bg-gray-500 dark:bg-gray-900 opacity-0 transition-opacity group-hover/sidebar-resizer:opacity-100"
+          type="button"
+        >
+          <svg
+            class="min-w-4 text-gray-50 dark:text-gray-500 -rotate-180"
+            fill="currentcolor"
+            style="width: 16px; height: 16px;"
+            viewBox="0 0 24 24"
+          >
+            <path
+              d="M10 16L10 12.8L10 11.2L10 8L14 12L10 16Z"
+            />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </aside>
+</DocumentFragment>
+`;
