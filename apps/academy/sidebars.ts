@@ -164,6 +164,7 @@ const sidebars = {
         "academy/APIReferences/PHDocumentMigrationGuide",
         "academy/APIReferences/SubgraphMigrationGuide",
         "academy/APIReferences/ProcessorMigrationGuide",
+        "academy/APIReferences/AttachmentService",
       ],
     },
 
