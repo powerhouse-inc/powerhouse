@@ -5,6 +5,7 @@
     // output transpiled code in the dist file relative to this package's root
     "outDir": "./.tsbuild",
     "customConditions": ["source"],
+    "types": ["node"],
     "paths": {
       "types": ["./types/index.ts"],
       "constants": ["./constants.ts"],

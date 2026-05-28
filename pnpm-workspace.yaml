@@ -9,6 +9,9 @@ packages:
   - "scripts/*"
   - "!releases"
 
+minimumReleaseAge: 10080
+preferFullMetadata: true
+
 catalog:
   "vite-tsconfig-paths": 6.1.1
   "@modelcontextprotocol/sdk": 1.29.0
