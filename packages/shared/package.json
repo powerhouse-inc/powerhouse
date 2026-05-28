@@ -129,6 +129,7 @@
     "@sentry/node-core": "^10.52.0",
     "@types/bun": "catalog:",
     "@types/luxon": "catalog:",
+    "@types/node": "catalog:",
     "@types/npm-package-arg": "catalog:",
     "@types/react": "catalog:",
     "kysely": "catalog:",
