@@ -9,6 +9,22 @@ import {
   writeAllGeneratedProjectFiles,
   writeProjectRootFiles,
 } from "file-builders";
+
+// Install recipes for `--clone`. Only managers with a cache-miss-fails
+// offline mode are listed; yarn needs an opt-in offline mirror and bun has
+// no real offline mode (https://github.com/oven-sh/bun/issues/7956).
+type CloneRecipe = { lockfile: string; install: string };
+const CLONE_RECIPES: Record<string, CloneRecipe | undefined> = {
+  pnpm: {
+    lockfile: "pnpm-lock.yaml",
+    install: "pnpm install --frozen-lockfile --offline",
+  },
+  npm: {
+    lockfile: "package-lock.json",
+    install: "npm ci --offline",
+  },
+};
+
 type CreateProjectArgs = {
   name: string;
   packageManager: string;
@@ -39,76 +55,70 @@ export async function createProject({
   const appPath = path.join(process.cwd(), name);
 
   if (fs.existsSync(appPath)) {
-    console.error(
+    throw new Error(
       `⛔ The folder "${name}" already exists in the current directory, please give it another name.`,
     );
-    process.exit(1);
   }
 
-  try {
-    if (clone) {
-      await createProjectFromClone({
-        name,
-        appPath,
-        clone,
-        packageManager,
-        skipGitInit,
-        skipInstall,
-        remoteDrive,
-      });
-      return;
-    }
-
-    // Create a new directory for the project
-    console.log(chalk.blue(`▶️ Creating directory for project "${name}"...\n`));
-    fs.mkdirSync(appPath);
-    process.chdir(appPath);
-    console.log(chalk.green(`✅ Project directory created\n`));
-
-    await writeFileEnsuringDir(".gitignore", gitIgnoreTemplate);
-    if (!skipGitInit) {
-      // Create a .gitignore file, then initialize the git repository
-      console.log(chalk.blue(`▶️ Initializing git repository...\n`));
-      runCmd(`git init`);
-      console.log(chalk.green(`\n✅ Git repository initialized\n`));
-    }
-
-    // Write the boilerplate files for the project
-    console.log(chalk.blue(`▶️ Creating project boilerplate files...\n`));
-    await writeProjectRootFiles({
+  if (clone) {
+    await createProjectFromClone({
       name,
-      tag,
-      version,
-      remoteDrive,
+      appPath,
+      clone,
       packageManager,
+      skipGitInit,
+      skipInstall,
+      remoteDrive,
     });
-    await writeAllGeneratedProjectFiles();
-    console.log(chalk.green(`✅ Project boilerplate files created\n`));
-
-    if (!skipInstall) {
-      // Install the project dependencies with the specified package manager
-      console.log(
-        chalk.blue(
-          `▶️ Installing project dependencies with ${packageManager}...\n`,
-        ),
-      );
-      const extra =
-        packageManager === "pnpm" ? " --config.minimum-release-age=0" : "";
-      runCmd(`${packageManager} install${extra}`);
-      console.log(chalk.green(`\n✅ Project dependencies installed\n`));
-    }
-
-    // Use the installed version of `prettier` to format the generated code
-    console.log(chalk.blue(`▶️ Formatting boilerplate project files...\n`));
-    await runPrettier();
-    console.log(chalk.green(`✅ Boilerplate files formatted\n`));
-
-    // Project creation complete
-    console.log(chalk.bold(`🎉 Successfully created project "${name}" 🎉\n`));
-  } catch (error) {
-    console.error(error);
-    process.exit(1);
+    return;
   }
+
+  // Create a new directory for the project
+  console.log(chalk.blue(`▶️ Creating directory for project "${name}"...\n`));
+  fs.mkdirSync(appPath);
+  process.chdir(appPath);
+  console.log(chalk.green(`✅ Project directory created\n`));
+
+  await writeFileEnsuringDir(".gitignore", gitIgnoreTemplate);
+  if (!skipGitInit) {
+    // Create a .gitignore file, then initialize the git repository
+    console.log(chalk.blue(`▶️ Initializing git repository...\n`));
+    runCmd(`git init`);
+    console.log(chalk.green(`\n✅ Git repository initialized\n`));
+  }
+
+  // Write the boilerplate files for the project
+  console.log(chalk.blue(`▶️ Creating project boilerplate files...\n`));
+  await writeProjectRootFiles({
+    name,
+    tag,
+    version,
+    remoteDrive,
+    packageManager,
+  });
+  await writeAllGeneratedProjectFiles();
+  console.log(chalk.green(`✅ Project boilerplate files created\n`));
+
+  if (!skipInstall) {
+    // Install the project dependencies with the specified package manager
+    console.log(
+      chalk.blue(
+        `▶️ Installing project dependencies with ${packageManager}...\n`,
+      ),
+    );
+    const extra =
+      packageManager === "pnpm" ? " --config.minimum-release-age=0" : "";
+    runCmd(`${packageManager} install${extra}`);
+    console.log(chalk.green(`\n✅ Project dependencies installed\n`));
+  }
+
+  // Use the installed version of `prettier` to format the generated code
+  console.log(chalk.blue(`▶️ Formatting boilerplate project files...\n`));
+  await runPrettier();
+  console.log(chalk.green(`✅ Boilerplate files formatted\n`));
+
+  // Project creation complete
+  console.log(chalk.bold(`🎉 Successfully created project "${name}" 🎉\n`));
 }
 
 /**
@@ -140,28 +150,26 @@ async function createProjectFromClone(args: {
     skipInstall,
     remoteDrive,
   } = args;
-  // The clone path materializes deps from the source project's pnpm-lock.yaml
-  // via `pnpm install --frozen-lockfile --offline`. Other package managers
-  // have no equivalent offline-from-pnpm-lockfile mode, so require pnpm
-  // explicitly instead of silently switching.
-  if (packageManager !== "pnpm") {
-    console.error(
-      `⛔ --clone requires --pnpm (got "${packageManager}"). The fast path materializes deps from the cloned project's pnpm-lock.yaml.`,
+  // --clone needs a package manager with a hard-offline install mode that
+  // refuses to hit the network on a cache miss. pnpm and npm qualify; yarn
+  // and bun do not (bun has no offline flag at all — cache misses silently
+  // re-fetch).
+  const recipe = CLONE_RECIPES[packageManager];
+  if (!recipe) {
+    throw new Error(
+      `⛔ --clone is only compatible with --pnpm or --npm (got "${packageManager}").`,
     );
-    process.exit(1);
   }
   const clonePath = path.resolve(process.cwd(), clone);
   if (!fs.existsSync(clonePath) || !fs.statSync(clonePath).isDirectory()) {
-    console.error(
+    throw new Error(
       `⛔ Clone source "${clone}" not found (resolved to "${clonePath}"). Pass a path to an existing scaffolded project.`,
     );
-    process.exit(1);
   }
-  if (!fs.existsSync(path.join(clonePath, "pnpm-lock.yaml"))) {
-    console.error(
-      `⛔ Clone source "${clone}" has no pnpm-lock.yaml. --clone requires a pnpm project scaffolded with a committed lockfile.`,
+  if (!fs.existsSync(path.join(clonePath, recipe.lockfile))) {
+    throw new Error(
+      `⛔ Clone source "${clone}" has no ${recipe.lockfile}. --clone with --${packageManager} requires a committed lockfile.`,
     );
-    process.exit(1);
   }
 
   // Copy source + lockfile only; node_modules is rebuilt from the store below,
@@ -194,11 +202,11 @@ async function createProjectFromClone(args: {
   console.log(chalk.green(`✅ Project customizations applied\n`));
 
   if (!skipInstall) {
-    // Rebuild node_modules from the lockfile, offline, via the warm store.
+    // Rebuild node_modules from the lockfile, offline, via the warm cache.
     console.log(
       chalk.blue(`▶️ Installing dependencies from lockfile (offline)...\n`),
     );
-    runCmd(`pnpm install --frozen-lockfile --offline`, { cwd: appPath });
+    runCmd(recipe.install, { cwd: appPath });
     console.log(chalk.green(`\n✅ Dependencies installed from lockfile\n`));
   }
 
