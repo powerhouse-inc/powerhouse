@@ -1,6 +1,6 @@
-import type { Page } from "@playwright/test";
+import type { BrowserContext, Page } from "@playwright/test";
 import type { ChildProcess } from "child_process";
-import { execSync } from "child_process";
+import { execSync, spawn } from "child_process";
 import fs from "fs";
 import path from "path";
 import type { DocumentBasicData } from "@powerhousedao/e2e-utils/types";
@@ -14,6 +14,7 @@ import {
   CONSUMER_CONNECT_URL,
   buildConsumerConnect,
   cleanupConsumerBuildArtifacts,
+  getConsumerProjectPath,
   installConsumerDeps,
   startConsumerPreview,
   stopConsumerPreview,
@@ -88,8 +89,30 @@ test.use({
 // Module-level state shared across serial tests
 let registryProcess: ChildProcess | undefined;
 let consumerPreviewProcess: ChildProcess | undefined;
+// The "Install Package in Consumer Project" test hands its browser context off
+// to the next test ("Change registry URL at runtime ...") so the second test
+// can continue inside the same Connect session (installed package, drive, etc.).
+// Closed by afterAll, not by the test that creates it.
+let consumerContext: BrowserContext | undefined;
+let consumerPage: Page | undefined;
+
+// Constants for the second registry started by the runtime-config-change test.
+// We can't reuse the e2e-utils REGISTRY_PORT (8080) because the whole point of
+// the test is to prove a port change is picked up at runtime; we also need a
+// dedicated storage + cdn cache directory to keep the two registries isolated.
+const NEW_REGISTRY_PORT = 8081;
+const NEW_REGISTRY_URL = `http://localhost:${NEW_REGISTRY_PORT}`;
 
 test.afterAll(async () => {
+  if (consumerContext) {
+    try {
+      await consumerContext.close();
+    } catch {
+      // already closed
+    }
+    consumerContext = undefined;
+    consumerPage = undefined;
+  }
   if (consumerPreviewProcess) {
     stopConsumerPreview(consumerPreviewProcess);
     consumerPreviewProcess = undefined;
@@ -100,6 +123,65 @@ test.afterAll(async () => {
   }
   cleanupConsumerBuildArtifacts();
 });
+
+// ----------------------------------------------------------------------
+// Restart the registry on a different port while keeping the original
+// storage + cdn cache directories. The previously-published
+// test-package-vetra stays available on the new port without a republish
+// — exactly the "operator changes the registry URL at runtime" scenario
+// the runtime-config test exercises.
+// ----------------------------------------------------------------------
+
+async function restartRegistryOnPort(
+  port: number,
+  storagePath: string,
+  cdnCachePath: string,
+): Promise<ChildProcess> {
+  // Deliberately do NOT wipe the storage / cdn cache directories — we want
+  // the previous publish to remain visible after the port switch.
+  const child = spawn(
+    "pnpm",
+    [
+      "exec",
+      "ph-registry",
+      "--port",
+      String(port),
+      "--storage-dir",
+      storagePath,
+      "--cdn-cache-dir",
+      cdnCachePath,
+    ],
+    { stdio: "pipe", detached: false },
+  );
+
+  child.stdout?.on("data", (d: Buffer) =>
+    console.log(`[registry:${port}] ${d.toString().trim()}`),
+  );
+  child.stderr?.on("data", (d: Buffer) =>
+    console.error(`[registry:${port}:err] ${d.toString().trim()}`),
+  );
+
+  const deadline = Date.now() + 30_000;
+  while (Date.now() < deadline) {
+    if (child.exitCode !== null) {
+      throw new Error(
+        `Registry on :${port} exited with code ${child.exitCode}`,
+      );
+    }
+    try {
+      const res = await fetch(`http://localhost:${port}/-/ping`);
+      if (res.ok) {
+        console.log(`[registry] ready on :${port}`);
+        return child;
+      }
+    } catch {
+      // not ready
+    }
+    await new Promise((r) => setTimeout(r, 500));
+  }
+  child.kill();
+  throw new Error(`Registry on :${port} did not start within 30s`);
+}
 
 test("Create ToDoDocument Model", async ({ page }) => {
   test.setTimeout(120_000);
@@ -435,9 +517,243 @@ test("Install Package in Consumer Project", async ({ browser }) => {
     // Verify the page has meaningful content (editor rendered)
     const docHeading = page.getByRole("heading", { name: "TestTodoDoc" });
     await expect(docHeading).toBeVisible({ timeout: 30_000 });
-  } finally {
+
+    // Hand the context off to the next serial test so it can continue inside
+    // the same Connect session (installed package, drive, etc.). afterAll
+    // closes both.
+    consumerContext = context;
+    consumerPage = page;
+  } catch (err) {
+    // Only close on failure so the next test still has a working session.
     await context.close();
+    throw err;
   }
+});
+
+test("Change registry URL at runtime and install from new registry", async () => {
+  test.setTimeout(10 * 60 * 1000); // 10 minutes for republish + UI flow
+
+  // Continuation of the previous test — reuse its browser context so the
+  // already-installed test-package-vetra (from the previous test) is present
+  // in localStorage. We uninstall it via the UI first, then point the runtime
+  // config at a fresh registry on a different port and install again.
+  if (!consumerPage || !consumerContext) {
+    throw new Error(
+      "Consumer browser session not initialised — previous test must have failed",
+    );
+  }
+  const page = consumerPage;
+
+  // -------------------------------------------------------------------
+  // Step 1: Uninstall test-package-vetra via the Package Manager UI
+  // -------------------------------------------------------------------
+  console.log("Uninstalling test-package-vetra via the Package Manager UI...");
+
+  const settingsButton = page.locator('button[aria-label="Settings"]');
+  await expect(settingsButton).toBeVisible({ timeout: 30_000 });
+  await settingsButton.click();
+
+  const settingsModal = page.getByRole("dialog");
+  await expect(settingsModal).toBeVisible({ timeout: 10_000 });
+
+  // The "Installed Packages" section is a collapsible PackageSection; it
+  // starts collapsed so the row isn't in the DOM yet. Click the section
+  // header to expand before looking for the row.
+  const installedSectionToggle = settingsModal
+    .getByRole("button", { name: /^Installed Packages/i });
+  await expect(installedSectionToggle).toBeVisible({ timeout: 10_000 });
+  await installedSectionToggle.click();
+
+  // Find the installed package row by its <h3>name and open its dropdown.
+  const installedRow = settingsModal
+    .locator("li")
+    .filter({ has: page.locator('h3:has-text("test-package-vetra")') });
+  await expect(installedRow).toBeVisible({ timeout: 30_000 });
+
+  // The 3-dot menu button is the only <button> on the row; the dropdown
+  // emits a "Uninstall" menu item once open.
+  const rowDotsButton = installedRow.locator("button").first();
+  await rowDotsButton.click();
+  const uninstallMenuItem = page.getByText("Uninstall", { exact: true });
+  await expect(uninstallMenuItem).toBeVisible({ timeout: 10_000 });
+  await uninstallMenuItem.click();
+
+  // Toast confirms the BrowserPackageManager.removePackage() cleared the
+  // localStorage entry — without this clean state, a subsequent boot under a
+  // different registry URL would attempt to re-hydrate the old install and
+  // 404 against the dead URL.
+  await expect(page.getByText(/uninstalled successfully/i)).toBeVisible({
+    timeout: 10_000,
+  });
+
+  // Close the settings modal so it doesn't capture later clicks.
+  const closeSettings = async () => {
+    const closeBtn = settingsModal
+      .locator("button")
+      .filter({ has: page.locator("svg") })
+      .first();
+    await closeBtn.click();
+    await settingsModal.waitFor({ state: "hidden", timeout: 10_000 });
+  };
+  await closeSettings();
+
+  // -------------------------------------------------------------------
+  // Step 2: Stop the registry on :8080 and restart it on :8081 using the
+  //         SAME storage + cdn cache directories so the package published
+  //         in the previous test is still available on the new port. No
+  //         republish needed — this is just an operator-facing URL change.
+  // -------------------------------------------------------------------
+  console.log("Stopping registry on :8080...");
+  const testDir = process.cwd();
+  const registryStoragePath = path.join(testDir, ".registry-storage");
+  const registryCdnCachePath = path.join(testDir, ".registry-cdn-cache");
+  if (registryProcess) {
+    stopRegistry(registryProcess);
+    registryProcess = undefined;
+  }
+  // Give the registry process a moment to release the port + flush.
+  await new Promise((r) => setTimeout(r, 1000));
+
+  console.log(`Restarting registry on :${NEW_REGISTRY_PORT} (same storage)...`);
+  registryProcess = await restartRegistryOnPort(
+    NEW_REGISTRY_PORT,
+    registryStoragePath,
+    registryCdnCachePath,
+  );
+
+  // -------------------------------------------------------------------
+  // Step 4a: Edit consumer's dist powerhouse.config.json at runtime
+  // -------------------------------------------------------------------
+  // The preview server is static (vite preview); a browser refresh re-reads
+  // the file from disk, so changing it here is enough — no server restart.
+  console.log(
+    `Editing consumer dist powerhouse.config.json → packageRegistryUrl=${NEW_REGISTRY_URL}`,
+  );
+  const consumerDistDir = path.join(
+    getConsumerProjectPath(),
+    ".ph",
+    "connect-build",
+    "dist",
+  );
+  const consumerDistConfig = path.join(
+    consumerDistDir,
+    "powerhouse.config.json",
+  );
+  const distConfigOriginal = fs.readFileSync(consumerDistConfig, "utf-8");
+  const distConfigParsed = JSON.parse(distConfigOriginal) as Record<
+    string,
+    unknown
+  >;
+  distConfigParsed.packageRegistryUrl = NEW_REGISTRY_URL;
+  fs.writeFileSync(
+    consumerDistConfig,
+    JSON.stringify(distConfigParsed, null, 2),
+  );
+
+  // -------------------------------------------------------------------
+  // Step 4b: Allow the new origin in the dist HTML's Content-Security-Policy
+  // -------------------------------------------------------------------
+  // CRITICAL: the meta CSP in dist/index.html is stamped at BUILD time with
+  // the build-time `packageRegistryUrl` baked into its `script-src` list.
+  // Changing `packageRegistryUrl` in the JSON config at runtime tells the
+  // SPA's package manager to fetch from the new origin, but the browser
+  // blocks the dynamic `import()` of `${cdnUrl}/<pkg>/browser/index.js`
+  // with: "Refused to load the script ... violates Content Security Policy
+  // directive script-src 'self' ... http://localhost:8080".
+  // For the runtime URL change to actually work, the new origin has to be
+  // allowlisted in the CSP too. Test this end-to-end by appending it here.
+  console.log(`Allowlisting ${NEW_REGISTRY_URL} in dist/index.html CSP...`);
+  const consumerDistIndex = path.join(consumerDistDir, "index.html");
+  const distIndexOriginal = fs.readFileSync(consumerDistIndex, "utf-8");
+  const distIndexPatched = distIndexOriginal.replace(
+    "http://localhost:8080",
+    `http://localhost:8080 ${NEW_REGISTRY_URL}`,
+  );
+  if (distIndexPatched === distIndexOriginal) {
+    throw new Error(
+      "Could not find http://localhost:8080 in dist/index.html CSP — " +
+        "the CSP-stamping logic in builder-tools/connect-utils may have changed.",
+    );
+  }
+  fs.writeFileSync(consumerDistIndex, distIndexPatched);
+
+  // -------------------------------------------------------------------
+  // Step 5: Refresh — same preview server, new packageRegistryUrl
+  // -------------------------------------------------------------------
+  console.log("Refreshing browser to pick up new registry URL...");
+  await page.reload({ waitUntil: "networkidle" });
+  await page
+    .locator(".skeleton-loader")
+    .waitFor({ state: "hidden", timeout: 60_000 });
+
+  // -------------------------------------------------------------------
+  // Diagnostics: capture console errors + 8081 network responses so a
+  // failure in step 6 surfaces the actual cause (CORS, 404, JS eval
+  // error, etc.) instead of just "count didn't increment".
+  // -------------------------------------------------------------------
+  page.on("console", (msg) => {
+    if (msg.type() === "error" || msg.type() === "warning") {
+      console.log(`[browser:${msg.type()}] ${msg.text()}`);
+    }
+  });
+  page.on("pageerror", (err) => {
+    console.log(`[browser:pageerror] ${err.message}`);
+  });
+  page.on("response", (res) => {
+    const url = res.url();
+    if (url.includes(`:${NEW_REGISTRY_PORT}`)) {
+      console.log(`[browser:net] ${res.status()} ${url}`);
+    }
+  });
+
+  // -------------------------------------------------------------------
+  // Step 6: Install test-package-vetra from the new registry via the
+  //          "Available Packages" dropdown menu (same pattern as uninstall).
+  // -------------------------------------------------------------------
+  // We use the Available-section row + dropdown menu rather than the search
+  // popover because the popover's "Install" affordance is a Combobox option,
+  // not a real button — selectors against it have proven flaky and the click
+  // doesn't always reliably trigger the install.
+  console.log(
+    "Installing test-package-vetra from new registry via the Available Packages dropdown...",
+  );
+  await expect(settingsButton).toBeVisible({ timeout: 30_000 });
+  await settingsButton.click();
+  await expect(settingsModal).toBeVisible({ timeout: 10_000 });
+
+  // Expand the Available Packages section so its rows are in the DOM.
+  // It's "Available Packages 1" because the (just-republished) package shows
+  // up on the new registry but isn't installed yet.
+  const availableToggle = settingsModal.getByRole("button", {
+    name: /^Available Packages\b/i,
+  });
+  await expect(availableToggle).toBeVisible({ timeout: 30_000 });
+  await availableToggle.click();
+
+  const availableRow = settingsModal
+    .locator("li")
+    .filter({ has: page.locator('h3:has-text("test-package-vetra")') });
+  await expect(availableRow).toBeVisible({ timeout: 30_000 });
+
+  // The row has TWO buttons: a "latest" version picker (first) and the
+  // 3-dot dropdown menu (last, top-right). We need the latter — first()
+  // would open the version picker instead of the menu.
+  const availableDotsButton = availableRow.locator("button").last();
+  await availableDotsButton.click();
+  const installMenuItem = page.getByText("Install", { exact: true });
+  await expect(installMenuItem).toBeVisible({ timeout: 10_000 });
+  await installMenuItem.click();
+
+  // -------------------------------------------------------------------
+  // Step 7: Verify the install succeeded against the new registry
+  // -------------------------------------------------------------------
+  // The strongest signal is that the "Installed Packages" count went up:
+  // before the install it sits at 3 (Common, Vetra, Local), after a
+  // successful fetch + register from the NEW registry it becomes 4. We
+  // poll the count heading so re-renders don't break the assertion.
+  await expect(
+    settingsModal.getByRole("heading", { name: /Installed Packages 4/i }),
+  ).toBeVisible({ timeout: 60_000 });
 });
 
 // Helper Functions
