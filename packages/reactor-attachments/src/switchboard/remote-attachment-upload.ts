@@ -34,6 +34,12 @@ export class RemoteAttachmentUpload implements IAttachmentUpload {
     const url = `${this.remoteUrl}/attachments/reservations/${this.reservationId}`;
     const authHeaders = await buildAuthHeaders(url, this.jwtHandler);
 
+    // Buffer the stream to a Blob. Streaming request bodies aren't universally
+    // supported in browsers (Firefox stringifies the stream to "[object
+    // ReadableStream]" even with duplex: "half"); buffering is the only
+    // portable option for attachment uploads.
+    const body = await new Response(data).blob();
+
     // Always upload as octet-stream. The server reads the real mime type from
     // the reservation row; sending the user's mime type here (e.g. application/json)
     // would let Express body-parser drain the request body before our handler runs,
@@ -41,9 +47,7 @@ export class RemoteAttachmentUpload implements IAttachmentUpload {
     const response = await this.fetchFn(url, {
       method: "PUT",
       headers: { ...authHeaders, "Content-Type": "application/octet-stream" },
-      body: data,
-      // @ts-expect-error Node fetch requires duplex for streaming request bodies
-      duplex: "half",
+      body,
     });
 
     if (!response.ok) {

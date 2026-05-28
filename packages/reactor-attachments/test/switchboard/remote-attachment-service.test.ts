@@ -264,13 +264,14 @@ describe("RemoteAttachmentUpload", () => {
     const got = await upload.send(stream);
 
     expect(got).toEqual(result);
-    expect(mockFetch).toHaveBeenCalledWith(
-      `${REMOTE_URL}/attachments/reservations/r-1`,
-      expect.objectContaining({
-        method: "PUT",
-        body: stream,
-      }),
-    );
+    const [calledUrl, calledInit] = mockFetch.mock.calls[0] as [
+      string,
+      RequestInit,
+    ];
+    expect(calledUrl).toBe(`${REMOTE_URL}/attachments/reservations/r-1`);
+    expect(calledInit.method).toBe("PUT");
+    expect(calledInit.body).toBeInstanceOf(Blob);
+    expect(await (calledInit.body as Blob).text()).toBe("hello");
   });
 
   it("throws on non-2xx", async () => {
