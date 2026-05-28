@@ -15,7 +15,7 @@ exports[`SelectField Component > should match snapshot 1`] = `
         aria-haspopup="dialog"
         aria-invalid="false"
         aria-label="Select"
-        class="gap-2 text-sm font-medium whitespace-nowrap transition-colors focus-visible:outline-none disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 flex h-9 w-full items-center justify-between px-3 py-2 rounded-md border border-gray-300 bg-white dark:border-charcoal-700 dark:bg-charcoal-900 hover:border-gray-300 hover:bg-gray-100 dark:hover:border-charcoal-700 dark:hover:bg-charcoal-800 focus:ring-1 focus:ring-gray-900 focus:ring-offset-0 focus:outline-none dark:focus:ring-charcoal-300 focus-visible:ring-1 focus-visible:ring-gray-900 focus-visible:ring-offset-0 dark:focus-visible:ring-charcoal-300"
+        class="gap-2 text-sm font-medium whitespace-nowrap transition-colors focus-visible:outline-none disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 flex h-9 w-full items-center justify-between px-3 py-2 rounded-md border border-gray-300 bg-white dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 hover:border-gray-300 hover:bg-gray-100 dark:hover:border-slate-500 dark:hover:bg-slate-600 dark:hover:text-slate-100 focus:ring-1 focus:ring-gray-900 focus:ring-offset-0 focus:outline-none dark:focus:ring-slate-300 focus-visible:ring-1 focus-visible:ring-gray-900 focus-visible:ring-offset-0 dark:focus-visible:ring-slate-300"
         data-state="closed"
         id="_r_1_-select"
         name="select"
@@ -26,7 +26,7 @@ exports[`SelectField Component > should match snapshot 1`] = `
           class="mx-auto flex w-full items-center justify-end"
         >
           <svg
-            class="cursor-pointer text-gray-700 dark:text-gray-400"
+            class="cursor-pointer text-gray-700 dark:text-slate-200"
             fill="none"
             stroke="currentcolor"
             style="width: 16px; height: 16px;"

@@ -4,7 +4,7 @@ exports[`UpgradeDriveModal Component > should match snapshot 1`] = `
 <div
   aria-describedby="radix-_r_2_"
   aria-labelledby="radix-_r_1_"
-  class="bg-white data-[state=closed]:animate-zoom-out data-[state=open]:animate-zoom-in rounded-3xl"
+  class="overflow-hidden rounded-3xl bg-white data-[state=closed]:animate-zoom-out data-[state=open]:animate-zoom-in"
   data-state="open"
   data-testid="upgrade-drive-modal"
   id="radix-_r_0_"
@@ -27,15 +27,15 @@ exports[`UpgradeDriveModal Component > should match snapshot 1`] = `
     </p>
   </span>
   <div
-    class="w-[400px] bg-white p-6 text-slate-300"
+    class="w-100 bg-white p-6 text-slate-300 dark:bg-slate-800 dark:text-slate-200"
   >
     <div
-      class="border-b border-slate-50 pb-2 text-2xl font-bold text-gray-800"
+      class="pb-2 text-2xl font-bold text-gray-800 dark:text-slate-100"
     >
       Upgrade to cloud drive
     </div>
     <div
-      class="my-6 rounded-md bg-slate-50 p-4 text-center"
+      class="my-6 rounded-md bg-slate-50 p-4 text-center text-gray-800 dark:bg-slate-800 dark:text-slate-100"
     >
       You are moving files from a private to a shared drive. These files will become accessible to others in the shared drive.Do you want to proceed?
     </div>
@@ -43,12 +43,12 @@ exports[`UpgradeDriveModal Component > should match snapshot 1`] = `
       class="mt-8 flex justify-between gap-3"
     >
       <button
-        class="min-h-[48px] min-w-[142px] text-base font-semibold py-3 px-6 rounded-xl outline-none active:opacity-75 hover:scale-105 transform transition-all flex-1 bg-slate-50 text-slate-800"
+        class="min-h-12 min-w-35.5 flex-1 transform place-items-center rounded-xl px-6 py-3 text-base font-semibold transition-all outline-none hover:scale-105 active:opacity-75 disabled:cursor-not-allowed disabled:hover:scale-none bg-gray-400 text-gray-50 dark:bg-slate-400 dark:text-slate-900"
       >
         Cancel
       </button>
       <button
-        class="min-h-[48px] min-w-[142px] text-base font-semibold py-3 px-6 rounded-xl outline-none active:opacity-75 hover:scale-105 transform transition-all flex-1 bg-gray-800 text-gray-50"
+        class="min-h-12 min-w-35.5 flex-1 transform place-items-center rounded-xl px-6 py-3 text-base font-semibold transition-all outline-none hover:scale-105 active:opacity-75 disabled:cursor-not-allowed disabled:hover:scale-none bg-gray-800 text-gray-50 dark:bg-slate-100 dark:text-slate-900"
       >
         Continue
       </button>
