@@ -1,3 +1,13 @@
+## 6.1.0-dev.8 (2026-05-28)
+
+### 🩹 Fixes
+
+- **reactor-api:** correctly load subgraphs from registry packages and surface real load failures ([e3b84ee12](https://github.com/powerhouse-inc/powerhouse/commit/e3b84ee12))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.1.0-dev.7 (2026-05-28)
 
 This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
