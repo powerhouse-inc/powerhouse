@@ -25,6 +25,7 @@ export async function startInit(args: InitArgs) {
     dev,
     staging,
     remoteDrive,
+    template,
   } = args;
 
   let name = namePositional ?? nameOption;
@@ -85,6 +86,14 @@ export async function startInit(args: InitArgs) {
     dev,
     staging,
   });
+
+  if (template && (tag || version || dev || staging)) {
+    console.log(
+      chalk.yellow(
+        "⚠️  --template is set; --version/--tag/--dev/--staging are ignored (the template's dependency set is authoritative).",
+      ),
+    );
+  }
 
   try {
     if (remoteDrive) {
