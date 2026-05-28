@@ -1,7 +1,9 @@
-@reference "tailwindcss";
+@import "@powerhousedao/design-system/theme.css";
+@import "tailwindcss";
+@source "../../packages/design-system/src/**/*.{tsx,ts}";
+@source "../../packages/powerhouse-vetra-packages/**/*.{tsx,ts}";
+@source "../../packages/vetra/**/*.{tsx,ts}";
 @import "@powerhousedao/design-system/style.css";
 /* @import "@powerhousedao/document-engineering/style.css"; */
 @import "@powerhousedao/powerhouse-vetra-packages/style.css";
 @import "@powerhousedao/vetra/style.css";
-
-@custom-variant dark (&:where(.dark, .dark *));

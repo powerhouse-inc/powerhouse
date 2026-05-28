@@ -31,13 +31,13 @@
       "import": "./dist/main.js"
     },
     "./assets/*": "./assets/*",
-    "./style.css": "./style.css"
+    "./style.css": "./dist/style.css"
   },
   "sideEffects": [
     "./dist/main.js",
     "./dist/start-connect.js",
     "./dist/i18n-*.js",
-    "./style.css"
+    "./dist/style.css"
   ],
   "license": "AGPL-3.0-only",
   "author": "powerhouse.inc",
@@ -54,8 +54,9 @@
     "lint": "eslint",
     "test": "vitest --run",
     "dev": "vite dev",
-    "build": "pnpm run build:bundle",
+    "build": "pnpm run build:bundle && pnpm run build:css",
     "build:bundle": "tsdown",
+    "build:css": "pnpm exec tailwindcss -i style.css -o dist/style.css",
     "build:debug": "PH_DEBUG_BUILD=true vite build",
     "preview": "vite preview",
     "cy:open": "cypress open",
