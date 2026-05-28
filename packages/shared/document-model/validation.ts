@@ -1,8 +1,10 @@
 import { constantCase, pascalCase } from "change-case";
 import type { DocumentOperations } from "./operations.js";
 import type {
+  CodeExample,
   DocumentModelGlobalState,
   ModuleSpecification,
+  OperationErrorSpecification,
   OperationSpecification,
   ValidationError,
 } from "./types.js";
@@ -295,6 +297,139 @@ export function findOperationOrThrow(
   throw new Error(
     `Operation "${operationId}" not found in the latest specification`,
   );
+}
+
+/**
+ * Find an operation error by id across all operations in the latest
+ * specification, or throw. Throws on a duplicate id too: setters act on a
+ * single error, so an ambiguous id must fail loudly rather than mutate an
+ * arbitrary match.
+ */
+export function findOperationErrorOrThrow(
+  state: DocumentModelGlobalState,
+  errorId: string,
+): OperationErrorSpecification {
+  const latestSpec = state.specifications[state.specifications.length - 1];
+  const matches =
+    latestSpec?.modules.flatMap((mod) =>
+      mod.operations.flatMap((op) => op.errors.filter((e) => e.id === errorId)),
+    ) ?? [];
+  if (matches.length === 0) {
+    throw new Error(
+      `Operation error "${errorId}" not found in the latest specification`,
+    );
+  }
+  if (matches.length > 1) {
+    throw new Error(
+      `Operation error "${errorId}" is duplicated in the latest specification`,
+    );
+  }
+  return matches[0];
+}
+
+/**
+ * Find an operation example (code example) by id across all operations in the
+ * latest specification, or throw. Throws on a duplicate id for the same reason
+ * as findOperationErrorOrThrow.
+ */
+export function findOperationExampleOrThrow(
+  state: DocumentModelGlobalState,
+  exampleId: string,
+): CodeExample {
+  const latestSpec = state.specifications[state.specifications.length - 1];
+  const matches =
+    latestSpec?.modules.flatMap((mod) =>
+      mod.operations.flatMap((op) =>
+        op.examples.filter((e) => e.id === exampleId),
+      ),
+    ) ?? [];
+  if (matches.length === 0) {
+    throw new Error(
+      `Operation example "${exampleId}" not found in the latest specification`,
+    );
+  }
+  if (matches.length > 1) {
+    throw new Error(
+      `Operation example "${exampleId}" is duplicated in the latest specification`,
+    );
+  }
+  return matches[0];
+}
+
+/**
+ * Assert no module in the latest specification already uses `id`. Modules are
+ * targeted by id by the setter/delete/reorder reducers, so a duplicate id makes
+ * those operations ambiguous.
+ */
+export function assertModuleIdUnique(
+  state: DocumentModelGlobalState,
+  id: string,
+): void {
+  const latestSpec = state.specifications[state.specifications.length - 1];
+  if (latestSpec?.modules.some((m) => m.id === id)) {
+    throw new Error(
+      `Module "${id}" already exists in the latest specification`,
+    );
+  }
+}
+
+/**
+ * Assert no operation in the latest specification already uses `id`. Operations
+ * are targeted by id across all modules, so the id must be unique document-wide.
+ */
+export function assertOperationIdUnique(
+  state: DocumentModelGlobalState,
+  id: string,
+): void {
+  const latestSpec = state.specifications[state.specifications.length - 1];
+  const exists = latestSpec?.modules.some((m) =>
+    m.operations.some((o) => o.id === id),
+  );
+  if (exists) {
+    throw new Error(
+      `Operation "${id}" already exists in the latest specification`,
+    );
+  }
+}
+
+/**
+ * Assert no operation error in the latest specification already uses `id`.
+ * Error ids are targeted document-wide by the setter/delete reducers, so the id
+ * must be unique to keep those operations unambiguous.
+ */
+export function assertOperationErrorIdUnique(
+  state: DocumentModelGlobalState,
+  id: string,
+): void {
+  const latestSpec = state.specifications[state.specifications.length - 1];
+  const exists = latestSpec?.modules.some((m) =>
+    m.operations.some((o) => o.errors.some((e) => e.id === id)),
+  );
+  if (exists) {
+    throw new Error(
+      `Operation error "${id}" already exists in the latest specification`,
+    );
+  }
+}
+
+/**
+ * Assert no operation example in the latest specification already uses `id`.
+ * Example ids are targeted document-wide by the update/delete reducers, so the
+ * id must be unique to keep those operations unambiguous.
+ */
+export function assertOperationExampleIdUnique(
+  state: DocumentModelGlobalState,
+  id: string,
+): void {
+  const latestSpec = state.specifications[state.specifications.length - 1];
+  const exists = latestSpec?.modules.some((m) =>
+    m.operations.some((o) => o.examples.some((e) => e.id === id)),
+  );
+  if (exists) {
+    throw new Error(
+      `Operation example "${id}" already exists in the latest specification`,
+    );
+  }
 }
 
 export function validateOperations(operations: DocumentOperations) {

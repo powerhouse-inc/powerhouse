@@ -25,6 +25,7 @@ export async function startInit(args: InitArgs) {
     dev,
     staging,
     remoteDrive,
+    clone,
   } = args;
 
   let name = namePositional ?? nameOption;
@@ -85,6 +86,14 @@ export async function startInit(args: InitArgs) {
     dev,
     staging,
   });
+
+  if (clone && (tag || version || dev || staging)) {
+    console.log(
+      chalk.yellow(
+        "⚠️  --clone is set; --version/--tag/--dev/--staging are ignored (the cloned project's dependency set is authoritative).",
+      ),
+    );
+  }
 
   try {
     if (remoteDrive) {

@@ -11,7 +11,9 @@ import {
   driveCollectionId,
   parseDriveUrl,
   type Database,
+  type JwtHandler,
 } from "@powerhousedao/reactor";
+import { createRemoteAttachmentService } from "@powerhousedao/reactor-attachments";
 import {
   HttpPackageLoader,
   ImportPackageLoader,
@@ -182,6 +184,26 @@ async function createReactorKysely(opts: {
       : `Using PGlite (PG${reactorPgliteMajor}) for reactor storage at ${reactorPgliteDir}`,
   );
   return new Kysely<Database>({ dialect: new ClosablePGliteDialect(pglite) });
+}
+
+/** Derive the remote attachment service config for switchboard's own `/attachments/*` API. */
+export function deriveAttachmentServiceConfig(
+  options: Pick<StartServerOptions, "attachmentServiceUrl" | "https">,
+  serverPort: number,
+  renown: IRenown | null,
+): { remoteUrl: string; jwtHandler: JwtHandler | undefined } {
+  const protocol = options.https ? "https" : "http";
+  const remoteUrl =
+    options.attachmentServiceUrl ??
+    process.env.PH_SWITCHBOARD_PUBLIC_URL ??
+    `${protocol}://localhost:${serverPort}`;
+  const jwtHandler: JwtHandler | undefined = renown
+    ? async (url: string) =>
+        renown.user
+          ? renown.getBearerToken({ expiresIn: 10, aud: url })
+          : undefined
+    : undefined;
+  return { remoteUrl, jwtHandler };
 }
 
 async function initServer(
@@ -498,6 +520,10 @@ async function initServer(
 
   registerAttachmentRoutes(api);
 
+  const attachmentService = createRemoteAttachmentService(
+    deriveAttachmentServiceConfig(options, serverPort, renown),
+  );
+
   if (process.env.SENTRY_DSN) {
     // Register Sentry error handler after all routes are established.
     // The adapter calls the framework-specific Sentry setup internally.
@@ -634,6 +660,7 @@ async function initServer(
     defaultDriveUrl,
     api,
     reactor: client,
+    attachmentService,
     renown,
     port: serverPort,
     shutdown: () => api.dispose(),

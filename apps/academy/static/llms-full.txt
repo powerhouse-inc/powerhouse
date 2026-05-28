@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-05-26T14:39:34.358Z
+> Generated: 2026-05-28T08:36:32.118Z
 > Total Documents: 86
 > Source: https://powerhouse.academy/llms-full.txt
 
@@ -17749,6 +17749,8 @@ Initialize a new project
 
 **Remote Drive** - Remote drive identifier. - Usage: `--remote-drive, -r <str>`
 
+**Clone** - Path to an existing scaffolded project to clone instead of resolving deps from scratch. Install runs offline from the cloned project's pnpm-lock.yaml (requires --pnpm; --version/--tag are ignored). - Usage: `--clone <str>`
+
 
 ### Flags
 **Npm** - Use 'npm' as package manager - Usage: `--npm`
@@ -17828,6 +17830,8 @@ Initialize a new global project
 **Version** - Specify the exact semver release version to use for your project. - Usage: `--version, -v <str>`
 
 **Remote Drive** - Remote drive identifier. - Usage: `--remote-drive, -r <str>`
+
+**Clone** - Path to an existing scaffolded project to clone instead of resolving deps from scratch. Install runs offline from the cloned project's pnpm-lock.yaml (requires --pnpm; --version/--tag are ignored). - Usage: `--clone <str>`
 
 
 ### Flags

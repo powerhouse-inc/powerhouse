@@ -1,4 +1,4 @@
-# PH-CMD CLI Commands (6.1.0-dev.5)<br>
+# PH-CMD CLI Commands (6.1.0-dev.7)<br>
 This document provides detailed information about the available commands in the PH-CMD CLI. The CLI is published as `ph-cmd` and is invoked with the `ph` command.<br><br>
 The Powerhouse CLI (ph-cmd) is a command-line interface tool that provides essential commands for managing Powerhouse projects.
 The tool and it's commands are fundamental for creating, building, and running Document Models as a builder in studio mode.<br>
@@ -37,6 +37,10 @@ Specify the exact semver release version to use for your project.<br><br>
 #### Remote Drive <br>
 Remote drive identifier.<br><br>
 **usage:** `--remote-drive, -r <str>`<br>
+
+#### Clone <br>
+Path to an existing scaffolded project to clone instead of resolving deps from scratch. Install runs offline from the cloned project's pnpm-lock.yaml (requires --pnpm; --version/--tag are ignored).<br><br>
+**usage:** `--clone <str>`<br>
 
 
 ### flags
@@ -149,6 +153,10 @@ Specify the exact semver release version to use for your project.<br><br>
 #### Remote Drive <br>
 Remote drive identifier.<br><br>
 **usage:** `--remote-drive, -r <str>`<br>
+
+#### Clone <br>
+Path to an existing scaffolded project to clone instead of resolving deps from scratch. Install runs offline from the cloned project's pnpm-lock.yaml (requires --pnpm; --version/--tag are ignored).<br><br>
+**usage:** `--clone <str>`<br>
 
 
 ### flags

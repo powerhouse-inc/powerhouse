@@ -80,8 +80,8 @@ export const GRAPHQL_TAG_PACKAGE = "graphql-tag";
 export const PEER_EXTERNAL_DEPENDENCIES = {
   [GRAPHQL_PACKAGE]: { peer: "^16", dev: "16.12.0" },
   [GRAPHQL_TAG_PACKAGE]: { peer: "^2", dev: "2.12.6" },
-  react: { peer: "^19", dev: "19.2.3" },
-  "react-dom": { peer: "^19", dev: "19.2.3" },
+  react: { peer: "^19", dev: "19.2.6" },
+  "react-dom": { peer: "^19", dev: "19.2.6" },
   zod: { peer: "^4", dev: "4.3.6" },
 } as const satisfies Record<string, PeerSpec>;
 
@@ -113,6 +113,16 @@ export const BOILERPLATE_ALLOWED_BUILDS = [
   "esbuild",
   "protobufjs",
 ] as const;
+
+// pnpm `overrides` written into the generated project's pnpm-workspace.yaml to
+// force a single chosen version of each, avoiding duplicates from coexisting
+// version ranges. Generated-project only — never change the monorepo catalog
+// for this (a re-resolution there pulls a tsc-crashing TS6 beta).
+export const BOILERPLATE_PNPM_OVERRIDES = {
+  "date-fns": "4.3.0",
+  vite: "8.0.14",
+  rolldown: "1.0.2",
+} as const satisfies Record<string, string>;
 
 export const VERSIONED_DEV_DEPENDENCIES = [
   "@powerhousedao/ph-cli",

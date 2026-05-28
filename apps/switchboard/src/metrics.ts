@@ -1,5 +1,5 @@
 import { OTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-http";
-import { Resource } from "@opentelemetry/resources";
+import { resourceFromAttributes } from "@opentelemetry/resources";
 import {
   MeterProvider,
   PeriodicExportingMetricReader,
@@ -27,7 +27,7 @@ export function createMeterProviderFromEnv(env: {
 
   logger.info(`Initializing OpenTelemetry metrics exporter at: ${endpoint}`);
   const meterProvider = new MeterProvider({
-    resource: new Resource({
+    resource: resourceFromAttributes({
       "service.name": env.OTEL_SERVICE_NAME ?? "switchboard",
     }),
     readers: [

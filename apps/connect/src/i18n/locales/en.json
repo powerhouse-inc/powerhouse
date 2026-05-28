@@ -103,7 +103,7 @@
     "builtWith": "Built with <icon /> Powerhouse"
   },
   "cookieBanner": {
-    "message": "This website uses cookies for analytic purposes only. Cookies are anonymous and do not link to user data. We collect information to improve the user experience and validate UI changes. You can still use the page without cookies. For more information, please read our <a>cookies policy.</a>",
+    "message": "This website uses cookies for analytic purposes only. When you are signed in, analytics events may be associated with your account identity. We collect information to improve the user experience and validate UI changes. You can still use the page without cookies. For more information, please read our <a>cookies policy.</a>",
     "accept": "Accept configured cookies",
     "reject": "Reject all cookies",
     "cookies": {

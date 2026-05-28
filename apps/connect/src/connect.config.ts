@@ -137,6 +137,13 @@ export const connectConfig = {
     externalProcessorsEnabled:
       env.PH_CONNECT_EXTERNAL_RELATIONAL_PROCESSORS_ENABLED,
   },
+  openPanel: {
+    clientId: env.PH_CONNECT_OPENPANEL_CLIENT_ID ?? "",
+    apiUrl: env.PH_CONNECT_OPENPANEL_API_URL,
+    // Intentionally dormant — no call sites gate on this yet; UI-event tracking is future work.
+    trackUiEvents: env.PH_CONNECT_OPENPANEL_TRACK_UI_EVENTS,
+    trackOperations: env.PH_CONNECT_OPENPANEL_TRACK_OPERATIONS,
+  },
   renown: {
     url: env.PH_CONNECT_RENOWN_URL,
     networkId: env.PH_CONNECT_RENOWN_NETWORK_ID,

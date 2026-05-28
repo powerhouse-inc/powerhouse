@@ -65,6 +65,8 @@ Initialize a new project
 
 **Remote Drive** - Remote drive identifier. - Usage: `--remote-drive, -r <str>`
 
+**Clone** - Path to an existing scaffolded project to clone instead of resolving deps from scratch. Install runs offline from the cloned project's pnpm-lock.yaml (requires --pnpm; --version/--tag are ignored). - Usage: `--clone <str>`
+
 
 
 
@@ -155,6 +157,8 @@ Initialize a new global project
 **Version** - Specify the exact semver release version to use for your project. - Usage: `--version, -v <str>`
 
 **Remote Drive** - Remote drive identifier. - Usage: `--remote-drive, -r <str>`
+
+**Clone** - Path to an existing scaffolded project to clone instead of resolving deps from scratch. Install runs offline from the cloned project's pnpm-lock.yaml (requires --pnpm; --version/--tag are ignored). - Usage: `--clone <str>`
 
 
 

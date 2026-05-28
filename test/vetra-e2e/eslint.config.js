@@ -19,6 +19,8 @@ export default tseslint.config(
   globalIgnores([
     "node_modules/",
     "dist/",
+    "**/dist/",
+    ".registry-cdn-cache/",
     ".ph/",
     ".tsbuild/",
     "ts-build/",

@@ -2,6 +2,7 @@ import type {
   IReactorClient,
   ReactorClientModule,
 } from "@powerhousedao/reactor";
+import type { IAttachmentService } from "@powerhousedao/reactor-attachments";
 import type { IRenown } from "@renown/sdk";
 import type { DriveInput } from "@powerhousedao/shared/document-drive";
 import type { ILogger } from "document-model";
@@ -104,6 +105,8 @@ export type StartServerOptions = {
    * and can authenticate with remote services on behalf of the user.
    */
   identity?: IdentityOptions;
+  /** Base URL for the attachment service; defaults to `PH_SWITCHBOARD_PUBLIC_URL` then `http(s)://localhost:${port}`. */
+  attachmentServiceUrl?: string;
   mcp?: boolean;
   processorConfig?: Map<string, unknown>;
   disableLocalPackages?: boolean;
@@ -140,6 +143,8 @@ export type StartServerOptions = {
 export type SwitchboardReactor = {
   defaultDriveUrl: string | undefined;
   reactor: IReactorClient;
+  /** Switchboard-backed remote attachment service over its own `/attachments/*` API, for downstream consumers. */
+  attachmentService: IAttachmentService;
   /** The Renown instance if identity was initialized */
   renown: IRenown | null;
   /**

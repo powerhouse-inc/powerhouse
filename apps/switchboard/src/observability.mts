@@ -16,7 +16,7 @@ import { ExpressInstrumentation } from "@opentelemetry/instrumentation-express";
 import { GraphQLInstrumentation } from "@opentelemetry/instrumentation-graphql";
 import { HttpInstrumentation } from "@opentelemetry/instrumentation-http";
 import { PgInstrumentation } from "@opentelemetry/instrumentation-pg";
-import { Resource } from "@opentelemetry/resources";
+import { resourceFromAttributes } from "@opentelemetry/resources";
 import type { MeterProvider } from "@opentelemetry/sdk-metrics";
 import { NodeSDK } from "@opentelemetry/sdk-node";
 import {
@@ -105,7 +105,7 @@ if (TRACING_ENABLED) {
   if (SENTRY_DSN) logger.info(`  Sentry span forwarding: enabled`);
   logger.info(`  Tenant: ${TENANT_ID}`);
 
-  const resource = new Resource({
+  const resource = resourceFromAttributes({
     [ATTR_SERVICE_NAME]: SERVICE_NAME,
     [ATTR_SERVICE_VERSION]: SERVICE_VERSION,
     "tenant.id": TENANT_ID,
