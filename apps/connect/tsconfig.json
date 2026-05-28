@@ -27,6 +27,7 @@
   "include": [
     "**/*",
     "src/i18n/locales/en.json",
+    "src/services/openpanel/events.json",
     "./package.json"
   ],
   "exclude": [

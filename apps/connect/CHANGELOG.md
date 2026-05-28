@@ -1,3 +1,37 @@
+## 6.1.0-dev.8 (2026-05-28)
+
+This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
+
+## 6.1.0-dev.7 (2026-05-28)
+
+This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
+
+## 6.1.0-dev.6 (2026-05-28)
+
+### 🚀 Features
+
+- fix type errors in processor.test.ts that break typecheck ([9a5dd1973](https://github.com/powerhouse-inc/powerhouse/commit/9a5dd1973))
+- **openpanel:** add useOpenPanel hook with pre-init event buffering ([292fb376f](https://github.com/powerhouse-inc/powerhouse/commit/292fb376f))
+- mount OpenPanel with consent gating and user identification ([aa7c77b07](https://github.com/powerhouse-inc/powerhouse/commit/aa7c77b07))
+- feat(openpanel): implement processor and factory for event tracking ([837a91df2](https://github.com/powerhouse-inc/powerhouse/commit/837a91df2))
+- feat(openpanel): add event mappings, validation, and naming helpers ([556688064](https://github.com/powerhouse-inc/powerhouse/commit/556688064))
+- add OpenPanel client singleton and types ([a05cbc19d](https://github.com/powerhouse-inc/powerhouse/commit/a05cbc19d))
+- **connect:** add OpenPanel Analytics configuration ([b39d072b2](https://github.com/powerhouse-inc/powerhouse/commit/b39d072b2))
+
+### 🩹 Fixes
+
+- **connect:** resolve @powerhousedao/connect/* aliases in vitest ([f7de787c6](https://github.com/powerhouse-inc/powerhouse/commit/f7de787c6))
+- **openpanel:** resolve eslint failures in static checks ([9bbefa737](https://github.com/powerhouse-inc/powerhouse/commit/9bbefa737))
+- **openpanel:** catch synchronous track errors in forward() ([36361c996](https://github.com/powerhouse-inc/powerhouse/commit/36361c996))
+- **connect:** clarify trackUiEvents dormancy and remove invalid tsconfigPaths config ([83bcc3a76](https://github.com/powerhouse-inc/powerhouse/commit/83bcc3a76))
+- pnpm-lock file ([d5019827c](https://github.com/powerhouse-inc/powerhouse/commit/d5019827c))
+- **useOpenPanel:** catch async errors from client.track in forward() ([c16887eb0](https://github.com/powerhouse-inc/powerhouse/commit/c16887eb0))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 4.7
+
 ## 6.1.0-dev.5 (2026-05-27)
 
 ### 🚀 Features

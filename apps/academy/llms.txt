@@ -76,6 +76,7 @@
 - [Vetra Remote Drive](https://powerhouse.academy/academy/APIReferences/VetraRemoteDrive): These commands enable collaborative development using Vetra remote drives. Instead of working with local drives only, you can connect your Powerhouse 
 - [Subgraph Migration Guide (v6 Reactor)](https://powerhouse.academy/academy/APIReferences/SubgraphMigrationGuide): This guide covers the breaking changes to the GraphQL subgraph API introduced in the v6 Reactor. If you were querying the old /graphql/document-drive 
 - [Processor Migration Guide (v6 Reactor)](https://powerhouse.academy/academy/APIReferences/ProcessorMigrationGuide): This guide covers the breaking changes to the processor interface introduced in the v6 Reactor. If you have existing processors built on the legacy st
+- [Attachment service](https://powerhouse.academy/academy/APIReferences/AttachmentService): The @powerhousedao/reactor-attachments package decouples large binaries (images, files, avatars) from the action and operation pipeline. Instead of ca
 - [Renown SDK](https://powerhouse.academy/academy/APIReferences/renown-sdk/Overview): A comprehensive SDK for integrating Renown authentication and user profile management into your React applications.
 - [Authentication Guide](https://powerhouse.academy/academy/APIReferences/renown-sdk/Authentication): Comprehensive guide to implementing authentication with the Renown SDK.
 - [API Reference](https://powerhouse.academy/academy/APIReferences/renown-sdk/APIReference): Complete API reference for the Renown SDK.

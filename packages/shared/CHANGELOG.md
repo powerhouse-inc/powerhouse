@@ -1,3 +1,42 @@
+## 6.1.0-dev.8 (2026-05-28)
+
+This was a version bump only for @powerhousedao/shared to align it with other projects, there were no code changes.
+
+## 6.1.0-dev.7 (2026-05-28)
+
+### 🚀 Features
+
+- **ph-cli:** add `ph init --template <path>` fast path ([ea9c646c9](https://github.com/powerhouse-inc/powerhouse/commit/ea9c646c9))
+
+### 🩹 Fixes
+
+- **codegen:** dedup react/date-fns/vite/rolldown in generated projects ([dc94b0934](https://github.com/powerhouse-inc/powerhouse/commit/dc94b0934))
+- **document-model:** let delete recover duplicates, validate move first ([56e28e55d](https://github.com/powerhouse-inc/powerhouse/commit/56e28e55d))
+- **document-model:** fail on duplicate ids in error/example/move reducers ([dfd2f02f5](https://github.com/powerhouse-inc/powerhouse/commit/dfd2f02f5))
+- **document-model:** throw on missing target id in reducers ([f58102b98](https://github.com/powerhouse-inc/powerhouse/commit/f58102b98))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.1.0-dev.6 (2026-05-28)
+
+### 🚀 Features
+
+- mount OpenPanel with consent gating and user identification ([aa7c77b07](https://github.com/powerhouse-inc/powerhouse/commit/aa7c77b07))
+- feat(openpanel): add event mappings, validation, and naming helpers ([556688064](https://github.com/powerhouse-inc/powerhouse/commit/556688064))
+- **connect:** add OpenPanel Analytics configuration ([b39d072b2](https://github.com/powerhouse-inc/powerhouse/commit/b39d072b2))
+
+### 🩹 Fixes
+
+- **connect:** resolve @powerhousedao/connect/* aliases in vitest ([f7de787c6](https://github.com/powerhouse-inc/powerhouse/commit/f7de787c6))
+- pnpm-lock file ([d5019827c](https://github.com/powerhouse-inc/powerhouse/commit/d5019827c))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 4.7
+
 ## 6.1.0-dev.5 (2026-05-27)
 
 ### 🚀 Features

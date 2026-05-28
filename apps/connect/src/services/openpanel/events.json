@@ -1,0 +1,30 @@
+[
+  {
+    "documentType": "powerhouse/document-drive",
+    "actionTypes": [
+      "ADD_FOLDER",
+      "DELETE_NODE",
+      "ADD_FILE",
+      "UPDATE_FILE",
+      "COPY_NODE",
+      "MOVE_NODE",
+      "SET_DRIVE_NAME",
+      "SET_DRIVE_ICON"
+    ]
+  },
+  {
+    "documentType": "powerhouse/document-model",
+    "actionTypes": [
+      "SET_MODEL_NAME",
+      "SET_MODEL_ID",
+      "ADD_MODULE",
+      "DELETE_MODULE",
+      "ADD_OPERATION",
+      "DELETE_OPERATION"
+    ]
+  },
+  {
+    "documentType": "powerhouse/reactor-drive",
+    "actionTypes": ["ADD_FOLDER", "REMOVE_FOLDER", "UPDATE_FOLDER"]
+  }
+]

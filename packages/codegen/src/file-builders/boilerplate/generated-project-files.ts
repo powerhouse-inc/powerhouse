@@ -3,7 +3,9 @@ import {
   buildBoilerplatePackageJson,
   createOrUpdateManifest,
 } from "file-builders";
+import { loadJsonFile } from "load-json-file";
 import { join } from "path";
+import { writeJsonFile } from "write-json-file";
 import {
   agentsTemplate,
   buildPowerhouseConfigTemplate,
@@ -183,7 +185,6 @@ export async function writeProjectRootFiles(
     tag,
     version,
   });
-  await createOrUpdateManifest({ name }, projectDir);
   const powerhouseConfig = await buildPowerhouseConfigTemplate({
     tag,
     version,
@@ -191,6 +192,40 @@ export async function writeProjectRootFiles(
   });
   await writeFileEnsuringDir("powerhouse.config.json", powerhouseConfig);
   await writeFileEnsuringDir("package.json", packageJson);
+  await applyProjectCustomizations({ name, projectDir });
+}
+
+/**
+ * Per-project customizations applied to a project directory — the parts
+ * `ph init` derives from the project name. Shared by the fresh-scaffold path
+ * ({@link writeProjectRootFiles}) and the `--template` clone path, so future
+ * per-project customizations only need to be added here once.
+ *
+ * Assumes `package.json` already exists in `projectDir`.
+ */
+export async function applyProjectCustomizations(args: {
+  name: string;
+  projectDir: string;
+  remoteDrive?: string;
+}) {
+  const { name, projectDir, remoteDrive } = args;
+  // package.json: set the project name (deps and everything else preserved).
+  const pkgPath = join(projectDir, "package.json");
+  const pkg = (await loadJsonFile(pkgPath)) as Record<string, unknown>;
+  pkg.name = name;
+  await writeJsonFile(pkgPath, pkg, { indent: 2 });
+  // powerhouse.manifest.json: set the project name.
+  await createOrUpdateManifest({ name }, projectDir);
+  // powerhouse.config.json: write the vetra remote-drive field. Only applies
+  // to the template path; the fresh-scaffold path already bakes this in via
+  // buildPowerhouseConfigTemplate.
+  if (remoteDrive) {
+    const configPath = join(projectDir, "powerhouse.config.json");
+    const config = (await loadJsonFile(configPath)) as Record<string, unknown>;
+    const driveId = remoteDrive.split("/").pop() ?? "";
+    config.vetra = { driveId, driveUrl: remoteDrive };
+    await writeJsonFile(configPath, config, { indent: 2 });
+  }
 }
 
 export async function writeCIFiles(projectDir = process.cwd()) {

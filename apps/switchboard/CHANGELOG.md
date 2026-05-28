@@ -1,3 +1,36 @@
+## 6.1.0-dev.8 (2026-05-28)
+
+This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.
+
+## 6.1.0-dev.7 (2026-05-28)
+
+### 🩹 Fixes
+
+- **switchboard,reactor-bench,profiling:** migrate Sentry 9->10 and OpenTelemetry v1->v2 ([5e5c1ef9e](https://github.com/powerhouse-inc/powerhouse/commit/5e5c1ef9e))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.1.0-dev.6 (2026-05-28)
+
+### 🚀 Features
+
+- adding attachment service to the switchboard options ([a88e4cdc6](https://github.com/powerhouse-inc/powerhouse/commit/a88e4cdc6))
+- mount OpenPanel with consent gating and user identification ([aa7c77b07](https://github.com/powerhouse-inc/powerhouse/commit/aa7c77b07))
+- feat(openpanel): add event mappings, validation, and naming helpers ([556688064](https://github.com/powerhouse-inc/powerhouse/commit/556688064))
+- **connect:** add OpenPanel Analytics configuration ([b39d072b2](https://github.com/powerhouse-inc/powerhouse/commit/b39d072b2))
+
+### 🩹 Fixes
+
+- **connect:** resolve @powerhousedao/connect/* aliases in vitest ([f7de787c6](https://github.com/powerhouse-inc/powerhouse/commit/f7de787c6))
+- pnpm-lock file ([d5019827c](https://github.com/powerhouse-inc/powerhouse/commit/d5019827c))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 4.7
+
 ## 6.1.0-dev.5 (2026-05-27)
 
 ### 🚀 Features

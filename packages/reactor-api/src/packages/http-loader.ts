@@ -19,6 +19,24 @@ type DocumentModelsExport = Record<string, DocumentModelModule>;
 // Expected shape of the subgraphs bundle export
 type SubgraphsExport = Record<string, SubgraphClass>;
 
+/**
+ * Extract subgraph classes from the imported subgraphs/index.mjs module shape.
+ *
+ * The published bundle uses `export * as Foo from "./file"`, which Node turns
+ * into `{ Foo: <namespace>, … }`. The inner namespace's keys come from the
+ * source file's named exports — typically `Subgraph` / `default` / the class
+ * name itself — so the shape varies. Flatten one level and keep callables.
+ *
+ * Exported for direct unit testing against synthetic module shapes.
+ */
+export function extractSubgraphsFromModule(
+  module: Record<string, SubgraphsExport>,
+): SubgraphClass[] {
+  return Object.values(module)
+    .flatMap((namespace) => Object.values(namespace))
+    .filter((s): s is SubgraphClass => typeof s === "function");
+}
+
 // Expected shape of the processors bundle export
 type ProcessorsExport = {
   processorFactory?: ProcessorFactoryBuilder;
@@ -112,13 +130,7 @@ export class HttpPackageLoader implements IPackageLoader {
 
     this.logger.verbose(`Importing subgraphs from: ${url}`);
     const module = (await import(url)) as Record<string, SubgraphsExport>;
-    const subgraphs = new Array<SubgraphClass>();
-    for (const [key, value] of Object.entries(module)) {
-      const subgraph = value[key];
-      if (subgraph && typeof subgraph === "function") {
-        subgraphs.push(subgraph);
-      }
-    }
+    const subgraphs = extractSubgraphsFromModule(module);
 
     this.logger.verbose(
       `Loaded ${subgraphs.length} subgraphs from ${packageName}`,

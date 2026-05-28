@@ -47,16 +47,43 @@ export async function resolve(
     return { url: resolved, shortCircuit: true, format: "module" };
   }
 
-  // For bare specifiers (e.g. "document-model") imported from HTTP modules,
-  // Node's default resolver fails because it can't find node_modules from an HTTP parent.
-  // Fall back to resolving from the process's working directory instead.
+  // Bare specifiers from HTTP modules need a node_modules root to resolve
+  // against. Under pnpm's strict isolation the deps a registry-built bundle
+  // needs split into two classes:
+  //   - Peer deps the *consumer* declared (react, react-dom, graphql, …) —
+  //     live at the consumer project root.
+  //   - Things reactor-api keeps external by design (the reactor-api package
+  //     itself, for class identity; internal helpers) — live in reactor-api's
+  //     own tree.
+  // Neither root sees the other under strict mode, so try the consumer first
+  // (its declared peers win on version) and fall back to reactor-api's tree.
+  //
+  // At this point: specifier is not an http(s):// URL (branch 1) and not
+  // relative (branch 2). Only redirect bare package specifiers; let absolute
+  // paths and other URL schemes (e.g. "node:fs", "file://…") fall through.
   if (
     parentURL &&
     (parentURL.startsWith("https://") || parentURL.startsWith("http://"))
   ) {
-    const { pathToFileURL } = await import("node:url");
-    const localParent = pathToFileURL(process.cwd() + "/").href;
-    return nextResolve(specifier, { ...context, parentURL: localParent });
+    const isBareSpecifier =
+      !specifier.startsWith("/") && !/^[a-z][a-z0-9+.-]*:/i.test(specifier);
+    if (isBareSpecifier) {
+      const { pathToFileURL } = await import("node:url");
+      const consumerRoot = pathToFileURL(process.cwd() + "/").href;
+      try {
+        return await nextResolve(specifier, {
+          ...context,
+          parentURL: consumerRoot,
+        });
+      } catch (e) {
+        const code = (e as NodeJS.ErrnoException | undefined)?.code;
+        if (code !== "ERR_MODULE_NOT_FOUND") throw e;
+        return nextResolve(specifier, {
+          ...context,
+          parentURL: import.meta.url,
+        });
+      }
+    }
   }
 
   // Let Node.js handle all other specifiers
