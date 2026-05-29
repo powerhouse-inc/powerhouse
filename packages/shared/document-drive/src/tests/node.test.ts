@@ -48,6 +48,26 @@ describe("Node Operations", () => {
     );
     expect(updatedDocument.operations.global![0].index).toEqual(0);
   });
+  // SKIP: documents a known bug — ADD_FILE silently drops the node when the
+  // name contains a non-ASCII character because isValidName (src/utils.ts) only
+  // permits ASCII URL characters. Un-skip once isValidName allows Unicode.
+  it.skip("should add a file node when the name contains a non-ASCII character (em-dash)", () => {
+    const input = generateMock(AddFileInputSchema());
+    // Em-dash U+2014, common in human-authored titles.
+    input.name = "Concord v1 — delivery plan";
+
+    const updatedDocument = driveDocumentReducer(document, addFile(input));
+
+    // The operation must succeed without recording an error.
+    expect(updatedDocument.operations.global![0].error).toBeUndefined();
+
+    // The node must be present in the projected state with the given name.
+    const node = updatedDocument.state.global.nodes.find(
+      (n) => n.id === input.id,
+    );
+    expect(node).toBeDefined();
+    expect(node!.name).toBe("Concord v1 — delivery plan");
+  });
   it("should prevent name collisions in addFile operation when parent is a folder", () => {
     const firstInput = generateMock(AddFileInputSchema());
     const secondInput = generateMock(AddFileInputSchema());
@@ -57,6 +77,12 @@ describe("Node Operations", () => {
     thirdInput.name = "test (copy) 1";
     secondInput.parentFolder = firstInput.parentFolder;
     thirdInput.parentFolder = firstInput.parentFolder;
+    // Nodes are sorted by id; assign ids matching the expected order so the
+    // positional assertions below are deterministic (secondInput is inserted
+    // first and keeps "test", firstInput becomes "test (copy) 1", etc.).
+    secondInput.id = "node-1";
+    firstInput.id = "node-2";
+    thirdInput.id = "node-3";
     const updatedDocument = driveDocumentReducer(
       document,
       addFile(secondInput),
@@ -87,6 +113,10 @@ describe("Node Operations", () => {
     firstInput.parentFolder = null;
     secondInput.parentFolder = null;
     thirdInput.parentFolder = null;
+    // Nodes are sorted by id; assign ids matching insertion/expected order.
+    secondInput.id = "node-1";
+    firstInput.id = "node-2";
+    thirdInput.id = "node-3";
     const updatedDocument = driveDocumentReducer(
       document,
       addFile(secondInput),
@@ -129,6 +159,10 @@ describe("Node Operations", () => {
     thirdInput.name = "test (copy) 1";
     secondInput.parentFolder = firstInput.parentFolder;
     thirdInput.parentFolder = firstInput.parentFolder;
+    // Nodes are sorted by id; assign ids matching insertion/expected order.
+    secondInput.id = "node-1";
+    firstInput.id = "node-2";
+    thirdInput.id = "node-3";
     const updatedDocument = driveDocumentReducer(
       document,
       addFolder(secondInput),
@@ -160,6 +194,10 @@ describe("Node Operations", () => {
     firstInput.parentFolder = null;
     secondInput.parentFolder = null;
     thirdInput.parentFolder = null;
+    // Nodes are sorted by id; assign ids matching insertion/expected order.
+    secondInput.id = "node-1";
+    firstInput.id = "node-2";
+    thirdInput.id = "node-3";
     const updatedDocument = driveDocumentReducer(
       document,
       addFolder(secondInput),
@@ -212,8 +250,10 @@ describe("Node Operations", () => {
   it("should handle name collisions in updateFile operation", () => {
     const existingFile1 = generateMock(FileNodeSchema());
     existingFile1.kind = "file";
+    existingFile1.id = "node-1";
     const existingFile2 = generateMock(FileNodeSchema());
     existingFile2.kind = "file";
+    existingFile2.id = "node-2";
     existingFile2.parentFolder = existingFile1.parentFolder;
     const input = generateMock(UpdateFileInputSchema());
     input.id = existingFile2.id;
@@ -245,8 +285,10 @@ describe("Node Operations", () => {
   it("should handle name collisions in updateNode operation", () => {
     const existingNode1 = generateMock(NodeSchema());
     existingNode1.kind = "file";
+    existingNode1.id = "node-1";
     const existingNode2 = generateMock(NodeSchema());
     existingNode2.kind = "file";
+    existingNode2.id = "node-2";
     existingNode2.parentFolder = existingNode1.parentFolder;
     const input = generateMock(UpdateNodeInputSchema());
     input.id = existingNode2.id;
@@ -405,8 +447,10 @@ describe("Node Operations", () => {
   it("should handle name collisions in copyNode operation", () => {
     const existingNode = generateMock(NodeSchema());
     existingNode.kind = "file";
+    existingNode.id = "node-1";
     const input = generateMock(CopyNodeInputSchema());
     input.srcId = existingNode.id;
+    input.targetId = "node-2";
     input.targetName = existingNode.name;
     input.targetParentFolder = existingNode.parentFolder;
     document.state.global.nodes = [existingNode];
@@ -422,9 +466,11 @@ describe("Node Operations", () => {
   it("should handle name collisions in copyNode operation when parent is drive", () => {
     const existingNode = generateMock(NodeSchema());
     existingNode.kind = "file";
+    existingNode.id = "node-1";
     const input = generateMock(CopyNodeInputSchema());
     existingNode.parentFolder = null;
     input.srcId = existingNode.id;
+    input.targetId = "node-2";
     input.targetName = existingNode.name;
     input.targetParentFolder = null;
     document.state.global.nodes = [existingNode];
@@ -440,8 +486,10 @@ describe("Node Operations", () => {
   it("should handle name collisions in copyNode operation", () => {
     const existingNode = generateMock(NodeSchema());
     existingNode.kind = "file";
+    existingNode.id = "node-1";
     const input = generateMock(CopyNodeInputSchema());
     input.srcId = existingNode.id;
+    input.targetId = "node-2";
     input.targetName = existingNode.name;
     input.targetParentFolder = existingNode.parentFolder;
     document.state.global.nodes = [existingNode];
@@ -479,9 +527,11 @@ describe("Node Operations", () => {
     const existingNode = generateMock(NodeSchema());
     existingNode.name = "test";
     existingNode.kind = "file";
+    existingNode.id = "node-1";
     const existingNode2 = generateMock(NodeSchema());
     existingNode2.name = "test";
     existingNode2.kind = "file";
+    existingNode2.id = "node-2";
     const input = generateMock(MoveNodeInputSchema());
     input.srcFolder = existingNode2.id;
     input.targetParentFolder = existingNode.parentFolder;
@@ -500,9 +550,11 @@ describe("Node Operations", () => {
     existingNode.name = "test";
     existingNode.parentFolder = null;
     existingNode.kind = "file";
+    existingNode.id = "node-1";
     const existingNode2 = generateMock(NodeSchema());
     existingNode2.name = "test";
     existingNode2.kind = "file";
+    existingNode2.id = "node-2";
     const input = generateMock(MoveNodeInputSchema());
     input.srcFolder = existingNode2.id;
     input.targetParentFolder = null;
