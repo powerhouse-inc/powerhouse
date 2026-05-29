@@ -15,8 +15,9 @@ export function mountAuthenticatedNodeRoute(
   path: string,
   handler: NodeHandler,
 ): void {
-  const authHandler = requireAuth(api.authService, handler);
-  api.httpAdapter.mountNodeRoute(method, path, (req, res) => {
-    void authHandler(req, res);
-  });
+  api.httpAdapter.mountNodeRoute(
+    method,
+    path,
+    requireAuth(api.authService, handler),
+  );
 }

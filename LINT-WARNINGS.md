@@ -22,7 +22,9 @@
 
 **Current: 383 / 609 fixed (63%), 226 warnings, 0 errors.** All fixes verified: `pnpm lint` → 226 warnings / **0 errors**, `pnpm typecheck` → **0 errors** (the cycle blocker was also fixed). Batches 1–10 complete; **batch 8 fully done — `require-await` switched to `error` and all 123 fixed**; batch 12 partial (13/38 — loop-safe hook-dep fixes). Remaining (~226): `no-unnecessary-condition` (200), 25 `useEffect`-dep `react-hooks` — these need per-file judgment (rationale below).
 
-**Test validation for the `require-await → error` work:** reactor-mcp (38), document-model (232), reactor-api gateway/graphql-manager (130), analytics-engine-core, renown (17) all pass. (3 pre-existing failures in `apps/switchboard` attachment integration tests are unrelated — they fail identically on clean `main`.)
+**Full test validation:** `pnpm test:ci` is **green across all packages** (reactor-api 538, design-system 245, vetra 234, document-model 232, switchboard 75, connect 78, reactor-mcp 38, versioned-documents 43, …). `pnpm typecheck` 0 errors, `pnpm lint` 0 errors.
+
+**Regression found & fixed:** the Batch 9 `no-misused-promises` fix had wrapped `mountAuthenticatedNodeRoute`'s handler in `(req,res) => void authHandler(req,res)`, which broke its documented contract ("mount the handler *unwrapped* when `authService` is undefined") — caught by `apps/switchboard` attachment tests under `simulate-ci-workflow` (lint+typecheck alone missed it). Root cause: `IHttpAdapter.mountNodeRoute` typed its handler `=> void`, but Node route handlers are legitimately `=> void | Promise<void>` (the fastify adapter already typed it as `NodeHandler`). **Proper fix:** widened the `mountNodeRoute` handler type to `=> void | Promise<void>` in the interface (`gateway/types.ts`) and the express adapter (which now `void`s the fire-and-forget call), then reverted `mount-auth.ts` to pass `requireAuth(...)` directly. This keeps `no-misused-promises` at 0 *and* restores the unwrapped-passthrough contract. All 53 attachment tests pass.
 
 ## Typecheck unblocked ✅
 
