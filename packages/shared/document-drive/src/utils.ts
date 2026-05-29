@@ -147,6 +147,8 @@ export function handleTargetNameCollisions(params: {
 }
 
 export const isValidName = (name: string) => {
-  // only allow characters that are valid in a URL
-  return /^[a-zA-Z0-9-_.\s()]+$/.test(name);
+  // Display label; URL slugs are derived from node ids, not names.
+  // Reject only empty names, control characters, and path separators.
+  // eslint-disable-next-line no-control-regex
+  return name.length > 0 && !/[\x00-\x1f\x7f/\\]/.test(name);
 };

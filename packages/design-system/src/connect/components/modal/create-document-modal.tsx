@@ -69,7 +69,7 @@ export function CreateDocumentModal(props: CreateDocumentModalProps) {
         <div className="my-6">
           {!isValid && nodeName && (
             <div className="mb-2 text-red-500">
-              Document name must be valid URL characters.
+              Document name cannot contain '/' or '\'.
             </div>
           )}
           <FormInput

@@ -73,9 +73,10 @@ describe("Node Operations", () => {
       (node) => node.name,
     );
     expect(new Set(nodeNames).size).toBe(nodeNames.length);
-    expect(nodeNames[0]).toBe("test");
-    expect(nodeNames[1]).toBe("test (copy) 1");
-    expect(nodeNames[2]).toBe("test (copy) 1 (copy) 1");
+    // Nodes are stored id-sorted, not insertion-ordered, so assert the set.
+    expect(new Set(nodeNames)).toEqual(
+      new Set(["test", "test (copy) 1", "test (copy) 1 (copy) 1"]),
+    );
   });
   it("should prevent name collisions in addFile operation when parent is a drive", () => {
     const firstInput = generateMock(AddFileInputSchema());
@@ -103,9 +104,10 @@ describe("Node Operations", () => {
       (node) => node.name,
     );
     expect(new Set(nodeNames).size).toBe(nodeNames.length);
-    expect(nodeNames[0]).toBe("test");
-    expect(nodeNames[1]).toBe("test (copy) 1");
-    expect(nodeNames[2]).toBe("test (copy) 1 (copy) 1");
+    // Nodes are stored id-sorted, not insertion-ordered, so assert the set.
+    expect(new Set(nodeNames)).toEqual(
+      new Set(["test", "test (copy) 1", "test (copy) 1 (copy) 1"]),
+    );
   });
   it("should handle addFolder operation", () => {
     const input = generateMock(AddFolderInputSchema());
@@ -145,9 +147,10 @@ describe("Node Operations", () => {
       (node) => node.name,
     );
     expect(new Set(nodeNames).size).toBe(nodeNames.length);
-    expect(nodeNames[0]).toBe("test");
-    expect(nodeNames[1]).toBe("test (copy) 1");
-    expect(nodeNames[2]).toBe("test (copy) 1 (copy) 1");
+    // Nodes are stored id-sorted, not insertion-ordered, so assert the set.
+    expect(new Set(nodeNames)).toEqual(
+      new Set(["test", "test (copy) 1", "test (copy) 1 (copy) 1"]),
+    );
   });
 
   it("should prevent name collisions in addFolder operation when parent is a drive", () => {
@@ -176,9 +179,10 @@ describe("Node Operations", () => {
       (node) => node.name,
     );
     expect(new Set(nodeNames).size).toBe(nodeNames.length);
-    expect(nodeNames[0]).toBe("test");
-    expect(nodeNames[1]).toBe("test (copy) 1");
-    expect(nodeNames[2]).toBe("test (copy) 1 (copy) 1");
+    // Nodes are stored id-sorted, not insertion-ordered, so assert the set.
+    expect(new Set(nodeNames)).toEqual(
+      new Set(["test", "test (copy) 1", "test (copy) 1 (copy) 1"]),
+    );
   });
 
   it("should handle deleteNode operation", () => {
@@ -226,8 +230,9 @@ describe("Node Operations", () => {
       (node) => node.name,
     );
     expect(new Set(nodeNames).size).toBe(nodeNames.length);
-    expect(nodeNames[0]).toBe(existingFile1.name);
-    expect(nodeNames[1]).toBe(input.name + " (copy) 1");
+    expect(new Set(nodeNames)).toEqual(
+      new Set([existingFile1.name, input.name + " (copy) 1"]),
+    );
   });
   it("should handle updateNode operation", () => {
     const input = generateMock(UpdateNodeInputSchema());
@@ -259,8 +264,9 @@ describe("Node Operations", () => {
       (node) => node.name,
     );
     expect(new Set(nodeNames).size).toBe(nodeNames.length);
-    expect(nodeNames[0]).toBe(existingNode1.name);
-    expect(nodeNames[1]).toBe(input.name + " (copy) 1");
+    expect(new Set(nodeNames)).toEqual(
+      new Set([existingNode1.name, input.name + " (copy) 1"]),
+    );
   });
   it("should not add (copy) when renaming a node to its current name", () => {
     const existingNode = generateMock(NodeSchema());
@@ -416,8 +422,9 @@ describe("Node Operations", () => {
       (node) => node.name,
     );
     expect(new Set(nodeNames).size).toBe(nodeNames.length);
-    expect(nodeNames[0]).toBe(existingNode.name);
-    expect(nodeNames[1]).toBe(input.targetName + " (copy) 1");
+    expect(new Set(nodeNames)).toEqual(
+      new Set([existingNode.name, input.targetName + " (copy) 1"]),
+    );
   });
   it("should handle name collisions in copyNode operation when parent is drive", () => {
     const existingNode = generateMock(NodeSchema());
@@ -434,8 +441,9 @@ describe("Node Operations", () => {
       (node) => node.name,
     );
     expect(new Set(nodeNames).size).toBe(nodeNames.length);
-    expect(nodeNames[0]).toBe(existingNode.name);
-    expect(nodeNames[1]).toBe(input.targetName + " (copy) 1");
+    expect(new Set(nodeNames)).toEqual(
+      new Set([existingNode.name, input.targetName + " (copy) 1"]),
+    );
   });
   it("should handle name collisions in copyNode operation", () => {
     const existingNode = generateMock(NodeSchema());
@@ -451,8 +459,9 @@ describe("Node Operations", () => {
       (node) => node.name,
     );
     expect(new Set(nodeNames).size).toBe(nodeNames.length);
-    expect(nodeNames[0]).toBe(existingNode.name);
-    expect(nodeNames[1]).toBe(input.targetName + " (copy) 1");
+    expect(new Set(nodeNames)).toEqual(
+      new Set([existingNode.name, input.targetName + " (copy) 1"]),
+    );
   });
   it("should handle moveNode operation", () => {
     const input = generateMock(MoveNodeInputSchema());
@@ -492,8 +501,7 @@ describe("Node Operations", () => {
       (node) => node.name,
     );
     expect(new Set(nodeNames).size).toBe(nodeNames.length);
-    expect(nodeNames[0]).toBe("test");
-    expect(nodeNames[1]).toBe("test (copy) 1");
+    expect(new Set(nodeNames)).toEqual(new Set(["test", "test (copy) 1"]));
   });
   it("should handle name collisions in moveNode operation when parent is drive", () => {
     const existingNode = generateMock(NodeSchema());
@@ -513,8 +521,7 @@ describe("Node Operations", () => {
       (node) => node.name,
     );
     expect(new Set(nodeNames).size).toBe(nodeNames.length);
-    expect(nodeNames[0]).toBe("test");
-    expect(nodeNames[1]).toBe("test (copy) 1");
+    expect(new Set(nodeNames)).toEqual(new Set(["test", "test (copy) 1"]));
   });
   it("should not allow moving folder to descendent", () => {
     // Mock data setup
@@ -691,6 +698,46 @@ describe("Node Operations", () => {
     );
     expect(copied?.name).toBe("Reports (copy) 1");
     expect(copied?.kind).toBe("file");
+  });
+
+  it("should add a file whose name contains a non-ASCII character (em-dash)", () => {
+    const input = generateMock(AddFileInputSchema());
+    input.name = "Concord v1 — delivery plan"; // U+2014 em-dash
+    input.parentFolder = null;
+
+    const updatedDocument = driveDocumentReducer(document, addFile(input));
+
+    const operation = updatedDocument.operations.global![0];
+    expect(operation.error).toBeUndefined();
+    const node = updatedDocument.state.global.nodes.find(
+      (n) => n.id === input.id,
+    );
+    expect(node).toBeDefined();
+    expect(node?.name).toBe("Concord v1 — delivery plan");
+  });
+
+  it("should add files with smart quotes, accents, CJK and emoji names", () => {
+    const names = [
+      "“Smart quotes”",
+      "Café résumé",
+      "予算レポート",
+      "Budget 📊 2026",
+    ];
+    let doc = document;
+    names.forEach((name, i) => {
+      const input = generateMock(AddFileInputSchema());
+      input.name = name;
+      input.parentFolder = null;
+      input.id = `unicode-${i}`;
+      doc = driveDocumentReducer(doc, addFile(input));
+    });
+
+    names.forEach((name, i) => {
+      const node = doc.state.global.nodes.find((n) => n.id === `unicode-${i}`);
+      expect(node, `node for "${name}"`).toBeDefined();
+      expect(node?.name).toBe(name);
+    });
+    expect(doc.operations.global!.every((op) => !op.error)).toBe(true);
   });
 
   it("should still rename when adding a second file with the same name (regression)", () => {

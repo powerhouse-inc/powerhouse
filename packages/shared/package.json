@@ -14,7 +14,8 @@
     "url": "https://github.com/powerhouse-inc/powerhouse"
   },
   "scripts": {
-    "build": "tsx ./bundle.ts"
+    "build": "tsx ./bundle.ts",
+    "test": "vitest --run"
   },
   "exports": {
     ".": {
