@@ -130,6 +130,8 @@ export const documentModelGenReducerFileTemplate = (
   v: DocumentModelFileMakerArgs,
 ) =>
   ts`
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import type { Reducer, StateReducer } from "document-model";
 import { isDocumentAction, createReducer } from "document-model";
 import type { ${v.phStateName} } from "${v.versionImportPath}";
