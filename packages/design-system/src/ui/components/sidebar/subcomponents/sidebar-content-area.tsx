@@ -66,7 +66,7 @@ export const SidebarContentArea = ({
       {isLoading ? (
         <SidebarSkeleton />
       ) : flattenedNodes.length === 0 ? (
-        <div className="flex max-w-full items-center gap-2 p-2 text-sm leading-5 text-gray-400 dark:text-gray-400">
+        <div className="flex max-w-full items-center gap-2 p-2 text-sm/5 text-gray-400 dark:text-gray-400">
           <Icon name="TreeViewSlash" size={16} className="min-w-4" />
           <span className="truncate">This node is empty</span>
         </div>

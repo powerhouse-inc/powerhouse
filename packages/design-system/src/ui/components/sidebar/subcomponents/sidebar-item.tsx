@@ -215,7 +215,7 @@ const RenderTitle = forwardRef<
   }
 >(({ title, searchTerm, isSearchActive, pinnedMode, className }, ref) => {
   return (
-    <div ref={ref} className={twMerge("truncate text-sm leading-5", className)}>
+    <div ref={ref} className={twMerge("truncate text-sm/5", className)}>
       {searchTerm &&
       title.toLowerCase().includes(searchTerm.toLowerCase()) &&
       !pinnedMode
