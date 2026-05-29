@@ -7,6 +7,7 @@ import type { DocumentOperations, Operation } from "./operations.js";
 import type { PHDocumentSignatureInfo } from "./signatures.js";
 import type { PHBaseState } from "./state.js";
 import type {
+  CreateDocumentActionInput,
   CreateState,
   DocumentAction,
   DocumentOperationsIgnoreMap,
@@ -20,8 +21,9 @@ import type {
   SkipHeaderOperations,
   UndoAction,
   UndoRedoAction,
+  UpgradeDocumentActionInput,
 } from "./types.js";
-import { generateId } from "./utils.js";
+import { deriveOperationId, generateId } from "./utils.js";
 
 /** Meta information about the document. */
 export type PHDocumentMeta = {
@@ -171,20 +173,88 @@ export function isDocumentAction(action: Action): action is DocumentAction {
 }
 
 /**
- * Important note: it is the responsibility of the caller to set the document type
- * on the header.
+ * The document-scope operations a reactor mints on `create`, so a standalone
+ * document carries its initial state when exported outside a reactor.
+ */
+function createDocumentScopeOperations<TState extends PHBaseState>(
+  header: PHDocumentHeader,
+  state: TState,
+): Operation[] {
+  const createInput: CreateDocumentActionInput = {
+    model: header.documentType,
+    version: 0,
+    documentId: header.id,
+    signing: {
+      signature: header.id,
+      publicKey: header.sig.publicKey,
+      nonce: header.sig.nonce,
+      createdAtUtcIso: header.createdAtUtcIso,
+      documentType: header.documentType,
+    },
+    slug: header.slug,
+    name: header.name,
+    branch: header.branch,
+    meta: header.meta,
+    protocolVersions: header.protocolVersions ?? { "base-reducer": 2 },
+  };
+  const upgradeInput: UpgradeDocumentActionInput = {
+    model: header.documentType,
+    fromVersion: 0,
+    toVersion: state.document.version,
+    documentId: header.id,
+    initialState: state,
+  };
+
+  const actions: Action[] = [
+    {
+      id: generateId(),
+      type: "CREATE_DOCUMENT",
+      scope: "document",
+      timestampUtcMs: header.createdAtUtcIso,
+      input: createInput,
+    },
+    {
+      id: generateId(),
+      type: "UPGRADE_DOCUMENT",
+      scope: "document",
+      timestampUtcMs: header.createdAtUtcIso,
+      input: upgradeInput,
+    },
+  ];
+
+  return actions.map((action, index) => ({
+    ...action,
+    action,
+    id: deriveOperationId(header.id, "document", header.branch, action.id),
+    hash: "",
+    error: undefined,
+    index,
+    skip: 0,
+  }));
+}
+
+/**
+ * Creates a new document. When `documentType` is given the header is stamped
+ * with it and the document-scope operations are seeded.
  */
 export function baseCreateDocument<TState extends PHBaseState = PHBaseState>(
   createState: CreateState<TState>,
   initialState?: Partial<TState>,
+  documentType = "",
 ): PHDocument<TState> {
   const state = createState(initialState);
-  const header = createPresignedHeader();
+  const header = createPresignedHeader(generateId(), documentType);
   const phDocument: PHDocument<TState> = {
     header,
     state,
     initialState: state,
-    operations: { global: [], local: [] },
+    operations: documentType
+      ? {
+          global: [],
+          local: [],
+          document: createDocumentScopeOperations(header, state),
+        }
+      : { global: [], local: [] },
     clipboard: [],
   };
 

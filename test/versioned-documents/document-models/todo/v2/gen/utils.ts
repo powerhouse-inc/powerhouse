@@ -8,7 +8,6 @@ import {
   baseLoadFromInput,
   baseSaveToFileHandle,
   defaultBaseState,
-  generateId,
 } from "document-model";
 import {
   assertIsTodoDocument,
@@ -33,14 +32,7 @@ export const utils: DocumentModelUtils<TodoPHState> = {
     };
   },
   createDocument(state) {
-    const document = baseCreateDocument(utils.createState, state);
-
-    document.header.documentType = todoDocumentType;
-
-    // for backwards compatibility, but this is NOT a valid signed document id
-    document.header.id = generateId();
-
-    return document;
+    return baseCreateDocument(utils.createState, state, todoDocumentType);
   },
   saveToFileHandle(document, input) {
     return baseSaveToFileHandle(document, input);

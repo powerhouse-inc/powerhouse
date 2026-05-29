@@ -8,7 +8,6 @@ import {
   baseLoadFromInput,
   baseSaveToFileHandle,
   defaultBaseState,
-  generateId,
 } from "document-model";
 import {
   assertIsProcessorModuleDocument,
@@ -43,14 +42,11 @@ export const utils: DocumentModelUtils<ProcessorModulePHState> = {
     };
   },
   createDocument(state) {
-    const document = baseCreateDocument(utils.createState, state);
-
-    document.header.documentType = processorModuleDocumentType;
-
-    // for backwards compatibility, but this is NOT a valid signed document id
-    document.header.id = generateId();
-
-    return document;
+    return baseCreateDocument(
+      utils.createState,
+      state,
+      processorModuleDocumentType,
+    );
   },
   saveToFileHandle(document, input) {
     return baseSaveToFileHandle(document, input);

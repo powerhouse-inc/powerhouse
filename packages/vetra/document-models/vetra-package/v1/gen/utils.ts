@@ -8,7 +8,6 @@ import {
   baseLoadFromInput,
   baseSaveToFileHandle,
   defaultBaseState,
-  generateId,
 } from "document-model";
 import {
   assertIsVetraPackageDocument,
@@ -48,14 +47,11 @@ export const utils: DocumentModelUtils<VetraPackagePHState> = {
     };
   },
   createDocument(state) {
-    const document = baseCreateDocument(utils.createState, state);
-
-    document.header.documentType = vetraPackageDocumentType;
-
-    // for backwards compatibility, but this is NOT a valid signed document id
-    document.header.id = generateId();
-
-    return document;
+    return baseCreateDocument(
+      utils.createState,
+      state,
+      vetraPackageDocumentType,
+    );
   },
   saveToFileHandle(document, input) {
     return baseSaveToFileHandle(document, input);

@@ -18,7 +18,6 @@ import {
   baseLoadFromInput,
   baseSaveToFileHandle,
   defaultBaseState,
-  generateId,
 } from "document-model";
 import {
   assertIsDriveDocument,
@@ -54,14 +53,7 @@ export const driveCreateState: CreateState<DocumentDrivePHState> = (
 export const driveCreateDocument: CreateDocument<DocumentDrivePHState> = (
   state,
 ) => {
-  const document = baseCreateDocument(driveCreateState, state);
-
-  document.header.documentType = driveDocumentType;
-
-  // for backward compatibility -- but this is NOT a valid document id
-  document.header.id = generateId();
-
-  return document;
+  return baseCreateDocument(driveCreateState, state, driveDocumentType);
 };
 
 export const driveSaveToFileHandle: SaveToFileHandle = (document, input) => {
