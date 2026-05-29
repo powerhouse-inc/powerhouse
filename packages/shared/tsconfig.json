@@ -25,5 +25,10 @@
   },
   // include all files in this package's root
   "include": ["**/*"],
-  "exclude": ["dist", "node_modules"]
+  "exclude": ["dist", "node_modules"],
+  "references": [
+    {
+      "path": "../document-model"
+    }
+  ]
 }
