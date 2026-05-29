@@ -32,10 +32,10 @@
     "lint": "eslint"
   },
   "peerDependencies": {
-    "@playwright/test": "^1.41.2"
+    "@playwright/test": "^1.60.0"
   },
   "devDependencies": {
-    "@playwright/test": "^1.41.2",
+    "@playwright/test": "^1.60.0",
     "tsdown": "catalog:"
   },
   "dependencies": {}

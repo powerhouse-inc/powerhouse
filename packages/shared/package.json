@@ -132,7 +132,6 @@
     "@types/node": "catalog:",
     "@types/npm-package-arg": "catalog:",
     "@types/react": "catalog:",
-    "document-model": "workspace:*",
     "kysely": "catalog:",
     "react": "catalog:",
     "rolldown": "catalog:",

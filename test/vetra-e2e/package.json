@@ -83,7 +83,7 @@
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "monocart-coverage-reports": "^2.12.8",
-    "@playwright/test": "^1.55.0",
+    "@playwright/test": "^1.60.0",
     "@powerhousedao/registry": "workspace:*",
     "@electric-sql/pglite": "catalog:",
     "@electric-sql/pglite-tools": "catalog:"
