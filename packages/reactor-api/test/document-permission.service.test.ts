@@ -357,8 +357,8 @@ describe("DocumentPermissionService", () => {
       "orphan-doc": [],
     };
 
-    const getParentIds = async (documentId: string): Promise<string[]> => {
-      return parentHierarchy[documentId] ?? [];
+    const getParentIds = (documentId: string): Promise<string[]> => {
+      return Promise.resolve(parentHierarchy[documentId] ?? []);
     };
 
     describe("canRead", () => {
@@ -513,7 +513,7 @@ describe("DocumentPermissionService", () => {
         const result = await service.filterReadableDocuments(
           ["doc-1", "doc-2", "doc-3", "doc-4"],
           userAddress,
-          async () => [], // No parent hierarchy
+          () => Promise.resolve([]), // No parent hierarchy
         );
 
         expect(result).toEqual(["doc-1", "doc-3"]);

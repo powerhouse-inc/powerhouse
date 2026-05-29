@@ -50,7 +50,8 @@ export class OpenPanelProcessor implements IProcessor {
     }
   }
 
-  async onDisconnect(): Promise<void> {
+  onDisconnect(): Promise<void> {
     this.client.flush?.();
+    return Promise.resolve();
   }
 }

@@ -46,10 +46,11 @@ export type GatewayAdapterHarnessFactory = () => Promise<GatewayAdapterHarness>;
 // ─── shared helpers ──────────────────────────────────────────────────────────
 
 /** A minimal context factory that satisfies GatewayContextFactory<Context>. */
-const noopCtx: GatewayContextFactory<Context> = async () => ({
-  headers: {},
-  db: null,
-});
+const noopCtx: GatewayContextFactory<Context> = () =>
+  Promise.resolve({
+    headers: {},
+    db: null,
+  });
 
 /**
  * Build a minimal federated schema with a single Query field.
@@ -184,9 +185,9 @@ export function runGatewayAdapterContractTests(
 
     it("the handler passes the Fetch Request to the context factory", async () => {
       let capturedRequest: Request | undefined;
-      const ctxFactory: GatewayContextFactory<Context> = async (req) => {
+      const ctxFactory: GatewayContextFactory<Context> = (req) => {
         capturedRequest = req;
-        return { headers: {}, db: null };
+        return Promise.resolve({ headers: {}, db: null });
       };
 
       const handler = await h.adapter.createHandler(makeSchema(), ctxFactory);
@@ -352,9 +353,9 @@ export function runGatewayAdapterContractTests(
 
     it("the supergraph handler passes context factory the Fetch Request", async () => {
       let capturedRequest: Request | undefined;
-      const ctxFactory: GatewayContextFactory<Context> = async (req) => {
+      const ctxFactory: GatewayContextFactory<Context> = (req) => {
         capturedRequest = req;
-        return { headers: {}, db: null };
+        return Promise.resolve({ headers: {}, db: null });
       };
 
       const sub = await makeSubServer();
@@ -479,10 +480,8 @@ export function runGatewayAdapterContractTests(
       const { WebSocketServer } = await import("ws");
       const wss = new WebSocketServer({ noServer: true });
 
-      const disposer = h.adapter.attachWebSocket(
-        wss,
-        makeSchema(),
-        async () => ({ headers: {}, db: null }),
+      const disposer = h.adapter.attachWebSocket(wss, makeSchema(), () =>
+        Promise.resolve({ headers: {}, db: null }),
       );
 
       expect(typeof disposer.dispose).toBe("function");

@@ -348,13 +348,11 @@ const _allTools = [
 // Inferred interface from tools
 export type ReactorMcpTools = ToolRecord<typeof _allTools>;
 
-export async function createReactorMcpProvider(
-  options: ReactorMcpProviderOptions,
-) {
+export function createReactorMcpProvider(options: ReactorMcpProviderOptions) {
   const { client, syncManager } = options;
   // No initialization needed - client is already initialized
 
-  async function getDocumentModelModule(documentType: string) {
+  function getDocumentModelModule(documentType: string) {
     return client.getDocumentModelModule(documentType);
   }
 
@@ -571,9 +569,9 @@ export async function createReactorMcpProvider(
 
   const prompts = {};
 
-  return {
+  return Promise.resolve({
     tools,
     resources,
     prompts,
-  } as const;
+  } as const);
 }

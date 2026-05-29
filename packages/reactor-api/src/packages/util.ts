@@ -18,10 +18,11 @@ type ProcessorsExport = {
 
 const _logger = childLogger(["reactor-api", "packages/util"]);
 
-export const installPackages = async (packages: string[]) => {
+export const installPackages = (packages: string[]): Promise<void> => {
   for (const packageName of packages) {
     execSync(`ph install ${packageName}`);
   }
+  return Promise.resolve();
 };
 
 export const readManifest = () => {

@@ -63,9 +63,9 @@ describe("Auth chain integration (AuthService → authFetchMiddleware → handle
 
     function buildChain() {
       const intercepted: Request[] = [];
-      const next = vi.fn(async (req: Request) => {
+      const next = vi.fn((req: Request) => {
         intercepted.push(req);
-        return new Response("handler ok", { status: 200 });
+        return Promise.resolve(new Response("handler ok", { status: 200 }));
       });
       const handler = createAuthFetchMiddleware(service)(next);
       return { handler, next, intercepted };
@@ -197,9 +197,9 @@ describe("Auth chain integration (AuthService → authFetchMiddleware → handle
 
     it("always calls the handler and sets auth_enabled=false, regardless of token", async () => {
       const intercepted: Request[] = [];
-      const next = vi.fn(async (req: Request) => {
+      const next = vi.fn((req: Request) => {
         intercepted.push(req);
-        return new Response("ok");
+        return Promise.resolve(new Response("ok"));
       });
       const handler = createAuthFetchMiddleware(service)(next);
 

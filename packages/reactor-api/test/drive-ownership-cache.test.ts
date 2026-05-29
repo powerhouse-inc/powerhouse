@@ -48,9 +48,9 @@ function paginatedPages(pages: string[][]): { find: IReactorClient["find"] } {
     return result;
   };
   return {
-    find: vi.fn(async () => {
+    find: vi.fn(() => {
       pageIndex = 0;
-      return buildPage();
+      return Promise.resolve(buildPage());
     }),
   };
 }
@@ -62,8 +62,8 @@ function makeClient(findImpl: IReactorClient["find"]): IReactorClient {
 describe("DriveOwnershipCache", () => {
   describe("init", () => {
     it("populates the cache from a single-page result", async () => {
-      const find = vi.fn(async () =>
-        singlePage(["drive-a", "drive-b", "drive-c"]),
+      const find = vi.fn(() =>
+        Promise.resolve(singlePage(["drive-a", "drive-b", "drive-c"])),
       );
       const cache = new DriveOwnershipCache(makeClient(find));
 
@@ -93,7 +93,7 @@ describe("DriveOwnershipCache", () => {
     });
 
     it("clears existing entries before re-populating", async () => {
-      const find = vi.fn(async () => singlePage(["drive-a"]));
+      const find = vi.fn(() => Promise.resolve(singlePage(["drive-a"])));
       const cache = new DriveOwnershipCache(makeClient(find));
 
       cache.add("stale-drive");
@@ -108,7 +108,7 @@ describe("DriveOwnershipCache", () => {
 
     it("handles an empty result set", async () => {
       const cache = new DriveOwnershipCache(
-        makeClient(vi.fn(async () => singlePage([]))),
+        makeClient(vi.fn(() => Promise.resolve(singlePage([])))),
       );
 
       await cache.init();

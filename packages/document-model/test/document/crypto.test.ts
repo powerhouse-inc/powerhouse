@@ -70,6 +70,7 @@ async function createTestSigner(): Promise<ISigner> {
       _action: Action,
       _abortSignal?: AbortSignal,
     ): Promise<Signature> {
+      await Promise.resolve();
       throw new Error("signAction not implemented in test signer");
     },
   };

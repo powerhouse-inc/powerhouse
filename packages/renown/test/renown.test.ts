@@ -111,24 +111,28 @@ describe("Renown login flow", () => {
       profileStatus = 200,
     } = options;
 
-    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+    vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
       const url = requestUrl(input);
 
       if (url.includes("/api/auth/credential")) {
         if (credentialStatus !== 200 || credential === null) {
-          return new Response(null, { status: credentialStatus || 404 });
+          return Promise.resolve(
+            new Response(null, { status: credentialStatus || 404 }),
+          );
         }
-        return Response.json({ credential });
+        return Promise.resolve(Response.json({ credential }));
       }
 
       if (url.includes("/api/profile")) {
         if (profileStatus !== 200 || profile === null) {
-          return new Response(null, { status: profileStatus || 404 });
+          return Promise.resolve(
+            new Response(null, { status: profileStatus || 404 }),
+          );
         }
-        return Response.json({ profile });
+        return Promise.resolve(Response.json({ profile }));
       }
 
-      return new Response(null, { status: 404 });
+      return Promise.resolve(new Response(null, { status: 404 }));
     });
   }
 

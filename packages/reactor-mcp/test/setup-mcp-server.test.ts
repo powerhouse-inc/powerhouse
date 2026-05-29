@@ -37,13 +37,13 @@ import { setupMcpServer } from "../src/mcp-routes.js";
 
 beforeEach(() => {
   createdServers.length = 0;
-  vi.mocked(createServer).mockImplementation(async () => {
+  vi.mocked(createServer).mockImplementation(() => {
     const server: MockServer = {
       connect: vi.fn().mockResolvedValue(undefined),
       close: vi.fn().mockResolvedValue(undefined),
     };
     createdServers.push(server);
-    return server as unknown as McpServer;
+    return Promise.resolve(server as unknown as McpServer);
   });
 });
 
@@ -302,7 +302,7 @@ describe("setupMcpServer", () => {
       // Verifies the try/catch around the awaited connect — even if the
       // underlying SDK rejects, the handler must respond with 500 instead
       // of leaking an unhandled rejection.
-      vi.mocked(createServer).mockImplementationOnce(async () => {
+      vi.mocked(createServer).mockImplementationOnce(() => {
         const server: MockServer = {
           connect: vi
             .fn()
@@ -310,7 +310,7 @@ describe("setupMcpServer", () => {
           close: vi.fn().mockResolvedValue(undefined),
         };
         createdServers.push(server);
-        return server as unknown as McpServer;
+        return Promise.resolve(server as unknown as McpServer);
       });
 
       const rejections: unknown[] = [];

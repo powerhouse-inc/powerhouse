@@ -82,7 +82,7 @@ function mockFetchForLogin(options?: { profile?: RenownProfile | null }) {
   const { profile = MOCK_PROFILE } = options ?? {};
   let capturedAppDid: string | undefined;
 
-  vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+  vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
     const url = requestUrl(input);
 
     if (url.includes("/api/auth/credential")) {
@@ -92,17 +92,17 @@ function mockFetchForLogin(options?: { profile?: RenownProfile | null }) {
         TEST_USER_DID,
         capturedAppDid ?? "",
       );
-      return Response.json({ credential });
+      return Promise.resolve(Response.json({ credential }));
     }
 
     if (url.includes("/api/profile")) {
       if (profile === null) {
-        return new Response(null, { status: 404 });
+        return Promise.resolve(new Response(null, { status: 404 }));
       }
-      return Response.json({ profile });
+      return Promise.resolve(Response.json({ profile }));
     }
 
-    return new Response(null, { status: 404 });
+    return Promise.resolve(new Response(null, { status: 404 }));
   });
 }
 

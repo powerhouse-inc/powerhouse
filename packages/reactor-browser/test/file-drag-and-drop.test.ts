@@ -116,11 +116,13 @@ describe("useDropFile", () => {
     const { result } = mountHook();
 
     await act(async () => {
+      await Promise.resolve();
       result.current.onDragOver(fakeEvent({ target: outside }).event);
     });
     expect(result.current.isDropTarget).toBe(true);
 
     await act(async () => {
+      await Promise.resolve();
       result.current.onDragOver(fakeEvent({ target: editor }).event);
     });
     expect(result.current.isDropTarget).toBe(false);

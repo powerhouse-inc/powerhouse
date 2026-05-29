@@ -24,12 +24,12 @@ export const AnalyticsResolvers: any = {
         })),
       }));
     },
-    metrics: async (
+    metrics: (
       _parent: any,
       { filter: _filter }: any,
       { dataSources: _dataSources }: any,
     ) => {
-      return [
+      return Promise.resolve([
         "Actuals",
         "AuditorNetOutflow",
         "Budget",
@@ -44,7 +44,7 @@ export const AnalyticsResolvers: any = {
         "PaymentsOffChainIncluded",
         "PaymentsOnChain",
         "ProtocolNetOutflow",
-      ];
+      ]);
     },
     dimensions: async (
       _: any,
@@ -54,12 +54,20 @@ export const AnalyticsResolvers: any = {
       const queryEngine: AnalyticsModel = dataSources.db.Analytics;
       return await queryEngine.getDimensions();
     },
-    currencies: async (
+    currencies: (
       _: any,
       { filter: _filter }: any,
       { dataSources: _dataSources }: any,
     ) => {
-      return ["DAI", "FTE", "GUSD", "MKR", "USDC", "USDP", "USDT"];
+      return Promise.resolve([
+        "DAI",
+        "FTE",
+        "GUSD",
+        "MKR",
+        "USDC",
+        "USDP",
+        "USDT",
+      ]);
     },
     multiCurrencySeries: async (
       _: any,

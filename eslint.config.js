@@ -204,8 +204,10 @@ const typescriptRules = {
   ],
   // we have a lot of types that lie about whether they are optional or not
   "@typescript-eslint/no-unnecessary-condition": "warn",
-  // we have a lot of functions which lie about whether they are async or not
-  "@typescript-eslint/require-await": "warn",
+  // async functions must contain an await; a synchronous implementation of an
+  // async contract should return an explicit Promise (e.g. Promise.resolve)
+  // rather than carry a no-op `async` keyword.
+  "@typescript-eslint/require-await": "error",
   "@typescript-eslint/no-misused-promises": "warn",
   "@typescript-eslint/no-floating-promises": "warn",
   // our codegen uses this wrong type definition all over the place.

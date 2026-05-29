@@ -74,31 +74,29 @@ describe("Permissions Integration Tests", () => {
 
     // Create mock ReactorClient with parent hierarchy
     mockReactorClient = {
-      get: vi.fn().mockImplementation(async (id: string) => {
-        if (id === "doc-123") return mockDocument;
-        if (id === "child-doc") return mockChildDocument;
-        if (id === "parent-doc") return mockParentDocument;
-        return null;
+      get: vi.fn().mockImplementation((id: string) => {
+        if (id === "doc-123") return Promise.resolve(mockDocument);
+        if (id === "child-doc") return Promise.resolve(mockChildDocument);
+        if (id === "parent-doc") return Promise.resolve(mockParentDocument);
+        return Promise.resolve(null);
       }),
       getOutgoingRelationships: vi.fn().mockResolvedValue({
         results: [],
         options: { limit: 10, cursor: "" },
       } as PagedResults<PHDocument>),
-      getIncomingRelationships: vi
-        .fn()
-        .mockImplementation(async (id: string) => {
-          // child-doc has parent-doc as parent
-          if (id === "child-doc") {
-            return {
-              results: [mockParentDocument],
-              options: { limit: 10, cursor: "" },
-            } as PagedResults<PHDocument>;
-          }
-          return {
-            results: [],
+      getIncomingRelationships: vi.fn().mockImplementation((id: string) => {
+        // child-doc has parent-doc as parent
+        if (id === "child-doc") {
+          return Promise.resolve({
+            results: [mockParentDocument],
             options: { limit: 10, cursor: "" },
-          } as PagedResults<PHDocument>;
-        }),
+          } as PagedResults<PHDocument>);
+        }
+        return Promise.resolve({
+          results: [],
+          options: { limit: 10, cursor: "" },
+        } as PagedResults<PHDocument>);
+      }),
       find: vi.fn().mockResolvedValue({
         results: [mockDocument],
         options: { limit: 10, cursor: "" },

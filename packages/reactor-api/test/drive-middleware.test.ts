@@ -53,9 +53,9 @@ describe("createDriveFetchMiddleware", () => {
 
   beforeEach(() => {
     nextCalls = [];
-    next = async (req: Request) => {
+    next = (req: Request) => {
       nextCalls.push(req);
-      return new Response("ok", { status: 200 });
+      return Promise.resolve(new Response("ok", { status: 200 }));
     };
   });
 

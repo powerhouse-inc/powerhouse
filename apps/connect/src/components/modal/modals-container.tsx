@@ -89,8 +89,8 @@ const modalComponents = {
   missingPackage: MissingPackageModal,
 } as const;
 
-export const ModalsContainer = lazy(async () => {
-  return {
+export const ModalsContainer = lazy(() => {
+  return Promise.resolve({
     default: () => {
       // eslint-disable-next-line react-hooks/rules-of-hooks
       const phModal = usePHModal();
@@ -107,5 +107,5 @@ export const ModalsContainer = lazy(async () => {
         </ErrorBoundary>
       ) : null;
     },
-  };
+  });
 });
