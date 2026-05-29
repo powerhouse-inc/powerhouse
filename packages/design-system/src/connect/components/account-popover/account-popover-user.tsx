@@ -33,7 +33,7 @@ export const AccountPopoverUser: FC<AccountPopoverUserProps> = ({
   }, []);
 
   return (
-    <div className="flex flex-col divide-y divide-gray-200 text-gray-900 dark:text-slate-50">
+    <div className="flex flex-col divide-y divide-gray-200 text-gray-900 dark:divide-slate-500 dark:text-slate-50">
       <div className="px-3 py-2">
         {username && <div className="text-sm font-medium">{username}</div>}
         <div className="mt-1 flex items-center gap-2">
@@ -84,7 +84,7 @@ export const AccountPopoverUser: FC<AccountPopoverUserProps> = ({
           )}
           type="button"
         >
-          <Icon name="Disconnect" size={14} color="#EA4335" />
+          <Icon name="Disconnect" size={14} />
           Disconnect
         </button>
       </div>
