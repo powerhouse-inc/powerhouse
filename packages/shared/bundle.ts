@@ -16,7 +16,7 @@ await build({
   outDir: "dist",
   platform: "neutral",
   clean: true,
-  dts: { tsconfig: "./tsconfig.dts.json" },
+  dts: true,
   sourcemap: true,
   deps: {
     neverBundle: [/^node:.*/],
@@ -28,7 +28,7 @@ await build({
   outDir: "dist/clis",
   platform: "node",
   clean: false,
-  dts: { tsconfig: "./tsconfig.dts.json" },
+  dts: true,
   sourcemap: true,
 });
 
@@ -39,7 +39,7 @@ await build({
   outDir: "dist/clis/args",
   platform: "node",
   clean: false,
-  dts: { tsconfig: "./tsconfig.dts.json" },
+  dts: true,
   sourcemap: true,
 });
 
@@ -54,6 +54,6 @@ await build({
   outDir: "dist/clis",
   platform: "node",
   clean: false,
-  dts: { tsconfig: "./tsconfig.dts.json" },
+  dts: true,
   sourcemap: true,
 });
