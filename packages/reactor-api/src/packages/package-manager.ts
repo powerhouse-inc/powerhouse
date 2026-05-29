@@ -20,6 +20,37 @@ import type {
 } from "./types.js";
 import { debounce } from "./util.js";
 
+/**
+ * A loader throwing "this package isn't mine to load" is normal — loaders are
+ * fallbacks for each other. These shapes mean "not found here", not "broken".
+ *
+ * `ERR_MODULE_NOT_FOUND` is ambiguous: it can mean either (a) the loader's own
+ * entry import for `pkg` failed (expected — the package isn't installed
+ * locally), or (b) the entry loaded successfully but a *transitive* bare
+ * import inside it couldn't resolve (real error — the bundle is broken). We
+ * distinguish by checking whether the error names the package we asked for —
+ * either bare (`'pkg'`) or as a subpath (`'pkg/subgraphs'`), since loaders
+ * import sub-entries like `${pkg}/subgraphs` / `${pkg}/document-models`.
+ */
+export function isExpectedLoaderMiss(error: unknown, pkg: string): boolean {
+  if (!(error instanceof Error)) return false;
+  const code = (error as NodeJS.ErrnoException).code;
+  if (code === "ERR_UNSUPPORTED_DIR_IMPORT") return true; // empty subgraphs/ etc.
+  // HttpPackageLoader rejects local paths and invalid npm names before any fetch
+  if (error.message.startsWith("Invalid package name:")) return true;
+  if (code === "ERR_MODULE_NOT_FOUND") {
+    // Match `'pkg'`, `"pkg"`, `'pkg/...'`, or `"pkg/..."`. Anything else is a
+    // transitive resolution failure inside a successfully-fetched bundle.
+    return (
+      error.message.includes(`'${pkg}'`) ||
+      error.message.includes(`"${pkg}"`) ||
+      error.message.includes(`'${pkg}/`) ||
+      error.message.includes(`"${pkg}/`)
+    );
+  }
+  return false;
+}
+
 export function getUniqueDocumentModels(
   ...documentModels: readonly (readonly DocumentModelModule<any>[])[]
 ): DocumentModelModule[] {
@@ -117,6 +148,8 @@ export class PackageManager implements IPackageManager {
 
     for (const pkg of packages) {
       const allDocumentModels: DocumentModelModule[] = [];
+      const failures: { loader: string; error: unknown }[] = [];
+      let succeeded = false;
 
       for (const loader of this.loaders) {
         try {
@@ -128,8 +161,10 @@ export class PackageManager implements IPackageManager {
             pkg,
             documentModels.map((dm) => dm.documentModel.global.id),
           );
+          succeeded = true;
           break;
         } catch (error) {
+          failures.push({ loader: loader.name, error });
           this.logger.debug(
             `[${loader.name}] Failed to load document models from package @pkg: @error`,
             pkg,
@@ -137,6 +172,13 @@ export class PackageManager implements IPackageManager {
           );
         }
       }
+
+      this.maybeWarnAllLoadersFailed(
+        "document models",
+        pkg,
+        succeeded,
+        failures,
+      );
 
       documentModelModuleMap.set(pkg, allDocumentModels);
     }
@@ -155,20 +197,26 @@ export class PackageManager implements IPackageManager {
 
     for (const pkg of packages) {
       const allSubgraphs: SubgraphClass[] = [];
+      const failures: { loader: string; error: unknown }[] = [];
+      let succeeded = false;
 
       for (const loader of this.loaders) {
         try {
           const subgraphs = await loader.loadSubgraphs(pkg);
 
           allSubgraphs.push(...subgraphs);
+          succeeded = true;
           break;
         } catch (error) {
+          failures.push({ loader: loader.name, error });
           this.logger.debug(
             `[${loader.name}] Failed to load subgraphs from package ${pkg}`,
             error,
           );
         }
       }
+
+      this.maybeWarnAllLoadersFailed("subgraphs", pkg, succeeded, failures);
 
       subgraphsMap.set(pkg, allSubgraphs);
     }
@@ -187,6 +235,8 @@ export class PackageManager implements IPackageManager {
 
     for (const pkg of packages) {
       const allProcessors: ProcessorFactoryBuilder[] = [];
+      const failures: { loader: string; error: unknown }[] = [];
+      let succeeded = false;
 
       for (const loader of this.loaders) {
         try {
@@ -195,8 +245,10 @@ export class PackageManager implements IPackageManager {
           if (processors) {
             allProcessors.push(processors);
           }
+          succeeded = true;
           break;
         } catch (error) {
+          failures.push({ loader: loader.name, error });
           this.logger.debug(
             `[${loader.name}] Failed to load processors from package ${pkg}`,
             error,
@@ -204,11 +256,43 @@ export class PackageManager implements IPackageManager {
         }
       }
 
+      this.maybeWarnAllLoadersFailed("processors", pkg, succeeded, failures);
+
       processorsMap.set(pkg, allProcessors);
     }
     this.updateProcessorsMap(processorsMap);
 
     return processorsMap;
+  }
+
+  private maybeWarnAllLoadersFailed(
+    kind: "document models" | "subgraphs" | "processors",
+    pkg: string,
+    succeeded: boolean,
+    failures: { loader: string; error: unknown }[],
+  ): void {
+    if (succeeded || failures.length === 0) return;
+    // Each loader's "this package isn't mine" failure is expected fallthrough,
+    // not a real error. Only surface a warning when at least one loader hit
+    // something unexpected (e.g. a bundle evaluation error or registry 5xx),
+    // and show only those non-expected failures — expected misses would just
+    // mislead the reader about which loader actually broke.
+    const realFailures = failures.filter(
+      ({ error }) => !isExpectedLoaderMiss(error, pkg),
+    );
+    if (realFailures.length === 0) return;
+
+    const details = realFailures
+      .map(({ loader, error }) => {
+        const message = error instanceof Error ? error.message : String(error);
+        return `  [${loader}] ${message}`;
+      })
+      .join("\n");
+    this.logger.warn(
+      `All package loaders failed to load ${kind} from @pkg:\n@details`,
+      pkg,
+      details,
+    );
   }
 
   private async updateDocumentModelsForPackage(pkg: string): Promise<void> {

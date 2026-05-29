@@ -14,6 +14,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function deriveExtension(fileName: string): string | null {
+  const idx = fileName.lastIndexOf(".");
+  if (idx <= 0 || idx === fileName.length - 1) return null;
+  return fileName.slice(idx + 1).toLowerCase();
+}
+
 function isReservation(value: unknown): value is Reservation {
   if (!isRecord(value)) return false;
   if (typeof value.reservationId !== "string") return false;
@@ -35,12 +41,13 @@ export class RemoteReservationStore implements IReservationStore {
   constructor(config: SwitchboardClientConfig) {
     this.remoteUrl = config.remoteUrl;
     this.jwtHandler = config.jwtHandler;
-    this.fetchFn = config.fetchFn ?? globalThis.fetch;
+    this.fetchFn = (config.fetchFn ?? globalThis.fetch).bind(globalThis);
   }
 
   async create(options: ReserveAttachmentOptions): Promise<Reservation> {
     const url = `${this.remoteUrl}/attachments/reservations`;
     const authHeaders = await buildAuthHeaders(url, this.jwtHandler);
+    const extension = options.extension ?? deriveExtension(options.fileName);
 
     const response = await this.fetchFn(url, {
       method: "POST",
@@ -48,7 +55,7 @@ export class RemoteReservationStore implements IReservationStore {
       body: JSON.stringify({
         mimeType: options.mimeType,
         fileName: options.fileName,
-        extension: options.extension ?? null,
+        extension,
       }),
     });
 
@@ -72,7 +79,7 @@ export class RemoteReservationStore implements IReservationStore {
       reservationId: json.reservationId,
       mimeType: options.mimeType,
       fileName: options.fileName,
-      extension: options.extension ?? null,
+      extension,
       createdAtUtc: json.createdAtUtc ?? now.toISOString(),
       expiresAtUtc:
         json.expiresAtUtc ??
