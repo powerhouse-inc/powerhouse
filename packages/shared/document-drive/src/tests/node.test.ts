@@ -48,10 +48,7 @@ describe("Node Operations", () => {
     );
     expect(updatedDocument.operations.global![0].index).toEqual(0);
   });
-  // SKIP: documents a known bug — ADD_FILE silently drops the node when the
-  // name contains a non-ASCII character because isValidName (src/utils.ts) only
-  // permits ASCII URL characters. Un-skip once isValidName allows Unicode.
-  it.skip("should add a file node when the name contains a non-ASCII character (em-dash)", () => {
+  it("should add a file node when the name contains a non-ASCII character (em-dash)", () => {
     const input = generateMock(AddFileInputSchema());
     // Em-dash U+2014, common in human-authored titles.
     input.name = "Concord v1 — delivery plan";
@@ -67,6 +64,45 @@ describe("Node Operations", () => {
     );
     expect(node).toBeDefined();
     expect(node!.name).toBe("Concord v1 — delivery plan");
+  });
+  it.each([
+    ["en-dash", "Q1 – Q2 plan"],
+    ["smart quotes", "“Concord” plan"],
+    ["accented latin", "Résumé café"],
+    ["CJK", "予算レポート"],
+    ["emoji", "Roadmap 🚀"],
+  ])(
+    "should add a file node when the name contains non-ASCII characters (%s)",
+    (_label, name) => {
+      const input = generateMock(AddFileInputSchema());
+      input.name = name;
+
+      const updatedDocument = driveDocumentReducer(document, addFile(input));
+
+      expect(updatedDocument.operations.global![0].error).toBeUndefined();
+      const node = updatedDocument.state.global.nodes.find(
+        (n) => n.id === input.id,
+      );
+      expect(node).toBeDefined();
+      expect(node!.name).toBe(name);
+    },
+  );
+  it.each([
+    ["empty", ""],
+    ["whitespace-only", "   "],
+    ["a control character", `bad${String.fromCharCode(7)}name`],
+    ["a newline", "line1\nline2"],
+  ])("should reject ADD_FILE when the name is %s", (_label, name) => {
+    const input = generateMock(AddFileInputSchema());
+    input.name = name;
+
+    const updatedDocument = driveDocumentReducer(document, addFile(input));
+
+    // Invalid names record an error and add no node.
+    expect(updatedDocument.operations.global![0].error).toMatch(/Invalid name/);
+    expect(
+      updatedDocument.state.global.nodes.find((n) => n.id === input.id),
+    ).toBeUndefined();
   });
   it("should prevent name collisions in addFile operation when parent is a folder", () => {
     const firstInput = generateMock(AddFileInputSchema());

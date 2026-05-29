@@ -147,6 +147,11 @@ export function handleTargetNameCollisions(params: {
 }
 
 export const isValidName = (name: string) => {
-  // only allow characters that are valid in a URL
-  return /^[a-zA-Z0-9-_.\s()]+$/.test(name);
+  // A node name is a human-facing display label, not a URL segment or path: the
+  // only URL use (makeNodeSlug) transliterates it via the unicode-aware `slug`
+  // library and always embeds the node id, and node lookups are by id. So we
+  // allow any unicode name — accents, em-dashes, CJK, emoji — and reject only
+  // empty / whitespace-only names and control characters (incl. null bytes).
+  // eslint-disable-next-line no-control-regex
+  return name.trim().length > 0 && !/[\u0000-\u001F\u007F]/.test(name);
 };
