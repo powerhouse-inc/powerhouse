@@ -14,7 +14,7 @@ export default function Header() {
   const [drives, setDrives] = useState([]);
 
   useEffect(() => {
-    auth.checkAuthValidity();
+    void auth.checkAuthValidity();
     auth
       .getDrives()
       .then((drives) => {

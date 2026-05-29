@@ -37,7 +37,7 @@ export function ModuleForm({
       name="name"
       label={isEdit ? "Module name *" : "Add module *"}
       value={module?.name}
-      onSubmit={handleSubmit}
+      onSubmit={(name) => void handleSubmit(name)}
       placeholder="Add module"
       unique={moduleNames}
       shouldReset={!isEdit}

@@ -174,7 +174,7 @@ function LocalStorage(props: LocalStorageProps) {
     <div>
       <button
         className="flex items-center gap-x-2 rounded-md border border-gray-300 bg-transparent px-3 py-1 text-sm font-medium text-red-900 transition-colors hover:bg-gray-100"
-        onClick={onClearStorage}
+        onClick={() => void onClearStorage()}
       >
         Clear Storage <Icon name="Trash" size={16} />
       </button>

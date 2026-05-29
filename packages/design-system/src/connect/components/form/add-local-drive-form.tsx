@@ -33,7 +33,7 @@ export function AddLocalDriveForm(props: AddLocalDriveFormProps) {
   return (
     <form
       name="add-local-drive"
-      onSubmit={handleSubmit(props.onSubmit)}
+      onSubmit={(e) => void handleSubmit(props.onSubmit)(e)}
       className="flex flex-col gap-4"
     >
       <div className="flex flex-col gap-4">

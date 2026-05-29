@@ -68,7 +68,7 @@ export function FolderItem(props: {
       console.error(`No handler found for dropdown menu item: ${itemId}`);
       return;
     }
-    handler();
+    void handler();
     setIsDropdownMenuOpen(false);
   }
 

@@ -165,7 +165,7 @@ export const TextField = forwardRef<TextFieldHandle, TextFieldProps>(
                     }
                   }}
                   placeholder={placeholder}
-                  onBlur={handleBlur}
+                  onBlur={() => void handleBlur()}
                   onChange={(e) => {
                     field.onChange(e);
                     handleChange(e);

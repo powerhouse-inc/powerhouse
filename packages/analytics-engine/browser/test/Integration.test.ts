@@ -157,7 +157,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  store.destroy();
+  await store.destroy();
 });
 
 it("should query records", async () => {

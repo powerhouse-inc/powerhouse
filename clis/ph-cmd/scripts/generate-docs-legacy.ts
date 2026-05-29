@@ -81,4 +81,4 @@ function formatCommandName(commandName: string): string {
 }
 
 // Run the script
-generateCommandsMd();
+void generateCommandsMd();

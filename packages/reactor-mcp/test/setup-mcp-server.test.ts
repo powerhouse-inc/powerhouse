@@ -162,7 +162,7 @@ describe("setupMcpServer", () => {
 
     const fakeReq = {} as IncomingMessage;
     const { res, written } = makeMockResponse();
-    getRoute!.handler(fakeReq, res);
+    await getRoute!.handler(fakeReq, res);
 
     expect(written.status).toBe(405);
   });
@@ -176,7 +176,7 @@ describe("setupMcpServer", () => {
 
     const fakeReq = {} as IncomingMessage;
     const { res, written } = makeMockResponse();
-    deleteRoute!.handler(fakeReq, res);
+    await deleteRoute!.handler(fakeReq, res);
 
     expect(written.status).toBe(405);
   });
@@ -188,7 +188,7 @@ describe("setupMcpServer", () => {
     for (const method of ["GET", "DELETE"] as const) {
       const route = routes.find((r) => r.method === method)!;
       const { res, written } = makeMockResponse();
-      route.handler({} as IncomingMessage, res);
+      await route.handler({} as IncomingMessage, res);
 
       const body = JSON.parse(written.body) as { error: { message: string } };
       expect(body.error.message).toBeTruthy();

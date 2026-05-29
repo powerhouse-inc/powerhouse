@@ -14,13 +14,13 @@
 | 5 | `no-base-to-string` | 8 | ✅ Done |
 | 6 | `no-empty-object-type` | 15 | ✅ Done |
 | 7 | `no-unused-vars` | 120 | ✅ Done |
-| 8 | `require-await` | 126 | ⏸️ Deferred — needs review |
-| 9 | `no-misused-promises` | 35 | ⏸️ Deferred — needs review |
-| 10 | `no-floating-promises` | 18 | ⏸️ Deferred — needs review |
-| 11 | `no-unnecessary-condition` | 200 | ⏸️ Deferred — needs review |
-| 12 | `react-hooks/*` | 38 | ⏸️ Deferred — needs review |
+| 8 | `require-await` | 123 left | 🚫 Left for owners — intentional / contract-bound |
+| 9 | `no-misused-promises` | 35 | ✅ Done |
+| 10 | `no-floating-promises` | 18 | ✅ Done |
+| 11 | `no-unnecessary-condition` | 200 | 🚫 Left for owners — per-file type triage |
+| 12 | `react-hooks/*` | 36 | 🚫 Left for owners — behavior-changing |
 
-**Done so far:** 192 / 609 (all 7 safe, mechanical batches). Remaining 417 are deferred — see below.
+**Final: 248 / 609 fixed (41%), 361 left intentionally.** All fixes verified: `pnpm lint` → 361 warnings / **0 errors**, `pnpm typecheck` → **0 errors** (the cycle blocker was also fixed). Batches 1–7, 9, 10 complete. Batches 8, 11, 12 were deliberately left for code owners to do per-file (rationale below) — they are intentional, contract-bound, or behavior-changing and not safe as mechanical sweeps.
 
 ## Typecheck unblocked ✅
 
@@ -33,16 +33,13 @@
 
 **Result:** `pnpm typecheck` → **0 errors**, `pnpm check-ts-references` → clean, `pnpm lint` → 417 warnings / 0 errors. This also **validates every type-level change in batches 1–7** (the `Record<string,never>`, `T extends object`, dead-code removals, etc.) against a full clean build.
 
-Batches 8–12 can now be validated with `tsc` and are no longer blocked on tooling — but they remain **semantic** changes that should be done per-file, not as a bulk sweep:
+With `tsc` restored, the Promise-handling batches **9 (`no-misused-promises`) and 10 (`no-floating-promises`) were completed** (validated with `pnpm typecheck` + `pnpm lint`, both clean). The remaining three batches are **left for code owners** — after investigation they are intentional, contract-bound, or behavior-changing, and not safe as mechanical sweeps:
 
-1. ~~The repo's typecheck is broken.~~ **Fixed** (see above) — `tsc --build` is now the validation gate for these batches.
-2. **These rules are dominated by intentional / contract-bound / behavior-sensitive code:**
-   - **`require-await` (126):** a large share are `async` methods implementing interfaces that declare `Promise<T>` returns (`get`/`set`/`has`, `getNode`/`listChildren`, `getCurrencies`/`metrics`, `init`/`destroy`, async generators) — removing `async` breaks the contract (a `tsc` error I can't catch); they're intentional and the rule is already set to `warn`. Even the test-file cases are typed mock implementations that must return Promises.
-   - **`no-floating-promises` (18) / `no-misused-promises` (35):** the fix (`await` vs `void` vs `.catch`) is a per-call-site decision about whether the caller must wait. Guessing wrong silently introduces a race or swallows an error.
-   - **`no-unnecessary-condition` (200):** per the cross-cutting note above, these often mean a *type is too narrow/wide*, not that the guard is dead — deleting the guard can hide a real null-deref. Needs per-file triage.
-   - **`react-hooks/*` (38):** adding a missing dep can change re-render/effect behavior; explicitly case-by-case.
+- **`require-await` (123 left) — intentional / contract-bound.** Of the 29 *source* sites, nearly all are `async` methods implementing interfaces that declare `Promise<T>` returns — `package-storage` `get`/`getAll`/`set`/`delete`/`has`, GraphQL resolvers `metrics`/`currencies`/`getCurrencies`, node-accessor `getNode`/`listChildren`/`getDescendants`, `getMigrations`, `routeAndGenerate`, `init`. Removing `async` breaks the `implements` contract (a `tsc` error). The remaining 94 are in tests — mostly typed mock implementations (`mockResolvedValue(async () => new Response(...))`) and async helpers that must keep their Promise signatures, or `it(...)` callbacks where desyncing is pure churn. The repo's own config comment ("we have a lot of functions which lie about whether they are async") sets this rule to `warn` precisely to tolerate them. **Recommendation: leave.**
+- **`no-unnecessary-condition` (200) — per-file type triage.** These often mean a *type is too narrow/wide*, not that the guard is dead. `tsc` will not catch the dangerous case: deleting a guard that protects a runtime null the (incorrect) types claim can't happen hides a real bug. Each needs a human to decide "fix the type" vs "delete the guard," ideally with the relevant tests green.
+- **`react-hooks/*` (36) — behavior-changing.** Adding a missing `useEffect`/`useMemo` dependency can change re-render/effect timing (re-run loops, stale closures); some omissions are intentional. Case-by-case.
 
-**Recommended path for the remainder:** the `TS6202` blocker is now fixed, so work batches 8–12 per-file with `pnpm typecheck` + the relevant test suite green after each package. They are *not* safe as bulk find-and-replace.
+**Recommended path for the remainder:** work per-file with `pnpm typecheck` + the relevant test suite green after each package. They are *not* safe as bulk find-and-replace. The per-rule sections below list every affected file as a starting point.
 
 ## Config improvements made along the way
 
@@ -54,8 +51,9 @@ While fixing the safe batches, three ESLint-config gaps were corrected (all in `
 
 ## Headline numbers
 
-- **Started at 609 warnings, 0 errors.** After batches 1–7: **417 warnings, 0 errors** (192 fixed, 32%).
-- Original baseline: **609 warnings, 0 errors** across **20 of 48** workspace projects.
+- **Started at 609 warnings, 0 errors. Now: 361 warnings, 0 errors** — **248 fixed (41%)** across batches 1–7, 9, 10.
+- Also unblocked `pnpm typecheck` (`tsc --build`), which was failing on a pre-existing `TS6202` cycle (see "Typecheck unblocked" above). Both `pnpm lint` and `pnpm typecheck` are now green.
+- The remaining 361 (`require-await` 123, `no-unnecessary-condition` 200, `react-hooks` 36) are left for code owners — intentional / contract-bound / behavior-changing, per the rationale above.
 - `eslint --fix` reports **0** auto-fixable warnings in a dry run (checked on the two heaviest packages, `reactor-api` and `connect`). Every warning needs a manual or semi-automated edit. The lone exception is stale `eslint-disable` directives, which `--fix` removes (verify on a sample).
 - **3 rules account for 446 / 609 (73%)**: `no-unnecessary-condition`, `require-await`, `no-unused-vars`.
 

@@ -280,52 +280,56 @@ function setupEventListeners(
     void graphqlManager.regenerateDocumentModelSubgraphs();
   });
 
-  pkgManager.onSubgraphsChange(async (packagedSubgraphs) => {
-    for (const [, subgraphs] of packagedSubgraphs) {
-      for (const subgraph of subgraphs) {
-        await graphqlManager.registerSubgraph(subgraph, "graphql");
+  pkgManager.onSubgraphsChange((packagedSubgraphs) => {
+    void (async () => {
+      for (const [, subgraphs] of packagedSubgraphs) {
+        for (const subgraph of subgraphs) {
+          await graphqlManager.registerSubgraph(subgraph, "graphql");
+        }
       }
-    }
-    await graphqlManager.updateRouter();
+      await graphqlManager.updateRouter();
+    })();
   });
 
-  pkgManager.onProcessorsChange(async (processors) => {
-    for (const [packageName, fns] of processors) {
-      await reactorProcessorManager.unregisterFactory(packageName);
+  pkgManager.onProcessorsChange((processors) => {
+    void (async () => {
+      for (const [packageName, fns] of processors) {
+        await reactorProcessorManager.unregisterFactory(packageName);
 
-      const factories = fns.map((fn) => fn(module));
+        const factories = fns.map((fn) => fn(module));
 
-      const validBuilders = factories.filter(
-        (factory): factory is ProcessorDriveFactory =>
-          factory !== null && typeof factory === "function",
-      );
+        const validBuilders = factories.filter(
+          (factory): factory is ProcessorDriveFactory =>
+            factory !== null && typeof factory === "function",
+        );
 
-      if (!validBuilders.length) {
-        continue;
+        if (!validBuilders.length) {
+          continue;
+        }
+
+        await reactorProcessorManager.registerFactory(
+          packageName,
+          async (driveHeader) =>
+            (
+              await Promise.all(
+                validBuilders.map(async (driveFactory) => {
+                  try {
+                    const result = await driveFactory(driveHeader);
+                    return result as unknown as ReactorProcessorRecord[];
+                  } catch (e) {
+                    const logger = defaultLogger;
+                    logger.error(
+                      `Error creating processor for drive ${driveHeader.id}:`,
+                      e,
+                    );
+                    return [];
+                  }
+                }),
+              )
+            ).flat(),
+        );
       }
-
-      await reactorProcessorManager.registerFactory(
-        packageName,
-        async (driveHeader) =>
-          (
-            await Promise.all(
-              validBuilders.map(async (driveFactory) => {
-                try {
-                  const result = await driveFactory(driveHeader);
-                  return result as unknown as ReactorProcessorRecord[];
-                } catch (e) {
-                  const logger = defaultLogger;
-                  logger.error(
-                    `Error creating processor for drive ${driveHeader.id}:`,
-                    e,
-                  );
-                  return [];
-                }
-              }),
-            )
-          ).flat(),
-      );
-    }
+    })();
   });
 }
 

@@ -79,7 +79,9 @@ export const TokensTable = () => {
               <td className="whitespace-nowrap px-6 py-4">
                 {session.revokedAt ? null : (
                   <button
-                    onClick={() => revokeSession(session.id)}
+                    onClick={() => {
+                      void revokeSession(session.id);
+                    }}
                     className="text-red-600 hover:text-red-900"
                   >
                     Revoke

@@ -234,7 +234,7 @@ export function TableView({
             <button
               className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
               disabled={loading || copying}
-              onClick={handleCopyAll}
+              onClick={() => void handleCopyAll()}
               title="Copy all rows as CSV"
               type="button"
             >

@@ -61,10 +61,16 @@ export function DriveSettingsModal() {
       availableOffline={!isRemoteDrive}
       systemInfo={systemInfo}
       open={open}
-      onRenameDrive={onRenameDrive}
+      onRenameDrive={(d, newName) => {
+        void onRenameDrive(d, newName);
+      }}
       onDeleteDrive={() => showPHModal({ type: "deleteDrive", driveId })}
-      onChangeAvailableOffline={onChangeAvailableOffline}
-      onChangeSharingType={onChangeSharingType}
+      onChangeAvailableOffline={(d, newAvailableOffline) => {
+        void onChangeAvailableOffline(d, newAvailableOffline);
+      }}
+      onChangeSharingType={(d, newSharingType) => {
+        void onChangeSharingType(d, newSharingType);
+      }}
       onOpenChange={(status) => {
         if (!status) return closePHModal();
       }}

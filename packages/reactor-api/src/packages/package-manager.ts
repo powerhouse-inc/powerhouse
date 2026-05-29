@@ -307,10 +307,13 @@ export class PackageManager implements IPackageManager {
     const unsubs: (() => void)[] = [];
     for (const pkg of packages) {
       if (!this.debouncedUpdateCallbacks.has(pkg)) {
-        this.debouncedUpdateCallbacks.set(
-          pkg,
-          debounce(() => this.updateDocumentModelsForPackage(pkg), 1000),
+        const debouncedFn = debounce(
+          () => this.updateDocumentModelsForPackage(pkg),
+          1000,
         );
+        this.debouncedUpdateCallbacks.set(pkg, () => {
+          void debouncedFn();
+        });
       }
       const debouncedCallback = this.debouncedUpdateCallbacks.get(pkg)!;
 

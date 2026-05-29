@@ -22,7 +22,9 @@ export const DangerZone: React.FC = () => {
   return (
     <BaseDangerZone
       drives={drives ?? []}
-      onDeleteDrive={handleDeleteDrive}
+      onDeleteDrive={(drive) => {
+        void handleDeleteDrive(drive);
+      }}
       onClearStorage={handleClearStorage}
     />
   );
