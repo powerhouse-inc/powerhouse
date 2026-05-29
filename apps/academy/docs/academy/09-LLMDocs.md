@@ -21,10 +21,10 @@ The complete academy content in a single markdown file. Use this when you want t
 
 ```bash
 # Index (llms.txt)
-curl https://powerhouse.academy/llms.txt
+curl https://academy.vetra.io/llms.txt
 
 # Full content (llms-full.txt)
-curl https://powerhouse.academy/llms-full.txt
+curl https://academy.vetra.io/llms-full.txt
 ```
 
 ## Regenerating the files

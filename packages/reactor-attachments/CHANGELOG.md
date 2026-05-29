@@ -1,3 +1,14 @@
+## 6.1.0-dev.9 (2026-05-29)
+
+### 🩹 Fixes
+
+- **reactor-attachments:** unfortunately because browsers suck we have to buffer the upload blob ([13ca172c4](https://github.com/powerhouse-inc/powerhouse/commit/13ca172c4))
+- **switchboard:** fix fetch bindings ([0021b39a9](https://github.com/powerhouse-inc/powerhouse/commit/0021b39a9))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.1.0-dev.8 (2026-05-28)
 
 This was a version bump only for @powerhousedao/reactor-attachments to align it with other projects, there were no code changes.
