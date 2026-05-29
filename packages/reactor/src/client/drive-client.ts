@@ -226,8 +226,17 @@ export class DriveClient implements IDriveClient {
       signal,
     );
     const node = drive.state.global.nodes.find((n) => n.id === nodeId);
+
     if (!node) {
-      throw new Error(`Node ${nodeId} not found in drive ${driveIdentifier}`);
+      // No FileNode, but the document may still exist as an orphan (relationship
+      // and document persisted, node never added — e.g. ADD_FILE rejected the
+      // name). Clean it up if so; otherwise it is genuinely unknown.
+      const exists = await this.documentExists(nodeId, signal);
+      if (!exists) {
+        throw new Error(`Node ${nodeId} not found in drive ${driveIdentifier}`);
+      }
+      await this.removeFileNode(driveIdentifier, nodeId, signal);
+      return;
     }
 
     if (isFolderNode(node)) {
@@ -467,6 +476,18 @@ export class DriveClient implements IDriveClient {
       ...(hasMore ? { nextCursor: String(endIndex) } : {}),
       totalCount: filtered.length,
     };
+  }
+
+  private async documentExists(
+    documentId: string,
+    signal?: AbortSignal,
+  ): Promise<boolean> {
+    try {
+      await this.client.get(documentId, undefined, signal);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   private async removeFileNode(

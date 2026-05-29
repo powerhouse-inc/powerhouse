@@ -269,6 +269,39 @@ describe("ReactorMcpProvider", () => {
         success: false,
       });
     });
+
+    it("can delete a document orphaned by an invalid (control-character) name", async () => {
+      const drive = await client.createEmpty<DocumentDriveDocument>(
+        "powerhouse/document-drive",
+      );
+
+      const provider = await createReactorMcpProvider({ client });
+
+      // A control char fails ADD_FILE name validation, so the FileNode is
+      // dropped while the document and its drive relationship persist (orphan).
+      const name = `Concord plan ${String.fromCharCode(7)}`;
+      const created = await provider.tools.createDocument.callback({
+        documentType: "powerhouse/document-model",
+        driveId: drive.header.id,
+        name,
+      });
+      const documentId = (created.structuredContent as { documentId: string })
+        .documentId;
+
+      // Document exists, but no FileNode was added to the drive tree.
+      await expect(client.get(documentId)).resolves.toBeDefined();
+      const driveDoc = await client.get<DocumentDriveDocument>(drive.header.id);
+      expect(
+        driveDoc.state.global.nodes.find((n) => n.id === documentId),
+      ).toBeUndefined();
+
+      const result = await provider.tools.deleteDocument.callback({
+        documentId,
+      });
+      expect(result.structuredContent).toMatchObject({
+        success: true,
+      });
+    });
   });
 
   describe("addActions tool", () => {

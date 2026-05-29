@@ -50,15 +50,11 @@ describe("Node Operations", () => {
   });
   it("should add a file node when the name contains a non-ASCII character (em-dash)", () => {
     const input = generateMock(AddFileInputSchema());
-    // Em-dash U+2014, common in human-authored titles.
     input.name = "Concord v1 — delivery plan";
 
     const updatedDocument = driveDocumentReducer(document, addFile(input));
 
-    // The operation must succeed without recording an error.
     expect(updatedDocument.operations.global![0].error).toBeUndefined();
-
-    // The node must be present in the projected state with the given name.
     const node = updatedDocument.state.global.nodes.find(
       (n) => n.id === input.id,
     );
@@ -98,7 +94,6 @@ describe("Node Operations", () => {
 
     const updatedDocument = driveDocumentReducer(document, addFile(input));
 
-    // Invalid names record an error and add no node.
     expect(updatedDocument.operations.global![0].error).toMatch(/Invalid name/);
     expect(
       updatedDocument.state.global.nodes.find((n) => n.id === input.id),
@@ -113,9 +108,7 @@ describe("Node Operations", () => {
     thirdInput.name = "test (copy) 1";
     secondInput.parentFolder = firstInput.parentFolder;
     thirdInput.parentFolder = firstInput.parentFolder;
-    // Nodes are sorted by id; assign ids matching the expected order so the
-    // positional assertions below are deterministic (secondInput is inserted
-    // first and keeps "test", firstInput becomes "test (copy) 1", etc.).
+    // Nodes are sorted by id; assign ids matching insertion/expected order.
     secondInput.id = "node-1";
     firstInput.id = "node-2";
     thirdInput.id = "node-3";
