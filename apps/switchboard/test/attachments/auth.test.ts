@@ -60,7 +60,7 @@ function makeAuthService(
 }
 
 describe("requireAuth", () => {
-  it("returns the original handler unchanged when authService is undefined", async () => {
+  it("returns the original handler unchanged when authService is undefined", () => {
     const handler: NodeHandler = vi.fn();
     const wrapped = requireAuth(undefined, handler);
     expect(wrapped).toBe(handler);

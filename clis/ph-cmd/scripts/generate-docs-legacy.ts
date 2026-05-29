@@ -5,7 +5,7 @@ import { fileURLToPath } from "url";
 /**
  * Generate COMMANDS.md file from the help texts in help.ts
  */
-async function generateCommandsMd() {
+function generateCommandsMd() {
   try {
     // Define paths for ES modules
     const __filename = fileURLToPath(import.meta.url);

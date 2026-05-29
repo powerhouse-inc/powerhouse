@@ -18,7 +18,7 @@ import {
 import { describe, expect, it } from "vitest";
 
 describe("PRUNE operation", () => {
-  it.skip("should prune first 4 operations", async () => {
+  it.skip("should prune first 4 operations", () => {
     const document = baseCreateDocument<CountPHState>(
       createCountDocumentState,
       createCountState(),
@@ -54,7 +54,7 @@ describe("PRUNE operation", () => {
     expect(newDocument.initialState).toStrictEqual(document.state);
   });
 
-  it.skip("should prune last 3 operations", async () => {
+  it.skip("should prune last 3 operations", () => {
     const document = baseCreateDocument<CountPHState>(
       createCountDocumentState,
       testCreateBaseState({ count: 0 }, { name: "" }),
@@ -91,7 +91,7 @@ describe("PRUNE operation", () => {
     expect(newDocument.initialState).toStrictEqual(document.state);
   });
 
-  it.skip("should prune 2 operations", async () => {
+  it.skip("should prune 2 operations", () => {
     const document = baseCreateDocument<CountPHState>(
       createCountDocumentState,
       testCreateBaseState({ count: 0 }, { name: "" }),
@@ -129,7 +129,7 @@ describe("PRUNE operation", () => {
     expect(newDocument.initialState).toStrictEqual(document.state);
   });
 
-  it.skip("should undo pruned state", async () => {
+  it.skip("should undo pruned state", () => {
     const document = baseCreateDocument<CountPHState>(
       createCountDocumentState,
       testCreateBaseState({ count: 0 }, { name: "" }),
@@ -169,7 +169,7 @@ describe("PRUNE operation", () => {
     expect(newDocument.initialState).toStrictEqual(document.state);
   });
 
-  it.skip("should redo pruned state", async () => {
+  it.skip("should redo pruned state", () => {
     const document = baseCreateDocument<CountPHState>(
       createCountDocumentState,
       testCreateBaseState({ count: 0 }, { name: "" }),

@@ -19,7 +19,7 @@ export function DocumentEditorContainer() {
 
   const _onClose = useCallback(() => {
     setSelectedNode(parentFolder);
-  }, [parentFolder, setSelectedNode]);
+  }, [parentFolder]);
 
   return (
     <div

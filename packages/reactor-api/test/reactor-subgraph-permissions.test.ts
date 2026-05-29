@@ -120,7 +120,7 @@ describe("ReactorSubgraph Permission Checks", () => {
   });
 
   describe("Query: document", () => {
-    const callDocument = async (ctx: any) => {
+    const callDocument = (ctx: any) => {
       const query = (reactorSubgraph.resolvers.Query as any)?.document;
       return query(null, { identifier: "doc-123" }, ctx);
     };
@@ -161,7 +161,7 @@ describe("ReactorSubgraph Permission Checks", () => {
   });
 
   describe("Query: documentOutgoingRelationships", () => {
-    const callDocumentOutgoingRelationships = async (ctx: any) => {
+    const callDocumentOutgoingRelationships = (ctx: any) => {
       const query = (reactorSubgraph.resolvers.Query as any)
         ?.documentOutgoingRelationships;
       return query(
@@ -201,7 +201,7 @@ describe("ReactorSubgraph Permission Checks", () => {
   });
 
   describe("Query: findDocuments", () => {
-    const callFindDocuments = async (ctx: any) => {
+    const callFindDocuments = (ctx: any) => {
       const query = (reactorSubgraph.resolvers.Query as any)?.findDocuments;
       return query(null, { search: { type: "test/document" } }, ctx);
     };
@@ -240,7 +240,7 @@ describe("ReactorSubgraph Permission Checks", () => {
   });
 
   describe("Mutation: createDocument", () => {
-    const callCreateDocument = async (ctx: any, parentIdentifier?: string) => {
+    const callCreateDocument = (ctx: any, parentIdentifier?: string) => {
       const mutation = (reactorSubgraph.resolvers.Mutation as any)
         ?.createDocument;
       return mutation(
@@ -305,7 +305,7 @@ describe("ReactorSubgraph Permission Checks", () => {
   });
 
   describe("Mutation: mutateDocument", () => {
-    const callMutateDocument = async (ctx: any) => {
+    const callMutateDocument = (ctx: any) => {
       const mutation = (reactorSubgraph.resolvers.Mutation as any)
         ?.mutateDocument;
       return mutation(
@@ -355,7 +355,7 @@ describe("ReactorSubgraph Permission Checks", () => {
   });
 
   describe("Mutation: deleteDocument", () => {
-    const callDeleteDocument = async (ctx: any) => {
+    const callDeleteDocument = (ctx: any) => {
       const mutation = (reactorSubgraph.resolvers.Mutation as any)
         ?.deleteDocument;
       return mutation(null, { identifier: "doc-123" }, ctx);
@@ -391,7 +391,7 @@ describe("ReactorSubgraph Permission Checks", () => {
   });
 
   describe("Mutation: moveRelationship", () => {
-    const callMoveRelationship = async (ctx: any) => {
+    const callMoveRelationship = (ctx: any) => {
       const mutation = (reactorSubgraph.resolvers.Mutation as any)
         ?.moveRelationship;
       return mutation(
