@@ -397,7 +397,7 @@ exports[`Sidebar Component > should match snapshot 1`] = `
                   </svg>
                 </div>
                 <div
-                  class="truncate text-sm leading-5"
+                  class="truncate text-sm/5"
                 >
                   Node 1
                 </div>
@@ -454,7 +454,7 @@ exports[`Sidebar Component > should match snapshot 1`] = `
                   </svg>
                 </div>
                 <div
-                  class="truncate text-sm leading-5"
+                  class="truncate text-sm/5"
                 >
                   Node 2
                 </div>
