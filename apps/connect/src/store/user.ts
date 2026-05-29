@@ -9,7 +9,7 @@ export function useSetSentryUser() {
     let sentryUser: SentryUser | null = null;
     if (user) {
       // saves the user info except the credential
-      const { credential, ...rest } = user;
+      const { credential: _credential, ...rest } = user;
       sentryUser = { id: rest.did, username: rest.ens?.name, ...rest };
     }
     setSentryUser(sentryUser);

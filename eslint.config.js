@@ -51,6 +51,9 @@ const normalIgnoredFiles = [
   "test/package-e2e/.registry-storage/",
   "test/package-e2e/.registry-cdn-cache/",
   "test/package-e2e/fixtures/",
+  // Vendored scratch folder (sql-wasm typings + multi-MB SQL dumps); not
+  // maintained source, so don't lint it.
+  "packages/analytics-engine/browser/backup/",
 ];
 
 /** These files need to be ignored for builds to pass, but they do not have clear reasons to be ignored.
@@ -188,16 +191,33 @@ const typescriptRules = {
   ],
   // we need to use `any` in our over zealous generics
   "@typescript-eslint/no-explicit-any": "off",
-  // we use things like _ as a placeholder for unused variables
-  "@typescript-eslint/no-unused-vars": "warn",
+  // we use things like _ as a placeholder for unused variables, so honour the
+  // conventional `_`-prefix as an explicit "intentionally unused" marker.
+  "@typescript-eslint/no-unused-vars": [
+    "warn",
+    {
+      argsIgnorePattern: "^_",
+      varsIgnorePattern: "^_",
+      caughtErrorsIgnorePattern: "^_",
+      destructuredArrayIgnorePattern: "^_",
+    },
+  ],
   // we have a lot of types that lie about whether they are optional or not
   "@typescript-eslint/no-unnecessary-condition": "warn",
-  // we have a lot of functions which lie about whether they are async or not
-  "@typescript-eslint/require-await": "warn",
+  // async functions must contain an await; a synchronous implementation of an
+  // async contract should return an explicit Promise (e.g. Promise.resolve)
+  // rather than carry a no-op `async` keyword.
+  "@typescript-eslint/require-await": "error",
   "@typescript-eslint/no-misused-promises": "warn",
   "@typescript-eslint/no-floating-promises": "warn",
-  // our codegen uses this wrong type definition all over the place
-  "@typescript-eslint/no-empty-object-type": "warn",
+  // our codegen uses this wrong type definition all over the place.
+  // `with-single-extends` permits `interface A extends B {}` — a legitimate
+  // pattern for named aliases, prop types, and global declaration merging
+  // (e.g. augmenting `WindowEventMap`), which has no type-alias equivalent.
+  "@typescript-eslint/no-empty-object-type": [
+    "warn",
+    { allowInterfaces: "with-single-extends" },
+  ],
   // our overzealous generics force us to do this
   "@typescript-eslint/no-duplicate-type-constituents": "warn",
   // we use infinite loops
@@ -291,6 +311,24 @@ const reactConfig = {
 const unsafeConfig = {
   files: filesWithUnsafeRules,
   rules: unsafeRules,
+};
+
+/** Generated code emits `eslint-disable` directives defensively (e.g. the
+ * graphql/zod codegen adds `no-empty-object-type` / `no-unused-vars` headers
+ * to every schema file). Simple schemas don't trigger those rules, so the
+ * directive reads as "unused" — but it's load-bearing for complex schemas.
+ * Don't flag unused directives in generated files; the source of truth is the
+ * codegen template, not the emitted file. */
+const generatedFilesConfig = {
+  files: ["**/gen/**/*.{ts,tsx}"],
+  linterOptions: {
+    reportUnusedDisableDirectives: "off",
+  },
+  rules: {
+    // graphql-codegen legitimately emits `{}` for empty query variables and
+    // default generic contexts; not worth fighting the generator over.
+    "@typescript-eslint/no-empty-object-type": "off",
+  },
 };
 
 /**
@@ -635,6 +673,7 @@ export default defineConfig(
   reactConfig,
   javascriptConfig,
   unsafeConfig,
+  generatedFilesConfig,
   cliColdPathConfig,
   loggerRulesConfig,
   tailwindConfig,

@@ -11,7 +11,7 @@ export type EditorActionButtonsProps = {
 export function EditorActionButtons(props: EditorActionButtonsProps) {
   const {
     onSwitchboardLinkClick,
-    onDownloadDocument,
+    onDownloadDocument: _onDownloadDocument,
     onClose,
     onShowRevisionHistory,
     onShowTimeline,

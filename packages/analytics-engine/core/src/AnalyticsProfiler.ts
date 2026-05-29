@@ -78,7 +78,7 @@ export class PassthroughAnalyticsProfiler implements IAnalyticsProfiler {
     return "";
   }
 
-  push(system: string) {
+  push(_system: string) {
     //
   }
 

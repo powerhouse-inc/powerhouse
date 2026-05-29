@@ -347,7 +347,7 @@ export interface IAuthCredentialSubject {
 
 export type AuthVerifiableCredential = IVerifiableCredential<
   IAuthCredentialSubject,
-  {}
+  Record<string, never>
 >;
 
 export type AuthVerifiedCredential = VerifiedCredential & {

@@ -39,7 +39,7 @@ type TransportFactory = (opts: {
   sessionIdGenerator: undefined;
 }) => InstanceType<typeof StreamableHTTPServerTransport>;
 
-export async function setupMcpServer(
+export function setupMcpServer(
   options: SetupMcpServerOptions,
   httpAdapter: NodeRouteAdapter,
   // Allow tests to inject a factory function instead of relying on `new vi.fn()`
@@ -91,4 +91,5 @@ export async function setupMcpServer(
       res.writeHead(405).end(METHOD_NOT_ALLOWED);
     },
   );
+  return Promise.resolve();
 }

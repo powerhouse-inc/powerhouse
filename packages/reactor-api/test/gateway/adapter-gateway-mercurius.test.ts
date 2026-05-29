@@ -22,11 +22,11 @@ const silentLogger = {
 
 runGatewayAdapterContractTests(
   "MercuriusGatewayAdapter",
-  async (): Promise<GatewayAdapterHarness> => {
+  (): Promise<GatewayAdapterHarness> => {
     const adapter = new MercuriusGatewayAdapter(silentLogger);
-    return {
+    return Promise.resolve({
       adapter,
       close: () => adapter.stop(),
-    };
+    });
   },
 );

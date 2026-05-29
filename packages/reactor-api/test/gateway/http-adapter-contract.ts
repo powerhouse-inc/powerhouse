@@ -218,11 +218,11 @@ export function runHttpAdapterContractTests(
     it("passes incoming request headers to the Fetch Request", async () => {
       let capturedHeaders: Record<string, string> = {};
 
-      h.adapter.mount("/api", async (req) => {
+      h.adapter.mount("/api", (req) => {
         req.headers.forEach((value, key) => {
           capturedHeaders[key] = value;
         });
-        return new Response("ok");
+        return Promise.resolve(new Response("ok"));
       });
 
       await fetch(`${h.url}/api`, {
@@ -256,9 +256,9 @@ export function runHttpAdapterContractTests(
     it("GET requests arrive with no body consumed", async () => {
       let bodyUsed = false;
 
-      h.adapter.mount("/api", async (req) => {
+      h.adapter.mount("/api", (req) => {
         bodyUsed = req.bodyUsed;
-        return new Response("ok");
+        return Promise.resolve(new Response("ok"));
       });
 
       await fetch(`${h.url}/api`);
@@ -266,9 +266,8 @@ export function runHttpAdapterContractTests(
     });
 
     it("writes the handler response status to the HTTP response", async () => {
-      h.adapter.mount(
-        "/api",
-        async () => new Response("not found", { status: 404 }),
+      h.adapter.mount("/api", () =>
+        Promise.resolve(new Response("not found", { status: 404 })),
       );
 
       const res = await fetch(`${h.url}/api`);
@@ -276,12 +275,12 @@ export function runHttpAdapterContractTests(
     });
 
     it("writes handler response headers to the HTTP response", async () => {
-      h.adapter.mount(
-        "/api",
-        async () =>
+      h.adapter.mount("/api", () =>
+        Promise.resolve(
           new Response("ok", {
             headers: { "x-custom": "my-value", "content-type": "text/plain" },
           }),
+        ),
       );
 
       const res = await fetch(`${h.url}/api`);
@@ -289,8 +288,8 @@ export function runHttpAdapterContractTests(
     });
 
     it("writes the handler response body to the HTTP response", async () => {
-      h.adapter.mount("/api", async () =>
-        Response.json({ message: "hello from handler" }),
+      h.adapter.mount("/api", () =>
+        Promise.resolve(Response.json({ message: "hello from handler" })),
       );
 
       const res = await fetch(`${h.url}/api`);
@@ -299,7 +298,7 @@ export function runHttpAdapterContractTests(
     });
 
     it("returns 500 when the handler throws", async () => {
-      h.adapter.mount("/api", async () => {
+      h.adapter.mount("/api", () => {
         throw new Error("handler error");
       });
 

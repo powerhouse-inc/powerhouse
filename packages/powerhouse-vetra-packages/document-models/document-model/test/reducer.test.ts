@@ -27,7 +27,7 @@ describe("Base reducer", () => {
     vi.useFakeTimers().setSystemTime(new Date("2020-01-01"));
   });
 
-  it("should update revision", async () => {
+  it("should update revision", () => {
     const document = baseCreateDocument<TestPHState>(
       defaultPHDocumentCreateState,
     );
@@ -66,7 +66,7 @@ describe("Base reducer", () => {
     vi.useRealTimers();
   });
 
-  it("should update global operations list", async () => {
+  it("should update global operations list", () => {
     vi.useFakeTimers({ now: new Date("2023-01-01") });
     const document = baseCreateDocument<TestPHState>(
       defaultPHDocumentCreateState,
@@ -118,7 +118,7 @@ describe("Base reducer", () => {
     expect(() => setName(1 as unknown as string)).toThrow();
   });
 
-  it("should set document name", async () => {
+  it("should set document name", () => {
     const document = baseCreateDocument<TestPHState>(
       defaultPHDocumentCreateState,
     );
@@ -141,7 +141,7 @@ describe("Base reducer", () => {
     expect(() => setPreferredEditor(123 as unknown as string)).toThrow();
   });
 
-  it("should set preferred editor in header meta", async () => {
+  it("should set preferred editor in header meta", () => {
     const document = baseCreateDocument<TestPHState>(
       defaultPHDocumentCreateState,
     );
@@ -152,7 +152,7 @@ describe("Base reducer", () => {
     expect(newDocument.header.meta?.preferredEditor).toBe("custom-editor");
   });
 
-  it("should clear preferred editor when passed null", async () => {
+  it("should clear preferred editor when passed null", () => {
     const document = baseCreateDocument<TestPHState>(
       defaultPHDocumentCreateState,
     );
@@ -166,7 +166,7 @@ describe("Base reducer", () => {
     expect(cleared.header.meta?.preferredEditor).toBeUndefined();
   });
 
-  it("should throw error on invalid base action", async () => {
+  it("should throw error on invalid base action", () => {
     const document = baseCreateDocument<TestPHState>(
       defaultPHDocumentCreateState,
     );
@@ -182,7 +182,7 @@ describe("Base reducer", () => {
     ).toThrow();
   });
 
-  it("should dispatch trigger action", async () => {
+  it("should dispatch trigger action", () => {
     expect.assertions(3);
     const document = baseCreateDocument<TestPHState>(
       defaultPHDocumentCreateState,

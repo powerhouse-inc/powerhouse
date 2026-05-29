@@ -96,8 +96,12 @@ export function AddDriveModal() {
   return (
     <ConnectAddLocalDriveModal
       open={open && ready}
-      onAddLocalDrive={onAddLocalDriveSubmit}
-      onAddRemoteDrive={onAddRemoteDriveSubmit}
+      onAddLocalDrive={(data) => {
+        void onAddLocalDriveSubmit(data);
+      }}
+      onAddRemoteDrive={(data) => {
+        void onAddRemoteDriveSubmit(data);
+      }}
       requestPublicDrive={async (url: string) => {
         try {
           if (user) {

@@ -1,6 +1,6 @@
 export const passthroughProfiler = () => ({
   prefix: "",
-  push: (system: string) => {},
+  push: (_system: string) => {},
   pop: () => {},
   record: async (metric: string, fn: () => Promise<any>) => await fn(),
 });

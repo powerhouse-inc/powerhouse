@@ -45,7 +45,9 @@ export const DeleteDriveModal: React.FC = () => {
       inputPlaceholder={t("modals.deleteDrive.inputPlaceholder")}
       cancelLabel={t("common.cancel")}
       continueLabel={t("common.delete")}
-      onContinue={() => onDeleteDrive()}
+      onContinue={() => {
+        void onDeleteDrive();
+      }}
       onOpenChange={(status: boolean) => {
         if (!status) return closePHModal();
       }}

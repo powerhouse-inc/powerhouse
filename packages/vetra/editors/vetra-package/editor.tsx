@@ -32,7 +32,7 @@ export default function Editor(props: EditorProps) {
 
       dispatch(setPackageName({ name }));
     },
-    [document.state.global.name],
+    [document.state.global.name, dispatch],
   );
 
   const onDescriptionChange = useCallback(
@@ -42,7 +42,7 @@ export default function Editor(props: EditorProps) {
 
       dispatch(setPackageDescription({ description }));
     },
-    [document.state.global.description],
+    [document.state.global.description, dispatch],
   );
 
   const onCategoryChange = useCallback(
@@ -52,7 +52,7 @@ export default function Editor(props: EditorProps) {
 
       dispatch(setPackageCategory({ category }));
     },
-    [document.state.global.category],
+    [document.state.global.category, dispatch],
   );
 
   const onPublisherChange = useCallback(
@@ -62,7 +62,7 @@ export default function Editor(props: EditorProps) {
 
       dispatch(setPackageAuthorName({ name }));
     },
-    [document.state.global.author.name],
+    [document.state.global.author.name, dispatch],
   );
 
   const onPublisherUrlChange = useCallback(
@@ -72,7 +72,7 @@ export default function Editor(props: EditorProps) {
 
       dispatch(setPackageAuthorWebsite({ website }));
     },
-    [document.state.global.author.website],
+    [document.state.global.author.website, dispatch],
   );
 
   const onGithubRepositoryChange = useCallback(
@@ -82,7 +82,7 @@ export default function Editor(props: EditorProps) {
 
       dispatch(setPackageGithubUrl({ url }));
     },
-    [document.state.global.githubUrl],
+    [document.state.global.githubUrl, dispatch],
   );
 
   const onNpmPackageChange = useCallback(
@@ -92,16 +92,22 @@ export default function Editor(props: EditorProps) {
 
       dispatch(setPackageNpmUrl({ url }));
     },
-    [document.state.global.npmUrl],
+    [document.state.global.npmUrl, dispatch],
   );
 
-  const onAddKeyword = useCallback((keyword: { id: string; label: string }) => {
-    dispatch(addPackageKeyword(keyword));
-  }, []);
+  const onAddKeyword = useCallback(
+    (keyword: { id: string; label: string }) => {
+      dispatch(addPackageKeyword(keyword));
+    },
+    [dispatch],
+  );
 
-  const onRemoveKeyword = useCallback((id: string) => {
-    dispatch(removePackageKeyword({ id }));
-  }, []);
+  const onRemoveKeyword = useCallback(
+    (id: string) => {
+      dispatch(removePackageKeyword({ id }));
+    },
+    [dispatch],
+  );
 
   return (
     <div className="bg-gray-50 p-6">

@@ -65,4 +65,4 @@ await bench.run();
 console.table(bench.table());
 
 postgres?.destroy();
-memory.destroy();
+void memory.destroy();

@@ -18,7 +18,7 @@ const toPascalCase = (filename: string): string => {
 };
 
 // Check if there are changes in the icons directory
-const hasChanges = () => {
+const _hasChanges = () => {
   try {
     const output = execSync(`git status --porcelain ${iconsDir}`).toString();
     return output.trim().length > 0;

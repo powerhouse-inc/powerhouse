@@ -129,7 +129,6 @@ describe("SimpleJobExecutor mutation signature verification", () => {
 
       const actionWithoutSigner = { ...operation.action };
       if (actionWithoutSigner.context) {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { signer: _signer, ...restContext } = actionWithoutSigner.context;
         if (Object.keys(restContext).length === 0) {
           delete actionWithoutSigner.context;

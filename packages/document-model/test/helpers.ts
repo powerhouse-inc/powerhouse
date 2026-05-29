@@ -88,9 +88,18 @@ export const createCountDocumentState: CreateState<CountPHState> = (state) => {
 };
 
 // Counter reducer that supports increment/decrement actions
-export type IncrementAction = Action & { type: "INCREMENT"; input: {} };
-export type DecrementAction = Action & { type: "DECREMENT"; input: {} };
-export type ErrorAction = Action & { type: "ERROR"; input: {} };
+export type IncrementAction = Action & {
+  type: "INCREMENT";
+  input: Record<string, never>;
+};
+export type DecrementAction = Action & {
+  type: "DECREMENT";
+  input: Record<string, never>;
+};
+export type ErrorAction = Action & {
+  type: "ERROR";
+  input: Record<string, never>;
+};
 export type SetLocalNameAction = Action & {
   type: "SET_LOCAL_NAME";
   input: { name: string };

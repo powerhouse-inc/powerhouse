@@ -11,7 +11,7 @@ import type { DB } from "./schema.js";
 export const vetraReadModelFactoryBuilder: ProcessorFactoryBuilder = (
   module: IProcessorHostModule,
 ) => {
-  return async (driveHeader: PHDocumentHeader): Promise<ProcessorRecord[]> => {
+  return async (_driveHeader: PHDocumentHeader): Promise<ProcessorRecord[]> => {
     // Create namespace (same as legacy - all vetra packages share one namespace)
     const db = await module.relationalDb.createNamespace<DB>("vetra-packages");
 

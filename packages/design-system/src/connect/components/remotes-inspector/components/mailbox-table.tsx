@@ -86,7 +86,7 @@ function sortOperations(
   if (!sort) return ops;
 
   return ops.sort((a, b) => {
-    let comparison = 0;
+    let comparison: number;
 
     switch (sort.column) {
       case "documentId":

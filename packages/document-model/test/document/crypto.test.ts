@@ -70,6 +70,7 @@ async function createTestSigner(): Promise<ISigner> {
       _action: Action,
       _abortSignal?: AbortSignal,
     ): Promise<Signature> {
+      await Promise.resolve();
       throw new Error("signAction not implemented in test signer");
     },
   };
@@ -192,8 +193,8 @@ describe("Crypto utils", () => {
     const reducer = ((
       document: PHDocument<CountPHState>,
       action: Action,
-      dispatch?: SignalDispatch,
-      options?: ReducerOptions,
+      _dispatch?: SignalDispatch,
+      _options?: ReducerOptions,
     ) => {
       const documentWithOp = countReducer(document, action);
 

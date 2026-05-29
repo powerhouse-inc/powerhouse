@@ -97,7 +97,7 @@ export function isEmptyOperationSchema(
 export function safeParseJsonRecord(json: string) {
   try {
     return JSON.parse(json) as Record<string, Serializable>;
-  } catch (error) {
+  } catch (_error) {
     return null;
   }
 }

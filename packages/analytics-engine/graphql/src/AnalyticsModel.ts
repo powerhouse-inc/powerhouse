@@ -136,9 +136,9 @@ export class AnalyticsModel {
     return await this.engine.getDimensions();
   }
 
-  public async getCurrencies() {
+  public getCurrencies(): Promise<string[]> {
     // todo: use knex inside of the analytics engine to select distinct currencies
-    return ["DAI", "FTE", "MKR", "USDC", "USDP", "USDT"];
+    return Promise.resolve(["DAI", "FTE", "MKR", "USDC", "USDP", "USDT"]);
   }
 }
 

@@ -22,7 +22,7 @@ describe("Local reducer", () => {
     vi.useFakeTimers().setSystemTime(new Date("2020-01-01"));
   });
 
-  it("should update local revision", async () => {
+  it("should update local revision", () => {
     const document = baseCreateDocument<TestPHState>(
       defaultPHDocumentCreateState,
     );
@@ -60,7 +60,7 @@ describe("Local reducer", () => {
     vi.useRealTimers();
   });
 
-  it("should not update global operations list", async () => {
+  it("should not update global operations list", () => {
     vi.useFakeTimers({ now: new Date("2023-01-01") });
     const document = baseCreateDocument<TestPHState>(
       defaultPHDocumentCreateState,
@@ -89,7 +89,7 @@ describe("Local reducer", () => {
     expect(newDocument.operations.global!).toStrictEqual([]);
   });
 
-  it("should update local operations list", async () => {
+  it("should update local operations list", () => {
     vi.useFakeTimers({ now: new Date("2023-01-01") });
     const document = baseCreateDocument<TestPHState>(
       defaultPHDocumentCreateState,
@@ -118,7 +118,7 @@ describe("Local reducer", () => {
 
     expect(newDocument.operations.global!).toStrictEqual([]);
   });
-  it("should update local name", async () => {
+  it("should update local name", () => {
     const document = baseCreateDocument<CountPHState>(
       createCountDocumentState,
       createCountState(),
@@ -143,7 +143,7 @@ describe("Local reducer", () => {
     });
   });
 
-  it("should undo local operation", async () => {
+  it("should undo local operation", () => {
     const document = baseCreateDocument<CountPHState>(
       createCountDocumentState,
       createCountState(),
@@ -185,7 +185,7 @@ describe("Local reducer", () => {
     });
   });
 
-  it("should redo local operation", async () => {
+  it("should redo local operation", () => {
     const document = baseCreateDocument<CountPHState>(
       createCountDocumentState,
       createCountState(),
@@ -220,7 +220,7 @@ describe("Local reducer", () => {
     });
   });
 
-  it.skip("should prune local operations", async () => {
+  it.skip("should prune local operations", () => {
     const document = baseCreateDocument<CountPHState>(
       createCountDocumentState,
       createCountState(),

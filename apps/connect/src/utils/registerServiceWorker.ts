@@ -93,15 +93,17 @@ class ServiceWorkerManager {
 
       // calls the update on an interval to force
       // the browser to check for a new version
-      const intervalId = setInterval(async () => {
-        const existingRegistration =
-          await navigator.serviceWorker.getRegistration();
-        if (existingRegistration) {
-          await existingRegistration.update();
-        } else {
-          clearInterval(intervalId);
-          this.registerServiceWorker();
-        }
+      const intervalId = setInterval(() => {
+        void (async () => {
+          const existingRegistration =
+            await navigator.serviceWorker.getRegistration();
+          if (existingRegistration) {
+            await existingRegistration.update();
+          } else {
+            clearInterval(intervalId);
+            this.registerServiceWorker();
+          }
+        })();
       }, connectConfig.appVersionCheckInterval);
     } catch (error) {
       console.error("ServiceWorker registration failed: ", error);

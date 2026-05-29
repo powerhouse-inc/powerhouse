@@ -41,7 +41,7 @@ export const AppEditorForm = () => {
       console.log("onNameChange", name);
       dispatch(setAppName({ name }));
     },
-    [documentName],
+    [documentName, dispatch],
   );
 
   useDebounce(appName, onNameChange, 300);

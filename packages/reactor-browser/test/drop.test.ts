@@ -18,7 +18,7 @@ describe("truncateAllTables", () => {
   let db: Kysely<any>;
   let module: ReactorClientModule;
 
-  beforeEach(async () => {
+  beforeEach(() => {
     pg = new PGlite();
     db = new Kysely<any>({
       dialect: new PGliteDialect(pg),

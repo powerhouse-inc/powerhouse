@@ -54,7 +54,7 @@ export function OperationForm({
       name="name"
       value={operation?.name}
       label={isEdit ? "Operation name *" : "Add operation *"}
-      onSubmit={handleSubmit}
+      onSubmit={(name) => void handleSubmit(name)}
       onChange={handleChange}
       placeholder="Add operation"
       required={!isEdit}

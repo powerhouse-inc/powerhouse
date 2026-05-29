@@ -301,7 +301,7 @@ describe("Subscription Filtering", () => {
   });
 
   describe("PubSub Integration", () => {
-    it("should publish events to correct channel", async () => {
+    it("should publish events to correct channel", () => {
       const publishSpy = vi.spyOn(getPubSub(), "publish");
 
       ensureGlobalDocumentSubscription(mockReactorClient);

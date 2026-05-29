@@ -60,7 +60,7 @@ function makeAuthService(
 }
 
 describe("requireAuth", () => {
-  it("returns the original handler unchanged when authService is undefined", async () => {
+  it("returns the original handler unchanged when authService is undefined", () => {
     const handler: NodeHandler = vi.fn();
     const wrapped = requireAuth(undefined, handler);
     expect(wrapped).toBe(handler);
@@ -77,11 +77,13 @@ describe("requireAuth", () => {
   });
 
   it("returns 401 with { error: 'Authentication required' } when Authorization header is missing", async () => {
-    const { service, spy } = makeAuthService(async () => ({
-      user: undefined,
-      admins: [],
-      auth_enabled: true,
-    }));
+    const { service, spy } = makeAuthService(() =>
+      Promise.resolve({
+        user: undefined,
+        admins: [],
+        auth_enabled: true,
+      }),
+    );
     const handler = vi.fn<NodeHandler>();
     const wrapped = requireAuth(service, handler);
 
@@ -96,12 +98,13 @@ describe("requireAuth", () => {
   });
 
   it("forwards a Response from AuthService (status, content-type, body) for an invalid bearer token", async () => {
-    const { service } = makeAuthService(
-      async () =>
+    const { service } = makeAuthService(() =>
+      Promise.resolve(
         new Response(JSON.stringify({ error: "Verification failed" }), {
           status: 401,
           headers: { "content-type": "application/json" },
         }),
+      ),
     );
     const handler = vi.fn<NodeHandler>();
     const wrapped = requireAuth(service, handler);
@@ -119,12 +122,13 @@ describe("requireAuth", () => {
   });
 
   it("forwards a Response with a non-JSON content-type verbatim", async () => {
-    const { service } = makeAuthService(
-      async () =>
+    const { service } = makeAuthService(() =>
+      Promise.resolve(
         new Response("nope", {
           status: 403,
           headers: { "content-type": "text/plain" },
         }),
+      ),
     );
     const handler = vi.fn<NodeHandler>();
     const wrapped = requireAuth(service, handler);
@@ -142,11 +146,13 @@ describe("requireAuth", () => {
   });
 
   it("invokes the handler and leaves the response untouched on a valid bearer token", async () => {
-    const { service } = makeAuthService(async () => ({
-      user: { address: "0x123", chainId: 1, networkId: "mainnet" },
-      admins: [],
-      auth_enabled: true,
-    }));
+    const { service } = makeAuthService(() =>
+      Promise.resolve({
+        user: { address: "0x123", chainId: 1, networkId: "mainnet" },
+        admins: [],
+        auth_enabled: true,
+      }),
+    );
     const handler = vi.fn<NodeHandler>();
     const wrapped = requireAuth(service, handler);
 
@@ -166,6 +172,7 @@ describe("requireAuth", () => {
 
   it("returns 500 with a sanitized body when AuthService throws", async () => {
     const { service } = makeAuthService(async () => {
+      await Promise.resolve();
       throw new Error("transient Renown failure: secret-internal-detail");
     });
     const handler = vi.fn<NodeHandler>();
@@ -187,11 +194,13 @@ describe("requireAuth", () => {
   });
 
   it("calls authService.verifyBearer with the incoming authorization header", async () => {
-    const { service, spy } = makeAuthService(async () => ({
-      user: { address: "0x1", chainId: 1, networkId: "mainnet" },
-      admins: [],
-      auth_enabled: true,
-    }));
+    const { service, spy } = makeAuthService(() =>
+      Promise.resolve({
+        user: { address: "0x1", chainId: 1, networkId: "mainnet" },
+        admins: [],
+        auth_enabled: true,
+      }),
+    );
     const wrapped = requireAuth(service, vi.fn());
 
     await wrapped(
@@ -204,11 +213,13 @@ describe("requireAuth", () => {
   });
 
   it("calls verifyBearer with undefined when no authorization header is present", async () => {
-    const { service, spy } = makeAuthService(async () => ({
-      user: undefined,
-      admins: [],
-      auth_enabled: true,
-    }));
+    const { service, spy } = makeAuthService(() =>
+      Promise.resolve({
+        user: undefined,
+        admins: [],
+        auth_enabled: true,
+      }),
+    );
     const wrapped = requireAuth(service, vi.fn());
 
     await wrapped(makeReq({ headers: {} }), makeRes());

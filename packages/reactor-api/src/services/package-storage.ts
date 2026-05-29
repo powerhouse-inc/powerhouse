@@ -17,23 +17,24 @@ export interface IPackageStorage {
 export class InMemoryPackageStorage implements IPackageStorage {
   private packages = new Map<string, InstalledPackageInfo>();
 
-  async get(name: string): Promise<InstalledPackageInfo | undefined> {
-    return this.packages.get(name);
+  get(name: string): Promise<InstalledPackageInfo | undefined> {
+    return Promise.resolve(this.packages.get(name));
   }
 
-  async getAll(): Promise<InstalledPackageInfo[]> {
-    return Array.from(this.packages.values());
+  getAll(): Promise<InstalledPackageInfo[]> {
+    return Promise.resolve(Array.from(this.packages.values()));
   }
 
-  async set(name: string, info: InstalledPackageInfo): Promise<void> {
+  set(name: string, info: InstalledPackageInfo): Promise<void> {
     this.packages.set(name, info);
+    return Promise.resolve();
   }
 
-  async delete(name: string): Promise<boolean> {
-    return this.packages.delete(name);
+  delete(name: string): Promise<boolean> {
+    return Promise.resolve(this.packages.delete(name));
   }
 
-  async has(name: string): Promise<boolean> {
-    return this.packages.has(name);
+  has(name: string): Promise<boolean> {
+    return Promise.resolve(this.packages.has(name));
   }
 }

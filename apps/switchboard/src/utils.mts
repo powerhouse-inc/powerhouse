@@ -3,13 +3,11 @@ import {
   reactorDriveCreateDocument,
   reactorDriveCreateState,
 } from "@powerhousedao/reactor-drive";
-import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import {
   driveCreateDocument,
   driveCreateState,
 } from "@powerhousedao/shared/document-drive";
 import type { DriveInput } from "@powerhousedao/shared/document-drive";
-import { generateId } from "@powerhousedao/shared/document-model";
 
 export async function addDefaultDrive(
   client: IReactorClient,

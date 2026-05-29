@@ -29,13 +29,13 @@ export function DropZone(props: DropZoneProps) {
   const {
     title = "Drag your documents",
     subtitle = "to drop them in the currently selected folder.",
-    node,
+    node: _node,
     enable = true,
     children,
     onAddFile,
     useLocalStorage = false,
     driveId,
-    acceptedFileExtensions = [".zip", ".phd", ".phdm"],
+    acceptedFileExtensions: _acceptedFileExtensions = [".zip", ".phd", ".phdm"],
     className,
     ...delegatedProps
   } = props;

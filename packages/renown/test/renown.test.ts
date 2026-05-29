@@ -14,6 +14,14 @@ const TEST_BASE_URL = "https://test.renown.id";
 const TEST_ADDRESS = "0x9aDdcBbaA28F7eB5f75E023F7C1Fcb13C9DFD8F7" as const;
 const TEST_USER_DID = `did:pkh:eip155:1:${TEST_ADDRESS}`;
 
+/** Resolve a `fetch` input (string | URL | Request) to its URL string. */
+const requestUrl = (input: RequestInfo | URL): string =>
+  typeof input === "string"
+    ? input
+    : input instanceof URL
+      ? input.toString()
+      : input.url;
+
 function createMockCredential(
   userDid: string,
   appDid: string,
@@ -103,24 +111,28 @@ describe("Renown login flow", () => {
       profileStatus = 200,
     } = options;
 
-    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
-      const url = input instanceof URL ? input.toString() : String(input);
+    vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
+      const url = requestUrl(input);
 
       if (url.includes("/api/auth/credential")) {
         if (credentialStatus !== 200 || credential === null) {
-          return new Response(null, { status: credentialStatus || 404 });
+          return Promise.resolve(
+            new Response(null, { status: credentialStatus || 404 }),
+          );
         }
-        return Response.json({ credential });
+        return Promise.resolve(Response.json({ credential }));
       }
 
       if (url.includes("/api/profile")) {
         if (profileStatus !== 200 || profile === null) {
-          return new Response(null, { status: profileStatus || 404 });
+          return Promise.resolve(
+            new Response(null, { status: profileStatus || 404 }),
+          );
         }
-        return Response.json({ profile });
+        return Promise.resolve(Response.json({ profile }));
       }
 
-      return new Response(null, { status: 404 });
+      return Promise.resolve(new Response(null, { status: 404 }));
     });
   }
 
@@ -242,7 +254,9 @@ describe("Renown login flow", () => {
 
       const profileCall = vi
         .mocked(globalThis.fetch)
-        .mock.calls.find((call) => String(call[0]).includes("/api/profile"));
+        .mock.calls.find((call) =>
+          requestUrl(call[0]).includes("/api/profile"),
+        );
       expect(profileCall).toBeDefined();
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const body = JSON.parse((profileCall![1] as RequestInit).body as string);
@@ -272,7 +286,7 @@ describe("Renown login flow", () => {
 
       // Make profile fetch slow
       vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
-        const url = String(input);
+        const url = requestUrl(input);
         if (url.includes("/api/auth/credential")) {
           return Response.json({ credential });
         }

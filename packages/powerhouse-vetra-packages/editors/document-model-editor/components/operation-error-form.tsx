@@ -49,7 +49,7 @@ export function OperationErrorForm({
     if (isEdit) {
       setOperationErrorName(operation.id, error.id, formattedName);
     } else {
-      onAddOperationError(operation.id, formattedName);
+      void onAddOperationError(operation.id, formattedName);
     }
     onSubmit?.();
   };

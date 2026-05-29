@@ -2,28 +2,28 @@ import type { VetraPackageBaseOperationsOperations } from "document-models/vetra
 
 export const vetraPackageBaseOperationsOperations: VetraPackageBaseOperationsOperations =
   {
-    setPackageNameOperation(state, action, dispatch) {
+    setPackageNameOperation(state, action, _dispatch) {
       state.name = action.input.name;
     },
-    setPackageDescriptionOperation(state, action, dispatch) {
+    setPackageDescriptionOperation(state, action, _dispatch) {
       state.description = action.input.description;
     },
-    setPackageCategoryOperation(state, action, dispatch) {
+    setPackageCategoryOperation(state, action, _dispatch) {
       state.category = action.input.category;
     },
-    setPackageAuthorOperation(state, action, dispatch) {
+    setPackageAuthorOperation(state, action, _dispatch) {
       state.author = {
         name: action.input.name ?? null,
         website: action.input.website ?? null,
       };
     },
-    setPackageAuthorNameOperation(state, action, dispatch) {
+    setPackageAuthorNameOperation(state, action, _dispatch) {
       state.author.name = action.input.name;
     },
-    setPackageAuthorWebsiteOperation(state, action, dispatch) {
+    setPackageAuthorWebsiteOperation(state, action, _dispatch) {
       state.author.website = action.input.website;
     },
-    addPackageKeywordOperation(state, action, dispatch) {
+    addPackageKeywordOperation(state, action, _dispatch) {
       // Check for duplicate ID
       const existingId = state.keywords.find(
         (keyword) => keyword.id === action.input.id,
@@ -34,15 +34,15 @@ export const vetraPackageBaseOperationsOperations: VetraPackageBaseOperationsOpe
 
       state.keywords.push(action.input);
     },
-    removePackageKeywordOperation(state, action, dispatch) {
+    removePackageKeywordOperation(state, action, _dispatch) {
       state.keywords = state.keywords.filter(
         (keyword) => keyword.id !== action.input.id,
       );
     },
-    setPackageGithubUrlOperation(state, action, dispatch) {
+    setPackageGithubUrlOperation(state, action, _dispatch) {
       state.githubUrl = action.input.url;
     },
-    setPackageNpmUrlOperation(state, action, dispatch) {
+    setPackageNpmUrlOperation(state, action, _dispatch) {
       state.npmUrl = action.input.url;
     },
   };

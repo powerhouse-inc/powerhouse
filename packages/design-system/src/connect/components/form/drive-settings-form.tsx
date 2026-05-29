@@ -60,7 +60,7 @@ export function DriveSettingsForm(props: DriveSettingsFormProps) {
   const location = sharingType === "PUBLIC" ? "SWITCHBOARD" : sharingType;
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)}>
+    <form onSubmit={(e) => void handleSubmit(onSubmit)(e)}>
       <DriveNameInput {...register("name")} />
       <Divider className="my-4" />
       <Label htmlFor="sharingType">Sharing settings</Label>

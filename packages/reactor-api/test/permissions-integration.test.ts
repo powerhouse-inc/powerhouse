@@ -74,31 +74,29 @@ describe("Permissions Integration Tests", () => {
 
     // Create mock ReactorClient with parent hierarchy
     mockReactorClient = {
-      get: vi.fn().mockImplementation(async (id: string) => {
-        if (id === "doc-123") return mockDocument;
-        if (id === "child-doc") return mockChildDocument;
-        if (id === "parent-doc") return mockParentDocument;
-        return null;
+      get: vi.fn().mockImplementation((id: string) => {
+        if (id === "doc-123") return Promise.resolve(mockDocument);
+        if (id === "child-doc") return Promise.resolve(mockChildDocument);
+        if (id === "parent-doc") return Promise.resolve(mockParentDocument);
+        return Promise.resolve(null);
       }),
       getOutgoingRelationships: vi.fn().mockResolvedValue({
         results: [],
         options: { limit: 10, cursor: "" },
       } as PagedResults<PHDocument>),
-      getIncomingRelationships: vi
-        .fn()
-        .mockImplementation(async (id: string) => {
-          // child-doc has parent-doc as parent
-          if (id === "child-doc") {
-            return {
-              results: [mockParentDocument],
-              options: { limit: 10, cursor: "" },
-            } as PagedResults<PHDocument>;
-          }
-          return {
-            results: [],
+      getIncomingRelationships: vi.fn().mockImplementation((id: string) => {
+        // child-doc has parent-doc as parent
+        if (id === "child-doc") {
+          return Promise.resolve({
+            results: [mockParentDocument],
             options: { limit: 10, cursor: "" },
-          } as PagedResults<PHDocument>;
-        }),
+          } as PagedResults<PHDocument>);
+        }
+        return Promise.resolve({
+          results: [],
+          options: { limit: 10, cursor: "" },
+        } as PagedResults<PHDocument>);
+      }),
       find: vi.fn().mockResolvedValue({
         results: [mockDocument],
         options: { limit: 10, cursor: "" },
@@ -146,7 +144,7 @@ describe("Permissions Integration Tests", () => {
   });
 
   describe("Document Query with Real Permission Service", () => {
-    const callDocument = async (ctx: any, identifier: string) => {
+    const callDocument = (ctx: any, identifier: string) => {
       const query = (reactorSubgraph.resolvers.Query as any)?.document;
       return query(null, { identifier }, ctx);
     };
@@ -232,7 +230,7 @@ describe("Permissions Integration Tests", () => {
   });
 
   describe("Permission Inheritance via Parent Hierarchy", () => {
-    const callDocument = async (ctx: any, identifier: string) => {
+    const callDocument = (ctx: any, identifier: string) => {
       const query = (reactorSubgraph.resolvers.Query as any)?.document;
       return query(null, { identifier }, ctx);
     };
@@ -306,7 +304,7 @@ describe("Permissions Integration Tests", () => {
 
   describe("Mutation Permissions with Real Permission Service", () => {
     describe("deleteDocument", () => {
-      const callDeleteDocument = async (ctx: any, identifier: string) => {
+      const callDeleteDocument = (ctx: any, identifier: string) => {
         const mutation = (reactorSubgraph.resolvers.Mutation as any)
           ?.deleteDocument;
         return mutation(null, { identifier }, ctx);
@@ -372,7 +370,7 @@ describe("Permissions Integration Tests", () => {
     });
 
     describe("moveRelationship", () => {
-      const callMoveRelationship = async (
+      const callMoveRelationship = (
         ctx: any,
         sourceId: string,
         targetId: string,
@@ -456,7 +454,7 @@ describe("Permissions Integration Tests", () => {
   });
 
   describe("findDocuments Filtering with Real Permission Service", () => {
-    const callFindDocuments = async (ctx: any) => {
+    const callFindDocuments = (ctx: any) => {
       const query = (reactorSubgraph.resolvers.Query as any)?.findDocuments;
       return query(
         null,
@@ -528,7 +526,7 @@ describe("Permissions Integration Tests", () => {
   });
 
   describe("Global Role Override", () => {
-    const callDocument = async (ctx: any) => {
+    const callDocument = (ctx: any) => {
       const query = (reactorSubgraph.resolvers.Query as any)?.document;
       return query(null, { identifier: "doc-123" }, ctx);
     };
@@ -561,7 +559,7 @@ describe("Permissions Integration Tests", () => {
   });
 
   describe("Permission Revocation Flow", () => {
-    const callDocument = async (ctx: any) => {
+    const callDocument = (ctx: any) => {
       const query = (reactorSubgraph.resolvers.Query as any)?.document;
       return query(null, { identifier: "doc-123" }, ctx);
     };

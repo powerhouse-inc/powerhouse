@@ -183,7 +183,6 @@ describe("OpenPanel component", () => {
       expect(mockClient.identify).toHaveBeenCalledTimes(1);
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const [identifyArg] = mockClient.identify.mock.calls[0] as [
       { profileId: string; properties: Record<string, unknown> },
     ];

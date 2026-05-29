@@ -74,7 +74,7 @@ export function useSearchAutocomplete(options: UseSearchAutocompleteOptions) {
 
       setIsLoading(true);
       debounceRef.current = setTimeout(() => {
-        fetchResults(value);
+        void fetchResults(value);
       }, debounceMs);
     },
     [debounceMs, fetchResults],

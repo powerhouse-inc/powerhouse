@@ -167,7 +167,7 @@ export function readJsonFile(filePath: string): PowerhouseConfig | null {
     const absolutePath = resolve(filePath);
     const fileContents = fs.readFileSync(absolutePath, "utf-8");
     return JSON.parse(fileContents) as PowerhouseConfig;
-  } catch (error) {
+  } catch (_error) {
     console.error(`Error reading file: ${filePath}`);
     return null;
   }
