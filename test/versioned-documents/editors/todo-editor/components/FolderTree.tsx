@@ -2,7 +2,7 @@ import {
   Sidebar,
   SidebarProvider,
   type SidebarNode,
-} from "@powerhousedao/document-engineering";
+} from "@powerhousedao/design-system/ui";
 import {
   setSelectedNode,
   useNodesInSelectedDrive,
