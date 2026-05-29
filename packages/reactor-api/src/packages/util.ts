@@ -16,7 +16,7 @@ type ProcessorsExport = {
   processorFactoryLegacy?: ProcessorFactoryBuilder;
 };
 
-const logger = childLogger(["reactor-api", "packages/util"]);
+const _logger = childLogger(["reactor-api", "packages/util"]);
 
 export const installPackages = async (packages: string[]) => {
   for (const packageName of packages) {

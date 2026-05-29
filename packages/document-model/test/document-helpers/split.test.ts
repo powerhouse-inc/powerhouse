@@ -99,7 +99,7 @@ describe("split", () => {
       ...testInput.targetOperations,
     ];
 
-    let commonOperationsShuffled = [];
+    let commonOperationsShuffled;
     if (testInput.shuffleProperties) {
       commonOperationsShuffled = testInput.commonOperations.map((op) =>
         buildOperation(

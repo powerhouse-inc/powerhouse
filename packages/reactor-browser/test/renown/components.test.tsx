@@ -14,6 +14,14 @@ const TEST_BASE_URL = "https://test.renown.id";
 const TEST_ADDRESS = "0x9aDdcBbaA28F7eB5f75E023F7C1Fcb13C9DFD8F7" as const;
 const TEST_USER_DID = `did:pkh:eip155:1:${TEST_ADDRESS}`;
 
+/** Resolve a `fetch` input (string | URL | Request) to its URL string. */
+const requestUrl = (input: RequestInfo | URL): string =>
+  typeof input === "string"
+    ? input
+    : input instanceof URL
+      ? input.toString()
+      : input.url;
+
 function createMockCredential(
   userDid: string,
   appDid: string,
@@ -75,7 +83,7 @@ function mockFetchForLogin(options?: { profile?: RenownProfile | null }) {
   let capturedAppDid: string | undefined;
 
   vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
-    const url = input instanceof URL ? input.toString() : String(input);
+    const url = requestUrl(input);
 
     if (url.includes("/api/auth/credential")) {
       const params = new URL(url).searchParams;

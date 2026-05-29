@@ -9,7 +9,6 @@ import {
   rowsToCsv,
   type ColumnInfo,
   type FilterGroup,
-  type FilterClause,
   type PaginationState,
   type SortOptions,
 } from "./components/table-view.js";

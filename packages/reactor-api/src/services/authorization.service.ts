@@ -150,7 +150,7 @@ export class AuthorizationService {
   async canManage(
     documentId: string,
     userAddress?: string,
-    getParentIds?: GetParentIdsFn,
+    _getParentIds?: GetParentIdsFn,
   ): Promise<boolean> {
     // Supreme admin bypasses all
     if (this.isSupremeAdmin(userAddress)) return true;

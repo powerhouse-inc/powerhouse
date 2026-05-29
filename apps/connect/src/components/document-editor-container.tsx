@@ -11,13 +11,13 @@ export function DocumentEditorContainer() {
   const parentFolder = useNodeParentFolderById(selectedDocument.header.id);
 
   // TODO: unused
-  const onOpenSwitchboardLink = useMemo(() => {
+  const _onOpenSwitchboardLink = useMemo(() => {
     return async () => {
       //
     };
   }, []);
 
-  const onClose = useCallback(() => {
+  const _onClose = useCallback(() => {
     setSelectedNode(parentFolder);
   }, [parentFolder, setSelectedNode]);
 

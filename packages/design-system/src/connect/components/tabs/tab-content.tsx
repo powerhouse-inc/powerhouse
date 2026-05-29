@@ -7,7 +7,7 @@ export type TabContentProps = {
   readonly disabled?: boolean;
 };
 export function TabContent(props: TabContentProps) {
-  const { label, children } = props;
+  const { label: _label, children } = props;
 
   return <div className="h-full">{children}</div>;
 }

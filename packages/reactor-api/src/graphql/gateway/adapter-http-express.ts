@@ -40,7 +40,6 @@ export class ExpressHttpAdapter implements IHttpAdapter {
   }
 
   mountRawMiddleware(middleware: unknown): void {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     this.#app.use(middleware as any);
   }
 

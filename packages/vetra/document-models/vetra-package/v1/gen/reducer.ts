@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import type { Reducer, StateReducer } from "document-model";
 import { createReducer, isDocumentAction } from "document-model";
 import type { VetraPackagePHState } from "document-models/vetra-package/v1";

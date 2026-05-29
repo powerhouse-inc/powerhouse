@@ -14,6 +14,14 @@ const TEST_BASE_URL = "https://test.renown.id";
 const TEST_ADDRESS = "0x9aDdcBbaA28F7eB5f75E023F7C1Fcb13C9DFD8F7" as const;
 const TEST_USER_DID = `did:pkh:eip155:1:${TEST_ADDRESS}`;
 
+/** Resolve a `fetch` input (string | URL | Request) to its URL string. */
+const requestUrl = (input: RequestInfo | URL): string =>
+  typeof input === "string"
+    ? input
+    : input instanceof URL
+      ? input.toString()
+      : input.url;
+
 function createMockCredential(
   userDid: string,
   appDid: string,
@@ -104,7 +112,7 @@ describe("Renown login flow", () => {
     } = options;
 
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
-      const url = input instanceof URL ? input.toString() : String(input);
+      const url = requestUrl(input);
 
       if (url.includes("/api/auth/credential")) {
         if (credentialStatus !== 200 || credential === null) {
@@ -242,7 +250,9 @@ describe("Renown login flow", () => {
 
       const profileCall = vi
         .mocked(globalThis.fetch)
-        .mock.calls.find((call) => String(call[0]).includes("/api/profile"));
+        .mock.calls.find((call) =>
+          requestUrl(call[0]).includes("/api/profile"),
+        );
       expect(profileCall).toBeDefined();
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const body = JSON.parse((profileCall![1] as RequestInit).body as string);
@@ -272,7 +282,7 @@ describe("Renown login flow", () => {
 
       // Make profile fetch slow
       vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
-        const url = String(input);
+        const url = requestUrl(input);
         if (url.includes("/api/auth/credential")) {
           return Response.json({ credential });
         }

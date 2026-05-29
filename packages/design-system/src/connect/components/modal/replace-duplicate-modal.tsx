@@ -40,7 +40,7 @@ export function ConnectReplaceDuplicateModal(
     bodyProps = {},
     headerProps = {},
     containerProps = {},
-    replaceButtonProps = {},
+    replaceButtonProps: _replaceButtonProps = {},
     duplicateButtonProps = {},
     buttonContainerProps = {},
     ...restProps

@@ -17,7 +17,7 @@ export const parseRawResults = (rawResults: any[]) => {
       const value: any = {};
       for (let j = 0, jLen = fields.length; j < jLen; j++) {
         // todo: switch on dataTypeID
-        const { name, dataTypeID } = fields[j];
+        const { name } = fields[j];
         value[name] = row[name];
       }
 

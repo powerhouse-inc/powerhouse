@@ -158,7 +158,7 @@ export class AnalyticsQueryEngine {
     inputsA: GroupedPeriodResults,
     inputsB: GroupedPeriodResults,
     operator: CompoundOperator,
-    resultCurrency?: AnalyticsPath,
+    _resultCurrency?: AnalyticsPath,
   ) {
     if (
       [CompoundOperator.ScalarMultiply, CompoundOperator.ScalarDivide].includes(

@@ -2,12 +2,12 @@ import type { AnalyticsModel } from "./AnalyticsModel.js";
 
 export const AnalyticsResolvers: any = {
   Query: {
-    analytics: (_: any, __: any, { dataSources }: any) => {
+    analytics: (_: any, __: any, { dataSources: _dataSources }: any) => {
       return {};
     },
   },
   AnalyticsQuery: {
-    series: async (parent: any, { filter }: any, { dataSources }: any) => {
+    series: async (_parent: any, { filter }: any, { dataSources }: any) => {
       const queryEngine: AnalyticsModel = dataSources.db.Analytics;
       const results = await queryEngine.query(filter);
       return results.map((s) => ({
@@ -24,7 +24,11 @@ export const AnalyticsResolvers: any = {
         })),
       }));
     },
-    metrics: async (parent: any, { filter }: any, { dataSources }: any) => {
+    metrics: async (
+      _parent: any,
+      { filter: _filter }: any,
+      { dataSources: _dataSources }: any,
+    ) => {
       return [
         "Actuals",
         "AuditorNetOutflow",
@@ -42,11 +46,19 @@ export const AnalyticsResolvers: any = {
         "ProtocolNetOutflow",
       ];
     },
-    dimensions: async (_: any, { filter }: any, { dataSources }: any) => {
+    dimensions: async (
+      _: any,
+      { filter: _filter }: any,
+      { dataSources }: any,
+    ) => {
       const queryEngine: AnalyticsModel = dataSources.db.Analytics;
       return await queryEngine.getDimensions();
     },
-    currencies: async (_: any, { filter }: any, { dataSources }: any) => {
+    currencies: async (
+      _: any,
+      { filter: _filter }: any,
+      { dataSources: _dataSources }: any,
+    ) => {
       return ["DAI", "FTE", "GUSD", "MKR", "USDC", "USDP", "USDT"];
     },
     multiCurrencySeries: async (

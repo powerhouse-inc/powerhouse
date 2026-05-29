@@ -107,7 +107,7 @@ export const TextField = forwardRef<TextFieldHandle, TextFieldProps>(
         if (form.formState.isValid) {
           await form.handleSubmit(handleSubmit)();
         }
-      } catch (e) {
+      } catch (_e) {
         // Allow blur to proceed even if validation fails
       }
     }, [form, handleSubmit, name, value]);

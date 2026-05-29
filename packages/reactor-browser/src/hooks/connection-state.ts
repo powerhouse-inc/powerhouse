@@ -1,5 +1,5 @@
 import type { ConnectionStateSnapshot } from "@powerhousedao/reactor";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSync } from "./reactor.js";
 
 /**

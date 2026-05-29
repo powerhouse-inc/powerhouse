@@ -329,7 +329,7 @@ type ToolRecord<T extends readonly ToolSchema[]> = {
 };
 
 // All tools array for type inference
-const allTools = [
+const _allTools = [
   getDocumentTool,
   createDocumentTool,
   getDocumentsTool,
@@ -346,7 +346,7 @@ const allTools = [
 ] as const;
 
 // Inferred interface from tools
-export type ReactorMcpTools = ToolRecord<typeof allTools>;
+export type ReactorMcpTools = ToolRecord<typeof _allTools>;
 
 export async function createReactorMcpProvider(
   options: ReactorMcpProviderOptions,

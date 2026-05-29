@@ -37,7 +37,7 @@ export interface IQuery {
 }
 
 export interface IKnexQueryExecutor {
-  execute<T extends {}, U>(query: Knex.QueryBuilder<T, U>): Promise<any>;
+  execute<T extends object, U>(query: Knex.QueryBuilder<T, U>): Promise<any>;
 }
 
 export type KnexAnalyticsStoreOptions = {

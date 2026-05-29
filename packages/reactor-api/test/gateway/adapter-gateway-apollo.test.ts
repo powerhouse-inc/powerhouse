@@ -1,5 +1,5 @@
 import type { ApolloServer } from "@apollo/server";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   ApolloGatewayAdapter,
   createApolloFetchHandler,

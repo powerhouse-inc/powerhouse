@@ -17,7 +17,7 @@ const queries = JSON.parse(fs.readFileSync("./data/query-cache.json", "utf-8"));
 // aggregate
 const querySet: { [crc: number]: QueryRecord } = {};
 for (const { analyticsQuery, hitCount, moduleName, queryName } of queries) {
-  let json = null;
+  let json;
   try {
     json = JSON.parse(analyticsQuery);
   } catch {

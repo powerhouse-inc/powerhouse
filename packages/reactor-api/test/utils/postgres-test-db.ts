@@ -52,6 +52,7 @@ export async function requireDockerComposePostgres(
         `  pnpm --filter @powerhousedao/reactor docker:up`,
         `Or set REACTOR_TEST_PG_HOST / REACTOR_TEST_PG_PORT to point at a different instance.`,
       ].join("\n"),
+      { cause: err },
     );
   }
 

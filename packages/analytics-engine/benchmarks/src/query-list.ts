@@ -72,12 +72,14 @@ function aggregate(results: ExecutionResults[]) {
 function deepEquals(a: any, b: any) {
   if (Array.isArray(a)) {
     if (!Array.isArray(b)) {
-      throw new Error(`Mismatch: ${a} is array but ${b} is not`);
+      throw new Error(
+        `Mismatch: ${JSON.stringify(a)} is array but ${JSON.stringify(b)} is not`,
+      );
     }
 
     if (a.length !== b.length) {
       throw new Error(
-        `Mismatch: ${a} length ${a.length} !== ${b} length ${b.length}`,
+        `Mismatch: ${JSON.stringify(a)} length ${a.length} !== ${JSON.stringify(b)} length ${b.length}`,
       );
     }
 

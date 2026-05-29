@@ -11,7 +11,7 @@ it("it should allow subscribing to a source with an explicit match", () => {
   let called = 0;
   const unsubscribe = subscriptions.subscribeToPath(
     AnalyticsPath.fromString("/a"),
-    (source) => {
+    (_source) => {
       called++;
     },
   );
@@ -71,7 +71,7 @@ it("it should ignore trailing slashes in both subscription and notification path
 
   // Test that a subscription to /a/ matches /a
   let aCalled = 0;
-  subscriptions.subscribeToPath(AnalyticsPath.fromString("/a/"), (source) => {
+  subscriptions.subscribeToPath(AnalyticsPath.fromString("/a/"), (_source) => {
     aCalled++;
   });
 
@@ -81,7 +81,7 @@ it("it should ignore trailing slashes in both subscription and notification path
 
   // Test that a subscription to /b matches /b/
   let bCalled = 0;
-  subscriptions.subscribeToPath(AnalyticsPath.fromString("/b"), (source) => {
+  subscriptions.subscribeToPath(AnalyticsPath.fromString("/b"), (_source) => {
     bCalled++;
   });
 
@@ -177,7 +177,7 @@ it("subscriptions support wildcards", () => {
   // Test subscription with wildcard segment
   let wildcardCalls = 0;
   const wildcardPath = AnalyticsPath.fromString("/a/*/c");
-  subscriptions.subscribeToPath(wildcardPath, (source) => {
+  subscriptions.subscribeToPath(wildcardPath, (_source) => {
     wildcardCalls++;
   });
 
@@ -203,7 +203,7 @@ it("subscriptions support wildcards", () => {
   let endWildcardCalls = 0;
   subscriptions.subscribeToPath(
     AnalyticsPath.fromString("/x/y/*"),
-    (source) => {
+    (_source) => {
       endWildcardCalls++;
     },
   );
