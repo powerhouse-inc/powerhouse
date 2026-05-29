@@ -5,7 +5,7 @@ await build({
   outDir: "dist",
   platform: "neutral",
   clean: true,
-  dts: true,
+  dts: { build: true },
   sourcemap: true,
 });
 
@@ -14,6 +14,6 @@ await build({
   outDir: "dist",
   platform: "node",
   clean: false,
-  dts: true,
+  dts: { build: true },
   sourcemap: true,
 });
