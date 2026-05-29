@@ -269,6 +269,66 @@ describe("ReactorMcpProvider", () => {
         success: false,
       });
     });
+
+    it("should fall back to deleteDocument for an orphaned document whose node is missing", async () => {
+      const removeNode = vi
+        .fn()
+        .mockRejectedValue(new Error("Node doc-1 not found in drive drive-1"));
+      const deleteDocument = vi.fn().mockResolvedValue(undefined);
+      const orphanClient = {
+        getIncomingRelationships: vi.fn().mockResolvedValue({
+          results: [
+            {
+              header: {
+                id: "drive-1",
+                documentType: "powerhouse/document-drive",
+              },
+            },
+          ],
+          options: { cursor: "", limit: 10 },
+        }),
+        drives: { removeNode },
+        deleteDocument,
+      } as unknown as IReactorClient;
+
+      const provider = await createReactorMcpProvider({ client: orphanClient });
+      const result = await provider.tools.deleteDocument.callback({
+        documentId: "doc-1",
+      });
+
+      expect(removeNode).toHaveBeenCalledWith("drive-1", "doc-1");
+      expect(deleteDocument).toHaveBeenCalledWith("doc-1");
+      expect(result.structuredContent).toMatchObject({ success: true });
+    });
+
+    it("should not delete the document directly when its node is removed normally", async () => {
+      const removeNode = vi.fn().mockResolvedValue(undefined);
+      const deleteDocument = vi.fn().mockResolvedValue(undefined);
+      const filedClient = {
+        getIncomingRelationships: vi.fn().mockResolvedValue({
+          results: [
+            {
+              header: {
+                id: "drive-1",
+                documentType: "powerhouse/document-drive",
+              },
+            },
+          ],
+          options: { cursor: "", limit: 10 },
+        }),
+        drives: { removeNode },
+        deleteDocument,
+      } as unknown as IReactorClient;
+
+      const provider = await createReactorMcpProvider({ client: filedClient });
+      const result = await provider.tools.deleteDocument.callback({
+        documentId: "doc-1",
+      });
+
+      expect(removeNode).toHaveBeenCalledWith("drive-1", "doc-1");
+      expect(deleteDocument).not.toHaveBeenCalled();
+      expect(result.structuredContent).toMatchObject({ success: true });
+    });
   });
 
   describe("addActions tool", () => {

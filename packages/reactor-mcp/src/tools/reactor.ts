@@ -407,10 +407,17 @@ export async function createReactorMcpProvider(
           (p) => p.header.documentType === DRIVE_DOCUMENT_TYPE,
         );
         if (driveParent) {
-          await client.drives.removeNode(
-            driveParent.header.id,
-            params.documentId,
-          );
+          try {
+            await client.drives.removeNode(
+              driveParent.header.id,
+              params.documentId,
+            );
+          } catch {
+            // Orphaned document: associated with the drive but with no FileNode
+            // in the tree, so removeNode throws. Fall back to a direct delete,
+            // which also clears the dangling relationship.
+            await client.deleteDocument(params.documentId);
+          }
         } else {
           await client.deleteDocument(params.documentId);
         }
