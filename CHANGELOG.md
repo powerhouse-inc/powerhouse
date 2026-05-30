@@ -1,3 +1,21 @@
+## 6.1.0-dev.10 (2026-05-30)
+
+### 🩹 Fixes
+
+- added a failing test for the set_name issue, which exposed the document-drive tests weren't running at all ([8221e66b9](https://github.com/powerhouse-inc/powerhouse/commit/8221e66b9))
+- fix issue from refactor ([d6c728c95](https://github.com/powerhouse-inc/powerhouse/commit/d6c728c95))
+- merge duplicate resolve keys in shared vitest config ([f65e56f08](https://github.com/powerhouse-inc/powerhouse/commit/f65e56f08))
+- re-adding emitted linter ignore -- ew ([cd37736cb](https://github.com/powerhouse-inc/powerhouse/commit/cd37736cb))
+- **ci:** bump playwright to 1.60.0 to fix install hang on node 24.16+ ([#2669](https://github.com/powerhouse-inc/powerhouse/pull/2669))
+- **document-drive:** document drive needs to more appropriately handle unicode and control characters ([38d3fefee](https://github.com/powerhouse-inc/powerhouse/commit/38d3fefee))
+- **reactor:** fix issue where delete could fail on orphaned docs ([e6ec50907](https://github.com/powerhouse-inc/powerhouse/commit/e6ec50907))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 4.8
+- Guillermo Puente Sandoval @gpuente
+
 ## 6.1.0-dev.9 (2026-05-29)
 
 ### 🩹 Fixes

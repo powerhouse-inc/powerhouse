@@ -1,3 +1,16 @@
+## 6.1.0-dev.10 (2026-05-30)
+
+### 🩹 Fixes
+
+- fix issue from refactor ([d6c728c95](https://github.com/powerhouse-inc/powerhouse/commit/d6c728c95))
+- **ci:** bump playwright to 1.60.0 to fix install hang on node 24.16+ ([#2669](https://github.com/powerhouse-inc/powerhouse/pull/2669))
+- added a failing test for the set_name issue, which exposed the document-drive tests weren't running at all ([8221e66b9](https://github.com/powerhouse-inc/powerhouse/commit/8221e66b9))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Guillermo Puente Sandoval @gpuente
+
 ## 6.1.0-dev.9 (2026-05-29)
 
 This was a version bump only for @powerhousedao/reactor-hypercore to align it with other projects, there were no code changes.
