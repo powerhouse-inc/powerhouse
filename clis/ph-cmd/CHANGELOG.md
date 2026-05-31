@@ -1,3 +1,7 @@
+## 6.1.0-dev.11 (2026-05-31)
+
+This was a version bump only for ph-cmd to align it with other projects, there were no code changes.
+
 ## 6.1.0-dev.10 (2026-05-30)
 
 ### 🩹 Fixes
