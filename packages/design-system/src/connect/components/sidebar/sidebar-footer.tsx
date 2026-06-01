@@ -91,7 +91,7 @@ export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
           size={24}
           strokeWidth={2}
         />
-        <span className="hidden text-sm/6 font-semibold text-gray-900 dark:text-slate-100">
+        <span className="hidden text-sm/6 font-semibold text-gray-800 dark:text-slate-100">
           Settings
         </span>
       </button>

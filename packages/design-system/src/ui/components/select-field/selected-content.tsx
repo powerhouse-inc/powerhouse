@@ -67,7 +67,7 @@ export const SelectedContent: React.FC<SelectedContentProps> = ({
     <div className="flex w-full items-center justify-between gap-2">
       <div
         className={twMerge(
-          "max-w-full truncate text-gray-900 dark:text-slate-50",
+          "max-w-full truncate text-gray-800 dark:text-slate-50",
           !multiple && "flex items-center gap-2",
         )}
       >

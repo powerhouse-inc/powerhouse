@@ -85,7 +85,7 @@ function MissingModelDetailsModal(props: DetailsProps) {
       contentProps={{ className: "rounded-3xl" }}
     >
       <div className="w-[520px] max-w-[90vw] bg-gray-50 p-6 dark:bg-slate-800">
-        <div className="border-b border-gray-100 pb-2 text-2xl font-bold text-gray-900 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
+        <div className="border-b border-gray-100 pb-2 text-2xl font-bold text-gray-800 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
           Missing document models
         </div>
         <div className="my-4 text-sm text-gray-700 dark:text-slate-200">
@@ -106,7 +106,7 @@ function MissingModelDetailsModal(props: DetailsProps) {
                   key={entry.documentType}
                   className="rounded-xl bg-gray-50 p-4 dark:bg-slate-800"
                 >
-                  <div className="mb-1 font-mono text-sm font-semibold text-gray-900 dark:text-slate-100">
+                  <div className="mb-1 font-mono text-sm font-semibold text-gray-800 dark:text-slate-100">
                     {entry.documentType}
                   </div>
                   <div className="mb-2 text-xs text-gray-700 dark:text-slate-200">

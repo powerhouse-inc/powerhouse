@@ -55,7 +55,7 @@ export const PackageManagerListItem = (props: {
     id: "install",
     label: "Install",
     icon: <Icon name="DownloadFile" />,
-    className: "text-gray-900 dark:text-slate-100",
+    className: "text-gray-800 dark:text-slate-100",
   } as const;
 
   const uninstallDropdownItem = {
@@ -83,7 +83,7 @@ export const PackageManagerListItem = (props: {
       )}
     >
       <div className="flex flex-wrap items-center gap-2 pr-8">
-        <h3 className="font-semibold text-gray-900 dark:text-slate-50">
+        <h3 className="font-semibold text-gray-800 dark:text-slate-50">
           {registryPackage.name}
         </h3>
         {canPickVersion && hasVersionMetadata ? (
@@ -156,7 +156,7 @@ export const PackageManagerListItem = (props: {
           }}
         >
           <Icon
-            className="text-gray-700 group-hover:text-gray-900 dark:text-slate-200 dark:group-hover:text-slate-50"
+            className="text-gray-700 group-hover:text-gray-800 dark:text-slate-200 dark:group-hover:text-slate-50"
             name="VerticalDots"
           />
         </button>
@@ -327,13 +327,13 @@ const PackageSection: React.FC<{
 
   return (
     <section className="mb-6">
-      <h3 className="sticky top-0 z-10 mb-3 border-b border-gray-200 bg-gray-50 text-gray-900 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100">
+      <h3 className="sticky top-0 z-10 mb-3 border-b border-gray-200 bg-gray-50 text-gray-800 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100">
         <button
           type="button"
           onClick={toggle}
           aria-expanded={!collapsed}
           aria-controls={contentId}
-          className="flex w-full items-center gap-2 pb-2 text-left text-base font-semibold text-gray-900 hover:text-gray-700 dark:text-slate-100 dark:hover:text-slate-200"
+          className="flex w-full items-center gap-2 pb-2 text-left text-base font-semibold text-gray-800 hover:text-gray-700 dark:text-slate-100 dark:hover:text-slate-200"
         >
           <Icon
             name="ChevronDown"

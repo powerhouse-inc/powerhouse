@@ -153,7 +153,7 @@ export const SearchAutocomplete: React.FC<SearchAutocompleteProps> = (
                     <div className="min-w-0 flex-1">{renderOption(option)}</div>
                   ) : (
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-gray-900 dark:text-slate-50">
+                      <p className="truncate text-sm font-medium text-gray-800 dark:text-slate-50">
                         {option.label}
                       </p>
                       {option.version && (

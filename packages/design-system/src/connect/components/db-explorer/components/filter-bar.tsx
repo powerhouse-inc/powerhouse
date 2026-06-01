@@ -224,7 +224,7 @@ function FilterClauseComponent({
       />
       {showValueInput && (
         <input
-          className="min-w-[150px] rounded-sm border border-gray-300 bg-gray-50 px-2 py-1 text-xs text-gray-900 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
+          className="min-w-[150px] rounded-sm border border-gray-300 bg-gray-50 px-2 py-1 text-xs text-gray-800 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
           type={inputType}
           value={clause.value}
           onChange={(e) => handleValueChange(e.target.value)}
@@ -331,7 +331,7 @@ export function FilterBar({
     <div className="flex shrink-0 flex-col gap-2 rounded-lg border border-gray-300 bg-gray-50 p-2 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
       <div className="flex items-center justify-between">
         <button
-          className="flex items-center gap-1 text-xs text-gray-700 hover:text-gray-900 dark:text-slate-200 dark:hover:text-slate-50"
+          className="flex items-center gap-1 text-xs text-gray-700 hover:text-gray-800 dark:text-slate-200 dark:hover:text-slate-50"
           onClick={() => setIsExpanded(!isExpanded)}
           type="button"
         >

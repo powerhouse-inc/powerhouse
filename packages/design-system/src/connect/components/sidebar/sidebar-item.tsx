@@ -27,7 +27,7 @@ export const SidebarItem = function SidebarItem(props: SidebarItemProps) {
     >
       <div
         className={twMerge(
-          "group/sidebar-item relative flex cursor-pointer flex-col items-center justify-center text-center text-sm text-gray-900 dark:text-slate-50",
+          "group/sidebar-item relative flex cursor-pointer flex-col items-center justify-center text-center text-sm text-gray-800 dark:text-slate-50",
           containerClassName,
           active && "bg-gray-50 dark:bg-slate-800",
           onClick && "cursor-pointer",

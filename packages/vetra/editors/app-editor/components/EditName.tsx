@@ -40,7 +40,7 @@ export function EditAppModuleName() {
         onSubmit={onSubmitSetName}
       >
         <input
-          className="p-1 text-lg font-semibold text-gray-900 placeholder:text-gray-700 dark:text-slate-50 dark:placeholder:text-slate-200"
+          className="p-1 text-lg font-semibold text-gray-800 placeholder:text-gray-700 dark:text-slate-50 dark:placeholder:text-slate-200"
           type="text"
           name="name"
           defaultValue={appModuleDocumentName}
@@ -65,7 +65,7 @@ export function EditAppModuleName() {
 
   return (
     <div className="flex items-center justify-between">
-      <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-50">
+      <h2 className="text-lg font-semibold text-gray-800 dark:text-slate-50">
         {appModuleDocumentName}
       </h2>
       <button

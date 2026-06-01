@@ -65,7 +65,7 @@ export const CookieBanner: React.FC<CookieBannerProps> = (props) => {
               type="checkbox"
             />
             <label
-              className="cursor-pointer text-gray-900 select-none dark:text-slate-50"
+              className="cursor-pointer text-gray-800 select-none dark:text-slate-50"
               htmlFor={cookie.id}
             >
               {cookie.label}

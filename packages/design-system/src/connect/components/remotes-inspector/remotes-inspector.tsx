@@ -214,14 +214,14 @@ export function RemotesInspector({
   return (
     <div className="flex h-full flex-col gap-2">
       <div className="flex shrink-0 items-center justify-between gap-2">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-50">
+        <h2 className="text-lg font-semibold text-gray-800 dark:text-slate-50">
           Remotes Inspector
         </h2>
         <div className="flex items-center gap-2">
           {addRemoteManual && (
             <div className="flex items-center gap-1">
               <input
-                className="w-[260px] rounded-sm border border-gray-300 px-2 py-1.5 text-sm text-gray-900 placeholder:text-gray-400 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 dark:placeholder:text-slate-500"
+                className="w-[260px] rounded-sm border border-gray-300 px-2 py-1.5 text-sm text-gray-800 placeholder:text-gray-400 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 dark:placeholder:text-slate-500"
                 disabled={adding}
                 onChange={(e) => setManualUrl(e.target.value)}
                 onKeyDown={(e) => {
@@ -279,7 +279,7 @@ export function RemotesInspector({
                       index > 0 &&
                         "border-l border-gray-300 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100",
                       isSortable &&
-                        "cursor-pointer hover:bg-gray-200 hover:text-gray-900 dark:hover:bg-slate-600 dark:hover:text-slate-100",
+                        "cursor-pointer hover:bg-gray-200 hover:text-gray-800 dark:hover:bg-slate-600 dark:hover:text-slate-100",
                     )}
                     onClick={() => isSortable && handleSort(column.key)}
                     style={{ width: column.width }}
@@ -320,12 +320,12 @@ export function RemotesInspector({
                   key={remote.id}
                   className="odd:bg-white even:bg-gray-50 hover:bg-blue-50 dark:odd:bg-slate-800 dark:even:bg-slate-800 dark:hover:bg-blue-900"
                 >
-                  <td className="px-3 py-2 text-xs text-gray-900 dark:text-slate-50">
+                  <td className="px-3 py-2 text-xs text-gray-800 dark:text-slate-50">
                     <span className="block truncate" title={remote.id}>
                       {truncateId(remote.id)}
                     </span>
                   </td>
-                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
+                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-800 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
                     <span className="block truncate" title={remote.name}>
                       {remote.name}
                     </span>
@@ -344,7 +344,7 @@ export function RemotesInspector({
                       </span>
                     )}
                   </td>
-                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
+                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-800 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
                     <span
                       className="block truncate"
                       title={remote.collectionId}
@@ -352,7 +352,7 @@ export function RemotesInspector({
                       {remote.collectionId}
                     </span>
                   </td>
-                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
+                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-800 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
                     <span
                       className="block truncate"
                       title={formatFilter(remote.filter)}

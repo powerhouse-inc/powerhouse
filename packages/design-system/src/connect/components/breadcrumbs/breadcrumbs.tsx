@@ -83,7 +83,7 @@ export function Breadcrumbs() {
       {isAllowedToCreateDocuments &&
         (isCreating ? (
           <NodeInput
-            className="text-gray-900 dark:text-slate-100"
+            className="text-gray-800 dark:text-slate-100"
             defaultValue="New Folder"
             onCancel={onCancel}
             onSubmit={onSubmit}

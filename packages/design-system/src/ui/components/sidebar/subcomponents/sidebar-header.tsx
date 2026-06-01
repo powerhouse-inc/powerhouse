@@ -20,7 +20,7 @@ export const SidebarHeader: React.FC<SidebarHeaderProps> = ({
   }
   let titleElement;
   const baseTitleClasses =
-    "truncate text-sm font-semibold text-gray-700 dark:text-slate-300";
+    "truncate text-sm font-semibold text-gray-700 dark:text-slate-200";
   if (handleOnTitleClick) {
     titleElement = (
       <button

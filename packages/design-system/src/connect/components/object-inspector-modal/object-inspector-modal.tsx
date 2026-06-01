@@ -44,11 +44,11 @@ export function ObjectInspectorModal({
     >
       <div className="flex size-full flex-col bg-gray-50 dark:bg-slate-800">
         <div className="flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-50">
+          <h2 className="text-lg font-semibold text-gray-800 dark:text-slate-50">
             {title}
           </h2>
           <button
-            className="flex size-6 cursor-pointer items-center justify-center rounded-md text-gray-500 outline-none hover:text-gray-900 dark:text-slate-400 dark:hover:text-slate-50"
+            className="flex size-6 cursor-pointer items-center justify-center rounded-md text-gray-500 outline-none hover:text-gray-800 dark:text-slate-400 dark:hover:text-slate-50"
             onClick={() => onOpenChange(false)}
             type="button"
           >

@@ -83,7 +83,7 @@ export const Radio = React.forwardRef<
             !disabled &&
               !hasError && [
                 "cursor-pointer",
-                "peer-hover:text-gray-900 dark:peer-hover:text-slate-50",
+                "peer-hover:text-gray-800 dark:peer-hover:text-slate-50",
               ],
           )}
           description={description}

@@ -104,7 +104,7 @@ export const CommandItemList: React.FC<FavoriteOptionsProps> = ({
                     <Icon
                       name="Checkmark"
                       size={16}
-                      className="text-gray-900 dark:text-slate-50"
+                      className="text-gray-800 dark:text-slate-50"
                     />
                   )}
                 </div>
@@ -126,7 +126,7 @@ export const CommandItemList: React.FC<FavoriteOptionsProps> = ({
                     <Icon
                       name="Checkmark"
                       size={16}
-                      className="text-gray-900 dark:text-slate-50"
+                      className="text-gray-800 dark:text-slate-50"
                     />
                   )}
                 </div>

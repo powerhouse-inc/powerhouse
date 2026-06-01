@@ -192,7 +192,7 @@ export function ProcessorsInspector({
   return (
     <div className="flex h-full flex-col gap-2">
       <div className="flex shrink-0 items-center justify-between">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-50">
+        <h2 className="text-lg font-semibold text-gray-800 dark:text-slate-50">
           Processors Inspector
         </h2>
         <div className="flex items-center gap-2">
@@ -240,7 +240,7 @@ export function ProcessorsInspector({
                   <th
                     key={column.key}
                     className={twMerge(
-                      "group cursor-pointer px-3 py-2 text-left text-xs font-medium text-gray-700 hover:bg-gray-200 hover:text-gray-900 dark:text-slate-200 dark:hover:bg-slate-600 dark:hover:text-slate-100",
+                      "group cursor-pointer px-3 py-2 text-left text-xs font-medium text-gray-700 hover:bg-gray-200 hover:text-gray-800 dark:text-slate-200 dark:hover:bg-slate-600 dark:hover:text-slate-100",
                       index > 0 &&
                         "border-l border-gray-300 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100",
                     )}
@@ -313,7 +313,7 @@ export function ProcessorsInspector({
                       {processor.status}
                     </span>
                   </td>
-                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
+                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-800 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
                     <span
                       className="block truncate"
                       title={processor.processorId}
@@ -321,7 +321,7 @@ export function ProcessorsInspector({
                       {truncateId(processor.processorId)}
                     </span>
                   </td>
-                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
+                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-800 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
                     <span
                       className="block truncate"
                       title={processor.factoryId}
@@ -329,18 +329,18 @@ export function ProcessorsInspector({
                       {truncateId(processor.factoryId)}
                     </span>
                   </td>
-                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
+                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-800 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
                     <span className="block truncate" title={processor.driveId}>
                       {truncateId(processor.driveId)}
                     </span>
                   </td>
-                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
+                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-800 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
                     {processor.processorIndex}
                   </td>
-                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
+                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-800 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
                     {processor.lastOrdinal}
                   </td>
-                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
+                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-800 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
                     {processor.lastError ? (
                       <span
                         className="block truncate text-red-600 dark:text-red-100"
@@ -354,7 +354,7 @@ export function ProcessorsInspector({
                       </span>
                     )}
                   </td>
-                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
+                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-800 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
                     {processor.lastErrorTimestamp ? (
                       <span
                         className="block truncate"

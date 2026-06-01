@@ -92,7 +92,7 @@ export function PackageInstallModal(props: PackageInstallModalProps) {
       {...restProps}
     >
       <div className="w-[460px] rounded-xl bg-gray-50 p-6 text-gray-300 dark:bg-slate-800 dark:text-slate-600">
-        <div className="border-b border-gray-50 pb-2 text-2xl font-bold text-gray-900 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
+        <div className="border-b border-gray-50 pb-2 text-2xl font-bold text-gray-800 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
           {grouped.length === 1 ? "Package Required" : "Packages Required"}
         </div>
         <div className="my-4 text-sm text-gray-700 dark:text-slate-200">
@@ -108,7 +108,7 @@ export function PackageInstallModal(props: PackageInstallModalProps) {
                 key={packageName}
                 className="rounded-xl bg-gray-50 p-4 dark:bg-slate-800"
               >
-                <div className="mb-1 text-sm font-semibold text-gray-900 dark:text-slate-100">
+                <div className="mb-1 text-sm font-semibold text-gray-800 dark:text-slate-100">
                   {packageName}
                 </div>
                 <div className="mb-3 text-xs text-gray-500 dark:text-slate-400">

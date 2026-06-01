@@ -36,7 +36,7 @@ export default function Header() {
     }
   };
   return (
-    <header className="fixed top-0 h-14 w-full bg-orange-100 text-gray-900 dark:bg-orange-800 dark:text-slate-50">
+    <header className="fixed top-0 h-14 w-full bg-orange-100 text-gray-800 dark:bg-orange-800 dark:text-slate-50">
       <nav className="flex h-14 flex-row items-center justify-between">
         <div className="flex items-start">
           <SwitchboardLink href="/">

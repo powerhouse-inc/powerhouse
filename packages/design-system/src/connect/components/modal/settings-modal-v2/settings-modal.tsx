@@ -74,12 +74,12 @@ export function SettingsModal(props: Props) {
       {...restProps}
     >
       <div className="flex justify-between rounded-t-xl border-b border-gray-50 p-4 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
-        <h1 className="text-center text-xl font-semibold text-gray-900 dark:text-slate-50">
+        <h1 className="text-center text-xl font-semibold text-gray-800 dark:text-slate-50">
           {title}
         </h1>
         <button
           type="button"
-          className="flex size-6 items-center justify-center rounded-md text-gray-900 outline-none dark:text-slate-100"
+          className="flex size-6 items-center justify-center rounded-md text-gray-800 outline-none dark:text-slate-100"
           onClick={() => onOpenChange?.(false)}
         >
           <Icon name="XmarkLight" size={24} />

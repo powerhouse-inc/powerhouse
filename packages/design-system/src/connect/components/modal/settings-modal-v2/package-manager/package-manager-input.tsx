@@ -74,7 +74,7 @@ function PackageResultCard(props: PackageResultCardProps) {
   return (
     <div className="flex items-start justify-between gap-3 rounded-md p-2 hover:bg-gray-50 dark:hover:bg-slate-800">
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-gray-900 dark:text-slate-50">
+        <p className="truncate text-sm font-medium text-gray-800 dark:text-slate-50">
           {baseName}
         </p>
         {option.description && (
@@ -192,7 +192,7 @@ export const PackageManagerInput: React.FC<PackageManagerInputProps> = (
 
   return (
     <div className={className}>
-      <h3 className="mb-4 font-semibold text-gray-900 dark:text-slate-50">
+      <h3 className="mb-4 font-semibold text-gray-800 dark:text-slate-50">
         Install Package
       </h3>
       <SearchAutocomplete

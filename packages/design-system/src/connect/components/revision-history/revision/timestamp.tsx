@@ -26,7 +26,7 @@ export function Timestamp(props: TimestampProps) {
         />
       }
       trigger={
-        <span className="cursor-pointer text-xs text-gray-900 dark:text-slate-50">
+        <span className="cursor-pointer text-xs text-gray-800 dark:text-slate-50">
           committed at {shortDate}
         </span>
       }

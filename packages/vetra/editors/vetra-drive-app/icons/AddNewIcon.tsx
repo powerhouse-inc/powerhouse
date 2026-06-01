@@ -18,7 +18,7 @@ export const AddNewIcon: React.FC<AddNewIconProps> = ({
       height={height}
       viewBox="0 0 40 42"
       fill="none"
-      className={twMerge(className, "text-gray-900 dark:text-slate-100")}
+      className={twMerge(className, "text-gray-800 dark:text-slate-100")}
       xmlns="http://www.w3.org/2000/svg"
     >
       <g filter="url(#filter0_di_2184_4955)">

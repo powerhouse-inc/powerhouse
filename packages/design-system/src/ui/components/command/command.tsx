@@ -42,7 +42,7 @@ const CommandInput = React.forwardRef<
       className={twMerge(
         "pointer-events-none absolute top-3.5 left-2 text-gray-500 dark:text-slate-400",
         "group-hover:text-gray-700 dark:group-hover:text-slate-200",
-        "group-focus-within:text-gray-900! dark:group-focus-within:text-slate-50",
+        "group-focus-within:text-gray-800! dark:group-focus-within:text-slate-50",
       )}
     />
     <CommandPrimitive.Input
@@ -119,7 +119,7 @@ const CommandItem = React.forwardRef<
     className={twMerge(
       "relative flex items-center justify-between select-none",
       "h-8 gap-2 rounded-md py-1.5 pr-2.5 pl-1.5",
-      "text-sm/4 text-gray-900 outline-none dark:text-slate-50",
+      "text-sm/4 text-gray-800 outline-none dark:text-slate-50",
       "border-y-2 border-white dark:border-slate-600 dark:bg-slate-600 dark:text-slate-100",
       "data-[disabled=true]:pointer-events-none",
       "[&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",

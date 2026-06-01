@@ -17,7 +17,7 @@ const IconRenderer: React.FC<{
           "shrink-0",
           asPlaceholder
             ? "text-gray-400 dark:text-slate-500"
-            : "text-gray-900 dark:text-slate-50",
+            : "text-gray-800 dark:text-slate-50",
         )}
       />
     );
@@ -128,7 +128,7 @@ const IdAutocompleteListOption: React.FC<IdAutocompleteListOptionProps> = ({
               "truncate text-sm/5 font-bold",
               asPlaceholder
                 ? "text-gray-400 dark:text-slate-500"
-                : "text-gray-900 dark:text-slate-50",
+                : "text-gray-800 dark:text-slate-50",
             )}
           >
             {title}
@@ -187,7 +187,7 @@ const IdAutocompleteListOption: React.FC<IdAutocompleteListOptionProps> = ({
               "line-clamp-2 text-xs/5",
               asPlaceholder
                 ? "text-gray-400 dark:text-slate-500"
-                : "text-gray-900 dark:text-slate-50",
+                : "text-gray-800 dark:text-slate-50",
             )}
           >
             {description}

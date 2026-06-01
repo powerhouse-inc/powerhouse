@@ -73,7 +73,7 @@ export const CookieBanner = () => {
                   <a
                     onClick={() => showPHModal({ type: "cookiesPolicy" })}
                     key={"cookieBanner.message-link"}
-                    className="cursor-pointer text-gray-900 hover:underline dark:text-slate-50"
+                    className="cursor-pointer text-gray-800 hover:underline dark:text-slate-50"
                   />
                 ),
               }}

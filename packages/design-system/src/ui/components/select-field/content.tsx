@@ -61,7 +61,7 @@ export const Content: React.FC<ContentProps> = ({
             }
           }}
           wrapperClassName="rounded-t"
-          className="text-gray-900 dark:text-slate-50"
+          className="text-gray-800 dark:text-slate-50"
         />
       )}
       <CommandList ref={commandListRef} tabIndex={!searchable ? 0 : undefined}>
@@ -104,12 +104,12 @@ export const Content: React.FC<ContentProps> = ({
                           <Icon
                             name="Checkmark"
                             size={16}
-                            className="text-gray-900 dark:text-slate-50"
+                            className="text-gray-800 dark:text-slate-50"
                           />
                         )}
                     </div>
                   )}
-                <span className="text-sm/4 font-semibold text-gray-900 dark:text-slate-50">
+                <span className="text-sm/4 font-semibold text-gray-800 dark:text-slate-50">
                   {selectedValues.length === enabledOptions.length
                     ? "Deselect All"
                     : "Select All"}
@@ -121,7 +121,7 @@ export const Content: React.FC<ContentProps> = ({
                         <Icon
                           name="Checkmark"
                           size={16}
-                          className="text-gray-900 dark:text-slate-50"
+                          className="text-gray-800 dark:text-slate-50"
                         />
                       )}
                     </div>

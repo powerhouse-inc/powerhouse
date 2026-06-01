@@ -36,7 +36,7 @@ export const DriveInfoItem: React.FC<DriveInfoItemProps> = ({
     >
       <LinkIcon width={14} height={14} />
       {label}
-      <span className="text-gray-900 dark:text-slate-50">{value}</span>
+      <span className="text-gray-800 dark:text-slate-50">{value}</span>
     </button>
   );
 };

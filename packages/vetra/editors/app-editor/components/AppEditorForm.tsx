@@ -129,7 +129,7 @@ export const AppEditorForm = () => {
   return (
     <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-medium text-gray-900 dark:text-slate-50">
+        <h2 className="text-lg font-medium text-gray-800 dark:text-slate-50">
           App Configuration
         </h2>
         <StatusPill
@@ -174,7 +174,7 @@ export const AppEditorForm = () => {
           {!isReadOnly && (
             <select
               onChange={(e) => handleDocumentTypeSelection(e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-gray-800 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
             >
               <option>Select a document type to add</option>
               <option>--- Vetra drive document types ---</option>
@@ -231,7 +231,7 @@ export const AppEditorForm = () => {
 
       {/* Drag and Drop Settings */}
       <div>
-        <h3 className="mb-4 text-base font-medium text-gray-900 dark:text-slate-50">
+        <h3 className="mb-4 text-base font-medium text-gray-800 dark:text-slate-50">
           Drag and Drop Settings
         </h3>
 

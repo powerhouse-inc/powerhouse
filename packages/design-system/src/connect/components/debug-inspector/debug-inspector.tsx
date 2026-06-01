@@ -37,7 +37,7 @@ export function DebugInspector({
   return (
     <div className="flex h-full flex-col gap-4 overflow-auto p-4">
       <div>
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-50">
+        <h2 className="text-lg font-semibold text-gray-800 dark:text-slate-50">
           PGlite data dir
         </h2>
         <p className="mt-1 text-sm text-gray-700 dark:text-slate-200">
@@ -49,7 +49,7 @@ export function DebugInspector({
           <span className="text-gray-700 dark:text-slate-200">
             Current version:
           </span>
-          <span className="font-semibold text-gray-900 dark:text-slate-50">
+          <span className="font-semibold text-gray-800 dark:text-slate-50">
             {currentPgVersion === null
               ? "None (no data dir)"
               : `Postgres ${currentPgVersion}`}

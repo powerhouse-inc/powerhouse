@@ -361,7 +361,7 @@ export default function Editor() {
               />
             </Suspense>
             <Divider />
-            <h3 className="mb-6 text-lg text-gray-900 capitalize dark:text-slate-100">
+            <h3 className="mb-6 text-lg text-gray-800 capitalize dark:text-slate-100">
               {scope} Operations
             </h3>
             <Modules

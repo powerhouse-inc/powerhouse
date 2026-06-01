@@ -337,7 +337,7 @@ export function TableView({
                       index > 0 &&
                         "border-l border-gray-300 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100",
                       onSort &&
-                        "cursor-pointer hover:bg-gray-200 hover:text-gray-900 dark:hover:bg-slate-600 dark:hover:text-slate-100",
+                        "cursor-pointer hover:bg-gray-200 hover:text-gray-800 dark:hover:bg-slate-600 dark:hover:text-slate-100",
                     )}
                     onClick={() => onSort && handleSort(column.name)}
                   >
@@ -385,7 +385,7 @@ export function TableView({
                     <td
                       key={column.name}
                       className={twMerge(
-                        "px-3 py-2 text-xs text-gray-900 dark:text-slate-50",
+                        "px-3 py-2 text-xs text-gray-800 dark:text-slate-50",
                         colIndex > 0 &&
                           "border-l border-gray-300 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100",
                       )}

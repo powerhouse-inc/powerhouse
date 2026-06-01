@@ -3,11 +3,11 @@ import { twMerge } from "tailwind-merge";
 import CaretDown from "../../../../powerhouse/components/icon-components/CaretDown.js";
 import Pin from "../../../../powerhouse/components/icon-components/Pin.js";
 import PinFilled from "../../../../powerhouse/components/icon-components/PinFilled.js";
+import { Icon } from "../../../../powerhouse/index.js";
 import { Tooltip, TooltipProvider } from "../../tooltip/tooltip.js";
 import { type FlattenedNode, NodeStatus, type SidebarNode } from "../types.js";
 import { useEllipsis } from "../use-ellipsis.js";
 import { StatusIcon } from "./status-icon.js";
-import { Icon } from "../../../../powerhouse/index.js";
 
 interface SidebarItemProps {
   node: FlattenedNode;
@@ -103,7 +103,7 @@ export const SidebarItem = ({
               pinnedMode &&
                 "after:absolute after:-top-2.5 after:left-[15px] after:h-4 after:w-px after:bg-gray-300 first:group-first/sidebar-item-wrapper:after:hidden hover:bg-gray-50 dark:hover:bg-slate-600",
               isActive &&
-                "bg-gray-200 font-medium text-gray-900 hover:bg-gray-200 dark:bg-slate-900 dark:text-slate-50 dark:hover:bg-slate-900",
+                "bg-gray-200 font-medium text-gray-800 hover:bg-gray-200 dark:bg-slate-900 dark:text-slate-50 dark:hover:bg-slate-900",
               node.className,
             )}
             onClick={() => {
@@ -266,7 +266,7 @@ const PinnedModeCircleIcon = ({ isPinned }: { isPinned: boolean }) => (
       className={
         isPinned
           ? "text-gray-500 dark:text-slate-500"
-          : "text-gray-300 dark:text-slate-300"
+          : "text-gray-300 dark:text-slate-200"
       }
     />
   </svg>

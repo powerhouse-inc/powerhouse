@@ -37,7 +37,7 @@ function Wrapper(args: Args) {
         <p className="mb-1 text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-slate-400">
           Current selection
         </p>
-        <p className="mb-3 font-mono text-xs text-gray-900 dark:text-slate-100">
+        <p className="mb-3 font-mono text-xs text-gray-800 dark:text-slate-100">
           {selected.kind}: {selected.value}
         </p>
         <VersionPicker

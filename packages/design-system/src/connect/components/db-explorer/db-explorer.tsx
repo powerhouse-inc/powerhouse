@@ -320,7 +320,7 @@ export function DBExplorer({
               <div className="flex flex-col gap-1 border-t border-gray-200 pt-2 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
                 <div className="flex items-center justify-between text-xs text-gray-700 dark:text-slate-200">
                   <span>Postgres version</span>
-                  <span className="font-semibold text-gray-900 dark:text-slate-50">
+                  <span className="font-semibold text-gray-800 dark:text-slate-50">
                     {pgVersionControl.currentPgVersion === null
                       ? "—"
                       : `PG${pgVersionControl.currentPgVersion}`}

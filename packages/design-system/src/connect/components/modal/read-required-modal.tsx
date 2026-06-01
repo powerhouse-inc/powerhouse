@@ -75,7 +75,7 @@ export function ReadRequiredModal(props: ReadRequiredModalProps) {
       contentProps={contentProps}
     >
       <div className="w-[500px] p-6">
-        <div className="border-b border-gray-100 pb-2 text-2xl font-bold text-gray-900 dark:border-slate-500 dark:text-slate-100">
+        <div className="border-b border-gray-100 pb-2 text-2xl font-bold text-gray-800 dark:border-slate-500 dark:text-slate-100">
           {header}
         </div>
         <div

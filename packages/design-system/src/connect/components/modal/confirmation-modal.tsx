@@ -41,10 +41,10 @@ export function ConnectConfirmationModal(props: ConfirmationModalProps) {
       contentProps={contentProps}
     >
       <div className="w-[400px] p-6">
-        <div className="pb-2 text-2xl font-bold text-gray-900 dark:text-slate-100">
+        <div className="pb-2 text-2xl font-bold text-gray-800 dark:text-slate-100">
           {header}
         </div>
-        <div className="my-6 rounded-md bg-gray-50 p-4 text-center text-gray-900 dark:bg-slate-700 dark:text-slate-100">
+        <div className="my-6 rounded-md bg-gray-50 p-4 text-center text-gray-800 dark:bg-slate-700 dark:text-slate-100">
           {body}
         </div>
         <div className="mt-8 flex justify-between gap-3">

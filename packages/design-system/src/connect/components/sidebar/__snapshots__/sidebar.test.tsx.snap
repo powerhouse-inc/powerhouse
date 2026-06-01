@@ -8,7 +8,7 @@ exports[`Connect Sidebar Component > should match snapshot 1`] = `
     style="width: 58px;"
   >
     <div
-      class="no-scrollbar flex-1 overflow-auto text-gray-900 transition-shadow"
+      class="no-scrollbar flex-1 overflow-auto text-gray-800 transition-shadow"
     >
       <div
         class="shrink-0 flex justify-center gap-4 border-b border-gray-300 py-4"

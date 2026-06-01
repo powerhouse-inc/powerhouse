@@ -44,7 +44,7 @@ export function ThemeSwitch() {
           className={twMerge(
             "flex size-fit cursor-pointer content-center items-center transition-colors",
             isActive(value)
-              ? "text-gray-900 dark:text-slate-50"
+              ? "text-gray-800 dark:text-slate-50"
               : "text-gray-500 dark:text-slate-400",
           )}
         >

@@ -24,7 +24,7 @@ function DocumentTypeSelectUI(
   return (
     <select
       id="supported-document-types"
-      className="w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
+      className="w-full rounded-md border border-gray-300 px-3 py-2 text-gray-800 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
       {...props}
     >
       <option value="">Select a document type</option>
@@ -134,7 +134,7 @@ export const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
   return (
     <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-medium text-gray-900 dark:text-slate-50">
+        <h2 className="text-lg font-medium text-gray-800 dark:text-slate-50">
           Editor Configuration
         </h2>
         <StatusPill

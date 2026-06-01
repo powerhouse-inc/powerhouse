@@ -33,7 +33,7 @@ export function DefaultEditorSelect(props: Props) {
 
   return (
     <div>
-      <h3 className="mb-4 font-semibold text-gray-900 dark:text-slate-50">
+      <h3 className="mb-4 font-semibold text-gray-800 dark:text-slate-50">
         Default Editor Selection
       </h3>
       <SelectFieldRaw

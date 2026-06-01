@@ -30,12 +30,12 @@ exports[`UpgradeDriveModal Component > should match snapshot 1`] = `
     class="w-100 bg-gray-50 p-6 text-gray-300 dark:bg-slate-800 dark:text-slate-200"
   >
     <div
-      class="pb-2 text-2xl font-bold text-gray-900 dark:text-slate-100"
+      class="pb-2 text-2xl font-bold text-gray-800 dark:text-slate-100"
     >
       Upgrade to cloud drive
     </div>
     <div
-      class="my-6 rounded-md bg-gray-50 p-4 text-center text-gray-900 dark:bg-slate-800 dark:text-slate-100"
+      class="my-6 rounded-md bg-gray-50 p-4 text-center text-gray-800 dark:bg-slate-800 dark:text-slate-100"
     >
       You are moving files from a private to a shared drive. These files will become accessible to others in the shared drive.Do you want to proceed?
     </div>
