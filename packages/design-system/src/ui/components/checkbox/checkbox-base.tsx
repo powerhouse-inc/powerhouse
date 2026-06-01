@@ -30,7 +30,7 @@ const CheckboxBase = React.forwardRef<
       // Checked & Indeterminate states
       "data-state:border-gray-700 dark:data-state:border-slate-500",
       "data-[state=checked]:bg-gray-900 data-[state=indeterminate]:bg-gray-900 dark:data-[state=checked]:bg-slate-400 dark:data-[state=indeterminate]:bg-slate-400",
-      "data-[state=checked]:text-slate-50 data-[state=indeterminate]:text-slate-50 dark:data-[state=checked]:text-slate-900 dark:data-[state=indeterminate]:text-slate-900",
+      "data-[state=checked]:text-gray-50 data-[state=indeterminate]:text-gray-50 dark:data-[state=checked]:text-slate-900 dark:data-[state=indeterminate]:text-slate-900",
       // hover states
       !props.disabled && [
         "group-hover:border-gray-900 data-[state=checked]:group-hover:bg-gray-900 data-[state=indeterminate]:group-hover:bg-gray-900 dark:group-hover:border-slate-50 dark:data-[state=checked]:group-hover:bg-slate-50 dark:data-[state=indeterminate]:group-hover:bg-slate-50",

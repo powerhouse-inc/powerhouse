@@ -127,7 +127,7 @@ function Drive(props: ModifyDrivesProps & { drive: DocumentDriveDocument }) {
             href="https://www.powerhouse.inc/"
             target="_blank"
             rel="noopener noreferrer"
-            className="group flex items-center gap-x-2 text-sm text-slate-500 transition-colors hover:text-purple-700 dark:text-slate-500 dark:hover:text-purple-100"
+            className="group flex items-center gap-x-2 text-sm text-gray-500 transition-colors hover:text-purple-700 dark:text-slate-500 dark:hover:text-purple-100"
           >
             By Powerhouse
             <svg

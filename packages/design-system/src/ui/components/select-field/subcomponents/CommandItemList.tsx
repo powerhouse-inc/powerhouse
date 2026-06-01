@@ -77,7 +77,7 @@ export const CommandItemList: React.FC<FavoriteOptionsProps> = ({
                     "flex size-4 items-center justify-center rounded-md border",
                     "border-gray-700 dark:border-slate-200",
                     isSelected &&
-                      "bg-gray-900 text-slate-50 dark:bg-slate-50 dark:text-slate-900",
+                      "bg-gray-900 text-gray-50 dark:bg-slate-50 dark:text-slate-900",
                   )}
                 >
                   {isSelected && <Icon name="Checkmark" size={16} />}

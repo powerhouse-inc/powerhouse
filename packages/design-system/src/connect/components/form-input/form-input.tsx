@@ -42,7 +42,7 @@ export const FormInput = forwardRef(function FormInput(
         {icon && (
           <span
             className={twJoin(
-              (!isDirty || isError) && "text-slate-200 dark:text-slate-200",
+              (!isDirty || isError) && "text-gray-200 dark:text-slate-200",
             )}
           >
             {icon}

@@ -88,7 +88,7 @@ export const Content: React.FC<ContentProps> = ({
                       "flex size-4 items-center justify-center rounded-md border",
                       "border-gray-700 dark:border-slate-200",
                       selectedValues.length === enabledOptions.length &&
-                        "bg-gray-900 text-slate-50 dark:bg-slate-50 dark:text-slate-900",
+                        "bg-gray-900 text-gray-50 dark:bg-slate-50 dark:text-slate-900",
                     )}
                   >
                     {selectedValues.length === enabledOptions.length && (

@@ -36,7 +36,7 @@ export function ConnectUpgradeDriveModal(props: ConnectUpgradeDriveModalProps) {
       }}
       {...restProps}
     >
-      <div className="w-100 bg-gray-50 p-6 text-slate-300 dark:bg-slate-800 dark:text-slate-200">
+      <div className="w-100 bg-gray-50 p-6 text-gray-300 dark:bg-slate-800 dark:text-slate-200">
         <div className="pb-2 text-2xl font-bold text-gray-900 dark:text-slate-100">
           {header}
         </div>

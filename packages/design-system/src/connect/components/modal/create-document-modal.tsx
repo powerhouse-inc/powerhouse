@@ -54,7 +54,7 @@ export function CreateDocumentModal(props: CreateDocumentModalProps) {
     >
       <form
         name="create-document"
-        className="w-100 rounded-xl bg-gray-50 p-6 text-slate-300 dark:bg-slate-800 dark:text-slate-600"
+        className="w-100 rounded-xl bg-gray-50 p-6 text-gray-300 dark:bg-slate-800 dark:text-slate-600"
         onSubmit={handleSubmit}
       >
         <div className="pb-2 text-2xl font-bold text-gray-900 dark:text-slate-100">
