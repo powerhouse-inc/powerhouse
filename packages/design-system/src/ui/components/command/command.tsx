@@ -1,7 +1,7 @@
 import { Icon } from "#design-system";
-import { twMerge } from "tailwind-merge";
 import { Command as CommandPrimitive } from "cmdk";
 import React from "react";
+import { twMerge } from "tailwind-merge";
 
 const Command = React.forwardRef<
   React.ElementRef<typeof CommandPrimitive>,
@@ -119,7 +119,7 @@ const CommandItem = React.forwardRef<
     className={twMerge(
       "relative flex items-center justify-between select-none",
       "h-8 gap-2 rounded-md py-1.5 pr-2.5 pl-1.5",
-      "text-sm/4 text-gray-800 outline-none dark:text-slate-50",
+      "text-sm/4 text-gray-800 outline-none dark:text-slate-100",
       "border-y-2 border-white dark:border-slate-600 dark:bg-slate-600 dark:text-slate-100",
       "data-[disabled=true]:pointer-events-none",
       "[&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
@@ -131,11 +131,12 @@ const CommandItem = React.forwardRef<
 CommandItem.displayName = CommandPrimitive.Item.displayName;
 
 export {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-  CommandLoading,
+    Command,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
+    CommandLoading
 };
+

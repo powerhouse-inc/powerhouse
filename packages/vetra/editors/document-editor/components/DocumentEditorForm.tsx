@@ -1,9 +1,9 @@
 import { Suspense, useEffect, useState } from "react";
 import { twMerge } from "tailwind-merge";
 import type {
-  AddDocumentTypeInput,
-  DocumentTypeItem,
-  RemoveDocumentTypeInput,
+    AddDocumentTypeInput,
+    DocumentTypeItem,
+    RemoveDocumentTypeInput,
 } from "../../../document-models/document-editor/index.js";
 import { StatusPill } from "../../components/index.js";
 import { useAvailableDocumentTypes, useDebounce } from "../../hooks/index.js";
@@ -134,7 +134,7 @@ export const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
   return (
     <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-medium text-gray-800 dark:text-slate-50">
+        <h2 className="text-lg font-medium text-gray-800 dark:text-slate-100">
           Editor Configuration
         </h2>
         <StatusPill

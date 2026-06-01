@@ -195,7 +195,7 @@ export function QueueInspector({
   return (
     <div className="flex h-full flex-col gap-2">
       <div className="flex shrink-0 items-center justify-between">
-        <h2 className="text-lg font-semibold text-gray-800 dark:text-slate-50">
+        <h2 className="text-lg font-semibold text-gray-800 dark:text-slate-100">
           Queue Inspector
         </h2>
         <div className="flex items-center gap-2">

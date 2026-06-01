@@ -3,8 +3,8 @@ import type { ComponentPropsWithoutRef } from "react";
 import { useMemo, useState } from "react";
 import { twMerge } from "tailwind-merge";
 import {
-  type UploadFileItemProps,
-  UploadFileItem,
+    type UploadFileItemProps,
+    UploadFileItem,
 } from "../upload-file-item/upload-file-item.js";
 import { getUploadListTitle } from "./utils.js";
 
@@ -47,7 +47,7 @@ export function UploadFileList(props: UploadFileListProps) {
           aria-expanded={!isCollapsed}
           aria-label={isCollapsed ? "Expand list" : "Collapse list"}
           onClick={() => setIsCollapsed((v) => !v)}
-          className="min-w-0 flex-1 text-left text-sm/4 font-medium text-gray-800 hover:opacity-80 dark:text-slate-50"
+          className="min-w-0 flex-1 text-left text-sm/4 font-medium text-gray-800 hover:opacity-80 dark:text-slate-100"
         >
           {computedTitle}
         </button>
@@ -58,7 +58,7 @@ export function UploadFileList(props: UploadFileListProps) {
             type="button"
             aria-label={isCollapsed ? "Expand" : "Collapse"}
             onClick={() => setIsCollapsed((v) => !v)}
-            className="text-gray-800 hover:opacity-80 dark:text-slate-50"
+            className="text-gray-800 hover:opacity-80 dark:text-slate-100"
           >
             <span
               className={twMerge(
@@ -76,7 +76,7 @@ export function UploadFileList(props: UploadFileListProps) {
               type="button"
               aria-label="Close"
               onClick={onClose}
-              className="text-gray-800 hover:opacity-80 dark:text-slate-50"
+              className="text-gray-800 hover:opacity-80 dark:text-slate-100"
             >
               <span className="inline-block size-4 select-none">
                 <Icon name="XmarkLight" size={16} aria-hidden="true" />

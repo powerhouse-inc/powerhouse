@@ -1,9 +1,9 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { twMerge } from "tailwind-merge";
-import { Input } from "../../../input/input.js";
 import CrossCircle from "../../../../../powerhouse/components/icon-components/CrossCircle.js";
 import Search from "../../../../../powerhouse/components/icon-components/Search.js";
 import Tabler from "../../../../../powerhouse/components/icon-components/Tabler.js";
+import { Input } from "../../../input/input.js";
 import { useSidebar } from "../sidebar-provider/index.js";
 import { SearchNavigationArrow } from "./search-navigation-arrow.js";
 import { SearchResultCounter } from "./search-result-counter.js";
@@ -59,7 +59,7 @@ export const SidebarSearch: React.FC<SidebarSearchProps> = ({
         <Search
           height={16}
           width={16}
-          className="absolute top-1/2 left-2 -translate-y-1/2 text-gray-700 dark:text-slate-50"
+          className="absolute top-1/2 left-2 -translate-y-1/2 text-gray-700 dark:text-slate-100"
         />
 
         {/* Search controls - only shown when there's a search term */}

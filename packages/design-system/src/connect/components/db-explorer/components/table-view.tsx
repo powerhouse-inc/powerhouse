@@ -385,7 +385,7 @@ export function TableView({
                     <td
                       key={column.name}
                       className={twMerge(
-                        "px-3 py-2 text-xs text-gray-800 dark:text-slate-50",
+                        "px-3 py-2 text-xs text-gray-800 dark:text-slate-100",
                         colIndex > 0 &&
                           "border-l border-gray-300 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100",
                       )}

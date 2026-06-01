@@ -1,7 +1,7 @@
 import type { IconName } from "#design-system";
 import { Icon } from "#design-system";
-import { twMerge } from "tailwind-merge";
 import React from "react";
+import { twMerge } from "tailwind-merge";
 import { CommandItem } from "../../command/command.js";
 import type { SelectProps } from "../../enum-field/types.js";
 
@@ -104,7 +104,7 @@ export const CommandItemList: React.FC<FavoriteOptionsProps> = ({
                     <Icon
                       name="Checkmark"
                       size={16}
-                      className="text-gray-800 dark:text-slate-50"
+                      className="text-gray-800 dark:text-slate-100"
                     />
                   )}
                 </div>
@@ -126,7 +126,7 @@ export const CommandItemList: React.FC<FavoriteOptionsProps> = ({
                     <Icon
                       name="Checkmark"
                       size={16}
-                      className="text-gray-800 dark:text-slate-50"
+                      className="text-gray-800 dark:text-slate-100"
                     />
                   )}
                 </div>

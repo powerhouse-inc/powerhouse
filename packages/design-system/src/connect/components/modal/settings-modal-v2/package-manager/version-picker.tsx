@@ -1,12 +1,12 @@
 import { Icon } from "#design-system";
-import { twMerge } from "tailwind-merge";
 import {
-  Input,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
+    Input,
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
 } from "#design-system/ui";
 import { useMemo, useState } from "react";
+import { twMerge } from "tailwind-merge";
 
 export type VersionSelection =
   | { kind: "tag"; value: string }
@@ -153,7 +153,7 @@ export const VersionPicker: React.FC<VersionPickerProps> = (props) => {
                         "bg-gray-100 font-semibold dark:bg-slate-700",
                     )}
                   >
-                    <span className="truncate text-gray-800 dark:text-slate-50">
+                    <span className="truncate text-gray-800 dark:text-slate-100">
                       {tag}
                     </span>
                     <span className="truncate text-gray-500 dark:text-slate-400">
@@ -188,7 +188,7 @@ export const VersionPicker: React.FC<VersionPickerProps> = (props) => {
                         "bg-gray-100 font-semibold dark:bg-slate-700",
                     )}
                   >
-                    <span className="truncate text-gray-800 dark:text-slate-50">
+                    <span className="truncate text-gray-800 dark:text-slate-100">
                       {ver}
                     </span>
                   </button>

@@ -5,7 +5,7 @@ export type InputProps = React.InputHTMLAttributes<HTMLInputElement>;
 
 const inputBaseStyles = twMerge(
   // Base styles
-  "flex h-9 w-full rounded-md text-sm/5 font-normal text-gray-800 dark:text-slate-50",
+  "flex h-9 w-full rounded-md text-sm/5 font-normal text-gray-800 dark:text-slate-100",
   // Border & Background
   "border border-gray-300 bg-gray-50 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100",
   // Padding

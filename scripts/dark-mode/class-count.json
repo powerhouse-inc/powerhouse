@@ -1,88 +1,86 @@
 {
   "lightCount": {
     "1": [
-      "bg-white/90",
+      "border-gray-500",
       "border-yellow-500",
       "bg-yellow-400",
       "bg-amber-100",
       "border-amber-300",
-      "border-gray-500",
-      "border-gray-400",
+      "bg-white/90",
       "bg-orange-100",
       "bg-orange-200",
       "border-orange-600",
       "bg-green-600",
       "bg-red-600",
       "bg-blue-200",
-      "bg-violet-400",
-      "text-charcoal-300",
-      "border-blue-600",
-      "border-red-900",
-      "text-purple-900",
+      "border-gray-400",
       "bg-gray-400",
-      "text-orange-700",
+      "border-gray-600",
+      "border-red-700",
+      "bg-purple-900",
+      "bg-green-900",
       "bg-amber-300",
       "bg-cyan-300",
+      "bg-yellow-300",
+      "border-red-900",
       "bg-green-50",
       "bg-yellow-500",
       "bg-purple-100",
       "text-purple-700",
-      "bg-purple-900",
-      "bg-green-900",
-      "border-gray-600",
-      "border-red-700",
-      "bg-yellow-300"
+      "bg-violet-400",
+      "text-purple-900",
+      "text-orange-700",
+      "border-blue-600"
     ],
     "2": [
       "text-amber-900",
-      "text-gray-800",
-      "border-blue-300",
-      "text-blue-800",
       "text-orange-300",
       "text-orange-400",
       "text-red-500",
       "text-orange-500",
       "bg-blue-300",
-      "bg-red-100",
-      "border-yellow-400",
-      "bg-yellow-600",
-      "border-green-300",
-      "border-blue-500",
-      "bg-red-900",
-      "text-yellow-400",
-      "text-red-400",
       "border-gray-700",
+      "border-gray-800",
       "bg-green-600/30",
       "bg-red-600/30",
-      "border-gray-800",
-      "text-blue-500"
+      "text-yellow-400",
+      "text-red-400",
+      "bg-red-900",
+      "border-green-300",
+      "border-blue-300",
+      "border-yellow-400",
+      "bg-yellow-600",
+      "text-blue-500",
+      "border-blue-500",
+      "text-blue-800",
+      "bg-red-100"
     ],
     "3": [
-      "bg-yellow-100",
-      "text-yellow-800",
-      "text-yellow-600",
+      "border-gray-50",
       "bg-blue-900",
+      "bg-yellow-100",
       "border-yellow-300",
-      "border-gray-50"
+      "text-yellow-800",
+      "text-yellow-600"
     ],
     "4": [
       "border-gray-900",
       "text-blue-600",
-      "bg-blue-600",
-      "text-green-800",
       "bg-gray-500",
       "text-green-900",
-      "text-green-600",
-      "text-yellow-700"
+      "text-yellow-700",
+      "bg-blue-600",
+      "text-green-800",
+      "text-green-600"
     ],
     "5": [
-      "bg-green-100",
-      "text-orange-900",
-      "border-red-300",
       "bg-blue-500",
       "bg-red-500",
       "text-yellow-900",
-      "text-gray-100"
+      "text-gray-100",
+      "bg-green-100",
+      "text-orange-900",
+      "border-red-300"
     ],
     "6": [
       "bg-gray-300",
@@ -98,8 +96,8 @@
     "8": [
       "border-gray-100",
       "bg-gray-800",
-      "bg-red-50",
-      "text-blue-700"
+      "text-blue-700",
+      "bg-red-50"
     ],
     "9": [
       "text-red-800"
@@ -109,10 +107,10 @@
       "text-red-600"
     ],
     "11": [
-      "bg-gray-200",
-      "text-blue-900"
+      "text-blue-900",
+      "bg-gray-200"
     ],
-    "12": [
+    "13": [
       "text-gray-300"
     ],
     "14": [
@@ -143,8 +141,8 @@
     "189": [
       "bg-gray-50"
     ],
-    "190": [
-      "text-gray-900"
+    "193": [
+      "text-gray-800"
     ],
     "207": [
       "text-gray-700"
@@ -152,28 +150,28 @@
   },
   "darkCount": {
     "1": [
-      "dark:border-yellow-400",
-      "dark:bg-yellow-500",
       "dark:border-slate-400",
+      "dark:bg-orange-800",
+      "dark:bg-orange-700",
       "dark:bg-amber-800",
       "dark:border-amber-600",
+      "dark:border-yellow-400",
+      "dark:bg-yellow-500",
+      "dark:border-orange-300",
       "dark:bg-green-300",
       "dark:bg-red-300",
       "dark:bg-blue-700",
-      "dark:bg-orange-800",
-      "dark:bg-orange-700",
-      "dark:border-orange-300",
       "dark:border-red-50",
-      "dark:bg-red-50",
-      "dark:bg-slate-900/50",
-      "dark:border-blue-300",
-      "dark:bg-violet-500",
+      "dark:border-blue-400",
       "dark:bg-amber-600",
       "dark:bg-cyan-600",
-      "dark:border-blue-400",
+      "dark:bg-red-50",
+      "dark:border-blue-300",
       "dark:bg-green-900",
       "dark:bg-yellow-400",
       "dark:bg-purple-800",
+      "dark:bg-slate-900/50",
+      "dark:bg-violet-500",
       "dark:border-slate-300",
       "dark:border-red-200",
       "dark:border-red-700"
@@ -182,18 +180,18 @@
       "dark:bg-slate-900/90",
       "dark:text-amber-100",
       "dark:bg-blue-600",
-      "dark:text-purple-100",
-      "dark:bg-yellow-800",
       "dark:border-blue-600",
-      "dark:bg-blue-50",
+      "dark:bg-yellow-800",
+      "dark:text-purple-100",
       "dark:border-yellow-500",
       "dark:bg-yellow-300",
       "dark:bg-red-800",
       "dark:border-green-600",
+      "dark:bg-blue-50",
       "dark:bg-green-600/30",
       "dark:bg-red-300/30",
-      "dark:border-slate-200",
-      "dark:border-slate-100"
+      "dark:border-slate-100",
+      "dark:border-slate-200"
     ],
     "3": [
       "dark:border-slate-50",
@@ -203,15 +201,14 @@
     ],
     "4": [
       "dark:bg-slate-400",
-      "dark:border-slate-600",
       "dark:bg-blue-300",
+      "dark:border-slate-600",
       "dark:border-slate-800"
     ],
     "5": [
-      "dark:bg-red-400",
       "dark:bg-green-800",
       "dark:border-red-600",
-      "dark:text-slate-300"
+      "dark:bg-red-400"
     ],
     "6": [
       "dark:bg-blue-800",
@@ -219,16 +216,18 @@
       "dark:bg-green-400"
     ],
     "7": [
+      "dark:text-slate-700",
       "dark:bg-blue-900"
     ],
     "8": [
       "dark:bg-slate-100",
-      "dark:text-slate-600",
       "dark:bg-red-900"
     ],
+    "9": [
+      "dark:text-slate-600"
+    ],
     "11": [
-      "dark:text-slate-800",
-      "dark:text-slate-700"
+      "dark:text-slate-800"
     ],
     "12": [
       "dark:text-orange-100"
@@ -246,7 +245,7 @@
     "23": [
       "dark:text-red-400"
     ],
-    "25": [
+    "26": [
       "dark:text-slate-500"
     ],
     "33": [
@@ -261,13 +260,10 @@
     "97": [
       "dark:bg-slate-800"
     ],
-    "104": [
-      "dark:text-slate-50"
-    ],
     "112": [
       "dark:text-slate-400"
     ],
-    "173": [
+    "180": [
       "dark:text-slate-200"
     ],
     "188": [
@@ -276,7 +272,7 @@
     "205": [
       "dark:bg-slate-600"
     ],
-    "239": [
+    "344": [
       "dark:text-slate-100"
     ]
   }

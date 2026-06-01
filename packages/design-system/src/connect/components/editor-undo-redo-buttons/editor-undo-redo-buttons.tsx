@@ -18,7 +18,7 @@ export function EditorUndoRedoButtons(props: EditorUndoRedoButtonsProps) {
           className={twMerge(
             "-scale-x-100",
             canUndo
-              ? "text-gray-800 active:opacity-50 dark:text-slate-50"
+              ? "text-gray-800 active:opacity-50 dark:text-slate-100"
               : "text-gray-500 dark:text-slate-400",
           )}
           name="RedoArrow"
@@ -29,7 +29,7 @@ export function EditorUndoRedoButtons(props: EditorUndoRedoButtonsProps) {
         <Icon
           className={twMerge(
             canRedo
-              ? "text-gray-800 active:opacity-50 dark:text-slate-50"
+              ? "text-gray-800 active:opacity-50 dark:text-slate-100"
               : "text-gray-500 dark:text-slate-400",
           )}
           name="RedoArrow"

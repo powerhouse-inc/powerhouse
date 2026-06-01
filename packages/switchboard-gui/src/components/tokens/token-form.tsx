@@ -1,6 +1,6 @@
+import type { FormEvent } from "preact/compat";
 import { useState } from "preact/hooks";
 import useAuth from "../../hooks/useAuth.js";
-import type { FormEvent } from "preact/compat";
 
 const TokenForm = () => {
   const [formData, setFormData] = useState({
@@ -54,7 +54,7 @@ const TokenForm = () => {
         <div className="flex-1 flex-col">
           <label
             htmlFor="name"
-            className="block text-sm font-semibold text-gray-800 dark:text-slate-50"
+            className="block text-sm font-semibold text-gray-800 dark:text-slate-100"
           >
             Name
           </label>
@@ -70,7 +70,7 @@ const TokenForm = () => {
         <div className="flex-1 flex-col">
           <label
             htmlFor="duration"
-            className="block text-sm font-semibold text-gray-800 dark:text-slate-50"
+            className="block text-sm font-semibold text-gray-800 dark:text-slate-100"
           >
             Duration
           </label>
@@ -93,7 +93,7 @@ const TokenForm = () => {
         <div className="flex-1 flex-col">
           <label
             htmlFor="allowedOrigin"
-            className="block text-sm font-semibold text-gray-800 dark:text-slate-50"
+            className="block text-sm font-semibold text-gray-800 dark:text-slate-100"
           >
             Allowed Origin
           </label>
@@ -129,10 +129,10 @@ const TokenForm = () => {
                 <div className="border-blueGray-200 flex items-start justify-between rounded-t border-b border-solid p-5">
                   <h3 className="text-3xl font-semibold">API Token</h3>
                   <button
-                    className="outline-hidden focus:outline-hidden float-right ml-auto border-0 bg-transparent p-1 text-3xl font-semibold leading-none text-gray-800 opacity-5 dark:text-slate-50"
+                    className="outline-hidden focus:outline-hidden float-right ml-auto border-0 bg-transparent p-1 text-3xl font-semibold leading-none text-gray-800 opacity-5 dark:text-slate-100"
                     onClick={() => setShowModal(false)}
                   >
-                    <span className="outline-hidden focus:outline-hidden block h-6 w-6 bg-transparent text-2xl text-gray-800 opacity-5 dark:text-slate-50">
+                    <span className="outline-hidden focus:outline-hidden block h-6 w-6 bg-transparent text-2xl text-gray-800 opacity-5 dark:text-slate-100">
                       ×
                     </span>
                   </button>

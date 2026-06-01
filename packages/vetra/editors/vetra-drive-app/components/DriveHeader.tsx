@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { DriveInfoItem } from "./DriveInfoItem.js";
-import { ShareMenuItem } from "./ShareMenuItem.js";
-import { InfoIcon } from "../icons/InfoIcon.js";
 import { ExternalLinkIcon } from "../icons/ExternalLinkIcon.js";
+import { InfoIcon } from "../icons/InfoIcon.js";
 import { ShareIcon } from "../icons/ShareIcon.js";
 import { VetraIcon } from "../icons/VetraIcon.js";
+import { DriveInfoItem } from "./DriveInfoItem.js";
+import { ShareMenuItem } from "./ShareMenuItem.js";
 
 interface DriveHeaderProps {
   driveId: string;
@@ -79,9 +79,9 @@ export const DriveHeader: React.FC<DriveHeaderProps> = ({
   return (
     <div className="bg-gray-50 px-6 py-4 dark:bg-slate-800">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-gray-800 dark:text-slate-50">
+        <div className="flex items-center gap-2 text-gray-800 dark:text-slate-100">
           <VetraIcon width={20} height={20} />
-          <h1 className="text-lg font-semibold text-gray-800 dark:text-slate-50">
+          <h1 className="text-lg font-semibold text-gray-800 dark:text-slate-100">
             Vetra Studio Drive
           </h1>
           <div className="relative" ref={infoMenuRef}>
@@ -108,7 +108,7 @@ export const DriveHeader: React.FC<DriveHeaderProps> = ({
               <button
                 aria-label="Share drive"
                 aria-expanded={isShareMenuOpen}
-                className="rounded-full p-1 text-gray-800 transition-colors hover:bg-gray-100 dark:text-slate-50 dark:hover:bg-slate-700"
+                className="rounded-full p-1 text-gray-800 transition-colors hover:bg-gray-100 dark:text-slate-100 dark:hover:bg-slate-700"
                 onClick={toggleShareMenu}
               >
                 <ShareIcon width={16} height={16} />
@@ -132,7 +132,7 @@ export const DriveHeader: React.FC<DriveHeaderProps> = ({
           href="https://academy.vetra.io/"
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-2 text-sm text-gray-800 underline transition-colors hover:text-gray-700 dark:text-slate-50 dark:hover:text-slate-200"
+          className="flex items-center gap-2 text-sm text-gray-800 underline transition-colors hover:text-gray-700 dark:text-slate-100 dark:hover:text-slate-200"
         >
           <ExternalLinkIcon />
           Vetra Academy

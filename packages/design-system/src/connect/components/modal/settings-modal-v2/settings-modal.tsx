@@ -74,7 +74,7 @@ export function SettingsModal(props: Props) {
       {...restProps}
     >
       <div className="flex justify-between rounded-t-xl border-b border-gray-50 p-4 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
-        <h1 className="text-center text-xl font-semibold text-gray-800 dark:text-slate-50">
+        <h1 className="text-center text-xl font-semibold text-gray-800 dark:text-slate-100">
           {title}
         </h1>
         <button

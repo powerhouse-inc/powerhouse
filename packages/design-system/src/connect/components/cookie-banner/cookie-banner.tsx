@@ -1,6 +1,6 @@
 import { PowerhouseButton } from "#design-system";
-import { twMerge } from "tailwind-merge";
 import { useState } from "react";
+import { twMerge } from "tailwind-merge";
 
 export type CookieInput = {
   id: string;
@@ -65,7 +65,7 @@ export const CookieBanner: React.FC<CookieBannerProps> = (props) => {
               type="checkbox"
             />
             <label
-              className="cursor-pointer text-gray-800 select-none dark:text-slate-50"
+              className="cursor-pointer text-gray-800 select-none dark:text-slate-100"
               htmlFor={cookie.id}
             >
               {cookie.label}

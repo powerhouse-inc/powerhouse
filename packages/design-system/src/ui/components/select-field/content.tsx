@@ -1,13 +1,13 @@
 import { Icon } from "#design-system";
-import { twMerge } from "tailwind-merge";
 import { useCommandState } from "cmdk";
 import React, { useEffect } from "react";
+import { twMerge } from "tailwind-merge";
 import {
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
 } from "../command/command.js";
 import type { SelectProps } from "../enum-field/types.js";
 import { CommandItemList } from "./subcomponents/CommandItemList.js";
@@ -61,7 +61,7 @@ export const Content: React.FC<ContentProps> = ({
             }
           }}
           wrapperClassName="rounded-t"
-          className="text-gray-800 dark:text-slate-50"
+          className="text-gray-800 dark:text-slate-100"
         />
       )}
       <CommandList ref={commandListRef} tabIndex={!searchable ? 0 : undefined}>
@@ -104,12 +104,12 @@ export const Content: React.FC<ContentProps> = ({
                           <Icon
                             name="Checkmark"
                             size={16}
-                            className="text-gray-800 dark:text-slate-50"
+                            className="text-gray-800 dark:text-slate-100"
                           />
                         )}
                     </div>
                   )}
-                <span className="text-sm/4 font-semibold text-gray-800 dark:text-slate-50">
+                <span className="text-sm/4 font-semibold text-gray-800 dark:text-slate-100">
                   {selectedValues.length === enabledOptions.length
                     ? "Deselect All"
                     : "Select All"}
@@ -121,7 +121,7 @@ export const Content: React.FC<ContentProps> = ({
                         <Icon
                           name="Checkmark"
                           size={16}
-                          className="text-gray-800 dark:text-slate-50"
+                          className="text-gray-800 dark:text-slate-100"
                         />
                       )}
                     </div>

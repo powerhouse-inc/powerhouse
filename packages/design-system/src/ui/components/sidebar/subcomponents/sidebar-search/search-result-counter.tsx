@@ -19,7 +19,7 @@ export const SearchResultCounter: React.FC<SearchResultCounterProps> = ({
     <div className="text-xs">
       {totalResults > 0 ? (
         <>
-          <span className="text-gray-700 dark:text-slate-50">
+          <span className="text-gray-700 dark:text-slate-100">
             {activeIndex + 1}
           </span>
           <span className="text-gray-500 dark:text-slate-700">

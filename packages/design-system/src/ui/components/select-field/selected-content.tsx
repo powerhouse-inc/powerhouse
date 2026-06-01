@@ -1,7 +1,7 @@
 import type { IconName } from "#design-system";
 import { Icon } from "#design-system";
-import { twMerge } from "tailwind-merge";
 import React from "react";
+import { twMerge } from "tailwind-merge";
 import type { SelectProps } from "../enum-field/types.js";
 
 interface SelectedContentProps {
@@ -67,7 +67,7 @@ export const SelectedContent: React.FC<SelectedContentProps> = ({
     <div className="flex w-full items-center justify-between gap-2">
       <div
         className={twMerge(
-          "max-w-full truncate text-gray-800 dark:text-slate-50",
+          "max-w-full truncate text-gray-800 dark:text-slate-100",
           !multiple && "flex items-center gap-2",
         )}
       >

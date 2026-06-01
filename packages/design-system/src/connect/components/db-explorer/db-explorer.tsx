@@ -1,25 +1,25 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ConnectConfirmationModal } from "../modal/confirmation-modal.js";
 import {
-  SchemaTreeSidebar,
-  type TableInfo,
+    SchemaTreeSidebar,
+    type TableInfo,
 } from "./components/schema-tree-sidebar.js";
 import {
-  TableView,
-  rowsToCsv,
-  type ColumnInfo,
-  type FilterGroup,
-  type PaginationState,
-  type SortOptions,
+    TableView,
+    rowsToCsv,
+    type ColumnInfo,
+    type FilterGroup,
+    type PaginationState,
+    type SortOptions,
 } from "./components/table-view.js";
 
 // Re-export types
 export type { TableInfo } from "./components/schema-tree-sidebar.js";
 export type {
-  ColumnInfo,
-  FilterClause,
-  FilterGroup,
-  SortOptions,
+    ColumnInfo,
+    FilterClause,
+    FilterGroup,
+    SortOptions
 } from "./components/table-view.js";
 
 export type GetTableRowsOptions = {
@@ -320,7 +320,7 @@ export function DBExplorer({
               <div className="flex flex-col gap-1 border-t border-gray-200 pt-2 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
                 <div className="flex items-center justify-between text-xs text-gray-700 dark:text-slate-200">
                   <span>Postgres version</span>
-                  <span className="font-semibold text-gray-800 dark:text-slate-50">
+                  <span className="font-semibold text-gray-800 dark:text-slate-100">
                     {pgVersionControl.currentPgVersion === null
                       ? "—"
                       : `PG${pgVersionControl.currentPgVersion}`}

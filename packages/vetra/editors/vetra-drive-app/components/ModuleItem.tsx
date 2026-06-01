@@ -1,11 +1,11 @@
 import { Icon } from "@powerhousedao/design-system";
-import { twMerge } from "tailwind-merge";
 import {
-  ConnectDropdownMenu,
-  fileNodeDropdownOptions,
+    ConnectDropdownMenu,
+    fileNodeDropdownOptions,
 } from "@powerhousedao/design-system/connect";
 import type { FileNode } from "@powerhousedao/shared/document-drive";
 import React, { useState } from "react";
+import { twMerge } from "tailwind-merge";
 import { DOCUMENT_TYPES } from "../document-types.js";
 import { AddNewIcon } from "../icons/AddNewIcon.js";
 import { AppIcon } from "../icons/AppIcon.js";
@@ -82,7 +82,7 @@ export const ModuleItem: React.FC<ModuleItemProps> = ({
         <IconComponent />
       </div>
       <div className="min-w-0 flex-1">
-        <h3 className="truncate text-sm font-medium text-gray-800 dark:text-slate-50">
+        <h3 className="truncate text-sm font-medium text-gray-800 dark:text-slate-100">
           {fileNode.name}
         </h3>
         <p className="truncate text-xs text-gray-500 dark:text-slate-400">

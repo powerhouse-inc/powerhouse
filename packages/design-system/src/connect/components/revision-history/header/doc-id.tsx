@@ -28,7 +28,7 @@ export function DocId(props: Props) {
     >
       <Icon name="Link" />
       DOC ID
-      <span className="text-gray-800 dark:text-slate-50">{docId}</span>
+      <span className="text-gray-800 dark:text-slate-100">{docId}</span>
     </button>
   );
 }

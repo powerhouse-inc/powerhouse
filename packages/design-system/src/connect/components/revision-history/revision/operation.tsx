@@ -12,7 +12,7 @@ export function Operation(props: OperationProps) {
     <CodePopover
       content={<FormattedJsonViewer value={operationInput} />}
       trigger={
-        <span className="flex cursor-pointer items-center gap-2 text-xs text-gray-800 dark:text-slate-50">
+        <span className="flex cursor-pointer items-center gap-2 text-xs text-gray-800 dark:text-slate-100">
           {operationType}
           <Icon
             className="text-gray-300 dark:text-slate-600"

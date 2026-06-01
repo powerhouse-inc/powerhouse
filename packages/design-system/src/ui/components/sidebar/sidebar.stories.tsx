@@ -327,7 +327,7 @@ export const WithinLayoutAndContent: Story = {
           style={{ width: "calc(100% - var(--sidebar-width))" }}
           className="flex-1 bg-gray-50 p-4 dark:bg-slate-800"
         >
-          <h1 className="text-2xl font-bold text-gray-800 dark:text-slate-50">
+          <h1 className="text-2xl font-bold text-gray-800 dark:text-slate-100">
             Content Area
           </h1>
           <p className="text-sm text-gray-500 dark:text-slate-400">
@@ -378,7 +378,7 @@ export const WithCustomTitleNavigation: Story = {
           style={{ width: "calc(100% - var(--sidebar-width))" }}
           className="flex-1 bg-gray-50 p-4 dark:bg-slate-800"
         >
-          <h1 className="text-2xl font-bold text-gray-800 dark:text-slate-50">
+          <h1 className="text-2xl font-bold text-gray-800 dark:text-slate-100">
             Content Area
           </h1>
           <p className="text-sm text-gray-500 dark:text-slate-400">
@@ -386,7 +386,7 @@ export const WithCustomTitleNavigation: Story = {
           </p>
 
           <div className="mt-4">
-            <h2 className="text-lg font-semibold text-gray-800 dark:text-slate-50">
+            <h2 className="text-lg font-semibold text-gray-800 dark:text-slate-100">
               Navigation Log:
             </h2>
             <div className="mt-2 overflow-y-auto rounded-sm border bg-gray-50 p-2 dark:bg-slate-700">
@@ -446,7 +446,7 @@ export const WithCustomStyles: Story = {
           style={{ width: "calc(100% - var(--sidebar-width))" }}
           className="flex-1 bg-gray-50 p-4 dark:bg-slate-800"
         >
-          <h1 className="text-2xl font-bold text-gray-800 dark:text-slate-50">
+          <h1 className="text-2xl font-bold text-gray-800 dark:text-slate-100">
             Content Area
           </h1>
           <p className="text-sm text-gray-500 dark:text-slate-400">
@@ -454,7 +454,7 @@ export const WithCustomStyles: Story = {
           </p>
 
           <div className="mt-4">
-            <h2 className="text-lg font-semibold text-gray-800 dark:text-slate-50">
+            <h2 className="text-lg font-semibold text-gray-800 dark:text-slate-100">
               Navigation Log:
             </h2>
             <div className="mt-2 overflow-y-auto rounded-sm border bg-gray-50 p-2 dark:bg-slate-700">
@@ -535,7 +535,7 @@ export const WithCustomTargetElement: Story = {
           style={{ width: "calc(100% - var(--sidebar-width))" }}
           className="flex-1 bg-gray-50 p-4 dark:bg-slate-800"
         >
-          <h1 className="text-2xl font-bold text-gray-800 dark:text-slate-50">
+          <h1 className="text-2xl font-bold text-gray-800 dark:text-slate-100">
             Content Area
           </h1>
           <p className="text-sm text-gray-500 dark:text-slate-400">
@@ -543,7 +543,7 @@ export const WithCustomTargetElement: Story = {
           </p>
 
           <div className="mt-4">
-            <h2 className="text-lg font-semibold text-gray-800 dark:text-slate-50">
+            <h2 className="text-lg font-semibold text-gray-800 dark:text-slate-100">
               Navigation Log:
             </h2>
             <div className="mt-2 overflow-y-auto rounded-sm border bg-gray-50 p-2 dark:bg-slate-700">
@@ -587,7 +587,7 @@ export const Loading: Story = {
           style={{ width: "calc(100% - var(--sidebar-width))" }}
           className="flex-1 bg-gray-50 p-4 dark:bg-slate-800"
         >
-          <h1 className="text-2xl font-bold text-gray-800 dark:text-slate-50">
+          <h1 className="text-2xl font-bold text-gray-800 dark:text-slate-100">
             Content Area
           </h1>
           <p className="text-sm text-gray-500 dark:text-slate-400">
@@ -651,7 +651,7 @@ export const WithCustomSorting: Story = {
           style={{ width: "calc(100% - var(--sidebar-width))" }}
           className="flex-1 bg-gray-50 p-4 dark:bg-slate-800"
         >
-          <h1 className="text-2xl font-bold text-gray-800 dark:text-slate-50">
+          <h1 className="text-2xl font-bold text-gray-800 dark:text-slate-100">
             Custom Sorting
           </h1>
           <div className="mt-4 space-y-2 text-sm text-gray-700 dark:text-slate-400">

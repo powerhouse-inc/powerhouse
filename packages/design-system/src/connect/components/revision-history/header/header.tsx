@@ -46,7 +46,7 @@ export function Header(props: Props) {
         >
           <Icon name="VariantArrowLeft" />
         </button>
-        <h1 className="text-xs text-gray-800 dark:text-slate-50">{title}</h1>
+        <h1 className="text-xs text-gray-800 dark:text-slate-100">{title}</h1>
       </div>
       <div className="flex items-center gap-2">
         <DocId docId={docId} onCopy={onCopyDocId} />

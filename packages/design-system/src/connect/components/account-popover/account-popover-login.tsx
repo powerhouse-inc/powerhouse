@@ -30,7 +30,7 @@ export const AccountPopoverLogin: FC<AccountPopoverLoginProps> = ({
   return (
     <div className="p-4">
       <div className="mb-4 flex justify-center">
-        <div className="flex h-5.5 w-20.75 items-center justify-center overflow-hidden text-gray-800 dark:text-slate-50">
+        <div className="flex h-5.5 w-20.75 items-center justify-center overflow-hidden text-gray-800 dark:text-slate-100">
           <Icon name="RenownLight" size={83} />
         </div>
       </div>

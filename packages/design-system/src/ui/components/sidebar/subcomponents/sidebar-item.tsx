@@ -103,7 +103,7 @@ export const SidebarItem = ({
               pinnedMode &&
                 "after:absolute after:-top-2.5 after:left-[15px] after:h-4 after:w-px after:bg-gray-300 first:group-first/sidebar-item-wrapper:after:hidden hover:bg-gray-50 dark:hover:bg-slate-600",
               isActive &&
-                "bg-gray-200 font-medium text-gray-800 hover:bg-gray-200 dark:bg-slate-900 dark:text-slate-50 dark:hover:bg-slate-900",
+                "bg-gray-200 font-medium text-gray-800 hover:bg-gray-200 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-900",
               node.className,
             )}
             onClick={() => {
@@ -164,7 +164,7 @@ export const SidebarItem = ({
                     "absolute top-1/2 flex -translate-y-1/2 items-center justify-center",
                     hasStatus ? "right-8" : "right-2",
                     isPinned
-                      ? "text-gray-700 hover:text-blue-900 dark:text-slate-50 dark:hover:text-blue-900"
+                      ? "text-gray-700 hover:text-blue-900 dark:text-slate-100 dark:hover:text-blue-900"
                       : "invisible text-gray-300 group-hover/sidebar-item:visible hover:text-gray-700 dark:text-slate-200 dark:hover:text-slate-100",
                   )}
                   onClick={(e) => {

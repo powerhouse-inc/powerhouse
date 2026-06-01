@@ -1,14 +1,14 @@
 import {
-  useDocumentTypesInSelectedDrive,
-  useSupportedDocumentTypesInReactor,
+    useDocumentTypesInSelectedDrive,
+    useSupportedDocumentTypesInReactor,
 } from "@powerhousedao/reactor-browser";
 import {
-  addDocumentType,
-  removeDocumentType,
-  setAppName,
-  setAppStatus,
-  setDocumentTypes,
-  setDragAndDropEnabled,
+    addDocumentType,
+    removeDocumentType,
+    setAppName,
+    setAppStatus,
+    setDocumentTypes,
+    setDragAndDropEnabled,
 } from "@powerhousedao/vetra/document-models/app-module";
 import { useCallback, useEffect, useState } from "react";
 import { twMerge } from "tailwind-merge";
@@ -129,7 +129,7 @@ export const AppEditorForm = () => {
   return (
     <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-medium text-gray-800 dark:text-slate-50">
+        <h2 className="text-lg font-medium text-gray-800 dark:text-slate-100">
           App Configuration
         </h2>
         <StatusPill
@@ -231,7 +231,7 @@ export const AppEditorForm = () => {
 
       {/* Drag and Drop Settings */}
       <div>
-        <h3 className="mb-4 text-base font-medium text-gray-800 dark:text-slate-50">
+        <h3 className="mb-4 text-base font-medium text-gray-800 dark:text-slate-100">
           Drag and Drop Settings
         </h3>
 

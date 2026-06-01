@@ -1,7 +1,7 @@
 import { Icon } from "#design-system";
 import type {
-  IChannel,
-  IntervalPollTimer,
+    IChannel,
+    IntervalPollTimer,
 } from "@powerhousedao/reactor-browser";
 import { useCallback, useState } from "react";
 import type { ConnectionStateSummary } from "../remotes-inspector.js";
@@ -164,7 +164,7 @@ export function ChannelInspector({
             <Icon className="rotate-90" name="ChevronDown" size={14} />
             Back
           </button>
-          <h2 className="text-lg font-semibold text-gray-800 dark:text-slate-50">
+          <h2 className="text-lg font-semibold text-gray-800 dark:text-slate-100">
             Channel: {remoteName}
           </h2>
         </div>
@@ -182,7 +182,7 @@ export function ChannelInspector({
 
       {connectionState && (
         <div className="rounded-sm border border-gray-200 bg-gray-50 p-4 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
-          <h3 className="mb-3 text-sm font-semibold text-gray-800 dark:text-slate-50">
+          <h3 className="mb-3 text-sm font-semibold text-gray-800 dark:text-slate-100">
             Connection State
           </h3>
           <div className="flex flex-wrap items-center gap-4 text-sm text-gray-700 dark:text-slate-200">
@@ -223,7 +223,7 @@ export function ChannelInspector({
 
       {pollerControls && (
         <div className="rounded-sm border border-gray-200 bg-gray-50 p-4 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
-          <h3 className="mb-3 text-sm font-semibold text-gray-800 dark:text-slate-50">
+          <h3 className="mb-3 text-sm font-semibold text-gray-800 dark:text-slate-100">
             Poller
           </h3>
           <div className="flex items-center justify-between">
@@ -304,7 +304,7 @@ export function ChannelInspector({
       )}
 
       <div className="rounded-sm border border-gray-200 bg-gray-50 p-4 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
-        <h3 className="mb-3 text-sm font-semibold text-gray-800 dark:text-slate-50">
+        <h3 className="mb-3 text-sm font-semibold text-gray-800 dark:text-slate-100">
           Mailbox Processing
         </h3>
         <div className="flex flex-col gap-3">

@@ -1,7 +1,7 @@
 import {
-  PROCESSOR_APPS,
-  type ProcessorApp,
-  type ProcessorApps,
+    PROCESSOR_APPS,
+    type ProcessorApp,
+    type ProcessorApps,
 } from "@powerhousedao/shared/processors";
 import { useEffect, useState } from "react";
 import { twMerge } from "tailwind-merge";
@@ -111,7 +111,7 @@ export const ProcessorEditorForm: React.FC<ProcessorEditorFormProps> = ({
   return (
     <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-medium text-gray-800 dark:text-slate-50">
+        <h2 className="text-lg font-medium text-gray-800 dark:text-slate-100">
           Processor Configuration
         </h2>
         <StatusPill

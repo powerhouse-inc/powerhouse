@@ -47,7 +47,7 @@ export function UploadFileItemHeader(props: HeaderProps) {
       </div>
 
       <div className="flex flex-1 flex-col gap-0.5">
-        <div className="text-xs leading-[18px] font-medium text-gray-800 dark:text-slate-50">
+        <div className="text-xs leading-[18px] font-medium text-gray-800 dark:text-slate-100">
           {fileName}
         </div>
         <div className="text-xs leading-[18px] font-medium text-gray-500 dark:text-slate-400">

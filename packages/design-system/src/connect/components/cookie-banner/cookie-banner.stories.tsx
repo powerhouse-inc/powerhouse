@@ -27,7 +27,7 @@ export const Default: Story = {
         anonymous and do not link to user data. We collect information to
         improve the user experience and validate UI changes. You can still use
         the page without cookies. For more information, please read our{" "}
-        <span className="text-gray-800 dark:text-slate-50">
+        <span className="text-gray-800 dark:text-slate-100">
           cookies policy.
         </span>
       </div>

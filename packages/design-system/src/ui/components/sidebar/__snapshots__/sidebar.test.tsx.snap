@@ -269,7 +269,7 @@ exports[`Sidebar Component > Loading State > should match snapshot in loading st
           value=""
         />
         <svg
-          class="absolute top-1/2 left-2 -translate-y-1/2 text-gray-700 dark:text-slate-50"
+          class="absolute top-1/2 left-2 -translate-y-1/2 text-gray-700 dark:text-slate-100"
           fill="currentcolor"
           height="16"
           viewBox="0 0 24 24"
@@ -497,7 +497,7 @@ exports[`Sidebar Component > should match snapshot 1`] = `
           value=""
         />
         <svg
-          class="absolute top-1/2 left-2 -translate-y-1/2 text-gray-700 dark:text-slate-50"
+          class="absolute top-1/2 left-2 -translate-y-1/2 text-gray-700 dark:text-slate-100"
           fill="currentcolor"
           height="16"
           viewBox="0 0 24 24"

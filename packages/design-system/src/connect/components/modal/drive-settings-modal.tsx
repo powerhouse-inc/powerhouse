@@ -1,14 +1,13 @@
 import type { DivProps } from "#design-system";
 import { Icon, Modal } from "#design-system";
 import type { DriveSystemInfoState } from "@powerhousedao/reactor-browser";
-import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
-import type { SharingType } from "@powerhousedao/shared/document-drive";
+import type { DocumentDriveDocument, SharingType } from "@powerhousedao/shared/document-drive";
 import type { ComponentPropsWithoutRef } from "react";
 import { twMerge } from "tailwind-merge";
 import { Divider } from "../divider/divider.js";
 import {
-  type DriveSettingsFormSubmitHandler,
-  DriveSettingsForm,
+    type DriveSettingsFormSubmitHandler,
+    DriveSettingsForm,
 } from "../form/drive-settings-form.js";
 
 type ModalProps = ComponentPropsWithoutRef<typeof Modal>;
@@ -88,7 +87,7 @@ export function DriveSettingsModal(props: DriveSettingsModalProps) {
         )}
       >
         <div className="flex justify-between">
-          <h1 className="text-xl font-bold text-gray-800 dark:text-slate-50">
+          <h1 className="text-xl font-bold text-gray-800 dark:text-slate-100">
             Drive settings
           </h1>
           <button

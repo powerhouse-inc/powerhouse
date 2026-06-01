@@ -33,7 +33,7 @@ export const AccountPopoverUser: FC<AccountPopoverUserProps> = ({
   }, []);
 
   return (
-    <div className="flex flex-col divide-y divide-gray-200 text-gray-800 dark:divide-slate-500 dark:text-slate-50">
+    <div className="flex flex-col divide-y divide-gray-200 text-gray-800 dark:divide-slate-500 dark:text-slate-100">
       <div className="px-3 py-2">
         {username && <div className="text-sm font-medium">{username}</div>}
         <div className="mt-1 flex items-center gap-2">
@@ -66,7 +66,7 @@ export const AccountPopoverUser: FC<AccountPopoverUserProps> = ({
             href={etherscanUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-2 text-sm text-gray-800 hover:text-gray-600 dark:text-slate-50 dark:hover:text-slate-300"
+            className="flex items-center gap-2 text-sm text-gray-800 hover:text-gray-600 dark:text-slate-100 dark:hover:text-slate-300"
           >
             <Icon name="Ethscan" size={14} />
             View on Etherscan

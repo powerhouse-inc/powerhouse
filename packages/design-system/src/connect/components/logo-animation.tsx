@@ -123,7 +123,7 @@ export function LogoAnimation({ size = 48, className = "" }) {
       viewBox="-1 -2 50 52"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      className={twMerge("text-gray-800 dark:text-slate-50", className)}
+      className={twMerge("text-gray-800 dark:text-slate-100", className)}
       aria-label="Animated logo"
     >
       {SEQUENCE.map(({ id }) => (

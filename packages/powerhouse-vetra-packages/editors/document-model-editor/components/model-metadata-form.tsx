@@ -2,9 +2,9 @@ import { useCallback } from "react";
 import { z } from "zod";
 import type { Scope } from "../types/documents.js";
 import {
-  handleModelNameChange,
-  makeInitialSchemaDoc,
-  renameSchemaType,
+    handleModelNameChange,
+    makeInitialSchemaDoc,
+    renameSchemaType,
 } from "../utils/helpers.js";
 import { TextField } from "./text-field.js";
 
@@ -113,7 +113,7 @@ export function ModelNameForm(props: Props) {
       value={name}
       onSubmit={onSubmit}
       placeholder="Model name"
-      className="border-none pl-0 text-xl font-bold text-gray-800 dark:text-slate-50"
+      className="border-none pl-0 text-xl font-bold text-gray-800 dark:text-slate-100"
       required
       focusOnMount
     />

@@ -1,12 +1,12 @@
 import {
-  useAcceptedCookies,
-  useCookieBanner,
+    useAcceptedCookies,
+    useCookieBanner,
 } from "@powerhousedao/connect/hooks";
+import { i18n } from "@powerhousedao/connect/i18n";
 import type { CookieInput } from "@powerhousedao/design-system/connect";
 import { CookieBanner as PHCookieBanner } from "@powerhousedao/design-system/connect";
 import { showPHModal } from "@powerhousedao/reactor-browser";
 import { Trans, useTranslation } from "react-i18next";
-import { i18n } from "@powerhousedao/connect/i18n";
 
 const isCookieAccepted = (cookies: CookieInput[], id: string) => {
   return cookies.some((cookie) => cookie.id === id && cookie.value);
@@ -73,7 +73,7 @@ export const CookieBanner = () => {
                   <a
                     onClick={() => showPHModal({ type: "cookiesPolicy" })}
                     key={"cookieBanner.message-link"}
-                    className="cursor-pointer text-gray-800 hover:underline dark:text-slate-50"
+                    className="cursor-pointer text-gray-800 hover:underline dark:text-slate-100"
                   />
                 ),
               }}

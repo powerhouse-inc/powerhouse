@@ -37,9 +37,9 @@ function getStatusColor(status: UploadFileItemStatus): string {
     case "conflict":
       return "text-red-900 dark:text-red-400";
     case "uploading":
-      return "text-gray-800 dark:text-slate-50";
+      return "text-gray-800 dark:text-slate-100";
     default:
-      return "text-gray-800 dark:text-slate-50";
+      return "text-gray-800 dark:text-slate-100";
   }
 }
 
@@ -83,7 +83,7 @@ export function UploadFileItemStatusRow(props: StatusRowProps) {
       </div>
 
       {status === "uploading" && (
-        <div className="text-xs leading-[18px] font-medium text-gray-800 dark:text-slate-50">
+        <div className="text-xs leading-[18px] font-medium text-gray-800 dark:text-slate-100">
           {Math.round(progress)}%
         </div>
       )}

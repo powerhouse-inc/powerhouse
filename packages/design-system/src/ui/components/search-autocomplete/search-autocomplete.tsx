@@ -1,5 +1,5 @@
-import { twMerge } from "tailwind-merge";
 import React, { useCallback, useState } from "react";
+import { twMerge } from "tailwind-merge";
 import { Input } from "../input/input.js";
 import { Popover, PopoverAnchor, PopoverContent } from "../popover/popover.js";
 import type { SearchAutocompleteProps } from "./types.js";
@@ -153,7 +153,7 @@ export const SearchAutocomplete: React.FC<SearchAutocompleteProps> = (
                     <div className="min-w-0 flex-1">{renderOption(option)}</div>
                   ) : (
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-gray-800 dark:text-slate-50">
+                      <p className="truncate text-sm font-medium text-gray-800 dark:text-slate-100">
                         {option.label}
                       </p>
                       {option.version && (

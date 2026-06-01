@@ -57,7 +57,7 @@ export const WithDifferentColors: Story = {
           <p className="flex items-center gap-2" key={status}>
             {capitalCase(status)}{" "}
             <SyncStatusIcon
-              className="text-gray-800 dark:text-slate-50"
+              className="text-gray-800 dark:text-slate-100"
               syncStatus={status}
             />
           </p>

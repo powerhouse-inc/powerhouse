@@ -6,10 +6,10 @@ import { ChannelInspector } from "./components/channel-inspector.js";
 import { ConnectionStateBadge } from "./components/connection-state-badge.js";
 import { SortIcon } from "./components/sort-icon.js";
 import {
-  type ColumnDef,
-  type SortDirection,
-  type SortOptions,
-  truncateId,
+    type ColumnDef,
+    type SortDirection,
+    type SortOptions,
+    truncateId,
 } from "./utils.js";
 
 export type ConnectionStateSummary = {
@@ -214,7 +214,7 @@ export function RemotesInspector({
   return (
     <div className="flex h-full flex-col gap-2">
       <div className="flex shrink-0 items-center justify-between gap-2">
-        <h2 className="text-lg font-semibold text-gray-800 dark:text-slate-50">
+        <h2 className="text-lg font-semibold text-gray-800 dark:text-slate-100">
           Remotes Inspector
         </h2>
         <div className="flex items-center gap-2">
@@ -320,7 +320,7 @@ export function RemotesInspector({
                   key={remote.id}
                   className="odd:bg-white even:bg-gray-50 hover:bg-blue-50 dark:odd:bg-slate-800 dark:even:bg-slate-800 dark:hover:bg-blue-900"
                 >
-                  <td className="px-3 py-2 text-xs text-gray-800 dark:text-slate-50">
+                  <td className="px-3 py-2 text-xs text-gray-800 dark:text-slate-100">
                     <span className="block truncate" title={remote.id}>
                       {truncateId(remote.id)}
                     </span>

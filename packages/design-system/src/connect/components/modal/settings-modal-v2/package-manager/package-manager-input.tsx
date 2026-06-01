@@ -1,7 +1,7 @@
 import { PackageAnimation } from "#design-system";
 import type {
-  SearchAutocompleteOption,
-  SearchAutocompleteRowContext,
+    SearchAutocompleteOption,
+    SearchAutocompleteRowContext,
 } from "#design-system/ui";
 import { SearchAutocomplete } from "#design-system/ui";
 import type { RegistryPackageList } from "@powerhousedao/shared/registry";
@@ -9,8 +9,8 @@ import { useCallback, useEffect, useState } from "react";
 import { buildPackageSpec, parsePackageSpec } from "./parse-package-spec.js";
 import type { VersionSelection } from "./version-picker.js";
 import {
-  VersionPicker,
-  resolveDefaultVersionSelection,
+    VersionPicker,
+    resolveDefaultVersionSelection,
 } from "./version-picker.js";
 
 export type PackageManagerInputProps = {
@@ -74,7 +74,7 @@ function PackageResultCard(props: PackageResultCardProps) {
   return (
     <div className="flex items-start justify-between gap-3 rounded-md p-2 hover:bg-gray-50 dark:hover:bg-slate-800">
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-gray-800 dark:text-slate-50">
+        <p className="truncate text-sm font-medium text-gray-800 dark:text-slate-100">
           {baseName}
         </p>
         {option.description && (
@@ -192,7 +192,7 @@ export const PackageManagerInput: React.FC<PackageManagerInputProps> = (
 
   return (
     <div className={className}>
-      <h3 className="mb-4 font-semibold text-gray-800 dark:text-slate-50">
+      <h3 className="mb-4 font-semibold text-gray-800 dark:text-slate-100">
         Install Package
       </h3>
       <SearchAutocomplete

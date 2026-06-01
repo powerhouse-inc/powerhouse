@@ -1,7 +1,7 @@
 import { Icon } from "#design-system";
 import type {
-  RegistryPackage,
-  RegistryPackageList,
+    RegistryPackage,
+    RegistryPackageList,
 } from "@powerhousedao/shared/registry";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useLayoutEffect, useState } from "react";
@@ -10,8 +10,8 @@ import { ConnectDropdownMenu } from "../../../dropdown-menu/dropdown-menu.js";
 import { buildPackageSpec } from "./parse-package-spec.js";
 import type { VersionSelection } from "./version-picker.js";
 import {
-  resolveDefaultVersionSelection,
-  VersionPicker,
+    resolveDefaultVersionSelection,
+    VersionPicker,
 } from "./version-picker.js";
 
 const PackageDetail: React.FC<{ label: string; value: ReactNode }> = ({
@@ -83,7 +83,7 @@ export const PackageManagerListItem = (props: {
       )}
     >
       <div className="flex flex-wrap items-center gap-2 pr-8">
-        <h3 className="font-semibold text-gray-800 dark:text-slate-50">
+        <h3 className="font-semibold text-gray-800 dark:text-slate-100">
           {registryPackage.name}
         </h3>
         {canPickVersion && hasVersionMetadata ? (

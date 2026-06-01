@@ -3,8 +3,8 @@ import { useCallback, useState } from "react";
 import { twMerge } from "tailwind-merge";
 
 import type {
-  RebuildResult,
-  ValidationResult,
+    RebuildResult,
+    ValidationResult,
 } from "@powerhousedao/reactor-browser";
 
 export type IntegrityInspectorProps = {
@@ -102,7 +102,7 @@ export function IntegrityInspector({
   return (
     <div className="flex h-full flex-col gap-3">
       <div className="flex shrink-0 items-center justify-between">
-        <h2 className="text-lg font-semibold text-gray-800 dark:text-slate-50">
+        <h2 className="text-lg font-semibold text-gray-800 dark:text-slate-100">
           Integrity Inspector
         </h2>
       </div>

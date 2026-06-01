@@ -1,8 +1,8 @@
 import {
-  CURRENT_PG_MAJOR,
-  getCachedReactorPgMajor,
-  migrateAllIfNeeded,
-  subscribeReactorPgMajor,
+    CURRENT_PG_MAJOR,
+    getCachedReactorPgMajor,
+    migrateAllIfNeeded,
+    subscribeReactorPgMajor,
 } from "@powerhousedao/connect/utils";
 import { useState, useSyncExternalStore } from "react";
 
@@ -63,7 +63,7 @@ export const MigrationBanner: React.FC = () => {
 
   return (
     <div className="absolute inset-x-0 top-0 z-30 flex justify-center p-3">
-      <div className="flex max-w-3xl items-center gap-3 rounded-lg border border-yellow-500 bg-yellow-400 px-4 py-3 text-sm text-gray-800 shadow-lg dark:border-yellow-400 dark:bg-yellow-500 dark:text-slate-50">
+      <div className="flex max-w-3xl items-center gap-3 rounded-lg border border-yellow-500 bg-yellow-400 px-4 py-3 text-sm text-gray-800 shadow-lg dark:border-yellow-400 dark:bg-yellow-500 dark:text-slate-100">
         <div className="flex-1">
           <div className="font-semibold">
             Your local database uses Postgres {major}.
@@ -90,7 +90,7 @@ export const MigrationBanner: React.FC = () => {
           type="button"
           disabled={migrating}
           onClick={dismiss}
-          className="rounded-sm border border-gray-900 bg-transparent px-3 py-1 text-sm font-medium text-gray-800 hover:bg-gray-900/10 disabled:opacity-50 dark:border-slate-50 dark:text-slate-50"
+          className="rounded-sm border border-gray-900 bg-transparent px-3 py-1 text-sm font-medium text-gray-800 hover:bg-gray-900/10 disabled:opacity-50 dark:border-slate-50 dark:text-slate-100"
         >
           Dismiss
         </button>
