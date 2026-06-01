@@ -72,14 +72,20 @@ function PackageResultCard(props: PackageResultCardProps) {
   const isDisabled = option.disabled === true;
 
   return (
-    <div className="flex items-start justify-between gap-3 rounded-md p-2 hover:bg-gray-50">
+    <div className="flex items-start justify-between gap-3 rounded-md p-2 hover:bg-gray-50 dark:hover:bg-slate-800">
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-gray-900">{baseName}</p>
+        <p className="truncate text-sm font-medium text-gray-900 dark:text-slate-50">
+          {baseName}
+        </p>
         {option.description && (
-          <p className="truncate text-xs text-gray-500">{option.description}</p>
+          <p className="truncate text-xs text-gray-700 dark:text-slate-200">
+            {option.description}
+          </p>
         )}
         {option.meta && (
-          <p className="truncate text-xs text-gray-400">{option.meta}</p>
+          <p className="truncate text-xs text-gray-700 dark:text-slate-200">
+            {option.meta}
+          </p>
         )}
         {hasVersionMetadata && (
           <div className="mt-2">
@@ -99,14 +105,14 @@ function PackageResultCard(props: PackageResultCardProps) {
             {selectingContent}
           </div>
         ) : isDisabled ? (
-          <span className="rounded-md bg-gray-100 px-3 py-1 text-xs font-medium text-gray-500">
+          <span className="rounded-md bg-gray-100 px-3 py-1 text-xs font-medium text-gray-500 dark:bg-slate-700 dark:text-slate-400">
             {option.disabledLabel ?? "Unavailable"}
           </span>
         ) : (
           <button
             onClick={() => handleSelect(installSpec)}
             disabled={isSelecting}
-            className="rounded-md bg-gray-900 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-gray-800 disabled:opacity-50"
+            className="rounded-md bg-gray-900 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-gray-800 disabled:opacity-50 dark:bg-slate-50 dark:text-slate-900 dark:hover:bg-slate-100"
           >
             {isSelecting ? "..." : selectLabel}
           </button>
@@ -186,7 +192,9 @@ export const PackageManagerInput: React.FC<PackageManagerInputProps> = (
 
   return (
     <div className={className}>
-      <h3 className="mb-4 font-semibold text-gray-900">Install Package</h3>
+      <h3 className="mb-4 font-semibold text-gray-900 dark:text-slate-50">
+        Install Package
+      </h3>
       <SearchAutocomplete
         fetchOptions={fetchOptions}
         onSelect={handleSelect}

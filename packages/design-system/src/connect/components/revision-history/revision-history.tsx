@@ -89,7 +89,7 @@ export function RevisionHistory(props: Props) {
 
   return (
     <ConnectTooltipProvider>
-      <div className="p-6">
+      <div className="p-6 dark:bg-slate-800">
         <Header
           docId={documentId}
           onChangeScope={onChangeScope}
@@ -101,7 +101,7 @@ export function RevisionHistory(props: Props) {
           onCopyDocId={onCopyDocId}
         />
         {PaginationComponent}
-        <div className="mt-4 flex justify-center rounded-md bg-slate-50 p-4">
+        <div className="mt-4 flex justify-center rounded-md bg-gray-50 p-4 dark:bg-slate-800">
           {visibleOperations.length > 0 ? (
             <div className="grid grid-cols-[minmax(min-content,1018px)]">
               <Timeline
@@ -111,7 +111,7 @@ export function RevisionHistory(props: Props) {
               />
             </div>
           ) : (
-            <h3 className="my-40 text-gray-600">
+            <h3 className="my-40 text-gray-700 dark:text-slate-200">
               This document has no recorded operations yet.
             </h3>
           )}

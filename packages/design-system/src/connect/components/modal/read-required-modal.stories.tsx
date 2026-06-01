@@ -9,7 +9,6 @@ const meta: Meta<typeof ReadRequiredModal> = {
     header: { control: "text" },
     body: { control: "text" },
     closeLabel: { control: "text" },
-    bodyProps: { control: "object" },
     onContinue: { action: "continue" },
     onOpenChange: { action: "openChange" },
   },

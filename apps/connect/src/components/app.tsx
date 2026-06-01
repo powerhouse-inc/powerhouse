@@ -9,12 +9,15 @@ import {
   DocumentEditorDebugTools,
   serviceWorkerManager,
 } from "@powerhousedao/connect/utils";
+import { useTheme } from "@powerhousedao/reactor-browser";
 import { useEffect } from "react";
 import { ToastContainer } from "../services/toast.js";
 import { MissingModelBanner } from "./missing-model-banner.js";
 import { PackageInstallPrompt } from "./package-install-prompt.js";
 
 export const App = () => {
+  useTheme(); // keeps the OS-preference change listener active
+
   // refresh page on vite preload error due to outdated chunks — but only when
   // the failing dynamic import is one of Connect's own chunks. External
   // dynamic imports (e.g. the package manager loading a package from the

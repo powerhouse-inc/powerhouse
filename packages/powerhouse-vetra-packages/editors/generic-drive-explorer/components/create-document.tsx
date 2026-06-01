@@ -22,7 +22,9 @@ export function CreateDocument() {
   if (!isAllowedToCreateDocuments) return null;
   return (
     <div className="px-6 py-4">
-      <h3 className="mb-3 text-xl font-bold text-gray-600">New document</h3>
+      <h3 className="mb-3 text-xl font-bold text-gray-700 dark:text-slate-200">
+        New document
+      </h3>
       <div className="flex w-full flex-wrap gap-4">
         {nonDriveDocumentModelModules?.map((doc) => {
           const spec = getDocumentSpec(doc);

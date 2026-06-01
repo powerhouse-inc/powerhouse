@@ -35,7 +35,7 @@ export function UploadFileList(props: UploadFileListProps) {
   return (
     <div
       className={twMerge(
-        "w-89.5 rounded-md border border-gray-100 bg-gray-50 p-4 shadow-charcoal",
+        "w-89.5 rounded-md border border-gray-100 bg-gray-50 p-4 shadow-charcoal dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100",
         className,
       )}
       {...delegatedProps}
@@ -47,7 +47,7 @@ export function UploadFileList(props: UploadFileListProps) {
           aria-expanded={!isCollapsed}
           aria-label={isCollapsed ? "Expand list" : "Collapse list"}
           onClick={() => setIsCollapsed((v) => !v)}
-          className="min-w-0 flex-1 text-left text-sm/4 font-medium text-gray-900 hover:opacity-80"
+          className="min-w-0 flex-1 text-left text-sm/4 font-medium text-gray-900 hover:opacity-80 dark:text-slate-50"
         >
           {computedTitle}
         </button>
@@ -58,7 +58,7 @@ export function UploadFileList(props: UploadFileListProps) {
             type="button"
             aria-label={isCollapsed ? "Expand" : "Collapse"}
             onClick={() => setIsCollapsed((v) => !v)}
-            className="text-gray-900 hover:opacity-80"
+            className="text-gray-900 hover:opacity-80 dark:text-slate-50"
           >
             <span
               className={twMerge(
@@ -76,7 +76,7 @@ export function UploadFileList(props: UploadFileListProps) {
               type="button"
               aria-label="Close"
               onClick={onClose}
-              className="text-gray-900 hover:opacity-80"
+              className="text-gray-900 hover:opacity-80 dark:text-slate-50"
             >
               <span className="inline-block size-4 select-none">
                 <Icon name="XmarkLight" size={16} aria-hidden="true" />

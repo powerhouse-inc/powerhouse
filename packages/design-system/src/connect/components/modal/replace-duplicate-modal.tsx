@@ -1,49 +1,34 @@
-import type { DivProps } from "#design-system";
-import { Icon, mergeClassNameProps, Modal } from "#design-system";
+import { Icon, Modal } from "#design-system";
 import type { ComponentPropsWithoutRef } from "react";
-import { twMerge } from "tailwind-merge";
+import { ModalButton } from "./modal-button.js";
 
-const buttonStyles =
-  "min-h-[48px] min-w-[142px] text-base font-semibold py-3 px-6 rounded-xl outline-none active:opacity-75 hover:scale-105 transform transition-all";
+type ModalProps = ComponentPropsWithoutRef<typeof Modal>;
 
-type ButtonProps = ComponentPropsWithoutRef<"button">;
-
-export type ConnectReplaceDuplicateModalProps = ComponentPropsWithoutRef<
-  typeof Modal
-> & {
+export type ConnectReplaceDuplicateModalProps = {
+  readonly open?: boolean;
+  readonly onOpenChange?: (open: boolean) => void;
   readonly title?: string;
   readonly fileName?: string;
   readonly message?: string;
-  readonly onDuplicate: () => void;
   readonly duplicateLabel?: string;
-  readonly bodyProps?: DivProps;
-  readonly replaceButtonProps?: ButtonProps;
-  readonly duplicateButtonProps?: ButtonProps;
-  readonly headerProps?: DivProps;
-  readonly buttonContainerProps?: DivProps;
-  readonly containerProps?: DivProps;
+  readonly onDuplicate: () => void;
+  readonly overlayProps?: ModalProps["overlayProps"];
+  readonly contentProps?: ModalProps["contentProps"];
 };
 
 export function ConnectReplaceDuplicateModal(
   props: ConnectReplaceDuplicateModalProps,
 ) {
   const {
+    open,
+    onOpenChange,
     title = "Document Already Exists",
     fileName,
     message,
-    children,
-    onOpenChange,
-    onDuplicate,
     duplicateLabel = "Create Copy",
+    onDuplicate,
     overlayProps,
     contentProps,
-    bodyProps = {},
-    headerProps = {},
-    containerProps = {},
-    replaceButtonProps: _replaceButtonProps = {},
-    duplicateButtonProps = {},
-    buttonContainerProps = {},
-    ...restProps
   } = props;
 
   const defaultMessage = fileName
@@ -52,59 +37,31 @@ export function ConnectReplaceDuplicateModal(
 
   return (
     <Modal
-      contentProps={{
-        ...contentProps,
-        className: twMerge("rounded-3xl", contentProps?.className),
-      }}
+      open={open}
       onOpenChange={onOpenChange}
-      overlayProps={{
-        ...overlayProps,
-        className: overlayProps?.className,
-      }}
-      {...restProps}
+      overlayProps={overlayProps}
+      contentProps={contentProps}
     >
-      <div
-        {...mergeClassNameProps(
-          containerProps,
-          "w-[450px] bg-white p-6 text-slate-300",
-        )}
-      >
-        <div className="flex items-center justify-between border-b border-slate-50 pb-2">
-          <div
-            {...mergeClassNameProps(
-              headerProps,
-              "text-2xl font-bold text-gray-800",
-            )}
-          >
+      <div className="w-[450px] p-6">
+        <div className="flex items-center justify-between pb-2">
+          <div className="text-2xl font-bold text-gray-900 dark:text-slate-100">
             {title}
           </div>
           <button
             type="button"
-            className="flex size-6 items-center justify-center rounded-md outline-none hover:bg-slate-100"
+            className="flex size-6 items-center justify-center rounded-md outline-none hover:bg-gray-100 dark:hover:bg-slate-700"
             onClick={() => onOpenChange?.(false)}
           >
             <Icon name="XmarkLight" size={24} />
           </button>
         </div>
-        <div
-          {...mergeClassNameProps(
-            bodyProps,
-            "my-6 rounded-md bg-slate-50 p-4 text-center",
-          )}
-        >
+        <div className="my-6 rounded-md bg-gray-50 p-4 text-center text-gray-900 dark:bg-slate-700 dark:text-slate-100">
           {message || defaultMessage}
-          {children}
         </div>
-        <div {...mergeClassNameProps(buttonContainerProps, "mt-8 flex")}>
-          <button
-            onClick={onDuplicate}
-            {...mergeClassNameProps(
-              duplicateButtonProps,
-              twMerge(buttonStyles, "flex-1 bg-gray-800 text-gray-50"),
-            )}
-          >
+        <div className="mt-8 flex">
+          <ModalButton variant="confirm" onClick={onDuplicate}>
             {duplicateLabel}
-          </button>
+          </ModalButton>
         </div>
       </div>
     </Modal>

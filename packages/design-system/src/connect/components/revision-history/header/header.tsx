@@ -41,12 +41,12 @@ export function Header(props: Props) {
       <div className="flex items-center gap-3">
         <button
           name="close-revision-history"
-          className="rounded-lg bg-gray-50 p-1 text-stone-300 shadow-button"
+          className="rounded-lg bg-gray-50 p-1 text-stone-300 shadow-button dark:bg-slate-800"
           onClick={onClose}
         >
           <Icon name="VariantArrowLeft" />
         </button>
-        <h1 className="text-xs">{title}</h1>
+        <h1 className="text-xs text-gray-900 dark:text-slate-50">{title}</h1>
       </div>
       <div className="flex items-center gap-2">
         <DocId docId={docId} onCopy={onCopyDocId} />

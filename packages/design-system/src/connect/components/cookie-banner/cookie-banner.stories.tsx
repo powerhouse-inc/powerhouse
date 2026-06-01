@@ -22,12 +22,14 @@ export const Default: Story = {
     submitLabel: "Accept configured cookies",
     rejectLabel: "Reject all cookies",
     children: (
-      <div className="font-semibold text-gray-500">
+      <div className="font-semibold text-gray-500 dark:text-slate-400">
         This website uses cookies for analytic purposes only. Cookies are
         anonymous and do not link to user data. We collect information to
         improve the user experience and validate UI changes. You can still use
         the page without cookies. For more information, please read our{" "}
-        <span className="text-gray-900">cookies policy.</span>
+        <span className="text-gray-900 dark:text-slate-50">
+          cookies policy.
+        </span>
       </div>
     ),
     cookies: [

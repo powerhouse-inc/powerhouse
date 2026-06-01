@@ -44,7 +44,7 @@ export function ConnectTooltip(props: Props) {
           side={side}
           sideOffset={sideOffset}
           className={twMerge(
-            "z-50 rounded-lg border border-gray-200 bg-white p-2 text-xs shadow-tooltip",
+            "z-50 rounded-lg border border-gray-200 bg-gray-50 p-2 text-xs shadow-tooltip dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100",
             className,
           )}
         >

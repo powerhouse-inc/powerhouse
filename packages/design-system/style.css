@@ -1,7 +1,7 @@
 @import "react-toastify/dist/ReactToastify.css";
 @import "react-json-view-lite/dist/index.css";
 
-@import "tailwindcss";
+@reference "tailwindcss";
 @import "./theme.css";
 @plugin "tailwind-scrollbar";
 
@@ -77,15 +77,6 @@ input[type="number"] {
 }
 
 @layer base {
-  h1,
-  h2,
-  h3,
-  h4,
-  h5,
-  h6,
-  p {
-    color: var(--color-gray-900);
-  }
   button {
     @apply cursor-pointer;
   }

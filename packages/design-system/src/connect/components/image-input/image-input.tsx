@@ -57,7 +57,7 @@ export function ImageInput<TFieldValues extends FieldValues>(
       render={({ field: { onBlur, onChange, value } }) => (
         <div
           className={twMerge(
-            "flex cursor-pointer items-center gap-2 rounded-xl bg-gray-100 p-3 text-gray-800",
+            "flex cursor-pointer items-center gap-2 rounded-xl bg-gray-100 p-3 text-gray-900 dark:bg-slate-700 dark:text-slate-100",
             className,
           )}
           onClick={handleContainerClick}

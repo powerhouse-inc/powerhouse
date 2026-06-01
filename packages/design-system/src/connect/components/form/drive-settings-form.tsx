@@ -81,18 +81,22 @@ export function DriveSettingsForm(props: DriveSettingsFormProps) {
         title="About this drive"
       >
         {systemInfo.status === "local" && (
-          <p className="py-2 text-sm text-gray-500">Local drive — N/A</p>
+          <p className="py-2 text-sm text-gray-500 dark:text-slate-400">
+            Local drive — N/A
+          </p>
         )}
         {systemInfo.status === "loading" && (
-          <p className="py-2 text-sm text-gray-400">Loading…</p>
+          <p className="py-2 text-sm text-gray-400 dark:text-slate-500">
+            Loading…
+          </p>
         )}
         {systemInfo.status === "error" && (
-          <p className="py-2 text-sm text-red-600">
+          <p className="py-2 text-sm text-red-600 dark:text-red-100">
             Could not load system info
           </p>
         )}
         {systemInfo.status === "ready" && (
-          <div className="py-2 text-sm text-gray-700">
+          <div className="py-2 text-sm text-gray-700 dark:text-slate-200">
             <div>
               <span className="font-medium">Version:</span> {systemInfo.version}
             </div>
@@ -110,7 +114,7 @@ export function DriveSettingsForm(props: DriveSettingsFormProps) {
         title="Danger zone"
       >
         <button
-          className="flex gap-2 py-3 font-semibold text-red-900 transition hover:brightness-125"
+          className="flex gap-2 py-3 font-semibold text-red-900 transition hover:brightness-125 dark:text-red-400"
           onClick={() => setShowDeleteDrive(true)}
           type="button"
         >

@@ -1,5 +1,4 @@
 import { twMerge } from "tailwind-merge";
-import { mergeClassNameProps } from "../../utils/mergeClassNameProps.js";
 import {
   PowerhouseButton,
   type PowerhouseButtonProps,
@@ -13,16 +12,19 @@ export const PaginationButton: React.FC<PaginationButtonProps> = ({
   active = false,
   ...props
 }) => {
-  const className = twMerge(
-    "h-8 min-w-8 border border-solid border-gray-300 bg-white px-3 py-1 text-xs text-gray-900 hover:bg-gray-100",
+  const { className: propClassName, ...restProps } = props;
+  const mergedClassName = twMerge(
+    "h-8 min-w-8 border border-solid border-gray-300 bg-gray-50 px-3 py-1 text-xs text-gray-900 hover:bg-gray-100 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 dark:hover:bg-slate-700",
     !active && "border-0",
+    typeof propClassName === "string" && propClassName,
   );
 
   return (
     <PowerhouseButton
       color="light"
       size="small"
-      {...mergeClassNameProps(props, className)}
+      className={mergedClassName}
+      {...restProps}
     >
       {props.children}
     </PowerhouseButton>

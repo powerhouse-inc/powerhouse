@@ -40,7 +40,7 @@ const Template: Story = {
   },
   decorators: [
     (Story) => (
-      <div className="h-[420px] bg-white p-8">
+      <div className="h-[420px] bg-gray-50 p-8 dark:bg-slate-800">
         <Story />
       </div>
     ),

@@ -1,5 +1,5 @@
-import { useVirtualizer } from "@tanstack/react-virtual";
 import type { Operation } from "@powerhousedao/shared/document-model";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Revision } from "../revision/revision.js";
 import { Skip } from "../skip/skip.js";
@@ -64,7 +64,7 @@ export function Timeline(props: TimelineProps) {
 
   return (
     <div
-      className="border-l border-slate-100"
+      className="border-l border-gray-100 dark:border-none dark:bg-slate-800 dark:text-slate-100"
       ref={parentRef}
       style={{
         height: `${rowVirtualizer.getTotalSize()}px`,

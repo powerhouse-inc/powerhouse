@@ -624,7 +624,7 @@ const tailwindConfig = [
     settings: {
       "better-tailwindcss": {
         cwd: path.join(repoRoot, "packages/design-system"),
-        entryPoint: "style.css",
+        entryPoint: "storybook.css",
       },
     },
   },
@@ -645,8 +645,8 @@ const tailwindConfig = [
     rules: tailwindRules,
     settings: {
       "better-tailwindcss": {
-        cwd: path.join(repoRoot, "packages/powerhouse-vetra-packages"),
-        entryPoint: "style.css",
+        cwd: path.join(repoRoot, "packages/design-system"),
+        entryPoint: "storybook.css",
       },
     },
   },
@@ -656,8 +656,8 @@ const tailwindConfig = [
     rules: tailwindRules,
     settings: {
       "better-tailwindcss": {
-        cwd: path.join(repoRoot, "packages/vetra"),
-        entryPoint: "style.css",
+        cwd: path.join(repoRoot, "packages/design-system"),
+        entryPoint: "storybook.css",
       },
     },
   },

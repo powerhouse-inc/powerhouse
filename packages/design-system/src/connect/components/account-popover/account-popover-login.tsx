@@ -30,14 +30,14 @@ export const AccountPopoverLogin: FC<AccountPopoverLoginProps> = ({
   return (
     <div className="p-4">
       <div className="mb-4 flex justify-center">
-        <div className="flex h-[22px] w-[83px] items-center justify-center overflow-hidden">
+        <div className="flex h-5.5 w-20.75 items-center justify-center overflow-hidden text-gray-900 dark:text-slate-50">
           <Icon name="RenownLight" size={83} />
         </div>
       </div>
       <button
         onClick={allowLogin ? handleLogin : undefined}
         className={twMerge(
-          "mt-4 flex h-7 w-full cursor-pointer items-center justify-center rounded-lg border border-gray-300 bg-transparent text-sm active:opacity-70",
+          "mt-4 flex h-7 w-full cursor-pointer items-center justify-center rounded-lg border border-gray-300 bg-transparent text-sm text-gray-900 active:opacity-70 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100",
           allowLogin ? "cursor-pointer" : "cursor-wait",
         )}
         type="button"

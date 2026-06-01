@@ -1,15 +1,17 @@
-import { mergeClassNameProps } from "#design-system";
+import { twMerge } from "tailwind-merge";
 
 export const Footer: React.FC<React.HTMLAttributes<HTMLElement>> = ({
   children,
+  className,
   ...props
 }) => {
   return (
     <footer
-      {...mergeClassNameProps(
-        props,
-        "flex items-center gap-x-6 text-xs font-medium text-charcoal-300",
+      className={twMerge(
+        "flex items-center gap-x-6 text-xs font-medium text-gray-300 dark:text-slate-600",
+        typeof className === "string" && className,
       )}
+      {...props}
     >
       {children}
     </footer>

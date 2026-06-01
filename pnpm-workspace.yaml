@@ -13,6 +13,7 @@ minimumReleaseAge: 10080
 preferFullMetadata: true
 
 catalog:
+  "execa": 9.6.1
   "vite-tsconfig-paths": 6.1.1
   "@modelcontextprotocol/sdk": 1.29.0
   "@powerhousedao/document-engineering": 1.40.5

@@ -1,7 +1,7 @@
 import { setName } from "@powerhousedao/shared/document-model";
+import { useSelectedAppModuleDocument } from "@powerhousedao/vetra/document-models/app-module";
 import type { FormEventHandler, MouseEventHandler } from "react";
 import { useState } from "react";
-import { useSelectedAppModuleDocument } from "@powerhousedao/vetra/document-models/app-module";
 
 /** Displays the name of the selected AppModule document and allows editing it */
 export function EditAppModuleName() {
@@ -40,18 +40,21 @@ export function EditAppModuleName() {
         onSubmit={onSubmitSetName}
       >
         <input
-          className="p-1 text-lg font-semibold text-gray-900"
+          className="p-1 text-lg font-semibold text-gray-900 placeholder:text-gray-700 dark:text-slate-50 dark:placeholder:text-slate-200"
           type="text"
           name="name"
           defaultValue={appModuleDocumentName}
           autoFocus
         />
         <div className="flex gap-2">
-          <button type="submit" className="text-sm text-gray-600">
+          <button
+            type="submit"
+            className="text-sm text-gray-700 dark:text-slate-200"
+          >
             Save
           </button>
           <button
-            className="text-sm text-red-800"
+            className="text-sm text-red-800 dark:text-red-100"
             onClick={onClickCancelEditAppModuleName}
           >
             Cancel
@@ -62,11 +65,11 @@ export function EditAppModuleName() {
 
   return (
     <div className="flex items-center justify-between">
-      <h2 className="text-lg font-semibold text-gray-900">
+      <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-50">
         {appModuleDocumentName}
       </h2>
       <button
-        className="text-sm text-gray-600"
+        className="text-sm text-gray-700 dark:text-slate-200"
         onClick={onClickEditAppModuleName}
       >
         Edit Name

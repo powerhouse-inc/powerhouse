@@ -1,5 +1,6 @@
 import type { IconName } from "#design-system";
-import { cn, Icon } from "#design-system";
+import { Icon } from "#design-system";
+import { twMerge } from "tailwind-merge";
 import React from "react";
 import type { IdAutocompleteOption, IdAutocompleteProps } from "./types.js";
 
@@ -12,11 +13,11 @@ const IconRenderer: React.FC<{
       <Icon
         name={customIcon}
         size={24}
-        className={cn(
+        className={twMerge(
           "shrink-0",
           asPlaceholder
-            ? "text-gray-400 dark:text-gray-700"
-            : "text-gray-900 dark:text-gray-300",
+            ? "text-gray-400 dark:text-slate-500"
+            : "text-gray-900 dark:text-slate-50",
         )}
       />
     );
@@ -47,7 +48,7 @@ const ReloadButton: React.FC<{
           handleFetchSelectedOption(value);
         }
       }}
-      className={cn(
+      className={twMerge(
         "mt-0.5 focus-visible:outline-none",
         "disabled:pointer-events-none [&_svg]:pointer-events-none",
       )}
@@ -62,8 +63,8 @@ const ReloadButton: React.FC<{
       <Icon
         name={isFetchSelectedOptionSync ? "Checkmark" : "Reload"}
         size={16}
-        className={cn(
-          "text-gray-500 dark:text-gray-600",
+        className={twMerge(
+          "text-gray-500 dark:text-slate-400",
           isLoadingSelectedOption && "animate-spin",
           isFetchSelectedOptionSync && "animate-fade-in duration-500",
         )}
@@ -100,13 +101,13 @@ const IdAutocompleteListOption: React.FC<IdAutocompleteListOptionProps> = ({
   ...extraProps
 }) => {
   const renderWithValue = () => (
-    <div className={cn("flex w-full items-center")}>
+    <div className={twMerge("flex w-full items-center")}>
       <span
-        className={cn(
+        className={twMerge(
           "truncate text-xs/5",
           asPlaceholder
-            ? "text-gray-400 dark:text-gray-700"
-            : "text-gray-500 dark:text-gray-600",
+            ? "text-gray-400 dark:text-slate-500"
+            : "text-gray-500 dark:text-slate-400",
         )}
       >
         {value}
@@ -115,19 +116,19 @@ const IdAutocompleteListOption: React.FC<IdAutocompleteListOptionProps> = ({
   );
 
   const renderWithValueTitleAndDescription = (showDescription = true) => (
-    <div className={cn("flex w-full flex-col gap-1")}>
-      <div className={cn("flex gap-2")}>
+    <div className={twMerge("flex w-full flex-col gap-1")}>
+      <div className={twMerge("flex gap-2")}>
         <IconRenderer
           customIcon={asPlaceholder ? placeholderIcon : icon}
           asPlaceholder={asPlaceholder}
         />
-        <div className={cn("flex min-w-0 grow flex-col gap-[-2px]")}>
+        <div className={twMerge("flex min-w-0 grow flex-col gap-[-2px]")}>
           <span
-            className={cn(
+            className={twMerge(
               "truncate text-sm/5 font-bold",
               asPlaceholder
-                ? "text-gray-400 dark:text-gray-700"
-                : "text-gray-900 dark:text-gray-300",
+                ? "text-gray-400 dark:text-slate-500"
+                : "text-gray-900 dark:text-slate-50",
             )}
           >
             {title}
@@ -137,19 +138,19 @@ const IdAutocompleteListOption: React.FC<IdAutocompleteListOptionProps> = ({
               href={path.url}
               target="_blank"
               rel="noopener noreferrer"
-              className={cn(
-                "truncate text-xs/5 text-blue-900 hover:underline focus-visible:outline-none",
+              className={twMerge(
+                "truncate text-xs/5 text-blue-900 hover:underline focus-visible:outline-none dark:text-blue-100",
               )}
             >
               {path.text}
             </a>
           ) : (
             <span
-              className={cn(
+              className={twMerge(
                 "truncate text-xs/5",
                 asPlaceholder
-                  ? "text-gray-400 dark:text-gray-700"
-                  : "text-gray-500 dark:text-gray-600",
+                  ? "text-gray-400 dark:text-slate-500"
+                  : "text-gray-500 dark:text-slate-400",
               )}
             >
               {typeof path === "object" ? path.text : path}
@@ -166,13 +167,13 @@ const IdAutocompleteListOption: React.FC<IdAutocompleteListOptionProps> = ({
         )}
       </div>
       {showValue && (
-        <div className={cn("flex max-w-full items-center")}>
+        <div className={twMerge("flex max-w-full items-center")}>
           <span
-            className={cn(
+            className={twMerge(
               "truncate text-xs/5",
               asPlaceholder
-                ? "text-gray-400 dark:text-gray-700"
-                : "text-gray-500 dark:text-gray-600",
+                ? "text-gray-400 dark:text-slate-500"
+                : "text-gray-500 dark:text-slate-400",
             )}
           >
             {value}
@@ -180,13 +181,13 @@ const IdAutocompleteListOption: React.FC<IdAutocompleteListOptionProps> = ({
         </div>
       )}
       {showDescription && (
-        <div className={cn("flex flex-col")}>
+        <div className={twMerge("flex flex-col")}>
           <p
-            className={cn(
+            className={twMerge(
               "line-clamp-2 text-xs/5",
               asPlaceholder
-                ? "text-gray-400 dark:text-gray-700"
-                : "text-gray-900 dark:text-gray-300",
+                ? "text-gray-400 dark:text-slate-500"
+                : "text-gray-900 dark:text-slate-50",
             )}
           >
             {description}
@@ -196,13 +197,13 @@ const IdAutocompleteListOption: React.FC<IdAutocompleteListOptionProps> = ({
       {showDescription &&
         "agentType" in extraProps &&
         typeof extraProps.agentType === "string" && (
-          <div className={cn("flex max-w-full items-center justify-end")}>
+          <div className={twMerge("flex max-w-full items-center justify-end")}>
             <span
-              className={cn(
+              className={twMerge(
                 "truncate text-xs/5",
                 asPlaceholder
-                  ? "text-gray-400 dark:text-gray-700"
-                  : "text-gray-500 dark:text-gray-600",
+                  ? "text-gray-400 dark:text-slate-500"
+                  : "text-gray-500 dark:text-slate-400",
               )}
             >
               {extraProps.agentType}
@@ -214,7 +215,7 @@ const IdAutocompleteListOption: React.FC<IdAutocompleteListOptionProps> = ({
 
   return (
     <div
-      className={cn(
+      className={twMerge(
         "w-full max-w-full rounded-md bg-transparent px-3 pb-2",
         variant === "withValue" ? "pt-2" : "pt-3",
         className,

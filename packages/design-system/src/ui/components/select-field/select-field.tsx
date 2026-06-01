@@ -1,4 +1,4 @@
-import { cn } from "#design-system";
+import { twMerge } from "tailwind-merge";
 import React, { useCallback, useId } from "react";
 import type { FieldErrorHandling, InputBaseProps } from "../../types.js";
 import { Button } from "../button/button.js";
@@ -142,16 +142,16 @@ export const SelectFieldRaw = React.forwardRef<
               }
               aria-required={required}
               aria-expanded={isPopoverOpen}
-              className={cn(
+              className={twMerge(
                 "flex h-9 w-full items-center justify-between px-3 py-2",
-                "rounded-md border border-gray-300 bg-white dark:border-charcoal-700 dark:bg-charcoal-900",
-                "hover:border-gray-300 hover:bg-gray-100",
-                "dark:hover:border-charcoal-700 dark:hover:bg-charcoal-800",
-                "focus:ring-1 focus:ring-gray-900 focus:ring-offset-0 focus:outline-none dark:focus:ring-charcoal-300",
-                "focus-visible:ring-1 focus-visible:ring-gray-900 focus-visible:ring-offset-0 dark:focus-visible:ring-charcoal-300",
+                "rounded-md border border-gray-300 bg-gray-50 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100",
+                "hover:border-gray-300 hover:bg-gray-100 dark:hover:border-slate-500 dark:hover:bg-slate-600 dark:hover:text-slate-100",
+                "dark:hover:border-slate-500 dark:hover:bg-slate-600 dark:hover:text-slate-100",
+                "focus:ring-1 focus:ring-gray-900 focus:ring-offset-0 focus:outline-none dark:focus:ring-slate-300",
+                "focus-visible:ring-1 focus-visible:ring-gray-900 focus-visible:ring-offset-0 dark:focus-visible:ring-slate-300",
                 disabled && [
-                  "pointer-events-auto! cursor-not-allowed bg-gray-50",
-                  "hover:border-gray-300 hover:bg-gray-50 dark:hover:border-charcoal-700 dark:hover:bg-charcoal-900",
+                  "pointer-events-auto! cursor-not-allowed bg-gray-50 dark:bg-slate-800",
+                  "hover:border-gray-300 hover:bg-gray-50 dark:hover:border-slate-500 dark:hover:bg-slate-600 dark:hover:text-slate-100",
                 ],
                 className,
               )}

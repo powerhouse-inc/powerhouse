@@ -68,6 +68,7 @@
     "normalize-exception": "^4.0.1",
     "remeda": "catalog:",
     "slug": "^11.0.0",
+    "usehooks-ts": "^3.1.1",
     "zod": "catalog:"
   },
   "devDependencies": {
@@ -94,7 +95,8 @@
     "tsdown": "catalog:",
     "vite": "catalog:",
     "vitest": "catalog:",
-    "vitest-browser-react": "^1.0.1"
+    "vitest-browser-react": "^1.0.1",
+    "type-fest": "catalog:"
   },
   "peerDependencies": {
     "graphql": "^16",

@@ -7,7 +7,7 @@ const meta: Meta<typeof FileItem> = {
   component: FileItem,
   decorators: [
     (Story) => (
-      <div className="w-[500px] bg-white p-10">
+      <div className="w-[500px] bg-gray-50 p-10 dark:bg-slate-800">
         <Story />
       </div>
     ),

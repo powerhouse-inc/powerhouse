@@ -1,4 +1,4 @@
-import { cn } from "#design-system";
+import { twMerge } from "tailwind-merge";
 import type { FormMessageType } from "./form-message.js";
 import { FormMessage } from "./form-message.js";
 
@@ -27,19 +27,19 @@ export const FormMessageList: React.FC<FormMessageListProps> = ({
   }
 
   const typeClasses: Record<FormMessageType, string> = {
-    error: "before:bg-red-900 dark:before:bg-red-900",
-    info: "before:bg-blue-900 dark:before:bg-blue-900",
-    warning: "before:bg-orange-900 dark:before:bg-orange-900",
+    error: "before:bg-red-900 dark:before:bg-red-50",
+    info: "before:bg-blue-900 dark:before:bg-blue-50",
+    warning: "before:bg-orange-900 dark:before:bg-orange-50",
   };
 
   return (
-    <ul className={cn("flex flex-col gap-1", className)} {...props}>
+    <ul className={twMerge("flex flex-col gap-1", className)} {...props}>
       {messages.map((message) => (
         <FormMessage
           key={message}
           as="li"
           type={type}
-          className={cn(
+          className={twMerge(
             // Layout
             "relative pl-4",
             // Visual styles

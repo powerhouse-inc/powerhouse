@@ -15,7 +15,11 @@ export default function SwitchboardLink({
 }: SwitchboardLinkProps) {
   return (
     <a
-      className={className ? className : "text-black hover:text-orange-500"}
+      className={
+        className
+          ? className
+          : "text-gray-900 hover:text-orange-500 dark:text-slate-50 dark:hover:text-orange-100"
+      }
       href={href}
       target={target ?? "_self"}
       onClick={onClick ?? (() => {})}

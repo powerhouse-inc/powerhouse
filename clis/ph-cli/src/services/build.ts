@@ -25,7 +25,7 @@ export async function runBuild(args: BuildArgs) {
   const agent = detectResult?.agent ?? "npm";
 
   // Emit types with tsc
-  const tscCommand = resolveCommand(agent, "execute-local", ["tsc"]);
+  const tscCommand = resolveCommand(agent, "execute-local", ["tsc", "--build"]);
   if (tscCommand === null) {
     console.error(
       "You need to have typescript installed to use the `build` command.",

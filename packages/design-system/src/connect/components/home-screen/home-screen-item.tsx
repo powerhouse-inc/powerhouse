@@ -17,7 +17,7 @@ export const HomeScreenItem = function HomeScreenItem(
   return (
     <div
       className={twMerge(
-        "hover-bg-transparent relative flex h-24 w-40 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-md p-2 text-center text-sm text-black",
+        "hover-bg-transparent relative flex h-24 w-40 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-md p-2 text-center text-sm text-gray-900 dark:text-slate-50",
         containerClassName,
         onClick && "cursor-pointer",
       )}
@@ -25,18 +25,20 @@ export const HomeScreenItem = function HomeScreenItem(
     >
       <div className="mx-auto pb-2">
         {icon || (
-          <div className="size-8 items-center justify-center rounded-lg bg-black pt-1">
-            <span className="w-6 text-white">
+          <div className="size-8 items-center justify-center rounded-lg bg-gray-900 pt-1 dark:bg-slate-50">
+            <span className="w-6 text-white dark:text-slate-900">
               {title.slice(0, 1).toUpperCase()}
             </span>
           </div>
         )}
       </div>
       <div className="w-full max-w-full">
-        <h3 className="w-full max-w-full truncate px-2 text-gray-900">
+        <h3 className="w-full max-w-full truncate px-2 text-gray-900 dark:text-slate-50">
           {title}
         </h3>
-        {description && <p className="text-gray-500">{description}</p>}
+        {description && (
+          <p className="text-gray-500 dark:text-slate-400">{description}</p>
+        )}
       </div>
       {shareable && (
         <div className="absolute top-0 left-2 mb-2">

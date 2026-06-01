@@ -1,110 +1,63 @@
-import type { ComponentPropsWithoutRef } from "react";
+import { Modal } from "#design-system";
+import type { ComponentPropsWithoutRef, ReactNode } from "react";
+import { ModalButton } from "./modal-button.js";
 
-import type { DivProps } from "#design-system";
-import { mergeClassNameProps, Modal } from "#design-system";
-import { twMerge } from "tailwind-merge";
+type ModalProps = ComponentPropsWithoutRef<typeof Modal>;
 
-const buttonStyles =
-  "min-h-[48px] min-w-[142px] text-base font-semibold py-3 px-6 rounded-xl outline-none active:opacity-75 hover:scale-105 transform transition-all";
-
-type ButtonProps = ComponentPropsWithoutRef<"button">;
-
-export type ConfirmationModalProps = ComponentPropsWithoutRef<typeof Modal> & {
-  readonly header: React.ReactNode;
-  readonly body?: React.ReactNode;
-  readonly onCancel: () => void;
-  readonly onContinue: () => void;
+export type ConfirmationModalProps = {
+  readonly open?: boolean;
+  readonly onOpenChange?: (open: boolean) => void;
+  readonly header: ReactNode;
+  readonly body?: ReactNode;
   readonly cancelLabel: string;
   readonly continueLabel: string;
-  readonly bodyProps?: DivProps;
-  readonly cancelButtonProps?: ButtonProps;
-  readonly continueButtonProps?: ButtonProps;
-  readonly headerProps?: DivProps;
-  readonly buttonContainerProps?: DivProps;
-  readonly containerProps?: DivProps;
+  readonly onCancel: () => void;
+  readonly onContinue: () => void;
+  readonly continueDisabled?: boolean;
+  readonly overlayProps?: ModalProps["overlayProps"];
+  readonly contentProps?: ModalProps["contentProps"];
 };
 
 export function ConnectConfirmationModal(props: ConfirmationModalProps) {
   const {
-    body,
-    header,
-    children,
-    onCancel,
+    open,
     onOpenChange,
-    onContinue,
+    header,
+    body,
     cancelLabel,
     continueLabel,
+    onCancel,
+    onContinue,
+    continueDisabled,
     overlayProps,
     contentProps,
-    bodyProps = {},
-    headerProps = {},
-    containerProps = {},
-    cancelButtonProps = {},
-    continueButtonProps = {},
-    buttonContainerProps = {},
-    ...restProps
   } = props;
 
   return (
     <Modal
-      contentProps={{
-        ...contentProps,
-        className: twMerge("rounded-3xl", contentProps?.className),
-      }}
+      open={open}
       onOpenChange={onOpenChange}
-      overlayProps={{
-        ...overlayProps,
-        className: overlayProps?.className,
-      }}
-      {...restProps}
+      overlayProps={overlayProps}
+      contentProps={contentProps}
     >
-      <div
-        {...mergeClassNameProps(
-          containerProps,
-          "w-[400px] bg-white p-6 text-slate-300",
-        )}
-      >
-        <div
-          {...mergeClassNameProps(
-            headerProps,
-            "border-b border-slate-50 pb-2 text-2xl font-bold text-gray-800",
-          )}
-        >
+      <div className="w-[400px] p-6">
+        <div className="pb-2 text-2xl font-bold text-gray-900 dark:text-slate-100">
           {header}
         </div>
-        <div
-          {...mergeClassNameProps(
-            bodyProps,
-            "my-6 rounded-md bg-slate-50 p-4 text-center",
-          )}
-        >
+        <div className="my-6 rounded-md bg-gray-50 p-4 text-center text-gray-900 dark:bg-slate-700 dark:text-slate-100">
           {body}
-          {children}
         </div>
-        <div
-          {...mergeClassNameProps(
-            buttonContainerProps,
-            "mt-8 flex justify-between gap-3",
-          )}
-        >
-          <button
-            onClick={onCancel}
-            {...mergeClassNameProps(
-              cancelButtonProps,
-              twMerge(buttonStyles, "flex-1 bg-slate-50 text-slate-800"),
-            )}
-          >
+        <div className="mt-8 flex justify-between gap-3">
+          <ModalButton variant="cancel" onClick={onCancel}>
             {cancelLabel}
-          </button>
-          <button
+          </ModalButton>
+          <ModalButton
+            variant="confirm"
+            disabled={continueDisabled}
             onClick={onContinue}
-            {...mergeClassNameProps(
-              continueButtonProps,
-              twMerge(buttonStyles, "flex-1 bg-gray-800 text-gray-50"),
-            )}
           >
             {continueLabel}
-          </button>
+          </ModalButton>
         </div>
       </div>
     </Modal>

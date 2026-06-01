@@ -1,6 +1,6 @@
 import * as TabsPrimitive from "@radix-ui/react-tabs";
 import * as React from "react";
-import { cn } from "../utils/style.js";
+import { twMerge } from "tailwind-merge";
 
 const Tabs = TabsPrimitive.Root;
 
@@ -10,8 +10,8 @@ const TabsList = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <TabsPrimitive.List
     ref={ref}
-    className={cn(
-      "flex items-center justify-center rounded-xl bg-slate-50 p-1 shadow-inner",
+    className={twMerge(
+      "flex items-center justify-center rounded-xl bg-gray-50 p-1 shadow-inner dark:bg-slate-800",
       className,
     )}
     {...props}
@@ -25,8 +25,8 @@ const TabsTrigger = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <TabsPrimitive.Trigger
     ref={ref}
-    className={cn(
-      "flex w-full items-center justify-center rounded-lg p-1 text-sm whitespace-nowrap text-gray-500 transition-all disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-gray-50 data-[state=active]:text-gray-800 data-[state=active]:shadow-tab",
+    className={twMerge(
+      "flex w-full items-center justify-center rounded-lg p-1 text-sm whitespace-nowrap text-gray-500 transition-all disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-gray-50 data-[state=active]:text-gray-800 data-[state=active]:shadow-tab dark:text-slate-400",
       className,
     )}
     {...props}
@@ -38,7 +38,7 @@ const TabsContent = React.forwardRef<
   React.ElementRef<typeof TabsPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof TabsPrimitive.Content>
 >(({ className, ...props }, ref) => (
-  <TabsPrimitive.Content ref={ref} className={cn("", className)} {...props} />
+  <TabsPrimitive.Content ref={ref} className={className} {...props} />
 ));
 TabsContent.displayName = TabsPrimitive.Content.displayName;
 

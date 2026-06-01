@@ -2,10 +2,11 @@ import type { Diagnostic } from "@codemirror/lint";
 import { forceLinting } from "@codemirror/lint";
 import { Compartment, EditorState } from "@codemirror/state";
 import { EditorView, keymap } from "@codemirror/view";
+import { useTheme } from "@powerhousedao/reactor-browser";
 import { graphql } from "cm6-graphql";
 import { buildSchema } from "graphql";
 import { memo, useEffect, useRef } from "react";
-import { ayuLight } from "thememirror";
+import { ayuLight, dracula } from "thememirror";
 import { useSchemaContext } from "../../context/schema-context.js";
 import { baseEditorExtensions, baseKeymap } from "./constants.js";
 import {
@@ -38,10 +39,11 @@ const GraphqlEditor = memo(function GraphqlEditor(props: Props) {
     pasteHandlerCompartment,
     timeoutRef,
   } = useEditorRefs();
-
+  const { theme } = useTheme();
   // GraphQL-specific refs
   const graphqlCompartment = useRef(new Compartment());
   const linterCompartment = useRef(new Compartment());
+  const themeCompartment = useRef(new Compartment());
   const { sharedSchema } = useSchemaContext();
 
   useEffect(() => {
@@ -53,7 +55,7 @@ const GraphqlEditor = memo(function GraphqlEditor(props: Props) {
           extensions: [
             ...baseEditorExtensions,
             keymap.of(baseKeymap),
-            ayuLight,
+            themeCompartment.current.of(theme === "light" ? ayuLight : dracula),
             graphqlCompartment.current.of(graphql(schema)),
             linterCompartment.current.of(makeLinter(schema, customLinter)),
             updateListenerCompartment.current.of(
@@ -75,6 +77,15 @@ const GraphqlEditor = memo(function GraphqlEditor(props: Props) {
   }, []);
 
   useEditorCleanup(viewRef);
+
+  useEffect(() => {
+    if (!viewRef.current) return;
+    viewRef.current.dispatch({
+      effects: themeCompartment.current.reconfigure(
+        theme === "light" ? ayuLight : dracula,
+      ),
+    });
+  }, [theme]);
 
   /* GraphQL-specific: Reconfigures the editor when the schema changes */
   useEffect(() => {

@@ -1,4 +1,4 @@
-import { cn } from "#design-system";
+import { twMerge } from "tailwind-merge";
 import React, { useCallback, useState } from "react";
 import { Input } from "../input/input.js";
 import { Popover, PopoverAnchor, PopoverContent } from "../popover/popover.js";
@@ -82,19 +82,19 @@ export const SearchAutocomplete: React.FC<SearchAutocompleteProps> = (
   // Fallback: plain text input + submit when no fetchOptions
   if (!fetchOptions) {
     return (
-      <div className={cn("flex items-center gap-2", className)}>
+      <div className={twMerge("flex items-center gap-2", className)}>
         <Input
           value={query}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           disabled={disabled || selectingValue !== null}
-          className="max-w-xs text-gray-700"
+          className="max-w-xs text-gray-700 dark:text-slate-200"
         />
         <button
           onClick={handleSubmit}
           disabled={disabled || !query.trim() || selectingValue !== null}
-          className="h-9 rounded-md bg-gray-900 px-4 text-sm font-semibold text-white transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+          className="h-9 rounded-md bg-gray-900 px-4 text-sm font-semibold text-white transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-slate-50 dark:text-slate-900 dark:hover:bg-slate-100"
         >
           {selectLabel}
         </button>
@@ -103,7 +103,7 @@ export const SearchAutocomplete: React.FC<SearchAutocompleteProps> = (
   }
 
   return (
-    <div className={cn("relative", className)}>
+    <div className={twMerge("relative", className)}>
       <Popover open={isOpen && results.length > 0} onOpenChange={setIsOpen}>
         <PopoverAnchor asChild>
           <Input
@@ -112,7 +112,7 @@ export const SearchAutocomplete: React.FC<SearchAutocompleteProps> = (
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
             disabled={disabled}
-            className="max-w-xs text-gray-700"
+            className="max-w-xs text-gray-700 dark:text-slate-200"
           />
         </PopoverAnchor>
         <PopoverContent
@@ -147,27 +147,27 @@ export const SearchAutocomplete: React.FC<SearchAutocompleteProps> = (
               return (
                 <div
                   key={option.value}
-                  className="flex items-center justify-between gap-2 rounded-md px-2 py-1.5 hover:bg-gray-100"
+                  className="flex items-center justify-between gap-2 rounded-md px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-slate-700"
                 >
                   {renderOption ? (
                     <div className="min-w-0 flex-1">{renderOption(option)}</div>
                   ) : (
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-gray-900">
+                      <p className="truncate text-sm font-medium text-gray-900 dark:text-slate-50">
                         {option.label}
                       </p>
                       {option.version && (
-                        <p className="truncate text-xs text-gray-500">
+                        <p className="truncate text-xs text-gray-500 dark:text-slate-400">
                           v{option.version}
                         </p>
                       )}
                       {option.description && (
-                        <p className="truncate text-xs text-gray-500">
+                        <p className="truncate text-xs text-gray-500 dark:text-slate-400">
                           {option.description}
                         </p>
                       )}
                       {option.meta && (
-                        <p className="truncate text-xs text-gray-400">
+                        <p className="truncate text-xs text-gray-400 dark:text-slate-500">
                           {option.meta}
                         </p>
                       )}
@@ -178,14 +178,14 @@ export const SearchAutocomplete: React.FC<SearchAutocompleteProps> = (
                       {selectingContent}
                     </div>
                   ) : option.disabled ? (
-                    <span className="shrink-0 rounded-md bg-gray-100 px-3 py-1 text-xs font-medium text-gray-500">
+                    <span className="shrink-0 rounded-md bg-gray-100 px-3 py-1 text-xs font-medium text-gray-500 dark:bg-slate-700 dark:text-slate-400">
                       {option.disabledLabel ?? "Unavailable"}
                     </span>
                   ) : (
                     <button
                       onClick={() => void handleSelect(option.value)}
                       disabled={selectingValue === option.value}
-                      className="shrink-0 rounded-md bg-gray-900 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-gray-800 disabled:opacity-50"
+                      className="shrink-0 rounded-md bg-gray-900 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-gray-800 disabled:opacity-50 dark:bg-slate-50 dark:text-slate-900 dark:hover:bg-slate-100"
                     >
                       {selectingValue === option.value ? "..." : selectLabel}
                     </button>
@@ -196,14 +196,22 @@ export const SearchAutocomplete: React.FC<SearchAutocompleteProps> = (
           </div>
         </PopoverContent>
       </Popover>
-      {loading && <p className="mt-1 text-xs text-gray-500">Searching...</p>}
-      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+      {loading && (
+        <p className="mt-1 text-xs text-gray-500 dark:text-slate-400">
+          Searching...
+        </p>
+      )}
+      {error && (
+        <p className="mt-1 text-xs text-red-600 dark:text-red-100">{error}</p>
+      )}
       {!loading &&
         !error &&
         query.trim() &&
         results.length === 0 &&
         !isOpen && (
-          <p className="mt-1 text-xs text-gray-500">No results found</p>
+          <p className="mt-1 text-xs text-gray-500 dark:text-slate-400">
+            No results found
+          </p>
         )}
     </div>
   );

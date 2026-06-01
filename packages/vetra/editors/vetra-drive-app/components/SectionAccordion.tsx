@@ -1,5 +1,5 @@
-import React from "react";
-import { useState } from "react";
+import React, { useState } from "react";
+import { twMerge } from "tailwind-merge";
 import { ChevronIcon } from "../icons/ChevronIcon.js";
 import { Accordion } from "./Accordion.js";
 
@@ -21,15 +21,18 @@ export const SectionAccordion: React.FC<SectionAccordionProps> = ({
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   const header = (
-    <div className="flex items-center gap-2 rounded-md border border-zinc-200 bg-zinc-50 px-4 py-2 transition-colors hover:bg-zinc-100">
+    <div className="flex items-center gap-2 rounded-md border border-gray-200 bg-gray-50 px-4 py-2 transition-colors hover:bg-gray-100 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 dark:hover:bg-slate-700">
       <ChevronIcon
         width={16}
         height={16}
-        className={`text-gray-600 transition-transform duration-300 ${
-          isOpen ? "rotate-90" : ""
-        }`}
+        className={twMerge(
+          "text-gray-700 transition-transform duration-300 dark:text-slate-200",
+          isOpen ? "rotate-90" : "",
+        )}
       />
-      <h2 className="text-base font-semibold text-gray-800">{title}</h2>
+      <h2 className="text-base font-semibold text-gray-900 dark:text-slate-100">
+        {title}
+      </h2>
       {actionButton && <div className="ml-auto">{actionButton}</div>}
     </div>
   );

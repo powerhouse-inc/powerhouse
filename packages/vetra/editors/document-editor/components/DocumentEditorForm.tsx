@@ -1,4 +1,5 @@
 import { Suspense, useEffect, useState } from "react";
+import { twMerge } from "tailwind-merge";
 import type {
   AddDocumentTypeInput,
   DocumentTypeItem,
@@ -23,7 +24,7 @@ function DocumentTypeSelectUI(
   return (
     <select
       id="supported-document-types"
-      className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none"
+      className="w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
       {...props}
     >
       <option value="">Select a document type</option>
@@ -133,7 +134,7 @@ export const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
   return (
     <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-medium text-gray-900">
+        <h2 className="text-lg font-medium text-gray-900 dark:text-slate-50">
           Editor Configuration
         </h2>
         <StatusPill
@@ -146,7 +147,7 @@ export const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
       <div>
         <label
           htmlFor="editor-name"
-          className="mb-2 block text-sm font-medium text-gray-700"
+          className="mb-2 block text-sm font-medium text-gray-700 dark:text-slate-200"
         >
           Editor Name
         </label>
@@ -156,9 +157,12 @@ export const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
           value={editorName}
           onChange={(e) => setEditorName(e.target.value)}
           disabled={isReadOnly}
-          className={`w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none ${
-            isReadOnly ? "cursor-not-allowed bg-gray-100" : ""
-          }`}
+          className={twMerge(
+            "w-full rounded-md border border-gray-300 px-3 py-2 placeholder:text-gray-700 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 dark:placeholder:text-slate-200",
+            isReadOnly
+              ? "cursor-not-allowed bg-gray-100 dark:bg-slate-700"
+              : "",
+          )}
         />
       </div>
 
@@ -166,7 +170,7 @@ export const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
       <div>
         <label
           htmlFor="supported-document-types"
-          className="mb-2 block text-sm font-medium text-gray-700"
+          className="mb-2 block text-sm font-medium text-gray-700 dark:text-slate-200"
         >
           Supported Document Types
         </label>
@@ -184,7 +188,7 @@ export const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
           <div className="space-y-1">
             {documentTypes.map((type) => (
               <div key={type.id} className="flex items-center py-1">
-                <span className="text-sm text-gray-700">
+                <span className="text-sm text-gray-700 dark:text-slate-200">
                   {type.documentType}
                 </span>
                 {!isReadOnly && (
@@ -193,7 +197,7 @@ export const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
                       setDocumentTypes([]);
                       onRemoveDocumentType?.({ id: type.id });
                     }}
-                    className="ml-2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                    className="ml-2 text-gray-400 hover:text-gray-600 focus:outline-none dark:text-slate-500 dark:hover:text-slate-300"
                   >
                     ×
                   </button>
@@ -210,7 +214,7 @@ export const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
           <button
             onClick={handleConfirm}
             disabled={!editorName.trim() || documentTypes.length === 0}
-            className="rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-300"
+            className="rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-300 dark:bg-blue-300 dark:text-slate-900 dark:hover:bg-blue-200 dark:disabled:bg-slate-600 dark:disabled:text-slate-100"
           >
             Confirm
           </button>

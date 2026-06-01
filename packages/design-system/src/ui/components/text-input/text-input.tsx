@@ -1,4 +1,4 @@
-import { cn } from "#design-system";
+import { twMerge } from "tailwind-merge";
 import { forwardRef, useId, useMemo } from "react";
 import { sharedValueTransformers } from "#design-system/ui/lib";
 import type { DiffMode, InputBaseProps, WithDifference } from "../../types.js";
@@ -97,7 +97,7 @@ const TextInput = forwardRef<HTMLInputElement, TextInputProps>(
           </ValueTransformer>
           {typeof maxLength === "number" && maxLength > 0 && (
             <div
-              className={cn(
+              className={twMerge(
                 "mt-[-6px] flex justify-end",
                 hasContentBelow && "-mb-1",
               )}

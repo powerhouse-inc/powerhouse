@@ -1,4 +1,5 @@
 import { Icon } from "#design-system";
+import { initTheme } from "@powerhousedao/reactor-browser";
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import type { Meta, StoryObj } from "@storybook/react";
 import { fn } from "@storybook/test";
@@ -6,6 +7,7 @@ import type { ComponentPropsWithoutRef } from "react";
 import { ConnectTooltipProvider } from "../tooltip/tooltip.js";
 import { SidebarItem } from "./sidebar-item.js";
 import { ConnectSidebar } from "./sidebar.js";
+import { SidebarAddDriveItem } from "./sidebar-add-drive-item.js";
 
 type Args = ComponentPropsWithoutRef<typeof ConnectSidebar> & {
   drives?: DocumentDriveDocument[];
@@ -24,6 +26,7 @@ const user = {
 } as const;
 
 const Wrapper = (args: Args) => {
+  initTheme();
   return (
     <ConnectTooltipProvider>
       <div className="relative h-screen">
@@ -38,10 +41,7 @@ const Wrapper = (args: Args) => {
           <SidebarItem title="My Local Drive" />
           <SidebarItem title="Shared Documents" />
           <SidebarItem title="Project Files" active={true} />
-          <SidebarItem title="Archive" />
-          <SidebarItem title="Templates" />
-          <SidebarItem title="Backups" />
-          <SidebarItem title="Settings" />
+          <SidebarAddDriveItem />
         </ConnectSidebar>
       </div>
     </ConnectTooltipProvider>

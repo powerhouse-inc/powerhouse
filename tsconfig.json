@@ -55,6 +55,9 @@
       "path": "test/vetra-e2e"
     },
     {
+      "path": "scripts/dark-mode"
+    },
+    {
       "path": "scripts/profiling"
     },
     {

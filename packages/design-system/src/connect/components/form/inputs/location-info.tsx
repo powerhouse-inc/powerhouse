@@ -13,14 +13,16 @@ export function LocationInfo(props: LocationInfoProps) {
     <div
       {...divProps}
       className={twMerge(
-        "my-3 flex items-center gap-2 rounded-xl border border-gray-100 bg-white p-3 text-gray-800 shadow-sm",
+        "my-3 flex items-center gap-2 rounded-xl border border-gray-100 bg-gray-50 p-3 text-gray-900 shadow-sm dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100",
         className,
       )}
     >
       {locationInfo.icon}
       <div>
         <p>{locationInfo.title}</p>
-        <p className="text-xs text-slate-200">{locationInfo.description}</p>
+        <p className="text-xs text-gray-200 dark:text-slate-700">
+          {locationInfo.description}
+        </p>
       </div>
     </div>
   );
