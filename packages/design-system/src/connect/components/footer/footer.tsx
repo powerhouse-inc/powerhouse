@@ -8,7 +8,7 @@ export const Footer: React.FC<React.HTMLAttributes<HTMLElement>> = ({
   return (
     <footer
       className={twMerge(
-        "flex items-center gap-x-6 text-xs font-medium text-charcoal-300 dark:text-slate-600",
+        "flex items-center gap-x-6 text-xs font-medium text-gray-300 dark:text-slate-600",
         typeof className === "string" && className,
       )}
       {...props}

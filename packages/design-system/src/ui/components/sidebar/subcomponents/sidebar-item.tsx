@@ -131,7 +131,7 @@ export const SidebarItem = ({
                         ? ""
                         : "-rotate-90",
                       node.children === undefined || node.children.length === 0
-                        ? "text-gray-300 dark:text-slate-700"
+                        ? "text-gray-300 dark:text-slate-500"
                         : "text-gray-700 dark:text-slate-400",
                     )}
                   />
@@ -165,7 +165,7 @@ export const SidebarItem = ({
                     hasStatus ? "right-8" : "right-2",
                     isPinned
                       ? "text-gray-700 hover:text-blue-900 dark:text-slate-50 dark:hover:text-blue-900"
-                      : "invisible text-gray-300 group-hover/sidebar-item:visible hover:text-gray-700 dark:text-slate-700 dark:hover:text-slate-50",
+                      : "invisible text-gray-300 group-hover/sidebar-item:visible hover:text-gray-700 dark:text-slate-200 dark:hover:text-slate-100",
                   )}
                   onClick={(e) => {
                     e.stopPropagation();
@@ -183,7 +183,7 @@ export const SidebarItem = ({
                 <div
                   className={twMerge(
                     "absolute top-1/2 right-2 flex -translate-y-1/2 items-center justify-center",
-                    "text-gray-300 group-hover/sidebar-item:visible hover:text-gray-700 dark:text-slate-700 dark:hover:text-slate-50",
+                    "text-gray-300 group-hover/sidebar-item:visible hover:text-gray-700 dark:text-slate-600 dark:hover:text-slate-500",
                   )}
                   onClick={(e) => {
                     e.stopPropagation();
