@@ -96,7 +96,7 @@ export const DriveHeader: React.FC<DriveHeaderProps> = ({
             {isInfoMenuOpen && (
               <div
                 role="menu"
-                className="absolute top-full left-0 z-10 mt-2 flex flex-col items-start gap-2 rounded-lg bg-white p-3 shadow-lg dark:bg-slate-800"
+                className="absolute top-full left-0 z-10 mt-2 flex flex-col items-start gap-2 rounded-lg bg-white p-3 shadow-lg dark:bg-slate-700"
               >
                 <DriveInfoItem label="Name" value={driveName} />
                 <DriveInfoItem label="Drive ID" value={driveId} />
