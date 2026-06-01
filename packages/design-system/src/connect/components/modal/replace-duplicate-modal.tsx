@@ -1,6 +1,5 @@
-import type { ComponentPropsWithoutRef } from "react";
 import { Icon, Modal } from "#design-system";
-import { twMerge } from "tailwind-merge";
+import type { ComponentPropsWithoutRef } from "react";
 import { ModalButton } from "./modal-button.js";
 
 type ModalProps = ComponentPropsWithoutRef<typeof Modal>;
@@ -30,13 +29,6 @@ export function ConnectReplaceDuplicateModal(
     onDuplicate,
     overlayProps,
     contentProps,
-    bodyProps = {},
-    headerProps = {},
-    containerProps = {},
-    replaceButtonProps: _replaceButtonProps = {},
-    duplicateButtonProps = {},
-    buttonContainerProps = {},
-    ...restProps
   } = props;
 
   const defaultMessage = fileName
