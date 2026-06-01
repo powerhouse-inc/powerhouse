@@ -5,7 +5,7 @@ export const folderTreeFileTemplate = tsx`
   Sidebar,
   SidebarProvider,
   type SidebarNode,
-} from "@powerhousedao/design-system/ui";
+} from "@powerhousedao/document-engineering";
 import {
   setSelectedNode,
   useNodesInSelectedDrive,
