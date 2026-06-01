@@ -54,9 +54,11 @@ export const reactorDriveCreateState: CreateState<ReactorDrivePHState> = (
 export const reactorDriveCreateDocument: CreateDocument<ReactorDrivePHState> = (
   state,
 ) => {
-  const document = baseCreateDocument(reactorDriveCreateState, state);
-  document.header.documentType = REACTOR_DRIVE_DOCUMENT_TYPE;
-  return document;
+  return baseCreateDocument(
+    reactorDriveCreateState,
+    state,
+    REACTOR_DRIVE_DOCUMENT_TYPE,
+  );
 };
 
 const reactorDriveSaveToFileHandle: SaveToFileHandle = (document, input) => {

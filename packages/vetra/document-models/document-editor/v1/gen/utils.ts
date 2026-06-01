@@ -8,7 +8,6 @@ import {
   baseLoadFromInput,
   baseSaveToFileHandle,
   defaultBaseState,
-  generateId,
 } from "document-model";
 import {
   assertIsDocumentEditorDocument,
@@ -41,14 +40,11 @@ export const utils: DocumentModelUtils<DocumentEditorPHState> = {
     };
   },
   createDocument(state) {
-    const document = baseCreateDocument(utils.createState, state);
-
-    document.header.documentType = documentEditorDocumentType;
-
-    // for backwards compatibility, but this is NOT a valid signed document id
-    document.header.id = generateId();
-
-    return document;
+    return baseCreateDocument(
+      utils.createState,
+      state,
+      documentEditorDocumentType,
+    );
   },
   saveToFileHandle(document, input) {
     return baseSaveToFileHandle(document, input);

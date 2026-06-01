@@ -8,7 +8,6 @@ import {
   baseLoadFromInput,
   baseSaveToFileHandle,
   defaultBaseState,
-  generateId,
 } from "document-model";
 import {
   assertIsAppModuleDocument,
@@ -42,14 +41,7 @@ export const utils: DocumentModelUtils<AppModulePHState> = {
     };
   },
   createDocument(state) {
-    const document = baseCreateDocument(utils.createState, state);
-
-    document.header.documentType = appModuleDocumentType;
-
-    // for backwards compatibility, but this is NOT a valid signed document id
-    document.header.id = generateId();
-
-    return document;
+    return baseCreateDocument(utils.createState, state, appModuleDocumentType);
   },
   saveToFileHandle(document, input) {
     return baseSaveToFileHandle(document, input);

@@ -1,3 +1,7 @@
+## 6.1.0-dev.13 (2026-06-01)
+
+This was a version bump only for @powerhousedao/ph-cli to align it with other projects, there were no code changes.
+
 ## 6.1.0-dev.12 (2026-06-01)
 
 This was a version bump only for @powerhousedao/ph-cli to align it with other projects, there were no code changes.

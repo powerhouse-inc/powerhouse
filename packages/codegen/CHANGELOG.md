@@ -1,3 +1,13 @@
+## 6.1.0-dev.13 (2026-06-01)
+
+### 🩹 Fixes
+
+- **document-model:** seed document-scope operations on create ([5fe967b8b](https://github.com/powerhouse-inc/powerhouse/commit/5fe967b8b))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.1.0-dev.12 (2026-06-01)
 
 This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.
