@@ -94,7 +94,7 @@ export const SidebarItem = ({
             data-testid="sidebar-item"
             id={`sidebar-item-${node.id}`}
             className={twMerge(
-              "group/sidebar-item relative flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-gray-700 select-none hover:bg-gray-100 dark:text-slate-400 dark:hover:bg-charcoal-900",
+              "group/sidebar-item relative flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-gray-700 select-none hover:bg-gray-100 dark:text-slate-400 dark:hover:bg-slate-900",
               hasStatus && "pr-6",
               allowPinning && (hasStatus ? "hover:pr-12" : "hover:pr-6"),
               isPinned && (hasStatus ? "pr-12" : "pr-6"),
@@ -103,7 +103,7 @@ export const SidebarItem = ({
               pinnedMode &&
                 "after:absolute after:-top-2.5 after:left-[15px] after:h-4 after:w-px after:bg-gray-300 first:group-first/sidebar-item-wrapper:after:hidden hover:bg-gray-50 dark:hover:bg-slate-600",
               isActive &&
-                "bg-gray-200 font-medium text-gray-900 hover:bg-gray-200 dark:bg-charcoal-900 dark:text-slate-50 dark:hover:bg-charcoal-900",
+                "bg-gray-200 font-medium text-gray-900 hover:bg-gray-200 dark:bg-slate-900 dark:text-slate-50 dark:hover:bg-slate-900",
               node.className,
             )}
             onClick={() => {
@@ -222,7 +222,7 @@ const RenderTitle = forwardRef<
         ? (() => {
             const highlightClass = isSearchActive
               ? "bg-yellow-300 dark:bg-[#604B00]"
-              : "bg-gray-300 dark:bg-charcoal-800";
+              : "bg-gray-300 dark:bg-slate-800";
             const parts: React.ReactNode[] = [];
             let remaining = title;
             const lowerTerm = searchTerm.toLowerCase();
