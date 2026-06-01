@@ -53,7 +53,7 @@ export const TokensTable = () => {
             </th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-200 bg-white dark:bg-slate-800">
+        <tbody className="divide-y divide-gray-200 bg-gray-50 dark:bg-slate-800">
           {sessions?.map((session, index) => (
             <tr key={index}>
               <td className="whitespace-nowrap px-6 py-4">{session.name}</td>

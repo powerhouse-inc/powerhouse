@@ -53,7 +53,7 @@ export const SidebarHeader: React.FC<SidebarHeaderProps> = ({
                 role="button"
                 tabIndex={0}
                 className={twMerge(
-                  "w-[26px] rounded-lg bg-slate-50 p-1 text-center text-xs text-slate-100 dark:bg-gray-900 dark:text-slate-200",
+                  "w-[26px] rounded-lg bg-gray-50 p-1 text-center text-xs text-slate-100 dark:bg-gray-900 dark:text-slate-200",
                   !isDisabled &&
                     "hover:bg-slate-100 hover:text-slate-200 dark:hover:bg-gray-600 dark:hover:text-slate-50",
                   isDisabled &&

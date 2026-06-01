@@ -96,7 +96,7 @@ export const DriveHeader: React.FC<DriveHeaderProps> = ({
             {isInfoMenuOpen && (
               <div
                 role="menu"
-                className="absolute top-full left-0 z-10 mt-2 flex flex-col items-start gap-2 rounded-lg bg-white p-3 shadow-lg dark:bg-slate-700"
+                className="absolute top-full left-0 z-10 mt-2 flex flex-col items-start gap-2 rounded-lg bg-gray-50 p-3 shadow-lg dark:bg-slate-700"
               >
                 <DriveInfoItem label="Name" value={driveName} />
                 <DriveInfoItem label="Drive ID" value={driveId} />
@@ -116,7 +116,7 @@ export const DriveHeader: React.FC<DriveHeaderProps> = ({
               {isShareMenuOpen && (
                 <div
                   role="menu"
-                  className="absolute top-full left-0 z-10 mt-2 flex w-max flex-col gap-4 rounded-lg bg-white p-4 shadow-lg dark:bg-slate-800"
+                  className="absolute top-full left-0 z-10 mt-2 flex w-max flex-col gap-4 rounded-lg bg-gray-50 p-4 shadow-lg dark:bg-slate-800"
                 >
                   <ShareMenuItem label="Copy the Drive URL" url={driveUrl} />
                   <ShareMenuItem

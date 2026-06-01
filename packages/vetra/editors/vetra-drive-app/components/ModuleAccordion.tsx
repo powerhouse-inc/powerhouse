@@ -28,7 +28,7 @@ export const ModuleAccordion: React.FC<ModuleAccordionProps> = ({
   const header = (
     <div
       className={twMerge(
-        "flex items-center justify-between rounded-md bg-white px-3 py-2 text-gray-900 transition-colors hover:bg-gray-50 dark:bg-slate-800 dark:text-slate-50 dark:hover:bg-slate-800",
+        "flex items-center justify-between rounded-md bg-gray-50 px-3 py-2 text-gray-900 transition-colors hover:bg-gray-50 dark:bg-slate-800 dark:text-slate-50 dark:hover:bg-slate-800",
         headerClassName,
       )}
     >
@@ -37,14 +37,14 @@ export const ModuleAccordion: React.FC<ModuleAccordionProps> = ({
           width={12}
           height={12}
           className={twMerge(
-            "text-gray-600 transition-transform duration-300 dark:text-slate-300",
+            "text-gray-700 transition-transform duration-300 dark:text-slate-200",
             isOpen ? "rotate-90" : "",
           )}
         />
         <span className="text-sm font-medium text-gray-700 dark:text-slate-200">
           {title}
         </span>
-        <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-slate-700 dark:text-slate-300">
+        <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 dark:bg-slate-700 dark:text-slate-200">
           {count}
         </span>
       </div>
@@ -58,7 +58,7 @@ export const ModuleAccordion: React.FC<ModuleAccordionProps> = ({
         <PlusIcon
           width={16}
           height={16}
-          className="text-gray-600 dark:text-slate-300"
+          className="text-gray-700 dark:text-slate-200"
         />
       </button>
     </div>

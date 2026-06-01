@@ -52,7 +52,7 @@ export function ConnectReplaceDuplicateModal(
     >
       <div className="w-[450px] p-6">
         <div className="flex items-center justify-between pb-2">
-          <div className="text-2xl font-bold text-gray-800 dark:text-slate-100">
+          <div className="text-2xl font-bold text-gray-900 dark:text-slate-100">
             {title}
           </div>
           <button
@@ -63,7 +63,7 @@ export function ConnectReplaceDuplicateModal(
             <Icon name="XmarkLight" size={24} />
           </button>
         </div>
-        <div className="my-6 rounded-md bg-slate-50 p-4 text-center text-gray-800 dark:bg-slate-700 dark:text-slate-100">
+        <div className="my-6 rounded-md bg-gray-50 p-4 text-center text-gray-900 dark:bg-slate-700 dark:text-slate-100">
           {message || defaultMessage}
         </div>
         <div className="mt-8 flex">

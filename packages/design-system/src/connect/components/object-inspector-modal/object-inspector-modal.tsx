@@ -42,7 +42,7 @@ export function ObjectInspectorModal({
       open={open}
       title={title}
     >
-      <div className="flex size-full flex-col bg-white dark:bg-slate-800">
+      <div className="flex size-full flex-col bg-gray-50 dark:bg-slate-800">
         <div className="flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-50">
             {title}

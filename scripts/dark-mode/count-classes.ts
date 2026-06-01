@@ -1,3 +1,4 @@
+import { writeFileSync } from "node:fs";
 import {
   countBy,
   entries,
@@ -48,5 +49,7 @@ const countClasses = async (toCount: Set<string>) =>
 const lightCount = await countClasses(lightClasses);
 const darkCount = await countClasses(darkClasses);
 
-console.log(lightCount);
-console.log(darkCount);
+writeFileSync(
+  "scripts/dark-mode/class-count.json",
+  JSON.stringify({ lightCount, darkCount }, null, 2),
+);

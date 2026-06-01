@@ -15,7 +15,7 @@ const FormDescription: React.FC<FormDescriptionProps> = ({
   return (
     <Component
       className={twMerge(
-        "font-sans text-sm/5 font-normal text-gray-600 dark:text-slate-300",
+        "font-sans text-sm/5 font-normal text-gray-700 dark:text-slate-200",
         className,
       )}
     >

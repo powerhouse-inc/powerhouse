@@ -23,7 +23,7 @@ export const Default: Story = {
     const [, setArgs] = useArgs<typeof args>();
 
     return (
-      <div className="w-[408px] bg-white p-6 dark:bg-slate-800">
+      <div className="w-[408px] bg-gray-50 p-6 dark:bg-slate-800">
         <Disclosure
           {...args}
           onOpenChange={() => setArgs({ ...args, isOpen: !args.isOpen })}

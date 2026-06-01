@@ -67,7 +67,7 @@ export const ConnectSelect = /* @__PURE__ */ fixedForwardRef(function Select<
   return (
     <div
       className={twMerge(
-        "border border-gray-200 bg-gray-50 text-gray-800 transition-[border-radius] dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100",
+        "border border-gray-200 bg-gray-50 text-gray-900 transition-[border-radius] dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100",
         absolutePositionMenu && "relative",
         containerClassName,
       )}
@@ -79,7 +79,7 @@ export const ConnectSelect = /* @__PURE__ */ fixedForwardRef(function Select<
     >
       <div
         className={twMerge(
-          "flex min-w-[360px] cursor-pointer items-center justify-between pr-3 text-gray-800 outline-none dark:text-slate-100",
+          "flex min-w-[360px] cursor-pointer items-center justify-between pr-3 text-gray-900 outline-none dark:text-slate-100",
           menuClassName,
         )}
         id={id}
@@ -135,7 +135,7 @@ function ItemContainer<TValue extends string>(
       className={twMerge(
         disabled
           ? "cursor-not-allowed text-gray-500 dark:text-slate-400"
-          : "text-gray-800 dark:text-slate-100",
+          : "text-gray-900 dark:text-slate-100",
         "flex size-full cursor-pointer items-center gap-2 bg-inherit py-3 pl-3 text-start outline-none",
         className,
       )}
@@ -146,7 +146,7 @@ function ItemContainer<TValue extends string>(
         <p className="text-inherit capitalize">
           {displayValue ?? value.toLowerCase()}
         </p>
-        <p className="text-xs text-gray-600 dark:text-slate-300">
+        <p className="text-xs text-gray-700 dark:text-slate-200">
           {description}
         </p>
       </div>

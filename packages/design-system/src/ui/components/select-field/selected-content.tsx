@@ -42,7 +42,7 @@ export const SelectedContent: React.FC<SelectedContentProps> = ({
         )}
       >
         {placeholder && (
-          <span className="text-sm/5 font-normal text-gray-600 dark:text-slate-300">
+          <span className="text-sm/5 font-normal text-gray-700 dark:text-slate-200">
             {placeholder}
           </span>
         )}

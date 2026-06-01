@@ -389,7 +389,7 @@ export const WithCustomTitleNavigation: Story = {
             <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-50">
               Navigation Log:
             </h2>
-            <div className="mt-2 overflow-y-auto rounded-sm border bg-white p-2 dark:bg-slate-700">
+            <div className="mt-2 overflow-y-auto rounded-sm border bg-gray-50 p-2 dark:bg-slate-700">
               {navigationLog.length === 0 ? (
                 <p className="text-sm text-gray-500 dark:text-gray-400">
                   Click the sidebar title to see navigation events
@@ -457,7 +457,7 @@ export const WithCustomStyles: Story = {
             <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-50">
               Navigation Log:
             </h2>
-            <div className="mt-2 overflow-y-auto rounded-sm border bg-white p-2 dark:bg-slate-700">
+            <div className="mt-2 overflow-y-auto rounded-sm border bg-gray-50 p-2 dark:bg-slate-700">
               {navigationLog.length === 0 ? (
                 <p className="text-sm text-gray-500 dark:text-gray-400">
                   Click the sidebar title to see navigation events
@@ -546,7 +546,7 @@ export const WithCustomTargetElement: Story = {
             <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-50">
               Navigation Log:
             </h2>
-            <div className="mt-2 overflow-y-auto rounded-sm border bg-white p-2 dark:bg-slate-700">
+            <div className="mt-2 overflow-y-auto rounded-sm border bg-gray-50 p-2 dark:bg-slate-700">
               {navigationLog.length === 0 ? (
                 <p className="text-sm text-gray-500 dark:text-gray-400">
                   Click the sidebar title to see navigation events
@@ -654,7 +654,7 @@ export const WithCustomSorting: Story = {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">
             Custom Sorting
           </h1>
-          <div className="mt-4 space-y-2 text-sm text-gray-600 dark:text-gray-400">
+          <div className="mt-4 space-y-2 text-sm text-gray-700 dark:text-gray-400">
             <p>
               <strong>nodeSortType:</strong>{" "}
               {args.nodeSortType === undefined

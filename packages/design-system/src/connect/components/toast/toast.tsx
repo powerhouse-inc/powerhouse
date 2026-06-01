@@ -52,7 +52,7 @@ function getDefaultOptions(type: ExtendedTypeOptions): ToastOptions {
         options.type = "warning";
         options.icon = (
           <Icon
-            className="text-gray-600 dark:text-slate-300"
+            className="text-gray-700 dark:text-slate-200"
             name="WarningFill"
             size={24}
           />
@@ -62,7 +62,7 @@ function getDefaultOptions(type: ExtendedTypeOptions): ToastOptions {
         options.type = "default";
         options.icon = (
           <Icon
-            className="text-gray-600 dark:text-slate-300"
+            className="text-gray-700 dark:text-slate-200"
             name="ClockFill"
             size={24}
           />

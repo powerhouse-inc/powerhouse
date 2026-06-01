@@ -19,7 +19,7 @@ export const LoggedOut: Story = {
   args: {
     children: (
       <div className="flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
-        <Icon name="Settings" className="text-gray-600 dark:text-slate-300" />
+        <Icon name="Settings" className="text-gray-700 dark:text-slate-200" />
         <span className="text-sm font-medium">Connect</span>
       </div>
     ),

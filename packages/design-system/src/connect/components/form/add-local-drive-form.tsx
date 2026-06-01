@@ -40,7 +40,7 @@ export function AddLocalDriveForm(props: AddLocalDriveFormProps) {
         <div>
           <Label
             htmlFor="name"
-            className="text-sm font-medium text-gray-800 dark:text-slate-100"
+            className="text-sm font-medium text-gray-900 dark:text-slate-100"
           >
             Drive Name
           </Label>
@@ -55,7 +55,7 @@ export function AddLocalDriveForm(props: AddLocalDriveFormProps) {
         <div>
           <Label
             htmlFor="driveApp"
-            className="text-sm font-medium text-gray-800 dark:text-slate-100"
+            className="text-sm font-medium text-gray-900 dark:text-slate-100"
           >
             Drive App
           </Label>
@@ -64,7 +64,7 @@ export function AddLocalDriveForm(props: AddLocalDriveFormProps) {
         <div>
           <Label
             htmlFor="sharingType"
-            className="text-sm font-medium text-gray-800 dark:text-slate-100"
+            className="text-sm font-medium text-gray-900 dark:text-slate-100"
           >
             Location
           </Label>

@@ -75,13 +75,13 @@ export function ReadRequiredModal(props: ReadRequiredModalProps) {
       contentProps={contentProps}
     >
       <div className="w-[500px] p-6">
-        <div className="border-b border-slate-100 pb-2 text-2xl font-bold text-gray-800 dark:border-slate-500 dark:text-slate-100">
+        <div className="border-b border-slate-100 pb-2 text-2xl font-bold text-gray-900 dark:border-slate-500 dark:text-slate-100">
           {header}
         </div>
         <div
           ref={contentRef}
           className={twMerge(
-            "my-6 max-h-[245px] overflow-scroll rounded-md bg-slate-50 p-4 text-center dark:bg-slate-700",
+            "my-6 max-h-[245px] overflow-scroll rounded-md bg-gray-50 p-4 text-center dark:bg-slate-700",
             bodyClassName,
           )}
         >

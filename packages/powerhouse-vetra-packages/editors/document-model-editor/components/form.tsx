@@ -86,7 +86,7 @@ const FormDescription = React.forwardRef<
       ref={ref}
       id={formDescriptionId}
       className={twMerge(
-        "text-sm text-gray-600 dark:text-slate-300",
+        "text-sm text-gray-700 dark:text-slate-200",
         className,
       )}
       {...props}

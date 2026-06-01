@@ -36,7 +36,7 @@ const MigrationOverlay = () => {
     <div className="absolute inset-0 z-20 flex items-center justify-center">
       <div className="rounded-lg bg-white/90 px-6 py-4 text-sm text-gray-900 shadow-lg dark:bg-slate-900/90 dark:text-slate-50">
         <div className="font-medium">Upgrading local database…</div>
-        <div className="text-gray-600 dark:text-slate-300">
+        <div className="text-gray-700 dark:text-slate-200">
           {PHASE_LABEL[status.phase]}
         </div>
       </div>
@@ -92,7 +92,7 @@ export const AppSkeleton: React.FC<PropsWithChildren> = (props) => {
    * fallback so the loading state matches the loaded state. */
   const isEmbedded = !isSSR && getIsEmbedded();
   return (
-    <div className="flex h-screen overflow-hidden bg-white dark:bg-slate-700">
+    <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-slate-700">
       {!isEmbedded && (
         <ConnectSidebar
           className="animate-pulse"

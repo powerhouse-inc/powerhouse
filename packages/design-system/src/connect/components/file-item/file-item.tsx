@@ -123,7 +123,7 @@ export function FileItem(props: Props) {
     <div className="relative">
       {icon}
       {isReadMode && syncStatus && (
-        <div className="absolute right-0 bottom-[-2px] size-3 rounded-full bg-white dark:bg-slate-800">
+        <div className="absolute right-0 bottom-[-2px] size-3 rounded-full bg-gray-50 dark:bg-slate-800">
           <div className="absolute top-[-2px] left-[-2px]">
             <SyncStatusIcon
               overrideSyncIcons={{ SUCCESS: "CheckCircleFill" }}

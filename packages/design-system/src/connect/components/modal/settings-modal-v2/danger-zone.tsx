@@ -41,15 +41,15 @@ export function DangerZone(props: Props) {
   return (
     <div
       className={twMerge(
-        "h-full rounded-lg bg-white p-3 dark:bg-slate-800",
+        "h-full rounded-lg bg-gray-50 p-3 dark:bg-slate-800",
         className,
       )}
     >
-      <h2 className="mb-4 font-semibold text-gray-800 dark:text-slate-100">
+      <h2 className="mb-4 font-semibold text-gray-900 dark:text-slate-100">
         Modify Drives
       </h2>
       <ModifyDrives {...rest} />
-      <h2 className="my-4 font-semibold text-gray-800 dark:text-slate-100">
+      <h2 className="my-4 font-semibold text-gray-900 dark:text-slate-100">
         Local Storage
       </h2>
       <LocalStorage {...rest} />
@@ -110,7 +110,7 @@ function Drive(props: ModifyDrivesProps & { drive: DocumentDriveDocument }) {
   return (
     <div
       className={twMerge(
-        "mb-4 flex w-96 items-center gap-2 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-gray-800 shadow-sm last-of-type:mb-0 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100",
+        "mb-4 flex w-96 items-center gap-2 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-gray-900 shadow-sm last-of-type:mb-0 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100",
         className,
       )}
     >
@@ -168,7 +168,7 @@ function Drive(props: ModifyDrivesProps & { drive: DocumentDriveDocument }) {
           }}
         >
           <Icon
-            className="text-gray-600 group-hover:text-gray-900 dark:text-slate-300 dark:group-hover:text-slate-50"
+            className="text-gray-700 group-hover:text-gray-900 dark:text-slate-200 dark:group-hover:text-slate-50"
             name="VerticalDots"
             size={16}
           />

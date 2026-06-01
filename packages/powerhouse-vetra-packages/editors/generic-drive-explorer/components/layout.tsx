@@ -70,7 +70,7 @@ DriveLayout.ContentSection = function DriveLayoutContentSection({
   return (
     <div className={twMerge(className)} {...containerProps} {...props}>
       {title && (
-        <div className="mb-4 text-base font-semibold text-gray-600 dark:text-slate-300">
+        <div className="mb-4 text-base font-semibold text-gray-700 dark:text-slate-200">
           {title}
         </div>
       )}

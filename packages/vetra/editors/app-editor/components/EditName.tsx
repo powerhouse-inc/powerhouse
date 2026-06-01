@@ -49,7 +49,7 @@ export function EditAppModuleName() {
         <div className="flex gap-2">
           <button
             type="submit"
-            className="text-sm text-gray-600 dark:text-slate-300"
+            className="text-sm text-gray-700 dark:text-slate-200"
           >
             Save
           </button>
@@ -69,7 +69,7 @@ export function EditAppModuleName() {
         {appModuleDocumentName}
       </h2>
       <button
-        className="text-sm text-gray-600 dark:text-slate-300"
+        className="text-sm text-gray-700 dark:text-slate-200"
         onClick={onClickEditAppModuleName}
       >
         Edit Name

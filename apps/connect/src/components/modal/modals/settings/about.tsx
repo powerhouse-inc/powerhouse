@@ -36,11 +36,11 @@ export const About: React.FC = () => {
       />
       <AppGitHash />
       <ConnectedDrives />
-      <div className="bg-white p-3 dark:bg-slate-800">
+      <div className="bg-gray-50 p-3 dark:bg-slate-800">
         <h2 className="mb-2 font-semibold text-gray-700 dark:text-slate-200">
           Inspector
         </h2>
-        <p className="mb-3 text-sm font-normal text-gray-600 dark:text-slate-300">
+        <p className="mb-3 text-sm font-normal text-gray-700 dark:text-slate-200">
           Explore the local database and sync state for debugging.
         </p>
         <button
@@ -61,7 +61,7 @@ function AppGitHash() {
   const url = getGitUrl();
   const label = shortGitSha(sha);
   return (
-    <div className="bg-white p-3 text-sm dark:bg-slate-800">
+    <div className="bg-gray-50 p-3 text-sm dark:bg-slate-800">
       <span className="font-semibold">Git hash: </span>
       {url ? (
         <a
@@ -97,12 +97,12 @@ function ConnectedDrives() {
   );
 
   return (
-    <div className="my-4 bg-white p-3 dark:bg-slate-800">
+    <div className="my-4 bg-gray-50 p-3 dark:bg-slate-800">
       <h2 className="mb-2 font-semibold text-gray-700 dark:text-slate-200">
         Connected drives
       </h2>
       {remoteDrives.length === 0 ? (
-        <p className="text-sm font-normal text-gray-600 dark:text-slate-300">
+        <p className="text-sm font-normal text-gray-700 dark:text-slate-200">
           No connected remote drives.
         </p>
       ) : (
@@ -141,7 +141,7 @@ function DriveAboutEntry({ drive }: { drive: DocumentDriveDocument }) {
         </div>
       )}
       {info.status === "ready" && (
-        <div className="mt-1 text-xs text-gray-600 dark:text-slate-300">
+        <div className="mt-1 text-xs text-gray-700 dark:text-slate-200">
           <div>
             <span className="font-medium">Version:</span> {info.version}
           </div>

@@ -91,11 +91,11 @@ export function PackageInstallModal(props: PackageInstallModalProps) {
       }}
       {...restProps}
     >
-      <div className="w-[460px] rounded-xl bg-white p-6 text-slate-300 dark:bg-slate-800 dark:text-slate-600">
-        <div className="border-b border-slate-50 pb-2 text-2xl font-bold text-gray-800 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
+      <div className="w-[460px] rounded-xl bg-gray-50 p-6 text-slate-300 dark:bg-slate-800 dark:text-slate-600">
+        <div className="border-b border-slate-50 pb-2 text-2xl font-bold text-gray-900 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
           {grouped.length === 1 ? "Package Required" : "Packages Required"}
         </div>
-        <div className="my-4 text-sm text-gray-600 dark:text-slate-300">
+        <div className="my-4 text-sm text-gray-700 dark:text-slate-200">
           {grouped.length === 1
             ? "A document requires a package that is not installed."
             : "Documents require packages that are not installed."}
@@ -106,9 +106,9 @@ export function PackageInstallModal(props: PackageInstallModalProps) {
             return (
               <div
                 key={packageName}
-                className="rounded-xl bg-slate-50 p-4 dark:bg-slate-800"
+                className="rounded-xl bg-gray-50 p-4 dark:bg-slate-800"
               >
-                <div className="mb-1 text-sm font-semibold text-gray-800 dark:text-slate-100">
+                <div className="mb-1 text-sm font-semibold text-gray-900 dark:text-slate-100">
                   {packageName}
                 </div>
                 <div className="mb-3 text-xs text-gray-500 dark:text-slate-400">
@@ -123,7 +123,7 @@ export function PackageInstallModal(props: PackageInstallModalProps) {
                     disabled={installing}
                     className={twMerge(
                       buttonStyles,
-                      "border border-slate-200 bg-white text-slate-800 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100",
+                      "border border-slate-200 bg-gray-50 text-slate-800 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100",
                       installing && "cursor-not-allowed opacity-50",
                     )}
                   >

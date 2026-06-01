@@ -39,7 +39,7 @@ export function FormattedJsonViewer(props: JsonViewProps<object>) {
             <Icon
               {...props}
               onClick={onClick}
-              className="inline-block cursor-pointer text-gray-600 dark:text-slate-300"
+              className="inline-block cursor-pointer text-gray-700 dark:text-slate-200"
               name="FilesEarmark"
               size={16}
             />

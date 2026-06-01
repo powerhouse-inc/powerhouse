@@ -109,7 +109,7 @@ export function IntegrityInspector({
 
       <div className="flex shrink-0 items-end gap-3">
         <div className="flex flex-1 flex-col gap-1">
-          <label className="text-xs font-medium text-gray-600 dark:text-slate-300">
+          <label className="text-xs font-medium text-gray-700 dark:text-slate-200">
             Document ID
           </label>
           <input
@@ -121,7 +121,7 @@ export function IntegrityInspector({
           />
         </div>
         <div className="flex w-40 flex-col gap-1">
-          <label className="text-xs font-medium text-gray-600 dark:text-slate-300">
+          <label className="text-xs font-medium text-gray-700 dark:text-slate-200">
             Branch (optional)
           </label>
           <input
@@ -196,7 +196,7 @@ export function IntegrityInspector({
             Confirm
           </button>
           <button
-            className="rounded-sm border border-gray-300 bg-white px-3 py-1 text-sm text-gray-600 hover:bg-gray-50 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 dark:hover:bg-slate-800"
+            className="rounded-sm border border-gray-300 bg-gray-50 px-3 py-1 text-sm text-gray-700 hover:bg-gray-50 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 dark:hover:bg-slate-800"
             onClick={() => setConfirmAction(null)}
             type="button"
           >
@@ -270,19 +270,19 @@ function ValidationResultView({ result }: { result: ValidationResult }) {
           <table className="w-full border-collapse text-xs">
             <thead>
               <tr className="bg-gray-100 dark:bg-slate-700">
-                <th className="px-2 py-1 text-left font-medium text-gray-600 dark:text-slate-300">
+                <th className="px-2 py-1 text-left font-medium text-gray-700 dark:text-slate-200">
                   Scope
                 </th>
-                <th className="border-l border-gray-300 px-2 py-1 text-left font-medium text-gray-600 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
+                <th className="border-l border-gray-300 px-2 py-1 text-left font-medium text-gray-700 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
                   Branch
                 </th>
-                <th className="border-l border-gray-300 px-2 py-1 text-left font-medium text-gray-600 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
+                <th className="border-l border-gray-300 px-2 py-1 text-left font-medium text-gray-700 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
                   Revision
                 </th>
-                <th className="border-l border-gray-300 px-2 py-1 text-left font-medium text-gray-600 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
+                <th className="border-l border-gray-300 px-2 py-1 text-left font-medium text-gray-700 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
                   Keyframe Hash
                 </th>
-                <th className="border-l border-gray-300 px-2 py-1 text-left font-medium text-gray-600 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
+                <th className="border-l border-gray-300 px-2 py-1 text-left font-medium text-gray-700 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
                   Replayed Hash
                 </th>
               </tr>
@@ -321,16 +321,16 @@ function ValidationResultView({ result }: { result: ValidationResult }) {
           <table className="w-full border-collapse text-xs">
             <thead>
               <tr className="bg-gray-100 dark:bg-slate-700">
-                <th className="px-2 py-1 text-left font-medium text-gray-600 dark:text-slate-300">
+                <th className="px-2 py-1 text-left font-medium text-gray-700 dark:text-slate-200">
                   Scope
                 </th>
-                <th className="border-l border-gray-300 px-2 py-1 text-left font-medium text-gray-600 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
+                <th className="border-l border-gray-300 px-2 py-1 text-left font-medium text-gray-700 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
                   Branch
                 </th>
-                <th className="border-l border-gray-300 px-2 py-1 text-left font-medium text-gray-600 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
+                <th className="border-l border-gray-300 px-2 py-1 text-left font-medium text-gray-700 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
                   Snapshot Hash
                 </th>
-                <th className="border-l border-gray-300 px-2 py-1 text-left font-medium text-gray-600 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
+                <th className="border-l border-gray-300 px-2 py-1 text-left font-medium text-gray-700 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
                   Replayed Hash
                 </th>
               </tr>

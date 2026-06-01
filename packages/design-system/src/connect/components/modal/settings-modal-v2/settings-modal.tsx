@@ -36,7 +36,7 @@ export function SettingsModal(props: Props) {
         className={twMerge(
           "flex h-9 w-48 cursor-pointer items-center gap-x-2 rounded-md pl-3 text-gray-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800",
           selectedTab === tab.id
-            ? "bg-slate-50 dark:bg-slate-800"
+            ? "bg-gray-50 dark:bg-slate-800"
             : "bg-transparent",
         )}
       >
@@ -79,7 +79,7 @@ export function SettingsModal(props: Props) {
         </h1>
         <button
           type="button"
-          className="flex size-6 items-center justify-center rounded-md text-gray-800 outline-none dark:text-slate-100"
+          className="flex size-6 items-center justify-center rounded-md text-gray-900 outline-none dark:text-slate-100"
           onClick={() => onOpenChange?.(false)}
         >
           <Icon name="XmarkLight" size={24} />
@@ -87,7 +87,7 @@ export function SettingsModal(props: Props) {
       </div>
       <div className="flex flex-1">
         <div className="flex flex-col gap-y-1 p-3 pt-6">{tabsContent}</div>
-        <div className="m-6 flex h-full flex-1 flex-col overflow-hidden rounded-lg border border-slate-50 bg-white dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
+        <div className="m-6 flex h-full flex-1 flex-col overflow-hidden rounded-lg border border-slate-50 bg-gray-50 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
           {typeof SelectedTabComponent === "function" ? (
             <SelectedTabComponent />
           ) : (

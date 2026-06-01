@@ -13,7 +13,7 @@ const stateStyles: Record<string, string> = {
     "bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100",
   error: "bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100",
   disconnected:
-    "bg-gray-100 text-gray-600 dark:bg-slate-700 dark:text-slate-300",
+    "bg-gray-100 text-gray-700 dark:bg-slate-700 dark:text-slate-200",
 };
 
 export function ConnectionStateBadge({
@@ -22,7 +22,7 @@ export function ConnectionStateBadge({
 }: ConnectionStateBadgeProps) {
   const style =
     stateStyles[state] ??
-    "bg-gray-100 text-gray-600 dark:bg-slate-700 dark:text-slate-300";
+    "bg-gray-100 text-gray-700 dark:bg-slate-700 dark:text-slate-200";
 
   return (
     <span

@@ -65,7 +65,7 @@ export function DependencyVersions(props: Props) {
       title={`App version: ${validatedData.version}`}
       toggleClassName="text-gray-900 text-sm dark:text-slate-50"
     >
-      <ul className="text-sm text-gray-600 dark:text-slate-300">
+      <ul className="text-sm text-gray-700 dark:text-slate-200">
         {Object.entries(validatedData.dependencies).map(([dep, version]) => (
           <li key={dep} className="my-1 flex justify-between pr-1">
             <span>{dep.replace("@powerhousedao/", "")}:</span>

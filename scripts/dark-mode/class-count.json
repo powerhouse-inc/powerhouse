@@ -1,0 +1,295 @@
+{
+  "lightCount": {
+    "1": [
+      "border-gray-500",
+      "bg-amber-100",
+      "border-amber-300",
+      "border-yellow-500",
+      "bg-yellow-400",
+      "bg-white/90",
+      "bg-orange-100",
+      "bg-orange-200",
+      "border-orange-600",
+      "bg-green-600",
+      "bg-red-600",
+      "bg-blue-200",
+      "text-purple-900",
+      "bg-gray-400",
+      "border-gray-400",
+      "text-charcoal-300",
+      "border-blue-600",
+      "bg-black/50",
+      "bg-purple-900",
+      "bg-green-900",
+      "bg-violet-400",
+      "bg-slate-900/50",
+      "border-red-900",
+      "bg-amber-300",
+      "bg-cyan-300",
+      "border-gray-600",
+      "border-red-700",
+      "bg-yellow-300",
+      "text-gray-200",
+      "bg-green-50",
+      "bg-yellow-500",
+      "bg-purple-100",
+      "text-purple-700",
+      "text-orange-700"
+    ],
+    "2": [
+      "text-amber-900",
+      "border-slate-200",
+      "text-orange-300",
+      "text-orange-400",
+      "text-red-500",
+      "bg-blue-300",
+      "text-orange-500",
+      "text-blue-800",
+      "bg-red-100",
+      "text-slate-500",
+      "border-blue-300",
+      "border-yellow-400",
+      "bg-yellow-600",
+      "bg-red-900",
+      "bg-green-600/30",
+      "bg-red-600/30",
+      "border-green-300",
+      "border-gray-800",
+      "border-gray-700",
+      "border-blue-500",
+      "text-yellow-400",
+      "text-red-400",
+      "text-blue-500",
+      "bg-slate-100"
+    ],
+    "3": [
+      "border-slate-100",
+      "border-gray-900",
+      "bg-yellow-100",
+      "text-yellow-800",
+      "text-yellow-600",
+      "text-slate-300",
+      "border-slate-50",
+      "bg-blue-900",
+      "border-yellow-300"
+    ],
+    "4": [
+      "bg-black",
+      "text-blue-600",
+      "bg-gray-500",
+      "text-green-900",
+      "text-green-800",
+      "text-green-600",
+      "bg-blue-600",
+      "text-yellow-700"
+    ],
+    "5": [
+      "border-red-300",
+      "bg-green-100",
+      "bg-blue-500",
+      "border-gray-100",
+      "bg-red-500",
+      "text-orange-900",
+      "text-yellow-900",
+      "text-slate-100"
+    ],
+    "6": [
+      "bg-gray-300",
+      "text-slate-200",
+      "text-slate-50",
+      "text-green-700",
+      "bg-yellow-50",
+      "bg-green-500"
+    ],
+    "7": [
+      "bg-blue-50",
+      "bg-blue-100"
+    ],
+    "8": [
+      "bg-gray-800",
+      "bg-red-50",
+      "text-blue-700"
+    ],
+    "9": [
+      "text-gray-300",
+      "text-red-800"
+    ],
+    "10": [
+      "text-red-700",
+      "bg-gray-900",
+      "text-red-600",
+      "text-black"
+    ],
+    "11": [
+      "text-blue-900",
+      "bg-gray-200"
+    ],
+    "12": [
+      "text-gray-50"
+    ],
+    "26": [
+      "bg-slate-50",
+      "text-red-900",
+      "text-gray-400"
+    ],
+    "29": [
+      "text-white"
+    ],
+    "46": [
+      "bg-gray-100",
+      "bg-gray-50"
+    ],
+    "48": [
+      "text-gray-800"
+    ],
+    "51": [
+      "border-gray-200"
+    ],
+    "93": [
+      "text-gray-600"
+    ],
+    "114": [
+      "text-gray-700"
+    ],
+    "117": [
+      "bg-white"
+    ],
+    "120": [
+      "text-gray-500"
+    ],
+    "132": [
+      "text-gray-900"
+    ],
+    "133": [
+      "border-gray-300"
+    ]
+  },
+  "darkCount": {
+    "1": [
+      "dark:border-slate-400",
+      "dark:bg-amber-800",
+      "dark:border-amber-600",
+      "dark:border-yellow-400",
+      "dark:bg-yellow-500",
+      "dark:bg-orange-800",
+      "dark:bg-orange-700",
+      "dark:border-orange-300",
+      "dark:border-slate-300",
+      "dark:border-red-200",
+      "dark:border-red-700",
+      "dark:bg-green-300",
+      "dark:bg-red-300",
+      "dark:bg-blue-700",
+      "dark:bg-amber-600",
+      "dark:bg-cyan-600",
+      "dark:bg-red-50",
+      "dark:border-blue-300",
+      "dark:bg-green-900",
+      "dark:bg-yellow-400",
+      "dark:bg-purple-800",
+      "dark:bg-violet-500",
+      "dark:border-red-50",
+      "dark:bg-slate-900/50",
+      "dark:border-blue-400"
+    ],
+    "2": [
+      "dark:bg-slate-900/90",
+      "dark:text-amber-100",
+      "dark:border-slate-100",
+      "dark:bg-blue-600",
+      "dark:bg-red-800",
+      "dark:border-slate-200",
+      "dark:bg-green-600/30",
+      "dark:bg-red-300/30",
+      "dark:border-green-600",
+      "dark:bg-blue-50",
+      "dark:text-purple-100",
+      "dark:bg-yellow-800",
+      "dark:border-blue-600",
+      "dark:border-yellow-500",
+      "dark:bg-yellow-300"
+    ],
+    "3": [
+      "dark:border-slate-50",
+      "dark:bg-blue-400",
+      "dark:border-yellow-600"
+    ],
+    "4": [
+      "dark:bg-slate-400",
+      "dark:border-slate-600",
+      "dark:bg-blue-300",
+      "dark:text-slate-700"
+    ],
+    "5": [
+      "dark:bg-red-400",
+      "dark:border-red-600",
+      "dark:bg-green-800"
+    ],
+    "6": [
+      "dark:bg-green-400",
+      "dark:bg-yellow-900",
+      "dark:bg-blue-800"
+    ],
+    "7": [
+      "dark:bg-blue-900"
+    ],
+    "8": [
+      "dark:bg-slate-100",
+      "dark:text-slate-600",
+      "dark:bg-red-900"
+    ],
+    "11": [
+      "dark:text-slate-800"
+    ],
+    "12": [
+      "dark:text-orange-100"
+    ],
+    "13": [
+      "dark:bg-slate-50"
+    ],
+    "17": [
+      "dark:text-green-100",
+      "dark:text-yellow-100"
+    ],
+    "20": [
+      "dark:text-blue-100"
+    ],
+    "23": [
+      "dark:text-red-400",
+      "dark:text-slate-500"
+    ],
+    "32": [
+      "dark:text-slate-900"
+    ],
+    "34": [
+      "dark:text-red-100"
+    ],
+    "53": [
+      "dark:bg-slate-700"
+    ],
+    "85": [
+      "dark:text-slate-200"
+    ],
+    "87": [
+      "dark:text-slate-300"
+    ],
+    "91": [
+      "dark:text-slate-50"
+    ],
+    "95": [
+      "dark:bg-slate-800"
+    ],
+    "98": [
+      "dark:text-slate-400"
+    ],
+    "188": [
+      "dark:border-slate-500"
+    ],
+    "202": [
+      "dark:bg-slate-600"
+    ],
+    "239": [
+      "dark:text-slate-100"
+    ]
+  }
+}

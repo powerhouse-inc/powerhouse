@@ -114,7 +114,7 @@ export const CommandItemList: React.FC<FavoriteOptionsProps> = ({
               className={twMerge(
                 "flex-1 truncate text-sm/4 font-normal",
                 "text-gray-700 dark:text-slate-200",
-                opt.disabled && "text-gray-600 dark:text-slate-300",
+                opt.disabled && "text-gray-700 dark:text-slate-200",
               )}
             >
               {opt.label}

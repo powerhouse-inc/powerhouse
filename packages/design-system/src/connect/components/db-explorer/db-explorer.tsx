@@ -300,7 +300,7 @@ export function DBExplorer({
           <div className="flex shrink-0 flex-col gap-2 border-t border-gray-200 p-2 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
             {onImportDb && (
               <button
-                className="rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 dark:hover:bg-slate-700"
+                className="rounded-sm border border-gray-300 bg-gray-50 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 dark:hover:bg-slate-700"
                 onClick={handleImportClick}
                 type="button"
               >
@@ -309,7 +309,7 @@ export function DBExplorer({
             )}
             {onExportDb && (
               <button
-                className="rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 dark:hover:bg-slate-700"
+                className="rounded-sm border border-gray-300 bg-gray-50 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 dark:hover:bg-slate-700"
                 onClick={handleExportClick}
                 type="button"
               >
@@ -318,7 +318,7 @@ export function DBExplorer({
             )}
             {pgVersionControl && (
               <div className="flex flex-col gap-1 border-t border-gray-200 pt-2 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
-                <div className="flex items-center justify-between text-xs text-gray-600 dark:text-slate-300">
+                <div className="flex items-center justify-between text-xs text-gray-700 dark:text-slate-200">
                   <span>Postgres version</span>
                   <span className="font-semibold text-gray-900 dark:text-slate-50">
                     {pgVersionControl.currentPgVersion === null

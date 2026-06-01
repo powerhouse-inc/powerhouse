@@ -217,7 +217,7 @@ export function QueueInspector({
             {state.isPaused ? "Resume" : "Pause"}
           </button>
           <button
-            className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 dark:hover:bg-slate-700"
+            className="flex items-center gap-1 rounded-sm border border-gray-300 bg-gray-50 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 dark:hover:bg-slate-700"
             disabled={loading}
             onClick={() => void handleRefresh()}
             type="button"
@@ -242,10 +242,10 @@ export function QueueInspector({
             {state.isPaused ? "Paused" : "Running"}
           </span>
         </div>
-        <div className="text-gray-600 dark:text-slate-300">
+        <div className="text-gray-700 dark:text-slate-200">
           Pending: <span className="font-medium">{state.totalPending}</span>
         </div>
-        <div className="text-gray-600 dark:text-slate-300">
+        <div className="text-gray-700 dark:text-slate-200">
           Executing: <span className="font-medium">{state.totalExecuting}</span>
         </div>
       </div>
@@ -262,7 +262,7 @@ export function QueueInspector({
                   <th
                     key={column.key}
                     className={twMerge(
-                      "group cursor-pointer px-3 py-2 text-left text-xs font-medium text-gray-600 hover:bg-gray-200 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-slate-600 dark:hover:text-slate-100",
+                      "group cursor-pointer px-3 py-2 text-left text-xs font-medium text-gray-700 hover:bg-gray-200 hover:text-gray-900 dark:text-slate-200 dark:hover:bg-slate-600 dark:hover:text-slate-100",
                       index > 0 &&
                         "border-l border-gray-300 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100",
                     )}
@@ -358,7 +358,7 @@ export function QueueInspector({
                         "inline-flex items-center gap-1 rounded-sm px-1.5 py-0.5",
                         job.status === "executing"
                           ? "bg-green-100 text-green-700 dark:bg-green-800 dark:text-green-100"
-                          : "bg-gray-100 text-gray-600 dark:bg-slate-700 dark:text-slate-300",
+                          : "bg-gray-100 text-gray-700 dark:bg-slate-700 dark:text-slate-200",
                       )}
                     >
                       {job.status === "executing" && (
@@ -374,7 +374,7 @@ export function QueueInspector({
         </table>
       </div>
 
-      <div className="shrink-0 text-sm text-gray-600 dark:text-slate-300">
+      <div className="shrink-0 text-sm text-gray-700 dark:text-slate-200">
         Showing {sortedJobs.length} job(s)
       </div>
 

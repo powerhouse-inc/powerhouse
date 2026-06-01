@@ -37,7 +37,7 @@ export function MissingModelBanner() {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="rounded-md border border-amber-300 bg-white px-3 py-1 text-amber-900 hover:bg-amber-50 dark:border-amber-600 dark:bg-slate-800 dark:text-amber-100 dark:hover:bg-amber-900"
+          className="rounded-md border border-amber-300 bg-gray-50 px-3 py-1 text-amber-900 hover:bg-amber-50 dark:border-amber-600 dark:bg-slate-800 dark:text-amber-100 dark:hover:bg-amber-900"
         >
           View
         </button>
@@ -84,16 +84,16 @@ function MissingModelDetailsModal(props: DetailsProps) {
       }}
       contentProps={{ className: "rounded-3xl" }}
     >
-      <div className="w-[520px] max-w-[90vw] bg-white p-6 dark:bg-slate-800">
-        <div className="border-b border-slate-100 pb-2 text-2xl font-bold text-gray-800 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
+      <div className="w-[520px] max-w-[90vw] bg-gray-50 p-6 dark:bg-slate-800">
+        <div className="border-b border-slate-100 pb-2 text-2xl font-bold text-gray-900 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
           Missing document models
         </div>
-        <div className="my-4 text-sm text-gray-600 dark:text-slate-300">
+        <div className="my-4 text-sm text-gray-700 dark:text-slate-200">
           The following document types couldn't be loaded. Documents using them
           won't display until the underlying package is installed.
         </div>
         {failed.length === 0 ? (
-          <div className="rounded-xl bg-slate-50 p-4 text-sm text-gray-600 dark:bg-slate-800 dark:text-slate-300">
+          <div className="rounded-xl bg-gray-50 p-4 text-sm text-gray-700 dark:bg-slate-800 dark:text-slate-200">
             No outstanding failures.
           </div>
         ) : (
@@ -104,12 +104,12 @@ function MissingModelDetailsModal(props: DetailsProps) {
               return (
                 <div
                   key={entry.documentType}
-                  className="rounded-xl bg-slate-50 p-4 dark:bg-slate-800"
+                  className="rounded-xl bg-gray-50 p-4 dark:bg-slate-800"
                 >
-                  <div className="mb-1 font-mono text-sm font-semibold text-gray-800 dark:text-slate-100">
+                  <div className="mb-1 font-mono text-sm font-semibold text-gray-900 dark:text-slate-100">
                     {entry.documentType}
                   </div>
-                  <div className="mb-2 text-xs text-gray-600 dark:text-slate-300">
+                  <div className="mb-2 text-xs text-gray-700 dark:text-slate-200">
                     {reasonLabels[entry.reason]}
                   </div>
                   {entry.packageNames.length > 0 ? (
@@ -152,7 +152,7 @@ function MissingModelDetailsModal(props: DetailsProps) {
           <button
             type="button"
             onClick={onClose}
-            className="min-h-[36px] rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 dark:hover:bg-slate-800"
+            className="min-h-[36px] rounded-xl border border-slate-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 dark:hover:bg-slate-800"
           >
             Close
           </button>

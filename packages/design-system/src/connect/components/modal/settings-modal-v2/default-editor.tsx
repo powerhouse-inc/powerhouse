@@ -14,7 +14,7 @@ export function DefaultEditor(props: Props) {
   return (
     <div
       className={twMerge(
-        "rounded-lg bg-white p-3 dark:bg-slate-800",
+        "rounded-lg bg-gray-50 p-3 dark:bg-slate-800",
         className,
       )}
     >

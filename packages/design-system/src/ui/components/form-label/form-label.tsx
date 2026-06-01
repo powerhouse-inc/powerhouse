@@ -52,7 +52,7 @@ export const FormLabel: React.FC<FormLabelProps> = ({
       {required && (
         <span
           className={twMerge(
-            "ml-1 text-gray-800 group-hover:text-gray-900 dark:text-slate-100 dark:group-hover:text-slate-50",
+            "ml-1 text-gray-900 group-hover:text-gray-900 dark:text-slate-100 dark:group-hover:text-slate-50",
             hasError &&
               `${inline ? "text-red-800 dark:text-red-100" : "text-red-900 dark:text-red-100"} group-hover:text-red-900`,
           )}
@@ -68,7 +68,7 @@ export const FormLabel: React.FC<FormLabelProps> = ({
               name="CircleInfo"
               size={16}
               className={twMerge(
-                "ml-1 cursor-pointer text-gray-600 hover:text-gray-500 dark:text-slate-300 dark:hover:text-slate-400",
+                "ml-1 cursor-pointer text-gray-700 hover:text-gray-500 dark:text-slate-200 dark:hover:text-slate-400",
                 disabled && "text-gray-500 dark:text-slate-400",
               )}
             />

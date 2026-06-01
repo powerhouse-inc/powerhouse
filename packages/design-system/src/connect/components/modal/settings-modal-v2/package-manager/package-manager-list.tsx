@@ -20,8 +20,8 @@ const PackageDetail: React.FC<{ label: string; value: ReactNode }> = ({
 }) => {
   return (
     <div className="flex items-start gap-2 text-sm">
-      <p className="text-gray-600 dark:text-slate-300">{label}:</p>
-      <p className="text-gray-600 dark:text-slate-300">{value}</p>
+      <p className="text-gray-700 dark:text-slate-200">{label}:</p>
+      <p className="text-gray-700 dark:text-slate-200">{value}</p>
     </div>
   );
 };
@@ -55,7 +55,7 @@ export const PackageManagerListItem = (props: {
     id: "install",
     label: "Install",
     icon: <Icon name="DownloadFile" />,
-    className: "text-gray-800 dark:text-slate-100",
+    className: "text-gray-900 dark:text-slate-100",
   } as const;
 
   const uninstallDropdownItem = {
@@ -78,7 +78,7 @@ export const PackageManagerListItem = (props: {
   return (
     <li
       className={twMerge(
-        "relative flex flex-col items-start rounded-md border border-gray-200 bg-white p-3 text-sm/5 shadow-sm dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100",
+        "relative flex flex-col items-start rounded-md border border-gray-200 bg-gray-50 p-3 text-sm/5 shadow-sm dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100",
         className,
       )}
     >
@@ -156,7 +156,7 @@ export const PackageManagerListItem = (props: {
           }}
         >
           <Icon
-            className="text-gray-600 group-hover:text-gray-900 dark:text-slate-300 dark:group-hover:text-slate-50"
+            className="text-gray-700 group-hover:text-gray-900 dark:text-slate-200 dark:group-hover:text-slate-50"
             name="VerticalDots"
           />
         </button>
@@ -327,24 +327,24 @@ const PackageSection: React.FC<{
 
   return (
     <section className="mb-6">
-      <h3 className="sticky top-0 z-10 mb-3 border-b border-gray-200 bg-white text-gray-800 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100">
+      <h3 className="sticky top-0 z-10 mb-3 border-b border-gray-200 bg-gray-50 text-gray-900 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100">
         <button
           type="button"
           onClick={toggle}
           aria-expanded={!collapsed}
           aria-controls={contentId}
-          className="flex w-full items-center gap-2 pb-2 text-left text-base font-semibold text-gray-800 hover:text-gray-700 dark:text-slate-100 dark:hover:text-slate-200"
+          className="flex w-full items-center gap-2 pb-2 text-left text-base font-semibold text-gray-900 hover:text-gray-700 dark:text-slate-100 dark:hover:text-slate-200"
         >
           <Icon
             name="ChevronDown"
             size={16}
             className={twMerge(
-              "shrink-0 text-gray-600 transition-transform dark:text-slate-300",
+              "shrink-0 text-gray-700 transition-transform dark:text-slate-200",
               collapsed && "-rotate-90",
             )}
           />
           <span>{title}</span>
-          <span className="text-xs font-medium text-gray-600 dark:text-slate-300">
+          <span className="text-xs font-medium text-gray-700 dark:text-slate-200">
             {count}
           </span>
         </button>
@@ -352,7 +352,7 @@ const PackageSection: React.FC<{
       {!collapsed && (
         <div id={contentId}>
           {isEmpty ? (
-            <p className="text-sm text-gray-600 dark:text-slate-300">
+            <p className="text-sm text-gray-700 dark:text-slate-200">
               {emptyText}
             </p>
           ) : (
@@ -371,7 +371,7 @@ const PackageSubSection: React.FC<{
 }> = ({ title, count, children }) => {
   return (
     <div>
-      <h4 className="mb-2 flex items-baseline gap-2 text-xs font-semibold tracking-wide text-gray-600 uppercase dark:text-slate-300">
+      <h4 className="mb-2 flex items-baseline gap-2 text-xs font-semibold tracking-wide text-gray-700 uppercase dark:text-slate-200">
         <span>{title}</span>
         <span className="font-medium tracking-normal text-gray-500 normal-case dark:text-slate-400">
           ({count})

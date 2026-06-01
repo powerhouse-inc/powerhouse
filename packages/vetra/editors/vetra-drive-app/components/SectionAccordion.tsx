@@ -26,11 +26,11 @@ export const SectionAccordion: React.FC<SectionAccordionProps> = ({
         width={16}
         height={16}
         className={twMerge(
-          "text-gray-600 transition-transform duration-300 dark:text-slate-300",
+          "text-gray-700 transition-transform duration-300 dark:text-slate-200",
           isOpen ? "rotate-90" : "",
         )}
       />
-      <h2 className="text-base font-semibold text-gray-800 dark:text-slate-100">
+      <h2 className="text-base font-semibold text-gray-900 dark:text-slate-100">
         {title}
       </h2>
       {actionButton && <div className="ml-auto">{actionButton}</div>}

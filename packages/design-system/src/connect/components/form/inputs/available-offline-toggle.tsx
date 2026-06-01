@@ -21,7 +21,7 @@ export const AvailableOfflineToggle = forwardRef(
           >
             Make available offline
           </label>
-          <p className="text-xs text-gray-600 dark:text-slate-300">
+          <p className="text-xs text-gray-700 dark:text-slate-200">
             Check this options if you keep a local backup
             <br />
             available at all times.

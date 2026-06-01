@@ -34,7 +34,7 @@ export const DebugSettingsModal: React.FC = () => {
         className: "rounded-2xl",
       }}
     >
-      <div className="w-[700px] rounded-2xl bg-white p-6 dark:bg-slate-800">
+      <div className="w-[700px] rounded-2xl bg-gray-50 p-6 dark:bg-slate-800">
         <div className="mb-6 flex justify-between">
           <div className="text-xl font-bold">Debug Tools</div>
           <button id="close-modal" onClick={() => closePHModal()}>
@@ -104,7 +104,7 @@ export const DebugSettingsModal: React.FC = () => {
               Set invalid app version:
             </label>
             <FormInput
-              containerClassName="p-1 bg-white border border-gray-200 rounded-md text-sm dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
+              containerClassName="p-1 bg-gray-50 border border-gray-200 rounded-md text-sm dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
               inputClassName="text-xs font-normal"
               id="appVersion"
               icon={

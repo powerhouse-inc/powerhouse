@@ -18,7 +18,7 @@ export const AllIcons: Story = {
   },
   render: () => {
     return (
-      <div className="bg-white p-8 dark:bg-slate-800">
+      <div className="bg-gray-50 p-8 dark:bg-slate-800">
         <h2 className="mb-6 text-xl font-semibold">All Available Icons</h2>
         <div className="flex flex-wrap">
           {iconNames.map((name) => (
@@ -32,7 +32,7 @@ export const AllIcons: Story = {
                   className="text-gray-700 dark:text-slate-200"
                 />
               </div>
-              <span className="text-xs text-gray-600 dark:text-slate-300">
+              <span className="text-xs text-gray-700 dark:text-slate-200">
                 {name}
               </span>
             </div>

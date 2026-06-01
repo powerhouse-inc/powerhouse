@@ -108,7 +108,7 @@ export const ModuleItem: React.FC<ModuleItemProps> = ({
             }}
           >
             <Icon
-              className="text-gray-600 dark:text-slate-300"
+              className="text-gray-700 dark:text-slate-200"
               name="VerticalDots"
             />
           </button>

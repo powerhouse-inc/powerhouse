@@ -68,7 +68,7 @@ export const MigrationBanner: React.FC = () => {
           <div className="font-semibold">
             Your local database uses Postgres {major}.
           </div>
-          <div className="text-gray-800 dark:text-slate-100">
+          <div className="text-gray-900 dark:text-slate-100">
             Migrate to Postgres {CURRENT_PG_MAJOR} to pick up the latest
             features. Your data will be backed up first.
           </div>

@@ -23,7 +23,7 @@ const Settings = () => {
       </div>
       <div className="mb-8">
         <h5 className="mb-8 text-2xl/relaxed">Budget Statements</h5>
-        <div className="rounded-2xl bg-slate-50 py-24 text-center dark:bg-slate-800">
+        <div className="rounded-2xl bg-gray-50 py-24 text-center dark:bg-slate-800">
           <h5 className="text-2xl/relaxed">Google Sheet Intergration</h5>
         </div>
       </div>
