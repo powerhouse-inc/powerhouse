@@ -68,7 +68,6 @@ export function useRenownInit({
     initRenown(appName, namespace, url)
       .then(promiseRef.current!.resolve)
       .catch(promiseRef.current!.reject);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- read once on mount
   }, []);
 
   return promiseRef.current.promise;
