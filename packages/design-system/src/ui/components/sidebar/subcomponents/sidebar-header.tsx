@@ -20,7 +20,7 @@ export const SidebarHeader: React.FC<SidebarHeaderProps> = ({
   }
   let titleElement;
   const baseTitleClasses =
-    "truncate text-sm font-semibold text-gray-700 dark:text-gray-300";
+    "truncate text-sm font-semibold text-gray-700 dark:text-slate-300";
   if (handleOnTitleClick) {
     titleElement = (
       <button
@@ -36,7 +36,7 @@ export const SidebarHeader: React.FC<SidebarHeaderProps> = ({
   }
 
   return (
-    <header className="flex items-center justify-between gap-2 border-b border-gray-300 bg-gray-50 p-4 dark:border-gray-800 dark:bg-slate-600">
+    <header className="flex items-center justify-between gap-2 border-b border-gray-300 bg-gray-50 p-4 dark:border-slate-800 dark:bg-slate-600">
       <div className="flex items-center gap-2 truncate">
         {sidebarIcon}
         {titleElement}
@@ -53,9 +53,9 @@ export const SidebarHeader: React.FC<SidebarHeaderProps> = ({
                 role="button"
                 tabIndex={0}
                 className={twMerge(
-                  "w-[26px] rounded-lg bg-gray-50 p-1 text-center text-xs text-slate-100 dark:bg-gray-900 dark:text-slate-200",
+                  "w-[26px] rounded-lg bg-gray-50 p-1 text-center text-xs text-slate-100 dark:bg-slate-900 dark:text-slate-200",
                   !isDisabled &&
-                    "hover:bg-slate-100 hover:text-slate-200 dark:hover:bg-gray-600 dark:hover:text-slate-50",
+                    "hover:bg-slate-100 hover:text-slate-200 dark:hover:bg-slate-600 dark:hover:text-slate-50",
                   isDisabled &&
                     "cursor-not-allowed bg-gray-100 text-[#E2E4E7] dark:bg-[#252728] dark:text-slate-500",
                 )}

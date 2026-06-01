@@ -94,7 +94,7 @@ export const SidebarItem = ({
             data-testid="sidebar-item"
             id={`sidebar-item-${node.id}`}
             className={twMerge(
-              "group/sidebar-item relative flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-gray-700 select-none hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-charcoal-900",
+              "group/sidebar-item relative flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-gray-700 select-none hover:bg-gray-100 dark:text-slate-400 dark:hover:bg-charcoal-900",
               hasStatus && "pr-6",
               allowPinning && (hasStatus ? "hover:pr-12" : "hover:pr-6"),
               isPinned && (hasStatus ? "pr-12" : "pr-6"),
@@ -103,7 +103,7 @@ export const SidebarItem = ({
               pinnedMode &&
                 "after:absolute after:-top-2.5 after:left-[15px] after:h-4 after:w-px after:bg-gray-300 first:group-first/sidebar-item-wrapper:after:hidden hover:bg-gray-50 dark:hover:bg-slate-600",
               isActive &&
-                "bg-gray-200 font-medium text-gray-900 hover:bg-gray-200 dark:bg-charcoal-900 dark:text-gray-50 dark:hover:bg-charcoal-900",
+                "bg-gray-200 font-medium text-gray-900 hover:bg-gray-200 dark:bg-charcoal-900 dark:text-slate-50 dark:hover:bg-charcoal-900",
               node.className,
             )}
             onClick={() => {
@@ -131,8 +131,8 @@ export const SidebarItem = ({
                         ? ""
                         : "-rotate-90",
                       node.children === undefined || node.children.length === 0
-                        ? "text-gray-300 dark:text-gray-700"
-                        : "text-gray-700 dark:text-gray-400",
+                        ? "text-gray-300 dark:text-slate-700"
+                        : "text-gray-700 dark:text-slate-400",
                     )}
                   />
                 </div>
@@ -164,8 +164,8 @@ export const SidebarItem = ({
                     "absolute top-1/2 flex -translate-y-1/2 items-center justify-center",
                     hasStatus ? "right-8" : "right-2",
                     isPinned
-                      ? "text-gray-700 hover:text-blue-900 dark:text-gray-50 dark:hover:text-blue-900"
-                      : "invisible text-gray-300 group-hover/sidebar-item:visible hover:text-gray-700 dark:text-gray-700 dark:hover:text-gray-50",
+                      ? "text-gray-700 hover:text-blue-900 dark:text-slate-50 dark:hover:text-blue-900"
+                      : "invisible text-gray-300 group-hover/sidebar-item:visible hover:text-gray-700 dark:text-slate-700 dark:hover:text-slate-50",
                   )}
                   onClick={(e) => {
                     e.stopPropagation();
@@ -183,7 +183,7 @@ export const SidebarItem = ({
                 <div
                   className={twMerge(
                     "absolute top-1/2 right-2 flex -translate-y-1/2 items-center justify-center",
-                    "text-gray-300 group-hover/sidebar-item:visible hover:text-gray-700 dark:text-gray-700 dark:hover:text-gray-50",
+                    "text-gray-300 group-hover/sidebar-item:visible hover:text-gray-700 dark:text-slate-700 dark:hover:text-slate-50",
                   )}
                   onClick={(e) => {
                     e.stopPropagation();
@@ -265,8 +265,8 @@ const PinnedModeCircleIcon = ({ isPinned }: { isPinned: boolean }) => (
       fill="currentColor"
       className={
         isPinned
-          ? "text-gray-500 dark:text-gray-500"
-          : "text-gray-300 dark:text-gray-300"
+          ? "text-gray-500 dark:text-slate-500"
+          : "text-gray-300 dark:text-slate-300"
       }
     />
   </svg>

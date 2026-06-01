@@ -21,13 +21,13 @@ export const SidebarSkeletonItem = ({
       >
         {/* Chevron icon skeleton */}
         <div className="flex size-4 min-w-4 items-center justify-center">
-          <div className="size-4 min-w-4 animate-pulse rounded-sm bg-gray-200 dark:bg-gray-600" />
+          <div className="size-4 min-w-4 animate-pulse rounded-sm bg-gray-200 dark:bg-slate-600" />
         </div>
 
         {/* Text content skeleton */}
         <div
           className={twMerge(
-            "h-4 animate-pulse rounded-sm bg-gray-200 dark:bg-gray-600",
+            "h-4 animate-pulse rounded-sm bg-gray-200 dark:bg-slate-600",
             textWidth,
           )}
         />

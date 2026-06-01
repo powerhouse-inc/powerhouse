@@ -11,7 +11,7 @@ export const SearchResultCounter: React.FC<SearchResultCounterProps> = ({
 }) => {
   if (isSearching) {
     return (
-      <div className="h-4 w-6 animate-pulse rounded-sm bg-gray-200 dark:bg-gray-800" />
+      <div className="h-4 w-6 animate-pulse rounded-sm bg-gray-200 dark:bg-slate-800" />
     );
   }
 
@@ -19,15 +19,15 @@ export const SearchResultCounter: React.FC<SearchResultCounterProps> = ({
     <div className="text-xs">
       {totalResults > 0 ? (
         <>
-          <span className="text-gray-700 dark:text-gray-50">
+          <span className="text-gray-700 dark:text-slate-50">
             {activeIndex + 1}
           </span>
-          <span className="text-gray-500 dark:text-gray-700">
+          <span className="text-gray-500 dark:text-slate-700">
             /{totalResults}
           </span>
         </>
       ) : (
-        <span className="text-gray-500 dark:text-gray-700">0/0</span>
+        <span className="text-gray-500 dark:text-slate-700">0/0</span>
       )}
     </div>
   );
