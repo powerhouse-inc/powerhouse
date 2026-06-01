@@ -8,7 +8,10 @@ type DefaultEditorLoaderProps = DivProps & {
 export function DefaultEditorLoader(props: DefaultEditorLoaderProps) {
   const { message = "Loading editor", ...divProps } = props;
   return (
-    <div className="grid h-full place-items-center" {...divProps}>
+    <div
+      className="grid h-full place-items-center text-gray-800 dark:text-slate-100"
+      {...divProps}
+    >
       <div className="-mt-20 grid place-items-center">
         <h3 className="mb-4 text-xl">{message}</h3>
         <LogoAnimation />
