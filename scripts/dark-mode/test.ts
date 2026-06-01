@@ -10,13 +10,7 @@ const classes = pipe(
   files,
   getStringLiteralsFromFiles(project),
   flatMap(getStringLiteralClassNameList),
-  filter(
-    (c) =>
-      c.includes("slate") &&
-      !c.includes("var") &&
-      !c.includes("translate") &&
-      !c.includes("dark:"),
-  ),
+  filter((c) => c.includes("black") && !c.includes("dark:")),
   unique(),
 );
 

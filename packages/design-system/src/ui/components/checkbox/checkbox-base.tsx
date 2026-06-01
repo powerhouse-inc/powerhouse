@@ -20,7 +20,7 @@ const CheckboxBase = React.forwardRef<
       // Base styles
       "peer size-4 shrink-0 rounded-sm",
       // Border & Shadow
-      "border shadow-sm shadow-black/4",
+      "border shadow-sm shadow-gray-900/4",
       // Background & Ring
       "transition-shadow",
       // Focus styles
