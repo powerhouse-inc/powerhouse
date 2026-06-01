@@ -10,8 +10,14 @@ type SidebarItemProps = {
   readonly onClick?: (event: React.MouseEvent<HTMLDivElement>) => void;
 };
 export const SidebarItem = function SidebarItem(props: SidebarItemProps) {
-  const { icon, title, description, containerClassName, active, onClick } =
-    props;
+  const {
+    icon,
+    title,
+    description: _description,
+    containerClassName,
+    active,
+    onClick,
+  } = props;
   return (
     <ConnectTooltip
       content={title}

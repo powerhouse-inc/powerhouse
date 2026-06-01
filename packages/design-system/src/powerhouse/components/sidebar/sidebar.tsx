@@ -20,7 +20,7 @@ type SidebarProps = HTMLAttributes<HTMLElement> & {
   minWidth: string;
 };
 export function Sidebar({
-  maxWidth = "304px",
+  maxWidth: _maxWidth = "304px",
   minWidth = "80px",
   className,
   children,

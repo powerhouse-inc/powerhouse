@@ -145,13 +145,11 @@ export function useDbExplorer() {
       const limit = options.limit;
       const offset = options.offset;
       const sort = options.sort;
-
       const filters = options.filters;
       const tableRef = sql.raw(`${REACTOR_SCHEMA}."${table}"`);
 
       // Build WHERE clause from filters
       let whereClause = sql``;
-
       if (filters?.clauses && filters.clauses.length > 0) {
         const conditions: ReturnType<typeof sql>[] = [];
 
@@ -177,13 +175,10 @@ export function useDbExplorer() {
             condition = sql`${columnRef} ${operator} ${value}`;
           } else {
             // For =, !=, >, <, >=, <=
-
             const operator = sql.raw(clause.operator);
-
             const value = clause.value;
 
             // Try to parse as number if it looks like a number
-
             let parsedValue: string | number = value;
             if (value !== "" && !isNaN(Number(value)) && value.trim() !== "") {
               parsedValue = Number(value);
@@ -195,10 +190,8 @@ export function useDbExplorer() {
           conditions.push(condition);
 
           // Add connector if not the last clause
-
           if (i < filters.clauses.length - 1) {
             const connector = filters.connectors?.[i] ?? "AND";
-
             conditions.push(sql.raw(connector));
           }
         }

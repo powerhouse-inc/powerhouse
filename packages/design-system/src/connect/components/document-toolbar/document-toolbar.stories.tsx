@@ -11,7 +11,6 @@ import {
 } from "@powerhousedao/shared/document-drive";
 import type { PHDocument } from "@powerhousedao/shared/document-model";
 import type { Meta, StoryObj } from "@storybook/react";
-import type { render } from "@testing-library/react";
 import { useEffect, useState } from "react";
 import { documentModelCreateDocument } from "../../../../../document-model/src/state.js";
 import { DocumentToolbar } from "./document-toolbar.js";

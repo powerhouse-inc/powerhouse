@@ -27,7 +27,11 @@ export const App = () => {
     const handlePreloadError = (event: Event) => {
       const payload = (event as Event & { payload?: unknown }).payload;
       const message =
-        payload instanceof Error ? payload.message : String(payload ?? "");
+        payload instanceof Error
+          ? payload.message
+          : typeof payload === "string"
+            ? payload
+            : "";
       const failedUrl = message.match(/https?:\/\/[^\s"']+/)?.[0];
 
       if (failedUrl && !failedUrl.startsWith(window.location.origin)) {

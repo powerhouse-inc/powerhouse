@@ -11,21 +11,23 @@ export function useProcessorsInspector(): ProcessorsInspectorProps | undefined {
     [processorManager],
   );
 
-  const getProcessors = useCallback(async () => {
+  const getProcessors = useCallback(() => {
     if (!processorManager) {
-      return [];
+      return Promise.resolve([]);
     }
 
-    return processorManager.getAll().map((tracked) => ({
-      processorId: tracked.processorId,
-      factoryId: tracked.factoryId,
-      driveId: tracked.driveId,
-      processorIndex: tracked.processorIndex,
-      lastOrdinal: tracked.lastOrdinal,
-      status: tracked.status,
-      lastError: tracked.lastError,
-      lastErrorTimestamp: tracked.lastErrorTimestamp,
-    }));
+    return Promise.resolve(
+      processorManager.getAll().map((tracked) => ({
+        processorId: tracked.processorId,
+        factoryId: tracked.factoryId,
+        driveId: tracked.driveId,
+        processorIndex: tracked.processorIndex,
+        lastOrdinal: tracked.lastOrdinal,
+        status: tracked.status,
+        lastError: tracked.lastError,
+        lastErrorTimestamp: tracked.lastErrorTimestamp,
+      })),
+    );
   }, [processorManager]);
 
   const onRetry = useCallback(

@@ -7,7 +7,7 @@ import { assignEnvVars } from "../utils/assign-env-vars.js";
 export async function runConnectPreview(args: ConnectPreviewArgs) {
   const {
     outDir,
-    connectBasePath,
+    connectBasePath: _connectBasePath,
     port,
     host,
     open,

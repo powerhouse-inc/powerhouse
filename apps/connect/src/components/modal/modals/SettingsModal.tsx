@@ -50,7 +50,7 @@ export const SettingsModal: React.FC = () => {
         content: About,
       },
     ],
-    [onRefresh],
+    [],
   );
 
   return (

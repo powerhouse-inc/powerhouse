@@ -2,7 +2,7 @@
  * @see: https://www.totaltypescript.com/forwardref-with-generic-components
  */
 
-export function fixedForwardRef<T, P = {}>(
+export function fixedForwardRef<T, P = Record<string, never>>(
   render: (props: P, ref: React.Ref<T>) => React.ReactNode,
 ): (props: P & React.RefAttributes<T>) => React.ReactNode {
   // @ts-expect-error - This is a hack to make the types work

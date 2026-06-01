@@ -2,7 +2,7 @@ import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { describe, expect, it } from "vitest";
 
-const documentModels = [
+const _documentModels = [
   documentModelDocumentModelModule,
 ] as unknown as DocumentModelModule[];
 

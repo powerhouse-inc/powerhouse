@@ -12,13 +12,14 @@ function makeVetraConfigField(vetraDriveUrl: string | undefined) {
 `.raw;
 }
 
-export async function buildPowerhouseConfigTemplate(args: {
+export function buildPowerhouseConfigTemplate(args: {
   tag?: string;
   version?: string;
   remoteDrive?: string;
-}) {
+}): Promise<string> {
   const vetraConfigField = makeVetraConfigField(args.remoteDrive);
-  return json`
+  return Promise.resolve(
+    json`
   {
   "documentModelsDir": "./document-models",
   "editorsDir": "./editors",
@@ -34,5 +35,6 @@ export async function buildPowerhouseConfigTemplate(args: {
   ],
   "packageRegistryUrl": "${DEFAULT_REGISTRY_URL}"${vetraConfigField}
 }
-`.raw;
+`.raw,
+  );
 }

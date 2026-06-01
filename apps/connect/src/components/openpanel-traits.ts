@@ -17,7 +17,6 @@ import type { User } from "@renown/sdk";
 export function buildTraits(user: User): Record<string, unknown> {
   // Destructure credential off so it can never accidentally make it into the
   // returned object.
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { credential: _credential, ...rest } = user;
 
   const traits: Record<string, unknown> = {

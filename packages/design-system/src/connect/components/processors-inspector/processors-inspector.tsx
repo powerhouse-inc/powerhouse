@@ -59,7 +59,7 @@ function sortProcessors(
   if (!sort) return processors;
 
   return [...processors].sort((a, b) => {
-    let comparison = 0;
+    let comparison: number;
 
     switch (sort.column) {
       case "status":

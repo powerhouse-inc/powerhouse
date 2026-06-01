@@ -287,8 +287,8 @@ describe("Push Backfill After Offline Recovery", () => {
     connectReactor = setup.connectReactor;
     switchboardReactor = setup.switchboardReactor;
     const {
-      connectModule,
-      switchboardModule,
+      connectModule: _connectModule,
+      switchboardModule: _switchboardModule,
       connectEventBus,
       switchboardEventBus,
       connectSyncManager,

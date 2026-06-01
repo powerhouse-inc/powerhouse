@@ -19,7 +19,7 @@ export async function reactorGraphqlFetchDocument<
     const document = result.document?.document;
     if (!document) return undefined;
     return phDocumentFromQuery(document, documentSchema);
-  } catch (error) {
+  } catch {
     return undefined;
   }
 }

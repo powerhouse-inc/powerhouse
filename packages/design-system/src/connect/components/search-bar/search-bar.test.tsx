@@ -27,7 +27,7 @@ const filterItems: ConnectSearchBarProps["filterItems"] = [
 ];
 
 describe("ConnectSearchBar Component", () => {
-  it("should match snapshot", async () => {
+  it("should match snapshot", () => {
     const { asFragment } = render(
       <ConnectSearchBar
         filterItems={filterItems}

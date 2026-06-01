@@ -16,7 +16,7 @@ export function Tabs({
     >
       <div className="flex w-full shrink-0 justify-between">
         <List className="flex w-full gap-x-2 rounded-xl p-1 text-sm font-semibold text-gray-600 outline-none dark:text-slate-300">
-          {React.Children.map(children, (child, i) => {
+          {React.Children.map(children, (child, _i) => {
             if (!React.isValidElement(child)) return;
             const { label, disabled } = child.props as TabContentProps;
             return (

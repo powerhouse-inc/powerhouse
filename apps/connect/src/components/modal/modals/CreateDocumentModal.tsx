@@ -35,7 +35,9 @@ export const CreateDocumentModal: React.FC = () => {
   return (
     <ConnectCreateDocumentModal
       open={open}
-      onContinue={onCreateDocument}
+      onContinue={(documentName) => {
+        void onCreateDocument(documentName);
+      }}
       onOpenChange={(status: boolean) => {
         if (!status) return closePHModal();
       }}

@@ -37,7 +37,7 @@ export interface IQuery {
 }
 
 export interface IKnexQueryExecutor {
-  execute<T extends {}, U>(query: Knex.QueryBuilder<T, U>): Promise<any>;
+  execute<T extends object, U>(query: Knex.QueryBuilder<T, U>): Promise<any>;
 }
 
 export type KnexAnalyticsStoreOptions = {
@@ -57,7 +57,10 @@ export class KnexAnalyticsStore implements IAnalyticsStore {
   }
 
   public destroy() {
-    this._knex.destroy();
+    // Fire-and-forget: the synchronous `destroy()` signature is part of this
+    // store's existing contract (callers don't await it), so close the pool
+    // without blocking. `void` marks the floating promise as intentional.
+    void this._knex.destroy();
   }
 
   public async clearSeriesBySource(
@@ -81,12 +84,12 @@ export class KnexAnalyticsStore implements IAnalyticsStore {
 
   public async clearEmptyAnalyticsDimensions() {
     const query = this._knex("AnalyticsDimension AS AD")
-      .whereNotExists((q) =>
-        q
+      .whereNotExists((q) => {
+        void q
           .select("*")
           .from("AnalyticsSeries_AnalyticsDimension AS ASAD")
-          .where("ASAD.dimensionId", this._knex.ref("AD.id")),
-      )
+          .where("ASAD.dimensionId", this._knex.ref("AD.id"));
+      })
       .delete();
 
     return await this._executor.execute(query);
@@ -120,10 +123,9 @@ export class KnexAnalyticsStore implements IAnalyticsStore {
         baseQuery.andWhereLike(`dim_${dimension}`, paths[0].toString("/%"));
       } else if (paths.length > 1) {
         baseQuery.andWhere((q) => {
-          paths.forEach((p) =>
-            q.orWhereLike(`dim_${dimension}`, p.toString("/%")),
-          );
-          return q;
+          paths.forEach((p) => {
+            void q.orWhereLike(`dim_${dimension}`, p.toString("/%"));
+          });
         });
       }
     }

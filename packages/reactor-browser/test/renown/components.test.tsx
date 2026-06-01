@@ -14,6 +14,14 @@ const TEST_BASE_URL = "https://test.renown.id";
 const TEST_ADDRESS = "0x9aDdcBbaA28F7eB5f75E023F7C1Fcb13C9DFD8F7" as const;
 const TEST_USER_DID = `did:pkh:eip155:1:${TEST_ADDRESS}`;
 
+/** Resolve a `fetch` input (string | URL | Request) to its URL string. */
+const requestUrl = (input: RequestInfo | URL): string =>
+  typeof input === "string"
+    ? input
+    : input instanceof URL
+      ? input.toString()
+      : input.url;
+
 function createMockCredential(
   userDid: string,
   appDid: string,
@@ -74,8 +82,8 @@ function mockFetchForLogin(options?: { profile?: RenownProfile | null }) {
   const { profile = MOCK_PROFILE } = options ?? {};
   let capturedAppDid: string | undefined;
 
-  vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
-    const url = input instanceof URL ? input.toString() : String(input);
+  vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
+    const url = requestUrl(input);
 
     if (url.includes("/api/auth/credential")) {
       const params = new URL(url).searchParams;
@@ -84,17 +92,17 @@ function mockFetchForLogin(options?: { profile?: RenownProfile | null }) {
         TEST_USER_DID,
         capturedAppDid ?? "",
       );
-      return Response.json({ credential });
+      return Promise.resolve(Response.json({ credential }));
     }
 
     if (url.includes("/api/profile")) {
       if (profile === null) {
-        return new Response(null, { status: 404 });
+        return Promise.resolve(new Response(null, { status: 404 }));
       }
-      return Response.json({ profile });
+      return Promise.resolve(Response.json({ profile }));
     }
 
-    return new Response(null, { status: 404 });
+    return Promise.resolve(new Response(null, { status: 404 }));
   });
 }
 

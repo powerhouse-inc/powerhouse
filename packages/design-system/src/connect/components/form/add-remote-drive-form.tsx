@@ -92,7 +92,7 @@ export function AddRemoteDriveForm(props: AddPublicDriveFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)}>
+    <form onSubmit={(e) => void handleSubmit(onSubmit)(e)}>
       {hasConfirmedUrl ? (
         <>
           <DriveName driveName={remoteDriveDetails?.name ?? "New drive"} />

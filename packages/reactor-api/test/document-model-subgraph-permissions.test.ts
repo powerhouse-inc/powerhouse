@@ -413,7 +413,7 @@ describe("DocumentModelSubgraph Permission Checks", () => {
 
       it("should filter documents based on permissions when no global access", async () => {
         vi.mocked(mockDocumentPermissionService.canRead!).mockImplementation(
-          async (docId) => docId === "doc-1" || docId === "doc-3",
+          (docId) => Promise.resolve(docId === "doc-1" || docId === "doc-3"),
         );
         const ctx = createContext({ userAddress: "0xpartial" });
 

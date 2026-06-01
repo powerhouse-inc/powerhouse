@@ -3,7 +3,6 @@ import type {
   ModuleSpecification,
   OperationSpecification,
 } from "@powerhousedao/shared";
-import { actions } from "@powerhousedao/shared/document-model";
 import { ts } from "@tmpl/core";
 import { camelCase, pascalCase } from "change-case";
 import { getActionTypeName } from "name-builders";

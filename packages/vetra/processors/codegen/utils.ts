@@ -10,12 +10,14 @@ export function debounce<T extends (...args: any[]) => any>(
   let timeoutId: ReturnType<typeof setTimeout>;
   return (...args: Parameters<T>): void => {
     clearTimeout(timeoutId);
-    timeoutId = setTimeout(async () => {
-      try {
-        await func(...args);
-      } catch (error) {
-        logger.error(`Error in debounced function: @error`, error);
-      }
+    timeoutId = setTimeout(() => {
+      void (async () => {
+        try {
+          await func(...args);
+        } catch (error) {
+          logger.error(`Error in debounced function: @error`, error);
+        }
+      })();
     }, delay);
   };
 }

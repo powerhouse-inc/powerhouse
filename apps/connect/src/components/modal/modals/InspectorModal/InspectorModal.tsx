@@ -39,7 +39,6 @@ export const InspectorModal: React.FC = () => {
         schema: REACTOR_SCHEMA,
         getTables,
         getTableRows,
-
         getDefaultSort,
         pageSize: DEFAULT_PAGE_SIZE,
         onExportDb,

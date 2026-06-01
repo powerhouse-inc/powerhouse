@@ -124,11 +124,13 @@ export interface IHttpAdapter {
   mountNodeRoute(
     method: "DELETE" | "GET" | "HEAD" | "POST" | "PUT",
     path: string,
+    // Node route handlers may be synchronous or async; the adapter
+    // fire-and-forgets the returned promise.
     handler: (
       req: http.IncomingMessage,
       res: http.ServerResponse,
       body?: unknown,
-    ) => void,
+    ) => void | Promise<void>,
   ): void;
 
   /**

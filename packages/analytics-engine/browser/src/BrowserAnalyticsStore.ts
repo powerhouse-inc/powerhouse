@@ -175,7 +175,7 @@ export class BrowserAnalyticsStore implements IAnalyticsStore {
   }
 
   public async destroy() {
-    this._pgLite.close();
+    await this._pgLite.close();
   }
 
   public async getDimensions(): Promise<any> {

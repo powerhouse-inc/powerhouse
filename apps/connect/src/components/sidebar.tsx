@@ -51,7 +51,9 @@ export function Sidebar() {
         onClickSettings={onClickSettings}
         address={user?.address}
         onLogin={openRenown}
-        onDisconnect={logout}
+        onDisconnect={() => {
+          void logout();
+        }}
         ensName={ensName || ensInfo.data?.ens}
         avatarUrl={
           avatarUrl ||

@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-05-28T18:11:40.975Z
+> Generated: 2026-05-29T19:48:11.049Z
 > Total Documents: 87
 > Source: https://powerhouse.academy/llms-full.txt
 
@@ -30098,10 +30098,10 @@ The complete academy content in a single markdown file. Use this when you want t
 
 ```bash
 # Index (llms.txt)
-curl https://powerhouse.academy/llms.txt
+curl https://academy.vetra.io/llms.txt
 
 # Full content (llms-full.txt)
-curl https://powerhouse.academy/llms-full.txt
+curl https://academy.vetra.io/llms-full.txt
 ```
 
 ## Regenerating the files

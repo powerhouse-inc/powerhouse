@@ -576,7 +576,7 @@ export async function addFileWithProgress(
 
     onProgress?.({ stage: "initializing", progress: 20 });
 
-    const doc = await reactor.get(documentId);
+    const _doc = await reactor.get(documentId);
     console.log("Document created, starting upload of operations");
     // Uploading stage (20-100%)
     await uploadOperations(
@@ -709,7 +709,7 @@ export async function addFolder(
   }
 
   // Get the drive document and add folder action
-  const drive = await reactorClient.get<DocumentDriveDocument>(driveId);
+  const _drive = await reactorClient.get<DocumentDriveDocument>(driveId);
   const folderId = generateId();
   const updatedDrive = await reactorClient.execute<DocumentDriveDocument>(
     driveId,

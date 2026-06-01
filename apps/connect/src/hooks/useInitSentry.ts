@@ -21,7 +21,7 @@ async function getSentry() {
 }
 
 async function initSentry() {
-  const release = connectConfig.sentry;
+  const _release = connectConfig.sentry;
 
   const Sentry = await getSentry();
   const integrations: BrowserOptions["integrations"] = [

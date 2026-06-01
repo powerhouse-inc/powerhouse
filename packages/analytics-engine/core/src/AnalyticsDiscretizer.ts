@@ -169,7 +169,7 @@ export class AnalyticsDiscretizer {
 
     if (remainingDimensions.length > 0) {
       const subdimension = remainingDimensions[0] as string;
-      Object.keys(node).forEach((subdimensionValue, index, arr) => {
+      Object.keys(node).forEach((subdimensionValue, _index, _arr) => {
         const newDimensionValues = { ...dimensionValues };
         newDimensionValues[subdimension] = subdimensionValue;
         result.push(

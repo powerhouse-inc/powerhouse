@@ -2,7 +2,7 @@ import type { AppModuleDndOperationsOperations } from "document-models/app-modul
 
 export const appModuleDndOperationsOperations: AppModuleDndOperationsOperations =
   {
-    setDragAndDropEnabledOperation(state, action, dispatch) {
+    setDragAndDropEnabledOperation(state, action, _dispatch) {
       state.isDragAndDropEnabled = action.input.enabled;
     },
   };

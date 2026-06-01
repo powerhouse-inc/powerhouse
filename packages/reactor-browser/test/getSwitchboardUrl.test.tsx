@@ -26,7 +26,7 @@ vi.mock("document-drive", () => ({
 }));
 
 describe("buildDocumentSubgraphQuery", () => {
-  const mockDriveUrl = "https://example.com/d/test-drive";
+  const _mockDriveUrl = "https://example.com/d/test-drive";
   const mockDocumentId = "test-document-123";
 
   beforeEach(() => {

@@ -46,7 +46,9 @@ const TokenForm = () => {
     <div className="bg-white p-5 dark:bg-slate-800">
       <span className="mb-4 mt-8 font-semibold">Create new token</span>
       <form
-        onSubmit={handleSubmit}
+        onSubmit={(e) => {
+          void handleSubmit(e);
+        }}
         className="mx-auto mt-4 flex w-full flex-row items-end gap-4"
       >
         <div className="flex-1 flex-col">

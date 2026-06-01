@@ -7,7 +7,7 @@ type DriveAppProps = DivProps & {
 };
 
 export function DriveApp(props: DriveAppProps) {
-  const { location, className, ...divProps } = props;
+  const { location: _location, className, ...divProps } = props;
 
   return (
     <div

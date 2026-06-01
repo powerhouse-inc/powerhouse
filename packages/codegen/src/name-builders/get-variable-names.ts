@@ -2,7 +2,6 @@ import type { DocumentModelDocumentTypeMetadata } from "@powerhousedao/codegen";
 import type {
   DocumentModelGlobalState,
   DocumentSpecification,
-  ModuleSpecification,
   OperationErrorSpecification,
   OperationSpecification,
 } from "@powerhousedao/shared";
@@ -154,6 +153,6 @@ function getErrorsFromOperation(operation: OperationSpecification) {
   return normalizedErrors;
 }
 
-function getErrorsFromOperations(operations: OperationSpecification[]) {
+function _getErrorsFromOperations(operations: OperationSpecification[]) {
   return operations.flatMap(getErrorsFromOperation);
 }

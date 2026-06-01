@@ -104,7 +104,7 @@ export function ModelNameForm(props: Props) {
         setStateSchema,
       });
     },
-    [name, globalStateSchema, localStateSchema, setStateSchema],
+    [name, globalStateSchema, localStateSchema, setStateSchema, setModelName],
   );
 
   return (

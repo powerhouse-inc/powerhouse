@@ -22,7 +22,7 @@ export const nodeReducer: DocumentDriveNodeOperations = {
 
     if (!isValidName(action.input.name)) {
       throw new Error(
-        `Invalid name: '${action.input.name}'. Names must be valid URL characters.`,
+        `Invalid name: '${action.input.name}'. Names must not be empty or contain control characters.`,
       );
     }
 
@@ -60,7 +60,7 @@ export const nodeReducer: DocumentDriveNodeOperations = {
 
     if (!isValidName(action.input.name)) {
       throw new Error(
-        `Invalid name: '${action.input.name}'. Names must be valid URL characters.`,
+        `Invalid name: '${action.input.name}'. Names must not be empty or contain control characters.`,
       );
     }
 
@@ -107,7 +107,7 @@ export const nodeReducer: DocumentDriveNodeOperations = {
   updateFileOperation(state, action) {
     if (action.input.name && !isValidName(action.input.name)) {
       throw new Error(
-        `Invalid name: '${action.input.name}'. Names must be valid URL characters.`,
+        `Invalid name: '${action.input.name}'. Names must not be empty or contain control characters.`,
       );
     }
 
@@ -136,7 +136,7 @@ export const nodeReducer: DocumentDriveNodeOperations = {
   updateNodeOperation(state, action) {
     if (action.input.name && !isValidName(action.input.name)) {
       throw new Error(
-        `Invalid name: '${action.input.name}'. Names must be valid URL characters.`,
+        `Invalid name: '${action.input.name}'. Names must not be empty or contain control characters.`,
       );
     }
 

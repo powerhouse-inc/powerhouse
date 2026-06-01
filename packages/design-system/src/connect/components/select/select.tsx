@@ -29,7 +29,7 @@ export type ConnectSelectProps<TValue extends string> = {
   absolutePositionMenu?: boolean;
 };
 
-function fixedForwardRef<T, P = {}>(
+function fixedForwardRef<T, P = Record<string, never>>(
   render: (props: P, ref: Ref<T>) => ReactNode,
 ): (props: P & RefAttributes<T>) => ReactNode {
   // @ts-expect-error - This is a hack to make the types work

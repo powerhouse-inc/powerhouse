@@ -40,7 +40,7 @@ export const AccountPopoverUser: FC<AccountPopoverUserProps> = ({
           <PowerhouseButton
             size="small"
             color="light"
-            onClick={copyToClipboard.bind(null, address)}
+            onClick={() => void copyToClipboard(address)}
             className="w-full cursor-pointer bg-transparent p-0 active:opacity-70"
             type="button"
           >

@@ -16,7 +16,7 @@ const User = () => {
           type="submit"
           className={`mx-auto rounded-sm bg-orange-500 px-4 py-2 text-xs font-semibold text-white hover:bg-orange-600`}
           onClick={() => {
-            signIn();
+            void signIn();
           }}
         >
           <div className="flex flex-row items-center rounded-sm text-white dark:text-slate-900">
@@ -38,7 +38,7 @@ const User = () => {
         <div className="flex grow justify-end">
           <Link
             onClick={() => {
-              signOut();
+              void signOut();
             }}
             href={"/"}
           >

@@ -4,7 +4,7 @@ import type { TodoPHState as StateV2 } from "document-models/todo/v2";
 
 function upgradeReducer(
   document: PHDocument<StateV1>,
-  action: Action,
+  _action: Action,
 ): PHDocument<StateV2> {
   return {
     ...document,

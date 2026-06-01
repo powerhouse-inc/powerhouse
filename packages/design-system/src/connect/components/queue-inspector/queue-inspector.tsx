@@ -64,7 +64,7 @@ function sortJobs(
   if (!sort) return jobs;
 
   return [...jobs].sort((a, b) => {
-    let comparison = 0;
+    let comparison: number;
 
     switch (sort.column) {
       case "id":

@@ -28,7 +28,7 @@ beforeAll(async () => {
 
 afterAll(() => {
   postgres.destroy();
-  memory.destroy();
+  void memory.destroy();
 });
 
 describe("Stores", () => {
