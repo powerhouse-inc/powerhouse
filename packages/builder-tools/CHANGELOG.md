@@ -1,3 +1,17 @@
+## 6.1.0-dev.15 (2026-06-02)
+
+### 🚀 Features
+
+- **renown:** add EIP-712 credential signing and signature verification ([069417a20](https://github.com/powerhouse-inc/powerhouse/commit/069417a20))
+
+### 🩹 Fixes
+
+- **builder-tools:** pass PH_CONNECT_BASE_PATH to vite base so connect serves under a path prefix ([b9452ab58](https://github.com/powerhouse-inc/powerhouse/commit/b9452ab58))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.1.0-dev.14 (2026-06-02)
 
 ### 🚀 Features

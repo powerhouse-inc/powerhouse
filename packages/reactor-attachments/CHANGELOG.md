@@ -1,3 +1,13 @@
+## 6.1.0-dev.15 (2026-06-02)
+
+### 🚀 Features
+
+- **renown:** add EIP-712 credential signing and signature verification ([069417a20](https://github.com/powerhouse-inc/powerhouse/commit/069417a20))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.1.0-dev.14 (2026-06-02)
 
 ### 🚀 Features

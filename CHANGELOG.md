@@ -1,3 +1,20 @@
+## 6.1.0-dev.15 (2026-06-02)
+
+### 🚀 Features
+
+- **registry:** cache headers on CDN responses, 503 on upstream error, leaner warm-up ([e5ed36354](https://github.com/powerhouse-inc/powerhouse/commit/e5ed36354))
+- **renown:** add EIP-712 credential signing and signature verification ([069417a20](https://github.com/powerhouse-inc/powerhouse/commit/069417a20))
+
+### 🩹 Fixes
+
+- **builder-tools:** pass PH_CONNECT_BASE_PATH to vite base so connect serves under a path prefix ([b9452ab58](https://github.com/powerhouse-inc/powerhouse/commit/b9452ab58))
+- **registry:** address remaining CDN review feedback ([21268c0d9](https://github.com/powerhouse-inc/powerhouse/commit/21268c0d9))
+- **renown:** export credential module from node entrypoint ([d1ec4a847](https://github.com/powerhouse-inc/powerhouse/commit/d1ec4a847))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.1.0-dev.14 (2026-06-02)
 
 ### 🚀 Features
