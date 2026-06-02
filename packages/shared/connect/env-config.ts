@@ -346,3 +346,47 @@ export function normalizeBasePath(basePath: string): string {
 
   return normalized;
 }
+
+/**
+ * Base storage namespace for a Connect instance served at the root of an
+ * origin. Kept as a literal so root deployments resolve to a byte-identical
+ * value with no migration.
+ */
+export const ROOT_STORAGE_NAMESPACE = "reactor";
+
+/**
+ * Derives the origin-scoped storage namespace from a Connect base path.
+ *
+ * Connect instances served under different path prefixes of the same origin
+ * (e.g. behind a reverse proxy) otherwise share all origin-scoped browser
+ * storage (PGlite data dirs, IndexedDB). This produces a deterministic,
+ * collision-free namespace per distinct prefix that is valid as an
+ * IndexedDB database name.
+ *
+ * - root base path ("/" or unset) -> "reactor" (byte-identical to the legacy
+ *   key, so existing root deployments keep their data with zero migration)
+ * - any non-root base path -> "reactor--<slug>", e.g.
+ *   "/reactor-project/vetra-studio/" -> "reactor--reactor-project-vetra-studio"
+ *
+ * @param basePath - The Connect base path (env.PH_CONNECT_BASE_PATH ||
+ *   import.meta.env.BASE_URL); normalized internally.
+ * @returns The storage namespace.
+ *
+ * @example
+ * getStorageNamespace('/') // 'reactor'
+ * getStorageNamespace('/reactor-project/vetra-studio/') // 'reactor--reactor-project-vetra-studio'
+ */
+export function getStorageNamespace(basePath: string): string {
+  const normalized = normalizeBasePath(basePath);
+  if (normalized === "/") {
+    return ROOT_STORAGE_NAMESPACE;
+  }
+  const slug = normalized
+    .slice(1, -1)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  // A non-root base path whose slug normalizes to nothing (e.g. "/-/") must
+  // not collapse into the root namespace and share its storage.
+  return `${ROOT_STORAGE_NAMESPACE}--${slug || "default"}`;
+}

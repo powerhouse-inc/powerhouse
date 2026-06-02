@@ -10,8 +10,14 @@ const REACT_DEPS = [
   "react-dom/client",
 ];
 
-const SHIM_PREFIX = "/__ph/dev-react-shim/";
-const VITE_DEPS_PREFIX = "/node_modules/.vite/deps";
+const SHIM_PATH = "__ph/dev-react-shim/";
+const VITE_DEPS_PATH = "node_modules/.vite/deps";
+
+// Vite serves dev module URLs under the resolved `base`. Join base + path
+// while collapsing the double slash so `base: "/"` stays byte-identical.
+function withBase(base: string, p: string): string {
+  return `${base}${p}`.replace(/\/{2,}/g, "/");
+}
 
 /**
  * Dev-only sibling of `esmExternalRequirePlugin`. The build path externalizes
@@ -32,11 +38,15 @@ const VITE_DEPS_PREFIX = "/node_modules/.vite/deps";
  */
 export function devReactImportmapPlugin(): Plugin {
   let namedExports = new Map<string, string[]>();
+  let base = "/";
 
   return {
     name: "ph-dev-react-importmap",
     apply: "serve",
     config: () => ({ optimizeDeps: { include: REACT_DEPS } }),
+    configResolved(config) {
+      base = config.base;
+    },
     configureServer(server) {
       // Resolve React's named exports from the consumer project so we don't
       // hardcode lists that drift across React versions.
@@ -54,11 +64,12 @@ export function devReactImportmapPlugin(): Plugin {
         }),
       );
 
+      // Match the base-prefixed shim URL, and the bare path for robustness.
+      const shimPrefixes = [withBase(base, SHIM_PATH), `/${SHIM_PATH}`];
       server.middlewares.use((req, res, next) => {
-        if (!req.url?.startsWith(SHIM_PREFIX)) return next();
-        const id = req.url
-          .slice(SHIM_PREFIX.length)
-          .replace(/\.js(\?.*)?$/, "");
+        const prefix = shimPrefixes.find((p) => req.url?.startsWith(p));
+        if (!prefix) return next();
+        const id = req.url!.slice(prefix.length).replace(/\.js(\?.*)?$/, "");
         if (!REACT_DEPS.includes(id)) return next();
 
         const optimizer = server.environments.client.depsOptimizer;
@@ -72,7 +83,7 @@ export function devReactImportmapPlugin(): Plugin {
         }
 
         const browserHash = info.browserHash ?? optimizer.metadata.browserHash;
-        const depUrl = `${VITE_DEPS_PREFIX}/${path.basename(info.file)}?v=${browserHash}`;
+        const depUrl = `${withBase(base, VITE_DEPS_PATH)}/${path.basename(info.file)}?v=${browserHash}`;
         const names = namedExports.get(id) ?? [];
 
         res.setHeader("Content-Type", "application/javascript");
@@ -92,10 +103,11 @@ export function devReactImportmapPlugin(): Plugin {
         const browserHash =
           ctx.server?.environments.client.depsOptimizer?.metadata.browserHash;
         if (!browserHash) return;
+        const shimPrefix = withBase(base, SHIM_PATH);
         const imports = Object.fromEntries(
           REACT_DEPS.map((id) => [
             id,
-            `${SHIM_PREFIX}${id}.js?v=${browserHash}`,
+            `${shimPrefix}${id}.js?v=${browserHash}`,
           ]),
         );
         return html.replace(

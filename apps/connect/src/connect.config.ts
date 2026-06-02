@@ -147,9 +147,13 @@ if (RESOLVED_LOG_LEVEL) {
 logger.debug("Setting log level to @level.", RESOLVED_LOG_LEVEL);
 
 // Normalize the base path to ensure it starts and ends with a forward slash.
-const PH_CONNECT_BASE_PATH = normalizeBasePath(runtime.app?.basePath ?? "/");
+export const PH_CONNECT_BASE_PATH = normalizeBasePath(
+  runtime.app?.basePath ?? "/",
+);
 
-// Analytics database name — derived deterministically from the base path.
+// Analytics database name — derived deterministically from the base path so
+// instances on different prefixes of one origin do not share an analytics DB.
+// Root resolves to ":analytics".
 const PH_CONNECT_ANALYTICS_DATABASE_NAME = `${PH_CONNECT_BASE_PATH.replace(
   /\//g,
   "",

@@ -3,12 +3,19 @@ import type { User } from "@renown/sdk";
 /**
  * Builds the OpenPanel identity traits from a renown User.
  *
+ * Canonical trait schema (shared with Renown and Vetra — each app sends every
+ * field it has data for, under these names):
+ * - `address`, `did`, `networkId`, `chainId`, `caip2` — wallet/chain facts.
+ * - `ensName`, `ensAvatar` — raw ENS facts.
+ * - `username`, `userImage`, `profileDocumentId`, `profileCreatedAt` — raw
+ *   Renown profile facts.
+ * - `accountType` — wallet-adapter concept; only Renown has it.
+ *
  * Rules:
  * - `credential` (contains a JWT) is **never** forwarded.
- * - The wallet `address` is sent as the top-level `profileId` key in the
- *   `client.identify()` call — the cross-app key shared with Renown and
- *   Vetra. It also stays in traits (Vetra does the same).
- * - The `did` travels as a trait so the DID is preserved on the profile.
+ * - Traits carry raw facts only; resolved presentation values (avatar,
+ *   display name) go in OpenPanel's native identify fields — see
+ *   {@link buildIdentifyPayload}.
  * - Optional fields (`ens`, `profile`) are only included when their value is
  *   non-nullish (guards against `null` from `RenownProfile` fields as well
  *   as plain `undefined`).
@@ -26,6 +33,7 @@ export function buildTraits(user: User): Record<string, unknown> {
     did: rest.did,
     networkId: rest.networkId,
     chainId: rest.chainId,
+    caip2: `${rest.networkId}:${rest.chainId}`,
   };
 
   // ens fields — optional on the User type
@@ -33,7 +41,7 @@ export function buildTraits(user: User): Record<string, unknown> {
     traits.ensName = rest.ens.name;
   }
   if (rest.ens?.avatarUrl != null) {
-    traits.avatarUrl = rest.ens.avatarUrl;
+    traits.ensAvatar = rest.ens.avatarUrl;
   }
 
   // profile fields — optional on InternalUser; RenownProfile members can be
@@ -52,4 +60,30 @@ export function buildTraits(user: User): Record<string, unknown> {
   }
 
   return traits;
+}
+
+/**
+ * Builds the full `identify()` payload:
+ * - `profileId` is the wallet address — the cross-app profile key shared with
+ *   Renown and Vetra.
+ * - `avatar` / `firstName` are OpenPanel's native profile fields (they drive
+ *   the picture and name in the dashboard UI), resolved as
+ *   `userImage ?? ensAvatar` and `ensName ?? username`.
+ * - `properties` are the raw traits from {@link buildTraits}.
+ */
+export function buildIdentifyPayload(user: User): {
+  profileId: string;
+  avatar?: string;
+  firstName?: string;
+  properties: Record<string, unknown>;
+} {
+  const avatar = user.profile?.userImage ?? user.ens?.avatarUrl;
+  const firstName = user.ens?.name ?? user.profile?.username;
+
+  return {
+    profileId: user.address,
+    ...(avatar != null ? { avatar } : {}),
+    ...(firstName != null ? { firstName } : {}),
+    properties: buildTraits(user),
+  };
 }

@@ -68,7 +68,7 @@ test.describe("runtime-config-preview", () => {
     expect(config.connect.branding.appName).toBe("Vetra E2E");
   });
 
-  test("--packages-registry CLI flag overrides packageRegistryUrl at build time", async () => {
+  test("--packages-registry CLI flag overrides packageRegistryUrl at build time", () => {
     const scratchDir = `dist-cli-test-${Date.now()}`;
     const scratchPath = path.join(PROJECT_ROOT, scratchDir);
     try {

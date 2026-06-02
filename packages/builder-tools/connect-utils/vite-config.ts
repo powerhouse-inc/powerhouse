@@ -225,6 +225,13 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
   const phPackageRegistryUrl =
     options.cliPackageRegistryUrl ?? phConfig.packageRegistryUrl ?? null;
 
+  // Base path is a runtime-config field (connect.app.basePath), not an env
+  // var. Resolve it with the same precedence as the rest of the connect
+  // config: CLI override > source powerhouse.config.json.
+  const connectBasePath =
+    options.cliConnectOverride?.app?.basePath ??
+    phConfig.connect?.app?.basePath;
+
   const authToken = env.PH_SENTRY_AUTH_TOKEN;
   const org = env.PH_SENTRY_ORG;
   const project = env.PH_SENTRY_PROJECT;
@@ -337,9 +344,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     // Prefix served/built asset URLs so Connect can run under a path prefix
     // (reverse proxy). Mirrors the client router basename; normalize so a bare
     // `app` or `/app` becomes `/app/` and matches the router.
-    base: env.PH_CONNECT_BASE_PATH
-      ? normalizeBasePath(env.PH_CONNECT_BASE_PATH)
-      : undefined,
+    base: connectBasePath ? normalizeBasePath(connectBasePath) : undefined,
     server: {
       watch: {
         ignored: ["**/backup-documents/**", "**/.ph/**"],

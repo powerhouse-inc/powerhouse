@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { User } from "@renown/sdk";
 
-import { buildTraits } from "./openpanel-traits.js";
+import { buildIdentifyPayload, buildTraits } from "./openpanel-traits.js";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -13,7 +13,7 @@ function makeUser(overrides: Partial<User> = {}): User {
   return {
     did: "did:pkh:eip155:1:0xabc",
     address: "0xabc123" as `0x${string}`,
-    networkId: "eip155:1",
+    networkId: "eip155",
     chainId: 1,
     credential: undefined,
     ...overrides,
@@ -35,8 +35,9 @@ describe("buildTraits", () => {
 
     expect(traits.address).toBe("0xabc123");
     expect(traits.did).toBe("did:pkh:eip155:1:0xabc");
-    expect(traits.networkId).toBe("eip155:1");
+    expect(traits.networkId).toBe("eip155");
     expect(traits.chainId).toBe(1);
+    expect(traits.caip2).toBe("eip155:1");
   });
 
   // ------------------------------------------------------------------
@@ -68,14 +69,14 @@ describe("buildTraits", () => {
   // ens fields
   // ------------------------------------------------------------------
 
-  it("includes ensName and avatarUrl when both are present", () => {
+  it("includes ensName and ensAvatar when both are present", () => {
     const user = makeUser({
       ens: { name: "alice.eth", avatarUrl: "https://example.com/avatar.png" },
     });
     const traits = buildTraits(user);
 
     expect(traits.ensName).toBe("alice.eth");
-    expect(traits.avatarUrl).toBe("https://example.com/avatar.png");
+    expect(traits.ensAvatar).toBe("https://example.com/avatar.png");
   });
 
   it("omits ens fields when ens is absent", () => {
@@ -83,7 +84,7 @@ describe("buildTraits", () => {
     const traits = buildTraits(user);
 
     expect("ensName" in traits).toBe(false);
-    expect("avatarUrl" in traits).toBe(false);
+    expect("ensAvatar" in traits).toBe(false);
   });
 
   it("omits ens fields when ens object is present but name/avatarUrl are absent", () => {
@@ -91,7 +92,7 @@ describe("buildTraits", () => {
     const traits = buildTraits(user);
 
     expect("ensName" in traits).toBe(false);
-    expect("avatarUrl" in traits).toBe(false);
+    expect("ensAvatar" in traits).toBe(false);
   });
 
   it("includes only ensName when avatarUrl is absent", () => {
@@ -99,7 +100,7 @@ describe("buildTraits", () => {
     const traits = buildTraits(user);
 
     expect(traits.ensName).toBe("bob.eth");
-    expect("avatarUrl" in traits).toBe(false);
+    expect("ensAvatar" in traits).toBe(false);
   });
 
   // ------------------------------------------------------------------
@@ -178,10 +179,11 @@ describe("buildTraits", () => {
     expect(traits).toEqual({
       address: "0xabc123",
       did: "did:pkh:eip155:1:0xabc",
-      networkId: "eip155:1",
+      networkId: "eip155",
       chainId: 1,
+      caip2: "eip155:1",
       ensName: "fulluser.eth",
-      avatarUrl: "https://ens.io/avatar",
+      ensAvatar: "https://ens.io/avatar",
       username: "fulluser",
       userImage: "https://example.com/u.png",
       profileDocumentId: "doc-full",
@@ -191,5 +193,70 @@ describe("buildTraits", () => {
     // Confirm banned fields are absent
     expect("credential" in traits).toBe(false);
     expect("profileId" in traits).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// buildIdentifyPayload
+// ---------------------------------------------------------------------------
+
+function makeProfile(
+  overrides: Partial<NonNullable<User["profile"]>> = {},
+): NonNullable<User["profile"]> {
+  return {
+    documentId: "doc-1",
+    username: null,
+    userImage: null,
+    createdAt: "2025-01-01T00:00:00Z",
+    ethAddress: null,
+    updatedAt: "2025-01-01T00:00:00Z",
+    ...overrides,
+  };
+}
+
+describe("buildIdentifyPayload", () => {
+  it("uses the wallet address as profileId and traits as properties", () => {
+    const user = makeUser();
+    const payload = buildIdentifyPayload(user);
+
+    expect(payload.profileId).toBe("0xabc123");
+    expect(payload.properties).toEqual(buildTraits(user));
+  });
+
+  it("omits avatar and firstName when there is no ens or profile data", () => {
+    const payload = buildIdentifyPayload(makeUser());
+
+    expect("avatar" in payload).toBe(false);
+    expect("firstName" in payload).toBe(false);
+  });
+
+  it("resolves avatar as userImage ?? ensAvatar", () => {
+    const both = buildIdentifyPayload(
+      makeUser({
+        ens: { avatarUrl: "https://ens.io/a.png" },
+        profile: makeProfile({ userImage: "https://example.com/u.png" }),
+      }),
+    );
+    expect(both.avatar).toBe("https://example.com/u.png");
+
+    const ensOnly = buildIdentifyPayload(
+      makeUser({ ens: { avatarUrl: "https://ens.io/a.png" } }),
+    );
+    expect(ensOnly.avatar).toBe("https://ens.io/a.png");
+  });
+
+  it("resolves firstName as ensName ?? username", () => {
+    const both = buildIdentifyPayload(
+      makeUser({
+        ens: { name: "alice.eth" },
+        profile: makeProfile({ username: "alice" }),
+      }),
+    );
+    expect(both.firstName).toBe("alice.eth");
+
+    const usernameOnly = buildIdentifyPayload(
+      makeUser({ profile: makeProfile({ username: "alice" }) }),
+    );
+    expect(usernameOnly.firstName).toBe("alice");
   });
 });
