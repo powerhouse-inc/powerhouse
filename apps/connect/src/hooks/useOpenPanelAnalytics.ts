@@ -14,12 +14,15 @@ const openPanelApi = { track } as const;
  * (no React state involved), so callers can safely depend on it without
  * `useMemo`.
  *
+ * Named `useOpenPanelAnalytics` — the shared caller-facing hook name across
+ * Connect, Renown, and Vetra.
+ *
  * Usage:
  * ```ts
- * const { track } = useOpenPanel();
+ * const { track } = useOpenPanelAnalytics();
  * track("button.clicked", { label: "save" });
  * ```
  */
-export function useOpenPanel(): { track: typeof track } {
+export function useOpenPanelAnalytics(): { track: typeof track } {
   return openPanelApi;
 }

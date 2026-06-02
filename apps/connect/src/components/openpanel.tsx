@@ -33,8 +33,8 @@ declare global {
  * Behaviour when both gates pass:
  * 1. Lazy-imports `@openpanel/web` and builds the singleton via
  *    `getOpenPanelClient(connectConfig.openPanel)`.
- * 2. Exposes the client on `window.openPanel` for the card-6 `useOpenPanel()`
- *    hook to consume.
+ * 2. Exposes the client on `window.openPanel` for the card-6
+ *    `useOpenPanelAnalytics()` hook to consume.
  * 3. If `connectConfig.openPanel.trackOperations`, registers the processor
  *    factory against `processorManager` so document operations are forwarded.
  * 4. Calls `client.identify()` when the renown user transitions from

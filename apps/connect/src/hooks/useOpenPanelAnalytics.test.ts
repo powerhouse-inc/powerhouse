@@ -15,8 +15,8 @@ import {
   clearOpenPanelBuffer,
   drainOpenPanelBuffer,
   track,
-  useOpenPanel,
-} from "./useOpenPanel.js";
+  useOpenPanelAnalytics,
+} from "./useOpenPanelAnalytics.js";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -32,7 +32,7 @@ function makeFakeClient(trackImpl?: () => void) {
 // Test suite
 // ---------------------------------------------------------------------------
 
-describe("useOpenPanel / buffer", () => {
+describe("useOpenPanelAnalytics / buffer", () => {
   beforeEach(() => {
     // Reset module state between tests.
     clearOpenPanelBuffer();
@@ -144,11 +144,12 @@ describe("useOpenPanel / buffer", () => {
   });
 
   // -------------------------------------------------------------------------
-  // 6. useOpenPanel() returns a stable object whose track is the module export
+  // 6. useOpenPanelAnalytics() returns a stable object whose track is the
+  //    module export
   // -------------------------------------------------------------------------
-  it("useOpenPanel returns the stable api object with track function", () => {
-    const result1 = useOpenPanel();
-    const result2 = useOpenPanel();
+  it("useOpenPanelAnalytics returns the stable api object with track function", () => {
+    const result1 = useOpenPanelAnalytics();
+    const result2 = useOpenPanelAnalytics();
 
     // Same reference — no new object per call.
     expect(result1).toBe(result2);
