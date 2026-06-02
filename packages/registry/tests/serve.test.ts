@@ -117,6 +117,13 @@ describe("isExactVersion", () => {
     expect(isExactVersion(undefined)).toBe(false);
     expect(isExactVersion("")).toBe(false);
   });
+
+  it("rejects non-semver characters that could reach the ETag header", () => {
+    expect(isExactVersion('1.2.3-"evil"')).toBe(false);
+    expect(isExactVersion("1.2.3-a b")).toBe(false);
+    expect(isExactVersion("1.2.3-x\r\ny")).toBe(false);
+    expect(isExactVersion("1.2.3+x;y")).toBe(false);
+  });
 });
 
 // Real CdnCache pointed at a dead registry port: no mocks. Verifies the
@@ -286,6 +293,14 @@ describe("registry CDN serving", () => {
     );
     expect(wildcard.status).toBe(304);
     await wildcard.text();
+
+    // RFC 9110 weak comparison: the strong form of a weak ETag still matches.
+    const strong = await fetch(
+      `${REGISTRY_URL}/-/cdn/${PKG_NAME}@${PKG_VERSION}/index.js`,
+      { headers: { "If-None-Match": etag!.replace(/^W\//, "") } },
+    );
+    expect(strong.status).toBe(304);
+    await strong.text();
   });
 
   it("returns 404 for a genuinely missing package", async () => {

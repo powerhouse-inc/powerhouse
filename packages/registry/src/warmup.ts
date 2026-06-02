@@ -67,11 +67,13 @@ export function createWarmer(
       });
       await Promise.all(workers);
       console.log(`[registry] /packages warm-up done (${targets.length} pkgs)`);
+      // Throttle only after a successful cycle so failures (e.g. registry
+      // not listening yet during startup) retry on the next call.
+      lastWarmAt = Date.now();
     } catch (err) {
       console.error("[registry] /packages warm-up failed:", err);
     } finally {
       warmInFlight = false;
-      lastWarmAt = Date.now();
     }
   };
 }

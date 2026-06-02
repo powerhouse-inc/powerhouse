@@ -37,7 +37,12 @@ export function parsePackageSpec(spec: string): {
 
 /** True when tag is a concrete semver, false for dist-tag names or undefined. */
 export function isExactVersion(tag?: string): boolean {
-  return !!tag && /^\d+\.\d+\.\d+(?:[-+].+)?$/.test(tag);
+  // Strict semver charset: the version flows into the ETag header, so
+  // arbitrary characters after the prerelease/build separator must not match.
+  return (
+    !!tag &&
+    /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/.test(tag)
+  );
 }
 
 export class CdnCache {
