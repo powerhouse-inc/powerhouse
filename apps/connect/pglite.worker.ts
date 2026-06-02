@@ -7,7 +7,7 @@ worker({
   init(options) {
     // dbName carries the origin-scoped storage namespace from the main thread.
     const dbName =
-      (options.meta as { dbName?: string } | undefined)?.dbName ??
+      (options?.meta as { dbName?: string } | undefined)?.dbName ??
       DEFAULT_RELATIONAL_PROCESSOR_DB_NAME;
     const idbFs = new IdbFs(dbName);
     return Promise.resolve(
