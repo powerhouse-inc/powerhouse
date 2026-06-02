@@ -8,6 +8,8 @@ import {
 import {
   driveCreateDocument,
   setAvailableOffline,
+  setDriveIcon as createSetDriveIconAction,
+  setDriveName as createSetDriveNameAction,
   setSharingType,
   type DocumentDriveDocument,
   type DriveInput,
@@ -267,4 +269,35 @@ export async function setDriveSharingType(
   return await reactorClient.execute(driveId, "main", [
     setSharingType({ type: sharingType }),
   ]);
+}
+
+export async function setDriveMetadata(
+  driveId: string,
+  metadata: { name?: string | null; icon?: string | null },
+): Promise<PHDocument | undefined> {
+  const { isAllowedToCreateDocuments } = getUserPermissions();
+  if (!isAllowedToCreateDocuments) {
+    throw new Error("User is not allowed to update drive metadata");
+  }
+
+  const reactorClient = window.ph?.reactorClient;
+  if (!reactorClient) {
+    throw new Error("ReactorClient not initialized");
+  }
+
+  const actions: Array<
+    | ReturnType<typeof createSetDriveNameAction>
+    | ReturnType<typeof createSetDriveIconAction>
+  > = [];
+  if (metadata.name) {
+    actions.push(createSetDriveNameAction({ name: metadata.name }));
+  }
+  if (metadata.icon !== undefined && metadata.icon !== null) {
+    actions.push(createSetDriveIconAction({ icon: metadata.icon }));
+  }
+  if (actions.length === 0) {
+    return undefined;
+  }
+
+  return await reactorClient.execute(driveId, "main", actions);
 }

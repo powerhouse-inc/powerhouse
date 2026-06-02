@@ -2,6 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 
 export const CONNECT_URL = "http://localhost:3001";
 export const REACTOR_URL = "http://localhost:4002";
+export const PREVIEW_URL = "http://localhost:4173";
 
 /**
  * Read environment variables from file.
@@ -32,9 +33,6 @@ export default defineConfig({
   reporter: "html",
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
-    /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: "http://localhost:3001",
-
     acceptDownloads: true,
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
@@ -43,40 +41,52 @@ export default defineConfig({
     screenshot: "only-on-failure",
   },
 
-  /* Configure projects for major browsers */
+  /* Two projects:
+   *  - vetra-dev runs the existing specs against `ph vetra --watch` (dev mode).
+   *  - connect-preview runs the runtime-config preview specs against
+   *    `ph connect build && ph connect preview` (production-built dist served
+   *    as static files). `dependencies: ["vetra-dev"]` forces strict ordering:
+   *    all vetra-dev tests finish before connect-preview tests start so the
+   *    two test sets cannot interfere on shared files (dist/ is only touched
+   *    by connect-preview tests).
+   */
   projects: [
     {
-      name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
+      name: "vetra-dev",
+      testIgnore: /runtime-config-preview\.spec\.ts/,
+      use: { ...devices["Desktop Chrome"], baseURL: CONNECT_URL },
     },
-
-    // {
-    //   name: "firefox",
-    //   use: { ...devices["Desktop Firefox"] },
-    // },
-
-    // {
-    //   name: "webkit",
-    //   use: { ...devices["Desktop Safari"] },
-    // },
-
-    /* Test against mobile viewports. */
-    // {
-    //   name: 'Mobile Chrome',
-    //   use: { ...devices['Pixel 5'] },
-    // },
-    // {
-    //   name: 'Mobile Safari',
-    //   use: { ...devices['iPhone 12'] },
-    // },
+    {
+      name: "connect-preview",
+      testMatch: /runtime-config-preview\.spec\.ts/,
+      use: { ...devices["Desktop Chrome"], baseURL: PREVIEW_URL },
+      dependencies: ["vetra-dev"],
+    },
   ],
 
-  /* Run your local dev server before starting the tests */
-  webServer: {
-    command: "pnpm vetra --watch",
-    url: CONNECT_URL,
-    stderr: "pipe",
-    stdout: "pipe",
-    reuseExistingServer: !process.env.CI,
-  },
+  /* One webServer per project. Both come up at playwright init; tests in each
+   * project hit their own baseURL so they never cross paths.
+   */
+  webServer: [
+    {
+      command: "pnpm vetra --watch",
+      url: CONNECT_URL,
+      stderr: "pipe",
+      stdout: "pipe",
+      reuseExistingServer: !process.env.CI,
+    },
+    {
+      // Isolated `--outDir dist-connect` so the Connect SPA build does NOT
+      // collide with `pnpm build` (= `ph-cli build`, the *package* build) that
+      // todo-document.spec.ts runs into the default `dist/`. Both commands
+      // write to `dist/` otherwise and the package build trashes the SPA.
+      command:
+        "pnpm exec ph-cli connect build --outDir dist-connect && pnpm exec ph-cli connect preview --outDir dist-connect --port 4173 --strictPort",
+      url: PREVIEW_URL,
+      stderr: "pipe",
+      stdout: "pipe",
+      reuseExistingServer: !process.env.CI,
+      timeout: 5 * 60 * 1000,
+    },
+  ],
 });

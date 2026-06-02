@@ -12,5 +12,6 @@ export {
   deleteDrive,
   renameDrive,
   setDriveAvailableOffline,
+  setDriveMetadata,
   setDriveSharingType,
 } from "./drive.js";

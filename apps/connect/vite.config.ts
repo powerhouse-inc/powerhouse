@@ -1,7 +1,6 @@
 import tailwind from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
-import { analyzer } from "vite-bundle-analyzer";
 
 const version =
   process.env.WORKSPACE_VERSION ?? process.env.npm_package_version ?? "unknown";
@@ -14,6 +13,9 @@ export default defineConfig({
   define: {
     CONNECT_VERSION: JSON.stringify(version),
     CONNECT_GIT_SHA: JSON.stringify(gitSha),
+    // Sentry release stays build-time so it always matches the sourcemap
+    // upload tag the release workflow used.
+    PH_CONNECT_SENTRY_RELEASE: JSON.stringify(version),
   },
   envPrefix: ["PH_CONNECT_"],
   optimizeDeps: {
@@ -24,11 +26,7 @@ export default defineConfig({
       "pglite-tools-legacy-02",
     ],
   },
-  plugins: [
-    process.env.PH_DEBUG_BUILD === "true" ? analyzer() : undefined,
-    tailwind(),
-    react(),
-  ],
+  plugins: [tailwind(), react()],
   worker: {
     format: "es",
   },

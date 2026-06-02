@@ -14,12 +14,12 @@ import type {
 import type { DocumentModelLib } from "document-model";
 import { useEffect, useMemo } from "react";
 import { useLocalStorage } from "usehooks-ts";
-import { getPackagesConfig } from "../packages.config.js";
+import { getRuntimeConfig } from "../runtime-config.js";
 
 export function useRegistryPackages() {
   const packageManager = useVetraPackageManager();
   const packageManagerPackages = packageManager?.packages;
-  const registryUrl = getPackagesConfig().registryUrl ?? null;
+  const registryUrl = getRuntimeConfig().packageRegistryUrl ?? null;
   // Normalize so `http://host` and `http://host/` don't produce two separate
   // localStorage maps where the install/status flow reads from one while the
   // registry fetch writes to the other.

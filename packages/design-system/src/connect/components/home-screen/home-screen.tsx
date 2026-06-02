@@ -4,10 +4,11 @@ import { HomeBackgroundImage } from "./home-background-image.js";
 type HomeScreenProps = {
   readonly children: React.ReactNode;
   readonly containerClassName?: string;
+  readonly homeBackground?: string | null;
 };
 
 export const HomeScreen = function HomeScreen(props: HomeScreenProps) {
-  const { children, containerClassName } = props;
+  const { children, containerClassName, homeBackground } = props;
   return (
     <div
       className={twMerge(
@@ -16,7 +17,7 @@ export const HomeScreen = function HomeScreen(props: HomeScreenProps) {
       )}
     >
       <div className="m-8 flex flex-wrap justify-center gap-4 bg-gray-50 pt-12 dark:bg-slate-800">
-        <HomeBackgroundImage />
+        <HomeBackgroundImage src={homeBackground ?? undefined} />
         {children}
       </div>
     </div>

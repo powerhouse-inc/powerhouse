@@ -1,4 +1,5 @@
 import type { PowerhouseConfig } from "@powerhousedao/config";
+import type { PHConnectRuntimeConfig } from "@powerhousedao/shared/clis";
 import type { CommonServerOptions } from "vite";
 
 export type IConnectOptions = {
@@ -7,6 +8,22 @@ export type IConnectOptions = {
   envDir?: string;
   powerhouseConfig?: PowerhouseConfig;
   watchTimeout?: number;
+  /**
+   * CLI-supplied connect override. Final (highest precedence) layer of the
+   * runtime-config deep-merge ladder applied by `phConfigPlugin`. Forwarded
+   * from `ph connect build`'s `--json` + individual `--flag` parsing.
+   *
+   * Order: DEFAULT_CONNECT_CONFIG < source.connect < cliConnectOverride.
+   * Env vars are NOT part of this merge; they only seed the dist file at
+   * container start (set-if-absent) via the Docker entrypoint.
+   */
+  cliConnectOverride?: PHConnectRuntimeConfig;
+  /**
+   * CLI override for the top-level `packageRegistryUrl`. Set when the user
+   * passes `--packages-registry` to `ph connect build`; wins over the source
+   * value in the emitted runtime config.
+   */
+  cliPackageRegistryUrl?: string;
 };
 
 export type ConnectCommonOptions = {

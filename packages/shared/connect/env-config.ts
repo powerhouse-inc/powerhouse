@@ -11,14 +11,6 @@ const booleanString = z
     return val === "true";
   });
 
-/**
- * Coerces string values to number.
- */
-const numberString = z.union([z.number(), z.string()]).transform((val) => {
-  if (typeof val === "number") return val;
-  return parseInt(val, 10);
-});
-
 // ============================================================================
 // Build-time Environment Variables
 // ============================================================================
@@ -27,12 +19,6 @@ const numberString = z.union([z.number(), z.string()]).transform((val) => {
  * Build-time configuration schema
  */
 const buildEnvSchema = z.object({
-  /**
-   * Path to powerhouse config file
-   * @default "powerhouse.config.json"
-   */
-  PH_CONFIG_PATH: z.string().optional(),
-
   /**
    * Comma-separated list of package names to load
    * @example "package1,package2"
@@ -43,18 +29,6 @@ const buildEnvSchema = z.object({
    * Path to local package to load during development
    */
   PH_LOCAL_PACKAGE: z.string().optional(),
-
-  /**
-   * Disable loading of local package
-   * @default false
-   */
-  PH_DISABLE_LOCAL_PACKAGE: booleanString.default(false),
-
-  /**
-   * Amount of time to wait before a file is considered changed
-   * @default 300
-   */
-  PH_WATCH_TIMEOUT: numberString.default(300),
 
   /**
    * Sentry authentication token for uploading source maps
@@ -73,202 +47,29 @@ const buildEnvSchema = z.object({
 });
 
 // ============================================================================
-// Application Configuration
+// Application Configuration (build metadata only)
 // ============================================================================
 
 /**
- * Application configuration schema
+ * Connect runtime values (anything in `PHConnectRuntimeConfig`) are NOT
+ * settable from env vars. They live in `powerhouse.config.json` and are
+ * overridden via `ph connect build --<field>` or `ph connect config
+ * --<field>`.
+ *
+ * What stays env-driven below is non-runtime: build metadata, Sentry
+ * credentials, analytics processor toggles, etc.
  */
 const appConfigSchema = z.object({
   /**
-   * Application version number
+   * Application version number (build metadata stamp)
    * @default "unknown"
    */
   PH_CONNECT_VERSION: z.string().default("unknown"),
 
   /**
-   * Log level for the application
-   * @default "info"
-   */
-  PH_CONNECT_LOG_LEVEL: z
-    .enum(["debug", "info", "warn", "error"])
-    .default("info"),
-
-  /**
-   * Whether app requires hard refresh on updates
-   * @default true
-   */
-  PH_CONNECT_REQUIRES_HARD_REFRESH: booleanString.default(true),
-
-  /**
-   * Show warning when app version is outdated
-   * @default false
-   */
-  PH_CONNECT_WARN_OUTDATED_APP: booleanString.default(false),
-
-  /**
-   * Enable studio mode features
-   * @default false
-   */
-  PH_CONNECT_STUDIO_MODE: booleanString.default(false),
-
-  /**
-   * Base path for the Connect router, defaults to import.meta.env.BASE_URL
-   */
-  PH_CONNECT_BASE_PATH: z.string().optional(),
-
-  /**
-   * Default drives URL to load on startup
-   */
-  PH_CONNECT_DEFAULT_DRIVES_URL: z.string().optional(),
-  /*
-   * Names of packages to load in connect
-   */
-  PH_CONNECT_PACKAGES: z.string().optional(),
-  /**
-   * URL(s) of the packages registry CDN endpoint.
-   * Supports comma-separated URLs for multiple registries.
-   * @example "http://localhost:8080/-/cdn/"
-   * @example "https://registry.powerhouse.io/-/cdn/,http://localhost:8080/-/cdn/"
-   */
-  PH_CONNECT_PACKAGES_REGISTRY: z.string().optional(),
-
-  /**
-   * Strategy for preserving drives
-   */
-  PH_CONNECT_DRIVES_PRESERVE_STRATEGY: z.string().optional(),
-
-  /**
-   * Interval in milliseconds to check for version updates
-   * @default 3600000 (1 hour)
-   */
-  PH_CONNECT_VERSION_CHECK_INTERVAL: numberString.default(60 * 60 * 1000),
-
-  /**
-   * CLI version number
+   * CLI version number (build metadata stamp)
    */
   PH_CONNECT_CLI_VERSION: z.string().optional(),
-
-  /**
-   * Chunk size for file upload operations
-   * @default 50
-   */
-  PH_CONNECT_FILE_UPLOAD_OPERATIONS_CHUNK_SIZE: numberString.default(50),
-});
-
-// ============================================================================
-// Feature Flags & UI Configuration
-// ============================================================================
-
-/**
- * Feature flags and UI configuration schema
- */
-const featureFlagsSchema = z.object({
-  /**
-   * Hide the "Add Drive" button completely
-   * @default false
-   */
-  PH_CONNECT_DISABLE_ADD_DRIVE: booleanString.default(false),
-
-  /**
-   * Show search bar in the UI
-   * @default false
-   */
-  PH_CONNECT_SEARCH_BAR_ENABLED: booleanString.default(false),
-
-  /**
-   * Hide document model selection in settings
-   * @default true
-   */
-  PH_CONNECT_HIDE_DOCUMENT_MODEL_SELECTION_SETTINGS:
-    booleanString.default(true),
-
-  /**
-   * Comma-separated list of enabled editor types
-   * Use "*" to enable all editors
-   * @example "editor1,editor2" or "*"
-   */
-  PH_CONNECT_ENABLED_EDITORS: z.string().optional(),
-
-  /**
-   * Comma-separated list of disabled editor types
-   * @default "powerhouse/document-drive"
-   */
-  PH_CONNECT_DISABLED_EDITORS: z.string().default("powerhouse/document-drive"),
-
-  /**
-   * Google Analytics tracking ID
-   */
-  PH_CONNECT_GA_TRACKING_ID: z.string().optional(),
-
-  /**
-   * Disable loading of external packages
-   * @default false
-   */
-  PH_CONNECT_EXTERNAL_PACKAGES_DISABLED: booleanString.default(false),
-});
-
-// ============================================================================
-// Drives Configuration
-// ============================================================================
-
-/**
- * Drives configuration schema
- */
-const drivesConfigSchema = z.object({
-  /**
-   * Enable public drives section
-   * @default true
-   */
-  PH_CONNECT_PUBLIC_DRIVES_ENABLED: booleanString.default(true),
-
-  /**
-   * Allow adding public drives
-   * @default true
-   */
-  PH_CONNECT_DISABLE_ADD_PUBLIC_DRIVES: booleanString.default(false),
-
-  /**
-   * Allow deleting public drives
-   * @default true
-   */
-  PH_CONNECT_DISABLE_DELETE_PUBLIC_DRIVES: booleanString.default(false),
-
-  /**
-   * Enable cloud drives section
-   * @default true
-   */
-  PH_CONNECT_CLOUD_DRIVES_ENABLED: booleanString.default(true),
-
-  /**
-   * Allow adding cloud drives
-   * @default true
-   */
-  PH_CONNECT_DISABLE_ADD_CLOUD_DRIVES: booleanString.default(false),
-
-  /**
-   * Allow deleting cloud drives
-   * @default true
-   */
-  PH_CONNECT_DISABLE_DELETE_CLOUD_DRIVES: booleanString.default(false),
-
-  /**
-   * Enable local drives section
-   * @default true
-   */
-  PH_CONNECT_LOCAL_DRIVES_ENABLED: booleanString.default(true),
-
-  /**
-   * Allow adding local drives
-   * @default true
-   */
-  PH_CONNECT_DISABLE_ADD_LOCAL_DRIVES: booleanString.default(false),
-
-  /**
-   * Allow deleting local drives
-   * @default true
-   */
-  PH_CONNECT_DISABLE_DELETE_LOCAL_DRIVES: booleanString.default(false),
 });
 
 // ============================================================================
@@ -276,27 +77,11 @@ const drivesConfigSchema = z.object({
 // ============================================================================
 
 /**
- * Analytics processor configuration schema
+ * Analytics processor configuration schema. These are non-runtime feature
+ * toggles for the analytics subsystem — they don't live in the runtime
+ * schema and stay env-driven.
  */
-const analyticsProcessorsConfigSchema = z.object({
-  /**
-   * Enable analytics
-   * @default true
-   */
-  PH_CONNECT_ANALYTICS_ENABLED: booleanString.default(true),
-
-  /**
-   * Name of the analytics database
-   * Defaults to basename + ":analytics"
-   */
-  PH_CONNECT_ANALYTICS_DATABASE_NAME: z.string().optional(),
-
-  /**
-   * Disable analytics database worker
-   * @default false
-   */
-  PH_CONNECT_ANALYTICS_DATABASE_WORKER_DISABLED: booleanString.default(true),
-
+const processorsConfigSchema = z.object({
   /**
    * Enable diff analytics tracking
    * @default false
@@ -315,45 +100,6 @@ const analyticsProcessorsConfigSchema = z.object({
    */
   PH_CONNECT_EXTERNAL_ANALYTICS_PROCESSORS_ENABLED: booleanString.default(true),
 });
-
-/**
- * Relational DB processor configuration schema
- */
-const relationalProcessorsConfigSchema = z.object({
-  /**
-   * Enable relational processors
-   * @default true
-   */
-  PH_CONNECT_RELATIONAL_PROCESSORS_ENABLED: booleanString.default(true),
-
-  /**
-   * Enable external relational processors
-   * @default true
-   */
-  PH_CONNECT_EXTERNAL_RELATIONAL_PROCESSORS_ENABLED:
-    booleanString.default(true),
-});
-
-/**
- * External processors configuration schema
- */
-const processorsBaseConfigSchema = z.object({
-  /**
-   * Enable processors
-   * @default true
-   */
-  PH_CONNECT_PROCESSORS_ENABLED: booleanString.default(true),
-
-  /**
-   * Enable external processors
-   * @default true
-   */
-  PH_CONNECT_EXTERNAL_PROCESSORS_ENABLED: booleanString.default(true),
-});
-
-const processorsConfigSchema = processorsBaseConfigSchema
-  .extend(analyticsProcessorsConfigSchema.shape)
-  .extend(relationalProcessorsConfigSchema.shape);
 
 // ============================================================================
 // OpenPanel Configuration
@@ -387,78 +133,17 @@ const openPanelConfigSchema = z.object({
 });
 
 // ============================================================================
-// Sentry Configuration
-// ============================================================================
-
-/**
- * Sentry error tracking configuration schema
- */
-const sentryConfigSchema = z.object({
-  /**
-   * Sentry release identifier
-   * Defaults to app version
-   */
-  PH_CONNECT_SENTRY_RELEASE: z.string().optional(),
-
-  /**
-   * Sentry DSN for error reporting
-   */
-  PH_CONNECT_SENTRY_DSN: z.string().optional(),
-
-  /**
-   * Sentry environment name
-   * @default "prod"
-   */
-  PH_CONNECT_SENTRY_ENV: z.string().default("dev"),
-
-  /**
-   * Enable Sentry performance tracing
-   * @default false
-   */
-  PH_CONNECT_SENTRY_TRACING_ENABLED: booleanString.default(false),
-});
-
-// ============================================================================
-// Renown Configuration
-// ============================================================================
-
-/**
- * Renown authentication configuration schema
- */
-const renownConfigSchema = z.object({
-  /**
-   * Renown authentication service URL
-   * @default "https://www.renown.id"
-   */
-  PH_CONNECT_RENOWN_URL: z.string().default("https://www.renown.id"),
-
-  /**
-   * Renown network ID
-   * @default "eip155"
-   */
-  PH_CONNECT_RENOWN_NETWORK_ID: z.string().default("eip155"),
-
-  /**
-   * Renown chain ID
-   * @default 1
-   */
-  PH_CONNECT_RENOWN_CHAIN_ID: numberString.default(1),
-});
-
-// ============================================================================
 // Combined Schemas
 // ============================================================================
 
 /**
- * Complete runtime environment schema (all PH_CONNECT_* vars)
+ * Complete runtime environment schema (all PH_CONNECT_* vars). Only
+ * build-metadata + analytics-processor toggles live here; all Connect
+ * runtime config lives in `powerhouse.config.json`.
  */
 export const runtimeEnvSchema = appConfigSchema
-  .extend(featureFlagsSchema.shape)
-  .extend(drivesConfigSchema.shape)
   .extend(processorsConfigSchema.shape)
-  .extend(openPanelConfigSchema.shape)
-  .extend(sentryConfigSchema.shape)
-  .extend(renownConfigSchema.shape);
+  .extend(openPanelConfigSchema.shape);
 
 /**
  * Complete environment schema (build + runtime)
@@ -502,7 +187,7 @@ function mergeEnvSources(
   const { processEnv = {}, fileEnv = {} } = options;
   const merged: Record<string, unknown> = {};
 
-  // Apply priority: fileEnv < optionsEnv < processEnv
+  // Apply priority: fileEnv < processEnv
   for (const key of keys) {
     const sources = [
       { name: "process.env", value: processEnv[key] },
@@ -547,9 +232,8 @@ function mergeEnvSources(
 /**
  * Loads and validates environment variables with priority:
  * 1. process.env (highest)
- * 2. options
- * 3. fileEnv
- * 4. defaults from schema (lowest)
+ * 2. fileEnv
+ * 3. defaults from schema (lowest)
  *
  * @param options - Environment sources in priority order
  * @returns Validated and typed environment configuration
@@ -565,7 +249,9 @@ export function loadConnectEnv(options: LoadEnvOptions = {}): ConnectEnv {
 }
 
 /**
- * Loads only runtime environment variables
+ * Loads only runtime environment variables (build metadata + Sentry +
+ * analytics-processor toggles — everything in the Connect runtime schema
+ * is sourced from powerhouse.config.json, not env).
  *
  * @param options - Environment sources in priority order
  * @returns Validated runtime environment configuration
@@ -579,18 +265,6 @@ export function loadRuntimeEnv(
 }
 
 /**
- * Loads only build-time environment variables
- *
- * @param options - Environment sources in priority order
- * @returns Validated build environment configuration
- */
-export function loadBuildEnv(options: LoadEnvOptions = {}): ConnectBuildEnv {
-  const allKeys = new Set(Object.keys(buildEnvSchema.shape));
-  const merged = mergeEnvSources(options, allKeys, buildEnvSchema);
-  return buildEnvSchema.parse(merged);
-}
-
-/**
  * Safely sets Connect environment variables with validation.
  * Invalid values will log a warning and be skipped.
  *
@@ -599,9 +273,8 @@ export function loadBuildEnv(options: LoadEnvOptions = {}): ConnectBuildEnv {
  * @example
  * ```ts
  * setConnectEnv({
- *   PH_CONNECT_LOG_LEVEL: "debug",
  *   PH_CONNECT_VERSION: "1.2.3",
- *   PH_CONNECT_STUDIO_MODE: true,
+ *   PH_CONNECT_SENTRY_DSN: "https://…",
  * });
  * ```
  */

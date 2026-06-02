@@ -62,7 +62,7 @@ async function main() {
   const restArgs = args.slice(1);
   if (
     command === "connect" &&
-    !["studio", "build", "preview"].includes(args[1]) &&
+    !["studio", "build", "preview", "config"].includes(args[1]) &&
     !isHelp
   ) {
     const argsWithDefaultConnectSubCommand = ["connect", "studio", ...restArgs];

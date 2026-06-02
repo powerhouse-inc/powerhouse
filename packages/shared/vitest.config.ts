@@ -20,7 +20,17 @@ export default defineConfig({
   test: {
     globals: true,
     environment: "node",
-    include: ["**/*.test.ts"],
+    // Scoped include: the schema/connect suites plus the document-drive tests.
+    // Other shared test suites (clis/tests/* hit the npm registry, etc.) have
+    // their own runners / environment requirements; folding them in is a
+    // separate effort.
+    include: [
+      "clis/source-config-schema.test.ts",
+      "connect/config-loader.test.ts",
+      "connect/env-config.test.ts",
+      "connect/entrypoint-seed.test.ts",
+      "document-drive/**/*.test.ts",
+    ],
     exclude: ["**/node_modules/**", "**/dist/**"],
   },
 });

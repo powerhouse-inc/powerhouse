@@ -7,47 +7,9 @@ import path, { join, resolve } from "node:path";
 import { cwd } from "node:process";
 import type { Plugin } from "vite";
 import { LOCAL_PACKAGE_ID } from "./constants.js";
-import { setConnectEnv } from "@powerhousedao/shared/connect";
 import type { ConnectCommonOptions } from "./types.js";
 
 export const DEFAULT_CONNECT_OUTDIR = ".ph/connect-build/dist/" as const;
-
-export function commonConnectOptionsToEnv(options: ConnectCommonOptions) {
-  const {
-    base,
-    configFile,
-    defaultDrivesUrl,
-    drivesPreserveStrategy,
-    disableLocalPackage,
-  } = options;
-
-  if (base) {
-    setConnectEnv({
-      PH_CONNECT_BASE_PATH: base,
-    });
-  }
-
-  if (configFile) {
-    setConnectEnv({
-      PH_CONFIG_PATH: configFile,
-    });
-  }
-  if (defaultDrivesUrl) {
-    setConnectEnv({
-      PH_CONNECT_DEFAULT_DRIVES_URL: defaultDrivesUrl.join(","),
-    });
-  }
-  if (drivesPreserveStrategy) {
-    setConnectEnv({
-      PH_CONNECT_DRIVES_PRESERVE_STRATEGY: drivesPreserveStrategy,
-    });
-  }
-  if (disableLocalPackage) {
-    setConnectEnv({
-      PH_DISABLE_LOCAL_PACKAGE: true,
-    });
-  }
-}
 
 export function resolveViteConfigPath(
   options: Pick<ConnectCommonOptions, "projectRoot" | "viteConfigFile">,

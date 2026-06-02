@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-05-29T19:48:11.049Z
+> Generated: 2026-06-02T16:54:52.898Z
 > Total Documents: 87
 > Source: https://powerhouse.academy/llms-full.txt
 
@@ -13553,140 +13553,207 @@ If you encounter issues or need assistance, there are several resources availabl
 
 > Source: https://powerhouse.academy/academy/MasteryTrack/Launch/ConfigureEnvironment
 
-After successfully setting up your server and installing the Powerhouse services using the `ph service setup` command as described in the [Setup Environment](../docs/docs/03-SetupEnvironment.md) guide, the next crucial step is to configure your environment. Proper configuration ensures that your Powerhouse Connect and Switchboard instances behave exactly as you need them to for your specific application.
+After successfully setting up your server and installing the Powerhouse services using the `ph service setup` command as described in the [Setup Environment](../docs/docs/03-SetupEnvironment.md) guide, the next crucial step is to configure your environment.
 
-Powerhouse offers two primary methods for configuration:
+Powerhouse Connect reads its runtime configuration from **`powerhouse.config.json`**. Editing that file (or using the `ph connect config` CLI) is the recommended way to tune Connect's behavior — drives, renown integration, packages, log level, base path, and so on. Environment variables remain available as a legacy / CI mechanism for seeding the same fields at build time, but the JSON file is the source of truth at runtime.
 
-1.  **Environment Variables**: Using a `.env` file in your project root. This is a straightforward way to set configuration values.
-2.  **Configuration Files**: For more complex configurations, some services might use a JSON configuration file (e.g., `powerhouse.config.json`).
+This guide walks you through the configuration model and shows you how to set values via JSON, the CLI, or env vars.
 
-**WARNING:**
-A key principle to remember is that **environment variables will always override values set in configuration files**. This allows for flexible setups, where you can have default configurations in a file and override them for different environments (development, staging, production) using environment variables.
+## Where the configuration lives
 
+A scaffolded Powerhouse project ships with `powerhouse.config.json` at the project root. Connect-specific settings live under the `connect` key:
 
-This guide will walk you through both methods and provide details on common configuration options, including setting up authorization.
-
-## Using environment variables
-
-The most common way to configure Powerhouse services is through environment variables. You can place these variables in a `.env` file at the root of your project directory. When you run `ph service start` or `ph service restart`, these variables are loaded into the environment of your running services.
-
-### How to create and edit your .env file
-
-If you're on your cloud server, you can create and edit the `.env` file directly:
-
-1.  Navigate to your project directory: `cd <your-project-name>`
-2.  Open the `.env` file with a text editor like `vim` or `nano`:
-    ```bash
-    vim .env
-    ```
-3.  Add your configuration variables, one per line, in the `KEY="VALUE"` format.
-    ```env
-    # Example for Connect
-    PH_CONNECT_STUDIO_MODE="true"
-    PH_CONNECT_DISABLE_ADD_DRIVE="true"
-    ```
-4.  Save the file and exit the editor (in `vim`, press `Esc`, then type `:wq` and press `Enter`).
-5.  For the changes to take effect, you must restart the Powerhouse services:
-    ```bash
-    ph service restart
-    ```
-
-### Common environment variables for Connect
-
-The Powerhouse Connect application has a wide range of available environment variables to toggle features and change its behavior. Below is a list of some variables you can configure.
-
-```bash
-# build arguments
-BASE_PATH="/" # vite base path
-BASE_HREF="./" # electron-forge base href
-PH_CONNECT_APP_REQUIRES_HARD_REFRESH="true"
-SENTRY_AUTH_TOKEN=""
-SENTRY_ORG=""
-SENTRY_PROJECT=""
-
-# environment variables
-LOG_LEVEL="info"
-
-## app configuration & feature flags
-PH_CONNECT_DISABLE_ADD_DRIVE="false"
-PH_CONNECT_WARN_OUTDATED_APP="false"
-PH_CONNECT_STUDIO_MODE="false"
-PH_CONNECT_ROUTER_BASENAME="/"
-PH_CONNECT_DEFAULT_DRIVES_URL=""
-PH_CONNECT_ENABLED_EDITORS=""
-PH_CONNECT_DISABLE_ADD_PUBLIC_DRIVES="false"
-PH_CONNECT_SEARCH_BAR_ENABLED="false"
-PH_CONNECT_DISABLE_ADD_CLOUD_DRIVES="false"
-PH_CONNECT_DISABLE_ADD_LOCAL_DRIVES="false"
-PH_CONNECT_DISABLE_DELETE_PUBLIC_DRIVES="false"
-PH_CONNECT_DISABLE_DELETE_CLOUD_DRIVES="false"
-PH_CONNECT_DISABLE_DELETE_LOCAL_DRIVES="false"
-PH_CONNECT_PUBLIC_DRIVES_ENABLED="true"
-PH_CONNECT_CLOUD_DRIVES_ENABLED="true"
-PH_CONNECT_LOCAL_DRIVES_ENABLED="true"
-PH_CONNECT_ARBITRUM_ALLOW_LIST=""
-PH_CONNECT_RWA_ALLOW_LIST=""
-PH_CONNECT_HIDE_DOCUMENT_MODEL_SELECTION_SETTINGS="true"
-
-PH_CONNECT_RENOWN_URL="https://www.renown.id"
-PH_CONNECT_RENOWN_NETWORK_ID="eip155"
-PH_CONNECT_RENOWN_CHAIN_ID=1
-PH_CONNECT_DISABLED_EDITORS="powerhouse/document-drive"
-
-PH_CONNECT_ANALYTICS_DATABASE_NAME=""
-PH_CONNECT_ANALYTICS_DATABASE_WORKER_DISABLED="false"
-
-## error tracking
-PH_CONNECT_SENTRY_DSN=""
-PH_CONNECT_SENTRY_PROJECT=""
-PH_CONNECT_SENTRY_ENV="prod"
-PH_CONNECT_SENTRY_TRACING_ENABLED="false"
-
-## analytics
-PH_CONNECT_GA_TRACKING_ID=
-
-FILE_UPLOAD_OPERATIONS_CHUNK_SIZE="50"
-PH_CONNECT_VERSION_CHECK_INTERVAL="3600000"
-PH_CONNECT_CLI_VERSION=""
-
-## set during build
-APP_VERSION=""
-SENTRY_RELEASE=""
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/powerhouse-inc/powerhouse/main/packages/shared/clis/source-config.schema.json",
+  "documentModelsDir": "./document-models",
+  "editorsDir": "./editors",
+  "studio": { "port": 3000 },
+  "reactor": { "port": 4001 },
+  "packages": [],
+  "connect": {
+    "app": {
+      "basePath": "/",
+      "logLevel": "info"
+    },
+    "packages": {
+      "externalEnabled": true
+    },
+    "drives": {
+      "allowAddDrive": true,
+      "defaultDrives": [],
+      "sections": {
+        "remote": { "enabled": true, "allowAdd": true, "allowDelete": true },
+        "local": { "enabled": true, "allowAdd": true, "allowDelete": true }
+      }
+    },
+    "renown": {
+      "url": "https://www.renown.id",
+      "networkId": "eip155",
+      "chainId": 1
+    }
+  }
+}
 ```
 
-You can find the most up-to-date list of variables in the source repository: [https://github.com/powerhouse-inc/powerhouse/blob/main/apps/connect/.env](https://github.com/powerhouse-inc/powerhouse/blob/main/apps/connect/.env)
+The dist served by `ph connect build` deep-merges the project file with the schema defaults, so missing fields fall back automatically.
 
-## Using a configuration file
+## Precedence
 
-For services like the Switchboard, you can also use a `powerhouse.config.json` file for more structured configuration, especially for features like authorization.
+When the dist `powerhouse.config.json` is built, values resolve in this order (lowest to highest):
 
-### Configuring authorization
+1. **Schema defaults** (`DEFAULT_CONNECT_CONFIG`) — always present.
+2. **Env-var seeds** — set-if-absent; only fill fields the source file does not specify (see [Build-time env-var seeds](#build-time-env-var-seeds) below for the list).
+3. **`powerhouse.config.json` (project root)** — the operator's source of truth.
+4. **`ph connect build --json`** — bulk override; applied last and beats source + seeds.
+5. **`ph connect build --<flag>`** — individual flag overrides; applied above `--json` for the fields they cover.
+
+At runtime Connect always reads the resulting dist file as-is — it does not consult `process.env` for any field in the runtime schema.
+
+## Editing the JSON
+
+### Manually
+
+Open `powerhouse.config.json` in any editor and edit the `connect.*` block. Save, then rebuild and restart:
+
+```bash
+ph connect build
+ph service restart
+```
+
+### Via `ph connect config`
+
+The CLI provides positional, flag, and bulk-JSON read/write access to every `connect.*` field. The same surface works on `ph connect build` and `ph connect config` — pick whichever fits your workflow (build-time vs. live edit on a deployed dist).
+
+```bash
+# Show the effective connect.* block (list mode)
+ph connect config
+
+# Read a single value — positional <key>, or equivalently --get
+ph connect config connect.renown.url
+ph connect config --get connect.renown.url
+
+# Set a single value — positional <key> <value>, or equivalently a per-field flag
+ph connect config connect.renown.url "https://renown.staging.example"
+ph connect config connect.renown.chainId 137
+ph connect config connect.drives.allowAddDrive false
+ph connect config --renown-url "https://renown.staging.example"
+ph connect config --renown-chain-id 137
+ph connect config --allow-add-drive false
+
+# Bulk update via JSON patch (required for arrays/objects; useful for multi-field changes)
+ph connect config --json '{"renown":{"url":"https://x"},"drives":{"sections":{"remote":{"enabled":false}}}}'
+```
+
+Positional `<value>` is JSON-parsed first (so `137` → number, `false` → boolean) then schema-validated against the path. Strings without quotes pass through as bare strings. Arrays and objects should go through `--json` instead.
+
+Writes are dual-target: the source `powerhouse.config.json` is updated (next build picks it up) and, if the dist file exists, it is patched as well (the currently-served SPA picks up the change on its next refresh). Invalid types fail loudly before any write; both positional and `--json` payloads are Ajv-validated against the runtime schema.
+
+Mutually exclusive: positional `<key>` / `<key> <value>`, `--get`, `--json`, and any field flag can't be combined in one call — pick exactly one mode per invocation.
+
+### At build time via positional / flags / JSON
+
+`ph connect build` accepts the same positional `<key> <value>` pair, per-field flags, and `--json` to bake values into the dist:
+
+```bash
+# Positional override (single field)
+ph connect build connect.renown.url https://renown.staging.example
+
+# Per-field flags (combinable)
+ph connect build \
+  --renown-url https://renown.staging.example \
+  --renown-chain-id 137 \
+  --allow-add-drive false \
+  --remote-drives-enabled true \
+  --app-name "My Connect"
+```
+
+```bash
+ph connect build --json '{"renown":{"url":"https://x"},"drives":{"allowAddDrive":false}}'
+```
+
+Overrides apply at dist-emit time and are baked into the dist file — operators see the resulting values when the container boots.
+
+### Full flag matrix
+
+Every `connect.*` field has a dedicated flag. Both `ph connect config` and `ph connect build` accept the same set.
+
+| `connect.*` JSON path                        | Flag                           | Type                                         |
+| -------------------------------------------- | ------------------------------ | -------------------------------------------- |
+| `connect.app.basePath`                       | `--base`                       | string                                       |
+| `connect.app.logLevel`                       | `--log-level`                  | `debug \| info \| warn \| error`             |
+| `connect.packages.externalEnabled`           | `--external-packages`          | boolean                                      |
+| `connect.packages.registryUrl`               | `--packages-registry`          | string                                       |
+| `connect.branding.appName`                   | `--app-name`                   | string                                       |
+| `connect.branding.homeBackground`            | `--home-background`            | string (pass `""` to reset to bundled image) |
+| `connect.drives.allowAddDrive`               | `--allow-add-drive`            | boolean                                      |
+| `connect.drives.defaultDrives`               | `--default-drives-url`         | comma-list → array of `{url, name, icon}`    |
+| `connect.drives.preserveStrategy`            | `--drive-preserve-strategy`    | `preserve-all \| preserve-by-url-and-detach` |
+| `connect.drives.sections.remote.enabled`     | `--remote-drives-enabled`      | boolean                                      |
+| `connect.drives.sections.remote.allowAdd`    | `--remote-drives-allow-add`    | boolean                                      |
+| `connect.drives.sections.remote.allowDelete` | `--remote-drives-allow-delete` | boolean                                      |
+| `connect.drives.sections.local.enabled`      | `--local-drives-enabled`       | boolean                                      |
+| `connect.drives.sections.local.allowAdd`     | `--local-drives-allow-add`     | boolean                                      |
+| `connect.drives.sections.local.allowDelete`  | `--local-drives-allow-delete`  | boolean                                      |
+| `connect.renown.url`                         | `--renown-url`                 | string                                       |
+| `connect.renown.networkId`                   | `--renown-network-id`          | string                                       |
+| `connect.renown.chainId`                     | `--renown-chain-id`            | number                                       |
+| _(bulk, any subset of fields)_               | `--json '{...}'`               | partial `connect.*` JSON blob                |
+
+Plus `ph connect config --get <connect.path>` to read a single value, `ph connect config --dist-dir <path>` to point at a non-default dist location (overrides `PH_CONNECT_OUTDIR`).
+
+## Configuring Connect's runtime values
+
+Connect's runtime configuration (everything under `connect.*` in
+`powerhouse.config.json` — branding, drives, renown, app, packages) is set
+from one of three sources, in increasing precedence:
+
+1. **The source file `powerhouse.config.json`** (project root) — hand-edited
+   or generated by `ph init`.
+2. **`ph connect config --<field>`** — dual-writes the value into the source
+   file _and_ the running dist file, so the SPA picks it up on the next
+   refresh without a rebuild.
+3. **`ph connect build --<field>` / `--json`** — applies as a CLI override
+   for the build, written into the emitted dist file.
+
+Environment variables are **not** a source for Connect's runtime config. The
+table above lists each `connect.*` field together with its CLI flag.
+
+### Docker deployments
+
+When deploying Connect's Docker image, the entrypoint can still translate a
+few operator-supplied env vars into edits to the dist `powerhouse.config.json`
+at container start (set-if-absent). This is purely an operator-time
+convenience — the SPA itself never reads env vars at runtime — and is
+documented in the [Docker Deployment guide](../docs/docs/05-DockerDeployment).
+
+## Variables that stay as env vars
+
+The following are **not** runtime-config fields. They remain ordinary env vars because they are secrets, build-stamped metadata, or container-shape concerns:
+
+```bash
+# Sentry (secrets / per-deploy)
+PH_SENTRY_AUTH_TOKEN=""
+PH_SENTRY_ORG=""
+PH_SENTRY_PROJECT=""
+PH_CONNECT_SENTRY_DSN=""
+PH_CONNECT_SENTRY_ENV="prod"
+PH_CONNECT_SENTRY_TRACING_ENABLED="false"
+PH_CONNECT_SENTRY_RELEASE=""
+
+# Build-stamped metadata
+PH_CONNECT_VERSION="..."        # baked into the bundle at build time
+PH_CONNECT_CLI_VERSION="..."    # baked into the bundle at build time
+
+# Container shape
+PORT=3001
+```
+
+## Configuring authorization (Switchboard)
 
 A critical aspect of your environment configuration is setting up authorization to control who can access your services and what they can do. As detailed in our dedicated [Switchboard Authorization](/academy/MasteryTrack/BuildingUserExperiences/Authorization/Authorization) guide, you can manage access using authentication, supreme admin access, and document protection.
 
-Here's a quick overview of how you can configure authorization:
-
-#### Via environment variables
-
-You can set the authorization config directly in your `.env` file.
-
-```bash
-# Required: Enable/disable authentication
-AUTH_ENABLED=true
-
-# Optional: Comma-separated list of admin wallet addresses (full access, bypasses all checks)
-ADMINS="0x123...,0x456..."
-
-# Optional: Make all new documents protected by default (requires explicit grants)
-DEFAULT_PROTECTION=true
-
-# Optional: Enable per-document permission management
-DOCUMENT_PERMISSIONS_ENABLED=true
-```
-
-#### Via `powerhouse.config.json`
-
-For a cleaner setup, you can define authorization in `powerhouse.config.json` in your project root.
+Authorization is a **Switchboard** concern, not Connect. The same `powerhouse.config.json` carries both:
 
 ```json
 {
@@ -13699,25 +13766,30 @@ For a cleaner setup, you can define authorization in `powerhouse.config.json` in
 }
 ```
 
-Remember, if you define `AUTH_ENABLED=false` as an environment variable, it will override the `enabled: true` setting in your JSON file.
+Or via env vars:
+
+```bash
+AUTH_ENABLED=true
+ADMINS="0x123...,0x456..."
+DEFAULT_PROTECTION=true
+DOCUMENT_PERMISSIONS_ENABLED=true
+```
 
 For a complete understanding of how authorization (authentication, admin access, and document protection) works, please refer to the full [Authorization guide](/academy/MasteryTrack/BuildingUserExperiences/Authorization/Authorization).
 
 ## Applying your changes
 
-Regardless of which method you use to update your configuration, the changes will not be applied until you restart your services.
-
-Use the following command to do so:
+Regardless of which method you use to update your configuration, the changes will not be applied until the service that consumes them restarts (or, in the case of the running SPA, the page is refreshed and re-fetches `/powerhouse.config.json`).
 
 ```bash
 ph service restart
 ```
 
-This will stop and then start the Connect and Switchboard services, ensuring they load the new configuration. You can check the status with `ph service status`.
+This stops and restarts Connect and Switchboard so they pick up the new configuration. You can check the status with `ph service status`.
 
 ## Summary
 
-Configuring your environment is a key step to tailor the Powerhouse platform to your needs. By using a combination of `.env` files for simple key-value settings and `powerhouse.config.json` for more structured data, you have fine-grained control over all features, from the UI of the Connect app to the security and authorization on your Switchboard.
+Configure Connect via `powerhouse.config.json` — edit the file directly, use `ph connect config <key> <value>`, or pass `--flag` / `--json` overrides to `ph connect build`. Env vars stay supported as build-time seeds for CI / docker workflows but are no longer the recommended interface. Secrets, build metadata, and container shape (sentry tokens, version stamps, `PORT`) remain as ordinary env vars.
 
 ---
 
@@ -13872,45 +13944,64 @@ After starting, you can access:
 - **Connect**: http://localhost:3000
 - **Switchboard**: http://localhost:4000
 
-## Environment Variables
+## Configuring Connect at runtime
 
-### Connect Environment Variables
+Connect's runtime behavior is driven by `powerhouse.config.json` (the same file the build uses). For a Docker deployment you have three options:
 
-| Variable                | Description                                         | Default  |
-| ----------------------- | --------------------------------------------------- | -------- |
-| `PORT`                  | Port the server listens on                          | `3001`   |
-| `PH_CONNECT_BASE_PATH`  | Base URL path for the application                   | `/`      |
-| `PH_REGISTRY_PACKAGES`  | Comma-separated list of packages to load at startup | `""`     |
-| `PH_CONNECT_SENTRY_DSN` | Sentry DSN for error tracking                       | `""`     |
-| `PH_CONNECT_SENTRY_ENV` | Sentry environment name                             | `""`     |
-| `DATABASE_URL`          | PostgreSQL connection string                        | Required |
+1. **Mount your own `powerhouse.config.json`** as a Kubernetes ConfigMap / Secret (or a bind-mounted file) at `/var/www/html/project/powerhouse.config.json`. The SPA fetches it from `/powerhouse.config.json` on every page load, so post-deploy edits are visible after a refresh.
+2. **Pass a JSON payload via the `PH_CONNECT_CONFIG_JSON` env var**. The entrypoint deep-merges it into the dist `powerhouse.config.json` at container start (set-if-absent — a mounted file's values always win).
+3. **Edit the file at build time** via `ph connect build --json '{...}'` or individual `--flag`s, baking the values into the image.
 
-#### Feature Flags
+For the full configuration model, precedence ladder, and the complete list of `connect.*` fields, see the [Configure Environment](../docs/docs/04-ConfigureEnvironment.md) guide.
 
-| Variable                                            | Description                        | Default   |
-| --------------------------------------------------- | ---------------------------------- | --------- |
-| `PH_CONNECT_DEFAULT_DRIVES_URL`                     | Default drives URL to load         | `""`      |
-| `PH_CONNECT_ENABLED_EDITORS`                        | Enabled editor types (`*` for all) | `"*"`     |
-| `PH_CONNECT_DISABLED_EDITORS`                       | Disabled editor types              | `""`      |
-| `PH_CONNECT_PUBLIC_DRIVES_ENABLED`                  | Enable public drives               | `"true"`  |
-| `PH_CONNECT_CLOUD_DRIVES_ENABLED`                   | Enable cloud drives                | `"true"`  |
-| `PH_CONNECT_LOCAL_DRIVES_ENABLED`                   | Enable local drives                | `"true"`  |
-| `PH_CONNECT_SEARCH_BAR_ENABLED`                     | Enable search bar                  | `"false"` |
-| `PH_CONNECT_DISABLE_ADD_PUBLIC_DRIVES`              | Disable adding public drives       | `"false"` |
-| `PH_CONNECT_DISABLE_ADD_CLOUD_DRIVES`               | Disable adding cloud drives        | `"false"` |
-| `PH_CONNECT_DISABLE_ADD_LOCAL_DRIVES`               | Disable adding local drives        | `"false"` |
-| `PH_CONNECT_DISABLE_DELETE_PUBLIC_DRIVES`           | Disable deleting public drives     | `"false"` |
-| `PH_CONNECT_DISABLE_DELETE_CLOUD_DRIVES`            | Disable deleting cloud drives      | `"false"` |
-| `PH_CONNECT_DISABLE_DELETE_LOCAL_DRIVES`            | Disable deleting local drives      | `"false"` |
-| `PH_CONNECT_HIDE_DOCUMENT_MODEL_SELECTION_SETTINGS` | Hide document model selection      | `"true"`  |
+### Connect container env vars
 
-#### Renown Authentication
+Connect's SPA reads runtime configuration from `/powerhouse.config.json`, never from env vars at runtime. The container entrypoint, however, can apply operator-supplied JSON to that file at startup (set-if-absent) — equivalent to pre-running `ph connect config --json '{...}'` on the dist file. The SPA then reads the file as usual.
 
-| Variable                       | Description                       | Default                    |
-| ------------------------------ | --------------------------------- | -------------------------- |
-| `PH_CONNECT_RENOWN_URL`        | Renown authentication service URL | `"https://auth.renown.id"` |
-| `PH_CONNECT_RENOWN_NETWORK_ID` | Renown network identifier         | `"eip155"`                 |
-| `PH_CONNECT_RENOWN_CHAIN_ID`   | Renown chain ID                   | `1`                        |
+#### Container shape and secrets
+
+| Variable                 | Description                                                 | Default  |
+| ------------------------ | ----------------------------------------------------------- | -------- |
+| `PORT`                   | Port the nginx server listens on                            | `3001`   |
+| `PH_CONNECT_BASE_PATH`   | nginx base URL path                                         | `/`      |
+| `PH_CONNECT_CONFIG_JSON` | Runtime config JSON to merge into the dist file (see below) | _unset_  |
+| `DATABASE_URL`           | PostgreSQL connection string (for Switchboard, not Connect) | Required |
+
+Sentry (DSN, environment label, tracing flag) is no longer set via per-field env vars — those live in `connect.sentry.*` of `powerhouse.config.json` and ride through `PH_CONNECT_CONFIG_JSON` like every other runtime field. See the example below.
+
+#### `PH_CONNECT_CONFIG_JSON` (set-if-absent)
+
+Set this env var to a JSON object that mirrors the `connect.*` block of `powerhouse.config.json`. At container start the entrypoint deep-merges it into the dist file with **set-if-absent semantics**: any path already present in the mounted/baked file wins; the env-supplied JSON only fills gaps.
+
+```bash
+docker run \
+  -e PH_CONNECT_CONFIG_JSON='{
+    "connect": {
+      "app": { "logLevel": "debug" },
+      "renown": { "url": "https://renown.staging.example", "chainId": 137 },
+      "drives": {
+        "defaultDrives": [
+          { "url": "https://drive-a.example", "name": null, "icon": null }
+        ],
+        "sections": {
+          "remote": { "enabled": true, "allowAdd": false }
+        }
+      },
+      "sentry": {
+        "dsn": "https://prod-key@sentry.io/1",
+        "env": "prod",
+        "tracing": true
+      }
+    }
+  }' \
+  connect:latest
+```
+
+The schema for the JSON object lives at `packages/builder-tools/connect-utils/runtime-config.schema.json` (also served as the `$schema` URL of any generated file). The same shape that `ph connect config --json` accepts is what `PH_CONNECT_CONFIG_JSON` accepts here.
+
+**Invalid input behaviour:** malformed JSON or a non-object payload aborts container startup with a clear stderr message rather than silently dropping the operator's intent.
+
+**Migration from per-field env vars:** the previous `PH_CONNECT_LOG_LEVEL`, `PH_CONNECT_DISABLE_ADD_DRIVE`, `PH_CONNECT_RENOWN_URL`, `PH_CONNECT_DEFAULT_DRIVES_URL`, `PH_CONNECT_SENTRY_DSN`, `PH_CONNECT_SENTRY_ENV`, `PH_CONNECT_SENTRY_TRACING_ENABLED`, and similar per-field variables are no longer wired. Wrap their values into a single `PH_CONNECT_CONFIG_JSON` payload using the JSON paths shown above. The Sentry **release** tag is build-time only — it stamps into the bundle via Vite's `define` from `WORKSPACE_VERSION` so it always matches the sourcemap upload tag CI used.
 
 ### Switchboard Environment Variables
 
@@ -18078,7 +18169,6 @@ and real-time processing with a "Vetra" drive or connection to remote drives.
 
 **Base** - Base path for the app - Usage: `--base <str>`
 
-**Environment:** `PH_CONNECT_BASE_PATH`
 **Log Level** - Log level for the application - Usage: `--log-level <value>`
 
 **Environment:** `PH_CONNECT_LOG_LEVEL`
@@ -18091,16 +18181,13 @@ and real-time processing with a "Vetra" drive or connection to remote drives.
 **Environment:** `PH_LOCAL_PACKAGE`
 **Default Drives Url** - The default drives url to use in connect - Usage: `--default-drives-url <str>`
 
-**Environment:** `PH_CONNECT_DEFAULT_DRIVES_URL`
 **Drive Preserve Strategy** - The preservation strategy to use on default drives - Usage: `--drive-preserve-strategy <value>`
 
-**Environment:** `PH_CONNECT_DRIVES_PRESERVE_STRATEGY`
 **Default:** `preserve-by-url-and-detach`
 **Host** - Expose the server to the network. Pass an IP (e.g. 0.0.0.0) to bind to a specific address. - Usage: `--host <str>`
 
 **Watch Timeout** - Amount of time to wait before a file is considered changed - Usage: `--watch-timeout <number>`
 
-**Environment:** `PH_WATCH_TIMEOUT`
 **Default:** `300`
 **Https Key File** - path to the ssl key file - Usage: `--https-key-file <str>`
 
@@ -18124,7 +18211,6 @@ and real-time processing with a "Vetra" drive or connection to remote drives.
 **Default:** `false`
 **Ignore Local** - Do not load local packages from this project - Usage: `--ignore-local`
 
-**Environment:** `PH_DISABLE_LOCAL_PACKAGE`
 **Force** - Force dep pre-optimization regardless of whether deps have changed. - Usage: `--force`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
@@ -18149,7 +18235,7 @@ and real-time processing with a "Vetra" drive or connection to remote drives.
 
 
 ## Connect
-Powerhouse Connect commands. Use with `studio`, `build` or `preview`. Defaults to `studio` if not specified.
+Powerhouse Connect commands. Use with `studio`, `build`, `preview`, or `config`. Defaults to `studio` if not specified.
 
 ## Connect Studio
 The studio command starts the Connect Studio, a development environment for building
@@ -18169,7 +18255,6 @@ your project.
 **Default:** `3000`
 **Base** - Base path for the app - Usage: `--base <str>`
 
-**Environment:** `PH_CONNECT_BASE_PATH`
 **Log Level** - Log level for the application - Usage: `--log-level <value>`
 
 **Environment:** `PH_CONNECT_LOG_LEVEL`
@@ -18182,23 +18267,19 @@ your project.
 **Environment:** `PH_LOCAL_PACKAGE`
 **Default Drives Url** - The default drives url to use in connect - Usage: `--default-drives-url <str>`
 
-**Environment:** `PH_CONNECT_DEFAULT_DRIVES_URL`
 **Drive Preserve Strategy** - The preservation strategy to use on default drives - Usage: `--drive-preserve-strategy <value>`
 
-**Environment:** `PH_CONNECT_DRIVES_PRESERVE_STRATEGY`
 **Default:** `preserve-by-url-and-detach`
 **Host** - Expose the server to the network. Pass an IP (e.g. 0.0.0.0) to bind to a specific address. - Usage: `--host <str>`
 
 **Watch Timeout** - Amount of time to wait before a file is considered changed - Usage: `--watch-timeout <number>`
 
-**Environment:** `PH_WATCH_TIMEOUT`
 **Default:** `300`
 
 
 ### Flags
 **Ignore Local** - Do not load local packages from this project - Usage: `--ignore-local`
 
-**Environment:** `PH_DISABLE_LOCAL_PACKAGE`
 **Force** - Force dep pre-optimization regardless of whether deps have changed. - Usage: `--force`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
@@ -18220,16 +18301,59 @@ your project.
 
 ## Connect Build
 The Connect build command creates a production build with the project's local and
-external packages included
+external packages included.
+
+Runtime-config overrides (all combinable — last wins on collision):
+  ph connect build                                    Build with the current source config.
+  ph connect build <key> <value>                      Build with a positional override applied (e.g. ph connect build connect.renown.url https://renown.staging).
+  ph connect build --<field> <value>                  Build with a per-field flag override (e.g. --renown-url https://renown.staging).
+  ph connect build --json '\{"…":"…"\}'                Build with a bulk override.
+
+Build has no read mode; passing only <key> without <value> errors out (use `ph connect config <key>` to read).
 
 
 ### Options
 **Out Dir** - Output directory - Usage: `--outDir <str>`
 
 **Default:** `.ph/connect-build/dist/`
+**Json** - Inline JSON override for the runtime connect.* block, e.g. '\{"renown":\{"url":"..."\}\}'. Validated against the runtime schema; deep-merged on top of env seeds and source powerhouse.config.json. Individual --flag values beat --json on collision. - Usage: `--json <str>`
+
+**Renown Url** - Override connect.renown.url. - Usage: `--renown-url <str>`
+
+**Renown Network Id** - Override connect.renown.networkId. - Usage: `--renown-network-id <str>`
+
+**Renown Chain Id** - Override connect.renown.chainId. - Usage: `--renown-chain-id <number>`
+
+**Allow Add Drive** - Override connect.drives.allowAddDrive (top-level add-drive toggle). - Usage: `--allow-add-drive <value>`
+
+**External Packages** - Override connect.packages.externalEnabled. - Usage: `--external-packages <value>`
+
+**Remote Drives Enabled** - Override connect.drives.sections.remote.enabled (the unified cloud+public section). - Usage: `--remote-drives-enabled <value>`
+
+**Remote Drives Allow Add** - Override connect.drives.sections.remote.allowAdd. - Usage: `--remote-drives-allow-add <value>`
+
+**Remote Drives Allow Delete** - Override connect.drives.sections.remote.allowDelete. - Usage: `--remote-drives-allow-delete <value>`
+
+**Local Drives Enabled** - Override connect.drives.sections.local.enabled. - Usage: `--local-drives-enabled <value>`
+
+**Local Drives Allow Add** - Override connect.drives.sections.local.allowAdd. - Usage: `--local-drives-allow-add <value>`
+
+**Local Drives Allow Delete** - Override connect.drives.sections.local.allowDelete. - Usage: `--local-drives-allow-delete <value>`
+
+**Packages Registry** - Override the top-level packageRegistryUrl. - Usage: `--packages-registry <str>`
+
+**App Name** - Override connect.branding.appName. - Usage: `--app-name <str>`
+
+**Home Background** - Override connect.branding.homeBackground. URL or path to an image; pass an empty string ("") to reset to the bundled default. - Usage: `--home-background <str>`
+
+**Sentry Dsn** - Override connect.sentry.dsn (Sentry DSN URL). Pass an empty string ("") to set null and disable Sentry. - Usage: `--sentry-dsn <str>`
+
+**Sentry Env** - Override connect.sentry.env (Sentry environment label). - Usage: `--sentry-env <str>`
+
+**Sentry Tracing Enabled** - Override connect.sentry.tracing (Sentry performance tracing). - Usage: `--sentry-tracing-enabled <value>`
+
 **Base** - Base path for the app - Usage: `--base <str>`
 
-**Environment:** `PH_CONNECT_BASE_PATH`
 **Log Level** - Log level for the application - Usage: `--log-level <value>`
 
 **Environment:** `PH_CONNECT_LOG_LEVEL`
@@ -18242,17 +18366,24 @@ external packages included
 **Environment:** `PH_LOCAL_PACKAGE`
 **Default Drives Url** - The default drives url to use in connect - Usage: `--default-drives-url <str>`
 
-**Environment:** `PH_CONNECT_DEFAULT_DRIVES_URL`
 **Drive Preserve Strategy** - The preservation strategy to use on default drives - Usage: `--drive-preserve-strategy <value>`
 
-**Environment:** `PH_CONNECT_DRIVES_PRESERVE_STRATEGY`
 **Default:** `preserve-by-url-and-detach`
+
+
+---
+
+## Parameters
+
+### Arguments
+**Key** - Dotted path inside the runtime config (e.g. connect.renown.url). Pair with <value> to set; pass alone to `ph connect config` to read. - Usage: `[key]`
+
+**Value** - Value to set at <key>. Coerced against the runtime schema (string, bool, number, enum). Arrays and objects require --json instead. - Usage: `[value]`
 
 
 ### Flags
 **Ignore Local** - Do not load local packages from this project - Usage: `--ignore-local`
 
-**Environment:** `PH_DISABLE_LOCAL_PACKAGE`
 **Force** - Force dep pre-optimization regardless of whether deps have changed. - Usage: `--force`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
@@ -18274,7 +18405,6 @@ NOTE: You must run `ph connect build` first
 **Default:** `.ph/connect-build/dist/`
 **Base** - Base path for the app - Usage: `--base <str>`
 
-**Environment:** `PH_CONNECT_BASE_PATH`
 **Log Level** - Log level for the application - Usage: `--log-level <value>`
 
 **Environment:** `PH_CONNECT_LOG_LEVEL`
@@ -18287,23 +18417,19 @@ NOTE: You must run `ph connect build` first
 **Environment:** `PH_LOCAL_PACKAGE`
 **Default Drives Url** - The default drives url to use in connect - Usage: `--default-drives-url <str>`
 
-**Environment:** `PH_CONNECT_DEFAULT_DRIVES_URL`
 **Drive Preserve Strategy** - The preservation strategy to use on default drives - Usage: `--drive-preserve-strategy <value>`
 
-**Environment:** `PH_CONNECT_DRIVES_PRESERVE_STRATEGY`
 **Default:** `preserve-by-url-and-detach`
 **Host** - Expose the server to the network. Pass an IP (e.g. 0.0.0.0) to bind to a specific address. - Usage: `--host <str>`
 
 **Watch Timeout** - Amount of time to wait before a file is considered changed - Usage: `--watch-timeout <number>`
 
-**Environment:** `PH_WATCH_TIMEOUT`
 **Default:** `300`
 
 
 ### Flags
 **Ignore Local** - Do not load local packages from this project - Usage: `--ignore-local`
 
-**Environment:** `PH_DISABLE_LOCAL_PACKAGE`
 **Force** - Force dep pre-optimization regardless of whether deps have changed. - Usage: `--force`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
@@ -18477,7 +18603,6 @@ models, processors, and real-time updates.
 
 **Ignore Local** - Do not load local packages from this project - Usage: `--ignore-local`
 
-**Environment:** `PH_DISABLE_LOCAL_PACKAGE`
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Use Identity** - enable identity using keypair from ph login (uses ~/.ph/keypair.json) - Usage: `--use-identity`

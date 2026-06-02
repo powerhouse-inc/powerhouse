@@ -23,7 +23,7 @@ import type { IConnectOptions } from "./types.js";
 import { devReactImportmapPlugin } from "./vite-plugins/dev-external-react.js";
 import { connectFaviconPlugin } from "./vite-plugins/favicon.js";
 import { phBundledPackagesPlugin } from "./vite-plugins/ph-bundled-packages.js";
-import { phPackagesPlugin } from "./vite-plugins/ph-packages.js";
+import { phConfigPlugin } from "./vite-plugins/ph-config.js";
 
 const REACT_VERSION = "19.2.0";
 
@@ -161,19 +161,22 @@ function viteLogger({
   return logger;
 }
 
-function getPackageNamesFromPowerhouseConfig({ packages }: PowerhouseConfig) {
-  if (!packages) return [];
-  // Preserve the version/tag from powerhouse.config.json so Connect's runtime
-  // resolver sees it when building the registry CDN URL. Without this the
-  // registry falls back to its `latest` dist-tag, which may point to a
-  // different release stream than what the project asked for (e.g. latest
-  // vs. dev). Local packages resolve from node_modules and don't need a
-  // version here.
-  return packages.map((p) =>
-    p.version && p.provider !== "local"
-      ? `${p.packageName}@${p.version}`
-      : p.packageName,
-  );
+function parsePackagesEnvOverride(phPackagesStr: string) {
+  return phPackagesStr
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map((entry) => {
+      const lastAt = entry.lastIndexOf("@");
+      if (lastAt > 0) {
+        return {
+          packageName: entry.slice(0, lastAt),
+          version: entry.slice(lastAt + 1),
+          provider: "registry" as const,
+        };
+      }
+      return { packageName: entry, provider: "registry" as const };
+    });
 }
 
 function getLocalPackageNamesFromPowerhouseConfig({
@@ -190,7 +193,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
   const envDir = options.envDir ?? options.dirname;
   const fileEnv = loadEnv(mode, envDir, "PH_");
 
-  // Load and validate environment with priority: process.env > options > fileEnv > defaults
+  // Load and validate environment with priority: process.env > fileEnv > defaults
   const env = loadConnectEnv({
     processEnv: process.env,
     fileEnv,
@@ -199,27 +202,45 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
   // set the resolved env to process.env so it's loaded by vite
   setConnectEnv(env);
 
-  // load powerhouse config
-  const phConfigPath =
-    env.PH_CONFIG_PATH ?? join(options.dirname, "powerhouse.config.json");
+  // Source config is always the project-root powerhouse.config.json.
+  const phConfigPath = join(options.dirname, "powerhouse.config.json");
 
   const phConfig = options.powerhouseConfig ?? getConfig(phConfigPath);
 
-  const packagesFromConfig = getPackageNamesFromPowerhouseConfig(phConfig);
+  const packagesFromConfig = phConfig.packages ?? [];
   const localPackagesFromConfig =
     getLocalPackageNamesFromPowerhouseConfig(phConfig);
   const phPackagesStr = env.PH_PACKAGES;
-  const envPhPackages = phPackagesStr?.split(",");
+  const envPhPackages = phPackagesStr
+    ? parsePackagesEnvOverride(phPackagesStr)
+    : undefined;
 
   const phPackages = envPhPackages ?? packagesFromConfig;
 
+  // Precedence (highest → lowest): `ph connect build --packages-registry`
+  // CLI override > source-config `packageRegistryUrl`. The resolved value
+  // flows both into the CSP header (script-src allowance for the registry
+  // CDN) and into the emitted runtime config so the SPA reads the same
+  // value.
   const phPackageRegistryUrl =
-    env.PH_CONNECT_PACKAGES_REGISTRY ?? phConfig.packageRegistryUrl ?? null;
+    options.cliPackageRegistryUrl ?? phConfig.packageRegistryUrl ?? null;
+
+  // Base path is a runtime-config field (connect.app.basePath), not an env
+  // var. Resolve it with the same precedence as the rest of the connect
+  // config: CLI override > source powerhouse.config.json.
+  const connectBasePath =
+    options.cliConnectOverride?.app?.basePath ??
+    phConfig.connect?.app?.basePath;
 
   const authToken = env.PH_SENTRY_AUTH_TOKEN;
   const org = env.PH_SENTRY_ORG;
   const project = env.PH_SENTRY_PROJECT;
-  const release = env.PH_CONNECT_SENTRY_RELEASE || env.PH_CONNECT_VERSION;
+  // Release tag derived from the workspace version so it matches the
+  // sourcemap upload tag CI uses.
+  const release =
+    process.env.WORKSPACE_VERSION ??
+    process.env.npm_package_version ??
+    env.PH_CONNECT_VERSION;
   const uploadSentrySourcemaps = authToken && org && project;
 
   const connectHtmlTags = getConnectHtmlTags({
@@ -271,9 +292,11 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     );
   }
 
-  // hide warnings unless LOG_LEVEL is set to debug
+  // hide warnings unless LOG_LEVEL is set to debug, or the source config
+  // declares connect.app.logLevel = "debug"
   const isDebug =
-    process.env.LOG_LEVEL === "debug" || env.PH_CONNECT_LOG_LEVEL === "debug";
+    process.env.LOG_LEVEL === "debug" ||
+    phConfig.connect?.app?.logLevel === "debug";
   const customLogger = isDebug
     ? undefined
     : viteLogger({
@@ -321,9 +344,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     // Prefix served/built asset URLs so Connect can run under a path prefix
     // (reverse proxy). Mirrors the client router basename; normalize so a bare
     // `app` or `/app` becomes `/app/` and matches the router.
-    base: env.PH_CONNECT_BASE_PATH
-      ? normalizeBasePath(env.PH_CONNECT_BASE_PATH)
-      : undefined,
+    base: connectBasePath ? normalizeBasePath(connectBasePath) : undefined,
     server: {
       watch: {
         ignored: ["**/backup-documents/**", "**/.ph/**"],
@@ -336,7 +357,9 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
       dedupe: ["react", "react-dom"],
       tsconfigPaths: true,
     },
-    define: {},
+    define: {
+      PH_CONNECT_SENTRY_RELEASE: JSON.stringify(release || "unknown"),
+    },
     customLogger,
     envPrefix: ["PH_CONNECT_"],
     optimizeDeps: {
@@ -350,13 +373,15 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
       exclude: ["@electric-sql/pglite", "@electric-sql/pglite-tools"],
     },
     plugins: [
-      // phPackagesPlugin must be registered before tailwind so its hotUpdate
+      // phConfigPlugin must be registered before tailwind so its hotUpdate
       // hook runs first and can suppress HMR updates for codegen-generated
       // files, preventing tailwind from triggering full page reloads.
-      phPackagesPlugin({
+      phConfigPlugin({
         packages: phPackages,
         projectRoot: options.dirname,
-        registryUrl: phPackageRegistryUrl,
+        connect: phConfig.connect,
+        packageRegistryUrl: phPackageRegistryUrl ?? undefined,
+        cliConnectOverride: options.cliConnectOverride,
       }),
       phBundledPackagesPlugin({
         packages: localPackagesFromConfig,

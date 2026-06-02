@@ -142,6 +142,7 @@ Resolution order for the registry URL:
         "install",
         args.local ? "local" : "registry",
         registryUrl,
+        args.registry !== undefined,
       );
       console.log("Config file updated successfully 🎉");
     } catch (error) {

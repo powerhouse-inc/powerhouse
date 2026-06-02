@@ -1,0 +1,257 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://powerhouse.inc/schemas/powerhouse.config.json",
+  "title": "Powerhouse Connect runtime configuration",
+  "description": "Runtime configuration loaded by Connect at boot from /powerhouse.config.json.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "packages", "localPackage"],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Optional JSON Schema reference for editor autocomplete. Set to the GitHub-hosted schema URL."
+    },
+    "schemaVersion": {
+      "const": 2,
+      "description": "Schema version. Must match the SPA bundle that ships with this dist. The SPA throws on mismatch to prevent SPA/config skew."
+    },
+    "packages": {
+      "type": "array",
+      "description": "Powerhouse packages this Connect instance loads at runtime.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["packageName"],
+        "properties": {
+          "packageName": {
+            "type": "string",
+            "description": "Fully qualified npm package name (e.g. @scope/name)."
+          },
+          "version": {
+            "type": "string",
+            "description": "Exact version (registry providers) or omit to take latest."
+          },
+          "provider": {
+            "type": "string",
+            "enum": ["npm", "github", "local", "registry"],
+            "description": "Where Connect should resolve the package from at runtime."
+          },
+          "url": {
+            "type": "string",
+            "description": "Override URL for non-registry providers (e.g. github tarball)."
+          }
+        }
+      }
+    },
+    "packageRegistryUrl": {
+      "type": "string",
+      "description": "Project-wide package registry endpoint. Copied verbatim from the source `powerhouse.config.json` top-level field — the SPA's Package Manager UI reads this directly."
+    },
+    "localPackage": {
+      "description": "Identity of the consumer project itself, captured at build time. null for Docker images and other generic deploys with no host project.",
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name", "version"],
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "version": {
+              "type": "string"
+            }
+          }
+        }
+      ]
+    },
+    "connect": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Connect-specific UI customisations. All fields optional; omit the section entirely for default behaviour.",
+      "properties": {
+        "branding": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "App identity and visual branding.",
+          "properties": {
+            "appName": {
+              "type": "string",
+              "description": "Browser tab title and any in-app brand text. Defaults to 'Powerhouse Connect'."
+            },
+            "homeBackground": {
+              "type": ["string", "null"],
+              "description": "Hero image on the empty home screen. URL or path to override; null or omitted uses the bundled default image."
+            }
+          }
+        },
+        "app": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Top-level Connect application behaviour.",
+          "properties": {
+            "logLevel": {
+              "type": "string",
+              "enum": ["debug", "info", "warn", "error"],
+              "description": "Log level applied by Connect's logger at boot. Affects browser-side output only.",
+              "default": "info"
+            },
+            "basePath": {
+              "type": "string",
+              "description": "Base path Connect is mounted under (e.g. '/connect' for subpath deploys). Normalised at runtime to start and end with '/'. Defaults to the build-time BASE_URL.",
+              "default": "/"
+            }
+          }
+        },
+        "packages": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Runtime behaviour for the Connect package manager (separate from top-level `packages[]`, which lists which packages to load).",
+          "properties": {
+            "externalEnabled": {
+              "type": "boolean",
+              "description": "When false, Connect refuses to load any package that wasn't bundled at build time. Affirmative replacement for the legacy PH_CONNECT_EXTERNAL_PACKAGES_DISABLED env var.",
+              "default": true
+            }
+          }
+        },
+        "drives": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Default-drive and add-drive UI behaviour.",
+          "properties": {
+            "allowAddDrive": {
+              "type": "boolean",
+              "description": "When false, the SPA hides the 'add drive' affordance entirely (top-level). Per-section overrides live in `sections.{remote,local}.allowAdd`.",
+              "default": true
+            },
+            "defaultDrives": {
+              "type": "array",
+              "description": "Drives the SPA auto-connects to on first load. Each must specify a URL; name and icon are optional overrides.",
+              "default": [],
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["url"],
+                "properties": {
+                  "url": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": ["string", "null"]
+                  },
+                  "icon": {
+                    "type": ["string", "null"]
+                  }
+                }
+              }
+            },
+            "preserveStrategy": {
+              "type": "string",
+              "enum": ["preserve-all", "preserve-by-url-and-detach"],
+              "description": "Strategy applied when defaultDrives change between deploys. 'preserve-all' keeps user-added drives untouched; 'preserve-by-url-and-detach' detaches removed default drives. No schema default — opt-in only."
+            },
+            "sections": {
+              "type": "object",
+              "additionalProperties": false,
+              "description": "Per-section visibility and affordance toggles. `remote` covers what was historically split into 'public' + 'cloud'; `local` is browser-local drives.",
+              "properties": {
+                "remote": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "description": "Visibility and add/delete affordances for a drive section in the sidebar.",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean",
+                      "description": "When false, the section is hidden in the sidebar.",
+                      "default": true
+                    },
+                    "allowAdd": {
+                      "type": "boolean",
+                      "description": "When false, the section's 'add drive' affordance is hidden.",
+                      "default": true
+                    },
+                    "allowDelete": {
+                      "type": "boolean",
+                      "description": "When false, drives in this section cannot be deleted from the UI.",
+                      "default": true
+                    }
+                  }
+                },
+                "local": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "description": "Visibility and add/delete affordances for a drive section in the sidebar.",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean",
+                      "description": "When false, the section is hidden in the sidebar.",
+                      "default": true
+                    },
+                    "allowAdd": {
+                      "type": "boolean",
+                      "description": "When false, the section's 'add drive' affordance is hidden.",
+                      "default": true
+                    },
+                    "allowDelete": {
+                      "type": "boolean",
+                      "description": "When false, drives in this section cannot be deleted from the UI.",
+                      "default": true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "renown": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Renown identity / authentication coordinates.",
+          "properties": {
+            "url": {
+              "type": "string",
+              "description": "Renown auth service URL.",
+              "default": "https://www.renown.id"
+            },
+            "networkId": {
+              "type": "string",
+              "description": "CAIP-2 network namespace (e.g. 'eip155').",
+              "default": "eip155"
+            },
+            "chainId": {
+              "type": "number",
+              "description": "CAIP-2 chain reference within the network namespace.",
+              "default": 1
+            }
+          }
+        },
+        "sentry": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Sentry error-tracking coordinates. Set `dsn` to enable Sentry; leave `dsn` null to disable. The Sentry release tag stays build-time (stamped via Vite's `define` from WORKSPACE_VERSION) so it always matches the sourcemaps uploaded by CI.",
+          "properties": {
+            "dsn": {
+              "type": ["string", "null"],
+              "description": "Sentry DSN URL. `null` disables Sentry entirely; the SPA never loads the Sentry SDK chunk.",
+              "default": null
+            },
+            "env": {
+              "type": "string",
+              "description": "Sentry environment label, surfaced as the `environment` tag on every event.",
+              "default": "dev"
+            },
+            "tracing": {
+              "type": "boolean",
+              "description": "Enable Sentry performance tracing.",
+              "default": false
+            }
+          }
+        }
+      }
+    }
+  }
+}

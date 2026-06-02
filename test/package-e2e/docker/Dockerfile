@@ -92,12 +92,11 @@ FROM package-installed AS connect-builder
 
 ARG PH_CONNECT_BASE_PATH="/"
 # powerhouse.config.json holds the container-side URL (host.docker.internal),
-# which the browser running on the host can't resolve. PH_CONNECT_PACKAGES_REGISTRY
-# overrides what gets baked into ph-packages.json — the browser uses this
+# which the browser running on the host can't resolve. --packages-registry
+# overrides what gets baked into the runtime config — the browser uses this
 # URL to fetch the package from the registry at runtime.
 ARG BROWSER_REGISTRY_URL=http://localhost:8080
-ENV PH_CONNECT_PACKAGES_REGISTRY=${BROWSER_REGISTRY_URL}
-RUN ph connect build --base ${PH_CONNECT_BASE_PATH}
+RUN ph connect build --base ${PH_CONNECT_BASE_PATH} --packages-registry ${BROWSER_REGISTRY_URL}
 
 FROM nginx:alpine AS connect
 RUN apk add --no-cache gettext

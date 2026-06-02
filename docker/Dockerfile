@@ -30,11 +30,14 @@ RUN case "$TAG" in \
 FROM base AS connect-build
 
 ARG PH_CONNECT_BASE_PATH="/"
+# Bakes the packages registry URL into the dist powerhouse.config.json as the
+# top-level `packageRegistryUrl` the SPA reads at runtime. Without it the field
+# is absent and Connect's package manager fetches nothing (registryUrl === null
+# short-circuits useRegistryPackages). Overridable via --build-arg.
 ARG PH_CONNECT_PACKAGES_REGISTRY="https://registry.dev.vetra.io"
-ENV PH_CONNECT_PACKAGES_REGISTRY=${PH_CONNECT_PACKAGES_REGISTRY}
 
 WORKDIR /app/project
-RUN ph connect build --base ${PH_CONNECT_BASE_PATH}
+RUN ph connect build --base ${PH_CONNECT_BASE_PATH} --packages-registry ${PH_CONNECT_PACKAGES_REGISTRY}
 
 # ============================================================
 # Connect target: nginx serving static files (runs as non-root)
@@ -58,9 +61,6 @@ USER nginx
 
 ENV PORT=3001
 ENV PH_CONNECT_BASE_PATH="/"
-ENV PH_REGISTRY_PACKAGES=""
-ENV PH_REGISTRY_URL="https://registry.dev.vetra.io"
-ENV PH_PACKAGE_REGISTRY_URL=""
 
 EXPOSE ${PORT}
 

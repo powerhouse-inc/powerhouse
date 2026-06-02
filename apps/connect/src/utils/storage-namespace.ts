@@ -3,11 +3,11 @@ import {
   getStorageNamespace,
   ROOT_STORAGE_NAMESPACE,
 } from "@powerhousedao/shared/connect";
-import { env } from "../connect.config.js";
+import { PH_CONNECT_BASE_PATH } from "../connect.config.js";
 
-// Single owner of the origin-scoped storage namespace. Resolved from the same
-// base-path source connect.config.ts uses so every store agrees.
-const basePath = env.PH_CONNECT_BASE_PATH || import.meta.env.BASE_URL;
+// Single owner of the origin-scoped storage namespace. Reuses the same
+// resolved base path connect.config.ts feeds the router so every store agrees.
+const basePath = PH_CONNECT_BASE_PATH;
 
 // "reactor" at the root, "reactor--<slug>" under a path prefix.
 export const STORAGE_NAMESPACE = getStorageNamespace(basePath);

@@ -3,12 +3,15 @@ import {
   ChannelScheme,
   ReactorBuilder,
   ReactorClientBuilder,
+  setDriveMetadata,
   type BrowserReactorClientModule,
   type Database,
   type IDocumentModelLoader,
   type JwtHandler,
   type SignerConfig,
 } from "@powerhousedao/reactor-browser";
+import type { PHConnectDefaultDrive } from "@powerhousedao/shared/clis";
+import type { RuntimePowerhouseConfig } from "@powerhousedao/shared/connect";
 import type {
   DocumentModelModule,
   UpgradeManifest,
@@ -85,16 +88,10 @@ export async function createBrowserReactor(
   } as BrowserReactorClientModule;
 }
 
-/**
- * Parse default drives from environment variable.
- * Returns an array of drive REST endpoint URLs (e.g., "https://example.com/d/powerhouse").
- */
-export function getDefaultDrivesFromEnv(): string[] {
-  const envValue = import.meta.env.PH_CONNECT_DEFAULT_DRIVES_URL as
-    | string
-    | undefined;
-  if (!envValue) return [];
-  return envValue.split(",").filter((url) => url.trim().length > 0);
+export function getDefaultDrives(
+  runtimeConfig: RuntimePowerhouseConfig,
+): PHConnectDefaultDrive[] {
+  return runtimeConfig.connect.drives?.defaultDrives ?? [];
 }
 
 /**
@@ -103,35 +100,50 @@ export function getDefaultDrivesFromEnv(): string[] {
  * Retries with linear backoff to handle the common race where Connect's
  * dev server is ready before the switchboard has finished binding its port.
  *
- * @param defaultDriveUrls - Array of drive REST endpoint URLs (e.g., "https://example.com/d/powerhouse")
+ * @param drives - Array of drive objects with url, optional name and icon
  * @param options - Forwarded to addRemoteDrive. Pass `awaitInitialSync: true`
  *   when the URL pins a drive slug that must resolve before selection.
  */
 export async function addDefaultDrivesForNewReactor(
-  defaultDriveUrls: string[],
+  drives: PHConnectDefaultDrive[],
   options?: { awaitInitialSync?: boolean; initialSyncTimeoutMs?: number },
 ): Promise<void> {
   const MAX_ATTEMPTS = 3;
   const BACKOFF_MS = 2000;
 
-  for (const url of defaultDriveUrls) {
+  for (const drive of drives) {
+    let driveId: string | undefined;
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
       try {
-        await addRemoteDrive(url, undefined, options);
+        driveId = await addRemoteDrive(drive.url, undefined, options);
         break;
       } catch (error) {
         if (attempt === MAX_ATTEMPTS) {
           console.error(
-            `Failed to add default drive ${url} after ${MAX_ATTEMPTS} attempts:`,
+            `Failed to add default drive ${drive.url} after ${MAX_ATTEMPTS} attempts:`,
             error,
           );
         } else {
           const delay = BACKOFF_MS * attempt;
           console.warn(
-            `Default drive ${url} not reachable (attempt ${attempt}/${MAX_ATTEMPTS}), retrying in ${delay}ms...`,
+            `Default drive ${drive.url} not reachable (attempt ${attempt}/${MAX_ATTEMPTS}), retrying in ${delay}ms...`,
           );
           await new Promise((resolve) => setTimeout(resolve, delay));
         }
+      }
+    }
+
+    if (driveId && (drive.name || drive.icon)) {
+      try {
+        await setDriveMetadata(driveId, {
+          name: drive.name,
+          icon: drive.icon,
+        });
+      } catch (error) {
+        console.warn(
+          `Default drive ${drive.url} was added but metadata update failed:`,
+          error,
+        );
       }
     }
   }

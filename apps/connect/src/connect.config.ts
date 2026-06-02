@@ -1,31 +1,47 @@
 import {
   setLogLevel,
-  type FullPHGlobalConfig,
   type PHAppConfig,
   type PHDocumentEditorConfig,
   type PHGlobalConfig,
 } from "@powerhousedao/reactor-browser";
+import type { PHConnectRuntimeConfig } from "@powerhousedao/shared/clis";
 import {
   loadRuntimeEnv,
   normalizeBasePath,
 } from "@powerhousedao/shared/connect";
 import { logger } from "document-model";
+import { getRuntimeConfig } from "./runtime-config.js";
 
-// Load environment variables with validation and defaults
+// Env vars are reserved for version stamps and analytics processor toggles.
+// Everything in the Connect runtime schema (PHConnectRuntimeConfig) is read
+// from `runtime` below. The Sentry release tag is stamped at build time via
+// Vite's `define` so it always matches the sourcemap upload tag CI used.
 export const env = loadRuntimeEnv({
   processEnv: import.meta.env,
 });
+
+declare const PH_CONNECT_SENTRY_RELEASE: string;
+
+// Runtime fields come from the JSON, not env. start-connect.tsx's top-level
+// await guarantees the loader cache is warm by the time this module
+// evaluates, so getRuntimeConfig() resolves synchronously. The cache merges
+// DEFAULT_CONNECT_CONFIG into whatever the file declared, so every leaf
+// under `runtime.*` is guaranteed defined.
+const runtime = getRuntimeConfig().connect;
 
 function getRouterBasenameFromBasePath(basePath: string) {
   return basePath.endsWith("/") ? basePath : basePath + "/";
 }
 
-function getPHGlobalConfigFromEnv(): PHGlobalConfig {
-  const basePath = env.PH_CONNECT_BASE_PATH || import.meta.env.BASE_URL;
-  const routerBasename = getRouterBasenameFromBasePath(basePath);
-  const config = {
-    basePath,
-    routerBasename,
+// Hardcoded literal defaults for `PHGlobalConfig` fields whose env-var
+// source was removed. The fields stay on the type so wired-but-dead SW /
+// hook consumers keep typechecking; values mirror the previous Zod
+// defaults.
+function getBuiltInDefaults(): Omit<
+  PHGlobalConfig,
+  "basePath" | "routerBasename"
+> {
+  return {
     allowList: undefined,
     allowedDocumentTypes: [],
     isDragAndDropEnabled: true,
@@ -33,111 +49,143 @@ function getPHGlobalConfigFromEnv(): PHGlobalConfig {
     isEditorReadModeEnabled: false,
     isExternalControlsEnabled: false,
     version: env.PH_CONNECT_VERSION,
-    logLevel: env.PH_CONNECT_LOG_LEVEL,
-    requiresHardRefresh: env.PH_CONNECT_REQUIRES_HARD_REFRESH,
-    warnOutdatedApp: env.PH_CONNECT_WARN_OUTDATED_APP,
-    studioMode: env.PH_CONNECT_STUDIO_MODE,
-    versionCheckInterval: env.PH_CONNECT_VERSION_CHECK_INTERVAL,
+    logLevel: runtime.app?.logLevel,
+    requiresHardRefresh: true,
+    warnOutdatedApp: false,
+    studioMode: false,
+    versionCheckInterval: 60 * 60 * 1000,
     cliVersion: env.PH_CONNECT_CLI_VERSION,
-    fileUploadOperationsChunkSize:
-      env.PH_CONNECT_FILE_UPLOAD_OPERATIONS_CHUNK_SIZE,
-    gaTrackingId: env.PH_CONNECT_GA_TRACKING_ID,
-    defaultDrivesUrl: env.PH_CONNECT_DEFAULT_DRIVES_URL,
-    drivesPreserveStrategy: env.PH_CONNECT_DRIVES_PRESERVE_STRATEGY,
-    enabledEditors: env.PH_CONNECT_ENABLED_EDITORS?.split(","),
-    disabledEditors: env.PH_CONNECT_DISABLED_EDITORS.split(","),
+    fileUploadOperationsChunkSize: 50,
+    gaTrackingId: undefined,
+    defaultDrivesUrl: runtime.drives?.defaultDrives?.[0]?.url,
+    drivesPreserveStrategy: runtime.drives?.preserveStrategy,
+    enabledEditors: undefined,
+    disabledEditors: ["powerhouse/document-drive"],
 
     /* Processors */
-    isExternalProcessorsEnabled: env.PH_CONNECT_EXTERNAL_PROCESSORS_ENABLED,
-    isAnalyticsEnabled: env.PH_CONNECT_ANALYTICS_ENABLED,
+    isExternalProcessorsEnabled: true,
+    // Analytics off by default; flip to true (or wire a runtime-config field)
+    // when we want analytics enabled out of the box.
+    isAnalyticsEnabled: false,
     isAnalyticsExternalProcessorsEnabled:
-      env.PH_CONNECT_EXTERNAL_PROCESSORS_ENABLED &&
       env.PH_CONNECT_EXTERNAL_ANALYTICS_PROCESSORS_ENABLED,
-    analyticsDatabaseName: env.PH_CONNECT_ANALYTICS_DATABASE_NAME,
-    isRelationalProcessorsEnabled: env.PH_CONNECT_RELATIONAL_PROCESSORS_ENABLED,
-    isExternalRelationalProcessorsEnabled:
-      env.PH_CONNECT_EXTERNAL_PROCESSORS_ENABLED &&
-      env.PH_CONNECT_EXTERNAL_RELATIONAL_PROCESSORS_ENABLED,
+    analyticsDatabaseName: undefined,
+    isRelationalProcessorsEnabled: true,
+    isExternalRelationalProcessorsEnabled: true,
 
-    renownUrl: env.PH_CONNECT_RENOWN_URL,
-    renownNetworkId: env.PH_CONNECT_RENOWN_NETWORK_ID,
-    renownChainId: env.PH_CONNECT_RENOWN_CHAIN_ID,
-    sentryRelease: env.PH_CONNECT_SENTRY_RELEASE,
-    sentryDsn: env.PH_CONNECT_SENTRY_DSN,
-    sentryEnv: env.PH_CONNECT_SENTRY_ENV,
+    renownUrl: runtime.renown?.url,
+    renownNetworkId: runtime.renown?.networkId,
+    renownChainId: runtime.renown?.chainId,
+    sentryRelease: PH_CONNECT_SENTRY_RELEASE,
+    sentryDsn: runtime.sentry?.dsn ?? undefined,
+    sentryEnv: runtime.sentry?.env,
     isDiffAnalyticsEnabled: env.PH_CONNECT_DIFF_ANALYTICS_ENABLED,
     isDriveAnalyticsEnabled: env.PH_CONNECT_DRIVE_ANALYTICS_ENABLED,
-    isPublicDrivesEnabled: env.PH_CONNECT_PUBLIC_DRIVES_ENABLED,
-    isCloudDrivesEnabled: env.PH_CONNECT_CLOUD_DRIVES_ENABLED,
-    isLocalDrivesEnabled: env.PH_CONNECT_LOCAL_DRIVES_ENABLED,
-    isSentryTracingEnabled: env.PH_CONNECT_SENTRY_TRACING_ENABLED,
-    isDocumentModelSelectionSettingsEnabled:
-      !env.PH_CONNECT_HIDE_DOCUMENT_MODEL_SELECTION_SETTINGS,
-    isAddDriveEnabled: !env.PH_CONNECT_DISABLE_ADD_DRIVE,
-    isAddPublicDrivesEnabled: !env.PH_CONNECT_DISABLE_ADD_PUBLIC_DRIVES,
-    isDeletePublicDrivesEnabled: !env.PH_CONNECT_DISABLE_DELETE_PUBLIC_DRIVES,
-    isAddCloudDrivesEnabled: !env.PH_CONNECT_DISABLE_ADD_CLOUD_DRIVES,
-    isDeleteCloudDrivesEnabled: !env.PH_CONNECT_DISABLE_DELETE_CLOUD_DRIVES,
-    isAddLocalDrivesEnabled: !env.PH_CONNECT_DISABLE_ADD_LOCAL_DRIVES,
-    isDeleteLocalDrivesEnabled: !env.PH_CONNECT_DISABLE_DELETE_LOCAL_DRIVES,
-    isAnalyticsDatabaseWorkerEnabled:
-      !env.PH_CONNECT_ANALYTICS_DATABASE_WORKER_DISABLED,
-    isExternalPackagesEnabled: !env.PH_CONNECT_EXTERNAL_PACKAGES_DISABLED,
-  } satisfies FullPHGlobalConfig;
-
-  return config;
+    isPublicDrivesEnabled: runtime.drives?.sections?.remote?.enabled,
+    isCloudDrivesEnabled: runtime.drives?.sections?.remote?.enabled ?? true,
+    isLocalDrivesEnabled: runtime.drives?.sections?.local?.enabled,
+    isSentryTracingEnabled: runtime.sentry?.tracing,
+    isDocumentModelSelectionSettingsEnabled: false,
+    isAddDriveEnabled: runtime.drives?.allowAddDrive,
+    isAddPublicDrivesEnabled: runtime.drives?.sections?.remote?.allowAdd,
+    isDeletePublicDrivesEnabled: runtime.drives?.sections?.remote?.allowDelete,
+    isAddCloudDrivesEnabled: runtime.drives?.sections?.remote?.allowAdd ?? true,
+    isDeleteCloudDrivesEnabled:
+      runtime.drives?.sections?.remote?.allowDelete ?? true,
+    isAddLocalDrivesEnabled: runtime.drives?.sections?.local?.allowAdd,
+    isDeleteLocalDrivesEnabled: runtime.drives?.sections?.local?.allowDelete,
+    isAnalyticsDatabaseWorkerEnabled: false,
+    isExternalPackagesEnabled: runtime.packages?.externalEnabled,
+  };
 }
 
-export const phGlobalConfigFromEnv = getPHGlobalConfigFromEnv();
+export function buildPHGlobalConfig(
+  basePath: string,
+  routerBasename: string,
+  connectFromConfig: PHConnectRuntimeConfig,
+): PHGlobalConfig {
+  const defaults = getBuiltInDefaults();
+  const fileOverrides: Partial<PHGlobalConfig> = {};
+
+  if (connectFromConfig.drives?.allowAddDrive !== undefined) {
+    fileOverrides.isAddDriveEnabled = connectFromConfig.drives.allowAddDrive;
+  }
+
+  return {
+    basePath,
+    routerBasename,
+    ...defaults,
+    ...fileOverrides,
+  };
+}
+
+function getPHGlobalConfigFromRuntime(): PHGlobalConfig {
+  // ConfigLoader merges DEFAULT_CONNECT_CONFIG at boot, so basePath is
+  // always defined; the `?? "/"` is a defensive guard for typecheck.
+  const basePath = runtime.app?.basePath ?? "/";
+  const routerBasename = getRouterBasenameFromBasePath(basePath);
+  return buildPHGlobalConfig(basePath, routerBasename, runtime);
+}
+
+export const phGlobalConfig = getPHGlobalConfigFromRuntime();
 
 export const defaultPHDocumentEditorConfig: PHDocumentEditorConfig = {
-  isExternalControlsEnabled: phGlobalConfigFromEnv.isExternalControlsEnabled,
+  isExternalControlsEnabled: phGlobalConfig.isExternalControlsEnabled,
 };
 
 export const defaultPHAppConfig: PHAppConfig = {
-  allowedDocumentTypes: phGlobalConfigFromEnv.allowedDocumentTypes,
-  isDragAndDropEnabled: phGlobalConfigFromEnv.isDragAndDropEnabled,
+  allowedDocumentTypes: phGlobalConfig.allowedDocumentTypes,
+  isDragAndDropEnabled: phGlobalConfig.isDragAndDropEnabled,
 };
 
-// Set log level from validated config
-setLogLevel(env.PH_CONNECT_LOG_LEVEL);
-logger.debug("Setting log level to @level.", env.PH_CONNECT_LOG_LEVEL);
+// Set log level from the runtime config (DEFAULT_CONNECT_CONFIG provides a
+// fallback, so this is always defined).
+const RESOLVED_LOG_LEVEL = runtime.app?.logLevel;
+if (RESOLVED_LOG_LEVEL) {
+  setLogLevel(RESOLVED_LOG_LEVEL);
+}
+logger.debug("Setting log level to @level.", RESOLVED_LOG_LEVEL);
 
-// Normalize the base path to ensure it starts and ends with a forward slash
-const PH_CONNECT_BASE_PATH = normalizeBasePath(
-  env.PH_CONNECT_BASE_PATH || import.meta.env.BASE_URL,
+// Normalize the base path to ensure it starts and ends with a forward slash.
+export const PH_CONNECT_BASE_PATH = normalizeBasePath(
+  runtime.app?.basePath ?? "/",
 );
 
-// Analytics database name. Explicit env override wins; otherwise the default
-// is scoped by base path so instances on different prefixes of one origin do
-// not share an analytics DB. Root resolves to ":analytics" (unchanged).
-const PH_CONNECT_ANALYTICS_DATABASE_NAME =
-  env.PH_CONNECT_ANALYTICS_DATABASE_NAME ||
-  `${PH_CONNECT_BASE_PATH.replace(/\//g, "")}:analytics`;
+// Analytics database name — derived deterministically from the base path so
+// instances on different prefixes of one origin do not share an analytics DB.
+// Root resolves to ":analytics".
+const PH_CONNECT_ANALYTICS_DATABASE_NAME = `${PH_CONNECT_BASE_PATH.replace(
+  /\//g,
+  "",
+)}:analytics`;
 
+// The CLOUD section was collapsed into the unified `remote` section. PUBLIC
+// keeps its existing string identifier in the legacy
+// connectConfig.drives.sections map to avoid rippling through downstream UI
+// components — both PUBLIC and the
+// soon-to-be-removed CLOUD readers point at runtime.drives.sections.remote.
 export const connectConfig = {
   appVersion: env.PH_CONNECT_VERSION,
-  studioMode: env.PH_CONNECT_STUDIO_MODE,
-  warnOutdatedApp: env.PH_CONNECT_WARN_OUTDATED_APP,
-  appVersionCheckInterval: env.PH_CONNECT_VERSION_CHECK_INTERVAL,
+  studioMode: false,
+  warnOutdatedApp: false,
+  appVersionCheckInterval: 60 * 60 * 1000,
   routerBasename: PH_CONNECT_BASE_PATH,
-  externalPackagesEnabled: !env.PH_CONNECT_EXTERNAL_PACKAGES_DISABLED,
+  externalPackagesEnabled: runtime.packages?.externalEnabled,
   processors: {
-    enabled: env.PH_CONNECT_PROCESSORS_ENABLED,
-    externalProcessorsEnabled: env.PH_CONNECT_EXTERNAL_PROCESSORS_ENABLED,
+    enabled: true,
+    externalProcessorsEnabled: true,
   },
   analytics: {
-    enabled: env.PH_CONNECT_ANALYTICS_ENABLED,
+    enabled: true,
     databaseName: PH_CONNECT_ANALYTICS_DATABASE_NAME,
-    useWorker: !env.PH_CONNECT_ANALYTICS_DATABASE_WORKER_DISABLED,
+    useWorker: false,
     driveAnalyticsEnabled: env.PH_CONNECT_DRIVE_ANALYTICS_ENABLED,
     diffProcessorEnabled: env.PH_CONNECT_DIFF_ANALYTICS_ENABLED,
-    externalProcessorsEnabled: env.PH_CONNECT_EXTERNAL_PROCESSORS_ENABLED,
+    externalProcessorsEnabled: true,
   },
   relational: {
-    enabled: env.PH_CONNECT_RELATIONAL_PROCESSORS_ENABLED,
-    externalProcessorsEnabled:
-      env.PH_CONNECT_EXTERNAL_RELATIONAL_PROCESSORS_ENABLED,
+    enabled: true,
+    externalProcessorsEnabled: true,
   },
   openPanel: {
     clientId: env.PH_CONNECT_OPENPANEL_CLIENT_ID ?? "",
@@ -147,43 +195,46 @@ export const connectConfig = {
     trackOperations: env.PH_CONNECT_OPENPANEL_TRACK_OPERATIONS,
   },
   renown: {
-    url: env.PH_CONNECT_RENOWN_URL,
-    networkId: env.PH_CONNECT_RENOWN_NETWORK_ID,
-    chainId: env.PH_CONNECT_RENOWN_CHAIN_ID,
+    url: runtime.renown?.url,
+    networkId: runtime.renown?.networkId,
+    chainId: runtime.renown?.chainId,
   },
   sentry: {
-    release: env.PH_CONNECT_SENTRY_RELEASE,
-    dsn: env.PH_CONNECT_SENTRY_DSN,
-    env: env.PH_CONNECT_SENTRY_ENV,
-    tracing: env.PH_CONNECT_SENTRY_TRACING_ENABLED,
+    release: PH_CONNECT_SENTRY_RELEASE,
+    // `dsn: null` (default) means Sentry is disabled — useInitSentry bails.
+    dsn: runtime.sentry?.dsn ?? null,
+    env: runtime.sentry?.env,
+    tracing: runtime.sentry?.tracing ?? false,
   },
   content: {
-    showSearchBar: env.PH_CONNECT_SEARCH_BAR_ENABLED,
-    showDocumentModelSelectionSetting:
-      !env.PH_CONNECT_HIDE_DOCUMENT_MODEL_SELECTION_SETTINGS,
+    showSearchBar: false,
+    showDocumentModelSelectionSetting: false,
   },
   drives: {
-    addDriveEnabled: !env.PH_CONNECT_DISABLE_ADD_DRIVE,
-    preserveStrategy: env.PH_CONNECT_DRIVES_PRESERVE_STRATEGY,
-    sections: {
-      LOCAL: {
-        enabled: env.PH_CONNECT_LOCAL_DRIVES_ENABLED,
-        allowAdd: !env.PH_CONNECT_DISABLE_ADD_LOCAL_DRIVES,
-        allowDelete: !env.PH_CONNECT_DISABLE_DELETE_LOCAL_DRIVES,
-      },
-      CLOUD: {
-        enabled: env.PH_CONNECT_CLOUD_DRIVES_ENABLED,
-        allowAdd: !env.PH_CONNECT_DISABLE_ADD_CLOUD_DRIVES,
-        allowDelete: !env.PH_CONNECT_DISABLE_DELETE_CLOUD_DRIVES,
-      },
-      PUBLIC: {
-        enabled: env.PH_CONNECT_PUBLIC_DRIVES_ENABLED,
-        allowAdd: !env.PH_CONNECT_DISABLE_ADD_PUBLIC_DRIVES,
-        allowDelete: !env.PH_CONNECT_DISABLE_DELETE_PUBLIC_DRIVES,
-      },
-    },
+    addDriveEnabled: runtime.drives?.allowAddDrive,
+    preserveStrategy: runtime.drives?.preserveStrategy,
+    // The legacy `SharingType` enum still includes a "CLOUD" variant.
+    // Connect collapsed CLOUD into the unified remote section, so both CLOUD
+    // and PUBLIC map to the same `runtime.drives.sections.remote` object —
+    // the alias keeps `sections[sharingType]` lookups type-safe for every
+    // SharingType value.
+    sections: (() => {
+      const remote = {
+        enabled: runtime.drives?.sections?.remote?.enabled,
+        allowAdd: runtime.drives?.sections?.remote?.allowAdd,
+        allowDelete: runtime.drives?.sections?.remote?.allowDelete,
+      };
+      return {
+        LOCAL: {
+          enabled: runtime.drives?.sections?.local?.enabled,
+          allowAdd: runtime.drives?.sections?.local?.allowAdd,
+          allowDelete: runtime.drives?.sections?.local?.allowDelete,
+        },
+        PUBLIC: remote,
+        CLOUD: remote,
+      };
+    })(),
   },
-  gaTrackingId: env.PH_CONNECT_GA_TRACKING_ID,
+  gaTrackingId: undefined,
   phCliVersion: env.PH_CONNECT_CLI_VERSION,
-  packagesRegistry: env.PH_CONNECT_PACKAGES_REGISTRY,
 } as const;

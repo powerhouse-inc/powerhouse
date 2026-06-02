@@ -146,45 +146,64 @@ After starting, you can access:
 - **Connect**: http://localhost:3000
 - **Switchboard**: http://localhost:4000
 
-## Environment Variables
+## Configuring Connect at runtime
 
-### Connect Environment Variables
+Connect's runtime behavior is driven by `powerhouse.config.json` (the same file the build uses). For a Docker deployment you have three options:
 
-| Variable                | Description                                         | Default  |
-| ----------------------- | --------------------------------------------------- | -------- |
-| `PORT`                  | Port the server listens on                          | `3001`   |
-| `PH_CONNECT_BASE_PATH`  | Base URL path for the application                   | `/`      |
-| `PH_REGISTRY_PACKAGES`  | Comma-separated list of packages to load at startup | `""`     |
-| `PH_CONNECT_SENTRY_DSN` | Sentry DSN for error tracking                       | `""`     |
-| `PH_CONNECT_SENTRY_ENV` | Sentry environment name                             | `""`     |
-| `DATABASE_URL`          | PostgreSQL connection string                        | Required |
+1. **Mount your own `powerhouse.config.json`** as a Kubernetes ConfigMap / Secret (or a bind-mounted file) at `/var/www/html/project/powerhouse.config.json`. The SPA fetches it from `/powerhouse.config.json` on every page load, so post-deploy edits are visible after a refresh.
+2. **Pass a JSON payload via the `PH_CONNECT_CONFIG_JSON` env var**. The entrypoint deep-merges it into the dist `powerhouse.config.json` at container start (set-if-absent — a mounted file's values always win).
+3. **Edit the file at build time** via `ph connect build --json '{...}'` or individual `--flag`s, baking the values into the image.
 
-#### Feature Flags
+For the full configuration model, precedence ladder, and the complete list of `connect.*` fields, see the [Configure Environment](./04-ConfigureEnvironment.md) guide.
 
-| Variable                                            | Description                        | Default   |
-| --------------------------------------------------- | ---------------------------------- | --------- |
-| `PH_CONNECT_DEFAULT_DRIVES_URL`                     | Default drives URL to load         | `""`      |
-| `PH_CONNECT_ENABLED_EDITORS`                        | Enabled editor types (`*` for all) | `"*"`     |
-| `PH_CONNECT_DISABLED_EDITORS`                       | Disabled editor types              | `""`      |
-| `PH_CONNECT_PUBLIC_DRIVES_ENABLED`                  | Enable public drives               | `"true"`  |
-| `PH_CONNECT_CLOUD_DRIVES_ENABLED`                   | Enable cloud drives                | `"true"`  |
-| `PH_CONNECT_LOCAL_DRIVES_ENABLED`                   | Enable local drives                | `"true"`  |
-| `PH_CONNECT_SEARCH_BAR_ENABLED`                     | Enable search bar                  | `"false"` |
-| `PH_CONNECT_DISABLE_ADD_PUBLIC_DRIVES`              | Disable adding public drives       | `"false"` |
-| `PH_CONNECT_DISABLE_ADD_CLOUD_DRIVES`               | Disable adding cloud drives        | `"false"` |
-| `PH_CONNECT_DISABLE_ADD_LOCAL_DRIVES`               | Disable adding local drives        | `"false"` |
-| `PH_CONNECT_DISABLE_DELETE_PUBLIC_DRIVES`           | Disable deleting public drives     | `"false"` |
-| `PH_CONNECT_DISABLE_DELETE_CLOUD_DRIVES`            | Disable deleting cloud drives      | `"false"` |
-| `PH_CONNECT_DISABLE_DELETE_LOCAL_DRIVES`            | Disable deleting local drives      | `"false"` |
-| `PH_CONNECT_HIDE_DOCUMENT_MODEL_SELECTION_SETTINGS` | Hide document model selection      | `"true"`  |
+### Connect container env vars
 
-#### Renown Authentication
+Connect's SPA reads runtime configuration from `/powerhouse.config.json`, never from env vars at runtime. The container entrypoint, however, can apply operator-supplied JSON to that file at startup (set-if-absent) — equivalent to pre-running `ph connect config --json '{...}'` on the dist file. The SPA then reads the file as usual.
 
-| Variable                       | Description                       | Default                    |
-| ------------------------------ | --------------------------------- | -------------------------- |
-| `PH_CONNECT_RENOWN_URL`        | Renown authentication service URL | `"https://auth.renown.id"` |
-| `PH_CONNECT_RENOWN_NETWORK_ID` | Renown network identifier         | `"eip155"`                 |
-| `PH_CONNECT_RENOWN_CHAIN_ID`   | Renown chain ID                   | `1`                        |
+#### Container shape and secrets
+
+| Variable                 | Description                                                 | Default  |
+| ------------------------ | ----------------------------------------------------------- | -------- |
+| `PORT`                   | Port the nginx server listens on                            | `3001`   |
+| `PH_CONNECT_BASE_PATH`   | nginx base URL path                                         | `/`      |
+| `PH_CONNECT_CONFIG_JSON` | Runtime config JSON to merge into the dist file (see below) | _unset_  |
+| `DATABASE_URL`           | PostgreSQL connection string (for Switchboard, not Connect) | Required |
+
+Sentry (DSN, environment label, tracing flag) is no longer set via per-field env vars — those live in `connect.sentry.*` of `powerhouse.config.json` and ride through `PH_CONNECT_CONFIG_JSON` like every other runtime field. See the example below.
+
+#### `PH_CONNECT_CONFIG_JSON` (set-if-absent)
+
+Set this env var to a JSON object that mirrors the `connect.*` block of `powerhouse.config.json`. At container start the entrypoint deep-merges it into the dist file with **set-if-absent semantics**: any path already present in the mounted/baked file wins; the env-supplied JSON only fills gaps.
+
+```bash
+docker run \
+  -e PH_CONNECT_CONFIG_JSON='{
+    "connect": {
+      "app": { "logLevel": "debug" },
+      "renown": { "url": "https://renown.staging.example", "chainId": 137 },
+      "drives": {
+        "defaultDrives": [
+          { "url": "https://drive-a.example", "name": null, "icon": null }
+        ],
+        "sections": {
+          "remote": { "enabled": true, "allowAdd": false }
+        }
+      },
+      "sentry": {
+        "dsn": "https://prod-key@sentry.io/1",
+        "env": "prod",
+        "tracing": true
+      }
+    }
+  }' \
+  connect:latest
+```
+
+The schema for the JSON object lives at `packages/builder-tools/connect-utils/runtime-config.schema.json` (also served as the `$schema` URL of any generated file). The same shape that `ph connect config --json` accepts is what `PH_CONNECT_CONFIG_JSON` accepts here.
+
+**Invalid input behaviour:** malformed JSON or a non-object payload aborts container startup with a clear stderr message rather than silently dropping the operator's intent.
+
+**Migration from per-field env vars:** the previous `PH_CONNECT_LOG_LEVEL`, `PH_CONNECT_DISABLE_ADD_DRIVE`, `PH_CONNECT_RENOWN_URL`, `PH_CONNECT_DEFAULT_DRIVES_URL`, `PH_CONNECT_SENTRY_DSN`, `PH_CONNECT_SENTRY_ENV`, `PH_CONNECT_SENTRY_TRACING_ENABLED`, and similar per-field variables are no longer wired. Wrap their values into a single `PH_CONNECT_CONFIG_JSON` payload using the JSON paths shown above. The Sentry **release** tag is build-time only — it stamps into the bundle via Vite's `define` from `WORKSPACE_VERSION` so it always matches the sourcemap upload tag CI used.
 
 ### Switchboard Environment Variables
 

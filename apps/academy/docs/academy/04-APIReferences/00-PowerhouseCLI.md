@@ -432,7 +432,6 @@ and real-time processing with a "Vetra" drive or connection to remote drives.
 
 **Base** - Base path for the app - Usage: `--base <str>`
 
-**Environment:** `PH_CONNECT_BASE_PATH`
 **Log Level** - Log level for the application - Usage: `--log-level <value>`
 
 **Environment:** `PH_CONNECT_LOG_LEVEL`
@@ -445,16 +444,13 @@ and real-time processing with a "Vetra" drive or connection to remote drives.
 **Environment:** `PH_LOCAL_PACKAGE`
 **Default Drives Url** - The default drives url to use in connect - Usage: `--default-drives-url <str>`
 
-**Environment:** `PH_CONNECT_DEFAULT_DRIVES_URL`
 **Drive Preserve Strategy** - The preservation strategy to use on default drives - Usage: `--drive-preserve-strategy <value>`
 
-**Environment:** `PH_CONNECT_DRIVES_PRESERVE_STRATEGY`
 **Default:** `preserve-by-url-and-detach`
 **Host** - Expose the server to the network. Pass an IP (e.g. 0.0.0.0) to bind to a specific address. - Usage: `--host <str>`
 
 **Watch Timeout** - Amount of time to wait before a file is considered changed - Usage: `--watch-timeout <number>`
 
-**Environment:** `PH_WATCH_TIMEOUT`
 **Default:** `300`
 **Https Key File** - path to the ssl key file - Usage: `--https-key-file <str>`
 
@@ -480,7 +476,6 @@ and real-time processing with a "Vetra" drive or connection to remote drives.
 **Default:** `false`
 **Ignore Local** - Do not load local packages from this project - Usage: `--ignore-local`
 
-**Environment:** `PH_DISABLE_LOCAL_PACKAGE`
 **Force** - Force dep pre-optimization regardless of whether deps have changed. - Usage: `--force`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
@@ -505,7 +500,7 @@ and real-time processing with a "Vetra" drive or connection to remote drives.
 
 
 ## Connect
-Powerhouse Connect commands. Use with `studio`, `build` or `preview`. Defaults to `studio` if not specified.
+Powerhouse Connect commands. Use with `studio`, `build`, `preview`, or `config`. Defaults to `studio` if not specified.
 
 ## Connect Studio
 The studio command starts the Connect Studio, a development environment for building
@@ -527,7 +522,6 @@ your project.
 **Default:** `3000`
 **Base** - Base path for the app - Usage: `--base <str>`
 
-**Environment:** `PH_CONNECT_BASE_PATH`
 **Log Level** - Log level for the application - Usage: `--log-level <value>`
 
 **Environment:** `PH_CONNECT_LOG_LEVEL`
@@ -540,16 +534,13 @@ your project.
 **Environment:** `PH_LOCAL_PACKAGE`
 **Default Drives Url** - The default drives url to use in connect - Usage: `--default-drives-url <str>`
 
-**Environment:** `PH_CONNECT_DEFAULT_DRIVES_URL`
 **Drive Preserve Strategy** - The preservation strategy to use on default drives - Usage: `--drive-preserve-strategy <value>`
 
-**Environment:** `PH_CONNECT_DRIVES_PRESERVE_STRATEGY`
 **Default:** `preserve-by-url-and-detach`
 **Host** - Expose the server to the network. Pass an IP (e.g. 0.0.0.0) to bind to a specific address. - Usage: `--host <str>`
 
 **Watch Timeout** - Amount of time to wait before a file is considered changed - Usage: `--watch-timeout <number>`
 
-**Environment:** `PH_WATCH_TIMEOUT`
 **Default:** `300`
 
 
@@ -558,7 +549,6 @@ your project.
 ### Flags
 **Ignore Local** - Do not load local packages from this project - Usage: `--ignore-local`
 
-**Environment:** `PH_DISABLE_LOCAL_PACKAGE`
 **Force** - Force dep pre-optimization regardless of whether deps have changed. - Usage: `--force`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
@@ -580,7 +570,15 @@ your project.
 
 ## Connect Build
 The Connect build command creates a production build with the project's local and
-external packages included
+external packages included.
+
+Runtime-config overrides (all combinable — last wins on collision):
+  ph connect build                                    Build with the current source config.
+  ph connect build <key> <value>                      Build with a positional override applied (e.g. ph connect build connect.renown.url https://renown.staging).
+  ph connect build --<field> <value>                  Build with a per-field flag override (e.g. --renown-url https://renown.staging).
+  ph connect build --json '\{"…":"…"\}'                Build with a bulk override.
+
+Build has no read mode; passing only <key> without <value> errors out (use `ph connect config <key>` to read).
 
 
 
@@ -589,9 +587,44 @@ external packages included
 **Out Dir** - Output directory - Usage: `--outDir <str>`
 
 **Default:** `.ph/connect-build/dist/`
+**Json** - Inline JSON override for the runtime connect.* block, e.g. '\{"renown":\{"url":"..."\}\}'. Validated against the runtime schema; deep-merged on top of env seeds and source powerhouse.config.json. Individual --flag values beat --json on collision. - Usage: `--json <str>`
+
+**Renown Url** - Override connect.renown.url. - Usage: `--renown-url <str>`
+
+**Renown Network Id** - Override connect.renown.networkId. - Usage: `--renown-network-id <str>`
+
+**Renown Chain Id** - Override connect.renown.chainId. - Usage: `--renown-chain-id <number>`
+
+**Allow Add Drive** - Override connect.drives.allowAddDrive (top-level add-drive toggle). - Usage: `--allow-add-drive <value>`
+
+**External Packages** - Override connect.packages.externalEnabled. - Usage: `--external-packages <value>`
+
+**Remote Drives Enabled** - Override connect.drives.sections.remote.enabled (the unified cloud+public section). - Usage: `--remote-drives-enabled <value>`
+
+**Remote Drives Allow Add** - Override connect.drives.sections.remote.allowAdd. - Usage: `--remote-drives-allow-add <value>`
+
+**Remote Drives Allow Delete** - Override connect.drives.sections.remote.allowDelete. - Usage: `--remote-drives-allow-delete <value>`
+
+**Local Drives Enabled** - Override connect.drives.sections.local.enabled. - Usage: `--local-drives-enabled <value>`
+
+**Local Drives Allow Add** - Override connect.drives.sections.local.allowAdd. - Usage: `--local-drives-allow-add <value>`
+
+**Local Drives Allow Delete** - Override connect.drives.sections.local.allowDelete. - Usage: `--local-drives-allow-delete <value>`
+
+**Packages Registry** - Override the top-level packageRegistryUrl. - Usage: `--packages-registry <str>`
+
+**App Name** - Override connect.branding.appName. - Usage: `--app-name <str>`
+
+**Home Background** - Override connect.branding.homeBackground. URL or path to an image; pass an empty string ("") to reset to the bundled default. - Usage: `--home-background <str>`
+
+**Sentry Dsn** - Override connect.sentry.dsn (Sentry DSN URL). Pass an empty string ("") to set null and disable Sentry. - Usage: `--sentry-dsn <str>`
+
+**Sentry Env** - Override connect.sentry.env (Sentry environment label). - Usage: `--sentry-env <str>`
+
+**Sentry Tracing Enabled** - Override connect.sentry.tracing (Sentry performance tracing). - Usage: `--sentry-tracing-enabled <value>`
+
 **Base** - Base path for the app - Usage: `--base <str>`
 
-**Environment:** `PH_CONNECT_BASE_PATH`
 **Log Level** - Log level for the application - Usage: `--log-level <value>`
 
 **Environment:** `PH_CONNECT_LOG_LEVEL`
@@ -604,11 +637,21 @@ external packages included
 **Environment:** `PH_LOCAL_PACKAGE`
 **Default Drives Url** - The default drives url to use in connect - Usage: `--default-drives-url <str>`
 
-**Environment:** `PH_CONNECT_DEFAULT_DRIVES_URL`
 **Drive Preserve Strategy** - The preservation strategy to use on default drives - Usage: `--drive-preserve-strategy <value>`
 
-**Environment:** `PH_CONNECT_DRIVES_PRESERVE_STRATEGY`
 **Default:** `preserve-by-url-and-detach`
+
+
+
+
+---
+
+## Parameters
+
+### Arguments
+**Key** - Dotted path inside the runtime config (e.g. connect.renown.url). Pair with <value> to set; pass alone to `ph connect config` to read. - Usage: `[key]`
+
+**Value** - Value to set at <key>. Coerced against the runtime schema (string, bool, number, enum). Arrays and objects require --json instead. - Usage: `[value]`
 
 
 
@@ -616,7 +659,6 @@ external packages included
 ### Flags
 **Ignore Local** - Do not load local packages from this project - Usage: `--ignore-local`
 
-**Environment:** `PH_DISABLE_LOCAL_PACKAGE`
 **Force** - Force dep pre-optimization regardless of whether deps have changed. - Usage: `--force`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
@@ -640,7 +682,6 @@ NOTE: You must run `ph connect build` first
 **Default:** `.ph/connect-build/dist/`
 **Base** - Base path for the app - Usage: `--base <str>`
 
-**Environment:** `PH_CONNECT_BASE_PATH`
 **Log Level** - Log level for the application - Usage: `--log-level <value>`
 
 **Environment:** `PH_CONNECT_LOG_LEVEL`
@@ -653,16 +694,13 @@ NOTE: You must run `ph connect build` first
 **Environment:** `PH_LOCAL_PACKAGE`
 **Default Drives Url** - The default drives url to use in connect - Usage: `--default-drives-url <str>`
 
-**Environment:** `PH_CONNECT_DEFAULT_DRIVES_URL`
 **Drive Preserve Strategy** - The preservation strategy to use on default drives - Usage: `--drive-preserve-strategy <value>`
 
-**Environment:** `PH_CONNECT_DRIVES_PRESERVE_STRATEGY`
 **Default:** `preserve-by-url-and-detach`
 **Host** - Expose the server to the network. Pass an IP (e.g. 0.0.0.0) to bind to a specific address. - Usage: `--host <str>`
 
 **Watch Timeout** - Amount of time to wait before a file is considered changed - Usage: `--watch-timeout <number>`
 
-**Environment:** `PH_WATCH_TIMEOUT`
 **Default:** `300`
 
 
@@ -671,7 +709,6 @@ NOTE: You must run `ph connect build` first
 ### Flags
 **Ignore Local** - Do not load local packages from this project - Usage: `--ignore-local`
 
-**Environment:** `PH_DISABLE_LOCAL_PACKAGE`
 **Force** - Force dep pre-optimization regardless of whether deps have changed. - Usage: `--force`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
@@ -860,7 +897,6 @@ models, processors, and real-time updates.
 
 **Ignore Local** - Do not load local packages from this project - Usage: `--ignore-local`
 
-**Environment:** `PH_DISABLE_LOCAL_PACKAGE`
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Use Identity** - enable identity using keypair from ph login (uses ~/.ph/keypair.json) - Usage: `--use-identity`

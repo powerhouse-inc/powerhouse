@@ -27,6 +27,69 @@ export type PowerhousePackage = {
   provider?: PHPackageProvider;
   url?: string;
 };
+
+export type PHConnectBranding = {
+  appName?: string;
+  homeBackground?: string | null;
+};
+
+export type PHConnectDefaultDrive = {
+  url: string;
+  name?: string | null;
+  icon?: string | null;
+};
+
+export type PHConnectDriveSection = {
+  enabled?: boolean;
+  allowAdd?: boolean;
+  allowDelete?: boolean;
+};
+
+export type PHConnectDriveSections = {
+  remote?: PHConnectDriveSection;
+  local?: PHConnectDriveSection;
+};
+
+export type PHConnectDrives = {
+  allowAddDrive?: boolean;
+  defaultDrives?: PHConnectDefaultDrive[];
+  preserveStrategy?: DrivePreserveStrategy;
+  sections?: PHConnectDriveSections;
+};
+
+export type PHConnectApp = {
+  logLevel?: "debug" | "info" | "warn" | "error";
+  basePath?: string;
+};
+
+export type PHConnectPackages = {
+  externalEnabled?: boolean;
+};
+
+export type PHConnectRenown = {
+  url?: string;
+  networkId?: string;
+  chainId?: number;
+};
+
+export type PHConnectSentry = {
+  /** Sentry DSN URL. `null` disables Sentry entirely. */
+  dsn?: string | null;
+  /** Sentry environment label. */
+  env?: string;
+  /** Enable Sentry performance tracing. */
+  tracing?: boolean;
+};
+
+export type PHConnectRuntimeConfig = {
+  branding?: PHConnectBranding;
+  app?: PHConnectApp;
+  packages?: PHConnectPackages;
+  drives?: PHConnectDrives;
+  renown?: PHConnectRenown;
+  sentry?: PHConnectSentry;
+};
+
 export type PowerhouseConfig = {
   // required
   logLevel: LogLevel;
@@ -78,4 +141,5 @@ export type PowerhouseConfig = {
     driveUrl: string;
   };
   packageRegistryUrl?: string;
+  connect?: PHConnectRuntimeConfig;
 };

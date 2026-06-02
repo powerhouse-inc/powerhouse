@@ -21,8 +21,6 @@ async function getSentry() {
 }
 
 async function initSentry() {
-  const _release = connectConfig.sentry;
-
   const Sentry = await getSentry();
   const integrations: BrowserOptions["integrations"] = [
     Sentry.httpClientIntegration(),
@@ -44,7 +42,7 @@ async function initSentry() {
 
   Sentry.init({
     release: connectConfig.sentry.release,
-    dsn: connectConfig.sentry.dsn,
+    dsn: connectConfig.sentry.dsn ?? undefined,
     environment: connectConfig.sentry.env,
     integrations,
     ignoreErrors: [
@@ -92,9 +90,13 @@ export function useInitSentry() {
       return;
     }
 
+    // Sentry is disabled when `dsn` is null, undefined, or an empty
+    // string — covers both the new schema default (`null`) and any
+    // hand-edited config that omits the DSN.
     if (
       clientStarted ||
-      !connectConfig.sentry.dsn ||
+      connectConfig.sentry.dsn === null ||
+      connectConfig.sentry.dsn === undefined ||
       connectConfig.sentry.dsn === ""
     ) {
       return;

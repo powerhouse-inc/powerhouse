@@ -14,7 +14,8 @@
     "url": "https://github.com/powerhouse-inc/powerhouse"
   },
   "scripts": {
-    "build": "tsx ./bundle.ts"
+    "build": "tsx ./bundle.ts",
+    "test": "vitest --run"
   },
   "exports": {
     ".": {
@@ -136,7 +137,8 @@
     "react": "catalog:",
     "rolldown": "catalog:",
     "tsdown": "catalog:",
-    "tsx": "catalog:"
+    "tsx": "catalog:",
+    "vitest": "catalog:"
   },
   "peerDependencies": {
     "@sentry/node-core": "^10.52.0",
