@@ -1,4 +1,4 @@
-import { cn } from "#design-system";
+import { twMerge } from "tailwind-merge";
 import type { HTMLAttributes, Ref } from "react";
 import { forwardRef, useId } from "react";
 import type { FieldErrorHandling, InputBaseProps } from "../../types.js";
@@ -55,7 +55,7 @@ const RadioGroupFieldRaw = forwardRef<HTMLDivElement, RadioGroupFieldProps>(
         aria-label={!hasLabel ? "Radio group" : undefined}
         aria-required={required}
         autoFocus={autoFocus}
-        className={cn("flex flex-col gap-2", className)}
+        className={twMerge("flex flex-col gap-2", className)}
         defaultValue={defaultValue}
         id={id}
         name={name}

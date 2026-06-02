@@ -11,7 +11,6 @@ import {
 } from "@powerhousedao/shared/document-drive";
 import type { PHDocument } from "@powerhousedao/shared/document-model";
 import type { Meta, StoryObj } from "@storybook/react";
-import type { render } from "@testing-library/react";
 import { useEffect, useState } from "react";
 import { documentModelCreateDocument } from "../../../../../document-model/src/state.js";
 import { DocumentToolbar } from "./document-toolbar.js";
@@ -152,7 +151,7 @@ export const WithCustomToolbarContainer: Story = {
   args: {
     ...defaultArgs,
     toolbarContainer: (props) => (
-      <div className="bg-amber-300">{props.children}</div>
+      <div className="bg-amber-300 dark:bg-amber-600">{props.children}</div>
     ),
   },
   render: Render,
@@ -162,7 +161,7 @@ export const WithCustomControlsContainer: Story = {
   args: {
     ...defaultArgs,
     controlsContainer: (props) => (
-      <div className="bg-cyan-300">{props.children}</div>
+      <div className="bg-cyan-300 dark:bg-cyan-600">{props.children}</div>
     ),
   },
   render: Render,
@@ -219,8 +218,9 @@ export const WithChildren: Story = {
 export const WithCustomStyles: Story = {
   args: {
     ...defaultArgs,
-    toolbarClassName: "border-none bg-green-100",
-    controlsContainerClassName: "border border-green-300 rounded-lg p-2",
+    toolbarClassName: "border-none bg-green-100 dark:bg-green-800",
+    controlsContainerClassName:
+      "border border-green-300 rounded-lg p-2 dark:border-green-600",
   },
   render: Render,
 };

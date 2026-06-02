@@ -2,14 +2,14 @@ import type { SubgraphModuleBaseOperationsOperations } from "document-models/sub
 
 export const subgraphModuleBaseOperationsOperations: SubgraphModuleBaseOperationsOperations =
   {
-    setSubgraphNameOperation(state, action, dispatch) {
+    setSubgraphNameOperation(state, action, _dispatch) {
       const trimmedName = action.input.name.trim();
       if (trimmedName === "") {
         throw new Error("Subgraph name cannot be empty");
       }
       state.name = trimmedName;
     },
-    setSubgraphStatusOperation(state, action, dispatch) {
+    setSubgraphStatusOperation(state, action, _dispatch) {
       state.status = action.input.status;
     },
   };

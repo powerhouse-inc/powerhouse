@@ -1,6 +1,6 @@
 import type { IRenown } from "@renown/sdk";
 import { RenownBuilder } from "@renown/sdk";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { loading } from "../hooks/loading.js";
 import { addRenownEventHandler, setRenown } from "../hooks/renown.js";
 import { login } from "./utils.js";
@@ -53,23 +53,22 @@ export function useRenownInit({
   namespace,
   url,
 }: RenownInitOptions): Promise<IRenown> {
-  const promiseRef = useRef(Promise.withResolvers<IRenown>());
+  // Stable promise returned every render; resolved later by the init effect.
+  const promiseRef = useRef<PromiseWithResolvers<IRenown> | null>(null);
+  promiseRef.current ??= Promise.withResolvers<IRenown>();
+
   const initRef = useRef(false);
 
-  if (typeof window === "undefined") {
-    promiseRef.current.reject(new Error("window is undefined"));
-    return promiseRef.current.promise;
-  }
+  // Init must run in an effect, not during render: setRenown() mutates the
+  // useSyncExternalStore-backed store, which would update subscribers mid-render.
+  useEffect(() => {
+    if (initRef.current) return;
+    initRef.current = true;
 
-  if (initRef.current) {
-    return promiseRef.current.promise;
-  }
-
-  initRef.current = true;
-
-  initRenown(appName, namespace, url)
-    .then(promiseRef.current.resolve)
-    .catch(promiseRef.current.reject);
+    initRenown(appName, namespace, url)
+      .then(promiseRef.current!.resolve)
+      .catch(promiseRef.current!.reject);
+  }, []);
 
   return promiseRef.current.promise;
 }

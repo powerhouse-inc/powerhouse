@@ -1,7 +1,6 @@
 import {
   type JobInfo as ClientJobInfo,
   type DocumentChangeEvent,
-  type IReactorClient,
   type PagedResults,
   PropagationMode,
 } from "@powerhousedao/reactor";

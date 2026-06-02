@@ -49,7 +49,6 @@ export class SwitchboardAttachmentTransport implements IAttachmentTransport {
     return { hash, metadata, body };
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async announce(_hash: AttachmentHash): Promise<void> {
     // No-op for switchboard -- data is already on the server after upload.
   }

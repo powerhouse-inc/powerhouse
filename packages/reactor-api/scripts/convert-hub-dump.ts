@@ -183,16 +183,16 @@ function printHelpAndExit(): never {
  * always report "absent" and let it emit every action.
  */
 class EmptyDriveReadModel implements IDriveReadModel {
-  async getNode(): Promise<ReactorDriveNode | undefined> {
-    return undefined;
+  getNode(): Promise<ReactorDriveNode | undefined> {
+    return Promise.resolve(undefined);
   }
-  async listChildren(): Promise<never> {
+  listChildren(): Promise<never> {
     throw new Error("listChildren is not used during conversion");
   }
-  async getDescendants(): Promise<never> {
+  getDescendants(): Promise<never> {
     throw new Error("getDescendants is not used during conversion");
   }
-  async listAll(): Promise<never> {
+  listAll(): Promise<never> {
     throw new Error("listAll is not used during conversion");
   }
 }

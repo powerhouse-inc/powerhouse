@@ -74,7 +74,7 @@ export function safeParseSdl(sdl: string) {
   try {
     if (!sdl) return null;
     return parse(sdl);
-  } catch (error) {
+  } catch (_error) {
     return null;
   }
 }

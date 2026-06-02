@@ -1,5 +1,6 @@
 import type { TransformerType } from "#design-system";
-import { cn, Icon } from "#design-system";
+import { Icon } from "#design-system";
+import { twMerge } from "tailwind-merge";
 import { sharedValueTransformers } from "#design-system/ui/lib";
 import { Command as CommandPrimitive } from "cmdk";
 import React, { useMemo, useState } from "react";
@@ -77,14 +78,14 @@ const IdAutocompleteInputContainer = React.forwardRef<
     );
 
     return (
-      <div className={cn("group relative")}>
+      <div className={twMerge("group relative")}>
         <ValueTransformer transformers={transformers}>
           <CommandPrimitive.Input asChild>
             <Input
               id={id}
               name={name}
               value={value}
-              className={cn("pr-9", className)}
+              className={twMerge("pr-9", className)}
               disabled={disabled}
               onChange={onChange}
               onBlur={onBlur}
@@ -144,7 +145,7 @@ const IdAutocompleteInputContainer = React.forwardRef<
           </CommandPrimitive.Input>
         </ValueTransformer>
         <div
-          className={cn(
+          className={twMerge(
             "absolute top-1/2 right-3 flex size-4 -translate-y-1/2 items-center",
             !isLoading &&
               !haveFetchError &&
@@ -156,13 +157,19 @@ const IdAutocompleteInputContainer = React.forwardRef<
             <Icon
               name="Reload"
               size={16}
-              className={cn("animate-spin text-gray-500 dark:text-gray-600")}
+              className={twMerge(
+                "animate-spin text-gray-500 dark:text-slate-400",
+              )}
             />
           )}
           {haveFetchError && (
             <TooltipProvider>
               <Tooltip content="Network error!">
-                <Icon name="Error" size={16} className={cn("text-red-900")} />
+                <Icon
+                  name="Error"
+                  size={16}
+                  className={twMerge("text-red-900 dark:text-red-400")}
+                />
               </Tooltip>
             </TooltipProvider>
           )}
@@ -179,10 +186,10 @@ const IdAutocompleteInputContainer = React.forwardRef<
                         setTimeout(() => setHasCopied(false), 2000);
                       })
                       .catch((error) => {
-                        console.error("Failed to copy value: ", error);
+                        console.error("Failed to copy value:", error);
                       });
                   }}
-                  className={cn(
+                  className={twMerge(
                     "focus-visible:outline-none [&_svg]:pointer-events-none",
                     hasHover &&
                       "opacity-0 transition-opacity duration-500 group-hover:opacity-100",
@@ -191,7 +198,7 @@ const IdAutocompleteInputContainer = React.forwardRef<
                   <Icon
                     name="Copy"
                     size={16}
-                    className={cn("text-gray-500 dark:text-gray-600")}
+                    className={twMerge("text-gray-500 dark:text-slate-400")}
                   />
                 </button>
               </Tooltip>

@@ -1,6 +1,10 @@
 import type { PowerhouseConfig } from "@powerhousedao/config";
 import { getConfig } from "@powerhousedao/config/node";
-import { loadConnectEnv, setConnectEnv } from "@powerhousedao/shared/connect";
+import {
+  loadConnectEnv,
+  normalizeBasePath,
+  setConnectEnv,
+} from "@powerhousedao/shared/connect";
 import tailwind from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { realpathSync } from "node:fs";
@@ -330,6 +334,12 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
   const config: InlineConfig = {
     configFile: false,
     mode,
+    // Prefix served/built asset URLs so Connect can run under a path prefix
+    // (reverse proxy). Mirrors the client router basename; normalize so a bare
+    // `app` or `/app` becomes `/app/` and matches the router.
+    base: env.PH_CONNECT_BASE_PATH
+      ? normalizeBasePath(env.PH_CONNECT_BASE_PATH)
+      : undefined,
     server: {
       watch: {
         ignored: ["**/backup-documents/**", "**/.ph/**"],

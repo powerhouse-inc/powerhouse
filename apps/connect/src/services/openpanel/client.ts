@@ -28,7 +28,12 @@ export async function getOpenPanelClient(
   client = new OpenPanelClass({
     clientId: config.clientId,
     ...(config.apiUrl ? { apiUrl: config.apiUrl } : {}),
+    trackScreenViews: true,
+    trackOutgoingLinks: true,
   });
+
+  // The web SDK has no `globalProperties` constructor option.
+  client.setGlobalProperties({ app: "connect" });
 
   // Runs once (the `if (client)` guard above), so the buffer is never
   // double-drained.

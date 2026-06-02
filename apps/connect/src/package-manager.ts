@@ -67,7 +67,7 @@ export class BrowserPackageManager implements IPackageManager {
   #packages: Map<string, DocumentModelLib<any>> = new Map();
   #subscribers = new Set<IPackagesListener>();
   #packagesMemo: DocumentModelLib<any>[] = [];
-  #stylesheets: Map<string, HTMLLinkElement> = new Map();
+  #stylesheets: Map<string, HTMLStyleElement> = new Map();
   #localPackage: DocumentModelLib<any> | undefined;
 
   #cdnUrl: string | null;
@@ -408,22 +408,20 @@ export class BrowserPackageManager implements IPackageManager {
 
   #mountStylesheet(name: string, href: string) {
     const existing = this.#stylesheets.get(name);
-
     if (existing) return existing;
 
-    const link = document.createElement("link");
-    link.rel = "stylesheet";
-    link.href = href;
-    document.head.appendChild(link);
+    const style = document.createElement("style");
+    style.textContent = `@import url("${href}") layer(external-packages);`;
+    document.head.appendChild(style);
 
-    this.#stylesheets.set(name, link);
+    this.#stylesheets.set(name, style);
   }
 
   #unmountStylesheet(name: string): void {
-    const link = this.#stylesheets.get(name);
-    if (!link) return;
+    const style = this.#stylesheets.get(name);
+    if (!style) return;
 
-    link.remove();
+    style.remove();
     this.#stylesheets.delete(name);
   }
 

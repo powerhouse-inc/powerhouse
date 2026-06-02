@@ -100,10 +100,10 @@ function makeMockGatewayAdapter(): IGatewayAdapter<Context> & {
     start: vi.fn().mockResolvedValue(undefined),
     createHandler: vi
       .fn()
-      .mockResolvedValue(async () => new Response("handler ok")),
+      .mockResolvedValue(() => Promise.resolve(new Response("handler ok"))),
     createSupergraphHandler: vi
       .fn()
-      .mockResolvedValue(async () => new Response("supergraph ok")),
+      .mockResolvedValue(() => Promise.resolve(new Response("supergraph ok"))),
     updateSupergraph: vi.fn().mockResolvedValue(undefined),
     attachWebSocket: vi
       .fn()
@@ -443,7 +443,7 @@ describe("GraphQLManager", () => {
         } satisfies AuthContext),
       } as unknown as AuthService;
       const middleware = createAuthFetchMiddleware(mockService);
-      await middleware(async () => new Response("ok"))(req);
+      await middleware(() => Promise.resolve(new Response("ok")))(req);
 
       const ctx = await contextFactory(req);
 
@@ -469,8 +469,8 @@ describe("GraphQLManager", () => {
           auth_enabled: true,
         } satisfies AuthContext),
       } as unknown as AuthService;
-      await createAuthFetchMiddleware(mockService)(
-        async () => new Response("ok"),
+      await createAuthFetchMiddleware(mockService)(() =>
+        Promise.resolve(new Response("ok")),
       )(req);
 
       const ctx = await contextFactory(req);
@@ -494,8 +494,8 @@ describe("GraphQLManager", () => {
           auth_enabled: false,
         } satisfies AuthContext),
       } as unknown as AuthService;
-      await createAuthFetchMiddleware(mockService)(
-        async () => new Response("ok"),
+      await createAuthFetchMiddleware(mockService)(() =>
+        Promise.resolve(new Response("ok")),
       )(req);
 
       const ctx = await contextFactory(req);
@@ -528,8 +528,8 @@ describe("GraphQLManager", () => {
           auth_enabled: true,
         } satisfies AuthContext),
       } as unknown as AuthService;
-      await createAuthFetchMiddleware(mockService)(
-        async () => new Response("ok"),
+      await createAuthFetchMiddleware(mockService)(() =>
+        Promise.resolve(new Response("ok")),
       )(req);
 
       const ctx = await contextFactory(req);
@@ -566,6 +566,7 @@ describe("GraphQLManager", () => {
           Subscription: {
             ping: {
               subscribe: async function* () {
+                await Promise.resolve();
                 yield { ping: "pong" };
               },
               resolve: (v: unknown) => (v as { ping: string }).ping,

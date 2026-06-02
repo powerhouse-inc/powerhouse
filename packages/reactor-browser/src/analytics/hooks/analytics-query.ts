@@ -61,7 +61,7 @@ function useAnalyticsMutationWrapper<TVariables, TData>(
   },
 ) {
   const { mutationFn, ...mutationOptions } = options;
-  const storeOptions = useAnalyticsStoreOptions();
+  const _storeOptions = useAnalyticsStoreOptions();
 
   return useMutation({
     ...mutationOptions,

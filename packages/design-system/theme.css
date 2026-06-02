@@ -15,17 +15,27 @@
   --color-gray-700: hsl(189 5% 29%);
   --color-gray-800: hsl(200 4% 26%);
   --color-gray-900: hsl(192 5% 21%);
-  --color-slate-50: hsl(210 20% 96%);
-  --color-slate-100: hsl(210 9% 74%);
-  --color-slate-200: hsl(210 9% 48%);
-  --color-slate-300: hsl(210 9% 39%);
-  --color-slate-400: hsl(210 9% 30%);
+  --color-gray-50: hsl(0 0% 99%);
+  --color-gray-100: hsl(0 0% 96%);
+  --color-gray-200: hsl(0 0% 94%);
+  --color-gray-300: hsl(210 3% 85%);
+  --color-gray-400: hsl(180 2% 78%);
+  --color-gray-500: hsl(200 2% 63%);
+  --color-gray-600: hsl(200 4% 44%);
+  --color-gray-700: hsl(189 5% 29%);
+  --color-gray-800: hsl(200 4% 26%);
+  --color-gray-900: hsl(192 5% 21%);
+  --color-slate-50: hsl(210 20% 99%);
+  --color-slate-100: hsl(210 20% 96%);
+  --color-slate-200: hsl(210 9% 90%);
+  --color-slate-300: hsl(210 9% 80%);
+  --color-slate-400: hsl(210 9% 63%);
   --color-slate-500: hsl(207 8% 21%);
   --color-slate-600: hsl(210 9% 13%);
   --color-slate-700: hsl(204 9% 11%);
   --color-slate-800: hsl(195 9% 9%);
   --color-slate-900: hsl(195 6% 6%);
-  --color-blue-100: hsl(209 100% 90%);
+  --color-blue-100: hsl(209 100% 99%);
   --color-blue-200: hsl(209 97% 85%);
   --color-blue-300: hsl(209 100% 80%);
   --color-blue-400: hsl(209 100% 75%);
@@ -34,7 +44,7 @@
   --color-blue-700: hsl(209 100% 60%);
   --color-blue-800: hsl(209 100% 55%);
   --color-blue-900: hsl(209 100% 50%);
-  --color-green-100: hsl(134 51% 89%);
+  --color-green-100: hsl(134 51% 99%);
   --color-green-200: hsl(135 52% 83%);
   --color-green-300: hsl(136 52% 77%);
   --color-green-400: hsl(136 53% 72%);
@@ -43,7 +53,7 @@
   --color-green-700: hsl(136 52% 55%);
   --color-green-800: hsl(136 53% 49%);
   --color-green-900: hsl(136 53% 43%);
-  --color-purple-100: hsl(262 79% 93%);
+  --color-purple-100: hsl(262 79% 99%);
   --color-purple-200: hsl(263 79% 89%);
   --color-purple-300: hsl(263 79% 85%);
   --color-purple-400: hsl(264 77% 81%);
@@ -52,7 +62,7 @@
   --color-purple-700: hsl(263 78% 70%);
   --color-purple-800: hsl(263 78% 66%);
   --color-purple-900: hsl(263 78% 63%);
-  --color-red-100: hsl(3 82% 96%);
+  --color-red-100: hsl(3 82% 99%);
   --color-red-200: hsl(3 82% 91%);
   --color-red-300: hsl(6 82% 87%);
   --color-red-400: hsl(5 82% 83%);
@@ -61,7 +71,7 @@
   --color-red-700: hsl(4 81% 69%);
   --color-red-800: hsl(5 81% 61%);
   --color-red-900: hsl(5 81% 56%);
-  --color-orange-100: hsl(33 100% 90%);
+  --color-orange-100: hsl(33 100% 99%);
   --color-orange-200: hsl(32 100% 85%);
   --color-orange-300: hsl(32 100% 80%);
   --color-orange-400: hsl(32 100% 75%);
@@ -70,7 +80,7 @@
   --color-orange-700: hsl(32 100% 60%);
   --color-orange-800: hsl(33 100% 55%);
   --color-orange-900: hsl(32 100% 50%);
-  --color-yellow-100: hsl(46 100% 94%);
+  --color-yellow-100: hsl(46 100% 99%);
   --color-yellow-200: hsl(47 100% 86%);
   --color-yellow-300: hsl(47 100% 79%);
   --color-yellow-400: hsl(47 100% 69%);
@@ -79,7 +89,7 @@
   --color-yellow-700: hsl(47 100% 51%);
   --color-yellow-800: hsl(47 100% 50%);
   --color-yellow-900: hsl(47 100% 49%);
-  --color-charcoal-100: hsl(214 16% 92%);
+  --color-charcoal-100: hsl(214 16% 99%);
   --color-charcoal-200: hsl(219 17% 84%);
   --color-charcoal-300: hsl(221 17% 67%);
   --color-charcoal-400: hsl(17 17% 58%);
@@ -103,8 +113,8 @@
     0px -1px 1px 0px rgba(0, 0, 0, 0.04) inset,
     0px 2px 0px 0px rgba(255, 255, 255, 0.25) inset,
     0px 4px 8px -4px rgba(0, 0, 0, 0.1);
---shadow-charcoal: 1px 4px 15px rgba(74, 88, 115, 0.25);
---shadow-inner: inset 0px 0px 2px rgba(255, 255, 255, 0.5);
+  --shadow-charcoal: 1px 4px 15px rgba(74, 88, 115, 0.25);
+  --shadow-inner: inset 0px 0px 2px rgba(255, 255, 255, 0.5);
   --animate-fade-in: fadeIn 0.3s ease-in-out;
   --animate-fade-out: fadeOut 0.1s ease-in-out;
   --animate-zoom-in: zoomIn 0.3s ease-in-out;
@@ -180,6 +190,42 @@
     }
     100% {
       transform: translateX(0);
+    }
+  }
+
+  @keyframes brickDrop {
+    0% {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    58% {
+      opacity: 1;
+      transform: translateY(1.2px);
+    }
+    78% {
+      transform: translateY(-0.4px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes brickFall {
+    0% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    20% {
+      opacity: 1;
+      transform: translateY(-1.2px);
+    }
+    40% {
+      transform: translateY(0.4px);
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(12px);
     }
   }
 }

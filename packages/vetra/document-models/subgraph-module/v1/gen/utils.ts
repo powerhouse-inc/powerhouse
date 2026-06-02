@@ -8,7 +8,6 @@ import {
   baseLoadFromInput,
   baseSaveToFileHandle,
   defaultBaseState,
-  generateId,
 } from "document-model";
 import {
   assertIsSubgraphModuleDocument,
@@ -40,14 +39,11 @@ export const utils: DocumentModelUtils<SubgraphModulePHState> = {
     };
   },
   createDocument(state) {
-    const document = baseCreateDocument(utils.createState, state);
-
-    document.header.documentType = subgraphModuleDocumentType;
-
-    // for backwards compatibility, but this is NOT a valid signed document id
-    document.header.id = generateId();
-
-    return document;
+    return baseCreateDocument(
+      utils.createState,
+      state,
+      subgraphModuleDocumentType,
+    );
   },
   saveToFileHandle(document, input) {
     return baseSaveToFileHandle(document, input);

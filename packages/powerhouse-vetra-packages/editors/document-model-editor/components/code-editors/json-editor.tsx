@@ -1,9 +1,10 @@
 import { json, jsonLanguage, jsonParseLinter } from "@codemirror/lang-json";
 import { forceLinting, linter } from "@codemirror/lint";
-import { EditorState } from "@codemirror/state";
+import { Compartment, EditorState } from "@codemirror/state";
 import { EditorView, keymap } from "@codemirror/view";
-import { memo, useEffect } from "react";
-import { ayuLight } from "thememirror";
+import { useTheme } from "@powerhousedao/reactor-browser";
+import { memo, useEffect, useRef } from "react";
+import { ayuLight, dracula } from "thememirror";
 import { baseEditorExtensions, baseKeymap } from "./constants.js";
 import {
   makeFocusHandler,
@@ -34,6 +35,8 @@ const JSONEditor = memo(function JSONEditor(props: Props) {
     pasteHandlerCompartment,
     timeoutRef,
   } = useEditorRefs();
+  const { theme } = useTheme();
+  const themeCompartment = useRef(new Compartment());
 
   useEffect(() => {
     if (!viewRef.current) {
@@ -43,7 +46,7 @@ const JSONEditor = memo(function JSONEditor(props: Props) {
           extensions: [
             ...baseEditorExtensions,
             keymap.of(baseKeymap),
-            ayuLight,
+            themeCompartment.current.of(theme === "light" ? ayuLight : dracula),
             jsonLanguage,
             json(),
             linter(jsonParseLinter()),
@@ -64,6 +67,15 @@ const JSONEditor = memo(function JSONEditor(props: Props) {
       forceLinting(viewRef.current);
     }
   }, []);
+
+  useEffect(() => {
+    if (!viewRef.current) return;
+    viewRef.current.dispatch({
+      effects: themeCompartment.current.reconfigure(
+        theme === "light" ? ayuLight : dracula,
+      ),
+    });
+  }, [theme]);
 
   useEditorCleanup(viewRef);
 

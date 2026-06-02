@@ -57,7 +57,7 @@ export function ImageInput<TFieldValues extends FieldValues>(
       render={({ field: { onBlur, onChange, value } }) => (
         <div
           className={twMerge(
-            "flex cursor-pointer items-center gap-2 rounded-xl bg-gray-100 p-3 text-gray-800",
+            "flex cursor-pointer items-center gap-2 rounded-xl bg-gray-100 p-3 text-gray-900 dark:bg-slate-700 dark:text-slate-100",
             className,
           )}
           onClick={handleContainerClick}
@@ -71,9 +71,11 @@ export function ImageInput<TFieldValues extends FieldValues>(
             className="hidden"
             id={id}
             onBlur={onBlur}
-            onChange={async (e) => {
-              const base64String = await getBase64File(e);
-              onChange(base64String);
+            onChange={(e) => {
+              void (async () => {
+                const base64String = await getBase64File(e);
+                onChange(base64String);
+              })();
             }}
             ref={fileInputRef}
             type="file"

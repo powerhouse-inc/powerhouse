@@ -14,7 +14,7 @@ import { getGlobal } from "../global/core.js";
 import type { CreateStoreOptions } from "./store.js";
 import { getAnalyticsStore } from "./store.js";
 
-const logger = childLogger(["reactor-browser", "analytics", "provider"]);
+const _logger = childLogger(["reactor-browser", "analytics", "provider"]);
 
 const defaultQueryClient = new QueryClient();
 
@@ -104,7 +104,7 @@ function CreateAnalyticsStore() {
 export function AnalyticsProvider({
   children,
   queryClient = defaultQueryClient,
-  ...props
+  ..._props
 }: AnalyticsProviderProps) {
   return (
     <QueryClientProvider client={queryClient}>

@@ -154,12 +154,12 @@ export class AnalyticsQueryEngine {
     return result;
   }
 
-  private async _applyVectorOperator(
+  private _applyVectorOperator(
     inputsA: GroupedPeriodResults,
     inputsB: GroupedPeriodResults,
     operator: CompoundOperator,
-    resultCurrency?: AnalyticsPath,
-  ) {
+    _resultCurrency?: AnalyticsPath,
+  ): Promise<GroupedPeriodResults> {
     if (
       [CompoundOperator.ScalarMultiply, CompoundOperator.ScalarDivide].includes(
         operator,
@@ -167,10 +167,10 @@ export class AnalyticsQueryEngine {
     ) {
       throw new Error("Invalid operator for vector operation");
     }
-    return inputsB;
+    return Promise.resolve(inputsB);
   }
 
-  private async _applyScalarOperator(
+  private _applyScalarOperator(
     inputs: GroupedPeriodResults, // expected input is the budget & actuals in 2022 monthly granularity in MKR
     operand: GroupedPeriodResults, // expected input is the daily mkr price change in 2022 monthly granularity in DAI
     operator: CompoundOperator, // expected to me multiply and later addition
@@ -219,7 +219,7 @@ export class AnalyticsQueryEngine {
       result.push(outputPeriod);
     }
 
-    return result;
+    return Promise.resolve(result);
   }
 
   private _calculateOutputValue(

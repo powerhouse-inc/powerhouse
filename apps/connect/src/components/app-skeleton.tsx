@@ -1,10 +1,11 @@
 import { getBasePath } from "@powerhousedao/connect/utils";
 import { getIsEmbedded } from "@powerhousedao/connect/hooks";
 import {
-  AnimatedLoader,
   ConnectSidebar,
   HomeScreen,
+  LogoAnimation,
 } from "@powerhousedao/design-system/connect";
+import { initTheme } from "@powerhousedao/reactor-browser";
 import {
   useEffect,
   useState,
@@ -33,9 +34,11 @@ const MigrationOverlay = () => {
   if (!status) return null;
   return (
     <div className="absolute inset-0 z-20 flex items-center justify-center">
-      <div className="rounded-lg bg-white/90 px-6 py-4 text-sm text-gray-900 shadow-lg">
+      <div className="rounded-lg bg-white/90 px-6 py-4 text-sm text-gray-900 shadow-lg dark:bg-slate-900/90 dark:text-slate-50">
         <div className="font-medium">Upgrading local database…</div>
-        <div className="text-gray-600">{PHASE_LABEL[status.phase]}</div>
+        <div className="text-gray-700 dark:text-slate-200">
+          {PHASE_LABEL[status.phase]}
+        </div>
       </div>
     </div>
   );
@@ -46,6 +49,9 @@ const Loader = ({ delay = LOADER_DELAY }: { delay?: number }) => {
   const showInitialLoader =
     typeof document !== "undefined" &&
     document.body.getAttribute("data-show-loader") === "true";
+  if (!isSSR) {
+    initTheme();
+  }
 
   const [showLoading, setShowLoading] = useState(!delay || showInitialLoader);
 
@@ -62,7 +68,7 @@ const Loader = ({ delay = LOADER_DELAY }: { delay?: number }) => {
       className={`skeleton-loader absolute inset-0 z-10 flex items-center justify-center ${showLoading ? "" : "hidden"}`}
     >
       <div className="animate-pulse overflow-hidden rounded-full shadow-lg">
-        <AnimatedLoader />
+        <LogoAnimation />
       </div>
       {isSSR ? (
         <script
@@ -86,7 +92,7 @@ export const AppSkeleton: React.FC<PropsWithChildren> = (props) => {
    * fallback so the loading state matches the loaded state. */
   const isEmbedded = !isSSR && getIsEmbedded();
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-slate-700">
       {!isEmbedded && (
         <ConnectSidebar
           className="animate-pulse"

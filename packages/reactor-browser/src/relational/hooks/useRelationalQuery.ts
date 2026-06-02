@@ -45,7 +45,7 @@ export function useRelationalQuery<Schema, T = unknown, TParams = undefined>(
     parameters?: TParams,
   ) => QueryCallbackReturnType,
   parameters?: TParams,
-  options?: useRelationalQueryOptions,
+  _options?: useRelationalQueryOptions,
 ) {
   const [result, setResult] = useState<LiveQueryResults<T> | null>(null);
   const [queryLoading, setQueryLoading] = useState(true);

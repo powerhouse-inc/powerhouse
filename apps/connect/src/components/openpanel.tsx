@@ -33,12 +33,13 @@ declare global {
  * Behaviour when both gates pass:
  * 1. Lazy-imports `@openpanel/web` and builds the singleton via
  *    `getOpenPanelClient(connectConfig.openPanel)`.
- * 2. Exposes the client on `window.openPanel` for the card-6 `useOpenPanel()`
- *    hook to consume.
+ * 2. Exposes the client on `window.openPanel` for the card-6
+ *    `useOpenPanelAnalytics()` hook to consume.
  * 3. If `connectConfig.openPanel.trackOperations`, registers the processor
  *    factory against `processorManager` so document operations are forwarded.
  * 4. Calls `client.identify()` when the renown user transitions from
- *    `undefined` → defined (login).
+ *    `undefined` → defined (login). The profile ID is the wallet address —
+ *    the cross-app key shared with Renown and Vetra.
  * 5. Calls `client.clear()` when the user transitions from defined →
  *    `undefined` (logout).
  *
@@ -75,7 +76,10 @@ export function OpenPanel(): null {
 
     let cancelled = false;
 
-    void (async () => {
+    // Read via a call — TS would otherwise narrow direct reads to always-false.
+    const isCancelled = () => cancelled;
+
+    const setup = async () => {
       let builtClient: OpenPanelClient | undefined;
       try {
         builtClient = await getOpenPanelClient(connectConfig.openPanel);
@@ -84,7 +88,7 @@ export function OpenPanel(): null {
         return;
       }
 
-      if (cancelled || !builtClient) return;
+      if (isCancelled() || !builtClient) return;
 
       setClient(builtClient);
       window.openPanel = builtClient;
@@ -100,7 +104,7 @@ export function OpenPanel(): null {
             }),
           );
           // Guard against teardown happening while registerFactory was in flight.
-          if (cancelled) {
+          if (isCancelled()) {
             await processorManager
               .unregisterFactory("openpanel")
               .catch((err: unknown) =>
@@ -117,7 +121,9 @@ export function OpenPanel(): null {
           );
         }
       }
-    })();
+    };
+
+    void setup();
 
     return () => {
       cancelled = true;
@@ -155,7 +161,7 @@ export function OpenPanel(): null {
       // already logged in — prevUserRef is undefined in both cases).
       try {
         void client.identify({
-          profileId: user.did,
+          profileId: user.address,
           properties: buildTraits(user),
         });
       } catch (err) {

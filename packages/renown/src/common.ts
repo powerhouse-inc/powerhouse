@@ -14,6 +14,7 @@ import type {
   RenownStorageMap,
   User,
 } from "./types.js";
+import { verifyCredentialSignature } from "./credential.js";
 import { parsePkhDid, verifyAuthBearerToken } from "./utils.js";
 export * from "./constants.js";
 
@@ -114,6 +115,16 @@ export class Renown implements IRenown {
         )
       ) {
         throw new Error("Invalid credential");
+      }
+
+      // Verify the EIP-712 proof was signed by the DID's address on its chain.
+      if (
+        credential.issuer.ethereumAddress.toLowerCase() !==
+          result.address.toLowerCase() ||
+        credential.proof.eip712.domain.chainId !== result.chainId ||
+        !(await verifyCredentialSignature(credential))
+      ) {
+        throw new Error("Invalid credential signature");
       }
 
       const user: User = {

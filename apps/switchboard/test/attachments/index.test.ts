@@ -61,11 +61,13 @@ function makeRes() {
 
 describe("mountAuthenticatedNodeRoute", () => {
   it("wraps the handler with auth enforcement when authService is defined", async () => {
-    const verifyBearer = vi.fn(async () => ({
-      user: undefined,
-      admins: [],
-      auth_enabled: true,
-    }));
+    const verifyBearer = vi.fn(() =>
+      Promise.resolve({
+        user: undefined,
+        admins: [],
+        auth_enabled: true,
+      }),
+    );
     const authService = { verifyBearer } as unknown as AuthService;
     const { api, captured } = makeFakeApi(authService);
     const inner = vi.fn();
@@ -88,11 +90,13 @@ describe("mountAuthenticatedNodeRoute", () => {
   });
 
   it("invokes the inner handler when verifyBearer returns a valid user", async () => {
-    const verifyBearer = vi.fn(async () => ({
-      user: { address: "0x1", chainId: 1, networkId: "mainnet" },
-      admins: [],
-      auth_enabled: true,
-    }));
+    const verifyBearer = vi.fn(() =>
+      Promise.resolve({
+        user: { address: "0x1", chainId: 1, networkId: "mainnet" },
+        admins: [],
+        auth_enabled: true,
+      }),
+    );
     const authService = { verifyBearer } as unknown as AuthService;
     const { api, captured } = makeFakeApi(authService);
     const inner = vi.fn();

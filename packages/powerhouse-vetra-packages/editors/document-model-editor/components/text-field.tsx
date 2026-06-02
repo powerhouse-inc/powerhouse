@@ -107,7 +107,7 @@ export const TextField = forwardRef<TextFieldHandle, TextFieldProps>(
         if (form.formState.isValid) {
           await form.handleSubmit(handleSubmit)();
         }
-      } catch (e) {
+      } catch (_e) {
         // Allow blur to proceed even if validation fails
       }
     }, [form, handleSubmit, name, value]);
@@ -148,7 +148,7 @@ export const TextField = forwardRef<TextFieldHandle, TextFieldProps>(
               {!!label && (
                 <FormLabel
                   htmlFor={name}
-                  className="text-sm font-medium text-gray-700"
+                  className="text-sm font-medium text-gray-700 dark:text-slate-200"
                 >
                   {label}
                 </FormLabel>
@@ -165,7 +165,7 @@ export const TextField = forwardRef<TextFieldHandle, TextFieldProps>(
                     }
                   }}
                   placeholder={placeholder}
-                  onBlur={handleBlur}
+                  onBlur={() => void handleBlur()}
                   onChange={(e) => {
                     field.onChange(e);
                     handleChange(e);

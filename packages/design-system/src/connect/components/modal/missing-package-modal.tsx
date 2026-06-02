@@ -84,21 +84,18 @@ export function PackageInstallModal(props: PackageInstallModalProps) {
         }
         onOpenChange?.(isOpen);
       }}
-      contentProps={{
-        ...contentProps,
-        className: twMerge("rounded-3xl", contentProps?.className),
-      }}
+      contentProps={contentProps}
       overlayProps={{
         ...overlayProps,
         className: overlayProps?.className,
       }}
       {...restProps}
     >
-      <div className="w-[460px] bg-white p-6 text-slate-300">
-        <div className="border-b border-slate-50 pb-2 text-2xl font-bold text-gray-800">
+      <div className="w-[460px] rounded-xl bg-gray-50 p-6 text-gray-300 dark:bg-slate-800 dark:text-slate-600">
+        <div className="border-b border-gray-50 pb-2 text-2xl font-bold text-gray-900 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
           {grouped.length === 1 ? "Package Required" : "Packages Required"}
         </div>
-        <div className="my-4 text-sm text-gray-600">
+        <div className="my-4 text-sm text-gray-700 dark:text-slate-200">
           {grouped.length === 1
             ? "A document requires a package that is not installed."
             : "Documents require packages that are not installed."}
@@ -107,11 +104,14 @@ export function PackageInstallModal(props: PackageInstallModalProps) {
           {grouped.map(({ packageName, documentTypes }) => {
             const installing = installingPackages.has(packageName);
             return (
-              <div key={packageName} className="rounded-xl bg-slate-50 p-4">
-                <div className="mb-1 text-sm font-semibold text-gray-800">
+              <div
+                key={packageName}
+                className="rounded-xl bg-gray-50 p-4 dark:bg-slate-800"
+              >
+                <div className="mb-1 text-sm font-semibold text-gray-900 dark:text-slate-100">
                   {packageName}
                 </div>
-                <div className="mb-3 text-xs text-gray-500">
+                <div className="mb-3 text-xs text-gray-500 dark:text-slate-400">
                   Required for document type
                   {documentTypes.length > 1 ? "s" : ""}:{" "}
                   {documentTypes.join(", ")}
@@ -123,7 +123,7 @@ export function PackageInstallModal(props: PackageInstallModalProps) {
                     disabled={installing}
                     className={twMerge(
                       buttonStyles,
-                      "border border-slate-200 bg-white text-slate-800",
+                      "border border-gray-200 bg-gray-50 text-gray-800 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100",
                       installing && "cursor-not-allowed opacity-50",
                     )}
                   >
@@ -135,7 +135,7 @@ export function PackageInstallModal(props: PackageInstallModalProps) {
                     disabled={installing}
                     className={twMerge(
                       buttonStyles,
-                      "bg-gray-800 text-gray-50",
+                      "bg-gray-800 text-gray-50 dark:bg-slate-100 dark:text-slate-900",
                       installing && "cursor-not-allowed opacity-50",
                     )}
                   >

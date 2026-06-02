@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { twMerge } from "tailwind-merge";
 import { StatusPill } from "../../components/index.js";
 import { useDebounce } from "../../hooks/index.js";
 
@@ -48,7 +49,7 @@ export const SubgraphEditorForm: React.FC<SubgraphEditorFormProps> = ({
   return (
     <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-medium text-gray-900">
+        <h2 className="text-lg font-medium text-gray-900 dark:text-slate-50">
           Subgraph Configuration
         </h2>
         <StatusPill
@@ -61,7 +62,7 @@ export const SubgraphEditorForm: React.FC<SubgraphEditorFormProps> = ({
       <div>
         <label
           htmlFor="subgraph-name"
-          className="mb-2 block text-sm font-medium text-gray-700"
+          className="mb-2 block text-sm font-medium text-gray-700 dark:text-slate-200"
         >
           Subgraph Name
         </label>
@@ -71,9 +72,12 @@ export const SubgraphEditorForm: React.FC<SubgraphEditorFormProps> = ({
           value={subgraphName}
           onChange={(e) => setSubgraphName(e.target.value)}
           disabled={isReadOnly}
-          className={`w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none ${
-            isReadOnly ? "cursor-not-allowed bg-gray-100" : ""
-          }`}
+          className={twMerge(
+            "w-full rounded-md border border-gray-300 px-3 py-2 placeholder:text-gray-700 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 dark:placeholder:text-slate-200",
+            isReadOnly
+              ? "cursor-not-allowed bg-gray-100 dark:bg-slate-700"
+              : "",
+          )}
           placeholder="Enter subgraph name"
         />
       </div>
@@ -84,7 +88,7 @@ export const SubgraphEditorForm: React.FC<SubgraphEditorFormProps> = ({
           <button
             onClick={handleConfirm}
             disabled={!subgraphName.trim()}
-            className="rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-300"
+            className="rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-300 dark:bg-blue-300 dark:text-slate-900 dark:hover:bg-blue-200 dark:disabled:bg-slate-600 dark:disabled:text-slate-100"
           >
             Confirm
           </button>

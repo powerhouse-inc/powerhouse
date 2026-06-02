@@ -88,14 +88,16 @@ export function deriveEventName(
   return `${normalize(op.context.documentType)}.${op.operation.action.type.toLowerCase()}`;
 }
 
-/** Builds the default properties attached to every OpenPanel event. */
+/**
+ * Builds the default properties attached to every OpenPanel event. The `app`
+ * property is stamped globally by the client, not here.
+ */
 export function buildDefaultProperties(op: OperationWithContext): {
   documentType: string;
   actionType: string;
   documentId: string;
   scope: string;
   branch: string;
-  app: string;
 } {
   return {
     documentType: op.context.documentType,
@@ -103,6 +105,5 @@ export function buildDefaultProperties(op: OperationWithContext): {
     documentId: op.context.documentId,
     scope: op.context.scope,
     branch: op.context.branch,
-    app: "connect",
   };
 }

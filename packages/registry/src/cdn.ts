@@ -35,6 +35,16 @@ export function parsePackageSpec(spec: string): {
   return { name: spec, tag: undefined };
 }
 
+/** True when tag is a concrete semver, false for dist-tag names or undefined. */
+export function isExactVersion(tag?: string): boolean {
+  // Strict semver charset: the version flows into the ETag header, so
+  // arbitrary characters after the prerelease/build separator must not match.
+  return (
+    !!tag &&
+    /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/.test(tag)
+  );
+}
+
 export class CdnCache {
   #extractionLocks = new Map<string, Promise<void>>();
 
@@ -110,40 +120,43 @@ export class CdnCache {
    * in the registry, return it directly. If tag is a dist-tag name (e.g.
    * "dev", "latest"), resolve it to the concrete version. If no tag is
    * provided, prefer "latest", then fall back to any available dist-tag.
+   * Returns null only for genuine not-found (404, or absent tag/version).
+   * Throws on network errors and non-OK responses other than 404.
    */
   async resolveVersion(
     packageName: string,
     tag?: string,
   ): Promise<string | null> {
-    try {
-      const url = `${this.registryUrl}/${encodeURIComponent(packageName)}`;
-      const res = await fetch(url, {
-        headers: { Accept: "application/json" },
-      });
-      if (!res.ok) return null;
-      const metadata = (await res.json()) as Record<string, unknown>;
-      const distTags = metadata["dist-tags"] as
-        | Record<string, string>
-        | undefined;
-      const versions = metadata["versions"] as
-        | Record<string, unknown>
-        | undefined;
+    const url = `${this.registryUrl}/${encodeURIComponent(packageName)}`;
+    const res = await fetch(url, {
+      headers: { Accept: "application/json" },
+    });
+    if (res.status === 404) return null;
+    if (!res.ok) {
+      throw new Error(
+        `Upstream metadata for ${packageName} returned ${res.status}`,
+      );
+    }
+    const metadata = (await res.json()) as Record<string, unknown>;
+    const distTags = metadata["dist-tags"] as
+      | Record<string, string>
+      | undefined;
+    const versions = metadata["versions"] as
+      | Record<string, unknown>
+      | undefined;
 
-      if (tag) {
-        // If the tag matches an exact version in the registry, use it directly
-        if (versions && tag in versions) return tag;
-        // Otherwise treat it as a dist-tag name
-        if (distTags && tag in distTags) return distTags[tag];
-        // Tag not found
-        return null;
-      }
-
-      if (!distTags) return null;
-      // No tag specified: prefer "latest", fall back to any available tag
-      return distTags.latest ?? Object.values(distTags)[0] ?? null;
-    } catch {
+    if (tag) {
+      // If the tag matches an exact version in the registry, use it directly
+      if (versions && tag in versions) return tag;
+      // Otherwise treat it as a dist-tag name
+      if (distTags && tag in distTags) return distTags[tag];
+      // Tag not found
       return null;
     }
+
+    if (!distTags) return null;
+    // No tag specified: prefer "latest", fall back to any available tag
+    return distTags.latest ?? Object.values(distTags)[0] ?? null;
   }
 
   async extractTarball(packageName: string, version: string): Promise<void> {

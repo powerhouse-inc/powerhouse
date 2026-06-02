@@ -117,7 +117,7 @@ export const WithForm: Decorator = (Story, context) => {
               onChange={onShowFormButtonsChange}
             />
             <label
-              className="cursor-pointer dark:text-gray-400"
+              className="cursor-pointer dark:text-slate-400"
               htmlFor={checkboxId}
             >
               Show form buttons

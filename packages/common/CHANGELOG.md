@@ -1,3 +1,50 @@
+## 6.1.0-dev.15 (2026-06-02)
+
+### 🚀 Features
+
+- **renown:** add EIP-712 credential signing and signature verification ([069417a20](https://github.com/powerhouse-inc/powerhouse/commit/069417a20))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.1.0-dev.14 (2026-06-02)
+
+### 🚀 Features
+
+- add dark mode classes ([#2629](https://github.com/powerhouse-inc/powerhouse/pull/2629))
+
+### ❤️ Thank You
+
+- CallmeT-ty @CallmeT-ty
+- Claude Sonnet 4.6
+- Ryan Wolhuter @ryanwolhuter
+
+## 6.1.0-dev.13 (2026-06-01)
+
+This was a version bump only for @powerhousedao/common to align it with other projects, there were no code changes.
+
+## 6.1.0-dev.12 (2026-06-01)
+
+This was a version bump only for @powerhousedao/common to align it with other projects, there were no code changes.
+
+## 6.1.0-dev.11 (2026-05-31)
+
+This was a version bump only for @powerhousedao/common to align it with other projects, there were no code changes.
+
+## 6.1.0-dev.10 (2026-05-30)
+
+### 🩹 Fixes
+
+- fix issue from refactor ([d6c728c95](https://github.com/powerhouse-inc/powerhouse/commit/d6c728c95))
+- **ci:** bump playwright to 1.60.0 to fix install hang on node 24.16+ ([#2669](https://github.com/powerhouse-inc/powerhouse/pull/2669))
+- added a failing test for the set_name issue, which exposed the document-drive tests weren't running at all ([8221e66b9](https://github.com/powerhouse-inc/powerhouse/commit/8221e66b9))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Guillermo Puente Sandoval @gpuente
+
 ## 6.1.0-dev.9 (2026-05-29)
 
 This was a version bump only for @powerhousedao/common to align it with other projects, there were no code changes.

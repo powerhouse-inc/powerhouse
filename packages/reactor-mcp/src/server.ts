@@ -70,7 +70,7 @@ export async function createServer(
     syncManager,
   });
 
-  const { callback, ...toolSchema } = reactorProvider.tools.getDocumentModels;
+  // const { callback, ...toolSchema } = reactorProvider.tools.getDocumentModels;
   // server.registerTool("getDocumentModels", toolSchema, callback);
   Object.entries(reactorProvider.tools).forEach(
     ([toolName, { callback, ...schema }]) => {

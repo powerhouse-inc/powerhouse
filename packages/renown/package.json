@@ -1,6 +1,6 @@
 {
   "name": "@renown/sdk",
-  "version": "6.1.0-dev.9",
+  "version": "6.1.0-dev.15",
   "description": "",
   "license": "AGPL-3.0-only",
   "private": false,
@@ -53,6 +53,7 @@
     "did-jwt-vc": "^4.0.12",
     "did-resolver": "^4.1.0",
     "key-did-resolver": "^4.0.0",
-    "uint8arrays": "^5.1.0"
+    "uint8arrays": "^5.1.0",
+    "viem": "~2.50.4"
   }
 }

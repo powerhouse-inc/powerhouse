@@ -1,4 +1,5 @@
-import { cn, Icon } from "@powerhousedao/design-system";
+import { Icon } from "@powerhousedao/design-system";
+import { twMerge } from "tailwind-merge";
 import {
   ConnectDropdownMenu,
   fileNodeDropdownOptions,
@@ -71,8 +72,8 @@ export const ModuleItem: React.FC<ModuleItemProps> = ({
   return (
     <div
       onClick={() => onClick(fileNode)}
-      className={cn(
-        "group flex w-full cursor-pointer items-center gap-3 rounded-md bg-zinc-100 p-1 text-left transition-colors hover:bg-zinc-200",
+      className={twMerge(
+        "group flex w-full cursor-pointer items-center gap-3 rounded-md bg-gray-100 p-1 text-left transition-colors hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 dark:hover:text-slate-100",
         className,
       )}
     >
@@ -81,10 +82,10 @@ export const ModuleItem: React.FC<ModuleItemProps> = ({
         <IconComponent />
       </div>
       <div className="min-w-0 flex-1">
-        <h3 className="truncate text-sm font-medium text-gray-900">
+        <h3 className="truncate text-sm font-medium text-gray-900 dark:text-slate-50">
           {fileNode.name}
         </h3>
-        <p className="truncate text-xs text-gray-500">
+        <p className="truncate text-xs text-gray-500 dark:text-slate-400">
           {fileNode.documentType}
         </p>
       </div>
@@ -94,10 +95,10 @@ export const ModuleItem: React.FC<ModuleItemProps> = ({
           onItemClick={onDropdownMenuOptionClick}
           onOpenChange={setIsDropdownMenuOpen}
           open={isDropdownMenuOpen}
-          menuClassName="border-zinc-200"
+          menuClassName="border-gray-200 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
         >
           <button
-            className={cn(
+            className={twMerge(
               "hidden group-hover:block",
               isDropdownMenuOpen && "block",
             )}
@@ -106,7 +107,10 @@ export const ModuleItem: React.FC<ModuleItemProps> = ({
               setIsDropdownMenuOpen(true);
             }}
           >
-            <Icon className="text-gray-600" name="VerticalDots" />
+            <Icon
+              className="text-gray-700 dark:text-slate-200"
+              name="VerticalDots"
+            />
           </button>
         </ConnectDropdownMenu>
       ) : null}

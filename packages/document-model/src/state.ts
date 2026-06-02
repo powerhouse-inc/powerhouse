@@ -57,8 +57,9 @@ export const documentModelCreateState: CreateState<DocumentModelPHState> = (
 export function documentModelCreateDocument(
   state?: Partial<DocumentModelPHState>,
 ): DocumentModelDocument {
-  const document = baseCreateDocument(documentModelCreateState, state);
-  document.header.documentType = documentModelDocumentType;
-
-  return document;
+  return baseCreateDocument(
+    documentModelCreateState,
+    state,
+    documentModelDocumentType,
+  );
 }

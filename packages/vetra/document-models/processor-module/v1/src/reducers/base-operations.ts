@@ -6,21 +6,21 @@ import type { ProcessorModuleBaseOperationsOperations } from "document-models/pr
 
 export const processorModuleBaseOperationsOperations: ProcessorModuleBaseOperationsOperations =
   {
-    setProcessorNameOperation(state, action, dispatch) {
+    setProcessorNameOperation(state, action, _dispatch) {
       const trimmedName = action.input.name.trim();
       if (trimmedName === "") {
         throw new Error("Processor name cannot be empty");
       }
       state.name = trimmedName;
     },
-    setProcessorTypeOperation(state, action, dispatch) {
+    setProcessorTypeOperation(state, action, _dispatch) {
       const trimmedType = action.input.type.trim();
       if (trimmedType === "") {
         throw new Error("Processor type cannot be empty");
       }
       state.type = trimmedType;
     },
-    addDocumentTypeOperation(state, action, dispatch) {
+    addDocumentTypeOperation(state, action, _dispatch) {
       // Check for duplicate ID
       const existingId = state.documentTypes.find(
         (dt) => dt.id === action.input.id,
@@ -36,12 +36,12 @@ export const processorModuleBaseOperationsOperations: ProcessorModuleBaseOperati
         documentType: action.input.documentType,
       });
     },
-    removeDocumentTypeOperation(state, action, dispatch) {
+    removeDocumentTypeOperation(state, action, _dispatch) {
       state.documentTypes = state.documentTypes.filter(
         (documentType) => documentType.id !== action.input.id,
       );
     },
-    setProcessorStatusOperation(state, action, dispatch) {
+    setProcessorStatusOperation(state, action, _dispatch) {
       state.status = action.input.status;
     },
     addProcessorAppOperation(state, action) {

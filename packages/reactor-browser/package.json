@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-browser",
-  "version": "6.1.0-dev.9",
+  "version": "6.1.0-dev.15",
   "license": "AGPL-3.0-only",
   "type": "module",
   "repository": {
@@ -68,6 +68,7 @@
     "normalize-exception": "^4.0.1",
     "remeda": "catalog:",
     "slug": "^11.0.0",
+    "usehooks-ts": "^3.1.1",
     "zod": "catalog:"
   },
   "devDependencies": {
@@ -92,6 +93,8 @@
     "react": "catalog:",
     "react-dom": "catalog:",
     "tsdown": "catalog:",
+    "type-fest": "catalog:",
+    "viem": "~2.50.4",
     "vite": "catalog:",
     "vitest": "catalog:",
     "vitest-browser-react": "^1.0.1"

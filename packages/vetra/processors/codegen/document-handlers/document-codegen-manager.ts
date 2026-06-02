@@ -96,7 +96,7 @@ export class DocumentCodegenManager {
    * Route a document to the appropriate generator and handle the generation
    * Handles both interactive and non-interactive modes with queue-based processing
    */
-  async routeAndGenerate(strand: CodegenInput): Promise<void> {
+  routeAndGenerate(strand: CodegenInput): Promise<void> {
     const documentType = strand.documentType;
 
     if (!documentType) {
@@ -119,7 +119,7 @@ export class DocumentCodegenManager {
       logger.debug(
         `>>> Generator validation failed for ${documentType}:${strand.documentId}, skipping processing`,
       );
-      return;
+      return Promise.resolve();
     }
 
     // Different flow for interactive vs non-interactive mode
@@ -199,6 +199,7 @@ export class DocumentCodegenManager {
       // Store the timer reference
       this.debounceTimers.set(timerKey, debounceTimer);
     }
+    return Promise.resolve();
   }
 
   /**

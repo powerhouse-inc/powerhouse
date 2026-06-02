@@ -1,28 +1,23 @@
-import type { ClassValue } from "clsx";
-import clsx from "clsx";
 import * as React from "react";
 import { twMerge } from "tailwind-merge";
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
+
 export type InputProps = React.InputHTMLAttributes<HTMLInputElement>;
 
-const inputBaseStyles = cn(
+const inputBaseStyles = twMerge(
   // Base styles
-  "flex h-9 w-full rounded-md text-sm/5 font-normal text-gray-900 dark:text-gray-50",
+  "flex h-9 w-full rounded-md text-sm/5 font-normal text-gray-900 dark:text-slate-50",
   // Border & Background
-  "border border-gray-300 bg-white dark:border-charcoal-700 dark:bg-charcoal-900",
+  "border border-gray-300 bg-gray-50 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100",
   // Padding
   "px-3 py-2",
   // Placeholder
-  "font-sans placeholder:text-gray-500 dark:placeholder:text-gray-600",
+  "font-sans placeholder:text-gray-500 dark:placeholder:text-slate-400",
   // Focus styles
   "focus-visible:ring-1 focus-visible:ring-gray-900 focus-visible:ring-offset-0 focus-visible:ring-offset-white focus-visible:outline-none",
-  "focus:bg-gray-50 dark:focus:bg-charcoal-900 dark:focus-visible:ring-charcoal-300 dark:focus-visible:ring-offset-charcoal-900",
+  "focus:bg-gray-50 dark:focus:bg-slate-700 dark:focus-visible:ring-slate-400 dark:focus-visible:ring-offset-slate-800",
   // Disabled state
   "disabled:cursor-not-allowed",
-  "disabled:border-gray-300 disabled:bg-gray-50 disabled:text-gray-700",
-  "disabled:dark:border-charcoal-800 disabled:dark:bg-charcoal-900 disabled:dark:text-gray-300",
+  "disabled:border-gray-300 disabled:bg-gray-50 disabled:text-gray-700 dark:disabled:border-slate-500 dark:disabled:bg-slate-700 dark:disabled:placeholder:text-slate-400",
 );
 
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
@@ -30,7 +25,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
     return (
       <input
         type={type}
-        className={cn(inputBaseStyles, className)}
+        className={twMerge(inputBaseStyles, className)}
         ref={ref}
         {...props}
       />

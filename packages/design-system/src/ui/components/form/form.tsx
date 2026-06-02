@@ -270,7 +270,7 @@ export const Form = forwardRef<UseFormReturn, FormProps>(
 
         <form
           id={formId}
-          onSubmit={methods.handleSubmit(wrappedOnSubmit)}
+          onSubmit={(e) => void methods.handleSubmit(wrappedOnSubmit)(e)}
           className={className}
           noValidate
         >

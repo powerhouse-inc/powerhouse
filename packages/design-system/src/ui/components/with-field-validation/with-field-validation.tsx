@@ -56,7 +56,7 @@ export const withFieldValidation = <
         props as PossibleEventsProps;
       const {
         control,
-        formState: { errors: formErrors, defaultValues },
+        formState: { errors: formErrors, defaultValues: _defaultValues },
         trigger,
         setValue,
         getValues,

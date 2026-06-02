@@ -307,10 +307,8 @@ export interface IProof {
   proofValue: string;
   eip712: {
     domain: {
-      name: string;
       version: string;
       chainId: number;
-      verifyingContract: string;
     };
     types: typeof CREDENTIAL_TYPES;
     primaryType: "VerifiableCredential";
@@ -327,7 +325,6 @@ export interface IVerifiableCredential<
 export interface IPowerhouseCredentialSubject {
   id: string;
   app: string;
-  name?: string;
 }
 
 export interface IPowerhouseIssuerType {
@@ -347,7 +344,7 @@ export interface IAuthCredentialSubject {
 
 export type AuthVerifiableCredential = IVerifiableCredential<
   IAuthCredentialSubject,
-  {}
+  Record<string, never>
 >;
 
 export type AuthVerifiedCredential = VerifiedCredential & {

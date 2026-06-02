@@ -31,8 +31,16 @@ export const SettingsModal: React.FC = () => {
       },
       {
         id: "danger-zone",
-        icon: <Icon name="Danger" size={12} className="text-red-900" />,
-        label: <span className="text-red-900">Danger Zone</span>,
+        icon: (
+          <Icon
+            name="Danger"
+            size={12}
+            className="text-red-900 dark:text-red-400"
+          />
+        ),
+        label: (
+          <span className="text-red-900 dark:text-red-400">Danger Zone</span>
+        ),
         content: () => <DangerZone />,
       },
       {
@@ -42,7 +50,7 @@ export const SettingsModal: React.FC = () => {
         content: About,
       },
     ],
-    [onRefresh],
+    [],
   );
 
   return (

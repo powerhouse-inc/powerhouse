@@ -7,9 +7,9 @@ type Props = {
 export function About(props: Props) {
   const { packageJson, phCliVersion } = props;
   return (
-    <div className="bg-white p-3">
-      <h2 className="font-semibold">About</h2>
-      <p className="text-sm font-normal text-gray-600">
+    <div className="bg-gray-50 p-3 dark:bg-slate-800">
+      <h2 className="font-semibold text-gray-900 dark:text-slate-100">About</h2>
+      <p className="text-sm font-normal text-gray-700 dark:text-slate-200">
         Connect is the hub for your most important documents and processes
         translated into software. Easily capture data in a structured way with
         Connect.

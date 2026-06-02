@@ -224,14 +224,14 @@ function FilterClauseComponent({
       />
       {showValueInput && (
         <input
-          className="min-w-[150px] rounded-sm border border-gray-300 bg-white px-2 py-1 text-xs text-gray-900"
+          className="min-w-[150px] rounded-sm border border-gray-300 bg-gray-50 px-2 py-1 text-xs text-gray-900 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
           type={inputType}
           value={clause.value}
           onChange={(e) => handleValueChange(e.target.value)}
         />
       )}
       <button
-        className="flex items-center justify-center rounded-sm p-1 text-gray-500 hover:bg-gray-200 hover:text-gray-700"
+        className="flex items-center justify-center rounded-sm p-1 text-gray-500 hover:bg-gray-200 hover:text-gray-700 dark:text-slate-400 dark:hover:bg-slate-600 dark:hover:text-slate-100"
         onClick={onRemove}
         title="Remove filter"
         type="button"
@@ -328,10 +328,10 @@ export function FilterBar({
   const hasFilters = filters && filters.clauses.length > 0;
 
   return (
-    <div className="flex shrink-0 flex-col gap-2 rounded-lg border border-gray-300 bg-white p-2">
+    <div className="flex shrink-0 flex-col gap-2 rounded-lg border border-gray-300 bg-gray-50 p-2 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
       <div className="flex items-center justify-between">
         <button
-          className="flex items-center gap-1 text-xs text-gray-700 hover:text-gray-900"
+          className="flex items-center gap-1 text-xs text-gray-700 hover:text-gray-900 dark:text-slate-200 dark:hover:text-slate-50"
           onClick={() => setIsExpanded(!isExpanded)}
           type="button"
         >
@@ -345,13 +345,13 @@ export function FilterBar({
           />
           <span>Filters</span>
           {hasFilters && (
-            <span className="rounded-sm bg-blue-100 px-1.5 py-0.5 text-xs text-blue-700">
+            <span className="rounded-sm bg-blue-100 px-1.5 py-0.5 text-xs text-blue-700 dark:bg-blue-800 dark:text-blue-100">
               {filters.clauses.length}
             </span>
           )}
         </button>
         <button
-          className="flex items-center gap-1 rounded-sm border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700 hover:bg-gray-100"
+          className="flex items-center gap-1 rounded-sm border border-gray-300 bg-gray-50 px-2 py-1 text-xs text-gray-700 hover:bg-gray-100 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 dark:hover:bg-slate-700"
           onClick={handleAddFilter}
           type="button"
         >

@@ -10,12 +10,11 @@ export const documentModelGenUtilsTemplate = (v: DocumentModelFileMakerArgs) =>
 import type {
     DocumentModelUtils,
 } from "document-model";
-import { 
+import {
     baseCreateDocument,
     baseSaveToFileHandle,
     baseLoadFromInput,
     defaultBaseState,
-    generateId,
  } from "document-model";
 import { reducer } from './reducer.js';
 import { ${v.documentTypeVariableName} } from "./document-type.js";
@@ -36,17 +35,11 @@ export const utils: DocumentModelUtils<${v.phStateName}> = {
         return { ...defaultBaseState(), global: { ...initialGlobalState, ...state?.global }, local: { ...initialLocalState, ...state?.local } };
     },
     createDocument(state) {
-        const document = baseCreateDocument(
+        return baseCreateDocument(
             utils.createState,
-            state
+            state,
+            ${v.documentTypeVariableName}
         );
-
-        document.header.documentType = ${v.documentTypeVariableName};
-
-        // for backwards compatibility, but this is NOT a valid signed document id
-        document.header.id = generateId();
-
-        return document;
     },
     saveToFileHandle(document, input) {
         return baseSaveToFileHandle(document, input);

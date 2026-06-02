@@ -1,4 +1,4 @@
-import { mergeClassNameProps } from "#design-system";
+import { twMerge } from "tailwind-merge";
 
 type FooterLinkProps<E extends React.ElementType> = {
   readonly as?: E;
@@ -7,14 +7,15 @@ type FooterLinkProps<E extends React.ElementType> = {
 export function FooterLink<E extends React.ElementType = "a">(
   props: FooterLinkProps<E>,
 ) {
-  const { as: Component = "a", ...restProps } = props;
+  const { as: Component = "a", className, ...restProps } = props;
 
   return (
     <Component
-      {...mergeClassNameProps(
-        restProps,
+      className={twMerge(
         "flex cursor-pointer items-center hover:underline",
+        typeof className === "string" && className,
       )}
+      {...restProps}
     />
   );
 }

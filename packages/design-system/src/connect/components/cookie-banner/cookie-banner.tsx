@@ -1,4 +1,5 @@
-import { mergeClassNameProps, PowerhouseButton } from "#design-system";
+import { PowerhouseButton } from "#design-system";
+import { twMerge } from "tailwind-merge";
 import { useState } from "react";
 
 export type CookieInput = {
@@ -26,6 +27,7 @@ export const CookieBanner: React.FC<CookieBannerProps> = (props) => {
     rejectLabel,
     onSubmit = () => {},
     onReject = () => {},
+    className,
     ...divProps
   } = props;
 
@@ -44,19 +46,28 @@ export const CookieBanner: React.FC<CookieBannerProps> = (props) => {
   const buttonStyles = "min-w-64 h-8 text-base";
 
   return (
-    <div {...mergeClassNameProps(divProps, "flex flex-col items-center")}>
+    <div
+      className={twMerge(
+        "flex flex-col items-center",
+        typeof className === "string" && className,
+      )}
+      {...divProps}
+    >
       <div className="text-center">{children}</div>
       <div className="my-8 flex gap-x-16 text-sm font-medium">
         {cookiesValue.map((cookie, i) => (
           <div className="cursor-pointer" key={i}>
             <input
               checked={cookie.value}
-              className="mr-1 size-3 cursor-pointer rounded-sm border-2 border-gray-900 accent-gray-900 focus:outline-none"
+              className="mr-1 size-3 cursor-pointer rounded-sm border-2 border-gray-900 accent-gray-900 focus:outline-none dark:border-slate-50"
               id={cookie.id}
               onChange={handleOnChange}
               type="checkbox"
             />
-            <label className="cursor-pointer select-none" htmlFor={cookie.id}>
+            <label
+              className="cursor-pointer text-gray-900 select-none dark:text-slate-50"
+              htmlFor={cookie.id}
+            >
               {cookie.label}
             </label>
           </div>

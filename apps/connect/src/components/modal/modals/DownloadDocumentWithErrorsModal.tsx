@@ -22,7 +22,6 @@ export function DownloadDocumentWithErrorsModal() {
   return (
     <ConnectConfirmationModal
       header={t("modals.downloadDocumentWithErrors.title")}
-      title={t("modals.downloadDocumentWithErrors.title")}
       body={
         <div>
           <p>{t("modals.downloadDocumentWithErrors.body")}</p>
@@ -36,14 +35,16 @@ export function DownloadDocumentWithErrorsModal() {
       cancelLabel={t("common.cancel")}
       continueLabel={t("common.export")}
       onCancel={() => closePHModal()}
-      onContinue={async () => {
-        try {
-          await exportFile(document);
-        } catch (error) {
-          console.error(error);
-        } finally {
-          closePHModal();
-        }
+      onContinue={() => {
+        void (async () => {
+          try {
+            await exportFile(document);
+          } catch (error) {
+            console.error(error);
+          } finally {
+            closePHModal();
+          }
+        })();
       }}
       open={open}
       onOpenChange={(status: boolean) => {

@@ -20,7 +20,9 @@ function collectMessages(err: unknown): string[] {
       messages.push(current.message);
       current = (current as Error & { cause?: unknown }).cause;
     } else {
-      messages.push(String(current));
+      messages.push(
+        typeof current === "string" ? current : JSON.stringify(current),
+      );
       break;
     }
   }

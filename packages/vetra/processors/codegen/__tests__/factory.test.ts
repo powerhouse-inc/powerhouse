@@ -11,7 +11,7 @@ vi.mock("../processor.js", () => ({
   }),
 }));
 
-describe("Codegen Processor Factory - Drive Filtering", async () => {
+describe("Codegen Processor Factory - Drive Filtering", () => {
   let mockModule: IProcessorHostModule;
 
   beforeEach(() => {
@@ -23,7 +23,7 @@ describe("Codegen Processor Factory - Drive Filtering", async () => {
     } as IProcessorHostModule;
   });
 
-  describe("Vetra Drive Pattern Matching (No Explicit Config)", async () => {
+  describe("Vetra Drive Pattern Matching (No Explicit Config)", () => {
     it("should create processor for drive with slug 'vetra'", async () => {
       const driveHeader: PHDocumentHeader = {
         id: "some-id",
@@ -102,7 +102,7 @@ describe("Codegen Processor Factory - Drive Filtering", async () => {
     });
   });
 
-  describe("Case-Insensitive Matching", async () => {
+  describe("Case-Insensitive Matching", () => {
     it("should match slug 'VETRA' (uppercase)", async () => {
       const driveHeader: PHDocumentHeader = {
         id: "some-id",
@@ -152,7 +152,7 @@ describe("Codegen Processor Factory - Drive Filtering", async () => {
     });
   });
 
-  describe("Explicit Drive ID Configuration", async () => {
+  describe("Explicit Drive ID Configuration", () => {
     it("should match exact slug when explicit driveId is configured", async () => {
       mockModule.config?.set(VETRA_PROCESSOR_CONFIG_KEY, {
         driveId: "my-custom-drive",
@@ -219,7 +219,7 @@ describe("Codegen Processor Factory - Drive Filtering", async () => {
     });
   });
 
-  describe("ProcessorRecord Filter Configuration", async () => {
+  describe("ProcessorRecord Filter Configuration", () => {
     it("should configure filter with correct branch, documentType, and scope", async () => {
       const driveHeader: PHDocumentHeader = {
         id: "vetra",

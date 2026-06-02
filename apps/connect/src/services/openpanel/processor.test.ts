@@ -116,7 +116,7 @@ describe("OpenPanelProcessor — mapping selection", () => {
 // ---------------------------------------------------------------------------
 
 describe("OpenPanelProcessor — default properties", () => {
-  it("merges the six default properties into every tracked event", async () => {
+  it("merges the five default properties into every tracked event", async () => {
     const client = makeFakeClient();
     const processor = new OpenPanelProcessor(client, realLookupMap);
     const op = makeOp("powerhouse/document-drive", "ADD_FOLDER", {
@@ -133,7 +133,7 @@ describe("OpenPanelProcessor — default properties", () => {
     );
   });
 
-  it("payload includes app: 'connect' constant", async () => {
+  it("payload does not embed an app property (stamped globally on the client)", async () => {
     const client = makeFakeClient();
     const processor = new OpenPanelProcessor(client, realLookupMap);
     const op = makeOp("powerhouse/document-drive", "ADD_FILE");
@@ -144,7 +144,7 @@ describe("OpenPanelProcessor — default properties", () => {
       string,
       Record<string, unknown>,
     ];
-    expect(payload).toMatchObject({ app: "connect" });
+    expect("app" in payload).toBe(false);
   });
 });
 

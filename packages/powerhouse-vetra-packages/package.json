@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/powerhouse-vetra-packages",
-  "version": "6.1.0-dev.9",
+  "version": "6.1.0-dev.15",
   "description": "",
   "keywords": [],
   "author": "",
@@ -17,7 +17,8 @@
     "access": "public"
   },
   "files": [
-    "dist"
+    "dist",
+    "style.css"
   ],
   "exports": {
     ".": {
@@ -61,15 +62,14 @@
       "node": "./dist/node/processors/index.mjs"
     },
     "./manifest": "./dist/powerhouse.manifest.json",
-    "./style.css": "./dist/style.css",
+    "./style.css": "./style.css",
     "./package.json": "./package.json"
   },
   "scripts": {
     "tsc": "tsc",
     "lint": "eslint",
-    "build:css": "pnpm exec tailwindcss -i ./style.css -o ./dist/style.css",
     "test": "vitest --run",
-    "build": "tsx ./build && pnpm build:css",
+    "build": "tsx ./build",
     "test:watch": "vitest",
     "generate": "ph-cli generate",
     "reactor": "ph-cli reactor",

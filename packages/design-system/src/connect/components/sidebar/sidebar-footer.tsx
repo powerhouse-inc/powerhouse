@@ -1,9 +1,10 @@
 import { Icon, SidebarFooter } from "#design-system";
+import { Settings } from "lucide-react";
 import type { ComponentProps } from "react";
 import { twMerge } from "tailwind-merge";
+import { ThemeSwitch } from "../theme-switch.js";
 import { SidebarLogin } from "./sidebar-login.js";
 import { SidebarUser } from "./sidebar-user.js";
-
 export interface ConnectSidebarFooterProps extends ComponentProps<
   typeof SidebarFooter
 > {
@@ -37,7 +38,7 @@ export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
     <SidebarFooter
       {...props}
       className={twMerge(
-        "flex flex-col gap-2 border-t border-gray-300 px-2 py-4",
+        "flex flex-col items-center gap-3 border-t border-gray-300 px-2 py-4 dark:border-none dark:bg-slate-700 dark:text-slate-100",
         className,
       )}
     >
@@ -45,10 +46,14 @@ export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
         <button
           aria-label="Home"
           type="button"
-          className="flex w-full cursor-pointer items-center justify-center outline-none"
+          className="cursor-pointer"
           onClick={onHomeClick}
         >
-          <Icon className="text-gray-600" name="ConnectSmall" size={24} />
+          <Icon
+            className="text-gray-700 dark:text-slate-200"
+            name="ConnectSmall"
+            size={24}
+          />
         </button>
       )}
       {showDebug && onDebugClick && (
@@ -56,10 +61,10 @@ export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
           aria-label="Debug Settings"
           type="button"
           id="connect-debug-button"
-          className="mt-3 flex w-full cursor-pointer items-center justify-center outline-none"
+          className="cursor-pointer"
           onClick={onDebugClick}
         >
-          <Icon className="text-gray-600" name="Tube" />
+          <Icon className="text-gray-700 dark:text-slate-200" name="Tube" />
         </button>
       )}
       <div className={onHomeClick ? "mt-3" : ""}>
@@ -78,17 +83,19 @@ export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
       <button
         aria-label="Settings"
         type="button"
-        className={twMerge(
-          "mt-3 flex w-full items-center justify-center outline-none",
-          onClickSettings ? "cursor-pointer" : "cursor-wait",
-        )}
+        className={twMerge(onClickSettings ? "cursor-pointer" : "cursor-wait")}
         onClick={onClickSettings}
       >
-        <Icon className="text-gray-600" name="Settings" />
-        <span className="hidden text-sm/6 font-semibold text-gray-800">
+        <Settings
+          className="text-gray-700 dark:text-slate-200"
+          size={24}
+          strokeWidth={2}
+        />
+        <span className="hidden text-sm/6 font-semibold text-gray-900 dark:text-slate-100">
           Settings
         </span>
       </button>
+      <ThemeSwitch />
     </SidebarFooter>
   );
 };

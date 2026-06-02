@@ -1,4 +1,5 @@
-import { cn, Icon } from "#design-system";
+import { Icon } from "#design-system";
+import { twMerge } from "tailwind-merge";
 import { useCommandState } from "cmdk";
 import React, { useEffect } from "react";
 import {
@@ -60,11 +61,11 @@ export const Content: React.FC<ContentProps> = ({
             }
           }}
           wrapperClassName="rounded-t"
-          className="text-gray-900 dark:text-gray-50"
+          className="text-gray-900 dark:text-slate-50"
         />
       )}
       <CommandList ref={commandListRef} tabIndex={!searchable ? 0 : undefined}>
-        <CommandEmpty className="p-4 text-center text-sm/5 font-normal text-gray-700 dark:text-gray-400">
+        <CommandEmpty className="p-4 text-center text-sm/5 font-normal text-gray-700 dark:text-slate-200">
           No results found.
         </CommandEmpty>
         {multiple && cmdkSearch === "" && (
@@ -73,9 +74,9 @@ export const Content: React.FC<ContentProps> = ({
               value="select-all"
               onSelect={toggleAll}
               disabled={false}
-              className={cn(
+              className={twMerge(
                 "cursor-pointer",
-                "data-[selected=true]:bg-gray-100 dark:data-[selected=true]:bg-gray-900",
+                "data-[selected=true]:bg-gray-100 dark:data-[selected=true]:bg-slate-600",
               )}
               role="option"
               aria-selected={selectedValues.length === enabledOptions.length}
@@ -83,11 +84,11 @@ export const Content: React.FC<ContentProps> = ({
               <div className="flex w-full items-center gap-2">
                 {selectionIcon === "auto" && (
                   <div
-                    className={cn(
+                    className={twMerge(
                       "flex size-4 items-center justify-center rounded-md border",
-                      "border-gray-700 dark:border-gray-400",
+                      "border-gray-700 dark:border-slate-200",
                       selectedValues.length === enabledOptions.length &&
-                        "bg-gray-900 text-slate-50 dark:bg-gray-400 dark:text-black",
+                        "bg-gray-900 text-gray-50 dark:bg-slate-50 dark:text-slate-900",
                     )}
                   >
                     {selectedValues.length === enabledOptions.length && (
@@ -103,12 +104,12 @@ export const Content: React.FC<ContentProps> = ({
                           <Icon
                             name="Checkmark"
                             size={16}
-                            className="text-gray-900 dark:text-gray-50"
+                            className="text-gray-900 dark:text-slate-50"
                           />
                         )}
                     </div>
                   )}
-                <span className="text-sm/4 font-semibold text-gray-900 dark:text-gray-50">
+                <span className="text-sm/4 font-semibold text-gray-900 dark:text-slate-50">
                   {selectedValues.length === enabledOptions.length
                     ? "Deselect All"
                     : "Select All"}
@@ -120,7 +121,7 @@ export const Content: React.FC<ContentProps> = ({
                         <Icon
                           name="Checkmark"
                           size={16}
-                          className="text-gray-900 dark:text-gray-50"
+                          className="text-gray-900 dark:text-slate-50"
                         />
                       )}
                     </div>
@@ -144,7 +145,7 @@ export const Content: React.FC<ContentProps> = ({
           />
 
           {favoriteOptions.length > 0 && (
-            <div className="my-1 border-b border-gray-300 dark:border-gray-600" />
+            <div className="my-1 border-b border-gray-300 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100" />
           )}
           <CommandItemList
             options={options}

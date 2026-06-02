@@ -15,7 +15,7 @@ let activeClient: OpenPanelTracker | undefined;
 let errorHandler: ((err: unknown) => void) | undefined;
 
 function defaultOnError(err: unknown): void {
-  console.warn("[useOpenPanel] track failed:", err);
+  console.warn("[useOpenPanelAnalytics] track failed:", err);
 }
 
 /**

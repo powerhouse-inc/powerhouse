@@ -20,7 +20,9 @@ const stringify = (value: unknown, includeStack: boolean): string => {
     try {
       return JSON.stringify(value);
     } catch {
-      return String(value);
+      // Circular or otherwise non-serializable object; fall back to the
+      // base tag (e.g. "[object Object]") without tripping no-base-to-string.
+      return Object.prototype.toString.call(value);
     }
   }
   if (typeof value === "function") {
@@ -28,7 +30,8 @@ const stringify = (value: unknown, includeStack: boolean): string => {
     const name = (value as Function).name;
     return name ? `${name}()` : "anonymous()";
   }
-  return String(value);
+  // Remaining primitives (number, boolean, bigint, symbol) stringify cleanly.
+  return String(value as number | boolean | bigint | symbol);
 };
 
 const formatMessage = (

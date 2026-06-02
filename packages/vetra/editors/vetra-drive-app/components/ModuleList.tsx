@@ -21,7 +21,10 @@ export const ModuleList: React.FC<ModuleListProps> = ({
   return (
     <div className="space-y-2">
       {items.map((item, index) => (
-        <div key={index} className="px-2 py-1 text-sm text-gray-600">
+        <div
+          key={index}
+          className="px-2 py-1 text-sm text-gray-700 dark:text-slate-200"
+        >
           <ModuleItem
             fileNode={item}
             onClick={onClickItem}
@@ -29,7 +32,7 @@ export const ModuleList: React.FC<ModuleListProps> = ({
           />
         </div>
       ))}
-      <div className="px-2 py-1 text-sm text-gray-600">
+      <div className="px-2 py-1 text-sm text-gray-700 dark:text-slate-200">
         <NewModuleItem
           title="Add new specification"
           subtitle={documentType}

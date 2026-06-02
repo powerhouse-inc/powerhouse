@@ -183,17 +183,17 @@ describe("OpenPanel component", () => {
       expect(mockClient.identify).toHaveBeenCalledTimes(1);
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const [identifyArg] = mockClient.identify.mock.calls[0] as [
       { profileId: string; properties: Record<string, unknown> },
     ];
 
     // profileId is top-level, not inside properties
-    expect(identifyArg.profileId).toBe(MOCK_USER.did);
+    expect(identifyArg.profileId).toBe(MOCK_USER.address);
 
     // Core property fields present
     const { properties } = identifyArg;
     expect(properties.address).toBe(MOCK_USER.address);
+    expect(properties.did).toBe(MOCK_USER.did);
     expect(properties.networkId).toBe(MOCK_USER.networkId);
     expect(properties.chainId).toBe(MOCK_USER.chainId);
 

@@ -1,4 +1,5 @@
 import React from "react";
+import { twMerge } from "tailwind-merge";
 import { AddNewIcon } from "../icons/AddNewIcon.js";
 
 interface NewModuleItemProps {
@@ -17,14 +18,21 @@ export const NewModuleItem: React.FC<NewModuleItemProps> = ({
   return (
     <button
       onClick={onClick}
-      className={`flex w-full items-center gap-3 rounded-md bg-zinc-100 p-1 text-left transition-colors hover:bg-zinc-200 ${className}`}
+      className={twMerge(
+        "flex w-full items-center gap-3 rounded-md bg-gray-100 p-1 text-left transition-colors hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 dark:hover:text-slate-100",
+        className,
+      )}
     >
       <div className="shrink-0">
         <AddNewIcon />
       </div>
       <div className="min-w-0 flex-1">
-        <h3 className="truncate text-sm font-medium text-gray-900">{title}</h3>
-        <p className="truncate text-xs text-gray-500">{subtitle}</p>
+        <h3 className="truncate text-sm font-medium text-gray-900 dark:text-slate-50">
+          {title}
+        </h3>
+        <p className="truncate text-xs text-gray-500 dark:text-slate-400">
+          {subtitle}
+        </p>
       </div>
     </button>
   );

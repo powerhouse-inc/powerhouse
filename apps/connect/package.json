@@ -1,7 +1,7 @@
 {
   "name": "@powerhousedao/connect",
   "productName": "Powerhouse-Connect",
-  "version": "6.1.0-dev.9",
+  "version": "6.1.0-dev.15",
   "description": "Powerhouse Connect",
   "main": "dist/index.html",
   "type": "module",
@@ -10,6 +10,7 @@
   },
   "files": [
     "dist",
+    "style.css",
     "nginx.conf",
     "nginx.sh",
     "scripts",
@@ -54,8 +55,8 @@
     "test": "vitest --run",
     "dev": "vite dev",
     "build": "pnpm run build:bundle && pnpm run build:css",
-    "build:css": "pnpm exec tailwindcss -i ./style.css -o ./dist/style.css",
     "build:bundle": "tsdown",
+    "build:css": "pnpm exec tailwindcss -i style.css -o dist/style.css",
     "build:debug": "PH_DEBUG_BUILD=true vite build",
     "preview": "vite preview",
     "cy:open": "cypress open",

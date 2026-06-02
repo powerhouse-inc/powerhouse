@@ -109,8 +109,8 @@ export function fetchFileNode(
   });
 }
 
-export const getFileNode = async (file: string) => {
-  return readFileNode(file);
+export const getFileNode = (file: string) => {
+  return Promise.resolve(readFileNode(file));
 };
 
 export const hashNode = (

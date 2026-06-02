@@ -62,13 +62,10 @@ export function makePHEventFunctions<TKey extends PHGlobalKey>(key: TKey) {
     if (isServer) {
       return undefined;
     }
-    if (!window.ph) {
-      console.warn(
-        `ph global store is not initialized. Did you call set${capitalCase(key)}?`,
-      );
-      return undefined;
-    }
-    return window.ph[key];
+    // The store is legitimately read before the first `setValue` (subscribers
+    // mount before init runs), so an uninitialized store is expected, not an
+    // error — return `undefined` quietly rather than warning on every render.
+    return window.ph?.[key];
   }
 
   function getServerSnapshot() {

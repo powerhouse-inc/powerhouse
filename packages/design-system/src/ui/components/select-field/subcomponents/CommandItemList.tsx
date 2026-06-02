@@ -1,5 +1,6 @@
 import type { IconName } from "#design-system";
-import { cn, Icon } from "#design-system";
+import { Icon } from "#design-system";
+import { twMerge } from "tailwind-merge";
 import React from "react";
 import { CommandItem } from "../../command/command.js";
 import type { SelectProps } from "../../enum-field/types.js";
@@ -26,14 +27,14 @@ const renderIcon = (
       <Icon
         name={IconComponent}
         size={16}
-        className={cn("text-gray-700 dark:text-gray-400")}
+        className={twMerge("text-gray-700 dark:text-slate-200")}
       />
     );
   }
   return (
     IconComponent && (
       <IconComponent
-        className={cn("size-4", "text-gray-700 dark:text-gray-400")}
+        className={twMerge("size-4", "text-gray-700 dark:text-slate-200")}
       />
     )
   );
@@ -60,11 +61,11 @@ export const CommandItemList: React.FC<FavoriteOptionsProps> = ({
             value={opt.label}
             onSelect={() => !opt.disabled && toggleOption(opt.value)}
             disabled={opt.disabled}
-            className={cn(
+            className={twMerge(
               "cursor-pointer",
-              "data-[selected=true]:bg-gray-100 dark:data-[selected=true]:bg-gray-900",
+              "data-[selected=true]:bg-gray-100 dark:data-[selected=true]:bg-slate-500",
               opt.disabled &&
-                "pointer-events-auto! cursor-not-allowed hover:bg-transparent dark:hover:bg-transparent",
+                "pointer-events-auto! cursor-not-allowed hover:bg-transparent dark:hover:bg-slate-500",
             )}
             role="option"
             aria-selected={isSelected}
@@ -72,27 +73,27 @@ export const CommandItemList: React.FC<FavoriteOptionsProps> = ({
             {selectionIcon === "auto" &&
               (multiple ? (
                 <div
-                  className={cn(
+                  className={twMerge(
                     "flex size-4 items-center justify-center rounded-md border",
-                    "border-gray-700 dark:border-gray-400",
+                    "border-gray-700 dark:border-slate-200",
                     isSelected &&
-                      "bg-gray-900 text-slate-50 dark:bg-gray-400 dark:text-black",
+                      "bg-gray-900 text-gray-50 dark:bg-slate-50 dark:text-slate-900",
                   )}
                 >
                   {isSelected && <Icon name="Checkmark" size={16} />}
                 </div>
               ) : (
                 <div
-                  className={cn(
+                  className={twMerge(
                     "relative size-4 rounded-full border",
                     isSelected
-                      ? "border-gray-900 dark:border-gray-400"
-                      : "border-gray-800 dark:border-gray-400",
-                    "bg-transparent dark:bg-transparent",
+                      ? "border-gray-900 dark:border-slate-50"
+                      : "border-gray-800 dark:border-slate-100",
+                    "bg-transparent",
                   )}
                 >
                   {isSelected && (
-                    <div className="absolute top-1/2 left-1/2 size-2.5 -translate-1/2 rounded-full bg-gray-900 dark:bg-gray-400" />
+                    <div className="absolute top-1/2 left-1/2 size-2.5 -translate-1/2 rounded-full bg-gray-900 dark:bg-slate-50" />
                   )}
                 </div>
               ))}
@@ -103,17 +104,17 @@ export const CommandItemList: React.FC<FavoriteOptionsProps> = ({
                     <Icon
                       name="Checkmark"
                       size={16}
-                      className="text-gray-900 dark:text-gray-50"
+                      className="text-gray-900 dark:text-slate-50"
                     />
                   )}
                 </div>
               )}
             {renderIcon(opt.icon)}
             <span
-              className={cn(
+              className={twMerge(
                 "flex-1 truncate text-sm/4 font-normal",
-                "text-gray-700 dark:text-gray-500",
-                opt.disabled && "text-gray-600 dark:text-gray-600",
+                "text-gray-700 dark:text-slate-200",
+                opt.disabled && "text-gray-700 dark:text-slate-200",
               )}
             >
               {opt.label}
@@ -125,7 +126,7 @@ export const CommandItemList: React.FC<FavoriteOptionsProps> = ({
                     <Icon
                       name="Checkmark"
                       size={16}
-                      className="text-gray-900 dark:text-gray-50"
+                      className="text-gray-900 dark:text-slate-50"
                     />
                   )}
                 </div>

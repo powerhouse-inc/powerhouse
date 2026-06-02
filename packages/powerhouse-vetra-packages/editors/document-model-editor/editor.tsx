@@ -320,7 +320,7 @@ export default function Editor() {
   };
 
   return (
-    <main className="min-h-dvh bg-gray-50 p-6">
+    <main className="min-h-dvh bg-gray-50 p-6 dark:bg-slate-800">
       <DocumentToolbar />
       <SchemaContextProvider
         globalStateSchemaSdl={globalStateSchema}
@@ -361,7 +361,9 @@ export default function Editor() {
               />
             </Suspense>
             <Divider />
-            <h3 className="mb-6 text-lg capitalize">{scope} Operations</h3>
+            <h3 className="mb-6 text-lg text-gray-900 capitalize dark:text-slate-100">
+              {scope} Operations
+            </h3>
             <Modules
               modules={modules.map((module) => ({
                 ...module,

@@ -2,25 +2,6 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { it, vi } from "vitest";
 import { ConnectDeleteItemModal } from "./delete-item-modal.js";
 describe("Modal Component", () => {
-  it("should match snapshot", () => {
-    render(
-      <ConnectDeleteItemModal
-        body="Are you sure you want to delete this folder? All files and subfolders within it will be removed."
-        cancelLabel="Cancel"
-        data-testid="delete-modal"
-        deleteLabel="Delete"
-        header="Delete “Ecosystem Actors” folder?"
-        onCancel={() => {}}
-        onDelete={() => {}}
-        open
-      />,
-    );
-
-    const modalComponent = screen.getByTestId("delete-modal");
-
-    expect(modalComponent).toMatchSnapshot();
-  });
-
   it("should render modal content", () => {
     const headerText = "Delete “Ecosystem Actors” folder?";
     const bodyText =

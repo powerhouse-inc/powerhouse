@@ -43,7 +43,9 @@ export const DeleteItemModal: React.FC = () => {
   return (
     <ConnectDeleteItemModal
       open={open}
-      onDelete={() => onDelete()}
+      onDelete={() => {
+        void onDelete();
+      }}
       onCancel={() => closePHModal()}
       header={t(`modals.deleteItem.${kind?.toLowerCase()}.header`, {
         item: name,

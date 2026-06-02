@@ -5,7 +5,7 @@ export * from "./useCookieBanner.js";
 export * from "./useFailedInstallations.js";
 export * from "./useInitSentry.js";
 export * from "./useIsEmbedded.js";
-export * from "./useOpenPanel.js";
+export * from "./useOpenPanelAnalytics.js";
 export * from "./usePendingInstallations.js";
 export * from "./useRegistryPackages.js";
 export * from "./useUndoRedoShortcuts.js";

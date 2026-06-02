@@ -20,15 +20,15 @@ export function useQueueInspector(): QueueInspectorProps | undefined {
     return undefined;
   }, [queue]);
 
-  const getQueueState = useCallback(async (): Promise<QueueState> => {
+  const getQueueState = useCallback((): Promise<QueueState> => {
     if (!inMemoryQueue) {
-      return {
+      return Promise.resolve({
         isPaused: false,
         pendingJobs: [],
         executingJobs: [],
         totalPending: 0,
         totalExecuting: 0,
-      };
+      });
     }
 
     const pendingJobs = inMemoryQueue.getPendingJobs();
@@ -44,19 +44,20 @@ export function useQueueInspector(): QueueInspectorProps | undefined {
       }
     }
 
-    return {
+    return Promise.resolve({
       isPaused: inMemoryQueue.paused,
       pendingJobs,
       executingJobs,
       totalPending: pendingJobs.length,
       totalExecuting: executingJobs.length,
-    };
+    });
   }, [inMemoryQueue]);
 
-  const onPause = useCallback(async (): Promise<void> => {
+  const onPause = useCallback((): Promise<void> => {
     if (inMemoryQueue) {
       inMemoryQueue.pause();
     }
+    return Promise.resolve();
   }, [inMemoryQueue]);
 
   const onResume = useCallback(async (): Promise<void> => {

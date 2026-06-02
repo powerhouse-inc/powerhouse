@@ -116,7 +116,7 @@ This command:
 
         const enquirer = await import("enquirer");
 
-        let confirmed = false;
+        let confirmed: boolean;
         try {
           const answer = await enquirer.default.prompt<{ confirmed: boolean }>({
             type: "confirm",

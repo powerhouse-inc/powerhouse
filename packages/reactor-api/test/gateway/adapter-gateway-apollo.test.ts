@@ -1,5 +1,5 @@
 import type { ApolloServer } from "@apollo/server";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   ApolloGatewayAdapter,
   createApolloFetchHandler,
@@ -14,10 +14,11 @@ import {
 // ─── helpers ────────────────────────────────────────────────────────────────
 
 /** A no-op context factory that satisfies GatewayContextFactory<Context>. */
-const noopCtx: GatewayContextFactory<Context> = async () => ({
-  headers: {},
-  db: null,
-});
+const noopCtx: GatewayContextFactory<Context> = () =>
+  Promise.resolve({
+    headers: {},
+    db: null,
+  });
 
 /** A stub ILogger that satisfies the interface without printing anything. */
 const silentLogger = {
@@ -62,12 +63,12 @@ function makeMockServer(result: ApolloHttpResult = makeApolloResult()) {
 
 runGatewayAdapterContractTests(
   "ApolloGatewayAdapter",
-  async (): Promise<GatewayAdapterHarness> => {
+  (): Promise<GatewayAdapterHarness> => {
     const adapter = new ApolloGatewayAdapter(silentLogger);
-    return {
+    return Promise.resolve({
       adapter,
       close: () => adapter.stop(),
-    };
+    });
   },
 );
 
@@ -159,9 +160,9 @@ describe("createApolloFetchHandler - request conversion", () => {
 
   it("passes the Fetch Request to the context factory", async () => {
     let capturedRequest: Request | undefined;
-    const ctxFactory: GatewayContextFactory<Context> = async (req) => {
+    const ctxFactory: GatewayContextFactory<Context> = (req) => {
       capturedRequest = req;
-      return { headers: {}, db: null };
+      return Promise.resolve({ headers: {}, db: null });
     };
 
     const { server, executeHTTPGraphQLRequest } = makeMockServer();
@@ -250,6 +251,7 @@ describe("createApolloFetchHandler - response conversion", () => {
 
   it("joins asyncIterator chunks into a single body string", async () => {
     async function* makeChunks() {
+      await Promise.resolve();
       yield '{"data":';
       yield '{"hello":"world"}}';
     }

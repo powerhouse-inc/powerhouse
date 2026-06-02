@@ -126,6 +126,26 @@ const typescriptEsLintRecommendedConfig = [
   ...tseslint.configs.recommendedTypeChecked,
 ];
 
+/** Generated code emits `eslint-disable` directives defensively; simple
+ * schemas don't trigger the disabled rule, so the directive reads as
+ * "unused". The source of truth is the codegen template, not the emitted
+ * file — don't flag unused directives in generated files. */
+const generatedFilesConfig = {
+  files: ["**/gen/**/*.{ts,tsx}"],
+  linterOptions: {
+    reportUnusedDisableDirectives: "off",
+  },
+  rules: {
+    // Generated reducers cast through `any`; this is inherent to the codegen
+    // output and not worth fighting per-file.
+    "@typescript-eslint/no-unsafe-argument": "off",
+    "@typescript-eslint/no-unsafe-member-access": "off",
+    "@typescript-eslint/no-unsafe-assignment": "off",
+    "@typescript-eslint/no-unsafe-call": "off",
+    "@typescript-eslint/no-unsafe-return": "off",
+  },
+};
+
 /** Main config */
 export default defineConfig(
   ignored,
@@ -135,4 +155,5 @@ export default defineConfig(
   reactConfig,
   javascriptConfig,
   eslintPluginPrettierRecommended,
+  generatedFilesConfig,
 );

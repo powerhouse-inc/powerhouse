@@ -61,9 +61,9 @@ describe("deriveAttachmentServiceConfig", () => {
     const calls: Array<{ expiresIn: number; aud: string }> = [];
     const renown = {
       user: { address: "0xabc" },
-      getBearerToken: async (opts: { expiresIn: number; aud: string }) => {
+      getBearerToken: (opts: { expiresIn: number; aud: string }) => {
         calls.push(opts);
-        return "tok-for-" + opts.aud;
+        return Promise.resolve("tok-for-" + opts.aud);
       },
     } as unknown as IRenown;
 
@@ -80,7 +80,7 @@ describe("deriveAttachmentServiceConfig", () => {
   it("returns undefined token when renown has no user identity", async () => {
     const renown = {
       user: null,
-      getBearerToken: async () => "should-not-be-called",
+      getBearerToken: () => Promise.resolve("should-not-be-called"),
     } as unknown as IRenown;
 
     const { jwtHandler } = deriveAttachmentServiceConfig({}, 4001, renown);

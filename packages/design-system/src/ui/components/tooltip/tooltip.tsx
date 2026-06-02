@@ -1,4 +1,4 @@
-import { cn } from "#design-system";
+import { twMerge } from "tailwind-merge";
 import type {
   TooltipContentProps,
   TooltipProps as TooltipPrimitiveProps,
@@ -27,11 +27,11 @@ const TooltipContent = forwardRef<
     <Content
       ref={ref}
       {...props}
-      className={cn(
+      className={twMerge(
         // Base styles
         "z-50 overflow-hidden rounded-md text-sm",
         // Colors & Border
-        "border border-gray-200 bg-white text-gray-900 dark:border-gray-900 dark:bg-slate-900 dark:text-gray-200",
+        "border border-gray-200 bg-gray-50 text-gray-900 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100",
         // Padding & Shadow
         "px-3 py-1.5 shadow-md",
         // Animations

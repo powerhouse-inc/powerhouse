@@ -4,15 +4,15 @@ export interface CharacterCounterProps {
 }
 
 const counterVariants = {
-  normal: "text-gray-500",
-  warning: "text-yellow-900",
-  error: "text-red-900",
+  normal: "text-gray-500 dark:text-slate-400",
+  warning: "text-yellow-900 dark:text-yellow-100",
+  error: "text-red-900 dark:text-red-400",
 };
 
 const maxLengthVariants = {
-  normal: "text-gray-300 dark:text-gray-700",
-  warning: "text-yellow-400 dark:text-yellow-900",
-  error: "text-red-400 dark:text-red-900",
+  normal: "text-gray-300 dark:text-slate-600",
+  warning: "text-yellow-400 dark:text-yellow-100",
+  error: "text-red-400 dark:text-red-100",
 };
 
 export const CharacterCounter: React.FC<CharacterCounterProps> = ({

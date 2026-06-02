@@ -63,15 +63,33 @@ export const locationInfoByLocation = {
 export const debugNodeOptionsMap = {
   ADD_TRIGGER: {
     label: "Add Trigger",
-    icon: <Icon className="text-orange-900" name="Plus" size={16} />,
+    icon: (
+      <Icon
+        className="text-orange-900 dark:text-orange-100"
+        name="Plus"
+        size={16}
+      />
+    ),
   },
   REMOVE_TRIGGER: {
     label: "Remove Trigger",
-    icon: <Icon className="text-orange-900" name="Xmark" size={16} />,
+    icon: (
+      <Icon
+        className="text-orange-900 dark:text-orange-100"
+        name="Xmark"
+        size={16}
+      />
+    ),
   },
   ADD_INVALID_TRIGGER: {
     label: "Add Trigger",
-    icon: <Icon className="text-orange-900" name="Exclamation" size={16} />,
+    icon: (
+      <Icon
+        className="text-orange-900 dark:text-orange-100"
+        name="Exclamation"
+        size={16}
+      />
+    ),
   },
 } as const;
 
@@ -87,7 +105,7 @@ export const folderNodeDropdownOptions = {
   DELETE: {
     label: "Delete",
     icon: <Icon name="Trash" size={16} />,
-    className: "text-red-900",
+    className: "text-red-900 dark:text-red-400",
   },
 } as const;
 

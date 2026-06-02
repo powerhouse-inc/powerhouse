@@ -1,3 +1,74 @@
+## 6.1.0-dev.15 (2026-06-02)
+
+### 🚀 Features
+
+- **registry:** cache headers on CDN responses, 503 on upstream error, leaner warm-up ([e5ed36354](https://github.com/powerhouse-inc/powerhouse/commit/e5ed36354))
+- **renown:** add EIP-712 credential signing and signature verification ([069417a20](https://github.com/powerhouse-inc/powerhouse/commit/069417a20))
+
+### 🩹 Fixes
+
+- **builder-tools:** pass PH_CONNECT_BASE_PATH to vite base so connect serves under a path prefix ([b9452ab58](https://github.com/powerhouse-inc/powerhouse/commit/b9452ab58))
+- **registry:** address remaining CDN review feedback ([21268c0d9](https://github.com/powerhouse-inc/powerhouse/commit/21268c0d9))
+- **renown:** export credential module from node entrypoint ([d1ec4a847](https://github.com/powerhouse-inc/powerhouse/commit/d1ec4a847))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.1.0-dev.14 (2026-06-02)
+
+### 🚀 Features
+
+- add dark mode classes ([#2629](https://github.com/powerhouse-inc/powerhouse/pull/2629))
+
+### 🩹 Fixes
+
+- looks like a bad import ([82988fd2a](https://github.com/powerhouse-inc/powerhouse/commit/82988fd2a))
+- **reactor-browser:** fix issue causing renown spam and breaking login ([2cdf76338](https://github.com/powerhouse-inc/powerhouse/commit/2cdf76338))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- CallmeT-ty @CallmeT-ty
+- Claude Sonnet 4.6
+- Ryan Wolhuter @ryanwolhuter
+
+## 6.1.0-dev.13 (2026-06-01)
+
+### 🩹 Fixes
+
+- **document-model:** seed document-scope operations on create ([5fe967b8b](https://github.com/powerhouse-inc/powerhouse/commit/5fe967b8b))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.1.0-dev.12 (2026-06-01)
+
+This was a version bump only, there were no code changes.
+
+## 6.1.0-dev.11 (2026-05-31)
+
+This was a version bump only, there were no code changes.
+
+## 6.1.0-dev.10 (2026-05-30)
+
+### 🩹 Fixes
+
+- added a failing test for the set_name issue, which exposed the document-drive tests weren't running at all ([8221e66b9](https://github.com/powerhouse-inc/powerhouse/commit/8221e66b9))
+- fix issue from refactor ([d6c728c95](https://github.com/powerhouse-inc/powerhouse/commit/d6c728c95))
+- merge duplicate resolve keys in shared vitest config ([f65e56f08](https://github.com/powerhouse-inc/powerhouse/commit/f65e56f08))
+- re-adding emitted linter ignore -- ew ([cd37736cb](https://github.com/powerhouse-inc/powerhouse/commit/cd37736cb))
+- **ci:** bump playwright to 1.60.0 to fix install hang on node 24.16+ ([#2669](https://github.com/powerhouse-inc/powerhouse/pull/2669))
+- **document-drive:** document drive needs to more appropriately handle unicode and control characters ([38d3fefee](https://github.com/powerhouse-inc/powerhouse/commit/38d3fefee))
+- **reactor:** fix issue where delete could fail on orphaned docs ([e6ec50907](https://github.com/powerhouse-inc/powerhouse/commit/e6ec50907))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 4.8
+- Guillermo Puente Sandoval @gpuente
+
 ## 6.1.0-dev.9 (2026-05-29)
 
 ### 🩹 Fixes

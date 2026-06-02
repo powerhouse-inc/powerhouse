@@ -9,7 +9,7 @@ import { describe, expect, it, vi } from "vitest";
 import * as adapters from "../src/graphql/reactor/adapters.js";
 import { PropagationMode as GqlPropagationMode } from "../src/graphql/reactor/gen/graphql.js";
 
-const createTestDocument = (): PHDocument => {
+const _createTestDocument = (): PHDocument => {
   return documentModelDocumentModelModule.utils.createDocument();
 };
 

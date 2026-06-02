@@ -1,43 +1,33 @@
-import type { ComponentPropsWithoutRef } from "react";
-
-import type { DivProps } from "#design-system";
-import { mergeClassNameProps, Modal } from "#design-system";
+import type { ComponentPropsWithoutRef, ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
+import { Modal } from "#design-system";
 import { twMerge } from "tailwind-merge";
 
-const buttonStyles =
-  "min-h-[48px] min-w-[142px] text-base font-semibold py-3 px-6 rounded-xl outline-none active:opacity-75 hover:scale-105 transform transition-all";
+type ModalProps = ComponentPropsWithoutRef<typeof Modal>;
 
-type ButtonProps = ComponentPropsWithoutRef<"button">;
-
-export type ReadRequiredModalProps = ComponentPropsWithoutRef<typeof Modal> & {
-  readonly header: React.ReactNode;
-  readonly body?: React.ReactNode;
-  readonly onContinue: () => void;
+export type ReadRequiredModalProps = {
+  readonly open?: boolean;
+  readonly onOpenChange?: (open: boolean) => void;
+  readonly header: ReactNode;
+  readonly body?: ReactNode;
   readonly closeLabel: string;
-  readonly bodyProps?: DivProps;
-  readonly continueButtonProps?: ButtonProps;
-  readonly headerProps?: DivProps;
-  readonly buttonContainerProps?: DivProps;
-  readonly containerProps?: DivProps;
+  readonly onContinue: () => void;
+  readonly bodyClassName?: string;
+  readonly overlayProps?: ModalProps["overlayProps"];
+  readonly contentProps?: ModalProps["contentProps"];
 };
 
 export function ReadRequiredModal(props: ReadRequiredModalProps) {
   const {
-    body,
-    header,
-    children,
+    open,
     onOpenChange,
-    onContinue,
+    header,
+    body,
     closeLabel,
+    onContinue,
+    bodyClassName,
     overlayProps,
     contentProps,
-    bodyProps = {},
-    headerProps = {},
-    containerProps = {},
-    continueButtonProps = {},
-    buttonContainerProps = {},
-    ...restProps
   } = props;
 
   const [disableClose, setDisableClose] = useState(true);
@@ -71,7 +61,6 @@ export function ReadRequiredModal(props: ReadRequiredModalProps) {
 
     return () => {
       const element = contentRef.current;
-
       if (element) {
         element.removeEventListener("scroll", handleScroll);
       }
@@ -80,58 +69,33 @@ export function ReadRequiredModal(props: ReadRequiredModalProps) {
 
   return (
     <Modal
-      contentProps={{
-        ...contentProps,
-        className: twMerge("rounded-3xl outline-none", contentProps?.className),
-      }}
+      open={open}
       onOpenChange={onOpenChange}
-      overlayProps={{
-        ...overlayProps,
-        className: overlayProps?.className,
-      }}
-      {...restProps}
+      overlayProps={overlayProps}
+      contentProps={contentProps}
     >
-      <div
-        {...mergeClassNameProps(
-          containerProps,
-          "w-[500px] bg-white p-6 text-slate-300",
-        )}
-      >
-        <div
-          {...mergeClassNameProps(
-            headerProps,
-            "border-b border-slate-50 pb-2 text-2xl font-bold text-gray-800",
-          )}
-        >
+      <div className="w-[500px] p-6">
+        <div className="border-b border-gray-100 pb-2 text-2xl font-bold text-gray-900 dark:border-slate-500 dark:text-slate-100">
           {header}
         </div>
         <div
           ref={contentRef}
-          {...mergeClassNameProps(
-            bodyProps,
-            "my-6 max-h-[245px] overflow-scroll rounded-md bg-slate-50 p-4 text-center",
+          className={twMerge(
+            "my-6 max-h-[245px] overflow-scroll rounded-md bg-gray-50 p-4 text-center dark:bg-slate-700",
+            bodyClassName,
           )}
         >
           {body}
-          {children}
         </div>
-        <div
-          {...mergeClassNameProps(
-            buttonContainerProps,
-            "mt-8 flex justify-between gap-3",
-          )}
-        >
+        <div className="mt-8 flex justify-between gap-3">
           <button
             disabled={disableClose}
             onClick={onContinue}
-            {...mergeClassNameProps(
-              continueButtonProps,
-              twMerge(
-                buttonStyles,
-                "flex-1 bg-gray-800 text-gray-50",
-                disableClose &&
-                  "cursor-not-allowed bg-gray-300 hover:scale-100",
-              ),
+            className={twMerge(
+              "min-h-12 flex-1 transform rounded-xl px-6 py-3 text-base font-semibold transition-all outline-none hover:scale-105 active:opacity-75",
+              "bg-gray-800 text-gray-50 dark:bg-slate-100 dark:text-slate-900",
+              disableClose &&
+                "cursor-not-allowed bg-gray-300 hover:scale-100 dark:bg-slate-600 dark:text-slate-100",
             )}
           >
             {closeLabel}

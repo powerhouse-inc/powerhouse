@@ -1,5 +1,5 @@
 import type { WithDifference } from "#design-system";
-import { cn } from "#design-system";
+import { twMerge } from "tailwind-merge";
 import { diffSentences, diffWords } from "diff";
 import { useMemo } from "react";
 
@@ -30,21 +30,27 @@ export const TextDiff = ({
   const bgColor =
     diffMode === "sentences" && hasChanges
       ? viewMode === "addition"
-        ? "bg-green-600/30"
+        ? "bg-green-600/30 dark:bg-green-600/30"
         : viewMode === "removal"
-          ? "bg-red-600/30"
+          ? "bg-red-600/30 dark:bg-red-300/30"
           : undefined
       : undefined;
 
   return (
-    <span className={cn("leading-[18px] text-gray-700", bgColor, className)}>
+    <span
+      className={twMerge(
+        "leading-[18px] text-gray-700 dark:text-slate-200",
+        bgColor,
+        className,
+      )}
+    >
       {wordsDiff.map((word, index) => {
         return word.added ? (
           viewMode === "addition" || viewMode === "mixed" ? (
             <span
-              className={cn(
+              className={twMerge(
                 (diffMode === "words" || viewMode === "mixed") &&
-                  "bg-green-600/30",
+                  "bg-green-600/30 dark:bg-green-600/30",
                 childrenClassName,
               )}
               key={`${word.value}-${index}`}
@@ -55,9 +61,9 @@ export const TextDiff = ({
         ) : word.removed ? (
           viewMode === "removal" || viewMode === "mixed" ? (
             <span
-              className={cn(
+              className={twMerge(
                 (diffMode === "words" || viewMode === "mixed") &&
-                  "bg-red-600/30",
+                  "bg-red-600/30 dark:bg-red-300/30",
                 childrenClassName,
               )}
               key={`${word.value}-${index}`}
@@ -68,7 +74,7 @@ export const TextDiff = ({
         ) : (
           <span
             key={`${word.value}-${index}`}
-            className={cn(childrenClassName)}
+            className={twMerge(childrenClassName)}
           >
             {word.value}
           </span>

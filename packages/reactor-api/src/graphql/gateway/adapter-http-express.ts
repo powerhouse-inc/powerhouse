@@ -40,7 +40,6 @@ export class ExpressHttpAdapter implements IHttpAdapter {
   }
 
   mountRawMiddleware(middleware: unknown): void {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     this.#app.use(middleware as any);
   }
 
@@ -51,7 +50,7 @@ export class ExpressHttpAdapter implements IHttpAdapter {
       req: http.IncomingMessage,
       res: http.ServerResponse,
       body?: unknown,
-    ) => void,
+    ) => void | Promise<void>,
   ): void {
     const m = method.toLowerCase() as
       | "delete"
@@ -59,9 +58,9 @@ export class ExpressHttpAdapter implements IHttpAdapter {
       | "head"
       | "post"
       | "put";
-    this.#app[m](path, (req: express.Request, res: express.Response) =>
-      handler(req, res, req.body as unknown),
-    );
+    this.#app[m](path, (req: express.Request, res: express.Response) => {
+      void handler(req, res, req.body as unknown);
+    });
   }
 
   setupMiddleware({

@@ -54,8 +54,8 @@ export const CookieBanner = () => {
 
   return (
     <div className="absolute inset-0 z-10000 backdrop-blur-sm">
-      <div className="absolute inset-0 bg-black opacity-15" />
-      <div className="absolute inset-x-0 bottom-0 flex justify-center bg-white px-10 pt-10 pb-16 shadow-lg">
+      <div className="absolute inset-0 bg-gray-900 opacity-15 dark:bg-slate-50" />
+      <div className="absolute inset-x-0 bottom-0 flex justify-center bg-gray-50 px-10 pt-10 pb-16 shadow-lg dark:bg-slate-800">
         <PHCookieBanner
           className="max-w-[1024px]"
           cookies={cookiesInput}
@@ -64,7 +64,7 @@ export const CookieBanner = () => {
           submitLabel={t("cookieBanner.accept")}
           rejectLabel={t("cookieBanner.reject")}
         >
-          <p className="font-semibold text-gray-500">
+          <p className="font-semibold text-gray-500 dark:text-slate-400">
             <Trans
               key={"cookieBanner.message"}
               i18nKey="cookieBanner.message"
@@ -73,7 +73,7 @@ export const CookieBanner = () => {
                   <a
                     onClick={() => showPHModal({ type: "cookiesPolicy" })}
                     key={"cookieBanner.message-link"}
-                    className="cursor-pointer text-gray-900 hover:underline"
+                    className="cursor-pointer text-gray-900 hover:underline dark:text-slate-50"
                   />
                 ),
               }}

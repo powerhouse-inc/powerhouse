@@ -2,7 +2,7 @@ import {
   Sidebar,
   SidebarProvider,
   type SidebarNode,
-} from "@powerhousedao/document-engineering";
+} from "@powerhousedao/design-system/ui";
 import {
   setSelectedNode,
   useNodesInSelectedDrive,
@@ -56,7 +56,7 @@ function transformNodesToSidebarNodes(
 }
 
 /**
- * Hierarchical folder tree navigation component using Sidebar from document-engineering.
+ * Hierarchical folder tree navigation component using Sidebar from the design system.
  * Displays folders and files in a tree structure with expand/collapse functionality, search, and resize support.
  */
 export function FolderTree() {

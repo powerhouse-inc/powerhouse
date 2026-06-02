@@ -1,5 +1,6 @@
 import type { IconName } from "#design-system";
-import { cn, Icon } from "#design-system";
+import { Icon } from "#design-system";
+import { twMerge } from "tailwind-merge";
 import React from "react";
 import type { SelectProps } from "../enum-field/types.js";
 
@@ -35,13 +36,13 @@ export const SelectedContent: React.FC<SelectedContentProps> = ({
   if (selectedValues.length === 0) {
     return (
       <div
-        className={cn(
+        className={twMerge(
           "mx-auto flex w-full items-center",
           placeholder ? "justify-between" : "justify-end",
         )}
       >
         {placeholder && (
-          <span className="text-sm/5 font-normal text-gray-600 dark:text-gray-500">
+          <span className="text-sm/5 font-normal text-gray-700 dark:text-slate-200">
             {placeholder}
           </span>
         )}
@@ -49,13 +50,13 @@ export const SelectedContent: React.FC<SelectedContentProps> = ({
           <Icon
             name="CaretSort"
             size={16}
-            className="cursor-pointer text-gray-700 dark:text-gray-400"
+            className="cursor-pointer text-gray-700 dark:text-slate-200"
           />
         ) : (
           <Icon
             name="ChevronDown"
             size={16}
-            className="cursor-pointer text-gray-700 dark:text-gray-400"
+            className="cursor-pointer text-gray-700 dark:text-slate-200"
           />
         )}
       </div>
@@ -65,8 +66,8 @@ export const SelectedContent: React.FC<SelectedContentProps> = ({
   return (
     <div className="flex w-full items-center justify-between gap-2">
       <div
-        className={cn(
-          "max-w-full truncate text-gray-900 dark:text-gray-50",
+        className={twMerge(
+          "max-w-full truncate text-gray-900 dark:text-slate-50",
           !multiple && "flex items-center gap-2",
         )}
       >
@@ -82,7 +83,7 @@ export const SelectedContent: React.FC<SelectedContentProps> = ({
           ) : (
             <span
               key={value}
-              className={cn(
+              className={twMerge(
                 "text-sm/5 font-normal",
                 index !== selectedValues.length - 1 && "mr-1",
               )}
@@ -107,7 +108,7 @@ export const SelectedContent: React.FC<SelectedContentProps> = ({
             <Icon
               name="XmarkLight"
               size={16}
-              className="cursor-pointer text-gray-700 dark:text-gray-400"
+              className="cursor-pointer text-gray-700 dark:text-slate-200"
             />
           </div>
         )}
@@ -115,13 +116,13 @@ export const SelectedContent: React.FC<SelectedContentProps> = ({
           <Icon
             name="CaretSort"
             size={16}
-            className="cursor-pointer text-gray-700 dark:text-gray-400"
+            className="cursor-pointer text-gray-700 dark:text-slate-200"
           />
         ) : (
           <Icon
             name="ChevronDown"
             size={16}
-            className="cursor-pointer text-gray-700 dark:text-gray-400"
+            className="cursor-pointer text-gray-700 dark:text-slate-200"
           />
         )}
       </div>

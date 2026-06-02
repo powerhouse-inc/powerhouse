@@ -9,7 +9,6 @@ import {
   rowsToCsv,
   type ColumnInfo,
   type FilterGroup,
-  type FilterClause,
   type PaginationState,
   type SortOptions,
 } from "./components/table-view.js";
@@ -18,9 +17,9 @@ import {
 export type { TableInfo } from "./components/schema-tree-sidebar.js";
 export type {
   ColumnInfo,
-  SortOptions,
-  FilterGroup,
   FilterClause,
+  FilterGroup,
+  SortOptions,
 } from "./components/table-view.js";
 
 export type GetTableRowsOptions = {
@@ -272,9 +271,6 @@ export function DBExplorer({
         continueLabel="Replace Data"
         onCancel={handleImportCancel}
         onContinue={() => void handleImportConfirm()}
-        continueButtonProps={{
-          className: "bg-red-900 text-white hover:bg-red-800",
-        }}
       />
 
       <ConnectConfirmationModal
@@ -286,12 +282,9 @@ export function DBExplorer({
         continueLabel={`Reset to PG${pendingResetMajor ?? ""}`}
         onCancel={() => setPendingResetMajor(null)}
         onContinue={() => void handleResetConfirm()}
-        continueButtonProps={{
-          className: "bg-red-900 text-white hover:bg-red-800",
-        }}
       />
 
-      <div className="flex w-64 shrink-0 flex-col border-r border-gray-200">
+      <div className="flex w-64 shrink-0 flex-col border-r border-gray-200 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
         <div className="flex-1 overflow-auto">
           <SchemaTreeSidebar
             schema={schema}
@@ -304,10 +297,10 @@ export function DBExplorer({
         </div>
 
         {(onImportDb || onExportDb || pgVersionControl) && (
-          <div className="flex shrink-0 flex-col gap-2 border-t border-gray-200 p-2">
+          <div className="flex shrink-0 flex-col gap-2 border-t border-gray-200 p-2 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
             {onImportDb && (
               <button
-                className="rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100"
+                className="rounded-sm border border-gray-300 bg-gray-50 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 dark:hover:bg-slate-700"
                 onClick={handleImportClick}
                 type="button"
               >
@@ -316,7 +309,7 @@ export function DBExplorer({
             )}
             {onExportDb && (
               <button
-                className="rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100"
+                className="rounded-sm border border-gray-300 bg-gray-50 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 dark:hover:bg-slate-700"
                 onClick={handleExportClick}
                 type="button"
               >
@@ -324,10 +317,10 @@ export function DBExplorer({
               </button>
             )}
             {pgVersionControl && (
-              <div className="flex flex-col gap-1 border-t border-gray-200 pt-2">
-                <div className="flex items-center justify-between text-xs text-gray-600">
+              <div className="flex flex-col gap-1 border-t border-gray-200 pt-2 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
+                <div className="flex items-center justify-between text-xs text-gray-700 dark:text-slate-200">
                   <span>Postgres version</span>
-                  <span className="font-semibold text-gray-900">
+                  <span className="font-semibold text-gray-900 dark:text-slate-50">
                     {pgVersionControl.currentPgVersion === null
                       ? "—"
                       : `PG${pgVersionControl.currentPgVersion}`}
@@ -335,7 +328,7 @@ export function DBExplorer({
                 </div>
                 {resetTargetMajor !== null && (
                   <button
-                    className="rounded-sm border border-red-300 bg-red-50 px-3 py-1.5 text-sm text-red-700 hover:bg-red-100 disabled:opacity-50"
+                    className="rounded-sm border border-red-300 bg-red-50 px-3 py-1.5 text-sm text-red-700 hover:bg-red-100 disabled:opacity-50 dark:border-red-600 dark:bg-red-900 dark:text-red-100 dark:hover:bg-red-800"
                     onClick={() => setPendingResetMajor(resetTargetMajor)}
                     disabled={resetting}
                     type="button"
@@ -353,11 +346,13 @@ export function DBExplorer({
 
       <div className="flex-1 overflow-auto p-4">
         {!selectedTable ? (
-          <div className="text-sm text-gray-500">
+          <div className="text-sm text-gray-500 dark:text-slate-400">
             Select a table to view data
           </div>
         ) : !tableData && loading ? (
-          <div className="text-sm text-gray-500">Loading...</div>
+          <div className="text-sm text-gray-500 dark:text-slate-400">
+            Loading...
+          </div>
         ) : tableData ? (
           <TableView
             columns={columns}
