@@ -34,6 +34,7 @@ describe("buildTraits", () => {
     const traits = buildTraits(user);
 
     expect(traits.address).toBe("0xabc123");
+    expect(traits.did).toBe("did:pkh:eip155:1:0xabc");
     expect(traits.networkId).toBe("eip155:1");
     expect(traits.chainId).toBe(1);
   });
@@ -52,14 +53,16 @@ describe("buildTraits", () => {
   });
 
   // ------------------------------------------------------------------
-  // did / profileId must not leak into traits
+  // did travels as a trait; profileId must not leak into traits
   // ------------------------------------------------------------------
 
-  it("never includes did or profileId", () => {
+  it("includes did as a trait but never profileId", () => {
     const user = makeUser();
     const traits = buildTraits(user);
 
-    expect("did" in traits).toBe(false);
+    // The wallet address is the top-level profileId; the DID is preserved
+    // on the profile as a trait.
+    expect(traits.did).toBe("did:pkh:eip155:1:0xabc");
     expect("profileId" in traits).toBe(false);
   });
 
@@ -67,14 +70,14 @@ describe("buildTraits", () => {
   // ens fields
   // ------------------------------------------------------------------
 
-  it("includes ensName and ensAvatar when both are present", () => {
+  it("includes ensName and avatarUrl when both are present", () => {
     const user = makeUser({
       ens: { name: "alice.eth", avatarUrl: "https://example.com/avatar.png" },
     });
     const traits = buildTraits(user);
 
     expect(traits.ensName).toBe("alice.eth");
-    expect(traits.ensAvatar).toBe("https://example.com/avatar.png");
+    expect(traits.avatarUrl).toBe("https://example.com/avatar.png");
   });
 
   it("omits ens fields when ens is absent", () => {
@@ -82,7 +85,7 @@ describe("buildTraits", () => {
     const traits = buildTraits(user);
 
     expect("ensName" in traits).toBe(false);
-    expect("ensAvatar" in traits).toBe(false);
+    expect("avatarUrl" in traits).toBe(false);
   });
 
   it("omits ens fields when ens object is present but name/avatarUrl are absent", () => {
@@ -90,7 +93,7 @@ describe("buildTraits", () => {
     const traits = buildTraits(user);
 
     expect("ensName" in traits).toBe(false);
-    expect("ensAvatar" in traits).toBe(false);
+    expect("avatarUrl" in traits).toBe(false);
   });
 
   it("includes only ensName when avatarUrl is absent", () => {
@@ -98,7 +101,7 @@ describe("buildTraits", () => {
     const traits = buildTraits(user);
 
     expect(traits.ensName).toBe("bob.eth");
-    expect("ensAvatar" in traits).toBe(false);
+    expect("avatarUrl" in traits).toBe(false);
   });
 
   // ------------------------------------------------------------------
@@ -176,10 +179,11 @@ describe("buildTraits", () => {
 
     expect(traits).toEqual({
       address: "0xabc123",
+      did: "did:pkh:eip155:1:0xabc",
       networkId: "eip155:1",
       chainId: 1,
       ensName: "fulluser.eth",
-      ensAvatar: "https://ens.io/avatar",
+      avatarUrl: "https://ens.io/avatar",
       username: "fulluser",
       userImage: "https://example.com/u.png",
       profileDocumentId: "doc-full",
@@ -188,7 +192,6 @@ describe("buildTraits", () => {
 
     // Confirm banned fields are absent
     expect("credential" in traits).toBe(false);
-    expect("did" in traits).toBe(false);
     expect("profileId" in traits).toBe(false);
   });
 });

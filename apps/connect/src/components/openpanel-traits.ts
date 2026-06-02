@@ -5,8 +5,10 @@ import type { User } from "@renown/sdk";
  *
  * Rules:
  * - `credential` (contains a JWT) is **never** forwarded.
- * - `did` / `profileId` is sent as the top-level `profileId` key in the
- *   `client.identify()` call — it is **not** duplicated inside traits.
+ * - The wallet `address` is sent as the top-level `profileId` key in the
+ *   `client.identify()` call — the cross-app key shared with Renown and
+ *   Vetra. It also stays in traits (Vetra does the same).
+ * - The `did` travels as a trait so the DID is preserved on the profile.
  * - Optional fields (`ens`, `profile`) are only included when their value is
  *   non-nullish (guards against `null` from `RenownProfile` fields as well
  *   as plain `undefined`).
@@ -21,6 +23,7 @@ export function buildTraits(user: User): Record<string, unknown> {
 
   const traits: Record<string, unknown> = {
     address: rest.address,
+    did: rest.did,
     networkId: rest.networkId,
     chainId: rest.chainId,
   };
@@ -30,7 +33,8 @@ export function buildTraits(user: User): Record<string, unknown> {
     traits.ensName = rest.ens.name;
   }
   if (rest.ens?.avatarUrl != null) {
-    traits.ensAvatar = rest.ens.avatarUrl;
+    // `avatarUrl` is the canonical trait key shared with Vetra.
+    traits.avatarUrl = rest.ens.avatarUrl;
   }
 
   // profile fields — optional on InternalUser; RenownProfile members can be

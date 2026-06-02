@@ -11,6 +11,7 @@ const MockOpenPanel = vi.hoisted(() =>
   vi.fn(function (this: Record<string, unknown>, opts: unknown) {
     this.options = opts;
     this.track = vi.fn();
+    this.setGlobalProperties = vi.fn();
   }),
 );
 
@@ -70,12 +71,38 @@ describe("getOpenPanelClient", () => {
     expect(MockOpenPanel).toHaveBeenCalledWith({
       clientId: "test-client-id",
       apiUrl: "https://custom.example.com",
+      trackScreenViews: true,
+      trackOutgoingLinks: true,
     });
   });
 
   it("omits apiUrl from constructor options when not provided", async () => {
     await getOpenPanelClient(BASE_CONFIG);
 
-    expect(MockOpenPanel).toHaveBeenCalledWith({ clientId: "test-client-id" });
+    expect(MockOpenPanel).toHaveBeenCalledWith({
+      clientId: "test-client-id",
+      trackScreenViews: true,
+      trackOutgoingLinks: true,
+    });
+  });
+
+  it("enables automatic screen-view and outgoing-link tracking", async () => {
+    await getOpenPanelClient(BASE_CONFIG);
+
+    expect(MockOpenPanel).toHaveBeenCalledWith(
+      expect.objectContaining({
+        trackScreenViews: true,
+        trackOutgoingLinks: true,
+      }),
+    );
+  });
+
+  it("stamps the app segmentation global property after construction", async () => {
+    const client = await getOpenPanelClient(BASE_CONFIG);
+
+    expect(client).toBeDefined();
+    expect(client?.setGlobalProperties).toHaveBeenCalledWith({
+      app: "connect",
+    });
   });
 });

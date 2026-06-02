@@ -215,7 +215,7 @@ describe("deriveEventName", () => {
 // ---------------------------------------------------------------------------
 
 describe("buildDefaultProperties", () => {
-  it("produces exactly the six documented fields", () => {
+  it("produces exactly the five documented fields", () => {
     const op = makeOp("powerhouse/document-drive", "ADD_FOLDER", {
       documentId: "drive-42",
       scope: "global",
@@ -225,14 +225,7 @@ describe("buildDefaultProperties", () => {
     const props = buildDefaultProperties(op);
 
     expect(Object.keys(props).sort()).toEqual(
-      [
-        "actionType",
-        "app",
-        "branch",
-        "documentId",
-        "documentType",
-        "scope",
-      ].sort(),
+      ["actionType", "branch", "documentId", "documentType", "scope"].sort(),
     );
   });
 
@@ -250,6 +243,8 @@ describe("buildDefaultProperties", () => {
     expect(props.documentId).toBe("drive-42");
     expect(props.scope).toBe("global");
     expect(props.branch).toBe("main");
-    expect(props.app).toBe("connect");
+    // `app: "connect"` is stamped via the client's global properties, not
+    // per-event (see getOpenPanelClient).
+    expect("app" in props).toBe(false);
   });
 });

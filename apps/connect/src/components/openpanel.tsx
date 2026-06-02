@@ -38,7 +38,8 @@ declare global {
  * 3. If `connectConfig.openPanel.trackOperations`, registers the processor
  *    factory against `processorManager` so document operations are forwarded.
  * 4. Calls `client.identify()` when the renown user transitions from
- *    `undefined` → defined (login).
+ *    `undefined` → defined (login). The profile ID is the wallet address —
+ *    the cross-app key shared with Renown and Vetra.
  * 5. Calls `client.clear()` when the user transitions from defined →
  *    `undefined` (logout).
  *
@@ -155,7 +156,11 @@ export function OpenPanel(): null {
       // already logged in — prevUserRef is undefined in both cases).
       try {
         void client.identify({
-          profileId: user.did,
+          // The wallet address is the cross-app profile key — the same
+          // identifier Renown and Vetra use in their identify calls, so the
+          // apps stitch into one OpenPanel profile. The DID travels as a
+          // trait (see buildTraits).
+          profileId: user.address,
           properties: buildTraits(user),
         });
       } catch (err) {
