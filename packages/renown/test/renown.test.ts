@@ -1,5 +1,7 @@
+import { privateKeyToAccount } from "viem/accounts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Renown, RenownMemoryStorage } from "../src/common.js";
+import { CREDENTIAL_TYPES } from "../src/constants.js";
 import { MemoryKeyStorage, RenownCryptoBuilder } from "../src/crypto/index.js";
 import { MemoryEventEmitter } from "../src/event/memory.js";
 import { fetchRenownProfile } from "../src/profile.js";
@@ -11,7 +13,10 @@ import type {
 } from "../src/types.js";
 
 const TEST_BASE_URL = "https://test.renown.id";
-const TEST_ADDRESS = "0x9aDdcBbaA28F7eB5f75E023F7C1Fcb13C9DFD8F7" as const;
+const TEST_ACCOUNT = privateKeyToAccount(
+  "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
+);
+const TEST_ADDRESS = TEST_ACCOUNT.address;
 const TEST_USER_DID = `did:pkh:eip155:1:${TEST_ADDRESS}`;
 
 /** Resolve a `fetch` input (string | URL | Request) to its URL string. */
@@ -22,42 +27,48 @@ const requestUrl = (input: RequestInfo | URL): string =>
       ? input.toString()
       : input.url;
 
-function createMockCredential(
+async function createMockCredential(
   userDid: string,
   appDid: string,
-): PowerhouseVerifiableCredential {
-  return {
+): Promise<PowerhouseVerifiableCredential> {
+  const issuanceDate = new Date().toISOString();
+  const expirationDate = new Date(
+    Date.now() + 7 * 24 * 60 * 60 * 1000,
+  ).toISOString();
+  const message = {
     "@context": ["https://www.w3.org/2018/credentials/v1"],
-    id: "test-credential-id",
     type: ["VerifiableCredential"],
-    issuer: {
-      id: userDid,
-      ethereumAddress: TEST_ADDRESS,
-    },
-    issuanceDate: new Date().toISOString(),
-    credentialSubject: {
-      id: appDid,
-      app: "test-app",
-    },
+    id: "test-credential-id",
+    issuer: { id: userDid, ethereumAddress: TEST_ADDRESS },
+    credentialSubject: { id: appDid, app: "test-app" },
     credentialSchema: {
       id: "https://schema.org",
       type: "JsonSchemaValidator2018",
     },
+    issuanceDate,
+    expirationDate,
+  };
+  const domain = { version: "1", chainId: 1 };
+  const { EIP712Domain, ...types } = CREDENTIAL_TYPES;
+  void EIP712Domain;
+  const proofValue = await TEST_ACCOUNT.signTypedData({
+    domain,
+    types,
+    primaryType: "VerifiableCredential",
+    message,
+  } as Parameters<typeof TEST_ACCOUNT.signTypedData>[0]);
+  return {
+    ...message,
     proof: {
-      verificationMethod: "test",
+      verificationMethod: userDid,
       ethereumAddress: TEST_ADDRESS,
-      created: new Date().toISOString(),
+      created: issuanceDate,
       proofPurpose: "assertionMethod",
       type: "EthereumEip712Signature2021",
-      proofValue: "0xtest",
+      proofValue,
       eip712: {
-        domain: {
-          name: "Renown",
-          version: "1",
-          chainId: 1,
-          verifyingContract: "0x0000000000000000000000000000000000000000",
-        },
-        types: {} as PowerhouseVerifiableCredential["proof"]["eip712"]["types"],
+        domain,
+        types: CREDENTIAL_TYPES,
         primaryType: "VerifiableCredential",
       },
     },
@@ -138,7 +149,7 @@ describe("Renown login flow", () => {
 
   describe("successful login", () => {
     it("should authenticate user and transition through status states", async () => {
-      const credential = createMockCredential(TEST_USER_DID, appDid);
+      const credential = await createMockCredential(TEST_USER_DID, appDid);
       mockFetch({ credential });
 
       const statuses: LoginStatus[] = [];
@@ -158,7 +169,7 @@ describe("Renown login flow", () => {
     });
 
     it("should emit user event on login", async () => {
-      const credential = createMockCredential(TEST_USER_DID, appDid);
+      const credential = await createMockCredential(TEST_USER_DID, appDid);
       mockFetch({ credential });
 
       const users: (User | undefined)[] = [];
@@ -171,7 +182,7 @@ describe("Renown login flow", () => {
     });
 
     it("should persist user in storage", async () => {
-      const credential = createMockCredential(TEST_USER_DID, appDid);
+      const credential = await createMockCredential(TEST_USER_DID, appDid);
       mockFetch({ credential });
 
       await renown.login(TEST_USER_DID);
@@ -181,7 +192,7 @@ describe("Renown login flow", () => {
     });
 
     it("should call credential API with correct parameters", async () => {
-      const credential = createMockCredential(TEST_USER_DID, appDid);
+      const credential = await createMockCredential(TEST_USER_DID, appDid);
       mockFetch({ credential });
 
       await renown.login(TEST_USER_DID);
@@ -205,7 +216,7 @@ describe("Renown login flow", () => {
 
   describe("profile fetching", () => {
     it("should enrich user with profile data in the background", async () => {
-      const credential = createMockCredential(TEST_USER_DID, appDid);
+      const credential = await createMockCredential(TEST_USER_DID, appDid);
       mockFetch({ credential });
 
       await renown.login(TEST_USER_DID);
@@ -224,7 +235,7 @@ describe("Renown login flow", () => {
     });
 
     it("should emit a second user event after profile fetch", async () => {
-      const credential = createMockCredential(TEST_USER_DID, appDid);
+      const credential = await createMockCredential(TEST_USER_DID, appDid);
       mockFetch({ credential });
 
       const users: (User | undefined)[] = [];
@@ -243,7 +254,7 @@ describe("Renown login flow", () => {
     });
 
     it("should call profile API with correct parameters", async () => {
-      const credential = createMockCredential(TEST_USER_DID, appDid);
+      const credential = await createMockCredential(TEST_USER_DID, appDid);
       mockFetch({ credential });
 
       await renown.login(TEST_USER_DID);
@@ -265,7 +276,7 @@ describe("Renown login flow", () => {
     });
 
     it("should handle profile fetch failure gracefully", async () => {
-      const credential = createMockCredential(TEST_USER_DID, appDid);
+      const credential = await createMockCredential(TEST_USER_DID, appDid);
       mockFetch({ credential, profileStatus: 500 });
 
       const user = await renown.login(TEST_USER_DID);
@@ -282,7 +293,7 @@ describe("Renown login flow", () => {
     });
 
     it("should not update user if they logged out before profile returns", async () => {
-      const credential = createMockCredential(TEST_USER_DID, appDid);
+      const credential = await createMockCredential(TEST_USER_DID, appDid);
 
       // Make profile fetch slow
       vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
@@ -320,7 +331,7 @@ describe("Renown login flow", () => {
     });
 
     it("should throw when credential issuer does not match userDid", async () => {
-      const credential = createMockCredential(
+      const credential = await createMockCredential(
         "did:pkh:eip155:1:0xDEADBEEF",
         appDid,
       );
@@ -333,11 +344,36 @@ describe("Renown login flow", () => {
     });
 
     it("should throw when credential subject does not match app DID", async () => {
-      const credential = createMockCredential(TEST_USER_DID, "did:key:wrong");
+      const credential = await createMockCredential(
+        TEST_USER_DID,
+        "did:key:wrong",
+      );
       mockFetch({ credential });
 
       await expect(renown.login(TEST_USER_DID)).rejects.toThrow(
         "Invalid credential",
+      );
+      expect(renown.status).toBe("not-authorized");
+    });
+
+    it("should throw when proof domain chainId does not match the DID", async () => {
+      const credential = await createMockCredential(TEST_USER_DID, appDid);
+      credential.proof.eip712.domain.chainId = 5;
+      mockFetch({ credential });
+
+      await expect(renown.login(TEST_USER_DID)).rejects.toThrow(
+        "Invalid credential signature",
+      );
+      expect(renown.status).toBe("not-authorized");
+    });
+
+    it("should throw when proof signature is invalid", async () => {
+      const credential = await createMockCredential(TEST_USER_DID, appDid);
+      credential.proof.proofValue = "0xtest";
+      mockFetch({ credential });
+
+      await expect(renown.login(TEST_USER_DID)).rejects.toThrow(
+        "Invalid credential signature",
       );
       expect(renown.status).toBe("not-authorized");
     });
@@ -366,7 +402,7 @@ describe("Renown login flow", () => {
 
   describe("logout", () => {
     it("should clear user and set status to not-authorized", async () => {
-      const credential = createMockCredential(TEST_USER_DID, appDid);
+      const credential = await createMockCredential(TEST_USER_DID, appDid);
       mockFetch({ credential });
 
       await renown.login(TEST_USER_DID);
@@ -380,7 +416,7 @@ describe("Renown login flow", () => {
     });
 
     it("should emit user and status events on logout", async () => {
-      const credential = createMockCredential(TEST_USER_DID, appDid);
+      const credential = await createMockCredential(TEST_USER_DID, appDid);
       mockFetch({ credential });
 
       await renown.login(TEST_USER_DID);
@@ -399,7 +435,7 @@ describe("Renown login flow", () => {
 
   describe("event subscriptions", () => {
     it("should return unsubscribe function from on()", async () => {
-      const credential = createMockCredential(TEST_USER_DID, appDid);
+      const credential = await createMockCredential(TEST_USER_DID, appDid);
       mockFetch({ credential });
 
       const statuses: LoginStatus[] = [];

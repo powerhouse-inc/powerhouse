@@ -93,10 +93,11 @@
     "react": "catalog:",
     "react-dom": "catalog:",
     "tsdown": "catalog:",
+    "type-fest": "catalog:",
+    "viem": "~2.50.4",
     "vite": "catalog:",
     "vitest": "catalog:",
-    "vitest-browser-react": "^1.0.1",
-    "type-fest": "catalog:"
+    "vitest-browser-react": "^1.0.1"
   },
   "peerDependencies": {
     "graphql": "^16",
