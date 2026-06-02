@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import type { Plugin } from "vite";
+import type { Connect, Plugin } from "vite";
 
 /**
  * Vite plugin to serve the Connect favicon (icon.ico) from the connect package.
@@ -9,8 +9,11 @@ export function connectFaviconPlugin(): Plugin {
   return {
     name: "copy-connect-favicon",
     configureServer(server) {
-      // Serve icon.ico before Vite's static middleware so it acts as a fallback
-      server.middlewares.use("/icon.ico", (_req, res, next) => {
+      // Vite rewrites the favicon link against `base`, so serve the
+      // base-prefixed path. Keep the bare path for robustness.
+      const base = server.config.base;
+      const faviconPath = `${base}icon.ico`.replace(/\/{2,}/g, "/");
+      const handler: Connect.NextHandleFunction = (_req, res, next) => {
         server.pluginContainer
           .resolveId("@powerhousedao/connect/assets/icon.ico")
           .then((resolved) => {
@@ -19,7 +22,14 @@ export function connectFaviconPlugin(): Plugin {
             res.end(readFileSync(resolved.id));
           })
           .catch(() => next());
-      });
+      };
+      // Mount on the exact route(s) so the handler only runs for icon.ico.
+      // Connect strips the mount prefix before matching, so mounting on
+      // "/icon.ico" matches that path exactly.
+      const paths = new Set([faviconPath, "/icon.ico"]);
+      for (const path of paths) {
+        server.middlewares.use(path, handler);
+      }
     },
     async generateBundle(_options, bundle) {
       try {
