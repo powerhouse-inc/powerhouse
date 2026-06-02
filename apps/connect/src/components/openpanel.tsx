@@ -14,7 +14,7 @@ import {
 } from "@powerhousedao/reactor-browser";
 import { useEffect, useRef, useState } from "react";
 
-import { buildTraits } from "./openpanel-traits.js";
+import { buildIdentifyPayload } from "./openpanel-traits.js";
 
 declare global {
   interface Window {
@@ -160,10 +160,7 @@ export function OpenPanel(): null {
       // Login: undefined → defined (or client became available with user
       // already logged in — prevUserRef is undefined in both cases).
       try {
-        void client.identify({
-          profileId: user.address,
-          properties: buildTraits(user),
-        });
+        void client.identify(buildIdentifyPayload(user));
       } catch (err) {
         console.warn("[OpenPanel] Failed to identify user:", err);
       }
