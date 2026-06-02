@@ -28,18 +28,11 @@ export async function getOpenPanelClient(
   client = new OpenPanelClass({
     clientId: config.clientId,
     ...(config.apiUrl ? { apiUrl: config.apiUrl } : {}),
-    // Parity with Renown/Vetra (`<OpenPanelComponent trackScreenViews
-    // trackOutgoingLinks />`): automatic pageviews on history changes and
-    // outgoing-link clicks. Not env-gated — the clientId kill switch and the
-    // cookie-consent gate remain the on/off controls.
     trackScreenViews: true,
     trackOutgoingLinks: true,
   });
 
-  // Stamp every event (including the constructor's deferred initial
-  // screen_view) with the app segmentation property — mirrors Renown/Vetra's
-  // `globalProperties={{ app }}`. The web SDK has no constructor option for
-  // this, so it is set imperatively right after construction.
+  // The web SDK has no `globalProperties` constructor option.
   client.setGlobalProperties({ app: "connect" });
 
   // Runs once (the `if (client)` guard above), so the buffer is never

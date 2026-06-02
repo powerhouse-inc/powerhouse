@@ -243,8 +243,6 @@ describe("buildDefaultProperties", () => {
     expect(props.documentId).toBe("drive-42");
     expect(props.scope).toBe("global");
     expect(props.branch).toBe("main");
-    // `app: "connect"` is stamped via the client's global properties, not
-    // per-event (see getOpenPanelClient).
     expect("app" in props).toBe(false);
   });
 });

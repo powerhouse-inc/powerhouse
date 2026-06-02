@@ -187,8 +187,7 @@ describe("OpenPanel component", () => {
       { profileId: string; properties: Record<string, unknown> },
     ];
 
-    // profileId is the wallet address (cross-app key shared with
-    // Renown/Vetra), sent top-level — not inside properties
+    // profileId is top-level, not inside properties
     expect(identifyArg.profileId).toBe(MOCK_USER.address);
 
     // Core property fields present

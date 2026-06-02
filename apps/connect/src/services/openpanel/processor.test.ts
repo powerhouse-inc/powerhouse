@@ -144,8 +144,6 @@ describe("OpenPanelProcessor — default properties", () => {
       string,
       Record<string, unknown>,
     ];
-    // `app: "connect"` comes from the client's global properties (set in
-    // getOpenPanelClient), not from the per-event payload.
     expect("app" in payload).toBe(false);
   });
 });

@@ -76,7 +76,10 @@ export function OpenPanel(): null {
 
     let cancelled = false;
 
-    void (async () => {
+    // Read via a call — TS would otherwise narrow direct reads to always-false.
+    const isCancelled = () => cancelled;
+
+    const setup = async () => {
       let builtClient: OpenPanelClient | undefined;
       try {
         builtClient = await getOpenPanelClient(connectConfig.openPanel);
@@ -85,7 +88,7 @@ export function OpenPanel(): null {
         return;
       }
 
-      if (cancelled || !builtClient) return;
+      if (isCancelled() || !builtClient) return;
 
       setClient(builtClient);
       window.openPanel = builtClient;
@@ -101,7 +104,7 @@ export function OpenPanel(): null {
             }),
           );
           // Guard against teardown happening while registerFactory was in flight.
-          if (cancelled) {
+          if (isCancelled()) {
             await processorManager
               .unregisterFactory("openpanel")
               .catch((err: unknown) =>
@@ -118,7 +121,9 @@ export function OpenPanel(): null {
           );
         }
       }
-    })();
+    };
+
+    void setup();
 
     return () => {
       cancelled = true;
@@ -156,10 +161,6 @@ export function OpenPanel(): null {
       // already logged in — prevUserRef is undefined in both cases).
       try {
         void client.identify({
-          // The wallet address is the cross-app profile key — the same
-          // identifier Renown and Vetra use in their identify calls, so the
-          // apps stitch into one OpenPanel profile. The DID travels as a
-          // trait (see buildTraits).
           profileId: user.address,
           properties: buildTraits(user),
         });

@@ -101,8 +101,10 @@ describe("getOpenPanelClient", () => {
     const client = await getOpenPanelClient(BASE_CONFIG);
 
     expect(client).toBeDefined();
-    expect(client?.setGlobalProperties).toHaveBeenCalledWith({
-      app: "connect",
-    });
+    // Cast avoids @typescript-eslint/unbound-method on the class-method type.
+    const { setGlobalProperties } = client as unknown as {
+      setGlobalProperties: ReturnType<typeof vi.fn>;
+    };
+    expect(setGlobalProperties).toHaveBeenCalledWith({ app: "connect" });
   });
 });

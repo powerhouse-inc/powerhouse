@@ -89,11 +89,8 @@ export function deriveEventName(
 }
 
 /**
- * Builds the default properties attached to every OpenPanel event.
- *
- * The `app: "connect"` segmentation property is NOT included here — it is set
- * once as a global property on the client (see `getOpenPanelClient`), so the
- * SDK stamps it on every event automatically.
+ * Builds the default properties attached to every OpenPanel event. The `app`
+ * property is stamped globally by the client, not here.
  */
 export function buildDefaultProperties(op: OperationWithContext): {
   documentType: string;

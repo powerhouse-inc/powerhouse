@@ -33,7 +33,6 @@ export function buildTraits(user: User): Record<string, unknown> {
     traits.ensName = rest.ens.name;
   }
   if (rest.ens?.avatarUrl != null) {
-    // `avatarUrl` is the canonical trait key shared with Vetra.
     traits.avatarUrl = rest.ens.avatarUrl;
   }
 

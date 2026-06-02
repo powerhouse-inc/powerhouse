@@ -60,8 +60,6 @@ describe("buildTraits", () => {
     const user = makeUser();
     const traits = buildTraits(user);
 
-    // The wallet address is the top-level profileId; the DID is preserved
-    // on the profile as a trait.
     expect(traits.did).toBe("did:pkh:eip155:1:0xabc");
     expect("profileId" in traits).toBe(false);
   });
