@@ -1,5 +1,5 @@
-import type { JwtHandler } from "@powerhousedao/reactor";
-import { ReservationNotFound } from "../errors.js";
+import type { AttachmentRef, JwtHandler } from "@powerhousedao/reactor";
+import { AttachmentAlreadyExists, ReservationNotFound } from "../errors.js";
 import type { IReservationStore } from "../interfaces.js";
 import type { Reservation, ReserveAttachmentOptions } from "../types.js";
 import { buildAuthHeaders } from "./build-auth-headers.js";
@@ -20,7 +20,14 @@ function deriveExtension(fileName: string): string | null {
   return fileName.slice(idx + 1).toLowerCase();
 }
 
-function isReservation(value: unknown): value is Reservation {
+function isReservationBase(value: unknown): value is Record<string, unknown> & {
+  reservationId: string;
+  mimeType: string;
+  fileName: string;
+  extension: string | null;
+  createdAtUtc: string;
+  expiresAtUtc: string;
+} {
   if (!isRecord(value)) return false;
   if (typeof value.reservationId !== "string") return false;
   if (typeof value.mimeType !== "string") return false;
@@ -30,6 +37,27 @@ function isReservation(value: unknown): value is Reservation {
   }
   if (typeof value.createdAtUtc !== "string") return false;
   if (typeof value.expiresAtUtc !== "string") return false;
+  return true;
+}
+
+function isReservation(value: unknown): value is Reservation {
+  if (!isReservationBase(value)) return false;
+  // clientHash and sizeBytes may be absent on responses from older
+  // switchboards; treat missing as null (normalized below in get()).
+  if (
+    value.clientHash !== undefined &&
+    value.clientHash !== null &&
+    typeof value.clientHash !== "string"
+  ) {
+    return false;
+  }
+  if (
+    value.sizeBytes !== undefined &&
+    value.sizeBytes !== null &&
+    typeof value.sizeBytes !== "number"
+  ) {
+    return false;
+  }
   return true;
 }
 
@@ -49,15 +77,48 @@ export class RemoteReservationStore implements IReservationStore {
     const authHeaders = await buildAuthHeaders(url, this.jwtHandler);
     const extension = options.extension ?? deriveExtension(options.fileName);
 
+    const bodyObj: Record<string, unknown> = {
+      mimeType: options.mimeType,
+      fileName: options.fileName,
+      extension,
+    };
+    if (options.clientHash !== undefined) {
+      bodyObj.clientHash = options.clientHash;
+    }
+    if (options.sizeBytes !== undefined) {
+      bodyObj.sizeBytes = options.sizeBytes;
+    }
+
     const response = await this.fetchFn(url, {
       method: "POST",
       headers: { ...authHeaders, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        mimeType: options.mimeType,
-        fileName: options.fileName,
-        extension,
-      }),
+      body: JSON.stringify(bodyObj),
     });
+
+    if (response.status === 409) {
+      let body: unknown;
+      try {
+        body = await response.json();
+      } catch {
+        throw new Error(
+          `Reservation create failed: ${response.status} ${response.statusText}`,
+        );
+      }
+      if (
+        isRecord(body) &&
+        body.error === "already_exists" &&
+        typeof body.ref === "string" &&
+        options.clientHash !== undefined
+      ) {
+        throw new AttachmentAlreadyExists(
+          options.clientHash,
+          body.ref as AttachmentRef,
+        );
+      }
+      throw new Error(
+        `Reservation create failed: ${response.status} ${response.statusText}`,
+      );
+    }
 
     if (!response.ok) {
       throw new Error(
@@ -67,6 +128,7 @@ export class RemoteReservationStore implements IReservationStore {
 
     const json = (await response.json()) as {
       reservationId: string;
+      ref?: string | null;
       createdAtUtc?: string;
       expiresAtUtc?: string;
     };
@@ -84,6 +146,8 @@ export class RemoteReservationStore implements IReservationStore {
       expiresAtUtc:
         json.expiresAtUtc ??
         new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString(),
+      clientHash: options.clientHash ?? null,
+      sizeBytes: options.sizeBytes ?? null,
     };
   }
 
@@ -113,7 +177,17 @@ export class RemoteReservationStore implements IReservationStore {
         "Reservation get returned a payload that does not match the Reservation shape",
       );
     }
-    return parsed;
+    return {
+      reservationId: parsed.reservationId,
+      mimeType: parsed.mimeType,
+      fileName: parsed.fileName,
+      extension: parsed.extension,
+      createdAtUtc: parsed.createdAtUtc,
+      expiresAtUtc: parsed.expiresAtUtc,
+      // Normalize fields that may be absent on older switchboard responses.
+      clientHash: parsed.clientHash ?? null,
+      sizeBytes: parsed.sizeBytes ?? null,
+    };
   }
 
   async delete(reservationId: string): Promise<void> {

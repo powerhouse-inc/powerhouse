@@ -1,6 +1,6 @@
 import type { AttachmentHash } from "@powerhousedao/reactor";
 import type { JwtHandler } from "@powerhousedao/reactor";
-import { AttachmentNotFound } from "../errors.js";
+import { AttachmentNotFound, AttachmentPending } from "../errors.js";
 import type { IAttachmentReader } from "../interfaces.js";
 import type {
   AttachmentHeader,
@@ -118,6 +118,61 @@ function parseMetadata(response: Response): AttachmentMetadata {
   return fallback();
 }
 
+type PendingInfo = {
+  expiresAtUtc: string;
+  mimeType: string;
+  fileName: string;
+  sizeBytes: number;
+};
+
+type PartialPendingInfo = {
+  expiresAtUtc: string;
+  mimeType?: string;
+  fileName?: string;
+  sizeBytes?: number;
+};
+
+function parsePendingExpiry(response: Response): PartialPendingInfo | null {
+  const header = response.headers.get("Attachment-Pending");
+  if (!header) return null;
+  try {
+    const parsed: unknown = JSON.parse(header);
+    if (!isRecord(parsed)) return null;
+    if (typeof parsed.expiresAtUtc !== "string") return null;
+    const result: PartialPendingInfo = { expiresAtUtc: parsed.expiresAtUtc };
+    if (typeof parsed.mimeType === "string") result.mimeType = parsed.mimeType;
+    if (typeof parsed.fileName === "string") result.fileName = parsed.fileName;
+    if (
+      typeof parsed.sizeBytes === "number" &&
+      Number.isFinite(parsed.sizeBytes) &&
+      parsed.sizeBytes >= 0
+    ) {
+      result.sizeBytes = parsed.sizeBytes;
+    }
+    return result;
+  } catch {
+    return null;
+  }
+}
+
+function parsePendingHeader(response: Response): PendingInfo | null {
+  const partial = parsePendingExpiry(response);
+  if (!partial) return null;
+  if (
+    typeof partial.mimeType !== "string" ||
+    typeof partial.fileName !== "string" ||
+    partial.sizeBytes === undefined
+  ) {
+    return null;
+  }
+  return {
+    expiresAtUtc: partial.expiresAtUtc,
+    mimeType: partial.mimeType,
+    fileName: partial.fileName,
+    sizeBytes: partial.sizeBytes,
+  };
+}
+
 export class RemoteAttachmentStore implements IAttachmentReader {
   private readonly remoteUrl: string;
   private readonly jwtHandler?: JwtHandler;
@@ -137,6 +192,16 @@ export class RemoteAttachmentStore implements IAttachmentReader {
       method: "HEAD",
       headers: authHeaders,
     });
+
+    if (response.status === 202) {
+      const pending = parsePendingHeader(response);
+      if (!pending) {
+        throw new Error(
+          "Attachment stat returned 202 with missing or malformed Attachment-Pending header",
+        );
+      }
+      return buildPendingHeader(hash, pending);
+    }
 
     if (response.status === 404) {
       throw new AttachmentNotFound(hash);
@@ -166,6 +231,16 @@ export class RemoteAttachmentStore implements IAttachmentReader {
     const headers = await buildAuthHeaders(url, this.jwtHandler);
 
     const response = await this.fetchFn(url, { signal, headers });
+
+    if (response.status === 202) {
+      const pending = parsePendingExpiry(response);
+      if (!pending) {
+        throw new Error(
+          "Attachment fetch returned 202 with missing or malformed Attachment-Pending header",
+        );
+      }
+      throw new AttachmentPending(hash, pending.expiresAtUtc);
+    }
 
     if (response.status === 404) {
       throw new AttachmentNotFound(hash);
@@ -198,5 +273,25 @@ function buildHeader(
     source: "sync",
     createdAtUtc: metadata.createdAtUtc,
     lastAccessedAtUtc: metadata.lastAccessedAtUtc ?? metadata.createdAtUtc,
+    expiresAtUtc: null,
+  };
+}
+
+function buildPendingHeader(
+  hash: AttachmentHash,
+  pending: PendingInfo,
+): AttachmentHeader {
+  const now = new Date().toISOString();
+  return {
+    hash,
+    mimeType: pending.mimeType,
+    fileName: pending.fileName,
+    sizeBytes: pending.sizeBytes,
+    extension: null,
+    status: "pending",
+    source: "sync",
+    createdAtUtc: now,
+    lastAccessedAtUtc: now,
+    expiresAtUtc: pending.expiresAtUtc,
   };
 }

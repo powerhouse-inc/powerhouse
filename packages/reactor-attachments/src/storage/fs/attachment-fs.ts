@@ -3,7 +3,7 @@ import { createReadStream, createWriteStream } from "node:fs";
 import { createHash, randomUUID } from "node:crypto";
 import { join, dirname } from "node:path";
 import { Readable } from "node:stream";
-import { UploadTooLarge } from "../../errors.js";
+import { SizeMismatch, UploadTooLarge } from "../../errors.js";
 
 /**
  * Compute the absolute storage path for an attachment hash.
@@ -43,7 +43,18 @@ export async function writeAttachmentBytes(
       bytesWritten += value.byteLength;
       const canContinue = writer.write(value);
       if (!canContinue) {
-        await new Promise<void>((resolve) => writer.once("drain", resolve));
+        await new Promise<void>((resolve, reject) => {
+          const onDrain = () => {
+            writer.off("error", onError);
+            resolve();
+          };
+          const onError = (err: Error) => {
+            writer.off("drain", onDrain);
+            reject(err);
+          };
+          writer.once("drain", onDrain);
+          writer.once("error", onError);
+        });
       }
     }
   } finally {
@@ -106,13 +117,20 @@ export function streamFromBuffer(data: Uint8Array): ReadableStream<Uint8Array> {
  *
  * If `maxBytes` is set and the input exceeds it, the temp file is removed and
  * `UploadTooLarge` is thrown.
+ *
+ * If `declaredSizeBytes` is set, the byte count is enforced as a contract:
+ * mid-stream, the moment the count exceeds the declaration the reader is
+ * released and `SizeMismatch` is thrown without consuming the rest of the
+ * stream. At stream end, if the count does not equal the declaration,
+ * `SizeMismatch` is thrown. Both the `maxBytes` and `declaredSizeBytes`
+ * checks apply; `maxBytes` is evaluated first on each chunk.
  */
 export async function streamHashAndWrite(
   basePath: string,
   data: ReadableStream<Uint8Array>,
-  options: { maxBytes?: number } = {},
+  options: { maxBytes?: number; declaredSizeBytes?: number } = {},
 ): Promise<{ tempPath: string; hash: string; sizeBytes: number }> {
-  const { maxBytes } = options;
+  const { maxBytes, declaredSizeBytes } = options;
   const tmpDir = join(basePath, ".tmp");
   await mkdir(tmpDir, { recursive: true });
   const tempPath = join(tmpDir, randomUUID());
@@ -130,6 +148,9 @@ export async function streamHashAndWrite(
       sizeBytes += value.byteLength;
       if (maxBytes !== undefined && sizeBytes > maxBytes) {
         throw new UploadTooLarge(maxBytes);
+      }
+      if (declaredSizeBytes !== undefined && sizeBytes > declaredSizeBytes) {
+        throw new SizeMismatch(declaredSizeBytes, sizeBytes);
       }
       hasher.update(value);
       const canContinue = writer.write(value);
@@ -165,6 +186,11 @@ export async function streamHashAndWrite(
   if (caughtError) {
     await rm(tempPath, { force: true });
     throw caughtError;
+  }
+
+  if (declaredSizeBytes !== undefined && sizeBytes !== declaredSizeBytes) {
+    await rm(tempPath, { force: true });
+    throw new SizeMismatch(declaredSizeBytes, sizeBytes);
   }
 
   return {

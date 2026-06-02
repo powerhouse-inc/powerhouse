@@ -28,6 +28,7 @@ const TEST_HEADER: AttachmentHeader = {
   source: "local",
   createdAtUtc: "2026-01-01T00:00:00.000Z",
   lastAccessedAtUtc: "2026-01-01T00:00:00.000Z",
+  expiresAtUtc: null,
 };
 
 describe("AttachmentService", () => {

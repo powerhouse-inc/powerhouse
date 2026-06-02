@@ -33,7 +33,7 @@ export function createMockTransport(
   overrides: Partial<IAttachmentTransport> = {},
 ): MockTransport {
   return {
-    fetch: vi.fn().mockResolvedValue(null),
+    fetch: vi.fn().mockResolvedValue({ kind: "not-found" }),
     announce: vi.fn().mockResolvedValue(undefined),
     push: vi.fn().mockResolvedValue(undefined),
     ...overrides,
@@ -90,6 +90,7 @@ export function createMockUploadFactory(): MockUploadFactory {
   return {
     createUpload: vi.fn().mockReturnValue({
       reservationId: "mock-reservation-id",
+      ref: null,
       send: vi.fn(),
     }),
   } as MockUploadFactory;

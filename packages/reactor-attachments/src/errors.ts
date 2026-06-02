@@ -1,3 +1,5 @@
+import type { AttachmentHash, AttachmentRef } from "@powerhousedao/reactor";
+
 /**
  * Thrown when an attachment ref or hash is not known to the store.
  */
@@ -38,5 +40,73 @@ export class UploadTooLarge extends Error {
     super(`Upload exceeds maximum size of ${maxBytes} bytes`);
     this.name = "UploadTooLarge";
     this.maxBytes = maxBytes;
+  }
+}
+
+/**
+ * Thrown by reserve() when the claimed hash is already available in the store.
+ * The caller should use err.ref directly and upload nothing -- this is the
+ * dedup fast path: duplicate content never leaves the client.
+ */
+export class AttachmentAlreadyExists extends Error {
+  readonly hash: AttachmentHash;
+  readonly ref: AttachmentRef;
+  constructor(hash: AttachmentHash, ref: AttachmentRef) {
+    super(`Attachment already exists for hash: ${hash}`);
+    this.name = "AttachmentAlreadyExists";
+    this.hash = hash;
+    this.ref = ref;
+  }
+}
+
+/**
+ * Thrown by send() when the server-computed hash of the uploaded bytes
+ * does not match the hash claimed at reservation time. Nothing is committed;
+ * the reservation is retained so the client can retry with correct bytes.
+ */
+export class HashMismatch extends Error {
+  readonly claimed: AttachmentHash;
+  readonly actual: AttachmentHash;
+  constructor(claimed: AttachmentHash, actual: AttachmentHash) {
+    super(`Hash mismatch: claimed ${claimed} but computed ${actual}`);
+    this.name = "HashMismatch";
+    this.claimed = claimed;
+    this.actual = actual;
+  }
+}
+
+/**
+ * Thrown by send() when the uploaded byte count does not equal the
+ * sizeBytes declared at reservation time. The handle may reject
+ * mid-stream as soon as the count exceeds the declaration.
+ * Nothing is committed; the reservation is retained for retry.
+ */
+export class SizeMismatch extends Error {
+  readonly declared: number;
+  readonly actual: number;
+  constructor(declared: number, actual: number) {
+    super(`Size mismatch: declared ${declared} bytes but received ${actual}`);
+    this.name = "SizeMismatch";
+    this.declared = declared;
+    this.actual = actual;
+  }
+}
+
+/**
+ * Thrown by get() when the hash is reserved by an in-flight upload and
+ * bytes are not yet available anywhere. Deliberately NOT a subclass of
+ * AttachmentNotFound -- callers must distinguish "retry later" from "unknown".
+ * After expiresAtUtc has passed the hash reads as not found.
+ */
+export class AttachmentPending extends Error {
+  readonly hash: AttachmentHash;
+  readonly expiresAtUtc: string;
+  constructor(hash: AttachmentHash, expiresAtUtc: string) {
+    super(
+      `Attachment pending upload for hash: ${hash}, expires: ${expiresAtUtc}`,
+    );
+    this.name = "AttachmentPending";
+    this.hash = hash;
+    this.expiresAtUtc = expiresAtUtc;
   }
 }

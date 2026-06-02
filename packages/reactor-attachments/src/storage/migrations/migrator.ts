@@ -6,6 +6,7 @@ import * as migration002 from "./002_create_reservation_table.js";
 import * as migration003 from "./003_add_reservation_expires_at.js";
 import * as migration004 from "./004_add_reservation_soft_delete.js";
 import * as migration005 from "./005_add_reservation_active_index.js";
+import * as migration006 from "./006_add_reservation_client_hash.js";
 
 export const ATTACHMENT_SCHEMA = "attachments";
 
@@ -21,6 +22,7 @@ const migrations = {
   "003_add_reservation_expires_at": migration003,
   "004_add_reservation_soft_delete": migration004,
   "005_add_reservation_active_index": migration005,
+  "006_add_reservation_client_hash": migration006,
 };
 
 class ProgrammaticMigrationProvider implements MigrationProvider {

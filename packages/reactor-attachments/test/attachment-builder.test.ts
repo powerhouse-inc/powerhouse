@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach, vi } from "vitest";
+import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { mkdtemp, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -87,7 +87,7 @@ describe("AttachmentBuilder", () => {
     cleanup = ctx.cleanup;
 
     const mockTransport: IAttachmentTransport = {
-      fetch: vi.fn().mockResolvedValue(null),
+      fetch: vi.fn().mockResolvedValue({ kind: "not-found" }),
       announce: vi.fn().mockResolvedValue(undefined),
       push: vi.fn().mockResolvedValue(undefined),
     };
@@ -116,7 +116,7 @@ describe("AttachmentBuilder", () => {
     try {
       await store.get(TEST_HASH);
     } catch {
-      // Expected: transport returns null so AttachmentNotFound is thrown
+      // Expected: transport returns not-found so AttachmentNotFound is thrown
     }
     // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(mockTransport.fetch).toHaveBeenCalledWith(TEST_HASH, undefined);
@@ -129,6 +129,7 @@ describe("AttachmentBuilder", () => {
     const mockFactory = {
       createUpload: vi.fn().mockReturnValue({
         reservationId: "custom-id",
+        ref: null,
         send: vi.fn().mockResolvedValue({
           hash: "custom-hash",
           ref: createRef("custom-hash"),
@@ -142,6 +143,7 @@ describe("AttachmentBuilder", () => {
             source: "local" as const,
             createdAtUtc: new Date().toISOString(),
             lastAccessedAtUtc: new Date().toISOString(),
+            expiresAtUtc: null,
           },
         }),
       }),
@@ -177,5 +179,95 @@ describe("AttachmentBuilder", () => {
     });
     const result = await upload.send(streamFromString(TEST_CONTENT));
     expect(result.hash).toBe(TEST_HASH);
+  });
+
+  describe("reservation sweep timer", () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("withReservationSweepMs calls deleteExpired on the configured interval", async () => {
+      const ctx = await createTestContext();
+      cleanup = ctx.cleanup;
+
+      const intervalMs = 60_000;
+      const { reservations, destroy } = await new AttachmentBuilder(
+        ctx.db,
+        ctx.storagePath,
+      )
+        .withReservationSweepMs(intervalMs)
+        .build();
+
+      const spy = vi.spyOn(reservations, "deleteExpired");
+
+      expect(spy).not.toHaveBeenCalled();
+
+      await vi.advanceTimersByTimeAsync(intervalMs);
+      expect(spy).toHaveBeenCalledTimes(1);
+
+      await vi.advanceTimersByTimeAsync(intervalMs);
+      expect(spy).toHaveBeenCalledTimes(2);
+
+      destroy();
+    });
+
+    it("destroy() stops the sweep timer", async () => {
+      const ctx = await createTestContext();
+      cleanup = ctx.cleanup;
+
+      const intervalMs = 30_000;
+      const { reservations, destroy } = await new AttachmentBuilder(
+        ctx.db,
+        ctx.storagePath,
+      )
+        .withReservationSweepMs(intervalMs)
+        .build();
+
+      const spy = vi.spyOn(reservations, "deleteExpired");
+
+      await vi.advanceTimersByTimeAsync(intervalMs);
+      expect(spy).toHaveBeenCalledTimes(1);
+
+      destroy();
+
+      // After destroy, advancing time must not trigger additional calls.
+      await vi.advanceTimersByTimeAsync(intervalMs * 5);
+      expect(spy).toHaveBeenCalledTimes(1);
+    });
+
+    it("destroy() is idempotent: calling it twice does not throw", async () => {
+      const ctx = await createTestContext();
+      cleanup = ctx.cleanup;
+
+      const { destroy } = await new AttachmentBuilder(ctx.db, ctx.storagePath)
+        .withReservationSweepMs(10_000)
+        .build();
+
+      expect(() => {
+        destroy();
+        destroy();
+      }).not.toThrow();
+    });
+
+    it("build() without withReservationSweepMs never calls deleteExpired", async () => {
+      const ctx = await createTestContext();
+      cleanup = ctx.cleanup;
+
+      const { reservations, destroy } = await new AttachmentBuilder(
+        ctx.db,
+        ctx.storagePath,
+      ).build();
+
+      const spy = vi.spyOn(reservations, "deleteExpired");
+
+      await vi.advanceTimersByTimeAsync(24 * 60 * 60 * 1000);
+      expect(spy).not.toHaveBeenCalled();
+
+      destroy();
+    });
   });
 });

@@ -1,7 +1,11 @@
 export {
+  AttachmentAlreadyExists,
   AttachmentNotFound,
+  AttachmentPending,
+  HashMismatch,
   InvalidAttachmentRef,
   ReservationNotFound,
+  SizeMismatch,
   UploadTooLarge,
 } from "./errors.js";
 export type {
@@ -23,6 +27,7 @@ export type {
   AttachmentUploadResult,
   Reservation,
   ReserveAttachmentOptions,
+  TransportFetchResult,
   TransportResponse,
 } from "./types.js";
 export { AttachmentService } from "./attachment-service.js";

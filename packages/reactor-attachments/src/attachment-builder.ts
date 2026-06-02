@@ -19,12 +19,15 @@ export type AttachmentBuildResult = {
   store: KyselyAttachmentStore;
   reservations: KyselyReservationStore;
   uploadFactory: IAttachmentUploadFactory;
+  /** Stops the reservation sweep timer, if one was configured via withReservationSweepMs(). */
+  destroy: () => void;
 };
 
 export class AttachmentBuilder {
   private transport: IAttachmentTransport = new NullAttachmentTransport();
   private customUploadFactory?: IAttachmentUploadFactory;
   private maxUploadBytes?: number;
+  private reservationSweepMs?: number;
 
   constructor(
     private readonly db: Kysely<any>,
@@ -43,6 +46,19 @@ export class AttachmentBuilder {
 
   withMaxUploadBytes(maxBytes: number): this {
     this.maxUploadBytes = maxBytes;
+    return this;
+  }
+
+  /**
+   * Configure a recurring sweep that deletes expired reservations.
+   * The sweep calls reservations.deleteExpired() on the given interval.
+   * When set, the built result's destroy() clears the timer.
+   * Without this option no sweep runs -- deleteExpired() is never called
+   * automatically. Call withReservationSweepMs in production to prevent
+   * expired reservation rows from accumulating indefinitely.
+   */
+  withReservationSweepMs(intervalMs: number): this {
+    this.reservationSweepMs = intervalMs;
     return this;
   }
 
@@ -74,6 +90,21 @@ export class AttachmentBuilder {
 
     const service = new AttachmentService(store, reservations, uploadFactory);
 
-    return { service, store, reservations, uploadFactory };
+    let sweepTimer: ReturnType<typeof setInterval> | undefined;
+    if (this.reservationSweepMs !== undefined) {
+      const intervalMs = this.reservationSweepMs;
+      sweepTimer = setInterval(() => {
+        void reservations.deleteExpired();
+      }, intervalMs);
+    }
+
+    const destroy = (): void => {
+      if (sweepTimer !== undefined) {
+        clearInterval(sweepTimer);
+        sweepTimer = undefined;
+      }
+    };
+
+    return { service, store, reservations, uploadFactory, destroy };
   }
 }

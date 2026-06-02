@@ -1,7 +1,12 @@
 import {
+  AttachmentAlreadyExists,
   AttachmentNotFound,
+  AttachmentPending,
+  HashMismatch,
   InvalidAttachmentRef,
   ReservationNotFound,
+  SizeMismatch,
+  UploadTooLarge,
   type AttachmentBuildResult,
   type ReserveAttachmentOptions,
 } from "@powerhousedao/reactor-attachments";
@@ -12,6 +17,8 @@ import { Readable } from "node:stream";
 import type { ReadableStream as NodeReadableStream } from "node:stream/web";
 
 const logger = childLogger(["switchboard", "attachments"]);
+
+const RETRY_AFTER_SECONDS = 5;
 
 // Canonical form is lowercase hex (the SHA-256 hasher emits lowercase), but
 // accept either case from the wire and normalise before lookup. This keeps
@@ -39,6 +46,7 @@ function statusForError(err: unknown): number {
   if (err instanceof AttachmentNotFound) return 404;
   if (err instanceof ReservationNotFound) return 404;
   if (err instanceof InvalidAttachmentRef) return 400;
+  if (err instanceof UploadTooLarge) return 413;
   return 500;
 }
 
@@ -100,6 +108,30 @@ export function parseReserveOptions(
   } else if (obj.extension !== undefined && obj.extension !== null) {
     return null;
   }
+
+  // Hash-first mode: clientHash triggers this path; sizeBytes is required alongside it.
+  // A body with sizeBytes but no clientHash falls through to the legacy path unchanged.
+  if (obj.clientHash !== undefined) {
+    if (typeof obj.clientHash !== "string" || !HASH_PATTERN.test(obj.clientHash)) {
+      return null;
+    }
+    if (
+      typeof obj.sizeBytes !== "number" ||
+      !Number.isInteger(obj.sizeBytes) ||
+      obj.sizeBytes <= 0 ||
+      !Number.isSafeInteger(obj.sizeBytes)
+    ) {
+      return null;
+    }
+    return {
+      mimeType: obj.mimeType,
+      fileName: obj.fileName,
+      extension,
+      clientHash: obj.clientHash.toLowerCase() as AttachmentHash,
+      sizeBytes: obj.sizeBytes,
+    };
+  }
+
   return {
     mimeType: obj.mimeType,
     fileName: obj.fileName,
@@ -144,16 +176,38 @@ export function makeReserveHandler(attachments: AttachmentBuildResult) {
       sendError(
         res,
         400,
-        "Body must be { mimeType: string (type/subtype), fileName: string (no control characters, max 255 chars), extension?: string|null }",
+        "Body must be { mimeType: string (type/subtype), fileName: string (no control characters, max 255 chars), extension?: string|null, clientHash?: string (64 hex chars), sizeBytes?: number (required with clientHash) }",
       );
       return;
     }
+
+    let upload;
     try {
-      const upload = await attachments.service.reserve(opts);
-      sendJson(res, 201, { reservationId: upload.reservationId });
+      upload = await attachments.service.reserve(opts);
     } catch (err) {
+      if (err instanceof AttachmentAlreadyExists) {
+        sendJson(res, 409, { error: "already_exists", ref: err.ref });
+        return;
+      }
       sendErrorFromException(res, err);
+      return;
     }
+
+    let expiresAtUtc: string | undefined;
+    try {
+      const reservation = await attachments.reservations.get(
+        upload.reservationId,
+      );
+      expiresAtUtc = reservation.expiresAtUtc;
+    } catch {
+      // Non-fatal: the reservationId is still valid; expiresAtUtc will be omitted.
+    }
+
+    sendJson(res, 201, {
+      reservationId: upload.reservationId,
+      ref: upload.ref,
+      expiresAtUtc,
+    });
   };
 }
 
@@ -173,13 +227,21 @@ export function makeUploadHandler(attachments: AttachmentBuildResult) {
       return;
     }
 
+    const uploadOptions: ReserveAttachmentOptions = {
+      mimeType: reservation.mimeType,
+      fileName: reservation.fileName,
+      extension: reservation.extension,
+      ...(reservation.clientHash !== null
+        ? {
+            clientHash: reservation.clientHash as AttachmentHash,
+            sizeBytes: reservation.sizeBytes ?? undefined,
+          }
+        : {}),
+    };
+
     const upload = attachments.uploadFactory.createUpload(
       reservation.reservationId,
-      {
-        mimeType: reservation.mimeType,
-        fileName: reservation.fileName,
-        extension: reservation.extension,
-      },
+      uploadOptions,
     );
 
     const webStream = Readable.toWeb(
@@ -190,6 +252,22 @@ export function makeUploadHandler(attachments: AttachmentBuildResult) {
       const result = await upload.send(webStream);
       sendJson(res, 200, result);
     } catch (err) {
+      if (err instanceof HashMismatch) {
+        sendJson(res, 422, {
+          error: "hash_mismatch",
+          claimed: err.claimed,
+          actual: err.actual,
+        });
+        return;
+      }
+      if (err instanceof SizeMismatch) {
+        sendJson(res, 422, {
+          error: "size_mismatch",
+          declared: err.declared,
+          actual: err.actual,
+        });
+        return;
+      }
       sendErrorFromException(res, err);
     }
   };
@@ -211,6 +289,34 @@ export function makeDownloadHandler(attachments: AttachmentBuildResult) {
     try {
       response = await attachments.store.get(canonicalHash, controller.signal);
     } catch (err) {
+      if (err instanceof AttachmentPending) {
+        let pendingMeta: {
+          mimeType: string;
+          fileName: string;
+          sizeBytes: number;
+        } | null = null;
+        try {
+          const statHeader = await attachments.store.stat(canonicalHash);
+          pendingMeta = {
+            mimeType: statHeader.mimeType,
+            fileName: statHeader.fileName,
+            sizeBytes: statHeader.sizeBytes,
+          };
+        } catch {
+          // Best-effort: if stat also fails, omit the optional fields.
+        }
+        res.statusCode = 202;
+        res.setHeader("Retry-After", String(RETRY_AFTER_SECONDS));
+        res.setHeader(
+          "Attachment-Pending",
+          JSON.stringify({
+            expiresAtUtc: err.expiresAtUtc,
+            ...(pendingMeta ?? {}),
+          }),
+        );
+        res.end();
+        return;
+      }
       sendErrorFromException(res, err);
       return;
     }
@@ -263,6 +369,22 @@ export function makeStatHandler(attachments: AttachmentBuildResult) {
       header = await attachments.store.stat(canonicalHash);
     } catch (err) {
       sendErrorFromException(res, err);
+      return;
+    }
+
+    if (header.status === "pending") {
+      res.statusCode = 202;
+      res.setHeader("Retry-After", String(RETRY_AFTER_SECONDS));
+      res.setHeader(
+        "Attachment-Pending",
+        JSON.stringify({
+          expiresAtUtc: header.expiresAtUtc,
+          mimeType: header.mimeType,
+          fileName: header.fileName,
+          sizeBytes: header.sizeBytes,
+        }),
+      );
+      res.end();
       return;
     }
 

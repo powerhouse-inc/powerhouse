@@ -2,12 +2,16 @@ import type { AttachmentHash, AttachmentRef } from "@powerhousedao/reactor";
 
 /**
  * Status of attachment data in the local store.
+ * 'pending' is a virtual status synthesized at query time from live,
+ * hash-bearing reservations -- it never appears in the attachment table.
  */
-export type AttachmentStatus = "available" | "evicted";
+export type AttachmentStatus = "available" | "evicted" | "pending";
 
 /**
- * Metadata about an attachment. Only exists after data is stored
- * (via upload.send for client uploads, or put for sync).
+ * Metadata about an attachment. For committed attachments (available/evicted),
+ * expiresAtUtc is null. For pending attachments synthesized from a live
+ * reservation, expiresAtUtc carries the reservation expiry so callers can
+ * emit Retry-After or bound polling loops.
  */
 export type AttachmentHeader = {
   hash: AttachmentHash;
@@ -19,6 +23,7 @@ export type AttachmentHeader = {
   source: "local" | "sync";
   createdAtUtc: string;
   lastAccessedAtUtc: string;
+  expiresAtUtc: string | null;
 };
 
 /**
@@ -51,11 +56,31 @@ export type AttachmentMetadata = {
 
 /**
  * Options provided when reserving an attachment slot.
+ *
+ * When clientHash is present, the service operates in hash-first mode:
+ * the ref is known at reservation time, reserve() rejects if the content
+ * is already available, and send() verifies the uploaded bytes against the
+ * claimed hash. sizeBytes is required when clientHash is present (enforced
+ * at the service layer and route parser).
+ *
+ * When clientHash is absent, the legacy upload-first flow applies.
  */
 export type ReserveAttachmentOptions = {
   mimeType: string;
   fileName: string;
   extension?: string | null;
+
+  /**
+   * Content hash claimed by the client (lowercase SHA-256 hex).
+   */
+  clientHash?: AttachmentHash;
+
+  /**
+   * Declared size in bytes. Required when clientHash is present.
+   * Reported by stat() during the pending window and enforced on
+   * ingest: an upload whose actual byte count differs is rejected.
+   */
+  sizeBytes?: number;
 };
 
 /**
@@ -88,6 +113,22 @@ export type TransportResponse = {
 };
 
 /**
+ * Three-way result from IAttachmentTransport.fetch(). Replaces
+ * TransportResponse | null to make the pending state explicit, so
+ * peers receiving a synced operation whose attachment is in-flight can
+ * distinguish "retry later" from "permanently unknown".
+ */
+export type TransportFetchResult =
+  | { kind: "data"; response: TransportResponse }
+  | {
+      kind: "pending";
+      hash: AttachmentHash;
+      expiresAtUtc: string;
+      retryAfterMs: number;
+    }
+  | { kind: "not-found" };
+
+/**
  * Configuration for creating an attachment transport instance.
  */
 export type AttachmentTransportConfig = {
@@ -99,6 +140,8 @@ export type AttachmentTransportConfig = {
  * A reservation for an in-progress attachment upload.
  * Created by reserve(), deleted when upload.send() completes or
  * once expiresAtUtc has passed and a sweep runs.
+ * clientHash and sizeBytes are set in hash-first mode and null in
+ * legacy upload-first mode.
  */
 export type Reservation = {
   reservationId: string;
@@ -107,4 +150,6 @@ export type Reservation = {
   extension: string | null;
   createdAtUtc: string;
   expiresAtUtc: string;
+  clientHash: string | null;
+  sizeBytes: number | null;
 };

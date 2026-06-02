@@ -7,7 +7,7 @@ import type {
   AttachmentUploadResult,
   Reservation,
   ReserveAttachmentOptions,
-  TransportResponse,
+  TransportFetchResult,
 } from "./types.js";
 
 /**
@@ -18,9 +18,20 @@ export interface IAttachmentService {
   /**
    * Reserve a new attachment slot and return an upload handle.
    *
-   * The handle abstracts the transport -- the caller streams data
-   * through it without knowing whether bytes flow via HTTP, S3,
-   * or any other mechanism.
+   * When options.clientHash is provided (hash-first mode):
+   * - @throws AttachmentAlreadyExists if data for that hash is currently
+   *   available. The error carries the canonical ref; the caller uses it
+   *   directly and uploads nothing (dedup fast path).
+   * - If the hash is evicted, the reservation is created: the client holds
+   *   the bytes and the upload restores them.
+   * - If the hash is pending (another in-flight reservation), the
+   *   reservation is created: concurrent reservations are deliberately
+   *   permitted (see design doc -- no uniqueness race).
+   * - The returned handle's ref field is set immediately to the computed ref.
+   *
+   * When options.clientHash is absent (legacy mode):
+   * - No pre-check against the store.
+   * - The returned handle's ref field is null until send() completes.
    */
   reserve(options: ReserveAttachmentOptions): Promise<IAttachmentUpload>;
 
@@ -28,14 +39,24 @@ export interface IAttachmentService {
    * Get attachment metadata by ref.
    *
    * @throws AttachmentNotFound if the ref is unknown.
+   * Returns an AttachmentHeader with status='pending' and expiresAtUtc set if
+   * the hash has an active reservation but no committed bytes. Callers must
+   * check header.status to distinguish pending from available.
    */
   stat(ref: AttachmentRef): Promise<AttachmentHeader>;
 
   /**
    * Retrieve attachment data.
    *
-   * Always succeeds for any known ref. The underlying store handles
-   * re-fetching evicted data from the transport transparently.
+   * Always succeeds for any known, available ref. The underlying store
+   * handles re-fetching evicted data from the transport transparently.
+   *
+   * @throws AttachmentPending if the hash is reserved but bytes not yet
+   *         available. There is no store-level wait; polling across the
+   *         pending window is the caller's loop, bounded by the error's
+   *         expiresAtUtc. A wait inside get() would hold request handlers
+   *         open across multi-second windows and hide retry policy where
+   *         callers cannot tune it.
    */
   get(ref: AttachmentRef, signal?: AbortSignal): Promise<AttachmentResponse>;
 }
@@ -51,6 +72,13 @@ export interface IAttachmentUpload {
   reservationId: string;
 
   /**
+   * The ref this upload will produce. Set immediately when the
+   * reservation carries a client hash (hash-first mode); null in the
+   * legacy flow, where the ref is only known after send() completes.
+   */
+  ref: AttachmentRef | null;
+
+  /**
    * Stream attachment data through this handle.
    *
    * The handle manages the full upload lifecycle internally:
@@ -61,6 +89,15 @@ export interface IAttachmentUpload {
    * Dedup: if an attachment with the same content hash already
    * exists, send() returns the existing ref. Content-addressed
    * storage means identical uploads converge on the same hash.
+   *
+   * When the reservation carries a client hash, the handle verifies
+   * the received bytes against the claims:
+   * - @throws SizeMismatch if the byte count differs from the declared
+   *   sizeBytes. The handle may reject mid-stream as soon as the count
+   *   exceeds the declaration, without consuming the rest.
+   * - @throws HashMismatch if the server-computed hash differs from the
+   *   claimed hash. Nothing is committed; the reservation is retained
+   *   so the client can retry with the correct bytes.
    *
    * @returns The content hash, ref, and header for the uploaded attachment.
    */
@@ -83,6 +120,9 @@ export interface IAttachmentReader {
    * not a data access.
    *
    * @throws AttachmentNotFound if the hash is unknown.
+   * Returns an AttachmentHeader with status='pending' and expiresAtUtc set if
+   * the hash has an active reservation but no committed bytes. Callers must
+   * check header.status to distinguish pending from available.
    */
   stat(hash: AttachmentHash): Promise<AttachmentHeader>;
 
@@ -93,10 +133,13 @@ export interface IAttachmentReader {
    * If the data has been evicted, re-fetches it from the transport,
    * restores it locally via put(), and returns the data. This makes
    * eviction transparent to callers -- get() always succeeds for
-   * any known hash.
+   * any known, available hash.
    *
    * @throws AttachmentNotFound if the hash is unknown (no metadata
-   *         record exists).
+   *         record exists and no pending reservation).
+   * @throws AttachmentPending if the hash is reserved by an in-flight
+   *         upload; bytes are not yet available. There is no store-level
+   *         wait -- polling is the caller's responsibility.
    */
   get(hash: AttachmentHash, signal?: AbortSignal): Promise<AttachmentResponse>;
 }
@@ -112,6 +155,7 @@ export interface IAttachmentStore extends IAttachmentReader {
    * Check whether attachment data is available locally.
    * Returns true if the bytes can be served from this reactor's store
    * without a transport round-trip. Does not trigger a remote fetch.
+   * Returns false for pending and evicted hashes.
    */
   has(hash: AttachmentHash): Promise<boolean>;
 
@@ -167,19 +211,19 @@ export interface IAttachmentTransport {
   /**
    * Fetch attachment data by hash from a remote source.
    *
-   * The transport resolves the hash to a data source (server endpoint,
-   * S3 presigned URL, etc.) and returns a stream.
+   * Returns a three-way discriminated union so callers can distinguish
+   * "data available", "upload in flight -- retry after expiry", and
+   * "not found -- possibly permanently". Conflating the last two would
+   * cause callers to apply long backoff to transient pending state,
+   * or to retry indefinitely on a permanently missing hash.
    *
    * @param hash - Content hash of the attachment
    * @param signal - Abort signal for cancellation
-   * @returns The attachment data with metadata, or null if not available.
-   *          Returns TransportResponse (not AttachmentResponse) because
-   *          remote peers cannot populate local concerns like status/source.
    */
   fetch(
     hash: AttachmentHash,
     signal?: AbortSignal,
-  ): Promise<TransportResponse | null>;
+  ): Promise<TransportFetchResult>;
 
   /**
    * Announce that this reactor has attachment data available.

@@ -1,10 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { AttachmentNotFound, ReservationNotFound } from "../../src/errors.js";
+import type { AttachmentHash } from "@powerhousedao/reactor";
+import {
+  AttachmentAlreadyExists,
+  AttachmentNotFound,
+  AttachmentPending,
+  HashMismatch,
+  ReservationNotFound,
+  SizeMismatch,
+} from "../../src/errors.js";
 import { RemoteAttachmentStore } from "../../src/switchboard/remote-attachment-store.js";
 import { RemoteAttachmentUpload } from "../../src/switchboard/remote-attachment-upload.js";
 import { RemoteAttachmentUploadFactory } from "../../src/switchboard/remote-attachment-upload-factory.js";
 import { RemoteReservationStore } from "../../src/switchboard/remote-reservation-store.js";
 import { createRemoteAttachmentService } from "../../src/switchboard/create-remote-attachment-service.js";
+import { createRef } from "../../src/ref.js";
 import { streamFromString, streamToBytes } from "../factories.js";
 
 const REMOTE_URL = "https://switchboard.example.com";
@@ -139,7 +148,11 @@ describe("RemoteReservationStore", () => {
 
     const got = await store.get("r-1");
 
-    expect(got).toEqual(reservation);
+    expect(got).toEqual({
+      ...reservation,
+      clientHash: null,
+      sizeBytes: null,
+    });
     expect(mockFetch).toHaveBeenCalledWith(
       `${REMOTE_URL}/attachments/reservations/r-1`,
       expect.any(Object),
@@ -227,6 +240,150 @@ describe("RemoteReservationStore", () => {
       /Reservation delete failed/,
     );
   });
+
+  describe("hash-first mode", () => {
+    it("includes clientHash and sizeBytes in POST body when provided", async () => {
+      const clientHash = "a".repeat(64) as AttachmentHash;
+      mockFetch.mockResolvedValue(
+        mockResponse(201, {
+          json: {
+            reservationId: "r-hash-first",
+            ref: `attachment://v1:${clientHash}`,
+            expiresAtUtc: "2026-06-03T00:00:00.000Z",
+          },
+        }),
+      );
+
+      await store.create({
+        mimeType: "application/pdf",
+        fileName: "doc.pdf",
+        extension: "pdf",
+        clientHash,
+        sizeBytes: 4096,
+      });
+
+      const callArgs = mockFetch.mock.calls[0] as [string, RequestInit];
+      const sentBody = JSON.parse(callArgs[1].body as string) as {
+        clientHash: string;
+        sizeBytes: number;
+      };
+      expect(sentBody.clientHash).toBe(clientHash);
+      expect(sentBody.sizeBytes).toBe(4096);
+    });
+
+    it("omits clientHash and sizeBytes from POST body when absent", async () => {
+      mockFetch.mockResolvedValue(
+        mockResponse(201, { json: { reservationId: "r-legacy" } }),
+      );
+
+      await store.create({ mimeType: "text/plain", fileName: "file.txt" });
+
+      const callArgs = mockFetch.mock.calls[0] as [string, RequestInit];
+      const sentBody = JSON.parse(callArgs[1].body as string) as Record<
+        string,
+        unknown
+      >;
+      expect("clientHash" in sentBody).toBe(false);
+      expect("sizeBytes" in sentBody).toBe(false);
+    });
+
+    it("maps 409 { error: already_exists, ref } to AttachmentAlreadyExists with that ref", async () => {
+      const clientHash = "b".repeat(64);
+      const ref = `attachment://v1:${clientHash}`;
+      mockFetch.mockResolvedValue(
+        mockResponse(409, {
+          json: { error: "already_exists", ref },
+          statusText: "Conflict",
+        }),
+      );
+
+      const err = await store
+        .create({
+          mimeType: "text/plain",
+          fileName: "dup.txt",
+          clientHash: clientHash as AttachmentHash,
+          sizeBytes: 100,
+        })
+        .catch((e: unknown) => e);
+
+      expect(err).toBeInstanceOf(AttachmentAlreadyExists);
+      const typed = err as AttachmentAlreadyExists;
+      expect(typed.hash).toBe(clientHash);
+      expect(typed.ref).toBe(ref);
+    });
+
+    it("treats 409 without { error: already_exists } as a generic error", async () => {
+      const clientHash = "c".repeat(64);
+      mockFetch.mockResolvedValue(
+        mockResponse(409, {
+          json: { error: "something_else" },
+          statusText: "Conflict",
+        }),
+      );
+
+      await expect(
+        store.create({
+          mimeType: "text/plain",
+          fileName: "dup.txt",
+          clientHash: clientHash as AttachmentHash,
+          sizeBytes: 100,
+        }),
+      ).rejects.toThrow(/Reservation create failed: 409/);
+    });
+
+    it("409 without clientHash in options throws generic error, not AttachmentAlreadyExists", async () => {
+      mockFetch.mockResolvedValue(
+        mockResponse(409, {
+          json: { error: "already_exists", ref: "attachment://v1:aaaa" },
+          statusText: "Conflict",
+        }),
+      );
+
+      const err = await store
+        .create({ mimeType: "text/plain", fileName: "file.txt" })
+        .catch((e: unknown) => e);
+
+      expect(err).not.toBeInstanceOf(AttachmentAlreadyExists);
+    });
+
+    it("uses server expiresAtUtc when present in 201 response", async () => {
+      const serverExpiry = "2026-12-31T00:00:00.000Z";
+      mockFetch.mockResolvedValue(
+        mockResponse(201, {
+          json: {
+            reservationId: "r-exp",
+            expiresAtUtc: serverExpiry,
+          },
+        }),
+      );
+
+      const reservation = await store.create({
+        mimeType: "text/plain",
+        fileName: "file.txt",
+      });
+
+      expect(reservation.expiresAtUtc).toBe(serverExpiry);
+    });
+
+    it("falls back to client-computed expiresAtUtc when server omits it", async () => {
+      const before = Date.now();
+      mockFetch.mockResolvedValue(
+        mockResponse(201, { json: { reservationId: "r-nexp" } }),
+      );
+
+      const reservation = await store.create({
+        mimeType: "text/plain",
+        fileName: "file.txt",
+      });
+
+      const after = Date.now();
+      const expiresMs = new Date(reservation.expiresAtUtc).getTime();
+      // Client fallback synthesizes a 24h TTL from the current clock.
+      const ttlMs = 24 * 60 * 60 * 1000;
+      expect(expiresMs).toBeGreaterThanOrEqual(before + ttlMs);
+      expect(expiresMs).toBeLessThanOrEqual(after + ttlMs);
+    });
+  });
 });
 
 describe("RemoteAttachmentUpload", () => {
@@ -283,6 +440,107 @@ describe("RemoteAttachmentUpload", () => {
     );
     await expect(upload.send(streamFromString("data"))).rejects.toThrow(
       /Attachment upload failed: 404/,
+    );
+  });
+
+  it("sets ref from clientHash when options include clientHash", () => {
+    const clientHash = "d".repeat(64) as AttachmentHash;
+    const upload = new RemoteAttachmentUpload(
+      "r-ref",
+      {
+        mimeType: "text/plain",
+        fileName: "file.txt",
+        clientHash,
+        sizeBytes: 10,
+      },
+      { remoteUrl: REMOTE_URL, fetchFn: mockFetch },
+    );
+    expect(upload.ref).toBe(createRef(clientHash));
+  });
+
+  it("sets ref to null when options do not include clientHash", () => {
+    const upload = new RemoteAttachmentUpload(
+      "r-noref",
+      { mimeType: "text/plain", fileName: "file.txt" },
+      { remoteUrl: REMOTE_URL, fetchFn: mockFetch },
+    );
+    expect(upload.ref).toBeNull();
+  });
+
+  it("maps 422 { error: hash_mismatch } to HashMismatch", async () => {
+    const claimed = "e".repeat(64);
+    const actual = "f".repeat(64);
+    mockFetch.mockResolvedValue(
+      mockResponse(422, {
+        json: { error: "hash_mismatch", claimed, actual },
+        statusText: "Unprocessable Entity",
+      }),
+    );
+
+    const upload = new RemoteAttachmentUpload(
+      "r-hm",
+      {
+        mimeType: "text/plain",
+        fileName: "file.txt",
+        clientHash: claimed as AttachmentHash,
+        sizeBytes: 10,
+      },
+      { remoteUrl: REMOTE_URL, fetchFn: mockFetch },
+    );
+
+    const err = await upload
+      .send(streamFromString("wrong"))
+      .catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(HashMismatch);
+    const typed = err as HashMismatch;
+    expect(typed.claimed).toBe(claimed);
+    expect(typed.actual).toBe(actual);
+  });
+
+  it("maps 422 { error: size_mismatch } to SizeMismatch", async () => {
+    mockFetch.mockResolvedValue(
+      mockResponse(422, {
+        json: { error: "size_mismatch", declared: 100, actual: 5 },
+        statusText: "Unprocessable Entity",
+      }),
+    );
+
+    const upload = new RemoteAttachmentUpload(
+      "r-sm",
+      {
+        mimeType: "text/plain",
+        fileName: "file.txt",
+        clientHash: "a".repeat(64) as AttachmentHash,
+        sizeBytes: 100,
+      },
+      { remoteUrl: REMOTE_URL, fetchFn: mockFetch },
+    );
+
+    const err = await upload
+      .send(streamFromString("hi"))
+      .catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(SizeMismatch);
+    const typed = err as SizeMismatch;
+    expect(typed.declared).toBe(100);
+    expect(typed.actual).toBe(5);
+  });
+
+  it("throws generic error for 422 with unrecognized error body", async () => {
+    mockFetch.mockResolvedValue(
+      mockResponse(422, {
+        json: { error: "unknown_error" },
+        statusText: "Unprocessable Entity",
+      }),
+    );
+
+    const upload = new RemoteAttachmentUpload(
+      "r-unk",
+      { mimeType: "text/plain", fileName: "file.txt" },
+      { remoteUrl: REMOTE_URL, fetchFn: mockFetch },
+    );
+
+    await expect(upload.send(streamFromString("data"))).rejects.toThrow(
+      /Attachment upload failed: 422/,
     );
   });
 });
@@ -343,6 +601,7 @@ describe("RemoteAttachmentStore", () => {
       source: "sync",
       createdAtUtc: "2024-01-01T00:00:00.000Z",
       lastAccessedAtUtc: "2024-06-01T12:00:00.000Z",
+      expiresAtUtc: null,
     });
   });
 
@@ -529,6 +788,7 @@ describe("RemoteAttachmentStore", () => {
       source: "sync",
       createdAtUtc: "2024-01-01T00:00:00.000Z",
       lastAccessedAtUtc: "2024-06-01T12:00:00.000Z",
+      expiresAtUtc: null,
     });
   });
 
@@ -537,6 +797,171 @@ describe("RemoteAttachmentStore", () => {
     await expect(store.stat("missing")).rejects.toBeInstanceOf(
       AttachmentNotFound,
     );
+  });
+
+  describe("202 pending path", () => {
+    const PENDING_HASH = "a".repeat(64);
+    const EXPIRES_AT = "2026-07-01T00:00:00.000Z";
+    const PENDING_HEADER_VALUE = JSON.stringify({
+      expiresAtUtc: EXPIRES_AT,
+      mimeType: "application/pdf",
+      fileName: "invoice.pdf",
+      sizeBytes: 2048,
+    });
+
+    it("stat 202 with valid Attachment-Pending header returns pending header", async () => {
+      mockFetch.mockResolvedValue(
+        mockResponse(202, {
+          headers: {
+            "Attachment-Pending": PENDING_HEADER_VALUE,
+            "Retry-After": "5",
+          },
+        }),
+      );
+
+      const header = await store.stat(PENDING_HASH);
+
+      expect(header.status).toBe("pending");
+      expect(header.hash).toBe(PENDING_HASH);
+      expect(header.expiresAtUtc).toBe(EXPIRES_AT);
+      expect(header.mimeType).toBe("application/pdf");
+      expect(header.fileName).toBe("invoice.pdf");
+      expect(header.sizeBytes).toBe(2048);
+    });
+
+    it("stat 202 must not be parsed as available data: no content-type or content-disposition in response", async () => {
+      // This is the critical pin: a 202 must NEVER produce an available
+      // attachment. Verify that the pending header path does not return
+      // status 'available'.
+      mockFetch.mockResolvedValue(
+        mockResponse(202, {
+          headers: { "Attachment-Pending": PENDING_HEADER_VALUE },
+        }),
+      );
+
+      const header = await store.stat(PENDING_HASH);
+
+      expect(header.status).not.toBe("available");
+      expect(header.status).toBe("pending");
+    });
+
+    it("stat 202 with missing Attachment-Pending header throws", async () => {
+      mockFetch.mockResolvedValue(mockResponse(202));
+
+      await expect(store.stat(PENDING_HASH)).rejects.toThrow(
+        /Attachment-Pending/,
+      );
+    });
+
+    it("stat 202 with malformed Attachment-Pending JSON throws", async () => {
+      mockFetch.mockResolvedValue(
+        mockResponse(202, {
+          headers: { "Attachment-Pending": "not json" },
+        }),
+      );
+
+      await expect(store.stat(PENDING_HASH)).rejects.toThrow(
+        /Attachment-Pending/,
+      );
+    });
+
+    it("stat 202 with Attachment-Pending missing required field throws", async () => {
+      mockFetch.mockResolvedValue(
+        mockResponse(202, {
+          headers: {
+            "Attachment-Pending": JSON.stringify({
+              // expiresAtUtc omitted
+              mimeType: "application/pdf",
+              fileName: "f",
+              sizeBytes: 1,
+            }),
+          },
+        }),
+      );
+
+      await expect(store.stat(PENDING_HASH)).rejects.toThrow(
+        /Attachment-Pending/,
+      );
+    });
+
+    it("get 202 with valid Attachment-Pending header throws AttachmentPending", async () => {
+      mockFetch.mockResolvedValue(
+        mockResponse(202, {
+          headers: {
+            "Attachment-Pending": PENDING_HEADER_VALUE,
+            "Retry-After": "5",
+          },
+        }),
+      );
+
+      const err = await store.get(PENDING_HASH).catch((e: unknown) => e);
+
+      expect(err).toBeInstanceOf(AttachmentPending);
+      const typed = err as AttachmentPending;
+      expect(typed.hash).toBe(PENDING_HASH);
+      expect(typed.expiresAtUtc).toBe(EXPIRES_AT);
+    });
+
+    it("get 202 must NEVER produce a zero-byte available attachment (CRITICAL pin)", async () => {
+      // The silent zero-byte corruption: a 202 falling through response.ok check
+      // would be parsed as a zero-length successful response, producing a
+      // real zero-byte attachment row. This test pins that the 202 path always
+      // throws, never returns a response with a body.
+      mockFetch.mockResolvedValue(
+        mockResponse(202, {
+          headers: { "Attachment-Pending": PENDING_HEADER_VALUE },
+        }),
+      );
+
+      await expect(store.get(PENDING_HASH)).rejects.toThrow();
+
+      // Confirm it's not silently succeeding with zero bytes.
+      const result = await store
+        .get(PENDING_HASH)
+        .then(() => "resolved")
+        .catch(() => "rejected");
+      expect(result).toBe("rejected");
+    });
+
+    it("get 202 with missing Attachment-Pending header throws (not data)", async () => {
+      mockFetch.mockResolvedValue(mockResponse(202));
+
+      await expect(store.get(PENDING_HASH)).rejects.toThrow(
+        /Attachment-Pending/,
+      );
+    });
+
+    it("get 202 with malformed Attachment-Pending JSON throws error, not data", async () => {
+      mockFetch.mockResolvedValue(
+        mockResponse(202, {
+          headers: { "Attachment-Pending": "{broken json" },
+        }),
+      );
+
+      const err = await store.get(PENDING_HASH).catch((e: unknown) => e);
+
+      // Must throw an error, and specifically not be a successful response.
+      expect(err).toBeInstanceOf(Error);
+      // Must NOT be AttachmentPending since parsing failed -- it should be
+      // a generic error about the malformed header.
+      expect((err as Error).message).toMatch(/Attachment-Pending/);
+    });
+
+    it("get 202 response body is not consumed as attachment data", async () => {
+      // Even if the server mistakenly sends a body on 202, we must not consume it.
+      mockFetch.mockResolvedValue(
+        mockResponse(202, {
+          body: streamFromString("accidentally-sent-data"),
+          headers: { "Attachment-Pending": PENDING_HEADER_VALUE },
+        }),
+      );
+
+      const err = await store.get(PENDING_HASH).catch((e: unknown) => e);
+
+      expect(err).toBeInstanceOf(AttachmentPending);
+      // Verify it is specifically not returning bytes as attachment data.
+      expect(err).not.toHaveProperty("body");
+    });
   });
 });
 

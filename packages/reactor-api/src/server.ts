@@ -512,10 +512,16 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     pglite: attachmentPglite,
   } = getDbClient(options.dbPath, options.pgliteFactory);
   dbClosers.push(...makeDbClosers(attachmentKnex, attachmentPglite));
+  const ATTACHMENT_SWEEP_INTERVAL_MS = 60 * 60 * 1000; // hourly
   const attachments = await new AttachmentBuilder(
     attachmentDb,
     attachmentStoragePath,
-  ).build();
+  )
+    .withReservationSweepMs(ATTACHMENT_SWEEP_INTERVAL_MS)
+    .build();
+  dbClosers.push(async () => {
+    attachments.destroy();
+  });
   logger.info("Attachment service initialized");
 
   // Initialize package manager

@@ -701,7 +701,426 @@ describe("attachment routes", () => {
     expect(h1).toBe(h2);
   });
 
+  describe("hash-first reserve: 409 already_exists", () => {
+    it("returns 409 { error: already_exists, ref } when hash is already available", async () => {
+      // Upload a file first using the legacy flow to populate the store.
+      const reserveHandler = makeReserveHandler(attachments);
+      const uploadHandler = makeUploadHandler(attachments);
+
+      const legacyReserveReq = makeReq({
+        method: "POST",
+        body: JSON.stringify({ mimeType: "text/plain", fileName: "dup.txt" }),
+      });
+      const legacyReserveRes = makeRes();
+      await reserveHandler(legacyReserveReq, legacyReserveRes);
+      await waitFor(legacyReserveRes);
+      const { reservationId: legacyId } = JSON.parse(
+        legacyReserveRes._body.toString("utf8"),
+      ) as { reservationId: string };
+
+      const payload = "deduplicated content";
+      const uploadReq = makeReq({
+        method: "PUT",
+        params: { reservationId: legacyId },
+        body: payload,
+      });
+      const uploadRes = makeRes();
+      await uploadHandler(uploadReq, uploadRes);
+      await waitFor(uploadRes);
+      const { hash: existingHash, ref: existingRef } = JSON.parse(
+        uploadRes._body.toString("utf8"),
+      ) as { hash: string; ref: string };
+
+      // Now reserve with clientHash pointing at the existing content.
+      const hashFirstReq = makeReq({
+        method: "POST",
+        body: JSON.stringify({
+          mimeType: "text/plain",
+          fileName: "dup.txt",
+          clientHash: existingHash,
+          sizeBytes: Buffer.byteLength(payload, "utf8"),
+        }),
+      });
+      const hashFirstRes = makeRes();
+      await reserveHandler(hashFirstReq, hashFirstRes);
+      await waitFor(hashFirstRes);
+
+      expect(hashFirstRes.statusCode).toBe(409);
+      const body = JSON.parse(hashFirstRes._body.toString("utf8")) as {
+        error: string;
+        ref: string;
+        reservationId?: string;
+      };
+      expect(body.error).toBe("already_exists");
+      expect(body.ref).toBe(existingRef);
+      // The 409 body must not expose another reservation's ID.
+      expect("reservationId" in body).toBe(false);
+    });
+
+    it("reserve 201 body includes reservationId, ref, and expiresAtUtc in hash-first mode", async () => {
+      const { createHash } = await import("node:crypto");
+      const payload = "some content for hash-first";
+      const hash = createHash("sha256")
+        .update(payload, "utf8")
+        .digest("hex");
+
+      const handler = makeReserveHandler(attachments);
+      const req = makeReq({
+        method: "POST",
+        body: JSON.stringify({
+          mimeType: "text/plain",
+          fileName: "hashfirst.txt",
+          clientHash: hash,
+          sizeBytes: Buffer.byteLength(payload, "utf8"),
+        }),
+      });
+      const res = makeRes();
+      await handler(req, res);
+      await waitFor(res);
+
+      expect(res.statusCode).toBe(201);
+      const body = JSON.parse(res._body.toString("utf8")) as {
+        reservationId: string;
+        ref: string | null;
+        expiresAtUtc: string;
+      };
+      expect(typeof body.reservationId).toBe("string");
+      expect(body.ref).toBe(`attachment://v1:${hash}`);
+      expect(typeof body.expiresAtUtc).toBe("string");
+      expect(new Date(body.expiresAtUtc).toString()).not.toBe("Invalid Date");
+    });
+  });
+
+  describe("hash-first upload: 422 responses", () => {
+    it("returns 422 { error: hash_mismatch, claimed, actual } when uploaded bytes hash differently", async () => {
+      const { createHash } = await import("node:crypto");
+
+      // claimedContent and wrongContent must be the same byte length so that
+      // sizeBytes matches and the server reaches the hash check (not size check).
+      const claimedContent = "AAAAAAAAAAAAAAAA"; // 16 bytes
+      const wrongContent   = "BBBBBBBBBBBBBBBB"; // 16 bytes, different hash
+      expect(Buffer.byteLength(claimedContent, "utf8")).toBe(
+        Buffer.byteLength(wrongContent, "utf8"),
+      );
+
+      const claimedHash = createHash("sha256")
+        .update(claimedContent, "utf8")
+        .digest("hex");
+      const sizeBytes = Buffer.byteLength(claimedContent, "utf8");
+
+      // Reserve with the claimed hash.
+      const reserveHandler = makeReserveHandler(attachments);
+      const reserveReq = makeReq({
+        method: "POST",
+        body: JSON.stringify({
+          mimeType: "text/plain",
+          fileName: "mismatch.txt",
+          clientHash: claimedHash,
+          sizeBytes,
+        }),
+      });
+      const reserveRes = makeRes();
+      await reserveHandler(reserveReq, reserveRes);
+      await waitFor(reserveRes);
+      expect(reserveRes.statusCode).toBe(201);
+      const { reservationId } = JSON.parse(
+        reserveRes._body.toString("utf8"),
+      ) as { reservationId: string };
+
+      // Upload wrongContent (same length, different hash).
+      const uploadHandler = makeUploadHandler(attachments);
+      const uploadReq = makeReq({
+        method: "PUT",
+        params: { reservationId },
+        body: wrongContent,
+      });
+      const uploadRes = makeRes();
+      await uploadHandler(uploadReq, uploadRes);
+      await waitFor(uploadRes);
+
+      expect(uploadRes.statusCode).toBe(422);
+      const body = JSON.parse(uploadRes._body.toString("utf8")) as {
+        error: string;
+        claimed: string;
+        actual: string;
+      };
+      expect(body.error).toBe("hash_mismatch");
+      expect(body.claimed).toBe(claimedHash);
+      expect(typeof body.actual).toBe("string");
+      expect(body.actual).not.toBe(claimedHash);
+    });
+
+    it("returns 422 { error: size_mismatch, declared, actual } when byte count differs from declared sizeBytes", async () => {
+      const { createHash } = await import("node:crypto");
+      const actualContent = "short";
+      const declaredSize = 9999;
+      const claimedHash = createHash("sha256")
+        .update(actualContent, "utf8")
+        .digest("hex");
+
+      const reserveHandler = makeReserveHandler(attachments);
+      const reserveReq = makeReq({
+        method: "POST",
+        body: JSON.stringify({
+          mimeType: "text/plain",
+          fileName: "sizemismatch.txt",
+          clientHash: claimedHash,
+          sizeBytes: declaredSize,
+        }),
+      });
+      const reserveRes = makeRes();
+      await reserveHandler(reserveReq, reserveRes);
+      await waitFor(reserveRes);
+      expect(reserveRes.statusCode).toBe(201);
+      const { reservationId } = JSON.parse(
+        reserveRes._body.toString("utf8"),
+      ) as { reservationId: string };
+
+      const uploadHandler = makeUploadHandler(attachments);
+      const uploadReq = makeReq({
+        method: "PUT",
+        params: { reservationId },
+        body: actualContent,
+      });
+      const uploadRes = makeRes();
+      await uploadHandler(uploadReq, uploadRes);
+      await waitFor(uploadRes);
+
+      expect(uploadRes.statusCode).toBe(422);
+      const body = JSON.parse(uploadRes._body.toString("utf8")) as {
+        error: string;
+        declared: number;
+        actual: number;
+      };
+      expect(body.error).toBe("size_mismatch");
+      expect(body.declared).toBe(declaredSize);
+      expect(typeof body.actual).toBe("number");
+    });
+  });
+
+  describe("pending state: stat and download 202 responses", () => {
+    async function createPendingReservation(
+      content: string,
+    ): Promise<{ hash: string }> {
+      const { createHash } = await import("node:crypto");
+      const hash = createHash("sha256").update(content, "utf8").digest("hex");
+
+      const reserveHandler = makeReserveHandler(attachments);
+      const req = makeReq({
+        method: "POST",
+        body: JSON.stringify({
+          mimeType: "text/plain",
+          fileName: "pending.txt",
+          clientHash: hash,
+          sizeBytes: Buffer.byteLength(content, "utf8"),
+        }),
+      });
+      const res = makeRes();
+      await reserveHandler(req, res);
+      await waitFor(res);
+      expect(res.statusCode).toBe(201);
+      return { hash };
+    }
+
+    it("HEAD stat returns 202 with Retry-After and Attachment-Pending for pending hash", async () => {
+      const { hash } = await createPendingReservation("pending content data");
+
+      const handler = makeStatHandler(attachments);
+      const req = makeReq({ method: "HEAD", params: { hash } });
+      const res = makeRes();
+      await handler(req, res);
+      await waitFor(res);
+
+      expect(res.statusCode).toBe(202);
+      expect(res.getHeader("retry-after")).toBeTruthy();
+      const pendingHeader = res.getHeader("attachment-pending") as string;
+      expect(pendingHeader).toBeTruthy();
+      const parsed = JSON.parse(pendingHeader) as {
+        expiresAtUtc: string;
+        mimeType: string;
+        fileName: string;
+        sizeBytes: number;
+      };
+      expect(typeof parsed.expiresAtUtc).toBe("string");
+      expect(parsed.mimeType).toBe("text/plain");
+      expect(parsed.fileName).toBe("pending.txt");
+      expect(typeof parsed.sizeBytes).toBe("number");
+    });
+
+    it("HEAD stat 202 for pending hash does not set Content-Disposition or Attachment-Metadata", async () => {
+      const { hash } = await createPendingReservation("no metadata content");
+
+      const handler = makeStatHandler(attachments);
+      const req = makeReq({ method: "HEAD", params: { hash } });
+      const res = makeRes();
+      await handler(req, res);
+      await waitFor(res);
+
+      expect(res.statusCode).toBe(202);
+      expect(res.getHeader("content-disposition")).toBeFalsy();
+      expect(res.getHeader("attachment-metadata")).toBeFalsy();
+    });
+
+    it("GET download returns 202 with Retry-After and Attachment-Pending for pending hash", async () => {
+      const { hash } = await createPendingReservation("download pending data");
+
+      const handler = makeDownloadHandler(attachments);
+      const req = makeReq({ method: "GET", params: { hash } });
+      const res = makeRes();
+      await handler(req, res);
+      await waitFor(res);
+
+      expect(res.statusCode).toBe(202);
+      expect(res.getHeader("retry-after")).toBeTruthy();
+      const pendingHeader = res.getHeader("attachment-pending") as string;
+      expect(pendingHeader).toBeTruthy();
+      const parsed = JSON.parse(pendingHeader) as {
+        expiresAtUtc: string;
+      };
+      expect(typeof parsed.expiresAtUtc).toBe("string");
+    });
+
+    it("GET download 202 for pending hash must NOT set Content-Disposition or Attachment-Metadata (prevents zero-byte corruption)", async () => {
+      // Critical pin: if 202 accidentally set Content-Disposition and
+      // Attachment-Metadata, a receiving RemoteAttachmentStore would interpret
+      // the response as a successful zero-byte attachment.
+      const { hash } = await createPendingReservation("check-headers content");
+
+      const handler = makeDownloadHandler(attachments);
+      const req = makeReq({ method: "GET", params: { hash } });
+      const res = makeRes();
+      await handler(req, res);
+      await waitFor(res);
+
+      expect(res.statusCode).toBe(202);
+      expect(res.getHeader("content-disposition")).toBeFalsy();
+      expect(res.getHeader("attachment-metadata")).toBeFalsy();
+    });
+
+    it("GET download 202 body is empty (not a zero-byte attachment)", async () => {
+      const { hash } = await createPendingReservation("empty body assertion");
+
+      const handler = makeDownloadHandler(attachments);
+      const req = makeReq({ method: "GET", params: { hash } });
+      const res = makeRes();
+      await handler(req, res);
+      await waitFor(res);
+
+      expect(res.statusCode).toBe(202);
+      expect(res._body.length).toBe(0);
+    });
+  });
+
   describe("validation and header encoding", () => {
+    it("parseReserveOptions accepts valid clientHash and sizeBytes", () => {
+      const opts = parseReserveOptions({
+        mimeType: "text/plain",
+        fileName: "file.txt",
+        clientHash: "a".repeat(64),
+        sizeBytes: 1024,
+      });
+      expect(opts).not.toBeNull();
+      expect(opts!.clientHash).toBe("a".repeat(64));
+      expect(opts!.sizeBytes).toBe(1024);
+    });
+
+    it("parseReserveOptions rejects clientHash with wrong length", () => {
+      expect(
+        parseReserveOptions({
+          mimeType: "text/plain",
+          fileName: "file.txt",
+          clientHash: "abc",
+          sizeBytes: 100,
+        }),
+      ).toBeNull();
+    });
+
+    it("parseReserveOptions rejects clientHash with non-hex characters", () => {
+      expect(
+        parseReserveOptions({
+          mimeType: "text/plain",
+          fileName: "file.txt",
+          clientHash: "z".repeat(64),
+          sizeBytes: 100,
+        }),
+      ).toBeNull();
+    });
+
+    it("parseReserveOptions rejects when clientHash is present but sizeBytes is absent", () => {
+      expect(
+        parseReserveOptions({
+          mimeType: "text/plain",
+          fileName: "file.txt",
+          clientHash: "a".repeat(64),
+        }),
+      ).toBeNull();
+    });
+
+    it("parseReserveOptions ignores sizeBytes when clientHash is absent (legacy compat)", () => {
+      expect(
+        parseReserveOptions({
+          mimeType: "text/plain",
+          fileName: "file.txt",
+          sizeBytes: 100,
+        }),
+      ).toEqual({ mimeType: "text/plain", fileName: "file.txt", extension: null });
+    });
+
+    it("parseReserveOptions rejects sizeBytes of zero", () => {
+      expect(
+        parseReserveOptions({
+          mimeType: "text/plain",
+          fileName: "file.txt",
+          clientHash: "a".repeat(64),
+          sizeBytes: 0,
+        }),
+      ).toBeNull();
+    });
+
+    it("parseReserveOptions rejects negative sizeBytes", () => {
+      expect(
+        parseReserveOptions({
+          mimeType: "text/plain",
+          fileName: "file.txt",
+          clientHash: "a".repeat(64),
+          sizeBytes: -1,
+        }),
+      ).toBeNull();
+    });
+
+    it("parseReserveOptions rejects non-integer sizeBytes", () => {
+      expect(
+        parseReserveOptions({
+          mimeType: "text/plain",
+          fileName: "file.txt",
+          clientHash: "a".repeat(64),
+          sizeBytes: 1.5,
+        }),
+      ).toBeNull();
+    });
+
+    it("parseReserveOptions rejects string sizeBytes", () => {
+      expect(
+        parseReserveOptions({
+          mimeType: "text/plain",
+          fileName: "file.txt",
+          clientHash: "a".repeat(64),
+          sizeBytes: "1024",
+        }),
+      ).toBeNull();
+    });
+
+    it("parseReserveOptions normalizes uppercase clientHash to lowercase", () => {
+      const opts = parseReserveOptions({
+        mimeType: "text/plain",
+        fileName: "file.txt",
+        clientHash: "A".repeat(64),
+        sizeBytes: 1,
+      });
+      expect(opts).not.toBeNull();
+      expect(opts!.clientHash).toBe("a".repeat(64));
+    });
+
     it("parseReserveOptions rejects fileName with CR/LF", () => {
       expect(
         parseReserveOptions({

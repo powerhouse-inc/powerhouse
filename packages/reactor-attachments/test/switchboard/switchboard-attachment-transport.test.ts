@@ -44,7 +44,7 @@ describe("SwitchboardAttachmentTransport", () => {
   });
 
   describe("fetch", () => {
-    it("returns TransportResponse on 200 with Attachment-Metadata header", async () => {
+    it("returns data result on 200 with Attachment-Metadata header", async () => {
       const body = streamFromString("file data");
       mockFetch.mockResolvedValue(
         mockResponse(200, {
@@ -57,16 +57,50 @@ describe("SwitchboardAttachmentTransport", () => {
 
       const result = await transport.fetch(TEST_HASH);
 
-      expect(result).not.toBeNull();
-      expect(result!.hash).toBe(TEST_HASH);
-      expect(result!.metadata).toEqual(TEST_METADATA);
-      expect(result!.body).toBe(body);
+      expect(result.kind).toBe("data");
+      if (result.kind !== "data") throw new Error("expected data");
+      expect(result.response.hash).toBe(TEST_HASH);
+      expect(result.response.metadata).toEqual(TEST_METADATA);
+      expect(result.response.body).toBe(body);
     });
 
-    it("returns null on 404", async () => {
+    it("returns not-found on 404", async () => {
       mockFetch.mockResolvedValue(mockResponse(404));
       const result = await transport.fetch(TEST_HASH);
-      expect(result).toBeNull();
+      expect(result).toEqual({ kind: "not-found" });
+    });
+
+    it("returns pending on 202 with Attachment-Pending header", async () => {
+      const expiresAtUtc = "2026-06-03T00:00:00.000Z";
+      mockFetch.mockResolvedValue(
+        mockResponse(202, {
+          headers: {
+            "Attachment-Pending": JSON.stringify({
+              expiresAtUtc,
+              mimeType: "application/pdf",
+              fileName: "invoice",
+              sizeBytes: 1024,
+            }),
+            "Retry-After": "10",
+          },
+        }),
+      );
+
+      const result = await transport.fetch(TEST_HASH);
+
+      expect(result.kind).toBe("pending");
+      if (result.kind !== "pending") throw new Error("expected pending");
+      expect(result.hash).toBe(TEST_HASH);
+      expect(result.expiresAtUtc).toBe(expiresAtUtc);
+      expect(result.retryAfterMs).toBe(10000);
+    });
+
+    it("throws on 202 with missing Attachment-Pending header", async () => {
+      mockFetch.mockResolvedValue(mockResponse(202));
+
+      await expect(transport.fetch(TEST_HASH)).rejects.toThrow(
+        /Attachment-Pending/,
+      );
     });
 
     it("throws on 500", async () => {
@@ -158,7 +192,9 @@ describe("SwitchboardAttachmentTransport", () => {
 
       const result = await transport.fetch(TEST_HASH);
 
-      expect(result!.metadata).toEqual({
+      expect(result.kind).toBe("data");
+      if (result.kind !== "data") throw new Error("expected data");
+      expect(result.response.metadata).toEqual({
         mimeType: "image/png",
         fileName: "unknown",
         sizeBytes: 512,
@@ -182,7 +218,9 @@ describe("SwitchboardAttachmentTransport", () => {
 
       const result = await transport.fetch(TEST_HASH);
 
-      expect(result!.metadata).toEqual({
+      expect(result.kind).toBe("data");
+      if (result.kind !== "data") throw new Error("expected data");
+      expect(result.response.metadata).toEqual({
         mimeType: "image/png",
         fileName: "unknown",
         sizeBytes: 512,
@@ -210,7 +248,9 @@ describe("SwitchboardAttachmentTransport", () => {
 
       const result = await transport.fetch(TEST_HASH);
 
-      expect(result!.metadata).toEqual({
+      expect(result.kind).toBe("data");
+      if (result.kind !== "data") throw new Error("expected data");
+      expect(result.response.metadata).toEqual({
         mimeType: "application/pdf",
         fileName: "invoice",
         sizeBytes: 1024,
@@ -218,7 +258,7 @@ describe("SwitchboardAttachmentTransport", () => {
         createdAtUtc: "2020-01-15T12:34:56.000Z",
         lastAccessedAtUtc: "2020-01-15T12:34:56.000Z",
       });
-      expect(result!.metadata.extension).toBeNull();
+      expect(result.response.metadata.extension).toBeNull();
     });
 
     it("falls back when Attachment-Metadata has wrong-type field", async () => {
@@ -240,7 +280,9 @@ describe("SwitchboardAttachmentTransport", () => {
 
       const result = await transport.fetch(TEST_HASH);
 
-      expect(result!.metadata).toEqual({
+      expect(result.kind).toBe("data");
+      if (result.kind !== "data") throw new Error("expected data");
+      expect(result.response.metadata).toEqual({
         mimeType: "image/png",
         fileName: "unknown",
         sizeBytes: 512,
@@ -268,7 +310,9 @@ describe("SwitchboardAttachmentTransport", () => {
 
       const result = await transport.fetch(TEST_HASH);
 
-      expect(result!.metadata).toEqual({
+      expect(result.kind).toBe("data");
+      if (result.kind !== "data") throw new Error("expected data");
+      expect(result.response.metadata).toEqual({
         mimeType: "image/png",
         fileName: "unknown",
         sizeBytes: 512,
@@ -297,7 +341,9 @@ describe("SwitchboardAttachmentTransport", () => {
 
       const result = await transport.fetch(TEST_HASH);
 
-      expect(result!.metadata).toEqual({
+      expect(result.kind).toBe("data");
+      if (result.kind !== "data") throw new Error("expected data");
+      expect(result.response.metadata).toEqual({
         mimeType: "image/png",
         fileName: "unknown",
         sizeBytes: 512,

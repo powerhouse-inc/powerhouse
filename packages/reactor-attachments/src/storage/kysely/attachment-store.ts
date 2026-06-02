@@ -12,7 +12,7 @@ import type {
   AttachmentResponse,
   AttachmentStatus,
 } from "../../types.js";
-import { AttachmentNotFound } from "../../errors.js";
+import { AttachmentNotFound, AttachmentPending } from "../../errors.js";
 import type { AttachmentDatabase, AttachmentRow } from "./types.js";
 import {
   storageRelativePath,
@@ -32,6 +32,7 @@ function rowToHeader(row: AttachmentRow): AttachmentHeader {
     source: row.source as "local" | "sync",
     createdAtUtc: row.created_at_utc,
     lastAccessedAtUtc: row.last_accessed_at_utc,
+    expiresAtUtc: null,
   };
 }
 
@@ -86,11 +87,32 @@ export class KyselyAttachmentStore implements IAttachmentStore {
       .where("hash", "=", hash)
       .executeTakeFirst();
 
-    if (!row) {
-      throw new AttachmentNotFound(hash);
+    if (row) {
+      return rowToHeader(row);
     }
 
-    return rowToHeader(row);
+    const now = new Date().toISOString();
+    const pending = await this.findPendingReservation(hash, now);
+
+    if (pending) {
+      if (pending.size_bytes === null) {
+        throw new AttachmentNotFound(hash);
+      }
+      return {
+        hash,
+        mimeType: pending.mime_type,
+        fileName: pending.file_name,
+        sizeBytes: Number(pending.size_bytes),
+        extension: pending.extension,
+        status: "pending",
+        source: "local",
+        createdAtUtc: pending.created_at_utc,
+        lastAccessedAtUtc: pending.created_at_utc,
+        expiresAtUtc: pending.expires_at_utc,
+      };
+    }
+
+    throw new AttachmentNotFound(hash);
   }
 
   async has(hash: AttachmentHash): Promise<boolean> {
@@ -113,38 +135,56 @@ export class KyselyAttachmentStore implements IAttachmentStore {
       .where("hash", "=", hash)
       .executeTakeFirst();
 
-    if (!row) {
-      throw new AttachmentNotFound(hash);
-    }
-
-    if (row.status === "evicted") {
-      const remote = await this.transport.fetch(hash, signal);
-      if (!remote) {
+    if (row) {
+      if (row.status === "evicted") {
+        const remote = await this.transport.fetch(hash, signal);
+        if (remote.kind === "data") {
+          await this.put(hash, remote.response.metadata, remote.response.body);
+          return this.get(hash, signal);
+        }
+        if (remote.kind === "pending") {
+          throw new AttachmentPending(hash, remote.expiresAtUtc);
+        }
         throw new AttachmentNotFound(hash);
       }
-      await this.put(hash, remote.metadata, remote.body);
-      return this.get(hash, signal);
+
+      const now = new Date().toISOString();
+      await this.db
+        .updateTable("attachment")
+        .set({ last_accessed_at_utc: now })
+        .where("hash", "=", hash)
+        .execute();
+
+      const header = rowToHeader(row);
+      header.lastAccessedAtUtc = now;
+
+      this.acquireReader(hash);
+
+      const fullPath = join(this.basePath, row.storage_path);
+      const rawStream = readAttachmentStream(fullPath);
+      const body = wrapStreamWithCleanup(rawStream, () =>
+        this.releaseReader(hash),
+      );
+
+      return { header, body };
     }
 
     const now = new Date().toISOString();
-    await this.db
-      .updateTable("attachment")
-      .set({ last_accessed_at_utc: now })
-      .where("hash", "=", hash)
-      .execute();
+    const pending = await this.findPendingReservation(hash, now);
 
-    const header = rowToHeader(row);
-    header.lastAccessedAtUtc = now;
+    if (pending) {
+      throw new AttachmentPending(hash, pending.expires_at_utc);
+    }
 
-    this.acquireReader(hash);
-
-    const fullPath = join(this.basePath, row.storage_path);
-    const rawStream = readAttachmentStream(fullPath);
-    const body = wrapStreamWithCleanup(rawStream, () =>
-      this.releaseReader(hash),
-    );
-
-    return { header, body };
+    const remote = await this.transport.fetch(hash, signal);
+    if (remote.kind === "data") {
+      await this.put(hash, remote.response.metadata, remote.response.body);
+      return this.get(hash, signal);
+    }
+    if (remote.kind === "pending") {
+      throw new AttachmentPending(hash, remote.expiresAtUtc);
+    }
+    throw new AttachmentNotFound(hash);
   }
 
   async put(
@@ -235,7 +275,39 @@ export class KyselyAttachmentStore implements IAttachmentStore {
     return Number(result?.total ?? 0);
   }
 
-  // Private: active reader tracking
+  // Private: pending reservation lookup and active reader tracking
+
+  private async findPendingReservation(
+    hash: AttachmentHash,
+    now: string,
+  ): Promise<{
+    mime_type: string;
+    file_name: string;
+    extension: string | null;
+    size_bytes: number | null;
+    created_at_utc: string;
+    expires_at_utc: string;
+  } | null> {
+    const row = await this.db
+      .selectFrom("attachment_reservation as r")
+      .leftJoin("attachment as a", "a.hash", "r.client_hash")
+      .select([
+        "r.mime_type",
+        "r.file_name",
+        "r.extension",
+        "r.size_bytes",
+        "r.created_at_utc",
+        "r.expires_at_utc",
+      ])
+      .where("r.client_hash", "=", hash)
+      .where("r.deleted_at_utc", "is", null)
+      .where("r.expires_at_utc", ">", now)
+      .where("a.hash", "is", null)
+      .orderBy("r.expires_at_utc", "desc")
+      .executeTakeFirst();
+
+    return row ?? null;
+  }
 
   private acquireReader(hash: string): void {
     this.activeReaders.set(hash, (this.activeReaders.get(hash) ?? 0) + 1);

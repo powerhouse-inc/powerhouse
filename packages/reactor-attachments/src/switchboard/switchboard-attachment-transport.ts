@@ -1,7 +1,7 @@
 import type { AttachmentHash } from "@powerhousedao/reactor";
 import type { JwtHandler } from "@powerhousedao/reactor";
 import type { IAttachmentTransport } from "../interfaces.js";
-import type { AttachmentMetadata, TransportResponse } from "../types.js";
+import type { AttachmentMetadata, TransportFetchResult } from "../types.js";
 import { buildAuthHeaders } from "./build-auth-headers.js";
 
 export type SwitchboardTransportConfig = {
@@ -24,14 +24,25 @@ export class SwitchboardAttachmentTransport implements IAttachmentTransport {
   async fetch(
     hash: AttachmentHash,
     signal?: AbortSignal,
-  ): Promise<TransportResponse | null> {
+  ): Promise<TransportFetchResult> {
     const url = `${this.remoteUrl}/attachments/${hash}`;
     const headers = await buildAuthHeaders(url, this.jwtHandler);
 
     const response = await this.fetchFn(url, { signal, headers });
 
+    if (response.status === 202) {
+      const expiresAtUtc = this.parsePendingExpiry(response);
+      if (!expiresAtUtc) {
+        throw new Error(
+          "Attachment fetch returned 202 with missing or malformed Attachment-Pending header",
+        );
+      }
+      const retryAfterMs = parseRetryAfterMs(response);
+      return { kind: "pending", hash, expiresAtUtc, retryAfterMs };
+    }
+
     if (response.status === 404) {
-      return null;
+      return { kind: "not-found" };
     }
 
     if (!response.ok) {
@@ -46,7 +57,7 @@ export class SwitchboardAttachmentTransport implements IAttachmentTransport {
       throw new Error("Response body is null");
     }
 
-    return { hash, metadata, body };
+    return { kind: "data", response: { hash, metadata, body } };
   }
 
   async announce(_hash: AttachmentHash): Promise<void> {
@@ -73,6 +84,19 @@ export class SwitchboardAttachmentTransport implements IAttachmentTransport {
       throw new Error(
         `Attachment push failed: ${response.status} ${response.statusText}`,
       );
+    }
+  }
+
+  private parsePendingExpiry(response: Response): string | null {
+    const header = response.headers.get("Attachment-Pending");
+    if (!header) return null;
+    try {
+      const parsed: unknown = JSON.parse(header);
+      if (!isRecord(parsed)) return null;
+      if (typeof parsed.expiresAtUtc !== "string") return null;
+      return parsed.expiresAtUtc;
+    } catch {
+      return null;
     }
   }
 
@@ -111,6 +135,16 @@ export class SwitchboardAttachmentTransport implements IAttachmentTransport {
     }
     return fallback();
   }
+}
+
+const DEFAULT_RETRY_AFTER_MS = 5000;
+
+function parseRetryAfterMs(response: Response): number {
+  const retryAfter = response.headers.get("Retry-After");
+  if (!retryAfter) return DEFAULT_RETRY_AFTER_MS;
+  const seconds = Number(retryAfter);
+  if (!Number.isFinite(seconds) || seconds < 0) return DEFAULT_RETRY_AFTER_MS;
+  return Math.round(seconds * 1000);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

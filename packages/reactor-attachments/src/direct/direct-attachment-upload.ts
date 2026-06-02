@@ -1,6 +1,7 @@
 import { mkdir, rename, rm } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import type { Kysely } from "kysely";
+import type { AttachmentRef } from "@powerhousedao/reactor";
 import type { IAttachmentUpload, IReservationStore } from "../interfaces.js";
 import type {
   AttachmentHeader,
@@ -11,6 +12,7 @@ import type {
   AttachmentDatabase,
   AttachmentRow,
 } from "../storage/kysely/types.js";
+import { HashMismatch } from "../errors.js";
 import { createRef } from "../ref.js";
 import {
   storageRelativePath,
@@ -29,11 +31,13 @@ function rowToHeader(row: AttachmentRow): AttachmentHeader {
     source: row.source as "local" | "sync",
     createdAtUtc: row.created_at_utc,
     lastAccessedAtUtc: row.last_accessed_at_utc,
+    expiresAtUtc: null,
   };
 }
 
 export class DirectAttachmentUpload implements IAttachmentUpload {
   readonly reservationId: string;
+  readonly ref: AttachmentRef | null;
 
   constructor(
     reservationId: string,
@@ -44,6 +48,8 @@ export class DirectAttachmentUpload implements IAttachmentUpload {
     private readonly maxBytes?: number,
   ) {
     this.reservationId = reservationId;
+    this.ref =
+      options.clientHash != null ? createRef(options.clientHash) : null;
   }
 
   async send(
@@ -52,11 +58,23 @@ export class DirectAttachmentUpload implements IAttachmentUpload {
     // Stream bytes directly to a temp file while hashing. This caps memory
     // usage at one chunk regardless of payload size, and lets us enforce
     // `maxBytes` before either disk or memory grows unbounded.
+    // When clientHash is present, declaredSizeBytes is enforced during the
+    // stream: exceeding it aborts early, and a short stream fails at end.
+    const declaredSizeBytes =
+      this.options.clientHash != null ? this.options.sizeBytes : undefined;
     const { tempPath, hash, sizeBytes } = await streamHashAndWrite(
       this.basePath,
       data,
-      { maxBytes: this.maxBytes },
+      { maxBytes: this.maxBytes, declaredSizeBytes },
     );
+
+    // Hash verification: if the client claimed a hash, compare before any
+    // DB write or rename. On mismatch the temp file is removed and the
+    // reservation is deliberately retained so the client can retry.
+    if (this.options.clientHash != null && hash !== this.options.clientHash) {
+      await rm(tempPath, { force: true });
+      throw new HashMismatch(this.options.clientHash, hash);
+    }
 
     try {
       const existing = await this.db

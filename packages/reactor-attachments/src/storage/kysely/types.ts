@@ -21,6 +21,8 @@ export interface AttachmentReservationTable {
   created_at_utc: string;
   expires_at_utc: string;
   deleted_at_utc: string | null;
+  client_hash: string | null;
+  size_bytes: number | null;
 }
 
 export interface AttachmentDatabase {
