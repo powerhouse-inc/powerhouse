@@ -1,3 +1,20 @@
+## 6.1.0-dev.14 (2026-06-02)
+
+### 🚀 Features
+
+- add dark mode classes ([#2629](https://github.com/powerhouse-inc/powerhouse/pull/2629))
+
+### 🩹 Fixes
+
+- looks like a bad import ([82988fd2a](https://github.com/powerhouse-inc/powerhouse/commit/82988fd2a))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- CallmeT-ty @CallmeT-ty
+- Claude Sonnet 4.6
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.1.0-dev.13 (2026-06-01)
 
 ### 🩹 Fixes

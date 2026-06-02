@@ -1,3 +1,15 @@
+## 6.1.0-dev.14 (2026-06-02)
+
+### 🚀 Features
+
+- add dark mode classes ([#2629](https://github.com/powerhouse-inc/powerhouse/pull/2629))
+
+### ❤️ Thank You
+
+- CallmeT-ty @CallmeT-ty
+- Claude Sonnet 4.6
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.1.0-dev.13 (2026-06-01)
 
 This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
