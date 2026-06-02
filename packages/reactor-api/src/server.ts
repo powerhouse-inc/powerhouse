@@ -300,7 +300,7 @@ function setupEventListeners(
 
         const validBuilders = factories.filter(
           (factory): factory is ProcessorDriveFactory =>
-            factory !== null && typeof factory === "function",
+            typeof factory === "function",
         );
 
         if (!validBuilders.length) {
@@ -390,11 +390,11 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   let authEnabled = false;
   if (options.configFile) {
     const config = getConfig(options.configFile);
-    admins = config.auth?.admins?.map((a) => a.toLowerCase()) ?? [];
+    admins = config.auth?.admins.map((a) => a.toLowerCase()) ?? [];
     authEnabled = config.auth?.enabled ?? false;
   } else if (options.auth) {
-    admins = options.auth?.admins?.map((a) => a.toLowerCase()) ?? [];
-    authEnabled = options.auth?.enabled ?? false;
+    admins = options.auth.admins.map((a) => a.toLowerCase());
+    authEnabled = options.auth.enabled;
   }
   const {
     AUTH_ENABLED,
@@ -519,8 +519,9 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   )
     .withReservationSweepMs(ATTACHMENT_SWEEP_INTERVAL_MS)
     .build();
-  dbClosers.push(async () => {
+  dbClosers.push(() => {
     attachments.destroy();
+    return Promise.resolve();
   });
   logger.info("Attachment service initialized");
 
