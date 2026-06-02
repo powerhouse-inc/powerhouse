@@ -713,5 +713,7 @@ export function getStorageNamespace(basePath: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
-  return slug ? `${ROOT_STORAGE_NAMESPACE}--${slug}` : ROOT_STORAGE_NAMESPACE;
+  // A non-root base path whose slug normalizes to nothing (e.g. "/-/") must
+  // not collapse into the root namespace and share its storage.
+  return `${ROOT_STORAGE_NAMESPACE}--${slug || "default"}`;
 }
