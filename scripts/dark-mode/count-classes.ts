@@ -10,11 +10,16 @@ import {
   map,
   mapValues,
   pipe,
+  unique,
   values,
 } from "remeda";
 import { findFilesWithClasses } from "./find-files-with-classes.js";
 import { colorMappings } from "./mappings.js";
-import { getStringLiteralsFromFiles, makeTsMorphProject } from "./ts-morph.js";
+import {
+  getNodesWithText,
+  getStringLiteralsFromFiles,
+  makeTsMorphProject,
+} from "./ts-morph.js";
 import {
   addPrefix,
   getStringLiteralClassNameList,

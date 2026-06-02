@@ -20,7 +20,7 @@ import {
   startsWith,
   unique,
 } from "remeda";
-import type { StringLiteral } from "ts-morph";
+import type { NoSubstitutionTemplateLiteral, StringLiteral } from "ts-morph";
 import { darkPrefix } from "./constants.js";
 import { getStringLiteralText, maybeUpdateStringLiteral } from "./ts-morph.js";
 import type {
@@ -60,7 +60,8 @@ export const hasClass = (m: ClassNameMap | ClassNameSet) => (c: ClassName) =>
  * this migration knows how to convert.
  */
 export const hasClasses =
-  (m: ClassNameMap | ClassNameSet) => (s: StringLiteral) =>
+  (m: ClassNameMap | ClassNameSet) =>
+  (s: StringLiteral | NoSubstitutionTemplateLiteral) =>
     pipe(
       s,
       getStringLiteralText,
@@ -80,11 +81,12 @@ export const replaceClass = (m: ClassNameMap) => (c: ClassName) =>
 export const replaceClasses = (m: ClassNameMap) => (cs: ClassNameList) =>
   flatMap(cs, replaceClass(m));
 
-export const getStringLiteralClassNameList = (s: StringLiteral) =>
-  pipe(s, getStringLiteralText, makeClassNameListFromString);
+export const getStringLiteralClassNameList = (
+  s: StringLiteral | NoSubstitutionTemplateLiteral,
+) => pipe(s, getStringLiteralText, makeClassNameListFromString);
 
 export const updateClassesForStringLiteral =
-  (s: StringLiteral) => (cs: ClassNameList) =>
+  (s: StringLiteral | NoSubstitutionTemplateLiteral) => (cs: ClassNameList) =>
     pipe(
       cs,
       unique(),
@@ -97,7 +99,7 @@ export const updateClassesForStringLiteral =
  * the AST node only if the literal value actually changed.
  */
 export const addClassesToStringLiteral =
-  (m: ClassNameMap) => (s: StringLiteral) =>
+  (m: ClassNameMap) => (s: StringLiteral | NoSubstitutionTemplateLiteral) =>
     pipe(
       s,
       getStringLiteralClassNameList,
@@ -106,7 +108,7 @@ export const addClassesToStringLiteral =
     );
 
 export const replaceClassesForStringLiteral =
-  (m: ClassNameMap) => (s: StringLiteral) =>
+  (m: ClassNameMap) => (s: StringLiteral | NoSubstitutionTemplateLiteral) =>
     pipe(
       s,
       getStringLiteralClassNameList,
@@ -115,7 +117,8 @@ export const replaceClassesForStringLiteral =
     );
 
 export const removeClassesFromStringLiteral =
-  (toRemove: ClassNameList) => (s: StringLiteral) =>
+  (toRemove: ClassNameList) =>
+  (s: StringLiteral | NoSubstitutionTemplateLiteral) =>
     pipe(
       s,
       getStringLiteralClassNameList,
@@ -147,7 +150,9 @@ export const addPrefix =
  * Existing dark-mode classes are treated as intentional, so the migration skips
  * these literals instead of adding potentially-conflicting generated classes.
  */
-export const hasDarkModeAlready = (s: StringLiteral) =>
+export const hasDarkModeAlready = (
+  s: StringLiteral | NoSubstitutionTemplateLiteral,
+) =>
   pipe(
     s,
     getStringLiteralClassNameList,
