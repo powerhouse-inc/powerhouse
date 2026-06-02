@@ -51,6 +51,18 @@ function readPackageMetadata(
   }
 }
 
+/**
+ * Locally-published check for a package, from verdaccio storage metadata.
+ * Returns the same tri-state as `readPackageMetadata.locallyPublished`:
+ * `true` (has `_attachments`), `false` (proxy-only), `undefined` (unreadable).
+ */
+export function isLocallyPublished(
+  storagePath: string | undefined,
+  packageName: string,
+): boolean | undefined {
+  return readPackageMetadata(storagePath, packageName).locallyPublished;
+}
+
 function readManifest(dir: string): Manifest | null {
   const candidates = [
     path.join(dir, "powerhouse.manifest.json"),

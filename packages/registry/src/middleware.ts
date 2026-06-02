@@ -4,9 +4,11 @@ import express, {
   type Request,
   type Response,
 } from "express";
+import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { CdnCache, parsePackageSpec } from "./cdn.js";
+import { pipeline } from "node:stream/promises";
+import { CdnCache, isExactVersion, parsePackageSpec } from "./cdn.js";
 import type { SSEChannel } from "./notifications/sse.js";
 import type { NotificationChannel } from "./notifications/types.js";
 import type { WebhookChannel } from "./notifications/webhook.js";
@@ -16,6 +18,7 @@ import {
   scanPackages,
 } from "./packages.js";
 import type { RegistryConfig } from "./types.js";
+import { createWarmer } from "./warmup.js";
 
 const MIME_TYPES: Record<string, string> = {
   ".js": "application/javascript",
@@ -31,6 +34,49 @@ const MIME_TYPES: Record<string, string> = {
 function getContentType(filePath: string): string {
   const ext = path.extname(filePath).toLowerCase();
   return MIME_TYPES[ext] ?? "application/octet-stream";
+}
+
+type VersionResolution =
+  | { kind: "ok"; version: string }
+  | { kind: "not-found" }
+  | { kind: "upstream-error" };
+
+/**
+ * Resolve a package version. Exact versions skip the network call. Upstream
+ * errors fall back to the latest cached version; genuine not-found falls back
+ * too, then reports not-found.
+ */
+async function resolvePackageVersion(
+  cdn: CdnCache,
+  packageName: string,
+  tag: string | undefined,
+): Promise<VersionResolution> {
+  if (tag && isExactVersion(tag)) return { kind: "ok", version: tag };
+
+  try {
+    const resolved =
+      (await cdn.resolveVersion(packageName, tag)) ??
+      cdn.getLatestCachedVersion(packageName);
+    if (!resolved) return { kind: "not-found" };
+    return { kind: "ok", version: resolved };
+  } catch {
+    const cached = cdn.getLatestCachedVersion(packageName);
+    if (!cached) return { kind: "upstream-error" };
+    return { kind: "ok", version: cached };
+  }
+}
+
+/** RFC 9110 If-None-Match: a comma-separated list of entity-tags or "*". */
+function etagMatches(
+  header: string | string[] | undefined,
+  etag: string,
+): boolean {
+  if (!header) return false;
+  const value = Array.isArray(header) ? header.join(",") : header;
+  return value.split(",").some((candidate) => {
+    const tag = candidate.trim();
+    return tag === etag || tag === "*";
+  });
 }
 
 export function createPowerhouseRouter(
@@ -91,66 +137,11 @@ export function createPowerhouseRouter(
     },
   );
 
-  // Throttle warm-up to once every WARM_INTERVAL_MS, plus an in-flight guard
-  // so the worker pool doesn't double-up. Why both:
-  //   - The in-flight guard alone can't stop us from kicking a fresh warm
-  //     the instant the previous one finishes. With kubelet readiness
-  //     probes hitting /packages every 5s × N pods, that's a steady drumbeat
-  //     of fan-out work for no benefit.
-  //   - The interval guard skips redundant cycles when we've recently warmed.
-  // The first call after startup, after invalidation, or after the interval
-  // elapses still kicks a real warm.
-  const WARM_INTERVAL_MS = 30_000;
-  let warmInFlight = false;
-  let lastWarmAt = 0;
-  async function warmCdnCacheFromVerdaccio(): Promise<void> {
-    if (warmInFlight) return;
-    if (Date.now() - lastWarmAt < WARM_INTERVAL_MS) return;
-    warmInFlight = true;
-    try {
-      const r = await fetch(
-        `http://localhost:${config.port}/-/verdaccio/data/packages`,
-      );
-      if (!r.ok) {
-        console.error(
-          `[registry] verdaccio package listing returned ${r.status}`,
-        );
-        return;
-      }
-      const known = (await r.json()) as Array<{
-        name: string;
-        version?: string;
-      }>;
-      const concurrency = 8;
-      let cursor = 0;
-      const workers = Array.from({ length: concurrency }).map(async () => {
-        while (cursor < known.length) {
-          const idx = cursor++;
-          const pkg = known[idx];
-          if (!pkg.version) continue;
-          try {
-            await cdn.extractTarball(pkg.name, pkg.version);
-          } catch (err) {
-            console.error(
-              `[registry] failed to warm cache for ${pkg.name}@${pkg.version}:`,
-              err,
-            );
-          }
-        }
-      });
-      await Promise.all(workers);
-      console.log(`[registry] /packages warm-up done (${known.length} pkgs)`);
-    } catch (err) {
-      console.error("[registry] /packages warm-up failed:", err);
-    } finally {
-      warmInFlight = false;
-      lastWarmAt = Date.now();
-    }
-  }
+  const warm = createWarmer(config, cdn);
 
   // Kick off an initial warm so /packages is useful soon after pod start
   // even if no clients hit it. Fire-and-forget — must not block the listener.
-  void warmCdnCacheFromVerdaccio();
+  void warm();
 
   // Package listing API.
   // Returns whatever's currently in the local cdn-cache (instant response —
@@ -159,7 +150,7 @@ export function createPowerhouseRouter(
   // a background warm-up so newly-published packages appear in the listing
   // without operator intervention.
   router.get("/packages", (req: Request, res: Response) => {
-    void warmCdnCacheFromVerdaccio();
+    void warm();
     const packages = scanPackages(config.cdnCachePath, config.storagePath);
     const documentType = req.query.documentType as string | undefined;
     if (documentType) {
@@ -193,9 +184,13 @@ export function createPowerhouseRouter(
   router.get("/packages/*", async (req: Request, res: Response) => {
     const raw = (req.params as Record<string, string>)[0];
     const { name, tag } = parsePackageSpec(raw);
-    const version =
-      (await cdn.resolveVersion(name, tag)) ?? cdn.getLatestCachedVersion(name);
-    const pkg = loadPackage(config.cdnCachePath, name, version ?? undefined);
+    const resolution = await resolvePackageVersion(cdn, name, tag);
+    if (resolution.kind === "upstream-error") {
+      res.status(503).send("Upstream registry unavailable");
+      return;
+    }
+    const version = resolution.kind === "ok" ? resolution.version : undefined;
+    const pkg = loadPackage(config.cdnCachePath, name, version);
     if (!pkg) {
       res.status(404).send("Package not found");
       return;
@@ -228,23 +223,66 @@ export function createPowerhouseRouter(
     }
 
     const { name: packageName, tag } = parsePackageSpec(packageSpec);
-    const version =
-      (await cdn.resolveVersion(packageName, tag)) ??
-      cdn.getLatestCachedVersion(packageName);
-    if (!version) {
+    const pinned = isExactVersion(tag);
+    const resolution = await resolvePackageVersion(cdn, packageName, tag);
+    if (resolution.kind === "upstream-error") {
+      res.status(503).send("Upstream registry unavailable");
+      return;
+    }
+    if (resolution.kind === "not-found") {
+      res.status(404).send("File not found");
+      return;
+    }
+    const version = resolution.version;
+
+    const resolved = await cdn.getFileByVersion(packageName, version, filePath);
+    if (!resolved) {
+      // Pinned requests skip the metadata lookup above, so a miss here may be
+      // an upstream failure rather than a genuine 404 — probe to distinguish,
+      // otherwise the CDN would cache a 404 while upstream is merely down.
+      if (pinned) {
+        try {
+          await cdn.resolveVersion(packageName, tag);
+        } catch {
+          res.status(503).send("Upstream registry unavailable");
+          return;
+        }
+      }
       res.status(404).send("File not found");
       return;
     }
 
-    const resolved = await cdn.getFileByVersion(packageName, version, filePath);
-    if (!resolved) {
-      res.status(404).send("File not found");
+    // Cache based on the request shape: pinned requests are immutable, moving
+    // ones (dist-tag / untagged) must revalidate frequently.
+    res.setHeader(
+      "Cache-Control",
+      pinned
+        ? "public, max-age=31536000, immutable"
+        : "public, max-age=60, must-revalidate",
+    );
+
+    // Hash the file path: it comes from the URL and may contain characters
+    // that are invalid in header values.
+    const fileHash = crypto
+      .createHash("sha1")
+      .update(filePath)
+      .digest("hex")
+      .slice(0, 16);
+    const etag = `W/"${version}-${fileHash}"`;
+    res.setHeader("ETag", etag);
+    if (etagMatches(req.headers["if-none-match"], etag)) {
+      res.status(304).end();
       return;
     }
 
     res.setHeader("Content-Type", getContentType(filePath));
-    const content = fs.readFileSync(resolved);
-    res.send(content);
+    try {
+      await pipeline(fs.createReadStream(resolved), res);
+    } catch {
+      // Stream failure (I/O error, client abort) after headers may already
+      // be sent — destroy the socket so the request doesn't hang.
+      res.destroy();
+    }
   });
 
   return router;
