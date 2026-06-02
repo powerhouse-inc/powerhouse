@@ -7,10 +7,14 @@ import {
   resolvePgMajorForRuntime,
   type SupportedPgMajor,
 } from "./utils/pglite-runtime.js";
+import { RELATIONAL_PGLITE_NAME } from "./utils/storage-namespace.js";
 
 async function createPGliteWorkerForMajor(
   major: SupportedPgMajor,
 ): Promise<PGliteWorker> {
+  // The worker reads the data-dir name from meta so the namespace is owned on
+  // the main thread alongside the other origin-scoped stores.
+  const meta = { dbName: RELATIONAL_PGLITE_NAME };
   if (major === 16) {
     const [legacyWorker, legacyLive] = await Promise.all([
       import("pglite-legacy-02/worker"),
@@ -21,6 +25,7 @@ async function createPGliteWorkerForMajor(
       { type: "module" },
     );
     return legacyWorker.PGliteWorker.create(worker, {
+      meta,
       extensions: { live: legacyLive.live },
     }) as unknown as PGliteWorker;
   }
@@ -31,7 +36,7 @@ async function createPGliteWorkerForMajor(
   const worker = new Worker(new URL("./pglite.worker.js", import.meta.url), {
     type: "module",
   });
-  return PGliteWorker.create(worker, { extensions: { live } });
+  return PGliteWorker.create(worker, { meta, extensions: { live } });
 }
 
 export async function getDb() {

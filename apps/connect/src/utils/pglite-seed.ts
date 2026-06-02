@@ -1,11 +1,12 @@
 import { invalidateReactorPgMajorCache } from "./pglite-runtime.js";
+import { REACTOR_PGLITE_NAME } from "./storage-namespace.js";
 
 export const PENDING_PG_SEED_KEY = "ph:pending-pg-seed";
 
 /**
  * If the Debug Inspector requested a forced PG version reset, this runs
  * before the reactor is created on the subsequent page load: opens a fresh
- * PGlite of the requested major against `idb://reactor`, lets `initdb`
+ * PGlite of the requested major against the reactor data dir, lets `initdb`
  * populate `PG_VERSION`, then closes. The next step of app boot then
  * detects this fresh data dir and picks the matching runtime.
  */
@@ -19,7 +20,7 @@ export async function seedPendingPgVersion(): Promise<void> {
   try {
     if (major === 16) {
       const { PGlite } = await import("pglite-legacy-02");
-      const pg = new PGlite("idb://reactor");
+      const pg = new PGlite(`idb://${REACTOR_PGLITE_NAME}`);
       try {
         await pg.waitReady;
       } finally {
@@ -27,7 +28,7 @@ export async function seedPendingPgVersion(): Promise<void> {
       }
     } else if (major === 17) {
       const { PGlite } = await import("@electric-sql/pglite");
-      const pg = new PGlite("idb://reactor");
+      const pg = new PGlite(`idb://${REACTOR_PGLITE_NAME}`);
       try {
         await pg.waitReady;
       } finally {

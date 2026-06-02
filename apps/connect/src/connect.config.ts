@@ -108,7 +108,9 @@ const PH_CONNECT_BASE_PATH = normalizeBasePath(
   env.PH_CONNECT_BASE_PATH || import.meta.env.BASE_URL,
 );
 
-// Analytics database name with custom logic
+// Analytics database name. Explicit env override wins; otherwise the default
+// is scoped by base path so instances on different prefixes of one origin do
+// not share an analytics DB. Root resolves to ":analytics" (unchanged).
 const PH_CONNECT_ANALYTICS_DATABASE_NAME =
   env.PH_CONNECT_ANALYTICS_DATABASE_NAME ||
   `${PH_CONNECT_BASE_PATH.replace(/\//g, "")}:analytics`;
