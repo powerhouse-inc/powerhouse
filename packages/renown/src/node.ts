@@ -1,4 +1,5 @@
 export * from "./common.js";
+export * from "./credential.js";
 export * from "./crypto/node.js";
 export * from "./event/event.node.js";
 export * from "./init.node.js";
