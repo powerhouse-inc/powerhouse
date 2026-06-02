@@ -1,7 +1,9 @@
-import type {
-  PowerhouseVerifiableCredential,
-  RenownProfile,
+import {
+  CREDENTIAL_TYPES,
+  type PowerhouseVerifiableCredential,
+  type RenownProfile,
 } from "@renown/sdk";
+import { privateKeyToAccount } from "viem/accounts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 import { addRenownEventHandler, setRenown } from "../../src/hooks/renown.js";
@@ -11,7 +13,10 @@ import { RenownUserButton } from "../../src/renown/components/RenownUserButton.j
 import { Renown } from "../../src/renown/renown-init.js";
 
 const TEST_BASE_URL = "https://test.renown.id";
-const TEST_ADDRESS = "0x9aDdcBbaA28F7eB5f75E023F7C1Fcb13C9DFD8F7" as const;
+const TEST_ACCOUNT = privateKeyToAccount(
+  "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
+);
+const TEST_ADDRESS = TEST_ACCOUNT.address;
 const TEST_USER_DID = `did:pkh:eip155:1:${TEST_ADDRESS}`;
 
 /** Resolve a `fetch` input (string | URL | Request) to its URL string. */
@@ -22,42 +27,48 @@ const requestUrl = (input: RequestInfo | URL): string =>
       ? input.toString()
       : input.url;
 
-function createMockCredential(
+async function createMockCredential(
   userDid: string,
   appDid: string,
-): PowerhouseVerifiableCredential {
-  return {
+): Promise<PowerhouseVerifiableCredential> {
+  const issuanceDate = new Date().toISOString();
+  const expirationDate = new Date(
+    Date.now() + 7 * 24 * 60 * 60 * 1000,
+  ).toISOString();
+  const message = {
     "@context": ["https://www.w3.org/2018/credentials/v1"],
-    id: "test-credential-id",
     type: ["VerifiableCredential"],
-    issuer: {
-      id: userDid,
-      ethereumAddress: TEST_ADDRESS,
-    },
-    issuanceDate: new Date().toISOString(),
-    credentialSubject: {
-      id: appDid,
-      app: "test-app",
-    },
+    id: "test-credential-id",
+    issuer: { id: userDid, ethereumAddress: TEST_ADDRESS },
+    credentialSubject: { id: appDid, app: "test-app" },
     credentialSchema: {
       id: "https://schema.org",
       type: "JsonSchemaValidator2018",
     },
+    issuanceDate,
+    expirationDate,
+  };
+  const domain = { version: "1", chainId: 1 };
+  const { EIP712Domain, ...types } = CREDENTIAL_TYPES;
+  void EIP712Domain;
+  const proofValue = await TEST_ACCOUNT.signTypedData({
+    domain,
+    types,
+    primaryType: "VerifiableCredential",
+    message,
+  } as Parameters<typeof TEST_ACCOUNT.signTypedData>[0]);
+  return {
+    ...message,
     proof: {
-      verificationMethod: "test",
+      verificationMethod: userDid,
       ethereumAddress: TEST_ADDRESS,
-      created: new Date().toISOString(),
+      created: issuanceDate,
       proofPurpose: "assertionMethod",
       type: "EthereumEip712Signature2021",
-      proofValue: "0xtest",
+      proofValue,
       eip712: {
-        domain: {
-          name: "Renown",
-          version: "1",
-          chainId: 1,
-          verifyingContract: "0x0000000000000000000000000000000000000000",
-        },
-        types: {} as PowerhouseVerifiableCredential["proof"]["eip712"]["types"],
+        domain,
+        types: CREDENTIAL_TYPES,
         primaryType: "VerifiableCredential",
       },
     },
@@ -82,17 +93,17 @@ function mockFetchForLogin(options?: { profile?: RenownProfile | null }) {
   const { profile = MOCK_PROFILE } = options ?? {};
   let capturedAppDid: string | undefined;
 
-  vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
+  vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
     const url = requestUrl(input);
 
     if (url.includes("/api/auth/credential")) {
       const params = new URL(url).searchParams;
       capturedAppDid = params.get("connectId") ?? undefined;
-      const credential = createMockCredential(
+      const credential = await createMockCredential(
         TEST_USER_DID,
         capturedAppDid ?? "",
       );
-      return Promise.resolve(Response.json({ credential }));
+      return Response.json({ credential });
     }
 
     if (url.includes("/api/profile")) {
@@ -176,7 +187,8 @@ describe("RenownUserButton", () => {
     const usernameElements = screen.getByText("testuser").elements();
     expect(usernameElements.length).toBeGreaterThanOrEqual(2);
     // Address should be truncated in the dropdown
-    await expect.element(screen.getByText("0x9aDdc...FD8F7")).toBeVisible();
+    const truncated = `${TEST_ADDRESS.slice(0, 7)}...${TEST_ADDRESS.slice(-5)}`;
+    await expect.element(screen.getByText(truncated)).toBeVisible();
   });
 
   it("should show 'View Profile' when userId is provided", async () => {

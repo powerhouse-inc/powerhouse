@@ -1,4 +1,5 @@
 export * from "./common.js";
+export * from "./credential.js";
 export * from "./crypto/index.js";
 export * from "./init.browser.js";
 export * from "./profile.js";
