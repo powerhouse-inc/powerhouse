@@ -66,16 +66,22 @@ async function resolvePackageVersion(
   }
 }
 
+/** Strip the weak-validator prefix: weak comparison is correct for GET/HEAD. */
+function opaqueTag(tag: string): string {
+  return tag.startsWith("W/") ? tag.slice(2) : tag;
+}
+
 /** RFC 9110 If-None-Match: a comma-separated list of entity-tags or "*". */
 function etagMatches(
   header: string | string[] | undefined,
   etag: string,
 ): boolean {
   if (!header) return false;
+  const target = opaqueTag(etag);
   const value = Array.isArray(header) ? header.join(",") : header;
   return value.split(",").some((candidate) => {
     const tag = candidate.trim();
-    return tag === etag || tag === "*";
+    return tag === "*" || opaqueTag(tag) === target;
   });
 }
 

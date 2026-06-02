@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { mkdir, rm } from "node:fs/promises";
 import path from "node:path";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { CdnCache } from "../src/cdn.js";
 import {
   DEFAULT_REGISTRY_CDN_CACHE_DIR_NAME,
@@ -174,5 +174,20 @@ describe("warmup", () => {
     // Second call inside the 30s window must not re-extract.
     await warm();
     expect(existsSync(path.join(cdnCachePath, "warm-pkg-b"))).toBe(false);
+  });
+
+  it("does not throttle retries after a failed warm-up", async () => {
+    // Port 1 has nothing listening, so every cycle fails.
+    const warm = createWarmer({ ...config, port: 1 }, cdn);
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      await warm();
+      await warm();
+      // Both calls attempted (and failed) — a failure must not start the
+      // 30s throttle window.
+      expect(spy).toHaveBeenCalledTimes(2);
+    } finally {
+      spy.mockRestore();
+    }
   });
 });
