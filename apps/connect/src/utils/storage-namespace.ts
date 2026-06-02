@@ -1,5 +1,8 @@
 import { DEFAULT_RELATIONAL_PROCESSOR_DB_NAME } from "@powerhousedao/shared/processors";
-import { getStorageNamespace } from "@powerhousedao/shared/connect";
+import {
+  getStorageNamespace,
+  ROOT_STORAGE_NAMESPACE,
+} from "@powerhousedao/shared/connect";
 import { env } from "../connect.config.js";
 
 // Single owner of the origin-scoped storage namespace. Resolved from the same
@@ -14,6 +17,6 @@ export const REACTOR_PGLITE_NAME = STORAGE_NAMESPACE;
 
 // IdbFs name for the relational-processor worker store.
 export const RELATIONAL_PGLITE_NAME =
-  STORAGE_NAMESPACE === "reactor"
+  STORAGE_NAMESPACE === ROOT_STORAGE_NAMESPACE
     ? DEFAULT_RELATIONAL_PROCESSOR_DB_NAME
     : `${STORAGE_NAMESPACE}-${DEFAULT_RELATIONAL_PROCESSOR_DB_NAME}`;
