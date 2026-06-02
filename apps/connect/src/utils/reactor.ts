@@ -22,6 +22,7 @@ import {
   loadPGliteModule,
   resolvePgMajorForRuntime,
 } from "./pglite-runtime.js";
+import { REACTOR_PGLITE_NAME } from "./storage-namespace.js";
 
 /**
  * Creates a Reactor that plugs into legacy storage but syncs through the new
@@ -53,7 +54,7 @@ export async function createBrowserReactor(
     );
   }
   const { PGlite } = await loadPGliteModule(major);
-  const pg = new PGlite("idb://reactor", {
+  const pg = new PGlite(`idb://${REACTOR_PGLITE_NAME}`, {
     relaxedDurability: true,
   });
   const logger = new ConsoleLogger(["reactor-client"]);
