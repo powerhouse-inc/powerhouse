@@ -30,6 +30,8 @@ Serves files from the CDN cache. On first request, fetches and extracts the tarb
 
 If the package is not published locally, Verdaccio transparently proxies metadata and tarballs from the configured upstream (`--uplink`, default `https://registry.npmjs.org/`). The CDN then extracts the upstream tarball into `cdn-cache/<pkg>/<version>/` exactly as it does for locally-published packages, so subsequent requests are served from the local cache without re-hitting the upstream. The same fallback applies to `@powerhousedao/*` packages: the registry prefers its local copy, and falls back to the upstream when the package isn't published locally.
 
+Responses carry caching headers keyed on the request shape. Version-pinned requests (`<pkg>@1.2.3/...`) are served `Cache-Control: public, max-age=31536000, immutable`; moving requests (a dist-tag like `@dev`/`@latest`, or untagged) get `public, max-age=60, must-revalidate`. A version-derived weak `ETag` is sent, and a matching `If-None-Match` returns `304`. When the upstream metadata lookup fails (as opposed to a genuine not-found), the endpoint serves the latest cached version if present, otherwise responds `503` rather than a cacheable `404`.
+
 ### Publish Notifications
 
 When a package is published, the registry can notify subscribers in real time via Server-Sent Events (SSE) and webhooks.
