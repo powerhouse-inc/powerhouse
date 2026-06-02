@@ -95,9 +95,6 @@ export class KyselyAttachmentStore implements IAttachmentStore {
     const pending = await this.findPendingReservation(hash, now);
 
     if (pending) {
-      if (pending.size_bytes === null) {
-        throw new AttachmentNotFound(hash);
-      }
       return {
         hash,
         mimeType: pending.mime_type,
@@ -173,7 +170,11 @@ export class KyselyAttachmentStore implements IAttachmentStore {
     const pending = await this.findPendingReservation(hash, now);
 
     if (pending) {
-      throw new AttachmentPending(hash, pending.expires_at_utc);
+      throw new AttachmentPending(hash, pending.expires_at_utc, {
+        mimeType: pending.mime_type,
+        fileName: pending.file_name,
+        sizeBytes: pending.size_bytes,
+      });
     }
 
     const remote = await this.transport.fetch(hash, signal);
@@ -284,7 +285,7 @@ export class KyselyAttachmentStore implements IAttachmentStore {
     mime_type: string;
     file_name: string;
     extension: string | null;
-    size_bytes: number | null;
+    size_bytes: number;
     created_at_utc: string;
     expires_at_utc: string;
   } | null> {
@@ -302,11 +303,20 @@ export class KyselyAttachmentStore implements IAttachmentStore {
       .where("r.client_hash", "=", hash)
       .where("r.deleted_at_utc", "is", null)
       .where("r.expires_at_utc", ">", now)
+      .where("r.size_bytes", "is not", null)
       .where("a.hash", "is", null)
       .orderBy("r.expires_at_utc", "desc")
       .executeTakeFirst();
 
-    return row ?? null;
+    if (!row) return null;
+    return {
+      mime_type: row.mime_type,
+      file_name: row.file_name,
+      extension: row.extension,
+      size_bytes: Number(row.size_bytes),
+      created_at_utc: row.created_at_utc,
+      expires_at_utc: row.expires_at_utc,
+    };
   }
 
   private acquireReader(hash: string): void {

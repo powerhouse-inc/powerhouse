@@ -55,33 +55,53 @@ export type AttachmentMetadata = {
 };
 
 /**
- * Options provided when reserving an attachment slot.
- *
- * When clientHash is present, the service operates in hash-first mode:
- * the ref is known at reservation time, reserve() rejects if the content
- * is already available, and send() verifies the uploaded bytes against the
- * claimed hash. sizeBytes is required when clientHash is present (enforced
- * at the service layer and route parser).
- *
- * When clientHash is absent, the legacy upload-first flow applies.
+ * Legacy upload-first reservation. clientHash and sizeBytes are absent;
+ * the ref is only known after send() completes.
  */
-export type ReserveAttachmentOptions = {
+export type LegacyReserveAttachmentOptions = {
   mimeType: string;
   fileName: string;
   extension?: string | null;
+  clientHash?: undefined;
+  sizeBytes?: undefined;
+};
 
+/**
+ * Hash-first reservation. clientHash is present and sizeBytes is required.
+ * The ref is known at reservation time; send() verifies the uploaded bytes
+ * against the claimed hash and declared size. The explicit "?: undefined"
+ * on LegacyReserveAttachmentOptions makes clientHash a narrowing discriminant:
+ * checking options.clientHash !== undefined narrows sizeBytes to number.
+ */
+export type HashFirstReserveAttachmentOptions = {
+  mimeType: string;
+  fileName: string;
+  extension?: string | null;
   /**
    * Content hash claimed by the client (lowercase SHA-256 hex).
    */
-  clientHash?: AttachmentHash;
-
+  clientHash: AttachmentHash;
   /**
    * Declared size in bytes. Required when clientHash is present.
    * Reported by stat() during the pending window and enforced on
    * ingest: an upload whose actual byte count differs is rejected.
    */
-  sizeBytes?: number;
+  sizeBytes: number;
 };
+
+/**
+ * Options provided when reserving an attachment slot.
+ *
+ * Use HashFirstReserveAttachmentOptions when clientHash is known up front;
+ * the service then operates in hash-first mode: reserve() rejects if the
+ * content is already available, and send() verifies the uploaded bytes.
+ *
+ * Use LegacyReserveAttachmentOptions (or omit clientHash) for the legacy
+ * upload-first flow where the ref is only known after send() completes.
+ */
+export type ReserveAttachmentOptions =
+  | LegacyReserveAttachmentOptions
+  | HashFirstReserveAttachmentOptions;
 
 /**
  * Result of uploading attachment data through a handle.

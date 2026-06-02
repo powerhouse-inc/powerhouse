@@ -4,9 +4,13 @@ import { AttachmentService } from "../../src/attachment-service.js";
 import {
   AttachmentAlreadyExists,
   AttachmentNotFound,
+  AttachmentPending,
 } from "../../src/errors.js";
 import { createRef } from "../../src/ref.js";
-import type { AttachmentHeader } from "../../src/types.js";
+import type {
+  AttachmentHeader,
+  ReserveAttachmentOptions,
+} from "../../src/types.js";
 import {
   createMockStore,
   createMockReservationStore,
@@ -32,6 +36,12 @@ const AVAILABLE_HEADER: AttachmentHeader = {
   createdAtUtc: "2026-01-01T00:00:00.000Z",
   lastAccessedAtUtc: "2026-01-01T00:00:00.000Z",
   expiresAtUtc: null,
+};
+
+const PENDING_HEADER: AttachmentHeader = {
+  ...AVAILABLE_HEADER,
+  status: "pending",
+  expiresAtUtc: "2026-01-02T00:00:00.000Z",
 };
 
 const EVICTED_HEADER: AttachmentHeader = {
@@ -164,11 +174,10 @@ describe("AttachmentService.reserve hash-first mode", () => {
   });
 
   describe("concurrent reservations for the same hash", () => {
-    it("creates a second reservation when another live reservation claims the same hash", async () => {
-      // No attachment row -- only an existing reservation (status pending).
-      // Pending status comes from the reservation table, not the attachment table.
-      // stat() throws AttachmentNotFound because there is no attachment row.
-      store.stat.mockRejectedValue(new AttachmentNotFound(VALID_HASH));
+    it("creates a second reservation when stat() returns a pending header for the same hash", async () => {
+      // Production KyselyAttachmentStore.stat() returns a pending header (not
+      // AttachmentNotFound) when a live reservation exists. Reserve must proceed.
+      store.stat.mockResolvedValue(PENDING_HEADER);
       reservations.create.mockResolvedValue(MOCK_RESERVATION);
 
       const handle1 = await service.reserve({
@@ -189,6 +198,41 @@ describe("AttachmentService.reserve hash-first mode", () => {
       expect(handle1).toBeDefined();
       expect(handle2).toBeDefined();
     });
+
+    it("proceeds when stat() throws AttachmentPending (degraded-wire concurrent case)", async () => {
+      // Covers FIX 6e: AttachmentPending from a remote stat is treated the
+      // same as AttachmentNotFound -- concurrent reservation is allowed.
+      store.stat.mockRejectedValue(
+        new AttachmentPending(VALID_HASH, "2026-01-02T00:00:00.000Z"),
+      );
+      reservations.create.mockResolvedValue(MOCK_RESERVATION);
+
+      const handle = await service.reserve({
+        mimeType: "application/pdf",
+        fileName: "invoice",
+        clientHash: VALID_HASH,
+        sizeBytes: 512,
+      });
+
+      expect(reservations.create).toHaveBeenCalledOnce();
+      expect(handle).toBeDefined();
+    });
+
+    it("creates a reservation when stat() throws AttachmentNotFound (no attachment row, no reservation)", async () => {
+      // Explicit not-found path: no attachment row and no live reservation.
+      store.stat.mockRejectedValue(new AttachmentNotFound(VALID_HASH));
+      reservations.create.mockResolvedValue(MOCK_RESERVATION);
+
+      const handle = await service.reserve({
+        mimeType: "application/pdf",
+        fileName: "invoice",
+        clientHash: VALID_HASH,
+        sizeBytes: 512,
+      });
+
+      expect(reservations.create).toHaveBeenCalledOnce();
+      expect(handle).toBeDefined();
+    });
   });
 
   describe("upload handle ref", () => {
@@ -198,6 +242,7 @@ describe("AttachmentService.reserve hash-first mode", () => {
       uploadFactory.createUpload.mockReturnValue({
         reservationId: "res-abc",
         ref: VALID_REF,
+        expiresAtUtc: "2026-01-02T00:00:00.000Z",
         send: vi.fn(),
       });
 
@@ -211,7 +256,7 @@ describe("AttachmentService.reserve hash-first mode", () => {
       expect(handle.ref).toBe(VALID_REF);
     });
 
-    it("passes normalized clientHash to uploadFactory", async () => {
+    it("passes normalized clientHash to uploadFactory via reservation", async () => {
       const uppercaseHash = "A".repeat(64) as AttachmentHash;
       store.stat.mockRejectedValue(new AttachmentNotFound(uppercaseHash));
       reservations.create.mockResolvedValue({
@@ -227,7 +272,6 @@ describe("AttachmentService.reserve hash-first mode", () => {
       });
 
       expect(uploadFactory.createUpload).toHaveBeenCalledWith(
-        expect.any(String),
         expect.objectContaining({ clientHash: VALID_HASH }),
       );
     });
@@ -245,13 +289,13 @@ describe("AttachmentService.reserve hash-first mode", () => {
       ).rejects.toThrow(/clientHash/);
     });
 
-    it("throws when sizeBytes is missing with clientHash", async () => {
+    it("throws when sizeBytes is missing with clientHash (runtime guard via cast)", async () => {
       await expect(
         service.reserve({
           mimeType: "application/pdf",
           fileName: "invoice",
           clientHash: VALID_HASH,
-        }),
+        } as unknown as ReserveAttachmentOptions),
       ).rejects.toThrow(/sizeBytes/);
     });
 
@@ -316,6 +360,7 @@ describe("AttachmentService.reserve hash-first mode", () => {
       uploadFactory.createUpload.mockReturnValue({
         reservationId: "res-abc",
         ref: null,
+        expiresAtUtc: "2026-01-02T00:00:00.000Z",
         send: vi.fn(),
       });
 

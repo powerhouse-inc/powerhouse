@@ -1,4 +1,4 @@
-import type { Kysely } from "kysely";
+import { sql, type Kysely } from "kysely";
 
 export async function up(db: Kysely<any>): Promise<void> {
   await db.schema
@@ -9,6 +9,18 @@ export async function up(db: Kysely<any>): Promise<void> {
   await db.schema
     .alterTable("attachment_reservation")
     .addColumn("size_bytes", "bigint")
+    .execute();
+
+  // Structural enforcement: size_bytes must be present whenever client_hash
+  // is present. The expression references only the row's own columns so the
+  // known withSchema() caveat (raw SQL table references are not schema-
+  // qualified) does not apply here.
+  await db.schema
+    .alterTable("attachment_reservation")
+    .addCheckConstraint(
+      "attachment_reservation_hash_size_check",
+      sql`client_hash is null or size_bytes is not null`,
+    )
     .execute();
 
   // Non-unique index. Partial unique indexes are not used here: raw SQL

@@ -41,6 +41,8 @@ export {
   type IAttachmentUploadFactory,
   type IReservationStore,
   type ParsedRef,
+  type HashFirstReserveAttachmentOptions,
+  type LegacyReserveAttachmentOptions,
   type Reservation,
   type ReserveAttachmentOptions,
   type TransportFetchResult,

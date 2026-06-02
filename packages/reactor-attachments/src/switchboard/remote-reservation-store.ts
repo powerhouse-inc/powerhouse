@@ -1,6 +1,7 @@
 import type { AttachmentRef, JwtHandler } from "@powerhousedao/reactor";
 import { AttachmentAlreadyExists, ReservationNotFound } from "../errors.js";
 import type { IReservationStore } from "../interfaces.js";
+import { createRef, parseRef } from "../ref.js";
 import type { Reservation, ReserveAttachmentOptions } from "../types.js";
 import { buildAuthHeaders } from "./build-auth-headers.js";
 
@@ -107,13 +108,20 @@ export class RemoteReservationStore implements IReservationStore {
       if (
         isRecord(body) &&
         body.error === "already_exists" &&
-        typeof body.ref === "string" &&
         options.clientHash !== undefined
       ) {
-        throw new AttachmentAlreadyExists(
-          options.clientHash,
-          body.ref as AttachmentRef,
-        );
+        let ref: AttachmentRef;
+        if (typeof body.ref === "string") {
+          try {
+            parseRef(body.ref as AttachmentRef);
+            ref = body.ref as AttachmentRef;
+          } catch {
+            ref = createRef(options.clientHash);
+          }
+        } else {
+          ref = createRef(options.clientHash);
+        }
+        throw new AttachmentAlreadyExists(options.clientHash, ref);
       }
       throw new Error(
         `Reservation create failed: ${response.status} ${response.statusText}`,
@@ -126,7 +134,23 @@ export class RemoteReservationStore implements IReservationStore {
       );
     }
 
-    const json = (await response.json()) as {
+    let json: unknown;
+    try {
+      json = await response.json();
+    } catch {
+      throw new Error("Reservation create returned non-JSON response");
+    }
+    if (
+      typeof json !== "object" ||
+      json === null ||
+      typeof (json as Record<string, unknown>).reservationId !== "string" ||
+      ((json as Record<string, unknown>).reservationId as string).length === 0
+    ) {
+      throw new Error(
+        "Reservation create returned a payload missing a non-empty reservationId string",
+      );
+    }
+    const body = json as {
       reservationId: string;
       ref?: string | null;
       createdAtUtc?: string;
@@ -138,13 +162,13 @@ export class RemoteReservationStore implements IReservationStore {
     // server's TTL, so expiresAtUtc is a best-effort placeholder.
     const now = new Date();
     return {
-      reservationId: json.reservationId,
+      reservationId: body.reservationId,
       mimeType: options.mimeType,
       fileName: options.fileName,
       extension,
-      createdAtUtc: json.createdAtUtc ?? now.toISOString(),
+      createdAtUtc: body.createdAtUtc ?? now.toISOString(),
       expiresAtUtc:
-        json.expiresAtUtc ??
+        body.expiresAtUtc ??
         new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString(),
       clientHash: options.clientHash ?? null,
       sizeBytes: options.sizeBytes ?? null,

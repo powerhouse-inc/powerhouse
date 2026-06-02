@@ -520,14 +520,7 @@ describe("DirectAttachmentUpload hash-first ingest verification", () => {
 
       const { UploadTooLarge } = await import("../../src/errors.js");
       const cappedUpload = new DirectAttachmentUpload(
-        reservation2.reservationId,
-        {
-          mimeType: "text/plain",
-          fileName: "test",
-          extension: "txt",
-          clientHash: CORRECT_HASH,
-          sizeBytes: CORRECT_BYTES.byteLength,
-        },
+        reservation2,
         db,
         storagePath2,
         reservationStore,

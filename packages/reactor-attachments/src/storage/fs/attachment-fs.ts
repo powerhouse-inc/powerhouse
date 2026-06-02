@@ -61,7 +61,7 @@ export async function writeAttachmentBytes(
     reader.releaseLock();
     await new Promise<void>((resolve, reject) => {
       writer.end(() => resolve());
-      writer.on("error", reject);
+      writer.once("error", reject);
     });
   }
 
@@ -175,17 +175,26 @@ export async function streamHashAndWrite(
     reader.releaseLock();
   }
 
-  await new Promise<void>((resolve, reject) => {
-    writer.end((err?: Error | null) => {
-      if (err) reject(err);
-      else resolve();
+  let endError: Error | undefined;
+  try {
+    await new Promise<void>((resolve, reject) => {
+      writer.end((err?: Error | null) => {
+        if (err) reject(err);
+        else resolve();
+      });
+      writer.once("error", reject);
     });
-    writer.on("error", reject);
-  });
+  } catch (err) {
+    endError = err instanceof Error ? err : new Error(String(err));
+  }
 
   if (caughtError) {
     await rm(tempPath, { force: true });
     throw caughtError;
+  }
+  if (endError) {
+    await rm(tempPath, { force: true });
+    throw endError;
   }
 
   if (declaredSizeBytes !== undefined && sizeBytes !== declaredSizeBytes) {

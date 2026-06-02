@@ -2,10 +2,7 @@ import type { AttachmentRef, JwtHandler } from "@powerhousedao/reactor";
 import { HashMismatch, SizeMismatch } from "../errors.js";
 import type { IAttachmentUpload } from "../interfaces.js";
 import { createRef } from "../ref.js";
-import type {
-  AttachmentUploadResult,
-  ReserveAttachmentOptions,
-} from "../types.js";
+import type { AttachmentUploadResult, Reservation } from "../types.js";
 import { buildAuthHeaders } from "./build-auth-headers.js";
 import type { SwitchboardClientConfig } from "./remote-reservation-store.js";
 
@@ -16,22 +13,18 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 export class RemoteAttachmentUpload implements IAttachmentUpload {
   readonly reservationId: string;
   readonly ref: AttachmentRef | null;
+  readonly expiresAtUtc: string;
   private readonly remoteUrl: string;
   private readonly jwtHandler?: JwtHandler;
   private readonly fetchFn: typeof fetch;
-  // The reserve options are kept for symmetry with DirectAttachmentUpload,
-  // but the server already has them tied to the reservation row.
-  private readonly options: ReserveAttachmentOptions;
 
-  constructor(
-    reservationId: string,
-    options: ReserveAttachmentOptions,
-    config: SwitchboardClientConfig,
-  ) {
-    this.reservationId = reservationId;
-    this.options = options;
+  constructor(reservation: Reservation, config: SwitchboardClientConfig) {
+    this.reservationId = reservation.reservationId;
     this.ref =
-      options.clientHash !== undefined ? createRef(options.clientHash) : null;
+      reservation.clientHash !== null
+        ? createRef(reservation.clientHash)
+        : null;
+    this.expiresAtUtc = reservation.expiresAtUtc;
     this.remoteUrl = config.remoteUrl;
     this.jwtHandler = config.jwtHandler;
     this.fetchFn = (config.fetchFn ?? globalThis.fetch).bind(globalThis);

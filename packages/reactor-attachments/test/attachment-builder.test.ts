@@ -130,6 +130,7 @@ describe("AttachmentBuilder", () => {
       createUpload: vi.fn().mockReturnValue({
         reservationId: "custom-id",
         ref: null,
+        expiresAtUtc: new Date(Date.now() + 86400000).toISOString(),
         send: vi.fn().mockResolvedValue({
           hash: "custom-hash",
           ref: createRef("custom-hash"),

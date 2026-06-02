@@ -137,6 +137,13 @@ interface IAttachmentUpload {
   ref: AttachmentRef | null;
 
   /**
+   * Reservation TTL contract, from the server in remote mode.
+   * ISO 8601 UTC string indicating when the reservation expires.
+   * Clients use this to bound retry windows and populate the pending-upload queue.
+   */
+  readonly expiresAtUtc: string;
+
+  /**
    * Stream attachment data through this handle.
    *
    * When the reservation carries a client hash, the handle verifies
@@ -326,6 +333,8 @@ interface IAttachmentTransport {
 ### What syncs and what does not
 
 Reservation rows themselves are **not replicated**. A reservation is node-local, single-writer state owned by the upload target, with a TTL. Replicating it would create distributed-expiry consistency problems for no benefit. Instead, pending is a *queryable* state: peers learn it on demand through the transport's fetch/stat path, exactly as they learn data availability. The authoritative answer always comes from the reactor holding the reservation.
+
+**Cross-reactor stat limitation.** `stat()` and `HEAD /attachments/:hash` are authoritative only on the reservation-holding reactor. A peer reactor's local `stat()` reports not-found for a hash that is pending remotely -- pending is discovered on the data path (`get()` / transport fetch), not via a peer's stat. This is a deliberate consequence of reservations being node-local, single-writer state: a peer must perform a transport fetch (which surfaces the 202 pending response from the source reactor) to learn that a hash is in flight. The local `stat()` shortcut, which queries only the local attachment and reservation tables, cannot cross this boundary.
 
 In the current client-server topology this works without extra hops: clients reserve and upload against the switchboard, so the switchboard -- the same node every peer fetches from -- is authoritative for pending. A peer's lazy fetch hits the switchboard and receives `pending` directly.
 

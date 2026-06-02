@@ -79,14 +79,7 @@ async function handle(
       sendJson(res, 404, { error: "reservation not found" });
       return;
     }
-    const upload = ctx.attachments.uploadFactory.createUpload(
-      reservation.reservationId,
-      {
-        mimeType: reservation.mimeType,
-        fileName: reservation.fileName,
-        extension: reservation.extension,
-      },
-    );
+    const upload = ctx.attachments.uploadFactory.createUpload(reservation);
     const webStream = Readable.toWeb(
       req as Readable,
     ) as ReadableStream<Uint8Array>;

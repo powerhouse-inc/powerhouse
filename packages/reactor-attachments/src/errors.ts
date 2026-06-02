@@ -80,6 +80,11 @@ export class HashMismatch extends Error {
  * sizeBytes declared at reservation time. The handle may reject
  * mid-stream as soon as the count exceeds the declaration.
  * Nothing is committed; the reservation is retained for retry.
+ *
+ * "actual" is the byte count received from the stream before aborting --
+ * it includes the chunk that crossed the declaration and can exceed bytes
+ * persisted. On mid-stream aborts the true total is unknown; at least
+ * "actual" bytes were sent.
  */
 export class SizeMismatch extends Error {
   readonly declared: number;
@@ -97,16 +102,34 @@ export class SizeMismatch extends Error {
  * bytes are not yet available anywhere. Deliberately NOT a subclass of
  * AttachmentNotFound -- callers must distinguish "retry later" from "unknown".
  * After expiresAtUtc has passed the hash reads as not found.
+ *
+ * metadata is populated when the reservation is local and its fields are
+ * known (mimeType, fileName, sizeBytes). It is undefined when the pending
+ * state is learned from a remote transport that did not supply the full
+ * Attachment-Pending header (transport-pending / degraded wire case).
  */
 export class AttachmentPending extends Error {
   readonly hash: AttachmentHash;
   readonly expiresAtUtc: string;
-  constructor(hash: AttachmentHash, expiresAtUtc: string) {
+  readonly metadata:
+    | {
+        readonly mimeType: string;
+        readonly fileName: string;
+        readonly sizeBytes: number;
+      }
+    | undefined;
+
+  constructor(
+    hash: AttachmentHash,
+    expiresAtUtc: string,
+    meta?: { mimeType: string; fileName: string; sizeBytes: number },
+  ) {
     super(
       `Attachment pending upload for hash: ${hash}, expires: ${expiresAtUtc}`,
     );
     this.name = "AttachmentPending";
     this.hash = hash;
     this.expiresAtUtc = expiresAtUtc;
+    this.metadata = meta;
   }
 }

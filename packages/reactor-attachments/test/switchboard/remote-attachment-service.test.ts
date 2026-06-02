@@ -412,8 +412,16 @@ describe("RemoteAttachmentUpload", () => {
     mockFetch.mockResolvedValue(mockResponse(200, { json: result }));
 
     const upload = new RemoteAttachmentUpload(
-      "r-1",
-      { mimeType: "text/plain", fileName: "x.txt", extension: "txt" },
+      {
+        reservationId: "r-1",
+        mimeType: "text/plain",
+        fileName: "x.txt",
+        extension: "txt",
+        createdAtUtc: "2024-01-01T00:00:00.000Z",
+        expiresAtUtc: "2024-01-02T00:00:00.000Z",
+        clientHash: null,
+        sizeBytes: null,
+      },
       { remoteUrl: REMOTE_URL, fetchFn: mockFetch },
     );
 
@@ -434,8 +442,16 @@ describe("RemoteAttachmentUpload", () => {
   it("throws on non-2xx", async () => {
     mockFetch.mockResolvedValue(mockResponse(404, { statusText: "Not Found" }));
     const upload = new RemoteAttachmentUpload(
-      "missing",
-      { mimeType: "text/plain", fileName: "x.txt" },
+      {
+        reservationId: "missing",
+        mimeType: "text/plain",
+        fileName: "x.txt",
+        extension: null,
+        createdAtUtc: "2024-01-01T00:00:00.000Z",
+        expiresAtUtc: "2024-01-02T00:00:00.000Z",
+        clientHash: null,
+        sizeBytes: null,
+      },
       { remoteUrl: REMOTE_URL, fetchFn: mockFetch },
     );
     await expect(upload.send(streamFromString("data"))).rejects.toThrow(
@@ -443,13 +459,16 @@ describe("RemoteAttachmentUpload", () => {
     );
   });
 
-  it("sets ref from clientHash when options include clientHash", () => {
+  it("sets ref from clientHash when reservation includes clientHash", () => {
     const clientHash = "d".repeat(64) as AttachmentHash;
     const upload = new RemoteAttachmentUpload(
-      "r-ref",
       {
+        reservationId: "r-ref",
         mimeType: "text/plain",
         fileName: "file.txt",
+        extension: null,
+        createdAtUtc: "2024-01-01T00:00:00.000Z",
+        expiresAtUtc: "2024-01-02T00:00:00.000Z",
         clientHash,
         sizeBytes: 10,
       },
@@ -458,10 +477,18 @@ describe("RemoteAttachmentUpload", () => {
     expect(upload.ref).toBe(createRef(clientHash));
   });
 
-  it("sets ref to null when options do not include clientHash", () => {
+  it("sets ref to null when reservation does not include clientHash", () => {
     const upload = new RemoteAttachmentUpload(
-      "r-noref",
-      { mimeType: "text/plain", fileName: "file.txt" },
+      {
+        reservationId: "r-noref",
+        mimeType: "text/plain",
+        fileName: "file.txt",
+        extension: null,
+        createdAtUtc: "2024-01-01T00:00:00.000Z",
+        expiresAtUtc: "2024-01-02T00:00:00.000Z",
+        clientHash: null,
+        sizeBytes: null,
+      },
       { remoteUrl: REMOTE_URL, fetchFn: mockFetch },
     );
     expect(upload.ref).toBeNull();
@@ -478,10 +505,13 @@ describe("RemoteAttachmentUpload", () => {
     );
 
     const upload = new RemoteAttachmentUpload(
-      "r-hm",
       {
+        reservationId: "r-hm",
         mimeType: "text/plain",
         fileName: "file.txt",
+        extension: null,
+        createdAtUtc: "2024-01-01T00:00:00.000Z",
+        expiresAtUtc: "2024-01-02T00:00:00.000Z",
         clientHash: claimed as AttachmentHash,
         sizeBytes: 10,
       },
@@ -506,10 +536,13 @@ describe("RemoteAttachmentUpload", () => {
     );
 
     const upload = new RemoteAttachmentUpload(
-      "r-sm",
       {
+        reservationId: "r-sm",
         mimeType: "text/plain",
         fileName: "file.txt",
+        extension: null,
+        createdAtUtc: "2024-01-01T00:00:00.000Z",
+        expiresAtUtc: "2024-01-02T00:00:00.000Z",
         clientHash: "a".repeat(64) as AttachmentHash,
         sizeBytes: 100,
       },
@@ -534,8 +567,16 @@ describe("RemoteAttachmentUpload", () => {
     );
 
     const upload = new RemoteAttachmentUpload(
-      "r-unk",
-      { mimeType: "text/plain", fileName: "file.txt" },
+      {
+        reservationId: "r-unk",
+        mimeType: "text/plain",
+        fileName: "file.txt",
+        extension: null,
+        createdAtUtc: "2024-01-01T00:00:00.000Z",
+        expiresAtUtc: "2024-01-02T00:00:00.000Z",
+        clientHash: null,
+        sizeBytes: null,
+      },
       { remoteUrl: REMOTE_URL, fetchFn: mockFetch },
     );
 
@@ -550,9 +591,15 @@ describe("RemoteAttachmentUploadFactory", () => {
     const factory = new RemoteAttachmentUploadFactory({
       remoteUrl: REMOTE_URL,
     });
-    const upload = factory.createUpload("r-1", {
+    const upload = factory.createUpload({
+      reservationId: "r-1",
       mimeType: "text/plain",
       fileName: "x.txt",
+      extension: null,
+      createdAtUtc: "2024-01-01T00:00:00.000Z",
+      expiresAtUtc: "2024-01-02T00:00:00.000Z",
+      clientHash: null,
+      sizeBytes: null,
     });
     expect(upload).toBeInstanceOf(RemoteAttachmentUpload);
     expect(upload.reservationId).toBe("r-1");
@@ -882,6 +929,23 @@ describe("RemoteAttachmentStore", () => {
       await expect(store.stat(PENDING_HASH)).rejects.toThrow(
         /Attachment-Pending/,
       );
+    });
+
+    it("stat 202 with Attachment-Pending containing only expiresAtUtc throws AttachmentPending (degraded-wire case)", async () => {
+      mockFetch.mockResolvedValue(
+        mockResponse(202, {
+          headers: {
+            "Attachment-Pending": JSON.stringify({ expiresAtUtc: EXPIRES_AT }),
+          },
+        }),
+      );
+
+      const err = await store.stat(PENDING_HASH).catch((e: unknown) => e);
+
+      expect(err).toBeInstanceOf(AttachmentPending);
+      const typed = err as AttachmentPending;
+      expect(typed.hash).toBe(PENDING_HASH);
+      expect(typed.expiresAtUtc).toBe(EXPIRES_AT);
     });
 
     it("get 202 with valid Attachment-Pending header throws AttachmentPending", async () => {

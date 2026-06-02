@@ -79,6 +79,13 @@ export interface IAttachmentUpload {
   ref: AttachmentRef | null;
 
   /**
+   * Reservation TTL contract, from the server in remote mode.
+   * ISO 8601 UTC string indicating when the reservation expires.
+   * Clients use this to bound retry windows and populate the pending-upload queue.
+   */
+  readonly expiresAtUtc: string;
+
+  /**
    * Stream attachment data through this handle.
    *
    * The handle manages the full upload lifecycle internally:
@@ -283,8 +290,5 @@ export interface IReservationStore {
  * that knows how to stream bytes to the appropriate backend.
  */
 export interface IAttachmentUploadFactory {
-  createUpload(
-    reservationId: string,
-    options: ReserveAttachmentOptions,
-  ): IAttachmentUpload;
+  createUpload(reservation: Reservation): IAttachmentUpload;
 }

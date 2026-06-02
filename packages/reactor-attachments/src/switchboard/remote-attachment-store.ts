@@ -184,6 +184,13 @@ export class RemoteAttachmentStore implements IAttachmentReader {
     this.fetchFn = (config.fetchFn ?? globalThis.fetch).bind(globalThis);
   }
 
+  /**
+   * Get attachment metadata. Normally returns a pending AttachmentHeader
+   * (status: 'pending') when the server responds 202 with a full
+   * Attachment-Pending header. When only expiresAtUtc is present in the
+   * header (degraded wire), throws AttachmentPending instead -- the
+   * AttachmentPending throw is the degraded-wire case.
+   */
   async stat(hash: AttachmentHash): Promise<AttachmentHeader> {
     const url = `${this.remoteUrl}/attachments/${hash}`;
     const authHeaders = await buildAuthHeaders(url, this.jwtHandler);
@@ -194,13 +201,17 @@ export class RemoteAttachmentStore implements IAttachmentReader {
     });
 
     if (response.status === 202) {
-      const pending = parsePendingHeader(response);
-      if (!pending) {
-        throw new Error(
-          "Attachment stat returned 202 with missing or malformed Attachment-Pending header",
-        );
+      const fullPending = parsePendingHeader(response);
+      if (fullPending) {
+        return buildPendingHeader(hash, fullPending);
       }
-      return buildPendingHeader(hash, pending);
+      const partial = parsePendingExpiry(response);
+      if (partial) {
+        throw new AttachmentPending(hash, partial.expiresAtUtc);
+      }
+      throw new Error(
+        "Attachment stat returned 202 with missing or malformed Attachment-Pending header",
+      );
     }
 
     if (response.status === 404) {

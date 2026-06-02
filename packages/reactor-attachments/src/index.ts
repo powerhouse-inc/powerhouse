@@ -25,6 +25,8 @@ export type {
   AttachmentStatus,
   AttachmentTransportConfig,
   AttachmentUploadResult,
+  HashFirstReserveAttachmentOptions,
+  LegacyReserveAttachmentOptions,
   Reservation,
   ReserveAttachmentOptions,
   TransportFetchResult,

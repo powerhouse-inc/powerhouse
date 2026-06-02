@@ -94,8 +94,13 @@ export class AttachmentBuilder {
     if (this.reservationSweepMs !== undefined) {
       const intervalMs = this.reservationSweepMs;
       sweepTimer = setInterval(() => {
-        void reservations.deleteExpired();
+        // Sweep failures are retried on the next interval; swallow to prevent
+        // unhandled rejection from terminating the process.
+        reservations.deleteExpired().catch(() => {});
       }, intervalMs);
+      if (typeof sweepTimer.unref === "function") {
+        sweepTimer.unref();
+      }
     }
 
     const destroy = (): void => {

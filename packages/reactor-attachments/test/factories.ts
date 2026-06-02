@@ -91,6 +91,7 @@ export function createMockUploadFactory(): MockUploadFactory {
     createUpload: vi.fn().mockReturnValue({
       reservationId: "mock-reservation-id",
       ref: null,
+      expiresAtUtc: new Date(Date.now() + 86400000).toISOString(),
       send: vi.fn(),
     }),
   } as MockUploadFactory;
@@ -214,8 +215,7 @@ export async function createTestDirectUpload(
   const store = new KyselyAttachmentStore(db, transport, storagePath);
   const reservation = await reservationStore.create(options);
   const upload = new DirectAttachmentUpload(
-    reservation.reservationId,
-    options,
+    reservation,
     db,
     storagePath,
     reservationStore,

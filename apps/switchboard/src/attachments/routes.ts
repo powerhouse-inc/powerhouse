@@ -193,20 +193,10 @@ export function makeReserveHandler(attachments: AttachmentBuildResult) {
       return;
     }
 
-    let expiresAtUtc: string | undefined;
-    try {
-      const reservation = await attachments.reservations.get(
-        upload.reservationId,
-      );
-      expiresAtUtc = reservation.expiresAtUtc;
-    } catch {
-      // Non-fatal: the reservationId is still valid; expiresAtUtc will be omitted.
-    }
-
     sendJson(res, 201, {
       reservationId: upload.reservationId,
       ref: upload.ref,
-      expiresAtUtc,
+      expiresAtUtc: upload.expiresAtUtc,
     });
   };
 }
@@ -227,22 +217,7 @@ export function makeUploadHandler(attachments: AttachmentBuildResult) {
       return;
     }
 
-    const uploadOptions: ReserveAttachmentOptions = {
-      mimeType: reservation.mimeType,
-      fileName: reservation.fileName,
-      extension: reservation.extension,
-      ...(reservation.clientHash !== null
-        ? {
-            clientHash: reservation.clientHash as AttachmentHash,
-            sizeBytes: reservation.sizeBytes ?? undefined,
-          }
-        : {}),
-    };
-
-    const upload = attachments.uploadFactory.createUpload(
-      reservation.reservationId,
-      uploadOptions,
-    );
+    const upload = attachments.uploadFactory.createUpload(reservation);
 
     const webStream = Readable.toWeb(
       req as Readable,
@@ -290,28 +265,13 @@ export function makeDownloadHandler(attachments: AttachmentBuildResult) {
       response = await attachments.store.get(canonicalHash, controller.signal);
     } catch (err) {
       if (err instanceof AttachmentPending) {
-        let pendingMeta: {
-          mimeType: string;
-          fileName: string;
-          sizeBytes: number;
-        } | null = null;
-        try {
-          const statHeader = await attachments.store.stat(canonicalHash);
-          pendingMeta = {
-            mimeType: statHeader.mimeType,
-            fileName: statHeader.fileName,
-            sizeBytes: statHeader.sizeBytes,
-          };
-        } catch {
-          // Best-effort: if stat also fails, omit the optional fields.
-        }
         res.statusCode = 202;
         res.setHeader("Retry-After", String(RETRY_AFTER_SECONDS));
         res.setHeader(
           "Attachment-Pending",
           JSON.stringify({
             expiresAtUtc: err.expiresAtUtc,
-            ...(pendingMeta ?? {}),
+            ...(err.metadata ?? {}),
           }),
         );
         res.end();

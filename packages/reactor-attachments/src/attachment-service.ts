@@ -11,7 +11,11 @@ import type {
   AttachmentResponse,
   ReserveAttachmentOptions,
 } from "./types.js";
-import { AttachmentAlreadyExists, AttachmentNotFound } from "./errors.js";
+import {
+  AttachmentAlreadyExists,
+  AttachmentNotFound,
+  AttachmentPending,
+} from "./errors.js";
 import { parseRef, createRef } from "./ref.js";
 
 const CLIENT_HASH_PATTERN = /^[a-f0-9]{64}$/;
@@ -28,7 +32,7 @@ export class AttachmentService implements IAttachmentService {
       return this.reserveHashFirst(options);
     }
     const reservation = await this.reservations.create(options);
-    return this.uploadFactory.createUpload(reservation.reservationId, options);
+    return this.uploadFactory.createUpload(reservation);
   }
 
   async stat(ref: AttachmentRef): Promise<AttachmentHeader> {
@@ -73,7 +77,10 @@ export class AttachmentService implements IAttachmentService {
     try {
       existingHeader = await this.store.stat(normalized);
     } catch (err) {
-      if (!(err instanceof AttachmentNotFound)) {
+      if (
+        !(err instanceof AttachmentNotFound) &&
+        !(err instanceof AttachmentPending)
+      ) {
         throw err;
       }
     }
@@ -83,9 +90,6 @@ export class AttachmentService implements IAttachmentService {
     }
 
     const reservation = await this.reservations.create(normalizedOptions);
-    return this.uploadFactory.createUpload(
-      reservation.reservationId,
-      normalizedOptions,
-    );
+    return this.uploadFactory.createUpload(reservation);
   }
 }
