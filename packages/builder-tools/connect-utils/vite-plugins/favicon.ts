@@ -9,8 +9,16 @@ export function connectFaviconPlugin(): Plugin {
   return {
     name: "copy-connect-favicon",
     configureServer(server) {
+      // Vite rewrites the favicon link against `base`, so match the
+      // base-prefixed path. Keep the bare path for robustness.
+      const base = server.config.base;
+      const faviconPath = `${base}icon.ico`.replace(/\/{2,}/g, "/");
       // Serve icon.ico before Vite's static middleware so it acts as a fallback
-      server.middlewares.use("/icon.ico", (_req, res, next) => {
+      server.middlewares.use((req, res, next) => {
+        const pathname = req.url?.split("?")[0];
+        if (pathname !== faviconPath && pathname !== "/icon.ico") {
+          return next();
+        }
         server.pluginContainer
           .resolveId("@powerhousedao/connect/assets/icon.ico")
           .then((resolved) => {
