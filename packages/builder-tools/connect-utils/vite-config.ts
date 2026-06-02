@@ -314,6 +314,9 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
   const config: InlineConfig = {
     configFile: false,
     mode,
+    // Prefix served/built asset URLs so Connect can run under a path prefix
+    // (reverse proxy). Mirrors the client router basename.
+    base: env.PH_CONNECT_BASE_PATH,
     server: {
       watch: {
         ignored: ["**/backup-documents/**", "**/.ph/**"],
