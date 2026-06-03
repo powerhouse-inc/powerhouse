@@ -11,7 +11,7 @@ const classesToRemove = pipe(
     "dark:bg-blue-900/30",
     "dark:bg-blue-900/20",
     "dark:text-black",
-    "dark:bg-red-900/20",
+    "dark:bg-red-800/20",
     "dark:hover:bg-blue-900/30",
     "dark:hover:bg-blue-900/20",
     "dark:hover:bg-yellow-900/30",
@@ -19,7 +19,7 @@ const classesToRemove = pipe(
     "dark:bg-yellow-800",
     "dark:bg-yellow-900/30",
     "dark:hover:bg-red-900/30",
-    "dark:bg-red-900/30",
+    "dark:bg-red-800/30",
     "dark:bg-black/90",
   ]),
 );

@@ -4,22 +4,17 @@ import {
   entries,
   filter,
   flatMap,
+  groupBy,
   groupByProp,
   identity,
   keys,
   map,
   mapValues,
   pipe,
-  unique,
-  values,
 } from "remeda";
 import { findFilesWithClasses } from "./find-files-with-classes.js";
-import { colorMappings } from "./mappings.js";
-import {
-  getNodesWithText,
-  getStringLiteralsFromFiles,
-  makeTsMorphProject,
-} from "./ts-morph.js";
+import { bg, border, text } from "./mappings.js";
+import { getStringLiteralsFromFiles, makeTsMorphProject } from "./ts-morph.js";
 import {
   addPrefix,
   getStringLiteralClassNameList,
@@ -27,10 +22,12 @@ import {
   hasClasses,
 } from "./utils.js";
 
-const lightClasses = new Set([...keys(colorMappings)]);
-const darkClasses = new Set([
-  ...values(mapValues(colorMappings, addPrefix("dark:"))),
-]);
+const bgLight = new Set(keys(bg));
+const borderLight = new Set(keys(border));
+const textLight = new Set(keys(text));
+const bgDark = new Set(map([...bgLight], addPrefix("dark:")));
+const borderDark = new Set(map([...borderLight], addPrefix("dark:")));
+const textDark = new Set(map([...textLight], addPrefix("dark:")));
 
 const project = makeTsMorphProject();
 
@@ -47,14 +44,30 @@ const countClasses = async (toCount: Set<string>) =>
       className,
       count,
     })),
-    groupByProp("count"),
-    mapValues((vs) => map(vs, ({ className }) => className)),
+    groupBy(({ className }) => className.split("-")[1]),
+    mapValues(groupByProp("count")),
+    mapValues((vs) =>
+      mapValues(vs, (v) => flatMap(v, ({ className }) => className)),
+    ),
   );
 
-const lightCount = await countClasses(lightClasses);
-const darkCount = await countClasses(darkClasses);
+const bgLightCount = await countClasses(bgLight);
+const borderLightCount = await countClasses(borderLight);
+const textLightCount = await countClasses(textLight);
+const bgDarkCount = await countClasses(bgDark);
+const borderDarkCount = await countClasses(borderDark);
+const textDarkCount = await countClasses(textDark);
+
+const counts = {
+  bgLightCount,
+  borderLightCount,
+  textLightCount,
+  bgDarkCount,
+  borderDarkCount,
+  textDarkCount,
+};
 
 writeFileSync(
   "scripts/dark-mode/class-count.json",
-  JSON.stringify({ lightCount, darkCount }, null, 2),
+  JSON.stringify(counts, null, 2),
 );

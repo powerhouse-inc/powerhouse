@@ -8,23 +8,27 @@ occurrence counts across the design-system source.
 
 ## Current pain points
 
-1. **Three near-identical mid-dark text grays** — `text-gray-900` (132), `text-gray-800`
-   (48), `text-gray-700` (114), `text-gray-600` (93). Combined 387 uses, no clear semantic
-   distinction between them. In dark mode they scatter across `slate-100/200/300/400`.
+1. **~~Three near-identical mid-dark text grays~~ — RESOLVED.** The four mid-dark grays were
+   consolidated to two: `gray-900` folded into `text-gray-800` (now 194, primary text) and
+   `gray-600` folded into `text-gray-700` (now 208, secondary text). The dark side collapsed
+   in parallel to `slate-100` (345) and `slate-200` (181).
 
-2. **`dark:text-slate-200` and `dark:text-slate-300` used identically** — both at 85
-   occurrences. There is no meaningful visual or semantic difference. One should be dropped.
+2. **~~`dark:text-slate-200` and `dark:text-slate-300` used identically~~ — RESOLVED.** Merged
+   to `dark:text-slate-200` (now 181) — the lighter of the two reads better as secondary text
+   on a dark background.
 
-3. **`bg-gray-50` and `bg-slate-50` are the same value** — custom palette defines both as
-   `hsl(* * 99%)`, differing only in a barely-perceptible hue shift. Combined 71 uses
-   across two class names that mean the same thing.
+3. **~~`bg-gray-50` and `bg-slate-50` are the same value~~ — RESOLVED.** Both — plus the
+   118 `bg-white` uses — folded into `bg-gray-50` (now 190).
 
-4. **`text-gray-500` (120) and `text-gray-400` (26)** — both used as "muted/secondary" text
-   with no consistent rule for which gets used where.
+4. **`text-gray-500` (122) and `text-gray-400` (26)** — both used as "muted/secondary" text
+   with no consistent rule for which gets used where. Still distinct roles; kept separate
+   (see merge 5 below).
 
-5. **Long tail of one-offs** — 37 light and 24 dark classes appear only once or twice.
-   Most are status/signal colors (amber, green, red for states). These don't belong in the
-   core theme and should be a separate status token system.
+5. **Long tail of one-offs — now the dominant remaining problem.** With the high-frequency
+   core consolidated, the long tail is proportionally larger: 51 light and 40 dark classes
+   now appear only once or twice. Almost all are status/signal colors (amber, green, red,
+   orange, blue for states). These don't belong in the core theme and should move to a
+   separate status token system.
 
 6. **Paired hover colors** — almost every hover state is a separate palette entry one step
    lighter or darker (e.g. `bg-gray-50 hover:bg-gray-100 dark:bg-slate-800 dark:hover:bg-slate-700`).
@@ -75,12 +79,17 @@ a custom theme author will likely want to adjust them independently.
 
 | Token | Light | Dark | Role |
 |---|---|---|---|
-| `--foreground` | `gray-900` | `slate-100` | Primary text — headings, body, labels |
+| `--foreground` | `gray-800` | `slate-100` | Primary text — headings, body, labels |
 | `--secondary-foreground` | `gray-700` | `slate-200` | Secondary labels, captions, form labels |
 | `--muted-foreground` | `gray-500` | `slate-400` | Placeholder text, metadata, helper text |
 | `--subtle-foreground` | `gray-400` | `slate-500` | Disabled states, empty content labels |
 | `--primary-foreground` | `white` | `white` | Text on primary-colored surfaces |
-| `--accent-foreground` | `gray-900` | `slate-50` | Text on accent-colored surfaces |
+| `--accent-foreground` | `gray-800` | `slate-100` | Text on accent-colored surfaces |
+
+> Since the consolidation, `--accent-foreground` now resolves to the same values as
+> `--foreground` in both modes (`gray-800` / `slate-100`). They are kept as separate tokens
+> for semantic clarity and independent theme overrides, but in the default theme they
+> coincide.
 
 ```tsx
 // text hierarchy in a form field
@@ -183,10 +192,10 @@ of `dark:bg-slate-600` alone) and because it will be fully themeable independent
 | Token | Light | Dark |
 |---|---|---|
 | `--sidebar` | `gray-50` | `slate-600` |
-| `--sidebar-foreground` | `gray-700` | `slate-300` |
+| `--sidebar-foreground` | `gray-700` | `slate-200` |
 | `--sidebar-border` | `gray-300` | `gray-800` |
 | `--sidebar-accent` | `gray-100` | `charcoal-900` |
-| `--sidebar-accent-foreground` | `gray-900` | `slate-50` |
+| `--sidebar-accent-foreground` | `gray-800` | `slate-100` |
 
 ### Search highlight
 
