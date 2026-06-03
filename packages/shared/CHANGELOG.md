@@ -1,3 +1,18 @@
+## 6.1.0-dev.16 (2026-06-03)
+
+### 🚀 Features
+
+- **connect:** migrate runtime configuration to powerhouse.config.json ([#2624](https://github.com/powerhouse-inc/powerhouse/pull/2624))
+
+### 🩹 Fixes
+
+- **connect:** namespace reactor storage by base path ([223c39b59](https://github.com/powerhouse-inc/powerhouse/commit/223c39b59))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Guillermo Puente Sandoval @gpuente
+
 ## 6.1.0-dev.15 (2026-06-02)
 
 ### 🚀 Features

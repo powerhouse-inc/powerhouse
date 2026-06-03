@@ -1,3 +1,13 @@
+## 6.1.0-dev.16 (2026-06-03)
+
+### 🚀 Features
+
+- **connect:** migrate runtime configuration to powerhouse.config.json ([#2624](https://github.com/powerhouse-inc/powerhouse/pull/2624))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 6.1.0-dev.15 (2026-06-02)
 
 ### 🚀 Features
