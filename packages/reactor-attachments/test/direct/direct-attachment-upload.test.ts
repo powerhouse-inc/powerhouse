@@ -120,8 +120,7 @@ describe("DirectAttachmentUpload", () => {
         extension: "txt",
       });
       const upload2 = new DirectAttachmentUpload(
-        reservation2.reservationId,
-        { mimeType: "text/plain", fileName: "test", extension: "txt" },
+        reservation2,
         db,
         testStoragePath,
         reservationStore,
@@ -306,8 +305,16 @@ describe("DirectAttachmentUpload", () => {
         const setup = await createTestDirectUpload();
         try {
           const cappedUpload = new DirectAttachmentUpload(
-            setup.reservationId,
-            { mimeType: "text/plain", fileName: "test", extension: "txt" },
+            {
+              reservationId: setup.reservationId,
+              mimeType: "text/plain",
+              fileName: "test",
+              extension: "txt",
+              createdAtUtc: new Date().toISOString(),
+              expiresAtUtc: new Date(Date.now() + 86400000).toISOString(),
+              clientHash: null,
+              sizeBytes: null,
+            },
             setup.db,
             setup.storagePath,
             setup.reservationStore,
@@ -352,8 +359,16 @@ describe("DirectAttachmentUpload", () => {
         const setup = await createTestDirectUpload();
         try {
           const cappedUpload = new DirectAttachmentUpload(
-            setup.reservationId,
-            { mimeType: "text/plain", fileName: "test", extension: "txt" },
+            {
+              reservationId: setup.reservationId,
+              mimeType: "text/plain",
+              fileName: "test",
+              extension: "txt",
+              createdAtUtc: new Date().toISOString(),
+              expiresAtUtc: new Date(Date.now() + 86400000).toISOString(),
+              clientHash: null,
+              sizeBytes: null,
+            },
             setup.db,
             setup.storagePath,
             setup.reservationStore,

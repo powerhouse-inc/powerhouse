@@ -1,13 +1,13 @@
 import type { IAttachmentTransport } from "./interfaces.js";
-import type { TransportResponse } from "./types.js";
+import type { TransportFetchResult } from "./types.js";
 
 /**
  * No-op transport for deployments without remote sync.
- * fetch() always returns null, announce() and push() are no-ops.
+ * fetch() always returns not-found, announce() and push() are no-ops.
  */
 export class NullAttachmentTransport implements IAttachmentTransport {
-  fetch(): Promise<TransportResponse | null> {
-    return Promise.resolve(null);
+  fetch(): Promise<TransportFetchResult> {
+    return Promise.resolve({ kind: "not-found" });
   }
 
   announce(): Promise<void> {

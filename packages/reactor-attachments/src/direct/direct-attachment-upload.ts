@@ -1,16 +1,18 @@
 import { mkdir, rename, rm } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import type { Kysely } from "kysely";
+import type { AttachmentRef } from "@powerhousedao/reactor";
 import type { IAttachmentUpload, IReservationStore } from "../interfaces.js";
 import type {
   AttachmentHeader,
   AttachmentUploadResult,
-  ReserveAttachmentOptions,
+  Reservation,
 } from "../types.js";
 import type {
   AttachmentDatabase,
   AttachmentRow,
 } from "../storage/kysely/types.js";
+import { HashMismatch } from "../errors.js";
 import { createRef } from "../ref.js";
 import {
   storageRelativePath,
@@ -29,34 +31,62 @@ function rowToHeader(row: AttachmentRow): AttachmentHeader {
     source: row.source as "local" | "sync",
     createdAtUtc: row.created_at_utc,
     lastAccessedAtUtc: row.last_accessed_at_utc,
+    expiresAtUtc: null,
   };
 }
 
 export class DirectAttachmentUpload implements IAttachmentUpload {
   readonly reservationId: string;
+  readonly ref: AttachmentRef | null;
+  readonly expiresAtUtc: string;
 
   constructor(
-    reservationId: string,
-    private readonly options: ReserveAttachmentOptions,
+    private readonly reservation: Reservation,
     private readonly db: Kysely<AttachmentDatabase>,
     private readonly basePath: string,
     private readonly reservations: IReservationStore,
     private readonly maxBytes?: number,
   ) {
-    this.reservationId = reservationId;
+    this.reservationId = reservation.reservationId;
+    this.ref =
+      reservation.clientHash != null ? createRef(reservation.clientHash) : null;
+    this.expiresAtUtc = reservation.expiresAtUtc;
   }
 
   async send(
     data: ReadableStream<Uint8Array>,
   ): Promise<AttachmentUploadResult> {
+    if (
+      this.reservation.clientHash != null &&
+      this.reservation.sizeBytes == null
+    ) {
+      throw new Error("hash-first reservation missing sizeBytes");
+    }
     // Stream bytes directly to a temp file while hashing. This caps memory
     // usage at one chunk regardless of payload size, and lets us enforce
     // `maxBytes` before either disk or memory grows unbounded.
+    // When clientHash is present, declaredSizeBytes is enforced during the
+    // stream: exceeding it aborts early, and a short stream fails at end.
+    const declaredSizeBytes =
+      this.reservation.clientHash != null
+        ? (this.reservation.sizeBytes ?? undefined)
+        : undefined;
     const { tempPath, hash, sizeBytes } = await streamHashAndWrite(
       this.basePath,
       data,
-      { maxBytes: this.maxBytes },
+      { maxBytes: this.maxBytes, declaredSizeBytes },
     );
+
+    // Hash verification: if the client claimed a hash, compare before any
+    // DB write or rename. On mismatch the temp file is removed and the
+    // reservation is deliberately retained so the client can retry.
+    if (
+      this.reservation.clientHash != null &&
+      hash !== this.reservation.clientHash
+    ) {
+      await rm(tempPath, { force: true });
+      throw new HashMismatch(this.reservation.clientHash, hash);
+    }
 
     try {
       const existing = await this.db
@@ -81,10 +111,10 @@ export class DirectAttachmentUpload implements IAttachmentUpload {
             .insertInto("attachment")
             .values({
               hash,
-              mime_type: this.options.mimeType,
-              file_name: this.options.fileName,
+              mime_type: this.reservation.mimeType,
+              file_name: this.reservation.fileName,
               size_bytes: sizeBytes,
-              extension: this.options.extension ?? null,
+              extension: this.reservation.extension ?? null,
               status: "available",
               storage_path: relPath,
               source: "local",

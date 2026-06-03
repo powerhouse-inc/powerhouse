@@ -15,6 +15,8 @@ function rowToReservation(row: ReservationRow): Reservation {
     extension: row.extension,
     createdAtUtc: row.created_at_utc,
     expiresAtUtc: row.expires_at_utc,
+    clientHash: row.client_hash,
+    sizeBytes: row.size_bytes !== null ? Number(row.size_bytes) : null,
   };
 }
 
@@ -43,6 +45,8 @@ export class KyselyReservationStore implements IReservationStore {
         extension: options.extension ?? null,
         created_at_utc: now,
         expires_at_utc: expiresAt,
+        client_hash: options.clientHash ?? null,
+        size_bytes: options.sizeBytes ?? null,
       })
       .returningAll()
       .executeTakeFirstOrThrow();

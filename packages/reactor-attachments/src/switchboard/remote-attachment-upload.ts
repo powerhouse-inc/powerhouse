@@ -1,28 +1,30 @@
-import type { JwtHandler } from "@powerhousedao/reactor";
+import type { AttachmentRef, JwtHandler } from "@powerhousedao/reactor";
+import { HashMismatch, SizeMismatch } from "../errors.js";
 import type { IAttachmentUpload } from "../interfaces.js";
-import type {
-  AttachmentUploadResult,
-  ReserveAttachmentOptions,
-} from "../types.js";
+import { createRef } from "../ref.js";
+import type { AttachmentUploadResult, Reservation } from "../types.js";
 import { buildAuthHeaders } from "./build-auth-headers.js";
 import type { SwitchboardClientConfig } from "./remote-reservation-store.js";
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 export class RemoteAttachmentUpload implements IAttachmentUpload {
   readonly reservationId: string;
+  readonly ref: AttachmentRef | null;
+  readonly expiresAtUtc: string;
   private readonly remoteUrl: string;
   private readonly jwtHandler?: JwtHandler;
   private readonly fetchFn: typeof fetch;
-  // The reserve options are kept for symmetry with DirectAttachmentUpload,
-  // but the server already has them tied to the reservation row.
-  private readonly options: ReserveAttachmentOptions;
 
-  constructor(
-    reservationId: string,
-    options: ReserveAttachmentOptions,
-    config: SwitchboardClientConfig,
-  ) {
-    this.reservationId = reservationId;
-    this.options = options;
+  constructor(reservation: Reservation, config: SwitchboardClientConfig) {
+    this.reservationId = reservation.reservationId;
+    this.ref =
+      reservation.clientHash !== null
+        ? createRef(reservation.clientHash)
+        : null;
+    this.expiresAtUtc = reservation.expiresAtUtc;
     this.remoteUrl = config.remoteUrl;
     this.jwtHandler = config.jwtHandler;
     this.fetchFn = (config.fetchFn ?? globalThis.fetch).bind(globalThis);
@@ -49,6 +51,36 @@ export class RemoteAttachmentUpload implements IAttachmentUpload {
       headers: { ...authHeaders, "Content-Type": "application/octet-stream" },
       body,
     });
+
+    if (response.status === 422) {
+      let errorBody: unknown;
+      try {
+        errorBody = await response.json();
+      } catch {
+        throw new Error(
+          `Attachment upload failed: ${response.status} ${response.statusText}`,
+        );
+      }
+      if (isRecord(errorBody)) {
+        if (
+          errorBody.error === "hash_mismatch" &&
+          typeof errorBody.claimed === "string" &&
+          typeof errorBody.actual === "string"
+        ) {
+          throw new HashMismatch(errorBody.claimed, errorBody.actual);
+        }
+        if (
+          errorBody.error === "size_mismatch" &&
+          typeof errorBody.declared === "number" &&
+          typeof errorBody.actual === "number"
+        ) {
+          throw new SizeMismatch(errorBody.declared, errorBody.actual);
+        }
+      }
+      throw new Error(
+        `Attachment upload failed: ${response.status} ${response.statusText}`,
+      );
+    }
 
     if (!response.ok) {
       throw new Error(

@@ -56,9 +56,8 @@ describe("KyselyAttachmentStore integration", () => {
 
     // get triggers re-fetch via transport
     transport.fetch.mockResolvedValueOnce({
-      hash,
-      metadata,
-      body: streamFromString(content),
+      kind: "data",
+      response: { hash, metadata, body: streamFromString(content) },
     });
 
     const response2 = await store.get(hash);

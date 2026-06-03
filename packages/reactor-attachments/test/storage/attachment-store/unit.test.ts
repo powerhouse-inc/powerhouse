@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import type { AttachmentHash } from "@powerhousedao/reactor";
 import type { KyselyAttachmentStore } from "../../../src/storage/kysely/attachment-store.js";
-import { AttachmentNotFound } from "../../../src/errors.js";
+import type { KyselyReservationStore } from "../../../src/storage/kysely/reservation-store.js";
+import { AttachmentNotFound, AttachmentPending } from "../../../src/errors.js";
 import {
   storagePath,
   attachmentBytesExist,
@@ -31,6 +33,7 @@ describe("KyselyAttachmentStore", () => {
   let store: KyselyAttachmentStore;
   let db: Kysely<AttachmentDatabase>;
   let transport: MockTransport;
+  let reservationStore: KyselyReservationStore;
   let testStoragePath: string;
   let cleanup: () => Promise<void>;
 
@@ -39,6 +42,7 @@ describe("KyselyAttachmentStore", () => {
     store = setup.store;
     db = setup.db;
     transport = setup.transport;
+    reservationStore = setup.reservationStore;
     testStoragePath = setup.storagePath;
     cleanup = setup.cleanup;
   });
@@ -197,9 +201,12 @@ describe("KyselyAttachmentStore", () => {
       await store.evict(TEST_HASH);
 
       transport.fetch.mockResolvedValueOnce({
-        hash: TEST_HASH,
-        metadata: TEST_METADATA,
-        body: streamFromString(TEST_CONTENT),
+        kind: "data",
+        response: {
+          hash: TEST_HASH,
+          metadata: TEST_METADATA,
+          body: streamFromString(TEST_CONTENT),
+        },
       });
 
       const response = await store.get(TEST_HASH);
@@ -208,11 +215,11 @@ describe("KyselyAttachmentStore", () => {
       expect(transport.fetch).toHaveBeenCalledWith(TEST_HASH, undefined);
     });
 
-    it("throws AttachmentNotFound when evicted and transport returns null", async () => {
+    it("throws AttachmentNotFound when evicted and transport returns not-found", async () => {
       await store.put(TEST_HASH, TEST_METADATA, streamFromString(TEST_CONTENT));
       await store.evict(TEST_HASH);
 
-      transport.fetch.mockResolvedValueOnce(null);
+      transport.fetch.mockResolvedValueOnce({ kind: "not-found" });
 
       await expect(store.get(TEST_HASH)).rejects.toThrow(AttachmentNotFound);
     });
@@ -250,6 +257,122 @@ describe("KyselyAttachmentStore", () => {
 
     it("throws AttachmentNotFound for unknown hash", async () => {
       await expect(store.stat("nonexistent")).rejects.toThrow(
+        AttachmentNotFound,
+      );
+    });
+  });
+
+  describe("pending state via reservation", () => {
+    const PENDING_CONTENT = "bytes-not-yet-uploaded";
+    const PENDING_BYTES = new TextEncoder().encode(PENDING_CONTENT);
+    const PENDING_HASH = computeHash(PENDING_BYTES);
+    const PENDING_SIZE = PENDING_BYTES.byteLength;
+
+    it("stat returns pending header when a live hash-bearing reservation exists and no attachment row", async () => {
+      await reservationStore.create({
+        mimeType: "application/pdf",
+        fileName: "pending.pdf",
+        extension: "pdf",
+        clientHash: PENDING_HASH as AttachmentHash,
+        sizeBytes: PENDING_SIZE,
+      });
+
+      const header = await store.stat(PENDING_HASH);
+
+      expect(header.status).toBe("pending");
+      expect(header.hash).toBe(PENDING_HASH);
+      expect(header.mimeType).toBe("application/pdf");
+      expect(header.fileName).toBe("pending.pdf");
+      expect(header.sizeBytes).toBe(PENDING_SIZE);
+      expect(typeof header.expiresAtUtc).toBe("string");
+    });
+
+    it("stat returns available header, not pending, when attachment row exists for the same hash", async () => {
+      // Even if a pending reservation exists, an attachment row takes priority.
+      await reservationStore.create({
+        mimeType: "application/pdf",
+        fileName: "pending.pdf",
+        clientHash: PENDING_HASH as AttachmentHash,
+        sizeBytes: PENDING_SIZE,
+      });
+      await store.put(
+        PENDING_HASH,
+        {
+          mimeType: "application/pdf",
+          fileName: "pending.pdf",
+          sizeBytes: PENDING_SIZE,
+          extension: null,
+          createdAtUtc: new Date().toISOString(),
+        },
+        streamFromString(PENDING_CONTENT),
+      );
+
+      const header = await store.stat(PENDING_HASH);
+
+      expect(header.status).toBe("available");
+    });
+
+    it("get throws AttachmentPending when a live hash-bearing reservation exists and no attachment row", async () => {
+      await reservationStore.create({
+        mimeType: "application/pdf",
+        fileName: "pending.pdf",
+        clientHash: PENDING_HASH as AttachmentHash,
+        sizeBytes: PENDING_SIZE,
+      });
+
+      const err = await store.get(PENDING_HASH).catch((e: unknown) => e);
+
+      expect(err).toBeInstanceOf(AttachmentPending);
+      const typed = err as AttachmentPending;
+      expect(typed.hash).toBe(PENDING_HASH);
+      expect(typeof typed.expiresAtUtc).toBe("string");
+    });
+
+    it("get with pending reservation must NEVER return a zero-byte attachment (CRITICAL pin)", async () => {
+      // Regression pin: a 202/pending response must never fall through to the
+      // 'data' path and produce a zero-byte attachment. Verify that get() always
+      // throws AttachmentPending, never resolves.
+      await reservationStore.create({
+        mimeType: "application/pdf",
+        fileName: "pending.pdf",
+        clientHash: PENDING_HASH as AttachmentHash,
+        sizeBytes: PENDING_SIZE,
+      });
+
+      const result = await store
+        .get(PENDING_HASH)
+        .then(() => "resolved")
+        .catch(() => "rejected");
+
+      expect(result).toBe("rejected");
+    });
+
+    it("get throws AttachmentPending rather than calling transport for a pending hash", async () => {
+      await reservationStore.create({
+        mimeType: "text/plain",
+        fileName: "f.txt",
+        clientHash: PENDING_HASH as AttachmentHash,
+        sizeBytes: PENDING_SIZE,
+      });
+
+      await expect(store.get(PENDING_HASH)).rejects.toBeInstanceOf(
+        AttachmentPending,
+      );
+      // The transport must not have been consulted -- the pending reservation
+      // is the authoritative answer.
+      expect(transport.fetch).not.toHaveBeenCalled();
+    });
+
+    it("stat throws AttachmentNotFound when no attachment row and no pending reservation", async () => {
+      await expect(store.stat(PENDING_HASH)).rejects.toBeInstanceOf(
+        AttachmentNotFound,
+      );
+    });
+
+    it("get throws AttachmentNotFound when no attachment row and no pending reservation and transport returns not-found", async () => {
+      transport.fetch.mockResolvedValueOnce({ kind: "not-found" });
+
+      await expect(store.get(PENDING_HASH)).rejects.toBeInstanceOf(
         AttachmentNotFound,
       );
     });

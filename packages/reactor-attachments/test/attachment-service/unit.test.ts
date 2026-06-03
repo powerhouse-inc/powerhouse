@@ -28,6 +28,7 @@ const TEST_HEADER: AttachmentHeader = {
   source: "local",
   createdAtUtc: "2026-01-01T00:00:00.000Z",
   lastAccessedAtUtc: "2026-01-01T00:00:00.000Z",
+  expiresAtUtc: null,
 };
 
 describe("AttachmentService", () => {
@@ -56,14 +57,16 @@ describe("AttachmentService", () => {
         fileName: "invoice",
         extension: "pdf",
         createdAtUtc: "2026-01-01T00:00:00.000Z",
+        expiresAtUtc: "2026-01-02T00:00:00.000Z",
+        clientHash: null,
+        sizeBytes: null,
       });
 
       const handle = await service.reserve(options);
 
       expect(reservations.create).toHaveBeenCalledWith(options);
       expect(uploadFactory.createUpload).toHaveBeenCalledWith(
-        "res-123",
-        options,
+        expect.objectContaining({ reservationId: "res-123" }),
       );
       expect(handle.reservationId).toBe("mock-reservation-id");
     });

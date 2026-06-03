@@ -4,7 +4,7 @@ import type {
   IAttachmentUploadFactory,
   IReservationStore,
 } from "../interfaces.js";
-import type { ReserveAttachmentOptions } from "../types.js";
+import type { Reservation } from "../types.js";
 import type { AttachmentDatabase } from "../storage/kysely/types.js";
 import { DirectAttachmentUpload } from "./direct-attachment-upload.js";
 
@@ -16,13 +16,9 @@ export class DirectAttachmentUploadFactory implements IAttachmentUploadFactory {
     private readonly maxBytes?: number,
   ) {}
 
-  createUpload(
-    reservationId: string,
-    options: ReserveAttachmentOptions,
-  ): IAttachmentUpload {
+  createUpload(reservation: Reservation): IAttachmentUpload {
     return new DirectAttachmentUpload(
-      reservationId,
-      options,
+      reservation,
       this.db,
       this.basePath,
       this.reservations,
