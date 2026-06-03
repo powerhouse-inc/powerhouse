@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import type { PGlite } from "@electric-sql/pglite";
+import type { PGlite, PGliteOptions } from "@electric-sql/pglite";
 import { getConfig } from "@powerhousedao/config/node";
 import { ReactorInstrumentation } from "@powerhousedao/opentelemetry-instrumentation-reactor";
 import { AtomicNodeFs } from "@powerhousedao/pglite-fs";
@@ -250,6 +250,17 @@ async function initServer(
     (d): d is string => d !== null,
   );
   const detectedMajors = new Map<string, number>();
+
+  // delete PGLite's lockfile to recover, in case it didn't have time to close
+  for (const dir of pgliteDirs) {
+    const lockPath = path.join(dir, "postmaster.pid");
+    try {
+      await fs.unlink(lockPath);
+      logger.warn(`Removed stale PGLite lockfile ${lockPath}`);
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+    }
+  }
 
   if (options.forcePgVersion !== undefined && pgliteDirs.length > 0) {
     if (options.migratePglite) {
