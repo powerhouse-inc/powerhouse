@@ -1,4 +1,7 @@
-import type { Operation } from "@powerhousedao/shared/document-model";
+import type {
+  Operation,
+  PHDocument,
+} from "@powerhousedao/shared/document-model";
 import {
   deriveOperationId,
   generateId,
@@ -17,6 +20,24 @@ import {
   createTestOperation,
   createTestOperationStore,
 } from "../../factories.js";
+
+/**
+ * Mirrors the write-cache slicing contract: putState keeps only the last
+ * operation per scope and clears the clipboard. getState returns that sliced
+ * snapshot, so round-trip assertions must compare against the sliced form.
+ */
+function slicedSnapshot(doc: PHDocument): PHDocument {
+  return {
+    ...doc,
+    operations: Object.fromEntries(
+      Object.entries(doc.operations).map(([scope, ops]) => [
+        scope,
+        ops.length ? [ops[ops.length - 1]] : [],
+      ]),
+    ),
+    clipboard: [],
+  };
+}
 
 function createMockOperationStore(): IOperationStore {
   return {
@@ -805,7 +826,7 @@ describe("KyselyWriteCache - Error Handling", () => {
 
       const retrieved = await testCache.getState("doc1", "global", "main", 10);
 
-      expect(retrieved).toEqual(doc);
+      expect(retrieved).toEqual(slicedSnapshot(doc));
     });
   });
 

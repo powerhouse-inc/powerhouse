@@ -74,6 +74,24 @@ function createTestDocument(): PHDocument {
   return doc;
 }
 
+/**
+ * Mirrors the write-cache slicing contract: putState keeps only the last
+ * operation per scope and clears the clipboard. getState returns that sliced
+ * snapshot, so round-trip assertions must compare against the sliced form.
+ */
+function slicedSnapshot(doc: PHDocument): PHDocument {
+  return {
+    ...doc,
+    operations: Object.fromEntries(
+      Object.entries(doc.operations).map(([scope, ops]) => [
+        scope,
+        ops.length ? [ops[ops.length - 1]] : [],
+      ]),
+    ),
+    clipboard: [],
+  };
+}
+
 describe("KyselyWriteCache", () => {
   let cache: KyselyWriteCache;
   let keyframeStore: IKeyframeStore;
@@ -106,7 +124,7 @@ describe("KyselyWriteCache", () => {
 
       const retrieved = await cache.getState("doc1", "global", "main", 1);
 
-      expect(retrieved).toEqual(doc1);
+      expect(retrieved).toEqual(slicedSnapshot(doc1));
     });
 
     it("should deep copy documents on put", () => {
@@ -385,7 +403,7 @@ describe("KyselyWriteCache", () => {
 
       const retrieved = await cache.getState("doc1", "global", "main", 2);
 
-      expect(retrieved).toEqual(doc2);
+      expect(retrieved).toEqual(slicedSnapshot(doc2));
     });
 
     it("should return newest snapshot when targetRevision undefined", async () => {
@@ -399,7 +417,7 @@ describe("KyselyWriteCache", () => {
 
       const retrieved = await cache.getState("doc1", "global", "main");
 
-      expect(retrieved).toEqual(doc3);
+      expect(retrieved).toEqual(slicedSnapshot(doc3));
     });
 
     it("should update LRU on cache hit", async () => {
