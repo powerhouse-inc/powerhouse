@@ -8,6 +8,7 @@ import {
   createBrowserReactor,
   getDefaultDrives,
 } from "@powerhousedao/connect/utils";
+import { createRemoteAttachmentService } from "@powerhousedao/reactor-attachments/client";
 import {
   addPHEventHandlers,
   addRemoteDrive,
@@ -19,6 +20,7 @@ import {
   login,
   refreshReactorDataClient,
   RegistryClient,
+  setAttachmentService,
   setDefaultPHGlobalConfig,
   setDocumentCache,
   setDrives,
@@ -353,6 +355,28 @@ export async function createReactor(localPackage?: DocumentModelLib) {
   const nodeSlug = extractNodeSlugFromPath(path);
   setReactorClientModule(reactorClientModule);
   setReactorClient(reactorClientModule.client);
+
+  const _defaultDrivesUrl = phGlobalConfig.defaultDrivesUrl;
+  if (_defaultDrivesUrl) {
+    let switchboardOrigin: string | undefined;
+    try {
+      switchboardOrigin = new URL(_defaultDrivesUrl).origin;
+    } catch {
+      // malformed URL — skip attachment service construction
+    }
+    if (switchboardOrigin) {
+      const attachmentJwtHandler = async (url: string) => {
+        if (!renown.user) return undefined;
+        return renown.getBearerToken({ expiresIn: 10, aud: url });
+      };
+      const attachmentService = createRemoteAttachmentService({
+        remoteUrl: switchboardOrigin,
+        jwtHandler: attachmentJwtHandler,
+      });
+      setAttachmentService(attachmentService);
+    }
+  }
+
   setDocumentCache(documentCache);
   setRenown(renown);
   setDrives(drives);
@@ -437,6 +461,7 @@ export async function createReactor(localPackage?: DocumentModelLib) {
     const processorHostModule = await createProcessorHostModule(
       reactorClientModule.client,
       readModels,
+      window.ph?.attachmentService,
     );
     if (processorHostModule !== undefined) {
       await Promise.all(

@@ -3,6 +3,7 @@ import type {
   IReactorClient,
   ReactorClientModule,
 } from "@powerhousedao/reactor";
+import type { IAttachmentService } from "@powerhousedao/reactor-attachments/client";
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import type { IRenown } from "@renown/sdk";
 import type {
@@ -28,6 +29,7 @@ export type PHGlobal = PHGlobalConfig & {
   loading?: boolean;
   reactorClientModule?: BrowserReactorClientModule;
   reactorClient?: IReactorClient;
+  attachmentService?: IAttachmentService;
   reactorGraphQLClient?: ReactorGraphQLClient | undefined;
   renown?: IRenown | LOADING;
   vetraPackageManager?: IPackageManager;

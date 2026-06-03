@@ -8,3 +8,4 @@ export type * from "./toast.js";
 export type * from "./upload.js";
 export type * from "./vetra.js";
 export type * from "./package-discovery.js";
+export type * from "./processor-host-module.js";

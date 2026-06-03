@@ -55,3 +55,5 @@ export * from "./use-get-switchboard-link.js";
 export * from "./use-on-drop-file.js";
 export * from "./user-permissions.js";
 export * from "./vetra-packages.js";
+export * from "./attachment-service.js";
+export * from "./use-attachments.js";

@@ -1,6 +1,8 @@
 import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
+import type { IReactorClient } from "@powerhousedao/reactor";
 import type { GraphQLManager } from "@powerhousedao/reactor-api";
 import type { AttachmentBuildResult } from "@powerhousedao/reactor-attachments";
+import type { IAttachmentClient } from "@powerhousedao/reactor-attachments/client";
 import type { PHDocumentHeader } from "@powerhousedao/shared/document-model";
 import type {
   IProcessorHostModule,
@@ -14,6 +16,11 @@ export type {
   IPackageLoader,
   IPackageLoaderOptions,
 } from "./packages/types.js";
+
+export interface IReactorProcessorHostModule extends IProcessorHostModule {
+  client: IReactorClient;
+  attachments: IAttachmentClient;
+}
 
 export type API = {
   httpAdapter: IHttpAdapter;

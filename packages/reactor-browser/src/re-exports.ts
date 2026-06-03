@@ -22,6 +22,7 @@ export type {
   IProcessor,
   IProcessorHostModule,
   IQueue,
+  IReactorClient,
   IRelationalDb,
   Job,
   JwtHandler,

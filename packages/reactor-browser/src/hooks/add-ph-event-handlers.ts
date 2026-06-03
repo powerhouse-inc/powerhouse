@@ -47,6 +47,7 @@ import {
   addVersionEventHandler,
   addWarnOutdatedAppEventHandler,
 } from "./config/connect.js";
+import { addAttachmentServiceEventHandler } from "./attachment-service.js";
 import { addFeaturesEventHandler } from "./features.js";
 
 import { forEachObj } from "remeda";
@@ -103,6 +104,7 @@ const phGlobalEventHandlerRegisterFunctions: PHGlobalEventHandlerAdders = {
   ...commonGlobalEventHandlerFunctions,
   reactorClientModule: addReactorClientModuleEventHandler,
   reactorClient: addReactorClientEventHandler,
+  attachmentService: addAttachmentServiceEventHandler,
   features: addFeaturesEventHandler,
   modal: addModalEventHandler,
   renown: addRenownEventHandler,

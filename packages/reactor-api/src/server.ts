@@ -14,6 +14,7 @@ import type {
 } from "@powerhousedao/reactor";
 import { AttachmentBuilder } from "@powerhousedao/reactor-attachments";
 import type { AttachmentBuildResult } from "@powerhousedao/reactor-attachments";
+import { createAttachmentClient } from "@powerhousedao/reactor-attachments/client";
 import { setupMcpServer } from "@powerhousedao/reactor-mcp";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import type { Kysely } from "kysely";
@@ -54,6 +55,7 @@ import { DocumentPermissionService } from "./services/document-permission.servic
 import type {
   API,
   IPackageLoader,
+  IReactorProcessorHostModule,
   Processor,
   ProcessorDriveFactory,
   ProcessorFactoryBuilder,
@@ -584,11 +586,13 @@ async function _setupAPI(
   dbClosers: Array<() => Promise<void>> = [],
   reactorDriveClient?: IDriveClient,
 ): Promise<API> {
-  const hostModule: IProcessorHostModule = {
+  const hostModule: IReactorProcessorHostModule = {
     relationalDb,
     analyticsStore,
     processorApp,
     config: options.processorConfig,
+    client: reactorClient,
+    attachments: createAttachmentClient(attachments.service),
     dispatch: {
       async execute(docId, branch, actions, signal) {
         const jobInfo = await reactorClient.executeAsync(

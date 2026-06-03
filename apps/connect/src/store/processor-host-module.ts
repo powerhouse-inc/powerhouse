@@ -1,15 +1,29 @@
-import { createAnalyticsStore } from "@powerhousedao/reactor-browser";
-import type { Action } from "@powerhousedao/shared/document-model";
-import { type IProcessorHostModule } from "@powerhousedao/shared/processors";
+import {
+  createAttachmentClient,
+  type AttachmentHeader,
+  type AttachmentResponse,
+  type IAttachmentService,
+} from "@powerhousedao/reactor-attachments/client";
+import {
+  createAnalyticsStore,
+  type IReactorClient,
+  type IReactorProcessorHostModule,
+} from "@powerhousedao/reactor-browser";
 import { getDb } from "../pglite.db.js";
 
-export interface IReactorDispatch {
-  executeAsync(
-    documentIdentifier: string,
-    branch: string,
-    actions: Action[],
-    signal?: AbortSignal,
-  ): Promise<{ id: string; status: string }>;
+/** @deprecated Use IReactorClient from @powerhousedao/reactor-browser */
+export type IReactorDispatch = IReactorClient;
+
+class NullAttachmentService implements IAttachmentService {
+  async reserve(): Promise<never> {
+    throw new Error("NullAttachmentService: no attachment service configured");
+  }
+  async stat(): Promise<AttachmentHeader> {
+    throw new Error("NullAttachmentService: no attachment service configured");
+  }
+  async get(): Promise<AttachmentResponse> {
+    throw new Error("NullAttachmentService: no attachment service configured");
+  }
 }
 
 interface INamedReadModel {
@@ -17,9 +31,10 @@ interface INamedReadModel {
 }
 
 export async function createProcessorHostModule(
-  reactorClient: IReactorDispatch,
+  reactorClient: IReactorClient,
   readModels: INamedReadModel[],
-): Promise<IProcessorHostModule | undefined> {
+  attachmentService?: IAttachmentService,
+): Promise<IReactorProcessorHostModule | undefined> {
   try {
     const { pgLite, relationalDb } = await getDb();
     const { store: analyticsStore } = await createAnalyticsStore({
@@ -30,6 +45,10 @@ export async function createProcessorHostModule(
       relationalDb,
       analyticsStore,
       processorApp,
+      client: reactorClient,
+      attachments: createAttachmentClient(
+        attachmentService ?? new NullAttachmentService(),
+      ),
       dispatch: {
         async execute(docId, branch, actions, signal) {
           const jobInfo = await reactorClient.executeAsync(

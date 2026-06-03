@@ -29,6 +29,9 @@
       "path": "../reactor"
     },
     {
+      "path": "../reactor-attachments"
+    },
+    {
       "path": "../reactor-drive"
     },
     {

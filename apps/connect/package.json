@@ -71,6 +71,7 @@
     "@openpanel/web": "^1.4.1",
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/design-system": "workspace:*",
+    "@powerhousedao/reactor-attachments": "workspace:*",
     "@powerhousedao/document-engineering": "catalog:",
     "@powerhousedao/powerhouse-vetra-packages": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
