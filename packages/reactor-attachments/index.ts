@@ -42,7 +42,7 @@ export {
   type IReservationStore,
   type ParsedRef,
   type HashFirstReserveAttachmentOptions,
-  type LegacyReserveAttachmentOptions,
+  type UploadFirstReserveAttachmentOptions,
   type Reservation,
   type ReserveAttachmentOptions,
   type TransportFetchResult,

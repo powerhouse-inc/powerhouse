@@ -483,7 +483,7 @@ describe("DirectAttachmentUpload hash-first ingest verification", () => {
       }
     });
 
-    it("handle.ref is null in legacy mode (no clientHash)", async () => {
+    it("handle.ref is null in upload-first mode (no clientHash)", async () => {
       const setup = await createTestDirectUpload({
         mimeType: "text/plain",
         fileName: "test",

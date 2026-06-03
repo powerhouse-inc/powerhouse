@@ -29,7 +29,7 @@ export interface IAttachmentService {
    *   permitted (see design doc -- no uniqueness race).
    * - The returned handle's ref field is set immediately to the computed ref.
    *
-   * When options.clientHash is absent (legacy mode):
+   * When options.clientHash is absent (upload-first mode):
    * - No pre-check against the store.
    * - The returned handle's ref field is null until send() completes.
    */
@@ -74,7 +74,7 @@ export interface IAttachmentUpload {
   /**
    * The ref this upload will produce. Set immediately when the
    * reservation carries a client hash (hash-first mode); null in the
-   * legacy flow, where the ref is only known after send() completes.
+   * upload-first flow, where the ref is only known after send() completes.
    */
   ref: AttachmentRef | null;
 

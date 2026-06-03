@@ -55,10 +55,10 @@ export type AttachmentMetadata = {
 };
 
 /**
- * Legacy upload-first reservation. clientHash and sizeBytes are absent;
+ * Upload-first reservation. clientHash and sizeBytes are absent;
  * the ref is only known after send() completes.
  */
-export type LegacyReserveAttachmentOptions = {
+export type UploadFirstReserveAttachmentOptions = {
   mimeType: string;
   fileName: string;
   extension?: string | null;
@@ -70,7 +70,7 @@ export type LegacyReserveAttachmentOptions = {
  * Hash-first reservation. clientHash is present and sizeBytes is required.
  * The ref is known at reservation time; send() verifies the uploaded bytes
  * against the claimed hash and declared size. The explicit "?: undefined"
- * on LegacyReserveAttachmentOptions makes clientHash a narrowing discriminant:
+ * on UploadFirstReserveAttachmentOptions makes clientHash a narrowing discriminant:
  * checking options.clientHash !== undefined narrows sizeBytes to number.
  */
 export type HashFirstReserveAttachmentOptions = {
@@ -96,11 +96,11 @@ export type HashFirstReserveAttachmentOptions = {
  * the service then operates in hash-first mode: reserve() rejects if the
  * content is already available, and send() verifies the uploaded bytes.
  *
- * Use LegacyReserveAttachmentOptions (or omit clientHash) for the legacy
+ * Use UploadFirstReserveAttachmentOptions (or omit clientHash) for the
  * upload-first flow where the ref is only known after send() completes.
  */
 export type ReserveAttachmentOptions =
-  | LegacyReserveAttachmentOptions
+  | UploadFirstReserveAttachmentOptions
   | HashFirstReserveAttachmentOptions;
 
 /**
@@ -161,7 +161,7 @@ export type AttachmentTransportConfig = {
  * Created by reserve(), deleted when upload.send() completes or
  * once expiresAtUtc has passed and a sweep runs.
  * clientHash and sizeBytes are set in hash-first mode and null in
- * legacy upload-first mode.
+ * upload-first mode.
  */
 export type Reservation = {
   reservationId: string;

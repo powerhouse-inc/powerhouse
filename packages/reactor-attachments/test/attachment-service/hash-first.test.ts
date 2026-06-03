@@ -334,7 +334,7 @@ describe("AttachmentService.reserve hash-first mode", () => {
     });
   });
 
-  describe("legacy mode (no clientHash)", () => {
+  describe("upload-first mode (no clientHash)", () => {
     it("skips the stat check and creates a reservation directly", async () => {
       reservations.create.mockResolvedValue({
         ...MOCK_RESERVATION,
@@ -351,7 +351,7 @@ describe("AttachmentService.reserve hash-first mode", () => {
       expect(reservations.create).toHaveBeenCalledOnce();
     });
 
-    it("returns handle with ref null in legacy mode", async () => {
+    it("returns handle with ref null in upload-first mode", async () => {
       reservations.create.mockResolvedValue({
         ...MOCK_RESERVATION,
         clientHash: null,

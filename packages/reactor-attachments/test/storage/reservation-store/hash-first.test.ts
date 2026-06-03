@@ -167,14 +167,14 @@ describe("KyselyReservationStore: hash-first fields", () => {
       expect(fetched.sizeBytes).toBe(512);
     });
 
-    it("stores null clientHash when omitted (legacy mode)", async () => {
+    it("stores null clientHash when omitted (upload-first mode)", async () => {
       const reservation = await reservationStore.create(TEST_OPTIONS);
       const fetched = await reservationStore.get(reservation.reservationId);
 
       expect(fetched.clientHash).toBeNull();
     });
 
-    it("stores null sizeBytes when omitted (legacy mode)", async () => {
+    it("stores null sizeBytes when omitted (upload-first mode)", async () => {
       const reservation = await reservationStore.create(TEST_OPTIONS);
       const fetched = await reservationStore.get(reservation.reservationId);
 
