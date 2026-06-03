@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import type { AttachmentHash, AttachmentRef } from "@powerhousedao/reactor";
-import type { IAttachmentService, IAttachmentUpload } from "../src/interfaces.js";
+import type {
+  IAttachmentService,
+  IAttachmentUpload,
+} from "../src/interfaces.js";
 import type { AttachmentHeader, AttachmentUploadResult } from "../src/types.js";
 import {
   AttachmentAlreadyExists,
@@ -88,7 +91,7 @@ describe("createAttachmentClient", () => {
       for (;;) {
         const { done, value } = await reader.read();
         if (done) break;
-        if (value) chunks.push(value);
+        chunks.push(value);
       }
       const totalLength = chunks.reduce((acc, c) => acc + c.byteLength, 0);
       const combined = new Uint8Array(totalLength);
@@ -107,13 +110,15 @@ describe("createAttachmentClient", () => {
       const s2 = result.stream();
       expect(s1).not.toBe(s2);
 
-      async function drain(s: ReadableStream<Uint8Array>): Promise<Uint8Array[]> {
+      async function drain(
+        s: ReadableStream<Uint8Array>,
+      ): Promise<Uint8Array[]> {
         const r = s.getReader();
         const out: Uint8Array[] = [];
         for (;;) {
           const { done, value } = await r.read();
           if (done) break;
-          if (value) out.push(value);
+          out.push(value);
         }
         return out;
       }

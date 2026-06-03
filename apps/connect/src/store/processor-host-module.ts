@@ -15,14 +15,20 @@ import { getDb } from "../pglite.db.js";
 export type IReactorDispatch = IReactorClient;
 
 class NullAttachmentService implements IAttachmentService {
-  async reserve(): Promise<never> {
-    throw new Error("NullAttachmentService: no attachment service configured");
+  reserve(): Promise<never> {
+    return Promise.reject(
+      new Error("NullAttachmentService: no attachment service configured"),
+    );
   }
-  async stat(): Promise<AttachmentHeader> {
-    throw new Error("NullAttachmentService: no attachment service configured");
+  stat(): Promise<AttachmentHeader> {
+    return Promise.reject(
+      new Error("NullAttachmentService: no attachment service configured"),
+    );
   }
-  async get(): Promise<AttachmentResponse> {
-    throw new Error("NullAttachmentService: no attachment service configured");
+  get(): Promise<AttachmentResponse> {
+    return Promise.reject(
+      new Error("NullAttachmentService: no attachment service configured"),
+    );
   }
 }
 

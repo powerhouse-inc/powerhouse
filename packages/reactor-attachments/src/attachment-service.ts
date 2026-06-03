@@ -1,4 +1,9 @@
 import type { AttachmentHash, AttachmentRef } from "@powerhousedao/reactor";
+import {
+  AttachmentAlreadyExists,
+  AttachmentNotFound,
+  AttachmentPending,
+} from "./errors.js";
 import type {
   IAttachmentReader,
   IAttachmentService,
@@ -6,17 +11,12 @@ import type {
   IAttachmentUploadFactory,
   IReservationStore,
 } from "./interfaces.js";
+import { createRef, parseRef } from "./ref.js";
 import type {
   AttachmentHeader,
   AttachmentResponse,
   ReserveAttachmentOptions,
 } from "./types.js";
-import {
-  AttachmentAlreadyExists,
-  AttachmentNotFound,
-  AttachmentPending,
-} from "./errors.js";
-import { parseRef, createRef } from "./ref.js";
 
 const CLIENT_HASH_PATTERN = /^[a-f0-9]{64}$/;
 

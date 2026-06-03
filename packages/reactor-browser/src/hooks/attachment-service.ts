@@ -6,7 +6,8 @@ import type {
 } from "@powerhousedao/reactor-browser";
 import { makePHEventFunctions } from "./make-ph-event-functions.js";
 
-const attachmentServiceEventFunctions = makePHEventFunctions("attachmentService");
+const attachmentServiceEventFunctions =
+  makePHEventFunctions("attachmentService");
 
 /** Returns the attachment service from window.ph */
 export const useAttachmentService: UsePHGlobalValue<IAttachmentService> =
