@@ -1,3 +1,13 @@
+## 6.1.0-dev.17 (2026-06-03)
+
+### 🩹 Fixes
+
+- **connect:** preserve deep link until remote drives load ([e1ac2ef02](https://github.com/powerhouse-inc/powerhouse/commit/e1ac2ef02))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.1.0-dev.16 (2026-06-03)
 
 ### 🚀 Features
