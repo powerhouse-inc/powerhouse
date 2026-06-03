@@ -14,4 +14,5 @@ export {
   setDriveAvailableOffline,
   setDriveMetadata,
   setDriveSharingType,
+  waitForDocumentReady,
 } from "./drive.js";

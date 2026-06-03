@@ -4,14 +4,40 @@ import {
   spawnSync,
   type ChildProcess,
 } from "node:child_process";
+import { createHash } from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { startRegistry, stopRegistry } from "@powerhousedao/e2e-utils";
+import {
+  REGISTRY_URL,
+  startRegistry,
+  stopRegistry,
+} from "@powerhousedao/e2e-utils";
 import { WORKSPACE_PUBLISH_PACKAGES } from "./lib/workspace-packages.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
 const COMPOSE = ["-f", path.join(ROOT, "docker/docker-compose.yml")];
+
+// Hash of the shasums of every workspace tarball in the local registry.
+// Identifies the published *content*, not the (unchanged) version string.
+function workspaceDigest(): string {
+  const shasums = WORKSPACE_PUBLISH_PACKAGES.map((name) => {
+    try {
+      return execSync(
+        `npm view ${name} dist.shasum --registry ${REGISTRY_URL}`,
+        { stdio: ["ignore", "pipe", "ignore"] },
+      )
+        .toString()
+        .trim();
+    } catch {
+      return `${name}:unknown`;
+    }
+  });
+  return createHash("sha256")
+    .update(shasums.join("\n"))
+    .digest("hex")
+    .slice(0, 16);
+}
 
 function step(name: string): void {
   console.log(`\n━━━ ${name} ━━━`);
@@ -100,6 +126,11 @@ async function main(): Promise<void> {
       path.join(ROOT, "scripts/publish-workspace.ts"),
     ]);
 
+    // Digest of the published tarballs: re-publishing the same version with
+    // different content must invalidate the scaffold's cached `ph init`.
+    const workspaceCachebust = workspaceDigest();
+    console.log(`workspace digest: ${workspaceCachebust}`);
+
     step("3/6 Publish todo package + pre-build scaffold image (parallel)");
     // Once workspace packages are in the local registry, the Dockerfile's
     // `scaffold` stage (toolchain + `ph init` with workspace deps) can build
@@ -130,6 +161,7 @@ async function main(): Promise<void> {
           // when building via `docker compose build`, not this raw `docker
           // build`).
           "--add-host=host.docker.internal:host-gateway",
+          `--build-arg=WORKSPACE_CACHEBUST=${workspaceCachebust}`,
           "-f",
           path.join(ROOT, "docker/Dockerfile"),
           ROOT,
@@ -149,7 +181,11 @@ async function main(): Promise<void> {
     // CACHEBUST invalidates just the `ph install test-todo-package@1.0.0`
     // layer so it re-fetches the latest payload from the freshly-started
     // registry. The scaffold stage we just built provides every prior layer.
-    const env = { ...process.env, CACHEBUST: Date.now().toString() };
+    const env = {
+      ...process.env,
+      CACHEBUST: Date.now().toString(),
+      WORKSPACE_CACHEBUST: workspaceCachebust,
+    };
     runWithEnv("docker", ["compose", ...COMPOSE, "build"], ROOT, env);
     runWithEnv("docker", ["compose", ...COMPOSE, "up", "-d"], ROOT, env);
     bringDownDocker = true;

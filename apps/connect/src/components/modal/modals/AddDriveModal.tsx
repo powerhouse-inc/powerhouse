@@ -8,13 +8,20 @@ import {
   addDrive,
   addRemoteDrive,
   closePHModal,
+  extractDriveSlugFromPath,
+  getDrives,
   setSelectedDrive,
   useAppModules,
   usePHModal,
   useRenown,
   useUser,
+  waitForDocumentReady,
 } from "@powerhousedao/reactor-browser";
 import { t } from "i18next";
+
+// Max wait for a remote drive's initial sync before skipping navigation.
+// Safe to be generous: navigation only fires if the user is still on home.
+const REMOTE_DRIVE_NAV_TIMEOUT_MS = 30_000;
 
 async function requestPublicDriveFromReactor(
   url: string,
@@ -76,7 +83,31 @@ export function AddDriveModal() {
         type: "connect-success",
       });
 
-      setSelectedDrive(driveId);
+      // Navigate into the drive if its initial sync lands in time.
+      // Not awaited so the modal closes immediately.
+      const reactorClient = window.ph?.reactorClient;
+      // Only a still unselected, un-pinned (home) view gets pulled into the
+      // new drive — the user may have navigated elsewhere meanwhile.
+      const stillOnHome = () =>
+        !window.ph?.selectedDriveId &&
+        !extractDriveSlugFromPath(window.location.pathname);
+      void (async () => {
+        try {
+          if (!reactorClient) {
+            return;
+          }
+          await waitForDocumentReady(reactorClient, driveId, {
+            timeoutMs: REMOTE_DRIVE_NAV_TIMEOUT_MS,
+          });
+          const drives = await getDrives(reactorClient);
+          const drive = drives.find((d) => d.header.id === driveId);
+          if (drive && stillOnHome()) {
+            setSelectedDrive(drive);
+          }
+        } catch {
+          // sync still in flight — the drive shows up on home once it lands
+        }
+      })();
     } catch (e) {
       console.error(e);
     }

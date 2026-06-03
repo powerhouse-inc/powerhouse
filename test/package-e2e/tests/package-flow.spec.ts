@@ -221,10 +221,8 @@ test("package-flow: drive + document + edits propagate via switchboard", async (
     await packageDialog.waitFor({ state: "hidden", timeout: 60_000 });
   }
 
-  // Now the drive card is clickable. The card uses an h3 for the drive name.
-  const driveCard = page.getByRole("heading", { name: driveName, level: 3 });
-  await expect(driveCard).toBeVisible({ timeout: 30_000 });
-  await driveCard.click();
+  // Connect navigates into the remote drive once its initial sync lands.
+  await expect(page).toHaveURL(/\/d\/[^/?]+/, { timeout: 30_000 });
   await page.waitForLoadState("networkidle");
 
   // The synced GraphQL-created doc surfaces as a clickable card.
