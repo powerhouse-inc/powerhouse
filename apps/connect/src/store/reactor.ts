@@ -330,11 +330,6 @@ export async function createReactor(localPackage?: DocumentModelLib) {
   // get the drives from the reactor
   const drives = await getDrives(reactorClientModule.client);
 
-  // set the selected drive and node from the path
-  const path = window.location.pathname;
-  const driveSlug = extractDriveSlugFromPath(path);
-  const nodeSlug = extractNodeSlugFromPath(path);
-
   // initialize user from URL parameter
   const didFromUrl = getDidFromUrl();
   await login(didFromUrl, renown);
@@ -350,6 +345,12 @@ export async function createReactor(localPackage?: DocumentModelLib) {
     runtimeConfig.connect ?? {},
   );
   setDefaultPHGlobalConfig(mergedGlobalConfig);
+
+  // Slug extraction needs window.ph.basePath, published by
+  // setDefaultPHGlobalConfig above.
+  const path = window.location.pathname;
+  const driveSlug = extractDriveSlugFromPath(path);
+  const nodeSlug = extractNodeSlugFromPath(path);
   setReactorClientModule(reactorClientModule);
   setReactorClient(reactorClientModule.client);
   setDocumentCache(documentCache);

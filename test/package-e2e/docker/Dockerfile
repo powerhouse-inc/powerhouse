@@ -48,6 +48,12 @@ ARG REGISTRY_URL=http://host.docker.internal:8080
 # Route every install through the local registry (which uplinks to npmjs).
 RUN echo "registry=${REGISTRY_URL}/" > /root/.npmrc
 
+# Digest of the locally published workspace tarballs (set by run.ts).
+# Re-publishing the same version with different content changes it,
+# invalidating the cached installs below.
+ARG WORKSPACE_CACHEBUST=0
+RUN echo "workspace_cachebust=${WORKSPACE_CACHEBUST}" > /dev/null
+
 # Install ph-cmd globally. Use --no-frozen-lockfile semantics by relying on
 # pnpm's default; this is a throwaway image so we don't pin a lockfile.
 RUN pnpm add -g ph-cmd@${TAG}

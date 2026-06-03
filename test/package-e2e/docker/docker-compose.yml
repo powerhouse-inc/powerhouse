@@ -16,6 +16,7 @@ services:
         PACKAGE_NAME: ${PH_PKG_NAME:-test-todo-package}
         REGISTRY_URL: http://host.docker.internal:8080
         CACHEBUST: ${CACHEBUST:-0}
+        WORKSPACE_CACHEBUST: ${WORKSPACE_CACHEBUST:-0}
       # `host.docker.internal` is auto-defined by Docker Desktop (Mac/Win) but
       # not by Linux Docker. The build steps `pnpm add -g ph-cmd@dev` /
       # `ph install` need it to reach the host registry, so route via the
@@ -49,6 +50,7 @@ services:
         BROWSER_REGISTRY_URL: http://localhost:8080
         PH_CONNECT_BASE_PATH: "/"
         CACHEBUST: ${CACHEBUST:-0}
+        WORKSPACE_CACHEBUST: ${WORKSPACE_CACHEBUST:-0}
       # See switchboard service for rationale.
       extra_hosts:
         - "host.docker.internal:host-gateway"

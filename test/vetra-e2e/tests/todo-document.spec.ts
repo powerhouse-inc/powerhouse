@@ -480,13 +480,9 @@ test("Install Package in Consumer Project", async ({ browser }) => {
     await page.waitForLoadState("networkidle");
     await page.waitForTimeout(2000);
 
-    // Step 10: Navigate into the drive by clicking on it
-    const driveCard = page.getByRole("heading", {
-      name: "Test Drive",
-      level: 3,
-    });
-    await expect(driveCard).toBeVisible({ timeout: 10_000 });
-    await driveCard.click();
+    // Step 10: creating a drive navigates straight into it (the URL segment
+    // is the drive's slug, which for a fresh local drive is its id)
+    await expect(page).toHaveURL(/\/d\/[^/?]+/, { timeout: 10_000 });
     await page.waitForLoadState("networkidle");
 
     // Step 11: Create a document of the installed package type

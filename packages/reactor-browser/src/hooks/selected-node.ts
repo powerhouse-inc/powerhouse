@@ -1,68 +1,17 @@
 import type { Node } from "@powerhousedao/shared/document-drive";
-import {
-  createUrlWithPreservedParams,
-  extractDriveSlugFromPath,
-  extractNodeIdFromSlug,
-  extractNodeSlugFromPath,
-  makeNodeSlug,
-  resolveUrlPathname,
-} from "../utils/url.js";
 import { useNodesInSelectedDrive } from "./items-in-selected-drive.js";
-import { makePHEventFunctions } from "./make-ph-event-functions.js";
+import { useSelectedNodeId } from "./set-selected-node.js";
 
-const selectedNodeIdEventFunctions = makePHEventFunctions("selectedNodeId");
-const useSelectedNodeId = selectedNodeIdEventFunctions.useValue;
-const setSelectedNodeId = selectedNodeIdEventFunctions.setValue;
-export const addSelectedNodeIdEventHandler =
-  selectedNodeIdEventFunctions.addEventHandler;
+export {
+  addResetSelectedNodeEventHandler,
+  addSelectedNodeIdEventHandler,
+  addSetSelectedNodeOnPopStateEventHandler,
+  setSelectedNode,
+} from "./set-selected-node.js";
 
 /** Returns the selected node. */
 export function useSelectedNode(): Node | undefined {
   const selectedNodeId = useSelectedNodeId();
   const nodes = useNodesInSelectedDrive();
   return nodes?.find((n) => n.id === selectedNodeId);
-}
-
-/** Sets the selected node (file or folder). */
-export function setSelectedNode(nodeOrNodeSlug: Node | string | undefined) {
-  const nodeSlug =
-    typeof nodeOrNodeSlug === "string"
-      ? nodeOrNodeSlug
-      : makeNodeSlug(nodeOrNodeSlug);
-  const nodeId = extractNodeIdFromSlug(nodeSlug);
-  setSelectedNodeId(nodeId);
-  const driveSlugFromPath = extractDriveSlugFromPath(window.location.pathname);
-  if (!driveSlugFromPath) {
-    return;
-  }
-  if (!nodeSlug) {
-    const pathname = resolveUrlPathname(`/d/${driveSlugFromPath}`);
-    if (pathname === window.location.pathname) {
-      return;
-    }
-    window.history.pushState(null, "", createUrlWithPreservedParams(pathname));
-    return;
-  }
-  const pathname = resolveUrlPathname(`/d/${driveSlugFromPath}/${nodeSlug}`);
-  if (pathname === window.location.pathname) {
-    return;
-  }
-  window.history.pushState(null, "", createUrlWithPreservedParams(pathname));
-}
-
-export function addResetSelectedNodeEventHandler() {
-  window.addEventListener("ph:selectedDriveIdUpdated", () => {
-    setSelectedNodeId(undefined);
-  });
-}
-
-export function addSetSelectedNodeOnPopStateEventHandler() {
-  window.addEventListener("popstate", () => {
-    const pathname = window.location.pathname;
-    const nodeSlug = extractNodeSlugFromPath(pathname);
-    const selectedNodeId = window.ph?.selectedNodeId;
-    if (nodeSlug !== selectedNodeId) {
-      setSelectedNode(nodeSlug);
-    }
-  });
 }
