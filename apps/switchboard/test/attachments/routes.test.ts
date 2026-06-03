@@ -760,9 +760,7 @@ describe("attachment routes", () => {
     it("reserve 201 body includes reservationId, ref, and expiresAtUtc in hash-first mode", async () => {
       const { createHash } = await import("node:crypto");
       const payload = "some content for hash-first";
-      const hash = createHash("sha256")
-        .update(payload, "utf8")
-        .digest("hex");
+      const hash = createHash("sha256").update(payload, "utf8").digest("hex");
 
       const handler = makeReserveHandler(attachments);
       const req = makeReq({
@@ -798,7 +796,7 @@ describe("attachment routes", () => {
       // claimedContent and wrongContent must be the same byte length so that
       // sizeBytes matches and the server reaches the hash check (not size check).
       const claimedContent = "AAAAAAAAAAAAAAAA"; // 16 bytes
-      const wrongContent   = "BBBBBBBBBBBBBBBB"; // 16 bytes, different hash
+      const wrongContent = "BBBBBBBBBBBBBBBB"; // 16 bytes, different hash
       expect(Buffer.byteLength(claimedContent, "utf8")).toBe(
         Buffer.byteLength(wrongContent, "utf8"),
       );
@@ -1063,7 +1061,11 @@ describe("attachment routes", () => {
           fileName: "file.txt",
           sizeBytes: 100,
         }),
-      ).toEqual({ mimeType: "text/plain", fileName: "file.txt", extension: null });
+      ).toEqual({
+        mimeType: "text/plain",
+        fileName: "file.txt",
+        extension: null,
+      });
     });
 
     it("parseReserveOptions rejects sizeBytes of zero", () => {

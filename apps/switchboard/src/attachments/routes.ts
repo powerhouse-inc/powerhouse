@@ -112,7 +112,10 @@ export function parseReserveOptions(
   // Hash-first mode: clientHash triggers this path; sizeBytes is required alongside it.
   // A body with sizeBytes but no clientHash falls through to the legacy path unchanged.
   if (obj.clientHash !== undefined) {
-    if (typeof obj.clientHash !== "string" || !HASH_PATTERN.test(obj.clientHash)) {
+    if (
+      typeof obj.clientHash !== "string" ||
+      !HASH_PATTERN.test(obj.clientHash)
+    ) {
       return null;
     }
     if (
