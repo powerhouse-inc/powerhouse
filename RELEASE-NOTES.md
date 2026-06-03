@@ -1,5 +1,126 @@
 # Release Changelog
 
+## 🚀 **v6.1.0** — May–Jun 2026
+
+### ✨ Highlights
+
+1. **Multi-worker Reactor** — Projection and job execution can now run across a pool of worker threads with sticky per-document routing, idempotent execution, and dynamic model loading
+2. **Product analytics with OpenPanel** — Consent-gated OpenPanel analytics in Connect, tracking both UI events and document operations
+3. **Run Connect under a path prefix** — New `PH_CONNECT_BASE_PATH` lets Connect serve from a sub-path behind a reverse proxy, plus dark-mode styling and embed-friendly rendering
+4. **EIP-712 credential signing in Renown** — Verifiable, signature-checked credentials for login
+
+---
+
+### NEW FEATURES
+
+#### ⚙️ Reactor — Projection Workers & Worker Pool
+
+The reactor can now distribute document projection and job execution across a pool of worker threads instead of running everything on the main thread. This is built on a new worker protocol with a parent-side IPC wrapper, a sticky router that pins a document to a worker, idempotent execution keyed on operation id, and dynamic document-model loading inside workers.
+
+The worker pool is configured through the reactor builder. When `workerPool` is enabled it requires the document-model specs and worker DB/signature configuration:
+
+```typescript
+// enabling the worker pool requires specs + worker config on the builder
+builder
+  .withDocumentModelSpecs(specs)
+  .withWorkerDbConfig(dbConfig)
+  .withWorkerSignatureVerifierSpec(verifierSpec)
+  .withWorkerPool({ enabled: true, numWorkers: 4 });
+```
+
+The build validates this up front — enabling the pool without `withDocumentModelSpecs`, `withWorkerDbConfig`, or `withWorkerSignatureVerifierSpec` throws with an explicit message rather than failing at runtime.
+
+✅ **What to try:** Run a heavy-write benchmark with the worker pool enabled and compare reactor throughput against single-threaded mode.
+
+#### 📊 OpenPanel Analytics in Connect
+
+Connect now integrates [OpenPanel](https://openpanel.dev) analytics with consent gating and user identification. It can track both UI events and document operations (via a dedicated processor), with a pre-init event buffer so nothing is lost during startup.
+
+Configure it through environment variables:
+
+```bash
+PH_CONNECT_OPENPANEL_CLIENT_ID="your-client-id"
+PH_CONNECT_OPENPANEL_API_URL="https://your-openpanel-host"
+PH_CONNECT_OPENPANEL_TRACK_UI_EVENTS="true"
+# Track document operations via the OpenPanel processor
+PH_CONNECT_OPENPANEL_TRACK_OPERATIONS="true"
+```
+
+Analytics only mount after consent is given, and the `useOpenPanel` hook safely swallows synchronous and asynchronous tracking errors so instrumentation never breaks the app.
+
+✅ **What to try:** Set a client id, accept the consent banner, and watch UI and operation events land in your OpenPanel dashboard.
+
+#### 🧭 Serve Connect Under a Path Prefix
+
+Connect can now run under a sub-path (e.g. behind a reverse proxy at `/app`) by setting `PH_CONNECT_BASE_PATH`. The value is normalized and applied to both the Vite asset base and the client router basename, so a bare `app` or `/app` becomes `/app/` consistently.
+
+```bash
+PH_CONNECT_BASE_PATH="/app" ph connect build
+```
+
+#### 🌗 Dark Mode
+
+Connect now ships dark-mode classes across its shell and components (skeleton, banners, cookie banner, error boundary, and more), giving the app a consistent dark theme. ([#2629](https://github.com/powerhouse-inc/powerhouse/pull/2629))
+
+#### ✍️ Renown — EIP-712 Credential Signing & Verification
+
+A new credential module in `@renown/sdk` signs and verifies credentials using EIP-712 typed data (via viem):
+
+```typescript
+import {
+  buildAndSignCredential,
+  recoverCredentialSigner,
+  verifyCredentialSignature,
+} from "@renown/sdk";
+```
+
+`Renown.login` now rejects credentials whose EIP-712 proof doesn't match the issuer address, or whose proof domain `chainId` doesn't match the DID. Malformed proofs return `false` rather than throwing. The credential types are also re-exported from `@powerhousedao/reactor-browser`.
+
+#### 🗂️ Registry — CDN Hardening
+
+The package registry's CDN layer now sends explicit cache headers on responses, returns `503` on upstream errors instead of masking them, and uses a leaner warm-up path.
+
+#### 🧰 `ph init --clone <path>`
+
+`ph init` gained a fast-path flag for scaffolding a new project from an existing local project. It works with `--npm`, rejects yarn/bun, and throws on errors instead of failing silently.
+
+```bash
+ph init my-project --clone ./path/to/existing-project --npm
+```
+
+> Note: this flag was briefly named `--template` during the dev cycle and renamed to `--clone` so `--template` can later mean a project-type preset.
+
+#### 🔗 Connect Remote-Drive Improvements
+
+- **Wait for sync before URL selection** — Connect waits for a remote drive's initial sync before selecting it via URL slug, and materializes default drives before slug resolution
+- **`addRemoteDrive` await-initial-sync option** — `reactor-browser` can now await the initial sync when adding a remote drive
+- **Embed mode** — Connect suppresses its chrome when rendered inside an embed
+
+---
+
+### IMPROVEMENTS
+
+- **Lighter installs** — `rolldown`, `fastify`/`mercurius`, and `@sentry/core` are now optional peer dependencies, so consumers only pull them when needed
+- **Sentry 9 → 10 and OpenTelemetry v1 → v2** migration across switchboard, reactor-bench, and profiling
+- **document-model reducer hardening** — validates operation name format, throws on missing target id, fails on duplicate ids in error/example/move reducers, lets delete recover duplicates (validating move first), and seeds document-scope operations on create
+- **Attachment service** is now wired into the switchboard options
+- **reactor-api** correctly loads subgraphs from registry packages and surfaces real load failures instead of swallowing them
+- **codegen** dedupes `react`, `date-fns`, `vite`, and `rolldown` in generated projects
+
+---
+
+### BUG FIXES
+
+- reactor-browser: fixed renown request spam that was breaking login
+- reactor: `delete` no longer fails on orphaned documents
+- document-drive: properly handles unicode and control characters
+- switchboard: fixed fetch bindings
+- builder-tools: allow `blob:` `worker-src` in the Connect CSP so document download works
+- reactor-attachments: buffer the upload blob (browser limitation workaround)
+- ci: bump Playwright to 1.60.0 to fix install hang on Node 24.16+ ([#2669](https://github.com/powerhouse-inc/powerhouse/pull/2669))
+
+---
+
 ## 🚀 **v6.0.0** — Jan–May 2026
 
 ### ✨ Highlights
