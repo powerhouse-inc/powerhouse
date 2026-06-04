@@ -6,7 +6,7 @@ import { fileURLToPath } from "url";
  * Generates combined CLI documentation from ph-cli and ph-cmd COMMANDS.md files
  * and injects it into the main 00-PowerhouseCLI.md documentation file.
  */
-async function generateCombinedCliDocs() {
+function generateCombinedCliDocs() {
   try {
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = path.dirname(__filename);
