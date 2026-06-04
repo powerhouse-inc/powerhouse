@@ -36,6 +36,12 @@ export interface RegistryConfig {
   storagePath: string;
   cdnCachePath: string;
   uplink?: string;
+  /** How long verdaccio caches npmjs uplink metadata before refetching.
+   *  Accepts verdaccio time strings (`"30s"`, `"2m"`, `"1h"`, etc).
+   *  Default `"2m"` matches verdaccio upstream — shortens the publish-to-
+   *  install propagation window in dev. Bump for production deployments
+   *  that want to reduce npmjs load. */
+  uplinkMaxage?: string;
   webEnabled?: boolean;
   s3?: S3Config;
   notify?: NotifyConfig;
@@ -55,6 +61,9 @@ export interface RegistryCommandArgs {
   storageDir: string;
   cdnCacheDir: string;
   uplink?: string;
+  /** How long verdaccio caches npmjs uplink metadata before refetching.
+   *  See RegistryConfig.uplinkMaxage. */
+  uplinkMaxage?: string;
   s3Bucket?: string;
   s3Endpoint?: string;
   s3Region?: string;

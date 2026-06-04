@@ -3,7 +3,7 @@ import type { RegistryConfig } from "../src/types.js";
 import { buildVerdaccioConfig } from "../src/verdaccio-config.js";
 
 type VerdaccioConfig = ReturnType<typeof buildVerdaccioConfig> & {
-  uplinks: Record<string, { url: string }>;
+  uplinks: Record<string, { url: string; maxage: string }>;
   packages: Record<string, { proxy?: string }>;
 };
 
@@ -42,5 +42,19 @@ describe("buildVerdaccioConfig", () => {
     const cfg = buildVerdaccioConfig(baseConfig()) as VerdaccioConfig;
 
     expect(cfg.packages["@powerhousedao/*"].proxy).toBe("npmjs");
+  });
+
+  it("defaults the uplink maxage to 2m (matching verdaccio's own default)", () => {
+    const cfg = buildVerdaccioConfig(baseConfig()) as VerdaccioConfig;
+
+    expect(cfg.uplinks.npmjs.maxage).toBe("2m");
+  });
+
+  it("honors a custom uplinkMaxage value", () => {
+    const cfg = buildVerdaccioConfig(
+      baseConfig({ uplinkMaxage: "30s" }),
+    ) as VerdaccioConfig;
+
+    expect(cfg.uplinks.npmjs.maxage).toBe("30s");
   });
 });
