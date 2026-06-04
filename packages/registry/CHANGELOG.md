@@ -1,3 +1,13 @@
+## 6.1.0-dev.19 (2026-06-04)
+
+### 🩹 Fixes
+
+- **registry:** make verdaccio uplink maxage configurable, default to 2m ([e3f4942a8](https://github.com/powerhouse-inc/powerhouse/commit/e3f4942a8))
+
+### ❤️ Thank You
+
+- Frank Pfeift
+
 ## 6.1.0-dev.18 (2026-06-04)
 
 ### 🚀 Features

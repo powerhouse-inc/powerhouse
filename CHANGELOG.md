@@ -1,3 +1,15 @@
+## 6.1.0-dev.19 (2026-06-04)
+
+### 🩹 Fixes
+
+- **academy:** escape angle brackets in generated CLI docs for MDX 3 ([b23de77c0](https://github.com/powerhouse-inc/powerhouse/commit/b23de77c0))
+- **academy:** drop unused 'async' on generateCombinedCliDocs (eslint require-await) ([c9024bf00](https://github.com/powerhouse-inc/powerhouse/commit/c9024bf00))
+- **registry:** make verdaccio uplink maxage configurable, default to 2m ([e3f4942a8](https://github.com/powerhouse-inc/powerhouse/commit/e3f4942a8))
+
+### ❤️ Thank You
+
+- Frank Pfeift
+
 ## 6.1.0-dev.18 (2026-06-04)
 
 ### 🚀 Features
