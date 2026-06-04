@@ -112,6 +112,16 @@ async function generateCombinedCliDocs() {
           // Escape curly braces for MDX compatibility
           .replace(/\{/g, "\\{")
           .replace(/\}/g, "\\}")
+          // Escape angle brackets too — CLI help text often contains
+          // placeholders like `<key>`, `<value>`, `<field>` that look
+          // like JSX tags to MDX 3 and break the build. We do this
+          // blindly (including inside backticks) because MDX treats
+          // `\<` / `\>` as literal in both prose and inline-code
+          // contexts; the only failure mode this could cause is a real
+          // JSX tag in the source COMMANDS.md getting neutered, which
+          // we don't currently rely on.
+          .replace(/</g, "\\<")
+          .replace(/>/g, "\\>")
           // Add better spacing around sections
           .replace(/^(###\s+.+)$/gm, "\n$1")
           .replace(/^(####\s+.+)$/gm, "\n$1")
