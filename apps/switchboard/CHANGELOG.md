@@ -1,3 +1,18 @@
+## 6.1.0-dev.18 (2026-06-04)
+
+### 🚀 Features
+
+- **reactor-attachment:** added attachment client and refactored types so they do not pollute shared ([415dd9875](https://github.com/powerhouse-inc/powerhouse/commit/415dd9875))
+- **reactor-attachments:** hash-first refs — client-supplied hash at reserve, pending status, and submit-before-upload support ([6a45c5de5](https://github.com/powerhouse-inc/powerhouse/commit/6a45c5de5))
+
+### 🩹 Fixes
+
+- merge fix ([2ac75f90c](https://github.com/powerhouse-inc/powerhouse/commit/2ac75f90c))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.1.0-dev.17 (2026-06-03)
 
 ### 🩹 Fixes
