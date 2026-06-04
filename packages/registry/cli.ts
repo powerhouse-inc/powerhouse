@@ -44,6 +44,18 @@ export const registryCommand = command({
       defaultValue: () => process.env.REGISTRY_UPLINK,
       defaultValueIsSerializable: true,
     }),
+    uplinkMaxage: option({
+      long: "uplink-maxage",
+      type: optional(string),
+      description:
+        "How long verdaccio caches npmjs uplink metadata before refetching. " +
+        "Accepts verdaccio time strings (e.g. '30s', '2m', '1h'). " +
+        "Default '2m' matches verdaccio upstream — shortens the publish-to-" +
+        "install propagation window in dev. Bump for production deployments " +
+        "that want to reduce npmjs load.",
+      defaultValue: () => process.env.PH_REGISTRY_UPLINK_MAXAGE,
+      defaultValueIsSerializable: true,
+    }),
     s3Bucket: option({
       long: "s3-bucket",
       type: optional(string),

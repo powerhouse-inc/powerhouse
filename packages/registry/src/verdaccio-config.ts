@@ -31,7 +31,13 @@ export function buildVerdaccioConfig(config: RegistryConfig) {
     uplinks: {
       npmjs: {
         url: uplinkUrl,
-        maxage: "15m",
+        // Defaults to verdaccio's own default of 2m. The previous 15m
+        // hardcoded value made publish-to-install dev loops painful —
+        // when a newly-published version landed on npmjs, our registry
+        // kept handing out the pre-publish packument for up to 15min.
+        // Operators that want heavier upstream caching for production
+        // can opt in via --uplink-maxage / PH_REGISTRY_UPLINK_MAXAGE.
+        maxage: config.uplinkMaxage ?? "2m",
         timeout: "30s",
         cache: true,
       },
