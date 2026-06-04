@@ -1,22 +1,17 @@
 import { defineConfig } from "tsdown";
 
-export default [
-  defineConfig({
-    entry: ["./index.ts"],
-    platform: "node",
-    outDir: "dist",
-    outExtensions: () => ({ js: ".js" }),
-    clean: true,
-    dts: true,
-    sourcemap: true,
-  }),
-  defineConfig({
-    entry: { client: "./src/client.ts" },
-    platform: "neutral",
-    outDir: "dist",
-    outExtensions: () => ({ js: ".js" }),
-    clean: false,
-    dts: true,
-    sourcemap: true,
-  }),
-];
+// Both entries build in ONE pass so shared modules (e.g. errors.ts) emit as one
+// chunk -- separate builds inline a private error class per bundle, breaking
+// instanceof across them.
+export default defineConfig({
+  entry: {
+    index: "./index.ts",
+    client: "./src/client.ts",
+  },
+  platform: "node",
+  outDir: "dist",
+  outExtensions: () => ({ js: ".js" }),
+  clean: true,
+  dts: true,
+  sourcemap: true,
+});
