@@ -1,3 +1,13 @@
+## 6.1.0-dev.21 (2026-06-05)
+
+### 🩹 Fixes
+
+- **vetra:** only load tsmorph project for vetra drives ([6763ba87a](https://github.com/powerhouse-inc/powerhouse/commit/6763ba87a))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.1.0-dev.20 (2026-06-05)
 
 This was a version bump only for @powerhousedao/vetra to align it with other projects, there were no code changes.

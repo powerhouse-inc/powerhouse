@@ -1,3 +1,13 @@
+## 6.1.0-dev.21 (2026-06-05)
+
+### 🩹 Fixes
+
+- **registry:** increate jwt expiry to 90 days ([55ce1f00c](https://github.com/powerhouse-inc/powerhouse/commit/55ce1f00c))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.1.0-dev.20 (2026-06-05)
 
 This was a version bump only for @powerhousedao/registry to align it with other projects, there were no code changes.

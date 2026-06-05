@@ -1,3 +1,18 @@
+## 6.1.0-dev.21 (2026-06-05)
+
+### 🚀 Features
+
+- **connect:** make packages live-reload SSE channel opt-in ([66c8936cd](https://github.com/powerhouse-inc/powerhouse/commit/66c8936cd))
+
+### 🩹 Fixes
+
+- **registry:** increate jwt expiry to 90 days ([55ce1f00c](https://github.com/powerhouse-inc/powerhouse/commit/55ce1f00c))
+- **vetra:** only load tsmorph project for vetra drives ([6763ba87a](https://github.com/powerhouse-inc/powerhouse/commit/6763ba87a))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.1.0-dev.20 (2026-06-05)
 
 ### 🩹 Fixes

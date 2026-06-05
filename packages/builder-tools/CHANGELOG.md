@@ -1,3 +1,13 @@
+## 6.1.0-dev.21 (2026-06-05)
+
+### 🚀 Features
+
+- **connect:** make packages live-reload SSE channel opt-in ([66c8936cd](https://github.com/powerhouse-inc/powerhouse/commit/66c8936cd))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.1.0-dev.20 (2026-06-05)
 
 This was a version bump only for @powerhousedao/builder-tools to align it with other projects, there were no code changes.
