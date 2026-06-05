@@ -274,12 +274,14 @@ export async function createReactor(localPackage?: DocumentModelLib) {
     if (r.type === "error") console.error(r.error);
   });
 
-  // Subscribe to the static-mode `/__packages` SSE channel so live publishes
-  // (e.g. ph-clint's publish-reload trigger pushing a new list) flow into the
-  // running tab without a page reload. The channel only exists in static
-  // hosting; failures are silently ignored when running in vite dev or any
-  // host that doesn't speak this protocol.
-  subscribeToPackagesChannel(packageManager);
+  // Opt-in: subscribe to the static-mode `/__packages` SSE channel so live
+  // publishes (e.g. ph-clint's publish-reload trigger pushing a new list) flow
+  // into the running tab without a page reload. Enabled via
+  // `connect.packages.liveReload`; the channel only exists in static hosting
+  // that speaks this protocol.
+  if (runtimeConfig.connect?.packages?.liveReload) {
+    subscribeToPackagesChannel(packageManager);
+  }
 
   // get document models to set in the reactor (all versions)
   const documentModelModules = packageManager.packages
