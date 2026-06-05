@@ -1,3 +1,13 @@
+## 6.1.0-dev.20 (2026-06-05)
+
+### 🩹 Fixes
+
+- **reactor-attachments:** tsdown config bug where shared types were exported twice, breaking instanceof ([5e5d0206f](https://github.com/powerhouse-inc/powerhouse/commit/5e5d0206f))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.1.0-dev.19 (2026-06-04)
 
 This was a version bump only for @powerhousedao/reactor-attachments to align it with other projects, there were no code changes.

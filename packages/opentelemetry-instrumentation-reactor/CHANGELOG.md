@@ -1,3 +1,7 @@
+## 6.1.0-dev.20 (2026-06-05)
+
+This was a version bump only for @powerhousedao/opentelemetry-instrumentation-reactor to align it with other projects, there were no code changes.
+
 ## 6.1.0-dev.19 (2026-06-04)
 
 This was a version bump only for @powerhousedao/opentelemetry-instrumentation-reactor to align it with other projects, there were no code changes.
