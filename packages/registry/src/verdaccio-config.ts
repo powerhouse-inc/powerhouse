@@ -18,7 +18,7 @@ export function buildVerdaccioConfig(config: RegistryConfig) {
     security: {
       api: {
         jwt: {
-          sign: { expiresIn: "5m" },
+          sign: { expiresIn: "90d" },
           verify: {},
         },
       },
