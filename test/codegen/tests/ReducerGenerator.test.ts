@@ -30,6 +30,8 @@ class TestDirectoryManager extends DirectoryManager {
   }
 
   async createSourceFile(project: Project, filePath: string) {
+    // Mirror the base manager (a no-op override here) so this stays genuinely async.
+    await this.ensureExists(filePath);
     // Check if file already exists and return it, otherwise create new one
     const existing = project.getSourceFile(filePath);
     if (existing) {
