@@ -41,7 +41,8 @@
     "audit:download": "tsx tools/registry-audit/download.ts",
     "audit:extract": "tsx tools/registry-audit/extract.ts",
     "audit:analyze": "tsx tools/registry-audit/analyze.ts",
-    "audit:typecheck": "tsx tools/registry-audit/typecheck.ts"
+    "audit:typecheck": "tsx tools/registry-audit/typecheck.ts",
+    "audit:load": "tsx tools/registry-audit/load.ts"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.8.1",

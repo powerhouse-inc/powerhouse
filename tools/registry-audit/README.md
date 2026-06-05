@@ -67,19 +67,67 @@ Options: `--rules <file>` (repeatable), `--pattern <regex>` (repeatable),
 ### 3b. typecheck — `pnpm audit:typecheck` (optional, best-effort)
 
 For each target package, scaffolds a standalone consumer project that installs the
-published tarball with selected dependencies **overridden to the local workspace
-builds**, then runs `tsc --noEmit`. Answers "do these published packages still
-typecheck against the current local build?".
+published tarball (`pnpm install --ignore-workspace --ignore-scripts`), then runs
+`tsc --noEmit` over an entry that imports it — with local workspace packages
+redirected via TypeScript `compilerOptions.paths`. tsc honours `paths` for every
+import in the program, including those inside the published package's own `.d.ts`,
+so the package is effectively type-checked against the **current local build**.
+Answers "do these published packages still typecheck against the current local code?".
 
 ```
 pnpm audit:typecheck [--from-report] [--package <name>] [--override <pkg>=<dir>] [--limit <n>] [--skip-install]
 ```
 
-Defaults to packages flagged in `report.json`. Local workspace packages
-(`packages/*`, `clis/*`) are overridden by default; the local builds must already be
-built. This installs a full dependency tree per package, so it is slow. Note that
-packages which bundle/inline their dependency types won't surface breakage here — the
-pattern scan is the better detector for that.
+- **Defaults to all extracted packages.** Use `--from-report` to limit to the
+  packages flagged by `analyze.ts`, or `--package <name>` for specific ones.
+- Local workspace packages under `packages/*` and `clis/*` that have built types are
+  redirected by default (the local builds must already be built). Add or change
+  redirects with `--override <pkg>=<dir>`.
+- Reported errors are **scoped to the target package's own files**; unrelated
+  transitive-dependency `.d.ts` noise is written to each scaffold's `tsc-errors.txt`
+  but not counted.
+- Installs a full dependency tree per package (the pnpm store is shared, so repeat
+  installs are faster), so it is slow.
+
+> Why `paths` and not pnpm `overrides`? pnpm does not apply `overrides` in an
+> `--ignore-workspace` standalone project, so the redirect would be silently ignored.
+
+**Important — limited signal for this audit.** Published models *bundle/inline* the
+removed types (e.g. their own copy of `AttachmentInput`), and import only surviving
+symbols (`Action`, …) from `document-model`. The inlined copies don't reference the
+local package, so tsc sees nothing wrong and these packages report `ok`. This phase
+only catches a package that *imports a now-removed named export*. For the
+attachment removal, **`analyze.ts` is the authoritative detector**, and the harness
+has been verified to flag removed exports (importing `AttachmentInput` from the local
+`document-model` correctly errors `TS2305`).
+
+### 5. load — `pnpm audit:load` (runtime integration test)
+
+Boots a **real Switchboard** server in-process (in-memory PGlite — no Postgres, no
+external services) and imports each extracted model package into it, building its
+GraphQL subgraph schema. This answers what the static phases can't: *does the
+published model actually load and build against the current core code?*
+
+```
+pnpm audit:load [--package <name>] [--from-report] [--filter <substr>] [--limit <n>] [--timeout <ms>]
+```
+
+- Each package is loaded in its **own subprocess** (`load-worker.ts`), so a
+  hang or hard crash is isolated; a per-package `--timeout` (default 120s) guards hangs.
+- Only packages that export `./document-models` are loaded; others are skipped.
+- The loaded package's runtime `import "document-model"` resolves (via node's
+  module walk-up to the repo's `node_modules`) to the **local** build — so this tests
+  the published model against the *current* core, not the version it was built with.
+- A baseline boot (no package) establishes the core model ids; each package's
+  contribution is the delta. Status per package: `loaded` (registered models +
+  schema built), `no-models` (booted but registered nothing), `boot-failed`
+  (threw — captured), `timeout`.
+- Writes `load-report.json` + a console summary. **Requires the local Switchboard to
+  be built**: `pnpm --filter=@powerhousedao/switchboard build`.
+
+> This is the phase that actually proves the attachment removal's runtime impact:
+> models whose SDL still declares `scalar Attachment` boot fine — the undeclared
+> scalar degrades to a passthrough rather than throwing.
 
 ## Typical run
 
@@ -87,6 +135,8 @@ pattern scan is the better detector for that.
 pnpm audit:download
 pnpm audit:extract
 pnpm audit:analyze --rules tools/registry-audit/rules/legacy-attachments.json
-# then optionally, on just the flagged packages:
+# optional static cross-reference check, on just the flagged packages:
 pnpm audit:typecheck --from-report --limit 5
+# runtime proof: boot a switchboard and import each model:
+pnpm audit:load
 ```

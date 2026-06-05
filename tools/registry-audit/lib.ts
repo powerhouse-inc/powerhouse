@@ -37,6 +37,7 @@ export const EXTRACTED_DIR = join(CACHE_DIR, "extracted");
 export const TYPECHECK_DIR = join(CACHE_DIR, "typecheck");
 export const MANIFEST_PATH = join(CACHE_DIR, "manifest.json");
 export const REPORT_PATH = join(CACHE_DIR, "report.json");
+export const TYPECHECK_REPORT_PATH = join(CACHE_DIR, "typecheck-report.json");
 
 // ---------------------------------------------------------------------------
 // Manifest
