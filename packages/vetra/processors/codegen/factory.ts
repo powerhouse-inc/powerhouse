@@ -1,7 +1,5 @@
-import { buildTsMorphProject } from "@powerhousedao/codegen/utils";
 import type { VetraProcessorConfigType } from "@powerhousedao/config";
 import { VETRA_PROCESSOR_CONFIG_KEY } from "@powerhousedao/config";
-import { getConfig } from "@powerhousedao/config/node";
 import type {
   IProcessorHostModule,
   ProcessorFactoryBuilder,
@@ -9,7 +7,6 @@ import type {
 } from "@powerhousedao/reactor-browser";
 import type { PHDocumentHeader } from "@powerhousedao/shared/document-model";
 import { logger } from "./logger.js";
-import { CodegenProcessor } from "./processor.js";
 
 /**
  * Determines if a drive header matches the Vetra drive criteria.
@@ -42,17 +39,13 @@ function isDriveVetra(
 export const codegenFactoryBuilder: ProcessorFactoryBuilder = (
   module: IProcessorHostModule,
 ) => {
-  return (driveHeader: PHDocumentHeader): ProcessorRecord[] => {
-    const config = getConfig();
-    const cwd = process.cwd();
-    /* Use one instance of ts-morph project, which handles race conditions */
-    const project = buildTsMorphProject(cwd);
+  return async (driveHeader: PHDocumentHeader): Promise<ProcessorRecord[]> => {
     const processorsConfig = module.config ?? new Map<string, unknown>();
     const vetraConfig = processorsConfig.get(VETRA_PROCESSOR_CONFIG_KEY) as
       | VetraProcessorConfigType
       | undefined;
 
-    // Check if this drive should use the Vetra processor
+    // Exit early if it's not a vetra drive
     if (!isDriveVetra(driveHeader, vetraConfig?.driveId)) {
       logger.debug(
         `Drive ${driveHeader.slug} is not a Vetra drive, skipping codegen processor`,
@@ -63,6 +56,20 @@ export const codegenFactoryBuilder: ProcessorFactoryBuilder = (
     logger.info(
       `Drive ${driveHeader.slug} is a Vetra drive, using codegen processor`,
     );
+
+    // Lazy-load codegen only once a Vetra drive is confirmed.
+    const [{ buildTsMorphProject }, { getConfig }, { CodegenProcessor }] =
+      await Promise.all([
+        import("@powerhousedao/codegen/utils"),
+        import("@powerhousedao/config/node"),
+        import("./processor.js"),
+      ]);
+
+    const config = getConfig();
+    const cwd = process.cwd();
+
+    /* Use one instance of ts-morph project, which handles race conditions */
+    const project = buildTsMorphProject(cwd);
     const processor = new CodegenProcessor(
       project,
       config,
