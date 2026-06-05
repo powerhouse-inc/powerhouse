@@ -469,7 +469,6 @@ export function replayDocument<TState extends PHBaseState = PHBaseState>(
         );
         documentState = {
           ...documentState,
-          // TODO how to deal with attachments?
           [scope]: scopeState,
         };
         const scopeInitialOps =

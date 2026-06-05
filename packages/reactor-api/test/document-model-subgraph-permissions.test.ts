@@ -72,7 +72,6 @@ describe("DocumentModelSubgraph Permission Checks", () => {
         global: [],
         local: [],
       },
-      attachments: {},
       clipboard: [],
     }) as unknown as PHDocument;
 

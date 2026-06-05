@@ -62,13 +62,6 @@ query GetDocumentWithOperations(
             timestampUtcMs
             input
             scope
-            attachments {
-              data
-              mimeType
-              hash
-              extension
-              fileName
-            }
             context {
               signer {
                 user {
@@ -173,13 +166,6 @@ query GetDocumentOperations(
         timestampUtcMs
         input
         scope
-        attachments {
-          data
-          mimeType
-          hash
-          extension
-          fileName
-        }
         context {
           signer {
             user {
@@ -409,13 +395,6 @@ query PollSyncEnvelopes(
             timestampUtcMs
             input
             scope
-            attachments {
-              data
-              mimeType
-              hash
-              extension
-              fileName
-            }
             context {
               signer {
                 user {

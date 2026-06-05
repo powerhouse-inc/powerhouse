@@ -33,7 +33,6 @@ export type Scalars = {
 };
 
 export type Action = {
-  readonly attachments?: Maybe<ReadonlyArray<Attachment>>;
   readonly context?: Maybe<ActionContext>;
   readonly id: Scalars["String"]["output"];
   readonly input: Scalars["JSONObject"]["output"];
@@ -51,29 +50,12 @@ export type ActionContextInput = {
 };
 
 export type ActionInput = {
-  readonly attachments?: InputMaybe<ReadonlyArray<AttachmentInput>>;
   readonly context?: InputMaybe<ActionContextInput>;
   readonly id: Scalars["String"]["input"];
   readonly input: Scalars["JSONObject"]["input"];
   readonly scope: Scalars["String"]["input"];
   readonly timestampUtcMs: Scalars["String"]["input"];
   readonly type: Scalars["String"]["input"];
-};
-
-export type Attachment = {
-  readonly data: Scalars["String"]["output"];
-  readonly extension?: Maybe<Scalars["String"]["output"]>;
-  readonly fileName?: Maybe<Scalars["String"]["output"]>;
-  readonly hash: Scalars["String"]["output"];
-  readonly mimeType: Scalars["String"]["output"];
-};
-
-export type AttachmentInput = {
-  readonly data: Scalars["String"]["input"];
-  readonly extension?: InputMaybe<Scalars["String"]["input"]>;
-  readonly fileName?: InputMaybe<Scalars["String"]["input"]>;
-  readonly hash: Scalars["String"]["input"];
-  readonly mimeType: Scalars["String"]["input"];
 };
 
 export type ChannelMeta = {
@@ -637,16 +619,6 @@ export type GetDocumentWithOperationsQuery = {
                     readonly timestampUtcMs: string;
                     readonly input: NonNullable<unknown>;
                     readonly scope: string;
-                    readonly attachments?:
-                      | ReadonlyArray<{
-                          readonly data: string;
-                          readonly mimeType: string;
-                          readonly hash: string;
-                          readonly extension?: string | null | undefined;
-                          readonly fileName?: string | null | undefined;
-                        }>
-                      | null
-                      | undefined;
                     readonly context?:
                       | {
                           readonly signer?:
@@ -798,16 +770,6 @@ export type GetDocumentOperationsQuery = {
         readonly timestampUtcMs: string;
         readonly input: NonNullable<unknown>;
         readonly scope: string;
-        readonly attachments?:
-          | ReadonlyArray<{
-              readonly data: string;
-              readonly mimeType: string;
-              readonly hash: string;
-              readonly extension?: string | null | undefined;
-              readonly fileName?: string | null | undefined;
-            }>
-          | null
-          | undefined;
         readonly context?:
           | {
               readonly signer?:
@@ -1145,16 +1107,6 @@ export type PollSyncEnvelopesQuery = {
                 readonly timestampUtcMs: string;
                 readonly input: NonNullable<unknown>;
                 readonly scope: string;
-                readonly attachments?:
-                  | ReadonlyArray<{
-                      readonly data: string;
-                      readonly mimeType: string;
-                      readonly hash: string;
-                      readonly extension?: string | null | undefined;
-                      readonly fileName?: string | null | undefined;
-                    }>
-                  | null
-                  | undefined;
                 readonly context?:
                   | {
                       readonly signer?:
@@ -1289,13 +1241,6 @@ export const GetDocumentWithOperationsDocument = gql`
               timestampUtcMs
               input
               scope
-              attachments {
-                data
-                mimeType
-                hash
-                extension
-                fileName
-              }
               context {
                 signer {
                   user {
@@ -1408,13 +1353,6 @@ export const GetDocumentOperationsDocument = gql`
           timestampUtcMs
           input
           scope
-          attachments {
-            data
-            mimeType
-            hash
-            extension
-            fileName
-          }
           context {
             signer {
               user {
@@ -1665,13 +1603,6 @@ export const PollSyncEnvelopesDocument = gql`
               timestampUtcMs
               input
               scope
-              attachments {
-                data
-                mimeType
-                hash
-                extension
-                fileName
-              }
               context {
                 signer {
                   user {

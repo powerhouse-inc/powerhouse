@@ -14,7 +14,6 @@ import type {
   DeleteOperationExampleInput,
   DeleteOperationInput,
   DeleteStateExampleInput,
-  DocumentFile,
   DocumentModelGlobalState,
   DocumentSpecification,
   LoadStateActionInput,
@@ -97,16 +96,6 @@ export function DocumentActionSchema() {
     SetPreferredEditorActionSchema(),
     UndoActionSchema(),
   ]);
-}
-
-export function DocumentFileSchema(): z.ZodObject<Properties<DocumentFile>> {
-  return z.object({
-    __typename: z.literal("DocumentFile").optional(),
-    data: z.string(),
-    extension: z.string().nullable(),
-    fileName: z.string().nullable(),
-    mimeType: z.string(),
-  });
 }
 
 export function LoadStateActionSchema(): z.ZodObject<

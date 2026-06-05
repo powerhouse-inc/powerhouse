@@ -46,40 +46,40 @@ type AttachmentInput = Attachment & {
 
 2. **Transport-agnostic.** The mechanism for moving bytes between reactors is pluggable (`IAttachmentTransport`), just as `IChannel`/`IChannelFactory` is pluggable for operation sync.
 
-3. **Refs are values.** An `AttachmentRef` is a plain string that travels inside domain action inputs. Document model schemas declare attachment fields using the `Attachment` scalar. The reducer stores the ref in state like any other field. There are no special core actions, no attachment set on the document, and no read model for reference tracking.
+3. **Refs are values.** An `AttachmentRef` is a protocol-prefixed string (`attachment://v<version>:<hash>`) that travels inside domain action inputs. Document model schemas declare attachment fields using the `AttachmentRef` scalar. The reducer stores the ref in state like any other field. There are no special core actions, no attachment set on the document, and no read model for reference tracking.
 
 4. **Lazy data availability.** A reactor may have an `AttachmentRef` in document state before the binary data is available locally. This is expected. When the data is needed, the attachment service fetches it from a peer via the transport layer. The data and the ref are independent concerns.
 
 5. **LRU eviction.** Garbage collection is storage-pressure-driven, not reference-count-driven. The store evicts least-recently-accessed data when storage limits are reached. Evicted data retains its metadata and can be re-fetched from any peer that has the bytes.
 
-### The Attachment Scalar
+### The AttachmentRef Scalar
 
-The `Attachment` scalar in a document model GraphQL schema declares that a field holds an `AttachmentRef`. The codegen pipeline already detects `": Attachment"` in operation schemas and generates appropriate types.
+The `AttachmentRef` scalar in a document model GraphQL schema declares that a field holds an attachment reference of the form `attachment://v<version>:<hash>`. Codegen maps it to a branded TypeScript string type and a Zod validator that enforces the protocol prefix.
 
 ```graphql
 # In a document model schema
-scalar Attachment
+scalar AttachmentRef
 
 input AttachInvoiceInput {
   vendorName: String!
   amount: Float!
-  scan: Attachment!
+  scan: AttachmentRef!
 }
 ```
 
-The generated TypeScript type maps `Attachment` to `string` (specifically `AttachmentRef`). The reducer treats it as an opaque string:
+The generated TypeScript type for `AttachmentRef` is the branded string `` `attachment://v${number}:${string}` ``. The reducer treats it as an opaque ref:
 
 ```ts
 attachInvoiceOperation(state, action) {
   state.invoices.push({
     vendorName: action.input.vendorName,
     amount: action.input.amount,
-    scan: action.input.scan, // AttachmentRef string
+    scan: action.input.scan, // AttachmentRef
   });
 }
 ```
 
-The `Attachment` scalar is the entire integration surface between document models and the attachment system. Document model authors do not interact with `IAttachmentService`, `IAttachmentStore`, or `IAttachmentTransport` -- they just declare `Attachment` fields and use the refs they receive from the upload flow.
+The `AttachmentRef` scalar is the entire integration surface between document models and the attachment system. Document model authors do not interact with `IAttachmentService`, `IAttachmentStore`, or `IAttachmentTransport` -- they just declare `AttachmentRef` fields and use the refs they receive from the upload flow.
 
 ### Attachment Lifecycle
 
@@ -849,23 +849,20 @@ S3 lifecycle rules can handle optional physical cleanup:
 
 ## Migration from Inline Attachments
 
-The inline base64 attachment format will coexist with `AttachmentRef` during a transition period.
+The legacy inline base64 attachment format has been removed. Attachment references now flow exclusively through the `AttachmentRef` scalar and the attachment service.
 
-### Phase 1: Add attachment service (non-breaking)
+### Phase 1: Add attachment service (done)
 
-- Deploy `IAttachmentService` and `IAttachmentStore` alongside the existing inline mechanism.
-- Actions can contain either inline `AttachmentInput[]` or `AttachmentRef` values in their input fields.
-- Inline attachments are processed as today. Refs resolve through the attachment service.
-- New attachments should use the multi-phase upload flow. The codegen `Attachment` scalar resolves to `AttachmentRef` (string).
+- `IAttachmentService` and `IAttachmentStore` are deployed.
+- New attachments use the multi-phase upload flow; the codegen `AttachmentRef` scalar resolves to a protocol-prefixed string.
 
 ### Phase 2: Migrate sync to use refs
 
-- Sync channels stop transferring inline attachment data.
+- Sync channels no longer transfer inline attachment data.
 - Attachment data moves between reactors via `IAttachmentTransport` (lazy fetch or eager push).
 - The transport config becomes part of the remote/channel configuration.
 
-### Phase 3: Remove inline support
+### Phase 3: Remove inline support (done)
 
-- The `attachments` field on `Action` is removed.
+- The `attachments` field on `Action` and the inline `AttachmentInput` / `Attachment` types have been removed.
 - All attachment data flows through `IAttachmentService`, `IAttachmentStore`, and `IAttachmentTransport`.
-- The `Attachment` type with inline `data: string` is deprecated and removed.

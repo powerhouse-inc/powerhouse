@@ -17,7 +17,6 @@ export type CodegenOperation = {
   schema: string | null;
   template: string | null;
   hasInput: boolean;
-  hasAttachment: boolean | undefined;
   scope: string;
   state: string;
   errors?: OperationErrorSpecification[];

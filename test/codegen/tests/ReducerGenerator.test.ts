@@ -82,7 +82,6 @@ describe("ReducerGenerator Integration", () => {
           template: null,
           scope: "global",
           hasInput: true,
-          hasAttachment: false,
           state: "",
         },
         {
@@ -96,7 +95,6 @@ describe("ReducerGenerator Integration", () => {
           template: null,
           scope: "global",
           hasInput: false,
-          hasAttachment: false,
           state: "",
         },
       ];
@@ -166,7 +164,6 @@ describe("ReducerGenerator Integration", () => {
           template: null,
           scope: "global",
           hasInput: true,
-          hasAttachment: false,
           state: "",
         },
       ];
@@ -197,7 +194,6 @@ describe("ReducerGenerator Integration", () => {
           template: null,
           scope: "global",
           hasInput: false,
-          hasAttachment: false,
           state: "",
         },
       ];
@@ -249,7 +245,6 @@ describe("ReducerGenerator Integration", () => {
             template: null,
             scope: "global",
             hasInput: true,
-            hasAttachment: false,
             state: "",
           },
         ],
@@ -326,7 +321,6 @@ describe("ReducerGenerator Integration", () => {
           template: null,
           scope: "global",
           hasInput: true,
-          hasAttachment: false,
           state: "",
         },
       ];
@@ -374,7 +368,6 @@ describe("ReducerGenerator Integration", () => {
           template: null,
           scope: "global",
           hasInput: true,
-          hasAttachment: false,
           state: "",
         },
         {
@@ -388,7 +381,6 @@ describe("ReducerGenerator Integration", () => {
           template: null,
           scope: "global",
           hasInput: false,
-          hasAttachment: false,
           state: "",
         },
         {
@@ -402,7 +394,6 @@ describe("ReducerGenerator Integration", () => {
           template: null,
           scope: "global",
           hasInput: false,
-          hasAttachment: false,
           state: "",
         },
       ];
@@ -445,7 +436,6 @@ describe("ReducerGenerator Integration", () => {
           template: null,
           scope: "global",
           hasInput: true,
-          hasAttachment: false,
           state: "",
         },
       ];
@@ -490,7 +480,6 @@ describe("ReducerGenerator Integration", () => {
           template: null,
           scope: "global",
           hasInput: true,
-          hasAttachment: false,
           state: "",
         },
       ];
@@ -530,7 +519,6 @@ describe("ReducerGenerator Integration", () => {
           template: null,
           scope: "global",
           hasInput: true,
-          hasAttachment: false,
           state: "",
         },
       ];
@@ -567,7 +555,6 @@ describe("ReducerGenerator Integration", () => {
           template: null,
           scope: "global",
           hasInput: true,
-          hasAttachment: false,
           state: "",
         },
       ];
@@ -597,7 +584,6 @@ describe("ReducerGenerator Integration", () => {
           template: null,
           scope: "global",
           hasInput: true,
-          hasAttachment: false,
           state: "",
         },
       ];

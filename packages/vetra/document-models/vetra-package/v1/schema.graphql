@@ -1,7 +1,7 @@
 scalar Unknown
 scalar DateTime
-scalar Attachment
 scalar Address
+scalar AttachmentRef
 scalar Amount_Tokens
 scalar EthereumAddress
 scalar EmailAddress
