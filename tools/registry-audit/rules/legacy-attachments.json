@@ -1,0 +1,43 @@
+{
+  "name": "legacy-attachments",
+  "description": "Detects references to the legacy attachment system removed in 163a5f6f1. Published models authored against the old system bundle these now-removed symbols and may be incompatible with the current document-model.",
+  "rules": [
+    {
+      "id": "removed-scalar-attachment",
+      "description": "Old `Attachment` GraphQL scalar (renamed to AttachmentRef). Appears as a Scalars key in generated schema types.",
+      "severity": "high",
+      "pattern": "\\bAttachment:\\s*\\{",
+      "include": ["gen/schema/", "types"]
+    },
+    {
+      "id": "removed-type-documentfile",
+      "description": "Removed `DocumentFile` type.",
+      "severity": "high",
+      "pattern": "\\bDocumentFile\\b"
+    },
+    {
+      "id": "removed-type-attachmentinput",
+      "description": "Removed `AttachmentInput` type.",
+      "severity": "high",
+      "pattern": "\\bAttachmentInput\\b"
+    },
+    {
+      "id": "removed-type-actionwithattachment",
+      "description": "Removed `ActionWithAttachment` type.",
+      "severity": "high",
+      "pattern": "\\bActionWithAttachment\\b"
+    },
+    {
+      "id": "removed-type-fileregistry",
+      "description": "Removed `FileRegistry` type.",
+      "severity": "medium",
+      "pattern": "\\bFileRegistry\\b"
+    },
+    {
+      "id": "removed-field-attachments",
+      "description": "Removed `attachments` field on Action: the typed declaration (`attachments?: AttachmentInput[]`) or the legacy createAction code that read/wrote `action.attachments`. Deliberately scoped to `action.attachments` to avoid matching unrelated `.attachments` members (e.g. UI controllers).",
+      "severity": "medium",
+      "pattern": "attachments\\??\\s*:\\s*(?:Maybe<)?\\s*AttachmentInput|\\baction\\.attachments\\b"
+    }
+  ]
+}

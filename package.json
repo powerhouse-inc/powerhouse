@@ -37,7 +37,11 @@
     "count-classes": "tsx scripts/dark-mode/count-classes.ts",
     "add-classes": "tsx scripts/dark-mode/add-classes.ts",
     "replace-classes": "tsx scripts/dark-mode/replace-classes.ts",
-    "remove-classes": "tsx scripts/dark-mode/remove-classes.ts"
+    "remove-classes": "tsx scripts/dark-mode/remove-classes.ts",
+    "audit:download": "tsx tools/registry-audit/download.ts",
+    "audit:extract": "tsx tools/registry-audit/extract.ts",
+    "audit:analyze": "tsx tools/registry-audit/analyze.ts",
+    "audit:typecheck": "tsx tools/registry-audit/typecheck.ts"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.8.1",
