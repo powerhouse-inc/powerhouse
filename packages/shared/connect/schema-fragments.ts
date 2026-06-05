@@ -115,6 +115,12 @@ export const phConnectRuntimeConfigSchema = {
             "When false, Connect refuses to load any package that wasn't bundled at build time. Affirmative replacement for the legacy PH_CONNECT_EXTERNAL_PACKAGES_DISABLED env var.",
           default: true,
         },
+        liveReload: {
+          type: "boolean",
+          description:
+            "When true, Connect subscribes to the static-mode `/__packages` SSE channel so live publishes flow into the running tab without a page reload. Only works under hosting that serves this channel (e.g. ph-clint static mode).",
+          default: false,
+        },
       },
     },
     drives: {

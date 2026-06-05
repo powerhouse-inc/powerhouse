@@ -35,6 +35,7 @@ export const DEFAULT_CONNECT_CONFIG: PHConnectRuntimeConfig = {
   },
   packages: {
     externalEnabled: true,
+    liveReload: false,
   },
   drives: {
     allowAddDrive: true,
