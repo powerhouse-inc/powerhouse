@@ -1,3 +1,7 @@
+## 6.2.0-dev.2 (2026-06-07)
+
+This was a version bump only for @powerhousedao/vetra to align it with other projects, there were no code changes.
+
 ## 6.2.0-dev.1 (2026-06-06)
 
 This was a version bump only for @powerhousedao/vetra to align it with other projects, there were no code changes.
