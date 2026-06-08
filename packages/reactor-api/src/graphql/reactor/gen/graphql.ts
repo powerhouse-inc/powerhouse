@@ -42,7 +42,6 @@ export type Scalars = {
 };
 
 export type Action = {
-  readonly attachments?: Maybe<ReadonlyArray<Attachment>>;
   readonly context?: Maybe<ActionContext>;
   readonly id: Scalars["String"]["output"];
   readonly input: Scalars["JSONObject"]["output"];
@@ -60,29 +59,12 @@ export type ActionContextInput = {
 };
 
 export type ActionInput = {
-  readonly attachments?: InputMaybe<ReadonlyArray<AttachmentInput>>;
   readonly context?: InputMaybe<ActionContextInput>;
   readonly id: Scalars["String"]["input"];
   readonly input: Scalars["JSONObject"]["input"];
   readonly scope: Scalars["String"]["input"];
   readonly timestampUtcMs: Scalars["String"]["input"];
   readonly type: Scalars["String"]["input"];
-};
-
-export type Attachment = {
-  readonly data: Scalars["String"]["output"];
-  readonly extension?: Maybe<Scalars["String"]["output"]>;
-  readonly fileName?: Maybe<Scalars["String"]["output"]>;
-  readonly hash: Scalars["String"]["output"];
-  readonly mimeType: Scalars["String"]["output"];
-};
-
-export type AttachmentInput = {
-  readonly data: Scalars["String"]["input"];
-  readonly extension?: InputMaybe<Scalars["String"]["input"]>;
-  readonly fileName?: InputMaybe<Scalars["String"]["input"]>;
-  readonly hash: Scalars["String"]["input"];
-  readonly mimeType: Scalars["String"]["input"];
 };
 
 export type ChannelMeta = {
@@ -646,16 +628,6 @@ export type GetDocumentWithOperationsQuery = {
                     readonly timestampUtcMs: string;
                     readonly input: NonNullable<unknown>;
                     readonly scope: string;
-                    readonly attachments?:
-                      | ReadonlyArray<{
-                          readonly data: string;
-                          readonly mimeType: string;
-                          readonly hash: string;
-                          readonly extension?: string | null | undefined;
-                          readonly fileName?: string | null | undefined;
-                        }>
-                      | null
-                      | undefined;
                     readonly context?:
                       | {
                           readonly signer?:
@@ -807,16 +779,6 @@ export type GetDocumentOperationsQuery = {
         readonly timestampUtcMs: string;
         readonly input: NonNullable<unknown>;
         readonly scope: string;
-        readonly attachments?:
-          | ReadonlyArray<{
-              readonly data: string;
-              readonly mimeType: string;
-              readonly hash: string;
-              readonly extension?: string | null | undefined;
-              readonly fileName?: string | null | undefined;
-            }>
-          | null
-          | undefined;
         readonly context?:
           | {
               readonly signer?:
@@ -1154,16 +1116,6 @@ export type PollSyncEnvelopesQuery = {
                 readonly timestampUtcMs: string;
                 readonly input: NonNullable<unknown>;
                 readonly scope: string;
-                readonly attachments?:
-                  | ReadonlyArray<{
-                      readonly data: string;
-                      readonly mimeType: string;
-                      readonly hash: string;
-                      readonly extension?: string | null | undefined;
-                      readonly fileName?: string | null | undefined;
-                    }>
-                  | null
-                  | undefined;
                 readonly context?:
                   | {
                       readonly signer?:
@@ -1357,8 +1309,6 @@ export type ResolversTypes = ResolversObject<{
   ActionContext: ResolverTypeWrapper<ActionContext>;
   ActionContextInput: ActionContextInput;
   ActionInput: ActionInput;
-  Attachment: ResolverTypeWrapper<Attachment>;
-  AttachmentInput: AttachmentInput;
   Boolean: ResolverTypeWrapper<Scalars["Boolean"]["output"]>;
   ChannelMeta: ResolverTypeWrapper<ChannelMeta>;
   ChannelMetaInput: ChannelMetaInput;
@@ -1418,8 +1368,6 @@ export type ResolversParentTypes = ResolversObject<{
   ActionContext: ActionContext;
   ActionContextInput: ActionContextInput;
   ActionInput: ActionInput;
-  Attachment: Attachment;
-  AttachmentInput: AttachmentInput;
   Boolean: Scalars["Boolean"]["output"];
   ChannelMeta: ChannelMeta;
   ChannelMetaInput: ChannelMetaInput;
@@ -1475,11 +1423,6 @@ export type ActionResolvers<
   ParentType extends ResolversParentTypes["Action"] =
     ResolversParentTypes["Action"],
 > = ResolversObject<{
-  attachments?: Resolver<
-    Maybe<ReadonlyArray<ResolversTypes["Attachment"]>>,
-    ParentType,
-    ContextType
-  >;
   context?: Resolver<
     Maybe<ResolversTypes["ActionContext"]>,
     ParentType,
@@ -1502,22 +1445,6 @@ export type ActionContextResolvers<
     ParentType,
     ContextType
   >;
-}>;
-
-export type AttachmentResolvers<
-  ContextType = Context,
-  ParentType extends ResolversParentTypes["Attachment"] =
-    ResolversParentTypes["Attachment"],
-> = ResolversObject<{
-  data?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
-  extension?: Resolver<
-    Maybe<ResolversTypes["String"]>,
-    ParentType,
-    ContextType
-  >;
-  fileName?: Resolver<Maybe<ResolversTypes["String"]>, ParentType, ContextType>;
-  hash?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
-  mimeType?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
 }>;
 
 export type ChannelMetaResolvers<
@@ -2110,7 +2037,6 @@ export type TouchChannelResultResolvers<
 export type Resolvers<ContextType = Context> = ResolversObject<{
   Action?: ActionResolvers<ContextType>;
   ActionContext?: ActionContextResolvers<ContextType>;
-  Attachment?: AttachmentResolvers<ContextType>;
   ChannelMeta?: ChannelMetaResolvers<ContextType>;
   DateTime?: GraphQLScalarType;
   DeadLetterInfo?: DeadLetterInfoResolvers<ContextType>;
@@ -2171,25 +2097,12 @@ export function ActionContextInputSchema(): z.ZodObject<
 
 export function ActionInputSchema(): z.ZodObject<Properties<ActionInput>> {
   return z.object({
-    attachments: z.array(z.lazy(() => AttachmentInputSchema())).nullish(),
     context: z.lazy(() => ActionContextInputSchema().nullish()),
     id: z.string(),
     input: z.custom<NonNullable<unknown>>((v) => v != null),
     scope: z.string(),
     timestampUtcMs: z.string(),
     type: z.string(),
-  });
-}
-
-export function AttachmentInputSchema(): z.ZodObject<
-  Properties<AttachmentInput>
-> {
-  return z.object({
-    data: z.string(),
-    extension: z.string().nullish(),
-    fileName: z.string().nullish(),
-    hash: z.string(),
-    mimeType: z.string(),
   });
 }
 
@@ -2433,13 +2346,6 @@ export const GetDocumentWithOperationsDocument = gql`
               timestampUtcMs
               input
               scope
-              attachments {
-                data
-                mimeType
-                hash
-                extension
-                fileName
-              }
               context {
                 signer {
                   user {
@@ -2552,13 +2458,6 @@ export const GetDocumentOperationsDocument = gql`
           timestampUtcMs
           input
           scope
-          attachments {
-            data
-            mimeType
-            hash
-            extension
-            fileName
-          }
           context {
             signer {
               user {
@@ -2809,13 +2708,6 @@ export const PollSyncEnvelopesDocument = gql`
               timestampUtcMs
               input
               scope
-              attachments {
-                data
-                mimeType
-                hash
-                extension
-                fileName
-              }
               context {
                 signer {
                   user {

@@ -35,7 +35,6 @@ function makeRemoteOp(
       timestampUtcMs: "1000",
       input: { name: `name-${overrides.index}` },
       scope: "global",
-      attachments: null,
       context: null,
     },
     ...overrides,
@@ -165,34 +164,6 @@ describe("remoteOperationToLocal", () => {
   it("preserves error string", () => {
     const remote = makeRemoteOp({ index: 0, error: "some error" });
     expect(remoteOperationToLocal(remote).error).toBe("some error");
-  });
-
-  it("converts attachments", () => {
-    const remote: RemoteOperation = {
-      ...makeRemoteOp({ index: 0 }),
-      action: {
-        ...makeRemoteOp({ index: 0 }).action,
-        attachments: [
-          {
-            data: "base64data",
-            mimeType: "image/png",
-            hash: "att-hash",
-            extension: "png",
-            fileName: "image.png",
-          },
-        ],
-      },
-    };
-
-    const local = remoteOperationToLocal(remote);
-    expect(local.action.attachments).toHaveLength(1);
-    expect(local.action.attachments![0]).toEqual({
-      data: "base64data",
-      mimeType: "image/png",
-      hash: "att-hash",
-      extension: "png",
-      fileName: "image.png",
-    });
   });
 
   it("converts signer context with signatures", () => {

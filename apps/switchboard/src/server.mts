@@ -543,6 +543,8 @@ async function initServer(
 
   const { client, graphqlManager, documentModelRegistry } = api;
 
+  const lateSubgraphs: Promise<unknown>[] = [];
+
   // Wire up dynamic package management if HTTP loader is configured
   if (httpLoader) {
     const packageManagementService = new PackageManagementService({
@@ -565,12 +567,13 @@ async function initServer(
       packageManagementService,
     });
 
-    void graphqlManager
-      .registerSubgraphInstance(packagesSubgraph, "graphql", false)
-      .then(() => graphqlManager.updateRouter())
-      .catch((error: unknown) => {
-        logger.error("Failed to register packages subgraph: @error", error);
-      });
+    lateSubgraphs.push(
+      graphqlManager
+        .registerSubgraphInstance(packagesSubgraph, "graphql", false)
+        .catch((error: unknown) => {
+          logger.error("Failed to register packages subgraph: @error", error);
+        }),
+    );
   }
 
   if (driveNodeView) {
@@ -587,16 +590,30 @@ async function initServer(
       relationalDb: undefined as never,
     };
 
-    void graphqlManager
-      .registerSubgraphInstance(reactorDriveSubgraph, "graphql", false)
-      .then(() => graphqlManager.updateRouter())
-      .catch((error: unknown) => {
-        logger.error(
-          "Failed to register reactor-drive subgraph: @error",
-          error,
-        );
-      });
+    lateSubgraphs.push(
+      graphqlManager
+        .registerSubgraphInstance(reactorDriveSubgraph, "graphql", false)
+        .catch((error: unknown) => {
+          logger.error(
+            "Failed to register reactor-drive subgraph: @error",
+            error,
+          );
+        }),
+    );
   }
+
+  void (async () => {
+    await Promise.all(lateSubgraphs);
+    try {
+      await graphqlManager.updateRouter(true);
+    } catch (error) {
+      logger.error(
+        "Final router update before readiness failed: @error",
+        error,
+      );
+    }
+    api.readiness.markReady();
+  })();
 
   // Create default drive if provided
   if (options.drive) {

@@ -45,7 +45,10 @@ export type Scalars = {
   Amount_Money: { input: number; output: number };
   Amount_Percentage: { input: number; output: number };
   Amount_Tokens: { input: number; output: number };
-  Attachment: { input: string; output: string };
+  AttachmentRef: {
+    input: `attachment://v${number}:${string}`;
+    output: `attachment://v${number}:${string}`;
+  };
   Currency: { input: string; output: string };
   Date: { input: string; output: string };
   DateTime: { input: string; output: string };

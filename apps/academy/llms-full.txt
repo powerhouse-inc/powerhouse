@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-06-02T16:54:52.898Z
+> Generated: 2026-06-05T18:44:06.547Z
 > Total Documents: 87
 > Source: https://powerhouse.academy/llms-full.txt
 
@@ -17830,17 +17830,17 @@ Initialize a new project
 
 
 ### Options
-**Name** - The name of your project. A new directory will be created in your current directory with this name. - Usage: `--name, -n <str>`
+**Name** - The name of your project. A new directory will be created in your current directory with this name. - Usage: `--name, -n \<str\>`
 
-**Package Manager** - Specify the package manager to use for your project. Can be one of: `npm`, `pnpm`, `yarn`, or `bun`. Defaults to your environment package manager. - Usage: `--package-manager, -p <value>`
+**Package Manager** - Specify the package manager to use for your project. Can be one of: `npm`, `pnpm`, `yarn`, or `bun`. Defaults to your environment package manager. - Usage: `--package-manager, -p \<value\>`
 
-**Tag** - Specify the release tag to use for your project. Can be one of: "latest", "staging", or "dev". - Usage: `--tag, -t <value>`
+**Tag** - Specify the release tag to use for your project. Can be one of: "latest", "staging", or "dev". - Usage: `--tag, -t \<value\>`
 
-**Version** - Specify the exact semver release version to use for your project. - Usage: `--version, -v <str>`
+**Version** - Specify the exact semver release version to use for your project. - Usage: `--version, -v \<str\>`
 
-**Remote Drive** - Remote drive identifier. - Usage: `--remote-drive, -r <str>`
+**Remote Drive** - Remote drive identifier. - Usage: `--remote-drive, -r \<str\>`
 
-**Clone** - Path to an existing scaffolded project to clone instead of resolving deps from scratch. Install runs offline from the cloned project's pnpm-lock.yaml (requires --pnpm; --version/--tag are ignored). - Usage: `--clone <str>`
+**Clone** - Path to an existing scaffolded project to clone instead of resolving deps from scratch. Install runs offline from the cloned project's pnpm-lock.yaml (requires --pnpm; --version/--tag are ignored). - Usage: `--clone \<str\>`
 
 
 ### Flags
@@ -17874,9 +17874,9 @@ Specify the release version of Powerhouse dependencies to use.
 
 
 ### Options
-**Tag** - Specify the release tag to use for your project. Can be one of: "latest", "staging", or "dev". - Usage: `--tag, -t <value>`
+**Tag** - Specify the release tag to use for your project. Can be one of: "latest", "staging", or "dev". - Usage: `--tag, -t \<value\>`
 
-**Version** - Specify the exact semver release version to use for your project. - Usage: `--version, -v <str>`
+**Version** - Specify the exact semver release version to use for your project. - Usage: `--version, -v \<str\>`
 
 
 ### Flags
@@ -17912,17 +17912,17 @@ Initialize a new global project
 
 
 ### Options
-**Name** - The name of your project. A new directory will be created in your current directory with this name. - Usage: `--name, -n <str>`
+**Name** - The name of your project. A new directory will be created in your current directory with this name. - Usage: `--name, -n \<str\>`
 
-**Package Manager** - Specify the package manager to use for your project. Can be one of: `npm`, `pnpm`, `yarn`, or `bun`. Defaults to your environment package manager. - Usage: `--package-manager, -p <value>`
+**Package Manager** - Specify the package manager to use for your project. Can be one of: `npm`, `pnpm`, `yarn`, or `bun`. Defaults to your environment package manager. - Usage: `--package-manager, -p \<value\>`
 
-**Tag** - Specify the release tag to use for your project. Can be one of: "latest", "staging", or "dev". - Usage: `--tag, -t <value>`
+**Tag** - Specify the release tag to use for your project. Can be one of: "latest", "staging", or "dev". - Usage: `--tag, -t \<value\>`
 
-**Version** - Specify the exact semver release version to use for your project. - Usage: `--version, -v <str>`
+**Version** - Specify the exact semver release version to use for your project. - Usage: `--version, -v \<str\>`
 
-**Remote Drive** - Remote drive identifier. - Usage: `--remote-drive, -r <str>`
+**Remote Drive** - Remote drive identifier. - Usage: `--remote-drive, -r \<str\>`
 
-**Clone** - Path to an existing scaffolded project to clone instead of resolving deps from scratch. Install runs offline from the cloned project's pnpm-lock.yaml (requires --pnpm; --version/--tag are ignored). - Usage: `--clone <str>`
+**Clone** - Path to an existing scaffolded project to clone instead of resolving deps from scratch. Install runs offline from the cloned project's pnpm-lock.yaml (requires --pnpm; --version/--tag are ignored). - Usage: `--clone \<str\>`
 
 
 ### Flags
@@ -17956,7 +17956,7 @@ Use your local `powerhouse` monorepo dependencies the current project.
 
 
 ### Options
-**Path** - Path to your local powerhouse monorepo relative to this project - Usage: `--path, -p <str>`
+**Path** - Path to your local powerhouse monorepo relative to this project - Usage: `--path, -p \<str\>`
 
 
 ### Flags
@@ -18009,9 +18009,9 @@ Generate a document model
 
 
 ### Options
-**Document** - Path to a document model spec (.phd or .json) to generate from - Usage: `--document, -d <file>`
+**Document** - Path to a document model spec (.phd or .json) to generate from - Usage: `--document, -d \<file\>`
 
-**Dir** - Name of the directory of an existing document model to re-generate - Usage: `--dir <dir>`
+**Dir** - Name of the directory of an existing document model to re-generate - Usage: `--dir \<dir\>`
 
 
 ### Flags
@@ -18029,13 +18029,13 @@ Generate a document editor
 
 
 ### Options
-**Name** - The name of the document editor to generate - Usage: `--name, -n <str>`
+**Name** - The name of the document editor to generate - Usage: `--name, -n \<str\>`
 
-**Document Type** - The document type for the new editor - Usage: `--document-type, -t <str>`
+**Document Type** - The document type for the new editor - Usage: `--document-type, -t \<str\>`
 
-**Document** - Path to a powerhouse/document-editor spec file (.phd or .json) to drive codegen - Usage: `--document, -d <file>`
+**Document** - Path to a powerhouse/document-editor spec file (.phd or .json) to drive codegen - Usage: `--document, -d \<file\>`
 
-**Dir** - Name of the directory of an existing editor to re-generate - Usage: `--dir <dir>`
+**Dir** - Name of the directory of an existing editor to re-generate - Usage: `--dir \<dir\>`
 
 
 ### Flags
@@ -18053,13 +18053,13 @@ Generate a drive app
 
 
 ### Options
-**Name** - The name of the drive app to generate - Usage: `--name, -n <str>`
+**Name** - The name of the drive app to generate - Usage: `--name, -n \<str\>`
 
-**Document Types** - The document types allowed by the new app - Usage: `--document-types <str>, -t=<str>`
+**Document Types** - The document types allowed by the new app - Usage: `--document-types \<str\>, -t=\<str\>`
 
-**Document** - Path to a powerhouse/app spec file (.phd or .json) to drive codegen - Usage: `--document, -d <file>`
+**Document** - Path to a powerhouse/app spec file (.phd or .json) to drive codegen - Usage: `--document, -d \<file\>`
 
-**Dir** - Name of the directory of an existing app to re-generate - Usage: `--dir <dir>`
+**Dir** - Name of the directory of an existing app to re-generate - Usage: `--dir \<dir\>`
 
 
 ### Flags
@@ -18080,20 +18080,20 @@ Generate a processor
 
 
 ### Options
-**Name** - The name of the processor to generate - Usage: `--name, -n <str>`
+**Name** - The name of the processor to generate - Usage: `--name, -n \<str\>`
 
-**Type** - The type of processor to generate - Usage: `--type <value>`
+**Type** - The type of processor to generate - Usage: `--type \<value\>`
 
 **Default:** `analytics`
-**Document Types** - The document types the processor will run on - Usage: `--document-types <str>, -t=<str>`
+**Document Types** - The document types the processor will run on - Usage: `--document-types \<str\>, -t=\<str\>`
 
 **Default:** ``
-**Apps** - Whether the processor will run in switchboard (nodejs), connect (browser), or both - Usage: `--apps <value>`
+**Apps** - Whether the processor will run in switchboard (nodejs), connect (browser), or both - Usage: `--apps \<value\>`
 
 **Default:** `switchboard,connect`
-**Document** - Path to a powerhouse/processor spec file (.phd or .json) to drive codegen - Usage: `--document, -d <file>`
+**Document** - Path to a powerhouse/processor spec file (.phd or .json) to drive codegen - Usage: `--document, -d \<file\>`
 
-**Dir** - Name of the directory of an existing processor to re-generate - Usage: `--dir <dir>`
+**Dir** - Name of the directory of an existing processor to re-generate - Usage: `--dir \<dir\>`
 
 
 ### Flags
@@ -18111,11 +18111,11 @@ Generate a subgraph
 
 
 ### Options
-**Name** - The name of the subgraph to generate - Usage: `--name, -n <str>`
+**Name** - The name of the subgraph to generate - Usage: `--name, -n \<str\>`
 
-**Document** - Path to a powerhouse/subgraph spec file (.phd or .json) to drive codegen - Usage: `--document, -d <file>`
+**Document** - Path to a powerhouse/subgraph spec file (.phd or .json) to drive codegen - Usage: `--document, -d \<file\>`
 
-**Dir** - Name of the directory of an existing subgraph to re-generate - Usage: `--dir <dir>`
+**Dir** - Name of the directory of an existing subgraph to re-generate - Usage: `--dir \<dir\>`
 
 
 ### Flags
@@ -18133,9 +18133,9 @@ Generate a migration file
 
 
 ### Options
-**Path *[required]*** - Path to the migration file - Usage: `--path, -p <str>`
+**Path *[required]*** - Path to the migration file - Usage: `--path, -p \<str\>`
 
-**Schema File** - Path to the output file. Defaults to './schema.ts' - Usage: `--schema-file <str>`
+**Schema File** - Path to the output file. Defaults to './schema.ts' - Usage: `--schema-file \<str\>`
 
 
 ### Flags
@@ -18158,42 +18158,42 @@ and real-time processing with a "Vetra" drive or connection to remote drives.
 
 
 ### Options
-**Switchboard Port** - port to use for the Vetra Switchboard - Usage: `--switchboard-port <number>`
+**Switchboard Port** - port to use for the Vetra Switchboard - Usage: `--switchboard-port \<number\>`
 
-**Connect Port** - port to use for the Vetra Connect - Usage: `--connect-port <number>`
+**Connect Port** - port to use for the Vetra Connect - Usage: `--connect-port \<number\>`
 
 **Default:** `3001`
-**Remote Drive** - URL of remote drive to connect to (skips switchboard initialization) - Usage: `--remote-drive <str>`
+**Remote Drive** - URL of remote drive to connect to (skips switchboard initialization) - Usage: `--remote-drive \<str\>`
 
-**Db Path** - Database path or connection string. Use a `postgres://` URL for Postgres; otherwise treated as a PGlite filesystem path. Leave unset for in-memory PGlite. - Usage: `--db-path <str>`
+**Db Path** - Database path or connection string. Use a `postgres://` URL for Postgres; otherwise treated as a PGlite filesystem path. Leave unset for in-memory PGlite. - Usage: `--db-path \<str\>`
 
-**Base** - Base path for the app - Usage: `--base <str>`
+**Base** - Base path for the app - Usage: `--base \<str\>`
 
-**Log Level** - Log level for the application - Usage: `--log-level <value>`
+**Log Level** - Log level for the application - Usage: `--log-level \<value\>`
 
 **Environment:** `PH_CONNECT_LOG_LEVEL`
 **Default:** `info`
-**Packages** - Comma-separated list of package names to load - Usage: `--packages <str>`
+**Packages** - Comma-separated list of package names to load - Usage: `--packages \<str\>`
 
 **Environment:** `PH_PACKAGES`
-**Local Package** - Path to local package to load during development - Usage: `--local-package <str>`
+**Local Package** - Path to local package to load during development - Usage: `--local-package \<str\>`
 
 **Environment:** `PH_LOCAL_PACKAGE`
-**Default Drives Url** - The default drives url to use in connect - Usage: `--default-drives-url <str>`
+**Default Drives Url** - The default drives url to use in connect - Usage: `--default-drives-url \<str\>`
 
-**Drive Preserve Strategy** - The preservation strategy to use on default drives - Usage: `--drive-preserve-strategy <value>`
+**Drive Preserve Strategy** - The preservation strategy to use on default drives - Usage: `--drive-preserve-strategy \<value\>`
 
 **Default:** `preserve-by-url-and-detach`
-**Host** - Expose the server to the network. Pass an IP (e.g. 0.0.0.0) to bind to a specific address. - Usage: `--host <str>`
+**Host** - Expose the server to the network. Pass an IP (e.g. 0.0.0.0) to bind to a specific address. - Usage: `--host \<str\>`
 
-**Watch Timeout** - Amount of time to wait before a file is considered changed - Usage: `--watch-timeout <number>`
+**Watch Timeout** - Amount of time to wait before a file is considered changed - Usage: `--watch-timeout \<number\>`
 
 **Default:** `300`
-**Https Key File** - path to the ssl key file - Usage: `--https-key-file <str>`
+**Https Key File** - path to the ssl key file - Usage: `--https-key-file \<str\>`
 
-**Https Cert File** - path to the ssl cert file - Usage: `--https-cert-file <str>`
+**Https Cert File** - path to the ssl cert file - Usage: `--https-cert-file \<str\>`
 
-**Remote Drives** - Specify remote drive URLs to use - Usage: `--remote-drives <str>`
+**Remote Drives** - Specify remote drive URLs to use - Usage: `--remote-drives \<str\>`
 
 
 ### Flags
@@ -18250,29 +18250,29 @@ your project.
 
 
 ### Options
-**Port** - Port to run the dev server on. - Usage: `--port <number>`
+**Port** - Port to run the dev server on. - Usage: `--port \<number\>`
 
 **Default:** `3000`
-**Base** - Base path for the app - Usage: `--base <str>`
+**Base** - Base path for the app - Usage: `--base \<str\>`
 
-**Log Level** - Log level for the application - Usage: `--log-level <value>`
+**Log Level** - Log level for the application - Usage: `--log-level \<value\>`
 
 **Environment:** `PH_CONNECT_LOG_LEVEL`
 **Default:** `info`
-**Packages** - Comma-separated list of package names to load - Usage: `--packages <str>`
+**Packages** - Comma-separated list of package names to load - Usage: `--packages \<str\>`
 
 **Environment:** `PH_PACKAGES`
-**Local Package** - Path to local package to load during development - Usage: `--local-package <str>`
+**Local Package** - Path to local package to load during development - Usage: `--local-package \<str\>`
 
 **Environment:** `PH_LOCAL_PACKAGE`
-**Default Drives Url** - The default drives url to use in connect - Usage: `--default-drives-url <str>`
+**Default Drives Url** - The default drives url to use in connect - Usage: `--default-drives-url \<str\>`
 
-**Drive Preserve Strategy** - The preservation strategy to use on default drives - Usage: `--drive-preserve-strategy <value>`
+**Drive Preserve Strategy** - The preservation strategy to use on default drives - Usage: `--drive-preserve-strategy \<value\>`
 
 **Default:** `preserve-by-url-and-detach`
-**Host** - Expose the server to the network. Pass an IP (e.g. 0.0.0.0) to bind to a specific address. - Usage: `--host <str>`
+**Host** - Expose the server to the network. Pass an IP (e.g. 0.0.0.0) to bind to a specific address. - Usage: `--host \<str\>`
 
-**Watch Timeout** - Amount of time to wait before a file is considered changed - Usage: `--watch-timeout <number>`
+**Watch Timeout** - Amount of time to wait before a file is considered changed - Usage: `--watch-timeout \<number\>`
 
 **Default:** `300`
 
@@ -18305,68 +18305,68 @@ external packages included.
 
 Runtime-config overrides (all combinable — last wins on collision):
   ph connect build                                    Build with the current source config.
-  ph connect build <key> <value>                      Build with a positional override applied (e.g. ph connect build connect.renown.url https://renown.staging).
-  ph connect build --<field> <value>                  Build with a per-field flag override (e.g. --renown-url https://renown.staging).
+  ph connect build \<key\> \<value\>                      Build with a positional override applied (e.g. ph connect build connect.renown.url https://renown.staging).
+  ph connect build --\<field\> \<value\>                  Build with a per-field flag override (e.g. --renown-url https://renown.staging).
   ph connect build --json '\{"…":"…"\}'                Build with a bulk override.
 
-Build has no read mode; passing only <key> without <value> errors out (use `ph connect config <key>` to read).
+Build has no read mode; passing only \<key\> without \<value\> errors out (use `ph connect config \<key\>` to read).
 
 
 ### Options
-**Out Dir** - Output directory - Usage: `--outDir <str>`
+**Out Dir** - Output directory - Usage: `--outDir \<str\>`
 
 **Default:** `.ph/connect-build/dist/`
-**Json** - Inline JSON override for the runtime connect.* block, e.g. '\{"renown":\{"url":"..."\}\}'. Validated against the runtime schema; deep-merged on top of env seeds and source powerhouse.config.json. Individual --flag values beat --json on collision. - Usage: `--json <str>`
+**Json** - Inline JSON override for the runtime connect.* block, e.g. '\{"renown":\{"url":"..."\}\}'. Validated against the runtime schema; deep-merged on top of env seeds and source powerhouse.config.json. Individual --flag values beat --json on collision. - Usage: `--json \<str\>`
 
-**Renown Url** - Override connect.renown.url. - Usage: `--renown-url <str>`
+**Renown Url** - Override connect.renown.url. - Usage: `--renown-url \<str\>`
 
-**Renown Network Id** - Override connect.renown.networkId. - Usage: `--renown-network-id <str>`
+**Renown Network Id** - Override connect.renown.networkId. - Usage: `--renown-network-id \<str\>`
 
-**Renown Chain Id** - Override connect.renown.chainId. - Usage: `--renown-chain-id <number>`
+**Renown Chain Id** - Override connect.renown.chainId. - Usage: `--renown-chain-id \<number\>`
 
-**Allow Add Drive** - Override connect.drives.allowAddDrive (top-level add-drive toggle). - Usage: `--allow-add-drive <value>`
+**Allow Add Drive** - Override connect.drives.allowAddDrive (top-level add-drive toggle). - Usage: `--allow-add-drive \<value\>`
 
-**External Packages** - Override connect.packages.externalEnabled. - Usage: `--external-packages <value>`
+**External Packages** - Override connect.packages.externalEnabled. - Usage: `--external-packages \<value\>`
 
-**Remote Drives Enabled** - Override connect.drives.sections.remote.enabled (the unified cloud+public section). - Usage: `--remote-drives-enabled <value>`
+**Remote Drives Enabled** - Override connect.drives.sections.remote.enabled (the unified cloud+public section). - Usage: `--remote-drives-enabled \<value\>`
 
-**Remote Drives Allow Add** - Override connect.drives.sections.remote.allowAdd. - Usage: `--remote-drives-allow-add <value>`
+**Remote Drives Allow Add** - Override connect.drives.sections.remote.allowAdd. - Usage: `--remote-drives-allow-add \<value\>`
 
-**Remote Drives Allow Delete** - Override connect.drives.sections.remote.allowDelete. - Usage: `--remote-drives-allow-delete <value>`
+**Remote Drives Allow Delete** - Override connect.drives.sections.remote.allowDelete. - Usage: `--remote-drives-allow-delete \<value\>`
 
-**Local Drives Enabled** - Override connect.drives.sections.local.enabled. - Usage: `--local-drives-enabled <value>`
+**Local Drives Enabled** - Override connect.drives.sections.local.enabled. - Usage: `--local-drives-enabled \<value\>`
 
-**Local Drives Allow Add** - Override connect.drives.sections.local.allowAdd. - Usage: `--local-drives-allow-add <value>`
+**Local Drives Allow Add** - Override connect.drives.sections.local.allowAdd. - Usage: `--local-drives-allow-add \<value\>`
 
-**Local Drives Allow Delete** - Override connect.drives.sections.local.allowDelete. - Usage: `--local-drives-allow-delete <value>`
+**Local Drives Allow Delete** - Override connect.drives.sections.local.allowDelete. - Usage: `--local-drives-allow-delete \<value\>`
 
-**Packages Registry** - Override the top-level packageRegistryUrl. - Usage: `--packages-registry <str>`
+**Packages Registry** - Override the top-level packageRegistryUrl. - Usage: `--packages-registry \<str\>`
 
-**App Name** - Override connect.branding.appName. - Usage: `--app-name <str>`
+**App Name** - Override connect.branding.appName. - Usage: `--app-name \<str\>`
 
-**Home Background** - Override connect.branding.homeBackground. URL or path to an image; pass an empty string ("") to reset to the bundled default. - Usage: `--home-background <str>`
+**Home Background** - Override connect.branding.homeBackground. URL or path to an image; pass an empty string ("") to reset to the bundled default. - Usage: `--home-background \<str\>`
 
-**Sentry Dsn** - Override connect.sentry.dsn (Sentry DSN URL). Pass an empty string ("") to set null and disable Sentry. - Usage: `--sentry-dsn <str>`
+**Sentry Dsn** - Override connect.sentry.dsn (Sentry DSN URL). Pass an empty string ("") to set null and disable Sentry. - Usage: `--sentry-dsn \<str\>`
 
-**Sentry Env** - Override connect.sentry.env (Sentry environment label). - Usage: `--sentry-env <str>`
+**Sentry Env** - Override connect.sentry.env (Sentry environment label). - Usage: `--sentry-env \<str\>`
 
-**Sentry Tracing Enabled** - Override connect.sentry.tracing (Sentry performance tracing). - Usage: `--sentry-tracing-enabled <value>`
+**Sentry Tracing Enabled** - Override connect.sentry.tracing (Sentry performance tracing). - Usage: `--sentry-tracing-enabled \<value\>`
 
-**Base** - Base path for the app - Usage: `--base <str>`
+**Base** - Base path for the app - Usage: `--base \<str\>`
 
-**Log Level** - Log level for the application - Usage: `--log-level <value>`
+**Log Level** - Log level for the application - Usage: `--log-level \<value\>`
 
 **Environment:** `PH_CONNECT_LOG_LEVEL`
 **Default:** `info`
-**Packages** - Comma-separated list of package names to load - Usage: `--packages <str>`
+**Packages** - Comma-separated list of package names to load - Usage: `--packages \<str\>`
 
 **Environment:** `PH_PACKAGES`
-**Local Package** - Path to local package to load during development - Usage: `--local-package <str>`
+**Local Package** - Path to local package to load during development - Usage: `--local-package \<str\>`
 
 **Environment:** `PH_LOCAL_PACKAGE`
-**Default Drives Url** - The default drives url to use in connect - Usage: `--default-drives-url <str>`
+**Default Drives Url** - The default drives url to use in connect - Usage: `--default-drives-url \<str\>`
 
-**Drive Preserve Strategy** - The preservation strategy to use on default drives - Usage: `--drive-preserve-strategy <value>`
+**Drive Preserve Strategy** - The preservation strategy to use on default drives - Usage: `--drive-preserve-strategy \<value\>`
 
 **Default:** `preserve-by-url-and-detach`
 
@@ -18376,9 +18376,9 @@ Build has no read mode; passing only <key> without <value> errors out (use `ph c
 ## Parameters
 
 ### Arguments
-**Key** - Dotted path inside the runtime config (e.g. connect.renown.url). Pair with <value> to set; pass alone to `ph connect config` to read. - Usage: `[key]`
+**Key** - Dotted path inside the runtime config (e.g. connect.renown.url). Pair with \<value\> to set; pass alone to `ph connect config` to read. - Usage: `[key]`
 
-**Value** - Value to set at <key>. Coerced against the runtime schema (string, bool, number, enum). Arrays and objects require --json instead. - Usage: `[value]`
+**Value** - Value to set at \<key\>. Coerced against the runtime schema (string, bool, number, enum). Arrays and objects require --json instead. - Usage: `[value]`
 
 
 ### Flags
@@ -18397,32 +18397,32 @@ NOTE: You must run `ph connect build` first
 
 
 ### Options
-**Port** - Port to run the preview server on. - Usage: `--port <number>`
+**Port** - Port to run the preview server on. - Usage: `--port \<number\>`
 
 **Default:** `4173`
-**Out Dir** - Output directory - Usage: `--outDir <str>`
+**Out Dir** - Output directory - Usage: `--outDir \<str\>`
 
 **Default:** `.ph/connect-build/dist/`
-**Base** - Base path for the app - Usage: `--base <str>`
+**Base** - Base path for the app - Usage: `--base \<str\>`
 
-**Log Level** - Log level for the application - Usage: `--log-level <value>`
+**Log Level** - Log level for the application - Usage: `--log-level \<value\>`
 
 **Environment:** `PH_CONNECT_LOG_LEVEL`
 **Default:** `info`
-**Packages** - Comma-separated list of package names to load - Usage: `--packages <str>`
+**Packages** - Comma-separated list of package names to load - Usage: `--packages \<str\>`
 
 **Environment:** `PH_PACKAGES`
-**Local Package** - Path to local package to load during development - Usage: `--local-package <str>`
+**Local Package** - Path to local package to load during development - Usage: `--local-package \<str\>`
 
 **Environment:** `PH_LOCAL_PACKAGE`
-**Default Drives Url** - The default drives url to use in connect - Usage: `--default-drives-url <str>`
+**Default Drives Url** - The default drives url to use in connect - Usage: `--default-drives-url \<str\>`
 
-**Drive Preserve Strategy** - The preservation strategy to use on default drives - Usage: `--drive-preserve-strategy <value>`
+**Drive Preserve Strategy** - The preservation strategy to use on default drives - Usage: `--drive-preserve-strategy \<value\>`
 
 **Default:** `preserve-by-url-and-detach`
-**Host** - Expose the server to the network. Pass an IP (e.g. 0.0.0.0) to bind to a specific address. - Usage: `--host <str>`
+**Host** - Expose the server to the network. Pass an IP (e.g. 0.0.0.0) to bind to a specific address. - Usage: `--host \<str\>`
 
-**Watch Timeout** - Amount of time to wait before a file is considered changed - Usage: `--watch-timeout <number>`
+**Watch Timeout** - Amount of time to wait before a file is considered changed - Usage: `--watch-timeout \<number\>`
 
 **Default:** `300`
 
@@ -18499,10 +18499,10 @@ Notes:
 
 
 ### Options
-**Expiry** - Token expiry duration. Supports: "7d" (days), "24h" (hours), "3600" or "3600s" (seconds) - Usage: `--expiry <str>`
+**Expiry** - Token expiry duration. Supports: "7d" (days), "24h" (hours), "3600" or "3600s" (seconds) - Usage: `--expiry \<str\>`
 
 **Default:** `7d`
-**Audience** - Target audience URL for the token - Usage: `--audience <str>`
+**Audience** - Target audience URL for the token - Usage: `--audience \<str\>`
 
 
 ### Flags
@@ -18529,7 +18529,7 @@ your project.
 ## Parameters
 
 ### Arguments
-**Package Name *[required]*** - The name of the package to inspect - Usage: `<package-name>`
+**Package Name *[required]*** - The name of the package to inspect - Usage: `\<package-name\>`
 
 
 ### Flags
@@ -18569,7 +18569,7 @@ Run migrations
 
 
 ### Options
-**Version** - The version to migrate to. Accepts a valid semver version or `staging`, `dev`, `latest`. - Usage: `--version, -v <str>`
+**Version** - The version to migrate to. Accepts a valid semver version or `staging`, `dev`, `latest`. - Usage: `--version, -v \<str\>`
 
 **Default:** `latest`
 
@@ -18627,26 +18627,26 @@ models, processors, and real-time updates.
 
 
 ### Options
-**Https Key File** - path to the ssl key file - Usage: `--https-key-file <str>`
+**Https Key File** - path to the ssl key file - Usage: `--https-key-file \<str\>`
 
-**Https Cert File** - path to the ssl cert file - Usage: `--https-cert-file <str>`
+**Https Cert File** - path to the ssl cert file - Usage: `--https-cert-file \<str\>`
 
-**Remote Drives** - Specify remote drive URLs to use - Usage: `--remote-drives <str>`
+**Remote Drives** - Specify remote drive URLs to use - Usage: `--remote-drives \<str\>`
 
-**Packages** - Comma-separated list of package names to load - Usage: `--packages <str>`
+**Packages** - Comma-separated list of package names to load - Usage: `--packages \<str\>`
 
 **Environment:** `PH_PACKAGES`
-**Port** - Port to host the api - Usage: `--port <number>`
+**Port** - Port to host the api - Usage: `--port \<number\>`
 
 **Default:** `4001`
-**Base Path** - base path for the API endpoints (sets the BASE_PATH environment variable) - Usage: `--base-path <str>`
+**Base Path** - base path for the API endpoints (sets the BASE_PATH environment variable) - Usage: `--base-path \<str\>`
 
-**Keypair Path** - path to custom keypair file for identity - Usage: `--keypair-path <str>`
+**Keypair Path** - path to custom keypair file for identity - Usage: `--keypair-path \<str\>`
 
-**Vetra Drive Id** - Specify a Vetra drive ID - Usage: `--vetra-drive-id <str>`
+**Vetra Drive Id** - Specify a Vetra drive ID - Usage: `--vetra-drive-id \<str\>`
 
 **Default:** `vetra`
-**Db Path** - path to the database - Usage: `--db-path <str>`
+**Db Path** - path to the database - Usage: `--db-path \<str\>`
 
 
 ## Login
@@ -18663,11 +18663,11 @@ the CLI to act on behalf of your Ethereum identity for authenticated operations.
 
 
 ### Options
-**Renown Url** - Renown server URL. - Usage: `--renown-url <str>`
+**Renown Url** - Renown server URL. - Usage: `--renown-url \<str\>`
 
 **Environment:** `PH_CONNECT_RENOWN_URL`
 **Default:** `https//www.renown.id`
-**Timeout** - Authentication timeout in seconds. - Usage: `--timeout <number>`
+**Timeout** - Authentication timeout in seconds. - Usage: `--timeout \<number\>`
 
 **Default:** `300`
 
@@ -18696,7 +18696,7 @@ as provider "local" — it will be bundled into ph connect build so the
 preview works without the registry being reachable.
 
 Resolution order for the registry URL:
-  --registry flag > PH_REGISTRY_URL env > powerhouse.config.json > default
+  --registry flag \> PH_REGISTRY_URL env \> powerhouse.config.json \> default
   
 
 
@@ -18709,11 +18709,11 @@ Resolution order for the registry URL:
 
 
 ### Options
-**Registry** - Registry URL to install from (overrides config and environment) - Usage: `--registry <str>`
+**Registry** - Registry URL to install from (overrides config and environment) - Usage: `--registry \<str\>`
 
-**Allow Build** - A list of package names that are allowed to run postinstall scripts during installation. - Usage: `--allow-build <str>`
+**Allow Build** - A list of package names that are allowed to run postinstall scripts during installation. - Usage: `--allow-build \<str\>`
 
-**Package Manager** - Specify the package manager to use for your project. Can be one of: `npm`, `pnpm`, `yarn`, or `bun`. Defaults to your environment package manager. - Usage: `--package-manager, -p <value>`
+**Package Manager** - Specify the package manager to use for your project. Can be one of: `npm`, `pnpm`, `yarn`, or `bun`. Defaults to your environment package manager. - Usage: `--package-manager, -p \<value\>`
 
 
 ### Flags
@@ -18753,7 +18753,7 @@ removal of packages, updates configuration files, and ensures proper cleanup.
 
 
 ### Options
-**Package Manager** - Specify the package manager to use for your project. Can be one of: `npm`, `pnpm`, `yarn`, or `bun`. Defaults to your environment package manager. - Usage: `--package-manager, -p <value>`
+**Package Manager** - Specify the package manager to use for your project. Can be one of: `npm`, `pnpm`, `yarn`, or `bun`. Defaults to your environment package manager. - Usage: `--package-manager, -p \<value\>`
 
 
 ### Flags
@@ -23708,7 +23708,19 @@ The `@powerhousedao/reactor-attachments` package decouples large binaries (image
 } from "@powerhousedao/reactor-attachments";
 ```
 
-For an architectural overview see [Working with the Reactor](/academy/Architecture/WorkingWithTheReactor). For the full design — storage layout, eviction, transports, the planned S3 backend — see the deep-dive doc at `packages/reactor/docs/attachments.md` in the monorepo.
+The package exposes two layers. `IAttachmentService` is the low-level, transport-facing interface — reserve a slot, stream the bytes, read them back by ref. `IAttachmentClient` wraps a service with convenience helpers; most notably `preprocess()`, which hashes a file up front so its ref is known before the bytes are uploaded. Build a client with `createAttachmentClient(service)`, and import it from the `/client` entrypoint:
+
+```typescript
+
+  createAttachmentClient,
+  type IAttachmentClient,
+  type PreprocessResult,
+} from "@powerhousedao/reactor-attachments/client";
+```
+
+The React hooks in `@powerhousedao/reactor-browser` are built on the client.
+
+For an architectural overview see [Working with the Reactor](/academy/Architecture/WorkingWithTheReactor). For the full design — storage layout, eviction, transports, the hash-first/pending protocol, and the planned S3 backend — see the deep-dive docs `packages/reactor/docs/attachments.md` and `packages/reactor/docs/attachments-hash-first.md` in the monorepo.
 
 ## When to use it
 
@@ -23740,11 +23752,18 @@ const attachments = createRemoteAttachmentService({
 The switchboard remote service is the supported client implementation right now. Other transports (S3, peer-to-peer) are designed but not yet stable — prefer `createRemoteAttachmentService` until these docs call out a replacement.
 
 
-On the server side (inside a subgraph, processor, or trigger), the service is already wired into `ReactorContext` by `@powerhousedao/reactor-api` and is available as `reactor.attachments`. There is no need to construct one yourself — see `packages/reactor-api/src/server.ts` for the wiring.
+On the server side (inside a subgraph, processor, or trigger), an `IAttachmentClient` is already wired into the host context by `@powerhousedao/reactor-api` and is available as `context.attachments`. There is no need to construct one yourself — the server builds the service and wraps it with `createAttachmentClient(...)`; see `packages/reactor-api/src/server.ts` for the wiring.
 
 ## The general flow
 
-Every interaction with the package is one of three operations on `IAttachmentService`: reserve a slot, send the bytes, then later read them back by ref.
+Every interaction with the package comes down to three operations: reserve a slot, send the bytes, then later read them back by ref.
+
+There are two reservation modes. They are equivalent in capability — neither is preferred, so pick whichever fits the caller:
+
+- **Upload-first** — reserve with just `{ mimeType, fileName }`. The content hash, and therefore the final ref, is only known *after* `send()` completes. Simplest when you can stream the bytes straight through and do not need the ref until the upload finishes.
+- **Hash-first** — hash the content up front and reserve with `{ clientHash, sizeBytes, ... }`. The ref is known at reservation time, so it can be written into document state before (or in parallel with) the upload, and dedup can short-circuit before any bytes are sent. The trade-off is that the whole file must be read to hash it. `IAttachmentClient.preprocess()` does that hashing for you.
+
+The walkthrough below uses the low-level service in upload-first mode. The [attachment client](#the-attachment-client) section shows the hash-first flow.
 
 ### 1. Reserve an upload slot
 
@@ -23827,21 +23846,92 @@ const objectUrl = URL.createObjectURL(blob);
 // ...later: URL.revokeObjectURL(objectUrl);
 ```
 
-`get()` always succeeds for a known ref. If the bytes were evicted from local storage, the service transparently re-fetches them through the transport.
+`get()` succeeds for any ref whose bytes are available. If the bytes were evicted from local storage, the service transparently re-fetches them through the transport. A hash-first ref can also be *pending* — reserved, with state already referencing it, but the bytes not yet uploaded. During that window `get()` throws `AttachmentPending`, while `stat()` succeeds and reports the declared size.
+
+## The attachment client
+
+`IAttachmentClient` wraps an `IAttachmentService` with the hash-first flow. Build one with `createAttachmentClient(service)` (server code already receives one as `context.attachments`).
+
+`preprocess(file)` reads the whole file, computes its SHA-256, and returns everything you need to both reference and upload it:
+
+```typescript
+const attachments = createAttachmentClient(service);
+
+const results = await attachments.preprocess(file);
+// results: { ref, hash, sizeBytes, options, data, stream }
+```
+
+Because it has to read the entire file to hash it, `preprocess` is async and buffers the bytes in memory — `file` is a `Blob`, not a stream.
+
+With the ref in hand you can write it into document state through a normal action, then upload the bytes:
+
+```typescript
+await client.execute(documentId, "main", [
+  attachInvoice({ scan: results.ref, vendorName: "Acme" }),
+]);
+
+await attachments.reserve(results.options, (handle) => handle.send(results.stream()));
+```
+
+`client.reserve(options, send)` reserves the slot and hands the upload handle to your `send` callback. If an attachment with the same hash already exists it short-circuits and returns the existing ref without uploading. Pass `results.stream()` — which returns a fresh `ReadableStream` on each call — rather than the single-use `results.data` if the upload might be retried. `send()` accepts any `ReadableStream<Uint8Array>`, so on the server you can stream from the original source instead of the buffered copy.
+
+Execute and reserve are awaited separately so each failure is handled on its own — a failed upload does not roll back the action, and a failed action does not strand an upload. If you do not need that separation, run them concurrently:
+
+```typescript
+await Promise.all([
+  client.execute(documentId, "main", [
+    attachInvoice({ scan: results.ref, vendorName: "Acme" }),
+  ]),
+  attachments.reserve(results.options, (handle) => handle.send(results.stream())),
+]);
+```
+
+### React
+
+`@powerhousedao/reactor-browser` exposes hooks built on the client. `useAttachments()` returns an `IAttachmentClient` for the current service (or `undefined` if none is configured). `useAttachmentUpload()` drives the full preprocess + upload lifecycle and tracks its status:
+
+```tsx
+const client = useReactorClient();
+const { preprocess, upload, status, progress, error } = useAttachmentUpload();
+
+const submit = useCallback(async () => {
+  // Buffers the file in memory and hands back the ref. Async because it has to
+  // read the whole file to hash it.
+  const results = await preprocess(file);
+
+  // Execute with the generated ref. `scan` is just a string here; the action
+  // and codegen never see the file or the attachments package.
+  await client.execute(documentId, "main", [
+    attachInvoice({ scan: results.ref, vendorName: "Acme" }),
+  ]);
+
+  // Upload the bytes. Awaited separately from execute() so each failure is
+  // handled on its own.
+  await upload(results);
+}, [client, preprocess, upload, documentId, file]);
+```
+
+In render, read the lifecycle straight off the hook:
+
+- `status` — `UploadStatus`: `None | Hashing | Uploading | Done | Error`
+- `progress` — coarse/stage-based; the remote transport buffers then issues a single PUT, so byte-level progress is not available yet
+- `error` — the upload failure, if any
+
+`preprocess` and `upload` are stable callbacks. `upload(results)` wraps `client.reserve(results.options, (handle) => handle.send(results.stream()))` and updates `status`/`progress`/`error`. Because React runs in the browser, this mirrors the buffered flow above; the ref still only exists after `preprocess` resolves, so submission is async — you cannot produce a ref inside the synchronous action input.
 
 ## Declaring attachment fields in a document model
 
-The integration surface between document models and the attachment system is a single GraphQL scalar: `Attachment`. Declare attachment-bearing fields with it, and codegen will emit a TypeScript `string` (specifically `AttachmentRef`).
+The integration surface between document models and the attachment system is a single GraphQL scalar: `AttachmentRef`. Declare attachment-bearing fields with it, and codegen will emit a branded TypeScript string (`` `attachment://v${number}:${string}` ``) plus a Zod validator that enforces the ref protocol.
 
 ```graphql
-scalar Attachment
+scalar AttachmentRef
 
 input SetAgentImageInput {
-  attachment: Attachment!
+  attachment: AttachmentRef!
 }
 
 type AgentInfo {
-  attachment: Attachment
+  attachment: AttachmentRef
 }
 ```
 
@@ -23849,7 +23939,7 @@ The reducer stores the value verbatim — no special handling needed:
 
 ```typescript
 setAgentImageOperation(state, action) {
-  state.agent.attachment = action.input.attachment; // AttachmentRef string
+  state.agent.attachment = action.input.attachment; // AttachmentRef
 }
 ```
 
@@ -23870,12 +23960,22 @@ setAgentImageOperation(state, action) {
 | `reservationId`    | `string`                                                        | Unique identifier for this reservation.                                                                           |
 | `send(data)`       | `(ReadableStream<Uint8Array>) => Promise<AttachmentUploadResult>` | Stream the bytes through the handle. Returns `{ hash, ref, header }`. Dedup against existing hashes is automatic. |
 
+### `IAttachmentClient`
+
+| Method                    | Returns                            | Description                                                                                                                                                                          |
+| ------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `preprocess(file, opts?)` | `Promise<PreprocessResult>`        | Read and hash a `Blob` up front. Returns the ref, hash, declared size, hash-first reserve options, and the buffered bytes (as a single-use `data` stream and a re-readable `stream()` factory). `opts` may override `{ fileName, mimeType }`. |
+| `reserve(options, send)`  | `Promise<AttachmentUploadResult>`  | Reserve a hash-first slot and run `send(handle)`. Short-circuits to the existing ref if the hash is already stored (`AttachmentAlreadyExists` is handled internally).                |
+
 ### Key types
 
 | Type                       | Shape                                                                                                                     |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
 | `AttachmentRef`            | `` `attachment://v${number}:${string}` `` — opaque ref string used in document state.                                     |
-| `ReserveAttachmentOptions` | `{ mimeType: string; fileName: string; extension?: string \| null }`                                                      |
+| `ReserveAttachmentOptions` | `UploadFirstReserveAttachmentOptions \| HashFirstReserveAttachmentOptions` — discriminated on `clientHash`.                |
+| `UploadFirstReserveAttachmentOptions` | `{ mimeType: string; fileName: string; extension?: string \| null }` — no `clientHash`; ref known only after `send()`. |
+| `HashFirstReserveAttachmentOptions`   | `{ mimeType: string; fileName: string; extension?: string \| null; clientHash: AttachmentHash; sizeBytes: number }` — ref known at reserve time. |
+| `PreprocessResult`         | `{ ref: AttachmentRef; hash: AttachmentHash; sizeBytes: number; options: HashFirstReserveAttachmentOptions; data: ReadableStream<Uint8Array>; stream: () => ReadableStream<Uint8Array> }` |
 | `AttachmentUploadResult`   | `{ hash: AttachmentHash; ref: AttachmentRef; header: AttachmentHeader }`                                                  |
 | `AttachmentHeader`         | `{ hash; mimeType; fileName; sizeBytes; extension; status; source; createdAtUtc; lastAccessedAtUtc }`                     |
 | `AttachmentResponse`       | `{ header: AttachmentHeader; body: ReadableStream<Uint8Array> }`                                                          |
@@ -23888,6 +23988,10 @@ setAgentImageOperation(state, action) {
 | `InvalidAttachmentRef` | A string passed where a ref is expected does not match `attachment://v<N>:<hash>`. |
 | `UploadTooLarge`       | `upload.send()` exceeded the server's configured byte cap. Maps to HTTP 413.       |
 | `ReservationNotFound`  | `upload.send()` after the reservation expired or was deleted.                      |
+| `AttachmentAlreadyExists` | Hash-first `reserve()` for content whose hash is already stored. The client's `reserve()` catches this and returns the existing ref instead of uploading. |
+| `AttachmentPending`    | `get(ref)` for a hash that is reserved but whose bytes have not finished uploading. |
+| `HashMismatch`         | Hash-first `send()` whose uploaded bytes do not match the claimed `clientHash`.    |
+| `SizeMismatch`         | Hash-first `send()` whose actual byte count differs from the declared `sizeBytes`. |
 
 ### Helpers
 
@@ -23898,13 +24002,13 @@ setAgentImageOperation(state, action) {
 If a document model previously inlined binary content, the migration is small and mechanical:
 
 - **Schema** — replace `data: String` (or composite fields like `{ image, imageMediaType, imageUrl }`) with a single `attachment: Attachment` field on the input and the state type.
-- **Write path** — replace the base64-encoding step with `attachments.reserve({ mimeType, fileName })` followed by `upload.send(stream)`. Dispatch the action with `result.ref`.
+- **Write path** — replace the base64-encoding step with a reservation and upload. Either reserve on the service directly (`attachments.reserve({ mimeType, fileName })` then `upload.send(stream)`, dispatching with `result.ref`), or use the client (`attachments.preprocess(file)` then `client.execute(...)` with `results.ref` and `attachments.reserve(results.options, ...)`). In the browser, `useAttachmentUpload()` wraps the client flow.
 - **Read path** — replace data-URI assembly with `attachments.get(ref)`. In a browser, drain the stream into a `Blob` and use `URL.createObjectURL` (remember to `revokeObjectURL` on cleanup).
 - **Graceful degradation** — code paths that may run without an attachment service (mock environments, tests, off-line previews) should branch on `if (!attachments)`. Writers should surface a clear error to the user; readers should skip the attachment and render a placeholder.
 
 ## Deep dive
 
-See `packages/reactor/docs/attachments.md` in the monorepo for the full design: storage internals, the LRU eviction policy, the `IAttachmentStore` and `IAttachmentTransport` interfaces, the switchboard upload protocol, and the planned S3 backend.
+See `packages/reactor/docs/attachments.md` in the monorepo for the full design: storage internals, the LRU eviction policy, the `IAttachmentStore` and `IAttachmentTransport` interfaces, the switchboard upload protocol, and the planned S3 backend. For the hash-first reservation mode, hash/size verification on ingest, and the pending-upload lifecycle, see `packages/reactor/docs/attachments-hash-first.md`.
 
 ---
 

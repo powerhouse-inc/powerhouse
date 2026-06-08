@@ -34,7 +34,6 @@ describe("ReactorSubgraph Permission Checks", () => {
         global: [],
         local: [],
       },
-      attachments: {},
       clipboard: [],
     }) as unknown as PHDocument;
 

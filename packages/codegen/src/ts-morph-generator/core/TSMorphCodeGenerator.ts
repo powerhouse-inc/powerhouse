@@ -131,7 +131,6 @@ export class TSMorphCodeGenerator {
     const operations: CodegenOperation[] = module.operations.map((op) => ({
       ...op,
       hasInput: op.schema !== null,
-      hasAttachment: op.schema?.includes(": Attachment"),
       scope: op.scope || "global",
       state: op.scope === "global" ? "" : op.scope,
     }));

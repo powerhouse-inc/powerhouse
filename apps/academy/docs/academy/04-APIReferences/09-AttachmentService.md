@@ -227,17 +227,17 @@ In render, read the lifecycle straight off the hook:
 
 ## Declaring attachment fields in a document model
 
-The integration surface between document models and the attachment system is a single GraphQL scalar: `Attachment`. Declare attachment-bearing fields with it, and codegen will emit a TypeScript `string` (specifically `AttachmentRef`).
+The integration surface between document models and the attachment system is a single GraphQL scalar: `AttachmentRef`. Declare attachment-bearing fields with it, and codegen will emit a branded TypeScript string (`` `attachment://v${number}:${string}` ``) plus a Zod validator that enforces the ref protocol.
 
 ```graphql
-scalar Attachment
+scalar AttachmentRef
 
 input SetAgentImageInput {
-  attachment: Attachment!
+  attachment: AttachmentRef!
 }
 
 type AgentInfo {
-  attachment: Attachment
+  attachment: AttachmentRef
 }
 ```
 
@@ -245,7 +245,7 @@ The reducer stores the value verbatim — no special handling needed:
 
 ```typescript
 setAgentImageOperation(state, action) {
-  state.agent.attachment = action.input.attachment; // AttachmentRef string
+  state.agent.attachment = action.input.attachment; // AttachmentRef
 }
 ```
 

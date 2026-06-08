@@ -233,7 +233,6 @@ describe("ReactorSDK", () => {
                 timestampUtcMs: "1000",
                 input: { name: "Test" },
                 scope: "global",
-                attachments: null,
                 context: {
                   signer: {
                     signatures: ["a, b, c, d, e"],
@@ -306,7 +305,6 @@ describe("ReactorSDK", () => {
                     timestampUtcMs: "1000",
                     input: { name: "Test" },
                     scope: "global",
-                    attachments: null,
                     context: null,
                   },
                 },

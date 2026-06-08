@@ -43,7 +43,6 @@ describe("Permissions Integration Tests", () => {
         global: [],
         local: [],
       },
-      attachments: {},
       clipboard: [],
     }) as unknown as PHDocument;
 

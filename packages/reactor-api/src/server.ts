@@ -59,6 +59,7 @@ import type {
   Processor,
   ProcessorDriveFactory,
   ProcessorFactoryBuilder,
+  ReadinessGate,
 } from "./types.js";
 import {
   getDbClient,
@@ -118,6 +119,16 @@ type Options = {
 type ProcessorInitializer = ProcessorFactoryBuilder;
 
 const DEFAULT_PORT = 4000;
+
+function createReadinessGate(): ReadinessGate {
+  let ready = false;
+  return {
+    isReady: () => ready,
+    markReady: () => {
+      ready = true;
+    },
+  };
+}
 
 function resolveAttachmentStoragePath(options: Options): string {
   if (options.attachmentStoragePath) return options.attachmentStoragePath;
@@ -383,6 +394,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   attachments: AttachmentBuildResult;
   packages: PackageManager;
   dbClosers: Array<() => Promise<void>>;
+  readiness: ReadinessGate;
 }> {
   const port = options.port ?? DEFAULT_PORT;
   const { adapter: httpAdapter } = await createHttpAdapter("express");
@@ -437,6 +449,13 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
 
   // Health check endpoint (registered directly on adapter, before auth)
   httpAdapter.getRoute("/health", () => new Response("OK", { status: 200 }));
+
+  const readiness = createReadinessGate();
+  httpAdapter.getRoute("/ready", () =>
+    readiness.isReady()
+      ? new Response("OK", { status: 200 })
+      : new Response("starting", { status: 503 }),
+  );
 
   // Explorer route
   const explorerPrefix = `${config.basePath}/explorer`;
@@ -553,6 +572,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     attachments,
     packages,
     dbClosers,
+    readiness,
   };
 }
 
@@ -841,6 +861,7 @@ export async function initializeAndStartAPI(
     client: IReactorClient;
     syncManager: ISyncManager;
     documentModelRegistry: IDocumentModelRegistry;
+    readiness: ReadinessGate;
   }
 > {
   const {
@@ -856,6 +877,7 @@ export async function initializeAndStartAPI(
     attachments,
     packages,
     dbClosers,
+    readiness,
   } = await _setupCommonInfrastructure(options);
 
   const { documentModels, processors, subgraphs } = await packages.init();
@@ -920,5 +942,6 @@ export async function initializeAndStartAPI(
     client: reactorClient,
     syncManager,
     documentModelRegistry,
+    readiness,
   };
 }

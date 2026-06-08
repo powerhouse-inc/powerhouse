@@ -555,7 +555,6 @@ describe("RemoteDocumentController", () => {
                   timestampUtcMs: "1000",
                   input: { description: "remote change" },
                   scope: "global",
-                  attachments: null,
                   context: null,
                 },
               },
@@ -873,7 +872,6 @@ describe("RemoteDocumentController", () => {
         timestampUtcMs: String(index * 1000),
         input: { name: `Name ${index}` },
         scope: "global",
-        attachments: null,
         context: null,
       },
     });

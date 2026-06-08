@@ -255,10 +255,10 @@ export const noop = (scope = "global") =>
  *
  * @param type - The type of the action.
  * @param input - The input properties of the action.
- * @param attachments - The attachments included in the action.
+ * @param _attachments - Deprecated and ignored. Retained so action creators
+ *   generated before the attachment-system removal keep their 5-argument shape.
  * @param validator - The validator to use for the input properties.
  * @param scope - The scope of the action, can either be 'global' or 'local'.
- * @param skip - The number of operations to skip before this new action is applied.
  *
  * @throws Error if the type is empty or not a string.
  *
@@ -267,7 +267,9 @@ export const noop = (scope = "global") =>
 export function createAction<TAction extends Action>(
   type: TAction["type"],
   input?: TAction["input"],
-  attachments?: TAction["attachments"],
+  // Deprecated, ignored. Retained so action creators generated before the
+  // legacy attachment system was removed keep their 5-argument call shape.
+  _attachments?: unknown,
   validator?: () => { parse(v: unknown): TAction["input"] },
   scope: Action["scope"] = "global",
 ): TAction {
@@ -282,8 +284,6 @@ export function createAction<TAction extends Action>(
     input,
     scope,
   };
-
-  if (attachments) action.attachments = attachments;
 
   try {
     validator?.().parse(action.input);
@@ -309,7 +309,6 @@ export const actionFromAction = (action: Action): Action => {
     input: action.input,
     scope: action.scope,
     context: action.context,
-    attachments: action.attachments,
   };
 };
 
@@ -983,46 +982,6 @@ export type Action = {
   /** The scope of the action */
   scope: string;
 
-  /**
-   * The attachments included in the action.
-   *
-   * This will be refactored in a future release.
-   */
-  attachments?: AttachmentInput[];
-
   /** The context of the action. */
   context?: ActionContext;
 };
-
-/**
- * The attributes stored for a file. Namely, attachments of a document.
- */
-export type Attachment = {
-  /** The binary data of the attachment in Base64 */
-  data: string;
-
-  /** The MIME type of the attachment */
-  mimeType: string;
-
-  // The extension of the attachment.
-  extension?: string | null;
-
-  // The file name of the attachment.
-  fileName?: string | null;
-};
-
-export type AttachmentInput = Attachment & {
-  hash: string;
-};
-
-export type ActionWithAttachment = Action & {
-  attachments: AttachmentInput[];
-};
-
-/**
- * String type representing an attachment in a Document.
- *
- * @remarks
- * Attachment string is formatted as `attachment://<filename>`.
- */
-export type AttachmentRef = string; // TODO `attachment://${string}`;

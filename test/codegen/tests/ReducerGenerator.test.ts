@@ -30,6 +30,8 @@ class TestDirectoryManager extends DirectoryManager {
   }
 
   async createSourceFile(project: Project, filePath: string) {
+    // Mirror the base manager (a no-op override here) so this stays genuinely async.
+    await this.ensureExists(filePath);
     // Check if file already exists and return it, otherwise create new one
     const existing = project.getSourceFile(filePath);
     if (existing) {
@@ -82,7 +84,6 @@ describe("ReducerGenerator Integration", () => {
           template: null,
           scope: "global",
           hasInput: true,
-          hasAttachment: false,
           state: "",
         },
         {
@@ -96,7 +97,6 @@ describe("ReducerGenerator Integration", () => {
           template: null,
           scope: "global",
           hasInput: false,
-          hasAttachment: false,
           state: "",
         },
       ];
@@ -166,7 +166,6 @@ describe("ReducerGenerator Integration", () => {
           template: null,
           scope: "global",
           hasInput: true,
-          hasAttachment: false,
           state: "",
         },
       ];
@@ -197,7 +196,6 @@ describe("ReducerGenerator Integration", () => {
           template: null,
           scope: "global",
           hasInput: false,
-          hasAttachment: false,
           state: "",
         },
       ];
@@ -249,7 +247,6 @@ describe("ReducerGenerator Integration", () => {
             template: null,
             scope: "global",
             hasInput: true,
-            hasAttachment: false,
             state: "",
           },
         ],
@@ -326,7 +323,6 @@ describe("ReducerGenerator Integration", () => {
           template: null,
           scope: "global",
           hasInput: true,
-          hasAttachment: false,
           state: "",
         },
       ];
@@ -374,7 +370,6 @@ describe("ReducerGenerator Integration", () => {
           template: null,
           scope: "global",
           hasInput: true,
-          hasAttachment: false,
           state: "",
         },
         {
@@ -388,7 +383,6 @@ describe("ReducerGenerator Integration", () => {
           template: null,
           scope: "global",
           hasInput: false,
-          hasAttachment: false,
           state: "",
         },
         {
@@ -402,7 +396,6 @@ describe("ReducerGenerator Integration", () => {
           template: null,
           scope: "global",
           hasInput: false,
-          hasAttachment: false,
           state: "",
         },
       ];
@@ -445,7 +438,6 @@ describe("ReducerGenerator Integration", () => {
           template: null,
           scope: "global",
           hasInput: true,
-          hasAttachment: false,
           state: "",
         },
       ];
@@ -490,7 +482,6 @@ describe("ReducerGenerator Integration", () => {
           template: null,
           scope: "global",
           hasInput: true,
-          hasAttachment: false,
           state: "",
         },
       ];
@@ -530,7 +521,6 @@ describe("ReducerGenerator Integration", () => {
           template: null,
           scope: "global",
           hasInput: true,
-          hasAttachment: false,
           state: "",
         },
       ];
@@ -567,7 +557,6 @@ describe("ReducerGenerator Integration", () => {
           template: null,
           scope: "global",
           hasInput: true,
-          hasAttachment: false,
           state: "",
         },
       ];
@@ -597,7 +586,6 @@ describe("ReducerGenerator Integration", () => {
           template: null,
           scope: "global",
           hasInput: true,
-          hasAttachment: false,
           state: "",
         },
       ];

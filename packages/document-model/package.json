@@ -55,7 +55,6 @@
   },
   "dependencies": {
     "@powerhousedao/shared": "workspace:*",
-    "jszip": "^3.10.1",
-    "mime": "^4.0.4"
+    "jszip": "^3.10.1"
   }
 }

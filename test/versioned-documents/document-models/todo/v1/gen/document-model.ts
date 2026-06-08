@@ -1,153 +1,153 @@
 import type { DocumentModelGlobalState } from "document-model";
 
 export const documentModel: DocumentModelGlobalState = {
+  id: "test/todo",
+  name: "Todo",
   author: {
     name: "Powerhouse",
     website: "https://powerhouse.inc",
   },
-  description: "A versioned todo document model for testing codegen",
   extension: "todo",
-  id: "test/todo",
-  name: "Todo",
+  description: "A versioned todo document model for testing codegen",
   specifications: [
     {
-      changeLog: [],
-      modules: [
-        {
-          description: "",
-          id: "42454fe7-a04b-4e25-8d2b-428df928dcd6",
-          name: "todo_operations",
-          operations: [
-            {
-              description: "",
-              errors: [],
-              examples: [],
-              id: "c0285a3b-6641-4899-8d40-73327a4fd4c5",
-              name: "ADD_TODO",
-              reducer:
-                "state.todos.push({\n  id: action.input.id,\n  title: action.input.title,\n  completed: action.input.completed,\n});",
-              schema:
-                "input AddTodoInput {\n  id: String!\n  title: String!\n  completed: Boolean!\n}",
-              template: "",
-              scope: "global",
-            },
-            {
-              description: "",
-              errors: [],
-              examples: [],
-              id: "890bddb3-aaff-49be-b981-57a5c79302e1",
-              name: "REMOVE_TODO",
-              reducer:
-                "const index = state.todos.findIndex(t => t.id === action.input.id);\nif (index !== -1) {\n  state.todos.splice(index, 1);\n}",
-              schema: "input RemoveTodoInput {\n  id: String!\n}",
-              template: "",
-              scope: "global",
-            },
-            {
-              description: "",
-              errors: [],
-              examples: [],
-              id: "22b59393-17c6-4afa-8f4d-0138e34f2832",
-              name: "UPDATE_TODO",
-              reducer:
-                "const todo = state.todos.find(t => t.id === action.input.id);\nif (todo) {\n  if (action.input.title !== undefined) todo.title = action.input.title;\n  if (action.input.completed !== undefined) todo.completed = action.input.completed;\n}",
-              schema:
-                "input UpdateTodoInput {\n  id: String!\n  title: String\n  completed: Boolean\n}",
-              template: "",
-              scope: "global",
-            },
-          ],
-        },
-      ],
       state: {
-        global: {
+        local: {
+          schema: "",
           examples: [],
-          initialValue: '{"todos":[]}',
+          initialValue: "",
+        },
+        global: {
           schema:
             "type TodoState {\n  todos: [TodoItem!]!\n}\n\ntype TodoItem {\n  id: String!\n  title: String!\n  completed: Boolean!\n}",
-        },
-        local: {
           examples: [],
-          initialValue: "",
-          schema: "",
+          initialValue: '{"todos":[]}',
         },
       },
-      version: 1,
-    },
-    {
-      changeLog: [],
       modules: [
         {
-          description: "",
           id: "42454fe7-a04b-4e25-8d2b-428df928dcd6",
           name: "todo_operations",
+          description: "",
           operations: [
             {
-              description: "",
-              errors: [],
-              examples: [],
               id: "c0285a3b-6641-4899-8d40-73327a4fd4c5",
               name: "ADD_TODO",
-              reducer:
-                "state.todos.push({\n  id: action.input.id,\n  title: action.input.title,\n  completed: action.input.completed,\n});",
+              description: "",
               schema:
                 "input AddTodoInput {\n  id: String!\n  title: String!\n  completed: Boolean!\n}",
               template: "",
+              reducer:
+                "state.todos.push({\n  id: action.input.id,\n  title: action.input.title,\n  completed: action.input.completed,\n});",
+              errors: [],
+              examples: [],
               scope: "global",
             },
             {
-              description: "",
-              errors: [],
-              examples: [],
               id: "890bddb3-aaff-49be-b981-57a5c79302e1",
               name: "REMOVE_TODO",
-              reducer:
-                "const index = state.todos.findIndex(t => t.id === action.input.id);\nif (index !== -1) {\n  state.todos.splice(index, 1);\n}",
+              description: "",
               schema: "input RemoveTodoInput {\n  id: String!\n}",
               template: "",
+              reducer:
+                "const index = state.todos.findIndex(t => t.id === action.input.id);\nif (index !== -1) {\n  state.todos.splice(index, 1);\n}",
+              errors: [],
+              examples: [],
               scope: "global",
             },
             {
-              description: "",
-              errors: [],
-              examples: [],
               id: "22b59393-17c6-4afa-8f4d-0138e34f2832",
               name: "UPDATE_TODO",
-              reducer:
-                "const todo = state.todos.find(t => t.id === action.input.id);\nif (todo) {\n  if (action.input.title !== undefined) todo.title = action.input.title;\n  if (action.input.completed !== undefined) todo.completed = action.input.completed;\n}",
+              description: "",
               schema:
                 "input UpdateTodoInput {\n  id: String!\n  title: String\n  completed: Boolean\n}",
               template: "",
-              scope: "global",
-            },
-            {
-              description: "",
+              reducer:
+                "const todo = state.todos.find(t => t.id === action.input.id);\nif (todo) {\n  if (action.input.title !== undefined) todo.title = action.input.title;\n  if (action.input.completed !== undefined) todo.completed = action.input.completed;\n}",
               errors: [],
               examples: [],
-              id: "896ca10b-6598-4d03-a73c-22fa706ca4fe",
-              name: "EDIT_TITLE",
-              reducer: "state.title = action.input.title || null;",
-              schema: "input EditTitleInput {\n  title: String\n}",
-              template: "",
               scope: "global",
             },
           ],
         },
       ],
+      version: 1,
+      changeLog: [],
+    },
+    {
       state: {
-        global: {
-          examples: [],
-          initialValue: '{"todos":[],"title":""}',
-          schema:
-            "type TodoState {\n  title: String\n  todos: [TodoItem!]!\n}\n\ntype TodoItem {\n  id: String!\n  title: String!\n  completed: Boolean!\n}",
-        },
         local: {
+          schema: "",
           examples: [],
           initialValue: "",
-          schema: "",
+        },
+        global: {
+          schema:
+            "type TodoState {\n  title: String\n  todos: [TodoItem!]!\n}\n\ntype TodoItem {\n  id: String!\n  title: String!\n  completed: Boolean!\n}",
+          examples: [],
+          initialValue: '{"todos":[],"title":""}',
         },
       },
+      modules: [
+        {
+          id: "42454fe7-a04b-4e25-8d2b-428df928dcd6",
+          name: "todo_operations",
+          description: "",
+          operations: [
+            {
+              id: "c0285a3b-6641-4899-8d40-73327a4fd4c5",
+              name: "ADD_TODO",
+              description: "",
+              schema:
+                "input AddTodoInput {\n  id: String!\n  title: String!\n  completed: Boolean!\n}",
+              template: "",
+              reducer:
+                "state.todos.push({\n  id: action.input.id,\n  title: action.input.title,\n  completed: action.input.completed,\n});",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+            {
+              id: "890bddb3-aaff-49be-b981-57a5c79302e1",
+              name: "REMOVE_TODO",
+              description: "",
+              schema: "input RemoveTodoInput {\n  id: String!\n}",
+              template: "",
+              reducer:
+                "const index = state.todos.findIndex(t => t.id === action.input.id);\nif (index !== -1) {\n  state.todos.splice(index, 1);\n}",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+            {
+              id: "22b59393-17c6-4afa-8f4d-0138e34f2832",
+              name: "UPDATE_TODO",
+              description: "",
+              schema:
+                "input UpdateTodoInput {\n  id: String!\n  title: String\n  completed: Boolean\n}",
+              template: "",
+              reducer:
+                "const todo = state.todos.find(t => t.id === action.input.id);\nif (todo) {\n  if (action.input.title !== undefined) todo.title = action.input.title;\n  if (action.input.completed !== undefined) todo.completed = action.input.completed;\n}",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+            {
+              id: "896ca10b-6598-4d03-a73c-22fa706ca4fe",
+              name: "EDIT_TITLE",
+              description: "",
+              schema: "input EditTitleInput {\n  title: String\n}",
+              template: "",
+              reducer: "state.title = action.input.title || null;",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+          ],
+        },
+      ],
       version: 2,
+      changeLog: [],
     },
   ],
 };

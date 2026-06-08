@@ -2,59 +2,17 @@ import {
   baseLoadFromInput,
   createMinimalZip,
   createZip,
-  type Attachment,
-  type AttachmentInput,
   type MinimalBackupData,
   type PHBaseState,
   type PHDocument,
   type Reducer,
   type ReplayDocumentOptions,
 } from "@powerhousedao/shared/document-model";
-import mime from "mime/lite";
 import type { BinaryLike } from "node:crypto";
 import { createHash } from "node:crypto";
 import fs from "node:fs";
 import https from "node:https";
 import { join } from "node:path";
-
-function getFileAttributes(
-  file: string,
-): Omit<Attachment, "data" | "mimeType"> {
-  const extension = file.replace(/^.*\./, "") || undefined;
-  const fileName = file.replace(/^.*[/\\]/, "") || undefined;
-  return { extension, fileName };
-}
-
-/**
- * Reads an attachment from a file and returns its base64-encoded data and MIME type.
- * @param path - The path of the attachment file to read.
- * @returns A Promise that resolves to an object containing the base64-encoded data and MIME type of the attachment.
- */
-export async function getLocalFile(path: string): Promise<AttachmentInput> {
-  const buffer = await getFileNode(path);
-  const mimeType = mime.getType(path) || "application/octet-stream";
-  const attributes = getFileAttributes(path);
-  const data = buffer.toString("base64");
-  return { data, hash: hashNode(data), mimeType, ...attributes };
-}
-
-/**
- * Fetches an attachment from a URL and returns its base64-encoded data and MIME type.
- * @param url - The URL of the attachment to fetch.
- * @returns A Promise that resolves to an object containing the base64-encoded data and MIME type of the attachment.
- */
-export async function getRemoteFile(url: string): Promise<AttachmentInput> {
-  const { buffer, mimeType = "application/octet-stream" } =
-    await fetchFileNode(url);
-  const attributes = getFileAttributes(url);
-  const data = buffer.toString("base64");
-  return {
-    data,
-    hash: hashNode(data),
-    mimeType,
-    ...attributes,
-  };
-}
 
 export function writeFileNode(
   path: string,
@@ -186,8 +144,8 @@ export async function baseMinimalSaveToFile(
  * Saves a document to a ZIP file.
  *
  * @remarks
- * This function creates a ZIP file containing the document's state, operations,
- * and file attachments. The file is saved to the specified path.
+ * This function creates a ZIP file containing the document's state and
+ * operations. The file is saved to the specified path.
  *
  * @param document - The document to save to the file.
  * @param path - The path to save the file to.
