@@ -274,12 +274,14 @@ export async function createReactor(localPackage?: DocumentModelLib) {
     if (r.type === "error") console.error(r.error);
   });
 
-  // Subscribe to the static-mode `/__packages` SSE channel so live publishes
-  // (e.g. ph-clint's publish-reload trigger pushing a new list) flow into the
-  // running tab without a page reload. The channel only exists in static
-  // hosting; failures are silently ignored when running in vite dev or any
-  // host that doesn't speak this protocol.
-  subscribeToPackagesChannel(packageManager);
+  // Opt-in: subscribe to the static-mode `/__packages` SSE channel so live
+  // publishes (e.g. ph-clint's publish-reload trigger pushing a new list) flow
+  // into the running tab without a page reload. Enabled via
+  // `connect.packages.liveReload`; the channel only exists in static hosting
+  // that speaks this protocol.
+  if (runtimeConfig.connect?.packages?.liveReload) {
+    subscribeToPackagesChannel(packageManager);
+  }
 
   // get document models to set in the reactor (all versions)
   const documentModelModules = packageManager.packages
@@ -382,36 +384,22 @@ export async function createReactor(localPackage?: DocumentModelLib) {
   setDrives(drives);
   setFeatures(features);
 
-  // When the URL pins a drive slug, default drives and any URL-supplied
-  // remote drive must be materialized before setSelectedDrive runs —
-  // otherwise the slug is unknown and the URL gets rewritten to "/".
-  const driveResolutionRequired = Boolean(driveSlug);
-
-  // Add default drives for new reactor (after window.ph is set up)
+  // Add default drives and any URL-supplied remote drive in the background so
+  // the app renders immediately. setSelectedDrive defers selection until the
+  // drive matching the URL slug syncs in (see deferDriveSelection), so we only
+  // ever wait for the selected drive, never for unrelated default drives.
   const defaultDrivesConfig = getDefaultDrives(runtimeConfig);
   if (defaultDrivesConfig.length > 0) {
-    await addDefaultDrivesForNewReactor(
-      defaultDrivesConfig,
-      driveResolutionRequired
-        ? { awaitInitialSync: true, initialSyncTimeoutMs: 15_000 }
-        : undefined,
+    void addDefaultDrivesForNewReactor(defaultDrivesConfig).catch((error) =>
+      console.error("Failed to add default drives:", error),
     );
   }
 
   const remoteUrl = getDriveUrl();
   if (remoteUrl) {
-    try {
-      await addRemoteDrive(remoteUrl, undefined, {
-        awaitInitialSync: driveResolutionRequired,
-        initialSyncTimeoutMs: 15_000,
-      });
-    } catch (error) {
-      console.error(`Failed to add remote drive from ${remoteUrl}:`, error);
-    }
-  }
-
-  if (driveResolutionRequired) {
-    await refreshReactorDataClient(reactorClientModule.client);
+    void addRemoteDrive(remoteUrl, undefined).catch((error) =>
+      console.error(`Failed to add remote drive from ${remoteUrl}:`, error),
+    );
   }
 
   setSelectedDrive(driveSlug);

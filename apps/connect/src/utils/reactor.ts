@@ -4,6 +4,7 @@ import {
   ReactorBuilder,
   ReactorClientBuilder,
   setDriveMetadata,
+  waitForDocumentReady,
   type BrowserReactorClientModule,
   type Database,
   type IDocumentModelLoader,
@@ -97,54 +98,64 @@ export function getDefaultDrives(
 /**
  * Add default drives for the new reactor via sync manager.
  *
- * Retries with linear backoff to handle the common race where Connect's
- * dev server is ready before the switchboard has finished binding its port.
+ * Drives register concurrently so a slow or unreachable drive can't delay the
+ * others — in particular the one the URL slug resolves to. Retries with linear
+ * backoff to handle the common race where Connect's dev server is ready before
+ * the switchboard has finished binding its port.
  *
  * @param drives - Array of drive objects with url, optional name and icon
- * @param options - Forwarded to addRemoteDrive. Pass `awaitInitialSync: true`
- *   when the URL pins a drive slug that must resolve before selection.
  */
 export async function addDefaultDrivesForNewReactor(
   drives: PHConnectDefaultDrive[],
-  options?: { awaitInitialSync?: boolean; initialSyncTimeoutMs?: number },
 ): Promise<void> {
   const MAX_ATTEMPTS = 3;
   const BACKOFF_MS = 2000;
 
-  for (const drive of drives) {
-    let driveId: string | undefined;
-    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-      try {
-        driveId = await addRemoteDrive(drive.url, undefined, options);
-        break;
-      } catch (error) {
-        if (attempt === MAX_ATTEMPTS) {
-          console.error(
-            `Failed to add default drive ${drive.url} after ${MAX_ATTEMPTS} attempts:`,
-            error,
-          );
-        } else {
-          const delay = BACKOFF_MS * attempt;
-          console.warn(
-            `Default drive ${drive.url} not reachable (attempt ${attempt}/${MAX_ATTEMPTS}), retrying in ${delay}ms...`,
-          );
-          await new Promise((resolve) => setTimeout(resolve, delay));
+  await Promise.all(
+    drives.map(async (drive) => {
+      let driveId: string | undefined;
+      for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+        try {
+          driveId = await addRemoteDrive(drive.url);
+          break;
+        } catch (error) {
+          if (attempt === MAX_ATTEMPTS) {
+            console.error(
+              `Failed to add default drive ${drive.url} after ${MAX_ATTEMPTS} attempts:`,
+              error,
+            );
+          } else {
+            const delay = BACKOFF_MS * attempt;
+            console.warn(
+              `Default drive ${drive.url} not reachable (attempt ${attempt}/${MAX_ATTEMPTS}), retrying in ${delay}ms...`,
+            );
+            await new Promise((resolve) => setTimeout(resolve, delay));
+          }
         }
       }
-    }
 
-    if (driveId && (drive.name || drive.icon)) {
-      try {
-        await setDriveMetadata(driveId, {
-          name: drive.name,
-          icon: drive.icon,
-        });
-      } catch (error) {
-        console.warn(
-          `Default drive ${drive.url} was added but metadata update failed:`,
-          error,
-        );
+      if (driveId && (drive.name || drive.icon)) {
+        try {
+          // setDriveMetadata dispatches against the local drive document, which
+          // only exists once initial backfill delivers it — wait for it first
+          // so the name/icon override isn't lost to a sync race.
+          const reactorClient = window.ph?.reactorClient;
+          if (reactorClient) {
+            await waitForDocumentReady(reactorClient, driveId, {
+              timeoutMs: 15_000,
+            });
+          }
+          await setDriveMetadata(driveId, {
+            name: drive.name,
+            icon: drive.icon,
+          });
+        } catch (error) {
+          console.warn(
+            `Default drive ${drive.url} was added but metadata update failed:`,
+            error,
+          );
+        }
       }
-    }
-  }
+    }),
+  );
 }

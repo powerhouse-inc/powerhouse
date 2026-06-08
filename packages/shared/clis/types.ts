@@ -64,6 +64,8 @@ export type PHConnectApp = {
 
 export type PHConnectPackages = {
   externalEnabled?: boolean;
+  /** Subscribe to the static-mode `/__packages` SSE channel for live reload. */
+  liveReload?: boolean;
 };
 
 export type PHConnectRenown = {

@@ -1,3 +1,44 @@
+## 6.2.0-dev.3 (2026-06-08)
+
+This was a version bump only, there were no code changes.
+
+## 6.2.0-dev.2 (2026-06-07)
+
+This was a version bump only, there were no code changes.
+
+## 6.2.0-dev.1 (2026-06-06)
+
+This was a version bump only, there were no code changes.
+
+## 6.2.0-dev.0 (2026-06-05)
+
+This was a version bump only, there were no code changes.
+
+## 6.1.0-dev.21 (2026-06-05)
+
+### 🚀 Features
+
+- **connect:** make packages live-reload SSE channel opt-in ([66c8936cd](https://github.com/powerhouse-inc/powerhouse/commit/66c8936cd))
+
+### 🩹 Fixes
+
+- **registry:** increate jwt expiry to 90 days ([55ce1f00c](https://github.com/powerhouse-inc/powerhouse/commit/55ce1f00c))
+- **vetra:** only load tsmorph project for vetra drives ([6763ba87a](https://github.com/powerhouse-inc/powerhouse/commit/6763ba87a))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.1.0-dev.20 (2026-06-05)
+
+### 🩹 Fixes
+
+- **reactor-attachments:** tsdown config bug where shared types were exported twice, breaking instanceof ([5e5d0206f](https://github.com/powerhouse-inc/powerhouse/commit/5e5d0206f))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.1.0-dev.19 (2026-06-04)
 
 ### 🩹 Fixes

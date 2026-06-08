@@ -1,3 +1,33 @@
+## 6.2.0-dev.3 (2026-06-08)
+
+This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
+
+## 6.2.0-dev.2 (2026-06-07)
+
+This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
+
+## 6.2.0-dev.1 (2026-06-06)
+
+This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
+
+## 6.2.0-dev.0 (2026-06-05)
+
+This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
+
+## 6.1.0-dev.21 (2026-06-05)
+
+### 🚀 Features
+
+- **connect:** make packages live-reload SSE channel opt-in ([66c8936cd](https://github.com/powerhouse-inc/powerhouse/commit/66c8936cd))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.1.0-dev.20 (2026-06-05)
+
+This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
+
 ## 6.1.0-dev.19 (2026-06-04)
 
 This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
