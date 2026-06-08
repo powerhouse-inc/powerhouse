@@ -324,12 +324,20 @@ export async function installScaffold(opts: {
       2,
     ),
   );
-  if (opts.skipInstall && (await exists(join(dir, "node_modules", opts.name)))) {
+  if (
+    opts.skipInstall &&
+    (await exists(join(dir, "node_modules", opts.name)))
+  ) {
     return { dir };
   }
   const install = await runCapture(
     "pnpm",
-    ["install", "--ignore-workspace", "--no-frozen-lockfile", "--ignore-scripts"],
+    [
+      "install",
+      "--ignore-workspace",
+      "--no-frozen-lockfile",
+      "--ignore-scripts",
+    ],
     { cwd: dir },
   );
   if (install.code !== 0) {

@@ -114,8 +114,10 @@ async function gqlFetch(
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ query, variables }),
   });
-  let body: { data?: Record<string, unknown>; errors?: { message?: string }[] } =
-    {};
+  let body: {
+    data?: Record<string, unknown>;
+    errors?: { message?: string }[];
+  } = {};
   try {
     body = (await res.json()) as typeof body;
   } catch {
@@ -132,7 +134,10 @@ async function gqlFetch(
 /** Joins GraphQL error messages into a single short string. */
 function errText(res: GqlResponse): string {
   if (!res.httpOk && !res.errors?.length) return `HTTP ${res.status}`;
-  return (res.errors ?? []).map((e) => e.message ?? "").join("; ").slice(0, 500);
+  return (res.errors ?? [])
+    .map((e) => e.message ?? "")
+    .join("; ")
+    .slice(0, 500);
 }
 
 async function exerciseModel(
