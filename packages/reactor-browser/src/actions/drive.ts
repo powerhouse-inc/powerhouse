@@ -20,6 +20,12 @@ import { getUserPermissions } from "../utils/user.js";
 
 const DEFAULT_INITIAL_SYNC_TIMEOUT_MS = 30_000;
 
+// In-flight remote registrations keyed by collectionId. sync.list()/sync.add()
+// is not atomic, so concurrent addRemoteDrive calls for the same drive would
+// both miss the existing remote and register duplicates. Concurrent callers
+// share the first registration instead.
+const inFlightRemoteRegistrations = new Map<string, Promise<unknown>>();
+
 export type AddRemoteDriveOptions = {
   pollBehavior?: PollBehavior;
   /**
@@ -161,26 +167,35 @@ export async function addRemoteDrive(
   const resolvedDriveId = driveId ?? driveInfo.id;
   const collectionId = driveCollectionId("main", resolvedDriveId);
 
-  const existingRemote = sync
-    .list()
-    .find((remote) => remote.collectionId === collectionId);
+  const inFlight = inFlightRemoteRegistrations.get(collectionId);
+  if (inFlight) {
+    await inFlight;
+  } else {
+    const existingRemote = sync
+      .list()
+      .find((remote) => remote.collectionId === collectionId);
 
-  if (!existingRemote) {
-    const remoteName = crypto.randomUUID();
-    await sync.add(
-      remoteName,
-      collectionId,
-      {
-        type: "gql",
-        parameters: {
-          url: driveInfo.graphqlEndpoint,
-        },
-      },
-      undefined,
-      options?.pollBehavior
-        ? { pollBehavior: options.pollBehavior }
-        : undefined,
-    );
+    if (!existingRemote) {
+      const remoteName = crypto.randomUUID();
+      const registration = sync
+        .add(
+          remoteName,
+          collectionId,
+          {
+            type: "gql",
+            parameters: {
+              url: driveInfo.graphqlEndpoint,
+            },
+          },
+          undefined,
+          options?.pollBehavior
+            ? { pollBehavior: options.pollBehavior }
+            : undefined,
+        )
+        .finally(() => inFlightRemoteRegistrations.delete(collectionId));
+      inFlightRemoteRegistrations.set(collectionId, registration);
+      await registration;
+    }
   }
 
   if (options?.awaitInitialSync) {
