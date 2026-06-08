@@ -36,157 +36,38 @@
  * Writes .cache/registry-audit/load-report.json and a console summary.
  * Requires the local Switchboard to be built (apps/switchboard/dist/server.mjs).
  */
-import { spawn } from "node:child_process";
-import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
-  CACHE_DIR,
+  hasDocumentModelsExport,
+  installScaffold,
+  LOAD_DIR,
+  LOAD_REPORT_PATH,
   opt,
   parseArgs,
   REPO_ROOT,
   REPORT_PATH,
   requireManifest,
-  runCapture,
-  sanitize,
+  requireSwitchboardBuild,
+  spawnWorker,
 } from "./lib.js";
 
-const LOAD_DIR = join(CACHE_DIR, "load");
-const LOAD_REPORT_PATH = join(CACHE_DIR, "load-report.json");
 const RUNNER = join(REPO_ROOT, "tools", "registry-audit", "load-worker.ts");
-const TSX = join(REPO_ROOT, "node_modules", ".bin", "tsx");
-const SWITCHBOARD = join(
-  REPO_ROOT,
-  "apps",
-  "switchboard",
-  "dist",
-  "server.mjs",
-);
 
 type RunnerResult = { ok: boolean; ids: string[]; error?: string; ms?: number };
-
-async function exists(path: string): Promise<boolean> {
-  try {
-    await stat(path);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-/** True if the extracted package declares a `./document-models` export. */
-async function hasDocumentModelsExport(
-  extractedPath: string,
-): Promise<boolean> {
-  try {
-    const pkg = JSON.parse(
-      await readFile(join(extractedPath, "package.json"), "utf8"),
-    ) as { exports?: Record<string, unknown> };
-    return Boolean(pkg.exports?.["./document-models"]);
-  } catch {
-    return false;
-  }
-}
-
-type RunOutcome = {
-  exitCode: number | null;
-  result: RunnerResult | null;
-  rawTail: string;
-  timedOut: boolean;
-};
 
 /**
  * Spawns the runner subprocess. `pkgName` undefined = baseline (no package);
  * `cwd` defaults to the repo root (used for the baseline).
  */
-function runOnce(
-  pkgName: string | undefined,
-  cwd: string,
-  timeoutMs: number,
-): Promise<RunOutcome> {
-  return new Promise((resolvePromise) => {
-    const child = spawn(TSX, [RUNNER, pkgName ?? "none"], {
-      cwd,
-      env: { ...process.env, PH_PGLITE_IN_MEMORY: "1" },
-    });
-    let out = "";
-    let timedOut = false;
-    const timer = setTimeout(() => {
-      timedOut = true;
-      child.kill("SIGKILL");
-    }, timeoutMs);
-
-    const collect = (d: Buffer) => (out += d.toString());
-    child.stdout.on("data", collect);
-    child.stderr.on("data", collect);
-    child.on("close", (exitCode) => {
-      clearTimeout(timer);
-      const line = out.split("\n").find((l) => l.startsWith("__SBLOAD__ "));
-      let result: RunnerResult | null = null;
-      if (line) {
-        try {
-          result = JSON.parse(line.slice("__SBLOAD__ ".length)) as RunnerResult;
-        } catch {
-          /* leave null */
-        }
-      }
-      resolvePromise({
-        exitCode,
-        result,
-        rawTail: out.split("\n").slice(-25).join("\n"),
-        timedOut,
-      });
-    });
+function runOnce(pkgName: string | undefined, cwd: string, timeoutMs: number) {
+  return spawnWorker<RunnerResult>({
+    runner: RUNNER,
+    arg: pkgName ?? "none",
+    cwd,
+    timeoutMs,
+    sentinel: "__SBLOAD__",
   });
-}
-
-/** Installs the published tarball into a clean scaffold; returns its dir or null. */
-async function installScaffold(
-  name: string,
-  tarballPath: string,
-  skipInstall: boolean,
-): Promise<{ dir: string } | { error: string }> {
-  const dir = join(LOAD_DIR, sanitize(name));
-  await mkdir(dir, { recursive: true });
-  // Deliberately no tsconfig.json here: a tsconfig with `paths` would make tsx
-  // mis-resolve the Switchboard's own deps when running with cwd=scaffold.
-  await writeFile(
-    join(dir, "package.json"),
-    JSON.stringify(
-      {
-        name: `audit-load-${sanitize(name).replace(/[@/]/g, "")}`,
-        private: true,
-        type: "module",
-        dependencies: { [name]: `file:${tarballPath}` },
-      },
-      null,
-      2,
-    ),
-  );
-  if (skipInstall && (await exists(join(dir, "node_modules", name)))) {
-    return { dir };
-  }
-  const install = await runCapture(
-    "pnpm",
-    [
-      "install",
-      "--ignore-workspace",
-      "--no-frozen-lockfile",
-      "--ignore-scripts",
-    ],
-    { cwd: dir },
-  );
-  if (install.code !== 0) {
-    await writeFile(
-      join(dir, "install-error.txt"),
-      install.stdout + install.stderr,
-    );
-    return {
-      error:
-        (install.stderr || install.stdout).trim().split("\n").pop() ??
-        `pnpm install exited ${install.code}`,
-    };
-  }
-  return { dir };
 }
 
 async function main() {
@@ -199,13 +80,7 @@ async function main() {
   const timeoutMs = Number(opt(args, "timeout", "120000"));
   const skipInstall = args.flags["skip-install"] ?? false;
 
-  if (!(await exists(SWITCHBOARD))) {
-    console.error(
-      `Switchboard build not found at ${SWITCHBOARD}.\n` +
-        `Build it first:  pnpm --filter=@powerhousedao/switchboard build`,
-    );
-    process.exit(1);
-  }
+  await requireSwitchboardBuild();
 
   const manifest = await requireManifest("tsx tools/registry-audit/extract.ts");
   let entries = Object.values(manifest.packages).filter(
@@ -267,11 +142,13 @@ async function main() {
   const results: Outcome[] = [];
 
   for (const entry of finalTargets) {
-    const scaffold = await installScaffold(
-      entry.name,
-      entry.tarballPath!,
+    const scaffold = await installScaffold({
+      name: entry.name,
+      tarballPath: entry.tarballPath!,
+      baseDir: LOAD_DIR,
+      namePrefix: "audit-load",
       skipInstall,
-    );
+    });
     if ("error" in scaffold) {
       results.push({
         package: entry.name,

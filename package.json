@@ -42,7 +42,8 @@
     "audit:extract": "tsx tools/registry-audit/extract.ts",
     "audit:analyze": "tsx tools/registry-audit/analyze.ts",
     "audit:typecheck": "tsx tools/registry-audit/typecheck.ts",
-    "audit:load": "tsx tools/registry-audit/load.ts"
+    "audit:load": "tsx tools/registry-audit/load.ts",
+    "audit:create-query": "tsx tools/registry-audit/create-query.ts"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.8.1",

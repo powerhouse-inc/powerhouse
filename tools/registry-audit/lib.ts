@@ -16,7 +16,7 @@
  */
 import { spawn } from "node:child_process";
 import { createWriteStream } from "node:fs";
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, stat, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { Readable } from "node:stream";
 import { pipeline as streamPipeline } from "node:stream/promises";
@@ -35,9 +35,25 @@ export const CACHE_DIR = join(REPO_ROOT, ".cache", "registry-audit");
 export const TARBALLS_DIR = join(CACHE_DIR, "tarballs");
 export const EXTRACTED_DIR = join(CACHE_DIR, "extracted");
 export const TYPECHECK_DIR = join(CACHE_DIR, "typecheck");
+/** Install scaffolds for the in-process boot phases (load, create-query). Shared so a single install is reused across both. */
+export const LOAD_DIR = join(CACHE_DIR, "load");
 export const MANIFEST_PATH = join(CACHE_DIR, "manifest.json");
 export const REPORT_PATH = join(CACHE_DIR, "report.json");
 export const TYPECHECK_REPORT_PATH = join(CACHE_DIR, "typecheck-report.json");
+export const LOAD_REPORT_PATH = join(CACHE_DIR, "load-report.json");
+export const CREATE_QUERY_REPORT_PATH = join(
+  CACHE_DIR,
+  "create-query-report.json",
+);
+
+/** The local Switchboard server build the boot phases import by absolute path. */
+export const SWITCHBOARD_SERVER = join(
+  REPO_ROOT,
+  "apps",
+  "switchboard",
+  "dist",
+  "server.mjs",
+);
 
 // ---------------------------------------------------------------------------
 // Manifest
@@ -234,6 +250,160 @@ export function runCapture(
     child.on("close", (code) =>
       resolvePromise({ code: code ?? 0, stdout, stderr }),
     );
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Switchboard boot harness (shared by load.ts and create-query.ts)
+// ---------------------------------------------------------------------------
+
+/** True if `path` exists. */
+export async function exists(path: string): Promise<boolean> {
+  try {
+    await stat(path);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** True if the extracted package declares a `./document-models` export. */
+export async function hasDocumentModelsExport(
+  extractedPath: string,
+): Promise<boolean> {
+  try {
+    const pkg = JSON.parse(
+      await readFile(join(extractedPath, "package.json"), "utf8"),
+    ) as { exports?: Record<string, unknown> };
+    return Boolean(pkg.exports?.["./document-models"]);
+  } catch {
+    return false;
+  }
+}
+
+/** Exits with a build hint if the local Switchboard server build is missing. */
+export async function requireSwitchboardBuild(): Promise<void> {
+  if (!(await exists(SWITCHBOARD_SERVER))) {
+    console.error(
+      `Switchboard build not found at ${SWITCHBOARD_SERVER}.\n` +
+        `Build it first:  pnpm --filter=@powerhousedao/switchboard build`,
+    );
+    process.exit(1);
+  }
+}
+
+/**
+ * Installs a published tarball into a clean scaffold under `baseDir/<sanitized>`
+ * so its full dependency graph resolves the way it would in a real deployment.
+ * Returns the scaffold dir, or an error string. When `skipInstall` is set and the
+ * package is already installed there, the existing install is reused (the
+ * published tarball is immutable for a given version, so reuse is always safe).
+ */
+export async function installScaffold(opts: {
+  name: string;
+  tarballPath: string;
+  baseDir: string;
+  /** package.json name prefix, e.g. "audit-load" / "audit-cq". */
+  namePrefix: string;
+  skipInstall: boolean;
+}): Promise<{ dir: string } | { error: string }> {
+  const dir = join(opts.baseDir, sanitize(opts.name));
+  await mkdir(dir, { recursive: true });
+  // Deliberately no tsconfig.json here: a tsconfig with `paths` would make tsx
+  // mis-resolve the Switchboard's own deps when running with cwd=scaffold.
+  await writeFile(
+    join(dir, "package.json"),
+    JSON.stringify(
+      {
+        name: `${opts.namePrefix}-${sanitize(opts.name).replace(/[@/]/g, "")}`,
+        private: true,
+        type: "module",
+        dependencies: { [opts.name]: `file:${opts.tarballPath}` },
+      },
+      null,
+      2,
+    ),
+  );
+  if (opts.skipInstall && (await exists(join(dir, "node_modules", opts.name)))) {
+    return { dir };
+  }
+  const install = await runCapture(
+    "pnpm",
+    ["install", "--ignore-workspace", "--no-frozen-lockfile", "--ignore-scripts"],
+    { cwd: dir },
+  );
+  if (install.code !== 0) {
+    await writeFile(
+      join(dir, "install-error.txt"),
+      install.stdout + install.stderr,
+    );
+    return {
+      error:
+        (install.stderr || install.stdout).trim().split("\n").pop() ??
+        `pnpm install exited ${install.code}`,
+    };
+  }
+  return { dir };
+}
+
+export type WorkerOutcome<T> = {
+  exitCode: number | null;
+  /** Parsed sentinel-line payload, or null if absent/unparseable. */
+  result: T | null;
+  /** Last 25 lines of combined stdout+stderr (for diagnosing failures). */
+  rawTail: string;
+  timedOut: boolean;
+};
+
+/**
+ * Spawns a worker (`tsx <runner> <arg>`) with cwd set to its scaffold, in-memory
+ * PGlite forced on, and a SIGKILL timeout. The worker prints exactly one machine
+ * line `"<sentinel> <json>"`; that JSON is parsed into `result`.
+ */
+export function spawnWorker<T>(opts: {
+  runner: string;
+  /** Worker argv[2]: a package name, or "none" for the baseline. */
+  arg: string;
+  cwd: string;
+  timeoutMs: number;
+  sentinel: string;
+  env?: NodeJS.ProcessEnv;
+}): Promise<WorkerOutcome<T>> {
+  const tsx = join(REPO_ROOT, "node_modules", ".bin", "tsx");
+  const prefix = `${opts.sentinel} `;
+  return new Promise((resolvePromise) => {
+    const child = spawn(tsx, [opts.runner, opts.arg], {
+      cwd: opts.cwd,
+      env: { ...process.env, PH_PGLITE_IN_MEMORY: "1", ...opts.env },
+    });
+    let out = "";
+    let timedOut = false;
+    const timer = setTimeout(() => {
+      timedOut = true;
+      child.kill("SIGKILL");
+    }, opts.timeoutMs);
+
+    const collect = (d: Buffer) => (out += d.toString());
+    child.stdout.on("data", collect);
+    child.stderr.on("data", collect);
+    child.on("close", (exitCode) => {
+      clearTimeout(timer);
+      const line = out.split("\n").find((l) => l.startsWith(prefix));
+      let result: T | null = null;
+      if (line) {
+        try {
+          result = JSON.parse(line.slice(prefix.length)) as T;
+        } catch {
+          /* leave null */
+        }
+      }
+      resolvePromise({
+        exitCode,
+        result,
+        rawTail: out.split("\n").slice(-25).join("\n"),
+        timedOut,
+      });
+    });
   });
 }
 

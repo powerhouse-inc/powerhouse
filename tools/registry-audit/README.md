@@ -129,6 +129,40 @@ pnpm audit:load [--package <name>] [--from-report] [--filter <substr>] [--limit 
 > models whose SDL still declares `scalar Attachment` boot fine — the undeclared
 > scalar degrades to a passthrough rather than throwing.
 
+### 6. create-query — `pnpm audit:create-query` (runtime API test)
+
+The deepest check in the suite. Where `load` only proves a model **boots and
+registers**, this proves its generated GraphQL API actually **works** against the
+current core: for every document model a package contributes, it hits that model's
+own generated subgraph endpoint (`/graphql/<kebab-name>`), creates an empty document
+of that type, then queries it back by id.
+
+```
+pnpm audit:create-query [--package <name>] [--from-report] [--filter <substr>] [--limit <n>] [--timeout <ms>] [--reinstall]
+```
+
+- Boots the same in-process Switchboard as `load` (in-memory PGlite) with the single
+  package loaded, then for each **own** model (core/baseline models excluded) runs,
+  over HTTP against the per-model subgraph:
+  - `mutation { <Name> { createEmptyDocument { id … } } }`, then
+  - `query { <Name> { document(identifier: <id>) { document { id documentType } } } }`.
+
+  `<Name>` is the model's GraphQL namespace (`pascalCase(name)`) and the endpoint
+  segment is `kebabCase(name)` — mirroring how `reactor-api` names subgraphs.
+- `createEmptyDocument` needs no drive and no input, so the check is uniform across
+  models. The query verifies the round-tripped `id` and `documentType` match.
+- **Reuses the `load` scaffolds** under `.cache/registry-audit/load/<pkg>/` — if a
+  package is already installed there (e.g. after `audit:load`), no reinstall happens.
+  Use `--reinstall` to force a fresh install.
+- Each package runs in its **own subprocess** (`create-query-worker.ts`) with a
+  per-package `--timeout` (default 120s).
+- Status per package: `ok` (every model created **and** queried), `partial` (some
+  models failed), `failed` (none succeeded), `no-models` (booted, contributed
+  nothing), `boot-failed`, `install-failed`, `timeout`. A per-model entry that 404s
+  on its subgraph is flagged `endpointMissing` (usually a name-derivation drift).
+- Writes `create-query-report.json` + a console summary. **Requires the local
+  Switchboard to be built**: `pnpm --filter=@powerhousedao/switchboard build`.
+
 ## Typical run
 
 ```
@@ -139,4 +173,6 @@ pnpm audit:analyze --rules tools/registry-audit/rules/legacy-attachments.json
 pnpm audit:typecheck --from-report --limit 5
 # runtime proof: boot a switchboard and import each model:
 pnpm audit:load
+# deepest proof: create + query a document per model via its generated endpoint:
+pnpm audit:create-query
 ```
