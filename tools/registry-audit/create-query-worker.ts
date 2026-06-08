@@ -43,38 +43,27 @@ type StartSwitchboard = (
 ) => Promise<SwitchboardHandle>;
 
 type ModelResult = {
-  /** Model id == document type, e.g. "powerhouse/builder-profile". */
   id: string;
-  /** Model global name (source of the subgraph/namespace names). */
   name: string;
-  /** Per-model subgraph URL segment, e.g. "powerhouse-builder-profile". */
   subgraph: string;
   created: boolean;
   queried: boolean;
-  /** Set when the subgraph endpoint itself is missing (404) - likely name drift. */
   endpointMissing?: boolean;
   createError?: string;
   queryError?: string;
 };
 
-/**
- * A fixed port to bind the Switchboard on. Unlike `load`, this phase must address
- * the HTTP server, and `startSwitchboard` does not report back an OS-assigned
- * (`port: 0`) port. Workers run one at a time and fully exit between packages, so a
- * fixed port is reusable; `strictPort` makes a lingering listener a hard error
- * rather than a silent rebind we couldn't find.
- */
+// startSwitchboard does not report back an OS-assigned (port: 0) port, and this
+// phase must address the HTTP server. Workers run sequentially so a fixed port is
+// reusable; strictPort surfaces a lingering listener instead of silently rebinding.
 const PORT = 47100;
 
 function emit(obj: unknown): void {
   console.log(`__SBCQ__ ${JSON.stringify(obj)}`);
 }
 
-/**
- * Splits an identifier into words on separators (/ space - _ .) and camel/acronym
- * boundaries - the basis for kebab/pascal casing that mirrors `change-case`, which
- * is what reactor-api uses to name each model's subgraph and GraphQL namespace.
- */
+// kebab/pascal below mirror `change-case`, which reactor-api uses to name each
+// model's subgraph (kebab) and GraphQL namespace (pascal).
 function toWords(input: string): string[] {
   return input
     .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
@@ -83,14 +72,12 @@ function toWords(input: string): string[] {
     .filter(Boolean);
 }
 
-/** kebabCase(name) - the subgraph URL segment (mirrors document-model-subgraph.ts). */
 function kebabCase(name: string): string {
   return toWords(name)
     .map((w) => w.toLowerCase())
     .join("-");
 }
 
-/** pascalCase(name) - the GraphQL namespace type (mirrors getDocumentModelSchemaName). */
 function pascalCase(name: string): string {
   return toWords(name)
     .map((w) => w[0].toUpperCase() + w.slice(1).toLowerCase())
@@ -131,7 +118,6 @@ async function gqlFetch(
   };
 }
 
-/** Joins GraphQL error messages into a single short string. */
 function errText(res: GqlResponse): string {
   if (!res.httpOk && !res.errors?.length) return `HTTP ${res.status}`;
   return (res.errors ?? [])
@@ -147,8 +133,7 @@ async function exerciseModel(
 ): Promise<ModelResult> {
   const subgraph = kebabCase(name);
   const namespace = pascalCase(name);
-  // 127.0.0.1, not "localhost": on macOS localhost can resolve to ::1 first and
-  // miss an IPv4-only listener.
+  // 127.0.0.1, not localhost: localhost can resolve to ::1 and miss an IPv4 listener.
   const endpoint = `http://127.0.0.1:${port}/graphql/${subgraph}`;
   const result: ModelResult = {
     id,
@@ -158,7 +143,6 @@ async function exerciseModel(
     queried: false,
   };
 
-  // 1. Create an empty document of this type via the model's generated subgraph.
   const createRes = await gqlFetch(
     endpoint,
     `mutation { ${namespace} { createEmptyDocument { id name documentType } } }`,
@@ -180,7 +164,6 @@ async function exerciseModel(
   result.created = true;
   const docId = created.id;
 
-  // 2. Query it back by id via the same generated subgraph.
   const queryRes = await gqlFetch(
     endpoint,
     `query($id: String!) { ${namespace} { document(identifier: $id) { document { id documentType } childIds } } }`,
@@ -246,8 +229,6 @@ async function main(): Promise<void> {
     try {
       models.push(await exerciseModel(PORT, m.id, m.name));
     } catch (e) {
-      // A transport-level failure (e.g. fetch failed) is the model's result, not
-      // a worker crash - record it so the other models still run.
       const msg = e instanceof Error ? e.message : String(e);
       models.push({
         id: m.id,

@@ -22,6 +22,11 @@ export interface IReactorProcessorHostModule extends IProcessorHostModule {
   attachments: IAttachmentClient;
 }
 
+export type ReadinessGate = {
+  isReady: () => boolean;
+  markReady: () => void;
+};
+
 export type API = {
   httpAdapter: IHttpAdapter;
   graphqlManager: GraphQLManager;

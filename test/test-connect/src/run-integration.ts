@@ -147,19 +147,23 @@ async function waitForSwitchboard(
   url: string,
   timeoutMs: number,
 ): Promise<void> {
+  const readyUrl = new URL("/ready", url).toString();
   const start = Date.now();
-  const client = new GraphQLClient(url);
 
   while (Date.now() - start < timeoutMs) {
-    const connected = await client.testConnection();
-    if (connected) {
-      return;
+    try {
+      const res = await fetch(readyUrl);
+      if (res.ok) {
+        return;
+      }
+    } catch {
+      // server not accepting connections yet
     }
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
 
   throw new Error(
-    `Switchboard did not become ready at ${url} within ${timeoutMs}ms`,
+    `Switchboard did not become ready at ${readyUrl} within ${timeoutMs}ms`,
   );
 }
 
