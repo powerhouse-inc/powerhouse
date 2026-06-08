@@ -1,3 +1,7 @@
+## 6.2.0-dev.3 (2026-06-08)
+
+This was a version bump only for @powerhousedao/config to align it with other projects, there were no code changes.
+
 ## 6.2.0-dev.2 (2026-06-07)
 
 This was a version bump only for @powerhousedao/config to align it with other projects, there were no code changes.
