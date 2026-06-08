@@ -231,6 +231,14 @@ async function main() {
       join(dir, "tsconfig.json"),
       JSON.stringify(tsconfig, null, 2),
     );
+    // Scope the install's registry to this scaffold only (a project-local
+    // .npmrc, read because pnpm runs with cwd: dir). The audit registry is a
+    // Verdaccio proxy, so both the published internal packages (e.g. vetra-app)
+    // and public deps resolve through it - without touching global npm config.
+    await writeFile(
+      join(dir, ".npmrc"),
+      `registry=${manifest.registry.replace(/\/$/, "")}/\n`,
+    );
     await writeFile(
       join(dir, "index.ts"),
       `import * as pkg from "${entry.name}";\nvoid (pkg as unknown);\n`,
