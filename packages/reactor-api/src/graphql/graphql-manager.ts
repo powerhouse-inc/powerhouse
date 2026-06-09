@@ -414,6 +414,15 @@ export class GraphQLManager {
     return this.path;
   }
 
+  /**
+   * Get the authorization service shared with subgraphs. Use this when
+   * constructing a subgraph instance externally for
+   * {@link registerSubgraphInstance}.
+   */
+  getAuthorizationService(): IAuthorizationService {
+    return this.authorizationService;
+  }
+
   async registerSubgraph(
     subgraph: SubgraphClass,
     supergraph = "",
