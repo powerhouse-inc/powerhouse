@@ -7,7 +7,7 @@ import type { SubgraphArgs } from "../src/graphql/types.js";
 import { runMigrations } from "../src/migrations/index.js";
 import {
   AuthorizationPolicy,
-  AuthorizationService,
+  createAuthorizationService,
 } from "../src/services/authorization.service.js";
 import { DocumentPermissionService } from "../src/services/document-permission.service.js";
 import type { DocumentPermissionDatabase } from "../src/utils/db.js";
@@ -70,13 +70,13 @@ describe("Permissions Integration Tests", () => {
     db = dbClient as Kysely<DocumentPermissionDatabase>;
     await runMigrations(db as Kysely<unknown>);
     documentPermissionService = new DocumentPermissionService(db);
-    const authorizationService = new AuthorizationService(
-      documentPermissionService,
+    const authorizationService = createAuthorizationService(
       {
         admins: ["0xadmin"],
         defaultProtection: false,
         policy: AuthorizationPolicy.DOCUMENT_PERMISSIONS,
       },
+      documentPermissionService,
     );
     // These tests exercise grant enforcement, which only applies to protected
     // documents; unprotected documents are open under the authorization model.

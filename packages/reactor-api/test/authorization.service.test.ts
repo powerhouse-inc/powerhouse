@@ -1,12 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { IAuthorizationService } from "../src/services/authorization.service.js";
 import {
   AuthorizationPolicy,
-  AuthorizationService,
+  createAuthorizationService,
 } from "../src/services/authorization.service.js";
 import type { DocumentPermissionService } from "../src/services/document-permission.service.js";
 
-describe("AuthorizationService", () => {
-  let service: AuthorizationService;
+describe("createAuthorizationService", () => {
+  let service: IAuthorizationService;
   let mockPermissionService: Partial<DocumentPermissionService>;
   const getParentIds = vi.fn().mockResolvedValue([]);
 
@@ -24,13 +25,13 @@ describe("AuthorizationService", () => {
       isOperationRestricted: vi.fn().mockResolvedValue(false),
       canExecuteOperation: vi.fn().mockResolvedValue(false),
     };
-    service = new AuthorizationService(
-      mockPermissionService as DocumentPermissionService,
+    service = createAuthorizationService(
       {
         admins: ["0xadmin"],
         defaultProtection: false,
         policy: AuthorizationPolicy.DOCUMENT_PERMISSIONS,
       },
+      mockPermissionService as DocumentPermissionService,
     );
   });
 
@@ -361,10 +362,10 @@ describe("AuthorizationService", () => {
   });
 
   describe("OPEN policy", () => {
-    let open: AuthorizationService;
+    let open: IAuthorizationService;
 
     beforeEach(() => {
-      open = new AuthorizationService(undefined, {
+      open = createAuthorizationService({
         admins: [],
         defaultProtection: false,
         policy: AuthorizationPolicy.OPEN,
@@ -385,10 +386,10 @@ describe("AuthorizationService", () => {
   });
 
   describe("ADMIN_ONLY policy", () => {
-    let adminOnly: AuthorizationService;
+    let adminOnly: IAuthorizationService;
 
     beforeEach(() => {
-      adminOnly = new AuthorizationService(undefined, {
+      adminOnly = createAuthorizationService({
         admins: ["0xadmin"],
         defaultProtection: false,
         policy: AuthorizationPolicy.ADMIN_ONLY,
@@ -412,15 +413,14 @@ describe("AuthorizationService", () => {
     });
   });
 
-  describe("constructor invariant", () => {
+  describe("factory invariant", () => {
     it("throws for DOCUMENT_PERMISSIONS policy without a permission service", () => {
-      expect(
-        () =>
-          new AuthorizationService(undefined, {
-            admins: [],
-            defaultProtection: false,
-            policy: AuthorizationPolicy.DOCUMENT_PERMISSIONS,
-          }),
+      expect(() =>
+        createAuthorizationService({
+          admins: [],
+          defaultProtection: false,
+          policy: AuthorizationPolicy.DOCUMENT_PERMISSIONS,
+        }),
       ).toThrow(/DocumentPermissionService is required/);
     });
   });

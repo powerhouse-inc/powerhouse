@@ -5,9 +5,10 @@ import {
   revokeDocumentPermission,
 } from "../src/graphql/auth/resolvers.js";
 import { runMigrations } from "../src/migrations/index.js";
+import type { IAuthorizationService } from "../src/services/authorization.service.js";
 import {
   AuthorizationPolicy,
-  AuthorizationService,
+  createAuthorizationService,
 } from "../src/services/authorization.service.js";
 import { DocumentPermissionService } from "../src/services/document-permission.service.js";
 import type { DocumentPermissionDatabase } from "../src/utils/db.js";
@@ -22,18 +23,21 @@ import { getDbClient } from "../src/utils/db.js";
 describe("grant/revoke resolvers route through canManage", () => {
   let db: Kysely<DocumentPermissionDatabase>;
   let permissions: DocumentPermissionService;
-  let authorization: AuthorizationService;
+  let authorization: IAuthorizationService;
 
   beforeEach(async () => {
     const { db: dbClient } = getDbClient();
     db = dbClient as Kysely<DocumentPermissionDatabase>;
     await runMigrations(db as Kysely<unknown>);
     permissions = new DocumentPermissionService(db);
-    authorization = new AuthorizationService(permissions, {
-      admins: ["0xadmin"],
-      defaultProtection: false,
-      policy: AuthorizationPolicy.DOCUMENT_PERMISSIONS,
-    });
+    authorization = createAuthorizationService(
+      {
+        admins: ["0xadmin"],
+        defaultProtection: false,
+        policy: AuthorizationPolicy.DOCUMENT_PERMISSIONS,
+      },
+      permissions,
+    );
     await permissions.setDocumentProtection("doc-1", true);
   });
 

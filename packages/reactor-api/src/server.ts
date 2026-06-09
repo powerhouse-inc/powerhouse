@@ -50,9 +50,10 @@ import { runMigrations } from "./migrations/index.js";
 import { ImportPackageLoader } from "./packages/import-loader.js";
 import { PackageManager } from "./packages/package-manager.js";
 import { AuthService } from "./services/auth.service.js";
+import type { IAuthorizationService } from "./services/authorization.service.js";
 import {
   AuthorizationPolicy,
-  AuthorizationService,
+  createAuthorizationService,
 } from "./services/authorization.service.js";
 import { DocumentPermissionService } from "./services/document-permission.service.js";
 import type {
@@ -227,7 +228,7 @@ async function setupGraphQLManager(
     core: SubgraphClass[];
   },
   logger: ILogger,
-  authorizationService: AuthorizationService,
+  authorizationService: IAuthorizationService,
   auth?: {
     enabled: boolean;
     admins: string[];
@@ -412,7 +413,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   relationalDb: IRelationalDb;
   analyticsStore: IAnalyticsStore;
   documentPermissionService: DocumentPermissionService | undefined;
-  authorizationService: AuthorizationService;
+  authorizationService: IAuthorizationService;
   attachments: AttachmentBuildResult;
   packages: PackageManager;
   dbClosers: Array<() => Promise<void>>;
@@ -541,9 +542,9 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     : authEnabled
       ? AuthorizationPolicy.ADMIN_ONLY
       : AuthorizationPolicy.OPEN;
-  const authorizationService = new AuthorizationService(
-    documentPermissionService,
+  const authorizationService = createAuthorizationService(
     { admins, defaultProtection, policy },
+    documentPermissionService,
   );
   logger.info(`Authorization service initialized (policy: ${policy})`);
 
@@ -624,7 +625,7 @@ async function _setupAPI(
   processorApp: ProcessorApp,
   readModels: IReadModel[],
   attachments: AttachmentBuildResult,
-  authorizationService: AuthorizationService,
+  authorizationService: IAuthorizationService,
   documentModelRegistry?: IDocumentModelRegistry,
   dbClosers: Array<() => Promise<void>> = [],
   reactorDriveClient?: IDriveClient,

@@ -30,7 +30,7 @@ import type {
 import { GraphQLManager } from "../src/graphql/graphql-manager.js";
 import {
   AuthorizationPolicy,
-  AuthorizationService,
+  createAuthorizationService,
 } from "../src/services/authorization.service.js";
 import type { Context } from "../src/graphql/types.js";
 import type { AuthContext, AuthService } from "../src/services/auth.service.js";
@@ -167,7 +167,7 @@ function makeHarness(options: HarnessOptions = {}) {
         options.enableDocumentModelSubgraphs ?? false,
     },
     4001,
-    new AuthorizationService(undefined, {
+    createAuthorizationService({
       admins: [],
       defaultProtection: false,
       policy: AuthorizationPolicy.OPEN,

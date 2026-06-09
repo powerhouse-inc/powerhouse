@@ -22,7 +22,7 @@ export interface AuthorizationConfig {
  * Single source of truth for every permission decision. Always present (never
  * null) so callers branch on data, not on the existence of a service.
  *
- * The policy selects behavior once at boot:
+ * The policy selects an implementation once at boot:
  * - OPEN: authentication disabled — everyone (incl. anonymous) is allowed.
  * - ADMIN_ONLY: authentication on, document permissions off — only ADMINS.
  * - DOCUMENT_PERMISSIONS: the full per-document protection + grant model.
@@ -58,30 +58,94 @@ export interface IAuthorizationService {
   ): Promise<boolean>;
 }
 
-export class AuthorizationService implements IAuthorizationService {
-  readonly config: AuthorizationConfig;
-
-  constructor(
-    private readonly documentPermissionService:
-      | DocumentPermissionService
-      | undefined,
-    config: AuthorizationConfig,
-  ) {
-    if (
-      config.policy === AuthorizationPolicy.DOCUMENT_PERMISSIONS &&
-      !documentPermissionService
-    ) {
-      throw new Error(
-        "DocumentPermissionService is required for the DOCUMENT_PERMISSIONS policy",
-      );
-    }
-    this.config = config;
-  }
+/** Shared config holder and admin-list check for the policy strategies. */
+abstract class BaseAuthorizationService implements IAuthorizationService {
+  constructor(readonly config: AuthorizationConfig) {}
 
   isSupremeAdmin(userAddress?: string): boolean {
-    if (this.config.policy === AuthorizationPolicy.OPEN) return true;
     if (!userAddress) return false;
     return this.config.admins.includes(userAddress.toLowerCase());
+  }
+
+  abstract canRead(
+    documentId: string,
+    userAddress?: string,
+    getParentIds?: GetParentIdsFn,
+  ): Promise<boolean>;
+
+  abstract canWrite(
+    documentId: string,
+    userAddress?: string,
+    getParentIds?: GetParentIdsFn,
+  ): Promise<boolean>;
+
+  abstract canManage(
+    documentId: string,
+    userAddress?: string,
+    getParentIds?: GetParentIdsFn,
+  ): Promise<boolean>;
+
+  abstract canMutate(
+    documentId: string,
+    operationType: string,
+    userAddress?: string,
+    getParentIds?: GetParentIdsFn,
+  ): Promise<boolean>;
+}
+
+/** OPEN: authentication disabled — everyone (incl. anonymous) is allowed. */
+class OpenAuthorizationService extends BaseAuthorizationService {
+  isSupremeAdmin(): boolean {
+    return true;
+  }
+
+  canRead(): Promise<boolean> {
+    return Promise.resolve(true);
+  }
+
+  canWrite(): Promise<boolean> {
+    return Promise.resolve(true);
+  }
+
+  canManage(): Promise<boolean> {
+    return Promise.resolve(true);
+  }
+
+  canMutate(): Promise<boolean> {
+    return Promise.resolve(true);
+  }
+}
+
+/** ADMIN_ONLY: authentication on, document permissions off — only ADMINS. */
+class AdminOnlyAuthorizationService extends BaseAuthorizationService {
+  canRead(_documentId: string, userAddress?: string): Promise<boolean> {
+    return Promise.resolve(this.isSupremeAdmin(userAddress));
+  }
+
+  canWrite(_documentId: string, userAddress?: string): Promise<boolean> {
+    return Promise.resolve(this.isSupremeAdmin(userAddress));
+  }
+
+  canManage(_documentId: string, userAddress?: string): Promise<boolean> {
+    return Promise.resolve(this.isSupremeAdmin(userAddress));
+  }
+
+  canMutate(
+    _documentId: string,
+    _operationType: string,
+    userAddress?: string,
+  ): Promise<boolean> {
+    return Promise.resolve(this.isSupremeAdmin(userAddress));
+  }
+}
+
+/** DOCUMENT_PERMISSIONS: the full per-document protection + grant model. */
+class DocumentPermissionsAuthorizationService extends BaseAuthorizationService {
+  constructor(
+    private readonly permissions: DocumentPermissionService,
+    config: AuthorizationConfig,
+  ) {
+    super(config);
   }
 
   async canRead(
@@ -89,10 +153,25 @@ export class AuthorizationService implements IAuthorizationService {
     userAddress?: string,
     getParentIds?: GetParentIdsFn,
   ): Promise<boolean> {
-    if (this.config.policy === AuthorizationPolicy.OPEN) return true;
     if (this.isSupremeAdmin(userAddress)) return true;
-    if (this.config.policy === AuthorizationPolicy.ADMIN_ONLY) return false;
-    return this.#permissionCanRead(documentId, userAddress, getParentIds);
+
+    const isProtected = getParentIds
+      ? await this.permissions.isProtectedWithAncestors(
+          documentId,
+          getParentIds,
+        )
+      : await this.permissions.isDocumentProtected(documentId);
+
+    if (!isProtected) return true;
+    if (!userAddress) return false;
+
+    const owner = await this.permissions.getDocumentOwner(documentId);
+    if (owner && owner === userAddress.toLowerCase()) return true;
+
+    if (getParentIds) {
+      return this.permissions.canRead(documentId, userAddress, getParentIds);
+    }
+    return this.permissions.canReadDocument(documentId, userAddress);
   }
 
   async canWrite(
@@ -100,21 +179,18 @@ export class AuthorizationService implements IAuthorizationService {
     userAddress?: string,
     getParentIds?: GetParentIdsFn,
   ): Promise<boolean> {
-    if (this.config.policy === AuthorizationPolicy.OPEN) return true;
     if (this.isSupremeAdmin(userAddress)) return true;
-    if (this.config.policy === AuthorizationPolicy.ADMIN_ONLY) return false;
     return this.#permissionCanWrite(documentId, userAddress, getParentIds);
   }
 
-  async canManage(
-    documentId: string,
-    userAddress?: string,
-    getParentIds?: GetParentIdsFn,
-  ): Promise<boolean> {
-    if (this.config.policy === AuthorizationPolicy.OPEN) return true;
+  async canManage(documentId: string, userAddress?: string): Promise<boolean> {
     if (this.isSupremeAdmin(userAddress)) return true;
-    if (this.config.policy === AuthorizationPolicy.ADMIN_ONLY) return false;
-    return this.#permissionCanManage(documentId, userAddress, getParentIds);
+    if (!userAddress) return false;
+
+    const owner = await this.permissions.getDocumentOwner(documentId);
+    if (owner && owner === userAddress.toLowerCase()) return true;
+
+    return this.permissions.canManageDocument(documentId, userAddress);
   }
 
   async canMutate(
@@ -123,96 +199,15 @@ export class AuthorizationService implements IAuthorizationService {
     userAddress?: string,
     getParentIds?: GetParentIdsFn,
   ): Promise<boolean> {
-    if (this.config.policy === AuthorizationPolicy.OPEN) return true;
     if (this.isSupremeAdmin(userAddress)) return true;
-    if (this.config.policy === AuthorizationPolicy.ADMIN_ONLY) return false;
-    return this.#permissionCanMutate(
-      documentId,
-      operationType,
-      userAddress,
-      getParentIds,
-    );
-  }
 
-  #permissions(): DocumentPermissionService {
-    if (!this.documentPermissionService) {
-      throw new Error("DocumentPermissionService is not available");
-    }
-    return this.documentPermissionService;
-  }
-
-  async #permissionCanRead(
-    documentId: string,
-    userAddress?: string,
-    getParentIds?: GetParentIdsFn,
-  ): Promise<boolean> {
-    const permissions = this.#permissions();
-    const isProtected = getParentIds
-      ? await permissions.isProtectedWithAncestors(documentId, getParentIds)
-      : await permissions.isDocumentProtected(documentId);
-
-    if (!isProtected) return true;
-    if (!userAddress) return false;
-
-    const owner = await permissions.getDocumentOwner(documentId);
-    if (owner && owner === userAddress.toLowerCase()) return true;
-
-    if (getParentIds) {
-      return permissions.canRead(documentId, userAddress, getParentIds);
-    }
-    return permissions.canReadDocument(documentId, userAddress);
-  }
-
-  async #permissionCanWrite(
-    documentId: string,
-    userAddress?: string,
-    getParentIds?: GetParentIdsFn,
-  ): Promise<boolean> {
-    const permissions = this.#permissions();
-    const isProtected = getParentIds
-      ? await permissions.isProtectedWithAncestors(documentId, getParentIds)
-      : await permissions.isDocumentProtected(documentId);
-
-    if (!isProtected) return true;
-    if (!userAddress) return false;
-
-    const owner = await permissions.getDocumentOwner(documentId);
-    if (owner && owner === userAddress.toLowerCase()) return true;
-
-    if (getParentIds) {
-      return permissions.canWrite(documentId, userAddress, getParentIds);
-    }
-    return permissions.canWriteDocument(documentId, userAddress);
-  }
-
-  async #permissionCanManage(
-    documentId: string,
-    userAddress?: string,
-    _getParentIds?: GetParentIdsFn,
-  ): Promise<boolean> {
-    if (!userAddress) return false;
-
-    const permissions = this.#permissions();
-    const owner = await permissions.getDocumentOwner(documentId);
-    if (owner && owner === userAddress.toLowerCase()) return true;
-
-    return permissions.canManageDocument(documentId, userAddress);
-  }
-
-  async #permissionCanMutate(
-    documentId: string,
-    operationType: string,
-    userAddress?: string,
-    getParentIds?: GetParentIdsFn,
-  ): Promise<boolean> {
-    const permissions = this.#permissions();
-    const isRestricted = await permissions.isOperationRestricted(
+    const isRestricted = await this.permissions.isOperationRestricted(
       documentId,
       operationType,
     );
 
     if (isRestricted) {
-      return permissions.canExecuteOperation(
+      return this.permissions.canExecuteOperation(
         documentId,
         operationType,
         userAddress?.toLowerCase(),
@@ -221,4 +216,53 @@ export class AuthorizationService implements IAuthorizationService {
 
     return this.#permissionCanWrite(documentId, userAddress, getParentIds);
   }
+
+  async #permissionCanWrite(
+    documentId: string,
+    userAddress?: string,
+    getParentIds?: GetParentIdsFn,
+  ): Promise<boolean> {
+    const isProtected = getParentIds
+      ? await this.permissions.isProtectedWithAncestors(
+          documentId,
+          getParentIds,
+        )
+      : await this.permissions.isDocumentProtected(documentId);
+
+    if (!isProtected) return true;
+    if (!userAddress) return false;
+
+    const owner = await this.permissions.getDocumentOwner(documentId);
+    if (owner && owner === userAddress.toLowerCase()) return true;
+
+    if (getParentIds) {
+      return this.permissions.canWrite(documentId, userAddress, getParentIds);
+    }
+    return this.permissions.canWriteDocument(documentId, userAddress);
+  }
+}
+
+/**
+ * Selects the strategy for the configured policy. The strategy classes are
+ * not exported, so this guard is the only construction path.
+ */
+export function createAuthorizationService(
+  config: AuthorizationConfig,
+  documentPermissionService?: DocumentPermissionService,
+): IAuthorizationService {
+  if (config.policy === AuthorizationPolicy.OPEN) {
+    return new OpenAuthorizationService(config);
+  }
+  if (config.policy === AuthorizationPolicy.ADMIN_ONLY) {
+    return new AdminOnlyAuthorizationService(config);
+  }
+  if (!documentPermissionService) {
+    throw new Error(
+      "DocumentPermissionService is required for the DOCUMENT_PERMISSIONS policy",
+    );
+  }
+  return new DocumentPermissionsAuthorizationService(
+    documentPermissionService,
+    config,
+  );
 }
