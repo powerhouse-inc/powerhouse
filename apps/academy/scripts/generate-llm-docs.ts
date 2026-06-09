@@ -2,7 +2,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { fileURLToPath } from "url";
 
-const SITE_URL = "https://powerhouse.academy";
+const SITE_URL = "https://academy.vetra.io";
 
 interface DocFile {
   path: string;
@@ -254,6 +254,10 @@ function generateLLMsIndex(docFiles: DocFile[]): string {
   let output = `# Powerhouse Academy
 
 > Powerhouse is an open-source toolkit for building decentralized applications with document models, real-time collaboration, and scalable network organizations. This documentation covers the full developer journey: getting started, building document models and editors, working with processors and data, deploying packages, and the underlying architecture.
+>
+> Core npm packages: @powerhousedao/reactor, @powerhousedao/reactor-browser, @powerhousedao/reactor-api, @powerhousedao/codegen, @powerhousedao/builder-tools, @powerhousedao/vetra, @powerhousedao/reactor-attachments, @powerhousedao/reactor-drive
+>
+> Source: https://github.com/powerhouse-inc/powerhouse — Documentation: https://academy.vetra.io
 
 `;
 

@@ -1,8 +1,8 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-06-05T18:44:06.547Z
+> Generated: 2026-06-09T23:13:52.609Z
 > Total Documents: 87
-> Source: https://powerhouse.academy/llms-full.txt
+> Source: https://academy.vetra.io/llms-full.txt
 
 
 # Get Started
@@ -10,7 +10,7 @@
 
 ## Explore the demo package
 
-> Source: https://powerhouse.academy/academy/GetStarted/ExploreDemoPackage
+> Source: https://academy.vetra.io/academy/GetStarted/ExploreDemoPackage
 
 ## Let's get started
 
@@ -256,7 +256,7 @@ Our next tutorial focuses on creating a simple to-do list document and will intr
 
 ## Create a new to-do list document
 
-> Source: https://powerhouse.academy/academy/GetStarted/CreateNewPowerhouseProject
+> Source: https://academy.vetra.io/academy/GetStarted/CreateNewPowerhouseProject
 
 **TIP:**
 📦 **Reference Code**: [step-1-initialize-with-ph-init](https://github.com/powerhouse-inc/todo-tutorial/tree/step-1-initialize-with-ph-init)
@@ -565,7 +565,7 @@ In the next tutorials, you will learn how to specify, add code and build an edit
 
 ## Write the document specification
 
-> Source: https://powerhouse.academy/academy/GetStarted/DefineToDoListDocumentModel
+> Source: https://academy.vetra.io/academy/GetStarted/DefineToDoListDocumentModel
 
 **TIP:**
 📦 **Reference Code**: [step-2-generate-todo-list-document-model](https://github.com/powerhouse-inc/todo-tutorial/tree/step-2-generate-todo-list-document-model)
@@ -792,7 +792,7 @@ Up next, you'll learn how to implement the runtime logic and components that wil
 
 ## Implement the document model reducers
 
-> Source: https://powerhouse.academy/academy/GetStarted/ImplementOperationReducers
+> Source: https://academy.vetra.io/academy/GetStarted/ImplementOperationReducers
 
 **TIP:**
 📦 **Reference Code**: [step-3-implement-reducer-operation-handlers](https://github.com/powerhouse-inc/todo-tutorial/tree/step-3-implement-reducer-operation-handlers)
@@ -1023,7 +1023,7 @@ In the next chapter, you'll write comprehensive tests to verify your reducer imp
 
 ## Write document model tests
 
-> Source: https://powerhouse.academy/academy/GetStarted/WriteDocumentModelTests
+> Source: https://academy.vetra.io/academy/GetStarted/WriteDocumentModelTests
 
 **TIP:**
 📦 **Reference Code**: [step-4-implement-tests-for-todos-operations](https://github.com/powerhouse-inc/todo-tutorial/tree/step-4-implement-tests-for-todos-operations)
@@ -1477,7 +1477,7 @@ In the next chapter, you'll learn how to implement a user interface (editor) for
 
 ## Build a to-do list editor
 
-> Source: https://powerhouse.academy/academy/GetStarted/BuildToDoListEditor
+> Source: https://academy.vetra.io/academy/GetStarted/BuildToDoListEditor
 
 **TIP:**
 📦 **Reference Code**:
@@ -2057,7 +2057,7 @@ You will learn:
 
 ## Prerequisites
 
-> Source: https://powerhouse.academy/academy/MasteryTrack/BuilderEnvironment/Prerequisites
+> Source: https://academy.vetra.io/academy/MasteryTrack/BuilderEnvironment/Prerequisites
 
 Let's set up your machine to start building your first Document Model. Don't worry if this is your first time setting up a development environment - we'll guide you through each step!
 
@@ -2456,7 +2456,7 @@ PH CLI is not available, please run `ph setup-globals` to generate the default g
 
 ## Vetra Studio
 
-> Source: https://powerhouse.academy/academy/MasteryTrack/BuilderEnvironment/VetraStudio
+> Source: https://academy.vetra.io/academy/MasteryTrack/BuilderEnvironment/VetraStudio
 
 ## Introducing Vetra Studio
 
@@ -2598,7 +2598,7 @@ The preview drive allows you to safely test changes before they affect the share
 
 ## Create a package with Vetra
 
-> Source: https://powerhouse.academy/academy/MasteryTrack/BuilderEnvironment/CreateAPackageWithVetra
+> Source: https://academy.vetra.io/academy/MasteryTrack/BuilderEnvironment/CreateAPackageWithVetra
 
 **INFO:**
 A **Powerhouse Package** is a distributable unit that bundles one or more document models, editors, and optional reactor modules into a single installable artifact. Once published to the Vetra registry, a package can be installed in any Vetra Cloud environment — extending Connect with new document types and editors, and extending Switchboard with the corresponding reactor logic.
@@ -3302,7 +3302,7 @@ Congratulations! You've successfully created, packaged, and published a Powerhou
 
 ## Vetra Cloud
 
-> Source: https://powerhouse.academy/academy/MasteryTrack/BuilderEnvironment/VetraCloud
+> Source: https://academy.vetra.io/academy/MasteryTrack/BuilderEnvironment/VetraCloud
 
 Vetra Cloud is the hosted infrastructure layer for Powerhouse applications. It lets you spin up a personal cloud environment that runs **Powerhouse Connect** (the user-facing document editor) and **Powerhouse Switchboard** (the backend GraphQL server) — and extend them with packages from the Vetra registry.
 
@@ -3408,7 +3408,7 @@ To publish your own packages to the registry, see the [Publishing Packages](../d
 
 ## Vetra builder tooling
 
-> Source: https://powerhouse.academy/academy/MasteryTrack/BuilderEnvironment/BuilderTools
+> Source: https://academy.vetra.io/academy/MasteryTrack/BuilderEnvironment/BuilderTools
 
 This page provides an overview of all the builder tooling offered in the Vetra ecosystem by Powerhouse.  
 This list will be maintained and updated as our toolkit grows.
@@ -3701,7 +3701,7 @@ ph generate processor --type analytics
 
 ## What is a document model?
 
-> Source: https://powerhouse.academy/academy/MasteryTrack/DocumentModelCreation/WhatIsADocumentModel
+> Source: https://academy.vetra.io/academy/MasteryTrack/DocumentModelCreation/WhatIsADocumentModel
 
 **TIP:**
 This chapter on **Document Model Creation** will help you with an in-depth practical understanding while building an **advanced to-do list** document model.
@@ -3927,7 +3927,7 @@ In the next chapters, we'll teach you how to build a To-do List document model w
 
 ## Specify the state schema
 
-> Source: https://powerhouse.academy/academy/MasteryTrack/DocumentModelCreation/SpecifyTheStateSchema
+> Source: https://academy.vetra.io/academy/MasteryTrack/DocumentModelCreation/SpecifyTheStateSchema
 
 The state schema is the backbone of your document model. It defines the structure, data types, and relationships of the information your document will hold. In Powerhouse, we use the **GraphQL Schema Definition Language (SDL)** to define this schema. A well-defined state schema is crucial for ensuring data integrity, consistency, and for enabling powerful querying and manipulation capabilities.
 
@@ -4173,7 +4173,7 @@ For a complete, working example, you can always have a look at the [Example Todo
 
 ## Specify document operations
 
-> Source: https://powerhouse.academy/academy/MasteryTrack/DocumentModelCreation/SpecifyDocumentOperations
+> Source: https://academy.vetra.io/academy/MasteryTrack/DocumentModelCreation/SpecifyDocumentOperations
 
 In the previous section, we defined the state schema for our document model. Now, we turn our attention to a critical aspect of document model creation: **specifying document operations**. These operations are the heart of your document's behavior, dictating how its state can be modified.
 
@@ -4419,7 +4419,7 @@ In the next section, we will dive deeper into the implementation of the reducer 
 
 ## Use the Document Model Generator
 
-> Source: https://powerhouse.academy/academy/MasteryTrack/DocumentModelCreation/UseTheDocumentModelGenerator
+> Source: https://academy.vetra.io/academy/MasteryTrack/DocumentModelCreation/UseTheDocumentModelGenerator
 
 When building document models with **Vetra Studio**, code generation happens automatically. As you add and update specification documents in your Vetra Studio Drive, Vetra monitors your changes and generates the necessary scaffolding in real-time. You'll receive updates directly in your terminal as Vetra processes your specifications.
 
@@ -4614,7 +4614,7 @@ Subsequently, write unit tests for your reducers to ensure they behave correctly
 
 ## Implement document reducers
 
-> Source: https://powerhouse.academy/academy/MasteryTrack/DocumentModelCreation/ImplementDocumentReducers
+> Source: https://academy.vetra.io/academy/MasteryTrack/DocumentModelCreation/ImplementDocumentReducers
 
 ## The heart of document logic
 
@@ -4994,7 +4994,7 @@ With your reducers implemented, your document model is now functionally complete
 
 ## Implement document model tests
 
-> Source: https://powerhouse.academy/academy/MasteryTrack/DocumentModelCreation/ImplementDocumentModelTests
+> Source: https://academy.vetra.io/academy/MasteryTrack/DocumentModelCreation/ImplementDocumentModelTests
 
 ## Ensuring robustness and reliability
 
@@ -5281,7 +5281,7 @@ For a complete, working example, you can always have a look at the [Example Todo
 
 ## Example: Todo-demo-package
 
-> Source: https://powerhouse.academy/academy/MasteryTrack/DocumentModelCreation/ExampleToDoListRepository
+> Source: https://academy.vetra.io/academy/MasteryTrack/DocumentModelCreation/ExampleToDoListRepository
 
 **INFO:**
 
@@ -5360,7 +5360,7 @@ Both approaches use the same naming conventions and patterns — the Mastery Tra
 
 ## Document Model Versioning
 
-> Source: https://powerhouse.academy/academy/MasteryTrack/DocumentModelCreation/DocumentModelVersioning
+> Source: https://academy.vetra.io/academy/MasteryTrack/DocumentModelCreation/DocumentModelVersioning
 
 **TIP:**
 This chapter covers **advanced document model versioning**—a system for evolving document schemas and operations while maintaining backward compatibility with existing documents. This is essential when your document models need to change over time in production environments.
@@ -5786,7 +5786,7 @@ Document model versioning enables your applications to evolve safely while prese
 
 ## Build document editors
 
-> Source: https://powerhouse.academy/academy/MasteryTrack/BuildingUserExperiences/BuildingDocumentEditors
+> Source: https://academy.vetra.io/academy/MasteryTrack/BuildingUserExperiences/BuildingDocumentEditors
 
 ## Build with React on Powerhouse
 
@@ -6470,7 +6470,7 @@ Imagine you have many TodoLists sitting in a drive. A custom Drive-app will allo
 
 ## Build a Drive-app
 
-> Source: https://powerhouse.academy/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer
+> Source: https://academy.vetra.io/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer
 
 **Drive-apps** enhance how contributors and organizations interact with document models.
 They create an 'app-like' experience by providing a **custom interface** for exploring and interacting with the contents of a drive.
@@ -7075,7 +7075,7 @@ The Powerhouse platform provides the tools. It's time to start building!
 
 ## CSS Customization for Connect Integration
 
-> Source: https://powerhouse.academy/academy/MasteryTrack/BuildingUserExperiences/CSSCustomization
+> Source: https://academy.vetra.io/academy/MasteryTrack/BuildingUserExperiences/CSSCustomization
 
 When your editor runs inside Connect, it's rendered within a specific container hierarchy. Understanding this structure allows you to customize your editor's appearance to match your application's design requirements.
 
@@ -7357,7 +7357,7 @@ export function Editor() {
 
 ## Document Toolbar
 
-> Source: https://powerhouse.academy/academy/MasteryTrack/BuildingUserExperiences/DocumentTools/DocumentToolbar
+> Source: https://academy.vetra.io/academy/MasteryTrack/BuildingUserExperiences/DocumentTools/DocumentToolbar
 
 The `DocumentToolbar` renders a default set of document controls for common document actions: undo, redo, download, document name editing, revision history, opening in Switchboard, and closing the current document view.
 
@@ -7709,7 +7709,7 @@ CustomToolbarControls
 
 ## Operations history
 
-> Source: https://powerhouse.academy/academy/MasteryTrack/BuildingUserExperiences/DocumentTools/OperationHistory
+> Source: https://academy.vetra.io/academy/MasteryTrack/BuildingUserExperiences/DocumentTools/OperationHistory
 
 ## What is a document model?
 
@@ -7789,7 +7789,7 @@ This remainder of this documentation is still being written and may be incomplet
 
 ## Revision history timeline
 
-> Source: https://powerhouse.academy/academy/MasteryTrack/BuildingUserExperiences/DocumentTools/RevisionHistoryTimeline
+> Source: https://academy.vetra.io/academy/MasteryTrack/BuildingUserExperiences/DocumentTools/RevisionHistoryTimeline
 
 The history timeline feature enables users to view document history and navigate through different revisions of a document. This guide explains how to implement and customize the timeline functionality in your Powerhouse application.
 
@@ -7942,7 +7942,7 @@ This implementation allows users to navigate through document history while prev
 
 ## Inspector Modal
 
-> Source: https://powerhouse.academy/academy/MasteryTrack/BuildingUserExperiences/DocumentTools/InspectorModal
+> Source: https://academy.vetra.io/academy/MasteryTrack/BuildingUserExperiences/DocumentTools/InspectorModal
 
 The Inspector Modal is a development and debugging tool in Connect that provides visibility into the internal state of your application. It allows you to inspect the local database and monitor sync operations with remote servers.
 
@@ -8107,7 +8107,7 @@ The Inspector Modal is helpful for:
 
 ## Renown authentication flow
 
-> Source: https://powerhouse.academy/academy/MasteryTrack/BuildingUserExperiences/Authorization/RenownAuthenticationFlow
+> Source: https://academy.vetra.io/academy/MasteryTrack/BuildingUserExperiences/Authorization/RenownAuthenticationFlow
 
 The Renown login flow leverages decentralized identity (DID) creation and the Ceramic network for credential storage and verification, ensuring secure and verifiable actions within decentralized organizations. Below is a detailed breakdown of the process, aimed at developers integrating the Renown, Connect, and Switchboard components.
 
@@ -8190,7 +8190,7 @@ This flow ensures that all actions within the Powerhouse ecosystem are secure, t
 
 ## Document Permission System
 
-> Source: https://powerhouse.academy/academy/MasteryTrack/BuildingUserExperiences/Authorization/DocumentPermissions
+> Source: https://academy.vetra.io/academy/MasteryTrack/BuildingUserExperiences/Authorization/DocumentPermissions
 
 **WARNING:**
 This documentation is still being written and may be incomplete.
@@ -9836,7 +9836,7 @@ Ensure database migrations have run:
 
 ## Signing
 
-> Source: https://powerhouse.academy/academy/MasteryTrack/BuildingUserExperiences/Authorization/Signing
+> Source: https://academy.vetra.io/academy/MasteryTrack/BuildingUserExperiences/Authorization/Signing
 
 Powerhouse uses two complementary signing mechanisms to establish trust across the document lifecycle:
 
@@ -10093,7 +10093,7 @@ Pre-signed actions are detected by checking for existing signatures in `action.c
 
 ## Reactor API Authorization
 
-> Source: https://powerhouse.academy/academy/MasteryTrack/BuildingUserExperiences/Authorization/Authorization
+> Source: https://academy.vetra.io/academy/MasteryTrack/BuildingUserExperiences/Authorization/Authorization
 
 **WARNING:**
 This documentation is still being written and may be incomplete.
@@ -10370,7 +10370,7 @@ The address is shown in the authentication status output.
 
 ## Configure a drive
 
-> Source: https://powerhouse.academy/academy/MasteryTrack/WorkWithData/ConfiguringDrives
+> Source: https://academy.vetra.io/academy/MasteryTrack/WorkWithData/ConfiguringDrives
 
 A drive in Powerhouse is a container for documents and data. It's a place where you can organize and store your documents and share them with others. This guide walks you through configuring and managing drives in your Powerhouse environment.
 
@@ -10548,7 +10548,7 @@ Enjoy!
 
 ## Using the API
 
-> Source: https://powerhouse.academy/academy/MasteryTrack/WorkWithData/UsingTheAPI
+> Source: https://academy.vetra.io/academy/MasteryTrack/WorkWithData/UsingTheAPI
 
 ## Introduction to Switchboard
 
@@ -11047,7 +11047,7 @@ This ability to programmatically read from and write to documents via the GraphQ
 
 ## Using subgraphs
 
-> Source: https://powerhouse.academy/academy/MasteryTrack/WorkWithData/UsingSubgraphs
+> Source: https://academy.vetra.io/academy/MasteryTrack/WorkWithData/UsingSubgraphs
 
 This tutorial will demonstrate how to create and customize a subgraph using our to-do list project as an example.
 Let's start with the basics and gradually add more complex features and functionality.
@@ -11462,7 +11462,7 @@ Bridge Processors and Subgraphs — Currently, there's a gap in how processors a
 
 ## Building a processor
 
-> Source: https://powerhouse.academy/academy/MasteryTrack/WorkWithData/BuildingAProcessor
+> Source: https://academy.vetra.io/academy/MasteryTrack/WorkWithData/BuildingAProcessor
 
 Processors are components that receive document operations from the reactor and perform side effects. While specialized processor types like [relational database processors](/academy/MasteryTrack/WorkWithData/RelationalDbProcessor) exist, you can build a plain processor by implementing the `IProcessor` interface directly.
 
@@ -11673,7 +11673,7 @@ For processors that need a relational database, see the [Relational Database Pro
 
 ## Processor best practices
 
-> Source: https://powerhouse.academy/academy/MasteryTrack/WorkWithData/ProcessorBestPractices
+> Source: https://academy.vetra.io/academy/MasteryTrack/WorkWithData/ProcessorBestPractices
 
 This guide covers advanced patterns for processors that need to mutate documents or query indexed data. It builds on the concepts from [Building a Processor](/academy/MasteryTrack/WorkWithData/BuildingAProcessor) — read that first if you haven't already.
 
@@ -11980,7 +11980,7 @@ interface IProcessorHostModule {
 
 ## Relational database processor
 
-> Source: https://powerhouse.academy/academy/MasteryTrack/WorkWithData/RelationalDbProcessor
+> Source: https://academy.vetra.io/academy/MasteryTrack/WorkWithData/RelationalDbProcessor
 
 In this chapter, we will implement a **Todo-List** relational database processor. This processor receives operations from the reactor and can use `resultingState` (from the operation context) or data from the operations themselves to populate a database.
 
@@ -12673,7 +12673,7 @@ This pattern is commonly used for:
 
 ## Publish your package
 
-> Source: https://powerhouse.academy/academy/MasteryTrack/Launch/PublishYourProject
+> Source: https://academy.vetra.io/academy/MasteryTrack/Launch/PublishYourProject
 
 **WARNING:**
 **This guide assumes familiarity with building document models in Vetra Studio.**  
@@ -13004,7 +13004,7 @@ Bump the `version` field in `package.json` before every subsequent publish.
 
 ## Setup your environment
 
-> Source: https://powerhouse.academy/academy/MasteryTrack/Launch/SetupEnvironment
+> Source: https://academy.vetra.io/academy/MasteryTrack/Launch/SetupEnvironment
 
 ## Introduction
 
@@ -13551,7 +13551,7 @@ If you encounter issues or need assistance, there are several resources availabl
 
 ## Configure your environment
 
-> Source: https://powerhouse.academy/academy/MasteryTrack/Launch/ConfigureEnvironment
+> Source: https://academy.vetra.io/academy/MasteryTrack/Launch/ConfigureEnvironment
 
 After successfully setting up your server and installing the Powerhouse services using the `ph service setup` command as described in the [Setup Environment](../docs/docs/03-SetupEnvironment.md) guide, the next crucial step is to configure your environment.
 
@@ -13796,7 +13796,7 @@ Configure Connect via `powerhouse.config.json` — edit the file directly, use `
 
 ## Docker deployment guide
 
-> Source: https://powerhouse.academy/academy/MasteryTrack/Launch/DockerDeployment
+> Source: https://academy.vetra.io/academy/MasteryTrack/Launch/DockerDeployment
 
 ## Introduction
 
@@ -14226,7 +14226,7 @@ docker push my-registry/my-connect:latest
 
 ## Example use-cases
 
-> Source: https://powerhouse.academy/academy/ExampleUsecases/Overview
+> Source: https://academy.vetra.io/academy/ExampleUsecases/Overview
 
 Explore real-world examples of applications built with the Powerhouse ecosystem. Each use-case provides a complete walkthrough from project setup to a fully functional application.
 
@@ -14332,7 +14332,7 @@ Explore real-world examples of applications built with the Powerhouse ecosystem.
 
 ## Create a new chatroom project
 
-> Source: https://powerhouse.academy/academy/ExampleUsecases/Chatroom/CreateNewPowerhouseProject
+> Source: https://academy.vetra.io/academy/ExampleUsecases/Chatroom/CreateNewPowerhouseProject
 
 **TIP:**
 📦 **Reference Code**: [chatroom-demo](https://github.com/powerhouse-inc/chatroom-demo)
@@ -14524,7 +14524,7 @@ In the next tutorial, you will learn how to design your document model and expor
 
 ## Write the document specification
 
-> Source: https://powerhouse.academy/academy/ExampleUsecases/Chatroom/DefineChatroomDocumentModel
+> Source: https://academy.vetra.io/academy/ExampleUsecases/Chatroom/DefineChatroomDocumentModel
 
 **TIP:**
 📦 **Reference Code**: [chatroom-demo](https://github.com/powerhouse-inc/chatroom-demo)
@@ -14796,7 +14796,7 @@ In the next step, you'll learn how to implement the runtime logic that will use 
 
 ## Implement the document model reducers
 
-> Source: https://powerhouse.academy/academy/ExampleUsecases/Chatroom/ImplementOperationReducers
+> Source: https://academy.vetra.io/academy/ExampleUsecases/Chatroom/ImplementOperationReducers
 
 **TIP:**
 📦 **Reference Code**: [chatroom-demo](https://github.com/powerhouse-inc/chatroom-demo)
@@ -15285,7 +15285,7 @@ Continue to the next section to learn how to implement the document model editor
 
 ## Build the ChatRoom editor
 
-> Source: https://powerhouse.academy/academy/ExampleUsecases/Chatroom/ImplementChatroomEditor
+> Source: https://academy.vetra.io/academy/ExampleUsecases/Chatroom/ImplementChatroomEditor
 
 **TIP:**
 📦 **Reference Code**: [chatroom-demo](https://github.com/powerhouse-inc/chatroom-demo)
@@ -15897,7 +15897,7 @@ In this tutorial you've learned:
 
 ## Step 0 - get the starter code
 
-> Source: https://powerhouse.academy/academy/ExampleUsecases/TodoList/GetTheStarterCode
+> Source: https://academy.vetra.io/academy/ExampleUsecases/TodoList/GetTheStarterCode
 
 Normally you would initialize a new powerhouse project by running `ph init` with your project name. But since this is a tutorial, we want to provide branches with the final code for each step.
 
@@ -15926,7 +15926,7 @@ Now we're ready to get started.
 
 ## Step 1 - Generate the `TodoList` document model
 
-> Source: https://powerhouse.academy/academy/ExampleUsecases/TodoList/GenerateTodoListDocumentModel
+> Source: https://academy.vetra.io/academy/ExampleUsecases/TodoList/GenerateTodoListDocumentModel
 
 ## Overview
 
@@ -16146,7 +16146,7 @@ Up next, you'll learn how to implement the runtime logic and components that wil
 
 ## Step 2 — Implement the `TodoList` document model reducer operation handlers
 
-> Source: https://powerhouse.academy/academy/ExampleUsecases/TodoList/ImplementTodoListDocumentModelReducerOperationHandlers
+> Source: https://academy.vetra.io/academy/ExampleUsecases/TodoList/ImplementTodoListDocumentModelReducerOperationHandlers
 
 ## Adding the logic for handling operations with reducers
 
@@ -16334,7 +16334,7 @@ Up next, you'll implement some custom tests to check the behavior of our new cod
 
 ## Step 3 — Adding our own tests for the document model actions
 
-> Source: https://powerhouse.academy/academy/ExampleUsecases/TodoList/AddTestsForTodoListActions
+> Source: https://academy.vetra.io/academy/ExampleUsecases/TodoList/AddTestsForTodoListActions
 
 Similarly to the operation handler logic, when you add a new module to your document model, we generate some boilerplate tests for your code.
 
@@ -16857,7 +16857,7 @@ Up next, we'll generate a boilerplate document editor for our `TodoList` documen
 
 ## Step 4 — Generating a document model editor for `TodoList` documents
 
-> Source: https://powerhouse.academy/academy/ExampleUsecases/TodoList/GenerateTodoListDocumentEditor
+> Source: https://academy.vetra.io/academy/ExampleUsecases/TodoList/GenerateTodoListDocumentEditor
 
 ## Generate the editor template
 
@@ -16908,7 +16908,7 @@ Next, we will add some UI components to create, read, update, and delete data in
 
 ## Step 5 — Implement `TodoList` document editor UI components
 
-> Source: https://powerhouse.academy/academy/ExampleUsecases/TodoList/ImplementTodoListDocumentEditorUIComponents
+> Source: https://academy.vetra.io/academy/ExampleUsecases/TodoList/ImplementTodoListDocumentEditorUIComponents
 
 Out of the box, we have a component for updating our `TodoList` documents' names, but we would like to create, read, update, and delete all of the data in our documents.
 
@@ -17307,7 +17307,7 @@ Next, we will generate a special kind of editor called a "drive editor" which we
 
 ## Step 6 - Generate the custom drive editor for managing our `TodoList` documents
 
-> Source: https://powerhouse.academy/academy/ExampleUsecases/TodoList/GenerateTodoDriveExplorer
+> Source: https://academy.vetra.io/academy/ExampleUsecases/TodoList/GenerateTodoDriveExplorer
 
 in Connect, a "drive" is just a document with the type "powerhouse/drive", which is specifically created for containing and managing other documents.
 
@@ -17374,7 +17374,7 @@ Next, we will add a UI component that is useful in both of our different editors
 
 ## Step 7 - Add shared component for showing TodoList stats
 
-> Source: https://powerhouse.academy/academy/ExampleUsecases/TodoList/AddSharedComponentForShowingTodoListStats
+> Source: https://academy.vetra.io/academy/ExampleUsecases/TodoList/AddSharedComponentForShowingTodoListStats
 
 So far we've been creating components that live in the same directories as the editors that use them. But sometimes we want to use the same component across multiple editors.
 
@@ -17751,7 +17751,7 @@ We're excited to see what you build!
 
 ## VetraPackageLibrary
 
-> Source: https://powerhouse.academy/academy/ExampleUsecases/VetraPackageLibrary/VetraPackageLibrary
+> Source: https://academy.vetra.io/academy/ExampleUsecases/VetraPackageLibrary/VetraPackageLibrary
 
 Packages of documents are a core structuring mechanism in the Vetra framework, allowing developers to group and manage related document efficiently. These packages serve as modular collections of document specifications and modules, ensuring consistency, scalability, and reusability across different applications.
 
@@ -17777,7 +17777,7 @@ You can get access to the [package library here.](https://vetra.io/packages)
 
 ## Powerhouse CLI
 
-> Source: https://powerhouse.academy/academy/APIReferences/PowerhouseCLI
+> Source: https://academy.vetra.io/academy/APIReferences/PowerhouseCLI
 
 ### Installing the Powerhouse CLI
 
@@ -18775,7 +18775,7 @@ removal of packages, updates configuration files, and ensures proper cleanup.
 
 ## React Hooks
 
-> Source: https://powerhouse.academy/academy/APIReferences/ReactHooks
+> Source: https://academy.vetra.io/academy/APIReferences/ReactHooks
 
 This page provides a reference for the hooks available in `@powerhousedao/reactor-browser`. These hooks are intended to be used by editors (including drive editors) which will be rendered inside Powerhouse host-applications such as Connect, Switchboard, Fusion or a Vetra Studio Drive.
 
@@ -20061,7 +20061,7 @@ function usePHDocumentEditorConfigByKey<TKey extends PHDocumentEditorConfigKey>(
 
 ## IReactorClient
 
-> Source: https://powerhouse.academy/academy/APIReferences/ReactorClient
+> Source: https://academy.vetra.io/academy/APIReferences/ReactorClient
 
 The `IReactorClient` interface is the primary way to interact with a Powerhouse reactor programmatically. It wraps lower-level APIs to provide a simpler, Promise-based interface for document operations.
 
@@ -20844,7 +20844,7 @@ console.log(completed.status); // "READ_READY" or "FAILED"
 
 ## Advanced reactor usage
 
-> Source: https://powerhouse.academy/academy/APIReferences/AdvancedReactorUsage
+> Source: https://academy.vetra.io/academy/APIReferences/AdvancedReactorUsage
 
 This page covers the low-level `IReactor` interface and the internal components you can access through `ReactorModule`. Most developers should use `IReactorClient` (see [IReactorClient API Reference](/academy/APIReferences/ReactorClient)) — the information here is for advanced scenarios such as:
 
@@ -21190,7 +21190,7 @@ module.reactor.kill();
 
 ## Relational Database
 
-> Source: https://powerhouse.academy/academy/APIReferences/RelationalDatabase
+> Source: https://academy.vetra.io/academy/APIReferences/RelationalDatabase
 
 This page covers the relational database tools available in Powerhouse applications, providing type-safe database operations with real-time updates through PGlite integration.
 
@@ -22075,7 +22075,7 @@ function BetterComponent({ driveId, user }) {
 
 ## PHDocument Migration Guide
 
-> Source: https://powerhouse.academy/academy/APIReferences/PHDocumentMigrationGuide
+> Source: https://academy.vetra.io/academy/APIReferences/PHDocumentMigrationGuide
 
 **TIP:**
 This guide covers the **breaking changes** introduced in Powerhouse v4.0.0 related to PHDocument structure changes. If you're upgrading from v3.2.0 or earlier, **this migration is required** and document models must be regenerated.
@@ -22426,7 +22426,7 @@ _This migration guide covers the major changes in v4.0.0. For additional technic
 
 ## Vetra Remote Drive
 
-> Source: https://powerhouse.academy/academy/APIReferences/VetraRemoteDrive
+> Source: https://academy.vetra.io/academy/APIReferences/VetraRemoteDrive
 
 These commands enable collaborative development using Vetra remote drives. Instead of working with local drives only, you can connect your Powerhouse project to a remote drive that syncs across team members.
 
@@ -22602,7 +22602,7 @@ ph vetra --watch
 
 ## Subgraph Migration Guide (v6 Reactor)
 
-> Source: https://powerhouse.academy/academy/APIReferences/SubgraphMigrationGuide
+> Source: https://academy.vetra.io/academy/APIReferences/SubgraphMigrationGuide
 
 **TIP:**
 This guide covers the **breaking changes** to the GraphQL subgraph API introduced in the v6 Reactor. If you were querying the old `/graphql/document-drive` or `/graphql/system` endpoints, or building custom subgraphs, **this migration is required**.
@@ -23201,7 +23201,7 @@ ph generate --subgraph my-custom
 
 ## Processor Migration Guide (v6 Reactor)
 
-> Source: https://powerhouse.academy/academy/APIReferences/ProcessorMigrationGuide
+> Source: https://academy.vetra.io/academy/APIReferences/ProcessorMigrationGuide
 
 **TIP:**
 This guide covers the **breaking changes** to the processor interface introduced in the v6 Reactor. If you have existing processors built on the legacy strand-based API, **this migration is required**.
@@ -23696,7 +23696,7 @@ Each item in the `onOperations` list destructures as `{ operation, context }`:
 
 ## Attachment service
 
-> Source: https://powerhouse.academy/academy/APIReferences/AttachmentService
+> Source: https://academy.vetra.io/academy/APIReferences/AttachmentService
 
 The `@powerhousedao/reactor-attachments` package decouples large binaries (images, files, avatars) from the action and operation pipeline. Instead of carrying base64-encoded `data` strings inside actions, document state holds opaque refs of the form `attachment://v1:<sha256>`, and the bytes flow through a dedicated `IAttachmentService`. Storage is content-addressed, so identical uploads dedupe to the same ref.
 
@@ -24015,7 +24015,7 @@ See `packages/reactor/docs/attachments.md` in the monorepo for the full design: 
 
 ## Renown SDK
 
-> Source: https://powerhouse.academy/academy/APIReferences/renown-sdk/Overview
+> Source: https://academy.vetra.io/academy/APIReferences/renown-sdk/Overview
 
 A comprehensive SDK for integrating Renown authentication and user profile management into your React applications.
 
@@ -24335,7 +24335,7 @@ AGPL-3.0-only
 
 ## Authentication Guide
 
-> Source: https://powerhouse.academy/academy/APIReferences/renown-sdk/Authentication
+> Source: https://academy.vetra.io/academy/APIReferences/renown-sdk/Authentication
 
 Comprehensive guide to implementing authentication with the Renown SDK.
 
@@ -24997,7 +24997,7 @@ const handleLogin = useCallback(
 
 ## API Reference
 
-> Source: https://powerhouse.academy/academy/APIReferences/renown-sdk/APIReference
+> Source: https://academy.vetra.io/academy/APIReferences/renown-sdk/APIReference
 
 Complete API reference for the Renown SDK.
 
@@ -25974,7 +25974,7 @@ The SDK is fully typed. Import types as needed:
 
 ## CLI Identity & Authentication
 
-> Source: https://powerhouse.academy/academy/APIReferences/renown-sdk/CLIIdentity
+> Source: https://academy.vetra.io/academy/APIReferences/renown-sdk/CLIIdentity
 
 This guide covers how to authenticate the Powerhouse CLI with your Ethereum identity and use that identity in the Switchboard for authenticated operations with remote services.
 
@@ -26309,7 +26309,7 @@ async function getBearerToken(
 
 ## Document-Engineering
 
-> Source: https://powerhouse.academy/academy/ComponentLibrary/DocumentEngineering
+> Source: https://academy.vetra.io/academy/ComponentLibrary/DocumentEngineering
 
 The reusable components in the Document-Engineering system are a set of of front-end components based on graphQL scalars.
 Powerhouse also has a set of custom scalars that are not part of the graphQL standard but are specific to the web3 ecosystem.
@@ -26573,7 +26573,7 @@ You can learn how to do so in our guide on [Creating Custom Scalars](/academy/Co
 
 ## Step 1: Create Custom Scalars
 
-> Source: https://powerhouse.academy/academy/ComponentLibrary/CreateCustomScalars
+> Source: https://academy.vetra.io/academy/ComponentLibrary/CreateCustomScalars
 
 This tutorial provides step-by-step instructions for creating custom scalars & components, and to contributing to the document-engineering project.
 The github repo for the Document-Engineering can be found [here](https://github.com/powerhouse-inc/document-engineering/tree/main)
@@ -26972,7 +26972,7 @@ export const schema = z.string().datetime();
 
 ## Step 2: Integrate Your Scalar into a React Component
 
-> Source: https://powerhouse.academy/academy/ComponentLibrary/IntegrateIntoAReactComponent
+> Source: https://academy.vetra.io/academy/ComponentLibrary/IntegrateIntoAReactComponent
 
 This guide explains how to use a custom scalar (created as described in the previous step) within a React component. You'll learn how to leverage the scalar's validation schema for form input, display errors, and ensure a seamless user experience.
 
@@ -27106,7 +27106,7 @@ Replace `EthereumAddress` with your scalar component as needed.
 
 ## Powerhouse Architecture
 
-> Source: https://powerhouse.academy/academy/Architecture/PowerhouseArchitecture
+> Source: https://academy.vetra.io/academy/Architecture/PowerhouseArchitecture
 
 **Vetra is part of the Powerhouse Ecosystem** and acts as the builder platform for creating an independent, open-source and decentralized back-end for any SaaS, ERP, CMS or CRM needs.
 
@@ -27174,7 +27174,7 @@ With the help of these host applications, Powerhouse is launching 2 platforms th
 
 ## Working with the Reactor
 
-> Source: https://powerhouse.academy/academy/Architecture/WorkingWithTheReactor
+> Source: https://academy.vetra.io/academy/Architecture/WorkingWithTheReactor
 
 **TIP:**
 Document models are the common design pattern that is used for all documents and files.  
@@ -27389,7 +27389,7 @@ If you are working with the Reactor directly or need additional information rega
 
 ## Overview
 
-> Source: https://powerhouse.academy/bookofpowerhouse/Overview
+> Source: https://academy.vetra.io/bookofpowerhouse/Overview
 
 Powerhouse is an initiative at the intersection of software development, legal innovation, and new business models for open-source projects. These elements form a common vision for reimagining how software is created, funded, and sustained. While each component has its own purpose, they are deeply interconnected and designed to support one another.
 
@@ -27424,7 +27424,7 @@ Book of Powerhouse Outline:
 
 ## **Part 1: Powerhouse General Framework and Open-Source Capitalism**
 
-> Source: https://powerhouse.academy/bookofpowerhouse/GeneralFrameworkAndPhilosophy
+> Source: https://academy.vetra.io/bookofpowerhouse/GeneralFrameworkAndPhilosophy
 
 Powerhouse emerged in the wake of Ethereum’s DAO movement, which began gaining momentum after the collapse of _The DAO_ in 2016. This turning point spurred the creation of blockchain-enabled organizations capable of operating without centralized corporate structures. Over the years, governance systems and decentralized operational tools have advanced, paving the way for the next generation of organizations across chains like Solana, Ethereum Layer 2 solutions, and beyond. Powerhouse aims to advance these principles and build large, global organizations around networks.
 
@@ -27465,7 +27465,7 @@ This is what makes Powerhouse unique: it’s not just about running decentralize
 
 ## Part 2: Powerhouse Software Architecture
 
-> Source: https://powerhouse.academy/bookofpowerhouse/PowerhouseSoftwareArchitecture
+> Source: https://academy.vetra.io/bookofpowerhouse/PowerhouseSoftwareArchitecture
 
 Powerhouse’s software architecture is designed to empower scalable, decentralized organizations with a modular, layered approach. It uses document models as the core unit that used across three layers:
 
@@ -27507,7 +27507,7 @@ Powerhouse’s software architecture is designed to empower scalable, decentrali
 
 ## Part 3: Development Approaches
 
-> Source: https://powerhouse.academy/bookofpowerhouse/DevelopmentApproaches
+> Source: https://academy.vetra.io/bookofpowerhouse/DevelopmentApproaches
 
 Powerhouse’s development approaches are designed to enable efficient, scalable, and innovative solutions for decentralized organizations. By drawing from blockchain principles, adopting Model-Driven Development (MDD), leveraging dynamic document models, and employing a Rapid Application Development (RAD) process, Powerhouse provides a comprehensive framework to address the unique challenges of decentralized systems.
 
@@ -27552,7 +27552,7 @@ These methodologies enhance collaboration, streamline workflows, and accelerate 
 
 ## Part 4: Scalable Network Organizations (SNOs)
 
-> Source: https://powerhouse.academy/bookofpowerhouse/SNOsandANewModelForOSSandPublicGoods
+> Source: https://academy.vetra.io/bookofpowerhouse/SNOsandANewModelForOSSandPublicGoods
 
 Decentralized Autonomous Organizations (DAOs) once promised to revolutionize global collaboration by enabling decentralized governance, transparent decision-making, and equitable ownership. However, the reality has often fallen short. DAOs have struggled with legal ambiguity, resource allocation inefficiencies, and broken incentive structures. These challenges have stifled their ability to scale and compete with centralized organizations.
 
@@ -27595,7 +27595,7 @@ Legal structures are crucial for the success of SNOs, providing clarity, complia
 
 ## **Part 5: Powerhouse Platforms – Decentralized Operations and Builder**
 
-> Source: https://powerhouse.academy/bookofpowerhouse/SNOsInActionAndPlatformEconomies
+> Source: https://academy.vetra.io/bookofpowerhouse/SNOsInActionAndPlatformEconomies
 
 ## **Introduction**
 
@@ -27645,7 +27645,7 @@ Powerhouse is not simply offering software; it is building the operating system 
 
 ## Powerhouse v5.3.0 🚀
 
-> Source: https://powerhouse.academy/academy/ReleaseNotes/v5.3.0
+> Source: https://academy.vetra.io/academy/ReleaseNotes/v5.3.0
 
 ## ✨ Highlights
 
@@ -27780,7 +27780,7 @@ Coming soon to **https://academy.vetra.io**
 
 ## Cookbook
 
-> Source: https://powerhouse.academy/academy/Cookbook
+> Source: https://academy.vetra.io/academy/Cookbook
 
 ## Powerhouse CLI recipes
 
@@ -30196,7 +30196,7 @@ yarn cache clean --force
 
 ## Glossary
 
-> Source: https://powerhouse.academy/academy/Glossary
+> Source: https://academy.vetra.io/academy/Glossary
 
 ## General Terms
 
@@ -30304,7 +30304,7 @@ yarn cache clean --force
 
 ## LLM docs
 
-> Source: https://powerhouse.academy/academy/LLMDocs
+> Source: https://academy.vetra.io/academy/LLMDocs
 
 The Powerhouse Academy follows the [llms.txt standard](https://llmstxt.org) to provide machine-readable documentation for LLMs and AI coding tools.
 
@@ -30322,6 +30322,14 @@ A concise index that follows the [llms.txt spec](https://llmstxt.org): an H1 tit
 ### llms-full.txt
 
 The complete academy content in a single markdown file. Use this when you want to load the full documentation into a context window at once (e.g. pasting a URL into Claude or ChatGPT).
+
+## Using with Context7
+
+[Context7](https://context7.com) users can load up-to-date Powerhouse documentation directly into their AI coding assistant. Search for **powerhouse-inc/powerhouse** in the Context7 library search, or use the library ID `/powerhouse-inc/powerhouse`.
+
+```
+use context7
+```
 
 ## Programmatic access
 
@@ -30348,7 +30356,7 @@ This writes both `static/llms.txt` and `static/llms-full.txt`, which Docusaurus 
 
 ## Step 2 — Implement the `TodoList` document model reducer operation handlers
 
-> Source: https://powerhouse.academy/academy/TodoListTutorial/ImplementTodoListDocumentModelReducerOperationHandlers
+> Source: https://academy.vetra.io/academy/TodoListTutorial/ImplementTodoListDocumentModelReducerOperationHandlers
 
 ## Adding the logic for handling operations with reducers
 
@@ -30524,7 +30532,7 @@ Up next, you'll implement some custom tests to check the behavior of our new cod
 
 ## Step 3 — Adding our own tests for the document model actions
 
-> Source: https://powerhouse.academy/academy/TodoListTutorial/AddTestsForTodoListActions
+> Source: https://academy.vetra.io/academy/TodoListTutorial/AddTestsForTodoListActions
 
 Similarly to the operation handler logic, when you add a new module to your document model, we generate some boilerplate tests for your code.
 
@@ -30982,7 +30990,7 @@ Up next, we'll generate a boilerplate document editor for our `TodoList` documen
 
 ## Step 5 — Implement `TodoList` document editor UI components
 
-> Source: https://powerhouse.academy/academy/TodoListTutorial/ImplementTodoListDocumentEditorUIComponents
+> Source: https://academy.vetra.io/academy/TodoListTutorial/ImplementTodoListDocumentEditorUIComponents
 
 Out of the box, we have a component for updating our `TodoList` documents' names, but we would like to create, read, update, and delete all of the data in our documents.
 
@@ -31397,7 +31405,7 @@ Next, we will generate a special kind of editor called a "drive editor" which we
 
 ## Step 7 - Add shared component for showing TodoList stats
 
-> Source: https://powerhouse.academy/academy/TodoListTutorial/AddSharedComponentForShowingTodoListStats
+> Source: https://academy.vetra.io/academy/TodoListTutorial/AddSharedComponentForShowingTodoListStats
 
 So far we've been creating components that live in the same directories as the editors that use them. But sometimes we want to use the same component across multiple editors.
 

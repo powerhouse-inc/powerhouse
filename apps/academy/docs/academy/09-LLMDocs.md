@@ -17,6 +17,14 @@ A concise index that follows the [llms.txt spec](https://llmstxt.org): an H1 tit
 
 The complete academy content in a single markdown file. Use this when you want to load the full documentation into a context window at once (e.g. pasting a URL into Claude or ChatGPT).
 
+## Using with Context7
+
+[Context7](https://context7.com) users can load up-to-date Powerhouse documentation directly into their AI coding assistant. Search for **powerhouse-inc/powerhouse** in the Context7 library search, or use the library ID `/powerhouse-inc/powerhouse`.
+
+```
+use context7
+```
+
 ## Programmatic access
 
 ```bash
