@@ -227,6 +227,7 @@ async function setupGraphQLManager(
     core: SubgraphClass[];
   },
   logger: ILogger,
+  authorizationService: AuthorizationService,
   auth?: {
     enabled: boolean;
     admins: string[];
@@ -234,7 +235,6 @@ async function setupGraphQLManager(
   documentPermissionService?: DocumentPermissionService,
   enableDocumentModelSubgraphs?: boolean,
   port?: number,
-  authorizationService?: AuthorizationService,
   reactorDriveClient?: IDriveClient,
 ): Promise<GraphQLManager> {
   const graphqlManager = new GraphQLManager(
@@ -624,7 +624,7 @@ async function _setupAPI(
   processorApp: ProcessorApp,
   readModels: IReadModel[],
   attachments: AttachmentBuildResult,
-  authorizationService?: AuthorizationService,
+  authorizationService: AuthorizationService,
   documentModelRegistry?: IDocumentModelRegistry,
   dbClosers: Array<() => Promise<void>> = [],
   reactorDriveClient?: IDriveClient,
@@ -754,11 +754,11 @@ async function _setupAPI(
       core: coreSubgraphs,
     },
     logger.child(["graphql-manager"]),
+    authorizationService,
     auth,
     documentPermissionService,
     options.enableDocumentModelSubgraphs,
     port,
-    authorizationService,
     reactorDriveClient,
   );
 

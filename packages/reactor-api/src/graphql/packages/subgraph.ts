@@ -70,6 +70,7 @@ export class PackagesSubgraph extends BaseSubgraph {
         try {
           return await resolvers.installPackage(
             this.packageManagementService,
+            this.authorizationService,
             args,
             ctx,
           );
@@ -88,6 +89,7 @@ export class PackagesSubgraph extends BaseSubgraph {
         try {
           return await resolvers.uninstallPackage(
             this.packageManagementService,
+            this.authorizationService,
             args,
             ctx,
           );
