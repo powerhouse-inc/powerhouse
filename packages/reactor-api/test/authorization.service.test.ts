@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { AuthorizationService } from "../src/services/authorization.service.js";
+import {
+  AuthorizationPolicy,
+  AuthorizationService,
+} from "../src/services/authorization.service.js";
 import type { DocumentPermissionService } from "../src/services/document-permission.service.js";
 
 describe("AuthorizationService", () => {
@@ -23,7 +26,11 @@ describe("AuthorizationService", () => {
     };
     service = new AuthorizationService(
       mockPermissionService as DocumentPermissionService,
-      { admins: ["0xadmin"], defaultProtection: false },
+      {
+        admins: ["0xadmin"],
+        defaultProtection: false,
+        policy: AuthorizationPolicy.DOCUMENT_PERMISSIONS,
+      },
     );
   });
 
@@ -446,6 +453,74 @@ describe("AuthorizationService", () => {
       expect(
         mockPermissionService.isProtectedWithAncestors,
       ).toHaveBeenCalledWith("doc-1", getParentIds);
+    });
+  });
+
+  describe("OPEN policy", () => {
+    let open: AuthorizationService;
+
+    beforeEach(() => {
+      open = new AuthorizationService(undefined, {
+        admins: [],
+        defaultProtection: false,
+        policy: AuthorizationPolicy.OPEN,
+      });
+    });
+
+    it("treats everyone (incl. anonymous) as a supreme admin", () => {
+      expect(open.isSupremeAdmin(undefined)).toBe(true);
+      expect(open.isSupremeAdmin("0xanyone")).toBe(true);
+    });
+
+    it("allows every decision without touching a permission store", async () => {
+      expect(await open.canRead("doc-1", undefined)).toBe(true);
+      expect(await open.canWrite("doc-1", undefined)).toBe(true);
+      expect(await open.canManage("doc-1", undefined)).toBe(true);
+      expect(await open.canExecuteOperation("doc-1", "OP", undefined)).toBe(
+        true,
+      );
+      expect(await open.canMutate("doc-1", "OP", undefined)).toBe(true);
+    });
+  });
+
+  describe("ADMIN_ONLY policy", () => {
+    let adminOnly: AuthorizationService;
+
+    beforeEach(() => {
+      adminOnly = new AuthorizationService(undefined, {
+        admins: ["0xadmin"],
+        defaultProtection: false,
+        policy: AuthorizationPolicy.ADMIN_ONLY,
+      });
+    });
+
+    it("allows supreme admins everything", async () => {
+      expect(await adminOnly.canRead("doc-1", "0xadmin")).toBe(true);
+      expect(await adminOnly.canWrite("doc-1", "0xadmin")).toBe(true);
+      expect(await adminOnly.canManage("doc-1", "0xadmin")).toBe(true);
+      expect(await adminOnly.canMutate("doc-1", "OP", "0xadmin")).toBe(true);
+    });
+
+    it("denies non-admins and anonymous everything", async () => {
+      expect(await adminOnly.canRead("doc-1", "0xuser")).toBe(false);
+      expect(await adminOnly.canWrite("doc-1", "0xuser")).toBe(false);
+      expect(await adminOnly.canManage("doc-1", "0xuser")).toBe(false);
+      expect(await adminOnly.canMutate("doc-1", "OP", "0xuser")).toBe(false);
+      expect(await adminOnly.canRead("doc-1", undefined)).toBe(false);
+      expect(await adminOnly.canWrite("doc-1", undefined)).toBe(false);
+    });
+  });
+
+  describe("constructor invariant", () => {
+    it("throws for DOCUMENT_PERMISSIONS policy without a permission service", () => {
+      expect(
+        () =>
+          new AuthorizationService(undefined, {
+            admins: [],
+            defaultProtection: false,
+            policy: AuthorizationPolicy.DOCUMENT_PERMISSIONS,
+          }),
+      ).toThrow(/DocumentPermissionService is required/);
     });
   });
 });

@@ -28,6 +28,10 @@ import type {
   WsDisposer,
 } from "../src/graphql/gateway/types.js";
 import { GraphQLManager } from "../src/graphql/graphql-manager.js";
+import {
+  AuthorizationPolicy,
+  AuthorizationService,
+} from "../src/services/authorization.service.js";
 import type { Context } from "../src/graphql/types.js";
 import type { AuthContext, AuthService } from "../src/services/auth.service.js";
 
@@ -163,7 +167,11 @@ function makeHarness(options: HarnessOptions = {}) {
         options.enableDocumentModelSubgraphs ?? false,
     },
     4001,
-    undefined, // authorizationService
+    new AuthorizationService(undefined, {
+      admins: [],
+      defaultProtection: false,
+      policy: AuthorizationPolicy.OPEN,
+    }),
   );
 
   return {

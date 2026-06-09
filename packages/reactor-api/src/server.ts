@@ -50,7 +50,10 @@ import { runMigrations } from "./migrations/index.js";
 import { ImportPackageLoader } from "./packages/import-loader.js";
 import { PackageManager } from "./packages/package-manager.js";
 import { AuthService } from "./services/auth.service.js";
-import { AuthorizationService } from "./services/authorization.service.js";
+import {
+  AuthorizationPolicy,
+  AuthorizationService,
+} from "./services/authorization.service.js";
 import { DocumentPermissionService } from "./services/document-permission.service.js";
 import type {
   API,
@@ -409,7 +412,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   relationalDb: IRelationalDb;
   analyticsStore: IAnalyticsStore;
   documentPermissionService: DocumentPermissionService | undefined;
-  authorizationService: AuthorizationService | undefined;
+  authorizationService: AuthorizationService;
   attachments: AttachmentBuildResult;
   packages: PackageManager;
   dbClosers: Array<() => Promise<void>>;
@@ -530,15 +533,19 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     logger.info("Document permission service initialized");
   }
 
-  // Create AuthorizationService when document permission service is available
-  let authorizationService: AuthorizationService | undefined;
-  if (documentPermissionService) {
-    authorizationService = new AuthorizationService(documentPermissionService, {
-      admins,
-      defaultProtection,
-    });
-    logger.info("Authorization service initialized");
-  }
+  // Authorization service is always present; the policy collapses the prior
+  // dual enforcement paths into one. Document permissions imply authentication
+  // (guaranteed by the boot gate above).
+  const policy = documentPermissionService
+    ? AuthorizationPolicy.DOCUMENT_PERMISSIONS
+    : authEnabled
+      ? AuthorizationPolicy.ADMIN_ONLY
+      : AuthorizationPolicy.OPEN;
+  const authorizationService = new AuthorizationService(
+    documentPermissionService,
+    { admins, defaultProtection, policy },
+  );
+  logger.info(`Authorization service initialized (policy: ${policy})`);
 
   // Initialize attachment service
   const attachmentStoragePath = resolveAttachmentStoragePath(options);

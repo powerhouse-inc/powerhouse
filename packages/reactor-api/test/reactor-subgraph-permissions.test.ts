@@ -3,10 +3,13 @@ import type { PHDocument } from "@powerhousedao/shared/document-model";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ReactorSubgraph } from "../src/graphql/reactor/subgraph.js";
 import type { SubgraphArgs } from "../src/graphql/types.js";
-import type { DocumentPermissionService } from "../src/services/document-permission.service.js";
+import {
+  AuthorizationPolicy,
+  type IAuthorizationService,
+} from "../src/services/authorization.service.js";
 
 describe("ReactorSubgraph Permission Checks", () => {
-  let mockDocumentPermissionService: Partial<DocumentPermissionService>;
+  let mockAuthorizationService: Partial<IAuthorizationService>;
   let mockReactorClient: Partial<IReactorClient>;
   let reactorSubgraph: ReactorSubgraph;
 
@@ -43,28 +46,51 @@ describe("ReactorSubgraph Permission Checks", () => {
     "Parent Document",
   );
 
-  // Helper to create context with different permission levels
-  const createContext = (options: {
-    isAdmin?: boolean;
-    userAddress?: string;
-  }) => ({
+  // Helper to create context with different user states
+  const createContext = (options: { userAddress?: string }) => ({
     user: options.userAddress ? { address: options.userAddress } : undefined,
-    isAdmin: () => options.isAdmin ?? false,
+    headers: {},
+    db: {},
   });
+
+  const buildSubgraph = (
+    authSvc: Partial<IAuthorizationService>,
+  ): ReactorSubgraph =>
+    new ReactorSubgraph({
+      reactorClient: mockReactorClient as IReactorClient,
+      authorizationService: authSvc as IAuthorizationService,
+      relationalDb: {} as any,
+      analyticsStore: {} as any,
+      graphqlManager: {
+        driveOwnershipCache: {
+          has: () => false,
+          add: () => undefined,
+          remove: () => undefined,
+          size: () => 0,
+        },
+      } as any,
+      syncManager: {} as any,
+    } as SubgraphArgs);
 
   beforeEach(() => {
     vi.clearAllMocks();
 
-    // Create mock DocumentPermissionService
-    mockDocumentPermissionService = {
-      canReadDocument: vi.fn().mockResolvedValue(false),
-      canWriteDocument: vi.fn().mockResolvedValue(false),
+    // Default mock: DOCUMENT_PERMISSIONS policy, non-admin, all decisions false
+    mockAuthorizationService = {
+      config: {
+        admins: [],
+        defaultProtection: false,
+        policy: AuthorizationPolicy.DOCUMENT_PERMISSIONS,
+      },
+      isSupremeAdmin: vi.fn().mockReturnValue(false),
       canRead: vi.fn().mockResolvedValue(false),
       canWrite: vi.fn().mockResolvedValue(false),
+      canManage: vi.fn().mockResolvedValue(false),
+      canMutate: vi.fn().mockResolvedValue(false),
+      canExecuteOperation: vi.fn().mockResolvedValue(false),
     };
 
     // Create mock ReactorClient
-    // Note: get() returns PHDocument directly
     mockReactorClient = {
       get: vi.fn().mockResolvedValue(mockDocument),
       getOutgoingRelationships: vi.fn().mockResolvedValue({
@@ -100,65 +126,45 @@ describe("ReactorSubgraph Permission Checks", () => {
       subscribe: vi.fn(),
     };
 
-    reactorSubgraph = new ReactorSubgraph({
-      reactorClient: mockReactorClient as IReactorClient,
-      documentPermissionService:
-        mockDocumentPermissionService as DocumentPermissionService,
-      relationalDb: {} as any,
-      analyticsStore: {} as any,
-      graphqlManager: {
-        driveOwnershipCache: {
-          has: () => false,
-          add: () => undefined,
-          remove: () => undefined,
-          size: () => 0,
-        },
-      } as any,
-      syncManager: {} as any,
-    } as SubgraphArgs);
+    reactorSubgraph = buildSubgraph(mockAuthorizationService);
   });
 
+  // ============================================================
+  // Query: document
+  // ============================================================
   describe("Query: document", () => {
     const callDocument = (ctx: any) => {
       const query = (reactorSubgraph.resolvers.Query as any)?.document;
       return query(null, { identifier: "doc-123" }, ctx);
     };
 
-    describe("Global Role Access", () => {
-      it("should allow access when user is global admin", async () => {
-        const ctx = createContext({ isAdmin: true, userAddress: "0xadmin" });
+    it("should allow access when authorizationService.canRead resolves true", async () => {
+      vi.mocked(mockAuthorizationService.canRead!).mockResolvedValue(true);
+      const ctx = createContext({ userAddress: "0xpermitted" });
 
-        const result = await callDocument(ctx);
+      const result = await callDocument(ctx);
 
-        expect(result).toBeDefined();
-        expect(mockDocumentPermissionService.canRead).not.toHaveBeenCalled();
-      });
+      expect(result).toBeDefined();
+      expect(mockAuthorizationService.canRead).toHaveBeenCalled();
     });
 
-    describe("Document Permission Access", () => {
-      it("should allow access when user has document read permission", async () => {
-        vi.mocked(mockDocumentPermissionService.canRead!).mockResolvedValue(
-          true,
-        );
-        const ctx = createContext({ userAddress: "0xpermitted" });
+    it("should deny access when authorizationService.canRead resolves false", async () => {
+      vi.mocked(mockAuthorizationService.canRead!).mockResolvedValue(false);
+      const ctx = createContext({ userAddress: "0xunpermitted" });
 
-        const result = await callDocument(ctx);
+      await expect(callDocument(ctx)).rejects.toThrow("Forbidden");
+    });
 
-        expect(result).toBeDefined();
-        expect(mockDocumentPermissionService.canRead).toHaveBeenCalled();
-      });
+    it("should deny access when no user is set (unauthenticated)", async () => {
+      const ctx = createContext({});
 
-      it("should deny access when user has no permissions", async () => {
-        vi.mocked(mockDocumentPermissionService.canRead!).mockResolvedValue(
-          false,
-        );
-        const ctx = createContext({ userAddress: "0xunpermitted" });
-
-        await expect(callDocument(ctx)).rejects.toThrow("Forbidden");
-      });
+      await expect(callDocument(ctx)).rejects.toThrow("Forbidden");
     });
   });
 
+  // ============================================================
+  // Query: documentOutgoingRelationships
+  // ============================================================
   describe("Query: documentOutgoingRelationships", () => {
     const callDocumentOutgoingRelationships = (ctx: any) => {
       const query = (reactorSubgraph.resolvers.Query as any)
@@ -170,27 +176,18 @@ describe("ReactorSubgraph Permission Checks", () => {
       );
     };
 
-    it("should allow access when user is global admin", async () => {
-      const ctx = createContext({ isAdmin: true, userAddress: "0xadmin" });
+    it("should allow access when canRead resolves true", async () => {
+      vi.mocked(mockAuthorizationService.canRead!).mockResolvedValue(true);
+      const ctx = createContext({ userAddress: "0xpermitted" });
 
       const result = await callDocumentOutgoingRelationships(ctx);
 
       expect(result).toBeDefined();
+      expect(mockAuthorizationService.canRead).toHaveBeenCalled();
     });
 
-    it("should check permission on source document", async () => {
-      vi.mocked(mockDocumentPermissionService.canRead!).mockResolvedValue(true);
-      const ctx = createContext({ userAddress: "0xpermitted" });
-
-      await callDocumentOutgoingRelationships(ctx);
-
-      expect(mockDocumentPermissionService.canRead).toHaveBeenCalled();
-    });
-
-    it("should deny access when user cannot read source", async () => {
-      vi.mocked(mockDocumentPermissionService.canRead!).mockResolvedValue(
-        false,
-      );
+    it("should deny access when canRead resolves false", async () => {
+      vi.mocked(mockAuthorizationService.canRead!).mockResolvedValue(false);
       const ctx = createContext({ userAddress: "0xunpermitted" });
 
       await expect(callDocumentOutgoingRelationships(ctx)).rejects.toThrow(
@@ -199,45 +196,55 @@ describe("ReactorSubgraph Permission Checks", () => {
     });
   });
 
+  // ============================================================
+  // Query: findDocuments — list-filter behavior
+  // ============================================================
   describe("Query: findDocuments", () => {
     const callFindDocuments = (ctx: any) => {
       const query = (reactorSubgraph.resolvers.Query as any)?.findDocuments;
       return query(null, { search: { type: "test/document" } }, ctx);
     };
 
-    it("should return all results for global admin", async () => {
-      const ctx = createContext({ isAdmin: true, userAddress: "0xadmin" });
+    it("should return all results without calling canRead when isSupremeAdmin is true", async () => {
+      vi.mocked(mockAuthorizationService.isSupremeAdmin!).mockReturnValue(true);
+      const ctx = createContext({ userAddress: "0xadmin" });
 
       const result = await callFindDocuments(ctx);
 
       expect(result.items).toHaveLength(1);
-      expect(mockDocumentPermissionService.canRead).not.toHaveBeenCalled();
+      expect(mockAuthorizationService.canRead).not.toHaveBeenCalled();
     });
 
-    it("should filter results based on permissions when no global access", async () => {
-      // First document: user has permission
-      // Setup: canRead returns true for first call
-      vi.mocked(mockDocumentPermissionService.canRead!).mockResolvedValue(true);
+    it("should filter results through canRead when isSupremeAdmin is false and canRead resolves true", async () => {
+      vi.mocked(mockAuthorizationService.isSupremeAdmin!).mockReturnValue(
+        false,
+      );
+      vi.mocked(mockAuthorizationService.canRead!).mockResolvedValue(true);
       const ctx = createContext({ userAddress: "0xpermitted" });
 
       const result = await callFindDocuments(ctx);
 
       expect(result.items).toHaveLength(1);
-      expect(mockDocumentPermissionService.canRead).toHaveBeenCalled();
+      expect(mockAuthorizationService.canRead).toHaveBeenCalled();
     });
 
-    it("should return empty results when user has no permissions", async () => {
-      vi.mocked(mockDocumentPermissionService.canRead!).mockResolvedValue(
+    it("should return empty results when isSupremeAdmin is false and canRead resolves false", async () => {
+      vi.mocked(mockAuthorizationService.isSupremeAdmin!).mockReturnValue(
         false,
       );
+      vi.mocked(mockAuthorizationService.canRead!).mockResolvedValue(false);
       const ctx = createContext({ userAddress: "0xunpermitted" });
 
       const result = await callFindDocuments(ctx);
 
       expect(result.items).toHaveLength(0);
+      expect(mockAuthorizationService.canRead).toHaveBeenCalled();
     });
   });
 
+  // ============================================================
+  // Mutation: createDocument
+  // ============================================================
   describe("Mutation: createDocument", () => {
     const callCreateDocument = (ctx: any, parentIdentifier?: string) => {
       const mutation = (reactorSubgraph.resolvers.Mutation as any)
@@ -252,48 +259,95 @@ describe("ReactorSubgraph Permission Checks", () => {
       );
     };
 
-    // Helper to verify permission passed (may fail later validation, but NOT due to "Forbidden")
+    // Helper: permission passed when the error (if any) is NOT "Forbidden"
     const expectPermissionPassed = async (promise: Promise<any>) => {
       try {
         await promise;
       } catch (error: any) {
-        // If we get here, make sure it's NOT a permission error
         expect(error.message).not.toContain("Forbidden");
       }
     };
 
-    describe("Without Parent", () => {
-      it("should allow when user is global admin", async () => {
-        const ctx = createContext({ isAdmin: true, userAddress: "0xadmin" });
+    describe("Without Parent (assertCanCreate path)", () => {
+      it("should allow when user address is set and policy is DOCUMENT_PERMISSIONS", async () => {
+        const ctx = createContext({ userAddress: "0xpermitted" });
 
-        // Permission check passes, may fail later validation
+        // policy=DOCUMENT_PERMISSIONS + address set → assertCanCreate passes
         await expectPermissionPassed(callCreateDocument(ctx));
-        expect(mockDocumentPermissionService.canWrite).not.toHaveBeenCalled();
       });
 
-      it("should deny when no global access", async () => {
-        const ctx = createContext({ userAddress: "0xunpermitted" });
+      it("should deny when no user address and policy is DOCUMENT_PERMISSIONS", async () => {
+        const ctx = createContext({});
 
         await expect(callCreateDocument(ctx)).rejects.toThrow("Forbidden");
       });
-    });
 
-    describe("With Parent", () => {
-      it("should check write permission on parent", async () => {
-        vi.mocked(mockDocumentPermissionService.canWrite!).mockResolvedValue(
-          true,
+      it("should allow for any user when policy is OPEN", async () => {
+        const openSubgraph = buildSubgraph({
+          ...mockAuthorizationService,
+          config: {
+            admins: [],
+            defaultProtection: false,
+            policy: AuthorizationPolicy.OPEN,
+          },
+        });
+        const mutation = (openSubgraph.resolvers.Mutation as any)
+          ?.createDocument;
+        const ctx = createContext({});
+
+        await expectPermissionPassed(
+          mutation(
+            null,
+            { document: { documentType: "test/document", state: {} } },
+            ctx,
+          ),
         );
-        const ctx = createContext({ userAddress: "0xpermitted" });
-
-        // Permission check passes, may fail later validation
-        await expectPermissionPassed(callCreateDocument(ctx, "parent-123"));
-        expect(mockDocumentPermissionService.canWrite).toHaveBeenCalled();
       });
 
-      it("should deny when user cannot write to parent", async () => {
-        vi.mocked(mockDocumentPermissionService.canWrite!).mockResolvedValue(
-          false,
+      it("should allow when isSupremeAdmin is true (DOCUMENT_PERMISSIONS policy)", async () => {
+        vi.mocked(mockAuthorizationService.isSupremeAdmin!).mockReturnValue(
+          true,
         );
+        const ctx = createContext({});
+
+        await expectPermissionPassed(callCreateDocument(ctx));
+      });
+
+      it("should deny for non-admin when policy is ADMIN_ONLY", async () => {
+        const adminOnlySubgraph = buildSubgraph({
+          ...mockAuthorizationService,
+          config: {
+            admins: [],
+            defaultProtection: false,
+            policy: AuthorizationPolicy.ADMIN_ONLY,
+          },
+          isSupremeAdmin: vi.fn().mockReturnValue(false),
+        });
+        const mutation = (adminOnlySubgraph.resolvers.Mutation as any)
+          ?.createDocument;
+        const ctx = createContext({ userAddress: "0xunpermitted" });
+
+        await expect(
+          mutation(
+            null,
+            { document: { documentType: "test/document", state: {} } },
+            ctx,
+          ),
+        ).rejects.toThrow("Forbidden");
+      });
+    });
+
+    describe("With Parent (assertCanWrite path)", () => {
+      it("should allow when canWrite resolves true on parent", async () => {
+        vi.mocked(mockAuthorizationService.canWrite!).mockResolvedValue(true);
+        const ctx = createContext({ userAddress: "0xpermitted" });
+
+        await expectPermissionPassed(callCreateDocument(ctx, "parent-123"));
+        expect(mockAuthorizationService.canWrite).toHaveBeenCalled();
+      });
+
+      it("should deny when canWrite resolves false on parent", async () => {
+        vi.mocked(mockAuthorizationService.canWrite!).mockResolvedValue(false);
         const ctx = createContext({ userAddress: "0xunpermitted" });
 
         await expect(callCreateDocument(ctx, "parent-123")).rejects.toThrow(
@@ -303,56 +357,55 @@ describe("ReactorSubgraph Permission Checks", () => {
     });
   });
 
+  // ============================================================
+  // Mutation: mutateDocument — drives via canMutate
+  // ============================================================
   describe("Mutation: mutateDocument", () => {
-    const callMutateDocument = (ctx: any) => {
+    const callMutateDocument = (ctx: any, actions: any[] = []) => {
       const mutation = (reactorSubgraph.resolvers.Mutation as any)
         ?.mutateDocument;
-      return mutation(
-        null,
-        { documentIdentifier: "doc-123", actions: [] },
-        ctx,
-      );
+      return mutation(null, { documentIdentifier: "doc-123", actions }, ctx);
     };
 
-    // Helper to verify permission passed (may fail later validation, but NOT due to "Forbidden")
     const expectPermissionPassed = async (promise: Promise<any>) => {
       try {
         await promise;
       } catch (error: any) {
-        // If we get here, make sure it's NOT a permission error
         expect(error.message).not.toContain("Forbidden");
       }
     };
 
-    it("should allow when user is global admin", async () => {
-      const ctx = createContext({ isAdmin: true, userAddress: "0xadmin" });
-
-      // Permission check passes, may fail later validation (document model not found)
-      await expectPermissionPassed(callMutateDocument(ctx));
-      expect(mockDocumentPermissionService.canWrite).not.toHaveBeenCalled();
-    });
-
-    it("should allow when user has write permission", async () => {
-      vi.mocked(mockDocumentPermissionService.canWrite!).mockResolvedValue(
-        true,
-      );
+    it("should pass through when actions is empty (no canMutate calls)", async () => {
       const ctx = createContext({ userAddress: "0xpermitted" });
 
-      // Permission check passes, may fail later validation
-      await expectPermissionPassed(callMutateDocument(ctx));
-      expect(mockDocumentPermissionService.canWrite).toHaveBeenCalled();
+      // No actions → assertCanExecuteOperations never calls canMutate → no throw
+      await expectPermissionPassed(callMutateDocument(ctx, []));
+      expect(mockAuthorizationService.canMutate).not.toHaveBeenCalled();
     });
 
-    it("should deny when user has no write permission", async () => {
-      vi.mocked(mockDocumentPermissionService.canWrite!).mockResolvedValue(
-        false,
+    it("should allow when canMutate resolves true for each action", async () => {
+      vi.mocked(mockAuthorizationService.canMutate!).mockResolvedValue(true);
+      const ctx = createContext({ userAddress: "0xpermitted" });
+
+      await expectPermissionPassed(
+        callMutateDocument(ctx, [{ type: "SET_NAME", input: {} }]),
       );
+      expect(mockAuthorizationService.canMutate).toHaveBeenCalled();
+    });
+
+    it("should deny when canMutate resolves false for an action", async () => {
+      vi.mocked(mockAuthorizationService.canMutate!).mockResolvedValue(false);
       const ctx = createContext({ userAddress: "0xunpermitted" });
 
-      await expect(callMutateDocument(ctx)).rejects.toThrow("Forbidden");
+      await expect(
+        callMutateDocument(ctx, [{ type: "SET_NAME", input: {} }]),
+      ).rejects.toThrow("Forbidden");
     });
   });
 
+  // ============================================================
+  // Mutation: deleteDocument — drives via canWrite
+  // ============================================================
   describe("Mutation: deleteDocument", () => {
     const callDeleteDocument = (ctx: any) => {
       const mutation = (reactorSubgraph.resolvers.Mutation as any)
@@ -360,35 +413,27 @@ describe("ReactorSubgraph Permission Checks", () => {
       return mutation(null, { identifier: "doc-123" }, ctx);
     };
 
-    it("should allow when user is global admin", async () => {
-      const ctx = createContext({ isAdmin: true, userAddress: "0xadmin" });
-
-      const result = await callDeleteDocument(ctx);
-
-      expect(result).toBe(true);
-    });
-
-    it("should allow when user has write permission", async () => {
-      vi.mocked(mockDocumentPermissionService.canWrite!).mockResolvedValue(
-        true,
-      );
+    it("should allow when canWrite resolves true", async () => {
+      vi.mocked(mockAuthorizationService.canWrite!).mockResolvedValue(true);
       const ctx = createContext({ userAddress: "0xpermitted" });
 
       const result = await callDeleteDocument(ctx);
 
       expect(result).toBe(true);
+      expect(mockAuthorizationService.canWrite).toHaveBeenCalled();
     });
 
-    it("should deny when user has no write permission", async () => {
-      vi.mocked(mockDocumentPermissionService.canWrite!).mockResolvedValue(
-        false,
-      );
+    it("should deny when canWrite resolves false", async () => {
+      vi.mocked(mockAuthorizationService.canWrite!).mockResolvedValue(false);
       const ctx = createContext({ userAddress: "0xunpermitted" });
 
       await expect(callDeleteDocument(ctx)).rejects.toThrow("Forbidden");
     });
   });
 
+  // ============================================================
+  // Mutation: moveRelationship — assertCanWrite on both parents
+  // ============================================================
   describe("Mutation: moveRelationship", () => {
     const callMoveRelationship = (ctx: any) => {
       const mutation = (reactorSubgraph.resolvers.Mutation as any)
@@ -405,28 +450,19 @@ describe("ReactorSubgraph Permission Checks", () => {
       );
     };
 
-    it("should allow when user is global admin", async () => {
-      const ctx = createContext({ isAdmin: true, userAddress: "0xadmin" });
+    it("should allow when canWrite resolves true for both parents", async () => {
+      vi.mocked(mockAuthorizationService.canWrite!).mockResolvedValue(true);
+      const ctx = createContext({ userAddress: "0xpermitted" });
 
       const result = await callMoveRelationship(ctx);
 
       expect(result).toBeDefined();
+      // Called twice: once per parent
+      expect(mockAuthorizationService.canWrite).toHaveBeenCalledTimes(2);
     });
 
-    it("should check write permission on both parents", async () => {
-      vi.mocked(mockDocumentPermissionService.canWrite!).mockResolvedValue(
-        true,
-      );
-      const ctx = createContext({ userAddress: "0xpermitted" });
-
-      await callMoveRelationship(ctx);
-
-      // Should be called twice - once for source, once for target
-      expect(mockDocumentPermissionService.canWrite).toHaveBeenCalledTimes(2);
-    });
-
-    it("should deny when user cannot write to source parent", async () => {
-      vi.mocked(mockDocumentPermissionService.canWrite!).mockResolvedValueOnce(
+    it("should deny when canWrite resolves false on source parent", async () => {
+      vi.mocked(mockAuthorizationService.canWrite!).mockResolvedValueOnce(
         false,
       );
       const ctx = createContext({ userAddress: "0xunpermitted" });
@@ -434,8 +470,8 @@ describe("ReactorSubgraph Permission Checks", () => {
       await expect(callMoveRelationship(ctx)).rejects.toThrow("Forbidden");
     });
 
-    it("should deny when user cannot write to target parent", async () => {
-      vi.mocked(mockDocumentPermissionService.canWrite!)
+    it("should deny when canWrite resolves false on target parent", async () => {
+      vi.mocked(mockAuthorizationService.canWrite!)
         .mockResolvedValueOnce(true) // source parent
         .mockResolvedValueOnce(false); // target parent
       const ctx = createContext({ userAddress: "0xunpermitted" });
@@ -444,59 +480,81 @@ describe("ReactorSubgraph Permission Checks", () => {
     });
   });
 
+  // ============================================================
+  // OPEN policy — all access allowed for anyone
+  // ============================================================
+  describe("OPEN policy behavior", () => {
+    let openSubgraph: ReactorSubgraph;
+
+    beforeEach(() => {
+      const openAuthSvc: Partial<IAuthorizationService> = {
+        config: {
+          admins: [],
+          defaultProtection: false,
+          policy: AuthorizationPolicy.OPEN,
+        },
+        isSupremeAdmin: vi.fn().mockReturnValue(true),
+        canRead: vi.fn().mockResolvedValue(true),
+        canWrite: vi.fn().mockResolvedValue(true),
+        canManage: vi.fn().mockResolvedValue(true),
+        canMutate: vi.fn().mockResolvedValue(true),
+        canExecuteOperation: vi.fn().mockResolvedValue(true),
+      };
+      openSubgraph = buildSubgraph(openAuthSvc);
+    });
+
+    it("should allow document reads for any user (including anonymous)", async () => {
+      const ctx = createContext({});
+      const query = (openSubgraph.resolvers.Query as any)?.document;
+
+      const result = await query(null, { identifier: "doc-123" }, ctx);
+
+      expect(result).toBeDefined();
+    });
+
+    it("should allow mutations for any user (including anonymous)", async () => {
+      const ctx = createContext({});
+      const mutation = (openSubgraph.resolvers.Mutation as any)?.deleteDocument;
+
+      const result = await mutation(null, { identifier: "doc-123" }, ctx);
+
+      expect(result).toBe(true);
+    });
+
+    it("should return all findDocuments items without per-item filtering", async () => {
+      const ctx = createContext({});
+      const query = (openSubgraph.resolvers.Query as any)?.findDocuments;
+
+      const result = await query(null, { search: {} }, ctx);
+
+      expect(result.items).toHaveLength(1);
+    });
+  });
+
+  // ============================================================
+  // Permission Inheritance
+  // ============================================================
   describe("Permission Inheritance", () => {
-    it("should allow access to child when user has permission on parent", async () => {
-      // Setup: canRead checks parent hierarchy and finds permission on parent
-      vi.mocked(mockDocumentPermissionService.canRead!).mockResolvedValue(true);
+    it("should allow access to child when canRead resolves true (hierarchy check)", async () => {
+      vi.mocked(mockAuthorizationService.canRead!).mockResolvedValue(true);
       const ctx = createContext({ userAddress: "0xpermitted" });
 
       const query = (reactorSubgraph.resolvers.Query as any)?.document;
       const result = await query(null, { identifier: "child-doc" }, ctx);
 
       expect(result).toBeDefined();
-      // The canRead should be called with getParentIdsFn which handles hierarchy
-      expect(mockDocumentPermissionService.canRead).toHaveBeenCalled();
+      expect(mockAuthorizationService.canRead).toHaveBeenCalled();
     });
   });
 
-  describe("AUTH_ENABLED=false behavior", () => {
-    it("should allow all access when isAdmin returns true", async () => {
-      // When AUTH_ENABLED=false, isAdmin returns true
-      const ctx = createContext({
-        isAdmin: true,
-        userAddress: "0xanyone",
-      });
-
-      // Test document query - permission check passes
-      const docResult = await (
-        reactorSubgraph.resolvers.Query as any
-      )?.document(null, { identifier: "doc-123" }, ctx);
-      expect(docResult).toBeDefined();
-
-      // Test mutation - permission check passes, may fail later validation
-      // but should NOT throw "Forbidden"
-      try {
-        await (reactorSubgraph.resolvers.Mutation as any)?.mutateDocument(
-          null,
-          { documentIdentifier: "doc-123", actions: [] },
-          ctx,
-        );
-      } catch (error: any) {
-        // Ensure it's not a permission error
-        expect(error.message).not.toContain("Forbidden");
-      }
-
-      // Permission service should never be called (global roles bypass)
-      expect(mockDocumentPermissionService.canRead).not.toHaveBeenCalled();
-      expect(mockDocumentPermissionService.canWrite).not.toHaveBeenCalled();
-    });
-  });
-
+  // ============================================================
+  // Edge Cases
+  // ============================================================
   describe("Edge Cases", () => {
     it("should handle document not found gracefully", async () => {
-      // When get() returns null, the resolver throws an error
       vi.mocked(mockReactorClient.get!).mockResolvedValue(null as any);
-      const ctx = createContext({ isAdmin: true, userAddress: "0xadmin" });
+      vi.mocked(mockAuthorizationService.canRead!).mockResolvedValue(true);
+      const ctx = createContext({ userAddress: "0xadmin" });
 
       const query = (reactorSubgraph.resolvers.Query as any)?.document;
 
@@ -507,12 +565,11 @@ describe("ReactorSubgraph Permission Checks", () => {
     });
 
     it("should throw error when document is null in result", async () => {
-      // When get() returns null, resolver throws
-      // because it tries to access document.header
       vi.mocked(mockReactorClient.get!).mockResolvedValue(
         null as unknown as PHDocument,
       );
-      const ctx = createContext({ isAdmin: true, userAddress: "0xadmin" });
+      vi.mocked(mockAuthorizationService.canRead!).mockResolvedValue(true);
+      const ctx = createContext({ userAddress: "0xadmin" });
 
       const query = (reactorSubgraph.resolvers.Query as any)?.document;
 
@@ -522,7 +579,7 @@ describe("ReactorSubgraph Permission Checks", () => {
       ).rejects.toThrow();
     });
 
-    it("should handle unauthenticated user (no user address)", async () => {
+    it("should handle unauthenticated user (no user address) — canRead false → Forbidden", async () => {
       const ctx = createContext({});
 
       const query = (reactorSubgraph.resolvers.Query as any)?.document;
