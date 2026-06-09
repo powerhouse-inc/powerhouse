@@ -28,6 +28,10 @@ import type {
   WsDisposer,
 } from "../src/graphql/gateway/types.js";
 import { GraphQLManager } from "../src/graphql/graphql-manager.js";
+import {
+  AuthorizationPolicy,
+  createAuthorizationService,
+} from "../src/services/authorization.service.js";
 import type { Context } from "../src/graphql/types.js";
 import type { AuthContext, AuthService } from "../src/services/auth.service.js";
 
@@ -163,7 +167,11 @@ function makeHarness(options: HarnessOptions = {}) {
         options.enableDocumentModelSubgraphs ?? false,
     },
     4001,
-    undefined, // authorizationService
+    createAuthorizationService({
+      admins: [],
+      defaultProtection: false,
+      policy: AuthorizationPolicy.OPEN,
+    }),
   );
 
   return {
@@ -415,17 +423,6 @@ describe("GraphQLManager", () => {
       expect(ctx["customField"]).toBe("custom-value");
     });
 
-    it("isAdmin always returns true when no AuthContext is present (auth disabled)", async () => {
-      const { manager, gatewayAdapter } = makeHarness();
-      await initAndFlush(manager);
-
-      const [, , contextFactory] =
-        gatewayAdapter.createSupergraphHandler.mock.calls[0];
-      const ctx = await contextFactory(new Request("http://localhost/graphql"));
-
-      expect(ctx.isAdmin("0xanyone")).toBe(true);
-    });
-
     it("populates user from the WeakMap AuthContext when present", async () => {
       const { manager, gatewayAdapter } = makeHarness();
       await initAndFlush(manager);
@@ -454,61 +451,11 @@ describe("GraphQLManager", () => {
       });
     });
 
-    it("isAdmin checks the admins list from the AuthContext when auth_enabled=true", async () => {
-      const { manager, gatewayAdapter } = makeHarness();
-      await initAndFlush(manager);
-
-      const [, , contextFactory] =
-        gatewayAdapter.createSupergraphHandler.mock.calls[0];
-
-      const req = new Request("http://localhost/graphql");
-      const mockService = {
-        authenticateRequest: vi.fn().mockResolvedValue({
-          user: undefined,
-          admins: ["0xadmin"],
-          auth_enabled: true,
-        } satisfies AuthContext),
-      } as unknown as AuthService;
-      await createAuthFetchMiddleware(mockService)(() =>
-        Promise.resolve(new Response("ok")),
-      )(req);
-
-      const ctx = await contextFactory(req);
-
-      expect(ctx.isAdmin("0xadmin")).toBe(true);
-      expect(ctx.isAdmin("0xnotadmin")).toBe(false);
-    });
-
-    it("isAdmin always returns true when auth_enabled=false in the AuthContext", async () => {
-      const { manager, gatewayAdapter } = makeHarness();
-      await initAndFlush(manager);
-
-      const [, , contextFactory] =
-        gatewayAdapter.createSupergraphHandler.mock.calls[0];
-
-      const req = new Request("http://localhost/graphql");
-      const mockService = {
-        authenticateRequest: vi.fn().mockResolvedValue({
-          user: undefined,
-          admins: [],
-          auth_enabled: false,
-        } satisfies AuthContext),
-      } as unknown as AuthService;
-      await createAuthFetchMiddleware(mockService)(() =>
-        Promise.resolve(new Response("ok")),
-      )(req);
-
-      const ctx = await contextFactory(req);
-
-      expect(ctx.isAdmin("0xanyone")).toBe(true);
-    });
-
-    it("auth fields (user, isAdmin) win over additionalContextFields with the same key", async () => {
+    it("auth-derived user wins over additionalContextFields with the same key", async () => {
       const { manager, gatewayAdapter } = makeHarness();
       // Deliberately set conflicting keys via setAdditionalContextFields
       manager.setAdditionalContextFields({
         user: { address: "0xoverridden" },
-        isAdmin: () => false,
       });
       await initAndFlush(manager);
 
@@ -536,8 +483,6 @@ describe("GraphQLManager", () => {
 
       // The auth-derived user should win over the one set via setAdditionalContextFields
       expect(ctx.user).toEqual(expectedUser);
-      // The auth-derived isAdmin should win too
-      expect(ctx.isAdmin("0xadmin")).toBe(true);
     });
   });
 

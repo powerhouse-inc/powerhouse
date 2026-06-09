@@ -11,7 +11,10 @@ import type {
 import type { DocumentNode } from "graphql";
 import { GraphQLError } from "graphql";
 import { gql } from "graphql-tag";
-import type { AuthorizationService } from "../services/authorization.service.js";
+import {
+  AuthorizationPolicy,
+  type IAuthorizationService,
+} from "../services/authorization.service.js";
 import type {
   DocumentPermissionService,
   GetParentIdsFn,
@@ -36,7 +39,7 @@ export class BaseSubgraph implements ISubgraph {
   relationalDb: IRelationalDb;
   syncManager: ISyncManager;
   documentPermissionService?: DocumentPermissionService;
-  authorizationService?: AuthorizationService;
+  authorizationService: IAuthorizationService;
 
   constructor(args: SubgraphArgs) {
     this.reactorClient = args.reactorClient;
@@ -70,67 +73,30 @@ export class BaseSubgraph implements ISubgraph {
     };
   }
 
-  protected hasGlobalAdminAccess(ctx: Context): boolean {
-    return !!ctx.isAdmin?.(ctx.user?.address ?? "");
-  }
-
   protected async canReadDocument(
     documentId: string,
     ctx: Context,
   ): Promise<boolean> {
-    if (this.authorizationService) {
-      return this.authorizationService.canRead(
-        documentId,
-        ctx.user?.address,
-        this.getParentIdsFn(),
-      );
-    }
-    if (this.hasGlobalAdminAccess(ctx)) return true;
-    if (this.documentPermissionService) {
-      return this.documentPermissionService.canRead(
-        documentId,
-        ctx.user?.address,
-        this.getParentIdsFn(),
-      );
-    }
-    return false;
+    return this.authorizationService.canRead(
+      documentId,
+      ctx.user?.address,
+      this.getParentIdsFn(),
+    );
   }
 
   protected async assertCanRead(
     documentId: string,
     ctx: Context,
   ): Promise<void> {
-    if (this.authorizationService) {
-      const canRead = await this.authorizationService.canRead(
-        documentId,
-        ctx.user?.address,
-        this.getParentIdsFn(),
+    const canRead = await this.authorizationService.canRead(
+      documentId,
+      ctx.user?.address,
+      this.getParentIdsFn(),
+    );
+    if (!canRead) {
+      throw new GraphQLError(
+        "Forbidden: insufficient permissions to read this document",
       );
-      if (!canRead) {
-        throw new GraphQLError(
-          "Forbidden: insufficient permissions to read this document",
-        );
-      }
-      return;
-    }
-    // Legacy fallback
-    if (!this.hasGlobalAdminAccess(ctx)) {
-      if (this.documentPermissionService) {
-        const canRead = await this.documentPermissionService.canRead(
-          documentId,
-          ctx.user?.address,
-          this.getParentIdsFn(),
-        );
-        if (!canRead) {
-          throw new GraphQLError(
-            "Forbidden: insufficient permissions to read this document",
-          );
-        }
-      } else {
-        throw new GraphQLError(
-          "Forbidden: insufficient permissions to read this document",
-        );
-      }
     }
   }
 
@@ -138,37 +104,15 @@ export class BaseSubgraph implements ISubgraph {
     documentId: string,
     ctx: Context,
   ): Promise<void> {
-    if (this.authorizationService) {
-      const canWrite = await this.authorizationService.canWrite(
-        documentId,
-        ctx.user?.address,
-        this.getParentIdsFn(),
+    const canWrite = await this.authorizationService.canWrite(
+      documentId,
+      ctx.user?.address,
+      this.getParentIdsFn(),
+    );
+    if (!canWrite) {
+      throw new GraphQLError(
+        "Forbidden: insufficient permissions to write to this document",
       );
-      if (!canWrite) {
-        throw new GraphQLError(
-          "Forbidden: insufficient permissions to write to this document",
-        );
-      }
-      return;
-    }
-    // Legacy fallback
-    if (!this.hasGlobalAdminAccess(ctx)) {
-      if (this.documentPermissionService) {
-        const canWrite = await this.documentPermissionService.canWrite(
-          documentId,
-          ctx.user?.address,
-          this.getParentIdsFn(),
-        );
-        if (!canWrite) {
-          throw new GraphQLError(
-            "Forbidden: insufficient permissions to write to this document",
-          );
-        }
-      } else {
-        throw new GraphQLError(
-          "Forbidden: insufficient permissions to write to this document",
-        );
-      }
     }
   }
 
@@ -177,40 +121,32 @@ export class BaseSubgraph implements ISubgraph {
     operationType: string,
     ctx: Context,
   ): Promise<void> {
-    if (this.authorizationService) {
-      const canMutate = await this.authorizationService.canMutate(
-        documentId,
-        operationType,
-        ctx.user?.address,
-        this.getParentIdsFn(),
+    const canMutate = await this.authorizationService.canMutate(
+      documentId,
+      operationType,
+      ctx.user?.address,
+      this.getParentIdsFn(),
+    );
+    if (!canMutate) {
+      throw new GraphQLError(
+        `Forbidden: insufficient permissions to execute operation "${operationType}" on this document`,
       );
-      if (!canMutate) {
-        throw new GraphQLError(
-          `Forbidden: insufficient permissions to execute operation "${operationType}" on this document`,
-        );
-      }
-      return;
     }
-    // Legacy fallback
-    if (!this.documentPermissionService) return;
-    if (ctx.isAdmin?.(ctx.user?.address ?? "")) return;
-    const isRestricted =
-      await this.documentPermissionService.isOperationRestricted(
-        documentId,
-        operationType,
+  }
+
+  protected assertCanCreate(ctx: Context): void {
+    const policy = this.authorizationService.config.policy;
+    if (policy === AuthorizationPolicy.OPEN) return;
+    if (this.authorizationService.isSupremeAdmin(ctx.user?.address)) return;
+    if (policy === AuthorizationPolicy.ADMIN_ONLY) {
+      throw new GraphQLError(
+        "Forbidden: insufficient permissions to create documents",
       );
-    if (isRestricted) {
-      const canExecute =
-        await this.documentPermissionService.canExecuteOperation(
-          documentId,
-          operationType,
-          ctx.user?.address,
-        );
-      if (!canExecute) {
-        throw new GraphQLError(
-          `Forbidden: insufficient permissions to execute operation "${operationType}" on this document`,
-        );
-      }
+    }
+    if (!ctx.user?.address) {
+      throw new GraphQLError(
+        "Forbidden: authentication required to create documents",
+      );
     }
   }
 }

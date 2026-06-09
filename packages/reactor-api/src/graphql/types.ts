@@ -9,7 +9,7 @@ import type { DocumentDriveGlobalState } from "@powerhousedao/shared/document-dr
 import type { PHDocument } from "@powerhousedao/shared/document-model";
 import type { DocumentNode } from "graphql";
 import type { IncomingHttpHeaders } from "http";
-import type { AuthorizationService } from "../services/authorization.service.js";
+import type { IAuthorizationService } from "../services/authorization.service.js";
 import type { DocumentPermissionService } from "../services/document-permission.service.js";
 import type { BaseSubgraph } from "./base-subgraph.js";
 
@@ -20,14 +20,11 @@ export type Context = {
   document?: PHDocument;
   headers: IncomingHttpHeaders;
   db: unknown;
-  isAdmin?: (address: string) => boolean;
   user?: {
     address: string;
     chainId: number;
     networkId: string;
   };
-  documentPermissionService?: DocumentPermissionService;
-  authorizationService?: AuthorizationService;
 };
 
 export type ISubgraph = {
@@ -48,7 +45,7 @@ export type SubgraphArgs = {
   graphqlManager: GraphQLManager;
   syncManager: ISyncManager;
   documentPermissionService?: DocumentPermissionService;
-  authorizationService?: AuthorizationService;
+  authorizationService: IAuthorizationService;
   path?: string;
 };
 

@@ -191,7 +191,6 @@ export class AuthSubgraph extends BaseSubgraph {
         args: { documentId: string; protected: boolean },
         ctx: {
           user?: { address: string };
-          isAdmin?: (address: string) => boolean;
         },
       ) => {
         this.logger.debug("setDocumentProtection(@args)", args);
@@ -199,13 +198,11 @@ export class AuthSubgraph extends BaseSubgraph {
           throw new GraphQLError("DocumentPermissionService not available");
         }
         try {
-          const isGlobalAdmin = ctx.isAdmin?.(ctx.user?.address ?? "") ?? false;
           return await resolvers.setDocumentProtection(
             this.documentPermissionService,
             this.authorizationService,
             args,
             ctx.user?.address,
-            isGlobalAdmin,
           );
         } catch (error) {
           this.logger.error("Error in setDocumentProtection: @error", error);
@@ -218,7 +215,6 @@ export class AuthSubgraph extends BaseSubgraph {
         args: { documentId: string; newOwnerAddress: string },
         ctx: {
           user?: { address: string };
-          isAdmin?: (address: string) => boolean;
         },
       ) => {
         this.logger.debug("transferDocumentOwnership(@args)", args);
@@ -226,13 +222,11 @@ export class AuthSubgraph extends BaseSubgraph {
           throw new GraphQLError("DocumentPermissionService not available");
         }
         try {
-          const isGlobalAdmin = ctx.isAdmin?.(ctx.user?.address ?? "") ?? false;
           return await resolvers.transferDocumentOwnership(
             this.documentPermissionService,
             this.authorizationService,
             args,
             ctx.user?.address,
-            isGlobalAdmin,
           );
         } catch (error) {
           this.logger.error(
@@ -248,7 +242,6 @@ export class AuthSubgraph extends BaseSubgraph {
         args: { documentId: string; userAddress: string; permission: string },
         ctx: {
           user?: { address: string };
-          isAdmin?: (address: string) => boolean;
         },
       ) => {
         this.logger.debug("grantDocumentPermission(@args)", args);
@@ -256,16 +249,15 @@ export class AuthSubgraph extends BaseSubgraph {
           throw new GraphQLError("DocumentPermissionService not available");
         }
         try {
-          const isGlobalAdmin = ctx.isAdmin?.(ctx.user?.address ?? "") ?? false;
           return await resolvers.grantDocumentPermission(
             this.documentPermissionService,
+            this.authorizationService,
             args as {
               documentId: string;
               userAddress: string;
               permission: "READ" | "WRITE" | "ADMIN";
             },
             ctx.user?.address,
-            isGlobalAdmin,
           );
         } catch (error) {
           this.logger.error("Error in grantDocumentPermission: @error", error);
@@ -278,7 +270,6 @@ export class AuthSubgraph extends BaseSubgraph {
         args: { documentId: string; userAddress: string },
         ctx: {
           user?: { address: string };
-          isAdmin?: (address: string) => boolean;
         },
       ) => {
         this.logger.debug("revokeDocumentPermission(@args)", args);
@@ -286,12 +277,11 @@ export class AuthSubgraph extends BaseSubgraph {
           throw new GraphQLError("DocumentPermissionService not available");
         }
         try {
-          const isGlobalAdmin = ctx.isAdmin?.(ctx.user?.address ?? "") ?? false;
           return await resolvers.revokeDocumentPermission(
             this.documentPermissionService,
+            this.authorizationService,
             args,
             ctx.user?.address,
-            isGlobalAdmin,
           );
         } catch (error) {
           this.logger.error("Error in revokeDocumentPermission: @error", error);
@@ -379,7 +369,6 @@ export class AuthSubgraph extends BaseSubgraph {
         args: { documentId: string; groupId: number; permission: string },
         ctx: {
           user?: { address: string };
-          isAdmin?: (address: string) => boolean;
         },
       ) => {
         this.logger.debug("grantGroupPermission(@args)", args);
@@ -387,16 +376,15 @@ export class AuthSubgraph extends BaseSubgraph {
           throw new GraphQLError("DocumentPermissionService not available");
         }
         try {
-          const isGlobalAdmin = ctx.isAdmin?.(ctx.user?.address ?? "") ?? false;
           return await resolvers.grantGroupPermission(
             this.documentPermissionService,
+            this.authorizationService,
             args as {
               documentId: string;
               groupId: number;
               permission: "READ" | "WRITE" | "ADMIN";
             },
             ctx.user?.address,
-            isGlobalAdmin,
           );
         } catch (error) {
           this.logger.error("Error in grantGroupPermission: @error", error);
@@ -409,7 +397,6 @@ export class AuthSubgraph extends BaseSubgraph {
         args: { documentId: string; groupId: number },
         ctx: {
           user?: { address: string };
-          isAdmin?: (address: string) => boolean;
         },
       ) => {
         this.logger.debug("revokeGroupPermission(@args)", args);
@@ -417,12 +404,11 @@ export class AuthSubgraph extends BaseSubgraph {
           throw new GraphQLError("DocumentPermissionService not available");
         }
         try {
-          const isGlobalAdmin = ctx.isAdmin?.(ctx.user?.address ?? "") ?? false;
           return await resolvers.revokeGroupPermission(
             this.documentPermissionService,
+            this.authorizationService,
             args,
             ctx.user?.address,
-            isGlobalAdmin,
           );
         } catch (error) {
           this.logger.error("Error in revokeGroupPermission: @error", error);
@@ -440,7 +426,6 @@ export class AuthSubgraph extends BaseSubgraph {
         },
         ctx: {
           user?: { address: string };
-          isAdmin?: (address: string) => boolean;
         },
       ) => {
         this.logger.debug("grantOperationPermission(@args)", args);
@@ -448,12 +433,11 @@ export class AuthSubgraph extends BaseSubgraph {
           throw new GraphQLError("DocumentPermissionService not available");
         }
         try {
-          const isGlobalAdmin = ctx.isAdmin?.(ctx.user?.address ?? "") ?? false;
           return await resolvers.grantOperationPermission(
             this.documentPermissionService,
+            this.authorizationService,
             args,
             ctx.user?.address,
-            isGlobalAdmin,
           );
         } catch (error) {
           this.logger.error("Error in grantOperationPermission: @error", error);
@@ -470,7 +454,6 @@ export class AuthSubgraph extends BaseSubgraph {
         },
         ctx: {
           user?: { address: string };
-          isAdmin?: (address: string) => boolean;
         },
       ) => {
         this.logger.debug("revokeOperationPermission(@args)", args);
@@ -478,12 +461,11 @@ export class AuthSubgraph extends BaseSubgraph {
           throw new GraphQLError("DocumentPermissionService not available");
         }
         try {
-          const isGlobalAdmin = ctx.isAdmin?.(ctx.user?.address ?? "") ?? false;
           return await resolvers.revokeOperationPermission(
             this.documentPermissionService,
+            this.authorizationService,
             args,
             ctx.user?.address,
-            isGlobalAdmin,
           );
         } catch (error) {
           this.logger.error(
@@ -499,7 +481,6 @@ export class AuthSubgraph extends BaseSubgraph {
         args: { documentId: string; operationType: string; groupId: number },
         ctx: {
           user?: { address: string };
-          isAdmin?: (address: string) => boolean;
         },
       ) => {
         this.logger.debug("grantGroupOperationPermission(@args)", args);
@@ -507,12 +488,11 @@ export class AuthSubgraph extends BaseSubgraph {
           throw new GraphQLError("DocumentPermissionService not available");
         }
         try {
-          const isGlobalAdmin = ctx.isAdmin?.(ctx.user?.address ?? "") ?? false;
           return await resolvers.grantGroupOperationPermission(
             this.documentPermissionService,
+            this.authorizationService,
             args,
             ctx.user?.address,
-            isGlobalAdmin,
           );
         } catch (error) {
           this.logger.error(
@@ -528,7 +508,6 @@ export class AuthSubgraph extends BaseSubgraph {
         args: { documentId: string; operationType: string; groupId: number },
         ctx: {
           user?: { address: string };
-          isAdmin?: (address: string) => boolean;
         },
       ) => {
         this.logger.debug("revokeGroupOperationPermission(@args)", args);
@@ -536,12 +515,11 @@ export class AuthSubgraph extends BaseSubgraph {
           throw new GraphQLError("DocumentPermissionService not available");
         }
         try {
-          const isGlobalAdmin = ctx.isAdmin?.(ctx.user?.address ?? "") ?? false;
           return await resolvers.revokeGroupOperationPermission(
             this.documentPermissionService,
+            this.authorizationService,
             args,
             ctx.user?.address,
-            isGlobalAdmin,
           );
         } catch (error) {
           this.logger.error(

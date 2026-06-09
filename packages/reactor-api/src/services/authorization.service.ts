@@ -3,239 +3,266 @@ import type {
   GetParentIdsFn,
 } from "./document-permission.service.js";
 
+export const AuthorizationPolicy = {
+  OPEN: "OPEN",
+  ADMIN_ONLY: "ADMIN_ONLY",
+  DOCUMENT_PERMISSIONS: "DOCUMENT_PERMISSIONS",
+} as const;
+
+export type AuthorizationPolicy =
+  (typeof AuthorizationPolicy)[keyof typeof AuthorizationPolicy];
+
 export interface AuthorizationConfig {
   admins: string[];
   defaultProtection: boolean;
+  policy: AuthorizationPolicy;
 }
 
 /**
- * Central authorization service — single source of truth for all permission checks.
+ * Single source of truth for every permission decision. Always present (never
+ * null) so callers branch on data, not on the existence of a service.
  *
- * Authorization model:
- * 1. Supreme admin (ADMINS env) → ALLOW ALL
- * 2. Is document protected?
- *    a. NOT protected:
- *       - READ: anyone (even anonymous) → ALLOW
- *       - WRITE: authenticated user → ALLOW
- *    b. PROTECTED:
- *       - READ: requires explicit READ/WRITE/ADMIN grant (direct or via group/parent)
- *       - WRITE: requires explicit WRITE/ADMIN grant (direct or via group/parent)
- * 3. Operation restricted? → Check OperationUserPermission
- * 4. Document owner = implicit ADMIN
- * 5. Drive protected = all children effectively protected
+ * The policy selects an implementation once at boot:
+ * - OPEN: authentication disabled — everyone (incl. anonymous) is allowed.
+ * - ADMIN_ONLY: authentication on, document permissions off — only ADMINS.
+ * - DOCUMENT_PERMISSIONS: the full per-document protection + grant model.
  */
-export class AuthorizationService {
+export interface IAuthorizationService {
   readonly config: AuthorizationConfig;
 
-  constructor(
-    private readonly documentPermissionService: DocumentPermissionService,
-    config: AuthorizationConfig,
-  ) {
-    this.config = config;
-  }
+  isSupremeAdmin(userAddress?: string): boolean;
 
-  /**
-   * Check if a user is a supreme admin (from ADMINS env var).
-   */
+  canRead(
+    documentId: string,
+    userAddress?: string,
+    getParentIds?: GetParentIdsFn,
+  ): Promise<boolean>;
+
+  canWrite(
+    documentId: string,
+    userAddress?: string,
+    getParentIds?: GetParentIdsFn,
+  ): Promise<boolean>;
+
+  canManage(
+    documentId: string,
+    userAddress?: string,
+    getParentIds?: GetParentIdsFn,
+  ): Promise<boolean>;
+
+  canMutate(
+    documentId: string,
+    operationType: string,
+    userAddress?: string,
+    getParentIds?: GetParentIdsFn,
+  ): Promise<boolean>;
+}
+
+/** Shared config holder and admin-list check for the policy strategies. */
+abstract class BaseAuthorizationService implements IAuthorizationService {
+  constructor(readonly config: AuthorizationConfig) {}
+
   isSupremeAdmin(userAddress?: string): boolean {
     if (!userAddress) return false;
     return this.config.admins.includes(userAddress.toLowerCase());
   }
 
-  /**
-   * Check if a user can read a document.
-   *
-   * - Supreme admin → yes
-   * - Not protected → anyone can read (even anonymous)
-   * - Protected → requires READ/WRITE/ADMIN grant (direct, group, or parent inheritance)
-   * - Owner → yes (implicit ADMIN)
-   */
+  abstract canRead(
+    documentId: string,
+    userAddress?: string,
+    getParentIds?: GetParentIdsFn,
+  ): Promise<boolean>;
+
+  abstract canWrite(
+    documentId: string,
+    userAddress?: string,
+    getParentIds?: GetParentIdsFn,
+  ): Promise<boolean>;
+
+  abstract canManage(
+    documentId: string,
+    userAddress?: string,
+    getParentIds?: GetParentIdsFn,
+  ): Promise<boolean>;
+
+  abstract canMutate(
+    documentId: string,
+    operationType: string,
+    userAddress?: string,
+    getParentIds?: GetParentIdsFn,
+  ): Promise<boolean>;
+}
+
+/** OPEN: authentication disabled — everyone (incl. anonymous) is allowed. */
+class OpenAuthorizationService extends BaseAuthorizationService {
+  isSupremeAdmin(): boolean {
+    return true;
+  }
+
+  canRead(): Promise<boolean> {
+    return Promise.resolve(true);
+  }
+
+  canWrite(): Promise<boolean> {
+    return Promise.resolve(true);
+  }
+
+  canManage(): Promise<boolean> {
+    return Promise.resolve(true);
+  }
+
+  canMutate(): Promise<boolean> {
+    return Promise.resolve(true);
+  }
+}
+
+/** ADMIN_ONLY: authentication on, document permissions off — only ADMINS. */
+class AdminOnlyAuthorizationService extends BaseAuthorizationService {
+  canRead(_documentId: string, userAddress?: string): Promise<boolean> {
+    return Promise.resolve(this.isSupremeAdmin(userAddress));
+  }
+
+  canWrite(_documentId: string, userAddress?: string): Promise<boolean> {
+    return Promise.resolve(this.isSupremeAdmin(userAddress));
+  }
+
+  canManage(_documentId: string, userAddress?: string): Promise<boolean> {
+    return Promise.resolve(this.isSupremeAdmin(userAddress));
+  }
+
+  canMutate(
+    _documentId: string,
+    _operationType: string,
+    userAddress?: string,
+  ): Promise<boolean> {
+    return Promise.resolve(this.isSupremeAdmin(userAddress));
+  }
+}
+
+/** DOCUMENT_PERMISSIONS: the full per-document protection + grant model. */
+class DocumentPermissionsAuthorizationService extends BaseAuthorizationService {
+  constructor(
+    private readonly permissions: DocumentPermissionService,
+    config: AuthorizationConfig,
+  ) {
+    super(config);
+  }
+
   async canRead(
     documentId: string,
     userAddress?: string,
     getParentIds?: GetParentIdsFn,
   ): Promise<boolean> {
-    // Supreme admin bypasses all
     if (this.isSupremeAdmin(userAddress)) return true;
 
-    // Check protection status (walks parent chain if getParentIds provided)
     const isProtected = getParentIds
-      ? await this.documentPermissionService.isProtectedWithAncestors(
+      ? await this.permissions.isProtectedWithAncestors(
           documentId,
           getParentIds,
         )
-      : await this.documentPermissionService.isDocumentProtected(documentId);
+      : await this.permissions.isDocumentProtected(documentId);
 
-    // Unprotected documents are readable by anyone
     if (!isProtected) return true;
-
-    // Protected document — requires authentication
     if (!userAddress) return false;
 
-    // Owner has implicit ADMIN
-    const owner =
-      await this.documentPermissionService.getDocumentOwner(documentId);
+    const owner = await this.permissions.getDocumentOwner(documentId);
     if (owner && owner === userAddress.toLowerCase()) return true;
 
-    // Check grant (READ/WRITE/ADMIN all allow reading)
     if (getParentIds) {
-      return this.documentPermissionService.canRead(
-        documentId,
-        userAddress,
-        getParentIds,
-      );
+      return this.permissions.canRead(documentId, userAddress, getParentIds);
     }
-    return this.documentPermissionService.canReadDocument(
-      documentId,
-      userAddress,
-    );
+    return this.permissions.canReadDocument(documentId, userAddress);
   }
 
-  /**
-   * Check if a user can write to a document.
-   *
-   * - Supreme admin → yes
-   * - Not protected → anyone can write (even anonymous)
-   * - Protected → requires authentication + WRITE/ADMIN grant
-   * - Owner → yes (implicit ADMIN)
-   */
   async canWrite(
     documentId: string,
     userAddress?: string,
     getParentIds?: GetParentIdsFn,
   ): Promise<boolean> {
-    // Supreme admin bypasses all
     if (this.isSupremeAdmin(userAddress)) return true;
+    return this.#permissionCanWrite(documentId, userAddress, getParentIds);
+  }
 
-    // Check protection status
-    const isProtected = getParentIds
-      ? await this.documentPermissionService.isProtectedWithAncestors(
-          documentId,
-          getParentIds,
-        )
-      : await this.documentPermissionService.isDocumentProtected(documentId);
-
-    // Unprotected documents are writable by anyone (even anonymous)
-    if (!isProtected) return true;
-
-    // Protected document — requires authentication
+  async canManage(documentId: string, userAddress?: string): Promise<boolean> {
+    if (this.isSupremeAdmin(userAddress)) return true;
     if (!userAddress) return false;
 
-    // Owner has implicit ADMIN
-    const owner =
-      await this.documentPermissionService.getDocumentOwner(documentId);
+    const owner = await this.permissions.getDocumentOwner(documentId);
     if (owner && owner === userAddress.toLowerCase()) return true;
 
-    // Check grant (WRITE/ADMIN allow writing)
-    if (getParentIds) {
-      return this.documentPermissionService.canWrite(
-        documentId,
-        userAddress,
-        getParentIds,
-      );
-    }
-    return this.documentPermissionService.canWriteDocument(
-      documentId,
-      userAddress,
-    );
+    return this.permissions.canManageDocument(documentId, userAddress);
   }
 
-  /**
-   * Check if a user can manage a document (change permissions, protection, transfer ownership).
-   *
-   * - Supreme admin → yes
-   * - Owner → yes
-   * - Has ADMIN grant → yes
-   */
-  async canManage(
-    documentId: string,
-    userAddress?: string,
-    _getParentIds?: GetParentIdsFn,
-  ): Promise<boolean> {
-    // Supreme admin bypasses all
-    if (this.isSupremeAdmin(userAddress)) return true;
-
-    if (!userAddress) return false;
-
-    // Owner has implicit ADMIN
-    const owner =
-      await this.documentPermissionService.getDocumentOwner(documentId);
-    if (owner && owner === userAddress.toLowerCase()) return true;
-
-    // Check ADMIN grant
-    return this.documentPermissionService.canManageDocument(
-      documentId,
-      userAddress,
-    );
-  }
-
-  /**
-   * Check if a user can execute a specific operation.
-   * If the operation is not restricted, falls through to the standard write check.
-   * If the operation is restricted, requires an explicit OperationUserPermission grant.
-   */
-  async canExecuteOperation(
-    documentId: string,
-    operationType: string,
-    userAddress?: string,
-    getParentIds?: GetParentIdsFn,
-  ): Promise<boolean> {
-    // Supreme admin bypasses all
-    if (this.isSupremeAdmin(userAddress)) return true;
-
-    // Check if operation is restricted
-    const isRestricted =
-      await this.documentPermissionService.isOperationRestricted(
-        documentId,
-        operationType,
-      );
-
-    if (!isRestricted) {
-      // Operation not restricted — standard write check applies
-      return this.canWrite(documentId, userAddress, getParentIds);
-    }
-
-    // Operation is restricted — user needs explicit operation grant
-    return this.documentPermissionService.canExecuteOperation(
-      documentId,
-      operationType,
-      userAddress?.toLowerCase(),
-    );
-  }
-
-  /**
-   * Combined check for mutations: can the user write + execute the operation?
-   * This enables READ-only users with operation grants to execute specific operations.
-   * For restricted operations, only the operation grant is checked (bypasses write check),
-   * allowing READ-only users with an explicit operation grant to execute that operation.
-   */
   async canMutate(
     documentId: string,
     operationType: string,
     userAddress?: string,
     getParentIds?: GetParentIdsFn,
   ): Promise<boolean> {
-    // Supreme admin bypasses all
     if (this.isSupremeAdmin(userAddress)) return true;
 
-    // Check if the operation is restricted
-    const isRestricted =
-      await this.documentPermissionService.isOperationRestricted(
-        documentId,
-        operationType,
-      );
+    const isRestricted = await this.permissions.isOperationRestricted(
+      documentId,
+      operationType,
+    );
 
     if (isRestricted) {
-      // For restricted operations, only the operation grant matters
-      // This allows READ-only users with operation grants to execute
-      return this.documentPermissionService.canExecuteOperation(
+      return this.permissions.canExecuteOperation(
         documentId,
         operationType,
         userAddress?.toLowerCase(),
       );
     }
 
-    // For unrestricted operations, standard write check applies
-    return this.canWrite(documentId, userAddress, getParentIds);
+    return this.#permissionCanWrite(documentId, userAddress, getParentIds);
   }
+
+  async #permissionCanWrite(
+    documentId: string,
+    userAddress?: string,
+    getParentIds?: GetParentIdsFn,
+  ): Promise<boolean> {
+    const isProtected = getParentIds
+      ? await this.permissions.isProtectedWithAncestors(
+          documentId,
+          getParentIds,
+        )
+      : await this.permissions.isDocumentProtected(documentId);
+
+    if (!isProtected) return true;
+    if (!userAddress) return false;
+
+    const owner = await this.permissions.getDocumentOwner(documentId);
+    if (owner && owner === userAddress.toLowerCase()) return true;
+
+    if (getParentIds) {
+      return this.permissions.canWrite(documentId, userAddress, getParentIds);
+    }
+    return this.permissions.canWriteDocument(documentId, userAddress);
+  }
+}
+
+/**
+ * Selects the strategy for the configured policy. The strategy classes are
+ * not exported, so this guard is the only construction path.
+ */
+export function createAuthorizationService(
+  config: AuthorizationConfig,
+  documentPermissionService?: DocumentPermissionService,
+): IAuthorizationService {
+  if (config.policy === AuthorizationPolicy.OPEN) {
+    return new OpenAuthorizationService(config);
+  }
+  if (config.policy === AuthorizationPolicy.ADMIN_ONLY) {
+    return new AdminOnlyAuthorizationService(config);
+  }
+  if (!documentPermissionService) {
+    throw new Error(
+      "DocumentPermissionService is required for the DOCUMENT_PERMISSIONS policy",
+    );
+  }
+  return new DocumentPermissionsAuthorizationService(
+    documentPermissionService,
+    config,
+  );
 }

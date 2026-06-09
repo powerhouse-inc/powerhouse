@@ -1,5 +1,4 @@
 import { ConsoleLogger } from "document-model";
-import { GraphQLError } from "graphql";
 import { withFilter } from "graphql-subscriptions";
 import { gql } from "graphql-tag";
 import schemaSource from "./schema.graphql";
@@ -155,10 +154,7 @@ export class ReactorSubgraph extends BaseSubgraph {
             this.reactorClient,
             args,
           );
-          if (
-            !this.hasGlobalAdminAccess(ctx) &&
-            this.documentPermissionService
-          ) {
+          if (!this.authorizationService.isSupremeAdmin(ctx.user?.address)) {
             const filteredItems = [];
             for (const item of result.items) {
               const canRead = await this.canReadDocument(item.id, ctx);
@@ -191,10 +187,7 @@ export class ReactorSubgraph extends BaseSubgraph {
           });
 
           // Filter results to only include documents the user can read
-          if (
-            !this.hasGlobalAdminAccess(ctx) &&
-            this.documentPermissionService
-          ) {
+          if (!this.authorizationService.isSupremeAdmin(ctx.user?.address)) {
             const filteredItems = [];
             for (const item of result.items) {
               const canRead = await this.canReadDocument(item.id, ctx);
@@ -273,16 +266,8 @@ export class ReactorSubgraph extends BaseSubgraph {
             });
 
             await this.assertCanWrite(parent.document.id, ctx);
-          } else if (this.authorizationService) {
-            if (!ctx.user?.address) {
-              throw new GraphQLError(
-                "Forbidden: authentication required to create documents",
-              );
-            }
-          } else if (!this.hasGlobalAdminAccess(ctx)) {
-            throw new GraphQLError(
-              "Forbidden: insufficient permissions to create documents",
-            );
+          } else {
+            this.assertCanCreate(ctx);
           }
           const result = await resolvers.createDocument(
             this.reactorClient,
@@ -295,7 +280,7 @@ export class ReactorSubgraph extends BaseSubgraph {
           }
 
           // Auto-ownership: set creator as document owner
-          if (this.authorizationService && ctx.user?.address && result?.id) {
+          if (ctx.user?.address && result?.id) {
             await this.documentPermissionService?.initializeDocumentProtection(
               result.id,
               ctx.user.address,
@@ -324,16 +309,8 @@ export class ReactorSubgraph extends BaseSubgraph {
             });
 
             await this.assertCanWrite(parent.document.id, ctx);
-          } else if (this.authorizationService) {
-            if (!ctx.user?.address) {
-              throw new GraphQLError(
-                "Forbidden: authentication required to create documents",
-              );
-            }
-          } else if (!this.hasGlobalAdminAccess(ctx)) {
-            throw new GraphQLError(
-              "Forbidden: insufficient permissions to create documents",
-            );
+          } else {
+            this.assertCanCreate(ctx);
           }
           const result = await resolvers.createEmptyDocument(
             this.reactorClient,
@@ -346,7 +323,7 @@ export class ReactorSubgraph extends BaseSubgraph {
           }
 
           // Auto-ownership: set creator as document owner
-          if (this.authorizationService && ctx.user?.address && result?.id) {
+          if (ctx.user?.address && result?.id) {
             await this.documentPermissionService?.initializeDocumentProtection(
               result.id,
               ctx.user.address,
@@ -368,13 +345,7 @@ export class ReactorSubgraph extends BaseSubgraph {
       mutateDocument: async (_parent, args, ctx: Context) => {
         this.logger.debug("mutateDocument(@args)", args);
         try {
-          // assertCanExecuteOperations uses canMutate (which combines write + operation checks)
-          // when authorizationService is available. For legacy fallback, assertCanWrite is needed.
-          if (!this.authorizationService) {
-            await this.assertCanWrite(args.documentIdentifier, ctx);
-          }
-
-          // Check operation-level permissions for each action
+          // canMutate combines the write + operation checks per action.
           await this.assertCanExecuteOperations(
             args.documentIdentifier,
             args.actions,
@@ -395,11 +366,6 @@ export class ReactorSubgraph extends BaseSubgraph {
       mutateDocumentAsync: async (_parent, args, ctx: Context) => {
         this.logger.debug("mutateDocumentAsync(@args)", args);
         try {
-          if (!this.authorizationService) {
-            await this.assertCanWrite(args.documentIdentifier, ctx);
-          }
-
-          // Check operation-level permissions for each action
           await this.assertCanExecuteOperations(
             args.documentIdentifier,
             args.actions,

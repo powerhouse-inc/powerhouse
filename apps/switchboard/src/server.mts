@@ -564,6 +564,7 @@ async function initServer(
       graphqlManager,
       syncManager: api.syncManager,
       path: graphqlManager.getBasePath(),
+      authorizationService: graphqlManager.getAuthorizationService(),
       packageManagementService,
     });
 

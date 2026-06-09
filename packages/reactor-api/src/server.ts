@@ -50,7 +50,11 @@ import { runMigrations } from "./migrations/index.js";
 import { ImportPackageLoader } from "./packages/import-loader.js";
 import { PackageManager } from "./packages/package-manager.js";
 import { AuthService } from "./services/auth.service.js";
-import { AuthorizationService } from "./services/authorization.service.js";
+import type { IAuthorizationService } from "./services/authorization.service.js";
+import {
+  AuthorizationPolicy,
+  createAuthorizationService,
+} from "./services/authorization.service.js";
 import { DocumentPermissionService } from "./services/document-permission.service.js";
 import type {
   API,
@@ -119,6 +123,25 @@ type Options = {
 type ProcessorInitializer = ProcessorFactoryBuilder;
 
 const DEFAULT_PORT = 4000;
+
+/**
+ * Doc-perms require auth: with auth off no `user` is ever resolved, so every
+ * authorization check fails closed. Refuse to boot rather than run broken.
+ */
+export function assertAuthRequiredForDocumentPermissions(
+  authEnabled: boolean,
+  documentPermissionsRequested: boolean,
+): void {
+  if (!authEnabled && documentPermissionsRequested) {
+    throw new Error(
+      "Document permissions require authentication: AUTH_ENABLED is false but " +
+        "document permissions were requested (DOCUMENT_PERMISSIONS_ENABLED=true " +
+        "or a documentPermissionService was provided). Enable authentication " +
+        "(AUTH_ENABLED=true, or auth.enabled in the config file) or disable " +
+        "document permissions.",
+    );
+  }
+}
 
 function createReadinessGate(): ReadinessGate {
   let ready = false;
@@ -205,6 +228,7 @@ async function setupGraphQLManager(
     core: SubgraphClass[];
   },
   logger: ILogger,
+  authorizationService: IAuthorizationService,
   auth?: {
     enabled: boolean;
     admins: string[];
@@ -212,7 +236,6 @@ async function setupGraphQLManager(
   documentPermissionService?: DocumentPermissionService,
   enableDocumentModelSubgraphs?: boolean,
   port?: number,
-  authorizationService?: AuthorizationService,
   reactorDriveClient?: IDriveClient,
 ): Promise<GraphQLManager> {
   const graphqlManager = new GraphQLManager(
@@ -390,7 +413,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   relationalDb: IRelationalDb;
   analyticsStore: IAnalyticsStore;
   documentPermissionService: DocumentPermissionService | undefined;
-  authorizationService: AuthorizationService | undefined;
+  authorizationService: IAuthorizationService;
   attachments: AttachmentBuildResult;
   packages: PackageManager;
   dbClosers: Array<() => Promise<void>>;
@@ -433,6 +456,14 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   if (SKIP_CREDENTIAL_VERIFICATION !== undefined) {
     skipCredentialVerification = SKIP_CREDENTIAL_VERIFICATION === "true";
   }
+
+  const documentPermissionsRequested =
+    options.documentPermissionService !== undefined ||
+    DOCUMENT_PERMISSIONS_ENABLED === "true";
+  assertAuthRequiredForDocumentPermissions(
+    authEnabled,
+    documentPermissionsRequested,
+  );
 
   const logger = options.logger ?? defaultLogger;
 
@@ -503,15 +534,19 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     logger.info("Document permission service initialized");
   }
 
-  // Create AuthorizationService when document permission service is available
-  let authorizationService: AuthorizationService | undefined;
-  if (documentPermissionService) {
-    authorizationService = new AuthorizationService(documentPermissionService, {
-      admins,
-      defaultProtection,
-    });
-    logger.info("Authorization service initialized");
-  }
+  // Authorization service is always present; the policy collapses the prior
+  // dual enforcement paths into one. Document permissions imply authentication
+  // (guaranteed by the boot gate above).
+  const policy = documentPermissionService
+    ? AuthorizationPolicy.DOCUMENT_PERMISSIONS
+    : authEnabled
+      ? AuthorizationPolicy.ADMIN_ONLY
+      : AuthorizationPolicy.OPEN;
+  const authorizationService = createAuthorizationService(
+    { admins, defaultProtection, policy },
+    documentPermissionService,
+  );
+  logger.info(`Authorization service initialized (policy: ${policy})`);
 
   // Initialize attachment service
   const attachmentStoragePath = resolveAttachmentStoragePath(options);
@@ -590,7 +625,7 @@ async function _setupAPI(
   processorApp: ProcessorApp,
   readModels: IReadModel[],
   attachments: AttachmentBuildResult,
-  authorizationService?: AuthorizationService,
+  authorizationService: IAuthorizationService,
   documentModelRegistry?: IDocumentModelRegistry,
   dbClosers: Array<() => Promise<void>> = [],
   reactorDriveClient?: IDriveClient,
@@ -720,11 +755,11 @@ async function _setupAPI(
       core: coreSubgraphs,
     },
     logger.child(["graphql-manager"]),
+    authorizationService,
     auth,
     documentPermissionService,
     options.enableDocumentModelSubgraphs,
     port,
-    authorizationService,
     reactorDriveClient,
   );
 

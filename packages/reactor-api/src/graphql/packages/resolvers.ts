@@ -1,11 +1,14 @@
 import { GraphQLError } from "graphql";
+import type { IAuthorizationService } from "../../services/authorization.service.js";
 import type { PackageManagementService } from "../../services/package-management.service.js";
 import type { InstalledPackageInfo } from "../../services/package-storage.js";
 import type { Context } from "../types.js";
 
-function requireAdmin(ctx: Context): void {
-  const isAdmin = ctx.isAdmin?.(ctx.user?.address ?? "") ?? false;
-  if (!isAdmin) {
+function requireAdmin(
+  authorizationService: IAuthorizationService,
+  ctx: Context,
+): void {
+  if (!authorizationService.isSupremeAdmin(ctx.user?.address)) {
     throw new GraphQLError("Admin access required");
   }
 }
@@ -37,13 +40,14 @@ export async function installedPackage(
 
 export async function installPackage(
   service: PackageManagementService,
+  authorizationService: IAuthorizationService,
   args: { name: string; registryUrl?: string | null },
   ctx: Context,
 ): Promise<{
   package: ReturnType<typeof formatPackageInfo>;
   documentModelsLoaded: number;
 }> {
-  requireAdmin(ctx);
+  requireAdmin(authorizationService, ctx);
 
   const result = await service.installPackage(
     args.name,
@@ -58,10 +62,11 @@ export async function installPackage(
 
 export async function uninstallPackage(
   service: PackageManagementService,
+  authorizationService: IAuthorizationService,
   args: { name: string },
   ctx: Context,
 ): Promise<boolean> {
-  requireAdmin(ctx);
+  requireAdmin(authorizationService, ctx);
 
   return service.uninstallPackage(args.name);
 }

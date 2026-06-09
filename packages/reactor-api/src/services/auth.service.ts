@@ -179,38 +179,6 @@ export class AuthService {
   }
 
   /**
-   * Get additional context fields for GraphQL
-   */
-  getAdditionalContextFields() {
-    if (!this.config.enabled) {
-      return {
-        isAdmin: () => true,
-      };
-    }
-
-    return {
-      isAdmin: (address: string) =>
-        this.config.enabled &&
-        this.config.admins?.includes(address.toLowerCase()),
-    };
-  }
-
-  /**
-   * Get user context for GraphQL
-   */
-  getUserContext(user?: User) {
-    if (!user) return {};
-
-    return {
-      user: {
-        address: user.address.toLowerCase(),
-        chainId: user.chainId,
-        networkId: user.networkId,
-      },
-    };
-  }
-
-  /**
    * Verify that the credential still exists on the Renown API
    */
   private async verifyCredentialExists(
