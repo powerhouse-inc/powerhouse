@@ -20,14 +20,11 @@ export type Context = {
   document?: PHDocument;
   headers: IncomingHttpHeaders;
   db: unknown;
-  isAdmin?: (address: string) => boolean;
   user?: {
     address: string;
     chainId: number;
     networkId: string;
   };
-  documentPermissionService?: DocumentPermissionService;
-  authorizationService?: IAuthorizationService;
 };
 
 export type ISubgraph = {

@@ -257,67 +257,6 @@ describe("AuthorizationService", () => {
     });
   });
 
-  describe("canExecuteOperation", () => {
-    it("should allow supreme admin", async () => {
-      const result = await service.canExecuteOperation(
-        "doc-1",
-        "SET_NAME",
-        "0xadmin",
-      );
-      expect(result).toBe(true);
-    });
-
-    it("should fall through to write check for unrestricted operations", async () => {
-      vi.mocked(mockPermissionService.isOperationRestricted!).mockResolvedValue(
-        false,
-      );
-      vi.mocked(mockPermissionService.isDocumentProtected!).mockResolvedValue(
-        false,
-      );
-      const result = await service.canExecuteOperation(
-        "doc-1",
-        "SET_NAME",
-        "0xuser",
-      );
-      expect(result).toBe(true); // unprotected + authenticated = write allowed
-    });
-
-    it("should check operation grant for restricted operations", async () => {
-      vi.mocked(mockPermissionService.isOperationRestricted!).mockResolvedValue(
-        true,
-      );
-      vi.mocked(mockPermissionService.canExecuteOperation!).mockResolvedValue(
-        true,
-      );
-      const result = await service.canExecuteOperation(
-        "doc-1",
-        "SPECIAL_OP",
-        "0xuser",
-      );
-      expect(result).toBe(true);
-      expect(mockPermissionService.canExecuteOperation).toHaveBeenCalledWith(
-        "doc-1",
-        "SPECIAL_OP",
-        "0xuser",
-      );
-    });
-
-    it("should deny when restricted and no operation grant", async () => {
-      vi.mocked(mockPermissionService.isOperationRestricted!).mockResolvedValue(
-        true,
-      );
-      vi.mocked(mockPermissionService.canExecuteOperation!).mockResolvedValue(
-        false,
-      );
-      const result = await service.canExecuteOperation(
-        "doc-1",
-        "SPECIAL_OP",
-        "0xuser",
-      );
-      expect(result).toBe(false);
-    });
-  });
-
   describe("canMutate", () => {
     it("should allow supreme admin", async () => {
       const result = await service.canMutate("doc-1", "SET_NAME", "0xadmin");
@@ -386,21 +325,6 @@ describe("AuthorizationService", () => {
   });
 
   describe("Address normalization", () => {
-    it("should normalize address in canExecuteOperation for restricted ops", async () => {
-      vi.mocked(mockPermissionService.isOperationRestricted!).mockResolvedValue(
-        true,
-      );
-      vi.mocked(mockPermissionService.canExecuteOperation!).mockResolvedValue(
-        true,
-      );
-      await service.canExecuteOperation("doc-1", "SPECIAL_OP", "0xMixedCase");
-      expect(mockPermissionService.canExecuteOperation).toHaveBeenCalledWith(
-        "doc-1",
-        "SPECIAL_OP",
-        "0xmixedcase",
-      );
-    });
-
     it("should normalize address in canMutate for restricted ops", async () => {
       vi.mocked(mockPermissionService.isOperationRestricted!).mockResolvedValue(
         true,
@@ -413,26 +337,6 @@ describe("AuthorizationService", () => {
         "doc-1",
         "SPECIAL_OP",
         "0xmixedcase",
-      );
-    });
-
-    it("should handle undefined address in canExecuteOperation", async () => {
-      vi.mocked(mockPermissionService.isOperationRestricted!).mockResolvedValue(
-        true,
-      );
-      vi.mocked(mockPermissionService.canExecuteOperation!).mockResolvedValue(
-        false,
-      );
-      const result = await service.canExecuteOperation(
-        "doc-1",
-        "SPECIAL_OP",
-        undefined,
-      );
-      expect(result).toBe(false);
-      expect(mockPermissionService.canExecuteOperation).toHaveBeenCalledWith(
-        "doc-1",
-        "SPECIAL_OP",
-        undefined,
       );
     });
   });
@@ -476,9 +380,6 @@ describe("AuthorizationService", () => {
       expect(await open.canRead("doc-1", undefined)).toBe(true);
       expect(await open.canWrite("doc-1", undefined)).toBe(true);
       expect(await open.canManage("doc-1", undefined)).toBe(true);
-      expect(await open.canExecuteOperation("doc-1", "OP", undefined)).toBe(
-        true,
-      );
       expect(await open.canMutate("doc-1", "OP", undefined)).toBe(true);
     });
   });

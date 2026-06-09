@@ -116,7 +116,6 @@ describe("DocumentModelSubgraph Permission Checks", () => {
       canRead: vi.fn().mockResolvedValue(false),
       canWrite: vi.fn().mockResolvedValue(false),
       canManage: vi.fn().mockResolvedValue(false),
-      canExecuteOperation: vi.fn().mockResolvedValue(false),
       canMutate: vi.fn().mockResolvedValue(false),
     };
 
@@ -896,7 +895,6 @@ describe("DocumentModelSubgraph Permission Checks", () => {
         canRead: vi.fn().mockResolvedValue(true),
         canWrite: vi.fn().mockResolvedValue(true),
         canManage: vi.fn().mockResolvedValue(true),
-        canExecuteOperation: vi.fn().mockResolvedValue(true),
         canMutate: vi.fn().mockResolvedValue(true),
       };
       openSubgraph = new DocumentModelSubgraph(

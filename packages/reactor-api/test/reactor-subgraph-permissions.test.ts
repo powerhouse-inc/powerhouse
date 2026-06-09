@@ -87,7 +87,6 @@ describe("ReactorSubgraph Permission Checks", () => {
       canWrite: vi.fn().mockResolvedValue(false),
       canManage: vi.fn().mockResolvedValue(false),
       canMutate: vi.fn().mockResolvedValue(false),
-      canExecuteOperation: vi.fn().mockResolvedValue(false),
     };
 
     // Create mock ReactorClient
@@ -498,7 +497,6 @@ describe("ReactorSubgraph Permission Checks", () => {
         canWrite: vi.fn().mockResolvedValue(true),
         canManage: vi.fn().mockResolvedValue(true),
         canMutate: vi.fn().mockResolvedValue(true),
-        canExecuteOperation: vi.fn().mockResolvedValue(true),
       };
       openSubgraph = buildSubgraph(openAuthSvc);
     });

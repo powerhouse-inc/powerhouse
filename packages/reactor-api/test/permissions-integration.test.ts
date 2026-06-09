@@ -58,12 +58,8 @@ describe("Permissions Integration Tests", () => {
   );
 
   // Context factory
-  const createContext = (options: {
-    isAdmin?: boolean;
-    userAddress?: string;
-  }) => ({
+  const createContext = (options: { userAddress?: string }) => ({
     user: options.userAddress ? { address: options.userAddress } : undefined,
-    isAdmin: () => options.isAdmin ?? false,
   });
 
   beforeEach(async () => {
@@ -554,7 +550,7 @@ describe("Permissions Integration Tests", () => {
 
     it("should allow admin access without document permission", async () => {
       // No document permission granted
-      const ctx = createContext({ isAdmin: true, userAddress: "0xadmin" });
+      const ctx = createContext({ userAddress: "0xadmin" });
 
       const result = await callDocument(ctx);
 
@@ -571,7 +567,7 @@ describe("Permissions Integration Tests", () => {
       );
 
       // This user has global admin but no document permission
-      const ctx = createContext({ isAdmin: true, userAddress: "0xadmin" });
+      const ctx = createContext({ userAddress: "0xadmin" });
 
       const result = await callDocument(ctx);
 

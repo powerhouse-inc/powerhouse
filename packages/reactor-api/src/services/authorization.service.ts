@@ -50,13 +50,6 @@ export interface IAuthorizationService {
     getParentIds?: GetParentIdsFn,
   ): Promise<boolean>;
 
-  canExecuteOperation(
-    documentId: string,
-    operationType: string,
-    userAddress?: string,
-    getParentIds?: GetParentIdsFn,
-  ): Promise<boolean>;
-
   canMutate(
     documentId: string,
     operationType: string,
@@ -122,23 +115,6 @@ export class AuthorizationService implements IAuthorizationService {
     if (this.isSupremeAdmin(userAddress)) return true;
     if (this.config.policy === AuthorizationPolicy.ADMIN_ONLY) return false;
     return this.#permissionCanManage(documentId, userAddress, getParentIds);
-  }
-
-  async canExecuteOperation(
-    documentId: string,
-    operationType: string,
-    userAddress?: string,
-    getParentIds?: GetParentIdsFn,
-  ): Promise<boolean> {
-    if (this.config.policy === AuthorizationPolicy.OPEN) return true;
-    if (this.isSupremeAdmin(userAddress)) return true;
-    if (this.config.policy === AuthorizationPolicy.ADMIN_ONLY) return false;
-    return this.#permissionCanExecuteOperation(
-      documentId,
-      operationType,
-      userAddress,
-      getParentIds,
-    );
   }
 
   async canMutate(
@@ -221,29 +197,6 @@ export class AuthorizationService implements IAuthorizationService {
     if (owner && owner === userAddress.toLowerCase()) return true;
 
     return permissions.canManageDocument(documentId, userAddress);
-  }
-
-  async #permissionCanExecuteOperation(
-    documentId: string,
-    operationType: string,
-    userAddress?: string,
-    getParentIds?: GetParentIdsFn,
-  ): Promise<boolean> {
-    const permissions = this.#permissions();
-    const isRestricted = await permissions.isOperationRestricted(
-      documentId,
-      operationType,
-    );
-
-    if (!isRestricted) {
-      return this.#permissionCanWrite(documentId, userAddress, getParentIds);
-    }
-
-    return permissions.canExecuteOperation(
-      documentId,
-      operationType,
-      userAddress?.toLowerCase(),
-    );
   }
 
   async #permissionCanMutate(

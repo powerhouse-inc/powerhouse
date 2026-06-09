@@ -476,15 +476,11 @@ export class GraphQLManager {
         );
     }
 
-    const authEnabled = this.authConfig?.enabled ?? false;
-    const admins = this.authConfig?.admins ?? [];
     const context: Context = {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       headers: connectionParams as any,
       db: this.relationalDb,
       ...this.getAdditionalContextFields(),
-      isAdmin: (address: string) =>
-        !authEnabled ? true : admins.includes(address.toLowerCase()),
     };
 
     if (user) {
@@ -508,12 +504,6 @@ export class GraphQLManager {
         ...this.getAdditionalContextFields(),
         driveId,
         user: authCtx?.user,
-        isAdmin: authCtx
-          ? (addr) =>
-              !authCtx.auth_enabled
-                ? true
-                : authCtx.admins.includes(addr.toLowerCase())
-          : () => true,
       });
     };
   }

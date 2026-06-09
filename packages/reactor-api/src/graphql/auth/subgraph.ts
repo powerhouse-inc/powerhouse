@@ -190,9 +190,7 @@ export class AuthSubgraph extends BaseSubgraph {
         _parent: unknown,
         args: { documentId: string; protected: boolean },
         ctx: {
-          user?: { address: string };
-          isAdmin?: (address: string) => boolean;
-        },
+          user?: { address: string };        },
       ) => {
         this.logger.debug("setDocumentProtection(@args)", args);
         if (!this.documentPermissionService) {
@@ -215,9 +213,7 @@ export class AuthSubgraph extends BaseSubgraph {
         _parent: unknown,
         args: { documentId: string; newOwnerAddress: string },
         ctx: {
-          user?: { address: string };
-          isAdmin?: (address: string) => boolean;
-        },
+          user?: { address: string };        },
       ) => {
         this.logger.debug("transferDocumentOwnership(@args)", args);
         if (!this.documentPermissionService) {
@@ -243,9 +239,7 @@ export class AuthSubgraph extends BaseSubgraph {
         _parent: unknown,
         args: { documentId: string; userAddress: string; permission: string },
         ctx: {
-          user?: { address: string };
-          isAdmin?: (address: string) => boolean;
-        },
+          user?: { address: string };        },
       ) => {
         this.logger.debug("grantDocumentPermission(@args)", args);
         if (!this.documentPermissionService) {
@@ -272,9 +266,7 @@ export class AuthSubgraph extends BaseSubgraph {
         _parent: unknown,
         args: { documentId: string; userAddress: string },
         ctx: {
-          user?: { address: string };
-          isAdmin?: (address: string) => boolean;
-        },
+          user?: { address: string };        },
       ) => {
         this.logger.debug("revokeDocumentPermission(@args)", args);
         if (!this.documentPermissionService) {
@@ -372,9 +364,7 @@ export class AuthSubgraph extends BaseSubgraph {
         _parent: unknown,
         args: { documentId: string; groupId: number; permission: string },
         ctx: {
-          user?: { address: string };
-          isAdmin?: (address: string) => boolean;
-        },
+          user?: { address: string };        },
       ) => {
         this.logger.debug("grantGroupPermission(@args)", args);
         if (!this.documentPermissionService) {
@@ -401,9 +391,7 @@ export class AuthSubgraph extends BaseSubgraph {
         _parent: unknown,
         args: { documentId: string; groupId: number },
         ctx: {
-          user?: { address: string };
-          isAdmin?: (address: string) => boolean;
-        },
+          user?: { address: string };        },
       ) => {
         this.logger.debug("revokeGroupPermission(@args)", args);
         if (!this.documentPermissionService) {
@@ -431,9 +419,7 @@ export class AuthSubgraph extends BaseSubgraph {
           userAddress: string;
         },
         ctx: {
-          user?: { address: string };
-          isAdmin?: (address: string) => boolean;
-        },
+          user?: { address: string };        },
       ) => {
         this.logger.debug("grantOperationPermission(@args)", args);
         if (!this.documentPermissionService) {
@@ -460,9 +446,7 @@ export class AuthSubgraph extends BaseSubgraph {
           userAddress: string;
         },
         ctx: {
-          user?: { address: string };
-          isAdmin?: (address: string) => boolean;
-        },
+          user?: { address: string };        },
       ) => {
         this.logger.debug("revokeOperationPermission(@args)", args);
         if (!this.documentPermissionService) {
@@ -488,9 +472,7 @@ export class AuthSubgraph extends BaseSubgraph {
         _parent: unknown,
         args: { documentId: string; operationType: string; groupId: number },
         ctx: {
-          user?: { address: string };
-          isAdmin?: (address: string) => boolean;
-        },
+          user?: { address: string };        },
       ) => {
         this.logger.debug("grantGroupOperationPermission(@args)", args);
         if (!this.documentPermissionService) {
@@ -516,9 +498,7 @@ export class AuthSubgraph extends BaseSubgraph {
         _parent: unknown,
         args: { documentId: string; operationType: string; groupId: number },
         ctx: {
-          user?: { address: string };
-          isAdmin?: (address: string) => boolean;
-        },
+          user?: { address: string };        },
       ) => {
         this.logger.debug("revokeGroupOperationPermission(@args)", args);
         if (!this.documentPermissionService) {
