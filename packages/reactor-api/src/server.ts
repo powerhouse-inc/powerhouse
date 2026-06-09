@@ -120,6 +120,25 @@ type ProcessorInitializer = ProcessorFactoryBuilder;
 
 const DEFAULT_PORT = 4000;
 
+/**
+ * Doc-perms require auth: with auth off no `user` is ever resolved, so every
+ * authorization check fails closed. Refuse to boot rather than run broken.
+ */
+export function assertAuthRequiredForDocumentPermissions(
+  authEnabled: boolean,
+  documentPermissionsRequested: boolean,
+): void {
+  if (!authEnabled && documentPermissionsRequested) {
+    throw new Error(
+      "Document permissions require authentication: AUTH_ENABLED is false but " +
+        "document permissions were requested (DOCUMENT_PERMISSIONS_ENABLED=true " +
+        "or a documentPermissionService was provided). Enable authentication " +
+        "(AUTH_ENABLED=true, or auth.enabled in the config file) or disable " +
+        "document permissions.",
+    );
+  }
+}
+
 function createReadinessGate(): ReadinessGate {
   let ready = false;
   return {
@@ -433,6 +452,14 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   if (SKIP_CREDENTIAL_VERIFICATION !== undefined) {
     skipCredentialVerification = SKIP_CREDENTIAL_VERIFICATION === "true";
   }
+
+  const documentPermissionsRequested =
+    options.documentPermissionService !== undefined ||
+    DOCUMENT_PERMISSIONS_ENABLED === "true";
+  assertAuthRequiredForDocumentPermissions(
+    authEnabled,
+    documentPermissionsRequested,
+  );
 
   const logger = options.logger ?? defaultLogger;
 
