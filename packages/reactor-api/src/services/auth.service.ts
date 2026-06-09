@@ -10,7 +10,6 @@ type VerifiedCredential =
 export interface AuthConfig {
   enabled: boolean;
   admins: string[];
-  cacheTtl?: number; // Cache TTL in milliseconds, defaults to 10 seconds
   skipCredentialVerification?: boolean; // Skip Renown API credential verification (useful for testing)
 }
 

@@ -429,17 +429,6 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     defaultProtection = DEFAULT_PROTECTION.toLowerCase() === "true";
   }
 
-  // Warn about deprecated env vars
-  const { USERS, GUESTS, FREE_ENTRY } = process.env;
-  if (USERS || GUESTS || FREE_ENTRY) {
-    console.warn(
-      "[DEPRECATION WARNING] The USERS, GUESTS, and FREE_ENTRY environment variables are no longer supported. " +
-        "Access control is now managed per-document via the DocumentProtection system. " +
-        "Use DEFAULT_PROTECTION=true for strict mode, or manage protection per document via the GraphQL API. " +
-        "See the auth documentation for migration guidance.",
-    );
-  }
-
   let skipCredentialVerification = false;
   if (SKIP_CREDENTIAL_VERIFICATION !== undefined) {
     skipCredentialVerification = SKIP_CREDENTIAL_VERIFICATION === "true";

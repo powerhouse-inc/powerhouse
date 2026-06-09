@@ -13,19 +13,18 @@ The Powerhouse authentication system is a sophisticated, decentralized identity 
 - **Wallet Integration**: Seamless integration with Ethereum wallets and other Web3 providers
 - **Privacy Preservation**: Users can maintain pseudonymous identities while building reputation
 
-### 🎭 **Role-Based Access Control (RBAC)**
+### 🎭 **Access Control**
 
-- **Three-Tier System**: Guests, Users, and Admins with different permission levels
+- **Supreme Admins**: a global admin list (`ADMINS`) whose addresses bypass all permission checks
+- **Per-Document Permissions**: READ / WRITE / ADMIN grants, ownership, and group membership enforced per document
 - **Flexible Configuration**: Easy setup through environment variables or configuration files
-- **Granular Permissions**: Fine-grained control over what each role can access
-- **Dynamic Role Assignment**: Roles can be updated without restarting the system
+- **Runtime Management**: permissions can be granted or revoked at runtime via the GraphQL API
 
 ### 🔒 **Advanced Security Features**
 
 - **Challenge-Response Authentication**: Cryptographic proof of wallet ownership
 - **JWT Token Management**: Secure session handling with automatic expiration
 - **Credential Verification**: Real-time validation against the Renown API
-- **Token Caching**: Performance optimization with secure token storage
 - **Session Management**: Multiple active sessions with individual controls
 
 ### 🌐 **Cross-Platform Compatibility**
@@ -116,24 +115,23 @@ interface VerifiableCredential {
 4. **Renown API Check**: Validate credential still exists and is valid
 5. **User Extraction**: Create user object from verified credentials
 
-### 5. **Role-Based Authorization**
+### 5. **Authorization**
 
-The system implements a three-tier role system with configurable permissions:
+Authentication produces a verified user; authorization is then decided by a global admin list plus per-document permissions:
 
 ```typescript
 interface AuthConfig {
   enabled: boolean;
-  guests: string[]; // Array of wallet addresses
-  users: string[]; // Array of wallet addresses
-  admins: string[]; // Array of wallet addresses
+  admins: string[]; // Wallet addresses with global admin (bypass) access
+  skipCredentialVerification?: boolean; // Skip the Renown credential re-check
 }
 ```
 
-**Permission Levels:**
+**How access is decided:**
 
-- **Guests**: Read-only access to public data
-- **Users**: Standard access to most endpoints and operations
-- **Admins**: Full access including administrative functions
+- **Supreme Admins**: addresses in `admins` bypass every check
+- **Document Owners**: implicit ADMIN on documents they create
+- **Per-Document Grants**: READ / WRITE / ADMIN granted to users or groups, inherited from protected ancestors
 
 ### 6. **Session Management**
 
@@ -171,9 +169,7 @@ interface Session {
 # Enable authentication
 export AUTH_ENABLED=true
 
-# Configure roles (comma-separated wallet addresses)
-export GUESTS="0x789,0xabc,0xdef"
-export USERS="0x123,0x456,0x789"
+# Configure admin wallet addresses (comma-separated)
 export ADMINS="0x111,0x222,0x333"
 ```
 
@@ -183,8 +179,6 @@ export ADMINS="0x111,0x222,0x333"
 {
   "auth": {
     "enabled": true,
-    "guests": ["0x789", "0xabc", "0xdef"],
-    "users": ["0x123", "0x456", "0x789"],
     "admins": ["0x111", "0x222", "0x333"]
   }
 }
@@ -245,20 +239,35 @@ import { AuthService } from "@powerhousedao/reactor-api";
 
 const authService = new AuthService({
   enabled: true,
-  guests: ["0x789", "0xabc"],
-  users: ["0x123", "0x456"],
   admins: ["0x111", "0x222"],
 });
 
-// Apply to all routes
+// Verify the Bearer token on each request. `verifyBearer` returns either an
+// AuthContext ({ user?, admins, auth_enabled }) or a Response (e.g. 401) when
+// the token is invalid, expired, or revoked.
 app.use(async (req, res, next) => {
-  await authService.authenticate(req, res, next);
+  const result = await authService.verifyBearer(req.headers.authorization);
+
+  if (result instanceof Response) {
+    // Invalid / expired / revoked token — forward the 401.
+    res.status(result.status).json(await result.json());
+    return;
+  }
+
+  if (result.auth_enabled && !result.user) {
+    // Auth is enabled but the request is anonymous.
+    res.status(401).json({ error: "Authentication required" });
+    return;
+  }
+
+  req.auth = result; // stash { user?, admins, auth_enabled } for handlers
+  next();
 });
 
-// Access user info in route handlers
+// Access the authenticated context in route handlers
 app.post("/api/data", (req, res) => {
-  const user = req.user; // Authenticated user object
-  const isAdmin = req.admins.includes(user.address);
+  const { user, admins } = req.auth;
+  const isAdmin = !!user && admins.includes(user.address);
 
   if (isAdmin) {
     // Admin-only operations
@@ -324,12 +333,13 @@ const restrictedToken = await createSession(
 );
 ```
 
-#### Role-Based Route Protection
+#### Admin-Only Route Protection
 
 ```typescript
 // Middleware for admin-only routes
 const requireAdmin = (req, res, next) => {
-  if (!req.admins.includes(req.user.address)) {
+  const { user, admins } = req.auth;
+  if (!user || !admins.includes(user.address)) {
     return res.status(403).json({ error: "Admin access required" });
   }
   next();
@@ -378,26 +388,7 @@ app.post("/admin/users", requireAdmin, (req, res) => {
    - User's wallet address not in allowed roles
    - Check role configuration and user permissions
 
-### Debug Mode
-
-Enable detailed logging for troubleshooting:
-
-```typescript
-// Enable verbose logging
-const authService = new AuthService({
-  enabled: true,
-  debug: true, // Enable debug logging
-  // ... other config
-});
-```
-
 ## Performance Optimization
-
-### Caching Strategies
-
-- **Token Caching**: Frequently used tokens are cached in memory
-- **Credential Validation**: Results are cached to reduce API calls
-- **Session Lookup**: Fast session validation using indexed lookups
 
 ### Scalability Features
 

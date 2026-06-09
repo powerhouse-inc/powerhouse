@@ -73,8 +73,6 @@ type Options = {
   packages?: string[];
   auth?: {
     enabled: boolean;
-    guests: string[];
-    users: string[];
     admins: string[];
   };
   https?:

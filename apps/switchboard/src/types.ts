@@ -93,12 +93,6 @@ export type StartServerOptions = {
       }
     | boolean
     | undefined;
-  auth?: {
-    enabled: boolean;
-    guests: string[];
-    users: string[];
-    admins: string[];
-  };
   /**
    * Identity options for Renown.
    * When configured, the switchboard will load the keypair from `ph login`
