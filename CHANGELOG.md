@@ -1,3 +1,24 @@
+## 6.2.0-dev.4 (2026-06-09)
+
+### 🚀 Features
+
+- setting up registry audit tool ([9aa531d0b](https://github.com/powerhouse-inc/powerhouse/commit/9aa531d0b))
+- more steps -- typecheck fixes and a new load function that loads it into switchboard ([0cf7649b1](https://github.com/powerhouse-inc/powerhouse/commit/0cf7649b1))
+- added a new audit pass that creates documents and then queries them ([cde281f1e](https://github.com/powerhouse-inc/powerhouse/commit/cde281f1e))
+- added a readiness probe to switchboard to fix tests and for best practices ([b8966f5a2](https://github.com/powerhouse-inc/powerhouse/commit/b8966f5a2))
+
+### 🩹 Fixes
+
+- needs to hit verdaccio ([f75a67aea](https://github.com/powerhouse-inc/powerhouse/commit/f75a67aea))
+- **codegen:** satisfy require-await in ReducerGenerator test stub ([ba02dbc18](https://github.com/powerhouse-inc/powerhouse/commit/ba02dbc18))
+- **connect:** don't block startup on default drive sync ([d1604d8ea](https://github.com/powerhouse-inc/powerhouse/commit/d1604d8ea))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 4.8
+
 ## 6.2.0-dev.3 (2026-06-08)
 
 This was a version bump only, there were no code changes.

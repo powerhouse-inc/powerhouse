@@ -1,3 +1,20 @@
+## 6.2.0-dev.4 (2026-06-09)
+
+### 🚀 Features
+
+- added a readiness probe to switchboard to fix tests and for best practices ([b8966f5a2](https://github.com/powerhouse-inc/powerhouse/commit/b8966f5a2))
+- added a new audit pass that creates documents and then queries them ([cde281f1e](https://github.com/powerhouse-inc/powerhouse/commit/cde281f1e))
+- more steps -- typecheck fixes and a new load function that loads it into switchboard ([0cf7649b1](https://github.com/powerhouse-inc/powerhouse/commit/0cf7649b1))
+- setting up registry audit tool ([9aa531d0b](https://github.com/powerhouse-inc/powerhouse/commit/9aa531d0b))
+
+### 🩹 Fixes
+
+- needs to hit verdaccio ([f75a67aea](https://github.com/powerhouse-inc/powerhouse/commit/f75a67aea))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.2.0-dev.3 (2026-06-08)
 
 This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.
