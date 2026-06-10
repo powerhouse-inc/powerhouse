@@ -11,14 +11,8 @@ import type {
 import type { DocumentNode } from "graphql";
 import { GraphQLError } from "graphql";
 import { gql } from "graphql-tag";
-import {
-  AuthorizationPolicy,
-  type IAuthorizationService,
-} from "../services/authorization.service.js";
-import type {
-  DocumentPermissionService,
-  GetParentIdsFn,
-} from "../services/document-permission.service.js";
+import type { IAuthorizationService } from "../services/authorization.service.js";
+import type { DocumentPermissionService } from "../services/document-permission.service.js";
 import type { Context } from "./types.js";
 
 export class BaseSubgraph implements ISubgraph {
@@ -59,29 +53,11 @@ export class BaseSubgraph implements ISubgraph {
   // Shared permission helpers
   // ============================================
 
-  protected getParentIdsFn(): GetParentIdsFn {
-    return async (documentId: string): Promise<string[]> => {
-      try {
-        const result = await this.reactorClient.getIncomingRelationships(
-          documentId,
-          "child",
-        );
-        return result.results.map((doc) => doc.header.id);
-      } catch {
-        return [];
-      }
-    };
-  }
-
   protected async canReadDocument(
     documentId: string,
     ctx: Context,
   ): Promise<boolean> {
-    return this.authorizationService.canRead(
-      documentId,
-      ctx.user?.address,
-      this.getParentIdsFn(),
-    );
+    return this.authorizationService.canRead(documentId, ctx.user?.address);
   }
 
   protected async assertCanRead(
@@ -91,7 +67,6 @@ export class BaseSubgraph implements ISubgraph {
     const canRead = await this.authorizationService.canRead(
       documentId,
       ctx.user?.address,
-      this.getParentIdsFn(),
     );
     if (!canRead) {
       throw new GraphQLError(
@@ -107,7 +82,6 @@ export class BaseSubgraph implements ISubgraph {
     const canWrite = await this.authorizationService.canWrite(
       documentId,
       ctx.user?.address,
-      this.getParentIdsFn(),
     );
     if (!canWrite) {
       throw new GraphQLError(
@@ -125,7 +99,6 @@ export class BaseSubgraph implements ISubgraph {
       documentId,
       operationType,
       ctx.user?.address,
-      this.getParentIdsFn(),
     );
     if (!canMutate) {
       throw new GraphQLError(
@@ -135,18 +108,11 @@ export class BaseSubgraph implements ISubgraph {
   }
 
   protected assertCanCreate(ctx: Context): void {
-    const policy = this.authorizationService.config.policy;
-    if (policy === AuthorizationPolicy.OPEN) return;
-    if (this.authorizationService.isSupremeAdmin(ctx.user?.address)) return;
-    if (policy === AuthorizationPolicy.ADMIN_ONLY) {
-      throw new GraphQLError(
-        "Forbidden: insufficient permissions to create documents",
-      );
-    }
-    if (!ctx.user?.address) {
-      throw new GraphQLError(
-        "Forbidden: authentication required to create documents",
-      );
-    }
+    if (this.authorizationService.canCreate(ctx.user?.address)) return;
+    throw new GraphQLError(
+      ctx.user?.address
+        ? "Forbidden: insufficient permissions to create documents"
+        : "Forbidden: authentication required to create documents",
+    );
   }
 }

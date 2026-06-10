@@ -1,11 +1,7 @@
 import { GraphQLError } from "graphql";
 import type { IAuthorizationService } from "../../services/authorization.service.js";
-import type {
-  DocumentPermissionService,
-  GetParentIdsFn,
-} from "../../services/document-permission.service.js";
+import type { DocumentPermissionService } from "../../services/document-permission.service.js";
 import type { DocumentPermissionLevel } from "../../utils/db.js";
-import type { IReactorClient } from "@powerhousedao/reactor";
 
 // ============================================
 // Document Permission Resolvers
@@ -124,25 +120,6 @@ export async function revokeDocumentPermission(
 
   await service.revokePermission(args.documentId, args.userAddress);
   return true;
-}
-
-/**
- * Create a getParentIds function using the reactor client
- */
-export function createGetParentIdsFn(
-  reactorClient: IReactorClient,
-): GetParentIdsFn {
-  return async (documentId: string): Promise<string[]> => {
-    try {
-      const result = await reactorClient.getIncomingRelationships(
-        documentId,
-        "child",
-      );
-      return result.results.map((doc) => doc.header.id);
-    } catch {
-      return [];
-    }
-  };
 }
 
 // ============================================
@@ -333,11 +310,11 @@ export async function operationPermissions(
 }
 
 export async function canExecuteOperation(
-  service: DocumentPermissionService,
+  authorizationService: IAuthorizationService,
   args: { documentId: string; operationType: string },
   userAddress: string | undefined,
 ): Promise<boolean> {
-  return service.canExecuteOperation(
+  return authorizationService.canMutate(
     args.documentId,
     args.operationType,
     userAddress,

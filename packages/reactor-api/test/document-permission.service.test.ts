@@ -1,6 +1,11 @@
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { runMigrations } from "../src/migrations/index.js";
+import type { IAuthorizationService } from "../src/services/authorization.service.js";
+import {
+  AuthorizationPolicy,
+  createAuthorizationService,
+} from "../src/services/authorization.service.js";
 import { DocumentPermissionService } from "../src/services/document-permission.service.js";
 import type { DocumentPermissionDatabase } from "../src/utils/db.js";
 import { getDbClient } from "../src/utils/db.js";
@@ -210,142 +215,7 @@ describe("DocumentPermissionService", () => {
     });
   });
 
-  describe("Access Control Checks", () => {
-    const documentId = "doc-123";
-    const adminAddress = "0xAdmin";
-
-    describe("canReadDocument", () => {
-      it("should return false for undefined user", async () => {
-        const result = await service.canReadDocument(documentId, undefined);
-        expect(result).toBe(false);
-      });
-
-      it("should return false when user has no permission", async () => {
-        const result = await service.canReadDocument(documentId, "0xunknown");
-        expect(result).toBe(false);
-      });
-
-      it("should return true when user has READ permission", async () => {
-        await service.grantPermission(
-          documentId,
-          "0xuser",
-          "READ",
-          adminAddress,
-        );
-        const result = await service.canReadDocument(documentId, "0xuser");
-        expect(result).toBe(true);
-      });
-
-      it("should return true when user has WRITE permission", async () => {
-        await service.grantPermission(
-          documentId,
-          "0xuser",
-          "WRITE",
-          adminAddress,
-        );
-        const result = await service.canReadDocument(documentId, "0xuser");
-        expect(result).toBe(true);
-      });
-
-      it("should return true when user has ADMIN permission", async () => {
-        await service.grantPermission(
-          documentId,
-          "0xuser",
-          "ADMIN",
-          adminAddress,
-        );
-        const result = await service.canReadDocument(documentId, "0xuser");
-        expect(result).toBe(true);
-      });
-    });
-
-    describe("canWriteDocument", () => {
-      it("should return false for undefined user", async () => {
-        const result = await service.canWriteDocument(documentId, undefined);
-        expect(result).toBe(false);
-      });
-
-      it("should return false when user has no permission", async () => {
-        const result = await service.canWriteDocument(documentId, "0xunknown");
-        expect(result).toBe(false);
-      });
-
-      it("should return false when user has only READ permission", async () => {
-        await service.grantPermission(
-          documentId,
-          "0xuser",
-          "READ",
-          adminAddress,
-        );
-        const result = await service.canWriteDocument(documentId, "0xuser");
-        expect(result).toBe(false);
-      });
-
-      it("should return true when user has WRITE permission", async () => {
-        await service.grantPermission(
-          documentId,
-          "0xuser",
-          "WRITE",
-          adminAddress,
-        );
-        const result = await service.canWriteDocument(documentId, "0xuser");
-        expect(result).toBe(true);
-      });
-
-      it("should return true when user has ADMIN permission", async () => {
-        await service.grantPermission(
-          documentId,
-          "0xuser",
-          "ADMIN",
-          adminAddress,
-        );
-        const result = await service.canWriteDocument(documentId, "0xuser");
-        expect(result).toBe(true);
-      });
-    });
-
-    describe("canManageDocument", () => {
-      it("should return false for undefined user", async () => {
-        const result = await service.canManageDocument(documentId, undefined);
-        expect(result).toBe(false);
-      });
-
-      it("should return false when user has only READ permission", async () => {
-        await service.grantPermission(
-          documentId,
-          "0xuser",
-          "READ",
-          adminAddress,
-        );
-        const result = await service.canManageDocument(documentId, "0xuser");
-        expect(result).toBe(false);
-      });
-
-      it("should return false when user has only WRITE permission", async () => {
-        await service.grantPermission(
-          documentId,
-          "0xuser",
-          "WRITE",
-          adminAddress,
-        );
-        const result = await service.canManageDocument(documentId, "0xuser");
-        expect(result).toBe(false);
-      });
-
-      it("should return true when user has ADMIN permission", async () => {
-        await service.grantPermission(
-          documentId,
-          "0xuser",
-          "ADMIN",
-          adminAddress,
-        );
-        const result = await service.canManageDocument(documentId, "0xuser");
-        expect(result).toBe(true);
-      });
-    });
-  });
-
-  describe("Permission Inheritance (canRead/canWrite with parent hierarchy)", () => {
+  describe("Authorization decisions over the data layer", () => {
     const adminAddress = "0xAdmin";
     const userAddress = "0xUser";
 
@@ -361,179 +231,292 @@ describe("DocumentPermissionService", () => {
       return Promise.resolve(parentHierarchy[documentId] ?? []);
     };
 
-    describe("canRead", () => {
-      it("should return true when user has direct permission", async () => {
+    let authorization: IAuthorizationService;
+
+    beforeEach(() => {
+      // Protect everything by default so grant checks are actually exercised.
+      const protectedService = new DocumentPermissionService(db, {
+        defaultProtection: true,
+      });
+      authorization = createAuthorizationService(
+        {
+          admins: [],
+          defaultProtection: true,
+          policy: AuthorizationPolicy.DOCUMENT_PERMISSIONS,
+        },
+        protectedService,
+        getParentIds,
+      );
+    });
+
+    describe("grant levels", () => {
+      it.each(["READ", "WRITE", "ADMIN"] as const)(
+        "%s grant allows reading",
+        async (level) => {
+          await service.grantPermission(
+            "orphan-doc",
+            userAddress,
+            level,
+            adminAddress,
+          );
+          expect(await authorization.canRead("orphan-doc", userAddress)).toBe(
+            true,
+          );
+        },
+      );
+
+      it("should deny read for undefined user", async () => {
+        expect(await authorization.canRead("orphan-doc", undefined)).toBe(
+          false,
+        );
+      });
+
+      it("should deny read when user has no permission", async () => {
+        expect(await authorization.canRead("orphan-doc", "0xunknown")).toBe(
+          false,
+        );
+      });
+
+      it("should deny write with only a READ grant", async () => {
         await service.grantPermission(
-          "child-doc",
-          userAddress,
-          "READ",
-          adminAddress,
-        );
-
-        const result = await service.canRead(
-          "child-doc",
-          userAddress,
-          getParentIds,
-        );
-        expect(result).toBe(true);
-      });
-
-      it("should return true when user has permission on parent", async () => {
-        await service.grantPermission(
-          "parent-doc",
-          userAddress,
-          "READ",
-          adminAddress,
-        );
-
-        const result = await service.canRead(
-          "child-doc",
-          userAddress,
-          getParentIds,
-        );
-        expect(result).toBe(true);
-      });
-
-      it("should return true when user has permission on grandparent", async () => {
-        await service.grantPermission(
-          "parent-doc",
-          userAddress,
-          "READ",
-          adminAddress,
-        );
-
-        const result = await service.canRead(
-          "grandchild-doc",
-          userAddress,
-          getParentIds,
-        );
-        expect(result).toBe(true);
-      });
-
-      it("should return false when user has no permission in hierarchy", async () => {
-        const result = await service.canRead(
-          "child-doc",
-          userAddress,
-          getParentIds,
-        );
-        expect(result).toBe(false);
-      });
-
-      it("should return false for orphan document without direct permission", async () => {
-        const result = await service.canRead(
           "orphan-doc",
           userAddress,
-          getParentIds,
+          "READ",
+          adminAddress,
         );
-        expect(result).toBe(false);
+        expect(await authorization.canWrite("orphan-doc", userAddress)).toBe(
+          false,
+        );
+      });
+
+      it.each(["WRITE", "ADMIN"] as const)(
+        "%s grant allows writing",
+        async (level) => {
+          await service.grantPermission(
+            "orphan-doc",
+            userAddress,
+            level,
+            adminAddress,
+          );
+          expect(await authorization.canWrite("orphan-doc", userAddress)).toBe(
+            true,
+          );
+        },
+      );
+
+      it.each(["READ", "WRITE"] as const)(
+        "%s grant does not allow managing",
+        async (level) => {
+          await service.grantPermission(
+            "orphan-doc",
+            userAddress,
+            level,
+            adminAddress,
+          );
+          expect(await authorization.canManage("orphan-doc", userAddress)).toBe(
+            false,
+          );
+        },
+      );
+
+      it("ADMIN grant allows managing", async () => {
+        await service.grantPermission(
+          "orphan-doc",
+          userAddress,
+          "ADMIN",
+          adminAddress,
+        );
+        expect(await authorization.canManage("orphan-doc", userAddress)).toBe(
+          true,
+        );
+      });
+
+      it("group grant allows reading and writing", async () => {
+        const group = await service.createGroup("Writers");
+        await service.addUserToGroup(userAddress, group.id);
+        await service.grantGroupPermission(
+          "orphan-doc",
+          group.id,
+          "WRITE",
+          adminAddress,
+        );
+        expect(await authorization.canRead("orphan-doc", userAddress)).toBe(
+          true,
+        );
+        expect(await authorization.canWrite("orphan-doc", userAddress)).toBe(
+          true,
+        );
+      });
+
+      it("revoking a group grant revokes the access it conferred", async () => {
+        const group = await service.createGroup("Revocable");
+        await service.addUserToGroup(userAddress, group.id);
+        await service.grantGroupPermission(
+          "orphan-doc",
+          group.id,
+          "WRITE",
+          adminAddress,
+        );
+        expect(await authorization.canWrite("orphan-doc", userAddress)).toBe(
+          true,
+        );
+
+        await service.revokeGroupPermission("orphan-doc", group.id);
+
+        expect(await authorization.canRead("orphan-doc", userAddress)).toBe(
+          false,
+        );
+        expect(await authorization.canWrite("orphan-doc", userAddress)).toBe(
+          false,
+        );
       });
     });
 
-    describe("canWrite", () => {
-      it("should return true when user has direct write permission", async () => {
-        await service.grantPermission(
-          "child-doc",
-          userAddress,
-          "WRITE",
-          adminAddress,
-        );
-
-        const result = await service.canWrite(
-          "child-doc",
-          userAddress,
-          getParentIds,
-        );
-        expect(result).toBe(true);
-      });
-
-      it("should return false when user has only READ permission on parent", async () => {
+    describe("permission inheritance", () => {
+      it("should allow read with a grant on the parent", async () => {
         await service.grantPermission(
           "parent-doc",
           userAddress,
           "READ",
           adminAddress,
         );
-
-        const result = await service.canWrite(
-          "child-doc",
-          userAddress,
-          getParentIds,
+        expect(await authorization.canRead("child-doc", userAddress)).toBe(
+          true,
         );
-        expect(result).toBe(false);
       });
 
-      it("should return true when user has WRITE permission on parent", async () => {
+      it("should allow read with a grant on the grandparent", async () => {
+        await service.grantPermission(
+          "parent-doc",
+          userAddress,
+          "READ",
+          adminAddress,
+        );
+        expect(await authorization.canRead("grandchild-doc", userAddress)).toBe(
+          true,
+        );
+      });
+
+      it("should deny read without any grant in the hierarchy", async () => {
+        expect(await authorization.canRead("child-doc", userAddress)).toBe(
+          false,
+        );
+      });
+
+      it("should not satisfy write via an inherited READ grant", async () => {
+        await service.grantPermission(
+          "parent-doc",
+          userAddress,
+          "READ",
+          adminAddress,
+        );
+        expect(await authorization.canWrite("child-doc", userAddress)).toBe(
+          false,
+        );
+      });
+
+      it("should allow write with a WRITE grant on the parent", async () => {
         await service.grantPermission(
           "parent-doc",
           userAddress,
           "WRITE",
           adminAddress,
         );
-
-        const result = await service.canWrite(
-          "child-doc",
-          userAddress,
-          getParentIds,
+        expect(await authorization.canWrite("child-doc", userAddress)).toBe(
+          true,
         );
-        expect(result).toBe(true);
       });
 
-      it("should return true when user has ADMIN permission on grandparent", async () => {
+      it("should allow write with an ADMIN grant on the grandparent", async () => {
         await service.grantPermission(
           "parent-doc",
           userAddress,
           "ADMIN",
           adminAddress,
         );
-
-        const result = await service.canWrite(
-          "grandchild-doc",
-          userAddress,
-          getParentIds,
-        );
-        expect(result).toBe(true);
+        expect(
+          await authorization.canWrite("grandchild-doc", userAddress),
+        ).toBe(true);
       });
     });
 
-    describe("filterReadableDocuments", () => {
-      it("should filter documents based on permissions", async () => {
-        await service.grantPermission(
-          "doc-1",
-          userAddress,
-          "READ",
-          adminAddress,
+    describe("owner and restricted operations", () => {
+      it("should allow the owner everything on their document", async () => {
+        await service.initializeDocumentProtection("orphan-doc", userAddress);
+        expect(await authorization.canRead("orphan-doc", userAddress)).toBe(
+          true,
         );
+        expect(await authorization.canWrite("orphan-doc", userAddress)).toBe(
+          true,
+        );
+        expect(await authorization.canManage("orphan-doc", userAddress)).toBe(
+          true,
+        );
+      });
+
+      it("should allow a restricted operation only with an operation grant", async () => {
         await service.grantPermission(
-          "doc-3",
+          "orphan-doc",
           userAddress,
           "WRITE",
           adminAddress,
         );
-
-        const result = await service.filterReadableDocuments(
-          ["doc-1", "doc-2", "doc-3", "doc-4"],
-          userAddress,
-          () => Promise.resolve([]), // No parent hierarchy
-        );
-
-        expect(result).toEqual(["doc-1", "doc-3"]);
-      });
-
-      it("should include documents accessible via parent hierarchy", async () => {
-        await service.grantPermission(
-          "parent-doc",
-          userAddress,
-          "READ",
+        await service.grantOperationPermission(
+          "orphan-doc",
+          "SPECIAL_OP",
+          "0xoperator",
           adminAddress,
         );
 
-        const result = await service.filterReadableDocuments(
-          ["child-doc", "orphan-doc"],
-          userAddress,
-          getParentIds,
+        expect(
+          await authorization.canMutate(
+            "orphan-doc",
+            "SPECIAL_OP",
+            userAddress,
+          ),
+        ).toBe(false);
+        expect(
+          await authorization.canMutate(
+            "orphan-doc",
+            "SPECIAL_OP",
+            "0xoperator",
+          ),
+        ).toBe(true);
+      });
+
+      it("should allow the owner to execute restricted operations", async () => {
+        await service.initializeDocumentProtection("orphan-doc", userAddress);
+        await service.grantOperationPermission(
+          "orphan-doc",
+          "SPECIAL_OP",
+          "0xoperator",
+          adminAddress,
         );
 
-        expect(result).toEqual(["child-doc"]);
+        expect(
+          await authorization.canMutate(
+            "orphan-doc",
+            "SPECIAL_OP",
+            userAddress,
+          ),
+        ).toBe(true);
+      });
+
+      it("should match operation grants case-insensitively through canMutate", async () => {
+        await service.grantOperationPermission(
+          "orphan-doc",
+          "SPECIAL_OP",
+          "0xoperator",
+          adminAddress,
+        );
+
+        expect(
+          await authorization.canMutate(
+            "orphan-doc",
+            "SPECIAL_OP",
+            "0xOPERATOR",
+          ),
+        ).toBe(true);
       });
     });
   });
@@ -661,7 +644,7 @@ describe("DocumentPermissionService", () => {
       expect(result.permission).toBe("WRITE");
     });
 
-    it("should allow user to read via group permission", async () => {
+    it("should surface a READ group grant for a member", async () => {
       const group = await service.createGroup("Readers");
       await service.addUserToGroup("0xuser", group.id);
       await service.grantGroupPermission(
@@ -671,11 +654,11 @@ describe("DocumentPermissionService", () => {
         adminAddress,
       );
 
-      const result = await service.canReadDocument(documentId, "0xuser");
-      expect(result).toBe(true);
+      const result = await service.getUserGroupPermission(documentId, "0xuser");
+      expect(result).toBe("READ");
     });
 
-    it("should allow user to write via group permission", async () => {
+    it("should surface a WRITE group grant for a member", async () => {
       const group = await service.createGroup("Writers");
       await service.addUserToGroup("0xuser", group.id);
       await service.grantGroupPermission(
@@ -685,8 +668,8 @@ describe("DocumentPermissionService", () => {
         adminAddress,
       );
 
-      const result = await service.canWriteDocument(documentId, "0xuser");
-      expect(result).toBe(true);
+      const result = await service.getUserGroupPermission(documentId, "0xuser");
+      expect(result).toBe("WRITE");
     });
 
     it("should return highest group permission level", async () => {
@@ -728,8 +711,8 @@ describe("DocumentPermissionService", () => {
 
       await service.revokeGroupPermission(documentId, group.id);
 
-      const result = await service.canReadDocument(documentId, "0xuser");
-      expect(result).toBe(false);
+      const result = await service.getUserGroupPermission(documentId, "0xuser");
+      expect(result).toBeNull();
     });
   });
 
@@ -752,7 +735,7 @@ describe("DocumentPermissionService", () => {
         expect(result.userAddress).toBe("0xuser");
       });
 
-      it("should check if user can execute operation", async () => {
+      it("should report an operation grant for the user", async () => {
         await service.grantOperationPermission(
           documentId,
           operationType,
@@ -760,7 +743,7 @@ describe("DocumentPermissionService", () => {
           adminAddress,
         );
 
-        const result = await service.canExecuteOperation(
+        const result = await service.hasOperationGrant(
           documentId,
           operationType,
           "0xuser",
@@ -769,7 +752,7 @@ describe("DocumentPermissionService", () => {
       });
 
       it("should return false when user has no operation permission", async () => {
-        const result = await service.canExecuteOperation(
+        const result = await service.hasOperationGrant(
           documentId,
           operationType,
           "0xunknown",
@@ -790,7 +773,7 @@ describe("DocumentPermissionService", () => {
           "0xuser",
         );
 
-        const result = await service.canExecuteOperation(
+        const result = await service.hasOperationGrant(
           documentId,
           operationType,
           "0xuser",
@@ -824,7 +807,7 @@ describe("DocumentPermissionService", () => {
           adminAddress,
         );
 
-        const result = await service.canExecuteOperation(
+        const result = await service.hasOperationGrant(
           documentId,
           operationType,
           "0xuser",
@@ -848,7 +831,7 @@ describe("DocumentPermissionService", () => {
           group.id,
         );
 
-        const result = await service.canExecuteOperation(
+        const result = await service.hasOperationGrant(
           documentId,
           operationType,
           "0xuser",
@@ -965,11 +948,6 @@ describe("DocumentPermissionService", () => {
   });
 
   describe("Edge Cases", () => {
-    it("should handle empty user address for canExecuteOperation", async () => {
-      const result = await service.canExecuteOperation("doc", "op", undefined);
-      expect(result).toBe(false);
-    });
-
     it("should handle duplicate group membership gracefully", async () => {
       const group = await service.createGroup("Test");
       await service.addUserToGroup("0xuser", group.id);

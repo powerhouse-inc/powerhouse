@@ -160,7 +160,7 @@ function makeHarness(options: HarnessOptions = {}) {
     silentLogger,
     httpAdapter,
     gatewayAdapter,
-    undefined, // authConfig
+    undefined, // authService
     undefined, // documentPermissionService
     {
       enableDocumentModelSubgraphs:

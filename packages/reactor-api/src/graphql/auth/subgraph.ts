@@ -142,12 +142,9 @@ export class AuthSubgraph extends BaseSubgraph {
         ctx: { user?: { address: string } },
       ) => {
         this.logger.debug("canExecuteOperation(@args)", args);
-        if (!this.documentPermissionService) {
-          throw new GraphQLError("DocumentPermissionService not available");
-        }
         try {
           return await resolvers.canExecuteOperation(
-            this.documentPermissionService,
+            this.authorizationService,
             args,
             ctx.user?.address,
           );

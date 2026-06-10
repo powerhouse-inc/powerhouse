@@ -83,6 +83,7 @@ describe("ReactorSubgraph Permission Checks", () => {
         policy: AuthorizationPolicy.DOCUMENT_PERMISSIONS,
       },
       isSupremeAdmin: vi.fn().mockReturnValue(false),
+      canCreate: vi.fn().mockImplementation((address?: string) => !!address),
       canRead: vi.fn().mockResolvedValue(false),
       canWrite: vi.fn().mockResolvedValue(false),
       canManage: vi.fn().mockResolvedValue(false),
@@ -289,6 +290,7 @@ describe("ReactorSubgraph Permission Checks", () => {
             defaultProtection: false,
             policy: AuthorizationPolicy.OPEN,
           },
+          canCreate: vi.fn().mockReturnValue(true),
         });
         const mutation = (openSubgraph.resolvers.Mutation as any)
           ?.createDocument;
@@ -303,10 +305,8 @@ describe("ReactorSubgraph Permission Checks", () => {
         );
       });
 
-      it("should allow when isSupremeAdmin is true (DOCUMENT_PERMISSIONS policy)", async () => {
-        vi.mocked(mockAuthorizationService.isSupremeAdmin!).mockReturnValue(
-          true,
-        );
+      it("should allow when canCreate allows regardless of user address", async () => {
+        vi.mocked(mockAuthorizationService.canCreate!).mockReturnValue(true);
         const ctx = createContext({});
 
         await expectPermissionPassed(callCreateDocument(ctx));
@@ -321,6 +321,7 @@ describe("ReactorSubgraph Permission Checks", () => {
             policy: AuthorizationPolicy.ADMIN_ONLY,
           },
           isSupremeAdmin: vi.fn().mockReturnValue(false),
+          canCreate: vi.fn().mockReturnValue(false),
         });
         const mutation = (adminOnlySubgraph.resolvers.Mutation as any)
           ?.createDocument;
@@ -493,6 +494,7 @@ describe("ReactorSubgraph Permission Checks", () => {
           policy: AuthorizationPolicy.OPEN,
         },
         isSupremeAdmin: vi.fn().mockReturnValue(true),
+        canCreate: vi.fn().mockReturnValue(true),
         canRead: vi.fn().mockResolvedValue(true),
         canWrite: vi.fn().mockResolvedValue(true),
         canManage: vi.fn().mockResolvedValue(true),
