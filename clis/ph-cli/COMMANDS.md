@@ -1,4 +1,4 @@
-# Powerhouse CLI Commands (6.2.0-dev.5)<br>
+# Powerhouse CLI Commands (6.2.0-dev.6)<br>
 This document provides detailed information about the available commands in the Powerhouse CLI.<br><br>
 The Powerhouse CLI (ph-cli) is a command-line interface tool that provides essential commands for managing Powerhouse projects. The tool and it's commands are fundamental for creating, building, and running Document Models as a builder in studio mode.<br>
 ## Table of Contents
@@ -599,6 +599,10 @@ Value to set at <key>. Coerced against the runtime schema (string, bool, number,
 
 
 ### flags
+#### Dynamic Base <br>
+Build one bundle that serves under any subpath; base resolved at serve time from a runtime global. Overrides --base.<br><br>
+**usage:** `--dynamic-base`<br>
+
 #### Ignore Local <br>
 Do not load local packages from this project<br><br>
 **usage:** `--ignore-local`<br>

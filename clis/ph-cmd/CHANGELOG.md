@@ -1,3 +1,13 @@
+## 6.2.0-dev.6 (2026-06-10)
+
+### 🚀 Features
+
+- **connect:** runtime-dynamic deploy base for Connect builds ([2f4c6441f](https://github.com/powerhouse-inc/powerhouse/commit/2f4c6441f))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.0-dev.5 (2026-06-10)
 
 This was a version bump only for ph-cmd to align it with other projects, there were no code changes.

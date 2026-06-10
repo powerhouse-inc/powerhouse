@@ -657,6 +657,8 @@ Build has no read mode; passing only \<key\> without \<value\> errors out (use `
 
 
 ### Flags
+**Dynamic Base** - Build one bundle that serves under any subpath; base resolved at serve time from a runtime global. Overrides --base. - Usage: `--dynamic-base`
+
 **Ignore Local** - Do not load local packages from this project - Usage: `--ignore-local`
 
 **Force** - Force dep pre-optimization regardless of whether deps have changed. - Usage: `--force`
