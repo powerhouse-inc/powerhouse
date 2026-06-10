@@ -68,13 +68,13 @@ const _defaultStyles = {
 const defaultStyles = {
   ..._defaultStyles,
   container: twMerge(_defaultStyles.container, "bg-transparent!"),
-  label: twMerge(_defaultStyles.label, "text-gray-600!"),
+  label: twMerge(_defaultStyles.label, "text-gray-500!"),
   punctuation: twMerge(
     _defaultStyles.punctuation,
     "font-semibold! text-gray-700!",
   ),
-  collapseIcon: twMerge(_defaultStyles.collapseIcon, "text-gray-600!"),
-  stringValue: twMerge(_defaultStyles.stringValue, "text-gray-600!"),
+  collapseIcon: twMerge(_defaultStyles.collapseIcon, "text-gray-500!"),
+  stringValue: twMerge(_defaultStyles.stringValue, "text-gray-500!"),
 };
 
 const allExpanded = () => true;

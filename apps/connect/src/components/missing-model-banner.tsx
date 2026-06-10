@@ -28,7 +28,7 @@ export function MissingModelBanner() {
 
   return (
     <>
-      <div className="flex items-center justify-between gap-3 bg-amber-100 px-4 py-2 text-sm text-amber-900 dark:bg-amber-800 dark:text-amber-100">
+      <div className="flex items-center justify-between gap-3 bg-orange-100 px-4 py-2 text-sm text-orange-900 dark:bg-orange-900 dark:text-orange-100">
         <span>
           {failed.length === 1
             ? "1 document type couldn't load (missing model)."
@@ -37,7 +37,7 @@ export function MissingModelBanner() {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="rounded-md border border-amber-300 bg-gray-50 px-3 py-1 text-amber-900 hover:effect dark:border-amber-600 dark:bg-slate-800 dark:text-amber-100"
+          className="rounded-md border border-orange-100 bg-gray-50 px-3 py-1 text-orange-900 hover:effect dark:border-orange-600 dark:bg-slate-800 dark:text-orange-100"
         >
           View
         </button>

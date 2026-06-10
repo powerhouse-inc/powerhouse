@@ -98,7 +98,7 @@ export const SidebarItem = ({
               hasStatus && "pr-6",
               allowPinning && (hasStatus ? "hover:pr-12" : "hover:pr-6"),
               isPinned && (hasStatus ? "pr-12" : "pr-6"),
-              isSearchActive && "bg-yellow-100 dark:bg-yellow-200",
+              isSearchActive && "bg-yellow-50 dark:bg-yellow-100",
               // line between pinned items
               pinnedMode &&
                 "hover:effect after:absolute after:-top-2.5 after:left-[15px] after:h-4 after:w-px after:bg-gray-300 first:group-first/sidebar-item-wrapper:after:hidden",
@@ -221,7 +221,7 @@ const RenderTitle = forwardRef<
       !pinnedMode
         ? (() => {
             const highlightClass = isSearchActive
-              ? "bg-yellow-300 dark:bg-yellow-400"
+              ? "bg-yellow-50 dark:bg-yellow-900"
               : "bg-gray-300 dark:bg-slate-800";
             const parts: React.ReactNode[] = [];
             let remaining = title;

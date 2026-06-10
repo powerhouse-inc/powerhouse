@@ -42,7 +42,7 @@ function getDefaultOptions(type: ExtendedTypeOptions): ToastOptions {
         options.type = "success";
         options.icon = (
           <Icon
-            className="text-green-800 dark:text-green-100"
+            className="text-green-900 dark:text-green-100"
             name="CheckCircleFill"
             size={24}
           />

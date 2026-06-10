@@ -31,7 +31,7 @@ export const DriveInfoItem: React.FC<DriveInfoItemProps> = ({
   return (
     <button
       aria-label={`Copy ${label}`}
-      className="flex h-8 items-center gap-1 rounded-lg bg-gray-50 pr-2 pl-1 text-xs whitespace-nowrap text-stone-300 dark:bg-slate-800"
+      className="flex h-8 items-center gap-1 rounded-lg bg-gray-50 pr-2 pl-1 text-xs whitespace-nowrap text-gray-300 dark:bg-slate-800"
       onClick={handleCopy}
     >
       <LinkIcon width={14} height={14} />

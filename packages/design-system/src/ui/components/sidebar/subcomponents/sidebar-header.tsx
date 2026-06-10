@@ -56,7 +56,7 @@ export const SidebarHeader: React.FC<SidebarHeaderProps> = ({
                   "w-[26px] rounded-lg bg-gray-50 p-1 text-center text-xs text-gray-100 dark:bg-slate-900 dark:text-slate-200",
                   !isDisabled && "hover:effect",
                   isDisabled &&
-                    "cursor-not-allowed bg-gray-100 text-slate-300 dark:bg-slate-800 dark:text-slate-500",
+                    "cursor-not-allowed bg-gray-100 text-gray-300 dark:bg-slate-800 dark:text-slate-500",
                 )}
                 onClick={() => {
                   if (!isDisabled) {

@@ -114,7 +114,7 @@ export const TimelineBar: React.FC<TimelineBarProps> = ({
             className={twMerge(
               "flex h-[25px] w-1.5 cursor-pointer flex-col items-center justify-center rounded-[2px] hover:effect",
               className,
-              isSelected && "bg-blue-300 dark:bg-blue-600",
+              isSelected && "bg-blue-100 dark:bg-blue-900",
             )}
             data-timestamp={timestamp}
             onClick={onClick}
@@ -122,7 +122,7 @@ export const TimelineBar: React.FC<TimelineBarProps> = ({
             <div className="flex h-3 w-0.5 items-end">
               <div
                 className={twMerge(
-                  "h-3 w-0.5 rounded-t-full bg-green-600 dark:bg-green-300",
+                  "h-3 w-0.5 rounded-t-full bg-green-600 dark:bg-green-100",
                   addBarHeight,
                 )}
               ></div>
@@ -130,7 +130,7 @@ export const TimelineBar: React.FC<TimelineBarProps> = ({
             <div className="flex h-3 w-0.5 items-start">
               <div
                 className={twMerge(
-                  "h-3 w-0.5 rounded-b-full bg-red-600 dark:bg-red-300",
+                  "h-3 w-0.5 rounded-b-full bg-red-600 dark:bg-red-400",
                   delBarHeight,
                 )}
               ></div>

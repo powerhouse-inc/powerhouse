@@ -83,7 +83,7 @@ export function DebugInspector({
           <button
             type="button"
             onClick={() => void handleReset(confirmMajor)}
-            className="rounded-sm bg-yellow-600 px-3 py-1 text-sm text-white hover:effect dark:bg-yellow-300 dark:text-slate-900"
+            className="rounded-sm bg-yellow-500 px-3 py-1 text-sm text-white hover:effect dark:bg-yellow-100 dark:text-slate-900"
           >
             Confirm reset to PG{confirmMajor}
           </button>

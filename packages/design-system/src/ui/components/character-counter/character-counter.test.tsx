@@ -32,7 +32,7 @@ describe("CharacterCounter", () => {
       "text-yellow-900 dark:text-yellow-100",
     );
     expect(screen.getByText("/10")).toHaveClass(
-      "text-yellow-400 dark:text-yellow-100",
+      "text-yellow-500 dark:text-yellow-100",
     );
   });
 
@@ -42,7 +42,7 @@ describe("CharacterCounter", () => {
       "text-red-900 dark:text-red-400",
     );
     expect(screen.getByText("/10")).toHaveClass(
-      "text-red-400 dark:text-red-100",
+      "text-red-500 dark:text-red-100",
     );
   });
 

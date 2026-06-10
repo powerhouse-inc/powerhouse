@@ -11,8 +11,8 @@ const counterVariants = {
 
 const maxLengthVariants = {
   normal: "text-gray-300 dark:text-slate-600",
-  warning: "text-yellow-400 dark:text-yellow-100",
-  error: "text-red-400 dark:text-red-100",
+  warning: "text-yellow-500 dark:text-yellow-100",
+  error: "text-red-500 dark:text-red-100",
 };
 
 export const CharacterCounter: React.FC<CharacterCounterProps> = ({

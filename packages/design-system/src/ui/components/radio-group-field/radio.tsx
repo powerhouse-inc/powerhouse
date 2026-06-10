@@ -45,7 +45,7 @@ export const Radio = React.forwardRef<
             "aspect-square size-4 rounded-full border border-gray-800 dark:border-slate-100",
             "hover:effect",
             disabled && [
-              "cursor-not-allowed border-gray-600 hover:effect dark:border-slate-300",
+              "cursor-not-allowed border-gray-500 hover:effect dark:border-slate-300",
               "hover:effect dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100",
             ],
             hasError && [
@@ -72,7 +72,7 @@ export const Radio = React.forwardRef<
                 "dark:group-hover:after:effect",
               ],
               disabled && [
-                "after:bg-gray-600 dark:after:bg-slate-300",
+                "after:bg-gray-500 dark:after:bg-slate-300",
                 "dark:after:bg-slate-600 dark:after:text-slate-100",
               ],
             )}

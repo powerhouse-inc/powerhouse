@@ -7,11 +7,11 @@ export type ConnectionStateBadgeProps = {
 
 const stateStyles: Record<string, string> = {
   connected:
-    "bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100",
-  connecting: "bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100",
+    "bg-green-100 text-green-900 dark:bg-green-900 dark:text-green-100",
+  connecting: "bg-blue-100 text-blue-900 dark:bg-blue-800 dark:text-blue-100",
   reconnecting:
-    "bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100",
-  error: "bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100",
+    "bg-yellow-50 text-yellow-900 dark:bg-yellow-900 dark:text-yellow-100",
+  error: "bg-red-50 text-red-800 dark:bg-red-900 dark:text-red-100",
   disconnected:
     "bg-gray-100 text-gray-700 dark:bg-slate-700 dark:text-slate-200",
 };

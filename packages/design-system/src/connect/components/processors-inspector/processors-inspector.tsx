@@ -213,7 +213,7 @@ export function ProcessorsInspector({
           Total: <span className="font-medium">{processors.length}</span>
         </div>
         <div className="flex items-center gap-2 text-gray-700 dark:text-slate-200">
-          <span className="size-2 rounded-full bg-green-500 dark:bg-green-400" />
+          <span className="size-2 rounded-full bg-green-600 dark:bg-green-400" />
           Active: <span className="font-medium">{activeCount}</span>
         </div>
         <div className="flex items-center gap-2 text-gray-700 dark:text-slate-200">
@@ -300,12 +300,12 @@ export function ProcessorsInspector({
                       className={twMerge(
                         "inline-flex items-center gap-1 rounded-sm px-1.5 py-0.5",
                         processor.status === "active"
-                          ? "bg-green-100 text-green-700 dark:bg-green-800 dark:text-green-100"
-                          : "bg-red-100 text-red-700 dark:bg-red-800 dark:text-red-100",
+                          ? "bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-100"
+                          : "bg-red-50 text-red-700 dark:bg-red-900 dark:text-red-100",
                       )}
                     >
                       {processor.status === "active" && (
-                        <span className="inline-block size-1.5 rounded-full bg-green-500 dark:bg-green-400" />
+                        <span className="inline-block size-1.5 rounded-full bg-green-600 dark:bg-green-400" />
                       )}
                       {processor.status === "errored" && (
                         <span className="inline-block size-1.5 rounded-full bg-red-500 dark:bg-red-400" />
@@ -371,7 +371,7 @@ export function ProcessorsInspector({
                   <td className="border-l border-gray-300 px-3 py-2 text-xs dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
                     {processor.status === "errored" && onRetry && (
                       <button
-                        className="flex items-center gap-1 rounded-sm bg-yellow-50 px-2 py-1 text-xs text-yellow-700 hover:effect disabled:opacity-50 dark:bg-yellow-900 dark:text-yellow-100"
+                        className="flex items-center gap-1 rounded-sm bg-yellow-50 px-2 py-1 text-xs text-yellow-900 hover:effect disabled:opacity-50 dark:bg-yellow-900 dark:text-yellow-100"
                         disabled={retryingId === processor.processorId}
                         onClick={() => void handleRetry(processor.processorId)}
                         type="button"

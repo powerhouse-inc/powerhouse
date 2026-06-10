@@ -23,7 +23,7 @@ export const DocumentState = (props: DocumentStateProps) => {
 
   return (
     <button
-      className="rounded-lg bg-gray-50 p-1 text-stone-300 dark:bg-slate-800"
+      className="rounded-lg bg-gray-50 p-1 text-gray-300 dark:bg-slate-800"
       onClick={handleCopy}
     >
       <Icon name="CurlyBrackets" />

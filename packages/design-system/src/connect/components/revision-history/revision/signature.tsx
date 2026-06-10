@@ -49,8 +49,8 @@ function VerificationStatus(props: SignatureProps) {
         verifiedSignaturesCount === 0
           ? "text-red-800 dark:text-red-100"
           : verifiedSignaturesCount === signatureCount
-            ? "text-green-700 dark:text-green-100"
-            : "text-orange-700 dark:text-orange-100",
+            ? "text-green-600 dark:text-green-100"
+            : "text-orange-900 dark:text-orange-100",
       )}
     >
       {verificationStatusText}

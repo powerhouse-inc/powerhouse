@@ -203,8 +203,8 @@ export function QueueInspector({
             className={twMerge(
               "flex items-center gap-1 rounded-sm border px-3 py-1.5 text-sm disabled:opacity-50",
               state.isPaused
-                ? "border-green-300 bg-green-50 text-green-700 hover:effect dark:border-green-600 dark:bg-green-900 dark:text-green-100"
-                : "border-yellow-300 bg-yellow-50 text-yellow-700 hover:effect dark:border-yellow-600 dark:bg-yellow-900 dark:text-yellow-100",
+                ? "border-green-100 bg-green-100 text-green-600 hover:effect dark:border-green-900 dark:bg-green-900 dark:text-green-100"
+                : "border-yellow-300 bg-yellow-50 text-yellow-900 hover:effect dark:border-yellow-600 dark:bg-yellow-900 dark:text-yellow-100",
             )}
             disabled={actionInProgress}
             onClick={() => void handlePauseResume()}
@@ -234,8 +234,8 @@ export function QueueInspector({
             className={twMerge(
               "size-2 rounded-full",
               state.isPaused
-                ? "bg-yellow-500 dark:bg-yellow-400"
-                : "bg-green-500 dark:bg-green-400",
+                ? "bg-yellow-500 dark:bg-yellow-900"
+                : "bg-green-600 dark:bg-green-400",
             )}
           />
           <span className="font-medium text-gray-700 dark:text-slate-200">
@@ -322,7 +322,7 @@ export function QueueInspector({
                       className={twMerge(
                         "inline-block rounded-sm px-1.5 py-0.5",
                         job.kind === "mutation"
-                          ? "bg-purple-100 text-purple-700 dark:bg-purple-800 dark:text-purple-100"
+                          ? "bg-purple-100 text-purple-900 dark:bg-purple-800 dark:text-purple-100"
                           : "bg-blue-100 text-blue-700 dark:bg-blue-800 dark:text-blue-100",
                       )}
                     >
@@ -357,12 +357,12 @@ export function QueueInspector({
                       className={twMerge(
                         "inline-flex items-center gap-1 rounded-sm px-1.5 py-0.5",
                         job.status === "executing"
-                          ? "bg-green-100 text-green-700 dark:bg-green-800 dark:text-green-100"
+                          ? "bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-100"
                           : "bg-gray-100 text-gray-700 dark:bg-slate-700 dark:text-slate-200",
                       )}
                     >
                       {job.status === "executing" && (
-                        <span className="inline-block size-1.5 animate-pulse rounded-full bg-green-500 dark:bg-green-400" />
+                        <span className="inline-block size-1.5 animate-pulse rounded-full bg-green-600 dark:bg-green-400" />
                       )}
                       {job.status}
                     </span>

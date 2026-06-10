@@ -113,7 +113,7 @@ const TokenForm = () => {
             disabled={submitDisabled}
             type="submit"
             className={twMerge(
-              "bg-orange-400 rounded px-4 py-2 font-semibold text-white dark:bg-orange-500",
+              "bg-orange-500 rounded px-4 py-2 font-semibold text-white dark:bg-orange-900",
               !submitDisabled && "hover:effect",
             )}
           >

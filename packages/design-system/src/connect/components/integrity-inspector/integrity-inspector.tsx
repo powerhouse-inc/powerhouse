@@ -147,7 +147,7 @@ export function IntegrityInspector({
             Validate
           </button>
           <button
-            className="flex items-center gap-1 rounded-sm border border-yellow-300 bg-yellow-50 px-3 py-1.5 text-sm text-yellow-700 hover:effect disabled:opacity-50 dark:border-yellow-600 dark:bg-yellow-900 dark:text-yellow-100"
+            className="flex items-center gap-1 rounded-sm border border-yellow-300 bg-yellow-50 px-3 py-1.5 text-sm text-yellow-900 hover:effect disabled:opacity-50 dark:border-yellow-600 dark:bg-yellow-900 dark:text-yellow-100"
             disabled={
               !documentId.trim() ||
               status === "running" ||
@@ -160,7 +160,7 @@ export function IntegrityInspector({
             Rebuild Keyframes
           </button>
           <button
-            className="flex items-center gap-1 rounded-sm border border-yellow-300 bg-yellow-50 px-3 py-1.5 text-sm text-yellow-700 hover:effect disabled:opacity-50 dark:border-yellow-600 dark:bg-yellow-900 dark:text-yellow-100"
+            className="flex items-center gap-1 rounded-sm border border-yellow-300 bg-yellow-50 px-3 py-1.5 text-sm text-yellow-900 hover:effect disabled:opacity-50 dark:border-yellow-600 dark:bg-yellow-900 dark:text-yellow-100"
             disabled={
               !documentId.trim() ||
               status === "running" ||
@@ -177,13 +177,13 @@ export function IntegrityInspector({
 
       {confirmAction && (
         <div className="flex shrink-0 items-center gap-3 rounded-sm border border-yellow-400 bg-yellow-50 px-3 py-2 dark:border-yellow-500 dark:bg-yellow-900">
-          <span className="text-sm text-yellow-800 dark:text-yellow-100">
+          <span className="text-sm text-yellow-900 dark:text-yellow-100">
             {confirmAction === "keyframes"
               ? "This will delete all keyframes for this document. Continue?"
               : "This will invalidate all cached snapshots for this document. Continue?"}
           </span>
           <button
-            className="rounded-sm bg-yellow-600 px-3 py-1 text-sm text-white hover:effect dark:bg-yellow-300 dark:text-slate-900"
+            className="rounded-sm bg-yellow-500 px-3 py-1 text-sm text-white hover:effect dark:bg-yellow-100 dark:text-slate-900"
             onClick={() => {
               if (confirmAction === "keyframes") {
                 void handleRebuildKeyframes();
@@ -247,7 +247,7 @@ function ValidationResultView({ result }: { result: ValidationResult }) {
           className={twMerge(
             "size-3 rounded-full",
             result.isConsistent
-              ? "bg-green-500 dark:bg-green-400"
+              ? "bg-green-600 dark:bg-green-400"
               : "bg-red-500 dark:bg-red-400",
           )}
         />
@@ -365,7 +365,7 @@ function RebuildResultView({ result }: { result: RebuildResult }) {
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-2">
-        <span className="size-3 rounded-full bg-green-500 dark:bg-green-400" />
+        <span className="size-3 rounded-full bg-green-600 dark:bg-green-400" />
         <span className="text-sm font-medium">Rebuild complete</span>
       </div>
       <div className="text-xs text-gray-500 dark:text-slate-400">
