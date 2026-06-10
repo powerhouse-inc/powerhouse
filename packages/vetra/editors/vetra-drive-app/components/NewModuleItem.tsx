@@ -19,7 +19,7 @@ export const NewModuleItem: React.FC<NewModuleItemProps> = ({
     <button
       onClick={onClick}
       className={twMerge(
-        "flex w-full items-center gap-3 rounded-md bg-gray-100 p-1 text-left transition-colors hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 dark:hover:text-slate-100",
+        "flex w-full items-center gap-3 rounded-md bg-gray-100 p-1 text-left transition-colors hover-hover dark:bg-slate-700",
         className,
       )}
     >

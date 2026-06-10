@@ -503,13 +503,13 @@ export const WithCustomTargetElement: Story = {
 
     const stylesToApply: Record<string, string> = {
       "4281ab93-ef4f-4974-988d-7dad149a693d":
-        "bg-red-900 text-white hover:!bg-red-800",
+        "bg-red-900 text-white hover-hover",
       "f85e197f-9fd7-48ed-abe9-5d2c1b22475a":
-        "bg-blue-900 text-white hover:!bg-blue-800",
+        "bg-blue-900 text-white hover-hover",
       "c4be9c5e-520d-4e9c-b29e-3adcc8071452":
-        "bg-purple-900 text-white hover:!bg-purple-800",
+        "bg-purple-900 text-white hover-hover",
       "eca5e587-79e3-480b-b70d-dd25697c9e1f":
-        "bg-green-900 text-white hover:!bg-green-800",
+        "bg-green-900 text-white hover-hover",
     };
     const applyStylesRecursively = (node: SidebarNode): SidebarNode => {
       return {
@@ -601,7 +601,7 @@ export const Loading: Story = {
                 onClick={() => {
                   setIsLoading(!isLoading);
                 }}
-                className="rounded-sm bg-blue-500 px-3 py-1 text-sm text-white hover:bg-blue-600"
+                className="rounded-sm bg-blue-500 px-3 py-1 text-sm text-white hover-hover"
               >
                 {isLoading ? "Stop Loading" : "Start Loading"}
               </button>

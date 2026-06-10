@@ -1,6 +1,10 @@
 import path from "node:path";
-import { flatMap, isStrictEqual, map, pipe, when } from "remeda";
-import type { SourceFile, StringLiteral } from "ts-morph";
+import { concat, flatMap, isStrictEqual, map, pipe, when } from "remeda";
+import type {
+  NoSubstitutionTemplateLiteral,
+  SourceFile,
+  StringLiteral,
+} from "ts-morph";
 import { Project, SyntaxKind } from "ts-morph";
 import type { ClassName, FilePath } from "./types.js";
 
@@ -8,21 +12,27 @@ import type { ClassName, FilePath } from "./types.js";
  * Returns all string literal nodes in a source file.
  * */
 export const getStringLiterals = (f: SourceFile) =>
-  f.getDescendantsOfKind(SyntaxKind.StringLiteral);
+  concat(
+    f.getDescendantsOfKind(SyntaxKind.StringLiteral),
+    f.getDescendantsOfKind(SyntaxKind.NoSubstitutionTemplateLiteral),
+  );
 
 /**
  * Returns the raw text value of a string literal node.
  */
-export const getStringLiteralText = (s: StringLiteral) => s.getLiteralValue();
+export const getStringLiteralText = (
+  s: StringLiteral | NoSubstitutionTemplateLiteral,
+) => s.getLiteralValue();
 /**
  * Updates a string literal only when the new value differs from its current value.
  */
-export const maybeUpdateStringLiteral = (s: StringLiteral) => (c: ClassName) =>
-  when(
-    s,
-    (s) => !isStrictEqual(c, getStringLiteralText(s)),
-    (s) => s.setLiteralValue(c),
-  );
+export const maybeUpdateStringLiteral =
+  (s: StringLiteral | NoSubstitutionTemplateLiteral) => (c: ClassName) =>
+    when(
+      s,
+      (s) => !isStrictEqual(c, getStringLiteralText(s)),
+      (s) => s.setLiteralValue(c),
+    );
 
 /**
  * Adds a file path to the ts-morph project and returns the resulting source file.

@@ -94,16 +94,16 @@ export const SidebarItem = ({
             data-testid="sidebar-item"
             id={`sidebar-item-${node.id}`}
             className={twMerge(
-              "group/sidebar-item relative flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-gray-700 select-none hover:bg-gray-100 dark:text-slate-400 dark:hover:bg-slate-900",
+              "group/sidebar-item relative flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-gray-700 select-none hover-hover dark:text-slate-400",
               hasStatus && "pr-6",
               allowPinning && (hasStatus ? "hover:pr-12" : "hover:pr-6"),
               isPinned && (hasStatus ? "pr-12" : "pr-6"),
               isSearchActive && "bg-yellow-100 dark:bg-[#604B0033]",
               // line between pinned items
               pinnedMode &&
-                "after:absolute after:-top-2.5 after:left-[15px] after:h-4 after:w-px after:bg-gray-300 first:group-first/sidebar-item-wrapper:after:hidden hover:bg-gray-50 dark:hover:bg-slate-600",
+                "after:absolute after:-top-2.5 after:left-[15px] after:h-4 after:w-px after:bg-gray-300 first:group-first/sidebar-item-wrapper:after:hidden hover-hover",
               isActive &&
-                "bg-gray-200 font-medium text-gray-900 hover:bg-gray-200 dark:bg-slate-900 dark:text-slate-50 dark:hover:bg-slate-900",
+                "bg-gray-200 font-medium text-gray-900 hover-hover dark:bg-slate-900 dark:text-slate-50",
               node.className,
             )}
             onClick={() => {
@@ -114,7 +114,7 @@ export const SidebarItem = ({
             <div className="flex max-w-full items-center gap-2">
               {!pinnedMode && (
                 <div
-                  className="-m-2 -mr-1 h-full rounded-md py-2 pr-1 pl-2 hover:bg-gray-200"
+                  className="-m-2 -mr-1 h-full rounded-md py-2 pr-1 pl-2 hover-hover"
                   onClick={(e) => {
                     e.stopPropagation();
                     toggleNode?.(node.id);
@@ -164,8 +164,8 @@ export const SidebarItem = ({
                     "absolute top-1/2 flex -translate-y-1/2 items-center justify-center",
                     hasStatus ? "right-8" : "right-2",
                     isPinned
-                      ? "text-gray-700 hover:text-blue-900 dark:text-slate-50 dark:hover:text-blue-900"
-                      : "invisible text-gray-300 group-hover/sidebar-item:visible hover:text-gray-700 dark:text-slate-200 dark:hover:text-slate-100",
+                      ? "text-gray-700 hover-hover dark:text-slate-50"
+                      : "invisible text-gray-300 group-hover/sidebar-item:visible hover-hover dark:text-slate-200",
                   )}
                   onClick={(e) => {
                     e.stopPropagation();
@@ -183,7 +183,7 @@ export const SidebarItem = ({
                 <div
                   className={twMerge(
                     "absolute top-1/2 right-2 flex -translate-y-1/2 items-center justify-center",
-                    "text-gray-300 group-hover/sidebar-item:visible hover:text-gray-700 dark:text-slate-600 dark:hover:text-slate-500",
+                    "text-gray-300 group-hover/sidebar-item:visible hover-hover dark:text-slate-600",
                   )}
                   onClick={(e) => {
                     e.stopPropagation();

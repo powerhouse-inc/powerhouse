@@ -333,7 +333,7 @@ const PackageSection: React.FC<{
           onClick={toggle}
           aria-expanded={!collapsed}
           aria-controls={contentId}
-          className="flex w-full items-center gap-2 pb-2 text-left text-base font-semibold text-gray-900 hover:text-gray-700 dark:text-slate-100 dark:hover:text-slate-200"
+          className="flex w-full items-center gap-2 pb-2 text-left text-base font-semibold text-gray-900 hover-hover dark:text-slate-100"
         >
           <Icon
             name="ChevronDown"

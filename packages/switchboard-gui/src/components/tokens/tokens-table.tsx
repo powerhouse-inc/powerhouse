@@ -82,7 +82,7 @@ export const TokensTable = () => {
                     onClick={() => {
                       void revokeSession(session.id);
                     }}
-                    className="text-red-600 hover:text-red-900 dark:text-red-100 dark:hover:text-red-400"
+                    className="text-red-600 hover-hover dark:text-red-100"
                   >
                     Revoke
                   </button>

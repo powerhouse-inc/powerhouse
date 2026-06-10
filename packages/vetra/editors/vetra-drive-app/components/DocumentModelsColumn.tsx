@@ -32,7 +32,7 @@ export const DocumentModelsColumn: React.FC<DocumentModelsColumnProps> = ({
             (() => console.log("Add document model clicked"))
           }
           defaultOpen={true}
-          headerClassName="m-4 bg-gray-100 hover:bg-gray-200 border border-gray-200 rounded-md dark:hover:bg-slate-600 dark:border-slate-500 dark:bg-slate-600 dark:hover:text-slate-100 dark:text-slate-100"
+          headerClassName="m-4 bg-gray-100 hover-hover border border-gray-200 rounded-md dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
         >
           <ModuleList
             items={documentModels}

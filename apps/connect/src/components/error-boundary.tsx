@@ -104,7 +104,7 @@ function DetailedFallback({ error, resetErrorBoundary }: FallbackProps) {
         </p>
         {hasDetails && (
           <details className="group">
-            <summary className="cursor-pointer text-sm font-medium text-gray-700 underline select-none hover:text-gray-700 dark:text-slate-200 dark:hover:text-slate-200">
+            <summary className="cursor-pointer text-sm font-medium text-gray-700 underline select-none hover-hover dark:text-slate-200">
               Show details
             </summary>
             <pre className="mt-2 max-h-48 overflow-auto rounded-sm bg-gray-100 p-3 text-xs dark:bg-slate-700">

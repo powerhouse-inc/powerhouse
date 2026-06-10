@@ -1,0 +1,574 @@
+{
+  "bgLightCount": {
+    "white/90": {
+      "1": [
+        "bg-white/90"
+      ]
+    },
+    "gray": {
+      "1": [
+        "bg-gray-400"
+      ],
+      "4": [
+        "bg-gray-500"
+      ],
+      "6": [
+        "bg-gray-300"
+      ],
+      "8": [
+        "bg-gray-800"
+      ],
+      "12": [
+        "bg-gray-200"
+      ],
+      "14": [
+        "bg-gray-900"
+      ],
+      "48": [
+        "bg-gray-100"
+      ],
+      "190": [
+        "bg-gray-50"
+      ]
+    },
+    "amber": {
+      "1": [
+        "bg-amber-100",
+        "bg-amber-300"
+      ]
+    },
+    "yellow": {
+      "1": [
+        "bg-yellow-400",
+        "bg-yellow-300",
+        "bg-yellow-500"
+      ],
+      "2": [
+        "bg-yellow-600"
+      ],
+      "3": [
+        "bg-yellow-100"
+      ],
+      "6": [
+        "bg-yellow-50"
+      ]
+    },
+    "orange": {
+      "1": [
+        "bg-orange-100",
+        "bg-orange-200",
+        "bg-orange-400",
+        "bg-orange-500"
+      ]
+    },
+    "blue": {
+      "1": [
+        "bg-blue-200"
+      ],
+      "2": [
+        "bg-blue-300"
+      ],
+      "3": [
+        "bg-blue-900"
+      ],
+      "4": [
+        "bg-blue-600"
+      ],
+      "5": [
+        "bg-blue-500"
+      ],
+      "7": [
+        "bg-blue-100",
+        "bg-blue-50"
+      ]
+    },
+    "green": {
+      "1": [
+        "bg-green-600",
+        "bg-green-900",
+        "bg-green-50"
+      ],
+      "2": [
+        "bg-green-600/30"
+      ],
+      "5": [
+        "bg-green-100"
+      ],
+      "6": [
+        "bg-green-500"
+      ]
+    },
+    "red": {
+      "1": [
+        "bg-red-600"
+      ],
+      "2": [
+        "bg-red-900",
+        "bg-red-600/30",
+        "bg-red-100"
+      ],
+      "5": [
+        "bg-red-500"
+      ],
+      "8": [
+        "bg-red-50"
+      ]
+    },
+    "purple": {
+      "1": [
+        "bg-purple-900",
+        "bg-purple-100"
+      ]
+    },
+    "violet": {
+      "1": [
+        "bg-violet-400"
+      ]
+    },
+    "cyan": {
+      "1": [
+        "bg-cyan-300"
+      ]
+    }
+  },
+  "borderLightCount": {
+    "gray": {
+      "1": [
+        "border-gray-500",
+        "border-gray-400",
+        "border-gray-600"
+      ],
+      "2": [
+        "border-gray-800",
+        "border-gray-700"
+      ],
+      "3": [
+        "border-gray-50"
+      ],
+      "4": [
+        "border-gray-900"
+      ],
+      "8": [
+        "border-gray-100"
+      ],
+      "54": [
+        "border-gray-200"
+      ],
+      "133": [
+        "border-gray-300"
+      ]
+    },
+    "amber": {
+      "1": [
+        "border-amber-300"
+      ]
+    },
+    "yellow": {
+      "1": [
+        "border-yellow-500"
+      ],
+      "2": [
+        "border-yellow-400"
+      ],
+      "3": [
+        "border-yellow-300"
+      ]
+    },
+    "orange": {
+      "1": [
+        "border-orange-600"
+      ]
+    },
+    "red": {
+      "1": [
+        "border-red-900",
+        "border-red-700"
+      ],
+      "5": [
+        "border-red-300"
+      ]
+    },
+    "green": {
+      "2": [
+        "border-green-300"
+      ]
+    },
+    "blue": {
+      "1": [
+        "border-blue-600"
+      ],
+      "2": [
+        "border-blue-500",
+        "border-blue-300"
+      ]
+    }
+  },
+  "textLightCount": {
+    "red": {
+      "2": [
+        "text-red-500",
+        "text-red-400"
+      ],
+      "8": [
+        "text-red-800"
+      ],
+      "10": [
+        "text-red-700",
+        "text-red-600"
+      ],
+      "26": [
+        "text-red-900"
+      ]
+    },
+    "gray": {
+      "3": [
+        "text-gray-800"
+      ],
+      "5": [
+        "text-gray-100"
+      ],
+      "7": [
+        "text-gray-200"
+      ],
+      "13": [
+        "text-gray-300"
+      ],
+      "18": [
+        "text-gray-50"
+      ],
+      "26": [
+        "text-gray-400"
+      ],
+      "122": [
+        "text-gray-500"
+      ],
+      "191": [
+        "text-gray-900"
+      ],
+      "208": [
+        "text-gray-700"
+      ]
+    },
+    "white": {
+      "31": [
+        "text-white"
+      ]
+    },
+    "amber": {
+      "2": [
+        "text-amber-900"
+      ]
+    },
+    "blue": {
+      "2": [
+        "text-blue-800",
+        "text-blue-500"
+      ],
+      "4": [
+        "text-blue-600"
+      ],
+      "8": [
+        "text-blue-700"
+      ],
+      "11": [
+        "text-blue-900"
+      ]
+    },
+    "orange": {
+      "1": [
+        "text-orange-700"
+      ],
+      "2": [
+        "text-orange-300",
+        "text-orange-400",
+        "text-orange-500"
+      ],
+      "5": [
+        "text-orange-900"
+      ]
+    },
+    "green": {
+      "4": [
+        "text-green-900",
+        "text-green-800",
+        "text-green-600"
+      ],
+      "6": [
+        "text-green-700"
+      ]
+    },
+    "yellow": {
+      "2": [
+        "text-yellow-400"
+      ],
+      "3": [
+        "text-yellow-800",
+        "text-yellow-600"
+      ],
+      "4": [
+        "text-yellow-700"
+      ],
+      "5": [
+        "text-yellow-900"
+      ]
+    },
+    "purple": {
+      "1": [
+        "text-purple-900",
+        "text-purple-700"
+      ]
+    }
+  },
+  "bgDarkCount": {
+    "slate": {
+      "1": [
+        "dark:bg-slate-900/50"
+      ],
+      "3": [
+        "dark:bg-slate-900"
+      ],
+      "4": [
+        "dark:bg-slate-400"
+      ],
+      "8": [
+        "dark:bg-slate-100"
+      ],
+      "13": [
+        "dark:bg-slate-50"
+      ],
+      "54": [
+        "dark:bg-slate-700"
+      ],
+      "97": [
+        "dark:bg-slate-800"
+      ],
+      "205": [
+        "dark:bg-slate-600"
+      ]
+    },
+    "amber": {
+      "1": [
+        "dark:bg-amber-800",
+        "dark:bg-amber-600"
+      ]
+    },
+    "yellow": {
+      "1": [
+        "dark:bg-yellow-500",
+        "dark:bg-yellow-400"
+      ],
+      "2": [
+        "dark:bg-yellow-800",
+        "dark:bg-yellow-300"
+      ],
+      "6": [
+        "dark:bg-yellow-900"
+      ]
+    },
+    "green": {
+      "1": [
+        "dark:bg-green-300",
+        "dark:bg-green-900"
+      ],
+      "2": [
+        "dark:bg-green-600/30"
+      ],
+      "5": [
+        "dark:bg-green-800"
+      ],
+      "6": [
+        "dark:bg-green-400"
+      ]
+    },
+    "blue": {
+      "1": [
+        "dark:bg-blue-700"
+      ],
+      "2": [
+        "dark:bg-blue-600",
+        "dark:bg-blue-50"
+      ],
+      "3": [
+        "dark:bg-blue-400"
+      ],
+      "4": [
+        "dark:bg-blue-300"
+      ],
+      "6": [
+        "dark:bg-blue-800"
+      ],
+      "7": [
+        "dark:bg-blue-900"
+      ]
+    },
+    "orange": {
+      "1": [
+        "dark:bg-orange-800",
+        "dark:bg-orange-700",
+        "dark:bg-orange-500"
+      ]
+    },
+    "red": {
+      "1": [
+        "dark:bg-red-300",
+        "dark:bg-red-50"
+      ],
+      "2": [
+        "dark:bg-red-800"
+      ],
+      "5": [
+        "dark:bg-red-400"
+      ],
+      "8": [
+        "dark:bg-red-900"
+      ]
+    },
+    "cyan": {
+      "1": [
+        "dark:bg-cyan-600"
+      ]
+    },
+    "violet": {
+      "1": [
+        "dark:bg-violet-500"
+      ]
+    },
+    "purple": {
+      "1": [
+        "dark:bg-purple-800"
+      ]
+    },
+    "white": {
+      "1": [
+        "dark:bg-white"
+      ]
+    }
+  },
+  "borderDarkCount": {
+    "slate": {
+      "1": [
+        "dark:border-slate-300",
+        "dark:border-slate-400"
+      ],
+      "2": [
+        "dark:border-slate-200",
+        "dark:border-slate-100"
+      ],
+      "3": [
+        "dark:border-slate-50"
+      ],
+      "4": [
+        "dark:border-slate-600",
+        "dark:border-slate-800"
+      ],
+      "188": [
+        "dark:border-slate-500"
+      ]
+    },
+    "orange": {
+      "1": [
+        "dark:border-orange-300"
+      ]
+    },
+    "red": {
+      "1": [
+        "dark:border-red-200",
+        "dark:border-red-700",
+        "dark:border-red-50"
+      ],
+      "5": [
+        "dark:border-red-600"
+      ]
+    },
+    "amber": {
+      "1": [
+        "dark:border-amber-600"
+      ]
+    },
+    "yellow": {
+      "1": [
+        "dark:border-yellow-400"
+      ],
+      "2": [
+        "dark:border-yellow-500"
+      ],
+      "3": [
+        "dark:border-yellow-600"
+      ]
+    },
+    "green": {
+      "2": [
+        "dark:border-green-600"
+      ]
+    },
+    "blue": {
+      "1": [
+        "dark:border-blue-400",
+        "dark:border-blue-300"
+      ],
+      "2": [
+        "dark:border-blue-600"
+      ]
+    }
+  },
+  "textDarkCount": {
+    "slate": {
+      "6": [
+        "dark:text-slate-300"
+      ],
+      "26": [
+        "dark:text-slate-500"
+      ],
+      "104": [
+        "dark:text-slate-50"
+      ],
+      "112": [
+        "dark:text-slate-400"
+      ],
+      "175": [
+        "dark:text-slate-200"
+      ],
+      "241": [
+        "dark:text-slate-100"
+      ]
+    },
+    "amber": {
+      "2": [
+        "dark:text-amber-100"
+      ]
+    },
+    "red": {
+      "23": [
+        "dark:text-red-400"
+      ],
+      "33": [
+        "dark:text-red-100"
+      ]
+    },
+    "blue": {
+      "20": [
+        "dark:text-blue-100"
+      ]
+    },
+    "orange": {
+      "12": [
+        "dark:text-orange-100"
+      ]
+    },
+    "green": {
+      "17": [
+        "dark:text-green-100"
+      ]
+    },
+    "yellow": {
+      "17": [
+        "dark:text-yellow-100"
+      ]
+    },
+    "purple": {
+      "2": [
+        "dark:text-purple-100"
+      ]
+    }
+  }
+}

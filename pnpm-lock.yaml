@@ -2483,6 +2483,9 @@ importers:
       preact-router:
         specifier: ^4.1.2
         version: 4.1.2(preact@10.28.4)
+      tailwind-merge:
+        specifier: 'catalog:'
+        version: 3.4.0
       tailwindcss:
         specifier: 'catalog:'
         version: 4.2.2

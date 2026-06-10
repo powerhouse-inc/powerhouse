@@ -55,7 +55,7 @@ export const SidebarHeader: React.FC<SidebarHeaderProps> = ({
                 className={twMerge(
                   "w-[26px] rounded-lg bg-gray-50 p-1 text-center text-xs text-gray-100 dark:bg-slate-900 dark:text-slate-200",
                   !isDisabled &&
-                    "hover:bg-gray-100 hover:text-gray-200 dark:hover:bg-slate-600 dark:hover:text-slate-50",
+                    "hover-hover",
                   isDisabled &&
                     "cursor-not-allowed bg-gray-100 text-[#E2E4E7] dark:bg-[#252728] dark:text-slate-500",
                 )}

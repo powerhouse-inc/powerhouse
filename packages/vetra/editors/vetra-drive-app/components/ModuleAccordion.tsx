@@ -28,7 +28,7 @@ export const ModuleAccordion: React.FC<ModuleAccordionProps> = ({
   const header = (
     <div
       className={twMerge(
-        "flex items-center justify-between rounded-md bg-gray-50 px-3 py-2 text-gray-900 transition-colors hover:bg-gray-50 dark:bg-slate-800 dark:text-slate-50 dark:hover:bg-slate-800",
+        "flex items-center justify-between rounded-md bg-gray-50 px-3 py-2 text-gray-900 transition-colors hover-hover dark:bg-slate-800 dark:text-slate-50",
         headerClassName,
       )}
     >
@@ -53,7 +53,7 @@ export const ModuleAccordion: React.FC<ModuleAccordionProps> = ({
           e.stopPropagation();
           onAdd?.();
         }}
-        className="rounded-sm p-1 transition-colors hover:bg-gray-200 dark:hover:bg-slate-600 dark:hover:text-slate-100"
+        className="rounded-sm p-1 transition-colors hover-hover"
       >
         <PlusIcon
           width={16}

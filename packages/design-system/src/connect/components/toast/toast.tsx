@@ -95,7 +95,7 @@ export function toast(content: ToastContent, options?: ConnectToastOptions) {
 
 const CloseButton: ToastContainerProps["closeButton"] = ({ closeToast }) => (
   <button
-    className="flex items-center text-gray-500 hover:text-gray-600 dark:text-slate-400 dark:hover:text-slate-300"
+    className="flex items-center text-gray-500 hover-hover dark:text-slate-400"
     onClick={closeToast}
   >
     <Icon name="XmarkLight" size={16} />

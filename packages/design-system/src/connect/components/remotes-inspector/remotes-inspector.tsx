@@ -232,7 +232,7 @@ export function RemotesInspector({
                 value={manualUrl}
               />
               <button
-                className="flex items-center gap-1 rounded-sm border border-gray-300 bg-gray-50 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 dark:hover:bg-slate-700"
+                className="flex items-center gap-1 rounded-sm border border-gray-300 bg-gray-50 px-3 py-1.5 text-sm text-gray-700 hover-hover disabled:opacity-50 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
                 disabled={adding || !manualUrl.trim()}
                 onClick={() => void handleAddManual()}
                 title="Register a remote drive in manual poll mode (no background polling)"
@@ -243,7 +243,7 @@ export function RemotesInspector({
             </div>
           )}
           <button
-            className="flex items-center gap-1 rounded-sm border border-gray-300 bg-gray-50 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 dark:hover:bg-slate-700"
+            className="flex items-center gap-1 rounded-sm border border-gray-300 bg-gray-50 px-3 py-1.5 text-sm text-gray-700 hover-hover disabled:opacity-50 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
             disabled={loading}
             onClick={() => void handleRefresh()}
             type="button"
@@ -279,7 +279,7 @@ export function RemotesInspector({
                       index > 0 &&
                         "border-l border-gray-300 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100",
                       isSortable &&
-                        "cursor-pointer hover:bg-gray-200 hover:text-gray-900 dark:hover:bg-slate-600 dark:hover:text-slate-100",
+                        "cursor-pointer hover-hover",
                     )}
                     onClick={() => isSortable && handleSort(column.key)}
                     style={{ width: column.width }}
@@ -318,7 +318,7 @@ export function RemotesInspector({
               sortedRemotes.map((remote) => (
                 <tr
                   key={remote.id}
-                  className="odd:bg-white even:bg-gray-50 hover:bg-blue-50 dark:odd:bg-slate-800 dark:even:bg-slate-800 dark:hover:bg-blue-900"
+                  className="odd:bg-white even:bg-gray-50 hover-hover dark:odd:bg-slate-800 dark:even:bg-slate-800"
                 >
                   <td className="px-3 py-2 text-xs text-gray-900 dark:text-slate-50">
                     <span className="block truncate" title={remote.id}>
@@ -362,7 +362,7 @@ export function RemotesInspector({
                   </td>
                   <td className="border-l border-gray-300 px-3 py-2 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
                     <button
-                      className="flex items-center gap-1 rounded-sm bg-blue-50 px-2 py-1 text-xs text-blue-700 hover:bg-blue-100 dark:bg-blue-900 dark:text-blue-100 dark:hover:bg-blue-800"
+                      className="flex items-center gap-1 rounded-sm bg-blue-50 px-2 py-1 text-xs text-blue-700 hover-hover dark:bg-blue-900 dark:text-blue-100"
                       onClick={() => handleViewChannel(remote)}
                       type="button"
                     >
@@ -375,7 +375,7 @@ export function RemotesInspector({
                       <div className="flex items-center gap-1">
                         {triggerPull && (
                           <button
-                            className="rounded-sm bg-gray-100 px-2 py-1 text-xs text-gray-700 hover:bg-gray-200 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600 dark:hover:text-slate-100"
+                            className="rounded-sm bg-gray-100 px-2 py-1 text-xs text-gray-700 hover-hover dark:bg-slate-700 dark:text-slate-200"
                             onClick={() => handlePull(remote)}
                             title="Trigger a single pull cycle for this remote"
                             type="button"
@@ -385,7 +385,7 @@ export function RemotesInspector({
                         )}
                         {removeRemote && (
                           <button
-                            className="rounded-sm bg-red-50 px-2 py-1 text-xs text-red-700 hover:bg-red-100 dark:bg-red-900 dark:text-red-100 dark:hover:bg-red-800"
+                            className="rounded-sm bg-red-50 px-2 py-1 text-xs text-red-700 hover-hover dark:bg-red-900 dark:text-red-100"
                             onClick={() => void handleRemove(remote)}
                             type="button"
                           >

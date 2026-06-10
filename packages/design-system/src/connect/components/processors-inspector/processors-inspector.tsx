@@ -197,7 +197,7 @@ export function ProcessorsInspector({
         </h2>
         <div className="flex items-center gap-2">
           <button
-            className="flex items-center gap-1 rounded-sm border border-gray-300 bg-gray-50 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 dark:hover:bg-slate-700"
+            className="flex items-center gap-1 rounded-sm border border-gray-300 bg-gray-50 px-3 py-1.5 text-sm text-gray-700 hover-hover disabled:opacity-50 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
             disabled={loading}
             onClick={() => void handleRefresh()}
             type="button"
@@ -240,7 +240,7 @@ export function ProcessorsInspector({
                   <th
                     key={column.key}
                     className={twMerge(
-                      "group cursor-pointer px-3 py-2 text-left text-xs font-medium text-gray-700 hover:bg-gray-200 hover:text-gray-900 dark:text-slate-200 dark:hover:bg-slate-600 dark:hover:text-slate-100",
+                      "group cursor-pointer px-3 py-2 text-left text-xs font-medium text-gray-700 hover-hover dark:text-slate-200",
                       index > 0 &&
                         "border-l border-gray-300 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100",
                     )}
@@ -280,7 +280,7 @@ export function ProcessorsInspector({
                 <tr
                   key={processor.processorId}
                   className={twMerge(
-                    "hover:bg-blue-50 dark:hover:bg-blue-900",
+                    "hover-hover",
                     processor.status === "errored"
                       ? "bg-red-50 dark:bg-red-900"
                       : "odd:bg-white even:bg-gray-50 dark:odd:bg-slate-800 dark:even:bg-slate-800",
@@ -288,7 +288,7 @@ export function ProcessorsInspector({
                 >
                   <td className="px-3 py-2 text-xs">
                     <button
-                      className="flex items-center gap-1 rounded-sm bg-blue-50 px-2 py-1 text-xs text-blue-700 hover:bg-blue-100 dark:bg-blue-900 dark:text-blue-100 dark:hover:bg-blue-800"
+                      className="flex items-center gap-1 rounded-sm bg-blue-50 px-2 py-1 text-xs text-blue-700 hover-hover dark:bg-blue-900 dark:text-blue-100"
                       onClick={() => setSelectedProcessor(processor)}
                       type="button"
                     >
@@ -371,7 +371,7 @@ export function ProcessorsInspector({
                   <td className="border-l border-gray-300 px-3 py-2 text-xs dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
                     {processor.status === "errored" && onRetry && (
                       <button
-                        className="flex items-center gap-1 rounded-sm bg-yellow-50 px-2 py-1 text-xs text-yellow-700 hover:bg-yellow-100 disabled:opacity-50 dark:bg-yellow-900 dark:text-yellow-100 dark:hover:bg-yellow-800"
+                        className="flex items-center gap-1 rounded-sm bg-yellow-50 px-2 py-1 text-xs text-yellow-700 hover-hover disabled:opacity-50 dark:bg-yellow-900 dark:text-yellow-100"
                         disabled={retryingId === processor.processorId}
                         onClick={() => void handleRetry(processor.processorId)}
                         type="button"

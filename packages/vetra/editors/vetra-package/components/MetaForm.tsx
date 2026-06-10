@@ -210,7 +210,7 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
                       setKeywords(keywords.filter((k) => k.id !== keyword.id));
                       onRemoveKeyword?.(keyword.id);
                     }}
-                    className="ml-1 text-blue-600 hover:text-blue-800 focus:outline-none dark:text-blue-100 dark:hover:text-blue-100"
+                    className="ml-1 text-blue-600 hover-hover focus:outline-none dark:text-blue-100"
                   >
                     ×
                   </button>

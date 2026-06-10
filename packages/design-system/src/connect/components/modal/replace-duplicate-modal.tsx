@@ -49,7 +49,7 @@ export function ConnectReplaceDuplicateModal(
           </div>
           <button
             type="button"
-            className="flex size-6 items-center justify-center rounded-md outline-none hover:bg-gray-100 dark:hover:bg-slate-700"
+            className="flex size-6 items-center justify-center rounded-md outline-none hover-hover"
             onClick={() => onOpenChange?.(false)}
           >
             <Icon name="XmarkLight" size={24} />

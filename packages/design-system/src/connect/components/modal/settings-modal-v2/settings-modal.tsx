@@ -34,7 +34,7 @@ export function SettingsModal(props: Props) {
     <button type="button" onClick={() => setSelectedTab(tab.id)} key={tab.id}>
       <div
         className={twMerge(
-          "flex h-9 w-48 cursor-pointer items-center gap-x-2 rounded-md pl-3 text-gray-700 hover:bg-gray-50 dark:text-slate-200 dark:hover:bg-slate-800",
+          "flex h-9 w-48 cursor-pointer items-center gap-x-2 rounded-md pl-3 text-gray-700 hover-hover dark:text-slate-200",
           selectedTab === tab.id
             ? "bg-gray-50 dark:bg-slate-800"
             : "bg-transparent",

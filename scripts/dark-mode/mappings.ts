@@ -7,7 +7,7 @@ import { addPrefix } from "./utils.js";
  * Values intentionally omit the {@link darkPrefix}; it is added later when the
  * runtime lookup map is created.
  */
-const text = {
+export const text = {
   "text-black": "text-slate-50",
   "text-white": "text-slate-900",
   "text-gray-900": "text-slate-50",

@@ -49,7 +49,7 @@ export const ShareMenuItem: React.FC<ShareMenuItemProps> = ({ label, url }) => {
         </div>
         <button
           aria-label="Copy URL"
-          className="rounded-sm p-1 transition-colors hover:bg-gray-100 dark:hover:bg-slate-700"
+          className="rounded-sm p-1 transition-colors hover-hover"
           onClick={handleCopy}
         >
           <CopyIcon width={16} height={16} fill="#9CA3AF" />

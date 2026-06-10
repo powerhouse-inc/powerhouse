@@ -18,7 +18,7 @@ export default function SwitchboardLink({
       className={
         className
           ? className
-          : "text-gray-900 hover:text-orange-500 dark:text-slate-50 dark:hover:text-orange-100"
+          : "text-gray-900 hover-hover dark:text-slate-50"
       }
       href={href}
       target={target ?? "_self"}

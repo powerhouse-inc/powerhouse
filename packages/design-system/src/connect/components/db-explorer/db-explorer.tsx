@@ -300,7 +300,7 @@ export function DBExplorer({
           <div className="flex shrink-0 flex-col gap-2 border-t border-gray-200 p-2 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
             {onImportDb && (
               <button
-                className="rounded-sm border border-gray-300 bg-gray-50 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 dark:hover:bg-slate-700"
+                className="rounded-sm border border-gray-300 bg-gray-50 px-3 py-1.5 text-sm text-gray-700 hover-hover dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
                 onClick={handleImportClick}
                 type="button"
               >
@@ -309,7 +309,7 @@ export function DBExplorer({
             )}
             {onExportDb && (
               <button
-                className="rounded-sm border border-gray-300 bg-gray-50 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 dark:hover:bg-slate-700"
+                className="rounded-sm border border-gray-300 bg-gray-50 px-3 py-1.5 text-sm text-gray-700 hover-hover dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
                 onClick={handleExportClick}
                 type="button"
               >
@@ -328,7 +328,7 @@ export function DBExplorer({
                 </div>
                 {resetTargetMajor !== null && (
                   <button
-                    className="rounded-sm border border-red-300 bg-red-50 px-3 py-1.5 text-sm text-red-700 hover:bg-red-100 disabled:opacity-50 dark:border-red-600 dark:bg-red-900 dark:text-red-100 dark:hover:bg-red-800"
+                    className="rounded-sm border border-red-300 bg-red-50 px-3 py-1.5 text-sm text-red-700 hover-hover disabled:opacity-50 dark:border-red-600 dark:bg-red-900 dark:text-red-100"
                     onClick={() => setPendingResetMajor(resetTargetMajor)}
                     disabled={resetting}
                     type="button"

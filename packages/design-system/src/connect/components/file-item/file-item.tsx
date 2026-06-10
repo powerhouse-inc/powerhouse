@@ -136,7 +136,7 @@ export function FileItem(props: Props) {
   );
 
   const containerStyles = twMerge(
-    "group flex h-12 cursor-pointer items-center rounded-lg bg-gray-200 px-2 text-gray-700 select-none hover:text-gray-800 dark:bg-slate-600 dark:text-slate-100 dark:hover:text-slate-100",
+    "group flex h-12 cursor-pointer items-center rounded-lg bg-gray-200 px-2 text-gray-700 select-none hover-hover dark:bg-slate-600 dark:text-slate-100",
     isDragging ? "opacity-60" : "",
     className,
   );

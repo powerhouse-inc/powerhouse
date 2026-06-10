@@ -88,7 +88,7 @@ export const VersionPicker: React.FC<VersionPickerProps> = (props) => {
         disabled={disabled || !hasAnyPickable}
         className={twMerge(
           "flex items-center justify-between gap-2 rounded-md border border-gray-300 bg-gray-50 px-2.5 py-1 text-xs font-medium text-gray-900 transition-colors dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100",
-          "hover:bg-gray-50 focus:ring-2 focus:ring-gray-900/20 focus:outline-none dark:hover:bg-slate-800",
+          "hover-hover focus:ring-2 focus:ring-gray-900/20 focus:outline-none",
           "disabled:cursor-not-allowed disabled:opacity-60",
           className,
         )}
@@ -148,7 +148,7 @@ export const VersionPicker: React.FC<VersionPickerProps> = (props) => {
                     }}
                     className={twMerge(
                       "flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-xs transition-colors",
-                      "hover:bg-gray-100 dark:hover:bg-slate-700",
+                      "hover-hover",
                       isSelected &&
                         "bg-gray-100 font-semibold dark:bg-slate-700",
                     )}
@@ -183,7 +183,7 @@ export const VersionPicker: React.FC<VersionPickerProps> = (props) => {
                     }}
                     className={twMerge(
                       "flex w-full items-center px-3 py-1.5 text-left text-xs transition-colors",
-                      "hover:bg-gray-100 dark:hover:bg-slate-700",
+                      "hover-hover",
                       isSelected &&
                         "bg-gray-100 font-semibold dark:bg-slate-700",
                     )}

@@ -88,7 +88,7 @@ export const SubgraphEditorForm: React.FC<SubgraphEditorFormProps> = ({
           <button
             onClick={handleConfirm}
             disabled={!subgraphName.trim()}
-            className="rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-300 dark:bg-blue-300 dark:text-slate-900 dark:hover:bg-blue-200 dark:disabled:bg-slate-600 dark:disabled:text-slate-100"
+            className="rounded-md bg-blue-600 px-4 py-2 text-white hover-hover focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-300 dark:bg-blue-300 dark:text-slate-900 dark:disabled:bg-slate-600 dark:disabled:text-slate-100"
           >
             Confirm
           </button>

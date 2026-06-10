@@ -1,3 +1,4 @@
+// #!/usr/bin/env node
 import { concat, forEach, map, pipe, values } from "remeda";
 import { findFilesWithClasses } from "./find-files-with-classes.js";
 import { allMappings } from "./mappings.js";

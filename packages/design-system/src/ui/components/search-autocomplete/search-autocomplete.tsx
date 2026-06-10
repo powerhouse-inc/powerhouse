@@ -94,7 +94,7 @@ export const SearchAutocomplete: React.FC<SearchAutocompleteProps> = (
         <button
           onClick={handleSubmit}
           disabled={disabled || !query.trim() || selectingValue !== null}
-          className="h-9 rounded-md bg-gray-900 px-4 text-sm font-semibold text-white transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-slate-50 dark:text-slate-900 dark:hover:bg-slate-100"
+          className="h-9 rounded-md bg-gray-900 px-4 text-sm font-semibold text-white transition-colors hover-hover disabled:cursor-not-allowed disabled:opacity-50 dark:bg-slate-50 dark:text-slate-900"
         >
           {selectLabel}
         </button>
@@ -147,7 +147,7 @@ export const SearchAutocomplete: React.FC<SearchAutocompleteProps> = (
               return (
                 <div
                   key={option.value}
-                  className="flex items-center justify-between gap-2 rounded-md px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-slate-700"
+                  className="flex items-center justify-between gap-2 rounded-md px-2 py-1.5 hover-hover"
                 >
                   {renderOption ? (
                     <div className="min-w-0 flex-1">{renderOption(option)}</div>
@@ -185,7 +185,7 @@ export const SearchAutocomplete: React.FC<SearchAutocompleteProps> = (
                     <button
                       onClick={() => void handleSelect(option.value)}
                       disabled={selectingValue === option.value}
-                      className="shrink-0 rounded-md bg-gray-900 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-gray-800 disabled:opacity-50 dark:bg-slate-50 dark:text-slate-900 dark:hover:bg-slate-100"
+                      className="shrink-0 rounded-md bg-gray-900 px-3 py-1 text-xs font-medium text-white transition-colors hover-hover disabled:opacity-50 dark:bg-slate-50 dark:text-slate-900"
                     >
                       {selectingValue === option.value ? "..." : selectLabel}
                     </button>

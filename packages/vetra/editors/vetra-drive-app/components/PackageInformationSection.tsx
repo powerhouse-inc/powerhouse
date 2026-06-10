@@ -34,7 +34,7 @@ export const PackageInformationSection: React.FC<
           e.stopPropagation();
           onOpenPackageDocument();
         }}
-        className="flex items-center justify-center rounded-sm bg-gray-50 p-1 text-gray-700 transition-colors hover:bg-gray-200 hover:text-gray-800 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-600 dark:hover:text-slate-100"
+        className="flex items-center justify-center rounded-sm bg-gray-50 p-1 text-gray-700 transition-colors hover-hover dark:bg-slate-800 dark:text-slate-200"
         aria-label="Open package document"
       >
         <Icon name="Moved" size={16} />
