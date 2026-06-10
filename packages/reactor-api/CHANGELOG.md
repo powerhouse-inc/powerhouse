@@ -1,3 +1,13 @@
+## 6.2.0-dev.5 (2026-06-10)
+
+### 🩹 Fixes
+
+- tons of edge cases when these vars diverge -- instead, fail fast ([26bf5963c](https://github.com/powerhouse-inc/powerhouse/commit/26bf5963c))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.2.0-dev.4 (2026-06-09)
 
 ### 🚀 Features
