@@ -25,12 +25,11 @@ export const FormLabel: React.FC<FormLabelProps> = ({
   const classes = twMerge(
     "inline-flex items-center text-sm font-medium",
     inline ? "leading-[22px]" : "leading-4",
-    `text-gray-900 dark:text-slate-100 ${inline ? "" : ""}`,
+    "text-gray-900 dark:text-slate-100",
     hasError && "group-hover:text-red-900 dark:group-hover:text-red-100",
     hasError && inline && "text-red-800 dark:text-red-100",
     hasError && !inline && "text-red-900 dark:text-red-400",
-    disabled &&
-      `cursor-not-allowed text-gray-700 dark:text-slate-300 ${inline ? "" : ""}`,
+    disabled && "cursor-not-allowed text-gray-700 dark:text-slate-300",
     inline
       ? !disabled && "group-hover:text-gray-900 dark:group-hover:text-slate-50"
       : "mb-[3px]",
@@ -54,7 +53,7 @@ export const FormLabel: React.FC<FormLabelProps> = ({
           className={twMerge(
             "ml-1 text-gray-900 group-hover:text-gray-900 dark:text-slate-100 dark:group-hover:text-slate-50",
             hasError &&
-              `${inline ? "text-red-800 dark:text-red-100" : "text-red-900 dark:text-red-100"} group-hover:text-red-900`,
+              "text-red-900 group-hover:text-red-900 dark:text-red-100",
           )}
         >
           *

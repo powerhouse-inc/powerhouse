@@ -1,4 +1,5 @@
 import { Icon } from "#design-system";
+import { twMerge } from "tailwind-merge";
 import { CodePopover } from "../../code-popover.js";
 import { FormattedJsonViewer } from "../../formatted-json-viewer.js";
 import type { Signature } from "../types.js";
@@ -40,12 +41,19 @@ function VerificationStatus(props: SignatureProps) {
   ).length;
   const signatureText = signatureCount === 1 ? "signature" : "signatures";
   const verificationStatusText = `${verifiedSignaturesCount}/${signatureCount} ${signatureText} verified`;
-  const color =
-    verifiedSignaturesCount === 0
-      ? "text-red-800 dark:text-red-100"
-      : verifiedSignaturesCount === signatureCount
-        ? "text-green-700 dark:text-green-100"
-        : "text-orange-700 dark:text-orange-100";
 
-  return <span className={`text-xs ${color}`}>{verificationStatusText}</span>;
+  return (
+    <span
+      className={twMerge(
+        `text-xs`,
+        verifiedSignaturesCount === 0
+          ? "text-red-800 dark:text-red-100"
+          : verifiedSignaturesCount === signatureCount
+            ? "text-green-700 dark:text-green-100"
+            : "text-orange-700 dark:text-orange-100",
+      )}
+    >
+      {verificationStatusText}
+    </span>
+  );
 }

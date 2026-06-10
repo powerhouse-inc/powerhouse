@@ -46,13 +46,19 @@ export const AccountPopoverUser: FC<AccountPopoverUserProps> = ({
           >
             <div className="relative flex w-full items-center gap-1">
               <div
-                className={`flex items-center gap-1 transition-opacity duration-150 ${isCopied ? "opacity-0" : "opacity-100"}`}
+                className={twMerge(
+                  `flex items-center gap-1 transition-opacity duration-150`,
+                  isCopied ? "opacity-0" : "opacity-100",
+                )}
               >
                 <span className="text-xs">{shortAddress(address)}</span>
                 <Icon name="FilesEarmark" color="#9EA0A1" size={14} />
               </div>
               <div
-                className={`absolute left-0 text-xs transition-opacity duration-150 ${isCopied ? "opacity-100" : "opacity-0"}`}
+                className={twMerge(
+                  `absolute left-0 text-xs transition-opacity duration-150`,
+                  isCopied ? "opacity-100" : "opacity-0",
+                )}
               >
                 Copied to clipboard!
               </div>

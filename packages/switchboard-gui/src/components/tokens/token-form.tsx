@@ -1,6 +1,7 @@
-import { useState } from "preact/hooks";
-import useAuth from "../../hooks/useAuth.js";
 import type { FormEvent } from "preact/compat";
+import { useState } from "preact/hooks";
+import { twMerge } from "tailwind-merge";
+import useAuth from "../../hooks/useAuth.js";
 
 const TokenForm = () => {
   const [formData, setFormData] = useState({
@@ -111,9 +112,10 @@ const TokenForm = () => {
           <button
             disabled={submitDisabled}
             type="submit"
-            className={`bg-orange-400 ${
-              submitDisabled ? `` : `hover:bg-orange-600`
-            } rounded px-4 py-2 font-semibold text-white`}
+            className={twMerge(
+              "bg-orange-400 rounded px-4 py-2 font-semibold text-white dark:bg-orange-500",
+              !submitDisabled && "hover-hover",
+            )}
           >
             Create New Token
           </button>
