@@ -3,11 +3,11 @@ import { twMerge } from "tailwind-merge";
 import CaretDown from "../../../../powerhouse/components/icon-components/CaretDown.js";
 import Pin from "../../../../powerhouse/components/icon-components/Pin.js";
 import PinFilled from "../../../../powerhouse/components/icon-components/PinFilled.js";
+import { Icon } from "../../../../powerhouse/index.js";
 import { Tooltip, TooltipProvider } from "../../tooltip/tooltip.js";
 import { type FlattenedNode, NodeStatus, type SidebarNode } from "../types.js";
 import { useEllipsis } from "../use-ellipsis.js";
 import { StatusIcon } from "./status-icon.js";
-import { Icon } from "../../../../powerhouse/index.js";
 
 interface SidebarItemProps {
   node: FlattenedNode;
@@ -94,16 +94,16 @@ export const SidebarItem = ({
             data-testid="sidebar-item"
             id={`sidebar-item-${node.id}`}
             className={twMerge(
-              "group/sidebar-item relative flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-gray-700 select-none hover:effect dark:text-slate-400",
+              "group/sidebar-item hover:effect relative flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-gray-700 select-none dark:text-slate-400",
               hasStatus && "pr-6",
               allowPinning && (hasStatus ? "hover:pr-12" : "hover:pr-6"),
               isPinned && (hasStatus ? "pr-12" : "pr-6"),
-              isSearchActive && "bg-yellow-100 dark:bg-[#604B0033]",
+              isSearchActive && "bg-yellow-100 dark:bg-yellow-200",
               // line between pinned items
               pinnedMode &&
-                "after:absolute after:-top-2.5 after:left-[15px] after:h-4 after:w-px after:bg-gray-300 first:group-first/sidebar-item-wrapper:after:hidden hover:effect",
+                "hover:effect after:absolute after:-top-2.5 after:left-[15px] after:h-4 after:w-px after:bg-gray-300 first:group-first/sidebar-item-wrapper:after:hidden",
               isActive &&
-                "bg-gray-200 font-medium text-gray-900 hover:effect dark:bg-slate-900 dark:text-slate-50",
+                "hover:effect bg-gray-200 font-medium text-gray-900 dark:bg-slate-900 dark:text-slate-50",
               node.className,
             )}
             onClick={() => {
@@ -114,7 +114,7 @@ export const SidebarItem = ({
             <div className="flex max-w-full items-center gap-2">
               {!pinnedMode && (
                 <div
-                  className="-m-2 -mr-1 h-full rounded-md py-2 pr-1 pl-2 hover:effect"
+                  className="hover:effect -m-2 -mr-1 h-full rounded-md py-2 pr-1 pl-2"
                   onClick={(e) => {
                     e.stopPropagation();
                     toggleNode?.(node.id);
@@ -164,8 +164,8 @@ export const SidebarItem = ({
                     "absolute top-1/2 flex -translate-y-1/2 items-center justify-center",
                     hasStatus ? "right-8" : "right-2",
                     isPinned
-                      ? "text-gray-700 hover:effect dark:text-slate-50"
-                      : "invisible text-gray-300 group-hover/sidebar-item:visible hover:effect dark:text-slate-200",
+                      ? "hover:effect text-gray-700 dark:text-slate-50"
+                      : "hover:effect invisible text-gray-300 group-hover/sidebar-item:visible dark:text-slate-200",
                   )}
                   onClick={(e) => {
                     e.stopPropagation();
@@ -183,7 +183,7 @@ export const SidebarItem = ({
                 <div
                   className={twMerge(
                     "absolute top-1/2 right-2 flex -translate-y-1/2 items-center justify-center",
-                    "text-gray-300 group-hover/sidebar-item:visible hover:effect dark:text-slate-600",
+                    "hover:effect text-gray-300 group-hover/sidebar-item:visible dark:text-slate-600",
                   )}
                   onClick={(e) => {
                     e.stopPropagation();
@@ -221,7 +221,7 @@ const RenderTitle = forwardRef<
       !pinnedMode
         ? (() => {
             const highlightClass = isSearchActive
-              ? "bg-yellow-300 dark:bg-[#604B00]"
+              ? "bg-yellow-300 dark:bg-yellow-400"
               : "bg-gray-300 dark:bg-slate-800";
             const parts: React.ReactNode[] = [];
             let remaining = title;

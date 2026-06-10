@@ -1,12 +1,27 @@
 import { writeFileSync } from "node:fs";
 import path from "node:path";
-import { filter, flatMap, isTruthy, last, map, pipe, unique } from "remeda";
+import {
+  countBy,
+  drop,
+  entries,
+  filter,
+  flatMap,
+  groupBy,
+  identity,
+  isTruthy,
+  join,
+  last,
+  map,
+  mapValues,
+  pipe,
+  unique,
+} from "remeda";
 import { findFilesWithClasses } from "./find-files-with-classes.js";
 import { getStringLiteralsFromFiles, makeTsMorphProject } from "./ts-morph.js";
 import { getStringLiteralClassNameList } from "./utils.js";
 
 const project = makeTsMorphProject();
-const colorClasses = ["bg-", "text-", "border-", ":effect"];
+const colorClasses = ["bg-", "text-", "border-"];
 const excludes = [
   "xs",
   "sm",
@@ -24,6 +39,10 @@ const excludes = [
   "border-r",
   "border-x",
   "border-y",
+  "border-none",
+  "border-color",
+  "border-2",
+  "inherit",
   "dashed",
   "dotted",
   "px",
@@ -32,40 +51,72 @@ const excludes = [
   "right",
   "center",
   "current",
+  "collapse",
+  "solid",
+  ".",
+  "text-decoration",
+  "text-start",
+  ":effect",
+  "foreground",
+  "<",
+  ">",
+  "=",
 ];
 const allClasses = pipe(
   await findFilesWithClasses(colorClasses),
   getStringLiteralsFromFiles(project),
   flatMap(getStringLiteralClassNameList),
-  unique(),
   filter((c) => colorClasses.some((cc) => c.includes(cc))),
   filter((c) => !excludes.some((e) => c.includes(e))),
 );
 
-const withoutPrefixes = pipe(
+const light = pipe(
   allClasses,
+  filter((c) => !c.includes("dark")),
   map((c) => last(c.split(":"))),
   filter(isTruthy),
 );
 
-const colors = pipe(
-  withoutPrefixes,
-  map((c) => c.split("-").at(1)),
+const dark = pipe(
+  allClasses,
+  filter((c) => c.includes("dark")),
+  map((c) => last(c.split(":"))),
   filter(isTruthy),
-  filter((c) => !c.includes("/")),
-  unique(),
 );
 
-const hover = pipe(
-  allClasses,
-  filter(
-    // (c) => c.startsWith("group-hover") || c.startsWith("dark:group-hover"),
-    (c) => c.includes("hover"),
-  ),
+const lightCounts = pipe(
+  light,
+  map((c) => drop(c.split("-"), 1)),
+  map(join("-")),
+  filter(isTruthy),
+  countBy(identity()),
+  entries(),
+  groupBy(([_, k]) => k),
+  mapValues((vs) => flatMap(vs, ([v, _]) => v)),
+);
+
+const darkCounts = pipe(
+  dark,
+  map((c) => drop(c.split("-"), 1)),
+  map(join("-")),
+  filter(isTruthy),
+  countBy(identity()),
+  entries(),
+  groupBy(([_, k]) => k),
+  mapValues((vs) => flatMap(vs, ([v, _]) => v)),
+);
+
+const withOpacity = pipe(
+  [...light, ...dark],
   unique(),
+  filter((c) => c.includes("/")),
 );
 
 writeFileSync(
   path.join(process.cwd(), "all-classes.json"),
-  JSON.stringify({ allClasses, withoutPrefixes, colors, hover }, null, 2),
+  JSON.stringify(
+    { allClasses: unique(allClasses), lightCounts, darkCounts, withOpacity },
+    null,
+    2,
+  ),
 );
