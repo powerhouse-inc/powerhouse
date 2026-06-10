@@ -33,6 +33,7 @@
     "@tailwindcss/vite": "catalog:",
     "@vitejs/plugin-react": "catalog:",
     "document-model": "workspace:*",
+    "magic-string": "^0.30.21",
     "vite": "catalog:",
     "vite-plugin-html": "catalog:"
   },
