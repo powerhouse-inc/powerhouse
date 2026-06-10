@@ -145,13 +145,13 @@ export const SelectFieldRaw = React.forwardRef<
               className={twMerge(
                 "flex h-9 w-full items-center justify-between px-3 py-2",
                 "rounded-md border border-gray-300 bg-gray-50 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100",
-                "hover-hover",
-                "hover-hover",
+                "hover:effect",
+                "hover:effect",
                 "focus:ring-1 focus:ring-gray-900 focus:ring-offset-0 focus:outline-none dark:focus:ring-slate-300",
                 "focus-visible:ring-1 focus-visible:ring-gray-900 focus-visible:ring-offset-0 dark:focus-visible:ring-slate-300",
                 disabled && [
                   "pointer-events-auto! cursor-not-allowed bg-gray-50 dark:bg-slate-800",
-                  "hover-hover",
+                  "hover:effect",
                 ],
                 className,
               )}

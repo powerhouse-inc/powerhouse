@@ -231,7 +231,7 @@ function FilterClauseComponent({
         />
       )}
       <button
-        className="flex items-center justify-center rounded-sm p-1 text-gray-500 hover-hover dark:text-slate-400"
+        className="flex items-center justify-center rounded-sm p-1 text-gray-500 hover:effect dark:text-slate-400"
         onClick={onRemove}
         title="Remove filter"
         type="button"
@@ -331,7 +331,7 @@ export function FilterBar({
     <div className="flex shrink-0 flex-col gap-2 rounded-lg border border-gray-300 bg-gray-50 p-2 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
       <div className="flex items-center justify-between">
         <button
-          className="flex items-center gap-1 text-xs text-gray-700 hover-hover dark:text-slate-200"
+          className="flex items-center gap-1 text-xs text-gray-700 hover:effect dark:text-slate-200"
           onClick={() => setIsExpanded(!isExpanded)}
           type="button"
         >
@@ -351,7 +351,7 @@ export function FilterBar({
           )}
         </button>
         <button
-          className="flex items-center gap-1 rounded-sm border border-gray-300 bg-gray-50 px-2 py-1 text-xs text-gray-700 hover-hover dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
+          className="flex items-center gap-1 rounded-sm border border-gray-300 bg-gray-50 px-2 py-1 text-xs text-gray-700 hover:effect dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
           onClick={handleAddFilter}
           type="button"
         >

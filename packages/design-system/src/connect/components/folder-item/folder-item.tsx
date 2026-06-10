@@ -74,7 +74,7 @@ export function FolderItem(props: {
 
   const content =
     isReadMode || !isAllowedToCreateDocuments ? (
-      <div className="ml-3 max-h-6 truncate font-medium text-gray-700 group-hover:text-gray-800 dark:text-slate-200 dark:group-hover:text-slate-100">
+      <div className="ml-3 max-h-6 truncate font-medium text-gray-700 group-hover:effect dark:text-slate-200">
         {folderNode.name}
       </div>
     ) : (
@@ -98,7 +98,7 @@ export function FolderItem(props: {
 
   return (
     <div
-      className="relative w-64"
+      className="relative w-64 hover:effect"
       onClick={isReadMode ? () => setSelectedNode(folderNode) : undefined}
     >
       <div {...dragProps} {...dropProps} className={containerStyles}>

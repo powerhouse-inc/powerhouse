@@ -232,7 +232,7 @@ export function TableView({
           </span>
           {rows.length > 0 && (
             <button
-              className="flex items-center gap-1 rounded-sm border border-gray-300 bg-gray-50 px-2 py-1 text-xs text-gray-700 hover-hover disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
+              className="flex items-center gap-1 rounded-sm border border-gray-300 bg-gray-50 px-2 py-1 text-xs text-gray-700 hover:effect disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
               disabled={loading || copying}
               onClick={() => void handleCopyAll()}
               title="Copy all rows as CSV"
@@ -247,7 +247,7 @@ export function TableView({
         {total !== null && total > limit && (
           <div className="flex gap-1">
             <button
-              className="rounded-sm border border-gray-300 bg-gray-50 px-2 py-1 text-xs text-gray-700 hover-hover disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
+              className="rounded-sm border border-gray-300 bg-gray-50 px-2 py-1 text-xs text-gray-700 hover:effect disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
               disabled={currentPage === 0}
               onClick={() => goToPage(0)}
               type="button"
@@ -255,7 +255,7 @@ export function TableView({
               First
             </button>
             <button
-              className="rounded-sm border border-gray-300 bg-gray-50 px-2 py-1 text-xs text-gray-700 hover-hover disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
+              className="rounded-sm border border-gray-300 bg-gray-50 px-2 py-1 text-xs text-gray-700 hover:effect disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
               disabled={currentPage === 0}
               onClick={() => goToPage(currentPage - 1)}
               type="button"
@@ -276,7 +276,7 @@ export function TableView({
                   "min-w-8 rounded-sm border px-2 py-1 text-xs",
                   page === currentPage
                     ? "border-blue-500 bg-blue-50 text-blue-700 dark:border-blue-400 dark:bg-blue-900 dark:text-blue-100"
-                    : "border-gray-300 bg-gray-50 text-gray-700 hover-hover dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100",
+                    : "border-gray-300 bg-gray-50 text-gray-700 hover:effect dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100",
                 )}
                 onClick={() => goToPage(page)}
                 type="button"
@@ -292,7 +292,7 @@ export function TableView({
             )}
 
             <button
-              className="rounded-sm border border-gray-300 bg-gray-50 px-2 py-1 text-xs text-gray-700 hover-hover disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
+              className="rounded-sm border border-gray-300 bg-gray-50 px-2 py-1 text-xs text-gray-700 hover:effect disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
               disabled={currentPage >= totalPages - 1}
               onClick={() => goToPage(currentPage + 1)}
               type="button"
@@ -300,7 +300,7 @@ export function TableView({
               <Icon className="-rotate-90" name="ChevronDown" size={14} />
             </button>
             <button
-              className="rounded-sm border border-gray-300 bg-gray-50 px-2 py-1 text-xs text-gray-700 hover-hover disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
+              className="rounded-sm border border-gray-300 bg-gray-50 px-2 py-1 text-xs text-gray-700 hover:effect disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
               disabled={currentPage >= totalPages - 1}
               onClick={() => goToPage(totalPages - 1)}
               type="button"
@@ -336,8 +336,7 @@ export function TableView({
                       "group px-3 py-2 text-left text-xs font-medium text-gray-700 dark:text-slate-200",
                       index > 0 &&
                         "border-l border-gray-300 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100",
-                      onSort &&
-                        "cursor-pointer hover-hover",
+                      onSort && "cursor-pointer hover:effect",
                     )}
                     onClick={() => onSort && handleSort(column.name)}
                   >
@@ -366,11 +365,11 @@ export function TableView({
               rows.map((row, rowIndex) => (
                 <tr
                   key={rowIndex}
-                  className="odd:bg-white even:bg-gray-50 hover-hover dark:odd:bg-slate-800 dark:even:bg-slate-800"
+                  className="odd:bg-white even:bg-gray-50 hover:effect dark:odd:bg-slate-800 dark:even:bg-slate-800"
                 >
                   <td className="p-2 text-center">
                     <button
-                      className="flex items-center justify-center rounded-sm p-1 text-gray-500 hover-hover dark:text-slate-400"
+                      className="flex items-center justify-center rounded-sm p-1 text-gray-500 hover:effect dark:text-slate-400"
                       onClick={() => void handleCopyRow(rowIndex)}
                       title="Copy row as CSV"
                       type="button"

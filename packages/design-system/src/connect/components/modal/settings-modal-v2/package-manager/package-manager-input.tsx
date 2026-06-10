@@ -72,7 +72,7 @@ function PackageResultCard(props: PackageResultCardProps) {
   const isDisabled = option.disabled === true;
 
   return (
-    <div className="flex items-start justify-between gap-3 rounded-md p-2 hover-hover">
+    <div className="flex items-start justify-between gap-3 rounded-md p-2 hover:effect">
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium text-gray-900 dark:text-slate-50">
           {baseName}
@@ -112,7 +112,7 @@ function PackageResultCard(props: PackageResultCardProps) {
           <button
             onClick={() => handleSelect(installSpec)}
             disabled={isSelecting}
-            className="rounded-md bg-gray-900 px-3 py-1 text-xs font-medium text-white transition-colors hover-hover disabled:opacity-50 dark:bg-slate-50 dark:text-slate-900"
+            className="rounded-md bg-gray-900 px-3 py-1 text-xs font-medium text-white transition-colors hover:effect disabled:opacity-50 dark:bg-slate-50 dark:text-slate-900"
           >
             {isSelecting ? "..." : selectLabel}
           </button>

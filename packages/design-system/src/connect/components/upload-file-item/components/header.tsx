@@ -60,7 +60,7 @@ export function UploadFileItemHeader(props: HeaderProps) {
           <button
             type="button"
             onClick={onClose}
-            className="flex h-[18px] w-[18px] items-center justify-center text-gray-700 hover-hover dark:text-slate-200"
+            className="flex h-[18px] w-[18px] items-center justify-center text-gray-700 hover:effect dark:text-slate-200"
             aria-label="Close"
           >
             <Icon name="XmarkLight" size={18} />

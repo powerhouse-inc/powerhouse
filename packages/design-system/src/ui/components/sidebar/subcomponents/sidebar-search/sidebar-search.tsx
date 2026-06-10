@@ -92,7 +92,7 @@ export const SidebarSearch: React.FC<SidebarSearchProps> = ({
               onClick={() => changeSearchTerm("")}
               height={16}
               width={16}
-              className="cursor-pointer text-gray-500 hover-hover active:text-gray-900 dark:text-slate-700 dark:active:text-slate-300"
+              className="cursor-pointer text-gray-500 hover:effect active:text-gray-900 dark:text-slate-700 dark:active:text-slate-300"
             />
           </div>
         )}
@@ -107,7 +107,7 @@ export const SidebarSearch: React.FC<SidebarSearchProps> = ({
             "rounded-md border border-gray-300 px-2 py-1 text-sm text-gray-500",
             isStatusFilterEnabled
               ? "border-blue-500 bg-blue-100 text-blue-900"
-              : "hover-hover",
+              : "hover:effect",
           )}
         >
           <Tabler height={16} width={16} />

@@ -346,9 +346,7 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
-@utility hover-hover {
-  &:hover {
-    filter: brightness(var(--hover));
-    transition: filter 0.2s ease-in-out;
-  }
+@utility effect {
+  filter: brightness(var(--hover));
+  transition: filter 0.2s ease-in-out;
 }

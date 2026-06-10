@@ -156,7 +156,7 @@ export const PackageManagerListItem = (props: {
           }}
         >
           <Icon
-            className="text-gray-700 group-hover:text-gray-900 dark:text-slate-200 dark:group-hover:text-slate-50"
+            className="text-gray-700 group-hover:effect dark:text-slate-200"
             name="VerticalDots"
           />
         </button>
@@ -333,7 +333,7 @@ const PackageSection: React.FC<{
           onClick={toggle}
           aria-expanded={!collapsed}
           aria-controls={contentId}
-          className="flex w-full items-center gap-2 pb-2 text-left text-base font-semibold text-gray-900 hover-hover dark:text-slate-100"
+          className="flex w-full items-center gap-2 pb-2 text-left text-base font-semibold text-gray-900 hover:effect dark:text-slate-100"
         >
           <Icon
             name="ChevronDown"

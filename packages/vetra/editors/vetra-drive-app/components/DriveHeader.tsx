@@ -88,7 +88,7 @@ export const DriveHeader: React.FC<DriveHeaderProps> = ({
             <button
               aria-label="Drive information"
               aria-expanded={isInfoMenuOpen}
-              className="rounded-full p-1 text-gray-500 transition-colors hover-hover dark:text-slate-400"
+              className="rounded-full p-1 text-gray-500 transition-colors hover:effect dark:text-slate-400"
               onClick={toggleInfoMenu}
             >
               <InfoIcon className="" />
@@ -108,7 +108,7 @@ export const DriveHeader: React.FC<DriveHeaderProps> = ({
               <button
                 aria-label="Share drive"
                 aria-expanded={isShareMenuOpen}
-                className="rounded-full p-1 text-gray-900 transition-colors hover-hover dark:text-slate-50"
+                className="rounded-full p-1 text-gray-900 transition-colors hover:effect dark:text-slate-50"
                 onClick={toggleShareMenu}
               >
                 <ShareIcon width={16} height={16} />
@@ -132,7 +132,7 @@ export const DriveHeader: React.FC<DriveHeaderProps> = ({
           href="https://academy.vetra.io/"
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-2 text-sm text-gray-900 underline transition-colors hover-hover dark:text-slate-50"
+          className="flex items-center gap-2 text-sm text-gray-900 underline transition-colors hover:effect dark:text-slate-50"
         >
           <ExternalLinkIcon />
           Vetra Academy

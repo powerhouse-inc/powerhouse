@@ -197,7 +197,7 @@ export const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
                       setDocumentTypes([]);
                       onRemoveDocumentType?.({ id: type.id });
                     }}
-                    className="ml-2 text-gray-400 hover-hover focus:outline-none dark:text-slate-500"
+                    className="ml-2 text-gray-400 hover:effect focus:outline-none dark:text-slate-500"
                   >
                     ×
                   </button>
@@ -214,7 +214,7 @@ export const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
           <button
             onClick={handleConfirm}
             disabled={!editorName.trim() || documentTypes.length === 0}
-            className="rounded-md bg-blue-600 px-4 py-2 text-white hover-hover focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-300 dark:bg-blue-300 dark:text-slate-900 dark:disabled:bg-slate-600 dark:disabled:text-slate-100"
+            className="rounded-md bg-blue-600 px-4 py-2 text-white hover:effect focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-300 dark:bg-blue-300 dark:text-slate-900 dark:disabled:bg-slate-600 dark:disabled:text-slate-100"
           >
             Confirm
           </button>

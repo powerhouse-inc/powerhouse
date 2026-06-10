@@ -114,7 +114,7 @@ const TokenForm = () => {
             type="submit"
             className={twMerge(
               "bg-orange-400 rounded px-4 py-2 font-semibold text-white dark:bg-orange-500",
-              !submitDisabled && "hover-hover",
+              !submitDisabled && "hover:effect",
             )}
           >
             Create New Token

@@ -79,7 +79,7 @@ export const ConnectSearchBar: React.FC<ConnectSearchBarProps> = (props) => {
         <DropdownMenuContent className="rounded-xl border border-gray-100 bg-gray-50 p-2 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
           {items.map((item) => (
             <DropdownMenuItem
-              className="h-10 cursor-pointer overflow-hidden rounded-lg hover-hover"
+              className="h-10 cursor-pointer overflow-hidden rounded-lg hover:effect"
               id={item.id}
               key={item.id}
               onSelect={() => onFilterSelect(item.id)}

@@ -251,7 +251,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         >
           <div
             className={twMerge(
-              "relative h-full w-px translate-x-[5px] transition-colors group-hover/sidebar-resizer:bg-gray-500 dark:group-hover/sidebar-resizer:bg-slate-600",
+              "relative h-full w-px translate-x-[5px] transition-colors group-hover/sidebar-resizer:effect dark:group-hover/sidebar-resizer:effect",
               isResizing && "cursor-default bg-blue-500",
               !isSidebarOpen && "bg-gray-300 dark:bg-slate-600",
             )}

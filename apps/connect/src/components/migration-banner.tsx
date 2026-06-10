@@ -82,7 +82,7 @@ export const MigrationBanner: React.FC = () => {
           type="button"
           disabled={migrating}
           onClick={handleMigrate}
-          className="rounded-sm bg-gray-900 px-3 py-1 text-sm font-medium text-white hover-hover disabled:opacity-50 dark:bg-slate-50 dark:text-slate-900"
+          className="rounded-sm bg-gray-900 px-3 py-1 text-sm font-medium text-white hover:effect disabled:opacity-50 dark:bg-slate-50 dark:text-slate-900"
         >
           {migrating ? "Migrating…" : "Migrate now"}
         </button>
@@ -90,7 +90,7 @@ export const MigrationBanner: React.FC = () => {
           type="button"
           disabled={migrating}
           onClick={dismiss}
-          className="rounded-sm border border-gray-900 bg-transparent px-3 py-1 text-sm font-medium text-gray-900 hover-hover disabled:opacity-50 dark:border-slate-50 dark:text-slate-50"
+          className="rounded-sm border border-gray-900 bg-transparent px-3 py-1 text-sm font-medium text-gray-900 hover:effect disabled:opacity-50 dark:border-slate-50 dark:text-slate-50"
         >
           Dismiss
         </button>

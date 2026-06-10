@@ -65,7 +65,7 @@ export const CommandItemList: React.FC<FavoriteOptionsProps> = ({
               "cursor-pointer",
               "data-[selected=true]:bg-gray-100 dark:data-[selected=true]:bg-slate-500",
               opt.disabled &&
-                "pointer-events-auto! cursor-not-allowed hover:bg-transparent hover-hover",
+                "pointer-events-auto! cursor-not-allowed hover:bg-transparent hover:effect",
             )}
             role="option"
             aria-selected={isSelected}

@@ -14,7 +14,7 @@ const User = () => {
       <div className="flex flex-col gap-8 pt-14">
         <button
           type="submit"
-          className={`mx-auto rounded-sm bg-orange-500 px-4 py-2 text-xs font-semibold text-white hover-hover`}
+          className={`mx-auto rounded-sm bg-orange-500 px-4 py-2 text-xs font-semibold text-white hover:effect`}
           onClick={() => {
             void signIn();
           }}
@@ -42,7 +42,7 @@ const User = () => {
             }}
             href={"/"}
           >
-            <div className="flex flex-row items-center rounded-sm text-orange-400 hover-hover dark:text-orange-100">
+            <div className="flex flex-row items-center rounded-sm text-orange-400 hover:effect dark:text-orange-100">
               <div className="w-20">Sign Out</div>{" "}
               <div className="w-8">
                 <ArrowRightStartOnRectangleIcon className="text-orange-500 dark:text-orange-100" />

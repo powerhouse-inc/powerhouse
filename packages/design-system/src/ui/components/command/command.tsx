@@ -29,7 +29,7 @@ const CommandInput = React.forwardRef<
       "group relative flex items-center border-b",
       "border-b-gray-300 dark:border-b-slate-900",
       "hover:border-b-gray-300 dark:hover:border-b-slate-800",
-      "hover-hover",
+      "hover:effect",
       "focus-within:border-b-gray-300 dark:focus-within:border-b-slate-800",
       "focus-within:bg-gray-100 dark:focus-within:bg-slate-700",
       wrapperClassName,
@@ -41,7 +41,7 @@ const CommandInput = React.forwardRef<
       size={16}
       className={twMerge(
         "pointer-events-none absolute top-3.5 left-2 text-gray-500 dark:text-slate-400",
-        "group-hover:text-gray-700 dark:group-hover:text-slate-200",
+        "group-hover:effect",
         "group-focus-within:text-gray-900! dark:group-focus-within:text-slate-50",
       )}
     />
@@ -50,7 +50,7 @@ const CommandInput = React.forwardRef<
       className={twMerge(
         "flex w-full bg-transparent pt-3 pr-3 pb-2 pl-8 text-sm/5 font-normal outline-none",
         "placeholder:text-gray-500 dark:placeholder:text-slate-400",
-        "group-hover:placeholder:text-gray-700 dark:group-hover:placeholder:text-slate-500",
+        "group-hover:placeholder:effect dark:group-hover:placeholder:effect",
         "group-focus-within:placeholder:text-gray-700! dark:group-focus-within:placeholder:text-slate-300",
         "disabled:cursor-not-allowed",
         className,

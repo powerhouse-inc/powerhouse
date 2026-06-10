@@ -43,7 +43,7 @@ export function ConnectDropdownMenu<TItemId extends string>(
         {items.map(({ id, label, icon, className }) => (
           <DropdownMenuItem
             className={twMerge(
-              "flex items-center px-5 py-2 outline-none first-of-type:rounded-t-2xl first-of-type:pt-3 last-of-type:rounded-b-2xl last-of-type:pb-3 hover-hover",
+              "flex items-center px-5 py-2 outline-none first-of-type:rounded-t-2xl first-of-type:pt-3 last-of-type:rounded-b-2xl last-of-type:pb-3 hover:effect",
               className,
             )}
             key={id}

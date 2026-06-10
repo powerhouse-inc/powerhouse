@@ -43,10 +43,10 @@ export const Radio = React.forwardRef<
           className={twMerge(
             "group peer",
             "aspect-square size-4 rounded-full border border-gray-800 dark:border-slate-100",
-            "hover-hover",
+            "hover:effect",
             disabled && [
-              "cursor-not-allowed border-gray-600 hover-hover dark:border-slate-300",
-              "dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 hover-hover",
+              "cursor-not-allowed border-gray-600 hover:effect dark:border-slate-300",
+              "hover:effect dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100",
             ],
             hasError && [
               "border-red-700 hover:border-red-900 dark:border-red-200 dark:hover:border-red-50",
@@ -68,8 +68,8 @@ export const Radio = React.forwardRef<
               "after:rounded-full after:bg-gray-800 after:content-[''] dark:after:bg-slate-100",
               "dark:after:bg-slate-400",
               !disabled && [
-                "group-hover:after:bg-gray-900 dark:group-hover:after:bg-slate-50",
-                "dark:group-hover:after:bg-slate-50",
+                "group-hover:after:effect dark:group-hover:after:effect",
+                "dark:group-hover:after:effect",
               ],
               disabled && [
                 "after:bg-gray-600 dark:after:bg-slate-300",
@@ -83,7 +83,7 @@ export const Radio = React.forwardRef<
             !disabled &&
               !hasError && [
                 "cursor-pointer",
-                "peer-hover:text-gray-900 dark:peer-hover:text-slate-50",
+                "peer-hover:effect dark:peer-hover:effect",
               ],
           )}
           description={description}

@@ -92,7 +92,7 @@ export function DriveSettingsModal(props: DriveSettingsModalProps) {
             Drive settings
           </h1>
           <button
-            className="flex size-8 items-center justify-center rounded-md bg-gray-100 text-gray-500 outline-none hover-hover dark:bg-slate-700 dark:text-slate-400"
+            className="flex size-8 items-center justify-center rounded-md bg-gray-100 text-gray-500 outline-none hover:effect dark:bg-slate-700 dark:text-slate-400"
             onClick={handleCancel}
             tabIndex={-1}
           >

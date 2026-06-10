@@ -48,7 +48,7 @@ export function ObjectInspectorModal({
             {title}
           </h2>
           <button
-            className="flex size-6 cursor-pointer items-center justify-center rounded-md text-gray-500 outline-none hover-hover dark:text-slate-400"
+            className="flex size-6 cursor-pointer items-center justify-center rounded-md text-gray-500 outline-none hover:effect dark:text-slate-400"
             onClick={() => onOpenChange(false)}
             type="button"
           >

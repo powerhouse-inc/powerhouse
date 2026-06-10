@@ -47,10 +47,7 @@ function MenuList(
     <components.MenuList {...rest}>
       {props.children}
       {hasAddItemButton ? (
-        <button
-          className="w-full px-2 py-3 hover-hover"
-          onClick={onClick}
-        >
+        <button className="w-full px-2 py-3 hover:effect" onClick={onClick}>
           {label}
         </button>
       ) : null}

@@ -66,7 +66,7 @@ export function DebugInspector({
               type="button"
               disabled={running}
               onClick={() => setConfirmMajor(major)}
-              className="flex items-center gap-1 rounded-sm border border-red-300 bg-red-50 px-3 py-1.5 text-sm text-red-700 hover-hover disabled:opacity-50 dark:border-red-600 dark:bg-red-900 dark:text-red-100"
+              className="flex items-center gap-1 rounded-sm border border-red-300 bg-red-50 px-3 py-1.5 text-sm text-red-700 hover:effect disabled:opacity-50 dark:border-red-600 dark:bg-red-900 dark:text-red-100"
             >
               {isPending ? `Resetting to PG${major}…` : `Reset to PG${major}`}
             </button>
@@ -83,14 +83,14 @@ export function DebugInspector({
           <button
             type="button"
             onClick={() => void handleReset(confirmMajor)}
-            className="rounded-sm bg-yellow-600 px-3 py-1 text-sm text-white hover-hover dark:bg-yellow-300 dark:text-slate-900"
+            className="rounded-sm bg-yellow-600 px-3 py-1 text-sm text-white hover:effect dark:bg-yellow-300 dark:text-slate-900"
           >
             Confirm reset to PG{confirmMajor}
           </button>
           <button
             type="button"
             onClick={() => setConfirmMajor(null)}
-            className="rounded-sm border border-gray-300 bg-gray-50 px-3 py-1 text-sm text-gray-700 hover-hover dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
+            className="rounded-sm border border-gray-300 bg-gray-50 px-3 py-1 text-sm text-gray-700 hover:effect dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
           >
             Cancel
           </button>

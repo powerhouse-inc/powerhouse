@@ -6,7 +6,7 @@ import { getStringLiteralsFromFiles, makeTsMorphProject } from "./ts-morph.js";
 import { getStringLiteralClassNameList } from "./utils.js";
 
 const project = makeTsMorphProject();
-const colorClasses = ["bg-", "text-", "border-"];
+const colorClasses = ["bg-", "text-", "border-", ":effect"];
 const excludes = [
   "xs",
   "sm",
@@ -56,9 +56,13 @@ const colors = pipe(
   unique(),
 );
 
-const hover = filter(
+const hover = pipe(
   allClasses,
-  (c) => c.startsWith("hover") || c.startsWith("dark:hover"),
+  filter(
+    // (c) => c.startsWith("group-hover") || c.startsWith("dark:group-hover"),
+    (c) => c.includes("hover"),
+  ),
+  unique(),
 );
 
 writeFileSync(

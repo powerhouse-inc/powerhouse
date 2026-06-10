@@ -33,14 +33,14 @@ const CheckboxBase = React.forwardRef<
       "data-[state=checked]:text-gray-50 data-[state=indeterminate]:text-gray-50 dark:data-[state=checked]:text-slate-900 dark:data-[state=indeterminate]:text-slate-900",
       // hover states
       !props.disabled && [
-        "group-hover:border-gray-900 data-[state=checked]:group-hover:bg-gray-900 data-[state=indeterminate]:group-hover:bg-gray-900 dark:group-hover:border-slate-50 dark:data-[state=checked]:group-hover:bg-slate-50 dark:data-[state=indeterminate]:group-hover:bg-slate-50",
-        "dark:group-hover:border-slate-50 dark:data-[state=checked]:group-hover:bg-slate-50 dark:data-[state=indeterminate]:group-hover:bg-slate-50",
+        "group-hover:effect data-[state=checked]:group-hover:effect data-[state=indeterminate]:group-hover:effect dark:data-[state=checked]:group-hover:effect dark:data-[state=indeterminate]:group-hover:effect",
+        "group-hover:effect dark:data-[state=checked]:group-hover:effect dark:data-[state=indeterminate]:group-hover:effect",
       ],
       // Error state
       "data-[invalid=true]:data-state:border-red-800! data-[invalid=true]:data-[state=checked]:bg-red-800! data-[invalid=true]:data-[state=indeterminate]:bg-red-800! dark:data-[invalid=true]:data-state:border-red-100! dark:data-[invalid=true]:data-[state=checked]:bg-red-100! dark:data-[invalid=true]:data-[state=indeterminate]:bg-red-100!",
       "dark:data-[invalid=true]:data-state:border-red-800! dark:data-[invalid=true]:data-[state=checked]:bg-red-800! dark:data-[invalid=true]:data-[state=indeterminate]:bg-red-800!",
       // error hover states
-      "data-[invalid=true]:group-hover:border-red-900! data-[invalid=true]:data-[state=checked]:group-hover:bg-red-900! data-[invalid=true]:data-[state=indeterminate]:group-hover:bg-red-900! dark:data-[invalid=true]:group-hover:border-red-50! dark:data-[invalid=true]:data-[state=checked]:group-hover:bg-red-50! dark:data-[invalid=true]:data-[state=indeterminate]:group-hover:bg-red-50!",
+      "data-[invalid=true]:group-hover:border-red-900! data-[invalid=true]:data-[state=checked]:group-hover:effect data-[invalid=true]:data-[state=indeterminate]:group-hover:effect dark:data-[invalid=true]:group-hover:border-red-50! dark:data-[invalid=true]:data-[state=checked]:group-hover:effect dark:data-[invalid=true]:data-[state=indeterminate]:group-hover:effect",
       className,
     )}
     checked={checked}

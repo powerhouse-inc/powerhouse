@@ -53,7 +53,7 @@ function TreeItem({
     <div>
       <div
         className={twMerge(
-          "flex cursor-pointer items-center gap-1 py-1 pr-2 text-sm hover-hover",
+          "flex cursor-pointer items-center gap-1 py-1 pr-2 text-sm hover:effect",
           selected && "bg-blue-50 dark:bg-blue-900",
         )}
         style={{ paddingLeft: depth * INDENT_PX + 4 }}
@@ -61,7 +61,7 @@ function TreeItem({
       >
         {hasChildren ? (
           <button
-            className="flex size-4 shrink-0 items-center justify-center text-gray-500 hover-hover dark:text-slate-200"
+            className="flex size-4 shrink-0 items-center justify-center text-gray-500 hover:effect dark:text-slate-200"
             onClick={handleChevronClick}
             type="button"
           >
@@ -171,7 +171,7 @@ export function SchemaTreeSidebar({
             <span className="truncate">{schema}</span>
             {onRefresh && (
               <button
-                className="ml-auto p-0.5 text-gray-400 hover-hover dark:text-slate-200"
+                className="ml-auto p-0.5 text-gray-400 hover:effect dark:text-slate-200"
                 onClick={handleRefreshClick}
                 type="button"
                 disabled={loading}

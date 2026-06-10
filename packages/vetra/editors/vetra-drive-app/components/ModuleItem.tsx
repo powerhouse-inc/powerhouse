@@ -73,7 +73,7 @@ export const ModuleItem: React.FC<ModuleItemProps> = ({
     <div
       onClick={() => onClick(fileNode)}
       className={twMerge(
-        "group flex w-full cursor-pointer items-center gap-3 rounded-md bg-gray-100 p-1 text-left transition-colors hover-hover dark:bg-slate-700",
+        "group flex w-full cursor-pointer items-center gap-3 rounded-md bg-gray-100 p-1 text-left transition-colors hover:effect dark:bg-slate-700",
         className,
       )}
     >

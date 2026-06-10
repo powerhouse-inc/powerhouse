@@ -36,7 +36,7 @@ export const DataIntegrationsColumn: React.FC<DataIntegrationsColumnProps> = ({
           count={subgraphs.length}
           onAdd={onAddSubgraph || (() => console.log("Add subgraph clicked"))}
           defaultOpen={true}
-          headerClassName="m-4 bg-gray-100 hover-hover border border-gray-200 rounded-md dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
+          headerClassName="m-4 bg-gray-100 hover:effect border border-gray-200 rounded-md dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
         >
           <ModuleList
             items={subgraphs}
@@ -51,7 +51,7 @@ export const DataIntegrationsColumn: React.FC<DataIntegrationsColumnProps> = ({
           count={processors.length}
           onAdd={onAddProcessor || (() => console.log("Add processor clicked"))}
           defaultOpen={true}
-          headerClassName="m-4 bg-gray-100 hover-hover border border-gray-200 rounded-md dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
+          headerClassName="m-4 bg-gray-100 hover:effect border border-gray-200 rounded-md dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
         >
           <ModuleList
             items={processors}
@@ -69,7 +69,7 @@ export const DataIntegrationsColumn: React.FC<DataIntegrationsColumnProps> = ({
             (() => console.log("Add codegen processor clicked"))
           }
           defaultOpen={true}
-          headerClassName="m-4 bg-gray-100 hover-hover border border-gray-200 rounded-md dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
+          headerClassName="m-4 bg-gray-100 hover:effect border border-gray-200 rounded-md dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
         >
           <ModuleList
             items={codegenProcessors}

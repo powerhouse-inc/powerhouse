@@ -136,7 +136,7 @@ export function FileItem(props: Props) {
   );
 
   const containerStyles = twMerge(
-    "group flex h-12 cursor-pointer items-center rounded-lg bg-gray-200 px-2 text-gray-700 select-none hover-hover dark:bg-slate-600 dark:text-slate-100",
+    "group flex h-12 cursor-pointer items-center rounded-lg bg-gray-200 px-2 text-gray-700 select-none hover:effect dark:bg-slate-600 dark:text-slate-100",
     isDragging ? "opacity-60" : "",
     className,
   );
@@ -144,10 +144,10 @@ export function FileItem(props: Props) {
   const content = isReadMode ? (
     <div className="flex w-52 items-center justify-between">
       <div className="mr-2 truncate group-hover:mr-0">
-        <div className="max-h-6 truncate text-sm font-medium text-gray-700 group-hover:text-gray-800 dark:text-slate-200 dark:group-hover:text-slate-100">
+        <div className="max-h-6 truncate text-sm font-medium text-gray-700 group-hover:effect dark:text-slate-200">
           {fileNode.name}
         </div>
-        <div className="max-h-6 truncate text-xs font-medium text-gray-700 group-hover:text-gray-800 dark:text-slate-200 dark:group-hover:text-slate-100">
+        <div className="max-h-6 truncate text-xs font-medium text-gray-700 group-hover:effect dark:text-slate-200">
           {fileNode.documentType}
         </div>
       </div>
