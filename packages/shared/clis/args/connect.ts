@@ -1,5 +1,13 @@
 import type { Type } from "cmd-ts";
-import { number, option, optional, positional, string } from "cmd-ts";
+import {
+  boolean,
+  flag,
+  number,
+  option,
+  optional,
+  positional,
+  string,
+} from "cmd-ts";
 import {
   DEFAULT_CONNECT_OUTDIR,
   DEFAULT_CONNECT_PREVIEW_PORT,
@@ -187,6 +195,12 @@ export const connectBuildArgs = {
   }),
   ...connectRuntimeOverrideArgs,
   ...connectPositionalArgs,
+  dynamicBase: flag({
+    type: optional(boolean),
+    long: "dynamic-base",
+    description:
+      "Build one bundle that serves under any subpath; base resolved at serve time from a runtime global. Overrides --base.",
+  }),
   ...commonArgs,
 };
 

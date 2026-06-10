@@ -67,6 +67,9 @@ Options:
 
   --base <base>               Base path for the app. Default is "/".
 
+  --dynamic-base              Build one bundle that serves under any subpath; base
+                              resolved at serve time from a runtime global. Overrides --base.
+
   --mode <mode>               Vite mode to use (e.g., development, production).
 
   --config-file <configFile>  Path to the powerhouse.config.js file.

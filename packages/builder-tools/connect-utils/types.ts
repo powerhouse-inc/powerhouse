@@ -24,6 +24,9 @@ export type IConnectOptions = {
    * value in the emitted runtime config.
    */
   cliPackageRegistryUrl?: string;
+  /* Build one bundle that serves under any subpath; base resolved at serve
+   * time from a runtime global instead of baked in. Overrides the deploy base. */
+  dynamicBase?: boolean;
 };
 
 export type ConnectCommonOptions = {
