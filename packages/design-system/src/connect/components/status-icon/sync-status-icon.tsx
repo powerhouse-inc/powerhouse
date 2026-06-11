@@ -69,7 +69,7 @@ export function SyncStatusIcon(props: SyncStatusIconProps) {
       <Icon
         size={16}
         {...iconProps}
-        className={twMerge("text-red-900 dark:text-red-400", className)}
+        className={twMerge("text-red-900 dark:text-red-500", className)}
         name={icons[MISSING]}
       />
     ),
@@ -77,7 +77,7 @@ export function SyncStatusIcon(props: SyncStatusIconProps) {
       <Icon
         size={16}
         {...iconProps}
-        className={twMerge("text-red-900 dark:text-red-400", className)}
+        className={twMerge("text-red-900 dark:text-red-500", className)}
         name={icons[ERROR]}
       />
     ),

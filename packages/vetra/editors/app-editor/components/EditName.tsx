@@ -54,7 +54,7 @@ export function EditAppModuleName() {
             Save
           </button>
           <button
-            className="text-sm text-red-800 dark:text-red-100"
+            className="text-sm text-red-900 dark:text-red-100"
             onClick={onClickCancelEditAppModuleName}
           >
             Cancel

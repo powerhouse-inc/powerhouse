@@ -72,7 +72,7 @@ function getDefaultOptions(type: ExtendedTypeOptions): ToastOptions {
         options.type = "error";
         options.icon = (
           <Icon
-            className="text-red-800 dark:text-red-100"
+            className="text-red-900 dark:text-red-100"
             name="TrashFill"
             size={24}
           />

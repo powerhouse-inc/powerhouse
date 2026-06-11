@@ -136,7 +136,7 @@ function DriveAboutEntry({ drive }: { drive: DocumentDriveDocument }) {
         </div>
       )}
       {info.status === "error" && (
-        <div className="mt-1 text-xs text-red-600 dark:text-red-100">
+        <div className="mt-1 text-xs text-red-500 dark:text-red-100">
           Could not load system info
         </div>
       )}

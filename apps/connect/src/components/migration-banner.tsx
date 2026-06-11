@@ -73,7 +73,7 @@ export const MigrationBanner: React.FC = () => {
             features. Your data will be backed up first.
           </div>
           {error && (
-            <div className="mt-2 font-medium text-red-900 dark:text-red-400">
+            <div className="mt-2 font-medium text-red-900 dark:text-red-500">
               Migration failed: {error}
             </div>
           )}

@@ -134,7 +134,7 @@ export function IntegrityInspector({
         </div>
         <div className="flex gap-2">
           <button
-            className="flex items-center gap-1 rounded-sm border border-blue-300 bg-blue-50 px-3 py-1.5 text-sm text-blue-700 hover:effect disabled:opacity-50 dark:border-blue-600 dark:bg-blue-900 dark:text-blue-100"
+            className="flex items-center gap-1 rounded-sm border border-blue-300 bg-blue-50 px-3 py-1.5 text-sm text-blue-900 hover:effect disabled:opacity-50 dark:border-blue-600 dark:bg-blue-900 dark:text-blue-100"
             disabled={
               !documentId.trim() ||
               status === "running" ||
@@ -219,7 +219,7 @@ export function IntegrityInspector({
         )}
 
         {status === "error" && error && (
-          <div className="rounded-sm bg-red-50 p-3 text-sm text-red-700 dark:bg-red-900 dark:text-red-100">
+          <div className="rounded-sm bg-red-50 p-3 text-sm text-red-900 dark:bg-red-900 dark:text-red-100">
             {error}
           </div>
         )}
@@ -247,8 +247,8 @@ function ValidationResultView({ result }: { result: ValidationResult }) {
           className={twMerge(
             "size-3 rounded-full",
             result.isConsistent
-              ? "bg-green-600 dark:bg-green-400"
-              : "bg-red-500 dark:bg-red-400",
+              ? "bg-green-500 dark:bg-green-500"
+              : "bg-red-500 dark:bg-red-500",
           )}
         />
         <span className="text-sm font-medium">
@@ -365,7 +365,7 @@ function RebuildResultView({ result }: { result: RebuildResult }) {
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-2">
-        <span className="size-3 rounded-full bg-green-600 dark:bg-green-400" />
+        <span className="size-3 rounded-full bg-green-500 dark:bg-green-500" />
         <span className="text-sm font-medium">Rebuild complete</span>
       </div>
       <div className="text-xs text-gray-500 dark:text-slate-400">

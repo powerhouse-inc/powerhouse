@@ -61,7 +61,7 @@ export const TimelineBar: React.FC<TimelineBarProps> = ({
     <div className="flex flex-col text-xs">
       <div>{formatTimestamp(timestamp)}</div>
       <div className="text-green-900 dark:text-green-100">{`${additions} additions +`}</div>
-      <div className="text-red-700 dark:text-red-100">{`${deletions} deletions -`}</div>
+      <div className="text-red-900 dark:text-red-100">{`${deletions} deletions -`}</div>
     </div>
   );
 
@@ -122,7 +122,7 @@ export const TimelineBar: React.FC<TimelineBarProps> = ({
             <div className="flex h-3 w-0.5 items-end">
               <div
                 className={twMerge(
-                  "h-3 w-0.5 rounded-t-full bg-green-600 dark:bg-green-100",
+                  "h-3 w-0.5 rounded-t-full bg-green-500 dark:bg-green-100",
                   addBarHeight,
                 )}
               ></div>
@@ -130,7 +130,7 @@ export const TimelineBar: React.FC<TimelineBarProps> = ({
             <div className="flex h-3 w-0.5 items-start">
               <div
                 className={twMerge(
-                  "h-3 w-0.5 rounded-b-full bg-red-600 dark:bg-red-400",
+                  "h-3 w-0.5 rounded-b-full bg-red-500 dark:bg-red-500",
                   delBarHeight,
                 )}
               ></div>

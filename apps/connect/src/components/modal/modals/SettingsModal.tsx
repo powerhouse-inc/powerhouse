@@ -35,11 +35,11 @@ export const SettingsModal: React.FC = () => {
           <Icon
             name="Danger"
             size={12}
-            className="text-red-900 dark:text-red-400"
+            className="text-red-900 dark:text-red-500"
           />
         ),
         label: (
-          <span className="text-red-900 dark:text-red-400">Danger Zone</span>
+          <span className="text-red-900 dark:text-red-500">Danger Zone</span>
         ),
         content: () => <DangerZone />,
       },

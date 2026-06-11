@@ -213,17 +213,17 @@ export function ProcessorsInspector({
           Total: <span className="font-medium">{processors.length}</span>
         </div>
         <div className="flex items-center gap-2 text-gray-700 dark:text-slate-200">
-          <span className="size-2 rounded-full bg-green-600 dark:bg-green-400" />
+          <span className="size-2 rounded-full bg-green-500 dark:bg-green-500" />
           Active: <span className="font-medium">{activeCount}</span>
         </div>
         <div className="flex items-center gap-2 text-gray-700 dark:text-slate-200">
-          <span className="size-2 rounded-full bg-red-500 dark:bg-red-400" />
+          <span className="size-2 rounded-full bg-red-500 dark:bg-red-500" />
           Errored: <span className="font-medium">{erroredCount}</span>
         </div>
       </div>
 
       {error && (
-        <div className="shrink-0 rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm text-red-700 dark:border-red-600 dark:bg-red-900 dark:text-red-100">
+        <div className="shrink-0 rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm text-red-900 dark:border-red-600 dark:bg-red-900 dark:text-red-100">
           Failed to load processors: {error}
         </div>
       )}
@@ -288,7 +288,7 @@ export function ProcessorsInspector({
                 >
                   <td className="px-3 py-2 text-xs">
                     <button
-                      className="flex items-center gap-1 rounded-sm bg-blue-50 px-2 py-1 text-xs text-blue-700 hover:effect dark:bg-blue-900 dark:text-blue-100"
+                      className="flex items-center gap-1 rounded-sm bg-blue-50 px-2 py-1 text-xs text-blue-900 hover:effect dark:bg-blue-900 dark:text-blue-100"
                       onClick={() => setSelectedProcessor(processor)}
                       type="button"
                     >
@@ -300,15 +300,15 @@ export function ProcessorsInspector({
                       className={twMerge(
                         "inline-flex items-center gap-1 rounded-sm px-1.5 py-0.5",
                         processor.status === "active"
-                          ? "bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-100"
-                          : "bg-red-50 text-red-700 dark:bg-red-900 dark:text-red-100",
+                          ? "bg-green-100 text-green-500 dark:bg-green-900 dark:text-green-100"
+                          : "bg-red-50 text-red-900 dark:bg-red-900 dark:text-red-100",
                       )}
                     >
                       {processor.status === "active" && (
-                        <span className="inline-block size-1.5 rounded-full bg-green-600 dark:bg-green-400" />
+                        <span className="inline-block size-1.5 rounded-full bg-green-500 dark:bg-green-500" />
                       )}
                       {processor.status === "errored" && (
-                        <span className="inline-block size-1.5 rounded-full bg-red-500 dark:bg-red-400" />
+                        <span className="inline-block size-1.5 rounded-full bg-red-500 dark:bg-red-500" />
                       )}
                       {processor.status}
                     </span>
@@ -343,7 +343,7 @@ export function ProcessorsInspector({
                   <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
                     {processor.lastError ? (
                       <span
-                        className="block truncate text-red-600 dark:text-red-100"
+                        className="block truncate text-red-500 dark:text-red-100"
                         title={processor.lastError}
                       >
                         {processor.lastError}

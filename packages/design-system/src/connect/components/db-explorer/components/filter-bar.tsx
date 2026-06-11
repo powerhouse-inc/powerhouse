@@ -345,7 +345,7 @@ export function FilterBar({
           />
           <span>Filters</span>
           {hasFilters && (
-            <span className="rounded-sm bg-blue-100 px-1.5 py-0.5 text-xs text-blue-700 dark:bg-blue-800 dark:text-blue-100">
+            <span className="rounded-sm bg-blue-100 px-1.5 py-0.5 text-xs text-blue-900 dark:bg-blue-900 dark:text-blue-100">
               {filters.clauses.length}
             </span>
           )}

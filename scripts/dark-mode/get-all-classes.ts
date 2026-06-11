@@ -5,6 +5,7 @@ import {
   drop,
   entries,
   filter,
+  first,
   flatMap,
   groupBy,
   identity,
@@ -112,10 +113,45 @@ const withOpacity = pipe(
   filter((c) => c.includes("/")),
 );
 
+const grayScale = ["black", "white", "slate", "gray"];
+const colors = pipe(
+  [...light, ...dark],
+  unique(),
+  map((c) => drop(c.split("-"), 1)),
+  map(join("-")),
+  map((c) => c.replace("!", "")),
+  map((c) => first(c.split("/"))),
+  filter(isTruthy),
+  map((c) => first(c.split("-"))),
+  filter(isTruthy),
+  unique(),
+  filter((c) => !grayScale.includes(c)),
+);
+
+const colorBgs = pipe(
+  allClasses,
+  filter((c) => c.includes("bg")),
+  filter((c) => colors.some((color) => c.includes(color))),
+);
+
+const borders = pipe(
+  allClasses,
+  filter((c) => c.includes("border")),
+  unique(),
+);
+
 writeFileSync(
   path.join(process.cwd(), "all-classes.json"),
   JSON.stringify(
-    { allClasses: unique(allClasses), lightCounts, darkCounts, withOpacity },
+    {
+      allClasses: unique(allClasses),
+      lightCounts,
+      darkCounts,
+      withOpacity,
+      colors,
+      colorBgs,
+      borders,
+    },
     null,
     2,
   ),

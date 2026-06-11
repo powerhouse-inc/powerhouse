@@ -39,7 +39,7 @@ describe("CharacterCounter", () => {
   it("should show error state when at or exceeding max length", () => {
     render(<CharacterCounter maxLength={10} value="Hello World" />);
     expect(screen.getByText("11")).toHaveClass(
-      "text-red-900 dark:text-red-400",
+      "text-red-900 dark:text-red-500",
     );
     expect(screen.getByText("/10")).toHaveClass(
       "text-red-500 dark:text-red-100",

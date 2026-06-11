@@ -61,7 +61,7 @@ export const FormInput = forwardRef(function FormInput(
       </div>
       <p
         className={twMerge(
-          "hidden min-h-4 text-xs text-red-900 dark:text-red-400",
+          "hidden min-h-4 text-xs text-red-900 dark:text-red-500",
           isError && "block",
           hideErrors && "hidden",
           errorMessageClassName,

@@ -151,7 +151,7 @@ export const WithCustomToolbarContainer: Story = {
   args: {
     ...defaultArgs,
     toolbarContainer: (props) => (
-      <div className="bg-orange-100 dark:bg-orange-600">{props.children}</div>
+      <div className="bg-orange-100 dark:bg-orange-500">{props.children}</div>
     ),
   },
   render: Render,

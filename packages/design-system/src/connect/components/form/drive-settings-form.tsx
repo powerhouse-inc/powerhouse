@@ -91,7 +91,7 @@ export function DriveSettingsForm(props: DriveSettingsFormProps) {
           </p>
         )}
         {systemInfo.status === "error" && (
-          <p className="py-2 text-sm text-red-600 dark:text-red-100">
+          <p className="py-2 text-sm text-red-500 dark:text-red-100">
             Could not load system info
           </p>
         )}
@@ -114,7 +114,7 @@ export function DriveSettingsForm(props: DriveSettingsFormProps) {
         title="Danger zone"
       >
         <button
-          className="flex gap-2 py-3 font-semibold text-red-900 transition hover:brightness-125 dark:text-red-400"
+          className="flex gap-2 py-3 font-semibold text-red-900 transition hover:brightness-125 dark:text-red-500"
           onClick={() => setShowDeleteDrive(true)}
           type="button"
         >

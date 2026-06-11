@@ -1,0 +1,19 @@
+{
+  "dark:text-red-400": "dark:text-red-500",
+  "dark:border-orange-600": "dark:border-orange-500",
+  "text-red-700": "text-red-900",
+  "text-blue-600": "text-blue-500",
+  "text-red-600": "text-red-500",
+  "text-red-800": "text-red-900",
+  "bg-green-600": "bg-green-500",
+  "bg-red-600": "bg-red-500",
+  "dark:bg-red-400": "dark:bg-red-500",
+  "dark:bg-blue-800": "dark:bg-blue-900",
+  "text-green-600": "text-green-500",
+  "bg-purple-400": "bg-purple-500",
+  "dark:bg-green-400": "dark:bg-green-500",
+  "text-blue-700": "text-blue-900",
+  "dark:bg-orange-600": "dark:bg-orange-500",
+  "dark:bg-purple-800": "dark:bg-purple-900",
+  "bg-blue-600": "bg-blue-500"
+}

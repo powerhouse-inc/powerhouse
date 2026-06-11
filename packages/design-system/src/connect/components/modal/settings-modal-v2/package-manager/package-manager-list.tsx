@@ -62,7 +62,7 @@ export const PackageManagerListItem = (props: {
     id: "uninstall",
     label: "Uninstall",
     icon: <Icon name="Trash" />,
-    className: "text-red-900 dark:text-red-400",
+    className: "text-red-900 dark:text-red-500",
   } as const;
 
   function getDropdownItems() {

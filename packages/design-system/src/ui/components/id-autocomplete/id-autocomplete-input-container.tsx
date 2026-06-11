@@ -168,7 +168,7 @@ const IdAutocompleteInputContainer = React.forwardRef<
                 <Icon
                   name="Error"
                   size={16}
-                  className={twMerge("text-red-900 dark:text-red-400")}
+                  className={twMerge("text-red-900 dark:text-red-500")}
                 />
               </Tooltip>
             </TooltipProvider>

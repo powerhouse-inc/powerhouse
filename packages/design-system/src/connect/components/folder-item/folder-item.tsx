@@ -91,7 +91,7 @@ export function FolderItem(props: {
     isDragging
       ? "opacity-60"
       : isDropTarget
-        ? "bg-blue-100 dark:bg-blue-800"
+        ? "bg-blue-100 dark:bg-blue-900"
         : "",
     className,
   );

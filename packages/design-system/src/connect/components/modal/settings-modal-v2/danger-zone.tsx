@@ -149,7 +149,7 @@ function Drive(props: ModifyDrivesProps & { drive: DocumentDriveDocument }) {
             id: "delete-drive",
             label: "Delete",
             icon: <Icon name="Trash" />,
-            className: "text-red-900 dark:text-red-400",
+            className: "text-red-900 dark:text-red-500",
           },
         ]}
         onItemClick={(id) => {

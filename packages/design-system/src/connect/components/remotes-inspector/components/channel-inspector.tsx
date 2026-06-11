@@ -205,14 +205,14 @@ export function ChannelInspector({
               <span
                 className={
                   connectionState.pushBlocked
-                    ? "text-red-600 dark:text-red-100"
-                    : "text-green-600 dark:text-green-100"
+                    ? "text-red-500 dark:text-red-100"
+                    : "text-green-500 dark:text-green-100"
                 }
               >
                 {connectionState.pushBlocked ? "Blocked" : "OK"}
               </span>
               {connectionState.pushFailureCount > 0 && (
-                <span className="ml-1 text-red-600 dark:text-red-100">
+                <span className="ml-1 text-red-500 dark:text-red-100">
                   ({connectionState.pushFailureCount} failures)
                 </span>
               )}
@@ -234,7 +234,7 @@ export function ChannelInspector({
                   className={
                     pollerState.isPaused
                       ? "text-yellow-500 dark:text-yellow-100"
-                      : "text-green-600 dark:text-green-100"
+                      : "text-green-500 dark:text-green-100"
                   }
                 >
                   {pollerState.isPaused ? "Paused" : "Running"}
@@ -316,7 +316,7 @@ export function ChannelInspector({
                   className={
                     mailboxStates.inbox.isPaused
                       ? "text-yellow-500 dark:text-yellow-100"
-                      : "text-green-600 dark:text-green-100"
+                      : "text-green-500 dark:text-green-100"
                   }
                 >
                   {mailboxStates.inbox.isPaused ? "Paused" : "Active"}
@@ -363,7 +363,7 @@ export function ChannelInspector({
                   className={
                     mailboxStates.outbox.isPaused
                       ? "text-yellow-500 dark:text-yellow-100"
-                      : "text-green-600 dark:text-green-100"
+                      : "text-green-500 dark:text-green-100"
                   }
                 >
                   {mailboxStates.outbox.isPaused ? "Paused" : "Active"}

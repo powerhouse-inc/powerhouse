@@ -30,12 +30,12 @@ function getStatusText(status: UploadFileItemStatus): string {
 function getStatusColor(status: UploadFileItemStatus): string {
   switch (status) {
     case "success":
-      return "text-green-600 dark:text-green-100";
+      return "text-green-500 dark:text-green-100";
     case "failed":
     case "unsupported-document-type":
     case "pending":
     case "conflict":
-      return "text-red-900 dark:text-red-400";
+      return "text-red-900 dark:text-red-500";
     case "uploading":
       return "text-gray-900 dark:text-slate-50";
     default:

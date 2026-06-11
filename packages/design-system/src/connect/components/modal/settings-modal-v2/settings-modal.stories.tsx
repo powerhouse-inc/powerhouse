@@ -51,10 +51,10 @@ const tabs = [
       <Icon
         name="Danger"
         size={12}
-        className="text-red-900 dark:text-red-400"
+        className="text-red-900 dark:text-red-500"
       />
     ),
-    label: <span className="text-red-900 dark:text-red-400">Danger Zone</span>,
+    label: <span className="text-red-900 dark:text-red-500">Danger Zone</span>,
     content() {
       // eslint-disable-next-line react-hooks/rules-of-hooks
       const [drives, setDrives] = React.useState([
@@ -101,7 +101,7 @@ export const Primary: Story = {
   },
   decorators: [
     (Story) => (
-      <div className="h-dvh bg-gray-50 dark:bg-white">
+      <div className="h-dvh bg-gray-50">
         <Story />
       </div>
     ),

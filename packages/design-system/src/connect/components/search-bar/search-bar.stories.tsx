@@ -9,7 +9,7 @@ const filterItems: ConnectSearchBarProps["filterItems"] = [
     label: ".project",
     icon: (
       <Icon
-        className="text-red-700 dark:text-red-100"
+        className="text-red-900 dark:text-red-100"
         name="Project"
         size={16}
       />

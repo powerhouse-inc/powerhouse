@@ -7,7 +7,7 @@ export function Errors({ errors }: Props) {
     <div className="mt-1">
       {Array.from(new Set(errors.split("\n"))).map((error) => (
         <p
-          className="text-sm font-semibold text-red-900 dark:text-red-400"
+          className="text-sm font-semibold text-red-900 dark:text-red-500"
           key={error}
         >
           {error}

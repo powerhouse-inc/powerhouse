@@ -46,7 +46,7 @@ const FormLabel = React.forwardRef<
   return (
     <Label
       ref={ref}
-      className={twMerge(error && "text-red-900 dark:text-red-400", className)}
+      className={twMerge(error && "text-red-900 dark:text-red-500", className)}
       htmlFor={formItemId}
       {...props}
     />
@@ -111,7 +111,7 @@ const FormMessage = React.forwardRef<
       ref={ref}
       id={formMessageId}
       className={twMerge(
-        "text-sm font-medium text-red-800 dark:text-red-100",
+        "text-sm font-medium text-red-900 dark:text-red-100",
         className,
       )}
       {...props}

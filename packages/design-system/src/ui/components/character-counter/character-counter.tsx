@@ -6,7 +6,7 @@ export interface CharacterCounterProps {
 const counterVariants = {
   normal: "text-gray-500 dark:text-slate-400",
   warning: "text-yellow-900 dark:text-yellow-100",
-  error: "text-red-900 dark:text-red-400",
+  error: "text-red-900 dark:text-red-500",
 };
 
 const maxLengthVariants = {

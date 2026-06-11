@@ -32,7 +32,7 @@ export const TextDiff = ({
       ? viewMode === "addition"
         ? "bg-green-100 dark:bg-green-100"
         : viewMode === "removal"
-          ? "bg-red-50 dark:bg-red-400"
+          ? "bg-red-50 dark:bg-red-500"
           : undefined
       : undefined;
 
@@ -63,7 +63,7 @@ export const TextDiff = ({
             <span
               className={twMerge(
                 (diffMode === "words" || viewMode === "mixed") &&
-                  "bg-red-50 dark:bg-red-400",
+                  "bg-red-50 dark:bg-red-500",
                 childrenClassName,
               )}
               key={`${word.value}-${index}`}

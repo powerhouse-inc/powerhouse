@@ -37,7 +37,7 @@ export function MissingModelBanner() {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="rounded-md border border-orange-100 bg-gray-50 px-3 py-1 text-orange-900 hover:effect dark:border-orange-600 dark:bg-slate-800 dark:text-orange-100"
+          className="rounded-md border border-orange-100 bg-gray-50 px-3 py-1 text-orange-900 hover:effect dark:border-orange-500 dark:bg-slate-800 dark:text-orange-100"
         >
           View
         </button>
@@ -119,7 +119,7 @@ function MissingModelDetailsModal(props: DetailsProps) {
                     </div>
                   ) : null}
                   {entry.error ? (
-                    <div className="mb-2 font-mono text-xs wrap-break-word text-red-700 dark:text-red-100">
+                    <div className="mb-2 font-mono text-xs wrap-break-word text-red-900 dark:text-red-100">
                       {entry.error.message}
                     </div>
                   ) : null}

@@ -174,7 +174,7 @@ function StateEditor({
             customLinter={customLinter}
           />
           {schemaErrors.length > 0 && (
-            <p className="mt-2 text-sm text-red-600 dark:text-red-100">
+            <p className="mt-2 text-sm text-red-500 dark:text-red-100">
               {schemaErrors[0].message}
             </p>
           )}
@@ -220,7 +220,7 @@ function StateEditor({
           {initialValueErrors.map((error, index) => (
             <p
               key={index}
-              className="mt-2 text-sm text-red-600 dark:text-red-100"
+              className="mt-2 text-sm text-red-500 dark:text-red-100"
             >
               {error instanceof StateValidationError ? (
                 <StateValidationErrorMessage error={error} />

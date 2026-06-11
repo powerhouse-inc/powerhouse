@@ -15,7 +15,7 @@ describe("FormMessage", () => {
   it("applies correct classes for error type", () => {
     render(<FormMessage type="error">Error message</FormMessage>);
     const message = screen.getByText("Error message");
-    expect(message).toHaveClass("text-red-900 dark:text-red-400");
+    expect(message).toHaveClass("text-red-900 dark:text-red-500");
   });
 
   it("applies correct classes for info type", () => {
