@@ -18,20 +18,20 @@ import {
   createZip,
   defaultBaseState,
   type Operation,
-  type PHBaseState,
+  type PartialState,
+  type PHDocument,
   type UpgradeDocumentAction,
 } from "document-model";
 import {
   addTodo,
   reducer as reducerV1,
-  type TodoGlobalState,
-  type TodoLocalState,
   type TodoPHState,
 } from "document-models/todo/v1";
 import {
   editTitle,
   reducer as reducerV2,
   utils as utilsV2,
+  type TodoPHState as TodoV2PHState,
 } from "document-models/todo/v2";
 import { todoUpgradeManifest } from "document-models/todo";
 import { randomUUID } from "crypto";
@@ -40,11 +40,11 @@ import { describe, expect, it } from "vitest";
 const todoDocumentType = "test/todo";
 
 /** Create a v1 todo state with version=1 explicitly set (required for versioned replay). */
-function createV1TodoState(partial?: Partial<TodoGlobalState>): TodoPHState {
+function createV1TodoState(state?: PartialState<TodoPHState>): TodoPHState {
   return {
     ...defaultBaseState(),
     document: { ...defaultBaseState().document, version: 1 },
-    global: { todos: [], ...partial },
+    global: { todos: [], ...state?.global },
     local: {},
   };
 }
@@ -98,7 +98,11 @@ describe("TodoV2 — mixed v1/v2 history loaded via generated loadFromInput", ()
     };
 
     const transitions = computeUpgradeTransitions(todoUpgradeManifest, 1, 2);
-    let docV2 = applyUpgradeDocumentAction(docV1, upgradeAction, transitions);
+    let docV2 = applyUpgradeDocumentAction(
+      docV1,
+      upgradeAction,
+      transitions,
+    ) as PHDocument<TodoV2PHState>;
 
     // Append the upgrade operation to the document scope
     const docScopeOps = docV2.operations["document"] ?? [];
