@@ -58,8 +58,20 @@ if (TRACING_REQUESTED && !HAS_TRACE_DESTINATION) {
   );
 }
 
-// Default 10% APM sampling — Sentry's own production guidance; overridable
-// per-deploy. Only kicks in once tracesSampleRate * (sampler decision) lands.
+// APM sampling for the Sentry-SDK-managed path (i.e. when TRACING is OFF and
+// @sentry/node runs its own bundled OTel — see skipOpenTelemetrySetup below).
+//
+// IMPORTANT: when TRACING_ENABLED, this value does NOT govern span volume.
+// Our NodeSDK (below) owns the pipeline and is constructed with no explicit
+// `sampler`, so @opentelemetry/sdk-node falls back to buildSamplerFromEnv()
+// and the REAL head-sampling knob is the standard OTEL_TRACES_SAMPLER /
+// OTEL_TRACES_SAMPLER_ARG env (set per-deploy in the k8s chart). That head
+// decision gates spans before any processor runs, so it bounds BOTH the
+// SentrySpanProcessor (→ Sentry transactions) and the Tempo OTLP export.
+// (Wiring @sentry/opentelemetry's SentrySampler here would let this rate
+// drive both backends and make DSC/sample_rand propagation spec-correct, but
+// that only matters for Sentry server-side dynamic sampling — a SaaS feature
+// our self-hosted install doesn't run — so it's intentionally deferred.)
 const SENTRY_TRACES_SAMPLE_RATE = parseFloat(
   process.env.SENTRY_TRACES_SAMPLE_RATE ?? "0.1",
 );
@@ -152,7 +164,19 @@ if (TRACING_ENABLED) {
         },
       }),
       new GraphQLInstrumentation({ mergeItems: true, allowValues: true }),
-      new PgInstrumentation({ enhancedDatabaseReporting: true }),
+      // requireParentSpan: only trace DB queries that run inside a request
+      // (HTTP/GraphQL) span. Parentless queries — the management
+      // switchboard's background polling loops (vetra-cloud-observability
+      // reconcile @60s + clint pull-worker @15s, each writing
+      // environment_pods / clint_runtime_endpoints) — would otherwise each
+      // become a standalone root transaction. That volume scales O(tenant
+      // count) and was ~70% of all Sentry transactions before this change.
+      // Dropping it at the instrumentation layer (no span created at all) is
+      // cheaper and cleaner than sampling it away downstream.
+      new PgInstrumentation({
+        enhancedDatabaseReporting: true,
+        requireParentSpan: true,
+      }),
     ],
   });
   sdk.start();
