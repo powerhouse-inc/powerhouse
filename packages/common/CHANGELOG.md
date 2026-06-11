@@ -1,3 +1,15 @@
+## 6.2.0-dev.9 (2026-06-11)
+
+### 🩹 Fixes
+
+- **connect:** stop nginx root-file regex from hijacking /assets at default base path ([f72fe2fe5](https://github.com/powerhouse-inc/powerhouse/commit/f72fe2fe5))
+- **switchboard:** stop tracing background DB polls + align @sentry versions ([c5b307333](https://github.com/powerhouse-inc/powerhouse/commit/c5b307333))
+
+### ❤️ Thank You
+
+- Frank Pfeift
+- Guillermo Puente @gpuente
+
 ## 6.2.0-dev.8 (2026-06-11)
 
 This was a version bump only for @powerhousedao/common to align it with other projects, there were no code changes.
