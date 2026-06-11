@@ -14,8 +14,10 @@ export type IConnectOptions = {
    * from `ph connect build`'s `--json` + individual `--flag` parsing.
    *
    * Order: DEFAULT_CONNECT_CONFIG < source.connect < cliConnectOverride.
-   * Env vars are NOT part of this merge; they only seed the dist file at
-   * container start (set-if-absent) via the Docker entrypoint.
+   * Env vars are NOT part of this merge; PH_CONNECT_CONFIG_JSON is applied
+   * to the dist file at container start by the Docker entrypoint
+   * (operator-wins: concrete values override the baked file, null/omitted
+   * keep it; connect.app.basePath excluded).
    */
   cliConnectOverride?: PHConnectRuntimeConfig;
   /**

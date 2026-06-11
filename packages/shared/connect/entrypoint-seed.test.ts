@@ -1,8 +1,11 @@
-// Integration test for `docker/connect-entrypoint.sh`'s env → file seeding.
+// Integration test for `docker/connect-entrypoint.sh`'s env → file merging.
 // Verifies the operator-facing contract: the entrypoint reads a single
-// `PH_CONNECT_CONFIG_JSON` env var, deep-merges it into the dist
-// `powerhouse.config.json`, and only writes paths that are currently
-// null/missing in the file (set-if-absent semantics).
+// `PH_CONNECT_CONFIG_JSON` env var and deep-merges it into the dist
+// `powerhouse.config.json` with operator-wins semantics — a concrete leaf
+// in the env JSON overwrites the baked value; a `null` leaf (or omitted
+// key) keeps the file's value. `connect.app.basePath` is the exception:
+// it is stripped from the operator payload because the base path is baked
+// into the built asset URLs and cannot be changed at runtime.
 //
 // The test patches the script in a tmpdir to skip the nginx/envsubst calls
 // (which require nginx + an /etc/nginx config that don't exist outside the
@@ -147,7 +150,8 @@ describe.skipIf(NEEDS_JQ)(
       expect((connect.renown as Plain).url).toBe("https://renown.from-env");
       expect((connect.renown as Plain).networkId).toBe("eip155");
       expect((connect.renown as Plain).chainId).toBe(137);
-      expect((connect.app as Plain).basePath).toBe("/sub");
+      // basePath is stripped from the operator payload — never runtime-set.
+      expect((connect.app as Plain).basePath).toBeUndefined();
       expect((connect.app as Plain).logLevel).toBe("debug");
       expect((connect.drives as Plain).preserveStrategy).toBe("preserve-all");
       expect((connect.drives as Plain).defaultDrives).toEqual([
@@ -156,21 +160,23 @@ describe.skipIf(NEEDS_JQ)(
       ]);
     });
 
-    it("does NOT overwrite values the file already has (set-if-absent)", () => {
+    it("overwrites baked values with operator values, except basePath", () => {
       seedFile({
         schemaVersion: 2,
         packages: [],
         localPackage: null,
         connect: {
-          renown: { url: "https://kept.example", networkId: "eip155" },
-          app: { basePath: "/kept", logLevel: "warn" },
+          branding: { appName: "Powerhouse Connect", homeBackground: null },
+          renown: { url: "https://baked.example", networkId: "eip155" },
+          app: { basePath: "/baked", logLevel: "warn" },
         },
       });
 
       const payload = {
         connect: {
-          renown: { url: "https://hostile.example", chainId: 137 },
-          app: { basePath: "/hostile", logLevel: "trace" },
+          branding: { appName: "Operator Connect" },
+          renown: { url: "https://operator.example", chainId: 137 },
+          app: { basePath: "/operator", logLevel: "trace" },
         },
       };
 
@@ -183,13 +189,53 @@ describe.skipIf(NEEDS_JQ)(
 
       const connect = (readConfig(runtimeFile) as { connect: Plain })
         .connect as Record<string, Plain>;
-      // Pre-existing values preserved
-      expect((connect.renown as Plain).url).toBe("https://kept.example");
-      expect((connect.renown as Plain).networkId).toBe("eip155");
-      expect((connect.app as Plain).basePath).toBe("/kept");
-      expect((connect.app as Plain).logLevel).toBe("warn");
+      // Operator values win over baked defaults
+      expect((connect.branding as Plain).appName).toBe("Operator Connect");
+      expect((connect.renown as Plain).url).toBe("https://operator.example");
+      expect((connect.app as Plain).logLevel).toBe("trace");
       // Net-new leaves get filled in
       expect((connect.renown as Plain).chainId).toBe(137);
+      // Untouched siblings keep their baked values
+      expect((connect.renown as Plain).networkId).toBe("eip155");
+      expect((connect.branding as Plain).homeBackground).toBeNull();
+      // basePath is stripped from the operator payload — baked value kept
+      expect((connect.app as Plain).basePath).toBe("/baked");
+    });
+
+    it("keeps baked values where the operator sends null", () => {
+      seedFile({
+        schemaVersion: 2,
+        packages: [],
+        localPackage: null,
+        connect: {
+          branding: { appName: "Powerhouse Connect", homeBackground: null },
+          app: { logLevel: "info" },
+        },
+      });
+
+      const payload = {
+        connect: {
+          branding: { appName: null, homeBackground: "https://bg.example" },
+          app: { logLevel: null },
+        },
+      };
+
+      const res = runEntrypoint({
+        scriptPath,
+        distDir,
+        env: { PH_CONNECT_CONFIG_JSON: JSON.stringify(payload) },
+      });
+      expect(res.status).toBe(0);
+
+      const connect = (readConfig(runtimeFile) as { connect: Plain })
+        .connect as Record<string, Plain>;
+      // null defers to the file's (default) value
+      expect((connect.branding as Plain).appName).toBe("Powerhouse Connect");
+      expect((connect.app as Plain).logLevel).toBe("info");
+      // Concrete sibling still applies
+      expect((connect.branding as Plain).homeBackground).toBe(
+        "https://bg.example",
+      );
     });
 
     it("is a no-op when PH_CONNECT_CONFIG_JSON is unset", () => {
@@ -210,9 +256,9 @@ describe.skipIf(NEEDS_JQ)(
       expect(readConfig(runtimeFile)).toEqual(baseline);
     });
 
-    it("fills in nested-object gaps without clobbering sibling leaves", () => {
-      // Sections.remote.enabled pre-set; .allowAdd and .allowDelete absent.
-      // The operator JSON sets all three; only the missing two are written.
+    it("applies explicit false values and fills missing subtrees", () => {
+      // drives.sections.remote.enabled baked true; the operator turns it
+      // off — `false` must count as a concrete value, not as "absent".
       seedFile({
         schemaVersion: 2,
         packages: [],
@@ -220,7 +266,7 @@ describe.skipIf(NEEDS_JQ)(
         connect: {
           drives: {
             sections: {
-              remote: { enabled: false },
+              remote: { enabled: true, allowAdd: true, allowDelete: true },
             },
           },
         },
@@ -230,7 +276,7 @@ describe.skipIf(NEEDS_JQ)(
         connect: {
           drives: {
             sections: {
-              remote: { enabled: true, allowAdd: false, allowDelete: false },
+              remote: { enabled: false },
               local: { enabled: true, allowAdd: true, allowDelete: true },
             },
           },
@@ -252,11 +298,11 @@ describe.skipIf(NEEDS_JQ)(
       >;
       const remote = sections.remote as Plain;
       const local = sections.local as Plain;
-      // Pre-existing flag kept
+      // Explicit operator false overrides baked true
       expect(remote.enabled).toBe(false);
-      // Net-new sibling leaves filled
-      expect(remote.allowAdd).toBe(false);
-      expect(remote.allowDelete).toBe(false);
+      // Untouched sibling leaves keep baked values
+      expect(remote.allowAdd).toBe(true);
+      expect(remote.allowDelete).toBe(true);
       // Entire missing subtree filled
       expect(local).toEqual({
         enabled: true,

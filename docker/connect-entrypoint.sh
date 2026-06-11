@@ -24,16 +24,29 @@ export PH_CONNECT_BASE_PATH PH_CONNECT_BASE_PREFIX
 envsubst '${PORT},${PH_CONNECT_BASE_PATH},${PH_CONNECT_BASE_PREFIX}' < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf
 
 # ============================================================
-# powerhouse.config.json seeding (set-if-absent)
+# powerhouse.config.json runtime overrides (operator wins)
 # ============================================================
 #
 # Operators inject runtime config via a single env var, PH_CONNECT_CONFIG_JSON,
-# carrying the JSON they want stamped onto the dist file. Same shape and same
-# semantics as `ph connect config --json '{...}'`. The entrypoint deep-merges
-# it into the dist `powerhouse.config.json` with **set-if-absent** semantics:
-# any path that already has a value (from the build, from CLI flags during
-# build, or from a mounted ConfigMap) wins — env-supplied values only fill
-# gaps. The SPA then reads the file as usual.
+# carrying the JSON they want applied to the dist file. Same shape as
+# `ph connect config --json '{...}'`. The entrypoint deep-merges it into the
+# dist `powerhouse.config.json` with **operator-wins** semantics: a concrete
+# leaf in the env JSON (including false / "" / [] / 0) overwrites whatever
+# the build baked; a `null` leaf (or an omitted key) keeps the existing
+# value, so build defaults only apply where the operator expressed no
+# opinion. The SPA then reads the file as usual.
+#
+# Why operator-wins: the build pads the dist file with DEFAULT_CONNECT_CONFIG
+# for every field (self-describing dist), so the previous set-if-absent merge
+# could never apply an operator override to any defaulted field — e.g.
+# setting connect.branding.appName from a deploy pipeline was silently
+# ignored because the baked default already occupied the path.
+#
+# Exception: `connect.app.basePath` is stripped from the operator payload.
+# The base path is baked into the built asset URLs (vite `base`) and the
+# nginx location prefixes; a runtime-only override desyncs the SPA from its
+# own assets and bricks the deploy. Rebuild with `--base` (or use
+# `--dynamic-base`) to change it.
 #
 # Backward incompatible: the old PH_CONNECT_* per-field env vars
 # (PH_CONNECT_LOG_LEVEL, PH_CONNECT_DISABLE_ADD_DRIVE, PH_CONNECT_RENOWN_*,
@@ -62,30 +75,35 @@ if [ -f "$RUNTIME_FILE" ] && [ -n "${PH_CONNECT_CONFIG_JSON:-}" ]; then
     exit 1
   fi
 
-  # Deep-merge with set-if-absent semantics. Recurses into objects on both
-  # sides; arrays and primitives are leaves (only written when target is
-  # null/missing — matches the previous per-field set-if-absent contract).
+  # Deep-merge with operator-wins semantics. Recurses where both sides are
+  # objects; arrays and primitives are leaves. An operator leaf overwrites
+  # the existing value unless it is `null`, which defers to the file.
   #
-  # Note: we use `== null` rather than `// null`. The `//` alternative
-  # operator treats `false` as "absent" and would clobber pre-existing
-  # `false` booleans (e.g. drives.sections.remote.enabled: false).
+  # Note: we test `== null` rather than using the `//` alternative operator.
+  # `//` treats `false` as "absent" and would discard explicit operator
+  # `false` values (e.g. drives.sections.remote.enabled: false).
+  #
+  # strip_base drops connect.app.basePath from the operator payload (see
+  # header). Guarded on the intermediate types so a malformed payload like
+  # {"connect": "x"} degrades to a plain merge instead of a jq error.
   jq --argjson op "$PH_CONNECT_CONFIG_JSON" '
-    def seed($a; $b):
-      if ($b | type) == "object" then
+    def merge($a; $b):
+      if ($a | type) == "object" and ($b | type) == "object" then
         reduce ($b | keys[]) as $k (
           $a;
-          if .[$k] == null then
-            .[$k] = $b[$k]
-          elif (.[$k] | type) == "object" and ($b[$k] | type) == "object" then
-            .[$k] = seed(.[$k]; $b[$k])
-          else
-            .  # already set; leave alone
-          end
+          .[$k] = merge(.[$k]; $b[$k])
         )
+      elif $b == null then
+        $a
       else
-        if . == null then $b else . end
+        $b
       end;
-    seed(.; $op)
+    def strip_base($o):
+      if ($o.connect | type) == "object" and ($o.connect.app | type) == "object"
+      then $o | del(.connect.app.basePath)
+      else $o
+      end;
+    merge(.; strip_base($op))
   ' "$RUNTIME_FILE" > "${RUNTIME_FILE}.tmp"
   cat "${RUNTIME_FILE}.tmp" > "$RUNTIME_FILE"
   rm -f "${RUNTIME_FILE}.tmp"
