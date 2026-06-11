@@ -114,14 +114,22 @@ function generateCombinedCliDocs() {
           .replace(/\}/g, "\\}")
           // Escape angle brackets too — CLI help text often contains
           // placeholders like `<key>`, `<value>`, `<field>` that look
-          // like JSX tags to MDX 3 and break the build. We do this
-          // blindly (including inside backticks) because MDX treats
-          // `\<` / `\>` as literal in both prose and inline-code
-          // contexts; the only failure mode this could cause is a real
-          // JSX tag in the source COMMANDS.md getting neutered, which
-          // we don't currently rely on.
-          .replace(/</g, "\\<")
-          .replace(/>/g, "\\>")
+          // like JSX tags to MDX 3 and break the build. Use HTML
+          // entities rather than `\<`: GFM autolink literals (e.g.
+          // `http://localhost:`) swallow a following backslash as part
+          // of the URL, un-escaping the `<` and breaking the build.
+          // Bare URLs are wrapped in backticks for the same reason —
+          // an autolink would otherwise absorb adjacent placeholder
+          // text (entities included) into an unparseable link target.
+          // Code spans are skipped — MDX never parses JSX inside
+          // backticks, and entities/backslashes would render literally
+          // there.
+          .replace(
+            /(`[^`\n]*`)|(https?:\/\/[^\s`]*[^\s`.,;:!?)\]])|[<>]/g,
+            (match, codeSpan: string, url: string) =>
+              codeSpan ??
+              (url ? `\`${url}\`` : match === "<" ? "&lt;" : "&gt;"),
+          )
           // Add better spacing around sections
           .replace(/^(###\s+.+)$/gm, "\n$1")
           .replace(/^(####\s+.+)$/gm, "\n$1")

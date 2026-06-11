@@ -21,6 +21,10 @@ import {
 import { createHtmlPlugin } from "vite-plugin-html";
 import type { IConnectOptions } from "./types.js";
 import { devReactImportmapPlugin } from "./vite-plugins/dev-external-react.js";
+import {
+  connectDynamicBasePlugin,
+  DYNAMIC_BASE_PLACEHOLDER,
+} from "./vite-plugins/dynamic-base.js";
 import { connectFaviconPlugin } from "./vite-plugins/favicon.js";
 import { phBundledPackagesPlugin } from "./vite-plugins/ph-bundled-packages.js";
 import { phConfigPlugin } from "./vite-plugins/ph-config.js";
@@ -344,7 +348,16 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     // Prefix served/built asset URLs so Connect can run under a path prefix
     // (reverse proxy). Mirrors the client router basename; normalize so a bare
     // `app` or `/app` becomes `/app/` and matches the router.
-    base: connectBasePath ? normalizeBasePath(connectBasePath) : undefined,
+    //
+    // Dynamic-base mode: set a placeholder token instead of a concrete base.
+    // connectDynamicBasePlugin (below) rewrites it in the emitted JS to a
+    // runtime expression so one bundle serves under any subpath; the proxy
+    // substitutes it in the HTML and sets the runtime global at serve time.
+    base: options.dynamicBase
+      ? DYNAMIC_BASE_PLACEHOLDER
+      : connectBasePath
+        ? normalizeBasePath(connectBasePath)
+        : undefined,
     server: {
       watch: {
         ignored: ["**/backup-documents/**", "**/.ph/**"],
@@ -407,9 +420,20 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
       // entries prevent the plugin from transforming require() calls.
       esmExternalRequirePlugin({ external: reactExternal }),
       connectFaviconPlugin(),
+      // enforce: "post" — rewrites the placeholder base after all other
+      // transforms have emitted their asset/chunk URLs.
+      ...(options.dynamicBase ? [connectDynamicBasePlugin()] : []),
     ],
     worker: {
       format: "es",
+      // Worker chunks are emitted by a separate Rolldown build, so the main
+      // bundle's generateBundle never sees them. The worker instance both
+      // rewrites the placeholder and prepends a prelude that resolves the base
+      // in worker scope (forWorker) — the proxy only sets the global on the
+      // main thread.
+      ...(options.dynamicBase
+        ? { plugins: () => [connectDynamicBasePlugin({ forWorker: true })] }
+        : {}),
     },
     build: {
       sourcemap: true,

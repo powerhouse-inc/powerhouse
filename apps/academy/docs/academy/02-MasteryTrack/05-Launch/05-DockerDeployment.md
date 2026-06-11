@@ -151,14 +151,14 @@ After starting, you can access:
 Connect's runtime behavior is driven by `powerhouse.config.json` (the same file the build uses). For a Docker deployment you have three options:
 
 1. **Mount your own `powerhouse.config.json`** as a Kubernetes ConfigMap / Secret (or a bind-mounted file) at `/var/www/html/project/powerhouse.config.json`. The SPA fetches it from `/powerhouse.config.json` on every page load, so post-deploy edits are visible after a refresh.
-2. **Pass a JSON payload via the `PH_CONNECT_CONFIG_JSON` env var**. The entrypoint deep-merges it into the dist `powerhouse.config.json` at container start (set-if-absent — a mounted file's values always win).
+2. **Pass a JSON payload via the `PH_CONNECT_CONFIG_JSON` env var**. The entrypoint deep-merges it into the dist `powerhouse.config.json` at container start (operator-wins — concrete values in the payload override the baked file).
 3. **Edit the file at build time** via `ph connect build --json '{...}'` or individual `--flag`s, baking the values into the image.
 
 For the full configuration model, precedence ladder, and the complete list of `connect.*` fields, see the [Configure Environment](./04-ConfigureEnvironment.md) guide.
 
 ### Connect container env vars
 
-Connect's SPA reads runtime configuration from `/powerhouse.config.json`, never from env vars at runtime. The container entrypoint, however, can apply operator-supplied JSON to that file at startup (set-if-absent) — equivalent to pre-running `ph connect config --json '{...}'` on the dist file. The SPA then reads the file as usual.
+Connect's SPA reads runtime configuration from `/powerhouse.config.json`, never from env vars at runtime. The container entrypoint, however, can apply operator-supplied JSON to that file at startup (operator-wins) — equivalent to pre-running `ph connect config --json '{...}'` on the dist file. The SPA then reads the file as usual.
 
 #### Container shape and secrets
 
@@ -171,9 +171,9 @@ Connect's SPA reads runtime configuration from `/powerhouse.config.json`, never 
 
 Sentry (DSN, environment label, tracing flag) is no longer set via per-field env vars — those live in `connect.sentry.*` of `powerhouse.config.json` and ride through `PH_CONNECT_CONFIG_JSON` like every other runtime field. See the example below.
 
-#### `PH_CONNECT_CONFIG_JSON` (set-if-absent)
+#### `PH_CONNECT_CONFIG_JSON` (operator-wins)
 
-Set this env var to a JSON object that mirrors the `connect.*` block of `powerhouse.config.json`. At container start the entrypoint deep-merges it into the dist file with **set-if-absent semantics**: any path already present in the mounted/baked file wins; the env-supplied JSON only fills gaps.
+Set this env var to a JSON object that mirrors the `connect.*` block of `powerhouse.config.json`. At container start the entrypoint deep-merges it into the dist file with **operator-wins semantics**: a concrete value in the env JSON overwrites the baked/mounted file; a `null` leaf (or an omitted key) keeps the file's value. Exception: `connect.app.basePath` is ignored — the base path is baked into the bundled asset URLs at build time (rebuild with `--base`, or use `--dynamic-base`).
 
 ```bash
 docker run \

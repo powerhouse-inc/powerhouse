@@ -1,4 +1,4 @@
-# Powerhouse CLI Commands (6.2.0-dev.5)<br>
+# Powerhouse CLI Commands (6.2.0-dev.10)<br>
 This document provides detailed information about the available commands in the Powerhouse CLI.<br><br>
 The Powerhouse CLI (ph-cli) is a command-line interface tool that provides essential commands for managing Powerhouse projects. The tool and it's commands are fundamental for creating, building, and running Document Models as a builder in studio mode.<br>
 ## Table of Contents
@@ -273,6 +273,10 @@ port to use for the Vetra Connect<br><br>
 #### Remote Drive <br>
 URL of remote drive to connect to (skips switchboard initialization)<br><br>
 **usage:** `--remote-drive <str>`<br>
+
+#### Drives Public Base <br>
+public base URL for the drive URLs advertised to Connect; each drive is exposed as <base>/d/<slug> instead of http://localhost:<switchboard-port>/d/<slug>. Use when the switchboard is reachable through a reverse proxy.<br><br>
+**usage:** `--drives-public-base <str>`<br>
 
 #### Db Path <br>
 Database path or connection string. Use a `postgres://` URL for Postgres; otherwise treated as a PGlite filesystem path. Leave unset for in-memory PGlite.<br><br>
@@ -599,6 +603,10 @@ Value to set at <key>. Coerced against the runtime schema (string, bool, number,
 
 
 ### flags
+#### Dynamic Base <br>
+Build one bundle that serves under any subpath; base resolved at serve time from a runtime global. Overrides --base.<br><br>
+**usage:** `--dynamic-base`<br>
+
 #### Ignore Local <br>
 Do not load local packages from this project<br><br>
 **usage:** `--ignore-local`<br>

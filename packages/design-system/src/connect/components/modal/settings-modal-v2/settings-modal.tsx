@@ -15,6 +15,7 @@ type Props = {
   readonly title: React.ReactNode;
   readonly tabs: SettingsTab[];
   defaultTab?: string;
+  navFooter?: React.ReactNode;
 } & ComponentProps<typeof Modal>;
 
 export function SettingsModal(props: Props) {
@@ -25,6 +26,7 @@ export function SettingsModal(props: Props) {
     onOpenChange,
     tabs,
     defaultTab,
+    navFooter,
     ...restProps
   } = props;
 
@@ -86,7 +88,14 @@ export function SettingsModal(props: Props) {
         </button>
       </div>
       <div className="flex flex-1">
-        <div className="flex flex-col gap-y-1 p-3 pt-6">{tabsContent}</div>
+        <div className="flex flex-col p-3 pt-6">
+          <div className="flex flex-col gap-y-1">{tabsContent}</div>
+          {navFooter && (
+            <div className="mt-auto border-t border-gray-100 pt-2 dark:border-slate-700">
+              {navFooter}
+            </div>
+          )}
+        </div>
         <div className="m-6 flex h-full flex-1 flex-col overflow-hidden rounded-lg border border-gray-50 bg-gray-50 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
           {typeof SelectedTabComponent === "function" ? (
             <SelectedTabComponent />

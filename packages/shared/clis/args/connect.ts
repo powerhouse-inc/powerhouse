@@ -1,5 +1,13 @@
 import type { Type } from "cmd-ts";
-import { number, option, optional, positional, string } from "cmd-ts";
+import {
+  boolean,
+  flag,
+  number,
+  option,
+  optional,
+  positional,
+  string,
+} from "cmd-ts";
 import {
   DEFAULT_CONNECT_OUTDIR,
   DEFAULT_CONNECT_PREVIEW_PORT,
@@ -55,9 +63,10 @@ export const connectStudioArgs = {
 //
 // `--json` accepts a partial `connect.*` blob (e.g. `{"renown":{"url":"..."}}`).
 // Individual flags merge on top of `--json` inside the same CLI layer, so they
-// win on collision. Env vars are NOT part of this build-time merge; they only
-// seed the dist file at container start (set-if-absent) via the Docker
-// entrypoint.
+// win on collision. Env vars are NOT part of this build-time merge;
+// PH_CONNECT_CONFIG_JSON is applied to the dist file at container start by
+// the Docker entrypoint (operator-wins: concrete values override the baked
+// file, null/omitted keep it; connect.app.basePath excluded).
 const connectRuntimeOverrideArgs = {
   json: option({
     type: optional(string),
@@ -187,6 +196,12 @@ export const connectBuildArgs = {
   }),
   ...connectRuntimeOverrideArgs,
   ...connectPositionalArgs,
+  dynamicBase: flag({
+    type: optional(boolean),
+    long: "dynamic-base",
+    description:
+      "Build one bundle that serves under any subpath; base resolved at serve time from a runtime global. Overrides --base.",
+  }),
   ...commonArgs,
 };
 

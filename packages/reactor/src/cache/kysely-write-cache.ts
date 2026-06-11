@@ -2,12 +2,13 @@ import type {
   CreateDocumentAction,
   PHDocument,
   UpgradeDocumentAction,
+  UpgradeTransition,
 } from "@powerhousedao/shared/document-model";
 import {
   applyDeleteDocumentAction,
   applyUpgradeDocumentAction,
-  createDocumentFromAction,
-} from "../executor/util.js";
+} from "@powerhousedao/shared/document-model";
+import { createDocumentFromAction } from "../executor/util.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
 import type { IKeyframeStore, IOperationStore } from "../storage/interfaces.js";
 import { RingBuffer } from "./buffer/ring-buffer.js";
@@ -18,6 +19,18 @@ import type { IWriteCache } from "./write/interfaces.js";
 type DocumentStream = {
   key: string;
   ringBuffer: RingBuffer<CachedSnapshot>;
+};
+
+/**
+ * An UPGRADE_DOCUMENT spine event validated as version-changing
+ * (fromVersion > 0 and fromVersion < toVersion), as opposed to the
+ * creation-time 0->N seed upgrade. Used to segment scope replay.
+ */
+type ValidatedUpgrade = {
+  fromVersion: number;
+  toVersion: number;
+  revision: Record<string, number> | undefined;
+  timestampUtcMs: string;
 };
 
 function extractModuleVersion(doc: PHDocument): number | undefined {
@@ -386,10 +399,66 @@ export class KyselyWriteCache implements IWriteCache {
     let startRevision: number;
     let documentType: string;
 
+    const validatedUpgrades: ValidatedUpgrade[] = [];
+
     if (keyframe) {
       document = keyframe.document;
       startRevision = keyframe.revision;
       documentType = keyframe.document.header.documentType;
+
+      const docScopeOpsAfterKeyframe = await this.operationStore.getSince(
+        documentId,
+        "document",
+        branch,
+        keyframe.revision,
+        undefined,
+        undefined,
+        signal,
+      );
+
+      for (const operation of docScopeOpsAfterKeyframe.results) {
+        if (operation.action.type === "UPGRADE_DOCUMENT") {
+          const upgradeAction = operation.action as UpgradeDocumentAction;
+          const fromVersion = upgradeAction.input.fromVersion;
+          const toVersion = upgradeAction.input.toVersion;
+
+          if (fromVersion > 0 && fromVersion < toVersion) {
+            let upgradePath: UpgradeTransition[] | undefined;
+            try {
+              upgradePath = this.registry.computeUpgradePath(
+                documentType,
+                fromVersion,
+                toVersion,
+              );
+            } catch (err) {
+              const upgradeInput = upgradeAction.input as {
+                initialState?: unknown;
+              };
+              if (upgradeInput.initialState !== undefined) {
+                upgradePath = undefined;
+              } else {
+                throw new Error(
+                  `Failed to rebuild document ${documentId}: no upgrade manifest for ${documentType} v${fromVersion}→v${toVersion} and no initialState snapshot. ${err instanceof Error ? err.message : String(err)}`,
+                  { cause: err },
+                );
+              }
+            }
+            validatedUpgrades.push({
+              fromVersion,
+              toVersion,
+              revision: upgradeAction.input.revision,
+              timestampUtcMs: operation.timestampUtcMs,
+            });
+            document = applyUpgradeDocumentAction(
+              document,
+              upgradeAction,
+              upgradePath,
+            );
+          }
+        } else if (operation.action.type === "DELETE_DOCUMENT") {
+          applyDeleteDocumentAction(document, operation.action as never);
+        }
+      }
     } else {
       startRevision = -1;
       const createOpResult = await this.operationStore.getSince(
@@ -446,7 +515,43 @@ export class KyselyWriteCache implements IWriteCache {
 
         if (operation.action.type === "UPGRADE_DOCUMENT") {
           const upgradeAction = operation.action as UpgradeDocumentAction;
-          document = applyUpgradeDocumentAction(document, upgradeAction);
+          const fromVersion = upgradeAction.input.fromVersion;
+          const toVersion = upgradeAction.input.toVersion;
+
+          let upgradePath: UpgradeTransition[] | undefined;
+          if (fromVersion > 0 && fromVersion < toVersion) {
+            try {
+              upgradePath = this.registry.computeUpgradePath(
+                documentType,
+                fromVersion,
+                toVersion,
+              );
+            } catch (err) {
+              const upgradeInput = upgradeAction.input as {
+                initialState?: unknown;
+              };
+              if (upgradeInput.initialState !== undefined) {
+                upgradePath = undefined;
+              } else {
+                throw new Error(
+                  `Failed to rebuild document ${documentId}: no upgrade manifest for ${documentType} v${fromVersion}→v${toVersion} and no initialState snapshot. ${err instanceof Error ? err.message : String(err)}`,
+                  { cause: err },
+                );
+              }
+            }
+            validatedUpgrades.push({
+              fromVersion,
+              toVersion,
+              revision: upgradeAction.input.revision,
+              timestampUtcMs: operation.timestampUtcMs,
+            });
+          }
+
+          document = applyUpgradeDocumentAction(
+            document,
+            upgradeAction,
+            upgradePath,
+          );
           docModule = this.registry.getModule(
             documentType,
             extractModuleVersion(document),
@@ -464,10 +569,21 @@ export class KyselyWriteCache implements IWriteCache {
       }
     }
 
-    const module = this.registry.getModule(
-      documentType,
-      extractModuleVersion(document),
-    );
+    const moduleCache = new Map<
+      number,
+      ReturnType<typeof this.registry.getModule>
+    >();
+
+    const getModuleCached = (version: number | undefined) => {
+      const key = version ?? 0;
+      let mod = moduleCache.get(key);
+      if (!mod) {
+        mod = this.registry.getModule(documentType, version);
+        moduleCache.set(key, mod);
+      }
+      return mod;
+    };
+
     let cursor: string | undefined = undefined;
     const pageSize = 100;
     let hasMorePages: boolean;
@@ -498,13 +614,26 @@ export class KyselyWriteCache implements IWriteCache {
             break;
           }
 
+          const moduleVersion = this.resolveModuleVersionForOp(
+            operation.index,
+            operation.timestampUtcMs,
+            scope,
+            validatedUpgrades,
+            extractModuleVersion(document),
+          );
+
           // Fail-fast: if reducer throws, error propagates immediately without caching partial state
           const protocolVersion =
             document.header.protocolVersions?.["base-reducer"] ?? 1;
-          document = module.reducer(document, operation.action, undefined, {
-            skip: operation.skip,
-            protocolVersion,
-          });
+          document = getModuleCached(moduleVersion).reducer(
+            document,
+            operation.action,
+            undefined,
+            {
+              skip: operation.skip,
+              protocolVersion,
+            },
+          );
         }
 
         const reachedTarget =
@@ -536,6 +665,47 @@ export class KyselyWriteCache implements IWriteCache {
     return document;
   }
 
+  /**
+   * Resolves which module version to use for a given operation in phase 2.
+   *
+   * Uses the validated-upgrade boundary rules from D7:
+   * - If `input.revision` is present: op.index < revision[scope] → before the upgrade boundary
+   * - Otherwise: timestamp fallback
+   * - Falls back to final module version when neither is decidable
+   */
+  private resolveModuleVersionForOp(
+    opIndex: number,
+    opTimestamp: string,
+    scope: string,
+    validatedUpgrades: ValidatedUpgrade[],
+    finalVersion: number | undefined,
+  ): number | undefined {
+    if (validatedUpgrades.length === 0) {
+      return finalVersion;
+    }
+
+    let currentVersion: number | undefined = validatedUpgrades[0]?.fromVersion;
+
+    for (const upgrade of validatedUpgrades) {
+      let beforeUpgrade: boolean;
+
+      if (upgrade.revision !== undefined) {
+        const boundary = upgrade.revision[scope] ?? 0;
+        beforeUpgrade = opIndex < boundary;
+      } else {
+        beforeUpgrade = opTimestamp < upgrade.timestampUtcMs;
+      }
+
+      if (beforeUpgrade) {
+        return currentVersion;
+      }
+
+      currentVersion = upgrade.toVersion;
+    }
+
+    return currentVersion;
+  }
+
   private async warmMissRebuild(
     baseDocument: PHDocument,
     baseRevision: number,
@@ -546,7 +716,36 @@ export class KyselyWriteCache implements IWriteCache {
     signal?: AbortSignal,
   ): Promise<PHDocument> {
     const documentType = baseDocument.header.documentType;
-    const module = this.registry.getModule(documentType);
+    const docScopeNextIndex = baseDocument.header.revision["document"] ?? 0;
+
+    const docScopeNewOps = await this.operationStore.getSince(
+      documentId,
+      "document",
+      branch,
+      docScopeNextIndex - 1,
+      undefined,
+      undefined,
+      signal,
+    );
+
+    const hasUpgradeCrossing = docScopeNewOps.results.some(
+      (op) => op.action.type === "UPGRADE_DOCUMENT",
+    );
+
+    if (hasUpgradeCrossing) {
+      return this.coldMissRebuild(
+        documentId,
+        scope,
+        branch,
+        targetRevision,
+        signal,
+      );
+    }
+
+    const module = this.registry.getModule(
+      documentType,
+      extractModuleVersion(baseDocument),
+    );
     let document = baseDocument;
 
     try {

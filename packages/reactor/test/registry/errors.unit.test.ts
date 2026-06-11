@@ -100,7 +100,7 @@ describe("DowngradeNotSupportedError", () => {
     const err = new DowngradeNotSupportedError("doc-type", 3, 1);
     expect(err.name).toBe("DowngradeNotSupportedError");
     expect(err.message).toBe(
-      "Downgrade not supported for doc-type: cannot go from version 3 to 1",
+      "Downgrade not supported for doc-type: cannot upgrade from version 3 to 1",
     );
   });
 });

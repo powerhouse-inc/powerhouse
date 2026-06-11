@@ -25,6 +25,24 @@ const getDefaultVetraUrl = (port: number) =>
 const getDriveId = (driveUrl: string | undefined): string =>
   driveUrl?.split("/").pop() ?? generateProjectDriveId(VETRA_DRIVE_NAME);
 
+// Rebase a local drive URL onto --drives-public-base: keeps the /d/<slug>
+// path, swaps the loopback origin for the public base. Browser clients
+// behind a reverse proxy can't reach http://localhost:<port>. Non-loopback
+// URLs (e.g. a remote drive) are already public and pass through unchanged.
+const rebaseDriveUrl = (driveUrl: string, publicBase: string): string => {
+  // Unparseable URLs pass through unchanged, like non-loopback ones.
+  let url: URL;
+  try {
+    url = new URL(driveUrl);
+  } catch {
+    return driveUrl;
+  }
+  if (!["localhost", "127.0.0.1", "[::1]"].includes(url.hostname)) {
+    return driveUrl;
+  }
+  return `${publicBase.replace(/\/+$/, "")}${url.pathname}`;
+};
+
 function createViteLogger(color: Color) {
   const customLogger = createLogger("info");
   const loggerInfo = customLogger.info.bind(customLogger);
@@ -288,10 +306,22 @@ export async function startVetra(args: VetraArgs) {
       // runConnectStudio so it survives the `wasFlagExplicitlyPassed`
       // gating (the user didn't pass --default-drives-url; vetra is setting
       // it itself).
+      // --drives-public-base: advertise proxy-reachable drive URLs to the
+      // browser instead of the switchboard's localhost origin.
+      const publicBase = args.drivesPublicBase;
+      const browserDriveUrl = publicBase
+        ? rebaseDriveUrl(driveUrl, publicBase)
+        : driveUrl;
+      const browserPreviewDriveUrl =
+        previewDriveUrl && publicBase
+          ? rebaseDriveUrl(previewDriveUrl, publicBase)
+          : previewDriveUrl;
       const vetraDrivesOverride = {
         drives: {
           defaultDrives: parseDefaultDrivesUrl(
-            previewDriveUrl ? [driveUrl, previewDriveUrl].join(",") : driveUrl,
+            browserPreviewDriveUrl
+              ? [browserDriveUrl, browserPreviewDriveUrl].join(",")
+              : browserDriveUrl,
           ),
           preserveStrategy: "preserve-all" as const,
         },

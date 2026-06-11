@@ -30,7 +30,7 @@ async function generateLLMDocs() {
     const academyDocsDir = path.resolve(__dirname, "..", "docs");
     const staticDir = path.resolve(__dirname, "..", "static");
 
-    const docFiles = await collectDocFiles(academyDocsDir);
+    const docFiles = collectDocFiles(academyDocsDir);
     const sortedFiles = sortFilesBySidebar(docFiles);
 
     const llmsTxt = generateLLMsIndex(sortedFiles);
@@ -82,7 +82,7 @@ function shouldExclude(relativePath: string): boolean {
   return EXCLUDE_PATTERNS.some((pattern) => pattern.test(normalized));
 }
 
-async function collectDocFiles(docsDir: string): Promise<DocFile[]> {
+function collectDocFiles(docsDir: string): DocFile[] {
   const docFiles: DocFile[] = [];
 
   function collectFiles(dir: string) {
