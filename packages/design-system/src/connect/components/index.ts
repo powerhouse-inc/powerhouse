@@ -54,6 +54,7 @@ export * from "./sidebar/sidebar.js";
 export * from "./status-icon/sync-status-icon.js";
 export * from "./tabs/tab-content.js";
 export * from "./tabs/tabs.js";
+export * from "./theme-switch.js";
 export * from "./toggle/toggle.js";
 export * from "./tooltip/tooltip.js";
 export type * from "./types.js";
