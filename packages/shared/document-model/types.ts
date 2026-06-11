@@ -1254,6 +1254,12 @@ export type UpgradeDocumentActionInput = {
   toVersion: number; // current model version
   documentId: string;
   initialState?: object; // optional; defaults to model.defaultState()
+  /**
+   * Per-scope next-operation-index snapshot at the moment the upgrade executes.
+   * Absent on legacy operations; loaders fall back to timestamp ordering when missing.
+   * Stamped CLIENT-SIDE at action creation (before signing), NEVER at execution.
+   */
+  revision?: Record<string, number>;
 };
 
 export type DeleteDocumentActionInput = {

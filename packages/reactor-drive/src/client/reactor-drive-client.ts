@@ -21,10 +21,13 @@ import type {
 import {
   createPresignedHeader,
   generateId,
-  replayDocument,
+  replayDocumentVersioned,
   type Action,
   type CreateDocumentActionInput,
+  type PHBaseState,
   type PHDocument,
+  type Reducer,
+  type VersionedReplayConfig,
 } from "@powerhousedao/shared/document-model";
 import {
   DRIVE_CHILD_RELATIONSHIP_TYPE,
@@ -450,14 +453,27 @@ export class ReactorDriveClient implements IDriveClient {
         undefined,
         signal,
       );
-      const documentModelModule = await this.reactor.getDocumentModelModule(
-        srcDoc.header.documentType,
+      const documentType = srcDoc.header.documentType;
+      const { results: allModules } =
+        await this.reactor.getDocumentModelModules();
+      const modulesForType = allModules.filter(
+        (m) => m.documentModel.global.id === documentType,
       );
-      const duplicated: PHDocument = replayDocument(
+      if (modulesForType.length === 0) {
+        throw new Error(
+          `Document model module not found for type: ${documentType}`,
+        );
+      }
+      const reducers: VersionedReplayConfig["reducers"] = {};
+      for (const m of modulesForType) {
+        reducers[m.version ?? 1] = m.reducer as Reducer<PHBaseState>;
+      }
+      const config: VersionedReplayConfig = { reducers };
+      const duplicated: PHDocument = replayDocumentVersioned(
         srcDoc.initialState,
         srcDoc.operations,
-        documentModelModule.reducer,
-        createPresignedHeader(newId, srcDoc.header.documentType),
+        config,
+        createPresignedHeader(newId, documentType),
       );
       duplicated.header.name = node.name;
 

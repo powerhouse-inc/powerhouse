@@ -17,3 +17,4 @@ export type * from "./types.js";
 export * from "./upgrades.js";
 export * from "./utils.js";
 export * from "./validation.js";
+export * from "./versioned-replay.js";

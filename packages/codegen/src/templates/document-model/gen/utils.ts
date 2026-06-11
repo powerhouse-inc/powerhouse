@@ -1,6 +1,33 @@
 import { ts } from "@tmpl/core";
 import type { DocumentModelFileMakerArgs } from "file-builders";
 
+function makeOlderReducerImports(
+  versions: number[],
+  currentVersion: number,
+): string {
+  return versions
+    .filter((k) => k < currentVersion)
+    .map(
+      (k) =>
+        `import { reducer as reducerV${k} } from "../../v${k}/gen/reducer.js";`,
+    )
+    .join("\n");
+}
+
+function makeReducersObject(
+  versions: number[],
+  currentVersion: number,
+): string {
+  const entries = versions
+    .filter((k) => k <= currentVersion)
+    .map((k) => {
+      const name = k === currentVersion ? "reducer" : `reducerV${k}`;
+      return `${k}: ${name} as unknown as Reducer<PHBaseState>`;
+    })
+    .join(", ");
+  return `{ ${entries} }`;
+}
+
 export const documentModelGenUtilsTemplate = (v: DocumentModelFileMakerArgs) =>
   ts`
 /**
@@ -9,14 +36,17 @@ export const documentModelGenUtilsTemplate = (v: DocumentModelFileMakerArgs) =>
  */
 import type {
     DocumentModelUtils,
+    PHBaseState,
+    Reducer,
 } from "document-model";
 import {
     baseCreateDocument,
     baseSaveToFileHandle,
-    baseLoadFromInput,
+    baseLoadFromInputVersioned,
     defaultBaseState,
  } from "document-model";
 import { reducer } from './reducer.js';
+${makeOlderReducerImports(v.versions, v.version) ? makeOlderReducerImports(v.versions, v.version) + "\n" : ""}import { ${v.upgradeManifestName} } from "../../upgrades/upgrade-manifest.js";
 import { ${v.documentTypeVariableName} } from "./document-type.js";
 import {
   ${v.assertIsPhDocumentOfTypeFunctionName},
@@ -45,7 +75,10 @@ export const utils: DocumentModelUtils<${v.phStateName}> = {
         return baseSaveToFileHandle(document, input);
     },
     loadFromInput(input) {
-        return baseLoadFromInput(input, reducer);
+        return baseLoadFromInputVersioned(input, {
+            reducers: ${makeReducersObject(v.versions, v.version)},
+            upgradeManifest: ${v.upgradeManifestName},
+        });
     },
     isStateOfType(state) {
         return ${v.isPhStateOfTypeFunctionName}(state);
