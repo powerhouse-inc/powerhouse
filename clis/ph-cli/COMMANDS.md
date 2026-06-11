@@ -274,6 +274,10 @@ port to use for the Vetra Connect<br><br>
 URL of remote drive to connect to (skips switchboard initialization)<br><br>
 **usage:** `--remote-drive <str>`<br>
 
+#### Drives Public Base <br>
+public base URL for the drive URLs advertised to Connect; each drive is exposed as <base>/d/<slug> instead of http://localhost:<switchboard-port>/d/<slug>. Use when the switchboard is reachable through a reverse proxy.<br><br>
+**usage:** `--drives-public-base <str>`<br>
+
 #### Db Path <br>
 Database path or connection string. Use a `postgres://` URL for Postgres; otherwise treated as a PGlite filesystem path. Leave unset for in-memory PGlite.<br><br>
 **usage:** `--db-path <str>`<br>

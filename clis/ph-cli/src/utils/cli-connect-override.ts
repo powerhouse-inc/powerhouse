@@ -317,9 +317,10 @@ export function buildCliConnectOverride(args: ConnectBuildArgs): {
  * `wasFlagExplicitlyPassed` so cmd-ts defaults don't leak into the override.
  *
  * `callerOverride` is supplied by wrappers around studio (notably `ph vetra`,
- * which sets default drives + preserveStrategy directly) and deep-merges on
- * top of the user-flag override, so caller choices stick even when the user
- * didn't type the corresponding flag.
+ * which sets default drives + preserveStrategy directly). The flag override
+ * deep-merges on top of it: caller choices apply for every flag the user
+ * didn't type, but an explicitly passed flag (e.g. `--default-drives-url`)
+ * always wins.
  */
 export function buildStudioConnectOverride(
   args: ConnectStudioArgs,
@@ -341,5 +342,5 @@ export function buildStudioConnectOverride(
   const hasFlag = Object.keys(flagOverride).length > 0;
   if (!hasFlag) return callerOverride;
   if (callerOverride === undefined) return flagOverride;
-  return deepMerge(flagOverride, callerOverride);
+  return deepMerge(callerOverride, flagOverride);
 }
