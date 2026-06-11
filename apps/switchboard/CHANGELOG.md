@@ -1,3 +1,13 @@
+## 6.2.0-dev.10 (2026-06-11)
+
+### 🩹 Fixes
+
+- **connect:** make PH_CONNECT_CONFIG_JSON overrides win over baked runtime-config defaults ([145a3d423](https://github.com/powerhouse-inc/powerhouse/commit/145a3d423))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 6.2.0-dev.9 (2026-06-11)
 
 ### 🚀 Features
