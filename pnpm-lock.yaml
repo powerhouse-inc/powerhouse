@@ -603,7 +603,7 @@ importers:
         version: 4.2.2
       tsdown:
         specifier: 'catalog:'
-        version: 0.21.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@tsdown/css@0.21.1)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(synckit@0.11.12)(typescript@5.9.3)
+        version: 0.21.1(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@tsdown/css@0.21.1)(oxc-resolver@11.19.0(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(synckit@0.11.12)(typescript@5.9.3)
       vite:
         specifier: 'catalog:'
         version: 8.0.8(@types/node@25.2.3)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3)
@@ -1178,7 +1178,7 @@ importers:
         version: 4.9.1
       tsdown:
         specifier: 'catalog:'
-        version: 0.21.1(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@tsdown/css@0.21.1)(oxc-resolver@11.19.0(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(synckit@0.11.12)(typescript@5.9.3)
+        version: 0.21.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@tsdown/css@0.21.1)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(synckit@0.11.12)(typescript@5.9.3)
       tsx:
         specifier: 'catalog:'
         version: 4.21.0
@@ -2392,6 +2392,9 @@ importers:
       fflate:
         specifier: ^0.8.2
         version: 0.8.2
+      kysely:
+        specifier: 'catalog:'
+        version: 0.28.16
       luxon:
         specifier: 'catalog:'
         version: 3.7.2
@@ -2444,9 +2447,6 @@ importers:
       '@types/react':
         specifier: 'catalog:'
         version: 19.2.14
-      kysely:
-        specifier: 'catalog:'
-        version: 0.28.16
       react:
         specifier: 'catalog:'
         version: 19.2.6
