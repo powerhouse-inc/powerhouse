@@ -1,3 +1,33 @@
+## 6.2.0-dev.10 (2026-06-11)
+
+### 🩹 Fixes
+
+- **connect:** make PH_CONNECT_CONFIG_JSON overrides win over baked runtime-config defaults ([145a3d423](https://github.com/powerhouse-inc/powerhouse/commit/145a3d423))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
+## 6.2.0-dev.9 (2026-06-11)
+
+### 🩹 Fixes
+
+- **connect:** stop nginx root-file regex from hijacking /assets at default base path ([f72fe2fe5](https://github.com/powerhouse-inc/powerhouse/commit/f72fe2fe5))
+- **switchboard:** stop tracing background DB polls + align @sentry versions ([c5b307333](https://github.com/powerhouse-inc/powerhouse/commit/c5b307333))
+
+### ❤️ Thank You
+
+- Frank Pfeift
+- Guillermo Puente @gpuente
+
+## 6.2.0-dev.8 (2026-06-11)
+
+This was a version bump only for @powerhousedao/pglite-fs to align it with other projects, there were no code changes.
+
+## 6.2.0-dev.7 (2026-06-11)
+
+This was a version bump only for @powerhousedao/pglite-fs to align it with other projects, there were no code changes.
+
 ## 6.2.0-dev.6 (2026-06-10)
 
 ### 🚀 Features

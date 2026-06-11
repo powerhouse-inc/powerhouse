@@ -168,11 +168,13 @@ table above lists each `connect.*` field together with its CLI flag.
 
 ### Docker deployments
 
-When deploying Connect's Docker image, the entrypoint can still translate a
-few operator-supplied env vars into edits to the dist `powerhouse.config.json`
-at container start (set-if-absent). This is purely an operator-time
-convenience — the SPA itself never reads env vars at runtime — and is
-documented in the [Docker Deployment guide](./05-DockerDeployment).
+When deploying Connect's Docker image, the entrypoint applies the
+operator-supplied `PH_CONNECT_CONFIG_JSON` env var to the dist
+`powerhouse.config.json` at container start (operator-wins: concrete values
+override the baked file; `null`/omitted keep it; `connect.app.basePath` is
+ignored). This is purely an operator-time convenience — the SPA itself never
+reads env vars at runtime — and is documented in the
+[Docker Deployment guide](./05-DockerDeployment).
 
 ## Variables that stay as env vars
 

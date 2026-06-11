@@ -85,7 +85,7 @@ Each layer can supply a partial value; missing leaves fall back to the layer bel
 | Manual edit of `<project>/powerhouse.config.json`           | source file                                     | Local dev tweaks; checked into git                                   |
 | `ph connect config --<field> <value>` (or `--json '{...}'`) | source **and** dist (dual-write)                | Quick CLI edit that takes effect on next refresh, without rebuilding |
 | `ph connect build --<field> <value>` (or `--json '{...}'`)  | dist (CLI override layer)                       | One-off override at build time, e.g. CI baking a different `--base`  |
-| Docker entrypoint env var `PH_CONNECT_CONFIG_JSON`          | dist file at container start, **set-if-absent** | Per-deployment knobs without rebuilding the image                    |
+| Docker entrypoint env var `PH_CONNECT_CONFIG_JSON`          | dist file at container start, **operator-wins** | Per-deployment knobs without rebuilding the image                    |
 
 Two special-case writers also exist:
 
@@ -107,7 +107,7 @@ Two special-case writers also exist:
 
 **`--base` is build-time only.** `ph connect build --base /foo` writes `connect.app.basePath` AND bakes the value into the Vite bundle's asset URLs AND templates the nginx config. `ph connect config --base /foo` would only write the first one, leaving the SPA's router and the deployed assets disagreeing — so `ph connect config` rejects `--base` up front with an actionable error pointing at `ph connect build --base`.
 
-**Docker entrypoint.** `docker/connect-entrypoint.sh` runs at container start and accepts a single env var, `PH_CONNECT_CONFIG_JSON`, carrying a full `powerhouse.config.json` payload (same shape as `ph connect config --json '{...}'`). It deep-merges that JSON into the dist file with **set-if-absent semantics**: any path already populated (by the build, by CLI flags, or by a mounted ConfigMap) wins; env-supplied values only fill gaps. This is the only env-var path still active — the SPA itself does not read env vars. Operators get the deployment-time knob without env vars leaking into runtime behaviour.
+**Docker entrypoint.** `docker/connect-entrypoint.sh` runs at container start and accepts a single env var, `PH_CONNECT_CONFIG_JSON`, carrying a full `powerhouse.config.json` payload (same shape as `ph connect config --json '{...}'`). It deep-merges that JSON into the dist file with **operator-wins semantics**: a concrete value in the env JSON (including `false`/`""`/`[]`/`0`) overwrites whatever the build baked; a `null` leaf (or an omitted key) keeps the file's value, so baked defaults only apply where the operator expressed no opinion. One exception: `connect.app.basePath` is stripped from the payload — the base path is baked into the bundled asset URLs and cannot be changed at runtime (rebuild with `--base`, or use `--dynamic-base`). This is the only env-var path still active — the SPA itself does not read env vars. Operators get the deployment-time knob without env vars leaking into runtime behaviour.
 
 ```bash
 docker run \
@@ -189,7 +189,7 @@ Edit the project's `powerhouse.config.json`, set `"packageRegistryUrl": "https:/
 `ph connect config --default-drives-url https://drive-a, https://drive-b`. The CSV is parsed into `connect.drives.defaultDrives[]` objects.
 
 **"I'm deploying the docker image to a new environment and need to override renown."**
-Set `PH_CONNECT_CONFIG_JSON='{"connect":{"renown":{"url":"https://renown.staging.example"}}}'` on the container. The entrypoint script deep-merges the JSON into the dist file before nginx starts (set-if-absent); the SPA serves the new value on the very first request.
+Set `PH_CONNECT_CONFIG_JSON='{"connect":{"renown":{"url":"https://renown.staging.example"}}}'` on the container. The entrypoint script deep-merges the JSON into the dist file before nginx starts (operator-wins); the SPA serves the new value on the very first request.
 
 **"I need a different Sentry DSN per environment."**
 Sentry config lives in `connect.sentry.*` of `powerhouse.config.json`. The DSN, environment label, and tracing flag are all runtime — one Docker image serves staging + prod by switching the env-supplied JSON:
@@ -276,9 +276,9 @@ packages/codegen/src/templates/boilerplate/powerhouse.config.json.ts
   └ `ph init` boilerplate template
 
 docker/connect-entrypoint.sh
-  └ PH_CONNECT_CONFIG_JSON → dist seeding (jq deep-merge, set-if-absent)
+  └ PH_CONNECT_CONFIG_JSON → dist overrides (jq deep-merge, operator-wins)
 ```
 
 ## Design principle, in one line
 
-The SPA never reads `process.env`; it reads one JSON file. Everything an operator or developer wants to configure — by CLI, env, manual edit, scaffolding, or programmatic API — ends up in that file, with a single, clear precedence: `defaults < source < CLI override`, plus `set-if-absent` env vars at deploy time.
+The SPA never reads `process.env`; it reads one JSON file. Everything an operator or developer wants to configure — by CLI, env, manual edit, scaffolding, or programmatic API — ends up in that file, with a single, clear precedence: `defaults < source < CLI override < PH_CONNECT_CONFIG_JSON` (the deploy-time env var wins wherever it supplies a concrete value).
