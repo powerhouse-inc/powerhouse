@@ -1,4 +1,5 @@
 import type { Manifest } from "@powerhousedao/shared";
+import { slimManifest } from "@powerhousedao/shared/registry";
 import fs from "node:fs";
 import path from "node:path";
 import { compareSemver } from "./semver.js";
@@ -72,7 +73,12 @@ function readManifest(dir: string): Manifest | null {
   for (const manifestPath of candidates) {
     try {
       const raw = fs.readFileSync(manifestPath, "utf-8");
-      return JSON.parse(raw) as Manifest;
+      // Manifests are publisher-supplied JSON; slim to the known summary
+      // fields so one oversized publish can't bloat every /packages
+      // listing (a single 7.8 MB `features` blob once pushed the response
+      // past clients' localStorage quota). The raw file stays available
+      // through the CDN path.
+      return slimManifest(JSON.parse(raw) as Manifest);
     } catch {
       // try next candidate
     }
@@ -119,7 +125,7 @@ export function loadPackage(
     return null;
   }
   return {
-    name: manifest.name ?? name,
+    name: manifest.name || name,
     path: `/-/cdn/${name}`,
     manifest,
     documentTypes: getDocumentTypesFromManifest(manifest),
@@ -182,7 +188,9 @@ export function scanPackages(
         const versionDir = getLatestVersionDir(pkgDir);
         const manifestDir = versionDir ?? pkgDir;
         const manifest = readManifest(manifestDir);
-        const name = manifest?.name ?? dirName;
+        // `||` (not `??`): slimManifest normalizes a missing manifest name to
+        // "" — fall back to the directory name in that case too.
+        const name = manifest?.name || dirName;
         const { distTags, versions, locallyPublished } = readPackageMetadata(
           storagePath,
           name,
@@ -209,7 +217,7 @@ export function scanPackages(
       const versionDir = getLatestVersionDir(pkgDir);
       const manifestDir = versionDir ?? pkgDir;
       const manifest = readManifest(manifestDir);
-      const name = manifest?.name ?? entry.name;
+      const name = manifest?.name || entry.name;
       const { distTags, versions, locallyPublished } = readPackageMetadata(
         storagePath,
         name,
