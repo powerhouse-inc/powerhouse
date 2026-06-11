@@ -2,9 +2,9 @@ import { Icon } from "#design-system";
 import { useTheme } from "@powerhousedao/reactor-browser";
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
 import type {
-  ClearIndicatorProps,
-  DropdownIndicatorProps,
-  MenuListProps,
+    ClearIndicatorProps,
+    DropdownIndicatorProps,
+    MenuListProps,
 } from "react-select";
 import Select, { components } from "react-select";
 
@@ -106,7 +106,7 @@ export function Combobox(props: Props) {
             color: invalid
               ? dark
                 ? "var(--color-red-400)"
-                : "var(--color-red-800)"
+                : "var(--color-red-900)"
               : dark
                 ? "var(--color-slate-100)"
                 : "var(--color-gray-500)",
