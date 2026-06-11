@@ -43,6 +43,16 @@ const DEPLOY_ENV = process.env.NODE_ENV || "development";
 const TEMPO_ENDPOINT = process.env.TEMPO_ENDPOINT;
 const SENTRY_DSN = process.env.SENTRY_DSN;
 
+// Whether to forward TRANSACTIONS (spans) to Sentry. Errors are always sent
+// when SENTRY_DSN is set — this flag only gates APM/tracing into Sentry.
+// Default on (back-compat). Set SENTRY_TRACING_ENABLED=false for an
+// "errors-only" deployment: errors still go to Sentry, traces still go to
+// Tempo, but no transactions hit Sentry (no Kafka/ClickHouse/nodestore
+// cost). This is the recommended mode for tenant workloads at scale —
+// Sentry's value there is error grouping; traces live in Tempo.
+const SENTRY_TRACING_TO_SENTRY =
+  Boolean(SENTRY_DSN) && process.env.SENTRY_TRACING_ENABLED !== "false";
+
 const TRACING_REQUESTED =
   process.env.ENABLE_TRACING === "true" ||
   process.env.NODE_ENV === "production";
@@ -88,7 +98,9 @@ if (SENTRY_DSN) {
       (process.env.npm_package_version
         ? `v${process.env.npm_package_version}`
         : undefined),
-    tracesSampleRate: SENTRY_TRACES_SAMPLE_RATE,
+    // 0 in errors-only mode so even @sentry/node's bundled auto-OTel path
+    // (used when TRACING_ENABLED is false) produces no transactions.
+    tracesSampleRate: SENTRY_TRACING_TO_SENTRY ? SENTRY_TRACES_SAMPLE_RATE : 0,
     // When tracing is on, our NodeSDK below owns the OTel globals and Sentry
     // receives spans via SentrySpanProcessor. Skipping Sentry's bundled OTel
     // setup avoids two TracerProviders fighting over setGlobalTracerProvider.
@@ -130,16 +142,20 @@ if (TRACING_ENABLED) {
       new BatchSpanProcessor(new OTLPTraceExporter({ url: TEMPO_ENDPOINT })),
     );
   }
-  if (SENTRY_DSN) {
+  if (SENTRY_TRACING_TO_SENTRY) {
     // Fan the same OTel spans into Sentry — same trace IDs as Tempo, so
-    // Sentry transactions cross-link to traces in Grafana.
+    // Sentry transactions cross-link to traces in Grafana. Skipped in
+    // errors-only mode (SENTRY_TRACING_ENABLED=false): spans still flow to
+    // Tempo via the BatchSpanProcessor above, just not to Sentry.
     spanProcessors.push(new SentrySpanProcessor());
   }
 
   sdk = new NodeSDK({
     resource,
     spanProcessors,
-    textMapPropagator: SENTRY_DSN ? new SentryPropagator() : undefined,
+    textMapPropagator: SENTRY_TRACING_TO_SENTRY
+      ? new SentryPropagator()
+      : undefined,
     instrumentations: [
       new HttpInstrumentation({
         ignoreIncomingRequestHook: (req) =>
@@ -180,7 +196,10 @@ if (TRACING_ENABLED) {
     ],
   });
   sdk.start();
-  if (SENTRY_DSN && typeof Sentry.validateOpenTelemetrySetup === "function") {
+  if (
+    SENTRY_TRACING_TO_SENTRY &&
+    typeof Sentry.validateOpenTelemetrySetup === "function"
+  ) {
     Sentry.validateOpenTelemetrySetup();
   }
   logger.info("OpenTelemetry tracing initialized");
