@@ -328,7 +328,7 @@ export function DBExplorer({
                 </div>
                 {resetTargetMajor !== null && (
                   <button
-                    className="rounded-sm border border-red-300 bg-red-50 px-3 py-1.5 text-sm text-red-900 hover:effect disabled:opacity-50 dark:border-red-600 dark:bg-red-900 dark:text-red-100"
+                    className="rounded-sm border border-red-500 bg-red-50 px-3 py-1.5 text-sm text-red-900 hover:effect disabled:opacity-50 dark:border-red-500 dark:bg-red-900 dark:text-red-100"
                     onClick={() => setPendingResetMajor(resetTargetMajor)}
                     disabled={resetting}
                     type="button"

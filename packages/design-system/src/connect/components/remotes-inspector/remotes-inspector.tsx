@@ -254,7 +254,7 @@ export function RemotesInspector({
         </div>
       </div>
       {addError && (
-        <div className="shrink-0 rounded-sm border border-red-300 bg-red-50 px-3 py-1.5 text-xs text-red-900 dark:border-red-600 dark:bg-red-900 dark:text-red-100">
+        <div className="shrink-0 rounded-sm border border-red-500 bg-red-50 px-3 py-1.5 text-xs text-red-900 dark:border-red-500 dark:bg-red-900 dark:text-red-100">
           {addError}
         </div>
       )}

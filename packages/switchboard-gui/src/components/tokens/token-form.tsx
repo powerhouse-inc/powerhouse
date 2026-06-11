@@ -128,7 +128,7 @@ const TokenForm = () => {
               {/*content*/}
               <div className="outline-hidden focus:outline-hidden relative flex w-full flex-col rounded-lg border-0 bg-gray-50 shadow-lg dark:bg-slate-800">
                 {/*header*/}
-                <div className="border-blueGray-200 flex items-start justify-between rounded-t border-b border-solid p-5">
+                <div className="border-gray-300 flex items-start justify-between rounded-t border-b border-solid p-5">
                   <h3 className="text-3xl font-semibold">API Token</h3>
                   <button
                     className="outline-hidden focus:outline-hidden float-right ml-auto border-0 bg-transparent p-1 text-3xl font-semibold leading-none text-gray-900 opacity-5 dark:text-slate-50"
@@ -146,7 +146,7 @@ const TokenForm = () => {
                   </div>
                 </div>
                 {/*footer*/}
-                <div className="border-blueGray-200 flex items-center justify-end rounded-b border-t border-solid p-6">
+                <div className="border-gray-300 flex items-center justify-end rounded-b border-t border-solid p-6">
                   <button
                     className="background-transparent outline-hidden focus:outline-hidden mb-1 mr-1 px-6 py-2 text-sm font-bold uppercase text-red-500 transition-all duration-150 ease-linear dark:text-red-100"
                     type="button"

@@ -113,7 +113,7 @@ export function IntegrityInspector({
             Document ID
           </label>
           <input
-            className="rounded-sm border border-gray-300 px-3 py-1.5 text-sm outline-none focus:border-blue-400 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 dark:focus:border-blue-500"
+            className="rounded-sm border border-gray-300 px-3 py-1.5 text-sm outline-none focus:border-blue-500 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 dark:focus:border-blue-500"
             onChange={(e) => setDocumentId(e.target.value)}
             placeholder="Enter document ID"
             type="text"
@@ -125,7 +125,7 @@ export function IntegrityInspector({
             Branch (optional)
           </label>
           <input
-            className="rounded-sm border border-gray-300 px-3 py-1.5 text-sm outline-none focus:border-blue-400 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 dark:focus:border-blue-500"
+            className="rounded-sm border border-gray-300 px-3 py-1.5 text-sm outline-none focus:border-blue-500 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 dark:focus:border-blue-500"
             onChange={(e) => setBranch(e.target.value)}
             placeholder="main"
             type="text"
@@ -134,7 +134,7 @@ export function IntegrityInspector({
         </div>
         <div className="flex gap-2">
           <button
-            className="flex items-center gap-1 rounded-sm border border-blue-300 bg-blue-50 px-3 py-1.5 text-sm text-blue-900 hover:effect disabled:opacity-50 dark:border-blue-600 dark:bg-blue-900 dark:text-blue-100"
+            className="flex items-center gap-1 rounded-sm border border-blue-500 bg-blue-50 px-3 py-1.5 text-sm text-blue-900 hover:effect disabled:opacity-50 dark:border-blue-500 dark:bg-blue-900 dark:text-blue-100"
             disabled={
               !documentId.trim() ||
               status === "running" ||
@@ -147,7 +147,7 @@ export function IntegrityInspector({
             Validate
           </button>
           <button
-            className="flex items-center gap-1 rounded-sm border border-yellow-300 bg-yellow-50 px-3 py-1.5 text-sm text-yellow-900 hover:effect disabled:opacity-50 dark:border-yellow-600 dark:bg-yellow-900 dark:text-yellow-100"
+            className="flex items-center gap-1 rounded-sm border border-yellow-500 bg-yellow-50 px-3 py-1.5 text-sm text-yellow-900 hover:effect disabled:opacity-50 dark:border-yellow-500 dark:bg-yellow-900 dark:text-yellow-100"
             disabled={
               !documentId.trim() ||
               status === "running" ||
@@ -160,7 +160,7 @@ export function IntegrityInspector({
             Rebuild Keyframes
           </button>
           <button
-            className="flex items-center gap-1 rounded-sm border border-yellow-300 bg-yellow-50 px-3 py-1.5 text-sm text-yellow-900 hover:effect disabled:opacity-50 dark:border-yellow-600 dark:bg-yellow-900 dark:text-yellow-100"
+            className="flex items-center gap-1 rounded-sm border border-yellow-500 bg-yellow-50 px-3 py-1.5 text-sm text-yellow-900 hover:effect disabled:opacity-50 dark:border-yellow-500 dark:bg-yellow-900 dark:text-yellow-100"
             disabled={
               !documentId.trim() ||
               status === "running" ||
@@ -176,7 +176,7 @@ export function IntegrityInspector({
       </div>
 
       {confirmAction && (
-        <div className="flex shrink-0 items-center gap-3 rounded-sm border border-yellow-400 bg-yellow-50 px-3 py-2 dark:border-yellow-500 dark:bg-yellow-900">
+        <div className="flex shrink-0 items-center gap-3 rounded-sm border border-yellow-500 bg-yellow-50 px-3 py-2 dark:border-yellow-500 dark:bg-yellow-900">
           <span className="text-sm text-yellow-900 dark:text-yellow-100">
             {confirmAction === "keyframes"
               ? "This will delete all keyframes for this document. Continue?"

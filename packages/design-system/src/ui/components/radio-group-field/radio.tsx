@@ -45,12 +45,12 @@ export const Radio = React.forwardRef<
             "aspect-square size-4 rounded-full border border-gray-900 dark:border-slate-50",
             "hover:effect",
             disabled && [
-              "cursor-not-allowed border-gray-300 hover:effect dark:border-slate-500",
-              "hover:effect dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100",
+              "cursor-not-allowed border-gray-300 dark:border-slate-500",
+              "dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100",
             ],
             hasError && [
-              "border-red-700 hover:border-red-900 dark:border-red-200 dark:hover:border-red-50",
-              "dark:border-red-700 dark:hover:border-red-900",
+              "border-red-900 dark:border-red-100",
+              "dark:border-red-900",
             ],
             className,
           )}

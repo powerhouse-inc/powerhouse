@@ -63,7 +63,7 @@ export const MigrationBanner: React.FC = () => {
 
   return (
     <div className="absolute inset-x-0 top-0 z-30 flex justify-center p-3">
-      <div className="flex max-w-3xl items-center gap-3 rounded-lg border border-yellow-500 bg-yellow-500 px-4 py-3 text-sm text-gray-900 shadow-lg dark:border-yellow-400 dark:bg-yellow-900 dark:text-slate-50">
+      <div className="flex max-w-3xl items-center gap-3 rounded-lg border border-yellow-500 bg-yellow-500 px-4 py-3 text-sm text-gray-900 shadow-lg dark:border-yellow-500 dark:bg-yellow-900 dark:text-slate-50">
         <div className="flex-1">
           <div className="font-semibold">
             Your local database uses Postgres {major}.

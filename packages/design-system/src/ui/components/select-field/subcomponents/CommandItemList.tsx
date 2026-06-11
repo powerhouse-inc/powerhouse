@@ -1,7 +1,7 @@
 import type { IconName } from "#design-system";
 import { Icon } from "#design-system";
-import { twMerge } from "tailwind-merge";
 import React from "react";
+import { twMerge } from "tailwind-merge";
 import { CommandItem } from "../../command/command.js";
 import type { SelectProps } from "../../enum-field/types.js";
 
@@ -65,7 +65,7 @@ export const CommandItemList: React.FC<FavoriteOptionsProps> = ({
               "cursor-pointer",
               "data-[selected=true]:bg-gray-100 dark:data-[selected=true]:bg-slate-500",
               opt.disabled &&
-                "pointer-events-auto! cursor-not-allowed hover:bg-transparent hover:effect",
+                "hover:effect pointer-events-auto! cursor-not-allowed",
             )}
             role="option"
             aria-selected={isSelected}

@@ -223,7 +223,7 @@ export function ProcessorsInspector({
       </div>
 
       {error && (
-        <div className="shrink-0 rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm text-red-900 dark:border-red-600 dark:bg-red-900 dark:text-red-100">
+        <div className="shrink-0 rounded-lg border border-red-500 bg-red-50 px-4 py-2 text-sm text-red-900 dark:border-red-500 dark:bg-red-900 dark:text-red-100">
           Failed to load processors: {error}
         </div>
       )}

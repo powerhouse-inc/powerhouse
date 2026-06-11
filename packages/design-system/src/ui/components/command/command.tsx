@@ -1,7 +1,7 @@
 import { Icon } from "#design-system";
-import { twMerge } from "tailwind-merge";
 import { Command as CommandPrimitive } from "cmdk";
 import React from "react";
+import { twMerge } from "tailwind-merge";
 
 const Command = React.forwardRef<
   React.ElementRef<typeof CommandPrimitive>,
@@ -28,7 +28,6 @@ const CommandInput = React.forwardRef<
     className={twMerge(
       "group relative flex items-center border-b",
       "border-b-gray-300 dark:border-b-slate-900",
-      "hover:border-b-gray-300 dark:hover:border-b-slate-800",
       "hover:effect",
       "focus-within:border-b-gray-300 dark:focus-within:border-b-slate-800",
       "focus-within:bg-gray-100 dark:focus-within:bg-slate-700",
@@ -137,5 +136,6 @@ export {
   CommandInput,
   CommandItem,
   CommandList,
-  CommandLoading,
+  CommandLoading
 };
+

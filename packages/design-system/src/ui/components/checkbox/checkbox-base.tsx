@@ -1,6 +1,6 @@
-import { twMerge } from "tailwind-merge";
 import * as CheckboxPrimitive from "@radix-ui/react-checkbox";
 import * as React from "react";
+import { twMerge } from "tailwind-merge";
 
 type CheckboxValue = boolean | "indeterminate";
 
@@ -32,15 +32,10 @@ const CheckboxBase = React.forwardRef<
       "data-[state=checked]:bg-gray-900 data-[state=indeterminate]:bg-gray-900 dark:data-[state=checked]:bg-slate-400 dark:data-[state=indeterminate]:bg-slate-400",
       "data-[state=checked]:text-gray-50 data-[state=indeterminate]:text-gray-50 dark:data-[state=checked]:text-slate-900 dark:data-[state=indeterminate]:text-slate-900",
       // hover states
-      !props.disabled && [
-        "group-hover:effect data-[state=checked]:group-hover:effect data-[state=indeterminate]:group-hover:effect dark:data-[state=checked]:group-hover:effect dark:data-[state=indeterminate]:group-hover:effect",
-        "group-hover:effect dark:data-[state=checked]:group-hover:effect dark:data-[state=indeterminate]:group-hover:effect",
-      ],
+      !props.disabled && "group-hover:effect",
       // Error state
-      "data-[invalid=true]:data-state:border-red-800! data-[invalid=true]:data-[state=checked]:bg-red-800! data-[invalid=true]:data-[state=indeterminate]:bg-red-800! dark:data-[invalid=true]:data-state:border-red-100! dark:data-[invalid=true]:data-[state=checked]:bg-red-100! dark:data-[invalid=true]:data-[state=indeterminate]:bg-red-100!",
-      "dark:data-[invalid=true]:data-state:border-red-800! dark:data-[invalid=true]:data-[state=checked]:bg-red-800! dark:data-[invalid=true]:data-[state=indeterminate]:bg-red-800!",
-      // error hover states
-      "data-[invalid=true]:group-hover:border-red-900! data-[invalid=true]:data-[state=checked]:group-hover:effect data-[invalid=true]:data-[state=indeterminate]:group-hover:effect dark:data-[invalid=true]:group-hover:border-red-50! dark:data-[invalid=true]:data-[state=checked]:group-hover:effect dark:data-[invalid=true]:data-[state=indeterminate]:group-hover:effect",
+      "data-[invalid=true]:data-state:border-red-900! data-[invalid=true]:data-[state=checked]:bg-red-800! data-[invalid=true]:data-[state=indeterminate]:bg-red-800! dark:data-[invalid=true]:data-state:border-red-100! dark:data-[invalid=true]:data-[state=checked]:bg-red-100! dark:data-[invalid=true]:data-[state=indeterminate]:bg-red-100!",
+      "dark:data-[invalid=true]:data-state:border-red-900! dark:data-[invalid=true]:data-[state=checked]:bg-red-800! dark:data-[invalid=true]:data-[state=indeterminate]:bg-red-800!",
       className,
     )}
     checked={checked}

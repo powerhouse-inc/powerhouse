@@ -6,25 +6,28 @@ import type { ClassNameRecord } from "./types.js";
 import { hasClasses, replaceClassesForStringLiteral } from "./utils.js";
 
 const classesToReplace: ClassNameRecord = {
-  "border-gray-500": "border-gray-300",
-  "dark:border-slate-400": "dark:border-slate-500",
-  "border-gray-100": "border-gray-300",
+  "dark:border-yellow-400": "dark:border-yellow-500",
+  "border-yellow-300": "border-yellow-500",
+  "dark:border-yellow-600": "dark:border-yellow-500",
   "border-gray-200": "border-gray-300",
-  "border-gray-400": "border-gray-300",
-  "dark:border-slate-600": "dark:border-slate-500",
-  "border-gray-50": "border-gray-300",
-  "active:border-gray-100": "active:border-gray-300",
-  "active:border-gray-700": "active:border-gray-900",
-  "dark:active:border-slate-200": "dark:active:border-slate-50",
-  "disabled:border-gray-700": "disabled:border-gray-900",
-  "dark:disabled:border-slate-200": "dark:disabled:border-slate-50",
-  "data-state:border-gray-700": "data-state:border-gray-900",
-  "dark:border-slate-800": "dark:border-slate-500",
-  "border-gray-700": "border-gray-900",
-  "dark:border-slate-200": "dark:border-slate-50",
-  "border-gray-800": "border-gray-900",
-  "dark:border-slate-100": "dark:border-slate-50",
-  "dark:border-slate-300": "dark:border-slate-500",
+  "border-red-300": "border-red-500",
+  "dark:border-red-600": "dark:border-red-500",
+  "focus:border-blue-400": "focus:border-blue-500",
+  "border-blue-300": "border-blue-500",
+  "dark:border-blue-600": "dark:border-blue-500",
+  "border-yellow-400": "border-yellow-500",
+  "dark:border-blue-400": "dark:border-blue-500",
+  "border-blue-600": "border-blue-500",
+  "dark:border-blue-300": "dark:border-blue-500",
+  "active:border-red-800": "active:border-red-900",
+  "active:border-blue-800": "active:border-blue-900",
+  "data-[invalid=true]:data-state:border-red-800!":
+    "data-[invalid=true]:data-state:border-red-900!",
+  "dark:data-[invalid=true]:data-state:border-red-800!":
+    "dark:data-[invalid=true]:data-state:border-red-900!",
+  "border-red-700": "border-red-900",
+  "dark:border-red-200": "dark:border-red-100",
+  "dark:border-red-700": "dark:border-red-900",
 };
 
 const project = makeTsMorphProject();

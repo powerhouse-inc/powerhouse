@@ -204,7 +204,7 @@ export function QueueInspector({
               "flex items-center gap-1 rounded-sm border px-3 py-1.5 text-sm disabled:opacity-50",
               state.isPaused
                 ? "border-green-100 bg-green-100 text-green-500 hover:effect dark:border-green-900 dark:bg-green-900 dark:text-green-100"
-                : "border-yellow-300 bg-yellow-50 text-yellow-900 hover:effect dark:border-yellow-600 dark:bg-yellow-900 dark:text-yellow-100",
+                : "border-yellow-500 bg-yellow-50 text-yellow-900 hover:effect dark:border-yellow-500 dark:bg-yellow-900 dark:text-yellow-100",
             )}
             disabled={actionInProgress}
             onClick={() => void handlePauseResume()}

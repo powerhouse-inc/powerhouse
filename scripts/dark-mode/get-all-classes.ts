@@ -5,7 +5,6 @@ import {
   drop,
   entries,
   filter,
-  first,
   flatMap,
   groupBy,
   identity,
@@ -22,7 +21,7 @@ import { getStringLiteralsFromFiles, makeTsMorphProject } from "./ts-morph.js";
 import { getStringLiteralClassNameList } from "./utils.js";
 
 const project = makeTsMorphProject();
-const colorClasses = ["bg-", "text-", "border-"];
+const colorClasses = ["bg", "text", "border"];
 const excludes = [
   "xs",
   "sm",
@@ -54,21 +53,32 @@ const excludes = [
   "current",
   "collapse",
   "solid",
-  ".",
+  ".js",
   "text-decoration",
   "text-start",
   ":effect",
-  "foreground",
-  "<",
-  ">",
-  "=",
 ];
+
+const colorNames = [
+  "red",
+  "blue",
+  "yellow",
+  "orange",
+  "green",
+  "purple",
+  "transparent",
+];
+const grayScaleNames = ["black", "white", "slate", "gray"];
+const allColorNames = [...colorNames, ...grayScaleNames];
 const allClasses = pipe(
   await findFilesWithClasses(colorClasses),
   getStringLiteralsFromFiles(project),
   flatMap(getStringLiteralClassNameList),
-  filter((c) => colorClasses.some((cc) => c.includes(cc))),
-  filter((c) => !excludes.some((e) => c.includes(e))),
+  filter((c) => map(colorClasses, (c) => `${c}-`).some((cc) => c.includes(cc))),
+  filter((c) =>
+    map(allColorNames, (c) => `-${c}`).some((cc) => c.includes(cc)),
+  ),
+  // filter((c) => !excludes.some((e) => c.includes(e))),
 );
 
 const light = pipe(
@@ -113,25 +123,12 @@ const withOpacity = pipe(
   filter((c) => c.includes("/")),
 );
 
-const grayScaleNames = ["black", "white", "slate", "gray"];
-const colors = pipe(
-  [...light, ...dark],
-  unique(),
-  map((c) => drop(c.split("-"), 1)),
-  map(join("-")),
-  map((c) => c.replace("!", "")),
-  map((c) => first(c.split("/"))),
-  filter(isTruthy),
-  map((c) => first(c.split("-"))),
-  filter(isTruthy),
-  unique(),
-  filter((c) => !grayScaleNames.includes(c)),
-);
-
 const colorBgs = pipe(
   allClasses,
   filter((c) => c.includes("bg")),
-  filter((c) => colors.some((color) => c.includes(color))),
+  filter((c) => allColorNames.some((color) => c.includes(color))),
+  unique(),
+  groupBy((c) => (c.includes("dark") ? "dark" : "light")),
 );
 
 const borders = pipe(
@@ -157,7 +154,6 @@ writeFileSync(
       lightCounts,
       darkCounts,
       withOpacity,
-      colors,
       colorBgs,
       borders,
       grayscaleBorders,

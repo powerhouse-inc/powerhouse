@@ -275,7 +275,7 @@ export function TableView({
                 className={twMerge(
                   "min-w-8 rounded-sm border px-2 py-1 text-xs",
                   page === currentPage
-                    ? "border-blue-500 bg-blue-50 text-blue-900 dark:border-blue-400 dark:bg-blue-900 dark:text-blue-100"
+                    ? "border-blue-500 bg-blue-50 text-blue-900 dark:border-blue-500 dark:bg-blue-900 dark:text-blue-100"
                     : "border-gray-300 bg-gray-50 text-gray-700 hover:effect dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100",
                 )}
                 onClick={() => goToPage(page)}

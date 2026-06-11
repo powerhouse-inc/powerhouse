@@ -66,7 +66,7 @@ export function DebugInspector({
               type="button"
               disabled={running}
               onClick={() => setConfirmMajor(major)}
-              className="flex items-center gap-1 rounded-sm border border-red-300 bg-red-50 px-3 py-1.5 text-sm text-red-900 hover:effect disabled:opacity-50 dark:border-red-600 dark:bg-red-900 dark:text-red-100"
+              className="hover:effect flex items-center gap-1 rounded-sm border border-red-500 bg-red-50 px-3 py-1.5 text-sm text-red-900 disabled:opacity-50 dark:border-red-500 dark:bg-red-900 dark:text-red-100"
             >
               {isPending ? `Resetting to PG${major}…` : `Reset to PG${major}`}
             </button>
@@ -75,22 +75,22 @@ export function DebugInspector({
       </div>
 
       {confirmMajor !== null && (
-        <div className="flex shrink-0 items-center gap-3 rounded-sm border border-yellow-400 bg-yellow-50 px-3 py-2 dark:border-yellow-500 dark:bg-yellow-900">
-          <span className="text-sm text-yellow-900 dark:text-yellow-100">
+        <div className="flex shrink-0 items-center gap-3 rounded-sm border border-yellow-500 bg-yellow-50 px-3 py-2 dark:bg-yellow-900">
+          <span className="text-sm text-yellow-900 dark:text-white">
             This will permanently delete all local reactor data and recreate an
             empty database under Postgres {confirmMajor}. The page will reload.
           </span>
           <button
             type="button"
             onClick={() => void handleReset(confirmMajor)}
-            className="rounded-sm bg-yellow-500 px-3 py-1 text-sm text-white hover:effect dark:bg-yellow-100 dark:text-slate-900"
+            className="hover:effect rounded-sm bg-yellow-500 px-3 py-1 text-sm text-white dark:bg-yellow-100 dark:text-slate-900"
           >
             Confirm reset to PG{confirmMajor}
           </button>
           <button
             type="button"
             onClick={() => setConfirmMajor(null)}
-            className="rounded-sm border border-gray-300 bg-gray-50 px-3 py-1 text-sm text-gray-700 hover:effect dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
+            className="hover:effect rounded-sm border border-gray-300 bg-gray-50 px-3 py-1 text-sm text-gray-700 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
           >
             Cancel
           </button>
@@ -98,7 +98,7 @@ export function DebugInspector({
       )}
 
       {error && (
-        <div className="rounded-sm border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-900 dark:border-red-600 dark:bg-red-900 dark:text-red-100">
+        <div className="rounded-sm border border-red-500 bg-red-50 px-3 py-2 text-sm text-red-900 dark:bg-red-900 dark:text-white">
           {error}
         </div>
       )}

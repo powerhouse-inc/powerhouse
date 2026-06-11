@@ -202,7 +202,7 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
               {keywords.map((keyword) => (
                 <span
                   key={keyword.id}
-                  className="inline-flex items-center rounded-sm border border-blue-300 bg-blue-100 px-2 py-0.5 text-xs text-blue-900 dark:border-blue-600 dark:bg-blue-900 dark:text-blue-100"
+                  className="inline-flex items-center rounded-sm border border-blue-500 bg-blue-100 px-2 py-0.5 text-xs text-blue-900 dark:border-blue-500 dark:bg-blue-900 dark:text-blue-100"
                 >
                   {keyword.label}
                   <button
