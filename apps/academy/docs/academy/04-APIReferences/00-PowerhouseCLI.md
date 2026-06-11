@@ -55,17 +55,17 @@ Initialize a new project
 
 
 ### Options
-**Name** - The name of your project. A new directory will be created in your current directory with this name. - Usage: `--name, -n \<str\>`
+**Name** - The name of your project. A new directory will be created in your current directory with this name. - Usage: `--name, -n <str>`
 
-**Package Manager** - Specify the package manager to use for your project. Can be one of: `npm`, `pnpm`, `yarn`, or `bun`. Defaults to your environment package manager. - Usage: `--package-manager, -p \<value\>`
+**Package Manager** - Specify the package manager to use for your project. Can be one of: `npm`, `pnpm`, `yarn`, or `bun`. Defaults to your environment package manager. - Usage: `--package-manager, -p <value>`
 
-**Tag** - Specify the release tag to use for your project. Can be one of: "latest", "staging", or "dev". - Usage: `--tag, -t \<value\>`
+**Tag** - Specify the release tag to use for your project. Can be one of: "latest", "staging", or "dev". - Usage: `--tag, -t <value>`
 
-**Version** - Specify the exact semver release version to use for your project. - Usage: `--version, -v \<str\>`
+**Version** - Specify the exact semver release version to use for your project. - Usage: `--version, -v <str>`
 
-**Remote Drive** - Remote drive identifier. - Usage: `--remote-drive, -r \<str\>`
+**Remote Drive** - Remote drive identifier. - Usage: `--remote-drive, -r <str>`
 
-**Clone** - Path to an existing scaffolded project to clone instead of resolving deps from scratch. Install runs offline from the cloned project's pnpm-lock.yaml (requires --pnpm; --version/--tag are ignored). - Usage: `--clone \<str\>`
+**Clone** - Path to an existing scaffolded project to clone instead of resolving deps from scratch. Install runs offline from the cloned project's pnpm-lock.yaml (requires --pnpm; --version/--tag are ignored). - Usage: `--clone <str>`
 
 
 
@@ -104,9 +104,9 @@ Specify the release version of Powerhouse dependencies to use.
 
 
 ### Options
-**Tag** - Specify the release tag to use for your project. Can be one of: "latest", "staging", or "dev". - Usage: `--tag, -t \<value\>`
+**Tag** - Specify the release tag to use for your project. Can be one of: "latest", "staging", or "dev". - Usage: `--tag, -t <value>`
 
-**Version** - Specify the exact semver release version to use for your project. - Usage: `--version, -v \<str\>`
+**Version** - Specify the exact semver release version to use for your project. - Usage: `--version, -v <str>`
 
 
 
@@ -148,17 +148,17 @@ Initialize a new global project
 
 
 ### Options
-**Name** - The name of your project. A new directory will be created in your current directory with this name. - Usage: `--name, -n \<str\>`
+**Name** - The name of your project. A new directory will be created in your current directory with this name. - Usage: `--name, -n <str>`
 
-**Package Manager** - Specify the package manager to use for your project. Can be one of: `npm`, `pnpm`, `yarn`, or `bun`. Defaults to your environment package manager. - Usage: `--package-manager, -p \<value\>`
+**Package Manager** - Specify the package manager to use for your project. Can be one of: `npm`, `pnpm`, `yarn`, or `bun`. Defaults to your environment package manager. - Usage: `--package-manager, -p <value>`
 
-**Tag** - Specify the release tag to use for your project. Can be one of: "latest", "staging", or "dev". - Usage: `--tag, -t \<value\>`
+**Tag** - Specify the release tag to use for your project. Can be one of: "latest", "staging", or "dev". - Usage: `--tag, -t <value>`
 
-**Version** - Specify the exact semver release version to use for your project. - Usage: `--version, -v \<str\>`
+**Version** - Specify the exact semver release version to use for your project. - Usage: `--version, -v <str>`
 
-**Remote Drive** - Remote drive identifier. - Usage: `--remote-drive, -r \<str\>`
+**Remote Drive** - Remote drive identifier. - Usage: `--remote-drive, -r <str>`
 
-**Clone** - Path to an existing scaffolded project to clone instead of resolving deps from scratch. Install runs offline from the cloned project's pnpm-lock.yaml (requires --pnpm; --version/--tag are ignored). - Usage: `--clone \<str\>`
+**Clone** - Path to an existing scaffolded project to clone instead of resolving deps from scratch. Install runs offline from the cloned project's pnpm-lock.yaml (requires --pnpm; --version/--tag are ignored). - Usage: `--clone <str>`
 
 
 
@@ -197,7 +197,7 @@ Use your local `powerhouse` monorepo dependencies the current project.
 
 
 ### Options
-**Path** - Path to your local powerhouse monorepo relative to this project - Usage: `--path, -p \<str\>`
+**Path** - Path to your local powerhouse monorepo relative to this project - Usage: `--path, -p <str>`
 
 
 
@@ -254,9 +254,9 @@ Generate a document model
 
 
 ### Options
-**Document** - Path to a document model spec (.phd or .json) to generate from - Usage: `--document, -d \<file\>`
+**Document** - Path to a document model spec (.phd or .json) to generate from - Usage: `--document, -d <file>`
 
-**Dir** - Name of the directory of an existing document model to re-generate - Usage: `--dir \<dir\>`
+**Dir** - Name of the directory of an existing document model to re-generate - Usage: `--dir <dir>`
 
 
 
@@ -277,13 +277,13 @@ Generate a document editor
 
 
 ### Options
-**Name** - The name of the document editor to generate - Usage: `--name, -n \<str\>`
+**Name** - The name of the document editor to generate - Usage: `--name, -n <str>`
 
-**Document Type** - The document type for the new editor - Usage: `--document-type, -t \<str\>`
+**Document Type** - The document type for the new editor - Usage: `--document-type, -t <str>`
 
-**Document** - Path to a powerhouse/document-editor spec file (.phd or .json) to drive codegen - Usage: `--document, -d \<file\>`
+**Document** - Path to a powerhouse/document-editor spec file (.phd or .json) to drive codegen - Usage: `--document, -d <file>`
 
-**Dir** - Name of the directory of an existing editor to re-generate - Usage: `--dir \<dir\>`
+**Dir** - Name of the directory of an existing editor to re-generate - Usage: `--dir <dir>`
 
 
 
@@ -304,13 +304,13 @@ Generate a drive app
 
 
 ### Options
-**Name** - The name of the drive app to generate - Usage: `--name, -n \<str\>`
+**Name** - The name of the drive app to generate - Usage: `--name, -n <str>`
 
-**Document Types** - The document types allowed by the new app - Usage: `--document-types \<str\>, -t=\<str\>`
+**Document Types** - The document types allowed by the new app - Usage: `--document-types <str>, -t=<str>`
 
-**Document** - Path to a powerhouse/app spec file (.phd or .json) to drive codegen - Usage: `--document, -d \<file\>`
+**Document** - Path to a powerhouse/app spec file (.phd or .json) to drive codegen - Usage: `--document, -d <file>`
 
-**Dir** - Name of the directory of an existing app to re-generate - Usage: `--dir \<dir\>`
+**Dir** - Name of the directory of an existing app to re-generate - Usage: `--dir <dir>`
 
 
 
@@ -334,20 +334,20 @@ Generate a processor
 
 
 ### Options
-**Name** - The name of the processor to generate - Usage: `--name, -n \<str\>`
+**Name** - The name of the processor to generate - Usage: `--name, -n <str>`
 
-**Type** - The type of processor to generate - Usage: `--type \<value\>`
+**Type** - The type of processor to generate - Usage: `--type <value>`
 
 **Default:** `analytics`
-**Document Types** - The document types the processor will run on - Usage: `--document-types \<str\>, -t=\<str\>`
+**Document Types** - The document types the processor will run on - Usage: `--document-types <str>, -t=<str>`
 
 **Default:** ``
-**Apps** - Whether the processor will run in switchboard (nodejs), connect (browser), or both - Usage: `--apps \<value\>`
+**Apps** - Whether the processor will run in switchboard (nodejs), connect (browser), or both - Usage: `--apps <value>`
 
 **Default:** `switchboard,connect`
-**Document** - Path to a powerhouse/processor spec file (.phd or .json) to drive codegen - Usage: `--document, -d \<file\>`
+**Document** - Path to a powerhouse/processor spec file (.phd or .json) to drive codegen - Usage: `--document, -d <file>`
 
-**Dir** - Name of the directory of an existing processor to re-generate - Usage: `--dir \<dir\>`
+**Dir** - Name of the directory of an existing processor to re-generate - Usage: `--dir <dir>`
 
 
 
@@ -368,11 +368,11 @@ Generate a subgraph
 
 
 ### Options
-**Name** - The name of the subgraph to generate - Usage: `--name, -n \<str\>`
+**Name** - The name of the subgraph to generate - Usage: `--name, -n <str>`
 
-**Document** - Path to a powerhouse/subgraph spec file (.phd or .json) to drive codegen - Usage: `--document, -d \<file\>`
+**Document** - Path to a powerhouse/subgraph spec file (.phd or .json) to drive codegen - Usage: `--document, -d <file>`
 
-**Dir** - Name of the directory of an existing subgraph to re-generate - Usage: `--dir \<dir\>`
+**Dir** - Name of the directory of an existing subgraph to re-generate - Usage: `--dir <dir>`
 
 
 
@@ -393,9 +393,9 @@ Generate a migration file
 
 
 ### Options
-**Path *[required]*** - Path to the migration file - Usage: `--path, -p \<str\>`
+**Path *[required]*** - Path to the migration file - Usage: `--path, -p <str>`
 
-**Schema File** - Path to the output file. Defaults to './schema.ts' - Usage: `--schema-file \<str\>`
+**Schema File** - Path to the output file. Defaults to './schema.ts' - Usage: `--schema-file <str>`
 
 
 
@@ -421,44 +421,44 @@ and real-time processing with a "Vetra" drive or connection to remote drives.
 
 
 ### Options
-**Switchboard Port** - port to use for the Vetra Switchboard - Usage: `--switchboard-port \<number\>`
+**Switchboard Port** - port to use for the Vetra Switchboard - Usage: `--switchboard-port <number>`
 
-**Connect Port** - port to use for the Vetra Connect - Usage: `--connect-port \<number\>`
+**Connect Port** - port to use for the Vetra Connect - Usage: `--connect-port <number>`
 
 **Default:** `3001`
-**Remote Drive** - URL of remote drive to connect to (skips switchboard initialization) - Usage: `--remote-drive \<str\>`
+**Remote Drive** - URL of remote drive to connect to (skips switchboard initialization) - Usage: `--remote-drive <str>`
 
-**Drives Public Base** - public base URL for the drive URLs advertised to Connect; each drive is exposed as \<base\>/d/\<slug\> instead of http://localhost:\<switchboard-port\>/d/\<slug\>. Use when the switchboard is reachable through a reverse proxy. - Usage: `--drives-public-base \<str\>`
+**Drives Public Base** - public base URL for the drive URLs advertised to Connect; each drive is exposed as &lt;base&gt;/d/&lt;slug&gt; instead of `http://localhost:<switchboard-port>/d/<slug>`. Use when the switchboard is reachable through a reverse proxy. - Usage: `--drives-public-base <str>`
 
-**Db Path** - Database path or connection string. Use a `postgres://` URL for Postgres; otherwise treated as a PGlite filesystem path. Leave unset for in-memory PGlite. - Usage: `--db-path \<str\>`
+**Db Path** - Database path or connection string. Use a `postgres://` URL for Postgres; otherwise treated as a PGlite filesystem path. Leave unset for in-memory PGlite. - Usage: `--db-path <str>`
 
-**Base** - Base path for the app - Usage: `--base \<str\>`
+**Base** - Base path for the app - Usage: `--base <str>`
 
-**Log Level** - Log level for the application - Usage: `--log-level \<value\>`
+**Log Level** - Log level for the application - Usage: `--log-level <value>`
 
 **Environment:** `PH_CONNECT_LOG_LEVEL`
 **Default:** `info`
-**Packages** - Comma-separated list of package names to load - Usage: `--packages \<str\>`
+**Packages** - Comma-separated list of package names to load - Usage: `--packages <str>`
 
 **Environment:** `PH_PACKAGES`
-**Local Package** - Path to local package to load during development - Usage: `--local-package \<str\>`
+**Local Package** - Path to local package to load during development - Usage: `--local-package <str>`
 
 **Environment:** `PH_LOCAL_PACKAGE`
-**Default Drives Url** - The default drives url to use in connect - Usage: `--default-drives-url \<str\>`
+**Default Drives Url** - The default drives url to use in connect - Usage: `--default-drives-url <str>`
 
-**Drive Preserve Strategy** - The preservation strategy to use on default drives - Usage: `--drive-preserve-strategy \<value\>`
+**Drive Preserve Strategy** - The preservation strategy to use on default drives - Usage: `--drive-preserve-strategy <value>`
 
 **Default:** `preserve-by-url-and-detach`
-**Host** - Expose the server to the network. Pass an IP (e.g. 0.0.0.0) to bind to a specific address. - Usage: `--host \<str\>`
+**Host** - Expose the server to the network. Pass an IP (e.g. 0.0.0.0) to bind to a specific address. - Usage: `--host <str>`
 
-**Watch Timeout** - Amount of time to wait before a file is considered changed - Usage: `--watch-timeout \<number\>`
+**Watch Timeout** - Amount of time to wait before a file is considered changed - Usage: `--watch-timeout <number>`
 
 **Default:** `300`
-**Https Key File** - path to the ssl key file - Usage: `--https-key-file \<str\>`
+**Https Key File** - path to the ssl key file - Usage: `--https-key-file <str>`
 
-**Https Cert File** - path to the ssl cert file - Usage: `--https-cert-file \<str\>`
+**Https Cert File** - path to the ssl cert file - Usage: `--https-cert-file <str>`
 
-**Remote Drives** - Specify remote drive URLs to use - Usage: `--remote-drives \<str\>`
+**Remote Drives** - Specify remote drive URLs to use - Usage: `--remote-drives <str>`
 
 
 
@@ -519,29 +519,29 @@ your project.
 
 
 ### Options
-**Port** - Port to run the dev server on. - Usage: `--port \<number\>`
+**Port** - Port to run the dev server on. - Usage: `--port <number>`
 
 **Default:** `3000`
-**Base** - Base path for the app - Usage: `--base \<str\>`
+**Base** - Base path for the app - Usage: `--base <str>`
 
-**Log Level** - Log level for the application - Usage: `--log-level \<value\>`
+**Log Level** - Log level for the application - Usage: `--log-level <value>`
 
 **Environment:** `PH_CONNECT_LOG_LEVEL`
 **Default:** `info`
-**Packages** - Comma-separated list of package names to load - Usage: `--packages \<str\>`
+**Packages** - Comma-separated list of package names to load - Usage: `--packages <str>`
 
 **Environment:** `PH_PACKAGES`
-**Local Package** - Path to local package to load during development - Usage: `--local-package \<str\>`
+**Local Package** - Path to local package to load during development - Usage: `--local-package <str>`
 
 **Environment:** `PH_LOCAL_PACKAGE`
-**Default Drives Url** - The default drives url to use in connect - Usage: `--default-drives-url \<str\>`
+**Default Drives Url** - The default drives url to use in connect - Usage: `--default-drives-url <str>`
 
-**Drive Preserve Strategy** - The preservation strategy to use on default drives - Usage: `--drive-preserve-strategy \<value\>`
+**Drive Preserve Strategy** - The preservation strategy to use on default drives - Usage: `--drive-preserve-strategy <value>`
 
 **Default:** `preserve-by-url-and-detach`
-**Host** - Expose the server to the network. Pass an IP (e.g. 0.0.0.0) to bind to a specific address. - Usage: `--host \<str\>`
+**Host** - Expose the server to the network. Pass an IP (e.g. 0.0.0.0) to bind to a specific address. - Usage: `--host <str>`
 
-**Watch Timeout** - Amount of time to wait before a file is considered changed - Usage: `--watch-timeout \<number\>`
+**Watch Timeout** - Amount of time to wait before a file is considered changed - Usage: `--watch-timeout <number>`
 
 **Default:** `300`
 
@@ -576,70 +576,70 @@ external packages included.
 
 Runtime-config overrides (all combinable — last wins on collision):
   ph connect build                                    Build with the current source config.
-  ph connect build \<key\> \<value\>                      Build with a positional override applied (e.g. ph connect build connect.renown.url https://renown.staging).
-  ph connect build --\<field\> \<value\>                  Build with a per-field flag override (e.g. --renown-url https://renown.staging).
+  ph connect build &lt;key&gt; &lt;value&gt;                      Build with a positional override applied (e.g. ph connect build connect.renown.url `https://renown.staging`).
+  ph connect build --&lt;field&gt; &lt;value&gt;                  Build with a per-field flag override (e.g. --renown-url `https://renown.staging`).
   ph connect build --json '\{"…":"…"\}'                Build with a bulk override.
 
-Build has no read mode; passing only \<key\> without \<value\> errors out (use `ph connect config \<key\>` to read).
+Build has no read mode; passing only &lt;key&gt; without &lt;value&gt; errors out (use `ph connect config <key>` to read).
 
 
 
 
 ### Options
-**Out Dir** - Output directory - Usage: `--outDir \<str\>`
+**Out Dir** - Output directory - Usage: `--outDir <str>`
 
 **Default:** `.ph/connect-build/dist/`
-**Json** - Inline JSON override for the runtime connect.* block, e.g. '\{"renown":\{"url":"..."\}\}'. Validated against the runtime schema; deep-merged on top of env seeds and source powerhouse.config.json. Individual --flag values beat --json on collision. - Usage: `--json \<str\>`
+**Json** - Inline JSON override for the runtime connect.* block, e.g. '\{"renown":\{"url":"..."\}\}'. Validated against the runtime schema; deep-merged on top of env seeds and source powerhouse.config.json. Individual --flag values beat --json on collision. - Usage: `--json <str>`
 
-**Renown Url** - Override connect.renown.url. - Usage: `--renown-url \<str\>`
+**Renown Url** - Override connect.renown.url. - Usage: `--renown-url <str>`
 
-**Renown Network Id** - Override connect.renown.networkId. - Usage: `--renown-network-id \<str\>`
+**Renown Network Id** - Override connect.renown.networkId. - Usage: `--renown-network-id <str>`
 
-**Renown Chain Id** - Override connect.renown.chainId. - Usage: `--renown-chain-id \<number\>`
+**Renown Chain Id** - Override connect.renown.chainId. - Usage: `--renown-chain-id <number>`
 
-**Allow Add Drive** - Override connect.drives.allowAddDrive (top-level add-drive toggle). - Usage: `--allow-add-drive \<value\>`
+**Allow Add Drive** - Override connect.drives.allowAddDrive (top-level add-drive toggle). - Usage: `--allow-add-drive <value>`
 
-**External Packages** - Override connect.packages.externalEnabled. - Usage: `--external-packages \<value\>`
+**External Packages** - Override connect.packages.externalEnabled. - Usage: `--external-packages <value>`
 
-**Remote Drives Enabled** - Override connect.drives.sections.remote.enabled (the unified cloud+public section). - Usage: `--remote-drives-enabled \<value\>`
+**Remote Drives Enabled** - Override connect.drives.sections.remote.enabled (the unified cloud+public section). - Usage: `--remote-drives-enabled <value>`
 
-**Remote Drives Allow Add** - Override connect.drives.sections.remote.allowAdd. - Usage: `--remote-drives-allow-add \<value\>`
+**Remote Drives Allow Add** - Override connect.drives.sections.remote.allowAdd. - Usage: `--remote-drives-allow-add <value>`
 
-**Remote Drives Allow Delete** - Override connect.drives.sections.remote.allowDelete. - Usage: `--remote-drives-allow-delete \<value\>`
+**Remote Drives Allow Delete** - Override connect.drives.sections.remote.allowDelete. - Usage: `--remote-drives-allow-delete <value>`
 
-**Local Drives Enabled** - Override connect.drives.sections.local.enabled. - Usage: `--local-drives-enabled \<value\>`
+**Local Drives Enabled** - Override connect.drives.sections.local.enabled. - Usage: `--local-drives-enabled <value>`
 
-**Local Drives Allow Add** - Override connect.drives.sections.local.allowAdd. - Usage: `--local-drives-allow-add \<value\>`
+**Local Drives Allow Add** - Override connect.drives.sections.local.allowAdd. - Usage: `--local-drives-allow-add <value>`
 
-**Local Drives Allow Delete** - Override connect.drives.sections.local.allowDelete. - Usage: `--local-drives-allow-delete \<value\>`
+**Local Drives Allow Delete** - Override connect.drives.sections.local.allowDelete. - Usage: `--local-drives-allow-delete <value>`
 
-**Packages Registry** - Override the top-level packageRegistryUrl. - Usage: `--packages-registry \<str\>`
+**Packages Registry** - Override the top-level packageRegistryUrl. - Usage: `--packages-registry <str>`
 
-**App Name** - Override connect.branding.appName. - Usage: `--app-name \<str\>`
+**App Name** - Override connect.branding.appName. - Usage: `--app-name <str>`
 
-**Home Background** - Override connect.branding.homeBackground. URL or path to an image; pass an empty string ("") to reset to the bundled default. - Usage: `--home-background \<str\>`
+**Home Background** - Override connect.branding.homeBackground. URL or path to an image; pass an empty string ("") to reset to the bundled default. - Usage: `--home-background <str>`
 
-**Sentry Dsn** - Override connect.sentry.dsn (Sentry DSN URL). Pass an empty string ("") to set null and disable Sentry. - Usage: `--sentry-dsn \<str\>`
+**Sentry Dsn** - Override connect.sentry.dsn (Sentry DSN URL). Pass an empty string ("") to set null and disable Sentry. - Usage: `--sentry-dsn <str>`
 
-**Sentry Env** - Override connect.sentry.env (Sentry environment label). - Usage: `--sentry-env \<str\>`
+**Sentry Env** - Override connect.sentry.env (Sentry environment label). - Usage: `--sentry-env <str>`
 
-**Sentry Tracing Enabled** - Override connect.sentry.tracing (Sentry performance tracing). - Usage: `--sentry-tracing-enabled \<value\>`
+**Sentry Tracing Enabled** - Override connect.sentry.tracing (Sentry performance tracing). - Usage: `--sentry-tracing-enabled <value>`
 
-**Base** - Base path for the app - Usage: `--base \<str\>`
+**Base** - Base path for the app - Usage: `--base <str>`
 
-**Log Level** - Log level for the application - Usage: `--log-level \<value\>`
+**Log Level** - Log level for the application - Usage: `--log-level <value>`
 
 **Environment:** `PH_CONNECT_LOG_LEVEL`
 **Default:** `info`
-**Packages** - Comma-separated list of package names to load - Usage: `--packages \<str\>`
+**Packages** - Comma-separated list of package names to load - Usage: `--packages <str>`
 
 **Environment:** `PH_PACKAGES`
-**Local Package** - Path to local package to load during development - Usage: `--local-package \<str\>`
+**Local Package** - Path to local package to load during development - Usage: `--local-package <str>`
 
 **Environment:** `PH_LOCAL_PACKAGE`
-**Default Drives Url** - The default drives url to use in connect - Usage: `--default-drives-url \<str\>`
+**Default Drives Url** - The default drives url to use in connect - Usage: `--default-drives-url <str>`
 
-**Drive Preserve Strategy** - The preservation strategy to use on default drives - Usage: `--drive-preserve-strategy \<value\>`
+**Drive Preserve Strategy** - The preservation strategy to use on default drives - Usage: `--drive-preserve-strategy <value>`
 
 **Default:** `preserve-by-url-and-detach`
 
@@ -651,9 +651,9 @@ Build has no read mode; passing only \<key\> without \<value\> errors out (use `
 ## Parameters
 
 ### Arguments
-**Key** - Dotted path inside the runtime config (e.g. connect.renown.url). Pair with \<value\> to set; pass alone to `ph connect config` to read. - Usage: `[key]`
+**Key** - Dotted path inside the runtime config (e.g. connect.renown.url). Pair with &lt;value&gt; to set; pass alone to `ph connect config` to read. - Usage: `[key]`
 
-**Value** - Value to set at \<key\>. Coerced against the runtime schema (string, bool, number, enum). Arrays and objects require --json instead. - Usage: `[value]`
+**Value** - Value to set at &lt;key&gt;. Coerced against the runtime schema (string, bool, number, enum). Arrays and objects require --json instead. - Usage: `[value]`
 
 
 
@@ -678,32 +678,32 @@ NOTE: You must run `ph connect build` first
 
 
 ### Options
-**Port** - Port to run the preview server on. - Usage: `--port \<number\>`
+**Port** - Port to run the preview server on. - Usage: `--port <number>`
 
 **Default:** `4173`
-**Out Dir** - Output directory - Usage: `--outDir \<str\>`
+**Out Dir** - Output directory - Usage: `--outDir <str>`
 
 **Default:** `.ph/connect-build/dist/`
-**Base** - Base path for the app - Usage: `--base \<str\>`
+**Base** - Base path for the app - Usage: `--base <str>`
 
-**Log Level** - Log level for the application - Usage: `--log-level \<value\>`
+**Log Level** - Log level for the application - Usage: `--log-level <value>`
 
 **Environment:** `PH_CONNECT_LOG_LEVEL`
 **Default:** `info`
-**Packages** - Comma-separated list of package names to load - Usage: `--packages \<str\>`
+**Packages** - Comma-separated list of package names to load - Usage: `--packages <str>`
 
 **Environment:** `PH_PACKAGES`
-**Local Package** - Path to local package to load during development - Usage: `--local-package \<str\>`
+**Local Package** - Path to local package to load during development - Usage: `--local-package <str>`
 
 **Environment:** `PH_LOCAL_PACKAGE`
-**Default Drives Url** - The default drives url to use in connect - Usage: `--default-drives-url \<str\>`
+**Default Drives Url** - The default drives url to use in connect - Usage: `--default-drives-url <str>`
 
-**Drive Preserve Strategy** - The preservation strategy to use on default drives - Usage: `--drive-preserve-strategy \<value\>`
+**Drive Preserve Strategy** - The preservation strategy to use on default drives - Usage: `--drive-preserve-strategy <value>`
 
 **Default:** `preserve-by-url-and-detach`
-**Host** - Expose the server to the network. Pass an IP (e.g. 0.0.0.0) to bind to a specific address. - Usage: `--host \<str\>`
+**Host** - Expose the server to the network. Pass an IP (e.g. 0.0.0.0) to bind to a specific address. - Usage: `--host <str>`
 
-**Watch Timeout** - Amount of time to wait before a file is considered changed - Usage: `--watch-timeout \<number\>`
+**Watch Timeout** - Amount of time to wait before a file is considered changed - Usage: `--watch-timeout <number>`
 
 **Default:** `300`
 
@@ -761,12 +761,12 @@ Output:
 
 This allows you to use the command in scripts:
   TOKEN=$(ph access-token)
-  curl -H "Authorization: Bearer $TOKEN" http://localhost:4001/graphql
+  curl -H "Authorization: Bearer $TOKEN" `http://localhost:4001/graphql`
 
 Usage with APIs:
   Generate token and use with curl
   TOKEN=$(ph access-token --expiry 1d)
-  curl -X POST http://localhost:4001/graphql \
+  curl -X POST `http://localhost:4001/graphql` \
     -H "Content-Type: application/json" \
     -H "Authorization: Bearer $TOKEN" \
     -d '\{"query": "\{ drives \{ id name \} \}"\}'
@@ -784,10 +784,10 @@ Notes:
 
 
 ### Options
-**Expiry** - Token expiry duration. Supports: "7d" (days), "24h" (hours), "3600" or "3600s" (seconds) - Usage: `--expiry \<str\>`
+**Expiry** - Token expiry duration. Supports: "7d" (days), "24h" (hours), "3600" or "3600s" (seconds) - Usage: `--expiry <str>`
 
 **Default:** `7d`
-**Audience** - Target audience URL for the token - Usage: `--audience \<str\>`
+**Audience** - Target audience URL for the token - Usage: `--audience <str>`
 
 
 
@@ -817,7 +817,7 @@ your project.
 ## Parameters
 
 ### Arguments
-**Package Name *[required]*** - The name of the package to inspect - Usage: `\<package-name\>`
+**Package Name *[required]*** - The name of the package to inspect - Usage: `<package-name>`
 
 
 
@@ -864,7 +864,7 @@ Run migrations
 
 
 ### Options
-**Version** - The version to migrate to. Accepts a valid semver version or `staging`, `dev`, `latest`. - Usage: `--version, -v \<str\>`
+**Version** - The version to migrate to. Accepts a valid semver version or `staging`, `dev`, `latest`. - Usage: `--version, -v <str>`
 
 **Default:** `latest`
 
@@ -927,26 +927,26 @@ models, processors, and real-time updates.
 
 
 ### Options
-**Https Key File** - path to the ssl key file - Usage: `--https-key-file \<str\>`
+**Https Key File** - path to the ssl key file - Usage: `--https-key-file <str>`
 
-**Https Cert File** - path to the ssl cert file - Usage: `--https-cert-file \<str\>`
+**Https Cert File** - path to the ssl cert file - Usage: `--https-cert-file <str>`
 
-**Remote Drives** - Specify remote drive URLs to use - Usage: `--remote-drives \<str\>`
+**Remote Drives** - Specify remote drive URLs to use - Usage: `--remote-drives <str>`
 
-**Packages** - Comma-separated list of package names to load - Usage: `--packages \<str\>`
+**Packages** - Comma-separated list of package names to load - Usage: `--packages <str>`
 
 **Environment:** `PH_PACKAGES`
-**Port** - Port to host the api - Usage: `--port \<number\>`
+**Port** - Port to host the api - Usage: `--port <number>`
 
 **Default:** `4001`
-**Base Path** - base path for the API endpoints (sets the BASE_PATH environment variable) - Usage: `--base-path \<str\>`
+**Base Path** - base path for the API endpoints (sets the BASE_PATH environment variable) - Usage: `--base-path <str>`
 
-**Keypair Path** - path to custom keypair file for identity - Usage: `--keypair-path \<str\>`
+**Keypair Path** - path to custom keypair file for identity - Usage: `--keypair-path <str>`
 
-**Vetra Drive Id** - Specify a Vetra drive ID - Usage: `--vetra-drive-id \<str\>`
+**Vetra Drive Id** - Specify a Vetra drive ID - Usage: `--vetra-drive-id <str>`
 
 **Default:** `vetra`
-**Db Path** - path to the database - Usage: `--db-path \<str\>`
+**Db Path** - path to the database - Usage: `--db-path <str>`
 
 
 ## Login
@@ -964,11 +964,11 @@ the CLI to act on behalf of your Ethereum identity for authenticated operations.
 
 
 ### Options
-**Renown Url** - Renown server URL. - Usage: `--renown-url \<str\>`
+**Renown Url** - Renown server URL. - Usage: `--renown-url <str>`
 
 **Environment:** `PH_CONNECT_RENOWN_URL`
 **Default:** `https//www.renown.id`
-**Timeout** - Authentication timeout in seconds. - Usage: `--timeout \<number\>`
+**Timeout** - Authentication timeout in seconds. - Usage: `--timeout <number>`
 
 **Default:** `300`
 
@@ -999,7 +999,7 @@ as provider "local" — it will be bundled into ph connect build so the
 preview works without the registry being reachable.
 
 Resolution order for the registry URL:
-  --registry flag \> PH_REGISTRY_URL env \> powerhouse.config.json \> default
+  --registry flag &gt; PH_REGISTRY_URL env &gt; powerhouse.config.json &gt; default
   
 
 
@@ -1015,11 +1015,11 @@ Resolution order for the registry URL:
 
 
 ### Options
-**Registry** - Registry URL to install from (overrides config and environment) - Usage: `--registry \<str\>`
+**Registry** - Registry URL to install from (overrides config and environment) - Usage: `--registry <str>`
 
-**Allow Build** - A list of package names that are allowed to run postinstall scripts during installation. - Usage: `--allow-build \<str\>`
+**Allow Build** - A list of package names that are allowed to run postinstall scripts during installation. - Usage: `--allow-build <str>`
 
-**Package Manager** - Specify the package manager to use for your project. Can be one of: `npm`, `pnpm`, `yarn`, or `bun`. Defaults to your environment package manager. - Usage: `--package-manager, -p \<value\>`
+**Package Manager** - Specify the package manager to use for your project. Can be one of: `npm`, `pnpm`, `yarn`, or `bun`. Defaults to your environment package manager. - Usage: `--package-manager, -p <value>`
 
 
 
@@ -1065,7 +1065,7 @@ removal of packages, updates configuration files, and ensures proper cleanup.
 
 
 ### Options
-**Package Manager** - Specify the package manager to use for your project. Can be one of: `npm`, `pnpm`, `yarn`, or `bun`. Defaults to your environment package manager. - Usage: `--package-manager, -p \<value\>`
+**Package Manager** - Specify the package manager to use for your project. Can be one of: `npm`, `pnpm`, `yarn`, or `bun`. Defaults to your environment package manager. - Usage: `--package-manager, -p <value>`
 
 
 
