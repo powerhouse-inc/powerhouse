@@ -7,7 +7,7 @@ import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import { childLogger, type ILogger } from "document-model";
 import path from "node:path";
 import { readPackage } from "read-pkg";
-import type { Logger, ViteDevServer } from "vite";
+import type { Logger, PluginOption, ViteDevServer } from "vite";
 import { createLogger, createServer } from "vite";
 import { isSubgraphClass } from "../graphql/utils.js";
 import type {
@@ -237,7 +237,9 @@ export async function startViteServer(root: string, logger?: Logger) {
       },
     },
     plugins: [
-      viteCommonjs(),
+      // cast: the plugin ships types built against an older vite, and the
+      // mismatched Plugin type crashes tsc 6 during assignability checking
+      viteCommonjs() as PluginOption,
       {
         name: "suppress-hmr",
         handleHotUpdate() {
