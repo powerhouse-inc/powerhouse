@@ -6,24 +6,27 @@ import type { ClassNameRecord } from "./types.js";
 import { hasClasses, replaceClassesForStringLiteral } from "./utils.js";
 
 const classesToReplace: ClassNameRecord = {
-  "dark:text-red-400": "dark:text-red-500",
-  "dark:border-orange-600": "dark:border-orange-500",
-  "text-red-700": "text-red-900",
-  "text-blue-600": "text-blue-500",
-  "text-red-600": "text-red-500",
-  "text-red-800": "text-red-900",
-  "bg-green-600": "bg-green-500",
-  "bg-red-600": "bg-red-500",
-  "dark:bg-red-400": "dark:bg-red-500",
-  "dark:bg-blue-800": "dark:bg-blue-900",
-  "text-green-600": "text-green-500",
-  "bg-purple-400": "bg-purple-500",
-  "dark:bg-green-400": "dark:bg-green-500",
-  "text-blue-700": "text-blue-900",
-  "dark:bg-orange-600": "dark:bg-orange-500",
-  "dark:bg-purple-800": "dark:bg-purple-900",
-  "bg-blue-600": "bg-blue-500"
-}
+  "border-gray-500": "border-gray-300",
+  "dark:border-slate-400": "dark:border-slate-500",
+  "border-gray-100": "border-gray-300",
+  "border-gray-200": "border-gray-300",
+  "border-gray-400": "border-gray-300",
+  "dark:border-slate-600": "dark:border-slate-500",
+  "border-gray-50": "border-gray-300",
+  "active:border-gray-100": "active:border-gray-300",
+  "active:border-gray-700": "active:border-gray-900",
+  "dark:active:border-slate-200": "dark:active:border-slate-50",
+  "disabled:border-gray-700": "disabled:border-gray-900",
+  "dark:disabled:border-slate-200": "dark:disabled:border-slate-50",
+  "data-state:border-gray-700": "data-state:border-gray-900",
+  "dark:border-slate-800": "dark:border-slate-500",
+  "border-gray-700": "border-gray-900",
+  "dark:border-slate-200": "dark:border-slate-50",
+  "border-gray-800": "border-gray-900",
+  "dark:border-slate-100": "dark:border-slate-50",
+  "dark:border-slate-300": "dark:border-slate-500",
+};
+
 const project = makeTsMorphProject();
 const files = await findFilesWithClasses(keys(classesToReplace));
 const classesMap = new Map(entries(classesToReplace));

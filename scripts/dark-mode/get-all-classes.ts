@@ -113,7 +113,7 @@ const withOpacity = pipe(
   filter((c) => c.includes("/")),
 );
 
-const grayScale = ["black", "white", "slate", "gray"];
+const grayScaleNames = ["black", "white", "slate", "gray"];
 const colors = pipe(
   [...light, ...dark],
   unique(),
@@ -125,7 +125,7 @@ const colors = pipe(
   map((c) => first(c.split("-"))),
   filter(isTruthy),
   unique(),
-  filter((c) => !grayScale.includes(c)),
+  filter((c) => !grayScaleNames.includes(c)),
 );
 
 const colorBgs = pipe(
@@ -138,6 +138,15 @@ const borders = pipe(
   allClasses,
   filter((c) => c.includes("border")),
   unique(),
+  groupBy((c) => (c.includes("dark") ? "dark" : "light")),
+);
+
+const grayscaleBorders = pipe(
+  allClasses,
+  filter((c) => c.includes("border")),
+  filter((c) => grayScaleNames.some((n) => c.includes(n))),
+  unique(),
+  groupBy((c) => (c.includes("dark") ? "dark" : "light")),
 );
 
 writeFileSync(
@@ -151,6 +160,7 @@ writeFileSync(
       colors,
       colorBgs,
       borders,
+      grayscaleBorders,
     },
     null,
     2,

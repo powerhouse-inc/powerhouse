@@ -110,7 +110,7 @@ function Drive(props: ModifyDrivesProps & { drive: DocumentDriveDocument }) {
   return (
     <div
       className={twMerge(
-        "mb-4 flex w-96 items-center gap-2 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-gray-900 shadow-sm last-of-type:mb-0 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100",
+        "mb-4 flex w-96 items-center gap-2 rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-gray-900 shadow-sm last-of-type:mb-0 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100",
         className,
       )}
     >

@@ -10,7 +10,7 @@ export type EditorUndoRedoButtonsProps = {
 export function EditorUndoRedoButtons(props: EditorUndoRedoButtonsProps) {
   const { canUndo, canRedo, undo, redo } = props;
   const buttonStyles =
-    "w-8 h-8 rounded-lg flex justify-center items-center rounded border border-gray-200 bg-gray-50 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100";
+    "w-8 h-8 rounded-lg flex justify-center items-center rounded border border-gray-300 bg-gray-50 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100";
   return (
     <div className="flex gap-x-2 text-gray-500 dark:text-slate-400">
       <button className={buttonStyles} disabled={!canUndo} onClick={undo}>

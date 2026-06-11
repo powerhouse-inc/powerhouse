@@ -94,7 +94,7 @@ function DetailedFallback({ error, resetErrorBoundary }: FallbackProps) {
 
   return (
     <div className="z-10 mx-auto flex max-w-[80%] flex-1 items-center justify-center p-6">
-      <div className="w-full max-w-lg rounded-lg border border-gray-500 bg-gray-50 p-6 shadow-sm dark:border-slate-400 dark:bg-slate-800">
+      <div className="w-full max-w-lg rounded-lg border border-gray-300 bg-gray-50 p-6 shadow-sm dark:border-slate-500 dark:bg-slate-800">
         <div className="mb-3 flex items-center gap-2">
           <Icon name="Error" className="size-5 shrink-0" />
           <h1 className="text-lg font-semibold">Something went wrong</h1>

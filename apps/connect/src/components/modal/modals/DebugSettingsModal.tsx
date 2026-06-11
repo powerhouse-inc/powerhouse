@@ -104,7 +104,7 @@ export const DebugSettingsModal: React.FC = () => {
               Set invalid app version:
             </label>
             <FormInput
-              containerClassName="p-1 bg-gray-50 border border-gray-200 rounded-md text-sm dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
+              containerClassName="p-1 bg-gray-50 border border-gray-300 rounded-md text-sm dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
               inputClassName="text-xs font-normal"
               id="appVersion"
               icon={

@@ -36,7 +36,7 @@ export const SidebarHeader: React.FC<SidebarHeaderProps> = ({
   }
 
   return (
-    <header className="flex items-center justify-between gap-2 border-b border-gray-300 bg-gray-50 p-4 dark:border-slate-800 dark:bg-slate-600">
+    <header className="flex items-center justify-between gap-2 border-b border-gray-300 bg-gray-50 p-4 dark:border-slate-500 dark:bg-slate-600">
       <div className="flex items-center gap-2 truncate">
         {sidebarIcon}
         {titleElement}

@@ -75,7 +75,7 @@ export const CommandItemList: React.FC<FavoriteOptionsProps> = ({
                 <div
                   className={twMerge(
                     "flex size-4 items-center justify-center rounded-md border",
-                    "border-gray-700 dark:border-slate-200",
+                    "border-gray-900 dark:border-slate-50",
                     isSelected &&
                       "bg-gray-900 text-gray-50 dark:bg-slate-50 dark:text-slate-900",
                   )}
@@ -88,7 +88,7 @@ export const CommandItemList: React.FC<FavoriteOptionsProps> = ({
                     "relative size-4 rounded-full border",
                     isSelected
                       ? "border-gray-900 dark:border-slate-50"
-                      : "border-gray-800 dark:border-slate-100",
+                      : "border-gray-900 dark:border-slate-50",
                     "bg-transparent",
                   )}
                 >

@@ -2,26 +2,24 @@ import { readFileSync, writeFileSync } from "node:fs";
 
 const { allClasses } = JSON.parse(readFileSync("./all-classes.json", "utf8"));
 
-// converge non-grayscale hues to {50, 100, 500, 900}
-const fold = { 200: 100, 300: 500, 400: 500, 600: 500, 700: 900, 800: 900 };
-const grayscale = new Set(["gray", "slate", "white", "black", "transparent"]);
+// grayscale border consolidation -> two buckets: subtle (border) + strong (foreground)
+// light = gray, dark = slate
+const borderRemap = {
+  gray: { 50: 300, 100: 300, 200: 300, 400: 300, 500: 300, 700: 900, 800: 900 }, // 300 & 900 stay
+  slate: { 100: 50, 200: 50, 300: 500, 400: 500, 600: 500, 800: 500 }, // 500 & 50 stay
+};
 
-const HUES =
-  "stone|gray|slate|blue|green|red|orange|yellow|amber|purple|violet|cyan|white|black|transparent";
-const re = new RegExp(`^(.+?)-(${HUES})(?:-(\\d+))?(\\/\\d+)?(!)?$`);
+const re = /^(.+-)border-(gray|slate)-(\d+)$|^border-(gray|slate)-(\d+)$/;
 
 const remapClass = (cls) => {
   const parts = cls.split(":");
   const utility = parts.pop();
-  const m = utility.match(re);
+  const m = utility.match(/^border-(gray|slate)-(\d+)$/);
   if (!m) return null;
-  const [, property, hue, shade, opacity = "", bang = ""] = m;
-  if (!shade || grayscale.has(hue)) return null;
-
-  const newShade = fold[Number(shade)] ?? Number(shade);
+  const [, hue, shade] = m;
+  const newShade = borderRemap[hue]?.[Number(shade)] ?? Number(shade);
   if (newShade === Number(shade)) return null;
-
-  const next = [...parts, `${property}-${hue}-${newShade}${opacity}${bang}`].join(":");
+  const next = [...parts, `border-${hue}-${newShade}`].join(":");
   return next === cls ? null : next;
 };
 

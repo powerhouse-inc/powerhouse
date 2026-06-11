@@ -95,7 +95,7 @@ export const ModuleItem: React.FC<ModuleItemProps> = ({
           onItemClick={onDropdownMenuOptionClick}
           onOpenChange={setIsDropdownMenuOpen}
           open={isDropdownMenuOpen}
-          menuClassName="border-gray-200 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
+          menuClassName="border-gray-300 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
         >
           <button
             className={twMerge(

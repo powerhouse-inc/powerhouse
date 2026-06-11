@@ -37,7 +37,7 @@ export const SidebarSearch: React.FC<SidebarSearchProps> = ({
   }, [searchTerm]);
 
   return (
-    <div className="flex w-full gap-2 border-t border-gray-300 p-2 dark:border-slate-800">
+    <div className="flex w-full gap-2 border-t border-gray-300 p-2 dark:border-slate-500">
       <div className="relative flex-1">
         <Input
           type="search"

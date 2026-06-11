@@ -13,7 +13,7 @@ export function DriveApp(props: DriveAppProps) {
     <div
       {...divProps}
       className={twMerge(
-        "flex items-center gap-2 rounded-md border border-gray-200 bg-gray-50 p-3 text-gray-900 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100",
+        "flex items-center gap-2 rounded-md border border-gray-300 bg-gray-50 p-3 text-gray-900 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100",
         className,
       )}
     >

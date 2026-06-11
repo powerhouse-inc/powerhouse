@@ -181,7 +181,7 @@ export function ChannelInspector({
       </div>
 
       {connectionState && (
-        <div className="rounded-sm border border-gray-200 bg-gray-50 p-4 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
+        <div className="rounded-sm border border-gray-300 bg-gray-50 p-4 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
           <h3 className="mb-3 text-sm font-semibold text-gray-900 dark:text-slate-50">
             Connection State
           </h3>
@@ -222,7 +222,7 @@ export function ChannelInspector({
       )}
 
       {pollerControls && (
-        <div className="rounded-sm border border-gray-200 bg-gray-50 p-4 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
+        <div className="rounded-sm border border-gray-300 bg-gray-50 p-4 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
           <h3 className="mb-3 text-sm font-semibold text-gray-900 dark:text-slate-50">
             Poller
           </h3>
@@ -303,7 +303,7 @@ export function ChannelInspector({
         </div>
       )}
 
-      <div className="rounded-sm border border-gray-200 bg-gray-50 p-4 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
+      <div className="rounded-sm border border-gray-300 bg-gray-50 p-4 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
         <h3 className="mb-3 text-sm font-semibold text-gray-900 dark:text-slate-50">
           Mailbox Processing
         </h3>

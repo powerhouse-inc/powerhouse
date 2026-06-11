@@ -26,9 +26,9 @@ const CheckboxBase = React.forwardRef<
       // Focus styles
       "focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
       // Disabled state
-      "disabled:cursor-not-allowed disabled:border-gray-700 disabled:data-[invalid=false]:data-[state=checked]:bg-gray-700 disabled:data-[invalid=false]:data-[state=indeterminate]:bg-gray-700 dark:disabled:border-slate-200 dark:disabled:data-[invalid=false]:data-[state=checked]:bg-slate-500 dark:disabled:data-[invalid=false]:data-[state=indeterminate]:bg-slate-500",
+      "disabled:cursor-not-allowed disabled:border-gray-900 disabled:data-[invalid=false]:data-[state=checked]:bg-gray-700 disabled:data-[invalid=false]:data-[state=indeterminate]:bg-gray-700 dark:disabled:border-slate-50 dark:disabled:data-[invalid=false]:data-[state=checked]:bg-slate-500 dark:disabled:data-[invalid=false]:data-[state=indeterminate]:bg-slate-500",
       // Checked & Indeterminate states
-      "data-state:border-gray-700 dark:data-state:border-slate-500",
+      "data-state:border-gray-900 dark:data-state:border-slate-500",
       "data-[state=checked]:bg-gray-900 data-[state=indeterminate]:bg-gray-900 dark:data-[state=checked]:bg-slate-400 dark:data-[state=indeterminate]:bg-slate-400",
       "data-[state=checked]:text-gray-50 data-[state=indeterminate]:text-gray-50 dark:data-[state=checked]:text-slate-900 dark:data-[state=indeterminate]:text-slate-900",
       // hover states

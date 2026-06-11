@@ -15,7 +15,7 @@ export function ToolbarContainer(props: ComponentProps<"div">) {
     <div
       {...rest}
       className={twMerge(
-        "flex h-12 w-full items-center justify-between rounded-xl border border-gray-200 bg-gray-50 px-4 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100",
+        "flex h-12 w-full items-center justify-between rounded-xl border border-gray-300 bg-gray-50 px-4 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100",
         className,
       )}
     >

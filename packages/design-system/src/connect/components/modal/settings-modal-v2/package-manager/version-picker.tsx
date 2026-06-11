@@ -108,7 +108,7 @@ export const VersionPicker: React.FC<VersionPickerProps> = (props) => {
         className="w-56 p-0"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
-        <div className="border-b border-gray-200 p-2 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
+        <div className="border-b border-gray-300 p-2 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
           <div className="relative">
             <Icon
               name="Search"

@@ -284,7 +284,7 @@ export function DBExplorer({
         onContinue={() => void handleResetConfirm()}
       />
 
-      <div className="flex w-64 shrink-0 flex-col border-r border-gray-200 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
+      <div className="flex w-64 shrink-0 flex-col border-r border-gray-300 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
         <div className="flex-1 overflow-auto">
           <SchemaTreeSidebar
             schema={schema}
@@ -297,7 +297,7 @@ export function DBExplorer({
         </div>
 
         {(onImportDb || onExportDb || pgVersionControl) && (
-          <div className="flex shrink-0 flex-col gap-2 border-t border-gray-200 p-2 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
+          <div className="flex shrink-0 flex-col gap-2 border-t border-gray-300 p-2 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
             {onImportDb && (
               <button
                 className="rounded-sm border border-gray-300 bg-gray-50 px-3 py-1.5 text-sm text-gray-700 hover:effect dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
@@ -317,7 +317,7 @@ export function DBExplorer({
               </button>
             )}
             {pgVersionControl && (
-              <div className="flex flex-col gap-1 border-t border-gray-200 pt-2 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
+              <div className="flex flex-col gap-1 border-t border-gray-300 pt-2 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
                 <div className="flex items-center justify-between text-xs text-gray-700 dark:text-slate-200">
                   <span>Postgres version</span>
                   <span className="font-semibold text-gray-900 dark:text-slate-50">

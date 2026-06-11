@@ -92,7 +92,7 @@ export function PackageInstallModal(props: PackageInstallModalProps) {
       {...restProps}
     >
       <div className="w-[460px] rounded-xl bg-gray-50 p-6 text-gray-300 dark:bg-slate-800 dark:text-slate-600">
-        <div className="border-b border-gray-50 pb-2 text-2xl font-bold text-gray-900 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
+        <div className="border-b border-gray-300 pb-2 text-2xl font-bold text-gray-900 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
           {grouped.length === 1 ? "Package Required" : "Packages Required"}
         </div>
         <div className="my-4 text-sm text-gray-700 dark:text-slate-200">
@@ -123,7 +123,7 @@ export function PackageInstallModal(props: PackageInstallModalProps) {
                     disabled={installing}
                     className={twMerge(
                       buttonStyles,
-                      "border border-gray-200 bg-gray-50 text-gray-800 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100",
+                      "border border-gray-300 bg-gray-50 text-gray-800 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100",
                       installing && "cursor-not-allowed opacity-50",
                     )}
                   >

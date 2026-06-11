@@ -42,10 +42,10 @@ export const Radio = React.forwardRef<
           aria-invalid={hasError}
           className={twMerge(
             "group peer",
-            "aspect-square size-4 rounded-full border border-gray-800 dark:border-slate-100",
+            "aspect-square size-4 rounded-full border border-gray-900 dark:border-slate-50",
             "hover:effect",
             disabled && [
-              "cursor-not-allowed border-gray-500 hover:effect dark:border-slate-300",
+              "cursor-not-allowed border-gray-300 hover:effect dark:border-slate-500",
               "hover:effect dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100",
             ],
             hasError && [

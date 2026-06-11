@@ -86,7 +86,7 @@ export const Content: React.FC<ContentProps> = ({
                   <div
                     className={twMerge(
                       "flex size-4 items-center justify-center rounded-md border",
-                      "border-gray-700 dark:border-slate-200",
+                      "border-gray-900 dark:border-slate-50",
                       selectedValues.length === enabledOptions.length &&
                         "bg-gray-900 text-gray-50 dark:bg-slate-50 dark:text-slate-900",
                     )}

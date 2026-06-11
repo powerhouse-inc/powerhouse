@@ -237,7 +237,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <SidebarSearch showStatusFilter={showStatusFilter} />
           )}
           {extraFooterContent && (
-            <div className="w-full border-t border-gray-300 p-2 dark:border-slate-800">
+            <div className="w-full border-t border-gray-300 p-2 dark:border-slate-500">
               {extraFooterContent}
             </div>
           )}

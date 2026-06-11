@@ -78,7 +78,7 @@ export const PackageManagerListItem = (props: {
   return (
     <li
       className={twMerge(
-        "relative flex flex-col items-start rounded-md border border-gray-200 bg-gray-50 p-3 text-sm/5 shadow-sm dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100",
+        "relative flex flex-col items-start rounded-md border border-gray-300 bg-gray-50 p-3 text-sm/5 shadow-sm dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100",
         className,
       )}
     >
@@ -327,7 +327,7 @@ const PackageSection: React.FC<{
 
   return (
     <section className="mb-6">
-      <h3 className="sticky top-0 z-10 mb-3 border-b border-gray-200 bg-gray-50 text-gray-900 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100">
+      <h3 className="sticky top-0 z-10 mb-3 border-b border-gray-300 bg-gray-50 text-gray-900 dark:border-slate-500 dark:bg-slate-800 dark:text-slate-100">
         <button
           type="button"
           onClick={toggle}
