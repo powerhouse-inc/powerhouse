@@ -1,3 +1,13 @@
+## 6.2.0-dev.8 (2026-06-11)
+
+### 🚀 Features
+
+- **ph-cli:** add --drives-public-base to ph vetra ([48005ada9](https://github.com/powerhouse-inc/powerhouse/commit/48005ada9))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.0-dev.7 (2026-06-11)
 
 This was a version bump only for @powerhousedao/shared to align it with other projects, there were no code changes.
