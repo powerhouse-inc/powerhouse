@@ -223,7 +223,7 @@ export function ProcessorsInspector({
       </div>
 
       {error && (
-        <div className="shrink-0 rounded-lg border border-red-500 bg-red-50 px-4 py-2 text-sm text-red-900 dark:border-red-500 dark:bg-red-900 dark:text-red-100">
+        <div className="shrink-0 rounded-lg border border-red-500 bg-red-50 px-4 py-2 text-sm text-red-900 dark:border-red-500 dark:bg-red-900 dark:text-red-50">
           Failed to load processors: {error}
         </div>
       )}
@@ -288,7 +288,7 @@ export function ProcessorsInspector({
                 >
                   <td className="px-3 py-2 text-xs">
                     <button
-                      className="flex items-center gap-1 rounded-sm bg-blue-50 px-2 py-1 text-xs text-blue-900 hover:effect dark:bg-blue-900 dark:text-blue-100"
+                      className="flex items-center gap-1 rounded-sm bg-blue-50 px-2 py-1 text-xs text-blue-900 hover:effect dark:bg-blue-900 dark:text-blue-50"
                       onClick={() => setSelectedProcessor(processor)}
                       type="button"
                     >
@@ -300,8 +300,8 @@ export function ProcessorsInspector({
                       className={twMerge(
                         "inline-flex items-center gap-1 rounded-sm px-1.5 py-0.5",
                         processor.status === "active"
-                          ? "bg-green-100 text-green-500 dark:bg-green-900 dark:text-green-100"
-                          : "bg-red-50 text-red-900 dark:bg-red-900 dark:text-red-100",
+                          ? "bg-green-50 text-green-500 dark:bg-green-900 dark:text-green-50"
+                          : "bg-red-50 text-red-900 dark:bg-red-900 dark:text-red-50",
                       )}
                     >
                       {processor.status === "active" && (
@@ -343,7 +343,7 @@ export function ProcessorsInspector({
                   <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
                     {processor.lastError ? (
                       <span
-                        className="block truncate text-red-500 dark:text-red-100"
+                        className="block truncate text-red-500 dark:text-red-50"
                         title={processor.lastError}
                       >
                         {processor.lastError}
@@ -371,7 +371,7 @@ export function ProcessorsInspector({
                   <td className="border-l border-gray-300 px-3 py-2 text-xs dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
                     {processor.status === "errored" && onRetry && (
                       <button
-                        className="flex items-center gap-1 rounded-sm bg-yellow-50 px-2 py-1 text-xs text-yellow-900 hover:effect disabled:opacity-50 dark:bg-yellow-900 dark:text-yellow-100"
+                        className="flex items-center gap-1 rounded-sm bg-yellow-50 px-2 py-1 text-xs text-yellow-900 hover:effect disabled:opacity-50 dark:bg-yellow-900 dark:text-yellow-50"
                         disabled={retryingId === processor.processorId}
                         onClick={() => void handleRetry(processor.processorId)}
                         type="button"

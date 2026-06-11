@@ -123,7 +123,7 @@ export function Breadcrumb(props: BreadcrumbProps) {
     isDragging
       ? "opacity-60"
       : isDropTarget
-        ? "bg-blue-100 dark:bg-blue-900"
+        ? "bg-blue-50 dark:bg-blue-900"
         : "",
   );
 

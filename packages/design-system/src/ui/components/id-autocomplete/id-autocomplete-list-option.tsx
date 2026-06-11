@@ -139,7 +139,7 @@ const IdAutocompleteListOption: React.FC<IdAutocompleteListOptionProps> = ({
               target="_blank"
               rel="noopener noreferrer"
               className={twMerge(
-                "truncate text-xs/5 text-blue-900 hover:underline focus-visible:outline-none dark:text-blue-100",
+                "truncate text-xs/5 text-blue-900 hover:underline focus-visible:outline-none dark:text-blue-50",
               )}
             >
               {path.text}

@@ -29,10 +29,10 @@ describe("CharacterCounter", () => {
   it("should show warning state when between 90% and 100% of max length", () => {
     render(<CharacterCounter maxLength={10} value="Hello Wor" />);
     expect(screen.getByText("9")).toHaveClass(
-      "text-yellow-900 dark:text-yellow-100",
+      "text-yellow-900 dark:text-yellow-50",
     );
     expect(screen.getByText("/10")).toHaveClass(
-      "text-yellow-500 dark:text-yellow-100",
+      "text-yellow-500 dark:text-yellow-50",
     );
   });
 
@@ -42,7 +42,7 @@ describe("CharacterCounter", () => {
       "text-red-900 dark:text-red-500",
     );
     expect(screen.getByText("/10")).toHaveClass(
-      "text-red-500 dark:text-red-100",
+      "text-red-500 dark:text-red-50",
     );
   });
 

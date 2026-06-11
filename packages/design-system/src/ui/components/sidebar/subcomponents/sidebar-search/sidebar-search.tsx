@@ -106,7 +106,7 @@ export const SidebarSearch: React.FC<SidebarSearchProps> = ({
           className={twMerge(
             "rounded-md border border-gray-300 px-2 py-1 text-sm text-gray-500",
             isStatusFilterEnabled
-              ? "border-blue-500 bg-blue-100 text-blue-900"
+              ? "border-blue-500 bg-blue-50 text-blue-900"
               : "hover:effect",
           )}
         >

@@ -32,7 +32,7 @@ const User = () => {
   return (
     <div className="flex flex-col gap-8 pt-14">
       <div className="my-auto flex flex-row items-center gap-4 bg-gray-50 px-5 dark:bg-slate-800">
-        <div className="flex border-b-4 border-orange-500 py-2 text-orange-500 dark:border-orange-100 dark:text-orange-100">
+        <div className="flex border-b-4 border-orange-500 py-2 text-orange-500 dark:border-orange-50 dark:text-orange-50">
           API Tokens
         </div>
         <div className="flex grow justify-end">
@@ -42,10 +42,10 @@ const User = () => {
             }}
             href={"/"}
           >
-            <div className="flex flex-row items-center rounded-sm text-orange-500 hover:effect dark:text-orange-100">
+            <div className="flex flex-row items-center rounded-sm text-orange-500 hover:effect dark:text-orange-50">
               <div className="w-20">Sign Out</div>{" "}
               <div className="w-8">
-                <ArrowRightStartOnRectangleIcon className="text-orange-500 dark:text-orange-100" />
+                <ArrowRightStartOnRectangleIcon className="text-orange-500 dark:text-orange-50" />
               </div>
             </div>
           </Link>

@@ -62,7 +62,7 @@ export function CreateDocumentModal(props: CreateDocumentModalProps) {
         </div>
         <div className="my-6">
           {!isValid && nodeName && (
-            <div className="mb-2 text-red-500 dark:text-red-100">
+            <div className="mb-2 text-red-500 dark:text-red-50">
               Document name must not be empty or contain control characters.
             </div>
           )}

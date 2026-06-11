@@ -60,8 +60,8 @@ export const TimelineBar: React.FC<TimelineBarProps> = ({
   const tooltipContent = (
     <div className="flex flex-col text-xs">
       <div>{formatTimestamp(timestamp)}</div>
-      <div className="text-green-900 dark:text-green-100">{`${additions} additions +`}</div>
-      <div className="text-red-900 dark:text-red-100">{`${deletions} deletions -`}</div>
+      <div className="text-green-900 dark:text-green-50">{`${additions} additions +`}</div>
+      <div className="text-red-900 dark:text-red-50">{`${deletions} deletions -`}</div>
     </div>
   );
 
@@ -114,7 +114,7 @@ export const TimelineBar: React.FC<TimelineBarProps> = ({
             className={twMerge(
               "flex h-[25px] w-1.5 cursor-pointer flex-col items-center justify-center rounded-[2px] hover:effect",
               className,
-              isSelected && "bg-blue-100 dark:bg-blue-900",
+              isSelected && "bg-blue-50 dark:bg-blue-900",
             )}
             data-timestamp={timestamp}
             onClick={onClick}
@@ -122,7 +122,7 @@ export const TimelineBar: React.FC<TimelineBarProps> = ({
             <div className="flex h-3 w-0.5 items-end">
               <div
                 className={twMerge(
-                  "h-3 w-0.5 rounded-t-full bg-green-500 dark:bg-green-100",
+                  "h-3 w-0.5 rounded-t-full bg-green-500 dark:bg-green-50",
                   addBarHeight,
                 )}
               ></div>

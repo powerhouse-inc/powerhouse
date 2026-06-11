@@ -202,7 +202,7 @@ export const SearchAutocomplete: React.FC<SearchAutocompleteProps> = (
         </p>
       )}
       {error && (
-        <p className="mt-1 text-xs text-red-500 dark:text-red-100">{error}</p>
+        <p className="mt-1 text-xs text-red-500 dark:text-red-50">{error}</p>
       )}
       {!loading &&
         !error &&

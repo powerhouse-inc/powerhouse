@@ -34,7 +34,7 @@ const CheckboxBase = React.forwardRef<
       // hover states
       !props.disabled && "group-hover:effect",
       // Error state
-      "data-[invalid=true]:data-state:border-red-900! data-[invalid=true]:data-[state=checked]:bg-red-800! data-[invalid=true]:data-[state=indeterminate]:bg-red-800! dark:data-[invalid=true]:data-state:border-red-100! dark:data-[invalid=true]:data-[state=checked]:bg-red-100! dark:data-[invalid=true]:data-[state=indeterminate]:bg-red-100!",
+      "data-[invalid=true]:data-state:border-red-900! data-[invalid=true]:data-[state=checked]:bg-red-800! data-[invalid=true]:data-[state=indeterminate]:bg-red-800! dark:data-[invalid=true]:data-state:border-red-50! dark:data-[invalid=true]:data-[state=checked]:bg-red-50! dark:data-[invalid=true]:data-[state=indeterminate]:bg-red-50!",
       "dark:data-[invalid=true]:data-state:border-red-900! dark:data-[invalid=true]:data-[state=checked]:bg-red-800! dark:data-[invalid=true]:data-[state=indeterminate]:bg-red-800!",
       className,
     )}

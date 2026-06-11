@@ -15,7 +15,7 @@ export function UploadFileItemProgressBar(props: ProgressBarProps) {
   return (
     <div className="h-2 w-full overflow-hidden rounded-sm bg-gray-200 dark:bg-slate-600 dark:text-slate-100">
       <div
-        className="h-full bg-blue-900 transition-all duration-300 ease-out dark:bg-blue-100"
+        className="h-full bg-blue-900 transition-all duration-300 ease-out dark:bg-blue-50"
         style={{ width: `${clamped}%` }}
       />
     </div>

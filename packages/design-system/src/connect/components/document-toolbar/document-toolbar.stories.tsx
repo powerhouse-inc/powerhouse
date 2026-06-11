@@ -151,7 +151,7 @@ export const WithCustomToolbarContainer: Story = {
   args: {
     ...defaultArgs,
     toolbarContainer: (props) => (
-      <div className="bg-orange-100 dark:bg-orange-500">{props.children}</div>
+      <div className="bg-orange-50 dark:bg-orange-500">{props.children}</div>
     ),
   },
   render: Render,
@@ -161,7 +161,7 @@ export const WithCustomControlsContainer: Story = {
   args: {
     ...defaultArgs,
     controlsContainer: (props) => (
-      <div className="bg-blue-100 dark:bg-blue-900">{props.children}</div>
+      <div className="bg-blue-50 dark:bg-blue-900">{props.children}</div>
     ),
   },
   render: Render,
@@ -218,9 +218,9 @@ export const WithChildren: Story = {
 export const WithCustomStyles: Story = {
   args: {
     ...defaultArgs,
-    toolbarClassName: "border-none bg-green-100 dark:bg-green-900",
+    toolbarClassName: "border-none bg-green-50 dark:bg-green-900",
     controlsContainerClassName:
-      "border border-green-100 rounded-lg p-2 dark:border-green-900",
+      "border border-green-50 rounded-lg p-2 dark:border-green-900",
   },
   render: Render,
 };

@@ -47,10 +47,10 @@ function VerificationStatus(props: SignatureProps) {
       className={twMerge(
         `text-xs`,
         verifiedSignaturesCount === 0
-          ? "text-red-900 dark:text-red-100"
+          ? "text-red-900 dark:text-red-50"
           : verifiedSignaturesCount === signatureCount
-            ? "text-green-500 dark:text-green-100"
-            : "text-orange-900 dark:text-orange-100",
+            ? "text-green-500 dark:text-green-50"
+            : "text-orange-900 dark:text-orange-50",
       )}
     >
       {verificationStatusText}

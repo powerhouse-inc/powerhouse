@@ -202,7 +202,7 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
               {keywords.map((keyword) => (
                 <span
                   key={keyword.id}
-                  className="inline-flex items-center rounded-sm border border-blue-500 bg-blue-100 px-2 py-0.5 text-xs text-blue-900 dark:border-blue-500 dark:bg-blue-900 dark:text-blue-100"
+                  className="inline-flex items-center rounded-sm border border-blue-500 bg-blue-50 px-2 py-0.5 text-xs text-blue-900 dark:border-blue-500 dark:bg-blue-900 dark:text-blue-50"
                 >
                   {keyword.label}
                   <button
@@ -210,7 +210,7 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
                       setKeywords(keywords.filter((k) => k.id !== keyword.id));
                       onRemoveKeyword?.(keyword.id);
                     }}
-                    className="ml-1 text-blue-500 hover:effect focus:outline-none dark:text-blue-100"
+                    className="ml-1 text-blue-500 hover:effect focus:outline-none dark:text-blue-50"
                   >
                     ×
                   </button>

@@ -36,7 +36,7 @@ export default function Header() {
     }
   };
   return (
-    <header className="fixed top-0 h-14 w-full bg-orange-100 text-gray-900 dark:bg-orange-900 dark:text-slate-50">
+    <header className="fixed top-0 h-14 w-full bg-orange-50 text-gray-900 dark:bg-orange-900 dark:text-slate-50">
       <nav className="flex h-14 flex-row items-center justify-between">
         <div className="flex items-start">
           <SwitchboardLink href="/">
@@ -74,9 +74,9 @@ export default function Header() {
           )}
         </div>
         <div className="flex flex-row gap-2">
-          <div className="flex items-center text-orange-100 dark:text-orange-100">
+          <div className="flex items-center text-orange-50 dark:text-orange-50">
             <SwitchboardLink
-              className="flex flex-row items-center gap-2 rounded-2xl bg-orange-100 px-4 py-2 text-orange-500 dark:bg-orange-900 dark:text-orange-100"
+              className="flex flex-row items-center gap-2 rounded-2xl bg-orange-50 px-4 py-2 text-orange-500 dark:bg-orange-900 dark:text-orange-50"
               href="/user"
             >
               <span>
@@ -89,7 +89,7 @@ export default function Header() {
               </span>
             </SwitchboardLink>
           </div>
-          <div className="my-auto pr-2 text-orange-100 dark:text-orange-100">
+          <div className="my-auto pr-2 text-orange-50 dark:text-orange-50">
             <Link
               href="https://github.com/powerhouse-inc/switchboard-boilerplate"
               target="_blank"

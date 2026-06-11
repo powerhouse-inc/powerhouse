@@ -66,7 +66,7 @@ export function DebugInspector({
               type="button"
               disabled={running}
               onClick={() => setConfirmMajor(major)}
-              className="hover:effect flex items-center gap-1 rounded-sm border border-red-500 bg-red-50 px-3 py-1.5 text-sm text-red-900 disabled:opacity-50 dark:border-red-500 dark:bg-red-900 dark:text-red-100"
+              className="hover:effect flex items-center gap-1 rounded-sm border border-red-500 bg-red-50 px-3 py-1.5 text-sm text-red-900 disabled:opacity-50 dark:border-red-500 dark:bg-red-900 dark:text-red-50"
             >
               {isPending ? `Resetting to PG${major}…` : `Reset to PG${major}`}
             </button>
@@ -83,7 +83,7 @@ export function DebugInspector({
           <button
             type="button"
             onClick={() => void handleReset(confirmMajor)}
-            className="hover:effect rounded-sm bg-yellow-500 px-3 py-1 text-sm text-white dark:bg-yellow-100 dark:text-slate-900"
+            className="hover:effect rounded-sm bg-yellow-500 px-3 py-1 text-sm text-white dark:bg-yellow-50 dark:text-slate-900"
           >
             Confirm reset to PG{confirmMajor}
           </button>

@@ -134,7 +134,7 @@ export function IntegrityInspector({
         </div>
         <div className="flex gap-2">
           <button
-            className="flex items-center gap-1 rounded-sm border border-blue-500 bg-blue-50 px-3 py-1.5 text-sm text-blue-900 hover:effect disabled:opacity-50 dark:border-blue-500 dark:bg-blue-900 dark:text-blue-100"
+            className="flex items-center gap-1 rounded-sm border border-blue-500 bg-blue-50 px-3 py-1.5 text-sm text-blue-900 hover:effect disabled:opacity-50 dark:border-blue-500 dark:bg-blue-900 dark:text-blue-50"
             disabled={
               !documentId.trim() ||
               status === "running" ||
@@ -147,7 +147,7 @@ export function IntegrityInspector({
             Validate
           </button>
           <button
-            className="flex items-center gap-1 rounded-sm border border-yellow-500 bg-yellow-50 px-3 py-1.5 text-sm text-yellow-900 hover:effect disabled:opacity-50 dark:border-yellow-500 dark:bg-yellow-900 dark:text-yellow-100"
+            className="flex items-center gap-1 rounded-sm border border-yellow-500 bg-yellow-50 px-3 py-1.5 text-sm text-yellow-900 hover:effect disabled:opacity-50 dark:border-yellow-500 dark:bg-yellow-900 dark:text-yellow-50"
             disabled={
               !documentId.trim() ||
               status === "running" ||
@@ -160,7 +160,7 @@ export function IntegrityInspector({
             Rebuild Keyframes
           </button>
           <button
-            className="flex items-center gap-1 rounded-sm border border-yellow-500 bg-yellow-50 px-3 py-1.5 text-sm text-yellow-900 hover:effect disabled:opacity-50 dark:border-yellow-500 dark:bg-yellow-900 dark:text-yellow-100"
+            className="flex items-center gap-1 rounded-sm border border-yellow-500 bg-yellow-50 px-3 py-1.5 text-sm text-yellow-900 hover:effect disabled:opacity-50 dark:border-yellow-500 dark:bg-yellow-900 dark:text-yellow-50"
             disabled={
               !documentId.trim() ||
               status === "running" ||
@@ -177,13 +177,13 @@ export function IntegrityInspector({
 
       {confirmAction && (
         <div className="flex shrink-0 items-center gap-3 rounded-sm border border-yellow-500 bg-yellow-50 px-3 py-2 dark:border-yellow-500 dark:bg-yellow-900">
-          <span className="text-sm text-yellow-900 dark:text-yellow-100">
+          <span className="text-sm text-yellow-900 dark:text-yellow-50">
             {confirmAction === "keyframes"
               ? "This will delete all keyframes for this document. Continue?"
               : "This will invalidate all cached snapshots for this document. Continue?"}
           </span>
           <button
-            className="rounded-sm bg-yellow-500 px-3 py-1 text-sm text-white hover:effect dark:bg-yellow-100 dark:text-slate-900"
+            className="rounded-sm bg-yellow-500 px-3 py-1 text-sm text-white hover:effect dark:bg-yellow-50 dark:text-slate-900"
             onClick={() => {
               if (confirmAction === "keyframes") {
                 void handleRebuildKeyframes();
@@ -219,7 +219,7 @@ export function IntegrityInspector({
         )}
 
         {status === "error" && error && (
-          <div className="rounded-sm bg-red-50 p-3 text-sm text-red-900 dark:bg-red-900 dark:text-red-100">
+          <div className="rounded-sm bg-red-50 p-3 text-sm text-red-900 dark:bg-red-900 dark:text-red-50">
             {error}
           </div>
         )}

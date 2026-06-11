@@ -65,7 +65,7 @@ export const debugNodeOptionsMap = {
     label: "Add Trigger",
     icon: (
       <Icon
-        className="text-orange-900 dark:text-orange-100"
+        className="text-orange-900 dark:text-orange-50"
         name="Plus"
         size={16}
       />
@@ -75,7 +75,7 @@ export const debugNodeOptionsMap = {
     label: "Remove Trigger",
     icon: (
       <Icon
-        className="text-orange-900 dark:text-orange-100"
+        className="text-orange-900 dark:text-orange-50"
         name="Xmark"
         size={16}
       />
@@ -85,7 +85,7 @@ export const debugNodeOptionsMap = {
     label: "Add Trigger",
     icon: (
       <Icon
-        className="text-orange-900 dark:text-orange-100"
+        className="text-orange-900 dark:text-orange-50"
         name="Exclamation"
         size={16}
       />

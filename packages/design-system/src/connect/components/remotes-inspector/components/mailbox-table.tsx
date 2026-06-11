@@ -228,7 +228,7 @@ export function MailboxTable({
                   >
                     <td className="px-3 py-2 text-xs">
                       <button
-                        className="flex items-center gap-1 rounded-sm bg-blue-50 px-2 py-1 text-xs text-blue-900 hover:effect dark:bg-blue-900 dark:text-blue-100"
+                        className="flex items-center gap-1 rounded-sm bg-blue-50 px-2 py-1 text-xs text-blue-900 hover:effect dark:bg-blue-900 dark:text-blue-50"
                         onClick={() => setSelectedOperation(op)}
                         type="button"
                       >
@@ -256,7 +256,7 @@ export function MailboxTable({
                     {mailboxType === "deadLetter" ? (
                       <td className="border-l border-gray-300 px-3 py-2 text-xs dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
                         <span
-                          className="block truncate text-red-500 dark:text-red-100"
+                          className="block truncate text-red-500 dark:text-red-50"
                           title={getErrorMessage(op.error)}
                         >
                           {getErrorMessage(op.error) || "Unknown error"}

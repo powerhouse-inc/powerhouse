@@ -29,7 +29,7 @@ export function FormattedJsonViewer(props: JsonViewProps<object>) {
             return (
               <Icon
                 {...props}
-                className="inline-block text-green-900 dark:text-green-100"
+                className="inline-block text-green-900 dark:text-green-50"
                 name="FilesEarmark"
                 size={16}
               />

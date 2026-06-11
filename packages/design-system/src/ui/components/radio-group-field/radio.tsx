@@ -49,7 +49,7 @@ export const Radio = React.forwardRef<
               "dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100",
             ],
             hasError && [
-              "border-red-900 dark:border-red-100",
+              "border-red-900 dark:border-red-50",
               "dark:border-red-900",
             ],
             className,

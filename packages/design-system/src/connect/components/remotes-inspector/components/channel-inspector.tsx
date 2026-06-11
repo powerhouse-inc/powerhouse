@@ -205,14 +205,14 @@ export function ChannelInspector({
               <span
                 className={
                   connectionState.pushBlocked
-                    ? "text-red-500 dark:text-red-100"
-                    : "text-green-500 dark:text-green-100"
+                    ? "text-red-500 dark:text-red-50"
+                    : "text-green-500 dark:text-green-50"
                 }
               >
                 {connectionState.pushBlocked ? "Blocked" : "OK"}
               </span>
               {connectionState.pushFailureCount > 0 && (
-                <span className="ml-1 text-red-500 dark:text-red-100">
+                <span className="ml-1 text-red-500 dark:text-red-50">
                   ({connectionState.pushFailureCount} failures)
                 </span>
               )}
@@ -233,8 +233,8 @@ export function ChannelInspector({
                 <span
                   className={
                     pollerState.isPaused
-                      ? "text-yellow-500 dark:text-yellow-100"
-                      : "text-green-500 dark:text-green-100"
+                      ? "text-yellow-500 dark:text-yellow-50"
+                      : "text-green-500 dark:text-green-50"
                   }
                 >
                   {pollerState.isPaused ? "Paused" : "Running"}
@@ -315,8 +315,8 @@ export function ChannelInspector({
                 <span
                   className={
                     mailboxStates.inbox.isPaused
-                      ? "text-yellow-500 dark:text-yellow-100"
-                      : "text-green-500 dark:text-green-100"
+                      ? "text-yellow-500 dark:text-yellow-50"
+                      : "text-green-500 dark:text-green-50"
                   }
                 >
                   {mailboxStates.inbox.isPaused ? "Paused" : "Active"}
@@ -362,8 +362,8 @@ export function ChannelInspector({
                 <span
                   className={
                     mailboxStates.outbox.isPaused
-                      ? "text-yellow-500 dark:text-yellow-100"
-                      : "text-green-500 dark:text-green-100"
+                      ? "text-yellow-500 dark:text-yellow-50"
+                      : "text-green-500 dark:text-green-50"
                   }
                 >
                   {mailboxStates.outbox.isPaused ? "Paused" : "Active"}

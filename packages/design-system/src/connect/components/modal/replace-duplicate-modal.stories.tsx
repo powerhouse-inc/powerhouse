@@ -20,7 +20,7 @@ function ModalWrapper(args: any) {
     <div>
       <button
         onClick={() => setOpen(true)}
-        className="rounded-sm bg-blue-500 px-4 py-2 text-white hover:effect dark:bg-blue-100 dark:text-slate-900"
+        className="rounded-sm bg-blue-500 px-4 py-2 text-white hover:effect dark:bg-blue-50 dark:text-slate-900"
       >
         Open Modal
       </button>

@@ -91,7 +91,7 @@ export function DriveSettingsForm(props: DriveSettingsFormProps) {
           </p>
         )}
         {systemInfo.status === "error" && (
-          <p className="py-2 text-sm text-red-500 dark:text-red-100">
+          <p className="py-2 text-sm text-red-500 dark:text-red-50">
             Could not load system info
           </p>
         )}

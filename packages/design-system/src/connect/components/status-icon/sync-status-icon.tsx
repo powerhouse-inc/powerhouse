@@ -37,7 +37,7 @@ export function SyncStatusIcon(props: SyncStatusIconProps) {
       <Icon
         size={16}
         {...iconProps}
-        className={twMerge("text-blue-900 dark:text-blue-100", className)}
+        className={twMerge("text-blue-900 dark:text-blue-50", className)}
         name={icons[INITIAL_SYNC]}
       />
     ),
@@ -45,7 +45,7 @@ export function SyncStatusIcon(props: SyncStatusIconProps) {
       <Icon
         size={16}
         {...iconProps}
-        className={twMerge("text-blue-900 dark:text-blue-100", className)}
+        className={twMerge("text-blue-900 dark:text-blue-50", className)}
         name={icons[SYNCING]}
       />
     ),
@@ -53,7 +53,7 @@ export function SyncStatusIcon(props: SyncStatusIconProps) {
       <Icon
         size={16}
         {...iconProps}
-        className={twMerge("text-green-900 dark:text-green-100", className)}
+        className={twMerge("text-green-900 dark:text-green-50", className)}
         name={icons[SUCCESS]}
       />
     ),
@@ -61,7 +61,7 @@ export function SyncStatusIcon(props: SyncStatusIconProps) {
       <Icon
         size={16}
         {...iconProps}
-        className={twMerge("text-orange-900 dark:text-orange-100", className)}
+        className={twMerge("text-orange-900 dark:text-orange-50", className)}
         name={icons[CONFLICT]}
       />
     ),

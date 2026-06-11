@@ -111,7 +111,7 @@ const FormMessage = React.forwardRef<
       ref={ref}
       id={formMessageId}
       className={twMerge(
-        "text-sm font-medium text-red-900 dark:text-red-100",
+        "text-sm font-medium text-red-900 dark:text-red-50",
         className,
       )}
       {...props}

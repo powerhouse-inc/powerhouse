@@ -254,7 +254,7 @@ export function RemotesInspector({
         </div>
       </div>
       {addError && (
-        <div className="shrink-0 rounded-sm border border-red-500 bg-red-50 px-3 py-1.5 text-xs text-red-900 dark:border-red-500 dark:bg-red-900 dark:text-red-100">
+        <div className="shrink-0 rounded-sm border border-red-500 bg-red-50 px-3 py-1.5 text-xs text-red-900 dark:border-red-500 dark:bg-red-900 dark:text-red-50">
           {addError}
         </div>
       )}
@@ -361,7 +361,7 @@ export function RemotesInspector({
                   </td>
                   <td className="border-l border-gray-300 px-3 py-2 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
                     <button
-                      className="flex items-center gap-1 rounded-sm bg-blue-50 px-2 py-1 text-xs text-blue-900 hover:effect dark:bg-blue-900 dark:text-blue-100"
+                      className="flex items-center gap-1 rounded-sm bg-blue-50 px-2 py-1 text-xs text-blue-900 hover:effect dark:bg-blue-900 dark:text-blue-50"
                       onClick={() => handleViewChannel(remote)}
                       type="button"
                     >
@@ -384,7 +384,7 @@ export function RemotesInspector({
                         )}
                         {removeRemote && (
                           <button
-                            className="rounded-sm bg-red-50 px-2 py-1 text-xs text-red-900 hover:effect dark:bg-red-900 dark:text-red-100"
+                            className="rounded-sm bg-red-50 px-2 py-1 text-xs text-red-900 hover:effect dark:bg-red-900 dark:text-red-50"
                             onClick={() => void handleRemove(remote)}
                             type="button"
                           >

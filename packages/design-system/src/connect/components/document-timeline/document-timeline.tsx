@@ -141,7 +141,7 @@ export const DocumentTimeline = (props: DocumentTimelineProps) => {
           >
             <div className="ml-auto flex h-[36px] w-max items-end px-2 pb-0">
               <div className="flex">{unselectedContent}</div>
-              <div className="flex rounded-sm bg-blue-100 dark:bg-blue-900">
+              <div className="flex rounded-sm bg-blue-50 dark:bg-blue-900">
                 {selectedContent}
               </div>
             </div>
