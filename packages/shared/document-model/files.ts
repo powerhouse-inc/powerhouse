@@ -26,6 +26,10 @@ import type {
   SaveToFileHandle,
 } from "./types.js";
 import { validateOperations } from "./validation.js";
+import {
+  replayDocumentVersioned,
+  type VersionedReplayConfig,
+} from "./versioned-replay.js";
 
 const NON_DOMAIN_SCOPES = new Set(["auth", "document"]);
 
@@ -154,11 +158,15 @@ function readEntry(files: Unzipped, name: string): string {
   return strFromU8(entry);
 }
 
-async function loadFromZipData<TState extends PHBaseState>(
+type ParsedZip<TState> = {
+  initialState: TState;
+  header: PHDocumentHeader;
+  clearedOperations: DocumentOperations;
+};
+
+async function parseZipData<TState extends PHBaseState>(
   data: Uint8Array,
-  reducer: Reducer<TState>,
-  options?: ReplayDocumentOptions,
-): Promise<PHDocument<TState>> {
+): Promise<ParsedZip<TState>> {
   const files = await unzipAsync(data);
 
   if (!files["state.json"]) {
@@ -188,6 +196,17 @@ async function loadFromZipData<TState extends PHBaseState>(
     throw new Error(errorMessages.join("\n"));
   }
 
+  return { initialState, header, clearedOperations };
+}
+
+async function loadFromZipData<TState extends PHBaseState>(
+  data: Uint8Array,
+  reducer: Reducer<TState>,
+  options?: ReplayDocumentOptions,
+): Promise<PHDocument<TState>> {
+  const { initialState, header, clearedOperations } =
+    await parseZipData<TState>(data);
+
   const domainOperations = Object.fromEntries(
     Object.entries(clearedOperations).filter(
       ([scope]) => !NON_DOMAIN_SCOPES.has(scope),
@@ -207,6 +226,26 @@ async function loadFromZipData<TState extends PHBaseState>(
   return { ...result, operations: clearedOperations };
 }
 
+async function loadFromZipDataVersioned<TState extends PHBaseState>(
+  data: Uint8Array,
+  config: VersionedReplayConfig,
+  options?: ReplayDocumentOptions,
+): Promise<PHDocument<TState>> {
+  const { initialState, header, clearedOperations } =
+    await parseZipData<TState>(data);
+
+  const result = replayDocumentVersioned<TState>(
+    initialState,
+    clearedOperations,
+    config,
+    header,
+    undefined,
+    options,
+  );
+
+  return { ...result, operations: clearedOperations };
+}
+
 export async function baseLoadFromInput<TState extends PHBaseState>(
   input: FileInput,
   reducer: Reducer<TState>,
@@ -214,6 +253,15 @@ export async function baseLoadFromInput<TState extends PHBaseState>(
 ): Promise<PHDocument<TState>> {
   const data = await toUint8Array(input);
   return loadFromZipData(data, reducer, options);
+}
+
+export async function baseLoadFromInputVersioned<TState extends PHBaseState>(
+  input: FileInput,
+  config: VersionedReplayConfig,
+  options?: ReplayDocumentOptions,
+): Promise<PHDocument<TState>> {
+  const data = await toUint8Array(input);
+  return loadFromZipDataVersioned<TState>(data, config, options);
 }
 
 export const documentModelLoadFromInput: LoadFromInput<DocumentModelPHState> = (
@@ -247,6 +295,6 @@ export function fetchFileBrowser(
   throw FileSystemError;
 }
 
-export const getFileBrowser = async (file: string) => {
-  return readFileBrowser(file);
+export const getFileBrowser = (file: string): Promise<void> => {
+  return Promise.resolve().then(() => readFileBrowser(file));
 };

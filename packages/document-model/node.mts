@@ -1,5 +1,6 @@
 import {
   baseLoadFromInput,
+  baseLoadFromInputVersioned,
   createMinimalZip,
   createZip,
   type MinimalBackupData,
@@ -7,6 +8,7 @@ import {
   type PHDocument,
   type Reducer,
   type ReplayDocumentOptions,
+  type VersionedReplayConfig,
 } from "@powerhousedao/shared/document-model";
 import type { BinaryLike } from "node:crypto";
 import { createHash } from "node:crypto";
@@ -116,6 +118,26 @@ export async function baseLoadFromFile<
 ): Promise<PHDocument<TState>> {
   const file = readFileNode(path);
   return baseLoadFromInput(file, reducer, options);
+}
+
+/**
+ * Loads a version-aware document from a ZIP file.
+ *
+ * @typeParam TState - The type of the state object.
+ * @param path - The path to the ZIP file.
+ * @param config - Versioned replay config with per-version reducers and optional upgrade manifest.
+ * @param options - Optional replay options.
+ * @returns A promise that resolves to the document state after versioned replay.
+ */
+export async function baseLoadFromFileVersioned<
+  TState extends PHBaseState = PHBaseState,
+>(
+  path: string,
+  config: VersionedReplayConfig,
+  options?: ReplayDocumentOptions,
+): Promise<PHDocument<TState>> {
+  const file = readFileNode(path);
+  return baseLoadFromInputVersioned<TState>(file, config, options);
 }
 
 /**

@@ -25,15 +25,18 @@ import type {
   Operation,
   PHBaseState,
   PHDocument,
+  Reducer,
+  VersionedReplayConfig,
 } from "@powerhousedao/shared/document-model";
 import {
   baseLoadFromInput,
+  baseLoadFromInputVersioned,
   baseSaveToFileHandle,
   createPresignedHeader,
   createZip,
   documentModelDocumentType,
   generateId,
-  replayDocument,
+  replayDocumentVersioned,
   setName,
   setPreferredEditor,
 } from "@powerhousedao/shared/document-model";
@@ -290,6 +293,11 @@ export async function exportFile(document: PHDocument, suggestedName?: string) {
   }
 }
 
+/**
+ * Loads a document file and replays it with version-aware reducers from the registry.
+ * Falls back to single-version legacy replay when no upgrade manifest is registered for
+ * the document type.
+ */
 export async function loadFile(path: string | File) {
   const baseDocument = await baseLoadFromInput(
     path,
@@ -301,16 +309,35 @@ export async function loadFile(path: string | File) {
   if (!reactorClient) {
     throw new Error("ReactorClient not initialized");
   }
+
+  const documentType = baseDocument.header.documentType;
   const { results: documentModelModules } =
     await reactorClient.getDocumentModelModules();
-  const documentModelModule = documentModelModules.find(
-    (module) =>
-      module.documentModel.global.id === baseDocument.header.documentType,
+  const modulesForType = documentModelModules.filter(
+    (module) => module.documentModel.global.id === documentType,
   );
-  if (!documentModelModule) {
-    throw new DocumentModelNotFoundError(baseDocument.header.documentType);
+  if (modulesForType.length === 0) {
+    throw new DocumentModelNotFoundError(documentType);
   }
-  return documentModelModule.utils.loadFromInput(path);
+
+  const reducers: VersionedReplayConfig["reducers"] = {};
+  for (const module of modulesForType) {
+    reducers[module.version ?? 1] = module.reducer as Reducer<PHBaseState>;
+  }
+
+  const registry =
+    window.ph?.reactorClientModule?.reactorModule?.documentModelRegistry;
+  let upgradeManifest: VersionedReplayConfig["upgradeManifest"] | undefined;
+  if (registry) {
+    try {
+      upgradeManifest = registry.getUpgradeManifest(documentType);
+    } catch {
+      // intentionally empty — missing manifest is normal for single-version documents
+    }
+  }
+
+  const config: VersionedReplayConfig = { reducers, upgradeManifest };
+  return baseLoadFromInputVersioned(path, config);
 }
 
 export async function addDocument(
@@ -889,20 +916,51 @@ export async function moveNode(
   ]);
 }
 
+/**
+ * Duplicates a document under a new id using version-aware replay.
+ * Falls back gracefully when no upgrade manifest is registered for the document type.
+ */
 async function _duplicateDocument(
   reactor: IReactorClient,
   document: PHDocument,
   newId = generateId(),
 ) {
-  const documentModule = await reactor.getDocumentModelModule(
-    document.header.documentType,
+  const documentType = document.header.documentType;
+  const { results: allModules } = await reactor.getDocumentModelModules();
+  const modulesForType = allModules.filter(
+    (m) => m.documentModel.global.id === documentType,
   );
 
-  return replayDocument(
+  const reducers: VersionedReplayConfig["reducers"] = {};
+  for (const m of modulesForType) {
+    reducers[m.version ?? 1] = m.reducer as Reducer<PHBaseState>;
+  }
+
+  if (Object.keys(reducers).length === 0) {
+    throw new Error(
+      `Document model module not found for type: ${documentType}`,
+    );
+  }
+
+  const registry =
+    window.ph?.reactorClientModule?.reactorModule?.documentModelRegistry;
+  let upgradeManifest: VersionedReplayConfig["upgradeManifest"] | undefined;
+  if (registry) {
+    try {
+      upgradeManifest = registry.getUpgradeManifest(documentType);
+    } catch {
+      // intentionally empty — missing manifest is normal for single-version documents
+    }
+  }
+
+  const config: VersionedReplayConfig = { reducers, upgradeManifest };
+  const header = createPresignedHeader(newId, documentType);
+
+  return replayDocumentVersioned(
     document.initialState,
     document.operations,
-    documentModule.reducer,
-    createPresignedHeader(newId, document.header.documentType),
+    config,
+    header,
   );
 }
 

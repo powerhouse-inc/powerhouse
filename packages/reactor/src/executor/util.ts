@@ -1,26 +1,26 @@
-import type { OperationWithContext } from "@powerhousedao/shared/document-model";
 import type {
   Action,
   CreateDocumentAction,
   CreateDocumentActionInput,
-  DeleteDocumentAction,
   Operation,
+  OperationWithContext,
   PHDocument,
-  UpgradeDocumentAction,
-  UpgradeTransition,
 } from "@powerhousedao/shared/document-model";
 import {
+  applyDeleteDocumentAction,
+  applyUpgradeDocumentAction,
   createPresignedHeader,
   defaultBaseState,
   deriveOperationId,
 } from "@powerhousedao/shared/document-model";
 import type { Job } from "../queue/types.js";
-import { DowngradeNotSupportedError } from "../shared/errors.js";
 import type {
   ConsistencyCoordinate,
   ConsistencyToken,
 } from "../shared/types.js";
 import type { JobResult } from "./types.js";
+
+export { applyDeleteDocumentAction, applyUpgradeDocumentAction };
 
 /**
  * Creates a PHDocument from a CREATE_DOCUMENT action input.
@@ -78,101 +78,6 @@ export function createDocumentFromAction(
     state: baseState,
     initialState: baseState,
     clipboard: [],
-  };
-
-  return document;
-}
-
-/**
- * Applies an UPGRADE_DOCUMENT action to a document.
- * Handles all upgrade scenarios including initial upgrades, no-ops, and multi-step upgrades.
- *
- * Behavior based on fromVersion/toVersion:
- * - fromVersion === toVersion (and fromVersion > 0): No-op - return unchanged document
- * - fromVersion > toVersion: Throw DowngradeNotSupportedError
- * - All other cases: Apply upgradePath transitions (if provided), then apply initialState, set version
- *
- * The initialState from the action is always applied (if provided) to maintain backward
- * compatibility with the original implementation.
- *
- * @param document - The document to upgrade
- * @param action - The UPGRADE_DOCUMENT action
- * @param upgradePath - Optional pre-computed upgrade path for multi-step upgrades
- * @returns The upgraded document (unchanged if no-op)
- * @throws DowngradeNotSupportedError if attempting to downgrade
- */
-export function applyUpgradeDocumentAction(
-  document: PHDocument,
-  action: UpgradeDocumentAction,
-  upgradePath?: UpgradeTransition[],
-): PHDocument {
-  const fromVersion = action.input.fromVersion;
-  const toVersion = action.input.toVersion;
-
-  if (fromVersion === toVersion && fromVersion > 0) {
-    return document;
-  }
-
-  if (fromVersion > toVersion) {
-    throw new DowngradeNotSupportedError(
-      document.header.documentType,
-      fromVersion,
-      toVersion,
-    );
-  }
-
-  if (upgradePath) {
-    for (const transition of upgradePath) {
-      document = transition.upgradeReducer(document, action);
-    }
-  }
-
-  applyInitialState(document, action);
-
-  document.state.document = {
-    ...document.state.document,
-    version: toVersion,
-  };
-  return document;
-}
-
-function applyInitialState(
-  document: PHDocument,
-  action: UpgradeDocumentAction,
-): void {
-  const input = action.input as {
-    initialState?: PHDocument["state"];
-    state?: PHDocument["state"];
-  };
-
-  const newState = input.initialState || input.state;
-  if (newState) {
-    document.state = { ...document.state, ...newState };
-    document.initialState = document.state;
-  }
-}
-
-/**
- * Applies a DELETE_DOCUMENT action to a document.
- * Marks the document as deleted in the document scope state.
- *
- * @param document - The document to mark as deleted
- * @param action - The DELETE_DOCUMENT action
- * @returns The updated document (mutates in place and returns for convenience)
- */
-export function applyDeleteDocumentAction(
-  document: PHDocument,
-  action: DeleteDocumentAction,
-): PHDocument {
-  const deletedAt = action.timestampUtcMs || new Date().toISOString();
-
-  document.state = {
-    ...document.state,
-    document: {
-      ...document.state.document,
-      isDeleted: true,
-      deletedAtUtcIso: deletedAt,
-    },
   };
 
   return document;

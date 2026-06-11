@@ -59,26 +59,7 @@ export class InvalidSignatureError extends Error {
   }
 }
 
-/**
- * Error thrown when attempting to downgrade a document version.
- */
-export class DowngradeNotSupportedError extends Error {
-  public readonly documentType: string;
-  public readonly fromVersion: number;
-  public readonly toVersion: number;
-
-  constructor(documentType: string, fromVersion: number, toVersion: number) {
-    super(
-      `Downgrade not supported for ${documentType}: cannot upgrade from version ${fromVersion} to ${toVersion}`,
-    );
-    this.name = "DowngradeNotSupportedError";
-    this.documentType = documentType;
-    this.fromVersion = fromVersion;
-    this.toVersion = toVersion;
-
-    Error.captureStackTrace(this, DowngradeNotSupportedError);
-  }
-}
+export { DowngradeNotSupportedError } from "@powerhousedao/shared/document-model";
 
 /**
  * Error thrown when an upgrade manifest is required but not registered.
