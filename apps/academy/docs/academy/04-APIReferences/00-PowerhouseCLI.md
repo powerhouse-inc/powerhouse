@@ -428,6 +428,8 @@ and real-time processing with a "Vetra" drive or connection to remote drives.
 **Default:** `3001`
 **Remote Drive** - URL of remote drive to connect to (skips switchboard initialization) - Usage: `--remote-drive \<str\>`
 
+**Drives Public Base** - public base URL for the drive URLs advertised to Connect; each drive is exposed as \<base\>/d/\<slug\> instead of http://localhost:\<switchboard-port\>/d/\<slug\>. Use when the switchboard is reachable through a reverse proxy. - Usage: `--drives-public-base \<str\>`
+
 **Db Path** - Database path or connection string. Use a `postgres://` URL for Postgres; otherwise treated as a PGlite filesystem path. Leave unset for in-memory PGlite. - Usage: `--db-path \<str\>`
 
 **Base** - Base path for the app - Usage: `--base \<str\>`

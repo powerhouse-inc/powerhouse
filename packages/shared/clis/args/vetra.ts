@@ -69,6 +69,12 @@ export const vetraArgs = {
     defaultValue: () => false,
     defaultValueIsSerializable: true,
   }),
+  drivesPublicBase: option({
+    type: optional(string),
+    long: "drives-public-base",
+    description:
+      "public base URL for the drive URLs advertised to Connect; each drive is exposed as <base>/d/<slug> instead of http://localhost:<switchboard-port>/d/<slug>. Use when the switchboard is reachable through a reverse proxy.",
+  }),
   dbPath: option({
     type: optional(string),
     long: "db-path",
