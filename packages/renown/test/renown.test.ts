@@ -400,6 +400,71 @@ describe("Renown login flow", () => {
     });
   });
 
+  describe("deployed credential API compatibility", () => {
+    // The deployed Renown credential API mis-unwraps the stored EIP-712
+    // domain JSON and returns proof.eip712 with undefined domain/types.
+    // The domain is canonical (version "1", the DID's chainId), so login
+    // must reconstruct it instead of failing with a TypeError.
+    function stripEip712Domain(credential: PowerhouseVerifiableCredential) {
+      credential.proof.eip712 = {
+        domain: undefined,
+        types: undefined,
+        primaryType: "VerifiableCredential",
+      } as unknown as PowerhouseVerifiableCredential["proof"]["eip712"];
+    }
+
+    it("should login when the API omits the eip712 domain from the proof", async () => {
+      const credential = await createMockCredential(TEST_USER_DID, appDid);
+      stripEip712Domain(credential);
+      mockFetch({ credential });
+
+      const user = await renown.login(TEST_USER_DID);
+
+      expect(user.did).toBe(TEST_USER_DID);
+      expect(user.address).toBe(TEST_ADDRESS);
+      expect(user.credential?.proof.eip712.domain).toEqual({
+        version: "1",
+        chainId: 1,
+      });
+      expect(renown.status).toBe("authorized");
+    });
+
+    it("should reject a tampered signature when the eip712 domain is missing", async () => {
+      const credential = await createMockCredential(TEST_USER_DID, appDid);
+      stripEip712Domain(credential);
+      credential.proof.proofValue = "0xtest";
+      mockFetch({ credential });
+
+      await expect(renown.login(TEST_USER_DID)).rejects.toThrow(
+        "Invalid credential signature",
+      );
+      expect(renown.status).toBe("not-authorized");
+    });
+
+    it("should reject a credential signed by another account when the eip712 domain is missing", async () => {
+      const credential = await createMockCredential(TEST_USER_DID, appDid);
+      const otherAccount = privateKeyToAccount(
+        "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d",
+      );
+      const { proof: _proof, ...message } = credential;
+      const { EIP712Domain, ...types } = CREDENTIAL_TYPES;
+      void EIP712Domain;
+      credential.proof.proofValue = await otherAccount.signTypedData({
+        domain: { version: "1", chainId: 1 },
+        types,
+        primaryType: "VerifiableCredential",
+        message,
+      } as Parameters<typeof otherAccount.signTypedData>[0]);
+      stripEip712Domain(credential);
+      mockFetch({ credential });
+
+      await expect(renown.login(TEST_USER_DID)).rejects.toThrow(
+        "Invalid credential signature",
+      );
+      expect(renown.status).toBe("not-authorized");
+    });
+  });
+
   describe("logout", () => {
     it("should clear user and set status to not-authorized", async () => {
       const credential = await createMockCredential(TEST_USER_DID, appDid);
