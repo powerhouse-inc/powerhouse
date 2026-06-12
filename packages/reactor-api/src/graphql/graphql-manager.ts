@@ -20,8 +20,7 @@ import path from "node:path";
 import { match } from "path-to-regexp";
 import type { WebSocketServer } from "ws";
 import { debounce } from "../packages/util.js";
-import type { AuthConfig } from "../services/auth.service.js";
-import { AuthService } from "../services/auth.service.js";
+import type { AuthService } from "../services/auth.service.js";
 import type { IAuthorizationService } from "../services/authorization.service.js";
 import type { DocumentPermissionService } from "../services/document-permission.service.js";
 import {
@@ -110,7 +109,6 @@ export class GraphQLManager {
   private coreSubgraphsMap = new Map<string, ISubgraph[]>();
   private contextFields: Record<string, any> = {};
   private readonly subgraphs = new Map<string, ISubgraph[]>();
-  private authService: AuthService | null = null;
 
   private readonly subgraphWsDisposers = new Map<string, WsDisposer>();
   #authMiddleware: AuthFetchMiddleware | undefined;
@@ -141,7 +139,7 @@ export class GraphQLManager {
     private readonly logger: ILogger,
     private readonly httpAdapter: IHttpAdapter,
     private readonly gatewayAdapter: IGatewayAdapter<Context>,
-    private readonly authConfig?: AuthConfig,
+    private readonly authService?: AuthService,
     private readonly documentPermissionService?: DocumentPermissionService,
     private readonly featureFlags: GraphqlManagerFeatureFlags = DefaultFeatureFlags,
     private readonly port: number = 4001,
@@ -153,9 +151,6 @@ export class GraphQLManager {
     }
     this.authorizationService = authorizationService;
     this.reactorDriveClient = reactorDriveClient;
-    if (this.authConfig) {
-      this.authService = new AuthService(this.authConfig);
-    }
 
     this.driveOwnershipCache = new DriveOwnershipCache(this.reactorClient);
 

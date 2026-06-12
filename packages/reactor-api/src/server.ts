@@ -229,10 +229,7 @@ async function setupGraphQLManager(
   },
   logger: ILogger,
   authorizationService: IAuthorizationService,
-  auth?: {
-    enabled: boolean;
-    admins: string[];
-  },
+  authService?: AuthService,
   documentPermissionService?: DocumentPermissionService,
   enableDocumentModelSubgraphs?: boolean,
   port?: number,
@@ -249,10 +246,7 @@ async function setupGraphQLManager(
     logger,
     httpAdapter,
     await createGatewayAdapter("apollo", logger),
-    {
-      enabled: auth?.enabled ?? false,
-      admins: auth?.admins ?? [],
-    },
+    authService,
     documentPermissionService,
     {
       enableDocumentModelSubgraphs,
@@ -406,10 +400,6 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   httpAdapter: IHttpAdapter;
   authFetchMiddleware: AuthFetchMiddleware | undefined;
   authService: AuthService | undefined;
-  auth: {
-    enabled: boolean;
-    admins: string[];
-  };
   relationalDb: IRelationalDb;
   analyticsStore: IAnalyticsStore;
   documentPermissionService: DocumentPermissionService | undefined;
@@ -421,6 +411,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
 }> {
   const port = options.port ?? DEFAULT_PORT;
   const { adapter: httpAdapter } = await createHttpAdapter("express");
+  const logger = options.logger ?? defaultLogger;
 
   // Setup auth configuration
   let admins: string[] = [];
@@ -439,6 +430,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     DEFAULT_PROTECTION,
     DOCUMENT_PERMISSIONS_ENABLED,
     SKIP_CREDENTIAL_VERIFICATION,
+    CREDENTIAL_VERIFICATION_CACHE_TTL_MS,
   } = process.env;
   if (AUTH_ENABLED !== undefined) {
     authEnabled = AUTH_ENABLED === "true";
@@ -457,6 +449,22 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     skipCredentialVerification = SKIP_CREDENTIAL_VERIFICATION === "true";
   }
 
+  let credentialVerificationCacheTtlMs: number | undefined;
+  if (CREDENTIAL_VERIFICATION_CACHE_TTL_MS !== undefined) {
+    const parsed = Number(CREDENTIAL_VERIFICATION_CACHE_TTL_MS);
+    if (
+      CREDENTIAL_VERIFICATION_CACHE_TTL_MS.trim() !== "" &&
+      Number.isFinite(parsed) &&
+      parsed >= 0
+    ) {
+      credentialVerificationCacheTtlMs = parsed;
+    } else {
+      logger.warn(
+        `Ignoring invalid CREDENTIAL_VERIFICATION_CACHE_TTL_MS="${CREDENTIAL_VERIFICATION_CACHE_TTL_MS}" (expected a non-negative number of milliseconds; 0 disables caching) — using the default TTL`,
+      );
+    }
+  }
+
   const documentPermissionsRequested =
     options.documentPermissionService !== undefined ||
     DOCUMENT_PERMISSIONS_ENABLED === "true";
@@ -464,8 +472,6 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     authEnabled,
     documentPermissionsRequested,
   );
-
-  const logger = options.logger ?? defaultLogger;
 
   // Health check endpoint (registered directly on adapter, before auth)
   httpAdapter.getRoute("/health", () => new Response("OK", { status: 200 }));
@@ -499,6 +505,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
       enabled: authEnabled,
       admins,
       skipCredentialVerification,
+      credentialVerificationCacheTtlMs,
     });
     authFetchMiddleware = createAuthFetchMiddleware(authService);
   }
@@ -585,10 +592,6 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     httpAdapter,
     authFetchMiddleware,
     authService,
-    auth: {
-      enabled: authEnabled,
-      admins,
-    },
     relationalDb,
     analyticsStore,
     documentPermissionService,
@@ -618,10 +621,6 @@ async function _setupAPI(
   processors: Map<string, Processor>,
   subgraphs: Map<string, SubgraphClass[]>,
   options: Options,
-  auth: {
-    enabled: boolean;
-    admins: string[];
-  },
   processorApp: ProcessorApp,
   readModels: IReadModel[],
   attachments: AttachmentBuildResult,
@@ -756,7 +755,7 @@ async function _setupAPI(
     },
     logger.child(["graphql-manager"]),
     authorizationService,
-    auth,
+    authService,
     documentPermissionService,
     options.enableDocumentModelSubgraphs,
     port,
@@ -893,7 +892,6 @@ export async function initializeAndStartAPI(
     httpAdapter,
     authFetchMiddleware,
     authService,
-    auth,
     relationalDb,
     analyticsStore,
     documentPermissionService,
@@ -951,7 +949,6 @@ export async function initializeAndStartAPI(
     processors,
     subgraphs,
     options,
-    auth,
     processorApp,
     readModels,
     attachments,

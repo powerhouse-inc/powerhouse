@@ -11,6 +11,15 @@ export interface AuthConfig {
   enabled: boolean;
   admins: string[];
   skipCredentialVerification?: boolean; // Skip Renown API credential verification (useful for testing)
+  credentialVerificationCacheTtlMs?: number; // How long successful Renown credential checks are cached; 0 disables caching
+}
+
+const DEFAULT_CREDENTIAL_CACHE_TTL_MS = 60_000;
+const CREDENTIAL_CACHE_MAX_ENTRIES = 1_000;
+
+interface CredentialCacheEntry {
+  exists: Promise<boolean>;
+  expiresAt: number;
 }
 
 export interface User {
@@ -27,6 +36,7 @@ export interface AuthContext {
 
 export class AuthService {
   private readonly config: AuthConfig;
+  private readonly credentialCache = new Map<string, CredentialCacheEntry>();
 
   constructor(config: AuthConfig) {
     this.config = config;
@@ -179,9 +189,79 @@ export class AuthService {
   }
 
   /**
-   * Verify that the credential still exists on the Renown API
+   * Verify that the credential still exists on the Renown API.
+   *
+   * Results are cached per (address, chainId, issuer) for a short TTL so the
+   * blocking external round-trip is not paid on every request. Concurrent
+   * checks for the same key share a single in-flight request, and entries
+   * that resolve to false are evicted immediately so failed or revoked
+   * credentials are re-checked on the next request.
    */
-  private async verifyCredentialExists(
+  private verifyCredentialExists(
+    address: string,
+    chainId: number,
+    appId: string,
+  ): Promise<boolean> {
+    const ttlMs =
+      this.config.credentialVerificationCacheTtlMs ??
+      DEFAULT_CREDENTIAL_CACHE_TTL_MS;
+    if (ttlMs <= 0) {
+      return this.fetchCredentialExists(address, chainId, appId);
+    }
+
+    const key = `${address.toLowerCase()}:${chainId}:${appId}`;
+    const now = Date.now();
+    const cached = this.credentialCache.get(key);
+    if (cached && cached.expiresAt > now) {
+      return cached.exists;
+    }
+
+    this.pruneCredentialCache(now);
+    const entry: CredentialCacheEntry = {
+      exists: this.fetchCredentialExists(address, chainId, appId).then(
+        (exists) => {
+          if (!exists && this.credentialCache.get(key) === entry) {
+            this.credentialCache.delete(key);
+          }
+          return exists;
+        },
+      ),
+      expiresAt: now + ttlMs,
+    };
+    this.credentialCache.set(key, entry);
+    return entry.exists;
+  }
+
+  /**
+   * Enforce the cache size cap before inserting a new entry: drop expired
+   * entries first, then evict oldest-inserted entries (insertion order
+   * matches expiry order since the TTL is constant) until under the cap, so
+   * a flood of distinct keys cannot grow the map without bound.
+   */
+  private pruneCredentialCache(now: number): void {
+    if (this.credentialCache.size < CREDENTIAL_CACHE_MAX_ENTRIES) {
+      return;
+    }
+    for (const [key, entry] of this.credentialCache) {
+      if (entry.expiresAt <= now) {
+        this.credentialCache.delete(key);
+      }
+    }
+    while (this.credentialCache.size >= CREDENTIAL_CACHE_MAX_ENTRIES) {
+      const oldestKey = this.credentialCache.keys().next().value;
+      if (oldestKey === undefined) {
+        break;
+      }
+      this.credentialCache.delete(oldestKey);
+    }
+  }
+
+  /**
+   * Fetch the credential from the Renown API and validate it against the
+   * expected address, chainId and issuer. Never throws; returns false on any
+   * network or validation failure.
+   */
+  private async fetchCredentialExists(
     address: string,
     chainId: number,
     appId: string,
@@ -191,6 +271,9 @@ export class AuthService {
       const response = await fetch(url, {
         method: "GET",
       });
+      if (response.status !== 200) {
+        return false;
+      }
       const body = (await response.json()) as {
         credential: PowerhouseVerifiableCredential;
       };
@@ -199,10 +282,6 @@ export class AuthService {
       const appIdVerfied = credential.credentialSubject.id;
       const addressVerfied = credential.issuer.id.split(":")[4];
       const chainIdVerfied = credential.issuer.id.split(":")[3];
-
-      if (response.status !== 200) {
-        return false;
-      }
 
       return (
         appIdVerfied === appId &&
