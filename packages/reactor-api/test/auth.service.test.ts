@@ -7,7 +7,15 @@
  * API fetch inside verifyCredentialExists().
  */
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type MockInstance,
+} from "vitest";
 import { AuthService } from "../src/services/auth.service.js";
 
 // ─── mock @renown/sdk ─────────────────────────────────────────────────────────
@@ -259,6 +267,168 @@ describe("AuthService.authenticateRequest()", () => {
   });
 
   // ── credential verification (Renown API) ────────────────────────────────────
+
+  describe("credential verification caching", () => {
+    const ADDRESS = "0xuser";
+    const CHAIN_ID = 1;
+    const ISSUER = "did:ethr:0xapp";
+
+    /** A Renown API response that fetchCredentialExists() validates as matching the user. */
+    function makeCredentialResponse(): Response {
+      return new Response(
+        JSON.stringify({
+          credential: {
+            credentialSubject: { id: ISSUER },
+            issuer: { id: `did:pkh:eip155:${CHAIN_ID}:${ADDRESS}` },
+          },
+        }),
+        { status: 200 },
+      );
+    }
+
+    function makeService(credentialVerificationCacheTtlMs?: number) {
+      return new AuthService({
+        enabled: true,
+        admins: ADMINS,
+        skipCredentialVerification: false,
+        credentialVerificationCacheTtlMs,
+      });
+    }
+
+    function authenticate(service: AuthService) {
+      return service.authenticateRequest(
+        makeRequest("POST", { authorization: "Bearer token" }),
+      );
+    }
+
+    let fetchSpy: MockInstance<typeof globalThis.fetch>;
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+      mockVerifyAuthBearerToken.mockResolvedValue(
+        makeVerified(ADDRESS, CHAIN_ID),
+      );
+      fetchSpy = vi
+        .spyOn(globalThis, "fetch")
+        .mockImplementation(() => Promise.resolve(makeCredentialResponse()));
+    });
+
+    afterEach(() => {
+      fetchSpy.mockRestore();
+      vi.useRealTimers();
+    });
+
+    it("caches successful checks so repeated requests make a single Renown fetch", async () => {
+      const service = makeService();
+
+      const first = await authenticate(service);
+      const second = await authenticate(service);
+
+      expect(first).not.toBeInstanceOf(Response);
+      expect(second).not.toBeInstanceOf(Response);
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it("shares a single in-flight fetch across concurrent requests", async () => {
+      const service = makeService();
+
+      const results = await Promise.all([
+        authenticate(service),
+        authenticate(service),
+        authenticate(service),
+      ]);
+
+      for (const result of results) {
+        expect(result).not.toBeInstanceOf(Response);
+      }
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not cache failed checks", async () => {
+      fetchSpy.mockRejectedValue(new Error("network error"));
+      const service = makeService();
+
+      const first = await authenticate(service);
+      const second = await authenticate(service);
+
+      expect(first).toBeInstanceOf(Response);
+      expect((first as Response).status).toBe(401);
+      expect(second).toBeInstanceOf(Response);
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+    });
+
+    it("rejects and does not cache when Renown responds with a non-200 status", async () => {
+      fetchSpy.mockImplementation(() =>
+        Promise.resolve(
+          new Response(makeCredentialResponse().body, { status: 503 }),
+        ),
+      );
+      const service = makeService();
+
+      const first = await authenticate(service);
+      const second = await authenticate(service);
+
+      expect(first).toBeInstanceOf(Response);
+      expect((first as Response).status).toBe(401);
+      expect(second).toBeInstanceOf(Response);
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+    });
+
+    it("re-fetches after the TTL expires", async () => {
+      const service = makeService(1_000);
+
+      await authenticate(service);
+      vi.advanceTimersByTime(1_001);
+      await authenticate(service);
+
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+    });
+
+    it("disables caching when the TTL is 0", async () => {
+      const service = makeService(0);
+
+      await authenticate(service);
+      await authenticate(service);
+
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+    });
+
+    it("caches per user, not globally", async () => {
+      const service = makeService();
+
+      await authenticate(service);
+      mockVerifyAuthBearerToken.mockResolvedValue(
+        makeVerified("0xother", CHAIN_ID),
+      );
+      await authenticate(service);
+
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+    });
+
+    it("evicts the oldest entries when the cache size cap is reached", async () => {
+      const service = makeService();
+
+      for (let i = 0; i < 1_000; i++) {
+        mockVerifyAuthBearerToken.mockResolvedValue(
+          makeVerified(`0xuser${i}`, CHAIN_ID),
+        );
+        await authenticate(service);
+      }
+      expect(fetchSpy).toHaveBeenCalledTimes(1_000);
+
+      mockVerifyAuthBearerToken.mockResolvedValue(
+        makeVerified("0xoverflow", CHAIN_ID),
+      );
+      await authenticate(service);
+      expect(fetchSpy).toHaveBeenCalledTimes(1_001);
+
+      mockVerifyAuthBearerToken.mockResolvedValue(
+        makeVerified("0xuser0", CHAIN_ID),
+      );
+      await authenticate(service);
+      expect(fetchSpy).toHaveBeenCalledTimes(1_002);
+    });
+  });
 
   describe("credential existence check", () => {
     it("returns 401 when the credential no longer exists on the Renown API", async () => {

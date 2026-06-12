@@ -693,6 +693,8 @@ describe("GqlRequestChannel Connection State", () => {
   });
 
   it("recovery with network error retries with backoff", async () => {
+    // pin backoff jitter so the retry fires at a deterministic 75ms
+    vi.spyOn(Math, "random").mockReturnValue(0.5);
     let touchCount = 0;
     const mockFetch = createMockFetch((body) => {
       if (body.query.includes("touchChannel")) {

@@ -1,7 +1,7 @@
 {
   "name": "@powerhousedao/switchboard",
   "type": "module",
-  "version": "6.2.0-dev.10",
+  "version": "6.2.0-dev.12",
   "main": "dist/index.mjs",
   "exports": {
     ".": {
@@ -62,6 +62,7 @@
     "@opentelemetry/instrumentation-graphql": "^0.66.0",
     "@opentelemetry/instrumentation-http": "^0.218.0",
     "@opentelemetry/instrumentation-pg": "^0.70.0",
+    "@opentelemetry/instrumentation-undici": "^0.28.0",
     "@opentelemetry/resources": "^2.7.1",
     "@opentelemetry/sdk-metrics": "^2.7.1",
     "@opentelemetry/sdk-node": "^0.218.0",

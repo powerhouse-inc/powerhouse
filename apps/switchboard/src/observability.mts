@@ -16,6 +16,7 @@ import { ExpressInstrumentation } from "@opentelemetry/instrumentation-express";
 import { GraphQLInstrumentation } from "@opentelemetry/instrumentation-graphql";
 import { HttpInstrumentation } from "@opentelemetry/instrumentation-http";
 import { PgInstrumentation } from "@opentelemetry/instrumentation-pg";
+import { UndiciInstrumentation } from "@opentelemetry/instrumentation-undici";
 import { resourceFromAttributes } from "@opentelemetry/resources";
 import type { MeterProvider } from "@opentelemetry/sdk-metrics";
 import { NodeSDK } from "@opentelemetry/sdk-node";
@@ -179,6 +180,10 @@ if (TRACING_ENABLED) {
           if (info.route) span.setAttribute("http.route", info.route);
         },
       }),
+      // HttpInstrumentation only patches node:http/https; outbound global
+      // fetch() goes through undici and is otherwise untraced — e.g. the
+      // per-request Renown credential check in AuthService.verifyCredentialExists.
+      new UndiciInstrumentation(),
       new GraphQLInstrumentation({ mergeItems: true, allowValues: true }),
       // requireParentSpan: only trace DB queries that run inside a request
       // (HTTP/GraphQL) span. Parentless queries — the management
