@@ -1,3 +1,22 @@
+## 6.2.0-dev.11 (2026-06-12)
+
+### 🚀 Features
+
+- **connect:** move theme toggle into settings nav ([7622718a7](https://github.com/powerhouse-inc/powerhouse/commit/7622718a7))
+
+### 🩹 Fixes
+
+- build fix because of vite incompatibility ([4dc94747e](https://github.com/powerhouse-inc/powerhouse/commit/4dc94747e))
+- kysely types were getting embedded in type defs and not matching later on because typescript is a broken and terrible language ([b5947709f](https://github.com/powerhouse-inc/powerhouse/commit/b5947709f))
+- **registry,connect:** slim package manifests so oversized publishes can't break the package manager ([#2718](https://github.com/powerhouse-inc/powerhouse/pull/2718))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- CallmeT-ty @CallmeT-ty
+- Claude Sonnet 4.6
+- Guillermo Puente Sandoval @gpuente
+
 ## 6.2.0-dev.10 (2026-06-11)
 
 ### 🩹 Fixes
