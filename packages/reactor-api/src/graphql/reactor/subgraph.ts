@@ -1,4 +1,5 @@
 import { ConsoleLogger } from "document-model";
+import { GraphQLError } from "graphql";
 import { withFilter } from "graphql-subscriptions";
 import { gql } from "graphql-tag";
 import schemaSource from "./schema.graphql";
@@ -530,10 +531,24 @@ export class ReactorSubgraph extends BaseSubgraph {
             sinceTimestampUtcMs: string;
           };
         },
+        ctx: Context,
       ) => {
         this.logger.debug("touchChannel(@args)", args);
 
         try {
+          // Empty documentId is a match-all wildcard; reserve it for admins.
+          const documentIds = args.input.filter.documentId;
+          if (!this.authorizationService.isSupremeAdmin(ctx.user?.address)) {
+            if (documentIds.length === 0) {
+              throw new GraphQLError(
+                "Forbidden: a sync channel without a document filter requires admin access",
+              );
+            }
+            for (const documentId of documentIds) {
+              await this.assertCanWrite(documentId, ctx);
+            }
+          }
+
           return await resolvers.touchChannel(this.syncManager, args);
         } catch (error) {
           this.logger.error(
@@ -545,10 +560,33 @@ export class ReactorSubgraph extends BaseSubgraph {
         }
       },
 
-      pushSyncEnvelopes: async (_parent, args) => {
+      pushSyncEnvelopes: async (_parent, args, ctx: Context) => {
         this.logger.debug("pushSyncEnvelopes(@args)", args);
 
         try {
+          // Check canMutate per distinct (documentId, action type). Nested map
+          // rather than a joined key: a separator could be forged to collide
+          // two distinct pairs and skip a check.
+          const checkedOperations = new Map<string, Set<string>>();
+          for (const envelope of args.envelopes) {
+            for (const op of envelope.operations ?? []) {
+              const documentId = op.context.documentId;
+              const operationType = op.operation.action.type;
+              let checkedTypes = checkedOperations.get(documentId);
+              if (!checkedTypes) {
+                checkedTypes = new Set<string>();
+                checkedOperations.set(documentId, checkedTypes);
+              }
+              if (checkedTypes.has(operationType)) continue;
+              checkedTypes.add(operationType);
+              await this.assertCanExecuteOperation(
+                documentId,
+                operationType,
+                ctx,
+              );
+            }
+          }
+
           // Convert readonly arrays to mutable arrays for the resolver
           const mutableArgs = {
             envelopes: args.envelopes.map((envelope) => ({

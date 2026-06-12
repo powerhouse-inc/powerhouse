@@ -36,10 +36,6 @@ const EXEMPT: Record<string, Record<string, string>> = {
       "Job status by id, not document content (AUTH_REVIEW §4: low-sensitivity).",
     "Query.pollSyncEnvelopes":
       "KNOWN GAP S-H1: sync reads are unauthenticated. Remediation order #2.",
-    "Mutation.touchChannel":
-      "KNOWN GAP S-C2/S-H1: sync channel creation is unauthorized. Remediation order #2.",
-    "Mutation.pushSyncEnvelopes":
-      "KNOWN GAP S-C2: unauthenticated write-to-any-document path. Remediation order #2.",
     "Subscription.documentChanges":
       "KNOWN GAP S-H2: subscription events are not permission-filtered. Remediation order #4.",
     "Subscription.jobChanges":

@@ -60,6 +60,7 @@ import {
 } from "./services/authorization.service.js";
 import { DocumentPermissionService } from "./services/document-permission.service.js";
 import { createGetParentIdsFn } from "./services/get-parent-ids.js";
+import { createMcpRequestAuthorizer } from "./services/mcp-request-authorizer.js";
 import type {
   API,
   IPackageLoader,
@@ -789,7 +790,17 @@ async function _setupAPI(
   );
 
   if (mcpServerEnabled) {
-    await setupMcpServer({ client: reactorClient, syncManager }, httpAdapter);
+    await setupMcpServer(
+      {
+        client: reactorClient,
+        syncManager,
+        authorizeRequest: createMcpRequestAuthorizer(
+          authService,
+          authorizationService,
+        ),
+      },
+      httpAdapter,
+    );
     logger.info(`MCP server available at http://localhost:${port}/mcp`);
   }
 

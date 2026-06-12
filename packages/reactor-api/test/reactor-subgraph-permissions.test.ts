@@ -1,4 +1,8 @@
-import type { IReactorClient, PagedResults } from "@powerhousedao/reactor";
+import type {
+  IReactorClient,
+  ISyncManager,
+  PagedResults,
+} from "@powerhousedao/reactor";
 import type { PHDocument } from "@powerhousedao/shared/document-model";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ReactorSubgraph } from "../src/graphql/reactor/subgraph.js";
@@ -55,6 +59,7 @@ describe("ReactorSubgraph Permission Checks", () => {
 
   const buildSubgraph = (
     authSvc: Partial<IAuthorizationService>,
+    syncManager: Partial<ISyncManager> = {},
   ): ReactorSubgraph =>
     new ReactorSubgraph({
       reactorClient: mockReactorClient as IReactorClient,
@@ -69,7 +74,7 @@ describe("ReactorSubgraph Permission Checks", () => {
           size: () => 0,
         },
       } as any,
-      syncManager: {} as any,
+      syncManager: syncManager as ISyncManager,
     } as SubgraphArgs);
 
   beforeEach(() => {
@@ -477,6 +482,271 @@ describe("ReactorSubgraph Permission Checks", () => {
       const ctx = createContext({ userAddress: "0xunpermitted" });
 
       await expect(callMoveRelationship(ctx)).rejects.toThrow("Forbidden");
+    });
+  });
+
+  // ============================================================
+  // Mutation: touchChannel — assertCanWrite per filtered document (S-C2)
+  // ============================================================
+  describe("Mutation: touchChannel", () => {
+    const makeSyncManager = () => ({
+      getById: vi.fn(() => {
+        throw new Error("not found");
+      }),
+      add: vi.fn().mockResolvedValue(undefined),
+    });
+
+    const touchArgs = (documentIds: string[]) => ({
+      input: {
+        id: "channel-1",
+        name: "remote-1",
+        collectionId: "collection-1",
+        filter: { documentId: documentIds, scope: [], branch: "main" },
+        sinceTimestampUtcMs: "0",
+      },
+    });
+
+    const callTouchChannel = (
+      subgraph: ReactorSubgraph,
+      ctx: any,
+      documentIds: string[],
+    ) => {
+      const mutation = (subgraph.resolvers.Mutation as any)?.touchChannel;
+      return mutation(null, touchArgs(documentIds), ctx);
+    };
+
+    it("should deny anonymous callers when canWrite resolves false", async () => {
+      const syncManager = makeSyncManager();
+      const subgraph = buildSubgraph(mockAuthorizationService, syncManager);
+      const ctx = createContext({});
+
+      await expect(
+        callTouchChannel(subgraph, ctx, ["doc-123"]),
+      ).rejects.toThrow("Forbidden");
+      expect(syncManager.add).not.toHaveBeenCalled();
+    });
+
+    it("should deny when canWrite resolves false for any filtered document", async () => {
+      vi.mocked(mockAuthorizationService.canWrite!)
+        .mockResolvedValueOnce(true)
+        .mockResolvedValueOnce(false);
+      const syncManager = makeSyncManager();
+      const subgraph = buildSubgraph(mockAuthorizationService, syncManager);
+      const ctx = createContext({ userAddress: "0xunpermitted" });
+
+      await expect(
+        callTouchChannel(subgraph, ctx, ["doc-123", "doc-456"]),
+      ).rejects.toThrow("Forbidden");
+      expect(syncManager.add).not.toHaveBeenCalled();
+    });
+
+    it("should allow when canWrite resolves true for every filtered document", async () => {
+      vi.mocked(mockAuthorizationService.canWrite!).mockResolvedValue(true);
+      const syncManager = makeSyncManager();
+      const subgraph = buildSubgraph(mockAuthorizationService, syncManager);
+      const ctx = createContext({ userAddress: "0xpermitted" });
+
+      const result = await callTouchChannel(subgraph, ctx, [
+        "doc-123",
+        "doc-456",
+      ]);
+
+      expect(result).toEqual({ success: true, ackOrdinal: 0 });
+      expect(mockAuthorizationService.canWrite).toHaveBeenCalledTimes(2);
+      expect(syncManager.add).toHaveBeenCalledOnce();
+    });
+
+    it("should deny an empty document filter (match-all wildcard) for non-admins", async () => {
+      vi.mocked(mockAuthorizationService.canWrite!).mockResolvedValue(true);
+      const syncManager = makeSyncManager();
+      const subgraph = buildSubgraph(mockAuthorizationService, syncManager);
+      const ctx = createContext({ userAddress: "0xpermitted" });
+
+      await expect(callTouchChannel(subgraph, ctx, [])).rejects.toThrow(
+        "Forbidden",
+      );
+      expect(syncManager.add).not.toHaveBeenCalled();
+    });
+
+    it("should allow supreme admins without per-document checks, including wildcards", async () => {
+      vi.mocked(mockAuthorizationService.isSupremeAdmin!).mockReturnValue(true);
+      const syncManager = makeSyncManager();
+      const subgraph = buildSubgraph(mockAuthorizationService, syncManager);
+      const ctx = createContext({ userAddress: "0xadmin" });
+
+      const result = await callTouchChannel(subgraph, ctx, []);
+
+      expect(result).toEqual({ success: true, ackOrdinal: 0 });
+      expect(mockAuthorizationService.canWrite).not.toHaveBeenCalled();
+      expect(syncManager.add).toHaveBeenCalledOnce();
+    });
+  });
+
+  // ============================================================
+  // Mutation: pushSyncEnvelopes — canMutate per (document, action type) (S-C2)
+  // ============================================================
+  describe("Mutation: pushSyncEnvelopes", () => {
+    const makeSyncManager = () => {
+      const inboxAdd = vi.fn();
+      const syncManager = {
+        getById: vi.fn().mockReturnValue({
+          name: "remote-1",
+          channel: { inbox: { add: inboxAdd } },
+        }),
+      };
+      return { syncManager, inboxAdd };
+    };
+
+    const operationFor = (documentId: string, type: string, ordinal = 0) => ({
+      operation: {
+        action: {
+          id: `action-${ordinal}`,
+          type,
+          timestampUtcMs: "0",
+          input: {},
+          scope: "global",
+        },
+        hash: "hash",
+        index: ordinal,
+        skip: 0,
+        timestampUtcMs: "0",
+      },
+      context: {
+        documentId,
+        documentType: "test/document",
+        scope: "global",
+        branch: "main",
+        ordinal,
+      },
+    });
+
+    const pushArgs = (
+      operations: ReturnType<typeof operationFor>[] | null,
+    ) => ({
+      envelopes: [
+        {
+          type: "OPERATIONS",
+          channelMeta: { id: "channel-1" },
+          operations,
+          cursor: null,
+          key: null,
+          dependsOn: null,
+        },
+      ],
+    });
+
+    const callPushSyncEnvelopes = (
+      subgraph: ReactorSubgraph,
+      ctx: any,
+      operations: ReturnType<typeof operationFor>[] | null,
+    ) => {
+      const mutation = (subgraph.resolvers.Mutation as any)?.pushSyncEnvelopes;
+      return mutation(null, pushArgs(operations), ctx);
+    };
+
+    it("should deny anonymous callers when canMutate resolves false", async () => {
+      const { syncManager, inboxAdd } = makeSyncManager();
+      const subgraph = buildSubgraph(mockAuthorizationService, syncManager);
+      const ctx = createContext({});
+
+      await expect(
+        callPushSyncEnvelopes(subgraph, ctx, [
+          operationFor("doc-123", "SET_NAME"),
+        ]),
+      ).rejects.toThrow("Forbidden");
+      expect(inboxAdd).not.toHaveBeenCalled();
+    });
+
+    it("should check canMutate against each operation's own document and action type", async () => {
+      vi.mocked(mockAuthorizationService.canMutate!).mockResolvedValue(true);
+      const { syncManager, inboxAdd } = makeSyncManager();
+      const subgraph = buildSubgraph(mockAuthorizationService, syncManager);
+      const ctx = createContext({ userAddress: "0xpermitted" });
+
+      const result = await callPushSyncEnvelopes(subgraph, ctx, [
+        operationFor("doc-123", "SET_NAME", 0),
+        operationFor("doc-456", "DELETE_NODE", 1),
+      ]);
+
+      expect(result).toBe(true);
+      expect(mockAuthorizationService.canMutate).toHaveBeenCalledWith(
+        "doc-123",
+        "SET_NAME",
+        "0xpermitted",
+      );
+      expect(mockAuthorizationService.canMutate).toHaveBeenCalledWith(
+        "doc-456",
+        "DELETE_NODE",
+        "0xpermitted",
+      );
+      expect(inboxAdd).toHaveBeenCalled();
+    });
+
+    it("should deny when canMutate resolves false for any pushed operation", async () => {
+      vi.mocked(mockAuthorizationService.canMutate!)
+        .mockResolvedValueOnce(true)
+        .mockResolvedValueOnce(false);
+      const { syncManager, inboxAdd } = makeSyncManager();
+      const subgraph = buildSubgraph(mockAuthorizationService, syncManager);
+      const ctx = createContext({ userAddress: "0xunpermitted" });
+
+      await expect(
+        callPushSyncEnvelopes(subgraph, ctx, [
+          operationFor("doc-123", "SET_NAME", 0),
+          operationFor("doc-456", "DELETE_NODE", 1),
+        ]),
+      ).rejects.toThrow("Forbidden");
+      expect(inboxAdd).not.toHaveBeenCalled();
+    });
+
+    it("should check each distinct (document, action type) pair once", async () => {
+      vi.mocked(mockAuthorizationService.canMutate!).mockResolvedValue(true);
+      const { syncManager } = makeSyncManager();
+      const subgraph = buildSubgraph(mockAuthorizationService, syncManager);
+      const ctx = createContext({ userAddress: "0xpermitted" });
+
+      await callPushSyncEnvelopes(subgraph, ctx, [
+        operationFor("doc-123", "SET_NAME", 0),
+        operationFor("doc-123", "SET_NAME", 1),
+        operationFor("doc-123", "DELETE_NODE", 2),
+      ]);
+
+      expect(mockAuthorizationService.canMutate).toHaveBeenCalledTimes(2);
+    });
+
+    it("should pass envelopes without operations through without permission checks", async () => {
+      const { syncManager } = makeSyncManager();
+      const subgraph = buildSubgraph(mockAuthorizationService, syncManager);
+      const ctx = createContext({});
+
+      const result = await callPushSyncEnvelopes(subgraph, ctx, null);
+
+      expect(result).toBe(true);
+      expect(mockAuthorizationService.canMutate).not.toHaveBeenCalled();
+    });
+
+    it("should not let a forged (document, action type) pair collide and skip a check", async () => {
+      // A space-joined key would let ("doc-x", "OP doc-y") and ("doc-x OP",
+      // "doc-y") collide; each distinct pair must be authorized on its own.
+      vi.mocked(mockAuthorizationService.canMutate!).mockImplementation(
+        (documentId: string) => Promise.resolve(documentId === "doc-x"),
+      );
+      const { syncManager, inboxAdd } = makeSyncManager();
+      const subgraph = buildSubgraph(mockAuthorizationService, syncManager);
+      const ctx = createContext({ userAddress: "0xpermitted" });
+
+      await expect(
+        callPushSyncEnvelopes(subgraph, ctx, [
+          operationFor("doc-x", "OP doc-y", 0),
+          operationFor("doc-x OP", "doc-y", 1),
+        ]),
+      ).rejects.toThrow("Forbidden");
+      expect(mockAuthorizationService.canMutate).toHaveBeenCalledWith(
+        "doc-x OP",
+        "doc-y",
+        "0xpermitted",
+      );
+      expect(inboxAdd).not.toHaveBeenCalled();
     });
   });
 
