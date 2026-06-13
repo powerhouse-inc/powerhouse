@@ -235,183 +235,6 @@ export class DocumentPermissionService {
   }
 
   // ============================================
-  // Access Control Checks
-  // ============================================
-
-  /**
-   * Check if a user can read a document.
-   * Returns true if user has READ, WRITE, or ADMIN permission (direct or via group)
-   */
-  async canReadDocument(
-    documentId: string,
-    userAddress: string | undefined,
-  ): Promise<boolean> {
-    if (!userAddress) {
-      return false;
-    }
-
-    // Check direct user permission
-    const directPermission = await this.getUserPermission(
-      documentId,
-      userAddress,
-    );
-    if (directPermission !== null) {
-      return true;
-    }
-
-    // Check group permission
-    const groupPermission = await this.getUserGroupPermission(
-      documentId,
-      userAddress,
-    );
-    return groupPermission !== null;
-  }
-
-  /**
-   * Check if a user can write to a document.
-   * Returns true if user has WRITE or ADMIN permission (direct or via group)
-   */
-  async canWriteDocument(
-    documentId: string,
-    userAddress: string | undefined,
-  ): Promise<boolean> {
-    if (!userAddress) {
-      return false;
-    }
-
-    // Check direct user permission
-    const directPermission = await this.getUserPermission(
-      documentId,
-      userAddress,
-    );
-    if (directPermission === "WRITE" || directPermission === "ADMIN") {
-      return true;
-    }
-
-    // Check group permission
-    const groupPermission = await this.getUserGroupPermission(
-      documentId,
-      userAddress,
-    );
-    return groupPermission === "WRITE" || groupPermission === "ADMIN";
-  }
-
-  /**
-   * Check if a user can manage a document (change permissions, settings).
-   * Returns true if user has ADMIN permission (direct or via group)
-   */
-  async canManageDocument(
-    documentId: string,
-    userAddress: string | undefined,
-  ): Promise<boolean> {
-    if (!userAddress) {
-      return false;
-    }
-
-    // Check direct user permission
-    const directPermission = await this.getUserPermission(
-      documentId,
-      userAddress,
-    );
-    if (directPermission === "ADMIN") {
-      return true;
-    }
-
-    // Check group permission
-    const groupPermission = await this.getUserGroupPermission(
-      documentId,
-      userAddress,
-    );
-    return groupPermission === "ADMIN";
-  }
-
-  // ============================================
-  // Access Control Checks (With Parent Hierarchy)
-  // ============================================
-
-  /**
-   * Check if a user can read a document, including parent permission inheritance.
-   * Returns true if user has permission on the document OR any parent in the hierarchy.
-   */
-  async canRead(
-    documentId: string,
-    userAddress: string | undefined,
-    getParentIds: GetParentIdsFn,
-  ): Promise<boolean> {
-    // Check if user has direct permission on this document
-    const canReadThis = await this.canReadDocument(documentId, userAddress);
-    if (canReadThis) {
-      return true;
-    }
-
-    // Check if user has permission on any parent (inheritance)
-    const parentIds = await getParentIds(documentId);
-    for (const parentId of parentIds) {
-      const canReadParent = await this.canRead(
-        parentId,
-        userAddress,
-        getParentIds,
-      );
-      if (canReadParent) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  /**
-   * Check if a user can write to a document, including parent permission inheritance.
-   * Returns true if user has write permission on the document OR any parent in the hierarchy.
-   */
-  async canWrite(
-    documentId: string,
-    userAddress: string | undefined,
-    getParentIds: GetParentIdsFn,
-  ): Promise<boolean> {
-    // Check if user has direct write permission on this document
-    const canWriteThis = await this.canWriteDocument(documentId, userAddress);
-    if (canWriteThis) {
-      return true;
-    }
-
-    // Check if user has write permission on any parent (inheritance)
-    const parentIds = await getParentIds(documentId);
-    for (const parentId of parentIds) {
-      const canWriteParent = await this.canWrite(
-        parentId,
-        userAddress,
-        getParentIds,
-      );
-      if (canWriteParent) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  /**
-   * Filter a list of document IDs to only include those the user can read.
-   */
-  async filterReadableDocuments(
-    documentIds: string[],
-    userAddress: string | undefined,
-    getParentIds: GetParentIdsFn,
-  ): Promise<string[]> {
-    const results: string[] = [];
-
-    for (const docId of documentIds) {
-      const canReadDoc = await this.canRead(docId, userAddress, getParentIds);
-      if (canReadDoc) {
-        results.push(docId);
-      }
-    }
-
-    return results;
-  }
-
-  // ============================================
   // Group Management
   // ============================================
 
@@ -830,18 +653,14 @@ export class DocumentPermissionService {
   }
 
   /**
-   * Check if a user can execute a specific operation on a document.
-   * Returns true if user has direct permission or is in a group with permission.
+   * Whether an operation-permission row exists for the user on this
+   * operation, either directly or via a group the user belongs to.
    */
-  async canExecuteOperation(
+  async hasOperationGrant(
     documentId: string,
     operationType: string,
-    userAddress: string | undefined,
+    userAddress: string,
   ): Promise<boolean> {
-    if (!userAddress) {
-      return false;
-    }
-
     const normalizedAddress = userAddress.toLowerCase();
 
     // Check direct user permission

@@ -47,7 +47,6 @@ function pickDriveClient(
 
 export const MAX_OPERATIONS_PER_ENVELOPE = 25;
 export const MAX_OPERATIONS_PER_PAGE = 100;
-import type { GetParentIdsFn } from "../../services/document-permission.service.js";
 import {
   fromInputMaybe,
   serializeOperationForGraphQL,
@@ -1339,23 +1338,4 @@ export function pushSyncEnvelopes(
   }
 
   return Promise.resolve(true);
-}
-
-/**
- * Create a getParentIds function using the reactor client
- */
-export function createGetParentIdsFn(
-  reactorClient: IReactorClient,
-): GetParentIdsFn {
-  return async (documentId: string): Promise<string[]> => {
-    try {
-      const result = await reactorClient.getIncomingRelationships(
-        documentId,
-        "child",
-      );
-      return result.results.map((doc) => doc.header.id);
-    } catch {
-      return [];
-    }
-  };
 }

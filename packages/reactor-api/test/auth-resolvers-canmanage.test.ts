@@ -37,6 +37,7 @@ describe("grant/revoke resolvers route through canManage", () => {
         policy: AuthorizationPolicy.DOCUMENT_PERMISSIONS,
       },
       permissions,
+      () => Promise.resolve([]),
     );
     await permissions.setDocumentProtection("doc-1", true);
   });
@@ -52,7 +53,7 @@ describe("grant/revoke resolvers route through canManage", () => {
     );
 
     expect(result.userAddress).toBe("0xbob");
-    expect(await permissions.canReadDocument("doc-1", "0xbob")).toBe(true);
+    expect(await authorization.canRead("doc-1", "0xbob")).toBe(true);
   });
 
   it("lets a supreme admin manage permissions", async () => {
@@ -90,6 +91,6 @@ describe("grant/revoke resolvers route through canManage", () => {
     );
 
     expect(revoked).toBe(true);
-    expect(await permissions.canReadDocument("doc-1", "0xbob")).toBe(false);
+    expect(await authorization.canRead("doc-1", "0xbob")).toBe(false);
   });
 });

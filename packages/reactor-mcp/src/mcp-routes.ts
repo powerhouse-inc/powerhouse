@@ -17,9 +17,23 @@ interface NodeRouteAdapter {
 import { logger } from "./logger.js";
 import { createServer } from "./server.js";
 
+export type McpAuthorizationResult =
+  | { authorized: true }
+  | { authorized: false; status: number; message: string };
+
+/**
+ * Authorizes an incoming /mcp request before it reaches the MCP transport.
+ * MCP tools run with unrestricted reactor access, so this is the only gate;
+ * an open endpoint must opt in by returning `authorized: true`.
+ */
+export type McpRequestAuthorizer = (
+  req: IncomingMessage,
+) => Promise<McpAuthorizationResult>;
+
 export interface SetupMcpServerOptions {
   client: IReactorClient;
   syncManager?: ISyncManager;
+  authorizeRequest: McpRequestAuthorizer;
 }
 
 const METHOD_NOT_ALLOWED = JSON.stringify({
@@ -39,6 +53,52 @@ type TransportFactory = (opts: {
   sessionIdGenerator: undefined;
 }) => InstanceType<typeof StreamableHTTPServerTransport>;
 
+type NodeRouteHandler = (
+  req: IncomingMessage,
+  res: ServerResponse,
+  body?: unknown,
+) => void | Promise<void>;
+
+function jsonRpcError(message: string): string {
+  return JSON.stringify({
+    jsonrpc: "2.0",
+    error: { code: -32000, message },
+    id: null,
+  });
+}
+
+/**
+ * Authorizes the request before running the handler. Failures respond with
+ * the authorizer's status and a JSON-RPC error; an authorizer fault fails
+ * closed with a 500.
+ */
+function withAuthorization(
+  authorize: McpRequestAuthorizer,
+  handler: NodeRouteHandler,
+): NodeRouteHandler {
+  return async (req: IncomingMessage, res: ServerResponse, body?: unknown) => {
+    let result: McpAuthorizationResult;
+    try {
+      result = await authorize(req);
+    } catch (error) {
+      logger.error("Error authorizing MCP request: @error", error);
+      if (!res.headersSent) {
+        res
+          .writeHead(500, { "Content-Type": "application/json" })
+          .end(INTERNAL_SERVER_ERROR);
+      }
+      return;
+    }
+    if (!result.authorized) {
+      res
+        .writeHead(result.status, { "Content-Type": "application/json" })
+        .end(jsonRpcError(result.message));
+      return;
+    }
+    await handler(req, res, body);
+  };
+}
+
 export function setupMcpServer(
   options: SetupMcpServerOptions,
   httpAdapter: NodeRouteAdapter,
@@ -47,34 +107,40 @@ export function setupMcpServer(
   createTransport: TransportFactory = (opts) =>
     new StreamableHTTPServerTransport(opts),
 ): Promise<void> {
+  const { authorizeRequest } = options;
+
   httpAdapter.mountNodeRoute(
     "POST",
     "/mcp",
-    async (req: IncomingMessage, res: ServerResponse, body?: unknown) => {
-      // Stateless mode: every request owns its McpServer + transport so
-      // concurrent or slow handlers cannot collide on a shared Protocol
-      // instance (which throws "Already connected to a transport").
-      try {
-        const server = await createServer(options);
-        const transport = createTransport({ sessionIdGenerator: undefined });
-        res.on("close", () => {
-          void transport.close();
-          void server.close();
-        });
-        await server.connect(transport);
-        await transport.handleRequest(req, res, body);
-      } catch (error) {
-        logger.error("Error handling MCP request: @error", error);
-        if (!res.headersSent) {
-          res
-            .writeHead(500, { "Content-Type": "application/json" })
-            .end(INTERNAL_SERVER_ERROR);
+    withAuthorization(
+      authorizeRequest,
+      async (req: IncomingMessage, res: ServerResponse, body?: unknown) => {
+        // Stateless mode: every request owns its McpServer + transport so
+        // concurrent or slow handlers cannot collide on a shared Protocol
+        // instance (which throws "Already connected to a transport").
+        try {
+          const server = await createServer(options);
+          const transport = createTransport({ sessionIdGenerator: undefined });
+          res.on("close", () => {
+            void transport.close();
+            void server.close();
+          });
+          await server.connect(transport);
+          await transport.handleRequest(req, res, body);
+        } catch (error) {
+          logger.error("Error handling MCP request: @error", error);
+          if (!res.headersSent) {
+            res
+              .writeHead(500, { "Content-Type": "application/json" })
+              .end(INTERNAL_SERVER_ERROR);
+          }
         }
-      }
-    },
+      },
+    ),
   );
 
-  // SSE notifications not supported in stateless mode
+  // GET/DELETE always answer 405 in stateless mode and reach no MCP tool, so
+  // they are intentionally left unauthorized.
   httpAdapter.mountNodeRoute(
     "GET",
     "/mcp",
@@ -83,7 +149,6 @@ export function setupMcpServer(
     },
   );
 
-  // Session termination not needed in stateless mode
   httpAdapter.mountNodeRoute(
     "DELETE",
     "/mcp",
