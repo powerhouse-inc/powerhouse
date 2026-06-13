@@ -1,3 +1,13 @@
+## 6.2.0-dev.13 (2026-06-13)
+
+### 🩹 Fixes
+
+- very simple ttl cache on renown credentials inside the reactor-api, full fix is grpc s2s call and/or shared cache ([dbf3d698c](https://github.com/powerhouse-inc/powerhouse/commit/dbf3d698c))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.2.0-dev.12 (2026-06-12)
 
 This was a version bump only for @powerhousedao/switchboard-gui to align it with other projects, there were no code changes.

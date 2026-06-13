@@ -1,3 +1,14 @@
+## 6.2.0-dev.13 (2026-06-13)
+
+### 🩹 Fixes
+
+- this test flaked 2% of the time because of an unpinned random() ([95dcf1fdc](https://github.com/powerhouse-inc/powerhouse/commit/95dcf1fdc))
+- very simple ttl cache on renown credentials inside the reactor-api, full fix is grpc s2s call and/or shared cache ([dbf3d698c](https://github.com/powerhouse-inc/powerhouse/commit/dbf3d698c))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.2.0-dev.12 (2026-06-12)
 
 This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
