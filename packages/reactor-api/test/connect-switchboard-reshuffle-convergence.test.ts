@@ -8,7 +8,7 @@ import {
   NullDocumentModelResolver,
   ReactorBuilder,
   SyncBuilder,
-  driveCollectionId,
+  DriveCollectionId,
   type IReactor,
   type ISyncManager,
   type ReactorModule,
@@ -228,7 +228,7 @@ describe("Connect-Switchboard reshuffle rebroadcast convergence", () => {
     connectB = setupResult.connectB;
     switchboard = setupResult.switchboard;
 
-    const collectionId = driveCollectionId("main", DOCUMENT_ID);
+    const collectionId = DriveCollectionId.forDrive(DOCUMENT_ID);
 
     await connectA.syncModule!.syncManager.add(
       `switchboard-a-${DOCUMENT_ID}`,

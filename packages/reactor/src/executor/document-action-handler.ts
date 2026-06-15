@@ -36,7 +36,7 @@ interface RelationshipPostWriteArgs {
 }
 import type { ILogger } from "document-model";
 import type { IOperationIndexTxn } from "../cache/operation-index-types.js";
-import { driveCollectionId } from "../cache/operation-index-types.js";
+import { DriveCollectionId } from "../cache/operation-index-types.js";
 import type { Job } from "../queue/types.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
 import { DocumentDeletedError } from "../shared/errors.js";
@@ -244,7 +244,10 @@ export class DocumentActionHandler {
     ]);
 
     if (this.driveContainerTypes.has(document.header.documentType)) {
-      const collectionId = driveCollectionId(job.branch, document.header.id);
+      const collectionId = DriveCollectionId.forDrive(
+        document.header.id,
+        job.branch,
+      ).key;
       indexTxn.createCollection(collectionId);
       indexTxn.addToCollection(collectionId, document.header.id);
     }
@@ -604,7 +607,10 @@ export class DocumentActionHandler {
           : null,
       ({ indexTxn: txn, stores: s, sourceDoc, input, job: j }) => {
         if (this.driveContainerTypes.has(sourceDoc.header.documentType)) {
-          const collectionId = driveCollectionId(j.branch, input.sourceId);
+          const collectionId = DriveCollectionId.forDrive(
+            input.sourceId,
+            j.branch,
+          ).key;
           txn.addToCollection(collectionId, input.targetId);
           s.collectionMembershipCache.invalidate(input.targetId);
         }
@@ -633,7 +639,10 @@ export class DocumentActionHandler {
       null,
       ({ indexTxn: txn, stores: s, sourceDoc, input, job: j }) => {
         if (this.driveContainerTypes.has(sourceDoc.header.documentType)) {
-          const collectionId = driveCollectionId(j.branch, input.sourceId);
+          const collectionId = DriveCollectionId.forDrive(
+            input.sourceId,
+            j.branch,
+          ).key;
           txn.removeFromCollection(collectionId, input.targetId);
           s.collectionMembershipCache.invalidate(input.targetId);
         }

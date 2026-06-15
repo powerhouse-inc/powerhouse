@@ -1,5 +1,6 @@
 import {
   DocumentModelRegistry,
+  DriveCollectionId,
   EventBus,
   GqlRequestChannel,
   GqlResponseChannelFactory,
@@ -146,7 +147,7 @@ describe("Fault-Injection Sync", () => {
 
     const config: GqlChannelConfig = {
       url: "http://server/graphql",
-      collectionId: "test-collection",
+      collectionId: DriveCollectionId.forDrive("test-collection"),
       filter: { documentId: [], scope: [], branch: "main" },
       retryBaseDelayMs: 100,
       retryMaxDelayMs: 200,

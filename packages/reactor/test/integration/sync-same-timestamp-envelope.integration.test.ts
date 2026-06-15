@@ -10,7 +10,7 @@ import type {
   IOperationIndex,
   OperationIndexEntry,
 } from "../../src/cache/operation-index-types.js";
-import { driveCollectionId } from "../../src/cache/operation-index-types.js";
+import { DriveCollectionId } from "../../src/cache/operation-index-types.js";
 import { DEFAULT_DRIVE_CONTAINER_TYPES } from "../../src/core/drive-container-types.js";
 import type { IReactor } from "../../src/core/types.js";
 import { EventBus } from "../../src/events/event-bus.js";
@@ -213,13 +213,13 @@ describe("Sync envelope grouping for same-timestamp runs", () => {
     await syncManager.startup();
 
     const driveId = "test-drive-same-ts";
-    const collectionId = driveCollectionId("main", driveId);
+    const collectionId = DriveCollectionId.forDrive(driveId);
     const timestampUtcMs = "2026-01-01T00:00:00.000Z";
 
     const RUN_SIZE = PAGE_LIMIT * 2 + 1; // 7 ops, straddling 3 pages of 3
     const ops = await seedRun({
       driveId,
-      collectionId,
+      collectionId: collectionId.key,
       documentId: driveId,
       documentType: "powerhouse/document-drive",
       branch: "main",
@@ -254,7 +254,7 @@ describe("Sync envelope grouping for same-timestamp runs", () => {
     await syncManager.startup();
 
     const driveId = "test-drive-mixed-ts";
-    const collectionId = driveCollectionId("main", driveId);
+    const collectionId = DriveCollectionId.forDrive(driveId);
     const earlierTs = "2026-01-01T00:00:00.000Z";
     const laterTs = "2026-01-01T00:00:01.000Z";
 
@@ -271,8 +271,8 @@ describe("Sync envelope grouping for same-timestamp runs", () => {
         sourceRemote: "",
       },
     ]);
-    txn.createCollection(collectionId);
-    txn.addToCollection(collectionId, driveId);
+    txn.createCollection(collectionId.key);
+    txn.addToCollection(collectionId.key, driveId);
     await innerIndex.commit(txn);
 
     const laterOps: Operation[] = [];
@@ -327,7 +327,7 @@ describe("Sync envelope grouping for same-timestamp runs", () => {
     await syncManager.startup();
 
     const driveId = "test-drive-two-events";
-    const collectionId = driveCollectionId("main", driveId);
+    const collectionId = DriveCollectionId.forDrive(driveId);
     const sharedTs = "2026-01-01T00:00:00.000Z";
 
     const channelConfig: ChannelConfig = {
@@ -354,8 +354,8 @@ describe("Sync envelope grouping for same-timestamp runs", () => {
         sourceRemote: "",
       },
     ]);
-    txn1.createCollection(collectionId);
-    txn1.addToCollection(collectionId, driveId);
+    txn1.createCollection(collectionId.key);
+    txn1.addToCollection(collectionId.key, driveId);
     const ordinals1 = await innerIndex.commit(txn1);
 
     sentEnvelopes.length = 0;
@@ -377,7 +377,7 @@ describe("Sync envelope grouping for same-timestamp runs", () => {
       jobId: "job-1",
       operations: operations1,
       jobMeta: { batchId: "batch-1", batchJobIds: ["job-1"] },
-      collectionMemberships: { [driveId]: [collectionId] },
+      collectionMemberships: { [driveId]: [collectionId.key] },
     });
 
     await vi.waitFor(() => {
@@ -418,7 +418,7 @@ describe("Sync envelope grouping for same-timestamp runs", () => {
       jobId: "job-2",
       operations: operations2,
       jobMeta: { batchId: "batch-2", batchJobIds: ["job-2"] },
-      collectionMemberships: { [driveId]: [collectionId] },
+      collectionMemberships: { [driveId]: [collectionId.key] },
     });
 
     await vi.waitFor(() => {

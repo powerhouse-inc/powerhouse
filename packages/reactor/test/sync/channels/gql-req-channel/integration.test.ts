@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ISyncCursorStorage } from "../../../../src/storage/interfaces.js";
 import type { KyselySyncRemoteStorage } from "../../../../src/storage/kysely/sync-remote-storage.js";
 import type { Database } from "../../../../src/storage/kysely/types.js";
+import { DriveCollectionId } from "../../../../src/cache/operation-index-types.js";
 import { GqlRequestChannel } from "../../../../src/sync/channels/gql-req-channel.js";
 import { SyncOperation } from "../../../../src/sync/sync-operation.js";
 import type { RemoteRecord, SyncEnvelope } from "../../../../src/sync/types.js";
@@ -138,7 +139,7 @@ describe("GqlRequestChannel Integration", () => {
     const remote: RemoteRecord = {
       id: `channel-${remoteCounter}`,
       name,
-      collectionId: "collection-1",
+      collectionId: DriveCollectionId.forDrive("collection-1"),
       channelConfig: {
         type: "polling",
         parameters: {},

@@ -6,7 +6,7 @@ import type {
   JobWriteReadyEvent,
 } from "../../../src/events/types.js";
 import type { ILogger } from "document-model";
-import { driveCollectionId } from "../../../src/cache/operation-index-types.js";
+import { DriveCollectionId } from "../../../src/cache/operation-index-types.js";
 import { DEFAULT_DRIVE_CONTAINER_TYPES } from "../../../src/core/drive-container-types.js";
 import {
   BatchAggregator,
@@ -364,7 +364,7 @@ describe("BatchAggregator", () => {
       expect(onBatchReady).toHaveBeenCalledTimes(1);
       const batch = onBatchReady.mock.calls[0][0] as PreparedBatch;
       expect(batch.collectionMemberships).toEqual({
-        "child-1": [driveCollectionId("main", "drive-1")],
+        "child-1": [DriveCollectionId.forDrive("drive-1").key],
       });
     });
 
@@ -380,7 +380,7 @@ describe("BatchAggregator", () => {
 
       const batch = onBatchReady.mock.calls[0][0] as PreparedBatch;
       expect(batch.collectionMemberships).toEqual({
-        "child-2": [driveCollectionId("main", "drive-2")],
+        "child-2": [DriveCollectionId.forDrive("drive-2").key],
       });
     });
 
@@ -421,7 +421,7 @@ describe("BatchAggregator", () => {
 
       const batch = onBatchReady.mock.calls[0][0] as PreparedBatch;
       expect(batch.collectionMemberships).toEqual({
-        "child-custom": [driveCollectionId("main", "drive-custom")],
+        "child-custom": [DriveCollectionId.forDrive("drive-custom").key],
       });
     });
   });

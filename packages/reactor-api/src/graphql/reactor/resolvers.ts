@@ -1,5 +1,6 @@
 import {
   consolidateSyncOperations,
+  DriveCollectionId,
   envelopesToSyncOperations,
   type IDriveClient,
   type IReactorClient,
@@ -1021,7 +1022,7 @@ export async function touchChannel(
   try {
     await syncManager.add(
       args.input.name,
-      args.input.collectionId,
+      DriveCollectionId.fromKey(args.input.collectionId),
       {
         type: "polling",
         parameters: {},

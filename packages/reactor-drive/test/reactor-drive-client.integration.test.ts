@@ -1,7 +1,7 @@
 import { MemoryFS, PGlite } from "@electric-sql/pglite";
 import {
   ConsistencyTracker,
-  driveCollectionId,
+  DriveCollectionId,
   REACTOR_SCHEMA,
   ReactorBuilder,
   ReactorClientBuilder,
@@ -258,7 +258,7 @@ describe("ReactorDriveClient Integration", () => {
       const doc = makeChildDocument("Tagged File");
       await driveClient.addFile(driveId, doc);
 
-      const expectedCollectionId = driveCollectionId("main", driveId);
+      const expectedCollectionId = DriveCollectionId.forDrive(driveId).key;
       const memberships =
         await reactorModule.operationIndex.getCollectionsForDocuments([
           doc.header.id,
@@ -278,7 +278,7 @@ describe("ReactorDriveClient Integration", () => {
         ]);
 
       expect(memberships[doc.header.id] ?? []).not.toContain(
-        driveCollectionId("main", driveId),
+        DriveCollectionId.forDrive(driveId).key,
       );
     });
   });

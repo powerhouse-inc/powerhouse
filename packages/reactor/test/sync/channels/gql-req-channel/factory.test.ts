@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { IQueue } from "../../../../src/queue/interfaces.js";
 import type { ISyncCursorStorage } from "../../../../src/storage/interfaces.js";
+import { DriveCollectionId } from "../../../../src/cache/operation-index-types.js";
 import { GqlRequestChannel } from "../../../../src/sync/channels/gql-req-channel.js";
 import { GqlRequestChannelFactory } from "../../../../src/sync/channels/gql-request-channel-factory.js";
 import type { ChannelConfig } from "../../../../src/sync/types.js";
@@ -10,7 +11,7 @@ import {
   createMockOperationIndex,
 } from "./test-helpers.js";
 
-const TEST_COLLECTION_ID = "test-collection";
+const TEST_COLLECTION_ID = DriveCollectionId.forDrive("test-collection");
 
 const createMockQueue = (): IQueue =>
   ({

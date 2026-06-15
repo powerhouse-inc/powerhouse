@@ -8,7 +8,7 @@ import {
   NullDocumentModelResolver,
   ReactorBuilder,
   SyncBuilder,
-  driveCollectionId,
+  DriveCollectionId,
   type IDocumentModelLoader,
   type IDocumentModelResolver,
   type IReactor,
@@ -137,7 +137,7 @@ export async function registerHubAsRemote(
 ): Promise<void> {
   await spoke.syncModule!.syncManager.add(
     remoteName,
-    driveCollectionId(branch, documentId),
+    DriveCollectionId.forDrive(documentId, branch),
     {
       type: "gql",
       parameters: {

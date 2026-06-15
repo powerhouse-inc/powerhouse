@@ -1,5 +1,5 @@
 import type { IReactorClient, ISyncManager } from "@powerhousedao/reactor";
-import { driveCollectionId } from "@powerhousedao/reactor";
+import { DriveCollectionId } from "@powerhousedao/reactor";
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import type {
   Action,
@@ -513,12 +513,12 @@ export function createReactorMcpProvider(options: ReactorMcpProviderOptions) {
       };
 
       const resolvedDriveId = driveInfo.id;
-      const collectionId = driveCollectionId("main", resolvedDriveId);
+      const collectionId = DriveCollectionId.forDrive(resolvedDriveId);
 
       // Check if remote already exists
       const existingRemote = syncManager
         .list()
-        .find((remote) => remote.collectionId === collectionId);
+        .find((remote) => remote.collectionId.equals(collectionId));
       if (existingRemote) {
         return { driveId: resolvedDriveId };
       }

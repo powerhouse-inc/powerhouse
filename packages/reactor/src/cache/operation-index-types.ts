@@ -94,6 +94,55 @@ export type InsertableOperationIndexOperation =
 export type UpdateableOperationIndexOperation =
   Updateable<OperationIndexOperationTable>;
 
-export function driveCollectionId(branch: string, driveId: string): string {
-  return `drive.${branch}.${driveId}`;
+const DRIVE_COLLECTION_PREFIX = "drive.";
+
+/**
+ * Identifies the collection a remote synchronizes. Collections are drive-level
+ * abstractions (document-drive and reactor-drive), so a collection id is the
+ * drive document id plus the branch it scopes to rather than an opaque string.
+ *
+ * The canonical string form (`drive.${branch}.${driveId}`) is produced only by
+ * `key` and parsed only by `fromKey`; that string is the wire and storage
+ * representation and is byte-for-byte identical to the legacy
+ * `driveCollectionId(branch, driveId)` output, so existing `document_collections`
+ * rows and persisted remotes remain valid without migration.
+ */
+export class DriveCollectionId {
+  private constructor(
+    readonly driveId: string,
+    readonly branch: string,
+  ) {}
+
+  static forDrive(driveId: string, branch = "main"): DriveCollectionId {
+    return new DriveCollectionId(driveId, branch);
+  }
+
+  /**
+   * The single deserializer for the wire/storage form. `branch` may contain
+   * dots, while `driveId` is a dot-free document id, so the drive id is the
+   * final dot-delimited segment.
+   */
+  static fromKey(key: string): DriveCollectionId {
+    if (!key.startsWith(DRIVE_COLLECTION_PREFIX)) {
+      throw new Error(`Unsupported collection id: ${key}`);
+    }
+    const rest = key.slice(DRIVE_COLLECTION_PREFIX.length);
+    const lastDot = rest.lastIndexOf(".");
+    if (lastDot === -1 || lastDot === rest.length - 1) {
+      throw new Error(`Malformed drive collection id: ${key}`);
+    }
+    return new DriveCollectionId(rest.slice(lastDot + 1), rest.slice(0, lastDot));
+  }
+
+  get key(): string {
+    return `${DRIVE_COLLECTION_PREFIX}${this.branch}.${this.driveId}`;
+  }
+
+  toString(): string {
+    return this.key;
+  }
+
+  equals(other: DriveCollectionId): boolean {
+    return this.driveId === other.driveId && this.branch === other.branch;
+  }
 }

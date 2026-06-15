@@ -9,7 +9,7 @@ import { CollectionMembershipCache } from "../../../src/cache/collection-members
 import { DocumentMetaCache } from "../../../src/cache/document-meta-cache.js";
 import { KyselyOperationIndex } from "../../../src/cache/kysely-operation-index.js";
 import { KyselyWriteCache } from "../../../src/cache/kysely-write-cache.js";
-import { driveCollectionId } from "../../../src/cache/operation-index-types.js";
+import { DriveCollectionId } from "../../../src/cache/operation-index-types.js";
 import type { WriteCacheConfig } from "../../../src/cache/write-cache-types.js";
 import { KyselyExecutionScope } from "../../../src/executor/execution-scope.js";
 import { DocumentModelRegistry } from "../../../src/registry/implementation.js";
@@ -115,7 +115,7 @@ describe("KyselyExecutionScope Integration", () => {
     ]);
 
     if (documentType === "powerhouse/document-drive") {
-      const collectionId = driveCollectionId("main", documentId);
+      const collectionId = DriveCollectionId.forDrive(documentId).key;
       indexTxn.createCollection(collectionId);
       indexTxn.addToCollection(collectionId, documentId);
     }

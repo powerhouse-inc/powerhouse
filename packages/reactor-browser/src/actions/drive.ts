@@ -1,6 +1,6 @@
 import {
   DocumentChangeType,
-  driveCollectionId,
+  DriveCollectionId,
   PropagationMode,
   type IReactorClient,
   type PollBehavior,
@@ -165,15 +165,15 @@ export async function addRemoteDrive(
   };
 
   const resolvedDriveId = driveId ?? driveInfo.id;
-  const collectionId = driveCollectionId("main", resolvedDriveId);
+  const collectionId = DriveCollectionId.forDrive(resolvedDriveId);
 
-  const inFlight = inFlightRemoteRegistrations.get(collectionId);
+  const inFlight = inFlightRemoteRegistrations.get(collectionId.key);
   if (inFlight) {
     await inFlight;
   } else {
     const existingRemote = sync
       .list()
-      .find((remote) => remote.collectionId === collectionId);
+      .find((remote) => remote.collectionId.equals(collectionId));
 
     if (!existingRemote) {
       const remoteName = crypto.randomUUID();
@@ -192,8 +192,8 @@ export async function addRemoteDrive(
             ? { pollBehavior: options.pollBehavior }
             : undefined,
         )
-        .finally(() => inFlightRemoteRegistrations.delete(collectionId));
-      inFlightRemoteRegistrations.set(collectionId, registration);
+        .finally(() => inFlightRemoteRegistrations.delete(collectionId.key));
+      inFlightRemoteRegistrations.set(collectionId.key, registration);
       await registration;
     }
   }
@@ -222,10 +222,10 @@ export async function deleteDrive(driveId: string) {
   const sync =
     window.ph?.reactorClientModule?.reactorModule?.syncModule?.syncManager;
   if (sync) {
-    const collectionId = driveCollectionId("main", driveId);
+    const collectionId = DriveCollectionId.forDrive(driveId);
     const remotes = sync
       .list()
-      .filter((remote) => remote.collectionId === collectionId);
+      .filter((remote) => remote.collectionId.equals(collectionId));
     for (const remote of remotes) {
       await sync.remove(remote.name);
     }
