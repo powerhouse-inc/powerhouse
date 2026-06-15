@@ -1,3 +1,13 @@
+## 6.2.0-dev.16 (2026-06-15)
+
+### 🩹 Fixes
+
+- **codegen:** resolve graphql-codegen plugins from this package ([3d9482993](https://github.com/powerhouse-inc/powerhouse/commit/3d9482993))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.0-dev.15 (2026-06-15)
 
 This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.
