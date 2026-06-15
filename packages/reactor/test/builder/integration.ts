@@ -91,7 +91,11 @@ describe("Reactor with SyncBuilder Integration", () => {
       );
 
       expect(remote.name).toBe("test-remote");
-      expect(remote.collectionId.equals(DriveCollectionId.forDrive("test-collection"))).toBe(true);
+      expect(
+        remote.collectionId.equals(
+          DriveCollectionId.forDrive("test-collection"),
+        ),
+      ).toBe(true);
 
       const remotes = module.syncModule!.syncManager.list();
       expect(remotes).toHaveLength(1);

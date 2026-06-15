@@ -1,14 +1,14 @@
 #!/usr/bin/env node
-import type { PGlite, PGliteOptions } from "@electric-sql/pglite";
+import type { PGlite } from "@electric-sql/pglite";
 import { getConfig } from "@powerhousedao/config/node";
 import { ReactorInstrumentation } from "@powerhousedao/opentelemetry-instrumentation-reactor";
 import { AtomicNodeFs } from "@powerhousedao/pglite-fs";
 import {
+  DriveCollectionId,
   EventBus,
   REACTOR_SCHEMA,
   ReactorBuilder,
   ReactorClientBuilder,
-  driveCollectionId,
   parseDriveUrl,
   type Database,
   type JwtHandler,
@@ -653,7 +653,7 @@ async function initServer(
         const parsed = parseDriveUrl(remoteDriveUrl);
         driveId = parsed.driveId;
         const remoteName = `remote-drive-${driveId}-${crypto.randomUUID()}`;
-        await syncManager.add(remoteName, driveCollectionId("main", driveId), {
+        await syncManager.add(remoteName, DriveCollectionId.forDrive(driveId), {
           type: "gql",
           parameters: { url: parsed.graphqlEndpoint },
         });

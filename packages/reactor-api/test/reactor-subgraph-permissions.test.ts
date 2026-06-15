@@ -1,7 +1,8 @@
-import type {
-  IReactorClient,
-  ISyncManager,
-  PagedResults,
+import {
+  DriveCollectionId,
+  type IReactorClient,
+  type ISyncManager,
+  type PagedResults,
 } from "@powerhousedao/reactor";
 import type { PHDocument } from "@powerhousedao/shared/document-model";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -489,9 +490,11 @@ describe("ReactorSubgraph Permission Checks", () => {
   });
 
   // ============================================================
-  // Mutation: touchChannel — assertCanWrite per filtered document (S-C2)
+  // Mutation: touchChannel — read access to the collection's drive (S-H1)
   // ============================================================
   describe("Mutation: touchChannel", () => {
+    const COLLECTION_ID = DriveCollectionId.forDrive("drive-1").key;
+
     const makeSyncManager = () => ({
       getById: vi.fn(() => {
         throw new Error("not found");
@@ -499,11 +502,11 @@ describe("ReactorSubgraph Permission Checks", () => {
       add: vi.fn().mockResolvedValue(undefined),
     });
 
-    const touchArgs = (documentIds: string[]) => ({
+    const touchArgs = (documentIds: string[] = []) => ({
       input: {
         id: "channel-1",
         name: "remote-1",
-        collectionId: "collection-1",
+        collectionId: COLLECTION_ID,
         filter: { documentId: documentIds, scope: [], branch: "main" },
         sinceTimestampUtcMs: "0",
       },
@@ -512,76 +515,261 @@ describe("ReactorSubgraph Permission Checks", () => {
     const callTouchChannel = (
       subgraph: ReactorSubgraph,
       ctx: any,
-      documentIds: string[],
+      documentIds: string[] = [],
     ) => {
       const mutation = (subgraph.resolvers.Mutation as any)?.touchChannel;
       return mutation(null, touchArgs(documentIds), ctx);
     };
 
-    it("should deny anonymous callers when canWrite resolves false", async () => {
+    it("should deny anonymous callers who cannot read the drive", async () => {
       const syncManager = makeSyncManager();
       const subgraph = buildSubgraph(mockAuthorizationService, syncManager);
       const ctx = createContext({});
 
-      await expect(
-        callTouchChannel(subgraph, ctx, ["doc-123"]),
-      ).rejects.toThrow("Forbidden");
-      expect(syncManager.add).not.toHaveBeenCalled();
-    });
-
-    it("should deny when canWrite resolves false for any filtered document", async () => {
-      vi.mocked(mockAuthorizationService.canWrite!)
-        .mockResolvedValueOnce(true)
-        .mockResolvedValueOnce(false);
-      const syncManager = makeSyncManager();
-      const subgraph = buildSubgraph(mockAuthorizationService, syncManager);
-      const ctx = createContext({ userAddress: "0xunpermitted" });
-
-      await expect(
-        callTouchChannel(subgraph, ctx, ["doc-123", "doc-456"]),
-      ).rejects.toThrow("Forbidden");
-      expect(syncManager.add).not.toHaveBeenCalled();
-    });
-
-    it("should allow when canWrite resolves true for every filtered document", async () => {
-      vi.mocked(mockAuthorizationService.canWrite!).mockResolvedValue(true);
-      const syncManager = makeSyncManager();
-      const subgraph = buildSubgraph(mockAuthorizationService, syncManager);
-      const ctx = createContext({ userAddress: "0xpermitted" });
-
-      const result = await callTouchChannel(subgraph, ctx, [
-        "doc-123",
-        "doc-456",
-      ]);
-
-      expect(result).toEqual({ success: true, ackOrdinal: 0 });
-      expect(mockAuthorizationService.canWrite).toHaveBeenCalledTimes(2);
-      expect(syncManager.add).toHaveBeenCalledOnce();
-    });
-
-    it("should deny an empty document filter (match-all wildcard) for non-admins", async () => {
-      vi.mocked(mockAuthorizationService.canWrite!).mockResolvedValue(true);
-      const syncManager = makeSyncManager();
-      const subgraph = buildSubgraph(mockAuthorizationService, syncManager);
-      const ctx = createContext({ userAddress: "0xpermitted" });
-
-      await expect(callTouchChannel(subgraph, ctx, [])).rejects.toThrow(
+      await expect(callTouchChannel(subgraph, ctx)).rejects.toThrow(
         "Forbidden",
       );
       expect(syncManager.add).not.toHaveBeenCalled();
     });
 
-    it("should allow supreme admins without per-document checks, including wildcards", async () => {
+    it("should deny when the caller cannot read the collection's drive", async () => {
+      vi.mocked(mockAuthorizationService.canRead!).mockResolvedValue(false);
+      const syncManager = makeSyncManager();
+      const subgraph = buildSubgraph(mockAuthorizationService, syncManager);
+      const ctx = createContext({ userAddress: "0xunpermitted" });
+
+      await expect(callTouchChannel(subgraph, ctx)).rejects.toThrow(
+        "Forbidden",
+      );
+      expect(syncManager.add).not.toHaveBeenCalled();
+    });
+
+    it("should gate on the drive id parsed from the collection id, not the filter", async () => {
+      vi.mocked(mockAuthorizationService.canRead!).mockResolvedValue(true);
+      const syncManager = makeSyncManager();
+      const subgraph = buildSubgraph(mockAuthorizationService, syncManager);
+      const ctx = createContext({ userAddress: "0xpermitted" });
+
+      const result = await callTouchChannel(subgraph, ctx, ["doc-1", "doc-2"]);
+
+      expect(result).toEqual({ success: true, ackOrdinal: 0 });
+      expect(mockAuthorizationService.canRead).toHaveBeenCalledWith(
+        "drive-1",
+        "0xpermitted",
+      );
+      // Registration is a read operation on the drive; per-operation writes are
+      // authorized in pushSyncEnvelopes, not here.
+      expect(mockAuthorizationService.canWrite).not.toHaveBeenCalled();
+      expect(syncManager.add).toHaveBeenCalledOnce();
+    });
+
+    it("should allow supreme admins without a drive check", async () => {
       vi.mocked(mockAuthorizationService.isSupremeAdmin!).mockReturnValue(true);
       const syncManager = makeSyncManager();
       const subgraph = buildSubgraph(mockAuthorizationService, syncManager);
       const ctx = createContext({ userAddress: "0xadmin" });
 
-      const result = await callTouchChannel(subgraph, ctx, []);
+      const result = await callTouchChannel(subgraph, ctx);
 
       expect(result).toEqual({ success: true, ackOrdinal: 0 });
-      expect(mockAuthorizationService.canWrite).not.toHaveBeenCalled();
+      expect(mockAuthorizationService.canRead).not.toHaveBeenCalled();
       expect(syncManager.add).toHaveBeenCalledOnce();
+    });
+  });
+
+  // ============================================================
+  // Query: pollSyncEnvelopes — drive read gate + per-document exclusion (S-H1)
+  // ============================================================
+  describe("Query: pollSyncEnvelopes", () => {
+    const makeOutboxSyncOp = (documentId: string, ordinal: number) => ({
+      documentId,
+      jobId: `job-${documentId}-${ordinal}`,
+      jobDependencies: [] as string[],
+      branch: "main",
+      scopes: ["global"],
+      emittedCount: 0,
+      deliveredCount: 0,
+      operations: [
+        {
+          operation: {
+            id: `op-${documentId}-${ordinal}`,
+            index: 0,
+            skip: 0,
+            hash: `hash-${ordinal}`,
+            timestampUtcMs: "0",
+            action: {
+              id: `action-${ordinal}`,
+              type: "SET_NAME",
+              input: {},
+              scope: "global",
+              timestampUtcMs: "0",
+            },
+          },
+          context: {
+            documentId,
+            documentType: "test/document",
+            scope: "global",
+            branch: "main",
+            ordinal,
+          },
+        },
+      ],
+      executed: vi.fn(),
+    });
+
+    const makeDeadLetter = (documentId: string) => ({
+      documentId,
+      error: new Error("boom"),
+      jobId: `dl-${documentId}`,
+      branch: "main",
+      scopes: ["global"],
+      operations: [{}],
+    });
+
+    const makeSyncManager = (
+      driveId: string,
+      outbox: ReturnType<typeof makeOutboxSyncOp>[] = [],
+      deadLetter: ReturnType<typeof makeDeadLetter>[] = [],
+    ) => ({
+      getById: vi.fn().mockReturnValue({
+        name: "remote-1",
+        collectionId: DriveCollectionId.forDrive(driveId),
+        channel: {
+          inbox: { ackOrdinal: 0 },
+          outbox: { items: outbox, remove: vi.fn() },
+          deadLetter: { items: deadLetter },
+        },
+      }),
+    });
+
+    const callPoll = (subgraph: ReactorSubgraph, ctx: any) => {
+      const query = (subgraph.resolvers.Query as any)?.pollSyncEnvelopes;
+      return query(
+        null,
+        { channelId: "channel-1", outboxAck: 0, outboxLatest: 0 },
+        ctx,
+      );
+    };
+
+    const deliveredDocIds = (result: any): string[] =>
+      result.envelopes.flatMap((e: any) =>
+        e.operations.map((o: any) => o.context.documentId),
+      );
+
+    it("returns envelopes for supreme admins without any read check", async () => {
+      vi.mocked(mockAuthorizationService.isSupremeAdmin!).mockReturnValue(true);
+      const syncManager = makeSyncManager("drive-1", [
+        makeOutboxSyncOp("doc-1", 1),
+      ]);
+      const subgraph = buildSubgraph(mockAuthorizationService, syncManager);
+
+      const result = await callPoll(
+        subgraph,
+        createContext({ userAddress: "0xadmin" }),
+      );
+
+      expect(deliveredDocIds(result)).toEqual(["doc-1"]);
+      expect(mockAuthorizationService.canRead).not.toHaveBeenCalled();
+    });
+
+    it("denies callers who cannot read the collection's drive", async () => {
+      vi.mocked(mockAuthorizationService.canRead!).mockResolvedValue(false);
+      const syncManager = makeSyncManager("drive-1", [
+        makeOutboxSyncOp("doc-1", 1),
+      ]);
+      const subgraph = buildSubgraph(mockAuthorizationService, syncManager);
+
+      await expect(
+        callPoll(subgraph, createContext({ userAddress: "0xno" })),
+      ).rejects.toThrow("Forbidden");
+    });
+
+    it("denies anonymous callers", async () => {
+      const syncManager = makeSyncManager("drive-1", [
+        makeOutboxSyncOp("doc-1", 1),
+      ]);
+      const subgraph = buildSubgraph(mockAuthorizationService, syncManager);
+
+      await expect(callPoll(subgraph, createContext({}))).rejects.toThrow(
+        "Forbidden",
+      );
+    });
+
+    it("throws Channel not found for an unknown channel", async () => {
+      const syncManager = {
+        getById: vi.fn(() => {
+          throw new Error("nope");
+        }),
+      };
+      const subgraph = buildSubgraph(mockAuthorizationService, syncManager);
+
+      await expect(
+        callPoll(subgraph, createContext({ userAddress: "0xx" })),
+      ).rejects.toThrow("Channel not found");
+    });
+
+    it("delivers all members when the drive is not world-readable (inheriting grant)", async () => {
+      // Tier 1 passes for the caller; the drive is not anonymously readable, so
+      // the caller's drive grant inherits to every member: no per-member checks.
+      vi.mocked(mockAuthorizationService.canRead!).mockImplementation(
+        (_documentId: string, address?: string) =>
+          Promise.resolve(address !== undefined),
+      );
+      const syncManager = makeSyncManager("drive-1", [
+        makeOutboxSyncOp("doc-1", 1),
+        makeOutboxSyncOp("doc-2", 2),
+      ]);
+      const subgraph = buildSubgraph(mockAuthorizationService, syncManager);
+
+      const result = await callPoll(
+        subgraph,
+        createContext({ userAddress: "0xowner" }),
+      );
+
+      expect(deliveredDocIds(result).sort()).toEqual(["doc-1", "doc-2"]);
+      // Only the Tier 1 gate and the world-readable probe ran, not per member.
+      expect(mockAuthorizationService.canRead).toHaveBeenCalledTimes(2);
+    });
+
+    it("excludes individually-unreadable members on a world-readable drive", async () => {
+      vi.mocked(mockAuthorizationService.canRead!).mockImplementation(
+        (documentId: string) => Promise.resolve(documentId !== "doc-2"),
+      );
+      const syncManager = makeSyncManager("drive-1", [
+        makeOutboxSyncOp("doc-1", 1),
+        makeOutboxSyncOp("doc-2", 2),
+      ]);
+      const subgraph = buildSubgraph(mockAuthorizationService, syncManager);
+
+      const result = await callPoll(
+        subgraph,
+        createContext({ userAddress: "0xreader" }),
+      );
+
+      const delivered = deliveredDocIds(result);
+      expect(delivered).toContain("doc-1");
+      expect(delivered).not.toContain("doc-2");
+    });
+
+    it("filters dead letters for documents the caller cannot read", async () => {
+      vi.mocked(mockAuthorizationService.canRead!).mockImplementation(
+        (documentId: string) => Promise.resolve(documentId !== "doc-secret"),
+      );
+      const syncManager = makeSyncManager(
+        "drive-1",
+        [],
+        [makeDeadLetter("doc-1"), makeDeadLetter("doc-secret")],
+      );
+      const subgraph = buildSubgraph(mockAuthorizationService, syncManager);
+
+      const result = await callPoll(
+        subgraph,
+        createContext({ userAddress: "0xreader" }),
+      );
+
+      const dlDocs = result.deadLetters.map((d: any) => d.documentId);
+      expect(dlDocs).toContain("doc-1");
+      expect(dlDocs).not.toContain("doc-secret");
     });
   });
 
@@ -870,7 +1058,9 @@ describe("ReactorSubgraph Permission Checks", () => {
   // ============================================================
   describe("S-C1: slug addressing is resolved before the auth check", () => {
     it("checks the canonical id (not the slug) when reading by slug", async () => {
-      vi.mocked(mockReactorClient.resolveIdOrSlug!).mockResolvedValue("doc-123");
+      vi.mocked(mockReactorClient.resolveIdOrSlug!).mockResolvedValue(
+        "doc-123",
+      );
       vi.mocked(mockAuthorizationService.canRead!).mockResolvedValue(false);
       const ctx = createContext({ userAddress: "0xnonowner" });
       const query = (reactorSubgraph.resolvers.Query as any)?.document;
@@ -891,7 +1081,9 @@ describe("ReactorSubgraph Permission Checks", () => {
     });
 
     it("allows a slug-addressed read when the canonical id is authorized", async () => {
-      vi.mocked(mockReactorClient.resolveIdOrSlug!).mockResolvedValue("doc-123");
+      vi.mocked(mockReactorClient.resolveIdOrSlug!).mockResolvedValue(
+        "doc-123",
+      );
       vi.mocked(mockAuthorizationService.canRead!).mockResolvedValue(true);
       const ctx = createContext({ userAddress: "0xowner" });
       const query = (reactorSubgraph.resolvers.Query as any)?.document;
@@ -906,7 +1098,9 @@ describe("ReactorSubgraph Permission Checks", () => {
     });
 
     it("denies a slug-addressed mutation when the canonical id lacks the grant", async () => {
-      vi.mocked(mockReactorClient.resolveIdOrSlug!).mockResolvedValue("doc-123");
+      vi.mocked(mockReactorClient.resolveIdOrSlug!).mockResolvedValue(
+        "doc-123",
+      );
       vi.mocked(mockAuthorizationService.canMutate!).mockResolvedValue(false);
       const ctx = createContext({ userAddress: "0xattacker" });
       const mutation = (reactorSubgraph.resolvers.Mutation as any)
@@ -944,7 +1138,9 @@ describe("ReactorSubgraph Permission Checks", () => {
     });
 
     it("passes the canonical id to the delete data path, not the slug", async () => {
-      vi.mocked(mockReactorClient.resolveIdOrSlug!).mockResolvedValue("doc-123");
+      vi.mocked(mockReactorClient.resolveIdOrSlug!).mockResolvedValue(
+        "doc-123",
+      );
       vi.mocked(mockAuthorizationService.canWrite!).mockResolvedValue(true);
       const ctx = createContext({ userAddress: "0xwriter" });
       const mutation = (reactorSubgraph.resolvers.Mutation as any)

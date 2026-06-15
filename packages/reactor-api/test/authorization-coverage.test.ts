@@ -34,8 +34,6 @@ const EXEMPT: Record<string, Record<string, string>> = {
       "Document model metadata, not document content (AUTH_REVIEW §4: low-sensitivity).",
     "Query.jobStatus":
       "Job status by id, not document content (AUTH_REVIEW §4: low-sensitivity).",
-    "Query.pollSyncEnvelopes":
-      "KNOWN GAP S-H1: sync reads are unauthenticated. Remediation order #2.",
     "Subscription.documentChanges":
       "KNOWN GAP S-H2: subscription events are not permission-filtered. Remediation order #4.",
     "Subscription.jobChanges":

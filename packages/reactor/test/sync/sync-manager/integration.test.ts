@@ -158,7 +158,11 @@ describe("SyncManager Integration", () => {
         parameters: {},
       };
 
-      await syncManager.add("remote1", DriveCollectionId.forDrive("collection1"), channelConfig);
+      await syncManager.add(
+        "remote1",
+        DriveCollectionId.forDrive("collection1"),
+        channelConfig,
+      );
 
       await syncManager.remove("remote1");
 
@@ -175,7 +179,11 @@ describe("SyncManager Integration", () => {
         parameters: {},
       };
 
-      await syncManager.add("remote1", DriveCollectionId.forDrive("collection1"), channelConfig);
+      await syncManager.add(
+        "remote1",
+        DriveCollectionId.forDrive("collection1"),
+        channelConfig,
+      );
 
       const remote = syncManager.getByName("remote1");
 
@@ -197,8 +205,16 @@ describe("SyncManager Integration", () => {
         parameters: {},
       };
 
-      await syncManager.add("remote1", DriveCollectionId.forDrive("collection1"), config1);
-      await syncManager.add("remote2", DriveCollectionId.forDrive("collection2"), config2);
+      await syncManager.add(
+        "remote1",
+        DriveCollectionId.forDrive("collection1"),
+        config1,
+      );
+      await syncManager.add(
+        "remote2",
+        DriveCollectionId.forDrive("collection2"),
+        config2,
+      );
 
       const remotes = syncManager.list();
 
@@ -215,11 +231,16 @@ describe("SyncManager Integration", () => {
         parameters: {},
       };
 
-      await syncManager.add("remote1", DriveCollectionId.forDrive("collection1"), channelConfig, {
-        documentId: ["doc1"],
-        scope: ["global"],
-        branch: "main",
-      });
+      await syncManager.add(
+        "remote1",
+        DriveCollectionId.forDrive("collection1"),
+        channelConfig,
+        {
+          documentId: ["doc1"],
+          scope: ["global"],
+          branch: "main",
+        },
+      );
 
       const op1: Operation = {
         id: "op1",
@@ -288,11 +309,16 @@ describe("SyncManager Integration", () => {
         parameters: {},
       };
 
-      await syncManager.add("remote1", DriveCollectionId.forDrive("collection1"), channelConfig, {
-        documentId: ["doc1"],
-        scope: ["global"],
-        branch: "main",
-      });
+      await syncManager.add(
+        "remote1",
+        DriveCollectionId.forDrive("collection1"),
+        channelConfig,
+        {
+          documentId: ["doc1"],
+          scope: ["global"],
+          branch: "main",
+        },
+      );
 
       const operations: OperationWithContext[] = [
         {
@@ -345,17 +371,27 @@ describe("SyncManager Integration", () => {
         parameters: {},
       };
 
-      await syncManager.add("remote1", DriveCollectionId.forDrive("collection1"), config1, {
-        documentId: ["doc1"],
-        scope: [],
-        branch: "main",
-      });
+      await syncManager.add(
+        "remote1",
+        DriveCollectionId.forDrive("collection1"),
+        config1,
+        {
+          documentId: ["doc1"],
+          scope: [],
+          branch: "main",
+        },
+      );
 
-      await syncManager.add("remote2", DriveCollectionId.forDrive("collection2"), config2, {
-        documentId: ["doc1"],
-        scope: [],
-        branch: "main",
-      });
+      await syncManager.add(
+        "remote2",
+        DriveCollectionId.forDrive("collection2"),
+        config2,
+        {
+          documentId: ["doc1"],
+          scope: [],
+          branch: "main",
+        },
+      );
 
       const op1: Operation = {
         id: "op1",
@@ -408,7 +444,9 @@ describe("SyncManager Integration", () => {
         jobId: "auto-job-1",
         operations,
         jobMeta: { batchId: "auto-auto-job-1", batchJobIds: ["auto-job-1"] },
-        collectionMemberships: { doc1: ["drive.main.collection1", "drive.main.collection2"] },
+        collectionMemberships: {
+          doc1: ["drive.main.collection1", "drive.main.collection2"],
+        },
       });
 
       expect(sentEnvelopes).toHaveLength(2);
@@ -426,11 +464,16 @@ describe("SyncManager Integration", () => {
         parameters: {},
       };
 
-      await syncManager.add("remote1", DriveCollectionId.forDrive("collection1"), channelConfig, {
-        documentId: ["doc1", "doc2"],
-        scope: ["global"],
-        branch: "main",
-      });
+      await syncManager.add(
+        "remote1",
+        DriveCollectionId.forDrive("collection1"),
+        channelConfig,
+        {
+          documentId: ["doc1", "doc2"],
+          scope: ["global"],
+          branch: "main",
+        },
+      );
 
       const findSpy = vi.spyOn(operationIndex, "find");
       findSpy.mockClear();
@@ -577,11 +620,16 @@ describe("SyncManager Integration", () => {
         parameters: {},
       };
 
-      await syncManager.add("remote1", DriveCollectionId.forDrive("collection1"), channelConfig, {
-        documentId: ["doc1", "doc2"],
-        scope: ["global"],
-        branch: "main",
-      });
+      await syncManager.add(
+        "remote1",
+        DriveCollectionId.forDrive("collection1"),
+        channelConfig,
+        {
+          documentId: ["doc1", "doc2"],
+          scope: ["global"],
+          branch: "main",
+        },
+      );
 
       const findSpy = vi.spyOn(operationIndex, "find");
       findSpy.mockClear();
@@ -846,7 +894,11 @@ describe("SyncManager Integration", () => {
         parameters: {},
       };
 
-      await syncManager.add("remote1", DriveCollectionId.forDrive("collection1"), channelConfig);
+      await syncManager.add(
+        "remote1",
+        DriveCollectionId.forDrive("collection1"),
+        channelConfig,
+      );
 
       const op1: Operation = {
         id: "op1",

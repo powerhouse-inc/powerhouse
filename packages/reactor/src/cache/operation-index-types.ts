@@ -131,7 +131,10 @@ export class DriveCollectionId {
     if (lastDot === -1 || lastDot === rest.length - 1) {
       throw new Error(`Malformed drive collection id: ${key}`);
     }
-    return new DriveCollectionId(rest.slice(lastDot + 1), rest.slice(0, lastDot));
+    return new DriveCollectionId(
+      rest.slice(lastDot + 1),
+      rest.slice(0, lastDot),
+    );
   }
 
   get key(): string {

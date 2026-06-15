@@ -1,6 +1,6 @@
 import {
   ChannelScheme,
-  driveCollectionId,
+  DriveCollectionId,
   ReactorBuilder,
   type ReactorModule,
 } from "@powerhousedao/reactor";
@@ -38,11 +38,11 @@ export async function createReactorWithSync(
   }
 
   const remoteName = crypto.randomUUID();
-  const collectionId = driveCollectionId("main", config.driveId);
+  const collectionId = DriveCollectionId.forDrive(config.driveId);
 
   if (config.verbose) {
     console.log(`[SYNC] Adding remote: name=${remoteName}`);
-    console.log(`[SYNC] collectionId=${collectionId}`);
+    console.log(`[SYNC] collectionId=${collectionId.key}`);
     console.log(`[SYNC] url=${config.url}`);
   }
 

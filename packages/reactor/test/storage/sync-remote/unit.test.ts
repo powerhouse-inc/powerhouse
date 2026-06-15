@@ -200,7 +200,9 @@ describe.each(testFsBackends)(
 
         const retrieved = await storage.get("new-remote");
         expect(retrieved.name).toBe("new-remote");
-        expect(retrieved.collectionId.toString()).toBe("drive.main.collection-1");
+        expect(retrieved.collectionId.toString()).toBe(
+          "drive.main.collection-1",
+        );
       });
 
       it("should update existing remote", async () => {
@@ -238,7 +240,9 @@ describe.each(testFsBackends)(
         await storage.upsert(updated);
 
         const retrieved = await storage.get("update-remote");
-        expect(retrieved.collectionId.toString()).toBe("drive.main.collection-2");
+        expect(retrieved.collectionId.toString()).toBe(
+          "drive.main.collection-2",
+        );
         expect(retrieved.status.push.state).toBe("running");
         expect(retrieved.status.pull.state).toBe("error");
         expect(retrieved.status.pull.failureCount).toBe(3);

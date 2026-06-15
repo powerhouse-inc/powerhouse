@@ -1,6 +1,6 @@
 import {
   ChannelScheme,
-  driveCollectionId,
+  DriveCollectionId,
   PollBehavior,
   ReactorBuilder,
   ReactorEventTypes,
@@ -85,7 +85,10 @@ export class SyncDriver {
     this.syncManager = module.syncModule.syncManager;
 
     this.driveId = driveInfo.id;
-    const collectionId = driveCollectionId(this.config.branch, driveInfo.id);
+    const collectionId = DriveCollectionId.forDrive(
+      driveInfo.id,
+      this.config.branch,
+    );
     this.remoteName = `debug-${driveInfo.id}`;
 
     this.remote = await this.syncManager.add(

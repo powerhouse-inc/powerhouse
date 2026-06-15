@@ -1,4 +1,5 @@
 import { ConsoleLogger } from "document-model";
+import { DriveCollectionId } from "@powerhousedao/reactor";
 import { GraphQLError } from "graphql";
 import { withFilter } from "graphql-subscriptions";
 import { gql } from "graphql-tag";
@@ -81,6 +82,29 @@ export class ReactorSubgraph extends BaseSubgraph {
     }
   }
 
+  /**
+   * Adds to `forbidden` the canonical document ids in `syncOps` that the caller
+   * cannot read, checking each distinct id once. Sync operation document ids are
+   * canonical (never slugs), so no resolution is needed.
+   */
+  async #collectForbiddenDocuments(
+    syncOps: ReadonlyArray<{ documentId: string }>,
+    forbidden: Set<string>,
+    ctx: Context,
+  ): Promise<void> {
+    const checked = new Set<string>();
+    for (const syncOp of syncOps) {
+      const documentId = syncOp.documentId;
+      if (checked.has(documentId) || forbidden.has(documentId)) continue;
+      checked.add(documentId);
+      const canRead = await this.canReadDocument(
+        documentId as CanonicalDocumentId,
+        ctx,
+      );
+      if (!canRead) forbidden.add(documentId);
+    }
+  }
+
   typeDefs = gql(schemaSource);
 
   resolvers: Resolvers = {
@@ -93,7 +117,10 @@ export class ReactorSubgraph extends BaseSubgraph {
           args,
         );
 
-        await this.assertCanReadCanonical(parent.id as CanonicalDocumentId, ctx);
+        await this.assertCanReadCanonical(
+          parent.id as CanonicalDocumentId,
+          ctx,
+        );
 
         try {
           // Build the filter using the document's id
@@ -255,15 +282,66 @@ export class ReactorSubgraph extends BaseSubgraph {
         }
       },
 
-      pollSyncEnvelopes: (
+      pollSyncEnvelopes: async (
         _parent: unknown,
         args: { channelId: string; outboxAck: number; outboxLatest: number },
+        ctx: Context,
       ) => {
         this.logger.debug("pollSyncEnvelopes(@args)", args);
 
         try {
+          let remote;
+          try {
+            remote = this.syncManager.getById(args.channelId);
+          } catch (error) {
+            throw new GraphQLError(
+              `Channel not found: ${error instanceof Error ? error.message : "Unknown error"}`,
+            );
+          }
+
+          // A collection is a drive-level abstraction; its canonical drive id is
+          // carried by the collection id (never a slug).
+          const driveId = remote.collectionId.driveId as CanonicalDocumentId;
+          const isAdmin = this.authorizationService.isSupremeAdmin(
+            ctx.user?.address,
+          );
+
+          // Tier 1: reading any operation in a collection requires read access to
+          // the drive it belongs to. No drive read, no document read.
+          if (!isAdmin) {
+            await this.assertCanReadCanonical(driveId, ctx);
+          }
+
+          // Tier 2/3: drop operations and dead letters for documents the caller
+          // cannot read individually.
+          const forbiddenIds = new Set<string>();
+          if (!isAdmin) {
+            // A caller who can read a *protected* drive holds a grant that
+            // inherits to every in-collection member, so the outbox needs no
+            // per-document check. Only a world-readable drive can contain an
+            // individually-protected member this caller cannot read.
+            const driveWorldReadable = await this.authorizationService.canRead(
+              driveId,
+              undefined,
+            );
+            if (driveWorldReadable) {
+              await this.#collectForbiddenDocuments(
+                remote.channel.outbox.items,
+                forbiddenIds,
+                ctx,
+              );
+            }
+            // Dead letters can carry documents outside this collection (failed
+            // inbox jobs) that the drive gate does not cover, so always filter.
+            await this.#collectForbiddenDocuments(
+              remote.channel.deadLetter.items,
+              forbiddenIds,
+              ctx,
+            );
+          }
+
           const { envelopes, ackOrdinal, deadLetters, hasMore } =
-            resolvers.pollSyncEnvelopes(this.syncManager, args);
+            resolvers.pollSyncEnvelopes(this.syncManager, args, forbiddenIds);
           return {
             envelopes,
             ackOrdinal,
@@ -606,23 +684,14 @@ export class ReactorSubgraph extends BaseSubgraph {
         this.logger.debug("touchChannel(@args)", args);
 
         try {
-          // Empty documentId is a match-all wildcard; reserve it for admins.
-          const documentIds = args.input.filter.documentId;
+          // A channel synchronizes a collection, i.e. a drive. Registering one
+          // requires read access to that drive; pushed operations are still
+          // authorized per-operation in pushSyncEnvelopes. The collection id
+          // carries the canonical drive id (never a slug).
           if (!this.authorizationService.isSupremeAdmin(ctx.user?.address)) {
-            if (documentIds.length === 0) {
-              throw new GraphQLError(
-                "Forbidden: a sync channel without a document filter requires admin access",
-              );
-            }
-            for (const documentId of documentIds) {
-              // Channel filter ids are matched verbatim against canonical
-              // operation document ids; a slug never matches, so check (and
-              // store) them as-is rather than resolving.
-              await this.assertCanWriteCanonical(
-                documentId as CanonicalDocumentId,
-                ctx,
-              );
-            }
+            const driveId = DriveCollectionId.fromKey(args.input.collectionId)
+              .driveId as CanonicalDocumentId;
+            await this.assertCanReadCanonical(driveId, ctx);
           }
 
           return await resolvers.touchChannel(this.syncManager, args);

@@ -158,7 +158,8 @@ export class BaseSubgraph implements ISubgraph {
     ctx: Context,
   ): Promise<AuthorizedDocumentHandle> {
     const documentId = await this.#resolveForCheck(identifier, ctx);
-    if (documentId === null) return AuthorizedDocumentHandle.skipped(identifier);
+    if (documentId === null)
+      return AuthorizedDocumentHandle.skipped(identifier);
     await this.assertCanReadCanonical(documentId, ctx);
     return AuthorizedDocumentHandle.resolved(documentId);
   }
@@ -168,7 +169,8 @@ export class BaseSubgraph implements ISubgraph {
     ctx: Context,
   ): Promise<AuthorizedDocumentHandle> {
     const documentId = await this.#resolveForCheck(identifier, ctx);
-    if (documentId === null) return AuthorizedDocumentHandle.skipped(identifier);
+    if (documentId === null)
+      return AuthorizedDocumentHandle.skipped(identifier);
     await this.assertCanWriteCanonical(documentId, ctx);
     return AuthorizedDocumentHandle.resolved(documentId);
   }
@@ -179,7 +181,8 @@ export class BaseSubgraph implements ISubgraph {
     ctx: Context,
   ): Promise<AuthorizedDocumentHandle> {
     const documentId = await this.#resolveForCheck(identifier, ctx);
-    if (documentId === null) return AuthorizedDocumentHandle.skipped(identifier);
+    if (documentId === null)
+      return AuthorizedDocumentHandle.skipped(identifier);
     await this.assertCanExecuteOperationCanonical(
       documentId,
       operationType,
