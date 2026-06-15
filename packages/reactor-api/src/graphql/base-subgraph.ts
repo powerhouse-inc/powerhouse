@@ -11,9 +11,10 @@ import type {
 import type { DocumentNode } from "graphql";
 import { GraphQLError } from "graphql";
 import { gql } from "graphql-tag";
-import type {
-  CanonicalDocumentId,
-  IAuthorizationService,
+import {
+  AuthorizationPolicy,
+  type CanonicalDocumentId,
+  type IAuthorizationService,
 } from "../services/authorization.service.js";
 import type { DocumentPermissionService } from "../services/document-permission.service.js";
 import type { Context } from "./types.js";
@@ -100,9 +101,31 @@ export class BaseSubgraph implements ISubgraph {
   }
 
   /**
+   * Returns the args object with its `documentId` field resolved to the
+   * canonical id. ACL rows are keyed on the canonical id, so unlike the
+   * assertCan* helpers this resolution is unconditional: it does not skip for
+   * supreme admins, whose grant/revoke must still target the canonical row.
+   */
+  protected async withCanonicalDocumentId<T extends { documentId: string }>(
+    args: T,
+    requestKey: object,
+  ): Promise<T & { documentId: CanonicalDocumentId }> {
+    const documentId = await this.resolveCanonicalDocumentId(
+      args.documentId,
+      requestKey,
+    );
+    return { ...args, documentId };
+  }
+
+  /**
    * Resolves an identifier for a per-document authorization check, or returns
    * null when the caller has policy-wide access (OPEN policy or a supreme
    * admin) so the check and its slug resolution can be skipped.
+   *
+   * Only the DOCUMENT_PERMISSIONS policy keys the decision on the document id.
+   * Under ADMIN_ONLY a non-admin is denied regardless of the document, so
+   * resolving the identifier here would be a wasted round-trip on a guaranteed
+   * deny; fail closed without resolving instead.
    */
   async #resolveForCheck(
     identifier: string,
@@ -110,6 +133,12 @@ export class BaseSubgraph implements ISubgraph {
   ): Promise<CanonicalDocumentId | null> {
     if (this.authorizationService.isSupremeAdmin(ctx.user?.address)) {
       return null;
+    }
+    if (
+      this.authorizationService.config.policy !==
+      AuthorizationPolicy.DOCUMENT_PERMISSIONS
+    ) {
+      throw new GraphQLError("Forbidden: insufficient permissions");
     }
     return this.resolveCanonicalDocumentId(identifier, ctx);
   }

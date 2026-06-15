@@ -36,17 +36,17 @@ export interface SetupMcpServerOptions {
   authorizeRequest: McpRequestAuthorizer;
 }
 
-const METHOD_NOT_ALLOWED = JSON.stringify({
-  jsonrpc: "2.0",
-  error: { code: -32000, message: "Method not allowed." },
-  id: null,
-});
+function jsonRpcError(message: string, code = -32000): string {
+  return JSON.stringify({
+    jsonrpc: "2.0",
+    error: { code, message },
+    id: null,
+  });
+}
 
-const INTERNAL_SERVER_ERROR = JSON.stringify({
-  jsonrpc: "2.0",
-  error: { code: -32603, message: "Internal server error" },
-  id: null,
-});
+const METHOD_NOT_ALLOWED = jsonRpcError("Method not allowed.");
+
+const INTERNAL_SERVER_ERROR = jsonRpcError("Internal server error", -32603);
 
 /** @internal Injected in tests to avoid relying on constructor mock semantics. */
 type TransportFactory = (opts: {
@@ -58,14 +58,6 @@ type NodeRouteHandler = (
   res: ServerResponse,
   body?: unknown,
 ) => void | Promise<void>;
-
-function jsonRpcError(message: string): string {
-  return JSON.stringify({
-    jsonrpc: "2.0",
-    error: { code: -32000, message },
-    id: null,
-  });
-}
 
 /**
  * Authorizes the request before running the handler. Failures respond with
