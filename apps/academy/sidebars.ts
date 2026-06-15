@@ -40,6 +40,7 @@ const sidebars = {
           },
           items: [
             "academy/MasteryTrack/BuilderEnvironment/Prerequisites",
+            "academy/MasteryTrack/BuilderEnvironment/VetraStudioAgent",
             "academy/MasteryTrack/BuilderEnvironment/VetraStudio",
             "academy/MasteryTrack/BuilderEnvironment/CreateAPackageWithVetra",
             "academy/MasteryTrack/BuilderEnvironment/VetraCloud",
