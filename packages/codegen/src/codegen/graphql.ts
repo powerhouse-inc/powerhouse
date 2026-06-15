@@ -11,9 +11,49 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import type { DocumentModelFileMakerArgs } from "file-builders";
 import type { ValidationSchemaPluginConfig } from "graphql-codegen-typescript-validation-schema";
+import { realpathSync } from "node:fs";
 import fs from "node:fs/promises";
+import { createRequire } from "node:module";
 import path from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { format } from "prettier";
+
+/* Resolve graphql-codegen plugins from this package's own install rather than
+ * graphql-codegen's default loader. The default resolves relative to graphql-
+ * codegen's location and is sensitive to the install layout (which cli copy,
+ * cwd), so it can report "Unable to find template plugin matching '<name>'"
+ * even when the plugins are installed. This package depends on its plugins
+ * directly, so resolving from here is deterministic. (selfReal covers
+ * --preserve-symlinks, where import.meta.url is the symlink path.) graphql-
+ * codegen probes candidate names; unresolved ones throw MODULE_NOT_FOUND so it
+ * falls through to the next candidate. */
+type PluginLoader = NonNullable<CodegenConfig["pluginLoader"]>;
+type CodegenPlugin = Awaited<ReturnType<PluginLoader>>;
+function makePluginLoader(): PluginLoader {
+  const selfPath = fileURLToPath(import.meta.url);
+  let selfReal = selfPath;
+  try {
+    selfReal = realpathSync(selfPath);
+  } catch {
+    // keep selfPath
+  }
+  const requirers = [createRequire(selfPath), createRequire(selfReal)];
+  return async (name: string) => {
+    let lastErr: unknown;
+    for (const requireFrom of requirers) {
+      try {
+        return (await import(
+          pathToFileURL(requireFrom.resolve(name)).href
+        )) as CodegenPlugin;
+      } catch (err) {
+        lastErr = err;
+      }
+    }
+    throw lastErr;
+  };
+}
+
+const pluginLoader = makePluginLoader();
 
 export const scalars = {
   Unknown: "unknown",
@@ -111,6 +151,7 @@ export async function generateTypesAndZodSchemasFromGraphql(
   const config: CodegenConfig = {
     overwrite: true,
     watch: false,
+    pluginLoader,
     hooks: {
       beforeOneFileWrite: formatContentWithPrettier,
     },
