@@ -20,6 +20,16 @@ describe("migrate", () => {
     await updatePackage(legacyDocumentModelsDir, {
       exports: null,
     });
+    // Remove the locally-installed document-model and @powerhousedao/shared so
+    // tsc resolves them from the monorepo workspace node_modules instead. The
+    // registry version lags behind the workspace — the generated code uses
+    // baseLoadFromInputVersioned which is present in the workspace build.
+    await rmForce(
+      join(legacyDocumentModelsDir, "node_modules", "document-model"),
+    );
+    await rmForce(
+      join(legacyDocumentModelsDir, "node_modules", "@powerhousedao", "shared"),
+    );
     await runTsc(legacyDocumentModelsDir);
   });
 });

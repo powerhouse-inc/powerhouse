@@ -12,15 +12,28 @@ let syncOpCounter = 0;
 
 /**
  * Serializes an action for GraphQL transport, converting signature tuples to strings.
+ *
+ * Only the fields declared by the GraphQL `ActionInput` type are forwarded. This
+ * guards against stale runtime-only fields (e.g. a legacy `attachments` array on
+ * operations persisted before the attachment-system removal) leaking into the
+ * mutation variables, where the tightened schema would reject them.
  */
 export function serializeAction(action: Action): unknown {
+  const base = {
+    id: action.id,
+    type: action.type,
+    timestampUtcMs: action.timestampUtcMs,
+    input: action.input,
+    scope: action.scope,
+  };
+
   const signer = action.context?.signer;
   if (!signer?.signatures) {
-    return action;
+    return action.context ? { ...base, context: action.context } : base;
   }
 
   return {
-    ...action,
+    ...base,
     context: {
       ...action.context,
       signer: {

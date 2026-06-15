@@ -1,0 +1,36 @@
+{
+  "name": "auth-context-consumers",
+  "description": "Detects published packages that consume the reactor-api authorization surface proposed for removal in feat/auth-refactor cleanup: the Context.isAdmin function, the Context.authorizationService / Context.documentPermissionService fields, and IAuthorizationService.canExecuteOperation. Scans published build output (.d.ts/.js/.mjs). Note: findings inside @powerhousedao/reactor-api itself are the source of these symbols, not consumers.",
+  "rules": [
+    {
+      "id": "ctx-isAdmin-member",
+      "description": "Member access on a Context-shaped value named isAdmin: ctx.isAdmin(...), context.isAdmin?.(...), e.isAdmin (minified). Strong signal a subgraph resolver consumes Context.isAdmin.",
+      "severity": "high",
+      "pattern": "\\.isAdmin\\b"
+    },
+    {
+      "id": "isAdmin-any-token",
+      "description": "Any bare isAdmin token (wide net; also catches minified receivers and unrelated domain fields named isAdmin). For manual triage.",
+      "severity": "low",
+      "pattern": "\\bisAdmin\\b"
+    },
+    {
+      "id": "ctx-authorizationService",
+      "description": "Reference to authorizationService (reactor-api Context field / injected service name).",
+      "severity": "high",
+      "pattern": "\\bauthorizationService\\b"
+    },
+    {
+      "id": "ctx-documentPermissionService",
+      "description": "Reference to documentPermissionService (reactor-api Context field / injected service name).",
+      "severity": "high",
+      "pattern": "\\bdocumentPermissionService\\b"
+    },
+    {
+      "id": "authorizationService-canExecuteOperation",
+      "description": "Call to .canExecuteOperation — the IAuthorizationService method proposed for removal (note: DocumentPermissionService also defines this name).",
+      "severity": "medium",
+      "pattern": "\\.canExecuteOperation\\b"
+    }
+  ]
+}

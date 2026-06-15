@@ -32,7 +32,11 @@ http {
             return 200 'OK';
         }
 
-        location ${PH_CONNECT_BASE_PREFIX}/assets/ {
+        # `^~` stops the regex location below from being checked for these
+        # prefixes: nginx gives regex locations precedence over plain prefix
+        # matches, so without it the root-files regex would capture
+        # /assets/<file>.js and alias it to the project root -> 404.
+        location ^~ ${PH_CONNECT_BASE_PREFIX}/assets/ {
             alias /var/www/html/project/assets/;
             access_log off;
             log_not_found off;
@@ -41,7 +45,7 @@ http {
             add_header Cache-Control "public, max-age=31536000, immutable";
         }
 
-        location ${PH_CONNECT_BASE_PREFIX}/fonts/ {
+        location ^~ ${PH_CONNECT_BASE_PREFIX}/fonts/ {
             alias /var/www/html/project/fonts/;
             access_log off;
             log_not_found off;
@@ -71,7 +75,12 @@ http {
             add_header Cache-Control "no-cache" always;
         }
 
-        location ~ ${PH_CONNECT_BASE_PREFIX}/(?!index\.html$)([^/]+\.[a-z0-9]+)$ {
+        # Root-level static files (icon.ico, manifest, ...). Must be anchored
+        # with `^`: at the default `/` base path PH_CONNECT_BASE_PREFIX is
+        # empty, and an unanchored `/<file>.<ext>$` matches the tail of ANY
+        # file URI (e.g. /assets/index-*.js), hijacking it from the prefix
+        # locations above and 404ing on the wrong alias path.
+        location ~ ^${PH_CONNECT_BASE_PREFIX}/(?!index\.html$)([^/]+\.[a-z0-9]+)$ {
             alias /var/www/html/project/$1;
             access_log off;
             log_not_found off;

@@ -211,12 +211,6 @@ services:
 PH_SWITCHBOARD_DATABASE_URL="postgresql://user:pass@db:5432/switchboard"
 PH_SWITCHBOARD_REDIS_URL="redis://redis:6379"
 
-# Authentication
-PH_SWITCHBOARD_AUTH_ENABLED=true
-PH_SWITCHBOARD_ADMINS_LIST="0x123,0x456"
-PH_SWITCHBOARD_USERS_LIST="0x789,0xabc"
-PH_SWITCHBOARD_GUESTS_LIST="0xdef,0xghi"
-
 # Packages
 PH_PACKAGES="package1,package2,package3"
 ```

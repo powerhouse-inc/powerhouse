@@ -2,7 +2,7 @@ import type { Draft } from "mutative";
 import type { ProcessorFactoryBuilder } from "processors";
 import type { FC, ReactNode } from "react";
 import type { z } from "zod";
-import type { Action, Attachment, AttachmentRef } from "./actions.js";
+import type { Action } from "./actions.js";
 import type { PHDocument } from "./documents.js";
 import type { Operation } from "./operations.js";
 import type {
@@ -1031,7 +1031,10 @@ export type Scalars = {
     input: `${string}:0x${string}`;
     output: `${string}:0x${string}`;
   };
-  Attachment: { input: string; output: string };
+  AttachmentRef: {
+    input: `attachment://v${number}:${string}`;
+    output: `attachment://v${number}:${string}`;
+  };
   DateTime: { input: string; output: string };
   Unknown: { input: unknown; output: unknown };
 };
@@ -1043,14 +1046,6 @@ export type OperationsByScope = Partial<Record<string, Operation[]>>;
 export type SkipHeaderOperationIndex = Partial<Pick<OperationIndex, "index">> &
   Pick<OperationIndex, "skip">;
 export type UndoRedoAction = SchemaRedoAction | SchemaUndoAction;
-
-export type DocumentFile = {
-  __typename?: "DocumentFile";
-  data: Scalars["String"]["output"];
-  extension: Maybe<Scalars["String"]["output"]>;
-  fileName: Maybe<Scalars["String"]["output"]>;
-  mimeType: Scalars["String"]["output"];
-};
 
 export type IAction = {
   type: Scalars["String"]["output"];
@@ -1259,6 +1254,12 @@ export type UpgradeDocumentActionInput = {
   toVersion: number; // current model version
   documentId: string;
   initialState?: object; // optional; defaults to model.defaultState()
+  /**
+   * Per-scope next-operation-index snapshot at the moment the upgrade executes.
+   * Absent on legacy operations; loaders fall back to timestamp ordering when missing.
+   * Stamped CLIENT-SIDE at action creation (before signing), NEVER at execution.
+   */
+  revision?: Record<string, number>;
 };
 
 export type DeleteDocumentActionInput = {
@@ -1461,16 +1462,6 @@ export type StateReducer<TState extends PHBaseState = PHBaseState> = (
   action: Action,
   dispatch?: SignalDispatch,
 ) => TState | undefined;
-
-/**
- * Object that indexes attachments of a Document.
- *
- * @remarks
- * This is used to reduce memory usage to avoid
- * multiple instances of the binary data of the attachments.
- *
- */
-export type FileRegistry = Record<AttachmentRef, Attachment>;
 
 export type MappedOperation = {
   ignore: boolean;

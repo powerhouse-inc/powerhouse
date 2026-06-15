@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/builder-tools",
-  "version": "6.2.0-dev.3",
+  "version": "6.2.0-dev.15",
   "type": "module",
   "license": "AGPL-3.0-only",
   "publishConfig": {
@@ -33,6 +33,7 @@
     "@tailwindcss/vite": "catalog:",
     "@vitejs/plugin-react": "catalog:",
     "document-model": "workspace:*",
+    "magic-string": "^0.30.21",
     "vite": "catalog:",
     "vite-plugin-html": "catalog:"
   },

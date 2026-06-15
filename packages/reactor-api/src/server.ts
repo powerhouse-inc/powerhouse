@@ -50,7 +50,11 @@ import { runMigrations } from "./migrations/index.js";
 import { ImportPackageLoader } from "./packages/import-loader.js";
 import { PackageManager } from "./packages/package-manager.js";
 import { AuthService } from "./services/auth.service.js";
-import { AuthorizationService } from "./services/authorization.service.js";
+import type { IAuthorizationService } from "./services/authorization.service.js";
+import {
+  AuthorizationPolicy,
+  createAuthorizationService,
+} from "./services/authorization.service.js";
 import { DocumentPermissionService } from "./services/document-permission.service.js";
 import type {
   API,
@@ -59,6 +63,7 @@ import type {
   Processor,
   ProcessorDriveFactory,
   ProcessorFactoryBuilder,
+  ReadinessGate,
 } from "./types.js";
 import {
   getDbClient,
@@ -118,6 +123,35 @@ type Options = {
 type ProcessorInitializer = ProcessorFactoryBuilder;
 
 const DEFAULT_PORT = 4000;
+
+/**
+ * Doc-perms require auth: with auth off no `user` is ever resolved, so every
+ * authorization check fails closed. Refuse to boot rather than run broken.
+ */
+export function assertAuthRequiredForDocumentPermissions(
+  authEnabled: boolean,
+  documentPermissionsRequested: boolean,
+): void {
+  if (!authEnabled && documentPermissionsRequested) {
+    throw new Error(
+      "Document permissions require authentication: AUTH_ENABLED is false but " +
+        "document permissions were requested (DOCUMENT_PERMISSIONS_ENABLED=true " +
+        "or a documentPermissionService was provided). Enable authentication " +
+        "(AUTH_ENABLED=true, or auth.enabled in the config file) or disable " +
+        "document permissions.",
+    );
+  }
+}
+
+function createReadinessGate(): ReadinessGate {
+  let ready = false;
+  return {
+    isReady: () => ready,
+    markReady: () => {
+      ready = true;
+    },
+  };
+}
 
 function resolveAttachmentStoragePath(options: Options): string {
   if (options.attachmentStoragePath) return options.attachmentStoragePath;
@@ -194,14 +228,11 @@ async function setupGraphQLManager(
     core: SubgraphClass[];
   },
   logger: ILogger,
-  auth?: {
-    enabled: boolean;
-    admins: string[];
-  },
+  authorizationService: IAuthorizationService,
+  authService?: AuthService,
   documentPermissionService?: DocumentPermissionService,
   enableDocumentModelSubgraphs?: boolean,
   port?: number,
-  authorizationService?: AuthorizationService,
   reactorDriveClient?: IDriveClient,
 ): Promise<GraphQLManager> {
   const graphqlManager = new GraphQLManager(
@@ -215,10 +246,7 @@ async function setupGraphQLManager(
     logger,
     httpAdapter,
     await createGatewayAdapter("apollo", logger),
-    {
-      enabled: auth?.enabled ?? false,
-      admins: auth?.admins ?? [],
-    },
+    authService,
     documentPermissionService,
     {
       enableDocumentModelSubgraphs,
@@ -372,20 +400,18 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   httpAdapter: IHttpAdapter;
   authFetchMiddleware: AuthFetchMiddleware | undefined;
   authService: AuthService | undefined;
-  auth: {
-    enabled: boolean;
-    admins: string[];
-  };
   relationalDb: IRelationalDb;
   analyticsStore: IAnalyticsStore;
   documentPermissionService: DocumentPermissionService | undefined;
-  authorizationService: AuthorizationService | undefined;
+  authorizationService: IAuthorizationService;
   attachments: AttachmentBuildResult;
   packages: PackageManager;
   dbClosers: Array<() => Promise<void>>;
+  readiness: ReadinessGate;
 }> {
   const port = options.port ?? DEFAULT_PORT;
   const { adapter: httpAdapter } = await createHttpAdapter("express");
+  const logger = options.logger ?? defaultLogger;
 
   // Setup auth configuration
   let admins: string[] = [];
@@ -404,6 +430,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     DEFAULT_PROTECTION,
     DOCUMENT_PERMISSIONS_ENABLED,
     SKIP_CREDENTIAL_VERIFICATION,
+    CREDENTIAL_VERIFICATION_CACHE_TTL_MS,
   } = process.env;
   if (AUTH_ENABLED !== undefined) {
     authEnabled = AUTH_ENABLED === "true";
@@ -417,26 +444,44 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     defaultProtection = DEFAULT_PROTECTION.toLowerCase() === "true";
   }
 
-  // Warn about deprecated env vars
-  const { USERS, GUESTS, FREE_ENTRY } = process.env;
-  if (USERS || GUESTS || FREE_ENTRY) {
-    console.warn(
-      "[DEPRECATION WARNING] The USERS, GUESTS, and FREE_ENTRY environment variables are no longer supported. " +
-        "Access control is now managed per-document via the DocumentProtection system. " +
-        "Use DEFAULT_PROTECTION=true for strict mode, or manage protection per document via the GraphQL API. " +
-        "See the auth documentation for migration guidance.",
-    );
-  }
-
   let skipCredentialVerification = false;
   if (SKIP_CREDENTIAL_VERIFICATION !== undefined) {
     skipCredentialVerification = SKIP_CREDENTIAL_VERIFICATION === "true";
   }
 
-  const logger = options.logger ?? defaultLogger;
+  let credentialVerificationCacheTtlMs: number | undefined;
+  if (CREDENTIAL_VERIFICATION_CACHE_TTL_MS !== undefined) {
+    const parsed = Number(CREDENTIAL_VERIFICATION_CACHE_TTL_MS);
+    if (
+      CREDENTIAL_VERIFICATION_CACHE_TTL_MS.trim() !== "" &&
+      Number.isFinite(parsed) &&
+      parsed >= 0
+    ) {
+      credentialVerificationCacheTtlMs = parsed;
+    } else {
+      logger.warn(
+        `Ignoring invalid CREDENTIAL_VERIFICATION_CACHE_TTL_MS="${CREDENTIAL_VERIFICATION_CACHE_TTL_MS}" (expected a non-negative number of milliseconds; 0 disables caching) — using the default TTL`,
+      );
+    }
+  }
+
+  const documentPermissionsRequested =
+    options.documentPermissionService !== undefined ||
+    DOCUMENT_PERMISSIONS_ENABLED === "true";
+  assertAuthRequiredForDocumentPermissions(
+    authEnabled,
+    documentPermissionsRequested,
+  );
 
   // Health check endpoint (registered directly on adapter, before auth)
   httpAdapter.getRoute("/health", () => new Response("OK", { status: 200 }));
+
+  const readiness = createReadinessGate();
+  httpAdapter.getRoute("/ready", () =>
+    readiness.isReady()
+      ? new Response("OK", { status: 200 })
+      : new Response("starting", { status: 503 }),
+  );
 
   // Explorer route
   const explorerPrefix = `${config.basePath}/explorer`;
@@ -460,6 +505,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
       enabled: authEnabled,
       admins,
       skipCredentialVerification,
+      credentialVerificationCacheTtlMs,
     });
     authFetchMiddleware = createAuthFetchMiddleware(authService);
   }
@@ -495,15 +541,19 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     logger.info("Document permission service initialized");
   }
 
-  // Create AuthorizationService when document permission service is available
-  let authorizationService: AuthorizationService | undefined;
-  if (documentPermissionService) {
-    authorizationService = new AuthorizationService(documentPermissionService, {
-      admins,
-      defaultProtection,
-    });
-    logger.info("Authorization service initialized");
-  }
+  // Authorization service is always present; the policy collapses the prior
+  // dual enforcement paths into one. Document permissions imply authentication
+  // (guaranteed by the boot gate above).
+  const policy = documentPermissionService
+    ? AuthorizationPolicy.DOCUMENT_PERMISSIONS
+    : authEnabled
+      ? AuthorizationPolicy.ADMIN_ONLY
+      : AuthorizationPolicy.OPEN;
+  const authorizationService = createAuthorizationService(
+    { admins, defaultProtection, policy },
+    documentPermissionService,
+  );
+  logger.info(`Authorization service initialized (policy: ${policy})`);
 
   // Initialize attachment service
   const attachmentStoragePath = resolveAttachmentStoragePath(options);
@@ -542,10 +592,6 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     httpAdapter,
     authFetchMiddleware,
     authService,
-    auth: {
-      enabled: authEnabled,
-      admins,
-    },
     relationalDb,
     analyticsStore,
     documentPermissionService,
@@ -553,6 +599,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     attachments,
     packages,
     dbClosers,
+    readiness,
   };
 }
 
@@ -574,14 +621,10 @@ async function _setupAPI(
   processors: Map<string, Processor>,
   subgraphs: Map<string, SubgraphClass[]>,
   options: Options,
-  auth: {
-    enabled: boolean;
-    admins: string[];
-  },
   processorApp: ProcessorApp,
   readModels: IReadModel[],
   attachments: AttachmentBuildResult,
-  authorizationService?: AuthorizationService,
+  authorizationService: IAuthorizationService,
   documentModelRegistry?: IDocumentModelRegistry,
   dbClosers: Array<() => Promise<void>> = [],
   reactorDriveClient?: IDriveClient,
@@ -711,11 +754,11 @@ async function _setupAPI(
       core: coreSubgraphs,
     },
     logger.child(["graphql-manager"]),
-    auth,
+    authorizationService,
+    authService,
     documentPermissionService,
     options.enableDocumentModelSubgraphs,
     port,
-    authorizationService,
     reactorDriveClient,
   );
 
@@ -841,6 +884,7 @@ export async function initializeAndStartAPI(
     client: IReactorClient;
     syncManager: ISyncManager;
     documentModelRegistry: IDocumentModelRegistry;
+    readiness: ReadinessGate;
   }
 > {
   const {
@@ -848,7 +892,6 @@ export async function initializeAndStartAPI(
     httpAdapter,
     authFetchMiddleware,
     authService,
-    auth,
     relationalDb,
     analyticsStore,
     documentPermissionService,
@@ -856,6 +899,7 @@ export async function initializeAndStartAPI(
     attachments,
     packages,
     dbClosers,
+    readiness,
   } = await _setupCommonInfrastructure(options);
 
   const { documentModels, processors, subgraphs } = await packages.init();
@@ -905,7 +949,6 @@ export async function initializeAndStartAPI(
     processors,
     subgraphs,
     options,
-    auth,
     processorApp,
     readModels,
     attachments,
@@ -920,5 +963,6 @@ export async function initializeAndStartAPI(
     client: reactorClient,
     syncManager,
     documentModelRegistry,
+    readiness,
   };
 }

@@ -30,6 +30,7 @@ export default defineConfig({
       "connect/env-config.test.ts",
       "connect/entrypoint-seed.test.ts",
       "document-drive/**/*.test.ts",
+      "registry/manifest-slim.test.ts",
     ],
     exclude: ["**/node_modules/**", "**/dist/**"],
   },

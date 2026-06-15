@@ -33,6 +33,22 @@ function getRouterBasenameFromBasePath(basePath: string) {
   return basePath.endsWith("/") ? basePath : basePath + "/";
 }
 
+// Runtime deploy base. In dynamic-base builds the plugin rewrites
+// import.meta.env.BASE_URL to (globalThis.__PH_DYNAMIC_BASE__||"/"), the same
+// base assets resolve against; it takes precedence so router basename and
+// path stripping match the served subpath. A baked runtime base path
+// (runtime.app.basePath) only applies to concrete-base builds, where the
+// dynamic global is unset.
+function getDeployBasePath() {
+  if (
+    typeof globalThis !== "undefined" &&
+    (globalThis as { __PH_DYNAMIC_BASE__?: string }).__PH_DYNAMIC_BASE__
+  ) {
+    return import.meta.env.BASE_URL;
+  }
+  return runtime.app?.basePath || import.meta.env.BASE_URL;
+}
+
 // Hardcoded literal defaults for `PHGlobalConfig` fields whose env-var
 // source was removed. The fields stay on the type so wired-but-dead SW /
 // hook consumers keep typechecking; values mirror the previous Zod
@@ -120,9 +136,10 @@ export function buildPHGlobalConfig(
 }
 
 function getPHGlobalConfigFromRuntime(): PHGlobalConfig {
-  // ConfigLoader merges DEFAULT_CONNECT_CONFIG at boot, so basePath is
-  // always defined; the `?? "/"` is a defensive guard for typecheck.
-  const basePath = runtime.app?.basePath ?? "/";
+  // Deploy base wins via getDeployBasePath: the dynamic-base global when set,
+  // else runtime.app.basePath (DEFAULT_CONNECT_CONFIG guarantees it defined),
+  // with a "/" fallback as a defensive guard for typecheck.
+  const basePath = getDeployBasePath() ?? "/";
   const routerBasename = getRouterBasenameFromBasePath(basePath);
   return buildPHGlobalConfig(basePath, routerBasename, runtime);
 }
@@ -148,7 +165,7 @@ logger.debug("Setting log level to @level.", RESOLVED_LOG_LEVEL);
 
 // Normalize the base path to ensure it starts and ends with a forward slash.
 export const PH_CONNECT_BASE_PATH = normalizeBasePath(
-  runtime.app?.basePath ?? "/",
+  getDeployBasePath() ?? "/",
 );
 
 // Analytics database name — derived deterministically from the base path so

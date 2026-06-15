@@ -1,8 +1,10 @@
-import { DEFAULT_RENOWN_URL } from "./constants.js";
+import { CREDENTIAL_TYPES, DEFAULT_RENOWN_URL } from "./constants.js";
+import { verifyCredentialSignature } from "./credential.js";
 import { RenownCryptoSigner, type IRenownCrypto } from "./crypto/index.js";
 import { MemoryStorage } from "./storage/common.js";
 import type {
   CreateBearerTokenOptions,
+  IProof,
   IRenown,
   ISigner,
   LoginStatus,
@@ -14,7 +16,6 @@ import type {
   RenownStorageMap,
   User,
 } from "./types.js";
-import { verifyCredentialSignature } from "./credential.js";
 import { parsePkhDid, verifyAuthBearerToken } from "./utils.js";
 export * from "./constants.js";
 
@@ -117,12 +118,35 @@ export class Renown implements IRenown {
         throw new Error("Invalid credential");
       }
 
+      // The deployed Renown credential API may return proof.eip712 without
+      // domain/types, despite the declared type. The domain is canonical
+      // (version "1", the DID's chainId), so reconstruct it — the signature
+      // verification below still fails if the credential wasn't signed for
+      // that domain.
+      const eip712 = credential.proof.eip712 as
+        | Partial<IProof["eip712"]>
+        | undefined;
+      const verifiableCredential: PowerhouseVerifiableCredential =
+        eip712?.domain
+          ? credential
+          : {
+              ...credential,
+              proof: {
+                ...credential.proof,
+                eip712: {
+                  domain: { version: "1", chainId: result.chainId },
+                  types: CREDENTIAL_TYPES,
+                  primaryType: "VerifiableCredential",
+                },
+              },
+            };
+
       // Verify the EIP-712 proof was signed by the DID's address on its chain.
       if (
         credential.issuer.ethereumAddress.toLowerCase() !==
           result.address.toLowerCase() ||
-        credential.proof.eip712.domain.chainId !== result.chainId ||
-        !(await verifyCredentialSignature(credential))
+        verifiableCredential.proof.eip712.domain.chainId !== result.chainId ||
+        !(await verifyCredentialSignature(verifiableCredential))
       ) {
         throw new Error("Invalid credential signature");
       }
@@ -131,7 +155,7 @@ export class Renown implements IRenown {
         ...result,
         address: credential.issuer.ethereumAddress,
         did: userDid,
-        credential,
+        credential: verifiableCredential,
       };
 
       this.#updateUser(user);

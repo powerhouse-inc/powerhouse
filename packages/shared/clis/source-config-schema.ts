@@ -141,11 +141,6 @@ export const sourceConfigSchema = {
           items: { type: "string" },
           description: "DIDs granted admin role.",
         },
-        defaultProtection: {
-          type: "boolean",
-          description:
-            "When true, newly-created drives default to authenticated-only access.",
-        },
       },
     },
     switchboard: {

@@ -11,9 +11,9 @@ import type {
   RegistryPackageSource,
   RegistryPackageStatus,
 } from "@powerhousedao/shared/registry";
+import { slimManifest } from "@powerhousedao/shared/registry/manifest-slim";
 import type { DocumentModelLib } from "document-model";
-import { useEffect, useMemo } from "react";
-import { useLocalStorage } from "usehooks-ts";
+import { useEffect, useMemo, useState } from "react";
 import { getRuntimeConfig } from "../runtime-config.js";
 
 export function useRegistryPackages() {
@@ -25,7 +25,7 @@ export function useRegistryPackages() {
   // registry fetch writes to the other.
   const registryPackagesKey = `REGISTRY_PACKAGES:${registryUrl === null ? null : trimTrailingSlash(registryUrl)}`;
   const [registryPackagesMap, setRegistryPackagesMap] =
-    useLocalStorage<RegistryPackageMap>(registryPackagesKey, {});
+    useBestEffortLocalStorage<RegistryPackageMap>(registryPackagesKey, {});
   const registryPackageList: RegistryPackageList = useMemo(() => {
     return Array.from(Object.values(registryPackagesMap)).filter(
       (p) => p !== undefined,
@@ -68,7 +68,8 @@ export function useRegistryPackages() {
             );
             newRegistryPackages[packageInfo.name] = {
               ...existingPackage,
-              manifest: packageInfo.manifest ?? existingPackage.manifest,
+              manifest:
+                slimManifest(packageInfo.manifest) ?? existingPackage.manifest,
               version:
                 installedVersion ??
                 packageInfo.version ??
@@ -201,7 +202,7 @@ function makeRegistryPackageFromDocumentModelLib(
       (d) => d.documentModel.global.id,
     ),
     status,
-    manifest: documentModelLib.manifest,
+    manifest: slimManifest(documentModelLib.manifest),
     version,
   };
 }
@@ -212,9 +213,59 @@ function makeRegistryPackageFromPackageInfo(
 ): RegistryPackage {
   return {
     ...packageInfo,
+    // Slim before caching: registry manifests are unvalidated JSON and have
+    // carried multi-megabyte junk fields that blew the localStorage quota
+    // (and the UI only reads the summary fields anyway).
+    manifest: slimManifest(packageInfo.manifest),
     documentTypes: packageInfo.manifest?.documentModels?.map((d) => d.id) ?? [],
     status,
   };
+}
+
+/**
+ * Like usehooks-ts' useLocalStorage, but persistence is best-effort: a failed
+ * `setItem` (e.g. QuotaExceededError on an oversized payload) keeps the
+ * in-memory state so the package manager still works for the session.
+ * useLocalStorage couples the state update to the write — when the write
+ * threw, the freshly fetched package list was discarded and the registry UI
+ * rendered (and searched) an empty list.
+ *
+ * The key is derived from the boot-time runtime config and never changes
+ * within a session, so no key-change rehydration is needed.
+ */
+function useBestEffortLocalStorage<T>(key: string, initialValue: T) {
+  const [value, setValue] = useState<T>(
+    () => readJsonFromStorage<T>(key) ?? initialValue,
+  );
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(key, JSON.stringify(value));
+    } catch (error) {
+      // Free the key and retry once — a stale oversized entry from an older
+      // session may be occupying the quota this write needs.
+      try {
+        window.localStorage.removeItem(key);
+        window.localStorage.setItem(key, JSON.stringify(value));
+      } catch {
+        console.warn(
+          `Failed to persist "${key}" to localStorage; continuing with in-memory data.`,
+          error,
+        );
+      }
+    }
+  }, [key, value]);
+
+  return [value, setValue] as const;
+}
+
+function readJsonFromStorage<T>(key: string): T | null {
+  try {
+    const raw = window.localStorage.getItem(key);
+    return raw === null ? null : (JSON.parse(raw) as T);
+  } catch {
+    return null;
+  }
 }
 
 /**

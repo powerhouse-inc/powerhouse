@@ -313,10 +313,7 @@ export class DocumentModelSubgraph extends BaseSubgraph {
           });
 
           // Filter by permission if needed
-          if (
-            !this.hasGlobalAdminAccess(ctx) &&
-            this.documentPermissionService
-          ) {
+          if (!this.authorizationService.isSupremeAdmin(ctx.user?.address)) {
             const filteredItems = [];
             for (const item of result.items) {
               const canRead = await this.canReadDocument(item.id, ctx);
@@ -355,10 +352,7 @@ export class DocumentModelSubgraph extends BaseSubgraph {
             paging,
           });
 
-          if (
-            !this.hasGlobalAdminAccess(ctx) &&
-            this.documentPermissionService
-          ) {
+          if (!this.authorizationService.isSupremeAdmin(ctx.user?.address)) {
             const filteredItems = [];
             for (const item of result.items) {
               const canRead = await this.canReadDocument(item.id, ctx);
@@ -459,16 +453,8 @@ export class DocumentModelSubgraph extends BaseSubgraph {
 
           if (parentIdentifier) {
             await this.assertCanWrite(parentIdentifier, ctx);
-          } else if (this.authorizationService) {
-            if (!ctx.user?.address) {
-              throw new GraphQLError(
-                "Forbidden: authentication required to create documents",
-              );
-            }
-          } else if (!this.hasGlobalAdminAccess(ctx)) {
-            throw new GraphQLError(
-              "Forbidden: insufficient permissions to create documents",
-            );
+          } else {
+            this.assertCanCreate(ctx);
           }
 
           let createdDoc;
@@ -498,11 +484,7 @@ export class DocumentModelSubgraph extends BaseSubgraph {
           }
 
           // Auto-ownership: set creator as document owner
-          if (
-            this.authorizationService &&
-            ctx.user?.address &&
-            createdDoc?.id
-          ) {
+          if (ctx.user?.address && createdDoc?.id) {
             await this.documentPermissionService?.initializeDocumentProtection(
               createdDoc.id,
               ctx.user.address,
@@ -537,16 +519,8 @@ export class DocumentModelSubgraph extends BaseSubgraph {
 
           if (parentIdentifier) {
             await this.assertCanWrite(parentIdentifier, ctx);
-          } else if (this.authorizationService) {
-            if (!ctx.user?.address) {
-              throw new GraphQLError(
-                "Forbidden: authentication required to create documents",
-              );
-            }
-          } else if (!this.hasGlobalAdminAccess(ctx)) {
-            throw new GraphQLError(
-              "Forbidden: insufficient permissions to create documents",
-            );
+          } else {
+            this.assertCanCreate(ctx);
           }
 
           const result = await createEmptyDocumentResolver(
@@ -559,7 +533,7 @@ export class DocumentModelSubgraph extends BaseSubgraph {
           );
 
           // Auto-ownership: set creator as document owner
-          if (this.authorizationService && ctx.user?.address && result?.id) {
+          if (ctx.user?.address && result?.id) {
             await this.documentPermissionService?.initializeDocumentProtection(
               result.id,
               ctx.user.address,
@@ -579,9 +553,6 @@ export class DocumentModelSubgraph extends BaseSubgraph {
           ) => {
             const { docId, input } = args;
 
-            if (!this.authorizationService) {
-              await this.assertCanWrite(docId, ctx);
-            }
             await this.assertCanExecuteOperation(docId, op.name!, ctx);
 
             const doc = await this.reactorClient.get(docId);
@@ -618,9 +589,6 @@ export class DocumentModelSubgraph extends BaseSubgraph {
           ) => {
             const { docId, input } = args;
 
-            if (!this.authorizationService) {
-              await this.assertCanWrite(docId, ctx);
-            }
             await this.assertCanExecuteOperation(docId, op.name!, ctx);
 
             const doc = await this.reactorClient.get(docId);

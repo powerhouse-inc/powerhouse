@@ -2,13 +2,15 @@
  * WARNING: DO NOT EDIT
  * This file is auto-generated and updated by codegen
  */
-import type { DocumentModelUtils } from "document-model";
+import type { DocumentModelUtils, PHBaseState, Reducer } from "document-model";
 import {
   baseCreateDocument,
-  baseLoadFromInput,
+  baseLoadFromInputVersioned,
   baseSaveToFileHandle,
   defaultBaseState,
 } from "document-model";
+import { todoUpgradeManifest } from "../../upgrades/upgrade-manifest.js";
+import { reducer as reducerV1 } from "../../v1/gen/reducer.js";
 import {
   assertIsTodoDocument,
   assertIsTodoState,
@@ -38,7 +40,13 @@ export const utils: DocumentModelUtils<TodoPHState> = {
     return baseSaveToFileHandle(document, input);
   },
   loadFromInput(input) {
-    return baseLoadFromInput(input, reducer);
+    return baseLoadFromInputVersioned(input, {
+      reducers: {
+        1: reducerV1 as unknown as Reducer<PHBaseState>,
+        2: reducer as unknown as Reducer<PHBaseState>,
+      },
+      upgradeManifest: todoUpgradeManifest,
+    });
   },
   isStateOfType(state) {
     return isTodoState(state);

@@ -7,9 +7,8 @@ import {
   replayDocument,
   validateOperations,
 } from "@powerhousedao/shared/document-model";
-import fs from "fs";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { getLocalFile, hashNode } from "../../node.mjs";
+import { describe, expect, it } from "vitest";
+import { hashNode } from "../../node.mjs";
 import type { CountPHState } from "../helpers.js";
 import {
   countReducer,
@@ -22,36 +21,6 @@ import {
 } from "../helpers.js";
 
 describe("Base utils", () => {
-  const tempDir = "./test/document/temp/utils/";
-  const tempFile = `${tempDir}report.pdf`;
-
-  beforeAll(() => {
-    if (!fs.existsSync(tempDir))
-      fs.mkdirSync(tempDir, {
-        recursive: true,
-      });
-    fs.writeFileSync(tempFile, "TEST");
-  });
-
-  afterAll(() => {
-    fs.rmSync(tempDir, { recursive: true, force: true });
-  });
-
-  it("should parse file attributes", async () => {
-    const file = await getLocalFile(tempFile);
-    expect(file).toStrictEqual({
-      data: "VEVTVA==",
-      hash: "Q1pqSc2iiEdpNLjRefhjnQ3nNc8=",
-      mimeType: "application/pdf",
-      extension: "pdf",
-      fileName: "report.pdf",
-    });
-  });
-
-  it("should throw exception when file doesn't exists", async () => {
-    await expect(getLocalFile("as")).rejects.toBeDefined();
-  });
-
   it("should return uuidv4 on generateId", () => {
     expect(generateId()).toMatch(
       /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,

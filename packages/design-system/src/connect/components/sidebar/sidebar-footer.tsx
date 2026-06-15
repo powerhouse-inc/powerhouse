@@ -2,7 +2,6 @@ import { Icon, SidebarFooter } from "#design-system";
 import { Settings } from "lucide-react";
 import type { ComponentProps } from "react";
 import { twMerge } from "tailwind-merge";
-import { ThemeSwitch } from "../theme-switch.js";
 import { SidebarLogin } from "./sidebar-login.js";
 import { SidebarUser } from "./sidebar-user.js";
 export interface ConnectSidebarFooterProps extends ComponentProps<
@@ -91,7 +90,6 @@ export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
           Settings
         </span>
       </button>
-      <ThemeSwitch />
     </SidebarFooter>
   );
 };

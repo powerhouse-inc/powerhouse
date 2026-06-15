@@ -60,7 +60,6 @@ function makeRemoteOp(index: number, scope = "global") {
       timestampUtcMs: Date.now().toString(),
       input: { name: `name-${index}` },
       scope,
-      attachments: null,
       context: null,
     },
   };

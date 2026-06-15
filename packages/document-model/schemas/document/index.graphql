@@ -1,7 +1,7 @@
 scalar DateTime
 scalar Address
 scalar Unknown
-scalar Attachment
+scalar AttachmentRef
 
 directive @equals(
   value: String = ""
@@ -27,13 +27,6 @@ type Operation implements IOperation {
   index: Int!
   timestamp: DateTime!
   hash: String!
-}
-
-type DocumentFile {
-  data: String!
-  mimeType: String!
-  extension: String
-  fileName: String
 }
 
 interface IDocument {

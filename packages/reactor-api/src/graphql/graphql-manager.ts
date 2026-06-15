@@ -20,9 +20,8 @@ import path from "node:path";
 import { match } from "path-to-regexp";
 import type { WebSocketServer } from "ws";
 import { debounce } from "../packages/util.js";
-import type { AuthConfig } from "../services/auth.service.js";
-import { AuthService } from "../services/auth.service.js";
-import type { AuthorizationService } from "../services/authorization.service.js";
+import type { AuthService } from "../services/auth.service.js";
+import type { IAuthorizationService } from "../services/authorization.service.js";
 import type { DocumentPermissionService } from "../services/document-permission.service.js";
 import {
   buildSubgraphSchemaModule,
@@ -110,7 +109,6 @@ export class GraphQLManager {
   private coreSubgraphsMap = new Map<string, ISubgraph[]>();
   private contextFields: Record<string, any> = {};
   private readonly subgraphs = new Map<string, ISubgraph[]>();
-  private authService: AuthService | null = null;
 
   private readonly subgraphWsDisposers = new Map<string, WsDisposer>();
   #authMiddleware: AuthFetchMiddleware | undefined;
@@ -128,6 +126,7 @@ export class GraphQLManager {
    * it for reactor-drive parents.
    */
   readonly reactorDriveClient?: IDriveClient;
+  private readonly authorizationService: IAuthorizationService;
 
   constructor(
     private readonly path: string,
@@ -140,17 +139,18 @@ export class GraphQLManager {
     private readonly logger: ILogger,
     private readonly httpAdapter: IHttpAdapter,
     private readonly gatewayAdapter: IGatewayAdapter<Context>,
-    private readonly authConfig?: AuthConfig,
+    private readonly authService?: AuthService,
     private readonly documentPermissionService?: DocumentPermissionService,
     private readonly featureFlags: GraphqlManagerFeatureFlags = DefaultFeatureFlags,
     private readonly port: number = 4001,
-    private readonly authorizationService?: AuthorizationService,
+    authorizationService?: IAuthorizationService,
     reactorDriveClient?: IDriveClient,
   ) {
-    this.reactorDriveClient = reactorDriveClient;
-    if (this.authConfig) {
-      this.authService = new AuthService(this.authConfig);
+    if (!authorizationService) {
+      throw new Error("GraphQLManager requires an authorizationService");
     }
+    this.authorizationService = authorizationService;
+    this.reactorDriveClient = reactorDriveClient;
 
     this.driveOwnershipCache = new DriveOwnershipCache(this.reactorClient);
 
@@ -409,6 +409,15 @@ export class GraphQLManager {
     return this.path;
   }
 
+  /**
+   * Get the authorization service shared with subgraphs. Use this when
+   * constructing a subgraph instance externally for
+   * {@link registerSubgraphInstance}.
+   */
+  getAuthorizationService(): IAuthorizationService {
+    return this.authorizationService;
+  }
+
   async registerSubgraph(
     subgraph: SubgraphClass,
     supergraph = "",
@@ -499,12 +508,6 @@ export class GraphQLManager {
         ...this.getAdditionalContextFields(),
         driveId,
         user: authCtx?.user,
-        isAdmin: authCtx
-          ? (addr) =>
-              !authCtx.auth_enabled
-                ? true
-                : authCtx.admins.includes(addr.toLowerCase())
-          : () => true,
       });
     };
   }

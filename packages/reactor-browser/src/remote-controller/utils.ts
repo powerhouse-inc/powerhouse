@@ -40,13 +40,6 @@ export function remoteOperationToLocal(remote: RemoteOperation): Operation {
       timestampUtcMs: remote.action.timestampUtcMs,
       input: remote.action.input,
       scope: remote.action.scope,
-      attachments: remote.action.attachments?.map((a) => ({
-        data: a.data,
-        mimeType: a.mimeType,
-        hash: a.hash,
-        extension: a.extension ?? undefined,
-        fileName: a.fileName ?? undefined,
-      })),
       context: remote.action.context?.signer
         ? {
             signer: {

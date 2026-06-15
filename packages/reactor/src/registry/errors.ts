@@ -71,17 +71,7 @@ export class ManifestNotFoundError extends Error {
   }
 }
 
-/**
- * Error thrown when attempting a downgrade operation.
- */
-export class DowngradeNotSupportedError extends Error {
-  constructor(documentType: string, fromVersion: number, toVersion: number) {
-    super(
-      `Downgrade not supported for ${documentType}: cannot go from version ${fromVersion} to ${toVersion}`,
-    );
-    this.name = "DowngradeNotSupportedError";
-  }
-}
+export { DowngradeNotSupportedError } from "@powerhousedao/shared/document-model";
 
 /**
  * Error thrown when a required upgrade transition is missing from the manifest.

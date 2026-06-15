@@ -109,16 +109,6 @@ export const ActionContextDTO = z
   })
   .strip();
 
-export const AttachmentDTO = z
-  .object({
-    data: z.string(),
-    mimeType: z.string(),
-    hash: z.string(),
-    extension: z.string().nullable().optional(),
-    fileName: z.string().nullable().optional(),
-  })
-  .strip();
-
 export const OperationActionDTO = z
   .object({
     id: z.string(),
@@ -126,7 +116,6 @@ export const OperationActionDTO = z
     timestampUtcMs: z.string(),
     input: z.unknown(),
     scope: z.string(),
-    attachments: z.array(AttachmentDTO).nullable().optional(),
     context: ActionContextDTO.nullable().optional(),
   })
   .strip();

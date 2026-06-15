@@ -189,16 +189,7 @@ type Action {
   timestampUtcMs: String!
   input: JSONObject!
   scope: String!
-  attachments: [Attachment!]
   context: ActionContext
-}
-
-type Attachment {
-  data: String!
-  mimeType: String!
-  hash: String!
-  extension: String
-  fileName: String
 }
 
 # Input types for sync operations
@@ -229,16 +220,7 @@ input ActionInput {
   timestampUtcMs: String!
   input: JSONObject!
   scope: String!
-  attachments: [AttachmentInput!]
   context: ActionContextInput
-}
-
-input AttachmentInput {
-  data: String!
-  mimeType: String!
-  hash: String!
-  extension: String
-  fileName: String
 }
 
 # Synchronization types

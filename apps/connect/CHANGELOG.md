@@ -1,3 +1,107 @@
+## 6.2.0-dev.15 (2026-06-15)
+
+This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
+
+## 6.2.0-dev.14 (2026-06-14)
+
+This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
+
+## 6.2.0-dev.13 (2026-06-13)
+
+### 🩹 Fixes
+
+- very simple ttl cache on renown credentials inside the reactor-api, full fix is grpc s2s call and/or shared cache ([dbf3d698c](https://github.com/powerhouse-inc/powerhouse/commit/dbf3d698c))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
+## 6.2.0-dev.12 (2026-06-12)
+
+This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
+
+## 6.2.0-dev.11 (2026-06-12)
+
+### 🚀 Features
+
+- **connect:** move theme toggle into settings nav ([7622718a7](https://github.com/powerhouse-inc/powerhouse/commit/7622718a7))
+
+### 🩹 Fixes
+
+- build fix because of vite incompatibility ([4dc94747e](https://github.com/powerhouse-inc/powerhouse/commit/4dc94747e))
+- kysely types were getting embedded in type defs and not matching later on because typescript is a broken and terrible language ([b5947709f](https://github.com/powerhouse-inc/powerhouse/commit/b5947709f))
+- **registry,connect:** slim package manifests so oversized publishes can't break the package manager ([#2718](https://github.com/powerhouse-inc/powerhouse/pull/2718))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- CallmeT-ty @CallmeT-ty
+- Claude Sonnet 4.6
+- Guillermo Puente Sandoval @gpuente
+
+## 6.2.0-dev.10 (2026-06-11)
+
+### 🩹 Fixes
+
+- **connect:** make PH_CONNECT_CONFIG_JSON overrides win over baked runtime-config defaults ([145a3d423](https://github.com/powerhouse-inc/powerhouse/commit/145a3d423))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
+## 6.2.0-dev.9 (2026-06-11)
+
+### 🩹 Fixes
+
+- **connect:** stop nginx root-file regex from hijacking /assets at default base path ([f72fe2fe5](https://github.com/powerhouse-inc/powerhouse/commit/f72fe2fe5))
+- **switchboard:** stop tracing background DB polls + align @sentry versions ([c5b307333](https://github.com/powerhouse-inc/powerhouse/commit/c5b307333))
+
+### ❤️ Thank You
+
+- Frank Pfeift
+- Guillermo Puente @gpuente
+
+## 6.2.0-dev.8 (2026-06-11)
+
+This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
+
+## 6.2.0-dev.7 (2026-06-11)
+
+This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
+
+## 6.2.0-dev.6 (2026-06-10)
+
+### 🚀 Features
+
+- **connect:** runtime-dynamic deploy base for Connect builds ([2f4c6441f](https://github.com/powerhouse-inc/powerhouse/commit/2f4c6441f))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.0-dev.5 (2026-06-10)
+
+This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
+
+## 6.2.0-dev.4 (2026-06-09)
+
+### 🚀 Features
+
+- added a readiness probe to switchboard to fix tests and for best practices ([b8966f5a2](https://github.com/powerhouse-inc/powerhouse/commit/b8966f5a2))
+- added a new audit pass that creates documents and then queries them ([cde281f1e](https://github.com/powerhouse-inc/powerhouse/commit/cde281f1e))
+- more steps -- typecheck fixes and a new load function that loads it into switchboard ([0cf7649b1](https://github.com/powerhouse-inc/powerhouse/commit/0cf7649b1))
+- setting up registry audit tool ([9aa531d0b](https://github.com/powerhouse-inc/powerhouse/commit/9aa531d0b))
+
+### 🩹 Fixes
+
+- needs to hit verdaccio ([f75a67aea](https://github.com/powerhouse-inc/powerhouse/commit/f75a67aea))
+- **connect:** don't block startup on default drive sync ([d1604d8ea](https://github.com/powerhouse-inc/powerhouse/commit/d1604d8ea))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+
 ## 6.2.0-dev.3 (2026-06-08)
 
 This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.

@@ -1,7 +1,7 @@
 {
   "name": "@powerhousedao/switchboard",
   "type": "module",
-  "version": "6.2.0-dev.3",
+  "version": "6.2.0-dev.15",
   "main": "dist/index.mjs",
   "exports": {
     ".": {
@@ -62,6 +62,7 @@
     "@opentelemetry/instrumentation-graphql": "^0.66.0",
     "@opentelemetry/instrumentation-http": "^0.218.0",
     "@opentelemetry/instrumentation-pg": "^0.70.0",
+    "@opentelemetry/instrumentation-undici": "^0.28.0",
     "@opentelemetry/resources": "^2.7.1",
     "@opentelemetry/sdk-metrics": "^2.7.1",
     "@opentelemetry/sdk-node": "^0.218.0",
@@ -77,8 +78,8 @@
     "@powerhousedao/pglite-fs": "workspace:*",
     "@pyroscope/nodejs": "^0.4.5",
     "@renown/sdk": "workspace:*",
-    "@sentry/node": "^10.52.0",
-    "@sentry/opentelemetry": "^10.52.0",
+    "@sentry/node": "^10.53.1",
+    "@sentry/opentelemetry": "^10.53.1",
     "document-model": "workspace:*",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",

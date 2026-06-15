@@ -5,6 +5,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ReactorSubgraph } from "../src/graphql/reactor/subgraph.js";
 import type { SubgraphArgs } from "../src/graphql/types.js";
 import { runMigrations } from "../src/migrations/index.js";
+import {
+  AuthorizationPolicy,
+  createAuthorizationService,
+} from "../src/services/authorization.service.js";
 import { DocumentPermissionService } from "../src/services/document-permission.service.js";
 import type { DocumentPermissionDatabase } from "../src/utils/db.js";
 import { getDbClient } from "../src/utils/db.js";
@@ -43,7 +47,6 @@ describe("Permissions Integration Tests", () => {
         global: [],
         local: [],
       },
-      attachments: {},
       clipboard: [],
     }) as unknown as PHDocument;
 
@@ -55,12 +58,8 @@ describe("Permissions Integration Tests", () => {
   );
 
   // Context factory
-  const createContext = (options: {
-    isAdmin?: boolean;
-    userAddress?: string;
-  }) => ({
+  const createContext = (options: { userAddress?: string }) => ({
     user: options.userAddress ? { address: options.userAddress } : undefined,
-    isAdmin: () => options.isAdmin ?? false,
   });
 
   beforeEach(async () => {
@@ -71,6 +70,19 @@ describe("Permissions Integration Tests", () => {
     db = dbClient as Kysely<DocumentPermissionDatabase>;
     await runMigrations(db as Kysely<unknown>);
     documentPermissionService = new DocumentPermissionService(db);
+    const authorizationService = createAuthorizationService(
+      {
+        admins: ["0xadmin"],
+        defaultProtection: false,
+        policy: AuthorizationPolicy.DOCUMENT_PERMISSIONS,
+      },
+      documentPermissionService,
+    );
+    // These tests exercise grant enforcement, which only applies to protected
+    // documents; unprotected documents are open under the authorization model.
+    await documentPermissionService.setDocumentProtection("doc-123", true);
+    await documentPermissionService.setDocumentProtection("child-doc", true);
+    await documentPermissionService.setDocumentProtection("parent-doc", true);
 
     // Create mock ReactorClient with parent hierarchy
     mockReactorClient = {
@@ -125,6 +137,7 @@ describe("Permissions Integration Tests", () => {
     reactorSubgraph = new ReactorSubgraph({
       reactorClient: mockReactorClient as IReactorClient,
       documentPermissionService,
+      authorizationService,
       relationalDb: {} as any,
       analyticsStore: {} as any,
       graphqlManager: {
@@ -463,7 +476,7 @@ describe("Permissions Integration Tests", () => {
       );
     };
 
-    beforeEach(() => {
+    beforeEach(async () => {
       // Setup find to return multiple documents
       const doc1 = createMockDocument("doc-1", "Doc 1");
       const doc2 = createMockDocument("doc-2", "Doc 2");
@@ -473,6 +486,10 @@ describe("Permissions Integration Tests", () => {
         results: [doc1, doc2, doc3],
         options: { limit: 10 },
       } as PagedResults<PHDocument>);
+
+      await documentPermissionService.setDocumentProtection("doc-1", true);
+      await documentPermissionService.setDocumentProtection("doc-2", true);
+      await documentPermissionService.setDocumentProtection("doc-3", true);
     });
 
     it("should filter results based on user permissions", async () => {
@@ -533,7 +550,7 @@ describe("Permissions Integration Tests", () => {
 
     it("should allow admin access without document permission", async () => {
       // No document permission granted
-      const ctx = createContext({ isAdmin: true, userAddress: "0xadmin" });
+      const ctx = createContext({ userAddress: "0xadmin" });
 
       const result = await callDocument(ctx);
 
@@ -550,7 +567,7 @@ describe("Permissions Integration Tests", () => {
       );
 
       // This user has global admin but no document permission
-      const ctx = createContext({ isAdmin: true, userAddress: "0xadmin" });
+      const ctx = createContext({ userAddress: "0xadmin" });
 
       const result = await callDocument(ctx);
 

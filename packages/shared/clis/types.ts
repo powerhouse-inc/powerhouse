@@ -123,7 +123,6 @@ export type PowerhouseConfig = {
   auth?: {
     enabled?: boolean;
     admins: string[];
-    defaultProtection?: boolean;
   };
   switchboard?: {
     database?: {

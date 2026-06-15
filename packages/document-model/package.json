@@ -1,6 +1,6 @@
 {
   "name": "document-model",
-  "version": "6.2.0-dev.3",
+  "version": "6.2.0-dev.15",
   "license": "AGPL-3.0-only",
   "private": false,
   "files": [
@@ -55,7 +55,6 @@
   },
   "dependencies": {
     "@powerhousedao/shared": "workspace:*",
-    "jszip": "^3.10.1",
-    "mime": "^4.0.4"
+    "jszip": "^3.10.1"
   }
 }

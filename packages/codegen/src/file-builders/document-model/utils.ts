@@ -11,7 +11,3 @@ export function operationHasEmptyInput(operation: OperationSpecification) {
     !operation.schema.replace(/_empty:\s*Boolean/, "").match(/\w+:\s*\w+/)
   );
 }
-
-export function operationHasAttachment(operation: OperationSpecification) {
-  return operation.schema?.includes(": Attachment");
-}

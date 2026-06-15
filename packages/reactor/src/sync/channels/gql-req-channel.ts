@@ -521,13 +521,6 @@ export class GqlRequestChannel implements IChannel {
                   timestampUtcMs
                   input
                   scope
-                  attachments {
-                    data
-                    mimeType
-                    hash
-                    extension
-                    fileName
-                  }
                   context {
                     signer {
                       user {

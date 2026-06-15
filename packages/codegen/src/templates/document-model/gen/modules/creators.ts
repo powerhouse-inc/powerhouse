@@ -2,19 +2,8 @@ import type { DocumentModelModuleFileMakerArgs } from "@powerhousedao/codegen";
 import type { OperationSpecification } from "@powerhousedao/shared";
 import { ts } from "@tmpl/core";
 import { camelCase, constantCase, pascalCase } from "change-case";
-import { operationHasAttachment, operationHasEmptyInput } from "file-builders";
+import { operationHasEmptyInput } from "file-builders";
 import { isTruthy } from "remeda";
-
-function makeDocumentModelTypeImports(args: DocumentModelModuleFileMakerArgs) {
-  const actionTypeImports = ["createAction"];
-  const anyActionHasAttachment = args.module.operations.some((a) =>
-    operationHasAttachment(a),
-  );
-  if (anyActionHasAttachment) {
-    actionTypeImports.push("AttachmentInput");
-  }
-  return actionTypeImports.join(",\n");
-}
 
 function makeActionInputSchemaName(action: OperationSpecification) {
   if (!action.name || !action.schema) return;
@@ -58,23 +47,17 @@ function makeActionCreatorWithInput(operation: OperationSpecification) {
   const actionTypeName = makeActionTypeName(operation);
   const inputSchemaName = makeActionInputSchemaName(operation)!;
   const inputTypeName = makeActionInputTypeName(operation)!;
-  const hasAttachment = operationHasAttachment(operation);
   const isEmptyInput = operationHasEmptyInput(operation);
   const inputArg = isEmptyInput
     ? `input: ${inputTypeName} = {}`
     : `input: ${inputTypeName}`;
-  const argsArray = [inputArg];
-  if (hasAttachment) {
-    argsArray.push(`attachments: AttachmentInput[]`);
-  }
-  const args = argsArray.join(", ");
 
   return ts`
-  export const ${camelCaseActionName} = (${args}) =>
+  export const ${camelCaseActionName} = (${inputArg}) =>
     createAction<${actionTypeName}>(
       "${constantCaseActionName}",
       {...input},
-      ${hasAttachment ? "attachments" : "undefined"},
+      undefined,
       ${inputSchemaName},
       "${operation.scope}"
     );`.raw;
@@ -116,7 +99,7 @@ export const documentModelOperationsModuleCreatorsFileTemplate = (
  * WARNING: DO NOT EDIT
  * This file is auto-generated and updated by codegen
  */
-import { ${makeDocumentModelTypeImports(v)} } from "document-model";
+import { createAction } from "document-model";
 import {
 ${makeActionInputSchemaImports(v)}
 } from '../schema/zod.js';
