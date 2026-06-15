@@ -19,6 +19,36 @@ export type CanonicalDocumentId = string & {
   readonly __canonicalDocumentId: unique symbol;
 };
 
+/**
+ * Result of a passed per-document authorization check. `fetchIdentifier` is
+ * always safe for the data fetch: the canonical id when resolved, or the raw
+ * identifier when the check was skipped for a policy-wide caller.
+ */
+export class AuthorizedDocumentHandle {
+  private constructor(
+    readonly fetchIdentifier: string,
+    readonly isResolved: boolean,
+  ) {}
+
+  static resolved(documentId: CanonicalDocumentId): AuthorizedDocumentHandle {
+    return new AuthorizedDocumentHandle(documentId, true);
+  }
+
+  static skipped(identifier: string): AuthorizedDocumentHandle {
+    return new AuthorizedDocumentHandle(identifier, false);
+  }
+
+  /** The verified canonical id; throws when resolution was skipped. */
+  canonicalId(): CanonicalDocumentId {
+    if (!this.isResolved) {
+      throw new Error(
+        "Canonical document id is unavailable: the authorization check was skipped for a policy-wide caller",
+      );
+    }
+    return this.fetchIdentifier as CanonicalDocumentId;
+  }
+}
+
 export const AuthorizationPolicy = {
   OPEN: "OPEN",
   ADMIN_ONLY: "ADMIN_ONLY",

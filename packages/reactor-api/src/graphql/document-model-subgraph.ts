@@ -392,15 +392,12 @@ export class DocumentModelSubgraph extends BaseSubgraph {
         ) => {
           const { relationshipType, view, paging } = args;
 
-          const sourceId = await this.assertCanRead(
-            args.sourceIdentifier,
-            ctx,
-          );
+          const handle = await this.assertCanRead(args.sourceIdentifier, ctx);
 
           const result = await documentOutgoingRelationshipsResolver(
             this.reactorClient,
             {
-              sourceIdentifier: sourceId ?? args.sourceIdentifier,
+              sourceIdentifier: handle.fetchIdentifier,
               relationshipType,
               view,
               paging,
@@ -430,13 +427,10 @@ export class DocumentModelSubgraph extends BaseSubgraph {
         ) => {
           const { relationshipType, view, paging } = args;
 
-          const targetId = await this.assertCanRead(
-            args.targetIdentifier,
-            ctx,
-          );
+          const handle = await this.assertCanRead(args.targetIdentifier, ctx);
 
           return documentIncomingRelationshipsResolver(this.reactorClient, {
-            targetIdentifier: targetId ?? args.targetIdentifier,
+            targetIdentifier: handle.fetchIdentifier,
             relationshipType,
             view,
             paging,
@@ -463,8 +457,8 @@ export class DocumentModelSubgraph extends BaseSubgraph {
 
           let parentIdentifier = args.parentIdentifier;
           if (parentIdentifier) {
-            const parentId = await this.assertCanWrite(parentIdentifier, ctx);
-            parentIdentifier = parentId ?? parentIdentifier;
+            const handle = await this.assertCanWrite(parentIdentifier, ctx);
+            parentIdentifier = handle.fetchIdentifier;
           } else {
             this.assertCanCreate(ctx);
           }
@@ -529,8 +523,8 @@ export class DocumentModelSubgraph extends BaseSubgraph {
         ) => {
           let parentIdentifier = args.parentIdentifier;
           if (parentIdentifier) {
-            const parentId = await this.assertCanWrite(parentIdentifier, ctx);
-            parentIdentifier = parentId ?? parentIdentifier;
+            const handle = await this.assertCanWrite(parentIdentifier, ctx);
+            parentIdentifier = handle.fetchIdentifier;
           } else {
             this.assertCanCreate(ctx);
           }
@@ -565,12 +559,12 @@ export class DocumentModelSubgraph extends BaseSubgraph {
           ) => {
             const { docId, input } = args;
 
-            const canonicalDocId = await this.assertCanExecuteOperation(
+            const handle = await this.assertCanExecuteOperation(
               docId,
               op.name!,
               ctx,
             );
-            const effectiveDocId = canonicalDocId ?? docId;
+            const effectiveDocId = handle.fetchIdentifier;
 
             const doc = await this.reactorClient.get(effectiveDocId);
             if (doc.header.documentType !== documentType) {
@@ -606,12 +600,12 @@ export class DocumentModelSubgraph extends BaseSubgraph {
           ) => {
             const { docId, input } = args;
 
-            const canonicalDocId = await this.assertCanExecuteOperation(
+            const handle = await this.assertCanExecuteOperation(
               docId,
               op.name!,
               ctx,
             );
-            const effectiveDocId = canonicalDocId ?? docId;
+            const effectiveDocId = handle.fetchIdentifier;
 
             const doc = await this.reactorClient.get(effectiveDocId);
             if (doc.header.documentType !== documentType) {

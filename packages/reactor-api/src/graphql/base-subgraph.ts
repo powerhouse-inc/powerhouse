@@ -13,6 +13,7 @@ import { GraphQLError } from "graphql";
 import { gql } from "graphql-tag";
 import {
   AuthorizationPolicy,
+  AuthorizedDocumentHandle,
   type CanonicalDocumentId,
   type IAuthorizationService,
 } from "../services/authorization.service.js";
@@ -101,10 +102,8 @@ export class BaseSubgraph implements ISubgraph {
   }
 
   /**
-   * Returns the args object with its `documentId` field resolved to the
-   * canonical id. ACL rows are keyed on the canonical id, so unlike the
-   * assertCan* helpers this resolution is unconditional: it does not skip for
-   * supreme admins, whose grant/revoke must still target the canonical row.
+   * Resolves the args' `documentId` to canonical form. Unconditional (unlike the
+   * assertCan* helpers, no admin skip): ACL rows are keyed on the canonical id.
    */
   protected async withCanonicalDocumentId<T extends { documentId: string }>(
     args: T,
@@ -118,14 +117,10 @@ export class BaseSubgraph implements ISubgraph {
   }
 
   /**
-   * Resolves an identifier for a per-document authorization check, or returns
-   * null when the caller has policy-wide access (OPEN policy or a supreme
-   * admin) so the check and its slug resolution can be skipped.
-   *
-   * Only the DOCUMENT_PERMISSIONS policy keys the decision on the document id.
-   * Under ADMIN_ONLY a non-admin is denied regardless of the document, so
-   * resolving the identifier here would be a wasted round-trip on a guaranteed
-   * deny; fail closed without resolving instead.
+   * Resolves an identifier for a per-document check, or null when the caller has
+   * policy-wide access (OPEN or supreme admin) and the check can be skipped.
+   * Only DOCUMENT_PERMISSIONS keys on the document id, so other policies fail
+   * closed without resolving.
    */
   async #resolveForCheck(
     identifier: string,
@@ -155,44 +150,42 @@ export class BaseSubgraph implements ISubgraph {
   }
 
   /**
-   * Asserts read access, resolving a slug to the canonical id first. Returns
-   * the canonical id so callers can reuse it for the data fetch (avoiding a
-   * second resolution and any slug-reassignment race), or null when the check
-   * was skipped for a policy-wide caller.
+   * Asserts read access, resolving a slug first. Returns a handle whose
+   * `fetchIdentifier` the caller reuses for the data fetch; a denial throws.
    */
   protected async assertCanRead(
     identifier: string,
     ctx: Context,
-  ): Promise<CanonicalDocumentId | null> {
+  ): Promise<AuthorizedDocumentHandle> {
     const documentId = await this.#resolveForCheck(identifier, ctx);
-    if (documentId === null) return null;
+    if (documentId === null) return AuthorizedDocumentHandle.skipped(identifier);
     await this.assertCanReadCanonical(documentId, ctx);
-    return documentId;
+    return AuthorizedDocumentHandle.resolved(documentId);
   }
 
   protected async assertCanWrite(
     identifier: string,
     ctx: Context,
-  ): Promise<CanonicalDocumentId | null> {
+  ): Promise<AuthorizedDocumentHandle> {
     const documentId = await this.#resolveForCheck(identifier, ctx);
-    if (documentId === null) return null;
+    if (documentId === null) return AuthorizedDocumentHandle.skipped(identifier);
     await this.assertCanWriteCanonical(documentId, ctx);
-    return documentId;
+    return AuthorizedDocumentHandle.resolved(documentId);
   }
 
   protected async assertCanExecuteOperation(
     identifier: string,
     operationType: string,
     ctx: Context,
-  ): Promise<CanonicalDocumentId | null> {
+  ): Promise<AuthorizedDocumentHandle> {
     const documentId = await this.#resolveForCheck(identifier, ctx);
-    if (documentId === null) return null;
+    if (documentId === null) return AuthorizedDocumentHandle.skipped(identifier);
     await this.assertCanExecuteOperationCanonical(
       documentId,
       operationType,
       ctx,
     );
-    return documentId;
+    return AuthorizedDocumentHandle.resolved(documentId);
   }
 
   /**
