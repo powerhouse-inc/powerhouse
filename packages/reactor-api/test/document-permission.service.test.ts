@@ -1,7 +1,10 @@
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { runMigrations } from "../src/migrations/index.js";
-import type { IAuthorizationService } from "../src/services/authorization.service.js";
+import type {
+  CanonicalDocumentId,
+  IAuthorizationService,
+} from "../src/services/authorization.service.js";
 import {
   AuthorizationPolicy,
   createAuthorizationService,
@@ -259,20 +262,20 @@ describe("DocumentPermissionService", () => {
             level,
             adminAddress,
           );
-          expect(await authorization.canRead("orphan-doc", userAddress)).toBe(
+          expect(await authorization.canRead("orphan-doc" as CanonicalDocumentId, userAddress)).toBe(
             true,
           );
         },
       );
 
       it("should deny read for undefined user", async () => {
-        expect(await authorization.canRead("orphan-doc", undefined)).toBe(
+        expect(await authorization.canRead("orphan-doc" as CanonicalDocumentId, undefined)).toBe(
           false,
         );
       });
 
       it("should deny read when user has no permission", async () => {
-        expect(await authorization.canRead("orphan-doc", "0xunknown")).toBe(
+        expect(await authorization.canRead("orphan-doc" as CanonicalDocumentId, "0xunknown")).toBe(
           false,
         );
       });
@@ -284,7 +287,7 @@ describe("DocumentPermissionService", () => {
           "READ",
           adminAddress,
         );
-        expect(await authorization.canWrite("orphan-doc", userAddress)).toBe(
+        expect(await authorization.canWrite("orphan-doc" as CanonicalDocumentId, userAddress)).toBe(
           false,
         );
       });
@@ -298,7 +301,7 @@ describe("DocumentPermissionService", () => {
             level,
             adminAddress,
           );
-          expect(await authorization.canWrite("orphan-doc", userAddress)).toBe(
+          expect(await authorization.canWrite("orphan-doc" as CanonicalDocumentId, userAddress)).toBe(
             true,
           );
         },
@@ -313,7 +316,7 @@ describe("DocumentPermissionService", () => {
             level,
             adminAddress,
           );
-          expect(await authorization.canManage("orphan-doc", userAddress)).toBe(
+          expect(await authorization.canManage("orphan-doc" as CanonicalDocumentId, userAddress)).toBe(
             false,
           );
         },
@@ -326,7 +329,7 @@ describe("DocumentPermissionService", () => {
           "ADMIN",
           adminAddress,
         );
-        expect(await authorization.canManage("orphan-doc", userAddress)).toBe(
+        expect(await authorization.canManage("orphan-doc" as CanonicalDocumentId, userAddress)).toBe(
           true,
         );
       });
@@ -340,10 +343,10 @@ describe("DocumentPermissionService", () => {
           "WRITE",
           adminAddress,
         );
-        expect(await authorization.canRead("orphan-doc", userAddress)).toBe(
+        expect(await authorization.canRead("orphan-doc" as CanonicalDocumentId, userAddress)).toBe(
           true,
         );
-        expect(await authorization.canWrite("orphan-doc", userAddress)).toBe(
+        expect(await authorization.canWrite("orphan-doc" as CanonicalDocumentId, userAddress)).toBe(
           true,
         );
       });
@@ -357,16 +360,16 @@ describe("DocumentPermissionService", () => {
           "WRITE",
           adminAddress,
         );
-        expect(await authorization.canWrite("orphan-doc", userAddress)).toBe(
+        expect(await authorization.canWrite("orphan-doc" as CanonicalDocumentId, userAddress)).toBe(
           true,
         );
 
         await service.revokeGroupPermission("orphan-doc", group.id);
 
-        expect(await authorization.canRead("orphan-doc", userAddress)).toBe(
+        expect(await authorization.canRead("orphan-doc" as CanonicalDocumentId, userAddress)).toBe(
           false,
         );
-        expect(await authorization.canWrite("orphan-doc", userAddress)).toBe(
+        expect(await authorization.canWrite("orphan-doc" as CanonicalDocumentId, userAddress)).toBe(
           false,
         );
       });
@@ -380,7 +383,7 @@ describe("DocumentPermissionService", () => {
           "READ",
           adminAddress,
         );
-        expect(await authorization.canRead("child-doc", userAddress)).toBe(
+        expect(await authorization.canRead("child-doc" as CanonicalDocumentId, userAddress)).toBe(
           true,
         );
       });
@@ -392,13 +395,13 @@ describe("DocumentPermissionService", () => {
           "READ",
           adminAddress,
         );
-        expect(await authorization.canRead("grandchild-doc", userAddress)).toBe(
+        expect(await authorization.canRead("grandchild-doc" as CanonicalDocumentId, userAddress)).toBe(
           true,
         );
       });
 
       it("should deny read without any grant in the hierarchy", async () => {
-        expect(await authorization.canRead("child-doc", userAddress)).toBe(
+        expect(await authorization.canRead("child-doc" as CanonicalDocumentId, userAddress)).toBe(
           false,
         );
       });
@@ -410,7 +413,7 @@ describe("DocumentPermissionService", () => {
           "READ",
           adminAddress,
         );
-        expect(await authorization.canWrite("child-doc", userAddress)).toBe(
+        expect(await authorization.canWrite("child-doc" as CanonicalDocumentId, userAddress)).toBe(
           false,
         );
       });
@@ -422,7 +425,7 @@ describe("DocumentPermissionService", () => {
           "WRITE",
           adminAddress,
         );
-        expect(await authorization.canWrite("child-doc", userAddress)).toBe(
+        expect(await authorization.canWrite("child-doc" as CanonicalDocumentId, userAddress)).toBe(
           true,
         );
       });
@@ -435,7 +438,7 @@ describe("DocumentPermissionService", () => {
           adminAddress,
         );
         expect(
-          await authorization.canWrite("grandchild-doc", userAddress),
+          await authorization.canWrite("grandchild-doc" as CanonicalDocumentId, userAddress),
         ).toBe(true);
       });
     });
@@ -443,13 +446,13 @@ describe("DocumentPermissionService", () => {
     describe("owner and restricted operations", () => {
       it("should allow the owner everything on their document", async () => {
         await service.initializeDocumentProtection("orphan-doc", userAddress);
-        expect(await authorization.canRead("orphan-doc", userAddress)).toBe(
+        expect(await authorization.canRead("orphan-doc" as CanonicalDocumentId, userAddress)).toBe(
           true,
         );
-        expect(await authorization.canWrite("orphan-doc", userAddress)).toBe(
+        expect(await authorization.canWrite("orphan-doc" as CanonicalDocumentId, userAddress)).toBe(
           true,
         );
-        expect(await authorization.canManage("orphan-doc", userAddress)).toBe(
+        expect(await authorization.canManage("orphan-doc" as CanonicalDocumentId, userAddress)).toBe(
           true,
         );
       });
@@ -470,14 +473,14 @@ describe("DocumentPermissionService", () => {
 
         expect(
           await authorization.canMutate(
-            "orphan-doc",
+            "orphan-doc" as CanonicalDocumentId,
             "SPECIAL_OP",
             userAddress,
           ),
         ).toBe(false);
         expect(
           await authorization.canMutate(
-            "orphan-doc",
+            "orphan-doc" as CanonicalDocumentId,
             "SPECIAL_OP",
             "0xoperator",
           ),
@@ -495,7 +498,7 @@ describe("DocumentPermissionService", () => {
 
         expect(
           await authorization.canMutate(
-            "orphan-doc",
+            "orphan-doc" as CanonicalDocumentId,
             "SPECIAL_OP",
             userAddress,
           ),
@@ -512,7 +515,7 @@ describe("DocumentPermissionService", () => {
 
         expect(
           await authorization.canMutate(
-            "orphan-doc",
+            "orphan-doc" as CanonicalDocumentId,
             "SPECIAL_OP",
             "0xOPERATOR",
           ),

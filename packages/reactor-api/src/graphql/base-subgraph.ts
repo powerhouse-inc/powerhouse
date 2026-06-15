@@ -11,7 +11,10 @@ import type {
 import type { DocumentNode } from "graphql";
 import { GraphQLError } from "graphql";
 import { gql } from "graphql-tag";
-import type { IAuthorizationService } from "../services/authorization.service.js";
+import type {
+  CanonicalDocumentId,
+  IAuthorizationService,
+} from "../services/authorization.service.js";
 import type { DocumentPermissionService } from "../services/document-permission.service.js";
 import type { Context } from "./types.js";
 
@@ -35,6 +38,16 @@ export class BaseSubgraph implements ISubgraph {
   documentPermissionService?: DocumentPermissionService;
   authorizationService: IAuthorizationService;
 
+  /**
+   * Per-request memo of raw identifier to canonical document id, keyed on the
+   * request context object so entries are released when the request ends. Lets
+   * batch resolvers resolve each distinct identifier at most once.
+   */
+  readonly #canonicalIdMemo = new WeakMap<
+    object,
+    Map<string, CanonicalDocumentId>
+  >();
+
   constructor(args: SubgraphArgs) {
     this.reactorClient = args.reactorClient;
     this.graphqlManager = args.graphqlManager;
@@ -53,15 +66,112 @@ export class BaseSubgraph implements ISubgraph {
   // Shared permission helpers
   // ============================================
 
+  /**
+   * Resolves a caller-supplied identifier (id or slug) to its canonical
+   * document id, memoized per request. Both the decision layer and the data
+   * layer must agree on the subject, so this runs the same resolveIdOrSlug
+   * lookup the data path uses. A resolution failure (not found, ambiguous, or
+   * transient) surfaces as a generic Forbidden, fail-closed, so a bad
+   * identifier cannot be used as a document-existence oracle.
+   */
+  protected async resolveCanonicalDocumentId(
+    identifier: string,
+    requestKey: object,
+  ): Promise<CanonicalDocumentId> {
+    let cache = this.#canonicalIdMemo.get(requestKey);
+    if (!cache) {
+      cache = new Map<string, CanonicalDocumentId>();
+      this.#canonicalIdMemo.set(requestKey, cache);
+    }
+
+    const cached = cache.get(identifier);
+    if (cached !== undefined) return cached;
+
+    let resolved: string;
+    try {
+      resolved = await this.reactorClient.resolveIdOrSlug(identifier);
+    } catch {
+      throw new GraphQLError("Forbidden: insufficient permissions");
+    }
+
+    const canonical = resolved as CanonicalDocumentId;
+    cache.set(identifier, canonical);
+    return canonical;
+  }
+
+  /**
+   * Resolves an identifier for a per-document authorization check, or returns
+   * null when the caller has policy-wide access (OPEN policy or a supreme
+   * admin) so the check and its slug resolution can be skipped.
+   */
+  async #resolveForCheck(
+    identifier: string,
+    ctx: Context,
+  ): Promise<CanonicalDocumentId | null> {
+    if (this.authorizationService.isSupremeAdmin(ctx.user?.address)) {
+      return null;
+    }
+    return this.resolveCanonicalDocumentId(identifier, ctx);
+  }
+
+  /**
+   * Read filter for an already-canonical document id (one sourced from the data
+   * layer, such as a fetched document's id). Performs no slug resolution.
+   */
   protected async canReadDocument(
-    documentId: string,
+    documentId: CanonicalDocumentId,
     ctx: Context,
   ): Promise<boolean> {
     return this.authorizationService.canRead(documentId, ctx.user?.address);
   }
 
+  /**
+   * Asserts read access, resolving a slug to the canonical id first. Returns
+   * the canonical id so callers can reuse it for the data fetch (avoiding a
+   * second resolution and any slug-reassignment race), or null when the check
+   * was skipped for a policy-wide caller.
+   */
   protected async assertCanRead(
-    documentId: string,
+    identifier: string,
+    ctx: Context,
+  ): Promise<CanonicalDocumentId | null> {
+    const documentId = await this.#resolveForCheck(identifier, ctx);
+    if (documentId === null) return null;
+    await this.assertCanReadCanonical(documentId, ctx);
+    return documentId;
+  }
+
+  protected async assertCanWrite(
+    identifier: string,
+    ctx: Context,
+  ): Promise<CanonicalDocumentId | null> {
+    const documentId = await this.#resolveForCheck(identifier, ctx);
+    if (documentId === null) return null;
+    await this.assertCanWriteCanonical(documentId, ctx);
+    return documentId;
+  }
+
+  protected async assertCanExecuteOperation(
+    identifier: string,
+    operationType: string,
+    ctx: Context,
+  ): Promise<CanonicalDocumentId | null> {
+    const documentId = await this.#resolveForCheck(identifier, ctx);
+    if (documentId === null) return null;
+    await this.assertCanExecuteOperationCanonical(
+      documentId,
+      operationType,
+      ctx,
+    );
+    return documentId;
+  }
+
+  /**
+   * Read assertion for an already-canonical document id. No slug resolution;
+   * use only with ids sourced from the data layer or already resolved.
+   */
+  protected async assertCanReadCanonical(
+    documentId: CanonicalDocumentId,
     ctx: Context,
   ): Promise<void> {
     const canRead = await this.authorizationService.canRead(
@@ -75,8 +185,8 @@ export class BaseSubgraph implements ISubgraph {
     }
   }
 
-  protected async assertCanWrite(
-    documentId: string,
+  protected async assertCanWriteCanonical(
+    documentId: CanonicalDocumentId,
     ctx: Context,
   ): Promise<void> {
     const canWrite = await this.authorizationService.canWrite(
@@ -90,8 +200,8 @@ export class BaseSubgraph implements ISubgraph {
     }
   }
 
-  protected async assertCanExecuteOperation(
-    documentId: string,
+  protected async assertCanExecuteOperationCanonical(
+    documentId: CanonicalDocumentId,
     operationType: string,
     ctx: Context,
   ): Promise<void> {

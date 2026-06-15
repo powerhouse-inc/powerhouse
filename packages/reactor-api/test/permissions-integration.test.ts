@@ -85,6 +85,9 @@ describe("Permissions Integration Tests", () => {
         if (id === "parent-doc") return Promise.resolve(mockParentDocument);
         return Promise.resolve(null);
       }),
+      resolveIdOrSlug: vi.fn((identifier: string) =>
+        Promise.resolve(identifier),
+      ),
       getOutgoingRelationships: vi.fn().mockResolvedValue({
         results: [],
         options: { limit: 10, cursor: "" },

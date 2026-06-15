@@ -121,6 +121,9 @@ describe("DocumentModelSubgraph Permission Checks", () => {
     };
 
     mockReactorClient = {
+      resolveIdOrSlug: vi.fn((identifier: string) =>
+        Promise.resolve(identifier),
+      ),
       getIncomingRelationships: vi.fn().mockResolvedValue({
         results: [],
         options: { limit: 10, cursor: "" },

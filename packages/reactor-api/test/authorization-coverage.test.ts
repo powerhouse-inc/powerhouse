@@ -86,10 +86,11 @@ const EXEMPT: Record<string, Record<string, string>> = {
 /**
  * A resolver counts as guarded when its source references the authorization
  * service — directly, or via the BaseSubgraph assertCan-and-canReadDocument
- * helpers, or via the packages requireAdmin helper.
+ * helpers (including the *Canonical variants for already-resolved ids), or via
+ * the packages requireAdmin helper.
  */
 const GUARD_PATTERN =
-  /\bassertCan(Read|Write|Create|ExecuteOperation|ExecuteOperations)\b|\bauthorizationService\b|\bcanReadDocument\b|\brequireAdmin\b/;
+  /\bassertCan(Read|Write|Create|ExecuteOperation|ExecuteOperations)(Canonical)?\b|\bauthorizationService\b|\bcanReadDocument\b|\brequireAdmin\b/;
 
 function resolverSource(value: unknown): string {
   if (typeof value === "function") return value.toString();

@@ -98,6 +98,9 @@ describe("ReactorSubgraph Permission Checks", () => {
     // Create mock ReactorClient
     mockReactorClient = {
       get: vi.fn().mockResolvedValue(mockDocument),
+      resolveIdOrSlug: vi.fn((identifier: string) =>
+        Promise.resolve(identifier),
+      ),
       getOutgoingRelationships: vi.fn().mockResolvedValue({
         results: [],
         options: { limit: 10, cursor: "" },
@@ -857,6 +860,178 @@ describe("ReactorSubgraph Permission Checks", () => {
       await expect(query(null, { identifier: "doc-123" }, ctx)).rejects.toThrow(
         "Forbidden",
       );
+    });
+  });
+
+  // ============================================================
+  // S-C1: a slug must be resolved to its canonical id before the
+  // per-document authorization check, so the decision layer and the
+  // data layer agree on the subject.
+  // ============================================================
+  describe("S-C1: slug addressing is resolved before the auth check", () => {
+    it("checks the canonical id (not the slug) when reading by slug", async () => {
+      vi.mocked(mockReactorClient.resolveIdOrSlug!).mockResolvedValue("doc-123");
+      vi.mocked(mockAuthorizationService.canRead!).mockResolvedValue(false);
+      const ctx = createContext({ userAddress: "0xnonowner" });
+      const query = (reactorSubgraph.resolvers.Query as any)?.document;
+
+      await expect(query(null, { identifier: "my-slug" }, ctx)).rejects.toThrow(
+        "Forbidden",
+      );
+
+      expect(mockReactorClient.resolveIdOrSlug).toHaveBeenCalledWith("my-slug");
+      expect(mockAuthorizationService.canRead).toHaveBeenCalledWith(
+        "doc-123",
+        "0xnonowner",
+      );
+      expect(mockAuthorizationService.canRead).not.toHaveBeenCalledWith(
+        "my-slug",
+        expect.anything(),
+      );
+    });
+
+    it("allows a slug-addressed read when the canonical id is authorized", async () => {
+      vi.mocked(mockReactorClient.resolveIdOrSlug!).mockResolvedValue("doc-123");
+      vi.mocked(mockAuthorizationService.canRead!).mockResolvedValue(true);
+      const ctx = createContext({ userAddress: "0xowner" });
+      const query = (reactorSubgraph.resolvers.Query as any)?.document;
+
+      const result = await query(null, { identifier: "my-slug" }, ctx);
+
+      expect(result).toBeDefined();
+      expect(mockAuthorizationService.canRead).toHaveBeenCalledWith(
+        "doc-123",
+        "0xowner",
+      );
+    });
+
+    it("denies a slug-addressed mutation when the canonical id lacks the grant", async () => {
+      vi.mocked(mockReactorClient.resolveIdOrSlug!).mockResolvedValue("doc-123");
+      vi.mocked(mockAuthorizationService.canMutate!).mockResolvedValue(false);
+      const ctx = createContext({ userAddress: "0xattacker" });
+      const mutation = (reactorSubgraph.resolvers.Mutation as any)
+        ?.mutateDocument;
+
+      await expect(
+        mutation(
+          null,
+          { documentIdentifier: "my-slug", actions: [{ type: "SET_NAME" }] },
+          ctx,
+        ),
+      ).rejects.toThrow("Forbidden");
+
+      expect(mockAuthorizationService.canMutate).toHaveBeenCalledWith(
+        "doc-123",
+        "SET_NAME",
+        "0xattacker",
+      );
+    });
+
+    it("returns Forbidden (not a not-found error) for an unresolvable identifier", async () => {
+      vi.mocked(mockReactorClient.resolveIdOrSlug!).mockRejectedValue(
+        new Error("Document not found: ghost"),
+      );
+      const ctx = createContext({ userAddress: "0xuser" });
+      const query = (reactorSubgraph.resolvers.Query as any)?.document;
+
+      const error = await query(null, { identifier: "ghost" }, ctx).catch(
+        (e: Error) => e,
+      );
+
+      expect(error.message).toContain("Forbidden");
+      expect(error.message).not.toContain("Document not found");
+      expect(mockAuthorizationService.canRead).not.toHaveBeenCalled();
+    });
+
+    it("passes the canonical id to the delete data path, not the slug", async () => {
+      vi.mocked(mockReactorClient.resolveIdOrSlug!).mockResolvedValue("doc-123");
+      vi.mocked(mockAuthorizationService.canWrite!).mockResolvedValue(true);
+      const ctx = createContext({ userAddress: "0xwriter" });
+      const mutation = (reactorSubgraph.resolvers.Mutation as any)
+        ?.deleteDocument;
+
+      await mutation(null, { identifier: "my-slug" }, ctx);
+
+      expect(mockAuthorizationService.canWrite).toHaveBeenCalledWith(
+        "doc-123",
+        "0xwriter",
+      );
+      // #resolveDriveId resolves the drive via the canonical id, proving the
+      // data path no longer sees the raw slug.
+      expect(mockReactorClient.get).toHaveBeenCalledWith("doc-123");
+    });
+
+    it("resolves each distinct identifier once across a batch (per-request memo)", async () => {
+      vi.mocked(mockReactorClient.resolveIdOrSlug!).mockImplementation(
+        (identifier: string) =>
+          Promise.resolve(identifier === "slug-a" ? "uuid-a" : "uuid-b"),
+      );
+      vi.mocked(mockAuthorizationService.canWrite!).mockResolvedValue(true);
+      const ctx = createContext({ userAddress: "0xwriter" });
+      const mutation = (reactorSubgraph.resolvers.Mutation as any)
+        ?.deleteDocuments;
+
+      await mutation(
+        null,
+        { identifiers: ["slug-a", "slug-a", "slug-b"] },
+        ctx,
+      );
+
+      const calls = vi
+        .mocked(mockReactorClient.resolveIdOrSlug!)
+        .mock.calls.map(([id]) => id);
+      expect(calls.filter((id) => id === "slug-a")).toHaveLength(1);
+      expect(calls.filter((id) => id === "slug-b")).toHaveLength(1);
+    });
+
+    it("resolves source and target independently in moveRelationship", async () => {
+      vi.mocked(mockReactorClient.resolveIdOrSlug!).mockImplementation(
+        (identifier: string) =>
+          Promise.resolve(
+            identifier === "source-slug" ? "source-uuid" : "target-uuid",
+          ),
+      );
+      vi.mocked(mockAuthorizationService.canWrite!).mockResolvedValue(true);
+      const ctx = createContext({ userAddress: "0xwriter" });
+      const mutation = (reactorSubgraph.resolvers.Mutation as any)
+        ?.moveRelationship;
+
+      await mutation(
+        null,
+        {
+          sourceParentIdentifier: "source-slug",
+          targetParentIdentifier: "target-slug",
+        },
+        ctx,
+      );
+
+      expect(mockAuthorizationService.canWrite).toHaveBeenCalledWith(
+        "source-uuid",
+        "0xwriter",
+      );
+      expect(mockAuthorizationService.canWrite).toHaveBeenCalledWith(
+        "target-uuid",
+        "0xwriter",
+      );
+    });
+
+    it("does not resolve slugs under OPEN policy (supreme-admin bypass)", async () => {
+      const openAuthSvc: Partial<IAuthorizationService> = {
+        config: {
+          admins: [],
+          defaultProtection: false,
+          policy: AuthorizationPolicy.OPEN,
+        },
+        isSupremeAdmin: vi.fn().mockReturnValue(true),
+        canRead: vi.fn().mockResolvedValue(true),
+      };
+      const openSubgraph = buildSubgraph(openAuthSvc);
+      const ctx = createContext({ userAddress: "0xanyone" });
+      const query = (openSubgraph.resolvers.Query as any)?.document;
+
+      await query(null, { identifier: "any-slug" }, ctx);
+
+      expect(mockReactorClient.resolveIdOrSlug).not.toHaveBeenCalled();
     });
   });
 });

@@ -8,6 +8,7 @@ import {
   generateDocumentModelSchema,
   getDocumentModelSchemaName,
 } from "../utils/create-schema.js";
+import type { CanonicalDocumentId } from "../services/authorization.service.js";
 import { BaseSubgraph } from "./base-subgraph.js";
 import { toGqlPhDocument } from "./reactor/adapters.js";
 import type {
@@ -293,7 +294,10 @@ export class DocumentModelSubgraph extends BaseSubgraph {
             );
           }
 
-          await this.assertCanRead(result.document.id, ctx);
+          await this.assertCanReadCanonical(
+            result.document.id as CanonicalDocumentId,
+            ctx,
+          );
 
           return result;
         },
@@ -316,7 +320,10 @@ export class DocumentModelSubgraph extends BaseSubgraph {
           if (!this.authorizationService.isSupremeAdmin(ctx.user?.address)) {
             const filteredItems = [];
             for (const item of result.items) {
-              const canRead = await this.canReadDocument(item.id, ctx);
+              const canRead = await this.canReadDocument(
+                item.id as CanonicalDocumentId,
+                ctx,
+              );
               if (canRead) {
                 filteredItems.push(item);
               }
@@ -355,7 +362,10 @@ export class DocumentModelSubgraph extends BaseSubgraph {
           if (!this.authorizationService.isSupremeAdmin(ctx.user?.address)) {
             const filteredItems = [];
             for (const item of result.items) {
-              const canRead = await this.canReadDocument(item.id, ctx);
+              const canRead = await this.canReadDocument(
+                item.id as CanonicalDocumentId,
+                ctx,
+              );
               if (canRead) {
                 filteredItems.push(item);
               }
@@ -380,14 +390,17 @@ export class DocumentModelSubgraph extends BaseSubgraph {
           },
           ctx: Context,
         ) => {
-          const { sourceIdentifier, relationshipType, view, paging } = args;
+          const { relationshipType, view, paging } = args;
 
-          await this.assertCanRead(sourceIdentifier, ctx);
+          const sourceId = await this.assertCanRead(
+            args.sourceIdentifier,
+            ctx,
+          );
 
           const result = await documentOutgoingRelationshipsResolver(
             this.reactorClient,
             {
-              sourceIdentifier,
+              sourceIdentifier: sourceId ?? args.sourceIdentifier,
               relationshipType,
               view,
               paging,
@@ -415,12 +428,15 @@ export class DocumentModelSubgraph extends BaseSubgraph {
           },
           ctx: Context,
         ) => {
-          const { targetIdentifier, relationshipType, view, paging } = args;
+          const { relationshipType, view, paging } = args;
 
-          await this.assertCanRead(targetIdentifier, ctx);
+          const targetId = await this.assertCanRead(
+            args.targetIdentifier,
+            ctx,
+          );
 
           return documentIncomingRelationshipsResolver(this.reactorClient, {
-            targetIdentifier,
+            targetIdentifier: targetId ?? args.targetIdentifier,
             relationshipType,
             view,
             paging,
@@ -443,16 +459,12 @@ export class DocumentModelSubgraph extends BaseSubgraph {
           },
           ctx: Context,
         ) => {
-          const {
-            parentIdentifier,
-            name,
-            slug,
-            preferredEditor,
-            initialState,
-          } = args;
+          const { name, slug, preferredEditor, initialState } = args;
 
+          let parentIdentifier = args.parentIdentifier;
           if (parentIdentifier) {
-            await this.assertCanWrite(parentIdentifier, ctx);
+            const parentId = await this.assertCanWrite(parentIdentifier, ctx);
+            parentIdentifier = parentId ?? parentIdentifier;
           } else {
             this.assertCanCreate(ctx);
           }
@@ -515,10 +527,10 @@ export class DocumentModelSubgraph extends BaseSubgraph {
           args: { parentIdentifier?: string },
           ctx: Context,
         ) => {
-          const { parentIdentifier } = args;
-
+          let parentIdentifier = args.parentIdentifier;
           if (parentIdentifier) {
-            await this.assertCanWrite(parentIdentifier, ctx);
+            const parentId = await this.assertCanWrite(parentIdentifier, ctx);
+            parentIdentifier = parentId ?? parentIdentifier;
           } else {
             this.assertCanCreate(ctx);
           }
@@ -553,9 +565,14 @@ export class DocumentModelSubgraph extends BaseSubgraph {
           ) => {
             const { docId, input } = args;
 
-            await this.assertCanExecuteOperation(docId, op.name!, ctx);
+            const canonicalDocId = await this.assertCanExecuteOperation(
+              docId,
+              op.name!,
+              ctx,
+            );
+            const effectiveDocId = canonicalDocId ?? docId;
 
-            const doc = await this.reactorClient.get(docId);
+            const doc = await this.reactorClient.get(effectiveDocId);
             if (doc.header.documentType !== documentType) {
               throw new GraphQLError(
                 `Document with id ${docId} is not of type ${documentType}`,
@@ -569,7 +586,7 @@ export class DocumentModelSubgraph extends BaseSubgraph {
 
             try {
               const updatedDoc = await this.reactorClient.execute(
-                docId,
+                effectiveDocId,
                 "main",
                 [action(input)],
               );
@@ -589,9 +606,14 @@ export class DocumentModelSubgraph extends BaseSubgraph {
           ) => {
             const { docId, input } = args;
 
-            await this.assertCanExecuteOperation(docId, op.name!, ctx);
+            const canonicalDocId = await this.assertCanExecuteOperation(
+              docId,
+              op.name!,
+              ctx,
+            );
+            const effectiveDocId = canonicalDocId ?? docId;
 
-            const doc = await this.reactorClient.get(docId);
+            const doc = await this.reactorClient.get(effectiveDocId);
             if (doc.header.documentType !== documentType) {
               throw new GraphQLError(
                 `Document with id ${docId} is not of type ${documentType}`,
@@ -605,7 +627,7 @@ export class DocumentModelSubgraph extends BaseSubgraph {
 
             try {
               const jobInfo = await this.reactorClient.executeAsync(
-                docId,
+                effectiveDocId,
                 "main",
                 [action(input)],
               );

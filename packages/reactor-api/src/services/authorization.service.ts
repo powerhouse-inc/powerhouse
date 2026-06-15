@@ -4,6 +4,21 @@ import type {
   GetParentIdsFn,
 } from "./document-permission.service.js";
 
+/**
+ * A document id that has been resolved to its canonical form, never a slug.
+ *
+ * Protection and grant rows are written under the canonical id, while the
+ * read/operation data paths accept an id-or-slug identifier. The decision layer
+ * must key on the canonical id, so branding it forces every caller to resolve a
+ * slug to its id before consulting this service, closing the slug-aliasing
+ * bypass (S-C1). The only sanctioned cast from string to CanonicalDocumentId
+ * lives in the BaseSubgraph resolution helpers, immediately after the shared
+ * resolveIdOrSlug lookup returns.
+ */
+export type CanonicalDocumentId = string & {
+  readonly __canonicalDocumentId: unique symbol;
+};
+
 export const AuthorizationPolicy = {
   OPEN: "OPEN",
   ADMIN_ONLY: "ADMIN_ONLY",
@@ -49,18 +64,27 @@ export interface IAuthorizationService {
    */
   canCreate(userAddress?: string): boolean;
 
-  canRead(documentId: string, userAddress?: string): Promise<boolean>;
+  canRead(
+    documentId: CanonicalDocumentId,
+    userAddress?: string,
+  ): Promise<boolean>;
 
-  canWrite(documentId: string, userAddress?: string): Promise<boolean>;
+  canWrite(
+    documentId: CanonicalDocumentId,
+    userAddress?: string,
+  ): Promise<boolean>;
 
   /**
    * Whether the user administers the document: supreme admin, document
    * owner, or holder of an ADMIN grant (direct or via group).
    */
-  canManage(documentId: string, userAddress?: string): Promise<boolean>;
+  canManage(
+    documentId: CanonicalDocumentId,
+    userAddress?: string,
+  ): Promise<boolean>;
 
   canMutate(
-    documentId: string,
+    documentId: CanonicalDocumentId,
     operationType: string,
     userAddress?: string,
   ): Promise<boolean>;
@@ -77,17 +101,23 @@ abstract class BaseAuthorizationService implements IAuthorizationService {
 
   abstract canCreate(userAddress?: string): boolean;
 
-  abstract canRead(documentId: string, userAddress?: string): Promise<boolean>;
+  abstract canRead(
+    documentId: CanonicalDocumentId,
+    userAddress?: string,
+  ): Promise<boolean>;
 
-  abstract canWrite(documentId: string, userAddress?: string): Promise<boolean>;
+  abstract canWrite(
+    documentId: CanonicalDocumentId,
+    userAddress?: string,
+  ): Promise<boolean>;
 
   abstract canManage(
-    documentId: string,
+    documentId: CanonicalDocumentId,
     userAddress?: string,
   ): Promise<boolean>;
 
   abstract canMutate(
-    documentId: string,
+    documentId: CanonicalDocumentId,
     operationType: string,
     userAddress?: string,
   ): Promise<boolean>;
@@ -126,20 +156,29 @@ class AdminOnlyAuthorizationService extends BaseAuthorizationService {
     return this.isSupremeAdmin(userAddress);
   }
 
-  canRead(_documentId: string, userAddress?: string): Promise<boolean> {
+  canRead(
+    _documentId: CanonicalDocumentId,
+    userAddress?: string,
+  ): Promise<boolean> {
     return Promise.resolve(this.isSupremeAdmin(userAddress));
   }
 
-  canWrite(_documentId: string, userAddress?: string): Promise<boolean> {
+  canWrite(
+    _documentId: CanonicalDocumentId,
+    userAddress?: string,
+  ): Promise<boolean> {
     return Promise.resolve(this.isSupremeAdmin(userAddress));
   }
 
-  canManage(_documentId: string, userAddress?: string): Promise<boolean> {
+  canManage(
+    _documentId: CanonicalDocumentId,
+    userAddress?: string,
+  ): Promise<boolean> {
     return Promise.resolve(this.isSupremeAdmin(userAddress));
   }
 
   canMutate(
-    _documentId: string,
+    _documentId: CanonicalDocumentId,
     _operationType: string,
     userAddress?: string,
   ): Promise<boolean> {
@@ -184,20 +223,29 @@ class DocumentPermissionsAuthorizationService extends BaseAuthorizationService {
     return this.isSupremeAdmin(userAddress) || !!userAddress;
   }
 
-  canRead(documentId: string, userAddress?: string): Promise<boolean> {
+  canRead(
+    documentId: CanonicalDocumentId,
+    userAddress?: string,
+  ): Promise<boolean> {
     return this.#canAccess(documentId, "READ", userAddress);
   }
 
-  canWrite(documentId: string, userAddress?: string): Promise<boolean> {
+  canWrite(
+    documentId: CanonicalDocumentId,
+    userAddress?: string,
+  ): Promise<boolean> {
     return this.#canAccess(documentId, "WRITE", userAddress);
   }
 
-  canManage(documentId: string, userAddress?: string): Promise<boolean> {
+  canManage(
+    documentId: CanonicalDocumentId,
+    userAddress?: string,
+  ): Promise<boolean> {
     return this.#isDocumentAdmin(documentId, userAddress);
   }
 
   async canMutate(
-    documentId: string,
+    documentId: CanonicalDocumentId,
     operationType: string,
     userAddress?: string,
   ): Promise<boolean> {
