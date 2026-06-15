@@ -63,7 +63,7 @@ export function DependencyVersions(props: Props) {
       isOpen={isOpen}
       onOpenChange={() => setIsOpen(!isOpen)}
       title={`App version: ${validatedData.version}`}
-      toggleClassName="text-foreground text-sm"
+      toggleClassName="text-sm text-foreground"
     >
       <ul className="text-sm text-foreground">
         {Object.entries(validatedData.dependencies).map(([dep, version]) => (

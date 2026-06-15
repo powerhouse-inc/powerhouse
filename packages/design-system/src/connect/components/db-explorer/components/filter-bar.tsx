@@ -195,7 +195,7 @@ function FilterClauseComponent({
           id={`connector-${clause.id}`}
           items={connectorItems}
           itemClassName="px-2 py-1 text-xs"
-          menuClassName="px-2 py-1 text-xs min-w-[80px]"
+          menuClassName="min-w-[80px] px-2 py-1 text-xs"
           value={connector}
           onChange={onConnectorChange}
         />
@@ -207,7 +207,7 @@ function FilterClauseComponent({
         id={`column-${clause.id}`}
         items={columnItems}
         itemClassName="px-2 py-1 text-xs"
-        menuClassName="px-2 py-1 text-xs min-w-[150px]"
+        menuClassName="min-w-[150px] px-2 py-1 text-xs"
         value={clause.column}
         onChange={handleColumnChange}
       />
@@ -218,7 +218,7 @@ function FilterClauseComponent({
         id={`operator-${clause.id}`}
         items={operatorItems}
         itemClassName="px-2 py-1 text-xs"
-        menuClassName="px-2 py-1 text-xs min-w-[100px]"
+        menuClassName="min-w-[100px] px-2 py-1 text-xs"
         value={clause.operator}
         onChange={handleOperatorChange}
       />

@@ -102,7 +102,7 @@ export const AppSkeleton: React.FC<PropsWithChildren> = (props) => {
       )}
       <HomeScreen
         containerClassName={
-          isSSR || !isHomeScreen ? "hidden home-screen" : undefined
+          isSSR || !isHomeScreen ? "home-screen hidden" : undefined
         }
         children={props.children ?? null}
       />

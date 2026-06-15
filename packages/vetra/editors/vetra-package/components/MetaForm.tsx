@@ -82,7 +82,7 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="disabled:disabled-effect w-full rounded-md border border-border px-3 py-2 text-foreground placeholder:text-muted-foreground focus:border-transparent focus:ring-2 focus:ring-ring focus:outline-none"
+            className="w-full rounded-md border border-border px-3 py-2 text-foreground placeholder:text-muted-foreground focus:border-transparent focus:ring-2 focus:ring-ring focus:outline-none disabled:disabled-effect"
           />
         </div>
 
@@ -99,7 +99,7 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
             rows={6}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            className="disabled:disabled-effect w-full resize-none rounded-md border border-border px-3 py-2 text-foreground placeholder:text-muted-foreground focus:border-transparent focus:ring-2 focus:ring-ring focus:outline-none"
+            className="w-full resize-none rounded-md border border-border px-3 py-2 text-foreground placeholder:text-muted-foreground focus:border-transparent focus:ring-2 focus:ring-ring focus:outline-none disabled:disabled-effect"
           />
         </div>
       </div>
@@ -122,7 +122,7 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
               setCategory(newValue);
               onCategoryChange?.(newValue);
             }}
-            className="disabled:disabled-effect w-full rounded-md border border-border px-3 py-2 text-foreground placeholder:text-muted-foreground focus:border-transparent focus:ring-2 focus:ring-ring focus:outline-none"
+            className="w-full rounded-md border border-border px-3 py-2 text-foreground placeholder:text-muted-foreground focus:border-transparent focus:ring-2 focus:ring-ring focus:outline-none disabled:disabled-effect"
           >
             <option value="">Not selected</option>
             <option value="Productivity">Productivity</option>
@@ -148,7 +148,7 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
             type="text"
             value={publisher}
             onChange={(e) => setPublisher(e.target.value)}
-            className="disabled:disabled-effect w-full rounded-md border border-border px-3 py-2 text-foreground placeholder:text-muted-foreground focus:border-transparent focus:ring-2 focus:ring-ring focus:outline-none"
+            className="w-full rounded-md border border-border px-3 py-2 text-foreground placeholder:text-muted-foreground focus:border-transparent focus:ring-2 focus:ring-ring focus:outline-none disabled:disabled-effect"
           />
         </div>
 
@@ -165,7 +165,7 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
             type="text"
             value={publisherUrl}
             onChange={(e) => setPublisherUrl(e.target.value)}
-            className="disabled:disabled-effect w-full rounded-md border border-border px-3 py-2 text-foreground placeholder:text-muted-foreground focus:border-transparent focus:ring-2 focus:ring-ring focus:outline-none"
+            className="w-full rounded-md border border-border px-3 py-2 text-foreground placeholder:text-muted-foreground focus:border-transparent focus:ring-2 focus:ring-ring focus:outline-none disabled:disabled-effect"
           />
         </div>
 
@@ -196,7 +196,7 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
                 }
               }}
               placeholder="Type a keyword and press Enter"
-              className="disabled:disabled-effect w-full rounded-md border border-border px-3 py-2 text-foreground placeholder:text-muted-foreground focus:border-transparent focus:ring-2 focus:ring-ring focus:outline-none"
+              className="w-full rounded-md border border-border px-3 py-2 text-foreground placeholder:text-muted-foreground focus:border-transparent focus:ring-2 focus:ring-ring focus:outline-none disabled:disabled-effect"
             />
             <div className="flex min-h-[80px] flex-wrap gap-2 rounded-md border border-border p-3">
               {keywords.map((keyword) => (
@@ -210,7 +210,7 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
                       setKeywords(keywords.filter((k) => k.id !== keyword.id));
                       onRemoveKeyword?.(keyword.id);
                     }}
-                    className="hover:hover-effect ml-1 text-info focus:outline-none"
+                    className="ml-1 text-info hover:hover-effect focus:outline-none"
                   >
                     ×
                   </button>
@@ -236,7 +236,7 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
             type="text"
             value={githubRepository}
             onChange={(e) => setGithubRepository(e.target.value)}
-            className="disabled:disabled-effect w-full rounded-md border border-border px-3 py-2 text-foreground placeholder:text-muted-foreground focus:border-transparent focus:ring-2 focus:ring-ring focus:outline-none"
+            className="w-full rounded-md border border-border px-3 py-2 text-foreground placeholder:text-muted-foreground focus:border-transparent focus:ring-2 focus:ring-ring focus:outline-none disabled:disabled-effect"
           />
         </div>
 
@@ -253,7 +253,7 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
             type="text"
             value={npmPackage}
             onChange={(e) => setNpmPackage(e.target.value)}
-            className="disabled:disabled-effect w-full rounded-md border border-border px-3 py-2 text-foreground placeholder:text-muted-foreground focus:border-transparent focus:ring-2 focus:ring-ring focus:outline-none"
+            className="w-full rounded-md border border-border px-3 py-2 text-foreground placeholder:text-muted-foreground focus:border-transparent focus:ring-2 focus:ring-ring focus:outline-none disabled:disabled-effect"
           />
         </div>
 
@@ -270,7 +270,7 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
             type="text"
             placeholder="1.0.0-dev"
             disabled
-            className="disabled:disabled-effect w-full cursor-not-allowed rounded-md border border-border bg-background px-3 py-2 text-foreground placeholder:text-muted-foreground"
+            className="w-full cursor-not-allowed rounded-md border border-border bg-background px-3 py-2 text-foreground placeholder:text-muted-foreground disabled:disabled-effect"
           />
         </div>
 
@@ -287,7 +287,7 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
             type="text"
             placeholder="AGPL-3.0-only"
             disabled
-            className="disabled:disabled-effect w-full cursor-not-allowed rounded-md border border-border bg-background px-3 py-2 text-foreground placeholder:text-muted-foreground"
+            className="w-full cursor-not-allowed rounded-md border border-border bg-background px-3 py-2 text-foreground placeholder:text-muted-foreground disabled:disabled-effect"
           />
         </div>
 
@@ -304,7 +304,7 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
             type="text"
             placeholder="@powerhousedao/todo-demo-package"
             disabled
-            className="disabled:disabled-effect w-full cursor-not-allowed rounded-md border border-border bg-background px-3 py-2 text-foreground placeholder:text-muted-foreground"
+            className="w-full cursor-not-allowed rounded-md border border-border bg-background px-3 py-2 text-foreground placeholder:text-muted-foreground disabled:disabled-effect"
           />
         </div>
       </div>

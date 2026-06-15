@@ -32,7 +32,7 @@ export const UserExperiencesColumn: React.FC<UserExperiencesColumnProps> = ({
           count={editors.length}
           onAdd={onAddEditor || (() => console.log("Add editor clicked"))}
           defaultOpen={true}
-          headerClassName="m-4 bg-muted hover:hover-effect border border-border rounded-md"
+          headerClassName="m-4 rounded-md border border-border bg-muted hover:hover-effect"
         >
           <ModuleList
             items={editors}
@@ -47,7 +47,7 @@ export const UserExperiencesColumn: React.FC<UserExperiencesColumnProps> = ({
           count={apps.length}
           onAdd={onAddApp || (() => console.log("Add app clicked"))}
           defaultOpen={true}
-          headerClassName="m-4 bg-muted hover:hover-effect border border-border rounded-md"
+          headerClassName="m-4 rounded-md border border-border bg-muted hover:hover-effect"
         >
           <ModuleList
             items={apps}

@@ -610,10 +610,31 @@ const tailwindRules = {
   "better-tailwindcss/no-unknown-classes": [
     "error",
     {
-      ignore: ["custom-class", "hover-bg-transparent", "skeleton-loader"],
+      ignore: [
+        "custom-class",
+        "hover-bg-transparent",
+        "skeleton-loader",
+        "home-screen",
+      ],
     },
   ],
 };
+
+// Lint Tailwind classes inside `className` and any custom `*ClassName` prop
+// (e.g. headerClassName, containerClassName, menuClassName).
+const classAttributes = [
+  "class",
+  "className",
+  ["^.*ClassName$", [{ match: "strings" }]],
+];
+
+const twSettings = (cwd, entryPoint) => ({
+  "better-tailwindcss": {
+    cwd: path.join(repoRoot, cwd),
+    entryPoint,
+    attributes: classAttributes,
+  },
+});
 
 const tailwindConfig = [
   {
@@ -621,56 +642,31 @@ const tailwindConfig = [
     ignores: ["packages/design-system/src/powerhouse/components/legacy/**"],
     ...betterTailwindcss.configs["recommended-error"],
     rules: tailwindRules,
-    settings: {
-      "better-tailwindcss": {
-        cwd: path.join(repoRoot, "packages/design-system"),
-        entryPoint: "storybook.css",
-      },
-    },
+    settings: twSettings("packages/design-system", "storybook.css"),
   },
   {
     files: ["apps/connect/**/*.{js,jsx,cjs,mjs,ts,tsx}"],
     ...betterTailwindcss.configs["recommended-error"],
     rules: tailwindRules,
-    settings: {
-      "better-tailwindcss": {
-        cwd: path.join(repoRoot, "apps/connect"),
-        entryPoint: "style.css",
-      },
-    },
+    settings: twSettings("apps/connect", "style.css"),
   },
   {
     files: ["packages/powerhouse-vetra-packages/**/*.{js,jsx,cjs,mjs,ts,tsx}"],
     ...betterTailwindcss.configs["recommended-error"],
     rules: tailwindRules,
-    settings: {
-      "better-tailwindcss": {
-        cwd: path.join(repoRoot, "packages/design-system"),
-        entryPoint: "storybook.css",
-      },
-    },
+    settings: twSettings("packages/design-system", "storybook.css"),
   },
   {
     files: ["packages/vetra/**/*.{js,jsx,cjs,mjs,ts,tsx}"],
     ...betterTailwindcss.configs["recommended-error"],
     rules: tailwindRules,
-    settings: {
-      "better-tailwindcss": {
-        cwd: path.join(repoRoot, "packages/design-system"),
-        entryPoint: "storybook.css",
-      },
-    },
+    settings: twSettings("packages/design-system", "storybook.css"),
   },
   {
     files: ["packages/switchboard-gui/**/*.{js,jsx,cjs,mjs,ts,tsx}"],
     ...betterTailwindcss.configs["recommended-error"],
     rules: tailwindRules,
-    settings: {
-      "better-tailwindcss": {
-        cwd: path.join(repoRoot, "packages/switchboard-gui"),
-        entryPoint: "src/index.css",
-      },
-    },
+    settings: twSettings("packages/switchboard-gui", "src/index.css"),
   },
 ];
 
