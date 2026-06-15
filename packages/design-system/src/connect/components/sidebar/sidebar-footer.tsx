@@ -38,7 +38,7 @@ export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
     <SidebarFooter
       {...props}
       className={twMerge(
-        "flex flex-col items-center gap-3 border-t border-gray-300 px-2 py-4 dark:border-none dark:bg-slate-700 dark:text-slate-100",
+        "flex flex-col items-center gap-3 border-t border-sidebar-border px-2 py-4 dark:border-none",
         className,
       )}
     >
@@ -50,7 +50,7 @@ export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
           onClick={onHomeClick}
         >
           <Icon
-            className="text-gray-700 dark:text-slate-200"
+            className="text-muted-foreground"
             name="ConnectSmall"
             size={24}
           />
@@ -64,7 +64,7 @@ export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
           className="cursor-pointer"
           onClick={onDebugClick}
         >
-          <Icon className="text-gray-700 dark:text-slate-200" name="Tube" />
+          <Icon className="text-foreground" name="Tube" />
         </button>
       )}
       <div className={onHomeClick ? "mt-3" : ""}>
@@ -86,12 +86,8 @@ export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
         className={twMerge(onClickSettings ? "cursor-pointer" : "cursor-wait")}
         onClick={onClickSettings}
       >
-        <Settings
-          className="text-gray-700 dark:text-slate-200"
-          size={24}
-          strokeWidth={2}
-        />
-        <span className="hidden text-sm/6 font-semibold text-gray-900 dark:text-slate-100">
+        <Settings className="text-foreground" size={24} strokeWidth={2} />
+        <span className="hidden text-sm/6 font-semibold text-foreground">
           Settings
         </span>
       </button>

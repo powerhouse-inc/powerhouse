@@ -73,7 +73,7 @@ export const ModuleItem: React.FC<ModuleItemProps> = ({
     <div
       onClick={() => onClick(fileNode)}
       className={twMerge(
-        "group flex w-full cursor-pointer items-center gap-3 rounded-md bg-gray-100 p-1 text-left transition-colors hover:effect dark:bg-slate-700",
+        "group flex w-full cursor-pointer items-center gap-3 rounded-md bg-muted p-1 text-left transition-colors hover:hover-effect",
         className,
       )}
     >
@@ -82,10 +82,10 @@ export const ModuleItem: React.FC<ModuleItemProps> = ({
         <IconComponent />
       </div>
       <div className="min-w-0 flex-1">
-        <h3 className="truncate text-sm font-medium text-gray-900 dark:text-slate-50">
+        <h3 className="truncate text-sm font-medium text-foreground">
           {fileNode.name}
         </h3>
-        <p className="truncate text-xs text-gray-500 dark:text-slate-400">
+        <p className="truncate text-xs text-muted-foreground">
           {fileNode.documentType}
         </p>
       </div>
@@ -95,7 +95,7 @@ export const ModuleItem: React.FC<ModuleItemProps> = ({
           onItemClick={onDropdownMenuOptionClick}
           onOpenChange={setIsDropdownMenuOpen}
           open={isDropdownMenuOpen}
-          menuClassName="border-gray-300 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
+          menuClassName="border-border"
         >
           <button
             className={twMerge(
@@ -107,10 +107,7 @@ export const ModuleItem: React.FC<ModuleItemProps> = ({
               setIsDropdownMenuOpen(true);
             }}
           >
-            <Icon
-              className="text-gray-700 dark:text-slate-200"
-              name="VerticalDots"
-            />
+            <Icon className="text-foreground" name="VerticalDots" />
           </button>
         </ConnectDropdownMenu>
       ) : null}

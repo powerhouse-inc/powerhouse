@@ -45,19 +45,19 @@ const styles: Record<string, CSSProperties> = {
     padding: "6px 12px",
     borderWidth: "1px",
     borderStyle: "solid",
-    borderColor: "#e5e7eb",
-    backgroundColor: "#ffffff",
+    borderColor: "var(--border, #e5e7eb)",
+    backgroundColor: "var(--card, #ffffff)",
     cursor: "pointer",
     borderRadius: "8px",
     fontSize: "12px",
     fontWeight: 500,
     fontFamily: "inherit",
-    color: "#111827",
+    color: "var(--card-foreground, #111827)",
     transition: "background-color 150ms, border-color 150ms",
   },
   triggerHover: {
-    backgroundColor: "#f9fafb",
-    borderColor: "#9ca3af",
+    backgroundColor: "var(--accent, #f3f4f6)",
+    borderColor: "var(--border, #e5e7eb)",
   },
   avatar: {
     width: "28px",
@@ -91,7 +91,7 @@ const styles: Record<string, CSSProperties> = {
   chevron: {
     flexShrink: 0,
     transition: "transform 150ms",
-    color: "#6b7280",
+    color: "var(--muted-foreground, #6b7280)",
   },
   chevronOpen: {
     transform: "rotate(180deg)",
@@ -99,25 +99,25 @@ const styles: Record<string, CSSProperties> = {
   popoverBase: {
     position: "absolute",
     right: 0,
-    backgroundColor: "#ffffff",
+    backgroundColor: "var(--popover, #ffffff)",
     borderRadius: "8px",
     boxShadow: "0 4px 12px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.08)",
     width: "100%",
     zIndex: 1000,
-    color: "#111827",
+    color: "var(--popover-foreground, #111827)",
     borderWidth: "1px",
     borderStyle: "solid",
-    borderColor: "#e5e7eb",
+    borderColor: "var(--border, #e5e7eb)",
     overflow: "hidden",
   },
   header: {
     padding: "12px 16px",
-    borderBottom: "1px solid #e5e7eb",
+    borderBottom: "1px solid var(--border, #e5e7eb)",
   },
   headerUsername: {
     fontSize: "14px",
     fontWeight: 600,
-    color: "#111827",
+    color: "var(--foreground, #111827)",
     margin: 0,
   },
   addressRow: {
@@ -135,14 +135,14 @@ const styles: Record<string, CSSProperties> = {
     backgroundColor: "transparent",
     cursor: "pointer",
     fontSize: "12px",
-    color: "#6b7280",
+    color: "var(--muted-foreground, #6b7280)",
     fontFamily: "inherit",
     position: "relative",
     width: "100%",
   },
   copiedText: {
     fontSize: "12px",
-    color: "#059669",
+    color: "var(--success, #059669)",
     position: "absolute",
     left: 0,
     transition: "opacity 150ms",
@@ -167,20 +167,20 @@ const styles: Record<string, CSSProperties> = {
     backgroundColor: "transparent",
     cursor: "pointer",
     fontSize: "14px",
-    color: "#374151",
+    color: "var(--foreground, #111827)",
     textDecoration: "none",
     fontFamily: "inherit",
     transition: "background-color 150ms",
   },
   menuItemHover: {
-    backgroundColor: "#f3f4f6",
+    backgroundColor: "var(--accent, #f3f4f6)",
   },
   disconnectItem: {
-    color: "#dc2626",
+    color: "var(--destructive, #dc2626)",
   },
   separator: {
     height: "1px",
-    backgroundColor: "#e5e7eb",
+    backgroundColor: "var(--border, #e5e7eb)",
     margin: 0,
     border: "none",
   },
@@ -342,7 +342,10 @@ export function RenownUserButton({
                       }}
                     >
                       <span>{truncateAddress(address)}</span>
-                      <CopyIcon size={12} color="#9ca3af" />
+                      <CopyIcon
+                        size={12}
+                        color="var(--muted-foreground, #9ca3af)"
+                      />
                     </div>
                     <div
                       style={{
@@ -369,7 +372,7 @@ export function RenownUserButton({
                   ...(hoveredItem === "profile" ? styles.menuItemHover : {}),
                 }}
               >
-                <UserIcon size={14} color="#6b7280" />
+                <UserIcon size={14} color="var(--muted-foreground, #6b7280)" />
                 View Profile
               </button>
             )}
@@ -404,7 +407,7 @@ export function RenownUserButton({
                 ...(hoveredItem === "disconnect" ? styles.menuItemHover : {}),
               }}
             >
-              <DisconnectIcon size={14} color="#dc2626" />
+              <DisconnectIcon size={14} color="var(--destructive, #dc2626)" />
               Log out
             </button>
           </div>

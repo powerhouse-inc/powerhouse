@@ -661,6 +661,17 @@ const tailwindConfig = [
       },
     },
   },
+  {
+    files: ["packages/switchboard-gui/**/*.{js,jsx,cjs,mjs,ts,tsx}"],
+    ...betterTailwindcss.configs["recommended-error"],
+    rules: tailwindRules,
+    settings: {
+      "better-tailwindcss": {
+        cwd: path.join(repoRoot, "packages/switchboard-gui"),
+        entryPoint: "src/index.css",
+      },
+    },
+  },
 ];
 
 /** Main config */

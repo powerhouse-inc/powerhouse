@@ -16,19 +16,19 @@ const STATUS_ICON_MAP: Record<
   { icon: React.ReactNode }
 > = {
   [NodeStatus.CREATED]: {
-    icon: <Created height={16} width={16} className="text-green-900" />,
+    icon: <Created height={16} width={16} className="text-success" />,
   },
   [NodeStatus.MODIFIED]: {
-    icon: <Modified height={16} width={16} className="text-blue-900" />,
+    icon: <Modified height={16} width={16} className="text-info" />,
   },
   [NodeStatus.REMOVED]: {
-    icon: <Removed height={16} width={16} className="text-red-900" />,
+    icon: <Removed height={16} width={16} className="text-destructive" />,
   },
   [NodeStatus.MOVED]: {
-    icon: <Moved height={16} width={16} className="text-blue-900" />,
+    icon: <Moved height={16} width={16} className="text-info" />,
   },
   [NodeStatus.DUPLICATED]: {
-    icon: <Duplicated height={16} width={16} className="text-blue-900" />,
+    icon: <Duplicated height={16} width={16} className="text-info" />,
   },
 };
 
@@ -38,7 +38,11 @@ export const StatusIcon = ({
 }: StatusIconProps) => {
   if (status === NodeStatus.UNCHANGED) {
     return isDescendenceModified ? (
-      <DescendenceModified height={16} width={16} className="text-gray-500" />
+      <DescendenceModified
+        height={16}
+        width={16}
+        className="text-muted-foreground"
+      />
     ) : null;
   }
 

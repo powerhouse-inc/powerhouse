@@ -33,11 +33,11 @@ function Wrapper(args: Args) {
   );
   return (
     <div className="flex min-h-[300px] items-start justify-start p-6">
-      <div className="w-72 rounded-md border border-gray-300 bg-gray-50 p-4 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
-        <p className="mb-1 text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-slate-400">
+      <div className="w-72 rounded-md border border-border bg-background p-4">
+        <p className="mb-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
           Current selection
         </p>
-        <p className="mb-3 font-mono text-xs text-gray-900 dark:text-slate-100">
+        <p className="mb-3 font-mono text-xs text-foreground">
           {selected.kind}: {selected.value}
         </p>
         <VersionPicker

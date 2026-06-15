@@ -20,8 +20,8 @@ export const InputDiff = ({
   return (
     <div
       className={twMerge(
-        "flex w-full items-center rounded-md font-sans text-sm/5 font-normal text-gray-700 dark:text-slate-200",
-        "cursor-not-allowed border border-gray-300 bg-transparent px-3 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100",
+        "flex w-full items-center rounded-md font-sans text-sm/5 font-normal text-foreground",
+        "cursor-not-allowed border border-border bg-transparent px-3",
         !multiline && ellipsis && "truncate [&>span]:truncate",
         hasPadding && "items-start py-2",
         className,

@@ -36,11 +36,9 @@ export function ConnectUpgradeDriveModal(props: ConnectUpgradeDriveModalProps) {
       }}
       {...restProps}
     >
-      <div className="w-100 bg-gray-50 p-6 text-gray-300 dark:bg-slate-800 dark:text-slate-200">
-        <div className="pb-2 text-2xl font-bold text-gray-900 dark:text-slate-100">
-          {header}
-        </div>
-        <div className="my-6 rounded-md bg-gray-50 p-4 text-center text-gray-900 dark:bg-slate-800 dark:text-slate-100">
+      <div className="w-100 bg-background p-6 text-foreground">
+        <div className="pb-2 text-2xl font-bold text-foreground">{header}</div>
+        <div className="my-6 rounded-md bg-background p-4 text-center text-foreground">
           {body}
         </div>
         <div className="mt-8 flex justify-between gap-3">

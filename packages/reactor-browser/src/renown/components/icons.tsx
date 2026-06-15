@@ -43,7 +43,10 @@ export function RenownLogo({
   );
 }
 
-export function CopyIcon({ size = 14, color = "#9EA0A1" }: IconProps) {
+export function CopyIcon({
+  size = 14,
+  color = "var(--muted-foreground, #9EA0A1)",
+}: IconProps) {
   return (
     <svg
       width={size}
@@ -70,7 +73,10 @@ export function CopyIcon({ size = 14, color = "#9EA0A1" }: IconProps) {
   );
 }
 
-export function DisconnectIcon({ size = 14, color = "#EA4335" }: IconProps) {
+export function DisconnectIcon({
+  size = 14,
+  color = "var(--destructive, #EA4335)",
+}: IconProps) {
   return (
     <svg
       width={size}

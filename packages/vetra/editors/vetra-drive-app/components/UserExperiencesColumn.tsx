@@ -23,16 +23,16 @@ export const UserExperiencesColumn: React.FC<UserExperiencesColumnProps> = ({
 }) => {
   return (
     <div>
-      <h3 className="mb-4 text-sm font-normal text-gray-700 dark:text-slate-200">
+      <h3 className="mb-4 text-sm font-normal text-foreground">
         2. User Experiences
       </h3>
-      <div className="rounded-md border border-gray-300 bg-gray-50 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
+      <div className="rounded-md border border-border bg-background">
         <ModuleAccordion
           title="Editors"
           count={editors.length}
           onAdd={onAddEditor || (() => console.log("Add editor clicked"))}
           defaultOpen={true}
-          headerClassName="m-4 bg-gray-100 hover:effect border border-gray-300 rounded-md dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
+          headerClassName="m-4 bg-muted hover:hover-effect border border-border rounded-md"
         >
           <ModuleList
             items={editors}
@@ -47,7 +47,7 @@ export const UserExperiencesColumn: React.FC<UserExperiencesColumnProps> = ({
           count={apps.length}
           onAdd={onAddApp || (() => console.log("Add app clicked"))}
           defaultOpen={true}
-          headerClassName="m-4 bg-gray-100 hover:effect border border-gray-300 rounded-md dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
+          headerClassName="m-4 bg-muted hover:hover-effect border border-border rounded-md"
         >
           <ModuleList
             items={apps}

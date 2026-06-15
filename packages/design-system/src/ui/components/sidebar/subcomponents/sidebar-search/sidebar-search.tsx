@@ -37,7 +37,7 @@ export const SidebarSearch: React.FC<SidebarSearchProps> = ({
   }, [searchTerm]);
 
   return (
-    <div className="flex w-full gap-2 border-t border-gray-300 p-2 dark:border-slate-500">
+    <div className="flex w-full gap-2 border-t border-sidebar-border p-2">
       <div className="relative flex-1">
         <Input
           type="search"
@@ -59,7 +59,7 @@ export const SidebarSearch: React.FC<SidebarSearchProps> = ({
         <Search
           height={16}
           width={16}
-          className="absolute top-1/2 left-2 -translate-y-1/2 text-gray-700 dark:text-slate-50"
+          className="absolute top-1/2 left-2 -translate-y-1/2 text-foreground"
         />
 
         {/* Search controls - only shown when there's a search term */}
@@ -74,7 +74,7 @@ export const SidebarSearch: React.FC<SidebarSearchProps> = ({
               totalResults={searchResults.length}
             />
 
-            <div className="flex flex-col text-gray-500 dark:text-slate-700">
+            <div className="flex flex-col text-muted-foreground">
               <SearchNavigationArrow
                 direction="up"
                 isDisabled={activeSearchIndex === 0}
@@ -92,7 +92,7 @@ export const SidebarSearch: React.FC<SidebarSearchProps> = ({
               onClick={() => changeSearchTerm("")}
               height={16}
               width={16}
-              className="cursor-pointer text-gray-500 hover:effect active:text-gray-900 dark:text-slate-700 dark:active:text-slate-300"
+              className="cursor-pointer text-muted-foreground hover:hover-effect active:active-effect"
             />
           </div>
         )}
@@ -104,10 +104,10 @@ export const SidebarSearch: React.FC<SidebarSearchProps> = ({
           onClick={toggleStatusFilter}
           tabIndex={1}
           className={twMerge(
-            "rounded-md border border-gray-300 px-2 py-1 text-sm text-gray-500",
+            "rounded-md border border-border px-2 py-1 text-sm text-muted-foreground",
             isStatusFilterEnabled
-              ? "border-blue-500 bg-blue-50 text-blue-900"
-              : "hover:effect",
+              ? "border-info bg-info/10 text-info"
+              : "hover:hover-effect",
           )}
         >
           <Tabler height={16} width={16} />

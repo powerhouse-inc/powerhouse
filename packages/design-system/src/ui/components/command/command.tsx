@@ -27,10 +27,10 @@ const CommandInput = React.forwardRef<
   <div
     className={twMerge(
       "group relative flex items-center border-b",
-      "border-b-gray-300 dark:border-b-slate-900",
-      "hover:effect",
-      "focus-within:border-b-gray-300 dark:focus-within:border-b-slate-800",
-      "focus-within:bg-gray-100 dark:focus-within:bg-slate-700",
+      "border-b-border",
+      "hover:hover-effect",
+      "focus-within:border-b-border",
+      "focus-within:bg-accent",
       wrapperClassName,
     )}
     cmdk-input-wrapper=""
@@ -39,19 +39,18 @@ const CommandInput = React.forwardRef<
       name="Search"
       size={16}
       className={twMerge(
-        "pointer-events-none absolute top-3.5 left-2 text-gray-500 dark:text-slate-400",
-        "group-hover:effect",
-        "group-focus-within:text-gray-900! dark:group-focus-within:text-slate-50",
+        "pointer-events-none absolute top-3.5 left-2 text-muted-foreground",
+        "group-hover:hover-effect",
+        "group-focus-within:text-foreground!",
       )}
     />
     <CommandPrimitive.Input
       ref={ref}
       className={twMerge(
         "flex w-full bg-transparent pt-3 pr-3 pb-2 pl-8 text-sm/5 font-normal outline-none",
-        "placeholder:text-gray-500 dark:placeholder:text-slate-400",
-        "group-hover:placeholder:effect dark:group-hover:placeholder:effect",
-        "group-focus-within:placeholder:text-gray-700! dark:group-focus-within:placeholder:text-slate-300",
-        "disabled:cursor-not-allowed",
+        "text-foreground placeholder:text-muted-foreground disabled:disabled-effect",
+        "group-hover:hover-effect",
+        "disabled:disabled-effect",
         className,
       )}
       {...props}
@@ -118,9 +117,9 @@ const CommandItem = React.forwardRef<
     className={twMerge(
       "relative flex items-center justify-between select-none",
       "h-8 gap-2 rounded-md py-1.5 pr-2.5 pl-1.5",
-      "text-sm/4 text-gray-900 outline-none dark:text-slate-50",
-      "border-y-2 border-white dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100",
-      "data-[disabled=true]:pointer-events-none",
+      "text-sm/4 text-foreground outline-none",
+      "border-y-2 border-border",
+      "data-[disabled=true]:disabled-effect",
       "[&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
       className,
     )}
@@ -136,6 +135,5 @@ export {
   CommandInput,
   CommandItem,
   CommandList,
-  CommandLoading
+  CommandLoading,
 };
-

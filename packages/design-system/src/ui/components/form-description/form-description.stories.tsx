@@ -24,7 +24,7 @@ export const Default: Story = {
 
 export const CustomClassName: Story = {
   args: {
-    className: "text-blue-500 dark:text-blue-50",
+    className: "text-info",
     children: "Description with custom styling",
   },
 };

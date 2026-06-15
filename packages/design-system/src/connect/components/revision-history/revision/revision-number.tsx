@@ -23,11 +23,11 @@ export function RevisionNumber(props: RevisionNumberProps) {
         />
       }
       trigger={
-        <span className="flex cursor-pointer items-center gap-2 text-xs text-gray-700 dark:text-slate-200">
+        <span className="flex cursor-pointer items-center gap-2 text-xs text-foreground">
           Revision {revisionNumber}.
           <a>
             <Icon
-              className="cursor-pointer text-gray-100 dark:text-slate-800"
+              className="cursor-pointer text-foreground"
               name="Ellipsis"
               size={14}
             />

@@ -1,6 +1,6 @@
+import { Modal } from "#design-system";
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
-import { Modal } from "#design-system";
 import { twMerge } from "tailwind-merge";
 
 type ModalProps = ComponentPropsWithoutRef<typeof Modal>;
@@ -75,13 +75,13 @@ export function ReadRequiredModal(props: ReadRequiredModalProps) {
       contentProps={contentProps}
     >
       <div className="w-[500px] p-6">
-        <div className="border-b border-gray-300 pb-2 text-2xl font-bold text-gray-900 dark:border-slate-500 dark:text-slate-100">
+        <div className="border-b border-border pb-2 text-2xl font-bold text-foreground">
           {header}
         </div>
         <div
           ref={contentRef}
           className={twMerge(
-            "my-6 max-h-[245px] overflow-scroll rounded-md bg-gray-50 p-4 text-center dark:bg-slate-700",
+            "my-6 max-h-[245px] overflow-scroll rounded-md bg-background p-4 text-center",
             bodyClassName,
           )}
         >
@@ -92,10 +92,10 @@ export function ReadRequiredModal(props: ReadRequiredModalProps) {
             disabled={disableClose}
             onClick={onContinue}
             className={twMerge(
-              "min-h-12 flex-1 transform rounded-xl px-6 py-3 text-base font-semibold transition-all outline-none hover:scale-105 active:opacity-75",
-              "bg-gray-800 text-gray-50 dark:bg-slate-100 dark:text-slate-900",
+              "min-h-12 flex-1 transform rounded-xl px-6 py-3 text-base font-semibold transition-all outline-none hover:hover-effect active:active-effect",
+              "bg-primary text-primary-foreground",
               disableClose &&
-                "cursor-not-allowed bg-gray-300 hover:scale-100 dark:bg-slate-600 dark:text-slate-100",
+                "cursor-not-allowed bg-secondary hover:hover-effect",
             )}
           >
             {closeLabel}

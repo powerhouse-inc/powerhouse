@@ -68,7 +68,7 @@ const Checkbox = React.forwardRef<HTMLButtonElement, CheckboxProps>(
             disabled={disabled}
             hasError={hasError}
             description={description}
-            className={twMerge(!disabled && "group-hover:cursor-pointer")}
+            className={twMerge(!disabled && "group-hover:hover-effect")}
             inline
           >
             {label}

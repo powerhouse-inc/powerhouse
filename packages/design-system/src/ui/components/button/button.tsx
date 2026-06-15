@@ -10,7 +10,7 @@ const buttonVariants = cva(
     "rounded-md text-sm font-medium whitespace-nowrap",
     "transition-colors",
     "focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
-    "disabled:pointer-events-none",
+    "disabled:disabled-effect",
     "[&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   ),
   {

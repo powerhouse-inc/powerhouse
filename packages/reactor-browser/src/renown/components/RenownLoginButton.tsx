@@ -13,31 +13,17 @@ export interface RenownLoginButtonProps {
   children?: ReactNode;
 }
 
-const lightStyles = {
+const colorStyles = {
   trigger: {
-    backgroundColor: "#ffffff",
+    backgroundColor: "var(--card, #ffffff)",
     borderWidth: "1px",
     borderStyle: "solid",
-    borderColor: "#d1d5db",
-    color: "#111827",
+    borderColor: "var(--border, #d1d5db)",
+    color: "var(--card-foreground, #111827)",
   },
   triggerHover: {
-    backgroundColor: "#ecf3f8",
-    borderColor: "#9ca3af",
-  },
-} as const;
-
-const darkStyles = {
-  trigger: {
-    backgroundColor: "#1f2937",
-    borderWidth: "1px",
-    borderStyle: "solid",
-    borderColor: "#4b5563",
-    color: "#ecf3f8",
-  },
-  triggerHover: {
-    backgroundColor: "#374151",
-    borderColor: "#6b7280",
+    backgroundColor: "var(--accent, #ecf3f8)",
+    borderColor: "var(--border, #d1d5db)",
   },
 } as const;
 
@@ -64,7 +50,6 @@ const styles: Record<string, CSSProperties> = {
 
 export function RenownLoginButton({
   onLogin: onLoginProp,
-  darkMode = false,
   style,
   className,
   asChild = false,
@@ -84,7 +69,7 @@ export function RenownLoginButton({
     }
   };
 
-  const themeStyles = darkMode ? darkStyles : lightStyles;
+  const themeStyles = colorStyles;
 
   const triggerStyle: CSSProperties = {
     ...styles.trigger,

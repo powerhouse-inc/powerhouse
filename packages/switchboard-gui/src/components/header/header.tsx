@@ -36,7 +36,7 @@ export default function Header() {
     }
   };
   return (
-    <header className="fixed top-0 h-14 w-full bg-orange-50 text-gray-900 dark:bg-orange-900 dark:text-slate-50">
+    <header className="fixed top-0 h-14 w-full bg-warning/10 text-foreground">
       <nav className="flex h-14 flex-row items-center justify-between">
         <div className="flex items-start">
           <SwitchboardLink href="/">
@@ -58,7 +58,7 @@ export default function Header() {
               id="graphqlPlayground"
               name="graphqlPlayground"
               aria-placeholder="Select GraphQL Playground"
-              className="w-full rounded-md border border-gray-300 p-2 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
+              className="w-full rounded-md border border-border p-2"
               onChange={selectGraphQLPlayground}
             >
               <option value="">GraphQL Playgrounds</option>
@@ -74,9 +74,9 @@ export default function Header() {
           )}
         </div>
         <div className="flex flex-row gap-2">
-          <div className="flex items-center text-orange-50 dark:text-orange-50">
+          <div className="flex items-center text-warning-foreground">
             <SwitchboardLink
-              className="flex flex-row items-center gap-2 rounded-2xl bg-orange-50 px-4 py-2 text-orange-500 dark:bg-orange-900 dark:text-orange-50"
+              className="flex flex-row items-center gap-2 rounded-2xl bg-warning/10 px-4 py-2 text-warning"
               href="/user"
             >
               <span>
@@ -89,7 +89,7 @@ export default function Header() {
               </span>
             </SwitchboardLink>
           </div>
-          <div className="my-auto pr-2 text-orange-50 dark:text-orange-50">
+          <div className="my-auto pr-2 text-warning-foreground">
             <Link
               href="https://github.com/powerhouse-inc/switchboard-boilerplate"
               target="_blank"

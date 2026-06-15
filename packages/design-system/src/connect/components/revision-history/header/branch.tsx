@@ -7,10 +7,10 @@ export function Branch(props: Props) {
   const { branch = "main" } = props;
 
   return (
-    <button className="flex h-8 w-fit items-center gap-1 rounded-lg bg-gray-50 pr-2 pl-1 text-xs text-gray-300 dark:bg-slate-800">
+    <button className="flex h-8 w-fit items-center gap-1 rounded-lg bg-background pr-2 pl-1 text-xs text-foreground">
       <Icon name="Branch" />
       <span>BRANCH</span>
-      <span className="text-gray-900 dark:text-slate-50">{branch}</span>
+      <span className="text-foreground">{branch}</span>
     </button>
   );
 }

@@ -24,7 +24,7 @@ export function FolderView(props: { className?: string }) {
             <FolderItem key={folderNode.id} folderNode={folderNode} />
           ))
         ) : (
-          <div className="mb-8 text-sm text-gray-400 dark:text-slate-200">
+          <div className="mb-8 text-sm text-muted-foreground">
             No documents or files 📄
           </div>
         )}

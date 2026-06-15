@@ -17,6 +17,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@powerhousedao/design-system": "workspace:*",
     "@apollo/client": "^3.11.8",
     "@heroicons/react": "^2.1.5",
     "ethers": "^6.13.3",

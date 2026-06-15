@@ -20,10 +20,10 @@ export const DocumentModelsColumn: React.FC<DocumentModelsColumnProps> = ({
 }) => {
   return (
     <div>
-      <h3 className="mb-4 text-sm font-normal text-gray-700 dark:text-slate-200">
+      <h3 className="mb-4 text-sm font-normal text-foreground">
         1. Document Models
       </h3>
-      <div className="rounded-md border border-gray-300 bg-gray-50 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
+      <div className="rounded-md border border-border bg-background">
         <ModuleAccordion
           title="Document Models"
           count={documentModels.length}
@@ -32,7 +32,7 @@ export const DocumentModelsColumn: React.FC<DocumentModelsColumnProps> = ({
             (() => console.log("Add document model clicked"))
           }
           defaultOpen={true}
-          headerClassName="m-4 bg-gray-100 hover:effect border border-gray-300 rounded-md dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
+          headerClassName="m-4 bg-muted hover:hover-effect border border-border rounded-md"
         >
           <ModuleList
             items={documentModels}

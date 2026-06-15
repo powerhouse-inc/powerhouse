@@ -27,16 +27,16 @@ export const DataIntegrationsColumn: React.FC<DataIntegrationsColumnProps> = ({
 }) => {
   return (
     <div>
-      <h3 className="mb-4 text-sm font-normal text-gray-700 dark:text-slate-200">
+      <h3 className="mb-4 text-sm font-normal text-foreground">
         3. Data Integrations
       </h3>
-      <div className="rounded-md border border-gray-300 bg-gray-50 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
+      <div className="rounded-md border border-border bg-background">
         <ModuleAccordion
           title="Subgraphs"
           count={subgraphs.length}
           onAdd={onAddSubgraph || (() => console.log("Add subgraph clicked"))}
           defaultOpen={true}
-          headerClassName="m-4 bg-gray-100 hover:effect border border-gray-300 rounded-md dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
+          headerClassName="m-4 bg-muted hover:hover-effect border border-border rounded-md"
         >
           <ModuleList
             items={subgraphs}
@@ -51,7 +51,7 @@ export const DataIntegrationsColumn: React.FC<DataIntegrationsColumnProps> = ({
           count={processors.length}
           onAdd={onAddProcessor || (() => console.log("Add processor clicked"))}
           defaultOpen={true}
-          headerClassName="m-4 bg-gray-100 hover:effect border border-gray-300 rounded-md dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
+          headerClassName="m-4 bg-muted hover:hover-effect border border-border rounded-md"
         >
           <ModuleList
             items={processors}
@@ -69,7 +69,7 @@ export const DataIntegrationsColumn: React.FC<DataIntegrationsColumnProps> = ({
             (() => console.log("Add codegen processor clicked"))
           }
           defaultOpen={true}
-          headerClassName="m-4 bg-gray-100 hover:effect border border-gray-300 rounded-md dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
+          headerClassName="m-4 bg-muted hover:hover-effect border border-border rounded-md"
         >
           <ModuleList
             items={codegenProcessors}

@@ -58,7 +58,7 @@ export function FileContentView() {
 
   if (fileNodes.length === 0) {
     return (
-      <div className="mb-8 text-sm text-gray-400 dark:text-slate-200">
+      <div className="mb-8 text-sm text-muted-foreground">
         No documents or files 📄
       </div>
     );

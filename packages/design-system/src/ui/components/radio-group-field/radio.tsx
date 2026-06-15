@@ -42,16 +42,10 @@ export const Radio = React.forwardRef<
           aria-invalid={hasError}
           className={twMerge(
             "group peer",
-            "aspect-square size-4 rounded-full border border-gray-900 dark:border-slate-50",
-            "hover:effect",
-            disabled && [
-              "cursor-not-allowed border-gray-300 dark:border-slate-500",
-              "dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100",
-            ],
-            hasError && [
-              "border-red-900 dark:border-red-50",
-              "dark:border-red-900",
-            ],
+            "aspect-square size-4 rounded-full border border-foreground",
+            "hover:hover-effect",
+            disabled && ["cursor-not-allowed border-border", ""],
+            hasError && ["border-destructive", ""],
             className,
           )}
           disabled={disabled}
@@ -65,16 +59,13 @@ export const Radio = React.forwardRef<
               "relative flex size-full items-center justify-center",
               "after:absolute after:top-1/2 after:left-1/2 after:size-2.5",
               "after:-translate-1/2",
-              "after:rounded-full after:bg-gray-800 after:content-[''] dark:after:bg-slate-100",
-              "dark:after:bg-slate-400",
+              "after:rounded-full after:bg-primary after:content-['']",
+              "",
               !disabled && [
-                "group-hover:after:effect dark:group-hover:after:effect",
-                "dark:group-hover:after:effect",
+                "group-hover:after:hover-effect dark:group-hover:after:hover-effect",
+                "dark:group-hover:after:hover-effect",
               ],
-              disabled && [
-                "after:bg-gray-500 dark:after:bg-slate-300",
-                "dark:after:bg-slate-600 dark:after:text-slate-100",
-              ],
+              disabled && ["after:bg-muted-foreground", ""],
             )}
           />
         </RadioGroupPrimitive.Item>
@@ -83,7 +74,7 @@ export const Radio = React.forwardRef<
             !disabled &&
               !hasError && [
                 "cursor-pointer",
-                "peer-hover:effect dark:peer-hover:effect",
+                "peer-hover:hover-effect dark:peer-hover:hover-effect",
               ],
           )}
           description={description}

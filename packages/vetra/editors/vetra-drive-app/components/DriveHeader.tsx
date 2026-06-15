@@ -77,18 +77,18 @@ export const DriveHeader: React.FC<DriveHeaderProps> = ({
   }, [driveUrl]);
 
   return (
-    <div className="bg-gray-50 px-6 py-4 dark:bg-slate-800">
+    <div className="bg-background px-6 py-4">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-gray-900 dark:text-slate-50">
+        <div className="flex items-center gap-2 text-foreground">
           <VetraIcon width={20} height={20} />
-          <h1 className="text-lg font-semibold text-gray-900 dark:text-slate-50">
+          <h1 className="text-lg font-semibold text-foreground">
             Vetra Studio Drive
           </h1>
           <div className="relative" ref={infoMenuRef}>
             <button
               aria-label="Drive information"
               aria-expanded={isInfoMenuOpen}
-              className="rounded-full p-1 text-gray-500 transition-colors hover:effect dark:text-slate-400"
+              className="rounded-full p-1 text-muted-foreground transition-colors hover:hover-effect"
               onClick={toggleInfoMenu}
             >
               <InfoIcon className="" />
@@ -96,7 +96,7 @@ export const DriveHeader: React.FC<DriveHeaderProps> = ({
             {isInfoMenuOpen && (
               <div
                 role="menu"
-                className="absolute top-full left-0 z-10 mt-2 flex flex-col items-start gap-2 rounded-lg bg-gray-50 p-3 shadow-lg dark:bg-slate-700"
+                className="absolute top-full left-0 z-10 mt-2 flex flex-col items-start gap-2 rounded-lg bg-background p-3 shadow-lg"
               >
                 <DriveInfoItem label="Name" value={driveName} />
                 <DriveInfoItem label="Drive ID" value={driveId} />
@@ -108,7 +108,7 @@ export const DriveHeader: React.FC<DriveHeaderProps> = ({
               <button
                 aria-label="Share drive"
                 aria-expanded={isShareMenuOpen}
-                className="rounded-full p-1 text-gray-900 transition-colors hover:effect dark:text-slate-50"
+                className="rounded-full p-1 text-foreground transition-colors hover:hover-effect"
                 onClick={toggleShareMenu}
               >
                 <ShareIcon width={16} height={16} />
@@ -116,7 +116,7 @@ export const DriveHeader: React.FC<DriveHeaderProps> = ({
               {isShareMenuOpen && (
                 <div
                   role="menu"
-                  className="absolute top-full left-0 z-10 mt-2 flex w-max flex-col gap-4 rounded-lg bg-gray-50 p-4 shadow-lg dark:bg-slate-800"
+                  className="absolute top-full left-0 z-10 mt-2 flex w-max flex-col gap-4 rounded-lg bg-background p-4 shadow-lg"
                 >
                   <ShareMenuItem label="Copy the Drive URL" url={driveUrl} />
                   <ShareMenuItem
@@ -132,7 +132,7 @@ export const DriveHeader: React.FC<DriveHeaderProps> = ({
           href="https://academy.vetra.io/"
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-2 text-sm text-gray-900 underline transition-colors hover:effect dark:text-slate-50"
+          className="flex items-center gap-2 text-sm text-foreground underline transition-colors hover:hover-effect"
         >
           <ExternalLinkIcon />
           Vetra Academy

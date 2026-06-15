@@ -69,7 +69,7 @@ export const PackageSearch: Story = {
   render: (args) => (
     <div className="w-[480px] p-6">
       <SearchAutocomplete {...(args as SearchAutocompleteProps)} />
-      <p className="mt-3 text-xs text-gray-500 dark:text-slate-400">
+      <p className="mt-3 text-xs text-muted-foreground">
         Try typing &quot;p&quot; or &quot;design&quot; to see the results.
       </p>
     </div>

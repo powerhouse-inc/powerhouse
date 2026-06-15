@@ -46,7 +46,7 @@ const FormLabel = React.forwardRef<
   return (
     <Label
       ref={ref}
-      className={twMerge(error && "text-red-900 dark:text-red-500", className)}
+      className={twMerge(error && "text-destructive", className)}
       htmlFor={formItemId}
       {...props}
     />
@@ -85,10 +85,7 @@ const FormDescription = React.forwardRef<
     <p
       ref={ref}
       id={formDescriptionId}
-      className={twMerge(
-        "text-sm text-gray-700 dark:text-slate-200",
-        className,
-      )}
+      className={twMerge("text-sm text-foreground", className)}
       {...props}
     />
   );
@@ -110,10 +107,7 @@ const FormMessage = React.forwardRef<
     <p
       ref={ref}
       id={formMessageId}
-      className={twMerge(
-        "text-sm font-medium text-red-900 dark:text-red-50",
-        className,
-      )}
+      className={twMerge("text-sm font-medium text-destructive", className)}
       {...props}
     >
       {body}

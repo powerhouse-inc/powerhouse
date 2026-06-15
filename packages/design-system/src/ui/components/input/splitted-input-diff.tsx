@@ -46,7 +46,7 @@ const CopyIcon = ({
           <Icon
             name="Copy"
             size={16}
-            className={twMerge("text-gray-500 dark:text-slate-400")}
+            className={twMerge("text-muted-foreground")}
           />
         </button>
       </Tooltip>
@@ -95,11 +95,7 @@ export const SplittedInputDiff = ({
               />
             )}
           </div>
-          <div
-            className={twMerge(
-              "mx-3 h-[34px] w-px bg-gray-300 dark:bg-slate-600 dark:text-slate-100",
-            )}
-          />
+          <div className={twMerge("mx-3 h-[34px] w-px bg-secondary")} />
           <div
             className={twMerge(
               "flex flex-1 items-center gap-2 truncate [&>span]:truncate",

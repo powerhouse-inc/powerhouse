@@ -1,36 +1,25 @@
 // #!/usr/bin/env node
-import { concat, forEach, map, pipe, values } from "remeda";
+import { filter, forEach, pipe } from "remeda";
 import { findFilesWithClasses } from "./find-files-with-classes.js";
-import { allMappings } from "./mappings.js";
 import { getStringLiteralsFromFiles, makeTsMorphProject } from "./ts-morph.js";
-import { addPrefix, removeClassesFromStringLiteral } from "./utils.js";
+import { hasClasses, removeClassesFromStringLiteral } from "./utils.js";
 
-const classesToRemove = pipe(
-  values(allMappings),
-  map(addPrefix("dark:")),
-  concat([
-    "dark:bg-blue-900/30",
-    "dark:bg-blue-900/20",
-    "dark:text-black",
-    "dark:bg-red-900/20",
-    "dark:hover:bg-blue-900/30",
-    "dark:hover:bg-blue-900/20",
-    "dark:hover:bg-yellow-900/30",
-    "dark:bg-yellow-900/20",
-    "dark:bg-yellow-800",
-    "dark:bg-yellow-900/30",
-    "dark:hover:bg-red-900/30",
-    "dark:bg-red-900/30",
-    "dark:bg-black/90",
-  ]),
-);
+const classesToRemove = [
+  "dark:divide-slate-500",
+  "dark:focus:ring-slate-300",
+  "dark:focus-visible:ring-slate-300",
+  "dark:focus-visible:ring-slate-400",
+];
+
+const set = new Set(classesToRemove);
 
 const project = makeTsMorphProject();
-const files = await findFilesWithClasses(["dark:"]);
+const files = await findFilesWithClasses(classesToRemove);
 
 pipe(
   files,
   getStringLiteralsFromFiles(project),
+  filter(hasClasses(set)),
   forEach(removeClassesFromStringLiteral(classesToRemove)),
 );
 

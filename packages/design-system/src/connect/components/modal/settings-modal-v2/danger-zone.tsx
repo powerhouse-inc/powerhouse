@@ -39,19 +39,10 @@ type Props = ModifyDrivesProps & LocalStorageProps;
 export function DangerZone(props: Props) {
   const { className, ...rest } = props;
   return (
-    <div
-      className={twMerge(
-        "h-full rounded-lg bg-gray-50 p-3 dark:bg-slate-800",
-        className,
-      )}
-    >
-      <h2 className="mb-4 font-semibold text-gray-900 dark:text-slate-100">
-        Modify Drives
-      </h2>
+    <div className={twMerge("h-full rounded-lg bg-background p-3", className)}>
+      <h2 className="mb-4 font-semibold text-foreground">Modify Drives</h2>
       <ModifyDrives {...rest} />
-      <h2 className="my-4 font-semibold text-gray-900 dark:text-slate-100">
-        Local Storage
-      </h2>
+      <h2 className="my-4 font-semibold text-foreground">Local Storage</h2>
       <LocalStorage {...rest} />
     </div>
   );
@@ -110,7 +101,7 @@ function Drive(props: ModifyDrivesProps & { drive: DocumentDriveDocument }) {
   return (
     <div
       className={twMerge(
-        "mb-4 flex w-96 items-center gap-2 rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-gray-900 shadow-sm last-of-type:mb-0 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100",
+        "mb-4 flex w-96 items-center gap-2 rounded-md border border-border bg-background px-3 py-2 text-foreground shadow-sm last-of-type:mb-0",
         className,
       )}
     >
@@ -120,20 +111,20 @@ function Drive(props: ModifyDrivesProps & { drive: DocumentDriveDocument }) {
           {capitalCase(drive.header.name)}
         </span>
         <div className="flex items-baseline gap-x-2 leading-4.5">
-          <span className="text-sm text-gray-700 dark:text-slate-200">
+          <span className="text-sm text-foreground">
             {capitalCase(getDriveSharingType(drive))} App
           </span>
           <a
             href="https://www.powerhouse.inc/"
             target="_blank"
             rel="noopener noreferrer"
-            className="group flex items-center gap-x-2 text-sm text-gray-500 transition-colors hover:effect dark:text-slate-500"
+            className="group flex items-center gap-x-2 text-sm text-muted-foreground transition-colors hover:hover-effect"
           >
             By Powerhouse
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 12 12"
-              className="size-4 text-gray-400 transition-colors group-hover:effect dark:text-slate-500"
+              className="size-4 text-muted-foreground transition-colors group-hover:hover-effect"
             >
               <path
                 d="M7.99365 11.9939C9.46632 11.9939 10.6603 10.7999 10.6603 9.32722V7.32722C10.6603 6.95922 10.3617 6.66056 9.99365 6.66056C9.62565 6.66056 9.32699 6.95922 9.32699 7.32722V9.32722C9.32699 10.0639 8.73032 10.6606 7.99365 10.6606H2.66032C1.92365 10.6606 1.32699 10.0639 1.32699 9.32722V3.99389C1.32699 3.25723 1.92365 2.66056 2.66032 2.66056H4.66032C5.02832 2.66056 5.32699 2.36189 5.32699 1.99389C5.32699 1.6259 5.02832 1.32723 4.66032 1.32723H2.66032C1.18765 1.32723 -0.00634766 2.52123 -0.00634766 3.99389V9.32722C-0.00634766 10.7999 1.18765 11.9939 2.66032 11.9939H7.99365ZM5.32699 7.32722C5.49765 7.32722 5.67565 7.26989 5.80632 7.13989L10.1396 2.80656L11.9937 4.66056V-0.00610352H7.32699L9.18099 1.8479L4.84766 6.18123C4.58766 6.4419 4.58766 6.87922 4.84766 7.13989C4.97832 7.26989 5.15632 7.32722 5.32699 7.32722Z"
@@ -149,7 +140,7 @@ function Drive(props: ModifyDrivesProps & { drive: DocumentDriveDocument }) {
             id: "delete-drive",
             label: "Delete",
             icon: <Icon name="Trash" />,
-            className: "text-red-900 dark:text-red-500",
+            className: "text-destructive",
           },
         ]}
         onItemClick={(id) => {
@@ -168,7 +159,7 @@ function Drive(props: ModifyDrivesProps & { drive: DocumentDriveDocument }) {
           }}
         >
           <Icon
-            className="text-gray-700 group-hover:effect dark:text-slate-200"
+            className="text-foreground group-hover:hover-effect"
             name="VerticalDots"
             size={16}
           />
@@ -183,7 +174,7 @@ function LocalStorage(props: LocalStorageProps) {
   return (
     <div>
       <button
-        className="flex items-center gap-x-2 rounded-md border border-gray-300 bg-transparent px-3 py-1 text-sm font-medium text-red-900 transition-colors hover:effect dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
+        className="flex items-center gap-x-2 rounded-md border border-border bg-transparent px-3 py-1 text-sm font-medium text-destructive transition-colors hover:hover-effect"
         onClick={() => void onClearStorage()}
       >
         Clear Storage <Icon name="Trash" size={16} />

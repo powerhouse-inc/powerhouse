@@ -15,13 +15,9 @@ export function Signature(props: SignatureProps) {
   return (
     <CodePopover
       trigger={
-        <span className="flex w-fit cursor-pointer items-center gap-1 rounded-lg border border-gray-300 bg-gray-50 px-2 py-1 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
+        <span className="flex w-fit cursor-pointer items-center gap-1 rounded-lg border border-border bg-background px-2 py-1">
           <VerificationStatus signatures={signatures} />{" "}
-          <Icon
-            className="text-gray-300 dark:text-slate-600"
-            name="InfoSquare"
-            size={16}
-          />
+          <Icon className="text-foreground" name="InfoSquare" size={16} />
         </span>
       }
       content={<FormattedJsonViewer value={signatures} collapsed={1} />}
@@ -47,10 +43,10 @@ function VerificationStatus(props: SignatureProps) {
       className={twMerge(
         `text-xs`,
         verifiedSignaturesCount === 0
-          ? "text-red-900 dark:text-red-50"
+          ? "text-destructive"
           : verifiedSignaturesCount === signatureCount
-            ? "text-green-500 dark:text-green-50"
-            : "text-orange-900 dark:text-orange-50",
+            ? "text-success"
+            : "text-warning",
       )}
     >
       {verificationStatusText}

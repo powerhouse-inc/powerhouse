@@ -148,7 +148,7 @@ export const TextField = forwardRef<TextFieldHandle, TextFieldProps>(
               {!!label && (
                 <FormLabel
                   htmlFor={name}
-                  className="text-sm font-medium text-gray-700 dark:text-slate-200"
+                  className="text-sm font-medium text-foreground"
                 >
                   {label}
                 </FormLabel>

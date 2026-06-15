@@ -13,15 +13,15 @@ export const AvailableOfflineToggle = forwardRef(
     ref: ForwardedRef<HTMLInputElement>,
   ) {
     return (
-      <div className="flex items-center rounded-md border border-gray-300 bg-gray-50 p-3 text-gray-900 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
+      <div className="flex items-center rounded-md border border-border bg-background p-3 text-foreground">
         <div className="flex-1">
           <label
-            className="font-medium text-gray-900 dark:text-slate-50"
+            className="font-medium text-foreground"
             htmlFor="availableOffline"
           >
             Make available offline
           </label>
-          <p className="text-xs text-gray-700 dark:text-slate-200">
+          <p className="text-xs text-foreground">
             Check this options if you keep a local backup
             <br />
             available at all times.

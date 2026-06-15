@@ -57,7 +57,7 @@ const mockNodesWithClassName = [
   {
     id: "1",
     title: "Node with custom class",
-    className: "custom-node-class text-blue-500",
+    className: "custom-node-class text-info",
     children: [],
   },
   {
@@ -150,7 +150,7 @@ describe("Sidebar Component", () => {
       );
       expect(sidebarItemContainer).toHaveClass(
         "custom-node-class",
-        "text-blue-500",
+        "text-info",
       );
     });
   });

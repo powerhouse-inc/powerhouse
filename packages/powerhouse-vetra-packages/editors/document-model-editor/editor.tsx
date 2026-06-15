@@ -320,7 +320,7 @@ export default function Editor() {
   };
 
   return (
-    <main className="min-h-dvh bg-gray-50 p-6 dark:bg-slate-800">
+    <main className="min-h-dvh bg-background p-6">
       <DocumentToolbar />
       <SchemaContextProvider
         globalStateSchemaSdl={globalStateSchema}
@@ -361,7 +361,7 @@ export default function Editor() {
               />
             </Suspense>
             <Divider />
-            <h3 className="mb-6 text-lg text-gray-900 capitalize dark:text-slate-100">
+            <h3 className="mb-6 text-lg text-foreground capitalize">
               {scope} Operations
             </h3>
             <Modules

@@ -29,7 +29,7 @@ export default function Editor() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-background p-6">
       <DocumentToolbar />
       <div className="mx-auto max-w-2xl">
         <h1 className="mb-4 text-2xl font-bold">{document.header.name}</h1>
@@ -88,7 +88,7 @@ export default function Editor() {
           ))}
         </ul>
 
-        <p className="mt-4 text-sm text-gray-500">
+        <p className="mt-4 text-sm text-muted-foreground">
           <span data-testid="todo-count">{todos.length}</span> todo(s)
         </p>
       </div>

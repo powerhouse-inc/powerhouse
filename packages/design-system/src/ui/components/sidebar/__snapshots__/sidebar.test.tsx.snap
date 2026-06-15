@@ -3,10 +3,10 @@
 exports[`Sidebar Component > Loading State > should match snapshot in loading state 1`] = `
 <DocumentFragment>
   <aside
-    class="group peer relative flex h-svh max-h-screen flex-col bg-gray-50 shadow-lg transition-[width] duration-75 ease-linear dark:bg-slate-600"
+    class="group peer relative flex h-svh max-h-screen flex-col bg-background shadow-lg transition-[width] duration-75 ease-linear dark:bg-slate-600"
   >
     <header
-      class="flex items-center justify-between gap-2 border-b border-gray-300 bg-gray-50 p-4 dark:border-slate-800 dark:bg-slate-600"
+      class="flex items-center justify-between gap-2 border-b border-gray-300 bg-background p-4 dark:border-slate-800 dark:bg-slate-600"
     >
       <div
         class="flex items-center gap-2 truncate"
@@ -35,14 +35,14 @@ exports[`Sidebar Component > Loading State > should match snapshot in loading st
         class="flex items-center gap-2 select-none"
       >
         <div
-          class="w-[26px] rounded-lg bg-gray-50 p-1 text-center text-xs text-gray-100 dark:bg-slate-900 dark:text-slate-200 hover:bg-gray-100 hover:text-gray-200 dark:hover:bg-slate-600 dark:hover:text-slate-50"
+          class="w-[26px] rounded-lg bg-background p-1 text-center text-xs text-gray-100 dark:bg-slate-900 dark:text-slate-200 hover:bg-gray-100 hover:text-gray-200 dark:hover:bg-slate-600 dark:hover:text-slate-50"
           role="button"
           tabindex="0"
         >
           1
         </div>
         <div
-          class="w-[26px] rounded-lg bg-gray-50 p-1 text-center text-xs text-gray-100 dark:bg-slate-900 dark:text-slate-200 hover:bg-gray-100 hover:text-gray-200 dark:hover:bg-slate-600 dark:hover:text-slate-50"
+          class="w-[26px] rounded-lg bg-background p-1 text-center text-xs text-gray-100 dark:bg-slate-900 dark:text-slate-200 hover:bg-gray-100 hover:text-gray-200 dark:hover:bg-slate-600 dark:hover:text-slate-50"
           role="button"
           tabindex="0"
         >
@@ -261,7 +261,7 @@ exports[`Sidebar Component > Loading State > should match snapshot in loading st
         class="relative flex-1"
       >
         <input
-          class="flex h-9 rounded-md text-sm/5 font-normal text-gray-900 border border-gray-300 bg-gray-50 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 px-3 py-2 font-sans placeholder:text-gray-500 dark:placeholder:text-slate-400 focus-visible:ring-1 focus-visible:ring-gray-900 focus-visible:ring-offset-0 focus-visible:ring-offset-white focus-visible:outline-none focus:bg-gray-50 dark:focus:bg-slate-700 dark:focus-visible:ring-slate-400 dark:focus-visible:ring-offset-slate-800 disabled:cursor-not-allowed disabled:border-gray-300 disabled:bg-gray-50 disabled:text-gray-700 dark:disabled:border-slate-500 dark:disabled:bg-slate-700 dark:disabled:placeholder:text-slate-400 w-full appearance-none pl-8 [&::-webkit-search-cancel-button]:hidden"
+          class="flex h-9 rounded-md text-sm/5 font-normal text-gray-900 border border-gray-300 bg-background dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 px-3 py-2 font-sans placeholder:text-muted-foreground dark:placeholder:text-slate-400 focus-visible:ring-1 focus-visible:ring-gray-900 focus-visible:ring-offset-0 focus-visible:ring-offset-white focus-visible:outline-none focus:bg-background dark:focus:bg-slate-700 dark:focus-visible:ring-slate-400 dark:focus-visible:ring-offset-slate-800 disabled:cursor-not-allowed disabled:border-gray-300 disabled:bg-background disabled:text-gray-700 dark:disabled:border-slate-500 dark:disabled:bg-slate-700 dark:disabled:placeholder:text-slate-400 w-full appearance-none pl-8 [&::-webkit-search-cancel-button]:hidden"
           placeholder="Search"
           style="padding-right: 16px;"
           tabindex="1"
@@ -311,10 +311,10 @@ exports[`Sidebar Component > Loading State > should match snapshot in loading st
 exports[`Sidebar Component > should match snapshot 1`] = `
 <DocumentFragment>
   <aside
-    class="group peer relative flex h-svh max-h-screen flex-col bg-gray-50 shadow-lg transition-[width] duration-75 ease-linear dark:bg-slate-600"
+    class="group peer relative flex h-svh max-h-screen flex-col bg-background shadow-lg transition-[width] duration-75 ease-linear dark:bg-slate-600"
   >
     <header
-      class="flex items-center justify-between gap-2 border-b border-gray-300 bg-gray-50 p-4 dark:border-slate-800 dark:bg-slate-600"
+      class="flex items-center justify-between gap-2 border-b border-gray-300 bg-background p-4 dark:border-slate-800 dark:bg-slate-600"
     >
       <div
         class="flex items-center gap-2 truncate"
@@ -343,14 +343,14 @@ exports[`Sidebar Component > should match snapshot 1`] = `
         class="flex items-center gap-2 select-none"
       >
         <div
-          class="w-[26px] rounded-lg bg-gray-50 p-1 text-center text-xs text-gray-100 dark:bg-slate-900 dark:text-slate-200 hover:bg-gray-100 hover:text-gray-200 dark:hover:bg-slate-600 dark:hover:text-slate-50"
+          class="w-[26px] rounded-lg bg-background p-1 text-center text-xs text-gray-100 dark:bg-slate-900 dark:text-slate-200 hover:bg-gray-100 hover:text-gray-200 dark:hover:bg-slate-600 dark:hover:text-slate-50"
           role="button"
           tabindex="0"
         >
           1
         </div>
         <div
-          class="w-[26px] rounded-lg bg-gray-50 p-1 text-center text-xs text-gray-100 dark:bg-slate-900 dark:text-slate-200 hover:bg-gray-100 hover:text-gray-200 dark:hover:bg-slate-600 dark:hover:text-slate-50"
+          class="w-[26px] rounded-lg bg-background p-1 text-center text-xs text-gray-100 dark:bg-slate-900 dark:text-slate-200 hover:bg-gray-100 hover:text-gray-200 dark:hover:bg-slate-600 dark:hover:text-slate-50"
           role="button"
           tabindex="0"
         >
@@ -489,7 +489,7 @@ exports[`Sidebar Component > should match snapshot 1`] = `
         class="relative flex-1"
       >
         <input
-          class="flex h-9 rounded-md text-sm/5 font-normal text-gray-900 border border-gray-300 bg-gray-50 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 px-3 py-2 font-sans placeholder:text-gray-500 dark:placeholder:text-slate-400 focus-visible:ring-1 focus-visible:ring-gray-900 focus-visible:ring-offset-0 focus-visible:ring-offset-white focus-visible:outline-none focus:bg-gray-50 dark:focus:bg-slate-700 dark:focus-visible:ring-slate-400 dark:focus-visible:ring-offset-slate-800 disabled:cursor-not-allowed disabled:border-gray-300 disabled:bg-gray-50 disabled:text-gray-700 dark:disabled:border-slate-500 dark:disabled:bg-slate-700 dark:disabled:placeholder:text-slate-400 w-full appearance-none pl-8 [&::-webkit-search-cancel-button]:hidden"
+          class="flex h-9 rounded-md text-sm/5 font-normal text-gray-900 border border-gray-300 bg-background dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 px-3 py-2 font-sans placeholder:text-muted-foreground dark:placeholder:text-slate-400 focus-visible:ring-1 focus-visible:ring-gray-900 focus-visible:ring-offset-0 focus-visible:ring-offset-white focus-visible:outline-none focus:bg-background dark:focus:bg-slate-700 dark:focus-visible:ring-slate-400 dark:focus-visible:ring-offset-slate-800 disabled:cursor-not-allowed disabled:border-gray-300 disabled:bg-background disabled:text-gray-700 dark:disabled:border-slate-500 dark:disabled:bg-slate-700 dark:disabled:placeholder:text-slate-400 w-full appearance-none pl-8 [&::-webkit-search-cancel-button]:hidden"
           placeholder="Search"
           style="padding-right: 16px;"
           tabindex="1"

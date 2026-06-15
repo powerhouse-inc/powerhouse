@@ -141,7 +141,7 @@ function StateEditor({
   return (
     <div className="grid grid-cols-2 gap-4">
       <div>
-        <h3 className="mb-2 text-lg text-gray-900 capitalize dark:text-slate-100">
+        <h3 className="mb-2 text-lg text-foreground capitalize">
           {scope} state schema *
         </h3>
         <Button
@@ -174,7 +174,7 @@ function StateEditor({
             customLinter={customLinter}
           />
           {schemaErrors.length > 0 && (
-            <p className="mt-2 text-sm text-red-500 dark:text-red-50">
+            <p className="mt-2 text-sm text-destructive">
               {schemaErrors[0].message}
             </p>
           )}
@@ -182,10 +182,10 @@ function StateEditor({
       </div>
       <div>
         <div className="flex flex-col items-end">
-          <h3 className="mb-2 text-right text-lg text-gray-900 capitalize dark:text-slate-100">
+          <h3 className="mb-2 text-right text-lg text-foreground capitalize">
             {scope} state initial value *
           </h3>
-          <label className="mb-2 flex w-fit items-center gap-2 rounded-md border border-gray-300 bg-gray-50 p-2 text-sm font-medium whitespace-nowrap text-gray-900 transition-colors hover:effect focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
+          <label className="mb-2 flex w-fit items-center gap-2 rounded-md border border-border bg-background p-2 text-sm font-medium whitespace-nowrap text-foreground transition-colors hover:hover-effect focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none">
             <input
               type="checkbox"
               className=""
@@ -218,10 +218,7 @@ function StateEditor({
             updateDocumentInModel={handleInitialStateUpdate}
           />
           {initialValueErrors.map((error, index) => (
-            <p
-              key={index}
-              className="mt-2 text-sm text-red-500 dark:text-red-50"
-            >
+            <p key={index} className="mt-2 text-sm text-destructive">
               {error instanceof StateValidationError ? (
                 <StateValidationErrorMessage error={error} />
               ) : (
@@ -280,7 +277,7 @@ export default function StateSchemas({
       <TabsContent value="local" tabIndex={-1}>
         {!localStateSchema ? (
           <div className="">
-            <h3 className="mb-2 text-lg text-gray-900 capitalize dark:text-slate-100">
+            <h3 className="mb-2 text-lg text-foreground capitalize">
               local state schema *
             </h3>
             <Button onClick={handleAddLocalState}>Add local state</Button>

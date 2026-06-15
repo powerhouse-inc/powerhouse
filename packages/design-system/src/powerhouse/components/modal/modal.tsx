@@ -34,7 +34,7 @@ export function Modal(props: Props) {
         <Overlay
           {...overlayProps}
           className={twMerge(
-            "fixed inset-0 grid place-items-center overflow-y-auto bg-gray-50/50 data-[state=closed]:animate-fade-out data-[state=open]:animate-fade-in dark:bg-slate-900/90",
+            "fixed inset-0 grid place-items-center overflow-y-auto bg-background/50 data-[state=closed]:animate-fade-out data-[state=open]:animate-fade-in",
             overlayProps?.className,
           )}
         >
@@ -42,7 +42,7 @@ export function Modal(props: Props) {
             {...delegated}
             {...contentProps}
             className={twMerge(
-              "overflow-hidden rounded-3xl bg-gray-50 data-[state=closed]:animate-zoom-out data-[state=open]:animate-zoom-in dark:bg-slate-700",
+              "overflow-hidden rounded-3xl bg-background data-[state=closed]:animate-zoom-out data-[state=open]:animate-zoom-in",
               contentProps?.className,
             )}
           >

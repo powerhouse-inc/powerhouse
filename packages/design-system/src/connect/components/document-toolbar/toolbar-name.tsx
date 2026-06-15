@@ -53,7 +53,7 @@ export function ToolbarName(props: {
   return (
     <h1
       className={twMerge(
-        "cursor-pointer text-sm font-medium text-gray-500 hover:effect dark:text-slate-400",
+        "cursor-pointer text-sm font-medium text-muted-foreground hover:hover-effect",
         titleClassName,
       )}
       onClick={activateEditing}

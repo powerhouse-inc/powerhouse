@@ -129,7 +129,7 @@ export const AppEditorForm = () => {
   return (
     <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-medium text-gray-900 dark:text-slate-50">
+        <h2 className="text-lg font-medium text-foreground">
           App Configuration
         </h2>
         <StatusPill
@@ -142,7 +142,7 @@ export const AppEditorForm = () => {
       <div>
         <label
           htmlFor="app-name"
-          className="mb-2 block text-sm font-medium text-gray-700 dark:text-slate-200"
+          className="mb-2 block text-sm font-medium text-foreground"
         >
           App Name
         </label>
@@ -153,10 +153,8 @@ export const AppEditorForm = () => {
           onChange={(e) => handleSetAppName(e.target.value)}
           disabled={isReadOnly}
           className={twMerge(
-            "w-full rounded-md border border-gray-300 px-3 py-2 text-gray-50 placeholder:text-gray-400 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 dark:placeholder:text-slate-400",
-            isReadOnly
-              ? "cursor-not-allowed bg-gray-100 dark:bg-slate-700"
-              : "",
+            "w-full rounded-md border border-border px-3 py-2 text-foreground placeholder:text-muted-foreground focus:border-transparent focus:ring-2 focus:ring-ring focus:outline-none disabled:disabled-effect",
+            isReadOnly ? "cursor-not-allowed bg-muted" : "",
           )}
           placeholder="Enter app name"
         />
@@ -166,7 +164,7 @@ export const AppEditorForm = () => {
       <div>
         <label
           htmlFor="document-types"
-          className="mb-2 block text-sm font-medium text-gray-700 dark:text-slate-200"
+          className="mb-2 block text-sm font-medium text-foreground"
         >
           Document Types
         </label>
@@ -174,7 +172,7 @@ export const AppEditorForm = () => {
           {!isReadOnly && (
             <select
               onChange={(e) => handleDocumentTypeSelection(e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
+              className="w-full rounded-md border border-border px-3 py-2 text-foreground focus:border-transparent focus:ring-2 focus:ring-ring focus:outline-none"
             >
               <option>Select a document type to add</option>
               <option>--- Vetra drive document types ---</option>
@@ -207,13 +205,11 @@ export const AppEditorForm = () => {
             {selectedDocumentTypes.length > 0 ? (
               selectedDocumentTypes.map((type) => (
                 <div key={type} className="flex items-center py-1">
-                  <span className="text-sm text-gray-700 dark:text-slate-200">
-                    {type}
-                  </span>
+                  <span className="text-sm text-foreground">{type}</span>
                   {!isReadOnly && (
                     <button
                       onClick={() => handleRemoveDocumentType(type)}
-                      className="ml-2 text-gray-400 hover:effect focus:outline-none dark:text-slate-500"
+                      className="ml-2 text-muted-foreground hover:hover-effect focus:outline-none"
                     >
                       ×
                     </button>
@@ -221,9 +217,7 @@ export const AppEditorForm = () => {
                 </div>
               ))
             ) : (
-              <span className="text-sm text-gray-700 dark:text-slate-200">
-                All documents (*)
-              </span>
+              <span className="text-sm text-foreground">All documents (*)</span>
             )}
           </div>
         </div>
@@ -231,7 +225,7 @@ export const AppEditorForm = () => {
 
       {/* Drag and Drop Settings */}
       <div>
-        <h3 className="mb-4 text-base font-medium text-gray-900 dark:text-slate-50">
+        <h3 className="mb-4 text-base font-medium text-foreground">
           Drag and Drop Settings
         </h3>
 
@@ -245,11 +239,11 @@ export const AppEditorForm = () => {
               onChange={(e) => onDragAndDropToggle(e.target.checked)}
               disabled={isReadOnly}
               className={twMerge(
-                "mr-2 size-4 rounded-sm border-gray-300 text-blue-500 focus:ring-blue-500 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100",
+                "mr-2 size-4 rounded-sm border-border text-info focus:ring-ring",
                 isReadOnly ? "cursor-not-allowed" : "",
               )}
             />
-            <span className="text-sm font-medium text-gray-700 dark:text-slate-200">
+            <span className="text-sm font-medium text-foreground">
               Enable drag and drop
             </span>
           </label>
@@ -262,7 +256,7 @@ export const AppEditorForm = () => {
           <button
             onClick={handleConfirm}
             disabled={!appName.trim()}
-            className="rounded-md bg-blue-500 px-4 py-2 text-white hover:effect focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-300 dark:bg-blue-50 dark:text-slate-900 dark:disabled:bg-slate-600 dark:disabled:text-slate-100"
+            className="rounded-md bg-primary px-4 py-2 text-primary-foreground hover:hover-effect focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-none disabled:disabled-effect"
           >
             Confirm
           </button>

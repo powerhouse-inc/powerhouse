@@ -23,7 +23,7 @@ export const ConnectDeleteDriveModal: React.FC<ConnectDeleteDriveModalProps> = (
       continueDisabled={inputName !== driveName}
       body={
         <div>
-          <div className="my-6 rounded-md bg-gray-50 p-4 text-center dark:bg-slate-800">
+          <div className="my-6 rounded-md bg-background p-4 text-center">
             {body}
           </div>
           <div>

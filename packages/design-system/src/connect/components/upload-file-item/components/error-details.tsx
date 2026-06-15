@@ -17,7 +17,7 @@ export function UploadFileItemErrorDetails(props: ErrorDetailsProps) {
     return null;
 
   return (
-    <div className="text-xs leading-[18px] wrap-break-word text-gray-500 dark:text-slate-400">
+    <div className="text-xs leading-[18px] wrap-break-word text-muted-foreground">
       {errorDetails}
     </div>
   );

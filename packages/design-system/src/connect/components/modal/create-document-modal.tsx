@@ -54,15 +54,15 @@ export function CreateDocumentModal(props: CreateDocumentModalProps) {
     >
       <form
         name="create-document"
-        className="w-100 rounded-xl bg-gray-50 p-6 text-gray-300 dark:bg-slate-800 dark:text-slate-600"
+        className="w-100 rounded-xl bg-background p-6 text-foreground"
         onSubmit={handleSubmit}
       >
-        <div className="pb-2 text-2xl font-bold text-gray-900 dark:text-slate-100">
+        <div className="pb-2 text-2xl font-bold text-foreground">
           Create a new document
         </div>
         <div className="my-6">
           {!isValid && nodeName && (
-            <div className="mb-2 text-red-500 dark:text-red-50">
+            <div className="mb-2 text-destructive">
               Document name must not be empty or contain control characters.
             </div>
           )}

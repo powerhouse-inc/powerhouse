@@ -87,9 +87,9 @@ export const VersionPicker: React.FC<VersionPickerProps> = (props) => {
       <PopoverTrigger
         disabled={disabled || !hasAnyPickable}
         className={twMerge(
-          "flex items-center justify-between gap-2 rounded-md border border-gray-300 bg-gray-50 px-2.5 py-1 text-xs font-medium text-gray-900 transition-colors dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100",
-          "hover:effect focus:ring-2 focus:ring-gray-900/20 focus:outline-none",
-          "disabled:cursor-not-allowed disabled:opacity-60",
+          "flex items-center justify-between gap-2 rounded-md border border-border bg-background px-2.5 py-1 text-xs font-medium text-foreground transition-colors",
+          "hover:hover-effect focus:ring-2 focus:ring-ring/20 focus:outline-none",
+          "disabled:disabled-effect",
           className,
         )}
         data-version-picker-trigger
@@ -98,7 +98,7 @@ export const VersionPicker: React.FC<VersionPickerProps> = (props) => {
         <Icon
           name="ChevronDown"
           size={12}
-          className="shrink-0 text-gray-500 dark:text-slate-400"
+          className="shrink-0 text-muted-foreground"
         />
       </PopoverTrigger>
       <PopoverContent
@@ -108,12 +108,12 @@ export const VersionPicker: React.FC<VersionPickerProps> = (props) => {
         className="w-56 p-0"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
-        <div className="border-b border-gray-300 p-2 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
+        <div className="border-b border-border p-2">
           <div className="relative">
             <Icon
               name="Search"
               size={14}
-              className="absolute top-1/2 left-2 -translate-y-1/2 text-gray-400 dark:text-slate-500"
+              className="absolute top-1/2 left-2 -translate-y-1/2 text-muted-foreground"
             />
             <Input
               value={query}
@@ -125,13 +125,13 @@ export const VersionPicker: React.FC<VersionPickerProps> = (props) => {
         </div>
         <div className="max-h-60 overflow-y-auto py-1">
           {filteredTags.length === 0 && filteredVersions.length === 0 && (
-            <p className="px-3 py-4 text-center text-xs text-gray-500 dark:text-slate-400">
+            <p className="px-3 py-4 text-center text-xs text-muted-foreground">
               No matches.
             </p>
           )}
           {filteredTags.length > 0 && (
             <div className="pb-1">
-              <p className="px-3 py-1 text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-slate-400">
+              <p className="px-3 py-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                 Tags
               </p>
               {filteredTags.map(([tag, ver]) => {
@@ -148,15 +148,12 @@ export const VersionPicker: React.FC<VersionPickerProps> = (props) => {
                     }}
                     className={twMerge(
                       "flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-xs transition-colors",
-                      "hover:effect",
-                      isSelected &&
-                        "bg-gray-100 font-semibold dark:bg-slate-700",
+                      "hover:hover-effect",
+                      isSelected && "bg-muted font-semibold",
                     )}
                   >
-                    <span className="truncate text-gray-900 dark:text-slate-50">
-                      {tag}
-                    </span>
-                    <span className="truncate text-gray-500 dark:text-slate-400">
+                    <span className="truncate text-foreground">{tag}</span>
+                    <span className="truncate text-muted-foreground">
                       {ver}
                     </span>
                   </button>
@@ -166,7 +163,7 @@ export const VersionPicker: React.FC<VersionPickerProps> = (props) => {
           )}
           {filteredVersions.length > 0 && (
             <div>
-              <p className="px-3 py-1 text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-slate-400">
+              <p className="px-3 py-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                 Versions
               </p>
               {filteredVersions.map((ver) => {
@@ -183,14 +180,11 @@ export const VersionPicker: React.FC<VersionPickerProps> = (props) => {
                     }}
                     className={twMerge(
                       "flex w-full items-center px-3 py-1.5 text-left text-xs transition-colors",
-                      "hover:effect",
-                      isSelected &&
-                        "bg-gray-100 font-semibold dark:bg-slate-700",
+                      "hover:hover-effect",
+                      isSelected && "bg-muted font-semibold",
                     )}
                   >
-                    <span className="truncate text-gray-900 dark:text-slate-50">
-                      {ver}
-                    </span>
+                    <span className="truncate text-foreground">{ver}</span>
                   </button>
                 );
               })}

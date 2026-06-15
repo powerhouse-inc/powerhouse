@@ -152,9 +152,8 @@ const outliers = {
   "group-focus-within:placeholder:text-gray-700":
     "group-focus-within:placeholder:text-foreground",
   "data-disabled:text-gray-400": "data-disabled:text-muted-foreground",
-  "data-[state='active']:text-gray-900":
-    "data-[state='active']:text-foreground",
-  "data-[state='active']:bg-gray-100": "data-[state='active']:bg-accent",
+  "data-[state=active]:text-gray-900": "data-[state=active]:text-foreground",
+  "data-[state=active]:bg-gray-100": "data-[state=active]:bg-accent",
   "data-[selected=true]:bg-gray-100": "data-[selected=true]:bg-accent",
   "data-state:border-gray-700": "data-state:border-border",
   "data-[state=checked]:text-gray-50":

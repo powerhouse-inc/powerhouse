@@ -47,14 +47,14 @@ export function Breadcrumbs() {
   const hasNodePath = !!selectedNodePath.length;
 
   return (
-    <div className="flex h-9 flex-row items-center gap-2 p-6 text-gray-500 dark:text-slate-400">
+    <div className="flex h-9 flex-row items-center gap-2 p-6 text-muted-foreground">
       {hasSelectedDrive && (
         <>
           <button
             type="button"
             aria-label="Back to home"
             title="Back to home"
-            className="flex items-center justify-center rounded-md p-1 text-gray-700 transition-colors hover:effect dark:text-slate-200"
+            className="flex items-center justify-center rounded-md p-1 text-foreground transition-colors hover:hover-effect"
             onClick={() => setSelectedDrive(undefined)}
           >
             <Icon name="ArrowLeft" size={14} />
@@ -83,7 +83,7 @@ export function Breadcrumbs() {
       {isAllowedToCreateDocuments &&
         (isCreating ? (
           <NodeInput
-            className="text-gray-900 dark:text-slate-100"
+            className="text-foreground"
             defaultValue="New Folder"
             onCancel={onCancel}
             onSubmit={onSubmit}
@@ -92,7 +92,7 @@ export function Breadcrumbs() {
         ) : (
           <button
             type="button"
-            className="ml-1 flex items-center justify-center gap-2 rounded-md bg-gray-50 px-2 py-1.5 text-gray-700 transition-colors hover:effect dark:bg-slate-800 dark:text-slate-200"
+            className="ml-1 flex items-center justify-center gap-2 rounded-md bg-background px-2 py-1.5 text-foreground transition-colors hover:hover-effect"
             onClick={onAddNew}
           >
             <Icon name="Plus" size={14} />
@@ -119,12 +119,8 @@ export function Breadcrumb(props: BreadcrumbProps) {
   const { isDropTarget, ...dropProps } = useDropNode(id);
 
   const containerStyles = twMerge(
-    "cursor-pointer transition-colors last-of-type:text-gray-800 hover:effect dark:text-slate-200 last-of-type:dark:text-slate-100",
-    isDragging
-      ? "opacity-60"
-      : isDropTarget
-        ? "bg-blue-50 dark:bg-blue-900"
-        : "",
+    "cursor-pointer transition-colors last-of-type:text-foreground hover:hover-effect",
+    isDragging ? "opacity-60" : isDropTarget ? "bg-info/10" : "",
   );
 
   return (

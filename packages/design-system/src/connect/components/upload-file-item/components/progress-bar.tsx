@@ -13,9 +13,9 @@ export function UploadFileItemProgressBar(props: ProgressBarProps) {
   const clamped = Math.min(100, Math.max(0, progress));
 
   return (
-    <div className="h-2 w-full overflow-hidden rounded-sm bg-gray-200 dark:bg-slate-600 dark:text-slate-100">
+    <div className="h-2 w-full overflow-hidden rounded-sm bg-secondary">
       <div
-        className="h-full bg-blue-900 transition-all duration-300 ease-out dark:bg-blue-50"
+        className="h-full bg-info transition-all duration-300 ease-out"
         style={{ width: `${clamped}%` }}
       />
     </div>

@@ -59,13 +59,13 @@ export const CookieBanner: React.FC<CookieBannerProps> = (props) => {
           <div className="cursor-pointer" key={i}>
             <input
               checked={cookie.value}
-              className="mr-1 size-3 cursor-pointer rounded-sm border-2 border-gray-900 accent-gray-900 focus:outline-none dark:border-slate-50"
+              className="mr-1 size-3 cursor-pointer rounded-sm border-2 border-foreground accent-primary focus:outline-none"
               id={cookie.id}
               onChange={handleOnChange}
               type="checkbox"
             />
             <label
-              className="cursor-pointer text-gray-900 select-none dark:text-slate-50"
+              className="cursor-pointer text-foreground select-none"
               htmlFor={cookie.id}
             >
               {cookie.label}

@@ -53,15 +53,15 @@ function TreeItem({
     <div>
       <div
         className={twMerge(
-          "flex cursor-pointer items-center gap-1 py-1 pr-2 text-sm hover:effect",
-          selected && "bg-blue-50 dark:bg-blue-900",
+          "flex cursor-pointer items-center gap-1 py-1 pr-2 text-sm hover:hover-effect",
+          selected && "bg-info/10",
         )}
         style={{ paddingLeft: depth * INDENT_PX + 4 }}
         onClick={onClick}
       >
         {hasChildren ? (
           <button
-            className="flex size-4 shrink-0 items-center justify-center text-gray-500 hover:effect dark:text-slate-200"
+            className="flex size-4 shrink-0 items-center justify-center text-muted-foreground hover:hover-effect"
             onClick={handleChevronClick}
             type="button"
           >
@@ -77,16 +77,10 @@ function TreeItem({
         ) : (
           <span className="w-4 shrink-0" />
         )}
-        {icon && (
-          <span className="shrink-0 text-gray-500 dark:text-slate-400">
-            {icon}
-          </span>
-        )}
-        <span className="min-w-0 flex-1 truncate text-gray-700 dark:text-slate-200">
-          {label}
-        </span>
+        {icon && <span className="shrink-0 text-muted-foreground">{icon}</span>}
+        <span className="min-w-0 flex-1 truncate text-foreground">{label}</span>
         {selected && (
-          <span className="ml-auto size-2 shrink-0 rounded-full bg-blue-500 dark:bg-blue-50" />
+          <span className="ml-auto size-2 shrink-0 rounded-full bg-info" />
         )}
       </div>
       {expanded && children}
@@ -108,12 +102,12 @@ function ColumnItem({
 
   return (
     <div
-      className="flex items-center gap-1 py-0.5 pr-2 text-xs text-gray-500 dark:text-slate-200"
+      className="flex items-center gap-1 py-0.5 pr-2 text-xs text-muted-foreground"
       style={{ paddingLeft: depth * INDENT_PX + 4 }}
     >
       <span className="w-4 shrink-0" />
       <span className="truncate">{column.name}</span>
-      <span className="ml-auto shrink-0 text-gray-400 dark:text-slate-200">
+      <span className="ml-auto shrink-0 text-muted-foreground">
         ({typeLabel})
       </span>
     </div>
@@ -171,7 +165,7 @@ export function SchemaTreeSidebar({
             <span className="truncate">{schema}</span>
             {onRefresh && (
               <button
-                className="ml-auto p-0.5 text-gray-400 hover:effect dark:text-slate-200"
+                className="ml-auto p-0.5 text-muted-foreground hover:hover-effect"
                 onClick={handleRefreshClick}
                 type="button"
                 disabled={loading}

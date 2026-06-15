@@ -11,8 +11,8 @@ export const StatusPill: React.FC<StatusPillProps> = ({ status, label }) => {
       className={twMerge(
         "rounded-full px-3 py-1 text-xs font-medium",
         status === "confirmed"
-          ? "bg-green-50 text-green-900 dark:bg-green-900 dark:text-green-50"
-          : "bg-yellow-50 text-yellow-900 dark:bg-yellow-900 dark:text-yellow-50",
+          ? "bg-success/10 text-success"
+          : "bg-warning/10 text-warning",
       )}
     >
       {label}

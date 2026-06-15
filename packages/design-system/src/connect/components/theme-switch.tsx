@@ -43,9 +43,7 @@ export function ThemeSwitch() {
           }
           className={twMerge(
             "flex size-fit cursor-pointer content-center items-center transition-colors",
-            isActive(value)
-              ? "text-gray-900 dark:text-slate-50"
-              : "text-gray-500 dark:text-slate-400",
+            isActive(value) ? "text-foreground" : "text-muted-foreground",
           )}
         >
           <Icon size={24} strokeWidth={2} aria-hidden="true" />

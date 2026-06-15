@@ -12,12 +12,7 @@ type Props = {
 export function DefaultEditor(props: Props) {
   const { className, ...rest } = props;
   return (
-    <div
-      className={twMerge(
-        "rounded-lg bg-gray-50 p-3 dark:bg-slate-800",
-        className,
-      )}
-    >
+    <div className={twMerge("rounded-lg bg-background p-3", className)}>
       <DefaultEditorSelect {...rest} />
     </div>
   );
@@ -33,7 +28,7 @@ export function DefaultEditorSelect(props: Props) {
 
   return (
     <div>
-      <h3 className="mb-4 font-semibold text-gray-900 dark:text-slate-50">
+      <h3 className="mb-4 font-semibold text-foreground">
         Default Editor Selection
       </h3>
       <SelectFieldRaw

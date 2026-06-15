@@ -15,9 +15,7 @@ const IconRenderer: React.FC<{
         size={24}
         className={twMerge(
           "shrink-0",
-          asPlaceholder
-            ? "text-gray-400 dark:text-slate-500"
-            : "text-gray-900 dark:text-slate-50",
+          asPlaceholder ? "text-muted-foreground" : "text-foreground",
         )}
       />
     );
@@ -50,7 +48,7 @@ const ReloadButton: React.FC<{
       }}
       className={twMerge(
         "mt-0.5 focus-visible:outline-none",
-        "disabled:pointer-events-none [&_svg]:pointer-events-none",
+        "disabled:disabled-effect [&_svg]:pointer-events-none",
       )}
       aria-label={
         isLoadingSelectedOption
@@ -64,7 +62,7 @@ const ReloadButton: React.FC<{
         name={isFetchSelectedOptionSync ? "Checkmark" : "Reload"}
         size={16}
         className={twMerge(
-          "text-gray-500 dark:text-slate-400",
+          "text-muted-foreground",
           isLoadingSelectedOption && "animate-spin",
           isFetchSelectedOptionSync && "animate-fade-in duration-500",
         )}
@@ -105,9 +103,7 @@ const IdAutocompleteListOption: React.FC<IdAutocompleteListOptionProps> = ({
       <span
         className={twMerge(
           "truncate text-xs/5",
-          asPlaceholder
-            ? "text-gray-400 dark:text-slate-500"
-            : "text-gray-500 dark:text-slate-400",
+          asPlaceholder ? "text-muted-foreground" : "text-muted-foreground",
         )}
       >
         {value}
@@ -126,9 +122,7 @@ const IdAutocompleteListOption: React.FC<IdAutocompleteListOptionProps> = ({
           <span
             className={twMerge(
               "truncate text-sm/5 font-bold",
-              asPlaceholder
-                ? "text-gray-400 dark:text-slate-500"
-                : "text-gray-900 dark:text-slate-50",
+              asPlaceholder ? "text-muted-foreground" : "text-foreground",
             )}
           >
             {title}
@@ -139,7 +133,7 @@ const IdAutocompleteListOption: React.FC<IdAutocompleteListOptionProps> = ({
               target="_blank"
               rel="noopener noreferrer"
               className={twMerge(
-                "truncate text-xs/5 text-blue-900 hover:underline focus-visible:outline-none dark:text-blue-50",
+                "truncate text-xs/5 text-info hover:underline focus-visible:outline-none",
               )}
             >
               {path.text}
@@ -149,8 +143,8 @@ const IdAutocompleteListOption: React.FC<IdAutocompleteListOptionProps> = ({
               className={twMerge(
                 "truncate text-xs/5",
                 asPlaceholder
-                  ? "text-gray-400 dark:text-slate-500"
-                  : "text-gray-500 dark:text-slate-400",
+                  ? "text-muted-foreground"
+                  : "text-muted-foreground",
               )}
             >
               {typeof path === "object" ? path.text : path}
@@ -171,9 +165,7 @@ const IdAutocompleteListOption: React.FC<IdAutocompleteListOptionProps> = ({
           <span
             className={twMerge(
               "truncate text-xs/5",
-              asPlaceholder
-                ? "text-gray-400 dark:text-slate-500"
-                : "text-gray-500 dark:text-slate-400",
+              asPlaceholder ? "text-muted-foreground" : "text-muted-foreground",
             )}
           >
             {value}
@@ -185,9 +177,7 @@ const IdAutocompleteListOption: React.FC<IdAutocompleteListOptionProps> = ({
           <p
             className={twMerge(
               "line-clamp-2 text-xs/5",
-              asPlaceholder
-                ? "text-gray-400 dark:text-slate-500"
-                : "text-gray-900 dark:text-slate-50",
+              asPlaceholder ? "text-muted-foreground" : "text-foreground",
             )}
           >
             {description}
@@ -202,8 +192,8 @@ const IdAutocompleteListOption: React.FC<IdAutocompleteListOptionProps> = ({
               className={twMerge(
                 "truncate text-xs/5",
                 asPlaceholder
-                  ? "text-gray-400 dark:text-slate-500"
-                  : "text-gray-500 dark:text-slate-400",
+                  ? "text-muted-foreground"
+                  : "text-muted-foreground",
               )}
             >
               {extraProps.agentType}

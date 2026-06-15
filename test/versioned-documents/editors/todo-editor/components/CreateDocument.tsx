@@ -14,7 +14,7 @@ export function CreateDocument() {
   return (
     <div>
       {/* Customize section title here */}
-      <h3 className="mb-3 mt-4 text-sm font-bold text-gray-600">
+      <h3 className="mb-3 mt-4 text-sm font-bold text-muted-foreground">
         Create document
       </h3>
       {/* Customize layout by changing flex-wrap, gap, or grid layout */}

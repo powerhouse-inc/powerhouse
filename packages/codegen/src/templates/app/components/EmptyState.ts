@@ -10,7 +10,7 @@ export function EmptyState() {
   if (hasNodes) return null;
 
   return (
-    <div className="py-12 text-center text-gray-500">
+    <div className="py-12 text-center text-muted-foreground">
       <p className="text-lg">This folder is empty</p>
       <p className="mt-2 text-sm">Create your first document or folder below</p>
     </div>

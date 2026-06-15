@@ -111,7 +111,7 @@ export const ProcessorEditorForm: React.FC<ProcessorEditorFormProps> = ({
   return (
     <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-medium text-gray-900 dark:text-slate-50">
+        <h2 className="text-lg font-medium text-foreground">
           Processor Configuration
         </h2>
         <StatusPill
@@ -124,7 +124,7 @@ export const ProcessorEditorForm: React.FC<ProcessorEditorFormProps> = ({
       <div>
         <label
           htmlFor="processor-name"
-          className="mb-2 block text-sm font-medium text-gray-700 dark:text-slate-200"
+          className="mb-2 block text-sm font-medium text-foreground"
         >
           Processor Name
         </label>
@@ -135,9 +135,9 @@ export const ProcessorEditorForm: React.FC<ProcessorEditorFormProps> = ({
           onChange={(e) => setProcessorName(e.target.value)}
           disabled={isReadOnly}
           className={twMerge(
-            "w-full rounded-md border border-gray-300 px-3 py-2 placeholder:text-gray-700 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 dark:placeholder:text-slate-200",
+            "w-full rounded-md border border-border px-3 py-2 text-foreground placeholder:text-muted-foreground focus:border-transparent focus:ring-2 focus:ring-ring focus:outline-none disabled:disabled-effect",
             isReadOnly
-              ? "cursor-not-allowed bg-gray-100 dark:bg-slate-700"
+              ? "cursor-not-allowed bg-muted text-muted-foreground"
               : "",
           )}
           placeholder="Enter processor name"
@@ -148,7 +148,7 @@ export const ProcessorEditorForm: React.FC<ProcessorEditorFormProps> = ({
       <div>
         <label
           htmlFor="processor-type"
-          className="mb-2 block text-sm font-medium text-gray-700 dark:text-slate-200"
+          className="mb-2 block text-sm font-medium text-foreground"
         >
           Type
         </label>
@@ -158,10 +158,8 @@ export const ProcessorEditorForm: React.FC<ProcessorEditorFormProps> = ({
           onChange={(e) => setProcessorType(e.target.value)}
           disabled={isReadOnly}
           className={twMerge(
-            "w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100",
-            isReadOnly
-              ? "cursor-not-allowed bg-gray-100 dark:bg-slate-700"
-              : "",
+            "w-full rounded-md border border-border px-3 py-2 text-foreground focus:border-transparent focus:ring-2 focus:ring-ring focus:outline-none",
+            isReadOnly ? "cursor-not-allowed bg-muted" : "",
           )}
         >
           <option value="">Select type...</option>
@@ -174,7 +172,7 @@ export const ProcessorEditorForm: React.FC<ProcessorEditorFormProps> = ({
       <div>
         <label
           htmlFor="document-types"
-          className="mb-2 block text-sm font-medium text-gray-700 dark:text-slate-200"
+          className="mb-2 block text-sm font-medium text-foreground"
         >
           Document Types
         </label>
@@ -199,7 +197,7 @@ export const ProcessorEditorForm: React.FC<ProcessorEditorFormProps> = ({
                 }
                 setSelectedDocumentType("");
               }}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
+              className="w-full rounded-md border border-border px-3 py-2 text-foreground focus:border-transparent focus:ring-2 focus:ring-ring focus:outline-none"
             >
               <option value="">Select a document type to add</option>
               {availableDocumentTypes
@@ -217,13 +215,13 @@ export const ProcessorEditorForm: React.FC<ProcessorEditorFormProps> = ({
           <div className="space-y-1">
             {documentTypes.map((type) => (
               <div key={type.id} className="flex items-center py-1">
-                <span className="text-sm text-gray-700 dark:text-slate-200">
+                <span className="text-sm text-foreground">
                   {type.documentType}
                 </span>
                 {!isReadOnly && (
                   <button
                     onClick={() => handleRemoveDocumentType(type.id)}
-                    className="ml-2 text-gray-400 hover:effect focus:outline-none dark:text-slate-500"
+                    className="ml-2 text-muted-foreground hover:hover-effect focus:outline-none"
                   >
                     ×
                   </button>
@@ -237,7 +235,7 @@ export const ProcessorEditorForm: React.FC<ProcessorEditorFormProps> = ({
       <div>
         <label
           htmlFor="processor-apps"
-          className="mb-2 block text-sm font-medium text-gray-700 dark:text-slate-200"
+          className="mb-2 block text-sm font-medium text-foreground"
         >
           Processor Apps
         </label>
@@ -268,10 +266,7 @@ export const ProcessorEditorForm: React.FC<ProcessorEditorFormProps> = ({
                       }
                     }}
                   />
-                  <label
-                    htmlFor={processorApp}
-                    className="text-gray-700 dark:text-slate-200"
-                  >
+                  <label htmlFor={processorApp} className="text-foreground">
                     {processorApp}
                   </label>
                 </div>
@@ -281,10 +276,7 @@ export const ProcessorEditorForm: React.FC<ProcessorEditorFormProps> = ({
           <div className="space-y-1">
             {isReadOnly &&
               processorApps.map((processorApp) => (
-                <span
-                  key={processorApp}
-                  className="text-sm text-gray-700 dark:text-slate-200"
-                >
+                <span key={processorApp} className="text-sm text-foreground">
                   {processorApp}
                 </span>
               ))}
@@ -297,7 +289,7 @@ export const ProcessorEditorForm: React.FC<ProcessorEditorFormProps> = ({
           <button
             onClick={handleConfirm}
             disabled={!canConfirm}
-            className="rounded-md bg-blue-500 px-4 py-2 text-white hover:effect focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-300 dark:bg-blue-50 dark:text-slate-900 dark:disabled:bg-slate-600 dark:disabled:text-slate-100"
+            className="rounded-md bg-primary px-4 py-2 text-primary-foreground hover:hover-effect focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-none disabled:disabled-effect"
           >
             Confirm
           </button>

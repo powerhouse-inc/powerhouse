@@ -61,11 +61,11 @@ export const Content: React.FC<ContentProps> = ({
             }
           }}
           wrapperClassName="rounded-t"
-          className="text-gray-900 dark:text-slate-50"
+          className="text-foreground"
         />
       )}
       <CommandList ref={commandListRef} tabIndex={!searchable ? 0 : undefined}>
-        <CommandEmpty className="p-4 text-center text-sm/5 font-normal text-gray-700 dark:text-slate-200">
+        <CommandEmpty className="p-4 text-center text-sm/5 font-normal text-foreground">
           No results found.
         </CommandEmpty>
         {multiple && cmdkSearch === "" && (
@@ -76,7 +76,7 @@ export const Content: React.FC<ContentProps> = ({
               disabled={false}
               className={twMerge(
                 "cursor-pointer",
-                "data-[selected=true]:bg-gray-100 dark:data-[selected=true]:bg-slate-600",
+                "data-[selected=true]:bg-accent",
               )}
               role="option"
               aria-selected={selectedValues.length === enabledOptions.length}
@@ -86,9 +86,9 @@ export const Content: React.FC<ContentProps> = ({
                   <div
                     className={twMerge(
                       "flex size-4 items-center justify-center rounded-md border",
-                      "border-gray-900 dark:border-slate-50",
+                      "border-foreground",
                       selectedValues.length === enabledOptions.length &&
-                        "bg-gray-900 text-gray-50 dark:bg-slate-50 dark:text-slate-900",
+                        "bg-primary text-primary-foreground",
                     )}
                   >
                     {selectedValues.length === enabledOptions.length && (
@@ -104,12 +104,12 @@ export const Content: React.FC<ContentProps> = ({
                           <Icon
                             name="Checkmark"
                             size={16}
-                            className="text-gray-900 dark:text-slate-50"
+                            className="text-foreground"
                           />
                         )}
                     </div>
                   )}
-                <span className="text-sm/4 font-semibold text-gray-900 dark:text-slate-50">
+                <span className="text-sm/4 font-semibold text-foreground">
                   {selectedValues.length === enabledOptions.length
                     ? "Deselect All"
                     : "Select All"}
@@ -121,7 +121,7 @@ export const Content: React.FC<ContentProps> = ({
                         <Icon
                           name="Checkmark"
                           size={16}
-                          className="text-gray-900 dark:text-slate-50"
+                          className="text-foreground"
                         />
                       )}
                     </div>
@@ -145,7 +145,7 @@ export const Content: React.FC<ContentProps> = ({
           />
 
           {favoriteOptions.length > 0 && (
-            <div className="my-1 border-b border-gray-300 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100" />
+            <div className="my-1 border-b border-border" />
           )}
           <CommandItemList
             options={options}

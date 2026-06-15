@@ -5,7 +5,7 @@ import { cva } from "class-variance-authority";
 import { twMerge } from "tailwind-merge";
 
 const labelVariants = cva(
-  "text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70",
+  "text-sm leading-none font-medium peer-disabled:disabled-effect",
 );
 
 const Label = React.forwardRef<

@@ -1,5 +1,5 @@
-import { twMerge } from "tailwind-merge";
 import React, { useCallback, useState } from "react";
+import { twMerge } from "tailwind-merge";
 import { Input } from "../input/input.js";
 import { Popover, PopoverAnchor, PopoverContent } from "../popover/popover.js";
 import type { SearchAutocompleteProps } from "./types.js";
@@ -89,12 +89,12 @@ export const SearchAutocomplete: React.FC<SearchAutocompleteProps> = (
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           disabled={disabled || selectingValue !== null}
-          className="max-w-xs text-gray-700 dark:text-slate-200"
+          className="max-w-xs text-foreground"
         />
         <button
           onClick={handleSubmit}
           disabled={disabled || !query.trim() || selectingValue !== null}
-          className="h-9 rounded-md bg-gray-900 px-4 text-sm font-semibold text-white transition-colors hover:effect disabled:cursor-not-allowed disabled:opacity-50 dark:bg-slate-50 dark:text-slate-900"
+          className="h-9 rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:hover-effect disabled:disabled-effect"
         >
           {selectLabel}
         </button>
@@ -112,7 +112,7 @@ export const SearchAutocomplete: React.FC<SearchAutocompleteProps> = (
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
             disabled={disabled}
-            className="max-w-xs text-gray-700 dark:text-slate-200"
+            className="max-w-xs text-foreground"
           />
         </PopoverAnchor>
         <PopoverContent
@@ -147,27 +147,27 @@ export const SearchAutocomplete: React.FC<SearchAutocompleteProps> = (
               return (
                 <div
                   key={option.value}
-                  className="flex items-center justify-between gap-2 rounded-md px-2 py-1.5 hover:effect"
+                  className="flex items-center justify-between gap-2 rounded-md px-2 py-1.5 hover:hover-effect"
                 >
                   {renderOption ? (
                     <div className="min-w-0 flex-1">{renderOption(option)}</div>
                   ) : (
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-gray-900 dark:text-slate-50">
+                      <p className="truncate text-sm font-medium text-foreground">
                         {option.label}
                       </p>
                       {option.version && (
-                        <p className="truncate text-xs text-gray-500 dark:text-slate-400">
+                        <p className="truncate text-xs text-muted-foreground">
                           v{option.version}
                         </p>
                       )}
                       {option.description && (
-                        <p className="truncate text-xs text-gray-500 dark:text-slate-400">
+                        <p className="truncate text-xs text-muted-foreground">
                           {option.description}
                         </p>
                       )}
                       {option.meta && (
-                        <p className="truncate text-xs text-gray-400 dark:text-slate-500">
+                        <p className="truncate text-xs text-muted-foreground">
                           {option.meta}
                         </p>
                       )}
@@ -178,14 +178,14 @@ export const SearchAutocomplete: React.FC<SearchAutocompleteProps> = (
                       {selectingContent}
                     </div>
                   ) : option.disabled ? (
-                    <span className="shrink-0 rounded-md bg-gray-100 px-3 py-1 text-xs font-medium text-gray-500 dark:bg-slate-700 dark:text-slate-400">
+                    <span className="shrink-0 rounded-md bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
                       {option.disabledLabel ?? "Unavailable"}
                     </span>
                   ) : (
                     <button
                       onClick={() => void handleSelect(option.value)}
                       disabled={selectingValue === option.value}
-                      className="shrink-0 rounded-md bg-gray-900 px-3 py-1 text-xs font-medium text-white transition-colors hover:effect disabled:opacity-50 dark:bg-slate-50 dark:text-slate-900"
+                      className="shrink-0 rounded-md bg-primary px-3 py-1 text-xs font-medium text-primary-foreground transition-colors hover:hover-effect disabled:disabled-effect"
                     >
                       {selectingValue === option.value ? "..." : selectLabel}
                     </button>
@@ -197,21 +197,15 @@ export const SearchAutocomplete: React.FC<SearchAutocompleteProps> = (
         </PopoverContent>
       </Popover>
       {loading && (
-        <p className="mt-1 text-xs text-gray-500 dark:text-slate-400">
-          Searching...
-        </p>
+        <p className="mt-1 text-xs text-muted-foreground">Searching...</p>
       )}
-      {error && (
-        <p className="mt-1 text-xs text-red-500 dark:text-red-50">{error}</p>
-      )}
+      {error && <p className="mt-1 text-xs text-destructive">{error}</p>}
       {!loading &&
         !error &&
         query.trim() &&
         results.length === 0 &&
         !isOpen && (
-          <p className="mt-1 text-xs text-gray-500 dark:text-slate-400">
-            No results found
-          </p>
+          <p className="mt-1 text-xs text-muted-foreground">No results found</p>
         )}
     </div>
   );

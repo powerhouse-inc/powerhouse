@@ -22,12 +22,7 @@ export function Divider({ className, size = "sm", margin = "md" }: Props) {
   const marginClass = getMargin();
   return (
     <div
-      className={twMerge(
-        "bg-gray-200 dark:bg-slate-600 dark:text-slate-100",
-        sizeClass,
-        marginClass,
-        className,
-      )}
+      className={twMerge("bg-secondary", sizeClass, marginClass, className)}
     />
   );
 }

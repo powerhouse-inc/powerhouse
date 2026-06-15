@@ -77,7 +77,7 @@ const colorNames = [
 ];
 const grayScaleNames = ["black", "white", "slate", "gray"];
 const allColorNames = [...colorNames, ...grayScaleNames];
-const allClasses = pipe(
+const allColorClasses = pipe(
   await findFilesWithClasses(colorClasses),
   getStringLiteralsFromFiles(project),
   flatMap(getStringLiteralClassNameList),
@@ -93,14 +93,14 @@ const allClasses = pipe(
 );
 
 const light = pipe(
-  allClasses,
+  allColorClasses,
   filter((c) => !c.includes("dark")),
   map((c) => last(c.split(":"))),
   filter(isTruthy),
 );
 
 const dark = pipe(
-  allClasses,
+  allColorClasses,
   filter((c) => c.includes("dark")),
   map((c) => last(c.split(":"))),
   filter(isTruthy),
@@ -135,7 +135,7 @@ const withOpacity = pipe(
 );
 
 const colorBgs = pipe(
-  allClasses,
+  allColorClasses,
   filter((c) => c.includes("bg")),
   filter((c) => allColorNames.some((color) => c.includes(color))),
   unique(),
@@ -143,31 +143,91 @@ const colorBgs = pipe(
 );
 
 const borders = pipe(
-  allClasses,
+  allColorClasses,
   filter((c) => c.includes("border")),
   unique(),
   groupBy((c) => (c.includes("dark") ? "dark" : "light")),
 );
 
 const grayscaleBorders = pipe(
-  allClasses,
+  allColorClasses,
   filter((c) => c.includes("border")),
   filter((c) => grayScaleNames.some((n) => c.includes(n))),
   unique(),
   groupBy((c) => (c.includes("dark") ? "dark" : "light")),
 );
 
+const disabledClassNames = [
+  "disabled:",
+  "peer-disabled:",
+  "data-[disabled=true]:",
+  "disabled:data-[invalid=false]:data-[state=checked]:",
+  "disabled:data-[invalid=false]:data-[state=indeterminate]:",
+  "data-disabled:",
+];
+
+const disabledClasses = pipe(
+  await findFilesWithClasses(disabledClassNames),
+  getStringLiteralsFromFiles(project),
+  flatMap(getStringLiteralClassNameList),
+  filter((c) => disabledClassNames.some((d) => c.includes(d))),
+  map((c) => {
+    let result = c;
+    forEach(excludes, (e) => (result = result.replaceAll(e, "")));
+    return result;
+  }),
+);
+
+const hoverClassNames = ["hover:", "group-hover:", "peer-hover:"];
+
+const hoverClasses = pipe(
+  await findFilesWithClasses(hoverClassNames),
+  getStringLiteralsFromFiles(project),
+  flatMap(getStringLiteralClassNameList),
+  filter((c) => hoverClassNames.some((d) => c.includes(d))),
+  filter(c => c.includes(":effect")),
+  map((c) => {
+    let result = c;
+    forEach(excludes, (e) => (result = result.replaceAll(e, "")));
+    return result;
+  }),
+  unique(),
+);
+
+const activeClassNames = [
+  "active:",
+  "group-active:",
+  "peer-active:",
+  "data-[state=active]",
+];
+
+const activeClasses = pipe(
+  await findFilesWithClasses(activeClassNames),
+  getStringLiteralsFromFiles(project),
+  flatMap(getStringLiteralClassNameList),
+  filter((c) => activeClassNames.some((d) => c.includes(d))),
+  map((c) => {
+    let result = c;
+    forEach(excludes, (e) => (result = result.replaceAll(e, "")));
+    return result;
+  }),
+  filter((c) => !c.includes(":effect")),
+);
+
 writeFileSync(
   path.join(process.cwd(), "all-classes.json"),
   JSON.stringify(
     {
-      allClasses: unique(allClasses),
+      allClasses: unique(allColorClasses),
       lightCounts,
       darkCounts,
       withOpacity,
       colorBgs,
       borders,
       grayscaleBorders,
+      disabledClasses,
+      hoverClasses,
+      activeClasses,
     },
     null,
     2,

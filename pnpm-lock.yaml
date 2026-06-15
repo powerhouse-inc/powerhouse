@@ -2471,6 +2471,9 @@ importers:
       '@heroicons/react':
         specifier: ^2.1.5
         version: 2.2.0(react@19.2.6)
+      '@powerhousedao/design-system':
+        specifier: workspace:*
+        version: link:../design-system
       ethers:
         specifier: ^6.13.3
         version: 6.16.0

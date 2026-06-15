@@ -28,7 +28,7 @@ export function MissingModelBanner() {
 
   return (
     <>
-      <div className="flex items-center justify-between gap-3 bg-orange-50 px-4 py-2 text-sm text-orange-900 dark:bg-orange-900 dark:text-orange-50">
+      <div className="flex items-center justify-between gap-3 bg-warning/10 px-4 py-2 text-sm text-warning">
         <span>
           {failed.length === 1
             ? "1 document type couldn't load (missing model)."
@@ -37,7 +37,7 @@ export function MissingModelBanner() {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="rounded-md border border-orange-50 bg-gray-50 px-3 py-1 text-orange-900 hover:effect dark:border-orange-500 dark:bg-slate-800 dark:text-orange-50"
+          className="rounded-md border border-warning bg-background px-3 py-1 text-warning hover:hover-effect"
         >
           View
         </button>
@@ -84,16 +84,16 @@ function MissingModelDetailsModal(props: DetailsProps) {
       }}
       contentProps={{ className: "rounded-3xl" }}
     >
-      <div className="w-[520px] max-w-[90vw] bg-gray-50 p-6 dark:bg-slate-800">
-        <div className="border-b border-gray-300 pb-2 text-2xl font-bold text-gray-900 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
+      <div className="w-[520px] max-w-[90vw] bg-background p-6">
+        <div className="border-b border-border pb-2 text-2xl font-bold text-foreground">
           Missing document models
         </div>
-        <div className="my-4 text-sm text-gray-700 dark:text-slate-200">
+        <div className="my-4 text-sm text-foreground">
           The following document types couldn't be loaded. Documents using them
           won't display until the underlying package is installed.
         </div>
         {failed.length === 0 ? (
-          <div className="rounded-xl bg-gray-50 p-4 text-sm text-gray-700 dark:bg-slate-800 dark:text-slate-200">
+          <div className="rounded-xl bg-background p-4 text-sm text-foreground">
             No outstanding failures.
           </div>
         ) : (
@@ -104,22 +104,22 @@ function MissingModelDetailsModal(props: DetailsProps) {
               return (
                 <div
                   key={entry.documentType}
-                  className="rounded-xl bg-gray-50 p-4 dark:bg-slate-800"
+                  className="rounded-xl bg-background p-4"
                 >
-                  <div className="mb-1 font-mono text-sm font-semibold text-gray-900 dark:text-slate-100">
+                  <div className="mb-1 font-mono text-sm font-semibold text-foreground">
                     {entry.documentType}
                   </div>
-                  <div className="mb-2 text-xs text-gray-700 dark:text-slate-200">
+                  <div className="mb-2 text-xs text-foreground">
                     {reasonLabels[entry.reason]}
                   </div>
                   {entry.packageNames.length > 0 ? (
-                    <div className="mb-2 text-xs text-gray-500 dark:text-slate-400">
+                    <div className="mb-2 text-xs text-muted-foreground">
                       Package{entry.packageNames.length > 1 ? "s" : ""}:{" "}
                       {entry.packageNames.join(", ")}
                     </div>
                   ) : null}
                   {entry.error ? (
-                    <div className="mb-2 font-mono text-xs wrap-break-word text-red-900 dark:text-red-50">
+                    <div className="mb-2 font-mono text-xs wrap-break-word text-destructive">
                       {entry.error.message}
                     </div>
                   ) : null}
@@ -134,10 +134,10 @@ function MissingModelDetailsModal(props: DetailsProps) {
                           : "No registry is configured; nothing to retry against."
                       }
                       className={twMerge(
-                        "min-h-[32px] rounded-xl px-3 py-1 text-sm font-semibold text-white transition-all hover:scale-105 dark:text-slate-900",
+                        "min-h-[32px] rounded-xl px-3 py-1 text-sm font-semibold text-foreground transition-all hover:hover-effect",
                         retryDisabled
-                          ? "cursor-not-allowed bg-gray-300 hover:scale-100 dark:bg-slate-600 dark:text-slate-100"
-                          : "bg-gray-800 active:opacity-75 dark:bg-slate-100",
+                          ? "cursor-not-allowed bg-secondary hover:hover-effect"
+                          : "bg-primary text-primary-foreground active:active-effect",
                       )}
                     >
                       {isRetrying ? "Retrying..." : "Try install again"}
@@ -152,7 +152,7 @@ function MissingModelDetailsModal(props: DetailsProps) {
           <button
             type="button"
             onClick={onClose}
-            className="min-h-[36px] rounded-xl border border-gray-300 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-800 hover:effect dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
+            className="min-h-[36px] rounded-xl border border-border bg-background px-4 py-2 text-sm font-semibold text-foreground hover:hover-effect"
           >
             Close
           </button>
