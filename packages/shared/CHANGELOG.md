@@ -1,3 +1,7 @@
+## 6.2.0-dev.15 (2026-06-15)
+
+This was a version bump only for @powerhousedao/shared to align it with other projects, there were no code changes.
+
 ## 6.2.0-dev.14 (2026-06-14)
 
 This was a version bump only for @powerhousedao/shared to align it with other projects, there were no code changes.
