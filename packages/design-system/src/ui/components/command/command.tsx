@@ -70,8 +70,7 @@ const CommandList = React.forwardRef<
       "focus:outline-none",
       "scrollbar-thin",
       "scrollbar-track-transparent",
-      "scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-300",
-      "dark:scrollbar-thumb-slate-700 dark:hover:scrollbar-thumb-slate-700",
+      "scrollbar-thumb-border hover:scrollbar-thumb-border",
       "scrollbar-thumb-rounded-md",
       className,
     )}

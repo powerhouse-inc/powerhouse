@@ -75,7 +75,7 @@ export function Combobox(props: Props) {
       }}
       classNames={{
         menuList: () =>
-          "scrollbar-thin scrollbar-track-transparent scrollbar-thumb-rounded-md scrollbar-thumb-gray-300 dark:scrollbar-thumb-slate-600",
+          "scrollbar-thin scrollbar-track-transparent scrollbar-thumb-rounded-md scrollbar-thumb-border",
       }}
       styles={{
         dropdownIndicator: () => {
