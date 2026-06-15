@@ -82,8 +82,8 @@ function sortRemotes(
         bValue = b.name;
         break;
       case "collectionId":
-        aValue = a.collectionId;
-        bValue = b.collectionId;
+        aValue = a.collectionId.key;
+        bValue = b.collectionId.key;
         break;
       case "filter":
         aValue = formatFilter(a.filter);
@@ -347,9 +347,9 @@ export function RemotesInspector({
                   <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
                     <span
                       className="block truncate"
-                      title={remote.collectionId}
+                      title={remote.collectionId.key}
                     >
-                      {remote.collectionId}
+                      {remote.collectionId.key}
                     </span>
                   </td>
                   <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
