@@ -185,7 +185,7 @@ const hoverClasses = pipe(
   getStringLiteralsFromFiles(project),
   flatMap(getStringLiteralClassNameList),
   filter((c) => hoverClassNames.some((d) => c.includes(d))),
-  filter(c => c.includes(":effect")),
+  filter((c) => c.includes(":effect")),
   map((c) => {
     let result = c;
     forEach(excludes, (e) => (result = result.replaceAll(e, "")));

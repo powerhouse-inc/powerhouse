@@ -3,7 +3,7 @@
 exports[`FormDescription > should render correctly 1`] = `
 <div>
   <p
-    class="font-sans text-sm/5 font-normal text-gray-700 dark:text-slate-200"
+    class="font-sans text-sm/5 font-normal text-foreground"
   >
     Test description
   </p>
