@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import {
+  DriveCollectionId,
   type IChannel,
   type Remote,
   type SyncOperation,
@@ -117,7 +118,7 @@ const mockRemotes: Remote[] = [
   {
     id: "abc-123-def-456",
     name: "remote-main",
-    collectionId: "drive:main/documents",
+    collectionId: DriveCollectionId.forDrive("documents"),
     filter: {
       documentId: [],
       scope: [],
@@ -179,7 +180,7 @@ const mockRemotes: Remote[] = [
   {
     id: "ghi-789-jkl-012",
     name: "remote-dev",
-    collectionId: "drive:dev/experiments",
+    collectionId: DriveCollectionId.forDrive("experiments", "dev"),
     filter: {
       documentId: ["doc-1", "doc-2"],
       scope: ["scope-a"],
@@ -203,7 +204,7 @@ const mockRemotes: Remote[] = [
   {
     id: "mno-345-pqr-678",
     name: "remote-feature",
-    collectionId: "drive:feature/new-ui",
+    collectionId: DriveCollectionId.forDrive("new-ui", "feature"),
     filter: {
       documentId: [],
       scope: ["ui", "components"],
@@ -242,7 +243,7 @@ export const SingleRemote: Story = {
 const manyRemotes: Remote[] = Array.from({ length: 20 }, (_, i) => ({
   id: `remote-id-${i + 1}-${Math.random().toString(36).slice(2, 8)}`,
   name: `remote-${i + 1}`,
-  collectionId: `drive:collection-${i + 1}/path`,
+  collectionId: DriveCollectionId.forDrive(`collection-${i + 1}`),
   filter: {
     documentId: i % 3 === 0 ? [`doc-${i}`] : [],
     scope: i % 2 === 0 ? ["scope-a"] : [],

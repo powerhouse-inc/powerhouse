@@ -1,7 +1,13 @@
 import { ConsoleLogger } from "document-model";
+import { DriveCollectionId } from "@powerhousedao/reactor";
+import { GraphQLError } from "graphql";
 import { withFilter } from "graphql-subscriptions";
 import { gql } from "graphql-tag";
 import schemaSource from "./schema.graphql";
+import {
+  AuthorizedDocumentHandle,
+  type CanonicalDocumentId,
+} from "../../services/authorization.service.js";
 import { BaseSubgraph } from "../base-subgraph.js";
 import type { Context, SubgraphArgs } from "../types.js";
 import {
@@ -41,15 +47,21 @@ export class ReactorSubgraph extends BaseSubgraph {
     documentId: string,
     actions: readonly unknown[],
     ctx: Context,
-  ): Promise<void> {
+  ): Promise<AuthorizedDocumentHandle> {
+    let handle = AuthorizedDocumentHandle.skipped(documentId);
     for (const action of actions) {
       if (!action || typeof action !== "object") continue;
       const actionObj = action as Record<string, unknown>;
       const operationType = actionObj.type;
       if (typeof operationType !== "string") continue;
 
-      await this.assertCanExecuteOperation(documentId, operationType, ctx);
+      handle = await this.assertCanExecuteOperation(
+        documentId,
+        operationType,
+        ctx,
+      );
     }
+    return handle;
   }
 
   /**
@@ -70,6 +82,29 @@ export class ReactorSubgraph extends BaseSubgraph {
     }
   }
 
+  /**
+   * Adds to `forbidden` the canonical document ids in `syncOps` that the caller
+   * cannot read, checking each distinct id once. Sync operation document ids are
+   * canonical (never slugs), so no resolution is needed.
+   */
+  async #collectForbiddenDocuments(
+    syncOps: ReadonlyArray<{ documentId: string }>,
+    forbidden: Set<string>,
+    ctx: Context,
+  ): Promise<void> {
+    const checked = new Set<string>();
+    for (const syncOp of syncOps) {
+      const documentId = syncOp.documentId;
+      if (checked.has(documentId) || forbidden.has(documentId)) continue;
+      checked.add(documentId);
+      const canRead = await this.canReadDocument(
+        documentId as CanonicalDocumentId,
+        ctx,
+      );
+      if (!canRead) forbidden.add(documentId);
+    }
+  }
+
   typeDefs = gql(schemaSource);
 
   resolvers: Resolvers = {
@@ -82,7 +117,10 @@ export class ReactorSubgraph extends BaseSubgraph {
           args,
         );
 
-        await this.assertCanRead(parent.id, ctx);
+        await this.assertCanReadCanonical(
+          parent.id as CanonicalDocumentId,
+          ctx,
+        );
 
         try {
           // Build the filter using the document's id
@@ -121,8 +159,11 @@ export class ReactorSubgraph extends BaseSubgraph {
       document: async (_parent, args, ctx: Context) => {
         this.logger.debug("document(@args)", args);
         try {
-          await this.assertCanRead(args.identifier, ctx);
-          return await resolvers.document(this.reactorClient, args);
+          const handle = await this.assertCanRead(args.identifier, ctx);
+          return await resolvers.document(this.reactorClient, {
+            ...args,
+            identifier: handle.fetchIdentifier,
+          });
         } catch (error) {
           this.logger.error("Error in document: @Error", error);
           throw error;
@@ -132,10 +173,10 @@ export class ReactorSubgraph extends BaseSubgraph {
       documentOutgoingRelationships: async (_parent, args, ctx: Context) => {
         this.logger.debug("documentOutgoingRelationships(@args)", args);
         try {
-          await this.assertCanRead(args.sourceIdentifier, ctx);
+          const handle = await this.assertCanRead(args.sourceIdentifier, ctx);
           return await resolvers.documentOutgoingRelationships(
             this.reactorClient,
-            args,
+            { ...args, sourceIdentifier: handle.fetchIdentifier },
           );
         } catch (error) {
           this.logger.error(
@@ -149,15 +190,18 @@ export class ReactorSubgraph extends BaseSubgraph {
       documentIncomingRelationships: async (_parent, args, ctx: Context) => {
         this.logger.debug("documentIncomingRelationships(@args)", args);
         try {
-          await this.assertCanRead(args.targetIdentifier, ctx);
+          const handle = await this.assertCanRead(args.targetIdentifier, ctx);
           const result = await resolvers.documentIncomingRelationships(
             this.reactorClient,
-            args,
+            { ...args, targetIdentifier: handle.fetchIdentifier },
           );
           if (!this.authorizationService.isSupremeAdmin(ctx.user?.address)) {
             const filteredItems = [];
             for (const item of result.items) {
-              const canRead = await this.canReadDocument(item.id, ctx);
+              const canRead = await this.canReadDocument(
+                item.id as CanonicalDocumentId,
+                ctx,
+              );
               if (canRead) {
                 filteredItems.push(item);
               }
@@ -190,7 +234,10 @@ export class ReactorSubgraph extends BaseSubgraph {
           if (!this.authorizationService.isSupremeAdmin(ctx.user?.address)) {
             const filteredItems = [];
             for (const item of result.items) {
-              const canRead = await this.canReadDocument(item.id, ctx);
+              const canRead = await this.canReadDocument(
+                item.id as CanonicalDocumentId,
+                ctx,
+              );
               if (canRead) {
                 filteredItems.push(item);
               }
@@ -221,23 +268,80 @@ export class ReactorSubgraph extends BaseSubgraph {
       documentOperations: async (_parent, args, ctx: Context) => {
         this.logger.debug("documentOperations(@args)", args);
         try {
-          await this.assertCanRead(args.filter.documentId, ctx);
-          return await resolvers.documentOperations(this.reactorClient, args);
+          const handle = await this.assertCanRead(args.filter.documentId, ctx);
+          return await resolvers.documentOperations(this.reactorClient, {
+            ...args,
+            filter: {
+              ...args.filter,
+              documentId: handle.fetchIdentifier,
+            },
+          });
         } catch (error) {
           this.logger.error("Error in documentOperations: @Error", error);
           throw error;
         }
       },
 
-      pollSyncEnvelopes: (
+      pollSyncEnvelopes: async (
         _parent: unknown,
         args: { channelId: string; outboxAck: number; outboxLatest: number },
+        ctx: Context,
       ) => {
         this.logger.debug("pollSyncEnvelopes(@args)", args);
 
         try {
+          let remote;
+          try {
+            remote = this.syncManager.getById(args.channelId);
+          } catch (error) {
+            throw new GraphQLError(
+              `Channel not found: ${error instanceof Error ? error.message : "Unknown error"}`,
+            );
+          }
+
+          // A collection is a drive-level abstraction; its canonical drive id is
+          // carried by the collection id (never a slug).
+          const driveId = remote.collectionId.driveId as CanonicalDocumentId;
+          const isAdmin = this.authorizationService.isSupremeAdmin(
+            ctx.user?.address,
+          );
+
+          // Tier 1: reading any operation in a collection requires read access to
+          // the drive it belongs to. No drive read, no document read.
+          if (!isAdmin) {
+            await this.assertCanReadCanonical(driveId, ctx);
+          }
+
+          // Tier 2/3: drop operations and dead letters for documents the caller
+          // cannot read individually.
+          const forbiddenIds = new Set<string>();
+          if (!isAdmin) {
+            // A caller who can read a *protected* drive holds a grant that
+            // inherits to every in-collection member, so the outbox needs no
+            // per-document check. Only a world-readable drive can contain an
+            // individually-protected member this caller cannot read.
+            const driveWorldReadable = await this.authorizationService.canRead(
+              driveId,
+              undefined,
+            );
+            if (driveWorldReadable) {
+              await this.#collectForbiddenDocuments(
+                remote.channel.outbox.items,
+                forbiddenIds,
+                ctx,
+              );
+            }
+            // Dead letters can carry documents outside this collection (failed
+            // inbox jobs) that the drive gate does not cover, so always filter.
+            await this.#collectForbiddenDocuments(
+              remote.channel.deadLetter.items,
+              forbiddenIds,
+              ctx,
+            );
+          }
+
           const { envelopes, ackOrdinal, deadLetters, hasMore } =
-            resolvers.pollSyncEnvelopes(this.syncManager, args);
+            resolvers.pollSyncEnvelopes(this.syncManager, args, forbiddenIds);
           return {
             envelopes,
             ackOrdinal,
@@ -265,7 +369,10 @@ export class ReactorSubgraph extends BaseSubgraph {
               identifier: args.parentIdentifier,
             });
 
-            await this.assertCanWrite(parent.document.id, ctx);
+            await this.assertCanWriteCanonical(
+              parent.document.id as CanonicalDocumentId,
+              ctx,
+            );
           } else {
             this.assertCanCreate(ctx);
           }
@@ -308,7 +415,10 @@ export class ReactorSubgraph extends BaseSubgraph {
               identifier: args.parentIdentifier,
             });
 
-            await this.assertCanWrite(parent.document.id, ctx);
+            await this.assertCanWriteCanonical(
+              parent.document.id as CanonicalDocumentId,
+              ctx,
+            );
           } else {
             this.assertCanCreate(ctx);
           }
@@ -346,13 +456,16 @@ export class ReactorSubgraph extends BaseSubgraph {
         this.logger.debug("mutateDocument(@args)", args);
         try {
           // canMutate combines the write + operation checks per action.
-          await this.assertCanExecuteOperations(
+          const handle = await this.assertCanExecuteOperations(
             args.documentIdentifier,
             args.actions,
             ctx,
           );
 
-          return await resolvers.mutateDocument(this.reactorClient, args);
+          return await resolvers.mutateDocument(this.reactorClient, {
+            ...args,
+            documentIdentifier: handle.fetchIdentifier,
+          });
         } catch (error) {
           this.logger.error(
             "Error in mutateDocument(@args): @Error",
@@ -366,13 +479,16 @@ export class ReactorSubgraph extends BaseSubgraph {
       mutateDocumentAsync: async (_parent, args, ctx: Context) => {
         this.logger.debug("mutateDocumentAsync(@args)", args);
         try {
-          await this.assertCanExecuteOperations(
+          const handle = await this.assertCanExecuteOperations(
             args.documentIdentifier,
             args.actions,
             ctx,
           );
 
-          return await resolvers.mutateDocumentAsync(this.reactorClient, args);
+          return await resolvers.mutateDocumentAsync(this.reactorClient, {
+            ...args,
+            documentIdentifier: handle.fetchIdentifier,
+          });
         } catch (error) {
           this.logger.error(
             "Error in mutateDocumentAsync(@args): @Error",
@@ -386,9 +502,15 @@ export class ReactorSubgraph extends BaseSubgraph {
       renameDocument: async (_parent, args, ctx: Context) => {
         this.logger.debug("renameDocument(@args)", args);
         try {
-          await this.assertCanWrite(args.documentIdentifier, ctx);
+          const handle = await this.assertCanWrite(
+            args.documentIdentifier,
+            ctx,
+          );
 
-          return await resolvers.renameDocument(this.reactorClient, args);
+          return await resolvers.renameDocument(this.reactorClient, {
+            ...args,
+            documentIdentifier: handle.fetchIdentifier,
+          });
         } catch (error) {
           this.logger.error(
             "Error in renameDocument(@args): @Error",
@@ -402,9 +524,15 @@ export class ReactorSubgraph extends BaseSubgraph {
       setPreferredEditor: async (_parent, args, ctx: Context) => {
         this.logger.debug("setPreferredEditor(@args)", args);
         try {
-          await this.assertCanWrite(args.documentIdentifier, ctx);
+          const handle = await this.assertCanWrite(
+            args.documentIdentifier,
+            ctx,
+          );
 
-          return await resolvers.setPreferredEditor(this.reactorClient, args);
+          return await resolvers.setPreferredEditor(this.reactorClient, {
+            ...args,
+            documentIdentifier: handle.fetchIdentifier,
+          });
         } catch (error) {
           this.logger.error(
             "Error in setPreferredEditor(@args): @Error",
@@ -418,9 +546,12 @@ export class ReactorSubgraph extends BaseSubgraph {
       addRelationship: async (_parent, args, ctx: Context) => {
         this.logger.debug("addRelationship(@args)", args);
         try {
-          await this.assertCanWrite(args.sourceIdentifier, ctx);
+          const handle = await this.assertCanWrite(args.sourceIdentifier, ctx);
 
-          return await resolvers.addRelationship(this.reactorClient, args);
+          return await resolvers.addRelationship(this.reactorClient, {
+            ...args,
+            sourceIdentifier: handle.fetchIdentifier,
+          });
         } catch (error) {
           this.logger.error(
             "Error in addRelationship(@args): @Error",
@@ -434,9 +565,12 @@ export class ReactorSubgraph extends BaseSubgraph {
       removeRelationship: async (_parent, args, ctx: Context) => {
         this.logger.debug("removeRelationship(@args)", args);
         try {
-          await this.assertCanWrite(args.sourceIdentifier, ctx);
+          const handle = await this.assertCanWrite(args.sourceIdentifier, ctx);
 
-          return await resolvers.removeRelationship(this.reactorClient, args);
+          return await resolvers.removeRelationship(this.reactorClient, {
+            ...args,
+            sourceIdentifier: handle.fetchIdentifier,
+          });
         } catch (error) {
           this.logger.error(
             "Error in removeRelationship(@args): @Error",
@@ -450,10 +584,20 @@ export class ReactorSubgraph extends BaseSubgraph {
       moveRelationship: async (_parent, args, ctx: Context) => {
         this.logger.debug("moveRelationship(@args)", args);
         try {
-          await this.assertCanWrite(args.sourceParentIdentifier, ctx);
-          await this.assertCanWrite(args.targetParentIdentifier, ctx);
+          const sourceHandle = await this.assertCanWrite(
+            args.sourceParentIdentifier,
+            ctx,
+          );
+          const targetHandle = await this.assertCanWrite(
+            args.targetParentIdentifier,
+            ctx,
+          );
 
-          return await resolvers.moveRelationship(this.reactorClient, args);
+          return await resolvers.moveRelationship(this.reactorClient, {
+            ...args,
+            sourceParentIdentifier: sourceHandle.fetchIdentifier,
+            targetParentIdentifier: targetHandle.fetchIdentifier,
+          });
         } catch (error) {
           this.logger.error(
             "Error in moveRelationship(@args): @Error @args",
@@ -467,18 +611,17 @@ export class ReactorSubgraph extends BaseSubgraph {
       deleteDocument: async (_parent, args, ctx: Context) => {
         this.logger.debug("deleteDocument(@args)", args);
         try {
-          await this.assertCanWrite(args.identifier, ctx);
+          const handle = await this.assertCanWrite(args.identifier, ctx);
+          const identifier = handle.fetchIdentifier;
 
           // Resolve identifier (id or slug) to detect drive deletes for cache
           // invalidation. Only one read; no-op for non-drive callers via the
           // catch.
-          const driveIdToInvalidate = await this.#resolveDriveId(
-            args.identifier,
-          );
+          const driveIdToInvalidate = await this.#resolveDriveId(identifier);
 
           const result = await resolvers.deleteDocument(
             this.reactorClient,
-            args,
+            { ...args, identifier },
             this.graphqlManager.reactorDriveClient,
           );
 
@@ -500,11 +643,17 @@ export class ReactorSubgraph extends BaseSubgraph {
       deleteDocuments: async (_parent, args, ctx: Context) => {
         this.logger.debug("deleteDocuments(@args)", args);
         try {
-          // Check write permission on each document
+          // Check write permission on each document, resolving slugs so the
+          // delete targets the same canonical ids the checks authorized.
+          const identifiers: string[] = [];
           for (const identifier of args.identifiers) {
-            await this.assertCanWrite(identifier, ctx);
+            const handle = await this.assertCanWrite(identifier, ctx);
+            identifiers.push(handle.fetchIdentifier);
           }
-          return await resolvers.deleteDocuments(this.reactorClient, args);
+          return await resolvers.deleteDocuments(this.reactorClient, {
+            ...args,
+            identifiers,
+          });
         } catch (error) {
           this.logger.error(
             "Error in deleteDocuments(@args): @Error",
@@ -530,10 +679,21 @@ export class ReactorSubgraph extends BaseSubgraph {
             sinceTimestampUtcMs: string;
           };
         },
+        ctx: Context,
       ) => {
         this.logger.debug("touchChannel(@args)", args);
 
         try {
+          // A channel synchronizes a collection, i.e. a drive. Registering one
+          // requires read access to that drive; pushed operations are still
+          // authorized per-operation in pushSyncEnvelopes. The collection id
+          // carries the canonical drive id (never a slug).
+          if (!this.authorizationService.isSupremeAdmin(ctx.user?.address)) {
+            const driveId = DriveCollectionId.fromKey(args.input.collectionId)
+              .driveId as CanonicalDocumentId;
+            await this.assertCanReadCanonical(driveId, ctx);
+          }
+
           return await resolvers.touchChannel(this.syncManager, args);
         } catch (error) {
           this.logger.error(
@@ -545,10 +705,36 @@ export class ReactorSubgraph extends BaseSubgraph {
         }
       },
 
-      pushSyncEnvelopes: async (_parent, args) => {
+      pushSyncEnvelopes: async (_parent, args, ctx: Context) => {
         this.logger.debug("pushSyncEnvelopes(@args)", args);
 
         try {
+          // Check canMutate per distinct (documentId, action type). Nested map
+          // rather than a joined key: a separator could be forged to collide
+          // two distinct pairs and skip a check.
+          const checkedOperations = new Map<string, Set<string>>();
+          for (const envelope of args.envelopes) {
+            for (const op of envelope.operations ?? []) {
+              const documentId = op.context.documentId;
+              const operationType = op.operation.action.type;
+              let checkedTypes = checkedOperations.get(documentId);
+              if (!checkedTypes) {
+                checkedTypes = new Set<string>();
+                checkedOperations.set(documentId, checkedTypes);
+              }
+              if (checkedTypes.has(operationType)) continue;
+              checkedTypes.add(operationType);
+              // Operation context ids are canonical document ids supplied by the
+              // sync protocol (never slugs) and may reference documents not yet
+              // materialized locally, so check them without slug resolution.
+              await this.assertCanExecuteOperationCanonical(
+                documentId as CanonicalDocumentId,
+                operationType,
+                ctx,
+              );
+            }
+          }
+
           // Convert readonly arrays to mutable arrays for the resolver
           const mutableArgs = {
             envelopes: args.envelopes.map((envelope) => ({

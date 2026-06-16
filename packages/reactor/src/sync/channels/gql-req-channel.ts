@@ -1,5 +1,8 @@
 import type { ILogger } from "document-model";
-import type { IOperationIndex } from "../../cache/operation-index-types.js";
+import type {
+  DriveCollectionId,
+  IOperationIndex,
+} from "../../cache/operation-index-types.js";
 import type { ISyncCursorStorage } from "../../storage/interfaces.js";
 import { BufferedMailbox } from "../buffered-mailbox.js";
 import { ChannelError, GraphQLRequestError } from "../errors.js";
@@ -36,8 +39,8 @@ export type GqlChannelConfig = {
   jwtHandler?: JwtHandler;
   /** Custom fetch function for testing (default: global fetch) */
   fetchFn?: typeof fetch;
-  /** Collection ID to synchronize */
-  collectionId: string;
+  /** Collection to synchronize (drive-level abstraction) */
+  collectionId: DriveCollectionId;
   /** Filter to apply to operations */
   filter: RemoteFilter;
   /** Base delay in ms for exponential backoff on push retries */
@@ -605,7 +608,7 @@ export class GqlRequestChannel implements IChannel {
     let sinceTimestampUtcMs = "0";
     try {
       const result = await this.operationIndex.getLatestTimestampForCollection(
-        this.config.collectionId,
+        this.config.collectionId.key,
       );
       if (result) {
         sinceTimestampUtcMs = result;
@@ -627,7 +630,7 @@ export class GqlRequestChannel implements IChannel {
       input: {
         id: this.channelId,
         name: this.channelId,
-        collectionId: this.config.collectionId,
+        collectionId: this.config.collectionId.key,
         filter: {
           documentId: this.config.filter.documentId,
           scope: this.config.filter.scope,

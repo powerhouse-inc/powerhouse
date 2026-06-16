@@ -8,6 +8,8 @@
  * - A fresh McpServer is created per POST request (regression for the
  *   "Already connected to a transport" unhandled rejection — see Sentry
  *   issue POWERHOUSE-9)
+ * - Every route runs the request authorizer before any MCP processing and
+ *   fails closed (AUTH_REVIEW S-C1)
  */
 
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -33,10 +35,14 @@ vi.mock("../src/server.js", () => ({
 
 // Static imports — vi.mock() is hoisted so the mock above is applied first.
 import { createServer } from "../src/server.js";
-import { setupMcpServer } from "../src/mcp-routes.js";
+import {
+  setupMcpServer,
+  type McpRequestAuthorizer,
+} from "../src/mcp-routes.js";
 
 beforeEach(() => {
   createdServers.length = 0;
+  vi.mocked(createServer).mockClear();
   vi.mocked(createServer).mockImplementation(() => {
     const server: MockServer = {
       connect: vi.fn().mockResolvedValue(undefined),
@@ -118,13 +124,25 @@ function makeTransportMock() {
 const mockClient = {} as IReactorClient;
 const mockSyncManager = {} as ISyncManager;
 
+const allowAll: McpRequestAuthorizer = () =>
+  Promise.resolve({ authorized: true });
+
+const denyWith =
+  (status: number, message: string): McpRequestAuthorizer =>
+  () =>
+    Promise.resolve({ authorized: false, status, message });
+
 // ── tests ─────────────────────────────────────────────────────────────────────
 
 describe("setupMcpServer", () => {
   it("registers routes for POST, GET, and DELETE on /mcp", async () => {
     const { adapter, routes } = makeMockAdapter();
     await setupMcpServer(
-      { client: mockClient, syncManager: mockSyncManager },
+      {
+        client: mockClient,
+        syncManager: mockSyncManager,
+        authorizeRequest: allowAll,
+      },
       adapter,
     );
 
@@ -137,7 +155,10 @@ describe("setupMcpServer", () => {
 
   it("registers all routes at /mcp", async () => {
     const { adapter, routes } = makeMockAdapter();
-    await setupMcpServer({ client: mockClient }, adapter);
+    await setupMcpServer(
+      { client: mockClient, authorizeRequest: allowAll },
+      adapter,
+    );
 
     for (const route of routes) {
       expect(route.path).toBe("/mcp");
@@ -146,7 +167,10 @@ describe("setupMcpServer", () => {
 
   it("does not create an McpServer at setup time", async () => {
     const { adapter } = makeMockAdapter();
-    await setupMcpServer({ client: mockClient }, adapter);
+    await setupMcpServer(
+      { client: mockClient, authorizeRequest: allowAll },
+      adapter,
+    );
 
     // Server creation must be deferred to per-request handlers — building one
     // up front and sharing it caused the "Already connected" rejection.
@@ -155,7 +179,10 @@ describe("setupMcpServer", () => {
 
   it("GET /mcp handler responds with 405", async () => {
     const { adapter, routes } = makeMockAdapter();
-    await setupMcpServer({ client: mockClient }, adapter);
+    await setupMcpServer(
+      { client: mockClient, authorizeRequest: allowAll },
+      adapter,
+    );
 
     const getRoute = routes.find((r) => r.method === "GET");
     expect(getRoute).toBeDefined();
@@ -169,7 +196,10 @@ describe("setupMcpServer", () => {
 
   it("DELETE /mcp handler responds with 405", async () => {
     const { adapter, routes } = makeMockAdapter();
-    await setupMcpServer({ client: mockClient }, adapter);
+    await setupMcpServer(
+      { client: mockClient, authorizeRequest: allowAll },
+      adapter,
+    );
 
     const deleteRoute = routes.find((r) => r.method === "DELETE");
     expect(deleteRoute).toBeDefined();
@@ -183,7 +213,10 @@ describe("setupMcpServer", () => {
 
   it("GET and DELETE response bodies contain a JSON-RPC error", async () => {
     const { adapter, routes } = makeMockAdapter();
-    await setupMcpServer({ client: mockClient }, adapter);
+    await setupMcpServer(
+      { client: mockClient, authorizeRequest: allowAll },
+      adapter,
+    );
 
     for (const method of ["GET", "DELETE"] as const) {
       const route = routes.find((r) => r.method === method)!;
@@ -213,7 +246,11 @@ describe("setupMcpServer", () => {
     it("calls transport.handleRequest with (req, res, body)", async () => {
       const { Transport, handleRequest } = makeTransportMock();
       const { adapter, routes } = makeMockAdapter();
-      await setupMcpServer({ client: mockClient }, adapter, Transport);
+      await setupMcpServer(
+        { client: mockClient, authorizeRequest: allowAll },
+        adapter,
+        Transport,
+      );
 
       const body = { jsonrpc: "2.0", method: "initialize", id: 1 };
       const { req, res } = await invokePost(routes, body);
@@ -225,7 +262,11 @@ describe("setupMcpServer", () => {
     it("creates a fresh transport per request for stateless isolation", async () => {
       const { Transport, handleRequest } = makeTransportMock();
       const { adapter, routes } = makeMockAdapter();
-      await setupMcpServer({ client: mockClient }, adapter, Transport);
+      await setupMcpServer(
+        { client: mockClient, authorizeRequest: allowAll },
+        adapter,
+        Transport,
+      );
 
       await invokePost(routes);
       await invokePost(routes);
@@ -237,7 +278,11 @@ describe("setupMcpServer", () => {
     it("creates a fresh McpServer per request and connects it to its transport", async () => {
       const { Transport } = makeTransportMock();
       const { adapter, routes } = makeMockAdapter();
-      await setupMcpServer({ client: mockClient }, adapter, Transport);
+      await setupMcpServer(
+        { client: mockClient, authorizeRequest: allowAll },
+        adapter,
+        Transport,
+      );
 
       await invokePost(routes);
       await invokePost(routes);
@@ -273,7 +318,11 @@ describe("setupMcpServer", () => {
       try {
         const { Transport } = makeTransportMock();
         const { adapter, routes } = makeMockAdapter();
-        await setupMcpServer({ client: mockClient }, adapter, Transport);
+        await setupMcpServer(
+          { client: mockClient, authorizeRequest: allowAll },
+          adapter,
+          Transport,
+        );
 
         const postRoute = routes.find((r) => r.method === "POST")!;
         const { res: res1 } = makeMockResponse();
@@ -319,7 +368,11 @@ describe("setupMcpServer", () => {
       try {
         const { Transport } = makeTransportMock();
         const { adapter, routes } = makeMockAdapter();
-        await setupMcpServer({ client: mockClient }, adapter, Transport);
+        await setupMcpServer(
+          { client: mockClient, authorizeRequest: allowAll },
+          adapter,
+          Transport,
+        );
 
         const postRoute = routes.find((r) => r.method === "POST")!;
         const { res, written } = makeMockResponse();
@@ -340,7 +393,11 @@ describe("setupMcpServer", () => {
     it("closes the transport when the response 'close' event fires", async () => {
       const { Transport, close } = makeTransportMock();
       const { adapter, routes } = makeMockAdapter();
-      await setupMcpServer({ client: mockClient }, adapter, Transport);
+      await setupMcpServer(
+        { client: mockClient, authorizeRequest: allowAll },
+        adapter,
+        Transport,
+      );
 
       const postRoute = routes.find((r) => r.method === "POST")!;
       const { res } = makeMockResponse();
@@ -351,6 +408,130 @@ describe("setupMcpServer", () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
 
       expect(close).toHaveBeenCalled();
+    });
+  });
+
+  // ── authorization (AUTH_REVIEW S-C1) ────────────────────────────────────────
+
+  describe("request authorization", () => {
+    it("rejects an unauthorized POST before any MCP processing", async () => {
+      const { Transport, handleRequest } = makeTransportMock();
+      const { adapter, routes } = makeMockAdapter();
+      await setupMcpServer(
+        {
+          client: mockClient,
+          authorizeRequest: denyWith(401, "Authentication required"),
+        },
+        adapter,
+        Transport,
+      );
+
+      const postRoute = routes.find((r) => r.method === "POST")!;
+      const { res, written } = makeMockResponse();
+      await postRoute.handler({} as IncomingMessage, res, {
+        jsonrpc: "2.0",
+        method: "initialize",
+        id: 1,
+      });
+
+      expect(written.status).toBe(401);
+      const body = JSON.parse(written.body) as {
+        error: { code: number; message: string };
+      };
+      expect(body.error.message).toBe("Authentication required");
+      expect(createServer).not.toHaveBeenCalled();
+      expect(handleRequest).not.toHaveBeenCalled();
+    });
+
+    it("does not authorize GET and DELETE — they answer 405 regardless of identity", async () => {
+      // GET/DELETE 405 regardless of identity, so a denying authorizer must
+      // not change their response.
+      const authorize = vi
+        .fn<McpRequestAuthorizer>()
+        .mockResolvedValue({ authorized: false, status: 403, message: "no" });
+      const { adapter, routes } = makeMockAdapter();
+      await setupMcpServer(
+        { client: mockClient, authorizeRequest: authorize },
+        adapter,
+      );
+
+      for (const method of ["GET", "DELETE"] as const) {
+        const route = routes.find((r) => r.method === method)!;
+        const { res, written } = makeMockResponse();
+        await route.handler({} as IncomingMessage, res);
+
+        expect(written.status).toBe(405);
+      }
+      expect(authorize).not.toHaveBeenCalled();
+    });
+
+    it("passes the incoming request to the authorizer", async () => {
+      const authorize = vi
+        .fn<McpRequestAuthorizer>()
+        .mockResolvedValue({ authorized: true });
+      const { Transport } = makeTransportMock();
+      const { adapter, routes } = makeMockAdapter();
+      await setupMcpServer(
+        { client: mockClient, authorizeRequest: authorize },
+        adapter,
+        Transport,
+      );
+
+      const postRoute = routes.find((r) => r.method === "POST")!;
+      const fakeReq = {
+        headers: { authorization: "Bearer token" },
+      } as unknown as IncomingMessage;
+      const { res } = makeMockResponse();
+      await postRoute.handler(fakeReq, res);
+
+      expect(authorize).toHaveBeenCalledWith(fakeReq);
+    });
+
+    it("handles the request normally when the authorizer allows it", async () => {
+      const { Transport, handleRequest } = makeTransportMock();
+      const { adapter, routes } = makeMockAdapter();
+      await setupMcpServer(
+        { client: mockClient, authorizeRequest: allowAll },
+        adapter,
+        Transport,
+      );
+
+      const postRoute = routes.find((r) => r.method === "POST")!;
+      const { res } = makeMockResponse();
+      await postRoute.handler({} as IncomingMessage, res);
+
+      expect(handleRequest).toHaveBeenCalledOnce();
+    });
+
+    it("fails closed with a 500 when the authorizer throws", async () => {
+      const rejections: unknown[] = [];
+      const onRejection = (reason: unknown) => rejections.push(reason);
+      process.on("unhandledRejection", onRejection);
+      try {
+        const { Transport, handleRequest } = makeTransportMock();
+        const { adapter, routes } = makeMockAdapter();
+        await setupMcpServer(
+          {
+            client: mockClient,
+            authorizeRequest: () =>
+              Promise.reject(new Error("auth backend down")),
+          },
+          adapter,
+          Transport,
+        );
+
+        const postRoute = routes.find((r) => r.method === "POST")!;
+        const { res, written } = makeMockResponse();
+        await postRoute.handler({} as IncomingMessage, res);
+        await new Promise((resolve) => setImmediate(resolve));
+
+        expect(rejections).toEqual([]);
+        expect(written.status).toBe(500);
+        expect(createServer).not.toHaveBeenCalled();
+        expect(handleRequest).not.toHaveBeenCalled();
+      } finally {
+        process.off("unhandledRejection", onRejection);
+      }
     });
   });
 });

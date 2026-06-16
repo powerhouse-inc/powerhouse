@@ -1,5 +1,5 @@
 import {
-  driveCollectionId,
+  DriveCollectionId,
   type GqlRequestChannel,
 } from "@powerhousedao/reactor";
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
@@ -45,8 +45,8 @@ export function useDriveSystemInfo(
 
   const systemUrl = useMemo(() => {
     if (!driveId) return null;
-    const remote = remotes.find(
-      (r) => r.collectionId === driveCollectionId("main", driveId),
+    const remote = remotes.find((r) =>
+      r.collectionId.equals(DriveCollectionId.forDrive(driveId)),
     );
     const channelUrl = (remote?.channel as GqlRequestChannel | undefined)
       ?.config.url;

@@ -1,5 +1,6 @@
 import {
   consolidateSyncOperations,
+  DriveCollectionId,
   envelopesToSyncOperations,
   type IDriveClient,
   type IReactorClient,
@@ -47,7 +48,6 @@ function pickDriveClient(
 
 export const MAX_OPERATIONS_PER_ENVELOPE = 25;
 export const MAX_OPERATIONS_PER_PAGE = 100;
-import type { GetParentIdsFn } from "../../services/document-permission.service.js";
 import {
   fromInputMaybe,
   serializeOperationForGraphQL,
@@ -1022,7 +1022,7 @@ export async function touchChannel(
   try {
     await syncManager.add(
       args.input.name,
-      args.input.collectionId,
+      DriveCollectionId.fromKey(args.input.collectionId),
       {
         type: "polling",
         parameters: {},
@@ -1058,6 +1058,7 @@ export function pollSyncEnvelopes(
     outboxAck: number;
     outboxLatest: number;
   },
+  forbiddenIds: ReadonlySet<string> = new Set(),
 ): {
   envelopes: any[];
   ackOrdinal: number;
@@ -1080,14 +1081,19 @@ export function pollSyncEnvelopes(
     );
   }
 
-  const deadLetters = remote.channel.deadLetter.items.map((syncOp) => ({
-    documentId: syncOp.documentId,
-    error: syncOp.error?.message ?? "Unknown error",
-    jobId: syncOp.jobId,
-    branch: syncOp.branch,
-    scopes: syncOp.scopes,
-    operationCount: syncOp.operations.length,
-  }));
+  // Dead-letter items can originate from failed inbox jobs whose documentId is
+  // outside this channel's collection, so they are filtered by the caller's read
+  // access independently of the outbox (see the poll resolver in subgraph.ts).
+  const deadLetters = remote.channel.deadLetter.items
+    .filter((syncOp) => !forbiddenIds.has(syncOp.documentId))
+    .map((syncOp) => ({
+      documentId: syncOp.documentId,
+      error: syncOp.error?.message ?? "Unknown error",
+      jobId: syncOp.jobId,
+      branch: syncOp.branch,
+      scopes: syncOp.scopes,
+      operationCount: syncOp.operations.length,
+    }));
 
   // Trim acked outbox items, but only those we have fully emitted to this
   // client. Without the emittedCount guard, a syncOp queued behind a page cap
@@ -1119,6 +1125,20 @@ export function pollSyncEnvelopes(
   }
 
   const operations = remote.channel.outbox.items;
+
+  // Drain forbidden operations: mark them fully delivered so the page loop's
+  // `remaining.length === 0` guard skips them (never emitted to this caller) and
+  // the ack trim above evicts them on a later poll. The caller proved they may
+  // not read these documents, so advancing the cursor past them is correct and
+  // avoids re-evaluating them every poll.
+  if (forbiddenIds.size > 0) {
+    for (const syncOp of operations) {
+      if (forbiddenIds.has(syncOp.documentId)) {
+        syncOp.deliveredCount = syncOp.operations.length;
+        syncOp.emittedCount = syncOp.operations.length;
+      }
+    }
+  }
 
   if (operations.length === 0) {
     return {
@@ -1339,23 +1359,4 @@ export function pushSyncEnvelopes(
   }
 
   return Promise.resolve(true);
-}
-
-/**
- * Create a getParentIds function using the reactor client
- */
-export function createGetParentIdsFn(
-  reactorClient: IReactorClient,
-): GetParentIdsFn {
-  return async (documentId: string): Promise<string[]> => {
-    try {
-      const result = await reactorClient.getIncomingRelationships(
-        documentId,
-        "child",
-      );
-      return result.results.map((doc) => doc.header.id);
-    } catch {
-      return [];
-    }
-  };
 }

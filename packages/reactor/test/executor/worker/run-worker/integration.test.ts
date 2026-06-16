@@ -28,7 +28,7 @@ import {
 } from "../../../../src/storage/migrations/migrator.js";
 import { KyselyOperationStore } from "../../../../src/storage/kysely/store.js";
 import { KyselyOperationIndex } from "../../../../src/cache/kysely-operation-index.js";
-import { driveCollectionId } from "../../../../src/cache/operation-index-types.js";
+import { DriveCollectionId } from "../../../../src/cache/operation-index-types.js";
 import type { Database as StorageDatabase } from "../../../../src/storage/kysely/types.js";
 
 type Harness = {
@@ -233,7 +233,7 @@ async function preCreateDriveDocument(
     },
   ]);
 
-  const collectionId = driveCollectionId("main", documentId);
+  const collectionId = DriveCollectionId.forDrive(documentId).key;
   indexTxn.createCollection(collectionId);
   indexTxn.addToCollection(collectionId, documentId);
   await index.commit(indexTxn);

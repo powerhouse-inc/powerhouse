@@ -19,6 +19,7 @@
   "scripts": {
     "build": "tsdown",
     "dev": "tsx src/cli.ts",
+    "lint": "eslint",
     "test": "vitest --run",
     "scenario:sync": "tsx src/orchestrator.ts",
     "scenario:sync:stress": "tsx src/orchestrator.ts --clients 5 --duration 120000 --mutation-interval 200",

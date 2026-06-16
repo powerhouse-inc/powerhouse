@@ -1,0 +1,48 @@
+{
+  "name": "auth-arch-refactor",
+  "description": "Detects published packages that consume the reactor-api surfaces changed by the AUTH_REVIEW A1-A8 architecture cleanups: DocumentPermissionService decision methods moved into the authorization strategy (A1), the getParentIds per-call parameter and its duplicate factories removed (A2), the GraphQLManager authConfig constructor parameter replaced by a shared AuthService instance (A6), and the isSupremeAdmin/canCreate semantics split (A8). Findings inside @powerhousedao/reactor-api itself are the source of these symbols, not consumers.",
+  "rules": [
+    {
+      "id": "dps-decision-methods",
+      "description": "Call/reference to a DocumentPermissionService decision method removed by A1 (canWriteDocument, canManageDocument, filterReadableDocuments). Decisions now live on IAuthorizationService.",
+      "severity": "high",
+      "pattern": "\\.(canWriteDocument|canManageDocument|filterReadableDocuments)\\b"
+    },
+    {
+      "id": "dps-canReadDocument",
+      "description": "Call to .canReadDocument — removed from DocumentPermissionService by A1, but BaseSubgraph keeps a protected helper with the same name that delegates to the authorization service. Triage the receiver: this.canReadDocument(...) on a subgraph is fine; documentPermissionService.canReadDocument(...) is broken.",
+      "severity": "medium",
+      "pattern": "\\.canReadDocument\\b"
+    },
+    {
+      "id": "dps-canExecuteOperation",
+      "description": "Call to .canExecuteOperation — removed from DocumentPermissionService by A1 (decision moved to IAuthorizationService.canMutate; raw ACL existence check renamed hasOperationGrant).",
+      "severity": "high",
+      "pattern": "\\.canExecuteOperation\\b"
+    },
+    {
+      "id": "getParentIds-factories",
+      "description": "Reference to createGetParentIdsFn (duplicate exports deleted by A2) or BaseSubgraph.getParentIdsFn (removed; the parent resolver is injected into the authorization service at construction).",
+      "severity": "high",
+      "pattern": "\\b(createGetParentIdsFn|getParentIdsFn)\\b"
+    },
+    {
+      "id": "authz-can-methods-arity",
+      "description": "Call to .canRead/.canWrite/.canManage/.canMutate. Two changes share these names: IAuthorizationService signatures lose the optional trailing getParentIds parameter (A2; extra args are ignored at runtime, two-arg calls unaffected), and DocumentPermissionService.canRead/canWrite(documentId, user, getParentIds) are REMOVED entirely (A1; calls on a DocumentPermissionService receiver throw at runtime). Triage by receiver.",
+      "severity": "medium",
+      "pattern": "\\.(canRead|canWrite|canManage|canMutate)\\s*\\("
+    },
+    {
+      "id": "graphqlmanager-construction",
+      "description": "Direct construction of GraphQLManager — the 11th constructor parameter changes from AuthConfig to a shared AuthService instance (A6).",
+      "severity": "medium",
+      "pattern": "new\\s+GraphQLManager\\b"
+    },
+    {
+      "id": "isSupremeAdmin-consumers",
+      "description": "Call to isSupremeAdmin — semantics documented/refined by A8 (returns true for everyone under the OPEN policy). Behavior unchanged; flagged for awareness.",
+      "severity": "low",
+      "pattern": "\\.isSupremeAdmin\\b"
+    }
+  ]
+}

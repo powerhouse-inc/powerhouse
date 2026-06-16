@@ -6,7 +6,7 @@ import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { KyselyOperationIndex } from "../../../src/cache/kysely-operation-index.js";
 import type { IOperationIndex } from "../../../src/cache/operation-index-types.js";
-import { driveCollectionId } from "../../../src/cache/operation-index-types.js";
+import { DriveCollectionId } from "../../../src/cache/operation-index-types.js";
 import type { Database } from "../../../src/storage/kysely/types.js";
 import { createTestSyncStorage } from "../../factories.js";
 
@@ -28,7 +28,7 @@ describe("KyselyOperationIndex Integration", () => {
     it("should include operations that occurred before document was added to collection", async () => {
       const driveId = "drive-1";
       const childDocId = "child-doc-1";
-      const collectionId = driveCollectionId("main", driveId);
+      const collectionId = DriveCollectionId.forDrive(driveId).key;
 
       const txn1 = operationIndex.start();
       const createActionId = generateId();
@@ -177,7 +177,7 @@ describe("KyselyOperationIndex Integration", () => {
     it("should include retroactively-joined operations even when the cursor has advanced past them", async () => {
       const driveId = "drive-retroactive";
       const childDocId = "child-doc-retroactive";
-      const collectionId = driveCollectionId("main", driveId);
+      const collectionId = DriveCollectionId.forDrive(driveId).key;
 
       const txn1 = operationIndex.start();
       const createDriveActionId = generateId();
@@ -357,7 +357,7 @@ describe("KyselyOperationIndex Integration", () => {
     it("splits joiner backfill and new ops across pages by ordinal", async () => {
       const driveId = "drive-paging-1";
       const childDocId = "child-paging-1";
-      const collectionId = driveCollectionId("main", driveId);
+      const collectionId = DriveCollectionId.forDrive(driveId).key;
 
       const txn1 = operationIndex.start();
       const createDriveActionId = generateId();
@@ -565,7 +565,7 @@ describe("KyselyOperationIndex Integration", () => {
     it("does not re-emit joiner ops on continuation pages", async () => {
       const driveId = "drive-no-dupes";
       const childDocId = "child-no-dupes";
-      const collectionId = driveCollectionId("main", driveId);
+      const collectionId = DriveCollectionId.forDrive(driveId).key;
 
       const txn1 = operationIndex.start();
       const createDriveActionId = generateId();
@@ -738,7 +738,7 @@ describe("KyselyOperationIndex Integration", () => {
     it("applies branch / scope / excludeSourceRemote view filters to joiner backfill", async () => {
       const driveId = "drive-view-filter";
       const childDocId = "child-view-filter";
-      const collectionId = driveCollectionId("main", driveId);
+      const collectionId = DriveCollectionId.forDrive(driveId).key;
 
       const txn1 = operationIndex.start();
       const createDriveActionId = generateId();
@@ -977,7 +977,7 @@ describe("KyselyOperationIndex Integration", () => {
     it("returns no rows when cursor is past joinedOrdinal", async () => {
       const driveId = "drive-past-cursor";
       const childDocId = "child-past-cursor";
-      const collectionId = driveCollectionId("main", driveId);
+      const collectionId = DriveCollectionId.forDrive(driveId).key;
 
       const txn1 = operationIndex.start();
       const createDriveActionId = generateId();
@@ -1123,7 +1123,7 @@ describe("KyselyOperationIndex Integration", () => {
     it("should exclude operations after document left the collection", async () => {
       const driveId = "drive-2";
       const childDocId = "child-doc-2";
-      const collectionId = driveCollectionId("main", driveId);
+      const collectionId = DriveCollectionId.forDrive(driveId).key;
 
       const txn1 = operationIndex.start();
       const createDriveActionId = generateId();
@@ -1292,7 +1292,7 @@ describe("KyselyOperationIndex Integration", () => {
     it("returns the latest timestamp for a collection with multiple operations", async () => {
       const driveId = "drive-timestamp-1";
       const childDocId = "child-doc-timestamp-1";
-      const collectionId = driveCollectionId("main", driveId);
+      const collectionId = DriveCollectionId.forDrive(driveId).key;
 
       const txn1 = operationIndex.start();
       const createDriveActionId = generateId();
@@ -1401,7 +1401,7 @@ describe("KyselyOperationIndex Integration", () => {
     it("excludes operations after document was removed from collection", async () => {
       const driveId = "drive-timestamp-2";
       const childDocId = "child-doc-timestamp-2";
-      const collectionId = driveCollectionId("main", driveId);
+      const collectionId = DriveCollectionId.forDrive(driveId).key;
 
       const txn1 = operationIndex.start();
       const createDriveActionId = generateId();

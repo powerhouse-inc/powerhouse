@@ -1,5 +1,5 @@
 import { Icon } from "@powerhousedao/design-system";
-import { driveCollectionId, useSyncList } from "@powerhousedao/reactor-browser";
+import { DriveCollectionId, useSyncList } from "@powerhousedao/reactor-browser";
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import { useMemo } from "react";
 
@@ -12,9 +12,8 @@ export function DriveIcon({
   const isRemoteDrive = useMemo(() => {
     if (!drive) return false;
 
-    return remotes.some(
-      (remote) =>
-        remote.collectionId === driveCollectionId("main", drive.header.id),
+    return remotes.some((remote) =>
+      remote.collectionId.equals(DriveCollectionId.forDrive(drive.header.id)),
     );
   }, [remotes, drive]);
 

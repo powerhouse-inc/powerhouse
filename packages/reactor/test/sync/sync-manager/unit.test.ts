@@ -2,6 +2,7 @@ import type { OperationWithContext } from "@powerhousedao/shared/document-model"
 import { ConsoleLogger } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { IOperationIndex } from "../../../src/cache/operation-index-types.js";
+import { DriveCollectionId } from "../../../src/cache/operation-index-types.js";
 import { DEFAULT_DRIVE_CONTAINER_TYPES } from "../../../src/core/drive-container-types.js";
 import type { IReactor } from "../../../src/core/types.js";
 import type { IEventBus } from "../../../src/events/interfaces.js";
@@ -298,7 +299,7 @@ describe("SyncManager - Unit Tests", () => {
         {
           id: "channel1",
           name: "remote1",
-          collectionId: "collection1",
+          collectionId: DriveCollectionId.forDrive("collection1"),
           channelConfig: {
             type: "internal",
             parameters: {},
@@ -338,7 +339,7 @@ describe("SyncManager - Unit Tests", () => {
         {
           id: "channel1",
           name: "remote1",
-          collectionId: "collection1",
+          collectionId: DriveCollectionId.forDrive("collection1"),
           channelConfig: {
             type: "internal",
             parameters: {},
@@ -382,7 +383,7 @@ describe("SyncManager - Unit Tests", () => {
         {
           id: "ch-fail",
           name: "remote-fail",
-          collectionId: "col1",
+          collectionId: DriveCollectionId.forDrive("col1"),
           channelConfig: { type: "internal", parameters: {} },
           filter: { documentId: [], scope: [], branch: "main" },
           options: { sinceTimestampUtcMs: "0" },
@@ -394,7 +395,7 @@ describe("SyncManager - Unit Tests", () => {
         {
           id: "ch-ok",
           name: "remote-ok",
-          collectionId: "col1",
+          collectionId: DriveCollectionId.forDrive("col1"),
           channelConfig: { type: "internal", parameters: {} },
           filter: { documentId: [], scope: [], branch: "main" },
           options: { sinceTimestampUtcMs: "0" },
@@ -428,7 +429,7 @@ describe("SyncManager - Unit Tests", () => {
       const remoteRecord: RemoteRecord = {
         id: "channel1",
         name: "remote1",
-        collectionId: "collection1",
+        collectionId: DriveCollectionId.forDrive("collection1"),
         channelConfig: { type: "internal", parameters: {} },
         filter: { documentId: [], scope: [], branch: "main" },
         options: { sinceTimestampUtcMs: "0" },
@@ -458,7 +459,7 @@ describe("SyncManager - Unit Tests", () => {
         expect(startupChannel.outbox.add).toHaveBeenCalled();
       });
       expect(mockOperationIndex.find).toHaveBeenCalledWith(
-        "collection1",
+        "drive.main.collection1",
         5,
         { excludeSourceRemote: "remote1" },
         undefined,
@@ -482,7 +483,7 @@ describe("SyncManager - Unit Tests", () => {
       const remoteRecord: RemoteRecord = {
         id: "channel1",
         name: "remote1",
-        collectionId: "collection1",
+        collectionId: DriveCollectionId.forDrive("collection1"),
         channelConfig: { type: "internal", parameters: {} },
         filter: { documentId: [], scope: [], branch: "main" },
         options: { sinceTimestampUtcMs: "0" },
@@ -512,7 +513,7 @@ describe("SyncManager - Unit Tests", () => {
         {
           id: "channel1",
           name: "remote1",
-          collectionId: "collection1",
+          collectionId: DriveCollectionId.forDrive("collection1"),
           channelConfig: {
             type: "internal",
             parameters: {},
@@ -558,18 +559,18 @@ describe("SyncManager - Unit Tests", () => {
 
       const remote = await syncManager.add(
         "remote1",
-        "collection1",
+        DriveCollectionId.forDrive("collection1"),
         channelConfig,
         { documentId: [], scope: [], branch: "main" },
         { sinceTimestampUtcMs: "0" },
       );
 
       expect(remote.name).toBe("remote1");
-      expect(remote.collectionId).toBe("collection1");
+      expect(remote.collectionId.toString()).toBe("drive.main.collection1");
       expect(mockRemoteStorage.upsert).toHaveBeenCalledWith(
         expect.objectContaining({
           name: "remote1",
-          collectionId: "collection1",
+          collectionId: DriveCollectionId.forDrive("collection1"),
           channelConfig,
         }),
       );
@@ -578,7 +579,7 @@ describe("SyncManager - Unit Tests", () => {
         "remote1",
         channelConfig,
         mockCursorStorage,
-        "collection1",
+        DriveCollectionId.forDrive("collection1"),
         { documentId: [], scope: [], branch: "main" },
         mockOperationIndex,
         { sinceTimestampUtcMs: "0" },
@@ -593,10 +594,18 @@ describe("SyncManager - Unit Tests", () => {
         parameters: {},
       };
 
-      await syncManager.add("remote1", "collection1", channelConfig);
+      await syncManager.add(
+        "remote1",
+        DriveCollectionId.forDrive("collection1"),
+        channelConfig,
+      );
 
       await expect(
-        syncManager.add("remote1", "collection2", channelConfig),
+        syncManager.add(
+          "remote1",
+          DriveCollectionId.forDrive("collection2"),
+          channelConfig,
+        ),
       ).rejects.toThrow("Remote with name 'remote1' already exists");
     });
 
@@ -605,7 +614,7 @@ describe("SyncManager - Unit Tests", () => {
       syncManager.shutdown();
 
       await expect(
-        syncManager.add("remote1", "collection1", {
+        syncManager.add("remote1", DriveCollectionId.forDrive("collection1"), {
           type: "internal",
 
           parameters: {},
@@ -628,7 +637,11 @@ describe("SyncManager - Unit Tests", () => {
       };
 
       await expect(
-        syncManager.add("remote-init-fail", "col1", channelConfig),
+        syncManager.add(
+          "remote-init-fail",
+          DriveCollectionId.forDrive("col1"),
+          channelConfig,
+        ),
       ).rejects.toThrow("init failed");
 
       expect(syncManager.list()).toHaveLength(0);
@@ -645,7 +658,7 @@ describe("SyncManager - Unit Tests", () => {
 
       const remote = await syncManager.add(
         "remote1",
-        "collection1",
+        DriveCollectionId.forDrive("collection1"),
         channelConfig,
       );
 
@@ -663,7 +676,11 @@ describe("SyncManager - Unit Tests", () => {
         parameters: {},
       };
 
-      await syncManager.add("remote1", "collection1", channelConfig);
+      await syncManager.add(
+        "remote1",
+        DriveCollectionId.forDrive("collection1"),
+        channelConfig,
+      );
 
       await syncManager.remove("remote1");
 
@@ -695,7 +712,11 @@ describe("SyncManager - Unit Tests", () => {
         parameters: {},
       };
 
-      await syncManager.add("remote1", "collection1", channelConfig);
+      await syncManager.add(
+        "remote1",
+        DriveCollectionId.forDrive("collection1"),
+        channelConfig,
+      );
 
       await syncManager.remove("remote1");
 
@@ -726,12 +747,16 @@ describe("SyncManager - Unit Tests", () => {
         parameters: {},
       };
 
-      await syncManager.add("remote1", "collection1", channelConfig);
+      await syncManager.add(
+        "remote1",
+        DriveCollectionId.forDrive("collection1"),
+        channelConfig,
+      );
 
       const remote = syncManager.getByName("remote1");
 
       expect(remote.name).toBe("remote1");
-      expect(remote.collectionId).toBe("collection1");
+      expect(remote.collectionId.toString()).toBe("drive.main.collection1");
     });
 
     it("should throw error if remote does not exist", async () => {
@@ -747,10 +772,14 @@ describe("SyncManager - Unit Tests", () => {
     it("delegates to the named remote's channel", async () => {
       await syncManager.startup();
 
-      await syncManager.add("remote1", "collection1", {
-        type: "internal",
-        parameters: {},
-      });
+      await syncManager.add(
+        "remote1",
+        DriveCollectionId.forDrive("collection1"),
+        {
+          type: "internal",
+          parameters: {},
+        },
+      );
 
       syncManager.triggerPull("remote1");
 
@@ -782,8 +811,16 @@ describe("SyncManager - Unit Tests", () => {
         parameters: {},
       };
 
-      await syncManager.add("remote1", "collection1", config1);
-      await syncManager.add("remote2", "collection2", config2);
+      await syncManager.add(
+        "remote1",
+        DriveCollectionId.forDrive("collection1"),
+        config1,
+      );
+      await syncManager.add(
+        "remote2",
+        DriveCollectionId.forDrive("collection2"),
+        config2,
+      );
 
       const remotes = syncManager.list();
 
@@ -810,11 +847,16 @@ describe("SyncManager - Unit Tests", () => {
         parameters: {},
       };
 
-      await syncManager.add("remote1", "collection1", channelConfig, {
-        documentId: ["doc1"],
-        scope: ["global"],
-        branch: "main",
-      });
+      await syncManager.add(
+        "remote1",
+        DriveCollectionId.forDrive("collection1"),
+        channelConfig,
+        {
+          documentId: ["doc1"],
+          scope: ["global"],
+          branch: "main",
+        },
+      );
 
       vi.mocked(mockOperationIndex.find).mockResolvedValueOnce(
         createFindResult([
@@ -851,7 +893,7 @@ describe("SyncManager - Unit Tests", () => {
       await emitWriteReady({
         jobId: "auto-job-1",
         operations,
-        collectionMemberships: { doc1: ["collection1"] },
+        collectionMemberships: { doc1: ["drive.main.collection1"] },
         jobMeta: { batchId: "auto-1", batchJobIds: ["auto-job-1"] },
       });
 
@@ -866,11 +908,16 @@ describe("SyncManager - Unit Tests", () => {
         parameters: {},
       };
 
-      await syncManager.add("remote1", "collection1", channelConfig, {
-        documentId: ["doc1", "doc2"],
-        scope: ["global"],
-        branch: "main",
-      });
+      await syncManager.add(
+        "remote1",
+        DriveCollectionId.forDrive("collection1"),
+        channelConfig,
+        {
+          documentId: ["doc1", "doc2"],
+          scope: ["global"],
+          branch: "main",
+        },
+      );
 
       vi.mocked(mockOperationIndex.find).mockClear();
       vi.mocked(mockCursorStorage.get).mockClear();
@@ -944,7 +991,7 @@ describe("SyncManager - Unit Tests", () => {
             },
           },
         ],
-        collectionMemberships: { doc2: ["collection1"] },
+        collectionMemberships: { doc2: ["drive.main.collection1"] },
         jobMeta: {
           batchId: "auto-job-index-enqueue",
           batchJobIds: ["job-index-enqueue"],
@@ -952,7 +999,7 @@ describe("SyncManager - Unit Tests", () => {
       });
 
       expect(mockOperationIndex.find).toHaveBeenCalledWith(
-        "collection1",
+        "drive.main.collection1",
         0,
         { excludeSourceRemote: "remote1" },
         undefined,
@@ -982,11 +1029,16 @@ describe("SyncManager - Unit Tests", () => {
         parameters: {},
       };
 
-      await syncManager.add("remote1", "collection1", channelConfig, {
-        documentId: ["doc1"],
-        scope: ["global"],
-        branch: "main",
-      });
+      await syncManager.add(
+        "remote1",
+        DriveCollectionId.forDrive("collection1"),
+        channelConfig,
+        {
+          documentId: ["doc1"],
+          scope: ["global"],
+          branch: "main",
+        },
+      );
 
       // Pre-populate outbox with a SyncOperation at ordinal 9
       const tailSyncOp = new SyncOperation(
@@ -1069,7 +1121,7 @@ describe("SyncManager - Unit Tests", () => {
             },
           },
         ],
-        collectionMemberships: { doc1: ["collection1"] },
+        collectionMemberships: { doc1: ["drive.main.collection1"] },
         jobMeta: {
           batchId: "auto-job-checkpoint-max",
           batchJobIds: ["job-checkpoint-max"],
@@ -1077,7 +1129,7 @@ describe("SyncManager - Unit Tests", () => {
       });
 
       expect(mockOperationIndex.find).toHaveBeenCalledWith(
-        "collection1",
+        "drive.main.collection1",
         9,
         { excludeSourceRemote: "remote1" },
         undefined,
@@ -1093,11 +1145,16 @@ describe("SyncManager - Unit Tests", () => {
         parameters: {},
       };
 
-      await syncManager.add("remote1", "collection1", channelConfig, {
-        documentId: ["doc1"],
-        scope: ["global"],
-        branch: "main",
-      });
+      await syncManager.add(
+        "remote1",
+        DriveCollectionId.forDrive("collection1"),
+        channelConfig,
+        {
+          documentId: ["doc1"],
+          scope: ["global"],
+          branch: "main",
+        },
+      );
 
       vi.mocked(mockOperationIndex.find).mockResolvedValueOnce(
         createFindResult([
@@ -1134,7 +1191,7 @@ describe("SyncManager - Unit Tests", () => {
       await emitWriteReady({
         jobId: "auto-job-1",
         operations,
-        collectionMemberships: { doc2: ["collection1"] },
+        collectionMemberships: { doc2: ["drive.main.collection1"] },
         jobMeta: { batchId: "auto-1", batchJobIds: ["auto-job-1"] },
       });
 
@@ -1150,7 +1207,11 @@ describe("SyncManager - Unit Tests", () => {
         parameters: {},
       };
 
-      await syncManager.add("remote1", "collection1", channelConfig);
+      await syncManager.add(
+        "remote1",
+        DriveCollectionId.forDrive("collection1"),
+        channelConfig,
+      );
 
       syncManager.shutdown();
 
@@ -1193,7 +1254,7 @@ describe("SyncManager - Unit Tests", () => {
 
       await syncManager.add(
         "my-remote",
-        "collection1",
+        DriveCollectionId.forDrive("collection1"),
         channelConfig,
         { documentId: [], scope: [], branch: "main" },
         { sinceTimestampUtcMs: "0" },
@@ -1233,7 +1294,7 @@ describe("SyncManager - Unit Tests", () => {
             },
           },
         ],
-        collectionMemberships: { doc1: ["collection1"] },
+        collectionMemberships: { doc1: ["drive.main.collection1"] },
         jobMeta: {
           batchId: "auto-job-exclude",
           batchJobIds: ["job-exclude"],
@@ -1241,7 +1302,7 @@ describe("SyncManager - Unit Tests", () => {
       });
 
       expect(mockOperationIndex.find).toHaveBeenCalledWith(
-        "collection1",
+        "drive.main.collection1",
         0,
         { excludeSourceRemote: "my-remote" },
         undefined,
@@ -1257,11 +1318,16 @@ describe("SyncManager - Unit Tests", () => {
         parameters: {},
       };
 
-      await syncManager.add("remote1", "collection1", channelConfig, {
-        documentId: [],
-        scope: [],
-        branch: "main",
-      });
+      await syncManager.add(
+        "remote1",
+        DriveCollectionId.forDrive("collection1"),
+        channelConfig,
+        {
+          documentId: [],
+          scope: [],
+          branch: "main",
+        },
+      );
 
       const inboxSyncOp = new SyncOperation(
         "inbox-s1",
@@ -1326,7 +1392,7 @@ describe("SyncManager - Unit Tests", () => {
             },
           },
         ],
-        collectionMemberships: { doc1: ["collection1"] },
+        collectionMemberships: { doc1: ["drive.main.collection1"] },
         jobMeta: { batchId: "auto-1", batchJobIds: ["j1"] },
       });
 
@@ -1344,7 +1410,7 @@ describe("SyncManager - Unit Tests", () => {
 
       await syncManager.add(
         "remote1",
-        "collection1",
+        DriveCollectionId.forDrive("collection1"),
         channelConfig,
         { documentId: [], scope: [], branch: "main" },
         { sinceTimestampUtcMs: "0" },
@@ -1416,7 +1482,7 @@ describe("SyncManager - Unit Tests", () => {
             },
           },
         ],
-        collectionMemberships: { doc1: ["collection1"] },
+        collectionMemberships: { doc1: ["drive.main.collection1"] },
         jobMeta: {
           batchId: "auto-job-anchor",
           batchJobIds: ["job-anchor"],
@@ -1424,7 +1490,7 @@ describe("SyncManager - Unit Tests", () => {
       });
 
       expect(mockOperationIndex.find).toHaveBeenCalledWith(
-        "collection1",
+        "drive.main.collection1",
         5,
         { excludeSourceRemote: "remote1" },
         undefined,
@@ -1446,16 +1512,26 @@ describe("SyncManager - Unit Tests", () => {
         .mockReturnValueOnce(ch1 as any)
         .mockReturnValueOnce(ch2 as any);
 
-      await syncManager.add("remote-a", "shared-col", channelConfig, {
-        documentId: [],
-        scope: [],
-        branch: "main",
-      });
-      await syncManager.add("remote-b", "shared-col", channelConfig, {
-        documentId: [],
-        scope: [],
-        branch: "main",
-      });
+      await syncManager.add(
+        "remote-a",
+        DriveCollectionId.forDrive("shared-col"),
+        channelConfig,
+        {
+          documentId: [],
+          scope: [],
+          branch: "main",
+        },
+      );
+      await syncManager.add(
+        "remote-b",
+        DriveCollectionId.forDrive("shared-col"),
+        channelConfig,
+        {
+          documentId: [],
+          scope: [],
+          branch: "main",
+        },
+      );
 
       vi.mocked(mockOperationIndex.find).mockClear();
       vi.mocked(mockOperationIndex.find)
@@ -1503,20 +1579,20 @@ describe("SyncManager - Unit Tests", () => {
             },
           },
         ],
-        collectionMemberships: { doc1: ["shared-col"] },
+        collectionMemberships: { doc1: ["drive.main.shared-col"] },
         jobMeta: { batchId: "auto-1", batchJobIds: ["j1"] },
       });
 
       expect(mockOperationIndex.find).toHaveBeenCalledTimes(2);
       expect(mockOperationIndex.find).toHaveBeenCalledWith(
-        "shared-col",
+        "drive.main.shared-col",
         0,
         { excludeSourceRemote: "remote-a" },
         undefined,
         expect.any(AbortSignal),
       );
       expect(mockOperationIndex.find).toHaveBeenCalledWith(
-        "shared-col",
+        "drive.main.shared-col",
         0,
         { excludeSourceRemote: "remote-b" },
         undefined,
@@ -1533,7 +1609,7 @@ describe("SyncManager - Unit Tests", () => {
 
       const driveId = "drive-1";
       const targetDocId = "new-doc-1";
-      const collectionId = `drive.main.${driveId}`;
+      const collectionId = DriveCollectionId.forDrive(driveId);
 
       const channelConfig: ChannelConfig = {
         type: "internal",
@@ -1632,14 +1708,14 @@ describe("SyncManager - Unit Tests", () => {
         jobId: "j1",
         operations: event1Operations,
         jobMeta: { batchId, batchJobIds },
-        collectionMemberships: { [targetDocId]: [collectionId] },
+        collectionMemberships: { [targetDocId]: [collectionId.key] },
       });
 
       await emitWriteReady({
         jobId: "j2",
         operations: event2Operations,
         jobMeta: { batchId, batchJobIds },
-        collectionMemberships: { [driveId]: [collectionId] },
+        collectionMemberships: { [driveId]: [collectionId.key] },
       });
 
       await new Promise((resolve) => setTimeout(resolve, 20));
@@ -1656,7 +1732,7 @@ describe("SyncManager - Unit Tests", () => {
 
       const driveId = "drive-3";
       const targetDocId = "new-doc-3";
-      const collectionId = `drive.main.${driveId}`;
+      const collectionId = DriveCollectionId.forDrive(driveId);
 
       const channelConfig: ChannelConfig = {
         type: "internal",
@@ -1665,7 +1741,7 @@ describe("SyncManager - Unit Tests", () => {
 
       await syncManager.add(
         "remote-other-collection",
-        "other-collection",
+        DriveCollectionId.forDrive("other-collection"),
         channelConfig,
         { documentId: [], scope: [], branch: "main" },
         { sinceTimestampUtcMs: "0" },
@@ -1707,7 +1783,7 @@ describe("SyncManager - Unit Tests", () => {
         jobId: "test-job",
         operations: addRelationshipOps,
         jobMeta: { batchId: "auto-test-job", batchJobIds: ["test-job"] },
-        collectionMemberships: { [driveId]: [collectionId] },
+        collectionMemberships: { [driveId]: [collectionId.key] },
       });
 
       await new Promise((resolve) => setTimeout(resolve, 10));
@@ -1729,11 +1805,16 @@ describe("SyncManager - Unit Tests", () => {
         parameters: {},
       };
 
-      await syncManager.add("remote1", "collection1", channelConfig, {
-        documentId: ["doc1"],
-        scope: ["global"],
-        branch: "main",
-      });
+      await syncManager.add(
+        "remote1",
+        DriveCollectionId.forDrive("collection1"),
+        channelConfig,
+        {
+          documentId: ["doc1"],
+          scope: ["global"],
+          branch: "main",
+        },
+      );
 
       vi.mocked(mockOperationIndex.find).mockResolvedValueOnce(
         createFindResult([
@@ -1802,13 +1883,13 @@ describe("SyncManager - Unit Tests", () => {
       await emitWriteReady({
         jobId: "job1",
         operations: event1Operations,
-        collectionMemberships: { doc1: ["collection1"] },
+        collectionMemberships: { doc1: ["drive.main.collection1"] },
         jobMeta: { batchId: "auto-job1", batchJobIds: ["job1"] },
       });
       await emitWriteReady({
         jobId: "job2",
         operations: event2Operations,
-        collectionMemberships: { doc1: ["collection1"] },
+        collectionMemberships: { doc1: ["drive.main.collection1"] },
         jobMeta: { batchId: "auto-job2", batchJobIds: ["job2"] },
       });
 
@@ -1827,11 +1908,16 @@ describe("SyncManager - Unit Tests", () => {
         parameters: {},
       };
 
-      await syncManager.add("remote1", "collection1", channelConfig, {
-        documentId: ["doc1"],
-        scope: ["global"],
-        branch: "main",
-      });
+      await syncManager.add(
+        "remote1",
+        DriveCollectionId.forDrive("collection1"),
+        channelConfig,
+        {
+          documentId: ["doc1"],
+          scope: ["global"],
+          branch: "main",
+        },
+      );
 
       const operations: OperationWithContext[] = [
         {
@@ -1886,11 +1972,16 @@ describe("SyncManager - Unit Tests", () => {
         parameters: {},
       };
 
-      await syncManager.add("remote1", "collection1", channelConfig, {
-        documentId: ["doc1"],
-        scope: ["global"],
-        branch: "main",
-      });
+      await syncManager.add(
+        "remote1",
+        DriveCollectionId.forDrive("collection1"),
+        channelConfig,
+        {
+          documentId: ["doc1"],
+          scope: ["global"],
+          branch: "main",
+        },
+      );
 
       vi.mocked(mockOperationIndex.find).mockResolvedValueOnce(
         createFindResult([
@@ -1957,7 +2048,7 @@ describe("SyncManager - Unit Tests", () => {
       await emitWriteReady({
         jobId: "j1",
         operations: event1Operations,
-        collectionMemberships: { doc1: ["collection1"] },
+        collectionMemberships: { doc1: ["drive.main.collection1"] },
         jobMeta: { batchId, batchJobIds },
       });
 
@@ -1967,7 +2058,7 @@ describe("SyncManager - Unit Tests", () => {
       await emitWriteReady({
         jobId: "j2",
         operations: event2Operations,
-        collectionMemberships: { doc1: ["collection1"] },
+        collectionMemberships: { doc1: ["drive.main.collection1"] },
         jobMeta: { batchId, batchJobIds },
       });
 
@@ -1984,11 +2075,16 @@ describe("SyncManager - Unit Tests", () => {
         parameters: {},
       };
 
-      await syncManager.add("remote1", "collection1", channelConfig, {
-        documentId: ["doc1"],
-        scope: ["global"],
-        branch: "main",
-      });
+      await syncManager.add(
+        "remote1",
+        DriveCollectionId.forDrive("collection1"),
+        channelConfig,
+        {
+          documentId: ["doc1"],
+          scope: ["global"],
+          branch: "main",
+        },
+      );
 
       vi.mocked(mockOperationIndex.find).mockResolvedValueOnce(
         createFindResult([
@@ -2025,7 +2121,7 @@ describe("SyncManager - Unit Tests", () => {
       await emitWriteReady({
         jobId: "j1",
         operations,
-        collectionMemberships: { doc1: ["collection1"] },
+        collectionMemberships: { doc1: ["drive.main.collection1"] },
         jobMeta: { batchId: "batch-single", batchJobIds: ["j1"] },
       });
 
@@ -2041,11 +2137,16 @@ describe("SyncManager - Unit Tests", () => {
         parameters: {},
       };
 
-      await syncManager.add("remote1", "collection1", channelConfig, {
-        documentId: ["doc1"],
-        scope: ["global"],
-        branch: "main",
-      });
+      await syncManager.add(
+        "remote1",
+        DriveCollectionId.forDrive("collection1"),
+        channelConfig,
+        {
+          documentId: ["doc1"],
+          scope: ["global"],
+          branch: "main",
+        },
+      );
 
       vi.mocked(mockOperationIndex.find).mockResolvedValueOnce(
         createFindResult([
@@ -2082,7 +2183,7 @@ describe("SyncManager - Unit Tests", () => {
       await emitWriteReady({
         jobId: "j1",
         operations,
-        collectionMemberships: { doc1: ["collection1"] },
+        collectionMemberships: { doc1: ["drive.main.collection1"] },
         jobMeta: { batchId: "auto-1", batchJobIds: ["j1"] },
       });
 
@@ -2098,11 +2199,16 @@ describe("SyncManager - Unit Tests", () => {
         parameters: {},
       };
 
-      await syncManager.add("remote1", "collection1", channelConfig, {
-        documentId: ["doc1"],
-        scope: ["global"],
-        branch: "main",
-      });
+      await syncManager.add(
+        "remote1",
+        DriveCollectionId.forDrive("collection1"),
+        channelConfig,
+        {
+          documentId: ["doc1"],
+          scope: ["global"],
+          branch: "main",
+        },
+      );
 
       const batchId = "batch-incomplete";
       const batchJobIds = ["j1", "j2"];
@@ -2147,7 +2253,7 @@ describe("SyncManager - Unit Tests", () => {
 
       const driveId = "drive-batch";
       const targetDocId = "new-doc-batch";
-      const collectionId = `drive.main.${driveId}`;
+      const collectionId = DriveCollectionId.forDrive(driveId);
 
       const channelConfig: ChannelConfig = {
         type: "internal",
@@ -2246,14 +2352,14 @@ describe("SyncManager - Unit Tests", () => {
         jobId: "j1",
         operations: event1Operations,
         jobMeta: { batchId, batchJobIds },
-        collectionMemberships: { [targetDocId]: [collectionId] },
+        collectionMemberships: { [targetDocId]: [collectionId.key] },
       });
 
       await emitWriteReady({
         jobId: "j2",
         operations: event2Operations,
         jobMeta: { batchId, batchJobIds },
-        collectionMemberships: { [driveId]: [collectionId] },
+        collectionMemberships: { [driveId]: [collectionId.key] },
       });
 
       await new Promise((resolve) => setTimeout(resolve, 20));
@@ -2268,7 +2374,7 @@ describe("SyncManager - Unit Tests", () => {
     it("should merge collection memberships from all batch events", async () => {
       await syncManager.startup();
 
-      const collectionId = "merged-collection";
+      const collectionId = DriveCollectionId.forDrive("merged-collection");
       const channelConfig: ChannelConfig = {
         type: "internal",
         parameters: {},
@@ -2351,7 +2457,7 @@ describe("SyncManager - Unit Tests", () => {
         jobId: "j1",
         operations: event1Operations,
         jobMeta: { batchId, batchJobIds },
-        collectionMemberships: { "doc-a": [collectionId] },
+        collectionMemberships: { "doc-a": [collectionId.key] },
       });
 
       // Event 2 only knows about doc-b's membership
@@ -2359,7 +2465,7 @@ describe("SyncManager - Unit Tests", () => {
         jobId: "j2",
         operations: event2Operations,
         jobMeta: { batchId, batchJobIds },
-        collectionMemberships: { "doc-b": [collectionId] },
+        collectionMemberships: { "doc-b": [collectionId.key] },
       });
 
       await new Promise((resolve) => setTimeout(resolve, 20));
@@ -2380,7 +2486,7 @@ describe("SyncManager - Unit Tests", () => {
 
       await syncManager.add(
         "remote1",
-        "collection1",
+        DriveCollectionId.forDrive("collection1"),
         channelConfig,
         { documentId: [], scope: [], branch: "main" },
         { sinceTimestampUtcMs: "0" },
@@ -2460,14 +2566,14 @@ describe("SyncManager - Unit Tests", () => {
       await emitWriteReady({
         jobId: "j1",
         operations: event1Operations,
-        collectionMemberships: { doc1: ["collection1"] },
+        collectionMemberships: { doc1: ["drive.main.collection1"] },
         jobMeta: { batchId, batchJobIds },
       });
 
       await emitWriteReady({
         jobId: "j2",
         operations: event2Operations,
-        collectionMemberships: { doc2: ["collection1"] },
+        collectionMemberships: { doc2: ["drive.main.collection1"] },
         jobMeta: { batchId, batchJobIds },
       });
 
@@ -2489,11 +2595,16 @@ describe("SyncManager - Unit Tests", () => {
         parameters: {},
       };
 
-      await syncManager.add("remote1", "collection1", channelConfig, {
-        documentId: ["doc1"],
-        scope: ["global"],
-        branch: "main",
-      });
+      await syncManager.add(
+        "remote1",
+        DriveCollectionId.forDrive("collection1"),
+        channelConfig,
+        {
+          documentId: ["doc1"],
+          scope: ["global"],
+          branch: "main",
+        },
+      );
 
       vi.mocked(mockOperationIndex.find).mockResolvedValueOnce(
         createFindResult([
@@ -2534,7 +2645,7 @@ describe("SyncManager - Unit Tests", () => {
       await emitWriteReady({
         jobId: "j1",
         operations: event1Operations,
-        collectionMemberships: { doc1: ["collection1"] },
+        collectionMemberships: { doc1: ["drive.main.collection1"] },
         jobMeta: { batchId, batchJobIds },
       });
 
@@ -2622,11 +2733,16 @@ describe("SyncManager - Unit Tests", () => {
 
       vi.mocked(mockChannelFactory.instance).mockReturnValue(mockChannel2);
 
-      await syncManager.add("remote-inbox", "collection1", channelConfig, {
-        documentId: ["doc1"],
-        scope: ["global"],
-        branch: "main",
-      });
+      await syncManager.add(
+        "remote-inbox",
+        DriveCollectionId.forDrive("collection1"),
+        channelConfig,
+        {
+          documentId: ["doc1"],
+          scope: ["global"],
+          branch: "main",
+        },
+      );
 
       const { SyncOperation: SyncOp } =
         await import("../../../src/sync/sync-operation.js");
@@ -2791,11 +2907,16 @@ describe("SyncManager - Unit Tests", () => {
 
       vi.mocked(mockChannelFactory.instance).mockReturnValue(mockChannel2);
 
-      await syncManager.add("remote-inbox2", "collection1", channelConfig, {
-        documentId: ["doc1"],
-        scope: ["global"],
-        branch: "main",
-      });
+      await syncManager.add(
+        "remote-inbox2",
+        DriveCollectionId.forDrive("collection1"),
+        channelConfig,
+        {
+          documentId: ["doc1"],
+          scope: ["global"],
+          branch: "main",
+        },
+      );
 
       const { SyncOperation: SyncOp } =
         await import("../../../src/sync/sync-operation.js");
@@ -2860,11 +2981,16 @@ describe("SyncManager - Unit Tests", () => {
       const ch = createTestChannel();
       vi.mocked(mockChannelFactory.instance).mockReturnValue(ch as any);
 
-      await syncManager.add("remote-fail", "col1", channelConfig, {
-        documentId: [],
-        scope: [],
-        branch: "main",
-      });
+      await syncManager.add(
+        "remote-fail",
+        DriveCollectionId.forDrive("col1"),
+        channelConfig,
+        {
+          documentId: [],
+          scope: [],
+          branch: "main",
+        },
+      );
 
       vi.mocked(mockReactor.load).mockResolvedValueOnce({
         id: "reactor-job-fail",
@@ -2924,11 +3050,16 @@ describe("SyncManager - Unit Tests", () => {
       const ch = createTestChannel();
       vi.mocked(mockChannelFactory.instance).mockReturnValue(ch as any);
 
-      await syncManager.add("remote-partial", "collection1", channelConfig, {
-        documentId: [],
-        scope: [],
-        branch: "main",
-      });
+      await syncManager.add(
+        "remote-partial",
+        DriveCollectionId.forDrive("collection1"),
+        channelConfig,
+        {
+          documentId: [],
+          scope: [],
+          branch: "main",
+        },
+      );
 
       const syncOp0 = new SyncOperation(
         "syncop-0",
@@ -3017,11 +3148,16 @@ describe("SyncManager - Unit Tests", () => {
       const ch = createTestChannel();
       vi.mocked(mockChannelFactory.instance).mockReturnValue(ch as any);
 
-      await syncManager.add("remote-mixed", "collection1", channelConfig, {
-        documentId: [],
-        scope: [],
-        branch: "main",
-      });
+      await syncManager.add(
+        "remote-mixed",
+        DriveCollectionId.forDrive("collection1"),
+        channelConfig,
+        {
+          documentId: [],
+          scope: [],
+          branch: "main",
+        },
+      );
 
       const nonKeyedSyncOp = new SyncOperation(
         "syncop-nk",
@@ -3214,11 +3350,16 @@ describe("SyncManager - Unit Tests", () => {
 
       vi.mocked(mockChannelFactory.instance).mockReturnValue(mockChannel2);
 
-      await syncManager.add("remote-inbox3", "collection1", channelConfig, {
-        documentId: ["doc1"],
-        scope: ["global"],
-        branch: "main",
-      });
+      await syncManager.add(
+        "remote-inbox3",
+        DriveCollectionId.forDrive("collection1"),
+        channelConfig,
+        {
+          documentId: ["doc1"],
+          scope: ["global"],
+          branch: "main",
+        },
+      );
 
       const { SyncOperation: SyncOp } =
         await import("../../../src/sync/sync-operation.js");
@@ -3314,11 +3455,16 @@ describe("SyncManager - Unit Tests", () => {
       const ch = createTestChannel();
       vi.mocked(mockChannelFactory.instance).mockReturnValue(ch as any);
 
-      await syncManager.add("remote-empty-dep", "collection1", channelConfig, {
-        documentId: [],
-        scope: [],
-        branch: "main",
-      });
+      await syncManager.add(
+        "remote-empty-dep",
+        DriveCollectionId.forDrive("collection1"),
+        channelConfig,
+        {
+          documentId: [],
+          scope: [],
+          branch: "main",
+        },
+      );
 
       const syncOp = new SyncOperation(
         "syncop-ed",
@@ -3384,7 +3530,7 @@ describe("SyncManager - Unit Tests", () => {
 
       await syncManager.add(
         "remote-fifo",
-        "collection1",
+        DriveCollectionId.forDrive("collection1"),
         { type: "internal", parameters: {} },
         {
           documentId: ["doc1"],
@@ -3503,7 +3649,7 @@ describe("SyncManager - Unit Tests", () => {
 
       await syncManager.add(
         "remote-xdoc",
-        "collection1",
+        DriveCollectionId.forDrive("collection1"),
         { type: "internal", parameters: {} },
         {
           documentId: ["docA", "docB"],
@@ -3613,7 +3759,7 @@ describe("SyncManager - Unit Tests", () => {
 
       await syncManager.add(
         "remote-stale",
-        "collection1",
+        DriveCollectionId.forDrive("collection1"),
         { type: "internal", parameters: {} },
         {
           documentId: ["doc1"],
@@ -3683,7 +3829,7 @@ describe("SyncManager - Unit Tests", () => {
 
       await syncManager.add(
         "remote-concurrent",
-        "collection1",
+        DriveCollectionId.forDrive("collection1"),
         { type: "internal", parameters: {} },
         {
           documentId: ["doc1"],
@@ -3811,11 +3957,16 @@ describe("SyncManager - Unit Tests", () => {
       const ch = createTestChannel();
       vi.mocked(mockChannelFactory.instance).mockReturnValue(ch as any);
 
-      await syncManager.add("remote-dl", "collection1", channelConfig, {
-        documentId: [],
-        scope: [],
-        branch: "main",
-      });
+      await syncManager.add(
+        "remote-dl",
+        DriveCollectionId.forDrive("collection1"),
+        channelConfig,
+        {
+          documentId: [],
+          scope: [],
+          branch: "main",
+        },
+      );
 
       const syncOp = new SyncOperation(
         "dl-syncop-1",
@@ -3897,7 +4048,7 @@ describe("SyncManager - Unit Tests", () => {
         {
           id: "channel1",
           name: "remote1",
-          collectionId: "collection1",
+          collectionId: DriveCollectionId.forDrive("collection1"),
           channelConfig: {
             type: "internal",
             parameters: {},
@@ -3954,7 +4105,7 @@ describe("SyncManager - Unit Tests", () => {
         {
           id: "channel1",
           name: "remote1",
-          collectionId: "collection1",
+          collectionId: DriveCollectionId.forDrive("collection1"),
           channelConfig: {
             type: "internal",
             parameters: {},
@@ -4002,10 +4153,14 @@ describe("SyncManager - Unit Tests", () => {
 
       await limitedSyncManager.startup();
 
-      await limitedSyncManager.add("remote-evict", "collection1", {
-        type: "internal",
-        parameters: {},
-      });
+      await limitedSyncManager.add(
+        "remote-evict",
+        DriveCollectionId.forDrive("collection1"),
+        {
+          type: "internal",
+          parameters: {},
+        },
+      );
 
       // Grab the onAdded callback
       const onAddedCalls = vi.mocked(ch.deadLetter.onAdded).mock.calls;
@@ -4065,10 +4220,14 @@ describe("SyncManager - Unit Tests", () => {
 
       await limitedSyncManager.startup();
 
-      await limitedSyncManager.add("remote-evict-2", "collection1", {
-        type: "internal",
-        parameters: {},
-      });
+      await limitedSyncManager.add(
+        "remote-evict-2",
+        DriveCollectionId.forDrive("collection1"),
+        {
+          type: "internal",
+          parameters: {},
+        },
+      );
 
       const onAddedCalls = vi.mocked(ch.deadLetter.onAdded).mock.calls;
       const deadLetterCb = onAddedCalls[onAddedCalls.length - 1][0];
@@ -4128,10 +4287,14 @@ describe("SyncManager - Unit Tests", () => {
 
       await limitedSyncManager.startup();
 
-      await limitedSyncManager.add("remote-no-evict", "collection1", {
-        type: "internal",
-        parameters: {},
-      });
+      await limitedSyncManager.add(
+        "remote-no-evict",
+        DriveCollectionId.forDrive("collection1"),
+        {
+          type: "internal",
+          parameters: {},
+        },
+      );
 
       const onAddedCalls = vi.mocked(ch.deadLetter.onAdded).mock.calls;
       const deadLetterCb = onAddedCalls[onAddedCalls.length - 1][0];
@@ -4179,10 +4342,14 @@ describe("SyncManager - Unit Tests", () => {
       const ch = createTestChannel();
       vi.mocked(mockChannelFactory.instance).mockReturnValue(ch as any);
 
-      await syncManager.add("remote-add-fail", "collection1", {
-        type: "internal",
-        parameters: {},
-      });
+      await syncManager.add(
+        "remote-add-fail",
+        DriveCollectionId.forDrive("collection1"),
+        {
+          type: "internal",
+          parameters: {},
+        },
+      );
 
       const syncOp = new SyncOperation(
         "dl-add-fail-1",
@@ -4237,7 +4404,7 @@ describe("SyncManager - Unit Tests", () => {
         {
           id: "channel1",
           name: "remote1",
-          collectionId: "collection1",
+          collectionId: DriveCollectionId.forDrive("collection1"),
           channelConfig: { type: "internal", parameters: {} },
           filter: { documentId: [], scope: [], branch: "main" },
           options: { sinceTimestampUtcMs: "0" },
@@ -4326,11 +4493,16 @@ describe("SyncManager - Unit Tests", () => {
 
       vi.mocked(mockChannelFactory.instance).mockReturnValue(loadFailChannel);
 
-      await syncManager.add("remote-load-fail", "collection1", channelConfig, {
-        documentId: [],
-        scope: [],
-        branch: "main",
-      });
+      await syncManager.add(
+        "remote-load-fail",
+        DriveCollectionId.forDrive("collection1"),
+        channelConfig,
+        {
+          documentId: [],
+          scope: [],
+          branch: "main",
+        },
+      );
 
       vi.mocked(mockReactor.load).mockRejectedValueOnce(
         new Error("Reactor load failed"),
@@ -4379,10 +4551,14 @@ describe("SyncManager - Unit Tests", () => {
     it("should quarantine document IDs when dead letters are added", async () => {
       await syncManager.startup();
 
-      const remote = await syncManager.add("remote-quarantine", "col1", {
-        type: "internal",
-        parameters: {},
-      } as ChannelConfig);
+      const remote = await syncManager.add(
+        "remote-quarantine",
+        DriveCollectionId.forDrive("col1"),
+        {
+          type: "internal",
+          parameters: {},
+        } as ChannelConfig,
+      );
 
       const ch = remote.channel;
       const onAddedCalls = vi.mocked(ch.deadLetter.onAdded).mock.calls;
@@ -4430,8 +4606,8 @@ describe("SyncManager - Unit Tests", () => {
       vi.mocked(
         mockOperationIndex.getCollectionsForDocuments,
       ).mockResolvedValue({
-        "quarantined-doc": ["col1"],
-        "healthy-doc": ["col1"],
+        "quarantined-doc": ["drive.main.col1"],
+        "healthy-doc": ["drive.main.col1"],
       });
 
       // Trigger updateOutbox via a write-ready event
@@ -4457,8 +4633,8 @@ describe("SyncManager - Unit Tests", () => {
           },
         ],
         collectionMemberships: {
-          "healthy-doc": ["col1"],
-          "quarantined-doc": ["col1"],
+          "healthy-doc": ["drive.main.col1"],
+          "quarantined-doc": ["drive.main.col1"],
         },
         jobMeta: { batchId: "batch-1", batchJobIds: ["j1"] },
       });
@@ -4473,10 +4649,14 @@ describe("SyncManager - Unit Tests", () => {
     it("should filter quarantined docs in handleInboxAdded", async () => {
       await syncManager.startup();
 
-      const remote = await syncManager.add("remote-inbox-quarantine", "col1", {
-        type: "internal",
-        parameters: {},
-      } as ChannelConfig);
+      const remote = await syncManager.add(
+        "remote-inbox-quarantine",
+        DriveCollectionId.forDrive("col1"),
+        {
+          type: "internal",
+          parameters: {},
+        } as ChannelConfig,
+      );
 
       const ch = remote.channel;
 
@@ -4581,10 +4761,14 @@ describe("SyncManager - Unit Tests", () => {
     it("should share quarantine across all remotes", async () => {
       await syncManager.startup();
 
-      const remote1 = await syncManager.add("remote-share-1", "col1", {
-        type: "internal",
-        parameters: {},
-      } as ChannelConfig);
+      const remote1 = await syncManager.add(
+        "remote-share-1",
+        DriveCollectionId.forDrive("col1"),
+        {
+          type: "internal",
+          parameters: {},
+        } as ChannelConfig,
+      );
 
       // Create a second channel mock for the second remote
       const channel2 = createTestChannel();
@@ -4592,10 +4776,14 @@ describe("SyncManager - Unit Tests", () => {
         channel2 as any,
       );
 
-      const remote2 = await syncManager.add("remote-share-2", "col1", {
-        type: "internal",
-        parameters: {},
-      } as ChannelConfig);
+      const remote2 = await syncManager.add(
+        "remote-share-2",
+        DriveCollectionId.forDrive("col1"),
+        {
+          type: "internal",
+          parameters: {},
+        } as ChannelConfig,
+      );
 
       // Quarantine a doc via remote1's dead letter
       const ch1 = remote1.channel;
@@ -4674,10 +4862,14 @@ describe("SyncManager - Unit Tests", () => {
 
       await syncManager.startup();
 
-      const remote = await syncManager.add("remote-startup-q", "col1", {
-        type: "internal",
-        parameters: {},
-      } as ChannelConfig);
+      const remote = await syncManager.add(
+        "remote-startup-q",
+        DriveCollectionId.forDrive("col1"),
+        {
+          type: "internal",
+          parameters: {},
+        } as ChannelConfig,
+      );
 
       // Trigger inbox with the quarantined doc
       const ch = remote.channel;
@@ -4722,10 +4914,14 @@ describe("SyncManager - Unit Tests", () => {
     it("should advance outbox ordinal past quarantined-only operations", async () => {
       await syncManager.startup();
 
-      const remote = await syncManager.add("remote-advance", "col1", {
-        type: "internal",
-        parameters: {},
-      } as ChannelConfig);
+      const remote = await syncManager.add(
+        "remote-advance",
+        DriveCollectionId.forDrive("col1"),
+        {
+          type: "internal",
+          parameters: {},
+        } as ChannelConfig,
+      );
 
       const ch = remote.channel;
 
@@ -4768,7 +4964,7 @@ describe("SyncManager - Unit Tests", () => {
       vi.mocked(
         mockOperationIndex.getCollectionsForDocuments,
       ).mockResolvedValue({
-        "quarantined-doc": ["col1"],
+        "quarantined-doc": ["drive.main.col1"],
       });
 
       // Clear any prior outbox.add calls from backfill
@@ -4795,7 +4991,7 @@ describe("SyncManager - Unit Tests", () => {
             },
           },
         ],
-        collectionMemberships: { "quarantined-doc": ["col1"] },
+        collectionMemberships: { "quarantined-doc": ["drive.main.col1"] },
         jobMeta: { batchId: "batch-adv", batchJobIds: ["j-adv"] },
       });
 
@@ -4847,11 +5043,16 @@ describe("SyncManager - Unit Tests", () => {
 
       vi.mocked(mockOperationIndex.find).mockResolvedValueOnce(page1);
 
-      await syncManager.add("remote-paged", "collection1", channelConfig, {
-        documentId: [],
-        scope: [],
-        branch: "main",
-      });
+      await syncManager.add(
+        "remote-paged",
+        DriveCollectionId.forDrive("collection1"),
+        channelConfig,
+        {
+          documentId: [],
+          scope: [],
+          branch: "main",
+        },
+      );
 
       // backfill runs asynchronously after add() returns
       await vi.waitFor(() => {
@@ -4914,11 +5115,16 @@ describe("SyncManager - Unit Tests", () => {
         },
       );
 
-      await syncManager.add("remote-deps", "collection1", channelConfig, {
-        documentId: [],
-        scope: [],
-        branch: "main",
-      });
+      await syncManager.add(
+        "remote-deps",
+        DriveCollectionId.forDrive("collection1"),
+        channelConfig,
+        {
+          documentId: [],
+          scope: [],
+          branch: "main",
+        },
+      );
 
       // backfill runs asynchronously after add() returns
       await vi.waitFor(() => {
@@ -4969,11 +5175,16 @@ describe("SyncManager - Unit Tests", () => {
 
       vi.mocked(mockOperationIndex.find).mockResolvedValueOnce(page1);
 
-      await syncManager.add("remote-ordinal", "collection1", channelConfig, {
-        documentId: [],
-        scope: [],
-        branch: "main",
-      });
+      await syncManager.add(
+        "remote-ordinal",
+        DriveCollectionId.forDrive("collection1"),
+        channelConfig,
+        {
+          documentId: [],
+          scope: [],
+          branch: "main",
+        },
+      );
 
       // backfill runs asynchronously after add() returns
       await vi.waitFor(() => {

@@ -50,12 +50,17 @@ import { runMigrations } from "./migrations/index.js";
 import { ImportPackageLoader } from "./packages/import-loader.js";
 import { PackageManager } from "./packages/package-manager.js";
 import { AuthService } from "./services/auth.service.js";
-import type { IAuthorizationService } from "./services/authorization.service.js";
+import type {
+  AuthorizationConfig,
+  IAuthorizationService,
+} from "./services/authorization.service.js";
 import {
   AuthorizationPolicy,
   createAuthorizationService,
 } from "./services/authorization.service.js";
 import { DocumentPermissionService } from "./services/document-permission.service.js";
+import { createGetParentIdsFn } from "./services/get-parent-ids.js";
+import { createMcpRequestAuthorizer } from "./services/mcp-request-authorizer.js";
 import type {
   API,
   IPackageLoader,
@@ -403,7 +408,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   relationalDb: IRelationalDb;
   analyticsStore: IAnalyticsStore;
   documentPermissionService: DocumentPermissionService | undefined;
-  authorizationService: IAuthorizationService;
+  authorizationConfig: AuthorizationConfig;
   attachments: AttachmentBuildResult;
   packages: PackageManager;
   dbClosers: Array<() => Promise<void>>;
@@ -541,19 +546,20 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     logger.info("Document permission service initialized");
   }
 
-  // Authorization service is always present; the policy collapses the prior
-  // dual enforcement paths into one. Document permissions imply authentication
-  // (guaranteed by the boot gate above).
+  // The authorization policy collapses the prior dual enforcement paths into
+  // one. Document permissions imply authentication (guaranteed by the boot
+  // gate above). The service itself is created in _setupAPI, where the
+  // reactor client needed for the parent-document resolver exists.
   const policy = documentPermissionService
     ? AuthorizationPolicy.DOCUMENT_PERMISSIONS
     : authEnabled
       ? AuthorizationPolicy.ADMIN_ONLY
       : AuthorizationPolicy.OPEN;
-  const authorizationService = createAuthorizationService(
-    { admins, defaultProtection, policy },
-    documentPermissionService,
-  );
-  logger.info(`Authorization service initialized (policy: ${policy})`);
+  const authorizationConfig: AuthorizationConfig = {
+    admins,
+    defaultProtection,
+    policy,
+  };
 
   // Initialize attachment service
   const attachmentStoragePath = resolveAttachmentStoragePath(options);
@@ -595,7 +601,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     relationalDb,
     analyticsStore,
     documentPermissionService,
-    authorizationService,
+    authorizationConfig,
     attachments,
     packages,
     dbClosers,
@@ -624,7 +630,7 @@ async function _setupAPI(
   processorApp: ProcessorApp,
   readModels: IReadModel[],
   attachments: AttachmentBuildResult,
-  authorizationService: IAuthorizationService,
+  authorizationConfig: AuthorizationConfig,
   documentModelRegistry?: IDocumentModelRegistry,
   dbClosers: Array<() => Promise<void>> = [],
   reactorDriveClient?: IDriveClient,
@@ -730,6 +736,18 @@ async function _setupAPI(
     logger,
   );
 
+  // Authorization service is always present; created here because the
+  // parent-document resolver used for permission inheritance needs the
+  // reactor client.
+  const authorizationService = createAuthorizationService(
+    authorizationConfig,
+    documentPermissionService,
+    createGetParentIdsFn(reactorClient),
+  );
+  logger.info(
+    `Authorization service initialized (policy: ${authorizationConfig.policy})`,
+  );
+
   // set up subgraph manager
   const coreSubgraphs: SubgraphClass[] = DefaultCoreSubgraphs.slice();
   coreSubgraphs.push(ReactorSubgraph);
@@ -772,7 +790,17 @@ async function _setupAPI(
   );
 
   if (mcpServerEnabled) {
-    await setupMcpServer({ client: reactorClient, syncManager }, httpAdapter);
+    await setupMcpServer(
+      {
+        client: reactorClient,
+        syncManager,
+        authorizeRequest: createMcpRequestAuthorizer(
+          authService,
+          authorizationService,
+        ),
+      },
+      httpAdapter,
+    );
     logger.info(`MCP server available at http://localhost:${port}/mcp`);
   }
 
@@ -895,7 +923,7 @@ export async function initializeAndStartAPI(
     relationalDb,
     analyticsStore,
     documentPermissionService,
-    authorizationService,
+    authorizationConfig,
     attachments,
     packages,
     dbClosers,
@@ -952,7 +980,7 @@ export async function initializeAndStartAPI(
     processorApp,
     readModels,
     attachments,
-    authorizationService,
+    authorizationConfig,
     documentModelRegistry,
     dbClosers,
     reactorDriveClient,

@@ -151,6 +151,23 @@ export class ReactorClient implements IReactorClient {
   }
 
   /**
+   * Resolves an identifier (id or slug) to the canonical document id, using the
+   * same lookup as the data path. Resolves against the "main" branch. Throws if
+   * the identifier cannot be resolved or is ambiguous.
+   */
+  async resolveIdOrSlug(
+    identifier: string,
+    signal?: AbortSignal,
+  ): Promise<string> {
+    return this.documentView.resolveIdOrSlug(
+      identifier,
+      undefined,
+      undefined,
+      signal,
+    );
+  }
+
+  /**
    * Retrieves operations for a document
    */
   async getOperations(

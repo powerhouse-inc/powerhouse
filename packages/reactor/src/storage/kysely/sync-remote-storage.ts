@@ -1,5 +1,6 @@
 import type { Kysely } from "kysely";
 import { sql } from "kysely";
+import { DriveCollectionId } from "../../cache/operation-index-types.js";
 import type { RemoteRecord } from "../../sync/types.js";
 import type { ISyncRemoteStorage } from "../interfaces.js";
 import type { Database, InsertableSyncRemote, SyncRemoteRow } from "./types.js";
@@ -8,7 +9,7 @@ function rowToRemoteRecord(row: SyncRemoteRow): RemoteRecord {
   return {
     id: row.channel_id,
     name: row.name,
-    collectionId: row.collection_id,
+    collectionId: DriveCollectionId.fromKey(row.collection_id),
     channelConfig: {
       type: row.channel_type,
       parameters: (row.channel_parameters ?? {}) as Record<string, unknown>,
@@ -47,7 +48,7 @@ function rowToRemoteRecord(row: SyncRemoteRow): RemoteRecord {
 function remoteRecordToRow(remote: RemoteRecord): InsertableSyncRemote {
   return {
     name: remote.name,
-    collection_id: remote.collectionId,
+    collection_id: remote.collectionId.key,
     channel_type: remote.channelConfig.type,
     channel_id: remote.id,
     remote_name: remote.name,

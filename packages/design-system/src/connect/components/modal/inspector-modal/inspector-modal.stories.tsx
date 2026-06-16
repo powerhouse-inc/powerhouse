@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { fn } from "@storybook/test";
 import {
+  DriveCollectionId,
   type IChannel,
   type Remote,
   type SyncOperation,
@@ -161,7 +162,7 @@ const mockRemotes: Remote[] = [
   {
     id: "abc-123-def-456",
     name: "remote-main",
-    collectionId: "drive:main/documents",
+    collectionId: DriveCollectionId.forDrive("documents"),
     filter: {
       documentId: [],
       scope: [],
@@ -209,7 +210,7 @@ const mockRemotes: Remote[] = [
   {
     id: "ghi-789-jkl-012",
     name: "remote-dev",
-    collectionId: "drive:dev/experiments",
+    collectionId: DriveCollectionId.forDrive("experiments", "dev"),
     filter: {
       documentId: ["doc-1", "doc-2"],
       scope: ["scope-a"],
@@ -233,7 +234,7 @@ const mockRemotes: Remote[] = [
   {
     id: "mno-345-pqr-678",
     name: "remote-feature",
-    collectionId: "drive:feature/new-ui",
+    collectionId: DriveCollectionId.forDrive("new-ui", "feature"),
     filter: {
       documentId: [],
       scope: ["ui", "components"],

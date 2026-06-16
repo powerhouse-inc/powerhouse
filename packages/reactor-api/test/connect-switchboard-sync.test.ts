@@ -1,6 +1,6 @@
 import {
   DocumentModelRegistry,
-  driveCollectionId,
+  DriveCollectionId,
   EventBus,
   GqlRequestChannelFactory,
   GqlResponseChannelFactory,
@@ -120,7 +120,7 @@ async function setupSyncForDrive(
   driveId: string,
   resolverBridge: typeof fetch,
 ): Promise<void> {
-  const collectionId = driveCollectionId("main", driveId);
+  const collectionId = DriveCollectionId.forDrive(driveId);
 
   await connectSyncManager.add(
     `switchboard-${driveId}`,
@@ -202,7 +202,7 @@ async function setupSyncForDriveOnSwitchboard(
   driveId: string,
   resolverBridge: typeof fetch,
 ): Promise<void> {
-  const collectionId = driveCollectionId("main", driveId);
+  const collectionId = DriveCollectionId.forDrive(driveId);
   await switchboardSyncManager.add(
     `connect-${driveId}`,
     collectionId,
@@ -554,7 +554,7 @@ describe("Connect-Switchboard Sync", () => {
 
       // Verify the outbox filter behavior: query with the actual
       // excludeSourceRemote used by Switchboard's connect-{driveId} remote
-      const collectionId = driveCollectionId("main", documentId);
+      const collectionId = DriveCollectionId.forDrive(documentId).key;
       const filteredIndex = await switchboardModule.operationIndex.find(
         collectionId,
         0,

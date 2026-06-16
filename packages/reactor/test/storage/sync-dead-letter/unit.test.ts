@@ -4,6 +4,7 @@ import type { KyselySyncDeadLetterStorage } from "../../../src/storage/kysely/sy
 import type { KyselySyncRemoteStorage } from "../../../src/storage/kysely/sync-remote-storage.js";
 import type { Database } from "../../../src/storage/kysely/types.js";
 import type { DeadLetterRecord } from "../../../src/storage/interfaces.js";
+import { DriveCollectionId } from "../../../src/cache/operation-index-types.js";
 import { ChannelErrorSource } from "../../../src/sync/types.js";
 import { createTestSyncStorage } from "../../factories.js";
 
@@ -15,7 +16,7 @@ describe("KyselySyncDeadLetterStorage", () => {
   const testRemote = {
     id: "remote-id-1",
     name: "remote-1",
-    collectionId: "collection-1",
+    collectionId: DriveCollectionId.forDrive("collection-1"),
     channelConfig: { type: "internal", parameters: {} },
     filter: { documentId: [], scope: [], branch: "main" },
     options: { sinceTimestampUtcMs: "0" },

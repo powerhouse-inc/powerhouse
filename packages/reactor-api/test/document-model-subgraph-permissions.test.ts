@@ -113,6 +113,7 @@ describe("DocumentModelSubgraph Permission Checks", () => {
         policy: AuthorizationPolicy.DOCUMENT_PERMISSIONS,
       },
       isSupremeAdmin: vi.fn().mockReturnValue(false),
+      canCreate: vi.fn().mockImplementation((address?: string) => !!address),
       canRead: vi.fn().mockResolvedValue(false),
       canWrite: vi.fn().mockResolvedValue(false),
       canManage: vi.fn().mockResolvedValue(false),
@@ -120,6 +121,9 @@ describe("DocumentModelSubgraph Permission Checks", () => {
     };
 
     mockReactorClient = {
+      resolveIdOrSlug: vi.fn((identifier: string) =>
+        Promise.resolve(identifier),
+      ),
       getIncomingRelationships: vi.fn().mockResolvedValue({
         results: [],
         options: { limit: 10, cursor: "" },
@@ -189,7 +193,6 @@ describe("DocumentModelSubgraph Permission Checks", () => {
         expect(mockAuthorizationService.canRead).toHaveBeenCalledWith(
           "doc-123",
           "0xpermitted",
-          expect.any(Function),
         );
       });
 
@@ -235,60 +238,6 @@ describe("DocumentModelSubgraph Permission Checks", () => {
         await expect(callGetDocument(ctx, "doc-123")).rejects.toThrow(
           "is not of type",
         );
-      });
-    });
-
-    describe("Permission inheritance (hierarchy)", () => {
-      it("should pass getParentIdsFn that retrieves parent IDs", async () => {
-        const mockParents = [
-          createMockDocument("parent-1", "Parent 1"),
-          createMockDocument("parent-2", "Parent 2"),
-        ];
-        vi.mocked(
-          mockReactorClient.getIncomingRelationships!,
-        ).mockResolvedValue({
-          results: mockParents,
-          options: { limit: 10, cursor: "" },
-        } as PagedResults<PHDocument>);
-
-        let capturedGetParentsFn:
-          | ((docId: string) => Promise<string[]>)
-          | null = null;
-        vi.mocked(mockAuthorizationService.canRead!).mockImplementation(
-          (_docId, _user, getParentsFn) => {
-            capturedGetParentsFn = getParentsFn ?? null;
-            return Promise.resolve(true);
-          },
-        );
-
-        const ctx = createContext({ userAddress: "0xuser" });
-        await callGetDocument(ctx, "child-doc");
-
-        expect(capturedGetParentsFn).not.toBeNull();
-        const parentIds = await capturedGetParentsFn!("child-doc");
-        expect(parentIds).toEqual(["parent-1", "parent-2"]);
-      });
-
-      it("should return empty array if getIncomingRelationships fails", async () => {
-        vi.mocked(
-          mockReactorClient.getIncomingRelationships!,
-        ).mockRejectedValue(new Error("Not found"));
-
-        let capturedGetParentsFn:
-          | ((docId: string) => Promise<string[]>)
-          | null = null;
-        vi.mocked(mockAuthorizationService.canRead!).mockImplementation(
-          (_docId, _user, getParentsFn) => {
-            capturedGetParentsFn = getParentsFn ?? null;
-            return Promise.resolve(true);
-          },
-        );
-
-        const ctx = createContext({ userAddress: "0xuser" });
-        await callGetDocument(ctx, "child-doc");
-
-        const parentIds = await capturedGetParentsFn!("child-doc");
-        expect(parentIds).toEqual([]);
       });
     });
 
@@ -575,6 +524,7 @@ describe("DocumentModelSubgraph Permission Checks", () => {
             policy: AuthorizationPolicy.ADMIN_ONLY,
           },
           isSupremeAdmin: vi.fn().mockReturnValue(false),
+          canCreate: vi.fn().mockReturnValue(false),
         };
         const sg = new DocumentModelSubgraph(
           mockDocumentModel,
@@ -598,6 +548,7 @@ describe("DocumentModelSubgraph Permission Checks", () => {
             policy: AuthorizationPolicy.OPEN,
           },
           isSupremeAdmin: vi.fn().mockReturnValue(true),
+          canCreate: vi.fn().mockReturnValue(true),
         };
         const sg = new DocumentModelSubgraph(
           mockDocumentModel,
@@ -626,7 +577,6 @@ describe("DocumentModelSubgraph Permission Checks", () => {
         expect(mockAuthorizationService.canWrite).toHaveBeenCalledWith(
           "drive-1",
           "0xpermitted",
-          expect.any(Function),
         );
       });
 
@@ -733,7 +683,6 @@ describe("DocumentModelSubgraph Permission Checks", () => {
           "doc-123",
           "SET_NAME",
           "0xpermitted",
-          expect.any(Function),
         );
       });
 
@@ -782,7 +731,6 @@ describe("DocumentModelSubgraph Permission Checks", () => {
           "doc-123",
           "RESTRICTED_OP",
           "0xauthorized",
-          expect.any(Function),
         );
       });
 
@@ -796,7 +744,6 @@ describe("DocumentModelSubgraph Permission Checks", () => {
           "doc-123",
           "SET_VALUE",
           "0xuser",
-          expect.any(Function),
         );
       });
     });
@@ -892,6 +839,7 @@ describe("DocumentModelSubgraph Permission Checks", () => {
           policy: AuthorizationPolicy.OPEN,
         },
         isSupremeAdmin: vi.fn().mockReturnValue(true),
+        canCreate: vi.fn().mockReturnValue(true),
         canRead: vi.fn().mockResolvedValue(true),
         canWrite: vi.fn().mockResolvedValue(true),
         canManage: vi.fn().mockResolvedValue(true),
@@ -981,7 +929,6 @@ describe("DocumentModelSubgraph Permission Checks", () => {
       expect(mockAuthorizationService.canRead).toHaveBeenCalledWith(
         "doc-123",
         "",
-        expect.any(Function),
       );
     });
   });

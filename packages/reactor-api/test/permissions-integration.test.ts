@@ -10,6 +10,7 @@ import {
   createAuthorizationService,
 } from "../src/services/authorization.service.js";
 import { DocumentPermissionService } from "../src/services/document-permission.service.js";
+import { createGetParentIdsFn } from "../src/services/get-parent-ids.js";
 import type { DocumentPermissionDatabase } from "../src/utils/db.js";
 import { getDbClient } from "../src/utils/db.js";
 
@@ -70,14 +71,6 @@ describe("Permissions Integration Tests", () => {
     db = dbClient as Kysely<DocumentPermissionDatabase>;
     await runMigrations(db as Kysely<unknown>);
     documentPermissionService = new DocumentPermissionService(db);
-    const authorizationService = createAuthorizationService(
-      {
-        admins: ["0xadmin"],
-        defaultProtection: false,
-        policy: AuthorizationPolicy.DOCUMENT_PERMISSIONS,
-      },
-      documentPermissionService,
-    );
     // These tests exercise grant enforcement, which only applies to protected
     // documents; unprotected documents are open under the authorization model.
     await documentPermissionService.setDocumentProtection("doc-123", true);
@@ -92,6 +85,9 @@ describe("Permissions Integration Tests", () => {
         if (id === "parent-doc") return Promise.resolve(mockParentDocument);
         return Promise.resolve(null);
       }),
+      resolveIdOrSlug: vi.fn((identifier: string) =>
+        Promise.resolve(identifier),
+      ),
       getOutgoingRelationships: vi.fn().mockResolvedValue({
         results: [],
         options: { limit: 10, cursor: "" },
@@ -133,6 +129,16 @@ describe("Permissions Integration Tests", () => {
       waitForJob: vi.fn(),
       subscribe: vi.fn(),
     };
+
+    const authorizationService = createAuthorizationService(
+      {
+        admins: ["0xadmin"],
+        defaultProtection: false,
+        policy: AuthorizationPolicy.DOCUMENT_PERMISSIONS,
+      },
+      documentPermissionService,
+      createGetParentIdsFn(mockReactorClient as IReactorClient),
+    );
 
     reactorSubgraph = new ReactorSubgraph({
       reactorClient: mockReactorClient as IReactorClient,

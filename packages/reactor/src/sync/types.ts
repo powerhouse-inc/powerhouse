@@ -1,4 +1,5 @@
 import type { OperationWithContext } from "@powerhousedao/shared/document-model";
+import type { DriveCollectionId } from "../cache/operation-index-types.js";
 
 export enum ChannelScheme {
   CONNECT = "connect",
@@ -132,7 +133,7 @@ export type ChannelConfig = {
 export type RemoteRecord = {
   id: string;
   name: string;
-  collectionId: string;
+  collectionId: DriveCollectionId;
   channelConfig: ChannelConfig;
   filter: RemoteFilter;
   options: RemoteOptions;

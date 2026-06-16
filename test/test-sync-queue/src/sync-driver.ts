@@ -1,6 +1,6 @@
 import {
   ChannelScheme,
-  driveCollectionId,
+  DriveCollectionId,
   PollBehavior,
   ReactorBuilder,
   ReactorEventTypes,
@@ -69,7 +69,7 @@ export class SyncDriver {
 
     if (this.config.jwt) {
       const token = this.config.jwt;
-      builder.withJwtHandler(async () => token);
+      builder.withJwtHandler(() => Promise.resolve(token));
     }
 
     const module = await builder.buildModule();
@@ -85,7 +85,10 @@ export class SyncDriver {
     this.syncManager = module.syncModule.syncManager;
 
     this.driveId = driveInfo.id;
-    const collectionId = driveCollectionId(this.config.branch, driveInfo.id);
+    const collectionId = DriveCollectionId.forDrive(
+      driveInfo.id,
+      this.config.branch,
+    );
     this.remoteName = `debug-${driveInfo.id}`;
 
     this.remote = await this.syncManager.add(
@@ -198,7 +201,7 @@ export class SyncDriver {
     return this.driveId;
   }
 
-  async shutdown(): Promise<void> {
+  shutdown(): Promise<void> {
     for (const unsubscribe of this.unsubscribes) {
       try {
         unsubscribe();
@@ -217,6 +220,7 @@ export class SyncDriver {
     } catch {
       // ignore
     }
+    return Promise.resolve();
   }
 
   private snapshotMailbox(
