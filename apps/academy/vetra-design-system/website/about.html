@@ -1,0 +1,761 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>About Vetra — Our Mission &amp; Team</title>
+    <link rel="stylesheet" href="../colors.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family:
+          'Inter',
+          -apple-system,
+          BlinkMacSystemFont,
+          sans-serif;
+        background: var(--background);
+        color: var(--foreground);
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+      }
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 10px 24px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-family: inherit;
+      }
+      .btn-primary {
+        background: var(--primary);
+        color: #fff;
+      }
+      .btn-primary:hover {
+        opacity: 0.9;
+        transform: translateY(-1px);
+      }
+      .btn-secondary {
+        background: var(--accent);
+        color: var(--foreground);
+      }
+      .btn-secondary:hover {
+        opacity: 0.85;
+      }
+      .btn-lg {
+        padding: 14px 32px;
+        font-size: 16px;
+        border-radius: 10px;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+
+      /* ─── NAV ─── */
+      .navbar {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        background: var(--background);
+        border-bottom: 1px solid var(--border);
+      }
+      .navbar .container {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 64px;
+      }
+      .nav-brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 700;
+        font-size: 18px;
+      }
+      .nav-brand img {
+        height: 24px;
+        width: auto;
+      }
+      .logo-dark {
+        display: none;
+      }
+      body.dark .logo-light {
+        display: none;
+      }
+      body.dark .logo-dark {
+        display: inline;
+      }
+      .nav-links {
+        display: flex;
+        align-items: center;
+        gap: 32px;
+      }
+      .nav-links a {
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--foreground-70);
+        transition: color 0.2s;
+      }
+      .nav-links a:hover {
+        color: var(--foreground);
+      }
+      .nav-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .theme-toggle {
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: var(--card);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+        transition: all 0.2s;
+        color: var(--foreground);
+      }
+      .theme-toggle:hover {
+        background: var(--accent);
+      }
+
+      /* ─── HERO ─── */
+      .about-hero {
+        padding: 96px 0 80px;
+        text-align: center;
+      }
+      .about-hero h1 {
+        font-size: 52px;
+        font-weight: 800;
+        letter-spacing: -1.5px;
+        margin-bottom: 20px;
+      }
+      .about-hero p {
+        font-size: 18px;
+        color: var(--foreground-70);
+        max-width: 640px;
+        margin: 0 auto;
+        line-height: 1.7;
+      }
+
+      /* ─── VALUES ─── */
+      .values {
+        padding: 80px 0;
+        background: var(--accent);
+      }
+      .section-header {
+        text-align: center;
+        margin-bottom: 56px;
+      }
+      .section-header h2 {
+        font-size: 36px;
+        font-weight: 700;
+        letter-spacing: -0.8px;
+        margin-bottom: 12px;
+      }
+      .section-header p {
+        font-size: 16px;
+        color: var(--foreground-70);
+        max-width: 520px;
+        margin: 0 auto;
+      }
+      .values-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 24px;
+      }
+      .value-card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 36px;
+      }
+      .value-icon {
+        width: 52px;
+        height: 52px;
+        border-radius: 12px;
+        background: var(--primary-30);
+        color: var(--primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        margin-bottom: 20px;
+      }
+      .value-card h3 {
+        font-size: 18px;
+        font-weight: 600;
+        margin-bottom: 10px;
+      }
+      .value-card p {
+        font-size: 14px;
+        color: var(--foreground-70);
+        line-height: 1.7;
+      }
+
+      /* ─── TIMELINE ─── */
+      .timeline-section {
+        padding: 96px 0;
+      }
+      .timeline {
+        max-width: 680px;
+        margin: 0 auto;
+        position: relative;
+        padding-left: 40px;
+      }
+      .timeline::before {
+        content: '';
+        position: absolute;
+        left: 11px;
+        top: 8px;
+        bottom: 8px;
+        width: 2px;
+        background: var(--border);
+      }
+      .timeline-item {
+        position: relative;
+        margin-bottom: 48px;
+      }
+      .timeline-item:last-child {
+        margin-bottom: 0;
+      }
+      .timeline-dot {
+        position: absolute;
+        left: -40px;
+        top: 4px;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: var(--primary);
+        border: 4px solid var(--background);
+        z-index: 1;
+      }
+      .timeline-year {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--primary);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 6px;
+      }
+      .timeline-item h3 {
+        font-size: 18px;
+        font-weight: 600;
+        margin-bottom: 6px;
+      }
+      .timeline-item p {
+        font-size: 14px;
+        color: var(--foreground-70);
+        line-height: 1.7;
+      }
+
+      /* ─── TEAM ─── */
+      .team {
+        padding: 96px 0;
+        background: var(--accent);
+      }
+      .team-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 24px;
+      }
+      .team-card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 32px;
+        text-align: center;
+      }
+      .team-avatar {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: var(--primary-30);
+        border: 2px solid var(--border);
+        margin: 0 auto 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 28px;
+        font-weight: 700;
+        color: var(--primary);
+      }
+      .team-card h3 {
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 2px;
+      }
+      .team-card .team-role {
+        font-size: 13px;
+        color: var(--primary);
+        font-weight: 500;
+        margin-bottom: 12px;
+      }
+      .team-card .team-bio {
+        font-size: 13px;
+        color: var(--foreground-70);
+        line-height: 1.6;
+      }
+
+      /* ─── PARTNERS ─── */
+      .partners {
+        padding: 64px 0;
+        border-top: 1px solid var(--border);
+        border-bottom: 1px solid var(--border);
+        text-align: center;
+      }
+      .partners p {
+        font-size: 13px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        color: var(--muted-foreground);
+        margin-bottom: 28px;
+      }
+      .partners-grid {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 24px;
+        flex-wrap: wrap;
+      }
+      .partner-box {
+        width: 140px;
+        height: 56px;
+        border-radius: 8px;
+        background: var(--accent);
+        border: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+        color: var(--muted-foreground);
+        font-weight: 600;
+      }
+
+      /* ─── JOIN CTA ─── */
+      .join-cta {
+        padding: 96px 0;
+        text-align: center;
+      }
+      .join-cta h2 {
+        font-size: 36px;
+        font-weight: 700;
+        letter-spacing: -0.8px;
+        margin-bottom: 12px;
+      }
+      .join-cta p {
+        font-size: 16px;
+        color: var(--foreground-70);
+        max-width: 480px;
+        margin: 0 auto 32px;
+        line-height: 1.7;
+      }
+
+      /* ─── FOOTER ─── */
+      .footer {
+        padding: 64px 0 0;
+        border-top: 1px solid var(--border);
+        background: var(--card);
+      }
+      .footer-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr 1fr 1fr;
+        gap: 48px;
+        margin-bottom: 48px;
+      }
+      .footer-brand p {
+        font-size: 14px;
+        color: var(--foreground-70);
+        margin-top: 12px;
+        line-height: 1.6;
+        max-width: 280px;
+      }
+      .footer-col h4 {
+        font-size: 13px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 16px;
+        color: var(--foreground);
+      }
+      .footer-col ul {
+        list-style: none;
+      }
+      .footer-col ul li {
+        margin-bottom: 10px;
+      }
+      .footer-col ul li a {
+        font-size: 14px;
+        color: var(--foreground-70);
+        transition: color 0.2s;
+      }
+      .footer-col ul li a:hover {
+        color: var(--foreground);
+      }
+      .footer-bottom {
+        border-top: 1px solid var(--border);
+        padding: 20px 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 13px;
+        color: var(--muted-foreground);
+      }
+      .footer-bottom-links {
+        display: flex;
+        gap: 24px;
+      }
+      .footer-bottom-links a {
+        color: var(--muted-foreground);
+        transition: color 0.2s;
+      }
+      .footer-bottom-links a:hover {
+        color: var(--foreground);
+      }
+
+      @media (max-width: 768px) {
+        .about-hero h1 {
+          font-size: 36px;
+        }
+        .values-grid,
+        .team-grid {
+          grid-template-columns: 1fr;
+        }
+        .footer-grid {
+          grid-template-columns: 1fr 1fr;
+        }
+        .nav-links {
+          display: none;
+        }
+        .section-header h2 {
+          font-size: 28px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Navbar -->
+    <nav class="navbar">
+      <div class="container">
+        <a href="landing-page.html" class="nav-brand">
+          <img src="../logos/vetra-full-logo.svg" alt="Vetra" height="24" class="logo-light" />
+          <img src="../logos/vetra-full-logo-light.svg" alt="Vetra" height="24" class="logo-dark" />
+        </a>
+        <div class="nav-links">
+          <a href="landing-page.html">Product</a>
+          <a href="about.html">About</a>
+          <a href="pricing.html">Pricing</a>
+          <a href="blog-article.html">Blog</a>
+          <a href="#">Docs</a>
+        </div>
+        <div class="nav-actions">
+          <button
+            class="theme-toggle"
+            onclick="document.body.classList.toggle('dark')"
+            aria-label="Toggle theme"
+          >
+            &#9789;
+          </button>
+          <a href="#" class="btn btn-secondary" style="padding: 8px 16px; font-size: 13px"
+            >Log in</a
+          >
+          <a href="#" class="btn btn-primary" style="padding: 8px 16px; font-size: 13px"
+            >Get Started</a
+          >
+        </div>
+      </div>
+    </nav>
+
+    <!-- Hero -->
+    <section class="about-hero">
+      <div class="container">
+        <h1>About Vetra</h1>
+        <p>
+          We believe every team deserves tools that are as thoughtful as the products they build.
+          Vetra was founded to eliminate the friction between great ideas and shipped software,
+          giving product teams a single, elegant workspace to plan, collaborate, and deliver with
+          confidence.
+        </p>
+      </div>
+    </section>
+
+    <!-- Values -->
+    <section class="values">
+      <div class="container">
+        <div class="section-header">
+          <h2>Our values</h2>
+          <p>The principles that guide everything we build and every decision we make.</p>
+        </div>
+        <div class="values-grid">
+          <div class="value-card">
+            <div class="value-icon">&#9878;</div>
+            <h3>Clarity over complexity</h3>
+            <p>
+              We strip away noise so teams can focus on what matters. Every feature we ship must
+              make workflows simpler, not more complicated. If it adds cognitive load, it does not
+              ship.
+            </p>
+          </div>
+          <div class="value-card">
+            <div class="value-icon">&#9889;</div>
+            <h3>Speed as a feature</h3>
+            <p>
+              Performance is not an afterthought. From sub-100ms interactions to instant search, we
+              obsess over speed because your team's momentum depends on it.
+            </p>
+          </div>
+          <div class="value-card">
+            <div class="value-icon">&#10084;</div>
+            <h3>Craft in every detail</h3>
+            <p>
+              Great software is built by people who care about the details. We sweat the
+              micro-interactions, the edge cases, and the quiet moments that make a tool feel truly
+              right.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Timeline -->
+    <section class="timeline-section">
+      <div class="container">
+        <div class="section-header">
+          <h2>Our journey</h2>
+          <p>Key milestones on the path to building the future of product management.</p>
+        </div>
+        <div class="timeline">
+          <div class="timeline-item">
+            <div class="timeline-dot"></div>
+            <div class="timeline-year">2020</div>
+            <h3>The idea takes shape</h3>
+            <p>
+              Co-founders Elena Vasquez and James Park, frustrated by juggling five different tools
+              at their previous startup, sketch out the first wireframes for a unified product
+              workspace over a weekend hackathon.
+            </p>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-dot"></div>
+            <div class="timeline-year">2021</div>
+            <h3>Seed round &amp; first users</h3>
+            <p>
+              Vetra raises a $4M seed round led by Horizon Ventures. The private beta launches with
+              30 design-partner teams, and early feedback shapes the core planning and collaboration
+              features.
+            </p>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-dot"></div>
+            <div class="timeline-year">2022</div>
+            <h3>Public launch</h3>
+            <p>
+              Vetra goes live on Product Hunt, reaching #1 Product of the Day. Over 2,000 teams sign
+              up in the first month. The platform adds integrations with GitHub, Slack, and Figma.
+            </p>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-dot"></div>
+            <div class="timeline-year">2024</div>
+            <h3>Series A &amp; enterprise expansion</h3>
+            <p>
+              With 12,000+ teams on the platform, Vetra raises a $28M Series A led by Meridian
+              Capital. The enterprise tier launches with SSO, SCIM, and advanced audit logging.
+            </p>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-dot"></div>
+            <div class="timeline-year">2026</div>
+            <h3>AI-powered workflows</h3>
+            <p>
+              Vetra introduces intelligent automation features powered by proprietary AI models,
+              enabling teams to auto-generate specs, triage bugs, and predict delivery timelines
+              with remarkable accuracy.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Team -->
+    <section class="team">
+      <div class="container">
+        <div class="section-header">
+          <h2>Meet the team</h2>
+          <p>The people behind the product, building tools they wish they had.</p>
+        </div>
+        <div class="team-grid">
+          <div class="team-card">
+            <div class="team-avatar">EV</div>
+            <h3>Elena Vasquez</h3>
+            <div class="team-role">Co-Founder &amp; CEO</div>
+            <div class="team-bio">
+              Former product lead at Stripe. Passionate about developer experience and design
+              systems. Believes great tools should feel invisible.
+            </div>
+          </div>
+          <div class="team-card">
+            <div class="team-avatar">JP</div>
+            <h3>James Park</h3>
+            <div class="team-role">Co-Founder &amp; CTO</div>
+            <div class="team-bio">
+              Previously staff engineer at Vercel. Obsessed with performance and real-time
+              collaboration. Built the sync engine that powers Vetra.
+            </div>
+          </div>
+          <div class="team-card">
+            <div class="team-avatar">LN</div>
+            <h3>Leila Nouri</h3>
+            <div class="team-role">Head of Design</div>
+            <div class="team-bio">
+              Design systems veteran from Figma. Leads the team that crafts every pixel of the Vetra
+              experience. Champion of accessibility-first design.
+            </div>
+          </div>
+          <div class="team-card">
+            <div class="team-avatar">DK</div>
+            <h3>Daniel Kim</h3>
+            <div class="team-role">VP of Engineering</div>
+            <div class="team-bio">
+              Scaled engineering teams at Linear and Notion. Brings deep expertise in building
+              collaborative editing systems and offline-first architectures.
+            </div>
+          </div>
+          <div class="team-card">
+            <div class="team-avatar">RW</div>
+            <h3>Rachel Wright</h3>
+            <div class="team-role">Head of Product</div>
+            <div class="team-bio">
+              Former PM at Intercom. Runs product strategy, user research, and roadmap
+              prioritization. Known for turning customer pain into elegant solutions.
+            </div>
+          </div>
+          <div class="team-card">
+            <div class="team-avatar">OT</div>
+            <h3>Omar Tadesse</h3>
+            <div class="team-role">Head of Growth</div>
+            <div class="team-bio">
+              Growth leader who scaled Raycast from 0 to 500k users. Combines data-driven
+              experimentation with brand storytelling to drive adoption.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Partners -->
+    <section class="partners">
+      <div class="container">
+        <p>Backed by world-class investors</p>
+        <div class="partners-grid">
+          <div class="partner-box">Horizon Ventures</div>
+          <div class="partner-box">Meridian Capital</div>
+          <div class="partner-box">Y Combinator</div>
+          <div class="partner-box">Abstract VC</div>
+          <div class="partner-box">Northstar Fund</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Join CTA -->
+    <section class="join-cta">
+      <div class="container">
+        <h2>Join us and shape the future of product work</h2>
+        <p>
+          We are a remote-first team of 45 people across 12 countries. We value craftsmanship,
+          kindness, and shipping early and often.
+        </p>
+        <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap">
+          <a href="#" class="btn btn-primary btn-lg">View open roles</a>
+          <a href="#" class="btn btn-secondary btn-lg">Our culture</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <div class="container">
+        <div class="footer-grid">
+          <div class="footer-brand">
+            <a href="landing-page.html" class="nav-brand">
+              <img src="../logos/vetra-full-logo.svg" alt="Vetra" height="24" class="logo-light" />
+              <img
+                src="../logos/vetra-full-logo-light.svg"
+                alt="Vetra"
+                height="24"
+                class="logo-dark"
+              />
+            </a>
+            <p>
+              The modern product management platform for teams that ship. Plan, build, and iterate
+              with clarity.
+            </p>
+          </div>
+          <div class="footer-col">
+            <h4>Product</h4>
+            <ul>
+              <li><a href="#">Features</a></li>
+              <li><a href="pricing.html">Pricing</a></li>
+              <li><a href="#">Integrations</a></li>
+              <li><a href="#">Changelog</a></li>
+            </ul>
+          </div>
+          <div class="footer-col">
+            <h4>Company</h4>
+            <ul>
+              <li><a href="about.html">About</a></li>
+              <li><a href="blog-article.html">Blog</a></li>
+              <li><a href="#">Careers</a></li>
+              <li><a href="#">Contact</a></li>
+            </ul>
+          </div>
+          <div class="footer-col">
+            <h4>Resources</h4>
+            <ul>
+              <li><a href="#">Documentation</a></li>
+              <li><a href="#">Help Center</a></li>
+              <li><a href="#">Community</a></li>
+              <li><a href="#">API Reference</a></li>
+            </ul>
+          </div>
+        </div>
+        <div class="footer-bottom">
+          <span>&copy; 2026 Vetra Inc. All rights reserved.</span>
+          <div class="footer-bottom-links">
+            <a href="#">Privacy</a>
+            <a href="#">Terms</a>
+            <a href="#">Security</a>
+          </div>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

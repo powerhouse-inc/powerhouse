@@ -26,8 +26,8 @@ function countItems(items: PropSidebarItem[]): number {
 export default function CategoryWrapper(props: Props): React.JSX.Element {
   const { item, level } = props;
 
-  // Only show count on top-level categories (level 1)
-  if (level !== 1) {
+  // Only show count on top-level categories (level 1), except Release Notes
+  if (level !== 1 || item.label === "Release Notes" || item.label === "Architecture") {
     return <Category {...props} />;
   }
 

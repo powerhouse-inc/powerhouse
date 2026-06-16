@@ -1,0 +1,769 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Product — Vetra</title>
+    <link rel="stylesheet" href="../colors.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family:
+          'Inter',
+          -apple-system,
+          BlinkMacSystemFont,
+          sans-serif;
+        background: var(--background);
+        color: var(--foreground);
+        line-height: 1.6;
+        transition:
+          background 0.3s,
+          color 0.3s;
+      }
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      /* Nav */
+      .nav {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        background: var(--background);
+        border-bottom: 1px solid var(--border);
+        backdrop-filter: blur(12px);
+      }
+      .nav-inner {
+        max-width: 1200px;
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 24px;
+        height: 64px;
+      }
+      .nav-left {
+        display: flex;
+        align-items: center;
+        gap: 32px;
+      }
+      .nav-logo {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 700;
+        font-size: 18px;
+      }
+      .nav-logo img {
+        height: 24px;
+        width: auto;
+      }
+      .logo-dark {
+        display: none;
+      }
+      body.dark .logo-light {
+        display: none;
+      }
+      body.dark .logo-dark {
+        display: inline;
+      }
+      .nav-links {
+        display: flex;
+        gap: 24px;
+      }
+      .nav-links a {
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--muted-foreground);
+        transition: color 0.2s;
+      }
+      .nav-links a:hover,
+      .nav-links a.active {
+        color: var(--foreground);
+      }
+      .nav-right {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      .theme-toggle {
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: var(--card);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        transition: all 0.2s;
+      }
+      .theme-toggle:hover {
+        background: var(--accent);
+      }
+
+      /* Buttons */
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 10px 24px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-family: inherit;
+      }
+      .btn-primary {
+        background: var(--primary);
+        color: #fff;
+      }
+      .btn-primary:hover {
+        opacity: 0.9;
+        transform: translateY(-1px);
+      }
+      .btn-secondary {
+        background: var(--accent);
+        color: var(--foreground);
+      }
+      .btn-secondary:hover {
+        background: var(--border);
+      }
+      .btn-white {
+        background: #fff;
+        color: var(--primary);
+      }
+      .btn-white:hover {
+        opacity: 0.9;
+      }
+      .btn-outline {
+        background: transparent;
+        color: #fff;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+      }
+      .btn-outline:hover {
+        border-color: #fff;
+      }
+
+      /* Hero */
+      .hero {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 80px 24px 96px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 64px;
+        align-items: center;
+      }
+      .hero h1 {
+        font-size: 52px;
+        font-weight: 800;
+        letter-spacing: -1.5px;
+        line-height: 1.1;
+        margin-bottom: 20px;
+      }
+      .hero p {
+        font-size: 18px;
+        color: var(--muted-foreground);
+        line-height: 1.7;
+        margin-bottom: 32px;
+      }
+      .hero-actions {
+        display: flex;
+        gap: 12px;
+      }
+      .hero-screenshot {
+        background: var(--accent);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        aspect-ratio: 4/3;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--muted-foreground);
+        font-size: 14px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08);
+      }
+
+      /* Section shared */
+      .section {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+      .section-header {
+        text-align: center;
+        max-width: 600px;
+        margin: 0 auto 56px;
+      }
+      .section-header h2 {
+        font-size: 36px;
+        font-weight: 800;
+        letter-spacing: -0.5px;
+        margin-bottom: 12px;
+      }
+      .section-header p {
+        font-size: 16px;
+        color: var(--muted-foreground);
+      }
+
+      /* How it Works */
+      .how-it-works {
+        padding-bottom: 96px;
+      }
+      .steps {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0;
+        position: relative;
+      }
+      .step {
+        text-align: center;
+        padding: 0 32px;
+        position: relative;
+      }
+      .step-number {
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background: var(--primary);
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        font-weight: 800;
+        margin: 0 auto 20px;
+        position: relative;
+        z-index: 1;
+      }
+      .step h3 {
+        font-size: 18px;
+        font-weight: 700;
+        margin-bottom: 8px;
+      }
+      .step p {
+        font-size: 14px;
+        color: var(--muted-foreground);
+        line-height: 1.6;
+      }
+      .steps::before {
+        content: '';
+        position: absolute;
+        top: 28px;
+        left: calc(16.67% + 28px);
+        right: calc(16.67% + 28px);
+        height: 2px;
+        background: var(--border);
+      }
+
+      /* Feature Deep-Dive */
+      .feature-section {
+        padding-bottom: 48px;
+      }
+      .feature-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 64px;
+        align-items: center;
+        padding-bottom: 96px;
+      }
+      .feature-row.reverse .feature-text {
+        order: 2;
+      }
+      .feature-row.reverse .feature-image {
+        order: 1;
+      }
+      .feature-tag {
+        display: inline-block;
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--primary);
+        background: var(--primary-30);
+        padding: 4px 12px;
+        border-radius: 20px;
+        margin-bottom: 16px;
+      }
+      .feature-text h3 {
+        font-size: 28px;
+        font-weight: 700;
+        margin-bottom: 12px;
+      }
+      .feature-text p {
+        font-size: 15px;
+        color: var(--muted-foreground);
+        line-height: 1.7;
+        margin-bottom: 16px;
+      }
+      .feature-list {
+        list-style: none;
+      }
+      .feature-list li {
+        padding: 6px 0;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .feature-list li::before {
+        content: '\2713';
+        color: var(--success);
+        font-weight: 700;
+      }
+      .feature-image {
+        background: var(--accent);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        aspect-ratio: 4/3;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--muted-foreground);
+        font-size: 14px;
+      }
+
+      /* Integrations */
+      .integrations {
+        padding-bottom: 96px;
+      }
+      .integration-grid {
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        gap: 20px;
+      }
+      .integration-box {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        height: 80px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--muted-foreground);
+        transition: all 0.2s;
+      }
+      .integration-box:hover {
+        border-color: var(--primary);
+        transform: translateY(-2px);
+      }
+
+      /* Metrics */
+      .metrics {
+        padding-bottom: 96px;
+      }
+      .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 24px;
+      }
+      .metric-card {
+        text-align: center;
+        padding: 40px 24px;
+      }
+      .metric-card .number {
+        font-size: 48px;
+        font-weight: 800;
+        color: var(--primary);
+        letter-spacing: -1px;
+      }
+      .metric-card .label {
+        font-size: 14px;
+        color: var(--muted-foreground);
+        margin-top: 8px;
+        font-weight: 500;
+      }
+
+      /* CTA */
+      .cta {
+        background: var(--primary);
+        border-radius: 24px;
+        padding: 80px 48px;
+        text-align: center;
+        max-width: 1200px;
+        margin: 0 auto 96px;
+      }
+      .cta h2 {
+        font-size: 40px;
+        font-weight: 800;
+        color: #fff;
+        margin-bottom: 16px;
+        letter-spacing: -0.5px;
+      }
+      .cta p {
+        color: rgba(255, 255, 255, 0.8);
+        font-size: 18px;
+        margin-bottom: 32px;
+        max-width: 500px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+      .cta-actions {
+        display: flex;
+        gap: 12px;
+        justify-content: center;
+      }
+
+      /* Footer */
+      .footer {
+        border-top: 1px solid var(--border);
+        padding: 48px 24px;
+        background: var(--card);
+      }
+      .footer-inner {
+        max-width: 1200px;
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: 2fr 1fr 1fr 1fr;
+        gap: 48px;
+      }
+      .footer-brand p {
+        color: var(--muted-foreground);
+        font-size: 14px;
+        margin-top: 12px;
+        line-height: 1.6;
+      }
+      .footer-col h4 {
+        font-size: 13px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 16px;
+        color: var(--muted-foreground);
+      }
+      .footer-col a {
+        display: block;
+        font-size: 14px;
+        color: var(--foreground);
+        padding: 4px 0;
+        transition: color 0.2s;
+      }
+      .footer-col a:hover {
+        color: var(--primary);
+      }
+      .footer-bottom {
+        max-width: 1200px;
+        margin: 32px auto 0;
+        padding-top: 24px;
+        border-top: 1px solid var(--border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 13px;
+        color: var(--muted-foreground);
+      }
+
+      @media (max-width: 768px) {
+        .hero {
+          grid-template-columns: 1fr;
+          gap: 40px;
+        }
+        .hero h1 {
+          font-size: 36px;
+        }
+        .steps {
+          grid-template-columns: 1fr;
+          gap: 40px;
+        }
+        .steps::before {
+          display: none;
+        }
+        .feature-row {
+          grid-template-columns: 1fr;
+          gap: 32px;
+        }
+        .feature-row.reverse .feature-text {
+          order: 1;
+        }
+        .feature-row.reverse .feature-image {
+          order: 2;
+        }
+        .integration-grid {
+          grid-template-columns: repeat(3, 1fr);
+        }
+        .metrics-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .cta {
+          margin-left: 24px;
+          margin-right: 24px;
+          padding: 48px 24px;
+        }
+        .cta h2 {
+          font-size: 28px;
+        }
+        .footer-inner {
+          grid-template-columns: 1fr 1fr;
+          gap: 32px;
+        }
+        .nav-links {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Nav -->
+    <nav class="nav">
+      <div class="nav-inner">
+        <div class="nav-left">
+          <a href="#" class="nav-logo">
+            <img src="../logos/vetra-full-logo.svg" alt="Vetra" height="24" class="logo-light" />
+            <img
+              src="../logos/vetra-full-logo-light.svg"
+              alt="Vetra"
+              height="24"
+              class="logo-dark"
+            />
+          </a>
+          <div class="nav-links">
+            <a href="product.html" class="active">Product</a>
+            <a href="documentation.html">Docs</a>
+            <a href="dashboard.html">Dashboard</a>
+            <a href="contact.html">Contact</a>
+          </div>
+        </div>
+        <div class="nav-right">
+          <button
+            class="theme-toggle"
+            onclick="
+              document.body.classList.toggle('dark')
+              this.textContent = document.body.classList.contains('dark') ? '&#9790;' : '&#9788;'
+            "
+            aria-label="Toggle theme"
+          >
+            &#9788;
+          </button>
+          <a href="#" class="btn btn-primary">Start Free Trial</a>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Hero -->
+    <section class="hero">
+      <div class="hero-text">
+        <h1>Ship products faster with Vetra</h1>
+        <p>
+          The all-in-one platform that brings your team together. Plan, build, and launch products
+          with real-time collaboration, powerful analytics, and seamless integrations.
+        </p>
+        <div class="hero-actions">
+          <a href="#" class="btn btn-primary">Get Started Free</a>
+          <a href="#" class="btn btn-secondary">Watch Demo</a>
+        </div>
+      </div>
+      <div class="hero-screenshot">Product screenshot placeholder</div>
+    </section>
+
+    <!-- How it Works -->
+    <section class="section how-it-works">
+      <div class="section-header">
+        <h2>How it works</h2>
+        <p>Get up and running in three simple steps. No complex setup required.</p>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-number">1</div>
+          <h3>Create your workspace</h3>
+          <p>
+            Sign up and configure your workspace in under two minutes. Invite your team and set
+            roles with granular permissions.
+          </p>
+        </div>
+        <div class="step">
+          <div class="step-number">2</div>
+          <h3>Connect your tools</h3>
+          <p>
+            Integrate with your existing stack in one click. We support over 50 integrations
+            including Slack, GitHub, and Figma.
+          </p>
+        </div>
+        <div class="step">
+          <div class="step-number">3</div>
+          <h3>Start building</h3>
+          <p>
+            Use our intuitive interface to plan sprints, track progress, and ship features with full
+            visibility across your team.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Feature Deep Dives -->
+    <section class="section feature-section">
+      <div class="section-header">
+        <h2>Built for modern teams</h2>
+        <p>Every feature is designed to help your team move faster without sacrificing quality.</p>
+      </div>
+
+      <div class="feature-row">
+        <div class="feature-text">
+          <span class="feature-tag">Collaboration</span>
+          <h3>Real-time multiplayer editing</h3>
+          <p>
+            Work together simultaneously on documents, designs, and code. See cursors, comments, and
+            changes in real time with zero latency.
+          </p>
+          <ul class="feature-list">
+            <li>Live cursors and presence indicators</li>
+            <li>Inline comments and threaded discussions</li>
+            <li>Version history with one-click restore</li>
+            <li>Conflict-free editing with CRDT sync</li>
+          </ul>
+        </div>
+        <div class="feature-image">Feature illustration placeholder</div>
+      </div>
+
+      <div class="feature-row reverse">
+        <div class="feature-text">
+          <span class="feature-tag">Analytics</span>
+          <h3>Insights that drive decisions</h3>
+          <p>
+            Turn raw data into actionable intelligence with our built-in analytics engine. Custom
+            dashboards, automated reports, and predictive forecasting.
+          </p>
+          <ul class="feature-list">
+            <li>Custom dashboard builder</li>
+            <li>Automated weekly and monthly reports</li>
+            <li>Predictive sprint velocity modeling</li>
+            <li>Team health and burnout detection</li>
+          </ul>
+        </div>
+        <div class="feature-image">Feature illustration placeholder</div>
+      </div>
+
+      <div class="feature-row">
+        <div class="feature-text">
+          <span class="feature-tag">Automation</span>
+          <h3>Automate the busywork</h3>
+          <p>
+            Set up powerful workflows with our visual automation builder. Trigger actions across
+            tools, send notifications, and keep your projects moving without manual effort.
+          </p>
+          <ul class="feature-list">
+            <li>Visual workflow builder with drag-and-drop</li>
+            <li>100+ pre-built automation templates</li>
+            <li>Cross-tool action triggers</li>
+            <li>Conditional logic and branching</li>
+          </ul>
+        </div>
+        <div class="feature-image">Feature illustration placeholder</div>
+      </div>
+    </section>
+
+    <!-- Integrations -->
+    <section class="section integrations">
+      <div class="section-header">
+        <h2>Works with your favorite tools</h2>
+        <p>Connect Vetra with the tools you already use. No migration headaches.</p>
+      </div>
+      <div class="integration-grid">
+        <div class="integration-box">Slack</div>
+        <div class="integration-box">GitHub</div>
+        <div class="integration-box">Figma</div>
+        <div class="integration-box">Notion</div>
+        <div class="integration-box">Jira</div>
+        <div class="integration-box">Linear</div>
+      </div>
+    </section>
+
+    <!-- Metrics -->
+    <section class="section metrics">
+      <div class="section-header">
+        <h2>Trusted by thousands of teams</h2>
+        <p>Numbers that speak for themselves.</p>
+      </div>
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="number">12K+</div>
+          <div class="label">Teams worldwide</div>
+        </div>
+        <div class="metric-card">
+          <div class="number">99.9%</div>
+          <div class="label">Uptime SLA</div>
+        </div>
+        <div class="metric-card">
+          <div class="number">3.2M</div>
+          <div class="label">Tasks completed daily</div>
+        </div>
+        <div class="metric-card">
+          <div class="number">4.9/5</div>
+          <div class="label">Average user rating</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="cta" style="margin-left: 24px; margin-right: 24px">
+      <h2>Ready to transform your workflow?</h2>
+      <p>Join thousands of teams already using Vetra to build better products, faster.</p>
+      <div class="cta-actions">
+        <a href="#" class="btn btn-white">Start Free Trial</a>
+        <a href="#" class="btn btn-outline">Talk to Sales</a>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <div class="footer-inner">
+        <div class="footer-brand">
+          <a href="#" class="nav-logo">
+            <img src="../logos/vetra-full-logo.svg" alt="Vetra" height="24" class="logo-light" />
+            <img
+              src="../logos/vetra-full-logo-light.svg"
+              alt="Vetra"
+              height="24"
+              class="logo-dark"
+            />
+          </a>
+          <p>
+            Build better products faster with the all-in-one platform designed for modern teams.
+          </p>
+        </div>
+        <div class="footer-col">
+          <h4>Product</h4>
+          <a href="#">Features</a>
+          <a href="#">Pricing</a>
+          <a href="#">Integrations</a>
+          <a href="#">Changelog</a>
+        </div>
+        <div class="footer-col">
+          <h4>Company</h4>
+          <a href="#">About</a>
+          <a href="#">Blog</a>
+          <a href="#">Careers</a>
+          <a href="#">Contact</a>
+        </div>
+        <div class="footer-col">
+          <h4>Legal</h4>
+          <a href="#">Privacy</a>
+          <a href="#">Terms</a>
+          <a href="#">Security</a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>&copy; 2026 Vetra, Inc. All rights reserved.</span>
+        <span>Made with care in San Francisco</span>
+      </div>
+    </footer>
+  </body>
+</html>

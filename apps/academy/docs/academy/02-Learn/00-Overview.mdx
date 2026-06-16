@@ -1,36 +1,71 @@
 ---
-title: Learn
+title: Learn the Powerhouse stack
 sidebar_label: Overview
 sidebar_position: 0
 hide_table_of_contents: true
 ---
 
-# Learn the Powerhouse stack, chapter by chapter
+import Admonition from "@theme/Admonition";
+import LearnCourseGrid from "@site/src/components/Learn/LearnCourseGrid";
 
-A linear course covering the mental model, the architecture, document models,
-editors, Connect, Switchboard, and sync. Read a little, try a little, quiz
-yourself, and move on.
+# Learn the Powerhouse stack
 
-These lessons are **explanation, not step-by-step build instructions** — the
-goal is to understand *what* the agent builds for you and *why* it looks the way
-it does. When you want to build by hand, head to
-[Build](/academy/MasteryTrack/ManualTodoTutorial/CreateNewPowerhouseProject); to
-ship with the agent, start at [Get started](/academy/GetStarted/VetraStudio).
+Powerhouse is a framework for building applications whose state evolves through
+**operations** rather than direct mutations. Instead of storing the current
+state, it records the ordered operations that produced it — giving every
+document a complete, auditable history. If you've worked with Git, event
+sourcing, or CRDTs, much of this will feel familiar.
 
-## The course
+This course explains how the stack is structured and how its pieces fit
+together. It's **explanation, not step-by-step instructions** — the goal is to
+understand *what* the agent builds for you and *why*. To ship with the agent,
+start at [Get started](/academy/GetStarted/VetraStudio); to build by hand, see
+[Build](/academy/MasteryTrack/ManualTodoTutorial/CreateNewPowerhouseProject).
 
-<Cards>
-  <Card title="01 · Foundations" href="/academy/Learn/foundations/what-is-powerhouse" description="The mental model — documents, actions, and operations, and why Powerhouse is built around them." />
-  <Card title="02 · Architecture" href="/academy/Learn/architecture/the-big-picture" description="How the Reactor, Connect, and Switchboard fit together — and where your code lives." />
-  <Card title="03 · Document models" href="/academy/Learn/document-models/documents-and-drives" description="The typed core: documents, drives, state scopes, actions, and reducers." />
-  <Card title="04 · Editors" href="/academy/Learn/editors/what-is-an-editor" description="React UIs that dispatch actions and render state — hooks, structure, and patterns." />
-  <Card title="05 · Connect" href="/academy/Learn/connect/what-is-connect" description="The host application — how it loads document models, drives, and editors at runtime." />
-  <Card title="06 · Switchboard" href="/academy/Learn/switchboard/what-is-switchboard" description="The server side — subgraphs that expose APIs and processors that build read models." />
-  <Card title="07 · Sync & collaboration" href="/academy/Learn/sync/sync-and-collaborate" description="Replay, merge, and why conflict-free just works once your state lives in a log." />
-  <Card title="08 · Going further" href="/academy/Learn/deep-dives/reducers-in-depth" description="Under the hood — reducer patterns, plus identity and signing on the operation log." />
-</Cards>
+## Why use Powerhouse?
 
-:::tip Start at the beginning
-New to Powerhouse? Read [What is Powerhouse?](/academy/Learn/foundations/what-is-powerhouse)
-first — every later lesson builds on the operation-log mental model it sets up.
-:::
+Because state is an operation log, teams get a set of hard problems solved by
+default:
+
+- **Track every change** — who did what, when, addressable by index and hash.
+- **Sync across peers** — offline edits merge deterministically, no last-write-wins.
+- **Build collaborative apps** — concurrent editing without conflict resolution code.
+- **Keep auditable histories** — the log *is* the audit trail.
+- **Separate business logic from UI** — reducers hold the rules; editors just dispatch.
+
+That makes it well suited to operational systems, governance tools, financial
+workflows, collaborative editors, and other distributed applications.
+
+## What you'll learn
+
+By the end of this course you'll understand:
+
+- The Powerhouse mental model — documents, state, and operations
+- Actions and reducers — how state changes are described and applied
+- Editors and host applications
+- Connect and distributed synchronization
+- Switchboard, subgraphs, and read models
+- How a complete Powerhouse application fits together
+
+## The path
+
+The chapters are designed to be read in order — each builds on the last:
+
+**Foundations → Architecture → Document models → Editors → Connect → Switchboard → Sync → Going further**
+
+Each chapter is a handful of short lessons that end with a quiz to check your
+understanding.
+
+<LearnCourseGrid />
+
+After the course you'll be able to navigate the Powerhouse architecture, reason
+about how a change flows through the stack, and read what the agent generates
+with confidence.
+
+<Admonition type="tip" title="Start here">
+
+New to Powerhouse? Begin with
+[What is Powerhouse?](/academy/Learn/foundations/what-is-powerhouse) — every
+later lesson builds on the operation-log model it establishes.
+
+</Admonition>

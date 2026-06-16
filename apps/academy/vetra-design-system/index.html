@@ -1,0 +1,517 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vetra Design System</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      :root {
+        --sidebar-w: 260px;
+        --bg: #fcfcfc;
+        --bg-sidebar: #f5f5f7;
+        --text: #141414;
+        --text-muted: #6c7275;
+        --border: #e0e0e0;
+        --primary: #04c161;
+        --primary-light: #e0f7ec;
+        --hover: #eeeff1;
+        --active: #e4e5e9;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #1a1d24;
+          --bg-sidebar: #141619;
+          --text: #fafafa;
+          --text-muted: #8a8f98;
+          --border: #2e3138;
+          --primary-light: #0d3321;
+          --hover: #252830;
+          --active: #2e3138;
+        }
+      }
+
+      body {
+        font-family:
+          'Inter',
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        height: 100vh;
+        display: flex;
+        overflow: hidden;
+      }
+
+      .sidebar {
+        width: var(--sidebar-w);
+        min-width: var(--sidebar-w);
+        height: 100vh;
+        background: var(--bg-sidebar);
+        border-right: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        transition:
+          margin-left 0.25s ease,
+          min-width 0.25s ease,
+          width 0.25s ease;
+        overflow: hidden;
+        z-index: 10;
+      }
+
+      .sidebar.collapsed {
+        margin-left: calc(-1 * var(--sidebar-w));
+        min-width: 0;
+        width: 0;
+      }
+
+      .sidebar-header {
+        padding: 20px 16px 12px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        border-bottom: 1px solid var(--border);
+        flex-shrink: 0;
+      }
+
+      .sidebar-header img {
+        height: 28px;
+        flex-shrink: 0;
+      }
+
+      .sidebar-header h1 {
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        white-space: nowrap;
+      }
+
+      .sidebar-header h1 span {
+        display: block;
+        font-size: 11px;
+        font-weight: 400;
+        color: var(--text-muted);
+        margin-top: 2px;
+      }
+
+      .sidebar-nav {
+        flex: 1;
+        overflow-y: auto;
+        padding: 8px;
+      }
+
+      .nav-section {
+        margin-bottom: 4px;
+      }
+
+      .nav-section-toggle {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        padding: 8px;
+        border: none;
+        background: none;
+        color: var(--text);
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        cursor: pointer;
+        border-radius: 6px;
+        text-align: left;
+        white-space: nowrap;
+      }
+
+      .nav-section-toggle:hover {
+        background: var(--hover);
+      }
+
+      .nav-section-toggle .chevron {
+        width: 14px;
+        height: 14px;
+        transition: transform 0.2s ease;
+        flex-shrink: 0;
+        color: var(--text-muted);
+      }
+
+      .nav-section.collapsed .chevron {
+        transform: rotate(-90deg);
+      }
+
+      .nav-section.collapsed .nav-items {
+        display: none;
+      }
+
+      .nav-items {
+        padding: 2px 0 4px;
+      }
+
+      .nav-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        padding: 6px 8px 6px 28px;
+        border: none;
+        background: none;
+        color: var(--text-muted);
+        font-size: 13px;
+        font-weight: 400;
+        cursor: pointer;
+        border-radius: 6px;
+        text-align: left;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        overflow: hidden;
+      }
+
+      .nav-item:hover {
+        background: var(--hover);
+        color: var(--text);
+      }
+      .nav-item.active {
+        background: var(--primary-light);
+        color: var(--primary);
+        font-weight: 500;
+      }
+
+      .nav-divider {
+        height: 1px;
+        background: var(--border);
+        margin: 8px;
+      }
+
+      .nav-download {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        padding: 6px 8px 6px 28px;
+        border: none;
+        background: none;
+        color: var(--text-muted);
+        font-size: 13px;
+        font-weight: 400;
+        cursor: pointer;
+        border-radius: 6px;
+        text-align: left;
+        text-decoration: none;
+        white-space: nowrap;
+      }
+
+      .nav-download:hover {
+        background: var(--hover);
+        color: var(--text);
+      }
+
+      .nav-download .dl-icon {
+        width: 14px;
+        height: 14px;
+        flex-shrink: 0;
+        opacity: 0.5;
+      }
+
+      .main {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+      }
+
+      .topbar {
+        height: 44px;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 0 12px;
+        border-bottom: 1px solid var(--border);
+        background: var(--bg);
+      }
+
+      .toggle-btn {
+        width: 32px;
+        height: 32px;
+        border: none;
+        background: none;
+        color: var(--text-muted);
+        cursor: pointer;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+
+      .toggle-btn:hover {
+        background: var(--hover);
+        color: var(--text);
+      }
+
+      .breadcrumb {
+        font-size: 13px;
+        color: var(--text-muted);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .breadcrumb strong {
+        color: var(--text);
+        font-weight: 500;
+      }
+
+      .content-frame {
+        flex: 1;
+        border: none;
+        width: 100%;
+        background: white;
+      }
+
+      .welcome {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+        padding: 40px;
+        text-align: center;
+      }
+
+      .welcome img {
+        height: 48px;
+      }
+      .welcome h2 {
+        font-size: 20px;
+        font-weight: 600;
+      }
+      .welcome p {
+        font-size: 14px;
+        color: var(--text-muted);
+        max-width: 400px;
+        line-height: 1.6;
+      }
+    </style>
+  </head>
+  <body>
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <img src="logos/vetra-icon.svg" alt="Vetra" />
+        <h1>Vetra <span>Design System</span></h1>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-section">
+          <button class="nav-section-toggle" onclick="toggleSection(this)">
+            <svg
+              class="chevron"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+            >
+              <path d="M5 3l5 5-5 5" />
+            </svg>
+            Style Guide
+          </button>
+          <div class="nav-items">
+            <button class="nav-item" onclick="load('styleguide.html', 'Style Guide')">
+              Style Guide
+            </button>
+          </div>
+        </div>
+
+        <div class="nav-section">
+          <button class="nav-section-toggle" onclick="toggleSection(this)">
+            <svg
+              class="chevron"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+            >
+              <path d="M5 3l5 5-5 5" />
+            </svg>
+            Presentation
+          </button>
+          <div class="nav-items">
+            <button class="nav-item" onclick="load('presentation.html', 'Presentation Templates')">
+              Slide Templates
+            </button>
+          </div>
+        </div>
+
+        <div class="nav-section">
+          <button class="nav-section-toggle" onclick="toggleSection(this)">
+            <svg
+              class="chevron"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+            >
+              <path d="M5 3l5 5-5 5" />
+            </svg>
+            Documents
+          </button>
+          <div class="nav-items">
+            <button class="nav-item" onclick="load('documents.html', 'Document Templates')">
+              Document Templates
+            </button>
+            <div class="nav-divider"></div>
+            <a class="nav-download" href="vetra-document-templates-light.pdf" download>
+              <svg
+                class="dl-icon"
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+              >
+                <path d="M8 2v8m0 0l-3-3m3 3l3-3M3 12v1.5h10V12" />
+              </svg>
+              PDF Export (Light)
+            </a>
+            <a class="nav-download" href="vetra-document-templates-dark.pdf" download>
+              <svg
+                class="dl-icon"
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+              >
+                <path d="M8 2v8m0 0l-3-3m3 3l3-3M3 12v1.5h10V12" />
+              </svg>
+              PDF Export (Dark)
+            </a>
+          </div>
+        </div>
+
+        <div class="nav-section">
+          <button class="nav-section-toggle" onclick="toggleSection(this)">
+            <svg
+              class="chevron"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+            >
+              <path d="M5 3l5 5-5 5" />
+            </svg>
+            Website
+          </button>
+          <div class="nav-items">
+            <button class="nav-item" onclick="load('website/landing-page.html', 'Landing Page')">
+              Landing Page
+            </button>
+            <button class="nav-item" onclick="load('website/about.html', 'About')">About</button>
+            <button class="nav-item" onclick="load('website/product.html', 'Product')">
+              Product
+            </button>
+            <button class="nav-item" onclick="load('website/pricing.html', 'Pricing')">
+              Pricing
+            </button>
+            <button class="nav-item" onclick="load('website/blog-article.html', 'Blog Article')">
+              Blog Article
+            </button>
+            <button class="nav-item" onclick="load('website/newsletter.html', 'Newsletter')">
+              Newsletter
+            </button>
+            <button class="nav-item" onclick="load('website/documentation.html', 'Documentation')">
+              Documentation
+            </button>
+            <button class="nav-item" onclick="load('website/dashboard.html', 'Dashboard')">
+              Dashboard
+            </button>
+            <button class="nav-item" onclick="load('website/ecommerce-product.html', 'E-Commerce')">
+              E-Commerce Product
+            </button>
+            <button class="nav-item" onclick="load('website/portfolio.html', 'Portfolio')">
+              Portfolio
+            </button>
+            <button class="nav-item" onclick="load('website/login.html', 'Login')">Login</button>
+            <button class="nav-item" onclick="load('website/contact.html', 'Contact')">
+              Contact
+            </button>
+            <button class="nav-item" onclick="load('website/careers.html', 'Careers')">
+              Careers
+            </button>
+            <button class="nav-item" onclick="load('website/changelog.html', 'Changelog')">
+              Changelog
+            </button>
+            <button class="nav-item" onclick="load('website/faq.html', 'FAQ')">FAQ</button>
+            <button class="nav-item" onclick="load('website/error-404.html', '404 Page')">
+              404 Page
+            </button>
+          </div>
+        </div>
+      </nav>
+    </aside>
+
+    <div class="main">
+      <div class="topbar">
+        <button class="toggle-btn" onclick="toggleSidebar()" title="Toggle sidebar">
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 18 18"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+          >
+            <path d="M3 4.5h12M3 9h12M3 13.5h12" />
+          </svg>
+        </button>
+        <div class="breadcrumb" id="breadcrumb">Select a page from the sidebar</div>
+      </div>
+      <div class="welcome" id="welcome">
+        <img src="logos/vetra-icon.svg" alt="Vetra" />
+        <h2>Vetra Design System</h2>
+        <p>
+          Browse the style guide, presentation templates, document templates, and website page
+          templates. Select a page from the sidebar to get started.
+        </p>
+      </div>
+      <iframe class="content-frame" id="frame" style="display: none"></iframe>
+    </div>
+
+    <script>
+      function toggleSidebar() {
+        document.getElementById('sidebar').classList.toggle('collapsed')
+      }
+
+      function toggleSection(btn) {
+        btn.closest('.nav-section').classList.toggle('collapsed')
+      }
+
+      function load(src, label) {
+        const frame = document.getElementById('frame')
+        const welcome = document.getElementById('welcome')
+        const breadcrumb = document.getElementById('breadcrumb')
+
+        welcome.style.display = 'none'
+        frame.style.display = 'block'
+        frame.src = src
+        breadcrumb.innerHTML = '<strong>' + label + '</strong>'
+
+        document.querySelectorAll('.nav-item').forEach((el) => el.classList.remove('active'))
+        event.currentTarget.classList.add('active')
+      }
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === '[' && !e.ctrlKey && !e.metaKey && e.target === document.body) {
+          toggleSidebar()
+        }
+      })
+    </script>
+  </body>
+</html>

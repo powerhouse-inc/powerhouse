@@ -1,0 +1,28 @@
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+/* Styleguide proportions: icon 36 / wordmark 24 = 3:2 */
+.icon {
+  height: 2.1rem;
+  width: auto;
+}
+
+.wordmark {
+  height: 1.4rem;
+  width: auto;
+}
+
+.wordmarkDark {
+  display: none;
+}
+
+:global([data-theme="dark"]) .wordmarkLight {
+  display: none;
+}
+
+:global([data-theme="dark"]) .wordmarkDark {
+  display: inline-block;
+}

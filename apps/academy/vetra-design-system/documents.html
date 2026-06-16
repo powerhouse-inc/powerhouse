@@ -1,0 +1,2665 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vetra Document Templates</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="colors.css" />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: 'Inter', sans-serif;
+        background: #e8e8e8;
+        padding: 40px;
+        transition: background 0.3s;
+      }
+      body.dark {
+        background: #111318;
+      }
+
+      .page-header {
+        max-width: 816px;
+        margin: 0 auto 32px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .page-header-left {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .page-header-left img {
+        height: 24px;
+      }
+      .page-header-title {
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        color: #9ea0a1;
+      }
+      .logo-light-mode,
+      .logo-dark-mode {
+        display: none;
+      }
+      body:not(.dark) .logo-light-mode {
+        display: block;
+      }
+      body.dark .logo-dark-mode {
+        display: block;
+      }
+
+      /* Toggle */
+      .theme-toggle {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        font-weight: 500;
+        color: #888;
+        cursor: pointer;
+        user-select: none;
+      }
+      .theme-toggle input {
+        display: none;
+      }
+      .toggle-track {
+        width: 40px;
+        height: 22px;
+        background: #d7d8d9;
+        border-radius: 11px;
+        position: relative;
+        transition: background 0.2s;
+      }
+      .toggle-track::after {
+        content: '';
+        position: absolute;
+        top: 3px;
+        left: 3px;
+        width: 16px;
+        height: 16px;
+        background: var(--primary);
+        border-radius: 50%;
+        transition: transform 0.2s;
+      }
+      .theme-toggle input:checked + .toggle-track {
+        background: #485265;
+      }
+      .theme-toggle input:checked + .toggle-track::after {
+        transform: translateX(18px);
+      }
+
+      /* Document stack */
+      .doc-stack {
+        max-width: 816px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 32px;
+      }
+
+      /* =============================================
+       PAGE BASE — A4-ish proportions
+       ============================================= */
+      .page {
+        width: 100%;
+        aspect-ratio: 8.5 / 11;
+        background: var(--background);
+        color: var(--foreground);
+        border-radius: 4px;
+        overflow: hidden;
+        position: relative;
+        box-shadow:
+          0 2px 16px rgba(0, 0, 0, 0.1),
+          0 0 0 1px rgba(0, 0, 0, 0.04);
+        transition:
+          background 0.3s,
+          color 0.3s;
+      }
+      .page * {
+        font-family: 'Inter', sans-serif;
+      }
+
+      /* Page number badge */
+      .page::after {
+        content: attr(data-page);
+        position: absolute;
+        bottom: 12px;
+        right: 14px;
+        font-size: 9px;
+        font-weight: 600;
+        color: var(--foreground-50);
+        pointer-events: none;
+        z-index: 5;
+        transition: color 0.3s;
+      }
+
+      /* Standard page padding */
+      .page-pad {
+        padding: 56px 64px;
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        height: 100%;
+      }
+
+      /* Theme-aware logo toggle */
+      .doc-logo-light,
+      .doc-logo-dark {
+        height: 20px;
+      }
+      .doc-logo-dark {
+        display: none;
+      }
+      body.dark .doc-logo-light {
+        display: none;
+      }
+      body.dark .doc-logo-dark {
+        display: block;
+      }
+
+      /* Text helpers */
+      .fg {
+        color: var(--foreground);
+        transition: color 0.3s;
+      }
+      .sub {
+        color: var(--foreground-70);
+        transition: color 0.3s;
+      }
+      .muted {
+        color: var(--muted-foreground);
+        transition: color 0.3s;
+      }
+
+      /* Divider */
+      .doc-hr {
+        border: none;
+        border-top: 1px solid var(--border);
+        margin: 16px 0;
+        transition: border-color 0.3s;
+      }
+      .doc-hr-thick {
+        border: none;
+        border-top: 3px solid var(--primary);
+        margin: 16px 0;
+        width: 48px;
+      }
+
+      /* Accent surface */
+      .doc-accent {
+        background: var(--accent);
+        border-radius: 8px;
+        padding: 20px;
+        transition: background 0.3s;
+      }
+      .doc-card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 20px;
+        transition:
+          background 0.3s,
+          border-color 0.3s;
+      }
+
+      /* Table */
+      .doc-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+      }
+      .doc-table th {
+        text-align: left;
+        font-weight: 700;
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        padding: 10px 12px;
+        border-bottom: 2px solid var(--primary);
+        color: var(--primary);
+        transition: border-color 0.3s;
+      }
+      .doc-table td {
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--border);
+        transition: border-color 0.3s;
+      }
+      .doc-table td:last-child,
+      .doc-table th:last-child {
+        text-align: right;
+      }
+
+      /* Bullet list */
+      .doc-list {
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .doc-list li {
+        padding-left: 16px;
+        position: relative;
+        font-size: 13px;
+        line-height: 1.7;
+        color: var(--foreground);
+      }
+      .doc-list li::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 8px;
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: var(--primary);
+      }
+
+      /* Progress bar */
+      .doc-progress {
+        height: 6px;
+        border-radius: 3px;
+        background: var(--muted);
+        overflow: hidden;
+        transition: background 0.3s;
+      }
+      .doc-progress-fill {
+        height: 100%;
+        border-radius: 3px;
+      }
+
+      /* Chart placeholder */
+      .doc-chart {
+        border-radius: 8px;
+        border: 1.5px dashed var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 1px;
+        color: var(--muted-foreground);
+        transition:
+          border-color 0.3s,
+          color 0.3s;
+      }
+
+      /* Primary bg page */
+      .primary-bg {
+        background: var(--primary) !important;
+        color: #fcfcfc !important;
+      }
+      .primary-bg .sub {
+        color: rgba(252, 252, 252, 0.65) !important;
+      }
+      .primary-bg .muted {
+        color: rgba(252, 252, 252, 0.4) !important;
+      }
+      .primary-bg .doc-hr {
+        border-color: rgba(255, 255, 255, 0.15) !important;
+      }
+
+      /* Page footer line */
+      .page-footer {
+        margin-top: auto;
+        padding-top: 16px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 9px;
+        font-weight: 500;
+        color: var(--foreground-50);
+        transition: color 0.3s;
+        border-top: 1px solid var(--border);
+        transition:
+          border-color 0.3s,
+          color 0.3s;
+      }
+      /* =============================================
+       PRINT STYLES
+       ============================================= */
+      @media print {
+        body {
+          background: none !important;
+          padding: 0 !important;
+          margin: 0 !important;
+        }
+        .page-header {
+          display: none !important;
+        }
+        .doc-stack {
+          max-width: none;
+          gap: 0;
+        }
+        .page {
+          aspect-ratio: auto;
+          width: 100%;
+          height: 100vh;
+          box-shadow: none;
+          border-radius: 0;
+          page-break-after: always;
+          break-after: page;
+        }
+        .page:last-child {
+          page-break-after: avoid;
+          break-after: avoid;
+        }
+        .page::after {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page-header">
+      <div class="page-header-left">
+        <img src="logos/vetra-full-logo.svg" alt="Vetra" height="24" class="logo-light-mode" />
+        <img src="logos/vetra-full-logo-light.svg" alt="Vetra" height="24" class="logo-dark-mode" />
+        <span class="page-header-title">Document Templates</span>
+      </div>
+      <label class="theme-toggle">
+        <span>Light</span>
+        <input type="checkbox" id="themeSwitch" />
+        <span class="toggle-track"></span>
+        <span>Dark</span>
+      </label>
+    </div>
+
+    <div class="doc-stack">
+      <!-- 1: Cover Page -->
+      <div class="page primary-bg" data-page="1">
+        <div class="page-pad" style="justify-content: space-between">
+          <img src="logos/vetra-full-logo-white.svg" alt="Vetra" style="height: 24px" />
+          <div
+            style="
+              flex: 1;
+              display: flex;
+              flex-direction: column;
+              justify-content: center;
+              gap: 16px;
+            "
+          >
+            <p
+              class="muted"
+              style="
+                font-size: 11px;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 3px;
+              "
+            >
+              Annual Report 2026
+            </p>
+            <h1 style="font-size: 40px; font-weight: 700; line-height: 1.15">
+              Building the Future of Decentralized Operations
+            </h1>
+            <p class="sub" style="font-size: 14px; line-height: 1.6; max-width: 75%">
+              A comprehensive overview of our platform growth, key milestones, financial
+              performance, and strategic roadmap for the year ahead.
+            </p>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: flex-end">
+            <div>
+              <p class="muted" style="font-size: 10px">Prepared by</p>
+              <p style="font-size: 12px; font-weight: 600">Vetra Powerhouse</p>
+            </div>
+            <div style="text-align: right">
+              <p class="muted" style="font-size: 10px">Date</p>
+              <p style="font-size: 12px; font-weight: 600">March 2026</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2: Table of Contents -->
+      <div class="page" data-page="2">
+        <div class="page-pad">
+          <img src="logos/vetra-icon.svg" alt="" style="height: 20px; margin-bottom: 32px" />
+          <h2 style="font-size: 28px; font-weight: 700; margin-bottom: 8px">Table of Contents</h2>
+          <hr class="doc-hr-thick" style="margin-bottom: 32px" />
+          <div style="display: flex; flex-direction: column; gap: 0; flex: 1">
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                align-items: baseline;
+                padding: 14px 0;
+                border-bottom: 1px solid var(--border);
+                transition: border-color 0.3s;
+              "
+            >
+              <div style="display: flex; align-items: baseline; gap: 16px">
+                <span style="font-size: 14px; font-weight: 700; color: var(--primary); width: 24px"
+                  >01</span
+                >
+                <span style="font-size: 14px; font-weight: 600">Executive Summary</span>
+              </div>
+              <span class="muted" style="font-size: 12px">3</span>
+            </div>
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                align-items: baseline;
+                padding: 14px 0;
+                border-bottom: 1px solid var(--border);
+                transition: border-color 0.3s;
+              "
+            >
+              <div style="display: flex; align-items: baseline; gap: 16px">
+                <span style="font-size: 14px; font-weight: 700; color: var(--primary); width: 24px"
+                  >02</span
+                >
+                <span style="font-size: 14px; font-weight: 600">Business Letter</span>
+              </div>
+              <span class="muted" style="font-size: 12px">4</span>
+            </div>
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                align-items: baseline;
+                padding: 14px 0;
+                border-bottom: 1px solid var(--border);
+                transition: border-color 0.3s;
+              "
+            >
+              <div style="display: flex; align-items: baseline; gap: 16px">
+                <span style="font-size: 14px; font-weight: 700; color: var(--primary); width: 24px"
+                  >03</span
+                >
+                <span style="font-size: 14px; font-weight: 600">Invoice</span>
+              </div>
+              <span class="muted" style="font-size: 12px">5</span>
+            </div>
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                align-items: baseline;
+                padding: 14px 0;
+                border-bottom: 1px solid var(--border);
+                transition: border-color 0.3s;
+              "
+            >
+              <div style="display: flex; align-items: baseline; gap: 16px">
+                <span style="font-size: 14px; font-weight: 700; color: var(--primary); width: 24px"
+                  >04</span
+                >
+                <span style="font-size: 14px; font-weight: 600">Analytics Report</span>
+              </div>
+              <span class="muted" style="font-size: 12px">6</span>
+            </div>
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                align-items: baseline;
+                padding: 14px 0;
+                border-bottom: 1px solid var(--border);
+                transition: border-color 0.3s;
+              "
+            >
+              <div style="display: flex; align-items: baseline; gap: 16px">
+                <span style="font-size: 14px; font-weight: 700; color: var(--primary); width: 24px"
+                  >05</span
+                >
+                <span style="font-size: 14px; font-weight: 600">Two-Column Paper</span>
+              </div>
+              <span class="muted" style="font-size: 12px">7</span>
+            </div>
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                align-items: baseline;
+                padding: 14px 0;
+                border-bottom: 1px solid var(--border);
+                transition: border-color 0.3s;
+              "
+            >
+              <div style="display: flex; align-items: baseline; gap: 16px">
+                <span style="font-size: 14px; font-weight: 700; color: var(--primary); width: 24px"
+                  >06</span
+                >
+                <span style="font-size: 14px; font-weight: 600">Project Proposal</span>
+              </div>
+              <span class="muted" style="font-size: 12px">8</span>
+            </div>
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                align-items: baseline;
+                padding: 14px 0;
+                border-bottom: 1px solid var(--border);
+                transition: border-color 0.3s;
+              "
+            >
+              <div style="display: flex; align-items: baseline; gap: 16px">
+                <span style="font-size: 14px; font-weight: 700; color: var(--primary); width: 24px"
+                  >07</span
+                >
+                <span style="font-size: 14px; font-weight: 600">Meeting Minutes</span>
+              </div>
+              <span class="muted" style="font-size: 12px">9</span>
+            </div>
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                align-items: baseline;
+                padding: 14px 0;
+                border-bottom: 1px solid var(--border);
+                transition: border-color 0.3s;
+              "
+            >
+              <div style="display: flex; align-items: baseline; gap: 16px">
+                <span style="font-size: 14px; font-weight: 700; color: var(--primary); width: 24px"
+                  >08</span
+                >
+                <span style="font-size: 14px; font-weight: 600">Resume / CV</span>
+              </div>
+              <span class="muted" style="font-size: 12px">10</span>
+            </div>
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                align-items: baseline;
+                padding: 14px 0;
+                border-bottom: 1px solid var(--border);
+                transition: border-color 0.3s;
+              "
+            >
+              <div style="display: flex; align-items: baseline; gap: 16px">
+                <span style="font-size: 14px; font-weight: 700; color: var(--primary); width: 24px"
+                  >09</span
+                >
+                <span style="font-size: 14px; font-weight: 600">Newsletter</span>
+              </div>
+              <span class="muted" style="font-size: 12px">11</span>
+            </div>
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                align-items: baseline;
+                padding: 14px 0;
+              "
+            >
+              <div style="display: flex; align-items: baseline; gap: 16px">
+                <span style="font-size: 14px; font-weight: 700; color: var(--primary); width: 24px"
+                  >10</span
+                >
+                <span style="font-size: 14px; font-weight: 600">More Templates</span>
+              </div>
+              <span class="muted" style="font-size: 12px">12–16</span>
+            </div>
+          </div>
+          <div class="page-footer">
+            <span>Vetra Powerhouse</span>
+            <span>2</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3: Executive Summary / Memo -->
+      <div class="page" data-page="3">
+        <div class="page-pad">
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: flex-start;
+              margin-bottom: 24px;
+            "
+          >
+            <img src="logos/vetra-icon.svg" alt="" style="height: 20px" />
+            <div style="text-align: right">
+              <p class="muted" style="font-size: 10px">Confidential</p>
+            </div>
+          </div>
+          <p
+            class="muted"
+            style="
+              font-size: 10px;
+              font-weight: 600;
+              text-transform: uppercase;
+              letter-spacing: 2px;
+              margin-bottom: 6px;
+            "
+          >
+            Executive Summary
+          </p>
+          <h2 style="font-size: 24px; font-weight: 700; line-height: 1.3; margin-bottom: 6px">
+            Platform Performance &amp; Strategic Outlook
+          </h2>
+          <hr class="doc-hr-thick" style="margin-bottom: 24px" />
+          <div
+            style="
+              display: grid;
+              grid-template-columns: 1fr 1fr 1fr;
+              gap: 16px;
+              margin-bottom: 24px;
+            "
+          >
+            <div class="doc-accent" style="text-align: center">
+              <div style="font-size: 28px; font-weight: 700; color: var(--primary); line-height: 1">
+                2.4k
+              </div>
+              <div class="sub" style="font-size: 10px; font-weight: 500; margin-top: 4px">
+                Active Users
+              </div>
+            </div>
+            <div class="doc-accent" style="text-align: center">
+              <div style="font-size: 28px; font-weight: 700; color: var(--success); line-height: 1">
+                $1.2M
+              </div>
+              <div class="sub" style="font-size: 10px; font-weight: 500; margin-top: 4px">ARR</div>
+            </div>
+            <div class="doc-accent" style="text-align: center">
+              <div
+                style="font-size: 28px; font-weight: 700; color: var(--progress); line-height: 1"
+              >
+                99.9%
+              </div>
+              <div class="sub" style="font-size: 10px; font-weight: 500; margin-top: 4px">
+                Uptime
+              </div>
+            </div>
+          </div>
+          <h3 style="font-size: 14px; font-weight: 700; margin-bottom: 8px">Overview</h3>
+          <p class="sub" style="font-size: 12px; line-height: 1.8; margin-bottom: 16px">
+            The past quarter has shown strong momentum across all key performance indicators. User
+            acquisition grew 34% quarter-over-quarter, driven by the launch of our self-serve
+            onboarding flow and expanded integration marketplace. Revenue growth continues to
+            outpace projections, with annual recurring revenue reaching $1.2M.
+          </p>
+          <h3 style="font-size: 14px; font-weight: 700; margin-bottom: 8px">Key Achievements</h3>
+          <ul class="doc-list" style="margin-bottom: 16px">
+            <li>Launched v2.0 of the platform with modular architecture and plugin system</li>
+            <li>Onboarded 12 enterprise clients representing $480k in new ARR</li>
+            <li>Reduced average API response time from 320ms to 148ms</li>
+            <li>Achieved SOC 2 Type II certification ahead of schedule</li>
+          </ul>
+          <h3 style="font-size: 14px; font-weight: 700; margin-bottom: 8px">Outlook</h3>
+          <p class="sub" style="font-size: 12px; line-height: 1.8">
+            We expect continued growth in Q2 with the release of our analytics dashboard, mobile
+            SDK, and expanded partner program. The primary focus will be on enterprise conversion
+            and reducing time-to-value for new customers.
+          </p>
+          <div class="page-footer">
+            <span>Vetra Powerhouse — Confidential</span>
+            <span>3</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4: Business Letter -->
+      <div class="page" data-page="4">
+        <div class="page-pad">
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: flex-start;
+              margin-bottom: 40px;
+            "
+          >
+            <div>
+              <img src="logos/vetra-icon.svg" alt="" style="height: 20px; margin-bottom: 12px" />
+              <p style="font-size: 11px; font-weight: 600">Vetra Powerhouse B.V.</p>
+              <p class="sub" style="font-size: 11px; line-height: 1.7">
+                Keizersgracht 520<br />1017 EK Amsterdam<br />The Netherlands
+              </p>
+            </div>
+            <div style="text-align: right">
+              <p class="sub" style="font-size: 11px; line-height: 1.7">
+                hello@vetra.io<br />+31 20 123 4567<br />vetra.io
+              </p>
+            </div>
+          </div>
+          <p class="sub" style="font-size: 11px; margin-bottom: 24px">March 13, 2026</p>
+          <div style="margin-bottom: 24px">
+            <p style="font-size: 11px; font-weight: 600">Ms. Sarah Chen</p>
+            <p class="sub" style="font-size: 11px; line-height: 1.7">
+              VP of Engineering<br />TechCorp International<br />350 Fifth Avenue, Suite 7200<br />New
+              York, NY 10118
+            </p>
+          </div>
+          <p style="font-size: 12px; font-weight: 600; margin-bottom: 16px">
+            Re: Partnership Proposal — Platform Integration
+          </p>
+          <p class="sub" style="font-size: 12px; line-height: 1.8; margin-bottom: 14px">
+            Dear Ms. Chen,
+          </p>
+          <p class="sub" style="font-size: 12px; line-height: 1.8; margin-bottom: 14px">
+            Thank you for taking the time to meet with our team last week to discuss the potential
+            integration between Vetra Powerhouse and TechCorp's infrastructure platform. We were
+            impressed by your team's technical depth and believe there is strong alignment between
+            our roadmaps.
+          </p>
+          <p class="sub" style="font-size: 12px; line-height: 1.8; margin-bottom: 14px">
+            As discussed, we propose a phased integration approach beginning with our REST API
+            connector, followed by a deeper GraphQL integration in Q3. Our engineering team has
+            already completed a preliminary feasibility assessment and is confident we can deliver
+            the initial phase within six weeks of kickoff.
+          </p>
+          <p class="sub" style="font-size: 12px; line-height: 1.8; margin-bottom: 14px">
+            Enclosed you will find the detailed technical specification and proposed timeline. We
+            would be happy to schedule a follow-up call with both engineering teams to align on
+            implementation details.
+          </p>
+          <p class="sub" style="font-size: 12px; line-height: 1.8; margin-bottom: 24px">
+            We look forward to building something great together.
+          </p>
+          <p style="font-size: 12px; line-height: 1.8">Sincerely,</p>
+          <p style="font-size: 12px; font-weight: 600; margin-top: 24px">Alexander Voss</p>
+          <p class="sub" style="font-size: 11px">CEO, Vetra Powerhouse</p>
+          <div class="page-footer">
+            <span>Vetra Powerhouse B.V. — KvK 87654321</span>
+            <span>4</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5: Invoice -->
+      <div class="page" data-page="5">
+        <div class="page-pad">
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: flex-start;
+              margin-bottom: 32px;
+            "
+          >
+            <div>
+              <img src="logos/vetra-icon.svg" alt="" style="height: 20px; margin-bottom: 12px" />
+              <p style="font-size: 11px; font-weight: 600">Vetra Powerhouse B.V.</p>
+              <p class="sub" style="font-size: 11px; line-height: 1.7">
+                Keizersgracht 520<br />1017 EK Amsterdam
+              </p>
+            </div>
+            <div style="text-align: right">
+              <h2
+                style="font-size: 28px; font-weight: 700; color: var(--primary); margin-bottom: 8px"
+              >
+                INVOICE
+              </h2>
+              <p style="font-size: 11px">
+                <span class="muted">Invoice No.</span> <strong>INV-2026-0042</strong>
+              </p>
+              <p style="font-size: 11px">
+                <span class="muted">Date</span> <strong>March 13, 2026</strong>
+              </p>
+              <p style="font-size: 11px">
+                <span class="muted">Due Date</span> <strong>April 12, 2026</strong>
+              </p>
+            </div>
+          </div>
+          <div class="doc-accent" style="margin-bottom: 24px; padding: 16px">
+            <p
+              class="muted"
+              style="
+                font-size: 9px;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                margin-bottom: 4px;
+              "
+            >
+              Bill To
+            </p>
+            <p style="font-size: 12px; font-weight: 600">TechCorp International</p>
+            <p class="sub" style="font-size: 11px; line-height: 1.6">
+              350 Fifth Avenue, Suite 7200<br />New York, NY 10118<br />billing@techcorp.com
+            </p>
+          </div>
+          <table class="doc-table" style="margin-bottom: 24px">
+            <thead>
+              <tr>
+                <th>Description</th>
+                <th style="text-align: center">Qty</th>
+                <th style="text-align: center">Rate</th>
+                <th>Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Platform License — Pro Plan (Annual)</td>
+                <td style="text-align: center">1</td>
+                <td style="text-align: center">$4,800.00</td>
+                <td style="text-align: right">$4,800.00</td>
+              </tr>
+              <tr>
+                <td>Custom Integration Development (40 hrs)</td>
+                <td style="text-align: center">40</td>
+                <td style="text-align: center">$150.00</td>
+                <td style="text-align: right">$6,000.00</td>
+              </tr>
+              <tr>
+                <td>Priority Support Add-on (Annual)</td>
+                <td style="text-align: center">1</td>
+                <td style="text-align: center">$1,200.00</td>
+                <td style="text-align: right">$1,200.00</td>
+              </tr>
+              <tr>
+                <td>Data Migration Service</td>
+                <td style="text-align: center">1</td>
+                <td style="text-align: center">$2,500.00</td>
+                <td style="text-align: right">$2,500.00</td>
+              </tr>
+            </tbody>
+          </table>
+          <div style="display: flex; justify-content: flex-end; margin-bottom: 32px">
+            <div style="width: 240px">
+              <div
+                style="
+                  display: flex;
+                  justify-content: space-between;
+                  padding: 6px 0;
+                  font-size: 12px;
+                "
+              >
+                <span class="sub">Subtotal</span><span style="font-weight: 600">$14,500.00</span>
+              </div>
+              <div
+                style="
+                  display: flex;
+                  justify-content: space-between;
+                  padding: 6px 0;
+                  font-size: 12px;
+                  border-bottom: 1px solid var(--border);
+                  transition: border-color 0.3s;
+                "
+              >
+                <span class="sub">VAT (21%)</span><span style="font-weight: 600">$3,045.00</span>
+              </div>
+              <div
+                style="
+                  display: flex;
+                  justify-content: space-between;
+                  padding: 10px 0;
+                  font-size: 14px;
+                "
+              >
+                <span style="font-weight: 700">Total</span
+                ><span style="font-weight: 700; color: var(--primary)">$17,545.00</span>
+              </div>
+            </div>
+          </div>
+          <div class="doc-accent" style="padding: 14px 16px">
+            <p style="font-size: 10px; font-weight: 600; margin-bottom: 4px">Payment Details</p>
+            <p class="sub" style="font-size: 10px; line-height: 1.7">
+              Bank: ING Bank N.V. &nbsp;|&nbsp; IBAN: NL91 INGB 0001 2345 67 &nbsp;|&nbsp; BIC:
+              INGBNL2A &nbsp;|&nbsp; Reference: INV-2026-0042
+            </p>
+          </div>
+          <div class="page-footer">
+            <span>Vetra Powerhouse B.V. — KvK 87654321 — VAT NL123456789B01</span>
+            <span>5</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 6: Analytics Report -->
+      <div class="page" data-page="6">
+        <div class="page-pad">
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: flex-start;
+              margin-bottom: 24px;
+            "
+          >
+            <div>
+              <p
+                class="muted"
+                style="
+                  font-size: 10px;
+                  font-weight: 600;
+                  text-transform: uppercase;
+                  letter-spacing: 2px;
+                  margin-bottom: 6px;
+                "
+              >
+                Analytics Report
+              </p>
+              <h2 style="font-size: 22px; font-weight: 700">Q1 2026 Performance Dashboard</h2>
+            </div>
+            <img src="logos/vetra-icon.svg" alt="" style="height: 20px" />
+          </div>
+          <hr class="doc-hr" style="margin-bottom: 20px" />
+          <div
+            style="
+              display: grid;
+              grid-template-columns: repeat(4, 1fr);
+              gap: 12px;
+              margin-bottom: 20px;
+            "
+          >
+            <div class="doc-accent" style="padding: 14px; text-align: center">
+              <div style="font-size: 22px; font-weight: 700; color: var(--primary); line-height: 1">
+                12.8k
+              </div>
+              <div class="sub" style="font-size: 9px; font-weight: 500; margin-top: 4px">
+                Page Views
+              </div>
+              <div style="font-size: 9px; font-weight: 600; color: var(--success); margin-top: 2px">
+                +24%
+              </div>
+            </div>
+            <div class="doc-accent" style="padding: 14px; text-align: center">
+              <div style="font-size: 22px; font-weight: 700; color: var(--success); line-height: 1">
+                3.2k
+              </div>
+              <div class="sub" style="font-size: 9px; font-weight: 500; margin-top: 4px">
+                Sessions
+              </div>
+              <div style="font-size: 9px; font-weight: 600; color: var(--success); margin-top: 2px">
+                +18%
+              </div>
+            </div>
+            <div class="doc-accent" style="padding: 14px; text-align: center">
+              <div
+                style="font-size: 22px; font-weight: 700; color: var(--progress); line-height: 1"
+              >
+                4:32
+              </div>
+              <div class="sub" style="font-size: 9px; font-weight: 500; margin-top: 4px">
+                Avg. Duration
+              </div>
+              <div style="font-size: 9px; font-weight: 600; color: var(--success); margin-top: 2px">
+                +12%
+              </div>
+            </div>
+            <div class="doc-accent" style="padding: 14px; text-align: center">
+              <div style="font-size: 22px; font-weight: 700; color: var(--todo); line-height: 1">
+                2.1%
+              </div>
+              <div class="sub" style="font-size: 9px; font-weight: 500; margin-top: 4px">
+                Bounce Rate
+              </div>
+              <div style="font-size: 9px; font-weight: 600; color: var(--success); margin-top: 2px">
+                -8%
+              </div>
+            </div>
+          </div>
+          <div
+            style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px"
+          >
+            <div>
+              <h4 style="font-size: 12px; font-weight: 700; margin-bottom: 10px">
+                Traffic Over Time
+              </h4>
+              <div class="doc-chart" style="height: 140px">CHART — Line graph</div>
+            </div>
+            <div>
+              <h4 style="font-size: 12px; font-weight: 700; margin-bottom: 10px">
+                Conversion Funnel
+              </h4>
+              <div class="doc-chart" style="height: 140px">CHART — Funnel</div>
+            </div>
+          </div>
+          <h4 style="font-size: 12px; font-weight: 700; margin-bottom: 10px">Top Channels</h4>
+          <table class="doc-table" style="margin-bottom: 16px">
+            <thead>
+              <tr>
+                <th>Channel</th>
+                <th style="text-align: center">Sessions</th>
+                <th style="text-align: center">Conv. Rate</th>
+                <th>Revenue</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="font-weight: 600">Organic Search</td>
+                <td style="text-align: center">1,240</td>
+                <td style="text-align: center">4.2%</td>
+                <td style="text-align: right; font-weight: 600">$18,600</td>
+              </tr>
+              <tr>
+                <td style="font-weight: 600">Direct</td>
+                <td style="text-align: center">860</td>
+                <td style="text-align: center">6.1%</td>
+                <td style="text-align: right; font-weight: 600">$12,400</td>
+              </tr>
+              <tr>
+                <td style="font-weight: 600">Referral</td>
+                <td style="text-align: center">540</td>
+                <td style="text-align: center">3.8%</td>
+                <td style="text-align: right; font-weight: 600">$8,200</td>
+              </tr>
+              <tr>
+                <td style="font-weight: 600">Social</td>
+                <td style="text-align: center">380</td>
+                <td style="text-align: center">2.4%</td>
+                <td style="text-align: right; font-weight: 600">$4,100</td>
+              </tr>
+              <tr>
+                <td style="font-weight: 600">Email</td>
+                <td style="text-align: center">210</td>
+                <td style="text-align: center">7.8%</td>
+                <td style="text-align: right; font-weight: 600">$6,900</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="page-footer">
+            <span>Vetra Powerhouse — Analytics Report Q1 2026</span>
+            <span>6</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 7: Two-Column Paper -->
+      <div class="page" data-page="7">
+        <div class="page-pad" style="gap: 0">
+          <div style="text-align: center; margin-bottom: 24px">
+            <p
+              class="muted"
+              style="
+                font-size: 9px;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 2px;
+                margin-bottom: 8px;
+              "
+            >
+              Vetra Technical Paper — March 2026
+            </p>
+            <h2 style="font-size: 20px; font-weight: 700; line-height: 1.3; margin-bottom: 8px">
+              Decentralized Component Orchestration:<br />A Scalable Approach to Distributed Systems
+            </h2>
+            <p class="sub" style="font-size: 11px">Alexander Voss, Emma Fisher, Chris Davis</p>
+            <p class="muted" style="font-size: 10px; margin-top: 4px">Vetra Powerhouse Research</p>
+          </div>
+          <hr class="doc-hr" style="margin-bottom: 16px" />
+          <div
+            style="
+              columns: 2;
+              column-gap: 28px;
+              flex: 1;
+              font-size: 11px;
+              line-height: 1.8;
+              color: var(--foreground-70);
+            "
+          >
+            <p style="margin-bottom: 10px">
+              <strong style="color: var(--foreground)">Abstract.</strong> We present a novel
+              framework for orchestrating decentralized components across distributed
+              infrastructure. Our approach leverages content-addressable storage and event-driven
+              coordination to achieve horizontal scalability without sacrificing consistency
+              guarantees.
+            </p>
+            <p style="margin-bottom: 10px">
+              <strong style="color: var(--foreground)">1. Introduction</strong>
+            </p>
+            <p style="margin-bottom: 10px">
+              Modern distributed systems face a fundamental tension between scalability and
+              consistency. Traditional monolithic architectures provide strong consistency
+              guarantees but struggle to scale beyond a single deployment region. Conversely,
+              microservice architectures offer horizontal scalability at the cost of increased
+              operational complexity.
+            </p>
+            <p style="margin-bottom: 10px">
+              In this paper, we propose a middleware layer that sits between service discovery and
+              application logic, providing automatic orchestration of component lifecycle events.
+              The system maintains a directed acyclic graph (DAG) of component dependencies and uses
+              this graph to determine optimal scheduling strategies.
+            </p>
+            <p style="margin-bottom: 10px">
+              <strong style="color: var(--foreground)">2. Architecture</strong>
+            </p>
+            <p style="margin-bottom: 10px">
+              The core architecture consists of three primary subsystems: (1) a component registry
+              that maintains metadata and version history, (2) an event bus that propagates state
+              changes across the network, and (3) a scheduler that determines execution order based
+              on dependency constraints and resource availability.
+            </p>
+            <p style="margin-bottom: 10px">
+              Each component is packaged as an immutable artifact with a content-addressable
+              identifier. This ensures reproducibility across environments and enables efficient
+              caching at the edge. Components declare their dependencies explicitly through a
+              manifest file, which the orchestrator uses to construct the DAG.
+            </p>
+            <p style="margin-bottom: 10px">
+              <strong style="color: var(--foreground)">3. Coordination Protocol</strong>
+            </p>
+            <p style="margin-bottom: 10px">
+              We employ a modified Raft consensus algorithm for leader election within component
+              groups. Unlike traditional Raft, our variant supports dynamic membership changes
+              without requiring a full reconfiguration round. This enables elastic scaling of
+              component instances in response to load.
+            </p>
+          </div>
+          <div class="page-footer" style="margin-top: 16px">
+            <span>Vetra Technical Paper</span>
+            <span>7</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 8: Project Proposal -->
+      <div class="page" data-page="8">
+        <div class="page-pad">
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: flex-start;
+              margin-bottom: 24px;
+            "
+          >
+            <img src="logos/vetra-icon.svg" alt="" style="height: 20px" />
+            <p class="muted" style="font-size: 10px; font-weight: 600">PROPOSAL</p>
+          </div>
+          <h2 style="font-size: 22px; font-weight: 700; margin-bottom: 6px">
+            Design System Migration
+          </h2>
+          <p class="sub" style="font-size: 12px; margin-bottom: 20px">
+            Proposed migration from legacy component library to Vetra Design System v2.
+          </p>
+          <hr class="doc-hr-thick" style="margin-bottom: 24px" />
+          <div
+            style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px"
+          >
+            <div>
+              <p
+                class="muted"
+                style="
+                  font-size: 9px;
+                  font-weight: 600;
+                  text-transform: uppercase;
+                  letter-spacing: 1px;
+                  margin-bottom: 6px;
+                "
+              >
+                Client
+              </p>
+              <p style="font-size: 12px; font-weight: 600">TechCorp International</p>
+            </div>
+            <div>
+              <p
+                class="muted"
+                style="
+                  font-size: 9px;
+                  font-weight: 600;
+                  text-transform: uppercase;
+                  letter-spacing: 1px;
+                  margin-bottom: 6px;
+                "
+              >
+                Timeline
+              </p>
+              <p style="font-size: 12px; font-weight: 600">12 weeks (Q2 2026)</p>
+            </div>
+            <div>
+              <p
+                class="muted"
+                style="
+                  font-size: 9px;
+                  font-weight: 600;
+                  text-transform: uppercase;
+                  letter-spacing: 1px;
+                  margin-bottom: 6px;
+                "
+              >
+                Budget
+              </p>
+              <p style="font-size: 12px; font-weight: 600">$85,000</p>
+            </div>
+            <div>
+              <p
+                class="muted"
+                style="
+                  font-size: 9px;
+                  font-weight: 600;
+                  text-transform: uppercase;
+                  letter-spacing: 1px;
+                  margin-bottom: 6px;
+                "
+              >
+                Team Size
+              </p>
+              <p style="font-size: 12px; font-weight: 600">4 engineers + 1 designer</p>
+            </div>
+          </div>
+          <h3 style="font-size: 14px; font-weight: 700; margin-bottom: 8px">Scope of Work</h3>
+          <ul class="doc-list" style="margin-bottom: 20px">
+            <li>Audit existing component library (142 components) and map to new system</li>
+            <li>Establish design token pipeline from Figma to codebase</li>
+            <li>Migrate core components (buttons, forms, navigation, cards, modals)</li>
+            <li>Build automated visual regression testing suite</li>
+            <li>Create comprehensive documentation and migration guide</li>
+          </ul>
+          <h3 style="font-size: 14px; font-weight: 700; margin-bottom: 12px">Phased Timeline</h3>
+          <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px">
+            <div style="display: flex; gap: 12px; align-items: center">
+              <div
+                style="
+                  width: 100px;
+                  font-size: 10px;
+                  font-weight: 700;
+                  color: var(--primary);
+                  flex-shrink: 0;
+                "
+              >
+                Weeks 1–2
+              </div>
+              <div
+                style="
+                  flex: 1;
+                  height: 24px;
+                  background: var(--primary-30);
+                  border-radius: 4px;
+                  display: flex;
+                  align-items: center;
+                  padding: 0 10px;
+                  font-size: 10px;
+                  font-weight: 600;
+                  color: var(--primary);
+                "
+              >
+                Audit &amp; Discovery
+              </div>
+            </div>
+            <div style="display: flex; gap: 12px; align-items: center">
+              <div
+                style="
+                  width: 100px;
+                  font-size: 10px;
+                  font-weight: 700;
+                  color: var(--progress);
+                  flex-shrink: 0;
+                "
+              >
+                Weeks 3–6
+              </div>
+              <div
+                style="
+                  flex: 1;
+                  height: 24px;
+                  background: var(--progress-30);
+                  border-radius: 4px;
+                  display: flex;
+                  align-items: center;
+                  padding: 0 10px;
+                  font-size: 10px;
+                  font-weight: 600;
+                  color: var(--progress);
+                "
+              >
+                Token Pipeline &amp; Core Components
+              </div>
+            </div>
+            <div style="display: flex; gap: 12px; align-items: center">
+              <div
+                style="
+                  width: 100px;
+                  font-size: 10px;
+                  font-weight: 700;
+                  color: var(--success);
+                  flex-shrink: 0;
+                "
+              >
+                Weeks 7–10
+              </div>
+              <div
+                style="
+                  flex: 1;
+                  height: 24px;
+                  background: var(--success-30);
+                  border-radius: 4px;
+                  display: flex;
+                  align-items: center;
+                  padding: 0 10px;
+                  font-size: 10px;
+                  font-weight: 600;
+                  color: var(--success);
+                "
+              >
+                Migration &amp; Testing
+              </div>
+            </div>
+            <div style="display: flex; gap: 12px; align-items: center">
+              <div
+                style="
+                  width: 100px;
+                  font-size: 10px;
+                  font-weight: 700;
+                  color: var(--yellow);
+                  flex-shrink: 0;
+                "
+              >
+                Weeks 11–12
+              </div>
+              <div
+                style="
+                  flex: 1;
+                  height: 24px;
+                  background: var(--yellow-30);
+                  border-radius: 4px;
+                  display: flex;
+                  align-items: center;
+                  padding: 0 10px;
+                  font-size: 10px;
+                  font-weight: 600;
+                  color: var(--yellow);
+                "
+              >
+                Documentation &amp; Handoff
+              </div>
+            </div>
+          </div>
+          <h3 style="font-size: 14px; font-weight: 700; margin-bottom: 8px">Expected Outcomes</h3>
+          <p class="sub" style="font-size: 12px; line-height: 1.8">
+            A fully migrated, token-driven design system with 100% component coverage, automated
+            visual testing, and a documented migration path for remaining legacy pages.
+          </p>
+          <div class="page-footer">
+            <span>Vetra Powerhouse — Proposal</span>
+            <span>8</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 9: Meeting Minutes -->
+      <div class="page" data-page="9">
+        <div class="page-pad">
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: flex-start;
+              margin-bottom: 24px;
+            "
+          >
+            <div>
+              <p
+                class="muted"
+                style="
+                  font-size: 10px;
+                  font-weight: 600;
+                  text-transform: uppercase;
+                  letter-spacing: 2px;
+                  margin-bottom: 6px;
+                "
+              >
+                Meeting Minutes
+              </p>
+              <h2 style="font-size: 22px; font-weight: 700">Sprint Planning — Week 11</h2>
+            </div>
+            <img src="logos/vetra-icon.svg" alt="" style="height: 20px" />
+          </div>
+          <hr class="doc-hr" style="margin-bottom: 20px" />
+          <div
+            style="
+              display: grid;
+              grid-template-columns: 1fr 1fr 1fr;
+              gap: 16px;
+              margin-bottom: 24px;
+            "
+          >
+            <div>
+              <p
+                class="muted"
+                style="
+                  font-size: 9px;
+                  font-weight: 600;
+                  text-transform: uppercase;
+                  letter-spacing: 1px;
+                  margin-bottom: 4px;
+                "
+              >
+                Date &amp; Time
+              </p>
+              <p style="font-size: 12px; font-weight: 500">March 10, 2026 — 10:00 AM</p>
+            </div>
+            <div>
+              <p
+                class="muted"
+                style="
+                  font-size: 9px;
+                  font-weight: 600;
+                  text-transform: uppercase;
+                  letter-spacing: 1px;
+                  margin-bottom: 4px;
+                "
+              >
+                Location
+              </p>
+              <p style="font-size: 12px; font-weight: 500">Virtual (Google Meet)</p>
+            </div>
+            <div>
+              <p
+                class="muted"
+                style="
+                  font-size: 9px;
+                  font-weight: 600;
+                  text-transform: uppercase;
+                  letter-spacing: 1px;
+                  margin-bottom: 4px;
+                "
+              >
+                Facilitator
+              </p>
+              <p style="font-size: 12px; font-weight: 500">Chris Davis</p>
+            </div>
+          </div>
+          <div class="doc-accent" style="margin-bottom: 20px; padding: 14px 16px">
+            <p style="font-size: 10px; font-weight: 600; margin-bottom: 4px">Attendees</p>
+            <p class="sub" style="font-size: 11px">
+              Alice Brown (Eng), Chris Davis (PM), Emma Fisher (Design), George Hill (DevOps), Jane
+              Kim (QA)
+            </p>
+          </div>
+          <h3 style="font-size: 13px; font-weight: 700; margin-bottom: 10px">
+            Agenda &amp; Discussion
+          </h3>
+          <div style="margin-bottom: 16px">
+            <p style="font-size: 12px; font-weight: 600; margin-bottom: 4px; color: var(--primary)">
+              1. Sprint 10 Retrospective
+            </p>
+            <p class="sub" style="font-size: 11px; line-height: 1.7; padding-left: 16px">
+              Completed 34 of 38 story points. Two items carried over due to API dependency blocker.
+              Team velocity trending upward — 15% improvement over last 3 sprints.
+            </p>
+          </div>
+          <div style="margin-bottom: 16px">
+            <p style="font-size: 12px; font-weight: 600; margin-bottom: 4px; color: var(--primary)">
+              2. Sprint 11 Planning
+            </p>
+            <p class="sub" style="font-size: 11px; line-height: 1.7; padding-left: 16px">
+              Committed to 36 story points. Key items: analytics dashboard MVP (13 pts),
+              notification service refactor (8 pts), design token sync pipeline (8 pts), bug fixes
+              and tech debt (7 pts).
+            </p>
+          </div>
+          <div style="margin-bottom: 16px">
+            <p style="font-size: 12px; font-weight: 600; margin-bottom: 4px; color: var(--primary)">
+              3. Blockers &amp; Risks
+            </p>
+            <p class="sub" style="font-size: 11px; line-height: 1.7; padding-left: 16px">
+              Third-party OAuth provider deprecating v1 endpoint on April 1. George to coordinate
+              migration by end of sprint. Design review for analytics dashboard scheduled for
+              Wednesday.
+            </p>
+          </div>
+          <h3 style="font-size: 13px; font-weight: 700; margin-bottom: 10px">Action Items</h3>
+          <table class="doc-table">
+            <thead>
+              <tr>
+                <th style="text-align: left">Action</th>
+                <th style="text-align: left">Owner</th>
+                <th style="text-align: center">Due</th>
+                <th style="text-align: right">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Migrate OAuth to v2 endpoint</td>
+                <td>George H.</td>
+                <td style="text-align: center">Mar 17</td>
+                <td style="text-align: right; color: var(--todo); font-weight: 600">To Do</td>
+              </tr>
+              <tr>
+                <td>Analytics dashboard wireframe review</td>
+                <td>Emma F.</td>
+                <td style="text-align: center">Mar 12</td>
+                <td style="text-align: right; color: var(--progress); font-weight: 600">
+                  In Progress
+                </td>
+              </tr>
+              <tr>
+                <td>Notification service load testing</td>
+                <td>Alice B.</td>
+                <td style="text-align: center">Mar 14</td>
+                <td style="text-align: right; color: var(--todo); font-weight: 600">To Do</td>
+              </tr>
+              <tr>
+                <td>Update staging environment config</td>
+                <td>George H.</td>
+                <td style="text-align: center">Mar 11</td>
+                <td style="text-align: right; color: var(--success); font-weight: 600">Done</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="page-footer">
+            <span>Vetra Powerhouse — Meeting Minutes</span>
+            <span>9</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 10: Resume / CV -->
+      <div class="page" data-page="10">
+        <div class="page-pad" style="padding-top: 48px">
+          <div style="display: flex; gap: 32px; margin-bottom: 24px">
+            <div style="flex: 1">
+              <h1 style="font-size: 28px; font-weight: 700; line-height: 1.2">Emma<br />Fisher</h1>
+              <p style="font-size: 13px; font-weight: 500; color: var(--primary); margin-top: 6px">
+                Design Director
+              </p>
+            </div>
+            <div style="font-size: 11px; line-height: 1.8; text-align: right" class="sub">
+              <p>emma.fisher@vetra.io</p>
+              <p>+31 6 1234 5678</p>
+              <p>Amsterdam, Netherlands</p>
+              <p>linkedin.com/in/emmafisher</p>
+            </div>
+          </div>
+          <hr style="border: none; border-top: 3px solid var(--primary); margin-bottom: 24px" />
+          <div style="display: grid; grid-template-columns: 160px 1fr; gap: 24px">
+            <div>
+              <h3
+                style="
+                  font-size: 10px;
+                  font-weight: 700;
+                  text-transform: uppercase;
+                  letter-spacing: 1.5px;
+                  color: var(--primary);
+                "
+              >
+                Profile
+              </h3>
+            </div>
+            <div>
+              <p class="sub" style="font-size: 11px; line-height: 1.8">
+                Design leader with 10+ years of experience building design systems, leading
+                cross-functional teams, and shipping products used by millions. Passionate about
+                systematic design, accessibility, and bridging the gap between design and
+                engineering.
+              </p>
+            </div>
+            <div>
+              <h3
+                style="
+                  font-size: 10px;
+                  font-weight: 700;
+                  text-transform: uppercase;
+                  letter-spacing: 1.5px;
+                  color: var(--primary);
+                  margin-top: 8px;
+                "
+              >
+                Experience
+              </h3>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 16px">
+              <div>
+                <div style="display: flex; justify-content: space-between; align-items: baseline">
+                  <p style="font-size: 12px; font-weight: 700">Design Director</p>
+                  <p class="muted" style="font-size: 10px">2024 — Present</p>
+                </div>
+                <p style="font-size: 11px; color: var(--primary); font-weight: 500">
+                  Vetra Powerhouse
+                </p>
+                <ul class="doc-list" style="margin-top: 6px">
+                  <li style="font-size: 10px">
+                    Led design system strategy serving 40+ components across 3 product lines
+                  </li>
+                  <li style="font-size: 10px">
+                    Built and managed a team of 6 designers and 2 design engineers
+                  </li>
+                  <li style="font-size: 10px">
+                    Reduced design-to-code handoff time by 60% through token automation
+                  </li>
+                </ul>
+              </div>
+              <div>
+                <div style="display: flex; justify-content: space-between; align-items: baseline">
+                  <p style="font-size: 12px; font-weight: 700">Senior Product Designer</p>
+                  <p class="muted" style="font-size: 10px">2020 — 2024</p>
+                </div>
+                <p style="font-size: 11px; color: var(--primary); font-weight: 500">Vercel</p>
+                <ul class="doc-list" style="margin-top: 6px">
+                  <li style="font-size: 10px">
+                    Designed the v0 dashboard and deployment pipeline experience
+                  </li>
+                  <li style="font-size: 10px">
+                    Contributed to Geist design system, adopted by 200+ internal projects
+                  </li>
+                </ul>
+              </div>
+              <div>
+                <div style="display: flex; justify-content: space-between; align-items: baseline">
+                  <p style="font-size: 12px; font-weight: 700">Product Designer</p>
+                  <p class="muted" style="font-size: 10px">2016 — 2020</p>
+                </div>
+                <p style="font-size: 11px; color: var(--primary); font-weight: 500">Spotify</p>
+                <ul class="doc-list" style="margin-top: 6px">
+                  <li style="font-size: 10px">
+                    Owned the Podcasts discovery experience, serving 180M+ monthly users
+                  </li>
+                  <li style="font-size: 10px">
+                    Established accessibility guidelines adopted across all mobile teams
+                  </li>
+                </ul>
+              </div>
+            </div>
+            <div>
+              <h3
+                style="
+                  font-size: 10px;
+                  font-weight: 700;
+                  text-transform: uppercase;
+                  letter-spacing: 1.5px;
+                  color: var(--primary);
+                  margin-top: 8px;
+                "
+              >
+                Education
+              </h3>
+            </div>
+            <div>
+              <div style="display: flex; justify-content: space-between; align-items: baseline">
+                <p style="font-size: 12px; font-weight: 700">MSc Human-Computer Interaction</p>
+                <p class="muted" style="font-size: 10px">2014 — 2016</p>
+              </div>
+              <p style="font-size: 11px; color: var(--primary); font-weight: 500">
+                Delft University of Technology
+              </p>
+            </div>
+            <div>
+              <h3
+                style="
+                  font-size: 10px;
+                  font-weight: 700;
+                  text-transform: uppercase;
+                  letter-spacing: 1.5px;
+                  color: var(--primary);
+                  margin-top: 8px;
+                "
+              >
+                Skills
+              </h3>
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 6px">
+              <span
+                style="
+                  display: inline-block;
+                  padding: 3px 10px;
+                  border-radius: 6px;
+                  font-size: 10px;
+                  font-weight: 600;
+                  background: var(--primary-30);
+                  color: var(--primary);
+                "
+                >Figma</span
+              >
+              <span
+                style="
+                  display: inline-block;
+                  padding: 3px 10px;
+                  border-radius: 6px;
+                  font-size: 10px;
+                  font-weight: 600;
+                  background: var(--primary-30);
+                  color: var(--primary);
+                "
+                >Design Systems</span
+              >
+              <span
+                style="
+                  display: inline-block;
+                  padding: 3px 10px;
+                  border-radius: 6px;
+                  font-size: 10px;
+                  font-weight: 600;
+                  background: var(--progress-30);
+                  color: var(--progress);
+                "
+                >React</span
+              >
+              <span
+                style="
+                  display: inline-block;
+                  padding: 3px 10px;
+                  border-radius: 6px;
+                  font-size: 10px;
+                  font-weight: 600;
+                  background: var(--progress-30);
+                  color: var(--progress);
+                "
+                >CSS</span
+              >
+              <span
+                style="
+                  display: inline-block;
+                  padding: 3px 10px;
+                  border-radius: 6px;
+                  font-size: 10px;
+                  font-weight: 600;
+                  background: var(--success-30);
+                  color: var(--success);
+                "
+                >Accessibility</span
+              >
+              <span
+                style="
+                  display: inline-block;
+                  padding: 3px 10px;
+                  border-radius: 6px;
+                  font-size: 10px;
+                  font-weight: 600;
+                  background: var(--success-30);
+                  color: var(--success);
+                "
+                >User Research</span
+              >
+              <span
+                style="
+                  display: inline-block;
+                  padding: 3px 10px;
+                  border-radius: 6px;
+                  font-size: 10px;
+                  font-weight: 600;
+                  background: var(--purple-30);
+                  color: var(--purple);
+                "
+                >Prototyping</span
+              >
+              <span
+                style="
+                  display: inline-block;
+                  padding: 3px 10px;
+                  border-radius: 6px;
+                  font-size: 10px;
+                  font-weight: 600;
+                  background: var(--purple-30);
+                  color: var(--purple);
+                "
+                >Motion Design</span
+              >
+            </div>
+          </div>
+          <div class="page-footer">
+            <span></span>
+            <span>10</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 11: Newsletter -->
+      <div class="page" data-page="11">
+        <div class="page-pad">
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              margin-bottom: 20px;
+            "
+          >
+            <div style="display: flex; align-items: center; gap: 8px">
+              <img src="logos/vetra-icon.svg" alt="" style="height: 20px" />
+              <span style="font-size: 14px; font-weight: 700">Vetra Weekly</span>
+            </div>
+            <p class="muted" style="font-size: 10px">Issue #47 — March 13, 2026</p>
+          </div>
+          <div
+            style="
+              background: var(--primary);
+              border-radius: 10px;
+              padding: 28px 24px;
+              margin-bottom: 24px;
+              color: #fff;
+            "
+          >
+            <p
+              style="
+                font-size: 10px;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 2px;
+                opacity: 0.5;
+                margin-bottom: 8px;
+              "
+            >
+              Featured
+            </p>
+            <h2 style="font-size: 22px; font-weight: 700; line-height: 1.3; margin-bottom: 8px">
+              Introducing the Vetra Analytics Dashboard
+            </h2>
+            <p style="font-size: 12px; opacity: 0.7; line-height: 1.6">
+              Real-time insights into your component usage, performance metrics, and team adoption —
+              all in one place.
+            </p>
+          </div>
+          <div
+            style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px"
+          >
+            <div>
+              <div
+                style="
+                  height: 100px;
+                  border-radius: 8px;
+                  background: linear-gradient(135deg, var(--primary-30), var(--purple-30));
+                  margin-bottom: 10px;
+                "
+              ></div>
+              <h4 style="font-size: 13px; font-weight: 700; margin-bottom: 4px">
+                Design Tokens v3 Released
+              </h4>
+              <p class="sub" style="font-size: 11px; line-height: 1.6">
+                The new token architecture supports multi-brand theming, semantic aliases, and
+                automatic Figma sync. Upgrade guide included.
+              </p>
+            </div>
+            <div>
+              <div
+                style="
+                  height: 100px;
+                  border-radius: 8px;
+                  background: linear-gradient(135deg, var(--success-30), var(--progress-30));
+                  margin-bottom: 10px;
+                "
+              ></div>
+              <h4 style="font-size: 13px; font-weight: 700; margin-bottom: 4px">
+                Community Spotlight: Reactors
+              </h4>
+              <p class="sub" style="font-size: 11px; line-height: 1.6">
+                How the Reactors team built a full admin dashboard in 3 days using Vetra components
+                and the new CLI scaffolding tool.
+              </p>
+            </div>
+          </div>
+          <hr class="doc-hr" />
+          <h3 style="font-size: 13px; font-weight: 700; margin-bottom: 10px">Quick Links</h3>
+          <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px">
+            <div style="display: flex; align-items: center; gap: 10px">
+              <span
+                style="
+                  width: 6px;
+                  height: 6px;
+                  border-radius: 50%;
+                  background: var(--primary);
+                  flex-shrink: 0;
+                "
+              ></span>
+              <span style="font-size: 11px; font-weight: 500"
+                >Storybook 8 migration guide now available</span
+              >
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px">
+              <span
+                style="
+                  width: 6px;
+                  height: 6px;
+                  border-radius: 50%;
+                  background: var(--primary);
+                  flex-shrink: 0;
+                "
+              ></span>
+              <span style="font-size: 11px; font-weight: 500"
+                >New accessibility audit checklist for component authors</span
+              >
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px">
+              <span
+                style="
+                  width: 6px;
+                  height: 6px;
+                  border-radius: 50%;
+                  background: var(--primary);
+                  flex-shrink: 0;
+                "
+              ></span>
+              <span style="font-size: 11px; font-weight: 500"
+                >Office hours: every Thursday at 3PM CET on Discord</span
+              >
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px">
+              <span
+                style="
+                  width: 6px;
+                  height: 6px;
+                  border-radius: 50%;
+                  background: var(--primary);
+                  flex-shrink: 0;
+                "
+              ></span>
+              <span style="font-size: 11px; font-weight: 500"
+                >RFC: Server Components support — feedback welcome</span
+              >
+            </div>
+          </div>
+          <div class="doc-accent" style="text-align: center; padding: 16px">
+            <p style="font-size: 11px; font-weight: 600; margin-bottom: 2px">Stay in the loop</p>
+            <p class="muted" style="font-size: 10px">
+              hello@vetra.io &nbsp;·&nbsp; vetra.io/blog &nbsp;·&nbsp; @vetra
+            </p>
+          </div>
+          <div class="page-footer">
+            <span>Vetra Weekly #47</span>
+            <span>11</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 12: Financial Statement -->
+      <div class="page" data-page="12">
+        <div class="page-pad">
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: flex-start;
+              margin-bottom: 24px;
+            "
+          >
+            <div>
+              <p
+                class="muted"
+                style="
+                  font-size: 10px;
+                  font-weight: 600;
+                  text-transform: uppercase;
+                  letter-spacing: 2px;
+                  margin-bottom: 6px;
+                "
+              >
+                Financial Statement
+              </p>
+              <h2 style="font-size: 22px; font-weight: 700">Income Statement — Q1 2026</h2>
+            </div>
+            <img src="logos/vetra-icon.svg" alt="" style="height: 20px" />
+          </div>
+          <hr class="doc-hr" style="margin-bottom: 20px" />
+          <h3 style="font-size: 13px; font-weight: 700; margin-bottom: 12px">Revenue</h3>
+          <table class="doc-table" style="margin-bottom: 20px">
+            <thead>
+              <tr>
+                <th>Category</th>
+                <th style="text-align: center">Q1 2026</th>
+                <th style="text-align: center">Q4 2025</th>
+                <th>Change</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Subscription Revenue</td>
+                <td style="text-align: center">$245,000</td>
+                <td style="text-align: center">$198,000</td>
+                <td style="text-align: right; color: var(--success); font-weight: 600">+23.7%</td>
+              </tr>
+              <tr>
+                <td>Professional Services</td>
+                <td style="text-align: center">$62,000</td>
+                <td style="text-align: center">$48,000</td>
+                <td style="text-align: right; color: var(--success); font-weight: 600">+29.2%</td>
+              </tr>
+              <tr>
+                <td>Support Contracts</td>
+                <td style="text-align: center">$18,000</td>
+                <td style="text-align: center">$15,000</td>
+                <td style="text-align: right; color: var(--success); font-weight: 600">+20.0%</td>
+              </tr>
+              <tr style="font-weight: 700">
+                <td>Total Revenue</td>
+                <td style="text-align: center">$325,000</td>
+                <td style="text-align: center">$261,000</td>
+                <td style="text-align: right; color: var(--success)">+24.5%</td>
+              </tr>
+            </tbody>
+          </table>
+          <h3 style="font-size: 13px; font-weight: 700; margin-bottom: 12px">Expenses</h3>
+          <table class="doc-table" style="margin-bottom: 20px">
+            <thead>
+              <tr>
+                <th>Category</th>
+                <th style="text-align: center">Q1 2026</th>
+                <th style="text-align: center">Q4 2025</th>
+                <th>Change</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Personnel</td>
+                <td style="text-align: center">$142,000</td>
+                <td style="text-align: center">$128,000</td>
+                <td style="text-align: right; color: var(--destructive); font-weight: 600">
+                  +10.9%
+                </td>
+              </tr>
+              <tr>
+                <td>Infrastructure</td>
+                <td style="text-align: center">$38,000</td>
+                <td style="text-align: center">$35,000</td>
+                <td style="text-align: right; color: var(--destructive); font-weight: 600">
+                  +8.6%
+                </td>
+              </tr>
+              <tr>
+                <td>Marketing</td>
+                <td style="text-align: center">$24,000</td>
+                <td style="text-align: center">$22,000</td>
+                <td style="text-align: right; color: var(--destructive); font-weight: 600">
+                  +9.1%
+                </td>
+              </tr>
+              <tr>
+                <td>Operations</td>
+                <td style="text-align: center">$16,000</td>
+                <td style="text-align: center">$14,000</td>
+                <td style="text-align: right; color: var(--destructive); font-weight: 600">
+                  +14.3%
+                </td>
+              </tr>
+              <tr style="font-weight: 700">
+                <td>Total Expenses</td>
+                <td style="text-align: center">$220,000</td>
+                <td style="text-align: center">$199,000</td>
+                <td style="text-align: right; color: var(--destructive)">+10.6%</td>
+              </tr>
+            </tbody>
+          </table>
+          <div
+            class="doc-accent"
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              padding: 16px 20px;
+            "
+          >
+            <div>
+              <p
+                class="muted"
+                style="
+                  font-size: 9px;
+                  font-weight: 600;
+                  text-transform: uppercase;
+                  letter-spacing: 1px;
+                "
+              >
+                Net Income
+              </p>
+              <p style="font-size: 24px; font-weight: 700; color: var(--success)">$105,000</p>
+            </div>
+            <div style="text-align: right">
+              <p
+                class="muted"
+                style="
+                  font-size: 9px;
+                  font-weight: 600;
+                  text-transform: uppercase;
+                  letter-spacing: 1px;
+                "
+              >
+                Margin
+              </p>
+              <p style="font-size: 24px; font-weight: 700; color: var(--primary)">32.3%</p>
+            </div>
+            <div style="text-align: right">
+              <p
+                class="muted"
+                style="
+                  font-size: 9px;
+                  font-weight: 600;
+                  text-transform: uppercase;
+                  letter-spacing: 1px;
+                "
+              >
+                vs Q4
+              </p>
+              <p style="font-size: 24px; font-weight: 700; color: var(--success)">+69.4%</p>
+            </div>
+          </div>
+          <div class="page-footer">
+            <span>Vetra Powerhouse — Financial Statement Q1 2026</span>
+            <span>12</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 13: Technical Specification -->
+      <div class="page" data-page="13">
+        <div class="page-pad">
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: flex-start;
+              margin-bottom: 24px;
+            "
+          >
+            <div>
+              <p
+                class="muted"
+                style="
+                  font-size: 10px;
+                  font-weight: 600;
+                  text-transform: uppercase;
+                  letter-spacing: 2px;
+                  margin-bottom: 6px;
+                "
+              >
+                Technical Specification
+              </p>
+              <h2 style="font-size: 22px; font-weight: 700">Notification Service v2 API</h2>
+            </div>
+            <div style="display: flex; gap: 6px">
+              <span
+                style="
+                  padding: 3px 8px;
+                  border-radius: 4px;
+                  font-size: 9px;
+                  font-weight: 600;
+                  background: var(--success-30);
+                  color: var(--success);
+                "
+                >Approved</span
+              >
+              <span
+                style="
+                  padding: 3px 8px;
+                  border-radius: 4px;
+                  font-size: 9px;
+                  font-weight: 600;
+                  background: var(--primary-30);
+                  color: var(--primary);
+                "
+                >v2.1</span
+              >
+            </div>
+          </div>
+          <hr class="doc-hr" style="margin-bottom: 20px" />
+          <div
+            style="
+              display: grid;
+              grid-template-columns: 1fr 1fr 1fr;
+              gap: 16px;
+              margin-bottom: 20px;
+            "
+          >
+            <div>
+              <p
+                class="muted"
+                style="
+                  font-size: 9px;
+                  font-weight: 600;
+                  text-transform: uppercase;
+                  letter-spacing: 1px;
+                  margin-bottom: 4px;
+                "
+              >
+                Author
+              </p>
+              <p style="font-size: 11px; font-weight: 500">Alice Brown</p>
+            </div>
+            <div>
+              <p
+                class="muted"
+                style="
+                  font-size: 9px;
+                  font-weight: 600;
+                  text-transform: uppercase;
+                  letter-spacing: 1px;
+                  margin-bottom: 4px;
+                "
+              >
+                Last Updated
+              </p>
+              <p style="font-size: 11px; font-weight: 500">March 8, 2026</p>
+            </div>
+            <div>
+              <p
+                class="muted"
+                style="
+                  font-size: 9px;
+                  font-weight: 600;
+                  text-transform: uppercase;
+                  letter-spacing: 1px;
+                  margin-bottom: 4px;
+                "
+              >
+                Reviewers
+              </p>
+              <p style="font-size: 11px; font-weight: 500">G. Hill, C. Davis</p>
+            </div>
+          </div>
+          <h3 style="font-size: 13px; font-weight: 700; margin-bottom: 8px">1. Overview</h3>
+          <p class="sub" style="font-size: 11px; line-height: 1.8; margin-bottom: 16px">
+            This document specifies the v2 Notification Service API, which replaces the legacy
+            polling-based system with a WebSocket-first architecture supporting real-time delivery,
+            channel routing, and user preference management.
+          </p>
+          <h3 style="font-size: 13px; font-weight: 700; margin-bottom: 8px">2. Endpoints</h3>
+          <div
+            style="
+              background: var(--accent);
+              border-radius: 6px;
+              padding: 14px;
+              font-family: 'Courier New', monospace;
+              font-size: 10px;
+              line-height: 1.8;
+              margin-bottom: 16px;
+              transition: background 0.3s;
+              white-space: pre-wrap;
+            "
+          >
+            <span class="muted">// Send notification</span> POST /api/v2/notifications Content-Type:
+            application/json { "recipient_id": "usr_abc123", "channel": "email" | "push" | "in_app",
+            "template": "welcome_onboard", "data": { "name": "Alice" }, "priority": "high" |
+            "normal" | "low" }
+          </div>
+          <h3 style="font-size: 13px; font-weight: 700; margin-bottom: 8px">3. WebSocket Events</h3>
+          <table class="doc-table" style="margin-bottom: 16px">
+            <thead>
+              <tr>
+                <th style="text-align: left">Event</th>
+                <th style="text-align: left">Payload</th>
+                <th style="text-align: left">Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="font-family: monospace; font-size: 10px">notification.new</td>
+                <td style="font-size: 10px">{id, channel, body}</td>
+                <td style="font-size: 10px">New notification created</td>
+              </tr>
+              <tr>
+                <td style="font-family: monospace; font-size: 10px">notification.read</td>
+                <td style="font-size: 10px">{id, read_at}</td>
+                <td style="font-size: 10px">Notification marked as read</td>
+              </tr>
+              <tr>
+                <td style="font-family: monospace; font-size: 10px">notification.dismissed</td>
+                <td style="font-size: 10px">{id}</td>
+                <td style="font-size: 10px">Notification dismissed by user</td>
+              </tr>
+              <tr>
+                <td style="font-family: monospace; font-size: 10px">preferences.updated</td>
+                <td style="font-size: 10px">{channels}</td>
+                <td style="font-size: 10px">User changed preferences</td>
+              </tr>
+            </tbody>
+          </table>
+          <h3 style="font-size: 13px; font-weight: 700; margin-bottom: 8px">4. Rate Limits</h3>
+          <p class="sub" style="font-size: 11px; line-height: 1.8">
+            Requests are rate-limited to 100/min per API key for standard plans and 1,000/min for
+            enterprise. WebSocket connections are limited to 5 concurrent per user. Exceeding limits
+            returns
+            <code
+              style="
+                background: var(--accent);
+                padding: 1px 5px;
+                border-radius: 3px;
+                font-size: 10px;
+              "
+              >429 Too Many Requests</code
+            >.
+          </p>
+          <div class="page-footer">
+            <span>Vetra Powerhouse — Technical Specification</span>
+            <span>13</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 14: Certificate -->
+      <div class="page" data-page="14">
+        <div
+          class="page-pad"
+          style="justify-content: center; align-items: center; text-align: center"
+        >
+          <div
+            style="
+              border: 2px solid var(--primary);
+              border-radius: 16px;
+              padding: 48px 56px;
+              width: 100%;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              gap: 16px;
+            "
+          >
+            <img src="logos/vetra-icon.svg" alt="" style="height: 40px; margin-bottom: 8px" />
+            <p
+              class="muted"
+              style="
+                font-size: 10px;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 4px;
+              "
+            >
+              Certificate of Completion
+            </p>
+            <hr
+              style="border: none; border-top: 2px solid var(--primary); width: 48px; margin: 4px 0"
+            />
+            <p class="sub" style="font-size: 12px">This certifies that</p>
+            <h2 style="font-size: 32px; font-weight: 700; color: var(--primary)">Jane Kim</h2>
+            <p class="sub" style="font-size: 12px; line-height: 1.7; max-width: 80%">
+              has successfully completed the
+              <strong style="color: var(--foreground)"
+                >Vetra Design System Certification Program</strong
+              >, demonstrating proficiency in component architecture, design token management, and
+              accessibility best practices.
+            </p>
+            <div
+              style="
+                display: grid;
+                grid-template-columns: 1fr 1fr 1fr;
+                gap: 32px;
+                margin-top: 16px;
+                width: 100%;
+              "
+            >
+              <div>
+                <p
+                  class="muted"
+                  style="
+                    font-size: 9px;
+                    text-transform: uppercase;
+                    letter-spacing: 1px;
+                    margin-bottom: 4px;
+                  "
+                >
+                  Date
+                </p>
+                <p style="font-size: 11px; font-weight: 600">March 13, 2026</p>
+              </div>
+              <div>
+                <p
+                  class="muted"
+                  style="
+                    font-size: 9px;
+                    text-transform: uppercase;
+                    letter-spacing: 1px;
+                    margin-bottom: 4px;
+                  "
+                >
+                  Credential ID
+                </p>
+                <p style="font-size: 11px; font-weight: 600">ACHR-2026-0891</p>
+              </div>
+              <div>
+                <p
+                  class="muted"
+                  style="
+                    font-size: 9px;
+                    text-transform: uppercase;
+                    letter-spacing: 1px;
+                    margin-bottom: 4px;
+                  "
+                >
+                  Issued By
+                </p>
+                <p style="font-size: 11px; font-weight: 600">Alexander Voss, CEO</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 15: Press Release -->
+      <div class="page" data-page="15">
+        <div class="page-pad">
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: flex-start;
+              margin-bottom: 20px;
+            "
+          >
+            <img src="logos/vetra-icon.svg" alt="" style="height: 20px" />
+            <span
+              style="
+                padding: 3px 10px;
+                border-radius: 4px;
+                font-size: 9px;
+                font-weight: 700;
+                background: var(--primary-30);
+                color: var(--primary);
+                text-transform: uppercase;
+                letter-spacing: 1px;
+              "
+              >Press Release</span
+            >
+          </div>
+          <p class="muted" style="font-size: 10px; margin-bottom: 4px">
+            FOR IMMEDIATE RELEASE — March 13, 2026
+          </p>
+          <h2 style="font-size: 22px; font-weight: 700; line-height: 1.3; margin-bottom: 8px">
+            Vetra Powerhouse Raises $12M Series A to Scale Decentralized Operations Platform
+          </h2>
+          <p class="sub" style="font-size: 12px; font-style: italic; margin-bottom: 20px">
+            Funding led by Horizon Ventures with participation from existing investors; company
+            plans to triple engineering team and expand to US market.
+          </p>
+          <hr class="doc-hr" style="margin-bottom: 16px" />
+          <p class="sub" style="font-size: 12px; line-height: 1.8; margin-bottom: 14px">
+            <strong style="color: var(--foreground)">AMSTERDAM, March 13, 2026</strong> — Vetra
+            Powerhouse, the open platform for decentralized operations management, today announced
+            it has raised $12 million in Series A financing. The round was led by Horizon Ventures,
+            with participation from Northzone and angel investors including former Stripe CTO Greg
+            Brockman.
+          </p>
+          <p class="sub" style="font-size: 12px; line-height: 1.8; margin-bottom: 14px">
+            The company will use the funding to triple its engineering team from 15 to 45 people,
+            open a New York office, and accelerate product development. Key investments will include
+            the launch of an enterprise-grade analytics suite, expanded integration marketplace, and
+            a mobile SDK for iOS and Android.
+          </p>
+          <p class="sub" style="font-size: 12px; line-height: 1.8; margin-bottom: 14px">
+            "Decentralized architectures are the future of how organizations operate, but the
+            tooling hasn't kept up," said Alexander Voss, CEO and co-founder of Vetra Powerhouse.
+            "Our platform gives teams the building blocks to move fast without sacrificing
+            reliability or governance. This funding lets us bring that to a much larger audience."
+          </p>
+          <p class="sub" style="font-size: 12px; line-height: 1.8; margin-bottom: 14px">
+            Since launching its public beta in September 2025, Vetra Powerhouse has grown to over
+            2,400 active users and 180 organizations, including enterprise customers in fintech,
+            healthcare, and logistics. The platform processes over 2 million operations daily with
+            99.9% uptime.
+          </p>
+          <p class="sub" style="font-size: 12px; line-height: 1.8; margin-bottom: 20px">
+            "The Vetra team has built something genuinely differentiated in a crowded market," said
+            Maria Lopez, Partner at Horizon Ventures. "Their developer-first approach and modular
+            architecture create a strong foundation for category leadership."
+          </p>
+          <hr class="doc-hr" style="margin-bottom: 16px" />
+          <p style="font-size: 10px; font-weight: 700; margin-bottom: 4px">Media Contact</p>
+          <p class="sub" style="font-size: 10px; line-height: 1.7">
+            Sarah Park, Head of Communications<br />press@vetra.io &nbsp;|&nbsp; +31 20 123 4567
+          </p>
+          <div class="page-footer">
+            <span>Vetra Powerhouse — Press Release</span>
+            <span>15</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 16: Contract / Agreement -->
+      <div class="page" data-page="16">
+        <div class="page-pad">
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: flex-start;
+              margin-bottom: 24px;
+            "
+          >
+            <img src="logos/vetra-icon.svg" alt="" style="height: 20px" />
+            <p class="muted" style="font-size: 10px; font-weight: 600">CONTRACT</p>
+          </div>
+          <h2 style="font-size: 22px; font-weight: 700; margin-bottom: 6px">Service Agreement</h2>
+          <p class="sub" style="font-size: 12px; margin-bottom: 20px">
+            Master Service Agreement between Vetra Powerhouse B.V. and TechCorp International.
+          </p>
+          <hr class="doc-hr-thick" style="margin-bottom: 24px" />
+          <p class="sub" style="font-size: 11px; line-height: 1.8; margin-bottom: 16px">
+            This Master Service Agreement ("Agreement") is entered into as of
+            <strong style="color: var(--foreground)">March 13, 2026</strong> ("Effective Date") by
+            and between:
+          </p>
+          <div
+            style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px"
+          >
+            <div class="doc-accent" style="padding: 14px">
+              <p
+                class="muted"
+                style="
+                  font-size: 9px;
+                  font-weight: 600;
+                  text-transform: uppercase;
+                  letter-spacing: 1px;
+                  margin-bottom: 4px;
+                "
+              >
+                Provider
+              </p>
+              <p style="font-size: 12px; font-weight: 600">Vetra Powerhouse B.V.</p>
+              <p class="sub" style="font-size: 10px; line-height: 1.6">
+                Keizersgracht 520, 1017 EK Amsterdam<br />KvK: 87654321
+              </p>
+            </div>
+            <div class="doc-accent" style="padding: 14px">
+              <p
+                class="muted"
+                style="
+                  font-size: 9px;
+                  font-weight: 600;
+                  text-transform: uppercase;
+                  letter-spacing: 1px;
+                  margin-bottom: 4px;
+                "
+              >
+                Client
+              </p>
+              <p style="font-size: 12px; font-weight: 600">TechCorp International</p>
+              <p class="sub" style="font-size: 10px; line-height: 1.6">
+                350 Fifth Avenue, Suite 7200<br />New York, NY 10118
+              </p>
+            </div>
+          </div>
+          <div style="font-size: 11px; line-height: 1.8; color: var(--foreground-70)">
+            <p style="margin-bottom: 12px">
+              <strong style="color: var(--foreground)">1. Scope of Services.</strong> Provider shall
+              deliver the services described in each Statement of Work ("SOW") executed under this
+              Agreement. Each SOW shall specify deliverables, timeline, fees, and acceptance
+              criteria.
+            </p>
+            <p style="margin-bottom: 12px">
+              <strong style="color: var(--foreground)">2. Term.</strong> This Agreement shall
+              commence on the Effective Date and continue for an initial term of twelve (12) months,
+              automatically renewing for successive twelve-month periods unless either party
+              provides sixty (60) days written notice of non-renewal.
+            </p>
+            <p style="margin-bottom: 12px">
+              <strong style="color: var(--foreground)">3. Fees and Payment.</strong> Client shall
+              pay Provider the fees set forth in each SOW within thirty (30) days of invoice date.
+              Late payments shall accrue interest at a rate of 1.5% per month or the maximum rate
+              permitted by law.
+            </p>
+            <p style="margin-bottom: 12px">
+              <strong style="color: var(--foreground)">4. Intellectual Property.</strong> All
+              pre-existing IP remains with its respective owner. Work product created under an SOW
+              shall be owned by Client upon full payment, excluding Provider's pre-existing tools,
+              frameworks, and methodologies.
+            </p>
+            <p style="margin-bottom: 12px">
+              <strong style="color: var(--foreground)">5. Confidentiality.</strong> Each party
+              agrees to maintain the confidentiality of all non-public information received from the
+              other party and to use such information solely for purposes of this Agreement.
+            </p>
+          </div>
+          <div
+            style="
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 32px;
+              margin-top: auto;
+              padding-top: 20px;
+              border-top: 1px solid var(--border);
+              transition: border-color 0.3s;
+            "
+          >
+            <div>
+              <p
+                class="muted"
+                style="
+                  font-size: 9px;
+                  font-weight: 600;
+                  text-transform: uppercase;
+                  letter-spacing: 1px;
+                  margin-bottom: 20px;
+                "
+              >
+                For Vetra Powerhouse B.V.
+              </p>
+              <hr
+                style="
+                  border: none;
+                  border-bottom: 1px solid var(--foreground-50);
+                  margin-bottom: 6px;
+                  width: 80%;
+                "
+              />
+              <p style="font-size: 10px">Name: ________________________</p>
+              <p class="muted" style="font-size: 10px; margin-top: 4px">
+                Date: ________________________
+              </p>
+            </div>
+            <div>
+              <p
+                class="muted"
+                style="
+                  font-size: 9px;
+                  font-weight: 600;
+                  text-transform: uppercase;
+                  letter-spacing: 1px;
+                  margin-bottom: 20px;
+                "
+              >
+                For TechCorp International
+              </p>
+              <hr
+                style="
+                  border: none;
+                  border-bottom: 1px solid var(--foreground-50);
+                  margin-bottom: 6px;
+                  width: 80%;
+                "
+              />
+              <p style="font-size: 10px">Name: ________________________</p>
+              <p class="muted" style="font-size: 10px; margin-top: 4px">
+                Date: ________________________
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const toggle = document.getElementById('themeSwitch')
+      toggle.addEventListener('change', () => {
+        document.body.classList.toggle('dark', toggle.checked)
+      })
+    </script>
+  </body>
+</html>

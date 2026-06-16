@@ -100,10 +100,10 @@ function renderRecipe(recipe: Recipe, readme: string | null): string {
   const source = `${TREE_BASE}/${recipe.slug}`;
   const body = readme
     ? sanitizeForMdx(readme.trim(), recipe.slug)
-    : `${recipe.description}\n\n> README could not be loaded at generation time. View it on GitHub.`;
+    : `> README could not be loaded at generation time. View it on GitHub.`;
   return [
     `<details id="recipe-${recipe.slug}">`,
-    `<summary>${recipe.title}</summary>`,
+    `<summary><strong>${recipe.title}</strong> — ${recipe.description}</summary>`,
     ``,
     body,
     ``,

@@ -1,0 +1,676 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Our Work — Vetra Portfolio</title>
+    <link rel="stylesheet" href="../colors.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: 'Inter', sans-serif;
+        background: var(--background);
+        color: var(--foreground);
+        line-height: 1.6;
+      }
+      a {
+        text-decoration: none;
+        color: inherit;
+      }
+      img {
+        max-width: 100%;
+        display: block;
+      }
+
+      /* Buttons */
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 10px 24px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-family: inherit;
+      }
+      .btn-primary {
+        background: var(--primary);
+        color: #fff;
+      }
+      .btn-primary:hover {
+        opacity: 0.9;
+      }
+      .btn-secondary {
+        background: var(--accent);
+        color: var(--foreground);
+      }
+      .btn-secondary:hover {
+        background: var(--border);
+      }
+
+      /* Container */
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+
+      /* Nav */
+      .nav {
+        background: var(--card);
+        border-bottom: 1px solid var(--border);
+        padding: 16px 0;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+      }
+      .nav .container {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .nav-brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 700;
+        font-size: 18px;
+      }
+      .nav-brand img {
+        height: 24px;
+        width: auto;
+      }
+      .logo-dark {
+        display: none;
+      }
+      body.dark .logo-light {
+        display: none;
+      }
+      body.dark .logo-dark {
+        display: inline;
+      }
+      .nav-links {
+        display: flex;
+        align-items: center;
+        gap: 32px;
+      }
+      .nav-links a {
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--foreground-70);
+        transition: color 0.2s;
+      }
+      .nav-links a:hover,
+      .nav-links a.active {
+        color: var(--foreground);
+      }
+
+      /* Hero */
+      .hero {
+        padding: 80px 0 60px;
+        text-align: center;
+      }
+      .hero h1 {
+        font-size: 48px;
+        font-weight: 800;
+        letter-spacing: -1px;
+        margin-bottom: 16px;
+      }
+      .hero p {
+        font-size: 18px;
+        color: var(--muted-foreground);
+        max-width: 560px;
+        margin: 0 auto;
+      }
+
+      /* Filter Bar */
+      .filter-bar {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 0 0 48px;
+        flex-wrap: wrap;
+      }
+      .filter-pill {
+        padding: 8px 20px;
+        border-radius: 100px;
+        font-size: 14px;
+        font-weight: 500;
+        border: 1px solid var(--border);
+        background: transparent;
+        color: var(--foreground);
+        cursor: pointer;
+        transition: all 0.2s;
+        font-family: inherit;
+      }
+      .filter-pill:hover {
+        background: var(--accent);
+      }
+      .filter-pill.active {
+        background: var(--primary);
+        color: #fff;
+        border-color: var(--primary);
+      }
+
+      /* Project Grid */
+      .project-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 24px;
+        padding-bottom: 80px;
+      }
+      .project-card {
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        overflow: hidden;
+        background: var(--card);
+        transition:
+          box-shadow 0.2s,
+          transform 0.2s;
+      }
+      .project-card:hover {
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+        transform: translateY(-2px);
+      }
+      .project-card-img {
+        aspect-ratio: 16/9;
+        position: relative;
+      }
+      .project-card-body {
+        padding: 20px;
+      }
+      .project-card-body h3 {
+        font-size: 16px;
+        font-weight: 700;
+        margin-bottom: 8px;
+      }
+      .project-card-body p {
+        font-size: 13px;
+        color: var(--muted-foreground);
+        line-height: 1.5;
+      }
+      .tag-pill {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 100px;
+        font-size: 12px;
+        font-weight: 500;
+        background: var(--primary-30);
+        color: var(--primary);
+        margin-bottom: 8px;
+      }
+
+      /* Featured */
+      .featured {
+        padding: 80px 0;
+        border-top: 1px solid var(--border);
+      }
+      .featured-label {
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        color: var(--primary);
+        margin-bottom: 12px;
+      }
+      .featured-grid {
+        display: grid;
+        grid-template-columns: 1.2fr 1fr;
+        gap: 48px;
+        align-items: center;
+      }
+      .featured-img {
+        aspect-ratio: 4/3;
+        border-radius: 16px;
+      }
+      .featured-details h2 {
+        font-size: 32px;
+        font-weight: 800;
+        margin-bottom: 16px;
+        letter-spacing: -0.5px;
+      }
+      .featured-details p {
+        color: var(--muted-foreground);
+        font-size: 15px;
+        margin-bottom: 24px;
+        line-height: 1.7;
+      }
+      .featured-meta {
+        margin-bottom: 24px;
+      }
+      .featured-meta-row {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 8px;
+        font-size: 14px;
+      }
+      .featured-meta-label {
+        font-weight: 600;
+        min-width: 110px;
+      }
+      .featured-meta-value {
+        color: var(--muted-foreground);
+      }
+      .tech-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 32px;
+      }
+      .tech-tag {
+        padding: 6px 14px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 500;
+        background: var(--accent);
+        color: var(--foreground);
+      }
+
+      /* Client Logos */
+      .client-logos {
+        padding: 60px 0;
+        border-top: 1px solid var(--border);
+        text-align: center;
+      }
+      .client-logos h3 {
+        font-size: 13px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        color: var(--muted-foreground);
+        margin-bottom: 40px;
+      }
+      .logos-row {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 48px;
+        flex-wrap: wrap;
+      }
+      .logo-placeholder {
+        width: 120px;
+        height: 40px;
+        border-radius: 8px;
+        background: var(--accent);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--muted-foreground);
+      }
+
+      /* CTA */
+      .cta {
+        padding: 80px 0;
+        text-align: center;
+        background: var(--primary);
+        color: #fff;
+        margin: 0;
+      }
+      .cta h2 {
+        font-size: 36px;
+        font-weight: 800;
+        margin-bottom: 16px;
+        letter-spacing: -0.5px;
+      }
+      .cta p {
+        font-size: 16px;
+        opacity: 0.85;
+        max-width: 480px;
+        margin: 0 auto 32px;
+      }
+      .cta .btn {
+        background: #fff;
+        color: var(--primary);
+      }
+      .cta .btn:hover {
+        opacity: 0.95;
+      }
+
+      /* Footer */
+      .footer {
+        padding: 48px 0 32px;
+        border-top: 1px solid var(--border);
+      }
+      .footer-grid {
+        display: grid;
+        grid-template-columns: 1.5fr 1fr 1fr 1fr;
+        gap: 40px;
+        margin-bottom: 40px;
+      }
+      .footer-brand {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 700;
+        font-size: 16px;
+        margin-bottom: 12px;
+      }
+      .footer-brand img {
+        height: 24px;
+        width: auto;
+      }
+      .footer-desc {
+        font-size: 13px;
+        color: var(--muted-foreground);
+        line-height: 1.6;
+      }
+      .footer-col h4 {
+        font-size: 13px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 16px;
+      }
+      .footer-col a {
+        display: block;
+        font-size: 14px;
+        color: var(--muted-foreground);
+        margin-bottom: 10px;
+        transition: color 0.2s;
+      }
+      .footer-col a:hover {
+        color: var(--foreground);
+      }
+      .footer-bottom {
+        border-top: 1px solid var(--border);
+        padding-top: 24px;
+        font-size: 13px;
+        color: var(--muted-foreground);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      /* Gradients for image placeholders */
+      .grad-1 {
+        background: linear-gradient(135deg, #04c161 0%, #329dff 100%);
+      }
+      .grad-2 {
+        background: linear-gradient(135deg, #fac400 0%, #ea4335 100%);
+      }
+      .grad-3 {
+        background: linear-gradient(135deg, #4fc86f 0%, #329dff 100%);
+      }
+      .grad-4 {
+        background: linear-gradient(135deg, #06d66b 0%, #04c161 60%, #329dff 100%);
+      }
+      .grad-5 {
+        background: linear-gradient(135deg, #ffa132 0%, #fac400 100%);
+      }
+      .grad-6 {
+        background: linear-gradient(135deg, #329dff 0%, #4fc86f 100%);
+      }
+
+      @media (max-width: 768px) {
+        .project-grid {
+          grid-template-columns: 1fr;
+        }
+        .featured-grid {
+          grid-template-columns: 1fr;
+        }
+        .footer-grid {
+          grid-template-columns: 1fr 1fr;
+        }
+        .hero h1 {
+          font-size: 32px;
+        }
+        .nav-links {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Nav -->
+    <nav class="nav">
+      <div class="container">
+        <a href="#" class="nav-brand">
+          <img src="../logos/vetra-full-logo.svg" alt="Vetra" height="24" class="logo-light" />
+          <img src="../logos/vetra-full-logo-light.svg" alt="Vetra" height="24" class="logo-dark" />
+        </a>
+        <div class="nav-links">
+          <a href="#">Home</a>
+          <a href="#" class="active">Portfolio</a>
+          <a href="#">Services</a>
+          <a href="#">About</a>
+          <a href="#">Contact</a>
+          <a href="#" class="btn btn-primary" style="padding: 8px 20px">Get Started</a>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Hero -->
+    <section class="hero">
+      <div class="container">
+        <h1>Our Work</h1>
+        <p>
+          A curated collection of projects we've delivered for ambitious brands and forward-thinking
+          startups.
+        </p>
+      </div>
+    </section>
+
+    <!-- Filter Bar -->
+    <div class="container">
+      <div class="filter-bar">
+        <button class="filter-pill active">All</button>
+        <button class="filter-pill">Web Design</button>
+        <button class="filter-pill">Mobile</button>
+        <button class="filter-pill">Branding</button>
+        <button class="filter-pill">Development</button>
+      </div>
+    </div>
+
+    <!-- Project Grid -->
+    <div class="container">
+      <div class="project-grid">
+        <div class="project-card">
+          <div class="project-card-img grad-1"></div>
+          <div class="project-card-body">
+            <span class="tag-pill">Web Design</span>
+            <h3>Finova Banking Platform</h3>
+            <p>
+              A complete redesign of the digital banking experience for a leading European fintech
+              company.
+            </p>
+          </div>
+        </div>
+
+        <div class="project-card">
+          <div class="project-card-img grad-2"></div>
+          <div class="project-card-body">
+            <span class="tag-pill">Branding</span>
+            <h3>Solara Brand Identity</h3>
+            <p>
+              Brand strategy and visual identity system for a sustainable energy startup entering
+              the US market.
+            </p>
+          </div>
+        </div>
+
+        <div class="project-card">
+          <div class="project-card-img grad-3"></div>
+          <div class="project-card-body">
+            <span class="tag-pill">Mobile</span>
+            <h3>PulseHealth App</h3>
+            <p>
+              iOS and Android health tracking application with real-time biometric data
+              visualization.
+            </p>
+          </div>
+        </div>
+
+        <div class="project-card">
+          <div class="project-card-img grad-4"></div>
+          <div class="project-card-body">
+            <span class="tag-pill">Development</span>
+            <h3>CloudSync Dashboard</h3>
+            <p>
+              Full-stack development of a multi-tenant SaaS analytics platform with real-time
+              collaboration.
+            </p>
+          </div>
+        </div>
+
+        <div class="project-card">
+          <div class="project-card-img grad-5"></div>
+          <div class="project-card-body">
+            <span class="tag-pill">Web Design</span>
+            <h3>Meridian Hotels</h3>
+            <p>
+              Luxury hotel booking experience with immersive imagery and streamlined reservation
+              flows.
+            </p>
+          </div>
+        </div>
+
+        <div class="project-card">
+          <div class="project-card-img grad-6"></div>
+          <div class="project-card-body">
+            <span class="tag-pill">Mobile</span>
+            <h3>GreenRoute Navigation</h3>
+            <p>
+              Eco-friendly navigation app that optimizes routes for lower carbon emissions and fuel
+              savings.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Featured Project -->
+    <section class="featured">
+      <div class="container">
+        <span class="featured-label">Featured Project</span>
+        <div class="featured-grid">
+          <div class="featured-img grad-4"></div>
+          <div class="featured-details">
+            <h2>CloudSync Dashboard</h2>
+            <p>
+              We partnered with CloudSync to build a powerful analytics platform that processes over
+              2 million data points daily. The dashboard provides actionable insights through
+              real-time visualizations and collaborative annotation tools, enabling teams to make
+              data-driven decisions faster than ever before.
+            </p>
+            <div class="featured-meta">
+              <div class="featured-meta-row">
+                <span class="featured-meta-label">Client</span>
+                <span class="featured-meta-value">CloudSync Technologies</span>
+              </div>
+              <div class="featured-meta-row">
+                <span class="featured-meta-label">Timeline</span>
+                <span class="featured-meta-value">14 weeks</span>
+              </div>
+              <div class="featured-meta-row">
+                <span class="featured-meta-label">Industry</span>
+                <span class="featured-meta-value">SaaS / Enterprise Analytics</span>
+              </div>
+            </div>
+            <div class="tech-tags">
+              <span class="tech-tag">React</span>
+              <span class="tech-tag">TypeScript</span>
+              <span class="tech-tag">Node.js</span>
+              <span class="tech-tag">PostgreSQL</span>
+              <span class="tech-tag">D3.js</span>
+              <span class="tech-tag">AWS</span>
+            </div>
+            <a href="#" class="btn btn-primary">View Project</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Client Logos -->
+    <section class="client-logos">
+      <div class="container">
+        <h3>Trusted by Industry Leaders</h3>
+        <div class="logos-row">
+          <div class="logo-placeholder">Finova</div>
+          <div class="logo-placeholder">Solara</div>
+          <div class="logo-placeholder">PulseHealth</div>
+          <div class="logo-placeholder">CloudSync</div>
+          <div class="logo-placeholder">Meridian</div>
+          <div class="logo-placeholder">GreenRoute</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="cta">
+      <div class="container">
+        <h2>Have a project in mind?</h2>
+        <p>
+          Let's talk about how we can help bring your vision to life with design and technology that
+          delivers results.
+        </p>
+        <a href="#" class="btn">Start a Conversation</a>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <div class="container">
+        <div class="footer-grid">
+          <div>
+            <div class="footer-brand">
+              <img src="../logos/vetra-full-logo.svg" alt="Vetra" height="24" class="logo-light" />
+              <img
+                src="../logos/vetra-full-logo-light.svg"
+                alt="Vetra"
+                height="24"
+                class="logo-dark"
+              />
+            </div>
+            <p class="footer-desc">
+              We craft digital experiences that help ambitious brands grow, engage, and lead their
+              markets.
+            </p>
+          </div>
+          <div class="footer-col">
+            <h4>Company</h4>
+            <a href="#">About</a>
+            <a href="#">Careers</a>
+            <a href="#">Blog</a>
+            <a href="#">Contact</a>
+          </div>
+          <div class="footer-col">
+            <h4>Services</h4>
+            <a href="#">Web Design</a>
+            <a href="#">Development</a>
+            <a href="#">Branding</a>
+            <a href="#">Mobile Apps</a>
+          </div>
+          <div class="footer-col">
+            <h4>Connect</h4>
+            <a href="#">Twitter</a>
+            <a href="#">LinkedIn</a>
+            <a href="#">Dribbble</a>
+            <a href="#">GitHub</a>
+          </div>
+        </div>
+        <div class="footer-bottom">
+          <span>&copy; 2026 Vetra. All rights reserved.</span>
+          <span>Privacy &middot; Terms</span>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

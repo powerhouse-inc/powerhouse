@@ -1,0 +1,2649 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vetra Presentation Template</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="colors.css" />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: 'Inter', sans-serif;
+        background: #e8e8e8;
+        padding: 40px;
+        transition: background 0.3s;
+      }
+      body.dark {
+        background: #111318;
+      }
+
+      .page-header {
+        max-width: 1280px;
+        margin: 0 auto 32px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .page-header-left {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .page-header-left img {
+        height: 28px;
+      }
+      .page-header-title {
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        color: #9ea0a1;
+      }
+      .logo-light-mode,
+      .logo-dark-mode {
+        display: none;
+      }
+      body:not(.dark) .logo-light-mode {
+        display: block;
+      }
+      body.dark .logo-dark-mode {
+        display: block;
+      }
+
+      /* Toggle */
+      .theme-toggle {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        font-weight: 500;
+        color: #888;
+        cursor: pointer;
+        user-select: none;
+      }
+      .theme-toggle input {
+        display: none;
+      }
+      .toggle-track {
+        width: 40px;
+        height: 22px;
+        background: #d7d8d9;
+        border-radius: 11px;
+        position: relative;
+        transition: background 0.2s;
+      }
+      .toggle-track::after {
+        content: '';
+        position: absolute;
+        top: 3px;
+        left: 3px;
+        width: 16px;
+        height: 16px;
+        background: var(--primary);
+        border-radius: 50%;
+        transition: transform 0.2s;
+      }
+      .theme-toggle input:checked + .toggle-track {
+        background: #485265;
+      }
+      .theme-toggle input:checked + .toggle-track::after {
+        transform: translateX(18px);
+      }
+
+      .grid {
+        max-width: 1280px;
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+      }
+
+      /* =============================================
+       SLIDE BASE
+       ============================================= */
+      .slide {
+        aspect-ratio: 16 / 9;
+        border-radius: 10px;
+        overflow: hidden;
+        position: relative;
+        display: flex;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+        background: var(--background);
+        color: var(--foreground);
+        transition:
+          background 0.3s,
+          color 0.3s;
+      }
+      .slide * {
+        font-family: 'Inter', sans-serif;
+      }
+
+      /* Slide number */
+      .slide::after {
+        content: attr(data-slide);
+        position: absolute;
+        top: 10px;
+        right: 12px;
+        font-size: 9px;
+        font-weight: 600;
+        color: var(--foreground-50);
+        background: var(--muted);
+        padding: 2px 7px;
+        border-radius: 4px;
+        pointer-events: none;
+        z-index: 5;
+        transition:
+          background 0.3s,
+          color 0.3s;
+      }
+      .slide.primary-bg::after {
+        background: rgba(255, 255, 255, 0.15);
+        color: rgba(255, 255, 255, 0.5);
+      }
+
+      /* Layout helpers */
+      .slide-pad {
+        padding: 40px;
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+      }
+      .slide-split {
+        display: flex;
+        width: 100%;
+        height: 100%;
+      }
+      .slide-half {
+        width: 50%;
+        padding: 40px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      }
+      .slide-logo-light,
+      .slide-logo-dark {
+        height: 18px;
+        margin-bottom: auto;
+      }
+      .slide-logo-dark {
+        display: none;
+      }
+      body.dark .slide-logo-light {
+        display: none;
+      }
+      body.dark .slide-logo-dark {
+        display: block;
+      }
+      .slide-footer {
+        margin-top: auto;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 9px;
+        font-weight: 500;
+        color: var(--foreground-50);
+        transition: color 0.3s;
+      }
+
+      /* Theme-aware text */
+      .fg {
+        color: var(--foreground);
+        transition: color 0.3s;
+      }
+      .sub {
+        color: var(--foreground-70);
+        transition: color 0.3s;
+      }
+      .muted {
+        color: var(--muted-foreground);
+        transition: color 0.3s;
+      }
+
+      /* Primary background slide overrides */
+      .primary-bg {
+        background: var(--primary) !important;
+        color: #fcfcfc !important;
+      }
+      .primary-bg .sub {
+        color: rgba(252, 252, 252, 0.65) !important;
+      }
+      .primary-bg .muted {
+        color: rgba(252, 252, 252, 0.4) !important;
+      }
+      .primary-bg .slide-footer {
+        color: rgba(252, 252, 252, 0.35) !important;
+      }
+      .primary-bg .bullet-list li::before {
+        background: rgba(255, 255, 255, 0.6) !important;
+      }
+
+      /* Accent surface */
+      .accent-surface {
+        background: var(--accent);
+        border-radius: 10px;
+        transition: background 0.3s;
+      }
+      .card-surface {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        transition:
+          background 0.3s,
+          border-color 0.3s;
+      }
+
+      /* Placeholder image areas */
+      .img-placeholder {
+        background: linear-gradient(135deg, var(--primary-30), var(--purple-30));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--primary);
+        letter-spacing: 1px;
+        transition: background 0.3s;
+      }
+
+      /* Chart placeholder */
+      .chart-placeholder {
+        flex: 1;
+        border-radius: 8px;
+        border: 1.5px dashed var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 1px;
+        color: var(--muted-foreground);
+        transition:
+          border-color 0.3s,
+          color 0.3s;
+      }
+
+      /* Bullet list */
+      .bullet-list {
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .bullet-list li {
+        padding-left: 16px;
+        position: relative;
+        font-size: 12px;
+        line-height: 1.6;
+      }
+      .bullet-list li::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 7px;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--primary);
+      }
+
+      /* Icon circle */
+      .icon-circle {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+        flex-shrink: 0;
+      }
+
+      .full-logo-tr {
+        position: absolute;
+        top: 24px;
+        right: 40px;
+      }
+      .icon-tr {
+        position: absolute;
+        top: 24px;
+        right: 40px;
+        height: 18px;
+        margin: 0 !important;
+      }
+
+      /* Divider */
+      .divider-bar {
+        width: 48px;
+        height: 4px;
+        background: var(--primary);
+        border-radius: 2px;
+      }
+
+      /* Avatar placeholder */
+      .avatar {
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        color: #fff;
+        flex-shrink: 0;
+      }
+
+      /* Numbered list */
+      .num-list {
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        counter-reset: num;
+      }
+      .num-list li {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        font-size: 12px;
+        line-height: 1.5;
+        counter-increment: num;
+      }
+      .num-list li::before {
+        content: counter(num);
+        flex-shrink: 0;
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        background: var(--primary);
+        color: #fff;
+        font-size: 10px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      /* Tag pill */
+      .tag-pill {
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 6px;
+        font-size: 10px;
+        font-weight: 600;
+      }
+
+      /* Table */
+      .slide-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 11px;
+      }
+      .slide-table th {
+        text-align: left;
+        font-weight: 700;
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        padding: 8px 12px;
+        border-bottom: 2px solid var(--primary);
+        color: var(--primary);
+        transition: border-color 0.3s;
+      }
+      .slide-table td {
+        padding: 8px 12px;
+        border-bottom: 1px solid var(--border);
+        transition: border-color 0.3s;
+      }
+
+      /* Code block */
+      .code-block {
+        background: var(--accent);
+        border-radius: 8px;
+        padding: 16px;
+        font-size: 11px;
+        font-family: 'Courier New', monospace;
+        line-height: 1.7;
+        overflow: hidden;
+        transition: background 0.3s;
+        white-space: pre-wrap;
+      }
+
+      /* Progress bar */
+      .progress-bar {
+        height: 6px;
+        border-radius: 3px;
+        background: var(--muted);
+        overflow: hidden;
+        transition: background 0.3s;
+      }
+      .progress-bar-fill {
+        height: 100%;
+        border-radius: 3px;
+      }
+
+      /* Accent bg slide */
+      .accent-bg-slide {
+        background: var(--accent) !important;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page-header">
+      <div class="page-header-left">
+        <img src="logos/vetra-full-logo.svg" alt="Vetra" height="24" class="logo-light-mode" />
+        <img src="logos/vetra-full-logo-light.svg" alt="Vetra" height="24" class="logo-dark-mode" />
+        <span class="page-header-title">Presentation Templates</span>
+      </div>
+      <label class="theme-toggle">
+        <span>Light</span>
+        <input type="checkbox" id="themeSwitch" />
+        <span class="toggle-track"></span>
+        <span>Dark</span>
+      </label>
+    </div>
+
+    <div class="grid">
+      <!-- 1: Title Slide -->
+      <div class="slide" data-slide="1">
+        <div class="slide-pad">
+          <img
+            src="logos/vetra-full-logo.svg"
+            alt="Vetra"
+            class="slide-logo-light"
+            style="margin-bottom: auto; align-self: flex-start"
+          />
+          <img
+            src="logos/vetra-full-logo-light.svg"
+            alt="Vetra"
+            class="slide-logo-dark"
+            style="margin-bottom: auto; align-self: flex-start"
+          />
+          <div style="display: flex; flex-direction: column; gap: 16px">
+            <p
+              class="muted"
+              style="
+                font-size: 11px;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 3px;
+              "
+            >
+              Presentation Title
+            </p>
+            <h1 style="font-size: 32px; font-weight: 700; line-height: 1.2">
+              Build the Future<br />of Decentralized Ops
+            </h1>
+            <p class="sub" style="font-size: 13px; line-height: 1.5; max-width: 70%">
+              A comprehensive overview of the platform architecture, roadmap, and key milestones.
+            </p>
+          </div>
+          <div class="slide-footer"><span>Vetra Powerhouse</span><span>2026</span></div>
+        </div>
+      </div>
+
+      <!-- 2: Title Slide (Primary) -->
+      <div class="slide primary-bg" data-slide="2">
+        <div class="slide-pad">
+          <img
+            src="logos/vetra-full-logo-white.svg"
+            alt="Vetra"
+            style="height: 18px; margin-bottom: auto; align-self: flex-start"
+          />
+          <div
+            style="
+              flex: 1;
+              display: flex;
+              flex-direction: column;
+              justify-content: center;
+              gap: 12px;
+            "
+          >
+            <p
+              class="sub"
+              style="
+                font-size: 11px;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 3px;
+              "
+            >
+              Welcome
+            </p>
+            <h1 style="font-size: 36px; font-weight: 700; line-height: 1.15">
+              Presentation<br />Title Here
+            </h1>
+            <p class="sub" style="font-size: 12px; line-height: 1.5; max-width: 65%">
+              Subtitle or short description of the presentation topic goes here.
+            </p>
+          </div>
+          <div class="slide-footer"><span>Author Name</span><span>Date</span></div>
+        </div>
+      </div>
+
+      <!-- 3: Section Divider (Centered) -->
+      <div class="slide" data-slide="3">
+        <div
+          class="slide-pad"
+          style="justify-content: center; align-items: center; text-align: center"
+        >
+          <img
+            src="logos/vetra-full-logo.svg"
+            alt="Vetra"
+            class="slide-logo-light"
+            style="position: absolute; top: 24px; left: 28px"
+          />
+          <img
+            src="logos/vetra-full-logo-light.svg"
+            alt="Vetra"
+            class="slide-logo-dark"
+            style="position: absolute; top: 24px; left: 28px"
+          />
+          <p
+            style="
+              font-size: 11px;
+              font-weight: 600;
+              text-transform: uppercase;
+              letter-spacing: 3px;
+              color: var(--primary);
+              margin-bottom: 12px;
+            "
+          >
+            Section 01
+          </p>
+          <h2 style="font-size: 28px; font-weight: 700; line-height: 1.2">Section Title</h2>
+          <p class="sub" style="font-size: 12px; margin-top: 8px; max-width: 60%">
+            Brief description of what this section covers.
+          </p>
+        </div>
+      </div>
+
+      <!-- 4: Section Divider (Left-aligned) -->
+      <div class="slide" data-slide="4">
+        <div class="slide-pad" style="justify-content: center; align-items: flex-start">
+          <img
+            src="logos/vetra-full-logo.svg"
+            alt="Vetra"
+            class="slide-logo-light"
+            style="position: absolute; top: 24px; left: 28px"
+          />
+          <img
+            src="logos/vetra-full-logo-light.svg"
+            alt="Vetra"
+            class="slide-logo-dark"
+            style="position: absolute; top: 24px; left: 28px"
+          />
+          <div class="divider-bar" style="margin-bottom: 20px"></div>
+          <h2 style="font-size: 28px; font-weight: 700; line-height: 1.2">Section Title</h2>
+          <p
+            class="sub"
+            style="font-size: 12px; margin-top: 10px; max-width: 55%; line-height: 1.6"
+          >
+            A short lead-in paragraph that sets context for the following slides.
+          </p>
+        </div>
+      </div>
+
+      <!-- 5: Bullets + Image -->
+      <div class="slide" data-slide="5">
+        <div class="slide-split">
+          <div class="slide-half" style="padding-right: 20px">
+            <h3 style="font-size: 20px; font-weight: 700; line-height: 1.2; margin-bottom: 16px">
+              Key Points
+            </h3>
+            <ul class="bullet-list">
+              <li>First important point about the topic with supporting detail</li>
+              <li>Second key insight that reinforces the narrative</li>
+              <li>Third takeaway that drives the message home</li>
+              <li>Additional context or supporting evidence</li>
+            </ul>
+          </div>
+          <div class="slide-half img-placeholder" style="padding: 0; border-radius: 0">IMAGE</div>
+        </div>
+      </div>
+
+      <!-- 6: Image + Bullets -->
+      <div class="slide" data-slide="6">
+        <div class="slide-split">
+          <div class="slide-half img-placeholder" style="padding: 0; border-radius: 0">IMAGE</div>
+          <div class="slide-half" style="padding-left: 28px">
+            <p
+              class="muted"
+              style="
+                font-size: 10px;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 2px;
+                margin-bottom: 8px;
+              "
+            >
+              Overview
+            </p>
+            <h3 style="font-size: 20px; font-weight: 700; line-height: 1.2; margin-bottom: 16px">
+              Content Title
+            </h3>
+            <ul class="bullet-list">
+              <li>Describe the first feature or benefit clearly</li>
+              <li>Explain the second point with context</li>
+              <li>Highlight the third advantage or detail</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- 7: Stats / Metrics -->
+      <div class="slide" data-slide="7">
+        <div class="slide-pad" style="gap: 24px">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start">
+            <div>
+              <p
+                class="muted"
+                style="
+                  font-size: 10px;
+                  font-weight: 600;
+                  text-transform: uppercase;
+                  letter-spacing: 2px;
+                  margin-bottom: 4px;
+                "
+              >
+                By The Numbers
+              </p>
+              <h3 style="font-size: 20px; font-weight: 700">Key Metrics</h3>
+            </div>
+          </div>
+          <img src="logos/vetra-icon.svg" alt="" class="slide-logo-light icon-tr" />
+          <img src="logos/vetra-icon-dark.svg" alt="" class="slide-logo-dark icon-tr" />
+          <div style="flex: 1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px">
+            <div
+              class="accent-surface"
+              style="
+                padding: 20px;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                text-align: center;
+              "
+            >
+              <div style="font-size: 32px; font-weight: 700; color: var(--primary); line-height: 1">
+                99.9%
+              </div>
+              <div class="sub" style="font-size: 11px; font-weight: 500; margin-top: 6px">
+                Uptime SLA
+              </div>
+            </div>
+            <div
+              class="accent-surface"
+              style="
+                padding: 20px;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                text-align: center;
+              "
+            >
+              <div style="font-size: 32px; font-weight: 700; color: var(--success); line-height: 1">
+                2.4k
+              </div>
+              <div class="sub" style="font-size: 11px; font-weight: 500; margin-top: 6px">
+                Active Users
+              </div>
+            </div>
+            <div
+              class="accent-surface"
+              style="
+                padding: 20px;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                text-align: center;
+              "
+            >
+              <div
+                style="font-size: 32px; font-weight: 700; color: var(--progress); line-height: 1"
+              >
+                148ms
+              </div>
+              <div class="sub" style="font-size: 11px; font-weight: 500; margin-top: 6px">
+                Avg Response
+              </div>
+            </div>
+            <div
+              class="accent-surface"
+              style="
+                padding: 20px;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                text-align: center;
+              "
+            >
+              <div style="font-size: 32px; font-weight: 700; color: var(--todo); line-height: 1">
+                47
+              </div>
+              <div class="sub" style="font-size: 11px; font-weight: 500; margin-top: 6px">
+                Integrations
+              </div>
+            </div>
+            <div
+              class="accent-surface"
+              style="
+                padding: 20px;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                text-align: center;
+              "
+            >
+              <div style="font-size: 32px; font-weight: 700; color: var(--purple); line-height: 1">
+                12
+              </div>
+              <div class="sub" style="font-size: 11px; font-weight: 500; margin-top: 6px">
+                Core Modules
+              </div>
+            </div>
+            <div
+              class="accent-surface"
+              style="
+                padding: 20px;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                text-align: center;
+              "
+            >
+              <div style="font-size: 32px; font-weight: 700; color: var(--yellow); line-height: 1">
+                3x
+              </div>
+              <div class="sub" style="font-size: 11px; font-weight: 500; margin-top: 6px">
+                Faster Deploys
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 8: Two-Column Text -->
+      <div class="slide" data-slide="8">
+        <div class="slide-pad" style="gap: 20px">
+          <img src="logos/vetra-icon.svg" alt="" class="slide-logo-light icon-tr" />
+          <img src="logos/vetra-icon-dark.svg" alt="" class="slide-logo-dark icon-tr" />
+          <h3 style="font-size: 20px; font-weight: 700">Two Column Layout</h3>
+          <div style="flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 24px">
+            <div>
+              <h4
+                style="font-size: 14px; font-weight: 700; margin-bottom: 8px; color: var(--primary)"
+              >
+                Left Column
+              </h4>
+              <p class="sub" style="font-size: 12px; line-height: 1.7">
+                Explain the first concept or theme here. Provide enough detail for the audience to
+                understand the core message without overwhelming them.
+              </p>
+            </div>
+            <div>
+              <h4
+                style="font-size: 14px; font-weight: 700; margin-bottom: 8px; color: var(--primary)"
+              >
+                Right Column
+              </h4>
+              <p class="sub" style="font-size: 12px; line-height: 1.7">
+                Cover the second concept or a contrasting perspective. Use this space to create a
+                natural comparison or complement to the left column.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 9: Quote / Statement (Primary) -->
+      <div class="slide primary-bg" data-slide="9">
+        <div
+          class="slide-pad"
+          style="justify-content: center; align-items: center; text-align: center"
+        >
+          <img
+            src="logos/vetra-full-logo-white.svg"
+            alt="Vetra"
+            style="height: 18px; position: absolute; top: 24px; left: 28px"
+          />
+          <div
+            style="
+              font-size: 64px;
+              line-height: 1;
+              font-weight: 700;
+              color: rgba(255, 255, 255, 0.2);
+            "
+          >
+            "
+          </div>
+          <p
+            style="
+              font-size: 22px;
+              font-weight: 600;
+              line-height: 1.4;
+              max-width: 80%;
+              margin-top: -12px;
+            "
+          >
+            The best way to predict the future is to build it, one decentralized component at a
+            time.
+          </p>
+          <p class="sub" style="font-size: 11px; margin-top: 16px; font-weight: 500">
+            — Speaker Name, Role
+          </p>
+        </div>
+      </div>
+
+      <!-- 10: Process / Timeline -->
+      <div class="slide" data-slide="10">
+        <div class="slide-pad" style="gap: 20px">
+          <img src="logos/vetra-icon.svg" alt="" class="slide-logo-light icon-tr" />
+          <img src="logos/vetra-icon-dark.svg" alt="" class="slide-logo-dark icon-tr" />
+          <h3 style="font-size: 20px; font-weight: 700">Process Overview</h3>
+          <div style="flex: 1; display: flex; align-items: flex-start; gap: 12px; padding-top: 8px">
+            <div
+              style="
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                text-align: center;
+                gap: 8px;
+              "
+            >
+              <div
+                class="icon-circle"
+                style="
+                  background: var(--primary-30);
+                  color: var(--primary);
+                  font-weight: 700;
+                  font-size: 13px;
+                "
+              >
+                1
+              </div>
+              <h5 style="font-size: 12px; font-weight: 700">Research</h5>
+              <p class="sub" style="font-size: 10px; line-height: 1.5">
+                Gather requirements and analyze the problem space
+              </p>
+            </div>
+            <div
+              style="
+                flex: 0;
+                height: 2px;
+                width: 32px;
+                background: var(--border);
+                margin-top: 18px;
+                transition: background 0.3s;
+              "
+            ></div>
+            <div
+              style="
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                text-align: center;
+                gap: 8px;
+              "
+            >
+              <div
+                class="icon-circle"
+                style="
+                  background: var(--progress-30);
+                  color: var(--progress);
+                  font-weight: 700;
+                  font-size: 13px;
+                "
+              >
+                2
+              </div>
+              <h5 style="font-size: 12px; font-weight: 700">Design</h5>
+              <p class="sub" style="font-size: 10px; line-height: 1.5">
+                Create wireframes, prototypes and architecture
+              </p>
+            </div>
+            <div
+              style="
+                flex: 0;
+                height: 2px;
+                width: 32px;
+                background: var(--border);
+                margin-top: 18px;
+                transition: background 0.3s;
+              "
+            ></div>
+            <div
+              style="
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                text-align: center;
+                gap: 8px;
+              "
+            >
+              <div
+                class="icon-circle"
+                style="
+                  background: var(--success-30);
+                  color: var(--success);
+                  font-weight: 700;
+                  font-size: 13px;
+                "
+              >
+                3
+              </div>
+              <h5 style="font-size: 12px; font-weight: 700">Build</h5>
+              <p class="sub" style="font-size: 10px; line-height: 1.5">
+                Develop, test, and iterate on the solution
+              </p>
+            </div>
+            <div
+              style="
+                flex: 0;
+                height: 2px;
+                width: 32px;
+                background: var(--border);
+                margin-top: 18px;
+                transition: background 0.3s;
+              "
+            ></div>
+            <div
+              style="
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                text-align: center;
+                gap: 8px;
+              "
+            >
+              <div
+                class="icon-circle"
+                style="
+                  background: var(--todo-30);
+                  color: var(--todo);
+                  font-weight: 700;
+                  font-size: 13px;
+                "
+              >
+                4
+              </div>
+              <h5 style="font-size: 12px; font-weight: 700">Launch</h5>
+              <p class="sub" style="font-size: 10px; line-height: 1.5">
+                Deploy to production and monitor results
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 11: Feature Grid -->
+      <div class="slide" data-slide="11">
+        <div class="slide-pad" style="gap: 20px">
+          <img src="logos/vetra-icon.svg" alt="" class="slide-logo-light icon-tr" />
+          <img src="logos/vetra-icon-dark.svg" alt="" class="slide-logo-dark icon-tr" />
+          <h3 style="font-size: 20px; font-weight: 700">Features</h3>
+          <div style="flex: 1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px">
+            <div class="accent-surface" style="padding: 16px">
+              <div
+                class="icon-circle"
+                style="
+                  background: var(--primary-30);
+                  color: var(--primary);
+                  font-size: 14px;
+                  margin-bottom: 10px;
+                "
+              >
+                &#9670;
+              </div>
+              <h5 style="font-size: 12px; font-weight: 700; margin-bottom: 4px">Modular Design</h5>
+              <p class="sub" style="font-size: 10px; line-height: 1.5">
+                Composable components that work independently.
+              </p>
+            </div>
+            <div class="accent-surface" style="padding: 16px">
+              <div
+                class="icon-circle"
+                style="
+                  background: var(--success-30);
+                  color: var(--success);
+                  font-size: 14px;
+                  margin-bottom: 10px;
+                "
+              >
+                &#9733;
+              </div>
+              <h5 style="font-size: 12px; font-weight: 700; margin-bottom: 4px">
+                High Performance
+              </h5>
+              <p class="sub" style="font-size: 10px; line-height: 1.5">
+                Optimized for speed and reliability at scale.
+              </p>
+            </div>
+            <div class="accent-surface" style="padding: 16px">
+              <div
+                class="icon-circle"
+                style="
+                  background: var(--progress-30);
+                  color: var(--progress);
+                  font-size: 14px;
+                  margin-bottom: 10px;
+                "
+              >
+                &#9881;
+              </div>
+              <h5 style="font-size: 12px; font-weight: 700; margin-bottom: 4px">
+                Easy Integration
+              </h5>
+              <p class="sub" style="font-size: 10px; line-height: 1.5">
+                Plug into existing workflows seamlessly.
+              </p>
+            </div>
+            <div class="accent-surface" style="padding: 16px">
+              <div
+                class="icon-circle"
+                style="
+                  background: var(--purple-30);
+                  color: var(--purple);
+                  font-size: 14px;
+                  margin-bottom: 10px;
+                "
+              >
+                &#9878;
+              </div>
+              <h5 style="font-size: 12px; font-weight: 700; margin-bottom: 4px">
+                Secure by Default
+              </h5>
+              <p class="sub" style="font-size: 10px; line-height: 1.5">
+                Built-in security best practices from day one.
+              </p>
+            </div>
+            <div class="accent-surface" style="padding: 16px">
+              <div
+                class="icon-circle"
+                style="
+                  background: var(--todo-30);
+                  color: var(--todo);
+                  font-size: 14px;
+                  margin-bottom: 10px;
+                "
+              >
+                &#9850;
+              </div>
+              <h5 style="font-size: 12px; font-weight: 700; margin-bottom: 4px">Accessible</h5>
+              <p class="sub" style="font-size: 10px; line-height: 1.5">
+                WCAG compliant with inclusive design.
+              </p>
+            </div>
+            <div class="accent-surface" style="padding: 16px">
+              <div
+                class="icon-circle"
+                style="
+                  background: var(--yellow-30);
+                  color: var(--yellow);
+                  font-size: 14px;
+                  margin-bottom: 10px;
+                "
+              >
+                &#9729;
+              </div>
+              <h5 style="font-size: 12px; font-weight: 700; margin-bottom: 4px">Cloud Native</h5>
+              <p class="sub" style="font-size: 10px; line-height: 1.5">
+                Designed for modern cloud infrastructure.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 12: Big Image + Caption -->
+      <div class="slide" data-slide="12">
+        <div class="slide-pad" style="gap: 16px">
+          <div style="flex: 1; border-radius: 10px; overflow: hidden" class="img-placeholder">
+            IMAGE
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: baseline">
+            <h4 style="font-size: 14px; font-weight: 700">Full-width visual with caption</h4>
+            <p class="muted" style="font-size: 10px">
+              Fig 1. — Description of the image or diagram
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 13: Before vs. After -->
+      <div class="slide" data-slide="13">
+        <div class="slide-pad" style="gap: 16px">
+          <h3 style="font-size: 20px; font-weight: 700; text-align: center">Before vs. After</h3>
+          <div
+            style="
+              flex: 1;
+              display: grid;
+              grid-template-columns: 1fr auto 1fr;
+              gap: 16px;
+              align-items: stretch;
+            "
+          >
+            <div
+              class="accent-surface"
+              style="padding: 20px; display: flex; flex-direction: column; gap: 10px"
+            >
+              <h4 style="font-size: 14px; font-weight: 700; color: var(--destructive)">Before</h4>
+              <ul class="bullet-list">
+                <li style="font-size: 11px">Manual processes slow delivery</li>
+                <li style="font-size: 11px">Siloed teams with poor visibility</li>
+                <li style="font-size: 11px">Inconsistent component library</li>
+                <li style="font-size: 11px">Fragmented documentation</li>
+              </ul>
+            </div>
+            <div style="display: flex; align-items: center; font-size: 18px" class="muted">vs</div>
+            <div
+              class="accent-surface"
+              style="padding: 20px; display: flex; flex-direction: column; gap: 10px"
+            >
+              <h4 style="font-size: 14px; font-weight: 700; color: var(--success)">After</h4>
+              <ul class="bullet-list">
+                <li style="font-size: 11px">Automated CI/CD pipelines</li>
+                <li style="font-size: 11px">Shared dashboards and real-time status</li>
+                <li style="font-size: 11px">Unified design system</li>
+                <li style="font-size: 11px">Single source of truth for docs</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 14: Chart Placeholder -->
+      <div class="slide" data-slide="14">
+        <div class="slide-pad" style="gap: 16px">
+          <img src="logos/vetra-icon.svg" alt="" class="slide-logo-light icon-tr" />
+          <img src="logos/vetra-icon-dark.svg" alt="" class="slide-logo-dark icon-tr" />
+          <div style="display: flex; justify-content: space-between; align-items: baseline">
+            <div>
+              <p
+                class="muted"
+                style="
+                  font-size: 10px;
+                  font-weight: 600;
+                  text-transform: uppercase;
+                  letter-spacing: 2px;
+                  margin-bottom: 4px;
+                "
+              >
+                Analytics
+              </p>
+              <h3 style="font-size: 20px; font-weight: 700">Growth Over Time</h3>
+            </div>
+            <div style="display: flex; gap: 12px">
+              <span
+                style="
+                  font-size: 10px;
+                  font-weight: 600;
+                  display: flex;
+                  align-items: center;
+                  gap: 4px;
+                "
+                ><span
+                  style="
+                    width: 8px;
+                    height: 8px;
+                    border-radius: 50%;
+                    background: var(--primary);
+                    display: inline-block;
+                  "
+                ></span>
+                Users</span
+              >
+              <span
+                class="sub"
+                style="
+                  font-size: 10px;
+                  font-weight: 600;
+                  display: flex;
+                  align-items: center;
+                  gap: 4px;
+                "
+                ><span
+                  style="
+                    width: 8px;
+                    height: 8px;
+                    border-radius: 50%;
+                    background: var(--success);
+                    display: inline-block;
+                  "
+                ></span>
+                Revenue</span
+              >
+            </div>
+          </div>
+          <div class="chart-placeholder">CHART</div>
+        </div>
+      </div>
+
+      <!-- 15: Agenda -->
+      <div class="slide" data-slide="15" style="overflow: hidden">
+        <div class="slide-split">
+          <div class="slide-half" style="background: var(--primary); color: #fcfcfc; padding: 36px">
+            <img
+              src="logos/vetra-full-logo-white.svg"
+              alt="Vetra"
+              style="height: 16px; margin-bottom: auto"
+            />
+            <div>
+              <p
+                style="
+                  font-size: 10px;
+                  font-weight: 600;
+                  text-transform: uppercase;
+                  letter-spacing: 2px;
+                  opacity: 0.5;
+                  margin-bottom: 8px;
+                "
+              >
+                Overview
+              </p>
+              <h2 style="font-size: 26px; font-weight: 700; line-height: 1.2">Agenda</h2>
+            </div>
+          </div>
+          <div class="slide-half" style="gap: 0; justify-content: center">
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                gap: 14px;
+                padding: 12px 0;
+                border-bottom: 1px solid var(--border);
+                transition: border-color 0.3s;
+              "
+            >
+              <span style="font-size: 18px; font-weight: 700; color: var(--primary); width: 28px"
+                >01</span
+              >
+              <span style="font-size: 13px; font-weight: 600">Introduction & Context</span>
+            </div>
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                gap: 14px;
+                padding: 12px 0;
+                border-bottom: 1px solid var(--border);
+                transition: border-color 0.3s;
+              "
+            >
+              <span style="font-size: 18px; font-weight: 700; color: var(--primary); width: 28px"
+                >02</span
+              >
+              <span style="font-size: 13px; font-weight: 600">Problem Statement</span>
+            </div>
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                gap: 14px;
+                padding: 12px 0;
+                border-bottom: 1px solid var(--border);
+                transition: border-color 0.3s;
+              "
+            >
+              <span style="font-size: 18px; font-weight: 700; color: var(--primary); width: 28px"
+                >03</span
+              >
+              <span style="font-size: 13px; font-weight: 600">Proposed Solution</span>
+            </div>
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                gap: 14px;
+                padding: 12px 0;
+                border-bottom: 1px solid var(--border);
+                transition: border-color 0.3s;
+              "
+            >
+              <span style="font-size: 18px; font-weight: 700; color: var(--primary); width: 28px"
+                >04</span
+              >
+              <span style="font-size: 13px; font-weight: 600">Timeline & Milestones</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 14px; padding: 12px 0">
+              <span style="font-size: 18px; font-weight: 700; color: var(--primary); width: 28px"
+                >05</span
+              >
+              <span style="font-size: 13px; font-weight: 600">Q&A</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 16: Team / People Grid -->
+      <div class="slide" data-slide="16">
+        <div class="slide-pad" style="gap: 20px">
+          <h3 style="font-size: 20px; font-weight: 700">Our Team</h3>
+          <div style="flex: 1; display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px">
+            <div
+              class="accent-surface"
+              style="
+                padding: 16px;
+                text-align: center;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 8px;
+              "
+            >
+              <div
+                class="avatar"
+                style="width: 40px; height: 40px; background: var(--primary); font-size: 14px"
+              >
+                AB
+              </div>
+              <h5 style="font-size: 11px; font-weight: 700">Alice Brown</h5>
+              <p class="muted" style="font-size: 9px">Engineering Lead</p>
+            </div>
+            <div
+              class="accent-surface"
+              style="
+                padding: 16px;
+                text-align: center;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 8px;
+              "
+            >
+              <div
+                class="avatar"
+                style="width: 40px; height: 40px; background: var(--progress); font-size: 14px"
+              >
+                CD
+              </div>
+              <h5 style="font-size: 11px; font-weight: 700">Chris Davis</h5>
+              <p class="muted" style="font-size: 9px">Product Manager</p>
+            </div>
+            <div
+              class="accent-surface"
+              style="
+                padding: 16px;
+                text-align: center;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 8px;
+              "
+            >
+              <div
+                class="avatar"
+                style="width: 40px; height: 40px; background: var(--success); font-size: 14px"
+              >
+                EF
+              </div>
+              <h5 style="font-size: 11px; font-weight: 700">Emma Fisher</h5>
+              <p class="muted" style="font-size: 9px">Design Director</p>
+            </div>
+            <div
+              class="accent-surface"
+              style="
+                padding: 16px;
+                text-align: center;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 8px;
+              "
+            >
+              <div
+                class="avatar"
+                style="width: 40px; height: 40px; background: var(--purple); font-size: 14px"
+              >
+                GH
+              </div>
+              <h5 style="font-size: 11px; font-weight: 700">George Hill</h5>
+              <p class="muted" style="font-size: 9px">DevOps Architect</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 17: Three-Column Bullets -->
+      <div class="slide" data-slide="17">
+        <div class="slide-pad" style="gap: 20px">
+          <img src="logos/vetra-icon.svg" alt="" class="slide-logo-light icon-tr" />
+          <img src="logos/vetra-icon-dark.svg" alt="" class="slide-logo-dark icon-tr" />
+          <h3 style="font-size: 20px; font-weight: 700">Three Pillars</h3>
+          <div style="flex: 1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px">
+            <div>
+              <div
+                class="divider-bar"
+                style="width: 32px; margin-bottom: 12px; background: var(--primary)"
+              ></div>
+              <h4 style="font-size: 13px; font-weight: 700; margin-bottom: 8px">Scalability</h4>
+              <ul class="bullet-list">
+                <li style="font-size: 11px">Horizontal auto-scaling</li>
+                <li style="font-size: 11px">Edge-first architecture</li>
+                <li style="font-size: 11px">Global CDN distribution</li>
+              </ul>
+            </div>
+            <div>
+              <div
+                class="divider-bar"
+                style="width: 32px; margin-bottom: 12px; background: var(--success)"
+              ></div>
+              <h4 style="font-size: 13px; font-weight: 700; margin-bottom: 8px">Reliability</h4>
+              <ul class="bullet-list">
+                <li style="font-size: 11px">Multi-region failover</li>
+                <li style="font-size: 11px">Automated health checks</li>
+                <li style="font-size: 11px">99.99% uptime target</li>
+              </ul>
+            </div>
+            <div>
+              <div
+                class="divider-bar"
+                style="width: 32px; margin-bottom: 12px; background: var(--progress)"
+              ></div>
+              <h4 style="font-size: 13px; font-weight: 700; margin-bottom: 8px">Security</h4>
+              <ul class="bullet-list">
+                <li style="font-size: 11px">End-to-end encryption</li>
+                <li style="font-size: 11px">Zero-trust networking</li>
+                <li style="font-size: 11px">SOC 2 compliant</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 18: Big Number Highlight -->
+      <div class="slide primary-bg" data-slide="18">
+        <div
+          class="slide-pad"
+          style="justify-content: center; align-items: center; text-align: center; gap: 8px"
+        >
+          <img
+            src="logos/vetra-full-logo-white.svg"
+            alt="Vetra"
+            style="height: 18px; position: absolute; top: 24px; left: 28px"
+          />
+          <p
+            class="sub"
+            style="
+              font-size: 11px;
+              font-weight: 600;
+              text-transform: uppercase;
+              letter-spacing: 3px;
+            "
+          >
+            Performance Improvement
+          </p>
+          <div style="font-size: 80px; font-weight: 700; line-height: 1">10x</div>
+          <p class="sub" style="font-size: 14px; max-width: 60%; line-height: 1.5">
+            Faster build times compared to the previous architecture, enabling rapid iteration
+            cycles.
+          </p>
+        </div>
+      </div>
+
+      <!-- 19: Image Grid (2x2) -->
+      <div class="slide" data-slide="19">
+        <div class="slide-pad" style="gap: 16px">
+          <h3 style="font-size: 20px; font-weight: 700">Gallery</h3>
+          <div
+            style="
+              flex: 1;
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              grid-template-rows: 1fr 1fr;
+              gap: 12px;
+            "
+          >
+            <div class="img-placeholder" style="border-radius: 8px">IMAGE 1</div>
+            <div class="img-placeholder" style="border-radius: 8px">IMAGE 2</div>
+            <div class="img-placeholder" style="border-radius: 8px">IMAGE 3</div>
+            <div class="img-placeholder" style="border-radius: 8px">IMAGE 4</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 20: Roadmap Timeline -->
+      <div class="slide" data-slide="20">
+        <div class="slide-pad" style="gap: 20px">
+          <img src="logos/vetra-full-logo.svg" alt="Vetra" class="slide-logo-light full-logo-tr" />
+          <img
+            src="logos/vetra-full-logo-light.svg"
+            alt="Vetra"
+            class="slide-logo-dark full-logo-tr"
+          />
+          <h3 style="font-size: 20px; font-weight: 700">Roadmap</h3>
+          <div
+            style="flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 0"
+          >
+            <div style="display: flex; align-items: stretch">
+              <div
+                style="
+                  flex: 1;
+                  padding: 12px 16px;
+                  border-left: 3px solid var(--primary);
+                  background: var(--primary-30);
+                  border-radius: 0 8px 8px 0;
+                "
+              >
+                <p
+                  style="
+                    font-size: 10px;
+                    font-weight: 700;
+                    color: var(--primary);
+                    margin-bottom: 2px;
+                  "
+                >
+                  Q1 2026
+                </p>
+                <p style="font-size: 11px; font-weight: 600">Foundation & Core Infrastructure</p>
+                <p class="sub" style="font-size: 10px">
+                  Set up monorepo, CI/CD, design system base
+                </p>
+              </div>
+            </div>
+            <div
+              style="
+                width: 3px;
+                height: 8px;
+                background: var(--border);
+                margin-left: 0;
+                transition: background 0.3s;
+              "
+            ></div>
+            <div style="display: flex; align-items: stretch">
+              <div
+                style="
+                  flex: 1;
+                  padding: 12px 16px;
+                  border-left: 3px solid var(--progress);
+                  background: var(--progress-30);
+                  border-radius: 0 8px 8px 0;
+                "
+              >
+                <p
+                  style="
+                    font-size: 10px;
+                    font-weight: 700;
+                    color: var(--progress);
+                    margin-bottom: 2px;
+                  "
+                >
+                  Q2 2026
+                </p>
+                <p style="font-size: 11px; font-weight: 600">Component Library v1</p>
+                <p class="sub" style="font-size: 10px">
+                  Ship first 40 components with documentation
+                </p>
+              </div>
+            </div>
+            <div
+              style="
+                width: 3px;
+                height: 8px;
+                background: var(--border);
+                margin-left: 0;
+                transition: background 0.3s;
+              "
+            ></div>
+            <div style="display: flex; align-items: stretch">
+              <div
+                style="
+                  flex: 1;
+                  padding: 12px 16px;
+                  border-left: 3px solid var(--success);
+                  background: var(--success-30);
+                  border-radius: 0 8px 8px 0;
+                "
+              >
+                <p
+                  style="
+                    font-size: 10px;
+                    font-weight: 700;
+                    color: var(--success);
+                    margin-bottom: 2px;
+                  "
+                >
+                  Q3 2026
+                </p>
+                <p style="font-size: 11px; font-weight: 600">Integration & Testing</p>
+                <p class="sub" style="font-size: 10px">
+                  End-to-end testing, third-party integrations
+                </p>
+              </div>
+            </div>
+            <div
+              style="
+                width: 3px;
+                height: 8px;
+                background: var(--border);
+                margin-left: 0;
+                transition: background 0.3s;
+              "
+            ></div>
+            <div style="display: flex; align-items: stretch">
+              <div
+                style="
+                  flex: 1;
+                  padding: 12px 16px;
+                  border-left: 3px solid var(--yellow);
+                  background: var(--yellow-30);
+                  border-radius: 0 8px 8px 0;
+                "
+              >
+                <p
+                  style="
+                    font-size: 10px;
+                    font-weight: 700;
+                    color: var(--yellow);
+                    margin-bottom: 2px;
+                  "
+                >
+                  Q4 2026
+                </p>
+                <p style="font-size: 11px; font-weight: 600">Public Launch</p>
+                <p class="sub" style="font-size: 10px">GA release, onboarding, community support</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 21: Pricing / Tiers -->
+      <div class="slide" data-slide="21">
+        <div class="slide-pad" style="gap: 16px">
+          <img src="logos/vetra-full-logo.svg" alt="Vetra" class="slide-logo-light full-logo-tr" />
+          <img
+            src="logos/vetra-full-logo-light.svg"
+            alt="Vetra"
+            class="slide-logo-dark full-logo-tr"
+          />
+          <h3 style="font-size: 20px; font-weight: 700; text-align: center">Plans</h3>
+          <div
+            style="
+              flex: 1;
+              display: grid;
+              grid-template-columns: repeat(3, 1fr);
+              gap: 14px;
+              align-items: stretch;
+            "
+          >
+            <div
+              class="card-surface"
+              style="padding: 20px; display: flex; flex-direction: column; gap: 10px"
+            >
+              <h4 style="font-size: 13px; font-weight: 700">Starter</h4>
+              <div style="font-size: 28px; font-weight: 700; color: var(--foreground)">Free</div>
+              <p class="sub" style="font-size: 10px; line-height: 1.5">
+                For individuals and small side projects.
+              </p>
+              <ul class="bullet-list" style="margin-top: auto">
+                <li style="font-size: 10px">Up to 3 projects</li>
+                <li style="font-size: 10px">Community support</li>
+                <li style="font-size: 10px">Basic analytics</li>
+              </ul>
+            </div>
+            <div
+              style="
+                padding: 20px;
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+                background: var(--primary);
+                color: #fff;
+                border-radius: 10px;
+                border: 2px solid var(--primary);
+              "
+            >
+              <div style="display: flex; justify-content: space-between; align-items: center">
+                <h4 style="font-size: 13px; font-weight: 700">Pro</h4>
+                <span class="tag-pill" style="background: rgba(255, 255, 255, 0.2); color: #fff"
+                  >Popular</span
+                >
+              </div>
+              <div style="font-size: 28px; font-weight: 700">
+                $29<span style="font-size: 13px; font-weight: 500; opacity: 0.6">/mo</span>
+              </div>
+              <p style="font-size: 10px; line-height: 1.5; opacity: 0.7">
+                For growing teams and production apps.
+              </p>
+              <ul class="bullet-list" style="margin-top: auto">
+                <li style="font-size: 10px">Unlimited projects</li>
+                <li style="font-size: 10px">Priority support</li>
+                <li style="font-size: 10px">Advanced analytics</li>
+              </ul>
+            </div>
+            <div
+              class="card-surface"
+              style="padding: 20px; display: flex; flex-direction: column; gap: 10px"
+            >
+              <h4 style="font-size: 13px; font-weight: 700">Enterprise</h4>
+              <div style="font-size: 28px; font-weight: 700; color: var(--foreground)">Custom</div>
+              <p class="sub" style="font-size: 10px; line-height: 1.5">
+                For organizations with advanced needs.
+              </p>
+              <ul class="bullet-list" style="margin-top: auto">
+                <li style="font-size: 10px">Dedicated infrastructure</li>
+                <li style="font-size: 10px">SLA guarantees</li>
+                <li style="font-size: 10px">Custom integrations</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 22: Testimonial with Avatar -->
+      <div class="slide" data-slide="22">
+        <div class="slide-split">
+          <div class="slide-half img-placeholder" style="padding: 0; border-radius: 0">PHOTO</div>
+          <div class="slide-half" style="padding-left: 28px; gap: 16px">
+            <div
+              style="
+                font-size: 48px;
+                line-height: 1;
+                font-weight: 700;
+                color: var(--primary);
+                opacity: 0.3;
+              "
+            >
+              "
+            </div>
+            <p style="font-size: 15px; font-weight: 500; line-height: 1.6; margin-top: -8px">
+              This platform transformed how our team collaborates. The design system alone saved us
+              hundreds of hours.
+            </p>
+            <div style="margin-top: auto; display: flex; align-items: center; gap: 12px">
+              <div
+                class="avatar"
+                style="width: 36px; height: 36px; background: var(--purple); font-size: 12px"
+              >
+                JK
+              </div>
+              <div>
+                <p style="font-size: 12px; font-weight: 700">Jane Kim</p>
+                <p class="muted" style="font-size: 10px">CTO, TechCorp</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 23: Numbered Steps (Vertical) -->
+      <div class="slide" data-slide="23">
+        <div class="slide-pad" style="gap: 20px">
+          <img src="logos/vetra-icon.svg" alt="" class="slide-logo-light icon-tr" />
+          <img src="logos/vetra-icon-dark.svg" alt="" class="slide-logo-dark icon-tr" />
+          <h3 style="font-size: 20px; font-weight: 700">Getting Started</h3>
+          <div style="flex: 1; display: flex; flex-direction: column; justify-content: center">
+            <ol class="num-list">
+              <li>
+                <span
+                  >Clone the repository and install dependencies using the package manager of your
+                  choice.</span
+                >
+              </li>
+              <li>
+                <span
+                  >Configure your environment variables and set up the local development
+                  server.</span
+                >
+              </li>
+              <li>
+                <span
+                  >Import the design tokens and connect your Figma library for live
+                  synchronization.</span
+                >
+              </li>
+              <li>
+                <span
+                  >Build your first component using the provided templates and submit a pull
+                  request.</span
+                >
+              </li>
+            </ol>
+          </div>
+        </div>
+      </div>
+
+      <!-- 24: Code / Terminal Block -->
+      <div class="slide" data-slide="24">
+        <div class="slide-split">
+          <div class="slide-half" style="padding-right: 20px">
+            <p
+              class="muted"
+              style="
+                font-size: 10px;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 2px;
+                margin-bottom: 8px;
+              "
+            >
+              Developer Experience
+            </p>
+            <h3 style="font-size: 20px; font-weight: 700; line-height: 1.2; margin-bottom: 12px">
+              Simple API
+            </h3>
+            <p class="sub" style="font-size: 12px; line-height: 1.6">
+              Get up and running with just a few lines of code. Our SDK handles authentication,
+              caching, and error recovery automatically.
+            </p>
+          </div>
+          <div class="slide-half" style="padding-left: 8px; justify-content: center">
+            <div class="code-block">
+              <span class="muted">// Initialize the client</span>
+              import { Vetra } from '@vetra/sdk'; const client = new Vetra({ apiKey:
+              process.env.API_KEY, region: 'eu-west-1', });
+
+              <span class="muted">// Fetch components</span>
+              const components = await client .components.list({ limit: 20 });
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 25: Data Table -->
+      <div class="slide" data-slide="25">
+        <div class="slide-pad" style="gap: 16px">
+          <img src="logos/vetra-full-logo.svg" alt="Vetra" class="slide-logo-light full-logo-tr" />
+          <img
+            src="logos/vetra-full-logo-light.svg"
+            alt="Vetra"
+            class="slide-logo-dark full-logo-tr"
+          />
+          <h3 style="font-size: 20px; font-weight: 700">Comparison Matrix</h3>
+          <div style="flex: 1; display: flex; flex-direction: column; justify-content: center">
+            <table class="slide-table">
+              <thead>
+                <tr>
+                  <th>Feature</th>
+                  <th>Starter</th>
+                  <th>Pro</th>
+                  <th>Enterprise</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Projects</td>
+                  <td>3</td>
+                  <td>Unlimited</td>
+                  <td>Unlimited</td>
+                </tr>
+                <tr>
+                  <td>Team Members</td>
+                  <td>1</td>
+                  <td>10</td>
+                  <td>Unlimited</td>
+                </tr>
+                <tr>
+                  <td>Storage</td>
+                  <td>1 GB</td>
+                  <td>50 GB</td>
+                  <td>Custom</td>
+                </tr>
+                <tr>
+                  <td>Support</td>
+                  <td>Community</td>
+                  <td>Priority</td>
+                  <td>Dedicated</td>
+                </tr>
+                <tr>
+                  <td>SLA</td>
+                  <td style="color: var(--muted-foreground)">—</td>
+                  <td>99.9%</td>
+                  <td style="font-weight: 600; color: var(--success)">99.99%</td>
+                </tr>
+                <tr>
+                  <td>SSO</td>
+                  <td style="color: var(--muted-foreground)">—</td>
+                  <td style="color: var(--muted-foreground)">—</td>
+                  <td style="color: var(--success)">&#10003;</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- 26: Checklist / To-Do -->
+      <div class="slide" data-slide="26">
+        <div class="slide-split">
+          <div class="slide-half" style="padding-right: 20px">
+            <h3 style="font-size: 20px; font-weight: 700; line-height: 1.2; margin-bottom: 16px">
+              Launch Checklist
+            </h3>
+            <div style="display: flex; flex-direction: column; gap: 10px">
+              <div style="display: flex; align-items: center; gap: 10px; font-size: 12px">
+                <span
+                  style="
+                    width: 18px;
+                    height: 18px;
+                    border-radius: 4px;
+                    background: var(--success);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: #fff;
+                    font-size: 10px;
+                    flex-shrink: 0;
+                  "
+                  >&#10003;</span
+                >
+                <span>Design system tokens finalized</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 10px; font-size: 12px">
+                <span
+                  style="
+                    width: 18px;
+                    height: 18px;
+                    border-radius: 4px;
+                    background: var(--success);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: #fff;
+                    font-size: 10px;
+                    flex-shrink: 0;
+                  "
+                  >&#10003;</span
+                >
+                <span>Core components built and tested</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 10px; font-size: 12px">
+                <span
+                  style="
+                    width: 18px;
+                    height: 18px;
+                    border-radius: 4px;
+                    background: var(--success);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: #fff;
+                    font-size: 10px;
+                    flex-shrink: 0;
+                  "
+                  >&#10003;</span
+                >
+                <span>CI/CD pipeline configured</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 10px; font-size: 12px">
+                <span
+                  style="
+                    width: 18px;
+                    height: 18px;
+                    border-radius: 4px;
+                    background: var(--progress);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: #fff;
+                    font-size: 10px;
+                    flex-shrink: 0;
+                  "
+                  >&#8226;</span
+                >
+                <span>Documentation review</span>
+              </div>
+              <div
+                style="display: flex; align-items: center; gap: 10px; font-size: 12px; opacity: 0.5"
+              >
+                <span
+                  style="
+                    width: 18px;
+                    height: 18px;
+                    border-radius: 4px;
+                    border: 1.5px solid var(--border);
+                    flex-shrink: 0;
+                    transition: border-color 0.3s;
+                  "
+                ></span>
+                <span>Stakeholder sign-off</span>
+              </div>
+              <div
+                style="display: flex; align-items: center; gap: 10px; font-size: 12px; opacity: 0.5"
+              >
+                <span
+                  style="
+                    width: 18px;
+                    height: 18px;
+                    border-radius: 4px;
+                    border: 1.5px solid var(--border);
+                    flex-shrink: 0;
+                    transition: border-color 0.3s;
+                  "
+                ></span>
+                <span>Production deployment</span>
+              </div>
+            </div>
+          </div>
+          <div
+            class="slide-half accent-surface"
+            style="
+              margin: 24px 24px 24px 0;
+              padding: 24px;
+              width: auto;
+              flex: 1;
+              border-radius: 10px;
+              gap: 12px;
+            "
+          >
+            <h4 style="font-size: 13px; font-weight: 700; color: var(--primary)">Progress</h4>
+            <div
+              style="
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+                flex: 1;
+                justify-content: center;
+              "
+            >
+              <div>
+                <div
+                  style="
+                    display: flex;
+                    justify-content: space-between;
+                    font-size: 10px;
+                    font-weight: 600;
+                    margin-bottom: 4px;
+                  "
+                >
+                  <span>Overall</span><span>65%</span>
+                </div>
+                <div class="progress-bar">
+                  <div
+                    class="progress-bar-fill"
+                    style="width: 65%; background: var(--primary)"
+                  ></div>
+                </div>
+              </div>
+              <div>
+                <div
+                  style="
+                    display: flex;
+                    justify-content: space-between;
+                    font-size: 10px;
+                    font-weight: 600;
+                    margin-bottom: 4px;
+                  "
+                >
+                  <span>Design</span><span>90%</span>
+                </div>
+                <div class="progress-bar">
+                  <div
+                    class="progress-bar-fill"
+                    style="width: 90%; background: var(--success)"
+                  ></div>
+                </div>
+              </div>
+              <div>
+                <div
+                  style="
+                    display: flex;
+                    justify-content: space-between;
+                    font-size: 10px;
+                    font-weight: 600;
+                    margin-bottom: 4px;
+                  "
+                >
+                  <span>Engineering</span><span>55%</span>
+                </div>
+                <div class="progress-bar">
+                  <div
+                    class="progress-bar-fill"
+                    style="width: 55%; background: var(--progress)"
+                  ></div>
+                </div>
+              </div>
+              <div>
+                <div
+                  style="
+                    display: flex;
+                    justify-content: space-between;
+                    font-size: 10px;
+                    font-weight: 600;
+                    margin-bottom: 4px;
+                  "
+                >
+                  <span>QA</span><span>30%</span>
+                </div>
+                <div class="progress-bar">
+                  <div class="progress-bar-fill" style="width: 30%; background: var(--todo)"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 27: Two Images Side-by-Side -->
+      <div class="slide" data-slide="27">
+        <div class="slide-pad" style="gap: 16px">
+          <h3 style="font-size: 20px; font-weight: 700">Visual Comparison</h3>
+          <div style="flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 16px">
+            <div style="display: flex; flex-direction: column; gap: 8px">
+              <div class="img-placeholder" style="flex: 1; border-radius: 8px">IMAGE A</div>
+              <p class="muted" style="font-size: 10px; text-align: center">
+                Desktop viewport — 1440px
+              </p>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 8px">
+              <div class="img-placeholder" style="flex: 1; border-radius: 8px">IMAGE B</div>
+              <p class="muted" style="font-size: 10px; text-align: center">
+                Mobile viewport — 375px
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 28: Icon List (Vertical) -->
+      <div class="slide" data-slide="28">
+        <div class="slide-pad" style="gap: 20px">
+          <img src="logos/vetra-icon.svg" alt="" class="slide-logo-light icon-tr" />
+          <img src="logos/vetra-icon-dark.svg" alt="" class="slide-logo-dark icon-tr" />
+          <h3 style="font-size: 20px; font-weight: 700">What's Included</h3>
+          <div
+            style="
+              flex: 1;
+              display: flex;
+              flex-direction: column;
+              justify-content: center;
+              gap: 14px;
+            "
+          >
+            <div style="display: flex; align-items: center; gap: 16px">
+              <div
+                class="icon-circle"
+                style="background: var(--primary-30); color: var(--primary); font-size: 14px"
+              >
+                &#9670;
+              </div>
+              <div>
+                <h5 style="font-size: 13px; font-weight: 700">Component Library</h5>
+                <p class="sub" style="font-size: 11px">
+                  40+ production-ready, accessible components with full documentation.
+                </p>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 16px">
+              <div
+                class="icon-circle"
+                style="background: var(--success-30); color: var(--success); font-size: 14px"
+              >
+                &#9733;
+              </div>
+              <div>
+                <h5 style="font-size: 13px; font-weight: 700">Design Tokens</h5>
+                <p class="sub" style="font-size: 11px">
+                  Synchronized color, typography, and spacing tokens from Figma to code.
+                </p>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 16px">
+              <div
+                class="icon-circle"
+                style="background: var(--progress-30); color: var(--progress); font-size: 14px"
+              >
+                &#9881;
+              </div>
+              <div>
+                <h5 style="font-size: 13px; font-weight: 700">CLI Tooling</h5>
+                <p class="sub" style="font-size: 11px">
+                  Scaffold, test, and deploy components from your terminal.
+                </p>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 16px">
+              <div
+                class="icon-circle"
+                style="background: var(--purple-30); color: var(--purple); font-size: 14px"
+              >
+                &#9878;
+              </div>
+              <div>
+                <h5 style="font-size: 13px; font-weight: 700">Theme Engine</h5>
+                <p class="sub" style="font-size: 11px">
+                  Light, dark, and custom themes with CSS custom property architecture.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 29: Split Text + Highlight Box -->
+      <div class="slide" data-slide="29">
+        <div class="slide-split">
+          <div class="slide-half" style="padding-right: 20px">
+            <p
+              class="muted"
+              style="
+                font-size: 10px;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 2px;
+                margin-bottom: 8px;
+              "
+            >
+              Key Insight
+            </p>
+            <h3 style="font-size: 22px; font-weight: 700; line-height: 1.3">
+              Design systems reduce development time by up to 60%
+            </h3>
+            <p class="sub" style="font-size: 12px; line-height: 1.6; margin-top: 12px">
+              Teams that adopt a shared design system spend significantly less time on redundant UI
+              work and more time on business logic and user experience.
+            </p>
+          </div>
+          <div class="slide-half" style="padding: 24px; justify-content: center; gap: 14px">
+            <div
+              class="accent-surface"
+              style="padding: 16px; display: flex; align-items: center; gap: 14px"
+            >
+              <div style="font-size: 28px; font-weight: 700; color: var(--primary)">60%</div>
+              <div>
+                <p style="font-size: 11px; font-weight: 600">Faster Development</p>
+                <p class="muted" style="font-size: 9px">Compared to building from scratch</p>
+              </div>
+            </div>
+            <div
+              class="accent-surface"
+              style="padding: 16px; display: flex; align-items: center; gap: 14px"
+            >
+              <div style="font-size: 28px; font-weight: 700; color: var(--success)">3x</div>
+              <div>
+                <p style="font-size: 11px; font-weight: 600">Better Consistency</p>
+                <p class="muted" style="font-size: 9px">Across all product surfaces</p>
+              </div>
+            </div>
+            <div
+              class="accent-surface"
+              style="padding: 16px; display: flex; align-items: center; gap: 14px"
+            >
+              <div style="font-size: 28px; font-weight: 700; color: var(--progress)">47%</div>
+              <div>
+                <p style="font-size: 11px; font-weight: 600">Fewer Bugs</p>
+                <p class="muted" style="font-size: 9px">With reusable, tested components</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 30: Tags / Ecosystem Map -->
+      <div class="slide" data-slide="30">
+        <div class="slide-pad" style="gap: 20px">
+          <img src="logos/vetra-full-logo.svg" alt="Vetra" class="slide-logo-light full-logo-tr" />
+          <img
+            src="logos/vetra-full-logo-light.svg"
+            alt="Vetra"
+            class="slide-logo-dark full-logo-tr"
+          />
+          <h3 style="font-size: 20px; font-weight: 700">Ecosystem</h3>
+          <div
+            style="
+              flex: 1;
+              display: flex;
+              flex-wrap: wrap;
+              gap: 10px;
+              align-content: center;
+              justify-content: center;
+            "
+          >
+            <span
+              class="tag-pill"
+              style="
+                background: var(--primary-30);
+                color: var(--primary);
+                font-size: 12px;
+                padding: 6px 14px;
+              "
+              >React</span
+            >
+            <span
+              class="tag-pill"
+              style="
+                background: var(--progress-30);
+                color: var(--progress);
+                font-size: 12px;
+                padding: 6px 14px;
+              "
+              >TypeScript</span
+            >
+            <span
+              class="tag-pill"
+              style="
+                background: var(--success-30);
+                color: var(--success);
+                font-size: 12px;
+                padding: 6px 14px;
+              "
+              >Node.js</span
+            >
+            <span
+              class="tag-pill"
+              style="
+                background: var(--purple-30);
+                color: var(--purple);
+                font-size: 12px;
+                padding: 6px 14px;
+              "
+              >GraphQL</span
+            >
+            <span
+              class="tag-pill"
+              style="
+                background: var(--todo-30);
+                color: var(--todo);
+                font-size: 12px;
+                padding: 6px 14px;
+              "
+              >Storybook</span
+            >
+            <span
+              class="tag-pill"
+              style="
+                background: var(--yellow-30);
+                color: var(--yellow);
+                font-size: 12px;
+                padding: 6px 14px;
+              "
+              >Figma</span
+            >
+            <span
+              class="tag-pill"
+              style="
+                background: var(--primary-30);
+                color: var(--primary);
+                font-size: 12px;
+                padding: 6px 14px;
+              "
+              >Next.js</span
+            >
+            <span
+              class="tag-pill"
+              style="
+                background: var(--destructive-30);
+                color: var(--destructive);
+                font-size: 12px;
+                padding: 6px 14px;
+              "
+              >Testing Library</span
+            >
+            <span
+              class="tag-pill"
+              style="
+                background: var(--success-30);
+                color: var(--success);
+                font-size: 12px;
+                padding: 6px 14px;
+              "
+              >Tailwind CSS</span
+            >
+            <span
+              class="tag-pill"
+              style="
+                background: var(--progress-30);
+                color: var(--progress);
+                font-size: 12px;
+                padding: 6px 14px;
+              "
+              >Docker</span
+            >
+            <span
+              class="tag-pill"
+              style="
+                background: var(--purple-30);
+                color: var(--purple);
+                font-size: 12px;
+                padding: 6px 14px;
+              "
+              >GitHub Actions</span
+            >
+            <span
+              class="tag-pill"
+              style="
+                background: var(--todo-30);
+                color: var(--todo);
+                font-size: 12px;
+                padding: 6px 14px;
+              "
+              >Playwright</span
+            >
+            <span
+              class="tag-pill"
+              style="
+                background: var(--yellow-30);
+                color: var(--yellow);
+                font-size: 12px;
+                padding: 6px 14px;
+              "
+              >Turborepo</span
+            >
+            <span
+              class="tag-pill"
+              style="
+                background: var(--primary-30);
+                color: var(--primary);
+                font-size: 12px;
+                padding: 6px 14px;
+              "
+              >Radix UI</span
+            >
+            <span
+              class="tag-pill"
+              style="
+                background: var(--destructive-30);
+                color: var(--destructive);
+                font-size: 12px;
+                padding: 6px 14px;
+              "
+              >Sentry</span
+            >
+          </div>
+        </div>
+      </div>
+
+      <!-- 31: Contact / Info Card -->
+      <div class="slide" data-slide="31">
+        <div class="slide-split">
+          <div class="slide-half" style="background: var(--primary); color: #fcfcfc; padding: 36px">
+            <img
+              src="logos/vetra-full-logo-white.svg"
+              alt="Vetra"
+              style="height: 16px; margin-bottom: auto"
+            />
+            <div>
+              <h2 style="font-size: 26px; font-weight: 700; line-height: 1.2">
+                Let's Work<br />Together
+              </h2>
+              <p style="font-size: 11px; opacity: 0.6; margin-top: 8px; line-height: 1.5">
+                Reach out to discuss partnerships, integrations, or just to say hello.
+              </p>
+            </div>
+          </div>
+          <div class="slide-half" style="gap: 16px; justify-content: center">
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 12px 0;
+                border-bottom: 1px solid var(--border);
+                transition: border-color 0.3s;
+              "
+            >
+              <div
+                class="icon-circle"
+                style="
+                  background: var(--primary-30);
+                  color: var(--primary);
+                  font-size: 12px;
+                  width: 28px;
+                  height: 28px;
+                "
+              >
+                @
+              </div>
+              <div>
+                <p class="muted" style="font-size: 9px">Email</p>
+                <p style="font-size: 12px; font-weight: 600">hello@vetra.io</p>
+              </div>
+            </div>
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 12px 0;
+                border-bottom: 1px solid var(--border);
+                transition: border-color 0.3s;
+              "
+            >
+              <div
+                class="icon-circle"
+                style="
+                  background: var(--progress-30);
+                  color: var(--progress);
+                  font-size: 12px;
+                  width: 28px;
+                  height: 28px;
+                "
+              >
+                W
+              </div>
+              <div>
+                <p class="muted" style="font-size: 9px">Website</p>
+                <p style="font-size: 12px; font-weight: 600">vetra.io</p>
+              </div>
+            </div>
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 12px 0;
+                border-bottom: 1px solid var(--border);
+                transition: border-color 0.3s;
+              "
+            >
+              <div
+                class="icon-circle"
+                style="
+                  background: var(--purple-30);
+                  color: var(--purple);
+                  font-size: 12px;
+                  width: 28px;
+                  height: 28px;
+                "
+              >
+                G
+              </div>
+              <div>
+                <p class="muted" style="font-size: 9px">GitHub</p>
+                <p style="font-size: 12px; font-weight: 600">github.com/vetra</p>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px; padding: 12px 0">
+              <div
+                class="icon-circle"
+                style="
+                  background: var(--success-30);
+                  color: var(--success);
+                  font-size: 12px;
+                  width: 28px;
+                  height: 28px;
+                "
+              >
+                X
+              </div>
+              <div>
+                <p class="muted" style="font-size: 9px">Social</p>
+                <p style="font-size: 12px; font-weight: 600">@vetra</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 32: Thank You / Closing -->
+      <div class="slide" data-slide="32">
+        <div
+          class="slide-pad"
+          style="justify-content: center; align-items: center; text-align: center; gap: 12px"
+        >
+          <img src="logos/vetra-icon.svg" alt="Vetra" style="height: 72px; margin-bottom: 0" />
+          <h2 style="font-size: 32px; font-weight: 700">Thank You</h2>
+          <p class="sub" style="font-size: 13px; max-width: 50%">
+            Questions, feedback, or ideas? Let's connect.
+          </p>
+          <div style="display: flex; gap: 24px; margin-top: 8px">
+            <span class="muted" style="font-size: 11px; font-weight: 500">email@vetra.io</span>
+            <span class="muted" style="font-size: 11px; font-weight: 500">vetra.io</span>
+            <span class="muted" style="font-size: 11px; font-weight: 500">@vetra</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 33: Logo Only -->
+      <div class="slide" data-slide="33">
+        <div class="slide-pad" style="justify-content: center; align-items: center">
+          <img
+            src="logos/vetra-full-logo.svg"
+            alt="Vetra"
+            class="slide-logo-light"
+            style="height: 56px; margin-bottom: 0"
+          />
+          <img
+            src="logos/vetra-full-logo-light.svg"
+            alt="Vetra"
+            class="slide-logo-dark"
+            style="height: 56px; margin-bottom: 0"
+          />
+        </div>
+      </div>
+
+      <!-- 34: Icon + Slogan -->
+      <div class="slide" data-slide="34">
+        <div
+          class="slide-pad"
+          style="justify-content: center; align-items: center; text-align: center; gap: 16px"
+        >
+          <img src="logos/vetra-icon.svg" alt="Vetra" style="height: 80px; margin-bottom: 0" />
+          <p
+            class="sub"
+            style="
+              font-size: 16px;
+              font-weight: 500;
+              letter-spacing: 2px;
+              max-width: 60%;
+              line-height: 1.6;
+            "
+          >
+            Powering the next generation of decentralized operations
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const toggle = document.getElementById('themeSwitch')
+      toggle.addEventListener('change', () => {
+        document.body.classList.toggle('dark', toggle.checked)
+      })
+    </script>
+  </body>
+</html>

@@ -8,21 +8,44 @@
 
 ## Get Started
 
-- [Explore the demo package](https://academy.vetra.io/academy/GetStarted/ExploreDemoPackage): To give you a quick idea of how the Powerhouse Vetra builder platform operates on document models and packages, why don't you try installing a package
-- [Create a new to-do list document](https://academy.vetra.io/academy/GetStarted/CreateNewPowerhouseProject): This tutorial step has a corresponding branch in the repository. You can:
-- [Write the document specification](https://academy.vetra.io/academy/GetStarted/DefineToDoListDocumentModel): This tutorial step has a corresponding branch. After completing this step, your project will have a generated document model with:
-- [Implement the document model reducers](https://academy.vetra.io/academy/GetStarted/ImplementOperationReducers): This step focuses on implementing the reducer logic for add, update, and delete operations.
-- [Write document model tests](https://academy.vetra.io/academy/GetStarted/WriteDocumentModelTests): This step focuses on writing comprehensive tests for the reducers you implemented in the previous step.
-- [Build a to-do list editor](https://academy.vetra.io/academy/GetStarted/BuildToDoListEditor): - Editor Scaffolding: step-5-generate-todo-list-document-editor - Complete Editor UI: step-6-add-basic-todo-editor-ui-components
+- [Vetra Studio](https://academy.vetra.io/academy/GetStarted/VetraStudio): Vetra Studio is the browser UI for the Vetra agent. It lets you chat with the Vetra agent, track work across the four-phase product development cycle
+- [Vetra Cloud](https://academy.vetra.io/academy/GetStarted/VetraCloud): Vetra Cloud is the hosted infrastructure layer for Powerhouse applications. It lets you spin up a personal cloud environment that runs Powerhouse Conn
+- [Vetra Drive](https://academy.vetra.io/academy/GetStarted/VetraDrive): Vetra Studio is the builder environment where you create, manage, and collaborate on Powerhouse packages. It consists of two main components:
+- [Prerequisites](https://academy.vetra.io/academy/GetStarted/Prerequisites): Let's set up your machine to start building your first Document Model. Don't worry if this is your first time setting up a development environment - w
+- [Create a package with Vetra](https://academy.vetra.io/academy/GetStarted/CreateAPackageWithVetra): A Powerhouse Package is a distributable unit that bundles one or more document models, editors, and optional reactor modules into a single installable
+- [Vetra builder tooling](https://academy.vetra.io/academy/GetStarted/BuilderTools): This page provides an overview of all the builder tooling offered in the Vetra ecosystem by Powerhouse. This list will be maintained and updated as ou
 
-## Mastery Track
+## Learn
 
-- [Vetra Studio Agent](https://academy.vetra.io/academy/MasteryTrack/BuilderEnvironment/VetraStudioAgent): Vetra Studio is the browser UI for the Vetra agent. It lets you chat with the Vetra agent, track work across the four-phase product development cycle
-- [Prerequisites](https://academy.vetra.io/academy/MasteryTrack/BuilderEnvironment/Prerequisites): Let's set up your machine to start building your first Document Model. Don't worry if this is your first time setting up a development environment - w
-- [Vetra Studio](https://academy.vetra.io/academy/MasteryTrack/BuilderEnvironment/VetraStudio): Vetra Studio is the builder environment where you create, manage, and collaborate on Powerhouse packages. It consists of two main components:
-- [Create a package with Vetra](https://academy.vetra.io/academy/MasteryTrack/BuilderEnvironment/CreateAPackageWithVetra): A Powerhouse Package is a distributable unit that bundles one or more document models, editors, and optional reactor modules into a single installable
-- [Vetra Cloud](https://academy.vetra.io/academy/MasteryTrack/BuilderEnvironment/VetraCloud): Vetra Cloud is the hosted infrastructure layer for Powerhouse applications. It lets you spin up a personal cloud environment that runs Powerhouse Conn
-- [Vetra builder tooling](https://academy.vetra.io/academy/MasteryTrack/BuilderEnvironment/BuilderTools): This page provides an overview of all the builder tooling offered in the Vetra ecosystem by Powerhouse. This list will be maintained and updated as ou
+- [Learn the Powerhouse stack, chapter by chapter](https://academy.vetra.io/academy/Learn/Overview): A linear course covering the mental model, the architecture, document models, editors, Connect, Switchboard, and sync. Read a little, try a little, qu
+- [01-what-is-powerhouse](https://academy.vetra.io/academy/Learn/foundations/what-is-powerhouse): Powerhouse is a framework for building apps whose state lives in documents that evolve through operations. If you've built with CRDTs, <Term>Event Sou
+- [02-thinking-in-operations](https://academy.vetra.io/academy/Learn/foundations/thinking-in-operations): If you've built CRUD apps before, you probably think in terms of rows — the current value of a record in a database. <Term>Powerhouse</Term> asks you 
+- [01-the-big-picture](https://academy.vetra.io/academy/Learn/architecture/the-big-picture): The previous lesson showed how every change becomes an operation appended to an immutable log. Now let's look at where that all actually runs. By the 
+- [02-host-applications](https://academy.vetra.io/academy/Learn/architecture/host-applications): The previous lesson named the three pieces: document models, a Reactor, and a host application. Now let's make the last one concrete. Because "embed a
+- [01-documents-and-drives](https://academy.vetra.io/academy/Learn/document-models/documents-and-drives): You already know that Powerhouse stores operations, not snapshots. Now let's look at what those operations live inside — and why the container for you
+- [02-state-and-scopes](https://academy.vetra.io/academy/Learn/document-models/state-and-scopes): A Powerhouse document doesn't have one monolithic state — it has scopes. Each scope is its own state shape, its own operation log, and its own sync ru
+- [03-actions-and-reducers](https://academy.vetra.io/academy/Learn/document-models/actions-and-reducers): You've heard the words — action, reducer, operation. This lesson makes the contract precise, so you can reason clearly about what's allowed inside eac
+- [04-your-first-document-model](https://academy.vetra.io/academy/Learn/document-models/your-first-document-model): In this lesson you'll build a minimal Todo document model from scratch. You'll define the schema in <Term>Vetra</Term> Studio, let codegen scaffold th
+- [01-what-is-an-editor](https://academy.vetra.io/academy/Learn/editors/what-is-an-editor): You've seen how documents store their history as operations, and how reducers produce the next state from each action. But none of that matters to a u
+- [02-your-first-editor](https://academy.vetra.io/academy/Learn/editors/your-first-editor): An editor in <Term>Powerhouse</Term> is a React component tied to one <Term>Document Model</Term>. It has one job: turn user input into actions and re
+- [03-editor-hooks-and-state](https://academy.vetra.io/academy/Learn/editors/editor-hooks-and-state): You've written an editor shell. Now you need to actually read the document and change it. Powerhouse gives you a small set of hooks from @powerhouseda
+- [Full local dev stack](https://academy.vetra.io/academy/Learn/connect/what-is-connect): You've got a Reactor running and a document model defined. But where do users actually open a document, browse their files, and click things? That's C
+- [02-drive-apps](https://academy.vetra.io/academy/Learn/connect/drive-apps): Connect's default drive view is a folder tree with documents inside it. That's fine for generic storage — but once you have a real product, you probab
+- [Reactor booted](https://academy.vetra.io/academy/Learn/switchboard/what-is-switchboard): You've seen Connect give users a browser UI for editing documents. Switchboard is the other side of that coin — it runs the same <Term>Reactor</Term> 
+- [02-subgraphs](https://academy.vetra.io/academy/Learn/switchboard/subgraphs): You've got documents. You've got operations. Now you need the outside world — a web app, a mobile client, an AI agent — to be able to read and write t
+- [03-processors-and-read-models](https://academy.vetra.io/academy/Learn/switchboard/processors-and-read-models): A document's operation log is authoritative but not always convenient. If you want to ask "which todos did Alice complete last week?" you don't want t
+- [01-sync-and-collaborate](https://academy.vetra.io/academy/Learn/sync/sync-and-collaborate): So far your Todo document lives in a single Reactor in a single tab. This lesson makes it collaborative: open it in two browsers, take one offline, an
+- [01-reducers-in-depth](https://academy.vetra.io/academy/Learn/deep-dives/reducers-in-depth): Reducers are the one part of a <Term>Powerhouse</Term> app that must be pure. Everything downstream — sync, replay, undo, audit — assumes that running
+- [02-identity-and-signing](https://academy.vetra.io/academy/Learn/deep-dives/identity-and-signing): You've seen that a document is its operation log, and that the log is what syncs between peers. That raises a question every collaborative system has 
+
+## Build
+
+- [Explore the demo package](https://academy.vetra.io/academy/MasteryTrack/ManualTodoTutorial/ExploreDemoPackage): To give you a quick idea of how the Powerhouse Vetra builder platform operates on document models and packages, why don't you try installing a package
+- [Create a new to-do list document](https://academy.vetra.io/academy/MasteryTrack/ManualTodoTutorial/CreateNewPowerhouseProject): This tutorial step has a corresponding branch in the repository. You can:
+- [Write the document specification](https://academy.vetra.io/academy/MasteryTrack/ManualTodoTutorial/DefineToDoListDocumentModel): This tutorial step has a corresponding branch. After completing this step, your project will have a generated document model with:
+- [Implement the document model reducers](https://academy.vetra.io/academy/MasteryTrack/ManualTodoTutorial/ImplementOperationReducers): This step focuses on implementing the reducer logic for add, update, and delete operations.
+- [Write document model tests](https://academy.vetra.io/academy/MasteryTrack/ManualTodoTutorial/WriteDocumentModelTests): This step focuses on writing comprehensive tests for the reducers you implemented in the previous step.
+- [Build a to-do list editor](https://academy.vetra.io/academy/MasteryTrack/ManualTodoTutorial/BuildToDoListEditor): - Editor Scaffolding: step-5-generate-todo-list-document-editor - Complete Editor UI: step-6-add-basic-todo-editor-ui-components
 - [What is a document model?](https://academy.vetra.io/academy/MasteryTrack/DocumentModelCreation/WhatIsADocumentModel): This chapter on Document Model Creation will help you with an in-depth practical understanding while building an advanced to-do list document model.
 - [Specify the state schema](https://academy.vetra.io/academy/MasteryTrack/DocumentModelCreation/SpecifyTheStateSchema): The state schema is the backbone of your document model. It defines the structure, data types, and relationships of the information your document will
 - [Specify document operations](https://academy.vetra.io/academy/MasteryTrack/DocumentModelCreation/SpecifyDocumentOperations): In the previous section, we defined the state schema for our document model. Now, we turn our attention to a critical aspect of document model creatio
@@ -52,43 +75,40 @@
 - [Setup your environment](https://academy.vetra.io/academy/MasteryTrack/Launch/SetupEnvironment): Powerhouse is a powerful platform that helps you manage and deploy your applications efficiently. This guide will walk you through the process of sett
 - [Configure your environment](https://academy.vetra.io/academy/MasteryTrack/Launch/ConfigureEnvironment): After successfully setting up your server and installing the Powerhouse services using the ph service setup command as described in the Setup Environm
 - [Docker deployment guide](https://academy.vetra.io/academy/MasteryTrack/Launch/DockerDeployment): Powerhouse provides official Docker images for deploying your applications in containerized environments. This guide covers the available Docker image
+- [Example use-cases](https://academy.vetra.io/academy/MasteryTrack/ExampleUsecases/Overview): Explore real-world examples of applications built with the Powerhouse ecosystem. Each use-case provides a complete walkthrough from project setup to a
+- [Create a new chatroom project](https://academy.vetra.io/academy/MasteryTrack/ExampleUsecases/Chatroom/CreateNewPowerhouseProject): This tutorial has a complete reference implementation available. You can:
+- [Write the document specification](https://academy.vetra.io/academy/MasteryTrack/ExampleUsecases/Chatroom/DefineChatroomDocumentModel): This tutorial step has a corresponding implementation in the repository. After completing this step, your project will have a document model specifica
+- [Implement the document model reducers](https://academy.vetra.io/academy/MasteryTrack/ExampleUsecases/Chatroom/ImplementOperationReducers): This tutorial covers two key implementations:
+- [Build the ChatRoom editor](https://academy.vetra.io/academy/MasteryTrack/ExampleUsecases/Chatroom/ImplementChatroomEditor): This tutorial covers building the ChatRoom editor:
+- [Step 0 - get the starter code](https://academy.vetra.io/academy/MasteryTrack/ExampleUsecases/TodoList/GetTheStarterCode): Normally you would initialize a new powerhouse project by running ph init with your project name. But since this is a tutorial, we want to provide bra
+- [Step 1 - Generate the `TodoList` document model](https://academy.vetra.io/academy/MasteryTrack/ExampleUsecases/TodoList/GenerateTodoListDocumentModel): This tutorial guides you through creating a simplified version of a 'Powerhouse project' for a To-do List. A Powerhouse project primarily consists of 
+- [Step 2 — Implement the `TodoList` document model reducer operation handlers](https://academy.vetra.io/academy/MasteryTrack/ExampleUsecases/TodoList/ImplementTodoListDocumentModelReducerOperationHandlers): Your document model update's the state of a given document by applying a set of append-only actions. Once these have been applied to the document, we 
+- [Step 3 — Adding our own tests for the document model actions](https://academy.vetra.io/academy/MasteryTrack/ExampleUsecases/TodoList/AddTestsForTodoListActions): Similarly to the operation handler logic, when you add a new module to your document model, we generate some boilerplate tests for your code.
+- [Step 4 — Generating a document model editor for `TodoList` documents](https://academy.vetra.io/academy/MasteryTrack/ExampleUsecases/TodoList/GenerateTodoListDocumentEditor): Run the command below to generate the editor template for the TodoList document model. This command reads the TodoList document model definition from 
+- [Step 5 — Implement `TodoList` document editor UI components](https://academy.vetra.io/academy/MasteryTrack/ExampleUsecases/TodoList/ImplementTodoListDocumentEditorUIComponents): Out of the box, we have a component for updating our TodoList documents' names, but we would like to create, read, update, and delete all of the data 
+- [Step 6 - Generate the custom drive editor for managing our `TodoList` documents](https://academy.vetra.io/academy/MasteryTrack/ExampleUsecases/TodoList/GenerateTodoDriveExplorer): in Connect, a "drive" is just a document with the type "powerhouse/drive", which is specifically created for containing and managing other documents.
+- [Step 7 - Add shared component for showing TodoList stats](https://academy.vetra.io/academy/MasteryTrack/ExampleUsecases/TodoList/AddSharedComponentForShowingTodoListStats): So far we've been creating components that live in the same directories as the editors that use them. But sometimes we want to use the same component 
+- [VetraPackageLibrary](https://academy.vetra.io/academy/MasteryTrack/ExampleUsecases/VetraPackageLibrary/VetraPackageLibrary): Packages of documents are a core structuring mechanism in the Vetra framework, allowing developers to group and manage related document efficiently. T
 
-## Example Use Cases
+## Reference
 
-- [Example use-cases](https://academy.vetra.io/academy/ExampleUsecases/Overview): Explore real-world examples of applications built with the Powerhouse ecosystem. Each use-case provides a complete walkthrough from project setup to a
-- [Create a new chatroom project](https://academy.vetra.io/academy/ExampleUsecases/Chatroom/CreateNewPowerhouseProject): This tutorial has a complete reference implementation available. You can:
-- [Write the document specification](https://academy.vetra.io/academy/ExampleUsecases/Chatroom/DefineChatroomDocumentModel): This tutorial step has a corresponding implementation in the repository. After completing this step, your project will have a document model specifica
-- [Implement the document model reducers](https://academy.vetra.io/academy/ExampleUsecases/Chatroom/ImplementOperationReducers): This tutorial covers two key implementations:
-- [Build the ChatRoom editor](https://academy.vetra.io/academy/ExampleUsecases/Chatroom/ImplementChatroomEditor): This tutorial covers building the ChatRoom editor:
-- [Step 0 - get the starter code](https://academy.vetra.io/academy/ExampleUsecases/TodoList/GetTheStarterCode): Normally you would initialize a new powerhouse project by running ph init with your project name. But since this is a tutorial, we want to provide bra
-- [Step 1 - Generate the `TodoList` document model](https://academy.vetra.io/academy/ExampleUsecases/TodoList/GenerateTodoListDocumentModel): This tutorial guides you through creating a simplified version of a 'Powerhouse project' for a To-do List. A Powerhouse project primarily consists of 
-- [Step 2 — Implement the `TodoList` document model reducer operation handlers](https://academy.vetra.io/academy/ExampleUsecases/TodoList/ImplementTodoListDocumentModelReducerOperationHandlers): Your document model update's the state of a given document by applying a set of append-only actions. Once these have been applied to the document, we 
-- [Step 3 — Adding our own tests for the document model actions](https://academy.vetra.io/academy/ExampleUsecases/TodoList/AddTestsForTodoListActions): Similarly to the operation handler logic, when you add a new module to your document model, we generate some boilerplate tests for your code.
-- [Step 4 — Generating a document model editor for `TodoList` documents](https://academy.vetra.io/academy/ExampleUsecases/TodoList/GenerateTodoListDocumentEditor): Run the command below to generate the editor template for the TodoList document model. This command reads the TodoList document model definition from 
-- [Step 5 — Implement `TodoList` document editor UI components](https://academy.vetra.io/academy/ExampleUsecases/TodoList/ImplementTodoListDocumentEditorUIComponents): Out of the box, we have a component for updating our TodoList documents' names, but we would like to create, read, update, and delete all of the data 
-- [Step 6 - Generate the custom drive editor for managing our `TodoList` documents](https://academy.vetra.io/academy/ExampleUsecases/TodoList/GenerateTodoDriveExplorer): in Connect, a "drive" is just a document with the type "powerhouse/drive", which is specifically created for containing and managing other documents.
-- [Step 7 - Add shared component for showing TodoList stats](https://academy.vetra.io/academy/ExampleUsecases/TodoList/AddSharedComponentForShowingTodoListStats): So far we've been creating components that live in the same directories as the editors that use them. But sometimes we want to use the same component 
-- [VetraPackageLibrary](https://academy.vetra.io/academy/ExampleUsecases/VetraPackageLibrary/VetraPackageLibrary): Packages of documents are a core structuring mechanism in the Vetra framework, allowing developers to group and manage related document efficiently. T
-
-## API References
-
-- [Powerhouse CLI](https://academy.vetra.io/academy/APIReferences/PowerhouseCLI): The Powerhouse CLI tool is the only essential tool to install on this page. Install it with the command below.
-- [React Hooks](https://academy.vetra.io/academy/APIReferences/ReactHooks): This page provides a reference for the hooks available in @powerhousedao/reactor-browser. These hooks are intended to be used by editors (including dr
-- [IReactorClient](https://academy.vetra.io/academy/APIReferences/ReactorClient): The IReactorClient interface is the primary way to interact with a Powerhouse reactor programmatically. It wraps lower-level APIs to provide a simpler
-- [Advanced reactor usage](https://academy.vetra.io/academy/APIReferences/AdvancedReactorUsage): This page covers the low-level IReactor interface and the internal components you can access through ReactorModule. Most developers should use IReacto
-- [Relational Database](https://academy.vetra.io/academy/APIReferences/RelationalDatabase): This page covers the relational database tools available in Powerhouse applications, providing type-safe database operations with real-time updates th
-- [Vetra Remote Drive](https://academy.vetra.io/academy/APIReferences/VetraRemoteDrive): These commands enable collaborative development using Vetra remote drives. Instead of working with local drives only, you can connect your Powerhouse 
-- [Subgraph Migration Guide (v6)](https://academy.vetra.io/academy/APIReferences/SubgraphMigrationGuide): This guide covers the breaking changes to the GraphQL subgraph API introduced in the v6 Reactor. If you were querying the old /graphql/document-drive 
-- [Processor Migration Guide (v6)](https://academy.vetra.io/academy/APIReferences/ProcessorMigrationGuide): This guide covers the breaking changes to the processor interface introduced in the v6 Reactor. If you have existing processors built on the legacy st
-- [Attachment service](https://academy.vetra.io/academy/APIReferences/AttachmentService): The @powerhousedao/reactor-attachments package decouples large binaries (images, files, avatars) from the action and operation pipeline. Instead of ca
-- [Renown SDK](https://academy.vetra.io/academy/APIReferences/renown-sdk/Overview): A comprehensive SDK for integrating Renown authentication and user profile management into your React applications.
-- [Authentication Guide](https://academy.vetra.io/academy/APIReferences/renown-sdk/Authentication): Comprehensive guide to implementing authentication with the Renown SDK.
-- [API Reference](https://academy.vetra.io/academy/APIReferences/renown-sdk/APIReference): Complete API reference for the Renown SDK.
-- [CLI Identity & Authentication](https://academy.vetra.io/academy/APIReferences/renown-sdk/CLIIdentity): This guide covers how to authenticate the Powerhouse CLI with your Ethereum identity and use that identity in the Switchboard for authenticated operat
-
-## Component Library
-
-- [Document-Engineering](https://academy.vetra.io/academy/ComponentLibrary/DocumentEngineering): The reusable components in the Document-Engineering system are a set of of front-end components based on graphQL scalars.
+- [Powerhouse CLI](https://academy.vetra.io/academy/Reference/APIReferences/PowerhouseCLI): The Powerhouse CLI tool is the only essential tool to install on this page. Install it with the command below.
+- [React Hooks](https://academy.vetra.io/academy/Reference/APIReferences/ReactHooks): This page provides a reference for the hooks available in @powerhousedao/reactor-browser. These hooks are intended to be used by editors (including dr
+- [IReactorClient](https://academy.vetra.io/academy/Reference/APIReferences/ReactorClient): The IReactorClient interface is the primary way to interact with a Powerhouse reactor programmatically. It wraps lower-level APIs to provide a simpler
+- [Advanced reactor usage](https://academy.vetra.io/academy/Reference/APIReferences/AdvancedReactorUsage): This page covers the low-level IReactor interface and the internal components you can access through ReactorModule. Most developers should use IReacto
+- [Relational Database](https://academy.vetra.io/academy/Reference/APIReferences/RelationalDatabase): This page covers the relational database tools available in Powerhouse applications, providing type-safe database operations with real-time updates th
+- [Vetra Remote Drive](https://academy.vetra.io/academy/Reference/APIReferences/VetraRemoteDrive): These commands enable collaborative development using Vetra remote drives. Instead of working with local drives only, you can connect your Powerhouse 
+- [Subgraph Migration Guide (v6)](https://academy.vetra.io/academy/Reference/APIReferences/SubgraphMigrationGuide): This guide covers the breaking changes to the GraphQL subgraph API introduced in the v6 Reactor. If you were querying the old /graphql/document-drive 
+- [Processor Migration Guide (v6)](https://academy.vetra.io/academy/Reference/APIReferences/ProcessorMigrationGuide): This guide covers the breaking changes to the processor interface introduced in the v6 Reactor. If you have existing processors built on the legacy st
+- [Attachment service](https://academy.vetra.io/academy/Reference/APIReferences/AttachmentService): The @powerhousedao/reactor-attachments package decouples large binaries (images, files, avatars) from the action and operation pipeline. Instead of ca
+- [Renown SDK](https://academy.vetra.io/academy/Reference/APIReferences/renown-sdk/Overview): A comprehensive SDK for integrating Renown authentication and user profile management into your React applications.
+- [Authentication Guide](https://academy.vetra.io/academy/Reference/APIReferences/renown-sdk/Authentication): Comprehensive guide to implementing authentication with the Renown SDK.
+- [API Reference](https://academy.vetra.io/academy/Reference/APIReferences/renown-sdk/APIReference): Complete API reference for the Renown SDK.
+- [CLI Identity & Authentication](https://academy.vetra.io/academy/Reference/APIReferences/renown-sdk/CLIIdentity): This guide covers how to authenticate the Powerhouse CLI with your Ethereum identity and use that identity in the Switchboard for authenticated operat
+- [Document-Engineering](https://academy.vetra.io/academy/Reference/ComponentLibrary/DocumentEngineering): The reusable components in the Document-Engineering system are a set of of front-end components based on graphQL scalars.
+- [Cookbook](https://academy.vetra.io/academy/Reference/Cookbook): This section covers recipes related to the ph-cmd, the command-line tool for Powerhouse project initialization, code generation, package management, a
+- [Glossary](https://academy.vetra.io/academy/Reference/Glossary): - Powerhouse – A network organization that provides open-source software and services to support decentralized operations for other network organizati
+- [LLM docs](https://academy.vetra.io/academy/Reference/LLMDocs): The Powerhouse Academy follows the llms.txt standard to provide machine-readable documentation for LLMs and AI coding tools.
 
 ## Architecture
 
@@ -110,13 +130,7 @@
 
 ## Miscellaneous
 
-- [Cookbook](https://academy.vetra.io/academy/Cookbook): This section covers recipes related to the ph-cmd, the command-line tool for Powerhouse project initialization, code generation, package management, a
-- [Glossary](https://academy.vetra.io/academy/Glossary): - Powerhouse – A network organization that provides open-source software and services to support decentralized operations for other network organizati
-- [LLM docs](https://academy.vetra.io/academy/LLMDocs): The Powerhouse Academy follows the llms.txt standard to provide machine-readable documentation for LLMs and AI coding tools.
-- [Step 2 — Implement the `TodoList` document model reducer operation handlers](https://academy.vetra.io/academy/TodoListTutorial/ImplementTodoListDocumentModelReducerOperationHandlers): Your document model update's the state of a given document by applying a set of append-only actions. Once these have been applied to the document, we 
-- [Step 3 — Adding our own tests for the document model actions](https://academy.vetra.io/academy/TodoListTutorial/AddTestsForTodoListActions): Similarly to the operation handler logic, when you add a new module to your document model, we generate some boilerplate tests for your code.
-- [Step 5 — Implement `TodoList` document editor UI components](https://academy.vetra.io/academy/TodoListTutorial/ImplementTodoListDocumentEditorUIComponents): Out of the box, we have a component for updating our TodoList documents' names, but we would like to create, read, update, and delete all of the data 
-- [Step 7 - Add shared component for showing TodoList stats](https://academy.vetra.io/academy/TodoListTutorial/AddSharedComponentForShowingTodoListStats): So far we've been creating components that live in the same directories as the editors that use them. But sometimes we want to use the same component 
+- [00-Home](https://academy.vetra.io/academy/Home)
 
 ## Optional
 
