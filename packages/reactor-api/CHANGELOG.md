@@ -1,3 +1,14 @@
+## 6.2.0-dev.19 (2026-06-16)
+
+### 🩹 Fixes
+
+- allow UPPER_SNAKE_CASE ([5cd154fb7](https://github.com/powerhouse-inc/powerhouse/commit/5cd154fb7))
+- subscriptions now sit behind auth ([82ac20cef](https://github.com/powerhouse-inc/powerhouse/commit/82ac20cef))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.2.0-dev.18 (2026-06-16)
 
 This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.

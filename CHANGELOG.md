@@ -1,3 +1,19 @@
+## 6.2.0-dev.19 (2026-06-16)
+
+### 🚀 Features
+
+- **connect:** prompt login for auth-protected drives ([#2727](https://github.com/powerhouse-inc/powerhouse/pull/2727))
+
+### 🩹 Fixes
+
+- subscriptions now sit behind auth ([82ac20cef](https://github.com/powerhouse-inc/powerhouse/commit/82ac20cef))
+- allow UPPER_SNAKE_CASE ([5cd154fb7](https://github.com/powerhouse-inc/powerhouse/commit/5cd154fb7))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Guillermo Puente Sandoval @gpuente
+
 ## 6.2.0-dev.18 (2026-06-16)
 
 ### 🩹 Fixes
