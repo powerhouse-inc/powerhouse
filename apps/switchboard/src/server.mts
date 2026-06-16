@@ -13,7 +13,6 @@ import {
   type Database,
   type JwtHandler,
 } from "@powerhousedao/reactor";
-import { createRemoteAttachmentService } from "@powerhousedao/reactor-attachments";
 import {
   HttpPackageLoader,
   ImportPackageLoader,
@@ -23,11 +22,8 @@ import {
   type IPackageLoader,
 } from "@powerhousedao/reactor-api";
 import { httpsHooksPath } from "@powerhousedao/reactor-api/https-hooks";
-import {
-  VitePackageLoader,
-  createViteLogger,
-  startViteServer,
-} from "@powerhousedao/reactor-api/vite";
+import type { VitePackageLoader } from "@powerhousedao/reactor-api/vite";
+import { createRemoteAttachmentService } from "@powerhousedao/reactor-attachments";
 import {
   DriveNodeView,
   NodeProcessor,
@@ -38,7 +34,6 @@ import {
 } from "@powerhousedao/reactor-drive";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import { processorFactory as vetraProcessorFactory } from "@powerhousedao/vetra/processors";
-import { applySwitchboardReactorDefaults } from "./builder-defaults.mjs";
 import type { IRenown } from "@renown/sdk/node";
 import * as Sentry from "@sentry/node";
 import { childLogger, setLogLevel, type ILogger } from "document-model";
@@ -49,7 +44,9 @@ import { register } from "node:module";
 import net from "node:net";
 import path from "path";
 import { Pool } from "pg";
+import type { ViteDevServer } from "vite";
 import { registerAttachmentRoutes } from "./attachments/index.js";
+import { applySwitchboardReactorDefaults } from "./builder-defaults.mjs";
 import { initFeatureFlags } from "./feature-flags.js";
 import { ClosablePGliteDialect } from "./pglite-dialect.js";
 import { migratePgliteDir } from "./pglite-migration.js";
@@ -454,12 +451,17 @@ async function initServer(
   let defaultDriveUrl: undefined | string = undefined;
 
   // TODO get path from powerhouse config
-  // start vite server if dev mode is enabled
   const basePath = process.cwd();
-  const viteLogger = createViteLogger(logger);
-  const vite = dev
-    ? await startViteServer(process.cwd(), viteLogger)
-    : undefined;
+
+  // import Vite loader only if dev mode is enabled
+  let vite: ViteDevServer | undefined;
+  let viteLoader: VitePackageLoader | undefined;
+  if (dev) {
+    const { VitePackageLoader, createViteLogger, startViteServer } =
+      await import("@powerhousedao/reactor-api/vite");
+    vite = await startViteServer(process.cwd(), createViteLogger(logger));
+    viteLoader = VitePackageLoader.build(vite);
+  }
 
   // get paths to local document models
   if (!options.disableLocalPackages) {
@@ -468,8 +470,8 @@ async function initServer(
 
   // create loaders
   const packageLoaders: IPackageLoader[] = [];
-  if (vite) {
-    packageLoaders.push(VitePackageLoader.build(vite));
+  if (viteLoader) {
+    packageLoaders.push(viteLoader);
   } else {
     packageLoaders.push(new ImportPackageLoader());
   }
@@ -778,11 +780,11 @@ export const startSwitchboard = async (
   }
 };
 
-export * from "./types.js";
 export {
   applySwitchboardReactorDefaults,
   type SwitchboardReactorDefaultsOptions,
 } from "./builder-defaults.mjs";
+export * from "./types.js";
 
 if (import.meta.main) {
   await startSwitchboard();
