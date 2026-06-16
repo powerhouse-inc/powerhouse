@@ -17,7 +17,7 @@
 
 ## Learn
 
-- [Learn the Powerhouse stack, chapter by chapter](https://academy.vetra.io/academy/Learn/Overview): A linear course covering the mental model, the architecture, document models, editors, Connect, Switchboard, and sync. Read a little, try a little, qu
+- [Learn the Powerhouse stack](https://academy.vetra.io/academy/Learn/Overview): Powerhouse is a framework for building applications whose state evolves through operations rather than direct mutations. Instead of storing the curren
 - [01-what-is-powerhouse](https://academy.vetra.io/academy/Learn/foundations/what-is-powerhouse): Powerhouse is a framework for building apps whose state lives in documents that evolve through operations. If you've built with CRDTs, <Term>Event Sou
 - [02-thinking-in-operations](https://academy.vetra.io/academy/Learn/foundations/thinking-in-operations): If you've built CRUD apps before, you probably think in terms of rows — the current value of a record in a database. <Term>Powerhouse</Term> asks you 
 - [01-the-big-picture](https://academy.vetra.io/academy/Learn/architecture/the-big-picture): The previous lesson showed how every change becomes an operation appended to an immutable log. Now let's look at where that all actually runs. By the 
@@ -127,6 +127,7 @@
 ## Release Notes
 
 - [Powerhouse v5.3.0 🚀](https://academy.vetra.io/academy/ReleaseNotes/v5.3.0): 1. Authentication & Permissions - CLI authentication and document-level permissions 2. Improved Code Generation - TS Morph and templates for faster, m
+- [Powerhouse v6.0.0 🚀](https://academy.vetra.io/academy/ReleaseNotes/v6.0.0): 1. Redesigned Reactor with sync reliability — Complete rewrite of the write model, sync pipeline, and job system with quarantine, dead letters, paging
 
 ## Miscellaneous
 

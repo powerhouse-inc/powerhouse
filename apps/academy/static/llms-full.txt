@@ -1,7 +1,7 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-06-16T14:18:42.715Z
-> Total Documents: 102
+> Generated: 2026-06-16T23:55:04.476Z
+> Total Documents: 103
 > Source: https://academy.vetra.io/llms-full.txt
 
 
@@ -1879,36 +1879,69 @@ ph generate processor --type analytics
 # Learn
 
 
-## Learn the Powerhouse stack, chapter by chapter
+## Learn the Powerhouse stack
 
 > Source: https://academy.vetra.io/academy/Learn/Overview
 
-A linear course covering the mental model, the architecture, document models,
-editors, Connect, Switchboard, and sync. Read a little, try a little, quiz
-yourself, and move on.
+Powerhouse is a framework for building applications whose state evolves through
+**operations** rather than direct mutations. Instead of storing the current
+state, it records the ordered operations that produced it — giving every
+document a complete, auditable history. If you've worked with Git, event
+sourcing, or CRDTs, much of this will feel familiar.
 
-These lessons are **explanation, not step-by-step build instructions** — the
-goal is to understand *what* the agent builds for you and *why* it looks the way
-it does. When you want to build by hand, head to
-[Build](/academy/MasteryTrack/ManualTodoTutorial/CreateNewPowerhouseProject); to
-ship with the agent, start at [Get started](/academy/GetStarted/VetraStudio).
+This course explains how the stack is structured and how its pieces fit
+together. It's **explanation, not step-by-step instructions** — the goal is to
+understand *what* the agent builds for you and *why*. To ship with the agent,
+start at [Get started](/academy/GetStarted/VetraStudio); to build by hand, see
+[Build](/academy/MasteryTrack/ManualTodoTutorial/CreateNewPowerhouseProject).
 
-## The course
+## Why use Powerhouse?
 
-<Cards>
-  <Card title="01 · Foundations" href="/academy/Learn/foundations/what-is-powerhouse" description="The mental model — documents, actions, and operations, and why Powerhouse is built around them." />
-  <Card title="02 · Architecture" href="/academy/Learn/architecture/the-big-picture" description="How the Reactor, Connect, and Switchboard fit together — and where your code lives." />
-  <Card title="03 · Document models" href="/academy/Learn/document-models/documents-and-drives" description="The typed core: documents, drives, state scopes, actions, and reducers." />
-  <Card title="04 · Editors" href="/academy/Learn/editors/what-is-an-editor" description="React UIs that dispatch actions and render state — hooks, structure, and patterns." />
-  <Card title="05 · Connect" href="/academy/Learn/connect/what-is-connect" description="The host application — how it loads document models, drives, and editors at runtime." />
-  <Card title="06 · Switchboard" href="/academy/Learn/switchboard/what-is-switchboard" description="The server side — subgraphs that expose APIs and processors that build read models." />
-  <Card title="07 · Sync & collaboration" href="/academy/Learn/sync/sync-and-collaborate" description="Replay, merge, and why conflict-free just works once your state lives in a log." />
-  <Card title="08 · Going further" href="/academy/Learn/deep-dives/reducers-in-depth" description="Under the hood — reducer patterns, plus identity and signing on the operation log." />
-</Cards>
+Because state is an operation log, teams get a set of hard problems solved by
+default:
 
-**TIP:**
-New to Powerhouse? Read [What is Powerhouse?](/academy/Learn/foundations/what-is-powerhouse)
-first — every later lesson builds on the operation-log mental model it sets up.
+- **Track every change** — who did what, when, addressable by index and hash.
+- **Sync across peers** — offline edits merge deterministically, no last-write-wins.
+- **Build collaborative apps** — concurrent editing without conflict resolution code.
+- **Keep auditable histories** — the log *is* the audit trail.
+- **Separate business logic from UI** — reducers hold the rules; editors just dispatch.
+
+That makes it well suited to operational systems, governance tools, financial
+workflows, collaborative editors, and other distributed applications.
+
+## What you'll learn
+
+By the end of this course you'll understand:
+
+- The Powerhouse mental model — documents, state, and operations
+- Actions and reducers — how state changes are described and applied
+- Editors and host applications
+- Connect and distributed synchronization
+- Switchboard, subgraphs, and read models
+- How a complete Powerhouse application fits together
+
+## The path
+
+The chapters are designed to be read in order — each builds on the last:
+
+**Foundations → Architecture → Document models → Editors → Connect → Switchboard → Sync → Going further**
+
+Each chapter is a handful of short lessons that end with a quiz to check your
+understanding.
+
+<LearnCourseGrid />
+
+After the course you'll be able to navigate the Powerhouse architecture, reason
+about how a change flows through the stack, and read what the agent generates
+with confidence.
+
+<Admonition type="tip" title="Start here">
+
+New to Powerhouse? Begin with
+[What is Powerhouse?](/academy/Learn/foundations/what-is-powerhouse) — every
+later lesson builds on the operation-log model it establishes.
+
+</Admonition>
 
 ---
 
@@ -2010,13 +2043,6 @@ These are the terms that show up everywhere in the docs and in the rest of these
   explanation="A good rule of thumb: reducers are pure, editors are impure. Anything that touches the DOM, network, or time belongs outside the reducer."
 />
 
-## Where to next
-
-<Cards>
-  <Card title="Thinking in operations" href="/academy/Learn/foundations/thinking-in-operations" />
-  <Card title="The big picture" href="/academy/Learn/architecture/the-big-picture" />
-</Cards>
-
 ---
 
 
@@ -2102,15 +2128,6 @@ Once the log exists, a lot of hard problems become easy:
 - **Derived read models** — a processor subscribes to the stream and maintains a search index, or a counter, or a cache.
 - **Replays** — reconstruct bugs by replaying the exact operations the user produced.
 
-## Where to next
-
-You've got the mental model. Next, see how the Powerhouse stack arranges itself around that operation log.
-
-<Cards>
-  <Card title="The big picture" href="/academy/Learn/architecture/the-big-picture" />
-  <Card title="Back to: What is Powerhouse?" href="/academy/Learn/foundations/what-is-powerhouse" />
-</Cards>
-
 ---
 
 
@@ -2186,13 +2203,6 @@ This is what the overview doc means by "local-first, built to scale": you get a 
 
 Connect and Switchboard are two of four host applications in the ecosystem. The next lesson covers all of them in depth, including how Fusion and Renown fit in. For now, the three-piece map — Reactor, Connect, Switchboard — is enough to orient everything else you'll learn.
 
-## Where to next
-
-<Cards>
-  <Card title="Host applications" href="/academy/Learn/architecture/host-applications" />
-  <Card title="Back to: Thinking in operations" href="/academy/Learn/foundations/thinking-in-operations" />
-</Cards>
-
 ---
 
 
@@ -2255,13 +2265,6 @@ The Reactor's job is to apply reducers, order operations into a deterministic lo
 Because the host owns the runtime, the same document model — the same reducer, the same business logic — can run in a browser and a headless server without any changes. Connect renders the editor and signs actions with the user's identity. Switchboard exposes the same document over an API and runs processors server-side. The document model doesn't know which host it's in, and it doesn't need to.
 
 This is the practical payoff of keeping the Reactor a plain library: you get to choose the runtime, and you can have more than one.
-
-## Where to next
-
-<Cards>
-  <Card title="Documents and drives" href="/academy/Learn/document-models/documents-and-drives" />
-  <Card title="Back to: The big picture" href="/academy/Learn/architecture/the-big-picture" />
-</Cards>
 
 ---
 
@@ -2335,13 +2338,6 @@ The new document comes into existence because the drive's reducer processed that
     },
   ]}
 />
-
-## Where to next
-
-<Cards>
-  <Card title="State and scopes" href="/academy/Learn/document-models/state-and-scopes" />
-  <Card title="Back to: Host applications" href="/academy/Learn/architecture/host-applications" />
-</Cards>
 
 ---
 
@@ -2423,13 +2419,6 @@ Not sure which scope to use? Ask: **should every collaborator see this change?**
 - No, this is mine alone → `local`
 
 That's it. The boundary isn't about importance or size — it's about audience.
-
-## Where to next
-
-<Cards>
-  <Card title="Actions and reducers" href="/academy/Learn/document-models/actions-and-reducers" />
-  <Card title="Back to: Documents and drives" href="/academy/Learn/document-models/documents-and-drives" />
-</Cards>
 
 ---
 
@@ -2539,13 +2528,6 @@ The action/reducer/operation triangle gives you a clean separation:
 | **Operation** | Result — the action plus proof it ran (index, hash, timestamp) |
 
 A caller can't sneak state changes past the reducer. A reducer can't introduce uncertainty. An operation can't be revised after the fact. Each piece does exactly one job.
-
-## Where to next
-
-<Cards>
-  <Card title="Your first document model" href="/academy/Learn/document-models/your-first-document-model" />
-  <Card title="Back to: State and scopes" href="/academy/Learn/document-models/state-and-scopes" />
-</Cards>
 
 ---
 
@@ -2699,13 +2681,6 @@ describe('todo reducer', () => {
 
 Run it with `pnpm test`. The same three operations can be replayed on any peer to reconstruct exactly this state.
 
-## Where to next
-
-<Cards>
-  <Card title="What is an editor?" href="/academy/Learn/editors/what-is-an-editor" />
-  <Card title="Back to: Actions and reducers" href="/academy/Learn/document-models/actions-and-reducers" />
-</Cards>
-
 ---
 
 
@@ -2768,13 +2743,6 @@ The editor dispatches. The reducer computes. Never the other way around.
 An editor isn't just a component — it's a component paired with metadata that says which document type it handles. That pairing is called an <Term>editor module</Term>, and it lives in `editors/editors.ts`. Connect reads this registry at startup to know which UI to mount for each document type.
 
 The registration is generated for you during the codegen phase — you don't write it by hand. But it's worth knowing it exists, because a missing registration is the most common reason an editor doesn't appear in Connect.
-
-## Where to next
-
-<Cards>
-  <Card title="Your first editor" href="/academy/Learn/editors/your-first-editor" />
-  <Card title="Back to: Your first document model" href="/academy/Learn/document-models/your-first-document-model" />
-</Cards>
 
 ---
 
@@ -3022,13 +2990,6 @@ dispatch(
 
 Pass a single action or an array to batch. Use `onErrors` to surface validation failures in your UI. Use `onSuccess` if you need the updated document immediately after the operation lands.
 
-## Where to next
-
-<Cards>
-  <Card title="What is Connect?" href="/academy/Learn/connect/what-is-connect" />
-  <Card title="Back to: Your first editor" href="/academy/Learn/editors/your-first-editor" />
-</Cards>
-
 ---
 
 
@@ -3104,13 +3065,6 @@ Connect runs in two modes, and from your editor's point of view they're identica
 
 The built bundle is configured entirely through `PH_CONNECT_*` environment variables — things like which Switchboard drives to default to (`PH_CONNECT_DEFAULT_DRIVES_URL`) or the log level (`PH_CONNECT_LOG_LEVEL`). These are baked in at build time and reach the browser, so never put secrets there.
 
-## Where to next
-
-<Cards>
-  <Card title="Drive apps" href="/academy/Learn/connect/drive-apps" />
-  <Card title="Back to: Editor hooks and state" href="/academy/Learn/editors/editor-hooks-and-state" />
-</Cards>
-
 ---
 
 
@@ -3180,13 +3134,6 @@ When a document is open, `children` is truthy and the editor appears. Otherwise,
 The combination of drive app + editors is how teams turn Powerhouse into a finished product. The drive app owns the navigation, the cross-document dashboard, and any workflow that spans multiple documents. Editors own the detail view for each one. Together they cover the full surface area of a real frontend — without leaving Connect.
 
 Hooks like `useDocumentsInSelectedDrive()` let the drive app read every document in the drive, and `showCreateDocumentModal()` wires up the "new document" flow — all from `@powerhousedao/reactor-browser`.
-
-## Where to next
-
-<Cards>
-  <Card title="What is Switchboard?" href="/academy/Learn/switchboard/what-is-switchboard" />
-  <Card title="Back to: What is Connect?" href="/academy/Learn/connect/what-is-connect" />
-</Cards>
 
 ---
 
@@ -3258,13 +3205,6 @@ ph vetra
 ```
 
 In production, Switchboard deploys as a Docker container — same code, persistent Reactor store, as many instances as you need behind a load balancer.
-
-## Where to next
-
-<Cards>
-  <Card title="Subgraphs" href="/academy/Learn/switchboard/subgraphs" />
-  <Card title="Back to: Drive apps" href="/academy/Learn/connect/drive-apps" />
-</Cards>
 
 ---
 
@@ -3342,13 +3282,6 @@ Mutation: {
 ```
 
 The Reactor runs the action through the reducer, stamps it as an operation, appends it to the document history, and syncs it to connected peers. The subgraph layer is thin — it translates network calls into document actions and hands off.
-
-## Where to next
-
-<Cards>
-  <Card title="Processors and read models" href="/academy/Learn/switchboard/processors-and-read-models" />
-  <Card title="Back to: What is Switchboard?" href="/academy/Learn/switchboard/what-is-switchboard" />
-</Cards>
 
 ---
 
@@ -3813,15 +3746,6 @@ make the whole history **tamper-evident**: change any past operation and every
 signature and hash after it stops verifying. The same structure that gives you
 deterministic replay and conflict-free sync gives you a trustworthy audit trail
 for free.
-
-## Where to next
-
-<Cards>
-  <Card title="Renown authentication flow" href="/academy/MasteryTrack/BuildingUserExperiences/Authorization/RenownAuthenticationFlow" description="How a user authenticates with Renown in Connect." />
-  <Card title="Signing, in depth" href="/academy/MasteryTrack/BuildingUserExperiences/Authorization/Signing" description="The mechanics of signing and verifying operations." />
-  <Card title="Document permissions" href="/academy/MasteryTrack/BuildingUserExperiences/Authorization/DocumentPermissions" description="How authorization gates which actions an identity may dispatch." />
-  <Card title="Back to: Reducers in depth" href="/academy/Learn/deep-dives/reducers-in-depth" />
-</Cards>
 
 ---
 
@@ -30113,8 +30037,6 @@ The [Powerhouse Recipes](https://github.com/powerhouse-inc/recipes) repository c
 
 > See the [recipes repository](https://github.com/powerhouse-inc/recipes) for full source code, setup instructions, and prerequisites.
 
-Expand any recipe below to read its full walkthrough inline:
-
 {/* AUTO-GENERATED-RECIPE-DOCS-START */}
 {/* This content is automatically generated by scripts/generate-recipe-docs.ts. Do not edit directly. */}
 
@@ -32620,6 +32542,206 @@ Coming soon to **https://academy.vetra.io**
 - Inspector Modal guide
 - Updated hooks documentation
 - Vetra Studio usage guides
+
+---
+
+
+## Powerhouse v6.0.0 🚀
+
+> Source: https://academy.vetra.io/academy/ReleaseNotes/v6.0.0
+
+## ✨ Highlights
+
+1. **Redesigned Reactor with sync reliability** — Complete rewrite of the write model, sync pipeline, and job system with quarantine, dead letters, paging, and FIFO batching
+2. **Vetra Package Ecosystem** — Private npm-compatible registry, `ph publish/install/unpublish`, and dynamic package loading at runtime in Connect and Switchboard
+3. **Reactor Attachments** — New `reactor-attachments` package for document-linked file storage with reservations, direct upload, and soft-delete
+4. **Switchboard Load Balancer** — Built-in `switchboard-lb` for multi-node deployments with least-conn routing and drive-id-based pinning
+5. **Full Observability** — OpenTelemetry metrics, Sentry source map uploads, Prometheus exporter, and OTel-to-Sentry span bridging
+
+## ⚙️ Reactor — Rewritten Write Model & Sync Engine
+
+The reactor's core write model was fundamentally rearchitected to unify transactions with execution context. The sync pipeline gained per-document quarantine (instead of blocking entire remotes), a persistent dead-letter store, buffered batched mailboxes, abort signals on GQL channels, and cursor-based paging for large sync batches.
+
+Key additions:
+
+- **DocumentIntegrityService** — validates and rebuilds document keyframes/snapshots
+- **Sync paging** — `getOperations` now pages across scopes
+- **Job timeout** via abort signals propagated through the entire job pipeline
+- **Yield utilities** for cooperative scheduling in the job executor
+- **Exponential backoff + jitter** on retries
+- **`test-sync-queue` CLI app** for detecting sync drift on large drives
+
+```bash
+# New profiling script for direct reactor performance testing
+npx tsx profiling/reactor-direct.ts --docs 1000 --otel
+```
+
+## 📦 Vetra Package Ecosystem
+
+A full end-to-end package ecosystem now powers Powerhouse apps. A private npm-compatible registry (Verdaccio-backed) hosts packages, and the CLI, Connect, and Switchboard all integrate with it.
+
+**New CLI commands:**
+
+```bash
+# Publish a built package to the Powerhouse registry
+ph publish
+
+# Install from the registry (uses Powerhouse registry by default)
+ph install @your-org/your-package
+
+# Unpublish a package and purge the CDN cache
+ph unpublish @your-org/your-package@1.0.0
+```
+
+**Dynamic loading:** Connect and Switchboard load processors and subgraphs at runtime from the HTTP registry — no rebuild required when new packages are published.
+
+**Auto-discovery:** Connect automatically finds and installs the correct package when it encounters an unknown document type.
+
+**Version picker:** The Connect UI lets users choose specific dist-tag versions when installing packages.
+
+```json
+// powerhouse.config.json
+{
+  "registry": "https://your-registry-url"
+}
+```
+
+## 📎 Reactor Attachments
+
+New `reactor-attachments` package provides document-linked file storage, integrated directly into the reactor and switchboard.
+
+Features:
+
+- Upload reservations + direct upload to storage
+- Switchboard transport implementation
+- `HEAD` support, soft-delete, and case-insensitive hash indexing
+- `Attachment-Metadata` headers
+
+## ⚖️ Switchboard Load Balancer
+
+New `switchboard-lb` package provides HTTP load balancing for multi-node Switchboard deployments:
+
+- **M1:** Least-connections proxying of upstream routes
+- **M2:** Request pinning across restarts
+- **M3:** Rewrite to drive-id header for deterministic routing
+
+## 📊 OpenTelemetry & Sentry Observability
+
+```bash
+# Enable OTel metrics export from Switchboard
+OTEL_EXPORTER_OTLP_ENDPOINT=http://tempo:4318 ph switchboard start
+
+# Prometheus metrics (opt-in)
+PROMETHEUS_METRICS=true ph switchboard start
+```
+
+- New `opentelemetry-instrumentation-reactor` package for distributed tracing across reactor internals
+- Sentry source maps uploaded in CI and releases tagged automatically
+- OTel spans bridged to Sentry for unified error correlation
+- Opt-out error reporting for `ph-cli` and `ph-cmd` via config
+- Lightweight Sentry SDK replaces full SDK in CLI
+
+## 🪝 `useDocumentSafe` Hook
+
+```typescript
+
+
+function MyEditor({ documentId }: { documentId: string }) {
+  const { document, error, isLoading } = useDocumentSafe(documentId);
+  if (isLoading) return <Spinner />;
+  if (error) return <ErrorBanner error={error} />;
+  return <Editor document={document} />;
+}
+```
+
+Replaces the pattern of calling `useDocument` and catching thrown errors — now surfaces error and loading state as first-class values.
+
+## 🤖 `ph code` Subcommand — AI Agent Harness
+
+```bash
+# Launch an AI-assisted code generation session
+ph code
+```
+
+New subcommand that wires Mastra and ph-clint into the CLI for AI-powered code assistance scoped to your Powerhouse project.
+
+## 🛡️ Per-Document Authentication
+
+- **Signature verification** on Switchboard: operations must carry a valid app-key signature
+- **Per-document protection model**: configure which documents require authentication
+- `ph login` / `ph logout` / `ph access-token` login flow now implemented in the Renown SDK and forwarded by the CLI
+
+## 🔧 Codegen Improvements
+
+- **Versioned reducers by default** — reducers are version-stamped at generation time
+- **`satisfies DocumentModelModule`** instead of type casts
+- **CI/CD + Docker templates** scaffolded by `ph init` for new projects
+- **Vitest coverage** scaffolded with reducer threshold checks
+- **Separate `ph generate` commands** for reducers, editors, and processors
+- **AGENTS.md template** with editor drag-and-drop guidance and reducer testing playbook
+- **E2E codegen tests** for processor and subgraph generation
+
+## 🖥️ Connect Improvements
+
+- **Processor inspector** panel showing live processor state
+- **Offline preview** for locally installed packages (bundled into Connect)
+- **PGlite migration banner** for DB version transitions
+- **Dump & import** for local PGlite database
+- **Version picker** UI for dist-tag selection
+- **Git hash display** in settings/URL for build traceability
+- **Drive info** shown in settings menu
+- **JSON viewer** in operations tooltip
+- **Retry on startup** for default drives with backoff
+
+## 📡 Reactor MCP
+
+The `reactor-mcp` package now creates a fresh `McpServer` per `/mcp` request, fixing concurrent transport collision when multiple clients connect simultaneously.
+
+## 🔄 Improvements
+
+- **tsdown** replaces the previous build toolchain across all packages: `analytics-engine`, `builder-tools`, `ph-cli`, `ph-cmd`, `registry`, `shared`, `design-system`
+- **Separate node/browser processor bundles** — processors now publish distinct `node` and `browser` entrypoints
+- **Tree-shaking** — `sideEffects: false` added to generated package boilerplate; pglite, jszip, and renown crypto are now lazy-loaded
+- **Document cache** made compatible with GraphQL clients directly
+- **Remote document controller** in `reactor-browser` for server-driven document state
+- **Single batch query** in `reactor-browser` for pulling operations on remote controllers
+- **Switchboard**: dynamic model loading behind `DYNAMIC_MODEL_LOADING` env var; OTel provider registration ordering enforced
+- **Registry**: SSE + webhook publish notifications; npm uplink for transparent CDN fallback; Renown JWT auth in front of Verdaccio
+- **`ph-cmd`** now delegates `init` and all forwarded commands to the versioned `ph-cli` binary — version pinning works correctly
+- **`ph migrate`** now runs against the target codegen version with `--force` flag available
+- **`ph install`**: `--allow-build` flag supported; prompts for dist-tag on prerelease publish
+
+## 🐞 Bug Fixes
+
+- Reactor: orphan reshuffle and cross-batch FIFO bugs fixed; documents with out-of-order `ADD_RELATIONSHIP` now correctly backfilled
+- Reactor: deleted documents no longer returned by queries; jobs targeting deleted documents are not retried
+- Reactor: GQL channel now correctly handles abort signals, backpressure, and dead-letter placement
+- Connect: PGlite idb cleared on storage wipe to avoid flush race; duplicate document models deduplicated by type+version
+- Switchboard: falls back to a free port on `EADDRINUSE` and propagates to Vetra
+- Switchboard: `migrate` command now honors correct env vars
+- Registry: concurrent tarball extraction prevented; correct package version resolved on CDN
+- ph-cli: lazy-loaded for faster startup; `PH_REGISTRY_URL` env takes precedence over config
+- Design system: static asset paths fixed post-tsdown migration; icons path corrected
+
+## ⚠️ Breaking Changes
+
+**Node.js 24 is now the minimum supported version.**
+
+```bash
+# Check your Node version
+node --version  # must be >= 24.0.0
+
+# Install Node 24 via nvm
+nvm install 24 && nvm use 24
+```
+
+**`DriveEditor` renamed** — a bulk rename was applied across all packages. Search your codebase for old `DriveEditor` references and update as directed by TypeScript.
+
+**Generated subgraph code should be deleted** — subgraphs are now generated and loaded at runtime. Delete any `src/subgraphs/` directory in your project to avoid conflicts.
+
+```bash
+rm -rf src/subgraphs/
+```
 
 ---
 
