@@ -148,6 +148,35 @@ export function assertAuthRequiredForDocumentPermissions(
   }
 }
 
+/**
+ * Refuses SKIP_CREDENTIAL_VERIFICATION at boot outside tests or an explicit
+ * opt-in: it removes the only binding between a token's claimed address and its
+ * signing key. Fail-closed — unset NODE_ENV counts as production.
+ */
+export function assertSkipCredentialVerificationAllowed(
+  authEnabled: boolean,
+  skipCredentialVerification: boolean,
+  env: NodeJS.ProcessEnv,
+): void {
+  if (!authEnabled || !skipCredentialVerification) {
+    return;
+  }
+  const inAutomatedTest = env.VITEST === "true" || env.NODE_ENV === "test";
+  const acknowledged =
+    env.ALLOW_INSECURE_SKIP_CREDENTIAL_VERIFICATION === "true";
+  if (!inAutomatedTest && !acknowledged) {
+    throw new Error(
+      "SKIP_CREDENTIAL_VERIFICATION is set but refused: it disables the live " +
+        "Renown credential check — the only check binding a token's claimed " +
+        "address to the key that signed it — so honoring it allows identity " +
+        "spoofing, including of admins. It is never safe in production. For " +
+        "local or sandbox use, also set " +
+        "ALLOW_INSECURE_SKIP_CREDENTIAL_VERIFICATION=true to acknowledge the " +
+        "risk; automated test runs (VITEST=true or NODE_ENV=test) are exempt.",
+    );
+  }
+}
+
 function createReadinessGate(): ReadinessGate {
   let ready = false;
   return {
@@ -477,6 +506,19 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     authEnabled,
     documentPermissionsRequested,
   );
+  assertSkipCredentialVerificationAllowed(
+    authEnabled,
+    skipCredentialVerification,
+    process.env,
+  );
+  if (authEnabled && skipCredentialVerification) {
+    logger.warn(
+      "SECURITY: SKIP_CREDENTIAL_VERIFICATION is enabled — Renown credential " +
+        "verification is disabled and a bearer token's claimed address is NOT " +
+        "cryptographically bound to its signing key. Identity is unverifiable; " +
+        "use only in development or test.",
+    );
+  }
 
   // Health check endpoint (registered directly on adapter, before auth)
   httpAdapter.getRoute("/health", () => new Response("OK", { status: 200 }));
