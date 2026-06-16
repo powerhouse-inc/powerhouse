@@ -76,7 +76,7 @@ export class BaseSubgraph implements ISubgraph {
    * transient) surfaces as a generic Forbidden, fail-closed, so a bad
    * identifier cannot be used as a document-existence oracle.
    */
-  protected async resolveCanonicalDocumentId(
+  async resolveCanonicalDocumentId(
     identifier: string,
     requestKey: object,
   ): Promise<CanonicalDocumentId> {
@@ -105,7 +105,7 @@ export class BaseSubgraph implements ISubgraph {
    * Resolves the args' `documentId` to canonical form. Unconditional (unlike the
    * assertCan* helpers, no admin skip): ACL rows are keyed on the canonical id.
    */
-  protected async withCanonicalDocumentId<T extends { documentId: string }>(
+  async withCanonicalDocumentId<T extends { documentId: string }>(
     args: T,
     requestKey: object,
   ): Promise<T & { documentId: CanonicalDocumentId }> {
@@ -142,7 +142,7 @@ export class BaseSubgraph implements ISubgraph {
    * Read filter for an already-canonical document id (one sourced from the data
    * layer, such as a fetched document's id). Performs no slug resolution.
    */
-  protected async canReadDocument(
+  async canReadDocument(
     documentId: CanonicalDocumentId,
     ctx: Context,
   ): Promise<boolean> {
@@ -153,7 +153,7 @@ export class BaseSubgraph implements ISubgraph {
    * Asserts read access, resolving a slug first. Returns a handle whose
    * `fetchIdentifier` the caller reuses for the data fetch; a denial throws.
    */
-  protected async assertCanRead(
+  async assertCanRead(
     identifier: string,
     ctx: Context,
   ): Promise<AuthorizedDocumentHandle> {
@@ -164,7 +164,7 @@ export class BaseSubgraph implements ISubgraph {
     return AuthorizedDocumentHandle.resolved(documentId);
   }
 
-  protected async assertCanWrite(
+  async assertCanWrite(
     identifier: string,
     ctx: Context,
   ): Promise<AuthorizedDocumentHandle> {
@@ -175,7 +175,7 @@ export class BaseSubgraph implements ISubgraph {
     return AuthorizedDocumentHandle.resolved(documentId);
   }
 
-  protected async assertCanExecuteOperation(
+  async assertCanExecuteOperation(
     identifier: string,
     operationType: string,
     ctx: Context,
@@ -195,7 +195,7 @@ export class BaseSubgraph implements ISubgraph {
    * Read assertion for an already-canonical document id. No slug resolution;
    * use only with ids sourced from the data layer or already resolved.
    */
-  protected async assertCanReadCanonical(
+  async assertCanReadCanonical(
     documentId: CanonicalDocumentId,
     ctx: Context,
   ): Promise<void> {
@@ -210,7 +210,7 @@ export class BaseSubgraph implements ISubgraph {
     }
   }
 
-  protected async assertCanWriteCanonical(
+  async assertCanWriteCanonical(
     documentId: CanonicalDocumentId,
     ctx: Context,
   ): Promise<void> {
@@ -225,7 +225,7 @@ export class BaseSubgraph implements ISubgraph {
     }
   }
 
-  protected async assertCanExecuteOperationCanonical(
+  async assertCanExecuteOperationCanonical(
     documentId: CanonicalDocumentId,
     operationType: string,
     ctx: Context,
@@ -242,7 +242,7 @@ export class BaseSubgraph implements ISubgraph {
     }
   }
 
-  protected assertCanCreate(ctx: Context): void {
+  assertCanCreate(ctx: Context): void {
     if (this.authorizationService.canCreate(ctx.user?.address)) return;
     throw new GraphQLError(
       ctx.user?.address

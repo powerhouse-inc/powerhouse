@@ -1,7 +1,7 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-06-11T15:13:53.990Z
-> Total Documents: 87
+> Generated: 2026-06-16T15:33:38.735Z
+> Total Documents: 89
 > Source: https://academy.vetra.io/llms-full.txt
 
 
@@ -2053,6 +2053,230 @@ You will learn:
 
 
 # Mastery Track
+
+
+## Vetra Studio Agent
+
+> Source: https://academy.vetra.io/academy/MasteryTrack/BuilderEnvironment/VetraStudioAgent
+
+Vetra Studio is the browser UI for the Vetra agent. It lets you chat with the Vetra agent, track work across the four-phase product development cycle 
+(Ideate → Specify → Build → Deploy), and watch a live preview of the product the Vetra agent is building.
+
+
+## What can i build? 
+
+With the Vetra Studio Agent, you can build **local-first, AI-ready, specification-driven products, platforms and software solutions**.
+These solutions can be used as:
+- Open-source and decentralized back-ends.
+- Any SaaS, ERP, CMS or CRM needs.
+- Are based on a structured data model & document-centric architecture.
+
+
+## Getting started
+
+Vetra Studio is currently in beta. You'll have gotten your hands on an early access code from Powerhouse.
+Log in at **vetra.io** to access Vetra Studio.
+
+---
+
+## The layout
+
+```
+┌──────────────────┬─┬─────────────────────────────────────┐
+│  Chat pane       │ │  Main pane                          │
+│                  │▒│                                     │
+│  Session list    │▒│  Home: phase cycle cards            │
+│  — or —          │▒│  — or —                             │
+│  Active session  │▒│  Ideate section                     │
+│                  │▒│  — or —                             │
+│                  │▒│  Build preview                      │
+└──────────────────┴─┴─────────────────────────────────────┘
+```
+
+- **Chat pane** (left): lists all chat sessions in the drive, and renders the
+  active session's message history when one is selected.
+- **Resize handle** (narrow vertical strip): drag to adjust pane width.
+  Double-click to reset to default.
+- **Main pane** (right): shows the home phase-cycle overview by default.
+  Opens to Ideate or Build when you click those phase cards.
+
+---
+
+## Creating a session
+
+1. Open **vetra.io** and log in.
+2. In the chat pane, click **New** (top-right) or **New session** (empty
+   state).
+3. A new chat session document is created in the drive and opened
+   immediately.
+4. Type your first message to the agent and press Enter (or click the send
+   button).
+
+Sessions persist across restarts — they are CRDT documents stored in the
+embedded reactor's PGlite database.
+
+---
+
+## The phase cycle
+
+The right pane shows four phase cards when no sub-section is open:
+
+| Phase | Status | What happens there |
+|-------|--------|--------------------|
+| **Ideate** | active | Problem-definition documents and feature lists |
+| **Specify** | inactive (coming) | Solution design |
+| **Build** | active | Live preview of the agent's in-progress work |
+| **Deploy** | inactive (coming) | Delivery / publish |
+
+Click **IDEATE** to browse product-identity cards, audiences and your product ideas 'Job to be done' framework. Click **BUILD** to open the live preview pane.
+
+---
+
+## Talking to the agent
+
+The chat session is the primary way to direct the agent. Type a message; the
+agent responds and runs tools. Tool calls (like `spec-update`,
+`spec-generate`, `reactor-project-start`) appear inline in the chat history as
+expandable cards showing their status (Running / Completed / Error).
+
+The agent can:
+
+- Create and iterate on **spec documents** (problem/audience/brand sheets,
+  feature lists, solution designs).
+- Scaffold a **reactor project** — a separate dev-mode process that hosts a
+  live editor preview.
+- Generate code (document models, editors, processors) directly into that
+  project.
+- Create a **preview document** inside the project and surface it in the
+  BUILD pane.
+
+---
+
+## The BUILD preview
+
+The BUILD pane hosts an iframe that deep-links into the reactor project the
+agent spawned for the session. Here is the sequence:
+
+1. The agent calls `reactor-project-start` — visible as a tool card in the
+   chat.
+2. The BUILD pane detects that the project is stopped and boots it
+   automatically (or waits for the agent's tool call to do it).
+3. A "Starting…" status is shown while the dev server warms up (typically
+   10–30 seconds).
+4. Once ready the agent calls `spec-preview-show` with a project + document
+   reference. The iframe navigates to that document's editor inside the
+   project's Connect.
+5. From this point, any code the agent generates is picked up by Vite HMR —
+   the iframe updates live without a full reload.
+
+You can navigate back to the phase-cycle home with the breadcrumb at the top
+of the BUILD pane.
+
+---
+
+## Session URLs
+
+The currently selected session id is kept in the `?session=<id>` query
+parameter. This means:
+
+- Sharing the URL opens the same session in another tab or browser.
+- Browser back/forward navigates between sessions.
+- Reloading the page restores the selection without losing your place.
+
+---
+
+## Glossary
+
+**Chat session** — a CRDT document that stores message history, agent tool
+calls, and tool results for one conversation thread.
+
+**Phase cycle** — the four-card home view (Ideate / Specify / Build / Deploy).
+Each card represents a stage of the product-development workflow.
+
+**Reactor project** — a `ph vetra` dev-mode child process the agent spawns to
+host a live editor preview. One per active build in a chat session.
+
+**Preview drive** — a hardcoded-slug drive inside a reactor project, used for
+ephemeral preview document instances.
+
+---
+
+<details>
+<summary>Running Vetra Studio locally (advanced)</summary>
+
+From the `vetra-cli` directory:
+
+```bash
+pnpm dev -i          # dev mode (watch + Vite HMR in reactor-projects)
+# or
+pnpm start -i        # production-mode binaries
+```
+
+Both commands pass `--workdir ../../vetra-test` by default. Once running,
+open **http://localhost:27370** in a browser. The terminal prints the URL when
+the embedded Connect server is ready.
+
+> If you see the generic Powerhouse drive explorer instead of Vetra Studio,
+> the SPA bundle is stale. Run both build commands listed under
+> "Rebuilding after editor changes" below and restart.
+
+### Rebuilding after editor changes
+
+Vetra Studio is a static SPA bundled at build time. After editing
+`vetra-app/editors/*` or `vetra-app/powerhouse.manifest.json` you must run
+**two** commands and restart:
+
+```bash
+# 1. Rebuild the package exports (document models, editor registrations)
+pnpm --filter vetra-app build
+
+# 2. Rebuild the SPA bundle that connect-server.js serves
+pnpm --filter vetra-app exec ph-cli connect build \
+  --outDir dist/connect \
+  --default-drives-url http://__ph_drive_url__
+```
+
+Then restart `pnpm dev -i`. The `connect-drive-url` hook stamps the live
+Switchboard drive URL into the bundle on startup; the placeholder above is
+what it replaces.
+
+Skipping step 2 leaves the bundle carrying the pre-edit manifest, and Connect
+will fall back to the generic folder view instead of Vetra Studio.
+
+### Service ports (default)
+
+| Service | Port | Purpose |
+|---------|------|---------|
+| Vetra Studio (Connect) | 27370 | Browser entry point |
+| Embedded Switchboard | 59220 | GraphQL + MCP |
+| Preview server (local API) | 5180 | Preview state + SSE |
+| Embedded reverse proxy | 8090 | Single public port (deployed mode) |
+| Reactor-project Connect | varies | Per-session BUILD preview |
+
+### Diagnostics
+
+```bash
+# Is the preview server up?
+curl -sS http://127.0.0.1:5180/healthz
+
+# What is the current preview target for a session?
+curl -sS "http://127.0.0.1:5180/resolve?project=<project-dir>&doc=<slug-or-id>"
+
+# Start a reactor project manually (idempotent)
+curl -sS -X POST "http://127.0.0.1:5180/start?project=<project-dir>"
+
+# Stream reactor-project lifecycle events
+curl -sS -N http://127.0.0.1:5180/events
+
+# Switchboard schema sanity check
+curl -sS -X POST http://localhost:59220/graphql \
+  -H "content-type: application/json" \
+  -d '{"query":"{ __schema { types { name } } }"}' | grep -i drive
+```
+
+</details>
+
+---
 
 
 ## Prerequisites
@@ -10368,6 +10592,259 @@ The address is shown in the authentication status output.
 ---
 
 
+## Enforcing Authorization in Subgraphs
+
+> Source: https://academy.vetra.io/academy/MasteryTrack/BuildingUserExperiences/Authorization/EnforcingAuthorizationInSubgraphs
+
+**WARNING:**
+This documentation is still being written and may be incomplete.
+
+
+The other pages in this section explain how an **operator** configures
+authorization for a Reactor ([Reactor API Authorization](../docs/docs/04-Authorization.md))
+and how grants are managed ([Document Permissions](../docs/docs/02-DocumentPermissions.md)).
+This page is for **builders**: when you write a [custom subgraph](../docs/../04-WorkWithData/03-UsingSubgraphs.md),
+your resolvers run with full access to the Reactor, so **you** are responsible for
+enforcing authorization on the data they read and write.
+
+## Why your resolvers must enforce authorization
+
+The Reactor's built-in subgraphs (`r`, `auth`, `document-drive`, the document-model
+subgraphs) already guard every resolver. A custom subgraph you generate with
+`ph generate subgraph` does **not** — the generated resolvers call the Reactor
+client directly and will happily return data regardless of who is asking.
+
+Consider the search resolver from the [Using subgraphs](../docs/../04-WorkWithData/03-UsingSubgraphs.md)
+tutorial:
+
+```typescript
+searchTodos: async (parent, args: { driveId: string; searchTerm: string }) => {
+  const children = await reactorClient.getOutgoingRelationships(args.driveId, "child");
+  // ...returns every matching document id, with no permission check
+};
+```
+
+If the Reactor is configured with document permissions, this resolver leaks the
+existence — and ids — of documents the caller is not allowed to read. The
+enforcement helpers on `BaseSubgraph` exist to close exactly this gap.
+
+## The model you are enforcing against
+
+Authorization is decided by a single service selected once at boot by the
+Reactor's [policy](../docs/docs/04-Authorization.md#how-authorization-works). You do **not**
+branch on the policy yourself — you call the same helpers in every resolver and
+the active policy decides the outcome:
+
+| Policy                     | When                                              | What the helpers do                                                            |
+| -------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------ |
+| **OPEN**                   | `AUTH_ENABLED=false`                              | Every check passes for everyone, including anonymous callers.                  |
+| **ADMIN_ONLY**             | `AUTH_ENABLED=true`, document permissions off      | Only addresses in `ADMINS` pass any check.                                     |
+| **DOCUMENT_PERMISSIONS**   | `DOCUMENT_PERMISSIONS_ENABLED=true`               | Full per-document protection + READ/WRITE/ADMIN grants, with inheritance.      |
+
+Because the policy is resolved centrally, the right approach is to **write one
+enforcement path** and let it behave correctly under all three policies. Calling
+a helper is always safe: under OPEN it is effectively a no-op, and under the
+stricter policies it fails closed.
+
+## Where the helpers live
+
+The helpers are public methods on `BaseSubgraph`. The scaffold produced by
+`ph generate subgraph` hands you the subgraph instance as the `subgraph`
+parameter of `getResolvers`, so call them directly as `subgraph.assertCanRead(...)`:
+
+```typescript
+// subgraphs/search-todos/resolvers.ts
+
+
+export const getResolvers = (subgraph: BaseSubgraph): Record<string, unknown> => {
+  const reactor = subgraph.reactorClient;
+
+  return {
+    Query: {
+      document: async (_parent: unknown, args: { identifier: string }, ctx: Context) => {
+        const handle = await subgraph.assertCanRead(args.identifier, ctx);
+        return reactor.get(handle.fetchIdentifier);
+      },
+    },
+  };
+};
+```
+
+**TIP:**
+If you define resolvers inside your subgraph class instead of in `getResolvers`,
+call the helpers on `this` (`this.assertCanRead(...)`). That is the style the
+Reactor's built-in subgraphs use. Both forms reach the same public methods.
+
+
+The caller's verified identity is on the request `Context` as `ctx.user`:
+
+```typescript
+ctx.user?.address;   // the verified Ethereum address, or undefined for anonymous callers
+```
+
+You never read identity from headers or arguments — `ctx.user` is the only
+trustworthy source, and it is `undefined` until the [authentication flow](../docs/docs/01-RenownAuthenticationFlow.md)
+has verified a token.
+
+## Identifiers: slugs, canonical ids, and the handle
+
+Resolvers usually receive an **identifier** that may be either a document id or a
+slug. Permission rows, however, are keyed on the **canonical document id**. If
+you authorized a slug but then fetched by that same slug through a different code
+path, a caller could alias one document's slug onto another and slip past the
+check.
+
+The identifier-accepting asserts solve this for you. Each returns an
+`AuthorizedDocumentHandle` whose `fetchIdentifier` is **always safe to fetch
+with** — it is the canonical id when a check ran, or the original identifier when
+the check was skipped for a policy-wide caller (OPEN or a supreme admin):
+
+```typescript
+const handle = await subgraph.assertCanRead(args.identifier, ctx); // throws if denied
+const doc = await subgraph.reactorClient.get(handle.fetchIdentifier); // never args.identifier
+```
+
+**Rule of thumb:** after any `assertCan*` that takes an identifier, perform the
+data fetch with `handle.fetchIdentifier`, never with the original argument.
+
+## The helper reference
+
+All of the following are public methods on `BaseSubgraph`, called on the
+`subgraph` instance (or `this` from a class-field resolver):
+
+| Helper                                                   | Use when                                                                 | On failure        |
+| -------------------------------------------------------- | ------------------------------------------------------------------------ | ----------------- |
+| `assertCanRead(identifier, ctx)`                         | Reading one document the caller named (id or slug).                      | throws `Forbidden`|
+| `assertCanWrite(identifier, ctx)`                        | Mutating one document the caller named.                                  | throws `Forbidden`|
+| `assertCanExecuteOperation(identifier, type, ctx)`       | Executing a specific operation type on a document.                       | throws `Forbidden`|
+| `assertCanCreate(ctx)`                                   | Creating a new top-level document (no parent to check write against).    | throws `Forbidden`|
+| `canReadDocument(canonicalId, ctx)`                      | Filtering a list — a non-throwing read check on an id from the data layer.| returns `boolean` |
+| `authorizationService.isSupremeAdmin(address)`           | Short-circuiting per-item filtering for policy-wide callers.             | returns `boolean` |
+
+Each `assertCan*` that takes an `identifier` returns an `AuthorizedDocumentHandle`;
+use its `fetchIdentifier` for the subsequent fetch. There are also lower-level
+`*Canonical` variants (`assertCanReadCanonical`, etc.) used by the built-in
+subgraphs when an id has already been resolved by the data layer; prefer the
+identifier-accepting variants in your own code.
+
+The supporting types are exported from `@powerhousedao/reactor-api` when you need
+to name them — `Context`, `CanonicalDocumentId`, `AuthorizationPolicy`,
+`AuthorizedDocumentHandle`, and `IAuthorizationService`.
+
+## Patterns
+
+### Guard a single-document read
+
+```typescript
+document: async (_parent, args: { identifier: string }, ctx: Context) => {
+  const handle = await subgraph.assertCanRead(args.identifier, ctx);
+  return subgraph.reactorClient.get(handle.fetchIdentifier);
+};
+```
+
+### Guard a write
+
+```typescript
+renameDocument: async (_parent, args: { identifier: string; name: string }, ctx: Context) => {
+  const handle = await subgraph.assertCanWrite(args.identifier, ctx);
+  return doRename(handle.fetchIdentifier, args.name);
+};
+```
+
+### Guard a specific operation type
+
+When a write should be allowed only for callers permitted to run a *particular*
+operation (operation-level grants):
+
+```typescript
+addTodoItem: async (_parent, args: { docId: string; input: AddTodoItemInput }, ctx: Context) => {
+  const handle = await subgraph.assertCanExecuteOperation(args.docId, "ADD_TODO_ITEM", ctx);
+  return applyOperation(handle.fetchIdentifier, "ADD_TODO_ITEM", args.input);
+};
+```
+
+### Guard document creation
+
+If you are creating a document **under a parent**, the meaningful check is write
+access on that parent, so resolve and assert against it. Only use
+`assertCanCreate` for a genuinely top-level document with no parent:
+
+```typescript
+createTodoList: async (_parent, args: { parentIdentifier?: string; name: string }, ctx: Context) => {
+  if (args.parentIdentifier) {
+    const handle = await subgraph.assertCanWrite(args.parentIdentifier, ctx);
+    return createUnder(handle.fetchIdentifier, args.name);
+  }
+  subgraph.assertCanCreate(ctx); // throws if the caller may not create documents
+  return createTopLevel(args.name);
+};
+```
+
+### Filter a list of documents
+
+A resolver that returns *many* documents must not throw on the first forbidden
+one — it must drop the documents the caller cannot read and return the rest.
+Supreme admins (and OPEN) see everything, so skip the per-item work for them:
+
+```typescript
+
+
+searchTodos: async (_parent, args: { driveId: string; searchTerm: string }, ctx: Context) => {
+  const matches = await runSearch(args.driveId, args.searchTerm); // returns document ids
+
+  // Policy-wide callers see everything; skip the per-item check.
+  if (subgraph.authorizationService.isSupremeAdmin(ctx.user?.address)) {
+    return matches;
+  }
+
+  const visible: string[] = [];
+  for (const id of matches) {
+    // canReadDocument is non-throwing; ids returned by the Reactor are already canonical
+    if (await subgraph.canReadDocument(id as CanonicalDocumentId, ctx)) {
+      visible.push(id);
+    }
+  }
+  return visible;
+};
+```
+
+This is the same shape the built-in `findDocuments` and relationship resolvers
+use. Filtering on read also means you never leak the *existence* of a protected
+document through a list endpoint.
+
+## Best practices
+
+1. **Fail closed.** Authorize *before* you fetch or mutate, and let a denial throw.
+   Never fetch first and filter the response shape afterwards.
+2. **Fetch with `handle.fetchIdentifier`.** Never re-use the raw identifier the
+   caller passed in after an `assertCan*` check.
+3. **Trust only `ctx.user`.** Do not read identity from arguments or headers.
+4. **Filter lists, don't throw on them.** Use `canReadDocument` + `isSupremeAdmin`
+   for collection resolvers; reserve the throwing asserts for single-target
+   resolvers.
+5. **Pick the tightest check.** Read endpoints use `assertCanRead`; mutations use
+   `assertCanWrite`; operation-restricted mutations use `assertCanExecuteOperation`.
+6. **Write the check unconditionally.** Don't special-case OPEN or ADMIN_ONLY in
+   your resolver — the helpers already collapse to the correct behavior per policy.
+
+**TIP:**
+Inside the `reactor-api` package, a default-deny test
+(`test/authorization-coverage.test.ts`) fails CI if any resolver on the built-in
+subgraphs references neither the authorization service nor a reviewed exemption.
+Custom subgraphs in your own project are **not** covered by that test — the
+responsibility for the patterns above is yours.
+
+
+## Next steps
+
+- **Configure the Reactor**: [Reactor API Authorization](../docs/docs/04-Authorization.md)
+- **Manage grants**: [Document Permissions](../docs/docs/02-DocumentPermissions.md)
+- **Authentication flow**: [Renown authentication](../docs/docs/01-RenownAuthenticationFlow.md)
+- **Build a subgraph**: [Using subgraphs](../docs/../04-WorkWithData/03-UsingSubgraphs.md)
+
+---
+
+
 ## Configure a drive
 
 > Source: https://academy.vetra.io/academy/MasteryTrack/WorkWithData/ConfiguringDrives
@@ -11189,6 +11666,14 @@ export const getResolvers = (subgraph: BaseSubgraph) => {
   };
 };
 ```
+
+**WARNING:**
+The resolver above returns data with no permission check. Custom subgraphs run
+with full access to the Reactor, so guarding reads, writes, and document
+creation is **your** responsibility. See
+[Enforcing Authorization in Subgraphs](../docs/03-BuildingUserExperiences/07-Authorization/05-EnforcingAuthorizationInSubgraphs.md)
+for the `assertCanRead` / `assertCanWrite` / `canReadDocument` patterns.
+
 
 ## 3. Testing the to-do list subgraph
 

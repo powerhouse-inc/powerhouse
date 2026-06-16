@@ -17,6 +17,7 @@
 
 ## Mastery Track
 
+- [Vetra Studio Agent](https://academy.vetra.io/academy/MasteryTrack/BuilderEnvironment/VetraStudioAgent): Vetra Studio is the browser UI for the Vetra agent. It lets you chat with the Vetra agent, track work across the four-phase product development cycle
 - [Prerequisites](https://academy.vetra.io/academy/MasteryTrack/BuilderEnvironment/Prerequisites): Let's set up your machine to start building your first Document Model. Don't worry if this is your first time setting up a development environment - w
 - [Vetra Studio](https://academy.vetra.io/academy/MasteryTrack/BuilderEnvironment/VetraStudio): Vetra Studio is the builder environment where you create, manage, and collaborate on Powerhouse packages. It consists of two main components:
 - [Create a package with Vetra](https://academy.vetra.io/academy/MasteryTrack/BuilderEnvironment/CreateAPackageWithVetra): A Powerhouse Package is a distributable unit that bundles one or more document models, editors, and optional reactor modules into a single installable
@@ -41,6 +42,7 @@
 - [Document Permission System](https://academy.vetra.io/academy/MasteryTrack/BuildingUserExperiences/Authorization/DocumentPermissions): This documentation is still being written and may be incomplete. The feature is not yet available on production.
 - [Signing](https://academy.vetra.io/academy/MasteryTrack/BuildingUserExperiences/Authorization/Signing): Powerhouse uses two complementary signing mechanisms to establish trust across the document lifecycle:
 - [Reactor API Authorization](https://academy.vetra.io/academy/MasteryTrack/BuildingUserExperiences/Authorization/Authorization): This documentation is still being written and may be incomplete.
+- [Enforcing Authorization in Subgraphs](https://academy.vetra.io/academy/MasteryTrack/BuildingUserExperiences/Authorization/EnforcingAuthorizationInSubgraphs): This documentation is still being written and may be incomplete.
 - [Configure a drive](https://academy.vetra.io/academy/MasteryTrack/WorkWithData/ConfiguringDrives): A drive in Powerhouse is a container for documents and data. It's a place where you can organize and store your documents and share them with others. 
 - [Using the API](https://academy.vetra.io/academy/MasteryTrack/WorkWithData/UsingTheAPI): Switchboard is the API interface that enables developers and data engineers to access data captured through document models in Connect and Fusion.
 - [Using subgraphs](https://academy.vetra.io/academy/MasteryTrack/WorkWithData/UsingSubgraphs): This tutorial will demonstrate how to create and customize a subgraph using our to-do list project as an example. Let's start with the basics and grad

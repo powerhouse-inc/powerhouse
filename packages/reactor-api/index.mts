@@ -1,5 +1,14 @@
 export * from "./src/graphql/index.js";
 export * from "./src/graphql/types.js";
+export {
+  AuthorizationPolicy,
+  AuthorizedDocumentHandle,
+} from "./src/services/authorization.service.js";
+export type {
+  AuthorizationConfig,
+  CanonicalDocumentId,
+  IAuthorizationService,
+} from "./src/services/authorization.service.js";
 export * from "./src/packages/http-loader.js";
 export * from "./src/packages/import-loader.js";
 export * from "./src/packages/package-manager.js";
