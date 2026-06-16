@@ -1,7 +1,7 @@
 {
   "name": "benchmarks",
   "private": true,
-  "version": "6.2.0-dev.17",
+  "version": "6.2.0-dev.18",
   "publishConfig": {
     "access": "restricted"
   },

@@ -1,3 +1,7 @@
+## 6.2.0-dev.18 (2026-06-16)
+
+This was a version bump only for @powerhousedao/analytics-engine-knex to align it with other projects, there were no code changes.
+
 ## 6.2.0-dev.17 (2026-06-16)
 
 This was a version bump only for @powerhousedao/analytics-engine-knex to align it with other projects, there were no code changes.

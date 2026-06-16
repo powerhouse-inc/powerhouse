@@ -1,3 +1,13 @@
+## 6.2.0-dev.18 (2026-06-16)
+
+### 🩹 Fixes
+
+- **switchboard:** load reactor-api vite loader lazily ([05c966791](https://github.com/powerhouse-inc/powerhouse/commit/05c966791))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.0-dev.17 (2026-06-16)
 
 This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.
