@@ -11,6 +11,7 @@ export * from "./divider/divider.js";
 export * from "./document-state-viewer/document-state-viewer.js";
 export * from "./document-timeline/document-timeline.js";
 export * from "./document-toolbar/index.js";
+export * from "./drive-auth-gate/drive-auth-gate.js";
 export * from "./drop-zone/drop-zone-wrapper.js";
 export * from "./drop-zone/drop-zone.js";
 export * from "./drop-zone/upload-file-list-container.js";

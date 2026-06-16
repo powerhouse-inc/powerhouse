@@ -367,9 +367,11 @@ export async function createReactor(localPackage?: DocumentModelLib) {
       // malformed URL — skip attachment service construction
     }
     if (switchboardOrigin) {
-      const attachmentJwtHandler = async (url: string) => {
+      const attachmentJwtHandler = async (_url: string) => {
         if (!renown.user) return undefined;
-        return renown.getBearerToken({ expiresIn: 10, aud: url });
+        // aud omitted: server verifies without an audience, so aud-bearing
+        // tokens are rejected. Re-enable once both sides support it.
+        return renown.getBearerToken({ expiresIn: 10 });
       };
       const attachmentService = createRemoteAttachmentService({
         remoteUrl: switchboardOrigin,
