@@ -69,7 +69,7 @@ export class SyncDriver {
 
     if (this.config.jwt) {
       const token = this.config.jwt;
-      builder.withJwtHandler(async () => token);
+      builder.withJwtHandler(() => Promise.resolve(token));
     }
 
     const module = await builder.buildModule();
@@ -201,7 +201,7 @@ export class SyncDriver {
     return this.driveId;
   }
 
-  async shutdown(): Promise<void> {
+  shutdown(): Promise<void> {
     for (const unsubscribe of this.unsubscribes) {
       try {
         unsubscribe();
@@ -220,6 +220,7 @@ export class SyncDriver {
     } catch {
       // ignore
     }
+    return Promise.resolve();
   }
 
   private snapshotMailbox(

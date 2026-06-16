@@ -135,7 +135,7 @@ describe("Remote drive sync via CONNECT channel", () => {
     initDeadLetterTrap();
   });
 
-  afterEach(async () => {
+  afterEach(() => {
     if (clientModule) {
       clientModule.reactorModule?.reactor.kill();
       clientModule = undefined;
