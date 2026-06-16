@@ -43,11 +43,13 @@ export async function createBrowserReactor(
     verifier: createSignatureVerifier(),
   };
 
-  const jwtHandler: JwtHandler = async (url: string) => {
+  const jwtHandler: JwtHandler = async (_url: string) => {
     if (!renown.user) {
       return undefined;
     }
-    return renown.getBearerToken({ expiresIn: 10, aud: url });
+    // aud omitted: server verifies without an audience, so aud-bearing tokens
+    // are rejected. Re-enable once both sides support audience restriction.
+    return renown.getBearerToken({ expiresIn: 10 });
   };
 
   const detected = await detectReactorPgMajor();

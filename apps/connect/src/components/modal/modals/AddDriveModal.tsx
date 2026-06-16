@@ -136,9 +136,10 @@ export function AddDriveModal() {
       requestPublicDrive={async (url: string) => {
         try {
           if (user) {
+            // aud omitted: server verifies without an audience, so aud-bearing
+            // tokens are rejected. Re-enable once both sides support it.
             const authToken = await renown?.getBearerToken?.({
               expiresIn: 10,
-              aud: url,
             });
             return requestPublicDriveFromReactor(url, {
               Authorization: `Bearer ${authToken}`,
