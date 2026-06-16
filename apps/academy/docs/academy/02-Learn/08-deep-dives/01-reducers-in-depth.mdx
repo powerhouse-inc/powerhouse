@@ -1,0 +1,121 @@
+---
+title: Reducers in depth
+description: Patterns, pitfalls, and testing strategies for writing reducers that stay pure — even when the logic gets messy.
+---
+
+Reducers are the one part of a <Term>Powerhouse</Term> app that *must* be pure. Everything downstream — sync, replay, undo, audit — assumes that running the same reducer against the same inputs produces the same outputs, forever.
+
+This lesson covers the patterns that keep reducers tidy and the ones that quietly break them.
+
+## Three rules, always
+
+1. **No I/O.** No `fetch`, no `localStorage`, no `console.log`.
+2. **No time or randomness.** No `Date.now()`, no `Math.random()`, no `crypto.randomUUID()` — those values come from action inputs.
+3. **Mutate only the provided draft.** Powerhouse wraps reducers in Mutative, so you mutate `state` in place. Never touch module-level variables or anything outside the `state` argument.
+
+If you want any of those things, they belong in one of:
+- **Action inputs** — the caller provides the id, timestamp, or external data.
+- **Processors** — derived read models that react to operations after they're appended.
+- **The editor** — for UI-facing side-effects.
+
+## State scopes
+
+Real documents have more than one kind of state. Powerhouse splits the state of a document into **scopes**:
+
+| Scope | What it holds | Who can write |
+| --- | --- | --- |
+| `global` | The canonical shape of the document | Any authenticated actor |
+| `local` | Per-actor UI state (cursor, selection) | Only the actor it belongs to |
+
+Reducers are split along the same lines. When you define an operation in Vetra Studio, you mark which scope it writes to. Codegen emits a typed action creator that passes the scope through to `createAction` automatically:
+
+```ts
+// generated in document-models/my-doc/gen/creators.ts
+export const setCursor = (input: SetCursorInput) =>
+  createAction<SetCursorAction>(
+    'SET_CURSOR',
+    { ...input },
+    undefined,
+    SetCursorInputSchema,
+    'local',
+  );
+```
+
+You never call `createAction` directly — use the generated creator (`setCursor(...)`) from `document-models/<your-model>/gen/creators.ts`.
+
+<Quiz
+  question="You're writing a collaborative markdown editor. Which of these actions should live in the local scope?"
+  multi
+  choices={[
+    {
+      label: 'insertText — typing characters into the document body.',
+      explanation: 'Text content is shared across all viewers — that\'s global.',
+    },
+    {
+      label: 'setCursor — where this user\'s cursor is right now.',
+      correct: true,
+      explanation: 'Each user has their own cursor. Local scope keeps it out of the shared log.',
+    },
+    {
+      label: 'toggleBold — applying bold formatting to a selection.',
+      explanation: 'Formatting changes the shared document, so it\'s global.',
+    },
+    {
+      label: 'collapseSidebar — hide the file tree in this browser tab.',
+      correct: true,
+      explanation: 'UI preferences should never sync to peers — local scope is ideal.',
+    },
+  ]}
+  explanation="Rule of thumb: if two people looking at the same document would disagree about the value, it belongs in local scope."
+/>
+
+## Pattern: invert for undo
+
+Because reducers are pure, undo is a pattern, not a feature you have to implement inside the reducer. For each action you support, emit a paired "inverse" action that the app can dispatch to roll it back.
+
+```ts
+function invert(op: Operation): Action | null {
+  switch (op.type) {
+    case 'ADD_TODO':
+      return removeTodo({ id: op.input.id });
+    case 'REMOVE_TODO':
+      return addTodo({ id: op.input.id, title: op.input.restoreTitle });
+    case 'COMPLETE_TODO':
+      return uncompleteTodo({ id: op.input.id });
+    default:
+      return null;
+  }
+}
+```
+
+Dispatching the inverse produces a *new* operation in the log — you keep the history, and the effect is undone. Nothing about the log is rewritten.
+
+## Testing reducers
+
+Because reducers are pure functions, they test like pure functions. No mocking, no fixtures, no in-memory DB:
+
+```ts
+import { utils, reducer } from 'my-package/document-models/todo';
+import { addTodo, completeTodo } from 'my-package/document-models/todo';
+
+test('completing a todo marks it done', () => {
+  let doc = utils.createDocument();
+  doc = reducer(doc, addTodo({ id: 't-1', title: 'Test' }));
+  const afterComplete = reducer(doc, completeTodo({ id: 't-1' }));
+
+  expect(afterComplete.state.global.items[0].done).toBe(true);
+  expect(doc.state.global.items[0].done).toBe(false); // original snapshot untouched
+});
+```
+
+Two things you should always cover:
+
+- **Determinism** — the same inputs produce the same output on two separate runs.
+- **Snapshot isolation** — the document passed into `reducer` is unchanged after the call; Mutative ensures that.
+
+If either assertion fails, your reducer isn't pure — and sync will eventually betray you.
+
+<Cards>
+  <Card title="Processors and read models" href="/academy/Learn/switchboard/processors-and-read-models" />
+  <Card title="Back to Foundations" href="/academy/Learn/foundations/what-is-powerhouse" />
+</Cards>

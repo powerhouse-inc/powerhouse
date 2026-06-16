@@ -72,6 +72,73 @@ const config: Config = {
     ],
   ],
 
+  plugins: [
+    [
+      "@docusaurus/plugin-client-redirects",
+      {
+        // Agent-first reorg: BuilderEnvironment became the new Get Started,
+        // and the old manual Get Started moved into the Build track.
+        redirects: [
+          // BuilderEnvironment -> Get Started
+          ...[
+            "VetraStudio",
+            "VetraCloud",
+            "VetraDrive",
+            "Prerequisites",
+            "CreateAPackageWithVetra",
+            "BuilderTools",
+          ].map((slug) => ({
+            from: `/academy/MasteryTrack/BuilderEnvironment/${slug}`,
+            to: `/academy/GetStarted/${slug}`,
+          })),
+          // Old manual Get Started -> Build track (Manual Todo tutorial)
+          ...[
+            "ExploreDemoPackage",
+            "CreateNewPowerhouseProject",
+            "DefineToDoListDocumentModel",
+            "ImplementOperationReducers",
+            "WriteDocumentModelTests",
+            "BuildToDoListEditor",
+          ].map((slug) => ({
+            from: `/academy/GetStarted/${slug}`,
+            to: `/academy/MasteryTrack/ManualTodoTutorial/${slug}`,
+          })),
+        ],
+        // Phase-2 sidebar cleanup: Reference grouping + Example use-cases folded into Build.
+        createRedirects(existingPath: string) {
+          if (existingPath.startsWith("/academy/Reference/APIReferences/"))
+            return [
+              existingPath.replace(
+                "/academy/Reference/APIReferences/",
+                "/academy/APIReferences/",
+              ),
+            ];
+          if (existingPath.startsWith("/academy/Reference/ComponentLibrary/"))
+            return [
+              existingPath.replace(
+                "/academy/Reference/ComponentLibrary/",
+                "/academy/ComponentLibrary/",
+              ),
+            ];
+          if (existingPath === "/academy/Reference/Cookbook")
+            return ["/academy/Cookbook"];
+          if (existingPath === "/academy/Reference/Glossary")
+            return ["/academy/Glossary"];
+          if (existingPath === "/academy/Reference/LLMDocs")
+            return ["/academy/LLMDocs"];
+          if (existingPath.startsWith("/academy/MasteryTrack/ExampleUsecases/"))
+            return [
+              existingPath.replace(
+                "/academy/MasteryTrack/ExampleUsecases/",
+                "/academy/ExampleUsecases/",
+              ),
+            ];
+          return undefined;
+        },
+      },
+    ],
+  ],
+
   themeConfig: {
     // Replace with your project's social card
     image: "img/docusaurus-social-card.jpg",
@@ -90,6 +157,16 @@ const config: Config = {
         href: "/",
       },
       items: [
+        {
+          to: "/learn",
+          label: "Learn",
+          position: "left",
+        },
+        {
+          href: "https://storybook.powerhouse.academy/",
+          label: "Storybook",
+          position: "right",
+        },
         {
           href: "https://github.com/powerhouse-inc/powerhouse-docs",
           label: "GitHub",

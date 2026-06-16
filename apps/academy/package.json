@@ -19,7 +19,9 @@
     "write-translations": "docusaurus write-translations",
     "write-heading-ids": "docusaurus write-heading-ids",
     "typecheck": "tsc",
+    "generate:docs": "pnpm generate:cli-docs && pnpm generate:recipe-docs && pnpm generate:llm-docs",
     "generate:cli-docs": "tsx ./scripts/generate-combined-cli-docs.ts",
+    "generate:recipe-docs": "tsx ./scripts/generate-recipe-docs.ts",
     "generate:llm-docs": "tsx ./scripts/generate-llm-docs.ts",
     "check:doc-snippets": "tsx ./scripts/check-doc-snippets.ts",
     "heroku-postbuild": "npm run build",
@@ -41,6 +43,7 @@
   },
   "devDependencies": {
     "@docusaurus/module-type-aliases": "^3.10.0",
+    "@docusaurus/plugin-client-redirects": "3.10.0",
     "@docusaurus/tsconfig": "^3.10.0",
     "@docusaurus/types": "^3.10.0",
     "@marp-team/marp-cli": "^4.2.3",

@@ -1,0 +1,158 @@
+---
+title: Your first document model
+description: Define a Todo schema in Vetra Studio, implement its reducer with Mutative, and verify it with a unit test.
+---
+
+In this lesson you'll build a minimal **Todo** document model from scratch. You'll define the schema in <Term>Vetra</Term> Studio, let codegen scaffold the types, and write the reducer that drives every state transition.
+
+You'll need:
+- Node.js ≥ 24
+- The `ph` CLI (`npm i -g @powerhousedao/ph-cmd` or see [Installation](/academy/GetStarted/Prerequisites))
+
+## Set up the project
+
+From an empty directory:
+
+```bash
+ph init todo-app
+cd todo-app
+pnpm install
+ph vetra
+```
+
+`ph vetra` launches Vetra Studio at `http://localhost:3000` and starts the file watchers. Leave it running in its own terminal throughout this lesson.
+
+## Define the schema in Vetra Studio
+
+Open the browser and go to `http://localhost:3000`. You'll see two drives — open the **`vetra-<hash>`** drive (the source drive for your package).
+
+Click **Document Model** to create a new model specification. Give it:
+
+- **Name**: `Todo` (PascalCase, no spaces)
+- **Document type**: `powerhouse/todo`
+
+In the GraphQL editor, author the state schema:
+
+```graphql
+type TodoState {
+  items: [TodoItem!]!
+}
+
+type TodoItem {
+  id: OID!
+  title: String!
+  done: Boolean!
+}
+```
+
+Add a module called `todos`, then add three operations: `ADD_TODO`, `COMPLETE_TODO`, and `REMOVE_TODO`. Vetra Studio generates the input types automatically. Once the schema is valid, codegen runs and emits files into your project.
+
+## Understand what codegen produces
+
+After codegen finishes, your project contains:
+
+```
+document-models/todo/
+├── gen/                        # auto-generated — never edit
+│   ├── actions.ts              # action type unions
+│   ├── creators.ts             # typed action creators
+│   ├── types.ts                # TypeScript interfaces
+│   └── reducer.ts              # reducer dispatcher
+├── src/
+│   └── reducers/
+│       └── todos.ts            # yours to implement
+├── schema.graphql
+└── todo.json
+```
+
+Files inside `gen/` are regenerated every time the schema changes — never edit them. Your work lives entirely in `src/reducers/`.
+
+## Write the reducer
+
+Open `document-models/todo/src/reducers/todos.ts`. Codegen scaffolds a stub that throws "not implemented" for each operation. Replace those with real logic:
+
+```ts title="document-models/todo/src/reducers/todos.ts"
+import type { TodoTodosOperations } from 'todo-app/document-models/todo';
+
+export const todoTodosOperations: TodoTodosOperations = {
+  addTodoOperation(state, action) {
+    state.items.push({
+      id: action.input.id,
+      title: action.input.title,
+      done: false,
+    });
+  },
+
+  completeTodoOperation(state, action) {
+    const item = state.items.find((t) => t.id === action.input.id);
+    if (item) item.done = true;
+  },
+
+  removeTodoOperation(state, action) {
+    state.items = state.items.filter((t) => t.id !== action.input.id);
+  },
+};
+```
+
+<Term>Powerhouse</Term> wraps reducers in [Mutative](https://mutative.js.org/), so you write direct mutations — no need to return a new object. The framework produces an immutable snapshot from each mutation.
+
+The `state` argument the operation receives is already the scoped state (`global` or `local`). From outside the reducer, you access items as `doc.state.global.items`.
+
+<Quiz
+  question="Which of these would break the reducer's purity contract?"
+  multi
+  choices={[
+    {
+      label: 'Calling fetch() to notify a server when a todo is added.',
+      correct: true,
+      explanation: 'Network calls are side-effects — they belong in a processor or in the Reactor, not the reducer.',
+    },
+    {
+      label: 'Reading the current time with Date.now() to timestamp the todo.',
+      correct: true,
+      explanation: 'Anything non-deterministic (time, randomness, environment) breaks replay. Timestamps come from the operation metadata.',
+    },
+    {
+      label: 'Filtering items with Array.prototype.filter.',
+      explanation: 'Pure. filter() returns a new array and touches nothing outside the reducer.',
+    },
+    {
+      label: 'Writing state.items.push(newItem) to add the item.',
+      explanation: 'This is the correct Powerhouse pattern. Mutative wraps the reducer so mutations produce an immutable snapshot — push and splice are both fine.',
+    },
+  ]}
+  explanation="Purity = (same state, same action) → same result, with no side-effects. Time, I/O, and randomness all break it. Mutative-style mutations do not."
+/>
+
+## Test it
+
+Because reducers are pure (deterministic, no I/O), you can test them without a server, a database, or a running Vetra instance:
+
+```ts title="document-models/todo/src/tests/todos.test.ts"
+import { utils, reducer } from 'todo-app/document-models/todo';
+import { addTodo, completeTodo } from 'todo-app/document-models/todo';
+import { describe, it, expect } from 'vitest';
+
+describe('todo reducer', () => {
+  it('adds and completes a todo', () => {
+    let doc = utils.createDocument();
+
+    doc = reducer(doc, addTodo({ id: 't-1', title: 'Write the tutorial' }));
+    doc = reducer(doc, addTodo({ id: 't-2', title: 'Review it' }));
+    doc = reducer(doc, completeTodo({ id: 't-1' }));
+
+    expect(doc.state.global.items).toHaveLength(2);
+    expect(doc.state.global.items[0].done).toBe(true);
+    expect(doc.state.global.items[1].done).toBe(false);
+  });
+});
+```
+
+Run it with `pnpm test`. The same three operations can be replayed on any peer to reconstruct exactly this state.
+
+## Where to next
+
+<Cards>
+  <Card title="What is an editor?" href="/academy/Learn/editors/what-is-an-editor" />
+  <Card title="Back to: Actions and reducers" href="/academy/Learn/document-models/actions-and-reducers" />
+</Cards>

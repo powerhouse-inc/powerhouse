@@ -128,7 +128,7 @@ const completed = await reactorClient.waitForJob(job.id);
 
 You can also poll with `getJobStatus(jobId)`.
 
-For the full API reference, see [IReactorClient API Reference](/academy/APIReferences/ReactorClient).
+For the full API reference, see [IReactorClient API Reference](/academy/Reference/APIReferences/ReactorClient).
 
 ## Job lifecycle
 

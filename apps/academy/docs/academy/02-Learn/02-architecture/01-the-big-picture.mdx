@@ -1,0 +1,79 @@
+---
+title: The big picture
+description: How the Reactor, Connect, and Switchboard fit together — one engine, two faces (a desktop app and a server), and your code in the middle.
+---
+
+The previous lesson showed how every change becomes an operation appended to an immutable log. Now let's look at *where* that all actually runs. By the end of this lesson, you'll be able to point at any concept in the course — a reducer, a processor, a React hook — and say confidently: "that runs in the Reactor" or "that lives in Switchboard."
+
+## One engine, two faces
+
+The **Reactor** is the core engine. It runs reducers, appends operations to storage, drives processors, and syncs with other Reactors over the DocSync protocol. Every instance of Powerhouse — on your laptop, on a server, on a peer's machine — has a Reactor at its heart.
+
+The Reactor doesn't have a UI, and it doesn't have a public API by default. That's the job of **host applications**. The two you'll meet most often are:
+
+- **Connect** — the browser-based collaboration workspace where end users edit documents. It embeds a Reactor in the browser, so it works offline and syncs when it reconnects.
+- **Switchboard** — the server-side host that exposes the Reactor over GraphQL and MCP. This is where processors run in the background, where read models are maintained, and where agents and integrations talk to your data.
+
+```
+Your browser                  Your server
+┌──────────────────────┐      ┌──────────────────────────┐
+│  Connect             │      │  Switchboard             │
+│  ┌────────────────┐  │      │  ┌────────────────────┐  │
+│  │  Reactor       │  │◄────►│  │  Reactor           │  │
+│  │  (browser)     │  │ sync │  │  + processors      │  │
+│  └────────────────┘  │      │  └────────────────────┘  │
+└──────────────────────┘      └──────────────────────────┘
+```
+
+Both Reactors speak the same protocol. Edits made offline in Connect flow to Switchboard the moment a connection is available — no polling, no special handling.
+
+## Your code plugs into all three
+
+When you build on Powerhouse, you ship a **package** — a bundle containing your document models (schemas + reducers), editor components, and processors. That one package plugs into the whole stack:
+
+- The **Reactor** picks up your reducers and runs them whenever an action is dispatched.
+- **Connect** renders your editor components so users can interact with documents.
+- **Switchboard** runs your processors, which fold the operation stream into read models and expose them over GraphQL.
+
+You write the logic once; the stack decides where it executes.
+
+<Quiz
+  question="A reducer receives an action and computes the next document state. Where does that actually execute?"
+  choices={[
+    {
+      label: "Inside Connect, because that's where the user is working.",
+      explanation: "Connect is a host that embeds a Reactor. The reducer runs inside the Reactor, not Connect itself. Connect just dispatches the action.",
+    },
+    {
+      label: "Inside the Reactor — whether that Reactor is embedded in Connect or running in Switchboard.",
+      correct: true,
+      explanation: "The Reactor is the engine that runs reducers everywhere. Connect and Switchboard are hosts — they embed a Reactor. The reducer runs in whichever Reactor processes the action.",
+    },
+    {
+      label: "Inside Switchboard, because it manages the API.",
+      explanation: "Switchboard hosts a server-side Reactor, but reducers run inside the Reactor itself — not in Switchboard's API layer.",
+    },
+    {
+      label: "On the DocSync protocol layer, as part of conflict resolution.",
+      explanation: "DocSync transports operations between Reactors. Reducers run before that — they produce the operations that DocSync then moves around.",
+    },
+  ]}
+  explanation="The Reactor is the engine. Connect and Switchboard are different faces that embed one. Wherever an action gets dispatched, the local Reactor's reducer runs."
+/>
+
+## What syncs between them
+
+The Reactor doesn't sync state — it syncs **operations**. When you edit a document in Connect offline and then reconnect, the Reactor sends the operations you produced to the remote Reactor in Switchboard. The remote Reactor replays them, and both ends land on the same state. No last-write-wins, no manual merge step.
+
+This is what the overview doc means by "local-first, built to scale": you get a real app experience on-device, and the operation log keeps everything consistent across the network.
+
+## Host applications — the bigger picture
+
+Connect and Switchboard are two of four host applications in the ecosystem. The next lesson covers all of them in depth, including how Fusion and Renown fit in. For now, the three-piece map — Reactor, Connect, Switchboard — is enough to orient everything else you'll learn.
+
+## Where to next
+
+<Cards>
+  <Card title="Host applications" href="/academy/Learn/architecture/host-applications" />
+  <Card title="Back to: Thinking in operations" href="/academy/Learn/foundations/thinking-in-operations" />
+</Cards>

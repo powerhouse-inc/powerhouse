@@ -1,0 +1,74 @@
+---
+title: Drive apps
+description: A drive app replaces Connect's default folder UI with your own React app, scoped to a drive. It's how you ship a custom user experience on top of Connect.
+---
+
+Connect's default drive view is a folder tree with documents inside it. That's fine for generic storage — but once you have a real product, you probably want a Kanban board, a project dashboard, or a curated landing page instead. That's exactly what a **drive app** gives you.
+
+## Editor vs. drive app — the sharp line
+
+You've already seen <Term>editors</Term>: a React component that renders and edits *one document*. A drive app is the complementary piece — it renders the *whole drive*.
+
+Think of it this way:
+
+- **Editor** — the inside of a document. One task, one contract, one budget row.
+- **Drive app** — the outside. A list of all tasks. A summary dashboard. A workflow screen that composes multiple documents into a single view.
+
+Connect calls one or the other depending on what's selected. When a user has a drive open but no document selected, the drive app runs. When they open a specific document, the appropriate editor takes over — and the drive app can still wrap it as a shell.
+
+## What a drive app looks like
+
+Codegen scaffolds a drive app with a `DriveExplorer` component. It receives `children` — the active document's editor — and decides where to render it:
+
+```tsx
+export function DriveExplorer({ children }: EditorProps) {
+  const showDocumentEditor = !!children;
+
+  return (
+    <div className="flex h-full">
+      <FolderTree />
+      <div className="flex-1 overflow-y-auto p-4">
+        {showDocumentEditor ? children : <DriveContents />}
+      </div>
+    </div>
+  );
+}
+```
+
+When a document is open, `children` is truthy and the editor appears. Otherwise, your custom `DriveContents` fills the space — a Kanban board, a document grid, whatever fits your product.
+
+<Quiz
+  question="Pick the right tool for each scenario."
+  choices={[
+    {
+      label: "I want a Kanban board that shows all task documents in a drive — use a drive app.",
+      correct: true,
+      explanation: "Exactly. A drive app renders the whole drive, so a cross-document board belongs here.",
+    },
+    {
+      label: "I want to render and edit one specific task document — use a drive app.",
+      explanation: "One document means one editor. Drive apps deal with the whole drive, not individual documents.",
+    },
+    {
+      label: "I want a custom file-tree sidebar for a drive — use an editor.",
+      explanation: "Navigation structure for a drive is a drive app concern, not an editor's. Editors stay inside a single document.",
+    },
+    {
+      label: "I want a rich form for filling out a contract — use a drive app.",
+      explanation: "A single-document form is an editor. Drive apps are about composing or listing multiple documents.",
+    },
+  ]}
+/>
+
+## Drive apps ship real products
+
+The combination of drive app + editors is how teams turn Powerhouse into a finished product. The drive app owns the navigation, the cross-document dashboard, and any workflow that spans multiple documents. Editors own the detail view for each one. Together they cover the full surface area of a real frontend — without leaving Connect.
+
+Hooks like `useDocumentsInSelectedDrive()` let the drive app read every document in the drive, and `showCreateDocumentModal()` wires up the "new document" flow — all from `@powerhousedao/reactor-browser`.
+
+## Where to next
+
+<Cards>
+  <Card title="What is Switchboard?" href="/academy/Learn/switchboard/what-is-switchboard" />
+  <Card title="Back to: What is Connect?" href="/academy/Learn/connect/what-is-connect" />
+</Cards>

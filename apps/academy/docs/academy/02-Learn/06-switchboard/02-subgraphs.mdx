@@ -1,0 +1,81 @@
+---
+title: Subgraphs
+description: Subgraphs are how Switchboard exposes your document models as a typed GraphQL API — one schema per package, composed into a single endpoint.
+---
+
+You've got documents. You've got operations. Now you need the outside world — a web app, a mobile client, an AI agent — to be able to read and write that data over the network. That's exactly what a <Term>subgraph</Term> does.
+
+## One endpoint, many packages
+
+Switchboard doesn't expose a single monolithic schema. Instead, every Reactor Package ships its *own* GraphQL schema fragment — its subgraph. When Switchboard boots, it composes all of those fragments into one unified endpoint.
+
+The practical payoff: a client can query data from two completely independent packages in a single request. Neither package knows about the other. Switchboard handles the stitching.
+
+```graphql
+query {
+  todoList(id: "doc-123") {
+    id
+    todos { id title done }
+  }
+}
+```
+
+That query hits one endpoint. Behind the scenes, it's resolved by whatever package owns the `todoList` type.
+
+## Subgraphs are the API face of your document model
+
+If a document model defines the *shape* of your data and the *actions* allowed on it, the subgraph is how that shape appears to callers on the network.
+
+Each subgraph exposes three things:
+
+- **Queries** — for reading documents and processor read models.
+- **Mutations** — for dispatching actions to documents.
+- **Custom types** — domain-specific GraphQL types your resolvers return.
+
+Because each package owns its subgraph, the package is the unit of delivery. Ship a new package and its API comes with it — no central schema registry to update.
+
+<Quiz
+  question="A client sends one GraphQL query that asks for data from two different packages. What does Switchboard do?"
+  choices={[
+    {
+      label: "It routes to whichever package responded first and ignores the other.",
+      explanation: "Switchboard composes all subgraphs at startup — there's no race. Both packages participate in the same response.",
+    },
+    {
+      label: "It resolves the query against the unified composed schema, pulling from both packages.",
+      correct: true,
+      explanation: "That's the point of composition. Each package declares its own types and resolvers; Switchboard stitches them into one schema so clients get one endpoint.",
+    },
+    {
+      label: "It rejects the query because cross-package queries aren't allowed.",
+      explanation: "The opposite — cross-package queries are exactly what composition enables.",
+    },
+    {
+      label: "It sends two separate requests and merges the JSON responses on the client.",
+      explanation: "No client-side merging needed. The composed schema handles it server-side.",
+    },
+  ]}
+/>
+
+## Where mutations go
+
+A mutation in a subgraph isn't stored as a database write. It dispatches an **action** to the underlying document via the Reactor.
+
+```ts
+Mutation: {
+  async addTodo(_parent, { input }, ctx) {
+    return ctx.reactor.dispatch("<doc-id>", [
+      { type: "ADD_TODO", input }
+    ]);
+  }
+}
+```
+
+The Reactor runs the action through the reducer, stamps it as an operation, appends it to the document history, and syncs it to connected peers. The subgraph layer is thin — it translates network calls into document actions and hands off.
+
+## Where to next
+
+<Cards>
+  <Card title="Processors and read models" href="/academy/Learn/switchboard/processors-and-read-models" />
+  <Card title="Back to: What is Switchboard?" href="/academy/Learn/switchboard/what-is-switchboard" />
+</Cards>

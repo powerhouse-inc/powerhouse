@@ -1,0 +1,110 @@
+---
+title: Identity and signing
+description: Who produced each operation, and can you trust it? How Renown identities and cryptographic signatures turn the operation log into a tamper-evident audit trail.
+---
+
+You've seen that a document *is* its operation log, and that the log is what
+syncs between peers. That raises a question every collaborative system has to
+answer: **who produced each operation, and can a peer trust it?** This lesson
+connects the operation model you already know to Powerhouse's identity and
+signing story.
+
+By the end you should be able to explain what a signed operation proves — and
+what it doesn't.
+
+## Operations carry an actor
+
+Every operation already records *who* dispatched it. In the foundations lesson
+you saw an operation shaped like this:
+
+```json
+{
+  "index": 42,
+  "name": "completeTodo",
+  "input": { "id": "t-1" },
+  "actor": "user:alice",
+  "hash": "…"
+}
+```
+
+That `actor` comes from an **identity**. In Powerhouse, identities are issued
+through <Term term="Renown">Renown</Term> — a decentralized identity layer, so a
+user's identity isn't owned by any single server. When someone connects in
+Connect, they authenticate with Renown and every action they dispatch is
+attributed to that identity.
+
+## A claim is not a proof
+
+An `actor` field on its own is just a *claim*. Nothing stops a malicious peer
+from writing `"actor": "user:alice"` onto an operation Alice never made. In a
+local-first system where operations flow between machines you don't control,
+that's a real problem.
+
+This is where **signing** comes in. When an operation is signed, the actor's
+private key produces a signature over the operation's content and position in
+the log. Any peer can then verify, using the public key, that:
+
+- the operation really came from that identity, and
+- it hasn't been altered since it was signed.
+
+Because the signature covers the operation's place in the history, you can't
+lift a signed operation out of one document and replay it into another — the
+hash chain won't match.
+
+<Quiz
+  question="A signed operation arrives from an untrusted peer. What does a valid signature let you conclude?"
+  choices={[
+    {
+      label: "That the operation is good for the document — its business rules passed.",
+      explanation: "Signatures prove origin and integrity, not validity. The reducer still decides whether the action is allowed.",
+    },
+    {
+      label: "That the named identity produced exactly this operation, and it hasn't been tampered with.",
+      correct: true,
+      explanation: "Authenticity + integrity. The signature binds the identity to this specific operation and its position in the log.",
+    },
+    {
+      label: "That the user had permission to perform the action.",
+      explanation: "Permissions are a separate check. A signature tells you who, not whether they were allowed.",
+    },
+    {
+      label: "That the operation is the most recent one in the document.",
+      explanation: "Ordering comes from the index and hash chain, not the signature itself.",
+    },
+  ]}
+  explanation="Signing answers 'who, and unchanged?'. Whether the action is allowed (permissions) and whether it's valid (the reducer) are separate gates that still run."
+/>
+
+## Three gates, not one
+
+It's worth separating the concerns that all meet at a single operation:
+
+| Gate | Question | Where it lives |
+| --- | --- | --- |
+| **Authentication** | Who is this identity? | Renown |
+| **Signing** | Did this identity really produce this exact operation? | Signature verification |
+| **Authorization** | Is this identity allowed to perform this action here? | Document permissions |
+| **Validity** | Is the resulting state legal? | The reducer |
+
+A signed operation can be perfectly authentic and still be rejected — because
+the signer lacks permission on that document, or because the reducer's rules
+don't allow the change. Identity establishes *trust*; it doesn't replace the
+other checks.
+
+## Why this falls out of the operation log
+
+None of this needs a bolt-on audit system. Because state is already an ordered,
+hash-linked log of operations, attaching a signature to each entry is enough to
+make the whole history **tamper-evident**: change any past operation and every
+signature and hash after it stops verifying. The same structure that gives you
+deterministic replay and conflict-free sync gives you a trustworthy audit trail
+for free.
+
+## Where to next
+
+<Cards>
+  <Card title="Renown authentication flow" href="/academy/MasteryTrack/BuildingUserExperiences/Authorization/RenownAuthenticationFlow" description="How a user authenticates with Renown in Connect." />
+  <Card title="Signing, in depth" href="/academy/MasteryTrack/BuildingUserExperiences/Authorization/Signing" description="The mechanics of signing and verifying operations." />
+  <Card title="Document permissions" href="/academy/MasteryTrack/BuildingUserExperiences/Authorization/DocumentPermissions" description="How authorization gates which actions an identity may dispatch." />
+  <Card title="Back to: Reducers in depth" href="/academy/Learn/deep-dives/reducers-in-depth" />
+</Cards>

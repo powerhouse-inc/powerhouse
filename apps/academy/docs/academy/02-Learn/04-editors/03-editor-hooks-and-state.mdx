@@ -1,0 +1,84 @@
+---
+title: Editor hooks and state
+description: The React hooks Powerhouse gives you for reading the current document, dispatching actions, and handling loading and error states.
+---
+
+You've written an editor shell. Now you need to actually *read* the document and *change* it. Powerhouse gives you a small set of hooks from `@powerhousedao/reactor-browser` to do exactly that — no manual subscriptions, no wiring.
+
+## The hook you'll use 90% of the time
+
+Codegen produces a typed hook for your document model. For a TodoList model, that's `useSelectedTodoListDocument`. Call it at the top of your editor:
+
+```tsx
+const [doc, dispatch] = useSelectedTodoListDocument();
+```
+
+`doc` is a fully-typed `PHDocument<TodoListState>`. Read state off `doc.state.global` or `doc.state.local`. The component re-renders automatically whenever an operation lands — you never poll.
+
+`dispatch` sends actions into the Reactor:
+
+```tsx
+dispatch(addTodo({ id: generateId(), title: "Buy milk" }));
+```
+
+Always generate IDs *before* calling dispatch — reducers must stay pure.
+
+## When the document type isn't known at compile time
+
+Sometimes you're building a generic component that works across models. Two hooks cover that:
+
+- `useSelectedDocument()` — returns `[PHDocument, DispatchFn]`, untyped. Throws if nothing is selected.
+- `useSelectedDocumentOfType(type)` — same shape, but narrows to a specific type string. Throws if the selected document is a different type.
+
+Use the generated typed hook whenever you can. Fall back to these only when generics genuinely prevent it.
+
+## Loading a document by ID
+
+Need a document that isn't the currently selected one? Two options:
+
+- `useDocumentById(id)` — returns `[PHDocument | undefined, DispatchFn]`. The doc is `undefined` while loading; render a spinner in that case.
+- `useDocument(id)` — Suspense-based. It never returns `undefined`; instead it suspends until the document is ready. Wrap the caller in `<Suspense>`.
+
+<Quiz
+  question="Your editor has a button. When clicked, it should mark a todo as done. Which hook gives you what you need?"
+  choices={[
+    {
+      label: "useDocument(id) — it fetches the document and I can call dispatch on the result.",
+      explanation: "useDocument(id) is Suspense-based and returns the document only — no dispatch. It's for reading a document by ID, not for the editor's primary action dispatch.",
+    },
+    {
+      label: "useSelectedTodoListDocument() — it returns [doc, dispatch], and dispatch sends the action.",
+      correct: true,
+      explanation: "Exactly right. The generated typed hook returns a tuple: the document and a dispatch function. Call dispatch(completeTodo({ id })) inside the button's onClick.",
+    },
+    {
+      label: "useSelectedDocument() — it's the most generic option, so it always works.",
+      explanation: "It works, but you lose type safety. Prefer the generated typed hook when you know the document model.",
+    },
+    {
+      label: "No hook needed — I can import dispatch directly from the Reactor.",
+      explanation: "The Reactor is not imported directly in editor components. The hooks are the supported interface and handle subscriptions for you.",
+    },
+  ]}
+/>
+
+## The dispatch signature
+
+Every hook's dispatch has the same shape:
+
+```ts
+dispatch(
+  actionOrActions: TAction | TAction[] | undefined,
+  onErrors?: (errors: Error[]) => void,
+  onSuccess?: (result: PHDocument) => void,
+): void
+```
+
+Pass a single action or an array to batch. Use `onErrors` to surface validation failures in your UI. Use `onSuccess` if you need the updated document immediately after the operation lands.
+
+## Where to next
+
+<Cards>
+  <Card title="What is Connect?" href="/academy/Learn/connect/what-is-connect" />
+  <Card title="Back to: Your first editor" href="/academy/Learn/editors/your-first-editor" />
+</Cards>

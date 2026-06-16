@@ -1,0 +1,67 @@
+---
+title: Host applications
+description: A Reactor doesn't run on its own — a host application embeds it. Connect is the default host, but you can write your own.
+---
+
+The previous lesson named the three pieces: document models, a Reactor, and a host application. Now let's make the last one concrete. Because "embed a Reactor" sounds abstract — until you see that a Reactor is just a library, and the host is the thing that gives it a place to live.
+
+## The Reactor is a library, not a server
+
+If you've deployed a Node service before, you might picture the Reactor as a long-running process you start and point your app at. It isn't.
+
+The Reactor is a package — `@powerhousedao/reactor`. It has no `main()`. It doesn't open a port. It sits inert until something boots it up, hands it a storage backend, and starts sending it actions.
+
+That "something" is the host application. The host is what runs, and the Reactor is what the host runs.
+
+## What a host provides
+
+A Reactor needs four things it can't supply itself:
+
+- **Storage** — where operations are persisted. Connect uses PGlite running in IndexedDB in the browser. Switchboard can point at a real Postgres instance. Your custom host could use anything that implements the storage interface.
+- **Network** — which other Reactors to sync with, over what transport, with what credentials.
+- **UI surfaces** — the windows, panels, and modals where editors render. The Reactor has no concept of a DOM.
+- **Package registry** — which document models, editors, and processors are loaded. The host discovers and registers them with the Reactor at startup.
+
+The Reactor's job is to apply reducers, order operations into a deterministic log, and route them to processors and sync channels. Everything else is the host's problem.
+
+<Quiz
+  question="A colleague asks: 'Who decides which storage backend the Reactor uses — the Reactor itself, or the host?' Which answer is right?"
+  choices={[
+    {
+      label: "The Reactor — it ships with PGlite and that's fixed.",
+      explanation: "PGlite is the default, but the storage layer is behind an interface. The host configures which implementation is wired in.",
+    },
+    {
+      label: "The host — it instantiates the Reactor and passes a storage implementation at startup.",
+      correct: true,
+      explanation: "Correct. The host controls the full wiring. The Reactor just requires something that satisfies IOperationStore and friends.",
+    },
+    {
+      label: "The Reactor chooses storage at runtime based on the environment.",
+      explanation: "There's no auto-detection. The host is explicit about what it wires.",
+    },
+    {
+      label: "It's chosen per document type, inside the document model package.",
+      explanation: "Document models define schemas and reducers — they don't touch storage configuration at all.",
+    },
+  ]}
+/>
+
+## The two ready-made hosts
+
+**Connect** is the browser and desktop host. When it boots, it initialises a Reactor with PGlite storage in IndexedDB, loads your installed packages, and exposes the Reactor through React hooks. Every editor you build reaches the Reactor through those hooks — you never construct a Reactor yourself inside an editor.
+
+**Switchboard** is the server host. It wraps a Reactor in a GraphQL and MCP API so agents, back-ends, and integrations can reach documents without a browser. A Switchboard instance can sync with one or more Connect clients through the DocSync protocol, so the same operation log flows between browser and server.
+
+## Why the separation matters
+
+Because the host owns the runtime, the same document model — the same reducer, the same business logic — can run in a browser and a headless server without any changes. Connect renders the editor and signs actions with the user's identity. Switchboard exposes the same document over an API and runs processors server-side. The document model doesn't know which host it's in, and it doesn't need to.
+
+This is the practical payoff of keeping the Reactor a plain library: you get to choose the runtime, and you can have more than one.
+
+## Where to next
+
+<Cards>
+  <Card title="Documents and drives" href="/academy/Learn/document-models/documents-and-drives" />
+  <Card title="Back to: The big picture" href="/academy/Learn/architecture/the-big-picture" />
+</Cards>

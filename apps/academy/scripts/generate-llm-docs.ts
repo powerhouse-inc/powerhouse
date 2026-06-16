@@ -168,41 +168,18 @@ function extractDescription(content: string): string {
 
 function extractCategory(relativePath: string): string {
   const parts = relativePath.split(path.sep);
-  const topDir = parts[0] ?? "";
+  // The section is the first meaningful path segment (skip a leading "academy").
+  const section = (parts[0] === "academy" ? parts[1] : parts[0]) ?? "";
 
-  if (topDir.includes("GetStarted") || topDir.includes("01-GetStarted"))
-    return "Get Started";
-  if (topDir.includes("MasteryTrack") || topDir.includes("02-MasteryTrack"))
-    return "Mastery Track";
-  if (
-    topDir.includes("ExampleUsecases") ||
-    topDir.includes("03-ExampleUsecases") ||
-    topDir.includes("10-TodoListTutorial")
-  )
-    return "Example Use Cases";
-  if (topDir.includes("APIReferences") || topDir.includes("04-APIReferences"))
-    return "API References";
-  if (topDir.includes("Architecture") || topDir.includes("05-Architecture"))
-    return "Architecture";
-  if (
-    topDir.includes("ComponentLibrary") ||
-    topDir.includes("06-ComponentLibrary")
-  )
-    return "Component Library";
-  if (topDir.includes("bookofpowerhouse")) return "Book of Powerhouse";
-  if (topDir.includes("ReleaseNotes")) return "Release Notes";
-  if (topDir.includes("academy")) {
-    // Files directly under academy/
-    const secondPart = parts[1] ?? "";
-    if (secondPart.includes("GetStarted")) return "Get Started";
-    if (secondPart.includes("MasteryTrack")) return "Mastery Track";
-    if (secondPart.includes("ExampleUsecases")) return "Example Use Cases";
-    if (secondPart.includes("APIReferences")) return "API References";
-    if (secondPart.includes("Architecture")) return "Architecture";
-    if (secondPart.includes("ComponentLibrary")) return "Component Library";
-    if (secondPart.includes("bookofpowerhouse")) return "Book of Powerhouse";
-    if (secondPart.includes("ReleaseNotes")) return "Release Notes";
-  }
+  // Reference and Build are parent folders that nest other sections, so match
+  // them before their children (e.g. APIReferences now lives under Reference).
+  if (section.includes("GetStarted")) return "Get Started";
+  if (section.includes("Learn")) return "Learn";
+  if (section.includes("MasteryTrack")) return "Build";
+  if (section.includes("Reference")) return "Reference";
+  if (section.includes("Architecture")) return "Architecture";
+  if (section.includes("bookofpowerhouse")) return "Book of Powerhouse";
+  if (section.includes("ReleaseNotes")) return "Release Notes";
 
   return "Miscellaneous";
 }
@@ -221,10 +198,9 @@ function buildUrlPath(relativePath: string): string {
 function sortFilesBySidebar(docFiles: DocFile[]): DocFile[] {
   const categoryOrder = [
     "Get Started",
-    "Mastery Track",
-    "Example Use Cases",
-    "API References",
-    "Component Library",
+    "Learn",
+    "Build",
+    "Reference",
     "Architecture",
     "Book of Powerhouse",
     "Release Notes",
