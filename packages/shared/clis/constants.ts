@@ -213,7 +213,7 @@ export const externalDevDependencies = {
   tailwindcss: "^4.1.16",
   typescript: "^5.9.3",
   "typescript-eslint": "^8.46.2",
-  vite: "^8.0.8",
+  vite: "^8.0.10",
   "vite-tsconfig-paths": "6.1.1",
   vitest: "4.1.1",
 } as const;
