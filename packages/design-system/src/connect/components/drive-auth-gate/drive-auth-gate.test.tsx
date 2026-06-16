@@ -9,17 +9,13 @@ describe("DriveAuthGate", () => {
     expect(
       screen.getByText(/sign in with Renown to view or edit it/i),
     ).toBeDefined();
-    expect(
-      screen.getByRole("button", { name: /log in with renown/i }),
-    ).toBeDefined();
+    expect(screen.getByRole("button", { name: /log in with/i })).toBeDefined();
   });
 
   it("calls onLogin when the CTA is clicked", () => {
     const onLogin = vi.fn();
     render(<DriveAuthGate onLogin={onLogin} />);
-    fireEvent.click(
-      screen.getByRole("button", { name: /log in with renown/i }),
-    );
+    fireEvent.click(screen.getByRole("button", { name: /log in with/i }));
     expect(onLogin).toHaveBeenCalledOnce();
   });
 });

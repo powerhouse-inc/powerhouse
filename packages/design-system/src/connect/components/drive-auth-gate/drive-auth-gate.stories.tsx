@@ -9,7 +9,7 @@ const meta = {
     onLogin: () => alert("Log in clicked"),
   },
   render: (args) => (
-    <div className="flex h-screen w-full flex-col">
+    <div className="flex h-screen w-full items-center justify-center bg-gray-100 dark:bg-slate-900">
       <DriveAuthGate {...args} />
     </div>
   ),
@@ -20,9 +20,3 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
-
-// Toggle the Storybook theme toolbar to dark to preview the dark page styles;
-// darkMode switches the Renown CTA's inline button styles.
-export const DarkMode: Story = {
-  args: { darkMode: true },
-};

@@ -29,4 +29,5 @@ export type PHModal =
   | { type: "cookiesPolicy" }
   | { type: "downloadDocumentWithErrors"; documentId: string }
   | { type: "inspector" }
-  | { type: "missingPackage"; documentType: string };
+  | { type: "missingPackage"; documentType: string }
+  | { type: "driveAuthRequired" };

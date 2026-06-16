@@ -49,7 +49,9 @@ export function Content() {
   return (
     <ContentContainer>
       {needsLogin ? (
-        <DriveAuthGate onLogin={openRenown} />
+        <div className="flex h-full items-center justify-center p-4">
+          <DriveAuthGate onLogin={openRenown} />
+        </div>
       ) : showHomeScreen ? (
         <HomeScreenContainer />
       ) : (
