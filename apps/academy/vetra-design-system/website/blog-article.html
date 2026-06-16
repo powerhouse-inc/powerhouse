@@ -1,0 +1,791 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Why Great Product Teams Obsess Over Feedback Loops — Vetra Blog</title>
+    <link rel="stylesheet" href="../colors.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family:
+          'Inter',
+          -apple-system,
+          BlinkMacSystemFont,
+          sans-serif;
+        background: var(--background);
+        color: var(--foreground);
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+      }
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 10px 24px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-family: inherit;
+      }
+      .btn-primary {
+        background: var(--primary);
+        color: #fff;
+      }
+      .btn-primary:hover {
+        opacity: 0.9;
+        transform: translateY(-1px);
+      }
+      .btn-secondary {
+        background: var(--accent);
+        color: var(--foreground);
+      }
+      .btn-secondary:hover {
+        opacity: 0.85;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+      .container-narrow {
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+
+      /* ─── NAV ─── */
+      .navbar {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        background: var(--background);
+        border-bottom: 1px solid var(--border);
+      }
+      .navbar .container {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 64px;
+      }
+      .nav-brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 700;
+        font-size: 18px;
+      }
+      .nav-brand img {
+        height: 24px;
+        width: auto;
+      }
+      .logo-dark {
+        display: none;
+      }
+      body.dark .logo-light {
+        display: none;
+      }
+      body.dark .logo-dark {
+        display: inline;
+      }
+      .nav-links {
+        display: flex;
+        align-items: center;
+        gap: 32px;
+      }
+      .nav-links a {
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--foreground-70);
+        transition: color 0.2s;
+      }
+      .nav-links a:hover {
+        color: var(--foreground);
+      }
+      .nav-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .theme-toggle {
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: var(--card);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+        transition: all 0.2s;
+        color: var(--foreground);
+      }
+      .theme-toggle:hover {
+        background: var(--accent);
+      }
+
+      /* ─── BREADCRUMB ─── */
+      .breadcrumb {
+        padding: 20px 0;
+        font-size: 13px;
+        color: var(--muted-foreground);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .breadcrumb a {
+        color: var(--muted-foreground);
+        transition: color 0.2s;
+      }
+      .breadcrumb a:hover {
+        color: var(--foreground);
+      }
+      .breadcrumb span {
+        color: var(--muted-foreground);
+      }
+
+      /* ─── ARTICLE HEADER ─── */
+      .article-header {
+        padding: 24px 0 40px;
+      }
+      .article-category {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 100px;
+        background: var(--primary-30);
+        color: var(--primary);
+        font-size: 12px;
+        font-weight: 600;
+        margin-bottom: 16px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      .article-header h1 {
+        font-size: 40px;
+        font-weight: 800;
+        letter-spacing: -1px;
+        line-height: 1.2;
+        margin-bottom: 20px;
+      }
+      .article-meta {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        font-size: 14px;
+        color: var(--foreground-70);
+      }
+      .article-meta-author {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .author-avatar-sm {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: var(--primary-30);
+        border: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--primary);
+      }
+      .article-meta-sep {
+        color: var(--border);
+      }
+
+      /* ─── HERO IMAGE ─── */
+      .article-hero-image {
+        width: 100%;
+        height: 400px;
+        border-radius: 16px;
+        background: var(--accent);
+        border: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--muted-foreground);
+        font-size: 14px;
+        font-weight: 500;
+        margin-bottom: 48px;
+      }
+
+      /* ─── ARTICLE BODY ─── */
+      .article-body {
+        padding-bottom: 56px;
+      }
+      .article-body p {
+        font-size: 16px;
+        line-height: 1.8;
+        margin-bottom: 24px;
+        color: var(--foreground);
+      }
+      .article-body h2 {
+        font-size: 24px;
+        font-weight: 700;
+        letter-spacing: -0.3px;
+        margin-top: 40px;
+        margin-bottom: 16px;
+      }
+      .article-body blockquote {
+        border-left: 3px solid var(--primary);
+        padding: 16px 24px;
+        margin: 32px 0;
+        background: var(--accent);
+        border-radius: 0 8px 8px 0;
+        font-size: 16px;
+        line-height: 1.7;
+        color: var(--foreground);
+        font-style: italic;
+      }
+      .article-body ul {
+        margin: 0 0 24px 20px;
+        font-size: 16px;
+        line-height: 1.8;
+      }
+      .article-body ul li {
+        margin-bottom: 8px;
+      }
+      .article-body code {
+        background: var(--accent);
+        border: 1px solid var(--border);
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 14px;
+        font-family: 'SF Mono', 'Fira Code', monospace;
+        color: var(--primary);
+      }
+      .tip-callout {
+        background: var(--accent);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 20px 24px;
+        margin: 32px 0;
+        display: flex;
+        gap: 14px;
+        align-items: flex-start;
+      }
+      .tip-callout-icon {
+        flex-shrink: 0;
+        width: 28px;
+        height: 28px;
+        border-radius: 6px;
+        background: var(--primary-30);
+        color: var(--primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        font-weight: 700;
+      }
+      .tip-callout-content {
+        font-size: 14px;
+        line-height: 1.7;
+      }
+      .tip-callout-content strong {
+        display: block;
+        margin-bottom: 4px;
+      }
+
+      /* ─── AUTHOR BIO ─── */
+      .author-bio {
+        border-top: 1px solid var(--border);
+        border-bottom: 1px solid var(--border);
+        padding: 32px 0;
+        margin-bottom: 64px;
+        display: flex;
+        gap: 20px;
+        align-items: flex-start;
+      }
+      .author-bio-avatar {
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        flex-shrink: 0;
+        background: var(--primary-30);
+        border: 2px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 22px;
+        font-weight: 700;
+        color: var(--primary);
+      }
+      .author-bio-info h3 {
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 2px;
+      }
+      .author-bio-info .role {
+        font-size: 13px;
+        color: var(--primary);
+        font-weight: 500;
+        margin-bottom: 8px;
+      }
+      .author-bio-info p {
+        font-size: 14px;
+        color: var(--foreground-70);
+        line-height: 1.6;
+        margin-bottom: 12px;
+      }
+      .author-social {
+        display: flex;
+        gap: 16px;
+      }
+      .author-social a {
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--muted-foreground);
+        transition: color 0.2s;
+      }
+      .author-social a:hover {
+        color: var(--primary);
+      }
+
+      /* ─── RELATED POSTS ─── */
+      .related-posts {
+        padding: 0 0 96px;
+      }
+      .related-posts h2 {
+        font-size: 24px;
+        font-weight: 700;
+        margin-bottom: 32px;
+        letter-spacing: -0.3px;
+      }
+      .related-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 24px;
+      }
+      .related-card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        overflow: hidden;
+        transition:
+          transform 0.2s,
+          box-shadow 0.2s;
+      }
+      .related-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+      }
+      .related-card-image {
+        height: 180px;
+        background: var(--accent);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--muted-foreground);
+        font-size: 13px;
+        font-weight: 500;
+        border-bottom: 1px solid var(--border);
+      }
+      .related-card-content {
+        padding: 20px;
+      }
+      .related-card-content h3 {
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 8px;
+        line-height: 1.4;
+      }
+      .related-card-content p {
+        font-size: 13px;
+        color: var(--foreground-70);
+        line-height: 1.6;
+        margin-bottom: 12px;
+      }
+      .related-card-content .date {
+        font-size: 12px;
+        color: var(--muted-foreground);
+      }
+
+      /* ─── FOOTER ─── */
+      .footer {
+        padding: 64px 0 0;
+        border-top: 1px solid var(--border);
+        background: var(--card);
+      }
+      .footer-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr 1fr 1fr;
+        gap: 48px;
+        margin-bottom: 48px;
+      }
+      .footer-brand p {
+        font-size: 14px;
+        color: var(--foreground-70);
+        margin-top: 12px;
+        line-height: 1.6;
+        max-width: 280px;
+      }
+      .footer-col h4 {
+        font-size: 13px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 16px;
+        color: var(--foreground);
+      }
+      .footer-col ul {
+        list-style: none;
+      }
+      .footer-col ul li {
+        margin-bottom: 10px;
+      }
+      .footer-col ul li a {
+        font-size: 14px;
+        color: var(--foreground-70);
+        transition: color 0.2s;
+      }
+      .footer-col ul li a:hover {
+        color: var(--foreground);
+      }
+      .footer-bottom {
+        border-top: 1px solid var(--border);
+        padding: 20px 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 13px;
+        color: var(--muted-foreground);
+      }
+      .footer-bottom-links {
+        display: flex;
+        gap: 24px;
+      }
+      .footer-bottom-links a {
+        color: var(--muted-foreground);
+        transition: color 0.2s;
+      }
+      .footer-bottom-links a:hover {
+        color: var(--foreground);
+      }
+
+      @media (max-width: 768px) {
+        .article-header h1 {
+          font-size: 28px;
+        }
+        .article-hero-image {
+          height: 240px;
+        }
+        .related-grid {
+          grid-template-columns: 1fr;
+        }
+        .author-bio {
+          flex-direction: column;
+        }
+        .footer-grid {
+          grid-template-columns: 1fr 1fr;
+        }
+        .nav-links {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Navbar -->
+    <nav class="navbar">
+      <div class="container">
+        <a href="landing-page.html" class="nav-brand">
+          <img src="../logos/vetra-full-logo.svg" alt="Vetra" height="24" class="logo-light" />
+          <img src="../logos/vetra-full-logo-light.svg" alt="Vetra" height="24" class="logo-dark" />
+        </a>
+        <div class="nav-links">
+          <a href="landing-page.html">Product</a>
+          <a href="about.html">About</a>
+          <a href="pricing.html">Pricing</a>
+          <a href="blog-article.html">Blog</a>
+          <a href="#">Docs</a>
+        </div>
+        <div class="nav-actions">
+          <button
+            class="theme-toggle"
+            onclick="document.body.classList.toggle('dark')"
+            aria-label="Toggle theme"
+          >
+            &#9789;
+          </button>
+          <a href="#" class="btn btn-secondary" style="padding: 8px 16px; font-size: 13px"
+            >Log in</a
+          >
+          <a href="#" class="btn btn-primary" style="padding: 8px 16px; font-size: 13px"
+            >Get Started</a
+          >
+        </div>
+      </div>
+    </nav>
+
+    <!-- Breadcrumb -->
+    <div class="container-narrow">
+      <nav class="breadcrumb">
+        <a href="#">Blog</a>
+        <span>&#8250;</span>
+        <a href="#">Product Strategy</a>
+        <span>&#8250;</span>
+        <span>Why Great Product Teams Obsess Over Feedback Loops</span>
+      </nav>
+    </div>
+
+    <!-- Article Header -->
+    <header class="container-narrow article-header">
+      <div class="article-category">Product Strategy</div>
+      <h1>Why Great Product Teams Obsess Over Feedback Loops</h1>
+      <div class="article-meta">
+        <div class="article-meta-author">
+          <div class="author-avatar-sm">RW</div>
+          <span style="font-weight: 500; color: var(--foreground)">Rachel Wright</span>
+        </div>
+        <span class="article-meta-sep">|</span>
+        <span>March 8, 2026</span>
+        <span class="article-meta-sep">|</span>
+        <span>7 min read</span>
+      </div>
+    </header>
+
+    <!-- Hero Image -->
+    <div class="container-narrow">
+      <div class="article-hero-image">Article hero image placeholder &mdash; 720 &times; 400</div>
+    </div>
+
+    <!-- Article Body -->
+    <article class="container-narrow article-body">
+      <p>
+        Every product decision is a hypothesis. You think users want a particular feature, that a
+        certain workflow will reduce churn, or that moving a button will increase conversions.
+        Without a tight feedback loop, those hypotheses stay untested and your product drifts
+        further from reality with each release.
+      </p>
+
+      <p>
+        The highest-performing product teams we have studied at Vetra share a common trait: they
+        treat feedback as a first-class input to their planning process, not an afterthought
+        collected in a spreadsheet once a quarter. They build systems that surface user signals
+        continuously and route them to the people making decisions.
+      </p>
+
+      <h2>The anatomy of an effective feedback loop</h2>
+
+      <p>
+        A feedback loop is not just a survey or a support ticket. It is a complete cycle: you ship
+        something, observe how people use it, extract insights, and feed those insights back into
+        your next iteration. The speed of this cycle determines how quickly your product converges
+        on something people genuinely value.
+      </p>
+
+      <blockquote>
+        "The goal is not to collect more feedback. The goal is to shorten the distance between a
+        user experiencing friction and your team understanding why it happened."
+      </blockquote>
+
+      <p>
+        There are several structural elements that make feedback loops effective rather than
+        overwhelming:
+      </p>
+
+      <ul>
+        <li>
+          <strong>Passive signals over active surveys:</strong> Track usage patterns, rage clicks,
+          and drop-off points rather than relying solely on users telling you what they think.
+        </li>
+        <li>
+          <strong>Contextual collection:</strong> Embed feedback triggers inside the product at the
+          moment of friction, not in a separate portal.
+        </li>
+        <li>
+          <strong>Closed-loop communication:</strong> Always tell users what happened with their
+          feedback, even if the answer is "not right now."
+        </li>
+        <li>
+          <strong>Quantitative plus qualitative:</strong> Numbers reveal what is happening;
+          conversations reveal why.
+        </li>
+      </ul>
+
+      <h2>From feedback to action: a practical framework</h2>
+
+      <p>
+        Collecting feedback is the easy part. The hard part is turning a messy stream of feature
+        requests, bug reports, and vague complaints into a coherent signal that informs your
+        roadmap. At Vetra, we use a lightweight framework built around the concept of
+        <code>feedback themes</code> that aggregates individual data points into clusters you can
+        reason about.
+      </p>
+
+      <p>
+        Each theme gets a severity score based on frequency, impact on core workflows, and alignment
+        with strategic goals. This prevents the loudest voices from dominating your roadmap while
+        ensuring genuine pain points bubble up naturally.
+      </p>
+
+      <div class="tip-callout">
+        <div class="tip-callout-icon">&#9432;</div>
+        <div class="tip-callout-content">
+          <strong>Pro tip</strong>
+          Set up a dedicated Slack channel or Vetra inbox where customer-facing teams can drop raw
+          feedback in real time. Tag each entry with a theme. Review themes weekly during planning.
+          This simple ritual creates more alignment than any quarterly review ever will.
+        </div>
+      </div>
+
+      <p>
+        Teams that build this discipline into their weekly cadence report dramatically faster
+        iteration cycles. One Vetra customer reduced their average time from user-reported issue to
+        shipped fix from 23 days to just 6 by implementing themed feedback routing directly into
+        their sprint planning workflow.
+      </p>
+
+      <p>
+        The takeaway is straightforward: the quality of your product is directly proportional to the
+        speed and fidelity of your feedback loops. Invest in them early, systematize them
+        relentlessly, and never let feedback sit in a queue without a clear owner and a timeline for
+        response.
+      </p>
+    </article>
+
+    <!-- Author Bio -->
+    <div class="container-narrow">
+      <div class="author-bio">
+        <div class="author-bio-avatar">RW</div>
+        <div class="author-bio-info">
+          <h3>Rachel Wright</h3>
+          <div class="role">Head of Product at Vetra</div>
+          <p>
+            Rachel leads product strategy at Vetra and writes about the systems and habits that make
+            product teams effective. Previously PM at Intercom, where she helped build the customer
+            feedback infrastructure used by 25,000 businesses.
+          </p>
+          <div class="author-social">
+            <a href="#">Twitter / X</a>
+            <a href="#">LinkedIn</a>
+            <a href="#">Website</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Related Posts -->
+    <section class="related-posts container">
+      <h2>Related articles</h2>
+      <div class="related-grid">
+        <a href="#" class="related-card">
+          <div class="related-card-image">Image placeholder</div>
+          <div class="related-card-content">
+            <h3>How to Run Effective Sprint Retrospectives Without the Dread</h3>
+            <p>
+              A practical guide to retrospectives that surface real insights and lead to measurable
+              improvements, not just sticky notes on a wall.
+            </p>
+            <div class="date">February 22, 2026</div>
+          </div>
+        </a>
+        <a href="#" class="related-card">
+          <div class="related-card-image">Image placeholder</div>
+          <div class="related-card-content">
+            <h3>The Case for Smaller Scopes: Why Less Really Is More</h3>
+            <p>
+              Shipping smaller increments is not about lowering ambition. It is about learning
+              faster, reducing risk, and building momentum that compounds.
+            </p>
+            <div class="date">February 10, 2026</div>
+          </div>
+        </a>
+        <a href="#" class="related-card">
+          <div class="related-card-image">Image placeholder</div>
+          <div class="related-card-content">
+            <h3>Building a Roadmap That Stakeholders Actually Trust</h3>
+            <p>
+              Most roadmaps fail because they promise dates instead of outcomes. Here is how to
+              build one that creates alignment without painting you into a corner.
+            </p>
+            <div class="date">January 28, 2026</div>
+          </div>
+        </a>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <div class="container">
+        <div class="footer-grid">
+          <div class="footer-brand">
+            <a href="landing-page.html" class="nav-brand">
+              <img src="../logos/vetra-full-logo.svg" alt="Vetra" height="24" class="logo-light" />
+              <img
+                src="../logos/vetra-full-logo-light.svg"
+                alt="Vetra"
+                height="24"
+                class="logo-dark"
+              />
+            </a>
+            <p>
+              The modern product management platform for teams that ship. Plan, build, and iterate
+              with clarity.
+            </p>
+          </div>
+          <div class="footer-col">
+            <h4>Product</h4>
+            <ul>
+              <li><a href="#">Features</a></li>
+              <li><a href="pricing.html">Pricing</a></li>
+              <li><a href="#">Integrations</a></li>
+              <li><a href="#">Changelog</a></li>
+            </ul>
+          </div>
+          <div class="footer-col">
+            <h4>Company</h4>
+            <ul>
+              <li><a href="about.html">About</a></li>
+              <li><a href="blog-article.html">Blog</a></li>
+              <li><a href="#">Careers</a></li>
+              <li><a href="#">Contact</a></li>
+            </ul>
+          </div>
+          <div class="footer-col">
+            <h4>Resources</h4>
+            <ul>
+              <li><a href="#">Documentation</a></li>
+              <li><a href="#">Help Center</a></li>
+              <li><a href="#">Community</a></li>
+              <li><a href="#">API Reference</a></li>
+            </ul>
+          </div>
+        </div>
+        <div class="footer-bottom">
+          <span>&copy; 2026 Vetra Inc. All rights reserved.</span>
+          <div class="footer-bottom-links">
+            <a href="#">Privacy</a>
+            <a href="#">Terms</a>
+            <a href="#">Security</a>
+          </div>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

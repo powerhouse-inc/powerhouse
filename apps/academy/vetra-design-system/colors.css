@@ -1,0 +1,110 @@
+/* Vetra Powerhouse - Color Palette */
+/* Generated from Figma: https://www.figma.com/design/P11OKVKPLTgW77GQKKb0vp/PH-Styleguide--Copy- */
+
+:root {
+  /* Primary Colors */
+  --primary: #04c161;
+  --primary-foreground: #ffffff;
+  --primary-30: rgba(4, 193, 97, 0.3);
+
+  /* Secondary Colors */
+  --secondary: #f4f4f4;
+  --secondary-foreground: #343839;
+  --secondary-foreground-30: rgba(52, 56, 57, 0.3);
+
+  /* Accent Colors */
+  --accent: #f3f5f7;
+  --accent-foreground: #000000;
+  --accent-foreground-30: rgba(0, 0, 0, 0.3);
+
+  /* Base Colors */
+  --background: #fcfcfc;
+  --foreground: #343839;
+  --foreground-70: rgba(52, 56, 57, 0.5);
+  --foreground-50: rgba(52, 56, 57, 0.3);
+
+  /* Card Colors */
+  --card: #fcfcfc;
+  --card-foreground: #343839;
+  --card-foreground-50: rgba(52, 56, 57, 0.5);
+
+  /* Popover Colors */
+  --popover: #ffffff;
+  --popover-foreground: #343839;
+
+  /* Muted Colors */
+  --muted: #efefef;
+  --muted-foreground: #9ea0a1;
+
+  /* Destructive Colors */
+  --destructive: #ea4335;
+  --destructive-foreground: #fcfcfc;
+  --destructive-30: rgba(234, 67, 53, 0.3);
+
+  /* Border & Input Colors */
+  --border: #d7d8d9;
+  --input: #ffffff;
+  --ring: #343839;
+
+  /* Status Colors */
+  --progress: #329dff;
+  --progress-30: rgba(50, 157, 255, 0.3);
+  --success: #4fc86f;
+  --success-30: rgba(79, 200, 111, 0.3);
+  --todo: #ffa132;
+  --todo-30: rgba(255, 161, 50, 0.3);
+
+  /* Extra Colors */
+  --yellow: #fac400;
+  --yellow-30: rgba(250, 196, 0, 0.3);
+  --purple: #8e55ea;
+  --purple-30: rgba(142, 85, 234, 0.3);
+}
+
+/* Dark Theme */
+.dark,
+[data-theme='dark'] {
+  /* Primary Colors */
+  --primary: #04c161;
+  --primary-foreground: #ffffff;
+  --primary-30: rgba(4, 193, 97, 0.3);
+
+  /* Secondary Colors */
+  --secondary: #4f596f;
+  --secondary-foreground: #a6b1c7;
+  --secondary-foreground-30: rgba(166, 177, 199, 0.3);
+
+  /* Accent Colors */
+  --accent: #373e4d;
+  --accent-foreground: #f3f5f7;
+  --accent-foreground-30: rgba(243, 245, 247, 0.3);
+
+  /* Base Colors */
+  --background: #1b1e24;
+  --foreground: #fcfcfc;
+  --foreground-70: rgba(252, 252, 252, 0.5);
+  --foreground-50: rgba(252, 252, 252, 0.3);
+
+  /* Card Colors */
+  --card: #252a34;
+  --card-foreground: #f3f5f7;
+  --card-foreground-50: rgba(243, 245, 247, 0.5);
+
+  /* Popover Colors */
+  --popover: #1e222b;
+  --popover-foreground: #fcfcfc;
+
+  /* Muted Colors */
+  --muted: #343839;
+  --muted-foreground: #6c7275;
+
+  /* Destructive Colors */
+  --destructive: #ea4335;
+  --destructive-foreground: #fcfcfc;
+  --destructive-30: rgba(234, 67, 53, 0.3);
+
+  /* Border & Input Colors */
+  --border: #485265;
+  --input: #1b1e24;
+  --ring: #f3f5f7;
+}

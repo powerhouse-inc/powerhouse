@@ -148,10 +148,53 @@
 }
 
 /* ---- Term ---- */
+.termWrap {
+  position: relative;
+}
+
 .term {
+  padding: 0;
+  border: 0;
   border-bottom: 1.5px dotted var(--ifm-color-primary);
-  cursor: help;
+  background: transparent;
+  color: inherit;
+  font: inherit;
   font-weight: 500;
+  cursor: help;
+}
+
+.term:focus-visible {
+  outline: 2px solid var(--ifm-color-primary);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.termPopover {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 8px);
+  z-index: 30;
+  display: block;
+  width: max-content;
+  max-width: min(320px, 90vw);
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: 10px;
+  background: var(--ifm-background-surface-color, var(--ifm-background-color));
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  color: var(--ifm-color-emphasis-800);
+  font-size: 0.85rem;
+  font-weight: 400;
+  line-height: 1.45;
+  white-space: normal;
+  cursor: default;
+}
+
+.termPopoverTitle {
+  display: block;
+  margin-bottom: 0.2rem;
+  color: var(--ifm-heading-color);
+  font-size: 0.8rem;
 }
 
 /* ---- Cards ---- */
@@ -180,6 +223,7 @@
   text-decoration: none;
   color: inherit;
   transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
 }
 
 .cardTitle {
@@ -189,4 +233,106 @@
 .cardDesc {
   font-size: 0.88rem;
   color: var(--ifm-color-emphasis-700);
+}
+
+/* ---- Learn course grid (Overview) ---- */
+.courseGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+
+@media (max-width: 996px) {
+  .courseGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .courseGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.courseCard {
+  display: flex;
+  flex-direction: column;
+  min-height: 220px;
+  padding: 1.4rem;
+  border: 1px solid var(--ifm-color-emphasis-200);
+  border-radius: var(--radius-lg, 12px);
+  background: var(--ifm-card-background-color);
+  color: inherit;
+  text-decoration: none;
+  transition:
+    border-color 0.15s ease,
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.courseCard:hover {
+  text-decoration: none;
+  color: inherit;
+  border-color: var(--ifm-color-primary);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+}
+
+.courseCardTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.courseIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--radius-md, 8px);
+  color: var(--ifm-color-primary);
+  background: color-mix(in oklab, var(--ifm-color-primary) 12%, transparent);
+}
+
+.courseChapter {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.75rem;
+  color: var(--ifm-color-emphasis-600);
+}
+
+.courseTitle {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.courseDesc {
+  flex: 1;
+  font-size: 0.9rem;
+  color: var(--ifm-color-emphasis-700);
+  margin: 0;
+}
+
+.courseCardBottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 1.25rem;
+}
+
+.courseLessons {
+  font-size: 0.8rem;
+  color: var(--ifm-color-emphasis-600);
+}
+
+.courseArrow {
+  color: var(--ifm-color-primary);
+  transition: transform 0.15s ease;
+}
+
+.courseCard:hover .courseArrow {
+  transform: translateX(2px);
 }

@@ -1,0 +1,782 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Documentation — Vetra</title>
+    <link rel="stylesheet" href="../colors.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family:
+          'Inter',
+          -apple-system,
+          BlinkMacSystemFont,
+          sans-serif;
+        background: var(--background);
+        color: var(--foreground);
+        line-height: 1.6;
+        transition:
+          background 0.3s,
+          color 0.3s;
+      }
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      /* Nav */
+      .nav {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        background: var(--background);
+        border-bottom: 1px solid var(--border);
+        backdrop-filter: blur(12px);
+      }
+      .nav-inner {
+        max-width: 100%;
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 24px;
+        height: 56px;
+      }
+      .nav-left {
+        display: flex;
+        align-items: center;
+        gap: 24px;
+      }
+      .nav-logo {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 700;
+        font-size: 18px;
+      }
+      .nav-logo img {
+        height: 24px;
+        width: auto;
+      }
+      .logo-dark {
+        display: none;
+      }
+      body.dark .logo-light {
+        display: none;
+      }
+      body.dark .logo-dark {
+        display: inline;
+      }
+      .nav-badge {
+        font-size: 11px;
+        font-weight: 600;
+        background: var(--accent);
+        color: var(--muted-foreground);
+        padding: 2px 8px;
+        border-radius: 4px;
+      }
+      .nav-right {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .nav-search {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 14px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: var(--input);
+        font-size: 13px;
+        color: var(--muted-foreground);
+        width: 240px;
+        cursor: text;
+      }
+      .nav-search kbd {
+        font-family: inherit;
+        font-size: 11px;
+        background: var(--accent);
+        padding: 1px 6px;
+        border-radius: 4px;
+        border: 1px solid var(--border);
+        margin-left: auto;
+      }
+      .theme-toggle {
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: var(--card);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+        transition: all 0.2s;
+      }
+      .theme-toggle:hover {
+        background: var(--accent);
+      }
+
+      /* Layout */
+      .docs-layout {
+        display: flex;
+        min-height: calc(100vh - 56px);
+      }
+
+      /* Sidebar */
+      .sidebar {
+        width: 240px;
+        flex-shrink: 0;
+        border-right: 1px solid var(--border);
+        padding: 24px 16px;
+        overflow-y: auto;
+        position: sticky;
+        top: 56px;
+        height: calc(100vh - 56px);
+      }
+      .sidebar-group {
+        margin-bottom: 24px;
+      }
+      .sidebar-group-title {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--muted-foreground);
+        padding: 0 12px;
+        margin-bottom: 4px;
+      }
+      .sidebar-link {
+        display: block;
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 13px;
+        color: var(--foreground);
+        transition: all 0.15s;
+        font-weight: 400;
+      }
+      .sidebar-link:hover {
+        background: var(--accent);
+      }
+      .sidebar-link.active {
+        background: var(--primary-30);
+        color: var(--primary);
+        font-weight: 600;
+      }
+
+      /* Content Area */
+      .content-area {
+        flex: 1;
+        min-width: 0;
+        max-width: 860px;
+        padding: 32px 48px 80px;
+      }
+
+      /* Breadcrumb */
+      .breadcrumb {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        color: var(--muted-foreground);
+        margin-bottom: 24px;
+      }
+      .breadcrumb a:hover {
+        color: var(--foreground);
+      }
+      .breadcrumb .sep {
+        opacity: 0.4;
+      }
+
+      /* On this page */
+      .on-this-page {
+        background: var(--accent);
+        border-radius: 8px;
+        padding: 16px 20px;
+        margin-bottom: 32px;
+        border: 1px solid var(--border);
+      }
+      .on-this-page-title {
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--muted-foreground);
+        margin-bottom: 8px;
+      }
+      .on-this-page a {
+        display: block;
+        font-size: 13px;
+        padding: 3px 0;
+        color: var(--foreground);
+        transition: color 0.15s;
+      }
+      .on-this-page a:hover {
+        color: var(--primary);
+      }
+
+      /* Content Typography */
+      .content-area h1 {
+        font-size: 36px;
+        font-weight: 800;
+        letter-spacing: -0.5px;
+        margin-bottom: 12px;
+      }
+      .content-area .intro {
+        font-size: 17px;
+        color: var(--muted-foreground);
+        line-height: 1.7;
+        margin-bottom: 40px;
+        max-width: 640px;
+      }
+      .content-area h2 {
+        font-size: 24px;
+        font-weight: 700;
+        margin-top: 48px;
+        margin-bottom: 16px;
+        padding-top: 24px;
+        border-top: 1px solid var(--border);
+      }
+      .content-area h2:first-of-type {
+        margin-top: 0;
+        border-top: none;
+        padding-top: 0;
+      }
+      .content-area p {
+        font-size: 15px;
+        line-height: 1.75;
+        margin-bottom: 16px;
+        color: var(--foreground);
+      }
+
+      /* Code Block */
+      .code-block {
+        margin: 24px 0;
+        border-radius: 12px;
+        overflow: hidden;
+        border: 1px solid var(--border);
+      }
+      .code-header {
+        background: var(--accent);
+        padding: 10px 16px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid var(--border);
+      }
+      .code-filename {
+        font-size: 13px;
+        font-weight: 600;
+        font-family: 'SF Mono', 'Fira Code', monospace;
+      }
+      .code-copy {
+        font-size: 12px;
+        font-weight: 600;
+        padding: 4px 10px;
+        border-radius: 4px;
+        border: 1px solid var(--border);
+        background: var(--card);
+        cursor: pointer;
+        color: var(--muted-foreground);
+        transition: all 0.15s;
+        font-family: inherit;
+      }
+      .code-copy:hover {
+        background: var(--background);
+        color: var(--foreground);
+      }
+      .code-body {
+        background: var(--card);
+        padding: 20px;
+        overflow-x: auto;
+      }
+      .code-body pre {
+        font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+        font-size: 13px;
+        line-height: 1.7;
+        color: var(--foreground);
+      }
+
+      /* Callouts */
+      .callout {
+        border-radius: 10px;
+        padding: 16px 20px;
+        margin: 24px 0;
+        display: flex;
+        gap: 12px;
+        font-size: 14px;
+        line-height: 1.6;
+        border: 1px solid;
+      }
+      .callout-icon {
+        flex-shrink: 0;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .callout-tip {
+        background: var(--success-30);
+        border-color: var(--success);
+      }
+      .callout-tip .callout-icon {
+        background: var(--success);
+        color: #fff;
+      }
+      .callout-warning {
+        background: var(--todo-30);
+        border-color: var(--todo);
+      }
+      .callout-warning .callout-icon {
+        background: var(--todo);
+        color: #fff;
+      }
+      .callout-content strong {
+        display: block;
+        margin-bottom: 2px;
+      }
+
+      /* Table */
+      .props-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 24px 0;
+        font-size: 14px;
+      }
+      .props-table th {
+        text-align: left;
+        padding: 10px 16px;
+        font-weight: 600;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--muted-foreground);
+        background: var(--accent);
+        border-bottom: 1px solid var(--border);
+      }
+      .props-table td {
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--border);
+        vertical-align: top;
+      }
+      .props-table code {
+        font-family: 'SF Mono', 'Fira Code', monospace;
+        font-size: 13px;
+        background: var(--accent);
+        padding: 2px 6px;
+        border-radius: 4px;
+      }
+      .type-badge {
+        color: var(--primary);
+        font-weight: 500;
+      }
+      .default-badge {
+        color: var(--muted-foreground);
+      }
+
+      /* Prev / Next */
+      .prev-next {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        margin-top: 64px;
+        padding-top: 32px;
+        border-top: 1px solid var(--border);
+      }
+      .prev-next a {
+        display: block;
+        padding: 20px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        transition: all 0.2s;
+      }
+      .prev-next a:hover {
+        border-color: var(--primary);
+        background: var(--accent);
+      }
+      .prev-next .label {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--muted-foreground);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 4px;
+      }
+      .prev-next .title {
+        font-size: 15px;
+        font-weight: 600;
+      }
+      .prev-next .next {
+        text-align: right;
+      }
+
+      @media (max-width: 768px) {
+        .sidebar {
+          display: none;
+        }
+        .content-area {
+          padding: 24px 20px 64px;
+        }
+        .content-area h1 {
+          font-size: 28px;
+        }
+        .nav-search {
+          display: none;
+        }
+        .prev-next {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Nav -->
+    <nav class="nav">
+      <div class="nav-inner">
+        <div class="nav-left">
+          <a href="#" class="nav-logo">
+            <img src="../logos/vetra-full-logo.svg" alt="Vetra" height="24" class="logo-light" />
+            <img
+              src="../logos/vetra-full-logo-light.svg"
+              alt="Vetra"
+              height="24"
+              class="logo-dark"
+            />
+          </a>
+          <span class="nav-badge">Docs</span>
+        </div>
+        <div class="nav-right">
+          <div class="nav-search">
+            <span>&#128269;</span> Search documentation... <kbd>&#8984;K</kbd>
+          </div>
+          <button
+            class="theme-toggle"
+            onclick="
+              document.body.classList.toggle('dark')
+              this.textContent = document.body.classList.contains('dark') ? '&#9790;' : '&#9788;'
+            "
+            aria-label="Toggle theme"
+          >
+            &#9788;
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <div class="docs-layout">
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <div class="sidebar-group">
+          <div class="sidebar-group-title">Getting Started</div>
+          <a href="#" class="sidebar-link active">Introduction</a>
+          <a href="#" class="sidebar-link">Installation</a>
+          <a href="#" class="sidebar-link">Quick Start</a>
+          <a href="#" class="sidebar-link">Project Structure</a>
+        </div>
+        <div class="sidebar-group">
+          <div class="sidebar-group-title">Components</div>
+          <a href="#" class="sidebar-link">Button</a>
+          <a href="#" class="sidebar-link">Card</a>
+          <a href="#" class="sidebar-link">Dialog</a>
+          <a href="#" class="sidebar-link">Table</a>
+        </div>
+        <div class="sidebar-group">
+          <div class="sidebar-group-title">API Reference</div>
+          <a href="#" class="sidebar-link">Authentication</a>
+          <a href="#" class="sidebar-link">Endpoints</a>
+          <a href="#" class="sidebar-link">Error Handling</a>
+          <a href="#" class="sidebar-link">Rate Limits</a>
+        </div>
+        <div class="sidebar-group">
+          <div class="sidebar-group-title">Guides</div>
+          <a href="#" class="sidebar-link">Theming</a>
+          <a href="#" class="sidebar-link">Deployment</a>
+          <a href="#" class="sidebar-link">Migration v2 to v3</a>
+        </div>
+      </aside>
+
+      <!-- Content -->
+      <main class="content-area">
+        <div class="breadcrumb">
+          <a href="#">Docs</a> <span class="sep">/</span> <a href="#">Getting Started</a>
+          <span class="sep">/</span>
+          <span>Introduction</span>
+        </div>
+
+        <h1>Introduction</h1>
+        <p class="intro">
+          Welcome to the Vetra documentation. This guide will walk you through everything you need
+          to know to get started building with our platform, from initial setup to advanced
+          configuration.
+        </p>
+
+        <div class="on-this-page">
+          <div class="on-this-page-title">On this page</div>
+          <a href="#what-is-vetra">What is Vetra?</a>
+          <a href="#key-concepts">Key Concepts</a>
+          <a href="#installation">Installation</a>
+          <a href="#configuration">Configuration</a>
+          <a href="#button-props">Button Component Props</a>
+        </div>
+
+        <h2 id="what-is-vetra">What is Vetra?</h2>
+        <p>
+          Vetra is a comprehensive development platform that provides a unified interface for
+          building, deploying, and managing modern web applications. It combines a powerful
+          component library with backend services, authentication, and real-time data
+          synchronization.
+        </p>
+        <p>
+          Whether you are building a simple landing page or a complex enterprise dashboard, Vetra
+          provides the tools and patterns you need to ship with confidence. Our component library
+          follows accessibility best practices and supports full theming out of the box.
+        </p>
+
+        <div class="callout callout-tip">
+          <div class="callout-icon">&#10003;</div>
+          <div class="callout-content">
+            <strong>Tip</strong>
+            If you are new to Vetra, we recommend starting with the Quick Start guide. It walks you
+            through creating your first project in under five minutes and covers the most common
+            patterns you will use every day.
+          </div>
+        </div>
+
+        <h2 id="key-concepts">Key Concepts</h2>
+        <p>
+          Before diving into the code, it helps to understand a few core concepts that underpin the
+          Vetra platform. These patterns are used throughout the library and will make the rest of
+          the documentation easier to follow.
+        </p>
+        <p>
+          <strong>Workspaces</strong> are top-level containers that hold your projects, team
+          members, and configuration. Each workspace has its own billing plan, permissions model,
+          and environment variables. You can think of a workspace as an organization or company
+          account.
+        </p>
+        <p>
+          <strong>Components</strong> are the building blocks of your UI. Vetra ships with over 40
+          pre-built components that are fully typed, accessible, and themeable. Each component
+          accepts a consistent set of props for sizing, variants, and state management.
+        </p>
+        <p>
+          <strong>Hooks</strong> provide reactive data bindings for common operations like fetching
+          data, managing form state, and subscribing to real-time updates. They integrate seamlessly
+          with the component library and follow React conventions.
+        </p>
+
+        <div class="callout callout-warning">
+          <div class="callout-icon">!</div>
+          <div class="callout-content">
+            <strong>Warning</strong>
+            The v2 API is deprecated and will be removed in the next major release. If you are still
+            using v2 endpoints, please follow the
+            <a href="#" style="color: var(--primary); text-decoration: underline"
+              >Migration Guide</a
+            >
+            to upgrade before April 2026.
+          </div>
+        </div>
+
+        <h2 id="installation">Installation</h2>
+        <p>
+          Install Vetra using your preferred package manager. We recommend using npm or pnpm for the
+          best compatibility with our toolchain.
+        </p>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-filename">Terminal</span>
+            <button
+              class="code-copy"
+              onclick="navigator.clipboard.writeText('npm install @vetra/core @vetra/components')"
+            >
+              Copy
+            </button>
+          </div>
+          <div class="code-body">
+            <pre>
+# Install core packages
+npm install @vetra/core @vetra/components
+
+# Install optional peer dependencies
+npm install @vetra/icons @vetra/hooks</pre
+            >
+          </div>
+        </div>
+
+        <p>
+          Once installed, wrap your application with the <code>VetraProvider</code> component. This
+          sets up the theme context, provides default configuration, and initializes the real-time
+          connection if enabled.
+        </p>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-filename">app.tsx</span>
+            <button
+              class="code-copy"
+              onclick="
+                navigator.clipboard.writeText(
+                  this.closest('.code-block').querySelector('pre').textContent,
+                )
+              "
+            >
+              Copy
+            </button>
+          </div>
+          <div class="code-body">
+            <pre>
+import { VetraProvider } from '@vetra/core';
+import { Button, Card } from '@vetra/components';
+
+export default function App() {
+  return (
+    &lt;VetraProvider theme="light"&gt;
+      &lt;Card padding="lg"&gt;
+        &lt;h1&gt;Hello, Vetra!&lt;/h1&gt;
+        &lt;Button variant="primary" size="md"&gt;
+          Get Started
+        &lt;/Button&gt;
+      &lt;/Card&gt;
+    &lt;/VetraProvider&gt;
+  );
+}</pre
+            >
+          </div>
+        </div>
+
+        <h2 id="configuration">Configuration</h2>
+        <p>
+          Vetra can be configured through a <code>vetra.config.ts</code> file at the root of your
+          project. This file lets you customize the theme, set default component props, configure
+          API endpoints, and enable feature flags.
+        </p>
+        <p>
+          The configuration file is automatically detected and loaded at build time. All options
+          have sensible defaults, so you only need to specify the values you want to override.
+        </p>
+
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-filename">vetra.config.ts</span>
+            <button
+              class="code-copy"
+              onclick="
+                navigator.clipboard.writeText(
+                  this.closest('.code-block').querySelector('pre').textContent,
+                )
+              "
+            >
+              Copy
+            </button>
+          </div>
+          <div class="code-body">
+            <pre>
+import { defineConfig } from '@vetra/core';
+
+export default defineConfig({
+  theme: {
+    primary: '#04C161',
+    radius: 8,
+    fontFamily: 'Inter, sans-serif',
+  },
+  api: {
+    baseUrl: 'https://api.vetra.io/v3',
+    timeout: 10000,
+  },
+  features: {
+    realtime: true,
+    analytics: true,
+  },
+});</pre
+            >
+          </div>
+        </div>
+
+        <h2 id="button-props">Button Component Props</h2>
+        <p>
+          The <code>Button</code> component is one of the most commonly used components in the
+          library. Here is a complete reference of its accepted props.
+        </p>
+
+        <table class="props-table">
+          <thead>
+            <tr>
+              <th>Prop</th>
+              <th>Type</th>
+              <th>Default</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>variant</code></td>
+              <td class="type-badge">"primary" | "secondary" | "ghost" | "destructive"</td>
+              <td class="default-badge">"primary"</td>
+              <td>Visual style variant of the button</td>
+            </tr>
+            <tr>
+              <td><code>size</code></td>
+              <td class="type-badge">"sm" | "md" | "lg"</td>
+              <td class="default-badge">"md"</td>
+              <td>Controls padding and font size</td>
+            </tr>
+            <tr>
+              <td><code>disabled</code></td>
+              <td class="type-badge">boolean</td>
+              <td class="default-badge">false</td>
+              <td>Disables the button and applies muted styles</td>
+            </tr>
+            <tr>
+              <td><code>loading</code></td>
+              <td class="type-badge">boolean</td>
+              <td class="default-badge">false</td>
+              <td>Shows a spinner and disables interaction</td>
+            </tr>
+            <tr>
+              <td><code>icon</code></td>
+              <td class="type-badge">ReactNode</td>
+              <td class="default-badge">undefined</td>
+              <td>Icon element rendered before the button label</td>
+            </tr>
+            <tr>
+              <td><code>onClick</code></td>
+              <td class="type-badge">(e: MouseEvent) =&gt; void</td>
+              <td class="default-badge">undefined</td>
+              <td>Callback fired when the button is clicked</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- Prev / Next -->
+        <div class="prev-next">
+          <div></div>
+          <a href="#" class="next">
+            <div class="label">Next</div>
+            <div class="title">Installation &#8594;</div>
+          </a>
+        </div>
+      </main>
+    </div>
+  </body>
+</html>

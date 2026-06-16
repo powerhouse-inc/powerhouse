@@ -7,6 +7,7 @@ import {
 } from "@docusaurus/plugin-content-docs/client";
 import DocCard from "@theme/DocCard";
 import type { Props } from "@theme/DocCardList";
+import styles from "./styles.module.css";
 
 function DocCardListForCurrentSidebarCategory({ className }: Props) {
   const category = useCurrentSidebarCategory();
@@ -20,11 +21,9 @@ export default function DocCardList(props: Props): ReactNode {
   }
   const filteredItems = filterDocCardListItems(items);
   return (
-    <section className={clsx("doc-card-list", className)}>
+    <section className={clsx(styles.grid, className)}>
       {filteredItems.map((item, index) => (
-        <article key={index} className="doc-card-list-item margin-bottom--lg">
-          <DocCard item={item} />
-        </article>
+        <DocCard key={index} item={item} />
       ))}
     </section>
   );

@@ -58,10 +58,3 @@ The editor dispatches. The reducer computes. Never the other way around.
 An editor isn't just a component — it's a component paired with metadata that says which document type it handles. That pairing is called an <Term>editor module</Term>, and it lives in `editors/editors.ts`. Connect reads this registry at startup to know which UI to mount for each document type.
 
 The registration is generated for you during the codegen phase — you don't write it by hand. But it's worth knowing it exists, because a missing registration is the most common reason an editor doesn't appear in Connect.
-
-## Where to next
-
-<Cards>
-  <Card title="Your first editor" href="/academy/Learn/editors/your-first-editor" />
-  <Card title="Back to: Your first document model" href="/academy/Learn/document-models/your-first-document-model" />
-</Cards>

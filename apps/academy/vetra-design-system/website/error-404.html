@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>404 — Page Not Found — Vetra</title>
+    <link rel="stylesheet" href="../colors.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: 'Inter', sans-serif;
+        background: var(--background);
+        color: var(--foreground);
+        line-height: 1.6;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+      a {
+        text-decoration: none;
+        color: inherit;
+      }
+
+      /* Buttons */
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 10px 24px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-family: inherit;
+      }
+      .btn-primary {
+        background: var(--primary);
+        color: #fff;
+      }
+      .btn-primary:hover {
+        opacity: 0.9;
+        transform: translateY(-1px);
+      }
+      .btn-secondary {
+        background: var(--accent);
+        color: var(--foreground);
+      }
+      .btn-secondary:hover {
+        background: var(--muted);
+      }
+      .btn-lg {
+        padding: 14px 32px;
+        font-size: 16px;
+      }
+
+      /* Main Layout */
+      .error-page {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 48px 24px;
+        text-align: center;
+      }
+
+      /* 404 Number */
+      .error-code {
+        font-size: 160px;
+        font-weight: 800;
+        line-height: 1;
+        color: var(--primary);
+        opacity: 0.2;
+        letter-spacing: -8px;
+        margin-bottom: -16px;
+        user-select: none;
+      }
+
+      /* Heading */
+      .error-page h1 {
+        font-size: 32px;
+        font-weight: 800;
+        letter-spacing: -0.5px;
+        margin-bottom: 12px;
+      }
+      .error-page > p {
+        font-size: 16px;
+        color: var(--muted-foreground);
+        max-width: 420px;
+        margin-bottom: 32px;
+        line-height: 1.6;
+      }
+
+      /* Search */
+      .error-search {
+        position: relative;
+        width: 100%;
+        max-width: 400px;
+        margin-bottom: 28px;
+      }
+      .error-search input {
+        width: 100%;
+        padding: 14px 16px 14px 48px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        background: var(--card);
+        font-size: 15px;
+        font-family: inherit;
+        color: var(--foreground);
+        outline: none;
+        transition:
+          border-color 0.2s,
+          box-shadow 0.2s;
+      }
+      .error-search input:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px var(--primary-30);
+      }
+      .error-search input::placeholder {
+        color: var(--muted-foreground);
+      }
+      .error-search svg {
+        position: absolute;
+        left: 16px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 20px;
+        height: 20px;
+        color: var(--muted-foreground);
+      }
+
+      /* Action buttons */
+      .error-actions {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 56px;
+      }
+
+      /* Quick links */
+      .quick-links {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+        max-width: 560px;
+        width: 100%;
+        margin-bottom: 64px;
+      }
+      .quick-link {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        padding: 24px 16px;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        transition: all 0.2s;
+        cursor: pointer;
+      }
+      .quick-link:hover {
+        border-color: var(--primary-30);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+      }
+      .quick-link-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        background: var(--accent);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .quick-link-icon svg {
+        width: 20px;
+        height: 20px;
+        color: var(--foreground);
+      }
+      .quick-link span {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--foreground);
+      }
+
+      /* Bottom branding */
+      .error-footer {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--muted-foreground);
+        font-size: 13px;
+      }
+      .error-footer img {
+        height: 18px;
+        width: auto;
+        opacity: 0.5;
+      }
+      .logo-dark {
+        display: none;
+      }
+      body.dark .logo-light {
+        display: none;
+      }
+      body.dark .logo-dark {
+        display: inline;
+      }
+
+      @media (max-width: 600px) {
+        .error-code {
+          font-size: 100px;
+          letter-spacing: -4px;
+        }
+        .error-page h1 {
+          font-size: 24px;
+        }
+        .quick-links {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .error-actions {
+          flex-direction: column;
+          width: 100%;
+          max-width: 300px;
+        }
+        .error-actions .btn {
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="error-page">
+      <!-- Large 404 -->
+      <div class="error-code">404</div>
+
+      <!-- Heading -->
+      <h1>Page not found</h1>
+      <p>
+        The page you're looking for doesn't exist or has been moved. Try searching or head back to
+        familiar ground.
+      </p>
+
+      <!-- Search -->
+      <div class="error-search">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke-width="2"
+          stroke="currentColor"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"
+          />
+        </svg>
+        <input type="text" placeholder="Search for something..." />
+      </div>
+
+      <!-- Buttons -->
+      <div class="error-actions">
+        <a href="#" class="btn btn-primary btn-lg">Go Home</a>
+        <a
+          href="#"
+          class="btn btn-secondary btn-lg"
+          onclick="
+            history.back()
+            return false
+          "
+          >Go Back</a
+        >
+      </div>
+
+      <!-- Quick Links -->
+      <div class="quick-links">
+        <a href="#" class="quick-link">
+          <div class="quick-link-icon">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="2"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25"
+              />
+            </svg>
+          </div>
+          <span>Documentation</span>
+        </a>
+        <a href="#" class="quick-link">
+          <div class="quick-link-icon">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="2"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M12 7.5h1.5m-1.5 3h1.5m-7.5 3h7.5m-7.5 3h7.5m3-9h3.375c.621 0 1.125.504 1.125 1.125V18a2.25 2.25 0 0 1-2.25 2.25M16.5 7.5V18a2.25 2.25 0 0 0 2.25 2.25M16.5 7.5V4.875c0-.621-.504-1.125-1.125-1.125H4.125C3.504 3.75 3 4.254 3 4.875V18a2.25 2.25 0 0 0 2.25 2.25h13.5M6 7.5h3v3H6v-3Z"
+              />
+            </svg>
+          </div>
+          <span>Blog</span>
+        </a>
+        <a href="#" class="quick-link">
+          <div class="quick-link-icon">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="2"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 0 0-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 0 1-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 0 0 3 15h-.75M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm3 0h.008v.008H18V10.5Zm-12 0h.008v.008H6V10.5Z"
+              />
+            </svg>
+          </div>
+          <span>Pricing</span>
+        </a>
+        <a href="#" class="quick-link">
+          <div class="quick-link-icon">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="2"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75"
+              />
+            </svg>
+          </div>
+          <span>Contact</span>
+        </a>
+      </div>
+
+      <!-- Footer branding -->
+      <div class="error-footer">
+        <img src="../logos/vetra-full-logo.svg" alt="Vetra" height="18" class="logo-light" />
+        <img src="../logos/vetra-full-logo-light.svg" alt="Vetra" height="18" class="logo-dark" />
+        <span>&copy; 2026 Vetra. All rights reserved.</span>
+      </div>
+    </main>
+  </body>
+</html>

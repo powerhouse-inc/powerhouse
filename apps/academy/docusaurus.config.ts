@@ -5,7 +5,11 @@ import type * as Preset from "@docusaurus/preset-classic";
 const config: Config = {
   title: "Powerhouse Academy",
   tagline: "Get started with the Powerhouse ecosystem",
-  favicon: "img/ph-icon-light.svg",
+  favicon: "img/vetra-icon.svg",
+
+  stylesheets: [
+    "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap",
+  ],
 
   future: {
     v4: true,
@@ -150,18 +154,14 @@ const config: Config = {
     },
     navbar: {
       title: "",
+      // Brand is rendered by the swizzled src/theme/Navbar/Logo (icon + wordmark).
       logo: {
-        alt: "My Site Logo",
-        src: "img/Vetra-logo-dark.svg",
-        srcDark: "img/vetra-logo-light.svg",
+        alt: "Vetra",
+        src: "img/vetra-icon.svg",
+        srcDark: "img/vetra-icon.svg",
         href: "/",
       },
       items: [
-        {
-          to: "/learn",
-          label: "Learn",
-          position: "left",
-        },
         {
           href: "https://storybook.powerhouse.academy/",
           label: "Storybook",

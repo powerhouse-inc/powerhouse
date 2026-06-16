@@ -1,0 +1,743 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Help Center — Vetra</title>
+    <link rel="stylesheet" href="../colors.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: 'Inter', sans-serif;
+        background: var(--background);
+        color: var(--foreground);
+        line-height: 1.6;
+      }
+      a {
+        text-decoration: none;
+        color: inherit;
+      }
+
+      /* Buttons */
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 10px 24px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-family: inherit;
+      }
+      .btn-primary {
+        background: var(--primary);
+        color: #fff;
+      }
+      .btn-primary:hover {
+        opacity: 0.9;
+        transform: translateY(-1px);
+      }
+      .btn-secondary {
+        background: var(--accent);
+        color: var(--foreground);
+      }
+      .btn-secondary:hover {
+        background: var(--muted);
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+      .container-narrow {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+
+      /* Nav */
+      nav {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        background: var(--background);
+        border-bottom: 1px solid var(--border);
+      }
+      .nav-inner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 64px;
+      }
+      .nav-logo {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 700;
+        font-size: 18px;
+      }
+      .nav-logo img {
+        height: 24px;
+        width: auto;
+      }
+      .logo-dark {
+        display: none;
+      }
+      body.dark .logo-light {
+        display: none;
+      }
+      body.dark .logo-dark {
+        display: inline;
+      }
+      .nav-links {
+        display: flex;
+        align-items: center;
+        gap: 32px;
+      }
+      .nav-links a {
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--foreground);
+        transition: color 0.2s;
+      }
+      .nav-links a:hover {
+        color: var(--primary);
+      }
+
+      /* Hero */
+      .hero {
+        padding: 80px 0 64px;
+        text-align: center;
+        background: var(--accent);
+      }
+      .hero h1 {
+        font-size: 48px;
+        font-weight: 800;
+        letter-spacing: -1.5px;
+        margin-bottom: 12px;
+      }
+      .hero p {
+        font-size: 18px;
+        color: var(--muted-foreground);
+        margin-bottom: 36px;
+      }
+      .search-bar {
+        max-width: 560px;
+        margin: 0 auto;
+        position: relative;
+      }
+      .search-bar input {
+        width: 100%;
+        padding: 16px 20px 16px 52px;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        background: var(--card);
+        font-size: 16px;
+        font-family: inherit;
+        color: var(--foreground);
+        outline: none;
+        transition:
+          border-color 0.2s,
+          box-shadow 0.2s;
+      }
+      .search-bar input:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px var(--primary-30);
+      }
+      .search-bar input::placeholder {
+        color: var(--muted-foreground);
+      }
+      .search-bar svg {
+        position: absolute;
+        left: 18px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 20px;
+        height: 20px;
+        color: var(--muted-foreground);
+      }
+
+      /* Section helpers */
+      .section-label {
+        font-size: 13px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        color: var(--primary);
+        margin-bottom: 12px;
+      }
+      .section-title {
+        font-size: 36px;
+        font-weight: 800;
+        letter-spacing: -0.5px;
+        margin-bottom: 16px;
+      }
+      .section-subtitle {
+        font-size: 16px;
+        color: var(--muted-foreground);
+        margin-bottom: 48px;
+      }
+
+      /* Categories */
+      .categories {
+        padding: 72px 0;
+      }
+      .cat-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 24px;
+      }
+      .cat-card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 32px 24px;
+        text-align: center;
+        transition: all 0.2s;
+        cursor: pointer;
+      }
+      .cat-card:hover {
+        border-color: var(--primary-30);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+      }
+      .cat-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 14px;
+        margin: 0 auto 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .cat-icon svg {
+        width: 28px;
+        height: 28px;
+      }
+      .cat-card h3 {
+        font-size: 16px;
+        font-weight: 700;
+        margin-bottom: 6px;
+      }
+      .cat-card p {
+        font-size: 13px;
+        color: var(--muted-foreground);
+      }
+
+      /* FAQ Accordion */
+      .faq-section {
+        padding: 0 0 96px;
+      }
+      .faq-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+      }
+      .faq-item {
+        border-bottom: 1px solid var(--border);
+      }
+      .faq-item:first-child {
+        border-top: 1px solid var(--border);
+      }
+      .faq-question {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 24px 0;
+        cursor: pointer;
+        gap: 16px;
+      }
+      .faq-question h3 {
+        font-size: 16px;
+        font-weight: 600;
+        flex: 1;
+      }
+      .faq-toggle {
+        width: 28px;
+        height: 28px;
+        border-radius: 6px;
+        background: var(--accent);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        font-size: 18px;
+        font-weight: 500;
+        color: var(--muted-foreground);
+        transition: all 0.2s;
+      }
+      .faq-item.expanded .faq-toggle {
+        background: var(--primary-30);
+        color: var(--primary);
+      }
+      .faq-answer {
+        padding: 0 0 24px;
+        font-size: 15px;
+        color: var(--muted-foreground);
+        line-height: 1.7;
+        max-width: 680px;
+      }
+      .faq-item.collapsed .faq-answer {
+        display: none;
+      }
+
+      /* Still need help */
+      .help-section {
+        padding: 96px 0;
+        background: var(--accent);
+      }
+      .help-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 24px;
+        margin-top: 48px;
+      }
+      .help-card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 40px 32px;
+        display: flex;
+        gap: 20px;
+        align-items: flex-start;
+        transition: all 0.2s;
+      }
+      .help-card:hover {
+        border-color: var(--primary-30);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+      }
+      .help-card-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        background: var(--primary-30);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+      .help-card-icon svg {
+        width: 24px;
+        height: 24px;
+        color: var(--primary);
+      }
+      .help-card h3 {
+        font-size: 18px;
+        font-weight: 700;
+        margin-bottom: 8px;
+      }
+      .help-card p {
+        font-size: 14px;
+        color: var(--muted-foreground);
+        line-height: 1.6;
+        margin-bottom: 16px;
+      }
+      .help-card a {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--primary);
+      }
+      .help-card a:hover {
+        text-decoration: underline;
+      }
+
+      /* Footer */
+      footer {
+        border-top: 1px solid var(--border);
+        padding: 48px 0;
+      }
+      .footer-inner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .footer-left {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 14px;
+        color: var(--muted-foreground);
+      }
+      .footer-left img {
+        height: 20px;
+        width: auto;
+      }
+      .footer-links {
+        display: flex;
+        gap: 24px;
+      }
+      .footer-links a {
+        font-size: 13px;
+        color: var(--muted-foreground);
+        transition: color 0.2s;
+      }
+      .footer-links a:hover {
+        color: var(--foreground);
+      }
+
+      @media (max-width: 768px) {
+        .hero h1 {
+          font-size: 32px;
+        }
+        .cat-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .help-grid {
+          grid-template-columns: 1fr;
+        }
+        .nav-links {
+          display: none;
+        }
+      }
+      @media (max-width: 480px) {
+        .cat-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Navigation -->
+    <nav>
+      <div class="nav-inner container">
+        <a href="#" class="nav-logo">
+          <img src="../logos/vetra-full-logo.svg" alt="Vetra" height="24" class="logo-light" />
+          <img src="../logos/vetra-full-logo-light.svg" alt="Vetra" height="24" class="logo-dark" />
+        </a>
+        <div class="nav-links">
+          <a href="#">Product</a>
+          <a href="#">Docs</a>
+          <a href="#">Pricing</a>
+          <a href="#">Blog</a>
+          <a href="#" style="color: var(--primary); font-weight: 600">Help</a>
+          <a href="#" class="btn btn-primary">Get Started</a>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Hero -->
+    <section class="hero">
+      <div class="container">
+        <h1>Help Center</h1>
+        <p>Find answers, explore guides, and get the support you need.</p>
+        <div class="search-bar">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke-width="2"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"
+            />
+          </svg>
+          <input type="text" placeholder="Search articles, guides, and FAQs..." />
+        </div>
+      </div>
+    </section>
+
+    <!-- Categories -->
+    <section class="categories">
+      <div class="container">
+        <div class="cat-grid">
+          <div class="cat-card">
+            <div class="cat-icon" style="background: rgba(50, 157, 255, 0.15)">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="2"
+                stroke="#329DFF"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M15.59 14.37a6 6 0 0 1-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 0 0 6.16-12.12A14.98 14.98 0 0 0 9.631 8.41m5.96 5.96a14.926 14.926 0 0 1-5.841 2.58m-.119-8.54a6 6 0 0 0-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 0 0-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 0 1-2.448-2.448 14.9 14.9 0 0 1 .06-.312m-2.24 2.39a4.493 4.493 0 0 0-1.757 4.306 4.493 4.493 0 0 0 4.306-1.758M16.5 9a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z"
+                />
+              </svg>
+            </div>
+            <h3>Getting Started</h3>
+            <p>12 articles</p>
+          </div>
+          <div class="cat-card">
+            <div class="cat-icon" style="background: rgba(4, 193, 97, 0.15)">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="2"
+                stroke="var(--primary)"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"
+                />
+              </svg>
+            </div>
+            <h3>Account &amp; Billing</h3>
+            <p>18 articles</p>
+          </div>
+          <div class="cat-card">
+            <div class="cat-icon" style="background: rgba(52, 56, 57, 0.1)">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="2"
+                stroke="var(--foreground)"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M17.25 6.75 22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3-4.5 16.5"
+                />
+              </svg>
+            </div>
+            <h3>API &amp; Integrations</h3>
+            <p>24 articles</p>
+          </div>
+          <div class="cat-card">
+            <div class="cat-icon" style="background: rgba(234, 67, 53, 0.12)">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="2"
+                stroke="var(--destructive)"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M11.42 15.17 17.25 21A2.652 2.652 0 0 0 21 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 1 1-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 0 0 4.486-6.336l-3.276 3.277a3.004 3.004 0 0 1-2.25-2.25l3.276-3.276a4.5 4.5 0 0 0-6.336 4.486c.049.58.025 1.193-.14 1.743"
+                />
+              </svg>
+            </div>
+            <h3>Troubleshooting</h3>
+            <p>15 articles</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section class="faq-section">
+      <div class="container-narrow">
+        <p class="section-label">FAQ</p>
+        <h2 class="section-title">Frequently Asked Questions</h2>
+        <p class="section-subtitle">Quick answers to the questions we hear most often.</p>
+
+        <div class="faq-list">
+          <!-- Expanded -->
+          <div class="faq-item expanded">
+            <div class="faq-question">
+              <h3>What is Vetra and who is it for?</h3>
+              <span class="faq-toggle">&minus;</span>
+            </div>
+            <div class="faq-answer">
+              Vetra is a design infrastructure platform built for product teams. It helps designers
+              and developers collaborate seamlessly by providing a shared source of truth for design
+              tokens, components, and documentation. Whether you're a startup or an enterprise,
+              Vetra scales with your needs.
+            </div>
+          </div>
+
+          <!-- Collapsed -->
+          <div class="faq-item collapsed">
+            <div class="faq-question">
+              <h3>How does pricing work?</h3>
+              <span class="faq-toggle">+</span>
+            </div>
+            <div class="faq-answer">
+              We offer a free tier for small teams and individual designers. Paid plans start at
+              $12/user/month and include advanced features like version history, branching, and
+              custom integrations. Enterprise plans with SSO and dedicated support are available on
+              request.
+            </div>
+          </div>
+
+          <!-- Expanded -->
+          <div class="faq-item expanded">
+            <div class="faq-question">
+              <h3>Can I import my existing design tokens?</h3>
+              <span class="faq-toggle">&minus;</span>
+            </div>
+            <div class="faq-answer">
+              Absolutely. Vetra supports importing tokens from JSON, YAML, Style Dictionary, and
+              Figma. Our migration wizard walks you through the process step by step, and typically
+              takes less than 10 minutes for most design systems.
+            </div>
+          </div>
+
+          <!-- Collapsed -->
+          <div class="faq-item collapsed">
+            <div class="faq-question">
+              <h3>Does Vetra integrate with Figma?</h3>
+              <span class="faq-toggle">+</span>
+            </div>
+            <div class="faq-answer">
+              Yes, we have a native Figma plugin that syncs your design tokens bi-directionally.
+              Changes made in Figma are reflected in your codebase and vice versa, keeping your
+              design and development teams perfectly aligned.
+            </div>
+          </div>
+
+          <!-- Expanded -->
+          <div class="faq-item expanded">
+            <div class="faq-question">
+              <h3>What frameworks and platforms do you support?</h3>
+              <span class="faq-toggle">&minus;</span>
+            </div>
+            <div class="faq-answer">
+              Vetra generates code for React, Vue, Svelte, Angular, iOS (Swift), and Android
+              (Kotlin). We also provide CSS custom properties, SCSS variables, and Tailwind config
+              outputs. If your platform isn't listed, our API allows you to build custom
+              transformers.
+            </div>
+          </div>
+
+          <!-- Collapsed -->
+          <div class="faq-item collapsed">
+            <div class="faq-question">
+              <h3>Is there a free trial?</h3>
+              <span class="faq-toggle">+</span>
+            </div>
+            <div class="faq-answer">
+              Yes. All paid plans come with a 14-day free trial, no credit card required. You get
+              full access to all features during the trial period so you can evaluate Vetra with
+              your actual projects and workflows.
+            </div>
+          </div>
+
+          <!-- Collapsed -->
+          <div class="faq-item collapsed">
+            <div class="faq-question">
+              <h3>How secure is my data?</h3>
+              <span class="faq-toggle">+</span>
+            </div>
+            <div class="faq-answer">
+              Security is our top priority. All data is encrypted at rest and in transit using
+              AES-256 and TLS 1.3. We're SOC 2 Type II certified, conduct annual penetration tests,
+              and offer SSO with SAML 2.0 on enterprise plans.
+            </div>
+          </div>
+
+          <!-- Expanded -->
+          <div class="faq-item expanded">
+            <div class="faq-question">
+              <h3>Can I use Vetra with my existing CI/CD pipeline?</h3>
+              <span class="faq-toggle">&minus;</span>
+            </div>
+            <div class="faq-answer">
+              Yes. Vetra provides a CLI tool and GitHub Action that integrates directly into your
+              CI/CD workflow. You can automate token publishing, run visual regression checks, and
+              enforce design consistency as part of your pull request process.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Still Need Help -->
+    <section class="help-section">
+      <div class="container">
+        <div style="text-align: center">
+          <p class="section-label">Support</p>
+          <h2 class="section-title">Still need help?</h2>
+          <p class="section-subtitle" style="margin-left: auto; margin-right: auto">
+            Our team is here to assist. Choose the channel that works best for you.
+          </p>
+        </div>
+
+        <div class="help-grid">
+          <div class="help-card">
+            <div class="help-card-icon">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="2"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75"
+                />
+              </svg>
+            </div>
+            <div>
+              <h3>Email Support</h3>
+              <p>
+                Send us a message and our team will get back to you within 24 hours. Premium plans
+                enjoy priority response times of under 4 hours.
+              </p>
+              <a href="#">Send an email &rarr;</a>
+            </div>
+          </div>
+          <div class="help-card">
+            <div class="help-card-icon">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="2"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z"
+                />
+              </svg>
+            </div>
+            <div>
+              <h3>Community Forum</h3>
+              <p>
+                Join thousands of Vetra users sharing tips, workflows, and solutions. Search past
+                threads or start a new discussion to get peer support.
+              </p>
+              <a href="#">Visit the forum &rarr;</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+      <div class="footer-inner container">
+        <div class="footer-left">
+          <img src="../logos/vetra-full-logo.svg" alt="Vetra" height="20" class="logo-light" />
+          <img src="../logos/vetra-full-logo-light.svg" alt="Vetra" height="20" class="logo-dark" />
+          <span>&copy; 2026 Vetra. All rights reserved.</span>
+        </div>
+        <div class="footer-links">
+          <a href="#">Privacy</a>
+          <a href="#">Terms</a>
+          <a href="#">Security</a>
+          <a href="#">Status</a>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,777 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Blog — Vetra</title>
+    <link rel="stylesheet" href="../colors.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: 'Inter', sans-serif;
+        background: var(--background);
+        color: var(--foreground);
+        line-height: 1.6;
+      }
+      a {
+        text-decoration: none;
+        color: inherit;
+      }
+      img {
+        max-width: 100%;
+        display: block;
+      }
+
+      /* Buttons */
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 10px 24px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-family: inherit;
+      }
+      .btn-primary {
+        background: var(--primary);
+        color: #fff;
+      }
+      .btn-primary:hover {
+        opacity: 0.9;
+        transform: translateY(-1px);
+      }
+      .btn-secondary {
+        background: var(--accent);
+        color: var(--foreground);
+      }
+      .btn-secondary:hover {
+        background: var(--muted);
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+
+      /* Nav */
+      nav {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        background: var(--background);
+        border-bottom: 1px solid var(--border);
+      }
+      .nav-inner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 64px;
+      }
+      .nav-logo {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 700;
+        font-size: 18px;
+      }
+      .nav-logo img {
+        height: 24px;
+        width: auto;
+      }
+      .logo-dark {
+        display: none;
+      }
+      body.dark .logo-light {
+        display: none;
+      }
+      body.dark .logo-dark {
+        display: inline;
+      }
+      .nav-links {
+        display: flex;
+        align-items: center;
+        gap: 32px;
+      }
+      .nav-links a {
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--foreground);
+        transition: color 0.2s;
+      }
+      .nav-links a:hover {
+        color: var(--primary);
+      }
+
+      /* Hero */
+      .hero {
+        padding: 80px 0 64px;
+        text-align: center;
+      }
+      .hero h1 {
+        font-size: 48px;
+        font-weight: 800;
+        letter-spacing: -1.5px;
+        margin-bottom: 12px;
+      }
+      .hero p {
+        font-size: 18px;
+        color: var(--muted-foreground);
+        margin-bottom: 36px;
+      }
+      .subscribe-inline {
+        display: flex;
+        gap: 12px;
+        max-width: 480px;
+        margin: 0 auto;
+      }
+      .subscribe-inline input {
+        flex: 1;
+        padding: 12px 16px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: var(--card);
+        font-size: 14px;
+        font-family: inherit;
+        color: var(--foreground);
+        outline: none;
+        transition: border-color 0.2s;
+      }
+      .subscribe-inline input:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px var(--primary-30);
+      }
+      .subscribe-inline input::placeholder {
+        color: var(--muted-foreground);
+      }
+
+      /* Section helpers */
+      .section-label {
+        font-size: 13px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        color: var(--primary);
+        margin-bottom: 12px;
+      }
+      .section-title {
+        font-size: 32px;
+        font-weight: 800;
+        letter-spacing: -0.5px;
+        margin-bottom: 48px;
+      }
+
+      /* Featured Post */
+      .featured {
+        padding: 0 0 72px;
+      }
+      .featured-card {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 48px;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        overflow: hidden;
+      }
+      .featured-img {
+        background: linear-gradient(135deg, var(--primary-30), #d4f5e2);
+        min-height: 360px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--muted-foreground);
+        font-size: 14px;
+      }
+      .featured-content {
+        padding: 48px 48px 48px 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      }
+      .pill {
+        display: inline-flex;
+        padding: 4px 14px;
+        border-radius: 100px;
+        font-size: 12px;
+        font-weight: 600;
+        background: var(--primary-30);
+        color: var(--primary);
+        margin-bottom: 16px;
+        width: fit-content;
+      }
+      .featured-content h2 {
+        font-size: 28px;
+        font-weight: 800;
+        letter-spacing: -0.5px;
+        line-height: 1.2;
+        margin-bottom: 16px;
+      }
+      .featured-content .excerpt {
+        font-size: 15px;
+        color: var(--muted-foreground);
+        line-height: 1.7;
+        margin-bottom: 24px;
+      }
+      .author-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 24px;
+      }
+      .author-avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: var(--muted);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--muted-foreground);
+        flex-shrink: 0;
+      }
+      .author-info {
+        font-size: 13px;
+      }
+      .author-info strong {
+        font-weight: 600;
+        display: block;
+        color: var(--foreground);
+      }
+      .author-info span {
+        color: var(--muted-foreground);
+      }
+      .read-more {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--primary);
+      }
+      .read-more:hover {
+        text-decoration: underline;
+      }
+
+      /* Post Grid */
+      .post-grid-section {
+        padding: 0 0 72px;
+      }
+      .posts-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 24px;
+      }
+      .post-card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        overflow: hidden;
+        transition: all 0.2s;
+        display: flex;
+        flex-direction: column;
+      }
+      .post-card:hover {
+        border-color: var(--primary-30);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+      }
+      .post-img {
+        aspect-ratio: 16/9;
+        background: var(--accent);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--muted-foreground);
+        font-size: 13px;
+      }
+      .post-body {
+        padding: 20px;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+      }
+      .post-body .pill {
+        margin-bottom: 12px;
+        font-size: 11px;
+      }
+      .post-body h3 {
+        font-size: 16px;
+        font-weight: 700;
+        line-height: 1.3;
+        margin-bottom: 8px;
+      }
+      .post-body .post-excerpt {
+        font-size: 14px;
+        color: var(--muted-foreground);
+        line-height: 1.5;
+        margin-bottom: 16px;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        flex: 1;
+      }
+      .post-footer {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding-top: 16px;
+        border-top: 1px solid var(--border);
+      }
+      .post-footer .author-avatar {
+        width: 28px;
+        height: 28px;
+        font-size: 11px;
+      }
+      .post-footer .author-info {
+        font-size: 12px;
+      }
+
+      /* Topics */
+      .topics-section {
+        padding: 0 0 72px;
+      }
+      .tag-cloud {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 24px;
+      }
+      .tag-pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 8px 20px;
+        border-radius: 100px;
+        font-size: 14px;
+        font-weight: 500;
+        background: var(--accent);
+        color: var(--foreground);
+        border: 1px solid var(--border);
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .tag-pill:hover {
+        border-color: var(--primary);
+        color: var(--primary);
+        background: var(--primary-30);
+      }
+
+      /* Pagination */
+      .pagination {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        padding: 0 0 72px;
+      }
+      .page-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 500;
+        background: transparent;
+        color: var(--foreground);
+        border: 1px solid var(--border);
+        cursor: pointer;
+        transition: all 0.2s;
+        font-family: inherit;
+      }
+      .page-btn:hover {
+        border-color: var(--primary);
+        color: var(--primary);
+      }
+      .page-btn.active {
+        background: var(--primary);
+        color: #fff;
+        border-color: var(--primary);
+      }
+      .page-btn.nav-btn {
+        width: auto;
+        padding: 0 16px;
+        font-weight: 600;
+      }
+      .page-dots {
+        width: 40px;
+        text-align: center;
+        color: var(--muted-foreground);
+      }
+
+      /* Subscribe Banner */
+      .subscribe-banner {
+        background: var(--primary);
+        padding: 72px 0;
+      }
+      .subscribe-banner-inner {
+        text-align: center;
+      }
+      .subscribe-banner h2 {
+        font-size: 32px;
+        font-weight: 800;
+        color: #fff;
+        margin-bottom: 12px;
+        letter-spacing: -0.5px;
+      }
+      .subscribe-banner p {
+        font-size: 16px;
+        color: rgba(255, 255, 255, 0.8);
+        margin-bottom: 32px;
+      }
+      .subscribe-banner .subscribe-inline {
+        max-width: 480px;
+        margin: 0 auto;
+      }
+      .subscribe-banner input {
+        background: rgba(255, 255, 255, 0.15);
+        border-color: rgba(255, 255, 255, 0.25);
+        color: #fff;
+      }
+      .subscribe-banner input::placeholder {
+        color: rgba(255, 255, 255, 0.6);
+      }
+      .subscribe-banner input:focus {
+        border-color: #fff;
+        box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.2);
+      }
+      .subscribe-banner .btn {
+        background: #fff;
+        color: var(--primary);
+        font-weight: 700;
+      }
+      .subscribe-banner .btn:hover {
+        opacity: 0.95;
+      }
+
+      /* Footer */
+      footer {
+        border-top: 1px solid var(--border);
+        padding: 48px 0;
+      }
+      .footer-inner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .footer-left {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 14px;
+        color: var(--muted-foreground);
+      }
+      .footer-left img {
+        height: 20px;
+        width: auto;
+      }
+      .footer-links {
+        display: flex;
+        gap: 24px;
+      }
+      .footer-links a {
+        font-size: 13px;
+        color: var(--muted-foreground);
+        transition: color 0.2s;
+      }
+      .footer-links a:hover {
+        color: var(--foreground);
+      }
+
+      @media (max-width: 768px) {
+        .hero h1 {
+          font-size: 32px;
+        }
+        .featured-card {
+          grid-template-columns: 1fr;
+        }
+        .featured-content {
+          padding: 24px;
+        }
+        .posts-grid {
+          grid-template-columns: 1fr;
+        }
+        .subscribe-inline {
+          flex-direction: column;
+        }
+        .nav-links {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Navigation -->
+    <nav>
+      <div class="nav-inner container">
+        <a href="#" class="nav-logo">
+          <img src="../logos/vetra-full-logo.svg" alt="Vetra" height="24" class="logo-light" />
+          <img src="../logos/vetra-full-logo-light.svg" alt="Vetra" height="24" class="logo-dark" />
+        </a>
+        <div class="nav-links">
+          <a href="#">Product</a>
+          <a href="#">Docs</a>
+          <a href="#">Pricing</a>
+          <a href="#" style="color: var(--primary); font-weight: 600">Blog</a>
+          <a href="#">Careers</a>
+          <a href="#" class="btn btn-primary">Get Started</a>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Hero -->
+    <section class="hero">
+      <div class="container">
+        <h1>Vetra Blog</h1>
+        <p>
+          Insights on design systems, engineering, product thinking, and building for the future.
+        </p>
+        <div class="subscribe-inline">
+          <input type="email" placeholder="Enter your email address" />
+          <button class="btn btn-primary">Subscribe</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Featured Post -->
+    <section class="featured">
+      <div class="container">
+        <div class="featured-card">
+          <div class="featured-img">Featured post image &mdash; 600 &times; 360</div>
+          <div class="featured-content">
+            <span class="pill">Design Systems</span>
+            <h2>The Future of Design Tokens: Why Interoperability Matters</h2>
+            <p class="excerpt">
+              Design tokens are the atomic building blocks of any design system. But as teams scale
+              across platforms and frameworks, the real challenge isn't creating tokens — it's
+              making them work everywhere. Here's how we're approaching interoperability at Vetra.
+            </p>
+            <div class="author-row">
+              <div class="author-avatar">SL</div>
+              <div class="author-info">
+                <strong>Sarah Lindqvist</strong>
+                <span>March 8, 2026 &middot; 8 min read</span>
+              </div>
+            </div>
+            <a href="#" class="read-more">Read more &rarr;</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Post Grid -->
+    <section class="post-grid-section">
+      <div class="container">
+        <h2 class="section-title">Latest Posts</h2>
+        <div class="posts-grid">
+          <!-- Post 1 -->
+          <article class="post-card">
+            <div class="post-img" style="background: linear-gradient(135deg, #dff5e3, #f3f5f7)">
+              Post image
+            </div>
+            <div class="post-body">
+              <span class="pill">Engineering</span>
+              <h3>How We Reduced Build Times by 70% with Incremental Compilation</h3>
+              <p class="post-excerpt">
+                Our design system compiler was getting slow. Here's the architectural change that
+                made everything fast again — and what we learned along the way.
+              </p>
+              <div class="post-footer">
+                <div class="author-avatar">MK</div>
+                <div class="author-info">
+                  <strong>Marcus Kim</strong>
+                  <span>March 5, 2026</span>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <!-- Post 2 -->
+          <article class="post-card">
+            <div class="post-img" style="background: linear-gradient(135deg, #fff3e0, #f3f5f7)">
+              Post image
+            </div>
+            <div class="post-body">
+              <span class="pill">Product</span>
+              <h3>Introducing Branching: Version Control for Your Design System</h3>
+              <p class="post-excerpt">
+                Today we're launching branching — a feature that lets design and engineering teams
+                experiment without breaking production.
+              </p>
+              <div class="post-footer">
+                <div class="author-avatar">AN</div>
+                <div class="author-info">
+                  <strong>Aisha Nkomo</strong>
+                  <span>February 28, 2026</span>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <!-- Post 3 -->
+          <article class="post-card">
+            <div class="post-img" style="background: linear-gradient(135deg, #d4f5e2, #f3f5f7)">
+              Post image
+            </div>
+            <div class="post-body">
+              <span class="pill">Accessibility</span>
+              <h3>Building Accessible Color Systems That Scale</h3>
+              <p class="post-excerpt">
+                Contrast ratios, perceptual uniformity, and automated checks — how we baked
+                accessibility into Vetra's color pipeline from day one.
+              </p>
+              <div class="post-footer">
+                <div class="author-avatar">JR</div>
+                <div class="author-info">
+                  <strong>Jamie Reeves</strong>
+                  <span>February 22, 2026</span>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <!-- Post 4 -->
+          <article class="post-card">
+            <div class="post-img" style="background: linear-gradient(135deg, #e0f0ff, #f3f5f7)">
+              Post image
+            </div>
+            <div class="post-body">
+              <span class="pill">Open Source</span>
+              <h3>Why We Open-Sourced Our Token Transformer</h3>
+              <p class="post-excerpt">
+                Open source isn't just a strategy for us — it's how we believe design infrastructure
+                should be built. Here's why we gave away our core technology.
+              </p>
+              <div class="post-footer">
+                <div class="author-avatar">SL</div>
+                <div class="author-info">
+                  <strong>Sarah Lindqvist</strong>
+                  <span>February 15, 2026</span>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <!-- Post 5 -->
+          <article class="post-card">
+            <div class="post-img" style="background: linear-gradient(135deg, #ffe0e6, #f3f5f7)">
+              Post image
+            </div>
+            <div class="post-body">
+              <span class="pill">Culture</span>
+              <h3>Lessons from Our First Year of Being Fully Remote</h3>
+              <p class="post-excerpt">
+                We went remote-first on day one. One year later, here are the rituals, tools, and
+                habits that actually work — and the ones we dropped.
+              </p>
+              <div class="post-footer">
+                <div class="author-avatar">DW</div>
+                <div class="author-info">
+                  <strong>David Walsh</strong>
+                  <span>February 8, 2026</span>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <!-- Post 6 -->
+          <article class="post-card">
+            <div class="post-img" style="background: linear-gradient(135deg, #f0f0f0, #f3f5f7)">
+              Post image
+            </div>
+            <div class="post-body">
+              <span class="pill">DevOps</span>
+              <h3>Deploying Design Tokens at Scale with GitHub Actions</h3>
+              <p class="post-excerpt">
+                A deep dive into our CI/CD pipeline that publishes tokens to npm, syncs with Figma,
+                and runs visual regression tests — all automatically.
+              </p>
+              <div class="post-footer">
+                <div class="author-avatar">LP</div>
+                <div class="author-info">
+                  <strong>Lisa Park</strong>
+                  <span>February 1, 2026</span>
+                </div>
+              </div>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- Topics -->
+    <section class="topics-section">
+      <div class="container">
+        <p class="section-label">Explore</p>
+        <h2 style="font-size: 24px; font-weight: 800; margin-bottom: 0">Topics</h2>
+        <div class="tag-cloud">
+          <span class="tag-pill">Design Systems</span>
+          <span class="tag-pill">Engineering</span>
+          <span class="tag-pill">Product</span>
+          <span class="tag-pill">Open Source</span>
+          <span class="tag-pill">Culture</span>
+          <span class="tag-pill">Accessibility</span>
+          <span class="tag-pill">Performance</span>
+          <span class="tag-pill">DevOps</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Pagination -->
+    <div class="pagination">
+      <button class="page-btn nav-btn">&larr; Previous</button>
+      <button class="page-btn active">1</button>
+      <button class="page-btn">2</button>
+      <button class="page-btn">3</button>
+      <span class="page-dots">&hellip;</span>
+      <button class="page-btn">12</button>
+      <button class="page-btn nav-btn">Next &rarr;</button>
+    </div>
+
+    <!-- Subscribe Banner -->
+    <section class="subscribe-banner">
+      <div class="subscribe-banner-inner container">
+        <h2>Subscribe to our newsletter</h2>
+        <p>Get the latest posts delivered straight to your inbox. No spam, unsubscribe anytime.</p>
+        <div class="subscribe-inline">
+          <input type="email" placeholder="Enter your email address" />
+          <button class="btn">Subscribe</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+      <div class="footer-inner container">
+        <div class="footer-left">
+          <img src="../logos/vetra-full-logo.svg" alt="Vetra" height="20" class="logo-light" />
+          <img src="../logos/vetra-full-logo-light.svg" alt="Vetra" height="20" class="logo-dark" />
+          <span>&copy; 2026 Vetra. All rights reserved.</span>
+        </div>
+        <div class="footer-links">
+          <a href="#">Privacy</a>
+          <a href="#">Terms</a>
+          <a href="#">Security</a>
+          <a href="#">Status</a>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

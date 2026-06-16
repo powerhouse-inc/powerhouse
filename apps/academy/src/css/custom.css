@@ -4,35 +4,114 @@
  * work well for content-centric websites.
  */
 
-/* You can override the default Infima variables here. */
+/* ─────────────────────────────────────────────────────────────────────
+   Vetra design system → Infima
+   Tokens mirror apps/academy/vetra-design-system/colors.css; Infima
+   variables are mapped onto them so the whole theme follows the system.
+   ───────────────────────────────────────────────────────────────────── */
 :root {
-  --ifm-color-primary: #1a1a1b;
-  --ifm-color-primary-dark: #1a1a1b;
-  --ifm-color-primary-darker: #1a1a1b;
-  --ifm-color-primary-darkest: #1a1a1b;
-  --ifm-color-primary-light: #1a1a1b;
-  --ifm-color-primary-lighter: #1a1a1b;
-  --ifm-color-primary-lightest: #1a1a1b;
+  /* Design-system tokens (light) */
+  --primary: #04c161;
+  --primary-foreground: #ffffff;
+  --background: #fcfcfc;
+  --foreground: #343839;
+  --card: #ffffff;
+  --card-foreground: #343839;
+  --muted: #efefef;
+  --muted-foreground: #9ea0a1;
+  --border: #d7d8d9;
+  --accent: #f3f5f7;
+  --secondary: #f4f4f4;
+  --destructive: #ea4335;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  /* Infima ← tokens */
+  --ifm-color-primary: #04c161;
+  --ifm-color-primary-dark: #04ae57;
+  --ifm-color-primary-darker: #04a452;
+  --ifm-color-primary-darkest: #038743;
+  --ifm-color-primary-light: #20c970;
+  --ifm-color-primary-lighter: #2ccd78;
+  --ifm-color-primary-lightest: #57d997;
+
+  --ifm-background-color: #fcfcfc;
+  --ifm-background-surface-color: #ffffff;
+  --ifm-font-color-base: #343839;
+  --ifm-heading-color: #343839;
+  --ifm-card-background-color: #ffffff;
+  --ifm-color-emphasis-100: #f4f4f4;
+  --ifm-color-emphasis-200: #d7d8d9;
+  --ifm-color-emphasis-300: #c8c9ca;
+  --ifm-toc-border-color: #d7d8d9;
+  --ifm-hr-border-color: #d7d8d9;
+
+  --ifm-font-family-base: "Inter", -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, sans-serif;
+  --ifm-font-family-monospace: "SF Mono", "Fira Code", "Consolas", monospace;
+  --ifm-global-radius: 12px;
   --ifm-code-font-size: 95%;
   --ifm-link-decoration: none;
   --ifm-link-hover-decoration: none;
-  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
-  --toc-color: #555; /* Muted black for inactive items */
-  --toc-color-active: #1a1a1b; /* Black for active items */
+
+  --docusaurus-highlighted-code-line-bg: rgba(4, 193, 97, 0.1);
+  --toc-color: var(--ifm-color-emphasis-600);
+  --toc-color-active: var(--foreground);
+
+  /* Green is reserved for brand/primary actions (buttons, logo, accents).
+     Sidebar, TOC and functional/navigation links stay neutral foreground. */
+  --ifm-link-color: var(--foreground);
+  --ifm-menu-color-active: var(--foreground);
+  --ifm-navbar-link-hover-color: var(--foreground);
+  --ifm-breadcrumb-color-active: var(--foreground);
 }
 
-/* For readability concerns, you should choose a lighter palette in dark mode. */
 [data-theme="dark"] {
-  --ifm-color-primary: #ffffff;
-  --ifm-color-primary-dark: #ffffff;
-  --ifm-color-primary-darker: #ffffff;
-  --ifm-color-primary-darkest: #ffffff;
-  --ifm-color-primary-light: #ffffff;
-  --ifm-color-primary-lighter: #ffffff;
-  --ifm-color-primary-lightest: #ffffff;
-  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
-  --toc-color: #ccc; /* Light grey for inactive items */
-  --toc-color-active: #ffffff; /* White for active items */
+  /* Design-system tokens (dark) */
+  --primary: #04c161;
+  --primary-foreground: #ffffff;
+  --background: #1b1e24;
+  --foreground: #fcfcfc;
+  --card: #252a34;
+  --card-foreground: #f3f5f7;
+  --muted: #343839;
+  --muted-foreground: #6c7275;
+  --border: #485265;
+  --accent: #373e4d;
+  --secondary: #4f596f;
+  --destructive: #ea4335;
+
+  /* Infima ← tokens */
+  --ifm-color-primary: #04c161;
+  --ifm-color-primary-dark: #04ae57;
+  --ifm-color-primary-darker: #04a452;
+  --ifm-color-primary-darkest: #038743;
+  --ifm-color-primary-light: #20c970;
+  --ifm-color-primary-lighter: #2ccd78;
+  --ifm-color-primary-lightest: #57d997;
+
+  --ifm-background-color: #1b1e24;
+  --ifm-background-surface-color: #252a34;
+  --ifm-font-color-base: #fcfcfc;
+  --ifm-heading-color: #fcfcfc;
+  --ifm-card-background-color: #252a34;
+  --ifm-color-emphasis-100: #252a34;
+  --ifm-color-emphasis-200: #485265;
+  --ifm-color-emphasis-300: #5a6478;
+  --ifm-toc-border-color: #485265;
+  --ifm-hr-border-color: #485265;
+
+  --docusaurus-highlighted-code-line-bg: rgba(4, 193, 97, 0.16);
+  --toc-color: var(--ifm-color-emphasis-600);
+  --toc-color-active: var(--foreground);
+
+  /* Green is reserved for brand/primary actions; functional links stay neutral. */
+  --ifm-link-color: var(--foreground);
+  --ifm-menu-color-active: var(--foreground);
+  --ifm-navbar-link-hover-color: var(--foreground);
+  --ifm-breadcrumb-color-active: var(--foreground);
 }
 
 @font-face {
@@ -82,25 +161,26 @@ html[data-theme="dark"] .hero__subtitle {
 
 /* Dark mode styles */
 html[data-theme="dark"] {
-  --ifm-background-color: #1a1a1b;
-  --ifm-background-surface-color: #1a1a1b;
+  --ifm-background-color: #1b1e24;
+  --ifm-background-surface-color: #1b1e24;
 }
 
 /* If you want to affect specific elements, you can add more specific rules */
 html[data-theme="dark"] .main-wrapper {
-  background-color: #1a1a1b;
+  background-color: #1b1e24;
 }
 
 html[data-theme="dark"] .navbar {
-  background-color: #1a1a1b;
+  background-color: #1b1e24;
 }
 
+
 html[data-theme="dark"] .footer {
-  background-color: #1a1a1b;
+  background-color: #1b1e24;
 }
 
 html[data-theme="light"] .footer {
-  background-color: #f5f5f5;
+  background-color: #f4f4f4;
 }
 
 /* Light theme styles for footer */
@@ -270,7 +350,7 @@ article > a,
 }
 
 .path-button {
-  background-color: #f5f5f5;
+  background-color: #f4f4f4;
   border: 1px solid #e0e0e0;
   border-radius: 8px;
   padding: 1rem 2rem;
@@ -350,15 +430,15 @@ article > a,
 
 /* Algolia DocSearch Dark Mode Styles */
 html[data-theme="dark"] .DocSearch-Hits {
-  background-color: #1a1a1b !important;
+  background-color: #1b1e24 !important;
 }
 
 html[data-theme="dark"] .DocSearch-Hit {
-  background-color: #1a1a1b !important;
+  background-color: #1b1e24 !important;
 }
 
 html[data-theme="dark"] .DocSearch-Hit-source {
-  background-color: #1a1a1b !important;
+  background-color: #1b1e24 !important;
   color: #ffffff !important;
 }
 
@@ -387,11 +467,11 @@ html[data-theme="dark"] .DocSearch-Hit[aria-selected="true"] {
 }
 
 html[data-theme="dark"] .DocSearch-Modal {
-  background-color: #1a1a1b !important;
+  background-color: #1b1e24 !important;
 }
 
 html[data-theme="dark"] .DocSearch-SearchBar {
-  background-color: #1a1a1b !important;
+  background-color: #1b1e24 !important;
 }
 
 html[data-theme="dark"] .DocSearch-Form {
@@ -411,7 +491,7 @@ html[data-theme="dark"] .DocSearch-Cancel {
 }
 
 html[data-theme="dark"] .DocSearch-Hit:first-child {
-  background-color: #1a1a1b !important;
+  background-color: #1b1e24 !important;
 }
 
 html[data-theme="dark"] .DocSearch-Hit--empty,
@@ -419,18 +499,18 @@ html[data-theme="dark"] .DocSearch-Hit[aria-label="No results"],
 html[data-theme="dark"] .DocSearch-Hit-content-wrapper:empty,
 html[data-theme="dark"] .DocSearch-Hit[style*="background-color: white"],
 html[data-theme="dark"] .DocSearch-Hit {
-  background-color: #1a1a1b !important;
+  background-color: #1b1e24 !important;
   color: #ffffff !important;
 }
 
 html[data-theme="dark"] .DocSearch-Hits > * {
-  background-color: #1a1a1b !important;
+  background-color: #1b1e24 !important;
   color: #ffffff !important;
-  border-color: #1a1a1b !important;
+  border-color: #1b1e24 !important;
 }
 
 html[data-theme="dark"] .DocSearch-Hits > *:empty {
-  background-color: #1a1a1b !important;
+  background-color: #1b1e24 !important;
   color: #ffffff !important;
   min-height: 48px; /* or whatever height matches the box */
   border-radius: 8px;

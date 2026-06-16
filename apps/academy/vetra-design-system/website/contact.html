@@ -1,0 +1,644 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Contact Us — Vetra</title>
+    <link rel="stylesheet" href="../colors.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family:
+          'Inter',
+          -apple-system,
+          BlinkMacSystemFont,
+          sans-serif;
+        background: var(--background);
+        color: var(--foreground);
+        line-height: 1.6;
+        transition:
+          background 0.3s,
+          color 0.3s;
+      }
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      /* Nav */
+      .nav {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        background: var(--background);
+        border-bottom: 1px solid var(--border);
+        backdrop-filter: blur(12px);
+      }
+      .nav-inner {
+        max-width: 1200px;
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 24px;
+        height: 64px;
+      }
+      .nav-left {
+        display: flex;
+        align-items: center;
+        gap: 32px;
+      }
+      .nav-logo {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 700;
+        font-size: 18px;
+      }
+      .nav-logo img {
+        height: 24px;
+        width: auto;
+      }
+      .logo-dark {
+        display: none;
+      }
+      body.dark .logo-light {
+        display: none;
+      }
+      body.dark .logo-dark {
+        display: inline;
+      }
+      .nav-links {
+        display: flex;
+        gap: 24px;
+      }
+      .nav-links a {
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--muted-foreground);
+        transition: color 0.2s;
+      }
+      .nav-links a:hover,
+      .nav-links a.active {
+        color: var(--foreground);
+      }
+      .nav-right {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      .theme-toggle {
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: var(--card);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        transition: all 0.2s;
+      }
+      .theme-toggle:hover {
+        background: var(--accent);
+      }
+
+      /* Buttons */
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 10px 24px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-family: inherit;
+      }
+      .btn-primary {
+        background: var(--primary);
+        color: #fff;
+      }
+      .btn-primary:hover {
+        opacity: 0.9;
+        transform: translateY(-1px);
+      }
+      .btn-secondary {
+        background: var(--accent);
+        color: var(--foreground);
+      }
+      .btn-secondary:hover {
+        background: var(--border);
+      }
+
+      /* Hero */
+      .hero {
+        text-align: center;
+        padding: 80px 24px 64px;
+        max-width: 680px;
+        margin: 0 auto;
+      }
+      .hero h1 {
+        font-size: 48px;
+        font-weight: 800;
+        letter-spacing: -1px;
+        margin-bottom: 16px;
+      }
+      .hero p {
+        font-size: 18px;
+        color: var(--muted-foreground);
+        line-height: 1.7;
+      }
+
+      /* Contact Cards */
+      .contact-cards {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 24px 80px;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 24px;
+      }
+      .contact-card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 40px 32px;
+        text-align: center;
+        transition:
+          transform 0.2s,
+          box-shadow 0.2s;
+      }
+      .contact-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
+      }
+      .contact-card-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background: var(--primary-30);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 20px;
+        font-size: 24px;
+      }
+      .contact-card h3 {
+        font-size: 14px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--muted-foreground);
+        margin-bottom: 8px;
+      }
+      .contact-card p {
+        font-size: 16px;
+        font-weight: 600;
+      }
+      .contact-card a {
+        color: var(--primary);
+      }
+
+      /* Form Section */
+      .form-section {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 24px 96px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 64px;
+      }
+      .form-section h2 {
+        font-size: 32px;
+        font-weight: 700;
+        margin-bottom: 8px;
+      }
+      .form-section .subtitle {
+        color: var(--muted-foreground);
+        margin-bottom: 32px;
+        font-size: 15px;
+      }
+      .form-group {
+        margin-bottom: 20px;
+      }
+      .form-group label {
+        display: block;
+        font-size: 14px;
+        font-weight: 600;
+        margin-bottom: 6px;
+      }
+      .form-group input,
+      .form-group select,
+      .form-group textarea {
+        width: 100%;
+        padding: 12px 16px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: var(--input);
+        color: var(--foreground);
+        font-family: inherit;
+        font-size: 14px;
+        transition: border-color 0.2s;
+      }
+      .form-group input:focus,
+      .form-group select:focus,
+      .form-group textarea:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px var(--primary-30);
+      }
+      .form-group textarea {
+        resize: vertical;
+        min-height: 140px;
+      }
+      .form-group select {
+        cursor: pointer;
+      }
+
+      .info-side h3 {
+        font-size: 18px;
+        font-weight: 700;
+        margin-bottom: 12px;
+        margin-top: 32px;
+      }
+      .info-side h3:first-child {
+        margin-top: 0;
+      }
+      .info-side p {
+        font-size: 14px;
+        color: var(--muted-foreground);
+        line-height: 1.7;
+      }
+      .map-placeholder {
+        width: 100%;
+        height: 200px;
+        border-radius: 12px;
+        background: var(--accent);
+        border: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--muted-foreground);
+        font-size: 14px;
+        margin-top: 16px;
+      }
+      .office-hours {
+        margin-top: 16px;
+      }
+      .office-hours li {
+        list-style: none;
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 0;
+        border-bottom: 1px solid var(--border);
+        font-size: 14px;
+      }
+      .office-hours li span:last-child {
+        font-weight: 600;
+      }
+
+      /* FAQ Section */
+      .faq-section {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 24px 96px;
+      }
+      .faq-section h2 {
+        font-size: 28px;
+        font-weight: 700;
+        text-align: center;
+        margin-bottom: 40px;
+      }
+      .faq-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+      }
+      .faq-card {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 20px 24px;
+        border-radius: 12px;
+        background: var(--card);
+        border: 1px solid var(--border);
+        transition: all 0.2s;
+        cursor: pointer;
+      }
+      .faq-card:hover {
+        border-color: var(--primary);
+        background: var(--accent);
+      }
+      .faq-card-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        flex-shrink: 0;
+        background: var(--accent);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        color: var(--primary);
+      }
+      .faq-card span {
+        font-size: 14px;
+        font-weight: 500;
+      }
+      .faq-card-arrow {
+        margin-left: auto;
+        color: var(--muted-foreground);
+        font-size: 18px;
+      }
+
+      /* Footer */
+      .footer {
+        border-top: 1px solid var(--border);
+        padding: 48px 24px;
+        background: var(--card);
+      }
+      .footer-inner {
+        max-width: 1200px;
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: 2fr 1fr 1fr 1fr;
+        gap: 48px;
+      }
+      .footer-brand p {
+        color: var(--muted-foreground);
+        font-size: 14px;
+        margin-top: 12px;
+        line-height: 1.6;
+      }
+      .footer-col h4 {
+        font-size: 13px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 16px;
+        color: var(--muted-foreground);
+      }
+      .footer-col a {
+        display: block;
+        font-size: 14px;
+        color: var(--foreground);
+        padding: 4px 0;
+        transition: color 0.2s;
+      }
+      .footer-col a:hover {
+        color: var(--primary);
+      }
+      .footer-bottom {
+        max-width: 1200px;
+        margin: 32px auto 0;
+        padding-top: 24px;
+        border-top: 1px solid var(--border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 13px;
+        color: var(--muted-foreground);
+      }
+
+      @media (max-width: 768px) {
+        .contact-cards {
+          grid-template-columns: 1fr;
+        }
+        .form-section {
+          grid-template-columns: 1fr;
+          gap: 40px;
+        }
+        .faq-grid {
+          grid-template-columns: 1fr;
+        }
+        .footer-inner {
+          grid-template-columns: 1fr 1fr;
+          gap: 32px;
+        }
+        .hero h1 {
+          font-size: 36px;
+        }
+        .nav-links {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Nav -->
+    <nav class="nav">
+      <div class="nav-inner">
+        <div class="nav-left">
+          <a href="#" class="nav-logo">
+            <img src="../logos/vetra-full-logo.svg" alt="Vetra" height="24" class="logo-light" />
+            <img
+              src="../logos/vetra-full-logo-light.svg"
+              alt="Vetra"
+              height="24"
+              class="logo-dark"
+            />
+          </a>
+          <div class="nav-links">
+            <a href="product.html">Product</a>
+            <a href="documentation.html">Docs</a>
+            <a href="dashboard.html">Dashboard</a>
+            <a href="contact.html" class="active">Contact</a>
+          </div>
+        </div>
+        <div class="nav-right">
+          <button
+            class="theme-toggle"
+            onclick="
+              document.body.classList.toggle('dark')
+              this.textContent = document.body.classList.contains('dark') ? '&#9790;' : '&#9788;'
+            "
+            aria-label="Toggle theme"
+          >
+            &#9788;
+          </button>
+          <a href="#contact-form" class="btn btn-primary">Get in Touch</a>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Hero -->
+    <section class="hero">
+      <h1>Get in Touch</h1>
+      <p>
+        We would love to hear from you. Whether you have a question about features, pricing, or
+        anything else, our team is ready to answer all your questions.
+      </p>
+    </section>
+
+    <!-- Contact Cards -->
+    <section class="contact-cards">
+      <div class="contact-card">
+        <div class="contact-card-icon">&#9993;</div>
+        <h3>Email</h3>
+        <p><a href="mailto:hello@vetra.io">hello@vetra.io</a></p>
+      </div>
+      <div class="contact-card">
+        <div class="contact-card-icon">&#9742;</div>
+        <h3>Phone</h3>
+        <p><a href="tel:+14155550132">+1 (415) 555-0132</a></p>
+      </div>
+      <div class="contact-card">
+        <div class="contact-card-icon">&#9962;</div>
+        <h3>Office</h3>
+        <p>350 Mission St, Suite 400<br />San Francisco, CA 94105</p>
+      </div>
+    </section>
+
+    <!-- Contact Form -->
+    <section class="form-section" id="contact-form">
+      <div class="form-side">
+        <h2>Send us a message</h2>
+        <p class="subtitle">Fill out the form below and we will get back to you within 24 hours.</p>
+        <form
+          onsubmit="
+            event.preventDefault()
+            alert('Message sent!')
+          "
+        >
+          <div class="form-group">
+            <label for="name">Full Name</label>
+            <input type="text" id="name" placeholder="Alice Johnson" />
+          </div>
+          <div class="form-group">
+            <label for="email">Email Address</label>
+            <input type="email" id="email" placeholder="alice@company.com" />
+          </div>
+          <div class="form-group">
+            <label for="subject">Subject</label>
+            <select id="subject">
+              <option value="" disabled selected>Choose a subject</option>
+              <option>General Inquiry</option>
+              <option>Sales &amp; Pricing</option>
+              <option>Technical Support</option>
+              <option>Partnership Opportunities</option>
+              <option>Bug Report</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="message">Message</label>
+            <textarea id="message" placeholder="Tell us how we can help..."></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary" style="width: 100%">Send Message</button>
+        </form>
+      </div>
+      <div class="info-side">
+        <h3>Our Office</h3>
+        <p>
+          Vetra Headquarters<br />350 Mission Street, Suite 400<br />San Francisco, CA 94105<br />United
+          States
+        </p>
+        <div class="map-placeholder">
+          <span>&#127758; Map placeholder</span>
+        </div>
+        <h3>Office Hours</h3>
+        <ul class="office-hours">
+          <li><span>Monday - Friday</span><span>9:00 AM - 6:00 PM</span></li>
+          <li><span>Saturday</span><span>10:00 AM - 2:00 PM</span></li>
+          <li><span>Sunday</span><span>Closed</span></li>
+        </ul>
+        <h3>Response Times</h3>
+        <p>
+          General inquiries are typically answered within 24 hours. Technical support requests are
+          prioritized and handled within 4 hours during business hours.
+        </p>
+      </div>
+    </section>
+
+    <!-- FAQ Quick Links -->
+    <section class="faq-section">
+      <h2>Frequently Asked Questions</h2>
+      <div class="faq-grid">
+        <a href="#" class="faq-card">
+          <div class="faq-card-icon">?</div>
+          <span>How do I reset my password?</span>
+          <span class="faq-card-arrow">&#8594;</span>
+        </a>
+        <a href="#" class="faq-card">
+          <div class="faq-card-icon">?</div>
+          <span>What payment methods do you accept?</span>
+          <span class="faq-card-arrow">&#8594;</span>
+        </a>
+        <a href="#" class="faq-card">
+          <div class="faq-card-icon">?</div>
+          <span>Can I upgrade my plan at any time?</span>
+          <span class="faq-card-arrow">&#8594;</span>
+        </a>
+        <a href="#" class="faq-card">
+          <div class="faq-card-icon">?</div>
+          <span>Do you offer a free trial?</span>
+          <span class="faq-card-arrow">&#8594;</span>
+        </a>
+        <a href="#" class="faq-card">
+          <div class="faq-card-icon">?</div>
+          <span>How do I cancel my subscription?</span>
+          <span class="faq-card-arrow">&#8594;</span>
+        </a>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <div class="footer-inner">
+        <div class="footer-brand">
+          <a href="#" class="nav-logo">
+            <img src="../logos/vetra-full-logo.svg" alt="Vetra" height="24" class="logo-light" />
+            <img
+              src="../logos/vetra-full-logo-light.svg"
+              alt="Vetra"
+              height="24"
+              class="logo-dark"
+            />
+          </a>
+          <p>
+            Build better products faster with the all-in-one platform designed for modern teams.
+          </p>
+        </div>
+        <div class="footer-col">
+          <h4>Product</h4>
+          <a href="#">Features</a>
+          <a href="#">Pricing</a>
+          <a href="#">Integrations</a>
+          <a href="#">Changelog</a>
+        </div>
+        <div class="footer-col">
+          <h4>Company</h4>
+          <a href="#">About</a>
+          <a href="#">Blog</a>
+          <a href="#">Careers</a>
+          <a href="#">Contact</a>
+        </div>
+        <div class="footer-col">
+          <h4>Legal</h4>
+          <a href="#">Privacy</a>
+          <a href="#">Terms</a>
+          <a href="#">Security</a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>&copy; 2026 Vetra, Inc. All rights reserved.</span>
+        <span>Made with care in San Francisco</span>
+      </div>
+    </footer>
+  </body>
+</html>

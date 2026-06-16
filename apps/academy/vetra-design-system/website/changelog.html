@@ -1,0 +1,655 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Changelog — Vetra</title>
+    <link rel="stylesheet" href="../colors.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: 'Inter', sans-serif;
+        background: var(--background);
+        color: var(--foreground);
+        line-height: 1.6;
+      }
+      a {
+        text-decoration: none;
+        color: inherit;
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 10px 24px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-family: inherit;
+      }
+      .btn-primary {
+        background: var(--primary);
+        color: #fff;
+      }
+      .btn-primary:hover {
+        opacity: 0.9;
+      }
+      .btn-secondary {
+        background: var(--accent);
+        color: var(--foreground);
+      }
+      .btn-secondary:hover {
+        background: var(--border);
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+      .container-narrow {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+
+      /* Nav */
+      .nav {
+        background: var(--card);
+        border-bottom: 1px solid var(--border);
+        padding: 16px 0;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+      }
+      .nav .container {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .nav-brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 700;
+        font-size: 18px;
+      }
+      .nav-brand img {
+        height: 24px;
+        width: auto;
+      }
+      .logo-dark {
+        display: none;
+      }
+      body.dark .logo-light {
+        display: none;
+      }
+      body.dark .logo-dark {
+        display: inline;
+      }
+      .nav-links {
+        display: flex;
+        align-items: center;
+        gap: 32px;
+      }
+      .nav-links a {
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--foreground-70);
+        transition: color 0.2s;
+      }
+      .nav-links a:hover,
+      .nav-links a.active {
+        color: var(--foreground);
+      }
+
+      /* Hero */
+      .hero {
+        padding: 80px 0 48px;
+        text-align: center;
+      }
+      .hero h1 {
+        font-size: 48px;
+        font-weight: 800;
+        letter-spacing: -1px;
+        margin-bottom: 16px;
+      }
+      .hero p {
+        font-size: 18px;
+        color: var(--muted-foreground);
+        max-width: 520px;
+        margin: 0 auto;
+      }
+
+      /* Filter Pills */
+      .filter-bar {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 0 0 56px;
+        flex-wrap: wrap;
+      }
+      .filter-pill {
+        padding: 8px 20px;
+        border-radius: 100px;
+        font-size: 14px;
+        font-weight: 500;
+        border: 1px solid var(--border);
+        background: transparent;
+        color: var(--foreground);
+        cursor: pointer;
+        transition: all 0.2s;
+        font-family: inherit;
+      }
+      .filter-pill:hover {
+        background: var(--accent);
+      }
+      .filter-pill.active {
+        background: var(--primary);
+        color: #fff;
+        border-color: var(--primary);
+      }
+
+      /* Timeline */
+      .timeline {
+        position: relative;
+        padding-bottom: 48px;
+      }
+      .timeline::before {
+        content: '';
+        position: absolute;
+        left: 18px;
+        top: 8px;
+        bottom: 0;
+        width: 2px;
+        background: var(--border);
+      }
+
+      .release {
+        position: relative;
+        padding-left: 56px;
+        margin-bottom: 48px;
+      }
+      .release:last-child {
+        margin-bottom: 0;
+      }
+
+      .release-dot {
+        position: absolute;
+        left: 11px;
+        top: 6px;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        border: 3px solid var(--background);
+        z-index: 1;
+      }
+      .release-dot.green {
+        background: var(--success);
+        box-shadow: 0 0 0 3px var(--success-30);
+      }
+      .release-dot.blue {
+        background: var(--progress);
+        box-shadow: 0 0 0 3px var(--progress-30);
+      }
+      .release-dot.yellow {
+        background: var(--todo);
+        box-shadow: 0 0 0 3px var(--todo-30);
+      }
+
+      .release-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 8px;
+        flex-wrap: wrap;
+      }
+      .version-badge {
+        padding: 4px 12px;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 700;
+        background: var(--accent);
+        color: var(--foreground);
+        font-family: 'Inter', monospace;
+      }
+      .release-date {
+        font-size: 13px;
+        color: var(--muted-foreground);
+      }
+      .release-title {
+        font-size: 20px;
+        font-weight: 700;
+        margin-bottom: 16px;
+        letter-spacing: -0.3px;
+      }
+
+      .change-list {
+        list-style: none;
+      }
+      .change-list li {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        margin-bottom: 10px;
+        font-size: 14px;
+        line-height: 1.6;
+        color: var(--foreground);
+      }
+      .change-tag {
+        display: inline-flex;
+        align-items: center;
+        padding: 2px 10px;
+        border-radius: 6px;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        flex-shrink: 0;
+        margin-top: 2px;
+      }
+      .change-tag.added {
+        background: var(--success-30);
+        color: #1e7a3a;
+      }
+      .change-tag.changed {
+        background: var(--progress-30);
+        color: #1a6fbf;
+      }
+      .change-tag.fixed {
+        background: var(--todo-30);
+        color: #b5751a;
+      }
+      .change-tag.removed {
+        background: var(--destructive-30);
+        color: #c22b1e;
+      }
+
+      /* Subscribe */
+      .subscribe-section {
+        padding: 64px 0;
+        border-top: 1px solid var(--border);
+        text-align: center;
+      }
+      .subscribe-section h2 {
+        font-size: 28px;
+        font-weight: 800;
+        margin-bottom: 12px;
+        letter-spacing: -0.5px;
+      }
+      .subscribe-section p {
+        font-size: 15px;
+        color: var(--muted-foreground);
+        margin-bottom: 28px;
+      }
+      .subscribe-form {
+        display: flex;
+        gap: 10px;
+        max-width: 440px;
+        margin: 0 auto;
+      }
+      .subscribe-form input {
+        flex: 1;
+        padding: 12px 16px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        font-size: 14px;
+        font-family: inherit;
+        background: var(--input);
+        color: var(--foreground);
+        outline: none;
+        transition: border-color 0.2s;
+      }
+      .subscribe-form input:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px var(--primary-30);
+      }
+      .subscribe-form .btn {
+        padding: 12px 28px;
+        flex-shrink: 0;
+      }
+
+      /* Footer */
+      .footer {
+        padding: 48px 0 32px;
+        border-top: 1px solid var(--border);
+      }
+      .footer-grid {
+        display: grid;
+        grid-template-columns: 1.5fr 1fr 1fr 1fr;
+        gap: 40px;
+        margin-bottom: 40px;
+      }
+      .footer-brand {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 700;
+        font-size: 16px;
+        margin-bottom: 12px;
+      }
+      .footer-brand img {
+        height: 24px;
+        width: auto;
+      }
+      .footer-desc {
+        font-size: 13px;
+        color: var(--muted-foreground);
+        line-height: 1.6;
+      }
+      .footer-col h4 {
+        font-size: 13px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 16px;
+      }
+      .footer-col a {
+        display: block;
+        font-size: 14px;
+        color: var(--muted-foreground);
+        margin-bottom: 10px;
+        transition: color 0.2s;
+      }
+      .footer-col a:hover {
+        color: var(--foreground);
+      }
+      .footer-bottom {
+        border-top: 1px solid var(--border);
+        padding-top: 24px;
+        font-size: 13px;
+        color: var(--muted-foreground);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      @media (max-width: 768px) {
+        .hero h1 {
+          font-size: 32px;
+        }
+        .footer-grid {
+          grid-template-columns: 1fr 1fr;
+        }
+        .nav-links {
+          display: none;
+        }
+        .subscribe-form {
+          flex-direction: column;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Nav -->
+    <nav class="nav">
+      <div class="container">
+        <a href="#" class="nav-brand">
+          <img src="../logos/vetra-full-logo.svg" alt="Vetra" height="24" class="logo-light" />
+          <img src="../logos/vetra-full-logo-light.svg" alt="Vetra" height="24" class="logo-dark" />
+        </a>
+        <div class="nav-links">
+          <a href="#">Home</a>
+          <a href="#">Product</a>
+          <a href="#">Docs</a>
+          <a href="#" class="active">Changelog</a>
+          <a href="#">Blog</a>
+          <a href="#" class="btn btn-primary" style="padding: 8px 20px">Get Started</a>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Hero -->
+    <section class="hero">
+      <div class="container-narrow">
+        <h1>Changelog</h1>
+        <p>
+          Stay up to date with the latest features, improvements, and fixes we ship to the Vetra
+          platform.
+        </p>
+      </div>
+    </section>
+
+    <!-- Filter Pills -->
+    <div class="container-narrow">
+      <div class="filter-bar">
+        <button class="filter-pill active">All</button>
+        <button class="filter-pill">Major</button>
+        <button class="filter-pill">Minor</button>
+        <button class="filter-pill">Patch</button>
+      </div>
+    </div>
+
+    <!-- Timeline -->
+    <div class="container-narrow">
+      <div class="timeline">
+        <!-- v2.4.0 -->
+        <div class="release">
+          <div class="release-dot green"></div>
+          <div class="release-header">
+            <span class="version-badge">v2.4.0</span>
+            <span class="release-date">March 8, 2026</span>
+          </div>
+          <h3 class="release-title">AI-Powered Workflow Automation</h3>
+          <ul class="change-list">
+            <li>
+              <span class="change-tag added">Added</span> AI workflow builder with natural language
+              commands for creating complex automation pipelines
+            </li>
+            <li>
+              <span class="change-tag added">Added</span> Smart suggestions engine that recommends
+              workflow optimizations based on usage patterns
+            </li>
+            <li>
+              <span class="change-tag added">Added</span> Webhook triggers with support for custom
+              payloads and conditional execution
+            </li>
+            <li>
+              <span class="change-tag changed">Changed</span> Redesigned automation dashboard with
+              real-time execution monitoring and logs
+            </li>
+            <li>
+              <span class="change-tag fixed">Fixed</span> Issue where scheduled tasks occasionally
+              ran twice when server time drifted
+            </li>
+          </ul>
+        </div>
+
+        <!-- v2.3.2 -->
+        <div class="release">
+          <div class="release-dot yellow"></div>
+          <div class="release-header">
+            <span class="version-badge">v2.3.2</span>
+            <span class="release-date">February 21, 2026</span>
+          </div>
+          <h3 class="release-title">Bug Fixes and Stability Improvements</h3>
+          <ul class="change-list">
+            <li>
+              <span class="change-tag fixed">Fixed</span> Critical memory leak in the real-time
+              collaboration module affecting sessions longer than 4 hours
+            </li>
+            <li>
+              <span class="change-tag fixed">Fixed</span> CSV export failing silently when datasets
+              contained special Unicode characters
+            </li>
+            <li>
+              <span class="change-tag fixed">Fixed</span> Dashboard widgets not respecting user
+              timezone preferences in date filters
+            </li>
+            <li>
+              <span class="change-tag changed">Changed</span> Improved error messages throughout the
+              API to include actionable troubleshooting steps
+            </li>
+          </ul>
+        </div>
+
+        <!-- v2.3.0 -->
+        <div class="release">
+          <div class="release-dot blue"></div>
+          <div class="release-header">
+            <span class="version-badge">v2.3.0</span>
+            <span class="release-date">February 3, 2026</span>
+          </div>
+          <h3 class="release-title">Enhanced Team Collaboration</h3>
+          <ul class="change-list">
+            <li>
+              <span class="change-tag added">Added</span> Real-time cursors and presence indicators
+              showing who is viewing each document
+            </li>
+            <li>
+              <span class="change-tag added">Added</span> Inline commenting system with threaded
+              replies and @mention notifications
+            </li>
+            <li>
+              <span class="change-tag changed">Changed</span> Permission model now supports custom
+              roles with granular access control per project
+            </li>
+            <li>
+              <span class="change-tag changed">Changed</span> Notification center redesigned with
+              grouped alerts and one-click action buttons
+            </li>
+            <li>
+              <span class="change-tag removed">Removed</span> Legacy team chat feature — replaced by
+              the new commenting and discussion system
+            </li>
+          </ul>
+        </div>
+
+        <!-- v2.2.1 -->
+        <div class="release">
+          <div class="release-dot yellow"></div>
+          <div class="release-header">
+            <span class="version-badge">v2.2.1</span>
+            <span class="release-date">January 15, 2026</span>
+          </div>
+          <h3 class="release-title">Performance Patch</h3>
+          <ul class="change-list">
+            <li>
+              <span class="change-tag fixed">Fixed</span> Page load times degraded on projects with
+              more than 500 assets — reduced by 60%
+            </li>
+            <li>
+              <span class="change-tag fixed">Fixed</span> Search indexing failing intermittently for
+              newly created items in large workspaces
+            </li>
+            <li>
+              <span class="change-tag changed">Changed</span> Upgraded image processing pipeline to
+              support AVIF format and reduce storage costs by 35%
+            </li>
+          </ul>
+        </div>
+
+        <!-- v2.2.0 -->
+        <div class="release">
+          <div class="release-dot green"></div>
+          <div class="release-header">
+            <span class="version-badge">v2.2.0</span>
+            <span class="release-date">December 18, 2025</span>
+          </div>
+          <h3 class="release-title">Advanced Analytics and Reporting</h3>
+          <ul class="change-list">
+            <li>
+              <span class="change-tag added">Added</span> Custom report builder with drag-and-drop
+              chart creation and 15+ visualization types
+            </li>
+            <li>
+              <span class="change-tag added">Added</span> Scheduled report delivery via email with
+              PDF and interactive HTML export options
+            </li>
+            <li>
+              <span class="change-tag added">Added</span> Funnel analysis and cohort retention
+              charts for product analytics use cases
+            </li>
+            <li>
+              <span class="change-tag changed">Changed</span> Data refresh intervals now
+              configurable per dashboard, from real-time to daily
+            </li>
+            <li>
+              <span class="change-tag removed">Removed</span> Deprecated v1 analytics API endpoints
+              — all clients should migrate to v2 endpoints
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Subscribe Section -->
+    <section class="subscribe-section">
+      <div class="container-narrow">
+        <h2>Subscribe to Updates</h2>
+        <p>
+          Get notified when we ship new features and improvements. No spam, unsubscribe anytime.
+        </p>
+        <form class="subscribe-form" onsubmit="return false">
+          <input type="email" placeholder="Enter your email address" />
+          <button type="submit" class="btn btn-primary">Subscribe</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <div class="container">
+        <div class="footer-grid">
+          <div>
+            <div class="footer-brand">
+              <img src="../logos/vetra-full-logo.svg" alt="Vetra" height="24" class="logo-light" />
+              <img
+                src="../logos/vetra-full-logo-light.svg"
+                alt="Vetra"
+                height="24"
+                class="logo-dark"
+              />
+            </div>
+            <p class="footer-desc">
+              The modern platform for building and scaling digital products. Trusted by thousands of
+              teams worldwide.
+            </p>
+          </div>
+          <div class="footer-col">
+            <h4>Product</h4>
+            <a href="#">Features</a>
+            <a href="#">Pricing</a>
+            <a href="#">Integrations</a>
+            <a href="#">Changelog</a>
+          </div>
+          <div class="footer-col">
+            <h4>Resources</h4>
+            <a href="#">Documentation</a>
+            <a href="#">API Reference</a>
+            <a href="#">Guides</a>
+            <a href="#">Community</a>
+          </div>
+          <div class="footer-col">
+            <h4>Company</h4>
+            <a href="#">About</a>
+            <a href="#">Careers</a>
+            <a href="#">Blog</a>
+            <a href="#">Contact</a>
+          </div>
+        </div>
+        <div class="footer-bottom">
+          <span>&copy; 2026 Vetra. All rights reserved.</span>
+          <span>Privacy &middot; Terms &middot; Security</span>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

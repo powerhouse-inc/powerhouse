@@ -1,0 +1,490 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sign In — Vetra</title>
+    <link rel="stylesheet" href="../colors.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: 'Inter', sans-serif;
+        background: var(--background);
+        color: var(--foreground);
+        line-height: 1.6;
+        min-height: 100vh;
+      }
+      a {
+        text-decoration: none;
+        color: inherit;
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 10px 24px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-family: inherit;
+      }
+      .btn-primary {
+        background: var(--primary);
+        color: #fff;
+      }
+      .btn-primary:hover {
+        opacity: 0.9;
+      }
+      .btn-secondary {
+        background: var(--accent);
+        color: var(--foreground);
+      }
+      .btn-secondary:hover {
+        background: var(--border);
+      }
+
+      /* Split Layout */
+      .auth-layout {
+        display: flex;
+        min-height: 100vh;
+      }
+
+      /* Left Panel */
+      .auth-panel {
+        flex: 1;
+        background: var(--primary);
+        color: #fff;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        padding: 60px 48px;
+        position: relative;
+        overflow: hidden;
+      }
+      .auth-panel::before {
+        content: '';
+        position: absolute;
+        top: -120px;
+        right: -120px;
+        width: 400px;
+        height: 400px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.06);
+      }
+      .auth-panel::after {
+        content: '';
+        position: absolute;
+        bottom: -80px;
+        left: -80px;
+        width: 300px;
+        height: 300px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.04);
+      }
+      .auth-panel-content {
+        position: relative;
+        z-index: 1;
+        max-width: 400px;
+        text-align: center;
+      }
+      .auth-panel-logo {
+        height: 40px;
+        width: auto;
+        margin: 0 auto 24px;
+      }
+      .auth-panel-title {
+        font-size: 28px;
+        font-weight: 800;
+        margin-bottom: 12px;
+        letter-spacing: -0.5px;
+      }
+      .auth-panel-subtitle {
+        font-size: 16px;
+        opacity: 0.8;
+        margin-bottom: 48px;
+        line-height: 1.6;
+      }
+      .auth-quote {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        padding: 24px;
+        text-align: left;
+        margin-bottom: 32px;
+      }
+      .auth-quote p {
+        font-size: 15px;
+        line-height: 1.7;
+        font-style: italic;
+        opacity: 0.9;
+        margin-bottom: 12px;
+      }
+      .auth-quote-author {
+        font-size: 13px;
+        font-weight: 600;
+        opacity: 0.7;
+      }
+      .auth-features {
+        text-align: left;
+      }
+      .auth-feature {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 16px;
+        font-size: 14px;
+        opacity: 0.85;
+      }
+      .auth-feature-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.15);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 15px;
+        flex-shrink: 0;
+      }
+
+      /* Right Panel — Form */
+      .auth-form-panel {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        padding: 48px;
+      }
+      .auth-form-wrapper {
+        width: 100%;
+        max-width: 400px;
+      }
+      .auth-form-header {
+        margin-bottom: 32px;
+      }
+      .auth-form-header h1 {
+        font-size: 28px;
+        font-weight: 800;
+        letter-spacing: -0.5px;
+        margin-bottom: 8px;
+      }
+      .auth-form-header p {
+        font-size: 14px;
+        color: var(--muted-foreground);
+      }
+
+      .form-group {
+        margin-bottom: 20px;
+      }
+      .form-label {
+        display: block;
+        font-size: 13px;
+        font-weight: 600;
+        margin-bottom: 6px;
+      }
+      .form-input {
+        width: 100%;
+        padding: 11px 14px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        font-size: 14px;
+        font-family: inherit;
+        background: var(--input);
+        color: var(--foreground);
+        transition: border-color 0.2s;
+        outline: none;
+      }
+      .form-input:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px var(--primary-30);
+      }
+      .form-input-wrapper {
+        position: relative;
+      }
+      .form-input-wrapper .form-input {
+        padding-right: 48px;
+      }
+      .toggle-password {
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--muted-foreground);
+        font-family: inherit;
+      }
+      .toggle-password:hover {
+        color: var(--foreground);
+      }
+
+      .form-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 24px;
+      }
+      .checkbox-label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        cursor: pointer;
+      }
+      .checkbox-label input[type='checkbox'] {
+        width: 16px;
+        height: 16px;
+        accent-color: var(--primary);
+        cursor: pointer;
+      }
+      .forgot-link {
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--primary);
+      }
+      .forgot-link:hover {
+        text-decoration: underline;
+      }
+
+      .btn-submit {
+        width: 100%;
+        padding: 12px 24px;
+        font-size: 15px;
+      }
+
+      /* Divider */
+      .divider {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin: 24px 0;
+      }
+      .divider::before,
+      .divider::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: var(--border);
+      }
+      .divider span {
+        font-size: 13px;
+        color: var(--muted-foreground);
+        white-space: nowrap;
+      }
+
+      /* Social Buttons */
+      .social-buttons {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 32px;
+      }
+      .btn-social {
+        flex: 1;
+        padding: 11px 16px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: transparent;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        font-family: inherit;
+        color: var(--foreground);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        transition: all 0.2s;
+      }
+      .btn-social:hover {
+        background: var(--accent);
+      }
+      .btn-social svg {
+        width: 18px;
+        height: 18px;
+      }
+
+      /* Signup Link */
+      .signup-link {
+        text-align: center;
+        font-size: 14px;
+        color: var(--muted-foreground);
+      }
+      .signup-link a {
+        color: var(--primary);
+        font-weight: 600;
+      }
+      .signup-link a:hover {
+        text-decoration: underline;
+      }
+
+      /* Copyright */
+      .auth-copyright {
+        position: absolute;
+        bottom: 24px;
+        left: 0;
+        right: 0;
+        text-align: center;
+        font-size: 12px;
+        color: var(--muted-foreground);
+      }
+
+      @media (max-width: 768px) {
+        .auth-layout {
+          flex-direction: column;
+        }
+        .auth-panel {
+          min-height: 280px;
+          padding: 40px 24px;
+        }
+        .auth-form-panel {
+          padding: 32px 24px;
+        }
+        .auth-quote {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="auth-layout">
+      <!-- Left Branded Panel -->
+      <div class="auth-panel">
+        <div class="auth-panel-content">
+          <img src="../logos/vetra-full-logo-white.svg" alt="Vetra" class="auth-panel-logo" />
+          <h2 class="auth-panel-title">Welcome back to Vetra</h2>
+          <p class="auth-panel-subtitle">
+            Your all-in-one platform for building, managing, and scaling digital products with
+            confidence.
+          </p>
+
+          <div class="auth-quote">
+            <p>
+              "Vetra transformed how our team collaborates. We shipped 3x faster within the first
+              quarter of adopting the platform."
+            </p>
+            <span class="auth-quote-author">— Sarah Chen, CTO at Finova</span>
+          </div>
+
+          <div class="auth-features">
+            <div class="auth-feature">
+              <div class="auth-feature-icon">&#9889;</div>
+              <span>Real-time collaboration across teams</span>
+            </div>
+            <div class="auth-feature">
+              <div class="auth-feature-icon">&#128274;</div>
+              <span>Enterprise-grade security and compliance</span>
+            </div>
+            <div class="auth-feature">
+              <div class="auth-feature-icon">&#128200;</div>
+              <span>Actionable analytics and reporting</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Form Panel -->
+      <div class="auth-form-panel" style="position: relative">
+        <div class="auth-form-wrapper">
+          <div class="auth-form-header">
+            <h1>Sign in</h1>
+            <p>Enter your credentials to access your account</p>
+          </div>
+
+          <form onsubmit="return false">
+            <div class="form-group">
+              <label class="form-label" for="email">Email address</label>
+              <input
+                class="form-input"
+                type="email"
+                id="email"
+                placeholder="you@example.com"
+                autocomplete="email"
+              />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="password">Password</label>
+              <div class="form-input-wrapper">
+                <input
+                  class="form-input"
+                  type="password"
+                  id="password"
+                  placeholder="Enter your password"
+                  autocomplete="current-password"
+                />
+                <button type="button" class="toggle-password">Show</button>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <label class="checkbox-label"> <input type="checkbox" /> Remember me </label>
+              <a href="#" class="forgot-link">Forgot password?</a>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-submit">Sign In</button>
+          </form>
+
+          <div class="divider">
+            <span>Or continue with</span>
+          </div>
+
+          <div class="social-buttons">
+            <button class="btn-social">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
+                  fill="#4285F4"
+                />
+                <path
+                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                  fill="#34A853"
+                />
+                <path
+                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                  fill="#FBBC05"
+                />
+                <path
+                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                  fill="#EA4335"
+                />
+              </svg>
+              Google
+            </button>
+            <button class="btn-social">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path
+                  d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"
+                />
+              </svg>
+              GitHub
+            </button>
+          </div>
+
+          <p class="signup-link">Don't have an account? <a href="#">Sign up</a></p>
+        </div>
+
+        <p class="auth-copyright">&copy; 2026 Vetra. All rights reserved.</p>
+      </div>
+    </div>
+  </body>
+</html>
