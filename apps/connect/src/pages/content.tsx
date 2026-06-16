@@ -4,11 +4,13 @@ import {
   defaultPHDocumentEditorConfig,
 } from "@powerhousedao/connect/config";
 import {
+  DriveAuthGate,
   HomeScreen,
   HomeScreenAddDriveItem,
   HomeScreenItem,
 } from "@powerhousedao/design-system/connect";
 import {
+  openRenown,
   setPHAppConfig,
   setPHDocumentEditorConfig,
   setSelectedDrive,
@@ -22,8 +24,10 @@ import {
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import { useEffect } from "react";
 import { getRuntimeConfig } from "../runtime-config.js";
+import { useDriveAuthGate } from "../components/use-drive-auth-gate.js";
 
 export function Content() {
+  const { needsLogin } = useDriveAuthGate();
   const [selectedDrive] = useSelectedDriveSafe();
   const selectedFolder = useSelectedFolder();
   const selectedDocumentId = useSelectedDocumentId();
@@ -44,7 +48,13 @@ export function Content() {
     !selectedDocumentId && !selectedDrive && !selectedFolder;
   return (
     <ContentContainer>
-      {showHomeScreen ? <HomeScreenContainer /> : <AppContainer />}
+      {needsLogin ? (
+        <DriveAuthGate onLogin={openRenown} />
+      ) : showHomeScreen ? (
+        <HomeScreenContainer />
+      ) : (
+        <AppContainer />
+      )}
     </ContentContainer>
   );
 }
