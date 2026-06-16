@@ -11,6 +11,7 @@ import {
 import { BaseSubgraph } from "../base-subgraph.js";
 import type { Context, SubgraphArgs } from "../types.js";
 import {
+  collectChangedDocumentIds,
   matchesJobFilter,
   matchesSearchFilter,
   toGqlDocumentChangeEvent,
@@ -783,68 +784,115 @@ export class ReactorSubgraph extends BaseSubgraph {
 
     Subscription: {
       documentChanges: {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        subscribe: withFilter(
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-          (() => {
-            this.logger.debug("documentChanges subscription started");
-            ensureGlobalDocumentSubscription(this.reactorClient);
-
-            return getPubSub().asyncIterableIterator<DocumentChangesPayload>(
-              SUBSCRIPTION_TRIGGERS.DOCUMENT_CHANGES,
-            );
-          }) as any,
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-          ((
-            payload: DocumentChangesPayload | undefined,
-            args: {
+        // Drop events referencing any document the subscriber cannot read. The
+        // check lives in the withFilter predicate (fail-closed on throw) so it
+        // covers both transports, which share this resolver.
+        subscribe: (
+          rootValue: unknown,
+          args: {
+            search?: { type?: string | null; parentId?: string | null } | null;
+          },
+          ctx: Context,
+          info: unknown,
+        ) => {
+          this.logger.debug("documentChanges subscription started");
+          const filtered = withFilter<
+            DocumentChangesPayload,
+            {
               search?: {
                 type?: string | null;
                 parentId?: string | null;
               } | null;
             },
-          ) => {
-            if (!payload) {
-              return false;
-            }
+            Context
+          >(
+            () => {
+              ensureGlobalDocumentSubscription(this.reactorClient);
+              return getPubSub().asyncIterableIterator<DocumentChangesPayload>(
+                SUBSCRIPTION_TRIGGERS.DOCUMENT_CHANGES,
+              );
+            },
+            async (payload, filterArgs, filterCtx) => {
+              if (!payload) return false;
 
-            const search = {
-              type: args.search?.type ?? undefined,
-              parentId: args.search?.parentId ?? undefined,
-            };
+              const search = {
+                type: filterArgs?.search?.type ?? undefined,
+                parentId: filterArgs?.search?.parentId ?? undefined,
+              };
+              if (!matchesSearchFilter(payload.documentChanges, search)) {
+                return false;
+              }
 
-            return matchesSearchFilter(payload.documentChanges, search);
-          }) as any,
-        ) as any,
+              if (
+                this.authorizationService.isSupremeAdmin(
+                  filterCtx?.user?.address,
+                )
+              ) {
+                return true;
+              }
+
+              const documentIds = collectChangedDocumentIds(
+                payload.documentChanges,
+              );
+              if (documentIds.length === 0) return false;
+              for (const documentId of documentIds) {
+                const canRead = await this.canReadDocument(
+                  documentId as CanonicalDocumentId,
+                  filterCtx as Context,
+                );
+                if (!canRead) return false;
+              }
+              return true;
+            },
+          );
+          return filtered(rootValue as DocumentChangesPayload, args, ctx, info);
+        },
         resolve: (payload: DocumentChangesPayload) => {
           return toGqlDocumentChangeEvent(payload.documentChanges);
         },
       },
 
       jobChanges: {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        subscribe: withFilter(
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-          ((_parent: unknown, args: { jobId: string }) => {
-            this.logger.debug("jobChanges(@args) subscription started", args);
-            ensureJobSubscription(this.reactorClient, args.jobId);
+        // Drop events unless the subscriber can read the job's document.
+        subscribe: (
+          rootValue: unknown,
+          args: { jobId: string },
+          ctx: Context,
+          info: unknown,
+        ) => {
+          this.logger.debug("jobChanges(@args) subscription started", args);
+          const filtered = withFilter<
+            JobChangesPayload,
+            { jobId: string },
+            Context
+          >(
+            () => {
+              ensureJobSubscription(this.reactorClient, args.jobId);
+              return getPubSub().asyncIterableIterator<JobChangesPayload>(
+                SUBSCRIPTION_TRIGGERS.JOB_CHANGES,
+              );
+            },
+            async (payload, filterArgs, filterCtx) => {
+              if (!payload || !filterArgs) return false;
+              if (!matchesJobFilter(payload, filterArgs)) return false;
 
-            return getPubSub().asyncIterableIterator<JobChangesPayload>(
-              SUBSCRIPTION_TRIGGERS.JOB_CHANGES,
-            );
-          }) as any,
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-          ((
-            payload: JobChangesPayload | undefined,
-            args: { jobId: string },
-          ) => {
-            if (!payload) {
-              return false;
-            }
+              if (
+                this.authorizationService.isSupremeAdmin(
+                  filterCtx?.user?.address,
+                )
+              ) {
+                return true;
+              }
 
-            return matchesJobFilter(payload, args);
-          }) as any,
-        ) as any,
+              if (!payload.documentId) return false;
+              return this.canReadDocument(
+                payload.documentId as CanonicalDocumentId,
+                filterCtx as Context,
+              );
+            },
+          );
+          return filtered(rootValue as JobChangesPayload, args, ctx, info);
+        },
         resolve: (payload: JobChangesPayload) => {
           return payload.jobChanges;
         },

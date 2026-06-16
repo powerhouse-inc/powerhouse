@@ -11,6 +11,10 @@ import {
   type DocumentChangesPayload,
   type JobChangesPayload,
 } from "../src/graphql/reactor/pubsub.js";
+import {
+  AuthorizationPolicy,
+  type IAuthorizationService,
+} from "../src/services/authorization.service.js";
 import { ReactorSubgraph } from "../src/graphql/reactor/subgraph.js";
 import { createGraphQLSSEHandler } from "../src/graphql/sse.js";
 import type { Context, SubgraphArgs } from "../src/graphql/types.js";
@@ -24,10 +28,44 @@ const mockReactorClient = {
   getJobStatus: vi.fn(),
 } as unknown as IReactorClient;
 
-const reactorSubgraph = new ReactorSubgraph({
-  reactorClient: mockReactorClient,
-  syncManager: {} as ISyncManager,
-} as SubgraphArgs);
+/** Authorization stub that grants read to everyone unless overridden. */
+function makeAuthorizationService(
+  overrides: Partial<IAuthorizationService> = {},
+): IAuthorizationService {
+  return {
+    config: {
+      admins: [],
+      defaultProtection: false,
+      policy: AuthorizationPolicy.DOCUMENT_PERMISSIONS,
+    },
+    isSupremeAdmin: () => false,
+    canCreate: () => false,
+    canRead: () => Promise.resolve(true),
+    canWrite: () => Promise.resolve(true),
+    canManage: () => Promise.resolve(true),
+    canMutate: () => Promise.resolve(true),
+    ...overrides,
+  };
+}
+
+function makeReactorSubgraph(
+  authorizationService: IAuthorizationService,
+): ReactorSubgraph {
+  return new ReactorSubgraph({
+    reactorClient: mockReactorClient,
+    syncManager: {} as ISyncManager,
+    authorizationService,
+  } as SubgraphArgs);
+}
+
+const reactorSubgraph = makeReactorSubgraph(makeAuthorizationService());
+
+/** Context with a verified reader identity, populated as in production. */
+const readerContext = {
+  user: { address: "0xreader" },
+  headers: {},
+  db: null,
+} as unknown as Context;
 
 /**
  * Build an executable schema for subscribe() tests.
@@ -37,11 +75,11 @@ const reactorSubgraph = new ReactorSubgraph({
  * graphql module instances, causing subscribe() to reject Federation
  * schemas with "Cannot use GraphQLSchema from another module or realm".
  */
-function buildSubscriptionSchema() {
-  const schema = buildSchema(print(reactorSubgraph.typeDefs));
+function buildSubscriptionSchema(subgraph: ReactorSubgraph = reactorSubgraph) {
+  const schema = buildSchema(print(subgraph.typeDefs));
   const subscriptionType = schema.getSubscriptionType()!;
   const fields = subscriptionType.getFields();
-  const resolvers = reactorSubgraph.resolvers.Subscription as Record<
+  const resolvers = subgraph.resolvers.Subscription as Record<
     string,
     { subscribe: () => unknown; resolve: (payload: unknown) => unknown }
   >;
@@ -64,6 +102,18 @@ function createTestDocument() {
   return documentModelDocumentModelModule.utils.createDocument();
 }
 
+function documentWithId(id: string) {
+  const doc = createTestDocument();
+  return { ...doc, header: { ...doc.header, id } };
+}
+
+function firstEvent(result: unknown) {
+  const iterator = (result as AsyncIterableIterator<unknown>)[
+    Symbol.asyncIterator
+  ]();
+  return { iterator, next: iterator.next() };
+}
+
 describe("Subscription SSE Integration", () => {
   describe("SSE Handler Creation", () => {
     it("should create an SSE handler from the reactor schema", () => {
@@ -84,6 +134,7 @@ describe("Subscription SSE Integration", () => {
 
       const result = await subscribe({
         schema,
+        contextValue: readerContext,
         document: parse(`
           subscription {
             documentChanges(search: {}) {
@@ -137,6 +188,7 @@ describe("Subscription SSE Integration", () => {
 
       const result = await subscribe({
         schema,
+        contextValue: readerContext,
         document: parse(`
           subscription {
             jobChanges(jobId: "job-123") {
@@ -163,6 +215,7 @@ describe("Subscription SSE Integration", () => {
           result: { output: "done" },
         },
         jobId: "job-123",
+        documentId: "doc-1",
       };
 
       const nextPromise = iterator.next();
@@ -189,6 +242,7 @@ describe("Subscription SSE Integration", () => {
 
       const result = await subscribe({
         schema,
+        contextValue: readerContext,
         document: parse(`
           subscription {
             documentChanges(search: {}) {
@@ -308,6 +362,267 @@ describe("Subscription SSE Integration", () => {
       expect(
         matchesSearchFilter(event.documentChanges, { parentId: "other" }),
       ).toBe(false);
+    });
+  });
+
+  describe("Subscription Authorization (S-H2)", () => {
+    it("drops documentChanges events for documents the subscriber cannot read", async () => {
+      const subgraph = makeReactorSubgraph(
+        makeAuthorizationService({
+          canRead: (documentId) =>
+            Promise.resolve(documentId === "readable-doc"),
+        }),
+      );
+      const schema = buildSubscriptionSchema(subgraph);
+
+      const result = await subscribe({
+        schema,
+        contextValue: readerContext,
+        document: parse(`
+          subscription {
+            documentChanges(search: {}) { type documents { id } }
+          }
+        `),
+      });
+      const { iterator, next: nextPromise } = firstEvent(result);
+
+      await delay(10);
+      // Unreadable document: must be dropped.
+      void getPubSub().publish(SUBSCRIPTION_TRIGGERS.DOCUMENT_CHANGES, {
+        documentChanges: {
+          type: DocumentChangeType.Created,
+          documents: [documentWithId("secret-doc")],
+        },
+        search: {},
+      } as DocumentChangesPayload);
+      await delay(10);
+      // Readable document: must be delivered.
+      void getPubSub().publish(SUBSCRIPTION_TRIGGERS.DOCUMENT_CHANGES, {
+        documentChanges: {
+          type: DocumentChangeType.Created,
+          documents: [documentWithId("readable-doc")],
+        },
+        search: {},
+      } as DocumentChangesPayload);
+
+      const next = await nextPromise;
+      expect(next.value).toEqual({
+        data: {
+          documentChanges: {
+            type: "CREATED",
+            documents: [expect.objectContaining({ id: "readable-doc" })],
+          },
+        },
+      });
+
+      await iterator.return?.();
+    });
+
+    it("drops relationship events whose context document is unreadable (empty documents array)", async () => {
+      // A naive check over `documents` would pass these events (the array is
+      // empty); the affected ids live in `context`.
+      const subgraph = makeReactorSubgraph(
+        makeAuthorizationService({
+          canRead: (documentId) =>
+            Promise.resolve(documentId === "visible-child"),
+        }),
+      );
+      const schema = buildSubscriptionSchema(subgraph);
+
+      const result = await subscribe({
+        schema,
+        contextValue: readerContext,
+        document: parse(`
+          subscription {
+            documentChanges(search: {}) {
+              type
+              context { parentId childId }
+            }
+          }
+        `),
+      });
+      const { iterator, next: nextPromise } = firstEvent(result);
+
+      await delay(10);
+      // ChildAdded references an unreadable parent -> must be dropped.
+      void getPubSub().publish(SUBSCRIPTION_TRIGGERS.DOCUMENT_CHANGES, {
+        documentChanges: {
+          type: DocumentChangeType.ChildAdded,
+          documents: [],
+          context: { parentId: "secret-parent", childId: "visible-child" },
+        },
+        search: {},
+      } as DocumentChangesPayload);
+      await delay(10);
+      // Deleted references only a readable child -> must be delivered.
+      void getPubSub().publish(SUBSCRIPTION_TRIGGERS.DOCUMENT_CHANGES, {
+        documentChanges: {
+          type: DocumentChangeType.Deleted,
+          documents: [],
+          context: { childId: "visible-child" },
+        },
+        search: {},
+      } as DocumentChangesPayload);
+
+      const next = await nextPromise;
+      expect(next.value).toEqual({
+        data: {
+          documentChanges: {
+            type: "DELETED",
+            context: { parentId: null, childId: "visible-child" },
+          },
+        },
+      });
+
+      await iterator.return?.();
+    });
+
+    it("delivers all documentChanges to a supreme admin without per-document checks", async () => {
+      const canRead = vi.fn(() => Promise.resolve(false));
+      const subgraph = makeReactorSubgraph(
+        makeAuthorizationService({ isSupremeAdmin: () => true, canRead }),
+      );
+      const schema = buildSubscriptionSchema(subgraph);
+
+      const result = await subscribe({
+        schema,
+        contextValue: { user: { address: "0xadmin" } } as unknown as Context,
+        document: parse(`
+          subscription {
+            documentChanges(search: {}) { type documents { id } }
+          }
+        `),
+      });
+      const { iterator, next: nextPromise } = firstEvent(result);
+
+      await delay(10);
+      void getPubSub().publish(SUBSCRIPTION_TRIGGERS.DOCUMENT_CHANGES, {
+        documentChanges: {
+          type: DocumentChangeType.Created,
+          documents: [documentWithId("any-doc")],
+        },
+        search: {},
+      } as DocumentChangesPayload);
+
+      const next = await nextPromise;
+      expect(next.value).toEqual({
+        data: {
+          documentChanges: {
+            type: "CREATED",
+            documents: [expect.objectContaining({ id: "any-doc" })],
+          },
+        },
+      });
+      expect(canRead).not.toHaveBeenCalled();
+
+      await iterator.return?.();
+    });
+
+    it("drops jobChanges events whose document the subscriber cannot read", async () => {
+      const subgraph = makeReactorSubgraph(
+        makeAuthorizationService({
+          canRead: (documentId) =>
+            Promise.resolve(documentId === "readable-doc"),
+        }),
+      );
+      const schema = buildSubscriptionSchema(subgraph);
+
+      const result = await subscribe({
+        schema,
+        contextValue: readerContext,
+        document: parse(`
+          subscription { jobChanges(jobId: "job-x") { jobId status } }
+        `),
+      });
+      const { iterator, next: nextPromise } = firstEvent(result);
+
+      await delay(10);
+      // Same jobId, secret document -> dropped.
+      void getPubSub().publish(SUBSCRIPTION_TRIGGERS.JOB_CHANGES, {
+        jobChanges: {
+          jobId: "job-x",
+          status: "RUNNING",
+          createdAt: "2024-01-01T00:00:00.000Z",
+          completedAt: null,
+          error: null,
+          result: {},
+        },
+        jobId: "job-x",
+        documentId: "secret-doc",
+      } as JobChangesPayload);
+      await delay(10);
+      // Same jobId, readable document -> delivered.
+      void getPubSub().publish(SUBSCRIPTION_TRIGGERS.JOB_CHANGES, {
+        jobChanges: {
+          jobId: "job-x",
+          status: "COMPLETED",
+          createdAt: "2024-01-01T00:00:00.000Z",
+          completedAt: "2024-01-01T00:01:00.000Z",
+          error: null,
+          result: {},
+        },
+        jobId: "job-x",
+        documentId: "readable-doc",
+      } as JobChangesPayload);
+
+      const next = await nextPromise;
+      expect(next.value).toEqual({
+        data: { jobChanges: { jobId: "job-x", status: "COMPLETED" } },
+      });
+
+      await iterator.return?.();
+    });
+
+    it("drops jobChanges events with an unknown document for non-admins (fail-closed)", async () => {
+      // canRead would allow everything; the empty documentId guard must still
+      // drop the event before canRead is consulted.
+      const subgraph = makeReactorSubgraph(
+        makeAuthorizationService({ canRead: () => Promise.resolve(true) }),
+      );
+      const schema = buildSubscriptionSchema(subgraph);
+
+      const result = await subscribe({
+        schema,
+        contextValue: readerContext,
+        document: parse(`
+          subscription { jobChanges(jobId: "job-y") { jobId status } }
+        `),
+      });
+      const { iterator, next: nextPromise } = firstEvent(result);
+
+      await delay(10);
+      void getPubSub().publish(SUBSCRIPTION_TRIGGERS.JOB_CHANGES, {
+        jobChanges: {
+          jobId: "job-y",
+          status: "RUNNING",
+          createdAt: "2024-01-01T00:00:00.000Z",
+          completedAt: null,
+          error: null,
+          result: {},
+        },
+        jobId: "job-y",
+        documentId: "",
+      } as JobChangesPayload);
+      await delay(10);
+      void getPubSub().publish(SUBSCRIPTION_TRIGGERS.JOB_CHANGES, {
+        jobChanges: {
+          jobId: "job-y",
+          status: "COMPLETED",
+          createdAt: "2024-01-01T00:00:00.000Z",
+          completedAt: "2024-01-01T00:01:00.000Z",
+          error: null,
+          result: {},
+        },
+        jobId: "job-y",
+        documentId: "known-doc",
+      } as JobChangesPayload);
+
+      const next = await nextPromise;
+      expect(next.value).toEqual({
+        data: { jobChanges: { jobId: "job-y", status: "COMPLETED" } },
+      });
+
+      await iterator.return?.();
     });
   });
 

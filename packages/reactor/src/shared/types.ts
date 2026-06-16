@@ -74,6 +74,9 @@ import type { Job } from "../queue/types.js";
  */
 export type JobInfo = {
   id: string;
+
+  /** The document this job operates on; empty string when the job is unknown. */
+  documentId: string;
   status: JobStatus;
   createdAtUtcIso: string;
   completedAtUtcIso?: string;

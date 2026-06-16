@@ -635,6 +635,7 @@ describe("ReactorClient Unit Tests", () => {
 
       const completedJobInfo: JobInfo = {
         id: "job-1",
+        documentId: "test-doc",
         status: JobStatus.READ_READY,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -645,6 +646,7 @@ describe("ReactorClient Unit Tests", () => {
         jobs: {
           create: {
             id: "job-1",
+            documentId: "test-doc",
             status: JobStatus.PENDING,
             createdAtUtcIso: new Date().toISOString(),
             consistencyToken: createEmptyConsistencyToken(),
@@ -686,6 +688,7 @@ describe("ReactorClient Unit Tests", () => {
 
       const completedJobInfo: JobInfo = {
         id: "job-1",
+        documentId: "test-doc",
         status: JobStatus.READ_READY,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -696,6 +699,7 @@ describe("ReactorClient Unit Tests", () => {
         jobs: {
           create: {
             id: "job-1",
+            documentId: "test-doc",
             status: JobStatus.PENDING,
             createdAtUtcIso: new Date().toISOString(),
             consistencyToken: createEmptyConsistencyToken(),
@@ -722,6 +726,7 @@ describe("ReactorClient Unit Tests", () => {
 
       const completedJobInfo: JobInfo = {
         id: "job-1",
+        documentId: "test-doc",
         status: JobStatus.READ_READY,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -732,6 +737,7 @@ describe("ReactorClient Unit Tests", () => {
         jobs: {
           create: {
             id: "job-1",
+            documentId: "test-doc",
             status: JobStatus.PENDING,
             createdAtUtcIso: new Date().toISOString(),
             consistencyToken: createEmptyConsistencyToken(),
@@ -739,6 +745,7 @@ describe("ReactorClient Unit Tests", () => {
           },
           parent: {
             id: "job-2",
+            documentId: "test-doc",
             status: JobStatus.PENDING,
             createdAtUtcIso: new Date().toISOString(),
             consistencyToken: createEmptyConsistencyToken(),
@@ -791,6 +798,7 @@ describe("ReactorClient Unit Tests", () => {
 
       const jobInfo: JobInfo = {
         id: "job-1",
+        documentId: "test-doc",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -799,6 +807,7 @@ describe("ReactorClient Unit Tests", () => {
 
       const completedJobInfo: JobInfo = {
         id: "job-1",
+        documentId: "test-doc",
         status: JobStatus.READ_READY,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -870,6 +879,7 @@ describe("ReactorClient Unit Tests", () => {
 
       const jobInfo: JobInfo = {
         id: "job-1",
+        documentId: "test-doc",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -905,6 +915,7 @@ describe("ReactorClient Unit Tests", () => {
 
       const jobInfo: JobInfo = {
         id: "job-1",
+        documentId: "test-doc",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -929,6 +940,7 @@ describe("ReactorClient Unit Tests", () => {
 
       const jobInfo: JobInfo = {
         id: "job-1",
+        documentId: "test-doc",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -965,6 +977,7 @@ describe("ReactorClient Unit Tests", () => {
 
       const jobInfo: JobInfo = {
         id: "job-1",
+        documentId: "test-doc",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -1020,6 +1033,7 @@ describe("ReactorClient Unit Tests", () => {
 
       vi.mocked(mockReactor.execute).mockResolvedValue({
         id: "job-1",
+        documentId: "test-doc",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -1039,6 +1053,7 @@ describe("ReactorClient Unit Tests", () => {
 
       const jobInfo: JobInfo = {
         id: "job-1",
+        documentId: "test-doc",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -1047,6 +1062,7 @@ describe("ReactorClient Unit Tests", () => {
 
       const completedJobInfo: JobInfo = {
         id: "job-1",
+        documentId: "test-doc",
         status: JobStatus.READ_READY,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -1092,6 +1108,7 @@ describe("ReactorClient Unit Tests", () => {
 
       const jobInfo: JobInfo = {
         id: "job-1",
+        documentId: "test-doc",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -1100,6 +1117,7 @@ describe("ReactorClient Unit Tests", () => {
 
       const completedJobInfo: JobInfo = {
         id: "job-1",
+        documentId: "test-doc",
         status: JobStatus.READ_READY,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -1148,6 +1166,7 @@ describe("ReactorClient Unit Tests", () => {
 
       const jobInfo: JobInfo = {
         id: "job-1",
+        documentId: "test-doc",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -1175,6 +1194,7 @@ describe("ReactorClient Unit Tests", () => {
 
       const jobInfo: JobInfo = {
         id: "job-1",
+        documentId: "test-doc",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -1200,6 +1220,7 @@ describe("ReactorClient Unit Tests", () => {
 
       const parentJobInfo: JobInfo = {
         id: "job-parent",
+        documentId: "test-doc",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -1208,6 +1229,7 @@ describe("ReactorClient Unit Tests", () => {
 
       const childJobInfo: JobInfo = {
         id: "job-child",
+        documentId: "test-doc",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -1249,6 +1271,7 @@ describe("ReactorClient Unit Tests", () => {
     it("should pass through to reactor.getJobStatus", async () => {
       const jobInfo: JobInfo = {
         id: "job-1",
+        documentId: "test-doc",
         status: JobStatus.RUNNING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -1268,6 +1291,7 @@ describe("ReactorClient Unit Tests", () => {
 
       vi.mocked(mockReactor.getJobStatus).mockResolvedValue({
         id: "job-1",
+        documentId: "test-doc",
         status: JobStatus.READ_READY,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -1284,6 +1308,7 @@ describe("ReactorClient Unit Tests", () => {
     it("should call jobAwaiter.waitForJob with job ID string", async () => {
       const completedJobInfo: JobInfo = {
         id: "job-1",
+        documentId: "test-doc",
         status: JobStatus.READ_READY,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -1304,6 +1329,7 @@ describe("ReactorClient Unit Tests", () => {
     it("should extract ID from JobInfo object", async () => {
       const jobInfo: JobInfo = {
         id: "job-2",
+        documentId: "test-doc",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -1331,6 +1357,7 @@ describe("ReactorClient Unit Tests", () => {
 
       vi.mocked(mockJobAwaiter.waitForJob).mockResolvedValue({
         id: "job-1",
+        documentId: "test-doc",
         status: JobStatus.READ_READY,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -1356,6 +1383,7 @@ describe("ReactorClient Unit Tests", () => {
 
       vi.mocked(mockReactor.execute).mockResolvedValue({
         id: "job-1",
+        documentId: "test-doc",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -1392,6 +1420,7 @@ describe("ReactorClient Unit Tests", () => {
 
       const failedJobInfo: JobInfo = {
         id: "job-1",
+        documentId: "test-doc",
         status: JobStatus.FAILED,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -1403,6 +1432,7 @@ describe("ReactorClient Unit Tests", () => {
         jobs: {
           create: {
             id: "job-1",
+            documentId: "test-doc",
             status: JobStatus.PENDING,
             createdAtUtcIso: new Date().toISOString(),
             consistencyToken: createEmptyConsistencyToken(),
@@ -1423,6 +1453,7 @@ describe("ReactorClient Unit Tests", () => {
     it("should throw error when execute job fails", async () => {
       const jobInfo: JobInfo = {
         id: "job-1",
+        documentId: "test-doc",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -1431,6 +1462,7 @@ describe("ReactorClient Unit Tests", () => {
 
       const failedJobInfo: JobInfo = {
         id: "job-1",
+        documentId: "test-doc",
         status: JobStatus.FAILED,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -1450,6 +1482,7 @@ describe("ReactorClient Unit Tests", () => {
     it("should throw error when addRelationship job fails", async () => {
       const jobInfo: JobInfo = {
         id: "job-1",
+        documentId: "test-doc",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -1458,6 +1491,7 @@ describe("ReactorClient Unit Tests", () => {
 
       const failedJobInfo: JobInfo = {
         id: "job-1",
+        documentId: "test-doc",
         status: JobStatus.FAILED,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -1477,6 +1511,7 @@ describe("ReactorClient Unit Tests", () => {
     it("should throw error when removeRelationship job fails", async () => {
       const jobInfo: JobInfo = {
         id: "job-1",
+        documentId: "test-doc",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -1485,6 +1520,7 @@ describe("ReactorClient Unit Tests", () => {
 
       const failedJobInfo: JobInfo = {
         id: "job-1",
+        documentId: "test-doc",
         status: JobStatus.FAILED,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -1504,6 +1540,7 @@ describe("ReactorClient Unit Tests", () => {
     it("should throw error when moveRelationship remove job fails", async () => {
       const removeJobInfo: JobInfo = {
         id: "job-remove",
+        documentId: "test-doc",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -1512,6 +1549,7 @@ describe("ReactorClient Unit Tests", () => {
 
       const failedRemoveJobInfo: JobInfo = {
         id: "job-remove",
+        documentId: "test-doc",
         status: JobStatus.FAILED,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -1535,6 +1573,7 @@ describe("ReactorClient Unit Tests", () => {
     it("should throw error when moveRelationship add job fails", async () => {
       const removeJobInfo: JobInfo = {
         id: "job-remove",
+        documentId: "test-doc",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -1543,6 +1582,7 @@ describe("ReactorClient Unit Tests", () => {
 
       const completedRemoveJobInfo: JobInfo = {
         id: "job-remove",
+        documentId: "test-doc",
         status: JobStatus.READ_READY,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -1551,6 +1591,7 @@ describe("ReactorClient Unit Tests", () => {
 
       const addJobInfo: JobInfo = {
         id: "job-add",
+        documentId: "test-doc",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -1559,6 +1600,7 @@ describe("ReactorClient Unit Tests", () => {
 
       const failedAddJobInfo: JobInfo = {
         id: "job-add",
+        documentId: "test-doc",
         status: JobStatus.FAILED,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -1583,6 +1625,7 @@ describe("ReactorClient Unit Tests", () => {
     it("should throw error when deleteDocument job fails", async () => {
       const jobInfo: JobInfo = {
         id: "job-1",
+        documentId: "test-doc",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -1591,6 +1634,7 @@ describe("ReactorClient Unit Tests", () => {
 
       const failedJobInfo: JobInfo = {
         id: "job-1",
+        documentId: "test-doc",
         status: JobStatus.FAILED,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -1612,6 +1656,7 @@ describe("ReactorClient Unit Tests", () => {
 
       const childJobInfo: JobInfo = {
         id: "job-child",
+        documentId: "test-doc",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -1620,6 +1665,7 @@ describe("ReactorClient Unit Tests", () => {
 
       const parentJobInfo: JobInfo = {
         id: "job-parent",
+        documentId: "test-doc",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -1628,6 +1674,7 @@ describe("ReactorClient Unit Tests", () => {
 
       const failedChildJobInfo: JobInfo = {
         id: "job-child",
+        documentId: "test-doc",
         status: JobStatus.FAILED,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -1637,6 +1684,7 @@ describe("ReactorClient Unit Tests", () => {
 
       const completedParentJobInfo: JobInfo = {
         id: "job-parent",
+        documentId: "test-doc",
         status: JobStatus.READ_READY,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),

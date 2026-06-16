@@ -33,6 +33,7 @@ describe("JobAwaiter Integration Tests", () => {
     it("should wait for job completion using real job tracker and event bus", async () => {
       const jobInfo: JobInfo = {
         id: "job-1",
+        documentId: "test-doc",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -85,6 +86,7 @@ describe("JobAwaiter Integration Tests", () => {
     it("should handle job with WRITE_COMPLETED status via OPERATION_WRITTEN event", async () => {
       const jobInfo: JobInfo = {
         id: "job-write",
+        documentId: "test-doc",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -116,6 +118,7 @@ describe("JobAwaiter Integration Tests", () => {
     it("should handle job with READ_MODELS_READY status via OPERATIONS_READY event", async () => {
       const jobInfo: JobInfo = {
         id: "job-read",
+        documentId: "test-doc",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -167,6 +170,7 @@ describe("JobAwaiter Integration Tests", () => {
     it("should handle job failure through real job tracker via JOB_FAILED event", async () => {
       const jobInfo: JobInfo = {
         id: "job-2",
+        documentId: "test-doc",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -192,6 +196,7 @@ describe("JobAwaiter Integration Tests", () => {
     it("should handle complete job lifecycle PENDING → RUNNING → WRITE_COMPLETED → READ_MODELS_READY", async () => {
       const jobInfo: JobInfo = {
         id: "job-3",
+        documentId: "test-doc",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -252,6 +257,7 @@ describe("JobAwaiter Integration Tests", () => {
     it("should handle multiple concurrent jobs with real job tracker", async () => {
       const job1: JobInfo = {
         id: "job-concurrent-1",
+        documentId: "test-doc",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -259,6 +265,7 @@ describe("JobAwaiter Integration Tests", () => {
       };
       const job2: JobInfo = {
         id: "job-concurrent-2",
+        documentId: "test-doc",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -266,6 +273,7 @@ describe("JobAwaiter Integration Tests", () => {
       };
       const job3: JobInfo = {
         id: "job-concurrent-3",
+        documentId: "test-doc",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -368,6 +376,7 @@ describe("JobAwaiter Integration Tests", () => {
     it("should handle same job being waited on multiple times", async () => {
       const jobInfo: JobInfo = {
         id: "job-duplicate",
+        documentId: "test-doc",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -419,6 +428,7 @@ describe("JobAwaiter Integration Tests", () => {
     it("should handle abort signals with real job tracker", async () => {
       const jobInfo: JobInfo = {
         id: "job-abort",
+        documentId: "test-doc",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -448,6 +458,7 @@ describe("JobAwaiter Integration Tests", () => {
     it("should handle immediate job completion", async () => {
       const jobInfo: JobInfo = {
         id: "job-immediate",
+        documentId: "test-doc",
         status: JobStatus.READ_READY,
         createdAtUtcIso: new Date().toISOString(),
         completedAtUtcIso: new Date().toISOString(),
@@ -466,6 +477,7 @@ describe("JobAwaiter Integration Tests", () => {
     it("should handle job completion with result data", async () => {
       const jobInfo: JobInfo = {
         id: "job-with-result",
+        documentId: "test-doc",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -517,6 +529,7 @@ describe("JobAwaiter Integration Tests", () => {
     it("should handle shutdown with pending jobs tracked by real tracker", async () => {
       const job1: JobInfo = {
         id: "job-shutdown-1",
+        documentId: "test-doc",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -524,6 +537,7 @@ describe("JobAwaiter Integration Tests", () => {
       };
       const job2: JobInfo = {
         id: "job-shutdown-2",
+        documentId: "test-doc",
         status: JobStatus.RUNNING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -549,6 +563,7 @@ describe("JobAwaiter Integration Tests", () => {
     it("should work correctly with event-driven updates", async () => {
       let jobInfo: JobInfo = {
         id: "job-cycle-1",
+        documentId: "test-doc",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -593,6 +608,7 @@ describe("JobAwaiter Integration Tests", () => {
 
       jobInfo = {
         id: "job-cycle-2",
+        documentId: "test-doc",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
