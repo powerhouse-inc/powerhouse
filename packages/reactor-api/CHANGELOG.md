@@ -1,3 +1,15 @@
+## 6.2.0-dev.17 (2026-06-16)
+
+### 🩹 Fixes
+
+- fixed a performance regression and consolidated some sloppy code ([3b9eecf3b](https://github.com/powerhouse-inc/powerhouse/commit/3b9eecf3b))
+- auth issue where slug operations skipped all auth ([6e8500bca](https://github.com/powerhouse-inc/powerhouse/commit/6e8500bca))
+- mcp and gql channel sync were not both behind auth ([3d145309d](https://github.com/powerhouse-inc/powerhouse/commit/3d145309d))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.2.0-dev.16 (2026-06-15)
 
 This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.

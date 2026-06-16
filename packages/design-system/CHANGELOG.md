@@ -1,3 +1,13 @@
+## 6.2.0-dev.17 (2026-06-16)
+
+### 🩹 Fixes
+
+- biuld fix ([aeeff5db9](https://github.com/powerhouse-inc/powerhouse/commit/aeeff5db9))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.2.0-dev.16 (2026-06-15)
 
 This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.

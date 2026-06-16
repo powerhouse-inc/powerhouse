@@ -1,3 +1,17 @@
+## 6.2.0-dev.17 (2026-06-16)
+
+### 🩹 Fixes
+
+- mcp and gql channel sync were not both behind auth ([3d145309d](https://github.com/powerhouse-inc/powerhouse/commit/3d145309d))
+- auth issue where slug operations skipped all auth ([6e8500bca](https://github.com/powerhouse-inc/powerhouse/commit/6e8500bca))
+- fixed a performance regression and consolidated some sloppy code ([3b9eecf3b](https://github.com/powerhouse-inc/powerhouse/commit/3b9eecf3b))
+- biuld fix ([aeeff5db9](https://github.com/powerhouse-inc/powerhouse/commit/aeeff5db9))
+- adding missing lint scripts ([c1d40c3f7](https://github.com/powerhouse-inc/powerhouse/commit/c1d40c3f7))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.2.0-dev.16 (2026-06-15)
 
 ### 🩹 Fixes
