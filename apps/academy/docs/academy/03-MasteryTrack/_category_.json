@@ -1,0 +1,7 @@
+{
+  "label": "Build",
+  "link": {
+    "type": "generated-index",
+    "description": "Build Powerhouse packages by hand: document models, editors, drive-apps, processors, and how to launch them. The under-the-hood workflows for when you go beyond the agent."
+  }
+}

@@ -17,7 +17,8 @@ function generateCombinedCliDocs() {
       "..",
       "docs",
       "academy",
-      "04-APIReferences",
+      "04-Reference",
+      "01-APIReferences",
     );
     const targetDocFile = path.join(academyDocsDir, "00-PowerhouseCLI.md");
 

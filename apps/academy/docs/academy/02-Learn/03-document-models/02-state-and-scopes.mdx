@@ -1,0 +1,85 @@
+---
+title: State and scopes
+description: Powerhouse splits document state into scopes (global, local) so private and shared data can travel together but sync independently.
+---
+
+A Powerhouse document doesn't have one monolithic state — it has **scopes**. Each scope is its own state shape, its own operation log, and its own sync rules. Once you see why that separation exists, a lot of tricky design decisions become obvious.
+
+## Two scopes, two purposes
+
+Every document starts with two scopes:
+
+- **`global`** — the state every collaborator sees. Operations land here, get appended to the global log, and replicate to all peers.
+- **`local`** — state that belongs only to your device. Operations here stay local; they never sync anywhere.
+
+```ts
+doc.state.global;        // shared with everyone
+doc.state.local;         // yours alone
+
+doc.operations.global;   // replicated log
+doc.operations.local;    // local-only log
+```
+
+Think of a shared todo list. The `global` scope holds the items everyone cares about — titles, completion status, assignees. The `local` scope holds things like whether *you* have the "show completed" filter on, or which item your cursor is sitting on. Those are yours. Nobody else needs them.
+
+## Scopes stay independent
+
+Global and local are separate streams. The operation at index 5 in `global` has nothing to do with index 5 in `local`. The Reactor's sync engine replicates `global` across peers and leaves `local` completely alone.
+
+This means you can dispatch an action that only updates your filter preference — it appends to the local log, runs the local reducer, and stops there. Your teammates never see it. Meanwhile, when you add a new todo, that action appends to the global log and propagates to everyone.
+
+<Quiz
+  question="A user is typing a comment in a draft box — they haven't posted it yet. Which scope should that draft text live in?"
+  choices={[
+    {
+      label: "global — so collaborators can see the user is typing.",
+      explanation: "Presence indicators are a UI concern, not document state. Unposted drafts are private by nature — sharing them globally would be noisy and unexpected.",
+    },
+    {
+      label: "local — it's private to this user's device until they post.",
+      correct: true,
+      explanation: "Draft text that hasn't been submitted is a perfect local-scope use case: it only matters on this device, and should never sync.",
+    },
+    {
+      label: "Neither — draft text shouldn't be stored in document state at all.",
+      explanation: "Storing ephemeral input in local state is exactly the right pattern. It gives you persistence across refreshes without polluting the shared log.",
+    },
+    {
+      label: "global, but only after a short delay.",
+      explanation: "Delaying the sync doesn't change the fact that unposted text is private. Use local scope and only move content to global when the user posts.",
+    },
+  ]}
+/>
+
+## Declaring scopes in the model
+
+When you define a document model, each scope gets its own GraphQL state schema. The local schema is optional — omit it and the document only has a global scope.
+
+```graphql
+type TodoListState {            # global scope
+  todos: [Todo!]!
+}
+
+type TodoListLocalState {       # local scope (optional)
+  showCompleted: Boolean!
+  activeTodoId: OID
+}
+```
+
+When you dispatch an action, you declare which scope it targets. The reducer for that scope runs against that scope's state — the other scope is untouched.
+
+## The one-question rule
+
+Not sure which scope to use? Ask: **should every collaborator see this change?**
+
+- Yes → `global`
+- No, this is mine alone → `local`
+
+That's it. The boundary isn't about importance or size — it's about audience.
+
+## Where to next
+
+<Cards>
+  <Card title="Actions and reducers" href="/academy/Learn/document-models/actions-and-reducers" />
+  <Card title="Back to: Documents and drives" href="/academy/Learn/document-models/documents-and-drives" />
+</Cards>

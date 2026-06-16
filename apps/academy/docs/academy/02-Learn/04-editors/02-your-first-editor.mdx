@@ -1,0 +1,167 @@
+---
+title: Your first editor
+description: Scaffold a React editor for the Todo model, implement the UI, and preview it in Vetra Studio.
+---
+
+An **editor** in <Term>Powerhouse</Term> is a React component tied to one <Term>Document Model</Term>. It has one job: turn user input into actions and render the document's state.
+
+This lesson builds a minimal editor for the Todo model from the previous lesson. You'll need `ph vetra` running and the Todo model from the previous step already in place.
+
+## Scaffold the editor
+
+In Vetra Studio, open the **`vetra-<hash>`** drive, then click **Document Editor** to create a new editor specification. Give it:
+
+- **Name**: `todo-editor`
+- **Document type**: `powerhouse/todo`
+
+Once you confirm (not just save as draft — the editor must be **confirmed** for codegen to run), codegen scaffolds the editor files:
+
+```
+editors/
+└── todo-editor/
+    ├── editor.tsx          # yours to implement
+    ├── module.ts           # auto-generated, registers the editor
+    └── index.ts
+```
+
+You can also scaffold the editor manually with:
+
+```bash
+ph generate --editor todo-editor --document-type powerhouse/todo
+```
+
+## Implement the editor
+
+The generated `editor.tsx` uses the `useSelectedTodoDocument()` hook to get the current document and a `dispatch` function. No props are passed — the hook connects to whichever Todo document is open.
+
+```tsx title="editors/todo-editor/editor.tsx"
+import { useState } from 'react';
+import { useSelectedTodoDocument } from 'todo-app/document-models/todo';
+import { addTodo, completeTodo, removeTodo } from 'todo-app/document-models/todo';
+
+export default function Editor() {
+  const [document, dispatch] = useSelectedTodoDocument();
+  const [title, setTitle] = useState('');
+
+  return (
+    <div className="todo">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!title.trim()) return;
+          dispatch(addTodo({ id: crypto.randomUUID(), title }));
+          setTitle('');
+        }}
+      >
+        <input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="What needs doing?"
+        />
+        <button type="submit">Add</button>
+      </form>
+
+      <ul>
+        {document.state.global.items.map((t) => (
+          <li key={t.id}>
+            <label>
+              <input
+                type="checkbox"
+                checked={t.done}
+                onChange={() => dispatch(completeTodo({ id: t.id }))}
+              />
+              {t.title}
+            </label>
+            <button
+              type="button"
+              onClick={() => dispatch(removeTodo({ id: t.id }))}
+            >
+              ×
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+```
+
+Notice what the editor does *not* do:
+
+- It never mutates state directly.
+- It never talks to the network.
+- It never generates timestamps or hashes — the <Term>Reactor</Term> handles that.
+
+All the editor does is dispatch. The reducer handles the rest.
+
+<Quiz
+  question="The user clicks the checkbox on a todo. What's the correct order of events?"
+  choices={[
+    {
+      label: 'Editor mutates document.state.global.items[i].done → UI re-renders.',
+      explanation: 'Editors must never mutate state. They dispatch actions.',
+    },
+    {
+      label: 'Editor dispatches completeTodo → reducer produces next state → Reactor appends operation → UI re-renders with new state.',
+      correct: true,
+      explanation: 'The action flows through the reducer and is recorded by the Reactor; the new state comes back to the editor.',
+    },
+    {
+      label: 'Editor fetches /api/todos/complete → server updates DB → UI re-renders.',
+      explanation: 'That\'s CRUD. Powerhouse inverts it: the log is local first, and syncs itself later.',
+    },
+    {
+      label: 'Editor calls completeTodo() directly without dispatch, so it runs synchronously.',
+      explanation: 'Actions are just data. The dispatch step is what turns them into operations via the reducer.',
+    },
+  ]}
+  explanation="The editor's only job is to produce actions. State, operations, and timestamps are the Reactor's concern."
+/>
+
+## How editors are registered
+
+The generated `module.ts` exports an `EditorModule` object that links the component to the document type:
+
+```ts title="editors/todo-editor/module.ts"
+import type { EditorModule } from 'document-model';
+import { lazy } from 'react';
+
+export const TodoEditor: EditorModule = {
+  Component: lazy(() => import('./editor.js')),
+  documentTypes: ['powerhouse/todo'],
+  config: {
+    id: 'todo-editor',
+    name: 'Todo Editor',
+  },
+};
+```
+
+Your package's `editors/editors.ts` collects all `EditorModule` exports:
+
+```ts title="editors/editors.ts"
+import type { EditorModule } from 'document-model';
+import { TodoEditor } from './todo-editor/module.js';
+
+export const editors: EditorModule[] = [TodoEditor];
+```
+
+Powerhouse reads this file to know which UI to render for which document type.
+
+## Preview in Vetra Studio
+
+With `ph vetra` running, open the **`preview-<hash>`** drive (labelled "Vetra Preview") in the browser. Create a new Todo document there — your editor renders immediately. Any change you make to `editor.tsx` triggers a hot reload.
+
+## What you have now
+
+You've got a full vertical slice:
+
+- A typed **document model** describing state and actions.
+- A pure **reducer** that defines every state transition.
+- A React **editor** that dispatches actions and reads `doc.state.global.items`.
+
+That's already enough to run offline, with replay, undo, and audit available. The next lesson turns the final key — sync.
+
+<Cards>
+  <Card title="Editor hooks and state" href="/academy/Learn/editors/editor-hooks-and-state" />
+  <Card title="Back to Your first document model" href="/academy/Learn/document-models/your-first-document-model" />
+</Cards>

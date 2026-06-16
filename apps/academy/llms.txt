@@ -78,10 +78,9 @@
 - [IReactorClient](https://academy.vetra.io/academy/APIReferences/ReactorClient): The IReactorClient interface is the primary way to interact with a Powerhouse reactor programmatically. It wraps lower-level APIs to provide a simpler
 - [Advanced reactor usage](https://academy.vetra.io/academy/APIReferences/AdvancedReactorUsage): This page covers the low-level IReactor interface and the internal components you can access through ReactorModule. Most developers should use IReacto
 - [Relational Database](https://academy.vetra.io/academy/APIReferences/RelationalDatabase): This page covers the relational database tools available in Powerhouse applications, providing type-safe database operations with real-time updates th
-- [PHDocument Migration Guide](https://academy.vetra.io/academy/APIReferences/PHDocumentMigrationGuide): This guide covers the breaking changes introduced in Powerhouse v4.0.0 related to PHDocument structure changes. If you're upgrading from v3.2.0 or ear
 - [Vetra Remote Drive](https://academy.vetra.io/academy/APIReferences/VetraRemoteDrive): These commands enable collaborative development using Vetra remote drives. Instead of working with local drives only, you can connect your Powerhouse 
-- [Subgraph Migration Guide (v6 Reactor)](https://academy.vetra.io/academy/APIReferences/SubgraphMigrationGuide): This guide covers the breaking changes to the GraphQL subgraph API introduced in the v6 Reactor. If you were querying the old /graphql/document-drive 
-- [Processor Migration Guide (v6 Reactor)](https://academy.vetra.io/academy/APIReferences/ProcessorMigrationGuide): This guide covers the breaking changes to the processor interface introduced in the v6 Reactor. If you have existing processors built on the legacy st
+- [Subgraph Migration Guide (v6)](https://academy.vetra.io/academy/APIReferences/SubgraphMigrationGuide): This guide covers the breaking changes to the GraphQL subgraph API introduced in the v6 Reactor. If you were querying the old /graphql/document-drive 
+- [Processor Migration Guide (v6)](https://academy.vetra.io/academy/APIReferences/ProcessorMigrationGuide): This guide covers the breaking changes to the processor interface introduced in the v6 Reactor. If you have existing processors built on the legacy st
 - [Attachment service](https://academy.vetra.io/academy/APIReferences/AttachmentService): The @powerhousedao/reactor-attachments package decouples large binaries (images, files, avatars) from the action and operation pipeline. Instead of ca
 - [Renown SDK](https://academy.vetra.io/academy/APIReferences/renown-sdk/Overview): A comprehensive SDK for integrating Renown authentication and user profile management into your React applications.
 - [Authentication Guide](https://academy.vetra.io/academy/APIReferences/renown-sdk/Authentication): Comprehensive guide to implementing authentication with the Renown SDK.
@@ -91,8 +90,6 @@
 ## Component Library
 
 - [Document-Engineering](https://academy.vetra.io/academy/ComponentLibrary/DocumentEngineering): The reusable components in the Document-Engineering system are a set of of front-end components based on graphQL scalars.
-- [Step 1: Create Custom Scalars](https://academy.vetra.io/academy/ComponentLibrary/CreateCustomScalars): This tutorial provides step-by-step instructions for creating custom scalars & components, and to contributing to the document-engineering project.
-- [Step 2: Integrate Your Scalar into a React Component](https://academy.vetra.io/academy/ComponentLibrary/IntegrateIntoAReactComponent): This guide explains how to use a custom scalar (created as described in the previous step) within a React component. You'll learn how to leverage the 
 
 ## Architecture
 

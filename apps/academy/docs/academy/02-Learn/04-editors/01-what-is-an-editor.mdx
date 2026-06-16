@@ -1,0 +1,67 @@
+---
+title: What is an editor?
+description: A Powerhouse editor is just a React component bound to one document. It reads state, dispatches actions, and the rest of the stack takes care of persistence and sync.
+---
+
+You've seen how documents store their history as operations, and how reducers produce the next state from each action. But none of that matters to a user until something renders on screen. That's the editor's job — and only that.
+
+## An editor is a React component, nothing more
+
+An editor is a React component bound to one document type. It receives two things: the current document state, and a way to dispatch actions. Everything else — running reducers, persisting operations, syncing across peers — is handled by the Reactor. The editor doesn't know any of that exists.
+
+When a user opens a document in Connect, the host looks up which editor is registered for that document type and mounts it. If no editor is registered, there's no UI. That registration step is what links a visual component to a document model.
+
+One model can have more than one editor. A budget document might have a simple viewer and a full spreadsheet-style editor. Both are separate React components registered against the same model.
+
+## The dividing line: editors vs reducers
+
+This is worth being explicit about, because it's easy to blur:
+
+| Job | Belongs in |
+| --- | --- |
+| Rendering state on screen | Editor |
+| Dispatching an action when the user clicks | Editor |
+| Showing a toast notification | Editor |
+| Computing the next state from an action | Reducer |
+| Validating that a field is non-empty | Reducer |
+| Generating the new document history | Reducer |
+
+The pattern is simple: **reducers are <Term term="pure functions (for reducers)">pure</Term>, editors are impure.** Reducers have no access to the DOM, the network, or the clock. Editors can do all of those things freely — because they're just React components.
+
+The editor dispatches. The reducer computes. Never the other way around.
+
+<Quiz
+  question="A user types a new title for a document and hits Save. Which part of the stack is responsible for each job?"
+  choices={[
+    {
+      label: "Rendering the title text field — reducer.",
+      explanation: "Rendering is the editor's job. Reducers are pure functions that never touch the DOM.",
+    },
+    {
+      label: "Showing a 'Saved!' toast after the dispatch succeeds — reducer.",
+      explanation: "Toast notifications are a UI side-effect. That belongs in the editor, not in a pure function.",
+    },
+    {
+      label: "Computing the next document state when the action arrives — reducer.",
+      correct: true,
+      explanation: "State transitions are exactly what reducers do. The editor dispatches the action; the reducer takes it from there.",
+    },
+    {
+      label: "Validating that the new title is not empty — editor.",
+      explanation: "Input validation that determines whether a state transition is valid belongs in the reducer, so it runs consistently regardless of which editor triggered the action.",
+    },
+  ]}
+/>
+
+## Registration: how Connect finds your editor
+
+An editor isn't just a component — it's a component paired with metadata that says which document type it handles. That pairing is called an <Term>editor module</Term>, and it lives in `editors/editors.ts`. Connect reads this registry at startup to know which UI to mount for each document type.
+
+The registration is generated for you during the codegen phase — you don't write it by hand. But it's worth knowing it exists, because a missing registration is the most common reason an editor doesn't appear in Connect.
+
+## Where to next
+
+<Cards>
+  <Card title="Your first editor" href="/academy/Learn/editors/your-first-editor" />
+  <Card title="Back to: Your first document model" href="/academy/Learn/document-models/your-first-document-model" />
+</Cards>

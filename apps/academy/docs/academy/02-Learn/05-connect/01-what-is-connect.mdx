@@ -1,0 +1,80 @@
+---
+title: What is Connect?
+description: Connect is the default host application — a desktop and web app that loads your document models, drives, and editors and runs a Reactor inside.
+---
+
+You've got a Reactor running and a document model defined. But where do users actually open a document, browse their files, and click things? That's Connect — the default host application Powerhouse ships, and the place where your code meets real users.
+
+## Connect is a host, not just a UI
+
+Back in the architecture overview you saw that a *host application* embeds a Reactor to get the operation engine, then adds its own UI on top. Connect is the most common host. It runs in a browser (or as a desktop app) and layers three things on top of the bare Reactor:
+
+- A **drives sidebar** — a file-browser-style view of all drives the user has access to.
+- An **editor host** — it looks at the document type you open and mounts whichever editor is registered for it.
+- A **sync client** — it connects to Switchboard and replicates state in real time.
+
+Closing Connect doesn't destroy the Reactor *library* — that's just code. But the session, the UI, the sync loop, and the drive browser all go away with it.
+
+## How Connect finds your packages
+
+When Connect starts, it reads configuration to know which document models and editors to load. The key env variable is `PH_CONNECT_PACKAGES` — a comma-separated list of packages Connect should pull in at runtime. If your todo document model isn't in that list, Connect has no idea it exists.
+
+For local development you don't usually set this manually. Running `ph vetra` spins up the full stack — Connect, Switchboard, and MCP — all pointed at your local Reactor Package automatically.
+
+```bash
+# Full local dev stack
+ph vetra
+
+# Connect only, pointed at a specific Switchboard
+ph connect studio
+```
+
+On the code side, editors are registered in your package's `editors/editors.ts`:
+
+```ts
+import type { EditorModule } from "document-model";
+import { TodoListEditor } from "./todo-list-editor/module.js";
+
+export const editors: EditorModule[] = [TodoListEditor];
+```
+
+If that array is empty, Connect renders nothing when you open a todo document.
+
+<Quiz
+  question="A user closes Connect. Which of the following is also gone?"
+  choices={[
+    {
+      label: "The Reactor library code itself.",
+      explanation: "The library is just an npm package — closing an app doesn't uninstall code. It can still be imported anywhere.",
+    },
+    {
+      label: "The drives sidebar, the mounted editor, and the sync loop.",
+      correct: true,
+      explanation: "Those all live inside Connect. The Reactor engine is embedded in Connect; without Connect running, there is no running session.",
+    },
+    {
+      label: "The document models — they need Connect to stay defined.",
+      explanation: "Document models are schema definitions, not runtime state. They exist in your package regardless of whether Connect is open.",
+    },
+    {
+      label: "The operation log stored on disk.",
+      explanation: "Persisted operations live in the local Reactor store, not in Connect's process. They survive restarts.",
+    },
+  ]}
+/>
+
+## Studio mode vs. production
+
+Connect runs in two modes, and from your editor's point of view they're identical:
+
+- **Studio mode** (`PH_CONNECT_STUDIO_MODE=true`) — points at your local Reactor Package. Every save reloads. This is where you build.
+- **Production mode** — a static bundle deployed to a server, connecting to a production Switchboard. Same editor code, different environment.
+
+The built bundle is configured entirely through `PH_CONNECT_*` environment variables — things like which Switchboard drives to default to (`PH_CONNECT_DEFAULT_DRIVES_URL`) or the log level (`PH_CONNECT_LOG_LEVEL`). These are baked in at build time and reach the browser, so never put secrets there.
+
+## Where to next
+
+<Cards>
+  <Card title="Drive apps" href="/academy/Learn/connect/drive-apps" />
+  <Card title="Back to: Editor hooks and state" href="/academy/Learn/editors/editor-hooks-and-state" />
+</Cards>

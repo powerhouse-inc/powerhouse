@@ -1,0 +1,155 @@
+---
+title: Processors and read models
+description: Fold the operation log into search indexes, dashboards, and caches — without weighing your documents down.
+---
+
+A document's operation log is authoritative but not always convenient. If you want to ask "which todos did Alice complete last week?" you don't want to replay the entire log every time. That's what **processors** are for: event-driven handlers that subscribe to the operation stream and maintain a **read model** on the side.
+
+## The mental model
+
+Think of processors as **materialised views** over the operation log. Each processor:
+
+1. Subscribes to one or more document types (or specific documents).
+2. Receives every operation as it's appended.
+3. Updates its own storage — a table, an index, a counter.
+
+Your reducers stay lean; your queries stay fast; neither has to know about the other.
+
+## The IProcessor interface
+
+Every processor implements `IProcessor` from `@powerhousedao/reactor-browser`:
+
+```ts
+import type { IProcessor, OperationWithContext } from '@powerhousedao/reactor-browser';
+
+export interface IProcessor {
+  onOperations(operations: OperationWithContext[]): Promise<void>;
+  onDisconnect(): Promise<void>;
+}
+```
+
+- `onOperations` is called each time operations arrive, in order. Batch all your updates inside one call rather than writing one-by-one.
+- `onDisconnect` is called when the Reactor removes the processor — use it to close connections or flush caches.
+
+## Scaffold a processor
+
+Generate the scaffolding with:
+
+```bash
+ph generate --processor todo-stats --processor-apps switchboard
+```
+
+This creates `processors/todo-stats/` with a class that implements `IProcessor` and a factory that registers it with the Reactor.
+
+## A minimal processor
+
+Fill in `onOperations` to build your read model:
+
+```ts title="processors/todo-stats/index.ts"
+import type { IProcessor, OperationWithContext } from '@powerhousedao/reactor-browser';
+
+export class TodoStatsProcessor implements IProcessor {
+  private counts = { added: 0, completed: 0, removed: 0 };
+
+  async onOperations(operations: OperationWithContext[]): Promise<void> {
+    for (const { operation, context } of operations) {
+      if (context.documentType !== 'powerhouse/todo') continue;
+
+      switch (operation.type) {
+        case 'ADD_TODO':
+          this.counts.added++;
+          break;
+        case 'COMPLETE_TODO':
+          this.counts.completed++;
+          break;
+        case 'REMOVE_TODO':
+          this.counts.removed++;
+          break;
+      }
+    }
+  }
+
+  async onDisconnect(): Promise<void> {
+    // release any resources here
+  }
+
+  getStats() {
+    return { ...this.counts };
+  }
+}
+```
+
+That's it. No polling, no cron, no diffing. Every operation flows through `onOperations` exactly once, in order.
+
+<Quiz
+  question="Which of these jobs is a good fit for a processor, and which should stay in the reducer?"
+  choices={[
+    {
+      label: 'Computing the total number of completed todos — reducer.',
+      explanation: 'That\'s a count across the entire history. Doing it in the reducer couples the document\'s state size to its age.',
+    },
+    {
+      label: 'Computing the total number of completed todos — processor.',
+      correct: true,
+      explanation: 'Aggregations like this are exactly what processors are built for.',
+    },
+    {
+      label: 'Sending an email when a todo is assigned — reducer.',
+      explanation: 'Reducers are pure — they can\'t send email. This belongs in a processor.',
+    },
+    {
+      label: 'Validating that a todo title isn\'t empty — processor.',
+      explanation: 'Validation runs before the action becomes an operation. That\'s reducer territory.',
+    },
+  ]}
+  explanation="Reducers answer 'what is this document now?' Processors answer 'what else should happen because of that operation?'"
+/>
+
+## Replay-safe from day one
+
+A processor's job is to reduce the log. So if you change the processor's code — add a new counter, fix a bug, reshape the output — you can drop its state and replay from operation zero. The log never changed; only the lens did.
+
+This is how <Term>Powerhouse</Term> keeps processors "forgiving": you can evolve them without corrupting the source of truth.
+
+## Filtering operations
+
+The factory registers a `ProcessorRecord` that tells the Reactor which operations to deliver. A typical filter targets a specific document type and scope:
+
+```ts title="processors/todo-stats/factory.ts"
+import type { ProcessorRecord } from '@powerhousedao/reactor-browser';
+import { TodoStatsProcessor } from './index.js';
+
+export async function todoStatsProcessorFactory(): Promise<ProcessorRecord[]> {
+  const processor = new TodoStatsProcessor();
+  return [
+    {
+      processor,
+      filter: {
+        documentType: ['powerhouse/todo'],
+        scope: ['global'],
+        branch: ['main'],
+      },
+    },
+  ];
+}
+```
+
+When your package registers the factory with the <Term>Reactor</Term>, only operations matching that filter reach `onOperations`.
+
+## You've seen the whole stack
+
+Reducers, editors, sync, and now processors. That's the full Powerhouse shape:
+
+```
+dispatch(action) → reducer → operation (in log)
+                                  │
+                                  ├─► synced to peers
+                                  └─► fanned out to processors → read models → UI / agents
+```
+
+Once you have the log, every downstream feature is just another lens on it.
+
+<Cards>
+  <Card title="Sync and collaborate" href="/academy/Learn/sync/sync-and-collaborate" />
+  <Card title="Back to: Subgraphs" href="/academy/Learn/switchboard/subgraphs" />
+</Cards>

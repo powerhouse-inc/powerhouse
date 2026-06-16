@@ -1,0 +1,77 @@
+---
+title: Sync and collaborate
+description: Open your Todo document in two browsers, take one offline, and watch operations reconcile when it reconnects.
+---
+
+So far your Todo document lives in a single Reactor in a single tab. This lesson makes it collaborative: open it in two browsers, take one offline, and see operations reconcile when it comes back.
+
+Nothing in your model or editor changes. Sync is infrastructure — it rides on top of the operation log you already have.
+
+## What "syncing" actually means
+
+Two <Term>Reactor</Term>s hold the same document if they hold the same ordered log of operations. Sync is just the protocol that gets them there:
+
+1. Each Reactor keeps its local log.
+2. When connected, they exchange missing operations.
+3. Both sides fold the combined log and arrive at the same state.
+
+Because each operation carries its own index and hash, there's no guessing what's new and no ambiguity about order.
+
+## Try it
+
+With `ph vetra` running and the Todo model and editor from the previous two lessons in place, open two browser windows pointing at `http://localhost:3000`. In both windows, open the same Todo document from the **`preview-<hash>`** drive and start editing. Additions, completions, and deletions flow between them in under a second.
+
+Now, in window A:
+- Open DevTools → Network → toggle "Offline."
+- Add three new todos.
+- Complete one of window B's existing todos.
+
+Window B keeps working — it doesn't know A is offline. It also keeps editing.
+
+Turn A's network back on. Within a moment:
+- A's three new todos appear in B.
+- B's changes appear in A.
+- Both logs have the same operations, in the same order, with the same hashes.
+
+That's it. No merge UI, no "whose version do you want to keep?" popup.
+
+<Quiz
+  question="While A is offline, which of these does Powerhouse guarantee?"
+  multi
+  choices={[
+    {
+      label: "A's new operations are queued locally and will be replayed to peers when A reconnects.",
+      correct: true,
+      explanation: 'The local log is always the source of truth. Peers catch up later.',
+    },
+    {
+      label: "A's UI is frozen because it can't reach the server.",
+      explanation: 'Offline-first means the UI keeps responding against the local log.',
+    },
+    {
+      label: 'Once reconciled, every peer holds the same ordered log.',
+      correct: true,
+      explanation: 'That\'s the whole point — same log → same state.',
+    },
+    {
+      label: "B's edits during A's downtime are discarded when A reconnects.",
+      explanation: 'Both sides\' operations survive — neither is privileged over the other.',
+    },
+  ]}
+  explanation="Offline-first isn't a side feature here — it falls out of the log being local, deterministic, and append-only."
+/>
+
+## When do conflicts *really* happen?
+
+The one place you still need to think is **semantic conflict**: two operations that are each fine on their own, but contradictory together. For example, if Alice renames todo `t-1` to "Groceries" and Bob renames it to "Errands" while offline, both renames will be in the log after sync, and the later one will win as the current title — but both actors' *intent* is preserved in the history.
+
+If your app needs a different resolution rule (for example, "the first writer wins"), you encode it in the reducer — not in sync. The sync layer never has to make a judgement call, because your reducer already has.
+
+## You've shipped the loop
+
+You now have a document model, a reducer, an editor, and a fully-synced, offline-first, multi-device experience — built on the same operation log the rest of Powerhouse uses for undo, audit, and replays.
+
+<Cards>
+  <Card title="Go deeper: reducers in depth" href="/academy/Learn/deep-dives/reducers-in-depth" />
+  <Card title="Go deeper: processors and read models" href="/academy/Learn/switchboard/processors-and-read-models" />
+</Cards>

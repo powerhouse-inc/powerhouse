@@ -1,0 +1,75 @@
+---
+title: What is Switchboard?
+description: Switchboard is the server-side host for Powerhouse. It runs a Reactor, exposes documents over GraphQL, and runs processors that derive read models.
+---
+
+You've seen Connect give users a browser UI for editing documents. Switchboard is the other side of that coin — it runs the same <Term>Reactor</Term> engine, but on a Node server, and instead of a UI it hands clients an API. Same documents, same operation log, different surface.
+
+## Just another host
+
+Remember the host-application pattern: any runtime that boots a Reactor and loads a package is a host. Connect is one. Switchboard is another.
+
+The difference is what each host exposes outward:
+
+- **Connect** renders editors — it gives *people* a UI.
+- **Switchboard** exposes GraphQL and MCP endpoints — it gives *code* an API.
+
+Because both run the same Reactor library with the same document models installed, they stay in sync. An operation written through Connect arrives in Switchboard; a mutation dispatched via GraphQL shows up immediately in Connect. One Reactor, two surfaces.
+
+## What Switchboard exposes
+
+Switchboard serves two protocols at once:
+
+- **GraphQL** — composed from *subgraphs*, one per installed package. Web apps, mobile clients, and integrations query documents and dispatch actions here.
+- **MCP** (Model Context Protocol) — the same Reactor, surfaced as tools an AI agent can call.
+
+You'll dig into subgraphs in the next lesson. For now, just think of them as "the GraphQL layer, split by package domain, then stitched back into one unified schema."
+
+## Where processors fit in
+
+Processors are event-driven handlers that subscribe to the operation stream and fold it into *read models* — optimised views for search indexes, dashboards, aggregates, or anything else that's awkward to derive from a single document's state at query time. Processors run inside Switchboard, and subgraphs query the read models they produce.
+
+You'll get a full lesson on processors too. The short version: if a query spans many documents or needs pre-computed data, a processor builds it; a subgraph exposes it.
+
+<Quiz
+  question="A team is building three features. Match each one to the right tool."
+  choices={[
+    {
+      label: "Expose a query endpoint so a mobile app can list all open tasks — build a processor.",
+      explanation: "A query endpoint for external clients is GraphQL work, which lives in a Switchboard subgraph — not a processor. Processors build read models; subgraphs expose them.",
+    },
+    {
+      label: "Let users drag-and-drop tasks in their browser — build that in Switchboard.",
+      explanation: "Browser UI work belongs in Connect (editors). Switchboard has no UI layer; it serves APIs.",
+    },
+    {
+      label: "Expose a query endpoint so a mobile app can list all open tasks — build a Switchboard subgraph.",
+      correct: true,
+      explanation: "Exactly. External clients query documents and read models through Switchboard's GraphQL API, which is assembled from subgraphs. Connect is for browser users, not API consumers.",
+    },
+    {
+      label: "Build a full-text search index across all documents — build that in Connect.",
+      explanation: "Cross-document derived data is a processor's job. Processors run in Switchboard, subscribe to operations, and write to read models that subgraphs can query.",
+    },
+  ]}
+/>
+
+## Running Switchboard locally
+
+During development, `ph vetra` spins up a local Switchboard alongside Connect. It hot-reloads your subgraphs as you edit them and attaches MCP so you can test agent workflows without a production deployment.
+
+```bash
+ph vetra
+# Reactor booted
+# Subgraphs composed — GraphQL at http://localhost:4001/graphql
+# MCP at http://localhost:4001/mcp
+```
+
+In production, Switchboard deploys as a Docker container — same code, persistent Reactor store, as many instances as you need behind a load balancer.
+
+## Where to next
+
+<Cards>
+  <Card title="Subgraphs" href="/academy/Learn/switchboard/subgraphs" />
+  <Card title="Back to: Drive apps" href="/academy/Learn/connect/drive-apps" />
+</Cards>

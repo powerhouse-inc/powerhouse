@@ -388,7 +388,7 @@ Impact on Editors:
 - Document and Drive editors need to adopt the new hook patterns from `@powerhousedao/reactor-browser`
 - Navigation and selection state is now managed through hooks instead of props
 
-Learn More: Complete hooks documentation and examples are available at https://academy.vetra.io/academy/APIReferences/ReactHooks
+Learn More: Complete hooks documentation and examples are available at https://academy.vetra.io/academy/Reference/APIReferences/ReactHooks
 
 Migration Required: Existing editors will need to be refactored to use the new hooks API. See Migration Guide below.
 
@@ -807,11 +807,11 @@ Introducing the **Relational Database & Operational Processor System**, a new ar
 #### Documentation & Guides:
 
 - **New:** PHDocument Migration Guide - Comprehensive guide to navigate the breaking changes in v4.0.0, including step-by-step migration instructions for the document header restructuring and property access patterns.
-- 🔗 https://academy.vetra.io/academy/APIReferences/PHDocumentMigrationGuide
+- 🔗 https://academy.vetra.io/academy/Reference/APIReferences/PHDocumentMigrationGuide
 - **New:** Drive Analytics Documentation and Examples - Complete documentation for the new analytics system with practical examples showing how to implement and use drive and document analytics processors.
 - 🔗 https://academy.vetra.io/academy/MasteryTrack/WorkWithData/drive-analytics
 - **New:** Relational Database & Operational Processor System - Educational content explaining the new architecture for data handling, querying, and synchronization
-- 🔗 https://academy.vetra.io/academy/APIReferences/RelationalDatabase
+- 🔗 https://academy.vetra.io/academy/Reference/APIReferences/RelationalDatabase
 - **New:** Todo-List Processor Tutorial - Try to add a processor to your todo-list demo project
 - 🔗 https://academy.vetra.io/academy/MasteryTrack/WorkWithData/RelationalDbProcessor
 
@@ -910,7 +910,7 @@ This release brings improvements to the **Cloud Environment Setup Flow,** a Conn
     configure your environment [https://academy.vetra.io/academy/MasteryTrack/Launch/ConfigureEnvironment](https://academy.vetra.io/academy/MasteryTrack/Launch/ConfigureEnvironment)
   ***
   ### Find your document scalars in the stand-alone Document-Engineering
-  - [https://academy.vetra.io/academy/ComponentLibrary/DocumentEngineering](https://academy.vetra.io/academy/ComponentLibrary/DocumentEngineering)
+  - [https://academy.vetra.io/academy/Reference/ComponentLibrary/DocumentEngineering](https://academy.vetra.io/academy/Reference/ComponentLibrary/DocumentEngineering)
     ✅ **What to try: Visit the updated** [https://storybook.powerhouse.academy](https://storybook.powerhouse.academy/?path=/docs/getting-started--readme) to see the latest scalar implementations by Dspot.
   ***
   ### Performance improvements in Connect
@@ -924,7 +924,7 @@ This release brings improvements to the **Cloud Environment Setup Flow,** a Conn
     'Configure a drive' is now available to help you out. [https://academy.vetra.io/academy/MasteryTrack/BuildingUserExperiences/ConfiguringDrives](https://academy.vetra.io/academy/MasteryTrack/BuildingUserExperiences/ConfiguringDrives)
   - New educational content is present inside the 'Mastery track' guiding you through the advanced ToDoList Demo. [https://academy.vetra.io/academy/MasteryTrack/DocumentModelCreation/WhatIsADocumentModel](https://academy.vetra.io/academy/MasteryTrack/DocumentModelCreation/WhatIsADocumentModel)
   - The first page inside our API references chapter is now automatically updated with all the latest available commands for the Powerhouse CLI
-    [https://academy.vetra.io/academy/APIReferences/PowerhouseCLI](https://academy.vetra.io/academy/APIReferences/PowerhouseCLI)
+    [https://academy.vetra.io/academy/Reference/APIReferences/PowerhouseCLI](https://academy.vetra.io/academy/Reference/APIReferences/PowerhouseCLI)
 
 ---
 
