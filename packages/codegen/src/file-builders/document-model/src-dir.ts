@@ -36,6 +36,7 @@ export async function makeReducerOperationHandlerForModule({
   module,
   version,
   srcDirPath,
+  genDirPath,
   versionImportPath,
   pascalCaseDocumentType,
   camelCaseDocumentType,
@@ -77,19 +78,23 @@ export async function makeReducerOperationHandlerForModule({
     existingOperationsInterfaceTypeImport.remove();
   }
 
-  const operationsInterfaceTypeImport = sourceFile.addImportDeclaration({
+  sourceFile.addImportDeclaration({
     namedImports: [operationsInterfaceTypeName],
     moduleSpecifier: versionImportPath,
     isTypeOnly: true,
   });
 
-  const operationsInterfaceTypeProperties = operationsInterfaceTypeImport
-    .getNamedImports()
-    .find((value) => value.getName() === operationsInterfaceTypeName)
-    ?.getNameNode()
-    .getType()
-    .getProperties()
-    .map((symbol) => symbol.getName());
+  // Read operation names from the generated operations interface's AST members;
+  // it's a source file in this project already, so no module resolution needed.
+  const operationsInterface = project
+    .getSourceFile(path.join(genDirPath, kebabCaseModuleName, "operations.ts"))
+    ?.getInterface(operationsInterfaceTypeName);
+  const operationsInterfaceTypeProperties = operationsInterface
+    ? [
+        ...operationsInterface.getProperties(),
+        ...operationsInterface.getMethods(),
+      ].map((member) => member.getName())
+    : undefined;
 
   if (!operationsInterfaceTypeProperties) {
     throw new Error("Failed to create operation handler object");
