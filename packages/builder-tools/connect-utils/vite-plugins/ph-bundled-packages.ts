@@ -13,8 +13,11 @@ export type PhBundledPackagesPluginOptions = {
   projectRoot?: string;
 };
 
-const VIRTUAL_ID = "ph-bundled-packages-virtual";
-const RESOLVED_VIRTUAL_ID = "\0virtual:" + VIRTUAL_ID;
+export const VIRTUAL_ID = "ph-bundled-packages-virtual";
+export const RESOLVED_VIRTUAL_ID = "\0virtual:" + VIRTUAL_ID;
+// Vite serves a resolved id at /@id/<id with \0 → __x00__>.
+export const BUNDLED_PACKAGES_DEV_URL =
+  "@id/" + RESOLVED_VIRTUAL_ID.replace("\0", "__x00__");
 
 function readBundledPackageVersion(
   projectRoot: string,

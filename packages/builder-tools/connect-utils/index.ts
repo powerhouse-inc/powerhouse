@@ -1,4 +1,5 @@
 export * from "./constants.js";
+export * from "./externalize-vendor.js";
 export * from "./helpers.js";
 export * from "./runtime-config-schema.js";
 export * from "./types.js";

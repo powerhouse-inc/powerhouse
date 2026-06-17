@@ -41,14 +41,19 @@
     "@sentry/vite-plugin": "^4.3.0",
     "tsdown": "catalog:",
     "tsx": "catalog:",
+    "vite-plugin-externalize-dependencies": "^1.0.1",
     "vitest": "catalog:",
     "zod": "catalog:"
   },
   "peerDependencies": {
-    "@sentry/vite-plugin": "^4.3.0"
+    "@sentry/vite-plugin": "^4.3.0",
+    "vite-plugin-externalize-dependencies": "^1.0.1"
   },
   "peerDependenciesMeta": {
     "@sentry/vite-plugin": {
+      "optional": true
+    },
+    "vite-plugin-externalize-dependencies": {
       "optional": true
     }
   }

@@ -405,7 +405,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
       // CDN editors load React from esm.sh while Connect uses Vite's local
       // copy → two React instances → useSyncExternalStore crash. The build
       // path stays untouched; `esmExternalRequirePlugin` below still owns it.
-      devReactImportmapPlugin(),
+      devReactImportmapPlugin(options.dirname),
       ...plugins,
       // Externalize React so both Connect and dynamically loaded registry
       // packages share the same React instance via the import map in index.html.
