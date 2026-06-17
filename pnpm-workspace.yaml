@@ -11,6 +11,7 @@ packages:
 
 minimumReleaseAge: 10080
 preferFullMetadata: true
+dedupePeerDependents: false
 
 catalog:
   "typescript": 6.0.3
