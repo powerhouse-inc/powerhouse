@@ -11,9 +11,7 @@
     "port": 4002,
     "storage": "memory"
   },
-  "packages": [
-
-  ],
+  "packages": [],
   "packageRegistryUrl": "http://localhost:8080",
   "connect": {
     "branding": {

@@ -3,7 +3,7 @@ title: Documents and drives
 description: A document is a typed bag of state with its own operation log. A drive is a folder of documents. Together they're the unit of storage and sharing in Powerhouse.
 ---
 
-You already know that Powerhouse stores *operations*, not snapshots. Now let's look at what those operations live *inside* — and why the container for your files is just as much a document as the files themselves.
+You already know that Powerhouse stores _operations_, not snapshots. Now let's look at what those operations live _inside_ — and why the container for your files is just as much a document as the files themselves.
 
 ## A document is one typed thing
 
@@ -15,7 +15,7 @@ A to-do list, a budget ledger, an invoice — each is its own document with its 
 
 ## A drive is a document too
 
-Here's the twist. A **drive** is a folder of documents — and it is *itself* a document.
+Here's the twist. A **drive** is a folder of documents — and it is _itself_ a document.
 
 Compare it to your filesystem: a folder contains files, but the folder is also an entry in the parent directory. In Powerhouse, that analogy goes one level deeper: the folder has its own full operation log. When you add a file, rename a folder, move something, or remove it, that change is an operation on the drive document — not on the file inside it.
 
@@ -25,7 +25,7 @@ The drive's model type is `powerhouse/document-drive` and its actions are struct
 
 ## Files live on drives
 
-When you create a document, it gets added to a drive via an `ADD_FILE` action — dispatched against the *drive*, not conjured from thin air:
+When you create a document, it gets added to a drive via an `ADD_FILE` action — dispatched against the _drive_, not conjured from thin air:
 
 ```ts
 // This action is dispatched on the drive, not on the new document
@@ -51,20 +51,26 @@ The new document comes into existence because the drive's reducer processed that
   choices={[
     {
       label: "The deleted document's log — it records its own removal.",
-      explanation: "The deleted document has no way to record its own departure. Its log ends wherever it ended before deletion.",
+      explanation:
+        "The deleted document has no way to record its own departure. Its log ends wherever it ended before deletion.",
     },
     {
-      label: "The drive's log — a DELETE_NODE operation is appended to the drive.",
+      label:
+        "The drive's log — a DELETE_NODE operation is appended to the drive.",
       correct: true,
-      explanation: "Exactly. The drive is a document whose model handles membership. Removing a file is an operation on the drive, not on the file.",
+      explanation:
+        "Exactly. The drive is a document whose model handles membership. Removing a file is an operation on the drive, not on the file.",
     },
     {
       label: "Both logs simultaneously, so sync stays consistent.",
-      explanation: "Only the drive logs the structural change. The deleted document isn't modified — it just stops being a node on the drive.",
+      explanation:
+        "Only the drive logs the structural change. The deleted document isn't modified — it just stops being a node on the drive.",
     },
     {
-      label: "A separate audit document that Powerhouse maintains automatically.",
-      explanation: "There's no separate audit document. The drive's own operation log is the record of all structural changes.",
+      label:
+        "A separate audit document that Powerhouse maintains automatically.",
+      explanation:
+        "There's no separate audit document. The drive's own operation log is the record of all structural changes.",
     },
   ]}
 />

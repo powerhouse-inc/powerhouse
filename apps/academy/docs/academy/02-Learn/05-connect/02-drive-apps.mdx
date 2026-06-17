@@ -7,7 +7,7 @@ Connect's default drive view is a folder tree with documents inside it. That's f
 
 ## Editor vs. drive app — the sharp line
 
-You've already seen <Term>editors</Term>: a React component that renders and edits *one document*. A drive app is the complementary piece — it renders the *whole drive*.
+You've already seen <Term>editors</Term>: a React component that renders and edits _one document_. A drive app is the complementary piece — it renders the _whole drive_.
 
 Think of it this way:
 
@@ -41,21 +41,27 @@ When a document is open, `children` is truthy and the editor appears. Otherwise,
   question="Pick the right tool for each scenario."
   choices={[
     {
-      label: "I want a Kanban board that shows all task documents in a drive — use a drive app.",
+      label:
+        "I want a Kanban board that shows all task documents in a drive — use a drive app.",
       correct: true,
-      explanation: "Exactly. A drive app renders the whole drive, so a cross-document board belongs here.",
+      explanation:
+        "Exactly. A drive app renders the whole drive, so a cross-document board belongs here.",
     },
     {
-      label: "I want to render and edit one specific task document — use a drive app.",
-      explanation: "One document means one editor. Drive apps deal with the whole drive, not individual documents.",
+      label:
+        "I want to render and edit one specific task document — use a drive app.",
+      explanation:
+        "One document means one editor. Drive apps deal with the whole drive, not individual documents.",
     },
     {
       label: "I want a custom file-tree sidebar for a drive — use an editor.",
-      explanation: "Navigation structure for a drive is a drive app concern, not an editor's. Editors stay inside a single document.",
+      explanation:
+        "Navigation structure for a drive is a drive app concern, not an editor's. Editors stay inside a single document.",
     },
     {
       label: "I want a rich form for filling out a contract — use a drive app.",
-      explanation: "A single-document form is an editor. Drive apps are about composing or listing multiple documents.",
+      explanation:
+        "A single-document form is an editor. Drive apps are about composing or listing multiple documents.",
     },
   ]}
 />

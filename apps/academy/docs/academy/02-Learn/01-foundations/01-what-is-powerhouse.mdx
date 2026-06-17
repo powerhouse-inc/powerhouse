@@ -3,7 +3,7 @@ title: What is Powerhouse?
 description: A 5-minute tour of the stack — what problem it solves, and the vocabulary you'll use in the rest of the lessons.
 ---
 
-Powerhouse is a framework for building apps whose state lives in **documents** that evolve through **operations**. If you've built with CRDTs, <Term>Event Sourcing</Term>, or Git, a lot of this will feel familiar — with one twist: Powerhouse makes the *type* of each document explicit, so actions are always validated before they turn into operations.
+Powerhouse is a framework for building apps whose state lives in **documents** that evolve through **operations**. If you've built with CRDTs, <Term>Event Sourcing</Term>, or Git, a lot of this will feel familiar — with one twist: Powerhouse makes the _type_ of each document explicit, so actions are always validated before they turn into operations.
 
 By the end of this lesson, you should be able to answer: what does Powerhouse store, and how does an app make changes to it?
 
@@ -17,7 +17,7 @@ Everything in Powerhouse flows through the same cycle:
 
 ```ts
 // Dispatch
-const action = addTodo({ id: 't-1', title: 'Learn Powerhouse' });
+const action = addTodo({ id: "t-1", title: "Learn Powerhouse" });
 
 // The reducer produces the next state
 const nextDoc = reducer(currentDoc, action);
@@ -29,28 +29,32 @@ This loop never changes, whether the document is a to-do list, a finance ledger,
   question="Which statement best describes what Powerhouse actually stores on disk?"
   choices={[
     {
-      label: 'Snapshots of the current document state.',
-      explanation: 'Snapshots are derivable — storing only them would throw away the history Powerhouse depends on for sync and audit.',
+      label: "Snapshots of the current document state.",
+      explanation:
+        "Snapshots are derivable — storing only them would throw away the history Powerhouse depends on for sync and audit.",
     },
     {
-      label: 'The full history of operations that produced the document.',
+      label: "The full history of operations that produced the document.",
       correct: true,
-      explanation: 'Operations are the source of truth. State is derived by replaying them.',
+      explanation:
+        "Operations are the source of truth. State is derived by replaying them.",
     },
     {
-      label: 'Both the current state and a backup copy every 24 hours.',
-      explanation: 'Close but not quite — Powerhouse doesn\'t rely on periodic backups. The operation log *is* the backup.',
+      label: "Both the current state and a backup copy every 24 hours.",
+      explanation:
+        "Close but not quite — Powerhouse doesn't rely on periodic backups. The operation log *is* the backup.",
     },
     {
-      label: 'Only the latest action the user dispatched.',
-      explanation: 'A single action isn\'t enough to rebuild a document — you need the whole ordered log.',
+      label: "Only the latest action the user dispatched.",
+      explanation:
+        "A single action isn't enough to rebuild a document — you need the whole ordered log.",
     },
   ]}
 />
 
 ## Why operations, not snapshots?
 
-Storing *what changed* instead of *what is* unlocks a few things:
+Storing _what changed_ instead of _what is_ unlocks a few things:
 
 - **Deterministic replay** — hand the operation log to any machine and it rebuilds the same state.
 - **Conflict-free sync** — two offline clients can both edit, then reconcile by merging operations in order.
@@ -61,36 +65,40 @@ Storing *what changed* instead of *what is* unlocks a few things:
 
 These are the terms that show up everywhere in the docs and in the rest of these lessons:
 
-| Term | What it is |
-| --- | --- |
-| **Document Model** | A typed schema + the set of actions allowed on it. |
-| **Document** | An instance of a model, plus its operation history. |
-| **Action** | Pure data — a name and inputs — describing an intended change. |
-| **Operation** | An action after it ran through a reducer: stamped with index, timestamp, hash. |
-| **Reducer** | A pure function `(state, action) → nextState`. |
-| **Editor** | A React UI that dispatches actions. |
-| **Processor** | An event-driven handler that derives read models from operations. |
-| **Reactor** | The engine that runs reducers, persists operations, and syncs them. |
+| Term               | What it is                                                                     |
+| ------------------ | ------------------------------------------------------------------------------ |
+| **Document Model** | A typed schema + the set of actions allowed on it.                             |
+| **Document**       | An instance of a model, plus its operation history.                            |
+| **Action**         | Pure data — a name and inputs — describing an intended change.                 |
+| **Operation**      | An action after it ran through a reducer: stamped with index, timestamp, hash. |
+| **Reducer**        | A pure function `(state, action) → nextState`.                                 |
+| **Editor**         | A React UI that dispatches actions.                                            |
+| **Processor**      | An event-driven handler that derives read models from operations.              |
+| **Reactor**        | The engine that runs reducers, persists operations, and syncs them.            |
 
 <Quiz
   question="You're building a note-taking app. Which of these belongs in a reducer, and which in an editor?"
   choices={[
     {
-      label: 'Rendering the note title in a text field — reducer.',
-      explanation: 'Rendering is the editor\'s job. Reducers don\'t touch the DOM.',
+      label: "Rendering the note title in a text field — reducer.",
+      explanation:
+        "Rendering is the editor's job. Reducers don't touch the DOM.",
     },
     {
-      label: 'Computing the new title when the user types — reducer.',
+      label: "Computing the new title when the user types — reducer.",
       correct: true,
-      explanation: 'State transitions belong in the reducer. The editor only dispatches actions.',
+      explanation:
+        "State transitions belong in the reducer. The editor only dispatches actions.",
     },
     {
-      label: 'Calling the server to save — reducer.',
-      explanation: 'Reducers are pure. Side-effects live elsewhere (the Reactor persists; processors react).',
+      label: "Calling the server to save — reducer.",
+      explanation:
+        "Reducers are pure. Side-effects live elsewhere (the Reactor persists; processors react).",
     },
     {
-      label: 'Showing a confirmation toast — reducer.',
-      explanation: 'Toasts are UI concerns — they belong in the editor or a processor that emits notifications.',
+      label: "Showing a confirmation toast — reducer.",
+      explanation:
+        "Toasts are UI concerns — they belong in the editor or a processor that emits notifications.",
     },
   ]}
   explanation="A good rule of thumb: reducers are pure, editors are impure. Anything that touches the DOM, network, or time belongs outside the reducer."

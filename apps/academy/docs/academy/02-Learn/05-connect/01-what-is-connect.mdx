@@ -7,13 +7,13 @@ You've got a Reactor running and a document model defined. But where do users ac
 
 ## Connect is a host, not just a UI
 
-Back in the architecture overview you saw that a *host application* embeds a Reactor to get the operation engine, then adds its own UI on top. Connect is the most common host. It runs in a browser (or as a desktop app) and layers three things on top of the bare Reactor:
+Back in the architecture overview you saw that a _host application_ embeds a Reactor to get the operation engine, then adds its own UI on top. Connect is the most common host. It runs in a browser (or as a desktop app) and layers three things on top of the bare Reactor:
 
 - A **drives sidebar** — a file-browser-style view of all drives the user has access to.
 - An **editor host** — it looks at the document type you open and mounts whichever editor is registered for it.
 - A **sync client** — it connects to Switchboard and replicates state in real time.
 
-Closing Connect doesn't destroy the Reactor *library* — that's just code. But the session, the UI, the sync loop, and the drive browser all go away with it.
+Closing Connect doesn't destroy the Reactor _library_ — that's just code. But the session, the UI, the sync loop, and the drive browser all go away with it.
 
 ## How Connect finds your packages
 
@@ -45,20 +45,24 @@ If that array is empty, Connect renders nothing when you open a todo document.
   choices={[
     {
       label: "The Reactor library code itself.",
-      explanation: "The library is just an npm package — closing an app doesn't uninstall code. It can still be imported anywhere.",
+      explanation:
+        "The library is just an npm package — closing an app doesn't uninstall code. It can still be imported anywhere.",
     },
     {
       label: "The drives sidebar, the mounted editor, and the sync loop.",
       correct: true,
-      explanation: "Those all live inside Connect. The Reactor engine is embedded in Connect; without Connect running, there is no running session.",
+      explanation:
+        "Those all live inside Connect. The Reactor engine is embedded in Connect; without Connect running, there is no running session.",
     },
     {
       label: "The document models — they need Connect to stay defined.",
-      explanation: "Document models are schema definitions, not runtime state. They exist in your package regardless of whether Connect is open.",
+      explanation:
+        "Document models are schema definitions, not runtime state. They exist in your package regardless of whether Connect is open.",
     },
     {
       label: "The operation log stored on disk.",
-      explanation: "Persisted operations live in the local Reactor store, not in Connect's process. They survive restarts.",
+      explanation:
+        "Persisted operations live in the local Reactor store, not in Connect's process. They survive restarts.",
     },
   ]}
 />

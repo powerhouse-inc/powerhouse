@@ -24,6 +24,7 @@ Read all `.md` files under `apps/academy/$DOCPATH`. If it's a single file, just 
 **3. Load the package source**
 
 For each package in `packages`:
+
 1. Read `$PACKAGE/index.ts` (the root re-export barrel) to get the full export list
 2. Identify which sub-files are relevant to the `checkFocus` scope by scanning the re-export paths
 3. Read those sub-files directly to verify actual signatures — do not rely on the barrel alone
@@ -47,19 +48,19 @@ Use the section's `checkFocus` as your primary scoping constraint. Only report f
 
 **Finding types:**
 
-| Type | Meaning |
-|------|---------|
-| `stale` | A documented name, signature, or type that no longer matches the source — includes exports that have been renamed or removed entirely |
-| `missing` | A source export within the `checkFocus` scope that the doc doesn't cover at all |
-| `wrong` | A code example that would not work as written — wrong function name, wrong import, wrong argument shape, or copy-paste of the wrong hook into an example |
+| Type      | Meaning                                                                                                                                                  |
+| --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `stale`   | A documented name, signature, or type that no longer matches the source — includes exports that have been renamed or removed entirely                    |
+| `missing` | A source export within the `checkFocus` scope that the doc doesn't cover at all                                                                          |
+| `wrong`   | A code example that would not work as written — wrong function name, wrong import, wrong argument shape, or copy-paste of the wrong hook into an example |
 
 **Urgency — assign one per finding:**
 
-| Urgency | Criteria |
-|---------|----------|
-| `high` | A developer following the doc will fail or call the wrong code: non-existent function documented, tutorial steps with wrong file paths, deprecated API with no warning, copy-paste example that calls the wrong function |
+| Urgency  | Criteria                                                                                                                                                                                                                                       |
+| -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `high`   | A developer following the doc will fail or call the wrong code: non-existent function documented, tutorial steps with wrong file paths, deprecated API with no warning, copy-paste example that calls the wrong function                       |
 | `medium` | A developer gets wrong or incomplete information but may still make progress: wrong value in a reference table, missing fields in a documented type, undocumented important export, stale rename that would cause a build error if copy-pasted |
-| `low` | Inconvenient but unlikely to block: missing command aliases, incomplete file inventory, import path uses a valid alias but is inconsistent with generated code, undocumented internal/minor exports |
+| `low`    | Inconvenient but unlikely to block: missing command aliases, incomplete file inventory, import path uses a valid alias but is inconsistent with generated code, undocumented internal/minor exports                                            |
 
 **What does NOT count as a finding:**
 

@@ -103,7 +103,7 @@
     "vite-tsconfig-paths": "catalog:",
     "vitest": "catalog:"
   },
-  "description": "Vetra \u2014 the agent-first builder platform for the Powerhouse ecosystem. Spec-driven and AI-native development of open-source, decentralized back-ends.",
+  "description": "Vetra — the agent-first builder platform for the Powerhouse ecosystem. Spec-driven and AI-native development of open-source, decentralized back-ends.",
   "keywords": [
     "powerhouse",
     "vetra",

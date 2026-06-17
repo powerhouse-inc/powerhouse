@@ -63,7 +63,7 @@
 
 /* Dark Theme */
 .dark,
-[data-theme='dark'] {
+[data-theme="dark"] {
   /* Primary Colors */
   --primary: #04c161;
   --primary-foreground: #ffffff;

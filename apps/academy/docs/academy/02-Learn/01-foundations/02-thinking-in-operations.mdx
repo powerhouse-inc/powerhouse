@@ -3,7 +3,7 @@ title: Thinking in operations
 description: Why an operation-based model changes what your app can do — and the small shift in mindset that makes the rest of Powerhouse click.
 ---
 
-If you've built CRUD apps before, you probably think in terms of *rows* — the current value of a record in a database. <Term>Powerhouse</Term> asks you to flip this: think in terms of the *sequence of changes* that produced that row.
+If you've built CRUD apps before, you probably think in terms of _rows_ — the current value of a record in a database. <Term>Powerhouse</Term> asks you to flip this: think in terms of the _sequence of changes_ that produced that row.
 
 This lesson is short on code and heavy on mental model. Once it clicks, the rest of the stack falls into place.
 
@@ -17,9 +17,9 @@ UPDATE todos SET done = true WHERE id = 't-1';
 
 That statement destroys information. Afterwards, you can't answer:
 
-- *When* did it get marked done?
-- *Who* marked it?
-- *What was it before?*
+- _When_ did it get marked done?
+- _Who_ marked it?
+- _What was it before?_
 - Can we undo just this change without rolling back everything since?
 
 You can rebuild some of that with audit tables, triggers, or soft deletes — but you're reintroducing history on top of a model that actively throws it away.
@@ -29,7 +29,7 @@ You can rebuild some of that with audit tables, triggers, or soft deletes — bu
 In Powerhouse, the same change is:
 
 ```ts
-dispatch(completeTodo({ id: 't-1' }));
+dispatch(completeTodo({ id: "t-1" }));
 ```
 
 Which becomes an operation appended to the document's log:
@@ -45,27 +45,33 @@ Which becomes an operation appended to the document's log:
 }
 ```
 
-State is *derived*. If you want "the current list of done todos," you fold the log. If you want "the state at index 30," you fold up to there. If two peers edit offline, you merge their logs in order — no last-write-wins guesswork.
+State is _derived_. If you want "the current list of done todos," you fold the log. If you want "the state at index 30," you fold up to there. If two peers edit offline, you merge their logs in order — no last-write-wins guesswork.
 
 <Quiz
   question="Two users edit the same todo list offline. Alice adds 'Buy milk.' Bob completes an existing todo. When they reconnect, what does Powerhouse do?"
   choices={[
     {
       label: "Last write wins — whoever synced last overwrites the other.",
-      explanation: 'Last-write-wins is a snapshot-model behaviour. Powerhouse operates on the log, not the snapshot.',
+      explanation:
+        "Last-write-wins is a snapshot-model behaviour. Powerhouse operates on the log, not the snapshot.",
     },
     {
-      label: "Interleaves both operations into a single ordered log; both changes survive.",
+      label:
+        "Interleaves both operations into a single ordered log; both changes survive.",
       correct: true,
-      explanation: 'Because operations describe intent independently, they can be combined in order without either being lost.',
+      explanation:
+        "Because operations describe intent independently, they can be combined in order without either being lost.",
     },
     {
       label: "Alice's change is queued until Bob confirms a merge.",
-      explanation: 'No manual merge is needed for non-conflicting operations on the same document.',
+      explanation:
+        "No manual merge is needed for non-conflicting operations on the same document.",
     },
     {
-      label: "The document rolls back to its last common state and both users lose their edits.",
-      explanation: 'That would be a hostile UX — the whole point of the operation log is that nothing needs to be lost.',
+      label:
+        "The document rolls back to its last common state and both users lose their edits.",
+      explanation:
+        "That would be a hostile UX — the whole point of the operation log is that nothing needs to be lost.",
     },
   ]}
   explanation="Because operations are ordered, independent, and carry their own intent, Powerhouse can merge them deterministically — which is what people mean by 'conflict-free sync'."

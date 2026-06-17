@@ -20,7 +20,7 @@
         padding: 0;
       }
       body {
-        font-family: 'Inter', sans-serif;
+        font-family: "Inter", sans-serif;
         background: var(--background);
         color: var(--foreground);
         line-height: 1.6;
@@ -173,7 +173,7 @@
         padding-bottom: 48px;
       }
       .timeline::before {
-        content: '';
+        content: "";
         position: absolute;
         left: 18px;
         top: 8px;
@@ -228,7 +228,7 @@
         font-weight: 700;
         background: var(--accent);
         color: var(--foreground);
-        font-family: 'Inter', monospace;
+        font-family: "Inter", monospace;
       }
       .release-date {
         font-size: 13px;
@@ -402,8 +402,18 @@
     <nav class="nav">
       <div class="container">
         <a href="#" class="nav-brand">
-          <img src="../logos/vetra-full-logo.svg" alt="Vetra" height="24" class="logo-light" />
-          <img src="../logos/vetra-full-logo-light.svg" alt="Vetra" height="24" class="logo-dark" />
+          <img
+            src="../logos/vetra-full-logo.svg"
+            alt="Vetra"
+            height="24"
+            class="logo-light"
+          />
+          <img
+            src="../logos/vetra-full-logo-light.svg"
+            alt="Vetra"
+            height="24"
+            class="logo-dark"
+          />
         </a>
         <div class="nav-links">
           <a href="#">Home</a>
@@ -411,7 +421,9 @@
           <a href="#">Docs</a>
           <a href="#" class="active">Changelog</a>
           <a href="#">Blog</a>
-          <a href="#" class="btn btn-primary" style="padding: 8px 20px">Get Started</a>
+          <a href="#" class="btn btn-primary" style="padding: 8px 20px"
+            >Get Started</a
+          >
         </div>
       </div>
     </nav>
@@ -421,8 +433,8 @@
       <div class="container-narrow">
         <h1>Changelog</h1>
         <p>
-          Stay up to date with the latest features, improvements, and fixes we ship to the Vetra
-          platform.
+          Stay up to date with the latest features, improvements, and fixes we
+          ship to the Vetra platform.
         </p>
       </div>
     </section>
@@ -450,24 +462,26 @@
           <h3 class="release-title">AI-Powered Workflow Automation</h3>
           <ul class="change-list">
             <li>
-              <span class="change-tag added">Added</span> AI workflow builder with natural language
-              commands for creating complex automation pipelines
+              <span class="change-tag added">Added</span> AI workflow builder
+              with natural language commands for creating complex automation
+              pipelines
             </li>
             <li>
-              <span class="change-tag added">Added</span> Smart suggestions engine that recommends
-              workflow optimizations based on usage patterns
+              <span class="change-tag added">Added</span> Smart suggestions
+              engine that recommends workflow optimizations based on usage
+              patterns
             </li>
             <li>
-              <span class="change-tag added">Added</span> Webhook triggers with support for custom
-              payloads and conditional execution
+              <span class="change-tag added">Added</span> Webhook triggers with
+              support for custom payloads and conditional execution
             </li>
             <li>
-              <span class="change-tag changed">Changed</span> Redesigned automation dashboard with
-              real-time execution monitoring and logs
+              <span class="change-tag changed">Changed</span> Redesigned
+              automation dashboard with real-time execution monitoring and logs
             </li>
             <li>
-              <span class="change-tag fixed">Fixed</span> Issue where scheduled tasks occasionally
-              ran twice when server time drifted
+              <span class="change-tag fixed">Fixed</span> Issue where scheduled
+              tasks occasionally ran twice when server time drifted
             </li>
           </ul>
         </div>
@@ -482,20 +496,22 @@
           <h3 class="release-title">Bug Fixes and Stability Improvements</h3>
           <ul class="change-list">
             <li>
-              <span class="change-tag fixed">Fixed</span> Critical memory leak in the real-time
-              collaboration module affecting sessions longer than 4 hours
+              <span class="change-tag fixed">Fixed</span> Critical memory leak
+              in the real-time collaboration module affecting sessions longer
+              than 4 hours
             </li>
             <li>
-              <span class="change-tag fixed">Fixed</span> CSV export failing silently when datasets
-              contained special Unicode characters
+              <span class="change-tag fixed">Fixed</span> CSV export failing
+              silently when datasets contained special Unicode characters
             </li>
             <li>
-              <span class="change-tag fixed">Fixed</span> Dashboard widgets not respecting user
-              timezone preferences in date filters
+              <span class="change-tag fixed">Fixed</span> Dashboard widgets not
+              respecting user timezone preferences in date filters
             </li>
             <li>
-              <span class="change-tag changed">Changed</span> Improved error messages throughout the
-              API to include actionable troubleshooting steps
+              <span class="change-tag changed">Changed</span> Improved error
+              messages throughout the API to include actionable troubleshooting
+              steps
             </li>
           </ul>
         </div>
@@ -510,24 +526,24 @@
           <h3 class="release-title">Enhanced Team Collaboration</h3>
           <ul class="change-list">
             <li>
-              <span class="change-tag added">Added</span> Real-time cursors and presence indicators
-              showing who is viewing each document
+              <span class="change-tag added">Added</span> Real-time cursors and
+              presence indicators showing who is viewing each document
             </li>
             <li>
-              <span class="change-tag added">Added</span> Inline commenting system with threaded
-              replies and @mention notifications
+              <span class="change-tag added">Added</span> Inline commenting
+              system with threaded replies and @mention notifications
             </li>
             <li>
-              <span class="change-tag changed">Changed</span> Permission model now supports custom
-              roles with granular access control per project
+              <span class="change-tag changed">Changed</span> Permission model
+              now supports custom roles with granular access control per project
             </li>
             <li>
-              <span class="change-tag changed">Changed</span> Notification center redesigned with
-              grouped alerts and one-click action buttons
+              <span class="change-tag changed">Changed</span> Notification
+              center redesigned with grouped alerts and one-click action buttons
             </li>
             <li>
-              <span class="change-tag removed">Removed</span> Legacy team chat feature — replaced by
-              the new commenting and discussion system
+              <span class="change-tag removed">Removed</span> Legacy team chat
+              feature — replaced by the new commenting and discussion system
             </li>
           </ul>
         </div>
@@ -542,16 +558,17 @@
           <h3 class="release-title">Performance Patch</h3>
           <ul class="change-list">
             <li>
-              <span class="change-tag fixed">Fixed</span> Page load times degraded on projects with
-              more than 500 assets — reduced by 60%
+              <span class="change-tag fixed">Fixed</span> Page load times
+              degraded on projects with more than 500 assets — reduced by 60%
             </li>
             <li>
-              <span class="change-tag fixed">Fixed</span> Search indexing failing intermittently for
-              newly created items in large workspaces
+              <span class="change-tag fixed">Fixed</span> Search indexing
+              failing intermittently for newly created items in large workspaces
             </li>
             <li>
-              <span class="change-tag changed">Changed</span> Upgraded image processing pipeline to
-              support AVIF format and reduce storage costs by 35%
+              <span class="change-tag changed">Changed</span> Upgraded image
+              processing pipeline to support AVIF format and reduce storage
+              costs by 35%
             </li>
           </ul>
         </div>
@@ -566,24 +583,25 @@
           <h3 class="release-title">Advanced Analytics and Reporting</h3>
           <ul class="change-list">
             <li>
-              <span class="change-tag added">Added</span> Custom report builder with drag-and-drop
-              chart creation and 15+ visualization types
+              <span class="change-tag added">Added</span> Custom report builder
+              with drag-and-drop chart creation and 15+ visualization types
             </li>
             <li>
-              <span class="change-tag added">Added</span> Scheduled report delivery via email with
-              PDF and interactive HTML export options
+              <span class="change-tag added">Added</span> Scheduled report
+              delivery via email with PDF and interactive HTML export options
             </li>
             <li>
-              <span class="change-tag added">Added</span> Funnel analysis and cohort retention
-              charts for product analytics use cases
+              <span class="change-tag added">Added</span> Funnel analysis and
+              cohort retention charts for product analytics use cases
             </li>
             <li>
-              <span class="change-tag changed">Changed</span> Data refresh intervals now
-              configurable per dashboard, from real-time to daily
+              <span class="change-tag changed">Changed</span> Data refresh
+              intervals now configurable per dashboard, from real-time to daily
             </li>
             <li>
-              <span class="change-tag removed">Removed</span> Deprecated v1 analytics API endpoints
-              — all clients should migrate to v2 endpoints
+              <span class="change-tag removed">Removed</span> Deprecated v1
+              analytics API endpoints — all clients should migrate to v2
+              endpoints
             </li>
           </ul>
         </div>
@@ -595,9 +613,10 @@
       <div class="container-narrow">
         <h2>Subscribe to Updates</h2>
         <p>
-          Get notified when we ship new features and improvements. No spam, unsubscribe anytime.
+          Get notified when we ship new features and improvements. No spam,
+          unsubscribe anytime.
         </p>
-        <form class="subscribe-form" onsubmit="return false">
+        <form class="subscribe-form" onsubmit="return false;">
           <input type="email" placeholder="Enter your email address" />
           <button type="submit" class="btn btn-primary">Subscribe</button>
         </form>
@@ -610,7 +629,12 @@
         <div class="footer-grid">
           <div>
             <div class="footer-brand">
-              <img src="../logos/vetra-full-logo.svg" alt="Vetra" height="24" class="logo-light" />
+              <img
+                src="../logos/vetra-full-logo.svg"
+                alt="Vetra"
+                height="24"
+                class="logo-light"
+              />
               <img
                 src="../logos/vetra-full-logo-light.svg"
                 alt="Vetra"
@@ -619,8 +643,8 @@
               />
             </div>
             <p class="footer-desc">
-              The modern platform for building and scaling digital products. Trusted by thousands of
-              teams worldwide.
+              The modern platform for building and scaling digital products.
+              Trusted by thousands of teams worldwide.
             </p>
           </div>
           <div class="footer-col">

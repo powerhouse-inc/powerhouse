@@ -21,7 +21,7 @@
       }
       body {
         font-family:
-          'Inter',
+          "Inter",
           -apple-system,
           BlinkMacSystemFont,
           sans-serif;
@@ -264,7 +264,7 @@
         line-height: 1.6;
       }
       .steps::before {
-        content: '';
+        content: "";
         position: absolute;
         top: 28px;
         left: calc(16.67% + 28px);
@@ -324,7 +324,7 @@
         gap: 10px;
       }
       .feature-list li::before {
-        content: '\2713';
+        content: "\2713";
         color: var(--success);
         font-weight: 700;
       }
@@ -527,7 +527,12 @@
       <div class="nav-inner">
         <div class="nav-left">
           <a href="#" class="nav-logo">
-            <img src="../logos/vetra-full-logo.svg" alt="Vetra" height="24" class="logo-light" />
+            <img
+              src="../logos/vetra-full-logo.svg"
+              alt="Vetra"
+              height="24"
+              class="logo-light"
+            />
             <img
               src="../logos/vetra-full-logo-light.svg"
               alt="Vetra"
@@ -546,8 +551,10 @@
           <button
             class="theme-toggle"
             onclick="
-              document.body.classList.toggle('dark')
-              this.textContent = document.body.classList.contains('dark') ? '&#9790;' : '&#9788;'
+              document.body.classList.toggle('dark');
+              this.textContent = document.body.classList.contains('dark')
+                ? '&#9790;'
+                : '&#9788;';
             "
             aria-label="Toggle theme"
           >
@@ -563,8 +570,9 @@
       <div class="hero-text">
         <h1>Ship products faster with Vetra</h1>
         <p>
-          The all-in-one platform that brings your team together. Plan, build, and launch products
-          with real-time collaboration, powerful analytics, and seamless integrations.
+          The all-in-one platform that brings your team together. Plan, build,
+          and launch products with real-time collaboration, powerful analytics,
+          and seamless integrations.
         </p>
         <div class="hero-actions">
           <a href="#" class="btn btn-primary">Get Started Free</a>
@@ -578,31 +586,33 @@
     <section class="section how-it-works">
       <div class="section-header">
         <h2>How it works</h2>
-        <p>Get up and running in three simple steps. No complex setup required.</p>
+        <p>
+          Get up and running in three simple steps. No complex setup required.
+        </p>
       </div>
       <div class="steps">
         <div class="step">
           <div class="step-number">1</div>
           <h3>Create your workspace</h3>
           <p>
-            Sign up and configure your workspace in under two minutes. Invite your team and set
-            roles with granular permissions.
+            Sign up and configure your workspace in under two minutes. Invite
+            your team and set roles with granular permissions.
           </p>
         </div>
         <div class="step">
           <div class="step-number">2</div>
           <h3>Connect your tools</h3>
           <p>
-            Integrate with your existing stack in one click. We support over 50 integrations
-            including Slack, GitHub, and Figma.
+            Integrate with your existing stack in one click. We support over 50
+            integrations including Slack, GitHub, and Figma.
           </p>
         </div>
         <div class="step">
           <div class="step-number">3</div>
           <h3>Start building</h3>
           <p>
-            Use our intuitive interface to plan sprints, track progress, and ship features with full
-            visibility across your team.
+            Use our intuitive interface to plan sprints, track progress, and
+            ship features with full visibility across your team.
           </p>
         </div>
       </div>
@@ -612,7 +622,10 @@
     <section class="section feature-section">
       <div class="section-header">
         <h2>Built for modern teams</h2>
-        <p>Every feature is designed to help your team move faster without sacrificing quality.</p>
+        <p>
+          Every feature is designed to help your team move faster without
+          sacrificing quality.
+        </p>
       </div>
 
       <div class="feature-row">
@@ -620,8 +633,8 @@
           <span class="feature-tag">Collaboration</span>
           <h3>Real-time multiplayer editing</h3>
           <p>
-            Work together simultaneously on documents, designs, and code. See cursors, comments, and
-            changes in real time with zero latency.
+            Work together simultaneously on documents, designs, and code. See
+            cursors, comments, and changes in real time with zero latency.
           </p>
           <ul class="feature-list">
             <li>Live cursors and presence indicators</li>
@@ -638,8 +651,9 @@
           <span class="feature-tag">Analytics</span>
           <h3>Insights that drive decisions</h3>
           <p>
-            Turn raw data into actionable intelligence with our built-in analytics engine. Custom
-            dashboards, automated reports, and predictive forecasting.
+            Turn raw data into actionable intelligence with our built-in
+            analytics engine. Custom dashboards, automated reports, and
+            predictive forecasting.
           </p>
           <ul class="feature-list">
             <li>Custom dashboard builder</li>
@@ -656,8 +670,9 @@
           <span class="feature-tag">Automation</span>
           <h3>Automate the busywork</h3>
           <p>
-            Set up powerful workflows with our visual automation builder. Trigger actions across
-            tools, send notifications, and keep your projects moving without manual effort.
+            Set up powerful workflows with our visual automation builder.
+            Trigger actions across tools, send notifications, and keep your
+            projects moving without manual effort.
           </p>
           <ul class="feature-list">
             <li>Visual workflow builder with drag-and-drop</li>
@@ -674,7 +689,9 @@
     <section class="section integrations">
       <div class="section-header">
         <h2>Works with your favorite tools</h2>
-        <p>Connect Vetra with the tools you already use. No migration headaches.</p>
+        <p>
+          Connect Vetra with the tools you already use. No migration headaches.
+        </p>
       </div>
       <div class="integration-grid">
         <div class="integration-box">Slack</div>
@@ -715,7 +732,10 @@
     <!-- CTA -->
     <section class="cta" style="margin-left: 24px; margin-right: 24px">
       <h2>Ready to transform your workflow?</h2>
-      <p>Join thousands of teams already using Vetra to build better products, faster.</p>
+      <p>
+        Join thousands of teams already using Vetra to build better products,
+        faster.
+      </p>
       <div class="cta-actions">
         <a href="#" class="btn btn-white">Start Free Trial</a>
         <a href="#" class="btn btn-outline">Talk to Sales</a>
@@ -727,7 +747,12 @@
       <div class="footer-inner">
         <div class="footer-brand">
           <a href="#" class="nav-logo">
-            <img src="../logos/vetra-full-logo.svg" alt="Vetra" height="24" class="logo-light" />
+            <img
+              src="../logos/vetra-full-logo.svg"
+              alt="Vetra"
+              height="24"
+              class="logo-light"
+            />
             <img
               src="../logos/vetra-full-logo-light.svg"
               alt="Vetra"
@@ -736,7 +761,8 @@
             />
           </a>
           <p>
-            Build better products faster with the all-in-one platform designed for modern teams.
+            Build better products faster with the all-in-one platform designed
+            for modern teams.
           </p>
         </div>
         <div class="footer-col">

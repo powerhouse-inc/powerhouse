@@ -432,7 +432,7 @@ This was a version bump only, there were no code changes.
 - linter should not lint too deep ([1f0e29003](https://github.com/powerhouse-inc/powerhouse/commit/1f0e29003))
 - **builder-tools:** allow blob worker-src in Connect CSP to unblock document download ([f0b31a3f6](https://github.com/powerhouse-inc/powerhouse/commit/f0b31a3f6))
 - **connect:** clarify trackUiEvents dormancy and remove invalid tsconfigPaths config ([83bcc3a76](https://github.com/powerhouse-inc/powerhouse/commit/83bcc3a76))
-- **connect:** resolve @powerhousedao/connect/* aliases in vitest ([f7de787c6](https://github.com/powerhouse-inc/powerhouse/commit/f7de787c6))
+- **connect:** resolve @powerhousedao/connect/\* aliases in vitest ([f7de787c6](https://github.com/powerhouse-inc/powerhouse/commit/f7de787c6))
 - **openpanel:** catch synchronous track errors in forward() ([36361c996](https://github.com/powerhouse-inc/powerhouse/commit/36361c996))
 - **openpanel:** resolve eslint failures in static checks ([9bbefa737](https://github.com/powerhouse-inc/powerhouse/commit/9bbefa737))
 - **useOpenPanel:** catch async errors from client.track in forward() ([c16887eb0](https://github.com/powerhouse-inc/powerhouse/commit/c16887eb0))
@@ -540,7 +540,7 @@ This was a version bump only, there were no code changes.
 
 ### 🚀 Features
 
-- **connect:** subscribe to /__packages SSE for live package updates ([5cb41a7e4](https://github.com/powerhouse-inc/powerhouse/commit/5cb41a7e4))
+- **connect:** subscribe to /\_\_packages SSE for live package updates ([5cb41a7e4](https://github.com/powerhouse-inc/powerhouse/commit/5cb41a7e4))
 - **connect:** remount editor on package version bump ([4fe72d93f](https://github.com/powerhouse-inc/powerhouse/commit/4fe72d93f))
 - **registry:** default to anonymous publish/unpublish ([5ca697fb7](https://github.com/powerhouse-inc/powerhouse/commit/5ca697fb7))
 - **spec:** reject invalid actions atomically in addActions ([c12a4d6c5](https://github.com/powerhouse-inc/powerhouse/commit/c12a4d6c5))
@@ -551,7 +551,7 @@ This was a version bump only, there were no code changes.
 ### 🩹 Fixes
 
 - address PR review for connect package-manager + vetra specPath doc ([4f330f16e](https://github.com/powerhouse-inc/powerhouse/commit/4f330f16e))
-- **connect:** version-aware /__packages diff with toasts and refetch ([36f2e641d](https://github.com/powerhouse-inc/powerhouse/commit/36f2e641d))
+- **connect:** version-aware /\_\_packages diff with toasts and refetch ([36f2e641d](https://github.com/powerhouse-inc/powerhouse/commit/36f2e641d))
 - **package-e2e:** use renamed --document flag for ph generate doc ([e3bbd1b49](https://github.com/powerhouse-inc/powerhouse/commit/e3bbd1b49))
 - **vetra:** update codegen imports to v1 document-model layout ([ecdc2b23e](https://github.com/powerhouse-inc/powerhouse/commit/ecdc2b23e))
 - **vetra:** repo-wide typecheck — keep ts-morph external + use existing types ([10f0a8488](https://github.com/powerhouse-inc/powerhouse/commit/10f0a8488))
@@ -926,7 +926,7 @@ This was a version bump only, there were no code changes.
 
 ### 🩹 Fixes
 
-- **ci:** pnpm 11 reads PNPM_CONFIG_* not NPM_CONFIG_* ([b6c05fb23](https://github.com/powerhouse-inc/powerhouse/commit/b6c05fb23))
+- **ci:** pnpm 11 reads PNPM*CONFIG*_ not NPM*CONFIG*_ ([b6c05fb23](https://github.com/powerhouse-inc/powerhouse/commit/b6c05fb23))
 - **ci, docker:** pnpm 11 uses pnpm-workspace.yaml for allowBuilds; env var for min-release-age ([37c04c28a](https://github.com/powerhouse-inc/powerhouse/commit/37c04c28a))
 
 ### ❤️ Thank You
@@ -1053,7 +1053,7 @@ This was a version bump only, there were no code changes.
 
 - **codegen:** dedupe test cases ([ac110c571](https://github.com/powerhouse-inc/powerhouse/commit/ac110c571))
 - **codegen:** fix drive editor metadata check ([48f3de5a5](https://github.com/powerhouse-inc/powerhouse/commit/48f3de5a5))
-- **codegen:** fix types export paths and  documentModels type safety ([92c08ecad](https://github.com/powerhouse-inc/powerhouse/commit/92c08ecad))
+- **codegen:** fix types export paths and documentModels type safety ([92c08ecad](https://github.com/powerhouse-inc/powerhouse/commit/92c08ecad))
 - **codegen:** safer test name check ([58132df1b](https://github.com/powerhouse-inc/powerhouse/commit/58132df1b))
 - **codegen,connect,shared:** exclude main.tsx from types and removed vite dependency ([fc9e541d6](https://github.com/powerhouse-inc/powerhouse/commit/fc9e541d6))
 - **registry:** make extractTarball idempotent + throttle /packages warm-up ([#2571](https://github.com/powerhouse-inc/powerhouse/pull/2571))

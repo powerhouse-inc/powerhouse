@@ -2,7 +2,7 @@
 toc_max_heading_level: 3
 ---
 
-# Vetra Drive 
+# Vetra Drive
 
 ## Introducing Vetra Drive for Builders
 

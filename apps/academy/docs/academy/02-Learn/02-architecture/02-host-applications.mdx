@@ -29,20 +29,26 @@ The Reactor's job is to apply reducers, order operations into a deterministic lo
   choices={[
     {
       label: "The Reactor — it ships with PGlite and that's fixed.",
-      explanation: "PGlite is the default, but the storage layer is behind an interface. The host configures which implementation is wired in.",
+      explanation:
+        "PGlite is the default, but the storage layer is behind an interface. The host configures which implementation is wired in.",
     },
     {
-      label: "The host — it instantiates the Reactor and passes a storage implementation at startup.",
+      label:
+        "The host — it instantiates the Reactor and passes a storage implementation at startup.",
       correct: true,
-      explanation: "Correct. The host controls the full wiring. The Reactor just requires something that satisfies IOperationStore and friends.",
+      explanation:
+        "Correct. The host controls the full wiring. The Reactor just requires something that satisfies IOperationStore and friends.",
     },
     {
       label: "The Reactor chooses storage at runtime based on the environment.",
-      explanation: "There's no auto-detection. The host is explicit about what it wires.",
+      explanation:
+        "There's no auto-detection. The host is explicit about what it wires.",
     },
     {
-      label: "It's chosen per document type, inside the document model package.",
-      explanation: "Document models define schemas and reducers — they don't touch storage configuration at all.",
+      label:
+        "It's chosen per document type, inside the document model package.",
+      explanation:
+        "Document models define schemas and reducers — they don't touch storage configuration at all.",
     },
   ]}
 />

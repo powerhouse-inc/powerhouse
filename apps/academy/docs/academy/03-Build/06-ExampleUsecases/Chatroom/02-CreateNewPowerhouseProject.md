@@ -8,7 +8,7 @@ This tutorial has a complete reference implementation available. You can:
 - View the complete code for each step
 - Clone and compare your implementation
 - Use `git diff` to compare your code with the reference
-:::
+  :::
 
 <details>
 <summary>📖 How to use this tutorial</summary>

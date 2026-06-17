@@ -5,11 +5,7 @@
     "resolveJsonModule": true,
     "types": ["node"]
   },
-  "include": [
-    "scripts/**/*.ts",
-    "tests/**/*.ts",
-    "playwright.config.ts"
-  ],
+  "include": ["scripts/**/*.ts", "tests/**/*.ts", "playwright.config.ts"],
   "references": [
     { "path": "../../clis/ph-cli" },
     { "path": "../../packages/registry" },

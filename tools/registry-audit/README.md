@@ -55,9 +55,9 @@ Rule shape (see `rules/legacy-attachments.json`):
 {
   "id": "removed-scalar-attachment",
   "severity": "high",
-  "pattern": "\\bAttachment:\\s*\\{",   // JS RegExp source
-  "include": ["gen/schema/"],            // optional path substring filters
-  "exclude": []
+  "pattern": "\\bAttachment:\\s*\\{", // JS RegExp source
+  "include": ["gen/schema/"], // optional path substring filters
+  "exclude": [],
 }
 ```
 
@@ -92,11 +92,11 @@ pnpm audit:typecheck [--from-report] [--package <name>] [--override <pkg>=<dir>]
 > Why `paths` and not pnpm `overrides`? pnpm does not apply `overrides` in an
 > `--ignore-workspace` standalone project, so the redirect would be silently ignored.
 
-**Important — limited signal for this audit.** Published models *bundle/inline* the
+**Important — limited signal for this audit.** Published models _bundle/inline_ the
 removed types (e.g. their own copy of `AttachmentInput`), and import only surviving
 symbols (`Action`, …) from `document-model`. The inlined copies don't reference the
 local package, so tsc sees nothing wrong and these packages report `ok`. This phase
-only catches a package that *imports a now-removed named export*. For the
+only catches a package that _imports a now-removed named export_. For the
 attachment removal, **`analyze.ts` is the authoritative detector**, and the harness
 has been verified to flag removed exports (importing `AttachmentInput` from the local
 `document-model` correctly errors `TS2305`).
@@ -105,8 +105,8 @@ has been verified to flag removed exports (importing `AttachmentInput` from the 
 
 Boots a **real Switchboard** server in-process (in-memory PGlite — no Postgres, no
 external services) and imports each extracted model package into it, building its
-GraphQL subgraph schema. This answers what the static phases can't: *does the
-published model actually load and build against the current core code?*
+GraphQL subgraph schema. This answers what the static phases can't: _does the
+published model actually load and build against the current core code?_
 
 ```
 pnpm audit:load [--package <name>] [--from-report] [--filter <substr>] [--limit <n>] [--timeout <ms>]
@@ -117,7 +117,7 @@ pnpm audit:load [--package <name>] [--from-report] [--filter <substr>] [--limit 
 - Only packages that export `./document-models` are loaded; others are skipped.
 - The loaded package's runtime `import "document-model"` resolves (via node's
   module walk-up to the repo's `node_modules`) to the **local** build — so this tests
-  the published model against the *current* core, not the version it was built with.
+  the published model against the _current_ core, not the version it was built with.
 - A baseline boot (no package) establishes the core model ids; each package's
   contribution is the delta. Status per package: `loaded` (registered models +
   schema built), `no-models` (booted but registered nothing), `boot-failed`
@@ -149,6 +149,7 @@ pnpm audit:create-query [--package <name>] [--from-report] [--filter <substr>] [
 
   `<Name>` is the model's GraphQL namespace (`pascalCase(name)`) and the endpoint
   segment is `kebabCase(name)` — mirroring how `reactor-api` names subgraphs.
+
 - `createEmptyDocument` needs no drive and no input, so the check is uniform across
   models. The query verifies the round-tripped `id` and `documentType` match.
 - **Reuses the `load` scaffolds** under `.cache/registry-audit/load/<pkg>/` — if a

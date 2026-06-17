@@ -2,19 +2,10 @@
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
     "outDir": "./.tsbuild",
-    "types": [
-      "vitest/globals"
-    ]
+    "types": ["vitest/globals"]
   },
-  "include": [
-    "**/*"
-  ],
-  "exclude": [
-    "dist",
-    "node_modules",
-    "bench/host",
-    ".tsbuild"
-  ],
+  "include": ["**/*"],
+  "exclude": ["dist", "node_modules", "bench/host", ".tsbuild"],
   "references": [
     {
       "path": "../document-model"

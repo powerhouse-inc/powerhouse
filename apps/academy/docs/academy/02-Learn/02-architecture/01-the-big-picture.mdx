@@ -3,7 +3,7 @@ title: The big picture
 description: How the Reactor, Connect, and Switchboard fit together — one engine, two faces (a desktop app and a server), and your code in the middle.
 ---
 
-The previous lesson showed how every change becomes an operation appended to an immutable log. Now let's look at *where* that all actually runs. By the end of this lesson, you'll be able to point at any concept in the course — a reducer, a processor, a React hook — and say confidently: "that runs in the Reactor" or "that lives in Switchboard."
+The previous lesson showed how every change becomes an operation appended to an immutable log. Now let's look at _where_ that all actually runs. By the end of this lesson, you'll be able to point at any concept in the course — a reducer, a processor, a React hook — and say confidently: "that runs in the Reactor" or "that lives in Switchboard."
 
 ## One engine, two faces
 
@@ -42,20 +42,25 @@ You write the logic once; the stack decides where it executes.
   choices={[
     {
       label: "Inside Connect, because that's where the user is working.",
-      explanation: "Connect is a host that embeds a Reactor. The reducer runs inside the Reactor, not Connect itself. Connect just dispatches the action.",
+      explanation:
+        "Connect is a host that embeds a Reactor. The reducer runs inside the Reactor, not Connect itself. Connect just dispatches the action.",
     },
     {
-      label: "Inside the Reactor — whether that Reactor is embedded in Connect or running in Switchboard.",
+      label:
+        "Inside the Reactor — whether that Reactor is embedded in Connect or running in Switchboard.",
       correct: true,
-      explanation: "The Reactor is the engine that runs reducers everywhere. Connect and Switchboard are hosts — they embed a Reactor. The reducer runs in whichever Reactor processes the action.",
+      explanation:
+        "The Reactor is the engine that runs reducers everywhere. Connect and Switchboard are hosts — they embed a Reactor. The reducer runs in whichever Reactor processes the action.",
     },
     {
       label: "Inside Switchboard, because it manages the API.",
-      explanation: "Switchboard hosts a server-side Reactor, but reducers run inside the Reactor itself — not in Switchboard's API layer.",
+      explanation:
+        "Switchboard hosts a server-side Reactor, but reducers run inside the Reactor itself — not in Switchboard's API layer.",
     },
     {
       label: "On the DocSync protocol layer, as part of conflict resolution.",
-      explanation: "DocSync transports operations between Reactors. Reducers run before that — they produce the operations that DocSync then moves around.",
+      explanation:
+        "DocSync transports operations between Reactors. Reducers run before that — they produce the operations that DocSync then moves around.",
     },
   ]}
   explanation="The Reactor is the engine. Connect and Switchboard are different faces that embed one. Wherever an action gets dispatched, the local Reactor's reducer runs."

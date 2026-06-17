@@ -26,11 +26,11 @@ normalize(s):
 
 Examples:
 
-| `documentType` | `actionType` | Derived event name |
-|---|---|---|
-| `powerhouse/document-drive` | `ADD_FOLDER` | `powerhouse.document-drive.add_folder` |
+| `documentType`              | `actionType`  | Derived event name                      |
+| --------------------------- | ------------- | --------------------------------------- |
+| `powerhouse/document-drive` | `ADD_FOLDER`  | `powerhouse.document-drive.add_folder`  |
 | `powerhouse/document-drive` | `DELETE_NODE` | `powerhouse.document-drive.delete_node` |
-| `sky/atlas-scope` | `SET_NAME` | `sky.atlas-scope.set_name` |
+| `sky/atlas-scope`           | `SET_NAME`    | `sky.atlas-scope.set_name`              |
 
 Set `"alias"` on a mapping entry to override the derived name with a static
 product-friendly label (e.g. `"drive.renamed"`).
@@ -48,7 +48,7 @@ product-friendly label (e.g. `"drive.renamed"`).
    {
      "documentType": "my-org/my-model",
      "actionTypes": ["MY_ACTION"],
-     "alias": "my-model.my-action"   // optional
+     "alias": "my-model.my-action" // optional
    }
    ```
 
@@ -61,14 +61,14 @@ product-friendly label (e.g. `"drive.renamed"`).
 
 ## Module exports
 
-| Export | Description |
-|---|---|
-| `loadEvents(raw?)` | Parse + validate raw JSON, return `{ mappings, lookupMap }` |
-| `eventMappings` | Validated array from the bundled `events.json` |
-| `eventLookupMap` | `Map<documentType, Map<actionType, mapping>>` — O(1) lookup |
-| `normalize(s)` | Document-type normalizer |
-| `deriveEventName(mapping, op)` | Alias or derived name for an op |
-| `buildDefaultProperties(op)` | Six default properties attached to every event |
-| `getOpenPanelClient()` | Lazy-loaded singleton |
-| `resetOpenPanelClient()` | Tear down + clear the singleton |
-| `createOpenPanelProcessorFactory(config)` | Factory for the reactor processor |
+| Export                                    | Description                                                 |
+| ----------------------------------------- | ----------------------------------------------------------- |
+| `loadEvents(raw?)`                        | Parse + validate raw JSON, return `{ mappings, lookupMap }` |
+| `eventMappings`                           | Validated array from the bundled `events.json`              |
+| `eventLookupMap`                          | `Map<documentType, Map<actionType, mapping>>` — O(1) lookup |
+| `normalize(s)`                            | Document-type normalizer                                    |
+| `deriveEventName(mapping, op)`            | Alias or derived name for an op                             |
+| `buildDefaultProperties(op)`              | Six default properties attached to every event              |
+| `getOpenPanelClient()`                    | Lazy-loaded singleton                                       |
+| `resetOpenPanelClient()`                  | Tear down + clear the singleton                             |
+| `createOpenPanelProcessorFactory(config)` | Factory for the reactor processor                           |

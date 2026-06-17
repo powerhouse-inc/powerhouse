@@ -292,7 +292,7 @@ This was a version bump only for @powerhousedao/connect to align it with other p
 
 ### 🩹 Fixes
 
-- **connect:** resolve @powerhousedao/connect/* aliases in vitest ([f7de787c6](https://github.com/powerhouse-inc/powerhouse/commit/f7de787c6))
+- **connect:** resolve @powerhousedao/connect/\* aliases in vitest ([f7de787c6](https://github.com/powerhouse-inc/powerhouse/commit/f7de787c6))
 - **openpanel:** resolve eslint failures in static checks ([9bbefa737](https://github.com/powerhouse-inc/powerhouse/commit/9bbefa737))
 - **openpanel:** catch synchronous track errors in forward() ([36361c996](https://github.com/powerhouse-inc/powerhouse/commit/36361c996))
 - **connect:** clarify trackUiEvents dormancy and remove invalid tsconfigPaths config ([83bcc3a76](https://github.com/powerhouse-inc/powerhouse/commit/83bcc3a76))
@@ -375,14 +375,14 @@ This was a version bump only for @powerhousedao/connect to align it with other p
 ### 🚀 Features
 
 - **connect:** remount editor on package version bump ([4fe72d93f](https://github.com/powerhouse-inc/powerhouse/commit/4fe72d93f))
-- **connect:** subscribe to /__packages SSE for live package updates ([5cb41a7e4](https://github.com/powerhouse-inc/powerhouse/commit/5cb41a7e4))
+- **connect:** subscribe to /\_\_packages SSE for live package updates ([5cb41a7e4](https://github.com/powerhouse-inc/powerhouse/commit/5cb41a7e4))
 - **vetra:** moved schema projection to ph-rupert-cli ([49f627e7b](https://github.com/powerhouse-inc/powerhouse/commit/49f627e7b))
 - **vetra,ph-cli:** add @powerhousedao/vetra/codegen subexport for agent-driven codegen ([9689be87e](https://github.com/powerhouse-inc/powerhouse/commit/9689be87e))
 
 ### 🩹 Fixes
 
 - address PR review for connect package-manager + vetra specPath doc ([4f330f16e](https://github.com/powerhouse-inc/powerhouse/commit/4f330f16e))
-- **connect:** version-aware /__packages diff with toasts and refetch ([36f2e641d](https://github.com/powerhouse-inc/powerhouse/commit/36f2e641d))
+- **connect:** version-aware /\_\_packages diff with toasts and refetch ([36f2e641d](https://github.com/powerhouse-inc/powerhouse/commit/36f2e641d))
 
 ### ❤️ Thank You
 
@@ -629,7 +629,7 @@ This was a version bump only for @powerhousedao/connect to align it with other p
 
 ### 🩹 Fixes
 
-- **ci:** pnpm 11 reads PNPM_CONFIG_* not NPM_CONFIG_* ([b6c05fb23](https://github.com/powerhouse-inc/powerhouse/commit/b6c05fb23))
+- **ci:** pnpm 11 reads PNPM*CONFIG*_ not NPM*CONFIG*_ ([b6c05fb23](https://github.com/powerhouse-inc/powerhouse/commit/b6c05fb23))
 - **ci, docker:** pnpm 11 uses pnpm-workspace.yaml for allowBuilds; env var for min-release-age ([37c04c28a](https://github.com/powerhouse-inc/powerhouse/commit/37c04c28a))
 
 ### ❤️ Thank You

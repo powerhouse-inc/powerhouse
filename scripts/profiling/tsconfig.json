@@ -1,22 +1,15 @@
 {
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
-    "types": [
-      "node"
-    ],
+    "types": ["node"],
     "resolveJsonModule": true,
     "noEmit": true,
     "tsBuildInfoFile": "./.tsbuild/tsconfig.tsbuildinfo",
     "moduleResolution": "NodeNext",
     "skipLibCheck": true
   },
-  "include": [
-    "**/*.ts"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist"
-  ],
+  "include": ["**/*.ts"],
+  "exclude": ["node_modules", "dist"],
   "references": [
     {
       "path": "../../packages/document-model"

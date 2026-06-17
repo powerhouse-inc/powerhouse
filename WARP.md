@@ -5,6 +5,7 @@ This file provides guidance to WARP (warp.dev) when working with code in this re
 ## Essential Development Commands
 
 ### Core Build and Test Commands
+
 ```bash
 # Install dependencies
 pnpm install
@@ -26,6 +27,7 @@ pnpm check:all
 ```
 
 ### Working with Specific Packages/Apps
+
 ```bash
 # Build a specific package
 npx nx build <package-name>
@@ -44,6 +46,7 @@ npx nx test <package-name> --watch
 ```
 
 ### Package Management and Releases
+
 ```bash
 # Perform initial release for a new package
 npx nx release --first-release --projects=<package-name> --dry-run
@@ -57,6 +60,7 @@ pnpm clean
 ```
 
 ### Docker Commands
+
 ```bash
 # Build and start all services
 docker compose up
@@ -72,9 +76,11 @@ docker compose up --build
 ## Architecture Overview
 
 ### Monorepo Structure
+
 This is a **pnpm workspace** managed by **Nx** with the following key directories:
+
 - `packages/` - Core libraries and shared packages
-- `apps/` - Applications (Connect, Switchboard, Academy)  
+- `apps/` - Applications (Connect, Switchboard, Academy)
 - `clis/` - Command-line tools (ph-cli, ph-cmd)
 
 ### Core Architecture: Document Model System
@@ -88,33 +94,38 @@ The foundation of Powerhouse is an **operation-based document system** where:
 #### Key Components
 
 **Document Model (`packages/document-model/`)**
+
 - Defines the core document structure and operation system
 - Operations are ordered, indexed, and can be replayed to rebuild state
 - Supports undo/redo through operation history
 - Each operation has: `index`, `skip`, `timestamp`, `hash`, and `action`
 
 **Document Drive (`packages/document-drive/`)**
-- Manages collections of documents with synchronization capabilities  
+
+- Manages collections of documents with synchronization capabilities
 - Handles document storage, caching, and cross-drive operations
 - Implements pull/push synchronization between drives
 - Supports offline-first operations with conflict resolution
 
 **Connect App (`apps/connect/`)**
+
 - React-based document editor and viewer
 - Uses Vite with React, TailwindCSS, and various document model integrations
 - Supports plugin architecture for different document types
 - Built for both web and desktop deployment
 
 **Switchboard App (`apps/switchboard/`)**
-- Node.js server that manages document synchronization  
+
+- Node.js server that manages document synchronization
 - Handles GraphQL API, database operations, and cross-drive sync
 - Can run standalone or as part of larger Powerhouse infrastructure
 
 ### Operation Lifecycle
 
 Operations follow this pattern:
+
 1. **Creation** - User action or system process creates an operation
-2. **Validation** - Operation is checked for conflicts and consistency  
+2. **Validation** - Operation is checked for conflicts and consistency
 3. **Application** - Operation transforms document state
 4. **Persistence** - Operation is stored in document history
 5. **Synchronization** - Operation propagates to other nodes
@@ -122,29 +133,34 @@ Operations follow this pattern:
 ### Synchronization Architecture
 
 Documents sync through **strand updates** containing batched operations:
+
 - Pull-based sync: Nodes periodically request updates
-- Push-based sync: Nodes actively send updates when changes occur  
+- Push-based sync: Nodes actively send updates when changes occur
 - Conflict resolution through operation ordering and timestamps
 - Support for offline work with eventual consistency
 
 ## Development Patterns
 
 ### Package Dependencies
+
 - Use `workspace:*` for internal dependencies in package.json
 - Build dependencies are managed through Nx dependency graph
 - Packages build in dependency order automatically
 
 ### Testing Strategy
+
 - Unit tests using Vitest across packages
 - Integration tests for document operations and sync
 - E2E tests for Connect app using Playwright
 
 ### Code Generation
+
 - Document models use code generation from schemas
 - GraphQL operations are generated from schema definitions
 - Use `packages/codegen` for automated code generation tasks
 
 ### Release Process
+
 - Conventional commits determine version bumps
 - Nx release automation handles versioning and publishing
 - GitHub Actions handle CI/CD and NPM publishing
@@ -153,6 +169,7 @@ Documents sync through **strand updates** containing batched operations:
 ## Key File Locations
 
 ### Configuration
+
 - `nx.json` - Nx workspace configuration
 - `package.json` - Root workspace dependencies and scripts
 - `vitest.workspace.ts` - Test configuration
@@ -160,12 +177,14 @@ Documents sync through **strand updates** containing batched operations:
 - `tsconfig.json` - TypeScript project references
 
 ### Core Packages
+
 - `packages/document-model/` - Core document and operation system
-- `packages/document-drive/` - Document storage and synchronization  
+- `packages/document-drive/` - Document storage and synchronization
 - `packages/design-system/` - Shared UI components
 - `packages/common/` - Shared utilities and types
 
 ### Applications
+
 - `apps/connect/` - Document editor application
 - `apps/switchboard/` - Synchronization server
 - `clis/ph-cli/` - Command-line interface for Powerhouse operations
@@ -173,6 +192,7 @@ Documents sync through **strand updates** containing batched operations:
 ## Environment Setup
 
 Requires:
+
 - Node.js >= 22.0.0 (specified in package.json engines)
 - pnpm 10.10.0+ (specified as packageManager)
 - Docker (optional, for containerized development)

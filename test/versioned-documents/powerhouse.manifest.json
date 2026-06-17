@@ -1,36 +1,32 @@
 {
-	"name": "@powerhousedao/versioned-documents",
-	"description": "Versioned documents test package",
-	"category": "",
-	"publisher": {
-		"name": "@powerhousedao",
-		"url": ""
-	},
-	"documentModels": [
-		{
-			"id": "test/todo",
-			"name": "Todo"
-		}
-	],
-	"apps": [
-		{
-			"id": "todo-editor",
-			"name": "TodoEditor",
-			"documentTypes": [
-				"powerhouse/document-drive"
-			]
-		}
-	],
-	"editors": [
-		{
-			"id": "todo-editor",
-			"name": "Todo Editor",
-			"documentTypes": [
-				"test/todo"
-			]
-		}
-	],
-	"processors": [],
-	"subgraphs": [],
-	"config": []
+  "name": "@powerhousedao/versioned-documents",
+  "description": "Versioned documents test package",
+  "category": "",
+  "publisher": {
+    "name": "@powerhousedao",
+    "url": ""
+  },
+  "documentModels": [
+    {
+      "id": "test/todo",
+      "name": "Todo"
+    }
+  ],
+  "apps": [
+    {
+      "id": "todo-editor",
+      "name": "TodoEditor",
+      "documentTypes": ["powerhouse/document-drive"]
+    }
+  ],
+  "editors": [
+    {
+      "id": "todo-editor",
+      "name": "Todo Editor",
+      "documentTypes": ["test/todo"]
+    }
+  ],
+  "processors": [],
+  "subgraphs": [],
+  "config": []
 }

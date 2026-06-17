@@ -14,11 +14,7 @@ services:
   postgres:
     image: postgres:16-alpine
     command:
-      [
-        "postgres",
-        "-c",
-        "max_connections=${POSTGRES_MAX_CONNECTIONS:-256}",
-      ]
+      ["postgres", "-c", "max_connections=${POSTGRES_MAX_CONNECTIONS:-256}"]
     environment:
       POSTGRES_DB: reactor
       POSTGRES_USER: reactor

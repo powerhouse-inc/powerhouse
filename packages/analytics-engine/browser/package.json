@@ -45,7 +45,7 @@
     "vitest": "catalog:",
     "tsdown": "catalog:"
   },
-  "description": "Browser-side Powerhouse analytics engine \u2014 runs the analytics query engine in-browser using PGlite.",
+  "description": "Browser-side Powerhouse analytics engine — runs the analytics query engine in-browser using PGlite.",
   "keywords": [
     "powerhouse",
     "vetra",

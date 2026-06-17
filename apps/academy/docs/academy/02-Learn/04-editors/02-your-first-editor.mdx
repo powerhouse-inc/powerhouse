@@ -35,13 +35,17 @@ ph generate --editor todo-editor --document-type powerhouse/todo
 The generated `editor.tsx` uses the `useSelectedTodoDocument()` hook to get the current document and a `dispatch` function. No props are passed — the hook connects to whichever Todo document is open.
 
 ```tsx title="editors/todo-editor/editor.tsx"
-import { useState } from 'react';
-import { useSelectedTodoDocument } from 'todo-app/document-models/todo';
-import { addTodo, completeTodo, removeTodo } from 'todo-app/document-models/todo';
+import { useState } from "react";
+import { useSelectedTodoDocument } from "todo-app/document-models/todo";
+import {
+  addTodo,
+  completeTodo,
+  removeTodo,
+} from "todo-app/document-models/todo";
 
 export default function Editor() {
   const [document, dispatch] = useSelectedTodoDocument();
-  const [title, setTitle] = useState('');
+  const [title, setTitle] = useState("");
 
   return (
     <div className="todo">
@@ -50,7 +54,7 @@ export default function Editor() {
           e.preventDefault();
           if (!title.trim()) return;
           dispatch(addTodo({ id: crypto.randomUUID(), title }));
-          setTitle('');
+          setTitle("");
         }}
       >
         <input
@@ -86,7 +90,7 @@ export default function Editor() {
 }
 ```
 
-Notice what the editor does *not* do:
+Notice what the editor does _not_ do:
 
 - It never mutates state directly.
 - It never talks to the network.
@@ -98,21 +102,28 @@ All the editor does is dispatch. The reducer handles the rest.
   question="The user clicks the checkbox on a todo. What's the correct order of events?"
   choices={[
     {
-      label: 'Editor mutates document.state.global.items[i].done → UI re-renders.',
-      explanation: 'Editors must never mutate state. They dispatch actions.',
+      label:
+        "Editor mutates document.state.global.items[i].done → UI re-renders.",
+      explanation: "Editors must never mutate state. They dispatch actions.",
     },
     {
-      label: 'Editor dispatches completeTodo → reducer produces next state → Reactor appends operation → UI re-renders with new state.',
+      label:
+        "Editor dispatches completeTodo → reducer produces next state → Reactor appends operation → UI re-renders with new state.",
       correct: true,
-      explanation: 'The action flows through the reducer and is recorded by the Reactor; the new state comes back to the editor.',
+      explanation:
+        "The action flows through the reducer and is recorded by the Reactor; the new state comes back to the editor.",
     },
     {
-      label: 'Editor fetches /api/todos/complete → server updates DB → UI re-renders.',
-      explanation: 'That\'s CRUD. Powerhouse inverts it: the log is local first, and syncs itself later.',
+      label:
+        "Editor fetches /api/todos/complete → server updates DB → UI re-renders.",
+      explanation:
+        "That's CRUD. Powerhouse inverts it: the log is local first, and syncs itself later.",
     },
     {
-      label: 'Editor calls completeTodo() directly without dispatch, so it runs synchronously.',
-      explanation: 'Actions are just data. The dispatch step is what turns them into operations via the reducer.',
+      label:
+        "Editor calls completeTodo() directly without dispatch, so it runs synchronously.",
+      explanation:
+        "Actions are just data. The dispatch step is what turns them into operations via the reducer.",
     },
   ]}
   explanation="The editor's only job is to produce actions. State, operations, and timestamps are the Reactor's concern."
@@ -123,15 +134,15 @@ All the editor does is dispatch. The reducer handles the rest.
 The generated `module.ts` exports an `EditorModule` object that links the component to the document type:
 
 ```ts title="editors/todo-editor/module.ts"
-import type { EditorModule } from 'document-model';
-import { lazy } from 'react';
+import type { EditorModule } from "document-model";
+import { lazy } from "react";
 
 export const TodoEditor: EditorModule = {
-  Component: lazy(() => import('./editor.js')),
-  documentTypes: ['powerhouse/todo'],
+  Component: lazy(() => import("./editor.js")),
+  documentTypes: ["powerhouse/todo"],
   config: {
-    id: 'todo-editor',
-    name: 'Todo Editor',
+    id: "todo-editor",
+    name: "Todo Editor",
   },
 };
 ```
@@ -139,8 +150,8 @@ export const TodoEditor: EditorModule = {
 Your package's `editors/editors.ts` collects all `EditorModule` exports:
 
 ```ts title="editors/editors.ts"
-import type { EditorModule } from 'document-model';
-import { TodoEditor } from './todo-editor/module.js';
+import type { EditorModule } from "document-model";
+import { TodoEditor } from "./todo-editor/module.js";
 
 export const editors: EditorModule[] = [TodoEditor];
 ```
@@ -162,6 +173,12 @@ You've got a full vertical slice:
 That's already enough to run offline, with replay, undo, and audit available. The next lesson turns the final key — sync.
 
 <Cards>
-  <Card title="Editor hooks and state" href="/academy/Learn/editors/editor-hooks-and-state" />
-  <Card title="Back to Your first document model" href="/academy/Learn/document-models/your-first-document-model" />
+  <Card
+    title="Editor hooks and state"
+    href="/academy/Learn/editors/editor-hooks-and-state"
+  />
+  <Card
+    title="Back to Your first document model"
+    href="/academy/Learn/document-models/your-first-document-model"
+  />
 </Cards>

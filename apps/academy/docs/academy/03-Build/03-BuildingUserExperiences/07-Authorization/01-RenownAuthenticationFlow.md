@@ -72,6 +72,6 @@ Renown is designed to address the challenge of trust within DAOs, where contribu
 - **Powerhouse Identity Node**: Hosts user credentials and enables verification. Powerhouse is working towards decentralizing this identity reactor over time.
 - **Connect**: The interface for users to perform operations. It uses the DID for signing operations.
 - **Switchboard**: Responsible for verifying credentials and operation signatures to ensure authenticity.
-:::
+  :::
 
 This flow ensures that all actions within the Powerhouse ecosystem are secure, transparent, and verifiable, promoting trust in a pseudonymous contributor environment.

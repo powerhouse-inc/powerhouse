@@ -58,7 +58,7 @@
       "optional": true
     }
   },
-  "description": "Build tooling for Powerhouse packages \u2014 Vite config, TypeScript setup, and dev-server utilities for document model editors and drive-apps.",
+  "description": "Build tooling for Powerhouse packages — Vite config, TypeScript setup, and dev-server utilities for document model editors and drive-apps.",
   "keywords": [
     "powerhouse",
     "vetra",

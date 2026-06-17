@@ -2,20 +2,11 @@
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
     "outDir": "./.tsbuild",
-    "types": [
-      "@types/bun"
-    ],
+    "types": ["@types/bun"],
     "customConditions": ["source"]
   },
-  "include": [
-    "**/*"
-  ],
-  "exclude": [
-    "dist",
-    "node_modules",
-    "test-output",
-    "test-projects"
-  ],
+  "include": ["**/*"],
+  "exclude": ["dist", "node_modules", "test-output", "test-projects"],
   "references": [
     {
       "path": "../../apps/connect"

@@ -27,11 +27,6 @@
       "path": "../../packages/shared"
     }
   ],
-  "include": [
-    "**/*"
-  ],
-  "exclude": [
-    "dist",
-    "node_modules"
-  ]
+  "include": ["**/*"],
+  "exclude": ["dist", "node_modules"]
 }

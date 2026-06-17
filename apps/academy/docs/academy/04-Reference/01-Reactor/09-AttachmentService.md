@@ -66,7 +66,7 @@ Every interaction with the package comes down to three operations: reserve a slo
 
 There are two reservation modes. They are equivalent in capability — neither is preferred, so pick whichever fits the caller:
 
-- **Upload-first** — reserve with just `{ mimeType, fileName }`. The content hash, and therefore the final ref, is only known *after* `send()` completes. Simplest when you can stream the bytes straight through and do not need the ref until the upload finishes.
+- **Upload-first** — reserve with just `{ mimeType, fileName }`. The content hash, and therefore the final ref, is only known _after_ `send()` completes. Simplest when you can stream the bytes straight through and do not need the ref until the upload finishes.
 - **Hash-first** — hash the content up front and reserve with `{ clientHash, sizeBytes, ... }`. The ref is known at reservation time, so it can be written into document state before (or in parallel with) the upload, and dedup can short-circuit before any bytes are sent. The trade-off is that the whole file must be read to hash it. `IAttachmentClient.preprocess()` does that hashing for you.
 
 The walkthrough below uses the low-level service in upload-first mode. The [attachment client](#the-attachment-client) section shows the hash-first flow.
@@ -120,7 +120,10 @@ async function resolveImageSource(image: string) {
 }
 
 const { mimeType, stream } = await resolveImageSource(agent.image);
-const upload = await attachments.reserve({ mimeType, fileName: `${agent.id}-avatar` });
+const upload = await attachments.reserve({
+  mimeType,
+  fileName: `${agent.id}-avatar`,
+});
 const { ref } = await upload.send(stream);
 ```
 
@@ -152,7 +155,7 @@ const objectUrl = URL.createObjectURL(blob);
 // ...later: URL.revokeObjectURL(objectUrl);
 ```
 
-`get()` succeeds for any ref whose bytes are available. If the bytes were evicted from local storage, the service transparently re-fetches them through the transport. A hash-first ref can also be *pending* — reserved, with state already referencing it, but the bytes not yet uploaded. During that window `get()` throws `AttachmentPending`, while `stat()` succeeds and reports the declared size.
+`get()` succeeds for any ref whose bytes are available. If the bytes were evicted from local storage, the service transparently re-fetches them through the transport. A hash-first ref can also be _pending_ — reserved, with state already referencing it, but the bytes not yet uploaded. During that window `get()` throws `AttachmentPending`, while `stat()` succeeds and reports the declared size.
 
 ## The attachment client
 
@@ -176,7 +179,9 @@ await client.execute(documentId, "main", [
   attachInvoice({ scan: results.ref, vendorName: "Acme" }),
 ]);
 
-await attachments.reserve(results.options, (handle) => handle.send(results.stream()));
+await attachments.reserve(results.options, (handle) =>
+  handle.send(results.stream()),
+);
 ```
 
 `client.reserve(options, send)` reserves the slot and hands the upload handle to your `send` callback. If an attachment with the same hash already exists it short-circuits and returns the existing ref without uploading. Pass `results.stream()` — which returns a fresh `ReadableStream` on each call — rather than the single-use `results.data` if the upload might be retried. `send()` accepts any `ReadableStream<Uint8Array>`, so on the server you can stream from the original source instead of the buffered copy.
@@ -188,7 +193,9 @@ await Promise.all([
   client.execute(documentId, "main", [
     attachInvoice({ scan: results.ref, vendorName: "Acme" }),
   ]),
-  attachments.reserve(results.options, (handle) => handle.send(results.stream())),
+  attachments.reserve(results.options, (handle) =>
+    handle.send(results.stream()),
+  ),
 ]);
 ```
 
@@ -253,51 +260,51 @@ setAgentImageOperation(state, action) {
 
 ### `IAttachmentService`
 
-| Method                              | Returns                          | Description                                                                                                  |
-| ----------------------------------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `reserve(options)`                  | `Promise<IAttachmentUpload>`     | Reserve a new attachment slot and return an upload handle.                                                   |
-| `stat(ref)`                         | `Promise<AttachmentHeader>`      | Look up metadata for an existing ref. Throws `AttachmentNotFound` if the ref is unknown.                     |
-| `get(ref, signal?)`                 | `Promise<AttachmentResponse>`    | Retrieve the bytes. Re-fetches transparently if the data was evicted. Accepts an optional `AbortSignal`.     |
+| Method              | Returns                       | Description                                                                                              |
+| ------------------- | ----------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `reserve(options)`  | `Promise<IAttachmentUpload>`  | Reserve a new attachment slot and return an upload handle.                                               |
+| `stat(ref)`         | `Promise<AttachmentHeader>`   | Look up metadata for an existing ref. Throws `AttachmentNotFound` if the ref is unknown.                 |
+| `get(ref, signal?)` | `Promise<AttachmentResponse>` | Retrieve the bytes. Re-fetches transparently if the data was evicted. Accepts an optional `AbortSignal`. |
 
 ### `IAttachmentUpload`
 
-| Member             | Type                                                            | Description                                                                                                       |
-| ------------------ | --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `reservationId`    | `string`                                                        | Unique identifier for this reservation.                                                                           |
-| `send(data)`       | `(ReadableStream<Uint8Array>) => Promise<AttachmentUploadResult>` | Stream the bytes through the handle. Returns `{ hash, ref, header }`. Dedup against existing hashes is automatic. |
+| Member          | Type                                                              | Description                                                                                                       |
+| --------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `reservationId` | `string`                                                          | Unique identifier for this reservation.                                                                           |
+| `send(data)`    | `(ReadableStream<Uint8Array>) => Promise<AttachmentUploadResult>` | Stream the bytes through the handle. Returns `{ hash, ref, header }`. Dedup against existing hashes is automatic. |
 
 ### `IAttachmentClient`
 
-| Method                    | Returns                            | Description                                                                                                                                                                          |
-| ------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `preprocess(file, opts?)` | `Promise<PreprocessResult>`        | Read and hash a `Blob` up front. Returns the ref, hash, declared size, hash-first reserve options, and the buffered bytes (as a single-use `data` stream and a re-readable `stream()` factory). `opts` may override `{ fileName, mimeType }`. |
-| `reserve(options, send)`  | `Promise<AttachmentUploadResult>`  | Reserve a hash-first slot and run `send(handle)`. Short-circuits to the existing ref if the hash is already stored (`AttachmentAlreadyExists` is handled internally).                |
+| Method                    | Returns                           | Description                                                                                                                                                                                                                                   |
+| ------------------------- | --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `preprocess(file, opts?)` | `Promise<PreprocessResult>`       | Read and hash a `Blob` up front. Returns the ref, hash, declared size, hash-first reserve options, and the buffered bytes (as a single-use `data` stream and a re-readable `stream()` factory). `opts` may override `{ fileName, mimeType }`. |
+| `reserve(options, send)`  | `Promise<AttachmentUploadResult>` | Reserve a hash-first slot and run `send(handle)`. Short-circuits to the existing ref if the hash is already stored (`AttachmentAlreadyExists` is handled internally).                                                                         |
 
 ### Key types
 
-| Type                       | Shape                                                                                                                     |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| `AttachmentRef`            | `` `attachment://v${number}:${string}` `` — opaque ref string used in document state.                                     |
-| `ReserveAttachmentOptions` | `UploadFirstReserveAttachmentOptions \| HashFirstReserveAttachmentOptions` — discriminated on `clientHash`.                |
-| `UploadFirstReserveAttachmentOptions` | `{ mimeType: string; fileName: string; extension?: string \| null }` — no `clientHash`; ref known only after `send()`. |
-| `HashFirstReserveAttachmentOptions`   | `{ mimeType: string; fileName: string; extension?: string \| null; clientHash: AttachmentHash; sizeBytes: number }` — ref known at reserve time. |
-| `PreprocessResult`         | `{ ref: AttachmentRef; hash: AttachmentHash; sizeBytes: number; options: HashFirstReserveAttachmentOptions; data: ReadableStream<Uint8Array>; stream: () => ReadableStream<Uint8Array> }` |
-| `AttachmentUploadResult`   | `{ hash: AttachmentHash; ref: AttachmentRef; header: AttachmentHeader }`                                                  |
-| `AttachmentHeader`         | `{ hash; mimeType; fileName; sizeBytes; extension; status; source; createdAtUtc; lastAccessedAtUtc }`                     |
-| `AttachmentResponse`       | `{ header: AttachmentHeader; body: ReadableStream<Uint8Array> }`                                                          |
+| Type                                  | Shape                                                                                                                                                                                     |
+| ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AttachmentRef`                       | `` `attachment://v${number}:${string}` `` — opaque ref string used in document state.                                                                                                     |
+| `ReserveAttachmentOptions`            | `UploadFirstReserveAttachmentOptions \| HashFirstReserveAttachmentOptions` — discriminated on `clientHash`.                                                                               |
+| `UploadFirstReserveAttachmentOptions` | `{ mimeType: string; fileName: string; extension?: string \| null }` — no `clientHash`; ref known only after `send()`.                                                                    |
+| `HashFirstReserveAttachmentOptions`   | `{ mimeType: string; fileName: string; extension?: string \| null; clientHash: AttachmentHash; sizeBytes: number }` — ref known at reserve time.                                          |
+| `PreprocessResult`                    | `{ ref: AttachmentRef; hash: AttachmentHash; sizeBytes: number; options: HashFirstReserveAttachmentOptions; data: ReadableStream<Uint8Array>; stream: () => ReadableStream<Uint8Array> }` |
+| `AttachmentUploadResult`              | `{ hash: AttachmentHash; ref: AttachmentRef; header: AttachmentHeader }`                                                                                                                  |
+| `AttachmentHeader`                    | `{ hash; mimeType; fileName; sizeBytes; extension; status; source; createdAtUtc; lastAccessedAtUtc }`                                                                                     |
+| `AttachmentResponse`                  | `{ header: AttachmentHeader; body: ReadableStream<Uint8Array> }`                                                                                                                          |
 
 ### Errors
 
-| Class                  | When it is thrown                                                                  |
-| ---------------------- | ---------------------------------------------------------------------------------- |
-| `AttachmentNotFound`   | `stat(ref)` or `get(ref)` called with a ref the store does not know.               |
-| `InvalidAttachmentRef` | A string passed where a ref is expected does not match `attachment://v<N>:<hash>`. |
-| `UploadTooLarge`       | `upload.send()` exceeded the server's configured byte cap. Maps to HTTP 413.       |
-| `ReservationNotFound`  | `upload.send()` after the reservation expired or was deleted.                      |
+| Class                     | When it is thrown                                                                                                                                         |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AttachmentNotFound`      | `stat(ref)` or `get(ref)` called with a ref the store does not know.                                                                                      |
+| `InvalidAttachmentRef`    | A string passed where a ref is expected does not match `attachment://v<N>:<hash>`.                                                                        |
+| `UploadTooLarge`          | `upload.send()` exceeded the server's configured byte cap. Maps to HTTP 413.                                                                              |
+| `ReservationNotFound`     | `upload.send()` after the reservation expired or was deleted.                                                                                             |
 | `AttachmentAlreadyExists` | Hash-first `reserve()` for content whose hash is already stored. The client's `reserve()` catches this and returns the existing ref instead of uploading. |
-| `AttachmentPending`    | `get(ref)` for a hash that is reserved but whose bytes have not finished uploading. |
-| `HashMismatch`         | Hash-first `send()` whose uploaded bytes do not match the claimed `clientHash`.    |
-| `SizeMismatch`         | Hash-first `send()` whose actual byte count differs from the declared `sizeBytes`. |
+| `AttachmentPending`       | `get(ref)` for a hash that is reserved but whose bytes have not finished uploading.                                                                       |
+| `HashMismatch`            | Hash-first `send()` whose uploaded bytes do not match the claimed `clientHash`.                                                                           |
+| `SizeMismatch`            | Hash-first `send()` whose actual byte count differs from the declared `sizeBytes`.                                                                        |
 
 ### Helpers
 

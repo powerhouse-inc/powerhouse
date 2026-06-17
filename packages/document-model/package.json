@@ -58,7 +58,7 @@
     "@powerhousedao/shared": "workspace:*",
     "jszip": "^3.10.1"
   },
-  "description": "Powerhouse document model \u2014 foundational data structure for local-first, event-sourced documents with typed operations, reducers, and GraphQL schema validation.",
+  "description": "Powerhouse document model — foundational data structure for local-first, event-sourced documents with typed operations, reducers, and GraphQL schema validation.",
   "keywords": [
     "powerhouse",
     "vetra",

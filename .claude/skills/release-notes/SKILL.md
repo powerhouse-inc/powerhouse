@@ -141,7 +141,7 @@ Match the format already in `RELEASE-NOTES.md`. Reference skeleton (drop subsect
 
 ### DOCUMENTATION
 
-- [<Title>](<url-from-diff>) — only if the diff itself added/updated the link
+- [<Title>](url-from-diff) — only if the diff itself added/updated the link
 ````
 
 Constraints, in priority order:

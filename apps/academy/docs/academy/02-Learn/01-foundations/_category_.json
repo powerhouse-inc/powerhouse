@@ -1,4 +1,7 @@
 {
   "label": "Foundations",
-  "link": { "type": "doc", "id": "academy/Learn/foundations/what-is-powerhouse" }
+  "link": {
+    "type": "doc",
+    "id": "academy/Learn/foundations/what-is-powerhouse"
+  }
 }

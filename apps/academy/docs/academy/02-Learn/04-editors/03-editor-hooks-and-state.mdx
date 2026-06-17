@@ -3,7 +3,7 @@ title: Editor hooks and state
 description: The React hooks Powerhouse gives you for reading the current document, dispatching actions, and handling loading and error states.
 ---
 
-You've written an editor shell. Now you need to actually *read* the document and *change* it. Powerhouse gives you a small set of hooks from `@powerhousedao/reactor-browser` to do exactly that — no manual subscriptions, no wiring.
+You've written an editor shell. Now you need to actually _read_ the document and _change_ it. Powerhouse gives you a small set of hooks from `@powerhousedao/reactor-browser` to do exactly that — no manual subscriptions, no wiring.
 
 ## The hook you'll use 90% of the time
 
@@ -21,7 +21,7 @@ const [doc, dispatch] = useSelectedTodoListDocument();
 dispatch(addTodo({ id: generateId(), title: "Buy milk" }));
 ```
 
-Always generate IDs *before* calling dispatch — reducers must stay pure.
+Always generate IDs _before_ calling dispatch — reducers must stay pure.
 
 ## When the document type isn't known at compile time
 
@@ -43,21 +43,29 @@ Need a document that isn't the currently selected one? Two options:
   question="Your editor has a button. When clicked, it should mark a todo as done. Which hook gives you what you need?"
   choices={[
     {
-      label: "useDocument(id) — it fetches the document and I can call dispatch on the result.",
-      explanation: "useDocument(id) is Suspense-based and returns the document only — no dispatch. It's for reading a document by ID, not for the editor's primary action dispatch.",
+      label:
+        "useDocument(id) — it fetches the document and I can call dispatch on the result.",
+      explanation:
+        "useDocument(id) is Suspense-based and returns the document only — no dispatch. It's for reading a document by ID, not for the editor's primary action dispatch.",
     },
     {
-      label: "useSelectedTodoListDocument() — it returns [doc, dispatch], and dispatch sends the action.",
+      label:
+        "useSelectedTodoListDocument() — it returns [doc, dispatch], and dispatch sends the action.",
       correct: true,
-      explanation: "Exactly right. The generated typed hook returns a tuple: the document and a dispatch function. Call dispatch(completeTodo({ id })) inside the button's onClick.",
+      explanation:
+        "Exactly right. The generated typed hook returns a tuple: the document and a dispatch function. Call dispatch(completeTodo({ id })) inside the button's onClick.",
     },
     {
-      label: "useSelectedDocument() — it's the most generic option, so it always works.",
-      explanation: "It works, but you lose type safety. Prefer the generated typed hook when you know the document model.",
+      label:
+        "useSelectedDocument() — it's the most generic option, so it always works.",
+      explanation:
+        "It works, but you lose type safety. Prefer the generated typed hook when you know the document model.",
     },
     {
-      label: "No hook needed — I can import dispatch directly from the Reactor.",
-      explanation: "The Reactor is not imported directly in editor components. The hooks are the supported interface and handle subscriptions for you.",
+      label:
+        "No hook needed — I can import dispatch directly from the Reactor.",
+      explanation:
+        "The Reactor is not imported directly in editor components. The hooks are the supported interface and handle subscriptions for you.",
     },
   ]}
 />

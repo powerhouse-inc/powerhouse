@@ -35,7 +35,7 @@
     "vitest": "catalog:",
     "tsdown": "catalog:"
   },
-  "description": "Powerhouse analytics engine \u2014 time-series query engine for document drive metrics and usage data.",
+  "description": "Powerhouse analytics engine — time-series query engine for document drive metrics and usage data.",
   "keywords": [
     "powerhouse",
     "vetra",

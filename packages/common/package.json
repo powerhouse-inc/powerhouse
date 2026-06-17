@@ -29,7 +29,7 @@
     }
   },
   "sideEffects": false,
-  "description": "Common Powerhouse package \u2014 base document model and drive UI components required for Connect and Vetra Studio.",
+  "description": "Common Powerhouse package — base document model and drive UI components required for Connect and Vetra Studio.",
   "scripts": {
     "build": "tsdown",
     "tsc": "tsc",

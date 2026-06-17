@@ -13,14 +13,14 @@ Every document starts with two scopes:
 - **`local`** — state that belongs only to your device. Operations here stay local; they never sync anywhere.
 
 ```ts
-doc.state.global;        // shared with everyone
-doc.state.local;         // yours alone
+doc.state.global; // shared with everyone
+doc.state.local; // yours alone
 
-doc.operations.global;   // replicated log
-doc.operations.local;    // local-only log
+doc.operations.global; // replicated log
+doc.operations.local; // local-only log
 ```
 
-Think of a shared todo list. The `global` scope holds the items everyone cares about — titles, completion status, assignees. The `local` scope holds things like whether *you* have the "show completed" filter on, or which item your cursor is sitting on. Those are yours. Nobody else needs them.
+Think of a shared todo list. The `global` scope holds the items everyone cares about — titles, completion status, assignees. The `local` scope holds things like whether _you_ have the "show completed" filter on, or which item your cursor is sitting on. Those are yours. Nobody else needs them.
 
 ## Scopes stay independent
 
@@ -33,20 +33,25 @@ This means you can dispatch an action that only updates your filter preference �
   choices={[
     {
       label: "global — so collaborators can see the user is typing.",
-      explanation: "Presence indicators are a UI concern, not document state. Unposted drafts are private by nature — sharing them globally would be noisy and unexpected.",
+      explanation:
+        "Presence indicators are a UI concern, not document state. Unposted drafts are private by nature — sharing them globally would be noisy and unexpected.",
     },
     {
       label: "local — it's private to this user's device until they post.",
       correct: true,
-      explanation: "Draft text that hasn't been submitted is a perfect local-scope use case: it only matters on this device, and should never sync.",
+      explanation:
+        "Draft text that hasn't been submitted is a perfect local-scope use case: it only matters on this device, and should never sync.",
     },
     {
-      label: "Neither — draft text shouldn't be stored in document state at all.",
-      explanation: "Storing ephemeral input in local state is exactly the right pattern. It gives you persistence across refreshes without polluting the shared log.",
+      label:
+        "Neither — draft text shouldn't be stored in document state at all.",
+      explanation:
+        "Storing ephemeral input in local state is exactly the right pattern. It gives you persistence across refreshes without polluting the shared log.",
     },
     {
       label: "global, but only after a short delay.",
-      explanation: "Delaying the sync doesn't change the fact that unposted text is private. Use local scope and only move content to global when the user posts.",
+      explanation:
+        "Delaying the sync doesn't change the fact that unposted text is private. Use local scope and only move content to global when the user posts.",
     },
   ]}
 />
@@ -56,11 +61,11 @@ This means you can dispatch an action that only updates your filter preference �
 When you define a document model, each scope gets its own GraphQL state schema. The local schema is optional — omit it and the document only has a global scope.
 
 ```graphql
-type TodoListState {            # global scope
+type TodoListState { # global scope
   todos: [Todo!]!
 }
 
-type TodoListLocalState {       # local scope (optional)
+type TodoListLocalState { # local scope (optional)
   showCompleted: Boolean!
   activeTodoId: OID
 }

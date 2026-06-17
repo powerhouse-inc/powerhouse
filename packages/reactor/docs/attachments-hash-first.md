@@ -4,11 +4,11 @@
 
 This document extends [attachments.md](./attachments.md). It does not replace it -- the interfaces, lifecycle, storage, and transport designs described there remain in force except where amended below.
 
-The current upload flow forces a strict ordering: reserve, upload all bytes, receive the `AttachmentRef`, and only then submit the domain action that uses the ref. Because the ref *is* the content hash (`attachment://v1:<sha256>`), and the hash is computed server-side at the end of the upload stream, the user cannot submit an action until a potentially lengthy upload completes.
+The current upload flow forces a strict ordering: reserve, upload all bytes, receive the `AttachmentRef`, and only then submit the domain action that uses the ref. Because the ref _is_ the content hash (`attachment://v1:<sha256>`), and the hash is computed server-side at the end of the upload stream, the user cannot submit an action until a potentially lengthy upload completes.
 
 The fix is to recognize that the hash does not require the upload -- it requires one local pass over the bytes. The client computes the SHA-256 itself, constructs the ref immediately, submits the action right away, and uploads concurrently or in the background. The server verifies the claimed hash on ingest and rejects mismatches.
 
-Nothing about the ref format, the `Attachment` scalar, codegen, the reducer contract, the operation store, or operation sync changes. The only things that change are *who computes the hash*, *when the ref becomes known*, and *how the system represents an attachment whose bytes have been promised but not yet delivered*.
+Nothing about the ref format, the `Attachment` scalar, codegen, the reducer contract, the operation store, or operation sync changes. The only things that change are _who computes the hash_, _when the ref becomes known_, and _how the system represents an attachment whose bytes have been promised but not yet delivered_.
 
 Three design commitments anchor this extension:
 
@@ -30,7 +30,7 @@ Client-side hashing won decisively because the ref in document state is bit-iden
 Two facts about the existing implementation make client-side hashing nearly free:
 
 - The browser upload path already buffers the entire file: `RemoteAttachmentUpload.send()` collects the stream into a Blob before the PUT, because streaming request bodies are not universally supported in browsers. Hashing that buffer is a single `crypto.subtle.digest("SHA-256", ...)` call over memory the client is already paying for. `crypto.subtle` is already a dependency of this codebase (operation signing, header hashing). This buffering is strictly a browser-client limitation -- the switchboard ingest path is and remains fully streaming (see Hash verification on ingest).
-- The architecture already tolerates refs without local data ("lazy data availability", design principle 4 in attachments.md). The reactor core, read models, and sync treat refs as opaque strings. What is new is tolerating a ref before *any* reactor has the data -- a difference in degree, not in kind.
+- The architecture already tolerates refs without local data ("lazy data availability", design principle 4 in attachments.md). The reactor core, read models, and sync treat refs as opaque strings. What is new is tolerating a ref before _any_ reactor has the data -- a difference in degree, not in kind.
 
 Node and CLI clients hash with `crypto.createHash("sha256")` over a first streaming pass (files on disk are re-readable). Callers with true one-shot streams that cannot be hashed up front simply omit the client hash and get the existing upload-first flow -- both modes coexist on the same interfaces.
 
@@ -63,7 +63,11 @@ try {
 //    Upload concurrently (or in the background).
 await Promise.all([
   reactor.execute(docId, "main", [
-    { type: "ATTACH_INVOICE", input: { scan: ref, vendorName: "Acme" }, scope: "global" },
+    {
+      type: "ATTACH_INVOICE",
+      input: { scan: ref, vendorName: "Acme" },
+      scope: "global",
+    },
   ]),
   upload ? upload.send(file.stream()) : Promise.resolve(),
 ]);
@@ -203,7 +207,7 @@ class AttachmentPending extends Error {
 type AttachmentStatus = "available" | "evicted" | "pending";
 ```
 
-`pending` is a *virtual* status. It never appears in the `attachment` table (whose primary key is the hash and whose rows mean "bytes are or were stored"). It is synthesized at query time from live, hash-bearing reservations -- see Storage below.
+`pending` is a _virtual_ status. It never appears in the `attachment` table (whose primary key is the hash and whose rows mean "bytes are or were stored"). It is synthesized at query time from live, hash-bearing reservations -- see Storage below.
 
 ## Reservation semantics
 
@@ -211,14 +215,14 @@ type AttachmentStatus = "available" | "evicted" | "pending";
 
 `reserve({ clientHash })` checks the attachment store before creating a reservation:
 
-| Store state for the hash | reserve() outcome |
-| ------------------------ | ----------------- |
-| Row exists, `status = 'available'` | **Rejects** with `AttachmentAlreadyExists` carrying the canonical ref. The client uses the ref directly. Zero bytes are transmitted -- today's flow uploads everything before dedup is even detectable. |
-| Row exists, `status = 'evicted'` | **Succeeds.** Metadata is known but the bytes are gone from this reactor. The client holds the bytes; the upload restores them through the existing evicted-restore commit path. Rejecting here would discard the only guaranteed copy and leave restoration dependent on some peer still having the data. |
-| No row, live reservation with the same `client_hash` exists | **Succeeds.** Concurrent reservations for the same hash are deliberately permitted -- see below. |
-| No row, no live reservation | **Succeeds.** Normal case. |
+| Store state for the hash                                    | reserve() outcome                                                                                                                                                                                                                                                                                          |
+| ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Row exists, `status = 'available'`                          | **Rejects** with `AttachmentAlreadyExists` carrying the canonical ref. The client uses the ref directly. Zero bytes are transmitted -- today's flow uploads everything before dedup is even detectable.                                                                                                    |
+| Row exists, `status = 'evicted'`                            | **Succeeds.** Metadata is known but the bytes are gone from this reactor. The client holds the bytes; the upload restores them through the existing evicted-restore commit path. Rejecting here would discard the only guaranteed copy and leave restoration dependent on some peer still having the data. |
+| No row, live reservation with the same `client_hash` exists | **Succeeds.** Concurrent reservations for the same hash are deliberately permitted -- see below.                                                                                                                                                                                                           |
+| No row, no live reservation                                 | **Succeeds.** Normal case.                                                                                                                                                                                                                                                                                 |
 
-The evicted case is a deliberate refinement of "reject if the hash is already known": the rejection criterion is *can this reactor currently serve the bytes*, not *has it ever seen the hash*. An evicted hash is known but not servable, and the reserving client is, at that moment, the most reliable source of the bytes.
+The evicted case is a deliberate refinement of "reject if the hash is already known": the rejection criterion is _can this reactor currently serve the bytes_, not _has it ever seen the hash_. An evicted hash is known but not servable, and the reserving client is, at that moment, the most reliable source of the bytes.
 
 ### Concurrent reservations for the same hash
 
@@ -228,7 +232,7 @@ Multiple live reservations may claim the same `client_hash`. This is intentional
 - **No reservation squatting.** If a second reserve were rejected in favor of an existing reservation, a client could reserve a hash it never intends to upload and block that content for the reservation TTL (24h). Independent reservations make squatting harmless: anyone with the bytes can upload them.
 - **Commit-time convergence already exists.** Whichever upload finishes first inserts the attachment row (`INSERT ... ON CONFLICT (hash) DO NOTHING`). A later `send()` for the same hash lands in the existing dedup path and returns the existing record. Each `send()` soft-deletes only its own reservation; stragglers age out via the TTL.
 
-The cost is a bounded amount of duplicate upload bandwidth in the rare concurrent case -- strictly no worse than today, where *every* duplicate upload transmits all bytes.
+The cost is a bounded amount of duplicate upload bandwidth in the rare concurrent case -- strictly no worse than today, where _every_ duplicate upload transmits all bytes.
 
 ### Hash verification on ingest
 
@@ -301,7 +305,7 @@ The declared `sizeBytes` in a pending header is enforced on ingest -- no upload 
 `KyselyAttachmentStore.get(hash)`:
 
 1. `attachment` row exists: unchanged (serve, or restore-from-transport if evicted).
-2. No row, pending reservation matches: throw `AttachmentPending` with the reservation's expiry. The bytes have not arrived *anywhere*; there is nothing to fetch.
+2. No row, pending reservation matches: throw `AttachmentPending` with the reservation's expiry. The bytes have not arrived _anywhere_; there is nothing to fetch.
 3. No row, no pending reservation: fetch via transport as today. The transport may itself report pending (see next section), which surfaces as `AttachmentPending` with the remote's expiry.
 
 There is no store-level wait option. `get()` always throws `AttachmentPending` immediately; polling across the pending window is the caller's loop, bounded by the error's `expiresAtUtc`. A wait inside the store would hold server request handlers open across multi-second windows and hide retry policy where callers cannot tune it.
@@ -310,45 +314,53 @@ There is no store-level wait option. `get()` always throws `AttachmentPending` i
 
 Pending state is part of the attachment transport's contract, not just a local store concern. When reactor B receives a synced operation whose input references hash `H`, and B fetches the data while the source client is still uploading, B must be able to distinguish three answers, not two:
 
-| Answer | Meaning | Correct peer behavior |
-| ------ | ------- | --------------------- |
-| data | Bytes available | Store via `put()`, serve |
+| Answer      | Meaning                                                             | Correct peer behavior                                                    |
+| ----------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| data        | Bytes available                                                     | Store via `put()`, serve                                                 |
 | **pending** | An upload for this hash is in flight at the source; expiry attached | Bounded retry with backoff until `expiresAtUtc`, then treat as not found |
-| not found | No data, no in-flight upload | Long backoff or give up; the ref may be permanently dangling |
+| not found   | No data, no in-flight upload                                        | Long backoff or give up; the ref may be permanently dangling             |
 
 The current `fetch(): Promise<TransportResponse | null>` conflates the last two. The interface changes to make the three-way result explicit:
 
 ```ts
 type TransportFetchResult =
   | { kind: "data"; response: TransportResponse }
-  | { kind: "pending"; hash: AttachmentHash; expiresAtUtc: string; retryAfterMs: number }
+  | {
+      kind: "pending";
+      hash: AttachmentHash;
+      expiresAtUtc: string;
+      retryAfterMs: number;
+    }
   | { kind: "not-found" };
 
 interface IAttachmentTransport {
-  fetch(hash: AttachmentHash, signal?: AbortSignal): Promise<TransportFetchResult>;
+  fetch(
+    hash: AttachmentHash,
+    signal?: AbortSignal,
+  ): Promise<TransportFetchResult>;
   // announce/push unchanged; see Future topologies.
 }
 ```
 
 ### What syncs and what does not
 
-Reservation rows themselves are **not replicated**. A reservation is node-local, single-writer state owned by the upload target, with a TTL. Replicating it would create distributed-expiry consistency problems for no benefit. Instead, pending is a *queryable* state: peers learn it on demand through the transport's fetch/stat path, exactly as they learn data availability. The authoritative answer always comes from the reactor holding the reservation.
+Reservation rows themselves are **not replicated**. A reservation is node-local, single-writer state owned by the upload target, with a TTL. Replicating it would create distributed-expiry consistency problems for no benefit. Instead, pending is a _queryable_ state: peers learn it on demand through the transport's fetch/stat path, exactly as they learn data availability. The authoritative answer always comes from the reactor holding the reservation.
 
 **Cross-reactor stat limitation.** `stat()` and `HEAD /attachments/:hash` are authoritative only on the reservation-holding reactor. A peer reactor's local `stat()` reports not-found for a hash that is pending remotely -- pending is discovered on the data path (`get()` / transport fetch), not via a peer's stat. This is a deliberate consequence of reservations being node-local, single-writer state: a peer must perform a transport fetch (which surfaces the 202 pending response from the source reactor) to learn that a hash is in flight. The local `stat()` shortcut, which queries only the local attachment and reservation tables, cannot cross this boundary.
 
 In the current client-server topology this works without extra hops: clients reserve and upload against the switchboard, so the switchboard -- the same node every peer fetches from -- is authoritative for pending. A peer's lazy fetch hits the switchboard and receives `pending` directly.
 
-In a local-first topology (a reactor reserving against its own direct store, syncing operations outward before pushing bytes), remote peers querying *their* configured transport see `not-found` until the source pushes or announces the data. That matches the existing lazy-data-availability principle: a ref may precede data availability, and the UI treats unfetchable refs gracefully. An eager `announce`-style pending hint (broadcasting "hash H is pending at me until T") is deliberately deferred -- see Future topologies.
+In a local-first topology (a reactor reserving against its own direct store, syncing operations outward before pushing bytes), remote peers querying _their_ configured transport see `not-found` until the source pushes or announces the data. That matches the existing lazy-data-availability principle: a ref may precede data availability, and the UI treats unfetchable refs gracefully. An eager `announce`-style pending hint (broadcasting "hash H is pending at me until T") is deliberately deferred -- see Future topologies.
 
 ### HTTP mapping (switchboard)
 
 All attachment endpoints below sit behind upload-equivalent authorization -- see the dedup oracle entry in Trust model.
 
-| Endpoint | Change |
-| -------- | ------ |
-| `POST /attachments/reservations` | Accepts optional `clientHash` (validated against `/^[a-f0-9]{64}$/`, normalized to lowercase) and `sizeBytes` (required with `clientHash`). Returns `201 { reservationId, ref, expiresAtUtc }`. Returns **`409 Conflict { error: "already_exists", ref }`** when the hash is available -- the dedup rejection. The body carries the canonical ref only; it never exposes another client's `reservationId` (that would let one principal complete or poison another's in-flight upload). |
-| `PUT /attachments/reservations/:reservationId` | The handler pipes the request stream directly through `hash.update(chunk)` and to disk -- the body is never buffered in server memory (see Hash verification on ingest). On size mismatch returns **`422 Unprocessable Entity { error: "size_mismatch", declared, actual }`** (the handler may abort mid-stream once the count exceeds the declaration); on hash mismatch returns **`422 Unprocessable Entity { error: "hash_mismatch", claimed, actual }`**. Reservation retained in both cases. |
-| `GET /attachments/:hash`, `HEAD /attachments/:hash` | When the hash is pending: **`202 Accepted`** with `Retry-After: <seconds>` and an `Attachment-Pending` header carrying `{ expiresAtUtc, mimeType, fileName, sizeBytes }`. Empty body. The normal `Attachment-Metadata`/`Content-Length` headers of the 200 path are not sent, so no consumer can mistake a pending response for a zero-byte attachment. |
+| Endpoint                                            | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST /attachments/reservations`                    | Accepts optional `clientHash` (validated against `/^[a-f0-9]{64}$/`, normalized to lowercase) and `sizeBytes` (required with `clientHash`). Returns `201 { reservationId, ref, expiresAtUtc }`. Returns **`409 Conflict { error: "already_exists", ref }`** when the hash is available -- the dedup rejection. The body carries the canonical ref only; it never exposes another client's `reservationId` (that would let one principal complete or poison another's in-flight upload).           |
+| `PUT /attachments/reservations/:reservationId`      | The handler pipes the request stream directly through `hash.update(chunk)` and to disk -- the body is never buffered in server memory (see Hash verification on ingest). On size mismatch returns **`422 Unprocessable Entity { error: "size_mismatch", declared, actual }`** (the handler may abort mid-stream once the count exceeds the declaration); on hash mismatch returns **`422 Unprocessable Entity { error: "hash_mismatch", claimed, actual }`**. Reservation retained in both cases. |
+| `GET /attachments/:hash`, `HEAD /attachments/:hash` | When the hash is pending: **`202 Accepted`** with `Retry-After: <seconds>` and an `Attachment-Pending` header carrying `{ expiresAtUtc, mimeType, fileName, sizeBytes }`. Empty body. The normal `Attachment-Metadata`/`Content-Length` headers of the 200 path are not sent, so no consumer can mistake a pending response for a zero-byte attachment.                                                                                                                                           |
 
 Client-side mappings:
 
@@ -365,22 +377,22 @@ Client-side mappings:
 
 Today, every ref in document state is server-attested: the server computed the hash. Under hash-first, refs become **client-claimed, server-verified**:
 
-- The *store* is exactly as trustworthy as before. Ingest verification means no sequence of client actions can cause wrong bytes to be served for a hash.
-- The *ref in document state* is a claim until the upload commits. A client that lies (or has a bug) produces a ref whose upload is rejected by `HashMismatch` -- leaving a dangling ref, which is precisely the state produced by an abandoned upload, and which the architecture already tolerates.
+- The _store_ is exactly as trustworthy as before. Ingest verification means no sequence of client actions can cause wrong bytes to be served for a hash.
+- The _ref in document state_ is a claim until the upload commits. A client that lies (or has a bug) produces a ref whose upload is rejected by `HashMismatch` -- leaving a dangling ref, which is precisely the state produced by an abandoned upload, and which the architecture already tolerates.
 - **Dedup oracle -- closed by default.** `reserve()` rejection (and `stat()` on an arbitrary hash) reveals whether given content exists on the server. This oracle already exists today -- any client can `stat()` any hash -- and hash-first makes probing cheaper and more natural. Therefore every endpoint that reveals hash existence (`POST /attachments/reservations`, `GET`/`HEAD /attachments/:hash`) **requires upload-equivalent authorization by default**: probing for content is treated as privileged as adding content. The switchboard mounts all attachment routes behind the same authorization gate as the upload endpoint, and transports carry those credentials on fetch (as the transport design in attachments.md already assumes via `authHeaders()`). The 409 body's metadata surface stays minimal by design (ref only -- no file name, no size).
 - The 409 rejection must never include an existing `reservationId`. Reservation ids are upload capabilities; leaking one across principals lets an attacker complete or poison someone else's in-flight upload.
 
 ## Failure modes
 
-| Scenario | Behavior | Mitigation |
-| -------- | -------- | ---------- |
-| Upload abandoned after action submitted | Hash reads `pending` until the reservation expires, then `AttachmentNotFound`. The ref dangles in document state -- the already-tolerated lazy-availability state. | Client retries by re-reserving the same hash (allowed: no attachment row exists). UI renders the pending/broken state from `stat()`. |
-| Hash or size mismatch on ingest | `send()` throws `HashMismatch` or `SizeMismatch` (size can fail mid-stream); nothing committed; reservation retained. The ref dangles unless a correct upload follows. | Client retries with correct bytes through the same reservation. Monitoring should count mismatches; they indicate client bugs or tampering. |
-| Peer fetches during pending window | Transport returns `pending` with expiry; peer backs off and retries until expiry. | Bounded by `expiresAtUtc` -- no infinite polling. After expiry the peer treats the hash as not found. |
-| Concurrent reservations, same hash | Both upload in the worst case; first commit wins, second `send()` dedups against the committed row. Straggler reservations expire via TTL. | None needed. Bandwidth cost is bounded and no worse than today's upload-then-dedup. |
-| Reservation expires mid-upload | `send()` completing after expiry finds the reservation soft-deleted or expired. | The upload handle treats an expired reservation as `ReservationNotFound`; the client re-reserves (same hash -- if some other upload completed it meanwhile, reserve rejects with the ref and the client is done). |
-| `reserve()` rejects (available), data evicted before client ever calls `get()` | Standard eviction semantics: `get()` restores via transport. | Deployments without a functioning transport (e.g. `NullAttachmentTransport`) must not enable eviction at all -- this constraint predates hash-first. |
-| Client crashes / tab closes mid-upload | Action is already durable server-side; only the upload is lost. | The pending-upload queue (below) re-drives the upload on next visit; otherwise the ref dangles until a retry or the reservation expires. |
+| Scenario                                                                       | Behavior                                                                                                                                                               | Mitigation                                                                                                                                                                                                        |
+| ------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Upload abandoned after action submitted                                        | Hash reads `pending` until the reservation expires, then `AttachmentNotFound`. The ref dangles in document state -- the already-tolerated lazy-availability state.     | Client retries by re-reserving the same hash (allowed: no attachment row exists). UI renders the pending/broken state from `stat()`.                                                                              |
+| Hash or size mismatch on ingest                                                | `send()` throws `HashMismatch` or `SizeMismatch` (size can fail mid-stream); nothing committed; reservation retained. The ref dangles unless a correct upload follows. | Client retries with correct bytes through the same reservation. Monitoring should count mismatches; they indicate client bugs or tampering.                                                                       |
+| Peer fetches during pending window                                             | Transport returns `pending` with expiry; peer backs off and retries until expiry.                                                                                      | Bounded by `expiresAtUtc` -- no infinite polling. After expiry the peer treats the hash as not found.                                                                                                             |
+| Concurrent reservations, same hash                                             | Both upload in the worst case; first commit wins, second `send()` dedups against the committed row. Straggler reservations expire via TTL.                             | None needed. Bandwidth cost is bounded and no worse than today's upload-then-dedup.                                                                                                                               |
+| Reservation expires mid-upload                                                 | `send()` completing after expiry finds the reservation soft-deleted or expired.                                                                                        | The upload handle treats an expired reservation as `ReservationNotFound`; the client re-reserves (same hash -- if some other upload completed it meanwhile, reserve rejects with the ref and the client is done). |
+| `reserve()` rejects (available), data evicted before client ever calls `get()` | Standard eviction semantics: `get()` restores via transport.                                                                                                           | Deployments without a functioning transport (e.g. `NullAttachmentTransport`) must not enable eviction at all -- this constraint predates hash-first.                                                              |
+| Client crashes / tab closes mid-upload                                         | Action is already durable server-side; only the upload is lost.                                                                                                        | The pending-upload queue (below) re-drives the upload on next visit; otherwise the ref dangles until a retry or the reservation expires.                                                                          |
 
 ## Client integration: pending upload queue
 
@@ -390,7 +402,7 @@ A small helper in `reactor-browser` makes background uploads survivable:
 - On `send()` success or terminal failure (`HashMismatch`, expiry), remove the record.
 - On app start, re-drive any persisted uploads whose reservations have not expired: verify the stored bytes still hash to the recorded value, then `send()` through a fresh reservation if the original expired.
 
-Because the *action* is already durable in the event log, IndexedDB protects only the upload bytes -- the cheap half of durability. The queue should hash and upload the same `Blob` reference rather than reading the file twice, and may use a chunked WASM hasher (e.g. `hash-wasm`) for files large enough that `blob.arrayBuffer()` is undesirable on memory-constrained devices; `crypto.subtle.digest` suffices for the common case.
+Because the _action_ is already durable in the event log, IndexedDB protects only the upload bytes -- the cheap half of durability. The queue should hash and upload the same `Blob` reference rather than reading the file twice, and may use a chunked WASM hasher (e.g. `hash-wasm`) for files large enough that `blob.arrayBuffer()` is undesirable on memory-constrained devices; `crypto.subtle.digest` suffices for the common case.
 
 ## What does not change
 

@@ -8,17 +8,10 @@
     "declarationMap": false,
     "emitDeclarationOnly": false,
     "incremental": false,
-    "types": [
-      "node"
-    ]
+    "types": ["node"]
   },
-  "include": [
-    "src/**/*.ts"
-  ],
-  "exclude": [
-    "node_modules",
-    ".tsbuild"
-  ],
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", ".tsbuild"],
   "references": [
     {
       "path": "../.."

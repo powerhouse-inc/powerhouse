@@ -3,23 +3,14 @@
   "compilerOptions": {
     "outDir": "./.tsbuild",
     "paths": {
-      "react": [
-        "./node_modules/preact/compat/"
-      ],
-      "react-dom": [
-        "./node_modules/preact/compat/"
-      ]
+      "react": ["./node_modules/preact/compat/"],
+      "react-dom": ["./node_modules/preact/compat/"]
     },
     "jsxImportSource": "preact",
     "jsx": "preserve"
   },
-  "include": [
-    "**/*"
-  ],
-  "exclude": [
-    "dist",
-    "node_modules"
-  ],
+  "include": ["**/*"],
+  "exclude": ["dist", "node_modules"],
   "references": [
     {
       "path": "../design-system"

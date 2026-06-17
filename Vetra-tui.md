@@ -3,6 +3,7 @@
 ## UI States & Examples
 
 ### 1. Initial State - System Starting
+
 ```
 ╔══════════════════════════════════════════════════════════════════════════╗
 ║                           VETRA DEVELOPMENT MODE                         ║
@@ -22,6 +23,7 @@ Press 'q' to quit | 'h' for help
 ```
 
 ### 2. Running State - Waiting for Changes
+
 ```
 ╔══════════════════════════════════════════════════════════════════════════╗
 ║                           VETRA DEVELOPMENT MODE                         ║
@@ -47,6 +49,7 @@ Press 'q' to quit | 'h' for help | 'c' to clear activity
 ```
 
 ### 3. Modules Queued - Debounce Timer Active
+
 ```
 ╔══════════════════════════════════════════════════════════════════════════╗
 ║                           VETRA DEVELOPMENT MODE                         ║
@@ -78,6 +81,7 @@ Press 'q' to quit | 'h' for help | 'c' to clear activity
 ```
 
 ### 4. Interactive Mode - Awaiting Confirmation
+
 ```
 ╔══════════════════════════════════════════════════════════════════════════╗
 ║                      VETRA DEVELOPMENT MODE (INTERACTIVE)                ║
@@ -110,6 +114,7 @@ Press 'q' to quit | 'h' for help | 'c' to clear activity
 ```
 
 ### 5. Active Code Generation - With Live Logs
+
 ```
 ╔══════════════════════════════════════════════════════════════════════════╗
 ║                           VETRA DEVELOPMENT MODE                         ║
@@ -146,6 +151,7 @@ Press 'q' to quit | 'h' for help | 'c' to clear activity
 ```
 
 ### 6. Completed State - All Successful
+
 ```
 ╔══════════════════════════════════════════════════════════════════════════╗
 ║                           VETRA DEVELOPMENT MODE                         ║
@@ -179,6 +185,7 @@ Press 'q' to quit | 'h' for help | 'c' to clear activity
 ```
 
 ### 7. Error State - Generation Failed
+
 ```
 ╔══════════════════════════════════════════════════════════════════════════╗
 ║                           VETRA DEVELOPMENT MODE                         ║
@@ -218,6 +225,7 @@ Press 'q' to quit | 'h' for help | 'r' to retry failed
 ```
 
 ### 8. Help Screen
+
 ```
 ╔══════════════════════════════════════════════════════════════════════════╗
 ║                              VETRA TUI - HELP                            ║
@@ -261,6 +269,7 @@ Press 'h' to close help | Press 'q' to quit
 ```
 
 ### 9. Compact Mode - Multiple Modules Processing
+
 ```
 ╔══════════════════════════════════════════════════════════════════════════╗
 ║                           VETRA DEVELOPMENT MODE                         ║
@@ -286,23 +295,27 @@ Last: 14:28:45 | Total: 8 | Success: 5 | Processing: 3 | Failed: 0
 ## UI Design Principles
 
 ### 1. **Real-time Updates**
+
 - All status changes appear immediately
 - Smooth transitions between states
 - No manual refresh needed
 
 ### 2. **Progressive Disclosure**
+
 - Show compact view by default
 - Expand details only for active/failed modules
 - Logs appear only during active generation
 - Details disappear when complete (unless error)
 
 ### 3. **Visual Hierarchy**
+
 - System status at top (Switchboard, Connect, Codegen)
 - Active modules in main panel with prominence
 - Completed modules shown compactly
 - Recent activity at bottom
 
 ### 4. **Color Coding** (when supported)
+
 - 🟢 Green: Success (✓)
 - 🔵 Blue: Processing (⚡)
 - 🟡 Yellow: Queued (⏳)
@@ -310,12 +323,14 @@ Last: 14:28:45 | Total: 8 | Success: 5 | Processing: 3 | Failed: 0
 - ⚪ Gray: Skipped (⏭)
 
 ### 5. **Animations**
+
 - Spinner for processing states
 - Progress bars for long operations
 - Smooth fade-in/out for completed items
 - Debounce countdown timer
 
 ### 6. **Information Density**
+
 - Balanced - not too sparse, not too crowded
 - Key info always visible
 - Details on demand (expandable)
@@ -326,6 +341,7 @@ Last: 14:28:45 | Total: 8 | Success: 5 | Processing: 3 | Failed: 0
 ### Components Breakdown
 
 #### VetraTUI.tsx (Main Container)
+
 ```typescript
 interface VetraTUIProps {
   statusTracker: VetraStatusTracker;
@@ -339,6 +355,7 @@ interface VetraTUIProps {
 ```
 
 #### SystemStatus.tsx
+
 ```typescript
 // Displays Switchboard, Connect, and Codegen status
 // Shows URLs and connection state
@@ -346,6 +363,7 @@ interface VetraTUIProps {
 ```
 
 #### ModuleList.tsx
+
 ```typescript
 // Lists all document modules
 // Filters by state (queued, processing, completed)
@@ -353,6 +371,7 @@ interface VetraTUIProps {
 ```
 
 #### ModuleItem.tsx
+
 ```typescript
 interface ModuleItemProps {
   module: ModuleStatus;
@@ -366,6 +385,7 @@ interface ModuleItemProps {
 ```
 
 #### LogStream.tsx
+
 ```typescript
 // Real-time log display below active module
 // Auto-scroll with pause option
@@ -374,6 +394,7 @@ interface ModuleItemProps {
 ```
 
 #### ActivityLog.tsx
+
 ```typescript
 // Shows recent activity feed
 // Time-stamped entries
@@ -382,6 +403,7 @@ interface ModuleItemProps {
 ```
 
 #### HelpScreen.tsx
+
 ```typescript
 // Keyboard shortcuts
 // Status icon legend
@@ -393,17 +415,17 @@ interface ModuleItemProps {
 
 ```typescript
 interface VetraStatusEvents {
-  'module:queued': (module: ModuleInfo) => void;
-  'module:processing': (module: ModuleInfo) => void;
-  'module:completed': (module: ModuleInfo, duration: number) => void;
-  'module:failed': (module: ModuleInfo, error: Error) => void;
-  'module:log': (module: ModuleInfo, message: string, level: LogLevel) => void;
-  'system:ready': () => void;
-  'system:error': (error: Error) => void;
-  'debounce:start': (timeMs: number) => void;
-  'debounce:tick': (remainingMs: number) => void;
-  'interactive:prompt': (modules: ModuleInfo[]) => void;
-  'interactive:confirmed': (approved: boolean) => void;
+  "module:queued": (module: ModuleInfo) => void;
+  "module:processing": (module: ModuleInfo) => void;
+  "module:completed": (module: ModuleInfo, duration: number) => void;
+  "module:failed": (module: ModuleInfo, error: Error) => void;
+  "module:log": (module: ModuleInfo, message: string, level: LogLevel) => void;
+  "system:ready": () => void;
+  "system:error": (error: Error) => void;
+  "debounce:start": (timeMs: number) => void;
+  "debounce:tick": (remainingMs: number) => void;
+  "interactive:prompt": (modules: ModuleInfo[]) => void;
+  "interactive:confirmed": (approved: boolean) => void;
 }
 ```
 
@@ -414,7 +436,7 @@ interface ModuleStatus {
   id: string;
   name: string;
   type: DocumentType;
-  state: 'queued' | 'processing' | 'completed' | 'failed' | 'skipped';
+  state: "queued" | "processing" | "completed" | "failed" | "skipped";
   startTime?: number;
   endTime?: number;
   duration?: number;
@@ -426,7 +448,7 @@ interface ModuleStatus {
 
 interface LogEntry {
   timestamp: number;
-  level: 'debug' | 'info' | 'warn' | 'error';
+  level: "debug" | "info" | "warn" | "error";
   message: string;
 }
 ```
@@ -434,6 +456,7 @@ interface LogEntry {
 ## Session Logging for Debugging
 
 ### Overview
+
 All Vetra TUI sessions are automatically logged to `.ph/vetra/logs/` directory for debugging and troubleshooting. This provides a complete audit trail of every session without cluttering the TUI display.
 
 ### Log File Structure
@@ -470,6 +493,7 @@ All Vetra TUI sessions are automatically logged to `.ph/vetra/logs/` directory f
 ### What Gets Logged
 
 #### 1. System Events
+
 - Session start/end timestamps
 - Switchboard initialization and URLs
 - Connect Studio startup
@@ -477,6 +501,7 @@ All Vetra TUI sessions are automatically logged to `.ph/vetra/logs/` directory f
 - Shutdown events
 
 #### 2. Module Lifecycle
+
 - Module queued with document type and ID
 - State transitions (queued → processing → completed/failed)
 - Duration and performance metrics
@@ -484,12 +509,14 @@ All Vetra TUI sessions are automatically logged to `.ph/vetra/logs/` directory f
 - Error messages with full stack traces
 
 #### 3. User Interactions
+
 - Interactive mode confirmations (y/n)
 - Keyboard shortcuts pressed
 - Help screen viewed
 - Activity log cleared
 
 #### 4. Codegen Events
+
 - Debounce timer events
 - Queue status changes
 - Generator selection and routing
@@ -497,6 +524,7 @@ All Vetra TUI sessions are automatically logged to `.ph/vetra/logs/` directory f
 - Validation failures
 
 #### 5. Performance Metrics
+
 - Module generation times
 - Total session duration
 - Peak queue size
@@ -507,9 +535,9 @@ All Vetra TUI sessions are automatically logged to `.ph/vetra/logs/` directory f
 ```typescript
 // File: packages/vetra/processors/codegen/session-logger.ts
 
-import { mkdir, writeFile, appendFile, symlink } from 'fs/promises';
-import { join } from 'path';
-import { homedir } from 'os';
+import { mkdir, writeFile, appendFile, symlink } from "fs/promises";
+import { join } from "path";
+import { homedir } from "os";
 
 export class SessionLogger {
   private sessionId: string;
@@ -520,7 +548,7 @@ export class SessionLogger {
 
   constructor(workingDir: string) {
     this.sessionId = this.generateSessionId();
-    const logDir = join(workingDir, '.ph', 'vetra', 'logs');
+    const logDir = join(workingDir, ".ph", "vetra", "logs");
     this.logFilePath = join(logDir, `session-${this.sessionId}.log`);
     this.errorLogPath = join(logDir, `session-${this.sessionId}-errors.log`);
 
@@ -536,95 +564,105 @@ export class SessionLogger {
 
     // Create session header
     const header = [
-      '='.repeat(80),
+      "=".repeat(80),
       `Vetra TUI Session Log`,
       `Session ID: ${this.sessionId}`,
       `Started: ${new Date().toISOString()}`,
       `Working Directory: ${process.cwd()}`,
       `Node Version: ${process.version}`,
-      '='.repeat(80),
-      ''
-    ].join('\n');
+      "=".repeat(80),
+      "",
+    ].join("\n");
 
     await writeFile(this.logFilePath, header);
 
     // Create/update 'latest.log' symlink
-    const latestLink = join(logDir, 'latest.log');
+    const latestLink = join(logDir, "latest.log");
     try {
       await symlink(this.logFilePath, latestLink);
     } catch {
       // Symlink exists, ignore
     }
 
-    this.log('SYSTEM', 'Vetra TUI session started');
+    this.log("SYSTEM", "Vetra TUI session started");
   }
 
   private generateSessionId(): string {
     const now = new Date();
-    return now.toISOString()
-      .replace(/[-:]/g, '')
-      .replace(/\..+/, '')
-      .replace('T', '-');
+    return now
+      .toISOString()
+      .replace(/[-:]/g, "")
+      .replace(/\..+/, "")
+      .replace("T", "-");
   }
 
   private formatLogEntry(
     level: string,
     message: string,
-    metadata?: Record<string, unknown>
+    metadata?: Record<string, unknown>,
   ): string {
-    const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 23);
-    const meta = metadata ? ` ${JSON.stringify(metadata)}` : '';
+    const timestamp = new Date()
+      .toISOString()
+      .replace("T", " ")
+      .substring(0, 23);
+    const meta = metadata ? ` ${JSON.stringify(metadata)}` : "";
     return `[${timestamp}] [${level.toUpperCase()}] ${message}${meta}`;
   }
 
   public log(
     level: string,
     message: string,
-    metadata?: Record<string, unknown>
+    metadata?: Record<string, unknown>,
   ): void {
     const entry = this.formatLogEntry(level, message, metadata);
     this.logBuffer.push(entry);
 
     // Also write errors to separate error log
-    if (level === 'ERROR' || level === 'STACK') {
-      appendFile(this.errorLogPath, entry + '\n').catch(console.error);
+    if (level === "ERROR" || level === "STACK") {
+      appendFile(this.errorLogPath, entry + "\n").catch(console.error);
     }
   }
 
   public logModuleEvent(
     module: string,
     state: string,
-    metadata?: Record<string, unknown>
+    metadata?: Record<string, unknown>,
   ): void {
-    this.log('MODULE', `${module} [${state}]`, metadata);
+    this.log("MODULE", `${module} [${state}]`, metadata);
   }
 
-  public logSystemEvent(event: string, metadata?: Record<string, unknown>): void {
-    this.log('SYSTEM', event, metadata);
+  public logSystemEvent(
+    event: string,
+    metadata?: Record<string, unknown>,
+  ): void {
+    this.log("SYSTEM", event, metadata);
   }
 
   public logError(error: Error, context?: string): void {
-    const prefix = context ? `${context}: ` : '';
-    this.log('ERROR', `${prefix}${error.message}`);
+    const prefix = context ? `${context}: ` : "";
+    this.log("ERROR", `${prefix}${error.message}`);
     if (error.stack) {
-      this.log('STACK', error.stack);
+      this.log("STACK", error.stack);
     }
   }
 
-  public logUserAction(action: string, metadata?: Record<string, unknown>): void {
-    this.log('USER', action, metadata);
+  public logUserAction(
+    action: string,
+    metadata?: Record<string, unknown>,
+  ): void {
+    this.log("USER", action, metadata);
   }
 
   private async flush(): Promise<void> {
     if (this.logBuffer.length === 0) return;
 
     const entries = this.logBuffer.splice(0, this.logBuffer.length);
-    const content = entries.join('\n') + '\n';
+    const content = entries.join("\n") + "\n";
 
     try {
       await appendFile(this.logFilePath, content);
     } catch (error) {
-      console.error('Failed to write to log file:', error);
+      console.error("Failed to write to log file:", error);
     }
   }
 
@@ -632,16 +670,16 @@ export class SessionLogger {
     clearInterval(this.flushInterval);
     await this.flush();
 
-    this.log('SYSTEM', 'Vetra TUI session ended');
+    this.log("SYSTEM", "Vetra TUI session ended");
     await this.flush();
 
     // Write session summary
     const footer = [
-      '',
-      '='.repeat(80),
+      "",
+      "=".repeat(80),
       `Session ended: ${new Date().toISOString()}`,
-      '='.repeat(80)
-    ].join('\n');
+      "=".repeat(80),
+    ].join("\n");
 
     await appendFile(this.logFilePath, footer);
   }
@@ -653,8 +691,8 @@ export class SessionLogger {
 ```typescript
 // File: packages/vetra/processors/codegen/status-tracker.ts
 
-import { EventEmitter } from 'events';
-import { SessionLogger } from './session-logger.js';
+import { EventEmitter } from "events";
+import { SessionLogger } from "./session-logger.js";
 
 export class VetraStatusTracker extends EventEmitter {
   private sessionLogger: SessionLogger;
@@ -665,52 +703,52 @@ export class VetraStatusTracker extends EventEmitter {
     this.sessionLogger = new SessionLogger(workingDir);
 
     // Log all events for debugging
-    this.on('module:queued', (module) => {
-      this.sessionLogger.logModuleEvent(module.name, 'queued', {
+    this.on("module:queued", (module) => {
+      this.sessionLogger.logModuleEvent(module.name, "queued", {
         type: module.type,
-        id: module.id
+        id: module.id,
       });
     });
 
-    this.on('module:processing', (module) => {
-      this.sessionLogger.logModuleEvent(module.name, 'processing', {
-        startTime: module.startTime
+    this.on("module:processing", (module) => {
+      this.sessionLogger.logModuleEvent(module.name, "processing", {
+        startTime: module.startTime,
       });
     });
 
-    this.on('module:completed', (module, duration) => {
-      this.sessionLogger.logModuleEvent(module.name, 'completed', {
+    this.on("module:completed", (module, duration) => {
+      this.sessionLogger.logModuleEvent(module.name, "completed", {
         duration,
-        filesGenerated: module.filesGenerated
+        filesGenerated: module.filesGenerated,
       });
     });
 
-    this.on('module:failed', (module, error) => {
-      this.sessionLogger.logModuleEvent(module.name, 'failed');
+    this.on("module:failed", (module, error) => {
+      this.sessionLogger.logModuleEvent(module.name, "failed");
       this.sessionLogger.logError(error, `Module: ${module.name}`);
     });
 
-    this.on('module:log', (module, message, level) => {
+    this.on("module:log", (module, message, level) => {
       this.sessionLogger.log(level.toUpperCase(), message);
     });
 
-    this.on('system:ready', () => {
-      this.sessionLogger.logSystemEvent('System ready');
+    this.on("system:ready", () => {
+      this.sessionLogger.logSystemEvent("System ready");
     });
 
-    this.on('system:error', (error) => {
+    this.on("system:error", (error) => {
       this.sessionLogger.logError(error);
     });
 
-    this.on('interactive:prompt', (modules) => {
-      this.sessionLogger.logUserAction('Interactive prompt shown', {
-        moduleCount: modules.length
+    this.on("interactive:prompt", (modules) => {
+      this.sessionLogger.logUserAction("Interactive prompt shown", {
+        moduleCount: modules.length,
       });
     });
 
-    this.on('interactive:confirmed', (approved) => {
+    this.on("interactive:confirmed", (approved) => {
       this.sessionLogger.logUserAction(
-        approved ? 'User approved generation' : 'User cancelled generation'
+        approved ? "User approved generation" : "User cancelled generation",
       );
     });
   }
@@ -724,17 +762,20 @@ export class VetraStatusTracker extends EventEmitter {
 ### Accessing Session Logs
 
 #### Via TUI (New Help Command)
+
 ```
 Press 'l' to show log file path in footer
 Press 'L' to open log file in default editor
 ```
 
 #### Footer Display (when 'l' pressed)
+
 ```
 Log: .ph/vetra/logs/session-2025-01-22-143045.log | Press 'L' to open
 ```
 
 #### Via CLI
+
 ```bash
 # View latest session
 cat .ph/vetra/logs/latest.log
@@ -755,13 +796,16 @@ tail -f .ph/vetra/logs/latest.log
 // Automatic cleanup of old log files
 // File: packages/vetra/processors/codegen/log-rotation.ts
 
-export async function rotateLogFiles(logDir: string, maxAge = 7): Promise<void> {
+export async function rotateLogFiles(
+  logDir: string,
+  maxAge = 7,
+): Promise<void> {
   const files = await readdir(logDir);
   const now = Date.now();
   const maxAgeMs = maxAge * 24 * 60 * 60 * 1000;
 
   for (const file of files) {
-    if (!file.startsWith('session-')) continue;
+    if (!file.startsWith("session-")) continue;
 
     const filePath = join(logDir, file);
     const stats = await stat(filePath);
@@ -827,6 +871,7 @@ Press 'q' to quit | 'h' for help | 'l' to view log
 ## Configuration Options
 
 ### Command Line Flags
+
 ```bash
 # Enable TUI (default)
 ph vetra --tui
@@ -845,6 +890,7 @@ ph vetra --tui --logs
 ```
 
 ### Config File (powerhouse.config.json)
+
 ```json
 {
   "vetra": {

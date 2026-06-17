@@ -17,14 +17,14 @@ One model can have more than one editor. A budget document might have a simple v
 
 This is worth being explicit about, because it's easy to blur:
 
-| Job | Belongs in |
-| --- | --- |
-| Rendering state on screen | Editor |
-| Dispatching an action when the user clicks | Editor |
-| Showing a toast notification | Editor |
-| Computing the next state from an action | Reducer |
-| Validating that a field is non-empty | Reducer |
-| Generating the new document history | Reducer |
+| Job                                        | Belongs in |
+| ------------------------------------------ | ---------- |
+| Rendering state on screen                  | Editor     |
+| Dispatching an action when the user clicks | Editor     |
+| Showing a toast notification               | Editor     |
+| Computing the next state from an action    | Reducer    |
+| Validating that a field is non-empty       | Reducer    |
+| Generating the new document history        | Reducer    |
 
 The pattern is simple: **reducers are <Term term="pure functions (for reducers)">pure</Term>, editors are impure.** Reducers have no access to the DOM, the network, or the clock. Editors can do all of those things freely — because they're just React components.
 
@@ -35,20 +35,25 @@ The editor dispatches. The reducer computes. Never the other way around.
   choices={[
     {
       label: "Rendering the title text field — reducer.",
-      explanation: "Rendering is the editor's job. Reducers are pure functions that never touch the DOM.",
+      explanation:
+        "Rendering is the editor's job. Reducers are pure functions that never touch the DOM.",
     },
     {
       label: "Showing a 'Saved!' toast after the dispatch succeeds — reducer.",
-      explanation: "Toast notifications are a UI side-effect. That belongs in the editor, not in a pure function.",
+      explanation:
+        "Toast notifications are a UI side-effect. That belongs in the editor, not in a pure function.",
     },
     {
-      label: "Computing the next document state when the action arrives — reducer.",
+      label:
+        "Computing the next document state when the action arrives — reducer.",
       correct: true,
-      explanation: "State transitions are exactly what reducers do. The editor dispatches the action; the reducer takes it from there.",
+      explanation:
+        "State transitions are exactly what reducers do. The editor dispatches the action; the reducer takes it from there.",
     },
     {
       label: "Validating that the new title is not empty — editor.",
-      explanation: "Input validation that determines whether a state transition is valid belongs in the reducer, so it runs consistently regardless of which editor triggered the action.",
+      explanation:
+        "Input validation that determines whether a state transition is valid belongs in the reducer, so it runs consistently regardless of which editor triggered the action.",
     },
   ]}
 />

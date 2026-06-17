@@ -20,7 +20,10 @@ Your reducers stay lean; your queries stay fast; neither has to know about the o
 Every processor implements `IProcessor` from `@powerhousedao/reactor-browser`:
 
 ```ts
-import type { IProcessor, OperationWithContext } from '@powerhousedao/reactor-browser';
+import type {
+  IProcessor,
+  OperationWithContext,
+} from "@powerhousedao/reactor-browser";
 
 export interface IProcessor {
   onOperations(operations: OperationWithContext[]): Promise<void>;
@@ -46,23 +49,26 @@ This creates `processors/todo-stats/` with a class that implements `IProcessor` 
 Fill in `onOperations` to build your read model:
 
 ```ts title="processors/todo-stats/index.ts"
-import type { IProcessor, OperationWithContext } from '@powerhousedao/reactor-browser';
+import type {
+  IProcessor,
+  OperationWithContext,
+} from "@powerhousedao/reactor-browser";
 
 export class TodoStatsProcessor implements IProcessor {
   private counts = { added: 0, completed: 0, removed: 0 };
 
   async onOperations(operations: OperationWithContext[]): Promise<void> {
     for (const { operation, context } of operations) {
-      if (context.documentType !== 'powerhouse/todo') continue;
+      if (context.documentType !== "powerhouse/todo") continue;
 
       switch (operation.type) {
-        case 'ADD_TODO':
+        case "ADD_TODO":
           this.counts.added++;
           break;
-        case 'COMPLETE_TODO':
+        case "COMPLETE_TODO":
           this.counts.completed++;
           break;
-        case 'REMOVE_TODO':
+        case "REMOVE_TODO":
           this.counts.removed++;
           break;
       }
@@ -85,21 +91,25 @@ That's it. No polling, no cron, no diffing. Every operation flows through `onOpe
   question="Which of these jobs is a good fit for a processor, and which should stay in the reducer?"
   choices={[
     {
-      label: 'Computing the total number of completed todos — reducer.',
-      explanation: 'That\'s a count across the entire history. Doing it in the reducer couples the document\'s state size to its age.',
+      label: "Computing the total number of completed todos — reducer.",
+      explanation:
+        "That's a count across the entire history. Doing it in the reducer couples the document's state size to its age.",
     },
     {
-      label: 'Computing the total number of completed todos — processor.',
+      label: "Computing the total number of completed todos — processor.",
       correct: true,
-      explanation: 'Aggregations like this are exactly what processors are built for.',
+      explanation:
+        "Aggregations like this are exactly what processors are built for.",
     },
     {
-      label: 'Sending an email when a todo is assigned — reducer.',
-      explanation: 'Reducers are pure — they can\'t send email. This belongs in a processor.',
+      label: "Sending an email when a todo is assigned — reducer.",
+      explanation:
+        "Reducers are pure — they can't send email. This belongs in a processor.",
     },
     {
-      label: 'Validating that a todo title isn\'t empty — processor.',
-      explanation: 'Validation runs before the action becomes an operation. That\'s reducer territory.',
+      label: "Validating that a todo title isn't empty — processor.",
+      explanation:
+        "Validation runs before the action becomes an operation. That's reducer territory.",
     },
   ]}
   explanation="Reducers answer 'what is this document now?' Processors answer 'what else should happen because of that operation?'"
@@ -116,8 +126,8 @@ This is how <Term>Powerhouse</Term> keeps processors "forgiving": you can evolve
 The factory registers a `ProcessorRecord` that tells the Reactor which operations to deliver. A typical filter targets a specific document type and scope:
 
 ```ts title="processors/todo-stats/factory.ts"
-import type { ProcessorRecord } from '@powerhousedao/reactor-browser';
-import { TodoStatsProcessor } from './index.js';
+import type { ProcessorRecord } from "@powerhousedao/reactor-browser";
+import { TodoStatsProcessor } from "./index.js";
 
 export async function todoStatsProcessorFactory(): Promise<ProcessorRecord[]> {
   const processor = new TodoStatsProcessor();
@@ -125,9 +135,9 @@ export async function todoStatsProcessorFactory(): Promise<ProcessorRecord[]> {
     {
       processor,
       filter: {
-        documentType: ['powerhouse/todo'],
-        scope: ['global'],
-        branch: ['main'],
+        documentType: ["powerhouse/todo"],
+        scope: ["global"],
+        branch: ["main"],
       },
     },
   ];
@@ -150,6 +160,12 @@ dispatch(action) → reducer → operation (in log)
 Once you have the log, every downstream feature is just another lens on it.
 
 <Cards>
-  <Card title="Sync and collaborate" href="/academy/Learn/sync/sync-and-collaborate" />
-  <Card title="Back to: Subgraphs" href="/academy/Learn/switchboard/subgraphs" />
+  <Card
+    title="Sync and collaborate"
+    href="/academy/Learn/sync/sync-and-collaborate"
+  />
+  <Card
+    title="Back to: Subgraphs"
+    href="/academy/Learn/switchboard/subgraphs"
+  />
 </Cards>

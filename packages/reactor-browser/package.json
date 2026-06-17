@@ -107,7 +107,7 @@
     "react": ">=19.0.0",
     "react-dom": ">=19.0.0"
   },
-  "description": "Browser-side Powerhouse reactor \u2014 React hooks and IReactorClient for building editors and drive-apps inside Connect, Switchboard, or Vetra Studio.",
+  "description": "Browser-side Powerhouse reactor — React hooks and IReactorClient for building editors and drive-apps inside Connect, Switchboard, or Vetra Studio.",
   "keywords": [
     "powerhouse",
     "vetra",

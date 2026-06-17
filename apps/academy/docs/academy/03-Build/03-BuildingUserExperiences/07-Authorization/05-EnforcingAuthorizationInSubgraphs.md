@@ -23,7 +23,10 @@ tutorial:
 
 ```typescript
 searchTodos: async (parent, args: { driveId: string; searchTerm: string }) => {
-  const children = await reactorClient.getOutgoingRelationships(args.driveId, "child");
+  const children = await reactorClient.getOutgoingRelationships(
+    args.driveId,
+    "child",
+  );
   // ...returns every matching document id, with no permission check
 };
 ```
@@ -39,11 +42,11 @@ Reactor's [policy](./04-Authorization.md#how-authorization-works). You do **not*
 branch on the policy yourself — you call the same helpers in every resolver and
 the active policy decides the outcome:
 
-| Policy                     | When                                              | What the helpers do                                                            |
-| -------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------ |
-| **OPEN**                   | `AUTH_ENABLED=false`                              | Every check passes for everyone, including anonymous callers.                  |
-| **ADMIN_ONLY**             | `AUTH_ENABLED=true`, document permissions off      | Only addresses in `ADMINS` pass any check.                                     |
-| **DOCUMENT_PERMISSIONS**   | `DOCUMENT_PERMISSIONS_ENABLED=true`               | Full per-document protection + READ/WRITE/ADMIN grants, with inheritance.      |
+| Policy                   | When                                          | What the helpers do                                                       |
+| ------------------------ | --------------------------------------------- | ------------------------------------------------------------------------- |
+| **OPEN**                 | `AUTH_ENABLED=false`                          | Every check passes for everyone, including anonymous callers.             |
+| **ADMIN_ONLY**           | `AUTH_ENABLED=true`, document permissions off | Only addresses in `ADMINS` pass any check.                                |
+| **DOCUMENT_PERMISSIONS** | `DOCUMENT_PERMISSIONS_ENABLED=true`           | Full per-document protection + READ/WRITE/ADMIN grants, with inheritance. |
 
 Because the policy is resolved centrally, the right approach is to **write one
 enforcement path** and let it behave correctly under all three policies. Calling
@@ -61,12 +64,18 @@ parameter of `getResolvers`, so call them directly as `subgraph.assertCanRead(..
 import { type BaseSubgraph } from "@powerhousedao/reactor-api";
 import type { Context } from "@powerhousedao/reactor-api";
 
-export const getResolvers = (subgraph: BaseSubgraph): Record<string, unknown> => {
+export const getResolvers = (
+  subgraph: BaseSubgraph,
+): Record<string, unknown> => {
   const reactor = subgraph.reactorClient;
 
   return {
     Query: {
-      document: async (_parent: unknown, args: { identifier: string }, ctx: Context) => {
+      document: async (
+        _parent: unknown,
+        args: { identifier: string },
+        ctx: Context,
+      ) => {
         const handle = await subgraph.assertCanRead(args.identifier, ctx);
         return reactor.get(handle.fetchIdentifier);
       },
@@ -84,7 +93,7 @@ Reactor's built-in subgraphs use. Both forms reach the same public methods.
 The caller's verified identity is on the request `Context` as `ctx.user`:
 
 ```typescript
-ctx.user?.address;   // the verified Ethereum address, or undefined for anonymous callers
+ctx.user?.address; // the verified Ethereum address, or undefined for anonymous callers
 ```
 
 You never read identity from headers or arguments — `ctx.user` is the only
@@ -117,14 +126,14 @@ data fetch with `handle.fetchIdentifier`, never with the original argument.
 All of the following are public methods on `BaseSubgraph`, called on the
 `subgraph` instance (or `this` from a class-field resolver):
 
-| Helper                                                   | Use when                                                                 | On failure        |
-| -------------------------------------------------------- | ------------------------------------------------------------------------ | ----------------- |
-| `assertCanRead(identifier, ctx)`                         | Reading one document the caller named (id or slug).                      | throws `Forbidden`|
-| `assertCanWrite(identifier, ctx)`                        | Mutating one document the caller named.                                  | throws `Forbidden`|
-| `assertCanExecuteOperation(identifier, type, ctx)`       | Executing a specific operation type on a document.                       | throws `Forbidden`|
-| `assertCanCreate(ctx)`                                   | Creating a new top-level document (no parent to check write against).    | throws `Forbidden`|
-| `canReadDocument(canonicalId, ctx)`                      | Filtering a list — a non-throwing read check on an id from the data layer.| returns `boolean` |
-| `authorizationService.isSupremeAdmin(address)`           | Short-circuiting per-item filtering for policy-wide callers.             | returns `boolean` |
+| Helper                                             | Use when                                                                   | On failure         |
+| -------------------------------------------------- | -------------------------------------------------------------------------- | ------------------ |
+| `assertCanRead(identifier, ctx)`                   | Reading one document the caller named (id or slug).                        | throws `Forbidden` |
+| `assertCanWrite(identifier, ctx)`                  | Mutating one document the caller named.                                    | throws `Forbidden` |
+| `assertCanExecuteOperation(identifier, type, ctx)` | Executing a specific operation type on a document.                         | throws `Forbidden` |
+| `assertCanCreate(ctx)`                             | Creating a new top-level document (no parent to check write against).      | throws `Forbidden` |
+| `canReadDocument(canonicalId, ctx)`                | Filtering a list — a non-throwing read check on an id from the data layer. | returns `boolean`  |
+| `authorizationService.isSupremeAdmin(address)`     | Short-circuiting per-item filtering for policy-wide callers.               | returns `boolean`  |
 
 Each `assertCan*` that takes an `identifier` returns an `AuthorizedDocumentHandle`;
 use its `fetchIdentifier` for the subsequent fetch. There are also lower-level
@@ -150,7 +159,11 @@ document: async (_parent, args: { identifier: string }, ctx: Context) => {
 ### Guard a write
 
 ```typescript
-renameDocument: async (_parent, args: { identifier: string; name: string }, ctx: Context) => {
+renameDocument: async (
+  _parent,
+  args: { identifier: string; name: string },
+  ctx: Context,
+) => {
   const handle = await subgraph.assertCanWrite(args.identifier, ctx);
   return doRename(handle.fetchIdentifier, args.name);
 };
@@ -158,12 +171,20 @@ renameDocument: async (_parent, args: { identifier: string; name: string }, ctx:
 
 ### Guard a specific operation type
 
-When a write should be allowed only for callers permitted to run a *particular*
+When a write should be allowed only for callers permitted to run a _particular_
 operation (operation-level grants):
 
 ```typescript
-addTodoItem: async (_parent, args: { docId: string; input: AddTodoItemInput }, ctx: Context) => {
-  const handle = await subgraph.assertCanExecuteOperation(args.docId, "ADD_TODO_ITEM", ctx);
+addTodoItem: async (
+  _parent,
+  args: { docId: string; input: AddTodoItemInput },
+  ctx: Context,
+) => {
+  const handle = await subgraph.assertCanExecuteOperation(
+    args.docId,
+    "ADD_TODO_ITEM",
+    ctx,
+  );
   return applyOperation(handle.fetchIdentifier, "ADD_TODO_ITEM", args.input);
 };
 ```
@@ -175,7 +196,11 @@ access on that parent, so resolve and assert against it. Only use
 `assertCanCreate` for a genuinely top-level document with no parent:
 
 ```typescript
-createTodoList: async (_parent, args: { parentIdentifier?: string; name: string }, ctx: Context) => {
+createTodoList: async (
+  _parent,
+  args: { parentIdentifier?: string; name: string },
+  ctx: Context,
+) => {
   if (args.parentIdentifier) {
     const handle = await subgraph.assertCanWrite(args.parentIdentifier, ctx);
     return createUnder(handle.fetchIdentifier, args.name);
@@ -187,14 +212,18 @@ createTodoList: async (_parent, args: { parentIdentifier?: string; name: string 
 
 ### Filter a list of documents
 
-A resolver that returns *many* documents must not throw on the first forbidden
+A resolver that returns _many_ documents must not throw on the first forbidden
 one — it must drop the documents the caller cannot read and return the rest.
 Supreme admins (and OPEN) see everything, so skip the per-item work for them:
 
 ```typescript
 import type { CanonicalDocumentId } from "@powerhousedao/reactor-api";
 
-searchTodos: async (_parent, args: { driveId: string; searchTerm: string }, ctx: Context) => {
+searchTodos: async (
+  _parent,
+  args: { driveId: string; searchTerm: string },
+  ctx: Context,
+) => {
   const matches = await runSearch(args.driveId, args.searchTerm); // returns document ids
 
   // Policy-wide callers see everything; skip the per-item check.
@@ -214,12 +243,12 @@ searchTodos: async (_parent, args: { driveId: string; searchTerm: string }, ctx:
 ```
 
 This is the same shape the built-in `findDocuments` and relationship resolvers
-use. Filtering on read also means you never leak the *existence* of a protected
+use. Filtering on read also means you never leak the _existence_ of a protected
 document through a list endpoint.
 
 ## Best practices
 
-1. **Fail closed.** Authorize *before* you fetch or mutate, and let a denial throw.
+1. **Fail closed.** Authorize _before_ you fetch or mutate, and let a denial throw.
    Never fetch first and filter the response shape afterwards.
 2. **Fetch with `handle.fetchIdentifier`.** Never re-use the raw identifier the
    caller passed in after an `assertCan*` check.

@@ -3,7 +3,7 @@ title: Identity and signing
 description: Who produced each operation, and can you trust it? How Renown identities and cryptographic signatures turn the operation log into a tamper-evident audit trail.
 ---
 
-You've seen that a document *is* its operation log, and that the log is what
+You've seen that a document _is_ its operation log, and that the log is what
 syncs between peers. That raises a question every collaborative system has to
 answer: **who produced each operation, and can a peer trust it?** This lesson
 connects the operation model you already know to Powerhouse's identity and
@@ -14,7 +14,7 @@ what it doesn't.
 
 ## Operations carry an actor
 
-Every operation already records *who* dispatched it. In the foundations lesson
+Every operation already records _who_ dispatched it. In the foundations lesson
 you saw an operation shaped like this:
 
 ```json
@@ -35,7 +35,7 @@ attributed to that identity.
 
 ## A claim is not a proof
 
-An `actor` field on its own is just a *claim*. Nothing stops a malicious peer
+An `actor` field on its own is just a _claim_. Nothing stops a malicious peer
 from writing `"actor": "user:alice"` onto an operation Alice never made. In a
 local-first system where operations flow between machines you don't control,
 that's a real problem.
@@ -55,21 +55,27 @@ hash chain won't match.
   question="A signed operation arrives from an untrusted peer. What does a valid signature let you conclude?"
   choices={[
     {
-      label: "That the operation is good for the document — its business rules passed.",
-      explanation: "Signatures prove origin and integrity, not validity. The reducer still decides whether the action is allowed.",
+      label:
+        "That the operation is good for the document — its business rules passed.",
+      explanation:
+        "Signatures prove origin and integrity, not validity. The reducer still decides whether the action is allowed.",
     },
     {
-      label: "That the named identity produced exactly this operation, and it hasn't been tampered with.",
+      label:
+        "That the named identity produced exactly this operation, and it hasn't been tampered with.",
       correct: true,
-      explanation: "Authenticity + integrity. The signature binds the identity to this specific operation and its position in the log.",
+      explanation:
+        "Authenticity + integrity. The signature binds the identity to this specific operation and its position in the log.",
     },
     {
       label: "That the user had permission to perform the action.",
-      explanation: "Permissions are a separate check. A signature tells you who, not whether they were allowed.",
+      explanation:
+        "Permissions are a separate check. A signature tells you who, not whether they were allowed.",
     },
     {
       label: "That the operation is the most recent one in the document.",
-      explanation: "Ordering comes from the index and hash chain, not the signature itself.",
+      explanation:
+        "Ordering comes from the index and hash chain, not the signature itself.",
     },
   ]}
   explanation="Signing answers 'who, and unchanged?'. Whether the action is allowed (permissions) and whether it's valid (the reducer) are separate gates that still run."
@@ -79,16 +85,16 @@ hash chain won't match.
 
 It's worth separating the concerns that all meet at a single operation:
 
-| Gate | Question | Where it lives |
-| --- | --- | --- |
-| **Authentication** | Who is this identity? | Renown |
-| **Signing** | Did this identity really produce this exact operation? | Signature verification |
-| **Authorization** | Is this identity allowed to perform this action here? | Document permissions |
-| **Validity** | Is the resulting state legal? | The reducer |
+| Gate               | Question                                               | Where it lives         |
+| ------------------ | ------------------------------------------------------ | ---------------------- |
+| **Authentication** | Who is this identity?                                  | Renown                 |
+| **Signing**        | Did this identity really produce this exact operation? | Signature verification |
+| **Authorization**  | Is this identity allowed to perform this action here?  | Document permissions   |
+| **Validity**       | Is the resulting state legal?                          | The reducer            |
 
 A signed operation can be perfectly authentic and still be rejected — because
 the signer lacks permission on that document, or because the reducer's rules
-don't allow the change. Identity establishes *trust*; it doesn't replace the
+don't allow the change. Identity establishes _trust_; it doesn't replace the
 other checks.
 
 ## Why this falls out of the operation log

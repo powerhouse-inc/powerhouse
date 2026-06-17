@@ -3,26 +3,12 @@
   "compilerOptions": {
     "outDir": "./.tsbuild",
     "paths": {
-      "@powerhousedao/connect/config": [
-        "./src/connect.config.ts"
-      ],
-      "@powerhousedao/connect/assets/*": [
-        "./assets/*"
-      ],
-      "@powerhousedao/connect/*": [
-        "./src/*/index.ts"
-      ]
+      "@powerhousedao/connect/config": ["./src/connect.config.ts"],
+      "@powerhousedao/connect/assets/*": ["./assets/*"],
+      "@powerhousedao/connect/*": ["./src/*/index.ts"]
     },
-    "lib": [
-      "ESNext",
-      "DOM",
-      "DOM.Iterable"
-    ],
-    "types": [
-      "node",
-      "@types/wicg-file-system-access",
-      "@types/bun"
-    ]
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "types": ["node", "@types/wicg-file-system-access", "@types/bun"]
   },
   "include": [
     "**/*",
@@ -30,11 +16,7 @@
     "src/services/openpanel/events.json",
     "./package.json"
   ],
-  "exclude": [
-    "dist",
-    "node_modules",
-    "storybook-static"
-  ],
+  "exclude": ["dist", "node_modules", "storybook-static"],
   "references": [
     {
       "path": "../../packages/config"

@@ -11,8 +11,8 @@ Remember the host-application pattern: any runtime that boots a Reactor and load
 
 The difference is what each host exposes outward:
 
-- **Connect** renders editors — it gives *people* a UI.
-- **Switchboard** exposes GraphQL and MCP endpoints — it gives *code* an API.
+- **Connect** renders editors — it gives _people_ a UI.
+- **Switchboard** exposes GraphQL and MCP endpoints — it gives _code_ an API.
 
 Because both run the same Reactor library with the same document models installed, they stay in sync. An operation written through Connect arrives in Switchboard; a mutation dispatched via GraphQL shows up immediately in Connect. One Reactor, two surfaces.
 
@@ -20,14 +20,14 @@ Because both run the same Reactor library with the same document models installe
 
 Switchboard serves two protocols at once:
 
-- **GraphQL** — composed from *subgraphs*, one per installed package. Web apps, mobile clients, and integrations query documents and dispatch actions here.
+- **GraphQL** — composed from _subgraphs_, one per installed package. Web apps, mobile clients, and integrations query documents and dispatch actions here.
 - **MCP** (Model Context Protocol) — the same Reactor, surfaced as tools an AI agent can call.
 
 You'll dig into subgraphs in the next lesson. For now, just think of them as "the GraphQL layer, split by package domain, then stitched back into one unified schema."
 
 ## Where processors fit in
 
-Processors are event-driven handlers that subscribe to the operation stream and fold it into *read models* — optimised views for search indexes, dashboards, aggregates, or anything else that's awkward to derive from a single document's state at query time. Processors run inside Switchboard, and subgraphs query the read models they produce.
+Processors are event-driven handlers that subscribe to the operation stream and fold it into _read models_ — optimised views for search indexes, dashboards, aggregates, or anything else that's awkward to derive from a single document's state at query time. Processors run inside Switchboard, and subgraphs query the read models they produce.
 
 You'll get a full lesson on processors too. The short version: if a query spans many documents or needs pre-computed data, a processor builds it; a subgraph exposes it.
 
@@ -35,21 +35,29 @@ You'll get a full lesson on processors too. The short version: if a query spans 
   question="A team is building three features. Match each one to the right tool."
   choices={[
     {
-      label: "Expose a query endpoint so a mobile app can list all open tasks — build a processor.",
-      explanation: "A query endpoint for external clients is GraphQL work, which lives in a Switchboard subgraph — not a processor. Processors build read models; subgraphs expose them.",
+      label:
+        "Expose a query endpoint so a mobile app can list all open tasks — build a processor.",
+      explanation:
+        "A query endpoint for external clients is GraphQL work, which lives in a Switchboard subgraph — not a processor. Processors build read models; subgraphs expose them.",
     },
     {
-      label: "Let users drag-and-drop tasks in their browser — build that in Switchboard.",
-      explanation: "Browser UI work belongs in Connect (editors). Switchboard has no UI layer; it serves APIs.",
+      label:
+        "Let users drag-and-drop tasks in their browser — build that in Switchboard.",
+      explanation:
+        "Browser UI work belongs in Connect (editors). Switchboard has no UI layer; it serves APIs.",
     },
     {
-      label: "Expose a query endpoint so a mobile app can list all open tasks — build a Switchboard subgraph.",
+      label:
+        "Expose a query endpoint so a mobile app can list all open tasks — build a Switchboard subgraph.",
       correct: true,
-      explanation: "Exactly. External clients query documents and read models through Switchboard's GraphQL API, which is assembled from subgraphs. Connect is for browser users, not API consumers.",
+      explanation:
+        "Exactly. External clients query documents and read models through Switchboard's GraphQL API, which is assembled from subgraphs. Connect is for browser users, not API consumers.",
     },
     {
-      label: "Build a full-text search index across all documents — build that in Connect.",
-      explanation: "Cross-document derived data is a processor's job. Processors run in Switchboard, subscribe to operations, and write to read models that subgraphs can query.",
+      label:
+        "Build a full-text search index across all documents — build that in Connect.",
+      explanation:
+        "Cross-document derived data is a processor's job. Processors run in Switchboard, subscribe to operations, and write to read models that subgraphs can query.",
     },
   ]}
 />

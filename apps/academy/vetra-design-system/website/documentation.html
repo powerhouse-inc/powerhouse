@@ -21,7 +21,7 @@
       }
       body {
         font-family:
-          'Inter',
+          "Inter",
           -apple-system,
           BlinkMacSystemFont,
           sans-serif;
@@ -282,7 +282,7 @@
       .code-filename {
         font-size: 13px;
         font-weight: 600;
-        font-family: 'SF Mono', 'Fira Code', monospace;
+        font-family: "SF Mono", "Fira Code", monospace;
       }
       .code-copy {
         font-size: 12px;
@@ -306,7 +306,7 @@
         overflow-x: auto;
       }
       .code-body pre {
-        font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+        font-family: "SF Mono", "Fira Code", "Consolas", monospace;
         font-size: 13px;
         line-height: 1.7;
         color: var(--foreground);
@@ -379,7 +379,7 @@
         vertical-align: top;
       }
       .props-table code {
-        font-family: 'SF Mono', 'Fira Code', monospace;
+        font-family: "SF Mono", "Fira Code", monospace;
         font-size: 13px;
         background: var(--accent);
         padding: 2px 6px;
@@ -454,7 +454,12 @@
       <div class="nav-inner">
         <div class="nav-left">
           <a href="#" class="nav-logo">
-            <img src="../logos/vetra-full-logo.svg" alt="Vetra" height="24" class="logo-light" />
+            <img
+              src="../logos/vetra-full-logo.svg"
+              alt="Vetra"
+              height="24"
+              class="logo-light"
+            />
             <img
               src="../logos/vetra-full-logo-light.svg"
               alt="Vetra"
@@ -471,8 +476,10 @@
           <button
             class="theme-toggle"
             onclick="
-              document.body.classList.toggle('dark')
-              this.textContent = document.body.classList.contains('dark') ? '&#9790;' : '&#9788;'
+              document.body.classList.toggle('dark');
+              this.textContent = document.body.classList.contains('dark')
+                ? '&#9790;'
+                : '&#9788;';
             "
             aria-label="Toggle theme"
           >
@@ -517,16 +524,17 @@
       <!-- Content -->
       <main class="content-area">
         <div class="breadcrumb">
-          <a href="#">Docs</a> <span class="sep">/</span> <a href="#">Getting Started</a>
+          <a href="#">Docs</a> <span class="sep">/</span>
+          <a href="#">Getting Started</a>
           <span class="sep">/</span>
           <span>Introduction</span>
         </div>
 
         <h1>Introduction</h1>
         <p class="intro">
-          Welcome to the Vetra documentation. This guide will walk you through everything you need
-          to know to get started building with our platform, from initial setup to advanced
-          configuration.
+          Welcome to the Vetra documentation. This guide will walk you through
+          everything you need to know to get started building with our platform,
+          from initial setup to advanced configuration.
         </p>
 
         <div class="on-this-page">
@@ -540,57 +548,64 @@
 
         <h2 id="what-is-vetra">What is Vetra?</h2>
         <p>
-          Vetra is a comprehensive development platform that provides a unified interface for
-          building, deploying, and managing modern web applications. It combines a powerful
-          component library with backend services, authentication, and real-time data
-          synchronization.
+          Vetra is a comprehensive development platform that provides a unified
+          interface for building, deploying, and managing modern web
+          applications. It combines a powerful component library with backend
+          services, authentication, and real-time data synchronization.
         </p>
         <p>
-          Whether you are building a simple landing page or a complex enterprise dashboard, Vetra
-          provides the tools and patterns you need to ship with confidence. Our component library
-          follows accessibility best practices and supports full theming out of the box.
+          Whether you are building a simple landing page or a complex enterprise
+          dashboard, Vetra provides the tools and patterns you need to ship with
+          confidence. Our component library follows accessibility best practices
+          and supports full theming out of the box.
         </p>
 
         <div class="callout callout-tip">
           <div class="callout-icon">&#10003;</div>
           <div class="callout-content">
             <strong>Tip</strong>
-            If you are new to Vetra, we recommend starting with the Quick Start guide. It walks you
-            through creating your first project in under five minutes and covers the most common
-            patterns you will use every day.
+            If you are new to Vetra, we recommend starting with the Quick Start
+            guide. It walks you through creating your first project in under
+            five minutes and covers the most common patterns you will use every
+            day.
           </div>
         </div>
 
         <h2 id="key-concepts">Key Concepts</h2>
         <p>
-          Before diving into the code, it helps to understand a few core concepts that underpin the
-          Vetra platform. These patterns are used throughout the library and will make the rest of
-          the documentation easier to follow.
+          Before diving into the code, it helps to understand a few core
+          concepts that underpin the Vetra platform. These patterns are used
+          throughout the library and will make the rest of the documentation
+          easier to follow.
         </p>
         <p>
-          <strong>Workspaces</strong> are top-level containers that hold your projects, team
-          members, and configuration. Each workspace has its own billing plan, permissions model,
-          and environment variables. You can think of a workspace as an organization or company
-          account.
+          <strong>Workspaces</strong> are top-level containers that hold your
+          projects, team members, and configuration. Each workspace has its own
+          billing plan, permissions model, and environment variables. You can
+          think of a workspace as an organization or company account.
         </p>
         <p>
-          <strong>Components</strong> are the building blocks of your UI. Vetra ships with over 40
-          pre-built components that are fully typed, accessible, and themeable. Each component
-          accepts a consistent set of props for sizing, variants, and state management.
+          <strong>Components</strong> are the building blocks of your UI. Vetra
+          ships with over 40 pre-built components that are fully typed,
+          accessible, and themeable. Each component accepts a consistent set of
+          props for sizing, variants, and state management.
         </p>
         <p>
-          <strong>Hooks</strong> provide reactive data bindings for common operations like fetching
-          data, managing form state, and subscribing to real-time updates. They integrate seamlessly
-          with the component library and follow React conventions.
+          <strong>Hooks</strong> provide reactive data bindings for common
+          operations like fetching data, managing form state, and subscribing to
+          real-time updates. They integrate seamlessly with the component
+          library and follow React conventions.
         </p>
 
         <div class="callout callout-warning">
           <div class="callout-icon">!</div>
           <div class="callout-content">
             <strong>Warning</strong>
-            The v2 API is deprecated and will be removed in the next major release. If you are still
-            using v2 endpoints, please follow the
-            <a href="#" style="color: var(--primary); text-decoration: underline"
+            The v2 API is deprecated and will be removed in the next major
+            release. If you are still using v2 endpoints, please follow the
+            <a
+              href="#"
+              style="color: var(--primary); text-decoration: underline"
               >Migration Guide</a
             >
             to upgrade before April 2026.
@@ -599,8 +614,8 @@
 
         <h2 id="installation">Installation</h2>
         <p>
-          Install Vetra using your preferred package manager. We recommend using npm or pnpm for the
-          best compatibility with our toolchain.
+          Install Vetra using your preferred package manager. We recommend using
+          npm or pnpm for the best compatibility with our toolchain.
         </p>
 
         <div class="code-block">
@@ -608,7 +623,11 @@
             <span class="code-filename">Terminal</span>
             <button
               class="code-copy"
-              onclick="navigator.clipboard.writeText('npm install @vetra/core @vetra/components')"
+              onclick="
+                navigator.clipboard.writeText(
+                  'npm install @vetra/core @vetra/components',
+                )
+              "
             >
               Copy
             </button>
@@ -625,8 +644,9 @@ npm install @vetra/icons @vetra/hooks</pre
         </div>
 
         <p>
-          Once installed, wrap your application with the <code>VetraProvider</code> component. This
-          sets up the theme context, provides default configuration, and initializes the real-time
+          Once installed, wrap your application with the
+          <code>VetraProvider</code> component. This sets up the theme context,
+          provides default configuration, and initializes the real-time
           connection if enabled.
         </p>
 
@@ -667,13 +687,15 @@ export default function App() {
 
         <h2 id="configuration">Configuration</h2>
         <p>
-          Vetra can be configured through a <code>vetra.config.ts</code> file at the root of your
-          project. This file lets you customize the theme, set default component props, configure
-          API endpoints, and enable feature flags.
+          Vetra can be configured through a <code>vetra.config.ts</code> file at
+          the root of your project. This file lets you customize the theme, set
+          default component props, configure API endpoints, and enable feature
+          flags.
         </p>
         <p>
-          The configuration file is automatically detected and loaded at build time. All options
-          have sensible defaults, so you only need to specify the values you want to override.
+          The configuration file is automatically detected and loaded at build
+          time. All options have sensible defaults, so you only need to specify
+          the values you want to override.
         </p>
 
         <div class="code-block">
@@ -715,8 +737,9 @@ export default defineConfig({
 
         <h2 id="button-props">Button Component Props</h2>
         <p>
-          The <code>Button</code> component is one of the most commonly used components in the
-          library. Here is a complete reference of its accepted props.
+          The <code>Button</code> component is one of the most commonly used
+          components in the library. Here is a complete reference of its
+          accepted props.
         </p>
 
         <table class="props-table">
@@ -731,7 +754,9 @@ export default defineConfig({
           <tbody>
             <tr>
               <td><code>variant</code></td>
-              <td class="type-badge">"primary" | "secondary" | "ghost" | "destructive"</td>
+              <td class="type-badge">
+                "primary" | "secondary" | "ghost" | "destructive"
+              </td>
               <td class="default-badge">"primary"</td>
               <td>Visual style variant of the button</td>
             </tr>

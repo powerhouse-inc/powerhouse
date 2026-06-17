@@ -128,7 +128,7 @@ In any package the styles are being generated through the styles.css file with t
 **Using `ph install` includes package styles automatically**
 
 - When installing a package with `ph install` on any instance, package styles are automatically added to styles.css. This ensures production builds always include the required package styles.
-:::
+  :::
 
 ## State management in editors: Hooks vs Props
 

@@ -21,7 +21,7 @@
       }
       body {
         font-family:
-          'Inter',
+          "Inter",
           -apple-system,
           BlinkMacSystemFont,
           sans-serif;
@@ -513,19 +513,35 @@
     <header class="topbar">
       <div class="topbar-left">
         <a href="#" class="topbar-logo">
-          <img src="../logos/vetra-full-logo.svg" alt="Vetra" height="24" class="logo-light" />
-          <img src="../logos/vetra-full-logo-light.svg" alt="Vetra" height="24" class="logo-dark" />
+          <img
+            src="../logos/vetra-full-logo.svg"
+            alt="Vetra"
+            height="24"
+            class="logo-light"
+          />
+          <img
+            src="../logos/vetra-full-logo-light.svg"
+            alt="Vetra"
+            height="24"
+            class="logo-dark"
+          />
         </a>
       </div>
       <div class="topbar-center">
-        <input type="text" class="topbar-search" placeholder="Search anything..." />
+        <input
+          type="text"
+          class="topbar-search"
+          placeholder="Search anything..."
+        />
       </div>
       <div class="topbar-right">
         <button
           class="theme-toggle"
           onclick="
-            document.body.classList.toggle('dark')
-            this.textContent = document.body.classList.contains('dark') ? '&#9790;' : '&#9788;'
+            document.body.classList.toggle('dark');
+            this.textContent = document.body.classList.contains('dark')
+              ? '&#9790;'
+              : '&#9788;';
           "
           aria-label="Toggle theme"
         >
@@ -543,15 +559,30 @@
       <!-- Sidebar -->
       <aside class="sidebar">
         <nav class="sidebar-nav">
-          <a href="#" class="sidebar-link active"> <span class="icon">&#9632;</span> Dashboard </a>
-          <a href="#" class="sidebar-link"> <span class="icon">&#9652;</span> Analytics </a>
-          <a href="#" class="sidebar-link"> <span class="icon">&#9733;</span> Projects </a>
-          <a href="#" class="sidebar-link"> <span class="icon">&#9824;</span> Team </a>
+          <a href="#" class="sidebar-link active">
+            <span class="icon">&#9632;</span> Dashboard
+          </a>
+          <a href="#" class="sidebar-link">
+            <span class="icon">&#9652;</span> Analytics
+          </a>
+          <a href="#" class="sidebar-link">
+            <span class="icon">&#9733;</span> Projects
+          </a>
+          <a href="#" class="sidebar-link">
+            <span class="icon">&#9824;</span> Team
+          </a>
           <div class="sidebar-divider"></div>
-          <a href="#" class="sidebar-link"> <span class="icon">&#9881;</span> Settings </a>
+          <a href="#" class="sidebar-link">
+            <span class="icon">&#9881;</span> Settings
+          </a>
         </nav>
         <div class="sidebar-footer">
-          <div class="avatar" style="width: 28px; height: 28px; font-size: 11px">AJ</div>
+          <div
+            class="avatar"
+            style="width: 28px; height: 28px; font-size: 11px"
+          >
+            AJ
+          </div>
           <div class="sidebar-footer-info">
             <div class="sidebar-footer-name">Alice Johnson</div>
             <div class="sidebar-footer-email">alice@vetra.io</div>
@@ -611,16 +642,21 @@
               <a href="#" class="panel-link">View all</a>
             </div>
             <div class="activity-item">
-              <div class="activity-icon" style="background: var(--success-30)">&#10003;</div>
+              <div class="activity-icon" style="background: var(--success-30)">
+                &#10003;
+              </div>
               <div>
                 <div class="activity-text">
-                  <strong>Project Aurora</strong> deployment completed successfully
+                  <strong>Project Aurora</strong> deployment completed
+                  successfully
                 </div>
                 <div class="activity-time">2 minutes ago</div>
               </div>
             </div>
             <div class="activity-item">
-              <div class="activity-icon" style="background: var(--progress-30)">&#128100;</div>
+              <div class="activity-icon" style="background: var(--progress-30)">
+                &#128100;
+              </div>
               <div>
                 <div class="activity-text">
                   <strong>Marcus Chen</strong> joined the Engineering team
@@ -629,7 +665,9 @@
               </div>
             </div>
             <div class="activity-item">
-              <div class="activity-icon" style="background: var(--todo-30)">&#9888;</div>
+              <div class="activity-icon" style="background: var(--todo-30)">
+                &#9888;
+              </div>
               <div>
                 <div class="activity-text">
                   <strong>API Gateway</strong> response time exceeded threshold
@@ -638,7 +676,9 @@
               </div>
             </div>
             <div class="activity-item">
-              <div class="activity-icon" style="background: var(--primary-30)">&#9733;</div>
+              <div class="activity-icon" style="background: var(--primary-30)">
+                &#9733;
+              </div>
               <div>
                 <div class="activity-text">
                   <strong>Design System v3.2</strong> released to production
@@ -647,7 +687,9 @@
               </div>
             </div>
             <div class="activity-item">
-              <div class="activity-icon" style="background: var(--accent)">&#128172;</div>
+              <div class="activity-icon" style="background: var(--accent)">
+                &#128172;
+              </div>
               <div>
                 <div class="activity-text">
                   <strong>Sarah Kim</strong> commented on the Q1 roadmap
@@ -665,11 +707,17 @@
             <div class="chart-placeholder">Revenue chart placeholder</div>
             <div class="chart-legend">
               <div class="chart-legend-item">
-                <div class="chart-legend-dot" style="background: var(--primary)"></div>
+                <div
+                  class="chart-legend-dot"
+                  style="background: var(--primary)"
+                ></div>
                 This month
               </div>
               <div class="chart-legend-item">
-                <div class="chart-legend-dot" style="background: var(--border)"></div>
+                <div
+                  class="chart-legend-dot"
+                  style="background: var(--border)"
+                ></div>
                 Last month
               </div>
             </div>
@@ -697,35 +745,45 @@
                 <td style="font-weight: 600">#ORD-7291</td>
                 <td>Elena Rodriguez</td>
                 <td>$1,250.00</td>
-                <td><span class="status-badge status-completed">Completed</span></td>
+                <td>
+                  <span class="status-badge status-completed">Completed</span>
+                </td>
                 <td>Mar 13, 2026</td>
               </tr>
               <tr>
                 <td style="font-weight: 600">#ORD-7290</td>
                 <td>James Nakamura</td>
                 <td>$890.00</td>
-                <td><span class="status-badge status-processing">Processing</span></td>
+                <td>
+                  <span class="status-badge status-processing">Processing</span>
+                </td>
                 <td>Mar 12, 2026</td>
               </tr>
               <tr>
                 <td style="font-weight: 600">#ORD-7289</td>
                 <td>Priya Sharma</td>
                 <td>$2,340.00</td>
-                <td><span class="status-badge status-completed">Completed</span></td>
+                <td>
+                  <span class="status-badge status-completed">Completed</span>
+                </td>
                 <td>Mar 12, 2026</td>
               </tr>
               <tr>
                 <td style="font-weight: 600">#ORD-7288</td>
                 <td>Thomas Bergmann</td>
                 <td>$460.00</td>
-                <td><span class="status-badge status-pending">Pending</span></td>
+                <td>
+                  <span class="status-badge status-pending">Pending</span>
+                </td>
                 <td>Mar 11, 2026</td>
               </tr>
               <tr>
                 <td style="font-weight: 600">#ORD-7287</td>
                 <td>Aisha Okonkwo</td>
                 <td>$3,100.00</td>
-                <td><span class="status-badge status-cancelled">Cancelled</span></td>
+                <td>
+                  <span class="status-badge status-cancelled">Cancelled</span>
+                </td>
                 <td>Mar 10, 2026</td>
               </tr>
             </tbody>

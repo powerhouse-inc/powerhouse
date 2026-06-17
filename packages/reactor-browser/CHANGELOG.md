@@ -279,7 +279,7 @@ This was a version bump only for @powerhousedao/reactor-browser to align it with
 
 ### 🩹 Fixes
 
-- **connect:** resolve @powerhousedao/connect/* aliases in vitest ([f7de787c6](https://github.com/powerhouse-inc/powerhouse/commit/f7de787c6))
+- **connect:** resolve @powerhousedao/connect/\* aliases in vitest ([f7de787c6](https://github.com/powerhouse-inc/powerhouse/commit/f7de787c6))
 - pnpm-lock file ([d5019827c](https://github.com/powerhouse-inc/powerhouse/commit/d5019827c))
 
 ### ❤️ Thank You
@@ -358,7 +358,7 @@ This was a version bump only for @powerhousedao/reactor-browser to align it with
 
 ### 🩹 Fixes
 
-- **connect:** version-aware /__packages diff with toasts and refetch ([36f2e641d](https://github.com/powerhouse-inc/powerhouse/commit/36f2e641d))
+- **connect:** version-aware /\_\_packages diff with toasts and refetch ([36f2e641d](https://github.com/powerhouse-inc/powerhouse/commit/36f2e641d))
 
 ### ❤️ Thank You
 
@@ -607,7 +607,7 @@ This was a version bump only for @powerhousedao/reactor-browser to align it with
 
 ### 🩹 Fixes
 
-- **ci:** pnpm 11 reads PNPM_CONFIG_* not NPM_CONFIG_* ([b6c05fb23](https://github.com/powerhouse-inc/powerhouse/commit/b6c05fb23))
+- **ci:** pnpm 11 reads PNPM*CONFIG*_ not NPM*CONFIG*_ ([b6c05fb23](https://github.com/powerhouse-inc/powerhouse/commit/b6c05fb23))
 - **ci, docker:** pnpm 11 uses pnpm-workspace.yaml for allowBuilds; env var for min-release-age ([37c04c28a](https://github.com/powerhouse-inc/powerhouse/commit/37c04c28a))
 
 ### ❤️ Thank You

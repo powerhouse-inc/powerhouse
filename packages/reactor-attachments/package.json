@@ -43,7 +43,7 @@
     "tsdown": "catalog:",
     "vitest": "catalog:"
   },
-  "description": "Content-addressed attachment service for the Powerhouse reactor \u2014 decouples large binaries from the action pipeline using opaque refs.",
+  "description": "Content-addressed attachment service for the Powerhouse reactor — decouples large binaries from the action pipeline using opaque refs.",
   "keywords": [
     "powerhouse",
     "vetra",

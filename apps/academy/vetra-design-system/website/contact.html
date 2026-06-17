@@ -21,7 +21,7 @@
       }
       body {
         font-family:
-          'Inter',
+          "Inter",
           -apple-system,
           BlinkMacSystemFont,
           sans-serif;
@@ -446,7 +446,12 @@
       <div class="nav-inner">
         <div class="nav-left">
           <a href="#" class="nav-logo">
-            <img src="../logos/vetra-full-logo.svg" alt="Vetra" height="24" class="logo-light" />
+            <img
+              src="../logos/vetra-full-logo.svg"
+              alt="Vetra"
+              height="24"
+              class="logo-light"
+            />
             <img
               src="../logos/vetra-full-logo-light.svg"
               alt="Vetra"
@@ -465,8 +470,10 @@
           <button
             class="theme-toggle"
             onclick="
-              document.body.classList.toggle('dark')
-              this.textContent = document.body.classList.contains('dark') ? '&#9790;' : '&#9788;'
+              document.body.classList.toggle('dark');
+              this.textContent = document.body.classList.contains('dark')
+                ? '&#9790;'
+                : '&#9788;';
             "
             aria-label="Toggle theme"
           >
@@ -481,8 +488,9 @@
     <section class="hero">
       <h1>Get in Touch</h1>
       <p>
-        We would love to hear from you. Whether you have a question about features, pricing, or
-        anything else, our team is ready to answer all your questions.
+        We would love to hear from you. Whether you have a question about
+        features, pricing, or anything else, our team is ready to answer all
+        your questions.
       </p>
     </section>
 
@@ -509,11 +517,13 @@
     <section class="form-section" id="contact-form">
       <div class="form-side">
         <h2>Send us a message</h2>
-        <p class="subtitle">Fill out the form below and we will get back to you within 24 hours.</p>
+        <p class="subtitle">
+          Fill out the form below and we will get back to you within 24 hours.
+        </p>
         <form
           onsubmit="
-            event.preventDefault()
-            alert('Message sent!')
+            event.preventDefault();
+            alert('Message sent!');
           "
         >
           <div class="form-group">
@@ -537,16 +547,21 @@
           </div>
           <div class="form-group">
             <label for="message">Message</label>
-            <textarea id="message" placeholder="Tell us how we can help..."></textarea>
+            <textarea
+              id="message"
+              placeholder="Tell us how we can help..."
+            ></textarea>
           </div>
-          <button type="submit" class="btn btn-primary" style="width: 100%">Send Message</button>
+          <button type="submit" class="btn btn-primary" style="width: 100%">
+            Send Message
+          </button>
         </form>
       </div>
       <div class="info-side">
         <h3>Our Office</h3>
         <p>
-          Vetra Headquarters<br />350 Mission Street, Suite 400<br />San Francisco, CA 94105<br />United
-          States
+          Vetra Headquarters<br />350 Mission Street, Suite 400<br />San
+          Francisco, CA 94105<br />United States
         </p>
         <div class="map-placeholder">
           <span>&#127758; Map placeholder</span>
@@ -559,8 +574,9 @@
         </ul>
         <h3>Response Times</h3>
         <p>
-          General inquiries are typically answered within 24 hours. Technical support requests are
-          prioritized and handled within 4 hours during business hours.
+          General inquiries are typically answered within 24 hours. Technical
+          support requests are prioritized and handled within 4 hours during
+          business hours.
         </p>
       </div>
     </section>
@@ -602,7 +618,12 @@
       <div class="footer-inner">
         <div class="footer-brand">
           <a href="#" class="nav-logo">
-            <img src="../logos/vetra-full-logo.svg" alt="Vetra" height="24" class="logo-light" />
+            <img
+              src="../logos/vetra-full-logo.svg"
+              alt="Vetra"
+              height="24"
+              class="logo-light"
+            />
             <img
               src="../logos/vetra-full-logo-light.svg"
               alt="Vetra"
@@ -611,7 +632,8 @@
             />
           </a>
           <p>
-            Build better products faster with the all-in-one platform designed for modern teams.
+            Build better products faster with the all-in-one platform designed
+            for modern teams.
           </p>
         </div>
         <div class="footer-col">

@@ -7,30 +7,16 @@
     "bg-transparent!"
   ],
   "lightCounts": {
-    "1": [
-      "black/40",
-      "transparent!"
-    ],
-    "33": [
-      "transparent"
-    ]
+    "1": ["black/40", "transparent!"],
+    "33": ["transparent"]
   },
   "darkCounts": {},
-  "withOpacity": [
-    "bg-black/40"
-  ],
+  "withOpacity": ["bg-black/40"],
   "colorBgs": {
-    "light": [
-      "bg-transparent",
-      "bg-black/40",
-      "bg-transparent!"
-    ]
+    "light": ["bg-transparent", "bg-black/40", "bg-transparent!"]
   },
   "borders": {
-    "light": [
-      "border-transparent",
-      "focus:border-transparent"
-    ]
+    "light": ["border-transparent", "focus:border-transparent"]
   },
   "grayscaleBorders": {},
   "disabledClasses": [

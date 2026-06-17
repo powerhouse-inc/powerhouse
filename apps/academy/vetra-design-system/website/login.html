@@ -20,7 +20,7 @@
         padding: 0;
       }
       body {
-        font-family: 'Inter', sans-serif;
+        font-family: "Inter", sans-serif;
         background: var(--background);
         color: var(--foreground);
         line-height: 1.6;
@@ -79,7 +79,7 @@
         overflow: hidden;
       }
       .auth-panel::before {
-        content: '';
+        content: "";
         position: absolute;
         top: -120px;
         right: -120px;
@@ -89,7 +89,7 @@
         background: rgba(255, 255, 255, 0.06);
       }
       .auth-panel::after {
-        content: '';
+        content: "";
         position: absolute;
         bottom: -80px;
         left: -80px;
@@ -251,7 +251,7 @@
         font-size: 13px;
         cursor: pointer;
       }
-      .checkbox-label input[type='checkbox'] {
+      .checkbox-label input[type="checkbox"] {
         width: 16px;
         height: 16px;
         accent-color: var(--primary);
@@ -281,7 +281,7 @@
       }
       .divider::before,
       .divider::after {
-        content: '';
+        content: "";
         flex: 1;
         height: 1px;
         background: var(--border);
@@ -370,17 +370,21 @@
       <!-- Left Branded Panel -->
       <div class="auth-panel">
         <div class="auth-panel-content">
-          <img src="../logos/vetra-full-logo-white.svg" alt="Vetra" class="auth-panel-logo" />
+          <img
+            src="../logos/vetra-full-logo-white.svg"
+            alt="Vetra"
+            class="auth-panel-logo"
+          />
           <h2 class="auth-panel-title">Welcome back to Vetra</h2>
           <p class="auth-panel-subtitle">
-            Your all-in-one platform for building, managing, and scaling digital products with
-            confidence.
+            Your all-in-one platform for building, managing, and scaling digital
+            products with confidence.
           </p>
 
           <div class="auth-quote">
             <p>
-              "Vetra transformed how our team collaborates. We shipped 3x faster within the first
-              quarter of adopting the platform."
+              "Vetra transformed how our team collaborates. We shipped 3x faster
+              within the first quarter of adopting the platform."
             </p>
             <span class="auth-quote-author">— Sarah Chen, CTO at Finova</span>
           </div>
@@ -410,7 +414,7 @@
             <p>Enter your credentials to access your account</p>
           </div>
 
-          <form onsubmit="return false">
+          <form onsubmit="return false;">
             <div class="form-group">
               <label class="form-label" for="email">Email address</label>
               <input
@@ -437,11 +441,15 @@
             </div>
 
             <div class="form-row">
-              <label class="checkbox-label"> <input type="checkbox" /> Remember me </label>
+              <label class="checkbox-label">
+                <input type="checkbox" /> Remember me
+              </label>
               <a href="#" class="forgot-link">Forgot password?</a>
             </div>
 
-            <button type="submit" class="btn btn-primary btn-submit">Sign In</button>
+            <button type="submit" class="btn btn-primary btn-submit">
+              Sign In
+            </button>
           </form>
 
           <div class="divider">
@@ -480,7 +488,9 @@
             </button>
           </div>
 
-          <p class="signup-link">Don't have an account? <a href="#">Sign up</a></p>
+          <p class="signup-link">
+            Don't have an account? <a href="#">Sign up</a>
+          </p>
         </div>
 
         <p class="auth-copyright">&copy; 2026 Vetra. All rights reserved.</p>

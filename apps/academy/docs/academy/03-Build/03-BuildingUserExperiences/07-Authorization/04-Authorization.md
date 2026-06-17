@@ -24,7 +24,7 @@ The Reactor API uses a layered authorization model:
 
 - For simple setups, configure `ADMINS` and leave documents **unprotected** — any authenticated user can read and write
 - When you need fine-grained control, **protect** specific documents and manage access with [document permissions](./02-DocumentPermissions.md)
-:::
+  :::
 
 ## Prerequisites
 
@@ -159,7 +159,7 @@ Does user have a grant for this document?
 
 - **Authentication** ([Renown flow](./01-RenownAuthenticationFlow.md)): Proves who you are (`ph login`)
 - **Authorization** (this guide): Determines what you can access
-:::
+  :::
 
 ## Common Scenarios
 

@@ -35,7 +35,7 @@ When no `document` prop is provided, the toolbar falls back to the currently sel
 The default toolbar includes these controls:
 
 ```ts
-["undo", "redo", "download", "name", "history", "switchboard", "close"]
+["undo", "redo", "download", "name", "history", "switchboard", "close"];
 ```
 
 The controls are arranged into three slots:
@@ -178,9 +178,7 @@ Use `toolbarContainer` to replace the outer toolbar container. The custom toolba
 <DocumentToolbar
   document={document}
   toolbarContainer={({ children, className }) => (
-    <div className={className}>
-      {children}
-    </div>
+    <div className={className}>{children}</div>
   )}
 />
 ```
@@ -218,7 +216,7 @@ import type { PHDocument } from "@powerhousedao/shared/document-model";
       </ToolbarDownloadButton>
     ),
   }}
-/>
+/>;
 ```
 
 The `name` control can also be replaced through `componentOverrides`.
@@ -303,18 +301,18 @@ Providing `children` replaces the default button contents. Providing `onClick` r
 ## Exported components
 
 ```ts
-DocumentToolbar
-ToolbarButton
-ToolbarUndoButton
-ToolbarRedoButton
-ToolbarDownloadButton
-ToolbarSwitchboardButton
-ToolbarHistoryButton
-ToolbarCloseButton
-ToolbarName
-ToolbarInput
-ToolbarContainer
-ToolbarControlsContainer
+DocumentToolbar;
+ToolbarButton;
+ToolbarUndoButton;
+ToolbarRedoButton;
+ToolbarDownloadButton;
+ToolbarSwitchboardButton;
+ToolbarHistoryButton;
+ToolbarCloseButton;
+ToolbarName;
+ToolbarInput;
+ToolbarContainer;
+ToolbarControlsContainer;
 ```
 
 The individual toolbar controls are exported so they can be reused when building custom toolbar layouts or custom control components.
@@ -322,20 +320,20 @@ The individual toolbar controls are exported so they can be reused when building
 ## Exported types
 
 ```ts
-DocumentToolbarProps
-DocumentToolbarWithChildrenProps
-DocumentToolbarWithCustomControlsProps
-DocumentToolbarControlName
-ToolbarButtonProps
-ToolbarButtonClickHandler
-ToolbarControlComponent
-ToolbarControlComponents
-ContainerComponent
-ControlSlot
-ControlPosition
-CustomToolbarControl
-CustomToolbarControlList
-CustomToolbarControls
+DocumentToolbarProps;
+DocumentToolbarWithChildrenProps;
+DocumentToolbarWithCustomControlsProps;
+DocumentToolbarControlName;
+ToolbarButtonProps;
+ToolbarButtonClickHandler;
+ToolbarControlComponent;
+ToolbarControlComponents;
+ContainerComponent;
+ControlSlot;
+ControlPosition;
+CustomToolbarControl;
+CustomToolbarControlList;
+CustomToolbarControls;
 ```
 
 ## Notes

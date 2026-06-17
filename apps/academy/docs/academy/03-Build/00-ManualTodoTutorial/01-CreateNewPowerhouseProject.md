@@ -8,7 +8,7 @@ This tutorial step has a corresponding branch in the repository. You can:
 - View the complete code for this step
 - Clone and checkout the branch to see the result
 - Compare your implementation using `git diff`
-:::
+  :::
 
 ## Overview
 
@@ -138,6 +138,7 @@ ph init
    ````
 
 Once the project is created, you will see output like:
+
 ```bash
 🚀 Initializing a new project...
 

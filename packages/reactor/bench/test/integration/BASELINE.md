@@ -48,17 +48,17 @@ the in-process control and should be roughly equivalent to `workers=1`.
 Recorded by the operator at run time. Fill in once after the first matrix
 sweep.
 
-| field            | value |
-| ---------------- | ----- |
+| field            | value                         |
+| ---------------- | ----------------------------- |
 | host             | Benjamins-MacBook-Pro-2.local |
-| OS               | Darwin 24.5.0 arm64 |
-| CPU              | Apple M4 Max |
-| cores allocated  | 14 |
-| Docker version   | 27.5.1 |
-| Postgres version | 16-alpine (compose default) |
-| Node version     | 24-alpine (compose default) |
-| reactor SHA      | 2b73c6911 |
-| date             | 2026-05-20 |
+| OS               | Darwin 24.5.0 arm64           |
+| CPU              | Apple M4 Max                  |
+| cores allocated  | 14                            |
+| Docker version   | 27.5.1                        |
+| Postgres version | 16-alpine (compose default)   |
+| Node version     | 24-alpine (compose default)   |
+| reactor SHA      | 2b73c6911                     |
+| date             | 2026-05-20                    |
 
 ## Initial measurement
 
@@ -69,11 +69,11 @@ Each row is one (workers, jobs/sec, p50, p95, p99, k6 reqs, k6 fail%) tuple.
 
 | workers | jobs/sec | p50 (ms) | p95 (ms) | p99 (ms) | k6 reqs | k6 fail% |
 | ------- | -------- | -------- | -------- | -------- | ------- | -------- |
-| 0 | 99.72 | 10000.00 | 10000.00 | 10000.00 | — | — |
-| 1 | 83.92 | 10000.00 | 10000.00 | 10000.00 | — | — |
-| 2 | 131.64 | 10000.00 | 10000.00 | 10000.00 | — | — |
-| 4 | 146.11 | 10000.00 | 10000.00 | 10000.00 | — | — |
-| 8 | 148.49 | 10000.00 | 10000.00 | 10000.00 | — | — |
+| 0       | 99.72    | 10000.00 | 10000.00 | 10000.00 | —       | —        |
+| 1       | 83.92    | 10000.00 | 10000.00 | 10000.00 | —       | —        |
+| 2       | 131.64   | 10000.00 | 10000.00 | 10000.00 | —       | —        |
+| 4       | 146.11   | 10000.00 | 10000.00 | 10000.00 | —       | —        |
+| 8       | 148.49   | 10000.00 | 10000.00 | 10000.00 | —       | —        |
 
 ### Notes on this first sweep (2026-05-20, VUS=16, DURATION=30s, NUM_DRIVES=8)
 
@@ -91,6 +91,7 @@ Each row is one (workers, jobs/sec, p50, p95, p99, k6 reqs, k6 fail%) tuple.
   warmup. Bench k6 over-fires by design (so we measure executor ceiling,
   not request handling); to isolate per-worker scaling we should also rerun
   at VUS≈workers (no queue backlog) to capture realistic per-job latency.
+
 ### Per-worker observability (2026-05-20, post-instrumentation)
 
 Phase-0 acceptance failure (1.74×) prompted adding `worker.id` attributes to
@@ -117,16 +118,16 @@ executor-duration histogram entirely. `JOB_COMPLETED` is now emitted first
 
 Per-worker jobs completed, `sum by (worker_id) (increase(reactor_executor_processed_total{job_success="true"}[2m]))`:
 
-| worker_id         | jobs completed |
-| ----------------- | -------------- |
-| reactor-worker-0  | ~5322          |
-| reactor-worker-1  | ~4450          |
-| reactor-worker-2  | ~2622          |
-| reactor-worker-3  | (none in slice) |
+| worker_id        | jobs completed  |
+| ---------------- | --------------- |
+| reactor-worker-0 | ~5322           |
+| reactor-worker-1 | ~4450           |
+| reactor-worker-2 | ~2622           |
+| reactor-worker-3 | (none in slice) |
 
 p50 executor duration is uniform at ~2.5 ms across the workers that did
-work — i.e. the per-job cost is identical, the disparity is purely *job
-count*. Combined with the flat 4w↔8w aggregate throughput, this confirms
+work — i.e. the per-job cost is identical, the disparity is purely _job
+count_. Combined with the flat 4w↔8w aggregate throughput, this confirms
 the original hypothesis: sticky-by-`documentId` routing across only 8 drives
 clusters the load onto a subset of workers, so adding more workers can't
 help.
@@ -145,20 +146,20 @@ distribution at the same time.
 
 | workers | jobs/sec | p50 (ms) | p95 (ms) | p99 (ms) | k6 reqs | k6 fail% |
 | ------- | -------- | -------- | -------- | -------- | ------- | -------- |
-| 0 |  63.43 | 10000.00 | 10000.00 | 10000.00 | — | — |
-| 1 |  65.42 | 10000.00 | 10000.00 | 10000.00 | — | — |
-| 2 |  93.61 | 10000.00 | 10000.00 | 10000.00 | — | — |
-| 4 | 101.33 | 10000.00 | 10000.00 | 10000.00 | — | — |
-| 8 |  92.74 | 10000.00 | 10000.00 | 10000.00 | — | — |
+| 0       | 63.43    | 10000.00 | 10000.00 | 10000.00 | —       | —        |
+| 1       | 65.42    | 10000.00 | 10000.00 | 10000.00 | —       | —        |
+| 2       | 93.61    | 10000.00 | 10000.00 | 10000.00 | —       | —        |
+| 4       | 101.33   | 10000.00 | 10000.00 | 10000.00 | —       | —        |
+| 8       | 92.74    | 10000.00 | 10000.00 | 10000.00 | —       | —        |
 
 ### Notes on this sweep (2026-05-20)
 
 - **4w/1w = 1.55×** — still well below the 3.0× acceptance criterion.
   Aggregate jobs/sec is lower across the board than the first sweep
   (workers=4 went 146 → 101, workers=8 went 148 → 93); the host was under
-  more load this run. The *shape* of the scaling curve is what matters and
+  more load this run. The _shape_ of the scaling curve is what matters and
   it is unchanged: flat from workers=4 onward, with workers=8 actually
-  slightly *worse* than workers=4.
+  slightly _worse_ than workers=4.
 - The additive `worker.id` instrumentation did not cost throughput — within
   this matrix the ordering of {2,4,8} (93 / 101 / 93) matches the prior
   sweep (132 / 146 / 148), all clustered within ~10%.
@@ -172,14 +173,14 @@ distribution at the same time.
 
 | worker_id        | jobs completed | share |
 | ---------------- | -------------- | ----- |
-| reactor-worker-1 | ~3239 | 25.1% |
-| reactor-worker-2 | ~3182 | 24.6% |
-| reactor-worker-3 | ~3257 | 25.2% |
-| reactor-worker-7 | ~3206 | 24.8% |
-| reactor-worker-0 | 0     | 0%    |
-| reactor-worker-4 | 0     | 0%    |
-| reactor-worker-5 | 0     | 0%    |
-| reactor-worker-6 | 0     | 0%    |
+| reactor-worker-1 | ~3239          | 25.1% |
+| reactor-worker-2 | ~3182          | 24.6% |
+| reactor-worker-3 | ~3257          | 25.2% |
+| reactor-worker-7 | ~3206          | 24.8% |
+| reactor-worker-0 | 0              | 0%    |
+| reactor-worker-4 | 0              | 0%    |
+| reactor-worker-5 | 0              | 0%    |
+| reactor-worker-6 | 0              | 0%    |
 
 **Half the worker pool is idle.** 8 drives × 8 worker buckets with the
 sticky-by-`documentId` hash collapses onto exactly 4 distinct bucket
@@ -203,11 +204,11 @@ across all workers. If scaling jumps to ≥3× at workers=4, the previous
 
 | workers | jobs/sec | p50 (ms) | p95 (ms) | p99 (ms) | k6 reqs | k6 fail% |
 | ------- | -------- | -------- | -------- | -------- | ------- | -------- |
-| 0 |  71.27 | 10000.00 | 10000.00 | 10000.00 | — | — |
-| 1 | 401.58 |    69.92 |   472.75 |   716.02 | — | — |
-| 2 | 396.91 |    56.54 |   237.48 |   417.90 | — | — |
-| 4 | 414.11 |    50.51 |   236.69 |   419.77 | — | — |
-| 8 | 404.76 |    47.57 |   234.53 |   414.65 | — | — |
+| 0       | 71.27    | 10000.00 | 10000.00 | 10000.00 | —       | —        |
+| 1       | 401.58   | 69.92    | 472.75   | 716.02   | —       | —        |
+| 2       | 396.91   | 56.54    | 237.48   | 417.90   | —       | —        |
+| 4       | 414.11   | 50.51    | 236.69   | 419.77   | —       | —        |
+| 8       | 404.76   | 47.57    | 234.53   | 414.65   | —       | —        |
 
 ### Notes on this sweep (2026-05-20, NUM_DRIVES=64)
 
@@ -221,16 +222,16 @@ Two big shifts versus NUM_DRIVES=8:
    pooled-worker configurations. We are now measuring actual executor work
    rather than queue backlog.
 
-But the original acceptance criterion still fails — for a *different*
+But the original acceptance criterion still fails — for a _different_
 reason:
 
 - **4w/1w = 414 / 402 = 1.03×.** Single worker already hits ~400 jobs/sec
   and the curve is flat from workers=1 through workers=8. The worker pool
-  is no longer the bottleneck; *something downstream of it* is.
+  is no longer the bottleneck; _something downstream of it_ is.
 - workers=0 (in-process at 71 jobs/sec) is now ~5.6× worse than workers=1,
   confirming the in-process executor was being starved by the
   request-handling event loop. Moving execution off the host loop is the
-  single biggest win, but adding *more* threads beyond one buys nothing at
+  single biggest win, but adding _more_ threads beyond one buys nothing at
   this workload.
 
 #### Per-worker distribution, workers=8, NUM_DRIVES=64
@@ -250,8 +251,8 @@ reason:
 
 All eight workers are now fed (no idle workers). Spread is min 2774, max
 5411 — a 1.95× max/min ratio, which matches the variance you'd expect for
-64 balls into 8 bins with a uniform hash. So the *routing* is doing its
-job; the *pool* simply can't translate the spread into more aggregate
+64 balls into 8 bins with a uniform hash. So the _routing_ is doing its
+job; the _pool_ simply can't translate the spread into more aggregate
 throughput.
 
 #### Where the new ceiling probably is
@@ -285,12 +286,12 @@ backlog so the worker pool actually becomes the limiter.
 
 | workers | jobs/sec | p50 (ms) | p95 (ms) | p99 (ms) | k6 reqs | k6 fail% |
 | ------- | -------- | -------- | -------- | -------- | ------- | -------- |
-| 0 | 29.99 | 10000.00 | 10000.00 | 10000.00 | — | — |
-| 1 | 63.91 | 10000.00 | 10000.00 | 10000.00 | — | — |
-| 1 | 55.50 | 10000.00 | 10000.00 | 10000.00 | — | — |
-| 2 | 104.75 | 10000.00 | 10000.00 | 10000.00 | — | — |
-| 4 | 116.82 | 10000.00 | 10000.00 | 10000.00 | — | — |
-| 8 | 162.56 | 10000.00 | 10000.00 | 10000.00 | — | — |
+| 0       | 29.99    | 10000.00 | 10000.00 | 10000.00 | —       | —        |
+| 1       | 63.91    | 10000.00 | 10000.00 | 10000.00 | —       | —        |
+| 1       | 55.50    | 10000.00 | 10000.00 | 10000.00 | —       | —        |
+| 2       | 104.75   | 10000.00 | 10000.00 | 10000.00 | —       | —        |
+| 4       | 116.82   | 10000.00 | 10000.00 | 10000.00 | —       | —        |
+| 8       | 162.56   | 10000.00 | 10000.00 | 10000.00 | —       | —        |
 
 Scaling ratios (using the complete sweep, not the orphan workers=1 row from the
 aborted prior run): 4w/1w = 2.11x, 8w/1w = 2.93x. Worse than VUS=32 in
@@ -339,12 +340,12 @@ Pipeline metrics over the workers=8 window:
 - per-job executor time = 17.9s / 11185 = **1.6 ms** (same as VUS=32)
 
 So with 577k jobs sitting in the queue and workers 97.4% idle, the workers
-are not slow — they are *starved*. Something between `queue has work` and
+are not slow — they are _starved_. Something between `queue has work` and
 `worker receives next job` is throttling the system to ~130 jobs/s total
 regardless of worker count.
 
 Per-worker throughput collapsed from ~50 jobs/s (VUS=32, NUM_DRIVES=64) to
-~16 jobs/s (VUS=128, NUM_DRIVES=64). Adding 4x more offered load *reduced*
+~16 jobs/s (VUS=128, NUM_DRIVES=64). Adding 4x more offered load _reduced_
 per-worker throughput by 3x. The executor's per-job compute is unchanged,
 so the dispatch latency per job grew by roughly the same factor.
 
@@ -363,7 +364,7 @@ isIdle? -> queue.dequeueNextMatching(predicate)
 
 `IQueue` is an in-memory `Map<queueKey, Job[]>` (one entry per
 `documentId:scope:branch`); with 64 documents the dispatch scan is trivial.
-The cost is in the two awaits *after* compute that gate the next dequeue.
+The cost is in the two awaits _after_ compute that gate the next dequeue.
 
 `emitWriteReady` cascades through the coordinator, which calls
 `indexOperations` for every pre-ready read model, then emits JOB_READ_READY
@@ -391,7 +392,8 @@ read-model or sync subscriber to attack first.
 #### Acceptance criterion status
 
 Phase 0 / D1 target was 4w/1w >= 3.0x. We measured:
-- VUS=32 NUM_DRIVES=8:  4w/1w = 0.99x (routing imbalance)
+
+- VUS=32 NUM_DRIVES=8: 4w/1w = 0.99x (routing imbalance)
 - VUS=32 NUM_DRIVES=64: 4w/1w = ~1.0x (k6-bound at 400 jobs/s)
 - VUS=128 NUM_DRIVES=64: 4w/1w = 2.11x (dispatch-bound, system overloaded)
 
@@ -421,13 +423,13 @@ bumped from `max=4` to `max=16`, `connectionTimeoutMillis=5000` threaded
 through `DbConfig`, and four new metrics added (`reactor.db.pool.*`).
 Compared to the prior sweep at the same VUS / drives / duration:
 
-| workers | Run 6 | Run 7 | factor |
-| ------- | ----- | ----- | ------ |
-| 0 | 6.66 | 16.55 | 2.5x |
-| 1 | 21.87 | 55.00 | 2.5x |
-| 2 | 21.34 | 105.84 | 5.0x |
-| 4 | 20.08 | 119.50 | 6.0x |
-| 8 | 16.85 | 103.15 | 6.1x |
+| workers | Run 6 | Run 7  | factor |
+| ------- | ----- | ------ | ------ |
+| 0       | 6.66  | 16.55  | 2.5x   |
+| 1       | 21.87 | 55.00  | 2.5x   |
+| 2       | 21.34 | 105.84 | 5.0x   |
+| 4       | 20.08 | 119.50 | 6.0x   |
+| 8       | 16.85 | 103.15 | 6.1x   |
 
 Throughput inverts between workers=4 and workers=8 — the host pool saturates
 again at the new ceiling (avg `pool.waiting` = 90 callers at workers=8 with
@@ -443,14 +445,14 @@ Headline numbers in this table are the matrix script's `jobs/sec` —
 
 | pool | workers | jobs/sec | p50 (ms) | p95 (ms) | p99 (ms) | k6 reqs | k6 fail% |
 | ---- | ------- | -------- | -------- | -------- | -------- | ------- | -------- |
-| 16 | 4 | 115.08 | 10000.00 | 10000.00 | 10000.00 | — | — |
-| 16 | 8 | 101.33 | 10000.00 | 10000.00 | 10000.00 | — | — |
-| 32 | 4 | 120.65 | 10000.00 | 10000.00 | 10000.00 | — | — |
-| 32 | 8 | 104.55 | 10000.00 | 10000.00 | 10000.00 | — | — |
-| 64 | 4 | 119.75 | 10000.00 | 10000.00 | 10000.00 | — | — |
-| 64 | 8 | 101.43 | 10000.00 | 10000.00 | 10000.00 | — | — |
-| 96 | 4 | 119.99 | 10000.00 | 10000.00 | 10000.00 | — | — |
-| 96 | 8 | 101.68 | 10000.00 | 10000.00 | 10000.00 | — | — |
+| 16   | 4       | 115.08   | 10000.00 | 10000.00 | 10000.00 | —       | —        |
+| 16   | 8       | 101.33   | 10000.00 | 10000.00 | 10000.00 | —       | —        |
+| 32   | 4       | 120.65   | 10000.00 | 10000.00 | 10000.00 | —       | —        |
+| 32   | 8       | 104.55   | 10000.00 | 10000.00 | 10000.00 | —       | —        |
+| 64   | 4       | 119.75   | 10000.00 | 10000.00 | 10000.00 | —       | —        |
+| 64   | 8       | 101.43   | 10000.00 | 10000.00 | 10000.00 | —       | —        |
+| 96   | 4       | 119.99   | 10000.00 | 10000.00 | 10000.00 | —       | —        |
+| 96   | 8       | 101.68   | 10000.00 | 10000.00 | 10000.00 | —       | —        |
 
 ### Notes on this sweep (Run 8, 2026-05-21, NUM_DRIVES=64, VUS=128, workers in {4, 8})
 
@@ -471,12 +473,12 @@ coordinator's per-op work. Full write-up in the Run 8 wiki page
 
 | drives | workers | jobs/sec | p50 (ms) | p95 (ms) | p99 (ms) | k6 reqs | k6 fail% |
 | ------ | ------- | -------- | -------- | -------- | -------- | ------- | -------- |
-| 64 | 4 | 121.02 | 10000.00 | 10000.00 | 10000.00 | — | — |
-| 64 | 8 | 102.37 | 10000.00 | 10000.00 | 10000.00 | — | — |
-| 128 | 4 | 118.15 | 10000.00 | 10000.00 | 10000.00 | — | — |
-| 128 | 8 | 117.43 | 10000.00 | 10000.00 | 10000.00 | — | — |
-| 256 | 4 | 114.99 | 10000.00 | 10000.00 | 10000.00 | — | — |
-| 256 | 8 | 114.53 | 10000.00 | 10000.00 | 10000.00 | — | — |
+| 64     | 4       | 121.02   | 10000.00 | 10000.00 | 10000.00 | —       | —        |
+| 64     | 8       | 102.37   | 10000.00 | 10000.00 | 10000.00 | —       | —        |
+| 128    | 4       | 118.15   | 10000.00 | 10000.00 | 10000.00 | —       | —        |
+| 128    | 8       | 117.43   | 10000.00 | 10000.00 | 10000.00 | —       | —        |
+| 256    | 4       | 114.99   | 10000.00 | 10000.00 | 10000.00 | —       | —        |
+| 256    | 8       | 114.53   | 10000.00 | 10000.00 | 10000.00 | —       | —        |
 
 ### Notes on this sweep (Run 9, 2026-05-21, VUS=128, pool=96, workers in {4, 8})
 
@@ -501,8 +503,8 @@ investment.
 
 | drives | workers | jobs/sec | p50 (ms) | p95 (ms) | p99 (ms) | loop.delay.p99 (ms) | loop.util | cpu.util |
 | ------ | ------- | -------- | -------- | -------- | -------- | ------------------- | --------- | -------- |
-| 64 | 8 | 101.00 | 10000.00 | 10000.00 | 10000.00 | 46.70 | 0.993 | 3.418 |
-| 256 | 8 | 118.00 | 10000.00 | 10000.00 | 10000.00 | 43.97 | 0.997 | 3.264 |
+| 64     | 8       | 101.00   | 10000.00 | 10000.00 | 10000.00 | 46.70               | 0.993     | 3.418    |
+| 256    | 8       | 118.00   | 10000.00 | 10000.00 | 10000.00 | 43.97               | 0.997     | 3.264    |
 
 Notes on Run 10: host event loop is the binding constraint. `eventloop.util`
 sits at 0.993 / 0.997 in both cells — the loop is pinned at 99 %+ before
@@ -542,8 +544,8 @@ partitioning are now all ruled out — none of them attack the loop.
 
 | drives | shards | jobs/sec | p50 (ms) | p95 (ms) | p99 (ms) | loop.delay.p99 (ms) | loop.util | cpu.util | chain.depth | acq.p50 (ms) |
 | ------ | ------ | -------- | -------- | -------- | -------- | ------------------- | --------- | -------- | ----------- | ------------ |
-| 64 | 1 | 1246.40 | 10000.00 | 10000.00 | 10000.00 | 32.63 | 0.967 | 4.010 | 6.50 | 2.50 |
-| 64 | 2 | 1221.87 | 10000.00 | 10000.00 | 10000.00 | 35.05 | 0.968 | 4.114 | 5.63 | 2.50 |
-| 64 | 4 | 1096.50 | 10000.00 | 10000.00 | 10000.00 | 31.03 | 0.977 | 4.155 | 5.33 | 2.50 |
-| 64 | 8 | 1064.87 | 10000.00 | 10000.00 | 10000.00 | 33.11 | 0.976 | 4.379 | 5.23 | 2.50 |
-| 256 | 4 | 958.24 | 10000.00 | 10000.00 | 10000.00 | 22.41 | 0.989 | 4.113 | 4.80 | 2.50 |
+| 64     | 1      | 1246.40  | 10000.00 | 10000.00 | 10000.00 | 32.63               | 0.967     | 4.010    | 6.50        | 2.50         |
+| 64     | 2      | 1221.87  | 10000.00 | 10000.00 | 10000.00 | 35.05               | 0.968     | 4.114    | 5.63        | 2.50         |
+| 64     | 4      | 1096.50  | 10000.00 | 10000.00 | 10000.00 | 31.03               | 0.977     | 4.155    | 5.33        | 2.50         |
+| 64     | 8      | 1064.87  | 10000.00 | 10000.00 | 10000.00 | 33.11               | 0.976     | 4.379    | 5.23        | 2.50         |
+| 256    | 4      | 958.24   | 10000.00 | 10000.00 | 10000.00 | 22.41               | 0.989     | 4.113    | 4.80        | 2.50         |

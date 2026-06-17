@@ -8,7 +8,7 @@ This tutorial step has a corresponding implementation in the repository. After c
 - Document model specification files (`chat-room.json`, `schema.graphql`)
 - Auto-generated TypeScript types and action creators
 - Reducer scaffolding ready for implementation
-:::
+  :::
 
 <details>
 <summary>📖 How to use this tutorial</summary>

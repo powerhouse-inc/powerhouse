@@ -11,15 +11,13 @@ if (isMainThread || parentPort === null) {
   throw new Error("worker-bootstrap.mjs must be run as a worker thread");
 }
 
-const { runWorker } = await import(
-  "../../../../src/executor/worker/run-worker.ts"
-);
+const { runWorker } =
+  await import("../../../../src/executor/worker/run-worker.ts");
 const { Kysely } = await import("kysely");
 const { PGlite } = await import("@electric-sql/pglite");
 const { PGliteDialect } = await import("kysely-pglite-dialect");
-const { REACTOR_SCHEMA, runMigrations } = await import(
-  "../../../../src/storage/migrations/migrator.ts"
-);
+const { REACTOR_SCHEMA, runMigrations } =
+  await import("../../../../src/storage/migrations/migrator.ts");
 
 async function createPgliteDatabase() {
   const pglite = new PGlite();

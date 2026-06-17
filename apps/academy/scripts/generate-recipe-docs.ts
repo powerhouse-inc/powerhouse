@@ -35,7 +35,11 @@ function parseRecipes(cookbook: string): Recipe[] {
   );
   const recipes: Recipe[] = [];
   for (const m of cookbook.matchAll(rowRe)) {
-    recipes.push({ title: m[1].trim(), slug: m[2].trim(), description: m[3].trim() });
+    recipes.push({
+      title: m[1].trim(),
+      slug: m[2].trim(),
+      description: m[3].trim(),
+    });
   }
   return recipes;
 }
@@ -90,7 +94,9 @@ async function fetchReadme(slug: string): Promise<string | null> {
   const url = `${RAW_BASE}/${slug}/README.md`;
   const res = await fetch(url);
   if (!res.ok) {
-    console.warn(`  ⚠️  ${slug}: README fetch failed (HTTP ${res.status}) — skipping inline content`);
+    console.warn(
+      `  ⚠️  ${slug}: README fetch failed (HTTP ${res.status}) — skipping inline content`,
+    );
     return null;
   }
   return res.text();

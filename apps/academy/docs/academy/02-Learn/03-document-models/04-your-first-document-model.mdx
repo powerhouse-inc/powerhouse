@@ -6,6 +6,7 @@ description: Define a Todo schema in Vetra Studio, implement its reducer with Mu
 In this lesson you'll build a minimal **Todo** document model from scratch. You'll define the schema in <Term>Vetra</Term> Studio, let codegen scaffold the types, and write the reducer that drives every state transition.
 
 You'll need:
+
 - Node.js ≥ 24
 - The `ph` CLI (`npm i -g @powerhousedao/ph-cmd` or see [Installation](/academy/GetStarted/Prerequisites))
 
@@ -72,7 +73,7 @@ Files inside `gen/` are regenerated every time the schema changes — never edit
 Open `document-models/todo/src/reducers/todos.ts`. Codegen scaffolds a stub that throws "not implemented" for each operation. Replace those with real logic:
 
 ```ts title="document-models/todo/src/reducers/todos.ts"
-import type { TodoTodosOperations } from 'todo-app/document-models/todo';
+import type { TodoTodosOperations } from "todo-app/document-models/todo";
 
 export const todoTodosOperations: TodoTodosOperations = {
   addTodoOperation(state, action) {
@@ -94,7 +95,9 @@ export const todoTodosOperations: TodoTodosOperations = {
 };
 ```
 
-<Term>Powerhouse</Term> wraps reducers in [Mutative](https://mutative.js.org/), so you write direct mutations — no need to return a new object. The framework produces an immutable snapshot from each mutation.
+<Term>Powerhouse</Term> wraps reducers in [Mutative](https://mutative.js.org/),
+so you write direct mutations — no need to return a new object. The framework
+produces an immutable snapshot from each mutation.
 
 The `state` argument the operation receives is already the scoped state (`global` or `local`). From outside the reducer, you access items as `doc.state.global.items`.
 
@@ -103,22 +106,26 @@ The `state` argument the operation receives is already the scoped state (`global
   multi
   choices={[
     {
-      label: 'Calling fetch() to notify a server when a todo is added.',
+      label: "Calling fetch() to notify a server when a todo is added.",
       correct: true,
-      explanation: 'Network calls are side-effects — they belong in a processor or in the Reactor, not the reducer.',
+      explanation:
+        "Network calls are side-effects — they belong in a processor or in the Reactor, not the reducer.",
     },
     {
-      label: 'Reading the current time with Date.now() to timestamp the todo.',
+      label: "Reading the current time with Date.now() to timestamp the todo.",
       correct: true,
-      explanation: 'Anything non-deterministic (time, randomness, environment) breaks replay. Timestamps come from the operation metadata.',
+      explanation:
+        "Anything non-deterministic (time, randomness, environment) breaks replay. Timestamps come from the operation metadata.",
     },
     {
-      label: 'Filtering items with Array.prototype.filter.',
-      explanation: 'Pure. filter() returns a new array and touches nothing outside the reducer.',
+      label: "Filtering items with Array.prototype.filter.",
+      explanation:
+        "Pure. filter() returns a new array and touches nothing outside the reducer.",
     },
     {
-      label: 'Writing state.items.push(newItem) to add the item.',
-      explanation: 'This is the correct Powerhouse pattern. Mutative wraps the reducer so mutations produce an immutable snapshot — push and splice are both fine.',
+      label: "Writing state.items.push(newItem) to add the item.",
+      explanation:
+        "This is the correct Powerhouse pattern. Mutative wraps the reducer so mutations produce an immutable snapshot — push and splice are both fine.",
     },
   ]}
   explanation="Purity = (same state, same action) → same result, with no side-effects. Time, I/O, and randomness all break it. Mutative-style mutations do not."
@@ -129,17 +136,17 @@ The `state` argument the operation receives is already the scoped state (`global
 Because reducers are pure (deterministic, no I/O), you can test them without a server, a database, or a running Vetra instance:
 
 ```ts title="document-models/todo/src/tests/todos.test.ts"
-import { utils, reducer } from 'todo-app/document-models/todo';
-import { addTodo, completeTodo } from 'todo-app/document-models/todo';
-import { describe, it, expect } from 'vitest';
+import { utils, reducer } from "todo-app/document-models/todo";
+import { addTodo, completeTodo } from "todo-app/document-models/todo";
+import { describe, it, expect } from "vitest";
 
-describe('todo reducer', () => {
-  it('adds and completes a todo', () => {
+describe("todo reducer", () => {
+  it("adds and completes a todo", () => {
     let doc = utils.createDocument();
 
-    doc = reducer(doc, addTodo({ id: 't-1', title: 'Write the tutorial' }));
-    doc = reducer(doc, addTodo({ id: 't-2', title: 'Review it' }));
-    doc = reducer(doc, completeTodo({ id: 't-1' }));
+    doc = reducer(doc, addTodo({ id: "t-1", title: "Write the tutorial" }));
+    doc = reducer(doc, addTodo({ id: "t-2", title: "Review it" }));
+    doc = reducer(doc, completeTodo({ id: "t-1" }));
 
     expect(doc.state.global.items).toHaveLength(2);
     expect(doc.state.global.items[0].done).toBe(true);

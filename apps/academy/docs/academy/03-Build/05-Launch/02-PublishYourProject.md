@@ -231,7 +231,7 @@ pnpm publish --tag beta
 
 - **Git Tags**: Markers in your repository history (e.g., `v1.0.0`) created by `pnpm version`
 - **NPM Dist-Tags**: Labels pointing to published versions (`latest`, `beta`, `next`). When publishing without a tag, the version gets the `latest` tag by default.
-:::
+  :::
 
 ## 3. Installing your package
 

@@ -5,32 +5,33 @@
 
 ## Progress
 
-| Batch | Rule | Count | Status |
-|------:|------|------:|--------|
-| 1 | stale `eslint-disable` directives | 34 | ✅ Done |
-| 2 | `no-useless-assignment` | 7 | ✅ Done |
-| 3 | `no-duplicate-type-constituents` + `preserve-caught-error` | 2 | ✅ Done |
-| 4 | `restrict-template-expressions` | 6 | ✅ Done |
-| 5 | `no-base-to-string` | 8 | ✅ Done |
-| 6 | `no-empty-object-type` | 15 | ✅ Done |
-| 7 | `no-unused-vars` | 120 | ✅ Done |
-| 8 | `require-await` | 123 / 123 | ✅ Done — rule switched to **error**; all fixed |
-| 9 | `no-misused-promises` | 35 | ✅ Done |
-| 10 | `no-floating-promises` | 18 | ✅ Done |
-| 11 | `no-unnecessary-condition` | 200 | 🚫 Left for owners — per-file type triage |
-| 12 | `react-hooks/*` | 13 / 38 | ◑ Partial — 13 loop-safe `useCallback`/`useMemo` fixed; 25 `useEffect` left |
+| Batch | Rule                                                       |     Count | Status                                                                      |
+| ----: | ---------------------------------------------------------- | --------: | --------------------------------------------------------------------------- |
+|     1 | stale `eslint-disable` directives                          |        34 | ✅ Done                                                                     |
+|     2 | `no-useless-assignment`                                    |         7 | ✅ Done                                                                     |
+|     3 | `no-duplicate-type-constituents` + `preserve-caught-error` |         2 | ✅ Done                                                                     |
+|     4 | `restrict-template-expressions`                            |         6 | ✅ Done                                                                     |
+|     5 | `no-base-to-string`                                        |         8 | ✅ Done                                                                     |
+|     6 | `no-empty-object-type`                                     |        15 | ✅ Done                                                                     |
+|     7 | `no-unused-vars`                                           |       120 | ✅ Done                                                                     |
+|     8 | `require-await`                                            | 123 / 123 | ✅ Done — rule switched to **error**; all fixed                             |
+|     9 | `no-misused-promises`                                      |        35 | ✅ Done                                                                     |
+|    10 | `no-floating-promises`                                     |        18 | ✅ Done                                                                     |
+|    11 | `no-unnecessary-condition`                                 |       200 | 🚫 Left for owners — per-file type triage                                   |
+|    12 | `react-hooks/*`                                            |   13 / 38 | ◑ Partial — 13 loop-safe `useCallback`/`useMemo` fixed; 25 `useEffect` left |
 
 **Current: 383 / 609 fixed (63%), 226 warnings, 0 errors.** All fixes verified: `pnpm lint` → 226 warnings / **0 errors**, `pnpm typecheck` → **0 errors** (the cycle blocker was also fixed). Batches 1–10 complete; **batch 8 fully done — `require-await` switched to `error` and all 123 fixed**; batch 12 partial (13/38 — loop-safe hook-dep fixes). Remaining (~226): `no-unnecessary-condition` (200), 25 `useEffect`-dep `react-hooks` — these need per-file judgment (rationale below).
 
 **Full test validation:** `pnpm test:ci` is **green across all packages** (reactor-api 538, design-system 245, vetra 234, document-model 232, switchboard 75, connect 78, reactor-mcp 38, versioned-documents 43, …). `pnpm typecheck` 0 errors, `pnpm lint` 0 errors.
 
-**Regression found & fixed:** the Batch 9 `no-misused-promises` fix had wrapped `mountAuthenticatedNodeRoute`'s handler in `(req,res) => void authHandler(req,res)`, which broke its documented contract ("mount the handler *unwrapped* when `authService` is undefined") — caught by `apps/switchboard` attachment tests under `simulate-ci-workflow` (lint+typecheck alone missed it). Root cause: `IHttpAdapter.mountNodeRoute` typed its handler `=> void`, but Node route handlers are legitimately `=> void | Promise<void>` (the fastify adapter already typed it as `NodeHandler`). **Proper fix:** widened the `mountNodeRoute` handler type to `=> void | Promise<void>` in the interface (`gateway/types.ts`) and the express adapter (which now `void`s the fire-and-forget call), then reverted `mount-auth.ts` to pass `requireAuth(...)` directly. This keeps `no-misused-promises` at 0 *and* restores the unwrapped-passthrough contract. All 53 attachment tests pass.
+**Regression found & fixed:** the Batch 9 `no-misused-promises` fix had wrapped `mountAuthenticatedNodeRoute`'s handler in `(req,res) => void authHandler(req,res)`, which broke its documented contract ("mount the handler _unwrapped_ when `authService` is undefined") — caught by `apps/switchboard` attachment tests under `simulate-ci-workflow` (lint+typecheck alone missed it). Root cause: `IHttpAdapter.mountNodeRoute` typed its handler `=> void`, but Node route handlers are legitimately `=> void | Promise<void>` (the fastify adapter already typed it as `NodeHandler`). **Proper fix:** widened the `mountNodeRoute` handler type to `=> void | Promise<void>` in the interface (`gateway/types.ts`) and the express adapter (which now `void`s the fire-and-forget call), then reverted `mount-auth.ts` to pass `requireAuth(...)` directly. This keeps `no-misused-promises` at 0 _and_ restores the unwrapped-passthrough contract. All 53 attachment tests pass.
 
 ## Typecheck unblocked ✅
 
-`pnpm typecheck` (`tsc --build`) was failing on a pre-existing circular project-reference error (`TS6202`): `@powerhousedao/shared` ⇄ `document-model`. Root cause: the commit before this work added a `document-model` *devDependency* to `shared` (so a new `document-drive` test could resolve it at runtime), and `update-ts-references` mirrored that into a `shared → document-model` project reference — but `document-model` is a thin re-export of `@powerhousedao/shared/document-model`, so the reference closed a cycle.
+`pnpm typecheck` (`tsc --build`) was failing on a pre-existing circular project-reference error (`TS6202`): `@powerhousedao/shared` ⇄ `document-model`. Root cause: the commit before this work added a `document-model` _devDependency_ to `shared` (so a new `document-drive` test could resolve it at runtime), and `update-ts-references` mirrored that into a `shared → document-model` project reference — but `document-model` is a thin re-export of `@powerhousedao/shared/document-model`, so the reference closed a cycle.
 
 **Fix (durable):**
+
 - Removed the `document-model` devDependency from `packages/shared/package.json` (a package shouldn't depend on a package that re-exports itself) and synced `pnpm-lock.yaml`.
 - Removed the now-unneeded `references` entry from `packages/shared/tsconfig.json`; imports of `"document-model"` inside `shared` already resolve to its own `./document-model` via the existing `paths` mapping.
 - Added a `resolve.alias` in `packages/shared/vitest.config.ts` so the document-drive tests resolve `document-model` to the local source at runtime (40/40 tests pass).
@@ -40,14 +41,15 @@
 With `tsc` restored, the Promise-handling batches **9 (`no-misused-promises`) and 10 (`no-floating-promises`) were completed** (validated with `pnpm typecheck` + `pnpm lint`, both clean). The remaining three batches are **left for code owners** — after investigation they are intentional, contract-bound, or behavior-changing, and not safe as mechanical sweeps:
 
 - **`require-await` (123) — DONE; rule switched to `error`.** Per the decision to enforce this rule, all sites were fixed (not disabled). The fix: **remove the no-op `async` keyword and return an explicit `Promise`** — `return EXPR` → `return Promise.resolve(EXPR)`, void bodies get `return Promise.resolve()`, mock arrows `async () => X` → `() => Promise.resolve(X)`. This preserves each method's `Promise<T>` contract (interface implementations like `IPackageStorage`, GraphQL resolvers, mock implementations of `fetch`/`createServer`, `React.lazy` factories, etc.). Two genuine edge cases: **async generators** (`makeChunks`, `subscribe`) keep `async*` (a sync generator has the wrong type) and got a real `await Promise.resolve()`; **throw-only / `act()` bodies** likewise keep `async` + `await Promise.resolve()`. `throw` statements were left as synchronous (equivalent to a rejected promise for the `await`-callers that consume these). `pnpm typecheck` stayed at 0 errors and the affected test suites pass.
-- **`no-unnecessary-condition` (200) — per-file type triage.** These often mean a *type is too narrow/wide*, not that the guard is dead. `tsc` will not catch the dangerous case: deleting a guard that protects a runtime null the (incorrect) types claim can't happen hides a real bug. Each needs a human to decide "fix the type" vs "delete the guard," ideally with the relevant tests green.
-- **`react-hooks/*` (25 left after fixing 13) — remaining are `useEffect`/loop-risk.** The 13 fixed were all `useCallback`/`useMemo` dep fixes (stable `dispatch`/setter additions + two "unnecessary dependency" removals) — these can't cause re-render loops (worst case is less memoization), and typecheck stayed clean. The 25 left are `useEffect` missing-deps (adding a dep the effect itself mutates can loop), "the X array/function makes deps change every render" cases (need the *intermediate* wrapped in `useMemo` — a real refactor), CodeMirror editor effects (re-init risk), and a ref-cleanup pattern. These need runtime validation, not just lint/typecheck.
+- **`no-unnecessary-condition` (200) — per-file type triage.** These often mean a _type is too narrow/wide_, not that the guard is dead. `tsc` will not catch the dangerous case: deleting a guard that protects a runtime null the (incorrect) types claim can't happen hides a real bug. Each needs a human to decide "fix the type" vs "delete the guard," ideally with the relevant tests green.
+- **`react-hooks/*` (25 left after fixing 13) — remaining are `useEffect`/loop-risk.** The 13 fixed were all `useCallback`/`useMemo` dep fixes (stable `dispatch`/setter additions + two "unnecessary dependency" removals) — these can't cause re-render loops (worst case is less memoization), and typecheck stayed clean. The 25 left are `useEffect` missing-deps (adding a dep the effect itself mutates can loop), "the X array/function makes deps change every render" cases (need the _intermediate_ wrapped in `useMemo` — a real refactor), CodeMirror editor effects (re-init risk), and a ref-cleanup pattern. These need runtime validation, not just lint/typecheck.
 
-**Recommended path for the remainder:** work per-file with `pnpm typecheck` + the relevant test suite green after each package. They are *not* safe as bulk find-and-replace. The per-rule sections below list every affected file as a starting point.
+**Recommended path for the remainder:** work per-file with `pnpm typecheck` + the relevant test suite green after each package. They are _not_ safe as bulk find-and-replace. The per-rule sections below list every affected file as a starting point.
 
 ## Config improvements made along the way
 
 ESLint-config changes (all in `eslint.config.js` unless noted):
+
 - **`require-await` promoted from `warn` to `error`** — synchronous implementations of an async contract must now return an explicit `Promise` (e.g. `Promise.resolve(...)`) rather than carry a no-op `async`. All existing violations were fixed to comply.
 - **`no-unused-vars`** now honours the documented `^_` "intentionally unused" convention (`args/vars/caughtErrors/destructuredArray` ignore patterns) — the comment claimed this but the options were missing.
 - **`no-empty-object-type`** now allows `interface A extends B {}` (`allowInterfaces: "with-single-extends"`) — a legitimate pattern with no type-alias equivalent for global declaration merging.
@@ -65,58 +67,58 @@ ESLint-config changes (all in `eslint.config.js` unless noted):
 
 ## Warnings by rule
 
-| # | Rule | Count | Files | Auto-fix | Batchable? |
-|--:|------|------:|------:|----------|------------|
-| 1 | `@typescript-eslint/no-unnecessary-condition` | 200 | 84 | No (manual) | Per-file (triage) |
-| 2 | `@typescript-eslint/require-await` | 126 | 49 | No (manual) | High |
-| 3 | `@typescript-eslint/no-unused-vars` | 120 | 66 | No (manual) | High |
-| 4 | `react-hooks/exhaustive-deps` | 36 | 24 | No (manual) | Low (case-by-case) |
-| 5 | `@typescript-eslint/no-misused-promises` | 35 | 29 | No (manual) | High (one idiom) |
-| 6 | `(unused-eslint-disable-directive)` | 34 | 12 | Yes (`eslint --fix`)* | High (do first) |
-| 7 | `@typescript-eslint/no-floating-promises` | 18 | 15 | No (manual) | Medium |
-| 8 | `@typescript-eslint/no-empty-object-type` | 15 | 12 | No (manual) | Medium |
-| 9 | `@typescript-eslint/no-base-to-string` | 8 | 5 | No (manual) | Medium |
-| 10 | `no-useless-assignment` | 7 | 7 | No (manual) | High |
-| 11 | `@typescript-eslint/restrict-template-expressions` | 6 | 2 | No (manual) | High |
-| 12 | `react-hooks/incompatible-library` | 2 | 2 | No (manual) | No |
-| 13 | `@typescript-eslint/no-duplicate-type-constituents` | 1 | 1 | No (manual) | One-off |
-| 14 | `preserve-caught-error` | 1 | 1 | No (manual) | One-off |
+|   # | Rule                                                | Count | Files | Auto-fix               | Batchable?         |
+| --: | --------------------------------------------------- | ----: | ----: | ---------------------- | ------------------ |
+|   1 | `@typescript-eslint/no-unnecessary-condition`       |   200 |    84 | No (manual)            | Per-file (triage)  |
+|   2 | `@typescript-eslint/require-await`                  |   126 |    49 | No (manual)            | High               |
+|   3 | `@typescript-eslint/no-unused-vars`                 |   120 |    66 | No (manual)            | High               |
+|   4 | `react-hooks/exhaustive-deps`                       |    36 |    24 | No (manual)            | Low (case-by-case) |
+|   5 | `@typescript-eslint/no-misused-promises`            |    35 |    29 | No (manual)            | High (one idiom)   |
+|   6 | `(unused-eslint-disable-directive)`                 |    34 |    12 | Yes (`eslint --fix`)\* | High (do first)    |
+|   7 | `@typescript-eslint/no-floating-promises`           |    18 |    15 | No (manual)            | Medium             |
+|   8 | `@typescript-eslint/no-empty-object-type`           |    15 |    12 | No (manual)            | Medium             |
+|   9 | `@typescript-eslint/no-base-to-string`              |     8 |     5 | No (manual)            | Medium             |
+|  10 | `no-useless-assignment`                             |     7 |     7 | No (manual)            | High               |
+|  11 | `@typescript-eslint/restrict-template-expressions`  |     6 |     2 | No (manual)            | High               |
+|  12 | `react-hooks/incompatible-library`                  |     2 |     2 | No (manual)            | No                 |
+|  13 | `@typescript-eslint/no-duplicate-type-constituents` |     1 |     1 | No (manual)            | One-off            |
+|  14 | `preserve-caught-error`                             |     1 |     1 | No (manual)            | One-off            |
 
 \* `eslint --fix` removes unused-disable directives, but the dry-run JSON does not flag them as `fixableWarningCount`; confirm on a sample before a bulk pass.
 
 ## Warnings by package
 
-| Package | Warnings |
-|---------|---------:|
-| `packages/reactor-api` | 132 |
-| `packages/vetra` | 96 |
-| `apps/connect` | 71 |
-| `packages/analytics-engine` | 69 |
-| `packages/design-system` | 63 |
-| `packages/reactor-browser` | 43 |
-| `packages/powerhouse-vetra-packages` | 31 |
-| `packages/document-model` | 23 |
-| `packages/reactor-mcp` | 19 |
-| `apps/switchboard` | 15 |
-| `packages/codegen` | 13 |
-| `packages/switchboard-gui` | 7 |
-| `packages/renown` | 7 |
-| `clis/ph-cli` | 5 |
-| `test/versioned-documents` | 4 |
-| `test/e2e-utils` | 3 |
-| `packages/common` | 3 |
-| `clis/ph-cmd` | 2 |
-| `packages/builder-tools` | 2 |
-| `packages/pglite-fs` | 1 |
+| Package                              | Warnings |
+| ------------------------------------ | -------: |
+| `packages/reactor-api`               |      132 |
+| `packages/vetra`                     |       96 |
+| `apps/connect`                       |       71 |
+| `packages/analytics-engine`          |       69 |
+| `packages/design-system`             |       63 |
+| `packages/reactor-browser`           |       43 |
+| `packages/powerhouse-vetra-packages` |       31 |
+| `packages/document-model`            |       23 |
+| `packages/reactor-mcp`               |       19 |
+| `apps/switchboard`                   |       15 |
+| `packages/codegen`                   |       13 |
+| `packages/switchboard-gui`           |        7 |
+| `packages/renown`                    |        7 |
+| `clis/ph-cli`                        |        5 |
+| `test/versioned-documents`           |        4 |
+| `test/e2e-utils`                     |        3 |
+| `packages/common`                    |        3 |
+| `clis/ph-cmd`                        |        2 |
+| `packages/builder-tools`             |        2 |
+| `packages/pglite-fs`                 |        1 |
 
 ## Cross-cutting notes (read before fixing)
 
-These cut across every rule and change *how* you should batch:
+These cut across every rule and change _how_ you should batch:
 
 - **163 / 609 warnings (27%) are in test files** (`*.test.*`, `*.spec.*`, `/test/`). Most of the `require-await` (async test arrows with no `await`) and many `no-unused-vars` live here. Test fixes are low-risk and can be done in one sweep per package, separately from production code — consider doing tests and `src` as distinct PRs.
 - **~19 warnings are in generated code** (`**/gen/**`, generated `graphql.ts`). Hand-editing these is pointless — they regenerate. Two real options: (a) fix the **codegen templates** so future output is clean, or (b) add the generated paths to the relevant package's ESLint `ignores`. Most of the stale `eslint-disable` directives in `vetra` are generated reducer files (`document-models/**/gen/reducer.ts`).
 - **No warning is `eslint --fix`-safe** except stale disable directives. Budget for manual review on everything else.
-- **Type-driven rules need type judgment.** `no-unnecessary-condition` and `no-empty-object-type` frequently signal that a *type is wrong* (too narrow / too wide), not that the code is wrong. Deleting the guard can hide a real bug. Triage each cluster.
+- **Type-driven rules need type judgment.** `no-unnecessary-condition` and `no-empty-object-type` frequently signal that a _type is wrong_ (too narrow / too wide), not that the code is wrong. Deleting the guard can hide a real bug. Triage each cluster.
 
 ## Suggested batches
 
@@ -127,9 +129,10 @@ Ordered by recommended execution sequence (safest / highest-confidence first).
 **What it means.** An `// eslint-disable[-next-line]` comment that no longer suppresses anything — the underlying problem is gone.
 
 **How it was fixed.**
+
 - **Non-generated files** (connect: `InspectorModal.tsx`, `useDbExplorer.ts`, `openpanel.test.tsx`; reactor-api: `adapter-http-express.ts`) — removed the stale directives via `eslint --fix`, then tidied the blank lines it left behind where standalone directive comments were deleted.
 - **Generated reducers** (`**/gen/reducer.ts` in vetra + versioned-documents) — these carried `no-unsafe-member-access` / `no-unsafe-argument` directives, but those rules are globally **off** for `**/gen/*.ts`, so the directives were dead everywhere. Removed them at the source: the codegen template `packages/codegen/src/templates/document-model/gen/reducer.ts`, plus the 7 already-checked-in generated files.
-- **Generated zod schemas** (`**/gen/schema/zod.ts`) — these carry `no-empty-object-type` / `no-unused-vars` directives emitted unconditionally by `packages/codegen/src/codegen/graphql.ts`. Those rules *are* active for gen files, so the directives are load-bearing for complex schemas and only coincidentally unused in simple ones. Rather than touch the template (which would surface warnings elsewhere), disabled `reportUnusedDisableDirectives` for `**/gen/**` files in both the root `eslint.config.js` and `test/versioned-documents/eslint.config.js`.
+- **Generated zod schemas** (`**/gen/schema/zod.ts`) — these carry `no-empty-object-type` / `no-unused-vars` directives emitted unconditionally by `packages/codegen/src/codegen/graphql.ts`. Those rules _are_ active for gen files, so the directives are load-bearing for complex schemas and only coincidentally unused in simple ones. Rather than touch the template (which would surface warnings elsewhere), disabled `reportUnusedDisableDirectives` for `**/gen/**` files in both the root `eslint.config.js` and `test/versioned-documents/eslint.config.js`.
 
 Packages: `apps/connect` (20), `packages/vetra` (11), `test/versioned-documents` (2), `packages/reactor-api` (1)
 
@@ -164,6 +167,7 @@ packages/vetra/document-models/document-editor/v1/gen/reducer.ts:1:1
 **What it means.** A value is assigned to a variable that is overwritten or never read before going out of scope.
 
 **How it was fixed.** Every case was a `let x = <init>` whose initializer is provably dead because all subsequent paths reassign before the first read:
+
 - 3× sort comparators in design-system (`processors-inspector`, `queue-inspector`, `mailbox-table`): `let comparison = 0;` → `let comparison: number;` (the `switch` has `default: return 0`, so every fall-through case assigns).
 - 2× CLI prompts (`ph-cli` `publish.ts`, `resolve-switchboard-port.ts`): `let confirmed = false;` → `let confirmed: boolean;` (try + catch both assign).
 - `analytics-engine` `processor.ts`: `let json = null;` → `let json;` (catch `continue`s).
@@ -195,6 +199,7 @@ packages/design-system/src/connect/components/queue-inspector/queue-inspector.ts
 ### Batch 3: `no-duplicate-type-constituents` + `preserve-caught-error` — 2 warning(s) — ✅ DONE
 
 **How it was fixed.**
+
 - `preserve-caught-error` (`reactor-api` `postgres-test-db.ts`): a re-thrown `new Error(...)` dropped the caught error → added `{ cause: err }` as the second arg.
 - `no-duplicate-type-constituents` (`analytics-engine/browser/backup/index.d.ts`): the duplicate (`(SQLiteCompatibleType | number[]) | null`) is in a **vendored scratch folder** (`backup/`, sitting next to multi-MB `.sql` dumps), not maintained source. Rather than edit vendored typings, added `packages/analytics-engine/browser/backup/` to the root ESLint ignore list.
 
@@ -241,6 +246,7 @@ packages/analytics-engine/compat/src/query-list.ts:71:36
 **What it means.** A value whose type has no meaningful `toString()` is being stringified, yielding `[object Object]`.
 
 **How it was fixed.**
+
 - `document-model/src/logger.ts` — the object fallback (after `JSON.stringify` throws on a circular ref) now uses `Object.prototype.toString.call(value)` (explicit base tag, no warning); the final primitive fallback is cast to `number | boolean | bigint | symbol` so the rule knows it's a primitive.
 - `renown/test/renown.test.ts` (3×) + `reactor-browser/test/renown/components.test.tsx` (1×) — all stringified a `fetch` input (`string | URL | Request`). Added a shared local `requestUrl()` helper that handles each case (`Request` → `.url`) instead of `String(input)`, which also fixes the latent `[object Request]` bug.
 - `connect/src/components/app.tsx` — preload-error handler only ever needs an `Error.message` or a string payload to regex for a URL, so it now returns `""` for non-string/non-Error payloads instead of `String(payload)`.
@@ -272,6 +278,7 @@ packages/renown/test/renown.test.ts:245:43
 **What it means.** Use of the `{}` type (or an empty interface), which accepts any non-nullish value — almost never intended.
 
 **How it was fixed.** Split three ways by intent:
+
 - **6 single-extends interfaces** (`IConnectCrypto`, `ConnectSidebarHeaderProps`, `WindowEventMap` augmentation, `InputProps`, `TextareaProps`, `VetraPackageGlobalState`) — `interface A extends B {}` is a legitimate pattern (named aliases, prop types, and **global declaration merging**, which has no type-alias equivalent). Enabled `allowInterfaces: "with-single-extends"` on the rule in `eslint.config.js` rather than rewriting them.
 - **2 in generated `gen/graphql.ts`** (`type definedNonNullAny = {}`, `Requester<C = {}>`) — graphql-codegen output; turned `no-empty-object-type` **off** for `**/gen/**` in `generatedFilesConfig`.
 - **7 literal `{}` in hand-written code** — fixed per intent: `document-model/test/helpers.ts` ×3 `input: {}` → `Record<string, never>`; `KnexAnalyticsStore` `T extends {}` → `T extends object`; `select.tsx` + `fixedForwardRef.ts` `P = {}` → `P = Record<string, never>`; `renown/types.ts` empty issuer param → `Record<string, never>`.
@@ -309,10 +316,11 @@ packages/analytics-engine/knex/src/KnexAnalyticsStore.ts:40:21
 **What it means.** A variable, import, parameter, or caught error is declared but never read.
 
 **How it was fixed.**
+
 - **Config gap fixed first.** The config comment said "we use `_` as a placeholder for unused variables," but the rule had no ignore pattern, so `_`-prefixed names were still flagged (17 of the 120). Added `argsIgnorePattern`/`varsIgnorePattern`/`caughtErrorsIgnorePattern`/`destructuredArrayIgnorePattern: "^_"` to honour the documented convention — this cleared those 17 and made `_`-prefixing a valid fix for the rest.
 - **Remaining 103 fixed across the codebase** (parallelized over 5 agents by package): unused imports removed; dead side-effect-free locals removed; unused params / caught errors / destructured bindings prefixed with `_`. No runtime behavior changed.
 - **Follow-on cleanup.** The `^_` ignore made a few existing `// eslint-disable …no-unused-vars` directives redundant (reactor `*-signature.unit.test.ts`, reactor-attachments transport, connect `openpanel-traits.ts`) — removed those too.
-- **Side effect caught & fixed:** removing the `no-unsafe-*` directives from versioned-documents' generated reducers in Batch 1 had surfaced 21 *errors* there (that package's standalone config keeps `no-unsafe-*` as errors with no gen-file exemption). Mirrored the root config by turning those rules off for `**/gen/**` in `test/versioned-documents/eslint.config.js`.
+- **Side effect caught & fixed:** removing the `no-unsafe-*` directives from versioned-documents' generated reducers in Batch 1 had surfaced 21 _errors_ there (that package's standalone config keeps `no-unsafe-*` as errors with no gen-file exemption). Mirrored the root config by turning those rules off for `**/gen/**` in `test/versioned-documents/eslint.config.js`.
 
 Packages: `packages/vetra` (29), `packages/analytics-engine` (23), `packages/design-system` (14), `packages/reactor-api` (13), `packages/reactor-browser` (12), `packages/document-model` (7), `apps/connect` (7), `packages/codegen` (3), `packages/reactor-mcp` (3), `packages/powerhouse-vetra-packages` (3), `apps/switchboard` (2), `clis/ph-cli` (2), `packages/builder-tools` (1), `test/versioned-documents` (1)
 
@@ -565,7 +573,7 @@ packages/analytics-engine/benchmarks/src/series.ts:68:1
 
 **What it means.** A condition (if / `?.` / `&&` / `||` / ternary) is always truthy or always nullish per the type system, so the check is redundant.
 
-**How to fix.** Manual. ESLint reports no safe autofix. Often the type is wider than reality (e.g. a value typed non-nullable that is actually optional at runtime), so the right fix is sometimes to correct the *type*, not delete the guard.
+**How to fix.** Manual. ESLint reports no safe autofix. Often the type is wider than reality (e.g. a value typed non-nullable that is actually optional at runtime), so the right fix is sometimes to correct the _type_, not delete the guard.
 
 **Batching.** Batch by file. Within a file the fixes are near-identical: drop the redundant `?.`/`!`/guard, OR widen/correct the upstream type. Triage into (a) genuinely-redundant guards -> delete, and (b) type-too-narrow -> fix the type. Do NOT blanket-delete guards on external/`unknown` data.
 

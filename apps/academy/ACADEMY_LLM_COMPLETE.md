@@ -4,9 +4,7 @@
 > Total Documents: 86
 > Source: https://powerhouse.academy/llms-full.txt
 
-
 # Get Started
-
 
 ## Explore the demo package
 
@@ -105,7 +103,6 @@ Click the returned localhost URL and you should see Connect appear in your brows
 **INFO:**
 **Connect** is the Powerhouse host application—a container that runs all your apps, editors, and drives. Think of it as the browser for your Powerhouse ecosystem. **Vetra Studio** (which you'll use for building) runs inside Connect, just like how a web app runs inside a browser.
 
-
 <figure className="image-container">
   <img src={require("./images/Connect.png").default} alt="Connect Home" />
   <figcaption>The Powerhouse Connect interface.</figcaption>
@@ -129,10 +126,8 @@ Here, you'll see that you've installed the `@powerhousedao/todo-demo`, which con
 **TIP:**
 A **drive** is a folder to store and organize your documents in. Powerhouse offers the ability to build customized Drive-apps for your documents. Think of a Drive-app as a specialized lens—it offers **different ways to visualize, organize, and interact with** the data stored within a drive, making it more intuitive and efficient for specific use cases. To learn more, visit [Building a Drive-app](/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer)
 
-
 **TIP:**
 An **editor** is a UI component for viewing and modifying a single document. A **Drive-app** is a custom interface for managing multiple documents within a drive—providing aggregated views, progress tracking, and specialized workflows across your document collection.
-
 
 ### 5.1 Create a local todo-list app drive
 
@@ -191,7 +186,6 @@ Renown is Powerhouse's **decentralized identity and reputation system** designed
 
 **TIP:**
 When signing in with Renown, use an Ethereum or blockchain address that can function as your 'identity', as this address will accrue more experience and history over time.
-
 
 ### 6.1 Click the renown icon and connect your Ethereum identity
 
@@ -252,7 +246,6 @@ Now that you have explored a Powerhouse package and discovered its basic functio
 Our next tutorial focuses on creating a simple to-do list document and will introduce you to the world of **Document Models**—the foundation of **Specification Driven Design & Development**, where structured specs become the shared language between you and AI agents.
 
 ---
-
 
 ## Create a new to-do list document
 
@@ -396,6 +389,7 @@ ph init
    ````
 
 Once the project is created, you will see output like:
+
 ```bash
 🚀 Initializing a new project...
 
@@ -435,7 +429,6 @@ Once in the project directory, run the `ph vetra --watch` command to start a Vet
 
 **INFO:**
 You'll notice "reactor-api" in the terminal output. A **Reactor** is the Powerhouse back-end service that hosts your drives, handles document synchronization, and provides the GraphQL API. When you run `ph vetra --watch`, a local Reactor starts automatically to power your development environment.
-
 
     ```bash
     ph vetra --watch
@@ -562,7 +555,6 @@ In the next tutorials, you will learn how to specify, add code and build an edit
 
 ---
 
-
 ## Write the document specification
 
 > Source: https://powerhouse.academy/academy/GetStarted/DefineToDoListDocumentModel
@@ -631,7 +623,6 @@ This schema defines the **data structure** of the document model and the types i
 Documents in Powerhouse leverage **event sourcing principles**, where every state transition is represented by an operation. GraphQL input types describe operations, ensuring that user intents are captured effectively. These operations detail the parameters needed for state transitions. The use of GraphQL aligns these transitions with explicit, validated, and reproducible commands.
 
 This is the essence of **Specification Driven Design & Development**: your schema serves as a machine-readable specification that both humans and AI agents can understand and execute—turning your intent into precise, maintainable functionality.
-
 
 <details>
 <summary>State schema of our simplified TodoList</summary>
@@ -782,13 +773,11 @@ pnpm lint
 git diff tutorial/step-2-generate-todo-list-document-model -- document-models/todo-list/
 ```
 
-
 ### Up next: reducers
 
 Up next, you'll learn how to implement the runtime logic and components that will use the `TodoList` document model specification you've just created and exported.
 
 ---
-
 
 ## Implement the document model reducers
 
@@ -798,7 +787,6 @@ Up next, you'll learn how to implement the runtime logic and components that wil
 📦 **Reference Code**: [step-3-implement-reducer-operation-handlers](https://github.com/powerhouse-inc/todo-tutorial/tree/step-3-implement-reducer-operation-handlers)
 
 This step focuses on implementing the reducer logic for add, update, and delete operations.
-
 
 <details>
 <summary>📖 How to use this tutorial</summary>
@@ -846,14 +834,11 @@ Reducers are a core concept in Powerhouse document models. They implement the st
 **Connection to schema definition language (SDL)**: The reducers directly implement the operations you defined in your SDL. Remember how we defined `AddTodoItemInput`, `UpdateTodoItemInput`, and `DeleteTodoItemInput` in our schema?  
 The reducers provide the actual implementation of what happens when those operations are performed.
 
-
 ## Explore the generated reducer file
 
 Navigate to `/document-models/todo-list/src/reducers/todos.ts` and open it. You should see scaffolding code that needs to be filled for the three operations you specified:
 
 ```typescript
-
-
 export const todoListTodosOperations: TodoListTodosOperations = {
   addTodoItemOperation(state, action) {
     // TODO: Implement "addTodoItemOperation" reducer
@@ -880,8 +865,6 @@ First, add the `generateId` import at the top of the file:
 
 ```typescript
 // added-line
-
-
 ```
 
 ### Step 2: Implement addTodoItemOperation
@@ -975,8 +958,6 @@ Here's the complete implementation:
 <summary>Complete todos.ts</summary>
 
 ```typescript
-
-
 export const todoListTodosOperations: TodoListTodosOperations = {
   addTodoItemOperation(state, action) {
     const id = generateId();
@@ -1013,13 +994,11 @@ pnpm lint
 git diff tutorial/step-3-implement-reducer-operation-handlers -- document-models/todo-list/src/reducers/
 ```
 
-
 ## Up next: Writing tests
 
 In the next chapter, you'll write comprehensive tests to verify your reducer implementations work correctly.
 
 ---
-
 
 ## Write document model tests
 
@@ -1029,7 +1008,6 @@ In the next chapter, you'll write comprehensive tests to verify your reducer imp
 📦 **Reference Code**: [step-4-implement-tests-for-todos-operations](https://github.com/powerhouse-inc/todo-tutorial/tree/step-4-implement-tests-for-todos-operations)
 
 This step focuses on writing comprehensive tests for the reducers you implemented in the previous step.
-
 
 <details>
 <summary>📖 How to use this tutorial</summary>
@@ -1467,13 +1445,11 @@ Expected test output:
       Tests  7 passed (7)
 ```
 
-
 ## Up next: Building the editor
 
 In the next chapter, you'll learn how to implement a user interface (editor) for your document model so you can interact with it visually.
 
 ---
-
 
 ## Build a to-do list editor
 
@@ -1491,7 +1467,6 @@ This tutorial covers two steps:
 2. **Step 6**: Building a complete, interactive UI with components for adding, editing, and deleting todos
 
 Compare implementations: `git diff step-5-generate-todo-list-document-editor step-6-add-basic-todo-editor-ui-components`
-
 
 <details>
 <summary>📖 How to use this tutorial</summary>
@@ -1582,7 +1557,6 @@ The editor structure we'll build includes:
 **TIP:**
 The tutorial repository (step-6) includes additional components like `TodoListName`, `CloseButton`, and `UndoRedoButtons`. We'll focus on the core components here, but you can explore the complete implementation using the git commands shown above.
 
-
 ## Adding the Document Toolbar
 
 The `DocumentToolbar` component provides essential document operations like saving, sharing, and navigation. To add it to your document editor, simply import it from the design system and place it at the top of your editor component. The toolbar automatically connects to the currently selected document and provides all standard document actions. For more details, see the [DocumentToolbar documentation](../docs/02-MasteryTrack/03-BuildingUserExperiences/06-DocumentTools/00-DocumentToolbar.mdx).
@@ -1595,7 +1569,6 @@ First, update `editors/todo-list-editor/editor.tsx` to import and render the mai
 // removed-line
 
 // added-line
-
 
 /** Editor component for the Todo List document type */
 export function Editor() {
@@ -1615,8 +1588,6 @@ export function Editor() {
 Create `editors/todo-list-editor/components/TodoList.tsx`. This is the main orchestrator that brings together all child components:
 
 ```tsx
-
-
 /** Displays the selected todo list */
 export function TodoList() {
   const [selectedTodoList] = useSelectedTodoListDocument();
@@ -1649,7 +1620,6 @@ The `useSelectedTodoListDocument` hook is generated by the Powerhouse CLI. It pr
 
 This hook connects your React components to the document model's state and operations.
 
-
 **TIP:**
 You'll notice we access `state.global.items`. Document state in Powerhouse is organized into scopes:
 
@@ -1658,14 +1628,11 @@ You'll notice we access `state.global.items`. Document state in Powerhouse is or
 
 In the future, an **authorization scope** will be added for permission-controlled data. For most use cases, you'll work exclusively with `state.global`.
 
-
 ### Step 3: Create the AddTodo form component
 
 Create `editors/todo-list-editor/components/AddTodo.tsx` to handle adding new todo items:
 
 ```tsx
-
-
 /** Component for adding a new todo item to the selected todo list */
 export function AddTodo() {
   // The hooks for getting documents also return a dispatch function
@@ -1724,8 +1691,6 @@ export function AddTodo() {
 Create `editors/todo-list-editor/components/Todos.tsx` to render the list of todos:
 
 ```tsx
-
-
 type Props = {
   todos: TodoItem[];
 };
@@ -1894,8 +1859,6 @@ export function Todo({ todo }: Props) {
 Finally, create `editors/todo-list-editor/components/TodoListName.tsx` for displaying and editing the document name:
 
 ```tsx
-
-
 /** Allows editing the name of the selected todo list */
 export function TodoListName() {
   const [isEditing, setIsEditing] = useState(false);
@@ -1962,7 +1925,6 @@ Click on it to create a new todo-list document.
 **INFO:**
 The editor will update dynamically as you make changes, so you can experiment with styling and functionality while seeing your results appear in Vetra Studio in real-time.
 
-
 **Try it out:**
 
 1. Add some todo items using the input form
@@ -2027,7 +1989,6 @@ In Connect, you should be able to:
 - Add, edit, and delete todo items
 - Check/uncheck items to mark them complete
 
-
 ## Key concepts learned
 
 In this tutorial you've learned:
@@ -2051,9 +2012,7 @@ You will learn:
 
 ---
 
-
 # Mastery Track
-
 
 ## Prerequisites
 
@@ -2063,7 +2022,6 @@ Let's set up your machine to start building your first Document Model. Don't wor
 
 **INFO:**
 If you've already set up **Git, Node.js 24, and a package manager (pnpm or npm)**, your most important step is to install the **Powerhouse CLI** with the command: `pnpm install -g ph-cmd` or `npm install -g ph-cmd`. A global install is recommended if you want to use the command from any directory as a power user. The Powerhouse CLI is used to create, build, and run your Document Models and gives you direct access to a series of Powerhouse Builder Tools. Move to the end of this page to [verify your installation.](#verify-installation)
-
 
 ---
 
@@ -2097,7 +2055,6 @@ Once WSL is set up, you can follow the **Linux (Ubuntu/Debian)** instructions be
 
 **TIP:**
 Using WSL provides a consistent development experience that matches most production environments and online tutorials. You can still use VS Code on Windows — it integrates seamlessly with WSL through the [Remote - WSL extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-wsl).
-
 
 For more details, see the official [WSL installation guide](https://learn.microsoft.com/en-us/windows/wsl/install).
 
@@ -2453,7 +2410,6 @@ PH CLI is not available, please run `ph setup-globals` to generate the default g
 
 ---
 
-
 ## Vetra Studio
 
 > Source: https://powerhouse.academy/academy/MasteryTrack/BuilderEnvironment/VetraStudio
@@ -2469,7 +2425,6 @@ Vetra Studio is the builder environment where you create, manage, and collaborat
 **INFO:**
 What is a Specification Document?
 A **specification document** is a configuration file that defines how a specific module in your package should behave. Think of it as a blueprint — it describes the structure, rules, and relationships that Powerhouse uses to generate the actual code for that module. These specification documents unlock **Specification Driven Design & Development**—enabling you to communicate your solution and intent through a structured framework designed for AI collaboration. Specs serve as a shared language that enables precise, iterative edits—turning messy intent into clean execution, and turning business needs into maintainable functionality.
-
 
 As Vetra Studio matures, each of these specification documents will offer an interface by which you as a builder get more control over the modules that make up your package.
 For now, the specification documents offer you a template for code generation.
@@ -2595,14 +2550,12 @@ The preview drive allows you to safely test changes before they affect the share
 
 ---
 
-
 ## Create a package with Vetra
 
 > Source: https://powerhouse.academy/academy/MasteryTrack/BuilderEnvironment/CreateAPackageWithVetra
 
 **INFO:**
 A **Powerhouse Package** is a distributable unit that bundles one or more document models, editors, and optional reactor modules into a single installable artifact. Once published to the Vetra registry, a package can be installed in any Vetra Cloud environment — extending Connect with new document types and editors, and extending Switchboard with the corresponding reactor logic.
-
 
 <figure className="image-container">
   <img
@@ -2619,7 +2572,6 @@ On Vetra Cloud you'll find these five steps as a quick reference for creating an
 It provides a summary from initial setup up to publishing a distributable package.
 
 Please start with the [**Get Started**](/) Chapter or [**Document Model Creation**](/academy/MasteryTrack/DocumentModelCreation/SpecifyTheStateSchema) section if you are unfamiliar with building a document model.
-
 
 <details>
 <summary>Key commands that you'll use in this flow</summary>
@@ -2653,7 +2605,6 @@ npm install -g ph-cmd
 
 **INFO:**
 See the [Prerequisites](/academy/MasteryTrack/BuilderEnvironment/Prerequisites) guide for detailed installation instructions for Node.js 24, package managers (pnpm or npm), and Git if you haven't set them up yet.
-
 
 ### 1.2. Initialize your project environment
 
@@ -2717,7 +2668,6 @@ In watch mode:
 When you are building your document model the code can break the Vetra Studio environment.
 A full overview of the Vetra Studio commands can be found in the [Powerhouse CLI](/academy/APIReferences/PowerhouseCLI#vetra)
 
-
 #### Standard Mode
 
 ```bash
@@ -2743,7 +2693,6 @@ This command typically opens Connect in your browser at `http://localhost:3000/`
 
 **INFO:**
 **Powerhouse Reactors** are essential nodes in the Powerhouse network. They store documents, manage versions, resolve conflicts, and verify document operation histories by rerunning them. Reactors can be configured for local storage (as in Studio Mode), centralized cloud storage, or decentralized storage networks.
-
 
 </details>
 
@@ -2792,7 +2741,6 @@ The **schema definition language** is not only a shared language that bridges th
 A specialized AI agent that guides users through document model creation with requirements gathering, design confirmation, and implementation including state schema definition, operation creation, and code generation.
 
 </details>
-
 
 #### 0. Configure the Reactor MCP
 
@@ -3159,7 +3107,6 @@ You'll see confirmation when everything compiles successfully.
 
 </details>
 
-
 ## Phase 4: Packaging and publishing
 
 Once your document model and editor are implemented and tested, you can package them for distribution. A Powerhouse Package is a modular unit that can group document models, editors, scripts, and processors.
@@ -3299,7 +3246,6 @@ Congratulations! You've successfully created, packaged, and published a Powerhou
 
 ---
 
-
 ## Vetra Cloud
 
 > Source: https://powerhouse.academy/academy/MasteryTrack/BuilderEnvironment/VetraCloud
@@ -3405,7 +3351,6 @@ To publish your own packages to the registry, see the [Publishing Packages](../d
 
 ---
 
-
 ## Vetra builder tooling
 
 > Source: https://powerhouse.academy/academy/MasteryTrack/BuilderEnvironment/BuilderTools
@@ -3422,7 +3367,6 @@ This list will be maintained and updated as our toolkit grows.
 **TIP:**
 The Powerhouse CLI tool is the only essential tool to install on this page.  
 Once you've installed it with the command below you can continue to the next steps.
-
 
 The Powerhouse CLI (`ph-cmd`) is a command-line interface tool that provides essential commands for managing Powerhouse projects. You can get access to the Powerhouse ecosystem tools by installing them globally using:
 
@@ -3698,7 +3642,6 @@ ph generate processor --type analytics
 
 ---
 
-
 ## What is a document model?
 
 > Source: https://powerhouse.academy/academy/MasteryTrack/DocumentModelCreation/WhatIsADocumentModel
@@ -3710,12 +3653,10 @@ If you have completed the [Get Started](/academy/GetStarted/CreateNewPowerhouseP
 
 Although not required, completing the Get Started tutorial first is highly recommended as it provides a hands-on foundation for the concepts explored in depth here.
 
-
 **INFO:**
 A Document Model is a programmable document structure that defines how data is stored, changed, and interpreted in a decentralized system. It acts like a living blueprint—capturing state, tracking changes, and enabling interaction through defined operations.
 
 For instance, an invoice document model might define fields like _issuer_, _lineItems_, and _status_, with operations such as _AddLineItem_ and _MarkAsPaid_.
-
 
 Document models are central to **Specification Driven Design & Development**—an approach where you communicate your solution and intent through structured specification documents. These specs are machine-readable and executable, serving as a shared language between developers, designers, and AI agents. This enables precise, iterative development and lays the groundwork for AI-assisted workflows.
 
@@ -3924,7 +3865,6 @@ In the next chapters, we'll teach you how to build a To-do List document model w
 
 ---
 
-
 ## Specify the state schema
 
 > Source: https://powerhouse.academy/academy/MasteryTrack/DocumentModelCreation/SpecifyTheStateSchema
@@ -3933,7 +3873,6 @@ The state schema is the backbone of your document model. It defines the structur
 
 **TIP:**
 Your state schema is more than just a data structure—it's a **specification** that enables **Specification Driven Design & Development**. This schema becomes a machine-readable blueprint that AI agents can interpret and execute, enabling precise collaboration between you and AI throughout the development process.
-
 
 ## Core concepts
 
@@ -3962,7 +3901,6 @@ In addition to these standard types, the Powerhouse Document-Engineering system 
 
 **TIP:**
 Powerhouse provides the `OID` (Object ID) scalar type, which is a custom scalar specifically designed for unique identifiers in document models. It provides automatic ID generation capabilities when used with the `generateId()` function from the document-model core library.
-
 
 ### Lists and non-null
 
@@ -3997,7 +3935,6 @@ type TodoItem {
 
 **INFO:**
 In this Mastery Track, we'll extend the basic schema with a `stats` field to demonstrate how you can add computed statistics to your document model. This is an **optional enhancement** that builds on the foundation from Get Started.
-
 
 ```graphql
 # The state of our TodoList (advanced version with stats)
@@ -4170,7 +4107,6 @@ For a complete, working example, you can always have a look at the [Example Todo
 
 ---
 
-
 ## Specify document operations
 
 > Source: https://powerhouse.academy/academy/MasteryTrack/DocumentModelCreation/SpecifyDocumentOperations
@@ -4220,7 +4156,6 @@ These `input` types are not just abstract definitions; they are the **specificat
 
 **TIP:**
 Notice that `AddTodoItemInput` only requires `text` — not an `id`. This is because the ID is generated automatically in the reducer using `generateId()` from `document-model/core`. This ensures unique, consistent IDs and follows the pattern used in the [todo-demo repository](https://github.com/powerhouse-inc/todo-demo).
-
 
 Vetra Studio uses these GraphQL input types when you define operations within a module (e.g., the `todos` module with operations `ADD_TODO_ITEM`, `UPDATE_TODO_ITEM`, `DELETE_TODO_ITEM`).
 
@@ -4277,8 +4212,6 @@ The generated code from `ph generate` (as seen in `03-ImplementOperationReducers
 For example, the `TodoListTodosOperations` type generated by Powerhouse will expect methods corresponding to `addTodoItemOperation`, `updateTodoItemOperation`, and `deleteTodoItemOperation`.
 
 ```typescript
-
-
 export const todoListTodosOperations: TodoListTodosOperations = {
   addTodoItemOperation(state, action) {
     // Implementation uses action.input which matches AddTodoItemInput
@@ -4415,7 +4348,6 @@ Specifying document operations is a foundational step in building robust and pre
 In the next section, we will dive deeper into the implementation of the reducer functions for these specified operations.
 
 ---
-
 
 ## Use the Document Model Generator
 
@@ -4611,7 +4543,6 @@ Subsequently, write unit tests for your reducers to ensure they behave correctly
 
 ---
 
-
 ## Implement document reducers
 
 > Source: https://powerhouse.academy/academy/MasteryTrack/DocumentModelCreation/ImplementDocumentReducers
@@ -4695,8 +4626,6 @@ Let's use our familiar `TodoList` example to illustrate common patterns.
 The basic implementation matches what you built in the Get Started tutorial:
 
 ```typescript
-
-
 export const todoListTodosOperations: TodoListTodosOperations = {
   addTodoItemOperation(state, action) {
     // Generate a unique ID for the new todo item
@@ -4728,18 +4657,14 @@ export const todoListTodosOperations: TodoListTodosOperations = {
 **INFO:**
 Notice that `addTodoItemOperation` uses `generateId()` from `document-model/core` to create a unique ID. This is the recommended pattern — the ID is generated in the reducer, not passed from the UI. This ensures consistent, unique IDs across all operations.
 
-
 ### Advanced implementation (with statistics tracking)
 
 **INFO:**
 This section extends the basic reducers with statistics tracking, matching the advanced schema from the previous section. This demonstrates how to update computed/derived state alongside your primary data.
 
-
 For the advanced version with `stats`, we need to update the statistics whenever items are added, updated, or deleted:
 
 ```typescript
-
-
 export const todoListTodosOperations: TodoListTodosOperations = {
   addTodoItemOperation(state, action) {
     // Generate a unique ID for the new todo item
@@ -4855,8 +4780,6 @@ As highlighted in [Using the Document Model Generator](04-UseTheDocumentModelGen
 **Always use these generated types in your reducer implementations!**
 
 ```typescript
-
-
 export const todoListTodosOperations: TodoListTodosOperations = {
   addTodoItemOperation(state, action) {
     // TypeScript knows action.input has { text: string }
@@ -4889,8 +4812,6 @@ Navigate to `document-models/todo-list/src/reducers/todos.ts`. The generator wil
 **Basic version (without stats):**
 
 ```typescript
-
-
 export const todoListTodosOperations: TodoListTodosOperations = {
   addTodoItemOperation(state, action) {
     const id = generateId();
@@ -4914,8 +4835,6 @@ export const todoListTodosOperations: TodoListTodosOperations = {
 **Advanced version (with stats):**
 
 ```typescript
-
-
 export const todoListTodosOperations: TodoListTodosOperations = {
   addTodoItemOperation(state, action) {
     const id = generateId();
@@ -4990,7 +4909,6 @@ Implementing document reducers is where you breathe life into your document mode
 With your reducers implemented, your document model is now functionally complete from a data manipulation perspective. The next chapter covers how to write tests for this logic to ensure its correctness and reliability.
 
 ---
-
 
 ## Implement document model tests
 
@@ -5151,7 +5069,6 @@ describe("Todos Operations", () => {
 **INFO:**
 If you implemented the advanced version with statistics tracking, add these additional tests to verify the stats are updated correctly.
 
-
 ```typescript
 describe("Todos Operations with Stats", () => {
   it("should update stats when adding a todo item", () => {
@@ -5278,7 +5195,6 @@ For a complete, working example, you can always have a look at the [Example Todo
 
 ---
 
-
 ## Example: Todo-demo-package
 
 > Source: https://powerhouse.academy/academy/MasteryTrack/DocumentModelCreation/ExampleToDoListRepository
@@ -5288,7 +5204,6 @@ For a complete, working example, you can always have a look at the [Example Todo
 The Todo-demo is maintained by the Powerhouse Team and serves as a reference for testing and introducing new features. It will be continuously updated alongside the accompanying documentation.
 
 https://github.com/powerhouse-inc/todo-demo
-
 
 There are several ways to explore this package:
 
@@ -5357,14 +5272,12 @@ Both approaches use the same naming conventions and patterns — the Mastery Tra
 
 ---
 
-
 ## Document Model Versioning
 
 > Source: https://powerhouse.academy/academy/MasteryTrack/DocumentModelCreation/DocumentModelVersioning
 
 **TIP:**
 This chapter covers **advanced document model versioning**—a system for evolving document schemas and operations while maintaining backward compatibility with existing documents. This is essential when your document models need to change over time in production environments.
-
 
 ## Why Versioning?
 
@@ -5377,7 +5290,6 @@ Document models in Powerhouse are **event-sourced**. Once a document is created 
 
 **INFO:**
 Document Model Versioning is a system that allows multiple versions of the same document model to coexist. Each version has its own schema, operations, and reducers. Documents created with older versions continue to work with their original reducers, while new documents use the latest version. Upgrade manifests define how to migrate documents between versions.
-
 
 ---
 
@@ -5523,7 +5435,6 @@ Each version exports a `DocumentModelModule` with an explicit version number:
 ```typescript
 // v1/module.ts
 
-
 export const Todo: DocumentModelModule<TodoPHState> = {
   version: 1, // Explicit version number
   reducer,
@@ -5550,7 +5461,6 @@ The upgrade reducer transforms a document from one version to the next:
 
 ```typescript
 // upgrades/v2.ts
-
 
 function upgradeReducer(
   document: PHDocument<StateV1>,
@@ -5589,7 +5499,6 @@ Tie everything together in the manifest:
 ```typescript
 // upgrades/upgrade-manifest.ts
 
-
 export const upgradeManifest: UpgradeManifest<typeof supportedVersions> = {
   documentType: "my-org/todo",
   latestVersion,
@@ -5602,7 +5511,6 @@ export const upgradeManifest: UpgradeManifest<typeof supportedVersions> = {
 
 ```typescript
 // document-models.ts
-
 
 export const documentModels: DocumentModelModule<any>[] = [TodoV1, TodoV2];
 export const upgradeManifests: UpgradeManifest<readonly number[]>[] = [
@@ -5783,7 +5691,6 @@ Document model versioning enables your applications to evolve safely while prese
 
 ---
 
-
 ## Build document editors
 
 > Source: https://powerhouse.academy/academy/MasteryTrack/BuildingUserExperiences/BuildingDocumentEditors
@@ -5896,7 +5803,6 @@ Choose the method or combination of methods that best suits your project needs a
 **TIP:**
 When your editor runs inside Connect, it's wrapped in container elements that you can target for advanced styling. See [CSS Customization for Connect Integration](/academy/MasteryTrack/BuildingUserExperiences/CSSCustomization) to learn how to customize `#document-editor-container` and `#document-editor-context`.
 
-
 **WARNING:**
 
 In any package the styles are being generated through the styles.css file with the help of the tailwindcss/cli package.
@@ -5948,7 +5854,6 @@ The **hook-based approach** uses `useSelectedTodoListDocument` — a React hook 
 
 **TIP:**
 Powerhouse provides many more hooks beyond the document-specific ones. See the complete [React Hooks API Reference](/academy/APIReferences/ReactHooks) for all available hooks.
-
 
 ```typescript
 
@@ -6374,7 +6279,6 @@ export function Todo({ todo }: Props) {
 **INFO:**
 If you implemented the advanced version with statistics tracking, you can add a stats component to display the todo counts.
 
-
 ```typescript
 // Add to TodoList.tsx
 export function TodoList() {
@@ -6434,7 +6338,6 @@ In Vetra Studio, you'll be able to create and test your **TodoList** documents. 
 **TIP:**
 The editor will update dynamically, so you can play around with your editor styling while seeing your results appear in Vetra Studio.
 
-
 <details>
 <summary>Alternatively: Test with Connect</summary>
 
@@ -6467,7 +6370,6 @@ Imagine you have many TodoLists sitting in a drive. A custom Drive-app will allo
 
 ---
 
-
 ## Build a Drive-app
 
 > Source: https://powerhouse.academy/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer
@@ -6477,7 +6379,6 @@ They create an 'app-like' experience by providing a **custom interface** for exp
 **TIP:**
 A Drive-app offers a tailored application designed around its document models.
 Think of a Drive-app as a specialized lens—it offers **different ways to visualize, organize, and interact with** the data stored within a drive, making it more intuitive and efficient for specific use cases.
-
 
 ### Drive-apps are purpose-built
 
@@ -6597,7 +6498,6 @@ You can also start by running Connect locally with `ph connect` instead of Vetra
 </details>
 
 </details>
-
 
 ## Generate the Drive-app
 
@@ -7072,7 +6972,6 @@ The Powerhouse platform provides the tools. It's time to start building!
 
 ---
 
-
 ## CSS Customization for Connect Integration
 
 > Source: https://powerhouse.academy/academy/MasteryTrack/BuildingUserExperiences/CSSCustomization
@@ -7126,14 +7025,12 @@ export function Editor() {
 **TIP:**
 Using `height: "100%"` ensures your editor fills the available vertical space within Connect's container hierarchy.
 
-
 ### Method 2: CSS File with Container Selectors
 
 For more complex customizations or when you need to override Connect's default container styles, you can target the container IDs directly in a CSS file:
 
 **DANGER:**
 Targeting container IDs directly will apply styles to **ALL** editors in your Connect application. For editor-specific styling, use [Method 3: Scoped Styling with Data Attributes](#method-3-scoped-styling-with-data-attributes) instead.
-
 
 ```css
 /* editors/my-editor/editor.css */
@@ -7161,7 +7058,6 @@ Remember to import styles in your `styles.css` file rather than directly in `.ts
 /* styles.css */
 @import "./editors/my-editor/editor.css";
 ```
-
 
 ### Method 3: Scoped Styling with Data Attributes
 
@@ -7192,7 +7088,6 @@ The `data-editor` value comes from the `id` property in your editor module confi
 ```typescript
 // editors/my-editor/module.ts
 
-
 export const MyEditor: EditorModule = {
   config: {
     id: "my-custom-editor", // <-- This becomes the data-editor value
@@ -7212,7 +7107,6 @@ export const MyEditor: EditorModule = {
 
 **TIP:**
 You can inspect the `data-editor` and `data-document-type` attributes in your browser's developer tools when editing a document to find the exact values for your target editor.
-
 
 ## Reference Implementation: Vetra Drive App
 
@@ -7354,7 +7248,6 @@ export function Editor() {
 
 ---
 
-
 ## Document Toolbar
 
 > Source: https://powerhouse.academy/academy/MasteryTrack/BuildingUserExperiences/DocumentTools/DocumentToolbar
@@ -7376,8 +7269,6 @@ The toolbar can be customized by enabling or disabling built-in controls, replac
 ## Basic usage
 
 ```tsx
-
-
 export function MyDocumentPage({ document }) {
   return <DocumentToolbar document={document} />;
 }
@@ -7394,7 +7285,7 @@ When no `document` prop is provided, the toolbar falls back to the currently sel
 The default toolbar includes these controls:
 
 ```ts
-["undo", "redo", "download", "name", "history", "switchboard", "close"]
+["undo", "redo", "download", "name", "history", "switchboard", "close"];
 ```
 
 The controls are arranged into three slots:
@@ -7537,9 +7428,7 @@ Use `toolbarContainer` to replace the outer toolbar container. The custom toolba
 <DocumentToolbar
   document={document}
   toolbarContainer={({ children, className }) => (
-    <div className={className}>
-      {children}
-    </div>
+    <div className={className}>{children}</div>
   )}
 />
 ```
@@ -7562,8 +7451,6 @@ Use `controlsContainer` to replace the container used for each toolbar slot. The
 Use `componentOverrides` to replace individual built-in controls while keeping the default toolbar structure. This is useful when you want to reuse the built-in control behavior or styling but change part of the rendering or click behavior.
 
 ```tsx
-
-
 <DocumentToolbar
   document={document}
   componentOverrides={{
@@ -7621,8 +7508,6 @@ Use `toolbarClassName` to add classes to the outer toolbar container. Use `contr
 Custom controls should match `ToolbarControlComponent`.
 
 ```tsx
-
-
 const MyControl: ToolbarControlComponent = ({ document }) => {
   return <button>{document?.header.name}</button>;
 };
@@ -7661,18 +7546,18 @@ Providing `children` replaces the default button contents. Providing `onClick` r
 ## Exported components
 
 ```ts
-DocumentToolbar
-ToolbarButton
-ToolbarUndoButton
-ToolbarRedoButton
-ToolbarDownloadButton
-ToolbarSwitchboardButton
-ToolbarHistoryButton
-ToolbarCloseButton
-ToolbarName
-ToolbarInput
-ToolbarContainer
-ToolbarControlsContainer
+DocumentToolbar;
+ToolbarButton;
+ToolbarUndoButton;
+ToolbarRedoButton;
+ToolbarDownloadButton;
+ToolbarSwitchboardButton;
+ToolbarHistoryButton;
+ToolbarCloseButton;
+ToolbarName;
+ToolbarInput;
+ToolbarContainer;
+ToolbarControlsContainer;
 ```
 
 The individual toolbar controls are exported so they can be reused when building custom toolbar layouts or custom control components.
@@ -7680,20 +7565,20 @@ The individual toolbar controls are exported so they can be reused when building
 ## Exported types
 
 ```ts
-DocumentToolbarProps
-DocumentToolbarWithChildrenProps
-DocumentToolbarWithCustomControlsProps
-DocumentToolbarControlName
-ToolbarButtonProps
-ToolbarButtonClickHandler
-ToolbarControlComponent
-ToolbarControlComponents
-ContainerComponent
-ControlSlot
-ControlPosition
-CustomToolbarControl
-CustomToolbarControlList
-CustomToolbarControls
+DocumentToolbarProps;
+DocumentToolbarWithChildrenProps;
+DocumentToolbarWithCustomControlsProps;
+DocumentToolbarControlName;
+ToolbarButtonProps;
+ToolbarButtonClickHandler;
+ToolbarControlComponent;
+ToolbarControlComponents;
+ContainerComponent;
+ControlSlot;
+ControlPosition;
+CustomToolbarControl;
+CustomToolbarControlList;
+CustomToolbarControls;
 ```
 
 ## Notes
@@ -7705,7 +7590,6 @@ CustomToolbarControls
 - `disabledControls` takes precedence over `enabledControls`.
 
 ---
-
 
 ## Operations history
 
@@ -7777,7 +7661,6 @@ You can also view the committer's address for each revision, supporting full tra
 **WARNING:**
 This remainder of this documentation is still being written and may be incomplete.
 
-
 ## Replay, branch, and merge (under development)
 
 - **Replay:** When you load a document, the system replays all operations to build its state.
@@ -7785,7 +7668,6 @@ This remainder of this documentation is still being written and may be incomplet
 - **Merge:** Combine branches intelligently based on operations, not just raw field values.
 
 ---
-
 
 ## Revision history timeline
 
@@ -7814,7 +7696,6 @@ The revision history timeline will only become visible once your document model 
 Add a few to-do's or some data in the model you are working on and the revision history timeline button in the Document Toolbar will be activated.
 Click the button to see the timeline expand and see the first history 'candle' appear.
 
-
 <figure className="image-container">
   <img src={require("./images/revision-history-timeline.png").default} alt="revision history timeline" />
   <figcaption>Once your document has a few operations added to it's history the revision history timeline gets activated.</figcaption>
@@ -7837,7 +7718,6 @@ For custom Drive-apps, you need to handle timeline items fetching and user inter
 1. First, import the necessary utilities from the Powerhouse common package:
 
 ```typescript
-
 
 ```
 
@@ -7939,7 +7819,6 @@ This implementation allows users to navigate through document history while prev
 
 ---
 
-
 ## Inspector Modal
 
 > Source: https://powerhouse.academy/academy/MasteryTrack/BuildingUserExperiences/DocumentTools/InspectorModal
@@ -8022,7 +7901,6 @@ This export contains the full database schema and all data, which can be useful 
 **WARNING:**
 Importing a database will **replace ALL existing data** in your local Connect instance. This action cannot be undone.
 
-
 To import a database:
 
 1. Click the **Import DB** button in the sidebar
@@ -8103,7 +7981,6 @@ The Inspector Modal is helpful for:
 - **Troubleshooting**: Inspect table schemas and data when debugging application issues
 
 ---
-
 
 ## Renown authentication flow
 
@@ -8187,7 +8064,6 @@ This flow ensures that all actions within the Powerhouse ecosystem are secure, t
 
 ---
 
-
 ## Document Permission System
 
 > Source: https://powerhouse.academy/academy/MasteryTrack/BuildingUserExperiences/Authorization/DocumentPermissions
@@ -8195,7 +8071,6 @@ This flow ensures that all actions within the Powerhouse ecosystem are secure, t
 **WARNING:**
 This documentation is still being written and may be incomplete.
 The feature is not yet available on production.
-
 
 ## Introduction
 
@@ -8211,16 +8086,15 @@ Within a Reactor, data is organized hierarchically:
 
 The Reactor API implements a two-layer authorization system:
 
-| Component               | System                                                     | Purpose                                              | Scope        |
-| ----------------------- | ---------------------------------------------------------- | ---------------------------------------------------- | ------------ |
+| Component               | System                                                                | Purpose                                              | Scope        |
+| ----------------------- | --------------------------------------------------------------------- | ---------------------------------------------------- | ------------ |
 | **Auth & Admin**        | [**Authentication & Admin Access**](../docs/docs/04-Authorization.md) | Controls authentication and supreme admin access     | Reactor-wide |
-| **Protection & Grants** | **Document Permission System** (this guide)                | Controls access to specific documents/folders/drives | Per-document |
+| **Protection & Grants** | **Document Permission System** (this guide)                           | Controls access to specific documents/folders/drives | Per-document |
 
 This document permission system allows you to implement fine-grained access control—for example, you might want certain team members to have write access to a "Marketing" drive while only having read access to a "Finance" drive, even though they're both authenticated users of your Reactor.
 
 **INFO:**
 Before using document permissions, you must configure [authentication](../docs/docs/04-Authorization.md) with `AUTH_ENABLED=true`. Users need a valid authentication token to access the Reactor API. Supreme admins (listed in `ADMINS`) bypass all permission checks.
-
 
 ## Overview
 
@@ -8347,7 +8221,6 @@ The system defines three permission levels for documents:
 - **WRITE**: A contributor can edit a specification document and push updates
 - **ADMIN**: A project lead can modify who has access to the entire project drive
 
-
 ## How It Works
 
 ### Permission Resolution
@@ -8391,7 +8264,6 @@ The Reactor API stores permission data in a relational database using six tables
 
 **INFO:**
 These tables are automatically created by database migrations when you enable `DOCUMENT_PERMISSIONS_ENABLED=true`. You don't need to create them manually.
-
 
 <details>
 <summary><strong>Useful Queries</strong></summary>
@@ -8528,7 +8400,6 @@ For document drives specifically, the following operation permissions are availa
 
 **INFO:**
 These operation permissions provide fine-grained control over specific actions within a document drive, separate from the general document permission levels (READ, WRITE, ADMIN). Note that renaming a document is not part of the WRITE permission on the document itself—it's an `UPDATE_NODE` operation on the drive document. If you need to set operation permissions for documents with different document models, familiarize yourself with the available operations of the installed document model package.
-
 
 </details>
 
@@ -8895,7 +8766,6 @@ All GraphQL operations below require:
 2. The token included in the `Authorization` header followed by 'Bearer `<token>`'
 3. The Reactor API running with both `AUTH_ENABLED=true` and `DOCUMENT_PERMISSIONS_ENABLED=true` as variables
 
-
 ## Configuration
 
 You can configure the Reactor API using either environment variables or a `powerhouse.config.json` file. Environment variables take precedence over the config file.
@@ -8937,7 +8807,6 @@ Alternatively, configure authorization in your `powerhouse.config.json` file:
 - **Document permissions** (this guide): Manages fine-grained READ/WRITE/ADMIN grants on specific documents
 
 Users must be authenticated before document permissions are evaluated. Supreme admins (`ADMINS`) bypass all permission checks.
-
 
 ## Usage Examples: Company Document Access & Permissions
 
@@ -9795,7 +9664,6 @@ curl -X POST http://localhost:4001/graphql \
 **TIP:**
 Permissions are tied to **Ethereum addresses** (e.g., `0x123...`), not usernames. When granting permissions, use the user's Ethereum address as shown in their Renown profile or obtained from `ph login --status`.
 
-
 ## Best Practices
 
 1. **Use groups for team access**: Instead of granting individual permissions, create groups and assign permissions to groups
@@ -9832,7 +9700,6 @@ Ensure database migrations have run:
 ```
 
 ---
-
 
 ## Signing
 
@@ -9873,8 +9740,6 @@ The header stores everything needed for self-contained verification:
 Anyone can verify a document's authenticity using only its header. The `validateHeader()` function reconstructs a verification-only signer from the embedded public key, regenerates the payload from `documentType + createdAtUtcIso + nonce`, and verifies the signature matches the document ID.
 
 ```typescript
-
-
 // Throws if the header signature is invalid
 await validateHeader(document.header);
 ```
@@ -9993,8 +9858,6 @@ const signAction = async (action, signer, signal?) => {
 Use `ReactorClientBuilder.withSigner()` to configure signing. It accepts either a bare `ISigner` or a `SignerConfig` that includes an optional verifier:
 
 ```typescript
-
-
 // Option 1: Signing only (no server-side verification)
 const client = await new ReactorClientBuilder()
   .withReactorBuilder(reactorBuilder)
@@ -10042,8 +9905,6 @@ This applies to both action jobs (new mutations) and load jobs (operations arriv
 Verification is enabled by passing a `verifier` in the `SignerConfig`:
 
 ```typescript
-
-
 const client = await new ReactorClientBuilder()
   .withReactorBuilder(reactorBuilder)
   .withSigner({
@@ -10090,14 +9951,12 @@ Pre-signed actions are detected by checking for existing signatures in `action.c
 
 ---
 
-
 ## Reactor API Authorization
 
 > Source: https://powerhouse.academy/academy/MasteryTrack/BuildingUserExperiences/Authorization/Authorization
 
 **WARNING:**
 This documentation is still being written and may be incomplete.
-
 
 This guide explains how to configure **authorization** for the Powerhouse Reactor API. Authorization controls who can access your Reactor and what they can do.
 
@@ -10109,10 +9968,10 @@ The **Reactor API** is the API interface to a Powerhouse **Reactor**—a storage
 
 The Reactor API uses a layered authorization model:
 
-| Component                                               | Purpose                                                    | Scope        |
-| ------------------------------------------------------- | ---------------------------------------------------------- | ------------ |
-| **Supreme Admin** (`ADMINS` env var)                    | Full bypass of all permission checks                       | Reactor-wide |
-| **Document Protection**                                 | Determines whether a document requires explicit grants     | Per-document |
+| Component                                                          | Purpose                                                    | Scope        |
+| ------------------------------------------------------------------ | ---------------------------------------------------------- | ------------ |
+| **Supreme Admin** (`ADMINS` env var)                               | Full bypass of all permission checks                       | Reactor-wide |
+| **Document Protection**                                            | Determines whether a document requires explicit grants     | Per-document |
 | **[Document Permissions](../docs/docs/02-DocumentPermissions.md)** | Fine-grained READ/WRITE/ADMIN grants on specific documents | Per-document |
 
 **TIP:**
@@ -10367,7 +10226,6 @@ The address is shown in the authentication status output.
 
 ---
 
-
 ## Configure a drive
 
 > Source: https://powerhouse.academy/academy/MasteryTrack/WorkWithData/ConfiguringDrives
@@ -10402,7 +10260,6 @@ Remote drives in Powerhouse allow you to connect to and work with data stored in
 Reactors can be configured for local storage, centralized cloud storage, or a decentralized storage network.
 
 A reactor allows you to store multiple documents and host **drives** and Drive-apps with different organizational purposes, users, access rights, and more.
-
 
 A drive uses a reactor and its underlying storage layer. A reactor is the low-level component that enables the synchronization of documents and drives.
 
@@ -10545,7 +10402,6 @@ Enjoy!
 
 ---
 
-
 ## Using the API
 
 > Source: https://powerhouse.academy/academy/MasteryTrack/WorkWithData/UsingTheAPI
@@ -10558,7 +10414,6 @@ Once you've structured and captured data from your business processes, Switchboa
 
 **TIP:**
 Since your document models are defined with a GraphQL schema, you can use the same objects and fields in your queries and mutations to retrieve or write data from and to your documents.
-
 
 <details>
 <summary>**New to GraphQL?** Click here for a primer on GraphQL concepts at Powerhouse</summary>
@@ -10754,7 +10609,6 @@ To make our document model available in the Apollo Studio Sandbox, we'll need to
 **INFO:**
 **Powerhouse Reactors** are the nodes in the network that store documents, resolve conflicts, and rerun operations to verify document event histories.
 Reactors can be configured for local storage, centralized cloud storage, or a decentralized storage network.
-
 
 Just as you can run Connect locally in studio mode, you can also run a Reactor locally. Use the following command in the terminal from within your Powerhouse project directory:
 
@@ -11044,7 +10898,6 @@ This ability to programmatically read from and write to documents via the GraphQ
 
 ---
 
-
 ## Using subgraphs
 
 > Source: https://powerhouse.academy/academy/MasteryTrack/WorkWithData/UsingSubgraphs
@@ -11139,8 +10992,6 @@ Now that we've generated our subgraph its time to define the GraphQL schema and 
 **Step 1: Define the schema in `subgraphs/search-todos/schema.ts` by creating the file:**
 
 ```typescript
-
-
 export const schema: DocumentNode = gql`
   """
   Subgraph definition
@@ -11155,7 +11006,6 @@ export const schema: DocumentNode = gql`
 
 ```typescript
 // subgraphs/search-todos/resolvers.ts
-
 
 export const getResolvers = (subgraph: BaseSubgraph) => {
   const reactorClient = subgraph.reactorClient;
@@ -11280,7 +11130,6 @@ This demonstrates the real-time synchronization between the document model and t
 
 **TIP:**
 Since you've gotten this far we'll explain a bit more in depth how the GraphQL API or Gateway works!
-
 
 ## 4. Working with the GraphQL Gateway
 
@@ -11459,7 +11308,6 @@ Bridge Processors and Subgraphs — Currently, there's a gap in how processors a
 
 ---
 
-
 ## Building a processor
 
 > Source: https://powerhouse.academy/academy/MasteryTrack/WorkWithData/BuildingAProcessor
@@ -11492,7 +11340,6 @@ The reactor calls your processor's `onOperations` method with a list of `Operati
 
 **INFO:**
 `@powerhousedao/reactor-browser` re-exports these types for convenience in browser environments. If you are working outside the browser (Node.js scripts, CLI tools, server-side code), import directly from `@powerhousedao/reactor`.
-
 
 ### `OperationWithContext`
 
@@ -11536,8 +11383,6 @@ type ProcessorFilter = {
 Create `processors/operation-logger/index.ts`:
 
 ```typescript
-
-
 export class OperationLoggerProcessor implements IProcessor {
   private driveId: string;
 
@@ -11670,7 +11515,6 @@ For processors that need a relational database, see the [Relational Database Pro
 
 ---
 
-
 ## Processor best practices
 
 > Source: https://powerhouse.academy/academy/MasteryTrack/WorkWithData/ProcessorBestPractices
@@ -11681,7 +11525,6 @@ This guide covers advanced patterns for processors that need to mutate documents
 Before reading this guide, make sure you're familiar with the basics:
 
 - [Building a Processor](/academy/MasteryTrack/WorkWithData/BuildingAProcessor) — processor interface, factories, and filters
-
 
 ## One-way data flow
 
@@ -11698,8 +11541,6 @@ This design keeps processors predictable, avoids circular dependencies, and prev
 The `dispatch` API lets a processor mutate documents by executing actions. It is available on the `IProcessorHostModule` object passed to your factory.
 
 ```typescript
-
-
 interface IProcessorDispatch {
   execute(
     docId: string,
@@ -11828,7 +11669,6 @@ const doc = await reactorClient.execute(docId, "main", actions);
 await this.dispatch.execute(docId, "main", actions);
 ```
 
-
 ## Querying data with `getReadModel`
 
 The `getReadModel` API lets a processor look up a registered read model by name. Read models are materialized views maintained by the reactor — they are updated as operations are written and provide efficient query access to indexed data.
@@ -11853,8 +11693,6 @@ The reactor registers several built-in read models that processors can access:
 For example, to look up a document snapshot from inside a processor:
 
 ```typescript
-
-
 const documentView = module.getReadModel<IDocumentView>("document-view");
 ```
 
@@ -11931,7 +11769,6 @@ export const budgetCheckProcessorFactory =
 **INFO:**
 `getReadModel` throws if the read model is not registered. Ensure the read model is registered with the reactor before your processor factory runs. If the read model is optional, wrap the call in a try/catch in your factory and handle the missing case gracefully.
 
-
 ## `IProcessorHostModule` reference
 
 The `IProcessorHostModule` is passed to your factory's outer function and provides access to all processor APIs:
@@ -11959,7 +11796,6 @@ interface IProcessorHostModule {
 **INFO:**
 `@powerhousedao/reactor-browser` re-exports these types for convenience in browser environments. If you are working outside the browser (Node.js, CLI tools, server-side code), import directly from `@powerhousedao/reactor` or `@powerhousedao/shared`.
 
-
 ## Summary
 
 - **Use `dispatch.execute()`** to mutate documents from processors — never `reactorClient` directly
@@ -11977,7 +11813,6 @@ interface IProcessorHostModule {
 
 ---
 
-
 ## Relational database processor
 
 > Source: https://powerhouse.academy/academy/MasteryTrack/WorkWithData/RelationalDbProcessor
@@ -11994,10 +11829,8 @@ A relational database processor is a specialized component that listens to docum
 **TIP:**
 This tutorial builds on the plain processor concepts covered in [Building a Processor](/academy/MasteryTrack/WorkWithData/BuildingAProcessor). If you are new to processors, start there first.
 
-
 **INFO:**
 The code examples below import from `@powerhousedao/reactor-browser`, which re-exports all reactor types for convenience in browser environments (editors, drive-apps, subgraphs). If you are working outside the browser — for example in a standalone Node.js script, CLI tool, or server-side processor — import directly from `@powerhousedao/reactor`.
-
 
 ## Generate the Processor
 
@@ -12040,8 +11873,6 @@ The migration file contains `up` and `down` functions that are called when the p
 In the migration.ts file you'll find an example of the todo table default schema:
 
 ```ts
-
-
 export async function up(db: IRelationalDb<any>): Promise<void> {
   // Create table - this runs when the processor starts
   await db.schema
@@ -12181,8 +12012,6 @@ Processors receive a flat list of `OperationWithContext[]` items. Each item carr
 - **`operation`**: `action` (with `type` and `input`), `index`, `timestampUtcMs`, `hash`
 
 ```ts
-
-
 export class TodoIndexerProcessor extends RelationalDbProcessor<DB> {
   // Generate a unique namespace for this processor based on the drive ID
   // This prevents data conflicts between different drives
@@ -12257,8 +12086,6 @@ A subgraph is a GraphQL schema that exposes your processed data to clients. It:
 Open `./subgraphs/todo/schema.ts` and configure the schema:
 
 ```ts
-
-
 export const schema: DocumentNode = gql`
   # Define the structure of a todo item as returned by GraphQL
   type TodoListEntry {
@@ -12277,7 +12104,6 @@ Open `./subgraphs/todo/resolvers.ts` and configure the resolvers:
 
 ```ts
 // subgraphs/search-todos/resolvers.ts
-
 
 export const getResolvers = (subgraph: BaseSubgraph) => {
   const reactorClient = subgraph.reactorClient;
@@ -12597,7 +12423,6 @@ Next.js API routes are useful when you need to:
 ```ts
 // pages/api/todos.ts
 
-
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse,
@@ -12670,7 +12495,6 @@ This pattern is commonly used for:
 
 ---
 
-
 ## Publish your package
 
 > Source: https://powerhouse.academy/academy/MasteryTrack/Launch/PublishYourProject
@@ -12678,7 +12502,6 @@ This pattern is commonly used for:
 **WARNING:**
 **This guide assumes familiarity with building document models in Vetra Studio.**  
 Please start with the [**Get Started**](/) chapter or [**Document Model Creation**](/academy/MasteryTrack/DocumentModelCreation/SpecifyTheStateSchema) section if you are new to building document models.
-
 
 This guide covers the process of **building** and **publishing** a Powerhouse package to NPM.
 
@@ -12690,7 +12513,6 @@ This guide covers the process of **building** and **publishing** a Powerhouse pa
 - **Powerhouse Drive-apps**: Customized drive interfaces that enhance document functionality and workflows within a drive.
 
 ![Key Concepts](images/keyconcepts.png)
-
 
 ## 1. Building your project
 
@@ -12933,7 +12755,6 @@ Starting with `ph-cmd` version **6.0.0-dev.153**, packages can be published to t
 
 This flow applies to **newly created projects** initialized with v6.0.0-dev.153 or later. Existing projects will need to be migrated.
 
-
 ### 4.1. Set up your environment
 
 Install or update the Powerhouse CLI:
@@ -12986,7 +12807,6 @@ Your package will be available at:
 **TIP:**
 Bump the `version` field in `package.json` before every subsequent publish.
 
-
 ### 4.5. Test dynamic loading in Connect
 
 1. Open your Connect instance on [staging.vetra.io](https://staging.vetra.io) (or use `https://connect.sharp-dove-96.vetra.io/`)
@@ -13000,7 +12820,6 @@ Bump the `version` field in `package.json` before every subsequent publish.
 **Congratulations on publishing your package!** Your document models and editors are now available for installation across the Powerhouse ecosystem.
 
 ---
-
 
 ## Setup your environment
 
@@ -13016,7 +12835,6 @@ This guide covers **VM/server-based deployment** with direct installation. If yo
 
 **Choose Docker if:** You want the fastest path to production, prefer containerized workflows, or are deploying to cloud platforms.
 **Choose Direct Installation if:** You need maximum performance, want full control, or are setting up a dedicated server.
-
 
 ## Prerequisites
 
@@ -13217,7 +13035,6 @@ This tutorial will guide you through the process of assigning a static IP (Elast
 **WARNING:**
 Make sure to keep your key pair file (.pem) secure and never share it. Without it, you won't be able to access your instance. Also, consider setting up AWS IAM roles and policies for better security management.
 
-
 ## Part 1: Assigning a static IP to EC2 instance
 
 ### Step 1: Allocate elastic IP
@@ -13380,7 +13197,6 @@ It installs and configures **Nginx** as a reverse proxy, sets up SSL certificate
 It also installs **PM2** for process management and starts your services with the appropriate configuration based on your SSL choice.
 The Nginx configuration includes optimizations for **WebSocket connections**, static file serving, and security headers.
 PM2 is configured to automatically restart services if they crash and to start them on system boot.
-
 
 The setup command will prompt you for the following information:
 
@@ -13547,7 +13363,6 @@ If you encounter issues or need assistance, there are several resources availabl
 4. **GitHub**: Report issues or contribute to the project on GitHub.
 
 ---
-
 
 ## Configure your environment
 
@@ -13793,7 +13608,6 @@ Configure Connect via `powerhouse.config.json` — edit the file directly, use `
 
 ---
 
-
 ## Docker deployment guide
 
 > Source: https://powerhouse.academy/academy/MasteryTrack/Launch/DockerDeployment
@@ -13814,7 +13628,6 @@ This guide covers **Docker-based deployment**. If you prefer **traditional VM/se
 
 **Choose Docker if:** You want the fastest path to production, prefer containerized workflows, or are deploying to cloud platforms.
 **Choose Direct Installation if:** You need maximum performance, want full control, or are setting up a dedicated server.
-
 
 ## Available Docker Images
 
@@ -14220,9 +14033,7 @@ docker push my-registry/my-connect:latest
 
 ---
 
-
 # Example Use Cases
-
 
 ## Example use-cases
 
@@ -14328,7 +14139,6 @@ Explore real-world examples of applications built with the Powerhouse ecosystem.
 </div>
 
 ---
-
 
 ## Create a new chatroom project
 
@@ -14500,7 +14310,6 @@ A new browser window will open and you will see the Connect application. If it d
 If your local drive is not present, navigate to Settings in the bottom left corner. Settings > Danger Zone > Clear Storage.
 Clear the storage of your localhost application as it might have an old session cached.
 
-
 Move into your local drive.  
 Create a new document model by clicking the `DocumentModel` button, found in the 'New Document' section at the bottom of the page. Name your document `ChatRoom` (PascalCase, no spaces or hyphens).
 
@@ -14520,7 +14329,6 @@ At this point, your project structure should include:
 In the next tutorial, you will learn how to design your document model and export it to be later used in your Powerhouse project.
 
 ---
-
 
 ## Write the document specification
 
@@ -14584,7 +14392,6 @@ We use the **GraphQL Schema Definition Language** (SDL) to define the schema for
 
 **INFO:**
 This schema defines the **data structure** of the document model and the types involved in its operations. Documents in Powerhouse leverage **event sourcing principles**, where every state transition is represented by an operation. GraphQL input types describe operations, ensuring that user intents are captured effectively.
-
 
 <details>
 <summary>State schema of our ChatRoom</summary>
@@ -14793,7 +14600,6 @@ In the next step, you'll learn how to implement the runtime logic that will use 
 
 ---
 
-
 ## Implement the document model reducers
 
 > Source: https://powerhouse.academy/academy/ExampleUsecases/Chatroom/ImplementOperationReducers
@@ -14807,7 +14613,6 @@ This tutorial covers two key implementations:
 2. **Tests**: Writing comprehensive tests for the reducers
 
 You can view the exact implementation in the repository's `document-models/chat-room/src/` directory.
-
 
 <details>
 <summary>📖 How to use this tutorial</summary>
@@ -14874,7 +14679,6 @@ Reducers are a core concept in Powerhouse document models. They implement the st
 **Connection to schema definition language (SDL)**: The reducers directly implement the operations you defined in your SDL. Remember how we defined `AddMessageInput`, `AddEmojiReactionInput`, `RemoveEmojiReactionInput`, `EditChatNameInput`, and `EditChatDescriptionInput` in our schema?  
 The reducers provide the actual implementation of what happens when those operations are performed.
 
-
 To import the document model specification into your Powerhouse project, you can either:
 
 - Copy and paste the file directly into the root of your Powerhouse project.
@@ -14907,8 +14711,6 @@ Navigate to `/document-models/chat-room/src/reducers/messages.ts` and start writ
 Open the `messages.ts` file and you should see the scaffolding code that needs to be filled for the three message operations. The generated file will look like this:
 
 ```typescript
-
-
 export const chatRoomMessagesOperations: ChatRoomMessagesOperations = {
   addMessageOperation(state, action) {
     // TODO: Implement "addMessageOperation" reducer
@@ -15282,7 +15084,6 @@ Continue to the next section to learn how to implement the document model editor
 
 ---
 
-
 ## Build the ChatRoom editor
 
 > Source: https://powerhouse.academy/academy/ExampleUsecases/Chatroom/ImplementChatroomEditor
@@ -15296,7 +15097,6 @@ This tutorial covers building the ChatRoom editor:
 2. **Component Implementation**: Building a complete, interactive chat UI with components
 
 Explore the complete implementation in the `editors/chat-room-editor/` directory.
-
 
 <details>
 <summary>📖 How to use this tutorial</summary>
@@ -15752,7 +15552,6 @@ The `useSelectedChatRoomDocument` hook is generated by the Powerhouse CLI. It pr
 
 This hook connects your React components to the document model's state and operations.
 
-
 ## Key components explained
 
 ### MessageItem component
@@ -15849,7 +15648,6 @@ In Vetra Studio, in the bottom right corner you'll find a new Document Model tha
 **WARNING:**
 A warning will prompt you to login before you can send messages. Login with an Ethereum address via Renown to start sending messages.
 
-
 ![Chatroom Editor](../docs/docs/images/ChatRoomTest.gif)
 
 **Try it out:**
@@ -15894,7 +15692,6 @@ In this tutorial you've learned:
 
 ---
 
-
 ## Step 0 - get the starter code
 
 > Source: https://powerhouse.academy/academy/ExampleUsecases/TodoList/GetTheStarterCode
@@ -15922,7 +15719,6 @@ Finally, run `pnpm install` to install the project dependencies.
 Now we're ready to get started.
 
 ---
-
 
 ## Step 1 - Generate the `TodoList` document model
 
@@ -15959,7 +15755,6 @@ A new browser window will open and you will see the Connect application. If it d
 If you local drive is not present navigate into Settings in the bottom left corner. Settings > Danger Zone > Clear Storage.
 Clear the storage of your localhost application as it might has an old session cached.
 
-
 1. To create a new local drive, click the "Create New Drive" icon. In the "Drive Name" field, enter a name for your drive (we will use "local" as the name). For "Drive App", select "Generic drive explorer" and for "Location", choose "Local". Then click the "Create new drive" button at the bottom of the modal.
 
 2. Move into your local drive, by clicking the the name of the drive (local).  
@@ -15984,7 +15779,6 @@ Below, you can see the SDL for the `TodoList` document model.
 **INFO:**
 This schema defines the **data structure** of the document model and the types involved in its operations, which are detailed further as input types.
 Documents in Powerhouse leverage **event sourcing principles**, where every state transition is represented by an operation. GraphQL input types describe operations, ensuring that user intents are captured effectively. These operations detail the parameters needed for state transitions. The use of GraphQL aligns these transitions with explicit, validated, and reproducible commands.
-
 
 ## The document model state schema
 
@@ -16143,7 +15937,6 @@ Up next, you'll learn how to implement the runtime logic and components that wil
 
 ---
 
-
 ## Step 2 — Implement the `TodoList` document model reducer operation handlers
 
 > Source: https://powerhouse.academy/academy/ExampleUsecases/TodoList/ImplementTodoListDocumentModelReducerOperationHandlers
@@ -16163,8 +15956,6 @@ So for our todos module, we will implement our handler logic in `document-models
 When you generated your document model code, we created a boilerplate implementation of the reducer logic for each of the operations we defined in step 1. You will see that there are functions for handling each of the operations, but all they do is throw "not implemented" errors.
 
 ```ts
-
-
 export const todoListTodosOperations: TodoListTodosOperations = {
   addTodoItemOperation(state, action) {
     // TODO: Implement "addTodoItemOperation" reducer
@@ -16188,8 +15979,6 @@ To handle the `addTodoItemOperation`, all we need to do is push a new todo item 
 Update your `addTodoItemOperation` like so:
 
 ```typescript
-
-
 export const todoListTodosOperations: TodoListTodosOperations = {
   // removed-start
   addTodoItemOperation(state, action) {
@@ -16287,8 +16076,6 @@ export const todoListTodosOperations: TodoListTodosOperations = {
 With that all done, your final result should look like this:
 
 ```ts
-
-
 export const todoListTodosOperations: TodoListTodosOperations = {
   addTodoItemOperation(state, action) {
     state.items.push({
@@ -16330,7 +16117,6 @@ To make sure all works as expected, we should:
 Up next, you'll implement some custom tests to check the behavior of our new code.
 
 ---
-
 
 ## Step 3 — Adding our own tests for the document model actions
 
@@ -16854,7 +16640,6 @@ Up next, we'll generate a boilerplate document editor for our `TodoList` documen
 
 ---
 
-
 ## Step 4 — Generating a document model editor for `TodoList` documents
 
 > Source: https://powerhouse.academy/academy/ExampleUsecases/TodoList/GenerateTodoListDocumentEditor
@@ -16905,7 +16690,6 @@ Next, we will add some UI components to create, read, update, and delete data in
 
 ---
 
-
 ## Step 5 — Implement `TodoList` document editor UI components
 
 > Source: https://powerhouse.academy/academy/ExampleUsecases/TodoList/ImplementTodoListDocumentEditorUIComponents
@@ -16919,8 +16703,6 @@ Let's start by adding a `<TodoList />` component that will be the main container
 Create a new file at `editors/todo-list-editor/components/TodoList.tsx` and add this:
 
 ```jsx
-
-
 /** Displays the selected todo list */
 export function TodoList() {
   // this hook returns the currently selected TodoList document
@@ -17043,8 +16825,6 @@ We have provided some basic Tailwind styles but you are welcome to style your co
 Let's add this component to our `<TodoList />` component. `./editors/todo-list-editor/components/TodoList.tsx`
 
 ```tsx
-
-
 /** Displays the selected todo list */
 export function TodoList() {
   // this hook returns the currently selected TodoList document
@@ -17248,8 +17028,6 @@ export function Todos({ todos }: Props) {
 And replace the content of your `TodoList.tsx` file with this:
 
 ```jsx
-
-
 /** Displays the selected todo list */
 export function TodoList() {
   // this hook returns the currently selected TodoList document
@@ -17303,7 +17081,6 @@ To make sure all works as expected, we should:
 Next, we will generate a special kind of editor called a "drive editor" which we will use instead of the generic drive explorer.
 
 ---
-
 
 ## Step 6 - Generate the custom drive editor for managing our `TodoList` documents
 
@@ -17370,7 +17147,6 @@ To make sure all works as expected, we should:
 Next, we will add a UI component that is useful in both of our different editors.
 
 ---
-
 
 ## Step 7 - Add shared component for showing TodoList stats
 
@@ -17513,8 +17289,6 @@ Don't be too concerned with the math and time related code you see here — thos
 Now let's use the `<Stats />` component in our `<TodoList />` component `editors/todo-list-editor/components/TodoList.tsx`:
 
 ```tsx
-
-
 // added-start
 
 // added-end
@@ -17748,7 +17522,6 @@ We're excited to see what you build!
 
 ---
 
-
 ## VetraPackageLibrary
 
 > Source: https://powerhouse.academy/academy/ExampleUsecases/VetraPackageLibrary/VetraPackageLibrary
@@ -17771,9 +17544,7 @@ You can get access to the [package library here.](https://vetra.io/packages)
 
 ---
 
-
 # API References
-
 
 ## Powerhouse CLI
 
@@ -17793,18 +17564,18 @@ The Powerhouse CLI (`ph-cmd`) is a command-line interface tool that provides ess
 pnpm install -g ph-cmd
 ```
 
+{/_ AUTO-GENERATED-CLI-COMMANDS-START _/}
+{/_ This content is automatically generated. Do not edit directly. _/}
 
-{/* AUTO-GENERATED-CLI-COMMANDS-START */}
-{/* This content is automatically generated. Do not edit directly. */}
 ## Quick Reference
 
-| Command | Description | Example |
-|---------|-------------|---------|
-| `ph init` | Initialize a new project | `ph init my-project --pnpm` |
-| `ph use` | Switch to a release version | `ph use staging` |
-| `ph update` | Update dependencies to latest | `ph update` |
-| `ph setup-globals` | Initialize global project | `ph setup-globals my-globals` |
-| `ph use-local` | Use local monorepo dependencies | `ph use-local ../powerhouse` |
+| Command            | Description                     | Example                       |
+| ------------------ | ------------------------------- | ----------------------------- |
+| `ph init`          | Initialize a new project        | `ph init my-project --pnpm`   |
+| `ph use`           | Switch to a release version     | `ph use staging`              |
+| `ph update`        | Update dependencies to latest   | `ph update`                   |
+| `ph setup-globals` | Initialize global project       | `ph setup-globals my-globals` |
+| `ph use-local`     | Use local monorepo dependencies | `ph use-local ../powerhouse`  |
 
 ---
 
@@ -17816,20 +17587,20 @@ pnpm install -g ph-cmd
 - [Setup Globals](#setup-globals)
 - [Use Local](#use-local)
 
-
 ## Init
+
 Initialize a new project
 
-
 ---
 
 ## Parameters
 
 ### Arguments
+
 **Name** - The name of your project. A new directory will be created in your current directory with this name. - Usage: `[name]`
 
-
 ### Options
+
 **Name** - The name of your project. A new directory will be created in your current directory with this name. - Usage: `--name, -n <str>`
 
 **Package Manager** - Specify the package manager to use for your project. Can be one of: `npm`, `pnpm`, `yarn`, or `bun`. Defaults to your environment package manager. - Usage: `--package-manager, -p <value>`
@@ -17840,8 +17611,8 @@ Initialize a new project
 
 **Remote Drive** - Remote drive identifier. - Usage: `--remote-drive, -r <str>`
 
-
 ### Flags
+
 **Npm** - Use 'npm' as package manager - Usage: `--npm`
 
 **Pnpm** - Use 'pnpm' as package manager - Usage: `--pnpm`
@@ -17857,59 +17628,59 @@ Initialize a new project
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`
-
 
 ## Use
-Specify the release version of Powerhouse dependencies to use.
 
+Specify the release version of Powerhouse dependencies to use.
 
 ---
 
 ## Parameters
 
 ### Arguments
+
 **Tag** - Specify the release tag to use for your project. Can be one of: "latest", "staging", or "dev". - Usage: `[tag]`
 
-
 ### Options
+
 **Tag** - Specify the release tag to use for your project. Can be one of: "latest", "staging", or "dev". - Usage: `--tag, -t <value>`
 
 **Version** - Specify the exact semver release version to use for your project. - Usage: `--version, -v <str>`
 
-
 ### Flags
+
 **Skip Install** - Skip running `install` with your package manager - Usage: `--skip-install, -s`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`
-
 
 ## Update
+
 Update your powerhouse dependencies to their latest tagged version
 
-
 ### Flags
+
 **Skip Install** - Skip running `install` with your package manager - Usage: `--skip-install, -s`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`
 
-
 ## Setup Globals
-Initialize a new global project
 
+Initialize a new global project
 
 ---
 
 ## Parameters
 
 ### Arguments
+
 **Name** - The name of your project. A new directory will be created in your current directory with this name. - Usage: `[name]`
 
-
 ### Options
+
 **Name** - The name of your project. A new directory will be created in your current directory with this name. - Usage: `--name, -n <str>`
 
 **Package Manager** - Specify the package manager to use for your project. Can be one of: `npm`, `pnpm`, `yarn`, or `bun`. Defaults to your environment package manager. - Usage: `--package-manager, -p <value>`
@@ -17920,8 +17691,8 @@ Initialize a new global project
 
 **Remote Drive** - Remote drive identifier. - Usage: `--remote-drive, -r <str>`
 
-
 ### Flags
+
 **Npm** - Use 'npm' as package manager - Usage: `--npm`
 
 **Pnpm** - Use 'pnpm' as package manager - Usage: `--pnpm`
@@ -17938,24 +17709,24 @@ Initialize a new global project
 
 **Help** - show help - Usage: `--help, -h`
 
-
 ## Use Local
-Use your local `powerhouse` monorepo dependencies the current project.
 
+Use your local `powerhouse` monorepo dependencies the current project.
 
 ---
 
 ## Parameters
 
 ### Arguments
+
 **Monorepo Path** - Path to your local powerhouse monorepo relative to this project - Usage: `[monorepo path]`
 
-
 ### Options
+
 **Path** - Path to your local powerhouse monorepo relative to this project - Usage: `--path, -p <str>`
 
-
 ### Flags
+
 **Skip Install** - Skip running `install` with `pnpm` - Usage: `--skip-install, -s`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
@@ -17986,31 +17757,32 @@ Use your local `powerhouse` monorepo dependencies the current project.
 - [Install](#install)
 - [Uninstall](#uninstall)
 
-
 ## Generate
+
 The generate command creates code for Powerhouse modules. It helps you create new code from scratch, or to re-generate existing code in your project.
 
 ## All
+
 Re-generate all modules in the current project
 
-
 ### Flags
+
 **Extract** - Instead of generating code, write a spec for every module into specs/ (one-shot migration to documents-as-source-of-truth) - Usage: `--extract, -x`
 
 **Help** - show help - Usage: `--help, -h`
 
-
 ## Document Model
+
 Generate a document model
 
-
 ### Options
+
 **Document** - Path to a document model spec (.phd or .json) to generate from - Usage: `--document, -d <file>`
 
 **Dir** - Name of the directory of an existing document model to re-generate - Usage: `--dir <dir>`
 
-
 ### Flags
+
 **All** - Re-generate all existing document models in the current project - Usage: `--all, -a`
 
 **Extract** - Write a powerhouse/document-model spec for each existing document model into specs/document-models/ - Usage: `--extract, -x`
@@ -18019,12 +17791,12 @@ Generate a document model
 
 **Help** - show help - Usage: `--help, -h`
 
-
 ## Editor
+
 Generate a document editor
 
-
 ### Options
+
 **Name** - The name of the document editor to generate - Usage: `--name, -n <str>`
 
 **Document Type** - The document type for the new editor - Usage: `--document-type, -t <str>`
@@ -18033,8 +17805,8 @@ Generate a document editor
 
 **Dir** - Name of the directory of an existing editor to re-generate - Usage: `--dir <dir>`
 
-
 ### Flags
+
 **All** - Re-generate all existing editors in the current project - Usage: `--all, -a`
 
 **Extract** - Write a powerhouse/document-editor spec for each existing editor into specs/editors/ - Usage: `--extract, -x`
@@ -18043,12 +17815,12 @@ Generate a document editor
 
 **Help** - show help - Usage: `--help, -h`
 
-
 ## App
+
 Generate a drive app
 
-
 ### Options
+
 **Name** - The name of the drive app to generate - Usage: `--name, -n <str>`
 
 **Document Types** - The document types allowed by the new app - Usage: `--document-types <str>, -t=<str>`
@@ -18057,8 +17829,8 @@ Generate a drive app
 
 **Dir** - Name of the directory of an existing app to re-generate - Usage: `--dir <dir>`
 
-
 ### Flags
+
 **Disable Drag And Drop** - Do not allow drag and drop in this drive app. - Usage: `--disable-drag-and-drop`
 
 **Default:** `false`
@@ -18070,12 +17842,12 @@ Generate a drive app
 
 **Help** - show help - Usage: `--help, -h`
 
-
 ## Processor
+
 Generate a processor
 
-
 ### Options
+
 **Name** - The name of the processor to generate - Usage: `--name, -n <str>`
 
 **Type** - The type of processor to generate - Usage: `--type <value>`
@@ -18083,16 +17855,15 @@ Generate a processor
 **Default:** `analytics`
 **Document Types** - The document types the processor will run on - Usage: `--document-types <str>, -t=<str>`
 
-**Default:** ``
-**Apps** - Whether the processor will run in switchboard (nodejs), connect (browser), or both - Usage: `--apps <value>`
+**Default:** ``**Apps** - Whether the processor will run in switchboard (nodejs), connect (browser), or both - Usage:`--apps <value>`
 
 **Default:** `switchboard,connect`
 **Document** - Path to a powerhouse/processor spec file (.phd or .json) to drive codegen - Usage: `--document, -d <file>`
 
 **Dir** - Name of the directory of an existing processor to re-generate - Usage: `--dir <dir>`
 
-
 ### Flags
+
 **All** - Re-generate all existing processors in the current project - Usage: `--all, -a`
 
 **Extract** - Write a powerhouse/processor spec for each existing processor into specs/processors/ - Usage: `--extract, -x`
@@ -18101,20 +17872,20 @@ Generate a processor
 
 **Help** - show help - Usage: `--help, -h`
 
-
 ## Subgraph
+
 Generate a subgraph
 
-
 ### Options
+
 **Name** - The name of the subgraph to generate - Usage: `--name, -n <str>`
 
 **Document** - Path to a powerhouse/subgraph spec file (.phd or .json) to drive codegen - Usage: `--document, -d <file>`
 
 **Dir** - Name of the directory of an existing subgraph to re-generate - Usage: `--dir <dir>`
 
-
 ### Flags
+
 **All** - Re-generate all existing subgraphs in the current project - Usage: `--all, -a`
 
 **Extract** - Write a powerhouse/subgraph spec for each existing subgraph into specs/subgraphs/ - Usage: `--extract, -x`
@@ -18123,37 +17894,37 @@ Generate a subgraph
 
 **Help** - show help - Usage: `--help, -h`
 
-
 ## Migration File
+
 Generate a migration file
 
-
 ### Options
-**Path *[required]*** - Path to the migration file - Usage: `--path, -p <str>`
+
+**Path _[required]_** - Path to the migration file - Usage: `--path, -p <str>`
 
 **Schema File** - Path to the output file. Defaults to './schema.ts' - Usage: `--schema-file <str>`
 
-
 ### Flags
+
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`
 
-
 ## Vetra
 
 The vetra command sets up a Vetra development environment for working with Vetra projects.
-It starts a Vetra Switchboard and optionally Connect Studio, enabling document collaboration 
+It starts a Vetra Switchboard and optionally Connect Studio, enabling document collaboration
 and real-time processing with a "Vetra" drive or connection to remote drives.
 
 **What it does:**
+
 - 1. Starts a Vetra Switchboard with a "Vetra" drive for document storage
 - 2. Optionally connects to remote drives instead of creating a local drive
 - 3. Starts Connect Studio pointing to the Switchboard for user interaction (unless disabled)
 - 4. Enables real-time updates, collaboration, and code generation
 
-
 ### Options
+
 **Switchboard Port** - port to use for the Vetra Switchboard - Usage: `--switchboard-port <number>`
 
 **Connect Port** - port to use for the Vetra Connect - Usage: `--connect-port <number>`
@@ -18191,8 +17962,8 @@ and real-time processing with a "Vetra" drive or connection to remote drives.
 
 **Remote Drives** - Specify remote drive URLs to use - Usage: `--remote-drives <str>`
 
-
 ### Flags
+
 **Watch** - Enable dynamic loading for document-models and editors in connect-studio and switchboard - Usage: `--watch, -w`
 
 **Default:** `false`
@@ -18229,23 +18000,25 @@ and real-time processing with a "Vetra" drive or connection to remote drives.
 
 **Help** - show help - Usage: `--help, -h`
 
-
 ## Connect
+
 Powerhouse Connect commands. Use with `studio`, `build`, `preview`, or `config`. Defaults to `studio` if not specified.
 
 ## Connect Studio
+
 The studio command starts the Connect Studio, a development environment for building
 and testing Powerhouse applications. It provides a visual interface for working with
 your project.
 
 **What it does:**
+
 - 1. Starts a local Connect Studio server
 - 2. Provides a web interface for development
 - 3. Allows you to interact with your project components
 - 4. Supports various configuration options for customization
 
-
 ### Options
+
 **Port** - Port to run the dev server on. - Usage: `--port <number>`
 
 **Default:** `3000`
@@ -18272,8 +18045,8 @@ your project.
 
 **Default:** `300`
 
-
 ### Flags
+
 **Ignore Local** - Do not load local packages from this project - Usage: `--ignore-local`
 
 **Force** - Force dep pre-optimization regardless of whether deps have changed. - Usage: `--force`
@@ -18294,25 +18067,25 @@ your project.
 **Default:** `true`
 **Help** - show help - Usage: `--help, -h`
 
-
 ## Connect Build
+
 The Connect build command creates a production build with the project's local and
 external packages included.
 
 Runtime-config overrides (all combinable — last wins on collision):
-  ph connect build                                    Build with the current source config.
-  ph connect build <key> <value>                      Build with a positional override applied (e.g. ph connect build connect.renown.url https://renown.staging).
-  ph connect build --<field> <value>                  Build with a per-field flag override (e.g. --renown-url https://renown.staging).
-  ph connect build --json '\{"…":"…"\}'                Build with a bulk override.
+ph connect build Build with the current source config.
+ph connect build <key> <value> Build with a positional override applied (e.g. ph connect build connect.renown.url https://renown.staging).
+ph connect build --<field> <value> Build with a per-field flag override (e.g. --renown-url https://renown.staging).
+ph connect build --json '\{"…":"…"\}' Build with a bulk override.
 
 Build has no read mode; passing only <key> without <value> errors out (use `ph connect config <key>` to read).
 
-
 ### Options
+
 **Out Dir** - Output directory - Usage: `--outDir <str>`
 
 **Default:** `.ph/connect-build/dist/`
-**Json** - Inline JSON override for the runtime connect.* block, e.g. '\{"renown":\{"url":"..."\}\}'. Validated against the runtime schema; deep-merged on top of env seeds and source powerhouse.config.json. Individual --flag values beat --json on collision. - Usage: `--json <str>`
+**Json** - Inline JSON override for the runtime connect.\* block, e.g. '\{"renown":\{"url":"..."\}\}'. Validated against the runtime schema; deep-merged on top of env seeds and source powerhouse.config.json. Individual --flag values beat --json on collision. - Usage: `--json <str>`
 
 **Renown Url** - Override connect.renown.url. - Usage: `--renown-url <str>`
 
@@ -18366,18 +18139,18 @@ Build has no read mode; passing only <key> without <value> errors out (use `ph c
 
 **Default:** `preserve-by-url-and-detach`
 
-
 ---
 
 ## Parameters
 
 ### Arguments
+
 **Key** - Dotted path inside the runtime config (e.g. connect.renown.url). Pair with <value> to set; pass alone to `ph connect config` to read. - Usage: `[key]`
 
 **Value** - Value to set at <key>. Coerced against the runtime schema (string, bool, number, enum). Arrays and objects require --json instead. - Usage: `[value]`
 
-
 ### Flags
+
 **Ignore Local** - Do not load local packages from this project - Usage: `--ignore-local`
 
 **Force** - Force dep pre-optimization regardless of whether deps have changed. - Usage: `--force`
@@ -18386,13 +18159,13 @@ Build has no read mode; passing only <key> without <value> errors out (use `ph c
 
 **Help** - show help - Usage: `--help, -h`
 
-
 ## Connect Preview
+
 The Connect preview command previews a built Connect project.
 NOTE: You must run `ph connect build` first
 
-
 ### Options
+
 **Port** - Port to run the preview server on. - Usage: `--port <number>`
 
 **Default:** `4173`
@@ -18422,8 +18195,8 @@ NOTE: You must run `ph connect build` first
 
 **Default:** `300`
 
-
 ### Flags
+
 **Ignore Local** - Do not load local packages from this project - Usage: `--ignore-local`
 
 **Force** - Force dep pre-optimization regardless of whether deps have changed. - Usage: `--force`
@@ -18444,68 +18217,71 @@ NOTE: You must run `ph connect build` first
 **Default:** `true`
 **Help** - show help - Usage: `--help, -h`
 
-
 ## Access Token
 
 The access-token command generates a bearer token for API authentication. This token
 can be used to authenticate requests to Powerhouse APIs like reactor-api (Switchboard).
 
 **What it does:**
+
 - 1. Uses your CLI's cryptographic identity (DID) to sign a verifiable credential
 - 2. Creates a JWT bearer token with configurable expiration
 - 3. Outputs the token to stdout (info to stderr) for easy piping
 
 Prerequisites:
-  You must have a cryptographic identity. Run 'ph login' first to:
-  - Generate a keypair (stored in .ph/.keypair.json)
-  - Optionally link your Ethereum address (stored in .ph/.renown.json)
+You must have a cryptographic identity. Run 'ph login' first to:
+
+- Generate a keypair (stored in .ph/.keypair.json)
+- Optionally link your Ethereum address (stored in .ph/.renown.json)
 
 Token Details:
-  The generated token is a JWT (JSON Web Token) containing:
-  - Issuer (iss): Your CLI's DID (did:key:...)
-  - Subject (sub): Your CLI's DID
-  - Credential Subject: Chain ID, network ID, and address (if authenticated)
-  - Expiration (exp): Based on --expiry option
-  - Audience (aud): If --audience is specified
+The generated token is a JWT (JSON Web Token) containing:
+
+- Issuer (iss): Your CLI's DID (did:key:...)
+- Subject (sub): Your CLI's DID
+- Credential Subject: Chain ID, network ID, and address (if authenticated)
+- Expiration (exp): Based on --expiry option
+- Audience (aud): If --audience is specified
 
 Output:
+
 - Token information (DID, address, expiry) is printed to stderr
 - The token itself is printed to stdout for easy piping/copying
 
 This allows you to use the command in scripts:
-  TOKEN=$(ph access-token)
-  curl -H "Authorization: Bearer $TOKEN" http://localhost:4001/graphql
+TOKEN=$(ph access-token)
+curl -H "Authorization: Bearer $TOKEN" http://localhost:4001/graphql
 
 Usage with APIs:
-  Generate token and use with curl
-  TOKEN=$(ph access-token --expiry 1d)
-  curl -X POST http://localhost:4001/graphql \
-    -H "Content-Type: application/json" \
-    -H "Authorization: Bearer $TOKEN" \
-    -d '\{"query": "\{ drives \{ id name \} \}"\}'
+Generate token and use with curl
+TOKEN=$(ph access-token --expiry 1d)
+curl -X POST http://localhost:4001/graphql \
+ -H "Content-Type: application/json" \
+ -H "Authorization: Bearer $TOKEN" \
+ -d '\{"query": "\{ drives \{ id name \} \}"\}'
 
-  Export as environment variable
-  export PH_ACCESS_TOKEN=$(ph access-token)
+Export as environment variable
+export PH_ACCESS_TOKEN=$(ph access-token)
 
 Notes:
-  - Tokens are self-signed using your CLI's private key
-  - No network request is made; tokens are generated locally
-  - The recipient API must trust your CLI's DID to accept the token
-  - For reactor-api, ensure AUTH_ENABLED=true to require authentication
 
+- Tokens are self-signed using your CLI's private key
+- No network request is made; tokens are generated locally
+- The recipient API must trust your CLI's DID to accept the token
+- For reactor-api, ensure AUTH_ENABLED=true to require authentication
 
 ### Options
+
 **Expiry** - Token expiry duration. Supports: "7d" (days), "24h" (hours), "3600" or "3600s" (seconds) - Usage: `--expiry <str>`
 
 **Default:** `7d`
 **Audience** - Target audience URL for the token - Usage: `--audience <str>`
 
-
 ### Flags
+
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`
-
 
 ## Inspect
 
@@ -18514,25 +18290,25 @@ It helps you understand the structure, dependencies, and configuration of packag
 your project.
 
 **What it does:**
+
 - 1. Analyzes the specified package
 - 2. Retrieves detailed information about its structure and configuration
 - 3. Displays package metadata, dependencies, and other relevant information
 - 4. Helps troubleshoot package-related issues
-
 
 ---
 
 ## Parameters
 
 ### Arguments
-**Package Name *[required]*** - The name of the package to inspect - Usage: `<package-name>`
 
+**Package Name _[required]_** - The name of the package to inspect - Usage: `<package-name>`
 
 ### Flags
+
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`
-
 
 ## List
 
@@ -18540,43 +18316,43 @@ The list command displays information about installed Powerhouse packages in you
 It reads the powerhouse.config.json file and shows the packages that are currently installed.
 
 **What it does:**
+
 - 1. Examines your project configuration
 - 2. Lists all installed Powerhouse packages
 - 3. Provides a clear overview of your project's dependencies
 - 4. Helps you manage and track your Powerhouse components
 
-
 ### Flags
+
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`
 
-
 ## Migrate
-Run migrations
 
+Run migrations
 
 ---
 
 ## Parameters
 
 ### Arguments
+
 **Version** - The version to migrate to. Accepts a valid semver version or `staging`, `dev`, `latest`. - Usage: `[version]`
 
-
 ### Options
+
 **Version** - The version to migrate to. Accepts a valid semver version or `staging`, `dev`, `latest`. - Usage: `--version, -v <str>`
 
 **Default:** `latest`
 
-
 ### Flags
+
 **Force** - Run migrate from the bundled codegen even if the target version cannot be resolved from the npm registry or differs from the installed ph-cli version. - Usage: `--force, -f`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`
-
 
 ## Switchboard
 
@@ -18585,14 +18361,15 @@ processing engine for Powerhouse projects. It provides the infrastructure for do
 models, processors, and real-time updates.
 
 **What it does:**
+
 - 1. Starts a local switchboard server
 - 2. Loads document models and processors
 - 3. Provides an API for document operations
 - 4. Enables real-time document processing
 - 5. Can authenticate with remote services using your identity from 'ph login'
 
-
 ### Flags
+
 **Https** - Use https - Usage: `--https`
 
 **Dev** - enable development mode to load local packages - Usage: `--dev`
@@ -18621,8 +18398,8 @@ models, processors, and real-time updates.
 **Default:** `false`
 **Help** - show help - Usage: `--help, -h`
 
-
 ### Options
+
 **Https Key File** - path to the ssl key file - Usage: `--https-key-file <str>`
 
 **Https Cert File** - path to the ssl cert file - Usage: `--https-cert-file <str>`
@@ -18644,21 +18421,20 @@ models, processors, and real-time updates.
 **Default:** `vetra`
 **Db Path** - path to the database - Usage: `--db-path <str>`
 
-
 ## Login
 
 The login command authenticates you with Renown using your Ethereum wallet. This enables
 the CLI to act on behalf of your Ethereum identity for authenticated operations.
 
 **What it does:**
+
 - 1. Generates or loads a cryptographic identity (DID) for the CLI
 - 2. Opens your browser to the Renown authentication page
 - 3. You authorize the CLI's DID to act on behalf of your Ethereum address
 - 4. Stores the credentials locally in .ph/.renown.json
-  
-
 
 ### Options
+
 **Renown Url** - Renown server URL. - Usage: `--renown-url <str>`
 
 **Environment:** `PH_CONNECT_RENOWN_URL`
@@ -18667,8 +18443,8 @@ the CLI to act on behalf of your Ethereum identity for authenticated operations.
 
 **Default:** `300`
 
-
 ### Flags
+
 **Logout** - Sign out and clear stored credentials - Usage: `--logout`
 
 **Status** - Show current authentication status - Usage: `--status`
@@ -18678,7 +18454,6 @@ the CLI to act on behalf of your Ethereum identity for authenticated operations.
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`
-
 
 ## Install
 
@@ -18692,27 +18467,26 @@ as provider "local" — it will be bundled into ph connect build so the
 preview works without the registry being reachable.
 
 Resolution order for the registry URL:
-  --registry flag > PH_REGISTRY_URL env > powerhouse.config.json > default
-  
-
+--registry flag > PH_REGISTRY_URL env > powerhouse.config.json > default
 
 ---
 
 ## Parameters
 
 ### Arguments
-**Dependencies *[required]*** - Names of the dependencies to install - Usage: `[...dependencies]`
 
+**Dependencies _[required]_** - Names of the dependencies to install - Usage: `[...dependencies]`
 
 ### Options
+
 **Registry** - Registry URL to install from (overrides config and environment) - Usage: `--registry <str>`
 
 **Allow Build** - A list of package names that are allowed to run postinstall scripts during installation. - Usage: `--allow-build <str>`
 
 **Package Manager** - Specify the package manager to use for your project. Can be one of: `npm`, `pnpm`, `yarn`, or `bun`. Defaults to your environment package manager. - Usage: `--package-manager, -p <value>`
 
-
 ### Flags
+
 **Local** - Also install packages into node_modules (marks them as provider: "local" so they get bundled into ph connect build) - Usage: `--local`
 
 **Npm** - Use 'npm' as package manager - Usage: `--npm`
@@ -18727,32 +18501,32 @@ Resolution order for the registry URL:
 
 **Help** - show help - Usage: `--help, -h`
 
-
 ## Uninstall
 
 The uninstall command removes Powerhouse dependencies from your project. It handles the
 removal of packages, updates configuration files, and ensures proper cleanup.
 
 **What it does:**
+
 - 1. Uninstalls specified Powerhouse dependencies using your package manager
 - 2. Updates powerhouse.config.json to remove the dependencies
 - 3. Supports various uninstallation options and configurations
 - 4. Works with npm, yarn, yarn@berry, pnpm, pnpm@6, bun, deno package managers
-
 
 ---
 
 ## Parameters
 
 ### Arguments
-**Dependencies *[required]*** - Names of the dependencies to uninstall - Usage: `[...dependencies]`
 
+**Dependencies _[required]_** - Names of the dependencies to uninstall - Usage: `[...dependencies]`
 
 ### Options
+
 **Package Manager** - Specify the package manager to use for your project. Can be one of: `npm`, `pnpm`, `yarn`, or `bun`. Defaults to your environment package manager. - Usage: `--package-manager, -p <value>`
 
-
 ### Flags
+
 **Npm** - Use 'npm' as package manager - Usage: `--npm`
 
 **Pnpm** - Use 'pnpm' as package manager - Usage: `--pnpm`
@@ -18764,10 +18538,9 @@ removal of packages, updates configuration files, and ensures proper cleanup.
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`
-{/* AUTO-GENERATED-CLI-COMMANDS-END */}
+{/_ AUTO-GENERATED-CLI-COMMANDS-END _/}
 
 ---
-
 
 ## React Hooks
 
@@ -18887,8 +18660,6 @@ function useSelectedDocument(): readonly [
 **Example:**
 
 ```tsx
-
-
 function DocumentViewer() {
   const [document, dispatch] = useSelectedDocument();
 
@@ -18935,8 +18706,6 @@ function useSelectedDocumentSafe(): readonly [
 **Example:**
 
 ```tsx
-
-
 function DocumentViewer() {
   const [document, dispatch] = useSelectedDocument();
 
@@ -18984,8 +18753,6 @@ function useSelectedDocumentOfType(documentType: null | undefined): never[];
 **Example:**
 
 ```tsx
-
-
 function BudgetEditor() {
   const [document, dispatch] = useSelectedDocumentOfType<
     BudgetStatementDocument,
@@ -19034,8 +18801,6 @@ function useDocumentById(
 **Example:**
 
 ```tsx
-
-
 function DocumentCard({ documentId }: { documentId: string }) {
   const [document, dispatch] = useDocumentById(documentId);
 
@@ -19149,8 +18914,6 @@ function useGetDocument(): (id: string) => Promise<PHDocument>;
 **Example:**
 
 ```tsx
-
-
 function DocumentFetcher() {
   const getDocument = useGetDocument();
 
@@ -19206,8 +18969,6 @@ function useGetDocumentAsync(id: string | null | undefined): {
 **Example:**
 
 ```tsx
-
-
 function AsyncDocumentLoader({ id }: { id: string }) {
   const { status, data, isPending, error, reload } = useGetDocumentAsync(id);
 
@@ -19243,8 +19004,6 @@ function useDrives(): DocumentDriveDocument[] | undefined;
 **Example:**
 
 ```tsx
-
-
 function DriveList() {
   const drives = useDrives();
 
@@ -19304,8 +19063,6 @@ function useSelectedDriveSafe():
 **Example:**
 
 ```tsx
-
-
 function DriveHeader() {
   const [drive, dispatch] = useSelectedDriveSafe();
 
@@ -19651,8 +19408,6 @@ function showCreateDocumentModal(documentType: string): void;
 **Example:**
 
 ```tsx
-
-
 function CreateButton() {
   return (
     <button
@@ -20002,8 +19757,6 @@ function useSetPHDriveEditorConfig(config: Partial<PHDriveEditorConfig>): void;
 **Example:**
 
 ```tsx
-
-
 function MyDriveEditor() {
   useSetPHDriveEditorConfig({
     isDragAndDropEnabled: true,
@@ -20054,7 +19807,6 @@ function usePHDocumentEditorConfigByKey<TKey extends PHDocumentEditorConfigKey>(
 
 ---
 
-
 ## IReactorClient
 
 > Source: https://powerhouse.academy/academy/APIReferences/ReactorClient
@@ -20067,7 +19819,6 @@ The `IReactorClient` interface is the primary way to interact with a Powerhouse 
 
 **INFO:**
 `@powerhousedao/reactor-browser` re-exports all reactor types for convenience in browser environments (editors, drive-apps, subgraphs). If you are working outside the browser — for example in a standalone Node.js script, CLI tool, or server-side processor — import directly from `@powerhousedao/reactor`.
-
 
 For an architectural overview of the reactor, see [Working with the Reactor](/academy/Architecture/WorkingWithTheReactor). For the low-level `IReactor` interface and access to internal components, see [Advanced Reactor Usage](/academy/APIReferences/AdvancedReactorUsage).
 
@@ -20569,8 +20320,6 @@ execute<TDocument extends PHDocument>(
 **Example:**
 
 ```typescript
-
-
 const updated = await reactorClient.execute(docId, "main", [
   actions.addTodoItem({ text: "Buy groceries" }),
   actions.addTodoItem({ text: "Walk the dog" }),
@@ -20837,7 +20586,6 @@ console.log(completed.status); // "READ_READY" or "FAILED"
 
 ---
 
-
 ## Advanced reactor usage
 
 > Source: https://powerhouse.academy/academy/APIReferences/AdvancedReactorUsage
@@ -21076,8 +20824,6 @@ const { reactor, eventBus, processorManager, operationStore } = module;
 The `IEventBus` lets you listen to internal reactor events. Subscribers are called sequentially in registration order.
 
 ```typescript
-
-
 // Listen for all completed jobs
 const unsubscribe = module.eventBus.subscribe(
   ReactorEventTypes.JOB_READ_READY,
@@ -21112,14 +20858,11 @@ const revisions = await operationStore.getRevisions(docId, "main");
 **WARNING:**
 Writing directly to the operation store bypasses the job queue, reducers, and read models. In almost all cases, use `reactor.execute()` or `reactor.load()` instead. Direct store access is intended for read-only inspection, debugging, and testing.
 
-
 ## Registering custom read models
 
 A read model receives operations after each job's write phase completes and builds a derived view of the data.
 
 ```typescript
-
-
 class MyCustomReadModel implements IReadModel {
   async indexOperations(operations: OperationWithContext[]): Promise<void> {
     for (const { operation, context } of operations) {
@@ -21182,7 +20925,6 @@ module.reactor.kill();
 ```
 
 ---
-
 
 ## Relational Database
 
@@ -21273,8 +21015,6 @@ type MyDatabase = {
 ### Step 2: Create a typed query hook
 
 ```typescript
-
-
 // Create a typed query hook for your processor
 const useTypedQuery = createProcessorQuery(MyProcessor);
 ```
@@ -21351,8 +21091,6 @@ Creates a typed query hook factory for a specific processor class. This is the m
 ### Usage Example
 
 ```typescript
-
-
 // Create a typed query hook for your processor
 const useTypedQuery = createProcessorQuery(MyProcessor);
 
@@ -22068,14 +21806,12 @@ function BetterComponent({ driveId, user }) {
 
 ---
 
-
 ## PHDocument Migration Guide
 
 > Source: https://powerhouse.academy/academy/APIReferences/PHDocumentMigrationGuide
 
 **TIP:**
 This guide covers the **breaking changes** introduced in Powerhouse v4.0.0 related to PHDocument structure changes. If you're upgrading from v3.2.0 or earlier, **this migration is required** and document models must be regenerated.
-
 
 ## Overview
 
@@ -22321,7 +22057,6 @@ query GetDocument($id: ID!) {
 **TIP:**
 **GraphQL Backward Compatibility:** The GraphQL API maintains backward compatibility through response transformation. Your existing queries will continue to work without changes. However, when working with the raw document objects in your application code, you'll need to use the new header structure.
 
-
 </details>
 
 ## Common Migration Issues and Solutions
@@ -22418,7 +22153,6 @@ describe("Document Migration", () => {
 _This migration guide covers the major changes in v4.0.0. For additional technical details, refer to the [RELEASE-NOTES.md](https://github.com/powerhouse-dao/powerhouse/blob/main/RELEASE-NOTES.md) in the main repository._
 
 ---
-
 
 ## Vetra Remote Drive
 
@@ -22595,14 +22329,12 @@ ph vetra --watch
 
 ---
 
-
 ## Subgraph Migration Guide (v6 Reactor)
 
 > Source: https://powerhouse.academy/academy/APIReferences/SubgraphMigrationGuide
 
 **TIP:**
 This guide covers the **breaking changes** to the GraphQL subgraph API introduced in the v6 Reactor. If you were querying the old `/graphql/document-drive` or `/graphql/system` endpoints, or building custom subgraphs, **this migration is required**.
-
 
 ## Overview
 
@@ -23109,7 +22841,6 @@ Custom subgraphs exported a `resolvers` object and a `typeDefs` string, using `c
 ```typescript
 // Legacy custom subgraph
 
-
 export const typeDefs = `
   type Query {
     myCustomQuery(driveId: String!): [String!]!
@@ -23134,7 +22865,6 @@ Custom subgraphs now use `getResolvers(subgraph: BaseSubgraph)` and access data 
 ```typescript
 // v6 custom subgraph — subgraphs/my-custom/resolvers.ts
 
-
 export const getResolvers = (subgraph: BaseSubgraph) => {
   const reactorClient = subgraph.reactorClient;
 
@@ -23155,7 +22885,6 @@ export const getResolvers = (subgraph: BaseSubgraph) => {
 
 ```typescript
 // v6 custom subgraph — subgraphs/my-custom/schema.ts
-
 
 export const schema: DocumentNode = gql`
   type Query {
@@ -23194,14 +22923,12 @@ ph generate --subgraph my-custom
 
 ---
 
-
 ## Processor Migration Guide (v6 Reactor)
 
 > Source: https://powerhouse.academy/academy/APIReferences/ProcessorMigrationGuide
 
 **TIP:**
 This guide covers the **breaking changes** to the processor interface introduced in the v6 Reactor. If you have existing processors built on the legacy strand-based API, **this migration is required**.
-
 
 ## Overview
 
@@ -23223,14 +22950,12 @@ This change simplifies the processor interface, improves cross-document ordering
 **INFO:**
 `@powerhousedao/reactor-browser` re-exports all reactor types for convenience in browser environments (editors, drive-apps). If you are working outside the browser (Node.js, CLI tools, server-side code), import directly from `@powerhousedao/reactor` or `@powerhousedao/shared`.
 
-
 ## Interface changes
 
 ### Legacy: IProcessor with onStrands
 
 ```typescript
 // Legacy processor interface
-
 
 export class MyProcessor implements IProcessor {
   // Received grouped strands — one per (driveId, documentId, scope, branch)
@@ -23258,7 +22983,6 @@ export class MyProcessor implements IProcessor {
 
 ```typescript
 // v6 processor interface
-
 
 export class MyProcessor implements IProcessor {
   // Receives a flat list of operations with full context
@@ -23293,7 +23017,6 @@ export class MyProcessor implements IProcessor {
 
 ```typescript
 // Legacy processor factory
-
 
 export const myProcessorFactory =
   (analyticsStore: IAnalyticsStore) =>
@@ -23491,7 +23214,6 @@ Legacy relational processors (previously called "operational processors") were p
 ```typescript
 // Legacy
 
-
 export class MyRelationalProcessor implements IProcessor {
   constructor(private db: any) {}
 
@@ -23524,7 +23246,6 @@ The v6 Reactor provides a `RelationalDbProcessor` base class with built-in datab
 
 ```typescript
 // v6
-
 
 export class MyRelationalProcessor extends RelationalDbProcessor<DB> {
   // Unique namespace per drive — prevents data collisions
@@ -23610,8 +23331,6 @@ ph generate --processor my-processor --processor-type relationalDb --document-ty
 ### Legacy
 
 ```typescript
-
-
 export class LoggerProcessor implements IProcessor {
   async onStrands(strands: InternalTransmitterUpdate[]): Promise<void> {
     for (const strand of strands) {
@@ -23633,8 +23352,6 @@ export class LoggerProcessor implements IProcessor {
 ### v6
 
 ```typescript
-
-
 export class LoggerProcessor implements IProcessor {
   constructor(private driveId: string) {}
 
@@ -23688,7 +23405,6 @@ Each item in the `onOperations` list destructures as `{ operation, context }`:
 - [ ] Regenerate processor scaffolding with `ph generate --processor <name>`
 
 ---
-
 
 ## Renown SDK
 
@@ -24008,7 +23724,6 @@ If you need to use a different Renown instance:
 AGPL-3.0-only
 
 ---
-
 
 ## Authentication Guide
 
@@ -24342,7 +24057,6 @@ export function Navigation() {
 ```typescript
 "use client";
 
-
 export function AuthStateListener() {
   const { user, loginStatus } = useUser();
   const router = useRouter();
@@ -24384,7 +24098,6 @@ export function AuthStateListener() {
 
 ```typescript
 "use client";
-
 
 interface ExtendedAuthState {
   user: User | null;
@@ -24670,7 +24383,6 @@ const handleLogin = useCallback(
 - Read the [API Reference](../docs/docs/02-APIReference.md) for detailed documentation
 
 ---
-
 
 ## API Reference
 
@@ -24973,8 +24685,6 @@ function initRenown(
 #### Example
 
 ```typescript
-
-
 const renown = await initRenown(
   "did:pkh:eip155:1:0x123...",
   "eip155",
@@ -25019,8 +24729,6 @@ function login(
 #### Example
 
 ```typescript
-
-
 const user = await login(
   "did:pkh:eip155:1:0x123...",
   window.renown,
@@ -25053,8 +24761,6 @@ function logout(): Promise<void>;
 #### Example
 
 ```typescript
-
-
 await logout();
 ```
 
@@ -25124,8 +24830,6 @@ function handleRenownReturn(): Promise<void>;
 #### Example
 
 ```typescript
-
-
 // Called automatically by UserProvider
 useEffect(() => {
   handleRenownReturn();
@@ -25164,8 +24868,6 @@ function fetchProfileDataForUser(user: User): Promise<User>;
 #### Example
 
 ```typescript
-
-
 const userWithProfile = await fetchProfileDataForUser(user);
 console.log(userWithProfile.name); // Display name
 console.log(userWithProfile.avatar); // Avatar URL
@@ -25197,8 +24899,6 @@ function reauthenticateFromSession(): Promise<User | null>;
 #### Example
 
 ```typescript
-
-
 const user = await reauthenticateFromSession();
 if (user) {
   console.log("Session restored for:", user.did);
@@ -25230,8 +24930,6 @@ function extractEthAddressFromDid(did: string): string | null;
 #### Example
 
 ```typescript
-
-
 const address = extractEthAddressFromDid("did:pkh:eip155:1:0x1234...");
 console.log(address); // '0x1234...'
 ```
@@ -25372,8 +25070,6 @@ constructor();
 #### Usage
 
 ```typescript
-
-
 const keyStorage = new BrowserKeyStorage();
 const connectCrypto = new ConnectCrypto(keyStorage);
 ```
@@ -25648,7 +25344,6 @@ The SDK is fully typed. Import types as needed:
 
 ---
 
-
 ## CLI Identity & Authentication
 
 > Source: https://powerhouse.academy/academy/APIReferences/renown-sdk/CLIIdentity
@@ -25828,8 +25523,6 @@ When the Switchboard starts with identity enabled, it can:
 The Switchboard can generate bearer tokens for authenticated API calls:
 
 ```typescript
-
-
 // Get the switchboard's DID
 const did = await getConnectDid();
 console.log("Switchboard DID:", did);
@@ -25980,9 +25673,7 @@ async function getBearerToken(
 
 ---
 
-
 # Component Library
-
 
 ## Document-Engineering
 
@@ -26017,7 +25708,6 @@ Understanding the relationship between document editors and viewers is crucial f
 
 **TIP:**
 The same component that will be used in a document viewer will have a **disabled state** (not allowed to edit documents). Document editors precede document viewers - you would start by creating a document editor and then, if needed, decide which viewer format is useful.
-
 
 ## Scalars vs. General UI Components
 
@@ -26069,7 +25759,6 @@ Purpose-specific container for other components like lists of other components, 
 
 **INFO:**
 The Powerhouse team is building a Component library with a wide range of components embedding best UX practices & key functionality. This library establishes standards and best practices for building documents while fast-tracking the building process through facilitation of the most basic & useful component types.
-
 
 ## Component Behavior & UX Principles
 
@@ -26247,7 +25936,6 @@ You can learn how to do so in our guide on [Creating Custom Scalars](/academy/Co
 
 ---
 
-
 ## Step 1: Create Custom Scalars
 
 > Source: https://powerhouse.academy/academy/ComponentLibrary/CreateCustomScalars
@@ -26344,10 +26032,7 @@ Add your scalar to the namespace imports section (around line 2):
 ```typescript
 // namespace imports -- DO NOT REMOVE OR EDIT THIS COMMENT
 
-
 // ... other imports ...
-
-
 ```
 
 ### 2.2 Add Type Export
@@ -26451,8 +26136,6 @@ Every scalar must have comprehensive tests to ensure it works correctly. Create 
 **Example: Creating `PhoneNumber.test.ts`**
 
 ```typescript
-
-
 describe("PhoneNumber Scalar", () => {
   it("should serialize a phone number", () => {
     const phoneNumber = "+1234567890";
@@ -26646,7 +26329,6 @@ export const schema = z.string().datetime();
 
 ---
 
-
 ## Step 2: Integrate Your Scalar into a React Component
 
 > Source: https://powerhouse.academy/academy/ComponentLibrary/IntegrateIntoAReactComponent
@@ -26673,10 +26355,7 @@ Custom scalars provide type-safe validation and parsing for your data. Integrati
 Import your scalar and React hooks. You may use any input component to capture user input. In the following example, `FormInput` is used for demonstration purposes, but you can use a standard `<input>`, a custom component, or any UI library input.
 
 ```typescript
-
-
 // FormInput is just an example. You can use any input component you prefer.
-
 ```
 
 Replace `EthereumAddress` with your scalar's name as needed.
@@ -26777,9 +26456,7 @@ Replace `EthereumAddress` with your scalar component as needed.
 
 ---
 
-
 # Architecture
-
 
 ## Powerhouse Architecture
 
@@ -26848,7 +26525,6 @@ With the help of these host applications, Powerhouse is launching 2 platforms th
 
 ---
 
-
 ## Working with the Reactor
 
 > Source: https://powerhouse.academy/academy/Architecture/WorkingWithTheReactor
@@ -26861,7 +26537,6 @@ DocSync is a decentralized synchronization protocol that is storage agnostic.
 But who is doing the syncing?
 
 We call these participants **Reactors**.
-
 
 ### Powerhouse Reactors
 
@@ -26880,7 +26555,6 @@ Powerhouse Reactors are the nodes in the network that store documents, resolve c
 
 **TIP:**
 The DocSync protocol _sends updates from one reactor to another_ - **smashing document operations into one another** - to ensure all data is synced.
-
 
 A **reactor** is responsible for storing data and resolving merge conflicts.  
 Editing data and submitting new operations must be done through Powerhouse's native applications (Connect, Switchboard, Fusion). Each instance of these applications contains a Reactor that is responsible for storing data and syncing data through DocSync. In other words, Powerhouse applications are how Reactors can be accessed, manipulated, steered, visualized and modified. A local Connect desktop application's reactor can therefore sync with the Reactor of a remote drive (e.g. Switchboard instance).
@@ -26904,7 +26578,6 @@ The `IReactorClient` is the primary interface for interacting with a reactor pro
 
 **INFO:**
 `@powerhousedao/reactor-browser` re-exports all reactor types for convenience in browser environments (editors, drive-apps, subgraphs). If you are working outside the browser — for example in a standalone Node.js script, CLI tool, or server-side processor — import directly from `@powerhousedao/reactor`.
-
 
 ### Reading documents
 
@@ -27060,9 +26733,7 @@ If you are working with the Reactor directly or need additional information rega
 
 ---
 
-
 # Book of Powerhouse
-
 
 ## Overview
 
@@ -27097,7 +26768,6 @@ Book of Powerhouse Outline:
 5. The Powerhouse Operations Platform
 
 ---
-
 
 ## **Part 1: Powerhouse General Framework and Open-Source Capitalism**
 
@@ -27139,7 +26809,6 @@ This is what makes Powerhouse unique: it’s not just about running decentralize
 
 ---
 
-
 ## Part 2: Powerhouse Software Architecture
 
 > Source: https://powerhouse.academy/bookofpowerhouse/PowerhouseSoftwareArchitecture
@@ -27180,7 +26849,6 @@ Powerhouse’s software architecture is designed to empower scalable, decentrali
         - **Renown and Academy Plugins**: Contributor reputation systems and training resources.
 
 ---
-
 
 ## Part 3: Development Approaches
 
@@ -27226,7 +26894,6 @@ These methodologies enhance collaboration, streamline workflows, and accelerate 
 
 ---
 
-
 ## Part 4: Scalable Network Organizations (SNOs)
 
 > Source: https://powerhouse.academy/bookofpowerhouse/SNOsandANewModelForOSSandPublicGoods
@@ -27268,7 +26935,6 @@ Legal structures are crucial for the success of SNOs, providing clarity, complia
   Powerhouse has developed a library of open-source legal templates to simplify the setup and operation of SNO entities. These templates include Contributor Agreements, MPAs, and licensing contracts, reducing the complexity and cost of navigating legal requirements. By standardizing these processes, Powerhouse enables SNOs to focus on innovation and growth.
 
 ---
-
 
 ## **Part 5: Powerhouse Platforms – Decentralized Operations and Builder**
 
@@ -27316,9 +26982,7 @@ Powerhouse is not simply offering software; it is building the operating system 
 
 ---
 
-
 # Release Notes
-
 
 ## Powerhouse v5.3.0 🚀
 
@@ -27451,9 +27115,7 @@ Coming soon to **https://academy.vetra.io**
 
 ---
 
-
 # Miscellaneous
-
 
 ## Cookbook
 
@@ -29870,7 +29532,6 @@ yarn cache clean --force
 
 ---
 
-
 ## Glossary
 
 > Source: https://powerhouse.academy/academy/Glossary
@@ -29978,7 +29639,6 @@ yarn cache clean --force
 
 ---
 
-
 ## LLM docs
 
 > Source: https://powerhouse.academy/academy/LLMDocs
@@ -30022,7 +29682,6 @@ This writes both `static/llms.txt` and `static/llms-full.txt`, which Docusaurus 
 
 ---
 
-
 ## Step 2 — Implement the `TodoList` document model reducer operation handlers
 
 > Source: https://powerhouse.academy/academy/TodoListTutorial/ImplementTodoListDocumentModelReducerOperationHandlers
@@ -30042,8 +29701,6 @@ So for our todos module, we will implement our handler logic in `document-models
 When you generated your document model code, we created a boilerplate implementation of the reducer logic for each of the operations we defined in step 1. You will see that there are functions for handling each of the operations, but all they do is throw "not implemented" errors.
 
 ```ts
-
-
 export const todoListTodosOperations: TodoListTodosOperations = {
   addTodoItemOperation(state, action) {
     // TODO: Implement "addTodoItemOperation" reducer
@@ -30067,8 +29724,6 @@ To handle the `addTodoItemOperation`, all we need to do is create an `id` for ou
 Update your `addTodoItemOperation` like so:
 
 ```typescript
-
-
 export const todoListTodosOperations: TodoListTodosOperations = {
   // removed-start
   addTodoItemOperation(state, action) {
@@ -30157,8 +29812,6 @@ export const todoListTodosOperations: TodoListTodosOperations = {
 With that all done, your final result should look like this:
 
 ```ts
-
-
 export const todoListTodosOperations: TodoListTodosOperations = {
   addTodoItemOperation(state, action) {
     const id = generateId();
@@ -30197,7 +29850,6 @@ To make sure all works as expected, we should:
 Up next, you'll implement some custom tests to check the behavior of our new code.
 
 ---
-
 
 ## Step 3 — Adding our own tests for the document model actions
 
@@ -30656,7 +30308,6 @@ Up next, we'll generate a boilerplate document editor for our `TodoList` documen
 
 ---
 
-
 ## Step 5 — Implement `TodoList` document editor UI components
 
 > Source: https://powerhouse.academy/academy/TodoListTutorial/ImplementTodoListDocumentEditorUIComponents
@@ -30670,8 +30321,6 @@ Let's start by adding a `<TodoList />` component that will be the main container
 Create a new file at `editors/todo-list-editor/components/TodoList.tsx` and add this:
 
 ```jsx
-
-
 /** Displays the selected todo list */
 export function TodoList() {
   // this hook returns the currently selected TodoList document
@@ -30698,7 +30347,6 @@ The `DocumentToolbar` component provides essential document operations like savi
 // removed-line
 
 // added-line
-
 
 export default function Editor() {
   return (
@@ -30771,10 +30419,7 @@ We have provided some basic Tailwind styles but you are welcome to style your co
 Let's add this component to our `<TodoList />` component.
 
 ```tsx
-
-
 // added-line
-
 
 /** Displays the selected todo list */
 export function TodoList() {
@@ -30827,10 +30472,7 @@ export function CloseButton() {
 Let's add this component to our `<TodoList />` component:
 
 ```tsx
-
-
 // added-line
-
 
 /** Displays the selected todo list */
 export function TodoList() {
@@ -31007,8 +30649,6 @@ export function Todos({ todos }: Props) {
 And replace the content of your `TodoList.tsx` file with this:
 
 ```jsx
-
-
 /** Displays the selected todo list */
 export function TodoList() {
   const [selectedTodoList] = useSelectedTodoListDocument();
@@ -31070,7 +30710,6 @@ To make sure all works as expected, we should:
 Next, we will generate a special kind of editor called a "drive editor" which we will use instead of the generic drive explorer.
 
 ---
-
 
 ## Step 7 - Add shared component for showing TodoList stats
 
@@ -31435,4 +31074,3 @@ Congratulations! You now have a working `TodoList` document model, and editor fo
 We're excited to see what you build!
 
 ---
-

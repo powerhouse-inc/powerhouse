@@ -9,7 +9,7 @@ Before configuring a drive, ensure you have:
 - Powerhouse [CLI installed](/academy/GetStarted/BuilderTools)
 - Access to a Powerhouse instance
 - Appropriate permissions to create and manage drives
-:::
+  :::
 
 ## Understanding drives
 
@@ -70,7 +70,7 @@ ph reactor
 `
 - The GraphQL endpoint of your instance. For example, for the staging environment, use: `https://staging.switchboard.phd/graphql` (this is a supergraph gateway. Read more about [subgraphs and supergraphs here](/academy/Build/WorkWithData/UsingSubgraphs).
 - Appropriate permissions to perform mutations.
-:::
+  :::
 
 <figure className="image-container">
   <img src={require("./images/CreateNewDrive.png").default} alt="Create a new drive" />

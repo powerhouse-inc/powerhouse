@@ -74,7 +74,7 @@
   "peerDependencies": {
     "graphql": "^16"
   },
-  "description": "Powerhouse code generator \u2014 generates TypeScript types, reducers, and editor scaffolding from GraphQL document model schemas.",
+  "description": "Powerhouse code generator — generates TypeScript types, reducers, and editor scaffolding from GraphQL document model schemas.",
   "keywords": [
     "powerhouse",
     "vetra",

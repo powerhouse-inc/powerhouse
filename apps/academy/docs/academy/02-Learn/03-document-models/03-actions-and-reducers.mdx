@@ -16,7 +16,7 @@ An action is plain data. Nothing more.
 }
 ```
 
-No timestamp. No hash. No index. An action describes *what you want to happen* — it's a request, not a fact. The action alone changes nothing.
+No timestamp. No hash. No index. An action describes _what you want to happen_ — it's a request, not a fact. The action alone changes nothing.
 
 That's intentional. Separating intent from result means you can validate, replay, or reject a change before it ever touches state.
 
@@ -39,17 +39,19 @@ addTodoOperation(state, action) {
 }
 ```
 
-Why so strict? Because peers reconstruct state by *replaying* the operation log. If a reducer reads `Date.now()` or calls `Math.random()`, two machines replaying the same log end up with different state. The whole system breaks.
+Why so strict? Because peers reconstruct state by _replaying_ the operation log. If a reducer reads `Date.now()` or calls `Math.random()`, two machines replaying the same log end up with different state. The whole system breaks.
 
 Non-deterministic values belong in the **action input** — generated before `dispatch`, outside the reducer:
 
 ```ts
 // In the editor — generate the ID before dispatching
-dispatch(addTodo({
-  id: generateId(),
-  createdAt: new Date().toISOString(),
-  title: input.title,
-}));
+dispatch(
+  addTodo({
+    id: generateId(),
+    createdAt: new Date().toISOString(),
+    title: input.title,
+  }),
+);
 ```
 
 <Quiz
@@ -57,20 +59,26 @@ dispatch(addTodo({
   choices={[
     {
       label: "state.id = action.input.id || crypto.randomUUID()",
-      explanation: "Random fallbacks make the reducer non-deterministic — two replays produce different IDs. Generate the ID in the action input instead.",
+      explanation:
+        "Random fallbacks make the reducer non-deterministic — two replays produce different IDs. Generate the ID in the action input instead.",
     },
     {
       label: "state.createdAt = new Date().toISOString()",
-      explanation: "Wall-clock time is non-deterministic. Peers replaying this operation at different moments get different timestamps. Pass the timestamp in the action input.",
+      explanation:
+        "Wall-clock time is non-deterministic. Peers replaying this operation at different moments get different timestamps. Pass the timestamp in the action input.",
     },
     {
-      label: "const user = await fetch('/me').then(r => r.json()); state.owner = user.id",
-      explanation: "Reducers must be synchronous and have no I/O. A network call makes the reducer async and unreliable. The owner ID should be included in the action input.",
+      label:
+        "const user = await fetch('/me').then(r => r.json()); state.owner = user.id",
+      explanation:
+        "Reducers must be synchronous and have no I/O. A network call makes the reducer async and unreliable. The owner ID should be included in the action input.",
     },
     {
-      label: "const t = state.todos.find(x => x.id === action.input.id); if (!t) throw new TodoNotFoundError('not found'); t.done = !t.done;",
+      label:
+        "const t = state.todos.find(x => x.id === action.input.id); if (!t) throw new TodoNotFoundError('not found'); t.done = !t.done;",
       correct: true,
-      explanation: "Pure, synchronous, deterministic — this is exactly what a valid reducer looks like. Same state + same action always produces the same result.",
+      explanation:
+        "Pure, synchronous, deterministic — this is exactly what a valid reducer looks like. Same state + same action always produces the same result.",
     },
   ]}
 />
@@ -97,10 +105,10 @@ If the reducer throws, the operation is still appended — but with `error` set 
 
 The action/reducer/operation triangle gives you a clean separation:
 
-| | Carries |
-|---|---|
-| **Action** | Intent — a name and inputs, nothing else |
-| **Reducer** | Logic — the only legal way state can change |
+|               | Carries                                                        |
+| ------------- | -------------------------------------------------------------- |
+| **Action**    | Intent — a name and inputs, nothing else                       |
+| **Reducer**   | Logic — the only legal way state can change                    |
 | **Operation** | Result — the action plus proof it ran (index, hash, timestamp) |
 
 A caller can't sneak state changes past the reducer. A reducer can't introduce uncertainty. An operation can't be revised after the fact. Each piece does exactly one job.

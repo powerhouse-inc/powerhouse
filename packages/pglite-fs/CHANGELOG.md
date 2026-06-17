@@ -266,7 +266,7 @@ This was a version bump only for @powerhousedao/pglite-fs to align it with other
 
 ### 🩹 Fixes
 
-- **connect:** resolve @powerhousedao/connect/* aliases in vitest ([f7de787c6](https://github.com/powerhouse-inc/powerhouse/commit/f7de787c6))
+- **connect:** resolve @powerhousedao/connect/\* aliases in vitest ([f7de787c6](https://github.com/powerhouse-inc/powerhouse/commit/f7de787c6))
 - pnpm-lock file ([d5019827c](https://github.com/powerhouse-inc/powerhouse/commit/d5019827c))
 
 ### ❤️ Thank You

@@ -31,10 +31,15 @@
         /* Shadow scale */
         --shadow-2xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
         --shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
-        --shadow-sm: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
-        --shadow-md: 0 4px 6px -1px hsl(0 0% 0% / 0.1), 0 2px 4px -2px hsl(0 0% 0% / 0.1);
-        --shadow-lg: 0 10px 15px -3px hsl(0 0% 0% / 0.1), 0 4px 6px -4px hsl(0 0% 0% / 0.1);
-        --shadow-xl: 0 20px 25px -5px hsl(0 0% 0% / 0.1), 0 8px 10px -6px hsl(0 0% 0% / 0.1);
+        --shadow-sm:
+          0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
+        --shadow-md:
+          0 4px 6px -1px hsl(0 0% 0% / 0.1), 0 2px 4px -2px hsl(0 0% 0% / 0.1);
+        --shadow-lg:
+          0 10px 15px -3px hsl(0 0% 0% / 0.1), 0 4px 6px -4px hsl(0 0% 0% / 0.1);
+        --shadow-xl:
+          0 20px 25px -5px hsl(0 0% 0% / 0.1),
+          0 8px 10px -6px hsl(0 0% 0% / 0.1);
         --shadow-2xl: 0 25px 50px -12px hsl(0 0% 0% / 0.25);
       }
       .dark {
@@ -57,7 +62,7 @@
       }
 
       body {
-        font-family: 'Inter', sans-serif;
+        font-family: "Inter", sans-serif;
         background: var(--background);
         color: var(--foreground);
         padding: 48px;
@@ -116,7 +121,7 @@
         transition: background 0.2s;
       }
       .toggle-track::after {
-        content: '';
+        content: "";
         position: absolute;
         top: 3px;
         left: 3px;
@@ -171,10 +176,18 @@
         height: 48px;
         object-fit: contain;
       }
-      .logo-card .logo-light { display: block; }
-      .logo-card .logo-dark  { display: none; }
-      .dark .logo-card .logo-light { display: none; }
-      .dark .logo-card .logo-dark  { display: block; }
+      .logo-card .logo-light {
+        display: block;
+      }
+      .logo-card .logo-dark {
+        display: none;
+      }
+      .dark .logo-card .logo-light {
+        display: none;
+      }
+      .dark .logo-card .logo-dark {
+        display: block;
+      }
       .logo-label {
         font-size: 12px;
         font-weight: 500;
@@ -189,7 +202,9 @@
         margin-bottom: 12px;
         margin-top: 24px;
       }
-      .color-group-title:first-child { margin-top: 0; }
+      .color-group-title:first-child {
+        margin-top: 0;
+      }
       .color-grid {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
@@ -220,7 +235,7 @@
         font-size: 11px;
         font-weight: 500;
         color: var(--muted-foreground);
-        font-family: 'Inter', monospace;
+        font-family: "Inter", monospace;
       }
 
       /* ── Typography section ─────────────────────────────────── */
@@ -232,7 +247,9 @@
         border-bottom: 1px solid var(--border);
         transition: border-color 0.3s;
       }
-      .type-row:last-child { border-bottom: none; }
+      .type-row:last-child {
+        border-bottom: none;
+      }
       .type-label {
         width: 100px;
         flex-shrink: 0;
@@ -285,7 +302,9 @@
         align-items: center;
         margin-bottom: 16px;
       }
-      .button-row:last-child { margin-bottom: 0; }
+      .button-row:last-child {
+        margin-bottom: 0;
+      }
       .button-row-label {
         font-size: 11px;
         font-weight: 600;
@@ -300,30 +319,85 @@
         justify-content: center;
         gap: 6px;
         border-radius: var(--radius-md);
-        font-family: 'Inter', sans-serif;
+        font-family: "Inter", sans-serif;
         font-weight: 600;
         border: 1px solid transparent;
         cursor: pointer;
-        transition: opacity 0.15s, background 0.15s;
+        transition:
+          opacity 0.15s,
+          background 0.15s;
         line-height: 1;
       }
       /* Sizes */
-      .btn-lg   { height: 40px; padding: 0 24px; font-size: 14px; border-radius: var(--radius-md); }
-      .btn-md   { height: 36px; padding: 0 16px; font-size: 14px; border-radius: var(--radius-md); }
-      .btn-sm   { height: 32px; padding: 0 12px; font-size: 13px; border-radius: var(--radius-md); }
-      .btn-icon { height: 36px; width: 36px; padding: 0; border-radius: var(--radius-md); font-size: 16px; }
+      .btn-lg {
+        height: 40px;
+        padding: 0 24px;
+        font-size: 14px;
+        border-radius: var(--radius-md);
+      }
+      .btn-md {
+        height: 36px;
+        padding: 0 16px;
+        font-size: 14px;
+        border-radius: var(--radius-md);
+      }
+      .btn-sm {
+        height: 32px;
+        padding: 0 12px;
+        font-size: 13px;
+        border-radius: var(--radius-md);
+      }
+      .btn-icon {
+        height: 36px;
+        width: 36px;
+        padding: 0;
+        border-radius: var(--radius-md);
+        font-size: 16px;
+      }
       /* Variants */
-      .btn-primary     { background: var(--primary); color: #fff; }
-      .btn-primary:hover { opacity: 0.9; }
-      .btn-outline     { background: transparent; color: var(--foreground); border-color: var(--border); }
-      .btn-outline:hover { background: var(--accent); }
-      .btn-ghost       { background: transparent; color: var(--foreground); }
-      .btn-ghost:hover { background: var(--accent); }
-      .btn-secondary   { background: var(--secondary); color: var(--secondary-foreground); }
-      .btn-secondary:hover { opacity: 0.85; }
-      .btn-destructive { background: var(--destructive); color: #fff; }
-      .btn-destructive:hover { opacity: 0.9; }
-      .btn-link        { background: transparent; color: var(--primary); text-decoration: underline; text-underline-offset: 3px; border: none; }
+      .btn-primary {
+        background: var(--primary);
+        color: #fff;
+      }
+      .btn-primary:hover {
+        opacity: 0.9;
+      }
+      .btn-outline {
+        background: transparent;
+        color: var(--foreground);
+        border-color: var(--border);
+      }
+      .btn-outline:hover {
+        background: var(--accent);
+      }
+      .btn-ghost {
+        background: transparent;
+        color: var(--foreground);
+      }
+      .btn-ghost:hover {
+        background: var(--accent);
+      }
+      .btn-secondary {
+        background: var(--secondary);
+        color: var(--secondary-foreground);
+      }
+      .btn-secondary:hover {
+        opacity: 0.85;
+      }
+      .btn-destructive {
+        background: var(--destructive);
+        color: #fff;
+      }
+      .btn-destructive:hover {
+        opacity: 0.9;
+      }
+      .btn-link {
+        background: transparent;
+        color: var(--primary);
+        text-decoration: underline;
+        text-underline-offset: 3px;
+        border: none;
+      }
 
       /* ── Badges ─────────────────────────────────────────────── */
       .badge-row {
@@ -333,7 +407,9 @@
         align-items: center;
         margin-bottom: 12px;
       }
-      .badge-row:last-child { margin-bottom: 0; }
+      .badge-row:last-child {
+        margin-bottom: 0;
+      }
       .badge {
         display: inline-flex;
         align-items: center;
@@ -342,14 +418,33 @@
         border: 1px solid transparent;
         font-weight: 500;
         white-space: nowrap;
-        font-family: 'Inter', sans-serif;
+        font-family: "Inter", sans-serif;
       }
-      .badge-default-size { padding: 2px 8px; font-size: 12px; }
-      .badge-xs-size      { padding: 0 6px;   font-size: 10px; }
-      .badge-primary      { background: var(--primary); color: #fff; }
-      .badge-secondary    { background: var(--secondary); color: var(--secondary-foreground); }
-      .badge-outline      { background: transparent; color: var(--foreground); border-color: var(--border); }
-      .badge-destructive  { background: var(--destructive); color: #fff; }
+      .badge-default-size {
+        padding: 2px 8px;
+        font-size: 12px;
+      }
+      .badge-xs-size {
+        padding: 0 6px;
+        font-size: 10px;
+      }
+      .badge-primary {
+        background: var(--primary);
+        color: #fff;
+      }
+      .badge-secondary {
+        background: var(--secondary);
+        color: var(--secondary-foreground);
+      }
+      .badge-outline {
+        background: transparent;
+        color: var(--foreground);
+        border-color: var(--border);
+      }
+      .badge-destructive {
+        background: var(--destructive);
+        color: #fff;
+      }
 
       /* ── Cards ──────────────────────────────────────────────── */
       .card-grid {
@@ -363,7 +458,9 @@
         border: 1px solid var(--border);
         border-radius: var(--radius-lg);
         padding: 24px;
-        transition: background 0.3s, border-color 0.3s;
+        transition:
+          background 0.3s,
+          border-color 0.3s;
       }
       .demo-card h4 {
         font-size: 16px;
@@ -394,20 +491,29 @@
         padding: 24px;
         position: relative;
         overflow: hidden;
-        transition: background 0.3s, border-color 0.3s;
+        transition:
+          background 0.3s,
+          border-color 0.3s;
       }
       .hero-card::before {
-        content: '';
+        content: "";
         position: absolute;
-        top: 0; left: 0; right: 0;
+        top: 0;
+        left: 0;
+        right: 0;
         height: 1px;
-        background: linear-gradient(to right, transparent, var(--primary), transparent);
+        background: linear-gradient(
+          to right,
+          transparent,
+          var(--primary),
+          transparent
+        );
         opacity: 0.6;
         pointer-events: none;
       }
       /* Glass card */
       .glass-card {
-        background: rgba(252, 252, 252, 0.70);
+        background: rgba(252, 252, 252, 0.7);
         backdrop-filter: blur(24px);
         -webkit-backdrop-filter: blur(24px);
         border: 1px solid var(--border);
@@ -418,7 +524,7 @@
         transition: border-color 0.3s;
       }
       .dark .glass-card {
-        background: rgba(37, 42, 52, 0.70);
+        background: rgba(37, 42, 52, 0.7);
       }
       /* StripedCard */
       .striped-card {
@@ -426,7 +532,9 @@
         border: 1px solid var(--border);
         border-radius: var(--radius-lg);
         overflow: hidden;
-        transition: background 0.3s, border-color 0.3s;
+        transition:
+          background 0.3s,
+          border-color 0.3s;
       }
       .striped-card-header {
         background: var(--accent);
@@ -542,7 +650,7 @@
       .frosted-demo-overlay {
         position: absolute;
         inset: 0;
-        background: rgba(252, 252, 252, 0.40);
+        background: rgba(252, 252, 252, 0.4);
         backdrop-filter: blur(8px);
         -webkit-backdrop-filter: blur(8px);
         display: flex;
@@ -553,7 +661,7 @@
         color: var(--foreground);
       }
       .dark .frosted-demo-overlay {
-        background: rgba(27, 30, 36, 0.40);
+        background: rgba(27, 30, 36, 0.4);
       }
       /* Ambient blob demo */
       .ambient-demo {
@@ -584,7 +692,7 @@
       /* ── Modal demo ─────────────────────────────────────────── */
       .modal-demo {
         background: rgba(252, 252, 252, 0.85);
-        border: 1px solid rgba(215, 216, 217, 0.40);
+        border: 1px solid rgba(215, 216, 217, 0.4);
         border-radius: var(--radius-xl);
         padding: 24px;
         box-shadow: var(--shadow-2xl);
@@ -597,21 +705,29 @@
       }
       .dark .modal-demo {
         background: rgba(37, 42, 52, 0.85);
-        border-color: rgba(72, 82, 101, 0.40);
+        border-color: rgba(72, 82, 101, 0.4);
       }
       .modal-demo::before {
-        content: '';
+        content: "";
         position: absolute;
-        top: 0; left: 0; right: 0;
+        top: 0;
+        left: 0;
+        right: 0;
         height: 1px;
-        background: linear-gradient(to right, transparent, var(--primary), transparent);
+        background: linear-gradient(
+          to right,
+          transparent,
+          var(--primary),
+          transparent
+        );
         opacity: 0.6;
         pointer-events: none;
       }
       .modal-demo-icon {
-        width: 40px; height: 40px;
+        width: 40px;
+        height: 40px;
         border-radius: 50%;
-        background: rgba(4, 193, 97, 0.10);
+        background: rgba(4, 193, 97, 0.1);
         color: var(--primary);
         display: flex;
         align-items: center;
@@ -651,7 +767,8 @@
         gap: 8px;
       }
       .icon-well {
-        width: 40px; height: 40px;
+        width: 40px;
+        height: 40px;
         border-radius: 50%;
         display: flex;
         align-items: center;
@@ -659,19 +776,38 @@
         font-size: 18px;
       }
       .icon-well-sm {
-        width: 32px; height: 32px;
+        width: 32px;
+        height: 32px;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
         font-size: 14px;
       }
-      .icon-well-primary     { background: rgba(4, 193, 97, 0.10); color: var(--primary); }
-      .icon-well-primary-15  { background: rgba(4, 193, 97, 0.15); color: var(--primary); }
-      .icon-well-info        { background: rgba(50, 157, 255, 0.10); color: var(--info); }
-      .icon-well-warning     { background: rgba(255, 161, 50, 0.10); color: var(--warning); }
-      .icon-well-destructive { background: rgba(234, 67, 53, 0.10); color: var(--destructive); }
-      .icon-well-muted       { background: var(--muted); color: var(--muted-foreground); }
+      .icon-well-primary {
+        background: rgba(4, 193, 97, 0.1);
+        color: var(--primary);
+      }
+      .icon-well-primary-15 {
+        background: rgba(4, 193, 97, 0.15);
+        color: var(--primary);
+      }
+      .icon-well-info {
+        background: rgba(50, 157, 255, 0.1);
+        color: var(--info);
+      }
+      .icon-well-warning {
+        background: rgba(255, 161, 50, 0.1);
+        color: var(--warning);
+      }
+      .icon-well-destructive {
+        background: rgba(234, 67, 53, 0.1);
+        color: var(--destructive);
+      }
+      .icon-well-muted {
+        background: var(--muted);
+        color: var(--muted-foreground);
+      }
       .icon-well-label {
         font-size: 11px;
         color: var(--muted-foreground);
@@ -681,8 +817,13 @@
 
       /* ── Skeleton loaders ───────────────────────────────────── */
       @keyframes pulse {
-        0%, 100% { opacity: 1; }
-        50%       { opacity: 0.45; }
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.45;
+        }
       }
       .skeleton {
         background: var(--muted);
@@ -717,7 +858,9 @@
         border: 1px solid var(--border);
         width: 100px;
       }
-      .series-preview { height: 48px; }
+      .series-preview {
+        height: 48px;
+      }
       .series-info {
         padding: 8px 10px;
         background: var(--card);
@@ -757,12 +900,14 @@
         border: 1px solid var(--border);
         background: var(--input);
         color: var(--foreground);
-        font-family: 'Inter', sans-serif;
+        font-family: "Inter", sans-serif;
         font-size: 14px;
         outline: none;
         height: 36px;
         width: 220px;
-        transition: border-color 0.2s, background 0.3s;
+        transition:
+          border-color 0.2s,
+          background 0.3s;
       }
       .input-field:focus {
         border-color: var(--ring);
@@ -782,7 +927,7 @@
       .progress-track {
         height: 8px;
         border-radius: 99px;
-        background: rgba(4, 193, 97, 0.20);
+        background: rgba(4, 193, 97, 0.2);
         overflow: hidden;
       }
       .progress-fill {
@@ -799,125 +944,670 @@
       }
 
       /* ── BREADCRUMB ─────────────────────────────────────────────────────── */
-      .vsg-breadcrumb { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; }
-      .vsg-breadcrumb-sep { color: var(--border); }
-      .vsg-breadcrumb-link { color: var(--muted-foreground); background: none; border: none; cursor: pointer; font-family: inherit; font-size: 13px; padding: 0; }
-      .vsg-breadcrumb-link:hover { color: var(--foreground); text-decoration: underline; text-underline-offset: 3px; }
-      .vsg-breadcrumb-current { font-weight: 500; color: var(--foreground); }
+      .vsg-breadcrumb {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+      }
+      .vsg-breadcrumb-sep {
+        color: var(--border);
+      }
+      .vsg-breadcrumb-link {
+        color: var(--muted-foreground);
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-family: inherit;
+        font-size: 13px;
+        padding: 0;
+      }
+      .vsg-breadcrumb-link:hover {
+        color: var(--foreground);
+        text-decoration: underline;
+        text-underline-offset: 3px;
+      }
+      .vsg-breadcrumb-current {
+        font-weight: 500;
+        color: var(--foreground);
+      }
 
       /* ── SERVER STATUS CHIPS ────────────────────────────────────────────── */
-      .vsg-chip { display: inline-flex; align-items: center; gap: 6px; border-radius: 9999px; border: 1px solid; padding: 2px 8px; font-size: 11px; font-weight: 500; }
-      .vsg-chip-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
-      .vsg-chip-ready    { border-color: rgba(79,200,111,0.4);  background: rgba(79,200,111,0.08);  color: var(--success); }
-      .vsg-chip-ready    .vsg-chip-dot { background: var(--success); }
-      .vsg-chip-starting { border-color: rgba(255,161,50,0.4);  background: rgba(255,161,50,0.08);  color: var(--todo); }
-      .vsg-chip-starting .vsg-chip-dot { background: var(--todo); animation: pulse 1.5s ease-in-out infinite; }
-      .vsg-chip-error    { border-color: rgba(234,67,53,0.4);   background: rgba(234,67,53,0.08);   color: var(--destructive); }
-      .vsg-chip-error    .vsg-chip-dot { background: var(--destructive); }
-      .vsg-chip-stopped  { border-color: var(--border); background: var(--muted); color: var(--muted-foreground); }
-      .vsg-chip-stopped  .vsg-chip-dot { background: var(--muted-foreground); }
+      .vsg-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border-radius: 9999px;
+        border: 1px solid;
+        padding: 2px 8px;
+        font-size: 11px;
+        font-weight: 500;
+      }
+      .vsg-chip-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        display: inline-block;
+      }
+      .vsg-chip-ready {
+        border-color: rgba(79, 200, 111, 0.4);
+        background: rgba(79, 200, 111, 0.08);
+        color: var(--success);
+      }
+      .vsg-chip-ready .vsg-chip-dot {
+        background: var(--success);
+      }
+      .vsg-chip-starting {
+        border-color: rgba(255, 161, 50, 0.4);
+        background: rgba(255, 161, 50, 0.08);
+        color: var(--todo);
+      }
+      .vsg-chip-starting .vsg-chip-dot {
+        background: var(--todo);
+        animation: pulse 1.5s ease-in-out infinite;
+      }
+      .vsg-chip-error {
+        border-color: rgba(234, 67, 53, 0.4);
+        background: rgba(234, 67, 53, 0.08);
+        color: var(--destructive);
+      }
+      .vsg-chip-error .vsg-chip-dot {
+        background: var(--destructive);
+      }
+      .vsg-chip-stopped {
+        border-color: var(--border);
+        background: var(--muted);
+        color: var(--muted-foreground);
+      }
+      .vsg-chip-stopped .vsg-chip-dot {
+        background: var(--muted-foreground);
+      }
 
       /* ── APP SHELL ──────────────────────────────────────────────────────── */
-      .vsg-app-shell { display: flex; height: 600px; border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-md); transition: border-color 0.3s; }
-      .vsg-chat-pane { width: 360px; flex-shrink: 0; display: flex; flex-direction: column; background: var(--card); transition: background 0.3s; }
-      .vsg-chat-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--border); padding: 12px 16px; transition: border-color 0.3s; }
-      .vsg-chat-header h2 { font-size: 13px; font-weight: 600; letter-spacing: -0.01em; color: var(--foreground); }
-      .vsg-chat-count { font-size: 12px; font-weight: 500; color: var(--muted-foreground); }
-      .vsg-divider { width: 10px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-left: 1px solid var(--border); border-right: 1px solid var(--border); background: var(--card); cursor: col-resize; transition: background 0.3s, border-color 0.3s; }
-      .vsg-divider:hover { background: var(--accent); }
-      .vsg-divider-dots { display: flex; flex-direction: column; gap: 4px; pointer-events: none; }
-      .vsg-divider-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--muted-foreground); }
-      .vsg-main-pane { flex: 1; min-width: 0; display: flex; flex-direction: column; background: var(--background); overflow: hidden; transition: background 0.3s; }
-      .vsg-main-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--border); background: var(--card); padding: 8px 32px; flex-shrink: 0; transition: background 0.3s, border-color 0.3s; }
-      .vsg-main-content { flex: 1; overflow-y: auto; padding: 32px; }
-      .vsg-session-list { list-style: none; flex: 1; overflow-y: auto; }
-      .vsg-session-item { display: flex; align-items: center; gap: 12px; border-left: 2px solid transparent; padding: 10px 16px; font-size: 13px; color: var(--foreground); transition: background 0.1s, border-color 0.1s; cursor: pointer; width: 100%; background: none; border-right: none; border-top: none; border-bottom: none; font-family: inherit; }
-      .vsg-session-item:hover { border-left-color: var(--primary); background: var(--accent); }
-      .vsg-session-item.active { border-left-color: var(--primary); background: var(--accent); }
-      .vsg-session-icon { width: 16px; height: 16px; flex-shrink: 0; color: var(--muted-foreground); }
-      .vsg-session-item.active .vsg-session-icon { color: var(--primary); }
-      .vsg-session-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
-      .vsg-session-chevron { width: 14px; height: 14px; flex-shrink: 0; color: var(--border); }
-      .vsg-session-header { display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--border); background: var(--card); padding: 8px 12px; transition: background 0.3s, border-color 0.3s; }
-      .vsg-session-header-name { font-size: 13px; font-weight: 500; color: var(--foreground); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .vsg-app-shell {
+        display: flex;
+        height: 600px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        box-shadow: var(--shadow-md);
+        transition: border-color 0.3s;
+      }
+      .vsg-chat-pane {
+        width: 360px;
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+        background: var(--card);
+        transition: background 0.3s;
+      }
+      .vsg-chat-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        border-bottom: 1px solid var(--border);
+        padding: 12px 16px;
+        transition: border-color 0.3s;
+      }
+      .vsg-chat-header h2 {
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        color: var(--foreground);
+      }
+      .vsg-chat-count {
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--muted-foreground);
+      }
+      .vsg-divider {
+        width: 10px;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-left: 1px solid var(--border);
+        border-right: 1px solid var(--border);
+        background: var(--card);
+        cursor: col-resize;
+        transition:
+          background 0.3s,
+          border-color 0.3s;
+      }
+      .vsg-divider:hover {
+        background: var(--accent);
+      }
+      .vsg-divider-dots {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        pointer-events: none;
+      }
+      .vsg-divider-dot {
+        width: 4px;
+        height: 4px;
+        border-radius: 50%;
+        background: var(--muted-foreground);
+      }
+      .vsg-main-pane {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        background: var(--background);
+        overflow: hidden;
+        transition: background 0.3s;
+      }
+      .vsg-main-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        border-bottom: 1px solid var(--border);
+        background: var(--card);
+        padding: 8px 32px;
+        flex-shrink: 0;
+        transition:
+          background 0.3s,
+          border-color 0.3s;
+      }
+      .vsg-main-content {
+        flex: 1;
+        overflow-y: auto;
+        padding: 32px;
+      }
+      .vsg-session-list {
+        list-style: none;
+        flex: 1;
+        overflow-y: auto;
+      }
+      .vsg-session-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        border-left: 2px solid transparent;
+        padding: 10px 16px;
+        font-size: 13px;
+        color: var(--foreground);
+        transition:
+          background 0.1s,
+          border-color 0.1s;
+        cursor: pointer;
+        width: 100%;
+        background: none;
+        border-right: none;
+        border-top: none;
+        border-bottom: none;
+        font-family: inherit;
+      }
+      .vsg-session-item:hover {
+        border-left-color: var(--primary);
+        background: var(--accent);
+      }
+      .vsg-session-item.active {
+        border-left-color: var(--primary);
+        background: var(--accent);
+      }
+      .vsg-session-icon {
+        width: 16px;
+        height: 16px;
+        flex-shrink: 0;
+        color: var(--muted-foreground);
+      }
+      .vsg-session-item.active .vsg-session-icon {
+        color: var(--primary);
+      }
+      .vsg-session-name {
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-weight: 500;
+      }
+      .vsg-session-chevron {
+        width: 14px;
+        height: 14px;
+        flex-shrink: 0;
+        color: var(--border);
+      }
+      .vsg-session-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        border-bottom: 1px solid var(--border);
+        background: var(--card);
+        padding: 8px 12px;
+        transition:
+          background 0.3s,
+          border-color 0.3s;
+      }
+      .vsg-session-header-name {
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--foreground);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
 
       /* ── PHASE CARDS ────────────────────────────────────────────────────── */
-      .vsg-phase-list { display: flex; flex-direction: column; gap: 16px; }
-      .vsg-phase-card { position: relative; overflow: hidden; display: flex; align-items: center; justify-content: space-between; border-radius: var(--radius-lg); border: 1px solid var(--border); background: var(--card); padding: 24px; transition: border-color 0.15s, box-shadow 0.15s, background 0.3s; cursor: pointer; width: 100%; font-family: inherit; text-align: left; }
-      .vsg-phase-card:not(.disabled):hover { border-color: var(--primary); box-shadow: var(--shadow-xs); }
-      .vsg-phase-card:not(.disabled):hover .vsg-phase-gradient { opacity: 0.6; }
-      .vsg-phase-card.disabled { cursor: default; background: var(--muted); border-color: rgba(215,216,217,0.5); }
-      .vsg-phase-gradient { position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(to right, transparent, var(--primary), transparent); opacity: 0; transition: opacity 0.15s; pointer-events: none; }
-      .vsg-phase-left { display: flex; align-items: center; gap: 10px; }
-      .vsg-phase-icon-enabled { color: var(--primary); }
-      .vsg-phase-icon-disabled { color: var(--muted-foreground); }
-      .vsg-phase-label { font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted-foreground); }
-      .vsg-phase-note { border-radius: var(--radius-sm); padding: 4px 12px; font-size: 13px; font-weight: 500; }
-      .vsg-phase-note.enabled  { background: rgba(4,193,97,0.10); color: var(--primary); }
-      .vsg-phase-note.disabled { background: var(--muted); color: var(--muted-foreground); }
+      .vsg-phase-list {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+      .vsg-phase-card {
+        position: relative;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--border);
+        background: var(--card);
+        padding: 24px;
+        transition:
+          border-color 0.15s,
+          box-shadow 0.15s,
+          background 0.3s;
+        cursor: pointer;
+        width: 100%;
+        font-family: inherit;
+        text-align: left;
+      }
+      .vsg-phase-card:not(.disabled):hover {
+        border-color: var(--primary);
+        box-shadow: var(--shadow-xs);
+      }
+      .vsg-phase-card:not(.disabled):hover .vsg-phase-gradient {
+        opacity: 0.6;
+      }
+      .vsg-phase-card.disabled {
+        cursor: default;
+        background: var(--muted);
+        border-color: rgba(215, 216, 217, 0.5);
+      }
+      .vsg-phase-gradient {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: linear-gradient(
+          to right,
+          transparent,
+          var(--primary),
+          transparent
+        );
+        opacity: 0;
+        transition: opacity 0.15s;
+        pointer-events: none;
+      }
+      .vsg-phase-left {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .vsg-phase-icon-enabled {
+        color: var(--primary);
+      }
+      .vsg-phase-icon-disabled {
+        color: var(--muted-foreground);
+      }
+      .vsg-phase-label {
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--muted-foreground);
+      }
+      .vsg-phase-note {
+        border-radius: var(--radius-sm);
+        padding: 4px 12px;
+        font-size: 13px;
+        font-weight: 500;
+      }
+      .vsg-phase-note.enabled {
+        background: rgba(4, 193, 97, 0.1);
+        color: var(--primary);
+      }
+      .vsg-phase-note.disabled {
+        background: var(--muted);
+        color: var(--muted-foreground);
+      }
 
       /* ── IDENTITY CARDS ─────────────────────────────────────────────────── */
-      .vsg-card-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-      .vsg-identity-card { height: 112px; display: flex; flex-direction: column; justify-content: space-between; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--card); padding: 16px; cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s, background 0.3s; text-align: left; font-family: inherit; }
-      .vsg-identity-card:hover { border-color: var(--primary); box-shadow: var(--shadow-xs); }
-      .vsg-identity-card-create { height: 112px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1px dashed var(--border); border-radius: var(--radius-lg); background: var(--accent); padding: 16px; cursor: pointer; transition: border-color 0.15s, background 0.3s; text-align: center; font-family: inherit; }
-      .vsg-identity-card-create:hover { border-color: var(--primary); }
-      .vsg-identity-title { font-size: 14px; font-weight: 600; color: var(--foreground); }
-      .vsg-identity-sub { font-size: 12px; color: var(--muted-foreground); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-      .vsg-identity-create-label { font-size: 14px; font-weight: 500; color: var(--foreground); }
-      .vsg-identity-create-hint { font-size: 12px; color: var(--muted-foreground); margin-top: 4px; }
+      .vsg-card-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+      }
+      .vsg-identity-card {
+        height: 112px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        background: var(--card);
+        padding: 16px;
+        cursor: pointer;
+        transition:
+          border-color 0.15s,
+          box-shadow 0.15s,
+          background 0.3s;
+        text-align: left;
+        font-family: inherit;
+      }
+      .vsg-identity-card:hover {
+        border-color: var(--primary);
+        box-shadow: var(--shadow-xs);
+      }
+      .vsg-identity-card-create {
+        height: 112px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        border: 1px dashed var(--border);
+        border-radius: var(--radius-lg);
+        background: var(--accent);
+        padding: 16px;
+        cursor: pointer;
+        transition:
+          border-color 0.15s,
+          background 0.3s;
+        text-align: center;
+        font-family: inherit;
+      }
+      .vsg-identity-card-create:hover {
+        border-color: var(--primary);
+      }
+      .vsg-identity-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--foreground);
+      }
+      .vsg-identity-sub {
+        font-size: 12px;
+        color: var(--muted-foreground);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .vsg-identity-create-label {
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--foreground);
+      }
+      .vsg-identity-create-hint {
+        font-size: 12px;
+        color: var(--muted-foreground);
+        margin-top: 4px;
+      }
 
       /* ── FEATURE LIST ────────────────────────────────────────────────────── */
-      .vsg-feature-list { overflow: hidden; border-radius: var(--radius-lg); border: 1px solid var(--border); background: var(--card); transition: border-color 0.3s, background 0.3s; }
-      .vsg-feature-list-header { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); background: var(--accent); padding: 8px 16px; font-size: 12px; font-weight: 500; color: var(--muted-foreground); transition: background 0.3s, border-color 0.3s; }
-      .vsg-feature-row { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(215,216,217,0.4); padding: 12px 16px; transition: background 0.1s, border-color 0.3s; }
-      .vsg-feature-row:last-child { border-bottom: none; }
-      .vsg-feature-row:hover { background: var(--accent); }
-      .vsg-feature-left { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; cursor: pointer; }
-      .vsg-feature-name { font-size: 14px; font-weight: 500; color: var(--foreground); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-      .vsg-feature-status { border-radius: 6px; background: var(--muted); padding: 2px 8px; font-size: 10px; font-weight: 600; letter-spacing: 0.05em; color: var(--foreground); white-space: nowrap; }
-      .vsg-feature-scope { font-size: 10px; letter-spacing: 0.05em; color: var(--muted-foreground); white-space: nowrap; }
-      .vsg-feature-wbs { font-size: 12px; font-weight: 500; color: var(--primary); cursor: pointer; background: none; border: none; font-family: inherit; flex-shrink: 0; margin-left: 12px; }
-      .vsg-feature-wbs:hover { text-decoration: underline; text-underline-offset: 3px; }
-      .vsg-feature-no-wbs { font-size: 12px; color: var(--border); flex-shrink: 0; margin-left: 12px; }
+      .vsg-feature-list {
+        overflow: hidden;
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--border);
+        background: var(--card);
+        transition:
+          border-color 0.3s,
+          background 0.3s;
+      }
+      .vsg-feature-list-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid var(--border);
+        background: var(--accent);
+        padding: 8px 16px;
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--muted-foreground);
+        transition:
+          background 0.3s,
+          border-color 0.3s;
+      }
+      .vsg-feature-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid rgba(215, 216, 217, 0.4);
+        padding: 12px 16px;
+        transition:
+          background 0.1s,
+          border-color 0.3s;
+      }
+      .vsg-feature-row:last-child {
+        border-bottom: none;
+      }
+      .vsg-feature-row:hover {
+        background: var(--accent);
+      }
+      .vsg-feature-left {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+        flex: 1;
+        cursor: pointer;
+      }
+      .vsg-feature-name {
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--foreground);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .vsg-feature-status {
+        border-radius: 6px;
+        background: var(--muted);
+        padding: 2px 8px;
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0.05em;
+        color: var(--foreground);
+        white-space: nowrap;
+      }
+      .vsg-feature-scope {
+        font-size: 10px;
+        letter-spacing: 0.05em;
+        color: var(--muted-foreground);
+        white-space: nowrap;
+      }
+      .vsg-feature-wbs {
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--primary);
+        cursor: pointer;
+        background: none;
+        border: none;
+        font-family: inherit;
+        flex-shrink: 0;
+        margin-left: 12px;
+      }
+      .vsg-feature-wbs:hover {
+        text-decoration: underline;
+        text-underline-offset: 3px;
+      }
+      .vsg-feature-no-wbs {
+        font-size: 12px;
+        color: var(--border);
+        flex-shrink: 0;
+        margin-left: 12px;
+      }
 
       /* ── CHAT MESSAGES ──────────────────────────────────────────────────── */
-      .vsg-msg-row { display: flex; align-items: flex-start; gap: 8px; max-width: 95%; }
-      .vsg-msg-row.user { margin-left: auto; flex-direction: row-reverse; }
-      .vsg-msg-avatar { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-      .vsg-msg-avatar.agent { background: var(--secondary); color: var(--secondary-foreground); }
-      .vsg-msg-avatar.user  { background: var(--foreground); color: var(--background); }
-      .vsg-msg-content { font-size: 13px; color: var(--foreground); line-height: 1.55; }
-      .vsg-msg-content.user { background: var(--secondary); border-radius: var(--radius-md); padding: 10px 14px; }
+      .vsg-msg-row {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        max-width: 95%;
+      }
+      .vsg-msg-row.user {
+        margin-left: auto;
+        flex-direction: row-reverse;
+      }
+      .vsg-msg-avatar {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+      .vsg-msg-avatar.agent {
+        background: var(--secondary);
+        color: var(--secondary-foreground);
+      }
+      .vsg-msg-avatar.user {
+        background: var(--foreground);
+        color: var(--background);
+      }
+      .vsg-msg-content {
+        font-size: 13px;
+        color: var(--foreground);
+        line-height: 1.55;
+      }
+      .vsg-msg-content.user {
+        background: var(--secondary);
+        border-radius: var(--radius-md);
+        padding: 10px 14px;
+      }
 
       /* ── RENOWN LOGIN CARD ──────────────────────────────────────────────── */
-      .vsg-renown-card { display: flex; align-items: flex-start; gap: 12px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px; box-shadow: var(--shadow-xs); max-width: 300px; }
-      .vsg-renown-icon { width: 32px; height: 32px; border-radius: 50%; background: var(--accent); color: var(--foreground); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-      .vsg-renown-title { font-size: 13px; font-weight: 600; color: var(--foreground); letter-spacing: -0.01em; }
-      .vsg-renown-desc  { margin-top: 4px; font-size: 12px; color: var(--muted-foreground); line-height: 1.55; }
-      .vsg-renown-btn { margin-top: 12px; display: inline-flex; align-items: center; gap: 6px; background: var(--primary); color: var(--primary-foreground); border-radius: var(--radius-md); padding: 6px 12px; font-size: 12px; font-weight: 600; font-family: 'Inter', sans-serif; cursor: pointer; border: none; transition: opacity 0.15s; }
-      .vsg-renown-btn:hover { opacity: 0.9; }
+      .vsg-renown-card {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        padding: 16px;
+        box-shadow: var(--shadow-xs);
+        max-width: 300px;
+      }
+      .vsg-renown-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: var(--accent);
+        color: var(--foreground);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+      .vsg-renown-title {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--foreground);
+        letter-spacing: -0.01em;
+      }
+      .vsg-renown-desc {
+        margin-top: 4px;
+        font-size: 12px;
+        color: var(--muted-foreground);
+        line-height: 1.55;
+      }
+      .vsg-renown-btn {
+        margin-top: 12px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: var(--primary);
+        color: var(--primary-foreground);
+        border-radius: var(--radius-md);
+        padding: 6px 12px;
+        font-size: 12px;
+        font-weight: 600;
+        font-family: "Inter", sans-serif;
+        cursor: pointer;
+        border: none;
+        transition: opacity 0.15s;
+      }
+      .vsg-renown-btn:hover {
+        opacity: 0.9;
+      }
 
       /* ── MISC ───────────────────────────────────────────────────────────── */
-      .vsg-pulse-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--primary); animation: pulse 1.5s ease-in-out infinite; }
-      .vsg-loading-state { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted-foreground); }
-      .vsg-status-block { text-align: center; max-width: 360px; }
-      .vsg-status-block-title { font-size: 13px; font-weight: 500; color: var(--foreground); }
-      .vsg-status-block-detail { font-size: 12px; color: var(--muted-foreground); margin-top: 4px; line-height: 1.5; }
-      .vsg-empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 48px 24px; text-align: center; flex: 1; }
-      .vsg-empty-title { font-size: 13px; font-weight: 500; color: var(--foreground); }
-      .vsg-empty-sub   { font-size: 12px; color: var(--muted-foreground); margin-top: 4px; }
+      .vsg-pulse-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--primary);
+        animation: pulse 1.5s ease-in-out infinite;
+      }
+      .vsg-loading-state {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        color: var(--muted-foreground);
+      }
+      .vsg-status-block {
+        text-align: center;
+        max-width: 360px;
+      }
+      .vsg-status-block-title {
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--foreground);
+      }
+      .vsg-status-block-detail {
+        font-size: 12px;
+        color: var(--muted-foreground);
+        margin-top: 4px;
+        line-height: 1.5;
+      }
+      .vsg-empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+        padding: 48px 24px;
+        text-align: center;
+        flex: 1;
+      }
+      .vsg-empty-title {
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--foreground);
+      }
+      .vsg-empty-sub {
+        font-size: 12px;
+        color: var(--muted-foreground);
+        margin-top: 4px;
+      }
     </style>
   </head>
   <body>
     <div class="styleguide">
-
       <!-- Header -->
       <header class="sg-header">
         <div class="sg-header-left">
           <img src="./logos/vetra-icon.svg" alt="Vetra" height="36" />
-          <img src="./logos/vetra-logo-light-text.svg" alt="Vetra" height="24" class="logo-light-mode" />
-          <img src="./logos/vetra-logo-dark-text.svg" alt="Vetra" height="24" class="logo-dark-mode" style="display: none" />
+          <img
+            src="./logos/vetra-logo-light-text.svg"
+            alt="Vetra"
+            height="24"
+            class="logo-light-mode"
+          />
+          <img
+            src="./logos/vetra-logo-dark-text.svg"
+            alt="Vetra"
+            height="24"
+            class="logo-dark-mode"
+            style="display: none"
+          />
           <span class="sg-header-title">Styleguide</span>
         </div>
         <label class="theme-toggle">
@@ -937,28 +1627,73 @@
             <span class="logo-label">Icon (Colored)</span>
           </div>
           <div class="logo-card">
-            <img src="./logos/vetra-full-logo.svg"        alt="Full Logo"       style="height:32px" class="logo-light" />
-            <img src="./logos/vetra-full-logo-light.svg"  alt="Full Logo Light" style="height:32px" class="logo-dark" />
+            <img
+              src="./logos/vetra-full-logo.svg"
+              alt="Full Logo"
+              style="height: 32px"
+              class="logo-light"
+            />
+            <img
+              src="./logos/vetra-full-logo-light.svg"
+              alt="Full Logo Light"
+              style="height: 32px"
+              class="logo-dark"
+            />
             <span class="logo-label">Full Logo</span>
           </div>
-          <div class="logo-card" style="background:#04c161;border-color:#04c161">
-            <img src="./logos/vetra-full-logo-white.svg" alt="Full Logo White" style="height:32px" />
-            <span class="logo-label" style="color:rgba(255,255,255,0.6)">Full Logo · Primary BG</span>
+          <div
+            class="logo-card"
+            style="background: #04c161; border-color: #04c161"
+          >
+            <img
+              src="./logos/vetra-full-logo-white.svg"
+              alt="Full Logo White"
+              style="height: 32px"
+            />
+            <span class="logo-label" style="color: rgba(255, 255, 255, 0.6)"
+              >Full Logo · Primary BG</span
+            >
           </div>
           <div class="logo-card">
-            <img src="./logos/vetra-logo-light-text.svg" alt="Vetra Wordmark Dark"  class="logo-light" />
-            <img src="./logos/vetra-logo-dark-text.svg"  alt="Vetra Wordmark Light" class="logo-dark" />
+            <img
+              src="./logos/vetra-logo-light-text.svg"
+              alt="Vetra Wordmark Dark"
+              class="logo-light"
+            />
+            <img
+              src="./logos/vetra-logo-dark-text.svg"
+              alt="Vetra Wordmark Light"
+              class="logo-dark"
+            />
             <span class="logo-label">Wordmark</span>
           </div>
           <div class="logo-card">
-            <img src="./logos/vetra-icon-black.svg" alt="Vetra Icon Black" class="logo-light" />
-            <img src="./logos/vetra-icon-dark.svg"  alt="Vetra Icon White" class="logo-dark" />
+            <img
+              src="./logos/vetra-icon-black.svg"
+              alt="Vetra Icon Black"
+              class="logo-light"
+            />
+            <img
+              src="./logos/vetra-icon-dark.svg"
+              alt="Vetra Icon White"
+              class="logo-dark"
+            />
             <span class="logo-label logo-light">Icon (Black)</span>
             <span class="logo-label logo-dark">Icon (White)</span>
           </div>
           <div class="logo-card">
-            <img src="./logos/vetra-full-logo-black.svg" alt="Full Logo Black" style="height:32px" class="logo-light" />
-            <img src="./logos/vetra-full-logo-white.svg" alt="Full Logo White" style="height:32px" class="logo-dark" />
+            <img
+              src="./logos/vetra-full-logo-black.svg"
+              alt="Full Logo Black"
+              style="height: 32px"
+              class="logo-light"
+            />
+            <img
+              src="./logos/vetra-full-logo-white.svg"
+              alt="Full Logo White"
+              style="height: 32px"
+              class="logo-dark"
+            />
             <span class="logo-label logo-light">Full Logo (Black)</span>
             <span class="logo-label logo-dark">Full Logo (White)</span>
           </div>
@@ -972,31 +1707,55 @@
         <h3 class="color-group-title">Core</h3>
         <div class="color-grid">
           <div class="color-swatch">
-            <div class="color-swatch-preview" style="background:var(--primary)"></div>
+            <div
+              class="color-swatch-preview"
+              style="background: var(--primary)"
+            ></div>
             <div class="color-swatch-info">
               <div class="color-swatch-name">Primary</div>
               <div class="color-swatch-value">#04C161</div>
             </div>
           </div>
           <div class="color-swatch">
-            <div class="color-swatch-preview" style="background:var(--primary-30)"></div>
+            <div
+              class="color-swatch-preview"
+              style="background: var(--primary-30)"
+            ></div>
             <div class="color-swatch-info">
               <div class="color-swatch-name">Primary 30%</div>
               <div class="color-swatch-value">rgba(4,193,97,0.3)</div>
             </div>
           </div>
           <div class="color-swatch">
-            <div class="color-swatch-preview" style="background:var(--secondary)"></div>
+            <div
+              class="color-swatch-preview"
+              style="background: var(--secondary)"
+            ></div>
             <div class="color-swatch-info">
               <div class="color-swatch-name">Secondary</div>
-              <div class="color-swatch-value" data-light="#F4F4F4" data-dark="#4F596F">#F4F4F4</div>
+              <div
+                class="color-swatch-value"
+                data-light="#F4F4F4"
+                data-dark="#4F596F"
+              >
+                #F4F4F4
+              </div>
             </div>
           </div>
           <div class="color-swatch">
-            <div class="color-swatch-preview" style="background:var(--accent)"></div>
+            <div
+              class="color-swatch-preview"
+              style="background: var(--accent)"
+            ></div>
             <div class="color-swatch-info">
               <div class="color-swatch-name">Accent</div>
-              <div class="color-swatch-value" data-light="#F3F5F7" data-dark="#373E4D">#F3F5F7</div>
+              <div
+                class="color-swatch-value"
+                data-light="#F3F5F7"
+                data-dark="#373E4D"
+              >
+                #F3F5F7
+              </div>
             </div>
           </div>
         </div>
@@ -1004,52 +1763,115 @@
         <h3 class="color-group-title">Surfaces</h3>
         <div class="color-grid">
           <div class="color-swatch">
-            <div class="color-swatch-preview" style="background:var(--background)"></div>
+            <div
+              class="color-swatch-preview"
+              style="background: var(--background)"
+            ></div>
             <div class="color-swatch-info">
               <div class="color-swatch-name">Background</div>
-              <div class="color-swatch-value" data-light="#FCFCFC" data-dark="#1B1E24">#FCFCFC</div>
+              <div
+                class="color-swatch-value"
+                data-light="#FCFCFC"
+                data-dark="#1B1E24"
+              >
+                #FCFCFC
+              </div>
             </div>
           </div>
           <div class="color-swatch">
-            <div class="color-swatch-preview" style="background:var(--card)"></div>
+            <div
+              class="color-swatch-preview"
+              style="background: var(--card)"
+            ></div>
             <div class="color-swatch-info">
               <div class="color-swatch-name">Card</div>
-              <div class="color-swatch-value" data-light="#FCFCFC" data-dark="#252A34">#FCFCFC</div>
+              <div
+                class="color-swatch-value"
+                data-light="#FCFCFC"
+                data-dark="#252A34"
+              >
+                #FCFCFC
+              </div>
             </div>
           </div>
           <div class="color-swatch">
-            <div class="color-swatch-preview" style="background:var(--popover)"></div>
+            <div
+              class="color-swatch-preview"
+              style="background: var(--popover)"
+            ></div>
             <div class="color-swatch-info">
               <div class="color-swatch-name">Popover</div>
-              <div class="color-swatch-value" data-light="#FFFFFF" data-dark="#1E222B">#FFFFFF</div>
+              <div
+                class="color-swatch-value"
+                data-light="#FFFFFF"
+                data-dark="#1E222B"
+              >
+                #FFFFFF
+              </div>
             </div>
           </div>
           <div class="color-swatch">
-            <div class="color-swatch-preview" style="background:var(--muted)"></div>
+            <div
+              class="color-swatch-preview"
+              style="background: var(--muted)"
+            ></div>
             <div class="color-swatch-info">
               <div class="color-swatch-name">Muted</div>
-              <div class="color-swatch-value" data-light="#EFEFEF" data-dark="#343839">#EFEFEF</div>
+              <div
+                class="color-swatch-value"
+                data-light="#EFEFEF"
+                data-dark="#343839"
+              >
+                #EFEFEF
+              </div>
             </div>
           </div>
           <div class="color-swatch">
-            <div class="color-swatch-preview" style="background:var(--input);border:1px solid var(--border)"></div>
+            <div
+              class="color-swatch-preview"
+              style="background: var(--input); border: 1px solid var(--border)"
+            ></div>
             <div class="color-swatch-info">
               <div class="color-swatch-name">Input</div>
-              <div class="color-swatch-value" data-light="#FFFFFF" data-dark="#1B1E24">#FFFFFF</div>
+              <div
+                class="color-swatch-value"
+                data-light="#FFFFFF"
+                data-dark="#1B1E24"
+              >
+                #FFFFFF
+              </div>
             </div>
           </div>
           <div class="color-swatch">
-            <div class="color-swatch-preview" style="background:var(--border)"></div>
+            <div
+              class="color-swatch-preview"
+              style="background: var(--border)"
+            ></div>
             <div class="color-swatch-info">
               <div class="color-swatch-name">Border</div>
-              <div class="color-swatch-value" data-light="#D7D8D9" data-dark="#485265">#D7D8D9</div>
+              <div
+                class="color-swatch-value"
+                data-light="#D7D8D9"
+                data-dark="#485265"
+              >
+                #D7D8D9
+              </div>
             </div>
           </div>
           <div class="color-swatch">
-            <div class="color-swatch-preview" style="background:var(--sidebar)"></div>
+            <div
+              class="color-swatch-preview"
+              style="background: var(--sidebar)"
+            ></div>
             <div class="color-swatch-info">
               <div class="color-swatch-name">Sidebar</div>
-              <div class="color-swatch-value" data-light="#FFFFFF" data-dark="#1B1E24">#FFFFFF</div>
+              <div
+                class="color-swatch-value"
+                data-light="#FFFFFF"
+                data-dark="#1B1E24"
+              >
+                #FFFFFF
+              </div>
             </div>
           </div>
         </div>
@@ -1057,35 +1879,62 @@
         <h3 class="color-group-title">Text</h3>
         <div class="color-grid">
           <div class="color-swatch">
-            <div class="color-swatch-preview" style="background:var(--foreground)"></div>
+            <div
+              class="color-swatch-preview"
+              style="background: var(--foreground)"
+            ></div>
             <div class="color-swatch-info">
               <div class="color-swatch-name">Foreground</div>
-              <div class="color-swatch-value" data-light="#343839" data-dark="#FCFCFC">#343839</div>
+              <div
+                class="color-swatch-value"
+                data-light="#343839"
+                data-dark="#FCFCFC"
+              >
+                #343839
+              </div>
             </div>
           </div>
           <div class="color-swatch">
-            <div class="color-swatch-preview" style="background:var(--foreground-70)"></div>
+            <div
+              class="color-swatch-preview"
+              style="background: var(--foreground-70)"
+            ></div>
             <div class="color-swatch-info">
               <div class="color-swatch-name">Foreground 70%</div>
               <div class="color-swatch-value">70% opacity</div>
             </div>
           </div>
           <div class="color-swatch">
-            <div class="color-swatch-preview" style="background:var(--foreground-50)"></div>
+            <div
+              class="color-swatch-preview"
+              style="background: var(--foreground-50)"
+            ></div>
             <div class="color-swatch-info">
               <div class="color-swatch-name">Foreground 50%</div>
               <div class="color-swatch-value">50% opacity</div>
             </div>
           </div>
           <div class="color-swatch">
-            <div class="color-swatch-preview" style="background:var(--muted-foreground)"></div>
+            <div
+              class="color-swatch-preview"
+              style="background: var(--muted-foreground)"
+            ></div>
             <div class="color-swatch-info">
               <div class="color-swatch-name">Muted FG</div>
-              <div class="color-swatch-value" data-light="#9EA0A1" data-dark="#6C7275">#9EA0A1</div>
+              <div
+                class="color-swatch-value"
+                data-light="#9EA0A1"
+                data-dark="#6C7275"
+              >
+                #9EA0A1
+              </div>
             </div>
           </div>
           <div class="color-swatch">
-            <div class="color-swatch-preview" style="background:var(--card-foreground-50)"></div>
+            <div
+              class="color-swatch-preview"
+              style="background: var(--card-foreground-50)"
+            ></div>
             <div class="color-swatch-info">
               <div class="color-swatch-name">Card FG 50%</div>
               <div class="color-swatch-value">50% opacity</div>
@@ -1096,42 +1945,60 @@
         <h3 class="color-group-title">Semantic</h3>
         <div class="color-grid">
           <div class="color-swatch">
-            <div class="color-swatch-preview" style="background:var(--destructive)"></div>
+            <div
+              class="color-swatch-preview"
+              style="background: var(--destructive)"
+            ></div>
             <div class="color-swatch-info">
               <div class="color-swatch-name">Destructive</div>
               <div class="color-swatch-value">#EA4335</div>
             </div>
           </div>
           <div class="color-swatch">
-            <div class="color-swatch-preview" style="background:var(--success)"></div>
+            <div
+              class="color-swatch-preview"
+              style="background: var(--success)"
+            ></div>
             <div class="color-swatch-info">
               <div class="color-swatch-name">Success</div>
               <div class="color-swatch-value">#4FC86F</div>
             </div>
           </div>
           <div class="color-swatch">
-            <div class="color-swatch-preview" style="background:var(--info)"></div>
+            <div
+              class="color-swatch-preview"
+              style="background: var(--info)"
+            ></div>
             <div class="color-swatch-info">
               <div class="color-swatch-name">Info</div>
               <div class="color-swatch-value">#329DFF</div>
             </div>
           </div>
           <div class="color-swatch">
-            <div class="color-swatch-preview" style="background:var(--warning)"></div>
+            <div
+              class="color-swatch-preview"
+              style="background: var(--warning)"
+            ></div>
             <div class="color-swatch-info">
               <div class="color-swatch-name">Warning</div>
               <div class="color-swatch-value">#FFA132</div>
             </div>
           </div>
           <div class="color-swatch">
-            <div class="color-swatch-preview" style="background:var(--yellow)"></div>
+            <div
+              class="color-swatch-preview"
+              style="background: var(--yellow)"
+            ></div>
             <div class="color-swatch-info">
               <div class="color-swatch-name">Yellow</div>
               <div class="color-swatch-value">#FAC400</div>
             </div>
           </div>
           <div class="color-swatch">
-            <div class="color-swatch-preview" style="background:var(--purple)"></div>
+            <div
+              class="color-swatch-preview"
+              style="background: var(--purple)"
+            ></div>
             <div class="color-swatch-info">
               <div class="color-swatch-name">Purple</div>
               <div class="color-swatch-value">#8E55EA</div>
@@ -1145,62 +2012,115 @@
         <h2 class="sg-section-title">Typography</h2>
         <div class="type-row">
           <span class="type-label">H1</span>
-          <span class="type-sample" style="font-size:64px;font-weight:700;line-height:1.2">Almost before</span>
+          <span
+            class="type-sample"
+            style="font-size: 64px; font-weight: 700; line-height: 1.2"
+            >Almost before</span
+          >
           <span class="type-meta">64px / 700<br />line-height: 1.2</span>
         </div>
         <div class="type-row">
           <span class="type-label">H2</span>
-          <span class="type-sample" style="font-size:40px;font-weight:700;line-height:1.2">Almost before we knew</span>
+          <span
+            class="type-sample"
+            style="font-size: 40px; font-weight: 700; line-height: 1.2"
+            >Almost before we knew</span
+          >
           <span class="type-meta">40px / 700<br />line-height: 1.2</span>
         </div>
         <div class="type-row">
           <span class="type-label">H3</span>
-          <span class="type-sample" style="font-size:32px;font-weight:700;line-height:1.2">Almost before we knew it</span>
+          <span
+            class="type-sample"
+            style="font-size: 32px; font-weight: 700; line-height: 1.2"
+            >Almost before we knew it</span
+          >
           <span class="type-meta">32px / 700<br />line-height: 1.2</span>
         </div>
         <div class="type-row">
           <span class="type-label">H4</span>
-          <span class="type-sample" style="font-size:24px;font-weight:700;line-height:1.2">Almost before we knew it, we had</span>
+          <span
+            class="type-sample"
+            style="font-size: 24px; font-weight: 700; line-height: 1.2"
+            >Almost before we knew it, we had</span
+          >
           <span class="type-meta">24px / 700<br />line-height: 1.2</span>
         </div>
         <div class="type-row">
           <span class="type-label">H5</span>
-          <span class="type-sample" style="font-size:20px;font-weight:700;line-height:1.2">Almost before we knew it, we had left the ground</span>
+          <span
+            class="type-sample"
+            style="font-size: 20px; font-weight: 700; line-height: 1.2"
+            >Almost before we knew it, we had left the ground</span
+          >
           <span class="type-meta">20px / 700<br />line-height: 1.2</span>
         </div>
         <div class="type-row">
           <span class="type-label">H6</span>
-          <span class="type-sample" style="font-size:18px;font-weight:700;line-height:1.2">Almost before we knew it, we had left the ground</span>
+          <span
+            class="type-sample"
+            style="font-size: 18px; font-weight: 700; line-height: 1.2"
+            >Almost before we knew it, we had left the ground</span
+          >
           <span class="type-meta">18px / 700<br />line-height: 1.2</span>
         </div>
         <div class="type-row">
           <span class="type-label">Subtitle 1</span>
-          <span class="type-sample" style="font-size:16px;font-weight:600;line-height:24px">Almost before we knew it, we had left the ground.</span>
+          <span
+            class="type-sample"
+            style="font-size: 16px; font-weight: 600; line-height: 24px"
+            >Almost before we knew it, we had left the ground.</span
+          >
           <span class="type-meta">16px / 600<br />line-height: 24px</span>
         </div>
         <div class="type-row">
           <span class="type-label">Subtitle 2</span>
-          <span class="type-sample" style="font-size:14px;font-weight:600;line-height:22px">Almost before we knew it, we had left the ground.</span>
+          <span
+            class="type-sample"
+            style="font-size: 14px; font-weight: 600; line-height: 22px"
+            >Almost before we knew it, we had left the ground.</span
+          >
           <span class="type-meta">14px / 600<br />line-height: 22px</span>
         </div>
         <div class="type-row">
           <span class="type-label">Body</span>
-          <span class="type-sample" style="font-size:16px;font-weight:400;line-height:24px">Almost before we knew it, we had left the ground.</span>
+          <span
+            class="type-sample"
+            style="font-size: 16px; font-weight: 400; line-height: 24px"
+            >Almost before we knew it, we had left the ground.</span
+          >
           <span class="type-meta">16px / 400<br />line-height: 24px</span>
         </div>
         <div class="type-row">
           <span class="type-label">Small</span>
-          <span class="type-sample" style="font-size:14px;font-weight:400;line-height:22px">Almost before we knew it, we had left the ground.</span>
+          <span
+            class="type-sample"
+            style="font-size: 14px; font-weight: 400; line-height: 22px"
+            >Almost before we knew it, we had left the ground.</span
+          >
           <span class="type-meta">14px / 400<br />line-height: 22px</span>
         </div>
         <div class="type-row">
           <span class="type-label">Caption</span>
-          <span class="type-sample" style="font-size:12px;font-weight:500;line-height:18px">Almost before we knew it, we had left the ground.</span>
+          <span
+            class="type-sample"
+            style="font-size: 12px; font-weight: 500; line-height: 18px"
+            >Almost before we knew it, we had left the ground.</span
+          >
           <span class="type-meta">12px / 500<br />line-height: 18px</span>
         </div>
         <div class="type-row">
           <span class="type-label">Mono</span>
-          <span class="type-sample" style="font-size:13px;font-weight:400;line-height:20px;font-family:ui-monospace,monospace">curl -fsSL https://get.vetra.io | sh</span>
+          <span
+            class="type-sample"
+            style="
+              font-size: 13px;
+              font-weight: 400;
+              line-height: 20px;
+              font-family: ui-monospace, monospace;
+            "
+            >curl -fsSL https://get.vetra.io | sh</span
+          >
           <span class="type-meta">13px / 400<br />monospace</span>
         </div>
       </section>
@@ -1210,27 +2130,39 @@
         <h2 class="sg-section-title">Border Radius</h2>
         <div class="radius-grid">
           <div class="radius-swatch">
-            <div class="radius-box" style="border-radius:var(--radius-sm)"></div>
+            <div
+              class="radius-box"
+              style="border-radius: var(--radius-sm)"
+            ></div>
             <span class="radius-label">sm</span>
             <span class="radius-sub">6px — compact rows, dropdowns</span>
           </div>
           <div class="radius-swatch">
-            <div class="radius-box" style="border-radius:var(--radius-md)"></div>
+            <div
+              class="radius-box"
+              style="border-radius: var(--radius-md)"
+            ></div>
             <span class="radius-label">md</span>
             <span class="radius-sub">8px — buttons, inputs, badges</span>
           </div>
           <div class="radius-swatch">
-            <div class="radius-box" style="border-radius:var(--radius-lg)"></div>
+            <div
+              class="radius-box"
+              style="border-radius: var(--radius-lg)"
+            ></div>
             <span class="radius-label">lg</span>
             <span class="radius-sub">12px — cards, panels</span>
           </div>
           <div class="radius-swatch">
-            <div class="radius-box" style="border-radius:var(--radius-xl)"></div>
+            <div
+              class="radius-box"
+              style="border-radius: var(--radius-xl)"
+            ></div>
             <span class="radius-label">xl</span>
             <span class="radius-sub">16px — modals, hero cards</span>
           </div>
           <div class="radius-swatch">
-            <div class="radius-box" style="border-radius:9999px"></div>
+            <div class="radius-box" style="border-radius: 9999px"></div>
             <span class="radius-label">full</span>
             <span class="radius-sub">9999px — pills, icon wells</span>
           </div>
@@ -1241,22 +2173,22 @@
       <section class="sg-section">
         <h2 class="sg-section-title">Shadows</h2>
         <div class="shadow-grid">
-          <div class="shadow-chip" style="box-shadow:var(--shadow-xs)">
+          <div class="shadow-chip" style="box-shadow: var(--shadow-xs)">
             <span class="shadow-label">xs</span>
           </div>
-          <div class="shadow-chip" style="box-shadow:var(--shadow-sm)">
+          <div class="shadow-chip" style="box-shadow: var(--shadow-sm)">
             <span class="shadow-label">sm</span>
           </div>
-          <div class="shadow-chip" style="box-shadow:var(--shadow-md)">
+          <div class="shadow-chip" style="box-shadow: var(--shadow-md)">
             <span class="shadow-label">md</span>
           </div>
-          <div class="shadow-chip" style="box-shadow:var(--shadow-lg)">
+          <div class="shadow-chip" style="box-shadow: var(--shadow-lg)">
             <span class="shadow-label">lg</span>
           </div>
-          <div class="shadow-chip" style="box-shadow:var(--shadow-xl)">
+          <div class="shadow-chip" style="box-shadow: var(--shadow-xl)">
             <span class="shadow-label">xl</span>
           </div>
-          <div class="shadow-chip" style="box-shadow:var(--shadow-2xl)">
+          <div class="shadow-chip" style="box-shadow: var(--shadow-2xl)">
             <span class="shadow-label">2xl</span>
           </div>
         </div>
@@ -1266,23 +2198,50 @@
       <section class="sg-section">
         <h2 class="sg-section-title">Status Indicators</h2>
         <div class="status-grid">
-          <div class="status-pill" style="background:var(--success-30);color:var(--success)">
-            <span class="status-dot" style="background:var(--success)"></span> Success
+          <div
+            class="status-pill"
+            style="background: var(--success-30); color: var(--success)"
+          >
+            <span class="status-dot" style="background: var(--success)"></span>
+            Success
           </div>
-          <div class="status-pill" style="background:var(--info-30);color:var(--info)">
-            <span class="status-dot" style="background:var(--info)"></span> Info
+          <div
+            class="status-pill"
+            style="background: var(--info-30); color: var(--info)"
+          >
+            <span class="status-dot" style="background: var(--info)"></span>
+            Info
           </div>
-          <div class="status-pill" style="background:var(--warning-30);color:var(--warning)">
-            <span class="status-dot" style="background:var(--warning)"></span> Warning
+          <div
+            class="status-pill"
+            style="background: var(--warning-30); color: var(--warning)"
+          >
+            <span class="status-dot" style="background: var(--warning)"></span>
+            Warning
           </div>
-          <div class="status-pill" style="background:var(--destructive-30);color:var(--destructive)">
-            <span class="status-dot" style="background:var(--destructive)"></span> Error
+          <div
+            class="status-pill"
+            style="background: var(--destructive-30); color: var(--destructive)"
+          >
+            <span
+              class="status-dot"
+              style="background: var(--destructive)"
+            ></span>
+            Error
           </div>
-          <div class="status-pill" style="background:var(--yellow-30);color:#b08a00">
-            <span class="status-dot" style="background:var(--yellow)"></span> Yellow
+          <div
+            class="status-pill"
+            style="background: var(--yellow-30); color: #b08a00"
+          >
+            <span class="status-dot" style="background: var(--yellow)"></span>
+            Yellow
           </div>
-          <div class="status-pill" style="background:var(--purple-30);color:var(--purple)">
-            <span class="status-dot" style="background:var(--purple)"></span> Purple
+          <div
+            class="status-pill"
+            style="background: var(--purple-30); color: var(--purple)"
+          >
+            <span class="status-dot" style="background: var(--purple)"></span>
+            Purple
           </div>
         </div>
       </section>
@@ -1301,26 +2260,62 @@
           <button class="btn btn-md btn-link">Link</button>
         </div>
 
-        <p class="button-row-label" style="margin-top:20px">Sizes</p>
+        <p class="button-row-label" style="margin-top: 20px">Sizes</p>
         <div class="button-row">
           <button class="btn btn-sm btn-primary">Small</button>
           <button class="btn btn-md btn-primary">Default</button>
           <button class="btn btn-lg btn-primary">Large</button>
-          <button class="btn btn-icon btn-outline" title="Icon button" style="font-size:14px">⊕</button>
+          <button
+            class="btn btn-icon btn-outline"
+            title="Icon button"
+            style="font-size: 14px"
+          >
+            ⊕
+          </button>
         </div>
 
-        <p class="button-row-label" style="margin-top:20px">With icon</p>
+        <p class="button-row-label" style="margin-top: 20px">With icon</p>
         <div class="button-row">
           <button class="btn btn-md btn-primary">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+            >
+              <path d="M5 12h14M12 5l7 7-7 7" />
+            </svg>
             Deploy
           </button>
           <button class="btn btn-md btn-outline">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 8v8M8 12h8"/></svg>
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <rect x="3" y="3" width="18" height="18" rx="2" />
+              <path d="M12 8v8M8 12h8" />
+            </svg>
             Add environment
           </button>
           <button class="btn btn-md btn-ghost">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <circle cx="12" cy="12" r="1" />
+              <circle cx="19" cy="12" r="1" />
+              <circle cx="5" cy="12" r="1" />
+            </svg>
             More
           </button>
         </div>
@@ -1333,12 +2328,18 @@
         <p class="button-row-label">Default size (12px)</p>
         <div class="badge-row">
           <span class="badge badge-default-size badge-primary">Primary</span>
-          <span class="badge badge-default-size badge-secondary">Secondary</span>
+          <span class="badge badge-default-size badge-secondary"
+            >Secondary</span
+          >
           <span class="badge badge-default-size badge-outline">Outline</span>
-          <span class="badge badge-default-size badge-destructive">Destructive</span>
+          <span class="badge badge-default-size badge-destructive"
+            >Destructive</span
+          >
         </div>
 
-        <p class="button-row-label" style="margin-top:16px">XS size (10px) — dense rows / tables</p>
+        <p class="button-row-label" style="margin-top: 16px">
+          XS size (10px) — dense rows / tables
+        </p>
         <div class="badge-row">
           <span class="badge badge-xs-size badge-primary">Primary</span>
           <span class="badge badge-xs-size badge-secondary">Secondary</span>
@@ -1346,13 +2347,53 @@
           <span class="badge badge-xs-size badge-destructive">Destructive</span>
         </div>
 
-        <p class="button-row-label" style="margin-top:16px">Semantic usage</p>
+        <p class="button-row-label" style="margin-top: 16px">Semantic usage</p>
         <div class="badge-row">
-          <span class="badge badge-default-size" style="background:var(--success-30);color:var(--success);border-color:transparent">Active</span>
-          <span class="badge badge-default-size" style="background:var(--info-30);color:var(--info);border-color:transparent">Running</span>
-          <span class="badge badge-default-size" style="background:var(--warning-30);color:var(--warning);border-color:transparent">Pending</span>
-          <span class="badge badge-default-size" style="background:var(--destructive-30);color:var(--destructive);border-color:transparent">Error</span>
-          <span class="badge badge-default-size" style="background:var(--purple-30);color:var(--purple);border-color:transparent">Beta</span>
+          <span
+            class="badge badge-default-size"
+            style="
+              background: var(--success-30);
+              color: var(--success);
+              border-color: transparent;
+            "
+            >Active</span
+          >
+          <span
+            class="badge badge-default-size"
+            style="
+              background: var(--info-30);
+              color: var(--info);
+              border-color: transparent;
+            "
+            >Running</span
+          >
+          <span
+            class="badge badge-default-size"
+            style="
+              background: var(--warning-30);
+              color: var(--warning);
+              border-color: transparent;
+            "
+            >Pending</span
+          >
+          <span
+            class="badge badge-default-size"
+            style="
+              background: var(--destructive-30);
+              color: var(--destructive);
+              border-color: transparent;
+            "
+            >Error</span
+          >
+          <span
+            class="badge badge-default-size"
+            style="
+              background: var(--purple-30);
+              color: var(--purple);
+              border-color: transparent;
+            "
+            >Beta</span
+          >
           <span class="badge badge-default-size badge-secondary">Draft</span>
         </div>
       </section>
@@ -1360,51 +2401,138 @@
       <!-- ── Icon Containers ─────────────────────────────────────── -->
       <section class="sg-section">
         <h2 class="sg-section-title">Icon Containers</h2>
-        <p style="font-size:13px;color:var(--muted-foreground);margin-bottom:20px;line-height:1.5">
-          Rounded wells used in dialog headers, feature cards, and list items. The tinted fill makes
-          the icon role legible without competing with surrounding text.
+        <p
+          style="
+            font-size: 13px;
+            color: var(--muted-foreground);
+            margin-bottom: 20px;
+            line-height: 1.5;
+          "
+        >
+          Rounded wells used in dialog headers, feature cards, and list items.
+          The tinted fill makes the icon role legible without competing with
+          surrounding text.
         </p>
         <div class="icon-container-grid">
           <div class="icon-container">
             <div class="icon-well icon-well-primary">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path
+                  d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"
+                />
+              </svg>
             </div>
             <span class="icon-well-label">primary/10</span>
           </div>
           <div class="icon-container">
             <div class="icon-well icon-well-primary-15">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path
+                  d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"
+                />
+              </svg>
             </div>
             <span class="icon-well-label">primary/15</span>
           </div>
           <div class="icon-container">
             <div class="icon-well icon-well-info">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
             </div>
             <span class="icon-well-label">info/10</span>
           </div>
           <div class="icon-container">
             <div class="icon-well icon-well-warning">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path
+                  d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
+                />
+                <line x1="12" y1="9" x2="12" y2="13" />
+                <line x1="12" y1="17" x2="12.01" y2="17" />
+              </svg>
             </div>
             <span class="icon-well-label">warning/10</span>
           </div>
           <div class="icon-container">
             <div class="icon-well icon-well-destructive">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <polyline points="3 6 5 6 21 6" />
+                <path
+                  d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"
+                />
+              </svg>
             </div>
             <span class="icon-well-label">destructive/10</span>
           </div>
           <div class="icon-container">
             <div class="icon-well icon-well-muted">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <circle cx="12" cy="12" r="3" />
+                <path
+                  d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"
+                />
+              </svg>
             </div>
             <span class="icon-well-label">muted</span>
           </div>
           <!-- sm variant -->
           <div class="icon-container">
             <div class="icon-well-sm icon-well-primary">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/></svg>
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+              >
+                <path d="M12 2L2 7l10 5 10-5-10-5z" />
+              </svg>
             </div>
             <span class="icon-well-label">sm variant</span>
           </div>
@@ -1415,40 +2543,104 @@
       <section class="sg-section">
         <h2 class="sg-section-title">Cards</h2>
         <div class="card-grid">
-
           <!-- Base card -->
           <div>
-            <p class="button-row-label" style="margin-bottom:10px">Base card</p>
+            <p class="button-row-label" style="margin-bottom: 10px">
+              Base card
+            </p>
             <div class="demo-card">
               <h4>Component Library</h4>
-              <p>A shared set of reusable components built to the Vetra design system specifications.</p>
+              <p>
+                A shared set of reusable components built to the Vetra design
+                system specifications.
+              </p>
               <span class="tag">Design System</span>
             </div>
           </div>
 
           <!-- HeroCard with accent top stripe -->
           <div>
-            <p class="button-row-label" style="margin-bottom:10px">HeroCard (accent top stripe)</p>
+            <p class="button-row-label" style="margin-bottom: 10px">
+              HeroCard (accent top stripe)
+            </p>
             <div class="hero-card">
-              <h4 style="font-size:16px;font-weight:700;margin-bottom:6px;color:var(--card-foreground)">Cloud Environment</h4>
-              <p style="font-size:13px;color:var(--card-foreground-50);line-height:1.6;margin-bottom:14px">
-                Primary status panel. The thin green gradient hairline at the top signals a "deliberate moment".
+              <h4
+                style="
+                  font-size: 16px;
+                  font-weight: 700;
+                  margin-bottom: 6px;
+                  color: var(--card-foreground);
+                "
+              >
+                Cloud Environment
+              </h4>
+              <p
+                style="
+                  font-size: 13px;
+                  color: var(--card-foreground-50);
+                  line-height: 1.6;
+                  margin-bottom: 14px;
+                "
+              >
+                Primary status panel. The thin green gradient hairline at the
+                top signals a "deliberate moment".
               </p>
-              <div style="display:flex;gap:8px">
-                <span class="badge badge-default-size" style="background:var(--success-30);color:var(--success);border-color:transparent">Active</span>
-                <span class="badge badge-default-size badge-secondary">prod</span>
+              <div style="display: flex; gap: 8px">
+                <span
+                  class="badge badge-default-size"
+                  style="
+                    background: var(--success-30);
+                    color: var(--success);
+                    border-color: transparent;
+                  "
+                  >Active</span
+                >
+                <span class="badge badge-default-size badge-secondary"
+                  >prod</span
+                >
               </div>
             </div>
           </div>
 
           <!-- Glass card -->
           <div>
-            <p class="button-row-label" style="margin-bottom:10px">Glass card (bg-card/70 + blur)</p>
-            <div style="background:linear-gradient(135deg,rgba(4,193,97,0.12) 0%,rgba(50,157,255,0.10) 100%);border-radius:14px;padding:2px">
-              <div class="glass-card" style="border-radius:12px">
-                <h4 style="font-size:16px;font-weight:700;margin-bottom:6px;color:var(--card-foreground)">Token Integration</h4>
-                <p style="font-size:13px;color:var(--card-foreground-50);line-height:1.6">
-                  Semi-transparent surface with <code style="font-family:monospace;font-size:12px">backdrop-blur-xl</code> — sits over the ambient background layer.
+            <p class="button-row-label" style="margin-bottom: 10px">
+              Glass card (bg-card/70 + blur)
+            </p>
+            <div
+              style="
+                background: linear-gradient(
+                  135deg,
+                  rgba(4, 193, 97, 0.12) 0%,
+                  rgba(50, 157, 255, 0.1) 100%
+                );
+                border-radius: 14px;
+                padding: 2px;
+              "
+            >
+              <div class="glass-card" style="border-radius: 12px">
+                <h4
+                  style="
+                    font-size: 16px;
+                    font-weight: 700;
+                    margin-bottom: 6px;
+                    color: var(--card-foreground);
+                  "
+                >
+                  Token Integration
+                </h4>
+                <p
+                  style="
+                    font-size: 13px;
+                    color: var(--card-foreground-50);
+                    line-height: 1.6;
+                  "
+                >
+                  Semi-transparent surface with
+                  <code style="font-family: monospace; font-size: 12px"
+                    >backdrop-blur-xl</code
+                  >
+                  — sits over the ambient background layer.
                 </p>
               </div>
             </div>
@@ -1456,18 +2648,27 @@
 
           <!-- StripedCard -->
           <div>
-            <p class="button-row-label" style="margin-bottom:10px">StripedCard</p>
+            <p class="button-row-label" style="margin-bottom: 10px">
+              StripedCard
+            </p>
             <div class="striped-card">
               <div class="striped-card-header">
                 <span>Package Registry</span>
-                <span style="font-size:11px;font-weight:500;color:var(--muted-foreground)">v2.4.1</span>
+                <span
+                  style="
+                    font-size: 11px;
+                    font-weight: 500;
+                    color: var(--muted-foreground);
+                  "
+                  >v2.4.1</span
+                >
               </div>
               <div class="striped-card-content">
-                Accent-tinted header strip with compact padding. Used in dense data lists and sidebar panels.
+                Accent-tinted header strip with compact padding. Used in dense
+                data lists and sidebar panels.
               </div>
             </div>
           </div>
-
         </div>
       </section>
 
@@ -1475,55 +2676,166 @@
       <section class="sg-section">
         <h2 class="sg-section-title">Surface Treatments</h2>
         <div class="surface-grid">
-
           <!-- Gradient top stroke -->
           <div>
-            <p class="button-row-label" style="margin-bottom:10px">Gradient accent stripe</p>
-            <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;position:relative;overflow:hidden;transition:background 0.3s,border-color 0.3s">
-              <div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(to right,transparent,var(--primary),transparent);opacity:0.6;pointer-events:none"></div>
-              <p style="font-size:12px;font-weight:600;color:var(--foreground);margin-bottom:4px">before::pseudo-element</p>
-              <p style="font-size:12px;color:var(--muted-foreground);line-height:1.5">1px hairline — <code style="font-family:monospace">from-transparent via-primary to-transparent</code> at 60% opacity. Used on every Dialog, AlertDialog, and HeroCard.</p>
+            <p class="button-row-label" style="margin-bottom: 10px">
+              Gradient accent stripe
+            </p>
+            <div
+              style="
+                background: var(--card);
+                border: 1px solid var(--border);
+                border-radius: var(--radius-lg);
+                padding: 20px;
+                position: relative;
+                overflow: hidden;
+                transition:
+                  background 0.3s,
+                  border-color 0.3s;
+              "
+            >
+              <div
+                style="
+                  position: absolute;
+                  top: 0;
+                  left: 0;
+                  right: 0;
+                  height: 1px;
+                  background: linear-gradient(
+                    to right,
+                    transparent,
+                    var(--primary),
+                    transparent
+                  );
+                  opacity: 0.6;
+                  pointer-events: none;
+                "
+              ></div>
+              <p
+                style="
+                  font-size: 12px;
+                  font-weight: 600;
+                  color: var(--foreground);
+                  margin-bottom: 4px;
+                "
+              >
+                before::pseudo-element
+              </p>
+              <p
+                style="
+                  font-size: 12px;
+                  color: var(--muted-foreground);
+                  line-height: 1.5;
+                "
+              >
+                1px hairline —
+                <code style="font-family: monospace"
+                  >from-transparent via-primary to-transparent</code
+                >
+                at 60% opacity. Used on every Dialog, AlertDialog, and HeroCard.
+              </p>
             </div>
           </div>
 
           <!-- Frosted overlay -->
           <div>
-            <p class="button-row-label" style="margin-bottom:10px">Frosted-glass overlay</p>
+            <p class="button-row-label" style="margin-bottom: 10px">
+              Frosted-glass overlay
+            </p>
             <div class="frosted-demo">
               <div class="frosted-demo-bg"></div>
-              <div class="frosted-demo-overlay">bg-background/40 + backdrop-blur-md</div>
+              <div class="frosted-demo-overlay">
+                bg-background/40 + backdrop-blur-md
+              </div>
             </div>
           </div>
 
           <!-- Ambient blobs -->
           <div>
-            <p class="button-row-label" style="margin-bottom:10px">Ambient background blobs</p>
+            <p class="button-row-label" style="margin-bottom: 10px">
+              Ambient background blobs
+            </p>
             <div class="ambient-demo">
-              <div class="ambient-blob" style="width:70%;height:70%;top:-20%;right:-15%;opacity:0.12"></div>
-              <div class="ambient-blob" style="width:60%;height:60%;bottom:-20%;left:-10%;opacity:0.10"></div>
-              <div class="ambient-blob" style="width:55%;height:55%;top:25%;left:35%;opacity:0.07"></div>
-              <div class="ambient-label">Site-wide AmbientBackground — fixed -z-10</div>
+              <div
+                class="ambient-blob"
+                style="
+                  width: 70%;
+                  height: 70%;
+                  top: -20%;
+                  right: -15%;
+                  opacity: 0.12;
+                "
+              ></div>
+              <div
+                class="ambient-blob"
+                style="
+                  width: 60%;
+                  height: 60%;
+                  bottom: -20%;
+                  left: -10%;
+                  opacity: 0.1;
+                "
+              ></div>
+              <div
+                class="ambient-blob"
+                style="
+                  width: 55%;
+                  height: 55%;
+                  top: 25%;
+                  left: 35%;
+                  opacity: 0.07;
+                "
+              ></div>
+              <div class="ambient-label">
+                Site-wide AmbientBackground — fixed -z-10
+              </div>
             </div>
           </div>
-
         </div>
       </section>
 
       <!-- ── Modal / Dialog ──────────────────────────────────────── -->
       <section class="sg-section">
         <h2 class="sg-section-title">Modal / Dialog</h2>
-        <p style="font-size:13px;color:var(--muted-foreground);margin-bottom:24px;line-height:1.5">
-          Glass surface (<code style="font-family:monospace;font-size:12px">bg-card/85 backdrop-blur-xl</code>) + soft hairline border
-          (<code style="font-family:monospace;font-size:12px">border-border/40</code>) + gradient accent stripe at top.
-          Overlay is <code style="font-family:monospace;font-size:12px">bg-background/40 backdrop-blur-md</code>.
+        <p
+          style="
+            font-size: 13px;
+            color: var(--muted-foreground);
+            margin-bottom: 24px;
+            line-height: 1.5;
+          "
+        >
+          Glass surface (<code style="font-family: monospace; font-size: 12px"
+            >bg-card/85 backdrop-blur-xl</code
+          >) + soft hairline border (<code
+            style="font-family: monospace; font-size: 12px"
+            >border-border/40</code
+          >) + gradient accent stripe at top. Overlay is
+          <code style="font-family: monospace; font-size: 12px"
+            >bg-background/40 backdrop-blur-md</code
+          >.
         </p>
 
         <div class="modal-demo">
           <div class="modal-demo-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path
+                d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"
+              />
+            </svg>
           </div>
           <h4>Deploy to production</h4>
-          <p>This will push the current build to the production environment. Connected users may experience a brief restart.</p>
+          <p>
+            This will push the current build to the production environment.
+            Connected users may experience a brief restart.
+          </p>
           <div class="modal-demo-footer">
             <button class="btn btn-md btn-outline">Cancel</button>
             <button class="btn btn-md btn-primary">Deploy</button>
@@ -1534,22 +2846,34 @@
       <!-- ── Inputs ──────────────────────────────────────────────── -->
       <section class="sg-section">
         <h2 class="sg-section-title">Inputs</h2>
-        <div class="input-row" style="margin-bottom:16px">
+        <div class="input-row" style="margin-bottom: 16px">
           <div class="input-group">
             <label>Name</label>
-            <input class="input-field" type="text" placeholder="Enter your name" />
+            <input
+              class="input-field"
+              type="text"
+              placeholder="Enter your name"
+            />
           </div>
           <div class="input-group">
             <label>Email</label>
-            <input class="input-field" type="email" placeholder="you@example.com" />
+            <input
+              class="input-field"
+              type="email"
+              placeholder="you@example.com"
+            />
           </div>
           <button class="btn btn-md btn-primary">Submit</button>
         </div>
         <div class="input-row">
           <div class="input-group">
             <label>Invite code</label>
-            <div style="display:flex;gap:8px">
-              <input class="input-field" type="text" placeholder="LOCAL-FIRST" />
+            <div style="display: flex; gap: 8px">
+              <input
+                class="input-field"
+                type="text"
+                placeholder="LOCAL-FIRST"
+              />
               <button class="btn btn-md btn-primary">Get Access</button>
             </div>
           </div>
@@ -1561,22 +2885,43 @@
         <h2 class="sg-section-title">Progress &amp; Utilisation</h2>
         <div class="progress-demo">
           <div>
-            <div class="progress-label"><span>CPU</span><span style="color:var(--primary)">42%</span></div>
-            <div style="height:4px"></div>
-            <div class="progress-track"><div class="progress-fill" style="width:42%"></div></div>
-          </div>
-          <div>
-            <div class="progress-label"><span>Memory</span><span style="color:var(--warning)">77%</span></div>
-            <div style="height:4px"></div>
-            <div class="progress-track" style="background:rgba(255,161,50,0.20)">
-              <div class="progress-fill" style="width:77%;background:var(--warning)"></div>
+            <div class="progress-label">
+              <span>CPU</span><span style="color: var(--primary)">42%</span>
+            </div>
+            <div style="height: 4px"></div>
+            <div class="progress-track">
+              <div class="progress-fill" style="width: 42%"></div>
             </div>
           </div>
           <div>
-            <div class="progress-label"><span>Storage</span><span style="color:var(--destructive)">91%</span></div>
-            <div style="height:4px"></div>
-            <div class="progress-track" style="background:rgba(234,67,53,0.20)">
-              <div class="progress-fill" style="width:91%;background:var(--destructive)"></div>
+            <div class="progress-label">
+              <span>Memory</span><span style="color: var(--warning)">77%</span>
+            </div>
+            <div style="height: 4px"></div>
+            <div
+              class="progress-track"
+              style="background: rgba(255, 161, 50, 0.2)"
+            >
+              <div
+                class="progress-fill"
+                style="width: 77%; background: var(--warning)"
+              ></div>
+            </div>
+          </div>
+          <div>
+            <div class="progress-label">
+              <span>Storage</span
+              ><span style="color: var(--destructive)">91%</span>
+            </div>
+            <div style="height: 4px"></div>
+            <div
+              class="progress-track"
+              style="background: rgba(234, 67, 53, 0.2)"
+            >
+              <div
+                class="progress-fill"
+                style="width: 91%; background: var(--destructive)"
+              ></div>
             </div>
           </div>
         </div>
@@ -1585,36 +2930,58 @@
       <!-- ── Skeleton Loaders ────────────────────────────────────── -->
       <section class="sg-section">
         <h2 class="sg-section-title">Skeleton Loaders</h2>
-        <div style="display:flex;gap:20px;flex-wrap:wrap">
+        <div style="display: flex; gap: 20px; flex-wrap: wrap">
           <!-- Card skeleton -->
           <div class="skeleton-card-demo">
-            <div class="skeleton" style="height:14px;width:60%"></div>
-            <div class="skeleton" style="height:10px;width:85%"></div>
-            <div class="skeleton" style="height:10px;width:70%"></div>
-            <div style="height:8px"></div>
-            <div class="skeleton" style="height:110px;width:100%"></div>
+            <div class="skeleton" style="height: 14px; width: 60%"></div>
+            <div class="skeleton" style="height: 10px; width: 85%"></div>
+            <div class="skeleton" style="height: 10px; width: 70%"></div>
+            <div style="height: 8px"></div>
+            <div class="skeleton" style="height: 110px; width: 100%"></div>
           </div>
           <!-- List skeleton -->
-          <div style="display:flex;flex-direction:column;gap:10px;width:240px">
-            <div style="display:flex;align-items:center;gap:10px">
-              <div class="skeleton" style="width:32px;height:32px;border-radius:50%"></div>
-              <div style="flex:1;display:flex;flex-direction:column;gap:6px">
-                <div class="skeleton" style="height:12px;width:80%"></div>
-                <div class="skeleton" style="height:10px;width:55%"></div>
+          <div
+            style="
+              display: flex;
+              flex-direction: column;
+              gap: 10px;
+              width: 240px;
+            "
+          >
+            <div style="display: flex; align-items: center; gap: 10px">
+              <div
+                class="skeleton"
+                style="width: 32px; height: 32px; border-radius: 50%"
+              ></div>
+              <div
+                style="flex: 1; display: flex; flex-direction: column; gap: 6px"
+              >
+                <div class="skeleton" style="height: 12px; width: 80%"></div>
+                <div class="skeleton" style="height: 10px; width: 55%"></div>
               </div>
             </div>
-            <div style="display:flex;align-items:center;gap:10px">
-              <div class="skeleton" style="width:32px;height:32px;border-radius:50%"></div>
-              <div style="flex:1;display:flex;flex-direction:column;gap:6px">
-                <div class="skeleton" style="height:12px;width:70%"></div>
-                <div class="skeleton" style="height:10px;width:45%"></div>
+            <div style="display: flex; align-items: center; gap: 10px">
+              <div
+                class="skeleton"
+                style="width: 32px; height: 32px; border-radius: 50%"
+              ></div>
+              <div
+                style="flex: 1; display: flex; flex-direction: column; gap: 6px"
+              >
+                <div class="skeleton" style="height: 12px; width: 70%"></div>
+                <div class="skeleton" style="height: 10px; width: 45%"></div>
               </div>
             </div>
-            <div style="display:flex;align-items:center;gap:10px">
-              <div class="skeleton" style="width:32px;height:32px;border-radius:50%"></div>
-              <div style="flex:1;display:flex;flex-direction:column;gap:6px">
-                <div class="skeleton" style="height:12px;width:90%"></div>
-                <div class="skeleton" style="height:10px;width:60%"></div>
+            <div style="display: flex; align-items: center; gap: 10px">
+              <div
+                class="skeleton"
+                style="width: 32px; height: 32px; border-radius: 50%"
+              ></div>
+              <div
+                style="flex: 1; display: flex; flex-direction: column; gap: 6px"
+              >
+                <div class="skeleton" style="height: 12px; width: 90%"></div>
+                <div class="skeleton" style="height: 10px; width: 60%"></div>
               </div>
             </div>
           </div>
@@ -1624,71 +2991,91 @@
       <!-- ── Chart Series Colors ─────────────────────────────────── -->
       <section class="sg-section">
         <h2 class="sg-section-title">Chart Series Colors</h2>
-        <p style="font-size:13px;color:var(--muted-foreground);margin-bottom:20px;line-height:1.5">
-          Sequential palette used in metric sparklines and area charts.
-          Series 0 (primary green) is the "peak / highlighted" pod; remaining series use indices 4–9 of the palette.
+        <p
+          style="
+            font-size: 13px;
+            color: var(--muted-foreground);
+            margin-bottom: 20px;
+            line-height: 1.5;
+          "
+        >
+          Sequential palette used in metric sparklines and area charts. Series 0
+          (primary green) is the "peak / highlighted" pod; remaining series use
+          indices 4–9 of the palette.
         </p>
         <div class="series-grid">
           <div class="series-swatch">
-            <div class="series-preview" style="background:#04c161"></div>
+            <div class="series-preview" style="background: #04c161"></div>
             <div class="series-info">
               <div class="series-name">Series 0</div>
               <div class="series-hex">#04C161</div>
             </div>
           </div>
           <div class="series-swatch">
-            <div class="series-preview" style="background:#329dff"></div>
+            <div class="series-preview" style="background: #329dff"></div>
             <div class="series-info">
               <div class="series-name">Series 1</div>
               <div class="series-hex">#329DFF</div>
             </div>
           </div>
           <div class="series-swatch">
-            <div class="series-preview" style="background:#ffa132"></div>
+            <div class="series-preview" style="background: #ffa132"></div>
             <div class="series-info">
               <div class="series-name">Series 2</div>
               <div class="series-hex">#FFA132</div>
             </div>
           </div>
           <div class="series-swatch">
-            <div class="series-preview" style="background:#ea4335"></div>
+            <div class="series-preview" style="background: #ea4335"></div>
             <div class="series-info">
               <div class="series-name">Series 3</div>
               <div class="series-hex">#EA4335</div>
             </div>
           </div>
           <div class="series-swatch">
-            <div class="series-preview" style="background:#9333ea"></div>
+            <div class="series-preview" style="background: #9333ea"></div>
             <div class="series-info">
               <div class="series-name">Series 4</div>
               <div class="series-hex">#9333EA</div>
             </div>
           </div>
           <div class="series-swatch">
-            <div class="series-preview" style="background:#06b6d4"></div>
+            <div class="series-preview" style="background: #06b6d4"></div>
             <div class="series-info">
               <div class="series-name">Series 5</div>
               <div class="series-hex">#06B6D4</div>
             </div>
           </div>
         </div>
-        <p style="font-size:12px;color:var(--muted-foreground);margin-top:12px">
-          Threshold colors: warn ≥ 75% → <strong style="color:#ffa132">#FFA132</strong> &nbsp;|&nbsp;
-          error ≥ 90% → <strong style="color:#ea4335">#EA4335</strong>
+        <p
+          style="
+            font-size: 12px;
+            color: var(--muted-foreground);
+            margin-top: 12px;
+          "
+        >
+          Threshold colors: warn ≥ 75% →
+          <strong style="color: #ffa132">#FFA132</strong> &nbsp;|&nbsp; error ≥
+          90% → <strong style="color: #ea4335">#EA4335</strong>
         </p>
       </section>
-
 
       <!-- ── Breadcrumb ──────────────────────────────────────────────────── -->
       <section class="sg-section">
         <h2 class="sg-section-title">Breadcrumb</h2>
-        <div style="display:flex;flex-direction:column;gap:20px">
+        <div style="display: flex; flex-direction: column; gap: 20px">
           <div>
-            <p class="button-row-label" style="margin-bottom:8px">Home level</p>
-            <nav class="vsg-breadcrumb"><span class="vsg-breadcrumb-current">My Product</span></nav>
+            <p class="button-row-label" style="margin-bottom: 8px">
+              Home level
+            </p>
+            <nav class="vsg-breadcrumb">
+              <span class="vsg-breadcrumb-current">My Product</span>
+            </nav>
           </div>
           <div>
-            <p class="button-row-label" style="margin-bottom:8px">Two levels</p>
+            <p class="button-row-label" style="margin-bottom: 8px">
+              Two levels
+            </p>
             <nav class="vsg-breadcrumb">
               <button class="vsg-breadcrumb-link">My Product</button>
               <span class="vsg-breadcrumb-sep">›</span>
@@ -1696,7 +3083,9 @@
             </nav>
           </div>
           <div>
-            <p class="button-row-label" style="margin-bottom:8px">Three levels</p>
+            <p class="button-row-label" style="margin-bottom: 8px">
+              Three levels
+            </p>
             <nav class="vsg-breadcrumb">
               <button class="vsg-breadcrumb-link">My Product</button>
               <span class="vsg-breadcrumb-sep">›</span>
@@ -1711,29 +3100,31 @@
       <!-- ── Server Status Chips ────────────────────────────────────────── -->
       <section class="sg-section">
         <h2 class="sg-section-title">Server Status Chips</h2>
-        <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center">
+        <div
+          style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center"
+        >
           <span class="vsg-chip vsg-chip-ready">
             <span class="vsg-chip-dot"></span>
             <span>my-project</span>
-            <span style="color:var(--muted-foreground)">·</span>
+            <span style="color: var(--muted-foreground)">·</span>
             <span>running</span>
           </span>
           <span class="vsg-chip vsg-chip-starting">
             <span class="vsg-chip-dot"></span>
             <span>my-project</span>
-            <span style="color:var(--muted-foreground)">·</span>
+            <span style="color: var(--muted-foreground)">·</span>
             <span>starting…</span>
           </span>
           <span class="vsg-chip vsg-chip-error">
             <span class="vsg-chip-dot"></span>
             <span>preview-server</span>
-            <span style="color:var(--muted-foreground)">·</span>
+            <span style="color: var(--muted-foreground)">·</span>
             <span>unreachable</span>
           </span>
           <span class="vsg-chip vsg-chip-stopped">
             <span class="vsg-chip-dot"></span>
             <span>my-project</span>
-            <span style="color:var(--muted-foreground)">·</span>
+            <span style="color: var(--muted-foreground)">·</span>
             <span>stopped</span>
           </span>
         </div>
@@ -1742,18 +3133,49 @@
       <!-- ── Phase Cards ────────────────────────────────────────────────── -->
       <section class="sg-section">
         <h2 class="sg-section-title">Phase Cards</h2>
-        <div class="vsg-phase-list" style="max-width:640px">
+        <div class="vsg-phase-list" style="max-width: 640px">
           <button class="vsg-phase-card">
             <span class="vsg-phase-gradient"></span>
             <span class="vsg-phase-left">
-              <svg class="vsg-phase-icon-enabled" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>
+              <svg
+                class="vsg-phase-icon-enabled"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                style="width: 15px; height: 15px"
+              >
+                <path
+                  d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"
+                />
+                <path d="M9 18h6" />
+                <path d="M10 22h4" />
+              </svg>
               <span class="vsg-phase-label">IDEATE</span>
             </span>
             <span class="vsg-phase-note enabled">Problem Definition</span>
           </button>
           <button class="vsg-phase-card disabled" disabled>
             <span class="vsg-phase-left">
-              <svg class="vsg-phase-icon-disabled" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+              <svg
+                class="vsg-phase-icon-disabled"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                style="width: 15px; height: 15px"
+              >
+                <path
+                  d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"
+                />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="16" y1="13" x2="8" y2="13" />
+                <line x1="16" y1="17" x2="8" y2="17" />
+              </svg>
               <span class="vsg-phase-label">SPECIFY</span>
             </span>
             <span class="vsg-phase-note disabled">Solution Design</span>
@@ -1761,14 +3183,51 @@
           <button class="vsg-phase-card">
             <span class="vsg-phase-gradient"></span>
             <span class="vsg-phase-left">
-              <svg class="vsg-phase-icon-enabled" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px"><path d="m15 12-8.5 8.5c-.83.83-2.17.83-3 0 0 0 0 0 0 0a2.12 2.12 0 0 1 0-3L12 9"/><path d="M17.64 15 22 10.64"/><path d="m20.91 11.7-1.25-1.25c-.6-.6-.93-1.4-.93-2.25v-.86L16.01 4.6a5.56 5.56 0 0 0-3.94-1.64H9l.92.82A6.18 6.18 0 0 1 12 8.4v1.56l2 2h2.47l2.26 1.91"/></svg>
+              <svg
+                class="vsg-phase-icon-enabled"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                style="width: 15px; height: 15px"
+              >
+                <path
+                  d="m15 12-8.5 8.5c-.83.83-2.17.83-3 0 0 0 0 0 0 0a2.12 2.12 0 0 1 0-3L12 9"
+                />
+                <path d="M17.64 15 22 10.64" />
+                <path
+                  d="m20.91 11.7-1.25-1.25c-.6-.6-.93-1.4-.93-2.25v-.86L16.01 4.6a5.56 5.56 0 0 0-3.94-1.64H9l.92.82A6.18 6.18 0 0 1 12 8.4v1.56l2 2h2.47l2.26 1.91"
+                />
+              </svg>
               <span class="vsg-phase-label">BUILD</span>
             </span>
-            <span class="vsg-phase-note enabled">Implementation &amp; Testing</span>
+            <span class="vsg-phase-note enabled"
+              >Implementation &amp; Testing</span
+            >
           </button>
           <button class="vsg-phase-card disabled" disabled>
             <span class="vsg-phase-left">
-              <svg class="vsg-phase-icon-disabled" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>
+              <svg
+                class="vsg-phase-icon-disabled"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                style="width: 15px; height: 15px"
+              >
+                <path
+                  d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"
+                />
+                <path
+                  d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"
+                />
+                <path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0" />
+                <path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5" />
+              </svg>
               <span class="vsg-phase-label">DEPLOY</span>
             </span>
             <span class="vsg-phase-note disabled">Delivery</span>
@@ -1782,51 +3241,199 @@
         <div class="vsg-app-shell">
           <div class="vsg-chat-pane">
             <div class="vsg-chat-header">
-              <div style="display:flex;align-items:baseline;gap:8px">
+              <div style="display: flex; align-items: baseline; gap: 8px">
                 <h2>Chat sessions</h2>
                 <span class="vsg-chat-count">3</span>
               </div>
               <button class="btn btn-sm btn-primary">
-                <svg viewBox="0 0 12 12" fill="none" style="width:11px;height:11px"><path d="M6 1.5v9M1.5 6h9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                <svg
+                  viewBox="0 0 12 12"
+                  fill="none"
+                  style="width: 11px; height: 11px"
+                >
+                  <path
+                    d="M6 1.5v9M1.5 6h9"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                  />
+                </svg>
                 New
               </button>
             </div>
             <ul class="vsg-session-list">
               <li>
                 <button class="vsg-session-item active">
-                  <svg class="vsg-session-icon" viewBox="0 0 16 16" fill="none"><path d="M3 3h10a1.5 1.5 0 0 1 1.5 1.5v6A1.5 1.5 0 0 1 13 12H7.5L4 14.5V12H3a1.5 1.5 0 0 1-1.5-1.5v-6A1.5 1.5 0 0 1 3 3Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+                  <svg class="vsg-session-icon" viewBox="0 0 16 16" fill="none">
+                    <path
+                      d="M3 3h10a1.5 1.5 0 0 1 1.5 1.5v6A1.5 1.5 0 0 1 13 12H7.5L4 14.5V12H3a1.5 1.5 0 0 1-1.5-1.5v-6A1.5 1.5 0 0 1 3 3Z"
+                      stroke="currentColor"
+                      stroke-width="1.4"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
                   <span class="vsg-session-name">Session 1</span>
                   <span class="vsg-pulse-dot"></span>
                 </button>
               </li>
               <li>
                 <button class="vsg-session-item">
-                  <svg class="vsg-session-icon" viewBox="0 0 16 16" fill="none"><path d="M3 3h10a1.5 1.5 0 0 1 1.5 1.5v6A1.5 1.5 0 0 1 13 12H7.5L4 14.5V12H3a1.5 1.5 0 0 1-1.5-1.5v-6A1.5 1.5 0 0 1 3 3Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+                  <svg class="vsg-session-icon" viewBox="0 0 16 16" fill="none">
+                    <path
+                      d="M3 3h10a1.5 1.5 0 0 1 1.5 1.5v6A1.5 1.5 0 0 1 13 12H7.5L4 14.5V12H3a1.5 1.5 0 0 1-1.5-1.5v-6A1.5 1.5 0 0 1 3 3Z"
+                      stroke="currentColor"
+                      stroke-width="1.4"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
                   <span class="vsg-session-name">Session 2</span>
-                  <svg class="vsg-session-chevron" viewBox="0 0 12 12" fill="none"><path d="m4.5 2.5 3.5 3.5-3.5 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <svg
+                    class="vsg-session-chevron"
+                    viewBox="0 0 12 12"
+                    fill="none"
+                  >
+                    <path
+                      d="m4.5 2.5 3.5 3.5-3.5 3.5"
+                      stroke="currentColor"
+                      stroke-width="1.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
                 </button>
               </li>
               <li>
                 <button class="vsg-session-item">
-                  <svg class="vsg-session-icon" viewBox="0 0 16 16" fill="none"><path d="M3 3h10a1.5 1.5 0 0 1 1.5 1.5v6A1.5 1.5 0 0 1 13 12H7.5L4 14.5V12H3a1.5 1.5 0 0 1-1.5-1.5v-6A1.5 1.5 0 0 1 3 3Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
-                  <span class="vsg-session-name">Session 3 — long name that gets clipped</span>
-                  <svg class="vsg-session-chevron" viewBox="0 0 12 12" fill="none"><path d="m4.5 2.5 3.5 3.5-3.5 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <svg class="vsg-session-icon" viewBox="0 0 16 16" fill="none">
+                    <path
+                      d="M3 3h10a1.5 1.5 0 0 1 1.5 1.5v6A1.5 1.5 0 0 1 13 12H7.5L4 14.5V12H3a1.5 1.5 0 0 1-1.5-1.5v-6A1.5 1.5 0 0 1 3 3Z"
+                      stroke="currentColor"
+                      stroke-width="1.4"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                  <span class="vsg-session-name"
+                    >Session 3 — long name that gets clipped</span
+                  >
+                  <svg
+                    class="vsg-session-chevron"
+                    viewBox="0 0 12 12"
+                    fill="none"
+                  >
+                    <path
+                      d="m4.5 2.5 3.5 3.5-3.5 3.5"
+                      stroke="currentColor"
+                      stroke-width="1.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
                 </button>
               </li>
             </ul>
           </div>
           <div class="vsg-divider">
             <div class="vsg-divider-dots">
-              <div class="vsg-divider-dot"></div><div class="vsg-divider-dot"></div><div class="vsg-divider-dot"></div>
+              <div class="vsg-divider-dot"></div>
+              <div class="vsg-divider-dot"></div>
+              <div class="vsg-divider-dot"></div>
             </div>
           </div>
           <div class="vsg-main-pane">
             <div class="vsg-main-content">
               <div class="vsg-phase-list">
-                <button class="vsg-phase-card"><span class="vsg-phase-gradient"></span><span class="vsg-phase-left"><svg class="vsg-phase-icon-enabled" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg><span class="vsg-phase-label">IDEATE</span></span><span class="vsg-phase-note enabled">Problem Definition</span></button>
-                <button class="vsg-phase-card disabled" disabled><span class="vsg-phase-left"><svg class="vsg-phase-icon-disabled" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span class="vsg-phase-label">SPECIFY</span></span><span class="vsg-phase-note disabled">Solution Design</span></button>
-                <button class="vsg-phase-card"><span class="vsg-phase-gradient"></span><span class="vsg-phase-left"><svg class="vsg-phase-icon-enabled" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px"><path d="m15 12-8.5 8.5c-.83.83-2.17.83-3 0 0 0 0 0 0 0a2.12 2.12 0 0 1 0-3L12 9"/><path d="M17.64 15 22 10.64"/><path d="m20.91 11.7-1.25-1.25c-.6-.6-.93-1.4-.93-2.25v-.86L16.01 4.6a5.56 5.56 0 0 0-3.94-1.64H9l.92.82A6.18 6.18 0 0 1 12 8.4v1.56l2 2h2.47l2.26 1.91"/></svg><span class="vsg-phase-label">BUILD</span></span><span class="vsg-phase-note enabled">Implementation &amp; Testing</span></button>
-                <button class="vsg-phase-card disabled" disabled><span class="vsg-phase-left"><svg class="vsg-phase-icon-disabled" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg><span class="vsg-phase-label">DEPLOY</span></span><span class="vsg-phase-note disabled">Delivery</span></button>
+                <button class="vsg-phase-card">
+                  <span class="vsg-phase-gradient"></span
+                  ><span class="vsg-phase-left"
+                    ><svg
+                      class="vsg-phase-icon-enabled"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      style="width: 15px; height: 15px"
+                    >
+                      <path
+                        d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"
+                      />
+                      <path d="M9 18h6" />
+                      <path d="M10 22h4" /></svg
+                    ><span class="vsg-phase-label">IDEATE</span></span
+                  ><span class="vsg-phase-note enabled"
+                    >Problem Definition</span
+                  >
+                </button>
+                <button class="vsg-phase-card disabled" disabled>
+                  <span class="vsg-phase-left"
+                    ><svg
+                      class="vsg-phase-icon-disabled"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      style="width: 15px; height: 15px"
+                    >
+                      <path
+                        d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"
+                      />
+                      <polyline points="14 2 14 8 20 8" />
+                      <line x1="16" y1="13" x2="8" y2="13" />
+                      <line x1="16" y1="17" x2="8" y2="17" /></svg
+                    ><span class="vsg-phase-label">SPECIFY</span></span
+                  ><span class="vsg-phase-note disabled">Solution Design</span>
+                </button>
+                <button class="vsg-phase-card">
+                  <span class="vsg-phase-gradient"></span
+                  ><span class="vsg-phase-left"
+                    ><svg
+                      class="vsg-phase-icon-enabled"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      style="width: 15px; height: 15px"
+                    >
+                      <path
+                        d="m15 12-8.5 8.5c-.83.83-2.17.83-3 0 0 0 0 0 0 0a2.12 2.12 0 0 1 0-3L12 9"
+                      />
+                      <path d="M17.64 15 22 10.64" />
+                      <path
+                        d="m20.91 11.7-1.25-1.25c-.6-.6-.93-1.4-.93-2.25v-.86L16.01 4.6a5.56 5.56 0 0 0-3.94-1.64H9l.92.82A6.18 6.18 0 0 1 12 8.4v1.56l2 2h2.47l2.26 1.91"
+                      /></svg
+                    ><span class="vsg-phase-label">BUILD</span></span
+                  ><span class="vsg-phase-note enabled"
+                    >Implementation &amp; Testing</span
+                  >
+                </button>
+                <button class="vsg-phase-card disabled" disabled>
+                  <span class="vsg-phase-left"
+                    ><svg
+                      class="vsg-phase-icon-disabled"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      style="width: 15px; height: 15px"
+                    >
+                      <path
+                        d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"
+                      />
+                      <path
+                        d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"
+                      />
+                      <path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0" />
+                      <path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5" /></svg
+                    ><span class="vsg-phase-label">DEPLOY</span></span
+                  ><span class="vsg-phase-note disabled">Delivery</span>
+                </button>
               </div>
             </div>
           </div>
@@ -1842,7 +3449,15 @@
               <button class="btn btn-sm btn-ghost">← Sessions</button>
               <span class="vsg-session-header-name">Session 1</span>
             </div>
-            <div style="flex:1;display:flex;align-items:center;justify-content:center;background:var(--background)">
+            <div
+              style="
+                flex: 1;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: var(--background);
+              "
+            >
               <div class="vsg-loading-state">
                 <span class="vsg-pulse-dot"></span>
                 Loading session…
@@ -1851,7 +3466,9 @@
           </div>
           <div class="vsg-divider">
             <div class="vsg-divider-dots">
-              <div class="vsg-divider-dot"></div><div class="vsg-divider-dot"></div><div class="vsg-divider-dot"></div>
+              <div class="vsg-divider-dot"></div>
+              <div class="vsg-divider-dot"></div>
+              <div class="vsg-divider-dot"></div>
             </div>
           </div>
           <div class="vsg-main-pane">
@@ -1864,14 +3481,24 @@
               <span class="vsg-chip vsg-chip-ready">
                 <span class="vsg-chip-dot"></span>
                 <span>my-project</span>
-                <span style="color:var(--muted-foreground)">·</span>
+                <span style="color: var(--muted-foreground)">·</span>
                 <span>running</span>
               </span>
             </div>
-            <div style="flex:1;display:flex;align-items:center;justify-content:center">
+            <div
+              style="
+                flex: 1;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+              "
+            >
               <div class="vsg-status-block">
                 <div class="vsg-status-block-title">No preview yet</div>
-                <div class="vsg-status-block-detail">The BUILD preview appears once the agent scaffolds a project for this session.</div>
+                <div class="vsg-status-block-detail">
+                  The BUILD preview appears once the agent scaffolds a project
+                  for this session.
+                </div>
               </div>
             </div>
           </div>
@@ -1884,41 +3511,87 @@
         <div class="vsg-app-shell">
           <div class="vsg-chat-pane">
             <div class="vsg-chat-header">
-              <div style="display:flex;align-items:baseline;gap:8px">
+              <div style="display: flex; align-items: baseline; gap: 8px">
                 <h2>Chat sessions</h2>
                 <span class="vsg-chat-count">2</span>
               </div>
               <button class="btn btn-sm btn-primary">
-                <svg viewBox="0 0 12 12" fill="none" style="width:11px;height:11px"><path d="M6 1.5v9M1.5 6h9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                <svg
+                  viewBox="0 0 12 12"
+                  fill="none"
+                  style="width: 11px; height: 11px"
+                >
+                  <path
+                    d="M6 1.5v9M1.5 6h9"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                  />
+                </svg>
                 New
               </button>
             </div>
             <div class="vsg-empty-state">
-              <svg viewBox="0 0 16 16" fill="none" style="width:32px;height:32px;color:var(--border)"><path d="M3 3h10a1.5 1.5 0 0 1 1.5 1.5v6A1.5 1.5 0 0 1 13 12H7.5L4 14.5V12H3a1.5 1.5 0 0 1-1.5-1.5v-6A1.5 1.5 0 0 1 3 3Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+              <svg
+                viewBox="0 0 16 16"
+                fill="none"
+                style="width: 32px; height: 32px; color: var(--border)"
+              >
+                <path
+                  d="M3 3h10a1.5 1.5 0 0 1 1.5 1.5v6A1.5 1.5 0 0 1 13 12H7.5L4 14.5V12H3a1.5 1.5 0 0 1-1.5-1.5v-6A1.5 1.5 0 0 1 3 3Z"
+                  stroke="currentColor"
+                  stroke-width="1.4"
+                  stroke-linejoin="round"
+                />
+              </svg>
               <div>
                 <div class="vsg-empty-title">What will you build today?</div>
-                <div class="vsg-empty-sub">Start a session to talk to the agent.</div>
+                <div class="vsg-empty-sub">
+                  Start a session to talk to the agent.
+                </div>
               </div>
               <button class="btn btn-md btn-primary">
-                <svg viewBox="0 0 12 12" fill="none" style="width:11px;height:11px"><path d="M6 1.5v9M1.5 6h9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                <svg
+                  viewBox="0 0 12 12"
+                  fill="none"
+                  style="width: 11px; height: 11px"
+                >
+                  <path
+                    d="M6 1.5v9M1.5 6h9"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                  />
+                </svg>
                 New session
               </button>
             </div>
           </div>
           <div class="vsg-divider">
             <div class="vsg-divider-dots">
-              <div class="vsg-divider-dot"></div><div class="vsg-divider-dot"></div><div class="vsg-divider-dot"></div>
+              <div class="vsg-divider-dot"></div>
+              <div class="vsg-divider-dot"></div>
+              <div class="vsg-divider-dot"></div>
             </div>
           </div>
           <div class="vsg-main-pane">
             <div class="vsg-main-content">
-              <nav class="vsg-breadcrumb" style="margin-bottom:24px">
+              <nav class="vsg-breadcrumb" style="margin-bottom: 24px">
                 <button class="vsg-breadcrumb-link">My Product</button>
                 <span class="vsg-breadcrumb-sep">›</span>
                 <span class="vsg-breadcrumb-current">Ideate</span>
               </nav>
-              <h3 style="font-size:16px;font-weight:600;color:var(--foreground);margin-bottom:12px">Product Identity</h3>
-              <div class="vsg-card-grid" style="margin-bottom:40px">
+              <h3
+                style="
+                  font-size: 16px;
+                  font-weight: 600;
+                  color: var(--foreground);
+                  margin-bottom: 12px;
+                "
+              >
+                Product Identity
+              </h3>
+              <div class="vsg-card-grid" style="margin-bottom: 40px">
                 <!-- Existing document state -->
                 <button class="vsg-identity-card">
                   <span class="vsg-identity-title">Brand Sheet</span>
@@ -1934,7 +3607,16 @@
                   <span class="vsg-identity-create-hint">+ Create</span>
                 </button>
               </div>
-              <h3 style="font-size:16px;font-weight:600;color:var(--foreground);margin-bottom:12px">Features</h3>
+              <h3
+                style="
+                  font-size: 16px;
+                  font-weight: 600;
+                  color: var(--foreground);
+                  margin-bottom: 12px;
+                "
+              >
+                Features
+              </h3>
               <div class="vsg-feature-list">
                 <div class="vsg-feature-list-header">
                   <span>Feature title, status, scope</span>
@@ -1970,8 +3652,19 @@
       <!-- ── Product Identity Cards ────────────────────────────────────── -->
       <section class="sg-section">
         <h2 class="sg-section-title">Product Identity Cards</h2>
-        <p style="font-size:13px;color:var(--muted-foreground);margin-bottom:20px;line-height:1.5">Two states: an existing document (solid border, label + filename) and an empty slot (dashed border, centered "+ Create"). Both get a green border on hover.</p>
-        <div class="vsg-card-grid" style="max-width:680px">
+        <p
+          style="
+            font-size: 13px;
+            color: var(--muted-foreground);
+            margin-bottom: 20px;
+            line-height: 1.5;
+          "
+        >
+          Two states: an existing document (solid border, label + filename) and
+          an empty slot (dashed border, centered "+ Create"). Both get a green
+          border on hover.
+        </p>
+        <div class="vsg-card-grid" style="max-width: 680px">
           <button class="vsg-identity-card">
             <span class="vsg-identity-title">Brand Sheet</span>
             <span class="vsg-identity-sub">brand-sheet.phdm</span>
@@ -1980,7 +3673,11 @@
             <span class="vsg-identity-create-label">Problem Sheet</span>
             <span class="vsg-identity-create-hint">+ Create</span>
           </button>
-          <button class="vsg-identity-card-create" disabled style="opacity:0.5;cursor:not-allowed">
+          <button
+            class="vsg-identity-card-create"
+            disabled
+            style="opacity: 0.5; cursor: not-allowed"
+          >
             <span class="vsg-identity-create-label">Audience Sheet</span>
             <span class="vsg-identity-create-hint">Creating…</span>
           </button>
@@ -1990,8 +3687,19 @@
       <!-- ── Feature List ───────────────────────────────────────────────── -->
       <section class="sg-section">
         <h2 class="sg-section-title">Feature List</h2>
-        <p style="font-size:13px;color:var(--muted-foreground);margin-bottom:20px;line-height:1.5">Table-like container with an accent header row. Each row shows name, optional status badge, optional scope label, and a green WBS link or a muted "no WBS" fallback.</p>
-        <div class="vsg-feature-list" style="max-width:680px">
+        <p
+          style="
+            font-size: 13px;
+            color: var(--muted-foreground);
+            margin-bottom: 20px;
+            line-height: 1.5;
+          "
+        >
+          Table-like container with an accent header row. Each row shows name,
+          optional status badge, optional scope label, and a green WBS link or a
+          muted "no WBS" fallback.
+        </p>
+        <div class="vsg-feature-list" style="max-width: 680px">
           <div class="vsg-feature-list-header">
             <span>Feature title, status, scope</span>
             <span>WBS</span>
@@ -2022,94 +3730,296 @@
 
       <!-- ── Chat — Renown Login Prompt ────────────────────────────────── -->
       <section class="sg-section">
-        <h2 class="sg-section-title">Chat — Inline Agent Message: Renown Login Prompt</h2>
+        <h2 class="sg-section-title">
+          Chat — Inline Agent Message: Renown Login Prompt
+        </h2>
 
-        <div style="border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;box-shadow:var(--shadow-md);max-width:520px;transition:border-color 0.3s">
+        <div
+          style="
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            box-shadow: var(--shadow-md);
+            max-width: 520px;
+            transition: border-color 0.3s;
+          "
+        >
           <div class="vsg-session-header">
             <button class="btn btn-sm btn-ghost">← Sessions</button>
             <span class="vsg-session-header-name">Session 1</span>
           </div>
-          <div style="background:var(--background);padding:24px 20px;display:flex;flex-direction:column;gap:16px;transition:background 0.3s">
+          <div
+            style="
+              background: var(--background);
+              padding: 24px 20px;
+              display: flex;
+              flex-direction: column;
+              gap: 16px;
+              transition: background 0.3s;
+            "
+          >
             <div class="vsg-msg-row user">
-              <div class="vsg-msg-content user">Can you connect to the Acme Corp drive so I can access the project documents?</div>
+              <div class="vsg-msg-content user">
+                Can you connect to the Acme Corp drive so I can access the
+                project documents?
+              </div>
               <div class="vsg-msg-avatar user">
-                <svg viewBox="0 0 24 24" fill="none" style="width:13px;height:13px"><circle cx="12" cy="8" r="3.5" stroke="currentColor" stroke-width="1.6"/><path d="M4.5 20c0-3.6 3.4-6.5 7.5-6.5s7.5 2.9 7.5 6.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  style="width: 13px; height: 13px"
+                >
+                  <circle
+                    cx="12"
+                    cy="8"
+                    r="3.5"
+                    stroke="currentColor"
+                    stroke-width="1.6"
+                  />
+                  <path
+                    d="M4.5 20c0-3.6 3.4-6.5 7.5-6.5s7.5 2.9 7.5 6.5"
+                    stroke="currentColor"
+                    stroke-width="1.6"
+                    stroke-linecap="round"
+                  />
+                </svg>
               </div>
             </div>
             <div class="vsg-msg-row">
               <div class="vsg-msg-avatar agent">
-                <svg viewBox="0 0 24 24" fill="none" style="width:13px;height:13px"><rect x="3" y="11" width="18" height="10" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M8 11V7a4 4 0 1 1 8 0v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="9" cy="16" r="1" fill="currentColor"/><circle cx="15" cy="16" r="1" fill="currentColor"/></svg>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  style="width: 13px; height: 13px"
+                >
+                  <rect
+                    x="3"
+                    y="11"
+                    width="18"
+                    height="10"
+                    rx="2"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                  />
+                  <path
+                    d="M8 11V7a4 4 0 1 1 8 0v4"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                  />
+                  <circle cx="9" cy="16" r="1" fill="currentColor" />
+                  <circle cx="15" cy="16" r="1" fill="currentColor" />
+                </svg>
               </div>
-              <div class="vsg-msg-content">I can help you connect to that drive. Let me try to establish access…</div>
+              <div class="vsg-msg-content">
+                I can help you connect to that drive. Let me try to establish
+                access…
+              </div>
             </div>
             <div class="vsg-msg-row">
               <div class="vsg-msg-avatar agent">
-                <svg viewBox="0 0 24 24" fill="none" style="width:13px;height:13px"><rect x="3" y="11" width="18" height="10" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M8 11V7a4 4 0 1 1 8 0v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="9" cy="16" r="1" fill="currentColor"/><circle cx="15" cy="16" r="1" fill="currentColor"/></svg>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  style="width: 13px; height: 13px"
+                >
+                  <rect
+                    x="3"
+                    y="11"
+                    width="18"
+                    height="10"
+                    rx="2"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                  />
+                  <path
+                    d="M8 11V7a4 4 0 1 1 8 0v4"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                  />
+                  <circle cx="9" cy="16" r="1" fill="currentColor" />
+                  <circle cx="15" cy="16" r="1" fill="currentColor" />
+                </svg>
               </div>
               <div class="vsg-renown-card">
                 <div class="vsg-renown-icon">
-                  <svg viewBox="0 0 24 24" fill="none" style="width:15px;height:15px"><rect x="5" y="11" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M8 11V7a4 4 0 1 1 8 0v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    style="width: 15px; height: 15px"
+                  >
+                    <rect
+                      x="5"
+                      y="11"
+                      width="14"
+                      height="10"
+                      rx="2"
+                      stroke="currentColor"
+                      stroke-width="1.5"
+                    />
+                    <path
+                      d="M8 11V7a4 4 0 1 1 8 0v4"
+                      stroke="currentColor"
+                      stroke-width="1.5"
+                      stroke-linecap="round"
+                    />
+                  </svg>
                 </div>
                 <div>
                   <p class="vsg-renown-title">Login with Renown</p>
-                  <p class="vsg-renown-desc">Authorization is required for the specific drive or instance you are trying to access.</p>
+                  <p class="vsg-renown-desc">
+                    Authorization is required for the specific drive or instance
+                    you are trying to access.
+                  </p>
                   <button class="vsg-renown-btn">
-                    <svg viewBox="0 0 24 24" fill="none" style="width:11px;height:11px"><rect x="5" y="11" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M8 11V7a4 4 0 1 1 8 0v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      style="width: 11px; height: 11px"
+                    >
+                      <rect
+                        x="5"
+                        y="11"
+                        width="14"
+                        height="10"
+                        rx="2"
+                        stroke="currentColor"
+                        stroke-width="1.5"
+                      />
+                      <path
+                        d="M8 11V7a4 4 0 1 1 8 0v4"
+                        stroke="currentColor"
+                        stroke-width="1.5"
+                        stroke-linecap="round"
+                      />
+                    </svg>
                     Login with Renown
                   </button>
                 </div>
               </div>
             </div>
           </div>
-          <div style="border-top:1px solid var(--border);background:var(--card);padding:10px 14px;display:flex;align-items:center;gap:8px;transition:background 0.3s,border-color 0.3s">
-            <div style="flex:1;border:1px solid var(--border);border-radius:var(--radius-md);padding:8px 12px;font-size:13px;color:var(--muted-foreground);background:var(--input)">Type a message…</div>
+          <div
+            style="
+              border-top: 1px solid var(--border);
+              background: var(--card);
+              padding: 10px 14px;
+              display: flex;
+              align-items: center;
+              gap: 8px;
+              transition:
+                background 0.3s,
+                border-color 0.3s;
+            "
+          >
+            <div
+              style="
+                flex: 1;
+                border: 1px solid var(--border);
+                border-radius: var(--radius-md);
+                padding: 8px 12px;
+                font-size: 13px;
+                color: var(--muted-foreground);
+                background: var(--input);
+              "
+            >
+              Type a message…
+            </div>
             <button class="btn btn-md btn-primary">Send</button>
           </div>
         </div>
 
-        <div style="margin-top:32px">
-          <p class="button-row-label" style="margin-bottom:10px">Card in isolation</p>
+        <div style="margin-top: 32px">
+          <p class="button-row-label" style="margin-bottom: 10px">
+            Card in isolation
+          </p>
           <div class="vsg-renown-card">
             <div class="vsg-renown-icon">
-              <svg viewBox="0 0 24 24" fill="none" style="width:15px;height:15px"><rect x="5" y="11" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M8 11V7a4 4 0 1 1 8 0v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                style="width: 15px; height: 15px"
+              >
+                <rect
+                  x="5"
+                  y="11"
+                  width="14"
+                  height="10"
+                  rx="2"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                />
+                <path
+                  d="M8 11V7a4 4 0 1 1 8 0v4"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                />
+              </svg>
             </div>
             <div>
               <p class="vsg-renown-title">Login with Renown</p>
-              <p class="vsg-renown-desc">Authorization is required for the specific drive or instance you are trying to access.</p>
+              <p class="vsg-renown-desc">
+                Authorization is required for the specific drive or instance you
+                are trying to access.
+              </p>
               <button class="vsg-renown-btn">
-                <svg viewBox="0 0 24 24" fill="none" style="width:11px;height:11px"><rect x="5" y="11" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M8 11V7a4 4 0 1 1 8 0v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  style="width: 11px; height: 11px"
+                >
+                  <rect
+                    x="5"
+                    y="11"
+                    width="14"
+                    height="10"
+                    rx="2"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                  />
+                  <path
+                    d="M8 11V7a4 4 0 1 1 8 0v4"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                  />
+                </svg>
                 Login with Renown
               </button>
             </div>
           </div>
         </div>
       </section>
-
-    </div><!-- /styleguide -->
+    </div>
+    <!-- /styleguide -->
 
     <script>
-      const toggle = document.getElementById('themeSwitch')
-      const body = document.body
-      const lightModeLogo = document.querySelector('.logo-light-mode')
-      const darkModeLogo  = document.querySelector('.logo-dark-mode')
+      const toggle = document.getElementById("themeSwitch");
+      const body = document.body;
+      const lightModeLogo = document.querySelector(".logo-light-mode");
+      const darkModeLogo = document.querySelector(".logo-dark-mode");
 
-      toggle.addEventListener('change', () => {
+      toggle.addEventListener("change", () => {
         if (toggle.checked) {
-          body.classList.add('dark')
-          if (lightModeLogo) lightModeLogo.style.display = 'none'
-          if (darkModeLogo)  darkModeLogo.style.display  = ''
+          body.classList.add("dark");
+          if (lightModeLogo) lightModeLogo.style.display = "none";
+          if (darkModeLogo) darkModeLogo.style.display = "";
         } else {
-          body.classList.remove('dark')
-          if (lightModeLogo) lightModeLogo.style.display = ''
-          if (darkModeLogo)  darkModeLogo.style.display  = 'none'
+          body.classList.remove("dark");
+          if (lightModeLogo) lightModeLogo.style.display = "";
+          if (darkModeLogo) darkModeLogo.style.display = "none";
         }
 
         // Update swatch hex values for theme
-        const mode = toggle.checked ? 'dark' : 'light'
-        document.querySelectorAll('.color-swatch-value[data-' + mode + ']').forEach((el) => {
-          el.textContent = el.dataset[mode]
-        })
-      })
+        const mode = toggle.checked ? "dark" : "light";
+        document
+          .querySelectorAll(".color-swatch-value[data-" + mode + "]")
+          .forEach((el) => {
+            el.textContent = el.dataset[mode];
+          });
+      });
     </script>
   </body>
 </html>

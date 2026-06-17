@@ -7,7 +7,7 @@ You've got documents. You've got operations. Now you need the outside world — 
 
 ## One endpoint, many packages
 
-Switchboard doesn't expose a single monolithic schema. Instead, every Reactor Package ships its *own* GraphQL schema fragment — its subgraph. When Switchboard boots, it composes all of those fragments into one unified endpoint.
+Switchboard doesn't expose a single monolithic schema. Instead, every Reactor Package ships its _own_ GraphQL schema fragment — its subgraph. When Switchboard boots, it composes all of those fragments into one unified endpoint.
 
 The practical payoff: a client can query data from two completely independent packages in a single request. Neither package knows about the other. Switchboard handles the stitching.
 
@@ -15,7 +15,11 @@ The practical payoff: a client can query data from two completely independent pa
 query {
   todoList(id: "doc-123") {
     id
-    todos { id title done }
+    todos {
+      id
+      title
+      done
+    }
   }
 }
 ```
@@ -24,7 +28,7 @@ That query hits one endpoint. Behind the scenes, it's resolved by whatever packa
 
 ## Subgraphs are the API face of your document model
 
-If a document model defines the *shape* of your data and the *actions* allowed on it, the subgraph is how that shape appears to callers on the network.
+If a document model defines the _shape_ of your data and the _actions_ allowed on it, the subgraph is how that shape appears to callers on the network.
 
 Each subgraph exposes three things:
 
@@ -38,21 +42,29 @@ Because each package owns its subgraph, the package is the unit of delivery. Shi
   question="A client sends one GraphQL query that asks for data from two different packages. What does Switchboard do?"
   choices={[
     {
-      label: "It routes to whichever package responded first and ignores the other.",
-      explanation: "Switchboard composes all subgraphs at startup — there's no race. Both packages participate in the same response.",
+      label:
+        "It routes to whichever package responded first and ignores the other.",
+      explanation:
+        "Switchboard composes all subgraphs at startup — there's no race. Both packages participate in the same response.",
     },
     {
-      label: "It resolves the query against the unified composed schema, pulling from both packages.",
+      label:
+        "It resolves the query against the unified composed schema, pulling from both packages.",
       correct: true,
-      explanation: "That's the point of composition. Each package declares its own types and resolvers; Switchboard stitches them into one schema so clients get one endpoint.",
+      explanation:
+        "That's the point of composition. Each package declares its own types and resolvers; Switchboard stitches them into one schema so clients get one endpoint.",
     },
     {
-      label: "It rejects the query because cross-package queries aren't allowed.",
-      explanation: "The opposite — cross-package queries are exactly what composition enables.",
+      label:
+        "It rejects the query because cross-package queries aren't allowed.",
+      explanation:
+        "The opposite — cross-package queries are exactly what composition enables.",
     },
     {
-      label: "It sends two separate requests and merges the JSON responses on the client.",
-      explanation: "No client-side merging needed. The composed schema handles it server-side.",
+      label:
+        "It sends two separate requests and merges the JSON responses on the client.",
+      explanation:
+        "No client-side merging needed. The composed schema handles it server-side.",
     },
   ]}
 />

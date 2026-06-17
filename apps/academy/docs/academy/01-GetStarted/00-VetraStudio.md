@@ -1,17 +1,16 @@
 # Vetra Studio
 
-Vetra Studio is the browser UI for the Vetra agent. It lets you chat with the Vetra agent, track work across the four-phase product development cycle 
+Vetra Studio is the browser UI for the Vetra agent. It lets you chat with the Vetra agent, track work across the four-phase product development cycle
 (Ideate → Specify → Build → Deploy), and watch a live preview of the product the Vetra agent is building.
 
-
-## What can i build? 
+## What can i build?
 
 With the Vetra Studio Agent, you can build **local-first, AI-ready, specification-driven products, platforms and software solutions**.
 These solutions can be used as:
+
 - Open-source and decentralized back-ends.
 - Any SaaS, ERP, CMS or CRM needs.
 - Are based on a structured data model & document-centric architecture.
-
 
 ## Getting started
 
@@ -62,12 +61,12 @@ embedded reactor's PGlite database.
 
 The right pane shows four phase cards when no sub-section is open:
 
-| Phase | Status | What happens there |
-|-------|--------|--------------------|
-| **Ideate** | active | Problem-definition documents and feature lists |
-| **Specify** | inactive (coming) | Solution design |
-| **Build** | active | Live preview of the agent's in-progress work |
-| **Deploy** | inactive (coming) | Delivery / publish |
+| Phase       | Status            | What happens there                             |
+| ----------- | ----------------- | ---------------------------------------------- |
+| **Ideate**  | active            | Problem-definition documents and feature lists |
+| **Specify** | inactive (coming) | Solution design                                |
+| **Build**   | active            | Live preview of the agent's in-progress work   |
+| **Deploy**  | inactive (coming) | Delivery / publish                             |
 
 Click **IDEATE** to browse product-identity cards, audiences and your product ideas 'Job to be done' framework. Click **BUILD** to open the live preview pane.
 
@@ -186,13 +185,13 @@ will fall back to the generic folder view instead of Vetra Studio.
 
 ### Service ports (default)
 
-| Service | Port | Purpose |
-|---------|------|---------|
-| Vetra Studio (Connect) | 27370 | Browser entry point |
-| Embedded Switchboard | 59220 | GraphQL + MCP |
-| Preview server (local API) | 5180 | Preview state + SSE |
-| Embedded reverse proxy | 8090 | Single public port (deployed mode) |
-| Reactor-project Connect | varies | Per-session BUILD preview |
+| Service                    | Port   | Purpose                            |
+| -------------------------- | ------ | ---------------------------------- |
+| Vetra Studio (Connect)     | 27370  | Browser entry point                |
+| Embedded Switchboard       | 59220  | GraphQL + MCP                      |
+| Preview server (local API) | 5180   | Preview state + SSE                |
+| Embedded reverse proxy     | 8090   | Single public port (deployed mode) |
+| Reactor-project Connect    | varies | Per-session BUILD preview          |
 
 ### Diagnostics
 
