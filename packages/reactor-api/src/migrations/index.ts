@@ -6,6 +6,7 @@ import {
 } from "kysely";
 import * as migration001 from "./001_create_document_permissions.js";
 import * as migration002 from "./002_add_document_protection.js";
+import * as migration003 from "./003_remove_group_tables.js";
 
 /**
  * Custom migration provider that loads migrations from imported modules
@@ -15,6 +16,7 @@ class StaticMigrationProvider implements MigrationProvider {
     return Promise.resolve({
       "001_create_document_permissions": migration001,
       "002_add_document_protection": migration002,
+      "003_remove_group_tables": migration003,
     });
   }
 }

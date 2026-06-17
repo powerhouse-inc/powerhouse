@@ -354,61 +354,6 @@ describe("DocumentPermissionService", () => {
           ),
         ).toBe(true);
       });
-
-      it("group grant allows reading and writing", async () => {
-        const group = await service.createGroup("Writers");
-        await service.addUserToGroup(userAddress, group.id);
-        await service.grantGroupPermission(
-          "orphan-doc",
-          group.id,
-          "WRITE",
-          adminAddress,
-        );
-        expect(
-          await authorization.canRead(
-            "orphan-doc" as CanonicalDocumentId,
-            userAddress,
-          ),
-        ).toBe(true);
-        expect(
-          await authorization.canWrite(
-            "orphan-doc" as CanonicalDocumentId,
-            userAddress,
-          ),
-        ).toBe(true);
-      });
-
-      it("revoking a group grant revokes the access it conferred", async () => {
-        const group = await service.createGroup("Revocable");
-        await service.addUserToGroup(userAddress, group.id);
-        await service.grantGroupPermission(
-          "orphan-doc",
-          group.id,
-          "WRITE",
-          adminAddress,
-        );
-        expect(
-          await authorization.canWrite(
-            "orphan-doc" as CanonicalDocumentId,
-            userAddress,
-          ),
-        ).toBe(true);
-
-        await service.revokeGroupPermission("orphan-doc", group.id);
-
-        expect(
-          await authorization.canRead(
-            "orphan-doc" as CanonicalDocumentId,
-            userAddress,
-          ),
-        ).toBe(false);
-        expect(
-          await authorization.canWrite(
-            "orphan-doc" as CanonicalDocumentId,
-            userAddress,
-          ),
-        ).toBe(false);
-      });
     });
 
     describe("permission inheritance", () => {
@@ -587,201 +532,6 @@ describe("DocumentPermissionService", () => {
     });
   });
 
-  describe("Group Management", () => {
-    describe("createGroup", () => {
-      it("should create a group with name and description", async () => {
-        const result = await service.createGroup(
-          "Editors",
-          "Can edit documents",
-        );
-
-        expect(result.name).toBe("Editors");
-        expect(result.description).toBe("Can edit documents");
-        expect(result.id).toBeDefined();
-      });
-
-      it("should create a group without description", async () => {
-        const result = await service.createGroup("Viewers");
-
-        expect(result.name).toBe("Viewers");
-        expect(result.description).toBeNull();
-      });
-    });
-
-    describe("getGroup", () => {
-      it("should return null for non-existent group", async () => {
-        const result = await service.getGroup(999);
-        expect(result).toBeNull();
-      });
-
-      it("should return group by ID", async () => {
-        const created = await service.createGroup("Test Group");
-        const result = await service.getGroup(created.id);
-
-        expect(result?.name).toBe("Test Group");
-      });
-    });
-
-    describe("listGroups", () => {
-      it("should return all groups", async () => {
-        await service.createGroup("Group1");
-        await service.createGroup("Group2");
-        await service.createGroup("Group3");
-
-        const result = await service.listGroups();
-        expect(result).toHaveLength(3);
-      });
-    });
-
-    describe("deleteGroup", () => {
-      it("should delete group and all associations", async () => {
-        const group = await service.createGroup("ToDelete");
-        await service.addUserToGroup("0xuser", group.id);
-        await service.grantGroupPermission(
-          "doc-1",
-          group.id,
-          "READ",
-          "0xadmin",
-        );
-
-        await service.deleteGroup(group.id);
-
-        const result = await service.getGroup(group.id);
-        expect(result).toBeNull();
-
-        const userGroups = await service.getUserGroups("0xuser");
-        expect(userGroups).toHaveLength(0);
-      });
-    });
-
-    describe("User-Group membership", () => {
-      it("should add user to group", async () => {
-        const group = await service.createGroup("Editors");
-        await service.addUserToGroup("0xuser", group.id);
-
-        const userGroups = await service.getUserGroups("0xuser");
-        expect(userGroups).toHaveLength(1);
-        expect(userGroups[0].name).toBe("Editors");
-      });
-
-      it("should remove user from group", async () => {
-        const group = await service.createGroup("Editors");
-        await service.addUserToGroup("0xuser", group.id);
-        await service.removeUserFromGroup("0xuser", group.id);
-
-        const userGroups = await service.getUserGroups("0xuser");
-        expect(userGroups).toHaveLength(0);
-      });
-
-      it("should get group members", async () => {
-        const group = await service.createGroup("Editors");
-        await service.addUserToGroup("0xuser1", group.id);
-        await service.addUserToGroup("0xuser2", group.id);
-
-        const members = await service.getGroupMembers(group.id);
-        expect(members.sort()).toEqual(["0xuser1", "0xuser2"]);
-      });
-
-      it("should normalize user addresses in group membership", async () => {
-        const group = await service.createGroup("Test");
-        await service.addUserToGroup("0xABCDEF", group.id);
-
-        const members = await service.getGroupMembers(group.id);
-        expect(members).toEqual(["0xabcdef"]);
-      });
-    });
-  });
-
-  describe("Group Document Permissions", () => {
-    const adminAddress = "0xAdmin";
-    const documentId = "doc-123";
-
-    it("should grant group permission on document", async () => {
-      const group = await service.createGroup("Editors");
-      const result = await service.grantGroupPermission(
-        documentId,
-        group.id,
-        "WRITE",
-        adminAddress,
-      );
-
-      expect(result.documentId).toBe(documentId);
-      expect(result.groupId).toBe(group.id);
-      expect(result.permission).toBe("WRITE");
-    });
-
-    it("should surface a READ group grant for a member", async () => {
-      const group = await service.createGroup("Readers");
-      await service.addUserToGroup("0xuser", group.id);
-      await service.grantGroupPermission(
-        documentId,
-        group.id,
-        "READ",
-        adminAddress,
-      );
-
-      const result = await service.getUserGroupPermission(documentId, "0xuser");
-      expect(result).toBe("READ");
-    });
-
-    it("should surface a WRITE group grant for a member", async () => {
-      const group = await service.createGroup("Writers");
-      await service.addUserToGroup("0xuser", group.id);
-      await service.grantGroupPermission(
-        documentId,
-        group.id,
-        "WRITE",
-        adminAddress,
-      );
-
-      const result = await service.getUserGroupPermission(documentId, "0xuser");
-      expect(result).toBe("WRITE");
-    });
-
-    it("should return highest group permission level", async () => {
-      const readersGroup = await service.createGroup("Readers");
-      const writersGroup = await service.createGroup("Writers");
-
-      await service.addUserToGroup("0xuser", readersGroup.id);
-      await service.addUserToGroup("0xuser", writersGroup.id);
-
-      await service.grantGroupPermission(
-        documentId,
-        readersGroup.id,
-        "READ",
-        adminAddress,
-      );
-      await service.grantGroupPermission(
-        documentId,
-        writersGroup.id,
-        "WRITE",
-        adminAddress,
-      );
-
-      const groupPermission = await service.getUserGroupPermission(
-        documentId,
-        "0xuser",
-      );
-      expect(groupPermission).toBe("WRITE");
-    });
-
-    it("should revoke group permission", async () => {
-      const group = await service.createGroup("TempGroup");
-      await service.addUserToGroup("0xuser", group.id);
-      await service.grantGroupPermission(
-        documentId,
-        group.id,
-        "READ",
-        adminAddress,
-      );
-
-      await service.revokeGroupPermission(documentId, group.id);
-
-      const result = await service.getUserGroupPermission(documentId, "0xuser");
-      expect(result).toBeNull();
-    });
-  });
-
   describe("Operation Permissions", () => {
     const documentId = "doc-123";
     const operationType = "SET_NAME";
@@ -848,64 +598,6 @@ describe("DocumentPermissionService", () => {
       });
     });
 
-    describe("Group operation permissions", () => {
-      it("should grant operation permission to group", async () => {
-        const group = await service.createGroup("Operators");
-        const result = await service.grantGroupOperationPermission(
-          documentId,
-          operationType,
-          group.id,
-          adminAddress,
-        );
-
-        expect(result.documentId).toBe(documentId);
-        expect(result.operationType).toBe(operationType);
-        expect(result.groupId).toBe(group.id);
-      });
-
-      it("should allow user to execute operation via group", async () => {
-        const group = await service.createGroup("Operators");
-        await service.addUserToGroup("0xuser", group.id);
-        await service.grantGroupOperationPermission(
-          documentId,
-          operationType,
-          group.id,
-          adminAddress,
-        );
-
-        const result = await service.hasOperationGrant(
-          documentId,
-          operationType,
-          "0xuser",
-        );
-        expect(result).toBe(true);
-      });
-
-      it("should revoke group operation permission", async () => {
-        const group = await service.createGroup("TempOps");
-        await service.addUserToGroup("0xuser", group.id);
-        await service.grantGroupOperationPermission(
-          documentId,
-          operationType,
-          group.id,
-          adminAddress,
-        );
-
-        await service.revokeGroupOperationPermission(
-          documentId,
-          operationType,
-          group.id,
-        );
-
-        const result = await service.hasOperationGrant(
-          documentId,
-          operationType,
-          "0xuser",
-        );
-        expect(result).toBe(false);
-      });
-    });
-
     describe("isOperationRestricted", () => {
       it("should return false when no permissions are set", async () => {
         const result = await service.isOperationRestricted(
@@ -920,22 +612,6 @@ describe("DocumentPermissionService", () => {
           documentId,
           operationType,
           "0xuser",
-          adminAddress,
-        );
-
-        const result = await service.isOperationRestricted(
-          documentId,
-          operationType,
-        );
-        expect(result).toBe(true);
-      });
-
-      it("should return true when group permission is set", async () => {
-        const group = await service.createGroup("Operators");
-        await service.grantGroupOperationPermission(
-          documentId,
-          operationType,
-          group.id,
           adminAddress,
         );
 
@@ -967,24 +643,10 @@ describe("DocumentPermissionService", () => {
         adminAddress,
       );
 
-      const group = await service.createGroup("TestGroup");
-      await service.grantGroupPermission(
-        documentId,
-        group.id,
-        "READ",
-        adminAddress,
-      );
-
       await service.grantOperationPermission(
         documentId,
         "SET_NAME",
         "0xuser1",
-        adminAddress,
-      );
-      await service.grantGroupOperationPermission(
-        documentId,
-        "SET_NAME",
-        group.id,
         adminAddress,
       );
 
@@ -995,32 +657,11 @@ describe("DocumentPermissionService", () => {
       const userPermissions = await service.getDocumentPermissions(documentId);
       expect(userPermissions).toHaveLength(0);
 
-      const groupPermissions =
-        await service.getDocumentGroupPermissions(documentId);
-      expect(groupPermissions).toHaveLength(0);
-
       const opUserPerms = await service.getOperationUserPermissions(
         documentId,
         "SET_NAME",
       );
       expect(opUserPerms).toHaveLength(0);
-
-      const opGroupPerms = await service.getOperationGroupPermissions(
-        documentId,
-        "SET_NAME",
-      );
-      expect(opGroupPerms).toHaveLength(0);
-    });
-  });
-
-  describe("Edge Cases", () => {
-    it("should handle duplicate group membership gracefully", async () => {
-      const group = await service.createGroup("Test");
-      await service.addUserToGroup("0xuser", group.id);
-      await service.addUserToGroup("0xuser", group.id); // Duplicate
-
-      const members = await service.getGroupMembers(group.id);
-      expect(members).toHaveLength(1);
     });
   });
 });

@@ -20,29 +20,33 @@ export type DocumentAccessInfo = {
     createdAt: Date;
     updatedAt: Date;
   }>;
-  groupPermissions: Array<{
-    documentId: string;
-    groupId: number;
-    permission: DocumentPermissionLevel;
-    grantedBy: string;
-    createdAt: Date;
-    updatedAt: Date;
-  }>;
 };
 
 export async function documentAccess(
   service: DocumentPermissionService,
-  args: { documentId: string },
+  authorizationService: IAuthorizationService,
+  args: { documentId: CanonicalDocumentId },
+  userAddress: string | undefined,
 ): Promise<DocumentAccessInfo> {
-  const permissions = await service.getDocumentPermissions(args.documentId);
-  const groupPermissions = await service.getDocumentGroupPermissions(
+  if (!userAddress) {
+    throw new GraphQLError("Authentication required");
+  }
+
+  const canManage = await authorizationService.canManage(
     args.documentId,
+    userAddress,
   );
+  if (!canManage) {
+    throw new GraphQLError(
+      "Forbidden: You must be an admin of this document to view its permissions",
+    );
+  }
+
+  const permissions = await service.getDocumentPermissions(args.documentId);
 
   return {
     documentId: args.documentId,
     permissions,
-    groupPermissions,
   };
 }
 
@@ -126,145 +130,6 @@ export async function revokeDocumentPermission(
 }
 
 // ============================================
-// Group Resolvers
-// ============================================
-
-export type Group = {
-  id: number;
-  name: string;
-  description: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-};
-
-export async function groups(
-  service: DocumentPermissionService,
-): Promise<Group[]> {
-  return service.listGroups();
-}
-
-export async function group(
-  service: DocumentPermissionService,
-  args: { id: number },
-): Promise<Group | null> {
-  return service.getGroup(args.id);
-}
-
-export async function userGroups(
-  service: DocumentPermissionService,
-  args: { userAddress: string },
-): Promise<Group[]> {
-  return service.getUserGroups(args.userAddress);
-}
-
-export async function createGroup(
-  service: DocumentPermissionService,
-  args: { name: string; description?: string | null },
-): Promise<Group> {
-  return service.createGroup(args.name, args.description ?? undefined);
-}
-
-export async function deleteGroup(
-  service: DocumentPermissionService,
-  args: { id: number },
-): Promise<boolean> {
-  await service.deleteGroup(args.id);
-  return true;
-}
-
-export async function addUserToGroup(
-  service: DocumentPermissionService,
-  args: { userAddress: string; groupId: number },
-): Promise<boolean> {
-  await service.addUserToGroup(args.userAddress, args.groupId);
-  return true;
-}
-
-export async function removeUserFromGroup(
-  service: DocumentPermissionService,
-  args: { userAddress: string; groupId: number },
-): Promise<boolean> {
-  await service.removeUserFromGroup(args.userAddress, args.groupId);
-  return true;
-}
-
-export async function getGroupMembers(
-  service: DocumentPermissionService,
-  groupId: number,
-): Promise<string[]> {
-  return service.getGroupMembers(groupId);
-}
-
-// ============================================
-// Group Document Permission Resolvers
-// ============================================
-
-export type DocumentGroupPermission = {
-  documentId: string;
-  groupId: number;
-  permission: DocumentPermissionLevel;
-  grantedBy: string;
-  createdAt: Date;
-  updatedAt: Date;
-};
-
-export async function grantGroupPermission(
-  service: DocumentPermissionService,
-  authorizationService: IAuthorizationService,
-  args: {
-    documentId: CanonicalDocumentId;
-    groupId: number;
-    permission: DocumentPermissionLevel;
-  },
-  grantedByAddress: string | undefined,
-): Promise<DocumentGroupPermission> {
-  if (!grantedByAddress) {
-    throw new GraphQLError("Authentication required");
-  }
-
-  const canManage = await authorizationService.canManage(
-    args.documentId,
-    grantedByAddress,
-  );
-  if (!canManage) {
-    throw new GraphQLError(
-      "Forbidden: You must be an admin of this document to grant permissions",
-    );
-  }
-
-  return service.grantGroupPermission(
-    args.documentId,
-    args.groupId,
-    args.permission,
-    grantedByAddress,
-  );
-}
-
-export async function revokeGroupPermission(
-  service: DocumentPermissionService,
-  authorizationService: IAuthorizationService,
-  args: { documentId: CanonicalDocumentId; groupId: number },
-  revokedByAddress: string | undefined,
-): Promise<boolean> {
-  if (!revokedByAddress) {
-    throw new GraphQLError("Authentication required");
-  }
-
-  const canManage = await authorizationService.canManage(
-    args.documentId,
-    revokedByAddress,
-  );
-  if (!canManage) {
-    throw new GraphQLError(
-      "Forbidden: You must be an admin of this document to revoke permissions",
-    );
-  }
-
-  await service.revokeGroupPermission(args.documentId, args.groupId);
-  return true;
-}
-
-// ============================================
 // Operation Permission Resolvers
 // ============================================
 
@@ -276,30 +141,33 @@ export type OperationUserPermission = {
   createdAt: Date;
 };
 
-export type OperationGroupPermission = {
-  documentId: string;
-  operationType: string;
-  groupId: number;
-  grantedBy: string;
-  createdAt: Date;
-};
-
 export type OperationPermissionsInfo = {
   documentId: string;
   operationType: string;
   userPermissions: OperationUserPermission[];
-  groupPermissions: OperationGroupPermission[];
 };
 
 export async function operationPermissions(
   service: DocumentPermissionService,
-  args: { documentId: string; operationType: string },
+  authorizationService: IAuthorizationService,
+  args: { documentId: CanonicalDocumentId; operationType: string },
+  userAddress: string | undefined,
 ): Promise<OperationPermissionsInfo> {
-  const userPermissions = await service.getOperationUserPermissions(
+  if (!userAddress) {
+    throw new GraphQLError("Authentication required");
+  }
+
+  const canManage = await authorizationService.canManage(
     args.documentId,
-    args.operationType,
+    userAddress,
   );
-  const groupPermissions = await service.getOperationGroupPermissions(
+  if (!canManage) {
+    throw new GraphQLError(
+      "Forbidden: You must be an admin of this document to view its operation permissions",
+    );
+  }
+
+  const userPermissions = await service.getOperationUserPermissions(
     args.documentId,
     args.operationType,
   );
@@ -308,7 +176,6 @@ export async function operationPermissions(
     documentId: args.documentId,
     operationType: args.operationType,
     userPermissions,
-    groupPermissions,
   };
 }
 
@@ -388,70 +255,6 @@ export async function revokeOperationPermission(
   return true;
 }
 
-export async function grantGroupOperationPermission(
-  service: DocumentPermissionService,
-  authorizationService: IAuthorizationService,
-  args: {
-    documentId: CanonicalDocumentId;
-    operationType: string;
-    groupId: number;
-  },
-  grantedByAddress: string | undefined,
-): Promise<OperationGroupPermission> {
-  if (!grantedByAddress) {
-    throw new GraphQLError("Authentication required");
-  }
-
-  const canManage = await authorizationService.canManage(
-    args.documentId,
-    grantedByAddress,
-  );
-  if (!canManage) {
-    throw new GraphQLError(
-      "Forbidden: You must be an admin of this document to grant operation permissions",
-    );
-  }
-
-  return service.grantGroupOperationPermission(
-    args.documentId,
-    args.operationType,
-    args.groupId,
-    grantedByAddress,
-  );
-}
-
-export async function revokeGroupOperationPermission(
-  service: DocumentPermissionService,
-  authorizationService: IAuthorizationService,
-  args: {
-    documentId: CanonicalDocumentId;
-    operationType: string;
-    groupId: number;
-  },
-  revokedByAddress: string | undefined,
-): Promise<boolean> {
-  if (!revokedByAddress) {
-    throw new GraphQLError("Authentication required");
-  }
-
-  const canManage = await authorizationService.canManage(
-    args.documentId,
-    revokedByAddress,
-  );
-  if (!canManage) {
-    throw new GraphQLError(
-      "Forbidden: You must be an admin of this document to revoke operation permissions",
-    );
-  }
-
-  await service.revokeGroupOperationPermission(
-    args.documentId,
-    args.operationType,
-    args.groupId,
-  );
-  return true;
-}
-
 // ============================================
 // Document Protection Resolvers
 // ============================================
@@ -464,8 +267,24 @@ export type DocumentProtectionInfo = {
 
 export async function documentProtection(
   service: DocumentPermissionService,
-  args: { documentId: string },
+  authorizationService: IAuthorizationService,
+  args: { documentId: CanonicalDocumentId },
+  userAddress: string | undefined,
 ): Promise<DocumentProtectionInfo> {
+  if (!userAddress) {
+    throw new GraphQLError("Authentication required");
+  }
+
+  const canManage = await authorizationService.canManage(
+    args.documentId,
+    userAddress,
+  );
+  if (!canManage) {
+    throw new GraphQLError(
+      "Forbidden: You must be an admin of this document to view its protection info",
+    );
+  }
+
   return service.getDocumentProtection(args.documentId);
 }
 
