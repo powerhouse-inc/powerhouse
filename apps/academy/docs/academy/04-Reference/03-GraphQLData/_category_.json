@@ -1,0 +1,7 @@
+{
+  "label": "GraphQL & Data",
+  "link": {
+    "type": "generated-index",
+    "description": "Subgraphs, relational database, and data access patterns."
+  }
+}

@@ -21,7 +21,7 @@ const FeatureList: FeatureItem[] = [
   {
     title: "Switchboard",
     imageSrc: require("@site/static/img/switchboard.png").default,
-    docPath: "/docs/academy/MasteryTrack/WorkWithData/UsingTheAPI",
+    docPath: "/docs/academy/Build/WorkWithData/UsingTheAPI",
     description: <>Get access to the open API interface with Switchboard</>,
   },
   {
@@ -34,7 +34,7 @@ const FeatureList: FeatureItem[] = [
     title: "Renown",
     imageSrc: require("@site/static/img/renown.png").default,
     docPath:
-      "/docs/academy/MasteryTrack/BuildingUserExperiences/Authorization/RenownAuthenticationFlow",
+      "/docs/academy/Build/BuildingUserExperiences/Authorization/RenownAuthenticationFlow",
     description: <>Dive into the customizable reputation system</>,
   },
   {
@@ -203,7 +203,7 @@ export default function HomepageFeatures() {
                 Building Beautiful Document Editors
               </a>
               <a
-                href="/docs/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer"
+                href="/docs/academy/Build/BuildingUserExperiences/BuildingADriveExplorer"
                 className={styles.pathButton}
               >
                 Building Custom Drive Explorers
@@ -253,13 +253,13 @@ export default function HomepageFeatures() {
             </div>
             <div className={styles.cardContent}>
               <a
-                href="//docs/academy/MasteryTrack/WorkWithData/UsingTheAPI"
+                href="//docs/academy/Build/WorkWithData/UsingTheAPI"
                 className={styles.pathButton}
               >
                 Reading & Writing through the API
               </a>
               <a
-                href="/docs/academy/MasteryTrack/WorkWithData/WorkingWithSubgraphs"
+                href="/docs/academy/Build/WorkWithData/WorkingWithSubgraphs"
                 className={styles.pathButton}
               >
                 Create your own Subgraph
@@ -287,7 +287,7 @@ export default function HomepageFeatures() {
             <div className={styles.cardContent}>
               <div className={styles.buttonContainer}>
                 <a
-                  href="/docs/academy/MasteryTrack/Launch/PublishYourProject"
+                  href="/docs/academy/Build/Launch/PublishYourProject"
                   className={styles.pathButton}
                 >
                   Package & Publish

@@ -1,7 +1,7 @@
 {
-  "label": "Reference",
+  "label": "API Reference",
   "link": {
     "type": "generated-index",
-    "description": "Look things up: CLI and API references, the Cookbook and recipes, the component library, glossary, and LLM docs."
+    "description": "Technical reference organized by theme: Architecture, Reactor, Document Models, GraphQL & Data, Processors, Editors & UI, Authorization & Identity, CLI & Tooling, and Lookup resources."
   }
 }

@@ -1,14 +1,14 @@
 /**
  * Learn-section course structure (prototype).
  *
- * Curated view over the existing `docs/academy/02-MasteryTrack` content — no
+ * Curated view over the existing `docs/academy/02-Build` content — no
  * content is duplicated. Lesson `id`s are Docusaurus doc IDs (numeric folder
  * prefixes like `01-` are stripped by Docusaurus to form the id/permalink).
  * With `routeBasePath: "/"`, a doc's URL is simply `/<id>`.
  */
 
 export type Lesson = {
-  /** Docusaurus doc id, e.g. "academy/MasteryTrack/BuilderEnvironment/Prerequisites" */
+  /** Docusaurus doc id, e.g. "academy/Build/BuilderEnvironment/Prerequisites" */
   id: string;
   title: string;
 };
@@ -20,7 +20,7 @@ export type Module = {
   lessons: Lesson[];
 };
 
-const BASE = "academy/MasteryTrack";
+const BASE = "academy/Build";
 
 export const modules: Module[] = [
   {

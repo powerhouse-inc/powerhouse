@@ -1,0 +1,7 @@
+{
+  "label": "Lookup",
+  "link": {
+    "type": "generated-index",
+    "description": "Cookbook recipes, glossary, and LLM documentation."
+  }
+}

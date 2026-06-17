@@ -18,7 +18,7 @@ On Vetra Cloud you'll find these five steps as a quick reference for creating an
 **This tutorial is a summary for builders that are already familiar with building document models**.  
 It provides a summary from initial setup up to publishing a distributable package.
 
-Please start with the [**Get Started**](/) Chapter or [**Document Model Creation**](/academy/MasteryTrack/DocumentModelCreation/SpecifyTheStateSchema) section if you are unfamiliar with building a document model.
+Please start with the [**Get Started**](/) Chapter or [**Document Model Creation**](/academy/Build/DocumentModelCreation/SpecifyTheStateSchema) section if you are unfamiliar with building a document model.
 :::
 
 <details>
@@ -115,7 +115,7 @@ In watch mode:
 
 :::warning[Be Aware]
 When you are building your document model the code can break the Vetra Studio environment.
-A full overview of the Vetra Studio commands can be found in the [Powerhouse CLI](/academy/Reference/APIReferences/PowerhouseCLI#vetra)
+A full overview of the Vetra Studio commands can be found in the [Powerhouse CLI](/academy/Reference/CLITooling/PowerhouseCLI#vetra)
 :::
 
 #### Standard Mode
@@ -260,9 +260,9 @@ You can create document models in two ways:
 - Define document schema with fields and types as in the **'Get Started'** chapter
 - Create the necessary operations
 - Add the required modules to your package
-- The document model creation chapter in the Mastery track provides in depth support [here](/academy/MasteryTrack/DocumentModelCreation/SpecifyTheStateSchema)
+- The document model creation chapter in the Mastery track provides in depth support [here](/academy/Build/DocumentModelCreation/SpecifyTheStateSchema)
 
-→ [Learn more about Document Models](/academy/MasteryTrack/DocumentModelCreation/WhatIsADocumentModel)
+→ [Learn more about Document Models](/academy/Build/DocumentModelCreation/WhatIsADocumentModel)
 
 #### Using MCP (AI-Assisted)
 
@@ -273,10 +273,10 @@ You can create document models in two ways:
   - Implement the required reducers
   - Place the document in the Vetra drive
 
-- Claude will also add the necessary interface in the form of a [document editor](/academy/MasteryTrack/BuildingUserExperiences/BuildingDocumentEditors) and scaffold the [drive-app functionality](/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer) when specified.
+- Claude will also add the necessary interface in the form of a [document editor](/academy/Build/BuildingUserExperiences/BuildingDocumentEditors) and scaffold the [drive-app functionality](/academy/Build/BuildingUserExperiences/BuildingADriveExplorer) when specified.
 
-→ [Learn more about Building Document Editors](/academy/MasteryTrack/BuildingUserExperiences/BuildingDocumentEditors)
-→ [Learn more about Building a Drive Explorer](/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer)
+→ [Learn more about Building Document Editors](/academy/Build/BuildingUserExperiences/BuildingDocumentEditors)
+→ [Learn more about Building a Drive Explorer](/academy/Build/BuildingUserExperiences/BuildingADriveExplorer)
 
 <details>
 <summary>Alternatively: Use Connect</summary>
@@ -329,7 +329,7 @@ This command creates a new directory under `document-models/YourModelName/` cont
   - Implement necessary hooks
   - Create required UI elements
 
-→ [Learn more about Building Document Editors](/academy/MasteryTrack/BuildingUserExperiences/BuildingDocumentEditors)
+→ [Learn more about Building Document Editors](/academy/Build/BuildingUserExperiences/BuildingDocumentEditors)
 
 <details>
 <summary>Alternatively: Generate command</summary>
@@ -347,7 +347,7 @@ This creates a template file, typically at `editors/your-model-name/editor.tsx`.
 
 - Customize this React component to build your UI.
 - You can use standard HTML, Tailwind CSS (available in Connect), or import custom CSS.
-- Utilize components from `@powerhousedao/document-engineering` for consistency and rapid development. Learn more at [Document-Engineering](/academy/Reference/ComponentLibrary/DocumentEngineering)
+- Utilize components from `@powerhousedao/document-engineering` for consistency and rapid development. Learn more at [Document-Engineering](/academy/Reference/EditorsUI/DocumentEngineering)
 
 </details>
 

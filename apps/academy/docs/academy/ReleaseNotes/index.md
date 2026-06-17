@@ -351,12 +351,12 @@ This prevents issues with `package.json` imports in vitest.config.ts being copie
 
 Authorization & Permissions:
 
-- [Reactor API Authorization](https://academy.vetra.io/academy/MasteryTrack/BuildingUserExperiences/Authorization/Authorization) - Role-based access control configuration
-- [Document Permission System](https://academy.vetra.io/academy/MasteryTrack/BuildingUserExperiences/Authorization/DocumentPermissions) - Fine-grained document-level permissions
+- [Reactor API Authorization](https://academy.vetra.io/academy/Build/BuildingUserExperiences/Authorization/Authorization) - Role-based access control configuration
+- [Document Permission System](https://academy.vetra.io/academy/Build/BuildingUserExperiences/Authorization/DocumentPermissions) - Fine-grained document-level permissions
 
 Connect Tools:
 
-- [Inspector Modal](https://academy.vetra.io/academy/MasteryTrack/ConnectTools/InspectorModal) - Database & reactor explorer
+- [Inspector Modal](https://academy.vetra.io/academy/Build/ConnectTools/InspectorModal) - Database & reactor explorer
 
 Other Updates:
 
@@ -388,7 +388,7 @@ New debugging components inside Connect to help developers understand what's hap
 - Remotes Inspector - View configured sync remotes and their status
 - Channel Inspector - Debug sync channels of the reactor (inbox, outbox, dead letter queues)
 
-These tools can be enabled via feature flags. See the [Inspector Modal documentation](https://academy.vetra.io/academy/MasteryTrack/ConnectTools/InspectorModal) for details.
+These tools can be enabled via feature flags. See the [Inspector Modal documentation](https://academy.vetra.io/academy/Build/ConnectTools/InspectorModal) for details.
 
 #### Renown Login Component
 
@@ -580,7 +580,7 @@ Impact on Editors:
 - Document and Drive editors need to adopt the new hook patterns from `@powerhousedao/reactor-browser`
 - Navigation and selection state is now managed through hooks instead of props
 
-Learn More: Complete hooks documentation and examples are available at https://academy.vetra.io/academy/Reference/APIReferences/ReactHooks
+Learn More: Complete hooks documentation and examples are available at https://academy.vetra.io/academy/Reference/EditorsUI/ReactHooks
 
 Migration Required: Existing editors will need to be refactored to use the new hooks API. See Migration Guide below.
 
@@ -999,13 +999,13 @@ Introducing the **Relational Database & Operational Processor System**, a new ar
 #### Documentation & Guides:
 
 - **New:** PHDocument Migration Guide - Comprehensive guide to navigate the breaking changes in v4.0.0, including step-by-step migration instructions for the document header restructuring and property access patterns.
-- 🔗 https://academy.vetra.io/academy/Reference/APIReferences/PHDocumentMigrationGuide
+- 🔗 https://academy.vetra.io/academy/Reference/DocumentModels/PHDocumentMigrationGuide
 - **New:** Drive Analytics Documentation and Examples - Complete documentation for the new analytics system with practical examples showing how to implement and use drive and document analytics processors.
-- 🔗 https://academy.vetra.io/academy/MasteryTrack/WorkWithData/drive-analytics
+- 🔗 https://academy.vetra.io/academy/Build/WorkWithData/drive-analytics
 - **New:** Relational Database & Operational Processor System - Educational content explaining the new architecture for data handling, querying, and synchronization
-- 🔗 https://academy.vetra.io/academy/Reference/APIReferences/RelationalDatabase
+- 🔗 https://academy.vetra.io/academy/Reference/GraphQLData/RelationalDatabase
 - **New:** Todo-List Processor Tutorial - Try to add a processor to your todo-list demo project
-- 🔗 https://academy.vetra.io/academy/MasteryTrack/WorkWithData/RelationalDbProcessor
+- 🔗 https://academy.vetra.io/academy/Build/WorkWithData/RelationalDbProcessor
 
 #### Enhanced Learning Content:
 
@@ -1083,7 +1083,7 @@ This release brings improvements to the **Cloud Environment Setup Flow,** a Conn
 
 ✅ **What to try:** Try to run the `ph service setup` flow on a cloud instance on AWS or digital ocean and install a @powerhousedao/todo-demo-package.
 
-[https://academy.vetra.io/academy/MasteryTrack/Launch/SetupEnvironment](https://academy.vetra.io/academy/MasteryTrack/Launch/SetupEnvironment)
+[https://academy.vetra.io/academy/Build/Launch/SetupEnvironment](https://academy.vetra.io/academy/Build/Launch/SetupEnvironment)
 
 ### `ph connect build` command
 
@@ -1094,15 +1094,15 @@ This release brings improvements to the **Cloud Environment Setup Flow,** a Conn
 ### Configure an Allowlist and add Authorization for Switchboard
 
 - Read how to add Authorization to your drive
-  - [https://academy.vetra.io/academy/MasteryTrack/BuildingUserExperiences/Authorization/Authorization](https://academy.vetra.io/academy/MasteryTrack/BuildingUserExperiences/Authorization/Authorization)
+  - [https://academy.vetra.io/academy/Build/BuildingUserExperiences/Authorization/Authorization](https://academy.vetra.io/academy/Build/BuildingUserExperiences/Authorization/Authorization)
 - Or try to configure your environment
-  - [https://academy.vetra.io/academy/MasteryTrack/Launch/ConfigureEnvironment](https://academy.vetra.io/academy/MasteryTrack/Launch/ConfigureEnvironment)
+  - [https://academy.vetra.io/academy/Build/Launch/ConfigureEnvironment](https://academy.vetra.io/academy/Build/Launch/ConfigureEnvironment)
   ### It's now possible to disable the Create New Drive button in Connect.
   - We have introduced PH_CONNECT_DISABLE_ADD_DRIVE=true/false env var in connect.
-    configure your environment [https://academy.vetra.io/academy/MasteryTrack/Launch/ConfigureEnvironment](https://academy.vetra.io/academy/MasteryTrack/Launch/ConfigureEnvironment)
+    configure your environment [https://academy.vetra.io/academy/Build/Launch/ConfigureEnvironment](https://academy.vetra.io/academy/Build/Launch/ConfigureEnvironment)
   ***
   ### Find your document scalars in the stand-alone Document-Engineering
-  - [https://academy.vetra.io/academy/Reference/ComponentLibrary/DocumentEngineering](https://academy.vetra.io/academy/Reference/ComponentLibrary/DocumentEngineering)
+  - [https://academy.vetra.io/academy/Reference/EditorsUI/DocumentEngineering](https://academy.vetra.io/academy/Reference/EditorsUI/DocumentEngineering)
     ✅ **What to try: Visit the updated** [https://storybook.powerhouse.academy](https://storybook.powerhouse.academy/?path=/docs/getting-started--readme) to see the latest scalar implementations by Dspot.
   ***
   ### Performance improvements in Connect
@@ -1113,10 +1113,10 @@ This release brings improvements to the **Cloud Environment Setup Flow,** a Conn
   - Academy moved to the monorepo! So you have more access to code context when writing documentation. 👌
   - We've updated the landing page getting you directly to the 'Get started' section & Tutorial
   - Still confused how to create a drive via mutations?
-    'Configure a drive' is now available to help you out. [https://academy.vetra.io/academy/MasteryTrack/BuildingUserExperiences/ConfiguringDrives](https://academy.vetra.io/academy/MasteryTrack/BuildingUserExperiences/ConfiguringDrives)
-  - New educational content is present inside the 'Mastery track' guiding you through the advanced ToDoList Demo. [https://academy.vetra.io/academy/MasteryTrack/DocumentModelCreation/WhatIsADocumentModel](https://academy.vetra.io/academy/MasteryTrack/DocumentModelCreation/WhatIsADocumentModel)
+    'Configure a drive' is now available to help you out. [https://academy.vetra.io/academy/Build/BuildingUserExperiences/ConfiguringDrives](https://academy.vetra.io/academy/Build/BuildingUserExperiences/ConfiguringDrives)
+  - New educational content is present inside the 'Mastery track' guiding you through the advanced ToDoList Demo. [https://academy.vetra.io/academy/Build/DocumentModelCreation/WhatIsADocumentModel](https://academy.vetra.io/academy/Build/DocumentModelCreation/WhatIsADocumentModel)
   - The first page inside our API references chapter is now automatically updated with all the latest available commands for the Powerhouse CLI
-    [https://academy.vetra.io/academy/Reference/APIReferences/PowerhouseCLI](https://academy.vetra.io/academy/Reference/APIReferences/PowerhouseCLI)
+    [https://academy.vetra.io/academy/Reference/CLITooling/PowerhouseCLI](https://academy.vetra.io/academy/Reference/CLITooling/PowerhouseCLI)
 
 ---
 

@@ -36,15 +36,15 @@ A **document model** is a structured data type that defines what information you
 
 - **Document model specification**: Defines the structure and operations of a document model using [GraphQL SDL](https://graphql.org/learn/schema/) (Schema Definition Language), ensuring consistent data management and processing.
 
-→ [Learn more about Document Models](/academy/MasteryTrack/DocumentModelCreation/WhatIsADocumentModel)
+→ [Learn more about Document Models](/academy/Build/DocumentModelCreation/WhatIsADocumentModel)
 
 ### 2. User Experiences
 
 - **Editor specification**: Outlines the interface and functionalities of a document model editor, allowing users to interact with and modify document data.
 - **Drive-app specification**: Specifies the UI and interactions for managing documents within a drive, providing tailored views and functionalities.
 
-→ [Learn more about Building Document Editors](/academy/MasteryTrack/BuildingUserExperiences/BuildingDocumentEditors)
-→ [Learn more about Building a Drive Explorer](/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer)
+→ [Learn more about Building Document Editors](/academy/Build/BuildingUserExperiences/BuildingDocumentEditors)
+→ [Learn more about Building a Drive Explorer](/academy/Build/BuildingUserExperiences/BuildingADriveExplorer)
 
 ### 3. Data Integrations
 
@@ -52,8 +52,8 @@ A **document model** is a structured data type that defines what information you
 - **Codegen Processor Specification**: Describes the process for automatically generating code from document model specifications, ensuring alignment with intended architecture.
 - **RelationalDb Processor Specification**: Defines how relational databases are structured and queried, supporting efficient data management and retrieval.
 
-→ [Learn more about Using Subgraphs](/academy/MasteryTrack/WorkWithData/UsingSubgraphs)
-→ [Learn more about Relational DB Processor](/academy/MasteryTrack/WorkWithData/RelationalDbProcessor)
+→ [Learn more about Using Subgraphs](/academy/Build/WorkWithData/UsingSubgraphs)
+→ [Learn more about Relational DB Processor](/academy/Build/WorkWithData/RelationalDbProcessor)
 
 <figure className="image-container">
   <img
@@ -110,7 +110,7 @@ Add the following configuration to your Claude MCP settings (e.g. `~/.claude/mcp
 
 This connects Claude to the Reactor running at `http://localhost:4001`. Make sure `ph vetra --watch` (or `ph reactor`) is running before starting a Claude session that uses the MCP.
 
-→ See [Connecting Claude with Reactor MCP](/academy/Reference/Cookbook#connecting-claude-with-reactor-mcp) for a step-by-step walkthrough.
+→ See [Connecting Claude with Reactor MCP](/academy/Lookup/Cookbook#connecting-claude-with-reactor-mcp) for a step-by-step walkthrough.
 
 <details>
 <summary>📦 Vetra Remote Drive Commands</summary>
@@ -135,6 +135,6 @@ The preview drive allows you to safely test changes before they affect the share
 - The **"Vetra Preview" drive** is created locally for testing document models and editors before syncing your changes to the team.
 - When restarting Vetra, always use `ph vetra --watch` so it loads your local documents and editors.
 
-→ [Full Vetra Remote Drive Reference](/academy/Reference/APIReferences/VetraRemoteDrive)
+→ [Full Vetra Remote Drive Reference](/academy/Reference/CLITooling/VetraRemoteDrive)
 
 </details>

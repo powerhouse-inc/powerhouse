@@ -131,7 +131,7 @@ const lanes: Lane[] = [
     title: "Build by hand",
     blurb:
       "Under the hood — the manual workflows for debugging, extending, and contributing when you need to go beyond the agent.",
-    href: "/academy/MasteryTrack/ManualTodoTutorial/CreateNewPowerhouseProject",
+    href: "/academy/Build/ManualTodoTutorial/CreateNewPowerhouseProject",
     cta: "Build manually",
   },
 ];
@@ -144,9 +144,9 @@ export default function Home(): JSX.Element {
           Build decentralized back-ends by describing them to an agent.
         </Heading>
         <p className={styles.heroSubtitle}>
-          Vetra is the agent-first builder platform for the Powerhouse
-          ecosystem. Spec-driven and AI-native — create open-source,
-          decentralized back-ends for any SaaS, ERP, CMS, or CRM.
+          Vetra is the agent-first builder platform for the Powerhouse ecosystem.
+          <br />
+          Spec-driven and AI-native — create open-source, decentralized back-ends for any SaaS, ERP, CMS, or CRM.
         </p>
         <div className={styles.heroButtons}>
           <Link
