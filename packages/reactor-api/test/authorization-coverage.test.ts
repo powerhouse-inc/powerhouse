@@ -36,33 +36,8 @@ const EXEMPT: Record<string, Record<string, string>> = {
       "Job status by id, not document content (AUTH_REVIEW §4: low-sensitivity).",
   },
   auth: {
-    "Query.documentAccess":
-      "KNOWN GAP S-H5: disclosed ACL graph. Remediation order #5.",
     "Query.userDocumentPermissions":
       "Self-scoped: returns only the caller's own grants; anonymous gets [].",
-    "Query.groups":
-      "KNOWN GAP S-H5: disclosed ACL graph. Remediation order #5.",
-    "Query.group": "KNOWN GAP S-H5: disclosed ACL graph. Remediation order #5.",
-    "Query.userGroups":
-      "KNOWN GAP S-H5: group membership for any address. Remediation order #5.",
-    "Query.operationPermissions":
-      "KNOWN GAP S-H5: operation ACLs for any document. Remediation order #5.",
-    "Query.documentProtection":
-      "KNOWN GAP S-H5: requires authentication but not canManage. Remediation order #5.",
-    "Mutation.createGroup":
-      "KNOWN GAP S-H3: group management is unauthenticated. Remediation order #3.",
-    "Mutation.deleteGroup":
-      "KNOWN GAP S-H3: group management is unauthenticated. Remediation order #3.",
-    "Mutation.addUserToGroup":
-      "KNOWN GAP S-H3: privilege escalation via self-add. Remediation order #3.",
-    "Mutation.removeUserFromGroup":
-      "KNOWN GAP S-H3: permission stripping/DoS. Remediation order #3.",
-    "Group.members":
-      "KNOWN GAP S-H5: group membership disclosure (field resolver). Remediation order #5.",
-    "DocumentGroupPermission.group":
-      "ACL metadata join; parent object already gated by its query's exemption/check.",
-    "OperationGroupPermission.group":
-      "ACL metadata join; parent object already gated by its query's exemption/check.",
   },
   packages: {
     "Query.Packages": "Namespace stub resolver; returns an empty object.",

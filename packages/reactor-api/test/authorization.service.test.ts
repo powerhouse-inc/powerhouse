@@ -20,8 +20,6 @@ describe("createAuthorizationService", () => {
   let parents: Record<string, string[]>;
   /** per-document direct grants for the user under test */
   let directGrants: Record<string, DocumentPermissionLevel>;
-  /** per-document group grants for the user under test */
-  let groupGrants: Record<string, DocumentPermissionLevel>;
   const getParentIds = vi.fn((documentId: string) =>
     Promise.resolve(parents[documentId] ?? []),
   );
@@ -30,15 +28,11 @@ describe("createAuthorizationService", () => {
     vi.clearAllMocks();
     parents = {};
     directGrants = {};
-    groupGrants = {};
     mockPermissionService = {
       isProtectedWithAncestors: vi.fn().mockResolvedValue(false),
       getDocumentOwner: vi.fn().mockResolvedValue(null),
       getUserPermission: vi.fn((documentId: string) =>
         Promise.resolve(directGrants[documentId] ?? null),
-      ),
-      getUserGroupPermission: vi.fn((documentId: string) =>
-        Promise.resolve(groupGrants[documentId] ?? null),
       ),
       isOperationRestricted: vi.fn().mockResolvedValue(false),
       hasOperationGrant: vi.fn().mockResolvedValue(false),
@@ -158,18 +152,6 @@ describe("createAuthorizationService", () => {
       expect(result).toBe(true);
     });
 
-    it("should allow read with a group grant", async () => {
-      vi.mocked(
-        mockPermissionService.isProtectedWithAncestors!,
-      ).mockResolvedValue(true);
-      groupGrants["doc-1"] = "READ";
-      const result = await service.canRead(
-        "doc-1" as CanonicalDocumentId,
-        "0xuser",
-      );
-      expect(result).toBe(true);
-    });
-
     it("should deny read when no grant on protected document", async () => {
       vi.mocked(
         mockPermissionService.isProtectedWithAncestors!,
@@ -200,7 +182,7 @@ describe("createAuthorizationService", () => {
       ).mockResolvedValue(true);
       parents["doc-1"] = ["parent-1"];
       parents["parent-1"] = ["grandparent-1"];
-      groupGrants["grandparent-1"] = "WRITE";
+      directGrants["grandparent-1"] = "WRITE";
       const result = await service.canRead(
         "doc-1" as CanonicalDocumentId,
         "0xuser",
@@ -300,18 +282,6 @@ describe("createAuthorizationService", () => {
       expect(result).toBe(true);
     });
 
-    it("should allow write with a group WRITE grant", async () => {
-      vi.mocked(
-        mockPermissionService.isProtectedWithAncestors!,
-      ).mockResolvedValue(true);
-      groupGrants["doc-1"] = "WRITE";
-      const result = await service.canWrite(
-        "doc-1" as CanonicalDocumentId,
-        "0xuser",
-      );
-      expect(result).toBe(true);
-    });
-
     it("should inherit a WRITE grant from a parent document", async () => {
       vi.mocked(
         mockPermissionService.isProtectedWithAncestors!,
@@ -369,15 +339,6 @@ describe("createAuthorizationService", () => {
 
     it("should allow user with a direct ADMIN grant", async () => {
       directGrants["doc-1"] = "ADMIN";
-      const result = await service.canManage(
-        "doc-1" as CanonicalDocumentId,
-        "0xuser",
-      );
-      expect(result).toBe(true);
-    });
-
-    it("should allow user with a group ADMIN grant", async () => {
-      groupGrants["doc-1"] = "ADMIN";
       const result = await service.canManage(
         "doc-1" as CanonicalDocumentId,
         "0xuser",

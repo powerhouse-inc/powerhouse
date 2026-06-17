@@ -14,35 +14,10 @@ export interface DocumentPermissionEntry {
   updatedAt: Date;
 }
 
-export interface Group {
-  id: number;
-  name: string;
-  description: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface DocumentGroupPermissionEntry {
-  documentId: string;
-  groupId: number;
-  permission: DocumentPermissionLevel;
-  grantedBy: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
 export interface OperationUserPermissionEntry {
   documentId: string;
   operationType: string;
   userAddress: string;
-  grantedBy: string;
-  createdAt: Date;
-}
-
-export interface OperationGroupPermissionEntry {
-  documentId: string;
-  operationType: string;
-  groupId: number;
   grantedBy: string;
   createdAt: Date;
 }
@@ -69,7 +44,7 @@ export interface DocumentPermissionConfig {
  * - ADMIN: Can manage document permissions and settings
  *
  * Operation permissions:
- * - Users and groups can be granted permission to execute specific operations
+ * - Users can be granted permission to execute specific operations
  */
 export class DocumentPermissionService {
   readonly config: DocumentPermissionConfig;
@@ -219,274 +194,9 @@ export class DocumentPermissionService {
       .execute();
 
     await this.db
-      .deleteFrom("DocumentGroupPermission")
-      .where("documentId", "=", documentId)
-      .execute();
-
-    await this.db
       .deleteFrom("OperationUserPermission")
       .where("documentId", "=", documentId)
       .execute();
-
-    await this.db
-      .deleteFrom("OperationGroupPermission")
-      .where("documentId", "=", documentId)
-      .execute();
-  }
-
-  // ============================================
-  // Group Management
-  // ============================================
-
-  /**
-   * Create a new group
-   */
-  async createGroup(name: string, description?: string): Promise<Group> {
-    const now = new Date();
-
-    await this.db
-      .insertInto("Group")
-      .values({
-        name,
-        description: description ?? null,
-        createdAt: now,
-        updatedAt: now,
-      })
-      .execute();
-
-    const result = await this.db
-      .selectFrom("Group")
-      .select(["id", "name", "description", "createdAt", "updatedAt"])
-      .where("name", "=", name)
-      .executeTakeFirstOrThrow();
-
-    return result;
-  }
-
-  /**
-   * Delete a group and all its associations
-   */
-  async deleteGroup(groupId: number): Promise<void> {
-    // Delete group permissions on operations
-    await this.db
-      .deleteFrom("OperationGroupPermission")
-      .where("groupId", "=", groupId)
-      .execute();
-
-    // Delete group document permissions
-    await this.db
-      .deleteFrom("DocumentGroupPermission")
-      .where("groupId", "=", groupId)
-      .execute();
-
-    // Delete user-group memberships
-    await this.db
-      .deleteFrom("UserGroup")
-      .where("groupId", "=", groupId)
-      .execute();
-
-    // Delete the group
-    await this.db.deleteFrom("Group").where("id", "=", groupId).execute();
-  }
-
-  /**
-   * Get a group by ID
-   */
-  async getGroup(groupId: number): Promise<Group | null> {
-    const result = await this.db
-      .selectFrom("Group")
-      .select(["id", "name", "description", "createdAt", "updatedAt"])
-      .where("id", "=", groupId)
-      .executeTakeFirst();
-
-    return result ?? null;
-  }
-
-  /**
-   * List all groups
-   */
-  async listGroups(): Promise<Group[]> {
-    return this.db
-      .selectFrom("Group")
-      .select(["id", "name", "description", "createdAt", "updatedAt"])
-      .execute();
-  }
-
-  /**
-   * Add a user to a group
-   */
-  async addUserToGroup(userAddress: string, groupId: number): Promise<void> {
-    const now = new Date();
-    const normalizedAddress = userAddress.toLowerCase();
-
-    await this.db
-      .insertInto("UserGroup")
-      .values({
-        userAddress: normalizedAddress,
-        groupId,
-        createdAt: now,
-      })
-      .onConflict((oc) => oc.columns(["userAddress", "groupId"]).doNothing())
-      .execute();
-  }
-
-  /**
-   * Remove a user from a group
-   */
-  async removeUserFromGroup(
-    userAddress: string,
-    groupId: number,
-  ): Promise<void> {
-    await this.db
-      .deleteFrom("UserGroup")
-      .where("userAddress", "=", userAddress.toLowerCase())
-      .where("groupId", "=", groupId)
-      .execute();
-  }
-
-  /**
-   * Get all groups a user belongs to
-   */
-  async getUserGroups(userAddress: string): Promise<Group[]> {
-    return this.db
-      .selectFrom("UserGroup")
-      .innerJoin("Group", "Group.id", "UserGroup.groupId")
-      .select([
-        "Group.id",
-        "Group.name",
-        "Group.description",
-        "Group.createdAt",
-        "Group.updatedAt",
-      ])
-      .where("UserGroup.userAddress", "=", userAddress.toLowerCase())
-      .execute();
-  }
-
-  /**
-   * Get all members of a group
-   */
-  async getGroupMembers(groupId: number): Promise<string[]> {
-    const results = await this.db
-      .selectFrom("UserGroup")
-      .select("userAddress")
-      .where("groupId", "=", groupId)
-      .execute();
-
-    return results.map((r) => r.userAddress);
-  }
-
-  // ============================================
-  // Group Document Permissions
-  // ============================================
-
-  /**
-   * Grant a group permission on a document
-   */
-  async grantGroupPermission(
-    documentId: string,
-    groupId: number,
-    permission: DocumentPermissionLevel,
-    grantedBy: string,
-  ): Promise<DocumentGroupPermissionEntry> {
-    const now = new Date();
-
-    await this.db
-      .insertInto("DocumentGroupPermission")
-      .values({
-        documentId,
-        groupId,
-        permission,
-        grantedBy: grantedBy.toLowerCase(),
-        createdAt: now,
-        updatedAt: now,
-      })
-      .onConflict((oc) =>
-        oc.columns(["documentId", "groupId"]).doUpdateSet({
-          permission,
-          grantedBy: grantedBy.toLowerCase(),
-          updatedAt: now,
-        }),
-      )
-      .execute();
-
-    const result = await this.db
-      .selectFrom("DocumentGroupPermission")
-      .select([
-        "documentId",
-        "groupId",
-        "permission",
-        "grantedBy",
-        "createdAt",
-        "updatedAt",
-      ])
-      .where("documentId", "=", documentId)
-      .where("groupId", "=", groupId)
-      .executeTakeFirstOrThrow();
-
-    return result;
-  }
-
-  /**
-   * Revoke a group's permission on a document
-   */
-  async revokeGroupPermission(
-    documentId: string,
-    groupId: number,
-  ): Promise<void> {
-    await this.db
-      .deleteFrom("DocumentGroupPermission")
-      .where("documentId", "=", documentId)
-      .where("groupId", "=", groupId)
-      .execute();
-  }
-
-  /**
-   * Get all group permissions for a document
-   */
-  async getDocumentGroupPermissions(
-    documentId: string,
-  ): Promise<DocumentGroupPermissionEntry[]> {
-    return this.db
-      .selectFrom("DocumentGroupPermission")
-      .select([
-        "documentId",
-        "groupId",
-        "permission",
-        "grantedBy",
-        "createdAt",
-        "updatedAt",
-      ])
-      .where("documentId", "=", documentId)
-      .execute();
-  }
-
-  /**
-   * Get best permission level a user has on a document via groups
-   */
-  async getUserGroupPermission(
-    documentId: string,
-    userAddress: string,
-  ): Promise<DocumentPermissionLevel | null> {
-    const result = await this.db
-      .selectFrom("DocumentGroupPermission")
-      .innerJoin(
-        "UserGroup",
-        "UserGroup.groupId",
-        "DocumentGroupPermission.groupId",
-      )
-      .select("DocumentGroupPermission.permission")
-      .where("DocumentGroupPermission.documentId", "=", documentId)
-      .where("UserGroup.userAddress", "=", userAddress.toLowerCase())
-      .execute();
-
-    if (result.length === 0) {
-      return null;
-    }
-
-    // Return highest permission level
-    if (result.some((r) => r.permission === "ADMIN")) return "ADMIN";
-    if (result.some((r) => r.permission === "WRITE")) return "WRITE";
-    return "READ";
   }
 
   // ============================================
@@ -553,64 +263,6 @@ export class DocumentPermissionService {
   }
 
   /**
-   * Grant a group permission to execute an operation on a document
-   */
-  async grantGroupOperationPermission(
-    documentId: string,
-    operationType: string,
-    groupId: number,
-    grantedBy: string,
-  ): Promise<OperationGroupPermissionEntry> {
-    const now = new Date();
-
-    await this.db
-      .insertInto("OperationGroupPermission")
-      .values({
-        documentId,
-        operationType,
-        groupId,
-        grantedBy: grantedBy.toLowerCase(),
-        createdAt: now,
-      })
-      .onConflict((oc) =>
-        oc.columns(["documentId", "operationType", "groupId"]).doNothing(),
-      )
-      .execute();
-
-    const result = await this.db
-      .selectFrom("OperationGroupPermission")
-      .select([
-        "documentId",
-        "operationType",
-        "groupId",
-        "grantedBy",
-        "createdAt",
-      ])
-      .where("documentId", "=", documentId)
-      .where("operationType", "=", operationType)
-      .where("groupId", "=", groupId)
-      .executeTakeFirstOrThrow();
-
-    return result;
-  }
-
-  /**
-   * Revoke a group's permission to execute an operation
-   */
-  async revokeGroupOperationPermission(
-    documentId: string,
-    operationType: string,
-    groupId: number,
-  ): Promise<void> {
-    await this.db
-      .deleteFrom("OperationGroupPermission")
-      .where("documentId", "=", documentId)
-      .where("operationType", "=", operationType)
-      .where("groupId", "=", groupId)
-      .execute();
-  }
-
-  /**
    * Get all users with permission to execute an operation
    */
   async getOperationUserPermissions(
@@ -632,29 +284,7 @@ export class DocumentPermissionService {
   }
 
   /**
-   * Get all groups with permission to execute an operation
-   */
-  async getOperationGroupPermissions(
-    documentId: string,
-    operationType: string,
-  ): Promise<OperationGroupPermissionEntry[]> {
-    return this.db
-      .selectFrom("OperationGroupPermission")
-      .select([
-        "documentId",
-        "operationType",
-        "groupId",
-        "grantedBy",
-        "createdAt",
-      ])
-      .where("documentId", "=", documentId)
-      .where("operationType", "=", operationType)
-      .execute();
-  }
-
-  /**
-   * Whether an operation-permission row exists for the user on this
-   * operation, either directly or via a group the user belongs to.
+   * Whether an operation-permission row exists for the user on this operation.
    */
   async hasOperationGrant(
     documentId: string,
@@ -663,7 +293,6 @@ export class DocumentPermissionService {
   ): Promise<boolean> {
     const normalizedAddress = userAddress.toLowerCase();
 
-    // Check direct user permission
     const userPermission = await this.db
       .selectFrom("OperationUserPermission")
       .select("userAddress")
@@ -672,25 +301,7 @@ export class DocumentPermissionService {
       .where("userAddress", "=", normalizedAddress)
       .executeTakeFirst();
 
-    if (userPermission) {
-      return true;
-    }
-
-    // Check group permission
-    const groupPermission = await this.db
-      .selectFrom("OperationGroupPermission")
-      .innerJoin(
-        "UserGroup",
-        "UserGroup.groupId",
-        "OperationGroupPermission.groupId",
-      )
-      .select("OperationGroupPermission.groupId")
-      .where("OperationGroupPermission.documentId", "=", documentId)
-      .where("OperationGroupPermission.operationType", "=", operationType)
-      .where("UserGroup.userAddress", "=", normalizedAddress)
-      .executeTakeFirst();
-
-    return !!groupPermission;
+    return !!userPermission;
   }
 
   /**
@@ -707,18 +318,7 @@ export class DocumentPermissionService {
       .where("operationType", "=", operationType)
       .executeTakeFirst();
 
-    if (userPermCount && Number(userPermCount.count) > 0) {
-      return true;
-    }
-
-    const groupPermCount = await this.db
-      .selectFrom("OperationGroupPermission")
-      .select(sql<number>`count(*)`.as("count"))
-      .where("documentId", "=", documentId)
-      .where("operationType", "=", operationType)
-      .executeTakeFirst();
-
-    return groupPermCount !== undefined && Number(groupPermCount.count) > 0;
+    return userPermCount !== undefined && Number(userPermCount.count) > 0;
   }
 
   // ============================================

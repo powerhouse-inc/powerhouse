@@ -12,8 +12,7 @@ import * as resolvers from "./resolvers.js";
  * This subgraph is conditionally registered based on the DOCUMENT_PERMISSIONS_ENABLED
  * feature flag. When enabled, it provides GraphQL operations for:
  * - Document permissions (grant/revoke user access)
- * - Group management (create/delete groups, manage membership)
- * - Group document permissions (grant/revoke group access)
+ * - Document protection and ownership
  * - Operation-level permissions (fine-grained operation control)
  */
 export class AuthSubgraph extends BaseSubgraph {
@@ -34,6 +33,7 @@ export class AuthSubgraph extends BaseSubgraph {
       documentAccess: async (
         _parent: unknown,
         args: { documentId: string },
+        ctx: { user?: { address: string } },
       ) => {
         this.logger.debug("documentAccess(@args)", args);
         if (!this.documentPermissionService) {
@@ -42,7 +42,9 @@ export class AuthSubgraph extends BaseSubgraph {
         try {
           return await resolvers.documentAccess(
             this.documentPermissionService,
-            args,
+            this.authorizationService,
+            await this.withCanonicalDocumentId(args, ctx),
+            ctx.user?.address,
           );
         } catch (error) {
           this.logger.error("Error in documentAccess: @error", error);
@@ -75,51 +77,10 @@ export class AuthSubgraph extends BaseSubgraph {
         }
       },
 
-      groups: async () => {
-        this.logger.debug("groups");
-        if (!this.documentPermissionService) {
-          throw new GraphQLError("DocumentPermissionService not available");
-        }
-        try {
-          return await resolvers.groups(this.documentPermissionService);
-        } catch (error) {
-          this.logger.error("Error in groups: @error", error);
-          throw error;
-        }
-      },
-
-      group: async (_parent: unknown, args: { id: number }) => {
-        this.logger.debug("group(@args)", args);
-        if (!this.documentPermissionService) {
-          throw new GraphQLError("DocumentPermissionService not available");
-        }
-        try {
-          return await resolvers.group(this.documentPermissionService, args);
-        } catch (error) {
-          this.logger.error("Error in group: @error", error);
-          throw error;
-        }
-      },
-
-      userGroups: async (_parent: unknown, args: { userAddress: string }) => {
-        this.logger.debug("userGroups(@args)", args);
-        if (!this.documentPermissionService) {
-          throw new GraphQLError("DocumentPermissionService not available");
-        }
-        try {
-          return await resolvers.userGroups(
-            this.documentPermissionService,
-            args,
-          );
-        } catch (error) {
-          this.logger.error("Error in userGroups: @error", error);
-          throw error;
-        }
-      },
-
       operationPermissions: async (
         _parent: unknown,
         args: { documentId: string; operationType: string },
+        ctx: { user?: { address: string } },
       ) => {
         this.logger.debug("operationPermissions(@args)", args);
         if (!this.documentPermissionService) {
@@ -128,7 +89,9 @@ export class AuthSubgraph extends BaseSubgraph {
         try {
           return await resolvers.operationPermissions(
             this.documentPermissionService,
-            args,
+            this.authorizationService,
+            await this.withCanonicalDocumentId(args, ctx),
+            ctx.user?.address,
           );
         } catch (error) {
           this.logger.error("Error in operationPermissions: @error", error);
@@ -165,15 +128,12 @@ export class AuthSubgraph extends BaseSubgraph {
         if (!this.documentPermissionService) {
           throw new GraphQLError("DocumentPermissionService not available");
         }
-        if (!ctx.user?.address) {
-          throw new GraphQLError(
-            "Authentication required to view document protection info",
-          );
-        }
         try {
           return await resolvers.documentProtection(
             this.documentPermissionService,
-            args,
+            this.authorizationService,
+            await this.withCanonicalDocumentId(args, ctx),
+            ctx.user?.address,
           );
         } catch (error) {
           this.logger.error("Error in documentProtection: @error", error);
@@ -286,133 +246,6 @@ export class AuthSubgraph extends BaseSubgraph {
         }
       },
 
-      // Group Management Mutations
-      createGroup: async (
-        _parent: unknown,
-        args: { name: string; description?: string | null },
-      ) => {
-        this.logger.debug("createGroup(@args)", args);
-        if (!this.documentPermissionService) {
-          throw new GraphQLError("DocumentPermissionService not available");
-        }
-        try {
-          return await resolvers.createGroup(
-            this.documentPermissionService,
-            args,
-          );
-        } catch (error) {
-          this.logger.error("Error in createGroup: @error", error);
-          throw error;
-        }
-      },
-
-      deleteGroup: async (_parent: unknown, args: { id: number }) => {
-        this.logger.debug("deleteGroup(@args)", args);
-        if (!this.documentPermissionService) {
-          throw new GraphQLError("DocumentPermissionService not available");
-        }
-        try {
-          return await resolvers.deleteGroup(
-            this.documentPermissionService,
-            args,
-          );
-        } catch (error) {
-          this.logger.error("Error in deleteGroup: @error", error);
-          throw error;
-        }
-      },
-
-      addUserToGroup: async (
-        _parent: unknown,
-        args: { userAddress: string; groupId: number },
-      ) => {
-        this.logger.debug("addUserToGroup(@args)", args);
-        if (!this.documentPermissionService) {
-          throw new GraphQLError("DocumentPermissionService not available");
-        }
-        try {
-          return await resolvers.addUserToGroup(
-            this.documentPermissionService,
-            args,
-          );
-        } catch (error) {
-          this.logger.error("Error in addUserToGroup: @error", error);
-          throw error;
-        }
-      },
-
-      removeUserFromGroup: async (
-        _parent: unknown,
-        args: { userAddress: string; groupId: number },
-      ) => {
-        this.logger.debug("removeUserFromGroup(@args)", args);
-        if (!this.documentPermissionService) {
-          throw new GraphQLError("DocumentPermissionService not available");
-        }
-        try {
-          return await resolvers.removeUserFromGroup(
-            this.documentPermissionService,
-            args,
-          );
-        } catch (error) {
-          this.logger.error("Error in removeUserFromGroup: @error", error);
-          throw error;
-        }
-      },
-
-      // Group Document Permission Mutations
-      grantGroupPermission: async (
-        _parent: unknown,
-        args: { documentId: string; groupId: number; permission: string },
-        ctx: {
-          user?: { address: string };
-        },
-      ) => {
-        this.logger.debug("grantGroupPermission(@args)", args);
-        if (!this.documentPermissionService) {
-          throw new GraphQLError("DocumentPermissionService not available");
-        }
-        try {
-          const resolved = await this.withCanonicalDocumentId(args, ctx);
-          return await resolvers.grantGroupPermission(
-            this.documentPermissionService,
-            this.authorizationService,
-            {
-              ...resolved,
-              permission: resolved.permission as "READ" | "WRITE" | "ADMIN",
-            },
-            ctx.user?.address,
-          );
-        } catch (error) {
-          this.logger.error("Error in grantGroupPermission: @error", error);
-          throw error;
-        }
-      },
-
-      revokeGroupPermission: async (
-        _parent: unknown,
-        args: { documentId: string; groupId: number },
-        ctx: {
-          user?: { address: string };
-        },
-      ) => {
-        this.logger.debug("revokeGroupPermission(@args)", args);
-        if (!this.documentPermissionService) {
-          throw new GraphQLError("DocumentPermissionService not available");
-        }
-        try {
-          return await resolvers.revokeGroupPermission(
-            this.documentPermissionService,
-            this.authorizationService,
-            await this.withCanonicalDocumentId(args, ctx),
-            ctx.user?.address,
-          );
-        } catch (error) {
-          this.logger.error("Error in revokeGroupPermission: @error", error);
-          throw error;
-        }
-      },
-
       // Operation Permission Mutations
       grantOperationPermission: async (
         _parent: unknown,
@@ -471,103 +304,6 @@ export class AuthSubgraph extends BaseSubgraph {
           );
           throw error;
         }
-      },
-
-      grantGroupOperationPermission: async (
-        _parent: unknown,
-        args: { documentId: string; operationType: string; groupId: number },
-        ctx: {
-          user?: { address: string };
-        },
-      ) => {
-        this.logger.debug("grantGroupOperationPermission(@args)", args);
-        if (!this.documentPermissionService) {
-          throw new GraphQLError("DocumentPermissionService not available");
-        }
-        try {
-          return await resolvers.grantGroupOperationPermission(
-            this.documentPermissionService,
-            this.authorizationService,
-            await this.withCanonicalDocumentId(args, ctx),
-            ctx.user?.address,
-          );
-        } catch (error) {
-          this.logger.error(
-            "Error in grantGroupOperationPermission: @error",
-            error,
-          );
-          throw error;
-        }
-      },
-
-      revokeGroupOperationPermission: async (
-        _parent: unknown,
-        args: { documentId: string; operationType: string; groupId: number },
-        ctx: {
-          user?: { address: string };
-        },
-      ) => {
-        this.logger.debug("revokeGroupOperationPermission(@args)", args);
-        if (!this.documentPermissionService) {
-          throw new GraphQLError("DocumentPermissionService not available");
-        }
-        try {
-          return await resolvers.revokeGroupOperationPermission(
-            this.documentPermissionService,
-            this.authorizationService,
-            await this.withCanonicalDocumentId(args, ctx),
-            ctx.user?.address,
-          );
-        } catch (error) {
-          this.logger.error(
-            "Error in revokeGroupOperationPermission: @error",
-            error,
-          );
-          throw error;
-        }
-      },
-    },
-
-    // Field Resolvers for nested types
-    Group: {
-      members: async (parent: { id: number }) => {
-        if (!this.documentPermissionService) {
-          throw new GraphQLError("DocumentPermissionService not available");
-        }
-        return resolvers.getGroupMembers(
-          this.documentPermissionService,
-          parent.id,
-        );
-      },
-    },
-
-    DocumentGroupPermission: {
-      group: async (parent: { groupId: number }) => {
-        if (!this.documentPermissionService) {
-          throw new GraphQLError("DocumentPermissionService not available");
-        }
-        const grp = await resolvers.group(this.documentPermissionService, {
-          id: parent.groupId,
-        });
-        if (!grp) {
-          throw new GraphQLError(`Group not found: ${parent.groupId}`);
-        }
-        return grp;
-      },
-    },
-
-    OperationGroupPermission: {
-      group: async (parent: { groupId: number }) => {
-        if (!this.documentPermissionService) {
-          throw new GraphQLError("DocumentPermissionService not available");
-        }
-        const grp = await resolvers.group(this.documentPermissionService, {
-          id: parent.groupId,
-        });
-        if (!grp) {
-          throw new GraphQLError(`Group not found: ${parent.groupId}`);
-        }
-        return grp;
       },
     },
   };

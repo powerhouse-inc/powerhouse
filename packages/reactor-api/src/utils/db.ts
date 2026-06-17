@@ -30,11 +30,7 @@ export interface DocumentProtectionTable {
 
 export interface DocumentPermissionDatabase {
   DocumentPermission: DocumentPermissionTable;
-  Group: GroupTable;
-  UserGroup: UserGroupTable;
-  DocumentGroupPermission: DocumentGroupPermissionTable;
   OperationUserPermission: OperationUserPermissionTable;
-  OperationGroupPermission: OperationGroupPermissionTable;
   DocumentProtection: DocumentProtectionTable;
 }
 
@@ -48,46 +44,12 @@ export interface DocumentPermissionTable {
   updatedAt: Date;
 }
 
-// Group management tables
-export interface GroupTable {
-  id: Generated<number>;
-  name: string;
-  description: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface UserGroupTable {
-  userAddress: string;
-  groupId: number;
-  createdAt: Date;
-}
-
-export interface DocumentGroupPermissionTable {
-  id: Generated<number>;
-  documentId: string;
-  groupId: number;
-  permission: DocumentPermissionLevel;
-  grantedBy: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
 // Operation permission tables
 export interface OperationUserPermissionTable {
   id: Generated<number>;
   documentId: string;
   operationType: string;
   userAddress: string;
-  grantedBy: string;
-  createdAt: Date;
-}
-
-export interface OperationGroupPermissionTable {
-  id: Generated<number>;
-  documentId: string;
-  operationType: string;
-  groupId: number;
   grantedBy: string;
   createdAt: Date;
 }

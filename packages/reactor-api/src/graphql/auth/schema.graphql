@@ -23,27 +23,6 @@ type DocumentPermissionEntry {
   updatedAt: DateTime!
 }
 
-# Group type
-type Group {
-  id: Int!
-  name: String!
-  description: String
-  createdAt: DateTime!
-  updatedAt: DateTime!
-  members: [String!]!
-}
-
-# Document group permission entry
-type DocumentGroupPermission {
-  documentId: String!
-  groupId: Int!
-  group: Group!
-  permission: DocumentPermissionLevel!
-  grantedBy: String!
-  createdAt: DateTime!
-  updatedAt: DateTime!
-}
-
 # Operation user permission entry
 type OperationUserPermission {
   documentId: String!
@@ -53,21 +32,10 @@ type OperationUserPermission {
   createdAt: DateTime!
 }
 
-# Operation group permission entry
-type OperationGroupPermission {
-  documentId: String!
-  operationType: String!
-  groupId: Int!
-  group: Group!
-  grantedBy: String!
-  createdAt: DateTime!
-}
-
 # Combined document access info
 type DocumentAccessInfo {
   documentId: String!
   permissions: [DocumentPermissionEntry!]!
-  groupPermissions: [DocumentGroupPermission!]!
 }
 
 # Operation permissions info
@@ -75,7 +43,6 @@ type OperationPermissionsInfo {
   documentId: String!
   operationType: String!
   userPermissions: [OperationUserPermission!]!
-  groupPermissions: [OperationGroupPermission!]!
 }
 
 # Document protection info
@@ -86,25 +53,17 @@ type DocumentProtectionInfo {
 }
 
 type Query {
-  # Get permissions for a document
+  # Get permissions for a document (requires ADMIN permission or global admin)
   documentAccess(documentId: String!): DocumentAccessInfo!
 
-  # Get protection status for a document
+  # Get protection status for a document (requires ADMIN permission or global admin)
   documentProtection(documentId: String!): DocumentProtectionInfo!
 
   # Get all documents the current user has explicit access to
   userDocumentPermissions: [DocumentPermissionEntry!]!
 
-  # Get all groups
-  groups: [Group!]!
-
-  # Get a specific group by ID
-  group(id: Int!): Group
-
-  # Get all groups a user belongs to
-  userGroups(userAddress: String!): [Group!]!
-
   # Get operation permissions for a document and operation type
+  # (requires ADMIN permission or global admin)
   operationPermissions(
     documentId: String!
     operationType: String!
@@ -137,32 +96,6 @@ type Mutation {
   # Revoke a user's permission on a document (requires ADMIN permission or global admin)
   revokeDocumentPermission(documentId: String!, userAddress: String!): Boolean!
 
-  # --- Group Management ---
-
-  # Create a new group
-  createGroup(name: String!, description: String): Group!
-
-  # Delete a group and all its associations
-  deleteGroup(id: Int!): Boolean!
-
-  # Add a user to a group
-  addUserToGroup(userAddress: String!, groupId: Int!): Boolean!
-
-  # Remove a user from a group
-  removeUserFromGroup(userAddress: String!, groupId: Int!): Boolean!
-
-  # --- Group Document Permissions ---
-
-  # Grant a group permission on a document
-  grantGroupPermission(
-    documentId: String!
-    groupId: Int!
-    permission: DocumentPermissionLevel!
-  ): DocumentGroupPermission!
-
-  # Revoke a group's permission on a document
-  revokeGroupPermission(documentId: String!, groupId: Int!): Boolean!
-
   # --- Operation Permissions ---
 
   # Grant a user permission to execute an operation on a document
@@ -177,19 +110,5 @@ type Mutation {
     documentId: String!
     operationType: String!
     userAddress: String!
-  ): Boolean!
-
-  # Grant a group permission to execute an operation on a document
-  grantGroupOperationPermission(
-    documentId: String!
-    operationType: String!
-    groupId: Int!
-  ): OperationGroupPermission!
-
-  # Revoke a group's permission to execute an operation
-  revokeGroupOperationPermission(
-    documentId: String!
-    operationType: String!
-    groupId: Int!
   ): Boolean!
 }

@@ -217,22 +217,6 @@ describe("Permissions Integration Tests", () => {
       expect(result).toBeDefined();
     });
 
-    it("should allow access via group permission", async () => {
-      const group = await documentPermissionService.createGroup("Readers");
-      await documentPermissionService.addUserToGroup("0xuser", group.id);
-      await documentPermissionService.grantGroupPermission(
-        "doc-123",
-        group.id,
-        "READ",
-        "0xadmin",
-      );
-
-      const ctx = createContext({ userAddress: "0xuser" });
-      const result = await callDocument(ctx, "doc-123");
-
-      expect(result).toBeDefined();
-    });
-
     it("should be case-insensitive for user addresses", async () => {
       await documentPermissionService.grantPermission(
         "doc-123",
@@ -302,23 +286,6 @@ describe("Permissions Integration Tests", () => {
 
       expect(result).toBeDefined();
     });
-
-    it("should allow child access via group permission on parent", async () => {
-      const group =
-        await documentPermissionService.createGroup("ParentReaders");
-      await documentPermissionService.addUserToGroup("0xuser", group.id);
-      await documentPermissionService.grantGroupPermission(
-        "parent-doc",
-        group.id,
-        "READ",
-        "0xadmin",
-      );
-
-      const ctx = createContext({ userAddress: "0xuser" });
-      const result = await callDocument(ctx, "child-doc");
-
-      expect(result).toBeDefined();
-    });
   });
 
   describe("Mutation Permissions with Real Permission Service", () => {
@@ -366,22 +333,6 @@ describe("Permissions Integration Tests", () => {
         );
         const ctx = createContext({ userAddress: "0xuser" });
 
-        const result = await callDeleteDocument(ctx, "doc-123");
-
-        expect(result).toBe(true);
-      });
-
-      it("should allow delete via group WRITE permission", async () => {
-        const group = await documentPermissionService.createGroup("Writers");
-        await documentPermissionService.addUserToGroup("0xuser", group.id);
-        await documentPermissionService.grantGroupPermission(
-          "doc-123",
-          group.id,
-          "WRITE",
-          "0xadmin",
-        );
-
-        const ctx = createContext({ userAddress: "0xuser" });
         const result = await callDeleteDocument(ctx, "doc-123");
 
         expect(result).toBe(true);
@@ -529,23 +480,6 @@ describe("Permissions Integration Tests", () => {
 
       expect(result.items).toHaveLength(0);
     });
-
-    it("should include documents accessible via groups", async () => {
-      const group = await documentPermissionService.createGroup("DocReaders");
-      await documentPermissionService.addUserToGroup("0xuser", group.id);
-      await documentPermissionService.grantGroupPermission(
-        "doc-2",
-        group.id,
-        "READ",
-        "0xadmin",
-      );
-
-      const ctx = createContext({ userAddress: "0xuser" });
-      const result = await callFindDocuments(ctx);
-
-      expect(result.items).toHaveLength(1);
-      expect(result.items[0].id).toBe("doc-2");
-    });
   });
 
   describe("Global Role Override", () => {
@@ -607,132 +541,6 @@ describe("Permissions Integration Tests", () => {
 
       // Should no longer have access
       await expect(callDocument(ctx)).rejects.toThrow("Forbidden");
-    });
-
-    it("should deny access after group membership is removed", async () => {
-      const group = await documentPermissionService.createGroup("TempReaders");
-      await documentPermissionService.addUserToGroup("0xuser", group.id);
-      await documentPermissionService.grantGroupPermission(
-        "doc-123",
-        group.id,
-        "READ",
-        "0xadmin",
-      );
-
-      const ctx = createContext({ userAddress: "0xuser" });
-
-      // Should have access via group
-      const result1 = await callDocument(ctx);
-      expect(result1).toBeDefined();
-
-      // Remove from group
-      await documentPermissionService.removeUserFromGroup("0xuser", group.id);
-
-      // Should no longer have access
-      await expect(callDocument(ctx)).rejects.toThrow("Forbidden");
-    });
-
-    it("should deny access after group permission is revoked", async () => {
-      const group = await documentPermissionService.createGroup("TempReaders");
-      await documentPermissionService.addUserToGroup("0xuser", group.id);
-      await documentPermissionService.grantGroupPermission(
-        "doc-123",
-        group.id,
-        "READ",
-        "0xadmin",
-      );
-
-      const ctx = createContext({ userAddress: "0xuser" });
-
-      // Should have access via group
-      const result1 = await callDocument(ctx);
-      expect(result1).toBeDefined();
-
-      // Revoke group permission
-      await documentPermissionService.revokeGroupPermission(
-        "doc-123",
-        group.id,
-      );
-
-      // Should no longer have access
-      await expect(callDocument(ctx)).rejects.toThrow("Forbidden");
-    });
-  });
-
-  describe("Complex Permission Scenarios", () => {
-    it("should use highest permission from multiple groups", async () => {
-      const readersGroup =
-        await documentPermissionService.createGroup("Readers");
-      const writersGroup =
-        await documentPermissionService.createGroup("Writers");
-
-      await documentPermissionService.addUserToGroup("0xuser", readersGroup.id);
-      await documentPermissionService.addUserToGroup("0xuser", writersGroup.id);
-
-      await documentPermissionService.grantGroupPermission(
-        "doc-123",
-        readersGroup.id,
-        "READ",
-        "0xadmin",
-      );
-      await documentPermissionService.grantGroupPermission(
-        "doc-123",
-        writersGroup.id,
-        "WRITE",
-        "0xadmin",
-      );
-
-      const ctx = createContext({ userAddress: "0xuser" });
-
-      // Should be able to delete (requires WRITE)
-      const mutation = (reactorSubgraph.resolvers.Mutation as any)
-        ?.deleteDocument;
-      const result = await mutation(null, { identifier: "doc-123" }, ctx);
-
-      expect(result).toBe(true);
-    });
-
-    it("should combine direct and group permissions", async () => {
-      // User has direct READ on doc-123
-      await documentPermissionService.grantPermission(
-        "doc-123",
-        "0xuser",
-        "READ",
-        "0xadmin",
-      );
-
-      // User is in group with WRITE on different document (parent-doc)
-      const group =
-        await documentPermissionService.createGroup("ParentWriters");
-      await documentPermissionService.addUserToGroup("0xuser", group.id);
-      await documentPermissionService.grantGroupPermission(
-        "parent-doc",
-        group.id,
-        "WRITE",
-        "0xadmin",
-      );
-
-      const ctx = createContext({ userAddress: "0xuser" });
-
-      // Can read doc-123 (direct permission)
-      const query = (reactorSubgraph.resolvers.Query as any)?.document;
-      const readResult = await query(null, { identifier: "doc-123" }, ctx);
-      expect(readResult).toBeDefined();
-
-      // Cannot write doc-123 (only has READ)
-      const deleteMutation = (reactorSubgraph.resolvers.Mutation as any)
-        ?.deleteDocument;
-      await expect(
-        deleteMutation(null, { identifier: "doc-123" }, ctx),
-      ).rejects.toThrow("Forbidden");
-
-      // Can write parent-doc (group permission)
-      const deleteParent = await deleteMutation(
-        null,
-        { identifier: "parent-doc" },
-        ctx,
-      );
-      expect(deleteParent).toBe(true);
     });
   });
 });

@@ -106,7 +106,7 @@ export interface IAuthorizationService {
 
   /**
    * Whether the user administers the document: supreme admin, document
-   * owner, or holder of an ADMIN grant (direct or via group).
+   * owner, or holder of an ADMIN grant.
    */
   canManage(
     documentId: CanonicalDocumentId,
@@ -233,7 +233,7 @@ function satisfies(
  * DOCUMENT_PERMISSIONS: the full per-document protection + grant model.
  *
  * All decisions live here; DocumentPermissionService is the data-access
- * layer underneath (grants, groups, protection rows, owners).
+ * layer underneath (grants, protection rows, owners).
  */
 class DocumentPermissionsAuthorizationService extends BaseAuthorizationService {
   readonly #permissions: DocumentPermissionService;
@@ -300,7 +300,7 @@ class DocumentPermissionsAuthorizationService extends BaseAuthorizationService {
 
   /**
    * The one "administers this document" predicate: supreme admin, document
-   * owner, or ADMIN grant (direct or via group) on the document itself.
+   * owner, or ADMIN grant on the document itself.
    */
   async #isDocumentAdmin(
     documentId: string,
@@ -339,24 +339,12 @@ class DocumentPermissionsAuthorizationService extends BaseAuthorizationService {
     return this.#hasGrantInHierarchy(documentId, userAddress, required);
   }
 
-  /** Best grant the user holds on the document, direct or via group. */
+  /** Best grant the user holds on the document. */
   async #grantLevel(
     documentId: string,
     userAddress: string,
   ): Promise<DocumentPermissionLevel | null> {
-    const direct = await this.#permissions.getUserPermission(
-      documentId,
-      userAddress,
-    );
-    if (direct === "ADMIN") return direct;
-
-    const group = await this.#permissions.getUserGroupPermission(
-      documentId,
-      userAddress,
-    );
-    if (group === null) return direct;
-    if (direct === null) return group;
-    return PERMISSION_RANK[direct] >= PERMISSION_RANK[group] ? direct : group;
+    return this.#permissions.getUserPermission(documentId, userAddress);
   }
 
   /**
