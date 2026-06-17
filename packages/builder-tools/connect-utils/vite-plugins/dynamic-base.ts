@@ -23,17 +23,14 @@ const RUNTIME_GLOBAL = "globalThis.__PH_DYNAMIC_BASE__";
 // base prefix appears in emitted JS.
 const BASE_EXPR = `(${RUNTIME_GLOBAL}||"/")`;
 
-/**
- * Worker scope has its own global object; the proxy injects the runtime global
- * into the main-thread `<head>` only, so a worker chunk's rewritten references
- * would fall back to "/" and fetch siblings (pglite .data/.wasm) without the
- * deploy prefix. Prepended to worker chunks, this defines the global in worker
- * scope from the worker's own script URL: the worker loads from
- * `<base>assets/<name>-<hash>.js`, so stripping `assets/<file>` off
- * `self.location.pathname` yields the same trailing-slash base the main thread
- * holds ("/myagent/" or "/").
- */
-const WORKER_PRELUDE = `${RUNTIME_GLOBAL}=self.location.pathname.replace(/assets\\/[^/]*$/,"");\n`;
+// Worker prelude: derive the deploy base in worker scope from the worker's own
+// URL (proxy sets the global on the main thread only).
+function workerPrelude(stripPrefix: string): string {
+  // `stripPrefix` is the segment between the deploy base and `assets/` (default
+  // "" → strip `assets/<file>`; vendor passes "__vendor__/").
+  const prefix = escapeForRegExp(stripPrefix).replace(/\//g, "\\/");
+  return `${RUNTIME_GLOBAL}=self.location.pathname.replace(/${prefix}assets\\/[^/]*$/,"");\n`;
+}
 
 // Match a string literal whose content STARTS with the placeholder, in any of
 // the three JS quote styles Rolldown emits (double, single, backtick). Group 1
@@ -80,7 +77,7 @@ const PLACEHOLDER_LITERAL = new RegExp(
  * prefix (which the HTML substitution handles).
  */
 export function connectDynamicBasePlugin(
-  options: { forWorker?: boolean } = {},
+  options: { forWorker?: boolean; workerStripPrefix?: string } = {},
 ): Plugin {
   return {
     name: "ph-connect-dynamic-base",
@@ -104,7 +101,7 @@ export function connectDynamicBasePlugin(
       // sets the runtime global; derive it from the worker's script URL so
       // the rewritten references above resolve against the deploy base.
       if (options.forWorker) {
-        s.prepend(WORKER_PRELUDE);
+        s.prepend(workerPrelude(options.workerStripPrefix ?? ""));
         this.info(
           `dynamic-base: worker prelude prepended to ${chunk.fileName}`,
         );
