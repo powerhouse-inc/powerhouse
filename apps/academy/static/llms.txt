@@ -40,6 +40,7 @@
 
 ## Build
 
+- [Enforcing Authorization in Subgraphs](https://academy.vetra.io/academy/MasteryTrack/BuildingUserExperiences/Authorization/EnforcingAuthorizationInSubgraphs): This documentation is still being written and may be incomplete.
 - [Explore the demo package](https://academy.vetra.io/academy/MasteryTrack/ManualTodoTutorial/ExploreDemoPackage): To give you a quick idea of how the Powerhouse Vetra builder platform operates on document models and packages, why don't you try installing a package
 - [Create a new to-do list document](https://academy.vetra.io/academy/MasteryTrack/ManualTodoTutorial/CreateNewPowerhouseProject): This tutorial step has a corresponding branch in the repository. You can:
 - [Write the document specification](https://academy.vetra.io/academy/MasteryTrack/ManualTodoTutorial/DefineToDoListDocumentModel): This tutorial step has a corresponding branch. After completing this step, your project will have a generated document model with:
