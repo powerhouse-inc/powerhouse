@@ -6,16 +6,15 @@ import type { ClassNameRecord } from "./types.js";
 import { hasClasses, replaceClassesForStringLiteral } from "./utils.js";
 
 const classesToReplace: ClassNameRecord = {
-  "divide-gray-200": "divide-border",
-  "accent-gray-900": "accent-primary",
-  "focus:ring-gray-900/20": "focus:ring-ring/20",
-  "focus:ring-gray-900": "focus:ring-ring",
-  "focus-visible:ring-gray-900": "focus-visible:ring-ring",
-  "dark:focus-visible:ring-offset-slate-800":
-    "focus-visible:ring-offset-background",
-  "shadow-gray-900/4": "shadow-foreground/4",
-  "text-white": "text-primary-foreground",
-  "text-black": "text-foreground",
+  "bg-gray-900/30": "bg-primary/30",
+  "bg-gray-100": "bg-muted",
+  "bg-gray-50": "bg-background",
+  "bg-white": "bg-card",
+  "text-gray-900": "text-foreground",
+  "text-gray-600": "text-muted-foreground",
+  "border-gray-300": "border-border",
+  "hover:bg-gray-100": "hover:bg-muted",
+  "focus-visible:ring-gray-400": "focus-visible:ring-ring",
 };
 
 const project = makeTsMorphProject();

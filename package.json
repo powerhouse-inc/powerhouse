@@ -75,7 +75,7 @@
     "ts-morph": "catalog:",
     "type-fest": "catalog:",
     "tsx": "catalog:",
-    "typescript": "6.0.3",
+    "typescript": "catalog:",
     "typescript-eslint": "^8.59.3",
     "update-ts-references": "^6.0.0",
     "vitest": "catalog:",

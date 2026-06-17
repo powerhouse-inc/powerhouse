@@ -108,7 +108,7 @@
     "react-dom": "catalog:",
     "tailwindcss": "catalog:",
     "tsdown": "catalog:",
-    "typescript": "^5.9.3",
+    "typescript": "catalog:",
     "typescript-eslint": "^8.46.2",
     "vite": "catalog:",
     "vite-tsconfig-paths": "catalog:",
