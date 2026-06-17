@@ -40,7 +40,7 @@ export function RenownAuthButton({
             gap: "8px",
             padding: "6px 12px",
             borderRadius: "8px",
-            border: "1px solid #e5e7eb",
+            border: "1px solid var(--border, #f0f0f0)",
             animation: "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
           }}
         >
@@ -49,7 +49,7 @@ export function RenownAuthButton({
               width: "28px",
               height: "28px",
               borderRadius: "50%",
-              backgroundColor: "#e5e7eb",
+              backgroundColor: "var(--secondary, #f0f0f0)",
             }}
           />
           <div
@@ -57,7 +57,7 @@ export function RenownAuthButton({
               width: "80px",
               height: "14px",
               borderRadius: "4px",
-              backgroundColor: "#e5e7eb",
+              backgroundColor: "var(--secondary, #f0f0f0)",
             }}
           />
         </div>

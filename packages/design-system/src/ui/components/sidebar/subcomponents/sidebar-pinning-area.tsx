@@ -6,7 +6,7 @@ export const SidebarPinningArea = () => {
     useSidebar();
 
   return (
-    <div className="flex flex-col gap-1 border-b border-gray-300 bg-gray-100 px-2 pt-2 pb-0.5 dark:border-slate-800 dark:bg-slate-700">
+    <div className="flex flex-col gap-1 border-b border-sidebar-border bg-muted px-2 pt-2 pb-0.5">
       {pinnedNodePath.map((node, index) => (
         <SidebarItem
           key={node.id}

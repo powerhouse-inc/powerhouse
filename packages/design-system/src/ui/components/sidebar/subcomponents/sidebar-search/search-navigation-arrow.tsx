@@ -13,8 +13,8 @@ export const SearchNavigationArrow: React.FC<SearchNavigationArrowProps> = ({
 }) => (
   <div
     className={twMerge(
-      "cursor-pointer px-1 py-0.5 hover:text-gray-700 dark:hover:text-slate-300",
-      isDisabled && "cursor-not-allowed text-gray-200 dark:text-slate-900",
+      "cursor-pointer px-1 py-0.5 hover:hover-effect",
+      isDisabled && "cursor-not-allowed text-muted-foreground",
     )}
     onClick={onClick}
   >

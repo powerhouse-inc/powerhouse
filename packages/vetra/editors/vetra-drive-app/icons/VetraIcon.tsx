@@ -19,7 +19,7 @@ export const VetraIcon: React.FC<VetraIconProps> = ({
       height={height}
       viewBox="0 0 23 22"
       fill="none"
-      className={twMerge(className, "text-gray-50 dark:text-slate-800")}
+      className={twMerge(className, "text-primary-foreground")}
       xmlns="http://www.w3.org/2000/svg"
     >
       <path

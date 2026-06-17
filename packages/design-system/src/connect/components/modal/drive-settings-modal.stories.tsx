@@ -35,7 +35,7 @@ export const Default: Story = {
     return (
       <div className="grid size-full place-items-center">
         <button
-          className="rounded-lg bg-red-500 p-4 text-white dark:bg-red-400 dark:text-slate-900"
+          className="rounded-lg bg-destructive p-4 text-destructive-foreground"
           onClick={() => {
             setArgs({
               ...args,

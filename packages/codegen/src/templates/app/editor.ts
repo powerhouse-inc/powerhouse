@@ -17,7 +17,7 @@ export default function Editor(props: EditorProps) {
   // you can update these configs in \`./config.ts\`
   useSetPHAppConfig(editorConfig);
   return (
-    <div className="bg-gray-50 p-6">
+    <div className="bg-background p-6">
       <DriveExplorer {...props} />
     </div>
   );

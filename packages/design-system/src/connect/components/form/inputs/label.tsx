@@ -9,7 +9,7 @@ export function Label(props: LabelProps) {
     <label
       {...labelProps}
       className={twMerge(
-        "block font-semibold text-gray-500 dark:text-slate-400",
+        "block font-semibold text-muted-foreground",
         className,
       )}
     >

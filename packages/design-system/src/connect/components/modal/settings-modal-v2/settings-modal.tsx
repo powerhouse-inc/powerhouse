@@ -36,10 +36,8 @@ export function SettingsModal(props: Props) {
     <button type="button" onClick={() => setSelectedTab(tab.id)} key={tab.id}>
       <div
         className={twMerge(
-          "flex h-9 w-48 cursor-pointer items-center gap-x-2 rounded-md pl-3 text-gray-700 hover:bg-gray-50 dark:text-slate-200 dark:hover:bg-slate-800",
-          selectedTab === tab.id
-            ? "bg-gray-50 dark:bg-slate-800"
-            : "bg-transparent",
+          "flex h-9 w-48 cursor-pointer items-center gap-x-2 rounded-md pl-3 text-foreground hover:hover-effect",
+          selectedTab === tab.id ? "bg-background" : "bg-transparent",
         )}
       >
         {tab.icon}
@@ -75,13 +73,13 @@ export function SettingsModal(props: Props) {
       }}
       {...restProps}
     >
-      <div className="flex justify-between rounded-t-xl border-b border-gray-50 p-4 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
-        <h1 className="text-center text-xl font-semibold text-gray-900 dark:text-slate-50">
+      <div className="flex justify-between rounded-t-xl border-b border-border p-4">
+        <h1 className="text-center text-xl font-semibold text-foreground">
           {title}
         </h1>
         <button
           type="button"
-          className="flex size-6 items-center justify-center rounded-md text-gray-900 outline-none dark:text-slate-100"
+          className="flex size-6 items-center justify-center rounded-md text-foreground outline-none"
           onClick={() => onOpenChange?.(false)}
         >
           <Icon name="XmarkLight" size={24} />
@@ -91,12 +89,12 @@ export function SettingsModal(props: Props) {
         <div className="flex flex-col p-3 pt-6">
           <div className="flex flex-col gap-y-1">{tabsContent}</div>
           {navFooter && (
-            <div className="mt-auto border-t border-gray-100 pt-2 dark:border-slate-700">
+            <div className="mt-auto border-t border-border pt-2">
               {navFooter}
             </div>
           )}
         </div>
-        <div className="m-6 flex h-full flex-1 flex-col overflow-hidden rounded-lg border border-gray-50 bg-gray-50 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
+        <div className="m-6 flex h-full flex-1 flex-col overflow-hidden rounded-lg border border-border bg-background">
           {typeof SelectedTabComponent === "function" ? (
             <SelectedTabComponent />
           ) : (

@@ -17,6 +17,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@powerhousedao/design-system": "workspace:*",
     "@apollo/client": "^3.11.8",
     "@heroicons/react": "^2.1.5",
     "ethers": "^6.13.3",
@@ -24,7 +25,8 @@
     "preact": "^10.24.1",
     "preact-router": "^4.1.2",
     "tailwindcss": "catalog:",
-    "zustand": "5.0.0-rc.2"
+    "zustand": "5.0.0-rc.2",
+    "tailwind-merge": "catalog:"
   },
   "devDependencies": {
     "@preact/preset-vite": "catalog:",

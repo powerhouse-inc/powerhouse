@@ -9,7 +9,7 @@ export function DefaultEditorLoader(props: DefaultEditorLoaderProps) {
   const { message = "Loading editor", ...divProps } = props;
   return (
     <div
-      className="grid h-full place-items-center text-gray-800 dark:text-slate-100"
+      className="grid h-full place-items-center text-foreground"
       {...divProps}
     >
       <div className="-mt-20 grid place-items-center">

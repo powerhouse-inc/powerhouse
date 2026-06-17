@@ -18,23 +18,18 @@ export const AllIcons: Story = {
   },
   render: () => {
     return (
-      <div className="bg-gray-50 p-8 dark:bg-slate-800">
+      <div className="bg-background p-8">
         <h2 className="mb-6 text-xl font-semibold">All Available Icons</h2>
         <div className="flex flex-wrap">
           {iconNames.map((name) => (
             <div
               key={name}
-              className="flex flex-col items-center gap-2 rounded-lg border border-gray-200 p-4 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
+              className="flex flex-col items-center gap-2 rounded-lg border border-border p-4"
             >
               <div className="flex size-10 items-center justify-center">
-                <Icon
-                  name={name}
-                  className="text-gray-700 dark:text-slate-200"
-                />
+                <Icon name={name} className="text-foreground" />
               </div>
-              <span className="text-xs text-gray-700 dark:text-slate-200">
-                {name}
-              </span>
+              <span className="text-xs text-foreground">{name}</span>
             </div>
           ))}
         </div>

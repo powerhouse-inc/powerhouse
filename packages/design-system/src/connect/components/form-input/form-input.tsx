@@ -34,17 +34,13 @@ export const FormInput = forwardRef(function FormInput(
     <div>
       <div
         className={twMerge(
-          "mb-1 flex gap-2 rounded-md border border-gray-200 bg-gray-50 p-3 text-gray-900 placeholder:text-gray-50 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 dark:placeholder:text-slate-900",
-          isError && "border-red-900 dark:border-red-50",
+          "mb-1 flex gap-2 rounded-md border border-border bg-background p-3 text-foreground placeholder:text-muted-foreground disabled:disabled-effect",
+          isError && "border-destructive",
           containerClassName,
         )}
       >
         {icon && (
-          <span
-            className={twJoin(
-              (!isDirty || isError) && "text-gray-200 dark:text-slate-200",
-            )}
-          >
+          <span className={twJoin((!isDirty || isError) && "text-foreground")}>
             {icon}
           </span>
         )}
@@ -61,7 +57,7 @@ export const FormInput = forwardRef(function FormInput(
       </div>
       <p
         className={twMerge(
-          "hidden min-h-4 text-xs text-red-900 dark:text-red-400",
+          "hidden min-h-4 text-xs text-destructive",
           isError && "block",
           hideErrors && "hidden",
           errorMessageClassName,

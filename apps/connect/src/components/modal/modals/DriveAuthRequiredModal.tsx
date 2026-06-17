@@ -22,7 +22,7 @@ export const DriveAuthRequiredModal: React.FC = () => {
       role="dialog"
       aria-modal="false"
       aria-label="Log in to access this drive"
-      className="pointer-events-none fixed inset-0 z-50 grid place-items-center bg-gray-900/30 dark:bg-slate-900/70"
+      className="pointer-events-none fixed inset-0 z-50 grid place-items-center bg-primary/30"
     >
       <DriveAuthGate
         onLogin={() => openRenown()}

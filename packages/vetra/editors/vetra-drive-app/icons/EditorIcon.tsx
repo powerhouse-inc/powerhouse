@@ -18,7 +18,7 @@ export const EditorIcon: React.FC<EditorIconProps> = ({
       height={height}
       viewBox="0 0 40 42"
       fill="none"
-      className={twMerge(className, "text-gray-50 dark:text-slate-800")}
+      className={twMerge(className, "text-primary-foreground")}
       xmlns="http://www.w3.org/2000/svg"
     >
       <g filter="url(#filter0_di_2102_4406)">

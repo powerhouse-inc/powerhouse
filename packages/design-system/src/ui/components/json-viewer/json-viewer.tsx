@@ -1,5 +1,6 @@
 import { lazy, Suspense } from "react";
 import type { Props } from "react-json-view-lite";
+import { twMerge } from "tailwind-merge";
 
 // copied from react-json-view-lite to allow lazy loading the component itself
 const styles = {
@@ -66,11 +67,14 @@ const _defaultStyles = {
 };
 const defaultStyles = {
   ..._defaultStyles,
-  container: `${_defaultStyles.container} !bg-transparent`,
-  label: `${_defaultStyles.label} !text-gray-600`,
-  punctuation: `${_defaultStyles.punctuation} !text-gray-700 !font-semibold`,
-  collapseIcon: `${_defaultStyles.collapseIcon} !text-gray-600`,
-  stringValue: `${_defaultStyles.stringValue} !text-gray-600`,
+  container: twMerge(_defaultStyles.container, "bg-transparent!"),
+  label: twMerge(_defaultStyles.label, "text-muted-foreground!"),
+  punctuation: twMerge(
+    _defaultStyles.punctuation,
+    "font-semibold! text-foreground!",
+  ),
+  collapseIcon: twMerge(_defaultStyles.collapseIcon, "text-muted-foreground!"),
+  stringValue: twMerge(_defaultStyles.stringValue, "text-muted-foreground!"),
 };
 
 const allExpanded = () => true;

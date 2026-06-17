@@ -16,7 +16,7 @@ export const Toggle = forwardRef(function Toggle(
         value=""
         {...props}
       />
-      <div className="peer h-6 w-11 rounded-full bg-gray-500 peer-checked:bg-blue-900 peer-focus:outline-none after:absolute after:inset-s-0.5 after:top-0.5 after:size-5 after:rounded-full after:border after:border-none after:bg-gray-50 after:transition-all peer-checked:after:translate-x-full dark:bg-slate-400 dark:after:bg-slate-800" />
+      <div className="peer h-6 w-11 rounded-full bg-muted-foreground peer-checked:bg-info peer-focus:outline-none after:absolute after:inset-s-0.5 after:top-0.5 after:size-5 after:rounded-full after:border after:border-none after:bg-background after:transition-all peer-checked:after:translate-x-full" />
     </label>
   );
 });

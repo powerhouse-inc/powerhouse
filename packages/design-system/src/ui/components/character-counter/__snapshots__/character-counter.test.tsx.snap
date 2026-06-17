@@ -6,12 +6,12 @@ exports[`CharacterCounter > should match snapshot 1`] = `
     class="flex items-center text-xs/3"
   >
     <span
-      class="text-gray-500 dark:text-slate-400"
+      class="text-muted-foreground"
     >
       5
     </span>
     <span
-      class="text-gray-300 dark:text-slate-600"
+      class="text-primary-foreground"
     >
       /
       10

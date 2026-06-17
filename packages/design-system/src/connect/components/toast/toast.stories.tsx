@@ -61,7 +61,7 @@ export const Default: Story = {
     const { content, ...options } = args;
     return (
       <button
-        className="rounded-md bg-gray-800 px-4 py-2 text-white hover:bg-gray-900 active:opacity-80 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-50"
+        className="rounded-md bg-primary px-4 py-2 text-primary-foreground hover:hover-effect active:active-effect"
         onClick={() =>
           toast(
             content,

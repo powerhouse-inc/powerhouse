@@ -8,7 +8,7 @@ export default function Editor() {
   console.log(document);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       <DocumentToolbar />
       <div className="flex justify-center px-4 py-8">
         <div>

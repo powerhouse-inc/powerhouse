@@ -157,9 +157,7 @@ const IdAutocompleteInputContainer = React.forwardRef<
             <Icon
               name="Reload"
               size={16}
-              className={twMerge(
-                "animate-spin text-gray-500 dark:text-slate-400",
-              )}
+              className={twMerge("animate-spin text-muted-foreground")}
             />
           )}
           {haveFetchError && (
@@ -168,7 +166,7 @@ const IdAutocompleteInputContainer = React.forwardRef<
                 <Icon
                   name="Error"
                   size={16}
-                  className={twMerge("text-red-900 dark:text-red-400")}
+                  className={twMerge("text-destructive")}
                 />
               </Tooltip>
             </TooltipProvider>
@@ -198,7 +196,7 @@ const IdAutocompleteInputContainer = React.forwardRef<
                   <Icon
                     name="Copy"
                     size={16}
-                    className={twMerge("text-gray-500 dark:text-slate-400")}
+                    className={twMerge("text-muted-foreground")}
                   />
                 </button>
               </Tooltip>

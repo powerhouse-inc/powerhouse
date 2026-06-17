@@ -45,8 +45,8 @@ export function ThemeSwitch({ horizontal = false }: { horizontal?: boolean }) {
             className={twMerge(
               "flex cursor-pointer items-center justify-center rounded-md p-1 transition-colors",
               isActive(value)
-                ? "bg-gray-50 text-gray-700 dark:bg-slate-800 dark:text-slate-200"
-                : "text-gray-400 hover:text-gray-600 dark:text-slate-500 dark:hover:text-slate-400",
+                ? "bg-background text-foreground"
+                : "text-muted-foreground hover:text-muted-foreground",
             )}
           >
             <Icon size={16} aria-hidden="true" />
@@ -75,9 +75,7 @@ export function ThemeSwitch({ horizontal = false }: { horizontal?: boolean }) {
           }
           className={twMerge(
             "flex size-fit cursor-pointer content-center items-center transition-colors",
-            isActive(value)
-              ? "text-gray-900 dark:text-slate-50"
-              : "text-gray-500 dark:text-slate-400",
+            isActive(value) ? "text-foreground" : "text-muted-foreground",
           )}
         >
           <Icon size={24} strokeWidth={2} aria-hidden="true" />

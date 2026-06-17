@@ -47,9 +47,7 @@ export const HDivider = (props: HDividerProps) => {
   const tooltipContent = (
     <div className="flex flex-col text-xs">
       {!!title && <div>{title}</div>}
-      {!!subtitle && (
-        <div className="text-gray-300 dark:text-slate-600">{subtitle}</div>
-      )}
+      {!!subtitle && <div className="text-foreground">{subtitle}</div>}
       {!!timestamp && <div>{formatTimestamp(timestamp)}</div>}
     </div>
   );
@@ -79,7 +77,7 @@ export const HDivider = (props: HDividerProps) => {
         />
       )}
       <ConnectTooltip
-        className="rounded-md bg-gray-900 text-white dark:bg-slate-50 dark:text-slate-900"
+        className="rounded-md bg-primary text-primary-foreground"
         content={tooltipContent}
         open={open && hasContent}
         onOpenChange={setOpen}
@@ -89,8 +87,8 @@ export const HDivider = (props: HDividerProps) => {
       >
         <div
           className={twMerge(
-            "mx-0.5 flex h-6.25 w-1.5 cursor-pointer flex-col items-center justify-center rounded-xs hover:bg-blue-300 dark:hover:bg-blue-600",
-            isSelected && "bg-blue-300 dark:bg-blue-600",
+            "mx-0.5 flex h-6.25 w-1.5 cursor-pointer flex-col items-center justify-center rounded-xs hover:hover-effect",
+            isSelected && "bg-info/10",
             className,
           )}
           onClick={onClick}
@@ -98,7 +96,7 @@ export const HDivider = (props: HDividerProps) => {
           data-subtitle={subtitle}
           data-timestamp={timestamp}
         >
-          <div className="h-0.5 w-1 rounded-full bg-gray-500 dark:bg-slate-400" />
+          <div className="h-0.5 w-1 rounded-full bg-muted" />
         </div>
       </ConnectTooltip>
     </div>

@@ -43,7 +43,7 @@ export function SidebarPanel({
     <>
       <div
         className={twMerge(
-          "scrollbar-none flex-1 overflow-auto text-gray-900 transition-shadow dark:text-slate-50",
+          "scrollbar-none flex-1 overflow-auto text-foreground transition-shadow",
           className,
         )}
         onScroll={(e) => checkContentScroll(e.currentTarget)}

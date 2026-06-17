@@ -7,7 +7,7 @@ import Header from "./components/header/header.js";
 
 export function App() {
   return (
-    <div className="bg-gray-100 dark:bg-slate-700">
+    <div className="bg-muted">
       <Header />
       <Router>
         <Route path="/" component={Home} />

@@ -30,16 +30,16 @@ function getStatusText(status: UploadFileItemStatus): string {
 function getStatusColor(status: UploadFileItemStatus): string {
   switch (status) {
     case "success":
-      return "text-green-700 dark:text-green-100";
+      return "text-success";
     case "failed":
     case "unsupported-document-type":
     case "pending":
     case "conflict":
-      return "text-red-900 dark:text-red-400";
+      return "text-destructive";
     case "uploading":
-      return "text-gray-900 dark:text-slate-50";
+      return "text-foreground";
     default:
-      return "text-gray-900 dark:text-slate-50";
+      return "text-foreground";
   }
 }
 
@@ -83,7 +83,7 @@ export function UploadFileItemStatusRow(props: StatusRowProps) {
       </div>
 
       {status === "uploading" && (
-        <div className="text-xs leading-[18px] font-medium text-gray-900 dark:text-slate-50">
+        <div className="text-xs leading-[18px] font-medium text-foreground">
           {Math.round(progress)}%
         </div>
       )}
@@ -92,7 +92,7 @@ export function UploadFileItemStatusRow(props: StatusRowProps) {
         <button
           type="button"
           onClick={handleCTAClick}
-          className="text-xs leading-[18px] text-blue-900 hover:opacity-80 dark:text-blue-100"
+          className="text-xs leading-[18px] text-info hover:hover-effect"
         >
           {getCTAText(status)}
         </button>

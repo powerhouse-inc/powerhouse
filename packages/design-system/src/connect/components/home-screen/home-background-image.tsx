@@ -12,7 +12,7 @@ export const HomeBackgroundImage = ({ src }: HomeBackgroundImageProps = {}) => {
   }
 
   return (
-    <div className="pointer-events-none fixed top-0 z-0 size-full bg-gray-50 dark:bg-slate-800">
+    <div className="pointer-events-none fixed top-0 z-0 size-full bg-background">
       <svg
         width="1858"
         height="1256"

@@ -19,7 +19,7 @@ export const NewModuleItem: React.FC<NewModuleItemProps> = ({
     <button
       onClick={onClick}
       className={twMerge(
-        "flex w-full items-center gap-3 rounded-md bg-gray-100 p-1 text-left transition-colors hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 dark:hover:text-slate-100",
+        "flex w-full items-center gap-3 rounded-md bg-muted p-1 text-left transition-colors hover:hover-effect",
         className,
       )}
     >
@@ -27,12 +27,10 @@ export const NewModuleItem: React.FC<NewModuleItemProps> = ({
         <AddNewIcon />
       </div>
       <div className="min-w-0 flex-1">
-        <h3 className="truncate text-sm font-medium text-gray-900 dark:text-slate-50">
+        <h3 className="truncate text-sm font-medium text-foreground">
           {title}
         </h3>
-        <p className="truncate text-xs text-gray-500 dark:text-slate-400">
-          {subtitle}
-        </p>
+        <p className="truncate text-xs text-muted-foreground">{subtitle}</p>
       </div>
     </button>
   );

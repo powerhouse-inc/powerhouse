@@ -1,7 +1,7 @@
 import type { IconName } from "#design-system";
 import { Icon } from "#design-system";
-import { twMerge } from "tailwind-merge";
 import React from "react";
+import { twMerge } from "tailwind-merge";
 import { CommandItem } from "../../command/command.js";
 import type { SelectProps } from "../../enum-field/types.js";
 
@@ -27,15 +27,13 @@ const renderIcon = (
       <Icon
         name={IconComponent}
         size={16}
-        className={twMerge("text-gray-700 dark:text-slate-200")}
+        className={twMerge("text-foreground")}
       />
     );
   }
   return (
     IconComponent && (
-      <IconComponent
-        className={twMerge("size-4", "text-gray-700 dark:text-slate-200")}
-      />
+      <IconComponent className={twMerge("size-4", "text-foreground")} />
     )
   );
 };
@@ -63,9 +61,9 @@ export const CommandItemList: React.FC<FavoriteOptionsProps> = ({
             disabled={opt.disabled}
             className={twMerge(
               "cursor-pointer",
-              "data-[selected=true]:bg-gray-100 dark:data-[selected=true]:bg-slate-500",
+              "data-[selected=true]:bg-accent",
               opt.disabled &&
-                "pointer-events-auto! cursor-not-allowed hover:bg-transparent dark:hover:bg-slate-500",
+                "pointer-events-auto! cursor-not-allowed hover:hover-effect",
             )}
             role="option"
             aria-selected={isSelected}
@@ -75,9 +73,8 @@ export const CommandItemList: React.FC<FavoriteOptionsProps> = ({
                 <div
                   className={twMerge(
                     "flex size-4 items-center justify-center rounded-md border",
-                    "border-gray-700 dark:border-slate-200",
-                    isSelected &&
-                      "bg-gray-900 text-gray-50 dark:bg-slate-50 dark:text-slate-900",
+                    "border-foreground",
+                    isSelected && "bg-primary text-primary-foreground",
                   )}
                 >
                   {isSelected && <Icon name="Checkmark" size={16} />}
@@ -86,14 +83,12 @@ export const CommandItemList: React.FC<FavoriteOptionsProps> = ({
                 <div
                   className={twMerge(
                     "relative size-4 rounded-full border",
-                    isSelected
-                      ? "border-gray-900 dark:border-slate-50"
-                      : "border-gray-800 dark:border-slate-100",
+                    isSelected ? "border-foreground" : "border-foreground",
                     "bg-transparent",
                   )}
                 >
                   {isSelected && (
-                    <div className="absolute top-1/2 left-1/2 size-2.5 -translate-1/2 rounded-full bg-gray-900 dark:bg-slate-50" />
+                    <div className="absolute top-1/2 left-1/2 size-2.5 -translate-1/2 rounded-full bg-primary" />
                   )}
                 </div>
               ))}
@@ -104,7 +99,7 @@ export const CommandItemList: React.FC<FavoriteOptionsProps> = ({
                     <Icon
                       name="Checkmark"
                       size={16}
-                      className="text-gray-900 dark:text-slate-50"
+                      className="text-foreground"
                     />
                   )}
                 </div>
@@ -113,8 +108,8 @@ export const CommandItemList: React.FC<FavoriteOptionsProps> = ({
             <span
               className={twMerge(
                 "flex-1 truncate text-sm/4 font-normal",
-                "text-gray-700 dark:text-slate-200",
-                opt.disabled && "text-gray-700 dark:text-slate-200",
+                "text-foreground",
+                opt.disabled && "text-foreground",
               )}
             >
               {opt.label}
@@ -126,7 +121,7 @@ export const CommandItemList: React.FC<FavoriteOptionsProps> = ({
                     <Icon
                       name="Checkmark"
                       size={16}
-                      className="text-gray-900 dark:text-slate-50"
+                      className="text-foreground"
                     />
                   )}
                 </div>

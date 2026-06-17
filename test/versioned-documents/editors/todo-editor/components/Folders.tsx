@@ -13,7 +13,7 @@ export function Folders() {
 
   return (
     <div>
-      <h3 className="mb-2 text-sm font-bold text-gray-600">Folders</h3>
+      <h3 className="mb-2 text-sm font-bold text-muted-foreground">Folders</h3>
       <div className="flex flex-wrap gap-4">
         {folderNodes.map((folderNode) => (
           <FolderItem key={folderNode.id} folderNode={folderNode} />

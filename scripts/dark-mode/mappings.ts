@@ -7,7 +7,7 @@ import { addPrefix } from "./utils.js";
  * Values intentionally omit the {@link darkPrefix}; it is added later when the
  * runtime lookup map is created.
  */
-const text = {
+export const text = {
   "text-black": "text-slate-50",
   "text-white": "text-slate-900",
   "text-gray-900": "text-slate-50",
@@ -452,13 +452,13 @@ export const disabled: Record<string, string> = pipe(
 
 export const outliers = {
   "data-disabled:text-gray-400": "data-disabled:text-slate-500",
-  "data-[state='active']:text-gray-900": "data-[state='active']:text-slate-50",
+  "data-[state=active]:text-gray-900": "data-[state=active]:text-slate-50",
   "group-hover:after:bg-gray-900": "group-hover:after:bg-slate-50",
   "data-[state=indeterminate]:group-hover:bg-gray-900":
     "data-[state=indeterminate]:group-hover:bg-slate-50",
   "data-[state=checked]:group-hover:bg-gray-900":
     "data-[state=checked]:group-hover:bg-slate-50",
-  "data-[state='active']:bg-gray-50": "data-[state='active']:bg-slate-900",
+  "data-[state=active]:bg-gray-50": "data-[state=active]:bg-slate-900",
   "data-[invalid=true]:data-[state=indeterminate]:group-hover:bg-red-900!":
     "data-[invalid=true]:data-[state=indeterminate]:group-hover:bg-red-50!",
   "data-[invalid=true]:data-[state=indeterminate]:bg-red-800!":

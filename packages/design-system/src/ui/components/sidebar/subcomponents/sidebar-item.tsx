@@ -3,11 +3,11 @@ import { twMerge } from "tailwind-merge";
 import CaretDown from "../../../../powerhouse/components/icon-components/CaretDown.js";
 import Pin from "../../../../powerhouse/components/icon-components/Pin.js";
 import PinFilled from "../../../../powerhouse/components/icon-components/PinFilled.js";
+import { Icon } from "../../../../powerhouse/index.js";
 import { Tooltip, TooltipProvider } from "../../tooltip/tooltip.js";
 import { type FlattenedNode, NodeStatus, type SidebarNode } from "../types.js";
 import { useEllipsis } from "../use-ellipsis.js";
 import { StatusIcon } from "./status-icon.js";
-import { Icon } from "../../../../powerhouse/index.js";
 
 interface SidebarItemProps {
   node: FlattenedNode;
@@ -94,16 +94,16 @@ export const SidebarItem = ({
             data-testid="sidebar-item"
             id={`sidebar-item-${node.id}`}
             className={twMerge(
-              "group/sidebar-item relative flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-gray-700 select-none hover:bg-gray-100 dark:text-slate-400 dark:hover:bg-slate-900",
+              "group/sidebar-item relative flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-foreground select-none hover:hover-effect",
               hasStatus && "pr-6",
               allowPinning && (hasStatus ? "hover:pr-12" : "hover:pr-6"),
               isPinned && (hasStatus ? "pr-12" : "pr-6"),
-              isSearchActive && "bg-yellow-100 dark:bg-[#604B0033]",
+              isSearchActive && "bg-warning/10",
               // line between pinned items
               pinnedMode &&
-                "after:absolute after:-top-2.5 after:left-[15px] after:h-4 after:w-px after:bg-gray-300 first:group-first/sidebar-item-wrapper:after:hidden hover:bg-gray-50 dark:hover:bg-slate-600",
+                "after:absolute after:-top-2.5 after:left-[15px] after:h-4 after:w-px after:bg-secondary first:group-first/sidebar-item-wrapper:after:hidden hover:hover-effect",
               isActive &&
-                "bg-gray-200 font-medium text-gray-900 hover:bg-gray-200 dark:bg-slate-900 dark:text-slate-50 dark:hover:bg-slate-900",
+                "bg-sidebar-accent font-medium text-sidebar-accent-foreground hover:hover-effect",
               node.className,
             )}
             onClick={() => {
@@ -114,7 +114,7 @@ export const SidebarItem = ({
             <div className="flex max-w-full items-center gap-2">
               {!pinnedMode && (
                 <div
-                  className="-m-2 -mr-1 h-full rounded-md py-2 pr-1 pl-2 hover:bg-gray-200"
+                  className="-m-2 -mr-1 h-full rounded-md py-2 pr-1 pl-2 hover:hover-effect"
                   onClick={(e) => {
                     e.stopPropagation();
                     toggleNode?.(node.id);
@@ -131,8 +131,8 @@ export const SidebarItem = ({
                         ? ""
                         : "-rotate-90",
                       node.children === undefined || node.children.length === 0
-                        ? "text-gray-300 dark:text-slate-500"
-                        : "text-gray-700 dark:text-slate-400",
+                        ? "text-muted-foreground"
+                        : "text-foreground",
                     )}
                   />
                 </div>
@@ -164,8 +164,8 @@ export const SidebarItem = ({
                     "absolute top-1/2 flex -translate-y-1/2 items-center justify-center",
                     hasStatus ? "right-8" : "right-2",
                     isPinned
-                      ? "text-gray-700 hover:text-blue-900 dark:text-slate-50 dark:hover:text-blue-900"
-                      : "invisible text-gray-300 group-hover/sidebar-item:visible hover:text-gray-700 dark:text-slate-200 dark:hover:text-slate-100",
+                      ? "text-foreground hover:hover-effect"
+                      : "invisible text-muted-foreground group-hover/sidebar-item:visible hover:hover-effect",
                   )}
                   onClick={(e) => {
                     e.stopPropagation();
@@ -183,7 +183,7 @@ export const SidebarItem = ({
                 <div
                   className={twMerge(
                     "absolute top-1/2 right-2 flex -translate-y-1/2 items-center justify-center",
-                    "text-gray-300 group-hover/sidebar-item:visible hover:text-gray-700 dark:text-slate-600 dark:hover:text-slate-500",
+                    "text-foreground group-hover/sidebar-item:visible hover:hover-effect",
                   )}
                   onClick={(e) => {
                     e.stopPropagation();
@@ -221,8 +221,8 @@ const RenderTitle = forwardRef<
       !pinnedMode
         ? (() => {
             const highlightClass = isSearchActive
-              ? "bg-yellow-300 dark:bg-[#604B00]"
-              : "bg-gray-300 dark:bg-slate-800";
+              ? "bg-warning/10"
+              : "bg-secondary";
             const parts: React.ReactNode[] = [];
             let remaining = title;
             const lowerTerm = searchTerm.toLowerCase();
@@ -263,11 +263,7 @@ const PinnedModeCircleIcon = ({ isPinned }: { isPinned: boolean }) => (
     <path
       d="M12 8C12 10.2091 10.2091 12 8 12C5.79086 12 4 10.2091 4 8C4 5.79086 5.79086 4 8 4C10.2091 4 12 5.79086 12 8Z"
       fill="currentColor"
-      className={
-        isPinned
-          ? "text-gray-500 dark:text-slate-500"
-          : "text-gray-300 dark:text-slate-300"
-      }
+      className={isPinned ? "text-muted-foreground" : "text-foreground"}
     />
   </svg>
 );

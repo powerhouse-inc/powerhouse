@@ -1,4 +1,5 @@
 import { Icon } from "#design-system";
+import { twMerge } from "tailwind-merge";
 import { CodePopover } from "../../code-popover.js";
 import { FormattedJsonViewer } from "../../formatted-json-viewer.js";
 import type { Signature } from "../types.js";
@@ -14,13 +15,9 @@ export function Signature(props: SignatureProps) {
   return (
     <CodePopover
       trigger={
-        <span className="flex w-fit cursor-pointer items-center gap-1 rounded-lg border border-gray-200 bg-gray-50 px-2 py-1 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
+        <span className="flex w-fit cursor-pointer items-center gap-1 rounded-lg border border-border bg-background px-2 py-1">
           <VerificationStatus signatures={signatures} />{" "}
-          <Icon
-            className="text-gray-300 dark:text-slate-600"
-            name="InfoSquare"
-            size={16}
-          />
+          <Icon className="text-foreground" name="InfoSquare" size={16} />
         </span>
       }
       content={<FormattedJsonViewer value={signatures} collapsed={1} />}
@@ -40,12 +37,19 @@ function VerificationStatus(props: SignatureProps) {
   ).length;
   const signatureText = signatureCount === 1 ? "signature" : "signatures";
   const verificationStatusText = `${verifiedSignaturesCount}/${signatureCount} ${signatureText} verified`;
-  const color =
-    verifiedSignaturesCount === 0
-      ? "text-red-800 dark:text-red-100"
-      : verifiedSignaturesCount === signatureCount
-        ? "text-green-700 dark:text-green-100"
-        : "text-orange-700 dark:text-orange-100";
 
-  return <span className={`text-xs ${color}`}>{verificationStatusText}</span>;
+  return (
+    <span
+      className={twMerge(
+        `text-xs`,
+        verifiedSignaturesCount === 0
+          ? "text-destructive"
+          : verifiedSignaturesCount === signatureCount
+            ? "text-success"
+            : "text-warning",
+      )}
+    >
+      {verificationStatusText}
+    </span>
+  );
 }

@@ -1,6 +1,7 @@
-import { useState } from "preact/hooks";
-import useAuth from "../../hooks/useAuth.js";
 import type { FormEvent } from "preact/compat";
+import { useState } from "preact/hooks";
+import { twMerge } from "tailwind-merge";
+import useAuth from "../../hooks/useAuth.js";
 
 const TokenForm = () => {
   const [formData, setFormData] = useState({
@@ -43,8 +44,8 @@ const TokenForm = () => {
   const submitDisabled = formData.name === "";
 
   return (
-    <div className="bg-gray-50 p-5 dark:bg-slate-800">
-      <span className="mb-4 mt-8 font-semibold">Create new token</span>
+    <div className="bg-background p-5">
+      <span className="mt-8 mb-4 font-semibold">Create new token</span>
       <form
         onSubmit={(e) => {
           void handleSubmit(e);
@@ -54,7 +55,7 @@ const TokenForm = () => {
         <div className="flex-1 flex-col">
           <label
             htmlFor="name"
-            className="block text-sm font-semibold text-gray-900 dark:text-slate-50"
+            className="block text-sm font-semibold text-foreground"
           >
             Name
           </label>
@@ -64,13 +65,13 @@ const TokenForm = () => {
             name="name"
             value={formData.name}
             onChange={handleChange}
-            className="mt-1 w-full rounded-md border border-gray-300 p-2 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
+            className="mt-1 w-full rounded-md border border-border p-2"
           />
         </div>
         <div className="flex-1 flex-col">
           <label
             htmlFor="duration"
-            className="block text-sm font-semibold text-gray-900 dark:text-slate-50"
+            className="block text-sm font-semibold text-foreground"
           >
             Duration
           </label>
@@ -80,7 +81,7 @@ const TokenForm = () => {
             aria-placeholder="Select Duration"
             value={formData.duration}
             onChange={handleChange}
-            className="mt-1 w-full rounded-md border border-gray-300 p-2 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
+            className="mt-1 w-full rounded-md border border-border p-2"
           >
             <option value="3600">1 Hour</option>
             <option value="86400">1 Day</option>
@@ -93,7 +94,7 @@ const TokenForm = () => {
         <div className="flex-1 flex-col">
           <label
             htmlFor="allowedOrigin"
-            className="block text-sm font-semibold text-gray-900 dark:text-slate-50"
+            className="block text-sm font-semibold text-foreground"
           >
             Allowed Origin
           </label>
@@ -104,16 +105,17 @@ const TokenForm = () => {
             placeholder="*"
             value={formData.allowedOrigin}
             onChange={handleChange}
-            className="mt-1 w-full rounded-md border border-gray-300 p-2 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100"
+            className="mt-1 w-full rounded-md border border-border p-2"
           />
         </div>
         <div className="flex h-full flex-col items-end">
           <button
             disabled={submitDisabled}
             type="submit"
-            className={`bg-orange-400 ${
-              submitDisabled ? `` : `hover:bg-orange-600`
-            } rounded px-4 py-2 font-semibold text-white`}
+            className={twMerge(
+              "rounded-sm bg-warning px-4 py-2 font-semibold text-warning-foreground",
+              !submitDisabled && "hover:hover-effect",
+            )}
           >
             Create New Token
           </button>
@@ -121,32 +123,32 @@ const TokenForm = () => {
       </form>
       {showModal ? (
         <>
-          <div className="outline-hidden focus:outline-hidden fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overflow-x-hidden">
+          <div className="fixed inset-0 z-50 flex items-center justify-center overflow-x-hidden overflow-y-auto outline-hidden focus:outline-hidden">
             <div className="relative mx-auto my-6 w-auto max-w-3xl">
               {/*content*/}
-              <div className="outline-hidden focus:outline-hidden relative flex w-full flex-col rounded-lg border-0 bg-gray-50 shadow-lg dark:bg-slate-800">
+              <div className="relative flex w-full flex-col rounded-lg border-0 bg-background shadow-lg outline-hidden focus:outline-hidden">
                 {/*header*/}
-                <div className="border-blueGray-200 flex items-start justify-between rounded-t border-b border-solid p-5">
+                <div className="flex items-start justify-between rounded-t border-b border-solid border-border p-5">
                   <h3 className="text-3xl font-semibold">API Token</h3>
                   <button
-                    className="outline-hidden focus:outline-hidden float-right ml-auto border-0 bg-transparent p-1 text-3xl font-semibold leading-none text-gray-900 opacity-5 dark:text-slate-50"
+                    className="float-right ml-auto border-0 bg-transparent p-1 text-3xl leading-none font-semibold text-foreground opacity-5 outline-hidden focus:outline-hidden"
                     onClick={() => setShowModal(false)}
                   >
-                    <span className="outline-hidden focus:outline-hidden block h-6 w-6 bg-transparent text-2xl text-gray-900 opacity-5 dark:text-slate-50">
+                    <span className="block size-6 bg-transparent text-2xl text-foreground opacity-5 outline-hidden focus:outline-hidden">
                       ×
                     </span>
                   </button>
                 </div>
                 {/*body*/}
                 <div className="relative flex-auto p-6">
-                  <div className="text-gray-500 my-4 break-words text-lg leading-relaxed dark:text-slate-400">
+                  <div className="my-4 text-lg/relaxed wrap-break-word text-muted-foreground">
                     {token}
                   </div>
                 </div>
                 {/*footer*/}
-                <div className="border-blueGray-200 flex items-center justify-end rounded-b border-t border-solid p-6">
+                <div className="flex items-center justify-end rounded-b border-t border-solid border-border p-6">
                   <button
-                    className="background-transparent outline-hidden focus:outline-hidden mb-1 mr-1 px-6 py-2 text-sm font-bold uppercase text-red-500 transition-all duration-150 ease-linear dark:text-red-100"
+                    className="mr-1 mb-1 bg-transparent px-6 py-2 text-sm font-bold text-destructive uppercase outline-hidden transition-all duration-150 ease-linear focus:outline-hidden"
                     type="button"
                     onClick={() => setShowModal(false)}
                   >
@@ -156,7 +158,7 @@ const TokenForm = () => {
               </div>
             </div>
           </div>
-          <div className="fixed inset-0 z-40 bg-gray-900 opacity-25 dark:bg-slate-50"></div>
+          <div className="fixed inset-0 z-40 bg-primary opacity-25"></div>
         </>
       ) : null}
     </div>

@@ -1,6 +1,6 @@
-import { twMerge } from "tailwind-merge";
 import * as CheckboxPrimitive from "@radix-ui/react-checkbox";
 import * as React from "react";
+import { twMerge } from "tailwind-merge";
 
 type CheckboxValue = boolean | "indeterminate";
 
@@ -20,27 +20,22 @@ const CheckboxBase = React.forwardRef<
       // Base styles
       "peer size-4 shrink-0 rounded-sm",
       // Border & Shadow
-      "border shadow-sm shadow-gray-900/4",
+      "border shadow-sm shadow-foreground/4",
       // Background & Ring
       "transition-shadow",
       // Focus styles
       "focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
       // Disabled state
-      "disabled:cursor-not-allowed disabled:border-gray-700 disabled:data-[invalid=false]:data-[state=checked]:bg-gray-700 disabled:data-[invalid=false]:data-[state=indeterminate]:bg-gray-700 dark:disabled:border-slate-200 dark:disabled:data-[invalid=false]:data-[state=checked]:bg-slate-500 dark:disabled:data-[invalid=false]:data-[state=indeterminate]:bg-slate-500",
+      "disabled:disabled-effect",
       // Checked & Indeterminate states
-      "data-state:border-gray-700 dark:data-state:border-slate-500",
-      "data-[state=checked]:bg-gray-900 data-[state=indeterminate]:bg-gray-900 dark:data-[state=checked]:bg-slate-400 dark:data-[state=indeterminate]:bg-slate-400",
-      "data-[state=checked]:text-gray-50 data-[state=indeterminate]:text-gray-50 dark:data-[state=checked]:text-slate-900 dark:data-[state=indeterminate]:text-slate-900",
+      "data-state:border-foreground",
+      "data-[state=checked]:bg-primary data-[state=indeterminate]:bg-primary",
+      "data-[state=checked]:text-primary-foreground data-[state=indeterminate]:text-primary-foreground",
       // hover states
-      !props.disabled && [
-        "group-hover:border-gray-900 data-[state=checked]:group-hover:bg-gray-900 data-[state=indeterminate]:group-hover:bg-gray-900 dark:group-hover:border-slate-50 dark:data-[state=checked]:group-hover:bg-slate-50 dark:data-[state=indeterminate]:group-hover:bg-slate-50",
-        "dark:group-hover:border-slate-50 dark:data-[state=checked]:group-hover:bg-slate-50 dark:data-[state=indeterminate]:group-hover:bg-slate-50",
-      ],
+      !props.disabled && "group-hover:hover-effect",
       // Error state
-      "data-[invalid=true]:data-state:border-red-800! data-[invalid=true]:data-[state=checked]:bg-red-800! data-[invalid=true]:data-[state=indeterminate]:bg-red-800! dark:data-[invalid=true]:data-state:border-red-100! dark:data-[invalid=true]:data-[state=checked]:bg-red-100! dark:data-[invalid=true]:data-[state=indeterminate]:bg-red-100!",
-      "dark:data-[invalid=true]:data-state:border-red-800! dark:data-[invalid=true]:data-[state=checked]:bg-red-800! dark:data-[invalid=true]:data-[state=indeterminate]:bg-red-800!",
-      // error hover states
-      "data-[invalid=true]:group-hover:border-red-900! data-[invalid=true]:data-[state=checked]:group-hover:bg-red-900! data-[invalid=true]:data-[state=indeterminate]:group-hover:bg-red-900! dark:data-[invalid=true]:group-hover:border-red-50! dark:data-[invalid=true]:data-[state=checked]:group-hover:bg-red-50! dark:data-[invalid=true]:data-[state=indeterminate]:group-hover:bg-red-50!",
+      "data-[invalid=true]:data-state:border-destructive! data-[invalid=true]:data-[state=checked]:bg-destructive! data-[invalid=true]:data-[state=indeterminate]:bg-destructive!",
+      "",
       className,
     )}
     checked={checked}

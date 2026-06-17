@@ -223,7 +223,7 @@ export function TableView({
       )}
       <div className="flex shrink-0 items-center justify-between text-sm">
         <div className="flex items-center gap-2">
-          <span className="text-gray-700 dark:text-slate-200">
+          <span className="text-foreground">
             {loading
               ? "Loading..."
               : total !== null
@@ -232,7 +232,7 @@ export function TableView({
           </span>
           {rows.length > 0 && (
             <button
-              className="flex items-center gap-1 rounded-sm border border-gray-300 bg-gray-50 px-2 py-1 text-xs text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 dark:hover:bg-slate-700"
+              className="flex items-center gap-1 rounded-sm border border-border bg-background px-2 py-1 text-xs text-foreground hover:hover-effect disabled:disabled-effect"
               disabled={loading || copying}
               onClick={() => void handleCopyAll()}
               title="Copy all rows as CSV"
@@ -247,7 +247,7 @@ export function TableView({
         {total !== null && total > limit && (
           <div className="flex gap-1">
             <button
-              className="rounded-sm border border-gray-300 bg-gray-50 px-2 py-1 text-xs text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 dark:hover:bg-slate-700"
+              className="rounded-sm border border-border bg-background px-2 py-1 text-xs text-foreground hover:hover-effect disabled:disabled-effect"
               disabled={currentPage === 0}
               onClick={() => goToPage(0)}
               type="button"
@@ -255,7 +255,7 @@ export function TableView({
               First
             </button>
             <button
-              className="rounded-sm border border-gray-300 bg-gray-50 px-2 py-1 text-xs text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 dark:hover:bg-slate-700"
+              className="rounded-sm border border-border bg-background px-2 py-1 text-xs text-foreground hover:hover-effect disabled:disabled-effect"
               disabled={currentPage === 0}
               onClick={() => goToPage(currentPage - 1)}
               type="button"
@@ -264,7 +264,7 @@ export function TableView({
             </button>
 
             {visiblePages[0] > 0 && (
-              <span className="flex items-center px-1 text-xs text-gray-500 dark:text-slate-400">
+              <span className="flex items-center px-1 text-xs text-muted-foreground">
                 ...
               </span>
             )}
@@ -275,8 +275,8 @@ export function TableView({
                 className={twMerge(
                   "min-w-8 rounded-sm border px-2 py-1 text-xs",
                   page === currentPage
-                    ? "border-blue-500 bg-blue-50 text-blue-700 dark:border-blue-400 dark:bg-blue-900 dark:text-blue-100"
-                    : "border-gray-300 bg-gray-50 text-gray-700 hover:bg-gray-100 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 dark:hover:bg-slate-700",
+                    ? "border-info bg-info/10 text-info"
+                    : "border-border bg-background text-foreground hover:hover-effect",
                 )}
                 onClick={() => goToPage(page)}
                 type="button"
@@ -286,13 +286,13 @@ export function TableView({
             ))}
 
             {visiblePages[visiblePages.length - 1] < totalPages - 1 && (
-              <span className="flex items-center px-1 text-xs text-gray-500 dark:text-slate-400">
+              <span className="flex items-center px-1 text-xs text-muted-foreground">
                 ...
               </span>
             )}
 
             <button
-              className="rounded-sm border border-gray-300 bg-gray-50 px-2 py-1 text-xs text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 dark:hover:bg-slate-700"
+              className="rounded-sm border border-border bg-background px-2 py-1 text-xs text-foreground hover:hover-effect disabled:disabled-effect"
               disabled={currentPage >= totalPages - 1}
               onClick={() => goToPage(currentPage + 1)}
               type="button"
@@ -300,7 +300,7 @@ export function TableView({
               <Icon className="-rotate-90" name="ChevronDown" size={14} />
             </button>
             <button
-              className="rounded-sm border border-gray-300 bg-gray-50 px-2 py-1 text-xs text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 dark:hover:bg-slate-700"
+              className="rounded-sm border border-border bg-background px-2 py-1 text-xs text-foreground hover:hover-effect disabled:disabled-effect"
               disabled={currentPage >= totalPages - 1}
               onClick={() => goToPage(totalPages - 1)}
               type="button"
@@ -313,16 +313,16 @@ export function TableView({
 
       <div
         className={twMerge(
-          "max-h-full overflow-auto rounded-lg border border-gray-300 transition-opacity dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100",
+          "max-h-full overflow-auto rounded-lg border border-border transition-opacity",
           "scrollbar-thin scrollbar-thumb-rounded-md scrollbar-track-transparent",
-          "scrollbar-thumb-gray-300 dark:scrollbar-thumb-slate-600",
+          "scrollbar-thumb-border",
           loading && "pointer-events-none opacity-50",
         )}
       >
         <table className="w-full border-collapse">
-          <thead className="sticky top-0 bg-gray-100 dark:bg-slate-700">
+          <thead className="sticky top-0 bg-muted">
             <tr>
-              <th className="w-12 p-2 text-center text-xs font-medium text-gray-700 dark:text-slate-200">
+              <th className="w-12 p-2 text-center text-xs font-medium text-foreground">
                 <span className="sr-only">Copy</span>
               </th>
               {columns.map((column, index) => {
@@ -333,11 +333,9 @@ export function TableView({
                   <th
                     key={column.name}
                     className={twMerge(
-                      "group px-3 py-2 text-left text-xs font-medium text-gray-700 dark:text-slate-200",
-                      index > 0 &&
-                        "border-l border-gray-300 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100",
-                      onSort &&
-                        "cursor-pointer hover:bg-gray-200 hover:text-gray-900 dark:hover:bg-slate-600 dark:hover:text-slate-100",
+                      "group px-3 py-2 text-left text-xs font-medium text-foreground",
+                      index > 0 && "border-l border-border",
+                      onSort && "cursor-pointer hover:hover-effect",
                     )}
                     onClick={() => onSort && handleSort(column.name)}
                   >
@@ -356,7 +354,7 @@ export function TableView({
             {rows.length === 0 ? (
               <tr>
                 <td
-                  className="px-3 py-8 text-center text-sm text-gray-500 dark:text-slate-400"
+                  className="px-3 py-8 text-center text-sm text-muted-foreground"
                   colSpan={columns.length + 1}
                 >
                   No data
@@ -366,11 +364,11 @@ export function TableView({
               rows.map((row, rowIndex) => (
                 <tr
                   key={rowIndex}
-                  className="odd:bg-white even:bg-gray-50 hover:bg-blue-50 dark:odd:bg-slate-800 dark:even:bg-slate-800 dark:hover:bg-blue-900"
+                  className="odd:bg-card even:bg-background hover:hover-effect"
                 >
                   <td className="p-2 text-center">
                     <button
-                      className="flex items-center justify-center rounded-sm p-1 text-gray-500 hover:bg-gray-200 hover:text-gray-700 dark:text-slate-400 dark:hover:bg-slate-600 dark:hover:text-slate-100"
+                      className="flex items-center justify-center rounded-sm p-1 text-muted-foreground hover:hover-effect"
                       onClick={() => void handleCopyRow(rowIndex)}
                       title="Copy row as CSV"
                       type="button"
@@ -385,16 +383,15 @@ export function TableView({
                     <td
                       key={column.name}
                       className={twMerge(
-                        "px-3 py-2 text-xs text-gray-900 dark:text-slate-50",
-                        colIndex > 0 &&
-                          "border-l border-gray-300 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100",
+                        "px-3 py-2 text-xs text-foreground",
+                        colIndex > 0 && "border-l border-border",
                       )}
                     >
                       <span
                         className={twMerge(
                           "block truncate",
                           row[column.name] === null &&
-                            "text-gray-400 italic dark:text-slate-500",
+                            "text-muted-foreground italic",
                         )}
                         title={formatCellValue(row[column.name])}
                       >

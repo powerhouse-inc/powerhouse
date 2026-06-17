@@ -1,3 +1,4 @@
+// #!/usr/bin/env node
 import { entries, filter, forEach, keys, pipe } from "remeda";
 import { findFilesWithClasses } from "./find-files-with-classes.js";
 import { getStringLiteralsFromFiles, makeTsMorphProject } from "./ts-morph.js";
@@ -5,11 +6,15 @@ import type { ClassNameRecord } from "./types.js";
 import { hasClasses, replaceClassesForStringLiteral } from "./utils.js";
 
 const classesToReplace: ClassNameRecord = {
-  "bg-black": "bg-gray-900",
-  "text-black": "text-gray-900",
-  "bg-black/50": "bg-gray-900/50",
-  "border-black": "border-gray-900",
-  "shadow-black/4": "shadow-gray-900/4",
+  "bg-gray-900/30": "bg-primary/30",
+  "bg-gray-100": "bg-muted",
+  "bg-gray-50": "bg-background",
+  "bg-white": "bg-card",
+  "text-gray-900": "text-foreground",
+  "text-gray-600": "text-muted-foreground",
+  "border-gray-300": "border-border",
+  "hover:bg-gray-100": "hover:bg-muted",
+  "focus-visible:ring-gray-400": "focus-visible:ring-ring",
 };
 
 const project = makeTsMorphProject();

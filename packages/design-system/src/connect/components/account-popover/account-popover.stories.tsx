@@ -18,8 +18,8 @@ type Story = StoryObj<typeof AccountPopover>;
 export const LoggedOut: Story = {
   args: {
     children: (
-      <div className="flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
-        <Icon name="Settings" className="text-gray-700 dark:text-slate-200" />
+      <div className="flex items-center gap-2 rounded-lg border border-border px-4 py-2">
+        <Icon name="Settings" className="text-foreground" />
         <span className="text-sm font-medium">Connect</span>
       </div>
     ),
@@ -35,12 +35,12 @@ export const LoggedIn: Story = {
   args: {
     children: (
       <div className="flex items-center gap-2">
-        <div className="size-8 rounded-full bg-gray-200 dark:bg-slate-600 dark:text-slate-100" />
+        <div className="size-8 rounded-full bg-secondary" />
         <div className="flex flex-col">
-          <span className="text-sm font-medium text-gray-900 dark:text-slate-50">
+          <span className="text-sm font-medium text-foreground">
             Willow.eth
           </span>
-          <span className="text-xs text-gray-500 dark:text-slate-400">{`${address.slice(0, 6)}...${address.slice(-4)}`}</span>
+          <span className="text-xs text-muted-foreground">{`${address.slice(0, 6)}...${address.slice(-4)}`}</span>
         </div>
       </div>
     ),

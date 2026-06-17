@@ -12,9 +12,7 @@ export function Errors(props: ErrorsProps) {
 
   const hasErrors = !!errors?.length;
 
-  const color = hasErrors
-    ? "text-red-800 dark:text-red-100"
-    : "text-green-700 dark:text-green-100";
+  const color = hasErrors ? "text-destructive" : "text-success";
 
   const icon = hasErrors ? (
     <Icon name="Exclamation" size={16} />
@@ -27,7 +25,7 @@ export function Errors(props: ErrorsProps) {
   const content = (
     <span
       className={twMerge(
-        "flex w-fit items-center rounded-lg border border-gray-200 bg-gray-50 px-2 py-1 text-xs dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100",
+        "flex w-fit items-center rounded-lg border border-border bg-background px-2 py-1 text-xs",
         color,
         hasErrors && "cursor-pointer",
       )}

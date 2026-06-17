@@ -42,7 +42,7 @@ export const SelectedContent: React.FC<SelectedContentProps> = ({
         )}
       >
         {placeholder && (
-          <span className="text-sm/5 font-normal text-gray-700 dark:text-slate-200">
+          <span className="text-sm/5 font-normal text-foreground">
             {placeholder}
           </span>
         )}
@@ -50,13 +50,13 @@ export const SelectedContent: React.FC<SelectedContentProps> = ({
           <Icon
             name="CaretSort"
             size={16}
-            className="cursor-pointer text-gray-700 dark:text-slate-200"
+            className="cursor-pointer text-foreground"
           />
         ) : (
           <Icon
             name="ChevronDown"
             size={16}
-            className="cursor-pointer text-gray-700 dark:text-slate-200"
+            className="cursor-pointer text-foreground"
           />
         )}
       </div>
@@ -67,7 +67,7 @@ export const SelectedContent: React.FC<SelectedContentProps> = ({
     <div className="flex w-full items-center justify-between gap-2">
       <div
         className={twMerge(
-          "max-w-full truncate text-gray-900 dark:text-slate-50",
+          "max-w-full truncate text-foreground",
           !multiple && "flex items-center gap-2",
         )}
       >
@@ -108,7 +108,7 @@ export const SelectedContent: React.FC<SelectedContentProps> = ({
             <Icon
               name="XmarkLight"
               size={16}
-              className="cursor-pointer text-gray-700 dark:text-slate-200"
+              className="cursor-pointer text-foreground"
             />
           </div>
         )}
@@ -116,13 +116,13 @@ export const SelectedContent: React.FC<SelectedContentProps> = ({
           <Icon
             name="CaretSort"
             size={16}
-            className="cursor-pointer text-gray-700 dark:text-slate-200"
+            className="cursor-pointer text-foreground"
           />
         ) : (
           <Icon
             name="ChevronDown"
             size={16}
-            className="cursor-pointer text-gray-700 dark:text-slate-200"
+            className="cursor-pointer text-foreground"
           />
         )}
       </div>

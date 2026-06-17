@@ -266,8 +266,8 @@ const meta: Meta<typeof Sidebar> = {
   args: {
     sidebarTitle: "Title Sidebar",
     sidebarIcon: (
-      <div className="flex items-center justify-center rounded-md bg-gray-900 p-2">
-        <Icon name="M" className="text-gray-50" size={16} />
+      <div className="flex items-center justify-center rounded-md bg-primary p-2">
+        <Icon name="M" className="text-primary-foreground" size={16} />
       </div>
     ),
     enableMacros: 4,
@@ -308,7 +308,7 @@ export const WithinLayoutAndContent: Story = {
           activeNodeId={activeNode}
           extraFooterContent={
             <div className="flex flex-col gap-1">
-              <div className="flex items-baseline gap-2 text-gray-900 dark:text-slate-200">
+              <div className="flex items-baseline gap-2 text-foreground">
                 <div>Login with</div>
                 <Icon
                   name="Renown"
@@ -317,7 +317,7 @@ export const WithinLayoutAndContent: Story = {
                   className="cursor-pointer"
                 />
               </div>
-              <div className="text-xs text-gray-500 dark:text-slate-400">
+              <div className="text-xs text-muted-foreground">
                 Auth integration example within sidebar content
               </div>
             </div>
@@ -325,12 +325,10 @@ export const WithinLayoutAndContent: Story = {
         />
         <div
           style={{ width: "calc(100% - var(--sidebar-width))" }}
-          className="flex-1 bg-gray-50 p-4 dark:bg-slate-800"
+          className="flex-1 bg-background p-4"
         >
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-50">
-            Content Area
-          </h1>
-          <p className="text-sm text-gray-500 dark:text-slate-400">
+          <h1 className="text-2xl font-bold text-foreground">Content Area</h1>
+          <p className="text-sm text-muted-foreground">
             Active Node: {activeNode}
           </p>
         </div>
@@ -376,26 +374,24 @@ export const WithCustomTitleNavigation: Story = {
         />
         <div
           style={{ width: "calc(100% - var(--sidebar-width))" }}
-          className="flex-1 bg-gray-50 p-4 dark:bg-slate-800"
+          className="flex-1 bg-background p-4"
         >
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-50">
-            Content Area
-          </h1>
-          <p className="text-sm text-gray-500 dark:text-slate-400">
+          <h1 className="text-2xl font-bold text-foreground">Content Area</h1>
+          <p className="text-sm text-muted-foreground">
             Active Node: {activeNode}
           </p>
 
           <div className="mt-4">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-50">
+            <h2 className="text-lg font-semibold text-foreground">
               Navigation Log:
             </h2>
-            <div className="mt-2 overflow-y-auto rounded-sm border bg-gray-50 p-2 dark:bg-slate-700">
+            <div className="mt-2 overflow-y-auto rounded-sm border bg-background p-2">
               {navigationLog.length === 0 ? (
-                <p className="text-sm text-gray-500 dark:text-slate-400">
+                <p className="text-sm text-muted-foreground">
                   Click the sidebar title to see navigation events
                 </p>
               ) : (
-                <ul className="text-sm text-gray-700 dark:text-slate-300">
+                <ul className="text-sm text-foreground">
                   {navigationLog.map((log, index) => (
                     <li key={index} className="py-1">
                       {log}
@@ -444,26 +440,24 @@ export const WithCustomStyles: Story = {
         />
         <div
           style={{ width: "calc(100% - var(--sidebar-width))" }}
-          className="flex-1 bg-gray-50 p-4 dark:bg-slate-800"
+          className="flex-1 bg-background p-4"
         >
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-50">
-            Content Area
-          </h1>
-          <p className="text-sm text-gray-500 dark:text-slate-400">
+          <h1 className="text-2xl font-bold text-foreground">Content Area</h1>
+          <p className="text-sm text-muted-foreground">
             Active Node: {activeNode}
           </p>
 
           <div className="mt-4">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-50">
+            <h2 className="text-lg font-semibold text-foreground">
               Navigation Log:
             </h2>
-            <div className="mt-2 overflow-y-auto rounded-sm border bg-gray-50 p-2 dark:bg-slate-700">
+            <div className="mt-2 overflow-y-auto rounded-sm border bg-background p-2">
               {navigationLog.length === 0 ? (
-                <p className="text-sm text-gray-500 dark:text-slate-400">
+                <p className="text-sm text-muted-foreground">
                   Click the sidebar title to see navigation events
                 </p>
               ) : (
-                <ul className="text-sm text-gray-700 dark:text-slate-300">
+                <ul className="text-sm text-foreground">
                   {navigationLog.map((log, index) => (
                     <li key={index} className="py-1">
                       {log}
@@ -503,13 +497,13 @@ export const WithCustomTargetElement: Story = {
 
     const stylesToApply: Record<string, string> = {
       "4281ab93-ef4f-4974-988d-7dad149a693d":
-        "bg-red-900 text-white hover:!bg-red-800",
+        "bg-destructive text-destructive-foreground hover:hover-effect",
       "f85e197f-9fd7-48ed-abe9-5d2c1b22475a":
-        "bg-blue-900 text-white hover:!bg-blue-800",
+        "bg-info text-info-foreground hover:hover-effect",
       "c4be9c5e-520d-4e9c-b29e-3adcc8071452":
-        "bg-purple-900 text-white hover:!bg-purple-800",
+        "bg-info text-info-foreground hover:hover-effect",
       "eca5e587-79e3-480b-b70d-dd25697c9e1f":
-        "bg-green-900 text-white hover:!bg-green-800",
+        "bg-success text-success-foreground hover:hover-effect",
     };
     const applyStylesRecursively = (node: SidebarNode): SidebarNode => {
       return {
@@ -533,26 +527,24 @@ export const WithCustomTargetElement: Story = {
         />
         <div
           style={{ width: "calc(100% - var(--sidebar-width))" }}
-          className="flex-1 bg-gray-50 p-4 dark:bg-slate-800"
+          className="flex-1 bg-background p-4"
         >
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-50">
-            Content Area
-          </h1>
-          <p className="text-sm text-gray-500 dark:text-slate-400">
+          <h1 className="text-2xl font-bold text-foreground">Content Area</h1>
+          <p className="text-sm text-muted-foreground">
             Active Node: {activeNode}
           </p>
 
           <div className="mt-4">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-50">
+            <h2 className="text-lg font-semibold text-foreground">
               Navigation Log:
             </h2>
-            <div className="mt-2 overflow-y-auto rounded-sm border bg-gray-50 p-2 dark:bg-slate-700">
+            <div className="mt-2 overflow-y-auto rounded-sm border bg-background p-2">
               {navigationLog.length === 0 ? (
-                <p className="text-sm text-gray-500 dark:text-slate-400">
+                <p className="text-sm text-muted-foreground">
                   Click the sidebar title to see navigation events
                 </p>
               ) : (
-                <ul className="text-sm text-gray-700 dark:text-slate-300">
+                <ul className="text-sm text-foreground">
                   {navigationLog.map((log, index) => (
                     <li key={index} className="py-1">
                       {log}
@@ -585,12 +577,10 @@ export const Loading: Story = {
         <Sidebar {...args} isLoading={isLoading} />
         <div
           style={{ width: "calc(100% - var(--sidebar-width))" }}
-          className="flex-1 bg-gray-50 p-4 dark:bg-slate-800"
+          className="flex-1 bg-background p-4"
         >
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-50">
-            Content Area
-          </h1>
-          <p className="text-sm text-gray-500 dark:text-slate-400">
+          <h1 className="text-2xl font-bold text-foreground">Content Area</h1>
+          <p className="text-sm text-muted-foreground">
             Sidebar Status: {isLoading ? "Loading..." : "Ready"}
           </p>
 
@@ -601,11 +591,11 @@ export const Loading: Story = {
                 onClick={() => {
                   setIsLoading(!isLoading);
                 }}
-                className="rounded-sm bg-blue-500 px-3 py-1 text-sm text-white hover:bg-blue-600"
+                className="rounded-sm bg-info px-3 py-1 text-sm text-info-foreground hover:hover-effect"
               >
                 {isLoading ? "Stop Loading" : "Start Loading"}
               </button>
-              <p className="text-xs text-gray-500 dark:text-slate-400">
+              <p className="text-xs text-muted-foreground">
                 Toggle loading state to see the skeleton animation
               </p>
             </div>
@@ -649,12 +639,10 @@ export const WithCustomSorting: Story = {
         />
         <div
           style={{ width: "calc(100% - var(--sidebar-width))" }}
-          className="flex-1 bg-gray-50 p-4 dark:bg-slate-800"
+          className="flex-1 bg-background p-4"
         >
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-50">
-            Custom Sorting
-          </h1>
-          <div className="mt-4 space-y-2 text-sm text-gray-700 dark:text-slate-400">
+          <h1 className="text-2xl font-bold text-foreground">Custom Sorting</h1>
+          <div className="mt-4 space-y-2 text-sm text-foreground">
             <p>
               <strong>nodeSortType:</strong>{" "}
               {args.nodeSortType === undefined

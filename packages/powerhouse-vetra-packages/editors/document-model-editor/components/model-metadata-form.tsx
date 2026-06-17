@@ -113,7 +113,7 @@ export function ModelNameForm(props: Props) {
       value={name}
       onSubmit={onSubmit}
       placeholder="Model name"
-      className="border-none pl-0 text-xl font-bold text-gray-900 dark:text-slate-50"
+      className="border-none pl-0 text-xl font-bold text-foreground"
       required
       focusOnMount
     />

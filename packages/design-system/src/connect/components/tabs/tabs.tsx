@@ -15,13 +15,13 @@ export function Tabs({
       className="flex min-h-0 flex-1 flex-col gap-2"
     >
       <div className="flex w-full shrink-0 justify-between">
-        <List className="flex w-full gap-x-2 rounded-xl p-1 text-sm font-semibold text-gray-700 outline-none dark:text-slate-200">
+        <List className="flex w-full gap-x-2 rounded-xl p-1 text-sm font-semibold text-foreground outline-none">
           {React.Children.map(children, (child, _i) => {
             if (!React.isValidElement(child)) return;
             const { label, disabled } = child.props as TabContentProps;
             return (
               <Trigger
-                className="flex min-h-7 flex-1 items-center justify-center rounded-lg border border-gray-100 bg-gray-50 py-2 text-gray-900 transition duration-300 data-disabled:cursor-not-allowed data-disabled:text-gray-400 data-[state='active']:bg-gray-100 data-[state='active']:text-gray-900 dark:border-slate-600 dark:bg-slate-600 dark:text-slate-200 dark:data-disabled:text-slate-500 dark:data-[state='active']:bg-slate-500 dark:data-[state='active']:text-slate-100"
+                className="flex min-h-7 flex-1 items-center justify-center rounded-lg border border-border bg-background py-2 text-foreground transition duration-300 data-disabled:disabled-effect data-[state=active]:bg-accent data-[state=active]:text-foreground"
                 key={label as string}
                 value={label as string}
                 disabled={disabled ?? false}
@@ -32,7 +32,7 @@ export function Tabs({
           })}
         </List>
       </div>
-      <div className="mt-3 min-h-0 flex-1 rounded-md bg-gray-50 dark:bg-slate-800">
+      <div className="mt-3 min-h-0 flex-1 rounded-md bg-background">
         {React.Children.map(children, (child, i) => {
           if (!React.isValidElement(child)) return;
           const { label } = child.props as TabContentProps;

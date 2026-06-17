@@ -34,11 +34,9 @@ const MigrationOverlay = () => {
   if (!status) return null;
   return (
     <div className="absolute inset-0 z-20 flex items-center justify-center">
-      <div className="rounded-lg bg-white/90 px-6 py-4 text-sm text-gray-900 shadow-lg dark:bg-slate-900/90 dark:text-slate-50">
+      <div className="rounded-lg bg-card/90 px-6 py-4 text-sm text-foreground shadow-lg">
         <div className="font-medium">Upgrading local database…</div>
-        <div className="text-gray-700 dark:text-slate-200">
-          {PHASE_LABEL[status.phase]}
-        </div>
+        <div className="text-foreground">{PHASE_LABEL[status.phase]}</div>
       </div>
     </div>
   );
@@ -92,7 +90,7 @@ export const AppSkeleton: React.FC<PropsWithChildren> = (props) => {
    * fallback so the loading state matches the loaded state. */
   const isEmbedded = !isSSR && getIsEmbedded();
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-slate-700">
+    <div className="flex h-screen overflow-hidden bg-background">
       {!isEmbedded && (
         <ConnectSidebar
           className="animate-pulse"
@@ -104,7 +102,7 @@ export const AppSkeleton: React.FC<PropsWithChildren> = (props) => {
       )}
       <HomeScreen
         containerClassName={
-          isSSR || !isHomeScreen ? "hidden home-screen" : undefined
+          isSSR || !isHomeScreen ? "home-screen hidden" : undefined
         }
         children={props.children ?? null}
       />

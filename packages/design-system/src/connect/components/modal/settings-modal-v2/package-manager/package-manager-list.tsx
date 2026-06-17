@@ -20,8 +20,8 @@ const PackageDetail: React.FC<{ label: string; value: ReactNode }> = ({
 }) => {
   return (
     <div className="flex items-start gap-2 text-sm">
-      <p className="text-gray-700 dark:text-slate-200">{label}:</p>
-      <p className="text-gray-700 dark:text-slate-200">{value}</p>
+      <p className="text-foreground">{label}:</p>
+      <p className="text-foreground">{value}</p>
     </div>
   );
 };
@@ -55,14 +55,14 @@ export const PackageManagerListItem = (props: {
     id: "install",
     label: "Install",
     icon: <Icon name="DownloadFile" />,
-    className: "text-gray-900 dark:text-slate-100",
+    className: "text-foreground",
   } as const;
 
   const uninstallDropdownItem = {
     id: "uninstall",
     label: "Uninstall",
     icon: <Icon name="Trash" />,
-    className: "text-red-900 dark:text-red-400",
+    className: "text-destructive",
   } as const;
 
   function getDropdownItems() {
@@ -78,12 +78,12 @@ export const PackageManagerListItem = (props: {
   return (
     <li
       className={twMerge(
-        "relative flex flex-col items-start rounded-md border border-gray-200 bg-gray-50 p-3 text-sm/5 shadow-sm dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100",
+        "relative flex flex-col items-start rounded-md border border-border bg-background p-3 text-sm/5 shadow-sm",
         className,
       )}
     >
       <div className="flex flex-wrap items-center gap-2 pr-8">
-        <h3 className="font-semibold text-gray-900 dark:text-slate-50">
+        <h3 className="font-semibold text-foreground">
           {registryPackage.name}
         </h3>
         {canPickVersion && hasVersionMetadata ? (
@@ -94,7 +94,7 @@ export const PackageManagerListItem = (props: {
             onChange={setSelected}
           />
         ) : registryPackage.version ? (
-          <span className="text-xs font-normal text-gray-500 dark:text-slate-400">
+          <span className="text-xs font-normal text-muted-foreground">
             v{registryPackage.version}
           </span>
         ) : null}
@@ -156,7 +156,7 @@ export const PackageManagerListItem = (props: {
           }}
         >
           <Icon
-            className="text-gray-700 group-hover:text-gray-900 dark:text-slate-200 dark:group-hover:text-slate-50"
+            className="text-foreground group-hover:hover-effect"
             name="VerticalDots"
           />
         </button>
@@ -327,34 +327,30 @@ const PackageSection: React.FC<{
 
   return (
     <section className="mb-6">
-      <h3 className="sticky top-0 z-10 mb-3 border-b border-gray-200 bg-gray-50 text-gray-900 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100">
+      <h3 className="sticky top-0 z-10 mb-3 border-b border-border bg-background text-foreground">
         <button
           type="button"
           onClick={toggle}
           aria-expanded={!collapsed}
           aria-controls={contentId}
-          className="flex w-full items-center gap-2 pb-2 text-left text-base font-semibold text-gray-900 hover:text-gray-700 dark:text-slate-100 dark:hover:text-slate-200"
+          className="flex w-full items-center gap-2 pb-2 text-left text-base font-semibold text-foreground hover:hover-effect"
         >
           <Icon
             name="ChevronDown"
             size={16}
             className={twMerge(
-              "shrink-0 text-gray-700 transition-transform dark:text-slate-200",
+              "shrink-0 text-foreground transition-transform",
               collapsed && "-rotate-90",
             )}
           />
           <span>{title}</span>
-          <span className="text-xs font-medium text-gray-700 dark:text-slate-200">
-            {count}
-          </span>
+          <span className="text-xs font-medium text-foreground">{count}</span>
         </button>
       </h3>
       {!collapsed && (
         <div id={contentId}>
           {isEmpty ? (
-            <p className="text-sm text-gray-700 dark:text-slate-200">
-              {emptyText}
-            </p>
+            <p className="text-sm text-foreground">{emptyText}</p>
           ) : (
             <div className="flex flex-col gap-4">{children}</div>
           )}
@@ -371,9 +367,9 @@ const PackageSubSection: React.FC<{
 }> = ({ title, count, children }) => {
   return (
     <div>
-      <h4 className="mb-2 flex items-baseline gap-2 text-xs font-semibold tracking-wide text-gray-700 uppercase dark:text-slate-200">
+      <h4 className="mb-2 flex items-baseline gap-2 text-xs font-semibold tracking-wide text-foreground uppercase">
         <span>{title}</span>
-        <span className="font-medium tracking-normal text-gray-500 normal-case dark:text-slate-400">
+        <span className="font-medium tracking-normal text-muted-foreground normal-case">
           ({count})
         </span>
       </h4>

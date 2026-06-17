@@ -123,7 +123,7 @@ export function FileItem(props: Props) {
     <div className="relative">
       {icon}
       {isReadMode && syncStatus && (
-        <div className="absolute right-0 bottom-[-2px] size-3 rounded-full bg-gray-50 dark:bg-slate-800">
+        <div className="absolute right-0 bottom-[-2px] size-3 rounded-full bg-background">
           <div className="absolute top-[-2px] left-[-2px]">
             <SyncStatusIcon
               overrideSyncIcons={{ SUCCESS: "CheckCircleFill" }}
@@ -136,7 +136,7 @@ export function FileItem(props: Props) {
   );
 
   const containerStyles = twMerge(
-    "group flex h-12 cursor-pointer items-center rounded-lg bg-gray-200 px-2 text-gray-700 select-none hover:text-gray-800 dark:bg-slate-600 dark:text-slate-100 dark:hover:text-slate-100",
+    "group flex h-12 cursor-pointer items-center rounded-lg bg-muted px-2 text-foreground select-none hover:hover-effect",
     isDragging ? "opacity-60" : "",
     className,
   );
@@ -144,10 +144,10 @@ export function FileItem(props: Props) {
   const content = isReadMode ? (
     <div className="flex w-52 items-center justify-between">
       <div className="mr-2 truncate group-hover:mr-0">
-        <div className="max-h-6 truncate text-sm font-medium text-gray-700 group-hover:text-gray-800 dark:text-slate-200 dark:group-hover:text-slate-100">
+        <div className="max-h-6 truncate text-sm font-medium text-foreground group-hover:hover-effect">
           {fileNode.name}
         </div>
-        <div className="max-h-6 truncate text-xs font-medium text-gray-700 group-hover:text-gray-800 dark:text-slate-200 dark:group-hover:text-slate-100">
+        <div className="max-h-6 truncate text-xs font-medium text-muted-foreground group-hover:hover-effect">
           {fileNode.documentType}
         </div>
       </div>
@@ -168,10 +168,7 @@ export function FileItem(props: Props) {
               setIsDropdownMenuOpen(true);
             }}
           >
-            <Icon
-              className="text-gray-700 dark:text-slate-200"
-              name="VerticalDots"
-            />
+            <Icon className="text-foreground" name="VerticalDots" />
           </button>
         </ConnectDropdownMenu>
       ) : null}
@@ -203,7 +200,7 @@ export function FileItem(props: Props) {
 
 function DefaultFileIcon() {
   return (
-    <div className="text-white dark:text-slate-800">
+    <div className="text-primary-foreground">
       <svg
         width="32"
         height="40"

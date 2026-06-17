@@ -10,16 +10,16 @@ export type EditorUndoRedoButtonsProps = {
 export function EditorUndoRedoButtons(props: EditorUndoRedoButtonsProps) {
   const { canUndo, canRedo, undo, redo } = props;
   const buttonStyles =
-    "w-8 h-8 rounded-lg flex justify-center items-center rounded border border-gray-200 bg-gray-50 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100";
+    "w-8 h-8 rounded-lg flex justify-center items-center rounded border border-border bg-background";
   return (
-    <div className="flex gap-x-2 text-gray-500 dark:text-slate-400">
+    <div className="flex gap-x-2 text-muted-foreground">
       <button className={buttonStyles} disabled={!canUndo} onClick={undo}>
         <Icon
           className={twMerge(
             "-scale-x-100",
             canUndo
-              ? "text-gray-900 active:opacity-50 dark:text-slate-50"
-              : "text-gray-500 dark:text-slate-400",
+              ? "text-foreground active:active-effect"
+              : "text-muted-foreground",
           )}
           name="RedoArrow"
           size={18}
@@ -29,8 +29,8 @@ export function EditorUndoRedoButtons(props: EditorUndoRedoButtonsProps) {
         <Icon
           className={twMerge(
             canRedo
-              ? "text-gray-900 active:opacity-50 dark:text-slate-50"
-              : "text-gray-500 dark:text-slate-400",
+              ? "text-foreground active:active-effect"
+              : "text-muted-foreground",
           )}
           name="RedoArrow"
           size={18}

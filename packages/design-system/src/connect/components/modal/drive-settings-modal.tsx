@@ -83,16 +83,14 @@ export function DriveSettingsModal(props: DriveSettingsModalProps) {
       <div
         {...containerProps}
         className={twMerge(
-          "max-w-[408px] rounded-2xl bg-gray-50 p-6 dark:bg-slate-800",
+          "max-w-[408px] rounded-2xl bg-background p-6",
           containerProps?.className,
         )}
       >
         <div className="flex justify-between">
-          <h1 className="text-xl font-bold text-gray-900 dark:text-slate-50">
-            Drive settings
-          </h1>
+          <h1 className="text-xl font-bold text-foreground">Drive settings</h1>
           <button
-            className="flex size-8 items-center justify-center rounded-md bg-gray-100 text-gray-500 outline-none hover:text-gray-900 dark:bg-slate-700 dark:text-slate-400 dark:hover:text-slate-50"
+            className="flex size-8 items-center justify-center rounded-md bg-muted text-muted-foreground outline-none hover:hover-effect"
             onClick={handleCancel}
             tabIndex={-1}
           >

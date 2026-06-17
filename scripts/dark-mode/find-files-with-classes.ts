@@ -29,6 +29,8 @@ const defaultIgnoredDirs = [
   "test",
   "flaky",
   "scripts",
+  ".json",
+  "packages/codegen/src/templates/boilerplate/AGENTS.md.ts",
 ] as const;
 
 export const findFilesWithClasses = async (

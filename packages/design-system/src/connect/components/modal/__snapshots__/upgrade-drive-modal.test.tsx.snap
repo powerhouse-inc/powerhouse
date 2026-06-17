@@ -4,7 +4,7 @@ exports[`UpgradeDriveModal Component > should match snapshot 1`] = `
 <div
   aria-describedby="radix-_r_2_"
   aria-labelledby="radix-_r_1_"
-  class="overflow-hidden rounded-3xl bg-gray-50 data-[state=closed]:animate-zoom-out data-[state=open]:animate-zoom-in dark:bg-slate-700"
+  class="overflow-hidden rounded-3xl bg-background data-[state=closed]:animate-zoom-out data-[state=open]:animate-zoom-in"
   data-state="open"
   data-testid="upgrade-drive-modal"
   id="radix-_r_0_"
@@ -27,15 +27,15 @@ exports[`UpgradeDriveModal Component > should match snapshot 1`] = `
     </p>
   </span>
   <div
-    class="w-100 bg-gray-50 p-6 text-gray-300 dark:bg-slate-800 dark:text-slate-200"
+    class="w-100 bg-background p-6 text-foreground"
   >
     <div
-      class="pb-2 text-2xl font-bold text-gray-900 dark:text-slate-100"
+      class="pb-2 text-2xl font-bold text-foreground"
     >
       Upgrade to cloud drive
     </div>
     <div
-      class="my-6 rounded-md bg-gray-50 p-4 text-center text-gray-900 dark:bg-slate-800 dark:text-slate-100"
+      class="my-6 rounded-md bg-background p-4 text-center text-foreground"
     >
       You are moving files from a private to a shared drive. These files will become accessible to others in the shared drive.Do you want to proceed?
     </div>
@@ -43,12 +43,12 @@ exports[`UpgradeDriveModal Component > should match snapshot 1`] = `
       class="mt-8 flex justify-between gap-3"
     >
       <button
-        class="min-h-12 min-w-35.5 flex-1 transform place-items-center rounded-xl px-6 py-3 text-base font-semibold transition-all outline-none hover:scale-105 active:opacity-75 disabled:cursor-not-allowed disabled:hover:scale-none bg-gray-400 text-gray-50 dark:bg-slate-400 dark:text-slate-900"
+        class="min-h-12 min-w-35.5 flex-1 transform place-items-center rounded-xl px-6 py-3 text-base font-semibold transition-all outline-none hover:hover-effect active:active-effect disabled:disabled-effect bg-muted text-muted-foreground"
       >
         Cancel
       </button>
       <button
-        class="min-h-12 min-w-35.5 flex-1 transform place-items-center rounded-xl px-6 py-3 text-base font-semibold transition-all outline-none hover:scale-105 active:opacity-75 disabled:cursor-not-allowed disabled:hover:scale-none bg-gray-800 text-gray-50 dark:bg-slate-100 dark:text-slate-900"
+        class="min-h-12 min-w-35.5 flex-1 transform place-items-center rounded-xl px-6 py-3 text-base font-semibold transition-all outline-none hover:hover-effect active:active-effect disabled:disabled-effect bg-primary text-primary-foreground"
       >
         Continue
       </button>

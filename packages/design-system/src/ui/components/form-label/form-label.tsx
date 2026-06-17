@@ -25,15 +25,12 @@ export const FormLabel: React.FC<FormLabelProps> = ({
   const classes = twMerge(
     "inline-flex items-center text-sm font-medium",
     inline ? "leading-[22px]" : "leading-4",
-    `text-gray-900 dark:text-slate-100 ${inline ? "" : ""}`,
-    hasError && "group-hover:text-red-900 dark:group-hover:text-red-100",
-    hasError && inline && "text-red-800 dark:text-red-100",
-    hasError && !inline && "text-red-900 dark:text-red-400",
-    disabled &&
-      `cursor-not-allowed text-gray-700 dark:text-slate-300 ${inline ? "" : ""}`,
-    inline
-      ? !disabled && "group-hover:text-gray-900 dark:group-hover:text-slate-50"
-      : "mb-[3px]",
+    "text-foreground",
+    hasError && "group-hover:hover-effect",
+    hasError && inline && "text-destructive",
+    hasError && !inline && "text-destructive",
+    disabled && "cursor-not-allowed text-foreground",
+    inline ? !disabled && "group-hover:hover-effect" : "mb-[3px]",
     className,
   );
 
@@ -52,9 +49,8 @@ export const FormLabel: React.FC<FormLabelProps> = ({
       {required && (
         <span
           className={twMerge(
-            "ml-1 text-gray-900 group-hover:text-gray-900 dark:text-slate-100 dark:group-hover:text-slate-50",
-            hasError &&
-              `${inline ? "text-red-800 dark:text-red-100" : "text-red-900 dark:text-red-100"} group-hover:text-red-900`,
+            "ml-1 text-foreground group-hover:hover-effect",
+            hasError && "text-destructive group-hover:hover-effect",
           )}
         >
           *
@@ -68,8 +64,8 @@ export const FormLabel: React.FC<FormLabelProps> = ({
               name="CircleInfo"
               size={16}
               className={twMerge(
-                "ml-1 cursor-pointer text-gray-700 hover:text-gray-500 dark:text-slate-200 dark:hover:text-slate-400",
-                disabled && "text-gray-500 dark:text-slate-400",
+                "ml-1 cursor-pointer text-foreground hover:hover-effect",
+                disabled && "text-muted-foreground",
               )}
             />
           </Tooltip>

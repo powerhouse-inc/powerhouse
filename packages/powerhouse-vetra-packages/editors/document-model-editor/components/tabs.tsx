@@ -11,7 +11,7 @@ const TabsList = React.forwardRef<
   <TabsPrimitive.List
     ref={ref}
     className={twMerge(
-      "flex items-center justify-center rounded-xl bg-gray-50 p-1 shadow-inner dark:bg-slate-800",
+      "flex items-center justify-center rounded-xl bg-background p-1 shadow-inner",
       className,
     )}
     {...props}
@@ -26,7 +26,7 @@ const TabsTrigger = React.forwardRef<
   <TabsPrimitive.Trigger
     ref={ref}
     className={twMerge(
-      "flex w-full items-center justify-center rounded-lg p-1 text-sm whitespace-nowrap text-gray-500 transition-all disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-gray-50 data-[state=active]:text-gray-800 data-[state=active]:shadow-tab dark:text-slate-400",
+      "flex w-full items-center justify-center rounded-lg p-1 text-sm whitespace-nowrap text-muted-foreground transition-all disabled:disabled-effect data-[state=active]:bg-accent data-[state=active]:text-foreground data-[state=active]:shadow-tab",
       className,
     )}
     {...props}

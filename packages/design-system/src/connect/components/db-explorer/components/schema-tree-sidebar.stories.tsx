@@ -15,7 +15,7 @@ const meta: Meta<typeof SchemaTreeSidebar> = {
   },
   decorators: [
     (Story) => (
-      <div className="w-64 border border-gray-200 bg-gray-50 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100">
+      <div className="w-64 border border-border bg-background">
         <Story />
       </div>
     ),

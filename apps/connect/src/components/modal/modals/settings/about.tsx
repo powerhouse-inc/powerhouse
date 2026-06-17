@@ -36,15 +36,13 @@ export const About: React.FC = () => {
       />
       <AppGitHash />
       <ConnectedDrives />
-      <div className="bg-gray-50 p-3 dark:bg-slate-800">
-        <h2 className="mb-2 font-semibold text-gray-700 dark:text-slate-200">
-          Inspector
-        </h2>
-        <p className="mb-3 text-sm font-normal text-gray-700 dark:text-slate-200">
+      <div className="bg-background p-3">
+        <h2 className="mb-2 font-semibold text-foreground">Inspector</h2>
+        <p className="mb-3 text-sm font-normal text-foreground">
           Explore the local database and sync state for debugging.
         </p>
         <button
-          className="flex items-center gap-x-2 rounded-md border border-gray-300 bg-transparent px-3 py-1 text-sm font-medium text-gray-900 transition-colors hover:bg-gray-100 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100 dark:hover:bg-slate-700"
+          className="flex items-center gap-x-2 rounded-md border border-border bg-transparent px-3 py-1 text-sm font-medium text-foreground transition-colors hover:hover-effect"
           onClick={onOpenInspector}
           type="button"
         >
@@ -61,7 +59,7 @@ function AppGitHash() {
   const url = getGitUrl();
   const label = shortGitSha(sha);
   return (
-    <div className="bg-gray-50 p-3 text-sm dark:bg-slate-800">
+    <div className="bg-background p-3 text-sm">
       <span className="font-semibold">Git hash: </span>
       {url ? (
         <a
@@ -97,12 +95,10 @@ function ConnectedDrives() {
   );
 
   return (
-    <div className="my-4 bg-gray-50 p-3 dark:bg-slate-800">
-      <h2 className="mb-2 font-semibold text-gray-700 dark:text-slate-200">
-        Connected drives
-      </h2>
+    <div className="my-4 bg-background p-3">
+      <h2 className="mb-2 font-semibold text-foreground">Connected drives</h2>
       {remoteDrives.length === 0 ? (
-        <p className="text-sm font-normal text-gray-700 dark:text-slate-200">
+        <p className="text-sm font-normal text-foreground">
           No connected remote drives.
         </p>
       ) : (
@@ -121,27 +117,23 @@ function DriveAboutEntry({ drive }: { drive: DocumentDriveDocument }) {
   const name = drive.state.global.name || drive.header.name;
 
   return (
-    <li className="text-sm text-gray-700 dark:text-slate-200">
+    <li className="text-sm text-foreground">
       <div className="flex items-baseline gap-2">
         <span className="font-medium">{name}</span>
         {info.status === "ready" && (
-          <span className="text-xs text-gray-500 dark:text-slate-400">
-            {info.host}
-          </span>
+          <span className="text-xs text-muted-foreground">{info.host}</span>
         )}
       </div>
       {info.status === "loading" && (
-        <div className="mt-1 text-xs text-gray-400 dark:text-slate-500">
-          Loading…
-        </div>
+        <div className="mt-1 text-xs text-muted-foreground">Loading…</div>
       )}
       {info.status === "error" && (
-        <div className="mt-1 text-xs text-red-600 dark:text-red-100">
+        <div className="mt-1 text-xs text-destructive">
           Could not load system info
         </div>
       )}
       {info.status === "ready" && (
-        <div className="mt-1 text-xs text-gray-700 dark:text-slate-200">
+        <div className="mt-1 text-xs text-foreground">
           <div>
             <span className="font-medium">Version:</span> {info.version}
           </div>
@@ -166,7 +158,7 @@ function DriveAboutEntry({ drive }: { drive: DocumentDriveDocument }) {
         </div>
       )}
       {info.status === "local" && (
-        <div className="mt-1 text-xs text-gray-400 dark:text-slate-500">
+        <div className="mt-1 text-xs text-muted-foreground">
           Local drive — N/A
         </div>
       )}

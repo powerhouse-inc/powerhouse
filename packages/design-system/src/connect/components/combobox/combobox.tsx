@@ -48,7 +48,7 @@ function MenuList(
       {props.children}
       {hasAddItemButton ? (
         <button
-          className="w-full px-2 py-3 hover:bg-gray-50 dark:hover:bg-slate-800"
+          className="w-full px-2 py-3 hover:hover-effect"
           onClick={onClick}
         >
           {label}
@@ -75,7 +75,7 @@ export function Combobox(props: Props) {
       }}
       classNames={{
         menuList: () =>
-          "scrollbar-thin scrollbar-track-transparent scrollbar-thumb-rounded-md scrollbar-thumb-gray-300 dark:scrollbar-thumb-slate-600",
+          "scrollbar-thin scrollbar-track-transparent scrollbar-thumb-rounded-md scrollbar-thumb-border",
       }}
       styles={{
         dropdownIndicator: () => {
@@ -109,7 +109,7 @@ export function Combobox(props: Props) {
             color: invalid
               ? dark
                 ? "var(--color-red-400)"
-                : "var(--color-red-800)"
+                : "var(--color-red-900)"
               : dark
                 ? "var(--color-slate-100)"
                 : "var(--color-gray-500)",

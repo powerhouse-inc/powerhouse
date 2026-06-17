@@ -15,19 +15,19 @@ describe("FormMessage", () => {
   it("applies correct classes for error type", () => {
     render(<FormMessage type="error">Error message</FormMessage>);
     const message = screen.getByText("Error message");
-    expect(message).toHaveClass("text-red-900 dark:text-red-400");
+    expect(message).toHaveClass("text-destructive");
   });
 
   it("applies correct classes for info type", () => {
     render(<FormMessage type="info">Info message</FormMessage>);
     const message = screen.getByText("Info message");
-    expect(message).toHaveClass("text-blue-900 dark:text-blue-100");
+    expect(message).toHaveClass("text-info");
   });
 
   it("applies correct classes for warning type", () => {
     render(<FormMessage type="warning">Warning message</FormMessage>);
     const message = screen.getByText("Warning message");
-    expect(message).toHaveClass("text-yellow-900 dark:text-yellow-100");
+    expect(message).toHaveClass("text-warning");
   });
 
   it("renders with custom props", () => {

@@ -74,7 +74,7 @@ export function FolderItem(props: {
 
   const content =
     isReadMode || !isAllowedToCreateDocuments ? (
-      <div className="ml-3 max-h-6 truncate font-medium text-gray-700 group-hover:text-gray-800 dark:text-slate-200 dark:group-hover:text-slate-100">
+      <div className="ml-3 max-h-6 truncate font-medium text-foreground group-hover:hover-effect">
         {folderNode.name}
       </div>
     ) : (
@@ -87,24 +87,20 @@ export function FolderItem(props: {
     );
 
   const containerStyles = twMerge(
-    "group flex h-12 cursor-pointer items-center rounded-lg bg-gray-200 px-2 select-none dark:bg-slate-600 dark:text-slate-100",
-    isDragging
-      ? "opacity-60"
-      : isDropTarget
-        ? "bg-blue-100 dark:bg-blue-800"
-        : "",
+    "group flex h-12 cursor-pointer items-center rounded-lg bg-muted px-2 select-none",
+    isDragging ? "opacity-60" : isDropTarget ? "bg-info/10" : "",
     className,
   );
 
   return (
     <div
-      className="relative w-64"
+      className="relative w-64 hover:hover-effect"
       onClick={isReadMode ? () => setSelectedNode(folderNode) : undefined}
     >
       <div {...dragProps} {...dropProps} className={containerStyles}>
         <div className="flex items-center overflow-hidden">
           <div className="p-1">
-            <div className="relative text-gray-700 dark:text-slate-200">
+            <div className="relative text-foreground">
               <Icon name="FolderClose" size={24} />
             </div>
           </div>
@@ -127,10 +123,7 @@ export function FolderItem(props: {
                 setIsDropdownMenuOpen(true);
               }}
             >
-              <Icon
-                className="text-gray-700 dark:text-slate-200"
-                name="VerticalDots"
-              />
+              <Icon className="text-foreground" name="VerticalDots" />
             </button>
           </ConnectDropdownMenu>
         ) : null}

@@ -35,7 +35,7 @@ export const Default: Story = {
         id: "delete",
         label: "Delete",
         icon: <Icon name="Trash" />,
-        className: "text-red-900 dark:text-red-400",
+        className: "text-destructive",
       },
     ],
   },

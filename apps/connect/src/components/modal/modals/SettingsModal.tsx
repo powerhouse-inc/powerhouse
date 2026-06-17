@@ -33,15 +33,8 @@ export const SettingsModal: React.FC = () => {
       },
       {
         id: "danger-zone",
-        icon: (
-          <TriangleAlert
-            {...iconProps}
-            className="text-red-900 dark:text-red-400"
-          />
-        ),
-        label: (
-          <span className="text-red-900 dark:text-red-400">Danger Zone</span>
-        ),
+        icon: <TriangleAlert {...iconProps} className="text-destructive" />,
+        label: <span className="text-destructive">Danger Zone</span>,
         content: () => <DangerZone />,
       },
       {

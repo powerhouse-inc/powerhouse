@@ -30,16 +30,16 @@ export const PowerhouseButton = forwardRef(function PowerhouseButton(
 
   const colorStyles = {
     light:
-      "bg-gray-200 text-gray-700 hover:text-gray-800 hover:border-gray-300 active:border-gray-100 active:text-gray-700 disabled:text-gray-400 dark:bg-slate-600 dark:hover:border-slate-500 dark:active:border-slate-500 dark:disabled:text-slate-500 dark:hover:bg-slate-600 dark:active:bg-slate-600 dark:text-slate-100 dark:hover:text-slate-100 dark:active:text-slate-100",
-    dark: "bg-gray-800 text-gray-50 hover:bg-gray-800 active:border-gray-700 disabled:bg-gray-300 disabled:text-gray-100 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-100 dark:active:border-slate-200 dark:disabled:bg-slate-600 dark:disabled:text-slate-100",
-    red: "bg-red-900 text-gray-50 hover:opacity-80 active:border-red-800 disabled:text-red-400 disabled:opacity-100 dark:bg-red-50 dark:text-slate-900 dark:active:border-red-100 dark:disabled:text-red-100",
-    blue: "bg-blue-900 text-gray-50 hover:opacity-80 active:border-blue-800 disabled:text-blue-400 disabled:opacity-100 dark:bg-blue-50 dark:text-slate-900 dark:active:border-blue-100 dark:disabled:text-blue-100",
+      "bg-secondary text-foreground hover:hover-effect active:active-effect disabled:disabled-effect",
+    dark: "bg-primary text-primary-foreground hover:hover-effect active:active-effect disabled:disabled-effect",
+    red: "bg-destructive text-destructive-foreground hover:hover-effect active:active-effect disabled:disabled-effect disabled:opacity-100",
+    blue: "bg-info text-info-foreground hover:hover-effect active:active-effect disabled:disabled-effect disabled:opacity-100",
   };
 
   const colorAndSizeStyle = twJoin(colorStyles[color], sizeStyles[size]);
 
   const finalClassName = twMerge(
-    "flex items-center justify-center gap-2 border border-none transition outline-none disabled:cursor-not-allowed",
+    "flex items-center justify-center gap-2 border border-none transition outline-none disabled:disabled-effect",
     colorAndSizeStyle,
     className,
   );

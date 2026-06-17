@@ -18,7 +18,7 @@ export function Files() {
 
   return (
     <div>
-      <h3 className="mb-2 text-sm font-semibold text-gray-600">Documents</h3>
+      <h3 className="mb-2 text-sm font-semibold text-muted-foreground">Documents</h3>
       <div className="flex flex-wrap gap-4">
         {fileNodes.map((fileNode) => (
           <FileItem key={fileNode.id} fileNode={fileNode} />

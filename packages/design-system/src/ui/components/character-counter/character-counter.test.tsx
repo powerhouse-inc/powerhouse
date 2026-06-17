@@ -18,39 +18,25 @@ describe("CharacterCounter", () => {
 
   it("should show normal state when under 90% of max length", () => {
     render(<CharacterCounter maxLength={10} value="Hello" />);
-    expect(screen.getByText("5")).toHaveClass(
-      "text-gray-500 dark:text-slate-400",
-    );
-    expect(screen.getByText("/10")).toHaveClass(
-      "text-gray-300 dark:text-slate-600",
-    );
+    expect(screen.getByText("5")).toHaveClass("text-muted-foreground");
+    expect(screen.getByText("/10")).toHaveClass("text-primary-foreground");
   });
 
   it("should show warning state when between 90% and 100% of max length", () => {
     render(<CharacterCounter maxLength={10} value="Hello Wor" />);
-    expect(screen.getByText("9")).toHaveClass(
-      "text-yellow-900 dark:text-yellow-100",
-    );
-    expect(screen.getByText("/10")).toHaveClass(
-      "text-yellow-400 dark:text-yellow-100",
-    );
+    expect(screen.getByText("9")).toHaveClass("text-warning");
+    expect(screen.getByText("/10")).toHaveClass("text-warning");
   });
 
   it("should show error state when at or exceeding max length", () => {
     render(<CharacterCounter maxLength={10} value="Hello World" />);
-    expect(screen.getByText("11")).toHaveClass(
-      "text-red-900 dark:text-red-400",
-    );
-    expect(screen.getByText("/10")).toHaveClass(
-      "text-red-400 dark:text-red-100",
-    );
+    expect(screen.getByText("11")).toHaveClass("text-destructive");
+    expect(screen.getByText("/10")).toHaveClass("text-destructive");
   });
 
   it("should handle empty string value", () => {
     render(<CharacterCounter maxLength={10} value="" />);
     expect(screen.getByText("0")).toBeInTheDocument();
-    expect(screen.getByText("0")).toHaveClass(
-      "text-gray-500 dark:text-slate-400",
-    );
+    expect(screen.getByText("0")).toHaveClass("text-muted-foreground");
   });
 });

@@ -13,16 +13,14 @@ export function DriveApp(props: DriveAppProps) {
     <div
       {...divProps}
       className={twMerge(
-        "flex items-center gap-2 rounded-md border border-gray-200 bg-gray-50 p-3 text-gray-900 dark:border-slate-500 dark:bg-slate-600 dark:text-slate-100",
+        "flex items-center gap-2 rounded-md border border-border bg-background p-3 text-foreground",
         className,
       )}
     >
       <Icon name="Server" />
       <div>
         <p>Drive Generic Explorer</p>
-        <p className="text-xs text-gray-700 dark:text-slate-200">
-          Built by Powerhouse
-        </p>
+        <p className="text-xs text-foreground">Built by Powerhouse</p>
       </div>
     </div>
   );

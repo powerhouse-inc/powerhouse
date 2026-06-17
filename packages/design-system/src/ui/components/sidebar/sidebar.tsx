@@ -214,7 +214,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       ref={sidebarRef}
       style={{ width: "min(100%, var(--sidebar-width))" }}
       className={twMerge(
-        "group peer relative flex h-svh max-h-screen flex-col bg-gray-50 shadow-lg transition-[width] duration-75 ease-linear dark:bg-slate-600",
+        "group peer relative flex h-svh max-h-screen flex-col bg-sidebar text-sidebar-foreground shadow-lg transition-[width] duration-75 ease-linear",
         isResizing && "transition-none",
         className,
       )}
@@ -237,7 +237,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <SidebarSearch showStatusFilter={showStatusFilter} />
           )}
           {extraFooterContent && (
-            <div className="w-full border-t border-gray-300 p-2 dark:border-slate-800">
+            <div className="w-full border-t border-sidebar-border p-2">
               {extraFooterContent}
             </div>
           )}
@@ -251,15 +251,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
         >
           <div
             className={twMerge(
-              "relative h-full w-px translate-x-[5px] transition-colors group-hover/sidebar-resizer:bg-gray-500 dark:group-hover/sidebar-resizer:bg-slate-600",
-              isResizing && "cursor-default bg-blue-500",
-              !isSidebarOpen && "bg-gray-300 dark:bg-slate-600",
+              "relative h-full w-px translate-x-[5px] transition-colors group-hover/sidebar-resizer:hover-effect",
+              isResizing && "cursor-default bg-info",
+              !isSidebarOpen && "bg-secondary",
             )}
           >
             <button
               type="button"
               className={twMerge(
-                "absolute top-14 right-0 size-4 translate-x-1/2 rounded-full bg-gray-500 dark:bg-slate-900",
+                "absolute top-14 right-0 size-4 translate-x-1/2 rounded-full bg-muted-foreground",
                 "opacity-0 transition-opacity group-hover/sidebar-resizer:opacity-100",
               )}
               onClick={handleToggleSidebar}
@@ -268,7 +268,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 name="Caret"
                 size={16}
                 className={twMerge(
-                  "min-w-4 text-gray-50 dark:text-slate-500",
+                  "min-w-4 text-foreground",
                   isSidebarOpen && "-rotate-180",
                 )}
               />

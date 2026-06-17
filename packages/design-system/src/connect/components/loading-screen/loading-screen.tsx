@@ -18,7 +18,7 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = (props) => {
   return (
     <div
       className={twMerge(
-        "absolute inset-0 z-10 flex items-center justify-center bg-gray-50 dark:bg-slate-800",
+        "absolute inset-0 z-10 flex items-center justify-center bg-background",
         !showLoadingScreen && "hidden",
         className,
       )}
