@@ -6,9 +6,9 @@ export const customSubgraphResolversTemplate = (v: {
   camelCaseName: string;
 }) =>
   ts`
-import { type ISubgraph } from "${REACTOR_API_PACKAGE}";
+import { type BaseSubgraph } from "${REACTOR_API_PACKAGE}";
 
-export const getResolvers = (subgraph: ISubgraph): Record<string, unknown> => {
+export const getResolvers = (subgraph: BaseSubgraph): Record<string, unknown> => {
   const reactor = subgraph.reactorClient;
 
   return ({

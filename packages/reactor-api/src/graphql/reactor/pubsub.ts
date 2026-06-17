@@ -38,6 +38,8 @@ export interface JobChangesPayload {
     result: NonNullable<unknown>;
   };
   jobId: string;
+  /** Document id used to authorize the subscription; not in the GraphQL event. */
+  documentId: string;
 }
 
 let globalDocumentUnsubscribe: (() => void) | null = null;
@@ -106,6 +108,7 @@ export function ensureJobSubscription(
           result: jobInfo.result ?? {},
         },
         jobId,
+        documentId: jobInfo.documentId,
       };
 
       void pubSub.publish(SUBSCRIPTION_TRIGGERS.JOB_CHANGES, payload);

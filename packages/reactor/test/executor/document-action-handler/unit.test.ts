@@ -1,7 +1,7 @@
 import type { Action, PHDocument } from "@powerhousedao/shared/document-model";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { IOperationIndexTxn } from "../../../src/cache/operation-index-types.js";
-import { driveCollectionId } from "../../../src/cache/operation-index-types.js";
+import { DriveCollectionId } from "../../../src/cache/operation-index-types.js";
 import type { IWriteCache } from "../../../src/cache/write/interfaces.js";
 import { DEFAULT_DRIVE_CONTAINER_TYPES } from "../../../src/core/drive-container-types.js";
 import { DocumentActionHandler } from "../../../src/executor/document-action-handler.js";
@@ -157,7 +157,7 @@ describe("DocumentActionHandler", () => {
       expect(harness.writeCache.putState).toHaveBeenCalledTimes(1);
       expect(harness.indexTxn.write).toHaveBeenCalledTimes(1);
       expect(harness.indexTxn.addToCollection).toHaveBeenCalledWith(
-        driveCollectionId("main", "drive-1"),
+        DriveCollectionId.forDrive("drive-1").key,
         "doc-2",
       );
       expect(harness.collectionMembershipCache.invalidate).toHaveBeenCalledWith(
@@ -192,7 +192,7 @@ describe("DocumentActionHandler", () => {
 
       expect(result.success).toBe(true);
       expect(harness.indexTxn.addToCollection).toHaveBeenCalledWith(
-        driveCollectionId("main", "drive-rd"),
+        DriveCollectionId.forDrive("drive-rd").key,
         "doc-2",
       );
     });
@@ -343,7 +343,7 @@ describe("DocumentActionHandler", () => {
 
       expect(result.success).toBe(true);
       expect(harness.indexTxn.removeFromCollection).toHaveBeenCalledWith(
-        driveCollectionId("main", "drive-1"),
+        DriveCollectionId.forDrive("drive-1").key,
         "doc-2",
       );
       expect(harness.collectionMembershipCache.invalidate).toHaveBeenCalledWith(
@@ -375,7 +375,7 @@ describe("DocumentActionHandler", () => {
 
       expect(result.success).toBe(true);
       expect(harness.indexTxn.removeFromCollection).toHaveBeenCalledWith(
-        driveCollectionId("main", "drive-rd"),
+        DriveCollectionId.forDrive("drive-rd").key,
         "doc-2",
       );
     });

@@ -10,7 +10,7 @@ type VerifiedCredential =
 export interface AuthConfig {
   enabled: boolean;
   admins: string[];
-  skipCredentialVerification?: boolean; // Skip Renown API credential verification (useful for testing)
+  skipCredentialVerification?: boolean; // DANGER: removes identity verification; boot-gated to test/dev
   credentialVerificationCacheTtlMs?: number; // How long successful Renown credential checks are cached; 0 disables caching
 }
 
@@ -138,8 +138,6 @@ export class AuthService {
       throw new Error("Invalid credentials");
     }
 
-    // Verify that the credentials still exist on the Renown API
-    // This can be skipped via config (useful for testing or when Renown API is unavailable)
     if (!this.config.skipCredentialVerification) {
       const credentialExists = await this.verifyCredentialExists(
         user.address,

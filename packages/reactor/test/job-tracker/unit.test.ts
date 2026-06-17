@@ -16,6 +16,7 @@ describe("InMemoryJobTracker", () => {
     it("should register a new job with PENDING status", () => {
       const jobInfo: JobInfo = {
         id: "job-1",
+        documentId: "test-doc",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -31,6 +32,7 @@ describe("InMemoryJobTracker", () => {
     it("should store a copy of the job info", () => {
       const jobInfo: JobInfo = {
         id: "job-1",
+        documentId: "test-doc",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -52,6 +54,7 @@ describe("InMemoryJobTracker", () => {
     it("should update registered job to RUNNING status", () => {
       const jobInfo: JobInfo = {
         id: "job-1",
+        documentId: "test-doc",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -79,6 +82,7 @@ describe("InMemoryJobTracker", () => {
     it("should update job to FAILED status with error", () => {
       const jobInfo: JobInfo = {
         id: "job-1",
+        documentId: "test-doc",
         status: JobStatus.RUNNING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -119,6 +123,7 @@ describe("InMemoryJobTracker", () => {
     it("should return a copy of job info", () => {
       const jobInfo: JobInfo = {
         id: "job-1",
+        documentId: "test-doc",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -141,6 +146,7 @@ describe("InMemoryJobTracker", () => {
     it("should handle PENDING → RUNNING lifecycle", () => {
       const jobInfo: JobInfo = {
         id: "job-1",
+        documentId: "test-doc",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -159,6 +165,7 @@ describe("InMemoryJobTracker", () => {
     it("should handle PENDING → RUNNING → FAILED lifecycle", () => {
       const jobInfo: JobInfo = {
         id: "job-1",
+        documentId: "test-doc",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -185,6 +192,7 @@ describe("InMemoryJobTracker", () => {
     it("should track multiple jobs independently", () => {
       const job1: JobInfo = {
         id: "job-1",
+        documentId: "test-doc",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -193,6 +201,7 @@ describe("InMemoryJobTracker", () => {
 
       const job2: JobInfo = {
         id: "job-2",
+        documentId: "test-doc",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),

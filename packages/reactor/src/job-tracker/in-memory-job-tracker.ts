@@ -110,6 +110,7 @@ export class InMemoryJobTracker implements IJobTracker {
       // Create minimal job entry
       this.jobs.set(jobId, {
         id: jobId,
+        documentId: "",
         status: JobStatus.RUNNING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -130,6 +131,7 @@ export class InMemoryJobTracker implements IJobTracker {
     if (!existing) {
       this.jobs.set(jobId, {
         id: jobId,
+        documentId: job?.documentId ?? "",
         status: JobStatus.FAILED,
         createdAtUtcIso: new Date().toISOString(),
         completedAtUtcIso: new Date().toISOString(),

@@ -50,12 +50,17 @@ import { runMigrations } from "./migrations/index.js";
 import { ImportPackageLoader } from "./packages/import-loader.js";
 import { PackageManager } from "./packages/package-manager.js";
 import { AuthService } from "./services/auth.service.js";
-import type { IAuthorizationService } from "./services/authorization.service.js";
+import type {
+  AuthorizationConfig,
+  IAuthorizationService,
+} from "./services/authorization.service.js";
 import {
   AuthorizationPolicy,
   createAuthorizationService,
 } from "./services/authorization.service.js";
 import { DocumentPermissionService } from "./services/document-permission.service.js";
+import { createGetParentIdsFn } from "./services/get-parent-ids.js";
+import { createMcpRequestAuthorizer } from "./services/mcp-request-authorizer.js";
 import type {
   API,
   IPackageLoader,
@@ -139,6 +144,35 @@ export function assertAuthRequiredForDocumentPermissions(
         "or a documentPermissionService was provided). Enable authentication " +
         "(AUTH_ENABLED=true, or auth.enabled in the config file) or disable " +
         "document permissions.",
+    );
+  }
+}
+
+/**
+ * Refuses SKIP_CREDENTIAL_VERIFICATION at boot outside tests or an explicit
+ * opt-in: it removes the only binding between a token's claimed address and its
+ * signing key. Fail-closed — unset NODE_ENV counts as production.
+ */
+export function assertSkipCredentialVerificationAllowed(
+  authEnabled: boolean,
+  skipCredentialVerification: boolean,
+  env: NodeJS.ProcessEnv,
+): void {
+  if (!authEnabled || !skipCredentialVerification) {
+    return;
+  }
+  const inAutomatedTest = env.VITEST === "true" || env.NODE_ENV === "test";
+  const acknowledged =
+    env.ALLOW_INSECURE_SKIP_CREDENTIAL_VERIFICATION === "true";
+  if (!inAutomatedTest && !acknowledged) {
+    throw new Error(
+      "SKIP_CREDENTIAL_VERIFICATION is set but refused: it disables the live " +
+        "Renown credential check — the only check binding a token's claimed " +
+        "address to the key that signed it — so honoring it allows identity " +
+        "spoofing, including of admins. It is never safe in production. For " +
+        "local or sandbox use, also set " +
+        "ALLOW_INSECURE_SKIP_CREDENTIAL_VERIFICATION=true to acknowledge the " +
+        "risk; automated test runs (VITEST=true or NODE_ENV=test) are exempt.",
     );
   }
 }
@@ -403,7 +437,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   relationalDb: IRelationalDb;
   analyticsStore: IAnalyticsStore;
   documentPermissionService: DocumentPermissionService | undefined;
-  authorizationService: IAuthorizationService;
+  authorizationConfig: AuthorizationConfig;
   attachments: AttachmentBuildResult;
   packages: PackageManager;
   dbClosers: Array<() => Promise<void>>;
@@ -472,6 +506,19 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     authEnabled,
     documentPermissionsRequested,
   );
+  assertSkipCredentialVerificationAllowed(
+    authEnabled,
+    skipCredentialVerification,
+    process.env,
+  );
+  if (authEnabled && skipCredentialVerification) {
+    logger.warn(
+      "SECURITY: SKIP_CREDENTIAL_VERIFICATION is enabled — Renown credential " +
+        "verification is disabled and a bearer token's claimed address is NOT " +
+        "cryptographically bound to its signing key. Identity is unverifiable; " +
+        "use only in development or test.",
+    );
+  }
 
   // Health check endpoint (registered directly on adapter, before auth)
   httpAdapter.getRoute("/health", () => new Response("OK", { status: 200 }));
@@ -541,19 +588,20 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     logger.info("Document permission service initialized");
   }
 
-  // Authorization service is always present; the policy collapses the prior
-  // dual enforcement paths into one. Document permissions imply authentication
-  // (guaranteed by the boot gate above).
+  // The authorization policy collapses the prior dual enforcement paths into
+  // one. Document permissions imply authentication (guaranteed by the boot
+  // gate above). The service itself is created in _setupAPI, where the
+  // reactor client needed for the parent-document resolver exists.
   const policy = documentPermissionService
     ? AuthorizationPolicy.DOCUMENT_PERMISSIONS
     : authEnabled
       ? AuthorizationPolicy.ADMIN_ONLY
       : AuthorizationPolicy.OPEN;
-  const authorizationService = createAuthorizationService(
-    { admins, defaultProtection, policy },
-    documentPermissionService,
-  );
-  logger.info(`Authorization service initialized (policy: ${policy})`);
+  const authorizationConfig: AuthorizationConfig = {
+    admins,
+    defaultProtection,
+    policy,
+  };
 
   // Initialize attachment service
   const attachmentStoragePath = resolveAttachmentStoragePath(options);
@@ -595,7 +643,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     relationalDb,
     analyticsStore,
     documentPermissionService,
-    authorizationService,
+    authorizationConfig,
     attachments,
     packages,
     dbClosers,
@@ -624,7 +672,7 @@ async function _setupAPI(
   processorApp: ProcessorApp,
   readModels: IReadModel[],
   attachments: AttachmentBuildResult,
-  authorizationService: IAuthorizationService,
+  authorizationConfig: AuthorizationConfig,
   documentModelRegistry?: IDocumentModelRegistry,
   dbClosers: Array<() => Promise<void>> = [],
   reactorDriveClient?: IDriveClient,
@@ -730,6 +778,18 @@ async function _setupAPI(
     logger,
   );
 
+  // Authorization service is always present; created here because the
+  // parent-document resolver used for permission inheritance needs the
+  // reactor client.
+  const authorizationService = createAuthorizationService(
+    authorizationConfig,
+    documentPermissionService,
+    createGetParentIdsFn(reactorClient),
+  );
+  logger.info(
+    `Authorization service initialized (policy: ${authorizationConfig.policy})`,
+  );
+
   // set up subgraph manager
   const coreSubgraphs: SubgraphClass[] = DefaultCoreSubgraphs.slice();
   coreSubgraphs.push(ReactorSubgraph);
@@ -772,7 +832,17 @@ async function _setupAPI(
   );
 
   if (mcpServerEnabled) {
-    await setupMcpServer({ client: reactorClient, syncManager }, httpAdapter);
+    await setupMcpServer(
+      {
+        client: reactorClient,
+        syncManager,
+        authorizeRequest: createMcpRequestAuthorizer(
+          authService,
+          authorizationService,
+        ),
+      },
+      httpAdapter,
+    );
     logger.info(`MCP server available at http://localhost:${port}/mcp`);
   }
 
@@ -895,7 +965,7 @@ export async function initializeAndStartAPI(
     relationalDb,
     analyticsStore,
     documentPermissionService,
-    authorizationService,
+    authorizationConfig,
     attachments,
     packages,
     dbClosers,
@@ -952,7 +1022,7 @@ export async function initializeAndStartAPI(
     processorApp,
     readModels,
     attachments,
-    authorizationService,
+    authorizationConfig,
     documentModelRegistry,
     dbClosers,
     reactorDriveClient,

@@ -142,13 +142,10 @@ export class AuthSubgraph extends BaseSubgraph {
         ctx: { user?: { address: string } },
       ) => {
         this.logger.debug("canExecuteOperation(@args)", args);
-        if (!this.documentPermissionService) {
-          throw new GraphQLError("DocumentPermissionService not available");
-        }
         try {
           return await resolvers.canExecuteOperation(
-            this.documentPermissionService,
-            args,
+            this.authorizationService,
+            await this.withCanonicalDocumentId(args, ctx),
             ctx.user?.address,
           );
         } catch (error) {
@@ -201,7 +198,7 @@ export class AuthSubgraph extends BaseSubgraph {
           return await resolvers.setDocumentProtection(
             this.documentPermissionService,
             this.authorizationService,
-            args,
+            await this.withCanonicalDocumentId(args, ctx),
             ctx.user?.address,
           );
         } catch (error) {
@@ -225,7 +222,7 @@ export class AuthSubgraph extends BaseSubgraph {
           return await resolvers.transferDocumentOwnership(
             this.documentPermissionService,
             this.authorizationService,
-            args,
+            await this.withCanonicalDocumentId(args, ctx),
             ctx.user?.address,
           );
         } catch (error) {
@@ -249,13 +246,13 @@ export class AuthSubgraph extends BaseSubgraph {
           throw new GraphQLError("DocumentPermissionService not available");
         }
         try {
+          const resolved = await this.withCanonicalDocumentId(args, ctx);
           return await resolvers.grantDocumentPermission(
             this.documentPermissionService,
             this.authorizationService,
-            args as {
-              documentId: string;
-              userAddress: string;
-              permission: "READ" | "WRITE" | "ADMIN";
+            {
+              ...resolved,
+              permission: resolved.permission as "READ" | "WRITE" | "ADMIN",
             },
             ctx.user?.address,
           );
@@ -280,7 +277,7 @@ export class AuthSubgraph extends BaseSubgraph {
           return await resolvers.revokeDocumentPermission(
             this.documentPermissionService,
             this.authorizationService,
-            args,
+            await this.withCanonicalDocumentId(args, ctx),
             ctx.user?.address,
           );
         } catch (error) {
@@ -376,13 +373,13 @@ export class AuthSubgraph extends BaseSubgraph {
           throw new GraphQLError("DocumentPermissionService not available");
         }
         try {
+          const resolved = await this.withCanonicalDocumentId(args, ctx);
           return await resolvers.grantGroupPermission(
             this.documentPermissionService,
             this.authorizationService,
-            args as {
-              documentId: string;
-              groupId: number;
-              permission: "READ" | "WRITE" | "ADMIN";
+            {
+              ...resolved,
+              permission: resolved.permission as "READ" | "WRITE" | "ADMIN",
             },
             ctx.user?.address,
           );
@@ -407,7 +404,7 @@ export class AuthSubgraph extends BaseSubgraph {
           return await resolvers.revokeGroupPermission(
             this.documentPermissionService,
             this.authorizationService,
-            args,
+            await this.withCanonicalDocumentId(args, ctx),
             ctx.user?.address,
           );
         } catch (error) {
@@ -436,7 +433,7 @@ export class AuthSubgraph extends BaseSubgraph {
           return await resolvers.grantOperationPermission(
             this.documentPermissionService,
             this.authorizationService,
-            args,
+            await this.withCanonicalDocumentId(args, ctx),
             ctx.user?.address,
           );
         } catch (error) {
@@ -464,7 +461,7 @@ export class AuthSubgraph extends BaseSubgraph {
           return await resolvers.revokeOperationPermission(
             this.documentPermissionService,
             this.authorizationService,
-            args,
+            await this.withCanonicalDocumentId(args, ctx),
             ctx.user?.address,
           );
         } catch (error) {
@@ -491,7 +488,7 @@ export class AuthSubgraph extends BaseSubgraph {
           return await resolvers.grantGroupOperationPermission(
             this.documentPermissionService,
             this.authorizationService,
-            args,
+            await this.withCanonicalDocumentId(args, ctx),
             ctx.user?.address,
           );
         } catch (error) {
@@ -518,7 +515,7 @@ export class AuthSubgraph extends BaseSubgraph {
           return await resolvers.revokeGroupOperationPermission(
             this.documentPermissionService,
             this.authorizationService,
-            args,
+            await this.withCanonicalDocumentId(args, ctx),
             ctx.user?.address,
           );
         } catch (error) {

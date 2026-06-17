@@ -9,7 +9,7 @@ import { Icon } from "@powerhousedao/design-system";
 import { About as BaseAbout } from "@powerhousedao/design-system/connect";
 import {
   closePHModal,
-  driveCollectionId,
+  DriveCollectionId,
   showPHModal,
   useDrives,
   useDriveSystemInfo,
@@ -87,8 +87,8 @@ function ConnectedDrives() {
   const remoteDrives = useMemo(
     () =>
       drives.filter((d) =>
-        remotes.some(
-          (r) => r.collectionId === driveCollectionId("main", d.header.id),
+        remotes.some((r) =>
+          r.collectionId.equals(DriveCollectionId.forDrive(d.header.id)),
         ),
       ),
     [drives, remotes],

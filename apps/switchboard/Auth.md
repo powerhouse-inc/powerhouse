@@ -123,7 +123,7 @@ Authentication produces a verified user; authorization is then decided by a glob
 interface AuthConfig {
   enabled: boolean;
   admins: string[]; // Wallet addresses with global admin (bypass) access
-  skipCredentialVerification?: boolean; // Skip the Renown credential re-check
+  skipCredentialVerification?: boolean; // DANGER (test/dev only): skips the Renown credential re-check, the only binding between a token's claimed address and its signing key — allows identity spoofing. Refused at boot unless VITEST/NODE_ENV=test or ALLOW_INSECURE_SKIP_CREDENTIAL_VERIFICATION=true.
 }
 ```
 

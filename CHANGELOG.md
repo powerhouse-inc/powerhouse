@@ -1,3 +1,57 @@
+## 6.2.0-dev.20 (2026-06-17)
+
+This was a version bump only, there were no code changes.
+
+## 6.2.0-dev.19 (2026-06-16)
+
+### 🚀 Features
+
+- **connect:** prompt login for auth-protected drives ([#2727](https://github.com/powerhouse-inc/powerhouse/pull/2727))
+
+### 🩹 Fixes
+
+- subscriptions now sit behind auth ([82ac20cef](https://github.com/powerhouse-inc/powerhouse/commit/82ac20cef))
+- allow UPPER_SNAKE_CASE ([5cd154fb7](https://github.com/powerhouse-inc/powerhouse/commit/5cd154fb7))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Guillermo Puente Sandoval @gpuente
+
+## 6.2.0-dev.18 (2026-06-16)
+
+### 🩹 Fixes
+
+- **switchboard:** load reactor-api vite loader lazily ([05c966791](https://github.com/powerhouse-inc/powerhouse/commit/05c966791))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.0-dev.17 (2026-06-16)
+
+### 🩹 Fixes
+
+- mcp and gql channel sync were not both behind auth ([3d145309d](https://github.com/powerhouse-inc/powerhouse/commit/3d145309d))
+- auth issue where slug operations skipped all auth ([6e8500bca](https://github.com/powerhouse-inc/powerhouse/commit/6e8500bca))
+- fixed a performance regression and consolidated some sloppy code ([3b9eecf3b](https://github.com/powerhouse-inc/powerhouse/commit/3b9eecf3b))
+- biuld fix ([aeeff5db9](https://github.com/powerhouse-inc/powerhouse/commit/aeeff5db9))
+- adding missing lint scripts ([c1d40c3f7](https://github.com/powerhouse-inc/powerhouse/commit/c1d40c3f7))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
+## 6.2.0-dev.16 (2026-06-15)
+
+### 🩹 Fixes
+
+- **codegen:** resolve graphql-codegen plugins from this package ([3d9482993](https://github.com/powerhouse-inc/powerhouse/commit/3d9482993))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.0-dev.15 (2026-06-15)
 
 This was a version bump only, there were no code changes.

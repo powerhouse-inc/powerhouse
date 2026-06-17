@@ -2,7 +2,7 @@ export {
   ChannelScheme,
   DocumentChangeType,
   DocumentIntegrityService,
-  driveCollectionId,
+  DriveCollectionId,
   GqlRequestChannel,
   InMemoryQueue,
   IntervalPollTimer,

@@ -4,7 +4,7 @@ import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { KyselyOperationIndex } from "../../../src/cache/kysely-operation-index.js";
 import type { IOperationIndex } from "../../../src/cache/operation-index-types.js";
-import { driveCollectionId } from "../../../src/cache/operation-index-types.js";
+import { DriveCollectionId } from "../../../src/cache/operation-index-types.js";
 import { DEFAULT_DRIVE_CONTAINER_TYPES } from "../../../src/core/drive-container-types.js";
 import type { IReactor } from "../../../src/core/types.js";
 import { EventBus } from "../../../src/events/event-bus.js";
@@ -78,7 +78,7 @@ describe("SyncManager Backfill", () => {
       await syncManager.startup();
 
       const driveId = "test-drive-1";
-      const collectionId = driveCollectionId("main", driveId);
+      const collectionId = DriveCollectionId.forDrive(driveId);
 
       const historicalOperation: Operation = {
         id: "op1",
@@ -106,8 +106,8 @@ describe("SyncManager Backfill", () => {
           sourceRemote: "",
         },
       ]);
-      txn.createCollection(collectionId);
-      txn.addToCollection(collectionId, driveId);
+      txn.createCollection(collectionId.key);
+      txn.addToCollection(collectionId.key, driveId);
       await operationIndex.commit(txn);
 
       const channelConfig: ChannelConfig = {
@@ -143,7 +143,7 @@ describe("SyncManager Backfill", () => {
 
       const remote = await syncManager.add(
         "remote1",
-        "empty-collection",
+        DriveCollectionId.forDrive("empty-collection"),
         channelConfig,
       );
 
@@ -154,7 +154,7 @@ describe("SyncManager Backfill", () => {
       await syncManager.startup();
 
       const driveId = "test-drive-2";
-      const collectionId = driveCollectionId("main", driveId);
+      const collectionId = DriveCollectionId.forDrive(driveId);
 
       const op1: Operation = {
         id: "op1",
@@ -197,8 +197,8 @@ describe("SyncManager Backfill", () => {
           sourceRemote: "",
         },
       ]);
-      txn.createCollection(collectionId);
-      txn.addToCollection(collectionId, driveId);
+      txn.createCollection(collectionId.key);
+      txn.addToCollection(collectionId.key, driveId);
       await operationIndex.commit(txn);
 
       const txn2 = operationIndex.start();
@@ -239,7 +239,7 @@ describe("SyncManager Backfill", () => {
       await syncManager.startup();
 
       const driveId = "test-drive-3";
-      const collectionId = driveCollectionId("main", driveId);
+      const collectionId = DriveCollectionId.forDrive(driveId);
 
       const olderOp: Operation = {
         id: "op-old",
@@ -282,8 +282,8 @@ describe("SyncManager Backfill", () => {
           sourceRemote: "",
         },
       ]);
-      txn.createCollection(collectionId);
-      txn.addToCollection(collectionId, driveId);
+      txn.createCollection(collectionId.key);
+      txn.addToCollection(collectionId.key, driveId);
       await operationIndex.commit(txn);
 
       const txn2 = operationIndex.start();

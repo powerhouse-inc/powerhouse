@@ -18,7 +18,8 @@
   "types": "./dist/index.d.mts",
   "scripts": {
     "build": "tsdown",
-    "dev": "tsx src/cli.ts"
+    "dev": "tsx src/cli.ts",
+    "lint": "eslint"
   },
   "dependencies": {
     "colorette": "catalog:",

@@ -1,6 +1,6 @@
 import {
   DocumentModelRegistry,
-  driveCollectionId,
+  DriveCollectionId,
   EventBus,
   GqlRequestChannelFactory,
   GqlResponseChannelFactory,
@@ -159,7 +159,7 @@ async function setupSyncForDrive(
   driveId: string,
   fetchFn: typeof fetch,
 ): Promise<void> {
-  const collectionId = driveCollectionId("main", driveId);
+  const collectionId = DriveCollectionId.forDrive(driveId);
 
   await connectSyncManager.add(
     `switchboard-${driveId}`,

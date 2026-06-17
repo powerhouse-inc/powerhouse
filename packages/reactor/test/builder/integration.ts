@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
+import { DriveCollectionId } from "../../src/cache/operation-index-types.js";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import type { IReactor, ReactorModule } from "../../src/core/types.js";
 import type { ISyncCursorStorage } from "../../src/storage/interfaces.js";
@@ -76,7 +77,7 @@ describe("Reactor with SyncBuilder Integration", () => {
 
       const remote = await module.syncModule!.syncManager.add(
         "test-remote",
-        "test-collection",
+        DriveCollectionId.forDrive("test-collection"),
         {
           type: "internal",
 
@@ -90,7 +91,11 @@ describe("Reactor with SyncBuilder Integration", () => {
       );
 
       expect(remote.name).toBe("test-remote");
-      expect(remote.collectionId).toBe("test-collection");
+      expect(
+        remote.collectionId.equals(
+          DriveCollectionId.forDrive("test-collection"),
+        ),
+      ).toBe(true);
 
       const remotes = module.syncModule!.syncManager.list();
       expect(remotes).toHaveLength(1);
@@ -125,7 +130,7 @@ describe("Reactor with SyncBuilder Integration", () => {
 
       await module.syncModule!.syncManager.add(
         "test-remote",
-        "test-collection",
+        DriveCollectionId.forDrive("test-collection"),
         {
           type: "internal",
 
@@ -174,7 +179,7 @@ describe("Reactor with SyncBuilder Integration", () => {
 
       await module.syncModule!.syncManager.add(
         "persistent-remote",
-        "persistent-collection",
+        DriveCollectionId.forDrive("persistent-collection"),
         {
           type: "internal",
 
@@ -229,7 +234,7 @@ describe("Reactor with SyncBuilder Integration", () => {
 
       await module.syncModule!.syncManager.add(
         "test-remote",
-        "test-collection",
+        DriveCollectionId.forDrive("test-collection"),
         {
           type: "internal",
 

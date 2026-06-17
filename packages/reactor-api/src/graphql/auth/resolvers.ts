@@ -1,11 +1,10 @@
 import { GraphQLError } from "graphql";
-import type { IAuthorizationService } from "../../services/authorization.service.js";
 import type {
-  DocumentPermissionService,
-  GetParentIdsFn,
-} from "../../services/document-permission.service.js";
+  CanonicalDocumentId,
+  IAuthorizationService,
+} from "../../services/authorization.service.js";
+import type { DocumentPermissionService } from "../../services/document-permission.service.js";
 import type { DocumentPermissionLevel } from "../../utils/db.js";
-import type { IReactorClient } from "@powerhousedao/reactor";
 
 // ============================================
 // Document Permission Resolvers
@@ -67,7 +66,7 @@ export async function grantDocumentPermission(
   service: DocumentPermissionService,
   authorizationService: IAuthorizationService,
   args: {
-    documentId: string;
+    documentId: CanonicalDocumentId;
     userAddress: string;
     permission: DocumentPermissionLevel;
   },
@@ -105,7 +104,7 @@ export async function grantDocumentPermission(
 export async function revokeDocumentPermission(
   service: DocumentPermissionService,
   authorizationService: IAuthorizationService,
-  args: { documentId: string; userAddress: string },
+  args: { documentId: CanonicalDocumentId; userAddress: string },
   revokedByAddress: string | undefined,
 ): Promise<boolean> {
   if (!revokedByAddress) {
@@ -124,25 +123,6 @@ export async function revokeDocumentPermission(
 
   await service.revokePermission(args.documentId, args.userAddress);
   return true;
-}
-
-/**
- * Create a getParentIds function using the reactor client
- */
-export function createGetParentIdsFn(
-  reactorClient: IReactorClient,
-): GetParentIdsFn {
-  return async (documentId: string): Promise<string[]> => {
-    try {
-      const result = await reactorClient.getIncomingRelationships(
-        documentId,
-        "child",
-      );
-      return result.results.map((doc) => doc.header.id);
-    } catch {
-      return [];
-    }
-  };
 }
 
 // ============================================
@@ -232,7 +212,7 @@ export async function grantGroupPermission(
   service: DocumentPermissionService,
   authorizationService: IAuthorizationService,
   args: {
-    documentId: string;
+    documentId: CanonicalDocumentId;
     groupId: number;
     permission: DocumentPermissionLevel;
   },
@@ -263,7 +243,7 @@ export async function grantGroupPermission(
 export async function revokeGroupPermission(
   service: DocumentPermissionService,
   authorizationService: IAuthorizationService,
-  args: { documentId: string; groupId: number },
+  args: { documentId: CanonicalDocumentId; groupId: number },
   revokedByAddress: string | undefined,
 ): Promise<boolean> {
   if (!revokedByAddress) {
@@ -333,11 +313,11 @@ export async function operationPermissions(
 }
 
 export async function canExecuteOperation(
-  service: DocumentPermissionService,
-  args: { documentId: string; operationType: string },
+  authorizationService: IAuthorizationService,
+  args: { documentId: CanonicalDocumentId; operationType: string },
   userAddress: string | undefined,
 ): Promise<boolean> {
-  return service.canExecuteOperation(
+  return authorizationService.canMutate(
     args.documentId,
     args.operationType,
     userAddress,
@@ -347,7 +327,11 @@ export async function canExecuteOperation(
 export async function grantOperationPermission(
   service: DocumentPermissionService,
   authorizationService: IAuthorizationService,
-  args: { documentId: string; operationType: string; userAddress: string },
+  args: {
+    documentId: CanonicalDocumentId;
+    operationType: string;
+    userAddress: string;
+  },
   grantedByAddress: string | undefined,
 ): Promise<OperationUserPermission> {
   if (!grantedByAddress) {
@@ -375,7 +359,11 @@ export async function grantOperationPermission(
 export async function revokeOperationPermission(
   service: DocumentPermissionService,
   authorizationService: IAuthorizationService,
-  args: { documentId: string; operationType: string; userAddress: string },
+  args: {
+    documentId: CanonicalDocumentId;
+    operationType: string;
+    userAddress: string;
+  },
   revokedByAddress: string | undefined,
 ): Promise<boolean> {
   if (!revokedByAddress) {
@@ -403,7 +391,11 @@ export async function revokeOperationPermission(
 export async function grantGroupOperationPermission(
   service: DocumentPermissionService,
   authorizationService: IAuthorizationService,
-  args: { documentId: string; operationType: string; groupId: number },
+  args: {
+    documentId: CanonicalDocumentId;
+    operationType: string;
+    groupId: number;
+  },
   grantedByAddress: string | undefined,
 ): Promise<OperationGroupPermission> {
   if (!grantedByAddress) {
@@ -431,7 +423,11 @@ export async function grantGroupOperationPermission(
 export async function revokeGroupOperationPermission(
   service: DocumentPermissionService,
   authorizationService: IAuthorizationService,
-  args: { documentId: string; operationType: string; groupId: number },
+  args: {
+    documentId: CanonicalDocumentId;
+    operationType: string;
+    groupId: number;
+  },
   revokedByAddress: string | undefined,
 ): Promise<boolean> {
   if (!revokedByAddress) {
@@ -476,7 +472,7 @@ export async function documentProtection(
 export async function setDocumentProtection(
   service: DocumentPermissionService,
   authorizationService: IAuthorizationService,
-  args: { documentId: string; protected: boolean },
+  args: { documentId: CanonicalDocumentId; protected: boolean },
   userAddress: string | undefined,
 ): Promise<DocumentProtectionInfo> {
   if (!userAddress) {
@@ -500,7 +496,7 @@ export async function setDocumentProtection(
 export async function transferDocumentOwnership(
   service: DocumentPermissionService,
   authorizationService: IAuthorizationService,
-  args: { documentId: string; newOwnerAddress: string },
+  args: { documentId: CanonicalDocumentId; newOwnerAddress: string },
   userAddress: string | undefined,
 ): Promise<DocumentProtectionInfo> {
   if (!userAddress) {

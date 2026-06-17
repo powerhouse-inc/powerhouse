@@ -1,5 +1,8 @@
 import type { ILogger } from "document-model";
-import type { IOperationIndex } from "../../cache/operation-index-types.js";
+import type {
+  DriveCollectionId,
+  IOperationIndex,
+} from "../../cache/operation-index-types.js";
 import type { IQueue } from "../../queue/interfaces.js";
 import type { ISyncCursorStorage } from "../../storage/interfaces.js";
 import type { IChannel, IChannelFactory } from "../interfaces.js";
@@ -51,7 +54,7 @@ export class GqlRequestChannelFactory implements IChannelFactory {
     remoteName: string,
     config: ChannelConfig,
     cursorStorage: ISyncCursorStorage,
-    collectionId: string,
+    collectionId: DriveCollectionId,
     filter: RemoteFilter,
     operationIndex: IOperationIndex,
     options?: RemoteOptions,

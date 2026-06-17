@@ -2,6 +2,7 @@ import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { KyselySyncRemoteStorage } from "../../../src/storage/kysely/sync-remote-storage.js";
 import type { Database } from "../../../src/storage/kysely/types.js";
+import { DriveCollectionId } from "../../../src/cache/operation-index-types.js";
 import type { RemoteRecord } from "../../../src/sync/types.js";
 import { createTestSyncStorage, testFsBackends } from "../../factories.js";
 
@@ -34,7 +35,7 @@ describe.each(testFsBackends)(
         const remote1: RemoteRecord = {
           id: "test-id",
           name: "remote-1",
-          collectionId: "collection-1",
+          collectionId: DriveCollectionId.forDrive("collection-1"),
           channelConfig: {
             type: "gql",
             parameters: { url: "https://api.example.com/graphql" },
@@ -54,7 +55,7 @@ describe.each(testFsBackends)(
         const remote2: RemoteRecord = {
           id: "test-id",
           name: "remote-2",
-          collectionId: "collection-2",
+          collectionId: DriveCollectionId.forDrive("collection-2"),
           channelConfig: {
             type: "internal",
             parameters: {},
@@ -102,7 +103,7 @@ describe.each(testFsBackends)(
         const remote: RemoteRecord = {
           id: "test-id",
           name: "test-remote",
-          collectionId: "main:drive-123",
+          collectionId: DriveCollectionId.forDrive("drive-123"),
           channelConfig: {
             type: "gql",
             parameters: {
@@ -135,7 +136,7 @@ describe.each(testFsBackends)(
         const retrieved = await storage.get("test-remote");
         expect(retrieved).toMatchObject({
           name: "test-remote",
-          collectionId: "main:drive-123",
+          collectionId: DriveCollectionId.forDrive("drive-123"),
           channelConfig: {
             type: "gql",
             parameters: {
@@ -178,7 +179,7 @@ describe.each(testFsBackends)(
         const remote: RemoteRecord = {
           id: "test-id",
           name: "new-remote",
-          collectionId: "collection-1",
+          collectionId: DriveCollectionId.forDrive("collection-1"),
           channelConfig: {
             type: "gql",
             parameters: { url: "https://api.example.com" },
@@ -199,14 +200,16 @@ describe.each(testFsBackends)(
 
         const retrieved = await storage.get("new-remote");
         expect(retrieved.name).toBe("new-remote");
-        expect(retrieved.collectionId).toBe("collection-1");
+        expect(retrieved.collectionId.toString()).toBe(
+          "drive.main.collection-1",
+        );
       });
 
       it("should update existing remote", async () => {
         const remote: RemoteRecord = {
           id: "test-id",
           name: "update-remote",
-          collectionId: "collection-1",
+          collectionId: DriveCollectionId.forDrive("collection-1"),
           channelConfig: {
             type: "gql",
             parameters: { url: "https://api.example.com" },
@@ -227,7 +230,7 @@ describe.each(testFsBackends)(
 
         const updated: RemoteRecord = {
           ...remote,
-          collectionId: "collection-2",
+          collectionId: DriveCollectionId.forDrive("collection-2"),
           status: {
             push: { state: "running", failureCount: 0 },
             pull: { state: "error", failureCount: 3 },
@@ -237,7 +240,9 @@ describe.each(testFsBackends)(
         await storage.upsert(updated);
 
         const retrieved = await storage.get("update-remote");
-        expect(retrieved.collectionId).toBe("collection-2");
+        expect(retrieved.collectionId.toString()).toBe(
+          "drive.main.collection-2",
+        );
         expect(retrieved.status.push.state).toBe("running");
         expect(retrieved.status.pull.state).toBe("error");
         expect(retrieved.status.pull.failureCount).toBe(3);
@@ -247,7 +252,7 @@ describe.each(testFsBackends)(
         const remote: RemoteRecord = {
           id: "test-id",
           name: "empty-filter-remote",
-          collectionId: "collection-1",
+          collectionId: DriveCollectionId.forDrive("collection-1"),
           channelConfig: {
             type: "internal",
             parameters: {},
@@ -275,7 +280,7 @@ describe.each(testFsBackends)(
         const remote: RemoteRecord = {
           id: "test-id",
           name: "jsonb-remote",
-          collectionId: "collection-1",
+          collectionId: DriveCollectionId.forDrive("collection-1"),
           channelConfig: {
             type: "gql",
             parameters: {
@@ -319,7 +324,7 @@ describe.each(testFsBackends)(
         const remote: RemoteRecord = {
           id: "test-id",
           name: "timestamp-remote",
-          collectionId: "collection-1",
+          collectionId: DriveCollectionId.forDrive("collection-1"),
           channelConfig: {
             type: "internal",
             parameters: {},
@@ -362,7 +367,7 @@ describe.each(testFsBackends)(
         const remote: RemoteRecord = {
           id: "test-id",
           name: "abort-remote",
-          collectionId: "collection-1",
+          collectionId: DriveCollectionId.forDrive("collection-1"),
           channelConfig: {
             type: "internal",
             parameters: {},
@@ -386,7 +391,7 @@ describe.each(testFsBackends)(
         const remote: RemoteRecord = {
           id: "test-id",
           name: "remove-remote",
-          collectionId: "collection-1",
+          collectionId: DriveCollectionId.forDrive("collection-1"),
           channelConfig: {
             type: "internal",
             parameters: {},
@@ -432,7 +437,7 @@ describe.each(testFsBackends)(
         const remote: RemoteRecord = {
           id: "test-id",
           name: "concurrent-remote",
-          collectionId: "collection-1",
+          collectionId: DriveCollectionId.forDrive("collection-1"),
           channelConfig: {
             type: "internal",
             parameters: {},

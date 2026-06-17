@@ -1,7 +1,10 @@
 import type { OperationContext } from "@powerhousedao/shared/document-model";
 import type { Mock } from "vitest";
 import { vi } from "vitest";
-import type { IOperationIndex } from "../../../../src/cache/operation-index-types.js";
+import {
+  DriveCollectionId,
+  type IOperationIndex,
+} from "../../../../src/cache/operation-index-types.js";
 import type { ISyncCursorStorage } from "../../../../src/storage/interfaces.js";
 import type { GqlChannelConfig } from "../../../../src/sync/channels/gql-req-channel.js";
 import type { IPollTimer } from "../../../../src/sync/channels/poll-timer.js";
@@ -62,7 +65,7 @@ export const createTestConfig = (
   overrides: Partial<GqlChannelConfig> = {},
 ): GqlChannelConfig => ({
   url: "https://example.com/graphql",
-  collectionId: "test-collection",
+  collectionId: DriveCollectionId.forDrive("test-collection"),
   filter: TEST_FILTER,
   retryBaseDelayMs: 1000,
   retryMaxDelayMs: 300000,

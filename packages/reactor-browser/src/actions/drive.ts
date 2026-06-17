@@ -1,6 +1,6 @@
 import {
   DocumentChangeType,
-  driveCollectionId,
+  DriveCollectionId,
   PropagationMode,
   type IReactorClient,
   type PollBehavior,
@@ -17,8 +17,21 @@ import {
 } from "@powerhousedao/shared/document-drive";
 import type { PHDocument } from "@powerhousedao/shared/document-model";
 import { getUserPermissions } from "../utils/user.js";
+import { showPHModal } from "../hooks/modals.js";
 
 const DEFAULT_INITIAL_SYNC_TIMEOUT_MS = 30_000;
+
+/**
+ * A drive add failed because the switchboard rejected the (anonymous or
+ * unverified) caller — Forbidden/Unauthorized — rather than a transient
+ * reachability error. Drives the login prompt.
+ */
+function isDriveAuthError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return /forbidden|unauthorized|insufficient permissions|\b401\b|\b403\b/i.test(
+    message,
+  );
+}
 
 // In-flight remote registrations keyed by collectionId. sync.list()/sync.add()
 // is not atomic, so concurrent addRemoteDrive calls for the same drive would
@@ -165,37 +178,48 @@ export async function addRemoteDrive(
   };
 
   const resolvedDriveId = driveId ?? driveInfo.id;
-  const collectionId = driveCollectionId("main", resolvedDriveId);
+  const collectionId = DriveCollectionId.forDrive(resolvedDriveId);
 
-  const inFlight = inFlightRemoteRegistrations.get(collectionId);
-  if (inFlight) {
-    await inFlight;
-  } else {
-    const existingRemote = sync
-      .list()
-      .find((remote) => remote.collectionId === collectionId);
+  const inFlight = inFlightRemoteRegistrations.get(collectionId.key);
+  try {
+    if (inFlight) {
+      await inFlight;
+    } else {
+      const existingRemote = sync
+        .list()
+        .find((remote) => remote.collectionId.equals(collectionId));
 
-    if (!existingRemote) {
-      const remoteName = crypto.randomUUID();
-      const registration = sync
-        .add(
-          remoteName,
-          collectionId,
-          {
-            type: "gql",
-            parameters: {
-              url: driveInfo.graphqlEndpoint,
+      if (!existingRemote) {
+        const remoteName = crypto.randomUUID();
+        const registration = sync
+          .add(
+            remoteName,
+            collectionId,
+            {
+              type: "gql",
+              parameters: {
+                url: driveInfo.graphqlEndpoint,
+              },
             },
-          },
-          undefined,
-          options?.pollBehavior
-            ? { pollBehavior: options.pollBehavior }
-            : undefined,
-        )
-        .finally(() => inFlightRemoteRegistrations.delete(collectionId));
-      inFlightRemoteRegistrations.set(collectionId, registration);
-      await registration;
+            undefined,
+            options?.pollBehavior
+              ? { pollBehavior: options.pollBehavior }
+              : undefined,
+          )
+          .finally(() => inFlightRemoteRegistrations.delete(collectionId.key));
+        inFlightRemoteRegistrations.set(collectionId.key, registration);
+        await registration;
+      }
     }
+  } catch (error) {
+    // Any drive add that fails because the caller isn't authorized (the
+    // switchboard rejected it — Forbidden/Unauthorized) prompts a login,
+    // regardless of which flow triggered the add. Re-throw so callers still
+    // see the failure.
+    if (isDriveAuthError(error)) {
+      showPHModal({ type: "driveAuthRequired" });
+    }
+    throw error;
   }
 
   if (options?.awaitInitialSync) {
@@ -222,10 +246,10 @@ export async function deleteDrive(driveId: string) {
   const sync =
     window.ph?.reactorClientModule?.reactorModule?.syncModule?.syncManager;
   if (sync) {
-    const collectionId = driveCollectionId("main", driveId);
+    const collectionId = DriveCollectionId.forDrive(driveId);
     const remotes = sync
       .list()
-      .filter((remote) => remote.collectionId === collectionId);
+      .filter((remote) => remote.collectionId.equals(collectionId));
     for (const remote of remotes) {
       await sync.remove(remote.name);
     }

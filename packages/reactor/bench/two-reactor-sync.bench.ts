@@ -1,5 +1,6 @@
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import { Bench } from "tinybench";
+import { DriveCollectionId } from "../src/cache/operation-index-types.js";
 import { ReactorBuilder } from "../src/core/reactor-builder.js";
 import type { IReactor, ReactorModule } from "../src/core/types.js";
 import { EventBus } from "../src/events/event-bus.js";
@@ -37,7 +38,7 @@ async function setupTwoReactors(): Promise<TwoReactorSetup> {
         remoteName: string,
         config: ChannelConfig,
         cursorStorage: ISyncCursorStorage,
-        _collectionId: string,
+        _collectionId: DriveCollectionId,
         _filter: unknown,
         _operationIndex: unknown,
       ): TestChannel {
@@ -87,7 +88,7 @@ async function setupTwoReactors(): Promise<TwoReactorSetup> {
 
   await moduleA.syncModule!.syncManager.add(
     "remoteB",
-    "collection1",
+    DriveCollectionId.forDrive("collection1"),
     {
       type: "internal",
       parameters: {},
@@ -101,7 +102,7 @@ async function setupTwoReactors(): Promise<TwoReactorSetup> {
 
   await moduleB.syncModule!.syncManager.add(
     "remoteA",
-    "collection1",
+    DriveCollectionId.forDrive("collection1"),
     {
       type: "internal",
       parameters: {},

@@ -237,6 +237,18 @@ export interface IReactorClient {
   ): Promise<TDocument>;
 
   /**
+   * Resolves an identifier (either an id or a slug) to the canonical document
+   * id, using the same lookup as the read/operation data paths. Resolves
+   * against the "main" branch. Throws if the identifier cannot be resolved or
+   * is ambiguous.
+   *
+   * @param identifier - Required, this is the document id or slug
+   * @param signal - Optional abort signal to cancel the request
+   * @returns The canonical document id
+   */
+  resolveIdOrSlug(identifier: string, signal?: AbortSignal): Promise<string>;
+
+  /**
    * Retrieves operations for a document.
    *
    * @param documentIdentifier - Required, this is either a document "id" field or a "slug"

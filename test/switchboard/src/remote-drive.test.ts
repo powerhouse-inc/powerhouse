@@ -3,7 +3,7 @@ import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/
 import type { ReactorClientModule } from "@powerhousedao/reactor";
 import {
   ChannelScheme,
-  driveCollectionId,
+  DriveCollectionId,
   ReactorBuilder,
   ReactorClientBuilder,
 } from "@powerhousedao/reactor";
@@ -87,7 +87,7 @@ async function createLocalReactor(
   }
 
   const remoteName = crypto.randomUUID();
-  const collectionId = driveCollectionId("main", driveId);
+  const collectionId = DriveCollectionId.forDrive(driveId);
 
   const remote = await sync.add(remoteName, collectionId, {
     type: "gql",
@@ -135,7 +135,7 @@ describe("Remote drive sync via CONNECT channel", () => {
     initDeadLetterTrap();
   });
 
-  afterEach(async () => {
+  afterEach(() => {
     if (clientModule) {
       clientModule.reactorModule?.reactor.kill();
       clientModule = undefined;

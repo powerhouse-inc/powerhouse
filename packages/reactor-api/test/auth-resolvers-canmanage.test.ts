@@ -5,7 +5,10 @@ import {
   revokeDocumentPermission,
 } from "../src/graphql/auth/resolvers.js";
 import { runMigrations } from "../src/migrations/index.js";
-import type { IAuthorizationService } from "../src/services/authorization.service.js";
+import type {
+  CanonicalDocumentId,
+  IAuthorizationService,
+} from "../src/services/authorization.service.js";
 import {
   AuthorizationPolicy,
   createAuthorizationService,
@@ -37,6 +40,7 @@ describe("grant/revoke resolvers route through canManage", () => {
         policy: AuthorizationPolicy.DOCUMENT_PERMISSIONS,
       },
       permissions,
+      () => Promise.resolve([]),
     );
     await permissions.setDocumentProtection("doc-1", true);
   });
@@ -47,19 +51,29 @@ describe("grant/revoke resolvers route through canManage", () => {
     const result = await grantDocumentPermission(
       permissions,
       authorization,
-      { documentId: "doc-1", userAddress: "0xbob", permission: "READ" },
+      {
+        documentId: "doc-1" as CanonicalDocumentId,
+        userAddress: "0xbob",
+        permission: "READ",
+      },
       "0xowner",
     );
 
     expect(result.userAddress).toBe("0xbob");
-    expect(await permissions.canReadDocument("doc-1", "0xbob")).toBe(true);
+    expect(
+      await authorization.canRead("doc-1" as CanonicalDocumentId, "0xbob"),
+    ).toBe(true);
   });
 
   it("lets a supreme admin manage permissions", async () => {
     const result = await grantDocumentPermission(
       permissions,
       authorization,
-      { documentId: "doc-1", userAddress: "0xbob", permission: "READ" },
+      {
+        documentId: "doc-1" as CanonicalDocumentId,
+        userAddress: "0xbob",
+        permission: "READ",
+      },
       "0xadmin",
     );
     expect(result.userAddress).toBe("0xbob");
@@ -72,7 +86,11 @@ describe("grant/revoke resolvers route through canManage", () => {
       grantDocumentPermission(
         permissions,
         authorization,
-        { documentId: "doc-1", userAddress: "0xbob", permission: "READ" },
+        {
+          documentId: "doc-1" as CanonicalDocumentId,
+          userAddress: "0xbob",
+          permission: "READ",
+        },
         "0xstranger",
       ),
     ).rejects.toThrow("Forbidden");
@@ -85,11 +103,13 @@ describe("grant/revoke resolvers route through canManage", () => {
     const revoked = await revokeDocumentPermission(
       permissions,
       authorization,
-      { documentId: "doc-1", userAddress: "0xbob" },
+      { documentId: "doc-1" as CanonicalDocumentId, userAddress: "0xbob" },
       "0xowner",
     );
 
     expect(revoked).toBe(true);
-    expect(await permissions.canReadDocument("doc-1", "0xbob")).toBe(false);
+    expect(
+      await authorization.canRead("doc-1" as CanonicalDocumentId, "0xbob"),
+    ).toBe(false);
   });
 });

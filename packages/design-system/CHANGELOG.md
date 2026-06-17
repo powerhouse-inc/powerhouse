@@ -1,3 +1,40 @@
+## 6.2.0-dev.20 (2026-06-17)
+
+This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.
+
+## 6.2.0-dev.19 (2026-06-16)
+
+### 🚀 Features
+
+- **connect:** prompt login for auth-protected drives ([#2727](https://github.com/powerhouse-inc/powerhouse/pull/2727))
+
+### 🩹 Fixes
+
+- allow UPPER_SNAKE_CASE ([5cd154fb7](https://github.com/powerhouse-inc/powerhouse/commit/5cd154fb7))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Guillermo Puente Sandoval @gpuente
+
+## 6.2.0-dev.18 (2026-06-16)
+
+This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.
+
+## 6.2.0-dev.17 (2026-06-16)
+
+### 🩹 Fixes
+
+- biuld fix ([aeeff5db9](https://github.com/powerhouse-inc/powerhouse/commit/aeeff5db9))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
+## 6.2.0-dev.16 (2026-06-15)
+
+This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.
+
 ## 6.2.0-dev.15 (2026-06-15)
 
 This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.

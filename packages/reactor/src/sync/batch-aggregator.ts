@@ -1,5 +1,5 @@
 import type { ILogger } from "document-model";
-import { driveCollectionId } from "../cache/operation-index-types.js";
+import { DriveCollectionId } from "../cache/operation-index-types.js";
 import type { JobFailedEvent, JobWriteReadyEvent } from "../events/types.js";
 
 export type PreparedBatch = {
@@ -171,10 +171,10 @@ export class BatchAggregator {
           continue;
         }
 
-        const collectionId = driveCollectionId(
-          op.context.branch,
+        const collectionId = DriveCollectionId.forDrive(
           input.sourceId,
-        );
+          op.context.branch,
+        ).key;
         if (!(input.targetId in mergedMemberships)) {
           mergedMemberships[input.targetId] = [];
         }

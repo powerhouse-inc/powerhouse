@@ -7,6 +7,7 @@
   "private": true,
   "scripts": {
     "build": "tsdown",
+    "lint": "eslint",
     "test": "vitest --run"
   },
   "devDependencies": {

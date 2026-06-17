@@ -27,6 +27,7 @@ describe("JobAwaiter", () => {
       const jobId = "job-already-completed";
       const completedJob: JobInfo = {
         id: jobId,
+        documentId: "test-doc",
         status: JobStatus.READ_READY,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -44,6 +45,7 @@ describe("JobAwaiter", () => {
       const jobId = "job-read-models-ready";
       const readModelsReadyJob: JobInfo = {
         id: jobId,
+        documentId: "test-doc",
         status: JobStatus.READ_READY,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -61,6 +63,7 @@ describe("JobAwaiter", () => {
       const jobId = "job-already-failed";
       const failedJob: JobInfo = {
         id: jobId,
+        documentId: "test-doc",
         status: JobStatus.FAILED,
         createdAtUtcIso: new Date().toISOString(),
         error: { message: "Job failed", stack: "" },
@@ -79,6 +82,7 @@ describe("JobAwaiter", () => {
       const jobId = "job-1";
       const runningJob: JobInfo = {
         id: jobId,
+        documentId: "test-doc",
         status: JobStatus.RUNNING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -86,6 +90,7 @@ describe("JobAwaiter", () => {
       };
       const completedJob: JobInfo = {
         id: jobId,
+        documentId: "test-doc",
         status: JobStatus.READ_READY,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -138,6 +143,7 @@ describe("JobAwaiter", () => {
       const jobId = "job-2";
       const runningJob: JobInfo = {
         id: jobId,
+        documentId: "test-doc",
         status: JobStatus.RUNNING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -145,6 +151,7 @@ describe("JobAwaiter", () => {
       };
       const completedJob: JobInfo = {
         id: jobId,
+        documentId: "test-doc",
         status: JobStatus.READ_READY,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -182,6 +189,7 @@ describe("JobAwaiter", () => {
       const jobId = "job-failed";
       const runningJob: JobInfo = {
         id: jobId,
+        documentId: "test-doc",
         status: JobStatus.RUNNING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -189,6 +197,7 @@ describe("JobAwaiter", () => {
       };
       const failedJob: JobInfo = {
         id: jobId,
+        documentId: "test-doc",
         status: JobStatus.FAILED,
         createdAtUtcIso: new Date().toISOString(),
         error: { message: "Job failed", stack: "" },
@@ -217,6 +226,7 @@ describe("JobAwaiter", () => {
     it("should handle multiple jobs concurrently", async () => {
       const job1: JobInfo = {
         id: "job-1",
+        documentId: "test-doc",
         status: JobStatus.READ_READY,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -224,6 +234,7 @@ describe("JobAwaiter", () => {
       };
       const job2: JobInfo = {
         id: "job-2",
+        documentId: "test-doc",
         status: JobStatus.READ_READY,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -231,6 +242,7 @@ describe("JobAwaiter", () => {
       };
       const job3: JobInfo = {
         id: "job-3",
+        documentId: "test-doc",
         status: JobStatus.FAILED,
         createdAtUtcIso: new Date().toISOString(),
         error: { message: "Job 3 failed", stack: "" },
@@ -269,6 +281,7 @@ describe("JobAwaiter", () => {
 
       getJobStatusMock.mockResolvedValue({
         id: jobId,
+        documentId: "test-doc",
         status: JobStatus.RUNNING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -309,6 +322,7 @@ describe("JobAwaiter", () => {
       const jobId = "job-duplicate";
       const runningJob: JobInfo = {
         id: jobId,
+        documentId: "test-doc",
         status: JobStatus.RUNNING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -316,6 +330,7 @@ describe("JobAwaiter", () => {
       };
       const completedJob: JobInfo = {
         id: jobId,
+        documentId: "test-doc",
         status: JobStatus.READ_READY,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -374,6 +389,7 @@ describe("JobAwaiter", () => {
 
       getJobStatusMock.mockResolvedValue({
         id: jobId,
+        documentId: "test-doc",
         status: JobStatus.RUNNING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -410,6 +426,7 @@ describe("JobAwaiter", () => {
 
       getJobStatusMock.mockResolvedValue({
         id: "any",
+        documentId: "test-doc",
         status: JobStatus.RUNNING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -432,6 +449,7 @@ describe("JobAwaiter", () => {
 
       getJobStatusMock.mockResolvedValue({
         id: jobId,
+        documentId: "test-doc",
         status: JobStatus.RUNNING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),

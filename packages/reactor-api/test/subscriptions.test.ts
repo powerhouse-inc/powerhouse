@@ -257,6 +257,7 @@ describe("Subscription Filtering", () => {
     it("should create only one job subscription per job ID", () => {
       vi.mocked(mockReactorClient.getJobStatus).mockResolvedValue({
         id: "job-1",
+        documentId: "doc-1",
         status: "PENDING" as any,
         createdAtUtcIso: "2024-01-01T00:00:00Z",
         consistencyToken: {
@@ -279,6 +280,7 @@ describe("Subscription Filtering", () => {
     it("should create separate subscriptions for different job IDs", () => {
       vi.mocked(mockReactorClient.getJobStatus).mockResolvedValue({
         id: "job-1",
+        documentId: "doc-1",
         status: "PENDING" as any,
         createdAtUtcIso: "2024-01-01T00:00:00Z",
         consistencyToken: {

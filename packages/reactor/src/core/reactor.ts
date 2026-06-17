@@ -504,6 +504,7 @@ export class Reactor implements IReactor {
 
     const jobInfo: JobInfo = {
       id: jobId,
+      documentId: job.documentId,
       status: JobStatus.PENDING,
       createdAtUtcIso,
       consistencyToken: {
@@ -558,6 +559,7 @@ export class Reactor implements IReactor {
 
     const jobInfo: JobInfo = {
       id: jobId,
+      documentId: job.documentId,
       status: JobStatus.PENDING,
       createdAtUtcIso,
       consistencyToken: {
@@ -613,6 +615,7 @@ export class Reactor implements IReactor {
 
     const jobInfo: JobInfo = {
       id: jobId,
+      documentId: job.documentId,
       status: JobStatus.PENDING,
       createdAtUtcIso,
       consistencyToken: {
@@ -675,6 +678,7 @@ export class Reactor implements IReactor {
 
     const jobInfo: JobInfo = {
       id: jobId,
+      documentId: job.documentId,
       status: JobStatus.PENDING,
       createdAtUtcIso,
       consistencyToken: {
@@ -723,6 +727,7 @@ export class Reactor implements IReactor {
       const jobId = planKeyToJobId.get(jobPlan.key)!;
       const jobInfo: JobInfo = {
         id: jobId,
+        documentId: jobPlan.documentId,
         status: JobStatus.PENDING,
         createdAtUtcIso,
         consistencyToken: {
@@ -815,6 +820,7 @@ export class Reactor implements IReactor {
       const jobId = planKeyToJobId.get(jobPlan.key)!;
       const jobInfo: JobInfo = {
         id: jobId,
+        documentId: jobPlan.documentId,
         status: JobStatus.PENDING,
         createdAtUtcIso,
         consistencyToken: {
@@ -948,6 +954,7 @@ export class Reactor implements IReactor {
       const now = new Date().toISOString();
       return Promise.resolve({
         id: jobId,
+        documentId: "",
         status: JobStatus.FAILED,
         createdAtUtcIso: now,
         completedAtUtcIso: now,

@@ -59,7 +59,7 @@ describe("generateSubgraph", () => {
       join(subgraphsDir, "my-custom", "resolvers.ts"),
       "utf-8",
     );
-    expect(resolversContent).toContain("ISubgraph");
+    expect(resolversContent).toContain("BaseSubgraph");
     expect(resolversContent).toContain("subgraph.reactorClient");
     expect(resolversContent).toContain("MyCustomQueries");
     expect(resolversContent).not.toContain("document-drive");

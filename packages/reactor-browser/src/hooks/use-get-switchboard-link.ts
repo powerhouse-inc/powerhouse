@@ -1,5 +1,5 @@
 import {
-  driveCollectionId,
+  DriveCollectionId,
   type GqlRequestChannel,
 } from "@powerhousedao/reactor";
 import type { PHDocument } from "@powerhousedao/shared/document-model";
@@ -29,18 +29,16 @@ export function useGetSwitchboardLink(
   const isRemoteDrive = useMemo(() => {
     if (!isDefined(drive)) return false;
 
-    return remotes.some(
-      (remote) =>
-        remote.collectionId === driveCollectionId("main", drive.header.id),
+    return remotes.some((remote) =>
+      remote.collectionId.equals(DriveCollectionId.forDrive(drive.header.id)),
     );
   }, [remotes, drive]);
   const remoteUrl = useMemo(() => {
     if (!isDefined(drive)) return null;
 
     try {
-      const remote = remotes.find(
-        (remote) =>
-          remote.collectionId === driveCollectionId("main", drive.header.id),
+      const remote = remotes.find((remote) =>
+        remote.collectionId.equals(DriveCollectionId.forDrive(drive.header.id)),
       );
 
       const channelUrl = (remote?.channel as GqlRequestChannel | undefined)

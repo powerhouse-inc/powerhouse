@@ -1,6 +1,9 @@
 import type { Operation } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
-import type { IOperationIndex } from "../cache/operation-index-types.js";
+import type {
+  DriveCollectionId,
+  IOperationIndex,
+} from "../cache/operation-index-types.js";
 import type {
   BatchLoadRequest,
   BatchLoadResult,
@@ -289,7 +292,7 @@ export class SyncManager implements ISyncManager {
 
   async add(
     name: string,
-    collectionId: string,
+    collectionId: DriveCollectionId,
     channelConfig: ChannelConfig,
     filter: RemoteFilter = { documentId: [], scope: [], branch: "" },
     options: RemoteOptions = { sinceTimestampUtcMs: "0" },
@@ -306,7 +309,7 @@ export class SyncManager implements ISyncManager {
     this.logger.debug(
       "Adding remote (@name, @collectionId, @channelConfig, @filter, @options, @id)",
       name,
-      collectionId,
+      collectionId.key,
       channelConfig,
       filter,
       options,
@@ -584,7 +587,7 @@ export class SyncManager implements ISyncManager {
 
   private getRemotesForCollection(collectionId: string): Remote[] {
     return Array.from(this.remotes.values()).filter(
-      (remote) => remote.collectionId === collectionId,
+      (remote) => remote.collectionId.key === collectionId,
     );
   }
 
@@ -930,7 +933,7 @@ export class SyncManager implements ISyncManager {
     };
 
     let page = await this.operationIndex.find(
-      remote.collectionId,
+      remote.collectionId.key,
       ackOrdinal,
       { excludeSourceRemote: remote.name },
       undefined,

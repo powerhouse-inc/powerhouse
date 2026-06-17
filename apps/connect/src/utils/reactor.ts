@@ -43,11 +43,13 @@ export async function createBrowserReactor(
     verifier: createSignatureVerifier(),
   };
 
-  const jwtHandler: JwtHandler = async (url: string) => {
+  const jwtHandler: JwtHandler = async (_url: string) => {
     if (!renown.user) {
       return undefined;
     }
-    return renown.getBearerToken({ expiresIn: 10, aud: url });
+    // aud omitted: server verifies without an audience, so aud-bearing tokens
+    // are rejected. Re-enable once both sides support audience restriction.
+    return renown.getBearerToken({ expiresIn: 10 });
   };
 
   const detected = await detectReactorPgMajor();
@@ -96,6 +98,18 @@ export function getDefaultDrives(
 }
 
 /**
+ * A drive add failed because the switchboard rejected the (anonymous or
+ * unverified) caller — Forbidden/Unauthorized — rather than a transient
+ * reachability error. Drives the login prompt instead of retrying.
+ */
+function isDriveAuthError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return /forbidden|unauthorized|insufficient permissions|\b401\b|\b403\b/i.test(
+    message,
+  );
+}
+
+/**
  * Add default drives for the new reactor via sync manager.
  *
  * Drives register concurrently so a slow or unreachable drive can't delay the
@@ -119,6 +133,11 @@ export async function addDefaultDrivesForNewReactor(
           driveId = await addRemoteDrive(drive.url);
           break;
         } catch (error) {
+          if (isDriveAuthError(error)) {
+            // addRemoteDrive already surfaces the login modal; auth failures
+            // don't self-heal, so don't burn the remaining retries.
+            break;
+          }
           if (attempt === MAX_ATTEMPTS) {
             console.error(
               `Failed to add default drive ${drive.url} after ${MAX_ATTEMPTS} attempts:`,

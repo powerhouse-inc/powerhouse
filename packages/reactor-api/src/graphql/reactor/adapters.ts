@@ -366,6 +366,22 @@ export function toGqlDocumentChangeEvent(
   };
 }
 
+/**
+ * Distinct document ids a change event references: affected documents plus the
+ * parent/child ids in `context` (delete/relationship events carry only context).
+ */
+export function collectChangedDocumentIds(
+  event: DocumentChangeEvent,
+): string[] {
+  const ids = new Set<string>();
+  for (const doc of event.documents) {
+    if (doc.header.id) ids.add(doc.header.id);
+  }
+  if (event.context?.parentId) ids.add(event.context.parentId);
+  if (event.context?.childId) ids.add(event.context.childId);
+  return [...ids];
+}
+
 export function matchesSearchFilter(
   event: DocumentChangeEvent,
   search: { type?: string | null; parentId?: string | null },

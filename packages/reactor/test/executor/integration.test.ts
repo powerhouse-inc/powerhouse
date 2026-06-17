@@ -9,7 +9,7 @@ import { CollectionMembershipCache } from "../../src/cache/collection-membership
 import { DocumentMetaCache } from "../../src/cache/document-meta-cache.js";
 import { KyselyOperationIndex } from "../../src/cache/kysely-operation-index.js";
 import { KyselyWriteCache } from "../../src/cache/kysely-write-cache.js";
-import { driveCollectionId } from "../../src/cache/operation-index-types.js";
+import { DriveCollectionId } from "../../src/cache/operation-index-types.js";
 import type { WriteCacheConfig } from "../../src/cache/write-cache-types.js";
 import { DEFAULT_DRIVE_CONTAINER_TYPES } from "../../src/core/drive-container-types.js";
 import type { IEventBus } from "../../src/events/interfaces.js";
@@ -153,7 +153,7 @@ describe.each(scopeVariants)(
       ]);
 
       if (documentType === "powerhouse/document-drive") {
-        const collectionId = driveCollectionId("main", documentId);
+        const collectionId = DriveCollectionId.forDrive(documentId).key;
         indexTxn.createCollection(collectionId);
         indexTxn.addToCollection(collectionId, documentId);
       }
@@ -906,7 +906,7 @@ describe.each(scopeVariants)(
 
         expect(result.success).toBe(true);
 
-        const collectionId = driveCollectionId("main", "new-doc-1");
+        const collectionId = DriveCollectionId.forDrive("new-doc-1").key;
         const indexedOps = await operationIndex.find(collectionId);
 
         expect(indexedOps.results).toHaveLength(1);
@@ -949,7 +949,7 @@ describe.each(scopeVariants)(
 
         expect(result.success).toBe(true);
 
-        const collectionId = driveCollectionId("main", driveId);
+        const collectionId = DriveCollectionId.forDrive(driveId).key;
         const collectionOps = await operationIndex.find(collectionId);
 
         expect(collectionOps.results).toHaveLength(1);
@@ -1004,7 +1004,7 @@ describe.each(scopeVariants)(
         const addRelResult = await executor.executeJob(addRelJob);
         expect(addRelResult.success).toBe(true);
 
-        const collectionId = driveCollectionId("main", driveId);
+        const collectionId = DriveCollectionId.forDrive(driveId).key;
         const collectionOps = await operationIndex.find(collectionId);
 
         const addRelOp = collectionOps.results.find(
@@ -1052,7 +1052,7 @@ describe.each(scopeVariants)(
 
         expect(result.success).toBe(true);
 
-        const collectionId = driveCollectionId("main", document.header.id);
+        const collectionId = DriveCollectionId.forDrive(document.header.id).key;
         const collectionOps = await operationIndex.find(collectionId);
 
         expect(collectionOps.results.length).toBeGreaterThan(0);

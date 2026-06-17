@@ -1,7 +1,7 @@
 import { DriveSettingsModal as ConnectDriveSettingsModal } from "@powerhousedao/design-system/connect";
 import {
   closePHModal,
-  driveCollectionId,
+  DriveCollectionId,
   renameDrive,
   setDriveAvailableOffline,
   setDriveSharingType,
@@ -24,9 +24,8 @@ export function DriveSettingsModal() {
 
   const isRemoteDrive = useMemo(() => {
     if (!drive) return false;
-    return remotes.some(
-      (remote) =>
-        remote.collectionId === driveCollectionId("main", drive.header.id),
+    return remotes.some((remote) =>
+      remote.collectionId.equals(DriveCollectionId.forDrive(drive.header.id)),
     );
   }, [remotes, drive]);
 

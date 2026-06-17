@@ -1,4 +1,7 @@
-import type { IOperationIndex } from "../cache/operation-index-types.js";
+import type {
+  DriveCollectionId,
+  IOperationIndex,
+} from "../cache/operation-index-types.js";
 import type { ShutdownStatus } from "../shared/types.js";
 import type { ISyncCursorStorage } from "../storage/interfaces.js";
 import type { IMailbox } from "./mailbox.js";
@@ -102,7 +105,7 @@ export interface IChannelFactory {
     config: ChannelConfig,
     // TODO: remove from the interface -- currently this is created inside of the builder
     cursorStorage: ISyncCursorStorage,
-    collectionId: string,
+    collectionId: DriveCollectionId,
     filter: RemoteFilter,
     // TODO: remove from the interface -- currently this is created inside of the builder
     operationIndex: IOperationIndex,
@@ -128,10 +131,10 @@ export type Remote = {
   name: string;
 
   /**
-   * Collection ID to synchronize.
-   * Typically created via driveCollectionId(branch, documentId) for drive-level sync.
+   * Collection to synchronize. A drive-level abstraction carrying the drive
+   * document id and branch (see DriveCollectionId).
    */
-  collectionId: string;
+  collectionId: DriveCollectionId;
 
   /**
    * Filter to apply to operations.
@@ -209,7 +212,7 @@ export interface ISyncManager {
    */
   add(
     name: string,
-    collectionId: string,
+    collectionId: DriveCollectionId,
     channelConfig: ChannelConfig,
     filter?: RemoteFilter,
     options?: RemoteOptions,
