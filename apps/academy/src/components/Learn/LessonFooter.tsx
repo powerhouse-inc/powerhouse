@@ -10,7 +10,11 @@ import styles from "./styles.module.css";
  * Injected above the default doc footer on Learn-track lessons. Lets the reader
  * mark the lesson complete and jump to the next one in the course sequence.
  */
-export default function LessonFooter({ docId }: { docId: string }): JSX.Element {
+export default function LessonFooter({
+  docId,
+}: {
+  docId: string;
+}): JSX.Element {
   const { isComplete, markComplete, toggle, loaded } = useProgress();
   const history = useHistory();
   const next = nextLesson(docId);

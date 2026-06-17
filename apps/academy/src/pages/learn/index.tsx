@@ -12,7 +12,10 @@ import {
 import { useProgress } from "@site/src/components/Learn/useProgress";
 import styles from "@site/src/components/Learn/styles.module.css";
 
-function firstUnfinished(lessons: Lesson[], isComplete: (id: string) => boolean) {
+function firstUnfinished(
+  lessons: Lesson[],
+  isComplete: (id: string) => boolean,
+) {
   return lessons.find((l) => !isComplete(l.id)) ?? lessons[0];
 }
 
@@ -64,9 +67,7 @@ export default function LearnPage(): JSX.Element {
             const start = firstUnfinished(mod.lessons, isComplete);
             return (
               <section key={mod.key} className={styles.moduleCard}>
-                <span className={styles.moduleNumber}>
-                  Module {i + 1}
-                </span>
+                <span className={styles.moduleNumber}>Module {i + 1}</span>
                 <Heading as="h2">{mod.title}</Heading>
                 <p className={styles.moduleDescription}>{mod.description}</p>
 

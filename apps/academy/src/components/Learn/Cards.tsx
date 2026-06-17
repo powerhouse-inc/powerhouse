@@ -14,7 +14,12 @@ type CardProps = {
   children?: ReactNode;
 };
 
-export function Card({ title, href, description, children }: CardProps): JSX.Element {
+export function Card({
+  title,
+  href,
+  description,
+  children,
+}: CardProps): JSX.Element {
   const body = (
     <>
       <span className={styles.cardTitle}>{title}</span>

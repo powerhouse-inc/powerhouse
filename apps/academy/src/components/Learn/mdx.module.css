@@ -48,7 +48,9 @@
   background: var(--ifm-background-color);
   color: var(--ifm-font-color-base);
   cursor: pointer;
-  transition: border-color 0.15s ease, background 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
 }
 
 .quizChoice:hover[data-state="idle"],
@@ -215,7 +217,9 @@
   background: var(--ifm-background-surface-color, var(--ifm-background-color));
   color: inherit;
   text-decoration: none;
-  transition: border-color 0.15s ease, transform 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    transform 0.15s ease;
 }
 
 .card:hover {

@@ -79,7 +79,9 @@ export default function Term({
       </button>
       {(open || pinned) && (
         <span role="tooltip" id={popoverId} className={styles.termPopover}>
-          {label && <strong className={styles.termPopoverTitle}>{label}</strong>}
+          {label && (
+            <strong className={styles.termPopoverTitle}>{label}</strong>
+          )}
           {text}
         </span>
       )}

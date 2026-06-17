@@ -77,7 +77,15 @@ export default function Quiz({
                 onClick={() => toggle(i)}
               >
                 <span className={styles.quizMark} data-state={state}>
-                  {reveal ? (c.correct ? "✓" : isSelected ? "✕" : "") : isSelected ? "•" : ""}
+                  {reveal
+                    ? c.correct
+                      ? "✓"
+                      : isSelected
+                        ? "✕"
+                        : ""
+                    : isSelected
+                      ? "•"
+                      : ""}
                 </span>
                 <span className={styles.quizChoiceBody}>
                   <span>{c.label}</span>

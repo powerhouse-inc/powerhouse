@@ -155,7 +155,10 @@ export default function Home(): JSX.Element {
           >
             Start building →
           </Link>
-          <Link className={`button button--secondary button--lg ${styles.introBtn}`} to="#intro">
+          <Link
+            className={`button button--secondary button--lg ${styles.introBtn}`}
+            to="#intro"
+          >
             ▶ Watch the 2-min intro
           </Link>
         </div>

@@ -48,8 +48,8 @@
   --ifm-toc-border-color: #d7d8d9;
   --ifm-hr-border-color: #d7d8d9;
 
-  --ifm-font-family-base: "Inter", -apple-system, BlinkMacSystemFont,
-    "Segoe UI", Roboto, sans-serif;
+  --ifm-font-family-base:
+    "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --ifm-font-family-monospace: "SF Mono", "Fira Code", "Consolas", monospace;
   --ifm-global-radius: 12px;
   --ifm-code-font-size: 95%;
@@ -173,7 +173,6 @@ html[data-theme="dark"] .main-wrapper {
 html[data-theme="dark"] .navbar {
   background-color: #1b1e24;
 }
-
 
 html[data-theme="dark"] .footer {
   background-color: #1b1e24;

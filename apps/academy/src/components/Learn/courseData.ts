@@ -33,7 +33,10 @@ export const modules: Module[] = [
       { id: `academy/GetStarted/VetraCloud`, title: "Vetra Cloud" },
       { id: `academy/GetStarted/VetraDrive`, title: "Vetra Drive" },
       { id: `academy/GetStarted/Prerequisites`, title: "Prerequisites" },
-      { id: `academy/GetStarted/CreateAPackageWithVetra`, title: "Create a package with Vetra" },
+      {
+        id: `academy/GetStarted/CreateAPackageWithVetra`,
+        title: "Create a package with Vetra",
+      },
       { id: `academy/GetStarted/BuilderTools`, title: "Builder tools" },
     ],
   },
@@ -43,14 +46,38 @@ export const modules: Module[] = [
     description:
       "Design a document model: its state schema, operations, reducers, and tests.",
     lessons: [
-      { id: `${BASE}/DocumentModelCreation/WhatIsADocumentModel`, title: "What is a document model?" },
-      { id: `${BASE}/DocumentModelCreation/SpecifyTheStateSchema`, title: "Specify the state schema" },
-      { id: `${BASE}/DocumentModelCreation/SpecifyDocumentOperations`, title: "Specify document operations" },
-      { id: `${BASE}/DocumentModelCreation/UseTheDocumentModelGenerator`, title: "Use the document model generator" },
-      { id: `${BASE}/DocumentModelCreation/ImplementDocumentReducers`, title: "Implement document reducers" },
-      { id: `${BASE}/DocumentModelCreation/ImplementDocumentModelTests`, title: "Implement document model tests" },
-      { id: `${BASE}/DocumentModelCreation/ExampleToDoListRepository`, title: "Example: Todo-demo-package" },
-      { id: `${BASE}/DocumentModelCreation/DocumentModelVersioning`, title: "Document model versioning" },
+      {
+        id: `${BASE}/DocumentModelCreation/WhatIsADocumentModel`,
+        title: "What is a document model?",
+      },
+      {
+        id: `${BASE}/DocumentModelCreation/SpecifyTheStateSchema`,
+        title: "Specify the state schema",
+      },
+      {
+        id: `${BASE}/DocumentModelCreation/SpecifyDocumentOperations`,
+        title: "Specify document operations",
+      },
+      {
+        id: `${BASE}/DocumentModelCreation/UseTheDocumentModelGenerator`,
+        title: "Use the document model generator",
+      },
+      {
+        id: `${BASE}/DocumentModelCreation/ImplementDocumentReducers`,
+        title: "Implement document reducers",
+      },
+      {
+        id: `${BASE}/DocumentModelCreation/ImplementDocumentModelTests`,
+        title: "Implement document model tests",
+      },
+      {
+        id: `${BASE}/DocumentModelCreation/ExampleToDoListRepository`,
+        title: "Example: Todo-demo-package",
+      },
+      {
+        id: `${BASE}/DocumentModelCreation/DocumentModelVersioning`,
+        title: "Document model versioning",
+      },
     ],
   },
   {
@@ -59,16 +86,46 @@ export const modules: Module[] = [
     description:
       "Build document editors and drive-apps, add document tools, and wire up authorization.",
     lessons: [
-      { id: `${BASE}/BuildingUserExperiences/BuildingDocumentEditors`, title: "Build document editors" },
-      { id: `${BASE}/BuildingUserExperiences/BuildingADriveExplorer`, title: "Build a Drive-app" },
-      { id: `${BASE}/BuildingUserExperiences/CSSCustomization`, title: "CSS customization for Connect" },
-      { id: `${BASE}/BuildingUserExperiences/DocumentTools/OperationHistory`, title: "Operations history" },
-      { id: `${BASE}/BuildingUserExperiences/DocumentTools/RevisionHistoryTimeline`, title: "Revision history timeline" },
-      { id: `${BASE}/BuildingUserExperiences/DocumentTools/InspectorModal`, title: "Inspector modal" },
-      { id: `${BASE}/BuildingUserExperiences/Authorization/RenownAuthenticationFlow`, title: "Renown authentication flow" },
-      { id: `${BASE}/BuildingUserExperiences/Authorization/DocumentPermissions`, title: "Document permission system" },
-      { id: `${BASE}/BuildingUserExperiences/Authorization/Signing`, title: "Signing" },
-      { id: `${BASE}/BuildingUserExperiences/Authorization/Authorization`, title: "Reactor API authorization" },
+      {
+        id: `${BASE}/BuildingUserExperiences/BuildingDocumentEditors`,
+        title: "Build document editors",
+      },
+      {
+        id: `${BASE}/BuildingUserExperiences/BuildingADriveExplorer`,
+        title: "Build a Drive-app",
+      },
+      {
+        id: `${BASE}/BuildingUserExperiences/CSSCustomization`,
+        title: "CSS customization for Connect",
+      },
+      {
+        id: `${BASE}/BuildingUserExperiences/DocumentTools/OperationHistory`,
+        title: "Operations history",
+      },
+      {
+        id: `${BASE}/BuildingUserExperiences/DocumentTools/RevisionHistoryTimeline`,
+        title: "Revision history timeline",
+      },
+      {
+        id: `${BASE}/BuildingUserExperiences/DocumentTools/InspectorModal`,
+        title: "Inspector modal",
+      },
+      {
+        id: `${BASE}/BuildingUserExperiences/Authorization/RenownAuthenticationFlow`,
+        title: "Renown authentication flow",
+      },
+      {
+        id: `${BASE}/BuildingUserExperiences/Authorization/DocumentPermissions`,
+        title: "Document permission system",
+      },
+      {
+        id: `${BASE}/BuildingUserExperiences/Authorization/Signing`,
+        title: "Signing",
+      },
+      {
+        id: `${BASE}/BuildingUserExperiences/Authorization/Authorization`,
+        title: "Reactor API authorization",
+      },
     ],
   },
   {
@@ -77,11 +134,23 @@ export const modules: Module[] = [
     description:
       "Configure drives, query with subgraphs, and build processors over your data.",
     lessons: [
-      { id: `${BASE}/WorkWithData/ConfiguringDrives`, title: "Configure a drive" },
+      {
+        id: `${BASE}/WorkWithData/ConfiguringDrives`,
+        title: "Configure a drive",
+      },
       { id: `${BASE}/WorkWithData/UsingSubgraphs`, title: "Using subgraphs" },
-      { id: `${BASE}/WorkWithData/BuildingAProcessor`, title: "Building a processor" },
-      { id: `${BASE}/WorkWithData/ProcessorBestPractices`, title: "Processor best practices" },
-      { id: `${BASE}/WorkWithData/RelationalDbProcessor`, title: "Relational database processor" },
+      {
+        id: `${BASE}/WorkWithData/BuildingAProcessor`,
+        title: "Building a processor",
+      },
+      {
+        id: `${BASE}/WorkWithData/ProcessorBestPractices`,
+        title: "Processor best practices",
+      },
+      {
+        id: `${BASE}/WorkWithData/RelationalDbProcessor`,
+        title: "Relational database processor",
+      },
     ],
   },
   {
@@ -90,10 +159,22 @@ export const modules: Module[] = [
     description:
       "Publish your package and deploy it to a configured environment.",
     lessons: [
-      { id: `${BASE}/Launch/PublishYourProject`, title: "Publish your package" },
-      { id: `${BASE}/Launch/SetupEnvironment`, title: "Setup your environment" },
-      { id: `${BASE}/Launch/ConfigureEnvironment`, title: "Configure your environment" },
-      { id: `${BASE}/Launch/DockerDeployment`, title: "Docker deployment guide" },
+      {
+        id: `${BASE}/Launch/PublishYourProject`,
+        title: "Publish your package",
+      },
+      {
+        id: `${BASE}/Launch/SetupEnvironment`,
+        title: "Setup your environment",
+      },
+      {
+        id: `${BASE}/Launch/ConfigureEnvironment`,
+        title: "Configure your environment",
+      },
+      {
+        id: `${BASE}/Launch/DockerDeployment`,
+        title: "Docker deployment guide",
+      },
     ],
   },
 ];
