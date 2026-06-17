@@ -1,3 +1,24 @@
+## 6.2.0-dev.21 (2026-06-17)
+
+### 🚀 Features
+
+- use shadcn type theming class names ([#2720](https://github.com/powerhouse-inc/powerhouse/pull/2720))
+
+### 🩹 Fixes
+
+- **codegen:** read reducer method names from the operations interface AST ([9d9480608](https://github.com/powerhouse-inc/powerhouse/commit/9d9480608))
+- **codegen:** preserve existing modules when rebuilding aggregates ([5091fbabd](https://github.com/powerhouse-inc/powerhouse/commit/5091fbabd))
+
+### 🔥 Performance
+
+- **codegen:** lighten ts-morph Project + restore previous-version source-file lookup ([7c826d202](https://github.com/powerhouse-inc/powerhouse/commit/7c826d202))
+- **connect:** serve Connect + heavy deps from a prebuilt vendor in dev (opt-in) ([8c530ad4a](https://github.com/powerhouse-inc/powerhouse/commit/8c530ad4a))
+
+### ❤️ Thank You
+
+- acaldas
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.2.0-dev.20 (2026-06-17)
 
 This was a version bump only, there were no code changes.

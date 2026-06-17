@@ -1,3 +1,18 @@
+## 6.2.0-dev.21 (2026-06-17)
+
+### 🚀 Features
+
+- use shadcn type theming class names ([#2720](https://github.com/powerhouse-inc/powerhouse/pull/2720))
+
+### 🔥 Performance
+
+- **connect:** serve Connect + heavy deps from a prebuilt vendor in dev (opt-in) ([8c530ad4a](https://github.com/powerhouse-inc/powerhouse/commit/8c530ad4a))
+
+### ❤️ Thank You
+
+- acaldas
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.2.0-dev.20 (2026-06-17)
 
 This was a version bump only for @powerhousedao/ph-cli to align it with other projects, there were no code changes.
