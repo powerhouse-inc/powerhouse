@@ -275,7 +275,7 @@
 }
 
 .dark {
-  --background: var(--color-slate-900);
+  --background: var(--color-slate-800);
   --foreground: var(--color-slate-100);
   --card: var(--color-slate-700);
   --card-foreground: var(--color-slate-100);
