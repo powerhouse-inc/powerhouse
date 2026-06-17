@@ -6,7 +6,8 @@
   "sideEffects": false,
   "repository": {
     "type": "git",
-    "url": "https://github.com/powerhouse-inc/powerhouse"
+    "url": "https://github.com/powerhouse-inc/powerhouse",
+    "directory": "packages/vetra"
   },
   "publishConfig": {
     "access": "public"
@@ -102,5 +103,18 @@
     "vite-tsconfig-paths": "catalog:",
     "vitest": "catalog:"
   },
-  "description": ""
+  "description": "Vetra \u2014 the agent-first builder platform for the Powerhouse ecosystem. Spec-driven and AI-native development of open-source, decentralized back-ends.",
+  "keywords": [
+    "powerhouse",
+    "vetra",
+    "document-model",
+    "local-first",
+    "event-sourcing",
+    "vetra",
+    "agent",
+    "ai-native",
+    "builder",
+    "decentralized"
+  ],
+  "homepage": "https://academy.vetra.io"
 }

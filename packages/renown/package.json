@@ -1,13 +1,14 @@
 {
   "name": "@renown/sdk",
   "version": "6.2.0-dev.21",
-  "description": "",
+  "description": "Renown SDK \u2014 wallet-based authentication and user identity management for Powerhouse React applications.",
   "license": "AGPL-3.0-only",
   "private": false,
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "https://github.com/powerhouse-inc/powerhouse"
+    "url": "https://github.com/powerhouse-inc/powerhouse",
+    "directory": "packages/renown"
   },
   "publishConfig": {
     "access": "public"
@@ -55,5 +56,20 @@
     "key-did-resolver": "^4.0.0",
     "uint8arrays": "^5.1.0",
     "viem": "~2.50.4"
-  }
+  },
+  "keywords": [
+    "powerhouse",
+    "vetra",
+    "document-model",
+    "local-first",
+    "event-sourcing",
+    "renown",
+    "authentication",
+    "identity",
+    "wallet",
+    "web3",
+    "react",
+    "sdk"
+  ],
+  "homepage": "https://academy.vetra.io/academy/Reference/Authorization/renown-sdk/Overview"
 }

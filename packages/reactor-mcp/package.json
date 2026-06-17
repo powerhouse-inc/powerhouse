@@ -1,11 +1,12 @@
 {
   "name": "@powerhousedao/reactor-mcp",
   "version": "6.2.0-dev.21",
-  "description": "MCP server for document model operations in the Powerhouse ecosystem. For document model creation tasks, consider using the document-model-creator agent which provides a more guided experience.",
+  "description": "MCP server for the Powerhouse reactor \u2014 exposes document model operations and drive management to AI coding assistants via the Model Context Protocol.",
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "https://github.com/powerhouse-inc/powerhouse"
+    "url": "https://github.com/powerhouse-inc/powerhouse",
+    "directory": "packages/reactor-mcp"
   },
   "exports": {
     ".": {
@@ -34,7 +35,19 @@
   "publishConfig": {
     "access": "public"
   },
-  "keywords": [],
+  "keywords": [
+    "powerhouse",
+    "vetra",
+    "document-model",
+    "local-first",
+    "event-sourcing",
+    "mcp",
+    "model-context-protocol",
+    "ai",
+    "claude",
+    "cursor",
+    "reactor"
+  ],
   "author": "",
   "license": "AGPL-3.0-only",
   "dependencies": {
@@ -54,5 +67,6 @@
     "@types/node": "catalog:",
     "tsdown": "catalog:",
     "vitest": "catalog:"
-  }
+  },
+  "homepage": "https://academy.vetra.io"
 }

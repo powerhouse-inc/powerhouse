@@ -5,7 +5,8 @@
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "https://github.com/powerhouse-inc/powerhouse"
+    "url": "https://github.com/powerhouse-inc/powerhouse",
+    "directory": "packages/reactor-attachments"
   },
   "publishConfig": {
     "access": "public"
@@ -41,5 +42,19 @@
     "kysely-pglite-dialect": "catalog:",
     "tsdown": "catalog:",
     "vitest": "catalog:"
-  }
+  },
+  "description": "Content-addressed attachment service for the Powerhouse reactor \u2014 decouples large binaries from the action pipeline using opaque refs.",
+  "keywords": [
+    "powerhouse",
+    "vetra",
+    "document-model",
+    "local-first",
+    "event-sourcing",
+    "reactor",
+    "attachments",
+    "binary",
+    "files",
+    "content-addressed"
+  ],
+  "homepage": "https://academy.vetra.io/academy/Reference/Reactor/AttachmentService"
 }

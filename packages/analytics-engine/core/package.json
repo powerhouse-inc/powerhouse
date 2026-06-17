@@ -4,7 +4,8 @@
   "license": "AGPL-3.0-only",
   "repository": {
     "type": "git",
-    "url": "https://github.com/powerhouse-inc/powerhouse"
+    "url": "https://github.com/powerhouse-inc/powerhouse",
+    "directory": "packages/analytics-engine/core"
   },
   "publishConfig": {
     "access": "public"
@@ -33,5 +34,17 @@
     "@types/luxon": "catalog:",
     "vitest": "catalog:",
     "tsdown": "catalog:"
-  }
+  },
+  "description": "Powerhouse analytics engine \u2014 time-series query engine for document drive metrics and usage data.",
+  "keywords": [
+    "powerhouse",
+    "vetra",
+    "document-model",
+    "local-first",
+    "event-sourcing",
+    "analytics",
+    "time-series",
+    "metrics"
+  ],
+  "homepage": "https://academy.vetra.io"
 }

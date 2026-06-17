@@ -1,10 +1,11 @@
 {
   "name": "@powerhousedao/reactor",
   "version": "6.2.0-dev.21",
-  "description": "",
+  "description": "Core Powerhouse reactor \u2014 stores documents, resolves conflicts, and reprocesses operation histories. Supports local, cloud, and decentralized storage backends.",
   "repository": {
     "url": "https://github.com/powerhouse-inc/powerhouse",
-    "directory": "packages/reactor"
+    "directory": "packages/reactor",
+    "type": "git"
   },
   "type": "module",
   "sideEffects": false,
@@ -36,7 +37,17 @@
   "publishConfig": {
     "access": "public"
   },
-  "keywords": [],
+  "keywords": [
+    "powerhouse",
+    "vetra",
+    "document-model",
+    "local-first",
+    "event-sourcing",
+    "reactor",
+    "cqrs",
+    "decentralized",
+    "sync"
+  ],
   "author": "",
   "license": "AGPL-3.0-only",
   "dependencies": {
@@ -59,5 +70,6 @@
     "vitest": "catalog:",
     "@types/bun": "catalog:",
     "tsdown": "catalog:"
-  }
+  },
+  "homepage": "https://academy.vetra.io/academy/Reference/Reactor/WorkingWithTheReactor"
 }

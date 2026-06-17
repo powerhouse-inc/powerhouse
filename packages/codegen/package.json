@@ -10,7 +10,8 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/powerhouse-inc/powerhouse"
+    "url": "https://github.com/powerhouse-inc/powerhouse",
+    "directory": "packages/codegen"
   },
   "exports": {
     ".": {
@@ -72,5 +73,19 @@
   },
   "peerDependencies": {
     "graphql": "^16"
-  }
+  },
+  "description": "Powerhouse code generator \u2014 generates TypeScript types, reducers, and editor scaffolding from GraphQL document model schemas.",
+  "keywords": [
+    "powerhouse",
+    "vetra",
+    "document-model",
+    "local-first",
+    "event-sourcing",
+    "codegen",
+    "graphql",
+    "typescript",
+    "generator",
+    "scaffold"
+  ],
+  "homepage": "https://academy.vetra.io"
 }

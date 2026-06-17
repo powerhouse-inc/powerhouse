@@ -8,7 +8,8 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/powerhouse-inc/powerhouse"
+    "url": "https://github.com/powerhouse-inc/powerhouse",
+    "directory": "packages/common"
   },
   "exports": {
     ".": {
@@ -28,7 +29,7 @@
     }
   },
   "sideEffects": false,
-  "description": "The Powerhouse Common package contains the basic document model and drive UI (App) that is required to get started with Connect and visualize private & public apps.",
+  "description": "Common Powerhouse package \u2014 base document model and drive UI components required for Connect and Vetra Studio.",
   "scripts": {
     "build": "tsdown",
     "tsc": "tsc",
@@ -50,5 +51,16 @@
     "@types/node": "catalog:",
     "@types/luxon": "catalog:",
     "tsdown": "catalog:"
-  }
+  },
+  "keywords": [
+    "powerhouse",
+    "vetra",
+    "document-model",
+    "local-first",
+    "event-sourcing",
+    "connect",
+    "drive",
+    "components"
+  ],
+  "homepage": "https://academy.vetra.io"
 }

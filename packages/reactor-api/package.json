@@ -1,11 +1,12 @@
 {
   "name": "@powerhousedao/reactor-api",
   "version": "6.2.0-dev.21",
-  "description": "",
+  "description": "GraphQL API layer for the Powerhouse reactor \u2014 auto-generated subgraphs per document model plus the core reactor subgraph for drive and document management.",
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "https://github.com/powerhouse-inc/powerhouse"
+    "url": "https://github.com/powerhouse-inc/powerhouse",
+    "directory": "packages/reactor-api"
   },
   "exports": {
     ".": {
@@ -48,7 +49,17 @@
   "publishConfig": {
     "access": "public"
   },
-  "keywords": [],
+  "keywords": [
+    "powerhouse",
+    "vetra",
+    "document-model",
+    "local-first",
+    "event-sourcing",
+    "reactor",
+    "graphql",
+    "subgraph",
+    "api"
+  ],
   "author": "",
   "license": "AGPL-3.0-only",
   "dependencies": {
@@ -148,5 +159,6 @@
     "vite": {
       "optional": true
     }
-  }
+  },
+  "homepage": "https://academy.vetra.io"
 }

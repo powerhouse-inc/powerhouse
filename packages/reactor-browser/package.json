@@ -5,7 +5,8 @@
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "https://github.com/powerhouse-inc/powerhouse"
+    "url": "https://github.com/powerhouse-inc/powerhouse",
+    "directory": "packages/reactor-browser"
   },
   "publishConfig": {
     "access": "public"
@@ -105,5 +106,20 @@
     "graphql-tag": "^2",
     "react": ">=19.0.0",
     "react-dom": ">=19.0.0"
-  }
+  },
+  "description": "Browser-side Powerhouse reactor \u2014 React hooks and IReactorClient for building editors and drive-apps inside Connect, Switchboard, or Vetra Studio.",
+  "keywords": [
+    "powerhouse",
+    "vetra",
+    "document-model",
+    "local-first",
+    "event-sourcing",
+    "reactor",
+    "react",
+    "hooks",
+    "editor",
+    "drive-app",
+    "browser"
+  ],
+  "homepage": "https://academy.vetra.io/academy/Reference/Reactor/ReactorClient"
 }

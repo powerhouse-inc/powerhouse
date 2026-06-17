@@ -1,7 +1,7 @@
 {
   "name": "@powerhousedao/design-system",
   "version": "6.2.0-dev.21",
-  "description": "",
+  "description": "Powerhouse document-engineering design system \u2014 GraphQL scalar UI components for building consistent Powerhouse editors.",
   "files": [
     "dist",
     "theme.css"
@@ -9,7 +9,8 @@
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "https://github.com/powerhouse-inc/powerhouse"
+    "url": "https://github.com/powerhouse-inc/powerhouse",
+    "directory": "packages/design-system"
   },
   "publishConfig": {
     "access": "public"
@@ -76,7 +77,7 @@
   "bugs": {
     "url": "https://github.com/powerhouse-inc/design-system/issues"
   },
-  "homepage": "https://github.com/powerhouse-inc/design-system#readme",
+  "homepage": "https://academy.vetra.io/academy/Reference/EditorsUI/DocumentEngineering",
   "devDependencies": {
     "@babel/core": "^7.29.0",
     "@babel/plugin-transform-react-pure-annotations": "^7.27.1",
@@ -157,5 +158,19 @@
     "tailwind-merge": "catalog:",
     "type-fest": "catalog:",
     "usehooks-ts": "^3.1.1"
-  }
+  },
+  "keywords": [
+    "powerhouse",
+    "vetra",
+    "document-model",
+    "local-first",
+    "event-sourcing",
+    "design-system",
+    "components",
+    "react",
+    "graphql",
+    "scalars",
+    "ui",
+    "editor"
+  ]
 }

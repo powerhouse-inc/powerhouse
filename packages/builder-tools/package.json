@@ -8,7 +8,8 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/powerhouse-inc/powerhouse"
+    "url": "https://github.com/powerhouse-inc/powerhouse",
+    "directory": "packages/builder-tools"
   },
   "files": [
     "dist"
@@ -56,5 +57,19 @@
     "vite-plugin-externalize-dependencies": {
       "optional": true
     }
-  }
+  },
+  "description": "Build tooling for Powerhouse packages \u2014 Vite config, TypeScript setup, and dev-server utilities for document model editors and drive-apps.",
+  "keywords": [
+    "powerhouse",
+    "vetra",
+    "document-model",
+    "local-first",
+    "event-sourcing",
+    "vite",
+    "typescript",
+    "build",
+    "editor",
+    "tooling"
+  ],
+  "homepage": "https://academy.vetra.io"
 }
