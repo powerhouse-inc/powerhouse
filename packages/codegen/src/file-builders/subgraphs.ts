@@ -112,6 +112,9 @@ export async function makeSubgraphsIndexFile(args: {
   subgraphsDir: string;
 }) {
   const { project, subgraphsDir } = args;
+  // skipAddingFilesFromTsConfig leaves other subgraphs out of the project; add
+  // their index files so the aggregate exports every subgraph, not just the new one.
+  project.addSourceFilesAtPaths(path.join(subgraphsDir, "**", "index.ts"));
   const { sourceFile } = getOrCreateSourceFile(
     project,
     path.join(subgraphsDir, "index.ts"),

@@ -28,6 +28,7 @@ export function buildTsMorphProject(projectDir: string) {
   process.chdir(projectDir);
   const tsConfigFilePath = path.join(projectDir, "tsconfig.json");
   const project = new Project({
+    ...DEFAULT_PROJECT_OPTIONS,
     tsConfigFilePath,
     /* This avoids adding many files that are referenced by a given tsconfig in a monorepo
      * Probably only relevant for internal testing in this monorepo */

@@ -228,6 +228,12 @@ export async function tsMorphGenerateDocumentModel(
     documentModelDirPath,
     latestVersion,
   });
+  // skipAddingFilesFromTsConfig leaves other models out of the project; add
+  // the files the aggregates scan so every model is included, not just the new one.
+  project.addSourceFilesAtPaths([
+    join(documentModelsDirPath, "**", "module.ts"),
+    join(documentModelsDirPath, "**", "upgrade-manifest.ts"),
+  ]);
   // /document-models/document-models.ts
   await makeDocumentModelsFile({ project, documentModelsDirPath });
   // /document-models/index.ts

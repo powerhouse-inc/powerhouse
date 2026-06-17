@@ -72,6 +72,14 @@ export function getPreviousVersionSourceFile(args: {
     `/v${previousVersion}/`,
   );
 
+  // With skipAddingFilesFromTsConfig, the file isn't in the project yet;
+  // add it from disk so getSourceFile can find it instead of returning undefined.
+  try {
+    project.addSourceFileAtPath(previousVersionFilePath);
+  } catch {
+    // previous version file doesn't exist on disk — fall through to getSourceFile
+  }
+
   const previousVersionFile = project.getSourceFile(previousVersionFilePath);
 
   return previousVersionFile;
