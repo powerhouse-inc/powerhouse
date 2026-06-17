@@ -1,13 +1,20 @@
 import { downloadDocument } from "../utils/download-document.js";
-import { useDocumentById } from "./document-by-id.js";
+import { useGetDocument } from "./document-cache.js";
 import { usePHToast } from "./toast.js";
 
 export function useDownloadDocument(id: string | undefined) {
-  const [document] = useDocumentById(id);
+  const getDocument = useGetDocument();
   const toast = usePHToast();
 
-  return () =>
-    downloadDocument(document, (error) =>
-      toast?.(`Failed to export document: ${error.message}`),
-    );
+  return async () => {
+    if (!id) return;
+    const handleError = (error: Error) =>
+      toast?.(`Failed to export document: ${error.message}`);
+    try {
+      const document = await getDocument(id);
+      downloadDocument(document, handleError);
+    } catch (error) {
+      handleError(error as Error);
+    }
+  };
 }
