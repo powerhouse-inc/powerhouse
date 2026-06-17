@@ -12,9 +12,11 @@
  * all three), and a multi-entry build with `preserveEntrySignatures: 'strict'`
  * dedupes shared code into shared chunks. Entries for CJS deps re-export the
  * module's named API explicitly (so `import { createRoot }` works); ESM deps
- * use `export *`. The build runs under `base = VENDOR_URL_PREFIX` so emitted
- * asset URLs (`new URL(…, import.meta.url)` for .wasm/.data/workers) resolve to
- * the dev middleware, not the SPA root.
+ * use `export *`. The build runs under a dynamic-base placeholder + vendor
+ * segment (`connectDynamicBasePlugin`), so emitted asset/chunk URLs
+ * (`new URL(…, import.meta.url)` for .wasm/.data/workers) carry the placeholder
+ * and resolve at serve time to `<deploy-base>__vendor__/`, while the vendored
+ * Connect's `import.meta.env.BASE_URL` resolves to the deploy base.
  *
  * The React family stays EXTERNAL (see `VENDOR_EXTERNAL`); `esmExternalRequirePlugin`
  * owns that externalization and rewrites CJS `require("react")` → import. Vendor
@@ -41,6 +43,8 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname as pathDirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { DYNAMIC_BASE_PLACEHOLDER } from "./vite-plugins/dynamic-base.js";
 
 export interface VendorPrebuildOptions {
   /** Project root (the reactor-project dir). */
@@ -94,6 +98,10 @@ export interface PrebuiltVendor {
 
 /** URL prefix the vendor bundle is served under by the dev middleware. */
 export const VENDOR_URL_PREFIX = "/__vendor__/";
+
+// Vite `base` for the vendor build: dynamic-base placeholder + vendor segment.
+// connectDynamicBasePlugin rewrites it so chunk/asset URLs resolve at serve time.
+const VENDOR_DYNAMIC_BASE = `${DYNAMIC_BASE_PLACEHOLDER}${VENDOR_URL_PREFIX.replace(/^\/+/, "")}`;
 
 /**
  * Build the prebuilt vendor (once, in a throwaway subprocess) and return its dir
@@ -468,6 +476,9 @@ function runBuildWorker(
 ): Promise<{ ok: boolean; stderr: string }> {
   const workerPath = join(outDir, "build-worker.mjs");
   writeFileSync(workerPath, VENDOR_BUILD_WORKER);
+  // Absolute path to this (built) module so the worker can import the
+  // dynamic-base plugin from builder-tools' own bundle.
+  const selfModulePath = fileURLToPath(import.meta.url);
   return new Promise((resolve) => {
     const child = spawn(
       process.execPath,
@@ -478,6 +489,8 @@ function runBuildWorker(
         JSON.stringify(include),
         VENDOR_URL_PREFIX,
         JSON.stringify(external),
+        VENDOR_DYNAMIC_BASE,
+        selfModulePath,
       ],
       { cwd: dirname, stdio: ["ignore", "pipe", "pipe"] },
     );
@@ -494,20 +507,25 @@ function runBuildWorker(
 }
 
 /**
- * The vendor build worker, written to disk and run as a subprocess. Self-contained
- * (only Node + the project's `vite`). argv: dirname, vendorDir, includeJSON, urlPrefix.
+ * The vendor build worker, written to disk and run as a subprocess. Loads
+ * `vite` from the project and `connectDynamicBasePlugin` from builder-tools' own
+ * built bundle (selfModulePath). argv: dirname, vendorDir, includeJSON,
+ * urlPrefix, externalJSON, dynamicBase, selfModulePath.
  */
 const VENDOR_BUILD_WORKER = `
 import { createRequire } from 'node:module';
 import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { join, isAbsolute } from 'node:path';
-import { fileURLToPath } from 'node:url';
-const [dirname, vendorDir, includeJSON, urlPrefix, externalJSON] = process.argv.slice(2);
+import { fileURLToPath, pathToFileURL } from 'node:url';
+const [dirname, vendorDir, includeJSON, urlPrefix, externalJSON, dynamicBase, selfModulePath] = process.argv.slice(2);
 const include = JSON.parse(includeJSON);
 const external = JSON.parse(externalJSON ?? '[]');
 const externalSet = new Set(external);
 const reqProj = createRequire(join(dirname, 'noop.js'));
 const { build, esmExternalRequirePlugin } = await import(reqProj.resolve('vite'));
+// Load the dynamic-base plugin from builder-tools' own built bundle (passed as
+// an absolute path) — it isn't resolvable as a bare specifier from the worker.
+const { connectDynamicBasePlugin, DYNAMIC_BASE_PLACEHOLDER } = await import(pathToFileURL(selfModulePath));
 const srcDir = join(vendorDir, '.entries');
 mkdirSync(srcDir, { recursive: true });
 const entryName = (spec) => spec.replace(/[^\\w]+/g, '_');
@@ -570,21 +588,21 @@ const phVendorResolve = {
 };
 await build({
   root: dirname, configFile: false, logLevel: 'error',
-  // Emit asset URLs (pglite .wasm/.data, workers via \`new URL(..., import.meta.url)\`)
-  // under the vendor prefix so they resolve to the middleware, not the SPA root.
-  base: urlPrefix,
-  define: { 'process.env.NODE_ENV': '"development"' },
-  // phVendorResolve runs first (pre) so bare specifiers resolve from the worker,
-  // not the importing module's realpath. esmExternalRequirePlugin then OWNS
-  // externalization of \`external\` (react family + dev virtuals): it marks them
-  // external AND rewrites CJS require("react") to import (Rolldown keeps bare
-  // require() for external ids, which fails in the browser). It must be the sole
-  // externalizer — also listing them in rollupOptions.external prevents the
-  // require() rewrite (see vite-config.ts).
-  plugins: [phVendorResolve, esmExternalRequirePlugin({ external })],
-  // pglite (and any worker dep) ships web workers; emit them as ES-module asset
-  // chunks into the vendor so the middleware can serve them.
-  worker: { format: 'es' },
+  // Dynamic-base placeholder + vendor segment: connectDynamicBasePlugin rewrites
+  // emitted chunk/asset URLs to resolve against the deploy base at serve time.
+  base: dynamicBase,
+  define: {
+    'process.env.NODE_ENV': '"development"',
+    // BASE_URL resolves to the deploy base (not the vendor prefix) so vendored
+    // Connect's router basename + BASE_URL-relative fetches use the right path.
+    'import.meta.env.BASE_URL': JSON.stringify(DYNAMIC_BASE_PLACEHOLDER),
+  },
+  // phVendorResolve (pre) resolves bares from the worker; esmExternalRequirePlugin owns
+  // react/virtual externalization; connectDynamicBasePlugin (post) rewrites the placeholder base.
+  plugins: [phVendorResolve, esmExternalRequirePlugin({ external }), connectDynamicBasePlugin()],
+  // pglite ships web workers as ES-module chunks. workerStripPrefix is the vendor
+  // segment so the worker recovers the deploy base, not the vendor prefix.
+  worker: { format: 'es', plugins: () => [connectDynamicBasePlugin({ forWorker: true, workerStripPrefix: urlPrefix.replace(/^\\/+/, '') })] },
   build: {
     outDir: vendorDir, emptyOutDir: false, minify: false, target: 'esnext', cssCodeSplit: true,
     rollupOptions: {

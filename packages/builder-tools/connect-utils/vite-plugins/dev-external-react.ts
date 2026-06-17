@@ -176,11 +176,19 @@ export async function devReactImportmapPlugin(
         }),
       );
 
-      // Serve the prebuilt vendor bundle (JS/CSS/maps + shared chunks/assets).
+      // Serve the prebuilt vendor bundle. Match the base-prefixed URL (chunk/asset
+      // URLs carry the deploy base) and the bare prefix; strip whichever matched.
       if (vendorActive) {
         const vendorDir = vendor!.vendorDir;
-        server.middlewares.use(VENDOR_URL_PREFIX, (req, res, next) => {
-          const name = (req.url ?? "").split("?")[0].replace(/^\/+/, "");
+        const vendorPrefixes = [
+          withBase(base, VENDOR_URL_PREFIX),
+          VENDOR_URL_PREFIX,
+        ];
+        server.middlewares.use((req, res, next) => {
+          const url = (req.url ?? "").split("?")[0];
+          const prefix = vendorPrefixes.find((p) => url.startsWith(p));
+          if (!prefix) return next();
+          const name = url.slice(prefix.length).replace(/^\/+/, "");
           const file = path.join(vendorDir, name);
           // Path-segment containment (not a string prefix): reject anything that
           // escapes vendorDir, incl. siblings like `.ph-vendor.lock`.
@@ -257,25 +265,28 @@ export async function devReactImportmapPlugin(
             `${shimPrefix}${id}.js?v=${browserHash}`,
           ]),
         );
-        // Heavy libs resolve to the prebuilt vendor; their bare React imports
-        // fall through to the React shim entries above.
+        // Heavy libs resolve to the prebuilt vendor (base-prefixed); their bare
+        // React imports fall through to the React shim entries above.
+        let dynamicBaseScript = "";
         if (vendorActive) {
-          Object.assign(imports, vendor!.imports);
-          // When Connect is vendored it isn't dev-processed, so its dynamic
-          // `import("ph-bundled-packages-virtual")` (project local packages)
-          // can't be transformed in place. Point it at the URL Vite serves the
-          // virtual module at (phBundledPackagesPlugin), so bundled local
-          // packages still register.
+          for (const [spec, url] of Object.entries(vendor!.imports)) {
+            imports[spec] = withBase(base, url);
+          }
+          // Connect vendored isn't dev-processed, so its dynamic
+          // `import("ph-bundled-packages-virtual")` points at the virtual URL.
           if (vendor!.imports["@powerhousedao/connect"]) {
             imports["ph-bundled-packages-virtual"] = withBase(
               base,
               BUNDLED_PACKAGES_DEV_URL,
             );
           }
+          // Set the runtime base global so the vendor's rewritten URL exprs
+          // resolve to the dev/deploy base (mirrors the proxy at serve time).
+          dynamicBaseScript = `<script>globalThis.__PH_DYNAMIC_BASE__=${JSON.stringify(base)};</script>\n`;
         }
         return html.replace(
           /<script type="importmap">[\s\S]*?<\/script>/,
-          `<script type="importmap">${JSON.stringify({ imports }, null, 2)}</script>`,
+          `${dynamicBaseScript}<script type="importmap">${JSON.stringify({ imports }, null, 2)}</script>`,
         );
       },
     },

@@ -28,21 +28,7 @@ import {
 import { connectFaviconPlugin } from "./vite-plugins/favicon.js";
 import { phBundledPackagesPlugin } from "./vite-plugins/ph-bundled-packages.js";
 import { phConfigPlugin } from "./vite-plugins/ph-config.js";
-
-const REACT_VERSION = "19.2.0";
-
-// Importmap injected into Connect's HTML in production builds. The build
-// pipeline externalizes react/react-dom via Rolldown's
-// `esmExternalRequirePlugin` (see below), so the browser resolves bare
-// `react` imports through this map → CDN editor packages and Connect share
-// the same React instance via esm.sh. In dev, `devReactImportmapPlugin`
-// rewrites this map to point at Vite's pre-bundled React instead.
-const REACT_IMPORTMAP_IMPORTS: Record<string, string> = {
-  react: `https://esm.sh/react@${REACT_VERSION}`,
-  "react/": `https://esm.sh/react@${REACT_VERSION}/`,
-  "react-dom": `https://esm.sh/react-dom@${REACT_VERSION}`,
-  "react-dom/": `https://esm.sh/react-dom@${REACT_VERSION}/`,
-};
+import { reactSelfHostPlugin } from "./vite-plugins/react-self-host.js";
 
 export function getConnectHtmlTags(
   options: {
@@ -56,7 +42,7 @@ export function getConnectHtmlTags(
       tag: "meta",
       attrs: {
         "http-equiv": "Content-Security-Policy",
-        content: `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://esm.sh${registryUrl ? " " + registryUrl : ""}; worker-src 'self' blob:; object-src 'none'; base-uri 'self';`,
+        content: `script-src 'self' 'unsafe-inline' 'unsafe-eval'${registryUrl ? " " + registryUrl : ""}; worker-src 'self' blob:; object-src 'none'; base-uri 'self';`,
       },
       injectTo,
     },
@@ -251,25 +237,27 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     registryUrl: phPackageRegistryUrl,
   });
 
+  // Dev needs a placeholder importmap for devReactImportmapPlugin to rewrite;
+  // builds get their map from reactSelfHostPlugin's boot script instead.
+  const devImportmapTag =
+    mode === "development"
+      ? [
+          {
+            tag: "script",
+            attrs: { type: "importmap" },
+            children: JSON.stringify({ imports: {} }),
+            injectTo: "head-prepend" as const,
+          },
+        ]
+      : [];
+
   const plugins: PluginOption[] = [
     tailwind(),
     react(),
     createHtmlPlugin({
       minify: false,
       inject: {
-        tags: [
-          ...connectHtmlTags,
-          {
-            tag: "script",
-            attrs: { type: "importmap" },
-            children: JSON.stringify(
-              { imports: REACT_IMPORTMAP_IMPORTS },
-              null,
-              2,
-            ),
-            injectTo: "head-prepend",
-          },
-        ],
+        tags: [...connectHtmlTags, ...devImportmapTag],
       },
     }),
   ] as const;
@@ -400,25 +388,19 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
         packages: localPackagesFromConfig,
         projectRoot: options.dirname,
       }),
-      // Dev-only: rewrite the importmap so it points at Vite's pre-bundled
-      // React (the same URL Connect's own modules resolve to). Without this,
-      // CDN editors load React from esm.sh while Connect uses Vite's local
-      // copy → two React instances → useSyncExternalStore crash. The build
-      // path stays untouched; `esmExternalRequirePlugin` below still owns it.
+      // Dev-only: rewrite the importmap to Vite's pre-bundled React so Connect
+      // and CDN editors share one instance (build uses reactSelfHostPlugin).
       devReactImportmapPlugin(options.dirname),
       ...plugins,
-      // Externalize React so both Connect and dynamically loaded registry
-      // packages share the same React instance via the import map in index.html.
-      // Without this, Vite bundles React into Connect's chunks while registry
-      // packages resolve React from the import map (esm.sh), creating two
-      // separate React instances that don't share context/state.
-      //
-      // In Vite 8 (Rolldown), require() calls for external modules are preserved
-      // as-is, which fails in browsers. esmExternalRequirePlugin handles both
-      // externalization AND converting require() to import statements.
-      // NOTE: Do NOT also list these in build.rolldownOptions.external — overlapping
-      // entries prevent the plugin from transforming require() calls.
+      // Externalize React so Connect + CDN editors share one instance via the
+      // import map (reactSelfHostPlugin URLs); also rewrites external require().
       esmExternalRequirePlugin({ external: reactExternal }),
+      // Build-only: emit the React family into the dist + static import map, so
+      // React is self-hosted (not esm.sh). Dev React for non-prod/debug builds.
+      reactSelfHostPlugin({
+        dirname: options.dirname,
+        dev: mode !== "production" || isDebug,
+      }),
       connectFaviconPlugin(),
       // enforce: "post" — rewrites the placeholder base after all other
       // transforms have emitted their asset/chunk URLs.
