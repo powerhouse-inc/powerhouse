@@ -93,4 +93,29 @@ describe("generateSubgraph", () => {
     );
     expect(secondIndex).toBe(originalIndex);
   });
+
+  // The second generate runs on a fresh project, so the first subgraph is only
+  // on disk — the case skipAddingFilesFromTsConfig regresses.
+  it("should keep existing subgraphs in the index when generating one on a fresh project", async () => {
+    const outDir = join(parentOutDir, "append-to-existing-subgraphs");
+    await cpForce(WITH_DOCUMENT_MODELS_SPEC_2, outDir);
+    const subgraphsDir = join(outDir, "subgraphs");
+
+    const firstProject = buildTsMorphProject(outDir);
+    await generateSubgraph("alpha", firstProject);
+    await firstProject.save();
+
+    const freshProject = buildTsMorphProject(outDir);
+    await generateSubgraph("beta", freshProject);
+    await freshProject.save();
+
+    const indexContent = await readFile(
+      join(subgraphsDir, "index.ts"),
+      "utf-8",
+    );
+    expect(indexContent).toContain("AlphaSubgraph");
+    expect(indexContent).toContain("BetaSubgraph");
+
+    await runTsc(outDir);
+  });
 });

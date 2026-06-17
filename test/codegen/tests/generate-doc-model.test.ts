@@ -1,4 +1,10 @@
+import {
+  generateDocumentModel,
+  loadDocumentModel,
+} from "@powerhousedao/codegen";
+import { buildTsMorphProject } from "@powerhousedao/codegen/utils";
 import { describe, expect, test } from "bun:test";
+import { readFile } from "node:fs/promises";
 import { basename, join } from "node:path";
 import {
   DATA,
@@ -132,5 +138,36 @@ describe("versioned document models", () => {
           }),
       ).toThrow();
     });
+  });
+
+  // Each generate runs on its own project, so the prior model is only on disk,
+  // not in-process — the case skipAddingFilesFromTsConfig regresses.
+  test("should preserve other models in aggregates when generating one on a fresh project", async () => {
+    const outDir = join(parentOutDir, "append-to-existing-document-models");
+    await rmForce(outDir);
+    await cpForce(NEW_PROJECT, outDir);
+
+    const billing = await loadDocumentModel(
+      join(SPEC_VERSION_1, "billing-statement", "billing-statement.json"),
+    );
+    const firstProject = buildTsMorphProject(outDir);
+    await generateDocumentModel(billing, firstProject);
+    await firstProject.save();
+
+    const testDoc = await loadDocumentModel(
+      join(SPEC_VERSION_1, "test-doc", "test-doc.json"),
+    );
+    const freshProject = buildTsMorphProject(outDir);
+    await generateDocumentModel(testDoc, freshProject);
+    await freshProject.save();
+
+    const documentModelsFile = await readFile(
+      join(outDir, "document-models", "document-models.ts"),
+      "utf-8",
+    );
+    expect(documentModelsFile).toContain("billing-statement/v1");
+    expect(documentModelsFile).toContain("test-doc/v1");
+
+    await runTsc(outDir);
   });
 });

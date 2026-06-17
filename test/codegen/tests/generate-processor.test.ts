@@ -1,4 +1,5 @@
 import { generateProcessor } from "@powerhousedao/codegen";
+import { fileExists } from "@powerhousedao/shared/clis";
 import type { ReactorModule } from "@powerhousedao/reactor";
 import { ReactorBuilder } from "@powerhousedao/reactor";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
@@ -16,6 +17,7 @@ import type {
   ProcessorRecord,
 } from "@powerhousedao/shared/processors";
 import { afterEach, describe, expect, it } from "bun:test";
+import { readFile, writeFile } from "node:fs/promises";
 import { join } from "path";
 import { Project } from "ts-morph";
 import { NEW_PROJECT, TEST_OUTPUT } from "../constants.js";
@@ -298,6 +300,34 @@ describe("generate processor", () => {
       });
     });
   });
+  // A customized processor's files are only on disk on a fresh project — the
+  // case skipAddingFilesFromTsConfig regresses, overwriting user code.
+  it("should not overwrite a customized processor on a fresh project", async () => {
+    const outDir = join(parentOutDir, "preserve-customized-processor");
+    await cpForce(NEW_PROJECT, outDir);
+    const customDir = join(outDir, "processors", "my-custom");
+    await mkdirRecursive(customDir);
+    const customIndex = "export class MyCustomProcessor {}\n";
+    await writeFile(join(customDir, "index.ts"), customIndex);
+
+    const project = buildTsMorphProject(outDir);
+    await generateProcessor(
+      {
+        processorName: "my-custom",
+        processorType: "analytics",
+        documentTypes: ["billing-statement"],
+        processorApps: ["connect"],
+      },
+      project,
+    );
+    await project.save();
+
+    expect(await readFile(join(customDir, "index.ts"), "utf-8")).toBe(
+      customIndex,
+    );
+    expect(await fileExists(join(customDir, "processor.ts"))).toBe(false);
+  });
+
   describe("relational db and analytics processors", () => {
     it("should generate multiple relational db and analytics processors with a combination of processor apps", async () => {
       await runProcessorTests({
@@ -520,8 +550,8 @@ describe("processor e2e integration", () => {
     const { store } = await createAnalyticsStore({ pgLite });
 
     const mockDispatch = {
-      async execute() {
-        return { id: "mock", status: "mock" };
+      execute() {
+        return Promise.resolve({ id: "mock", status: "mock" });
       },
     };
     const mockGetReadModel = <T>(): T => {

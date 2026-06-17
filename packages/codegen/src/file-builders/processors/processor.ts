@@ -59,6 +59,9 @@ export async function tsMorphGenerateProcessor(args: {
   const dirPath = path.join(processorsDirPath, kebabCaseName);
   await ensureDirectoriesExist(project, processorsDirPath, dirPath);
 
+  // skipAddingFilesFromTsConfig leaves an existing processor's files out of
+  // the project; add them so a customized dir is detected, not overwritten.
+  project.addSourceFilesAtPaths(path.join(dirPath, "*.ts"));
   if (isCustomizedProcessorDir(project.getDirectory(dirPath))) {
     const relativePath = path.relative(
       projectDir,
