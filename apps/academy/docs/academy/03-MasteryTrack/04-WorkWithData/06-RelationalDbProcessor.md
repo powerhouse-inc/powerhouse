@@ -9,11 +9,11 @@ A relational database processor is a specialized component that listens to docum
 - **Analytics and Reporting**: Running complex SQL queries on your document data
 - **Integration**: Connecting with existing business intelligence tools
 
-:::tip Prerequisites
+:::tip[Prerequisites]
 This tutorial builds on the plain processor concepts covered in [Building a Processor](/academy/MasteryTrack/WorkWithData/BuildingAProcessor). If you are new to processors, start there first.
 :::
 
-:::info Import paths
+:::info[Import paths]
 The code examples below import from `@powerhousedao/reactor-browser`, which re-exports all reactor types for convenience in browser environments (editors, drive-apps, subgraphs). If you are working outside the browser — for example in a standalone Node.js script, CLI tool, or server-side processor — import directly from `@powerhousedao/reactor`.
 :::
 

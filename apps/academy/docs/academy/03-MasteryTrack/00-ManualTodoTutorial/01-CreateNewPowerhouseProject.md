@@ -1,6 +1,6 @@
 # Create a new to-do list document
 
-:::tip Tutorial Repository
+:::tip[Tutorial Repository]
 📦 **Reference Code**: [step-1-initialize-with-ph-init](https://github.com/powerhouse-inc/todo-tutorial/tree/step-1-initialize-with-ph-init)
 
 This tutorial step has a corresponding branch in the repository. You can:
@@ -175,7 +175,7 @@ Navigate to the newly created project directory:
 
 Once in the project directory, run the `ph vetra --watch` command to start a Vetra Studio Drive where you'll be defining your specifications. This is the preferred way to launch your development environment.
 
-:::info What is a Reactor?
+:::info[What is a Reactor?]
 You'll notice "reactor-api" in the terminal output. A **Reactor** is the Powerhouse back-end service that hosts your drives, handles document synchronization, and provides the GraphQL API. When you run `ph vetra --watch`, a local Reactor starts automatically to power your development environment.
 :::
 

@@ -1,6 +1,6 @@
 # Implement the document model reducers
 
-:::tip Tutorial Repository
+:::tip[Tutorial Repository]
 📦 **Reference Code**: [step-3-implement-reducer-operation-handlers](https://github.com/powerhouse-inc/todo-tutorial/tree/step-3-implement-reducer-operation-handlers)
 
 This step focuses on implementing the reducer logic for add, update, and delete operations.
@@ -205,7 +205,7 @@ export const todoListTodosOperations: TodoListTodosOperations = {
 
 </details>
 
-:::tip Check your work
+:::tip[Check your work]
 
 To make sure everything works as expected:
 

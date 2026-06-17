@@ -43,7 +43,7 @@ These `input` types are not just abstract definitions; they are the **specificat
 - **`UpdateTodoItemInput`** specifies that for an `UPDATE_TODO_ITEM` operation, we need the `id` of the item to update, and optionally new `text` or a `checked` status.
 - **`DeleteTodoItemInput`** specifies that a `DELETE_TODO_ITEM` operation requires the `id` of the item to be removed.
 
-:::tip ID Generation
+:::tip[ID Generation]
 Notice that `AddTodoItemInput` only requires `text` — not an `id`. This is because the ID is generated automatically in the reducer using `generateId()` from `document-model/core`. This ensures unique, consistent IDs and follows the pattern used in the [todo-demo repository](https://github.com/powerhouse-inc/todo-demo).
 :::
 

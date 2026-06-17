@@ -54,7 +54,7 @@ Using `height: "100%"` ensures your editor fills the available vertical space wi
 
 For more complex customizations or when you need to override Connect's default container styles, you can target the container IDs directly in a CSS file:
 
-:::danger Affects All Editors
+:::danger[Affects All Editors]
 Targeting container IDs directly will apply styles to **ALL** editors in your Connect application. For editor-specific styling, use [Method 3: Scoped Styling with Data Attributes](#method-3-scoped-styling-with-data-attributes) instead.
 :::
 
@@ -77,7 +77,7 @@ Targeting container IDs directly will apply styles to **ALL** editors in your Co
 }
 ```
 
-:::warning Best Practice: Centralize Style Imports
+:::warning[Best Practice: Centralize Style Imports]
 Remember to import styles in your `styles.css` file rather than directly in `.tsx` files. Direct imports work in development but won't be included in production builds.
 
 ```css
@@ -134,7 +134,7 @@ export const MyEditor: EditorModule = {
 | `vetra-drive-app`        | `powerhouse/document-drive`  | Drive Explorer  |
 | `app-editor`             | `powerhouse/app`             | App Editor      |
 
-:::tip Runtime Inspection
+:::tip[Runtime Inspection]
 You can inspect the `data-editor` and `data-document-type` attributes in your browser's developer tools when editing a document to find the exact values for your target editor.
 :::
 

@@ -1,6 +1,6 @@
 # Write document model tests
 
-:::tip Tutorial Repository
+:::tip[Tutorial Repository]
 📦 **Reference Code**: [step-4-implement-tests-for-todos-operations](https://github.com/powerhouse-inc/todo-tutorial/tree/step-4-implement-tests-for-todos-operations)
 
 This step focuses on writing comprehensive tests for the reducers you implemented in the previous step.
@@ -416,7 +416,7 @@ describe("Todos Operations", () => {
 
 </details>
 
-:::tip Check your work
+:::tip[Check your work]
 
 To make sure everything works as expected:
 

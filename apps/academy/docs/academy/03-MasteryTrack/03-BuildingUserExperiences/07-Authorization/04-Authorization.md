@@ -1,6 +1,6 @@
 # Reactor API Authorization
 
-:::warning Work in Progress
+:::warning[Work in Progress]
 This documentation is still being written and may be incomplete.
 :::
 
@@ -20,7 +20,7 @@ The Reactor API uses a layered authorization model:
 | **Document Protection**                                 | Determines whether a document requires explicit grants     | Per-document |
 | **[Document Permissions](./02-DocumentPermissions.md)** | Fine-grained READ/WRITE/ADMIN grants on specific documents | Per-document |
 
-:::tip When do I need document permissions?
+:::tip[When do I need document permissions?]
 
 - For simple setups, configure `ADMINS` and leave documents **unprotected** — any authenticated user can read and write
 - When you need fine-grained control, **protect** specific documents and manage access with [document permissions](./02-DocumentPermissions.md)
@@ -155,7 +155,7 @@ Does user have a grant for this document?
 4. **Document protection check**: If the document is unprotected, allow read for everyone and write for authenticated users
 5. **Grant check** (protected documents only): Check [document-level permissions](./02-DocumentPermissions.md) for READ/WRITE/ADMIN grants
 
-:::tip Authentication vs Authorization
+:::tip[Authentication vs Authorization]
 
 - **Authentication** ([Renown flow](./01-RenownAuthenticationFlow.md)): Proves who you are (`ph login`)
 - **Authorization** (this guide): Determines what you can access

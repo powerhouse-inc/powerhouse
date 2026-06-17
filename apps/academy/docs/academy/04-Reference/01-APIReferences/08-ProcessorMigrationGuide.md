@@ -21,7 +21,7 @@ This change simplifies the processor interface, improves cross-document ordering
 | `import type { ReactorContext } from "document-drive"`                   | Removed — no longer needed                                                               |
 | `import type { OperationWithContext } from "@powerhousedao/reactor"`     | Same (server-side alternative to reactor-browser)                                        |
 
-:::info Import paths
+:::info[Import paths]
 `@powerhousedao/reactor-browser` re-exports all reactor types for convenience in browser environments (editors, drive-apps). If you are working outside the browser (Node.js, CLI tools, server-side code), import directly from `@powerhousedao/reactor` or `@powerhousedao/shared`.
 :::
 

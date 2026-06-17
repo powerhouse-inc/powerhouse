@@ -10,7 +10,7 @@ The `IReactorClient` interface is the primary way to interact with a Powerhouse 
 import type { IReactorClient } from "@powerhousedao/reactor-browser";
 ```
 
-:::info Import paths
+:::info[Import paths]
 `@powerhousedao/reactor-browser` re-exports all reactor types for convenience in browser environments (editors, drive-apps, subgraphs). If you are working outside the browser — for example in a standalone Node.js script, CLI tool, or server-side processor — import directly from `@powerhousedao/reactor`.
 :::
 

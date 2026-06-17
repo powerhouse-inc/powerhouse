@@ -26,7 +26,7 @@ import type {
 import type { OperationWithContext } from "document-model";
 ```
 
-:::info Import paths
+:::info[Import paths]
 `@powerhousedao/reactor-browser` re-exports these types for convenience in browser environments. If you are working outside the browser (Node.js scripts, CLI tools, server-side code), import directly from `@powerhousedao/reactor`.
 :::
 

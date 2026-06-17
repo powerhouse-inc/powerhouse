@@ -110,13 +110,13 @@ export const todoListTodosOperations: TodoListTodosOperations = {
 };
 ```
 
-:::info Key Pattern: ID Generation
+:::info[Key Pattern: ID Generation]
 Notice that `addTodoItemOperation` uses `generateId()` from `document-model/core` to create a unique ID. This is the recommended pattern — the ID is generated in the reducer, not passed from the UI. This ensures consistent, unique IDs across all operations.
 :::
 
 ### Advanced implementation (with statistics tracking)
 
-:::info Advanced Feature
+:::info[Advanced Feature]
 This section extends the basic reducers with statistics tracking, matching the advanced schema from the previous section. This demonstrates how to update computed/derived state alongside your primary data.
 :::
 

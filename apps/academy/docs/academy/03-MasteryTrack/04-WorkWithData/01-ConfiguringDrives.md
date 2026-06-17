@@ -2,7 +2,7 @@
 
 A drive in Powerhouse is a container for documents and data. It's a place where you can organize and store your documents and share them with others. This guide walks you through configuring and managing drives in your Powerhouse environment.
 
-:::info **Prerequisites**
+:::info[**Prerequisites**]
 
 Before configuring a drive, ensure you have:
 
@@ -25,7 +25,7 @@ Remote drives in Powerhouse allow you to connect to and work with data stored in
 - **Cloud Storage**: For centralized, scalable data management.
 - **Decentralized Storage**: Such as Ceramic or IPFS, enabling distributed and blockchain-based storage options.
 
-:::tip **Explainer**
+:::tip[**Explainer**]
 **Powerhouse Reactors** are the nodes in the network that store and synchronize documents and drives, resolve conflicts, and rerun operations to verify document event histories.
 Reactors can be configured for local storage, centralized cloud storage, or a decentralized storage network.
 
@@ -62,7 +62,7 @@ To create a new drive in Powerhouse, follow these steps:
 
 You can also add a new remote drive to your Connect environment programmatically using GraphQL mutations. This is especially useful for automation, scripting, or integrating with external systems.
 
-:::info **Prerequisites**
+:::info[**Prerequisites**]
 
 - Access to the Switchboard or remote reactor (server node) of your Connect instance. In your local project, you can start your Reactor by running the following command in a different terminal from Connect Studio.
   `bash

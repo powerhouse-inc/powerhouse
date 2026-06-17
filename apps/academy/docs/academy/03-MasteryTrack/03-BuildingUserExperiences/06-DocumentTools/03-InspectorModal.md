@@ -75,7 +75,7 @@ This export contains the full database schema and all data, which can be useful 
 
 ### Importing a Database
 
-:::warning **Data Replacement Warning**
+:::warning[**Data Replacement Warning**]
 Importing a database will **replace ALL existing data** in your local Connect instance. This action cannot be undone.
 :::
 

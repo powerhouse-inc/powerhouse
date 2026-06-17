@@ -5,7 +5,7 @@
 In the next section, you'll learn how to run a local Reactor to test real-time synchronization between multiple users.
 
 
-:::tip Tutorial Repository
+:::tip[Tutorial Repository]
 📦 **Reference Code**: [chatroom-demo](https://github.com/powerhouse-inc/chatroom-demo)
 
 This final step demonstrates real-time collaboration by running a local Reactor instance.
@@ -50,7 +50,7 @@ Now you can:
 - React to messages with emojis and watch the reactions sync
 - Edit the chat name or description and see updates propagate
 
-:::info Real-time Sync
+:::info[Real-time Sync]
 The Reactor ensures that all operations are synchronized across connected clients. Each message and reaction is recorded as an operation, maintaining a complete history that can be replayed to reconstruct the document state.
 :::
 

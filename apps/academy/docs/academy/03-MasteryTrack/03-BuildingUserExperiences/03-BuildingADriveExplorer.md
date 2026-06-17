@@ -2,7 +2,7 @@
 
 **Drive-apps** enhance how contributors and organizations interact with document models.
 They create an 'app-like' experience by providing a **custom interface** for exploring and interacting with the contents of a drive.
-:::tip What is a Drive-app?
+:::tip[What is a Drive-app?]
 A Drive-app offers a tailored application designed around its document models.
 Think of a Drive-app as a specialized lens—it offers **different ways to visualize, organize, and interact with** the data stored within a drive, making it more intuitive and efficient for specific use cases.
 :::
@@ -73,7 +73,7 @@ Now, let's implement a specific example for the to-do list we've been working on
 This example demonstrates how to create a todo-list Drive-app application using the Powerhouse platform.
 The application allows users to create and manage to-do lists with a visual progress indicator.
 
-:::warning Heads-up!
+:::warning[Heads-up!]
 If you've been following the Mastery Track, you can continue with the to-do list document model and Powerhouse project you've created. For more details, you can refer to the [Document Model Creation guide](/academy/MasteryTrack/DocumentModelCreation/SpecifyTheStateSchema).
 
 If not, you can follow the shortened guide below to prepare your project for this tutorial.

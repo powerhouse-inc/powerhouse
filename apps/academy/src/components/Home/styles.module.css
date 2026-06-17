@@ -30,6 +30,13 @@
   justify-content: center;
 }
 
+/* Force readable text on the secondary "Watch intro" button in dark mode.
+   The Infima secondary button keeps a light background even in dark mode,
+   so we pin the text to the light-mode foreground colour (#343839). */
+[data-theme="dark"] .introBtn {
+  color: #343839 !important;
+}
+
 /* ---- 3-step agent path ---- */
 .steps {
   display: grid;

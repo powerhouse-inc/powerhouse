@@ -7,7 +7,7 @@ Please start with the [**Get Started**](/) chapter or [**Document Model Creation
 
 This guide covers the process of **building** and **publishing** a Powerhouse package to NPM.
 
-:::info Key Concepts
+:::info[Key Concepts]
 
 - **Powerhouse Package**: A collection of modules published to NPM that can be installed on a server instance or locally. Organizations build packages for specific purposes or workflows.
 - **Powerhouse Modules**: The building blocks of your package—document models, editors, processors, or scripts.
@@ -227,7 +227,7 @@ To publish a pre-release version:
 pnpm publish --tag beta
 ```
 
-:::info Git Tags vs NPM Tags
+:::info[Git Tags vs NPM Tags]
 
 - **Git Tags**: Markers in your repository history (e.g., `v1.0.0`) created by `pnpm version`
 - **NPM Dist-Tags**: Labels pointing to published versions (`latest`, `beta`, `next`). When publishing without a tag, the version gets the `latest` tag by default.
@@ -253,7 +253,7 @@ A visual package manager can be found in Connect's settings (bottom left setting
 
 ## 4. Publishing to the Vetra Registry (v6.0.0-dev.153+)
 
-:::info New publishing flow
+:::info[New publishing flow]
 Starting with `ph-cmd` version **6.0.0-dev.153**, packages can be published to the Vetra package registry using `ph publish`. This enables **dynamic package loading** — Connect can detect the required package from a document file and prompt the user to install it directly from the registry.
 
 This flow applies to **newly created projects** initialized with v6.0.0-dev.153 or later. Existing projects will need to be migrated.
@@ -308,7 +308,7 @@ Your package will be available at:
 - Registry index: `https://registry.dev.vetra.io/`
 - Package page: `https://registry.dev.vetra.io/your-package-name`
 
-:::tip Publishing new versions
+:::tip[Publishing new versions]
 Bump the `version` field in `package.json` before every subsequent publish.
 :::
 

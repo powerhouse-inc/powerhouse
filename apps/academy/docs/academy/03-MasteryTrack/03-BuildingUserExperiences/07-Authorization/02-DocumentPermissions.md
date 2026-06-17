@@ -1,6 +1,6 @@
 # Document Permission System
 
-:::warning Work in Progress
+:::warning[Work in Progress]
 This documentation is still being written and may be incomplete.
 The feature is not yet available on production.
 :::
@@ -26,7 +26,7 @@ The Reactor API implements a two-layer authorization system:
 
 This document permission system allows you to implement fine-grained access control—for example, you might want certain team members to have write access to a "Marketing" drive while only having read access to a "Finance" drive, even though they're both authenticated users of your Reactor.
 
-:::info Prerequisites: Authentication Required
+:::info[Prerequisites: Authentication Required]
 Before using document permissions, you must configure [authentication](./04-Authorization.md) with `AUTH_ENABLED=true`. Users need a valid authentication token to access the Reactor API. Supreme admins (listed in `ADMINS`) bypass all permission checks.
 :::
 
@@ -149,7 +149,7 @@ The system defines three permission levels for documents:
 
 **Permission hierarchy**: Higher permission levels include all capabilities of lower levels (ADMIN includes WRITE and READ, WRITE includes READ).
 
-:::tip Practical Examples
+:::tip[Practical Examples]
 
 - **READ**: A team member can view a budget document but cannot make changes
 - **WRITE**: A contributor can edit a specification document and push updates
@@ -335,7 +335,7 @@ For document drives specifically, the following operation permissions are availa
 - `COPY_NODE` - Copy files or folders within the drive
 - `MOVE_NODE` - Move files or folders within the drive
 
-:::info Operation Permissions vs Document Permissions
+:::info[Operation Permissions vs Document Permissions]
 These operation permissions provide fine-grained control over specific actions within a document drive, separate from the general document permission levels (READ, WRITE, ADMIN). Note that renaming a document is not part of the WRITE permission on the document itself—it's an `UPDATE_NODE` operation on the drive document. If you need to set operation permissions for documents with different document models, familiarize yourself with the available operations of the installed document model package.
 :::
 
@@ -697,7 +697,7 @@ mutation SetDriveName($id: String!, $name: String!) {
 
 The Reactor API exposes a GraphQL interface for all operations. When `DOCUMENT_PERMISSIONS_ENABLED=true`, an **Auth subgraph** is registered that adds permission-related queries and mutations to the API.
 
-:::tip How to use these APIs
+:::tip[How to use these APIs]
 All GraphQL operations below require:
 
 1. A valid bearer token from `ph access-token`
@@ -740,7 +740,7 @@ Alternatively, configure authorization in your `powerhouse.config.json` file:
 }
 ```
 
-:::info Authorization Model
+:::info[Authorization Model]
 
 - **[Authentication & Admin Access](./04-Authorization.md)** (`AUTH_ENABLED`, `ADMINS`): Controls authentication and supreme admin bypass
 - **Document protection**: Determines whether a document requires explicit grants (configurable via `DEFAULT_PROTECTION` or per-document)
@@ -1602,7 +1602,7 @@ curl -X POST http://localhost:4001/graphql \
   -d '{"query": "{ userDocumentPermissions { documentId permission } }"}'
 ```
 
-:::tip User Identification
+:::tip[User Identification]
 Permissions are tied to **Ethereum addresses** (e.g., `0x123...`), not usernames. When granting permissions, use the user's Ethereum address as shown in their Renown profile or obtained from `ph login --status`.
 :::
 

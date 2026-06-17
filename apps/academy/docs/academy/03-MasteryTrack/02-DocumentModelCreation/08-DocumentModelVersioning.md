@@ -13,7 +13,7 @@ Document models in Powerhouse are **event-sourced**. Once a document is created 
 - **Modify reducer logic** for new documents
 - **Automatically upgrade** old documents to new versions when needed
 
-:::info **Definition: What is Document Model Versioning?**
+:::info[**Definition: What is Document Model Versioning?**]
 Document Model Versioning is a system that allows multiple versions of the same document model to coexist. Each version has its own schema, operations, and reducers. Documents created with older versions continue to work with their original reducers, while new documents use the latest version. Upgrade manifests define how to migrate documents between versions.
 :::
 

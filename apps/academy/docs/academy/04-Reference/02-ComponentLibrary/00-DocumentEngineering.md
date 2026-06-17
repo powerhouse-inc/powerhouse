@@ -27,7 +27,7 @@ Understanding the relationship between document editors and viewers is crucial f
 
 **Document Viewer**: Does not allow modifications. It's a great way to inform about the state of the document type, making it a great tool for providing a broader group or public with transparent insights. Document viewers do not have to match the view of the editor one-to-one - the data presented could be framed as a specific selection, or filtered to provide desired insights.
 
-:::tip Component Behavior in Different Contexts
+:::tip[Component Behavior in Different Contexts]
 The same component that will be used in a document viewer will have a **disabled state** (not allowed to edit documents). Document editors precede document viewers - you would start by creating a document editor and then, if needed, decide which viewer format is useful.
 :::
 
@@ -79,7 +79,7 @@ Compound component that has an object/array value. It's made up of multiple scal
 Purpose-specific container for other components like lists of other components, color layouts, sections, etc.
 **Examples:** Homepage section layout
 
-:::info Component Library Philosophy
+:::info[Component Library Philosophy]
 The Powerhouse team is building a Component library with a wide range of components embedding best UX practices & key functionality. This library establishes standards and best practices for building documents while fast-tracking the building process through facilitation of the most basic & useful component types.
 :::
 

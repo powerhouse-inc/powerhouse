@@ -5,7 +5,7 @@
 Powerhouse is a powerful platform that helps you manage and deploy your applications efficiently.  
 This guide will walk you through the process of setting up both the Powerhouse CLI and configuring your server machine to run Powerhouse services. Whether you're setting up a development environment or preparing for production deployment, this guide provides all the necessary steps and considerations.
 
-:::tip Deployment Options
+:::tip[Deployment Options]
 This guide covers **VM/server-based deployment** with direct installation. If you prefer **containerized deployment**, see the [Docker Deployment Guide](./05-DockerDeployment.md).
 
 **Choose Docker if:** You want the fastest path to production, prefer containerized workflows, or are deploying to cloud platforms.
@@ -368,7 +368,7 @@ ph service setup
 
 Follow the interactive prompts. This command installs the Powerhouse services (Connect and Switchboard) and guides you through their configuration.
 
-:::info **What does `ph service setup` do?**
+:::info[**What does `ph service setup` do?**]
 The script takes care of all the necessary service configuration automatically.
 It installs and configures **Nginx** as a reverse proxy, sets up SSL certificates, and configures the proxy settings for optimal performance.
 It also installs **PM2** for process management and starts your services with the appropriate configuration based on your SSL choice.

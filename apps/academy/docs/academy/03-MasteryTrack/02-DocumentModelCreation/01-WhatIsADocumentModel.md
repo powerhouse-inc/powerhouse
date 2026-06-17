@@ -8,7 +8,7 @@ If you have completed the [Get Started](/academy/MasteryTrack/ManualTodoTutorial
 Although not required, completing the Get Started tutorial first is highly recommended as it provides a hands-on foundation for the concepts explored in depth here.
 :::
 
-:::info **Definition: What is a Document Model?**
+:::info[**Definition: What is a Document Model?**]
 A Document Model is a programmable document structure that defines how data is stored, changed, and interpreted in a decentralized system. It acts like a living blueprint—capturing state, tracking changes, and enabling interaction through defined operations.
 
 For instance, an invoice document model might define fields like _issuer_, _lineItems_, and _status_, with operations such as _AddLineItem_ and _MarkAsPaid_.

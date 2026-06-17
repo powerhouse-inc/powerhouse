@@ -1,6 +1,6 @@
 # Write the document specification
 
-:::tip Tutorial Repository
+:::tip[Tutorial Repository]
 📦 **Reference Code**: [step-2-generate-todo-list-document-model](https://github.com/powerhouse-inc/todo-tutorial/tree/step-2-generate-todo-list-document-model)
 
 This tutorial step has a corresponding branch. After completing this step, your project will have a generated document model with:
@@ -200,7 +200,7 @@ document-models/todo-list/
     └── versions.ts
 ```
 
-:::tip Check your work
+:::tip[Check your work]
 
 To make sure everything works as expected:
 

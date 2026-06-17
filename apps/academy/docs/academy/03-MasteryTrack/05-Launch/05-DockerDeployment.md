@@ -11,7 +11,7 @@ Docker deployment is ideal for:
 - **CI/CD pipelines** that need automated testing and deployment
 - **Cloud platforms** like AWS ECS, Google Cloud Run, or Kubernetes
 
-:::tip Deployment Options
+:::tip[Deployment Options]
 This guide covers **Docker-based deployment**. If you prefer **traditional VM/server deployment** with direct installation, see the [Setup Environment Guide](./03-SetupEnvironment.md).
 
 **Choose Docker if:** You want the fastest path to production, prefer containerized workflows, or are deploying to cloud platforms.

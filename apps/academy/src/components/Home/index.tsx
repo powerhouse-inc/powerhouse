@@ -6,7 +6,7 @@ import styles from "./styles.module.css";
 
 const steps = [
   { n: "1", label: "Install the CLI", code: "pnpm install -g ph-cmd" },
-  { n: "2", label: "Launch the agent", code: "ph vetra --watch" },
+  { n: "2", label: "Launch the agent", code: "placeholder curl" },
   {
     n: "3",
     label: "Describe what you want",
@@ -155,7 +155,7 @@ export default function Home(): JSX.Element {
           >
             Start building →
           </Link>
-          <Link className="button button--secondary button--lg" to="#intro">
+          <Link className={`button button--secondary button--lg ${styles.introBtn}`} to="#intro">
             ▶ Watch the 2-min intro
           </Link>
         </div>

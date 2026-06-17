@@ -2,7 +2,7 @@
 
 The state schema is the backbone of your document model. It defines the structure, data types, and relationships of the information your document will hold. In Powerhouse, we use the **GraphQL Schema Definition Language (SDL)** to define this schema. A well-defined state schema is crucial for ensuring data integrity, consistency, and for enabling powerful querying and manipulation capabilities.
 
-:::tip Specification Driven Design
+:::tip[Specification Driven Design]
 Your state schema is more than just a data structure—it's a **specification** that enables **Specification Driven Design & Development**. This schema becomes a machine-readable blueprint that AI agents can interpret and execute, enabling precise collaboration between you and AI throughout the development process.
 :::
 
@@ -31,7 +31,7 @@ GraphQL has a set of built-in **scalar types**:
 
 In addition to these standard types, the Powerhouse Document-Engineering system introduces custom scalars that are linked to reusable front-end components. These scalars are tailored for the web3 ecosystem and will be explored in the Component Library section of the documentation.
 
-:::tip Custom Scalar: OID
+:::tip[Custom Scalar: OID]
 Powerhouse provides the `OID` (Object ID) scalar type, which is a custom scalar specifically designed for unique identifiers in document models. It provides automatic ID generation capabilities when used with the `generateId()` function from the document-model core library.
 :::
 
@@ -66,7 +66,7 @@ type TodoItem {
 
 ### Advanced schema (with statistics tracking)
 
-:::info Advanced Feature
+:::info[Advanced Feature]
 In this Mastery Track, we'll extend the basic schema with a `stats` field to demonstrate how you can add computed statistics to your document model. This is an **optional enhancement** that builds on the foundation from Get Started.
 :::
 

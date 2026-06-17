@@ -1,6 +1,6 @@
 # Write the document specification
 
-:::tip Tutorial Repository
+:::tip[Tutorial Repository]
 📦 **Reference Code**: [chatroom-demo](https://github.com/powerhouse-inc/chatroom-demo)
 
 This tutorial step has a corresponding implementation in the repository. After completing this step, your project will have a document model specification with:

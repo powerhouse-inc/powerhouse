@@ -1,6 +1,6 @@
 # Implement the document model reducers
 
-:::tip Tutorial Repository
+:::tip[Tutorial Repository]
 📦 **Reference Code**: [chatroom-demo](https://github.com/powerhouse-inc/chatroom-demo)
 
 This tutorial covers two key implementations:

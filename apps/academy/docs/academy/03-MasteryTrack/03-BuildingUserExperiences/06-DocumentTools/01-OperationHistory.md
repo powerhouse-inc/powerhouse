@@ -63,7 +63,7 @@ You can also view the committer's address for each revision, supporting full tra
 
 ![Committer Address Popup](./images/committer-address-popup.png)
 
-:::warning Work in Progress
+:::warning[Work in Progress]
 This remainder of this documentation is still being written and may be incomplete.
 :::
 

@@ -2,7 +2,7 @@
 
 This guide covers advanced patterns for processors that need to mutate documents or query indexed data. It builds on the concepts from [Building a Processor](/academy/MasteryTrack/WorkWithData/BuildingAProcessor) — read that first if you haven't already.
 
-:::tip Prerequisites
+:::tip[Prerequisites]
 Before reading this guide, make sure you're familiar with the basics:
 
 - [Building a Processor](/academy/MasteryTrack/WorkWithData/BuildingAProcessor) — processor interface, factories, and filters
@@ -129,7 +129,7 @@ The processor dispatches the `CREATE_PAYMENT` action and moves on. It does not w
 
 ### Why not `reactorClient`?
 
-:::warning Anti-pattern: using reactorClient directly
+:::warning[Anti-pattern: using reactorClient directly]
 Do not use `reactorClient` methods directly from inside a processor. Use `dispatch` instead.
 
 **Why:**
@@ -255,7 +255,7 @@ export const budgetCheckProcessorFactory =
   };
 ```
 
-:::info Read model availability
+:::info[Read model availability]
 `getReadModel` throws if the read model is not registered. Ensure the read model is registered with the reactor before your processor factory runs. If the read model is optional, wrap the call in a try/catch in your factory and handle the missing case gracefully.
 :::
 
@@ -283,7 +283,7 @@ interface IProcessorHostModule {
 | `getReadModel`   | `<T>(name: string) => T` | Read model lookup by name (see above)                 |
 | `config`         | `Map<string, unknown>`   | Optional processor-specific configuration             |
 
-:::info Import paths
+:::info[Import paths]
 `@powerhousedao/reactor-browser` re-exports these types for convenience in browser environments. If you are working outside the browser (Node.js, CLI tools, server-side code), import directly from `@powerhousedao/reactor` or `@powerhousedao/shared`.
 :::
 

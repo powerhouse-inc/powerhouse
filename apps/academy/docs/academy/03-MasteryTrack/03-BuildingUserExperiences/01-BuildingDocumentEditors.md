@@ -105,11 +105,11 @@ You have several options for styling your editor components:
 
 Choose the method or combination of methods that best suits your project needs and team preferences. Vetra Studio (`ph vetra --watch`) or Connect (`ph connect`) will allow you to see your styles applied in real-time.
 
-:::tip Advanced Styling: Connect Container Customization
+:::tip[Advanced Styling: Connect Container Customization]
 When your editor runs inside Connect, it's wrapped in container elements that you can target for advanced styling. See [CSS Customization for Connect Integration](/academy/MasteryTrack/BuildingUserExperiences/CSSCustomization) to learn how to customize `#document-editor-container` and `#document-editor-context`.
 :::
 
-:::warning **Best practices for consistent reliable styles**
+:::warning[**Best practices for consistent reliable styles**]
 
 In any package the styles are being generated through the styles.css file with the help of the tailwindcss/cli package.
 
@@ -158,7 +158,7 @@ Think of it like ordering food at a restaurant:
 
 The **hook-based approach** uses `useSelectedTodoListDocument` — a React hook that Powerhouse generates for your document model. Any component can call this hook to get the current document state and a function to dispatch changes.
 
-:::tip Full React Hooks Reference
+:::tip[Full React Hooks Reference]
 Powerhouse provides many more hooks beyond the document-specific ones. See the complete [React Hooks API Reference](/academy/Reference/APIReferences/ReactHooks) for all available hooks.
 :::
 
@@ -591,7 +591,7 @@ export function Todo({ todo }: Props) {
 
 ## Advanced: Adding stats display
 
-:::info Advanced Feature
+:::info[Advanced Feature]
 If you implemented the advanced version with statistics tracking, you can add a stats component to display the todo counts.
 :::
 
@@ -651,7 +651,7 @@ ph vetra --watch
 
 In Vetra Studio, you'll be able to create and test your **TodoList** documents. Click on the Document Models section and create a new TodoList document.
 
-:::tip Vetra Studio as your dynamic development environment
+:::tip[Vetra Studio as your dynamic development environment]
 The editor will update dynamically, so you can play around with your editor styling while seeing your results appear in Vetra Studio.
 :::
 

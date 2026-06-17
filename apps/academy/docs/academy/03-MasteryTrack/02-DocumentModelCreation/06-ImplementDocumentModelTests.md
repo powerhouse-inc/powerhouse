@@ -153,7 +153,7 @@ describe("Todos Operations", () => {
 
 **Advanced tests (with stats verification):**
 
-:::info Advanced Feature
+:::info[Advanced Feature]
 If you implemented the advanced version with statistics tracking, add these additional tests to verify the stats are updated correctly.
 :::
 

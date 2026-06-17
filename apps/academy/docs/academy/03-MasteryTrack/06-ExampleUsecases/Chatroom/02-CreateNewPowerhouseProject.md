@@ -1,6 +1,6 @@
 # Create a new chatroom project
 
-:::tip Tutorial Repository
+:::tip[Tutorial Repository]
 📦 **Reference Code**: [chatroom-demo](https://github.com/powerhouse-inc/chatroom-demo)
 
 This tutorial has a complete reference implementation available. You can:
