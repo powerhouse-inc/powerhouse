@@ -1,3 +1,13 @@
+## 6.2.0-dev.23 (2026-06-18)
+
+### 🩹 Fixes
+
+- **academy:** point cli-docs generator at relocated CLITooling path ([1dadb16e3](https://github.com/powerhouse-inc/powerhouse/commit/1dadb16e3))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.0-dev.21 (2026-06-17)
 
 ### 🚀 Features

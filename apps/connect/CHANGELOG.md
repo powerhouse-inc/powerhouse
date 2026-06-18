@@ -1,3 +1,13 @@
+## 6.2.0-dev.23 (2026-06-18)
+
+### 🚀 Features
+
+- **connect:** self-host React + base-aware externalize-vendor ([2ce1cbdc1](https://github.com/powerhouse-inc/powerhouse/commit/2ce1cbdc1))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.0-dev.21 (2026-06-17)
 
 ### 🚀 Features
