@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-06-17T17:10:04.553Z
+> Generated: 2026-06-18T08:45:22.149Z
 > Total Documents: 105
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -12,18 +12,17 @@
 
 > Source: https://academy.vetra.io/academy/GetStarted/VetraStudio
 
-Vetra Studio is the browser UI for the Vetra agent. It lets you chat with the Vetra agent, track work across the four-phase product development cycle 
+Vetra Studio is the browser UI for the Vetra agent. It lets you chat with the Vetra agent, track work across the four-phase product development cycle
 (Ideate → Specify → Build → Deploy), and watch a live preview of the product the Vetra agent is building.
 
-
-## What can i build? 
+## What can i build?
 
 With the Vetra Studio Agent, you can build **local-first, AI-ready, specification-driven products, platforms and software solutions**.
 These solutions can be used as:
+
 - Open-source and decentralized back-ends.
 - Any SaaS, ERP, CMS or CRM needs.
 - Are based on a structured data model & document-centric architecture.
-
 
 ## Getting started
 
@@ -74,12 +73,12 @@ embedded reactor's PGlite database.
 
 The right pane shows four phase cards when no sub-section is open:
 
-| Phase | Status | What happens there |
-|-------|--------|--------------------|
-| **Ideate** | active | Problem-definition documents and feature lists |
-| **Specify** | inactive (coming) | Solution design |
-| **Build** | active | Live preview of the agent's in-progress work |
-| **Deploy** | inactive (coming) | Delivery / publish |
+| Phase       | Status            | What happens there                             |
+| ----------- | ----------------- | ---------------------------------------------- |
+| **Ideate**  | active            | Problem-definition documents and feature lists |
+| **Specify** | inactive (coming) | Solution design                                |
+| **Build**   | active            | Live preview of the agent's in-progress work   |
+| **Deploy**  | inactive (coming) | Delivery / publish                             |
 
 Click **IDEATE** to browse product-identity cards, audiences and your product ideas 'Job to be done' framework. Click **BUILD** to open the live preview pane.
 
@@ -198,13 +197,13 @@ will fall back to the generic folder view instead of Vetra Studio.
 
 ### Service ports (default)
 
-| Service | Port | Purpose |
-|---------|------|---------|
-| Vetra Studio (Connect) | 27370 | Browser entry point |
-| Embedded Switchboard | 59220 | GraphQL + MCP |
-| Preview server (local API) | 5180 | Preview state + SSE |
-| Embedded reverse proxy | 8090 | Single public port (deployed mode) |
-| Reactor-project Connect | varies | Per-session BUILD preview |
+| Service                    | Port   | Purpose                            |
+| -------------------------- | ------ | ---------------------------------- |
+| Vetra Studio (Connect)     | 27370  | Browser entry point                |
+| Embedded Switchboard       | 59220  | GraphQL + MCP                      |
+| Preview server (local API) | 5180   | Preview state + SSE                |
+| Embedded reverse proxy     | 8090   | Single public port (deployed mode) |
+| Reactor-project Connect    | varies | Per-session BUILD preview          |
 
 ### Diagnostics
 
@@ -1492,7 +1491,7 @@ sourcing, or CRDTs, much of this will feel familiar.
 
 This course explains how the stack is structured and how its pieces fit
 together. It's **explanation, not step-by-step instructions** — the goal is to
-understand *what* the agent builds for you and *why*. To ship with the agent,
+understand _what_ the agent builds for you and _why_. To ship with the agent,
 start at [Get started](/academy/GetStarted/VetraStudio); to build by hand, see
 [Build](/academy/Build/ManualTodoTutorial/CreateNewPowerhouseProject).
 
@@ -1504,7 +1503,7 @@ default:
 - **Track every change** — who did what, when, addressable by index and hash.
 - **Sync across peers** — offline edits merge deterministically, no last-write-wins.
 - **Build collaborative apps** — concurrent editing without conflict resolution code.
-- **Keep auditable histories** — the log *is* the audit trail.
+- **Keep auditable histories** — the log _is_ the audit trail.
 - **Separate business logic from UI** — reducers hold the rules; editors just dispatch.
 
 That makes it well suited to operational systems, governance tools, financial
@@ -1551,7 +1550,7 @@ later lesson builds on the operation-log model it establishes.
 
 > Source: https://academy.vetra.io/academy/Learn/foundations/what-is-powerhouse
 
-Powerhouse is a framework for building apps whose state lives in **documents** that evolve through **operations**. If you've built with CRDTs, <Term>Event Sourcing</Term>, or Git, a lot of this will feel familiar — with one twist: Powerhouse makes the *type* of each document explicit, so actions are always validated before they turn into operations.
+Powerhouse is a framework for building apps whose state lives in **documents** that evolve through **operations**. If you've built with CRDTs, <Term>Event Sourcing</Term>, or Git, a lot of this will feel familiar — with one twist: Powerhouse makes the _type_ of each document explicit, so actions are always validated before they turn into operations.
 
 By the end of this lesson, you should be able to answer: what does Powerhouse store, and how does an app make changes to it?
 
@@ -1565,7 +1564,7 @@ Everything in Powerhouse flows through the same cycle:
 
 ```ts
 // Dispatch
-const action = addTodo({ id: 't-1', title: 'Learn Powerhouse' });
+const action = addTodo({ id: "t-1", title: "Learn Powerhouse" });
 
 // The reducer produces the next state
 const nextDoc = reducer(currentDoc, action);
@@ -1577,28 +1576,32 @@ This loop never changes, whether the document is a to-do list, a finance ledger,
   question="Which statement best describes what Powerhouse actually stores on disk?"
   choices={[
     {
-      label: 'Snapshots of the current document state.',
-      explanation: 'Snapshots are derivable — storing only them would throw away the history Powerhouse depends on for sync and audit.',
+      label: "Snapshots of the current document state.",
+      explanation:
+        "Snapshots are derivable — storing only them would throw away the history Powerhouse depends on for sync and audit.",
     },
     {
-      label: 'The full history of operations that produced the document.',
+      label: "The full history of operations that produced the document.",
       correct: true,
-      explanation: 'Operations are the source of truth. State is derived by replaying them.',
+      explanation:
+        "Operations are the source of truth. State is derived by replaying them.",
     },
     {
-      label: 'Both the current state and a backup copy every 24 hours.',
-      explanation: 'Close but not quite — Powerhouse doesn\'t rely on periodic backups. The operation log *is* the backup.',
+      label: "Both the current state and a backup copy every 24 hours.",
+      explanation:
+        "Close but not quite — Powerhouse doesn't rely on periodic backups. The operation log *is* the backup.",
     },
     {
-      label: 'Only the latest action the user dispatched.',
-      explanation: 'A single action isn\'t enough to rebuild a document — you need the whole ordered log.',
+      label: "Only the latest action the user dispatched.",
+      explanation:
+        "A single action isn't enough to rebuild a document — you need the whole ordered log.",
     },
   ]}
 />
 
 ## Why operations, not snapshots?
 
-Storing *what changed* instead of *what is* unlocks a few things:
+Storing _what changed_ instead of _what is_ unlocks a few things:
 
 - **Deterministic replay** — hand the operation log to any machine and it rebuilds the same state.
 - **Conflict-free sync** — two offline clients can both edit, then reconcile by merging operations in order.
@@ -1609,36 +1612,40 @@ Storing *what changed* instead of *what is* unlocks a few things:
 
 These are the terms that show up everywhere in the docs and in the rest of these lessons:
 
-| Term | What it is |
-| --- | --- |
-| **Document Model** | A typed schema + the set of actions allowed on it. |
-| **Document** | An instance of a model, plus its operation history. |
-| **Action** | Pure data — a name and inputs — describing an intended change. |
-| **Operation** | An action after it ran through a reducer: stamped with index, timestamp, hash. |
-| **Reducer** | A pure function `(state, action) → nextState`. |
-| **Editor** | A React UI that dispatches actions. |
-| **Processor** | An event-driven handler that derives read models from operations. |
-| **Reactor** | The engine that runs reducers, persists operations, and syncs them. |
+| Term               | What it is                                                                     |
+| ------------------ | ------------------------------------------------------------------------------ |
+| **Document Model** | A typed schema + the set of actions allowed on it.                             |
+| **Document**       | An instance of a model, plus its operation history.                            |
+| **Action**         | Pure data — a name and inputs — describing an intended change.                 |
+| **Operation**      | An action after it ran through a reducer: stamped with index, timestamp, hash. |
+| **Reducer**        | A pure function `(state, action) → nextState`.                                 |
+| **Editor**         | A React UI that dispatches actions.                                            |
+| **Processor**      | An event-driven handler that derives read models from operations.              |
+| **Reactor**        | The engine that runs reducers, persists operations, and syncs them.            |
 
 <Quiz
   question="You're building a note-taking app. Which of these belongs in a reducer, and which in an editor?"
   choices={[
     {
-      label: 'Rendering the note title in a text field — reducer.',
-      explanation: 'Rendering is the editor\'s job. Reducers don\'t touch the DOM.',
+      label: "Rendering the note title in a text field — reducer.",
+      explanation:
+        "Rendering is the editor's job. Reducers don't touch the DOM.",
     },
     {
-      label: 'Computing the new title when the user types — reducer.',
+      label: "Computing the new title when the user types — reducer.",
       correct: true,
-      explanation: 'State transitions belong in the reducer. The editor only dispatches actions.',
+      explanation:
+        "State transitions belong in the reducer. The editor only dispatches actions.",
     },
     {
-      label: 'Calling the server to save — reducer.',
-      explanation: 'Reducers are pure. Side-effects live elsewhere (the Reactor persists; processors react).',
+      label: "Calling the server to save — reducer.",
+      explanation:
+        "Reducers are pure. Side-effects live elsewhere (the Reactor persists; processors react).",
     },
     {
-      label: 'Showing a confirmation toast — reducer.',
-      explanation: 'Toasts are UI concerns — they belong in the editor or a processor that emits notifications.',
+      label: "Showing a confirmation toast — reducer.",
+      explanation:
+        "Toasts are UI concerns — they belong in the editor or a processor that emits notifications.",
     },
   ]}
   explanation="A good rule of thumb: reducers are pure, editors are impure. Anything that touches the DOM, network, or time belongs outside the reducer."
@@ -1651,7 +1658,7 @@ These are the terms that show up everywhere in the docs and in the rest of these
 
 > Source: https://academy.vetra.io/academy/Learn/foundations/thinking-in-operations
 
-If you've built CRUD apps before, you probably think in terms of *rows* — the current value of a record in a database. <Term>Powerhouse</Term> asks you to flip this: think in terms of the *sequence of changes* that produced that row.
+If you've built CRUD apps before, you probably think in terms of _rows_ — the current value of a record in a database. <Term>Powerhouse</Term> asks you to flip this: think in terms of the _sequence of changes_ that produced that row.
 
 This lesson is short on code and heavy on mental model. Once it clicks, the rest of the stack falls into place.
 
@@ -1665,9 +1672,9 @@ UPDATE todos SET done = true WHERE id = 't-1';
 
 That statement destroys information. Afterwards, you can't answer:
 
-- *When* did it get marked done?
-- *Who* marked it?
-- *What was it before?*
+- _When_ did it get marked done?
+- _Who_ marked it?
+- _What was it before?_
 - Can we undo just this change without rolling back everything since?
 
 You can rebuild some of that with audit tables, triggers, or soft deletes — but you're reintroducing history on top of a model that actively throws it away.
@@ -1677,7 +1684,7 @@ You can rebuild some of that with audit tables, triggers, or soft deletes — bu
 In Powerhouse, the same change is:
 
 ```ts
-dispatch(completeTodo({ id: 't-1' }));
+dispatch(completeTodo({ id: "t-1" }));
 ```
 
 Which becomes an operation appended to the document's log:
@@ -1693,27 +1700,33 @@ Which becomes an operation appended to the document's log:
 }
 ```
 
-State is *derived*. If you want "the current list of done todos," you fold the log. If you want "the state at index 30," you fold up to there. If two peers edit offline, you merge their logs in order — no last-write-wins guesswork.
+State is _derived_. If you want "the current list of done todos," you fold the log. If you want "the state at index 30," you fold up to there. If two peers edit offline, you merge their logs in order — no last-write-wins guesswork.
 
 <Quiz
   question="Two users edit the same todo list offline. Alice adds 'Buy milk.' Bob completes an existing todo. When they reconnect, what does Powerhouse do?"
   choices={[
     {
       label: "Last write wins — whoever synced last overwrites the other.",
-      explanation: 'Last-write-wins is a snapshot-model behaviour. Powerhouse operates on the log, not the snapshot.',
+      explanation:
+        "Last-write-wins is a snapshot-model behaviour. Powerhouse operates on the log, not the snapshot.",
     },
     {
-      label: "Interleaves both operations into a single ordered log; both changes survive.",
+      label:
+        "Interleaves both operations into a single ordered log; both changes survive.",
       correct: true,
-      explanation: 'Because operations describe intent independently, they can be combined in order without either being lost.',
+      explanation:
+        "Because operations describe intent independently, they can be combined in order without either being lost.",
     },
     {
       label: "Alice's change is queued until Bob confirms a merge.",
-      explanation: 'No manual merge is needed for non-conflicting operations on the same document.',
+      explanation:
+        "No manual merge is needed for non-conflicting operations on the same document.",
     },
     {
-      label: "The document rolls back to its last common state and both users lose their edits.",
-      explanation: 'That would be a hostile UX — the whole point of the operation log is that nothing needs to be lost.',
+      label:
+        "The document rolls back to its last common state and both users lose their edits.",
+      explanation:
+        "That would be a hostile UX — the whole point of the operation log is that nothing needs to be lost.",
     },
   ]}
   explanation="Because operations are ordered, independent, and carry their own intent, Powerhouse can merge them deterministically — which is what people mean by 'conflict-free sync'."
@@ -1736,7 +1749,7 @@ Once the log exists, a lot of hard problems become easy:
 
 > Source: https://academy.vetra.io/academy/Learn/architecture/the-big-picture
 
-The previous lesson showed how every change becomes an operation appended to an immutable log. Now let's look at *where* that all actually runs. By the end of this lesson, you'll be able to point at any concept in the course — a reducer, a processor, a React hook — and say confidently: "that runs in the Reactor" or "that lives in Switchboard."
+The previous lesson showed how every change becomes an operation appended to an immutable log. Now let's look at _where_ that all actually runs. By the end of this lesson, you'll be able to point at any concept in the course — a reducer, a processor, a React hook — and say confidently: "that runs in the Reactor" or "that lives in Switchboard."
 
 ## One engine, two faces
 
@@ -1775,20 +1788,25 @@ You write the logic once; the stack decides where it executes.
   choices={[
     {
       label: "Inside Connect, because that's where the user is working.",
-      explanation: "Connect is a host that embeds a Reactor. The reducer runs inside the Reactor, not Connect itself. Connect just dispatches the action.",
+      explanation:
+        "Connect is a host that embeds a Reactor. The reducer runs inside the Reactor, not Connect itself. Connect just dispatches the action.",
     },
     {
-      label: "Inside the Reactor — whether that Reactor is embedded in Connect or running in Switchboard.",
+      label:
+        "Inside the Reactor — whether that Reactor is embedded in Connect or running in Switchboard.",
       correct: true,
-      explanation: "The Reactor is the engine that runs reducers everywhere. Connect and Switchboard are hosts — they embed a Reactor. The reducer runs in whichever Reactor processes the action.",
+      explanation:
+        "The Reactor is the engine that runs reducers everywhere. Connect and Switchboard are hosts — they embed a Reactor. The reducer runs in whichever Reactor processes the action.",
     },
     {
       label: "Inside Switchboard, because it manages the API.",
-      explanation: "Switchboard hosts a server-side Reactor, but reducers run inside the Reactor itself — not in Switchboard's API layer.",
+      explanation:
+        "Switchboard hosts a server-side Reactor, but reducers run inside the Reactor itself — not in Switchboard's API layer.",
     },
     {
       label: "On the DocSync protocol layer, as part of conflict resolution.",
-      explanation: "DocSync transports operations between Reactors. Reducers run before that — they produce the operations that DocSync then moves around.",
+      explanation:
+        "DocSync transports operations between Reactors. Reducers run before that — they produce the operations that DocSync then moves around.",
     },
   ]}
   explanation="The Reactor is the engine. Connect and Switchboard are different faces that embed one. Wherever an action gets dispatched, the local Reactor's reducer runs."
@@ -1837,20 +1855,26 @@ The Reactor's job is to apply reducers, order operations into a deterministic lo
   choices={[
     {
       label: "The Reactor — it ships with PGlite and that's fixed.",
-      explanation: "PGlite is the default, but the storage layer is behind an interface. The host configures which implementation is wired in.",
+      explanation:
+        "PGlite is the default, but the storage layer is behind an interface. The host configures which implementation is wired in.",
     },
     {
-      label: "The host — it instantiates the Reactor and passes a storage implementation at startup.",
+      label:
+        "The host — it instantiates the Reactor and passes a storage implementation at startup.",
       correct: true,
-      explanation: "Correct. The host controls the full wiring. The Reactor just requires something that satisfies IOperationStore and friends.",
+      explanation:
+        "Correct. The host controls the full wiring. The Reactor just requires something that satisfies IOperationStore and friends.",
     },
     {
       label: "The Reactor chooses storage at runtime based on the environment.",
-      explanation: "There's no auto-detection. The host is explicit about what it wires.",
+      explanation:
+        "There's no auto-detection. The host is explicit about what it wires.",
     },
     {
-      label: "It's chosen per document type, inside the document model package.",
-      explanation: "Document models define schemas and reducers — they don't touch storage configuration at all.",
+      label:
+        "It's chosen per document type, inside the document model package.",
+      explanation:
+        "Document models define schemas and reducers — they don't touch storage configuration at all.",
     },
   ]}
 />
@@ -1874,7 +1898,7 @@ This is the practical payoff of keeping the Reactor a plain library: you get to 
 
 > Source: https://academy.vetra.io/academy/Learn/document-models/documents-and-drives
 
-You already know that Powerhouse stores *operations*, not snapshots. Now let's look at what those operations live *inside* — and why the container for your files is just as much a document as the files themselves.
+You already know that Powerhouse stores _operations_, not snapshots. Now let's look at what those operations live _inside_ — and why the container for your files is just as much a document as the files themselves.
 
 ## A document is one typed thing
 
@@ -1886,7 +1910,7 @@ A to-do list, a budget ledger, an invoice — each is its own document with its 
 
 ## A drive is a document too
 
-Here's the twist. A **drive** is a folder of documents — and it is *itself* a document.
+Here's the twist. A **drive** is a folder of documents — and it is _itself_ a document.
 
 Compare it to your filesystem: a folder contains files, but the folder is also an entry in the parent directory. In Powerhouse, that analogy goes one level deeper: the folder has its own full operation log. When you add a file, rename a folder, move something, or remove it, that change is an operation on the drive document — not on the file inside it.
 
@@ -1896,7 +1920,7 @@ The drive's model type is `powerhouse/document-drive` and its actions are struct
 
 ## Files live on drives
 
-When you create a document, it gets added to a drive via an `ADD_FILE` action — dispatched against the *drive*, not conjured from thin air:
+When you create a document, it gets added to a drive via an `ADD_FILE` action — dispatched against the _drive_, not conjured from thin air:
 
 ```ts
 // This action is dispatched on the drive, not on the new document
@@ -1922,20 +1946,26 @@ The new document comes into existence because the drive's reducer processed that
   choices={[
     {
       label: "The deleted document's log — it records its own removal.",
-      explanation: "The deleted document has no way to record its own departure. Its log ends wherever it ended before deletion.",
+      explanation:
+        "The deleted document has no way to record its own departure. Its log ends wherever it ended before deletion.",
     },
     {
-      label: "The drive's log — a DELETE_NODE operation is appended to the drive.",
+      label:
+        "The drive's log — a DELETE_NODE operation is appended to the drive.",
       correct: true,
-      explanation: "Exactly. The drive is a document whose model handles membership. Removing a file is an operation on the drive, not on the file.",
+      explanation:
+        "Exactly. The drive is a document whose model handles membership. Removing a file is an operation on the drive, not on the file.",
     },
     {
       label: "Both logs simultaneously, so sync stays consistent.",
-      explanation: "Only the drive logs the structural change. The deleted document isn't modified — it just stops being a node on the drive.",
+      explanation:
+        "Only the drive logs the structural change. The deleted document isn't modified — it just stops being a node on the drive.",
     },
     {
-      label: "A separate audit document that Powerhouse maintains automatically.",
-      explanation: "There's no separate audit document. The drive's own operation log is the record of all structural changes.",
+      label:
+        "A separate audit document that Powerhouse maintains automatically.",
+      explanation:
+        "There's no separate audit document. The drive's own operation log is the record of all structural changes.",
     },
   ]}
 />
@@ -1957,14 +1987,14 @@ Every document starts with two scopes:
 - **`local`** — state that belongs only to your device. Operations here stay local; they never sync anywhere.
 
 ```ts
-doc.state.global;        // shared with everyone
-doc.state.local;         // yours alone
+doc.state.global; // shared with everyone
+doc.state.local; // yours alone
 
-doc.operations.global;   // replicated log
-doc.operations.local;    // local-only log
+doc.operations.global; // replicated log
+doc.operations.local; // local-only log
 ```
 
-Think of a shared todo list. The `global` scope holds the items everyone cares about — titles, completion status, assignees. The `local` scope holds things like whether *you* have the "show completed" filter on, or which item your cursor is sitting on. Those are yours. Nobody else needs them.
+Think of a shared todo list. The `global` scope holds the items everyone cares about — titles, completion status, assignees. The `local` scope holds things like whether _you_ have the "show completed" filter on, or which item your cursor is sitting on. Those are yours. Nobody else needs them.
 
 ## Scopes stay independent
 
@@ -1977,20 +2007,25 @@ This means you can dispatch an action that only updates your filter preference �
   choices={[
     {
       label: "global — so collaborators can see the user is typing.",
-      explanation: "Presence indicators are a UI concern, not document state. Unposted drafts are private by nature — sharing them globally would be noisy and unexpected.",
+      explanation:
+        "Presence indicators are a UI concern, not document state. Unposted drafts are private by nature — sharing them globally would be noisy and unexpected.",
     },
     {
       label: "local — it's private to this user's device until they post.",
       correct: true,
-      explanation: "Draft text that hasn't been submitted is a perfect local-scope use case: it only matters on this device, and should never sync.",
+      explanation:
+        "Draft text that hasn't been submitted is a perfect local-scope use case: it only matters on this device, and should never sync.",
     },
     {
-      label: "Neither — draft text shouldn't be stored in document state at all.",
-      explanation: "Storing ephemeral input in local state is exactly the right pattern. It gives you persistence across refreshes without polluting the shared log.",
+      label:
+        "Neither — draft text shouldn't be stored in document state at all.",
+      explanation:
+        "Storing ephemeral input in local state is exactly the right pattern. It gives you persistence across refreshes without polluting the shared log.",
     },
     {
       label: "global, but only after a short delay.",
-      explanation: "Delaying the sync doesn't change the fact that unposted text is private. Use local scope and only move content to global when the user posts.",
+      explanation:
+        "Delaying the sync doesn't change the fact that unposted text is private. Use local scope and only move content to global when the user posts.",
     },
   ]}
 />
@@ -2000,11 +2035,11 @@ This means you can dispatch an action that only updates your filter preference �
 When you define a document model, each scope gets its own GraphQL state schema. The local schema is optional — omit it and the document only has a global scope.
 
 ```graphql
-type TodoListState {            # global scope
+type TodoListState { # global scope
   todos: [Todo!]!
 }
 
-type TodoListLocalState {       # local scope (optional)
+type TodoListLocalState { # local scope (optional)
   showCompleted: Boolean!
   activeTodoId: OID
 }
@@ -2041,7 +2076,7 @@ An action is plain data. Nothing more.
 }
 ```
 
-No timestamp. No hash. No index. An action describes *what you want to happen* — it's a request, not a fact. The action alone changes nothing.
+No timestamp. No hash. No index. An action describes _what you want to happen_ — it's a request, not a fact. The action alone changes nothing.
 
 That's intentional. Separating intent from result means you can validate, replay, or reject a change before it ever touches state.
 
@@ -2064,17 +2099,19 @@ addTodoOperation(state, action) {
 }
 ```
 
-Why so strict? Because peers reconstruct state by *replaying* the operation log. If a reducer reads `Date.now()` or calls `Math.random()`, two machines replaying the same log end up with different state. The whole system breaks.
+Why so strict? Because peers reconstruct state by _replaying_ the operation log. If a reducer reads `Date.now()` or calls `Math.random()`, two machines replaying the same log end up with different state. The whole system breaks.
 
 Non-deterministic values belong in the **action input** — generated before `dispatch`, outside the reducer:
 
 ```ts
 // In the editor — generate the ID before dispatching
-dispatch(addTodo({
-  id: generateId(),
-  createdAt: new Date().toISOString(),
-  title: input.title,
-}));
+dispatch(
+  addTodo({
+    id: generateId(),
+    createdAt: new Date().toISOString(),
+    title: input.title,
+  }),
+);
 ```
 
 <Quiz
@@ -2082,20 +2119,26 @@ dispatch(addTodo({
   choices={[
     {
       label: "state.id = action.input.id || crypto.randomUUID()",
-      explanation: "Random fallbacks make the reducer non-deterministic — two replays produce different IDs. Generate the ID in the action input instead.",
+      explanation:
+        "Random fallbacks make the reducer non-deterministic — two replays produce different IDs. Generate the ID in the action input instead.",
     },
     {
       label: "state.createdAt = new Date().toISOString()",
-      explanation: "Wall-clock time is non-deterministic. Peers replaying this operation at different moments get different timestamps. Pass the timestamp in the action input.",
+      explanation:
+        "Wall-clock time is non-deterministic. Peers replaying this operation at different moments get different timestamps. Pass the timestamp in the action input.",
     },
     {
-      label: "const user = await fetch('/me').then(r => r.json()); state.owner = user.id",
-      explanation: "Reducers must be synchronous and have no I/O. A network call makes the reducer async and unreliable. The owner ID should be included in the action input.",
+      label:
+        "const user = await fetch('/me').then(r => r.json()); state.owner = user.id",
+      explanation:
+        "Reducers must be synchronous and have no I/O. A network call makes the reducer async and unreliable. The owner ID should be included in the action input.",
     },
     {
-      label: "const t = state.todos.find(x => x.id === action.input.id); if (!t) throw new TodoNotFoundError('not found'); t.done = !t.done;",
+      label:
+        "const t = state.todos.find(x => x.id === action.input.id); if (!t) throw new TodoNotFoundError('not found'); t.done = !t.done;",
       correct: true,
-      explanation: "Pure, synchronous, deterministic — this is exactly what a valid reducer looks like. Same state + same action always produces the same result.",
+      explanation:
+        "Pure, synchronous, deterministic — this is exactly what a valid reducer looks like. Same state + same action always produces the same result.",
     },
   ]}
 />
@@ -2122,10 +2165,10 @@ If the reducer throws, the operation is still appended — but with `error` set 
 
 The action/reducer/operation triangle gives you a clean separation:
 
-| | Carries |
-|---|---|
-| **Action** | Intent — a name and inputs, nothing else |
-| **Reducer** | Logic — the only legal way state can change |
+|               | Carries                                                        |
+| ------------- | -------------------------------------------------------------- |
+| **Action**    | Intent — a name and inputs, nothing else                       |
+| **Reducer**   | Logic — the only legal way state can change                    |
 | **Operation** | Result — the action plus proof it ran (index, hash, timestamp) |
 
 A caller can't sneak state changes past the reducer. A reducer can't introduce uncertainty. An operation can't be revised after the fact. Each piece does exactly one job.
@@ -2140,6 +2183,7 @@ A caller can't sneak state changes past the reducer. A reducer can't introduce u
 In this lesson you'll build a minimal **Todo** document model from scratch. You'll define the schema in <Term>Vetra</Term> Studio, let codegen scaffold the types, and write the reducer that drives every state transition.
 
 You'll need:
+
 - Node.js ≥ 24
 - The `ph` CLI (`npm i -g @powerhousedao/ph-cmd` or see [Installation](/academy/GetStarted/Prerequisites))
 
@@ -2228,7 +2272,9 @@ export const todoTodosOperations: TodoTodosOperations = {
 };
 ```
 
-<Term>Powerhouse</Term> wraps reducers in [Mutative](https://mutative.js.org/), so you write direct mutations — no need to return a new object. The framework produces an immutable snapshot from each mutation.
+<Term>Powerhouse</Term> wraps reducers in [Mutative](https://mutative.js.org/),
+so you write direct mutations — no need to return a new object. The framework
+produces an immutable snapshot from each mutation.
 
 The `state` argument the operation receives is already the scoped state (`global` or `local`). From outside the reducer, you access items as `doc.state.global.items`.
 
@@ -2237,22 +2283,26 @@ The `state` argument the operation receives is already the scoped state (`global
   multi
   choices={[
     {
-      label: 'Calling fetch() to notify a server when a todo is added.',
+      label: "Calling fetch() to notify a server when a todo is added.",
       correct: true,
-      explanation: 'Network calls are side-effects — they belong in a processor or in the Reactor, not the reducer.',
+      explanation:
+        "Network calls are side-effects — they belong in a processor or in the Reactor, not the reducer.",
     },
     {
-      label: 'Reading the current time with Date.now() to timestamp the todo.',
+      label: "Reading the current time with Date.now() to timestamp the todo.",
       correct: true,
-      explanation: 'Anything non-deterministic (time, randomness, environment) breaks replay. Timestamps come from the operation metadata.',
+      explanation:
+        "Anything non-deterministic (time, randomness, environment) breaks replay. Timestamps come from the operation metadata.",
     },
     {
-      label: 'Filtering items with Array.prototype.filter.',
-      explanation: 'Pure. filter() returns a new array and touches nothing outside the reducer.',
+      label: "Filtering items with Array.prototype.filter.",
+      explanation:
+        "Pure. filter() returns a new array and touches nothing outside the reducer.",
     },
     {
-      label: 'Writing state.items.push(newItem) to add the item.',
-      explanation: 'This is the correct Powerhouse pattern. Mutative wraps the reducer so mutations produce an immutable snapshot — push and splice are both fine.',
+      label: "Writing state.items.push(newItem) to add the item.",
+      explanation:
+        "This is the correct Powerhouse pattern. Mutative wraps the reducer so mutations produce an immutable snapshot — push and splice are both fine.",
     },
   ]}
   explanation="Purity = (same state, same action) → same result, with no side-effects. Time, I/O, and randomness all break it. Mutative-style mutations do not."
@@ -2265,13 +2315,13 @@ Because reducers are pure (deterministic, no I/O), you can test them without a s
 ```ts title="document-models/todo/src/tests/todos.test.ts"
 
 
-describe('todo reducer', () => {
-  it('adds and completes a todo', () => {
+describe("todo reducer", () => {
+  it("adds and completes a todo", () => {
     let doc = utils.createDocument();
 
-    doc = reducer(doc, addTodo({ id: 't-1', title: 'Write the tutorial' }));
-    doc = reducer(doc, addTodo({ id: 't-2', title: 'Review it' }));
-    doc = reducer(doc, completeTodo({ id: 't-1' }));
+    doc = reducer(doc, addTodo({ id: "t-1", title: "Write the tutorial" }));
+    doc = reducer(doc, addTodo({ id: "t-2", title: "Review it" }));
+    doc = reducer(doc, completeTodo({ id: "t-1" }));
 
     expect(doc.state.global.items).toHaveLength(2);
     expect(doc.state.global.items[0].done).toBe(true);
@@ -2303,14 +2353,14 @@ One model can have more than one editor. A budget document might have a simple v
 
 This is worth being explicit about, because it's easy to blur:
 
-| Job | Belongs in |
-| --- | --- |
-| Rendering state on screen | Editor |
-| Dispatching an action when the user clicks | Editor |
-| Showing a toast notification | Editor |
-| Computing the next state from an action | Reducer |
-| Validating that a field is non-empty | Reducer |
-| Generating the new document history | Reducer |
+| Job                                        | Belongs in |
+| ------------------------------------------ | ---------- |
+| Rendering state on screen                  | Editor     |
+| Dispatching an action when the user clicks | Editor     |
+| Showing a toast notification               | Editor     |
+| Computing the next state from an action    | Reducer    |
+| Validating that a field is non-empty       | Reducer    |
+| Generating the new document history        | Reducer    |
 
 The pattern is simple: **reducers are <Term term="pure functions (for reducers)">pure</Term>, editors are impure.** Reducers have no access to the DOM, the network, or the clock. Editors can do all of those things freely — because they're just React components.
 
@@ -2321,20 +2371,25 @@ The editor dispatches. The reducer computes. Never the other way around.
   choices={[
     {
       label: "Rendering the title text field — reducer.",
-      explanation: "Rendering is the editor's job. Reducers are pure functions that never touch the DOM.",
+      explanation:
+        "Rendering is the editor's job. Reducers are pure functions that never touch the DOM.",
     },
     {
       label: "Showing a 'Saved!' toast after the dispatch succeeds — reducer.",
-      explanation: "Toast notifications are a UI side-effect. That belongs in the editor, not in a pure function.",
+      explanation:
+        "Toast notifications are a UI side-effect. That belongs in the editor, not in a pure function.",
     },
     {
-      label: "Computing the next document state when the action arrives — reducer.",
+      label:
+        "Computing the next document state when the action arrives — reducer.",
       correct: true,
-      explanation: "State transitions are exactly what reducers do. The editor dispatches the action; the reducer takes it from there.",
+      explanation:
+        "State transitions are exactly what reducers do. The editor dispatches the action; the reducer takes it from there.",
     },
     {
       label: "Validating that the new title is not empty — editor.",
-      explanation: "Input validation that determines whether a state transition is valid belongs in the reducer, so it runs consistently regardless of which editor triggered the action.",
+      explanation:
+        "Input validation that determines whether a state transition is valid belongs in the reducer, so it runs consistently regardless of which editor triggered the action.",
     },
   ]}
 />
@@ -2386,9 +2441,14 @@ The generated `editor.tsx` uses the `useSelectedTodoDocument()` hook to get the 
 ```tsx title="editors/todo-editor/editor.tsx"
 
 
+  addTodo,
+  completeTodo,
+  removeTodo,
+} from "todo-app/document-models/todo";
+
 export default function Editor() {
   const [document, dispatch] = useSelectedTodoDocument();
-  const [title, setTitle] = useState('');
+  const [title, setTitle] = useState("");
 
   return (
     <div className="todo">
@@ -2397,7 +2457,7 @@ export default function Editor() {
           e.preventDefault();
           if (!title.trim()) return;
           dispatch(addTodo({ id: crypto.randomUUID(), title }));
-          setTitle('');
+          setTitle("");
         }}
       >
         <input
@@ -2433,7 +2493,7 @@ export default function Editor() {
 }
 ```
 
-Notice what the editor does *not* do:
+Notice what the editor does _not_ do:
 
 - It never mutates state directly.
 - It never talks to the network.
@@ -2445,21 +2505,28 @@ All the editor does is dispatch. The reducer handles the rest.
   question="The user clicks the checkbox on a todo. What's the correct order of events?"
   choices={[
     {
-      label: 'Editor mutates document.state.global.items[i].done → UI re-renders.',
-      explanation: 'Editors must never mutate state. They dispatch actions.',
+      label:
+        "Editor mutates document.state.global.items[i].done → UI re-renders.",
+      explanation: "Editors must never mutate state. They dispatch actions.",
     },
     {
-      label: 'Editor dispatches completeTodo → reducer produces next state → Reactor appends operation → UI re-renders with new state.',
+      label:
+        "Editor dispatches completeTodo → reducer produces next state → Reactor appends operation → UI re-renders with new state.",
       correct: true,
-      explanation: 'The action flows through the reducer and is recorded by the Reactor; the new state comes back to the editor.',
+      explanation:
+        "The action flows through the reducer and is recorded by the Reactor; the new state comes back to the editor.",
     },
     {
-      label: 'Editor fetches /api/todos/complete → server updates DB → UI re-renders.',
-      explanation: 'That\'s CRUD. Powerhouse inverts it: the log is local first, and syncs itself later.',
+      label:
+        "Editor fetches /api/todos/complete → server updates DB → UI re-renders.",
+      explanation:
+        "That's CRUD. Powerhouse inverts it: the log is local first, and syncs itself later.",
     },
     {
-      label: 'Editor calls completeTodo() directly without dispatch, so it runs synchronously.',
-      explanation: 'Actions are just data. The dispatch step is what turns them into operations via the reducer.',
+      label:
+        "Editor calls completeTodo() directly without dispatch, so it runs synchronously.",
+      explanation:
+        "Actions are just data. The dispatch step is what turns them into operations via the reducer.",
     },
   ]}
   explanation="The editor's only job is to produce actions. State, operations, and timestamps are the Reactor's concern."
@@ -2473,11 +2540,11 @@ The generated `module.ts` exports an `EditorModule` object that links the compon
 
 
 export const TodoEditor: EditorModule = {
-  Component: lazy(() => import('./editor.js')),
-  documentTypes: ['powerhouse/todo'],
+  Component: lazy(() => import("./editor.js")),
+  documentTypes: ["powerhouse/todo"],
   config: {
-    id: 'todo-editor',
-    name: 'Todo Editor',
+    id: "todo-editor",
+    name: "Todo Editor",
   },
 };
 ```
@@ -2507,8 +2574,14 @@ You've got a full vertical slice:
 That's already enough to run offline, with replay, undo, and audit available. The next lesson turns the final key — sync.
 
 <Cards>
-  <Card title="Editor hooks and state" href="/academy/Learn/editors/editor-hooks-and-state" />
-  <Card title="Back to Your first document model" href="/academy/Learn/document-models/your-first-document-model" />
+  <Card
+    title="Editor hooks and state"
+    href="/academy/Learn/editors/editor-hooks-and-state"
+  />
+  <Card
+    title="Back to Your first document model"
+    href="/academy/Learn/document-models/your-first-document-model"
+  />
 </Cards>
 
 ---
@@ -2518,7 +2591,7 @@ That's already enough to run offline, with replay, undo, and audit available. Th
 
 > Source: https://academy.vetra.io/academy/Learn/editors/editor-hooks-and-state
 
-You've written an editor shell. Now you need to actually *read* the document and *change* it. Powerhouse gives you a small set of hooks from `@powerhousedao/reactor-browser` to do exactly that — no manual subscriptions, no wiring.
+You've written an editor shell. Now you need to actually _read_ the document and _change_ it. Powerhouse gives you a small set of hooks from `@powerhousedao/reactor-browser` to do exactly that — no manual subscriptions, no wiring.
 
 ## The hook you'll use 90% of the time
 
@@ -2536,7 +2609,7 @@ const [doc, dispatch] = useSelectedTodoListDocument();
 dispatch(addTodo({ id: generateId(), title: "Buy milk" }));
 ```
 
-Always generate IDs *before* calling dispatch — reducers must stay pure.
+Always generate IDs _before_ calling dispatch — reducers must stay pure.
 
 ## When the document type isn't known at compile time
 
@@ -2558,21 +2631,29 @@ Need a document that isn't the currently selected one? Two options:
   question="Your editor has a button. When clicked, it should mark a todo as done. Which hook gives you what you need?"
   choices={[
     {
-      label: "useDocument(id) — it fetches the document and I can call dispatch on the result.",
-      explanation: "useDocument(id) is Suspense-based and returns the document only — no dispatch. It's for reading a document by ID, not for the editor's primary action dispatch.",
+      label:
+        "useDocument(id) — it fetches the document and I can call dispatch on the result.",
+      explanation:
+        "useDocument(id) is Suspense-based and returns the document only — no dispatch. It's for reading a document by ID, not for the editor's primary action dispatch.",
     },
     {
-      label: "useSelectedTodoListDocument() — it returns [doc, dispatch], and dispatch sends the action.",
+      label:
+        "useSelectedTodoListDocument() — it returns [doc, dispatch], and dispatch sends the action.",
       correct: true,
-      explanation: "Exactly right. The generated typed hook returns a tuple: the document and a dispatch function. Call dispatch(completeTodo({ id })) inside the button's onClick.",
+      explanation:
+        "Exactly right. The generated typed hook returns a tuple: the document and a dispatch function. Call dispatch(completeTodo({ id })) inside the button's onClick.",
     },
     {
-      label: "useSelectedDocument() — it's the most generic option, so it always works.",
-      explanation: "It works, but you lose type safety. Prefer the generated typed hook when you know the document model.",
+      label:
+        "useSelectedDocument() — it's the most generic option, so it always works.",
+      explanation:
+        "It works, but you lose type safety. Prefer the generated typed hook when you know the document model.",
     },
     {
-      label: "No hook needed — I can import dispatch directly from the Reactor.",
-      explanation: "The Reactor is not imported directly in editor components. The hooks are the supported interface and handle subscriptions for you.",
+      label:
+        "No hook needed — I can import dispatch directly from the Reactor.",
+      explanation:
+        "The Reactor is not imported directly in editor components. The hooks are the supported interface and handle subscriptions for you.",
     },
   ]}
 />
@@ -2602,13 +2683,13 @@ You've got a Reactor running and a document model defined. But where do users ac
 
 ## Connect is a host, not just a UI
 
-Back in the architecture overview you saw that a *host application* embeds a Reactor to get the operation engine, then adds its own UI on top. Connect is the most common host. It runs in a browser (or as a desktop app) and layers three things on top of the bare Reactor:
+Back in the architecture overview you saw that a _host application_ embeds a Reactor to get the operation engine, then adds its own UI on top. Connect is the most common host. It runs in a browser (or as a desktop app) and layers three things on top of the bare Reactor:
 
 - A **drives sidebar** — a file-browser-style view of all drives the user has access to.
 - An **editor host** — it looks at the document type you open and mounts whichever editor is registered for it.
 - A **sync client** — it connects to Switchboard and replicates state in real time.
 
-Closing Connect doesn't destroy the Reactor *library* — that's just code. But the session, the UI, the sync loop, and the drive browser all go away with it.
+Closing Connect doesn't destroy the Reactor _library_ — that's just code. But the session, the UI, the sync loop, and the drive browser all go away with it.
 
 ## How Connect finds your packages
 
@@ -2639,20 +2720,24 @@ If that array is empty, Connect renders nothing when you open a todo document.
   choices={[
     {
       label: "The Reactor library code itself.",
-      explanation: "The library is just an npm package — closing an app doesn't uninstall code. It can still be imported anywhere.",
+      explanation:
+        "The library is just an npm package — closing an app doesn't uninstall code. It can still be imported anywhere.",
     },
     {
       label: "The drives sidebar, the mounted editor, and the sync loop.",
       correct: true,
-      explanation: "Those all live inside Connect. The Reactor engine is embedded in Connect; without Connect running, there is no running session.",
+      explanation:
+        "Those all live inside Connect. The Reactor engine is embedded in Connect; without Connect running, there is no running session.",
     },
     {
       label: "The document models — they need Connect to stay defined.",
-      explanation: "Document models are schema definitions, not runtime state. They exist in your package regardless of whether Connect is open.",
+      explanation:
+        "Document models are schema definitions, not runtime state. They exist in your package regardless of whether Connect is open.",
     },
     {
       label: "The operation log stored on disk.",
-      explanation: "Persisted operations live in the local Reactor store, not in Connect's process. They survive restarts.",
+      explanation:
+        "Persisted operations live in the local Reactor store, not in Connect's process. They survive restarts.",
     },
   ]}
 />
@@ -2677,7 +2762,7 @@ Connect's default drive view is a folder tree with documents inside it. That's f
 
 ## Editor vs. drive app — the sharp line
 
-You've already seen <Term>editors</Term>: a React component that renders and edits *one document*. A drive app is the complementary piece — it renders the *whole drive*.
+You've already seen <Term>editors</Term>: a React component that renders and edits _one document_. A drive app is the complementary piece — it renders the _whole drive_.
 
 Think of it this way:
 
@@ -2711,21 +2796,27 @@ When a document is open, `children` is truthy and the editor appears. Otherwise,
   question="Pick the right tool for each scenario."
   choices={[
     {
-      label: "I want a Kanban board that shows all task documents in a drive — use a drive app.",
+      label:
+        "I want a Kanban board that shows all task documents in a drive — use a drive app.",
       correct: true,
-      explanation: "Exactly. A drive app renders the whole drive, so a cross-document board belongs here.",
+      explanation:
+        "Exactly. A drive app renders the whole drive, so a cross-document board belongs here.",
     },
     {
-      label: "I want to render and edit one specific task document — use a drive app.",
-      explanation: "One document means one editor. Drive apps deal with the whole drive, not individual documents.",
+      label:
+        "I want to render and edit one specific task document — use a drive app.",
+      explanation:
+        "One document means one editor. Drive apps deal with the whole drive, not individual documents.",
     },
     {
       label: "I want a custom file-tree sidebar for a drive — use an editor.",
-      explanation: "Navigation structure for a drive is a drive app concern, not an editor's. Editors stay inside a single document.",
+      explanation:
+        "Navigation structure for a drive is a drive app concern, not an editor's. Editors stay inside a single document.",
     },
     {
       label: "I want a rich form for filling out a contract — use a drive app.",
-      explanation: "A single-document form is an editor. Drive apps are about composing or listing multiple documents.",
+      explanation:
+        "A single-document form is an editor. Drive apps are about composing or listing multiple documents.",
     },
   ]}
 />
@@ -2751,8 +2842,8 @@ Remember the host-application pattern: any runtime that boots a Reactor and load
 
 The difference is what each host exposes outward:
 
-- **Connect** renders editors — it gives *people* a UI.
-- **Switchboard** exposes GraphQL and MCP endpoints — it gives *code* an API.
+- **Connect** renders editors — it gives _people_ a UI.
+- **Switchboard** exposes GraphQL and MCP endpoints — it gives _code_ an API.
 
 Because both run the same Reactor library with the same document models installed, they stay in sync. An operation written through Connect arrives in Switchboard; a mutation dispatched via GraphQL shows up immediately in Connect. One Reactor, two surfaces.
 
@@ -2760,14 +2851,14 @@ Because both run the same Reactor library with the same document models installe
 
 Switchboard serves two protocols at once:
 
-- **GraphQL** — composed from *subgraphs*, one per installed package. Web apps, mobile clients, and integrations query documents and dispatch actions here.
+- **GraphQL** — composed from _subgraphs_, one per installed package. Web apps, mobile clients, and integrations query documents and dispatch actions here.
 - **MCP** (Model Context Protocol) — the same Reactor, surfaced as tools an AI agent can call.
 
 You'll dig into subgraphs in the next lesson. For now, just think of them as "the GraphQL layer, split by package domain, then stitched back into one unified schema."
 
 ## Where processors fit in
 
-Processors are event-driven handlers that subscribe to the operation stream and fold it into *read models* — optimised views for search indexes, dashboards, aggregates, or anything else that's awkward to derive from a single document's state at query time. Processors run inside Switchboard, and subgraphs query the read models they produce.
+Processors are event-driven handlers that subscribe to the operation stream and fold it into _read models_ — optimised views for search indexes, dashboards, aggregates, or anything else that's awkward to derive from a single document's state at query time. Processors run inside Switchboard, and subgraphs query the read models they produce.
 
 You'll get a full lesson on processors too. The short version: if a query spans many documents or needs pre-computed data, a processor builds it; a subgraph exposes it.
 
@@ -2775,21 +2866,29 @@ You'll get a full lesson on processors too. The short version: if a query spans 
   question="A team is building three features. Match each one to the right tool."
   choices={[
     {
-      label: "Expose a query endpoint so a mobile app can list all open tasks — build a processor.",
-      explanation: "A query endpoint for external clients is GraphQL work, which lives in a Switchboard subgraph — not a processor. Processors build read models; subgraphs expose them.",
+      label:
+        "Expose a query endpoint so a mobile app can list all open tasks — build a processor.",
+      explanation:
+        "A query endpoint for external clients is GraphQL work, which lives in a Switchboard subgraph — not a processor. Processors build read models; subgraphs expose them.",
     },
     {
-      label: "Let users drag-and-drop tasks in their browser — build that in Switchboard.",
-      explanation: "Browser UI work belongs in Connect (editors). Switchboard has no UI layer; it serves APIs.",
+      label:
+        "Let users drag-and-drop tasks in their browser — build that in Switchboard.",
+      explanation:
+        "Browser UI work belongs in Connect (editors). Switchboard has no UI layer; it serves APIs.",
     },
     {
-      label: "Expose a query endpoint so a mobile app can list all open tasks — build a Switchboard subgraph.",
+      label:
+        "Expose a query endpoint so a mobile app can list all open tasks — build a Switchboard subgraph.",
       correct: true,
-      explanation: "Exactly. External clients query documents and read models through Switchboard's GraphQL API, which is assembled from subgraphs. Connect is for browser users, not API consumers.",
+      explanation:
+        "Exactly. External clients query documents and read models through Switchboard's GraphQL API, which is assembled from subgraphs. Connect is for browser users, not API consumers.",
     },
     {
-      label: "Build a full-text search index across all documents — build that in Connect.",
-      explanation: "Cross-document derived data is a processor's job. Processors run in Switchboard, subscribe to operations, and write to read models that subgraphs can query.",
+      label:
+        "Build a full-text search index across all documents — build that in Connect.",
+      explanation:
+        "Cross-document derived data is a processor's job. Processors run in Switchboard, subscribe to operations, and write to read models that subgraphs can query.",
     },
   ]}
 />
@@ -2818,7 +2917,7 @@ You've got documents. You've got operations. Now you need the outside world — 
 
 ## One endpoint, many packages
 
-Switchboard doesn't expose a single monolithic schema. Instead, every Reactor Package ships its *own* GraphQL schema fragment — its subgraph. When Switchboard boots, it composes all of those fragments into one unified endpoint.
+Switchboard doesn't expose a single monolithic schema. Instead, every Reactor Package ships its _own_ GraphQL schema fragment — its subgraph. When Switchboard boots, it composes all of those fragments into one unified endpoint.
 
 The practical payoff: a client can query data from two completely independent packages in a single request. Neither package knows about the other. Switchboard handles the stitching.
 
@@ -2826,7 +2925,11 @@ The practical payoff: a client can query data from two completely independent pa
 query {
   todoList(id: "doc-123") {
     id
-    todos { id title done }
+    todos {
+      id
+      title
+      done
+    }
   }
 }
 ```
@@ -2835,7 +2938,7 @@ That query hits one endpoint. Behind the scenes, it's resolved by whatever packa
 
 ## Subgraphs are the API face of your document model
 
-If a document model defines the *shape* of your data and the *actions* allowed on it, the subgraph is how that shape appears to callers on the network.
+If a document model defines the _shape_ of your data and the _actions_ allowed on it, the subgraph is how that shape appears to callers on the network.
 
 Each subgraph exposes three things:
 
@@ -2849,21 +2952,29 @@ Because each package owns its subgraph, the package is the unit of delivery. Shi
   question="A client sends one GraphQL query that asks for data from two different packages. What does Switchboard do?"
   choices={[
     {
-      label: "It routes to whichever package responded first and ignores the other.",
-      explanation: "Switchboard composes all subgraphs at startup — there's no race. Both packages participate in the same response.",
+      label:
+        "It routes to whichever package responded first and ignores the other.",
+      explanation:
+        "Switchboard composes all subgraphs at startup — there's no race. Both packages participate in the same response.",
     },
     {
-      label: "It resolves the query against the unified composed schema, pulling from both packages.",
+      label:
+        "It resolves the query against the unified composed schema, pulling from both packages.",
       correct: true,
-      explanation: "That's the point of composition. Each package declares its own types and resolvers; Switchboard stitches them into one schema so clients get one endpoint.",
+      explanation:
+        "That's the point of composition. Each package declares its own types and resolvers; Switchboard stitches them into one schema so clients get one endpoint.",
     },
     {
-      label: "It rejects the query because cross-package queries aren't allowed.",
-      explanation: "The opposite — cross-package queries are exactly what composition enables.",
+      label:
+        "It rejects the query because cross-package queries aren't allowed.",
+      explanation:
+        "The opposite — cross-package queries are exactly what composition enables.",
     },
     {
-      label: "It sends two separate requests and merges the JSON responses on the client.",
-      explanation: "No client-side merging needed. The composed schema handles it server-side.",
+      label:
+        "It sends two separate requests and merges the JSON responses on the client.",
+      explanation:
+        "No client-side merging needed. The composed schema handles it server-side.",
     },
   ]}
 />
@@ -2909,6 +3020,9 @@ Every processor implements `IProcessor` from `@powerhousedao/reactor-browser`:
 
 ```ts
 
+  IProcessor,
+  OperationWithContext,
+} from "@powerhousedao/reactor-browser";
 
 export interface IProcessor {
   onOperations(operations: OperationWithContext[]): Promise<void>;
@@ -2935,22 +3049,25 @@ Fill in `onOperations` to build your read model:
 
 ```ts title="processors/todo-stats/index.ts"
 
+  IProcessor,
+  OperationWithContext,
+} from "@powerhousedao/reactor-browser";
 
 export class TodoStatsProcessor implements IProcessor {
   private counts = { added: 0, completed: 0, removed: 0 };
 
   async onOperations(operations: OperationWithContext[]): Promise<void> {
     for (const { operation, context } of operations) {
-      if (context.documentType !== 'powerhouse/todo') continue;
+      if (context.documentType !== "powerhouse/todo") continue;
 
       switch (operation.type) {
-        case 'ADD_TODO':
+        case "ADD_TODO":
           this.counts.added++;
           break;
-        case 'COMPLETE_TODO':
+        case "COMPLETE_TODO":
           this.counts.completed++;
           break;
-        case 'REMOVE_TODO':
+        case "REMOVE_TODO":
           this.counts.removed++;
           break;
       }
@@ -2973,21 +3090,25 @@ That's it. No polling, no cron, no diffing. Every operation flows through `onOpe
   question="Which of these jobs is a good fit for a processor, and which should stay in the reducer?"
   choices={[
     {
-      label: 'Computing the total number of completed todos — reducer.',
-      explanation: 'That\'s a count across the entire history. Doing it in the reducer couples the document\'s state size to its age.',
+      label: "Computing the total number of completed todos — reducer.",
+      explanation:
+        "That's a count across the entire history. Doing it in the reducer couples the document's state size to its age.",
     },
     {
-      label: 'Computing the total number of completed todos — processor.',
+      label: "Computing the total number of completed todos — processor.",
       correct: true,
-      explanation: 'Aggregations like this are exactly what processors are built for.',
+      explanation:
+        "Aggregations like this are exactly what processors are built for.",
     },
     {
-      label: 'Sending an email when a todo is assigned — reducer.',
-      explanation: 'Reducers are pure — they can\'t send email. This belongs in a processor.',
+      label: "Sending an email when a todo is assigned — reducer.",
+      explanation:
+        "Reducers are pure — they can't send email. This belongs in a processor.",
     },
     {
-      label: 'Validating that a todo title isn\'t empty — processor.',
-      explanation: 'Validation runs before the action becomes an operation. That\'s reducer territory.',
+      label: "Validating that a todo title isn't empty — processor.",
+      explanation:
+        "Validation runs before the action becomes an operation. That's reducer territory.",
     },
   ]}
   explanation="Reducers answer 'what is this document now?' Processors answer 'what else should happen because of that operation?'"
@@ -3012,9 +3133,9 @@ export async function todoStatsProcessorFactory(): Promise<ProcessorRecord[]> {
     {
       processor,
       filter: {
-        documentType: ['powerhouse/todo'],
-        scope: ['global'],
-        branch: ['main'],
+        documentType: ["powerhouse/todo"],
+        scope: ["global"],
+        branch: ["main"],
       },
     },
   ];
@@ -3037,8 +3158,14 @@ dispatch(action) → reducer → operation (in log)
 Once you have the log, every downstream feature is just another lens on it.
 
 <Cards>
-  <Card title="Sync and collaborate" href="/academy/Learn/sync/sync-and-collaborate" />
-  <Card title="Back to: Subgraphs" href="/academy/Learn/switchboard/subgraphs" />
+  <Card
+    title="Sync and collaborate"
+    href="/academy/Learn/sync/sync-and-collaborate"
+  />
+  <Card
+    title="Back to: Subgraphs"
+    href="/academy/Learn/switchboard/subgraphs"
+  />
 </Cards>
 
 ---
@@ -3067,6 +3194,7 @@ Because each operation carries its own index and hash, there's no guessing what'
 With `ph vetra` running and the Todo model and editor from the previous two lessons in place, open two browser windows pointing at `http://localhost:3000`. In both windows, open the same Todo document from the **`preview-<hash>`** drive and start editing. Additions, completions, and deletions flow between them in under a second.
 
 Now, in window A:
+
 - Open DevTools → Network → toggle "Offline."
 - Add three new todos.
 - Complete one of window B's existing todos.
@@ -3074,6 +3202,7 @@ Now, in window A:
 Window B keeps working — it doesn't know A is offline. It also keeps editing.
 
 Turn A's network back on. Within a moment:
+
 - A's three new todos appear in B.
 - B's changes appear in A.
 - Both logs have the same operations, in the same order, with the same hashes.
@@ -3085,30 +3214,34 @@ That's it. No merge UI, no "whose version do you want to keep?" popup.
   multi
   choices={[
     {
-      label: "A's new operations are queued locally and will be replayed to peers when A reconnects.",
+      label:
+        "A's new operations are queued locally and will be replayed to peers when A reconnects.",
       correct: true,
-      explanation: 'The local log is always the source of truth. Peers catch up later.',
+      explanation:
+        "The local log is always the source of truth. Peers catch up later.",
     },
     {
       label: "A's UI is frozen because it can't reach the server.",
-      explanation: 'Offline-first means the UI keeps responding against the local log.',
+      explanation:
+        "Offline-first means the UI keeps responding against the local log.",
     },
     {
-      label: 'Once reconciled, every peer holds the same ordered log.',
+      label: "Once reconciled, every peer holds the same ordered log.",
       correct: true,
-      explanation: 'That\'s the whole point — same log → same state.',
+      explanation: "That's the whole point — same log → same state.",
     },
     {
       label: "B's edits during A's downtime are discarded when A reconnects.",
-      explanation: 'Both sides\' operations survive — neither is privileged over the other.',
+      explanation:
+        "Both sides' operations survive — neither is privileged over the other.",
     },
   ]}
   explanation="Offline-first isn't a side feature here — it falls out of the log being local, deterministic, and append-only."
 />
 
-## When do conflicts *really* happen?
+## When do conflicts _really_ happen?
 
-The one place you still need to think is **semantic conflict**: two operations that are each fine on their own, but contradictory together. For example, if Alice renames todo `t-1` to "Groceries" and Bob renames it to "Errands" while offline, both renames will be in the log after sync, and the later one will win as the current title — but both actors' *intent* is preserved in the history.
+The one place you still need to think is **semantic conflict**: two operations that are each fine on their own, but contradictory together. For example, if Alice renames todo `t-1` to "Groceries" and Bob renames it to "Errands" while offline, both renames will be in the log after sync, and the later one will win as the current title — but both actors' _intent_ is preserved in the history.
 
 If your app needs a different resolution rule (for example, "the first writer wins"), you encode it in the reducer — not in sync. The sync layer never has to make a judgement call, because your reducer already has.
 
@@ -3117,8 +3250,14 @@ If your app needs a different resolution rule (for example, "the first writer wi
 You now have a document model, a reducer, an editor, and a fully-synced, offline-first, multi-device experience — built on the same operation log the rest of Powerhouse uses for undo, audit, and replays.
 
 <Cards>
-  <Card title="Go deeper: reducers in depth" href="/academy/Learn/deep-dives/reducers-in-depth" />
-  <Card title="Go deeper: processors and read models" href="/academy/Learn/switchboard/processors-and-read-models" />
+  <Card
+    title="Go deeper: reducers in depth"
+    href="/academy/Learn/deep-dives/reducers-in-depth"
+  />
+  <Card
+    title="Go deeper: processors and read models"
+    href="/academy/Learn/switchboard/processors-and-read-models"
+  />
 </Cards>
 
 ---
@@ -3128,7 +3267,7 @@ You now have a document model, a reducer, an editor, and a fully-synced, offline
 
 > Source: https://academy.vetra.io/academy/Learn/deep-dives/reducers-in-depth
 
-Reducers are the one part of a <Term>Powerhouse</Term> app that *must* be pure. Everything downstream — sync, replay, undo, audit — assumes that running the same reducer against the same inputs produces the same outputs, forever.
+Reducers are the one part of a <Term>Powerhouse</Term> app that _must_ be pure. Everything downstream — sync, replay, undo, audit — assumes that running the same reducer against the same inputs produces the same outputs, forever.
 
 This lesson covers the patterns that keep reducers tidy and the ones that quietly break them.
 
@@ -3139,6 +3278,7 @@ This lesson covers the patterns that keep reducers tidy and the ones that quietl
 3. **Mutate only the provided draft.** Powerhouse wraps reducers in Mutative, so you mutate `state` in place. Never touch module-level variables or anything outside the `state` argument.
 
 If you want any of those things, they belong in one of:
+
 - **Action inputs** — the caller provides the id, timestamp, or external data.
 - **Processors** — derived read models that react to operations after they're appended.
 - **The editor** — for UI-facing side-effects.
@@ -3147,10 +3287,10 @@ If you want any of those things, they belong in one of:
 
 Real documents have more than one kind of state. Powerhouse splits the state of a document into **scopes**:
 
-| Scope | What it holds | Who can write |
-| --- | --- | --- |
-| `global` | The canonical shape of the document | Any authenticated actor |
-| `local` | Per-actor UI state (cursor, selection) | Only the actor it belongs to |
+| Scope    | What it holds                          | Who can write                |
+| -------- | -------------------------------------- | ---------------------------- |
+| `global` | The canonical shape of the document    | Any authenticated actor      |
+| `local`  | Per-actor UI state (cursor, selection) | Only the actor it belongs to |
 
 Reducers are split along the same lines. When you define an operation in Vetra Studio, you mark which scope it writes to. Codegen emits a typed action creator that passes the scope through to `createAction` automatically:
 
@@ -3158,11 +3298,11 @@ Reducers are split along the same lines. When you define an operation in Vetra S
 // generated in document-models/my-doc/gen/creators.ts
 export const setCursor = (input: SetCursorInput) =>
   createAction<SetCursorAction>(
-    'SET_CURSOR',
+    "SET_CURSOR",
     { ...input },
     undefined,
     SetCursorInputSchema,
-    'local',
+    "local",
   );
 ```
 
@@ -3173,22 +3313,24 @@ You never call `createAction` directly — use the generated creator (`setCursor
   multi
   choices={[
     {
-      label: 'insertText — typing characters into the document body.',
-      explanation: 'Text content is shared across all viewers — that\'s global.',
+      label: "insertText — typing characters into the document body.",
+      explanation: "Text content is shared across all viewers — that's global.",
     },
     {
-      label: 'setCursor — where this user\'s cursor is right now.',
+      label: "setCursor — where this user's cursor is right now.",
       correct: true,
-      explanation: 'Each user has their own cursor. Local scope keeps it out of the shared log.',
+      explanation:
+        "Each user has their own cursor. Local scope keeps it out of the shared log.",
     },
     {
-      label: 'toggleBold — applying bold formatting to a selection.',
-      explanation: 'Formatting changes the shared document, so it\'s global.',
+      label: "toggleBold — applying bold formatting to a selection.",
+      explanation: "Formatting changes the shared document, so it's global.",
     },
     {
-      label: 'collapseSidebar — hide the file tree in this browser tab.',
+      label: "collapseSidebar — hide the file tree in this browser tab.",
       correct: true,
-      explanation: 'UI preferences should never sync to peers — local scope is ideal.',
+      explanation:
+        "UI preferences should never sync to peers — local scope is ideal.",
     },
   ]}
   explanation="Rule of thumb: if two people looking at the same document would disagree about the value, it belongs in local scope."
@@ -3201,11 +3343,11 @@ Because reducers are pure, undo is a pattern, not a feature you have to implemen
 ```ts
 function invert(op: Operation): Action | null {
   switch (op.type) {
-    case 'ADD_TODO':
+    case "ADD_TODO":
       return removeTodo({ id: op.input.id });
-    case 'REMOVE_TODO':
+    case "REMOVE_TODO":
       return addTodo({ id: op.input.id, title: op.input.restoreTitle });
-    case 'COMPLETE_TODO':
+    case "COMPLETE_TODO":
       return uncompleteTodo({ id: op.input.id });
     default:
       return null;
@@ -3213,7 +3355,7 @@ function invert(op: Operation): Action | null {
 }
 ```
 
-Dispatching the inverse produces a *new* operation in the log — you keep the history, and the effect is undone. Nothing about the log is rewritten.
+Dispatching the inverse produces a _new_ operation in the log — you keep the history, and the effect is undone. Nothing about the log is rewritten.
 
 ## Testing reducers
 
@@ -3222,10 +3364,10 @@ Because reducers are pure functions, they test like pure functions. No mocking, 
 ```ts
 
 
-test('completing a todo marks it done', () => {
+test("completing a todo marks it done", () => {
   let doc = utils.createDocument();
-  doc = reducer(doc, addTodo({ id: 't-1', title: 'Test' }));
-  const afterComplete = reducer(doc, completeTodo({ id: 't-1' }));
+  doc = reducer(doc, addTodo({ id: "t-1", title: "Test" }));
+  const afterComplete = reducer(doc, completeTodo({ id: "t-1" }));
 
   expect(afterComplete.state.global.items[0].done).toBe(true);
   expect(doc.state.global.items[0].done).toBe(false); // original snapshot untouched
@@ -3240,8 +3382,14 @@ Two things you should always cover:
 If either assertion fails, your reducer isn't pure — and sync will eventually betray you.
 
 <Cards>
-  <Card title="Processors and read models" href="/academy/Learn/switchboard/processors-and-read-models" />
-  <Card title="Back to Foundations" href="/academy/Learn/foundations/what-is-powerhouse" />
+  <Card
+    title="Processors and read models"
+    href="/academy/Learn/switchboard/processors-and-read-models"
+  />
+  <Card
+    title="Back to Foundations"
+    href="/academy/Learn/foundations/what-is-powerhouse"
+  />
 </Cards>
 
 ---
@@ -3251,7 +3399,7 @@ If either assertion fails, your reducer isn't pure — and sync will eventually 
 
 > Source: https://academy.vetra.io/academy/Learn/deep-dives/identity-and-signing
 
-You've seen that a document *is* its operation log, and that the log is what
+You've seen that a document _is_ its operation log, and that the log is what
 syncs between peers. That raises a question every collaborative system has to
 answer: **who produced each operation, and can a peer trust it?** This lesson
 connects the operation model you already know to Powerhouse's identity and
@@ -3262,7 +3410,7 @@ what it doesn't.
 
 ## Operations carry an actor
 
-Every operation already records *who* dispatched it. In the foundations lesson
+Every operation already records _who_ dispatched it. In the foundations lesson
 you saw an operation shaped like this:
 
 ```json
@@ -3283,7 +3431,7 @@ attributed to that identity.
 
 ## A claim is not a proof
 
-An `actor` field on its own is just a *claim*. Nothing stops a malicious peer
+An `actor` field on its own is just a _claim_. Nothing stops a malicious peer
 from writing `"actor": "user:alice"` onto an operation Alice never made. In a
 local-first system where operations flow between machines you don't control,
 that's a real problem.
@@ -3303,21 +3451,27 @@ hash chain won't match.
   question="A signed operation arrives from an untrusted peer. What does a valid signature let you conclude?"
   choices={[
     {
-      label: "That the operation is good for the document — its business rules passed.",
-      explanation: "Signatures prove origin and integrity, not validity. The reducer still decides whether the action is allowed.",
+      label:
+        "That the operation is good for the document — its business rules passed.",
+      explanation:
+        "Signatures prove origin and integrity, not validity. The reducer still decides whether the action is allowed.",
     },
     {
-      label: "That the named identity produced exactly this operation, and it hasn't been tampered with.",
+      label:
+        "That the named identity produced exactly this operation, and it hasn't been tampered with.",
       correct: true,
-      explanation: "Authenticity + integrity. The signature binds the identity to this specific operation and its position in the log.",
+      explanation:
+        "Authenticity + integrity. The signature binds the identity to this specific operation and its position in the log.",
     },
     {
       label: "That the user had permission to perform the action.",
-      explanation: "Permissions are a separate check. A signature tells you who, not whether they were allowed.",
+      explanation:
+        "Permissions are a separate check. A signature tells you who, not whether they were allowed.",
     },
     {
       label: "That the operation is the most recent one in the document.",
-      explanation: "Ordering comes from the index and hash chain, not the signature itself.",
+      explanation:
+        "Ordering comes from the index and hash chain, not the signature itself.",
     },
   ]}
   explanation="Signing answers 'who, and unchanged?'. Whether the action is allowed (permissions) and whether it's valid (the reducer) are separate gates that still run."
@@ -3327,16 +3481,16 @@ hash chain won't match.
 
 It's worth separating the concerns that all meet at a single operation:
 
-| Gate | Question | Where it lives |
-| --- | --- | --- |
-| **Authentication** | Who is this identity? | Renown |
-| **Signing** | Did this identity really produce this exact operation? | Signature verification |
-| **Authorization** | Is this identity allowed to perform this action here? | Document permissions |
-| **Validity** | Is the resulting state legal? | The reducer |
+| Gate               | Question                                               | Where it lives         |
+| ------------------ | ------------------------------------------------------ | ---------------------- |
+| **Authentication** | Who is this identity?                                  | Renown                 |
+| **Signing**        | Did this identity really produce this exact operation? | Signature verification |
+| **Authorization**  | Is this identity allowed to perform this action here?  | Document permissions   |
+| **Validity**       | Is the resulting state legal?                          | The reducer            |
 
 A signed operation can be perfectly authentic and still be rejected — because
 the signer lacks permission on that document, or because the reducer's rules
-don't allow the change. Identity establishes *trust*; it doesn't replace the
+don't allow the change. Identity establishes _trust_; it doesn't replace the
 other checks.
 
 ## Why this falls out of the operation log
@@ -4829,7 +4983,7 @@ Every interaction with the package comes down to three operations: reserve a slo
 
 There are two reservation modes. They are equivalent in capability — neither is preferred, so pick whichever fits the caller:
 
-- **Upload-first** — reserve with just `{ mimeType, fileName }`. The content hash, and therefore the final ref, is only known *after* `send()` completes. Simplest when you can stream the bytes straight through and do not need the ref until the upload finishes.
+- **Upload-first** — reserve with just `{ mimeType, fileName }`. The content hash, and therefore the final ref, is only known _after_ `send()` completes. Simplest when you can stream the bytes straight through and do not need the ref until the upload finishes.
 - **Hash-first** — hash the content up front and reserve with `{ clientHash, sizeBytes, ... }`. The ref is known at reservation time, so it can be written into document state before (or in parallel with) the upload, and dedup can short-circuit before any bytes are sent. The trade-off is that the whole file must be read to hash it. `IAttachmentClient.preprocess()` does that hashing for you.
 
 The walkthrough below uses the low-level service in upload-first mode. The [attachment client](#the-attachment-client) section shows the hash-first flow.
@@ -4883,7 +5037,10 @@ async function resolveImageSource(image: string) {
 }
 
 const { mimeType, stream } = await resolveImageSource(agent.image);
-const upload = await attachments.reserve({ mimeType, fileName: `${agent.id}-avatar` });
+const upload = await attachments.reserve({
+  mimeType,
+  fileName: `${agent.id}-avatar`,
+});
 const { ref } = await upload.send(stream);
 ```
 
@@ -4915,7 +5072,7 @@ const objectUrl = URL.createObjectURL(blob);
 // ...later: URL.revokeObjectURL(objectUrl);
 ```
 
-`get()` succeeds for any ref whose bytes are available. If the bytes were evicted from local storage, the service transparently re-fetches them through the transport. A hash-first ref can also be *pending* — reserved, with state already referencing it, but the bytes not yet uploaded. During that window `get()` throws `AttachmentPending`, while `stat()` succeeds and reports the declared size.
+`get()` succeeds for any ref whose bytes are available. If the bytes were evicted from local storage, the service transparently re-fetches them through the transport. A hash-first ref can also be _pending_ — reserved, with state already referencing it, but the bytes not yet uploaded. During that window `get()` throws `AttachmentPending`, while `stat()` succeeds and reports the declared size.
 
 ## The attachment client
 
@@ -4939,7 +5096,9 @@ await client.execute(documentId, "main", [
   attachInvoice({ scan: results.ref, vendorName: "Acme" }),
 ]);
 
-await attachments.reserve(results.options, (handle) => handle.send(results.stream()));
+await attachments.reserve(results.options, (handle) =>
+  handle.send(results.stream()),
+);
 ```
 
 `client.reserve(options, send)` reserves the slot and hands the upload handle to your `send` callback. If an attachment with the same hash already exists it short-circuits and returns the existing ref without uploading. Pass `results.stream()` — which returns a fresh `ReadableStream` on each call — rather than the single-use `results.data` if the upload might be retried. `send()` accepts any `ReadableStream<Uint8Array>`, so on the server you can stream from the original source instead of the buffered copy.
@@ -4951,7 +5110,9 @@ await Promise.all([
   client.execute(documentId, "main", [
     attachInvoice({ scan: results.ref, vendorName: "Acme" }),
   ]),
-  attachments.reserve(results.options, (handle) => handle.send(results.stream())),
+  attachments.reserve(results.options, (handle) =>
+    handle.send(results.stream()),
+  ),
 ]);
 ```
 
@@ -5016,51 +5177,51 @@ setAgentImageOperation(state, action) {
 
 ### `IAttachmentService`
 
-| Method                              | Returns                          | Description                                                                                                  |
-| ----------------------------------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `reserve(options)`                  | `Promise<IAttachmentUpload>`     | Reserve a new attachment slot and return an upload handle.                                                   |
-| `stat(ref)`                         | `Promise<AttachmentHeader>`      | Look up metadata for an existing ref. Throws `AttachmentNotFound` if the ref is unknown.                     |
-| `get(ref, signal?)`                 | `Promise<AttachmentResponse>`    | Retrieve the bytes. Re-fetches transparently if the data was evicted. Accepts an optional `AbortSignal`.     |
+| Method              | Returns                       | Description                                                                                              |
+| ------------------- | ----------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `reserve(options)`  | `Promise<IAttachmentUpload>`  | Reserve a new attachment slot and return an upload handle.                                               |
+| `stat(ref)`         | `Promise<AttachmentHeader>`   | Look up metadata for an existing ref. Throws `AttachmentNotFound` if the ref is unknown.                 |
+| `get(ref, signal?)` | `Promise<AttachmentResponse>` | Retrieve the bytes. Re-fetches transparently if the data was evicted. Accepts an optional `AbortSignal`. |
 
 ### `IAttachmentUpload`
 
-| Member             | Type                                                            | Description                                                                                                       |
-| ------------------ | --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `reservationId`    | `string`                                                        | Unique identifier for this reservation.                                                                           |
-| `send(data)`       | `(ReadableStream<Uint8Array>) => Promise<AttachmentUploadResult>` | Stream the bytes through the handle. Returns `{ hash, ref, header }`. Dedup against existing hashes is automatic. |
+| Member          | Type                                                              | Description                                                                                                       |
+| --------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `reservationId` | `string`                                                          | Unique identifier for this reservation.                                                                           |
+| `send(data)`    | `(ReadableStream<Uint8Array>) => Promise<AttachmentUploadResult>` | Stream the bytes through the handle. Returns `{ hash, ref, header }`. Dedup against existing hashes is automatic. |
 
 ### `IAttachmentClient`
 
-| Method                    | Returns                            | Description                                                                                                                                                                          |
-| ------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `preprocess(file, opts?)` | `Promise<PreprocessResult>`        | Read and hash a `Blob` up front. Returns the ref, hash, declared size, hash-first reserve options, and the buffered bytes (as a single-use `data` stream and a re-readable `stream()` factory). `opts` may override `{ fileName, mimeType }`. |
-| `reserve(options, send)`  | `Promise<AttachmentUploadResult>`  | Reserve a hash-first slot and run `send(handle)`. Short-circuits to the existing ref if the hash is already stored (`AttachmentAlreadyExists` is handled internally).                |
+| Method                    | Returns                           | Description                                                                                                                                                                                                                                   |
+| ------------------------- | --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `preprocess(file, opts?)` | `Promise<PreprocessResult>`       | Read and hash a `Blob` up front. Returns the ref, hash, declared size, hash-first reserve options, and the buffered bytes (as a single-use `data` stream and a re-readable `stream()` factory). `opts` may override `{ fileName, mimeType }`. |
+| `reserve(options, send)`  | `Promise<AttachmentUploadResult>` | Reserve a hash-first slot and run `send(handle)`. Short-circuits to the existing ref if the hash is already stored (`AttachmentAlreadyExists` is handled internally).                                                                         |
 
 ### Key types
 
-| Type                       | Shape                                                                                                                     |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| `AttachmentRef`            | `` `attachment://v${number}:${string}` `` — opaque ref string used in document state.                                     |
-| `ReserveAttachmentOptions` | `UploadFirstReserveAttachmentOptions \| HashFirstReserveAttachmentOptions` — discriminated on `clientHash`.                |
-| `UploadFirstReserveAttachmentOptions` | `{ mimeType: string; fileName: string; extension?: string \| null }` — no `clientHash`; ref known only after `send()`. |
-| `HashFirstReserveAttachmentOptions`   | `{ mimeType: string; fileName: string; extension?: string \| null; clientHash: AttachmentHash; sizeBytes: number }` — ref known at reserve time. |
-| `PreprocessResult`         | `{ ref: AttachmentRef; hash: AttachmentHash; sizeBytes: number; options: HashFirstReserveAttachmentOptions; data: ReadableStream<Uint8Array>; stream: () => ReadableStream<Uint8Array> }` |
-| `AttachmentUploadResult`   | `{ hash: AttachmentHash; ref: AttachmentRef; header: AttachmentHeader }`                                                  |
-| `AttachmentHeader`         | `{ hash; mimeType; fileName; sizeBytes; extension; status; source; createdAtUtc; lastAccessedAtUtc }`                     |
-| `AttachmentResponse`       | `{ header: AttachmentHeader; body: ReadableStream<Uint8Array> }`                                                          |
+| Type                                  | Shape                                                                                                                                                                                     |
+| ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AttachmentRef`                       | `` `attachment://v${number}:${string}` `` — opaque ref string used in document state.                                                                                                     |
+| `ReserveAttachmentOptions`            | `UploadFirstReserveAttachmentOptions \| HashFirstReserveAttachmentOptions` — discriminated on `clientHash`.                                                                               |
+| `UploadFirstReserveAttachmentOptions` | `{ mimeType: string; fileName: string; extension?: string \| null }` — no `clientHash`; ref known only after `send()`.                                                                    |
+| `HashFirstReserveAttachmentOptions`   | `{ mimeType: string; fileName: string; extension?: string \| null; clientHash: AttachmentHash; sizeBytes: number }` — ref known at reserve time.                                          |
+| `PreprocessResult`                    | `{ ref: AttachmentRef; hash: AttachmentHash; sizeBytes: number; options: HashFirstReserveAttachmentOptions; data: ReadableStream<Uint8Array>; stream: () => ReadableStream<Uint8Array> }` |
+| `AttachmentUploadResult`              | `{ hash: AttachmentHash; ref: AttachmentRef; header: AttachmentHeader }`                                                                                                                  |
+| `AttachmentHeader`                    | `{ hash; mimeType; fileName; sizeBytes; extension; status; source; createdAtUtc; lastAccessedAtUtc }`                                                                                     |
+| `AttachmentResponse`                  | `{ header: AttachmentHeader; body: ReadableStream<Uint8Array> }`                                                                                                                          |
 
 ### Errors
 
-| Class                  | When it is thrown                                                                  |
-| ---------------------- | ---------------------------------------------------------------------------------- |
-| `AttachmentNotFound`   | `stat(ref)` or `get(ref)` called with a ref the store does not know.               |
-| `InvalidAttachmentRef` | A string passed where a ref is expected does not match `attachment://v<N>:<hash>`. |
-| `UploadTooLarge`       | `upload.send()` exceeded the server's configured byte cap. Maps to HTTP 413.       |
-| `ReservationNotFound`  | `upload.send()` after the reservation expired or was deleted.                      |
+| Class                     | When it is thrown                                                                                                                                         |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AttachmentNotFound`      | `stat(ref)` or `get(ref)` called with a ref the store does not know.                                                                                      |
+| `InvalidAttachmentRef`    | A string passed where a ref is expected does not match `attachment://v<N>:<hash>`.                                                                        |
+| `UploadTooLarge`          | `upload.send()` exceeded the server's configured byte cap. Maps to HTTP 413.                                                                              |
+| `ReservationNotFound`     | `upload.send()` after the reservation expired or was deleted.                                                                                             |
 | `AttachmentAlreadyExists` | Hash-first `reserve()` for content whose hash is already stored. The client's `reserve()` catches this and returns the existing ref instead of uploading. |
-| `AttachmentPending`    | `get(ref)` for a hash that is reserved but whose bytes have not finished uploading. |
-| `HashMismatch`         | Hash-first `send()` whose uploaded bytes do not match the claimed `clientHash`.    |
-| `SizeMismatch`         | Hash-first `send()` whose actual byte count differs from the declared `sizeBytes`. |
+| `AttachmentPending`       | `get(ref)` for a hash that is reserved but whose bytes have not finished uploading.                                                                       |
+| `HashMismatch`            | Hash-first `send()` whose uploaded bytes do not match the claimed `clientHash`.                                                                           |
+| `SizeMismatch`            | Hash-first `send()` whose actual byte count differs from the declared `sizeBytes`.                                                                        |
 
 ### Helpers
 
@@ -7429,7 +7590,7 @@ Here are the key points to understand:
 - **Basic Building Blocks:** Scalars are the basic data types—like String, Int, Float, Boolean, and ID—that represent atomic values.
 - **Leaf Nodes:** Scalars are the "leaves" of a GraphQL query. They can't have any sub-fields, meaning once you hit a scalar in a query, that's the final value.
 - **Custom Scalars:** Besides the built-in scalars, you can define custom scalars (e.g., a Date type) if you need to handle more specific formats or validations. Powerhouse does this specific for the web3 ecosystem.
-
+  :::
 
 ## What are Components?
 
@@ -11692,9 +11853,11 @@ pnpm install -g ph-cmd
 - [Update](#update)
 - [Setup Globals](#setup-globals)
 - [Use Local](#use-local)
+  
 
 
 ## Init
+
 Initialize a new project
 
 
@@ -11703,10 +11866,12 @@ Initialize a new project
 ## Parameters
 
 ### Arguments
+
 **Name** - The name of your project. A new directory will be created in your current directory with this name. - Usage: `[name]`
 
 
 ### Options
+
 **Name** - The name of your project. A new directory will be created in your current directory with this name. - Usage: `--name, -n <str>`
 
 **Package Manager** - Specify the package manager to use for your project. Can be one of: `npm`, `pnpm`, `yarn`, or `bun`. Defaults to your environment package manager. - Usage: `--package-manager, -p <value>`
@@ -11721,6 +11886,7 @@ Initialize a new project
 
 
 ### Flags
+
 **Npm** - Use 'npm' as package manager - Usage: `--npm`
 
 **Pnpm** - Use 'pnpm' as package manager - Usage: `--pnpm`
@@ -11739,6 +11905,7 @@ Initialize a new project
 
 
 ## Use
+
 Specify the release version of Powerhouse dependencies to use.
 
 
@@ -11747,16 +11914,19 @@ Specify the release version of Powerhouse dependencies to use.
 ## Parameters
 
 ### Arguments
+
 **Tag** - Specify the release tag to use for your project. Can be one of: "latest", "staging", or "dev". - Usage: `[tag]`
 
 
 ### Options
+
 **Tag** - Specify the release tag to use for your project. Can be one of: "latest", "staging", or "dev". - Usage: `--tag, -t <value>`
 
 **Version** - Specify the exact semver release version to use for your project. - Usage: `--version, -v <str>`
 
 
 ### Flags
+
 **Skip Install** - Skip running `install` with your package manager - Usage: `--skip-install, -s`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
@@ -11765,10 +11935,12 @@ Specify the release version of Powerhouse dependencies to use.
 
 
 ## Update
+
 Update your powerhouse dependencies to their latest tagged version
 
 
 ### Flags
+
 **Skip Install** - Skip running `install` with your package manager - Usage: `--skip-install, -s`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
@@ -11777,6 +11949,7 @@ Update your powerhouse dependencies to their latest tagged version
 
 
 ## Setup Globals
+
 Initialize a new global project
 
 
@@ -11785,10 +11958,12 @@ Initialize a new global project
 ## Parameters
 
 ### Arguments
+
 **Name** - The name of your project. A new directory will be created in your current directory with this name. - Usage: `[name]`
 
 
 ### Options
+
 **Name** - The name of your project. A new directory will be created in your current directory with this name. - Usage: `--name, -n <str>`
 
 **Package Manager** - Specify the package manager to use for your project. Can be one of: `npm`, `pnpm`, `yarn`, or `bun`. Defaults to your environment package manager. - Usage: `--package-manager, -p <value>`
@@ -11803,6 +11978,7 @@ Initialize a new global project
 
 
 ### Flags
+
 **Npm** - Use 'npm' as package manager - Usage: `--npm`
 
 **Pnpm** - Use 'pnpm' as package manager - Usage: `--pnpm`
@@ -11821,6 +11997,7 @@ Initialize a new global project
 
 
 ## Use Local
+
 Use your local `powerhouse` monorepo dependencies the current project.
 
 
@@ -11829,14 +12006,17 @@ Use your local `powerhouse` monorepo dependencies the current project.
 ## Parameters
 
 ### Arguments
+
 **Monorepo Path** - Path to your local powerhouse monorepo relative to this project - Usage: `[monorepo path]`
 
 
 ### Options
+
 **Path** - Path to your local powerhouse monorepo relative to this project - Usage: `--path, -p <str>`
 
 
 ### Flags
+
 **Skip Install** - Skip running `install` with `pnpm` - Usage: `--skip-install, -s`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
@@ -11866,32 +12046,40 @@ Use your local `powerhouse` monorepo dependencies the current project.
 - [Login](#login)
 - [Install](#install)
 - [Uninstall](#uninstall)
+  
 
 
 ## Generate
+
 The generate command creates code for Powerhouse modules. It helps you create new code from scratch, or to re-generate existing code in your project.
 
+
 ## All
+
 Re-generate all modules in the current project
 
 
 ### Flags
+
 **Extract** - Instead of generating code, write a spec for every module into specs/ (one-shot migration to documents-as-source-of-truth) - Usage: `--extract, -x`
 
 **Help** - show help - Usage: `--help, -h`
 
 
 ## Document Model
+
 Generate a document model
 
 
 ### Options
+
 **Document** - Path to a document model spec (.phd or .json) to generate from - Usage: `--document, -d <file>`
 
 **Dir** - Name of the directory of an existing document model to re-generate - Usage: `--dir <dir>`
 
 
 ### Flags
+
 **All** - Re-generate all existing document models in the current project - Usage: `--all, -a`
 
 **Extract** - Write a powerhouse/document-model spec for each existing document model into specs/document-models/ - Usage: `--extract, -x`
@@ -11902,10 +12090,12 @@ Generate a document model
 
 
 ## Editor
+
 Generate a document editor
 
 
 ### Options
+
 **Name** - The name of the document editor to generate - Usage: `--name, -n <str>`
 
 **Document Type** - The document type for the new editor - Usage: `--document-type, -t <str>`
@@ -11916,6 +12106,7 @@ Generate a document editor
 
 
 ### Flags
+
 **All** - Re-generate all existing editors in the current project - Usage: `--all, -a`
 
 **Extract** - Write a powerhouse/document-editor spec for each existing editor into specs/editors/ - Usage: `--extract, -x`
@@ -11926,10 +12117,12 @@ Generate a document editor
 
 
 ## App
+
 Generate a drive app
 
 
 ### Options
+
 **Name** - The name of the drive app to generate - Usage: `--name, -n <str>`
 
 **Document Types** - The document types allowed by the new app - Usage: `--document-types <str>, -t=<str>`
@@ -11940,9 +12133,11 @@ Generate a drive app
 
 
 ### Flags
+
 **Disable Drag And Drop** - Do not allow drag and drop in this drive app. - Usage: `--disable-drag-and-drop`
 
 **Default:** `false`
+
 **All** - Re-generate all existing apps in the current project - Usage: `--all, -a`
 
 **Extract** - Write a powerhouse/app spec for each existing drive app into specs/apps/ - Usage: `--extract, -x`
@@ -11953,27 +12148,33 @@ Generate a drive app
 
 
 ## Processor
+
 Generate a processor
 
 
 ### Options
+
 **Name** - The name of the processor to generate - Usage: `--name, -n <str>`
 
 **Type** - The type of processor to generate - Usage: `--type <value>`
 
 **Default:** `analytics`
+
 **Document Types** - The document types the processor will run on - Usage: `--document-types <str>, -t=<str>`
 
 **Default:** ``
+
 **Apps** - Whether the processor will run in switchboard (nodejs), connect (browser), or both - Usage: `--apps <value>`
 
 **Default:** `switchboard,connect`
+
 **Document** - Path to a powerhouse/processor spec file (.phd or .json) to drive codegen - Usage: `--document, -d <file>`
 
 **Dir** - Name of the directory of an existing processor to re-generate - Usage: `--dir <dir>`
 
 
 ### Flags
+
 **All** - Re-generate all existing processors in the current project - Usage: `--all, -a`
 
 **Extract** - Write a powerhouse/processor spec for each existing processor into specs/processors/ - Usage: `--extract, -x`
@@ -11984,10 +12185,12 @@ Generate a processor
 
 
 ## Subgraph
+
 Generate a subgraph
 
 
 ### Options
+
 **Name** - The name of the subgraph to generate - Usage: `--name, -n <str>`
 
 **Document** - Path to a powerhouse/subgraph spec file (.phd or .json) to drive codegen - Usage: `--document, -d <file>`
@@ -11996,6 +12199,7 @@ Generate a subgraph
 
 
 ### Flags
+
 **All** - Re-generate all existing subgraphs in the current project - Usage: `--all, -a`
 
 **Extract** - Write a powerhouse/subgraph spec for each existing subgraph into specs/subgraphs/ - Usage: `--extract, -x`
@@ -12006,16 +12210,19 @@ Generate a subgraph
 
 
 ## Migration File
+
 Generate a migration file
 
 
 ### Options
-**Path *[required]*** - Path to the migration file - Usage: `--path, -p <str>`
+
+**Path _[required]_** - Path to the migration file - Usage: `--path, -p <str>`
 
 **Schema File** - Path to the output file. Defaults to './schema.ts' - Usage: `--schema-file <str>`
 
 
 ### Flags
+
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`
@@ -12024,10 +12231,11 @@ Generate a migration file
 ## Vetra
 
 The vetra command sets up a Vetra development environment for working with Vetra projects.
-It starts a Vetra Switchboard and optionally Connect Studio, enabling document collaboration 
+It starts a Vetra Switchboard and optionally Connect Studio, enabling document collaboration
 and real-time processing with a "Vetra" drive or connection to remote drives.
 
 **What it does:**
+
 - 1. Starts a Vetra Switchboard with a "Vetra" drive for document storage
 - 2. Optionally connects to remote drives instead of creating a local drive
 - 3. Starts Connect Studio pointing to the Switchboard for user interaction (unless disabled)
@@ -12035,11 +12243,13 @@ and real-time processing with a "Vetra" drive or connection to remote drives.
 
 
 ### Options
+
 **Switchboard Port** - port to use for the Vetra Switchboard - Usage: `--switchboard-port <number>`
 
 **Connect Port** - port to use for the Vetra Connect - Usage: `--connect-port <number>`
 
 **Default:** `3001`
+
 **Remote Drive** - URL of remote drive to connect to (skips switchboard initialization) - Usage: `--remote-drive <str>`
 
 **Drives Public Base** - public base URL for the drive URLs advertised to Connect; each drive is exposed as &lt;base&gt;/d/&lt;slug&gt; instead of `http://localhost:<switchboard-port>/d/<slug>`. Use when the switchboard is reachable through a reverse proxy. - Usage: `--drives-public-base <str>`
@@ -12052,22 +12262,27 @@ and real-time processing with a "Vetra" drive or connection to remote drives.
 
 **Environment:** `PH_CONNECT_LOG_LEVEL`
 **Default:** `info`
+
 **Packages** - Comma-separated list of package names to load - Usage: `--packages <str>`
 
 **Environment:** `PH_PACKAGES`
+
 **Local Package** - Path to local package to load during development - Usage: `--local-package <str>`
 
 **Environment:** `PH_LOCAL_PACKAGE`
+
 **Default Drives Url** - The default drives url to use in connect - Usage: `--default-drives-url <str>`
 
 **Drive Preserve Strategy** - The preservation strategy to use on default drives - Usage: `--drive-preserve-strategy <value>`
 
 **Default:** `preserve-by-url-and-detach`
+
 **Host** - Expose the server to the network. Pass an IP (e.g. 0.0.0.0) to bind to a specific address. - Usage: `--host <str>`
 
 **Watch Timeout** - Amount of time to wait before a file is considered changed - Usage: `--watch-timeout <number>`
 
 **Default:** `300`
+
 **Https Key File** - path to the ssl key file - Usage: `--https-key-file <str>`
 
 **Https Cert File** - path to the ssl cert file - Usage: `--https-cert-file <str>`
@@ -12076,18 +12291,23 @@ and real-time processing with a "Vetra" drive or connection to remote drives.
 
 
 ### Flags
+
 **Watch** - Enable dynamic loading for document-models and editors in connect-studio and switchboard - Usage: `--watch, -w`
 
 **Default:** `false`
+
 **Logs** - Show additional logs - Usage: `--logs`
 
 **Default:** `false`
+
 **Disable Connect** - Skip Connect initialization (only start switchboard and reactor) - Usage: `--disable-connect`
 
 **Default:** `false`
+
 **Interactive** - Enable interactive mode for code generation (requires user confirmation before generating code) - Usage: `--interactive`
 
 **Default:** `false`
+
 **Ignore Local** - Do not load local packages from this project - Usage: `--ignore-local`
 
 **Force** - Force dep pre-optimization regardless of whether deps have changed. - Usage: `--force`
@@ -12103,9 +12323,11 @@ and real-time processing with a "Vetra" drive or connection to remote drives.
 **Print Urls** - Print server urls - Usage: `--print-urls`
 
 **Default:** `true`
+
 **Bind Cli Shortcuts** - Bind CLI shortcuts - Usage: `--bind-cli-shortcuts`
 
 **Default:** `true`
+
 **Https** - Use https - Usage: `--https`
 
 **Dev** - enable development mode to load local packages - Usage: `--dev`
@@ -12114,14 +12336,18 @@ and real-time processing with a "Vetra" drive or connection to remote drives.
 
 
 ## Connect
+
 Powerhouse Connect commands. Use with `studio`, `build`, `preview`, or `config`. Defaults to `studio` if not specified.
 
+
 ## Connect Studio
+
 The studio command starts the Connect Studio, a development environment for building
 and testing Powerhouse applications. It provides a visual interface for working with
 your project.
 
 **What it does:**
+
 - 1. Starts a local Connect Studio server
 - 2. Provides a web interface for development
 - 3. Allows you to interact with your project components
@@ -12129,26 +12355,32 @@ your project.
 
 
 ### Options
+
 **Port** - Port to run the dev server on. - Usage: `--port <number>`
 
 **Default:** `3000`
+
 **Base** - Base path for the app - Usage: `--base <str>`
 
 **Log Level** - Log level for the application - Usage: `--log-level <value>`
 
 **Environment:** `PH_CONNECT_LOG_LEVEL`
 **Default:** `info`
+
 **Packages** - Comma-separated list of package names to load - Usage: `--packages <str>`
 
 **Environment:** `PH_PACKAGES`
+
 **Local Package** - Path to local package to load during development - Usage: `--local-package <str>`
 
 **Environment:** `PH_LOCAL_PACKAGE`
+
 **Default Drives Url** - The default drives url to use in connect - Usage: `--default-drives-url <str>`
 
 **Drive Preserve Strategy** - The preservation strategy to use on default drives - Usage: `--drive-preserve-strategy <value>`
 
 **Default:** `preserve-by-url-and-detach`
+
 **Host** - Expose the server to the network. Pass an IP (e.g. 0.0.0.0) to bind to a specific address. - Usage: `--host <str>`
 
 **Watch Timeout** - Amount of time to wait before a file is considered changed - Usage: `--watch-timeout <number>`
@@ -12157,6 +12389,7 @@ your project.
 
 
 ### Flags
+
 **Ignore Local** - Do not load local packages from this project - Usage: `--ignore-local`
 
 **Force** - Force dep pre-optimization regardless of whether deps have changed. - Usage: `--force`
@@ -12172,30 +12405,35 @@ your project.
 **Print Urls** - Print server urls - Usage: `--print-urls`
 
 **Default:** `true`
+
 **Bind Cli Shortcuts** - Bind CLI shortcuts - Usage: `--bind-cli-shortcuts`
 
 **Default:** `true`
+
 **Help** - show help - Usage: `--help, -h`
 
 
 ## Connect Build
+
 The Connect build command creates a production build with the project's local and
 external packages included.
 
 Runtime-config overrides (all combinable — last wins on collision):
-  ph connect build                                    Build with the current source config.
-  ph connect build &lt;key&gt; &lt;value&gt;                      Build with a positional override applied (e.g. ph connect build connect.renown.url `https://renown.staging`).
-  ph connect build --&lt;field&gt; &lt;value&gt;                  Build with a per-field flag override (e.g. --renown-url `https://renown.staging`).
-  ph connect build --json '\{"…":"…"\}'                Build with a bulk override.
+ph connect build Build with the current source config.
+ph connect build &lt;key&gt; &lt;value&gt; Build with a positional override applied (e.g. ph connect build connect.renown.url `https://renown.staging`).
+ph connect build --&lt;field&gt; &lt;value&gt; Build with a per-field flag override (e.g. --renown-url `https://renown.staging`).
+ph connect build --json '\{"…":"…"\}' Build with a bulk override.
 
 Build has no read mode; passing only &lt;key&gt; without &lt;value&gt; errors out (use `ph connect config <key>` to read).
 
 
 ### Options
+
 **Out Dir** - Output directory - Usage: `--outDir <str>`
 
 **Default:** `.ph/connect-build/dist/`
-**Json** - Inline JSON override for the runtime connect.* block, e.g. '\{"renown":\{"url":"..."\}\}'. Validated against the runtime schema; deep-merged on top of env seeds and source powerhouse.config.json. Individual --flag values beat --json on collision. - Usage: `--json <str>`
+
+**Json** - Inline JSON override for the runtime connect.\* block, e.g. '\{"renown":\{"url":"..."\}\}'. Validated against the runtime schema; deep-merged on top of env seeds and source powerhouse.config.json. Individual --flag values beat --json on collision. - Usage: `--json <str>`
 
 **Renown Url** - Override connect.renown.url. - Usage: `--renown-url <str>`
 
@@ -12237,12 +12475,15 @@ Build has no read mode; passing only &lt;key&gt; without &lt;value&gt; errors ou
 
 **Environment:** `PH_CONNECT_LOG_LEVEL`
 **Default:** `info`
+
 **Packages** - Comma-separated list of package names to load - Usage: `--packages <str>`
 
 **Environment:** `PH_PACKAGES`
+
 **Local Package** - Path to local package to load during development - Usage: `--local-package <str>`
 
 **Environment:** `PH_LOCAL_PACKAGE`
+
 **Default Drives Url** - The default drives url to use in connect - Usage: `--default-drives-url <str>`
 
 **Drive Preserve Strategy** - The preservation strategy to use on default drives - Usage: `--drive-preserve-strategy <value>`
@@ -12255,12 +12496,14 @@ Build has no read mode; passing only &lt;key&gt; without &lt;value&gt; errors ou
 ## Parameters
 
 ### Arguments
+
 **Key** - Dotted path inside the runtime config (e.g. connect.renown.url). Pair with &lt;value&gt; to set; pass alone to `ph connect config` to read. - Usage: `[key]`
 
 **Value** - Value to set at &lt;key&gt;. Coerced against the runtime schema (string, bool, number, enum). Arrays and objects require --json instead. - Usage: `[value]`
 
 
 ### Flags
+
 **Dynamic Base** - Build one bundle that serves under any subpath; base resolved at serve time from a runtime global. Overrides --base. - Usage: `--dynamic-base`
 
 **Ignore Local** - Do not load local packages from this project - Usage: `--ignore-local`
@@ -12273,34 +12516,42 @@ Build has no read mode; passing only &lt;key&gt; without &lt;value&gt; errors ou
 
 
 ## Connect Preview
+
 The Connect preview command previews a built Connect project.
 NOTE: You must run `ph connect build` first
 
 
 ### Options
+
 **Port** - Port to run the preview server on. - Usage: `--port <number>`
 
 **Default:** `4173`
+
 **Out Dir** - Output directory - Usage: `--outDir <str>`
 
 **Default:** `.ph/connect-build/dist/`
+
 **Base** - Base path for the app - Usage: `--base <str>`
 
 **Log Level** - Log level for the application - Usage: `--log-level <value>`
 
 **Environment:** `PH_CONNECT_LOG_LEVEL`
 **Default:** `info`
+
 **Packages** - Comma-separated list of package names to load - Usage: `--packages <str>`
 
 **Environment:** `PH_PACKAGES`
+
 **Local Package** - Path to local package to load during development - Usage: `--local-package <str>`
 
 **Environment:** `PH_LOCAL_PACKAGE`
+
 **Default Drives Url** - The default drives url to use in connect - Usage: `--default-drives-url <str>`
 
 **Drive Preserve Strategy** - The preservation strategy to use on default drives - Usage: `--drive-preserve-strategy <value>`
 
 **Default:** `preserve-by-url-and-detach`
+
 **Host** - Expose the server to the network. Pass an IP (e.g. 0.0.0.0) to bind to a specific address. - Usage: `--host <str>`
 
 **Watch Timeout** - Amount of time to wait before a file is considered changed - Usage: `--watch-timeout <number>`
@@ -12309,6 +12560,7 @@ NOTE: You must run `ph connect build` first
 
 
 ### Flags
+
 **Ignore Local** - Do not load local packages from this project - Usage: `--ignore-local`
 
 **Force** - Force dep pre-optimization regardless of whether deps have changed. - Usage: `--force`
@@ -12324,9 +12576,11 @@ NOTE: You must run `ph connect build` first
 **Print Urls** - Print server urls - Usage: `--print-urls`
 
 **Default:** `true`
+
 **Bind Cli Shortcuts** - Bind CLI shortcuts - Usage: `--bind-cli-shortcuts`
 
 **Default:** `true`
+
 **Help** - show help - Usage: `--help, -h`
 
 
@@ -12336,57 +12590,65 @@ The access-token command generates a bearer token for API authentication. This t
 can be used to authenticate requests to Powerhouse APIs like reactor-api (Switchboard).
 
 **What it does:**
+
 - 1. Uses your CLI's cryptographic identity (DID) to sign a verifiable credential
 - 2. Creates a JWT bearer token with configurable expiration
 - 3. Outputs the token to stdout (info to stderr) for easy piping
 
 Prerequisites:
-  You must have a cryptographic identity. Run 'ph login' first to:
-  - Generate a keypair (stored in .ph/.keypair.json)
-  - Optionally link your Ethereum address (stored in .ph/.renown.json)
+You must have a cryptographic identity. Run 'ph login' first to:
+
+- Generate a keypair (stored in .ph/.keypair.json)
+- Optionally link your Ethereum address (stored in .ph/.renown.json)
 
 Token Details:
-  The generated token is a JWT (JSON Web Token) containing:
-  - Issuer (iss): Your CLI's DID (did:key:...)
-  - Subject (sub): Your CLI's DID
-  - Credential Subject: Chain ID, network ID, and address (if authenticated)
-  - Expiration (exp): Based on --expiry option
-  - Audience (aud): If --audience is specified
+The generated token is a JWT (JSON Web Token) containing:
+
+- Issuer (iss): Your CLI's DID (did:key:...)
+- Subject (sub): Your CLI's DID
+- Credential Subject: Chain ID, network ID, and address (if authenticated)
+- Expiration (exp): Based on --expiry option
+- Audience (aud): If --audience is specified
 
 Output:
+
 - Token information (DID, address, expiry) is printed to stderr
 - The token itself is printed to stdout for easy piping/copying
 
 This allows you to use the command in scripts:
-  TOKEN=$(ph access-token)
-  curl -H "Authorization: Bearer $TOKEN" `http://localhost:4001/graphql`
+TOKEN=$(ph access-token)
+curl -H "Authorization: Bearer $TOKEN" `http://localhost:4001/graphql`
 
 Usage with APIs:
-  Generate token and use with curl
-  TOKEN=$(ph access-token --expiry 1d)
-  curl -X POST `http://localhost:4001/graphql` \
-    -H "Content-Type: application/json" \
-    -H "Authorization: Bearer $TOKEN" \
-    -d '\{"query": "\{ drives \{ id name \} \}"\}'
+Generate token and use with curl
+TOKEN=$(ph access-token --expiry 1d)
+curl -X POST `http://localhost:4001/graphql` \
+ -H "Content-Type: application/json" \
+ -H "Authorization: Bearer $TOKEN" \
+ -d '\{"query": "\{ drives \{ id name \} \}"\}'
 
-  Export as environment variable
-  export PH_ACCESS_TOKEN=$(ph access-token)
+Export as environment variable
+export PH_ACCESS_TOKEN=$(ph access-token)
 
 Notes:
-  - Tokens are self-signed using your CLI's private key
-  - No network request is made; tokens are generated locally
-  - The recipient API must trust your CLI's DID to accept the token
-  - For reactor-api, ensure AUTH_ENABLED=true to require authentication
+
+- Tokens are self-signed using your CLI's private key
+- No network request is made; tokens are generated locally
+- The recipient API must trust your CLI's DID to accept the token
+- For reactor-api, ensure AUTH_ENABLED=true to require authentication
 
 
 ### Options
+
 **Expiry** - Token expiry duration. Supports: "7d" (days), "24h" (hours), "3600" or "3600s" (seconds) - Usage: `--expiry <str>`
 
 **Default:** `7d`
+
 **Audience** - Target audience URL for the token - Usage: `--audience <str>`
 
 
 ### Flags
+
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`
@@ -12399,6 +12661,7 @@ It helps you understand the structure, dependencies, and configuration of packag
 your project.
 
 **What it does:**
+
 - 1. Analyzes the specified package
 - 2. Retrieves detailed information about its structure and configuration
 - 3. Displays package metadata, dependencies, and other relevant information
@@ -12410,10 +12673,12 @@ your project.
 ## Parameters
 
 ### Arguments
-**Package Name *[required]*** - The name of the package to inspect - Usage: `<package-name>`
+
+**Package Name _[required]_** - The name of the package to inspect - Usage: `<package-name>`
 
 
 ### Flags
+
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`
@@ -12425,6 +12690,7 @@ The list command displays information about installed Powerhouse packages in you
 It reads the powerhouse.config.json file and shows the packages that are currently installed.
 
 **What it does:**
+
 - 1. Examines your project configuration
 - 2. Lists all installed Powerhouse packages
 - 3. Provides a clear overview of your project's dependencies
@@ -12432,12 +12698,14 @@ It reads the powerhouse.config.json file and shows the packages that are current
 
 
 ### Flags
+
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`
 
 
 ## Migrate
+
 Run migrations
 
 
@@ -12446,16 +12714,19 @@ Run migrations
 ## Parameters
 
 ### Arguments
+
 **Version** - The version to migrate to. Accepts a valid semver version or `staging`, `dev`, `latest`. - Usage: `[version]`
 
 
 ### Options
+
 **Version** - The version to migrate to. Accepts a valid semver version or `staging`, `dev`, `latest`. - Usage: `--version, -v <str>`
 
 **Default:** `latest`
 
 
 ### Flags
+
 **Force** - Run migrate from the bundled codegen even if the target version cannot be resolved from the npm registry or differs from the installed ph-cli version. - Usage: `--force, -f`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
@@ -12470,6 +12741,7 @@ processing engine for Powerhouse projects. It provides the infrastructure for do
 models, processors, and real-time updates.
 
 **What it does:**
+
 - 1. Starts a local switchboard server
 - 2. Loads document models and processors
 - 3. Provides an API for document operations
@@ -12478,6 +12750,7 @@ models, processors, and real-time updates.
 
 
 ### Flags
+
 **Https** - Use https - Usage: `--https`
 
 **Dev** - enable development mode to load local packages - Usage: `--dev`
@@ -12501,13 +12774,16 @@ models, processors, and real-time updates.
 **Mcp** - enable Mcp route at /mcp - Usage: `--mcp`
 
 **Default:** `true`
+
 **Use Vetra Drive** - Use a Vetra drive - Usage: `--use-vetra-drive`
 
 **Default:** `false`
+
 **Help** - show help - Usage: `--help, -h`
 
 
 ### Options
+
 **Https Key File** - path to the ssl key file - Usage: `--https-key-file <str>`
 
 **Https Cert File** - path to the ssl cert file - Usage: `--https-cert-file <str>`
@@ -12517,9 +12793,11 @@ models, processors, and real-time updates.
 **Packages** - Comma-separated list of package names to load - Usage: `--packages <str>`
 
 **Environment:** `PH_PACKAGES`
+
 **Port** - Port to host the api - Usage: `--port <number>`
 
 **Default:** `4001`
+
 **Base Path** - base path for the API endpoints (sets the BASE_PATH environment variable) - Usage: `--base-path <str>`
 
 **Keypair Path** - path to custom keypair file for identity - Usage: `--keypair-path <str>`
@@ -12527,6 +12805,7 @@ models, processors, and real-time updates.
 **Vetra Drive Id** - Specify a Vetra drive ID - Usage: `--vetra-drive-id <str>`
 
 **Default:** `vetra`
+
 **Db Path** - path to the database - Usage: `--db-path <str>`
 
 
@@ -12536,24 +12815,27 @@ The login command authenticates you with Renown using your Ethereum wallet. This
 the CLI to act on behalf of your Ethereum identity for authenticated operations.
 
 **What it does:**
+
 - 1. Generates or loads a cryptographic identity (DID) for the CLI
 - 2. Opens your browser to the Renown authentication page
 - 3. You authorize the CLI's DID to act on behalf of your Ethereum address
 - 4. Stores the credentials locally in .ph/.renown.json
-  
 
 
 ### Options
+
 **Renown Url** - Renown server URL. - Usage: `--renown-url <str>`
 
 **Environment:** `PH_CONNECT_RENOWN_URL`
 **Default:** `https//www.renown.id`
+
 **Timeout** - Authentication timeout in seconds. - Usage: `--timeout <number>`
 
 **Default:** `300`
 
 
 ### Flags
+
 **Logout** - Sign out and clear stored credentials - Usage: `--logout`
 
 **Status** - Show current authentication status - Usage: `--status`
@@ -12577,8 +12859,7 @@ as provider "local" — it will be bundled into ph connect build so the
 preview works without the registry being reachable.
 
 Resolution order for the registry URL:
-  --registry flag &gt; PH_REGISTRY_URL env &gt; powerhouse.config.json &gt; default
-  
+--registry flag &gt; PH_REGISTRY_URL env &gt; powerhouse.config.json &gt; default
 
 
 ---
@@ -12586,10 +12867,12 @@ Resolution order for the registry URL:
 ## Parameters
 
 ### Arguments
-**Dependencies *[required]*** - Names of the dependencies to install - Usage: `[...dependencies]`
+
+**Dependencies _[required]_** - Names of the dependencies to install - Usage: `[...dependencies]`
 
 
 ### Options
+
 **Registry** - Registry URL to install from (overrides config and environment) - Usage: `--registry <str>`
 
 **Allow Build** - A list of package names that are allowed to run postinstall scripts during installation. - Usage: `--allow-build <str>`
@@ -12598,6 +12881,7 @@ Resolution order for the registry URL:
 
 
 ### Flags
+
 **Local** - Also install packages into node_modules (marks them as provider: "local" so they get bundled into ph connect build) - Usage: `--local`
 
 **Npm** - Use 'npm' as package manager - Usage: `--npm`
@@ -12619,6 +12903,7 @@ The uninstall command removes Powerhouse dependencies from your project. It hand
 removal of packages, updates configuration files, and ensures proper cleanup.
 
 **What it does:**
+
 - 1. Uninstalls specified Powerhouse dependencies using your package manager
 - 2. Updates powerhouse.config.json to remove the dependencies
 - 3. Supports various uninstallation options and configurations
@@ -12630,14 +12915,17 @@ removal of packages, updates configuration files, and ensures proper cleanup.
 ## Parameters
 
 ### Arguments
-**Dependencies *[required]*** - Names of the dependencies to uninstall - Usage: `[...dependencies]`
+
+**Dependencies _[required]_** - Names of the dependencies to uninstall - Usage: `[...dependencies]`
 
 
 ### Options
+
 **Package Manager** - Specify the package manager to use for your project. Can be one of: `npm`, `pnpm`, `yarn`, or `bun`. Defaults to your environment package manager. - Usage: `--package-manager, -p <value>`
 
 
 ### Flags
+
 **Npm** - Use 'npm' as package manager - Usage: `--npm`
 
 **Pnpm** - Use 'pnpm' as package manager - Usage: `--pnpm`
@@ -13691,7 +13979,7 @@ This tutorial step has a corresponding branch in the repository. You can:
 - View the complete code for this step
 - Clone and checkout the branch to see the result
 - Compare your implementation using `git diff`
-
+  :::
 
 ## Overview
 
@@ -13821,6 +14109,7 @@ ph init
    ````
 
 Once the project is created, you will see output like:
+
 ```bash
 🚀 Initializing a new project...
 
@@ -14000,7 +14289,7 @@ This tutorial step has a corresponding branch. After completing this step, your 
 - Document model specification files (`todo-list.json`, `schema.graphql`)
 - Auto-generated TypeScript types and action creators
 - Reducer scaffolding ready for implementation
-
+  :::
 
 <details>
 <summary>📖 How to use this tutorial</summary>
@@ -17694,7 +17983,7 @@ In any package the styles are being generated through the styles.css file with t
 **Using `ph install` includes package styles automatically**
 
 - When installing a package with `ph install` on any instance, package styles are automatically added to styles.css. This ensures production builds always include the required package styles.
-
+  :::
 
 ## State management in editors: Hooks vs Props
 
@@ -19172,7 +19461,7 @@ When no `document` prop is provided, the toolbar falls back to the currently sel
 The default toolbar includes these controls:
 
 ```ts
-["undo", "redo", "download", "name", "history", "switchboard", "close"]
+["undo", "redo", "download", "name", "history", "switchboard", "close"];
 ```
 
 The controls are arranged into three slots:
@@ -19315,9 +19604,7 @@ Use `toolbarContainer` to replace the outer toolbar container. The custom toolba
 <DocumentToolbar
   document={document}
   toolbarContainer={({ children, className }) => (
-    <div className={className}>
-      {children}
-    </div>
+    <div className={className}>{children}</div>
   )}
 />
 ```
@@ -19354,7 +19641,7 @@ Use `componentOverrides` to replace individual built-in controls while keeping t
       </ToolbarDownloadButton>
     ),
   }}
-/>
+/>;
 ```
 
 The `name` control can also be replaced through `componentOverrides`.
@@ -19439,18 +19726,18 @@ Providing `children` replaces the default button contents. Providing `onClick` r
 ## Exported components
 
 ```ts
-DocumentToolbar
-ToolbarButton
-ToolbarUndoButton
-ToolbarRedoButton
-ToolbarDownloadButton
-ToolbarSwitchboardButton
-ToolbarHistoryButton
-ToolbarCloseButton
-ToolbarName
-ToolbarInput
-ToolbarContainer
-ToolbarControlsContainer
+DocumentToolbar;
+ToolbarButton;
+ToolbarUndoButton;
+ToolbarRedoButton;
+ToolbarDownloadButton;
+ToolbarSwitchboardButton;
+ToolbarHistoryButton;
+ToolbarCloseButton;
+ToolbarName;
+ToolbarInput;
+ToolbarContainer;
+ToolbarControlsContainer;
 ```
 
 The individual toolbar controls are exported so they can be reused when building custom toolbar layouts or custom control components.
@@ -19458,20 +19745,20 @@ The individual toolbar controls are exported so they can be reused when building
 ## Exported types
 
 ```ts
-DocumentToolbarProps
-DocumentToolbarWithChildrenProps
-DocumentToolbarWithCustomControlsProps
-DocumentToolbarControlName
-ToolbarButtonProps
-ToolbarButtonClickHandler
-ToolbarControlComponent
-ToolbarControlComponents
-ContainerComponent
-ControlSlot
-ControlPosition
-CustomToolbarControl
-CustomToolbarControlList
-CustomToolbarControls
+DocumentToolbarProps;
+DocumentToolbarWithChildrenProps;
+DocumentToolbarWithCustomControlsProps;
+DocumentToolbarControlName;
+ToolbarButtonProps;
+ToolbarButtonClickHandler;
+ToolbarControlComponent;
+ToolbarControlComponents;
+ContainerComponent;
+ControlSlot;
+ControlPosition;
+CustomToolbarControl;
+CustomToolbarControlList;
+CustomToolbarControls;
 ```
 
 ## Notes
@@ -19959,7 +20246,7 @@ Renown is designed to address the challenge of trust within DAOs, where contribu
 - **Powerhouse Identity Node**: Hosts user credentials and enables verification. Powerhouse is working towards decentralizing this identity reactor over time.
 - **Connect**: The interface for users to perform operations. It uses the DID for signing operations.
 - **Switchboard**: Responsible for verifying credentials and operation signatures to ensure authenticity.
-
+  :::
 
 This flow ensures that all actions within the Powerhouse ecosystem are secure, transparent, and verifiable, promoting trust in a pseudonymous contributor environment.
 
@@ -21897,7 +22184,7 @@ The Reactor API uses a layered authorization model:
 
 - For simple setups, configure `ADMINS` and leave documents **unprotected** — any authenticated user can read and write
 - When you need fine-grained control, **protect** specific documents and manage access with [document permissions](../docs/docs/02-DocumentPermissions.md)
-
+  :::
 
 ## Prerequisites
 
@@ -22032,7 +22319,7 @@ Does user have a grant for this document?
 
 - **Authentication** ([Renown flow](../docs/docs/01-RenownAuthenticationFlow.md)): Proves who you are (`ph login`)
 - **Authorization** (this guide): Determines what you can access
-
+  :::
 
 ## Common Scenarios
 
@@ -22173,7 +22460,10 @@ tutorial:
 
 ```typescript
 searchTodos: async (parent, args: { driveId: string; searchTerm: string }) => {
-  const children = await reactorClient.getOutgoingRelationships(args.driveId, "child");
+  const children = await reactorClient.getOutgoingRelationships(
+    args.driveId,
+    "child",
+  );
   // ...returns every matching document id, with no permission check
 };
 ```
@@ -22189,11 +22479,11 @@ Reactor's [policy](../docs/docs/04-Authorization.md#how-authorization-works). Yo
 branch on the policy yourself — you call the same helpers in every resolver and
 the active policy decides the outcome:
 
-| Policy                     | When                                              | What the helpers do                                                            |
-| -------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------ |
-| **OPEN**                   | `AUTH_ENABLED=false`                              | Every check passes for everyone, including anonymous callers.                  |
-| **ADMIN_ONLY**             | `AUTH_ENABLED=true`, document permissions off      | Only addresses in `ADMINS` pass any check.                                     |
-| **DOCUMENT_PERMISSIONS**   | `DOCUMENT_PERMISSIONS_ENABLED=true`               | Full per-document protection + READ/WRITE/ADMIN grants, with inheritance.      |
+| Policy                   | When                                          | What the helpers do                                                       |
+| ------------------------ | --------------------------------------------- | ------------------------------------------------------------------------- |
+| **OPEN**                 | `AUTH_ENABLED=false`                          | Every check passes for everyone, including anonymous callers.             |
+| **ADMIN_ONLY**           | `AUTH_ENABLED=true`, document permissions off | Only addresses in `ADMINS` pass any check.                                |
+| **DOCUMENT_PERMISSIONS** | `DOCUMENT_PERMISSIONS_ENABLED=true`           | Full per-document protection + READ/WRITE/ADMIN grants, with inheritance. |
 
 Because the policy is resolved centrally, the right approach is to **write one
 enforcement path** and let it behave correctly under all three policies. Calling
@@ -22210,12 +22500,18 @@ parameter of `getResolvers`, so call them directly as `subgraph.assertCanRead(..
 // subgraphs/search-todos/resolvers.ts
 
 
-export const getResolvers = (subgraph: BaseSubgraph): Record<string, unknown> => {
+export const getResolvers = (
+  subgraph: BaseSubgraph,
+): Record<string, unknown> => {
   const reactor = subgraph.reactorClient;
 
   return {
     Query: {
-      document: async (_parent: unknown, args: { identifier: string }, ctx: Context) => {
+      document: async (
+        _parent: unknown,
+        args: { identifier: string },
+        ctx: Context,
+      ) => {
         const handle = await subgraph.assertCanRead(args.identifier, ctx);
         return reactor.get(handle.fetchIdentifier);
       },
@@ -22233,7 +22529,7 @@ Reactor's built-in subgraphs use. Both forms reach the same public methods.
 The caller's verified identity is on the request `Context` as `ctx.user`:
 
 ```typescript
-ctx.user?.address;   // the verified Ethereum address, or undefined for anonymous callers
+ctx.user?.address; // the verified Ethereum address, or undefined for anonymous callers
 ```
 
 You never read identity from headers or arguments — `ctx.user` is the only
@@ -22266,14 +22562,14 @@ data fetch with `handle.fetchIdentifier`, never with the original argument.
 All of the following are public methods on `BaseSubgraph`, called on the
 `subgraph` instance (or `this` from a class-field resolver):
 
-| Helper                                                   | Use when                                                                 | On failure        |
-| -------------------------------------------------------- | ------------------------------------------------------------------------ | ----------------- |
-| `assertCanRead(identifier, ctx)`                         | Reading one document the caller named (id or slug).                      | throws `Forbidden`|
-| `assertCanWrite(identifier, ctx)`                        | Mutating one document the caller named.                                  | throws `Forbidden`|
-| `assertCanExecuteOperation(identifier, type, ctx)`       | Executing a specific operation type on a document.                       | throws `Forbidden`|
-| `assertCanCreate(ctx)`                                   | Creating a new top-level document (no parent to check write against).    | throws `Forbidden`|
-| `canReadDocument(canonicalId, ctx)`                      | Filtering a list — a non-throwing read check on an id from the data layer.| returns `boolean` |
-| `authorizationService.isSupremeAdmin(address)`           | Short-circuiting per-item filtering for policy-wide callers.             | returns `boolean` |
+| Helper                                             | Use when                                                                   | On failure         |
+| -------------------------------------------------- | -------------------------------------------------------------------------- | ------------------ |
+| `assertCanRead(identifier, ctx)`                   | Reading one document the caller named (id or slug).                        | throws `Forbidden` |
+| `assertCanWrite(identifier, ctx)`                  | Mutating one document the caller named.                                    | throws `Forbidden` |
+| `assertCanExecuteOperation(identifier, type, ctx)` | Executing a specific operation type on a document.                         | throws `Forbidden` |
+| `assertCanCreate(ctx)`                             | Creating a new top-level document (no parent to check write against).      | throws `Forbidden` |
+| `canReadDocument(canonicalId, ctx)`                | Filtering a list — a non-throwing read check on an id from the data layer. | returns `boolean`  |
+| `authorizationService.isSupremeAdmin(address)`     | Short-circuiting per-item filtering for policy-wide callers.               | returns `boolean`  |
 
 Each `assertCan*` that takes an `identifier` returns an `AuthorizedDocumentHandle`;
 use its `fetchIdentifier` for the subsequent fetch. There are also lower-level
@@ -22299,7 +22595,11 @@ document: async (_parent, args: { identifier: string }, ctx: Context) => {
 ### Guard a write
 
 ```typescript
-renameDocument: async (_parent, args: { identifier: string; name: string }, ctx: Context) => {
+renameDocument: async (
+  _parent,
+  args: { identifier: string; name: string },
+  ctx: Context,
+) => {
   const handle = await subgraph.assertCanWrite(args.identifier, ctx);
   return doRename(handle.fetchIdentifier, args.name);
 };
@@ -22307,12 +22607,20 @@ renameDocument: async (_parent, args: { identifier: string; name: string }, ctx:
 
 ### Guard a specific operation type
 
-When a write should be allowed only for callers permitted to run a *particular*
+When a write should be allowed only for callers permitted to run a _particular_
 operation (operation-level grants):
 
 ```typescript
-addTodoItem: async (_parent, args: { docId: string; input: AddTodoItemInput }, ctx: Context) => {
-  const handle = await subgraph.assertCanExecuteOperation(args.docId, "ADD_TODO_ITEM", ctx);
+addTodoItem: async (
+  _parent,
+  args: { docId: string; input: AddTodoItemInput },
+  ctx: Context,
+) => {
+  const handle = await subgraph.assertCanExecuteOperation(
+    args.docId,
+    "ADD_TODO_ITEM",
+    ctx,
+  );
   return applyOperation(handle.fetchIdentifier, "ADD_TODO_ITEM", args.input);
 };
 ```
@@ -22324,7 +22632,11 @@ access on that parent, so resolve and assert against it. Only use
 `assertCanCreate` for a genuinely top-level document with no parent:
 
 ```typescript
-createTodoList: async (_parent, args: { parentIdentifier?: string; name: string }, ctx: Context) => {
+createTodoList: async (
+  _parent,
+  args: { parentIdentifier?: string; name: string },
+  ctx: Context,
+) => {
   if (args.parentIdentifier) {
     const handle = await subgraph.assertCanWrite(args.parentIdentifier, ctx);
     return createUnder(handle.fetchIdentifier, args.name);
@@ -22336,14 +22648,18 @@ createTodoList: async (_parent, args: { parentIdentifier?: string; name: string 
 
 ### Filter a list of documents
 
-A resolver that returns *many* documents must not throw on the first forbidden
+A resolver that returns _many_ documents must not throw on the first forbidden
 one — it must drop the documents the caller cannot read and return the rest.
 Supreme admins (and OPEN) see everything, so skip the per-item work for them:
 
 ```typescript
 
 
-searchTodos: async (_parent, args: { driveId: string; searchTerm: string }, ctx: Context) => {
+searchTodos: async (
+  _parent,
+  args: { driveId: string; searchTerm: string },
+  ctx: Context,
+) => {
   const matches = await runSearch(args.driveId, args.searchTerm); // returns document ids
 
   // Policy-wide callers see everything; skip the per-item check.
@@ -22363,12 +22679,12 @@ searchTodos: async (_parent, args: { driveId: string; searchTerm: string }, ctx:
 ```
 
 This is the same shape the built-in `findDocuments` and relationship resolvers
-use. Filtering on read also means you never leak the *existence* of a protected
+use. Filtering on read also means you never leak the _existence_ of a protected
 document through a list endpoint.
 
 ## Best practices
 
-1. **Fail closed.** Authorize *before* you fetch or mutate, and let a denial throw.
+1. **Fail closed.** Authorize _before_ you fetch or mutate, and let a denial throw.
    Never fetch first and filter the response shape afterwards.
 2. **Fetch with `handle.fetchIdentifier`.** Never re-use the raw identifier the
    caller passed in after an `assertCan*` check.
@@ -22412,7 +22728,7 @@ Before configuring a drive, ensure you have:
 - Powerhouse [CLI installed](/academy/GetStarted/BuilderTools)
 - Access to a Powerhouse instance
 - Appropriate permissions to create and manage drives
-
+  :::
 
 ## Understanding drives
 
@@ -22473,7 +22789,7 @@ ph reactor
 `
 - The GraphQL endpoint of your instance. For example, for the staging environment, use: `https://staging.switchboard.phd/graphql` (this is a supergraph gateway. Read more about [subgraphs and supergraphs here](/academy/Build/WorkWithData/UsingSubgraphs).
 - Appropriate permissions to perform mutations.
-
+  :::
 
 <figure className="image-container">
   <img src={require("./images/CreateNewDrive.png").default} alt="Create a new drive" />
@@ -24945,7 +25261,7 @@ pnpm publish --tag beta
 
 - **Git Tags**: Markers in your repository history (e.g., `v1.0.0`) created by `pnpm version`
 - **NPM Dist-Tags**: Labels pointing to published versions (`latest`, `beta`, `next`). When publishing without a tag, the version gets the `latest` tag by default.
-
+  :::
 
 ## 3. Installing your package
 
@@ -26380,7 +26696,7 @@ This tutorial has a complete reference implementation available. You can:
 - View the complete code for each step
 - Clone and compare your implementation
 - Use `git diff` to compare your code with the reference
-
+  :::
 
 <details>
 <summary>📖 How to use this tutorial</summary>
@@ -26572,7 +26888,7 @@ This tutorial step has a corresponding implementation in the repository. After c
 - Document model specification files (`chat-room.json`, `schema.graphql`)
 - Auto-generated TypeScript types and action creators
 - Reducer scaffolding ready for implementation
-
+  :::
 
 <details>
 <summary>📖 How to use this tutorial</summary>
@@ -31529,8 +31845,8 @@ The [Powerhouse Recipes](https://github.com/powerhouse-inc/recipes) repository c
 
 > See the [recipes repository](https://github.com/powerhouse-inc/recipes) for full source code, setup instructions, and prerequisites.
 
-{/* AUTO-GENERATED-RECIPE-DOCS-START */}
-{/* This content is automatically generated by scripts/generate-recipe-docs.ts. Do not edit directly. */}
+{/_ AUTO-GENERATED-RECIPE-DOCS-START _/}
+{/_ This content is automatically generated by scripts/generate-recipe-docs.ts. Do not edit directly. _/}
 
 <details id="recipe-audit-trail">
 <summary>Audit Trail</summary>
@@ -31560,6 +31876,11 @@ pnpm build
 ```ts
 
 
+  up,
+  AuditTrailProcessor,
+  createAuditTrailFactory,
+} from "@powerhousedao/example-audit-trail";
+
 const db = new Kysely({ dialect: new PostgresDialect({ pool }) });
 await up(db);
 
@@ -31584,13 +31905,31 @@ Query examples:
 
 ```graphql
 # By user
-{ auditByUser(address: "0xabc", limit: 10) { actionType documentId timestamp } }
+{
+  auditByUser(address: "0xabc", limit: 10) {
+    actionType
+    documentId
+    timestamp
+  }
+}
 
 # By document
-{ auditByDocument(documentId: "doc-1", limit: 10) { signerAddress actionType timestamp } }
+{
+  auditByDocument(documentId: "doc-1", limit: 10) {
+    signerAddress
+    actionType
+    timestamp
+  }
+}
 
 # By time range
-{ auditByTimeRange(from: "2025-01-01T00:00:00Z", to: "2025-12-31T23:59:59Z") { signerAddress actionType documentId } }
+{
+  auditByTimeRange(from: "2025-01-01T00:00:00Z", to: "2025-12-31T23:59:59Z") {
+    signerAddress
+    actionType
+    documentId
+  }
+}
 ```
 
 #### Tests
@@ -31602,6 +31941,7 @@ pnpm test
 Tests use [PGlite](https://github.com/electric-sql/pglite) for an in-memory PostgreSQL instance.
 
 [View source on GitHub →](https://github.com/powerhouse-inc/recipes/tree/main/audit-trail)
+
 </details>
 
 <details id="recipe-batch-progress">
@@ -31644,10 +31984,25 @@ Four sequential calls, manual error handling, no atomicity.
 ```ts
 await reactor.executeBatch({
   jobs: [
-    { key: "budget",  documentId: budgetId,  actions: [initBudget],  dependsOn: [] },
-    { key: "scope",   documentId: scopeId,   actions: [initScope],   dependsOn: [] },
-    { key: "project", documentId: projectId, actions: [initProject], dependsOn: ["budget", "scope"] },
-    { key: "drive",   documentId: driveId,   actions: [addFiles],    dependsOn: ["project"] },
+    {
+      key: "budget",
+      documentId: budgetId,
+      actions: [initBudget],
+      dependsOn: [],
+    },
+    { key: "scope", documentId: scopeId, actions: [initScope], dependsOn: [] },
+    {
+      key: "project",
+      documentId: projectId,
+      actions: [initProject],
+      dependsOn: ["budget", "scope"],
+    },
+    {
+      key: "drive",
+      documentId: driveId,
+      actions: [addFiles],
+      dependsOn: ["project"],
+    },
   ],
 });
 ```
@@ -31669,13 +32024,13 @@ PENDING → RUNNING → WRITE_READY → READ_READY
                                  ↘ FAILED
 ```
 
-| Status | Meaning |
-|--------|---------|
-| `PENDING` | Job is queued but not yet started |
-| `RUNNING` | Job is currently being executed |
-| `WRITE_READY` | Operations written to the operation store |
-| `READ_READY` | Read models have finished indexing (terminal) |
-| `FAILED` | Job failed (terminal) |
+| Status        | Meaning                                       |
+| ------------- | --------------------------------------------- |
+| `PENDING`     | Job is queued but not yet started             |
+| `RUNNING`     | Job is currently being executed               |
+| `WRITE_READY` | Operations written to the operation store     |
+| `READ_READY`  | Read models have finished indexing (terminal) |
+| `FAILED`      | Job failed (terminal)                         |
 
 #### Usage
 
@@ -31710,6 +32065,7 @@ Drive created: abc123
 AGPL-3.0-only
 
 [View source on GitHub →](https://github.com/powerhouse-inc/recipes/tree/main/batch-progress)
+
 </details>
 
 <details id="recipe-cross-document-reactor">
@@ -31773,6 +32129,7 @@ Documents named: "Invoice-001" ↔ "Task-001-Invoice-001"
 AGPL-3.0-only
 
 [View source on GitHub →](https://github.com/powerhouse-inc/recipes/tree/main/cross-document-reactor)
+
 </details>
 
 <details id="recipe-custom-read-model">
@@ -31796,12 +32153,12 @@ Operation written → JOB_WRITE_READY → ReadModelCoordinator
 
 ##### Read model vs processor
 
-| | Read Model (IReadModel) | Processor (IProcessor) |
-|--|--|--|
-| Phase | **Pre-ready** — completes before `JOB_READ_READY` | **Post-ready** — runs after `JOB_READ_READY` |
-| Purpose | Derived views that must be queryable immediately | Side-effects (webhooks, notifications, sync) |
-| Registration | `ReactorBuilder.withReadModel()` | `ProcessorManager.registerFactory()` |
-| Receives | `OperationWithContext[]` via `indexOperations()` | `OperationWithContext[]` via `onOperations()` |
+|              | Read Model (IReadModel)                           | Processor (IProcessor)                        |
+| ------------ | ------------------------------------------------- | --------------------------------------------- |
+| Phase        | **Pre-ready** — completes before `JOB_READ_READY` | **Post-ready** — runs after `JOB_READ_READY`  |
+| Purpose      | Derived views that must be queryable immediately  | Side-effects (webhooks, notifications, sync)  |
+| Registration | `ReactorBuilder.withReadModel()`                  | `ProcessorManager.registerFactory()`          |
+| Receives     | `OperationWithContext[]` via `indexOperations()`  | `OperationWithContext[]` via `onOperations()` |
 
 ##### Why implement IReadModel directly?
 
@@ -31813,10 +32170,10 @@ Operation written → JOB_WRITE_READY → ReadModelCoordinator
 
 #### Architecture
 
-| Module | Purpose |
-|--------|---------|
-| `src/document-count-read-model.ts` | `DocumentCountReadModel` — the `IReadModel` implementation |
-| `src/index.ts` | Demo: builds a reactor, creates a document, shows the read model counts inside `JOB_READ_READY` |
+| Module                             | Purpose                                                                                         |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `src/document-count-read-model.ts` | `DocumentCountReadModel` — the `IReadModel` implementation                                      |
+| `src/index.ts`                     | Demo: builds a reactor, creates a document, shows the read model counts inside `JOB_READ_READY` |
 
 #### Usage
 
@@ -31834,17 +32191,16 @@ pnpm start
 const countReadModel = new DocumentCountReadModel();
 
 const reactorModule = await new ReactorBuilder()
-  .withDocumentModels([/* your models */])
+  .withDocumentModels([
+    /* your models */
+  ])
   .withReadModel(countReadModel)
   .buildModule();
 
 // After any job completes, counts are already up to date:
-reactorModule.eventBus.subscribe(
-  ReactorEventTypes.JOB_READ_READY,
-  () => {
-    console.log(countReadModel.getCounts());
-  },
-);
+reactorModule.eventBus.subscribe(ReactorEventTypes.JOB_READ_READY, () => {
+  console.log(countReadModel.getCounts());
+});
 ```
 
 ##### Query the materialized view
@@ -31870,6 +32226,7 @@ export { DocumentCountReadModel } from "./src/document-count-read-model.js";
 ```
 
 [View source on GitHub →](https://github.com/powerhouse-inc/recipes/tree/main/custom-read-model)
+
 </details>
 
 <details id="recipe-discord-webhook-processor">
@@ -31915,6 +32272,7 @@ pnpm test
 ```
 
 [View source on GitHub →](https://github.com/powerhouse-inc/recipes/tree/main/discord-webhook-processor)
+
 </details>
 
 <details id="recipe-document-snapshot-exporter">
@@ -31933,13 +32291,13 @@ CLI tool that exports document state and operation history to JSON files, demons
 
 ##### IReactor vs IReactorClient
 
-| | IReactor | IReactorClient |
-|---|---|---|
-| Mutations return | `JobInfo` (must await manually) | The document (job awaited internally) |
-| Consistency | You pass `ConsistencyToken` to reads | Managed automatically |
-| Signing | Manual (pass `ISigner` to each call) | Automatic via configured signer |
-| `getOperations()` returns | `Record<string, PagedResults>` (per-scope) | `PagedResults` (flat) |
-| Use when | You need fine-grained control over job lifecycle | You want a simpler, higher-level API |
+|                           | IReactor                                         | IReactorClient                        |
+| ------------------------- | ------------------------------------------------ | ------------------------------------- |
+| Mutations return          | `JobInfo` (must await manually)                  | The document (job awaited internally) |
+| Consistency               | You pass `ConsistencyToken` to reads             | Managed automatically                 |
+| Signing                   | Manual (pass `ISigner` to each call)             | Automatic via configured signer       |
+| `getOperations()` returns | `Record<string, PagedResults>` (per-scope)       | `PagedResults` (flat)                 |
+| Use when                  | You need fine-grained control over job lifecycle | You want a simpler, higher-level API  |
 
 #### Usage
 
@@ -31987,6 +32345,7 @@ Each document is written as a JSON file named `<document-id>.json`:
 ```
 
 [View source on GitHub →](https://github.com/powerhouse-inc/recipes/tree/main/document-snapshot-exporter)
+
 </details>
 
 <details id="recipe-full-text-search">
@@ -32007,13 +32366,13 @@ When operations arrive, the processor:
 
 #### Architecture
 
-| Module | Purpose |
-|--------|---------|
-| `processor.ts` | `SearchProcessor` — the `IProcessor` implementation |
-| `schema.ts` | Kysely type definitions for the `search_index` table |
-| `migrations.ts` | `up` / `down` functions to create/drop the table and GIN index |
-| `query.ts` | `createSearchQuery` — returns a `search(term, limit?)` helper using `ts_rank` |
-| `utils.ts` | `flattenToSearchableText` — recursively extracts all string values from a JSON state |
+| Module          | Purpose                                                                              |
+| --------------- | ------------------------------------------------------------------------------------ |
+| `processor.ts`  | `SearchProcessor` — the `IProcessor` implementation                                  |
+| `schema.ts`     | Kysely type definitions for the `search_index` table                                 |
+| `migrations.ts` | `up` / `down` functions to create/drop the table and GIN index                       |
+| `query.ts`      | `createSearchQuery` — returns a `search(term, limit?)` helper using `ts_rank`        |
+| `utils.ts`      | `flattenToSearchableText` — recursively extracts all string values from a JSON state |
 
 #### Prerequisites
 
@@ -32060,6 +32419,7 @@ export { up, down } from "./migrations.js";
 ```
 
 [View source on GitHub →](https://github.com/powerhouse-inc/recipes/tree/main/full-text-search)
+
 </details>
 
 <details id="recipe-rate-limiter">
@@ -32087,19 +32447,19 @@ Operations without a signer are silently skipped. Counters are in-memory and res
 
 #### Architecture
 
-| Module | Purpose |
-|--------|---------|
-| `src/auth-service.ts` | `AuthService` — in-memory cooldown gate with `cooldown()`, `isAllowed()`, and `getCooldownRemaining()` |
-| `src/rate-limiter-processor.ts` | `RateLimiterProcessor` — the `IProcessor` implementation; also exports `createRateLimiterFactory` |
+| Module                          | Purpose                                                                                                |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `src/auth-service.ts`           | `AuthService` — in-memory cooldown gate with `cooldown()`, `isAllowed()`, and `getCooldownRemaining()` |
+| `src/rate-limiter-processor.ts` | `RateLimiterProcessor` — the `IProcessor` implementation; also exports `createRateLimiterFactory`      |
 
 #### Configuration
 
-| Option | Type | Description |
-|--------|------|-------------|
-| `maxOperations` | `number` | Maximum operations allowed per user within the time window |
-| `windowMs` | `number` | Length of the sliding time window in milliseconds |
-| `cooldownMs` | `number` | How long a user is blocked after exceeding the limit |
-| `filter` | `ProcessorFilter` | Which operations the processor subscribes to (document type, scope, branch, etc.) |
+| Option          | Type              | Description                                                                       |
+| --------------- | ----------------- | --------------------------------------------------------------------------------- |
+| `maxOperations` | `number`          | Maximum operations allowed per user within the time window                        |
+| `windowMs`      | `number`          | Length of the sliding time window in milliseconds                                 |
+| `cooldownMs`    | `number`          | How long a user is blocked after exceeding the limit                              |
+| `filter`        | `ProcessorFilter` | Which operations the processor subscribes to (document type, scope, branch, etc.) |
 
 #### Usage
 
@@ -32116,7 +32476,7 @@ await processorManager.registerFactory(
   createRateLimiterFactory({
     authService,
     maxOperations: 100,
-    windowMs: 60_000,    // 1-minute window
+    windowMs: 60_000, // 1-minute window
     cooldownMs: 300_000, // 5-minute cooldown
     filter: { branch: ["main"] },
   }),
@@ -32144,7 +32504,10 @@ const remainingMs = authService.getCooldownRemaining(userAddress);
 ```ts
 export { AuthService } from "./src/auth-service.js";
 export type { AuthCheckResult } from "./src/auth-service.js";
-export { RateLimiterProcessor, createRateLimiterFactory } from "./src/rate-limiter-processor.js";
+export {
+  RateLimiterProcessor,
+  createRateLimiterFactory,
+} from "./src/rate-limiter-processor.js";
 export type { RateLimiterConfig } from "./src/rate-limiter-processor.js";
 ```
 
@@ -32155,6 +32518,7 @@ pnpm test
 ```
 
 [View source on GitHub →](https://github.com/powerhouse-inc/recipes/tree/main/rate-limiter)
+
 </details>
 
 <details id="recipe-relational-db-subgraph">
@@ -32181,25 +32545,33 @@ The GraphQL subgraph exposes this data via queries like `documents`, `document(i
 
 #### Mapping to `ph generate`
 
-| Generated artifact | File in this recipe |
-|---|---|
+| Generated artifact        | File in this recipe                                                              |
+| ------------------------- | -------------------------------------------------------------------------------- |
 | `ph generate --processor` | `src/processor.ts` — `CatalogProcessor extends RelationalDbProcessor<CatalogDB>` |
-| `ph generate --subgraph` | `src/subgraph.ts` — GraphQL SDL + resolvers backed by the query layer |
-| Schema types | `src/schema.ts` — Kysely DB interface |
-| Migrations | `src/migrations.ts` — `up()`/`down()` functions |
-| Query layer | `src/query.ts` — type-safe Kysely queries with joins |
+| `ph generate --subgraph`  | `src/subgraph.ts` — GraphQL SDL + resolvers backed by the query layer            |
+| Schema types              | `src/schema.ts` — Kysely DB interface                                            |
+| Migrations                | `src/migrations.ts` — `up()`/`down()` functions                                  |
+| Query layer               | `src/query.ts` — type-safe Kysely queries with joins                             |
 
 #### Usage
 
 ```ts
 
 
+  CatalogProcessor,
+  startCatalogServer,
+} from "@powerhousedao/example-relational-db-subgraph";
+
 // 1. Create a Kysely instance (PGlite, PostgreSQL, etc.)
 const db = new Kysely<CatalogDB>({ dialect });
 const relationalDb = createRelationalDb(db);
 
 // 2. Create and initialize the processor
-const processor = new CatalogProcessor("catalog", { branch: ["main"] }, relationalDb);
+const processor = new CatalogProcessor(
+  "catalog",
+  { branch: ["main"] },
+  relationalDb,
+);
 await processor.initAndUpgrade();
 
 // 3. Register with the Reactor processor manager
@@ -32233,6 +32605,7 @@ Tests use PGlite (embedded PostgreSQL) — no external database required.
 AGPL-3.0-only
 
 [View source on GitHub →](https://github.com/powerhouse-inc/recipes/tree/main/relational-db-subgraph)
+
 </details>
 
 <details id="recipe-saga">
@@ -32316,6 +32689,7 @@ with a traceable saga_id linking every step.
 AGPL-3.0-only
 
 [View source on GitHub →](https://github.com/powerhouse-inc/recipes/tree/main/saga)
+
 </details>
 
 <details id="recipe-signed-operations-verifier">
@@ -32344,17 +32718,18 @@ pnpm --filter @powerhousedao/example-signed-operations-verifier test
 
 #### Key APIs
 
-| Import | API | Purpose |
-|--------|-----|---------|
-| `document-model/core` | `verifyOperationSignature()` | Verify a single signature tuple |
-| `document-model/core` | `buildSignedAction()` | Create a signed operation from an action |
-| `document-model/core` | `actionSigner()` | Construct an `ActionSigner` with identity info |
-| `@renown/sdk/node` | `RenownCryptoSigner` | `ISigner` implementation using ECDSA P-256 |
-| `@renown/sdk/node` | `RenownCryptoBuilder` | Builder for the underlying crypto engine |
-| `@renown/sdk/node` | `MemoryKeyStorage` | In-memory key pair storage for demos |
-| `@renown/sdk/node` | `createSignatureVerifier()` | Higher-level full-operation verifier |
+| Import                | API                          | Purpose                                        |
+| --------------------- | ---------------------------- | ---------------------------------------------- |
+| `document-model/core` | `verifyOperationSignature()` | Verify a single signature tuple                |
+| `document-model/core` | `buildSignedAction()`        | Create a signed operation from an action       |
+| `document-model/core` | `actionSigner()`             | Construct an `ActionSigner` with identity info |
+| `@renown/sdk/node`    | `RenownCryptoSigner`         | `ISigner` implementation using ECDSA P-256     |
+| `@renown/sdk/node`    | `RenownCryptoBuilder`        | Builder for the underlying crypto engine       |
+| `@renown/sdk/node`    | `MemoryKeyStorage`           | In-memory key pair storage for demos           |
+| `@renown/sdk/node`    | `createSignatureVerifier()`  | Higher-level full-operation verifier           |
 
 [View source on GitHub →](https://github.com/powerhouse-inc/recipes/tree/main/signed-operations-verifier)
+
 </details>
 
 <details id="recipe-subscription-cli">
@@ -32383,14 +32758,14 @@ pnpm start -- --url ws://localhost:4001/graphql/subscriptions \
 
 #### CLI Options
 
-| Flag | Description | Default |
-|------|-------------|---------|
-| `--url <url>` | WebSocket endpoint | `ws://localhost:4001/graphql/subscriptions` |
-| `--type <type>` | Filter `documentChanges` by document type | _(none)_ |
-| `--parent-id <id>` | Filter `documentChanges` by parent document (drive) ID | _(none)_ |
-| `--job-id <id>` | Also subscribe to `jobChanges` for a specific job | _(none)_ |
-| `--auth <token>` | Bearer token for authentication | _(none)_ |
-| `--help` | Show help message | |
+| Flag               | Description                                            | Default                                     |
+| ------------------ | ------------------------------------------------------ | ------------------------------------------- |
+| `--url <url>`      | WebSocket endpoint                                     | `ws://localhost:4001/graphql/subscriptions` |
+| `--type <type>`    | Filter `documentChanges` by document type              | _(none)_                                    |
+| `--parent-id <id>` | Filter `documentChanges` by parent document (drive) ID | _(none)_                                    |
+| `--job-id <id>`    | Also subscribe to `jobChanges` for a specific job      | _(none)_                                    |
+| `--auth <token>`   | Bearer token for authentication                        | _(none)_                                    |
+| `--help`           | Show help message                                      |                                             |
 
 #### Example output
 
@@ -32405,6 +32780,7 @@ pnpm start -- --url ws://localhost:4001/graphql/subscriptions \
 Press `Ctrl+C` for clean shutdown.
 
 [View source on GitHub →](https://github.com/powerhouse-inc/recipes/tree/main/subscription-cli)
+
 </details>
 
 <details id="recipe-sync-health-monitor">
@@ -32432,20 +32808,20 @@ Subscribes to `SyncEventTypes` on the Reactor EventBus and maintains a live heal
 
 ##### Demo phases
 
-| Phase | What happens | Events fired |
-|-------|-------------|-------------|
-| Normal sync | Create a document on A, syncs to B | `SYNC_PENDING`, `SYNC_SUCCEEDED` |
-| Connection issue | Simulate disconnect → reconnect on the channel | `CONNECTION_STATE_CHANGED` (x3) |
-| Failure | Make the channel throw, then create a document | `SYNC_PENDING`, `SYNC_FAILED`, `DEAD_LETTER_ADDED` |
-| Recovery | Restore the channel, create another document | `SYNC_PENDING`, `SYNC_SUCCEEDED` |
+| Phase            | What happens                                   | Events fired                                       |
+| ---------------- | ---------------------------------------------- | -------------------------------------------------- |
+| Normal sync      | Create a document on A, syncs to B             | `SYNC_PENDING`, `SYNC_SUCCEEDED`                   |
+| Connection issue | Simulate disconnect → reconnect on the channel | `CONNECTION_STATE_CHANGED` (x3)                    |
+| Failure          | Make the channel throw, then create a document | `SYNC_PENDING`, `SYNC_FAILED`, `DEAD_LETTER_ADDED` |
+| Recovery         | Restore the channel, create another document   | `SYNC_PENDING`, `SYNC_SUCCEEDED`                   |
 
 ##### Health status logic
 
-| Status | Condition |
-|--------|-----------|
-| `healthy` | All connections up, low failure ratio, no dead letters |
-| `degraded` | A connection is disconnected/reconnecting, failure ratio &gt;10%, or dead letters exist |
-| `unhealthy` | Any connection is in `error` state |
+| Status      | Condition                                                                               |
+| ----------- | --------------------------------------------------------------------------------------- |
+| `healthy`   | All connections up, low failure ratio, no dead letters                                  |
+| `degraded`  | A connection is disconnected/reconnecting, failure ratio &gt;10%, or dead letters exist |
+| `unhealthy` | Any connection is in `error` state                                                      |
 
 #### Usage
 
@@ -32504,6 +32880,7 @@ Unit tests verify the `SyncHealthMonitor` class in isolation using a standalone 
 AGPL-3.0-only
 
 [View source on GitHub →](https://github.com/powerhouse-inc/recipes/tree/main/sync-health-monitor)
+
 </details>
 {/* AUTO-GENERATED-RECIPE-DOCS-END */}
 

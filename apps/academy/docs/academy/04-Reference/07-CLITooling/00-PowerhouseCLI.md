@@ -16,18 +16,17 @@ pnpm install -g ph-cmd
 
 :::
 
-{/_ AUTO-GENERATED-CLI-COMMANDS-START _/}
-{/_ This content is automatically generated. Do not edit directly. _/}
-
+{/* AUTO-GENERATED-CLI-COMMANDS-START */}
+{/* This content is automatically generated. Do not edit directly. */}
 ## Quick Reference
 
-| Command            | Description                     | Example                       |
-| ------------------ | ------------------------------- | ----------------------------- |
-| `ph init`          | Initialize a new project        | `ph init my-project --pnpm`   |
-| `ph use`           | Switch to a release version     | `ph use staging`              |
-| `ph update`        | Update dependencies to latest   | `ph update`                   |
-| `ph setup-globals` | Initialize global project       | `ph setup-globals my-globals` |
-| `ph use-local`     | Use local monorepo dependencies | `ph use-local ../powerhouse`  |
+| Command | Description | Example |
+|---------|-------------|---------|
+| `ph init` | Initialize a new project | `ph init my-project --pnpm` |
+| `ph use` | Switch to a release version | `ph use staging` |
+| `ph update` | Update dependencies to latest | `ph update` |
+| `ph setup-globals` | Initialize global project | `ph setup-globals my-globals` |
+| `ph use-local` | Use local monorepo dependencies | `ph use-local ../powerhouse` |
 
 ---
 
@@ -38,10 +37,15 @@ pnpm install -g ph-cmd
 - [Update](#update)
 - [Setup Globals](#setup-globals)
 - [Use Local](#use-local)
+  
+
 
 ## Init
 
 Initialize a new project
+
+
+
 
 ---
 
@@ -50,6 +54,9 @@ Initialize a new project
 ### Arguments
 
 **Name** - The name of your project. A new directory will be created in your current directory with this name. - Usage: `[name]`
+
+
+
 
 ### Options
 
@@ -64,6 +71,9 @@ Initialize a new project
 **Remote Drive** - Remote drive identifier. - Usage: `--remote-drive, -r <str>`
 
 **Clone** - Path to an existing scaffolded project to clone instead of resolving deps from scratch. Install runs offline from the cloned project's pnpm-lock.yaml (requires --pnpm; --version/--tag are ignored). - Usage: `--clone <str>`
+
+
+
 
 ### Flags
 
@@ -83,9 +93,13 @@ Initialize a new project
 
 **Help** - show help - Usage: `--help, -h`
 
+
 ## Use
 
 Specify the release version of Powerhouse dependencies to use.
+
+
+
 
 ---
 
@@ -95,12 +109,18 @@ Specify the release version of Powerhouse dependencies to use.
 
 **Tag** - Specify the release tag to use for your project. Can be one of: "latest", "staging", or "dev". - Usage: `[tag]`
 
+
+
+
 ### Options
 
 **Tag** - Specify the release tag to use for your project. Can be one of: "latest", "staging", or "dev". - Usage: `--tag, -t <value>`
 
 **Version** - Specify the exact semver release version to use for your project. - Usage: `--version, -v <str>`
 
+
+
+
 ### Flags
 
 **Skip Install** - Skip running `install` with your package manager - Usage: `--skip-install, -s`
@@ -108,11 +128,15 @@ Specify the release version of Powerhouse dependencies to use.
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`
+
 
 ## Update
 
 Update your powerhouse dependencies to their latest tagged version
 
+
+
+
 ### Flags
 
 **Skip Install** - Skip running `install` with your package manager - Usage: `--skip-install, -s`
@@ -121,9 +145,13 @@ Update your powerhouse dependencies to their latest tagged version
 
 **Help** - show help - Usage: `--help, -h`
 
+
 ## Setup Globals
 
 Initialize a new global project
+
+
+
 
 ---
 
@@ -132,6 +160,9 @@ Initialize a new global project
 ### Arguments
 
 **Name** - The name of your project. A new directory will be created in your current directory with this name. - Usage: `[name]`
+
+
+
 
 ### Options
 
@@ -146,6 +177,9 @@ Initialize a new global project
 **Remote Drive** - Remote drive identifier. - Usage: `--remote-drive, -r <str>`
 
 **Clone** - Path to an existing scaffolded project to clone instead of resolving deps from scratch. Install runs offline from the cloned project's pnpm-lock.yaml (requires --pnpm; --version/--tag are ignored). - Usage: `--clone <str>`
+
+
+
 
 ### Flags
 
@@ -165,9 +199,13 @@ Initialize a new global project
 
 **Help** - show help - Usage: `--help, -h`
 
+
 ## Use Local
 
 Use your local `powerhouse` monorepo dependencies the current project.
+
+
+
 
 ---
 
@@ -177,9 +215,15 @@ Use your local `powerhouse` monorepo dependencies the current project.
 
 **Monorepo Path** - Path to your local powerhouse monorepo relative to this project - Usage: `[monorepo path]`
 
+
+
+
 ### Options
 
 **Path** - Path to your local powerhouse monorepo relative to this project - Usage: `--path, -p <str>`
+
+
+
 
 ### Flags
 
@@ -212,14 +256,20 @@ Use your local `powerhouse` monorepo dependencies the current project.
 - [Login](#login)
 - [Install](#install)
 - [Uninstall](#uninstall)
+  
+
 
 ## Generate
 
 The generate command creates code for Powerhouse modules. It helps you create new code from scratch, or to re-generate existing code in your project.
 
+
 ## All
 
 Re-generate all modules in the current project
+
+
+
 
 ### Flags
 
@@ -227,15 +277,22 @@ Re-generate all modules in the current project
 
 **Help** - show help - Usage: `--help, -h`
 
+
 ## Document Model
 
 Generate a document model
+
+
+
 
 ### Options
 
 **Document** - Path to a document model spec (.phd or .json) to generate from - Usage: `--document, -d <file>`
 
 **Dir** - Name of the directory of an existing document model to re-generate - Usage: `--dir <dir>`
+
+
+
 
 ### Flags
 
@@ -247,9 +304,13 @@ Generate a document model
 
 **Help** - show help - Usage: `--help, -h`
 
+
 ## Editor
 
 Generate a document editor
+
+
+
 
 ### Options
 
@@ -261,6 +322,9 @@ Generate a document editor
 
 **Dir** - Name of the directory of an existing editor to re-generate - Usage: `--dir <dir>`
 
+
+
+
 ### Flags
 
 **All** - Re-generate all existing editors in the current project - Usage: `--all, -a`
@@ -271,9 +335,13 @@ Generate a document editor
 
 **Help** - show help - Usage: `--help, -h`
 
+
 ## App
 
 Generate a drive app
+
+
+
 
 ### Options
 
@@ -285,11 +353,15 @@ Generate a drive app
 
 **Dir** - Name of the directory of an existing app to re-generate - Usage: `--dir <dir>`
 
+
+
+
 ### Flags
 
 **Disable Drag And Drop** - Do not allow drag and drop in this drive app. - Usage: `--disable-drag-and-drop`
 
 **Default:** `false`
+
 **All** - Re-generate all existing apps in the current project - Usage: `--all, -a`
 
 **Extract** - Write a powerhouse/app spec for each existing drive app into specs/apps/ - Usage: `--extract, -x`
@@ -298,9 +370,13 @@ Generate a drive app
 
 **Help** - show help - Usage: `--help, -h`
 
+
 ## Processor
 
 Generate a processor
+
+
+
 
 ### Options
 
@@ -309,14 +385,21 @@ Generate a processor
 **Type** - The type of processor to generate - Usage: `--type <value>`
 
 **Default:** `analytics`
+
 **Document Types** - The document types the processor will run on - Usage: `--document-types <str>, -t=<str>`
 
-**Default:** ``**Apps** - Whether the processor will run in switchboard (nodejs), connect (browser), or both - Usage:`--apps <value>`
+**Default:** ``
+
+**Apps** - Whether the processor will run in switchboard (nodejs), connect (browser), or both - Usage: `--apps <value>`
 
 **Default:** `switchboard,connect`
+
 **Document** - Path to a powerhouse/processor spec file (.phd or .json) to drive codegen - Usage: `--document, -d <file>`
 
 **Dir** - Name of the directory of an existing processor to re-generate - Usage: `--dir <dir>`
+
+
+
 
 ### Flags
 
@@ -328,9 +411,13 @@ Generate a processor
 
 **Help** - show help - Usage: `--help, -h`
 
+
 ## Subgraph
 
 Generate a subgraph
+
+
+
 
 ### Options
 
@@ -339,6 +426,9 @@ Generate a subgraph
 **Document** - Path to a powerhouse/subgraph spec file (.phd or .json) to drive codegen - Usage: `--document, -d <file>`
 
 **Dir** - Name of the directory of an existing subgraph to re-generate - Usage: `--dir <dir>`
+
+
+
 
 ### Flags
 
@@ -350,9 +440,13 @@ Generate a subgraph
 
 **Help** - show help - Usage: `--help, -h`
 
+
 ## Migration File
 
 Generate a migration file
+
+
+
 
 ### Options
 
@@ -360,11 +454,15 @@ Generate a migration file
 
 **Schema File** - Path to the output file. Defaults to './schema.ts' - Usage: `--schema-file <str>`
 
+
+
+
 ### Flags
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`
+
 
 ## Vetra
 
@@ -379,6 +477,9 @@ and real-time processing with a "Vetra" drive or connection to remote drives.
 - 3. Starts Connect Studio pointing to the Switchboard for user interaction (unless disabled)
 - 4. Enables real-time updates, collaboration, and code generation
 
+
+
+
 ### Options
 
 **Switchboard Port** - port to use for the Vetra Switchboard - Usage: `--switchboard-port <number>`
@@ -386,6 +487,7 @@ and real-time processing with a "Vetra" drive or connection to remote drives.
 **Connect Port** - port to use for the Vetra Connect - Usage: `--connect-port <number>`
 
 **Default:** `3001`
+
 **Remote Drive** - URL of remote drive to connect to (skips switchboard initialization) - Usage: `--remote-drive <str>`
 
 **Drives Public Base** - public base URL for the drive URLs advertised to Connect; each drive is exposed as &lt;base&gt;/d/&lt;slug&gt; instead of `http://localhost:<switchboard-port>/d/<slug>`. Use when the switchboard is reachable through a reverse proxy. - Usage: `--drives-public-base <str>`
@@ -398,42 +500,54 @@ and real-time processing with a "Vetra" drive or connection to remote drives.
 
 **Environment:** `PH_CONNECT_LOG_LEVEL`
 **Default:** `info`
+
 **Packages** - Comma-separated list of package names to load - Usage: `--packages <str>`
 
 **Environment:** `PH_PACKAGES`
+
 **Local Package** - Path to local package to load during development - Usage: `--local-package <str>`
 
 **Environment:** `PH_LOCAL_PACKAGE`
+
 **Default Drives Url** - The default drives url to use in connect - Usage: `--default-drives-url <str>`
 
 **Drive Preserve Strategy** - The preservation strategy to use on default drives - Usage: `--drive-preserve-strategy <value>`
 
 **Default:** `preserve-by-url-and-detach`
+
 **Host** - Expose the server to the network. Pass an IP (e.g. 0.0.0.0) to bind to a specific address. - Usage: `--host <str>`
 
 **Watch Timeout** - Amount of time to wait before a file is considered changed - Usage: `--watch-timeout <number>`
 
 **Default:** `300`
+
 **Https Key File** - path to the ssl key file - Usage: `--https-key-file <str>`
 
 **Https Cert File** - path to the ssl cert file - Usage: `--https-cert-file <str>`
 
 **Remote Drives** - Specify remote drive URLs to use - Usage: `--remote-drives <str>`
 
+
+
+
 ### Flags
 
 **Watch** - Enable dynamic loading for document-models and editors in connect-studio and switchboard - Usage: `--watch, -w`
 
 **Default:** `false`
+
 **Logs** - Show additional logs - Usage: `--logs`
 
 **Default:** `false`
+
 **Disable Connect** - Skip Connect initialization (only start switchboard and reactor) - Usage: `--disable-connect`
 
 **Default:** `false`
+
 **Interactive** - Enable interactive mode for code generation (requires user confirmation before generating code) - Usage: `--interactive`
 
 **Default:** `false`
+
 **Ignore Local** - Do not load local packages from this project - Usage: `--ignore-local`
 
 **Force** - Force dep pre-optimization regardless of whether deps have changed. - Usage: `--force`
@@ -449,18 +563,22 @@ and real-time processing with a "Vetra" drive or connection to remote drives.
 **Print Urls** - Print server urls - Usage: `--print-urls`
 
 **Default:** `true`
+
 **Bind Cli Shortcuts** - Bind CLI shortcuts - Usage: `--bind-cli-shortcuts`
 
 **Default:** `true`
+
 **Https** - Use https - Usage: `--https`
 
 **Dev** - enable development mode to load local packages - Usage: `--dev`
 
 **Help** - show help - Usage: `--help, -h`
 
+
 ## Connect
 
 Powerhouse Connect commands. Use with `studio`, `build`, `preview`, or `config`. Defaults to `studio` if not specified.
+
 
 ## Connect Studio
 
@@ -475,33 +593,44 @@ your project.
 - 3. Allows you to interact with your project components
 - 4. Supports various configuration options for customization
 
+
+
+
 ### Options
 
 **Port** - Port to run the dev server on. - Usage: `--port <number>`
 
 **Default:** `3000`
+
 **Base** - Base path for the app - Usage: `--base <str>`
 
 **Log Level** - Log level for the application - Usage: `--log-level <value>`
 
 **Environment:** `PH_CONNECT_LOG_LEVEL`
 **Default:** `info`
+
 **Packages** - Comma-separated list of package names to load - Usage: `--packages <str>`
 
 **Environment:** `PH_PACKAGES`
+
 **Local Package** - Path to local package to load during development - Usage: `--local-package <str>`
 
 **Environment:** `PH_LOCAL_PACKAGE`
+
 **Default Drives Url** - The default drives url to use in connect - Usage: `--default-drives-url <str>`
 
 **Drive Preserve Strategy** - The preservation strategy to use on default drives - Usage: `--drive-preserve-strategy <value>`
 
 **Default:** `preserve-by-url-and-detach`
+
 **Host** - Expose the server to the network. Pass an IP (e.g. 0.0.0.0) to bind to a specific address. - Usage: `--host <str>`
 
 **Watch Timeout** - Amount of time to wait before a file is considered changed - Usage: `--watch-timeout <number>`
 
 **Default:** `300`
+
+
+
 
 ### Flags
 
@@ -520,10 +649,13 @@ your project.
 **Print Urls** - Print server urls - Usage: `--print-urls`
 
 **Default:** `true`
+
 **Bind Cli Shortcuts** - Bind CLI shortcuts - Usage: `--bind-cli-shortcuts`
 
 **Default:** `true`
+
 **Help** - show help - Usage: `--help, -h`
+
 
 ## Connect Build
 
@@ -538,11 +670,15 @@ ph connect build --json '\{"…":"…"\}' Build with a bulk override.
 
 Build has no read mode; passing only &lt;key&gt; without &lt;value&gt; errors out (use `ph connect config <key>` to read).
 
+
+
+
 ### Options
 
 **Out Dir** - Output directory - Usage: `--outDir <str>`
 
 **Default:** `.ph/connect-build/dist/`
+
 **Json** - Inline JSON override for the runtime connect.\* block, e.g. '\{"renown":\{"url":"..."\}\}'. Validated against the runtime schema; deep-merged on top of env seeds and source powerhouse.config.json. Individual --flag values beat --json on collision. - Usage: `--json <str>`
 
 **Renown Url** - Override connect.renown.url. - Usage: `--renown-url <str>`
@@ -585,17 +721,23 @@ Build has no read mode; passing only &lt;key&gt; without &lt;value&gt; errors ou
 
 **Environment:** `PH_CONNECT_LOG_LEVEL`
 **Default:** `info`
+
 **Packages** - Comma-separated list of package names to load - Usage: `--packages <str>`
 
 **Environment:** `PH_PACKAGES`
+
 **Local Package** - Path to local package to load during development - Usage: `--local-package <str>`
 
 **Environment:** `PH_LOCAL_PACKAGE`
+
 **Default Drives Url** - The default drives url to use in connect - Usage: `--default-drives-url <str>`
 
 **Drive Preserve Strategy** - The preservation strategy to use on default drives - Usage: `--drive-preserve-strategy <value>`
 
 **Default:** `preserve-by-url-and-detach`
+
+
+
 
 ---
 
@@ -606,6 +748,9 @@ Build has no read mode; passing only &lt;key&gt; without &lt;value&gt; errors ou
 **Key** - Dotted path inside the runtime config (e.g. connect.renown.url). Pair with &lt;value&gt; to set; pass alone to `ph connect config` to read. - Usage: `[key]`
 
 **Value** - Value to set at &lt;key&gt;. Coerced against the runtime schema (string, bool, number, enum). Arrays and objects require --json instead. - Usage: `[value]`
+
+
+
 
 ### Flags
 
@@ -619,41 +764,54 @@ Build has no read mode; passing only &lt;key&gt; without &lt;value&gt; errors ou
 
 **Help** - show help - Usage: `--help, -h`
 
+
 ## Connect Preview
 
 The Connect preview command previews a built Connect project.
 NOTE: You must run `ph connect build` first
+
+
+
 
 ### Options
 
 **Port** - Port to run the preview server on. - Usage: `--port <number>`
 
 **Default:** `4173`
+
 **Out Dir** - Output directory - Usage: `--outDir <str>`
 
 **Default:** `.ph/connect-build/dist/`
+
 **Base** - Base path for the app - Usage: `--base <str>`
 
 **Log Level** - Log level for the application - Usage: `--log-level <value>`
 
 **Environment:** `PH_CONNECT_LOG_LEVEL`
 **Default:** `info`
+
 **Packages** - Comma-separated list of package names to load - Usage: `--packages <str>`
 
 **Environment:** `PH_PACKAGES`
+
 **Local Package** - Path to local package to load during development - Usage: `--local-package <str>`
 
 **Environment:** `PH_LOCAL_PACKAGE`
+
 **Default Drives Url** - The default drives url to use in connect - Usage: `--default-drives-url <str>`
 
 **Drive Preserve Strategy** - The preservation strategy to use on default drives - Usage: `--drive-preserve-strategy <value>`
 
 **Default:** `preserve-by-url-and-detach`
+
 **Host** - Expose the server to the network. Pass an IP (e.g. 0.0.0.0) to bind to a specific address. - Usage: `--host <str>`
 
 **Watch Timeout** - Amount of time to wait before a file is considered changed - Usage: `--watch-timeout <number>`
 
 **Default:** `300`
+
+
+
 
 ### Flags
 
@@ -672,10 +830,13 @@ NOTE: You must run `ph connect build` first
 **Print Urls** - Print server urls - Usage: `--print-urls`
 
 **Default:** `true`
+
 **Bind Cli Shortcuts** - Bind CLI shortcuts - Usage: `--bind-cli-shortcuts`
 
 **Default:** `true`
+
 **Help** - show help - Usage: `--help, -h`
+
 
 ## Access Token
 
@@ -730,18 +891,26 @@ Notes:
 - The recipient API must trust your CLI's DID to accept the token
 - For reactor-api, ensure AUTH_ENABLED=true to require authentication
 
+
+
+
 ### Options
 
 **Expiry** - Token expiry duration. Supports: "7d" (days), "24h" (hours), "3600" or "3600s" (seconds) - Usage: `--expiry <str>`
 
 **Default:** `7d`
+
 **Audience** - Target audience URL for the token - Usage: `--audience <str>`
+
+
+
 
 ### Flags
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`
+
 
 ## Inspect
 
@@ -756,6 +925,9 @@ your project.
 - 3. Displays package metadata, dependencies, and other relevant information
 - 4. Helps troubleshoot package-related issues
 
+
+
+
 ---
 
 ## Parameters
@@ -764,11 +936,15 @@ your project.
 
 **Package Name _[required]_** - The name of the package to inspect - Usage: `<package-name>`
 
+
+
+
 ### Flags
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`
+
 
 ## List
 
@@ -782,15 +958,22 @@ It reads the powerhouse.config.json file and shows the packages that are current
 - 3. Provides a clear overview of your project's dependencies
 - 4. Helps you manage and track your Powerhouse components
 
+
+
+
 ### Flags
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`
 
+
 ## Migrate
 
 Run migrations
+
+
+
 
 ---
 
@@ -800,11 +983,17 @@ Run migrations
 
 **Version** - The version to migrate to. Accepts a valid semver version or `staging`, `dev`, `latest`. - Usage: `[version]`
 
+
+
+
 ### Options
 
 **Version** - The version to migrate to. Accepts a valid semver version or `staging`, `dev`, `latest`. - Usage: `--version, -v <str>`
 
 **Default:** `latest`
+
+
+
 
 ### Flags
 
@@ -813,6 +1002,7 @@ Run migrations
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`
+
 
 ## Switchboard
 
@@ -827,6 +1017,9 @@ models, processors, and real-time updates.
 - 3. Provides an API for document operations
 - 4. Enables real-time document processing
 - 5. Can authenticate with remote services using your identity from 'ph login'
+
+
+
 
 ### Flags
 
@@ -853,10 +1046,15 @@ models, processors, and real-time updates.
 **Mcp** - enable Mcp route at /mcp - Usage: `--mcp`
 
 **Default:** `true`
+
 **Use Vetra Drive** - Use a Vetra drive - Usage: `--use-vetra-drive`
 
 **Default:** `false`
+
 **Help** - show help - Usage: `--help, -h`
+
+
+
 
 ### Options
 
@@ -869,9 +1067,11 @@ models, processors, and real-time updates.
 **Packages** - Comma-separated list of package names to load - Usage: `--packages <str>`
 
 **Environment:** `PH_PACKAGES`
+
 **Port** - Port to host the api - Usage: `--port <number>`
 
 **Default:** `4001`
+
 **Base Path** - base path for the API endpoints (sets the BASE_PATH environment variable) - Usage: `--base-path <str>`
 
 **Keypair Path** - path to custom keypair file for identity - Usage: `--keypair-path <str>`
@@ -879,7 +1079,9 @@ models, processors, and real-time updates.
 **Vetra Drive Id** - Specify a Vetra drive ID - Usage: `--vetra-drive-id <str>`
 
 **Default:** `vetra`
+
 **Db Path** - path to the database - Usage: `--db-path <str>`
+
 
 ## Login
 
@@ -893,15 +1095,22 @@ the CLI to act on behalf of your Ethereum identity for authenticated operations.
 - 3. You authorize the CLI's DID to act on behalf of your Ethereum address
 - 4. Stores the credentials locally in .ph/.renown.json
 
+
+
+
 ### Options
 
 **Renown Url** - Renown server URL. - Usage: `--renown-url <str>`
 
 **Environment:** `PH_CONNECT_RENOWN_URL`
 **Default:** `https//www.renown.id`
+
 **Timeout** - Authentication timeout in seconds. - Usage: `--timeout <number>`
 
 **Default:** `300`
+
+
+
 
 ### Flags
 
@@ -914,6 +1123,7 @@ the CLI to act on behalf of your Ethereum identity for authenticated operations.
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`
+
 
 ## Install
 
@@ -929,6 +1139,9 @@ preview works without the registry being reachable.
 Resolution order for the registry URL:
 --registry flag &gt; PH_REGISTRY_URL env &gt; powerhouse.config.json &gt; default
 
+
+
+
 ---
 
 ## Parameters
@@ -937,6 +1150,9 @@ Resolution order for the registry URL:
 
 **Dependencies _[required]_** - Names of the dependencies to install - Usage: `[...dependencies]`
 
+
+
+
 ### Options
 
 **Registry** - Registry URL to install from (overrides config and environment) - Usage: `--registry <str>`
@@ -944,6 +1160,9 @@ Resolution order for the registry URL:
 **Allow Build** - A list of package names that are allowed to run postinstall scripts during installation. - Usage: `--allow-build <str>`
 
 **Package Manager** - Specify the package manager to use for your project. Can be one of: `npm`, `pnpm`, `yarn`, or `bun`. Defaults to your environment package manager. - Usage: `--package-manager, -p <value>`
+
+
+
 
 ### Flags
 
@@ -961,6 +1180,7 @@ Resolution order for the registry URL:
 
 **Help** - show help - Usage: `--help, -h`
 
+
 ## Uninstall
 
 The uninstall command removes Powerhouse dependencies from your project. It handles the
@@ -973,6 +1193,9 @@ removal of packages, updates configuration files, and ensures proper cleanup.
 - 3. Supports various uninstallation options and configurations
 - 4. Works with npm, yarn, yarn@berry, pnpm, pnpm@6, bun, deno package managers
 
+
+
+
 ---
 
 ## Parameters
@@ -981,9 +1204,15 @@ removal of packages, updates configuration files, and ensures proper cleanup.
 
 **Dependencies _[required]_** - Names of the dependencies to uninstall - Usage: `[...dependencies]`
 
+
+
+
 ### Options
 
 **Package Manager** - Specify the package manager to use for your project. Can be one of: `npm`, `pnpm`, `yarn`, or `bun`. Defaults to your environment package manager. - Usage: `--package-manager, -p <value>`
+
+
+
 
 ### Flags
 
@@ -998,4 +1227,4 @@ removal of packages, updates configuration files, and ensures proper cleanup.
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`
-{/_ AUTO-GENERATED-CLI-COMMANDS-END _/}
+{/* AUTO-GENERATED-CLI-COMMANDS-END */}
