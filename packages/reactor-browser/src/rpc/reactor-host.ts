@@ -116,18 +116,17 @@ export class ReactorHost {
     transport: IRpcTransport,
     ensureServer: (construct?: unknown) => Promise<void>,
   ): Promise<void> {
-    if (this.baseline && !versionsCompatible(this.baseline, message.version)) {
-      transport.post({ k: "reload", reason: "reactor version mismatch" });
-      transport.post({
-        k: "res",
-        id: message.id,
-        value: { ok: false, reload: "reactor version mismatch" },
-      });
-      return;
+    if (this.baseline) {
+      if (!versionsCompatible(this.baseline, message.version)) {
+        transport.post({ k: "reload", reason: "reactor version mismatch" });
+        transport.post({ k: "res", id: message.id, value: { ok: false } });
+        return;
+      }
+    } else {
+      this.baseline = message.version;
     }
     try {
       await ensureServer(message.construct);
-      this.baseline ??= message.version;
       transport.post({ k: "res", id: message.id, value: { ok: true } });
     } catch (error) {
       transport.post({ k: "err", id: message.id, error: toErrorInfo(error) });

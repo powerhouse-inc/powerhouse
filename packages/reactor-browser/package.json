@@ -39,6 +39,11 @@
       "source": "./src/renown/index.ts",
       "types": "./dist/src/renown/index.d.ts",
       "import": "./dist/src/renown/index.js"
+    },
+    "./rpc": {
+      "source": "./src/rpc/index.ts",
+      "types": "./dist/src/rpc/index.d.ts",
+      "import": "./dist/src/rpc/index.js"
     }
   },
   "sideEffects": false,

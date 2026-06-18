@@ -27,8 +27,13 @@ function isAbortSignal(value: unknown): value is AbortSignal {
   );
 }
 
+export type ReactorClientProxyOptions = {
+  onReload?: (reason: string) => void;
+};
+
 export function createReactorClientProxy(
   transport: IRpcTransport,
+  options: ReactorClientProxyOptions = {},
 ): IReactorClient {
   let counter = 0;
   const nextId = (): CorrelationId => `c${++counter}`;
@@ -77,6 +82,10 @@ export function createReactorClientProxy(
         pending.delete(msg.id);
         entry.reject(fromErrorInfo(msg.error));
       }
+      return;
+    }
+    if (msg.k === "reload") {
+      options.onReload?.(msg.reason);
       return;
     }
     if (msg.k === "event") {

@@ -1,0 +1,24 @@
+import type { IReactorClient } from "@powerhousedao/reactor";
+import { createReactorClientProxy } from "./client-proxy.js";
+import type { VersionFingerprint } from "./protocol.js";
+import type { IRpcTransport } from "./transport.js";
+
+export type ReactorHello = {
+  version: VersionFingerprint;
+  construct?: unknown;
+};
+
+export function connectReactorClient(
+  transport: IRpcTransport,
+  hello: ReactorHello,
+  onReload?: (reason: string) => void,
+): IReactorClient {
+  const client = createReactorClientProxy(transport, { onReload });
+  transport.post({
+    k: "hello",
+    id: "hello",
+    version: hello.version,
+    construct: hello.construct,
+  });
+  return client;
+}

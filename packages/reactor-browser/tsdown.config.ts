@@ -7,6 +7,7 @@ export default defineConfig({
     "./src/graphql/client.ts",
     "./src/relational/index.ts",
     "./src/renown/index.ts",
+    "./src/rpc/index.ts",
   ],
   platform: "browser",
   clean: true,
