@@ -24,7 +24,7 @@ describe("ReactorHost shares one reactor across multiple tabs", () => {
 
   beforeEach(async () => {
     reactor = await createInMemoryReactorClient();
-    host = new ReactorHost(reactor.client);
+    host = new ReactorHost({ client: reactor.client });
   });
 
   afterEach(async () => {

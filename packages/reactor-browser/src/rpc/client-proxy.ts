@@ -79,7 +79,9 @@ export function createReactorClientProxy(
       }
       return;
     }
-    subscribers.get(msg.id)?.(msg.change as DocumentChangeEvent);
+    if (msg.k === "event") {
+      subscribers.get(msg.id)?.(msg.change as DocumentChangeEvent);
+    }
   });
 
   const call = (method: string, args: unknown[]): Promise<unknown> => {

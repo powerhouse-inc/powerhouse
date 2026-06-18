@@ -32,7 +32,7 @@ export class ReactorHostServer {
 
   start(): void {
     this.detach = this.transport.onMessage((message) => {
-      void this.handle(message as ClientMessage);
+      void this.handleMessage(message as ClientMessage);
     });
   }
 
@@ -46,7 +46,7 @@ export class ReactorHostServer {
     this.pages.clear();
   }
 
-  private async handle(message: ClientMessage): Promise<void> {
+  async handleMessage(message: ClientMessage): Promise<void> {
     try {
       switch (message.k) {
         case "req":
