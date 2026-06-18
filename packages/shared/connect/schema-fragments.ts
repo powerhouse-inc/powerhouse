@@ -215,5 +215,20 @@ export const phConnectRuntimeConfigSchema = {
         },
       },
     },
+    instance: {
+      type: "object",
+      additionalProperties: false,
+      required: ["namespace"],
+      description:
+        "Per-instance identity. Lets one origin host multiple isolated Connect instances, each with its own storage + SharedWorker namespace.",
+      properties: {
+        namespace: {
+          type: ["string", "null"],
+          description:
+            "Explicit storage/SharedWorker namespace for this instance. `null` derives it from the base path (and, later, the configured endpoint), so root deployments stay byte-identical.",
+          default: null,
+        },
+      },
+    },
   },
 } as const;

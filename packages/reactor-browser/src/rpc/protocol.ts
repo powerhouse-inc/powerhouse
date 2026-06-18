@@ -12,7 +12,6 @@ export type RpcRequest = {
   id: CorrelationId;
   method: string;
   args: unknown[];
-  // index of the arg that held an AbortSignal, stripped before posting
   abortAt?: number;
 };
 
@@ -33,7 +32,6 @@ export type RpcEvent = { k: "event"; id: CorrelationId; change: unknown };
 
 export type RpcUnsub = { k: "unsub"; id: CorrelationId };
 
-// fetches the next page of a PagedResults; its `next` closure lives owner-side
 export type RpcNextPage = { k: "page"; id: CorrelationId; token: string };
 
 export type ClientMessage =

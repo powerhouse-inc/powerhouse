@@ -17,7 +17,6 @@ type Forwarder = (...args: unknown[]) => Promise<unknown>;
 
 type ChangeCallback = (event: DocumentChangeEvent) => void;
 
-// duck-typed so a signal created in another realm still matches
 function isAbortSignal(value: unknown): value is AbortSignal {
   return (
     typeof value === "object" &&
@@ -45,8 +44,6 @@ export function createReactorClientProxy(
     return promise;
   };
 
-  // owner ships a PagedResults without its `next` function; restore it as a
-  // round-trip to the owner keyed by the page token
   const rehydrate = (value: unknown): unknown => {
     if (
       value !== null &&

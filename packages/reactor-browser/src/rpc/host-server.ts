@@ -146,8 +146,6 @@ export class ReactorHostServer {
     this.subscriptions.set(message.id, unsubscribe);
   }
 
-  // PagedResults.next is the one function-valued return in the client surface:
-  // hold it owner-side under a token and ship a clone-safe payload.
   private prepareResult(value: unknown): unknown {
     if (
       value !== null &&

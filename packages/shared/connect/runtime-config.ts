@@ -58,6 +58,9 @@ export const DEFAULT_CONNECT_CONFIG: PHConnectRuntimeConfig = {
     env: "dev",
     tracing: false,
   },
+  instance: {
+    namespace: null,
+  },
 };
 
 export function buildRuntimeConfig(
