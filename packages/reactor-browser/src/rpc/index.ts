@@ -1,5 +1,6 @@
 export { createReactorClientProxy } from "./client-proxy.js";
 export { ReactorHostServer } from "./host-server.js";
+export { ReactorHost } from "./reactor-host.js";
 export { createPortTransport, type IRpcTransport } from "./transport.js";
 export { fromErrorInfo, toErrorInfo } from "./error-info.js";
 export type {
