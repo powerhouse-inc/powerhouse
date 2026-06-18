@@ -39,7 +39,7 @@ Please start with the [**Get Started**](/) Chapter or [**Document Model Creation
 
 ### 1.1. Install Powerhouse CLI
 
-Ensure you have the Powerhouse Command Line Interface (`ph-cmd`) installed. This tool is crucial for managing your Powerhouse projects.
+Ensure you have the Powerhouse Command Line Interface (`ph-cmd`) installed. You use it to manage your Powerhouse projects.
 
 ```bash
 pnpm install -g ph-cmd
@@ -149,7 +149,7 @@ This command typically opens Connect in your browser at `http://localhost:3000/`
 
 ### 1.4. Launch Claude with Reactor-MCP
 
-Vetra Studio integrates deeply with Claude through MCP (Model Context Protocol). This is where AI comes into the mix and you get the chance to have greater control and direction over what your LLM is coding for you.
+Vetra Studio connects to Claude through MCP (Model Context Protocol). This gives you greater control and direction over what the LLM codes for you.
 
 :::info[Specification Driven Design & Development]
 Vetra embraces **Specification Driven Design & Development** —an approach where your structured specification documents become the shared language between you and AI agents. You communicate intent through precise specs that are machine-readable and executable.
@@ -220,8 +220,7 @@ Claude will automatically recognize the necessary files and MCP tools.
 claude
 ```
 
-Since you're interacting with an LLM it has a high capacity for interpreting your intentions.
-Similar natural language commands will work as well.
+Claude also understands natural language, so similar phrasings work as well.
 
 ```bash
 connect to the reactor mcp
@@ -363,7 +362,7 @@ Reducers are pure functions that implement the state transition logic for each o
 
 ### 3.2. Write unit tests for reducers
 
-It's crucial to test your reducer logic. Write unit tests in the `document-models/YourModelName/src/reducers/tests/` directory.
+Test your reducer logic. Write unit tests in the `document-models/YourModelName/src/reducers/tests/` directory.
 
 - Verify that each operation correctly transforms the document state.
 - Use the auto-generated action creators from the `gen/` folder to create operation actions for your tests.
@@ -695,4 +694,4 @@ ph install @your-org-ph/your-package-name
 
 This command makes the document models and editors defined in your package available within that Powerhouse instance.
 
-Congratulations! You've successfully created, packaged, and published a Powerhouse Document Model. This enables modularity, reusability, and collaboration within the Powerhouse ecosystem.
+Your package is now installable in any Powerhouse environment with `ph install`.

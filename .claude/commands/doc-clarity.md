@@ -7,7 +7,7 @@ Review one academy documentation section for prose quality, clarity, and appropr
 **Best run after `/doc-fix`** — reviewing prose on a section with known mechanical gaps is waste.
 
 **Section IDs** (from `test/ph-lora/ph-lora-mapping.json`):
-`get-started` · `mastery-builder-environment` · `mastery-document-model-creation` · `mastery-building-user-experiences` · `mastery-work-with-data` · `mastery-launch` · `example-usecases` · `api-references-cli` · `api-references-react-hooks` · `api-references-reactor-client` · `api-references-relational-database` · `api-references-renown-sdk` · `api-references-migration-guides` · `component-library` · `architecture`
+`get-started` · `learn` · `build-manual-todo-tutorial` · `build-document-model-creation` · `build-user-experiences` · `build-work-with-data` · `build-launch` · `build-example-usecases` · `reference-architecture` · `reference-reactor` · `reference-document-models` · `reference-graphql-data` · `reference-processors` · `reference-editors-ui` · `reference-authorization` · `reference-cli` · `lookup`
 
 ---
 
@@ -21,9 +21,9 @@ Infer the **doc type** from the section ID and path:
 
 | Pattern                                                 | Doc type      |
 | ------------------------------------------------------- | ------------- |
-| `get-started`, `mastery-*`                              | Tutorial      |
-| `api-references-*`                                      | API reference |
-| `architecture`, `component-library`, `example-usecases` | Conceptual    |
+| `get-started`, `build-*`                                | Tutorial      |
+| `reference-*` (except `reference-architecture`)         | API reference |
+| `learn`, `lookup`, `reference-architecture`             | Conceptual    |
 
 The doc type changes which rubric items apply — note this throughout the review.
 
@@ -120,8 +120,10 @@ Flag any block — paragraph, callout, or `<details>` — whose content would be
 
 #### Rubric D — Prose directness
 
+The canonical lexicon lives in `apps/academy/STYLE.md` — read it and apply its **banned lexicon** table and **structural LLM-isms** list. Do not maintain a competing word list here; if the voice changes, it changes in STYLE.md.
+
 **Passive and indirect phrasing:**
-Flag these constructions and suggest the direct form:
+Flag indirect constructions and suggest the direct form, e.g.:
 
 | Indirect                         | Direct                          |
 | -------------------------------- | ------------------------------- |
@@ -129,10 +131,10 @@ Flag these constructions and suggest the direct form:
 | "it is recommended that you use" | "use X"                         |
 | "can be used to achieve"         | "does X"                        |
 | "it is important to note that"   | just say the thing              |
-| "in order to"                    | "to"                            |
-| "you may want to consider"       | "use X if Y"                    |
 
 Only flag these when they appear in instructional steps or summaries. Prose-heavy conceptual sections can carry more natural phrasing.
+
+**Note on overlap with `/doc-voice`:** deep voice and LLM-ism cleanup is `/doc-voice`'s job (and it can apply fixes). In `/doc-clarity`, flag voice issues only when they materially hurt clarity — don't duplicate a full lexicon sweep. Point the reader to `/doc-voice <section-id>` for the thorough pass.
 
 **Run-on introductions:**
 
