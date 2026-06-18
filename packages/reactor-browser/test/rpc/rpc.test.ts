@@ -38,6 +38,20 @@ function makeFakeClient() {
       calls.push(`resolve:${identifier}`);
       return Promise.resolve(`resolved:${identifier}`);
     },
+    find() {
+      calls.push("find");
+      const page2 = {
+        results: [{ id: "b" }],
+        options: { cursor: "1", limit: 1 },
+      };
+      const page1 = {
+        results: [{ id: "a" }],
+        options: { cursor: "0", limit: 1 },
+        nextCursor: "1",
+        next: () => Promise.resolve(page2),
+      };
+      return Promise.resolve(page1);
+    },
     drives: {
       addFolder(driveId: string, name: string) {
         calls.push(`addFolder:${driveId}/${name}`);
@@ -136,6 +150,19 @@ describe("reactor RPC proxy <-> host", () => {
     await tick();
     expect(received).toHaveLength(1);
     expect(fake.calls).toContain("unsub");
+  });
+
+  it("rehydrates PagedResults.next across the boundary", async () => {
+    const { proxy, close } = setup();
+    cleanup = close;
+    const page1 = await proxy.find({ type: "x" } as SearchFilter);
+    expect(page1.results).toEqual([{ id: "a" }]);
+    if (!page1.next) {
+      throw new Error("expected page1 to have a next()");
+    }
+    const page2 = await page1.next();
+    expect(page2.results).toEqual([{ id: "b" }]);
+    expect(page2.next).toBeUndefined();
   });
 
   it("forwards an AbortSignal so the owner can cancel an in-flight call", async () => {

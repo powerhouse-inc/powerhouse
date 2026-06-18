@@ -33,7 +33,15 @@ export type RpcEvent = { k: "event"; id: CorrelationId; change: unknown };
 
 export type RpcUnsub = { k: "unsub"; id: CorrelationId };
 
-export type ClientMessage = RpcRequest | RpcAbort | RpcSubscribe | RpcUnsub;
+// fetches the next page of a PagedResults; its `next` closure lives owner-side
+export type RpcNextPage = { k: "page"; id: CorrelationId; token: string };
+
+export type ClientMessage =
+  | RpcRequest
+  | RpcAbort
+  | RpcSubscribe
+  | RpcUnsub
+  | RpcNextPage;
 
 export type OwnerMessage = RpcResponse | RpcError | RpcEvent;
 

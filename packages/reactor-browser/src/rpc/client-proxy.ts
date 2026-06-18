@@ -36,13 +36,41 @@ export function createReactorClientProxy(
   const pending = new Map<CorrelationId, Pending>();
   const subscribers = new Map<CorrelationId, ChangeCallback>();
 
+  const fetchPage = (token: string): Promise<unknown> => {
+    const id = nextId();
+    const promise = new Promise<unknown>((resolve, reject) => {
+      pending.set(id, { resolve, reject });
+    });
+    transport.post({ k: "page", id, token });
+    return promise;
+  };
+
+  // owner ships a PagedResults without its `next` function; restore it as a
+  // round-trip to the owner keyed by the page token
+  const rehydrate = (value: unknown): unknown => {
+    if (
+      value !== null &&
+      typeof value === "object" &&
+      typeof (value as { nextToken?: unknown }).nextToken === "string"
+    ) {
+      const token = (value as { nextToken: string }).nextToken;
+      const result: Record<string, unknown> = {
+        ...(value as Record<string, unknown>),
+      };
+      delete result.nextToken;
+      result.next = () => fetchPage(token);
+      return result;
+    }
+    return value;
+  };
+
   transport.onMessage((message) => {
     const msg = message as OwnerMessage;
     if (msg.k === "res") {
       const entry = pending.get(msg.id);
       if (entry) {
         pending.delete(msg.id);
-        entry.resolve(msg.value);
+        entry.resolve(rehydrate(msg.value));
       }
       return;
     }

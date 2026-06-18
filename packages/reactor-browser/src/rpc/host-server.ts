@@ -5,16 +5,24 @@ import type {
   ViewFilter,
 } from "@powerhousedao/reactor";
 import { toErrorInfo } from "./error-info.js";
-import type { ClientMessage, RpcRequest, RpcSubscribe } from "./protocol.js";
+import type {
+  ClientMessage,
+  RpcNextPage,
+  RpcRequest,
+  RpcSubscribe,
+} from "./protocol.js";
 import type { IRpcTransport } from "./transport.js";
 
 type AnyMethod = (...args: unknown[]) => unknown;
+type NextPage = () => Promise<unknown>;
 
 export class ReactorHostServer {
   private readonly client: IReactorClient;
   private readonly transport: IRpcTransport;
   private readonly aborters = new Map<string, AbortController>();
   private readonly subscriptions = new Map<string, () => void>();
+  private readonly pages = new Map<string, NextPage>();
+  private pageCounter = 0;
   private detach: () => void = () => {};
 
   constructor(client: IReactorClient, transport: IRpcTransport) {
@@ -35,6 +43,7 @@ export class ReactorHostServer {
     }
     this.subscriptions.clear();
     this.aborters.clear();
+    this.pages.clear();
   }
 
   private async handle(message: ClientMessage): Promise<void> {
@@ -42,6 +51,9 @@ export class ReactorHostServer {
       switch (message.k) {
         case "req":
           await this.handleRequest(message);
+          return;
+        case "page":
+          await this.handlePage(message);
           return;
         case "abort":
           this.aborters.get(message.targetId)?.abort();
@@ -77,7 +89,11 @@ export class ReactorHostServer {
     try {
       const method = this.resolveMethod(message.method);
       const value = await method(...args);
-      this.transport.post({ k: "res", id: message.id, value });
+      this.transport.post({
+        k: "res",
+        id: message.id,
+        value: this.prepareResult(value),
+      });
     } catch (error) {
       this.transport.post({
         k: "err",
@@ -91,6 +107,35 @@ export class ReactorHostServer {
     }
   }
 
+  private async handlePage(message: RpcNextPage): Promise<void> {
+    const next = this.pages.get(message.token);
+    this.pages.delete(message.token);
+    if (!next) {
+      this.transport.post({
+        k: "err",
+        id: message.id,
+        error: toErrorInfo(
+          new Error("Paged cursor already consumed or expired"),
+        ),
+      });
+      return;
+    }
+    try {
+      const value = await next();
+      this.transport.post({
+        k: "res",
+        id: message.id,
+        value: this.prepareResult(value),
+      });
+    } catch (error) {
+      this.transport.post({
+        k: "err",
+        id: message.id,
+        error: toErrorInfo(error),
+      });
+    }
+  }
+
   private handleSubscribe(message: RpcSubscribe): void {
     const unsubscribe = this.client.subscribe(
       message.search as SearchFilter,
@@ -99,6 +144,26 @@ export class ReactorHostServer {
       message.view as ViewFilter | undefined,
     );
     this.subscriptions.set(message.id, unsubscribe);
+  }
+
+  // PagedResults.next is the one function-valued return in the client surface:
+  // hold it owner-side under a token and ship a clone-safe payload.
+  private prepareResult(value: unknown): unknown {
+    if (
+      value !== null &&
+      typeof value === "object" &&
+      typeof (value as { next?: unknown }).next === "function"
+    ) {
+      const token = `p${++this.pageCounter}`;
+      this.pages.set(token, (value as { next: NextPage }).next);
+      const rest: Record<string, unknown> = {
+        ...(value as Record<string, unknown>),
+      };
+      delete rest.next;
+      rest.nextToken = token;
+      return rest;
+    }
+    return value;
   }
 
   private resolveMethod(path: string): AnyMethod {
