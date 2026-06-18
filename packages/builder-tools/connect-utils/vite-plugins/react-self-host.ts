@@ -43,7 +43,9 @@ function resolveReactEntries(dirname: string): Record<string, string> {
     try {
       const pkgJsonPath = require.resolve(`${pkg}/package.json`);
       pkgRoot = pathDirname(pkgJsonPath);
-      exp = JSON.parse(readFileSync(pkgJsonPath, "utf8")).exports;
+      exp = (
+        JSON.parse(readFileSync(pkgJsonPath, "utf8")) as { exports?: unknown }
+      ).exports;
     } catch {
       continue;
     }
@@ -188,18 +190,26 @@ for (const [spec, file] of Object.entries(entries)) {
   // (react-dom/client -> react-dom/client.js), matching the catch-all import map.
   input[spec] = entryFile;
 }
-await build({
-  root: dirname, configFile: false, logLevel: 'error',
-  base: './', publicDir: false,
-  define: { 'process.env.NODE_ENV': JSON.stringify(nodeEnv) },
-  resolve: { conditions: ['browser', 'import', 'module', 'default'] },
-  build: {
-    outDir, emptyOutDir: false, minify: nodeEnv === 'production', target: 'esnext',
-    rollupOptions: {
-      input, preserveEntrySignatures: 'strict',
-      output: { format: 'es', entryFileNames: '[name].js', chunkFileNames: 'chunks/[name]-[hash].js', assetFileNames: 'assets/[name]-[hash][extname]' },
+try {
+  await build({
+    root: dirname, configFile: false, logLevel: 'error',
+    base: './', publicDir: false,
+    define: { 'process.env.NODE_ENV': JSON.stringify(nodeEnv) },
+    resolve: { conditions: ['browser', 'import', 'module', 'default'] },
+    build: {
+      outDir, emptyOutDir: false, minify: nodeEnv === 'production', target: 'esnext',
+      rollupOptions: {
+        input, preserveEntrySignatures: 'strict',
+        output: { format: 'es', entryFileNames: '[name].js', chunkFileNames: 'chunks/[name]-[hash].js', assetFileNames: 'assets/[name]-[hash][extname]' },
+      },
     },
-  },
-});
-rmSync(srcDir, { recursive: true, force: true });
+  });
+  rmSync(srcDir, { recursive: true, force: true });
+  // Force exit: rolldown can leave native worker threads alive that keep the
+  // event loop open, hanging the parent's spawn() promise indefinitely.
+  process.exit(0);
+} catch (err) {
+  console.error(err instanceof Error ? (err.stack ?? err.message) : String(err));
+  process.exit(1);
+}
 `;
