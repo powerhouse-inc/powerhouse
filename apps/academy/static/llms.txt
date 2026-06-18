@@ -11,6 +11,7 @@
 - [Vetra Studio](https://academy.vetra.io/academy/GetStarted/VetraStudio): Vetra Studio is the browser UI for the Vetra agent. It lets you chat with the Vetra agent, track work across the four-phase product development cycle
 - [Vetra Cloud](https://academy.vetra.io/academy/GetStarted/VetraCloud): Vetra Cloud is the hosted infrastructure layer for Powerhouse applications. It lets you spin up a personal cloud environment that runs Powerhouse Conn
 - [Vetra Drive](https://academy.vetra.io/academy/GetStarted/VetraDrive): Vetra Studio is the builder environment where you create, manage, and collaborate on Powerhouse packages. It consists of two main components:
+- [Prerequisites](https://academy.vetra.io/academy/GetStarted/Prerequisites): Let's set up your machine to start building your first Document Model. Don't worry if this is your first time setting up a development environment - w
 - [Create a package with Vetra](https://academy.vetra.io/academy/GetStarted/CreateAPackageWithVetra): A Powerhouse Package is a distributable unit that bundles one or more document models, editors, and optional reactor modules into a single installable
 - [Vetra builder tooling](https://academy.vetra.io/academy/GetStarted/BuilderTools): This page provides an overview of all the builder tooling offered in the Vetra ecosystem by Powerhouse. This list will be maintained and updated as ou
 
