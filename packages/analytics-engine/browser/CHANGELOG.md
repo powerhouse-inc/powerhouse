@@ -1,3 +1,13 @@
+## 6.2.0-dev.24 (2026-06-19)
+
+### 🩹 Fixes
+
+- release unblocker & clean up ([56090fd53](https://github.com/powerhouse-inc/powerhouse/commit/56090fd53))
+
+### ❤️ Thank You
+
+- CallmeT-ty @CallmeT-ty
+
 ## 6.2.0-dev.23 (2026-06-18)
 
 This was a version bump only for @powerhousedao/analytics-engine-browser to align it with other projects, there were no code changes.
