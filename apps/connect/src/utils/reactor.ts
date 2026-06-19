@@ -1,6 +1,7 @@
 import {
   addRemoteDrive,
   ChannelScheme,
+  isDriveAuthError,
   ReactorBuilder,
   ReactorClientBuilder,
   setDriveMetadata,
@@ -95,18 +96,6 @@ export function getDefaultDrives(
   runtimeConfig: RuntimePowerhouseConfig,
 ): PHConnectDefaultDrive[] {
   return runtimeConfig.connect.drives?.defaultDrives ?? [];
-}
-
-/**
- * A drive add failed because the switchboard rejected the (anonymous or
- * unverified) caller — Forbidden/Unauthorized — rather than a transient
- * reachability error. Drives the login prompt instead of retrying.
- */
-function isDriveAuthError(error: unknown): boolean {
-  const message = error instanceof Error ? error.message : String(error);
-  return /forbidden|unauthorized|insufficient permissions|\b401\b|\b403\b/i.test(
-    message,
-  );
 }
 
 /**

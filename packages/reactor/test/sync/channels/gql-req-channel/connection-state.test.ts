@@ -496,6 +496,8 @@ describe("GqlRequestChannel Connection State", () => {
     await vi.waitFor(() => {
       expect(channel.getConnectionState().state).toBe("error");
     });
+    // GraphQL validation rejection is not an auth failure.
+    expect(channel.getConnectionState().requiresAuth).toBe(false);
     await channel.shutdown();
   });
 
@@ -653,7 +655,54 @@ describe("GqlRequestChannel Connection State", () => {
     await manualTimer.tick();
 
     expect(channel.getConnectionState().state).toBe("error");
+    expect(channel.getConnectionState().requiresAuth).toBe(true);
     expect(manualTimer.isRunning()).toBe(false);
+    await channel.shutdown();
+  });
+
+  it("Forbidden GraphQL poll error sets requiresAuth", async () => {
+    const mockFetch = createMockFetch((body) => {
+      if (body.query.includes("touchChannel")) {
+        return {
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              data: { touchChannel: { success: true, ackOrdinal: 0 } },
+            }),
+        };
+      }
+      // Switchboard returns HTTP 200 with a Forbidden error in the body.
+      return {
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            errors: [
+              {
+                message:
+                  "Forbidden: insufficient permissions to read this document",
+              },
+            ],
+          }),
+      };
+    });
+    global.fetch = mockFetch as unknown as typeof global.fetch;
+
+    const manualTimer = new ManualPollTimer();
+    const channel = new GqlRequestChannel(
+      createMockLogger(),
+      "channel-1",
+      "remote-1",
+      createMockCursorStorage(),
+      createTestConfig(),
+      createMockOperationIndex(),
+      manualTimer,
+    );
+
+    await channel.init();
+    await manualTimer.tick().catch(() => {});
+
+    expect(channel.getConnectionState().state).toBe("error");
+    expect(channel.getConnectionState().requiresAuth).toBe(true);
     await channel.shutdown();
   });
 
@@ -711,6 +760,7 @@ describe("GqlRequestChannel Connection State", () => {
     // First poll: 500 error (recoverable) - rethrown by handlePollError
     await manualTimer.tick().catch(() => {});
     expect(channel.getConnectionState().state).toBe("error");
+    expect(channel.getConnectionState().requiresAuth).toBe(false);
     expect(manualTimer.isRunning()).toBe(true);
 
     // Second poll succeeds - timer is still running
@@ -767,6 +817,7 @@ describe("GqlRequestChannel Connection State", () => {
 
     await vi.advanceTimersByTimeAsync(100);
     expect(channel.getConnectionState().state).toBe("error");
+    expect(channel.getConnectionState().requiresAuth).toBe(true);
     // Timer should stay stopped (not restarted)
     expect(manualTimer.isRunning()).toBe(false);
     await channel.shutdown();

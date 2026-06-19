@@ -5,7 +5,11 @@ import type {
 } from "../../cache/operation-index-types.js";
 import type { ISyncCursorStorage } from "../../storage/interfaces.js";
 import { BufferedMailbox } from "../buffered-mailbox.js";
-import { ChannelError, GraphQLRequestError } from "../errors.js";
+import {
+  ChannelError,
+  GraphQLRequestError,
+  isDriveAuthError,
+} from "../errors.js";
 import type { ConnectionStateChangeCallback, IChannel } from "../interfaces.js";
 import { type IMailbox, Mailbox } from "../mailbox.js";
 import { SyncOperation } from "../sync-operation.js";
@@ -79,6 +83,8 @@ export class GqlRequestChannel implements IChannel {
   private receivingPages: boolean = false;
   private isRecovering: boolean = false;
   private connectionState: ConnectionState = "connecting";
+  /** Latest unrecoverable error was an auth rejection; cleared on connect. */
+  private requiresAuth: boolean = false;
   private readonly connectionStateCallbacks: Set<ConnectionStateChangeCallback> =
     new Set();
 
@@ -212,6 +218,7 @@ export class GqlRequestChannel implements IChannel {
       pushBlocked: this.pushBlocked,
       pushFailureCount: this.pushFailureCount,
       receivingPages: this.receivingPages,
+      requiresAuth: this.requiresAuth,
     };
   }
 
@@ -254,6 +261,7 @@ export class GqlRequestChannel implements IChannel {
   }
 
   private transitionConnectionState(next: ConnectionState): void {
+    if (next === "connected") this.requiresAuth = false;
     if (this.connectionState === next) return;
     this.connectionState = next;
     const snapshot = this.getConnectionState();
@@ -411,6 +419,7 @@ export class GqlRequestChannel implements IChannel {
 
     if (classification === "unrecoverable") {
       this.pollTimer.stop();
+      this.requiresAuth = isDriveAuthError(err);
       this.transitionConnectionState("error");
       return true;
     }
@@ -475,6 +484,7 @@ export class GqlRequestChannel implements IChannel {
 
           if (classification === "unrecoverable") {
             this.isRecovering = false;
+            this.requiresAuth = isDriveAuthError(err);
             this.transitionConnectionState("error");
             return;
           }
@@ -740,6 +750,7 @@ export class GqlRequestChannel implements IChannel {
           }
           this.deadLetter.add(...syncOps);
           this.outbox.remove(...syncOps);
+          this.requiresAuth = isDriveAuthError(err);
           this.transitionConnectionState("error");
         }
       });
