@@ -9,7 +9,7 @@ import type {
   SubgraphArgs,
 } from "@powerhousedao/reactor-api";
 import type { DocumentNode } from "graphql";
-import { GraphQLError } from "graphql";
+import { ForbiddenError, AuthenticationRequiredError } from "./errors.js";
 import { gql } from "graphql-tag";
 import {
   AuthorizationPolicy,
@@ -93,7 +93,7 @@ export class BaseSubgraph implements ISubgraph {
     try {
       resolved = await this.reactorClient.resolveIdOrSlug(identifier);
     } catch {
-      throw new GraphQLError("Forbidden: insufficient permissions");
+      throw new ForbiddenError();
     }
 
     const canonical = resolved as CanonicalDocumentId;
@@ -133,7 +133,7 @@ export class BaseSubgraph implements ISubgraph {
       this.authorizationService.config.policy !==
       AuthorizationPolicy.DOCUMENT_PERMISSIONS
     ) {
-      throw new GraphQLError("Forbidden: insufficient permissions");
+      throw new ForbiddenError();
     }
     return this.resolveCanonicalDocumentId(identifier, ctx);
   }
@@ -204,9 +204,7 @@ export class BaseSubgraph implements ISubgraph {
       ctx.user?.address,
     );
     if (!canRead) {
-      throw new GraphQLError(
-        "Forbidden: insufficient permissions to read this document",
-      );
+      throw new ForbiddenError("to read this document");
     }
   }
 
@@ -219,9 +217,7 @@ export class BaseSubgraph implements ISubgraph {
       ctx.user?.address,
     );
     if (!canWrite) {
-      throw new GraphQLError(
-        "Forbidden: insufficient permissions to write to this document",
-      );
+      throw new ForbiddenError("to write to this document");
     }
   }
 
@@ -236,18 +232,17 @@ export class BaseSubgraph implements ISubgraph {
       ctx.user?.address,
     );
     if (!canMutate) {
-      throw new GraphQLError(
-        `Forbidden: insufficient permissions to execute operation "${operationType}" on this document`,
+      throw new ForbiddenError(
+        `to execute operation "${operationType}" on this document`,
       );
     }
   }
 
   assertCanCreate(ctx: Context): void {
     if (this.authorizationService.canCreate(ctx.user?.address)) return;
-    throw new GraphQLError(
-      ctx.user?.address
-        ? "Forbidden: insufficient permissions to create documents"
-        : "Forbidden: authentication required to create documents",
-    );
+    if (ctx.user?.address) {
+      throw new ForbiddenError("to create documents");
+    }
+    throw new AuthenticationRequiredError("to create documents");
   }
 }

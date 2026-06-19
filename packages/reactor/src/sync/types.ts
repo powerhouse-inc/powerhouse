@@ -110,6 +110,9 @@ export type ConnectionStateSnapshot = {
   pushBlocked: boolean;
   pushFailureCount: number;
   receivingPages: boolean;
+  /** Latest error was the remote rejecting the caller as unauthenticated
+   * (401/403 or Forbidden GraphQL error). Only meaningful while state="error". */
+  requiresAuth: boolean;
 };
 
 export type ConnectionStateChangedEvent = {
