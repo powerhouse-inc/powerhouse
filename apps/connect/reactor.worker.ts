@@ -1,17 +1,21 @@
-import { PGlite } from "@electric-sql/pglite";
 import {
   ReactorBuilder,
   ReactorClientBuilder,
   type Database,
 } from "@powerhousedao/reactor";
 import {
-  createPortTransport,
   ReactorHost,
   WorkerPackageLoader,
 } from "@powerhousedao/reactor-browser/rpc";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
+import { readPgVersionFile } from "./src/utils/pglite-idb.js";
+import {
+  coerceMajor,
+  loadPGliteModule,
+  resolvePgMajorForRuntime,
+} from "./src/utils/pglite-major.js";
 
 type WorkerConstruct = {
   namespace: string;
@@ -25,6 +29,39 @@ type ModelRegistry = {
 
 let loader: WorkerPackageLoader | undefined;
 let registry: ModelRegistry | undefined;
+const registeredKeys = new Set<string>();
+
+function modelKey(module: DocumentModelModule): string {
+  return `${module.documentModel.global.id}@${module.version ?? 1}`;
+}
+
+// Register only the delta; the registry rejects duplicate (type, version) pairs.
+function registerNewModules(): void {
+  if (!loader || !registry) {
+    return;
+  }
+  const fresh = loader.models.filter((m) => !registeredKeys.has(modelKey(m)));
+  if (fresh.length === 0) {
+    return;
+  }
+  registry.registerModules(...fresh);
+  for (const m of fresh) {
+    registeredKeys.add(modelKey(m));
+  }
+}
+
+// Open against the major already on disk so a legacy PG16 dir isn't read by PG17.
+async function openReactorPglite(namespace: string) {
+  const detected = coerceMajor(await readPgVersionFile(`/pglite/${namespace}`));
+  const major = resolvePgMajorForRuntime(detected);
+  if (major !== 17) {
+    console.warn(
+      `[reactor.worker] Running against legacy PGlite data dir (Postgres ${major}). Migrate to PG17 from the Connect banner or the Inspector.`,
+    );
+  }
+  const { PGlite } = await loadPGliteModule(major);
+  return new PGlite(`idb://${namespace}`, { relaxedDurability: true });
+}
 
 const host = new ReactorHost({
   build: async (raw) => {
@@ -35,9 +72,7 @@ const host = new ReactorHost({
         import(/* @vite-ignore */ url) as Promise<Record<string, unknown>>,
     });
     const models = await loader.loadPackages(construct.packageSpecs);
-    const pg = new PGlite(`idb://${construct.namespace}`, {
-      relaxedDurability: true,
-    });
+    const pg = await openReactorPglite(construct.namespace);
     const builder = new ReactorClientBuilder().withReactorBuilder(
       new ReactorBuilder()
         .withDocumentModels(models)
@@ -46,14 +81,17 @@ const host = new ReactorHost({
     builder.withDocumentModelLoader(loader);
     const module = await builder.buildModule();
     registry = module.reactorModule?.documentModelRegistry;
+    for (const m of models) {
+      registeredKeys.add(modelKey(m));
+    }
     return module.client;
   },
   registerPackages: async (specs) => {
     if (!loader) {
       return;
     }
-    const models = await loader.loadPackages(specs);
-    registry?.registerModules(...models);
+    await loader.loadPackages(specs);
+    registerNewModules();
   },
 });
 

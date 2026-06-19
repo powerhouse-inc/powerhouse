@@ -9,10 +9,10 @@ import {
   IDB_STORE_NAME,
   idbError,
   openIdb,
-  PRIMARY_IDB_NAMES,
   readPgVersionFile,
 } from "./pglite-idb.js";
 import { CURRENT_PG_MAJOR } from "./pglite-runtime.js";
+import { PRIMARY_IDB_NAMES } from "./storage-namespace.js";
 
 const BACKUP_PREFIX = "ph-pglite-backup::";
 const BACKUP_INDEX_KEY = "ph:pglite-backups";

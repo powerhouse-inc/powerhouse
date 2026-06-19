@@ -42,6 +42,37 @@ describe("WorkerPackageLoader", () => {
     );
   });
 
+  it("imports each spec only once across repeated loadPackages calls", async () => {
+    const urls: string[] = [];
+    const loader = new WorkerPackageLoader({
+      cdnUrl: "https://cdn.example",
+      importPackage: (url) => {
+        urls.push(url);
+        return Promise.resolve({ M: fakeModel("ok/model") });
+      },
+    });
+    await loader.loadPackages(["pkg@1.0.0"]);
+    await loader.loadPackages(["pkg@1.0.0"]);
+    expect(urls).toHaveLength(1);
+  });
+
+  it("retries a previously failed spec on a later load", async () => {
+    let attempt = 0;
+    const loader = new WorkerPackageLoader({
+      cdnUrl: "https://cdn.example",
+      importPackage: () => {
+        attempt += 1;
+        return attempt === 1
+          ? Promise.reject(new Error("404"))
+          : Promise.resolve({ M: fakeModel("ok/model") });
+      },
+    });
+    expect(await loader.loadPackages(["pkg"])).toHaveLength(0);
+    const models = await loader.loadPackages(["pkg"]);
+    expect(models).toHaveLength(1);
+    expect(attempt).toBe(2);
+  });
+
   it("records a failed package without aborting the others", async () => {
     const loader = new WorkerPackageLoader({
       cdnUrl: "https://cdn.example",

@@ -1,18 +1,5 @@
-import {
-  REACTOR_PGLITE_NAME,
-  RELATIONAL_PGLITE_NAME,
-} from "./storage-namespace.js";
-
 export const IDB_STORE_NAME = "FILE_DATA";
 export const IDB_DB_VERSION = 21;
-
-export const REACTOR_IDB_NAME = `/pglite/${REACTOR_PGLITE_NAME}`;
-export const RELATIONAL_IDB_NAME = `/pglite/${RELATIONAL_PGLITE_NAME}`;
-
-export const PRIMARY_IDB_NAMES = [
-  REACTOR_IDB_NAME,
-  RELATIONAL_IDB_NAME,
-] as const;
 
 type FileDataValue = {
   contents: Uint8Array | number[];

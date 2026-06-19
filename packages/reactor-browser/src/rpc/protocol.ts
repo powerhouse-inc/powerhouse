@@ -45,6 +45,7 @@ export type RpcHello = {
   id: CorrelationId;
   version: VersionFingerprint;
   construct?: unknown;
+  packages?: string[];
 };
 
 export type RpcRegisterPackages = {

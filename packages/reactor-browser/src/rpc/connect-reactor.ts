@@ -6,6 +6,7 @@ import type { IRpcTransport } from "./transport.js";
 export type ReactorHello = {
   version: VersionFingerprint;
   construct?: unknown;
+  packages?: string[];
 };
 
 export function connectReactorClient(
@@ -19,6 +20,7 @@ export function connectReactorClient(
     id: "hello",
     version: hello.version,
     construct: hello.construct,
+    packages: hello.packages,
   });
   return client;
 }

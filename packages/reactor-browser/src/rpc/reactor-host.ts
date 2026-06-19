@@ -127,6 +127,9 @@ export class ReactorHost {
     }
     try {
       await ensureServer(message.construct);
+      if (message.packages && message.packages.length > 0) {
+        await this.options.registerPackages?.(message.packages);
+      }
       transport.post({ k: "res", id: message.id, value: { ok: true } });
     } catch (error) {
       transport.post({ k: "err", id: message.id, error: toErrorInfo(error) });

@@ -37,6 +37,7 @@ export class WorkerPackageLoader implements IDocumentModelLoader {
   private readonly cdnUrl: string;
   private readonly importPackage: PackageImporter;
   private readonly modulesByType = new Map<string, DocumentModelModule>();
+  private readonly loadedSpecs = new Set<string>();
   private readonly failures: PackageLoadFailure[] = [];
 
   constructor(options: WorkerPackageLoaderOptions) {
@@ -70,6 +71,9 @@ export class WorkerPackageLoader implements IDocumentModelLoader {
   }
 
   private async loadPackage(spec: string): Promise<void> {
+    if (this.loadedSpecs.has(spec)) {
+      return;
+    }
     const name = packageName(spec);
     const url = `${this.cdnUrl}/${name}/browser/document-models/index.js`;
     try {
@@ -79,6 +83,7 @@ export class WorkerPackageLoader implements IDocumentModelLoader {
           this.modulesByType.set(value.documentModel.global.id, value);
         }
       }
+      this.loadedSpecs.add(spec);
     } catch (error) {
       this.failures.push({ name, url, error });
     }

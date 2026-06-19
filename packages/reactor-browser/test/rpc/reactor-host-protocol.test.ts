@@ -104,6 +104,58 @@ describe("ReactorHost protocol (hello / version / register)", () => {
     expect(tab2.reloads).toContain("reactor version mismatch");
   });
 
+  it("lazily registers each connecting tab's packages on hello", async () => {
+    const registered: string[][] = [];
+    const host = new ReactorHost({
+      build: () => Promise.resolve(fakeClient([])),
+      registerPackages: (specs) => {
+        registered.push(specs);
+        return Promise.resolve();
+      },
+    });
+
+    const ch1 = new MessageChannel();
+    host.connect(createPortTransport(ch1.port1));
+    const tab1 = rawTab(ch1.port2);
+    expect(
+      await tab1.send({
+        k: "hello",
+        version: V1,
+        packages: ["@scope/a@1.0.0"],
+      }),
+    ).toEqual({ ok: true });
+
+    const ch2 = new MessageChannel();
+    host.connect(createPortTransport(ch2.port1));
+    const tab2 = rawTab(ch2.port2);
+    expect(
+      await tab2.send({
+        k: "hello",
+        version: V1,
+        packages: ["@scope/b@1.0.0"],
+      }),
+    ).toEqual({ ok: true });
+
+    expect(registered).toEqual([["@scope/a@1.0.0"], ["@scope/b@1.0.0"]]);
+  });
+
+  it("does not invoke registerPackages when a hello carries no packages", async () => {
+    const registered: string[][] = [];
+    const host = new ReactorHost({
+      build: () => Promise.resolve(fakeClient([])),
+      registerPackages: (specs) => {
+        registered.push(specs);
+        return Promise.resolve();
+      },
+    });
+
+    const ch = new MessageChannel();
+    host.connect(createPortTransport(ch.port1));
+    const tab = rawTab(ch.port2);
+    await tab.send({ k: "hello", version: V1 });
+    expect(registered).toEqual([]);
+  });
+
   it("registers packages via the injected handler", async () => {
     const registered: string[][] = [];
     const host = new ReactorHost({

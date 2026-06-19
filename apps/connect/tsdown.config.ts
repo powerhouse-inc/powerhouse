@@ -10,6 +10,7 @@ export default defineConfig({
     "main.tsx",
     "pglite.worker.ts",
     "pglite.worker.legacy.ts",
+    "reactor.worker.ts",
   ],
   platform: "browser",
   outDir: "dist",
