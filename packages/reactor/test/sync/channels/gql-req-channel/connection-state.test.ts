@@ -499,6 +499,86 @@ describe("GqlRequestChannel Connection State", () => {
     await channel.shutdown();
   });
 
+  it("push channel-not-found recovers by re-touching and retries the push", async () => {
+    let pushCount = 0;
+    let touchCount = 0;
+    const mockFetch = createMockFetch((body) => {
+      if (body.query.includes("touchChannel")) {
+        touchCount++;
+        return {
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              data: { touchChannel: { success: true, ackOrdinal: 0 } },
+            }),
+        };
+      }
+      if (body.query.includes("pushSyncEnvelopes")) {
+        pushCount++;
+        if (pushCount === 1) {
+          // remote dropped the channel
+          return {
+            ok: true,
+            json: () =>
+              Promise.resolve({
+                errors: [{ message: "Channel not found: channel-1" }],
+              }),
+          };
+        }
+        return {
+          ok: true,
+          json: () => Promise.resolve({ data: { pushSyncEnvelopes: true } }),
+        };
+      }
+      return {
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            data: {
+              pollSyncEnvelopes: {
+                envelopes: [],
+                ackOrdinal: 0,
+                deadLetters: [],
+                hasMore: false,
+              },
+            },
+          }),
+      };
+    });
+    global.fetch = mockFetch as unknown as typeof global.fetch;
+
+    const manualTimer = new ManualPollTimer();
+    const channel = new GqlRequestChannel(
+      createMockLogger(),
+      "channel-1",
+      "remote-1",
+      createMockCursorStorage(),
+      createTestConfig({ retryBaseDelayMs: 10, retryMaxDelayMs: 20 }),
+      createMockOperationIndex(),
+      manualTimer,
+    );
+
+    await channel.init();
+    expect(touchCount).toBe(1);
+
+    const syncOp = createMockSyncOperation("op-1", "remote-1", 1);
+    channel.outbox.add(syncOp);
+
+    // first push fails with channel-not-found -> recovery re-touches the channel,
+    // then the blocked push is retried and succeeds
+    await vi.runAllTimersAsync();
+    await vi.waitFor(() => {
+      expect(channel.getConnectionState().state).toBe("connected");
+    });
+
+    expect(touchCount).toBe(2); // init + recovery
+    expect(pushCount).toBe(2); // failed push + retried push
+    expect(channel.getConnectionState().pushBlocked).toBe(false);
+    // the operation was retried, not dead-lettered
+    expect(channel.deadLetter.items.length).toBe(0);
+    await channel.shutdown();
+  });
+
   it("snapshot includes correct failure counts", async () => {
     const mockFetch = createMockFetch((body) => {
       if (body.query.includes("touchChannel")) {

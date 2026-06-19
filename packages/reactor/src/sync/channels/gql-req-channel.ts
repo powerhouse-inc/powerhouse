@@ -77,6 +77,7 @@ export class GqlRequestChannel implements IChannel {
   private isPushing: boolean = false;
   private pendingDrain: boolean = false;
   private receivingPages: boolean = false;
+  private isRecovering: boolean = false;
   private connectionState: ConnectionState = "connecting";
   private readonly connectionStateCallbacks: Set<ConnectionStateChangeCallback> =
     new Set();
@@ -423,6 +424,9 @@ export class GqlRequestChannel implements IChannel {
    * Self-retries with backoff instead of restarting the poll timer on failure.
    */
   private recoverFromChannelNotFound(): void {
+    if (this.isRecovering) return;
+    this.isRecovering = true;
+
     this.logger.info(
       "GqlChannel @ChannelId not found on remote, re-registering...",
       this.channelId,
@@ -431,7 +435,10 @@ export class GqlRequestChannel implements IChannel {
     this.pollTimer.stop();
 
     const attemptRecovery = (attempt: number): void => {
-      if (this.isShutdown) return;
+      if (this.isShutdown) {
+        this.isRecovering = false;
+        return;
+      }
 
       void this.touchRemoteChannel()
         .then(({ ackOrdinal }) => {
@@ -439,12 +446,14 @@ export class GqlRequestChannel implements IChannel {
             "GqlChannel @ChannelId re-registered successfully",
             this.channelId,
           );
+          this.isRecovering = false;
           this.failureCount = 0;
           if (ackOrdinal > 0) {
             trimMailboxFromAckOrdinal(this.outbox, ackOrdinal);
           }
           this.pollTimer.start();
           this.transitionConnectionState("connected");
+          this.resumePushAfterRecovery();
         })
         .catch((recoveryError: unknown) => {
           const err =
@@ -465,6 +474,7 @@ export class GqlRequestChannel implements IChannel {
           this.lastFailureUtcMs = Date.now();
 
           if (classification === "unrecoverable") {
+            this.isRecovering = false;
             this.transitionConnectionState("error");
             return;
           }
@@ -481,6 +491,28 @@ export class GqlRequestChannel implements IChannel {
     };
 
     attemptRecovery(1);
+  }
+
+  /**
+   * Resumes pushing outbox items that were blocked while the channel was being
+   * recreated. Called after a successful re-registration.
+   */
+  private resumePushAfterRecovery(): void {
+    if (this.isShutdown) return;
+    if (!this.pushBlocked) return;
+
+    if (this.pushRetryTimer) {
+      clearTimeout(this.pushRetryTimer);
+      this.pushRetryTimer = null;
+    }
+
+    this.pushBlocked = false;
+    this.pushFailureCount = 0;
+
+    const items = this.outbox.items;
+    if (items.length > 0) {
+      this.attemptPush([...items]);
+    }
   }
 
   /**
@@ -681,6 +713,14 @@ export class GqlRequestChannel implements IChannel {
         if (this.isShutdown) return;
 
         const err = error instanceof Error ? error : new Error(String(error));
+
+        if (err.message.includes("Channel not found")) {
+          this.pushBlocked = true; // keep ops in outbox; retried after recovery
+          this.transitionConnectionState("reconnecting");
+          this.recoverFromChannelNotFound();
+          return;
+        }
+
         const classification = this.classifyError(err);
 
         if (classification === "recoverable") {
