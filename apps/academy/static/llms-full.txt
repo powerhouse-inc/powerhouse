@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-06-18T17:20:14.351Z
+> Generated: 2026-06-18T23:53:32.335Z
 > Total Documents: 106
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -351,7 +351,7 @@ Vetra Studio is the builder environment where you create, manage, and collaborat
 
 **INFO:**
 What is a Specification Document?
-A **specification document** is a configuration file that defines how a specific module in your package should behave. Think of it as a blueprint — it describes the structure, rules, and relationships that Powerhouse uses to generate the actual code for that module. These specification documents unlock **Specification Driven Design & Development**—enabling you to communicate your solution and intent through a structured framework designed for AI collaboration. Specs serve as a shared language that enables precise, iterative edits—turning messy intent into clean execution, and turning business needs into maintainable functionality.
+A **specification document** is a configuration file that defines how a specific module in your package should behave. Think of it as a blueprint: it describes the structure, rules, and relationships that Powerhouse uses to generate the actual code for that module. Specification documents make **Specification-Driven Design & Development** possible: you communicate your solution and intent through a structured framework designed for AI collaboration. Specs are a shared language that enables precise, iterative edits.
 
 
 As Vetra Studio matures, each of these specification documents will offer an interface by which you as a builder get more control over the modules that make up your package.
@@ -483,7 +483,7 @@ The preview drive allows you to safely test changes before they affect the share
 
 > Source: https://academy.vetra.io/academy/GetStarted/Prerequisites
 
-Let's set up your machine to start building your first Document Model. Don't worry if this is your first time setting up a development environment - we'll guide you through each step!
+This page sets up your machine to build your first Document Model. It covers Node.js 24, VS Code, Git, and the Powerhouse CLI.
 
 **INFO:**
 If you've already set up **Git, Node.js 24, and a package manager (pnpm or npm)**, your most important step is to install the **Powerhouse CLI** with the command: `pnpm install -g ph-cmd` or `npm install -g ph-cmd`. A global install is recommended if you want to use the command from any directory as a power user. The Powerhouse CLI is used to create, build, and run your Document Models and gives you direct access to a series of Powerhouse Builder Tools. Move to the end of this page to [verify your installation.](#verify-installation)
@@ -493,11 +493,11 @@ If you've already set up **Git, Node.js 24, and a package manager (pnpm or npm)*
 
 ## Overview
 
-Before we begin building our Document Model, we need to install some software on your machine. We'll need three main tools:
+Before building your Document Model, install some software on your machine. You need three tools:
 
-- Node.js 24, which helps us run our code.
-- Visual Studio Code (VS Code), which is where we'll write our code
-- Git, which helps us manage our code.
+- Node.js 24, which runs your code.
+- Visual Studio Code (VS Code), where you write your code.
+- Git, which manages your code.
 
 Follow the steps below based on your computer's operating system.
 
@@ -520,7 +520,7 @@ wsl --install
 Once WSL is set up, you can follow the **Linux (Ubuntu/Debian)** instructions below for installing Node.js, Git, and other tools. Your Linux environment will be accessible through the Windows Terminal or by typing `wsl` in PowerShell.
 
 **TIP:**
-Using WSL provides a consistent development experience that matches most production environments and online tutorials. You can still use VS Code on Windows — it integrates seamlessly with WSL through the [Remote - WSL extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-wsl).
+Using WSL provides a consistent development experience that matches most production environments and online tutorials. You can still use VS Code on Windows — it integrates with WSL through the [Remote - WSL extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-wsl).
 
 
 For more details, see the official [WSL installation guide](https://learn.microsoft.com/en-us/windows/wsl/install).
@@ -529,7 +529,7 @@ For more details, see the official [WSL installation guide](https://learn.micros
 
 ### Installing Node.js 24
 
-Node.js 24 is a tool that lets us run our application. Let's install it step by step.
+Node.js 24 runs your application. Install it with the steps below.
 
 #### For Windows:
 
@@ -573,7 +573,7 @@ Node.js 24 is a tool that lets us run our application. Let's install it step by 
    npm --version
    ```
 
-   - You should see version numbers appear after each command (e.g., v24.x.x for Node.js). If you do, congratulations - Node.js and your package manager are installed!
+   - Version numbers should appear after each command (e.g., v24.x.x for Node.js). If they do, Node.js and your package manager are installed.
 
 > **Note**: If Node.js commands don't work in VS Code, restart VS Code to refresh environment variables.
 
@@ -612,7 +612,7 @@ Node.js 24 is a tool that lets us run our application. Let's install it step by 
    npm --version
    ```
 
-   - If you see version numbers, you've successfully installed Node.js and your package manager!
+   - If version numbers appear, Node.js and your package manager are installed.
 
 #### For Linux (Ubuntu/Debian):
 
@@ -644,7 +644,7 @@ Node.js 24 is a tool that lets us run our application. Let's install it step by 
    npm --version
    ```
 
-   - If you see version numbers, you're all set!
+   - If version numbers appear, your installation is complete.
 
 ### Installing Visual Studio Code
 
@@ -769,7 +769,7 @@ Key commands include:
 - `ph init` to start a new project and build a document model
 - `ph help` to get an overview of all the available commands
 
-This tool will be fundamental on your journey when creating, building, and running Document Models.
+Use it to create, build, and run Document Models.
 
 <details>
 <summary> How to use different branches? </summary>
@@ -921,7 +921,7 @@ Please start with the [**Get Started**](/) Chapter or [**Document Model Creation
 
 ### 1.1. Install Powerhouse CLI
 
-Ensure you have the Powerhouse Command Line Interface (`ph-cmd`) installed. This tool is crucial for managing your Powerhouse projects.
+Ensure you have the Powerhouse Command Line Interface (`ph-cmd`) installed. You use it to manage your Powerhouse projects.
 
 ```bash
 pnpm install -g ph-cmd
@@ -1031,7 +1031,7 @@ This command typically opens Connect in your browser at `http://localhost:3000/`
 
 ### 1.4. Launch Claude with Reactor-MCP
 
-Vetra Studio integrates deeply with Claude through MCP (Model Context Protocol). This is where AI comes into the mix and you get the chance to have greater control and direction over what your LLM is coding for you.
+Vetra Studio connects to Claude through MCP (Model Context Protocol). This gives you greater control and direction over what the LLM codes for you.
 
 **INFO:**
 Vetra embraces **Specification Driven Design & Development** —an approach where your structured specification documents become the shared language between you and AI agents. You communicate intent through precise specs that are machine-readable and executable.
@@ -1102,8 +1102,7 @@ Claude will automatically recognize the necessary files and MCP tools.
 claude
 ```
 
-Since you're interacting with an LLM it has a high capacity for interpreting your intentions.
-Similar natural language commands will work as well.
+Claude also understands natural language, so similar phrasings work as well.
 
 ```bash
 connect to the reactor mcp
@@ -1245,7 +1244,7 @@ Reducers are pure functions that implement the state transition logic for each o
 
 ### 3.2. Write unit tests for reducers
 
-It's crucial to test your reducer logic. Write unit tests in the `document-models/YourModelName/src/reducers/tests/` directory.
+Test your reducer logic. Write unit tests in the `document-models/YourModelName/src/reducers/tests/` directory.
 
 - Verify that each operation correctly transforms the document state.
 - Use the auto-generated action creators from the `gen/` folder to create operation actions for your tests.
@@ -1577,7 +1576,7 @@ ph install @your-org-ph/your-package-name
 
 This command makes the document models and editors defined in your package available within that Powerhouse instance.
 
-Congratulations! You've successfully created, packaged, and published a Powerhouse Document Model. This enables modularity, reusability, and collaboration within the Powerhouse ecosystem.
+Your package is now installable in any Powerhouse environment with `ph install`.
 
 ---
 
@@ -1619,7 +1618,7 @@ Key commands include:
 - `ph init` to start a new project and build a Document Model
 - `ph help` to get an overview of all the available commands
 
-This tool will be fundamental on your journey when creating, building, and running Document Models
+Use it to create, build, and run Document Models
 
 <details>
 <summary> How to make use of different branches? </summary>
@@ -1786,7 +1785,7 @@ Both commands support multiple package managers (npm, yarn, pnpm, and bun) and w
 
 ---
 
-The Document Model Boilerplate is a foundational template that is used for code generation when scaffolding your editors and models. It ensures compatibility with host applications like Connect and Switchboard for seamless Document Model and editor integration.
+The Document Model Boilerplate is a foundational template that is used for code generation when scaffolding your editors and models. It ensures compatibility with host applications like Connect and Switchboard for Document Model and editor integration.
 
 After installing `ph-cmd`, you will run `ph init` to initialize a project directory and structure. This initialization command makes use of the boilerplate.
 
@@ -1838,7 +1837,7 @@ Handles document organization and storage management, but can also be customized
 
 ---
 
-Powerhouse provides several code generation tools to streamline development:
+Powerhouse provides several code generation tools:
 
     ### Document model scaffolding
     Generates the basic structure for new Document Models with the command `ph init` based on the boilerplate.
