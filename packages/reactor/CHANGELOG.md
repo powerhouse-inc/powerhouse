@@ -1,3 +1,19 @@
+## 6.2.0-dev.25 (2026-06-20)
+
+### 🚀 Features
+
+- doc-capture skill for ph-lora( ([446d854b4](https://github.com/powerhouse-inc/powerhouse/commit/446d854b4))
+
+### 🩹 Fixes
+
+- academy agents ([4630e22d9](https://github.com/powerhouse-inc/powerhouse/commit/4630e22d9))
+- retry touchChannel if a channel is not found on push ([12d4367f7](https://github.com/powerhouse-inc/powerhouse/commit/12d4367f7))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- CallmeT-ty @CallmeT-ty
+
 ## 6.2.0-dev.24 (2026-06-19)
 
 ### 🩹 Fixes

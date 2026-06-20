@@ -1,3 +1,19 @@
+## 6.2.0-dev.25 (2026-06-20)
+
+### 🚀 Features
+
+- doc-capture skill for ph-lora( ([446d854b4](https://github.com/powerhouse-inc/powerhouse/commit/446d854b4))
+
+### 🩹 Fixes
+
+- cleanup article ([adfbb2abd](https://github.com/powerhouse-inc/powerhouse/commit/adfbb2abd))
+- updated vetra studio ([240c144b0](https://github.com/powerhouse-inc/powerhouse/commit/240c144b0))
+- academy agents ([4630e22d9](https://github.com/powerhouse-inc/powerhouse/commit/4630e22d9))
+
+### ❤️ Thank You
+
+- CallmeT-ty @CallmeT-ty
+
 ## 6.2.0-dev.24 (2026-06-19)
 
 ### 🩹 Fixes

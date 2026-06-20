@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-mcp",
-  "version": "6.2.0-dev.24",
+  "version": "6.2.0-dev.25",
   "description": "MCP server for the Powerhouse reactor — exposes document model operations and drive management to AI coding assistants via the Model Context Protocol.",
   "type": "module",
   "repository": {
