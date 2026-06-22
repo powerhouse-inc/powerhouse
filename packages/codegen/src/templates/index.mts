@@ -28,6 +28,7 @@ export * from "./boilerplate/gitignore.js";
 export * from "./boilerplate/index.html.js";
 export * from "./boilerplate/index.html.legacy.js";
 export * from "./boilerplate/index.js";
+export * from "./boilerplate/reactor.js";
 export * from "./boilerplate/LICENSE.js";
 export * from "./boilerplate/main.tsx.js";
 export * from "./boilerplate/mcp.json.js";

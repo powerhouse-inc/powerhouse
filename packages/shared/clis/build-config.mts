@@ -15,6 +15,9 @@ const entry = [
   "processors/*/index.ts",
 ];
 
+// ./reactor is browser-only: the SharedWorker needs it, the node build does not.
+const browserEntry = [...entry, "reactor/index.ts"];
+
 const alwaysBundle = ["**"];
 
 // React must be external in rolldown (via neverBundle) so ESM `import ... from "react"`
@@ -73,7 +76,7 @@ const dts = false;
 const sourcemap = true;
 
 export const browserBuildConfig: InlineConfig = {
-  entry,
+  entry: browserEntry,
   deps: {
     alwaysBundle,
     neverBundle: browserNeverBundle,
