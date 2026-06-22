@@ -1,5 +1,9 @@
 export { createReactorClientProxy } from "./client-proxy.js";
-export { connectReactorClient, type ReactorHello } from "./connect-reactor.js";
+export {
+  connectReactorClient,
+  postReactorIdentity,
+  type ReactorHello,
+} from "./connect-reactor.js";
 export { ReactorHostServer } from "./host-server.js";
 export { ReactorHost } from "./reactor-host.js";
 export {
@@ -14,5 +18,6 @@ export type {
   CorrelationId,
   ErrorInfo,
   OwnerMessage,
+  ReactorIdentity,
   RpcMessage,
 } from "./protocol.js";

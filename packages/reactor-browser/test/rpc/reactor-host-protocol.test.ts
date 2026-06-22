@@ -1,7 +1,11 @@
 import type { IReactorClient } from "@powerhousedao/reactor";
 import { describe, expect, it } from "vitest";
+import { postReactorIdentity } from "../../src/rpc/connect-reactor.js";
 import { ReactorHost } from "../../src/rpc/reactor-host.js";
-import type { VersionFingerprint } from "../../src/rpc/protocol.js";
+import type {
+  ReactorIdentity,
+  VersionFingerprint,
+} from "../../src/rpc/protocol.js";
 import { createPortTransport } from "../../src/rpc/transport.js";
 
 const V1: VersionFingerprint = {
@@ -176,5 +180,26 @@ describe("ReactorHost protocol (hello / version / register)", () => {
     });
     expect(ack).toEqual({ ok: true });
     expect(registered).toEqual([["@scope/pkg@1.0.0"]]);
+  });
+
+  it("routes pushed identity (and null on logout) to onIdentity", async () => {
+    const seen: (ReactorIdentity | null)[] = [];
+    const host = new ReactorHost({
+      build: () => Promise.resolve(fakeClient([])),
+      onIdentity: (user) => seen.push(user),
+    });
+
+    const ch = new MessageChannel();
+    host.connect(createPortTransport(ch.port1));
+    const tab = createPortTransport(ch.port2);
+    const identity: ReactorIdentity = {
+      address: "0xabc",
+      chainId: 1,
+      networkId: "eip155",
+    };
+    postReactorIdentity(tab, identity);
+    postReactorIdentity(tab, null);
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(seen).toEqual([identity, null]);
   });
 });

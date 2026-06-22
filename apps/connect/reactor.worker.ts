@@ -1,11 +1,14 @@
 import {
+  ChannelScheme,
   ReactorBuilder,
   ReactorClientBuilder,
   type Database,
+  type JwtHandler,
 } from "@powerhousedao/reactor";
 import {
   ReactorHost,
   WorkerPackageLoader,
+  type ReactorIdentity,
 } from "@powerhousedao/reactor-browser/rpc";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import {
@@ -38,6 +41,8 @@ type ModelRegistry = {
 
 let loader: WorkerPackageLoader | undefined;
 let registry: ModelRegistry | undefined;
+let signer: RenownCryptoSigner | undefined;
+let currentIdentity: ReactorIdentity | null = null;
 const registeredKeys = new Set<string>();
 
 function modelKey(module: DocumentModelModule): string {
@@ -59,16 +64,10 @@ function registerNewModules(): void {
   }
 }
 
-// Rebuild the signer from the shared renownKeyDB keypair (origin-scoped IndexedDB).
-async function buildWorkerSigner() {
+// Rebuild renown crypto from the shared renownKeyDB keypair (origin-scoped IndexedDB).
+async function buildWorkerCrypto() {
   const keyStorage = await BrowserKeyStorage.create();
-  const crypto = await new RenownCryptoBuilder()
-    .withKeyPairStorage(keyStorage)
-    .build();
-  return {
-    signer: new RenownCryptoSigner(crypto, RENOWN_APP_NAME),
-    verifier: createSignatureVerifier(),
-  };
+  return new RenownCryptoBuilder().withKeyPairStorage(keyStorage).build();
 }
 
 // Open against the major already on disk so a legacy PG16 dir isn't read by PG17.
@@ -94,12 +93,23 @@ const host = new ReactorHost({
     });
     const models = await loader.loadPackages(construct.packageSpecs);
     const pg = await openReactorPglite(construct.namespace);
-    const signerConfig = await buildWorkerSigner();
+    const crypto = await buildWorkerCrypto();
+    signer = new RenownCryptoSigner(
+      crypto,
+      RENOWN_APP_NAME,
+      currentIdentity ?? undefined,
+    );
+    const jwtHandler: JwtHandler = async () =>
+      currentIdentity
+        ? crypto.getBearerToken(currentIdentity.address, { expiresIn: 10 })
+        : undefined;
     const builder = new ReactorClientBuilder()
-      .withSigner(signerConfig)
+      .withSigner({ signer, verifier: createSignatureVerifier() })
       .withReactorBuilder(
         new ReactorBuilder()
           .withDocumentModels(models)
+          .withChannelScheme(ChannelScheme.CONNECT)
+          .withJwtHandler(jwtHandler)
           .withKysely(new Kysely<Database>({ dialect: new PGliteDialect(pg) })),
       );
     builder.withDocumentModelLoader(loader);
@@ -116,6 +126,12 @@ const host = new ReactorHost({
     }
     await loader.loadPackages(specs);
     registerNewModules();
+  },
+  onIdentity: (user) => {
+    currentIdentity = user;
+    if (signer) {
+      signer.user = user ?? undefined;
+    }
   },
 });
 

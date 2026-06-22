@@ -62,6 +62,16 @@ export type RpcUnregisterPackages = {
 
 export type RpcReload = { k: "reload"; reason: string };
 
+// Cloneable subset of renown's user — action-signer attribution + the address
+// the worker mints bearer tokens for. Matches UserActionSigner's shape.
+export type ReactorIdentity = {
+  address: string;
+  chainId: number;
+  networkId: string;
+};
+
+export type RpcIdentity = { k: "identity"; user: ReactorIdentity | null };
+
 export type ClientMessage =
   | RpcRequest
   | RpcAbort
@@ -70,7 +80,8 @@ export type ClientMessage =
   | RpcNextPage
   | RpcHello
   | RpcRegisterPackages
-  | RpcUnregisterPackages;
+  | RpcUnregisterPackages
+  | RpcIdentity;
 
 export type OwnerMessage = RpcResponse | RpcError | RpcEvent | RpcReload;
 

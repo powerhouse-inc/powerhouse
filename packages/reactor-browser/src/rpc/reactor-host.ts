@@ -3,6 +3,7 @@ import { toErrorInfo } from "./error-info.js";
 import { ReactorHostServer } from "./host-server.js";
 import type {
   ClientMessage,
+  ReactorIdentity,
   RpcHello,
   RpcRegisterPackages,
   RpcUnregisterPackages,
@@ -15,6 +16,7 @@ export type ReactorHostOptions = {
   build?: (construct: unknown) => Promise<IReactorClient>;
   registerPackages?: (specs: string[]) => Promise<void>;
   unregisterPackages?: (names: string[]) => Promise<void>;
+  onIdentity?: (user: ReactorIdentity | null) => void;
 };
 
 function versionsCompatible(
@@ -68,6 +70,10 @@ export class ReactorHost {
       }
       if (msg.k === "unregister-packages") {
         void this.handleUnregister(msg, transport);
+        return;
+      }
+      if (msg.k === "identity") {
+        this.options.onIdentity?.(msg.user);
         return;
       }
       if (server) {
