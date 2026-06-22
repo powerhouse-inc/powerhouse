@@ -62,8 +62,7 @@ export type RpcUnregisterPackages = {
 
 export type RpcReload = { k: "reload"; reason: string };
 
-// Cloneable subset of renown's user — action-signer attribution + the address
-// the worker mints bearer tokens for. Matches UserActionSigner's shape.
+// Cloneable subset of renown's user (matches UserActionSigner); token minting + attribution.
 export type ReactorIdentity = {
   address: string;
   chainId: number;
@@ -71,6 +70,10 @@ export type ReactorIdentity = {
 };
 
 export type RpcIdentity = { k: "identity"; user: ReactorIdentity | null };
+
+// Distributed EventBus: worker -> all tabs, fire-and-forget. `eventType` is a
+// reactor IEventBus numeric type; `event` is the (cloneable) payload.
+export type RpcBusEvent = { k: "bus-event"; eventType: number; event: unknown };
 
 export type ClientMessage =
   | RpcRequest
@@ -83,6 +86,11 @@ export type ClientMessage =
   | RpcUnregisterPackages
   | RpcIdentity;
 
-export type OwnerMessage = RpcResponse | RpcError | RpcEvent | RpcReload;
+export type OwnerMessage =
+  | RpcResponse
+  | RpcError
+  | RpcEvent
+  | RpcReload
+  | RpcBusEvent;
 
 export type RpcMessage = ClientMessage | OwnerMessage;

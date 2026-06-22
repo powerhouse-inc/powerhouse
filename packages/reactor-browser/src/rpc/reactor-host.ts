@@ -32,6 +32,7 @@ function versionsCompatible(
 export class ReactorHost {
   private readonly options: ReactorHostOptions;
   private readonly disposers = new Set<() => void>();
+  private readonly clients = new Set<IRpcTransport>();
   private clientPromise: Promise<IReactorClient> | null = null;
   private baseline: VersionFingerprint | null = null;
 
@@ -83,6 +84,7 @@ export class ReactorHost {
       }
     });
 
+    this.clients.add(transport);
     if (this.options.client) {
       void ensureServer();
     }
@@ -90,6 +92,7 @@ export class ReactorHost {
     const dispose = () => {
       server?.stop();
       detach();
+      this.clients.delete(transport);
       this.disposers.delete(dispose);
     };
     this.disposers.add(dispose);
@@ -98,6 +101,13 @@ export class ReactorHost {
 
   connectPort(port: MessagePort): () => void {
     return this.connect(createPortTransport(port));
+  }
+
+  // Fan out a reactor bus event to every connected tab, fire-and-forget.
+  broadcastBusEvent(eventType: number, event: unknown): void {
+    for (const transport of this.clients) {
+      transport.post({ k: "bus-event", eventType, event });
+    }
   }
 
   get connectionCount(): number {

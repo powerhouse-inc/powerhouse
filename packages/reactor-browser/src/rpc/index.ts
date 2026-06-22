@@ -1,5 +1,10 @@
 export { createReactorClientProxy } from "./client-proxy.js";
 export {
+  createReactorEventBusProxy,
+  type BusEventListener,
+  type ReactorEventBusProxy,
+} from "./event-bus-proxy.js";
+export {
   connectReactorClient,
   postReactorIdentity,
   type ReactorHello,

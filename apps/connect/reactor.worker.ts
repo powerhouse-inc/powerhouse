@@ -2,6 +2,7 @@ import {
   ChannelScheme,
   ReactorBuilder,
   ReactorClientBuilder,
+  SyncEventTypes,
   type Database,
   type JwtHandler,
 } from "@powerhousedao/reactor";
@@ -28,6 +29,15 @@ import {
 
 // Matches the main thread's RenownBuilder("connect").
 const RENOWN_APP_NAME = "connect";
+
+// Reactor bus events fanned out to tabs over the distributed EventBus.
+const FORWARDED_EVENT_TYPES = [
+  SyncEventTypes.SYNC_PENDING,
+  SyncEventTypes.SYNC_SUCCEEDED,
+  SyncEventTypes.SYNC_FAILED,
+  SyncEventTypes.DEAD_LETTER_ADDED,
+  SyncEventTypes.CONNECTION_STATE_CHANGED,
+];
 
 type WorkerConstruct = {
   namespace: string;
@@ -117,6 +127,11 @@ const host = new ReactorHost({
     registry = module.reactorModule?.documentModelRegistry;
     for (const m of models) {
       registeredKeys.add(modelKey(m));
+    }
+    for (const type of FORWARDED_EVENT_TYPES) {
+      module.eventBus.subscribe(type, (forwardedType, event) =>
+        host.broadcastBusEvent(forwardedType, event),
+      );
     }
     return module.client;
   },
