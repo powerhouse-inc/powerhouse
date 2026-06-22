@@ -3,7 +3,7 @@ import { js } from "@tmpl/core";
 export const eslintConfigTemplate = js`
 // @ts-check
 import { default as eslint } from "@eslint/js";
-import eslintPluginPrettierRecommended from "eslint-plugin-prettier/recommended";
+import eslintConfigPrettier from "eslint-config-prettier";
 import reactPlugin from "eslint-plugin-react";
 import reactHooksPlugin from "eslint-plugin-react-hooks";
 import { defineConfig, globalIgnores } from "eslint/config";
@@ -135,6 +135,6 @@ export default defineConfig(
   typescriptConfig,
   reactConfig,
   javascriptConfig,
-  eslintPluginPrettierRecommended,
+  eslintConfigPrettier,
 );
 `.raw;

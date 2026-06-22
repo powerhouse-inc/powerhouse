@@ -38,6 +38,8 @@ export const packageJsonTemplate = (
     "test:coverage": "vitest run --coverage",
     "lint": "eslint --config eslint.config.js --cache --cache-strategy content",
     "lint:fix": "npm run lint -- --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "tsc": "tsc",
     "tsc:watch": "tsc --watch",
     "check-circular-imports": "npx dpdm -T ./index.ts",

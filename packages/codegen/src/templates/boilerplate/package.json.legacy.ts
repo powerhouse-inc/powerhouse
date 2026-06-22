@@ -4,6 +4,8 @@ export const packageJsonScriptsTemplate = {
   "test:watch": "vitest",
   lint: "eslint --config eslint.config.js --cache --cache-strategy content",
   "lint:fix": "npm run lint -- --fix",
+  format: "prettier --write .",
+  "format:check": "prettier --check .",
   tsc: "tsc",
   "tsc:watch": "tsc --watch",
   tailwind: "pnpm exec tailwindcss -i ./style.css -o ./dist/style.css",
