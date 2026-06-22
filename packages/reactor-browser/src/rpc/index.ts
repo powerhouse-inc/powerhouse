@@ -12,6 +12,12 @@ export {
 export { ReactorHostServer } from "./host-server.js";
 export { ReactorHost } from "./reactor-host.js";
 export {
+  createSyncManagerProxy,
+  SyncManagerProxy,
+  SYNC_STATUS_CHANGED_EVENT,
+  type SyncStatusChangedBusEvent,
+} from "./sync-manager-proxy.js";
+export {
   WorkerPackageLoader,
   type PackageImporter,
   type WorkerPackageLoaderOptions,

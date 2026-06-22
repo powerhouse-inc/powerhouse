@@ -8,11 +8,13 @@ import {
   type Database,
   type ISyncManager,
   type JwtHandler,
+  type Remote,
   type RemoteFilter,
   type RemoteOptions,
 } from "@powerhousedao/reactor";
 import {
   ReactorHost,
+  SYNC_STATUS_CHANGED_EVENT,
   WorkerPackageLoader,
   type ReactorIdentity,
 } from "@powerhousedao/reactor-browser/rpc";
@@ -63,6 +65,14 @@ const registeredKeys = new Set<string>();
 
 function modelKey(module: DocumentModelModule): string {
   return `${module.documentModel.global.id}@${module.version ?? 1}`;
+}
+
+// Cloneable projection of a Remote: meta (carries channelConfig) + connection snapshot.
+function toWireRemote(remote: Remote) {
+  return {
+    meta: remote.meta,
+    connectionState: remote.channel.getConnectionState(),
+  };
 }
 
 // Register only the delta; the registry rejects duplicate (type, version) pairs.
@@ -140,6 +150,9 @@ const host = new ReactorHost({
         host.broadcastBusEvent(forwardedType, event),
       );
     }
+    syncManager?.onSyncStatusChange((documentId, status) =>
+      host.broadcastBusEvent(SYNC_STATUS_CHANGED_EVENT, { documentId, status }),
+    );
     return module.client;
   },
   registerPackages: async (specs) => {
@@ -161,7 +174,7 @@ const host = new ReactorHost({
     }
     switch (method) {
       case "list":
-        return syncManager.list().map((remote) => remote.meta);
+        return syncManager.list().map(toWireRemote);
       case "add": {
         const [name, collectionIdKey, channelConfig, filter, options] =
           args as [
@@ -178,7 +191,7 @@ const host = new ReactorHost({
           filter,
           options,
         );
-        return remote.meta;
+        return toWireRemote(remote);
       }
       case "remove":
         await syncManager.remove(args[0] as string);

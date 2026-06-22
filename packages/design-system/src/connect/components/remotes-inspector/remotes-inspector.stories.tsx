@@ -120,6 +120,7 @@ const mockRemotes: Remote[] = [
       id: "abc-123-def-456",
       name: "remote-main",
       collectionId: DriveCollectionId.forDrive("documents"),
+      channelConfig: { type: "gql", parameters: {} },
       filter: {
         documentId: [],
         scope: [],
@@ -184,6 +185,7 @@ const mockRemotes: Remote[] = [
       id: "ghi-789-jkl-012",
       name: "remote-dev",
       collectionId: DriveCollectionId.forDrive("experiments", "dev"),
+      channelConfig: { type: "gql", parameters: {} },
       filter: {
         documentId: ["doc-1", "doc-2"],
         scope: ["scope-a"],
@@ -210,6 +212,7 @@ const mockRemotes: Remote[] = [
       id: "mno-345-pqr-678",
       name: "remote-feature",
       collectionId: DriveCollectionId.forDrive("new-ui", "feature"),
+      channelConfig: { type: "gql", parameters: {} },
       filter: {
         documentId: [],
         scope: ["ui", "components"],
@@ -251,6 +254,7 @@ const manyRemotes: Remote[] = Array.from({ length: 20 }, (_, i) => ({
     id: `remote-id-${i + 1}-${Math.random().toString(36).slice(2, 8)}`,
     name: `remote-${i + 1}`,
     collectionId: DriveCollectionId.forDrive(`collection-${i + 1}`),
+    channelConfig: { type: "gql", parameters: {} },
     filter: {
       documentId: i % 3 === 0 ? [`doc-${i}`] : [],
       scope: i % 2 === 0 ? ["scope-a"] : [],

@@ -119,12 +119,13 @@ export interface IChannelFactory {
  * A remote defines what to synchronize (collectionId, filter) and how to synchronize it (channel).
  * The remote name is used as a unique identifier across the system.
  */
-// Cloneable definition of a remote (id, name, collectionId, filter, options),
-// separated from the live channel so it can cross a worker boundary as-is.
+// Cloneable definition of a remote, separated from the live channel so it can
+// cross a worker boundary as-is.
 export type RemoteMeta = {
   id: string;
   name: string;
   collectionId: DriveCollectionId;
+  channelConfig: ChannelConfig;
   filter: RemoteFilter;
   options: RemoteOptions;
 };

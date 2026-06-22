@@ -307,6 +307,7 @@ export {
   type GqlChannelConfig,
   type IChannel,
   type IChannelFactory,
+  type IMailbox,
   type IPollTimer,
   type ISyncManager,
   type ISyncStatusTracker,
