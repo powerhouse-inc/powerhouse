@@ -19,7 +19,7 @@ catalog:
   "vite-tsconfig-paths": 6.1.1
   "@modelcontextprotocol/sdk": 1.29.0
   "@powerhousedao/document-engineering": 1.40.5
-  "kysely": 0.28.16
+  "kysely": 0.28.17
   "kysely-pglite-dialect": 1.2.0
   "kysely-pglite": 0.6.1
   "kysely-knex": 0.2.0
