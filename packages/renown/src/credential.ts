@@ -1,11 +1,18 @@
-import {
-  recoverTypedDataAddress,
-  type Hex,
-  type TypedDataDomain,
-  type TypedDataParameter,
-} from "viem";
+import { recoverTypedDataAddress } from "viem";
 import { CREDENTIAL_TYPES, DEFAULT_RENOWN_NETWORK_ID } from "./constants.js";
 import type { PowerhouseVerifiableCredential } from "./types.js";
+
+/* Local structural aliases (EIP-712 standard shapes) so renown's public .d.ts
+ * never names viem — a viem type in the surface drags viem's whole closure in. */
+type Hex = `0x${string}`;
+type TypedDataDomain = {
+  name?: string;
+  version?: string;
+  chainId?: number;
+  verifyingContract?: Hex;
+  salt?: Hex;
+};
+type TypedDataParameter = { name: string; type: string };
 
 /** EIP-712 domain as signed by the credential issuer. */
 export type CredentialDomain = {
