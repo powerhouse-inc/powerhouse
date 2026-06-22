@@ -39,6 +39,42 @@ const stripScalarDefinitions = (doc: DocumentNode): string => {
   return print({ kind: Kind.DOCUMENT, definitions: filteredDefinitions });
 };
 
+/**
+ * Type-system definition kinds that GraphQL requires to be uniquely named.
+ * A subgraph SDL with two definitions sharing a name fails federation
+ * composition ("There can be only one type named X"), which is fatal to the
+ * whole gateway. We dedupe these by name; field/operation/extension nodes are
+ * left untouched.
+ */
+const TYPE_DEFINITION_KINDS = new Set<Kind>([
+  Kind.OBJECT_TYPE_DEFINITION,
+  Kind.ENUM_TYPE_DEFINITION,
+  Kind.INPUT_OBJECT_TYPE_DEFINITION,
+  Kind.INTERFACE_TYPE_DEFINITION,
+  Kind.UNION_TYPE_DEFINITION,
+  Kind.SCALAR_TYPE_DEFINITION,
+]);
+
+/**
+ * Drop duplicate type-system definitions by name, keeping the first occurrence.
+ * State types are emitted before operation types, so keep-first preserves the
+ * authoritative state definition. This heals a document model that defines the
+ * same name twice (global+local, state+operation, or twice in one scope) so the
+ * assembled subgraph SDL composes instead of crashing the gateway (Sentry #917).
+ */
+const dedupeTypeDefinitions = (doc: DocumentNode): DocumentNode => {
+  const seen = new Set<string>();
+  const definitions = doc.definitions.filter((def) => {
+    if (!TYPE_DEFINITION_KINDS.has(def.kind)) return true;
+    const name = (def as { name?: { value: string } }).name?.value;
+    if (!name) return true;
+    if (seen.has(name)) return false;
+    seen.add(name);
+    return true;
+  });
+  return { kind: Kind.DOCUMENT, definitions };
+};
+
 export const buildSubgraphSchemaModule = (
   documentModels: DocumentModelModule[],
   resolvers: GraphQLResolverMap<Context>,
@@ -251,7 +287,7 @@ export const getDocumentModelTypeDefs = (
     ${stripScalarDefinitions(typeDefs)}
   `;
 
-  return schema;
+  return dedupeTypeDefinitions(schema);
 };
 
 /**

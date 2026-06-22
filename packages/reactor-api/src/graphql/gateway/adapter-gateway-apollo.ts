@@ -14,6 +14,7 @@ import { ApolloServer, HeaderMap } from "@apollo/server";
 import { ApolloServerPluginInlineTraceDisabled } from "@apollo/server/plugin/disabled";
 import { ApolloServerPluginDrainHttpServer } from "@apollo/server/plugin/drainHttpServer";
 import { ApolloServerPluginLandingPageLocalDefault } from "@apollo/server/plugin/landingPage/default";
+import { buildSubgraphSchema } from "@apollo/subgraph";
 import type { ILogger } from "document-model";
 import type { GraphQLSchema } from "graphql";
 import type http from "node:http";
@@ -28,6 +29,31 @@ import type {
   WsContextFactory,
   WsDisposer,
 } from "./types.js";
+
+/**
+ * Drop subgraphs whose typeDefs cannot be built into a valid subgraph schema,
+ * so a single malformed subgraph cannot fail the whole supergraph composition
+ * (and, on the unguarded boot path, take down the entire /graphql endpoint —
+ * Sentry #917). Each excluded subgraph is logged; the rest compose normally.
+ */
+export function filterComposableSubgraphs(
+  serviceList: ServiceDefinition[],
+  logger?: Pick<ILogger, "error">,
+): ServiceDefinition[] {
+  return serviceList.filter((service) => {
+    try {
+      buildSubgraphSchema({ typeDefs: service.typeDefs });
+      return true;
+    } catch (error) {
+      logger?.error(
+        `Excluding subgraph "${service.name}" from supergraph composition: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+      return false;
+    }
+  });
+}
 
 // Forwards the incoming authorization header to federated subgraph requests.
 class AuthenticatedDataSource extends RemoteGraphQLDataSource {
@@ -141,7 +167,13 @@ export class ApolloGatewayAdapter implements IGatewayAdapter<Context> {
       typeDefs: s.typeDefs,
       url: s.url,
     }));
-    const localCompose = new LocalCompose({ localServiceList: serviceList });
+    const composableServiceList = filterComposableSubgraphs(
+      serviceList,
+      this.#logger,
+    );
+    const localCompose = new LocalCompose({
+      localServiceList: composableServiceList,
+    });
     return localCompose.initialize(this.#gatewayOptions);
   }
 
