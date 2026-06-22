@@ -30,8 +30,8 @@ RUN pnpm config set @jsr:registry https://npm.jsr.io
 ARG TAG=latest
 ARG PH_CONNECT_BASE_PATH="/"
 
-# Install ph-cmd, prisma, and prettier globally
-RUN pnpm add -g ph-cmd@$TAG prisma@5.17.0 prettier
+# Install ph-cmd, prisma, and oxfmt globally
+RUN pnpm add -g ph-cmd@$TAG prisma@5.17.0 oxfmt
 
 # Initialize project based on tag (dev/staging/latest)
 RUN case "$TAG" in \\
