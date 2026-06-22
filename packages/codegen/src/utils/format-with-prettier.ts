@@ -25,6 +25,6 @@ export async function formatSafe(
   }
 }
 
-export async function runPrettier() {
-  await spawnAsync("npx", ["prettier", "--write", "."]);
+export async function runOxfmt() {
+  await spawnAsync("npx", ["oxfmt", "."]);
 }
