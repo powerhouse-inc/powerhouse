@@ -48,6 +48,23 @@ describe("filterComposableSubgraphs (Sentry #917)", () => {
     expect(logger.error.mock.calls[0][0]).toContain("bad");
   });
 
+  it("returns an empty list when given an empty list", () => {
+    expect(filterComposableSubgraphs([])).toEqual([]);
+  });
+
+  it("excludes every subgraph when all are un-composable", () => {
+    const alsoBad: ServiceDefinition = {
+      name: "also-bad",
+      typeDefs: parse(`
+        type Query { x: String }
+        enum Dup { A }
+        enum Dup { B }
+      `),
+      url: "http://localhost/graphql/also-bad",
+    };
+    expect(filterComposableSubgraphs([badSubgraph, alsoBad])).toEqual([]);
+  });
+
   it("keeps all subgraphs when every one is composable", () => {
     const another: ServiceDefinition = {
       name: "another",

@@ -125,6 +125,31 @@ describe("getDocumentModelTypeDefs dedupe (Sentry #917)", () => {
     expect(countOf(names, "EmploymentDetails_ContractType")).toBe(1);
   });
 
+  it("a type and an enum sharing a name (cross-kind) are deduped to one", () => {
+    const model = buildModel(
+      "EmploymentDetails",
+      `
+        type EmploymentDetailsState {
+          contractType: ContractType
+        }
+        type ContractType {
+          label: String
+        }
+        enum ContractType {
+          FULL_TIME
+          PART_TIME
+        }
+      `,
+    );
+
+    const names = typeDefNames(
+      getDocumentModelTypeDefs([model], EMPTY_TYPEDEFS),
+    );
+
+    expect(countOf(names, "EmploymentDetails_ContractType")).toBe(1);
+    expect(duplicateNames(names)).toEqual([]);
+  });
+
   it("state + operation schema define the same type: deduped to one", () => {
     const model = buildModel(
       "EmploymentDetails",

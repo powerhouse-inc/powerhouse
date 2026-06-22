@@ -31,10 +31,14 @@ import type {
 } from "./types.js";
 
 /**
- * Drop subgraphs whose typeDefs cannot be built into a valid subgraph schema,
- * so a single malformed subgraph cannot fail the whole supergraph composition
- * (and, on the unguarded boot path, take down the entire /graphql endpoint —
- * Sentry #917). Each excluded subgraph is logged; the rest compose normally.
+ * Drop subgraphs whose typeDefs cannot be built into a valid subgraph schema in
+ * isolation — e.g. a duplicate type definition within a single subgraph (Sentry
+ * #917) — so one broken subgraph is excluded instead of failing the build for
+ * everyone. Each excluded subgraph is logged; the rest are composed.
+ *
+ * Scope: this only catches per-subgraph build failures. Errors that surface only
+ * when subgraphs are composed together (cross-subgraph type or `@key` conflicts)
+ * are still thrown by `LocalCompose.initialize()` and are NOT handled here.
  */
 export function filterComposableSubgraphs(
   serviceList: ServiceDefinition[],

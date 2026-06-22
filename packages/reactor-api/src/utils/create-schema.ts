@@ -57,10 +57,13 @@ const TYPE_DEFINITION_KINDS = new Set<Kind>([
 
 /**
  * Drop duplicate type-system definitions by name, keeping the first occurrence.
- * State types are emitted before operation types, so keep-first preserves the
- * authoritative state definition. This heals a document model that defines the
- * same name twice (global+local, state+operation, or twice in one scope) so the
- * assembled subgraph SDL composes instead of crashing the gateway (Sentry #917).
+ * Deduping is by name across ALL kinds (a `type` and an `enum` sharing a name
+ * collide in GraphQL too), so the first definition of a given name wins
+ * regardless of kind. State types are emitted before operation types, so
+ * keep-first preserves the authoritative state definition. This heals a document
+ * model that defines the same name twice (global+local, state+operation, or
+ * twice in one scope) so the assembled subgraph SDL composes instead of crashing
+ * the gateway (Sentry #917).
  */
 const dedupeTypeDefinitions = (doc: DocumentNode): DocumentNode => {
   const seen = new Set<string>();
@@ -68,7 +71,12 @@ const dedupeTypeDefinitions = (doc: DocumentNode): DocumentNode => {
     if (!TYPE_DEFINITION_KINDS.has(def.kind)) return true;
     const name = (def as { name?: { value: string } }).name?.value;
     if (!name) return true;
-    if (seen.has(name)) return false;
+    if (seen.has(name)) {
+      // A duplicate here would otherwise crash supergraph composition; log it so
+      // production has a breadcrumb of which model shipped a duplicate name.
+      logger.debug(`Dropping duplicate type definition: ${name}`);
+      return false;
+    }
     seen.add(name);
     return true;
   });
