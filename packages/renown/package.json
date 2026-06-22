@@ -25,6 +25,12 @@
       "types": "./dist/node.d.ts",
       "import": "./dist/node.js",
       "default": "./dist/node.js"
+    },
+    "./crypto": {
+      "source": "./src/crypto.ts",
+      "types": "./dist/crypto.d.ts",
+      "import": "./dist/crypto.js",
+      "default": "./dist/crypto.js"
     }
   },
   "types": "./dist/index.d.ts",
