@@ -75,6 +75,16 @@ export type RpcIdentity = { k: "identity"; user: ReactorIdentity | null };
 // reactor IEventBus numeric type; `event` is the (cloneable) payload.
 export type RpcBusEvent = { k: "bus-event"; eventType: number; event: unknown };
 
+// Request/response for syncManager commands (add/remove/triggerPull/list); the
+// reply value is the reactor's RemoteMeta (its DriveCollectionId degrades to
+// plain {driveId,branch} over postMessage and is rehydrated tab-side).
+export type RpcSyncOp = {
+  k: "sync-op";
+  id: CorrelationId;
+  method: string;
+  args: unknown[];
+};
+
 export type ClientMessage =
   | RpcRequest
   | RpcAbort
@@ -84,7 +94,8 @@ export type ClientMessage =
   | RpcHello
   | RpcRegisterPackages
   | RpcUnregisterPackages
-  | RpcIdentity;
+  | RpcIdentity
+  | RpcSyncOp;
 
 export type OwnerMessage =
   | RpcResponse

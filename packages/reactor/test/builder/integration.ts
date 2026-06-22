@@ -90,16 +90,16 @@ describe("Reactor with SyncBuilder Integration", () => {
         },
       );
 
-      expect(remote.name).toBe("test-remote");
+      expect(remote.meta.name).toBe("test-remote");
       expect(
-        remote.collectionId.equals(
+        remote.meta.collectionId.equals(
           DriveCollectionId.forDrive("test-collection"),
         ),
       ).toBe(true);
 
       const remotes = module.syncModule!.syncManager.list();
       expect(remotes).toHaveLength(1);
-      expect(remotes[0].name).toBe("test-remote");
+      expect(remotes[0].meta.name).toBe("test-remote");
     });
 
     it("should shutdown sync manager independently from reactor", async () => {
@@ -189,7 +189,7 @@ describe("Reactor with SyncBuilder Integration", () => {
 
       const remotesBefore = module.syncModule!.syncManager.list();
       expect(remotesBefore).toHaveLength(1);
-      expect(remotesBefore[0].name).toBe("persistent-remote");
+      expect(remotesBefore[0].meta.name).toBe("persistent-remote");
     });
   });
 

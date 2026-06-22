@@ -314,6 +314,7 @@ export {
   type OperationBatch,
   type Remote,
   type RemoteCursor,
+  type RemoteMeta,
   type RemoteFilter,
   type RemoteOptions,
   type RemoteRecord,

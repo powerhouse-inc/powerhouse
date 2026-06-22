@@ -35,6 +35,8 @@ export type {
   ProcessorRecord,
   RebuildResult,
   Remote,
+  RemoteFilter,
+  RemoteMeta,
   SignerConfig,
   SnapshotValidationIssue,
   SyncOperation,

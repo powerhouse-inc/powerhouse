@@ -1,10 +1,15 @@
 import {
   ChannelScheme,
+  DriveCollectionId,
   ReactorBuilder,
   ReactorClientBuilder,
   SyncEventTypes,
+  type ChannelConfig,
   type Database,
+  type ISyncManager,
   type JwtHandler,
+  type RemoteFilter,
+  type RemoteOptions,
 } from "@powerhousedao/reactor";
 import {
   ReactorHost,
@@ -52,6 +57,7 @@ type ModelRegistry = {
 let loader: WorkerPackageLoader | undefined;
 let registry: ModelRegistry | undefined;
 let signer: RenownCryptoSigner | undefined;
+let syncManager: ISyncManager | undefined;
 let currentIdentity: ReactorIdentity | null = null;
 const registeredKeys = new Set<string>();
 
@@ -125,6 +131,7 @@ const host = new ReactorHost({
     builder.withDocumentModelLoader(loader);
     const module = await builder.buildModule();
     registry = module.reactorModule?.documentModelRegistry;
+    syncManager = module.reactorModule?.syncModule?.syncManager;
     for (const m of models) {
       registeredKeys.add(modelKey(m));
     }
@@ -146,6 +153,41 @@ const host = new ReactorHost({
     currentIdentity = user;
     if (signer) {
       signer.user = user ?? undefined;
+    }
+  },
+  onSyncOp: async (method, args) => {
+    if (!syncManager) {
+      throw new Error("SyncManager not available");
+    }
+    switch (method) {
+      case "list":
+        return syncManager.list().map((remote) => remote.meta);
+      case "add": {
+        const [name, collectionIdKey, channelConfig, filter, options] =
+          args as [
+            string,
+            string,
+            ChannelConfig,
+            RemoteFilter | undefined,
+            RemoteOptions | undefined,
+          ];
+        const remote = await syncManager.add(
+          name,
+          DriveCollectionId.fromKey(collectionIdKey),
+          channelConfig,
+          filter,
+          options,
+        );
+        return remote.meta;
+      }
+      case "remove":
+        await syncManager.remove(args[0] as string);
+        return undefined;
+      case "triggerPull":
+        syncManager.triggerPull(args[0] as string);
+        return undefined;
+      default:
+        throw new Error(`Unknown sync op: ${method}`);
     }
   },
 });

@@ -302,7 +302,8 @@ export class ReactorSubgraph extends BaseSubgraph {
 
           // A collection is a drive-level abstraction; its canonical drive id is
           // carried by the collection id (never a slug).
-          const driveId = remote.collectionId.driveId as CanonicalDocumentId;
+          const driveId = remote.meta.collectionId
+            .driveId as CanonicalDocumentId;
           const isAdmin = this.authorizationService.isSupremeAdmin(
             ctx.user?.address,
           );

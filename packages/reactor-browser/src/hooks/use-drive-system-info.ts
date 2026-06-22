@@ -46,7 +46,7 @@ export function useDriveSystemInfo(
   const systemUrl = useMemo(() => {
     if (!driveId) return null;
     const remote = remotes.find((r) =>
-      r.collectionId.equals(DriveCollectionId.forDrive(driveId)),
+      r.meta.collectionId.equals(DriveCollectionId.forDrive(driveId)),
     );
     const channelUrl = (remote?.channel as GqlRequestChannel | undefined)
       ?.config.url;

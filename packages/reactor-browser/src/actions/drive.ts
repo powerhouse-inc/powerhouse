@@ -187,7 +187,7 @@ export async function addRemoteDrive(
     } else {
       const existingRemote = sync
         .list()
-        .find((remote) => remote.collectionId.equals(collectionId));
+        .find((remote) => remote.meta.collectionId.equals(collectionId));
 
       if (!existingRemote) {
         const remoteName = crypto.randomUUID();
@@ -249,9 +249,9 @@ export async function deleteDrive(driveId: string) {
     const collectionId = DriveCollectionId.forDrive(driveId);
     const remotes = sync
       .list()
-      .filter((remote) => remote.collectionId.equals(collectionId));
+      .filter((remote) => remote.meta.collectionId.equals(collectionId));
     for (const remote of remotes) {
-      await sync.remove(remote.name);
+      await sync.remove(remote.meta.name);
     }
   }
 

@@ -6,6 +6,7 @@ import type {
   ReactorIdentity,
   RpcHello,
   RpcRegisterPackages,
+  RpcSyncOp,
   RpcUnregisterPackages,
   VersionFingerprint,
 } from "./protocol.js";
@@ -17,6 +18,7 @@ export type ReactorHostOptions = {
   registerPackages?: (specs: string[]) => Promise<void>;
   unregisterPackages?: (names: string[]) => Promise<void>;
   onIdentity?: (user: ReactorIdentity | null) => void;
+  onSyncOp?: (method: string, args: unknown[]) => Promise<unknown>;
 };
 
 function versionsCompatible(
@@ -75,6 +77,10 @@ export class ReactorHost {
       }
       if (msg.k === "identity") {
         this.options.onIdentity?.(msg.user);
+        return;
+      }
+      if (msg.k === "sync-op") {
+        void this.handleSyncOp(msg, transport);
         return;
       }
       if (server) {
@@ -171,6 +177,27 @@ export class ReactorHost {
     try {
       await this.options.unregisterPackages?.(message.names);
       transport.post({ k: "res", id: message.id, value: { ok: true } });
+    } catch (error) {
+      transport.post({ k: "err", id: message.id, error: toErrorInfo(error) });
+    }
+  }
+
+  private async handleSyncOp(
+    message: RpcSyncOp,
+    transport: IRpcTransport,
+  ): Promise<void> {
+    const handler = this.options.onSyncOp;
+    if (!handler) {
+      transport.post({
+        k: "err",
+        id: message.id,
+        error: toErrorInfo(new Error("ReactorHost has no sync handler")),
+      });
+      return;
+    }
+    try {
+      const value = await handler(message.method, message.args);
+      transport.post({ k: "res", id: message.id, value });
     } catch (error) {
       transport.post({ k: "err", id: message.id, error: toErrorInfo(error) });
     }

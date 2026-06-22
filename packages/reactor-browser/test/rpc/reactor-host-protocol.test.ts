@@ -202,4 +202,35 @@ describe("ReactorHost protocol (hello / version / register)", () => {
     await new Promise((resolve) => setTimeout(resolve, 10));
     expect(seen).toEqual([identity, null]);
   });
+
+  it("routes a sync-op to onSyncOp and returns its result", async () => {
+    const calls: Array<[string, unknown[]]> = [];
+    const host = new ReactorHost({
+      build: () => Promise.resolve(fakeClient([])),
+      onSyncOp: (method, args) => {
+        calls.push([method, args]);
+        return Promise.resolve([{ name: "r1" }]);
+      },
+    });
+
+    const ch = new MessageChannel();
+    host.connect(createPortTransport(ch.port1));
+    const tab = rawTab(ch.port2);
+    const result = await tab.send({ k: "sync-op", method: "list", args: [] });
+    expect(result).toEqual([{ name: "r1" }]);
+    expect(calls).toEqual([["list", []]]);
+  });
+
+  it("errors a sync-op when no sync handler is configured", async () => {
+    const host = new ReactorHost({
+      build: () => Promise.resolve(fakeClient([])),
+    });
+
+    const ch = new MessageChannel();
+    host.connect(createPortTransport(ch.port1));
+    const tab = rawTab(ch.port2);
+    await expect(
+      tab.send({ k: "sync-op", method: "list", args: [] }),
+    ).rejects.toThrow(/no sync handler/);
+  });
 });
