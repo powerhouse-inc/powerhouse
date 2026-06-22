@@ -51,6 +51,11 @@
       "types": "./dist/codegen/index.d.ts",
       "import": "./dist/codegen/index.js"
     },
+    "./codegen/spec": {
+      "source": "./codegen/spec.ts",
+      "types": "./dist/codegen/spec.d.ts",
+      "import": "./dist/codegen/spec.js"
+    },
     "./manifest": "./dist/powerhouse.manifest.json",
     "./style.css": "./style.css",
     "./package.json": "./package.json"
