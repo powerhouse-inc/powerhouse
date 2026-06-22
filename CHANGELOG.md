@@ -1,3 +1,17 @@
+## 6.2.0-dev.28 (2026-06-22)
+
+### 🩹 Fixes
+
+- **connect:** gate drive login prompt on genuine auth rejections ([1a6a3e702](https://github.com/powerhouse-inc/powerhouse/commit/1a6a3e702))
+
+### 🔥 Performance
+
+- **renown:** keep viem out of public .d.ts surface ([f6361ddec](https://github.com/powerhouse-inc/powerhouse/commit/f6361ddec))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.0-dev.27 (2026-06-22)
 
 This was a version bump only, there were no code changes.
