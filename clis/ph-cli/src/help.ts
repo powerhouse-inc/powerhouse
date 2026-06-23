@@ -70,6 +70,9 @@ Options:
   --dynamic-base              Build one bundle that serves under any subpath; base
                               resolved at serve time from a runtime global. Overrides --base.
 
+  --renown-namespace <ns>     Renown localStorage namespace; share it across Connects
+                              to share login.
+
   --mode <mode>               Vite mode to use (e.g., development, production).
 
   --config-file <configFile>  Path to the powerhouse.config.js file.
@@ -406,6 +409,9 @@ Options:
   --interactive              Enable interactive mode for code generation. When enabled, the system
                             will prompt for user confirmation before generating code. This is useful
                             for development when you want control over when code regeneration happens.
+
+  --renown-namespace <ns>    Renown localStorage namespace; share it across Connects to
+                            share login (e.g. so a preview Connect reuses the Studio session).
 
 Examples:
   $ ph vetra                                              # Start Vetra environment with defaults
