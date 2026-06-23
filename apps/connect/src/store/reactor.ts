@@ -229,8 +229,15 @@ export async function createReactor(localPackage?: DocumentModelLib) {
     .build();
 
   // initialize Renown
+  // The Renown namespace is a boot-time constant (no runtime mutation), so read
+  // it straight from the runtime config rather than threading it through the
+  // PHGlobalConfig event/setter/hook machinery. baseUrl still comes from
+  // phGlobalConfig (its mutable-config home). The sync getter is safe here for
+  // the same reason as line ~244: loadComponent() warmed the cache before this.
   const renown = await new RenownBuilder("connect", {
-    basename: phGlobalConfig.routerBasename,
+    basename:
+      getRuntimeConfig().connect.renown?.namespace ??
+      phGlobalConfig.routerBasename,
     baseUrl: phGlobalConfig.renownUrl,
   })
     .withCrypto(renownCrypto)
