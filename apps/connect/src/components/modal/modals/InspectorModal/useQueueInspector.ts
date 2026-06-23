@@ -10,7 +10,8 @@ import {
 import { useCallback, useMemo } from "react";
 
 export function useQueueInspector(): QueueInspectorProps | undefined {
-  const reactorClientModule = useReactorClientModule();
+  const module = useReactorClientModule();
+  const reactorClientModule = module?.kind === "browser" ? module : undefined;
   const queue = reactorClientModule?.reactorModule?.queue;
 
   const inMemoryQueue = useMemo(() => {

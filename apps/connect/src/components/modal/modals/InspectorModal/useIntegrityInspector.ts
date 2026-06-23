@@ -6,8 +6,9 @@ import {
 import { useCallback, useMemo } from "react";
 
 export function useIntegrityInspector(): IntegrityInspectorProps | undefined {
-  const reactorClientModule = useReactorClientModule();
-  const reactorModule = reactorClientModule?.reactorModule;
+  const module = useReactorClientModule();
+  const reactorModule =
+    module?.kind === "browser" ? module.reactorModule : undefined;
 
   const service = useMemo(() => {
     if (!reactorModule) return undefined;

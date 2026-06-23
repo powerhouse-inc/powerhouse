@@ -82,7 +82,8 @@ const PRIORITY_COLUMNS = [
 export function useDbExplorer() {
   const database = useDatabase();
   const pglite = usePGlite();
-  const reactorClientModule = useReactorClientModule();
+  const module = useReactorClientModule();
+  const reactorClientModule = module?.kind === "browser" ? module : undefined;
   const reactor = reactorClientModule?.reactorModule?.reactor;
   const queue = reactorClientModule?.reactorModule?.queue;
 
@@ -288,12 +289,7 @@ export function useDbExplorer() {
         await status.completed;
       }
 
-      // Drop every user-created schema before restoring. Processors may own
-      // schemas beyond `reactor`, so dropping only that one leaves orphans
-      // whose tables collide with whatever the dump recreates. The dump
-      // itself emits `CREATE SCHEMA ...;` statements, so we don't pre-create.
-      // `standard_conforming_strings=off` matches pg_dump's escape-string
-      // literals so doubled backslashes in JSONB collapse correctly.
+      // drop every user-created schema before restoring
       await pglite.transaction(async (tx) => {
         const schemas = await tx.query<{ nspname: string }>(
           `SELECT nspname FROM pg_namespace
@@ -313,14 +309,11 @@ export function useDbExplorer() {
         await tx.exec(`SET search_path TO ${REACTOR_SCHEMA}`);
       });
 
-      // Flush IDBFS → IndexedDB synchronously. PGlite's own syncToFs is
-      // fire-and-forget under relaxedDurability, and close() doesn't run
-      // a final sync, so we drive Emscripten's syncfs directly — its
-      // callback fires from the IDB transaction's oncomplete, guaranteeing
-      // the writes have committed before we reload.
+      // flush IDBFS → IndexedDB synchronously
       await syncPgliteToIdb(pglite);
 
       window.location.reload();
+
       // reload() is asynchronous; without blocking here the DBExplorer caller
       // would continue and call loadTables() against an in-flight shutdown.
       await new Promise(() => {});

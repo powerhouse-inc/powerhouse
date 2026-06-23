@@ -24,6 +24,7 @@ export {
 } from "./worker-package-loader.js";
 export { createPortTransport, type IRpcTransport } from "./transport.js";
 export { fromErrorInfo, toErrorInfo } from "./error-info.js";
+export { RPC_PROTOCOL_VERSION } from "./protocol.js";
 export type {
   ClientMessage,
   CorrelationId,
@@ -31,4 +32,5 @@ export type {
   OwnerMessage,
   ReactorIdentity,
   RpcMessage,
+  VersionFingerprint,
 } from "./protocol.js";

@@ -1,7 +1,10 @@
 import type { PGlite } from "@electric-sql/pglite";
 import type {
+  InProcessReactorClientModule,
+  InProcessReactorModule,
   IReactorClient,
   ReactorClientModule,
+  ReactorModule,
 } from "@powerhousedao/reactor";
 import type { IAttachmentService } from "@powerhousedao/reactor-attachments/client";
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
@@ -19,15 +22,28 @@ import type { PHToastFn } from "./toast.js";
 import type { IPackageManager } from "./vetra.js";
 import type { DraggingNode } from "../hooks/node-drag-and-drop.js";
 
-export type BrowserReactorClientModule = ReactorClientModule & {
+// Browser in-process module: the full reactor graph plus the PGlite handle.
+export interface BrowserReactorModule extends InProcessReactorModule {
   pg: PGlite;
-};
+}
+export interface BrowserReactorClientModule extends InProcessReactorClientModule {
+  kind: "browser";
+  reactorModule: BrowserReactorModule | undefined;
+}
+
+// Worker-backed tab module: resolves only the base ReactorModule contract
+// (tab-local registry + sync-manager proxy); the full graph lives in the worker.
+export type WorkerReactorModule = ReactorModule;
+export interface WorkerReactorClientModule extends ReactorClientModule {
+  kind: "worker";
+  reactorModule: WorkerReactorModule;
+}
 
 export type LOADING = null;
 
 export type PHGlobal = PHGlobalConfig & {
   loading?: boolean;
-  reactorClientModule?: BrowserReactorClientModule;
+  reactorClientModule?: BrowserReactorClientModule | WorkerReactorClientModule;
   reactorClient?: IReactorClient;
   attachmentService?: IAttachmentService;
   reactorGraphQLClient?: ReactorGraphQLClient | undefined;

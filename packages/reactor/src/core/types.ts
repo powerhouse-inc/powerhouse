@@ -11,6 +11,7 @@ import type { IProcessorManager } from "@powerhousedao/shared/processors";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
 import type { ReactorClient } from "../client/reactor-client.js";
+import type { IReactorClient } from "../client/types.js";
 import type { IEventBus } from "../events/interfaces.js";
 import type { IJobExecutorManager } from "../executor/interfaces.js";
 import type { IJobTracker } from "../job-tracker/interfaces.js";
@@ -419,24 +420,41 @@ export type Database = StorageDatabase &
   DocumentIndexerDatabase;
 
 /**
- * Container for all sync manager dependencies created during the build process.
+ * Base sync-manager contract resolvable in every environment (in-process or
+ * proxied over a worker boundary): just the sync manager.
  */
 export interface SyncModule {
-  remoteStorage: ISyncRemoteStorage;
-  cursorStorage: ISyncCursorStorage;
-  deadLetterStorage: ISyncDeadLetterStorage;
-  channelFactory: IChannelFactory;
   syncManager: ISyncManager;
 }
 
 /**
- * Container for all reactor dependencies created during the build process.
- * Provides direct access to internal components for advanced use cases,
- * testing, or integration scenarios.
+ * Sync module composed in-process, with the full set of sync dependencies.
+ */
+export interface InProcessSyncModule extends SyncModule {
+  remoteStorage: ISyncRemoteStorage;
+  cursorStorage: ISyncCursorStorage;
+  deadLetterStorage: ISyncDeadLetterStorage;
+  channelFactory: IChannelFactory;
+}
+
+/**
+ * Base reactor module contract — the dependencies a client resolves regardless
+ * of where the reactor graph lives. In-process hosts compose
+ * {@link InProcessReactorModule}; a worker-backed tab resolves only this base
+ * (the full graph lives in the worker).
  */
 export interface ReactorModule {
-  eventBus: IEventBus;
   documentModelRegistry: IDocumentModelRegistry;
+  syncModule: SyncModule | undefined;
+}
+
+/**
+ * Reactor module composed in-process: the full dependency graph. Provides
+ * direct access to internal components for advanced use cases, testing, or
+ * integration scenarios.
+ */
+export interface InProcessReactorModule extends ReactorModule {
+  eventBus: IEventBus;
   queue: IQueue;
   jobTracker: IJobTracker;
   executorManager: IJobExecutorManager;
@@ -453,8 +471,8 @@ export interface ReactorModule {
   subscriptionManager: IReactorSubscriptionManager;
   processorManager: IProcessorManager;
   processorManagerConsistencyTracker: IConsistencyTracker;
-  syncModule: SyncModule | undefined;
   reactor: IReactor;
+  syncModule: InProcessSyncModule | undefined;
   /**
    * Instrumented pg.Pool handles registered with the builder, either by
    * createPostgresDatabase or by withInstrumentedPool. Empty when no pg
@@ -465,11 +483,19 @@ export interface ReactorModule {
 }
 
 /**
- * Container for all reactor client dependencies created during the build process.
- * Provides direct access to internal components for advanced use cases,
- * testing, or integration scenarios.
+ * Base reactor client contract — the client plus its reactor module. Satisfied
+ * by every host; in-process hosts extend it with {@link InProcessReactorClientModule}.
  */
 export interface ReactorClientModule {
+  client: IReactorClient;
+  reactorModule: ReactorModule | undefined;
+}
+
+/**
+ * Reactor client composed in-process: the concrete client plus direct refs to
+ * the in-process graph internals.
+ */
+export interface InProcessReactorClientModule extends ReactorClientModule {
   client: ReactorClient;
   reactor: IReactor;
   eventBus: IEventBus;
@@ -478,5 +504,5 @@ export interface ReactorClientModule {
   signer: ISigner;
   subscriptionManager: IReactorSubscriptionManager;
   jobAwaiter: IJobAwaiter;
-  reactorModule: ReactorModule | undefined;
+  reactorModule: InProcessReactorModule | undefined;
 }

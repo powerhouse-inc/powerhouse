@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { DriveCollectionId } from "../../src/cache/operation-index-types.js";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
-import type { IReactor, ReactorModule } from "../../src/core/types.js";
+import type { IReactor, InProcessReactorModule } from "../../src/core/types.js";
 import type { ISyncCursorStorage } from "../../src/storage/interfaces.js";
 import { TestChannel } from "../sync/channels/test-channel.js";
 import type { IChannelFactory } from "../../src/sync/interfaces.js";
@@ -10,7 +10,7 @@ import type { ChannelConfig } from "../../src/sync/types.js";
 
 describe("Reactor with SyncBuilder Integration", () => {
   let reactor: IReactor;
-  let module: ReactorModule;
+  let module: InProcessReactorModule;
 
   afterEach(() => {
     reactor.kill();

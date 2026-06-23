@@ -196,6 +196,11 @@ export class ReactorHost {
       return;
     }
     try {
+      // Wait for the reactor to finish building so the handler's syncManager
+      // exists; a tab's eager list() can arrive before the build completes.
+      if (this.clientPromise) {
+        await this.clientPromise;
+      }
       const value = await handler(message.method, message.args);
       transport.post({ k: "res", id: message.id, value });
     } catch (error) {

@@ -34,6 +34,10 @@ export type RpcUnsub = { k: "unsub"; id: CorrelationId };
 
 export type RpcNextPage = { k: "page"; id: CorrelationId; token: string };
 
+// Bumped when the tab<->owner wire protocol changes incompatibly; a tab whose
+// version differs from the owner's baseline is told to reload.
+export const RPC_PROTOCOL_VERSION = 1;
+
 export type VersionFingerprint = {
   appBuildId: string;
   rpcProtocolVersion: number;

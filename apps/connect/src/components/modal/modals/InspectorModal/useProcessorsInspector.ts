@@ -3,8 +3,11 @@ import { useReactorClientModule } from "@powerhousedao/reactor-browser";
 import { useCallback, useMemo } from "react";
 
 export function useProcessorsInspector(): ProcessorsInspectorProps | undefined {
-  const reactorClientModule = useReactorClientModule();
-  const processorManager = reactorClientModule?.reactorModule?.processorManager;
+  const module = useReactorClientModule();
+  const processorManager =
+    module?.kind === "browser"
+      ? module.reactorModule?.processorManager
+      : undefined;
 
   const hasProcessorManager = useMemo(
     () => processorManager != null,

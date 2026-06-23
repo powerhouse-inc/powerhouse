@@ -86,10 +86,10 @@ import { DEFAULT_DRIVE_CONTAINER_TYPES } from "./drive-container-types.js";
 import { Reactor } from "./reactor.js";
 import type {
   Database,
+  InProcessReactorModule,
+  InProcessSyncModule,
   IReactor,
   ReactorFeatures,
-  ReactorModule,
-  SyncModule,
 } from "./types.js";
 
 /**
@@ -394,7 +394,7 @@ export class ReactorBuilder {
     return module.reactor;
   }
 
-  async buildModule(): Promise<ReactorModule> {
+  async buildModule(): Promise<InProcessReactorModule> {
     if (!this.logger) {
       this.logger = new ConsoleLogger(["reactor"]);
     }
@@ -694,7 +694,7 @@ export class ReactorBuilder {
       executorManager,
     );
 
-    let syncModule: SyncModule | undefined = undefined;
+    let syncModule: InProcessSyncModule | undefined = undefined;
     if (this.channelScheme) {
       const factory =
         this.channelScheme === ChannelScheme.CONNECT
@@ -723,7 +723,7 @@ export class ReactorBuilder {
       await syncModule.syncManager.startup();
     }
 
-    const module: ReactorModule = {
+    const module: InProcessReactorModule = {
       eventBus,
       documentModelRegistry,
       queue,
@@ -891,7 +891,7 @@ export class ReactorBuilder {
     });
   }
 
-  private attachSignalHandlers(module: ReactorModule): void {
+  private attachSignalHandlers(module: InProcessReactorModule): void {
     if (
       typeof globalThis === "undefined" ||
       !("process" in globalThis) ||

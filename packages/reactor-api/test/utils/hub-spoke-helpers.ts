@@ -12,7 +12,7 @@ import {
   type IDocumentModelLoader,
   type IDocumentModelResolver,
   type IReactor,
-  type ReactorModule,
+  type InProcessReactorModule,
 } from "@powerhousedao/reactor";
 import { reactorDriveDocumentModelModule } from "@powerhousedao/reactor-drive";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
@@ -72,7 +72,7 @@ export async function buildHubModule(
   kysely: Kysely<Database>,
   documentModelLoader?: IDocumentModelLoader,
   extraModules: DocumentModelModule[] = [],
-): Promise<ReactorModule> {
+): Promise<InProcessReactorModule> {
   const eventBus = new EventBus();
   const modelRegistry = new DocumentModelRegistry();
   const allModules = [...REGISTERED_DOCUMENT_MODELS, ...extraModules];
@@ -103,7 +103,7 @@ export async function buildSpokeModule(
   logger: ConsoleLogger,
   documentModelLoader?: IDocumentModelLoader,
   extraModules: DocumentModelModule[] = [],
-): Promise<ReactorModule> {
+): Promise<InProcessReactorModule> {
   const eventBus = new EventBus();
   const modelRegistry = new DocumentModelRegistry();
   const allModules = [...REGISTERED_DOCUMENT_MODELS, ...extraModules];
@@ -129,7 +129,7 @@ export async function buildSpokeModule(
 }
 
 export async function registerHubAsRemote(
-  spoke: ReactorModule,
+  spoke: InProcessReactorModule,
   remoteName: string,
   documentId: string,
   branch: string,
@@ -194,7 +194,7 @@ async function getActualCounts(
 }
 
 export async function waitForAllSpokesConverged(
-  spokes: ReactorModule[],
+  spokes: InProcessReactorModule[],
   metadata: FixtureMetadata,
   options: {
     timeoutMs: number;
@@ -250,8 +250,8 @@ export async function waitForAllSpokesConverged(
 }
 
 export async function assertSpokeMatchesHub(
-  spoke: ReactorModule,
-  hub: ReactorModule,
+  spoke: InProcessReactorModule,
+  hub: InProcessReactorModule,
   metadata: FixtureMetadata,
   spokeIndex: number,
 ): Promise<void> {
