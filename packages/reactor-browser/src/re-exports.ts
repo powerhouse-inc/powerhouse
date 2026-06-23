@@ -6,6 +6,7 @@ export {
   GqlRequestChannel,
   InMemoryQueue,
   IntervalPollTimer,
+  isDriveAuthError,
   PollBehavior,
   REACTOR_SCHEMA,
   ReactorBuilder,

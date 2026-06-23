@@ -1,3 +1,58 @@
+## 6.2.0-dev.29 (2026-06-23)
+
+This was a version bump only, there were no code changes.
+
+## 6.2.0-dev.28 (2026-06-22)
+
+### 🩹 Fixes
+
+- **connect:** gate drive login prompt on genuine auth rejections ([1a6a3e702](https://github.com/powerhouse-inc/powerhouse/commit/1a6a3e702))
+
+### 🔥 Performance
+
+- **renown:** keep viem out of public .d.ts surface ([f6361ddec](https://github.com/powerhouse-inc/powerhouse/commit/f6361ddec))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.0-dev.27 (2026-06-22)
+
+This was a version bump only, there were no code changes.
+
+## 6.2.0-dev.26 (2026-06-21)
+
+This was a version bump only, there were no code changes.
+
+## 6.2.0-dev.25 (2026-06-20)
+
+### 🚀 Features
+
+- doc-capture skill for ph-lora( ([446d854b4](https://github.com/powerhouse-inc/powerhouse/commit/446d854b4))
+
+### 🩹 Fixes
+
+- retry touchChannel if a channel is not found on push ([12d4367f7](https://github.com/powerhouse-inc/powerhouse/commit/12d4367f7))
+- retry touchChannel if a channel is not found on push ([#2751](https://github.com/powerhouse-inc/powerhouse/pull/2751))
+- academy agents ([4630e22d9](https://github.com/powerhouse-inc/powerhouse/commit/4630e22d9))
+- updated vetra studio ([240c144b0](https://github.com/powerhouse-inc/powerhouse/commit/240c144b0))
+- cleanup article ([adfbb2abd](https://github.com/powerhouse-inc/powerhouse/commit/adfbb2abd))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- CallmeT-ty @CallmeT-ty
+
+## 6.2.0-dev.24 (2026-06-19)
+
+### 🩹 Fixes
+
+- release unblocker & clean up ([56090fd53](https://github.com/powerhouse-inc/powerhouse/commit/56090fd53))
+
+### ❤️ Thank You
+
+- CallmeT-ty @CallmeT-ty
+
 ## 6.2.0-dev.23 (2026-06-18)
 
 ### 🚀 Features

@@ -49,7 +49,12 @@ export {
   SyncOperationAggregateError,
 } from "./sync-operation.js";
 
-export { ChannelError, PollingChannelError } from "./errors.js";
+export {
+  ChannelError,
+  PollingChannelError,
+  isDriveAuthError,
+  DRIVE_AUTH_ERROR_MESSAGES,
+} from "./errors.js";
 
 export {
   envelopesToSyncOperations,

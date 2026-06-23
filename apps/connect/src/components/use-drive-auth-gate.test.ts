@@ -2,9 +2,10 @@ import { describe, expect, it } from "vitest";
 import type { ConnectionStateSnapshot } from "@powerhousedao/reactor-browser";
 import { computeNeedsLogin } from "./use-drive-auth-gate.js";
 
-// Only `state` drives the decision; the rest are filled with neutral values.
+// `state` + `requiresAuth` drive the decision; the rest are neutral.
 function snap(
   state: ConnectionStateSnapshot["state"],
+  requiresAuth = false,
 ): ConnectionStateSnapshot {
   return {
     state,
@@ -14,18 +15,24 @@ function snap(
     pushBlocked: false,
     pushFailureCount: 0,
     receivingPages: false,
+    requiresAuth,
   };
 }
 
 describe("computeNeedsLogin", () => {
-  it("never gates an authenticated user, even with an errored channel", () => {
-    const states = new Map([["studio", snap("error")]]);
+  it("never gates an authenticated user, even with an auth-rejected channel", () => {
+    const states = new Map([["studio", snap("error", true)]]);
     expect(computeNeedsLogin(true, states)).toBe(false);
   });
 
-  it("gates an anonymous user when a channel is in error", () => {
-    const states = new Map([["studio", snap("error")]]);
+  it("gates an anonymous user when a channel failed with an auth rejection", () => {
+    const states = new Map([["studio", snap("error", true)]]);
     expect(computeNeedsLogin(false, states)).toBe(true);
+  });
+
+  it("does not gate an anonymous user on a non-auth error", () => {
+    const states = new Map([["studio", snap("error", false)]]);
+    expect(computeNeedsLogin(false, states)).toBe(false);
   });
 
   it("does not gate an anonymous user when all channels are healthy", () => {

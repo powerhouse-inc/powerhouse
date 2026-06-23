@@ -420,19 +420,19 @@ importers:
         specifier: ^2.14.4
         version: 2.20.0(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@docusaurus/core':
-        specifier: ^3.10.0
+        specifier: 3.10.0
         version: 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11)(@swc/core@1.11.31)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)
       '@docusaurus/faster':
-        specifier: ^3.10.0
+        specifier: 3.10.0
         version: 3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(esbuild@0.27.3)
       '@docusaurus/plugin-content-docs':
-        specifier: ^3.10.0
+        specifier: 3.10.0
         version: 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11)(@swc/core@1.11.31)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)
       '@docusaurus/preset-classic':
-        specifier: ^3.10.0
+        specifier: 3.10.0
         version: 3.10.0(@algolia/client-search@5.49.1)(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11)(@swc/core@1.11.31)(@types/react@19.2.14)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(search-insights@2.17.3)(typescript@6.0.3)
       '@docusaurus/theme-search-algolia':
-        specifier: ^3.10.0
+        specifier: 3.10.0
         version: 3.10.0(@algolia/client-search@5.49.1)(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11)(@swc/core@1.11.31)(@types/react@19.2.14)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(search-insights@2.17.3)(typescript@6.0.3)
       '@mdx-js/react':
         specifier: ^3.0.0
@@ -451,16 +451,16 @@ importers:
         version: 19.2.6(react@19.2.6)
     devDependencies:
       '@docusaurus/module-type-aliases':
-        specifier: ^3.10.0
+        specifier: 3.10.0
         version: 3.10.0(@swc/core@1.11.31)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@docusaurus/plugin-client-redirects':
         specifier: 3.10.0
         version: 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11)(@swc/core@1.11.31)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)
       '@docusaurus/tsconfig':
-        specifier: ^3.10.0
+        specifier: 3.10.0
         version: 3.10.0
       '@docusaurus/types':
-        specifier: ^3.10.0
+        specifier: 3.10.0
         version: 3.10.0(@swc/core@1.11.31)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@marp-team/marp-cli':
         specifier: ^4.2.3

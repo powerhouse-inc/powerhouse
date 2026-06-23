@@ -174,7 +174,7 @@ operator-supplied `PH_CONNECT_CONFIG_JSON` env var to the dist
 override the baked file; `null`/omitted keep it; `connect.app.basePath` is
 ignored). This is purely an operator-time convenience — the SPA itself never
 reads env vars at runtime — and is documented in the
-[Docker Deployment guide](./05-DockerDeployment).
+[Docker Deployment guide](/academy/Build/Launch/DockerDeployment).
 
 ## Variables that stay as env vars
 

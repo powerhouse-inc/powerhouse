@@ -285,6 +285,8 @@ export {
   GqlResponseChannel,
   GqlResponseChannelFactory,
   IntervalPollTimer,
+  DRIVE_AUTH_ERROR_MESSAGES,
+  isDriveAuthError,
   Mailbox,
   PollBehavior,
   PollingChannelError,

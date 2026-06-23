@@ -1,7 +1,7 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-06-18T08:45:22.149Z
-> Total Documents: 105
+> Generated: 2026-06-20T01:49:24.072Z
+> Total Documents: 106
 > Source: https://academy.vetra.io/llms-full.txt
 
 
@@ -12,149 +12,189 @@
 
 > Source: https://academy.vetra.io/academy/GetStarted/VetraStudio
 
-Vetra Studio is the browser UI for the Vetra agent. It lets you chat with the Vetra agent, track work across the four-phase product development cycle
-(Ideate → Specify → Build → Deploy), and watch a live preview of the product the Vetra agent is building.
+Vetra Studio is the browser UI for the Vetra agent. You chat with the agent, watch it work across the four-phase product cycle (Ideate → Specify → Build → Deploy), and see a live preview of the product it builds.
 
-## What can i build?
+Each Studio runs as a **dedicated cloud agent** tied to your identity. You provide an Anthropic API key, and Vetra provisions an isolated environment that hosts the agent, its workspace, and the preview services.
 
-With the Vetra Studio Agent, you can build **local-first, AI-ready, specification-driven products, platforms and software solutions**.
-These solutions can be used as:
+## What you can build
 
-- Open-source and decentralized back-ends.
-- Any SaaS, ERP, CMS or CRM needs.
-- Are based on a structured data model & document-centric architecture.
+With the Vetra agent you build **local-first, AI-ready, specification-driven** products and platforms:
+
+- Open-source, decentralized back-ends.
+- SaaS, ERP, CMS, or CRM applications.
+- Structured-data, document-centric systems with a built-in GraphQL API.
+
+---
 
 ## Getting started
 
-Vetra Studio is currently in beta. You'll have gotten your hands on an early access code from Powerhouse.
-Log in at **vetra.io** to access Vetra Studio.
+Vetra Studio is in beta. You need an early-access code from Powerhouse.
+
+1. Open **[vetra.io](https://vetra.io)** and log in with your wallet (via Renown).
+2. Click **Vetra Studio** in the top-right header. This opens your **Products** dashboard at `/user`.
+
+Each product is one Vetra Studio instance, running on its own subdomain (`vetra-agent.<slug>.vetra.io`). A studio shows **Ready** once it is provisioned.
+
+The Products dashboard lists your Vetra Studio instances. Each is a dedicated cloud agent on its own subdomain.
+
+### Create a studio
+
+To create a new instance, click **Create new product…** and provide an **Anthropic API key**. The studio runs the agent on Claude using this key.
+
+A studio runs as a dedicated cloud agent. Provide an Anthropic API key to start it.
+
+The instance moves through **Provisioning…** (not yet openable) to **Ready**. Click **Open →** to launch the studio in a new tab.
 
 ---
 
 ## The layout
 
-```
-┌──────────────────┬─┬─────────────────────────────────────┐
-│  Chat pane       │ │  Main pane                          │
-│                  │▒│                                     │
-│  Session list    │▒│  Home: phase cycle cards            │
-│  — or —          │▒│  — or —                             │
-│  Active session  │▒│  Ideate section                     │
-│                  │▒│  — or —                             │
-│                  │▒│  Build preview                      │
-└──────────────────┴─┴─────────────────────────────────────┘
-```
+A studio opens in Powerhouse Connect with two panes:
 
-- **Chat pane** (left): lists all chat sessions in the drive, and renders the
-  active session's message history when one is selected.
-- **Resize handle** (narrow vertical strip): drag to adjust pane width.
-  Double-click to reset to default.
-- **Main pane** (right): shows the home phase-cycle overview by default.
-  Opens to Ideate or Build when you click those phase cards.
+- **Chat pane** (left): lists chat sessions, and renders the active session's message history when one is open.
+- **Resize handle** (vertical strip): drag to adjust pane width.
+- **Main pane** (right): shows the four phase-cycle cards by default, and opens a phase section, a document, or the build preview when you navigate.
+- **Toolbar** (far left): **Home**, **Open Account** (Renown), and **Settings**.
+- **Auto-follow agent** (top of the main pane, on by default): when checked, the main pane follows the agent and opens documents as the agent creates them.
+
+A fresh studio: empty session list on the left, the four phase cards on the right.
 
 ---
 
 ## Creating a session
 
-1. Open **vetra.io** and log in.
-2. In the chat pane, click **New** (top-right) or **New session** (empty
-   state).
-3. A new chat session document is created in the drive and opened
-   immediately.
-4. Type your first message to the agent and press Enter (or click the send
-   button).
+1. In the chat pane, click **New** (top-right) or **New session** (empty state).
+2. A new chat session document is created in the drive and opened immediately.
+3. Type your first message and press Enter (or click the send button).
 
-Sessions persist across restarts — they are CRDT documents stored in the
-embedded reactor's PGlite database.
+Sessions persist across restarts. They are CRDT documents stored in the studio's reactor.
 
----
-
-## The phase cycle
-
-The right pane shows four phase cards when no sub-section is open:
-
-| Phase       | Status            | What happens there                             |
-| ----------- | ----------------- | ---------------------------------------------- |
-| **Ideate**  | active            | Problem-definition documents and feature lists |
-| **Specify** | inactive (coming) | Solution design                                |
-| **Build**   | active            | Live preview of the agent's in-progress work   |
-| **Deploy**  | inactive (coming) | Delivery / publish                             |
-
-Click **IDEATE** to browse product-identity cards, audiences and your product ideas 'Job to be done' framework. Click **BUILD** to open the live preview pane.
+Sessions are scoped to your identity: signing in with a different identity shows a different session list.
 
 ---
 
 ## Talking to the agent
 
-The chat session is the primary way to direct the agent. Type a message; the
-agent responds and runs tools. Tool calls (like `spec-update`,
-`spec-generate`, `reactor-project-start`) appear inline in the chat history as
-expandable cards showing their status (Running / Completed / Error).
+The chat session is how you direct the agent. Type a message; the agent responds and runs tools. Each tool call appears inline as an expandable card showing its name, status (**Running** / **Completed** / **Error**), and a result preview. While the agent works, the send button becomes **Stop**.
+
+Tools you will see include:
+
+- `skill` / `skill_read` — the agent loads a named skill (such as `document-modeling`, `drive-app-creation`) and reads its reference docs.
+- `spec-create`, `spec-generate`, `spec-update`, `spec-list` — create and edit specification documents.
+- `reactor-project-init`, `reactor-project-start`, `reactor-project-check`, `reactor-project-ls` — scaffold and run the project that hosts the preview.
+- `spec-preview-list`, `spec-preview-show` — surface a document in the BUILD pane.
+- `mastra_workspace_`* — read, write, grep, and run commands in the agent's workspace.
+
+A status bar at the bottom of the chat shows the session state: **Active**, start time, message count, token count, and tool-call count.
 
 The agent can:
 
-- Create and iterate on **spec documents** (problem/audience/brand sheets,
-  feature lists, solution designs).
-- Scaffold a **reactor project** — a separate dev-mode process that hosts a
-  live editor preview.
-- Generate code (document models, editors, processors) directly into that
-  project.
-- Create a **preview document** inside the project and surface it in the
-  BUILD pane.
+- Create and iterate on **spec documents** (problem and audience sheets, feature lists, document models).
+- Scaffold a **reactor project** that hosts a live editor preview.
+- Generate code (document models, editors, processors) into that project.
+- Surface a **preview document** in the BUILD pane.
+
+---
+
+## The phase cycle
+
+The main pane shows four phase cards when no section is open. Click a card to open its section, or navigate with the breadcrumb (`Home › <Phase>`).
+
+
+| Phase                                | What happens there                                            |
+| ------------------------------------ | ------------------------------------------------------------- |
+| **Ideate** — Problem Definition      | Problem and audience documents, feature lists                 |
+| **Specify** — Solution Design        | Document models and solution-design specs, grouped by project |
+| **Build** — Implementation & Testing | Live preview of the agent's in-progress work                  |
+| **Deploy** — Delivery                | Publish the studio's services to Vetra Cloud                  |
+
+
+A card's availability depends on progress: BUILD shows a preview only after the agent scaffolds a project, and DEPLOY needs you to sign in with Renown.
+
+---
+
+## Ideate and Specify
+
+The Ideate and Specify sections hold the documents the agent writes. Specify groups them into **projects**: each project is a folder of specs and document models.
+
+Specify groups documents into projects. Each project is a folder of specs and document models.
+
+With **Auto-follow agent** on, a document opens in the main pane as the agent creates it. Opening a document **pauses the agent** — the control bar reads "paused — close the document to resume." Close the document to let the agent continue.
+
+A document editor has Undo / Redo / Download, a revision-history view, an **Open link in Switchboard** action, and a **Close document** button. For a document model you edit its type, description, and state schema directly.
+
+A document-model editor. Opening a document pauses the agent until you close it.
 
 ---
 
 ## The BUILD preview
 
-The BUILD pane hosts an iframe that deep-links into the reactor project the
-agent spawned for the session. Here is the sequence:
+The BUILD pane hosts an iframe that deep-links into the reactor project the agent spawned for the session. The sequence:
 
-1. The agent calls `reactor-project-start` — visible as a tool card in the
-   chat.
-2. The BUILD pane detects that the project is stopped and boots it
-   automatically (or waits for the agent's tool call to do it).
-3. A "Starting…" status is shown while the dev server warms up (typically
-   10–30 seconds).
-4. Once ready the agent calls `spec-preview-show` with a project + document
-   reference. The iframe navigates to that document's editor inside the
-   project's Connect.
-5. From this point, any code the agent generates is picked up by Vite HMR —
-   the iframe updates live without a full reload.
+1. The agent calls `reactor-project-init` and `reactor-project-start` — visible as tool cards in the chat.
+2. The dev server warms up (typically 10–30 seconds) and the project reports `[ready]`.
+3. The agent calls `spec-preview-show` with a project, drive, and app reference. The iframe loads that app inside the project's Connect, and a `<project> · running` chip appears in the breadcrumb.
+4. Any code the agent generates after that is picked up by Vite HMR — the iframe updates without a full reload.
 
-You can navigate back to the phase-cycle home with the breadcrumb at the top
-of the BUILD pane.
+Until the agent calls `spec-preview-show`, the pane reads **"No preview yet."** A running reactor project is not enough on its own; the agent has to surface a preview document.
+
+The BUILD pane renders the generated app live. Here the agent built a hotel breakfast-order form.
+
+**WARNING:**
+The BUILD preview runs the editors and apps in a local dev reactor. **Processors do not run here** — they execute server-side in Switchboard once the studio is deployed. Preview drives are also ephemeral and reset between sessions. So an action wired through a processor (for example, syncing a guest order to a staff board) only takes effect after you deploy.
+
+
+Use the breadcrumb at the top of the pane to navigate back to the phase-cycle home.
+
+---
+
+## Deploy
+
+The Deploy section publishes the studio's services to **Vetra Cloud**. Sign in with **Renown** to see and manage your environments. Each environment runs **Powerhouse Connect** at `connect.<slug>.vetra.io` and **Switchboard** (the GraphQL API) at `switchboard.<slug>.vetra.io/graphql`, and gets a public subdomain.
+
+The environment view shows a deployment name, a **Changes pending / Ready** status, and a per-service list with enable toggles and copyable URLs. **Open in Vetra Cloud** opens the full environment dashboard.
+
+For environment management, services, sizing, and versions, see [Vetra Cloud](../docs/docs/01-VetraCloud.md).
+
+---
+
+## Authorizing the agent
+
+To let the agent sign actions with your identity, click **Authorize agent** (or **Connect with Renown** in Deploy). Renown shows a **Confirm Authorization** screen: it authorizes the studio's subdomain to sign actions on your behalf. Once confirmed, the control bar shows **Authorized via Renown** with your address and a **Disconnect** button.
+
+Authorization is independent of chat sessions, and it switches the studio's active identity from a generated `did:key` to your wallet identity (`did:pkh`).
 
 ---
 
 ## Session URLs
 
-The currently selected session id is kept in the `?session=<id>` query
-parameter. This means:
+The selected session id is kept in the `?session=<id>` query parameter:
 
 - Sharing the URL opens the same session in another tab or browser.
 - Browser back/forward navigates between sessions.
-- Reloading the page restores the selection without losing your place.
+- Reloading restores the selection without losing your place.
+
+When the agent opens a document, the URL also carries a `doc=<id>` parameter.
 
 ---
 
 ## Glossary
 
-**Chat session** — a CRDT document that stores message history, agent tool
-calls, and tool results for one conversation thread.
+**Chat session** — a CRDT document that stores message history, agent tool calls, and tool results for one conversation thread.
 
-**Phase cycle** — the four-card home view (Ideate / Specify / Build / Deploy).
-Each card represents a stage of the product-development workflow.
+**Phase cycle** — the four-card home view (Ideate / Specify / Build / Deploy). Each card is a stage of the product-development workflow.
 
-**Reactor project** — a `ph vetra` dev-mode child process the agent spawns to
-host a live editor preview. One per active build in a chat session.
+**Project** — a folder of related specs and document models, shown in the Specify section.
 
-**Preview drive** — a hardcoded-slug drive inside a reactor project, used for
-ephemeral preview document instances.
+**Reactor project** — a dev-mode process the agent spawns to host a live editor preview. One per active build in a chat session.
+
+**Preview drive** — a drive inside a reactor project, used for ephemeral preview document instances.
+
+**Renown** — the identity layer that lets the studio sign actions on behalf of your wallet without exposing your private key.
 
 ---
 
-<details>
-<summary>Running Vetra Studio locally (advanced)</summary>
+Running Vetra Studio locally (advanced)
 
 From the `vetra-cli` directory:
 
@@ -165,7 +205,7 @@ pnpm start -i        # production-mode binaries
 ```
 
 Both commands pass `--workdir ../../vetra-test` by default. Once running,
-open **http://localhost:27370** in a browser. The terminal prints the URL when
+open **[http://localhost:27370](http://localhost:27370)** in a browser. The terminal prints the URL when
 the embedded Connect server is ready.
 
 > If you see the generic Powerhouse drive explorer instead of Vetra Studio,
@@ -175,7 +215,7 @@ the embedded Connect server is ready.
 ### Rebuilding after editor changes
 
 Vetra Studio is a static SPA bundled at build time. After editing
-`vetra-app/editors/*` or `vetra-app/powerhouse.manifest.json` you must run
+`vetra-app/editors/`* or `vetra-app/powerhouse.manifest.json` you must run
 **two** commands and restart:
 
 ```bash
@@ -197,6 +237,7 @@ will fall back to the generic folder view instead of Vetra Studio.
 
 ### Service ports (default)
 
+
 | Service                    | Port   | Purpose                            |
 | -------------------------- | ------ | ---------------------------------- |
 | Vetra Studio (Connect)     | 27370  | Browser entry point                |
@@ -204,6 +245,7 @@ will fall back to the generic folder view instead of Vetra Studio.
 | Preview server (local API) | 5180   | Preview state + SSE                |
 | Embedded reverse proxy     | 8090   | Single public port (deployed mode) |
 | Reactor-project Connect    | varies | Per-session BUILD preview          |
+
 
 ### Diagnostics
 
@@ -225,8 +267,6 @@ curl -sS -X POST http://localhost:59220/graphql \
   -H "content-type: application/json" \
   -d '{"query":"{ __schema { types { name } } }"}' | grep -i drive
 ```
-
-</details>
 
 ---
 
@@ -332,7 +372,7 @@ Once you select a package, a **Pending change** banner appears at the bottom. Cl
 
 Once your environment is running you can point your local `ph` CLI at it, or share the Connect URL with collaborators so they can start working with your document models right away.
 
-To publish your own packages to the registry, see the [Publishing Packages](../docs/02-PublishingPackages/index.md) guide.
+To publish your own packages to the registry, see the [Publishing Packages](/academy/Build/Launch/PublishYourProject) guide.
 
 ---
 
@@ -351,7 +391,7 @@ Vetra Studio is the builder environment where you create, manage, and collaborat
 
 **INFO:**
 What is a Specification Document?
-A **specification document** is a configuration file that defines how a specific module in your package should behave. Think of it as a blueprint — it describes the structure, rules, and relationships that Powerhouse uses to generate the actual code for that module. These specification documents unlock **Specification Driven Design & Development**—enabling you to communicate your solution and intent through a structured framework designed for AI collaboration. Specs serve as a shared language that enables precise, iterative edits—turning messy intent into clean execution, and turning business needs into maintainable functionality.
+A **specification document** is a configuration file that defines how a specific module in your package should behave. Think of it as a blueprint: it describes the structure, rules, and relationships that Powerhouse uses to generate the actual code for that module. Specification documents make **Specification-Driven Design & Development** possible: you communicate your solution and intent through a structured framework designed for AI collaboration. Specs are a shared language that enables precise, iterative edits.
 
 
 As Vetra Studio matures, each of these specification documents will offer an interface by which you as a builder get more control over the modules that make up your package.
@@ -479,6 +519,405 @@ The preview drive allows you to safely test changes before they affect the share
 ---
 
 
+## Prerequisites
+
+> Source: https://academy.vetra.io/academy/GetStarted/Prerequisites
+
+This page sets up your machine to build your first Document Model. It covers Node.js 24, VS Code, Git, and the Powerhouse CLI.
+
+**INFO:**
+If you've already set up **Git, Node.js 24, and a package manager (pnpm or npm)**, your most important step is to install the **Powerhouse CLI** with the command: `pnpm install -g ph-cmd` or `npm install -g ph-cmd`. A global install is recommended if you want to use the command from any directory as a power user. The Powerhouse CLI is used to create, build, and run your Document Models and gives you direct access to a series of Powerhouse Builder Tools. Move to the end of this page to [verify your installation.](#verify-installation)
+
+
+---
+
+## Overview
+
+Before building your Document Model, install some software on your machine. You need three tools:
+
+- Node.js 24, which runs your code.
+- Visual Studio Code (VS Code), where you write your code.
+- Git, which manages your code.
+
+Follow the steps below based on your computer's operating system.
+
+### Windows Users: Consider Using WSL
+
+If you're on Windows, we recommend using **Windows Subsystem for Linux (WSL)** for the best development experience. WSL lets you run a full Linux environment directly on Windows without the overhead of a virtual machine. This gives you access to Linux command-line tools and utilities, which are often preferred for modern web development workflows.
+
+**To install WSL:**
+
+1. Open PowerShell as Administrator (right-click and select "Run as administrator")
+2. Run the following command:
+
+```powershell
+wsl --install
+```
+
+3. Restart your computer when prompted
+4. After restart, a terminal will open asking you to create a Linux username and password
+
+Once WSL is set up, you can follow the **Linux (Ubuntu/Debian)** instructions below for installing Node.js, Git, and other tools. Your Linux environment will be accessible through the Windows Terminal or by typing `wsl` in PowerShell.
+
+**TIP:**
+Using WSL provides a consistent development experience that matches most production environments and online tutorials. You can still use VS Code on Windows — it integrates with WSL through the [Remote - WSL extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-wsl).
+
+
+For more details, see the official [WSL installation guide](https://learn.microsoft.com/en-us/windows/wsl/install).
+
+---
+
+### Installing Node.js 24
+
+Node.js 24 runs your application. Install it with the steps below.
+
+#### For Windows:
+
+1. **Set up PowerShell for running commands:**
+   - Press the Windows key
+   - Type "PowerShell"
+   - Right-click on "Windows PowerShell" and select "Run as administrator"
+   - In the PowerShell window, type this command and press Enter:
+
+   ```powershell
+   Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
+   ```
+
+   - Type 'A' when prompted to confirm
+   - You can now close this window and open PowerShell normally for the remaining steps
+
+2. **Install Node.js 24:**
+   - Visit the [Node.js official website](https://nodejs.org/)
+   - Click the big green button that says "LTS" (this means Long Term Support - it's the most stable version)
+   - Once the installer downloads, double-click it to start installation
+   - Click "Next" through the installation wizard, leaving all settings at their defaults
+
+3. **Install a package manager (pnpm or npm):**
+   - Open PowerShell (no need for admin mode)
+   - For pnpm (recommended), type this command and press Enter:
+
+   ```powershell
+   npm install -g pnpm
+   ```
+
+   - Note: Node.js comes with npm by default, so npm is already available after installing Node.js
+
+4. **Verify Installation:**
+   - Open PowerShell (no need for admin mode)
+   - Type these commands one at a time and press Enter after each:
+
+   ```powershell
+   node --version
+   pnpm --version
+   # or
+   npm --version
+   ```
+
+   - Version numbers should appear after each command (e.g., v24.x.x for Node.js). If they do, Node.js and your package manager are installed.
+
+> **Note**: If Node.js commands don't work in VS Code, restart VS Code to refresh environment variables.
+
+#### For macOS:
+
+1. **Install Homebrew:**
+   - Open Terminal (press Command + Space and type "Terminal")
+   - Copy and paste this command into Terminal and press Enter:
+
+   ```bash
+   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+   ```
+
+   - Follow any additional instructions that appear
+
+2. **Install Node.js 24:**
+   - In the same Terminal window, type this command and press Enter:
+
+   ```bash
+   brew install node@24
+   ```
+
+   - Then, optionally install pnpm (npm comes with Node.js):
+
+   ```bash
+   brew install pnpm
+   ```
+
+3. **Verify Installation:**
+   - In Terminal, type these commands one at a time and press Enter after each:
+
+   ```bash
+   node --version
+   pnpm --version
+   # or
+   npm --version
+   ```
+
+   - If version numbers appear, Node.js and your package manager are installed.
+
+#### For Linux (Ubuntu/Debian):
+
+1. **Open Terminal:**
+   - Press Ctrl + Alt + T on your keyboard, or
+   - Click the Activities button and type "Terminal"
+
+2. **Update Package List:**
+
+   ```bash
+   sudo apt update
+   ```
+
+3. **Install Node.js 24 and optionally pnpm:**
+
+   ```bash
+   sudo apt install nodejs
+   # Optionally install pnpm (npm comes with Node.js)
+   sudo apt install pnpm
+   ```
+
+4. **Verify Installation:**
+   - Type these commands one at a time and press Enter after each:
+
+   ```bash
+   node --version
+   pnpm --version
+   # or
+   npm --version
+   ```
+
+   - If version numbers appear, your installation is complete.
+
+### Installing Visual Studio Code
+
+VS Code is the editor we'll use to write our code. Here's how to install it:
+
+#### For Windows:
+
+1. Visit the [Visual Studio Code website](https://code.visualstudio.com/)
+2. Click the blue "Download for Windows" button
+3. Once the installer downloads, double-click it
+4. Accept the license agreement and click "Next"
+5. Leave the default installation location and click "Next"
+6. In the Select Additional Tasks window, make sure "Add to PATH" is checked
+7. Click "Next" and then "Install"
+8. When installation is complete, click "Finish"
+
+#### For macOS:
+
+1. Visit the [Visual Studio Code website](https://code.visualstudio.com/)
+2. Click the blue "Download for Mac" button
+3. Once the .zip file downloads, double-click it to extract
+4. Drag Visual Studio Code.app to the Applications folder
+5. Double-click the app to launch it
+6. To make VS Code available in your terminal:
+   - Open VS Code
+   - Press Command + Shift + P
+   - Type "shell command" and select "Shell Command: Install 'code' command in PATH"
+
+#### For Linux (Ubuntu/Debian):
+
+1. Open Terminal (Ctrl + Alt + T)
+2. First, update the packages list:
+   ```bash
+   sudo apt update
+   ```
+3. Install the dependencies needed to add Microsoft's repository:
+   ```bash
+   sudo apt install software-properties-common apt-transport-https wget
+   ```
+4. Import Microsoft's GPG key:
+   ```bash
+   wget -q https://packages.microsoft.com/keys/microsoft.asc -O- | sudo apt-key add -
+   ```
+5. Add the VS Code repository:
+   ```bash
+   sudo add-apt-repository "deb [arch=amd64] https://packages.microsoft.com/repos/vscode stable main"
+   ```
+6. Install VS Code:
+   ```bash
+   sudo apt install code
+   ```
+7. Once installed, you can launch VS Code by:
+   - Typing `code` in the terminal, or
+   - Finding it in your Applications menu
+
+### Install Git
+
+#### For Windows
+
+1. Open PowerShell (press Windows key, type "PowerShell", and press Enter)
+2. Visit the [Git website](https://git-scm.com/)
+3. Download the latest version for Windows
+4. Run the installer and use the recommended settings
+5. Verify installation by opening PowerShell:
+   ```powershell
+   git --version
+   ```
+
+#### For macOS
+
+1. Install using Homebrew:
+   ```bash
+   brew install git
+   ```
+2. Verify installation:
+   ```bash
+   git --version
+   ```
+
+#### For Linux (Ubuntu/Debian)
+
+1. Update package list:
+   ```bash
+   sudo apt update
+   ```
+2. Install Git:
+   ```bash
+   sudo apt install git
+   ```
+3. Verify installation:
+   ```bash
+   git --version
+   ```
+
+### Configure Git (All Systems)
+
+After installation, set up your identity:
+
+```bash
+git config --global user.name "Your Name"
+git config --global user.email "your.email@example.com"
+```
+
+### Install the Powerhouse CLI
+
+The Powerhouse CLI (installed via the `ph-cmd` package) is a command-line interface tool. It provides the `ph` command, which is essential for managing Powerhouse projects. You can get access to the Powerhouse Ecosystem tools by installing them globally using:
+
+```bash
+pnpm install -g ph-cmd
+```
+
+Or if you're using npm:
+
+```bash
+npm install -g ph-cmd
+```
+
+Key commands include:
+
+- `ph connect` for running the Connect application locally
+- `ph switchboard` or `ph reactor` for starting the API service
+- `ph init` to start a new project and build a document model
+- `ph help` to get an overview of all the available commands
+
+Use it to create, build, and run Document Models.
+
+<details>
+<summary> How to use different branches? </summary>
+
+When installing or using the Powerhouse CLI commands you can use the dev & staging branches. These branches contain more experimental features than the latest stable release the PH CLI uses by default. They can be used to get access to a bug fix or features under development.
+
+| Command                            | Description                                       |
+| ---------------------------------- | ------------------------------------------------- |
+| **pnpm install -g ph-cmd**         | Install latest stable version                     |
+| **pnpm install -g ph-cmd@dev**     | Install development version                       |
+| **pnpm install -g ph-cmd@staging** | Install staging version                           |
+| **ph init**                        | Use latest stable version of the boilerplate      |
+| **ph init --dev**                  | Use development version of the boilerplate        |
+| **ph init --staging**              | Use staging version of the boilerplate            |
+| **ph use latest**                  | Switch all dependencies to latest stable versions |
+| **ph use dev**                     | Switch all dependencies to development versions   |
+| **ph use staging**                 | Switch all dependencies to staging versions       |
+
+Please be aware that these versions can contain bugs and experimental features that aren't fully tested.
+
+</details>
+
+<details>
+<summary>Managing ph-cmd Versions and Package Information</summary>
+
+### Switching Between Versions
+
+To change to a different version of `ph-cmd`, reinstall it globally with your package manager:
+
+```bash
+# Install latest version with a specific tag
+npm install -g ph-cmd@staging
+pnpm install -g ph-cmd@dev
+
+# Install a specific version number
+npm install -g ph-cmd@1.2.3-staging.10
+pnpm install -g ph-cmd@6.0.0-dev.33
+```
+
+**Important:** Always use the same package manager you used for the original global install to avoid conflicting installations.
+
+### Checking Your Installation
+
+Use the `which` command to see where your global install is located:
+
+```bash
+which ph
+# Example output: /Users/username/Library/pnpm/ph
+```
+
+This shows which package manager was used (in this case, pnpm).
+
+### Viewing Available Versions
+
+Use `npm view` to see all available versions and tags:
+
+```bash
+npm view ph-cmd
+```
+
+**Example dist-tags output:**
+
+```
+dist-tags:
+latest: 5.3.0
+dev: 6.0.0-dev.33
+staging: 5.3.0-staging.24
+test: 2.5.0-test.0
+```
+
+### Best Practices
+
+- Use specific version numbers instead of tags when you need exact version consistency
+- Check `npm view ph-cmd` before switching to see the latest available versions
+- Remember that without specifying a version, `@latest` is installed by default
+
+</details>
+
+### Verify Installation
+
+Open your terminal (command prompt) and run the following commands to verify your setup:
+
+```bash
+node --version
+pnpm --version
+git --version
+ph --version
+```
+
+You should see version numbers displayed for all commands, similar to the example output below (your versions might be higher). The output for `ph --version` includes its version and may also show additional messages if further setup like `ph setup-globals` is needed.
+You're now ready to start building your first Document Model!
+
+```bash
+% node --version
+v24.13.0
+% pnpm --version
+10.10.0
+% git --version
+git version 2.39.3
+% ph --version
+PH CMD version:  0.43.18
+-------------------------------------
+PH CLI is not available, please run `ph setup-globals` to generate the default global project
+```
+
+---
+
+
 ## Create a package with Vetra
 
 > Source: https://academy.vetra.io/academy/GetStarted/CreateAPackageWithVetra
@@ -522,7 +961,7 @@ Please start with the [**Get Started**](/) Chapter or [**Document Model Creation
 
 ### 1.1. Install Powerhouse CLI
 
-Ensure you have the Powerhouse Command Line Interface (`ph-cmd`) installed. This tool is crucial for managing your Powerhouse projects.
+Ensure you have the Powerhouse Command Line Interface (`ph-cmd`) installed. You use it to manage your Powerhouse projects.
 
 ```bash
 pnpm install -g ph-cmd
@@ -632,7 +1071,7 @@ This command typically opens Connect in your browser at `http://localhost:3000/`
 
 ### 1.4. Launch Claude with Reactor-MCP
 
-Vetra Studio integrates deeply with Claude through MCP (Model Context Protocol). This is where AI comes into the mix and you get the chance to have greater control and direction over what your LLM is coding for you.
+Vetra Studio connects to Claude through MCP (Model Context Protocol). This gives you greater control and direction over what the LLM codes for you.
 
 **INFO:**
 Vetra embraces **Specification Driven Design & Development** —an approach where your structured specification documents become the shared language between you and AI agents. You communicate intent through precise specs that are machine-readable and executable.
@@ -703,8 +1142,7 @@ Claude will automatically recognize the necessary files and MCP tools.
 claude
 ```
 
-Since you're interacting with an LLM it has a high capacity for interpreting your intentions.
-Similar natural language commands will work as well.
+Claude also understands natural language, so similar phrasings work as well.
 
 ```bash
 connect to the reactor mcp
@@ -846,7 +1284,7 @@ Reducers are pure functions that implement the state transition logic for each o
 
 ### 3.2. Write unit tests for reducers
 
-It's crucial to test your reducer logic. Write unit tests in the `document-models/YourModelName/src/reducers/tests/` directory.
+Test your reducer logic. Write unit tests in the `document-models/YourModelName/src/reducers/tests/` directory.
 
 - Verify that each operation correctly transforms the document state.
 - Use the auto-generated action creators from the `gen/` folder to create operation actions for your tests.
@@ -1178,7 +1616,7 @@ ph install @your-org-ph/your-package-name
 
 This command makes the document models and editors defined in your package available within that Powerhouse instance.
 
-Congratulations! You've successfully created, packaged, and published a Powerhouse Document Model. This enables modularity, reusability, and collaboration within the Powerhouse ecosystem.
+Your package is now installable in any Powerhouse environment with `ph install`.
 
 ---
 
@@ -1220,7 +1658,7 @@ Key commands include:
 - `ph init` to start a new project and build a Document Model
 - `ph help` to get an overview of all the available commands
 
-This tool will be fundamental on your journey when creating, building, and running Document Models
+Use it to create, build, and run Document Models
 
 <details>
 <summary> How to make use of different branches? </summary>
@@ -1387,7 +1825,7 @@ Both commands support multiple package managers (npm, yarn, pnpm, and bun) and w
 
 ---
 
-The Document Model Boilerplate is a foundational template that is used for code generation when scaffolding your editors and models. It ensures compatibility with host applications like Connect and Switchboard for seamless Document Model and editor integration.
+The Document Model Boilerplate is a foundational template that is used for code generation when scaffolding your editors and models. It ensures compatibility with host applications like Connect and Switchboard for Document Model and editor integration.
 
 After installing `ph-cmd`, you will run `ph init` to initialize a project directory and structure. This initialization command makes use of the boilerplate.
 
@@ -1439,7 +1877,7 @@ Handles document organization and storage management, but can also be customized
 
 ---
 
-Powerhouse provides several code generation tools to streamline development:
+Powerhouse provides several code generation tools:
 
     ### Document model scaffolding
     Generates the basic structure for new Document Models with the command `ph init` based on the boilerplate.
@@ -5585,7 +6023,7 @@ describe("Document Migration", () => {
 - [PHDocument Architecture](/academy/Reference/Architecture/PowerhouseArchitecture)
 - [Document Model Creation](/academy/Build/DocumentModelCreation/WhatIsADocumentModel)
 - [Document Model Versioning](/academy/Build/DocumentModelCreation/DocumentModelVersioning) - For evolving document schemas over time
-- [React Hooks](/academy/APIReferences/ReactHooks)
+- [React Hooks](/academy/Reference/EditorsUI/ReactHooks)
 
 ---
 
@@ -13896,7 +14334,7 @@ A key feature of Connect is the **Operations History**. Every change to a docume
   </figcaption>
 </figure>
 
-Learn more about the [Operations History](../docs/Build/BuildingUserExperiences/DocumentTools/OperationHistory) and other document tools you get for free.
+Learn more about the [Operations History](/academy/Build/BuildingUserExperiences/DocumentTools/OperationHistory) and other document tools you get for free.
 
 ## Step 6: Enable operation signing and verification through Renown
 
@@ -16130,7 +16568,7 @@ Now that you understand the concepts behind the state schema, let's put it into 
 
 ### Prerequisites
 
-- You have a Powerhouse project set up. If not, please follow the [Create a new Powerhouse Project](../docs/../GetStarted/CreateNewPowerhouseProject) tutorial.
+- You have a Powerhouse project set up. If not, please follow the [Create a new Powerhouse Project](/academy/Build/ManualTodoTutorial/CreateNewPowerhouseProject) tutorial.
 - Vetra Studio is running. If not, navigate to your project directory in the terminal and run `ph vetra --watch`.
 
 ### Steps
@@ -16184,7 +16622,7 @@ By completing these steps, you have successfully specified the data structure fo
 
 ### Prerequisites
 
-- You have a Powerhouse project set up. If not, please follow the [Create a new Powerhouse Project](../docs/../GetStarted/CreateNewPowerhouseProject) tutorial.
+- You have a Powerhouse project set up. If not, please follow the [Create a new Powerhouse Project](/academy/Build/ManualTodoTutorial/CreateNewPowerhouseProject) tutorial.
 - Connect is running. If not, navigate to your project directory in the terminal and run `ph connect`.
 
 ### Steps
@@ -26082,7 +26520,7 @@ operator-supplied `PH_CONNECT_CONFIG_JSON` env var to the dist
 override the baked file; `null`/omitted keep it; `connect.app.basePath` is
 ignored). This is purely an operator-time convenience — the SPA itself never
 reads env vars at runtime — and is documented in the
-[Docker Deployment guide](../docs/docs/05-DockerDeployment).
+[Docker Deployment guide](/academy/Build/Launch/DockerDeployment).
 
 ## Variables that stay as env vars
 
@@ -31845,8 +32283,8 @@ The [Powerhouse Recipes](https://github.com/powerhouse-inc/recipes) repository c
 
 > See the [recipes repository](https://github.com/powerhouse-inc/recipes) for full source code, setup instructions, and prerequisites.
 
-{/_ AUTO-GENERATED-RECIPE-DOCS-START _/}
-{/_ This content is automatically generated by scripts/generate-recipe-docs.ts. Do not edit directly. _/}
+{/* AUTO-GENERATED-RECIPE-DOCS-START */}
+{/* This content is automatically generated by scripts/generate-recipe-docs.ts. Do not edit directly. */}
 
 <details id="recipe-audit-trail">
 <summary>Audit Trail</summary>

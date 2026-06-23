@@ -5,7 +5,7 @@ Review one academy documentation section for drift against the monorepo source.
 **Usage:** `/doc-review <section-id>`
 
 **Section IDs** (from `test/ph-lora/ph-lora-mapping.json`):
-`get-started` · `mastery-builder-environment` · `mastery-document-model-creation` · `mastery-building-user-experiences` · `mastery-work-with-data` · `mastery-launch` · `example-usecases` · `api-references-cli` · `api-references-react-hooks` · `api-references-reactor-client` · `api-references-relational-database` · `api-references-renown-sdk` · `api-references-migration-guides` · `component-library` · `architecture`
+`get-started` · `learn` · `build-manual-todo-tutorial` · `build-document-model-creation` · `build-user-experiences` · `build-work-with-data` · `build-launch` · `build-example-usecases` · `reference-architecture` · `reference-reactor` · `reference-document-models` · `reference-graphql-data` · `reference-processors` · `reference-editors-ui` · `reference-authorization` · `reference-cli` · `lookup`
 
 ---
 

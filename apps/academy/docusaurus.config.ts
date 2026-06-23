@@ -59,13 +59,7 @@ const config: Config = {
         theme: {
           customCss: "./src/css/custom.css",
         },
-        blog: {
-          showReadingTime: false,
-          editUrl: "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev",
-          onInlineAuthors: "ignore",
-          showLastUpdateTime: false,
-          showLastUpdateAuthor: false,
-        },
+        blog: false,
         sitemap: {
           changefreq: "weekly",
           priority: 0.5,
@@ -105,7 +99,7 @@ const config: Config = {
             "BuildToDoListEditor",
           ].map((slug) => ({
             from: `/academy/GetStarted/${slug}`,
-            to: `/academy/MasteryTrack/ManualTodoTutorial/${slug}`,
+            to: `/academy/Build/ManualTodoTutorial/${slug}`,
           })),
         ],
         // Phase-2 sidebar cleanup: Reference grouping + Example use-cases folded into Build.
@@ -130,11 +124,15 @@ const config: Config = {
             return ["/academy/Glossary"];
           if (existingPath === "/academy/Reference/LLMDocs")
             return ["/academy/LLMDocs"];
-          if (existingPath.startsWith("/academy/MasteryTrack/ExampleUsecases/"))
+          if (existingPath.startsWith("/academy/Build/ExampleUsecases/"))
             return [
               existingPath.replace(
-                "/academy/MasteryTrack/ExampleUsecases/",
+                "/academy/Build/ExampleUsecases/",
                 "/academy/ExampleUsecases/",
+              ),
+              existingPath.replace(
+                "/academy/Build/ExampleUsecases/",
+                "/academy/MasteryTrack/ExampleUsecases/",
               ),
             ];
           return undefined;
@@ -182,11 +180,11 @@ const config: Config = {
           items: [
             {
               label: "Powerhouse Architecture",
-              to: "academy/Architecture/PowerhouseArchitecture",
+              to: "academy/Reference/Architecture/PowerhouseArchitecture",
             },
             {
               label: "Cookbook",
-              to: "academy/Cookbook",
+              to: "academy/Lookup/Cookbook",
             },
           ],
         },

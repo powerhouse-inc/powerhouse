@@ -1,3 +1,43 @@
+## 6.2.0-dev.29 (2026-06-23)
+
+This was a version bump only for @powerhousedao/opentelemetry-instrumentation-reactor to align it with other projects, there were no code changes.
+
+## 6.2.0-dev.28 (2026-06-22)
+
+This was a version bump only for @powerhousedao/opentelemetry-instrumentation-reactor to align it with other projects, there were no code changes.
+
+## 6.2.0-dev.27 (2026-06-22)
+
+This was a version bump only for @powerhousedao/opentelemetry-instrumentation-reactor to align it with other projects, there were no code changes.
+
+## 6.2.0-dev.26 (2026-06-21)
+
+This was a version bump only for @powerhousedao/opentelemetry-instrumentation-reactor to align it with other projects, there were no code changes.
+
+## 6.2.0-dev.25 (2026-06-20)
+
+### 🚀 Features
+
+- doc-capture skill for ph-lora( ([446d854b4](https://github.com/powerhouse-inc/powerhouse/commit/446d854b4))
+
+### 🩹 Fixes
+
+- academy agents ([4630e22d9](https://github.com/powerhouse-inc/powerhouse/commit/4630e22d9))
+
+### ❤️ Thank You
+
+- CallmeT-ty @CallmeT-ty
+
+## 6.2.0-dev.24 (2026-06-19)
+
+### 🩹 Fixes
+
+- release unblocker & clean up ([56090fd53](https://github.com/powerhouse-inc/powerhouse/commit/56090fd53))
+
+### ❤️ Thank You
+
+- CallmeT-ty @CallmeT-ty
+
 ## 6.2.0-dev.23 (2026-06-18)
 
 This was a version bump only for @powerhousedao/opentelemetry-instrumentation-reactor to align it with other projects, there were no code changes.
