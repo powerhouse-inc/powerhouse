@@ -1,8 +1,10 @@
 import { spawnAsync } from "@powerhousedao/shared/clis";
-import { format, type BuiltInParserName, type LiteralUnion } from "prettier";
+import { format as oxfmtFormat } from "oxfmt";
 import type { SourceFile } from "ts-morph";
 
-/** Formats the text of a ts-morph source file with prettier before writing the text to memory */
+const FORMAT_OPTIONS = { printWidth: 80 } as const;
+
+/** Formats the text of a ts-morph source file with oxfmt before writing the text to memory */
 export async function formatSourceFileWithPrettier(sourceFile: SourceFile) {
   sourceFile.organizeImports();
   const sourceText = sourceFile.getFullText();
@@ -10,15 +12,23 @@ export async function formatSourceFileWithPrettier(sourceFile: SourceFile) {
   sourceFile.replaceWithText(formattedText);
 }
 
+const EXT_MAP: Record<string, string> = {
+  typescript: ".ts",
+  json: ".json",
+  html: ".html",
+  css: ".css",
+  babel: ".js",
+  markdown: ".md",
+};
+
 export async function formatSafe(
   sourceText: string,
-  parser: LiteralUnion<BuiltInParserName, string> = "typescript",
-) {
+  parser = "typescript",
+): Promise<string> {
   try {
-    const formattedText = await format(sourceText, {
-      parser,
-    });
-    return formattedText;
+    const ext = EXT_MAP[parser] ?? ".ts";
+    const result = await oxfmtFormat(`file${ext}`, sourceText, FORMAT_OPTIONS);
+    return result.code;
   } catch (error) {
     console.error(error);
     return sourceText;

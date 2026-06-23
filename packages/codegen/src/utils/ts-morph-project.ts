@@ -6,7 +6,7 @@ export const DEFAULT_PROJECT_OPTIONS = {
   skipAddingFilesFromTsConfig: true,
   // don't load library files, we only need the files we're adding
   skipLoadingLibFiles: true,
-  // use formatting rules which match prettier
+  // formatting rules consistent with the project's formatter
   manipulationSettings: {
     useTrailingCommas: true,
     indentationText: IndentationText.TwoSpaces,
