@@ -85,6 +85,7 @@ export type PHConnectSentry = {
 
 export type PHConnectInstance = {
   namespace: string | null;
+  reactorWorker: boolean;
 };
 
 export type PHConnectRuntimeConfig = {

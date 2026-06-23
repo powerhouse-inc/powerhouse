@@ -46,6 +46,7 @@ function snapshot(state: ConnectionState): ConnectionStateSnapshot {
     pushBlocked: false,
     pushFailureCount: 0,
     receivingPages: false,
+    requiresAuth: false,
   };
 }
 

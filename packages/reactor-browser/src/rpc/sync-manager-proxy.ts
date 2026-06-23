@@ -58,6 +58,7 @@ const DEFAULT_SNAPSHOT: ConnectionStateSnapshot = {
   pushBlocked: false,
   pushFailureCount: 0,
   receivingPages: false,
+  requiresAuth: false,
 };
 
 // Inert mailbox: a proxy remote carries no live sync operations tab-side.
