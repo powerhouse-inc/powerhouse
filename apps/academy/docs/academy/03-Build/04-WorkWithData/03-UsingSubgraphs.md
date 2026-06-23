@@ -143,7 +143,7 @@ export const getResolvers = (subgraph: BaseSubgraph) => {
 };
 ```
 
-:::warning Enforce authorization in your resolvers
+:::warning[Enforce authorization in your resolvers]
 The resolver above returns data with no permission check. Custom subgraphs run
 with full access to the Reactor, so guarding reads, writes, and document
 creation is **your** responsibility. See

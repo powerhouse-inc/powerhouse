@@ -52,7 +52,7 @@ npm install -g ph-cmd
 ```
 
 :::info[Prerequisites]
-See the [Prerequisites](/academy/GetStarted/Prerequisites) guide for detailed installation instructions for Node.js 24, package managers (pnpm or npm), and Git if you haven't set them up yet.
+See the [Prerequisites](/academy/Build/GettingStartedBuilding/Prerequisites) guide for detailed installation instructions for Node.js 24, package managers (pnpm or npm), and Git if you haven't set them up yet.
 :::
 
 ### 1.2. Initialize your project environment

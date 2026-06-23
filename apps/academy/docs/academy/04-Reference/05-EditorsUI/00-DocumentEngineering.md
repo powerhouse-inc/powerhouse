@@ -131,7 +131,7 @@ Let's walk through the typical workflow for using a component from the document-
 
     This line instructs the build process to locate the `Form` and `BooleanField` components within the installed `@powerhousedao/document-engineering/scalars` package and make them available for use.
 
-    :::info Form Wrapper Required
+    :::info[Form Wrapper Required]
     Scalar components like `BooleanField` must be wrapped in a `Form` component from the same package. This provides built-in validation and form state management.
     :::
 

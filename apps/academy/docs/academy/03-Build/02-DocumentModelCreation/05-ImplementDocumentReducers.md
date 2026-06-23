@@ -43,7 +43,7 @@ Let's break down its components and principles:
     - **Always Return a New Object for Changes**: If the state changes, you must create and return a brand new object. If the state does not change, you return the original `currentState` object.
     - This is fundamental to Powerhouse's event sourcing architecture, enabling time travel, efficient change detection, and a clear audit trail.
 
-    :::tip Powerhouse uses Immer.js
+    :::tip[Powerhouse uses Immer.js]
     Powerhouse uses **Immer.js** under the hood, which means you can write code that _looks like_ it's mutating the state directly (e.g., `state.items.push(...)`), but Immer ensures it results in an immutable update. This gives you the best of both worlds: readable code and immutable state.
     :::
 

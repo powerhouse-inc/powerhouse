@@ -38,6 +38,12 @@
 }
 
 /* ---- 3-step agent path ---- */
+.stepsTitle {
+  font-size: 1.4rem;
+  text-align: center;
+  margin: 0 auto 1.25rem;
+}
+
 .steps {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
