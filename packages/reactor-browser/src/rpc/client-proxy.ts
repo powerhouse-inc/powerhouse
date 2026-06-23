@@ -1,6 +1,8 @@
 import type {
   DocumentChangeEvent,
+  IDocumentModelRegistry,
   IReactorClient,
+  PagingOptions,
   SearchFilter,
   ViewFilter,
 } from "@powerhousedao/reactor";
@@ -29,12 +31,16 @@ function isAbortSignal(value: unknown): value is AbortSignal {
 
 export type ReactorClientProxyOptions = {
   onReload?: (reason: string) => void;
+  // Document model modules carry reducer/editor functions that cannot cross the
+  // worker boundary, so module lookups resolve from this tab-local registry.
+  registry?: IDocumentModelRegistry;
 };
 
 export function createReactorClientProxy(
   transport: IRpcTransport,
   options: ReactorClientProxyOptions = {},
 ): IReactorClient {
+  const registry = options.registry;
   let counter = 0;
   const nextId = (): CorrelationId => `c${++counter}`;
   const pending = new Map<CorrelationId, Pending>();
@@ -164,6 +170,19 @@ export function createReactorClientProxy(
       }
       if (prop === "subscribe") {
         return subscribe;
+      }
+      if (registry) {
+        if (prop === "getDocumentModelModule") {
+          return (documentType: string) =>
+            Promise.resolve().then(() => registry.getModule(documentType));
+        }
+        if (prop === "getDocumentModelModules") {
+          return (_namespace?: string, paging?: PagingOptions) =>
+            Promise.resolve({
+              results: registry.getAllModules(),
+              options: paging ?? { cursor: "", limit: Number.MAX_SAFE_INTEGER },
+            });
+        }
       }
       return forwarder(prop);
     },

@@ -1,4 +1,7 @@
-import type { IReactorClient } from "@powerhousedao/reactor";
+import type {
+  IDocumentModelRegistry,
+  IReactorClient,
+} from "@powerhousedao/reactor";
 import { createReactorClientProxy } from "./client-proxy.js";
 import type { ReactorIdentity, VersionFingerprint } from "./protocol.js";
 import type { IRpcTransport } from "./transport.js";
@@ -13,8 +16,9 @@ export function connectReactorClient(
   transport: IRpcTransport,
   hello: ReactorHello,
   onReload?: (reason: string) => void,
+  registry?: IDocumentModelRegistry,
 ): IReactorClient {
-  const client = createReactorClientProxy(transport, { onReload });
+  const client = createReactorClientProxy(transport, { onReload, registry });
   transport.post({
     k: "hello",
     id: "hello",

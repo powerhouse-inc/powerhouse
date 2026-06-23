@@ -51,6 +51,10 @@ export function createWorkerReactorClientModule(
   );
   const transport = createPortTransport(worker.port);
 
+  const documentModelRegistry = new DocumentModelRegistry();
+  documentModelRegistry.registerModules(...args.documentModelModules);
+  documentModelRegistry.registerUpgradeManifests(...args.upgradeManifests);
+
   const gitSha = getGitSha();
   const clientProxy = connectReactorClient(
     transport,
@@ -71,14 +75,11 @@ export function createWorkerReactorClientModule(
       packages: args.packageSpecs,
     },
     args.onReload,
+    documentModelRegistry,
   );
 
   const busProxy = createReactorEventBusProxy(transport);
   const syncManagerProxy = new SyncManagerProxy(transport, busProxy);
-
-  const documentModelRegistry = new DocumentModelRegistry();
-  documentModelRegistry.registerModules(...args.documentModelModules);
-  documentModelRegistry.registerUpgradeManifests(...args.upgradeManifests);
 
   postReactorIdentity(transport, toReactorIdentity(args.renown.user));
   args.renown.on("user", (user) =>
