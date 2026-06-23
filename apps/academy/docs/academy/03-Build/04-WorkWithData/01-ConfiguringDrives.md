@@ -104,7 +104,7 @@ mutation CreateDrive($name: String!, $slug: String) {
 }
 ```
 
-- These are the example variables, feel free to change these as you like:
+- These are the example variables; change them as needed:
 
 ```json title="Example Variables"
 {

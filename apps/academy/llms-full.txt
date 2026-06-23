@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-06-23T19:02:31.023Z
+> Generated: 2026-06-23T19:07:05.102Z
 > Total Documents: 106
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -23275,7 +23275,7 @@ mutation CreateDrive($name: String!, $slug: String) {
 }
 ```
 
-- These are the example variables, feel free to change these as you like:
+- These are the example variables; change them as needed:
 
 ```json title="Example Variables"
 {
@@ -23369,7 +23369,7 @@ More specifically, GraphQL is used as:
 - The **schema definition language (SDL)** for defining our document models and thereby self-documenting the API to the data model. It allows developers to define the structure and relationships of data in a strongly-typed format.
 - As the **query language in subgraphs**, which allow different services to expose and query structured data dynamically.
 
-GraphQL SDL is the backbone of **Specification Driven Design & Development** at Powerhouse. By defining your document models in SDL, you create machine-readable specifications that serve as a shared language—bridging the gap between developers, designers, and AI agents for precise, iterative collaboration.
+GraphQL SDL is the backbone of **Specification Driven Design & Development** at Powerhouse. By defining your document models in SDL, you create machine-readable specifications that developers, designers, and AI agents all work from.
 
 ### Why GraphQL?
 
@@ -23592,8 +23592,8 @@ Click the (+) 'Create New Drive' to add a public drive. To add a new drive, you'
 
 ## Query the state of a document
 
-Now that we have our remote reactor and/or drive running, we can store our document model on it.
-Let's quickly create a new to-do list document in Connect Studio to test the process. Let's call it **'Powerhouse-onboarding-tasks'**.
+With the remote reactor and/or drive running, store a document model on it.
+Create a new to-do list document in Connect Studio named **'Powerhouse-onboarding-tasks'**.
 
 Add the following to-dos to your list:
 
@@ -23698,7 +23698,7 @@ It extracts common metadata fields such as **id**, **name**, **documentType**, *
 
 Once you've found your document via any of the three options above, you'll be able to query its state.
 
-In the previous step, we queried for document metadata. Now let's query for the actual content of the document state.
+The previous step queried for document metadata. Now query for the actual content of the document state.
 
 ```graphql title="Get the Document state"
 query getDocument($identifier: String!) {
@@ -23760,7 +23760,7 @@ To perform write operations, we use **GraphQL Mutations**. Mutations are similar
 
 ### Adding a new to-do item
 
-Let's start by adding a new item to our list. The document model for our to-do list has an `ADD_TODO_ITEM` operation, which translates to an `addTodoItem` mutation in GraphQL.
+Add a new item to the list. The document model for the to-do list has an `ADD_TODO_ITEM` operation, which translates to an `addTodoItem` mutation in GraphQL.
 To use this mutation, you need to provide the `docId` of the to-do list you want to modify, and the `text` and `id` for the new to-do item. We'll specify these via variables.
 
 Here is an example of how to structure the mutation:
@@ -23848,8 +23848,7 @@ You can now read and write documents over the GraphQL API. To expose your own qu
 
 > Source: https://academy.vetra.io/academy/Build/WorkWithData/UsingSubgraphs
 
-This tutorial will demonstrate how to create and customize a subgraph using our to-do list project as an example.
-Let's start with the basics and gradually add more complex features and functionality.
+Create and customize a subgraph, using the to-do list project as an example. This starts with the basics and adds more complex features as it goes.
 
 ## What is a subgraph?
 
@@ -23885,9 +23884,8 @@ First we will generate the subgraph with the help of the Powerhouse CLI, then we
 
 ### 1. Generate the subgraph
 
-Let's start by generating a new subgraph. For our tutorial we will create a new subgraph within our to-do list project you've created in the previous chapters.  
-Open your project and start your terminal.
-The Powerhouse Vetra toolkit provides a command-line utility to create new subgraphs easily.
+Generate a new subgraph within the to-do list project you created in the previous chapters. Open your project and start your terminal.
+The Powerhouse Vetra toolkit has a command-line utility to create new subgraphs.
 
 ```bash title="Run the following command to generate a new subgraph"
 ph generate subgraph --name search-todos
@@ -24015,7 +24013,7 @@ You should see the subgraph being registered in the console output:
 
 ### 3.2. Create some test data
 
-Before testing queries, let's create some to-do list documents with test data:
+Before testing queries, create some to-do list documents with test data:
 
 1. Start Connect
 
@@ -24231,18 +24229,9 @@ The supergraph allows you to both query & mutate data from the same endpoint.
 
 This demonstrates how the supergraph provides a unified interface to both your document models and your custom subgraphs, allowing you to query and mutate data from the same endpoint.
 
-## 5. Summary
+## 5. What you built
 
-Congratulations! You've successfully built a complete to-do list subgraph that demonstrates the power of extending document models with custom GraphQL functionality. Let's recap what you've accomplished:
-
-### Key concepts learned:
-
-- **Subgraphs extend document models** with additional querying and data processing capabilities
-- **Operational data stores** provide efficient storage for subgraph data
-- **Event processing** enables real-time synchronization between document models and subgraphs
-- **The supergraph** unifies multiple subgraphs into a single GraphQL endpoint
-
-This tutorial has provided you with a solid foundation for building sophisticated data processing and querying capabilities in the Powerhouse ecosystem.
+You now have a to-do list subgraph: an operational data store, event processing that keeps it in sync with the document model, and a supergraph that exposes it through a single GraphQL endpoint.
 
 ## Subgraphs are particularly useful for
 
@@ -24789,7 +24778,7 @@ interface IProcessorHostModule {
 
 > Source: https://academy.vetra.io/academy/Build/WorkWithData/RelationalDbProcessor
 
-In this chapter, we will implement a **Todo-List** relational database processor. This processor receives operations from the reactor and can use `resultingState` (from the operation context) or data from the operations themselves to populate a database.
+In this chapter you'll implement a **Todo-List** relational database processor. This processor receives operations from the reactor and can use `resultingState` (from the operation context) or data from the operations themselves to populate a database.
 
 **What is a Relational Database Processor?**
 
@@ -25270,7 +25259,7 @@ Result:
 
 ### **Step 4: Query Both Data Sources**
 
-**The Power of Dual Data Access**: Now we can query BOTH the original document state AND our processed relational data in a single GraphQL request. This demonstrates the flexibility of the Powerhouse architecture.
+**Dual data access**: You can now query both the original document state and the processed relational data in a single GraphQL request.
 
 ```graphql
 query GetTodoList($docId: PHID!, $driveId: PHID) {

@@ -20,7 +20,7 @@ More specifically, GraphQL is used as:
 - The **schema definition language (SDL)** for defining our document models and thereby self-documenting the API to the data model. It allows developers to define the structure and relationships of data in a strongly-typed format.
 - As the **query language in subgraphs**, which allow different services to expose and query structured data dynamically.
 
-GraphQL SDL is the backbone of **Specification Driven Design & Development** at Powerhouse. By defining your document models in SDL, you create machine-readable specifications that serve as a shared language—bridging the gap between developers, designers, and AI agents for precise, iterative collaboration.
+GraphQL SDL is the backbone of **Specification Driven Design & Development** at Powerhouse. By defining your document models in SDL, you create machine-readable specifications that developers, designers, and AI agents all work from.
 
 ### Why GraphQL?
 
@@ -243,8 +243,8 @@ Click the (+) 'Create New Drive' to add a public drive. To add a new drive, you'
 
 ## Query the state of a document
 
-Now that we have our remote reactor and/or drive running, we can store our document model on it.
-Let's quickly create a new to-do list document in Connect Studio to test the process. Let's call it **'Powerhouse-onboarding-tasks'**.
+With the remote reactor and/or drive running, store a document model on it.
+Create a new to-do list document in Connect Studio named **'Powerhouse-onboarding-tasks'**.
 
 Add the following to-dos to your list:
 
@@ -349,7 +349,7 @@ It extracts common metadata fields such as **id**, **name**, **documentType**, *
 
 Once you've found your document via any of the three options above, you'll be able to query its state.
 
-In the previous step, we queried for document metadata. Now let's query for the actual content of the document state.
+The previous step queried for document metadata. Now query for the actual content of the document state.
 
 ```graphql title="Get the Document state"
 query getDocument($identifier: String!) {
@@ -411,7 +411,7 @@ To perform write operations, we use **GraphQL Mutations**. Mutations are similar
 
 ### Adding a new to-do item
 
-Let's start by adding a new item to our list. The document model for our to-do list has an `ADD_TODO_ITEM` operation, which translates to an `addTodoItem` mutation in GraphQL.
+Add a new item to the list. The document model for the to-do list has an `ADD_TODO_ITEM` operation, which translates to an `addTodoItem` mutation in GraphQL.
 To use this mutation, you need to provide the `docId` of the to-do list you want to modify, and the `text` and `id` for the new to-do item. We'll specify these via variables.
 
 Here is an example of how to structure the mutation:
