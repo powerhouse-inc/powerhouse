@@ -1,3 +1,18 @@
+## 6.2.0-dev.30 (2026-06-23)
+
+### 🚀 Features
+
+- **migrate:** strip eslint/prettier artifacts when migrating to oxc ([c9dcb6f36](https://github.com/powerhouse-inc/powerhouse/commit/c9dcb6f36))
+
+### 🔥 Performance
+
+- **codegen:** replace prettier with oxfmt for generation-time formatting ([a2faa630d](https://github.com/powerhouse-inc/powerhouse/commit/a2faa630d))
+- **codegen:** migrate boilerplate lint+format to the oxc toolchain ([a9a9d1ba0](https://github.com/powerhouse-inc/powerhouse/commit/a9a9d1ba0))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.0-dev.29 (2026-06-23)
 
 This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.

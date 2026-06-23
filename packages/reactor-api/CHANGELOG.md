@@ -1,3 +1,18 @@
+## 6.2.0-dev.30 (2026-06-23)
+
+### 🩹 Fixes
+
+- **reactor-api:** prevent duplicate subgraph types from crashing the gateway ([#2764](https://github.com/powerhouse-inc/powerhouse/pull/2764))
+
+### 🔥 Performance
+
+- **codegen:** replace prettier with oxfmt for generation-time formatting ([a2faa630d](https://github.com/powerhouse-inc/powerhouse/commit/a2faa630d))
+
+### ❤️ Thank You
+
+- acaldas
+- Guillermo Puente Sandoval
+
 ## 6.2.0-dev.29 (2026-06-23)
 
 This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
