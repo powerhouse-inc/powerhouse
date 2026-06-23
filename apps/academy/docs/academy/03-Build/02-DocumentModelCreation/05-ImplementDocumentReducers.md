@@ -74,9 +74,9 @@ Let's break down its components and principles:
 
 Let's use our familiar `TodoList` example to illustrate common patterns.
 
-### Basic implementation (matching Get Started)
+### Basic implementation (matching the Manual Todo tutorial)
 
-The basic implementation matches what you built in the Get Started tutorial:
+The basic implementation matches what you built in the Manual Todo tutorial:
 
 ```typescript
 import { generateId } from "document-model/core";

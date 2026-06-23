@@ -44,11 +44,11 @@ You can modify types using lists and non-null indicators:
 
 ## Example: TodoList state schema
 
-Let's revisit the `TodoList` example from the "Define the TodoList document specification" tutorial in Get Started.
+Revisit the `TodoList` example from the "Define the TodoList document specification" step of the Manual Todo tutorial.
 
-### Basic schema (matching Get Started tutorial)
+### Basic schema (matching the Manual Todo tutorial)
 
-This is the same schema you built in the Get Started tutorial:
+This is the same schema you built in the Manual Todo tutorial:
 
 ```graphql
 # The state of our TodoList
@@ -67,7 +67,7 @@ type TodoItem {
 ### Advanced schema (with statistics tracking)
 
 :::info[Advanced Feature]
-In this Mastery Track, we'll extend the basic schema with a `stats` field to demonstrate how you can add computed statistics to your document model. This is an **optional enhancement** that builds on the foundation from Get Started.
+In this Mastery Track, we'll extend the basic schema with a `stats` field to demonstrate how you can add computed statistics to your document model. This is an **optional enhancement** that builds on the foundation from the Manual Todo tutorial.
 :::
 
 ```graphql

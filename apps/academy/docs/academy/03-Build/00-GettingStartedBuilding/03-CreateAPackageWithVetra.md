@@ -12,13 +12,13 @@ A **Powerhouse Package** is a distributable unit that bundles one or more docume
   <figcaption>The five steps to build and publish a package to the Vetra ecosystem.</figcaption>
 </figure>
 
-On Vetra Cloud you'll find these five steps as a quick reference for creating and publishing a package. This guide walks you through each step in detail — from installing the CLI and scaffolding your project, to building document models and editors, and finally publishing your package to the Vetra registry so others can install it in their environments.
+On Vetra Cloud you'll find these steps as a quick reference for creating a package. This guide walks you through each one in detail — from installing the CLI and scaffolding your project to building and testing document models and editors. Publishing is covered separately in [Launch](/academy/Build/Launch/PublishYourProject).
 
 :::warning
 **This tutorial is a summary for builders that are already familiar with building document models**.  
-It provides a summary from initial setup up to publishing a distributable package.
+It summarizes the flow from initial setup to a built, tested package.
 
-Please start with the [**Get Started**](/) Chapter or [**Document Model Creation**](/academy/Build/DocumentModelCreation/SpecifyTheStateSchema) section if you are unfamiliar with building a document model.
+Please start with the [**Manual Todo tutorial**](/academy/Build/ManualTodoTutorial/CreateNewPowerhouseProject) or the [**Document Model Creation**](/academy/Build/DocumentModelCreation/SpecifyTheStateSchema) section if you are unfamiliar with building a document model.
 :::
 
 <details>
@@ -157,7 +157,7 @@ Vetra embraces **Specification Driven Design & Development** —an approach wher
 <details>
 <summary>Explainer: Specification Driven AI</summary>
 
-In the **'Get Started'** chapter we've been making use of strict schema definition principles to communicate the intended use case of our document models.
+In the **Manual Todo tutorial** we've been making use of strict schema definition principles to communicate the intended use case of our document models.
 The **schema definition language** is not only a shared language that bridges the gap between developer, designer and analyst but also the gap between builder and AI-agent through **specification driven AI control**.
 
 - Communicate your solution and intent through a structured specification framework designed for AI collaboration.
@@ -256,7 +256,7 @@ You can create document models in two ways:
 
 #### Manual Creation
 
-- Define document schema with fields and types as in the **'Get Started'** chapter
+- Define document schema with fields and types as in the **Manual Todo tutorial**
 - Create the necessary operations
 - Add the required modules to your package
 - The document model creation chapter in the Mastery track provides in depth support [here](/academy/Build/DocumentModelCreation/SpecifyTheStateSchema)
@@ -559,139 +559,12 @@ You'll see confirmation when everything compiles successfully.
 </details>
 :::
 
-## Phase 4: Packaging and publishing
+## Phase 4: Package and publish
 
-Once your document model and editor are implemented and tested, you can package them for distribution. A Powerhouse Package is a modular unit that can group document models, editors, scripts, and processors.
+With your document model and editor implemented and tested, package and publish them for distribution. Publishing is covered in one place for both the manual and Vetra workflows — it walks through configuring package details, building, versioning, and publishing to NPM or the Vetra registry:
 
-### 4.1. Prepare project for packaging
+→ [Publish your package](/academy/Build/Launch/PublishYourProject)
 
-If you didn't initialize your project with `ph init` intending it as a package, ensure your project structure is set up correctly. The `ph init` command is designed to create this structure.
+## Up next
 
-- `document-models/`: Contains your document models.
-- `editors/`: Contains your editor components.
-- `src/`: Often used for shared utilities or can be part of the model/editor structure.
-- (Optional) `processors/`, `scripts/` for advanced functionalities.
-
-### 4.2. Specify package details in `package.json`
-
-Navigate to the `package.json` file in your project root. This file is crucial for NPM publishing.
-
-- **`name`**: Follow a scoped naming convention, e.g., `@your-org-ph/your-package-name`. The `-ph` suffix helps identify Powerhouse ecosystem packages.
-- **`version`**: Use semantic versioning (e.g., `1.0.0`).
-- **`author`**: Your name or organization.
-- **`license`**: e.g., `AGPL-3.0-only`.
-- **`main`**: The entry point of your package (e.g., `index.js` or `dist/index.js`).
-- **`publishConfig`**: For scoped packages intended to be public, add:
-  ```json
-  "publishConfig": {
-    "access": "public"
-  }
-  ```
-
-Example `package.json` snippet:
-
-```json
-{
-  "name": "@your-org-ph/your-package-name",
-  "version": "1.0.0",
-  "author": "Your Name",
-  "license": "AGPL-3.0-only",
-  "main": "index.js",
-  "files": [
-    // Ensure your build output and necessary files are included
-    "dist",
-    "manifest.json",
-    "document-models",
-    "editors"
-  ],
-  "publishConfig": {
-    "access": "public"
-  }
-}
-```
-
-### 4.3. Add a manifest file (`manifest.json`)
-
-Create a `manifest.json` file in your project root. This file describes your package's contents (document models, editors) and helps host applications like Connect understand and integrate your package.
-
-Example `manifest.json`:
-
-```json
-{
-  "name": "@yourorg-ph/your-package-name", // it's recommended to use an organization-specific NPM account (e.g., `yourorg-ph`).
-  "description": "A brief description of your package and its document models.",
-  "category": "your-category", // e.g., "Finance", "People Ops", "Legal"
-  "publisher": {
-    "name": "your-publisher-name", // Your organization or name
-    "url": "your-publisher-url" // Link to your website or repository
-  },
-  "documentModels": [
-    {
-      "id": "powerhouse/YourModelName", // Document type string as defined in Connect
-      "name": "YourModelName" // Human-readable name
-    }
-  ],
-  "editors": [
-    {
-      "id": "your-editor-id", // A unique ID for the editor component
-      "name": "YourModelName Editor", // Human-readable name
-      "documentTypes": ["powerhouse/YourModelName"] // Links editor to document type(s)
-    }
-  ]
-}
-```
-
-Update your project's main `index.js` or entry point to export your document models and editors so they can be discovered by Powerhouse applications.
-
-### 4.4. Build your project
-
-Compile and optimize your project for production:
-
-```bash
-ph build
-```
-
-This command typically creates a `dist/` or `build/` directory with the compiled assets. Ensure your `package.json`'s `files` array includes this directory and other necessary assets like `manifest.json`, `document-models`, and `editors` if they are not part of the build output but need to be in the package.
-
-### 4.5. Version control
-
-Store your project in a Git repository for versioning and collaboration.
-
-```bash
-git init
-git add .
-git commit -m "Initial commit of document model package"
-# git remote add origin <your-remote-repository-url>
-# git push -u origin main
-```
-
-### 4.6. Publish to NPM
-
-To share your package with others or deploy it to different environments, publish it to the NPM registry.
-
-1.  **Login to NPM:**
-    If you haven't already, log into your NPM account. It's recommended to use an organization-specific NPM account (e.g., `yourorg-ph`).
-
-    ```bash
-    npm login
-    ```
-
-    Follow the prompts in your terminal or browser.
-
-2.  **Publish the package:**
-    ```bash
-    ph publish
-    ```
-    This publishes your package to the Vetra registry, making it available to install in any Vetra Cloud environment.
-
-### 4.7. Using your published package
-
-Once published, your package can be installed and used in any Powerhouse environment (like another local Connect instance or a deployed Reactor setup).
-
-```bash
-ph install @your-org-ph/your-package-name
-```
-
-This command makes the document models and editors defined in your package available within that Powerhouse instance.
-
-Your package is now installable in any Powerhouse environment with `ph install`.
+You've seen the full Vetra flow. Now build a package by hand, step by step, in the [Manual Todo tutorial](/academy/Build/ManualTodoTutorial/ExploreDemoPackage).

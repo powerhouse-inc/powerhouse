@@ -87,7 +87,7 @@ If not, you can follow the shortened guide below to prepare your project for thi
 
 - Start by running Vetra Studio locally with `ph vetra --watch`
 
-- Follow the [Get Started guide](/academy/Build/ManualTodoTutorial/DefineToDoListDocumentModel) to create your TodoList document model specification.
+- Follow the [Manual Todo tutorial](/academy/Build/ManualTodoTutorial/DefineToDoListDocumentModel) to create your TodoList document model specification.
 - Drop the downloaded file in the Vetra Studio drive. You'll find it under document models. Vetra should now automatically generate the necessary code for your project
 
 ### 2. Add the reducer code:

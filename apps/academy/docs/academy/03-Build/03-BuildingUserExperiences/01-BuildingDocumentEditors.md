@@ -436,7 +436,7 @@ Vetra Studio provides a dynamic local environment (`ph vetra --watch`) to visual
 
 ## TodoList editor using hooks (Recommended)
 
-This approach uses the `useSelectedTodoListDocument` hook, which is the same pattern used in the Get Started tutorial and the [todo-demo repository](https://github.com/powerhouse-inc/todo-demo).
+This approach uses the `useSelectedTodoListDocument` hook, which is the same pattern used in the Manual Todo tutorial and the [todo-demo repository](https://github.com/powerhouse-inc/todo-demo).
 
 ### Main editor file
 

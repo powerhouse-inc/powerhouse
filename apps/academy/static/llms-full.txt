@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-06-23T19:07:05.102Z
+> Generated: 2026-06-23T23:32:01.264Z
 > Total Documents: 106
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -13351,6 +13351,10 @@ PH CMD version:  0.43.18
 PH CLI is not available, please run `ph setup-globals` to generate the default global project
 ```
 
+## Up next
+
+Your machine is ready. Next, set up your [Vetra Drive](/academy/Build/GettingStartedBuilding/VetraDrive) — the workspace where you'll manage document model specifications, editors, and data integrations.
+
 ---
 
 
@@ -13493,6 +13497,10 @@ The preview drive allows you to safely test changes before they affect the share
 
 </details>
 
+## Up next
+
+With your drive set up, [create a package with Vetra](/academy/Build/GettingStartedBuilding/CreateAPackageWithVetra) to see the end-to-end flow, then build one by hand in the [Manual Todo tutorial](/academy/Build/ManualTodoTutorial/ExploreDemoPackage).
+
 ---
 
 
@@ -13512,13 +13520,13 @@ A **Powerhouse Package** is a distributable unit that bundles one or more docume
   <figcaption>The five steps to build and publish a package to the Vetra ecosystem.</figcaption>
 </figure>
 
-On Vetra Cloud you'll find these five steps as a quick reference for creating and publishing a package. This guide walks you through each step in detail — from installing the CLI and scaffolding your project, to building document models and editors, and finally publishing your package to the Vetra registry so others can install it in their environments.
+On Vetra Cloud you'll find these steps as a quick reference for creating a package. This guide walks you through each one in detail — from installing the CLI and scaffolding your project to building and testing document models and editors. Publishing is covered separately in [Launch](/academy/Build/Launch/PublishYourProject).
 
 **WARNING:**
 **This tutorial is a summary for builders that are already familiar with building document models**.  
-It provides a summary from initial setup up to publishing a distributable package.
+It summarizes the flow from initial setup to a built, tested package.
 
-Please start with the [**Get Started**](/) Chapter or [**Document Model Creation**](/academy/Build/DocumentModelCreation/SpecifyTheStateSchema) section if you are unfamiliar with building a document model.
+Please start with the [**Manual Todo tutorial**](/academy/Build/ManualTodoTutorial/CreateNewPowerhouseProject) or the [**Document Model Creation**](/academy/Build/DocumentModelCreation/SpecifyTheStateSchema) section if you are unfamiliar with building a document model.
 
 
 <details>
@@ -13657,7 +13665,7 @@ Vetra embraces **Specification Driven Design & Development** —an approach wher
 <details>
 <summary>Explainer: Specification Driven AI</summary>
 
-In the **'Get Started'** chapter we've been making use of strict schema definition principles to communicate the intended use case of our document models.
+In the **Manual Todo tutorial** we've been making use of strict schema definition principles to communicate the intended use case of our document models.
 The **schema definition language** is not only a shared language that bridges the gap between developer, designer and analyst but also the gap between builder and AI-agent through **specification driven AI control**.
 
 - Communicate your solution and intent through a structured specification framework designed for AI collaboration.
@@ -13756,7 +13764,7 @@ You can create document models in two ways:
 
 #### Manual Creation
 
-- Define document schema with fields and types as in the **'Get Started'** chapter
+- Define document schema with fields and types as in the **Manual Todo tutorial**
 - Create the necessary operations
 - Add the required modules to your package
 - The document model creation chapter in the Mastery track provides in depth support [here](/academy/Build/DocumentModelCreation/SpecifyTheStateSchema)
@@ -14059,142 +14067,15 @@ You'll see confirmation when everything compiles successfully.
 </details>
 
 
-## Phase 4: Packaging and publishing
+## Phase 4: Package and publish
 
-Once your document model and editor are implemented and tested, you can package them for distribution. A Powerhouse Package is a modular unit that can group document models, editors, scripts, and processors.
+With your document model and editor implemented and tested, package and publish them for distribution. Publishing is covered in one place for both the manual and Vetra workflows — it walks through configuring package details, building, versioning, and publishing to NPM or the Vetra registry:
 
-### 4.1. Prepare project for packaging
+→ [Publish your package](/academy/Build/Launch/PublishYourProject)
 
-If you didn't initialize your project with `ph init` intending it as a package, ensure your project structure is set up correctly. The `ph init` command is designed to create this structure.
+## Up next
 
-- `document-models/`: Contains your document models.
-- `editors/`: Contains your editor components.
-- `src/`: Often used for shared utilities or can be part of the model/editor structure.
-- (Optional) `processors/`, `scripts/` for advanced functionalities.
-
-### 4.2. Specify package details in `package.json`
-
-Navigate to the `package.json` file in your project root. This file is crucial for NPM publishing.
-
-- **`name`**: Follow a scoped naming convention, e.g., `@your-org-ph/your-package-name`. The `-ph` suffix helps identify Powerhouse ecosystem packages.
-- **`version`**: Use semantic versioning (e.g., `1.0.0`).
-- **`author`**: Your name or organization.
-- **`license`**: e.g., `AGPL-3.0-only`.
-- **`main`**: The entry point of your package (e.g., `index.js` or `dist/index.js`).
-- **`publishConfig`**: For scoped packages intended to be public, add:
-  ```json
-  "publishConfig": {
-    "access": "public"
-  }
-  ```
-
-Example `package.json` snippet:
-
-```json
-{
-  "name": "@your-org-ph/your-package-name",
-  "version": "1.0.0",
-  "author": "Your Name",
-  "license": "AGPL-3.0-only",
-  "main": "index.js",
-  "files": [
-    // Ensure your build output and necessary files are included
-    "dist",
-    "manifest.json",
-    "document-models",
-    "editors"
-  ],
-  "publishConfig": {
-    "access": "public"
-  }
-}
-```
-
-### 4.3. Add a manifest file (`manifest.json`)
-
-Create a `manifest.json` file in your project root. This file describes your package's contents (document models, editors) and helps host applications like Connect understand and integrate your package.
-
-Example `manifest.json`:
-
-```json
-{
-  "name": "@yourorg-ph/your-package-name", // it's recommended to use an organization-specific NPM account (e.g., `yourorg-ph`).
-  "description": "A brief description of your package and its document models.",
-  "category": "your-category", // e.g., "Finance", "People Ops", "Legal"
-  "publisher": {
-    "name": "your-publisher-name", // Your organization or name
-    "url": "your-publisher-url" // Link to your website or repository
-  },
-  "documentModels": [
-    {
-      "id": "powerhouse/YourModelName", // Document type string as defined in Connect
-      "name": "YourModelName" // Human-readable name
-    }
-  ],
-  "editors": [
-    {
-      "id": "your-editor-id", // A unique ID for the editor component
-      "name": "YourModelName Editor", // Human-readable name
-      "documentTypes": ["powerhouse/YourModelName"] // Links editor to document type(s)
-    }
-  ]
-}
-```
-
-Update your project's main `index.js` or entry point to export your document models and editors so they can be discovered by Powerhouse applications.
-
-### 4.4. Build your project
-
-Compile and optimize your project for production:
-
-```bash
-ph build
-```
-
-This command typically creates a `dist/` or `build/` directory with the compiled assets. Ensure your `package.json`'s `files` array includes this directory and other necessary assets like `manifest.json`, `document-models`, and `editors` if they are not part of the build output but need to be in the package.
-
-### 4.5. Version control
-
-Store your project in a Git repository for versioning and collaboration.
-
-```bash
-git init
-git add .
-git commit -m "Initial commit of document model package"
-# git remote add origin <your-remote-repository-url>
-# git push -u origin main
-```
-
-### 4.6. Publish to NPM
-
-To share your package with others or deploy it to different environments, publish it to the NPM registry.
-
-1.  **Login to NPM:**
-    If you haven't already, log into your NPM account. It's recommended to use an organization-specific NPM account (e.g., `yourorg-ph`).
-
-    ```bash
-    npm login
-    ```
-
-    Follow the prompts in your terminal or browser.
-
-2.  **Publish the package:**
-    ```bash
-    ph publish
-    ```
-    This publishes your package to the Vetra registry, making it available to install in any Vetra Cloud environment.
-
-### 4.7. Using your published package
-
-Once published, your package can be installed and used in any Powerhouse environment (like another local Connect instance or a deployed Reactor setup).
-
-```bash
-ph install @your-org-ph/your-package-name
-```
-
-This command makes the document models and editors defined in your package available within that Powerhouse instance.
-
-Your package is now installable in any Powerhouse environment with `ph install`.
+You've seen the full Vetra flow. Now build a package by hand, step by step, in the [Manual Todo tutorial](/academy/Build/ManualTodoTutorial/ExploreDemoPackage).
 
 ---
 
@@ -14203,25 +14084,17 @@ Your package is now installable in any Powerhouse environment with `ph install`.
 
 > Source: https://academy.vetra.io/academy/Build/ManualTodoTutorial/ExploreDemoPackage
 
-## Let's get started
+Before recreating the package yourself, install the finished version to see what you'll build. The demo is a pre-built package containing a document model, an editor, and a Drive-app — the same "To-do List Demo Package" you'll recreate across this tutorial.
 
-To give you a quick idea of how the Powerhouse Vetra builder platform operates on document models and packages, why don't you try installing a package?
-We will show you how to install the Powerhouse command-line tool `ph-cmd` and then use it to install a pre-built demo package containing a document model, an editor, and a Drive-app.
+## Step 1: Confirm the CLI is installed
 
-## Step 1: Install the Powerhouse CLI
-
-You will use the Powerhouse CLI to launch a local environment with a "To-do List Demo Package" installed.
-This is also the package that you'll recreate during the tutorials and gets you familiar with Powerhouse Vetra.
-
-```bash
-pnpm install -g ph-cmd
-```
-
-Verify the installation:
+You set up `ph-cmd` in [Prerequisites](/academy/Build/GettingStartedBuilding/Prerequisites). Verify it:
 
 ```bash
 ph --version
 ```
+
+If the command isn't found, complete [Prerequisites](/academy/Build/GettingStartedBuilding/Prerequisites) first.
 
 ## Step 2: Initialize a new project
 
@@ -16220,15 +16093,13 @@ In Connect, you should be able to:
 - Check/uncheck items to mark them complete
 
 
-### Up next: Mastery Track
+## Up next
 
-In the [Mastery Track chapter: Document Model Creation](/academy/Build/DocumentModelCreation/WhatIsADocumentModel) we guide you through the theoretics of the previous steps while creating a more advanced version of the todo-list.
+You've built a working package by hand. From here you can go deeper or put it to use:
 
-You will learn:
-
-- The ins and outs of a document model.
-- How to use UI & Scalar components from the Document Engineering system.
-- How to build Custom drive-apps or Drive Explorers.
+- **Go deeper — [Mastery Track: Document Model Creation](/academy/Build/DocumentModelCreation/WhatIsADocumentModel)** — the theory behind the steps you just followed, plus an advanced version of the todo-list (computed stats), the Document Engineering UI components, and custom Drive Explorers.
+- **Expose your data — [Work With Data](/academy/Build/WorkWithData/ConfiguringDrives)** — configure drives, query documents over the GraphQL API, and build subgraphs and processors.
+- **Ship it — [Launch](/academy/Build/Launch/PublishYourProject)** — publish your package and deploy Connect and Switchboard.
 
 ---
 
@@ -16240,9 +16111,9 @@ You will learn:
 **TIP:**
 This chapter on **Document Model Creation** will help you with an in-depth practical understanding while building an **advanced to-do list** document model.
 
-If you have completed the [Get Started](/academy/Build/ManualTodoTutorial/CreateNewPowerhouseProject) tutorial (which includes creating a simple to-do list document model), you will revisit familiar topics and can enhance your existing document model with the advanced features covered in this Mastery Track, such as statistics tracking.
+If you have completed the [Manual Todo tutorial](/academy/Build/ManualTodoTutorial/CreateNewPowerhouseProject) (which includes creating a simple to-do list document model), you will revisit familiar topics and can enhance your existing document model with the advanced features covered in this Mastery Track, such as statistics tracking.
 
-Although not required, completing the Get Started tutorial first is highly recommended as it provides a hands-on foundation for the concepts explored in depth here.
+Although not required, completing the Manual Todo tutorial first is recommended as it provides a hands-on foundation for the concepts explored in depth here.
 
 
 **INFO:**
@@ -16505,11 +16376,11 @@ You can modify types using lists and non-null indicators:
 
 ## Example: TodoList state schema
 
-Let's revisit the `TodoList` example from the "Define the TodoList document specification" tutorial in Get Started.
+Revisit the `TodoList` example from the "Define the TodoList document specification" step of the Manual Todo tutorial.
 
-### Basic schema (matching Get Started tutorial)
+### Basic schema (matching the Manual Todo tutorial)
 
-This is the same schema you built in the Get Started tutorial:
+This is the same schema you built in the Manual Todo tutorial:
 
 ```graphql
 # The state of our TodoList
@@ -16528,7 +16399,7 @@ type TodoItem {
 ### Advanced schema (with statistics tracking)
 
 **INFO:**
-In this Mastery Track, we'll extend the basic schema with a `stats` field to demonstrate how you can add computed statistics to your document model. This is an **optional enhancement** that builds on the foundation from Get Started.
+In this Mastery Track, we'll extend the basic schema with a `stats` field to demonstrate how you can add computed statistics to your document model. This is an **optional enhancement** that builds on the foundation from the Manual Todo tutorial.
 
 
 ```graphql
@@ -16723,7 +16594,7 @@ Each operation acts as a command that, when applied, transitions the document fr
 
 ## Connecting operations to the schema
 
-In the "Define TodoList Document Model" chapter in the "Get Started" guide, we used GraphQL `input` types to define the structure of the data required for each operation. Let's revisit that:
+In the "Define TodoList Document Model" step of the Manual Todo tutorial, we used GraphQL `input` types to define the structure of the data required for each operation. Revisit that:
 
 ```graphql
 # Defines a GraphQL input type for adding a new to-do item
@@ -17222,9 +17093,9 @@ Let's break down its components and principles:
 
 Let's use our familiar `TodoList` example to illustrate common patterns.
 
-### Basic implementation (matching Get Started)
+### Basic implementation (matching the Manual Todo tutorial)
 
-The basic implementation matches what you built in the Get Started tutorial:
+The basic implementation matches what you built in the Manual Todo tutorial:
 
 ```typescript
 
@@ -17549,7 +17420,7 @@ With the reducer logic in place, it's critical to test it. Navigate to the gener
 
 This suite tests each operation, verifying not only that the `items` array is correct, but also that the operation itself is recorded properly in the document's history.
 
-**Basic tests (matching Get Started):**
+**Basic tests (matching the Manual Todo tutorial):**
 
 ```typescript
 
@@ -17876,9 +17747,9 @@ Alternatively, you can install this package in a Powerhouse project or in your d
 ph install @powerhousedao/todo-demo
 ```
 
-## Comparing Get Started vs Mastery Track
+## Comparing the Manual Todo tutorial vs Mastery Track
 
-| Aspect             | Get Started                | Mastery Track (Advanced)             |
+| Aspect             | Manual Todo tutorial       | Mastery Track (Advanced)             |
 | ------------------ | -------------------------- | ------------------------------------ |
 | Schema             | Basic `items` array only   | Includes `stats` object for tracking |
 | Reducer complexity | Simple CRUD operations     | Includes statistics updates          |
@@ -18753,7 +18624,7 @@ Vetra Studio provides a dynamic local environment (`ph vetra --watch`) to visual
 
 ## TodoList editor using hooks (Recommended)
 
-This approach uses the `useSelectedTodoListDocument` hook, which is the same pattern used in the Get Started tutorial and the [todo-demo repository](https://github.com/powerhouse-inc/todo-demo).
+This approach uses the `useSelectedTodoListDocument` hook, which is the same pattern used in the Manual Todo tutorial and the [todo-demo repository](https://github.com/powerhouse-inc/todo-demo).
 
 ### Main editor file
 
@@ -19087,7 +18958,7 @@ If not, you can follow the shortened guide below to prepare your project for thi
 
 - Start by running Vetra Studio locally with `ph vetra --watch`
 
-- Follow the [Get Started guide](/academy/Build/ManualTodoTutorial/DefineToDoListDocumentModel) to create your TodoList document model specification.
+- Follow the [Manual Todo tutorial](/academy/Build/ManualTodoTutorial/DefineToDoListDocumentModel) to create your TodoList document model specification.
 - Drop the downloaded file in the Vetra Studio drive. You'll find it under document models. Vetra should now automatically generate the necessary code for your project
 
 ### 2. Add the reducer code:
@@ -25473,7 +25344,7 @@ This pattern is commonly used for:
 
 **WARNING:**
 **This guide assumes familiarity with building document models in Vetra Studio.**  
-Please start with the [**Get Started**](/) chapter or [**Document Model Creation**](/academy/Build/DocumentModelCreation/SpecifyTheStateSchema) section if you are new to building document models.
+Please start with the [**Manual Todo tutorial**](/academy/Build/ManualTodoTutorial/CreateNewPowerhouseProject) or the [**Document Model Creation**](/academy/Build/DocumentModelCreation/SpecifyTheStateSchema) section if you are new to building document models.
 
 
 This guide covers the process of **building** and **publishing** a Powerhouse package to NPM.

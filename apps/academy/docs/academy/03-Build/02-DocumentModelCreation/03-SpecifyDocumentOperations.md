@@ -16,7 +16,7 @@ Each operation acts as a command that, when applied, transitions the document fr
 
 ## Connecting operations to the schema
 
-In the "Define TodoList Document Model" chapter in the "Get Started" guide, we used GraphQL `input` types to define the structure of the data required for each operation. Let's revisit that:
+In the "Define TodoList Document Model" step of the Manual Todo tutorial, we used GraphQL `input` types to define the structure of the data required for each operation. Revisit that:
 
 ```graphql
 # Defines a GraphQL input type for adding a new to-do item

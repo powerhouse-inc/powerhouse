@@ -3,9 +3,9 @@
 :::tip
 This chapter on **Document Model Creation** will help you with an in-depth practical understanding while building an **advanced to-do list** document model.
 
-If you have completed the [Get Started](/academy/Build/ManualTodoTutorial/CreateNewPowerhouseProject) tutorial (which includes creating a simple to-do list document model), you will revisit familiar topics and can enhance your existing document model with the advanced features covered in this Mastery Track, such as statistics tracking.
+If you have completed the [Manual Todo tutorial](/academy/Build/ManualTodoTutorial/CreateNewPowerhouseProject) (which includes creating a simple to-do list document model), you will revisit familiar topics and can enhance your existing document model with the advanced features covered in this Mastery Track, such as statistics tracking.
 
-Although not required, completing the Get Started tutorial first is highly recommended as it provides a hands-on foundation for the concepts explored in depth here.
+Although not required, completing the Manual Todo tutorial first is recommended as it provides a hands-on foundation for the concepts explored in depth here.
 :::
 
 :::info[**Definition: What is a Document Model?**]

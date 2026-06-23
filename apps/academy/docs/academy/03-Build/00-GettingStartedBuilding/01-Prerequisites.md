@@ -399,3 +399,7 @@ PH CMD version:  0.43.18
 -------------------------------------
 PH CLI is not available, please run `ph setup-globals` to generate the default global project
 ```
+
+## Up next
+
+Your machine is ready. Next, set up your [Vetra Drive](/academy/Build/GettingStartedBuilding/VetraDrive) — the workspace where you'll manage document model specifications, editors, and data integrations.

@@ -21,7 +21,7 @@ With the reducer logic in place, it's critical to test it. Navigate to the gener
 
 This suite tests each operation, verifying not only that the `items` array is correct, but also that the operation itself is recorded properly in the document's history.
 
-**Basic tests (matching Get Started):**
+**Basic tests (matching the Manual Todo tutorial):**
 
 ```typescript
 import { describe, it, expect } from "vitest";

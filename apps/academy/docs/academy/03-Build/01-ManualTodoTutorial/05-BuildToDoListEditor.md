@@ -559,12 +559,10 @@ In Connect, you should be able to:
 
 :::
 
-### Up next: Mastery Track
+## Up next
 
-In the [Mastery Track chapter: Document Model Creation](/academy/Build/DocumentModelCreation/WhatIsADocumentModel) we guide you through the theoretics of the previous steps while creating a more advanced version of the todo-list.
+You've built a working package by hand. From here you can go deeper or put it to use:
 
-You will learn:
-
-- The ins and outs of a document model.
-- How to use UI & Scalar components from the Document Engineering system.
-- How to build Custom drive-apps or Drive Explorers.
+- **Go deeper — [Mastery Track: Document Model Creation](/academy/Build/DocumentModelCreation/WhatIsADocumentModel)** — the theory behind the steps you just followed, plus an advanced version of the todo-list (computed stats), the Document Engineering UI components, and custom Drive Explorers.
+- **Expose your data — [Work With Data](/academy/Build/WorkWithData/ConfiguringDrives)** — configure drives, query documents over the GraphQL API, and build subgraphs and processors.
+- **Ship it — [Launch](/academy/Build/Launch/PublishYourProject)** — publish your package and deploy Connect and Switchboard.

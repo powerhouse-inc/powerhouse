@@ -61,9 +61,9 @@ Alternatively, you can install this package in a Powerhouse project or in your d
 ph install @powerhousedao/todo-demo
 ```
 
-## Comparing Get Started vs Mastery Track
+## Comparing the Manual Todo tutorial vs Mastery Track
 
-| Aspect             | Get Started                | Mastery Track (Advanced)             |
+| Aspect             | Manual Todo tutorial       | Mastery Track (Advanced)             |
 | ------------------ | -------------------------- | ------------------------------------ |
 | Schema             | Basic `items` array only   | Includes `stats` object for tracking |
 | Reducer complexity | Simple CRUD operations     | Includes statistics updates          |
