@@ -1687,9 +1687,432 @@ Use the constructed URL to add or access the drive in your Connect environment.
 
 Creating, installing, and managing Powerhouse Packages for distribution and reuse.
 
+<details id="packaging-and-publishing-a-powerhouse-project">
+<summary>Packaging and Publishing a Powerhouse Project</summary>
+
+### How to Package and Publish a Powerhouse Project
+
+---
+
+### Problem statement
+
+You have created a collection of document models, editors, or other components and want to share it as a reusable package on a public or private npm registry. Publishing a package allows other projects to install and use your creations easily.
+
+### Prerequisites
+
+- A completed Powerhouse project that you are ready to share.
+- An account on [npmjs.com](https://www.npmjs.com/) (or a private registry).
+- Your project's `package.json` should have a unique name and correct version.
+- You must be logged into your npm account via the command line.
+
+### Solution
+
+### Step 1: Build the Project
+
+First, compile your project to create a production-ready build in the `dist/` or `build/` directory.
+
+```bash
+pnpm build
+```
+
+### Step 2: Log In to npm
+
+If you aren't already, log in to your npm account. You will be prompted for your username, password, and one-time password.
+
+```bash
+npm login
+```
+
+### Step 3: Version Your Package
+
+Update the package version according to semantic versioning. This command updates `package.json` and creates a new Git tag.
+
+```bash
+# Choose one depending on the significance of your changes
+pnpm version patch   # For bug fixes (e.g., 1.0.0 -> 1.0.1)
+pnpm version minor   # For new features (e.g., 1.0.1 -> 1.1.0)
+pnpm version major   # For breaking changes (e.g., 1.1.0 -> 2.0.0)
+```
+
+### Step 4: Publish the Package
+
+Publish your package to the npm registry. If it's your first time publishing a scoped package (e.g., `@your-org/your-package`), you may need to add the `--access public` flag.
+
+```bash
+npm publish --access public
+```
+
+### Step 5: Push Git Commits and Tags
+
+Push your new version commit and tag to your remote repository to keep it in sync.
+
+```bash
+# Push your current branch
+git push
+
+# Push the newly created version tag
+git push --tags
+```
+
+### Expected outcome
+
+- Your Powerhouse project is successfully published to the npm registry.
+- Other developers can now install your package into their projects using `ph install @your-org/your-package-name`.
+- Your Git repository is updated with the new version information.
+
+### Common issues and solutions
+
+- **Issue**: "403 Forbidden" or "You do not have permission" error on publish.
+  - **Solution**: Ensure your package name is unique and not already taken on npm. If it's a scoped package (`@scope/name`), make sure the organization exists and you have permission to publish to it. For public scoped packages, you must include `--access public`.
+
+### Related recipes
+
+- [Installing a Custom Powerhouse Package](#installing-a-custom-powerhouse-package)
+- [Managing and Updating Powerhouse Dependencies](#managing-and-updating-powerhouse-dependencies)
+
+</details>
+
+<details id="installing-a-custom-powerhouse-package">
+<summary>Installing a Custom Powerhouse Package</summary>
+
+### How to Install a Custom Powerhouse Package
+
+---
+
+### Problem statement
+
+You have developed and published a Powerhouse package (containing document models, editors, etc.) to npm, or you have a local package, and you need to install it into another Powerhouse project.
+
+### Prerequisites
+
+- Powerhouse CLI (`ph-cmd`) installed
+- A Powerhouse project initialized (`ph init`) where you want to install the package.
+- The custom package is either published to npm or available locally.
+
+### Solution
+
+### Step 1: Navigate to the Target Project Directory
+
+Ensure your terminal is in the root directory of the Powerhouse project where you want to install the package.
+
+```bash
+cd <your-target-project-name>
+```
+
+### Step 2: Install the Package
+
+Use the `ph install` command followed by the package name (if published to npm) or the path to the local package.
+
+**For npm packages:**
+
+```bash
+# Replace <your-package-name> with the actual name on npm
+ph install <your-package-name>
+```
+
+**For local packages (using a relative or absolute path):**
+
+```bash
+# Example using a relative path
+ph install ../path/to/my-local-package
+
+# Example using an absolute path
+ph install /Users/you/dev/my-local-package
+```
+
+### Step 3: Verify Installation
+
+Check your project's `package.json` and `powerhouse.manifest.json` to ensure the package dependency has been added correctly. Run `ph vetra --watch` (or `ph connect`) to see if the components from the installed package are available.
+
+### Expected outcome
+
+- The custom Powerhouse package is downloaded and installed into your project's dependencies.
+- The `powerhouse.manifest.json` is updated (if necessary) to reflect the installed package.
+- Document models, editors, Drive-apps, or other components from the package become available within the target project.
+
+### Common issues and solutions
+
+- Issue: Package not found (npm).
+  - Solution: Double-check the package name for typos. Ensure the package is published and accessible on npm.
+- Issue: Path not found (local).
+  - Solution: Verify the relative or absolute path to the local package directory is correct.
+- Issue: Conflicts with existing project components or dependencies.
+  - Solution: Resolve version conflicts or naming collisions as needed. Review the installed package's structure and dependencies.
+
+### Related recipes
+
+- [Publishing a Powerhouse Package](#publishing-a-powerhouse-package)
+- [Initializing a Powerhouse Project](#initializing-a-new-project-and-document-model)
+
+</details>
+
 ## Deployment recipes
 
 This section covers deploying Powerhouse applications and packages to various environments using Docker and other deployment methods.
+
+<details id="deploying-powerhouse-with-docker">
+<summary>Deploying Powerhouse with Docker</summary>
+
+### How to Deploy Powerhouse with Docker
+
+---
+
+### Problem statement
+
+You want to deploy your Powerhouse application (Connect and Switchboard) using Docker containers for production or development environments. Docker deployment provides consistency, reproducibility, and easy scalability across different platforms.
+
+### Prerequisites
+
+- Docker installed on your system
+- Docker Compose installed (usually included with Docker Desktop)
+- Basic understanding of Docker concepts
+- (Optional) A custom Powerhouse package to deploy
+
+### Solution
+
+### Step 1: Create a Docker Compose Configuration
+
+Create a `docker-compose.yml` file in your project directory:
+
+```yaml
+name: powerhouse
+
+services:
+  connect:
+    image: ghcr.io/powerhouse-inc/powerhouse/connect:latest
+    environment:
+      - DATABASE_URL=postgres://postgres:postgres@postgres:5432/postgres
+      - PH_CONNECT_BASE_PATH=/
+    ports:
+      - "127.0.0.1:3000:4000"
+    networks:
+      - powerhouse_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  switchboard:
+    image: ghcr.io/powerhouse-inc/powerhouse/switchboard:latest
+    environment:
+      - DATABASE_URL=postgres://postgres:postgres@postgres:5432/postgres
+    ports:
+      - "127.0.0.1:4000:4001"
+    networks:
+      - powerhouse_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:16.1
+    ports:
+      - "127.0.0.1:5444:5432"
+    environment:
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgres
+      - POSTGRES_USER=postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - powerhouse_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+
+networks:
+  powerhouse_network:
+    name: powerhouse_network
+
+volumes:
+  postgres_data:
+```
+
+### Step 2: Install Custom Packages (Optional)
+
+If you have custom Powerhouse packages to deploy, add them via the `PH_PACKAGES` environment variable:
+
+```yaml
+services:
+  connect:
+    image: ghcr.io/powerhouse-inc/powerhouse/connect:latest
+    environment:
+      - PH_PACKAGES=@powerhousedao/your-package,@powerhousedao/another-package
+      - DATABASE_URL=postgres://postgres:postgres@postgres:5432/postgres
+```
+
+### Step 3: Start the Services
+
+Launch all services in detached mode:
+
+```bash
+docker compose up -d
+```
+
+### Step 4: Verify Deployment
+
+Check that all services are running:
+
+```bash
+docker compose ps
+```
+
+View logs to confirm successful startup:
+
+```bash
+docker compose logs -f
+```
+
+### Step 5: Access Your Application
+
+Once services are running, access:
+
+- **Connect**: http://localhost:3000
+- **Switchboard API**: http://localhost:4000
+
+### Production Configuration
+
+For production deployments, use specific version tags and secure credentials:
+
+```yaml
+services:
+  connect:
+    image: ghcr.io/powerhouse-inc/powerhouse/connect:v1.0.0
+    env_file:
+      - .env
+
+  switchboard:
+    image: ghcr.io/powerhouse-inc/powerhouse/switchboard:v1.0.0
+    env_file:
+      - .env
+```
+
+Create a `.env` file with secure credentials:
+
+```bash
+POSTGRES_PASSWORD=your-secure-password
+DATABASE_URL=postgres://powerhouse:your-secure-password@postgres:5432/powerhouse
+```
+
+### Expected outcome
+
+- All Powerhouse services (Connect, Switchboard, PostgreSQL) are running in Docker containers
+- Services can communicate with each other through the Docker network
+- Your custom packages (if specified) are installed and available
+- The application is accessible through the configured ports
+- Data is persisted in Docker volumes
+
+### Common issues and solutions
+
+- **Issue**: Container fails to start with "port already in use" error
+  - **Solution**: Change the port mapping in `docker-compose.yml` to use an available port (e.g., `3001:4000` instead of `3000:4000`)
+- **Issue**: Database connection errors on startup
+  - **Solution**: Ensure the `depends_on` configuration includes health checks so services wait for PostgreSQL to be ready
+- **Issue**: Custom packages fail to install
+  - **Solution**: Verify package names are correct and published to npm. Check container logs with `docker compose logs switchboard` or `docker compose logs connect`
+- **Issue**: Changes to docker-compose.yml not taking effect
+  - **Solution**: Run `docker compose down` then `docker compose up -d` to recreate containers with new configuration
+- **Issue**: Permission errors with volumes
+  - **Solution**: Ensure the volume paths have correct permissions: `sudo chown -R 1000:1000 ./data`
+
+### Related recipes
+
+- [Installing a Custom Powerhouse Package](#installing-a-custom-powerhouse-package)
+- [Setting up a Production Environment](#setting-up-a-production-environment)
+- [Publishing a Powerhouse Package](#packaging-and-publishing-a-powerhouse-project)
+
+### Further reading
+
+- [Docker Deployment Guide](/academy/Build/Launch/DockerDeployment)
+- [Environment Configuration](/academy/Build/Launch/ConfigureEnvironment)
+- [Setup Environment Guide](/academy/Build/Launch/SetupEnvironment)
+- [Docker Compose Documentation](https://docs.docker.com/compose/)
+</details>
+
+<details id="setting-up-a-production-environment">
+<summary>Setting up a Production Environment</summary>
+
+### How to set up a Production Powerhouse Environment
+
+---
+
+### Problem statement
+
+You need to set up a new production-ready server to host and run your Powerhouse services (Connect and Switchboard).
+
+### Prerequisites
+
+- A Linux-based server (Ubuntu or Debian recommended) with `sudo` privileges.
+- A registered domain name.
+- DNS `A` records for your `connect` and `switchboard` subdomains pointing to your server's public IP address.
+
+### Solution
+
+### Step 1: Install Powerhouse Services
+
+SSH into your server and run the universal installation script. This will install Node.js, pnpm, and prepare the system for Powerhouse services.
+
+```bash
+curl -fsSL https://apps.powerhouse.io/install | bash
+```
+
+### Step 2: Reload Your Shell
+
+After the installation, reload your shell's configuration to recognize the new commands.
+
+```bash
+source ~/.bashrc  # Or source ~/.zshrc if using zsh
+```
+
+### Step 3: Initialize a Project
+
+Create a project directory for your services. The `ph-init` command sets up the basic structure. Move into the directory after creation.
+
+```bash
+ph-init my-powerhouse-services
+cd my-powerhouse-services
+```
+
+### Step 4: Configure Services
+
+Run the interactive setup command. This will guide you through configuring Nginx, PM2, databases, and SSL.
+
+```bash
+ph service setup
+```
+
+During the setup, you will be prompted for:
+
+- **Packages to install:** You can pre-install any Powerhouse packages you need. (Optional)
+- **Database:** Choose between a local PostgreSQL setup or connecting to a remote database.
+- **SSL Certificate:** Select Let's Encrypt for a production setup. You will need to provide your domain and subdomains.
+
+### Expected outcome
+
+- Powerhouse Connect and Switchboard services are installed, configured, and running on your server.
+- Nginx is set up as a reverse proxy with SSL certificates from Let's Encrypt.
+- Services are managed by PM2 and will restart automatically on boot or if they crash.
+- You can access your services securely at `https://connect.yourdomain.com` and `https://switchboard.yourdomain.com`.
+
+### Common issues and solutions
+
+- **Issue:** `ph: command not found`
+  - **Solution:** Ensure you have reloaded your shell with `source ~/.bashrc` or have restarted your terminal session.
+- **Issue:** Let's Encrypt SSL certificate creation fails.
+  - **Solution:** Verify that your domain's DNS records have fully propagated and are pointing to the correct server IP. This can take some time.
+- **Issue:** Services fail to start.
+  - **Solution:** Check the service logs for errors using `ph service logs` or `pm2 logs`.
+
+### Related recipes
+
+- [Installing a Custom Powerhouse Package](#installing-a-custom-powerhouse-package)
+- [Deploying Powerhouse with Docker](#deploying-powerhouse-with-docker)
+
+### Further reading
+
+- [Full Setup Guide](/academy/Build/Launch/SetupEnvironment)
+</details>
 
 ## Reactor & Data Synchronisation recipes
 
@@ -1719,8 +2142,8 @@ The [Powerhouse Recipes](https://github.com/powerhouse-inc/recipes) repository c
 
 > See the [recipes repository](https://github.com/powerhouse-inc/recipes) for full source code, setup instructions, and prerequisites.
 
-{/* AUTO-GENERATED-RECIPE-DOCS-START */}
-{/* This content is automatically generated by scripts/generate-recipe-docs.ts. Do not edit directly. */}
+{/_ AUTO-GENERATED-RECIPE-DOCS-START _/}
+{/_ This content is automatically generated by scripts/generate-recipe-docs.ts. Do not edit directly. _/}
 
 <details id="recipe-audit-trail">
 <summary>Audit Trail</summary>
@@ -2831,429 +3254,6 @@ ph reactor
 
 - [Launching Vetra Studio](#launching-vetra-studio)
 - [Initializing a New Project & Document Model](#initializing-a-new-project-and-document-model)
-
-</details>
-
-<details id="deploying-powerhouse-with-docker">
-<summary>Deploying Powerhouse with Docker</summary>
-
-### How to Deploy Powerhouse with Docker
-
----
-
-### Problem statement
-
-You want to deploy your Powerhouse application (Connect and Switchboard) using Docker containers for production or development environments. Docker deployment provides consistency, reproducibility, and easy scalability across different platforms.
-
-### Prerequisites
-
-- Docker installed on your system
-- Docker Compose installed (usually included with Docker Desktop)
-- Basic understanding of Docker concepts
-- (Optional) A custom Powerhouse package to deploy
-
-### Solution
-
-### Step 1: Create a Docker Compose Configuration
-
-Create a `docker-compose.yml` file in your project directory:
-
-```yaml
-name: powerhouse
-
-services:
-  connect:
-    image: ghcr.io/powerhouse-inc/powerhouse/connect:latest
-    environment:
-      - DATABASE_URL=postgres://postgres:postgres@postgres:5432/postgres
-      - PH_CONNECT_BASE_PATH=/
-    ports:
-      - "127.0.0.1:3000:4000"
-    networks:
-      - powerhouse_network
-    depends_on:
-      postgres:
-        condition: service_healthy
-
-  switchboard:
-    image: ghcr.io/powerhouse-inc/powerhouse/switchboard:latest
-    environment:
-      - DATABASE_URL=postgres://postgres:postgres@postgres:5432/postgres
-    ports:
-      - "127.0.0.1:4000:4001"
-    networks:
-      - powerhouse_network
-    depends_on:
-      postgres:
-        condition: service_healthy
-
-  postgres:
-    image: postgres:16.1
-    ports:
-      - "127.0.0.1:5444:5432"
-    environment:
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=postgres
-      - POSTGRES_USER=postgres
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    networks:
-      - powerhouse_network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 5s
-      timeout: 3s
-      retries: 3
-
-networks:
-  powerhouse_network:
-    name: powerhouse_network
-
-volumes:
-  postgres_data:
-```
-
-### Step 2: Install Custom Packages (Optional)
-
-If you have custom Powerhouse packages to deploy, add them via the `PH_PACKAGES` environment variable:
-
-```yaml
-services:
-  connect:
-    image: ghcr.io/powerhouse-inc/powerhouse/connect:latest
-    environment:
-      - PH_PACKAGES=@powerhousedao/your-package,@powerhousedao/another-package
-      - DATABASE_URL=postgres://postgres:postgres@postgres:5432/postgres
-```
-
-### Step 3: Start the Services
-
-Launch all services in detached mode:
-
-```bash
-docker compose up -d
-```
-
-### Step 4: Verify Deployment
-
-Check that all services are running:
-
-```bash
-docker compose ps
-```
-
-View logs to confirm successful startup:
-
-```bash
-docker compose logs -f
-```
-
-### Step 5: Access Your Application
-
-Once services are running, access:
-
-- **Connect**: http://localhost:3000
-- **Switchboard API**: http://localhost:4000
-
-### Production Configuration
-
-For production deployments, use specific version tags and secure credentials:
-
-```yaml
-services:
-  connect:
-    image: ghcr.io/powerhouse-inc/powerhouse/connect:v1.0.0
-    env_file:
-      - .env
-
-  switchboard:
-    image: ghcr.io/powerhouse-inc/powerhouse/switchboard:v1.0.0
-    env_file:
-      - .env
-```
-
-Create a `.env` file with secure credentials:
-
-```bash
-POSTGRES_PASSWORD=your-secure-password
-DATABASE_URL=postgres://powerhouse:your-secure-password@postgres:5432/powerhouse
-```
-
-### Expected outcome
-
-- All Powerhouse services (Connect, Switchboard, PostgreSQL) are running in Docker containers
-- Services can communicate with each other through the Docker network
-- Your custom packages (if specified) are installed and available
-- The application is accessible through the configured ports
-- Data is persisted in Docker volumes
-
-### Common issues and solutions
-
-- **Issue**: Container fails to start with "port already in use" error
-  - **Solution**: Change the port mapping in `docker-compose.yml` to use an available port (e.g., `3001:4000` instead of `3000:4000`)
-- **Issue**: Database connection errors on startup
-  - **Solution**: Ensure the `depends_on` configuration includes health checks so services wait for PostgreSQL to be ready
-- **Issue**: Custom packages fail to install
-  - **Solution**: Verify package names are correct and published to npm. Check container logs with `docker compose logs switchboard` or `docker compose logs connect`
-- **Issue**: Changes to docker-compose.yml not taking effect
-  - **Solution**: Run `docker compose down` then `docker compose up -d` to recreate containers with new configuration
-- **Issue**: Permission errors with volumes
-  - **Solution**: Ensure the volume paths have correct permissions: `sudo chown -R 1000:1000 ./data`
-
-### Related recipes
-
-- [Installing a Custom Powerhouse Package](#installing-a-custom-powerhouse-package)
-- [Setting up a Production Environment](#setting-up-a-production-environment)
-- [Publishing a Powerhouse Package](#packaging-and-publishing-a-powerhouse-project)
-
-### Further reading
-
-- [Docker Deployment Guide](/academy/Build/Launch/DockerDeployment)
-- [Environment Configuration](/academy/Build/Launch/ConfigureEnvironment)
-- [Setup Environment Guide](/academy/Build/Launch/SetupEnvironment)
-- [Docker Compose Documentation](https://docs.docker.com/compose/)
-</details>
-
-<details id="setting-up-a-production-environment">
-<summary>Setting up a Production Environment</summary>
-
-### How to set up a Production Powerhouse Environment
-
----
-
-### Problem statement
-
-You need to set up a new production-ready server to host and run your Powerhouse services (Connect and Switchboard).
-
-### Prerequisites
-
-- A Linux-based server (Ubuntu or Debian recommended) with `sudo` privileges.
-- A registered domain name.
-- DNS `A` records for your `connect` and `switchboard` subdomains pointing to your server's public IP address.
-
-### Solution
-
-### Step 1: Install Powerhouse Services
-
-SSH into your server and run the universal installation script. This will install Node.js, pnpm, and prepare the system for Powerhouse services.
-
-```bash
-curl -fsSL https://apps.powerhouse.io/install | bash
-```
-
-### Step 2: Reload Your Shell
-
-After the installation, reload your shell's configuration to recognize the new commands.
-
-```bash
-source ~/.bashrc  # Or source ~/.zshrc if using zsh
-```
-
-### Step 3: Initialize a Project
-
-Create a project directory for your services. The `ph-init` command sets up the basic structure. Move into the directory after creation.
-
-```bash
-ph-init my-powerhouse-services
-cd my-powerhouse-services
-```
-
-### Step 4: Configure Services
-
-Run the interactive setup command. This will guide you through configuring Nginx, PM2, databases, and SSL.
-
-```bash
-ph service setup
-```
-
-During the setup, you will be prompted for:
-
-- **Packages to install:** You can pre-install any Powerhouse packages you need. (Optional)
-- **Database:** Choose between a local PostgreSQL setup or connecting to a remote database.
-- **SSL Certificate:** Select Let's Encrypt for a production setup. You will need to provide your domain and subdomains.
-
-### Expected outcome
-
-- Powerhouse Connect and Switchboard services are installed, configured, and running on your server.
-- Nginx is set up as a reverse proxy with SSL certificates from Let's Encrypt.
-- Services are managed by PM2 and will restart automatically on boot or if they crash.
-- You can access your services securely at `https://connect.yourdomain.com` and `https://switchboard.yourdomain.com`.
-
-### Common issues and solutions
-
-- **Issue:** `ph: command not found`
-  - **Solution:** Ensure you have reloaded your shell with `source ~/.bashrc` or have restarted your terminal session.
-- **Issue:** Let's Encrypt SSL certificate creation fails.
-  - **Solution:** Verify that your domain's DNS records have fully propagated and are pointing to the correct server IP. This can take some time.
-- **Issue:** Services fail to start.
-  - **Solution:** Check the service logs for errors using `ph service logs` or `pm2 logs`.
-
-### Related recipes
-
-- [Installing a Custom Powerhouse Package](#installing-a-custom-powerhouse-package)
-- [Deploying Powerhouse with Docker](#deploying-powerhouse-with-docker)
-
-### Further reading
-
-- [Full Setup Guide](/academy/Build/Launch/SetupEnvironment)
-</details>
-
-<details id="installing-a-custom-powerhouse-package">
-<summary>Installing a Custom Powerhouse Package</summary>
-
-### How to Install a Custom Powerhouse Package
-
----
-
-### Problem statement
-
-You have developed and published a Powerhouse package (containing document models, editors, etc.) to npm, or you have a local package, and you need to install it into another Powerhouse project.
-
-### Prerequisites
-
-- Powerhouse CLI (`ph-cmd`) installed
-- A Powerhouse project initialized (`ph init`) where you want to install the package.
-- The custom package is either published to npm or available locally.
-
-### Solution
-
-### Step 1: Navigate to the Target Project Directory
-
-Ensure your terminal is in the root directory of the Powerhouse project where you want to install the package.
-
-```bash
-cd <your-target-project-name>
-```
-
-### Step 2: Install the Package
-
-Use the `ph install` command followed by the package name (if published to npm) or the path to the local package.
-
-**For npm packages:**
-
-```bash
-# Replace <your-package-name> with the actual name on npm
-ph install <your-package-name>
-```
-
-**For local packages (using a relative or absolute path):**
-
-```bash
-# Example using a relative path
-ph install ../path/to/my-local-package
-
-# Example using an absolute path
-ph install /Users/you/dev/my-local-package
-```
-
-### Step 3: Verify Installation
-
-Check your project's `package.json` and `powerhouse.manifest.json` to ensure the package dependency has been added correctly. Run `ph vetra --watch` (or `ph connect`) to see if the components from the installed package are available.
-
-### Expected outcome
-
-- The custom Powerhouse package is downloaded and installed into your project's dependencies.
-- The `powerhouse.manifest.json` is updated (if necessary) to reflect the installed package.
-- Document models, editors, Drive-apps, or other components from the package become available within the target project.
-
-### Common issues and solutions
-
-- Issue: Package not found (npm).
-  - Solution: Double-check the package name for typos. Ensure the package is published and accessible on npm.
-- Issue: Path not found (local).
-  - Solution: Verify the relative or absolute path to the local package directory is correct.
-- Issue: Conflicts with existing project components or dependencies.
-  - Solution: Resolve version conflicts or naming collisions as needed. Review the installed package's structure and dependencies.
-
-### Related recipes
-
-- [Publishing a Powerhouse Package](#publishing-a-powerhouse-package)
-- [Initializing a Powerhouse Project](#initializing-a-new-project-and-document-model)
-
-</details>
-
-<details id="packaging-and-publishing-a-powerhouse-project">
-<summary>Packaging and Publishing a Powerhouse Project</summary>
-
-### How to Package and Publish a Powerhouse Project
-
----
-
-### Problem statement
-
-You have created a collection of document models, editors, or other components and want to share it as a reusable package on a public or private npm registry. Publishing a package allows other projects to install and use your creations easily.
-
-### Prerequisites
-
-- A completed Powerhouse project that you are ready to share.
-- An account on [npmjs.com](https://www.npmjs.com/) (or a private registry).
-- Your project's `package.json` should have a unique name and correct version.
-- You must be logged into your npm account via the command line.
-
-### Solution
-
-### Step 1: Build the Project
-
-First, compile your project to create a production-ready build in the `dist/` or `build/` directory.
-
-```bash
-pnpm build
-```
-
-### Step 2: Log In to npm
-
-If you aren't already, log in to your npm account. You will be prompted for your username, password, and one-time password.
-
-```bash
-npm login
-```
-
-### Step 3: Version Your Package
-
-Update the package version according to semantic versioning. This command updates `package.json` and creates a new Git tag.
-
-```bash
-# Choose one depending on the significance of your changes
-pnpm version patch   # For bug fixes (e.g., 1.0.0 -> 1.0.1)
-pnpm version minor   # For new features (e.g., 1.0.1 -> 1.1.0)
-pnpm version major   # For breaking changes (e.g., 1.1.0 -> 2.0.0)
-```
-
-### Step 4: Publish the Package
-
-Publish your package to the npm registry. If it's your first time publishing a scoped package (e.g., `@your-org/your-package`), you may need to add the `--access public` flag.
-
-```bash
-npm publish --access public
-```
-
-### Step 5: Push Git Commits and Tags
-
-Push your new version commit and tag to your remote repository to keep it in sync.
-
-```bash
-# Push your current branch
-git push
-
-# Push the newly created version tag
-git push --tags
-```
-
-### Expected outcome
-
-- Your Powerhouse project is successfully published to the npm registry.
-- Other developers can now install your package into their projects using `ph install @your-org/your-package-name`.
-- Your Git repository is updated with the new version information.
-
-### Common issues and solutions
-
-- **Issue**: "403 Forbidden" or "You do not have permission" error on publish.
-  - **Solution**: Ensure your package name is unique and not already taken on npm. If it's a scoped package (`@scope/name`), make sure the organization exists and you have permission to publish to it. For public scoped packages, you must include `--access public`.
-
-### Related recipes
-
-- [Installing a Custom Powerhouse Package](#installing-a-custom-powerhouse-package)
-- [Managing and Updating Powerhouse Dependencies](#managing-and-updating-powerhouse-dependencies)
 
 </details>
 
