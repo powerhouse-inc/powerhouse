@@ -53,9 +53,17 @@ function remoteRecordToRow(remote: RemoteRecord): InsertableSyncRemote {
     channel_id: remote.id,
     remote_name: remote.name,
     channel_parameters: remote.channelConfig.parameters,
+    // jsonb array columns must be JSON-encoded before binding: the pg driver
+    // serializes a JS array to a Postgres array literal ("{a,b}"), which jsonb
+    // rejects. Matches the convention in sync-dead-letter-storage.
     filter_document_ids:
-      remote.filter.documentId.length > 0 ? remote.filter.documentId : null,
-    filter_scopes: remote.filter.scope.length > 0 ? remote.filter.scope : null,
+      remote.filter.documentId.length > 0
+        ? JSON.stringify(remote.filter.documentId)
+        : null,
+    filter_scopes:
+      remote.filter.scope.length > 0
+        ? JSON.stringify(remote.filter.scope)
+        : null,
     filter_branch: remote.filter.branch,
     push_state: remote.status.push.state,
     push_last_success_utc_ms: remote.status.push.lastSuccessUtcMs
