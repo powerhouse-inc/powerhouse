@@ -194,6 +194,46 @@ export const packageScripts = {
 
 export const externalDependencies = {} as const;
 
+// eslint/prettier devDependencies present in projects scaffolded before the oxc migration.
+// Stripped from package.json during `ph migrate`.
+export const LEGACY_LINT_FORMAT_DEPENDENCIES = [
+  "@eslint/js",
+  "eslint",
+  "eslint-config-prettier",
+  "eslint-plugin-prettier",
+  "eslint-plugin-react",
+  "eslint-plugin-react-hooks",
+  "globals",
+  "prettier",
+  "typescript-eslint",
+] as const;
+
+// Legacy lint/format config files written by eslint/prettier boilerplate.
+// Removed from the project root during `ph migrate`.
+export const LEGACY_LINT_FORMAT_FILES = [
+  "eslint.config.js",
+  "eslint.config.mjs",
+  "eslint.config.cjs",
+  "eslint.config.ts",
+  ".eslintrc",
+  ".eslintrc.js",
+  ".eslintrc.cjs",
+  ".eslintrc.json",
+  ".eslintrc.yml",
+  ".eslintrc.yaml",
+  ".eslintignore",
+  ".prettierrc",
+  ".prettierrc.js",
+  ".prettierrc.cjs",
+  ".prettierrc.json",
+  ".prettierrc.yml",
+  ".prettierrc.yaml",
+  "prettier.config.js",
+  "prettier.config.cjs",
+  "prettier.config.mjs",
+  ".prettierignore",
+] as const;
+
 export const externalDevDependencies = {
   "@electric-sql/pglite": "0.3.15",
   "@electric-sql/pglite-tools": "0.2.20",

@@ -3,6 +3,8 @@ import {
   FEATURE_DEPENDENCIES,
   getPackageManagerAtPowerhouseProjectDirPath,
   getPowerhouseProjectInstallCommand,
+  LEGACY_LINT_FORMAT_DEPENDENCIES,
+  LEGACY_LINT_FORMAT_FILES,
   packageJsonExports,
   packageScripts,
   PEER_EXTERNAL_DEPENDENCIES,
@@ -179,7 +181,7 @@ export async function migrate(version: string, projectDir = process.cwd()) {
 
   const peerDependencies = pipe(
     packageJson.peerDependencies ?? {},
-    omit(managedDevNames),
+    omit([...managedDevNames, ...LEGACY_LINT_FORMAT_DEPENDENCIES]),
     merge(
       preserveProtected(
         {
@@ -201,7 +203,7 @@ export async function migrate(version: string, projectDir = process.cwd()) {
 
   const devDependencies = pipe(
     merge(packageJson.dependencies ?? {}, packageJson.devDependencies ?? {}),
-    omit(managedPeerNames),
+    omit([...managedPeerNames, ...LEGACY_LINT_FORMAT_DEPENDENCIES]),
     merge(
       preserveProtected(
         {
@@ -238,6 +240,8 @@ export async function migrate(version: string, projectDir = process.cwd()) {
   delete (updatedPackageJson as { dependencies?: unknown }).dependencies;
   await writePackage(projectDir, updatedPackageJson);
 
+  console.log("Removing legacy lint/format config files...");
+  removeLegacyLintFormatFiles(projectDir);
   console.log("Overwriting project root files...");
   await writeAllGeneratedProjectFiles(projectDir);
   console.log("Moving unversioned document models...");
@@ -250,6 +254,12 @@ export async function migrate(version: string, projectDir = process.cwd()) {
   console.log("Re-generating code...");
   await generateAll(project);
   await project.save();
+}
+
+function removeLegacyLintFormatFiles(projectDir: string) {
+  for (const name of LEGACY_LINT_FORMAT_FILES) {
+    rmSync(join(projectDir, name), { force: true });
+  }
 }
 
 async function installProjectDependencies(projectDir: string) {
