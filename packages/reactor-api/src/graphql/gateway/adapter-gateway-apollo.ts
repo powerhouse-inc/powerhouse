@@ -14,6 +14,7 @@ import { ApolloServer, HeaderMap } from "@apollo/server";
 import { ApolloServerPluginInlineTraceDisabled } from "@apollo/server/plugin/disabled";
 import { ApolloServerPluginDrainHttpServer } from "@apollo/server/plugin/drainHttpServer";
 import { ApolloServerPluginLandingPageLocalDefault } from "@apollo/server/plugin/landingPage/default";
+import { buildSubgraphSchema } from "@apollo/subgraph";
 import type { ILogger } from "document-model";
 import type { GraphQLSchema } from "graphql";
 import type http from "node:http";
@@ -28,6 +29,35 @@ import type {
   WsContextFactory,
   WsDisposer,
 } from "./types.js";
+
+/**
+ * Drop subgraphs whose typeDefs cannot be built into a valid subgraph schema in
+ * isolation — e.g. a duplicate type definition within a single subgraph (Sentry
+ * #917) — so one broken subgraph is excluded instead of failing the build for
+ * everyone. Each excluded subgraph is logged; the rest are composed.
+ *
+ * Scope: this only catches per-subgraph build failures. Errors that surface only
+ * when subgraphs are composed together (cross-subgraph type or `@key` conflicts)
+ * are still thrown by `LocalCompose.initialize()` and are NOT handled here.
+ */
+export function filterComposableSubgraphs(
+  serviceList: ServiceDefinition[],
+  logger?: Pick<ILogger, "error">,
+): ServiceDefinition[] {
+  return serviceList.filter((service) => {
+    try {
+      buildSubgraphSchema({ typeDefs: service.typeDefs });
+      return true;
+    } catch (error) {
+      logger?.error(
+        `Excluding subgraph "${service.name}" from supergraph composition: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+      return false;
+    }
+  });
+}
 
 // Forwards the incoming authorization header to federated subgraph requests.
 class AuthenticatedDataSource extends RemoteGraphQLDataSource {
@@ -141,7 +171,13 @@ export class ApolloGatewayAdapter implements IGatewayAdapter<Context> {
       typeDefs: s.typeDefs,
       url: s.url,
     }));
-    const localCompose = new LocalCompose({ localServiceList: serviceList });
+    const composableServiceList = filterComposableSubgraphs(
+      serviceList,
+      this.#logger,
+    );
+    const localCompose = new LocalCompose({
+      localServiceList: composableServiceList,
+    });
     return localCompose.initialize(this.#gatewayOptions);
   }
 
