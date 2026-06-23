@@ -6,6 +6,7 @@ import {
   type ConnectionStateChangedEvent,
   type ConnectionStateSnapshot,
   type IChannel,
+  type IEventBus,
   type IMailbox,
   type ISyncManager,
   type Remote,
@@ -18,7 +19,6 @@ import {
   type SyncStatusChangeCallback,
 } from "@powerhousedao/reactor";
 import { fromErrorInfo } from "./error-info.js";
-import type { ReactorEventBusProxy } from "./event-bus-proxy.js";
 import type { CorrelationId, OwnerMessage } from "./protocol.js";
 import type { IRpcTransport } from "./transport.js";
 
@@ -125,7 +125,7 @@ export class SyncManagerProxy implements ISyncManager {
   private remotes: Remote[] = [];
   private seedPromise: Promise<void> | null = null;
 
-  constructor(transport: IRpcTransport, busProxy: ReactorEventBusProxy) {
+  constructor(transport: IRpcTransport, busProxy: IEventBus) {
     this.transport = transport;
 
     transport.onMessage((message) => {
@@ -145,13 +145,16 @@ export class SyncManagerProxy implements ISyncManager {
       }
     });
 
-    busProxy.on(SyncEventTypes.CONNECTION_STATE_CHANGED, (event) => {
-      const e = event as ConnectionStateChangedEvent;
-      this.connectionStates.set(e.remoteName, e.snapshot);
-      this.notifyConnection();
-    });
+    busProxy.subscribe(
+      SyncEventTypes.CONNECTION_STATE_CHANGED,
+      (_type, event) => {
+        const e = event as ConnectionStateChangedEvent;
+        this.connectionStates.set(e.remoteName, e.snapshot);
+        this.notifyConnection();
+      },
+    );
 
-    busProxy.on(SYNC_STATUS_CHANGED_EVENT, (event) => {
+    busProxy.subscribe(SYNC_STATUS_CHANGED_EVENT, (_type, event) => {
       const e = event as SyncStatusChangedBusEvent;
       this.syncStatuses.set(e.documentId, e.status);
       for (const listener of [...this.syncStatusListeners]) {
@@ -308,7 +311,7 @@ export class SyncManagerProxy implements ISyncManager {
 
 export function createSyncManagerProxy(
   transport: IRpcTransport,
-  busProxy: ReactorEventBusProxy,
+  busProxy: IEventBus,
 ): ISyncManager {
   return new SyncManagerProxy(transport, busProxy);
 }

@@ -6,6 +6,7 @@ import { createPortTransport } from "../../src/rpc/transport.js";
 
 const CONNECTION_STATE_CHANGED = 20005;
 const SYNC_PENDING = 20001;
+const JOB_PENDING = 10001;
 
 function fakeClient(): IReactorClient {
   return {} as unknown as IReactorClient;
@@ -44,8 +45,12 @@ describe("distributed EventBus (worker -> tabs)", () => {
   it("fans out a bus event to all connected tabs", async () => {
     const a: unknown[] = [];
     const b: unknown[] = [];
-    connectTab().on(CONNECTION_STATE_CHANGED, (e) => a.push(e));
-    connectTab().on(CONNECTION_STATE_CHANGED, (e) => b.push(e));
+    connectTab().subscribe(CONNECTION_STATE_CHANGED, (_type, e) => {
+      a.push(e);
+    });
+    connectTab().subscribe(CONNECTION_STATE_CHANGED, (_type, e) => {
+      b.push(e);
+    });
     const snapshot = { remoteName: "r1", current: "connected" };
     host.broadcastBusEvent(CONNECTION_STATE_CHANGED, snapshot);
     await tick();
@@ -56,10 +61,12 @@ describe("distributed EventBus (worker -> tabs)", () => {
   it("dispatches only to listeners for the matching event type", async () => {
     const seen: number[] = [];
     const proxy = connectTab();
-    proxy.on(CONNECTION_STATE_CHANGED, () =>
-      seen.push(CONNECTION_STATE_CHANGED),
-    );
-    proxy.on(SYNC_PENDING, () => seen.push(SYNC_PENDING));
+    proxy.subscribe(CONNECTION_STATE_CHANGED, () => {
+      seen.push(CONNECTION_STATE_CHANGED);
+    });
+    proxy.subscribe(SYNC_PENDING, () => {
+      seen.push(SYNC_PENDING);
+    });
     host.broadcastBusEvent(CONNECTION_STATE_CHANGED, {});
     await tick();
     expect(seen).toEqual([CONNECTION_STATE_CHANGED]);
@@ -67,7 +74,9 @@ describe("distributed EventBus (worker -> tabs)", () => {
 
   it("stops delivering after unsubscribe", async () => {
     const seen: unknown[] = [];
-    const off = connectTab().on(CONNECTION_STATE_CHANGED, (e) => seen.push(e));
+    const off = connectTab().subscribe(CONNECTION_STATE_CHANGED, (_type, e) => {
+      seen.push(e);
+    });
     off();
     host.broadcastBusEvent(CONNECTION_STATE_CHANGED, { x: 1 });
     await tick();
@@ -79,13 +88,20 @@ describe("distributed EventBus (worker -> tabs)", () => {
     const channel = new MessageChannel();
     channels.push(channel);
     const dispose = host.connect(createPortTransport(channel.port1));
-    createReactorEventBusProxy(createPortTransport(channel.port2)).on(
+    createReactorEventBusProxy(createPortTransport(channel.port2)).subscribe(
       CONNECTION_STATE_CHANGED,
-      (e) => seen.push(e),
+      (_type, e) => {
+        seen.push(e);
+      },
     );
     dispose();
     host.broadcastBusEvent(CONNECTION_STATE_CHANGED, { x: 1 });
     await tick();
     expect(seen).toEqual([]);
+  });
+
+  it("throws when subscribing to an event the worker does not forward", () => {
+    const proxy = connectTab();
+    expect(() => proxy.subscribe(JOB_PENDING, () => {})).toThrow();
   });
 });

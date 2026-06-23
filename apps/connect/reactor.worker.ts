@@ -3,7 +3,6 @@ import {
   DriveCollectionId,
   ReactorBuilder,
   ReactorClientBuilder,
-  SyncEventTypes,
   type ChannelConfig,
   type Database,
   type ISyncManager,
@@ -13,6 +12,7 @@ import {
   type RemoteOptions,
 } from "@powerhousedao/reactor";
 import {
+  FORWARDED_EVENT_TYPES,
   ReactorHost,
   SYNC_STATUS_CHANGED_EVENT,
   WorkerPackageLoader,
@@ -36,15 +36,6 @@ import {
 
 // Matches the main thread's RenownBuilder("connect").
 const RENOWN_APP_NAME = "connect";
-
-// Reactor bus events fanned out to tabs over the distributed EventBus.
-const FORWARDED_EVENT_TYPES = [
-  SyncEventTypes.SYNC_PENDING,
-  SyncEventTypes.SYNC_SUCCEEDED,
-  SyncEventTypes.SYNC_FAILED,
-  SyncEventTypes.DEAD_LETTER_ADDED,
-  SyncEventTypes.CONNECTION_STATE_CHANGED,
-];
 
 type WorkerConstruct = {
   namespace: string;

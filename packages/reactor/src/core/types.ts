@@ -446,6 +446,7 @@ export interface InProcessSyncModule extends SyncModule {
 export interface ReactorModule {
   documentModelRegistry: IDocumentModelRegistry;
   syncModule: SyncModule | undefined;
+  eventBus: IEventBus;
 }
 
 /**
@@ -454,7 +455,6 @@ export interface ReactorModule {
  * integration scenarios.
  */
 export interface InProcessReactorModule extends ReactorModule {
-  eventBus: IEventBus;
   queue: IQueue;
   jobTracker: IJobTracker;
   executorManager: IJobExecutorManager;

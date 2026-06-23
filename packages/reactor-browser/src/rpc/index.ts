@@ -1,9 +1,12 @@
 export { createReactorClientProxy } from "./client-proxy.js";
 export {
   createReactorEventBusProxy,
-  type BusEventListener,
-  type ReactorEventBusProxy,
+  ReactorEventBusProxy,
 } from "./event-bus-proxy.js";
+export {
+  FORWARDED_BUS_EVENT_TYPES,
+  FORWARDED_EVENT_TYPES,
+} from "./forwarded-events.js";
 export {
   connectReactorClient,
   postReactorIdentity,

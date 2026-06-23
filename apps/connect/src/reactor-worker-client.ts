@@ -91,6 +91,7 @@ export function createWorkerReactorClientModule(
     reactorModule: {
       documentModelRegistry,
       syncModule: { syncManager: syncManagerProxy },
+      eventBus: busProxy,
     },
   };
 

@@ -1,43 +1,62 @@
+import type { IEventBus, Unsubscribe } from "@powerhousedao/reactor";
+import { FORWARDED_BUS_EVENT_TYPES } from "./forwarded-events.js";
 import type { OwnerMessage } from "./protocol.js";
 import type { IRpcTransport } from "./transport.js";
 
-export type BusEventListener = (event: unknown) => void;
+type BusSubscriber = (type: number, event: unknown) => void | Promise<void>;
 
-export type ReactorEventBusProxy = {
-  on(eventType: number, listener: BusEventListener): () => void;
-};
+// Tab-side IEventBus over the worker's forwarded bus; emit() is unsupported (the worker is the sole emitter).
+export class ReactorEventBusProxy implements IEventBus {
+  private readonly forwardedTypes = new Set<number>(FORWARDED_BUS_EVENT_TYPES);
+  private readonly subscribers = new Map<number, Set<BusSubscriber>>();
 
-// Tab-side view of the worker's reactor IEventBus: dispatches forwarded
-// bus events to listeners by numeric event type.
+  constructor(transport: IRpcTransport) {
+    transport.onMessage((message) => {
+      const msg = message as OwnerMessage;
+      if (msg.k !== "bus-event") {
+        return;
+      }
+      const set = this.subscribers.get(msg.eventType);
+      if (set) {
+        for (const subscriber of [...set]) {
+          void subscriber(msg.eventType, msg.event);
+        }
+      }
+    });
+  }
+
+  subscribe<K>(
+    type: number,
+    subscriber: (type: number, event: K) => void | Promise<void>,
+  ): Unsubscribe {
+    if (!this.forwardedTypes.has(type)) {
+      throw new Error(
+        `ReactorEventBusProxy cannot subscribe to event type ${type}: the worker forwards only [${[...this.forwardedTypes].join(", ")}]`,
+      );
+    }
+    let set = this.subscribers.get(type);
+    if (!set) {
+      set = new Set();
+      this.subscribers.set(type, set);
+    }
+    const entry = subscriber as BusSubscriber;
+    set.add(entry);
+    return () => {
+      set.delete(entry);
+    };
+  }
+
+  emit(): Promise<void> {
+    return Promise.reject(
+      new Error(
+        "EventBus.emit is not supported tab-side; the reactor graph emits in the worker",
+      ),
+    );
+  }
+}
+
 export function createReactorEventBusProxy(
   transport: IRpcTransport,
-): ReactorEventBusProxy {
-  const listeners = new Map<number, Set<BusEventListener>>();
-
-  transport.onMessage((message) => {
-    const msg = message as OwnerMessage;
-    if (msg.k !== "bus-event") {
-      return;
-    }
-    const set = listeners.get(msg.eventType);
-    if (set) {
-      for (const listener of [...set]) {
-        listener(msg.event);
-      }
-    }
-  });
-
-  return {
-    on(eventType, listener) {
-      let set = listeners.get(eventType);
-      if (!set) {
-        set = new Set();
-        listeners.set(eventType, set);
-      }
-      set.add(listener);
-      return () => {
-        set.delete(listener);
-      };
-    },
-  };
+): IEventBus {
+  return new ReactorEventBusProxy(transport);
 }
