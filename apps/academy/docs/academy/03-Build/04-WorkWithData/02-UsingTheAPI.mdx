@@ -4,7 +4,7 @@
 
 **Switchboard** is the API interface that enables developers and data engineers to access data captured through document models in Connect and Fusion.
 
-Once you've structured and captured data from your business processes, Switchboard allows you to leverage that data to build insightful experiences in external websites, create interactive drive widgets, or generate detailed reports and dashboards in Fusion.
+Once you've structured and captured data from your business processes, use Switchboard to build experiences in external websites, create interactive drive widgets, or generate reports and dashboards in Fusion.
 
 :::tip[Using your document's state schema]
 Since your document models are defined with a GraphQL schema, you can use the same objects and fields in your queries and mutations to retrieve or write data from and to your documents.
@@ -198,7 +198,7 @@ For more information about GraphQL fundamentals, visit the [Introduction to Grap
 
 ### Starting the reactor locally
 
-In this tutorial, we'll show how to use a **GraphQL** query to query a document model. We'll continue with the **To-do List example** from our [introduction tutorial](/academy/Build/ManualTodoTutorial/CreateNewPowerhouseProject), but the process can be applied to any other document model.
+Use a **GraphQL** query to read a document model. This continues with the **To-do List example** from the [introduction tutorial](/academy/Build/ManualTodoTutorial/CreateNewPowerhouseProject), but the process applies to any document model.
 To make our document model available in the Apollo Studio Sandbox, we'll need to store it on a remote [Reactor](/academy/Reference/Reactor/WorkingWithTheReactor).
 
 :::info[What are reactors?]
@@ -488,6 +488,6 @@ After performing a write mutation, you can verify that the change was successful
 1.  **Query the document state again:** Rerun the `document` query from earlier in this tutorial. You should see the new item in the list or the deleted item removed.
 2.  **Check the Operation History:** The operation history in Connect will show the new `ADD_TODO_ITEM` or `DELETE_TODO_ITEM` operation, along with who performed it and when. This provides a complete audit trail of all changes to the document.
 
-### Summary
+### Next
 
-This ability to programmatically read from and write to documents via the GraphQL API is a powerful feature of Powerhouse. It unlocks countless possibilities for integrating your structured data into other applications, building automated workflows, and creating rich, data-driven user experiences.
+You can now read and write documents over the GraphQL API. To expose your own queries and mutations on top of this data, see [Using Subgraphs](/academy/Build/WorkWithData/UsingSubgraphs).

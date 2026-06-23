@@ -27,7 +27,7 @@
     {
       "id": "build-manual-todo-tutorial",
       "label": "Build — Manual ToDo Tutorial",
-      "docPath": "docs/academy/03-Build/00-ManualTodoTutorial",
+      "docPath": "docs/academy/03-Build/01-ManualTodoTutorial",
       "packages": [
         "clis/ph-cmd",
         "clis/ph-cli",

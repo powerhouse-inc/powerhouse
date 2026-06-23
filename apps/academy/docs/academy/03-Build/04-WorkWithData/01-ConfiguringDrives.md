@@ -19,7 +19,7 @@ A local drive is a container for local documents and data, hosted on your local 
 
 ### Remote drives vs. reactors
 
-Remote drives in Powerhouse allow you to connect to and work with data stored in external systems or cloud services. These drives act as bridges between Powerhouse contributors or other data sources, enabling seamless data synchronization. Drives can exist in three types of locations:
+Remote drives let you connect to and work with data stored in external systems or cloud services. They act as bridges between Powerhouse contributors or other data sources, syncing data between them. Drives can exist in three types of locations:
 
 - **Local Storage**: For offline or on-device access.
 - **Cloud Storage**: For centralized, scalable data management.

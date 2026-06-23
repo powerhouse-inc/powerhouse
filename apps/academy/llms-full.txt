@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-06-23T17:28:30.338Z
+> Generated: 2026-06-23T19:02:31.023Z
 > Total Documents: 106
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -14419,7 +14419,7 @@ This DID is then associated with a credential that authorizes a specific Connect
 
 ### 6.3 Verify the signatures of new operations in the todo list
 
-By leveraging this system, every operation or modification made to a document is cryptographically signed by the contributor's Renown identity. This ensures that each change is verifiable, traceable, and attributable to a specific pseudonymous user, providing a robust audit trail for all document activity.
+With this system, every operation made to a document is cryptographically signed by the contributor's Renown identity. Each change is verifiable, traceable, and attributable to a specific pseudonymous user, giving every document a complete audit trail.
 
 Now, return to your to-do list and make some additional changes. You'll notice that these operations are now signed with your Renown identity, making every action traceable and verifiable in the operations history.
 
@@ -14820,7 +14820,7 @@ Below, you can see the SDL for the `TodoList` document model.
 
 **INFO:**
 This schema defines the **data structure** of the document model and the types involved in its operations, which are detailed further as input types.
-Documents in Powerhouse leverage **event sourcing principles**, where every state transition is represented by an operation. GraphQL input types describe operations, ensuring that user intents are captured effectively. These operations detail the parameters needed for state transitions. The use of GraphQL aligns these transitions with explicit, validated, and reproducible commands.
+Documents in Powerhouse use **event sourcing**: every state transition is an operation. GraphQL input types describe those operations and the parameters each one needs, which makes state transitions explicit, validated, and reproducible.
 
 This is the essence of **Specification Driven Design & Development**: your schema serves as a machine-readable specification that both humans and AI agents can understand and execute—turning your intent into precise, maintainable functionality.
 
@@ -15029,7 +15029,7 @@ git reset --hard tutorial/step-3-implement-reducer-operation-handlers
 
 </details>
 
-In this section, we will implement the operation reducers for the **todo-list** document model. In the previous step Vetra imported our document specification and scaffolded our code and directory through live code generation.
+Now implement the operation reducers for the **todo-list** document model. In the previous step, Vetra imported the document specification and scaffolded the code and directory through live code generation.
 
 **INFO:**
 
@@ -15208,7 +15208,7 @@ git diff tutorial/step-3-implement-reducer-operation-handlers -- document-models
 
 ## Up next: Writing tests
 
-In the next chapter, you'll write comprehensive tests to verify your reducer implementations work correctly.
+In the next chapter, you'll write tests to verify your reducer implementations work correctly.
 
 ---
 
@@ -15220,7 +15220,7 @@ In the next chapter, you'll write comprehensive tests to verify your reducer imp
 **TIP:**
 📦 **Reference Code**: [step-4-implement-tests-for-todos-operations](https://github.com/powerhouse-inc/todo-tutorial/tree/step-4-implement-tests-for-todos-operations)
 
-This step focuses on writing comprehensive tests for the reducers you implemented in the previous step.
+This step covers writing tests for the reducers you implemented in the previous step.
 
 
 <details>
@@ -15248,7 +15248,7 @@ After committing your work, compare visually:
 
 </details>
 
-In order to make sure the operation reducers are working as expected, you need to write tests for them. When you generated your document model code, we created some boilerplate tests for you. Now we'll enhance them to properly verify our reducer logic.
+To verify the operation reducers work as expected, write tests for them. Generating your document model code created boilerplate tests; now extend them to check the reducer logic.
 
 ## Understanding the generated test file
 
@@ -15312,7 +15312,7 @@ describe("Todos Operations", () => {
 
 ## Enhance the tests
 
-The boilerplate tests check that operations are applied, but they don't verify the **actual results**. Let's write more comprehensive tests.
+The boilerplate tests check that operations are applied, but they don't verify the **actual results**. Extend them to assert on the resulting state.
 
 ### Test 1: Update the addTodoItem test
 
@@ -15738,7 +15738,7 @@ See step 1 for detailed GitHub Desktop instructions.
 
 </details>
 
-In this chapter we will continue with the interface or editor implementation of the **todo-list** document model. This means you will create a simple user interface for the **todo-list** document model which will be used inside Connect to create, update and delete your todo-list items.
+Now build the editor: the user interface for the **todo-list** document model. It runs inside Connect to create, update, and delete your todo-list items.
 
 ## Add a document editor specification in Vetra Studio.
 
@@ -15748,7 +15748,7 @@ Give the editor the name `todo-list-editor` and select the correct document mode
 
 ### Editor implementation options
 
-When building your editor component within the Powerhouse ecosystem, you have several options for styling, allowing you to leverage your preferred methods:
+You have several options for styling your editor component:
 
 1.  **Default HTML Styling:** Standard HTML tags (`<h1>`, `<p>`, `<button>`, etc.) will render with default styles offered through the boilerplate.
 2.  **Tailwind CSS:** Connect Studio comes with Tailwind CSS integrated. You can directly use Tailwind utility classes for rapid, consistent styling without writing separate CSS files.
@@ -16220,17 +16220,6 @@ In Connect, you should be able to:
 - Check/uncheck items to mark them complete
 
 
-## Key concepts learned
-
-In this tutorial you've learned:
-
-✅ **Component-based architecture** - Breaking down complex UIs into reusable components  
-✅ **Document model hooks** - Using `useSelectedTodoListDocument` to connect React to your document state  
-✅ **Action dispatching** - How to dispatch operations (`addTodoItem`, `updateTodoItem`, `deleteTodoItem`) from your UI  
-✅ **Type-safe development** - Leveraging TypeScript with generated types from your SDL  
-✅ **Form handling** - Using React forms with proper event handlers  
-✅ **Local vs. document state** - When to use React `useState` vs. document model state
-
 ### Up next: Mastery Track
 
 In the [Mastery Track chapter: Document Model Creation](/academy/Build/DocumentModelCreation/WhatIsADocumentModel) we guide you through the theoretics of the previous steps while creating a more advanced version of the todo-list.
@@ -16268,12 +16257,12 @@ A Document Model can be understood as:
 
 - A structured software framework that represents and **manages business logic** within a digital environment.
 - A sophisticated template that **encapsulates the essential aspects of a digital process or a set of data**.
-- A blueprints that define how data is **captured, manipulated, and visualised** within a system.
+- A blueprint that defines how data is **captured, manipulated, and visualised** within a system.
 - A **standardized way to store, modify, and query data** in scalable, decentralized applications.
 
-### **How does a document model function?**
+### How does a document model function?
 
-#### **Structure and composition**
+#### Structure and composition
 
 Each document model consists of three key components:
 
@@ -16281,15 +16270,15 @@ Each document model consists of three key components:
 2. **Document Operations** – Defines how the document can be modified.
 3. **Event History** – Maintains an append-only log of changes.
 
-Document models leverage **event sourcing, CQRS (Command Query Responsibility Segregation), and an append-only architecture** to ensure immutability, auditability, and scalability.
+Document models use **event sourcing, CQRS (Command Query Responsibility Segregation), and an append-only architecture** for immutability, auditability, and scalability.
 
 ---
 
-## **1. Structure of a document model**
+## 1. Structure of a document model
 
 A document model consists of the following key components:
 
-### **1.1 State schema**
+### 1.1 State schema
 
 The **state schema** defines the structure of the document, including its fields and data types. It serves as a blueprint for how data is stored and validated.
 
@@ -16314,7 +16303,7 @@ type LineItem {
 }
 ```
 
-### **State schema features:**
+### State schema features:
 
 - Uses **GraphQL-like definitions** for a **clear, structured schema**.
 - Supports **custom scalar types** like `OID`, `Currency`, and `DateTime`. Or other Web3 specific scalars
@@ -16324,7 +16313,7 @@ The state schema acts as a **template** for document instances. Every new invoic
 
 ---
 
-### **1.2 Document operations**
+### 1.2 Document operations
 
 Document models are **append-only**, meaning changes are not made directly to the document state. Instead, **document operations** define valid state transitions.
 
@@ -16353,11 +16342,11 @@ Instead, a new event is appended to the document history.
 
 ---
 
-### **1.3 Event history (append-only log)**
+### 1.3 Event history (append-only log)
 
 Every operation applied to a document is **stored as an event** in an append-only log.
 
-#### **Example event log for an invoice document:**
+#### Example event log for an invoice document:
 
 ```json
 [
@@ -16366,7 +16355,7 @@ Every operation applied to a document is **stored as an event** in an append-onl
   { "timestamp": 1700000200, "operation": "MARK_AS_PAID", "data": {}
 ```
 
-### **Event history benefits:**
+### Event history benefits:
 
 - Provides a **transparent audit trail** of changes.
 - Enables **time travel debugging** by reconstructing past states.
@@ -16374,11 +16363,11 @@ Every operation applied to a document is **stored as an event** in an append-onl
 
 ---
 
-## **2. How document models work technically**
+## 2. How document models work technically
 
 Document models in Powerhouse rely on **event-driven architecture, event sourcing, and CQRS principles**. Here's a step-by-step breakdown:
 
-### **2.1 Document creation**
+### 2.1 Document creation
 
 1. A user (or system) **submits an operation** to create a new document.
 2. The document model **validates** the input data against the state schema.
@@ -16400,7 +16389,7 @@ Document models in Powerhouse rely on **event-driven architecture, event sourcin
 
 ---
 
-### **2.2 Document modification**
+### 2.2 Document modification
 
 1. A user submits an **operation** (e.g., `ADD_LINE_ITEM`).
 2. The **event is appended** to the document history.
@@ -16425,7 +16414,7 @@ Since changes are **not applied directly**, this model is **highly scalable and 
 
 ---
 
-### **2.3 Querying document models**
+### 2.3 Querying document models
 
 Powerhouse uses **GraphQL queries** to fetch document states efficiently. Because documents store structured data, developers can instantly query:
 
@@ -16448,24 +16437,22 @@ This removes the need for **complex database joins** and allows for **fast, stru
 
 ---
 
-### **What do document models unlock?**
+### What document models give you
 
-Document Models offer a range of features that can be leveraged to create sophisticated, automated, and data-driven solutions:
+Document models support:
 
 - **Automation**: Automate workflows using consistent, structured document logic.
 - **Auditability**: Maintain a full history of changes for compliance and transparency.
-- **API Integration**: Seamlessly connect with Switchboard or external APIs for data exchange.
-- **Data Analysis**: Enable real-time and historical insights through structured read models.
+- **API Integration**: Connect with Switchboard or external APIs for data exchange.
+- **Data Analysis**: Get real-time and historical insights through structured read models.
 - **Version Control**: Track and compare document states over time, similar to Git.
-- **Collaboration**: Empower decentralized teams to build, modify, and share documents asynchronously.
+- **Collaboration**: Let decentralized teams build, modify, and share documents asynchronously.
 - **Extensibility**: Add new fields, operations, and integrations over time without rewriting logic.
-- **Schema Evolution**: Evolve document models with [versioning](/academy/Build/DocumentModelCreation/DocumentModelVersioning)—upgrade schemas while maintaining backward compatibility with existing documents.
-
-Document Models are a powerful primitive within the Powerhouse vision, offering a flexible, structured, and efficient way to manage business logic and data.
+- **Schema Evolution**: Evolve document models with [versioning](/academy/Build/DocumentModelCreation/DocumentModelVersioning): upgrade schemas while keeping backward compatibility with existing documents.
 
 ### Up next: How to build a document model
 
-In the next chapters, we'll teach you how to build a To-do List document model while explaining all of the theory that is involved.
+Next, you'll build a To-do List document model, with the theory explained as you go.
 
 ---
 
@@ -16474,7 +16461,7 @@ In the next chapters, we'll teach you how to build a To-do List document model w
 
 > Source: https://academy.vetra.io/academy/Build/DocumentModelCreation/SpecifyTheStateSchema
 
-The state schema is the backbone of your document model. It defines the structure, data types, and relationships of the information your document will hold. In Powerhouse, we use the **GraphQL Schema Definition Language (SDL)** to define this schema. A well-defined state schema is crucial for ensuring data integrity, consistency, and for enabling powerful querying and manipulation capabilities.
+The state schema is the backbone of your document model. It defines the structure, data types, and relationships of the information your document will hold. In Powerhouse, you define this schema with the **GraphQL Schema Definition Language (SDL)**. A well-defined state schema keeps data consistent and is what makes the document queryable.
 
 **TIP:**
 Your state schema is more than just a data structure—it's a **specification** that enables **Specification Driven Design & Development**. This schema becomes a machine-readable blueprint that AI agents can interpret and execute, enabling precise collaboration between you and AI throughout the development process.
@@ -16597,7 +16584,7 @@ type TodoListStats {
 5.  **Consider Future Needs**: While you shouldn't over-engineer, think a little about potential future enhancements. For example, adding a `createdAt: String` or `dueDate: String` field to `TodoItem` might be useful later.
 6.  **Root State Type**: It's a common pattern to have a single root type for your document state (e.g., `TodoListState`). This provides a clear entry point for accessing all document data.
 
-By carefully defining your state schema, you lay a solid foundation for your Powerhouse document model, making it robust, maintainable, and easy to work with. The schema dictates not only how data is stored but also how it can be queried and mutated through operations, which will be covered in the next section.
+The schema dictates how data is stored, and how it can be queried and mutated through operations. Operations are covered in the next section.
 
 ## Practical implementation: defining the state schema in Vetra Studio
 
@@ -18564,7 +18551,7 @@ export default function Editor(props: IProps) {
 
 ### Additional hooks for editors
 
-Beyond the document-specific hooks (like `useSelectedTodoListDocument`), Powerhouse provides a comprehensive set of hooks from the reactor-browser package that you can use in your editors:
+Beyond the document-specific hooks (like `useSelectedTodoListDocument`), the reactor-browser package provides these hooks for your editors:
 
 | Hook                        | Description                                   |
 | --------------------------- | --------------------------------------------- |
@@ -18680,7 +18667,7 @@ This pattern is useful when you need to:
 
 ## Powerhouse component library
 
-Powerhouse provides a rich set of reusable UI components through the **`@powerhousedao/document-engineering/scalars`** package. These components are designed for consistency, efficiency, and seamless integration with the Powerhouse ecosystem, with many based on GraphQL scalar types. For more information read our chapter on the [Component Library](/academy/Reference/EditorsUI/DocumentEngineering)
+The **`@powerhousedao/document-engineering/scalars`** package provides reusable UI components, many of them based on GraphQL scalar types. For more information read our chapter on the [Component Library](/academy/Reference/EditorsUI/DocumentEngineering).
 
 ### Exploring components
 
@@ -18722,7 +18709,7 @@ Storybook allows you to:
 
 ## Build a TodoList editor
 
-In this final part of our tutorial we will continue with the interface or editor implementation of the **TodoList** document model. This means you will create a simple user interface for the **TodoList** document model which will be used inside the Connect app to create, update and delete your TodoList items, and also display the statistics we've implemented in our reducers (if you followed the advanced version).
+Now build the editor: the user interface for the **TodoList** document model. It runs inside the Connect app to create, update, and delete TodoList items, and (if you followed the advanced version) displays the statistics from your reducers.
 
 ## Generate the editor template
 
@@ -18754,7 +18741,7 @@ Notice the `--editor` flag which specifies the editor name, and the `--document-
 
 ### Editor implementation options
 
-When building your editor component within the Powerhouse ecosystem, you have several options for styling, allowing you to leverage your preferred methods:
+You have several options for styling your editor component:
 
 1.  **Default HTML Styling:** Standard HTML tags (`<h1>`, `<p>`, `<button>`, etc.) will render with default styles offered through the boilerplate.
 2.  **Tailwind CSS:** Vetra Studio comes with Tailwind CSS integrated. You can directly use Tailwind utility classes for rapid, consistent styling without writing separate CSS files.
@@ -18997,13 +18984,9 @@ The editor will update dynamically, so you can play around with your editor styl
 
 </details>
 
-Congratulations!
-If you managed to follow this tutorial until this point, you have successfully implemented the **TodoList** document model with its reducer operations and editor.
-
 ## Up Next
 
-Now you can move on to creating a [custom Drive-app](/academy/Build/BuildingUserExperiences/BuildingADriveExplorer) for your TodoList document.  
-Imagine you have many TodoLists sitting in a drive. A custom Drive-app will allow you to organize and track them at a glance, opening up a new world of possibilities to increase the functionality of your documents!
+Next, build a [custom Drive-app](/academy/Build/BuildingUserExperiences/BuildingADriveExplorer) for your TodoList document. When you have many TodoLists sitting in a drive, a Drive-app lets you organize and track them at a glance.
 
 ### Further Reading
 
@@ -19602,18 +19585,9 @@ return showRevisionHistory ? (
 ph connect
 ```
 
-### Now it's your turn!
+## Up Next
 
-Start building your own Drive-apps or experiences.
-Congratulations on completing this tutorial!
-You've successfully built a custom drive explorer, enhancing the way users interact with document models.
-
-Now, take a moment to think about the possibilities!
-
-- What **unique Drive Experiences** could you create for your own projects?
-- How can you tailor interfaces and streamline workflows to unlock the full potential of your document models?
-
-The Powerhouse platform provides the tools. It's time to start building!
+You've built a custom drive explorer. Next, style it with [CSS customization](/academy/Build/BuildingUserExperiences/CSSCustomization).
 
 ---
 
@@ -23216,7 +23190,7 @@ A local drive is a container for local documents and data, hosted on your local 
 
 ### Remote drives vs. reactors
 
-Remote drives in Powerhouse allow you to connect to and work with data stored in external systems or cloud services. These drives act as bridges between Powerhouse contributors or other data sources, enabling seamless data synchronization. Drives can exist in three types of locations:
+Remote drives let you connect to and work with data stored in external systems or cloud services. They act as bridges between Powerhouse contributors or other data sources, syncing data between them. Drives can exist in three types of locations:
 
 - **Local Storage**: For offline or on-device access.
 - **Cloud Storage**: For centralized, scalable data management.
@@ -23379,7 +23353,7 @@ Enjoy!
 
 **Switchboard** is the API interface that enables developers and data engineers to access data captured through document models in Connect and Fusion.
 
-Once you've structured and captured data from your business processes, Switchboard allows you to leverage that data to build insightful experiences in external websites, create interactive drive widgets, or generate detailed reports and dashboards in Fusion.
+Once you've structured and captured data from your business processes, use Switchboard to build experiences in external websites, create interactive drive widgets, or generate reports and dashboards in Fusion.
 
 **TIP:**
 Since your document models are defined with a GraphQL schema, you can use the same objects and fields in your queries and mutations to retrieve or write data from and to your documents.
@@ -23573,7 +23547,7 @@ For more information about GraphQL fundamentals, visit the [Introduction to Grap
 
 ### Starting the reactor locally
 
-In this tutorial, we'll show how to use a **GraphQL** query to query a document model. We'll continue with the **To-do List example** from our [introduction tutorial](/academy/Build/ManualTodoTutorial/CreateNewPowerhouseProject), but the process can be applied to any other document model.
+Use a **GraphQL** query to read a document model. This continues with the **To-do List example** from the [introduction tutorial](/academy/Build/ManualTodoTutorial/CreateNewPowerhouseProject), but the process applies to any document model.
 To make our document model available in the Apollo Studio Sandbox, we'll need to store it on a remote [Reactor](/academy/Reference/Reactor/WorkingWithTheReactor).
 
 **INFO:**
@@ -23863,9 +23837,9 @@ After performing a write mutation, you can verify that the change was successful
 1.  **Query the document state again:** Rerun the `document` query from earlier in this tutorial. You should see the new item in the list or the deleted item removed.
 2.  **Check the Operation History:** The operation history in Connect will show the new `ADD_TODO_ITEM` or `DELETE_TODO_ITEM` operation, along with who performed it and when. This provides a complete audit trail of all changes to the document.
 
-### Summary
+### Next
 
-This ability to programmatically read from and write to documents via the GraphQL API is a powerful feature of Powerhouse. It unlocks countless possibilities for integrating your structured data into other applications, building automated workflows, and creating rich, data-driven user experiences.
+You can now read and write documents over the GraphQL API. To expose your own queries and mutations on top of this data, see [Using Subgraphs](/academy/Build/WorkWithData/UsingSubgraphs).
 
 ---
 
@@ -24299,7 +24273,7 @@ Bridge Processors and Subgraphs — Currently, there's a gap in how processors a
 
 Processors are components that receive document operations from the reactor and perform side effects. While specialized processor types like [relational database processors](/academy/Build/WorkWithData/RelationalDbProcessor) exist, you can build a plain processor by implementing the `IProcessor` interface directly.
 
-In this tutorial we will build a **logging processor** that prints a structured summary of every operation to the console.
+In this tutorial you'll build a **logging processor** that prints a structured summary of every operation to the console.
 
 ## What is a processor?
 
@@ -25839,10 +25813,7 @@ Bump the `version` field in `package.json` before every subsequent publish.
 
 > Source: https://academy.vetra.io/academy/Build/Launch/SetupEnvironment
 
-## Introduction
-
-Powerhouse is a powerful platform that helps you manage and deploy your applications efficiently.  
-This guide will walk you through the process of setting up both the Powerhouse CLI and configuring your server machine to run Powerhouse services. Whether you're setting up a development environment or preparing for production deployment, this guide provides all the necessary steps and considerations.
+This guide sets up the Powerhouse CLI and configures a server machine to run Powerhouse services, for both development and production deployment.
 
 **TIP:**
 This guide covers **VM/server-based deployment** with direct installation. If you prefer **containerized deployment**, see the [Docker Deployment Guide](../docs/docs/05-DockerDeployment.md).
@@ -27694,7 +27665,7 @@ git reset --hard tutorial/main
 
 </details>
 
-In this section, we will implement and test the operation reducers for the **ChatRoom** document model. Vetra Studio has been automatically generating your document model code as you defined the specification.
+Now implement and test the operation reducers for the **ChatRoom** document model. Vetra Studio has been generating your document model code as you defined the specification.
 
 If you need to review the document model specification steps, see [Define ChatRoom Document Model](/academy/Build/ExampleUsecases/Chatroom/DefineChatroomDocumentModel).
 
@@ -28169,7 +28140,7 @@ See step 1 for detailed GitHub Desktop instructions.
 
 </details>
 
-In this chapter we will continue with the interface or editor implementation of the **ChatRoom** document model. This means you will create a user interface for the **ChatRoom** document model which will be used to visualize your chatroom, send messages, and react with emojis.
+Now build the editor: the user interface for the **ChatRoom** document model. It visualizes your chatroom, sends messages, and reacts with emojis.
 
 ## Add a document editor specification in Vetra Studio
 
@@ -28713,16 +28684,7 @@ git show tutorial/main:editors/chat-room-editor/components/Header/EditableLabel.
 git diff tutorial/main -- editors/chat-room-editor/
 ```
 
-## Key concepts learned
-
-In this tutorial you've learned:
-
-✅ **Component-based architecture** - Breaking down complex UIs into reusable components  
-✅ **Document model hooks** - Using `useSelectedChatRoomDocument` to connect React to your document state  
-✅ **User authentication** - Using `useUser` hook for wallet-based authentication  
-✅ **Action dispatching** - How to dispatch operations from your UI  
-✅ **Type-safe development** - Leveraging TypeScript with generated types from your SDL  
-✅ **Real-time collaboration** - Building features that work across multiple users
+You now have a working ChatRoom editor. Compare your implementation against the reference branch above if anything differs.
 
 ---
 

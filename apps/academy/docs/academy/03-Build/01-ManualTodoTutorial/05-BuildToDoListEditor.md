@@ -67,7 +67,7 @@ See step 1 for detailed GitHub Desktop instructions.
 
 </details>
 
-In this chapter we will continue with the interface or editor implementation of the **todo-list** document model. This means you will create a simple user interface for the **todo-list** document model which will be used inside Connect to create, update and delete your todo-list items.
+Now build the editor: the user interface for the **todo-list** document model. It runs inside Connect to create, update, and delete your todo-list items.
 
 ## Add a document editor specification in Vetra Studio.
 
@@ -77,7 +77,7 @@ Give the editor the name `todo-list-editor` and select the correct document mode
 
 ### Editor implementation options
 
-When building your editor component within the Powerhouse ecosystem, you have several options for styling, allowing you to leverage your preferred methods:
+You have several options for styling your editor component:
 
 1.  **Default HTML Styling:** Standard HTML tags (`<h1>`, `<p>`, `<button>`, etc.) will render with default styles offered through the boilerplate.
 2.  **Tailwind CSS:** Connect Studio comes with Tailwind CSS integrated. You can directly use Tailwind utility classes for rapid, consistent styling without writing separate CSS files.
@@ -558,17 +558,6 @@ In Connect, you should be able to:
 - Check/uncheck items to mark them complete
 
 :::
-
-## Key concepts learned
-
-In this tutorial you've learned:
-
-✅ **Component-based architecture** - Breaking down complex UIs into reusable components  
-✅ **Document model hooks** - Using `useSelectedTodoListDocument` to connect React to your document state  
-✅ **Action dispatching** - How to dispatch operations (`addTodoItem`, `updateTodoItem`, `deleteTodoItem`) from your UI  
-✅ **Type-safe development** - Leveraging TypeScript with generated types from your SDL  
-✅ **Form handling** - Using React forms with proper event handlers  
-✅ **Local vs. document state** - When to use React `useState` vs. document model state
 
 ### Up next: Mastery Track
 
