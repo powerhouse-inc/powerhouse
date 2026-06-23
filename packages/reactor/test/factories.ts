@@ -940,7 +940,10 @@ export const testSyncStorageBackends: Array<{
   name: string;
   create: () => Promise<TestSyncStorage>;
 }> = [
-  { name: "PGLite/MemoryFS", create: () => createPGliteSyncStorage(memoryFsBackend) },
+  {
+    name: "PGLite/MemoryFS",
+    create: () => createPGliteSyncStorage(memoryFsBackend),
+  },
   {
     name: "PGLite/AtomicNodeFs",
     create: () => createPGliteSyncStorage(atomicNodeFsBackend),
