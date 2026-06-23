@@ -11,6 +11,7 @@ import {
   type RemoteFilter,
   type RemoteOptions,
 } from "@powerhousedao/reactor";
+import { baseDocumentModels } from "@powerhousedao/reactor-browser/base-document-models";
 import {
   FORWARDED_EVENT_TYPES,
   ReactorHost,
@@ -108,7 +109,8 @@ const host = new ReactorHost({
       importPackage: (url) =>
         import(/* @vite-ignore */ url) as Promise<Record<string, unknown>>,
     });
-    const models = await loader.loadPackages(construct.packageSpecs);
+    const loaded = await loader.loadPackages(construct.packageSpecs);
+    const models = baseDocumentModels.concat(loaded);
     const pg = await openReactorPglite(construct.namespace);
     const crypto = await buildWorkerCrypto();
     signer = new RenownCryptoSigner(

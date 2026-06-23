@@ -25,6 +25,11 @@
       "types": "./dist/src/analytics/index.d.ts",
       "import": "./dist/src/analytics/index.js"
     },
+    "./base-document-models": {
+      "source": "./src/document-model.ts",
+      "types": "./dist/src/document-model.d.ts",
+      "import": "./dist/src/document-model.js"
+    },
     "./graphql": {
       "source": "./src/graphql/client.ts",
       "types": "./dist/src/graphql/client.d.ts",

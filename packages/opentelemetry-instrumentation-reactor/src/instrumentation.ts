@@ -19,7 +19,7 @@ import type {
   ReadModelBatchCompletedEvent,
   ReadModelIndexedEvent,
   IReadModelCoordinator,
-  ReactorModule,
+  InProcessReactorModule,
   SyncModule,
   Unsubscribe,
 } from "@powerhousedao/reactor";
@@ -27,7 +27,7 @@ import type { ObservableCallback, ObservableGauge } from "@opentelemetry/api";
 import { createMetrics, type ReactorMetrics } from "./metrics.js";
 
 export class ReactorInstrumentation {
-  private readonly module: ReactorModule;
+  private readonly module: InProcessReactorModule;
   private metrics: ReactorMetrics | undefined;
   private unsubscribes: Unsubscribe[] = [];
   private observableCallbacks: Array<[ObservableGauge, ObservableCallback]> =
@@ -37,7 +37,7 @@ export class ReactorInstrumentation {
   private runningTimestamps = new Map<string, number>();
   private writeReadyTimestamps = new Map<string, number>();
 
-  constructor(module: ReactorModule) {
+  constructor(module: InProcessReactorModule) {
     this.module = module;
   }
 

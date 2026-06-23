@@ -5,7 +5,7 @@ import type { IRpcTransport } from "./transport.js";
 
 type BusSubscriber = (type: number, event: unknown) => void | Promise<void>;
 
-// Tab-side IEventBus over the worker's forwarded bus; emit() is unsupported (the worker is the sole emitter).
+// emit() is unsupported tab-side; the worker is the sole emitter.
 export class ReactorEventBusProxy implements IEventBus {
   private readonly forwardedTypes = new Set<number>(FORWARDED_BUS_EVENT_TYPES);
   private readonly subscribers = new Map<number, Set<BusSubscriber>>();

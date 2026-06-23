@@ -14,7 +14,7 @@ import {
   ReactorBuilder,
   type Database,
   type DocumentModelSpecInput,
-  type ReactorModule,
+  type InProcessReactorModule,
 } from "@powerhousedao/reactor";
 import { ReactorInstrumentation } from "@powerhousedao/opentelemetry-instrumentation-reactor";
 import type {
@@ -69,7 +69,7 @@ const N_PROJECTION_SHARDS = parseInt(
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 type State = {
-  module: ReactorModule;
+  module: InProcessReactorModule;
   instrumentation: ReactorInstrumentation;
   signer: ISigner;
 };

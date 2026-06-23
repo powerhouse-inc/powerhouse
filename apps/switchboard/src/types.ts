@@ -1,6 +1,6 @@
 import type {
+  InProcessReactorClientModule,
   IReactorClient,
-  ReactorClientModule,
 } from "@powerhousedao/reactor";
 import type { IAttachmentService } from "@powerhousedao/reactor-attachments";
 import type { IRenown } from "@renown/sdk";
@@ -65,7 +65,7 @@ export type StartServerOptions = {
    * the same defaults switchboard uses internally; opt out of individual
    * pieces as needed.
    */
-  reactor?: ReactorClientModule;
+  reactor?: InProcessReactorClientModule;
   /**
    * Registry URL for the HttpPackageLoader. Enables `PackagesSubgraph`
    * (install/uninstall mutations) plus dynamic package resolution.

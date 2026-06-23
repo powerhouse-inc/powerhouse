@@ -1,10 +1,12 @@
 import { closeDocumentFromToolbar } from "@powerhousedao/e2e-utils";
 import { createDocument, navigateToVetraDrive } from "./helpers/document.js";
 import { expect, test } from "./helpers/fixtures.js";
+import { DESCRIBE_TIMEOUT, LONG_VISIBLE_TIMEOUT } from "./helpers/timeouts.js";
+import { waitForAppReady } from "./helpers/wait.js";
 
 // Run these tests serially to avoid conflicts with other tests
 // that modify the shared Vetra drive
-test.describe.configure({ mode: "serial", timeout: 5 * 60 * 60 * 1000 });
+test.describe.configure({ mode: "serial", timeout: DESCRIBE_TIMEOUT });
 
 test.use({
   storageState: {
@@ -63,16 +65,16 @@ test("should create document of each supported type in Vetra drive", async ({
     expect(documentUrl).toContain("/d/vetra-");
 
     // Wait for the document toolbar to be fully rendered before closing
-    await page.waitForLoadState("networkidle");
+    await waitForAppReady(page);
     await closeDocumentFromToolbar(page);
-    await page.waitForLoadState("networkidle");
+    await waitForAppReady(page);
 
     const documentHeading = page.getByRole("heading", {
       name: doc.name,
       level: 3,
       exact: true,
     });
-    await expect(documentHeading).toBeVisible({ timeout: 5 * 60 * 60 * 1000 });
+    await expect(documentHeading).toBeVisible({ timeout: LONG_VISIBLE_TIMEOUT });
   }
 });
 
@@ -89,9 +91,9 @@ test("should log console message when attempting to create powerhouse/codegen-pr
     name: "Add new specification powerhouse/codegen-processor",
   });
 
-  await expect(codegenButton).toBeVisible({ timeout: 2 * 60 * 60 * 1000 });
+  await expect(codegenButton).toBeVisible({ timeout: LONG_VISIBLE_TIMEOUT });
   await codegenButton.click();
 
   // Wait for any console messages to appear
-  await page.waitForLoadState("networkidle");
+  await waitForAppReady(page);
 });

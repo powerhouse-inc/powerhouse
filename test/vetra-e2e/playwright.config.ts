@@ -4,6 +4,32 @@ export const CONNECT_URL = "http://localhost:3001";
 export const REACTOR_URL = "http://localhost:4002";
 export const PREVIEW_URL = "http://localhost:4173";
 
+// Worker runs only need the dev server, so they skip the slow connect-preview build.
+const workerMode =
+  process.env.PH_REACTOR_WORKER === "1" ||
+  process.env.PH_REACTOR_WORKER === "true";
+
+const previewProject = {
+  name: "connect-preview",
+  testMatch: /runtime-config-preview\.spec\.ts/,
+  use: { ...devices["Desktop Chrome"], baseURL: PREVIEW_URL },
+  dependencies: ["vetra-dev"],
+};
+
+const previewWebServer = {
+  // Isolated `--outDir dist-connect` so the Connect SPA build does NOT
+  // collide with `pnpm build` (= `ph-cli build`, the *package* build) that
+  // todo-document.spec.ts runs into the default `dist/`. Both commands
+  // write to `dist/` otherwise and the package build trashes the SPA.
+  command:
+    "pnpm exec ph-cli connect build --outDir dist-connect && pnpm exec ph-cli connect preview --outDir dist-connect --port 4173 --strictPort",
+  url: PREVIEW_URL,
+  stderr: "pipe" as const,
+  stdout: "pipe" as const,
+  reuseExistingServer: !process.env.CI,
+  timeout: 5 * 60 * 1000,
+};
+
 /**
  * Read environment variables from file.
  * https://github.com/motdotla/dotenv
@@ -56,12 +82,7 @@ export default defineConfig({
       testIgnore: /runtime-config-preview\.spec\.ts/,
       use: { ...devices["Desktop Chrome"], baseURL: CONNECT_URL },
     },
-    {
-      name: "connect-preview",
-      testMatch: /runtime-config-preview\.spec\.ts/,
-      use: { ...devices["Desktop Chrome"], baseURL: PREVIEW_URL },
-      dependencies: ["vetra-dev"],
-    },
+    ...(workerMode ? [] : [previewProject]),
   ],
 
   /* One webServer per project. Both come up at playwright init; tests in each
@@ -75,18 +96,6 @@ export default defineConfig({
       stdout: "pipe",
       reuseExistingServer: !process.env.CI,
     },
-    {
-      // Isolated `--outDir dist-connect` so the Connect SPA build does NOT
-      // collide with `pnpm build` (= `ph-cli build`, the *package* build) that
-      // todo-document.spec.ts runs into the default `dist/`. Both commands
-      // write to `dist/` otherwise and the package build trashes the SPA.
-      command:
-        "pnpm exec ph-cli connect build --outDir dist-connect && pnpm exec ph-cli connect preview --outDir dist-connect --port 4173 --strictPort",
-      url: PREVIEW_URL,
-      stderr: "pipe",
-      stdout: "pipe",
-      reuseExistingServer: !process.env.CI,
-      timeout: 5 * 60 * 1000,
-    },
+    ...(workerMode ? [] : [previewWebServer]),
   ],
 });
