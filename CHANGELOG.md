@@ -1,3 +1,7 @@
+## 6.2.0-dev.29 (2026-06-23)
+
+This was a version bump only, there were no code changes.
+
 ## 6.2.0-dev.28 (2026-06-22)
 
 ### 🩹 Fixes
