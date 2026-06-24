@@ -1,12 +1,13 @@
 import * as fs from "fs";
 import * as path from "path";
 import { fileURLToPath } from "url";
+import prettier from "prettier";
 
 /**
  * Generates combined CLI documentation from ph-cli and ph-cmd COMMANDS.md files
  * and injects it into the main 00-PowerhouseCLI.md documentation file.
  */
-function generateCombinedCliDocs() {
+async function generateCombinedCliDocs() {
   try {
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = path.dirname(__filename);
@@ -193,8 +194,15 @@ function generateCombinedCliDocs() {
       "\n" +
       targetDocContent.substring(endIndex);
 
+    // Format with the project's Prettier config so the generated file passes
+    // `prettier --check` and doesn't drift from the rest of the docs.
+    const formattedDocContent = await prettier.format(targetDocContent, {
+      ...(await prettier.resolveConfig(targetDocFile)),
+      filepath: targetDocFile,
+    });
+
     // Write the updated content back to the target file
-    fs.writeFileSync(targetDocFile, targetDocContent);
+    fs.writeFileSync(targetDocFile, formattedDocContent);
 
     console.log(
       `✅ Combined CLI documentation has been generated at ${targetDocFile}`,
