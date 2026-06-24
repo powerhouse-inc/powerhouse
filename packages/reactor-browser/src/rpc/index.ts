@@ -7,6 +7,7 @@ export {
   createLiveQueryProxy,
   type ILiveQueryProxy,
 } from "./live-query-proxy.js";
+export { createRelationalPgliteProxy } from "./relational-db-proxy.js";
 export {
   createReactorEventBusProxy,
   ReactorEventBusProxy,

@@ -33,23 +33,21 @@ export const usePGliteDB = () => {
   return state;
 };
 
-export const useSetPGliteDB = () => {
-  const setPGliteState = (pglite: Partial<PGliteState>) => {
-    const currentPowerhouse = window.powerhouse ?? {};
-    const currentPGliteState = window.powerhouse?.pglite ?? defaultPGliteState;
+export function setPGliteDB(pglite: Partial<PGliteState>): void {
+  const currentPowerhouse = window.powerhouse ?? {};
+  const currentPGliteState = window.powerhouse?.pglite ?? defaultPGliteState;
 
-    window.powerhouse = {
-      ...currentPowerhouse,
-      pglite: {
-        ...currentPGliteState,
-        ...pglite,
-      },
-    };
-    window.dispatchEvent(new CustomEvent(PGLITE_UPDATE_EVENT));
+  window.powerhouse = {
+    ...currentPowerhouse,
+    pglite: {
+      ...currentPGliteState,
+      ...pglite,
+    },
   };
+  window.dispatchEvent(new CustomEvent(PGLITE_UPDATE_EVENT));
+}
 
-  return setPGliteState;
-};
+export const useSetPGliteDB = () => setPGliteDB;
 
 export const usePGlite = () => {
   const pglite = usePGliteDB();

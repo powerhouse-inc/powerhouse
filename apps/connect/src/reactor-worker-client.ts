@@ -5,11 +5,15 @@ import {
   type IDocumentModelLoader,
   type ModelLoadedEvent,
 } from "@powerhousedao/reactor";
-import type { WorkerReactorClientModule } from "@powerhousedao/reactor-browser";
+import {
+  setPGliteDB,
+  type WorkerReactorClientModule,
+} from "@powerhousedao/reactor-browser";
 import {
   connectReactorClient,
   createPortTransport,
   createReactorEventBusProxy,
+  createRelationalPgliteProxy,
   createWorkerAdminClient,
   postReactorIdentity,
   RPC_PROTOCOL_VERSION,
@@ -105,6 +109,13 @@ export function createWorkerReactorClientModule(
         error,
       );
     });
+  });
+
+  // Seed the relational read surface the relational hooks read (SELECT + live, no raw PGlite).
+  setPGliteDB({
+    db: createRelationalPgliteProxy(transport),
+    isLoading: false,
+    error: null,
   });
 
   postReactorIdentity(transport, toReactorIdentity(args.renown.user));
