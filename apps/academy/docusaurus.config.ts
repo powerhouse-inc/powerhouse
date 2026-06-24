@@ -26,7 +26,7 @@ const config: Config = {
   organizationName: "", // Usually your GitHub org/user name.
   projectName: "", // Usually your repo name.
 
-  onBrokenLinks: "warn",
+  onBrokenLinks: "throw",
   deploymentBranch: "gh-pages",
   trailingSlash: false,
   onBrokenAnchors: "ignore",
