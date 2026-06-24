@@ -1,5 +1,4 @@
 import type { IReactorClient } from "@powerhousedao/reactor";
-import { type DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import { setDrives } from "./hooks/drives.js";
 import { getDrives } from "./utils/drives.js";
 
@@ -24,8 +23,7 @@ async function _refreshReactorData(reactor: IReactorClient) {
 async function _refreshReactorDataClient(reactor: IReactorClient | undefined) {
   if (!reactor) return;
 
-  const result = await reactor.find({ type: "powerhouse/document-drive" });
-  setDrives(result.results as DocumentDriveDocument[]);
+  setDrives(await getDrives(reactor));
 }
 
 function createDebouncedRefreshReactorData(
@@ -39,18 +37,15 @@ function createDebouncedRefreshReactorData(
     const now = Date.now();
     const timeSinceLastRefresh = now - lastRefreshTime;
 
-    // Clear any pending timeout
     if (timeout !== null) {
       clearTimeout(timeout);
     }
 
-    // If caller requests immediate execution or enough time has passed, execute immediately
     if (immediate || timeSinceLastRefresh >= immediateThresholdMs) {
       lastRefreshTime = now;
       return _refreshReactorData(reactor);
     }
 
-    // Otherwise, debounce the call
     return new Promise<void>((resolve) => {
       timeout = setTimeout(() => {
         lastRefreshTime = Date.now();
@@ -71,18 +66,15 @@ function createDebouncedRefreshReactorDataClient(
     const now = Date.now();
     const timeSinceLastRefresh = now - lastRefreshTime;
 
-    // Clear any pending timeout
     if (timeout !== null) {
       clearTimeout(timeout);
     }
 
-    // If caller requests immediate execution or enough time has passed, execute immediately
     if (immediate || timeSinceLastRefresh >= immediateThresholdMs) {
       lastRefreshTime = now;
       return _refreshReactorDataClient(reactor);
     }
 
-    // Otherwise, debounce the call
     return new Promise<void>((resolve) => {
       timeout = setTimeout(() => {
         lastRefreshTime = Date.now();
