@@ -36,7 +36,7 @@ export type RpcNextPage = { k: "page"; id: CorrelationId; token: string };
 
 // Bumped when the tab<->owner wire protocol changes incompatibly; a tab whose
 // version differs from the owner's baseline is told to reload.
-export const RPC_PROTOCOL_VERSION = 1;
+export const RPC_PROTOCOL_VERSION = 2;
 
 export type VersionFingerprint = {
   appBuildId: string;
@@ -107,6 +107,28 @@ export type RpcSyncOp = {
   args: unknown[];
 };
 
+export type RpcDbOp = {
+  k: "db-op";
+  id: CorrelationId;
+  method: string;
+  args: unknown[];
+};
+
+export type RpcLiveSubscribe = {
+  k: "sub-live";
+  id: CorrelationId;
+  sql: string;
+  params: unknown[];
+};
+
+export type RpcLiveEvent = {
+  k: "event-live";
+  id: CorrelationId;
+  rows: unknown[];
+};
+
+export type RpcLiveUnsub = { k: "unsub-live"; id: CorrelationId };
+
 export type ClientMessage =
   | RpcRequest
   | RpcAbort
@@ -118,13 +140,17 @@ export type ClientMessage =
   | RpcUnregisterPackages
   | RpcIdentity
   | RpcAdmin
-  | RpcSyncOp;
+  | RpcSyncOp
+  | RpcDbOp
+  | RpcLiveSubscribe
+  | RpcLiveUnsub;
 
 export type OwnerMessage =
   | RpcResponse
   | RpcError
   | RpcEvent
   | RpcReload
-  | RpcBusEvent;
+  | RpcBusEvent
+  | RpcLiveEvent;
 
 export type RpcMessage = ClientMessage | OwnerMessage;
