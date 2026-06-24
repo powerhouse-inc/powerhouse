@@ -10,7 +10,6 @@
 
 - [Vetra Studio](https://academy.vetra.io/academy/GetStarted/VetraStudio): Vetra Studio is the browser UI for the Vetra agent. You chat with the agent, watch it work across the four-phase product cycle (Ideate → Specify → Bui
 - [Vetra Cloud](https://academy.vetra.io/academy/GetStarted/VetraCloud): Vetra Cloud is the hosted infrastructure layer for Powerhouse applications. It lets you spin up a personal cloud environment that runs Powerhouse Conn
-- [Vetra builder tooling](https://academy.vetra.io/academy/GetStarted/BuilderTools): This page provides an overview of all the builder tooling offered in the Vetra ecosystem by Powerhouse. This list will be maintained and updated as ou
 
 ## Learn
 
@@ -76,6 +75,7 @@
 - [Prerequisites](https://academy.vetra.io/academy/Build/GettingStartedBuilding/Prerequisites): This Build chapter is the manual experience — you build Powerhouse packages by hand on your own machine with the Powerhouse CLI, controlling every ste
 - [Vetra Drive](https://academy.vetra.io/academy/Build/GettingStartedBuilding/VetraDrive): Vetra Studio is the builder environment where you create, manage, and collaborate on Powerhouse packages. It consists of two main components:
 - [Create a package with Vetra](https://academy.vetra.io/academy/Build/GettingStartedBuilding/CreateAPackageWithVetra): A Powerhouse Package is a distributable unit that bundles one or more document models, editors, and optional reactor modules into a single installable
+- [Vetra builder tooling](https://academy.vetra.io/academy/Build/GettingStartedBuilding/BuilderTools): An overview of the builder tooling in the Powerhouse/Vetra ecosystem, for the manual (CLI) builder workflow. This list grows as the toolkit does.
 - [Explore the demo package](https://academy.vetra.io/academy/Build/ManualTodoTutorial/ExploreDemoPackage): Before recreating the package yourself, install the finished version to see what you'll build. The demo is a pre-built package containing a document m
 - [Create a new to-do list document](https://academy.vetra.io/academy/Build/ManualTodoTutorial/CreateNewPowerhouseProject): This tutorial step has a corresponding branch in the repository. You can:
 - [Write the document specification](https://academy.vetra.io/academy/Build/ManualTodoTutorial/DefineToDoListDocumentModel): This tutorial step has a corresponding branch. After completing this step, your project will have a generated document model with:

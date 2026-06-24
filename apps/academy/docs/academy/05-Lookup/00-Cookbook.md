@@ -69,7 +69,7 @@ pnpm install -g ph-cmd@<version>
 
 ### Further reading
 
-- [Powerhouse Builder Tools](/academy/GetStarted/BuilderTools)
+- [Powerhouse Builder Tools](/academy/Build/GettingStartedBuilding/BuilderTools)
 </details>
 
 <details id="managing-ph-cmd-versions">
@@ -170,7 +170,7 @@ test: 2.5.0-test.0
 
 ### Further reading
 
-- [Powerhouse Builder Tools](/academy/GetStarted/BuilderTools)
+- [Powerhouse Builder Tools](/academy/Build/GettingStartedBuilding/BuilderTools)
 </details>
 
 <details id="uninstalling-ph-cmd">
@@ -220,7 +220,7 @@ rm -rf ~/.ph
 
 ### Further reading
 
-- [Powerhouse Builder Tools](/academy/GetStarted/BuilderTools)
+- [Powerhouse Builder Tools](/academy/Build/GettingStartedBuilding/BuilderTools)
 - [Create A New Powerhouse Project](/academy/Build/ManualTodoTutorial/CreateNewPowerhouseProject)
 </details>
 
@@ -292,7 +292,7 @@ ph use staging
 
 ### Further reading
 
-- [Powerhouse Builder Tools](/academy/GetStarted/BuilderTools)
+- [Powerhouse Builder Tools](/academy/Build/GettingStartedBuilding/BuilderTools)
 - [GraphQL Schema Best Practices](/academy/Build/WorkWithData/UsingTheAPI)
 </details>
 
@@ -381,7 +381,7 @@ ph use prod
 
 ### Further reading
 
-- [Powerhouse Builder Tools](/academy/GetStarted/BuilderTools)
+- [Powerhouse Builder Tools](/academy/Build/GettingStartedBuilding/BuilderTools)
 </details>
 
 <details id="using-different-package-managers-with-powerhouse">
@@ -495,7 +495,7 @@ ph init --package-manager pnpm
 
 ### Further reading
 
-- [Powerhouse Builder Tools](/academy/GetStarted/BuilderTools)
+- [Powerhouse Builder Tools](/academy/Build/GettingStartedBuilding/BuilderTools)
 - [Yarn Global Installation Guide](https://classic.yarnpkg.com/lang/en/docs/cli/global/)
 - [Bun Installation Guide](https://bun.sh/docs/installation#how-to-add-your-path)
 </details>
@@ -1343,7 +1343,7 @@ If you're developing packages:
 
 - [Powerhouse CLI Reference: Update Command](/academy/Reference/CLITooling/PowerhouseCLI#update)
 - [Powerhouse CLI Reference: Use Command](/academy/Reference/CLITooling/PowerhouseCLI#use)
-- [Powerhouse Builder Tools](/academy/GetStarted/BuilderTools)
+- [Powerhouse Builder Tools](/academy/Build/GettingStartedBuilding/BuilderTools)
 
 </details>
 
@@ -1428,7 +1428,7 @@ You might encounter a browser warning about the self-signed certificate; you may
 ### Further reading
 
 - [Vetra Studio Documentation](/academy/GetStarted/VetraStudio)
-- [Powerhouse Builder Tools](/academy/GetStarted/BuilderTools)
+- [Powerhouse Builder Tools](/academy/Build/GettingStartedBuilding/BuilderTools)
 </details>
 
 ### Editors & Drive-apps
@@ -1679,7 +1679,7 @@ Use the constructed URL to add or access the drive in your Connect environment.
 ### Further reading
 
 - [GraphQL Playground](https://www.apollographql.com/docs/apollo-server/testing/graphql-playground/)
-- [Powerhouse Builder Tools](/academy/GetStarted/BuilderTools)
+- [Powerhouse Builder Tools](/academy/Build/GettingStartedBuilding/BuilderTools)
 
 </details>
 

@@ -78,24 +78,27 @@ const config: Config = {
         // and the old manual Get Started moved into the Build track.
         redirects: [
           // BuilderEnvironment -> Get Started (pages that stayed in Get Started)
-          ...["VetraStudio", "VetraCloud", "BuilderTools"].map((slug) => ({
+          ...["VetraStudio", "VetraCloud"].map((slug) => ({
             from: `/academy/MasteryTrack/BuilderEnvironment/${slug}`,
             to: `/academy/GetStarted/${slug}`,
           })),
           // BuilderEnvironment / Get Started -> Build/GettingStartedBuilding
           // (these pages later moved into the Build track)
-          ...["VetraDrive", "Prerequisites", "CreateAPackageWithVetra"].flatMap(
-            (slug) => [
-              {
-                from: `/academy/MasteryTrack/BuilderEnvironment/${slug}`,
-                to: `/academy/Build/GettingStartedBuilding/${slug}`,
-              },
-              {
-                from: `/academy/GetStarted/${slug}`,
-                to: `/academy/Build/GettingStartedBuilding/${slug}`,
-              },
-            ],
-          ),
+          ...[
+            "VetraDrive",
+            "Prerequisites",
+            "CreateAPackageWithVetra",
+            "BuilderTools",
+          ].flatMap((slug) => [
+            {
+              from: `/academy/MasteryTrack/BuilderEnvironment/${slug}`,
+              to: `/academy/Build/GettingStartedBuilding/${slug}`,
+            },
+            {
+              from: `/academy/GetStarted/${slug}`,
+              to: `/academy/Build/GettingStartedBuilding/${slug}`,
+            },
+          ]),
           // Old manual Get Started -> Build track (Manual Todo tutorial)
           ...[
             "ExploreDemoPackage",

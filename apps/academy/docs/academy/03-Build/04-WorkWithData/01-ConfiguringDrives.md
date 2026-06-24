@@ -6,7 +6,7 @@ A drive in Powerhouse is a container for documents and data. It's a place where 
 
 Before configuring a drive, ensure you have:
 
-- Powerhouse [CLI installed](/academy/GetStarted/BuilderTools)
+- Powerhouse [CLI installed](/academy/Build/GettingStartedBuilding/Prerequisites)
 - Access to a Powerhouse instance
 - Appropriate permissions to create and manage drives
   :::

@@ -43,7 +43,10 @@ export const modules: Module[] = [
         id: `academy/Build/GettingStartedBuilding/CreateAPackageWithVetra`,
         title: "Create a package with Vetra",
       },
-      { id: `academy/GetStarted/BuilderTools`, title: "Builder tools" },
+      {
+        id: `academy/Build/GettingStartedBuilding/BuilderTools`,
+        title: "Builder tools",
+      },
     ],
   },
   {
