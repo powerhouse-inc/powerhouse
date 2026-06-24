@@ -87,6 +87,7 @@ export class TestChannel implements IChannel {
       pushBlocked: false,
       pushFailureCount: 0,
       receivingPages: false,
+      requiresAuth: false,
     };
   }
 

@@ -97,4 +97,4 @@ Once you select a package, a **Pending change** banner appears at the bottom. Cl
 
 Once your environment is running you can point your local `ph` CLI at it, or share the Connect URL with collaborators so they can start working with your document models right away.
 
-To publish your own packages to the registry, see the [Publishing Packages](../02-PublishingPackages/index.md) guide.
+To publish your own packages to the registry, see the [Publishing Packages](/academy/Build/Launch/PublishYourProject) guide.

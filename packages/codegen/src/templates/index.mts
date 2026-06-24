@@ -21,7 +21,7 @@ export * from "./boilerplate/document-models/index.js";
 export * from "./boilerplate/document-models/upgrade-manifests.js";
 export * from "./boilerplate/editors/editors.js";
 export * from "./boilerplate/editors/index.js";
-export * from "./boilerplate/eslint.config.js.js";
+export * from "./boilerplate/oxlintrc.json.js";
 export * from "./boilerplate/gemini/settings.json.js";
 export * from "./boilerplate/github/sync-and-publish.yml.js";
 export * from "./boilerplate/gitignore.js";

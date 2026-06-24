@@ -9,6 +9,7 @@ export default defineConfig({
     "processors/index.ts",
     "processors/*/index.ts",
     "codegen/index.ts",
+    "codegen/spec.ts",
     "powerhouse.manifest.json",
   ],
   platform: "neutral",

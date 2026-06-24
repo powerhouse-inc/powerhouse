@@ -14,8 +14,8 @@ This tutorial will guide you through the process of creating a new document mode
 <summary>Available NPM commands</summary>
 
 - \`generate\`: Updates the generated code according to the JSON spec and GraphQL schema of your document model, made in Connect.
-- \`lint\`: Checks for errors with ESLint and TypeScript checking.
-- \`format\`: Formats the code using Prettier.
+- \`lint\`: Checks for errors with oxlint, including type-aware rules and TypeScript type checking.
+- \`format\`: Formats the code using oxfmt.
 - \`build\`: Builds the library project using Vite.
 - \`storybook\`: Starts Storybook in development mode.
 - \`build-storybook\`: Builds Storybook.

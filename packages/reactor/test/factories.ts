@@ -1,8 +1,5 @@
 import { MemoryFS, PGlite } from "@electric-sql/pglite";
 import { AtomicNodeFs } from "@powerhousedao/pglite-fs";
-import { promises as fsp } from "node:fs";
-import os from "node:os";
-import path from "node:path";
 import type {
   Action,
   DocumentModelModule,
@@ -17,8 +14,12 @@ import {
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import { documentModelDocumentModelModule } from "document-model";
-import { Kysely } from "kysely";
+import { Kysely, PostgresDialect, sql } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
+import { promises as fsp } from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { Pool } from "pg";
 import { v4 as uuidv4 } from "uuid";
 import { vi } from "vitest";
 import type { ICollectionMembershipCache } from "../src/cache/collection-membership-cache.js";
@@ -872,6 +873,83 @@ export async function createTestSyncStorage(
     cleanup,
   };
 }
+
+export type TestSyncStorage = {
+  db: Kysely<DatabaseSchema>;
+  syncRemoteStorage: KyselySyncRemoteStorage;
+  syncCursorStorage: KyselySyncCursorStorage;
+  syncDeadLetterStorage: KyselySyncDeadLetterStorage;
+  cleanup: () => Promise<void>;
+};
+
+const PG_TEST_URL =
+  process.env.REACTOR_TEST_PG_URL ??
+  "postgres://postgres:postgres@localhost:5433/reactor";
+
+let pgTestSchemaCounter = 0;
+
+export async function createTestSyncStoragePostgres(): Promise<TestSyncStorage> {
+  const schema = `reactor_test_${process.pid}_${pgTestSchemaCounter++}`;
+  const baseDb = new Kysely<DatabaseSchema>({
+    dialect: new PostgresDialect({
+      pool: new Pool({ connectionString: PG_TEST_URL }),
+    }),
+  });
+
+  const result = await runMigrations(baseDb, schema);
+  if (!result.success && result.error) {
+    throw new Error(`Test migration failed: ${result.error.message}`);
+  }
+
+  const db = baseDb.withSchema(schema);
+  const syncRemoteStorage = new KyselySyncRemoteStorage(db);
+  const syncCursorStorage = new KyselySyncCursorStorage(db);
+  const syncDeadLetterStorage = new KyselySyncDeadLetterStorage(db);
+
+  return {
+    db,
+    syncRemoteStorage,
+    syncCursorStorage,
+    syncDeadLetterStorage,
+    cleanup: async () => {
+      try {
+        await sql`DROP SCHEMA IF EXISTS ${sql.id(schema)} CASCADE`.execute(
+          baseDb,
+        );
+      } finally {
+        await baseDb.destroy();
+      }
+    },
+  };
+}
+
+async function createPGliteSyncStorage(
+  backend: TestFsBackend,
+): Promise<TestSyncStorage> {
+  const setup = await createTestSyncStorage(backend);
+  return {
+    ...setup,
+    cleanup: async () => {
+      await setup.db.destroy();
+      await setup.cleanup();
+    },
+  };
+}
+
+export const testSyncStorageBackends: Array<{
+  name: string;
+  create: () => Promise<TestSyncStorage>;
+}> = [
+  {
+    name: "PGLite/MemoryFS",
+    create: () => createPGliteSyncStorage(memoryFsBackend),
+  },
+  {
+    name: "PGLite/AtomicNodeFs",
+    create: () => createPGliteSyncStorage(atomicNodeFsBackend),
+  },
+  { name: "Postgres", create: () => createTestSyncStoragePostgres() },
+];
 
 /**
  * Creates a mock ISigner for testing.

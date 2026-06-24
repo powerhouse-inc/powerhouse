@@ -134,7 +134,7 @@ Now that you understand the concepts behind the state schema, let's put it into 
 
 ### Prerequisites
 
-- You have a Powerhouse project set up. If not, please follow the [Create a new Powerhouse Project](../../GetStarted/CreateNewPowerhouseProject) tutorial.
+- You have a Powerhouse project set up. If not, please follow the [Create a new Powerhouse Project](/academy/Build/ManualTodoTutorial/CreateNewPowerhouseProject) tutorial.
 - Vetra Studio is running. If not, navigate to your project directory in the terminal and run `ph vetra --watch`.
 
 ### Steps
@@ -188,7 +188,7 @@ By completing these steps, you have successfully specified the data structure fo
 
 ### Prerequisites
 
-- You have a Powerhouse project set up. If not, please follow the [Create a new Powerhouse Project](../../GetStarted/CreateNewPowerhouseProject) tutorial.
+- You have a Powerhouse project set up. If not, please follow the [Create a new Powerhouse Project](/academy/Build/ManualTodoTutorial/CreateNewPowerhouseProject) tutorial.
 - Connect is running. If not, navigate to your project directory in the terminal and run `ph connect`.
 
 ### Steps

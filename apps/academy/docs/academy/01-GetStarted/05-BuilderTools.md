@@ -33,7 +33,7 @@ Key commands include:
 - `ph init` to start a new project and build a Document Model
 - `ph help` to get an overview of all the available commands
 
-This tool will be fundamental on your journey when creating, building, and running Document Models
+Use it to create, build, and run Document Models
 
 <details>
 <summary> How to make use of different branches? </summary>
@@ -200,7 +200,7 @@ Both commands support multiple package managers (npm, yarn, pnpm, and bun) and w
 
 ---
 
-The Document Model Boilerplate is a foundational template that is used for code generation when scaffolding your editors and models. It ensures compatibility with host applications like Connect and Switchboard for seamless Document Model and editor integration.
+The Document Model Boilerplate is a foundational template that is used for code generation when scaffolding your editors and models. It ensures compatibility with host applications like Connect and Switchboard for Document Model and editor integration.
 
 After installing `ph-cmd`, you will run `ph init` to initialize a project directory and structure. This initialization command makes use of the boilerplate.
 
@@ -252,7 +252,7 @@ Handles document organization and storage management, but can also be customized
 
 ---
 
-Powerhouse provides several code generation tools to streamline development:
+Powerhouse provides several code generation tools:
 
     ### Document model scaffolding
     Generates the basic structure for new Document Models with the command `ph init` based on the boilerplate.

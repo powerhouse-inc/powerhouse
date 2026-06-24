@@ -1,6 +1,6 @@
 # Prerequisites
 
-Let's set up your machine to start building your first Document Model. Don't worry if this is your first time setting up a development environment - we'll guide you through each step!
+This page sets up your machine to build your first Document Model. It covers Node.js 24, VS Code, Git, and the Powerhouse CLI.
 
 :::info
 If you've already set up **Git, Node.js 24, and a package manager (pnpm or npm)**, your most important step is to install the **Powerhouse CLI** with the command: `pnpm install -g ph-cmd` or `npm install -g ph-cmd`. A global install is recommended if you want to use the command from any directory as a power user. The Powerhouse CLI is used to create, build, and run your Document Models and gives you direct access to a series of Powerhouse Builder Tools. Move to the end of this page to [verify your installation.](#verify-installation)
@@ -10,11 +10,11 @@ If you've already set up **Git, Node.js 24, and a package manager (pnpm or npm)*
 
 ## Overview
 
-Before we begin building our Document Model, we need to install some software on your machine. We'll need three main tools:
+Before building your Document Model, install some software on your machine. You need three tools:
 
-- Node.js 24, which helps us run our code.
-- Visual Studio Code (VS Code), which is where we'll write our code
-- Git, which helps us manage our code.
+- Node.js 24, which runs your code.
+- Visual Studio Code (VS Code), where you write your code.
+- Git, which manages your code.
 
 Follow the steps below based on your computer's operating system.
 
@@ -37,7 +37,7 @@ wsl --install
 Once WSL is set up, you can follow the **Linux (Ubuntu/Debian)** instructions below for installing Node.js, Git, and other tools. Your Linux environment will be accessible through the Windows Terminal or by typing `wsl` in PowerShell.
 
 :::tip
-Using WSL provides a consistent development experience that matches most production environments and online tutorials. You can still use VS Code on Windows — it integrates seamlessly with WSL through the [Remote - WSL extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-wsl).
+Using WSL provides a consistent development experience that matches most production environments and online tutorials. You can still use VS Code on Windows — it integrates with WSL through the [Remote - WSL extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-wsl).
 :::
 
 For more details, see the official [WSL installation guide](https://learn.microsoft.com/en-us/windows/wsl/install).
@@ -46,7 +46,7 @@ For more details, see the official [WSL installation guide](https://learn.micros
 
 ### Installing Node.js 24
 
-Node.js 24 is a tool that lets us run our application. Let's install it step by step.
+Node.js 24 runs your application. Install it with the steps below.
 
 #### For Windows:
 
@@ -90,7 +90,7 @@ Node.js 24 is a tool that lets us run our application. Let's install it step by 
    npm --version
    ```
 
-   - You should see version numbers appear after each command (e.g., v24.x.x for Node.js). If you do, congratulations - Node.js and your package manager are installed!
+   - Version numbers should appear after each command (e.g., v24.x.x for Node.js). If they do, Node.js and your package manager are installed.
 
 > **Note**: If Node.js commands don't work in VS Code, restart VS Code to refresh environment variables.
 
@@ -129,7 +129,7 @@ Node.js 24 is a tool that lets us run our application. Let's install it step by 
    npm --version
    ```
 
-   - If you see version numbers, you've successfully installed Node.js and your package manager!
+   - If version numbers appear, Node.js and your package manager are installed.
 
 #### For Linux (Ubuntu/Debian):
 
@@ -161,7 +161,7 @@ Node.js 24 is a tool that lets us run our application. Let's install it step by 
    npm --version
    ```
 
-   - If you see version numbers, you're all set!
+   - If version numbers appear, your installation is complete.
 
 ### Installing Visual Studio Code
 
@@ -286,7 +286,7 @@ Key commands include:
 - `ph init` to start a new project and build a document model
 - `ph help` to get an overview of all the available commands
 
-This tool will be fundamental on your journey when creating, building, and running Document Models.
+Use it to create, build, and run Document Models.
 
 <details>
 <summary> How to use different branches? </summary>

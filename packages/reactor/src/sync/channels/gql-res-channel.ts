@@ -101,6 +101,7 @@ export class GqlResponseChannel implements IChannel {
       pushBlocked: false,
       pushFailureCount: 0,
       receivingPages: false,
+      requiresAuth: false,
     };
   }
 

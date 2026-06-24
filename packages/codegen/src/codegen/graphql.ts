@@ -16,7 +16,7 @@ import fs from "node:fs/promises";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { format } from "prettier";
+import { format as oxfmtFormat } from "oxfmt";
 
 /* Resolve graphql-codegen plugins from this package's own install rather than
  * graphql-codegen's default loader. The default resolves relative to graphql-
@@ -132,11 +132,9 @@ function buildGraphqlDocumentStringForSpecification(
   return [customScalarSchemas, ...stateSchemas, ...moduleSchemas];
 }
 
-async function formatContentWithPrettier(path: string, content: string) {
-  const formattedContent = await format(content, {
-    parser: "typescript",
-  });
-  return formattedContent;
+async function formatContent(path: string, content: string) {
+  const result = await oxfmtFormat(path, content, { printWidth: 80 });
+  return result.code;
 }
 
 type GenerateTypesAndZodSchemasFromGraphqlArgs = {
@@ -153,7 +151,7 @@ export async function generateTypesAndZodSchemasFromGraphql(
     watch: false,
     pluginLoader,
     hooks: {
-      beforeOneFileWrite: formatContentWithPrettier,
+      beforeOneFileWrite: formatContent,
     },
     generates: {
       [`${schemaDirPath}/types.ts`]: {
