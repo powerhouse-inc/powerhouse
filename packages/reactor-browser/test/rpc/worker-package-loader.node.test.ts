@@ -33,13 +33,45 @@ describe("WorkerPackageLoader", () => {
       cdnUrl: "https://cdn.example",
       importPackage: () =>
         Promise.resolve({ M: fakeModel("powerhouse/document-drive") }),
+      resolvePackages: () => Promise.resolve([]),
     });
     await loader.loadPackages(["pkg"]);
     const module = await loader.load("powerhouse/document-drive");
     expect(module.documentModel.global.id).toBe("powerhouse/document-drive");
     await expect(loader.load("does/not-exist")).rejects.toThrow(
-      "Document model not loaded",
+      "No package found for document model: does/not-exist",
     );
+  });
+
+  it("loads an unknown type on demand via discovery", async () => {
+    const urls: string[] = [];
+    const loader = new WorkerPackageLoader({
+      cdnUrl: "https://cdn.example",
+      importPackage: (url) => {
+        urls.push(url);
+        return Promise.resolve({ M: fakeModel("ph/lazy") });
+      },
+      resolvePackages: (documentType) =>
+        Promise.resolve(documentType === "ph/lazy" ? ["lazy-pkg"] : []),
+    });
+    const module = await loader.load("ph/lazy");
+    expect(module.documentModel.global.id).toBe("ph/lazy");
+    expect(urls).toEqual([
+      "https://cdn.example/lazy-pkg/browser/document-models/index.js",
+    ]);
+  });
+
+  it("preserves the import error as the cause when on-demand load fails", async () => {
+    const importError = new Error("404");
+    const loader = new WorkerPackageLoader({
+      cdnUrl: "https://cdn.example",
+      importPackage: () => Promise.reject(importError),
+      resolvePackages: () => Promise.resolve(["broken-pkg"]),
+    });
+    await expect(loader.load("ph/lazy")).rejects.toMatchObject({
+      message: expect.stringContaining("broken-pkg"),
+      cause: importError,
+    });
   });
 
   it("imports each spec only once across repeated loadPackages calls", async () => {

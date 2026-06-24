@@ -1,4 +1,10 @@
-import { DocumentModelRegistry } from "@powerhousedao/reactor";
+import {
+  DocumentModelRegistry,
+  DocumentModelResolver,
+  ReactorEventTypes,
+  type IDocumentModelLoader,
+  type ModelLoadedEvent,
+} from "@powerhousedao/reactor";
 import type { WorkerReactorClientModule } from "@powerhousedao/reactor-browser";
 import {
   connectReactorClient,
@@ -22,6 +28,7 @@ export type WorkerReactorClientArgs = {
   packageSpecs: string[];
   documentModelModules: DocumentModelModule[];
   upgradeManifests: UpgradeManifest<readonly number[]>[];
+  documentModelLoader: IDocumentModelLoader;
   renown: IRenown;
   onReload: (reason: string) => void;
 };
@@ -80,6 +87,21 @@ export function createWorkerReactorClientModule(
 
   const busProxy = createReactorEventBusProxy(transport);
   const syncManagerProxy = new SyncManagerProxy(transport, busProxy);
+
+  // Keep the tab registry synced with the worker's on-demand loads.
+  const modelResolver = new DocumentModelResolver(
+    documentModelRegistry,
+    args.documentModelLoader,
+  );
+  busProxy.subscribe(ReactorEventTypes.MODEL_LOADED, (_type, event) => {
+    const { documentType } = event as ModelLoadedEvent;
+    void modelResolver.ensureModelLoaded(documentType).catch((error) => {
+      console.error(
+        `Failed to load model "${documentType}" into tab registry`,
+        error,
+      );
+    });
+  });
 
   postReactorIdentity(transport, toReactorIdentity(args.renown.user));
   args.renown.on("user", (user) =>

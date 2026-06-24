@@ -53,6 +53,7 @@ export const ReactorEventTypes = {
   JOB_FAILED: 10005,
   READMODEL_BATCH_COMPLETED: 10006,
   READMODEL_INDEXED: 10007,
+  MODEL_LOADED: 10008,
 } as const;
 
 /**
@@ -66,6 +67,13 @@ export type ReadModelStage = "pre_ready" | "emit" | "post_ready";
  * involve a read model so it is excluded from this discriminant.
  */
 export type ReadModelIndexingStage = "pre_ready" | "post_ready";
+
+/**
+ * Emitted after the resolver loads a model on demand, so peers load it too.
+ */
+export type ModelLoadedEvent = {
+  documentType: string;
+};
 
 /**
  * Event emitted when a job is registered and waiting to be executed.

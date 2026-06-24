@@ -28,6 +28,8 @@ export class DocumentModelResolver implements IDocumentModelResolver {
   private loadingModels = new Map<string, Promise<void>>();
   private failedModelTypes = new Set<string>();
   private broadcastHook: ModelLoadedBroadcastHook | null = null;
+  private modelLoadedHook: ((documentType: string) => Promise<void>) | null =
+    null;
 
   constructor(
     private registry: IDocumentModelRegistry,
@@ -41,6 +43,14 @@ export class DocumentModelResolver implements IDocumentModelResolver {
    */
   setBroadcastHook(hook: ModelLoadedBroadcastHook): void {
     this.broadcastHook = hook;
+  }
+
+  /**
+   * Post-success hook called with the document type after a model loads, so
+   * peers (tabs) can load the same type via the event bus.
+   */
+  setModelLoadedHook(hook: (documentType: string) => Promise<void>): void {
+    this.modelLoadedHook = hook;
   }
 
   async ensureModelLoaded(documentType: string): Promise<void> {
@@ -75,6 +85,9 @@ export class DocumentModelResolver implements IDocumentModelResolver {
           throw result.error as Error;
         }
         await this.broadcastIfPossible(documentType);
+        if (this.modelLoadedHook) {
+          await this.modelLoadedHook(documentType);
+        }
       } catch (error) {
         this.failedModelTypes.add(documentType);
         throw error;

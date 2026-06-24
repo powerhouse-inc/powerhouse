@@ -22,6 +22,7 @@ import type { WriteCacheConfig } from "../cache/write-cache-types.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
 import { EventBus } from "../events/event-bus.js";
 import type { IEventBus } from "../events/interfaces.js";
+import { ReactorEventTypes } from "../events/types.js";
 import {
   KyselyExecutionScope,
   type IExecutionScope,
@@ -506,6 +507,11 @@ export class ReactorBuilder {
           this.documentModelLoader,
         )
       : new NullDocumentModelResolver(documentModelRegistry);
+    if (resolver instanceof DocumentModelResolver) {
+      resolver.setModelLoadedHook((documentType) =>
+        eventBus.emit(ReactorEventTypes.MODEL_LOADED, { documentType }),
+      );
+    }
     const queue = this.queueInstance ?? new InMemoryQueue(eventBus, resolver);
     const jobTracker = new InMemoryJobTracker(eventBus);
 

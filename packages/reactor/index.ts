@@ -100,6 +100,7 @@ export { type IEventBus } from "./src/events/interfaces.js";
 export {
   EventBusAggregateError,
   ReactorEventTypes,
+  type ModelLoadedEvent,
   type JobPendingEvent,
   type JobReadReadyEvent,
   type JobRunningEvent,

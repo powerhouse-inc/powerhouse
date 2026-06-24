@@ -1,11 +1,13 @@
 import type { IDocumentModelLoader } from "@powerhousedao/reactor";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
+import { RegistryClient } from "../registry/client.js";
 
 export type PackageImporter = (url: string) => Promise<Record<string, unknown>>;
 
 export type WorkerPackageLoaderOptions = {
   cdnUrl: string;
   importPackage: PackageImporter;
+  resolvePackages?: (documentType: string) => Promise<string[]>;
 };
 
 export type PackageLoadFailure = {
@@ -36,6 +38,7 @@ function isDocumentModelModule(value: unknown): value is DocumentModelModule {
 export class WorkerPackageLoader implements IDocumentModelLoader {
   private readonly cdnUrl: string;
   private readonly importPackage: PackageImporter;
+  private readonly resolvePackages: (documentType: string) => Promise<string[]>;
   private readonly modulesByType = new Map<string, DocumentModelModule>();
   private readonly loadedSpecs = new Set<string>();
   private readonly failures: PackageLoadFailure[] = [];
@@ -43,6 +46,11 @@ export class WorkerPackageLoader implements IDocumentModelLoader {
   constructor(options: WorkerPackageLoaderOptions) {
     this.cdnUrl = options.cdnUrl.replace(/\/$/, "");
     this.importPackage = options.importPackage;
+    const registryClient = new RegistryClient(options.cdnUrl);
+    this.resolvePackages =
+      options.resolvePackages ??
+      ((documentType) =>
+        registryClient.getPackagesByDocumentType(documentType));
   }
 
   async loadPackages(specs: string[]): Promise<DocumentModelModule[]> {
@@ -52,14 +60,26 @@ export class WorkerPackageLoader implements IDocumentModelLoader {
     return this.models;
   }
 
-  load(documentType: string): Promise<DocumentModelModule> {
-    const module = this.modulesByType.get(documentType);
-    if (!module) {
-      return Promise.reject(
-        new Error(`Document model not loaded: ${documentType}`),
-      );
+  // On a miss, discover the package(s) for the type and import them on demand.
+  async load(documentType: string): Promise<DocumentModelModule> {
+    const existing = this.modulesByType.get(documentType);
+    if (existing) {
+      return existing;
     }
-    return Promise.resolve(module);
+    const packageNames = await this.resolvePackages(documentType);
+    const failuresBefore = this.failures.length;
+    for (const name of packageNames) {
+      await this.loadPackage(name);
+    }
+    const loaded = this.modulesByType.get(documentType);
+    if (loaded) {
+      return loaded;
+    }
+    throw this.notLoadedError(
+      documentType,
+      packageNames,
+      this.failures.slice(failuresBefore),
+    );
   }
 
   get models(): DocumentModelModule[] {
@@ -68,6 +88,29 @@ export class WorkerPackageLoader implements IDocumentModelLoader {
 
   get loadFailures(): PackageLoadFailure[] {
     return [...this.failures];
+  }
+
+  private notLoadedError(
+    documentType: string,
+    packageNames: string[],
+    failures: PackageLoadFailure[],
+  ): Error {
+    if (packageNames.length === 0) {
+      return new Error(`No package found for document model: ${documentType}`);
+    }
+    if (failures.length === 0) {
+      return new Error(
+        `Imported [${packageNames.join(", ")}] but document model not found: ${documentType}`,
+      );
+    }
+    const cause =
+      failures.length === 1
+        ? failures[0].error
+        : new AggregateError(failures.map((failure) => failure.error));
+    return new Error(
+      `Failed to import package(s) [${packageNames.join(", ")}] for document model: ${documentType}`,
+      { cause },
+    );
   }
 
   private async loadPackage(spec: string): Promise<void> {

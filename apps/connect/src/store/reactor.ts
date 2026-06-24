@@ -34,6 +34,7 @@ import {
   setSelectedNode,
   setVetraPackageManager,
   type BrowserReactorClientModule,
+  type IDocumentModelLoader,
   type IPackageManager,
   type PHToastFn,
   type WorkerReactorClientModule,
@@ -339,12 +340,42 @@ export async function createReactor(localPackage?: DocumentModelLib) {
     const packageSpecs = packageManager
       .getRegistryPackages()
       .map((p) => (p.version ? `${p.name}@${p.version}` : p.name));
+    // Silent tab loader (no install prompt; the worker already loaded the model).
+    const registryClient = new RegistryClient(packageManager.cdnUrl ?? "");
+    const documentModelLoader: IDocumentModelLoader = {
+      async load(documentType) {
+        const names = packageManager.cdnUrl
+          ? await registryClient.getPackagesByDocumentType(documentType)
+          : [];
+        for (const name of names) {
+          const result = await packageManager.addPackage(name);
+          if (result.type === "error") {
+            throw new Error(
+              `Failed to install package "${name}" for document model: ${documentType}`,
+              { cause: result.error },
+            );
+          }
+        }
+        const module = packageManager.packages
+          .flatMap((p) => p.documentModels)
+          .find((m) => m.documentModel.global.id === documentType);
+        if (!module) {
+          throw new Error(
+            names.length > 0
+              ? `Installed [${names.join(", ")}] but document model not available: ${documentType}`
+              : `No package found for document model: ${documentType} (cdnUrl: ${packageManager.cdnUrl ?? "none"})`,
+          );
+        }
+        return module;
+      },
+    };
     const workerClient = createWorkerReactorClientModule({
       namespace: REACTOR_INSTANCE_NAMESPACE,
       cdnUrl: packageManager.cdnUrl ?? "",
       packageSpecs,
       documentModelModules,
       upgradeManifests,
+      documentModelLoader,
       renown,
       onReload: (reason) => {
         logger.warn("Reactor worker requested reload: @reason", reason);
