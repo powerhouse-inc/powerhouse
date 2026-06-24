@@ -18,7 +18,7 @@ type FakeOutbox = {
 };
 
 type FakeRemote = {
-  name: string;
+  meta: { name: string };
   channel: {
     outbox: FakeOutbox;
     inbox: { ackOrdinal: number };
@@ -83,7 +83,7 @@ function makeSyncOp(
 
 function makeSyncManager(items: SyncOperation[]): ISyncManager {
   const remote: FakeRemote = {
-    name: REMOTE_NAME,
+    meta: { name: REMOTE_NAME },
     channel: {
       outbox: { items },
       inbox: { ackOrdinal: 0 },
