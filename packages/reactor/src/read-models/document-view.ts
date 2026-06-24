@@ -77,6 +77,14 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
 
         const operationType = operation.action.type;
 
+        // Non-header ops carry a denormalized header echo with possibly stale
+        // `meta`; only header-scope ops and CREATE/UPGRADE/DELETE may write it.
+        const preserveHeaderMeta =
+          operationType !== "CREATE_DOCUMENT" &&
+          operationType !== "UPGRADE_DOCUMENT" &&
+          operationType !== "DELETE_DOCUMENT" &&
+          scope !== "header";
+
         if (operationType === "DELETE_DOCUMENT") {
           const now = new Date();
           await trx
@@ -175,6 +183,16 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
             }
             if (typeof headerName === "string") {
               name = headerName;
+            }
+
+            if (preserveHeaderMeta && existingSnapshot) {
+              const existingHeader = existingSnapshot.content as Record<
+                string,
+                unknown
+              >;
+              if (existingHeader && "meta" in existingHeader) {
+                newState.meta = existingHeader.meta;
+              }
             }
 
             if (slug && slug !== documentId) {

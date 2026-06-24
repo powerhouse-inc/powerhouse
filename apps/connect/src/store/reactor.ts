@@ -14,6 +14,7 @@ import {
   addRemoteDrive,
   DocumentCache,
   DocumentChangeType,
+  DRIVE_DOCUMENT_TYPES,
   extractDriveSlugFromPath,
   extractNodeSlugFromPath,
   getDrives,
@@ -54,13 +55,9 @@ import { getRuntimeConfig } from "../runtime-config.js";
 import { createProcessorHostModule } from "./processor-host-module.js";
 
 /**
- * Subscribe to the `/__packages` SSE channel exposed by ph-clint's
- * static-mode `connect-server.js`. On each `packages-changed` event the
- * server sends the full live list; we diff against what the packageManager
- * already has loaded and call `addPackage`/`removePackage` to converge.
- *
- * Best-effort — silently no-ops when the SSE endpoint doesn't exist
- * (e.g. running under vite dev, or hosted somewhere without this protocol).
+ * Subscribe to ph-clint's `/__packages` SSE channel; each `packages-changed`
+ * event sends the full live list, which we diff to add/remove packages.
+ * Best-effort: no-ops when the endpoint is absent (e.g. vite dev).
  */
 function subscribeToPackagesChannel(packageManager: IPackageManager): void {
   if (typeof window === "undefined" || typeof EventSource === "undefined") {
@@ -83,11 +80,8 @@ function subscribeToPackagesChannel(packageManager: IPackageManager): void {
       const next = payload.packages.filter(
         (p): p is string => typeof p === "string",
       );
-      // Split each incoming spec into (bareName, version). The server may
-      // send either bare names ("@scope/pkg") or version-qualified specs
-      // ("@scope/pkg@1.2.3"). parseBareName-style logic: for scoped specs
-      // the first `@` belongs to the scope, so version starts after the
-      // last `@` only when that `@` is past index 0.
+      // Split a spec into (bareName, version). For scoped specs the leading
+      // `@` is the scope, so the version `@` only counts when past index 0.
       const parseBare = (
         spec: string,
       ): { bareName: string; version?: string } => {
@@ -100,10 +94,8 @@ function subscribeToPackagesChannel(packageManager: IPackageManager): void {
         return { bareName: spec };
       };
 
-      // Diff against the registry-tracked subset only. Bundled "common"
-      // packages and the project's local package never appear in the
-      // server's list and removing them on every event would wipe the
-      // drive editors and break the AddDrive modal.
+      // Diff against registry packages only; bundled/local packages aren't in
+      // the server list and removing them would break the drive editors.
       const currentByName = new Map(
         packageManager
           .getRegistryPackages()
@@ -130,8 +122,6 @@ function subscribeToPackagesChannel(packageManager: IPackageManager): void {
         const { bareName, version } = parseBare(spec);
         const currentVersion = currentByName.get(bareName);
         const isKnown = currentByName.has(bareName);
-        // Skip when the package is already present at the same version (or
-        // when no version info is available on either side to compare).
         if (
           isKnown &&
           (!version || !currentVersion || version === currentVersion)
@@ -170,17 +160,15 @@ function subscribeToPackagesChannel(packageManager: IPackageManager): void {
     }
   });
   source.addEventListener("error", () => {
-    // EventSource auto-reconnects; nothing to do.
+    // EventSource auto-reconnects.
   });
 }
 
 export async function clearReactorStorage() {
   await window.ph?.reactorClientModule?.pg?.close();
 
-  // Dropping tables inside an existing PGlite instance is unreliable with
-  // `relaxedDurability: true` followed by an immediate page reload — pending
-  // IDB writes can be lost. Deleting the underlying database outright sidesteps
-  // flush-timing; the next startup re-creates and re-migrates from scratch.
+  // Dropping tables in PGlite with relaxedDurability can lose pending IDB
+  // writes on reload; delete the whole DB so startup re-migrates from scratch.
   const dbs = await indexedDB.databases();
   const targets = dbs
     .map((d) => d.name)
@@ -208,13 +196,10 @@ export async function createReactor(localPackage?: DocumentModelLib) {
 
   window.ph.loading = true;
 
-  // add window event handlers for updates
   addPHEventHandlers();
 
-  // register toast function for use in editor components
   setPHToast(toast as PHToastFn);
 
-  // initialize feature flags
   const features = await initFeatureFlags();
 
   logger.info(
@@ -222,18 +207,13 @@ export async function createReactor(localPackage?: DocumentModelLib) {
     JSON.stringify(Object.fromEntries(features), null, 2),
   );
 
-  // initialize renown crypto
   const keyPairStorage = await BrowserKeyStorage.create();
   const renownCrypto = await new RenownCryptoBuilder()
     .withKeyPairStorage(keyPairStorage)
     .build();
 
-  // initialize Renown
-  // The Renown namespace is a boot-time constant (no runtime mutation), so read
-  // it straight from the runtime config rather than threading it through the
-  // PHGlobalConfig event/setter/hook machinery. baseUrl still comes from
-  // phGlobalConfig (its mutable-config home). The sync getter is safe here for
-  // the same reason as line ~244: loadComponent() warmed the cache before this.
+  // Renown namespace is a boot-time constant, so read it from runtime config
+  // rather than the PHGlobalConfig machinery; baseUrl stays in phGlobalConfig.
   const renown = await new RenownBuilder("connect", {
     basename:
       getRuntimeConfig().connect.renown?.namespace ??
@@ -243,27 +223,20 @@ export async function createReactor(localPackage?: DocumentModelLib) {
     .withCrypto(renownCrypto)
     .build();
 
-  // Read the runtime config from cache. loadComponent() awaited
-  // loadRuntimeConfig() before calling createReactor, so the cache is warm;
-  // using the sync getter matches the convention used by connect.config.ts,
-  // useRegistryPackages, and pages/content.tsx — and throws loudly if a
-  // future caller violates the boot ordering.
+  // Sync getter is safe: loadComponent() warmed the cache before createReactor,
+  // and it throws loudly if a future caller violates that boot ordering.
   const runtimeConfig = getRuntimeConfig();
 
-  // initialize package manager
   const packageManager = new BrowserPackageManager(
     phGlobalConfig.routerBasename ?? "",
     runtimeConfig.packageRegistryUrl ?? null,
   );
   setVetraPackageManager(packageManager);
   await packageManager.init(localPackage, runtimeConfig.localPackage?.version);
-  // Register any packages marked as provider: "local" in powerhouse.config.json
-  // that the vite plugin bundled into this build. The virtual module is only
-  // emitted when `phBundledPackagesPlugin` is registered (ph-cli's Connect
-  // flow); running `vite dev` against apps/connect's own config has no
-  // bundled packages, so a resolution failure here is expected. The
-  // indirection + @vite-ignore also keeps Vite's dep scanner from treating
-  // the specifier as a real npm package to pre-bundle.
+  // Register provider:"local" packages the vite plugin bundled in. The virtual
+  // module only exists under phBundledPackagesPlugin (ph-cli), so a resolution
+  // failure under plain vite dev is expected; the indirection + @vite-ignore
+  // also stops Vite's dep scanner from pre-bundling the specifier.
   try {
     const bundledPackagesModule = "ph-bundled-packages-virtual";
     const { default: registerBundledPackages } = (await import(
@@ -281,21 +254,17 @@ export async function createReactor(localPackage?: DocumentModelLib) {
     if (r.type === "error") console.error(r.error);
   });
 
-  // Opt-in: subscribe to the static-mode `/__packages` SSE channel so live
-  // publishes (e.g. ph-clint's publish-reload trigger pushing a new list) flow
-  // into the running tab without a page reload. Enabled via
-  // `connect.packages.liveReload`; the channel only exists in static hosting
-  // that speaks this protocol.
+  // Opt-in (connect.packages.liveReload): pick up live publishes without a
+  // page reload via the static-mode `/__packages` SSE channel.
   if (runtimeConfig.connect?.packages?.liveReload) {
     subscribeToPackagesChannel(packageManager);
   }
 
-  // get document models to set in the reactor (all versions)
   const documentModelModules = packageManager.packages
     .flatMap((pkg) => pkg.documentModels)
     .filter(
       (module, index, modules) =>
-        // deduplicate by documentType and version
+        // dedupe by documentType and version
         modules.findIndex(
           (m) =>
             m.documentModel.global.id === module.documentModel.global.id &&
@@ -303,19 +272,18 @@ export async function createReactor(localPackage?: DocumentModelLib) {
         ) === index,
     );
 
-  // get upgrade manifests from packages
   const upgradeManifests = packageManager.packages
     .flatMap((pkg) => pkg.upgradeManifests)
     .filter(
       (manifest, index, manifests) =>
-        // deduplicate by documentType and version
+        // dedupe by documentType
         manifest !== undefined &&
         manifests.findIndex(
           (m) => m && m.documentType === manifest.documentType,
         ) === index,
     ) as UpgradeManifest<readonly number[]>[];
 
-  // initialize package discovery service for auto-installing unknown document types
+  // auto-installs packages for unknown document types
   const discoveryService =
     packageManager.cdnUrl !== null
       ? new PackageDiscoveryService(
@@ -330,7 +298,6 @@ export async function createReactor(localPackage?: DocumentModelLib) {
 
   setPackageDiscoveryService(discoveryService);
 
-  // create reactor v2 with all versions and upgrade manifests
   const reactorClientModule = await createBrowserReactor(
     documentModelModules,
     upgradeManifests,
@@ -338,16 +305,13 @@ export async function createReactor(localPackage?: DocumentModelLib) {
     discoveryService,
   );
 
-  // get the drives from the reactor
   const drives = await getDrives(reactorClientModule.client);
 
-  // initialize user from URL parameter
   const didFromUrl = getDidFromUrl();
   await login(didFromUrl, renown);
 
   const documentCache = new DocumentCache(reactorClientModule.client);
 
-  // dispatch the events to set the values in the window object
   const basePath = phGlobalConfig.basePath ?? "/";
   const routerBasename = phGlobalConfig.routerBasename ?? "/";
   const mergedGlobalConfig = buildPHGlobalConfig(
@@ -376,8 +340,7 @@ export async function createReactor(localPackage?: DocumentModelLib) {
     if (switchboardOrigin) {
       const attachmentJwtHandler = async (_url: string) => {
         if (!renown.user) return undefined;
-        // aud omitted: server verifies without an audience, so aud-bearing
-        // tokens are rejected. Re-enable once both sides support it.
+        // aud omitted: server rejects aud-bearing tokens. Re-enable once both sides support it.
         return renown.getBearerToken({ expiresIn: 10 });
       };
       const attachmentService = createRemoteAttachmentService({
@@ -393,10 +356,8 @@ export async function createReactor(localPackage?: DocumentModelLib) {
   setDrives(drives);
   setFeatures(features);
 
-  // Add default drives and any URL-supplied remote drive in the background so
-  // the app renders immediately. setSelectedDrive defers selection until the
-  // drive matching the URL slug syncs in (see deferDriveSelection), so we only
-  // ever wait for the selected drive, never for unrelated default drives.
+  // Add default/remote drives in the background so the app renders immediately;
+  // setSelectedDrive defers selection until the URL-matched drive syncs in.
   const defaultDrivesConfig = getDefaultDrives(runtimeConfig);
   if (defaultDrivesConfig.length > 0) {
     void addDefaultDrivesForNewReactor(defaultDrivesConfig).catch((error) =>
@@ -414,14 +375,17 @@ export async function createReactor(localPackage?: DocumentModelLib) {
   setSelectedDrive(driveSlug);
   setSelectedNode(nodeSlug);
 
-  // Subscribe via ReactorClient interface
+  // Refresh the drive list on any drive-type change so async-added
+  // default/remote drives surface on first load without a manual reload.
   const reactorClient = reactorClientModule.client;
-  reactorClient.subscribe({ type: "powerhouse/document-drive" }, (event) => {
-    logger.verbose("ReactorClient subscription event: @event", event);
-    refreshReactorDataClient(reactorClientModule.client).catch((e) =>
-      logger.error("@error", e),
-    );
-  });
+  for (const driveType of DRIVE_DOCUMENT_TYPES) {
+    reactorClient.subscribe({ type: driveType }, (event) => {
+      logger.verbose("ReactorClient subscription event: @event", event);
+      refreshReactorDataClient(reactorClientModule.client).catch((e) =>
+        logger.error("@error", e),
+      );
+    });
+  }
 
   // Redirect when a currently-viewed document or drive is deleted remotely
   reactorClient.subscribe({}, (event) => {
@@ -444,10 +408,8 @@ export async function createReactor(localPackage?: DocumentModelLib) {
     }
   });
 
-  // Refresh from ReactorClient to pick up any synced drives
   await refreshReactorDataClient(reactorClientModule.client);
 
-  // Setup processor factories for packages that have them
   const packagesWithProcessorFactories = packageManager.packages.filter(
     (pkg) => pkg.processorFactory !== undefined,
   );

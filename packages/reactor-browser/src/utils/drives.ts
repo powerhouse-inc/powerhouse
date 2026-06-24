@@ -4,8 +4,8 @@ import type {
   DocumentDriveDocument,
   SharingType,
 } from "@powerhousedao/shared/document-drive";
+import { DRIVE_DOCUMENT_TYPES } from "../constants.js";
 
-// legacy sync status types
 export type UISyncStatus =
   | "INITIAL_SYNC"
   | "SUCCESS"
@@ -25,10 +25,11 @@ const syncStatusToUI: Record<SyncStatus, UISyncStatus> = {
 export async function getDrives(
   reactor: IReactorClient,
 ): Promise<DocumentDriveDocument[]> {
-  const results = await reactor.find({
-    type: "powerhouse/document-drive",
-  });
-  return results.results as DocumentDriveDocument[];
+  // SearchFilter.type takes one string, so query each drive type and merge.
+  const perType = await Promise.all(
+    DRIVE_DOCUMENT_TYPES.map((type) => reactor.find({ type })),
+  );
+  return perType.flatMap((r) => r.results) as DocumentDriveDocument[];
 }
 
 export function getSyncStatus(
