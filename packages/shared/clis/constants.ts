@@ -138,6 +138,10 @@ export const packageJsonExports = {
     browser: "./dist/browser/index.js",
     node: "./dist/node/index.mjs",
   },
+  "./reactor": {
+    types: "./dist/types/reactor/index.d.ts",
+    browser: "./dist/browser/reactor/index.js",
+  },
   "./document-models": {
     types: "./dist/types/document-models/index.d.ts",
     browser: "./dist/browser/document-models/index.js",

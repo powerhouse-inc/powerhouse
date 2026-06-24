@@ -32,6 +32,7 @@ import {
   pnpmWorkspaceTemplate,
   processorsFactoryTemplate,
   processorsIndexTemplate,
+  reactorTsTemplate,
   readmeTemplate,
   styleTemplate,
   subgraphsIndexTemplate,
@@ -67,6 +68,10 @@ export async function writeGeneratedProjectRootFiles(projectDir: string) {
   await writeFileEnsuringDir(
     join(projectDir, "index.ts"),
     await formatSafe(indexTsTemplate),
+  );
+  await writeFileEnsuringDir(
+    join(projectDir, "reactor/index.ts"),
+    await formatSafe(reactorTsTemplate),
   );
   await writeFileEnsuringDir(
     join(projectDir, "style.css"),
