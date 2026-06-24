@@ -1,5 +1,9 @@
 import { InspectorModal as ConnectInspectorModal } from "@powerhousedao/design-system/connect";
-import { closePHModal, REACTOR_SCHEMA, usePHModal } from "@powerhousedao/reactor-browser";
+import {
+  closePHModal,
+  REACTOR_SCHEMA,
+  usePHModal,
+} from "@powerhousedao/reactor-browser";
 import { useDbExplorer } from "./useDbExplorer.js";
 import { useDebugInspector } from "./useDebugInspector.js";
 import { useIntegrityInspector } from "./useIntegrityInspector.js";
@@ -9,9 +13,6 @@ import { useRemotesInspector } from "./useRemotesInspector.js";
 import { useWorkerInspector } from "./useWorkerInspector.js";
 
 const DEFAULT_PAGE_SIZE = 25;
-
-const WORKER_DEFERRED_NOTE =
-  "Not available in worker mode yet — this reads reactor internals that live in the SharedWorker and aren't bridged over RPC. Coming in Phase 3.";
 
 export const InspectorModal: React.FC = () => {
   const phModal = usePHModal();
@@ -32,14 +33,6 @@ export const InspectorModal: React.FC = () => {
   const workerInspectorProps = useWorkerInspector();
   const { currentPgVersion, supportedPgVersions, onResetToPgVersion } =
     useDebugInspector();
-
-  const unavailableTabs = workerInspectorProps
-    ? {
-        Queue: WORKER_DEFERRED_NOTE,
-        Processors: WORKER_DEFERRED_NOTE,
-        Integrity: WORKER_DEFERRED_NOTE,
-      }
-    : undefined;
 
   return (
     <ConnectInspectorModal
@@ -72,7 +65,6 @@ export const InspectorModal: React.FC = () => {
       processorsInspectorProps={processorsInspectorProps}
       integrityInspectorProps={integrityInspectorProps}
       workerInspectorProps={workerInspectorProps}
-      unavailableTabs={unavailableTabs}
     />
   );
 };

@@ -8,6 +8,9 @@ export interface IRpcTransport {
 
 export function createPortTransport(port: MessagePort): IRpcTransport {
   port.start();
+  port.addEventListener("messageerror", (event) => {
+    console.error("[rpc transport] failed to deserialize message", event);
+  });
   return {
     post(message) {
       port.postMessage(message);

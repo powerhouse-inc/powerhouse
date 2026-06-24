@@ -5,13 +5,13 @@ const version =
 const gitSha = process.env.WORKSPACE_GIT_SHA ?? "unknown";
 
 export default defineConfig({
-  entry: [
-    "start-connect.tsx",
-    "main.tsx",
-    "pglite.worker.ts",
-    "pglite.worker.legacy.ts",
-    "reactor.worker.ts",
-  ],
+  entry: {
+    "start-connect": "start-connect.tsx",
+    main: "main.tsx",
+    "pglite.worker": "pglite.worker.ts",
+    "pglite.worker.legacy": "pglite.worker.legacy.ts",
+    "reactor.worker": "src/reactor.worker.ts",
+  },
   platform: "browser",
   outDir: "dist",
   clean: true,

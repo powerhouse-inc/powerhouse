@@ -1,4 +1,7 @@
-import type { ProcessorsInspectorProps } from "@powerhousedao/design-system/connect";
+import type {
+  ProcessorInfo,
+  ProcessorsInspectorProps,
+} from "@powerhousedao/design-system/connect";
 import { useReactorClientModule } from "@powerhousedao/reactor-browser";
 import { useCallback, useMemo } from "react";
 
@@ -8,17 +11,20 @@ export function useProcessorsInspector(): ProcessorsInspectorProps | undefined {
     module?.kind === "browser"
       ? module.reactorModule?.processorManager
       : undefined;
+  const inspector = module?.kind === "worker" ? module.inspector : undefined;
 
-  const hasProcessorManager = useMemo(
-    () => processorManager != null,
-    [processorManager],
+  const available = useMemo(
+    () => processorManager != null || inspector != null,
+    [processorManager, inspector],
   );
 
-  const getProcessors = useCallback(() => {
+  const getProcessors = useCallback((): Promise<ProcessorInfo[]> => {
+    if (inspector) {
+      return inspector.getProcessors() as Promise<ProcessorInfo[]>;
+    }
     if (!processorManager) {
       return Promise.resolve([]);
     }
-
     return Promise.resolve(
       processorManager.getAll().map((tracked) => ({
         processorId: tracked.processorId,
@@ -31,20 +37,24 @@ export function useProcessorsInspector(): ProcessorsInspectorProps | undefined {
         lastErrorTimestamp: tracked.lastErrorTimestamp,
       })),
     );
-  }, [processorManager]);
+  }, [processorManager, inspector]);
 
   const onRetry = useCallback(
     async (processorId: string) => {
+      if (inspector) {
+        await inspector.retryProcessor(processorId);
+        return;
+      }
       if (!processorManager) return;
       const tracked = processorManager.get(processorId);
       if (tracked) {
         await tracked.retry();
       }
     },
-    [processorManager],
+    [processorManager, inspector],
   );
 
-  if (!hasProcessorManager) {
+  if (!available) {
     return undefined;
   }
 

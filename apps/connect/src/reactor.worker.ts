@@ -1,6 +1,8 @@
 import {
   ChannelScheme,
+  DocumentIntegrityService,
   DriveCollectionId,
+  InMemoryQueue,
   ReactorBuilder,
   ReactorClientBuilder,
   type ChannelConfig,
@@ -23,6 +25,7 @@ import {
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import {
   createRelationalDb,
+  type IProcessorManager,
   type IRelationalDb,
 } from "@powerhousedao/shared/processors";
 import * as commonDocumentModels from "@powerhousedao/powerhouse-vetra-packages/document-models";
@@ -36,14 +39,14 @@ import {
 import type * as PgLiveModuleNs from "@electric-sql/pglite/live";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
-import { readPgVersionFile } from "./src/utils/pglite-idb.js";
+import { readPgVersionFile } from "./utils/pglite-idb.js";
 import {
   coerceMajor,
   CURRENT_PG_MAJOR,
   loadPGliteModule,
   resolvePgMajorForRuntime,
   type SupportedPgMajor,
-} from "./src/utils/pglite-major.js";
+} from "./utils/pglite-major.js";
 import {
   type BackupStrategy,
   type FileDataEntry,
@@ -51,7 +54,9 @@ import {
   migrateIdb,
   readFileData,
   writeFileData,
-} from "./src/utils/pglite-migrate-core.js";
+} from "./utils/pglite-migrate-core.js";
+
+console.info("[reactor.worker] module evaluating");
 
 // Matches the main thread's RenownBuilder("connect").
 const RENOWN_APP_NAME = "connect";
@@ -90,11 +95,17 @@ type RelationalState = {
 };
 const relational: RelationalState = {};
 type OwnedStorage = {
-  reactorPg?: { close: () => Promise<void> };
+  reactorPg?: {
+    close: () => Promise<void>;
+    query: (sql: string, params?: unknown[]) => Promise<{ rows: unknown[] }>;
+  };
   reactorIdb?: string;
   relationalIdb?: string;
 };
 const owned: OwnedStorage = {};
+let inspectorQueue: InMemoryQueue | undefined;
+let inspectorProcessors: IProcessorManager | undefined;
+let inspectorIntegrity: DocumentIntegrityService | undefined;
 let currentIdentity: ReactorIdentity | null = null;
 const registeredKeys = new Set<string>();
 
@@ -251,67 +262,100 @@ const host = new ReactorHost({
     }
   },
   build: async (raw) => {
-    const construct = raw as WorkerConstruct;
-    loader = new WorkerPackageLoader({
-      cdnUrl: construct.cdnUrl,
-      importPackage: (url) =>
-        import(/* @vite-ignore */ url) as Promise<Record<string, unknown>>,
-    });
-    const loaded = await loader.loadPackages(construct.packageSpecs);
-    const models = baseDocumentModels.concat(bundledDocumentModels, loaded);
-    const [pg] = await Promise.all([
-      openReactorPglite(construct.namespace),
-      openRelational(construct.relationalNamespace),
-    ]);
-    const reactorIdb = `/pglite/${construct.namespace}`;
-    const relationalIdb = `/pglite/${construct.relationalNamespace}`;
-    owned.reactorPg = pg;
-    owned.reactorIdb = reactorIdb;
-    owned.relationalIdb = relationalIdb;
-    const legacyMajor = (
-      await Promise.all([
-        readPgVersionFile(reactorIdb),
-        readPgVersionFile(relationalIdb),
-      ])
-    ).find((m): m is number => m !== null && m !== CURRENT_PG_MAJOR);
-    if (legacyMajor !== undefined) {
-      setMigration({ status: "needed", legacyMajor });
-    }
-    const crypto = await buildWorkerCrypto();
-    signer = new RenownCryptoSigner(
-      crypto,
-      RENOWN_APP_NAME,
-      currentIdentity ?? undefined,
-    );
-    const jwtHandler: JwtHandler = async () =>
-      currentIdentity
-        ? crypto.getBearerToken(currentIdentity.address, { expiresIn: 10 })
-        : undefined;
-    const builder = new ReactorClientBuilder()
-      .withSigner({ signer, verifier: createSignatureVerifier() })
-      .withReactorBuilder(
-        new ReactorBuilder()
-          .withDocumentModels(models)
-          .withChannelScheme(ChannelScheme.CONNECT)
-          .withJwtHandler(jwtHandler)
-          .withKysely(new Kysely<Database>({ dialect: new PGliteDialect(pg) })),
+    let phase = "init";
+    try {
+      const construct = raw as WorkerConstruct;
+      phase = "loading packages";
+      console.info(`[reactor.worker] boot: ${phase}`);
+      loader = new WorkerPackageLoader({
+        cdnUrl: construct.cdnUrl,
+        importPackage: (url) =>
+          import(/* @vite-ignore */ url) as Promise<Record<string, unknown>>,
+      });
+      const loaded = await loader.loadPackages(construct.packageSpecs);
+      const models = baseDocumentModels.concat(bundledDocumentModels, loaded);
+      phase = "opening pglite stores";
+      console.info(`[reactor.worker] boot: ${phase}`);
+      const [pg] = await Promise.all([
+        openReactorPglite(construct.namespace),
+        openRelational(construct.relationalNamespace),
+      ]);
+      const reactorIdb = `/pglite/${construct.namespace}`;
+      const relationalIdb = `/pglite/${construct.relationalNamespace}`;
+      owned.reactorPg = pg;
+      owned.reactorIdb = reactorIdb;
+      owned.relationalIdb = relationalIdb;
+      const legacyMajor = (
+        await Promise.all([
+          readPgVersionFile(reactorIdb),
+          readPgVersionFile(relationalIdb),
+        ])
+      ).find((m): m is number => m !== null && m !== CURRENT_PG_MAJOR);
+      if (legacyMajor !== undefined) {
+        setMigration({ status: "needed", legacyMajor });
+      }
+      phase = "building crypto";
+      console.info(`[reactor.worker] boot: ${phase}`);
+      const crypto = await buildWorkerCrypto();
+      signer = new RenownCryptoSigner(
+        crypto,
+        RENOWN_APP_NAME,
+        currentIdentity ?? undefined,
       );
-    builder.withDocumentModelLoader(loader);
-    const module = await builder.buildModule();
-    registry = module.reactorModule?.documentModelRegistry;
-    syncManager = module.reactorModule?.syncModule?.syncManager;
-    for (const m of models) {
-      registeredKeys.add(modelKey(m));
-    }
-    for (const type of FORWARDED_EVENT_TYPES) {
-      module.eventBus.subscribe(type, (forwardedType, event) =>
-        host.broadcastBusEvent(forwardedType, event),
+      const jwtHandler: JwtHandler = async () =>
+        currentIdentity
+          ? crypto.getBearerToken(currentIdentity.address, { expiresIn: 10 })
+          : undefined;
+      phase = "building reactor module";
+      console.info(`[reactor.worker] boot: ${phase}`);
+      const builder = new ReactorClientBuilder()
+        .withSigner({ signer, verifier: createSignatureVerifier() })
+        .withReactorBuilder(
+          new ReactorBuilder()
+            .withDocumentModels(models)
+            .withChannelScheme(ChannelScheme.CONNECT)
+            .withJwtHandler(jwtHandler)
+            .withKysely(
+              new Kysely<Database>({ dialect: new PGliteDialect(pg) }),
+            ),
+        );
+      builder.withDocumentModelLoader(loader);
+      const module = await builder.buildModule();
+      registry = module.reactorModule?.documentModelRegistry;
+      syncManager = module.reactorModule?.syncModule?.syncManager;
+      const rm = module.reactorModule;
+      if (rm) {
+        inspectorQueue =
+          rm.queue instanceof InMemoryQueue ? rm.queue : undefined;
+        inspectorProcessors = rm.processorManager;
+        inspectorIntegrity = new DocumentIntegrityService(
+          rm.keyframeStore,
+          rm.operationStore,
+          rm.writeCache,
+          rm.documentView,
+          rm.documentModelRegistry,
+        );
+      }
+      for (const m of models) {
+        registeredKeys.add(modelKey(m));
+      }
+      for (const type of FORWARDED_EVENT_TYPES) {
+        module.eventBus.subscribe(type, (forwardedType, event) =>
+          host.broadcastBusEvent(forwardedType, event),
+        );
+      }
+      syncManager?.onSyncStatusChange((documentId, status) =>
+        host.broadcastBusEvent(SYNC_STATUS_CHANGED_EVENT, {
+          documentId,
+          status,
+        }),
       );
+      console.info("[reactor.worker] boot: complete");
+      return module.client;
+    } catch (error) {
+      console.error(`[reactor.worker] boot failed at phase "${phase}":`, error);
+      throw error;
     }
-    syncManager?.onSyncStatusChange((documentId, status) =>
-      host.broadcastBusEvent(SYNC_STATUS_CHANGED_EVENT, { documentId, status }),
-    );
-    return module.client;
   },
   registerPackages: async (specs) => {
     if (!loader) {
@@ -386,14 +430,124 @@ const host = new ReactorHost({
       void live.unsubscribe();
     };
   },
+  onInspectorOp: async (method, args) => {
+    switch (method) {
+      case "queue.getState": {
+        if (!inspectorQueue) {
+          return {
+            isPaused: false,
+            pendingJobs: [],
+            executingJobs: [],
+            totalPending: 0,
+            totalExecuting: 0,
+          };
+        }
+        const pendingJobs = inspectorQueue.getPendingJobs();
+        const executingJobs = [];
+        for (const jobIds of inspectorQueue.getExecutingJobIds().values()) {
+          for (const jobId of jobIds) {
+            const job = inspectorQueue.getJob(jobId);
+            if (job) {
+              executingJobs.push(job);
+            }
+          }
+        }
+        return {
+          isPaused: inspectorQueue.paused,
+          pendingJobs,
+          executingJobs,
+          totalPending: pendingJobs.length,
+          totalExecuting: executingJobs.length,
+        };
+      }
+      case "queue.pause":
+        inspectorQueue?.pause();
+        return undefined;
+      case "queue.resume":
+        await inspectorQueue?.resume();
+        return undefined;
+      case "processors.getAll":
+        return (inspectorProcessors?.getAll() ?? []).map((tracked) => ({
+          processorId: tracked.processorId,
+          factoryId: tracked.factoryId,
+          driveId: tracked.driveId,
+          processorIndex: tracked.processorIndex,
+          lastOrdinal: tracked.lastOrdinal,
+          status: tracked.status,
+          lastError: tracked.lastError,
+          lastErrorTimestamp: tracked.lastErrorTimestamp,
+        }));
+      case "processors.retry": {
+        const [processorId] = args as [string];
+        await inspectorProcessors?.get(processorId)?.retry();
+        return undefined;
+      }
+      case "integrity.validate": {
+        if (!inspectorIntegrity) {
+          throw new Error("Integrity service not available");
+        }
+        const [documentId, branch] = args as [string, string?];
+        return inspectorIntegrity.validateDocument(documentId, branch);
+      }
+      case "integrity.rebuildKeyframes": {
+        if (!inspectorIntegrity) {
+          throw new Error("Integrity service not available");
+        }
+        const [documentId, branch] = args as [string, string?];
+        return inspectorIntegrity.rebuildKeyframes(documentId, branch);
+      }
+      case "integrity.rebuildSnapshots": {
+        if (!inspectorIntegrity) {
+          throw new Error("Integrity service not available");
+        }
+        const [documentId, branch] = args as [string, string?];
+        return inspectorIntegrity.rebuildSnapshots(documentId, branch);
+      }
+      case "db.query": {
+        if (!owned.reactorPg) {
+          throw new Error("Reactor store not available");
+        }
+        const [sql, params] = args as [string, unknown[]];
+        const result = await owned.reactorPg.query(sql, params);
+        return result.rows;
+      }
+      default:
+        throw new Error(`Unknown inspector op: ${method}`);
+    }
+  },
 });
 
-const scope = self as unknown as {
+type WorkerGlobalErrorEvent = {
+  message?: string;
+  error?: unknown;
+  reason?: unknown;
+};
+
+const globalScope = self as unknown as {
+  addEventListener: (
+    type: "error" | "unhandledrejection",
+    listener: (event: WorkerGlobalErrorEvent) => void,
+  ) => void;
   onconnect: ((event: MessageEvent) => void) | null;
 };
-scope.onconnect = (event) => {
+
+globalScope.addEventListener("error", (event) => {
+  console.error(
+    "[reactor.worker] uncaught error",
+    event.message ?? event.error ?? event,
+  );
+});
+globalScope.addEventListener("unhandledrejection", (event) => {
+  console.error("[reactor.worker] unhandled rejection", event.reason);
+});
+
+globalScope.onconnect = (event) => {
   const port = event.ports[0];
   if (port) {
-    host.connectPort(port);
+    try {
+      host.connectPort(port);
+    } catch (error) {
+      console.error("[reactor.worker] failed to connect port", error);
+    }
   }
 };

@@ -22,6 +22,7 @@ import type { PHToastFn } from "./toast.js";
 import type { IPackageManager } from "./vetra.js";
 import type { DraggingNode } from "../hooks/node-drag-and-drop.js";
 import type { IWorkerAdminClient } from "../rpc/admin-client.js";
+import type { IInspectorProxy } from "../rpc/inspector-proxy.js";
 
 // Browser in-process module: the full reactor graph plus the PGlite handle.
 export interface BrowserReactorModule extends InProcessReactorModule {
@@ -39,6 +40,7 @@ export interface WorkerReactorClientModule extends ReactorClientModule {
   kind: "worker";
   reactorModule: WorkerReactorModule;
   adminClient: IWorkerAdminClient;
+  inspector: IInspectorProxy;
 }
 
 export type LOADING = null;

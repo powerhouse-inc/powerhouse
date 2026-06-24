@@ -11,6 +11,7 @@ import {
 } from "@powerhousedao/reactor-browser";
 import {
   connectReactorClient,
+  createInspectorProxy,
   createPortTransport,
   createReactorEventBusProxy,
   createRelationalPgliteProxy,
@@ -59,10 +60,28 @@ function toReactorIdentity(user: User | undefined): ReactorIdentity | null {
 export function createWorkerReactorClientModule(
   args: WorkerReactorClientArgs,
 ): WorkerReactorClient {
-  const worker = new SharedWorker(
-    new URL("./reactor.worker.js", import.meta.url),
-    { name: reactorWorkerName(args.namespace), type: "module" },
+  const workerUrl = new URL("./reactor.worker.js", import.meta.url);
+  console.info(
+    `[reactor-worker] constructing SharedWorker ${reactorWorkerName(
+      args.namespace,
+    )} from ${workerUrl.href}`,
   );
+  const worker = new SharedWorker(workerUrl, {
+    name: reactorWorkerName(args.namespace),
+    type: "module",
+  });
+  worker.addEventListener("error", (event) => {
+    console.error(
+      `[reactor-worker] SharedWorker failed to load from ${workerUrl.href}`,
+      event.message || event,
+    );
+  });
+  worker.port.onmessageerror = (event) => {
+    console.error(
+      "[reactor-worker] port message could not be deserialized",
+      event,
+    );
+  };
   const transport = createPortTransport(worker.port);
 
   const documentModelRegistry = new DocumentModelRegistry();
@@ -127,6 +146,7 @@ export function createWorkerReactorClientModule(
     kind: "worker",
     client: clientProxy,
     adminClient: createWorkerAdminClient(transport),
+    inspector: createInspectorProxy(transport),
     reactorModule: {
       documentModelRegistry,
       syncModule: { syncManager: syncManagerProxy },

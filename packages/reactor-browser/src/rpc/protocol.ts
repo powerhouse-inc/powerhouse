@@ -125,6 +125,13 @@ export type RpcDbOp = {
   args: unknown[];
 };
 
+export type RpcInspectorOp = {
+  k: "inspector-op";
+  id: CorrelationId;
+  method: string;
+  args: unknown[];
+};
+
 export type RpcLiveSubscribe = {
   k: "sub-live";
   id: CorrelationId;
@@ -153,6 +160,7 @@ export type ClientMessage =
   | RpcAdmin
   | RpcSyncOp
   | RpcDbOp
+  | RpcInspectorOp
   | RpcLiveSubscribe
   | RpcLiveUnsub;
 

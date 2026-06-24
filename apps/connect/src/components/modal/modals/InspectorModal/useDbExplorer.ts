@@ -1,3 +1,6 @@
+import type { PGlite } from "@electric-sql/pglite";
+import type { Database } from "@powerhousedao/reactor";
+import type { IInspectorProxy } from "@powerhousedao/reactor-browser/rpc";
 import {
   getCachedReactorPgMajor,
   loadPgDump,
@@ -14,8 +17,9 @@ import {
   useReactorClientModule,
   type IQueue,
 } from "@powerhousedao/reactor-browser";
-import { sql } from "kysely";
-import { useCallback } from "react";
+import { Kysely, sql } from "kysely";
+import { PGliteDialect } from "kysely-pglite-dialect";
+import { useCallback, useMemo } from "react";
 
 async function quiesceQueue(queue: IQueue): Promise<void> {
   await new Promise<void>((resolve) => queue.block(() => resolve()));
@@ -79,13 +83,42 @@ const PRIORITY_COLUMNS = [
   "skip",
 ] as const;
 
+type ReactorPgliteAdapter = {
+  query: (
+    sql: string,
+    params?: unknown[],
+  ) => Promise<{ rows: unknown[]; affectedRows?: number }>;
+};
+
+function createWorkerReactorDatabase(
+  inspector: IInspectorProxy,
+): Kysely<Database> {
+  const adapter: ReactorPgliteAdapter = {
+    query: async (statement, params) => ({
+      rows: (await inspector.queryReactorDb(statement, params)) as unknown[],
+    }),
+  };
+  return new Kysely<Database>({
+    dialect: new PGliteDialect(adapter as unknown as PGlite),
+  });
+}
+
 export function useDbExplorer() {
-  const database = useDatabase();
+  const browserDatabase = useDatabase();
   const pglite = usePGlite();
   const module = useReactorClientModule();
   const reactorClientModule = module?.kind === "browser" ? module : undefined;
   const reactor = reactorClientModule?.reactorModule?.reactor;
   const queue = reactorClientModule?.reactorModule?.queue;
+  const workerModule = module?.kind === "worker" ? module : undefined;
+  const workerDatabase = useMemo(
+    () =>
+      workerModule
+        ? createWorkerReactorDatabase(workerModule.inspector)
+        : undefined,
+    [workerModule],
+  );
+  const database = browserDatabase ?? workerDatabase;
 
   const getTables = useCallback(async (): Promise<TableInfo[]> => {
     if (!database) return [];

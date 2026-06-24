@@ -273,6 +273,41 @@ describe("ReactorHost protocol (hello / version / register)", () => {
     ).rejects.toThrow(/no db handler/);
   });
 
+  it("routes an inspector-op to onInspectorOp and returns its value", async () => {
+    const calls: Array<[string, unknown[]]> = [];
+    const host = new ReactorHost({
+      build: () => Promise.resolve(fakeClient([])),
+      onInspectorOp: (method, args) => {
+        calls.push([method, args]);
+        return Promise.resolve({ totalPending: 3 });
+      },
+    });
+
+    const ch = new MessageChannel();
+    host.connect(createPortTransport(ch.port1));
+    const tab = rawTab(ch.port2);
+    const result = await tab.send({
+      k: "inspector-op",
+      method: "queue.getState",
+      args: [],
+    });
+    expect(result).toEqual({ totalPending: 3 });
+    expect(calls).toEqual([["queue.getState", []]]);
+  });
+
+  it("errors an inspector-op when no inspector handler is configured", async () => {
+    const host = new ReactorHost({
+      build: () => Promise.resolve(fakeClient([])),
+    });
+
+    const ch = new MessageChannel();
+    host.connect(createPortTransport(ch.port1));
+    const tab = rawTab(ch.port2);
+    await expect(
+      tab.send({ k: "inspector-op", method: "queue.getState", args: [] }),
+    ).rejects.toThrow(/no inspector handler/);
+  });
+
   it("routes an admin clearStorage to onAdminClearStorage", async () => {
     let cleared = false;
     const host = new ReactorHost({

@@ -25,6 +25,8 @@ import type { IRpcTransport } from "./transport.js";
 // Synthetic bus channel id for sync-status deltas (not a reactor IEventBus type).
 export const SYNC_STATUS_CHANGED_EVENT = 90001;
 
+const SYNC_OP_TIMEOUT_MS = 30000;
+
 export type SyncStatusChangedBusEvent = {
   documentId: string;
   status: SyncStatus;
@@ -48,6 +50,7 @@ type WireRemote = {
 type PendingCall = {
   resolve: (value: unknown) => void;
   reject: (error: unknown) => void;
+  timer?: ReturnType<typeof setTimeout>;
 };
 
 const DEFAULT_SNAPSHOT: ConnectionStateSnapshot = {
@@ -138,6 +141,9 @@ export class SyncManagerProxy implements ISyncManager {
         return;
       }
       this.pending.delete(msg.id);
+      if (entry.timer) {
+        clearTimeout(entry.timer);
+      }
       if (msg.k === "res") {
         entry.resolve(msg.value);
       } else {
@@ -244,7 +250,16 @@ export class SyncManagerProxy implements ISyncManager {
   private callSyncOp(method: string, args: unknown[]): Promise<unknown> {
     const id = this.nextId();
     const promise = new Promise<unknown>((resolve, reject) => {
-      this.pending.set(id, { resolve, reject });
+      const timer = setTimeout(() => {
+        if (this.pending.delete(id)) {
+          reject(
+            new Error(
+              `Reactor worker did not respond to sync-op "${method}" within ${SYNC_OP_TIMEOUT_MS}ms; the worker may have failed to load`,
+            ),
+          );
+        }
+      }, SYNC_OP_TIMEOUT_MS);
+      this.pending.set(id, { resolve, reject, timer });
     });
     this.transport.post({ k: "sync-op", id, method, args });
     return promise;

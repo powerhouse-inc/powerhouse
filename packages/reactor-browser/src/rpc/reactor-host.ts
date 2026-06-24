@@ -9,6 +9,7 @@ import type {
   RpcAdmin,
   RpcDbOp,
   RpcHello,
+  RpcInspectorOp,
   RpcLiveSubscribe,
   RpcRegisterPackages,
   RpcSyncOp,
@@ -27,6 +28,7 @@ function isDataMessage(
     msg.k === "page" ||
     msg.k === "sync-op" ||
     msg.k === "db-op" ||
+    msg.k === "inspector-op" ||
     msg.k === "sub-live"
   );
 }
@@ -40,6 +42,7 @@ export type ReactorHostOptions = {
   onIdentity?: (user: ReactorIdentity | null) => void;
   onSyncOp?: (method: string, args: unknown[]) => Promise<unknown>;
   onDbOp?: (method: string, args: unknown[]) => Promise<unknown>;
+  onInspectorOp?: (method: string, args: unknown[]) => Promise<unknown>;
   onLiveQuery?: (
     sql: string,
     params: unknown[],
@@ -133,6 +136,10 @@ export class ReactorHost {
       }
       if (msg.k === "db-op") {
         void this.handleDbOp(msg, transport);
+        return;
+      }
+      if (msg.k === "inspector-op") {
+        void this.handleInspectorOp(msg, transport);
         return;
       }
       if (msg.k === "sub-live") {
@@ -353,6 +360,30 @@ export class ReactorHost {
         k: "err",
         id: message.id,
         error: toErrorInfo(new Error("ReactorHost has no db handler")),
+      });
+      return;
+    }
+    try {
+      if (this.clientPromise) {
+        await this.clientPromise;
+      }
+      const value = await handler(message.method, message.args);
+      transport.post({ k: "res", id: message.id, value });
+    } catch (error) {
+      transport.post({ k: "err", id: message.id, error: toErrorInfo(error) });
+    }
+  }
+
+  private async handleInspectorOp(
+    message: RpcInspectorOp,
+    transport: IRpcTransport,
+  ): Promise<void> {
+    const handler = this.options.onInspectorOp;
+    if (!handler) {
+      transport.post({
+        k: "err",
+        id: message.id,
+        error: toErrorInfo(new Error("ReactorHost has no inspector handler")),
       });
       return;
     }

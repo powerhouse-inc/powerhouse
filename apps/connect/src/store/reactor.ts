@@ -398,7 +398,13 @@ export async function createReactor(localPackage?: DocumentModelLib) {
     reactorClientModule = workerClient.reactorClientModule;
     // Block boot until the sync manager seeds remotes from the worker, so
     // list()/connection state are warm before consumers first read them.
-    await workerClient.syncManagerProxy.startup();
+    try {
+      await workerClient.syncManagerProxy.startup();
+    } catch (error) {
+      window.ph.loading = false;
+      logger.error("Reactor worker failed to start: @error", error);
+      throw error;
+    }
   } else {
     reactorClientModule = await createBrowserReactor(
       documentModelModules,
