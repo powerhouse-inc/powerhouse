@@ -31,13 +31,22 @@ export const modules: Module[] = [
     lessons: [
       { id: `academy/GetStarted/VetraStudio`, title: "Vetra Studio" },
       { id: `academy/GetStarted/VetraCloud`, title: "Vetra Cloud" },
-      { id: `academy/GetStarted/VetraDrive`, title: "Vetra Drive" },
-      { id: `academy/GetStarted/Prerequisites`, title: "Prerequisites" },
       {
-        id: `academy/GetStarted/CreateAPackageWithVetra`,
+        id: `academy/Build/GettingStartedBuilding/VetraDrive`,
+        title: "Vetra Drive",
+      },
+      {
+        id: `academy/Build/GettingStartedBuilding/Prerequisites`,
+        title: "Prerequisites",
+      },
+      {
+        id: `academy/Build/GettingStartedBuilding/CreateAPackageWithVetra`,
         title: "Create a package with Vetra",
       },
-      { id: `academy/GetStarted/BuilderTools`, title: "Builder tools" },
+      {
+        id: `academy/Build/GettingStartedBuilding/BuilderTools`,
+        title: "Builder tools",
+      },
     ],
   },
   {

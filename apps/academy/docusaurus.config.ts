@@ -26,7 +26,7 @@ const config: Config = {
   organizationName: "", // Usually your GitHub org/user name.
   projectName: "", // Usually your repo name.
 
-  onBrokenLinks: "warn",
+  onBrokenLinks: "throw",
   deploymentBranch: "gh-pages",
   trailingSlash: false,
   onBrokenAnchors: "ignore",
@@ -77,18 +77,28 @@ const config: Config = {
         // Agent-first reorg: BuilderEnvironment became the new Get Started,
         // and the old manual Get Started moved into the Build track.
         redirects: [
-          // BuilderEnvironment -> Get Started
+          // BuilderEnvironment -> Get Started (pages that stayed in Get Started)
+          ...["VetraStudio", "VetraCloud"].map((slug) => ({
+            from: `/academy/MasteryTrack/BuilderEnvironment/${slug}`,
+            to: `/academy/GetStarted/${slug}`,
+          })),
+          // BuilderEnvironment / Get Started -> Build/GettingStartedBuilding
+          // (these pages later moved into the Build track)
           ...[
-            "VetraStudio",
-            "VetraCloud",
             "VetraDrive",
             "Prerequisites",
             "CreateAPackageWithVetra",
             "BuilderTools",
-          ].map((slug) => ({
-            from: `/academy/MasteryTrack/BuilderEnvironment/${slug}`,
-            to: `/academy/GetStarted/${slug}`,
-          })),
+          ].flatMap((slug) => [
+            {
+              from: `/academy/MasteryTrack/BuilderEnvironment/${slug}`,
+              to: `/academy/Build/GettingStartedBuilding/${slug}`,
+            },
+            {
+              from: `/academy/GetStarted/${slug}`,
+              to: `/academy/Build/GettingStartedBuilding/${slug}`,
+            },
+          ]),
           // Old manual Get Started -> Build track (Manual Todo tutorial)
           ...[
             "ExploreDemoPackage",

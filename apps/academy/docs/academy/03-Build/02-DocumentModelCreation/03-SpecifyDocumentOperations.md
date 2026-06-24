@@ -1,5 +1,9 @@
 # Specify document operations
 
+:::note[Builds on the Manual Todo tutorial]
+You defined these operations in the [Manual Todo tutorial](/academy/Build/ManualTodoTutorial/DefineToDoListDocumentModel); this page explains them in depth and adds the operations behind the advanced `stats` feature.
+:::
+
 In the previous section, we defined the state schema for our document model. Now, we turn our attention to a critical aspect of document model creation: **specifying document operations**. These operations are the heart of your document's behavior, dictating how its state can be modified.
 
 ## What are document operations?
@@ -16,7 +20,7 @@ Each operation acts as a command that, when applied, transitions the document fr
 
 ## Connecting operations to the schema
 
-In the "Define TodoList Document Model" chapter in the "Get Started" guide, we used GraphQL `input` types to define the structure of the data required for each operation. Let's revisit that:
+In the "Define TodoList Document Model" step of the Manual Todo tutorial, we used GraphQL `input` types to define the structure of the data required for each operation. Revisit that:
 
 ```graphql
 # Defines a GraphQL input type for adding a new to-do item

@@ -1,6 +1,6 @@
 # Enforcing Authorization in Subgraphs
 
-:::warning Work in Progress
+:::warning[Work in Progress]
 This documentation is still being written and may be incomplete.
 :::
 
@@ -84,7 +84,7 @@ export const getResolvers = (
 };
 ```
 
-:::tip Class-field resolvers work too
+:::tip[Class-field resolvers work too]
 If you define resolvers inside your subgraph class instead of in `getResolvers`,
 call the helpers on `this` (`this.assertCanRead(...)`). That is the style the
 Reactor's built-in subgraphs use. Both forms reach the same public methods.
@@ -261,7 +261,7 @@ document through a list endpoint.
 6. **Write the check unconditionally.** Don't special-case OPEN or ADMIN_ONLY in
    your resolver — the helpers already collapse to the correct behavior per policy.
 
-:::tip Built-in subgraphs are covered by CI
+:::tip[Built-in subgraphs are covered by CI]
 Inside the `reactor-api` package, a default-deny test
 (`test/authorization-coverage.test.ts`) fails CI if any resolver on the built-in
 subgraphs references neither the authorization service nor a reviewed exemption.

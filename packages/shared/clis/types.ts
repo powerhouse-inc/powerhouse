@@ -72,6 +72,8 @@ export type PHConnectRenown = {
   url?: string;
   networkId?: string;
   chainId?: number;
+  /** Renown localStorage namespace; share it across Connects to share login. */
+  namespace?: string;
 };
 
 export type PHConnectSentry = {

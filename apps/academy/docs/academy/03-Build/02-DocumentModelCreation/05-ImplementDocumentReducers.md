@@ -1,5 +1,9 @@
 # Implement document reducers
 
+:::note[Builds on the Manual Todo tutorial]
+This is the same step from the [Manual Todo tutorial](/academy/Build/ManualTodoTutorial/ImplementOperationReducers), covered here in depth. The Mastery Track's only addition is the reducer logic for the computed `stats` field — if you've done the basic build, skim to the stats parts.
+:::
+
 ## The heart of document logic
 
 In our journey through Powerhouse Document Model creation, we've defined the "what" – the structure of our data ([State Schema](02-SpecifyTheStateSchema.md)) and the ways it can be changed ([Document Operations](03-SpecifyDocumentOperations.md)). We've also seen how the [Document Model Generator](04-UseTheDocumentModelGenerator.md) translates these specifications into a coded scaffold. Now, we arrive at the "how": implementing **Document Reducers**.
@@ -43,7 +47,7 @@ Let's break down its components and principles:
     - **Always Return a New Object for Changes**: If the state changes, you must create and return a brand new object. If the state does not change, you return the original `currentState` object.
     - This is fundamental to Powerhouse's event sourcing architecture, enabling time travel, efficient change detection, and a clear audit trail.
 
-    :::tip Powerhouse uses Immer.js
+    :::tip[Powerhouse uses Immer.js]
     Powerhouse uses **Immer.js** under the hood, which means you can write code that _looks like_ it's mutating the state directly (e.g., `state.items.push(...)`), but Immer ensures it results in an immutable update. This gives you the best of both worlds: readable code and immutable state.
     :::
 
@@ -74,9 +78,9 @@ Let's break down its components and principles:
 
 Let's use our familiar `TodoList` example to illustrate common patterns.
 
-### Basic implementation (matching Get Started)
+### Basic implementation (matching the Manual Todo tutorial)
 
-The basic implementation matches what you built in the Get Started tutorial:
+The basic implementation matches what you built in the Manual Todo tutorial:
 
 ```typescript
 import { generateId } from "document-model/core";

@@ -1,6 +1,6 @@
 # Relational database processor
 
-In this chapter, we will implement a **Todo-List** relational database processor. This processor receives operations from the reactor and can use `resultingState` (from the operation context) or data from the operations themselves to populate a database.
+In this chapter you'll implement a **Todo-List** relational database processor. This processor receives operations from the reactor and can use `resultingState` (from the operation context) or data from the operations themselves to populate a database.
 
 **What is a Relational Database Processor?**
 
@@ -490,7 +490,7 @@ Result:
 
 ### **Step 4: Query Both Data Sources**
 
-**The Power of Dual Data Access**: Now we can query BOTH the original document state AND our processed relational data in a single GraphQL request. This demonstrates the flexibility of the Powerhouse architecture.
+**Dual data access**: You can now query both the original document state and the processed relational data in a single GraphQL request.
 
 ```graphql
 query GetTodoList($docId: PHID!, $driveId: PHID) {

@@ -2,7 +2,7 @@
 
 Processors are components that receive document operations from the reactor and perform side effects. While specialized processor types like [relational database processors](/academy/Build/WorkWithData/RelationalDbProcessor) exist, you can build a plain processor by implementing the `IProcessor` interface directly.
 
-In this tutorial we will build a **logging processor** that prints a structured summary of every operation to the console.
+In this tutorial you'll build a **logging processor** that prints a structured summary of every operation to the console.
 
 ## What is a processor?
 

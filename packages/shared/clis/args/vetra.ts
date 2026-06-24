@@ -7,6 +7,7 @@ import { getConfig } from "../file-system/get-config.js";
 import {
   commonArgs,
   commonServerArgs,
+  renownNamespace,
   vetraSwitchboardArgs,
 } from "./common.js";
 
@@ -81,6 +82,7 @@ export const vetraArgs = {
     description:
       "Database path or connection string. Use a `postgres://` URL for Postgres; otherwise treated as a PGlite filesystem path. Leave unset for in-memory PGlite.",
   }),
+  renownNamespace,
   ...commonArgs,
   ...commonServerArgs,
   ...vetraSwitchboardArgs,

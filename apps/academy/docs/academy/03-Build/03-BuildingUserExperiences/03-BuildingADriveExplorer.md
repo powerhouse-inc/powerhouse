@@ -87,7 +87,7 @@ If not, you can follow the shortened guide below to prepare your project for thi
 
 - Start by running Vetra Studio locally with `ph vetra --watch`
 
-- Follow the [Get Started guide](/academy/Build/ManualTodoTutorial/DefineToDoListDocumentModel) to create your TodoList document model specification.
+- Follow the [Manual Todo tutorial](/academy/Build/ManualTodoTutorial/DefineToDoListDocumentModel) to create your TodoList document model specification.
 - Drop the downloaded file in the Vetra Studio drive. You'll find it under document models. Vetra should now automatically generate the necessary code for your project
 
 ### 2. Add the reducer code:
@@ -595,15 +595,6 @@ return showRevisionHistory ? (
 ph connect
 ```
 
-### Now it's your turn!
+## Up Next
 
-Start building your own Drive-apps or experiences.
-Congratulations on completing this tutorial!
-You've successfully built a custom drive explorer, enhancing the way users interact with document models.
-
-Now, take a moment to think about the possibilities!
-
-- What **unique Drive Experiences** could you create for your own projects?
-- How can you tailor interfaces and streamline workflows to unlock the full potential of your document models?
-
-The Powerhouse platform provides the tools. It's time to start building!
+You've built a custom drive explorer. Next, style it with [CSS customization](/academy/Build/BuildingUserExperiences/CSSCustomization).

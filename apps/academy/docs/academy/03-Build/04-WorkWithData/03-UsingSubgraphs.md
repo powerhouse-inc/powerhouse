@@ -1,7 +1,6 @@
 # Using subgraphs
 
-This tutorial will demonstrate how to create and customize a subgraph using our to-do list project as an example.
-Let's start with the basics and gradually add more complex features and functionality.
+Create and customize a subgraph, using the to-do list project as an example. This starts with the basics and adds more complex features as it goes.
 
 ## What is a subgraph?
 
@@ -37,9 +36,8 @@ First we will generate the subgraph with the help of the Powerhouse CLI, then we
 
 ### 1. Generate the subgraph
 
-Let's start by generating a new subgraph. For our tutorial we will create a new subgraph within our to-do list project you've created in the previous chapters.  
-Open your project and start your terminal.
-The Powerhouse Vetra toolkit provides a command-line utility to create new subgraphs easily.
+Generate a new subgraph within the to-do list project you created in the previous chapters. Open your project and start your terminal.
+The Powerhouse Vetra toolkit has a command-line utility to create new subgraphs.
 
 ```bash title="Run the following command to generate a new subgraph"
 ph generate subgraph --name search-todos
@@ -143,7 +141,7 @@ export const getResolvers = (subgraph: BaseSubgraph) => {
 };
 ```
 
-:::warning Enforce authorization in your resolvers
+:::warning[Enforce authorization in your resolvers]
 The resolver above returns data with no permission check. Custom subgraphs run
 with full access to the Reactor, so guarding reads, writes, and document
 creation is **your** responsibility. See
@@ -169,7 +167,7 @@ You should see the subgraph being registered in the console output:
 
 ### 3.2. Create some test data
 
-Before testing queries, let's create some to-do list documents with test data:
+Before testing queries, create some to-do list documents with test data:
 
 1. Start Connect
 
@@ -385,18 +383,9 @@ The supergraph allows you to both query & mutate data from the same endpoint.
 
 This demonstrates how the supergraph provides a unified interface to both your document models and your custom subgraphs, allowing you to query and mutate data from the same endpoint.
 
-## 5. Summary
+## 5. What you built
 
-Congratulations! You've successfully built a complete to-do list subgraph that demonstrates the power of extending document models with custom GraphQL functionality. Let's recap what you've accomplished:
-
-### Key concepts learned:
-
-- **Subgraphs extend document models** with additional querying and data processing capabilities
-- **Operational data stores** provide efficient storage for subgraph data
-- **Event processing** enables real-time synchronization between document models and subgraphs
-- **The supergraph** unifies multiple subgraphs into a single GraphQL endpoint
-
-This tutorial has provided you with a solid foundation for building sophisticated data processing and querying capabilities in the Powerhouse ecosystem.
+You now have a to-do list subgraph: an operational data store, event processing that keeps it in sync with the document model, and a supergraph that exposes it through a single GraphQL endpoint.
 
 ## Subgraphs are particularly useful for
 

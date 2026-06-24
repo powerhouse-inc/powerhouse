@@ -69,7 +69,7 @@ pnpm install -g ph-cmd@<version>
 
 ### Further reading
 
-- [Powerhouse Builder Tools](/academy/GetStarted/BuilderTools)
+- [Powerhouse Builder Tools](/academy/Build/GettingStartedBuilding/BuilderTools)
 </details>
 
 <details id="managing-ph-cmd-versions">
@@ -170,7 +170,7 @@ test: 2.5.0-test.0
 
 ### Further reading
 
-- [Powerhouse Builder Tools](/academy/GetStarted/BuilderTools)
+- [Powerhouse Builder Tools](/academy/Build/GettingStartedBuilding/BuilderTools)
 </details>
 
 <details id="uninstalling-ph-cmd">
@@ -220,7 +220,7 @@ rm -rf ~/.ph
 
 ### Further reading
 
-- [Powerhouse Builder Tools](/academy/GetStarted/BuilderTools)
+- [Powerhouse Builder Tools](/academy/Build/GettingStartedBuilding/BuilderTools)
 - [Create A New Powerhouse Project](/academy/Build/ManualTodoTutorial/CreateNewPowerhouseProject)
 </details>
 
@@ -292,7 +292,7 @@ ph use staging
 
 ### Further reading
 
-- [Powerhouse Builder Tools](/academy/GetStarted/BuilderTools)
+- [Powerhouse Builder Tools](/academy/Build/GettingStartedBuilding/BuilderTools)
 - [GraphQL Schema Best Practices](/academy/Build/WorkWithData/UsingTheAPI)
 </details>
 
@@ -381,7 +381,7 @@ ph use prod
 
 ### Further reading
 
-- [Powerhouse Builder Tools](/academy/GetStarted/BuilderTools)
+- [Powerhouse Builder Tools](/academy/Build/GettingStartedBuilding/BuilderTools)
 </details>
 
 <details id="using-different-package-managers-with-powerhouse">
@@ -495,7 +495,7 @@ ph init --package-manager pnpm
 
 ### Further reading
 
-- [Powerhouse Builder Tools](/academy/GetStarted/BuilderTools)
+- [Powerhouse Builder Tools](/academy/Build/GettingStartedBuilding/BuilderTools)
 - [Yarn Global Installation Guide](https://classic.yarnpkg.com/lang/en/docs/cli/global/)
 - [Bun Installation Guide](https://bun.sh/docs/installation#how-to-add-your-path)
 </details>
@@ -1343,7 +1343,7 @@ If you're developing packages:
 
 - [Powerhouse CLI Reference: Update Command](/academy/Reference/CLITooling/PowerhouseCLI#update)
 - [Powerhouse CLI Reference: Use Command](/academy/Reference/CLITooling/PowerhouseCLI#use)
-- [Powerhouse Builder Tools](/academy/GetStarted/BuilderTools)
+- [Powerhouse Builder Tools](/academy/Build/GettingStartedBuilding/BuilderTools)
 
 </details>
 
@@ -1428,7 +1428,7 @@ You might encounter a browser warning about the self-signed certificate; you may
 ### Further reading
 
 - [Vetra Studio Documentation](/academy/GetStarted/VetraStudio)
-- [Powerhouse Builder Tools](/academy/GetStarted/BuilderTools)
+- [Powerhouse Builder Tools](/academy/Build/GettingStartedBuilding/BuilderTools)
 </details>
 
 ### Editors & Drive-apps
@@ -1679,7 +1679,7 @@ Use the constructed URL to add or access the drive in your Connect environment.
 ### Further reading
 
 - [GraphQL Playground](https://www.apollographql.com/docs/apollo-server/testing/graphql-playground/)
-- [Powerhouse Builder Tools](/academy/GetStarted/BuilderTools)
+- [Powerhouse Builder Tools](/academy/Build/GettingStartedBuilding/BuilderTools)
 
 </details>
 
@@ -1687,1152 +1687,168 @@ Use the constructed URL to add or access the drive in your Connect environment.
 
 Creating, installing, and managing Powerhouse Packages for distribution and reuse.
 
-## Deployment recipes
+<details id="packaging-and-publishing-a-powerhouse-project">
+<summary>Packaging and Publishing a Powerhouse Project</summary>
 
-This section covers deploying Powerhouse applications and packages to various environments using Docker and other deployment methods.
-
-## Reactor & Data Synchronisation recipes
-
-This section covers managing the Powerhouse Reactor (the local service for processing document model operations) and troubleshooting data synchronization within the Powerhouse ecosystem.
-
-> **Tip:** For development workflows, **Vetra Studio** (`ph vetra --watch`) is recommended as it includes reactor functionality along with automatic code generation and live preview.
-
-### Reactor Recipes
-
-The [Powerhouse Recipes](https://github.com/powerhouse-inc/recipes) repository contains standalone example projects that demonstrate common Reactor patterns and integrations. Each recipe is a self-contained project you can clone and run.
-
-| Recipe                                                                                                       | Description                                                                                                                                                                    |
-| ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| [Audit Trail](https://github.com/powerhouse-inc/recipes/tree/main/audit-trail)                               | Reactor processor that builds an immutable audit log in PostgreSQL from `ActionSigner` context, with a GraphQL subgraph for querying entries by user, document, or time range. |
-| [Batch Progress](https://github.com/powerhouse-inc/recipes/tree/main/batch-progress)                         | Multi-document creation with dependency ordering using `executeBatch` and real-time progress tracking via the EventBus.                                                        |
-| [Cross-Document Reactor](https://github.com/powerhouse-inc/recipes/tree/main/cross-document-reactor)         | Event-driven cross-document automation using `ReactorClient` subscriptions to dispatch actions across related documents.                                                       |
-| [Custom Read Model](https://github.com/powerhouse-inc/recipes/tree/main/custom-read-model)                   | Custom `IReadModel` registered via `ReactorBuilder.withReadModel()` that maintains a document-count-per-type materialized view.                                                |
-| [Discord Webhook Processor](https://github.com/powerhouse-inc/recipes/tree/main/discord-webhook-processor)   | Reactor processor that posts document operations to a Discord channel as rich embeds with automatic batching and HMAC-SHA256 signatures.                                       |
-| [Document Snapshot Exporter](https://github.com/powerhouse-inc/recipes/tree/main/document-snapshot-exporter) | CLI tool for reliable read-after-write export of document state and operation history to JSON using Reactor consistency tokens.                                                |
-| [Full-Text Search](https://github.com/powerhouse-inc/recipes/tree/main/full-text-search)                     | Reactor processor that indexes document state into a PostgreSQL full-text search table for ranked keyword search across all documents.                                         |
-| [Rate Limiter](https://github.com/powerhouse-inc/recipes/tree/main/rate-limiter)                             | Reactor processor paired with an `AuthService` gate to throttle users by signer address using a sliding window.                                                                |
-| [Relational DB Subgraph](https://github.com/powerhouse-inc/recipes/tree/main/relational-db-subgraph)         | Complete relational DB processor with Kysely migrations, typed schema, and a GraphQL subgraph for a document catalog.                                                          |
-| [Saga](https://github.com/powerhouse-inc/recipes/tree/main/saga)                                             | Saga pattern via Reactor processor: operations on one document trigger operations on others, linked by a traceable saga context with re-entrancy guards.                       |
-| [Signed Operations Verifier](https://github.com/powerhouse-inc/recipes/tree/main/signed-operations-verifier) | Standalone script that builds document operations with cryptographic signatures and verifies each one, demonstrating tamper detection via `ISigner`.                           |
-| [Subscription CLI](https://github.com/powerhouse-inc/recipes/tree/main/subscription-cli)                     | CLI for monitoring Reactor GraphQL subscriptions over WebSocket in real time, printing timestamped events to stdout.                                                           |
-| [Sync Health Monitor](https://github.com/powerhouse-inc/recipes/tree/main/sync-health-monitor)               | EventBus-based sync health dashboard with two-reactor sync monitoring and a GraphQL subgraph for metrics.                                                                      |
-
-> See the [recipes repository](https://github.com/powerhouse-inc/recipes) for full source code, setup instructions, and prerequisites.
-
-{/* AUTO-GENERATED-RECIPE-DOCS-START */}
-{/* This content is automatically generated by scripts/generate-recipe-docs.ts. Do not edit directly. */}
-
-<details id="recipe-audit-trail">
-<summary>Audit Trail</summary>
-
-### Audit Trail
-
-A Reactor processor that inspects `ActionSigner` context on every operation to build an immutable audit log in PostgreSQL. Exposes a GraphQL subgraph for querying entries by user, document, or time range.
-
-#### What it demonstrates
-
-- **Signature/signer inspection** — extracting `user.address`, `networkId`, `chainId`, and app credentials from `operation.action.context.signer`
-- **Relational DB processor** — batch-inserting structured rows via Kysely
-- **Subgraph resolvers** — GraphQL API over the audit log using graphql-yoga
-- **Operation context fields** — using `documentId`, `documentType`, `action.type`, and `timestampUtcMs`
-
-#### Setup
-
-```sh
-pnpm install
-pnpm build
-```
-
-#### Usage
-
-##### Processor
-
-```ts
-import { Kysely, PostgresDialect } from "kysely";
-import {
-  up,
-  AuditTrailProcessor,
-  createAuditTrailFactory,
-} from "@powerhousedao/example-audit-trail";
-
-const db = new Kysely({ dialect: new PostgresDialect({ pool }) });
-await up(db);
-
-await processorManager.registerFactory(
-  "audit-trail",
-  createAuditTrailFactory({
-    db,
-    filter: { branch: ["main"] },
-  }),
-);
-```
-
-##### GraphQL subgraph
-
-```ts
-import { startAuditServer } from "@powerhousedao/example-audit-trail";
-
-const server = startAuditServer(db, 4002);
-```
-
-Query examples:
-
-```graphql
-# By user
-{
-  auditByUser(address: "0xabc", limit: 10) {
-    actionType
-    documentId
-    timestamp
-  }
-}
-
-# By document
-{
-  auditByDocument(documentId: "doc-1", limit: 10) {
-    signerAddress
-    actionType
-    timestamp
-  }
-}
-
-# By time range
-{
-  auditByTimeRange(from: "2025-01-01T00:00:00Z", to: "2025-12-31T23:59:59Z") {
-    signerAddress
-    actionType
-    documentId
-  }
-}
-```
-
-#### Tests
-
-```sh
-pnpm test
-```
-
-Tests use [PGlite](https://github.com/electric-sql/pglite) for an in-memory PostgreSQL instance.
-
-[View source on GitHub →](https://github.com/powerhouse-inc/recipes/tree/main/audit-trail)
-
-</details>
-
-<details id="recipe-batch-progress">
-<summary>Batch Progress</summary>
-
-### Batch Progress
-
-Demonstrates multi-document wizard creation with dependency ordering using Reactor's `executeBatch` and real-time progress tracking via the EventBus.
-
-#### What it shows
-
-A "Create Project" flow that atomically creates 4 documents with dependencies:
-
-```
-budget ──┐
-          ├──► project ──► drive (add files)
-scope  ──┘
-```
-
-- **budget** and **scope** create in parallel (no dependencies)
-- **project** waits for both budget and scope
-- **drive** adds all three as files after project completes
-
-One call, one result, automatic dependency resolution.
-
-##### Without Reactor
-
-```ts
-const budget = await createDocument(budgetId, initBudget);
-const scope = await createDocument(scopeId, initScope);
-// hope nothing interleaves...
-const project = await createDocument(projectId, initProject);
-await addFilesToDrive(driveId, [budget, scope, project]);
-```
-
-Four sequential calls, manual error handling, no atomicity.
-
-##### With Reactor
-
-```ts
-await reactor.executeBatch({
-  jobs: [
-    {
-      key: "budget",
-      documentId: budgetId,
-      actions: [initBudget],
-      dependsOn: [],
-    },
-    { key: "scope", documentId: scopeId, actions: [initScope], dependsOn: [] },
-    {
-      key: "project",
-      documentId: projectId,
-      actions: [initProject],
-      dependsOn: ["budget", "scope"],
-    },
-    {
-      key: "drive",
-      documentId: driveId,
-      actions: [addFiles],
-      dependsOn: ["project"],
-    },
-  ],
-});
-```
-
-One call. Budget and scope run in parallel. Project waits for both. Drive waits for project. The reactor handles ordering, parallelism, and failure propagation.
-
-#### How it works
-
-1. **Embedded Reactor** — spins up an in-memory Reactor (PGlite, no external DB)
-2. **Drive creation** — creates a drive document to hold the project files
-3. **Batch submission** — submits 4 dependent jobs via `IReactor.executeBatch`
-4. **EventBus tracking** — subscribes to `JOB_PENDING`, `JOB_RUNNING`, `JOB_WRITE_READY`, `JOB_READ_READY`, and `JOB_FAILED` events for real-time status updates
-5. **Live progress** — renders a multi-bar terminal display showing each job's status
-
-#### Job status lifecycle
-
-```
-PENDING → RUNNING → WRITE_READY → READ_READY
-                                 ↘ FAILED
-```
-
-| Status        | Meaning                                       |
-| ------------- | --------------------------------------------- |
-| `PENDING`     | Job is queued but not yet started             |
-| `RUNNING`     | Job is currently being executed               |
-| `WRITE_READY` | Operations written to the operation store     |
-| `READ_READY`  | Read models have finished indexing (terminal) |
-| `FAILED`      | Job failed (terminal)                         |
-
-#### Usage
-
-```sh
-pnpm install
-pnpm start
-```
-
-##### Example output
-
-```
-Multi-Document Wizard — Create Project
-═══════════════════════════════════════
-
-Creating drive...
-Drive created: abc123
-
-  budget  |████████████████████████████████████████| READ_READY
-  scope   |████████████████████████████████████████| READ_READY
-  project |████████████████████████████████████████| READ_READY
-  drive   |████████████████████████████████████████| READ_READY
-
-✓ Done in 0.42s — 4 jobs completed, 0 failed
-  Budget:  def456
-  Scope:   ghi789
-  Project: jkl012
-  Drive:   abc123
-```
-
-#### License
-
-AGPL-3.0-only
-
-[View source on GitHub →](https://github.com/powerhouse-inc/recipes/tree/main/batch-progress)
-
-</details>
-
-<details id="recipe-cross-document-reactor">
-<summary>Cross-Document Reactor</summary>
-
-### Cross-Document Reactor
-
-Event-driven cross-document automation using `ReactorClient` subscriptions.
-
-#### What it demonstrates
-
-- **`reactorClient.subscribe()`** — broad subscription watching all document changes
-- **Cross-document workflows** — a change on one document triggers an action on a related document
-- **`execute()` from within a subscription handler** — the reactor as an event-driven automation engine
-
-#### How it works
-
-1. Creates a drive with two documents: an **invoice** and a **task**, linked by naming convention (`Invoice-001` ↔ `Task-001-Invoice-001`)
-2. Subscribes to all document changes with an empty search filter (`{}`)
-3. When the invoice is renamed to include `[PAID]`, the subscription handler finds the related task and renames it to include `[CLOSED]`
-
-#### Running
-
-```sh
-pnpm install
-pnpm --filter @powerhousedao/cross-document-reactor start
-```
-
-#### Expected output
-
-```
-Cross-Document Reactor
-══════════════════════
-
-Starting reactor... done (X.Xs)
-
-Creating drive... <drive-id>
-Creating invoice document... <invoice-id>
-Creating task document... <task-id>
-
-Documents named: "Invoice-001" ↔ "Task-001-Invoice-001"
-
-─── Triggering workflow: marking Invoice-001 as [PAID] ───
-
-  [HH:MM:SS.mmm] updated → Invoice-001 [PAID]
-  [HH:MM:SS.mmm] ⚡ Rule triggered: "Invoice-001 [PAID]" is paid
-  [HH:MM:SS.mmm]    Looking for task: "Task-001-Invoice-001"...
-  [HH:MM:SS.mmm]    Found task <task-id>, closing it...
-  [HH:MM:SS.mmm] updated → Task-001-Invoice-001 [CLOSED]
-
-─── Final document state ───
-
-  Invoice: "Invoice-001 [PAID]"
-  Task:    "Task-001-Invoice-001 [CLOSED]"
-
-✓ Cross-document reaction succeeded
-```
-
-#### License
-
-AGPL-3.0-only
-
-[View source on GitHub →](https://github.com/powerhouse-inc/recipes/tree/main/cross-document-reactor)
-
-</details>
-
-<details id="recipe-custom-read-model">
-<summary>Custom Read Model</summary>
-
-### Custom Read Model
-
-A custom `IReadModel` implementation registered via `ReactorBuilder.withReadModel()` that maintains a document-count-per-type materialized view. Demonstrates the read model lifecycle, the pre-ready guarantee, and how read models differ from processors.
-
-#### How it works
-
-`DocumentCountReadModel` implements `IReadModel` directly — it receives every operation written to the reactor's operation store via `indexOperations()` and increments an in-memory counter keyed by `context.documentType`.
-
-```
-Operation written → JOB_WRITE_READY → ReadModelCoordinator
-                                        ├── preReady:  DocumentCountReadModel.indexOperations() ← our read model
-                                        ├── preReady:  DocumentView, DocumentIndexer (built-in)
-                                        ├── emit JOB_READ_READY  ← counts are already up to date here
-                                        └── postReady: processors, subscriptions
-```
-
-##### Read model vs processor
-
-|              | Read Model (IReadModel)                           | Processor (IProcessor)                        |
-| ------------ | ------------------------------------------------- | --------------------------------------------- |
-| Phase        | **Pre-ready** — completes before `JOB_READ_READY` | **Post-ready** — runs after `JOB_READ_READY`  |
-| Purpose      | Derived views that must be queryable immediately  | Side-effects (webhooks, notifications, sync)  |
-| Registration | `ReactorBuilder.withReadModel()`                  | `ProcessorManager.registerFactory()`          |
-| Receives     | `OperationWithContext[]` via `indexOperations()`  | `OperationWithContext[]` via `onOperations()` |
-
-##### Why implement IReadModel directly?
-
-`BaseReadModel` provides catch-up/rewind via the `ViewState` table and requires `IOperationIndex`, `IWriteCache`, and `IConsistencyTracker` — useful for persistent read models but unnecessary for a simple in-memory counter. Implementing `IReadModel` directly keeps the example minimal and shows the core contract.
-
-##### buildModule() internals
-
-`ReactorBuilder.buildModule()` returns a `ReactorModule` with direct access to the event bus, database, operation store, and other internals — useful for advanced integration, testing, or custom wiring.
-
-#### Architecture
-
-| Module                             | Purpose                                                                                         |
-| ---------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `src/document-count-read-model.ts` | `DocumentCountReadModel` — the `IReadModel` implementation                                      |
-| `src/index.ts`                     | Demo: builds a reactor, creates a document, shows the read model counts inside `JOB_READ_READY` |
-
-#### Usage
-
-##### Run the demo
-
-```sh
-pnpm start
-```
-
-##### Use in your own code
-
-```ts
-import { ReactorBuilder } from "@powerhousedao/reactor";
-import { DocumentCountReadModel } from "./src/document-count-read-model.js";
-
-const countReadModel = new DocumentCountReadModel();
-
-const reactorModule = await new ReactorBuilder()
-  .withDocumentModels([
-    /* your models */
-  ])
-  .withReadModel(countReadModel)
-  .buildModule();
-
-// After any job completes, counts are already up to date:
-reactorModule.eventBus.subscribe(ReactorEventTypes.JOB_READ_READY, () => {
-  console.log(countReadModel.getCounts());
-});
-```
-
-##### Query the materialized view
-
-```ts
-// All counts
-const counts: ReadonlyMap<string, number> = countReadModel.getCounts();
-
-// Single type
-const budgetOps = countReadModel.getCount("powerhouse/budget");
-```
-
-#### Tests
-
-```sh
-pnpm test
-```
-
-#### Exports
-
-```ts
-export { DocumentCountReadModel } from "./src/document-count-read-model.js";
-```
-
-[View source on GitHub →](https://github.com/powerhouse-inc/recipes/tree/main/custom-read-model)
-
-</details>
-
-<details id="recipe-discord-webhook-processor">
-<summary>Discord Webhook Processor</summary>
-
-### Discord Webhook Processor
-
-A Reactor `IProcessor` that posts document operations to a Discord channel via webhook.
-
-Each operation is converted into a Discord embed containing:
-
-- Action type, document ID, document type, scope, branch, hash
-- Truncated action input (max 1024 chars)
-- Timestamp
-
-Batches exceeding Discord's 10-embed limit are automatically chunked into multiple requests. Every request includes an HMAC-SHA256 signature in the `X-Reactor-Signature` header.
-
-#### Usage
-
-Register the processor with a Reactor `ProcessorManager`:
-
-```ts
-import { createDiscordWebhookFactory } from "@powerhousedao/example-discord-webhook-processor";
-
-await processorManager.registerFactory(
-  "discord-webhook",
-  createDiscordWebhookFactory({
-    webhookUrl: "https://discord.com/api/webhooks/{id}/{token}",
-    secret: process.env.WEBHOOK_SECRET!,
-    filter: {
-      documentType: ["powerhouse/billing-statement"],
-      scope: ["global"],
-      branch: ["main"],
-    },
-  }),
-);
-```
-
-#### Tests
-
-```sh
-pnpm test
-```
-
-[View source on GitHub →](https://github.com/powerhouse-inc/recipes/tree/main/discord-webhook-processor)
-
-</details>
-
-<details id="recipe-document-snapshot-exporter">
-<summary>Document Snapshot Exporter</summary>
-
-### Document Snapshot Exporter
-
-CLI tool that exports document state and operation history to JSON files, demonstrating reliable read-after-write consistency using the Reactor API.
-
-#### What it demonstrates
-
-- **IReactor API** — low-level interface where mutations return `JobInfo` with consistency tokens
-- **Consistency tokens** — passed to reads (`reactor.get()`, `reactor.getOperations()`) to guarantee the read reflects prior writes
-- **OperationFilter** — filtering operations by action type, timestamp range, or revision
-- **IReactor vs IReactorClient** — run with `--mode reactor` or `--mode client` to compare the two APIs side by side
-
-##### IReactor vs IReactorClient
-
-|                           | IReactor                                         | IReactorClient                        |
-| ------------------------- | ------------------------------------------------ | ------------------------------------- |
-| Mutations return          | `JobInfo` (must await manually)                  | The document (job awaited internally) |
-| Consistency               | You pass `ConsistencyToken` to reads             | Managed automatically                 |
-| Signing                   | Manual (pass `ISigner` to each call)             | Automatic via configured signer       |
-| `getOperations()` returns | `Record<string, PagedResults>` (per-scope)       | `PagedResults` (flat)                 |
-| Use when                  | You need fine-grained control over job lifecycle | You want a simpler, higher-level API  |
-
-#### Usage
-
-```sh
-pnpm install
-pnpm start
-```
-
-##### Options
-
-```
---mode <reactor|client>   API mode (default: reactor)
---out <path>              Output directory (default: ./output)
-```
-
-##### Examples
-
-```sh
-# Export using low-level IReactor with explicit consistency tokens
-pnpm start
-
-# Export using high-level IReactorClient
-pnpm start -- --mode client
-
-# Custom output directory
-pnpm start -- --out ./snapshots
-
-# Compare both modes
-pnpm start -- --out ./out-reactor
-pnpm start -- --mode client --out ./out-client
-```
-
-#### Output
-
-Each document is written as a JSON file named `<document-id>.json`:
-
-```json
-{
-  "header": { "id": "...", "documentType": "...", ... },
-  "state": { ... },
-  "operations": [ ... ],
-  "exportedAt": "2025-01-01T00:00:00.000Z",
-  "mode": "reactor"
-}
-```
-
-[View source on GitHub →](https://github.com/powerhouse-inc/recipes/tree/main/document-snapshot-exporter)
-
-</details>
-
-<details id="recipe-full-text-search">
-<summary>Full-Text Search</summary>
-
-### Full-Text Search Processor
-
-A Reactor `IProcessor` that indexes document state into a PostgreSQL full-text search table, enabling ranked keyword search across all documents managed by a Reactor instance.
-
-#### How it works
-
-When operations arrive, the processor:
-
-1. Collects the last operation per document (earlier states are superseded).
-2. Flattens the resulting document state into a single searchable string via `flattenToSearchableText`.
-3. Upserts a row in `search_index` with the content and a PostgreSQL `tsvector`.
-4. Handles `DELETE_DOCUMENT` actions by removing the corresponding row.
-
-#### Architecture
-
-| Module          | Purpose                                                                              |
-| --------------- | ------------------------------------------------------------------------------------ |
-| `processor.ts`  | `SearchProcessor` — the `IProcessor` implementation                                  |
-| `schema.ts`     | Kysely type definitions for the `search_index` table                                 |
-| `migrations.ts` | `up` / `down` functions to create/drop the table and GIN index                       |
-| `query.ts`      | `createSearchQuery` — returns a `search(term, limit?)` helper using `ts_rank`        |
-| `utils.ts`      | `flattenToSearchableText` — recursively extracts all string values from a JSON state |
-
-#### Prerequisites
-
-- PostgreSQL with full-text search support (`tsvector`, `plainto_tsquery`, `ts_rank`)
-- [Kysely](https://kysely.dev/) database instance
-
-#### Usage
-
-##### Run migrations
-
-```ts
-import { up } from "@powerhousedao/example-full-text-search";
-
-await up(db);
-```
-
-##### Register the processor
-
-```ts
-import { SearchProcessor } from "@powerhousedao/example-full-text-search";
-
-const processor = new SearchProcessor(db);
-```
-
-##### Query the index
-
-```ts
-import { createSearchQuery } from "@powerhousedao/example-full-text-search";
-
-const search = createSearchQuery(db);
-const results = await search.search("budget allocation", 10);
-// returns: [{ document_id, document_type, title, rank }]
-```
-
-#### Exports
-
-```ts
-export { SearchProcessor } from "./processor.js";
-export { createSearchQuery } from "./query.js";
-export type { SearchResult } from "./query.js";
-export type { SearchDB, SearchIndex } from "./schema.js";
-export { flattenToSearchableText } from "./utils.js";
-export { up, down } from "./migrations.js";
-```
-
-[View source on GitHub →](https://github.com/powerhouse-inc/recipes/tree/main/full-text-search)
-
-</details>
-
-<details id="recipe-rate-limiter">
-<summary>Rate Limiter</summary>
-
-### Rate Limiter
-
-A Reactor `IProcessor` paired with an `AuthService` gate to throttle users by signer address, preventing any single user from overwhelming the system with excessive operations.
-
-#### How it works
-
-The recipe has two components that form a feedback loop:
-
-1. **`RateLimiterProcessor`** sits inside the Reactor and observes every operation. It extracts the signer address from `operation.action.context.signer.user.address`, counts operations per user within a sliding time window, and calls `authService.cooldown()` when a user exceeds the threshold. The processor never throws — it only signals.
-
-2. **`AuthService`** sits in front of the Reactor (e.g. in a GraphQL resolver or HTTP middleware). Before forwarding a mutation, the caller checks `authService.isAllowed(address)`. If the user is on cooldown, the response includes `retryAfterMs` so the client knows when to retry.
-
-```
-Client → [AuthService gate] → Reactor → RateLimiterProcessor → authService.cooldown()
-              ↑                                                        |
-              └────────────────────────────────────────────────────────┘
-```
-
-Operations without a signer are silently skipped. Counters are in-memory and reset on processor disconnect or restart.
-
-#### Architecture
-
-| Module                          | Purpose                                                                                                |
-| ------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| `src/auth-service.ts`           | `AuthService` — in-memory cooldown gate with `cooldown()`, `isAllowed()`, and `getCooldownRemaining()` |
-| `src/rate-limiter-processor.ts` | `RateLimiterProcessor` — the `IProcessor` implementation; also exports `createRateLimiterFactory`      |
-
-#### Configuration
-
-| Option          | Type              | Description                                                                       |
-| --------------- | ----------------- | --------------------------------------------------------------------------------- |
-| `maxOperations` | `number`          | Maximum operations allowed per user within the time window                        |
-| `windowMs`      | `number`          | Length of the sliding time window in milliseconds                                 |
-| `cooldownMs`    | `number`          | How long a user is blocked after exceeding the limit                              |
-| `filter`        | `ProcessorFilter` | Which operations the processor subscribes to (document type, scope, branch, etc.) |
-
-#### Usage
-
-##### Register the processor
-
-```ts
-import { AuthService } from "@powerhousedao/example-rate-limiter/src/auth-service.js";
-import { createRateLimiterFactory } from "@powerhousedao/example-rate-limiter/src/rate-limiter-processor.js";
-
-// Shared instance — pass to both the GQL layer and the processor
-const authService = new AuthService();
-
-await processorManager.registerFactory(
-  "rate-limiter",
-  createRateLimiterFactory({
-    authService,
-    maxOperations: 100,
-    windowMs: 60_000, // 1-minute window
-    cooldownMs: 300_000, // 5-minute cooldown
-    filter: { branch: ["main"] },
-  }),
-);
-```
-
-##### Gate requests in your GraphQL / HTTP layer
-
-```ts
-const check = authService.isAllowed(userAddress);
-if (!check.allowed) {
-  res.set("Retry-After", String(Math.ceil(check.retryAfterMs! / 1000)));
-  throw new Error(`Rate limited. Retry after ${check.retryAfterMs}ms`);
-}
-```
-
-##### Check cooldown status
-
-```ts
-const remainingMs = authService.getCooldownRemaining(userAddress);
-```
-
-#### Exports
-
-```ts
-export { AuthService } from "./src/auth-service.js";
-export type { AuthCheckResult } from "./src/auth-service.js";
-export {
-  RateLimiterProcessor,
-  createRateLimiterFactory,
-} from "./src/rate-limiter-processor.js";
-export type { RateLimiterConfig } from "./src/rate-limiter-processor.js";
-```
-
-#### Tests
-
-```sh
-pnpm test
-```
-
-[View source on GitHub →](https://github.com/powerhouse-inc/recipes/tree/main/rate-limiter)
-
-</details>
-
-<details id="recipe-relational-db-subgraph">
-<summary>Relational DB Subgraph</summary>
-
-### Relational DB Subgraph
-
-A complete relational DB processor recipe demonstrating the academy flagship tutorial pattern:
-
-- **RelationalDbProcessor** — extends the base class with `initAndUpgrade()`, namespaced DB, and type-safe `query` builder
-- **Kysely migrations** — up/down migrations creating `documents` and `document_tags` tables
-- **Typed schema** — full Kysely DB interface with `CatalogDB`, `DocumentRow`, and `DocumentTagRow`
-- **Type-safe queries** — Kysely query layer with joins, filtering by type/tag, and pagination
-- **GraphQL subgraph** — graphql-yoga server exposing the catalog data, ready for supergraph composition
-
-#### What it does
-
-The `CatalogProcessor` watches all documents flowing through the Reactor (document-type-agnostic) and maintains a denormalized relational view:
-
-- **`documents`** table — stores document metadata (ID, type, name, content summary, revision)
-- **`document_tags`** table — stores tags extracted from document state
-
-The GraphQL subgraph exposes this data via queries like `documents`, `document(id)`, `documentsByType`, and `documentsByTag`.
-
-#### Mapping to `ph generate`
-
-| Generated artifact        | File in this recipe                                                              |
-| ------------------------- | -------------------------------------------------------------------------------- |
-| `ph generate --processor` | `src/processor.ts` — `CatalogProcessor extends RelationalDbProcessor<CatalogDB>` |
-| `ph generate --subgraph`  | `src/subgraph.ts` — GraphQL SDL + resolvers backed by the query layer            |
-| Schema types              | `src/schema.ts` — Kysely DB interface                                            |
-| Migrations                | `src/migrations.ts` — `up()`/`down()` functions                                  |
-| Query layer               | `src/query.ts` — type-safe Kysely queries with joins                             |
-
-#### Usage
-
-```ts
-import { Kysely } from "kysely";
-import { createRelationalDb } from "@powerhousedao/reactor";
-import {
-  CatalogProcessor,
-  startCatalogServer,
-} from "@powerhousedao/example-relational-db-subgraph";
-
-// 1. Create a Kysely instance (PGlite, PostgreSQL, etc.)
-const db = new Kysely<CatalogDB>({ dialect });
-const relationalDb = createRelationalDb(db);
-
-// 2. Create and initialize the processor
-const processor = new CatalogProcessor(
-  "catalog",
-  { branch: ["main"] },
-  relationalDb,
-);
-await processor.initAndUpgrade();
-
-// 3. Register with the Reactor processor manager
-await processorManager.registerFactory("catalog", () => [
-  {
-    processor,
-    filter: { branch: ["main"] },
-    startFrom: "beginning",
-  },
-]);
-
-// 4. Start the GraphQL subgraph server
-startCatalogServer(db, 4002);
-// → Catalog subgraph ready at http://localhost:4002/graphql
-```
-
-#### Supergraph composition
-
-This subgraph can be composed into a supergraph alongside other subgraphs (e.g., the Reactor's built-in GraphQL endpoint). With a gateway like Apollo Router or GraphQL Mesh, you can query documents from the catalog and other sources in a single request.
-
-#### Running tests
-
-```sh
-pnpm test
-```
-
-Tests use PGlite (embedded PostgreSQL) — no external database required.
-
-#### License
-
-AGPL-3.0-only
-
-[View source on GitHub →](https://github.com/powerhouse-inc/recipes/tree/main/relational-db-subgraph)
-
-</details>
-
-<details id="recipe-saga">
-<summary>Saga</summary>
-
-### Saga
-
-Saga pattern via Reactor processor: operations on one document trigger operations on others, linked by a traceable saga context.
-
-#### What it demonstrates
-
-- **`IProcessor` as a saga coordinator** — a processor that reacts to operations and dispatches follow-up actions on other documents
-- **Saga correlation via DB** — a `saga_id` ties every step together, tracked entirely in the processor's own table (no changes to document interfaces)
-- **`IReactor.execute()` from within a processor** — the processor dispatches actions to other documents in response to incoming operations
-- **Re-entrancy guard** — prevents the processor from reacting to its own dispatched operations
-
-#### How it works
-
-1. Creates a drive with three documents: **Order-001**, **Payment-001**, and **Fulfillment-001**
-2. Registers a `SagaProcessor` with step definitions that form a chain:
-   - `Order-001 [CREATED]` &rarr; dispatches rename on Payment to `Payment-001 [REQUESTED]`
-   - `Payment-001 [REQUESTED]` &rarr; dispatches rename on Fulfillment to `Fulfillment-001 [STARTED]`
-   - `Fulfillment-001 [STARTED]` &rarr; dispatches rename on Order to `Order-001 [FULFILLED]`
-3. Triggering the saga by renaming the order document cascades through all three steps
-4. The saga log table records every step with a shared `saga_id` for traceability
-
-#### Running
-
-```sh
-pnpm install
-pnpm --filter @powerhousedao/saga start
-```
-
-#### Expected output
-
-```
-Saga Pattern Demo
-==================
-
-Demonstrates: processor-based saga coordination across documents,
-with a traceable saga_id linking every step.
-
-  Starting reactor... done (X.Xs)
-
-  Creating drive... <drive-id>
-  Creating order document... <order-id>
-  Creating payment document... <payment-id>
-  Creating fulfillment document... <fulfillment-id>
-
-  Documents named: "Order-001", "Payment-001", "Fulfillment-001"
-
-  Registered saga processor
-
---- Triggering saga: renaming Order-001 to Order-001 [CREATED] ---
-
---- Final document state ---
-
-  Order:       "Order-001 [FULFILLED]"
-  Payment:     "Payment-001 [REQUESTED]"
-  Fulfillment: "Fulfillment-001 [STARTED]"
-
---- Saga log ---
-
-  Saga ID: <uuid>
-
-  Step: order-created
-    <order-id> -> <payment-id>
-    action: SET_NAME  status: dispatched
-  Step: payment-requested
-    <payment-id> -> <fulfillment-id>
-    action: SET_NAME  status: dispatched
-  Step: fulfillment-started
-    <fulfillment-id> -> <order-id>
-    action: SET_NAME  status: dispatched
-
-+ Saga completed successfully
-```
-
-#### License
-
-AGPL-3.0-only
-
-[View source on GitHub →](https://github.com/powerhouse-inc/recipes/tree/main/saga)
-
-</details>
-
-<details id="recipe-signed-operations-verifier">
-<summary>Signed Operations Verifier</summary>
-
-### Signed Operations Verifier
-
-A standalone script that builds a document operation history with cryptographic signatures, then verifies each one. Demonstrates detection of unsigned and tampered operations, plus signer identity chain extraction.
-
-#### What it demonstrates
-
-- **`ISigner` interface** via `RenownCryptoSigner` from `@renown/sdk`
-- **`RenownCryptoSigner`** construction using `MemoryKeyStorage` + `RenownCryptoBuilder` (no filesystem or network needed)
-- **`verifyOperationSignature()`** — low-level per-signature verification with a custom `ActionVerificationHandler`
-- **`createSignatureVerifier()`** — higher-level operation verifier from `@renown/sdk`
-- **`validateHeader()`** — document header signature validation
-- **Signature tuple structure** — `[timestamp, publicKey, actionHash, prevStateHash, signature]`
-- **Signer identity chain** — user address/networkId/chainId + app name/key
-
-#### Run
-
-```bash
-pnpm install
-pnpm --filter @powerhousedao/example-signed-operations-verifier test
-```
-
-#### Key APIs
-
-| Import                | API                          | Purpose                                        |
-| --------------------- | ---------------------------- | ---------------------------------------------- |
-| `document-model/core` | `verifyOperationSignature()` | Verify a single signature tuple                |
-| `document-model/core` | `buildSignedAction()`        | Create a signed operation from an action       |
-| `document-model/core` | `actionSigner()`             | Construct an `ActionSigner` with identity info |
-| `@renown/sdk/node`    | `RenownCryptoSigner`         | `ISigner` implementation using ECDSA P-256     |
-| `@renown/sdk/node`    | `RenownCryptoBuilder`        | Builder for the underlying crypto engine       |
-| `@renown/sdk/node`    | `MemoryKeyStorage`           | In-memory key pair storage for demos           |
-| `@renown/sdk/node`    | `createSignatureVerifier()`  | Higher-level full-operation verifier           |
-
-[View source on GitHub →](https://github.com/powerhouse-inc/recipes/tree/main/signed-operations-verifier)
-
-</details>
-
-<details id="recipe-subscription-cli">
-<summary>Subscription CLI</summary>
-
-### Subscription CLI
-
-A standalone CLI for monitoring Powerhouse Reactor GraphQL subscriptions over WebSocket in real time.
-
-Subscribes to `documentChanges` and optionally `jobChanges`, printing timestamped events to stdout. Useful for debugging, integration testing, and observing Reactor activity.
-
-#### Usage
-
-```sh
-pnpm start
-```
-
-With options:
-
-```sh
-pnpm start -- --url ws://localhost:4001/graphql/subscriptions \
-  --type "powerhouse/billing-statement" \
-  --parent-id "drive-abc-123" \
-  --auth "eyJhbG..."
-```
-
-#### CLI Options
-
-| Flag               | Description                                            | Default                                     |
-| ------------------ | ------------------------------------------------------ | ------------------------------------------- |
-| `--url <url>`      | WebSocket endpoint                                     | `ws://localhost:4001/graphql/subscriptions` |
-| `--type <type>`    | Filter `documentChanges` by document type              | _(none)_                                    |
-| `--parent-id <id>` | Filter `documentChanges` by parent document (drive) ID | _(none)_                                    |
-| `--job-id <id>`    | Also subscribe to `jobChanges` for a specific job      | _(none)_                                    |
-| `--auth <token>`   | Bearer token for authentication                        | _(none)_                                    |
-| `--help`           | Show help message                                      |                                             |
-
-#### Example output
-
-```
-[12:34:56.789] Connecting to ws://localhost:4001/graphql/subscriptions...
-[12:34:56.801] Connected
-[12:34:56.802] Subscribing to documentChanges (type: powerhouse/billing-statement)...
-[12:34:56.803] Listening for events. Press Ctrl+C to stop.
-[12:34:58.100] documentChanges [UPDATE] Invoice Q1 (powerhouse/billing-statement)
-```
-
-Press `Ctrl+C` for clean shutdown.
-
-[View source on GitHub →](https://github.com/powerhouse-inc/recipes/tree/main/subscription-cli)
-
-</details>
-
-<details id="recipe-sync-health-monitor">
-<summary>Sync Health Monitor</summary>
-
-### Sync Health Monitor
-
-Subscribes to `SyncEventTypes` on the Reactor EventBus and maintains a live health dashboard. Exposes metrics via a GraphQL subgraph.
-
-#### What it shows
-
-- **EventBus subscriptions** — listens to all five sync event types (`SYNC_PENDING`, `SYNC_SUCCEEDED`, `SYNC_FAILED`, `DEAD_LETTER_ADDED`, `CONNECTION_STATE_CHANGED`)
-- **ReactorModule internals** — accesses `eventBus` and `syncModule` from the built `ReactorModule`
-- **Two-reactor sync** — wires two embedded reactors via a custom `InternalChannel` (no network, direct in-process delivery)
-- **GraphQL subgraph** — serves a `syncHealth` query with counters, connection states, and recent errors
-- **Live dashboard** — refreshing terminal display with health status, sync counters, and connection states
-
-#### How it works
-
-1. **Two embedded reactors** — builds reactor A and reactor B, each with in-memory PGlite
-2. **Internal channels** — a shared `IChannelFactory` creates `InternalChannel` pairs that deliver operations directly between reactors
-3. **Health monitor** — subscribes to reactor A's `EventBus` for all `SyncEventTypes`, maintains counters and connection state
-4. **GraphQL server** — serves the health metrics via a `syncHealth` query on `http://localhost:4001/graphql`
-5. **Demo scenario** — runs through four phases: normal sync, connection state changes, simulated failure, and recovery
-
-##### Demo phases
-
-| Phase            | What happens                                   | Events fired                                       |
-| ---------------- | ---------------------------------------------- | -------------------------------------------------- |
-| Normal sync      | Create a document on A, syncs to B             | `SYNC_PENDING`, `SYNC_SUCCEEDED`                   |
-| Connection issue | Simulate disconnect → reconnect on the channel | `CONNECTION_STATE_CHANGED` (x3)                    |
-| Failure          | Make the channel throw, then create a document | `SYNC_PENDING`, `SYNC_FAILED`, `DEAD_LETTER_ADDED` |
-| Recovery         | Restore the channel, create another document   | `SYNC_PENDING`, `SYNC_SUCCEEDED`                   |
-
-##### Health status logic
-
-| Status      | Condition                                                                               |
-| ----------- | --------------------------------------------------------------------------------------- |
-| `healthy`   | All connections up, low failure ratio, no dead letters                                  |
-| `degraded`  | A connection is disconnected/reconnecting, failure ratio &gt;10%, or dead letters exist |
-| `unhealthy` | Any connection is in `error` state                                                      |
-
-#### Usage
-
-```sh
-pnpm install
-pnpm start
-```
-
-##### JSON mode
-
-```sh
-pnpm start -- --json
-```
-
-Emits one JSON line per refresh interval instead of the visual dashboard.
-
-##### GraphQL query
-
-While the dashboard is running, query the subgraph:
-
-```sh
-curl -s http://localhost:4001/graphql \
-  -H 'Content-Type: application/json' \
-  -d '{"query":"{ syncHealth { healthStatus pendingCount successCount failureCount deadLetterCount connectionStates { remoteName state } recentErrors { timestamp remoteName error } } }"}' \
-  | jq .
-```
-
-##### Example output
-
-```
-Sync Health Monitor                            uptime 0h 0m 12s
-============================================================
-  Status:  HEALTHY
-
-  Sync Operations
-    pending: 0   succeeded: 2   failed: 0
-    dead letters: 0
-
-  Connections
-    remoteB              connected
-
-------------------------------------------------------------
-  GraphQL: http://localhost:4001/graphql   Ctrl+C to quit
-```
-
-#### Tests
-
-```sh
-pnpm test
-```
-
-Unit tests verify the `SyncHealthMonitor` class in isolation using a standalone `EventBus` with synthetic events.
-
-#### License
-
-AGPL-3.0-only
-
-[View source on GitHub →](https://github.com/powerhouse-inc/recipes/tree/main/sync-health-monitor)
-
-</details>
-{/* AUTO-GENERATED-RECIPE-DOCS-END */}
-
-### Reactor Management
-
-<details id="starting-the-reactor">
-<summary>Starting the Reactor</summary>
-
-### How to Start the Powerhouse Reactor
+### How to Package and Publish a Powerhouse Project
 
 ---
 
 ### Problem statement
 
-You need to start the Powerhouse Reactor, the local service responsible for processing document model operations and managing state, typically for testing or development purposes.
+You have created a collection of document models, editors, or other components and want to share it as a reusable package on a public or private npm registry. Publishing a package allows other projects to install and use your creations easily.
 
 ### Prerequisites
 
-- Powerhouse CLI (`ph-cmd`) installed
-- A Powerhouse project initialized (`ph init`)
-- You are in the root directory of your Powerhouse project.
+- A completed Powerhouse project that you are ready to share.
+- An account on [npmjs.com](https://www.npmjs.com/) (or a private registry).
+- Your project's `package.json` should have a unique name and correct version.
+- You must be logged into your npm account via the command line.
 
 ### Solution
 
-> **Note:** For development, **Vetra Studio** (`ph vetra --watch`) is the recommended workflow as it includes the reactor functionality along with automatic code generation and live preview. Use `ph reactor` directly when you need to run the reactor service independently.
+### Step 1: Build the Project
 
-### Using Vetra (Recommended for Development)
+First, compile your project to create a production-ready build in the `dist/` or `build/` directory.
 
 ```bash
-ph vetra --watch
+pnpm build
 ```
 
-Vetra includes reactor functionality and provides:
+### Step 2: Log In to npm
 
-- Automatic code generation when document models change
-- Live preview of documents and editors
-- Integrated development environment
-
-### Using Reactor Directly
-
-### Step 1: Navigate to Project Directory (if needed)
-
-Ensure your terminal is in the root directory of your Powerhouse project.
+If you aren't already, log in to your npm account. You will be prompted for your username, password, and one-time password.
 
 ```bash
-cd <yourprojectname>
+npm login
 ```
 
-### Step 2: Run the Reactor Command
+### Step 3: Version Your Package
 
-Execute the `ph reactor` command.
+Update the package version according to semantic versioning. This command updates `package.json` and creates a new Git tag.
 
 ```bash
-ph reactor
+# Choose one depending on the significance of your changes
+pnpm version patch   # For bug fixes (e.g., 1.0.0 -> 1.0.1)
+pnpm version minor   # For new features (e.g., 1.0.1 -> 1.1.0)
+pnpm version major   # For breaking changes (e.g., 1.1.0 -> 2.0.0)
+```
+
+### Step 4: Publish the Package
+
+Publish your package to the npm registry. If it's your first time publishing a scoped package (e.g., `@your-org/your-package`), you may need to add the `--access public` flag.
+
+```bash
+npm publish --access public
+```
+
+### Step 5: Push Git Commits and Tags
+
+Push your new version commit and tag to your remote repository to keep it in sync.
+
+```bash
+# Push your current branch
+git push
+
+# Push the newly created version tag
+git push --tags
 ```
 
 ### Expected outcome
 
-- The Reactor service starts, typically listening on `localhost:4001`.
-- You will see log output indicating the reactor is running and ready to process operations.
-- A GraphQL endpoint is usually available at `http://localhost:4001/graphql` for direct interaction and testing.
+- Your Powerhouse project is successfully published to the npm registry.
+- Other developers can now install your package into their projects using `ph install @your-org/your-package-name`.
+- Your Git repository is updated with the new version information.
 
 ### Common issues and solutions
 
-- Issue: Reactor fails to start, mentioning port conflicts.
-  - Solution: Ensure port `4001` (or the configured reactor port) is not already in use by another application. Stop the conflicting application or configure the reactor to use a different port (if possible, check documentation).
-- Issue: Errors related to storage or configuration.
-  - Solution: Check the `powerhouse.manifest.json` and any reactor-specific configuration files for errors. Ensure storage providers (like local disk) are accessible and configured correctly.
+- **Issue**: "403 Forbidden" or "You do not have permission" error on publish.
+  - **Solution**: Ensure your package name is unique and not already taken on npm. If it's a scoped package (`@scope/name`), make sure the organization exists and you have permission to publish to it. For public scoped packages, you must include `--access public`.
 
 ### Related recipes
 
-- [Launching Vetra Studio](#launching-vetra-studio)
-- [Initializing a New Project & Document Model](#initializing-a-new-project-and-document-model)
+- [Installing a Custom Powerhouse Package](#installing-a-custom-powerhouse-package)
+- [Managing and Updating Powerhouse Dependencies](#managing-and-updating-powerhouse-dependencies)
 
 </details>
+
+<details id="installing-a-custom-powerhouse-package">
+<summary>Installing a Custom Powerhouse Package</summary>
+
+### How to Install a Custom Powerhouse Package
+
+---
+
+### Problem statement
+
+You have developed and published a Powerhouse package (containing document models, editors, etc.) to npm, or you have a local package, and you need to install it into another Powerhouse project.
+
+### Prerequisites
+
+- Powerhouse CLI (`ph-cmd`) installed
+- A Powerhouse project initialized (`ph init`) where you want to install the package.
+- The custom package is either published to npm or available locally.
+
+### Solution
+
+### Step 1: Navigate to the Target Project Directory
+
+Ensure your terminal is in the root directory of the Powerhouse project where you want to install the package.
+
+```bash
+cd <your-target-project-name>
+```
+
+### Step 2: Install the Package
+
+Use the `ph install` command followed by the package name (if published to npm) or the path to the local package.
+
+**For npm packages:**
+
+```bash
+# Replace <your-package-name> with the actual name on npm
+ph install <your-package-name>
+```
+
+**For local packages (using a relative or absolute path):**
+
+```bash
+# Example using a relative path
+ph install ../path/to/my-local-package
+
+# Example using an absolute path
+ph install /Users/you/dev/my-local-package
+```
+
+### Step 3: Verify Installation
+
+Check your project's `package.json` and `powerhouse.manifest.json` to ensure the package dependency has been added correctly. Run `ph vetra --watch` (or `ph connect`) to see if the components from the installed package are available.
+
+### Expected outcome
+
+- The custom Powerhouse package is downloaded and installed into your project's dependencies.
+- The `powerhouse.manifest.json` is updated (if necessary) to reflect the installed package.
+- Document models, editors, Drive-apps, or other components from the package become available within the target project.
+
+### Common issues and solutions
+
+- Issue: Package not found (npm).
+  - Solution: Double-check the package name for typos. Ensure the package is published and accessible on npm.
+- Issue: Path not found (local).
+  - Solution: Verify the relative or absolute path to the local package directory is correct.
+- Issue: Conflicts with existing project components or dependencies.
+  - Solution: Resolve version conflicts or naming collisions as needed. Review the installed package's structure and dependencies.
+
+### Related recipes
+
+- [Publishing a Powerhouse Package](#publishing-a-powerhouse-package)
+- [Initializing a Powerhouse Project](#initializing-a-new-project-and-document-model)
+
+</details>
+
+## Deployment recipes
+
+This section covers deploying Powerhouse applications and packages to various environments using Docker and other deployment methods.
 
 <details id="deploying-powerhouse-with-docker">
 <summary>Deploying Powerhouse with Docker</summary>
@@ -3098,162 +2114,1087 @@ During the setup, you will be prompted for:
 - [Full Setup Guide](/academy/Build/Launch/SetupEnvironment)
 </details>
 
-<details id="installing-a-custom-powerhouse-package">
-<summary>Installing a Custom Powerhouse Package</summary>
+## Reactor & Data Synchronisation recipes
 
-### How to Install a Custom Powerhouse Package
+This section covers managing the Powerhouse Reactor (the local service for processing document model operations) and troubleshooting data synchronization within the Powerhouse ecosystem.
+
+> **Tip:** For development workflows, **Vetra Studio** (`ph vetra --watch`) is recommended as it includes reactor functionality along with automatic code generation and live preview.
+
+### Reactor Recipes
+
+The [Powerhouse Recipes](https://github.com/powerhouse-inc/recipes) repository contains standalone example projects that demonstrate common Reactor patterns and integrations. Each recipe is a self-contained project you can clone and run.
+
+| Recipe                                                                                                       | Description                                                                                                                                                                    |
+| ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [Audit Trail](https://github.com/powerhouse-inc/recipes/tree/main/audit-trail)                               | Reactor processor that builds an immutable audit log in PostgreSQL from `ActionSigner` context, with a GraphQL subgraph for querying entries by user, document, or time range. |
+| [Batch Progress](https://github.com/powerhouse-inc/recipes/tree/main/batch-progress)                         | Multi-document creation with dependency ordering using `executeBatch` and real-time progress tracking via the EventBus.                                                        |
+| [Cross-Document Reactor](https://github.com/powerhouse-inc/recipes/tree/main/cross-document-reactor)         | Event-driven cross-document automation using `ReactorClient` subscriptions to dispatch actions across related documents.                                                       |
+| [Custom Read Model](https://github.com/powerhouse-inc/recipes/tree/main/custom-read-model)                   | Custom `IReadModel` registered via `ReactorBuilder.withReadModel()` that maintains a document-count-per-type materialized view.                                                |
+| [Discord Webhook Processor](https://github.com/powerhouse-inc/recipes/tree/main/discord-webhook-processor)   | Reactor processor that posts document operations to a Discord channel as rich embeds with automatic batching and HMAC-SHA256 signatures.                                       |
+| [Document Snapshot Exporter](https://github.com/powerhouse-inc/recipes/tree/main/document-snapshot-exporter) | CLI tool for reliable read-after-write export of document state and operation history to JSON using Reactor consistency tokens.                                                |
+| [Full-Text Search](https://github.com/powerhouse-inc/recipes/tree/main/full-text-search)                     | Reactor processor that indexes document state into a PostgreSQL full-text search table for ranked keyword search across all documents.                                         |
+| [Rate Limiter](https://github.com/powerhouse-inc/recipes/tree/main/rate-limiter)                             | Reactor processor paired with an `AuthService` gate to throttle users by signer address using a sliding window.                                                                |
+| [Relational DB Subgraph](https://github.com/powerhouse-inc/recipes/tree/main/relational-db-subgraph)         | Complete relational DB processor with Kysely migrations, typed schema, and a GraphQL subgraph for a document catalog.                                                          |
+| [Saga](https://github.com/powerhouse-inc/recipes/tree/main/saga)                                             | Saga pattern via Reactor processor: operations on one document trigger operations on others, linked by a traceable saga context with re-entrancy guards.                       |
+| [Signed Operations Verifier](https://github.com/powerhouse-inc/recipes/tree/main/signed-operations-verifier) | Standalone script that builds document operations with cryptographic signatures and verifies each one, demonstrating tamper detection via `ISigner`.                           |
+| [Subscription CLI](https://github.com/powerhouse-inc/recipes/tree/main/subscription-cli)                     | CLI for monitoring Reactor GraphQL subscriptions over WebSocket in real time, printing timestamped events to stdout.                                                           |
+| [Sync Health Monitor](https://github.com/powerhouse-inc/recipes/tree/main/sync-health-monitor)               | EventBus-based sync health dashboard with two-reactor sync monitoring and a GraphQL subgraph for metrics.                                                                      |
+
+> See the [recipes repository](https://github.com/powerhouse-inc/recipes) for full source code, setup instructions, and prerequisites.
+
+{/* AUTO-GENERATED-RECIPE-DOCS-START */}
+{/* This content is automatically generated by scripts/generate-recipe-docs.ts. Do not edit directly. */}
+
+<details id="recipe-audit-trail">
+<summary><strong>Audit Trail</strong> — Reactor processor that builds an immutable audit log in PostgreSQL from `ActionSigner` context, with a GraphQL subgraph for querying entries by user, document, or time range.</summary>
+
+### Audit Trail
+
+A Reactor processor that inspects `ActionSigner` context on every operation to build an immutable audit log in PostgreSQL. Exposes a GraphQL subgraph for querying entries by user, document, or time range.
+
+#### What it demonstrates
+
+- **Signature/signer inspection** — extracting `user.address`, `networkId`, `chainId`, and app credentials from `operation.action.context.signer`
+- **Relational DB processor** — batch-inserting structured rows via Kysely
+- **Subgraph resolvers** — GraphQL API over the audit log using graphql-yoga
+- **Operation context fields** — using `documentId`, `documentType`, `action.type`, and `timestampUtcMs`
+
+#### Setup
+
+```sh
+pnpm install
+pnpm build
+```
+
+#### Usage
+
+##### Processor
+
+```ts
+import { Kysely, PostgresDialect } from "kysely";
+import { up, AuditTrailProcessor, createAuditTrailFactory } from "@powerhousedao/example-audit-trail";
+
+const db = new Kysely({ dialect: new PostgresDialect({ pool }) });
+await up(db);
+
+await processorManager.registerFactory(
+  "audit-trail",
+  createAuditTrailFactory({
+    db,
+    filter: { branch: ["main"] },
+  }),
+);
+```
+
+##### GraphQL subgraph
+
+```ts
+import { startAuditServer } from "@powerhousedao/example-audit-trail";
+
+const server = startAuditServer(db, 4002);
+```
+
+Query examples:
+
+```graphql
+# By user
+{ auditByUser(address: "0xabc", limit: 10) { actionType documentId timestamp } }
+
+# By document
+{ auditByDocument(documentId: "doc-1", limit: 10) { signerAddress actionType timestamp } }
+
+# By time range
+{ auditByTimeRange(from: "2025-01-01T00:00:00Z", to: "2025-12-31T23:59:59Z") { signerAddress actionType documentId } }
+```
+
+#### Tests
+
+```sh
+pnpm test
+```
+
+Tests use [PGlite](https://github.com/electric-sql/pglite) for an in-memory PostgreSQL instance.
+
+[View source on GitHub →](https://github.com/powerhouse-inc/recipes/tree/main/audit-trail)
+</details>
+
+<details id="recipe-batch-progress">
+<summary><strong>Batch Progress</strong> — Multi-document creation with dependency ordering using `executeBatch` and real-time progress tracking via the EventBus.</summary>
+
+### Batch Progress
+
+Demonstrates multi-document wizard creation with dependency ordering using Reactor's `executeBatch` and real-time progress tracking via the EventBus.
+
+#### What it shows
+
+A "Create Project" flow that atomically creates 4 documents with dependencies:
+
+```
+budget ──┐
+          ├──► project ──► drive (add files)
+scope  ──┘
+```
+
+- **budget** and **scope** create in parallel (no dependencies)
+- **project** waits for both budget and scope
+- **drive** adds all three as files after project completes
+
+One call, one result, automatic dependency resolution.
+
+##### Without Reactor
+
+```ts
+const budget = await createDocument(budgetId, initBudget);
+const scope = await createDocument(scopeId, initScope);
+// hope nothing interleaves...
+const project = await createDocument(projectId, initProject);
+await addFilesToDrive(driveId, [budget, scope, project]);
+```
+
+Four sequential calls, manual error handling, no atomicity.
+
+##### With Reactor
+
+```ts
+await reactor.executeBatch({
+  jobs: [
+    { key: "budget",  documentId: budgetId,  actions: [initBudget],  dependsOn: [] },
+    { key: "scope",   documentId: scopeId,   actions: [initScope],   dependsOn: [] },
+    { key: "project", documentId: projectId, actions: [initProject], dependsOn: ["budget", "scope"] },
+    { key: "drive",   documentId: driveId,   actions: [addFiles],    dependsOn: ["project"] },
+  ],
+});
+```
+
+One call. Budget and scope run in parallel. Project waits for both. Drive waits for project. The reactor handles ordering, parallelism, and failure propagation.
+
+#### How it works
+
+1. **Embedded Reactor** — spins up an in-memory Reactor (PGlite, no external DB)
+2. **Drive creation** — creates a drive document to hold the project files
+3. **Batch submission** — submits 4 dependent jobs via `IReactor.executeBatch`
+4. **EventBus tracking** — subscribes to `JOB_PENDING`, `JOB_RUNNING`, `JOB_WRITE_READY`, `JOB_READ_READY`, and `JOB_FAILED` events for real-time status updates
+5. **Live progress** — renders a multi-bar terminal display showing each job's status
+
+#### Job status lifecycle
+
+```
+PENDING → RUNNING → WRITE_READY → READ_READY
+                                 ↘ FAILED
+```
+
+| Status | Meaning |
+|--------|---------|
+| `PENDING` | Job is queued but not yet started |
+| `RUNNING` | Job is currently being executed |
+| `WRITE_READY` | Operations written to the operation store |
+| `READ_READY` | Read models have finished indexing (terminal) |
+| `FAILED` | Job failed (terminal) |
+
+#### Usage
+
+```sh
+pnpm install
+pnpm start
+```
+
+##### Example output
+
+```
+Multi-Document Wizard — Create Project
+═══════════════════════════════════════
+
+Creating drive...
+Drive created: abc123
+
+  budget  |████████████████████████████████████████| READ_READY
+  scope   |████████████████████████████████████████| READ_READY
+  project |████████████████████████████████████████| READ_READY
+  drive   |████████████████████████████████████████| READ_READY
+
+✓ Done in 0.42s — 4 jobs completed, 0 failed
+  Budget:  def456
+  Scope:   ghi789
+  Project: jkl012
+  Drive:   abc123
+```
+
+#### License
+
+AGPL-3.0-only
+
+[View source on GitHub →](https://github.com/powerhouse-inc/recipes/tree/main/batch-progress)
+</details>
+
+<details id="recipe-cross-document-reactor">
+<summary><strong>Cross-Document Reactor</strong> — Event-driven cross-document automation using `ReactorClient` subscriptions to dispatch actions across related documents.</summary>
+
+### Cross-Document Reactor
+
+Event-driven cross-document automation using `ReactorClient` subscriptions.
+
+#### What it demonstrates
+
+- **`reactorClient.subscribe()`** — broad subscription watching all document changes
+- **Cross-document workflows** — a change on one document triggers an action on a related document
+- **`execute()` from within a subscription handler** — the reactor as an event-driven automation engine
+
+#### How it works
+
+1. Creates a drive with two documents: an **invoice** and a **task**, linked by naming convention (`Invoice-001` ↔ `Task-001-Invoice-001`)
+2. Subscribes to all document changes with an empty search filter (`{}`)
+3. When the invoice is renamed to include `[PAID]`, the subscription handler finds the related task and renames it to include `[CLOSED]`
+
+#### Running
+
+```sh
+pnpm install
+pnpm --filter @powerhousedao/cross-document-reactor start
+```
+
+#### Expected output
+
+```
+Cross-Document Reactor
+══════════════════════
+
+Starting reactor... done (X.Xs)
+
+Creating drive... <drive-id>
+Creating invoice document... <invoice-id>
+Creating task document... <task-id>
+
+Documents named: "Invoice-001" ↔ "Task-001-Invoice-001"
+
+─── Triggering workflow: marking Invoice-001 as [PAID] ───
+
+  [HH:MM:SS.mmm] updated → Invoice-001 [PAID]
+  [HH:MM:SS.mmm] ⚡ Rule triggered: "Invoice-001 [PAID]" is paid
+  [HH:MM:SS.mmm]    Looking for task: "Task-001-Invoice-001"...
+  [HH:MM:SS.mmm]    Found task <task-id>, closing it...
+  [HH:MM:SS.mmm] updated → Task-001-Invoice-001 [CLOSED]
+
+─── Final document state ───
+
+  Invoice: "Invoice-001 [PAID]"
+  Task:    "Task-001-Invoice-001 [CLOSED]"
+
+✓ Cross-document reaction succeeded
+```
+
+#### License
+
+AGPL-3.0-only
+
+[View source on GitHub →](https://github.com/powerhouse-inc/recipes/tree/main/cross-document-reactor)
+</details>
+
+<details id="recipe-custom-read-model">
+<summary><strong>Custom Read Model</strong> — Custom `IReadModel` registered via `ReactorBuilder.withReadModel()` that maintains a document-count-per-type materialized view.</summary>
+
+### Custom Read Model
+
+A custom `IReadModel` implementation registered via `ReactorBuilder.withReadModel()` that maintains a document-count-per-type materialized view. Demonstrates the read model lifecycle, the pre-ready guarantee, and how read models differ from processors.
+
+#### How it works
+
+`DocumentCountReadModel` implements `IReadModel` directly — it receives every operation written to the reactor's operation store via `indexOperations()` and increments an in-memory counter keyed by `context.documentType`.
+
+```
+Operation written → JOB_WRITE_READY → ReadModelCoordinator
+                                        ├── preReady:  DocumentCountReadModel.indexOperations() ← our read model
+                                        ├── preReady:  DocumentView, DocumentIndexer (built-in)
+                                        ├── emit JOB_READ_READY  ← counts are already up to date here
+                                        └── postReady: processors, subscriptions
+```
+
+##### Read model vs processor
+
+| | Read Model (IReadModel) | Processor (IProcessor) |
+|--|--|--|
+| Phase | **Pre-ready** — completes before `JOB_READ_READY` | **Post-ready** — runs after `JOB_READ_READY` |
+| Purpose | Derived views that must be queryable immediately | Side-effects (webhooks, notifications, sync) |
+| Registration | `ReactorBuilder.withReadModel()` | `ProcessorManager.registerFactory()` |
+| Receives | `OperationWithContext[]` via `indexOperations()` | `OperationWithContext[]` via `onOperations()` |
+
+##### Why implement IReadModel directly?
+
+`BaseReadModel` provides catch-up/rewind via the `ViewState` table and requires `IOperationIndex`, `IWriteCache`, and `IConsistencyTracker` — useful for persistent read models but unnecessary for a simple in-memory counter. Implementing `IReadModel` directly keeps the example minimal and shows the core contract.
+
+##### buildModule() internals
+
+`ReactorBuilder.buildModule()` returns a `ReactorModule` with direct access to the event bus, database, operation store, and other internals — useful for advanced integration, testing, or custom wiring.
+
+#### Architecture
+
+| Module | Purpose |
+|--------|---------|
+| `src/document-count-read-model.ts` | `DocumentCountReadModel` — the `IReadModel` implementation |
+| `src/index.ts` | Demo: builds a reactor, creates a document, shows the read model counts inside `JOB_READ_READY` |
+
+#### Usage
+
+##### Run the demo
+
+```sh
+pnpm start
+```
+
+##### Use in your own code
+
+```ts
+import { ReactorBuilder } from "@powerhousedao/reactor";
+import { DocumentCountReadModel } from "./src/document-count-read-model.js";
+
+const countReadModel = new DocumentCountReadModel();
+
+const reactorModule = await new ReactorBuilder()
+  .withDocumentModels([/* your models */])
+  .withReadModel(countReadModel)
+  .buildModule();
+
+// After any job completes, counts are already up to date:
+reactorModule.eventBus.subscribe(
+  ReactorEventTypes.JOB_READ_READY,
+  () => {
+    console.log(countReadModel.getCounts());
+  },
+);
+```
+
+##### Query the materialized view
+
+```ts
+// All counts
+const counts: ReadonlyMap<string, number> = countReadModel.getCounts();
+
+// Single type
+const budgetOps = countReadModel.getCount("powerhouse/budget");
+```
+
+#### Tests
+
+```sh
+pnpm test
+```
+
+#### Exports
+
+```ts
+export { DocumentCountReadModel } from "./src/document-count-read-model.js";
+```
+
+[View source on GitHub →](https://github.com/powerhouse-inc/recipes/tree/main/custom-read-model)
+</details>
+
+<details id="recipe-discord-webhook-processor">
+<summary><strong>Discord Webhook Processor</strong> — Reactor processor that posts document operations to a Discord channel as rich embeds with automatic batching and HMAC-SHA256 signatures.</summary>
+
+### Discord Webhook Processor
+
+A Reactor `IProcessor` that posts document operations to a Discord channel via webhook.
+
+Each operation is converted into a Discord embed containing:
+
+- Action type, document ID, document type, scope, branch, hash
+- Truncated action input (max 1024 chars)
+- Timestamp
+
+Batches exceeding Discord's 10-embed limit are automatically chunked into multiple requests. Every request includes an HMAC-SHA256 signature in the `X-Reactor-Signature` header.
+
+#### Usage
+
+Register the processor with a Reactor `ProcessorManager`:
+
+```ts
+import { createDiscordWebhookFactory } from "@powerhousedao/example-discord-webhook-processor";
+
+await processorManager.registerFactory(
+  "discord-webhook",
+  createDiscordWebhookFactory({
+    webhookUrl: "https://discord.com/api/webhooks/{id}/{token}",
+    secret: process.env.WEBHOOK_SECRET!,
+    filter: {
+      documentType: ["powerhouse/billing-statement"],
+      scope: ["global"],
+      branch: ["main"],
+    },
+  }),
+);
+```
+
+#### Tests
+
+```sh
+pnpm test
+```
+
+[View source on GitHub →](https://github.com/powerhouse-inc/recipes/tree/main/discord-webhook-processor)
+</details>
+
+<details id="recipe-document-snapshot-exporter">
+<summary><strong>Document Snapshot Exporter</strong> — CLI tool for reliable read-after-write export of document state and operation history to JSON using Reactor consistency tokens.</summary>
+
+### Document Snapshot Exporter
+
+CLI tool that exports document state and operation history to JSON files, demonstrating reliable read-after-write consistency using the Reactor API.
+
+#### What it demonstrates
+
+- **IReactor API** — low-level interface where mutations return `JobInfo` with consistency tokens
+- **Consistency tokens** — passed to reads (`reactor.get()`, `reactor.getOperations()`) to guarantee the read reflects prior writes
+- **OperationFilter** — filtering operations by action type, timestamp range, or revision
+- **IReactor vs IReactorClient** — run with `--mode reactor` or `--mode client` to compare the two APIs side by side
+
+##### IReactor vs IReactorClient
+
+| | IReactor | IReactorClient |
+|---|---|---|
+| Mutations return | `JobInfo` (must await manually) | The document (job awaited internally) |
+| Consistency | You pass `ConsistencyToken` to reads | Managed automatically |
+| Signing | Manual (pass `ISigner` to each call) | Automatic via configured signer |
+| `getOperations()` returns | `Record<string, PagedResults>` (per-scope) | `PagedResults` (flat) |
+| Use when | You need fine-grained control over job lifecycle | You want a simpler, higher-level API |
+
+#### Usage
+
+```sh
+pnpm install
+pnpm start
+```
+
+##### Options
+
+```
+--mode <reactor|client>   API mode (default: reactor)
+--out <path>              Output directory (default: ./output)
+```
+
+##### Examples
+
+```sh
+# Export using low-level IReactor with explicit consistency tokens
+pnpm start
+
+# Export using high-level IReactorClient
+pnpm start -- --mode client
+
+# Custom output directory
+pnpm start -- --out ./snapshots
+
+# Compare both modes
+pnpm start -- --out ./out-reactor
+pnpm start -- --mode client --out ./out-client
+```
+
+#### Output
+
+Each document is written as a JSON file named `<document-id>.json`:
+
+```json
+{
+  "header": { "id": "...", "documentType": "...", ... },
+  "state": { ... },
+  "operations": [ ... ],
+  "exportedAt": "2025-01-01T00:00:00.000Z",
+  "mode": "reactor"
+}
+```
+
+[View source on GitHub →](https://github.com/powerhouse-inc/recipes/tree/main/document-snapshot-exporter)
+</details>
+
+<details id="recipe-full-text-search">
+<summary><strong>Full-Text Search</strong> — Reactor processor that indexes document state into a PostgreSQL full-text search table for ranked keyword search across all documents.</summary>
+
+### Full-Text Search Processor
+
+A Reactor `IProcessor` that indexes document state into a PostgreSQL full-text search table, enabling ranked keyword search across all documents managed by a Reactor instance.
+
+#### How it works
+
+When operations arrive, the processor:
+
+1. Collects the last operation per document (earlier states are superseded).
+2. Flattens the resulting document state into a single searchable string via `flattenToSearchableText`.
+3. Upserts a row in `search_index` with the content and a PostgreSQL `tsvector`.
+4. Handles `DELETE_DOCUMENT` actions by removing the corresponding row.
+
+#### Architecture
+
+| Module | Purpose |
+|--------|---------|
+| `processor.ts` | `SearchProcessor` — the `IProcessor` implementation |
+| `schema.ts` | Kysely type definitions for the `search_index` table |
+| `migrations.ts` | `up` / `down` functions to create/drop the table and GIN index |
+| `query.ts` | `createSearchQuery` — returns a `search(term, limit?)` helper using `ts_rank` |
+| `utils.ts` | `flattenToSearchableText` — recursively extracts all string values from a JSON state |
+
+#### Prerequisites
+
+- PostgreSQL with full-text search support (`tsvector`, `plainto_tsquery`, `ts_rank`)
+- [Kysely](https://kysely.dev/) database instance
+
+#### Usage
+
+##### Run migrations
+
+```ts
+import { up } from "@powerhousedao/example-full-text-search";
+
+await up(db);
+```
+
+##### Register the processor
+
+```ts
+import { SearchProcessor } from "@powerhousedao/example-full-text-search";
+
+const processor = new SearchProcessor(db);
+```
+
+##### Query the index
+
+```ts
+import { createSearchQuery } from "@powerhousedao/example-full-text-search";
+
+const search = createSearchQuery(db);
+const results = await search.search("budget allocation", 10);
+// returns: [{ document_id, document_type, title, rank }]
+```
+
+#### Exports
+
+```ts
+export { SearchProcessor } from "./processor.js";
+export { createSearchQuery } from "./query.js";
+export type { SearchResult } from "./query.js";
+export type { SearchDB, SearchIndex } from "./schema.js";
+export { flattenToSearchableText } from "./utils.js";
+export { up, down } from "./migrations.js";
+```
+
+[View source on GitHub →](https://github.com/powerhouse-inc/recipes/tree/main/full-text-search)
+</details>
+
+<details id="recipe-rate-limiter">
+<summary><strong>Rate Limiter</strong> — Reactor processor paired with an `AuthService` gate to throttle users by signer address using a sliding window.</summary>
+
+### Rate Limiter
+
+A Reactor `IProcessor` paired with an `AuthService` gate to throttle users by signer address, preventing any single user from overwhelming the system with excessive operations.
+
+#### How it works
+
+The recipe has two components that form a feedback loop:
+
+1. **`RateLimiterProcessor`** sits inside the Reactor and observes every operation. It extracts the signer address from `operation.action.context.signer.user.address`, counts operations per user within a sliding time window, and calls `authService.cooldown()` when a user exceeds the threshold. The processor never throws — it only signals.
+
+2. **`AuthService`** sits in front of the Reactor (e.g. in a GraphQL resolver or HTTP middleware). Before forwarding a mutation, the caller checks `authService.isAllowed(address)`. If the user is on cooldown, the response includes `retryAfterMs` so the client knows when to retry.
+
+```
+Client → [AuthService gate] → Reactor → RateLimiterProcessor → authService.cooldown()
+              ↑                                                        |
+              └────────────────────────────────────────────────────────┘
+```
+
+Operations without a signer are silently skipped. Counters are in-memory and reset on processor disconnect or restart.
+
+#### Architecture
+
+| Module | Purpose |
+|--------|---------|
+| `src/auth-service.ts` | `AuthService` — in-memory cooldown gate with `cooldown()`, `isAllowed()`, and `getCooldownRemaining()` |
+| `src/rate-limiter-processor.ts` | `RateLimiterProcessor` — the `IProcessor` implementation; also exports `createRateLimiterFactory` |
+
+#### Configuration
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `maxOperations` | `number` | Maximum operations allowed per user within the time window |
+| `windowMs` | `number` | Length of the sliding time window in milliseconds |
+| `cooldownMs` | `number` | How long a user is blocked after exceeding the limit |
+| `filter` | `ProcessorFilter` | Which operations the processor subscribes to (document type, scope, branch, etc.) |
+
+#### Usage
+
+##### Register the processor
+
+```ts
+import { AuthService } from "@powerhousedao/example-rate-limiter/src/auth-service.js";
+import { createRateLimiterFactory } from "@powerhousedao/example-rate-limiter/src/rate-limiter-processor.js";
+
+// Shared instance — pass to both the GQL layer and the processor
+const authService = new AuthService();
+
+await processorManager.registerFactory(
+  "rate-limiter",
+  createRateLimiterFactory({
+    authService,
+    maxOperations: 100,
+    windowMs: 60_000,    // 1-minute window
+    cooldownMs: 300_000, // 5-minute cooldown
+    filter: { branch: ["main"] },
+  }),
+);
+```
+
+##### Gate requests in your GraphQL / HTTP layer
+
+```ts
+const check = authService.isAllowed(userAddress);
+if (!check.allowed) {
+  res.set("Retry-After", String(Math.ceil(check.retryAfterMs! / 1000)));
+  throw new Error(`Rate limited. Retry after ${check.retryAfterMs}ms`);
+}
+```
+
+##### Check cooldown status
+
+```ts
+const remainingMs = authService.getCooldownRemaining(userAddress);
+```
+
+#### Exports
+
+```ts
+export { AuthService } from "./src/auth-service.js";
+export type { AuthCheckResult } from "./src/auth-service.js";
+export { RateLimiterProcessor, createRateLimiterFactory } from "./src/rate-limiter-processor.js";
+export type { RateLimiterConfig } from "./src/rate-limiter-processor.js";
+```
+
+#### Tests
+
+```sh
+pnpm test
+```
+
+[View source on GitHub →](https://github.com/powerhouse-inc/recipes/tree/main/rate-limiter)
+</details>
+
+<details id="recipe-relational-db-subgraph">
+<summary><strong>Relational DB Subgraph</strong> — Complete relational DB processor with Kysely migrations, typed schema, and a GraphQL subgraph for a document catalog.</summary>
+
+### Relational DB Subgraph
+
+A complete relational DB processor recipe demonstrating the academy flagship tutorial pattern:
+
+- **RelationalDbProcessor** — extends the base class with `initAndUpgrade()`, namespaced DB, and type-safe `query` builder
+- **Kysely migrations** — up/down migrations creating `documents` and `document_tags` tables
+- **Typed schema** — full Kysely DB interface with `CatalogDB`, `DocumentRow`, and `DocumentTagRow`
+- **Type-safe queries** — Kysely query layer with joins, filtering by type/tag, and pagination
+- **GraphQL subgraph** — graphql-yoga server exposing the catalog data, ready for supergraph composition
+
+#### What it does
+
+The `CatalogProcessor` watches all documents flowing through the Reactor (document-type-agnostic) and maintains a denormalized relational view:
+
+- **`documents`** table — stores document metadata (ID, type, name, content summary, revision)
+- **`document_tags`** table — stores tags extracted from document state
+
+The GraphQL subgraph exposes this data via queries like `documents`, `document(id)`, `documentsByType`, and `documentsByTag`.
+
+#### Mapping to `ph generate`
+
+| Generated artifact | File in this recipe |
+|---|---|
+| `ph generate --processor` | `src/processor.ts` — `CatalogProcessor extends RelationalDbProcessor<CatalogDB>` |
+| `ph generate --subgraph` | `src/subgraph.ts` — GraphQL SDL + resolvers backed by the query layer |
+| Schema types | `src/schema.ts` — Kysely DB interface |
+| Migrations | `src/migrations.ts` — `up()`/`down()` functions |
+| Query layer | `src/query.ts` — type-safe Kysely queries with joins |
+
+#### Usage
+
+```ts
+import { Kysely } from "kysely";
+import { createRelationalDb } from "@powerhousedao/reactor";
+import { CatalogProcessor, startCatalogServer } from "@powerhousedao/example-relational-db-subgraph";
+
+// 1. Create a Kysely instance (PGlite, PostgreSQL, etc.)
+const db = new Kysely<CatalogDB>({ dialect });
+const relationalDb = createRelationalDb(db);
+
+// 2. Create and initialize the processor
+const processor = new CatalogProcessor("catalog", { branch: ["main"] }, relationalDb);
+await processor.initAndUpgrade();
+
+// 3. Register with the Reactor processor manager
+await processorManager.registerFactory("catalog", () => [
+  {
+    processor,
+    filter: { branch: ["main"] },
+    startFrom: "beginning",
+  },
+]);
+
+// 4. Start the GraphQL subgraph server
+startCatalogServer(db, 4002);
+// → Catalog subgraph ready at http://localhost:4002/graphql
+```
+
+#### Supergraph composition
+
+This subgraph can be composed into a supergraph alongside other subgraphs (e.g., the Reactor's built-in GraphQL endpoint). With a gateway like Apollo Router or GraphQL Mesh, you can query documents from the catalog and other sources in a single request.
+
+#### Running tests
+
+```sh
+pnpm test
+```
+
+Tests use PGlite (embedded PostgreSQL) — no external database required.
+
+#### License
+
+AGPL-3.0-only
+
+[View source on GitHub →](https://github.com/powerhouse-inc/recipes/tree/main/relational-db-subgraph)
+</details>
+
+<details id="recipe-saga">
+<summary><strong>Saga</strong> — Saga pattern via Reactor processor: operations on one document trigger operations on others, linked by a traceable saga context with re-entrancy guards.</summary>
+
+### Saga
+
+Saga pattern via Reactor processor: operations on one document trigger operations on others, linked by a traceable saga context.
+
+#### What it demonstrates
+
+- **`IProcessor` as a saga coordinator** — a processor that reacts to operations and dispatches follow-up actions on other documents
+- **Saga correlation via DB** — a `saga_id` ties every step together, tracked entirely in the processor's own table (no changes to document interfaces)
+- **`IReactor.execute()` from within a processor** — the processor dispatches actions to other documents in response to incoming operations
+- **Re-entrancy guard** — prevents the processor from reacting to its own dispatched operations
+
+#### How it works
+
+1. Creates a drive with three documents: **Order-001**, **Payment-001**, and **Fulfillment-001**
+2. Registers a `SagaProcessor` with step definitions that form a chain:
+   - `Order-001 [CREATED]` &rarr; dispatches rename on Payment to `Payment-001 [REQUESTED]`
+   - `Payment-001 [REQUESTED]` &rarr; dispatches rename on Fulfillment to `Fulfillment-001 [STARTED]`
+   - `Fulfillment-001 [STARTED]` &rarr; dispatches rename on Order to `Order-001 [FULFILLED]`
+3. Triggering the saga by renaming the order document cascades through all three steps
+4. The saga log table records every step with a shared `saga_id` for traceability
+
+#### Running
+
+```sh
+pnpm install
+pnpm --filter @powerhousedao/saga start
+```
+
+#### Expected output
+
+```
+Saga Pattern Demo
+==================
+
+Demonstrates: processor-based saga coordination across documents,
+with a traceable saga_id linking every step.
+
+  Starting reactor... done (X.Xs)
+
+  Creating drive... <drive-id>
+  Creating order document... <order-id>
+  Creating payment document... <payment-id>
+  Creating fulfillment document... <fulfillment-id>
+
+  Documents named: "Order-001", "Payment-001", "Fulfillment-001"
+
+  Registered saga processor
+
+--- Triggering saga: renaming Order-001 to Order-001 [CREATED] ---
+
+--- Final document state ---
+
+  Order:       "Order-001 [FULFILLED]"
+  Payment:     "Payment-001 [REQUESTED]"
+  Fulfillment: "Fulfillment-001 [STARTED]"
+
+--- Saga log ---
+
+  Saga ID: <uuid>
+
+  Step: order-created
+    <order-id> -> <payment-id>
+    action: SET_NAME  status: dispatched
+  Step: payment-requested
+    <payment-id> -> <fulfillment-id>
+    action: SET_NAME  status: dispatched
+  Step: fulfillment-started
+    <fulfillment-id> -> <order-id>
+    action: SET_NAME  status: dispatched
+
++ Saga completed successfully
+```
+
+#### License
+
+AGPL-3.0-only
+
+[View source on GitHub →](https://github.com/powerhouse-inc/recipes/tree/main/saga)
+</details>
+
+<details id="recipe-signed-operations-verifier">
+<summary><strong>Signed Operations Verifier</strong> — Standalone script that builds document operations with cryptographic signatures and verifies each one, demonstrating tamper detection via `ISigner`.</summary>
+
+### Signed Operations Verifier
+
+A standalone script that builds a document operation history with cryptographic signatures, then verifies each one. Demonstrates detection of unsigned and tampered operations, plus signer identity chain extraction.
+
+#### What it demonstrates
+
+- **`ISigner` interface** via `RenownCryptoSigner` from `@renown/sdk`
+- **`RenownCryptoSigner`** construction using `MemoryKeyStorage` + `RenownCryptoBuilder` (no filesystem or network needed)
+- **`verifyOperationSignature()`** — low-level per-signature verification with a custom `ActionVerificationHandler`
+- **`createSignatureVerifier()`** — higher-level operation verifier from `@renown/sdk`
+- **`validateHeader()`** — document header signature validation
+- **Signature tuple structure** — `[timestamp, publicKey, actionHash, prevStateHash, signature]`
+- **Signer identity chain** — user address/networkId/chainId + app name/key
+
+#### Run
+
+```bash
+pnpm install
+pnpm --filter @powerhousedao/example-signed-operations-verifier test
+```
+
+#### Key APIs
+
+| Import | API | Purpose |
+|--------|-----|---------|
+| `document-model/core` | `verifyOperationSignature()` | Verify a single signature tuple |
+| `document-model/core` | `buildSignedAction()` | Create a signed operation from an action |
+| `document-model/core` | `actionSigner()` | Construct an `ActionSigner` with identity info |
+| `@renown/sdk/node` | `RenownCryptoSigner` | `ISigner` implementation using ECDSA P-256 |
+| `@renown/sdk/node` | `RenownCryptoBuilder` | Builder for the underlying crypto engine |
+| `@renown/sdk/node` | `MemoryKeyStorage` | In-memory key pair storage for demos |
+| `@renown/sdk/node` | `createSignatureVerifier()` | Higher-level full-operation verifier |
+
+[View source on GitHub →](https://github.com/powerhouse-inc/recipes/tree/main/signed-operations-verifier)
+</details>
+
+<details id="recipe-subscription-cli">
+<summary><strong>Subscription CLI</strong> — CLI for monitoring Reactor GraphQL subscriptions over WebSocket in real time, printing timestamped events to stdout.</summary>
+
+### Subscription CLI
+
+A standalone CLI for monitoring Powerhouse Reactor GraphQL subscriptions over WebSocket in real time.
+
+Subscribes to `documentChanges` and optionally `jobChanges`, printing timestamped events to stdout. Useful for debugging, integration testing, and observing Reactor activity.
+
+#### Usage
+
+```sh
+pnpm start
+```
+
+With options:
+
+```sh
+pnpm start -- --url ws://localhost:4001/graphql/subscriptions \
+  --type "powerhouse/billing-statement" \
+  --parent-id "drive-abc-123" \
+  --auth "eyJhbG..."
+```
+
+#### CLI Options
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--url <url>` | WebSocket endpoint | `ws://localhost:4001/graphql/subscriptions` |
+| `--type <type>` | Filter `documentChanges` by document type | _(none)_ |
+| `--parent-id <id>` | Filter `documentChanges` by parent document (drive) ID | _(none)_ |
+| `--job-id <id>` | Also subscribe to `jobChanges` for a specific job | _(none)_ |
+| `--auth <token>` | Bearer token for authentication | _(none)_ |
+| `--help` | Show help message | |
+
+#### Example output
+
+```
+[12:34:56.789] Connecting to ws://localhost:4001/graphql/subscriptions...
+[12:34:56.801] Connected
+[12:34:56.802] Subscribing to documentChanges (type: powerhouse/billing-statement)...
+[12:34:56.803] Listening for events. Press Ctrl+C to stop.
+[12:34:58.100] documentChanges [UPDATE] Invoice Q1 (powerhouse/billing-statement)
+```
+
+Press `Ctrl+C` for clean shutdown.
+
+[View source on GitHub →](https://github.com/powerhouse-inc/recipes/tree/main/subscription-cli)
+</details>
+
+<details id="recipe-sync-health-monitor">
+<summary><strong>Sync Health Monitor</strong> — EventBus-based sync health dashboard with two-reactor sync monitoring and a GraphQL subgraph for metrics.</summary>
+
+### Sync Health Monitor
+
+Subscribes to `SyncEventTypes` on the Reactor EventBus and maintains a live health dashboard. Exposes metrics via a GraphQL subgraph.
+
+#### What it shows
+
+- **EventBus subscriptions** — listens to all five sync event types (`SYNC_PENDING`, `SYNC_SUCCEEDED`, `SYNC_FAILED`, `DEAD_LETTER_ADDED`, `CONNECTION_STATE_CHANGED`)
+- **ReactorModule internals** — accesses `eventBus` and `syncModule` from the built `ReactorModule`
+- **Two-reactor sync** — wires two embedded reactors via a custom `InternalChannel` (no network, direct in-process delivery)
+- **GraphQL subgraph** — serves a `syncHealth` query with counters, connection states, and recent errors
+- **Live dashboard** — refreshing terminal display with health status, sync counters, and connection states
+
+#### How it works
+
+1. **Two embedded reactors** — builds reactor A and reactor B, each with in-memory PGlite
+2. **Internal channels** — a shared `IChannelFactory` creates `InternalChannel` pairs that deliver operations directly between reactors
+3. **Health monitor** — subscribes to reactor A's `EventBus` for all `SyncEventTypes`, maintains counters and connection state
+4. **GraphQL server** — serves the health metrics via a `syncHealth` query on `http://localhost:4001/graphql`
+5. **Demo scenario** — runs through four phases: normal sync, connection state changes, simulated failure, and recovery
+
+##### Demo phases
+
+| Phase | What happens | Events fired |
+|-------|-------------|-------------|
+| Normal sync | Create a document on A, syncs to B | `SYNC_PENDING`, `SYNC_SUCCEEDED` |
+| Connection issue | Simulate disconnect → reconnect on the channel | `CONNECTION_STATE_CHANGED` (x3) |
+| Failure | Make the channel throw, then create a document | `SYNC_PENDING`, `SYNC_FAILED`, `DEAD_LETTER_ADDED` |
+| Recovery | Restore the channel, create another document | `SYNC_PENDING`, `SYNC_SUCCEEDED` |
+
+##### Health status logic
+
+| Status | Condition |
+|--------|-----------|
+| `healthy` | All connections up, low failure ratio, no dead letters |
+| `degraded` | A connection is disconnected/reconnecting, failure ratio &gt;10%, or dead letters exist |
+| `unhealthy` | Any connection is in `error` state |
+
+#### Usage
+
+```sh
+pnpm install
+pnpm start
+```
+
+##### JSON mode
+
+```sh
+pnpm start -- --json
+```
+
+Emits one JSON line per refresh interval instead of the visual dashboard.
+
+##### GraphQL query
+
+While the dashboard is running, query the subgraph:
+
+```sh
+curl -s http://localhost:4001/graphql \
+  -H 'Content-Type: application/json' \
+  -d '{"query":"{ syncHealth { healthStatus pendingCount successCount failureCount deadLetterCount connectionStates { remoteName state } recentErrors { timestamp remoteName error } } }"}' \
+  | jq .
+```
+
+##### Example output
+
+```
+Sync Health Monitor                            uptime 0h 0m 12s
+============================================================
+  Status:  HEALTHY
+
+  Sync Operations
+    pending: 0   succeeded: 2   failed: 0
+    dead letters: 0
+
+  Connections
+    remoteB              connected
+
+------------------------------------------------------------
+  GraphQL: http://localhost:4001/graphql   Ctrl+C to quit
+```
+
+#### Tests
+
+```sh
+pnpm test
+```
+
+Unit tests verify the `SyncHealthMonitor` class in isolation using a standalone `EventBus` with synthetic events.
+
+#### License
+
+AGPL-3.0-only
+
+[View source on GitHub →](https://github.com/powerhouse-inc/recipes/tree/main/sync-health-monitor)
+</details>
+{/* AUTO-GENERATED-RECIPE-DOCS-END */}
+
+### Reactor Management
+
+<details id="starting-the-reactor">
+<summary>Starting the Reactor</summary>
+
+### How to Start the Powerhouse Reactor
 
 ---
 
 ### Problem statement
 
-You have developed and published a Powerhouse package (containing document models, editors, etc.) to npm, or you have a local package, and you need to install it into another Powerhouse project.
+You need to start the Powerhouse Reactor, the local service responsible for processing document model operations and managing state, typically for testing or development purposes.
 
 ### Prerequisites
 
 - Powerhouse CLI (`ph-cmd`) installed
-- A Powerhouse project initialized (`ph init`) where you want to install the package.
-- The custom package is either published to npm or available locally.
+- A Powerhouse project initialized (`ph init`)
+- You are in the root directory of your Powerhouse project.
 
 ### Solution
 
-### Step 1: Navigate to the Target Project Directory
+> **Note:** For development, **Vetra Studio** (`ph vetra --watch`) is the recommended workflow as it includes the reactor functionality along with automatic code generation and live preview. Use `ph reactor` directly when you need to run the reactor service independently.
 
-Ensure your terminal is in the root directory of the Powerhouse project where you want to install the package.
+### Using Vetra (Recommended for Development)
 
 ```bash
-cd <your-target-project-name>
+ph vetra --watch
 ```
 
-### Step 2: Install the Package
+Vetra includes reactor functionality and provides:
 
-Use the `ph install` command followed by the package name (if published to npm) or the path to the local package.
+- Automatic code generation when document models change
+- Live preview of documents and editors
+- Integrated development environment
 
-**For npm packages:**
+### Using Reactor Directly
+
+### Step 1: Navigate to Project Directory (if needed)
+
+Ensure your terminal is in the root directory of your Powerhouse project.
 
 ```bash
-# Replace <your-package-name> with the actual name on npm
-ph install <your-package-name>
+cd <yourprojectname>
 ```
 
-**For local packages (using a relative or absolute path):**
+### Step 2: Run the Reactor Command
+
+Execute the `ph reactor` command.
 
 ```bash
-# Example using a relative path
-ph install ../path/to/my-local-package
-
-# Example using an absolute path
-ph install /Users/you/dev/my-local-package
-```
-
-### Step 3: Verify Installation
-
-Check your project's `package.json` and `powerhouse.manifest.json` to ensure the package dependency has been added correctly. Run `ph vetra --watch` (or `ph connect`) to see if the components from the installed package are available.
-
-### Expected outcome
-
-- The custom Powerhouse package is downloaded and installed into your project's dependencies.
-- The `powerhouse.manifest.json` is updated (if necessary) to reflect the installed package.
-- Document models, editors, Drive-apps, or other components from the package become available within the target project.
-
-### Common issues and solutions
-
-- Issue: Package not found (npm).
-  - Solution: Double-check the package name for typos. Ensure the package is published and accessible on npm.
-- Issue: Path not found (local).
-  - Solution: Verify the relative or absolute path to the local package directory is correct.
-- Issue: Conflicts with existing project components or dependencies.
-  - Solution: Resolve version conflicts or naming collisions as needed. Review the installed package's structure and dependencies.
-
-### Related recipes
-
-- [Publishing a Powerhouse Package](#publishing-a-powerhouse-package)
-- [Initializing a Powerhouse Project](#initializing-a-new-project-and-document-model)
-
-</details>
-
-<details id="packaging-and-publishing-a-powerhouse-project">
-<summary>Packaging and Publishing a Powerhouse Project</summary>
-
-### How to Package and Publish a Powerhouse Project
-
----
-
-### Problem statement
-
-You have created a collection of document models, editors, or other components and want to share it as a reusable package on a public or private npm registry. Publishing a package allows other projects to install and use your creations easily.
-
-### Prerequisites
-
-- A completed Powerhouse project that you are ready to share.
-- An account on [npmjs.com](https://www.npmjs.com/) (or a private registry).
-- Your project's `package.json` should have a unique name and correct version.
-- You must be logged into your npm account via the command line.
-
-### Solution
-
-### Step 1: Build the Project
-
-First, compile your project to create a production-ready build in the `dist/` or `build/` directory.
-
-```bash
-pnpm build
-```
-
-### Step 2: Log In to npm
-
-If you aren't already, log in to your npm account. You will be prompted for your username, password, and one-time password.
-
-```bash
-npm login
-```
-
-### Step 3: Version Your Package
-
-Update the package version according to semantic versioning. This command updates `package.json` and creates a new Git tag.
-
-```bash
-# Choose one depending on the significance of your changes
-pnpm version patch   # For bug fixes (e.g., 1.0.0 -> 1.0.1)
-pnpm version minor   # For new features (e.g., 1.0.1 -> 1.1.0)
-pnpm version major   # For breaking changes (e.g., 1.1.0 -> 2.0.0)
-```
-
-### Step 4: Publish the Package
-
-Publish your package to the npm registry. If it's your first time publishing a scoped package (e.g., `@your-org/your-package`), you may need to add the `--access public` flag.
-
-```bash
-npm publish --access public
-```
-
-### Step 5: Push Git Commits and Tags
-
-Push your new version commit and tag to your remote repository to keep it in sync.
-
-```bash
-# Push your current branch
-git push
-
-# Push the newly created version tag
-git push --tags
+ph reactor
 ```
 
 ### Expected outcome
 
-- Your Powerhouse project is successfully published to the npm registry.
-- Other developers can now install your package into their projects using `ph install @your-org/your-package-name`.
-- Your Git repository is updated with the new version information.
+- The Reactor service starts, typically listening on `localhost:4001`.
+- You will see log output indicating the reactor is running and ready to process operations.
+- A GraphQL endpoint is usually available at `http://localhost:4001/graphql` for direct interaction and testing.
 
 ### Common issues and solutions
 
-- **Issue**: "403 Forbidden" or "You do not have permission" error on publish.
-  - **Solution**: Ensure your package name is unique and not already taken on npm. If it's a scoped package (`@scope/name`), make sure the organization exists and you have permission to publish to it. For public scoped packages, you must include `--access public`.
+- Issue: Reactor fails to start, mentioning port conflicts.
+  - Solution: Ensure port `4001` (or the configured reactor port) is not already in use by another application. Stop the conflicting application or configure the reactor to use a different port (if possible, check documentation).
+- Issue: Errors related to storage or configuration.
+  - Solution: Check the `powerhouse.manifest.json` and any reactor-specific configuration files for errors. Ensure storage providers (like local disk) are accessible and configured correctly.
 
 ### Related recipes
 
-- [Installing a Custom Powerhouse Package](#installing-a-custom-powerhouse-package)
-- [Managing and Updating Powerhouse Dependencies](#managing-and-updating-powerhouse-dependencies)
+- [Launching Vetra Studio](#launching-vetra-studio)
+- [Initializing a New Project & Document Model](#initializing-a-new-project-and-document-model)
 
 </details>
 

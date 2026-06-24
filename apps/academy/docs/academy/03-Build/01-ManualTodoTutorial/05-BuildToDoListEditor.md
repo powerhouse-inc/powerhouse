@@ -67,7 +67,7 @@ See step 1 for detailed GitHub Desktop instructions.
 
 </details>
 
-In this chapter we will continue with the interface or editor implementation of the **todo-list** document model. This means you will create a simple user interface for the **todo-list** document model which will be used inside Connect to create, update and delete your todo-list items.
+Now build the editor: the user interface for the **todo-list** document model. It runs inside Connect to create, update, and delete your todo-list items.
 
 ## Add a document editor specification in Vetra Studio.
 
@@ -77,7 +77,7 @@ Give the editor the name `todo-list-editor` and select the correct document mode
 
 ### Editor implementation options
 
-When building your editor component within the Powerhouse ecosystem, you have several options for styling, allowing you to leverage your preferred methods:
+You have several options for styling your editor component:
 
 1.  **Default HTML Styling:** Standard HTML tags (`<h1>`, `<p>`, `<button>`, etc.) will render with default styles offered through the boilerplate.
 2.  **Tailwind CSS:** Connect Studio comes with Tailwind CSS integrated. You can directly use Tailwind utility classes for rapid, consistent styling without writing separate CSS files.
@@ -559,23 +559,10 @@ In Connect, you should be able to:
 
 :::
 
-## Key concepts learned
+## Up next
 
-In this tutorial you've learned:
+You've built a working package by hand. From here you can go deeper or put it to use:
 
-✅ **Component-based architecture** - Breaking down complex UIs into reusable components  
-✅ **Document model hooks** - Using `useSelectedTodoListDocument` to connect React to your document state  
-✅ **Action dispatching** - How to dispatch operations (`addTodoItem`, `updateTodoItem`, `deleteTodoItem`) from your UI  
-✅ **Type-safe development** - Leveraging TypeScript with generated types from your SDL  
-✅ **Form handling** - Using React forms with proper event handlers  
-✅ **Local vs. document state** - When to use React `useState` vs. document model state
-
-### Up next: Mastery Track
-
-In the [Mastery Track chapter: Document Model Creation](/academy/Build/DocumentModelCreation/WhatIsADocumentModel) we guide you through the theoretics of the previous steps while creating a more advanced version of the todo-list.
-
-You will learn:
-
-- The ins and outs of a document model.
-- How to use UI & Scalar components from the Document Engineering system.
-- How to build Custom drive-apps or Drive Explorers.
+- **Go deeper — [Mastery Track: Document Model Creation](/academy/Build/DocumentModelCreation/WhatIsADocumentModel)** — the theory behind the steps you just followed, plus an advanced version of the todo-list (computed stats), the Document Engineering UI components, and custom Drive Explorers.
+- **Expose your data — [Work With Data](/academy/Build/WorkWithData/ConfiguringDrives)** — configure drives, query documents over the GraphQL API, and build subgraphs and processors.
+- **Ship it — [Launch](/academy/Build/Launch/PublishYourProject)** — publish your package and deploy Connect and Switchboard.

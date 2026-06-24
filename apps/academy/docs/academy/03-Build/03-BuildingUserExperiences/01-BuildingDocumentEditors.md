@@ -233,7 +233,7 @@ export default function Editor(props: IProps) {
 
 ### Additional hooks for editors
 
-Beyond the document-specific hooks (like `useSelectedTodoListDocument`), Powerhouse provides a comprehensive set of hooks from the reactor-browser package that you can use in your editors:
+Beyond the document-specific hooks (like `useSelectedTodoListDocument`), the reactor-browser package provides these hooks for your editors:
 
 | Hook                        | Description                                   |
 | --------------------------- | --------------------------------------------- |
@@ -350,7 +350,7 @@ This pattern is useful when you need to:
 
 ## Powerhouse component library
 
-Powerhouse provides a rich set of reusable UI components through the **`@powerhousedao/document-engineering/scalars`** package. These components are designed for consistency, efficiency, and seamless integration with the Powerhouse ecosystem, with many based on GraphQL scalar types. For more information read our chapter on the [Component Library](/academy/Reference/EditorsUI/DocumentEngineering)
+The **`@powerhousedao/document-engineering/scalars`** package provides reusable UI components, many of them based on GraphQL scalar types. For more information read our chapter on the [Component Library](/academy/Reference/EditorsUI/DocumentEngineering).
 
 ### Exploring components
 
@@ -392,7 +392,7 @@ Storybook allows you to:
 
 ## Build a TodoList editor
 
-In this final part of our tutorial we will continue with the interface or editor implementation of the **TodoList** document model. This means you will create a simple user interface for the **TodoList** document model which will be used inside the Connect app to create, update and delete your TodoList items, and also display the statistics we've implemented in our reducers (if you followed the advanced version).
+Now build the editor: the user interface for the **TodoList** document model. It runs inside the Connect app to create, update, and delete TodoList items, and (if you followed the advanced version) displays the statistics from your reducers.
 
 ## Generate the editor template
 
@@ -424,7 +424,7 @@ Notice the `--editor` flag which specifies the editor name, and the `--document-
 
 ### Editor implementation options
 
-When building your editor component within the Powerhouse ecosystem, you have several options for styling, allowing you to leverage your preferred methods:
+You have several options for styling your editor component:
 
 1.  **Default HTML Styling:** Standard HTML tags (`<h1>`, `<p>`, `<button>`, etc.) will render with default styles offered through the boilerplate.
 2.  **Tailwind CSS:** Vetra Studio comes with Tailwind CSS integrated. You can directly use Tailwind utility classes for rapid, consistent styling without writing separate CSS files.
@@ -436,7 +436,7 @@ Vetra Studio provides a dynamic local environment (`ph vetra --watch`) to visual
 
 ## TodoList editor using hooks (Recommended)
 
-This approach uses the `useSelectedTodoListDocument` hook, which is the same pattern used in the Get Started tutorial and the [todo-demo repository](https://github.com/powerhouse-inc/todo-demo).
+This approach uses the `useSelectedTodoListDocument` hook, which is the same pattern used in the Manual Todo tutorial and the [todo-demo repository](https://github.com/powerhouse-inc/todo-demo).
 
 ### Main editor file
 
@@ -672,13 +672,9 @@ The editor will update dynamically, so you can play around with your editor styl
 
 </details>
 
-Congratulations!
-If you managed to follow this tutorial until this point, you have successfully implemented the **TodoList** document model with its reducer operations and editor.
-
 ## Up Next
 
-Now you can move on to creating a [custom Drive-app](/academy/Build/BuildingUserExperiences/BuildingADriveExplorer) for your TodoList document.  
-Imagine you have many TodoLists sitting in a drive. A custom Drive-app will allow you to organize and track them at a glance, opening up a new world of possibilities to increase the functionality of your documents!
+Next, build a [custom Drive-app](/academy/Build/BuildingUserExperiences/BuildingADriveExplorer) for your TodoList document. When you have many TodoLists sitting in a drive, a Drive-app lets you organize and track them at a glance.
 
 ### Further Reading
 

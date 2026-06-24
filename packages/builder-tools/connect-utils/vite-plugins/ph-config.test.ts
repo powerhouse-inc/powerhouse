@@ -113,7 +113,11 @@ describe("phConfigPlugin", () => {
         drives: { allowAddDrive: true },
       },
       cliConnectOverride: {
-        renown: { url: "https://cli.renown", chainId: 42 },
+        renown: {
+          url: "https://cli.renown",
+          chainId: 42,
+          namespace: "vetra-studio",
+        },
         drives: { allowAddDrive: false },
       },
     });
@@ -135,8 +139,11 @@ describe("phConfigPlugin", () => {
     expect(connect.renown.url).toBe("https://cli.renown");
     expect(connect.drives.allowAddDrive).toBe(false);
 
-    // CLI-only fields are present (deep-merged into source/default tree)
+    // CLI-only fields are present (deep-merged into source/default tree).
+    // namespace must survive schema validation — it's how the preview Connect
+    // shares the Studio's Renown session.
     expect(connect.renown.chainId).toBe(42);
+    expect(connect.renown.namespace).toBe("vetra-studio");
 
     // Source fields untouched by CLI remain populated from defaults
     expect(connect.renown.networkId).toBe(

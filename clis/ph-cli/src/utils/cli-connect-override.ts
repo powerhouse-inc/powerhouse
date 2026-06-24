@@ -46,6 +46,7 @@ export type ConnectFlagInput = {
   renownUrl?: string | undefined;
   renownNetworkId?: string | undefined;
   renownChainId?: number | undefined;
+  renownNamespace?: string | undefined;
   allowAddDrive?: boolean | undefined;
   externalPackages?: boolean | undefined;
   remoteDrivesEnabled?: boolean | undefined;
@@ -142,6 +143,7 @@ export function buildConnectFlagPatch(args: ConnectFlagInput): PlainObject {
   setIfDefined(renown, "url", args.renownUrl);
   setIfDefined(renown, "networkId", args.renownNetworkId);
   setIfDefined(renown, "chainId", args.renownChainId);
+  setIfDefined(renown, "namespace", args.renownNamespace);
   if (Object.keys(renown).length > 0) out.renown = renown;
 
   const packages: PlainObject = {};
@@ -222,6 +224,7 @@ export function buildCliConnectOverride(args: ConnectBuildArgs): {
     renownUrl: args.renownUrl,
     renownNetworkId: args.renownNetworkId,
     renownChainId: args.renownChainId,
+    renownNamespace: args.renownNamespace,
     allowAddDrive: args.allowAddDrive,
     externalPackages: args.externalPackages,
     remoteDrivesEnabled: args.remoteDrivesEnabled,
@@ -337,6 +340,7 @@ export function buildStudioConnectOverride(
     drivesPreserveStrategy: wasFlagExplicitlyPassed("drive-preserve-strategy")
       ? args.drivesPreserveStrategy
       : undefined,
+    renownNamespace: args.renownNamespace,
   }) as PHConnectRuntimeConfig;
 
   const hasFlag = Object.keys(flagOverride).length > 0;

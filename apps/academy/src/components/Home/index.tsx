@@ -166,6 +166,9 @@ export default function Home(): JSX.Element {
         </div>
       </header>
 
+      <Heading as="h2" className={styles.stepsTitle}>
+        Run it locally with your own key
+      </Heading>
       <section className={styles.steps}>
         {steps.map((s) => (
           <div key={s.n} className={styles.step}>
@@ -180,6 +183,9 @@ export default function Home(): JSX.Element {
 
       <hr className={styles.divider} />
 
+      <Heading as="h2" className={styles.stepsTitle}>
+        From prompt to source code
+      </Heading>
       <section className={styles.lanes}>
         {lanes.map((lane) => (
           <Link key={lane.title} to={lane.href} className={styles.lane}>
