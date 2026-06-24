@@ -6,6 +6,7 @@ import type {
   ClientMessage,
   ReactorIdentity,
   RpcAdmin,
+  RpcDbOp,
   RpcHello,
   RpcRegisterPackages,
   RpcSyncOp,
@@ -22,6 +23,7 @@ export type ReactorHostOptions = {
   unregisterPackages?: (names: string[]) => Promise<void>;
   onIdentity?: (user: ReactorIdentity | null) => void;
   onSyncOp?: (method: string, args: unknown[]) => Promise<unknown>;
+  onDbOp?: (method: string, args: unknown[]) => Promise<unknown>;
   // Worker identity + restart for the admin/inspector channel.
   namespace?: string;
   appBuildId?: string;
@@ -94,6 +96,10 @@ export class ReactorHost {
       }
       if (msg.k === "sync-op") {
         void this.handleSyncOp(msg, transport);
+        return;
+      }
+      if (msg.k === "db-op") {
+        void this.handleDbOp(msg, transport);
         return;
       }
       if (msg.k === "admin") {
@@ -241,6 +247,30 @@ export class ReactorHost {
     try {
       // Wait for the reactor to finish building so the handler's syncManager
       // exists; a tab's eager list() can arrive before the build completes.
+      if (this.clientPromise) {
+        await this.clientPromise;
+      }
+      const value = await handler(message.method, message.args);
+      transport.post({ k: "res", id: message.id, value });
+    } catch (error) {
+      transport.post({ k: "err", id: message.id, error: toErrorInfo(error) });
+    }
+  }
+
+  private async handleDbOp(
+    message: RpcDbOp,
+    transport: IRpcTransport,
+  ): Promise<void> {
+    const handler = this.options.onDbOp;
+    if (!handler) {
+      transport.post({
+        k: "err",
+        id: message.id,
+        error: toErrorInfo(new Error("ReactorHost has no db handler")),
+      });
+      return;
+    }
+    try {
       if (this.clientPromise) {
         await this.clientPromise;
       }

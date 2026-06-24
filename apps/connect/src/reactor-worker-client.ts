@@ -26,6 +26,7 @@ import { getGitSha, getVersion } from "./utils/build-info.js";
 
 export type WorkerReactorClientArgs = {
   namespace: string;
+  relationalNamespace: string;
   cdnUrl: string;
   packageSpecs: string[];
   documentModelModules: DocumentModelModule[];
@@ -78,6 +79,7 @@ export function createWorkerReactorClientModule(
       },
       construct: {
         namespace: args.namespace,
+        relationalNamespace: args.relationalNamespace,
         cdnUrl: args.cdnUrl,
         packageSpecs: args.packageSpecs,
       },

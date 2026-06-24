@@ -57,7 +57,10 @@ import { getRuntimeConfig } from "../runtime-config.js";
 import { createWorkerReactorClientModule } from "../reactor-worker-client.js";
 import { bumpWorkerGen } from "../reactor-worker-name.js";
 import { isReactorWorkerEnabled } from "../utils/reactor-worker-flag.js";
-import { REACTOR_INSTANCE_NAMESPACE } from "../utils/storage-namespace.js";
+import {
+  REACTOR_INSTANCE_NAMESPACE,
+  RELATIONAL_PGLITE_NAME,
+} from "../utils/storage-namespace.js";
 import { createProcessorHostModule } from "./processor-host-module.js";
 
 /**
@@ -372,6 +375,7 @@ export async function createReactor(localPackage?: DocumentModelLib) {
     };
     const workerClient = createWorkerReactorClientModule({
       namespace: REACTOR_INSTANCE_NAMESPACE,
+      relationalNamespace: RELATIONAL_PGLITE_NAME,
       cdnUrl: packageManager.cdnUrl ?? "",
       packageSpecs,
       documentModelModules,

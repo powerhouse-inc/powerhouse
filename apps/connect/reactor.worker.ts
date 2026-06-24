@@ -20,6 +20,10 @@ import {
   type ReactorIdentity,
 } from "@powerhousedao/reactor-browser/rpc";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
+import {
+  createRelationalDb,
+  type IRelationalDb,
+} from "@powerhousedao/shared/processors";
 import * as commonDocumentModels from "@powerhousedao/powerhouse-vetra-packages/document-models";
 import * as vetraDocumentModels from "@powerhousedao/vetra/document-models";
 import {
@@ -28,6 +32,8 @@ import {
   RenownCryptoBuilder,
   RenownCryptoSigner,
 } from "@renown/sdk/crypto";
+import type { PGlite } from "@electric-sql/pglite";
+import type * as PgLiveModuleNs from "@electric-sql/pglite/live";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import { readPgVersionFile } from "./src/utils/pglite-idb.js";
@@ -35,6 +41,7 @@ import {
   coerceMajor,
   loadPGliteModule,
   resolvePgMajorForRuntime,
+  type SupportedPgMajor,
 } from "./src/utils/pglite-major.js";
 
 // Matches the main thread's RenownBuilder("connect").
@@ -55,6 +62,7 @@ const bundledDocumentModels = bundledModelCandidates.filter(
 
 type WorkerConstruct = {
   namespace: string;
+  relationalNamespace: string;
   cdnUrl: string;
   packageSpecs: string[];
 };
@@ -67,6 +75,8 @@ let loader: WorkerPackageLoader | undefined;
 let registry: ModelRegistry | undefined;
 let signer: RenownCryptoSigner | undefined;
 let syncManager: ISyncManager | undefined;
+type RelationalState = { pg?: PGlite; db?: IRelationalDb };
+const relational: RelationalState = {};
 let currentIdentity: ReactorIdentity | null = null;
 const registeredKeys = new Set<string>();
 
@@ -116,6 +126,49 @@ async function openReactorPglite(namespace: string) {
   return new PGlite(`idb://${namespace}`, { relaxedDurability: true });
 }
 
+type PgLiveModule = typeof PgLiveModuleNs;
+
+async function loadPgLive(major: SupportedPgMajor): Promise<PgLiveModule> {
+  if (major === 16) {
+    return import("pglite-legacy-02/live") as unknown as Promise<PgLiveModule>;
+  }
+  return import("@electric-sql/pglite/live");
+}
+
+async function openRelational(namespace: string): Promise<void> {
+  try {
+    const detected = coerceMajor(
+      await readPgVersionFile(`/pglite/${namespace}`),
+    );
+    const major = resolvePgMajorForRuntime(detected);
+    if (major !== 17) {
+      console.warn(
+        `[reactor.worker] Relational store opening legacy PGlite data dir (Postgres ${major}). Migrate to PG17 from the Connect banner or the Inspector.`,
+      );
+    }
+    const [{ PGlite }, { live }] = await Promise.all([
+      loadPGliteModule(major),
+      loadPgLive(major),
+    ]);
+    const pg = new PGlite(`idb://${namespace}`, {
+      relaxedDurability: true,
+      extensions: { live },
+    });
+    relational.pg = pg;
+    relational.db = createRelationalDb(
+      new Kysely({ dialect: new PGliteDialect(pg) }),
+    );
+    console.info(
+      `[reactor.worker] Relational store opened: idb://${namespace} (Postgres ${major}).`,
+    );
+  } catch (error) {
+    console.error(
+      "[reactor.worker] Failed to open the relational store:",
+      error,
+    );
+  }
+}
+
 const workerName = (self as { name?: string }).name ?? "";
 
 const host = new ReactorHost({
@@ -131,7 +184,10 @@ const host = new ReactorHost({
     });
     const loaded = await loader.loadPackages(construct.packageSpecs);
     const models = baseDocumentModels.concat(bundledDocumentModels, loaded);
-    const pg = await openReactorPglite(construct.namespace);
+    const [pg] = await Promise.all([
+      openReactorPglite(construct.namespace),
+      openRelational(construct.relationalNamespace),
+    ]);
     const crypto = await buildWorkerCrypto();
     signer = new RenownCryptoSigner(
       crypto,
@@ -214,6 +270,20 @@ const host = new ReactorHost({
         return undefined;
       default:
         throw new Error(`Unknown sync op: ${method}`);
+    }
+  },
+  onDbOp: async (method, args) => {
+    if (!relational.pg) {
+      throw new Error("Relational store not available");
+    }
+    switch (method) {
+      case "query": {
+        const [sql, params] = args as [string, unknown[]];
+        const result = await relational.pg.query(sql, params);
+        return result.rows;
+      }
+      default:
+        throw new Error(`Unknown db op: ${method}`);
     }
   },
 });

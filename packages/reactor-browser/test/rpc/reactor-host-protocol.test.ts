@@ -233,4 +233,39 @@ describe("ReactorHost protocol (hello / version / register)", () => {
       tab.send({ k: "sync-op", method: "list", args: [] }),
     ).rejects.toThrow(/no sync handler/);
   });
+
+  it("routes a db-op to onDbOp and returns its rows", async () => {
+    const calls: Array<[string, unknown[]]> = [];
+    const host = new ReactorHost({
+      build: () => Promise.resolve(fakeClient([])),
+      onDbOp: (method, args) => {
+        calls.push([method, args]);
+        return Promise.resolve([{ n: 1 }]);
+      },
+    });
+
+    const ch = new MessageChannel();
+    host.connect(createPortTransport(ch.port1));
+    const tab = rawTab(ch.port2);
+    const result = await tab.send({
+      k: "db-op",
+      method: "query",
+      args: ["select 1 as n", []],
+    });
+    expect(result).toEqual([{ n: 1 }]);
+    expect(calls).toEqual([["query", ["select 1 as n", []]]]);
+  });
+
+  it("errors a db-op when no db handler is configured", async () => {
+    const host = new ReactorHost({
+      build: () => Promise.resolve(fakeClient([])),
+    });
+
+    const ch = new MessageChannel();
+    host.connect(createPortTransport(ch.port1));
+    const tab = rawTab(ch.port2);
+    await expect(
+      tab.send({ k: "db-op", method: "query", args: ["select 1", []] }),
+    ).rejects.toThrow(/no db handler/);
+  });
 });
