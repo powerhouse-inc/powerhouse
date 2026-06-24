@@ -8,7 +8,7 @@ describe.each(testSyncStorageBackends)(
   "KyselySyncRemoteStorage [$name]",
   ({ create }) => {
     let storage: KyselySyncRemoteStorage;
-    let cleanup: () => Promise<void>;
+    let cleanup: () => Promise<void> = async () => {};
 
     beforeEach(async () => {
       const setup = await create();

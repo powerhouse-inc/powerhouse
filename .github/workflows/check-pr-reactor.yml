@@ -29,6 +29,22 @@ jobs:
     runs-on: ubuntu-24.04
     container: node:24
 
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: reactor
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      REACTOR_TEST_PG_URL: postgres://postgres:postgres@postgres:5432/reactor
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
