@@ -124,7 +124,7 @@ export type RpcLiveSubscribe = {
 export type RpcLiveEvent = {
   k: "event-live";
   id: CorrelationId;
-  rows: unknown[];
+  results: unknown;
 };
 
 export type RpcLiveUnsub = { k: "unsub-live"; id: CorrelationId };

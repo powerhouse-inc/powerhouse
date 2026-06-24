@@ -8,6 +8,7 @@ import type {
   RpcAdmin,
   RpcDbOp,
   RpcHello,
+  RpcLiveSubscribe,
   RpcRegisterPackages,
   RpcSyncOp,
   RpcUnregisterPackages,
@@ -24,6 +25,11 @@ export type ReactorHostOptions = {
   onIdentity?: (user: ReactorIdentity | null) => void;
   onSyncOp?: (method: string, args: unknown[]) => Promise<unknown>;
   onDbOp?: (method: string, args: unknown[]) => Promise<unknown>;
+  onLiveQuery?: (
+    sql: string,
+    params: unknown[],
+    onResults: (results: unknown) => void,
+  ) => Promise<() => void>;
   // Worker identity + restart for the admin/inspector channel.
   namespace?: string;
   appBuildId?: string;
@@ -63,6 +69,7 @@ export class ReactorHost {
   connect(transport: IRpcTransport): () => void {
     let server: ReactorHostServer | null = null;
     const buffer: ClientMessage[] = [];
+    const liveSubs = new Map<string, () => void>();
 
     const ensureServer = async (construct?: unknown): Promise<void> => {
       if (server) {
@@ -102,6 +109,15 @@ export class ReactorHost {
         void this.handleDbOp(msg, transport);
         return;
       }
+      if (msg.k === "sub-live") {
+        void this.handleLiveSubscribe(msg, transport, liveSubs);
+        return;
+      }
+      if (msg.k === "unsub-live") {
+        liveSubs.get(msg.id)?.();
+        liveSubs.delete(msg.id);
+        return;
+      }
       if (msg.k === "admin") {
         this.handleAdmin(msg, transport);
         return;
@@ -121,6 +137,10 @@ export class ReactorHost {
     const dispose = () => {
       server?.stop();
       detach();
+      for (const unsubscribe of liveSubs.values()) {
+        unsubscribe();
+      }
+      liveSubs.clear();
       this.clients.delete(transport);
       this.disposers.delete(dispose);
     };
@@ -277,6 +297,47 @@ export class ReactorHost {
       const value = await handler(message.method, message.args);
       transport.post({ k: "res", id: message.id, value });
     } catch (error) {
+      transport.post({ k: "err", id: message.id, error: toErrorInfo(error) });
+    }
+  }
+
+  private async handleLiveSubscribe(
+    message: RpcLiveSubscribe,
+    transport: IRpcTransport,
+    liveSubs: Map<string, () => void>,
+  ): Promise<void> {
+    const handler = this.options.onLiveQuery;
+    if (!handler) {
+      transport.post({
+        k: "err",
+        id: message.id,
+        error: toErrorInfo(new Error("ReactorHost has no live-query handler")),
+      });
+      return;
+    }
+    const placeholder = () => undefined;
+    liveSubs.set(message.id, placeholder);
+    try {
+      if (this.clientPromise) {
+        await this.clientPromise;
+      }
+      const unsubscribe = await handler(
+        message.sql,
+        message.params,
+        (results) => {
+          transport.post({ k: "event-live", id: message.id, results });
+        },
+      );
+      // unsub-live raced ahead during the await: tear down, don't leak.
+      if (liveSubs.get(message.id) !== placeholder) {
+        unsubscribe();
+        return;
+      }
+      liveSubs.set(message.id, unsubscribe);
+    } catch (error) {
+      if (liveSubs.get(message.id) === placeholder) {
+        liveSubs.delete(message.id);
+      }
       transport.post({ k: "err", id: message.id, error: toErrorInfo(error) });
     }
   }

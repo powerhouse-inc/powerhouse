@@ -48,7 +48,7 @@ describe("relational + live-query wire protocol (v2)", () => {
     const msg: RpcLiveEvent = {
       k: "event-live",
       id: "live1",
-      rows: [{ a: 1 }, { a: 2 }],
+      results: { rows: [{ a: 1 }, { a: 2 }] },
     };
     expect(await roundTrip(msg)).toEqual(msg);
   });

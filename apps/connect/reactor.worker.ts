@@ -32,7 +32,6 @@ import {
   RenownCryptoBuilder,
   RenownCryptoSigner,
 } from "@renown/sdk/crypto";
-import type { PGlite } from "@electric-sql/pglite";
 import type * as PgLiveModuleNs from "@electric-sql/pglite/live";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
@@ -75,7 +74,10 @@ let loader: WorkerPackageLoader | undefined;
 let registry: ModelRegistry | undefined;
 let signer: RenownCryptoSigner | undefined;
 let syncManager: ISyncManager | undefined;
-type RelationalState = { pg?: PGlite; db?: IRelationalDb };
+type RelationalState = {
+  pg?: PgLiveModuleNs.PGliteWithLive;
+  db?: IRelationalDb;
+};
 const relational: RelationalState = {};
 let currentIdentity: ReactorIdentity | null = null;
 const registeredKeys = new Set<string>();
@@ -154,7 +156,7 @@ async function openRelational(namespace: string): Promise<void> {
       relaxedDurability: true,
       extensions: { live },
     });
-    relational.pg = pg;
+    relational.pg = pg as unknown as PgLiveModuleNs.PGliteWithLive;
     relational.db = createRelationalDb(
       new Kysely({ dialect: new PGliteDialect(pg) }),
     );
@@ -285,6 +287,17 @@ const host = new ReactorHost({
       default:
         throw new Error(`Unknown db op: ${method}`);
     }
+  },
+  onLiveQuery: async (sql, params, onResults) => {
+    if (!relational.pg) {
+      throw new Error("Relational store not available");
+    }
+    const live = await relational.pg.live.query(sql, params, (results) =>
+      onResults(results),
+    );
+    return () => {
+      void live.unsubscribe();
+    };
   },
 });
 

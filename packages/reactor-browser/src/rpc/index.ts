@@ -4,6 +4,10 @@ export {
 } from "./admin-client.js";
 export { createReactorClientProxy } from "./client-proxy.js";
 export {
+  createLiveQueryProxy,
+  type ILiveQueryProxy,
+} from "./live-query-proxy.js";
+export {
   createReactorEventBusProxy,
   ReactorEventBusProxy,
 } from "./event-bus-proxy.js";
