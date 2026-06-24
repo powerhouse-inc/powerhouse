@@ -77,18 +77,25 @@ const config: Config = {
         // Agent-first reorg: BuilderEnvironment became the new Get Started,
         // and the old manual Get Started moved into the Build track.
         redirects: [
-          // BuilderEnvironment -> Get Started
-          ...[
-            "VetraStudio",
-            "VetraCloud",
-            "VetraDrive",
-            "Prerequisites",
-            "CreateAPackageWithVetra",
-            "BuilderTools",
-          ].map((slug) => ({
+          // BuilderEnvironment -> Get Started (pages that stayed in Get Started)
+          ...["VetraStudio", "VetraCloud", "BuilderTools"].map((slug) => ({
             from: `/academy/MasteryTrack/BuilderEnvironment/${slug}`,
             to: `/academy/GetStarted/${slug}`,
           })),
+          // BuilderEnvironment / Get Started -> Build/GettingStartedBuilding
+          // (these pages later moved into the Build track)
+          ...["VetraDrive", "Prerequisites", "CreateAPackageWithVetra"].flatMap(
+            (slug) => [
+              {
+                from: `/academy/MasteryTrack/BuilderEnvironment/${slug}`,
+                to: `/academy/Build/GettingStartedBuilding/${slug}`,
+              },
+              {
+                from: `/academy/GetStarted/${slug}`,
+                to: `/academy/Build/GettingStartedBuilding/${slug}`,
+              },
+            ],
+          ),
           // Old manual Get Started -> Build track (Manual Todo tutorial)
           ...[
             "ExploreDemoPackage",

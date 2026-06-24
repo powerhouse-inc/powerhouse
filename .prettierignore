@@ -1,0 +1,6 @@
+# Generated MDX docs. Docusaurus treats these .md files as MDX. Prettier's
+# Markdown parser corrupts MDX comments ({/* ... */} -> {/_ ... _/}) and its
+# MDX parser reflows JSX/<details> blocks in ways that break the build, so
+# these generator-written files must not be formatted by Prettier.
+apps/academy/docs/academy/05-Lookup/00-Cookbook.md
+apps/academy/docs/academy/04-Reference/07-CLITooling/00-PowerhouseCLI.md

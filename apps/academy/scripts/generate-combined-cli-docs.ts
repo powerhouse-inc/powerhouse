@@ -1,13 +1,12 @@
 import * as fs from "fs";
 import * as path from "path";
 import { fileURLToPath } from "url";
-import prettier from "prettier";
 
 /**
  * Generates combined CLI documentation from ph-cli and ph-cmd COMMANDS.md files
  * and injects it into the main 00-PowerhouseCLI.md documentation file.
  */
-async function generateCombinedCliDocs() {
+function generateCombinedCliDocs() {
   try {
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = path.dirname(__filename);
@@ -194,15 +193,12 @@ async function generateCombinedCliDocs() {
       "\n" +
       targetDocContent.substring(endIndex);
 
-    // Format with the project's Prettier config so the generated file passes
-    // `prettier --check` and doesn't drift from the rest of the docs.
-    const formattedDocContent = await prettier.format(targetDocContent, {
-      ...(await prettier.resolveConfig(targetDocFile)),
-      filepath: targetDocFile,
-    });
-
-    // Write the updated content back to the target file
-    fs.writeFileSync(targetDocFile, formattedDocContent);
+    // Write the updated content back to the target file.
+    // NOTE: do not run Prettier on this file. It is MDX (Docusaurus treats
+    // .md as MDX), and Prettier's Markdown parser corrupts MDX comments
+    // ({/* ... */} -> {/_ ... _/}) while its MDX parser reflows JSX/details
+    // blocks in ways that break compilation. This file is .prettierignore'd.
+    fs.writeFileSync(targetDocFile, targetDocContent);
 
     console.log(
       `✅ Combined CLI documentation has been generated at ${targetDocFile}`,
