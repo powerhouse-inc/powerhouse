@@ -20,6 +20,8 @@ import {
   type ReactorIdentity,
 } from "@powerhousedao/reactor-browser/rpc";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
+import * as commonDocumentModels from "@powerhousedao/powerhouse-vetra-packages/document-models";
+import * as vetraDocumentModels from "@powerhousedao/vetra/document-models";
 import {
   BrowserKeyStorage,
   createSignatureVerifier,
@@ -37,6 +39,19 @@ import {
 
 // Matches the main thread's RenownBuilder("connect").
 const RENOWN_APP_NAME = "connect";
+
+// Studio models the tab bundles as local packages; not CDN-loadable, so the worker imports them directly.
+const bundledModelCandidates: unknown[] = [
+  ...Object.values(commonDocumentModels),
+  ...Object.values(vetraDocumentModels),
+];
+const bundledDocumentModels = bundledModelCandidates.filter(
+  (m): m is DocumentModelModule =>
+    typeof m === "object" &&
+    m !== null &&
+    "documentModel" in m &&
+    "reducer" in m,
+);
 
 type WorkerConstruct = {
   namespace: string;
@@ -110,7 +125,7 @@ const host = new ReactorHost({
         import(/* @vite-ignore */ url) as Promise<Record<string, unknown>>,
     });
     const loaded = await loader.loadPackages(construct.packageSpecs);
-    const models = baseDocumentModels.concat(loaded);
+    const models = baseDocumentModels.concat(bundledDocumentModels, loaded);
     const pg = await openReactorPglite(construct.namespace);
     const crypto = await buildWorkerCrypto();
     signer = new RenownCryptoSigner(
