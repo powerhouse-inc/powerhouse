@@ -3,12 +3,17 @@ import type {
   CorrelationId,
   OwnerMessage,
   WorkerInspectorInfo,
+  WorkerMigrationState,
 } from "./protocol.js";
 import type { IRpcTransport } from "./transport.js";
 
 export interface IWorkerAdminClient {
   info(): Promise<WorkerInspectorInfo>;
   restart(): Promise<void>;
+  clearStorage(): Promise<void>;
+  migrate(): Promise<void>;
+  getMigrationState(): WorkerMigrationState;
+  subscribeMigration(callback: () => void): () => void;
 }
 
 type Pending = {
@@ -23,6 +28,8 @@ export function createWorkerAdminClient(
 ): IWorkerAdminClient {
   let counter = 0;
   const pending = new Map<CorrelationId, Pending>();
+  let migrationState: WorkerMigrationState = { status: "idle" };
+  const migrationListeners = new Set<() => void>();
 
   transport.onMessage((message) => {
     const msg = message as OwnerMessage;
@@ -38,10 +45,15 @@ export function createWorkerAdminClient(
         pending.delete(msg.id);
         entry.reject(fromErrorInfo(msg.error));
       }
+    } else if (msg.k === "migration") {
+      migrationState = msg.state;
+      for (const listener of migrationListeners) listener();
     }
   });
 
-  const send = (method: "info" | "restart"): Promise<unknown> => {
+  const send = (
+    method: "info" | "restart" | "clearStorage" | "migrate",
+  ): Promise<unknown> => {
     const id: CorrelationId = `admin-${++counter}`;
     const promise = new Promise<unknown>((resolve, reject) => {
       pending.set(id, { resolve, reject });
@@ -53,5 +65,12 @@ export function createWorkerAdminClient(
   return {
     info: () => send("info") as Promise<WorkerInspectorInfo>,
     restart: () => send("restart").then(() => undefined),
+    clearStorage: () => send("clearStorage").then(() => undefined),
+    migrate: () => send("migrate").then(() => undefined),
+    getMigrationState: () => migrationState,
+    subscribeMigration: (callback) => {
+      migrationListeners.add(callback);
+      return () => migrationListeners.delete(callback);
+    },
   };
 }

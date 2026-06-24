@@ -26,6 +26,7 @@ function rawTab(port: MessagePort) {
     { resolve: (value: unknown) => void; reject: (error: unknown) => void }
   >();
   const reloads: string[] = [];
+  const migrations: unknown[] = [];
   port.onmessage = (event: MessageEvent) => {
     const msg = event.data as {
       k: string;
@@ -33,6 +34,7 @@ function rawTab(port: MessagePort) {
       value?: unknown;
       error?: { message: string };
       reason?: string;
+      state?: unknown;
     };
     if (msg.k === "res" && msg.id) {
       pending.get(msg.id)?.resolve(msg.value);
@@ -40,6 +42,8 @@ function rawTab(port: MessagePort) {
       pending.get(msg.id)?.reject(new Error(msg.error?.message));
     } else if (msg.k === "reload") {
       reloads.push(msg.reason ?? "");
+    } else if (msg.k === "migration") {
+      migrations.push(msg.state);
     }
   };
   const send = (msg: Record<string, unknown>): Promise<unknown> => {
@@ -50,7 +54,7 @@ function rawTab(port: MessagePort) {
     port.postMessage({ ...msg, id });
     return promise;
   };
-  return { send, reloads };
+  return { send, reloads, migrations };
 }
 
 function fakeClient(calls: string[]): IReactorClient {
@@ -267,5 +271,74 @@ describe("ReactorHost protocol (hello / version / register)", () => {
     await expect(
       tab.send({ k: "db-op", method: "query", args: ["select 1", []] }),
     ).rejects.toThrow(/no db handler/);
+  });
+
+  it("routes an admin clearStorage to onAdminClearStorage", async () => {
+    let cleared = false;
+    const host = new ReactorHost({
+      build: () => Promise.resolve(fakeClient([])),
+      onAdminClearStorage: () => {
+        cleared = true;
+        return Promise.resolve();
+      },
+    });
+
+    const ch = new MessageChannel();
+    host.connect(createPortTransport(ch.port1));
+    const tab = rawTab(ch.port2);
+    const result = await tab.send({ k: "admin", method: "clearStorage" });
+    expect(result).toEqual({ ok: true });
+    expect(cleared).toBe(true);
+  });
+
+  it("routes an admin migrate to onAdminMigrate", async () => {
+    let migrated = false;
+    const host = new ReactorHost({
+      build: () => Promise.resolve(fakeClient([])),
+      onAdminMigrate: () => {
+        migrated = true;
+        return Promise.resolve();
+      },
+    });
+
+    const ch = new MessageChannel();
+    host.connect(createPortTransport(ch.port1));
+    const tab = rawTab(ch.port2);
+    const result = await tab.send({ k: "admin", method: "migrate" });
+    expect(result).toEqual({ ok: true });
+    expect(migrated).toBe(true);
+  });
+
+  it("bounces data messages while migrating", async () => {
+    const host = new ReactorHost({
+      build: () => Promise.resolve(fakeClient([])),
+    });
+    const ch = new MessageChannel();
+    host.connect(createPortTransport(ch.port1));
+    const tab = rawTab(ch.port2);
+
+    host.setMigrationState({ status: "migrating" });
+    await expect(
+      tab.send({ k: "req", method: "get", args: ["abc"] }),
+    ).rejects.toThrow(/migration in progress/);
+  });
+
+  it("pushes migration state to connected tabs and seeds new ones", async () => {
+    const host = new ReactorHost({
+      build: () => Promise.resolve(fakeClient([])),
+    });
+    const ch1 = new MessageChannel();
+    host.connect(createPortTransport(ch1.port1));
+    const tab1 = rawTab(ch1.port2);
+
+    host.setMigrationState({ status: "needed", legacyMajor: 16 });
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(tab1.migrations).toEqual([{ status: "needed", legacyMajor: 16 }]);
+
+    const ch2 = new MessageChannel();
+    host.connect(createPortTransport(ch2.port1));
+    const tab2 = rawTab(ch2.port2);
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(tab2.migrations).toEqual([{ status: "needed", legacyMajor: 16 }]);
   });
 });

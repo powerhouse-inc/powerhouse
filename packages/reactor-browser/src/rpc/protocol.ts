@@ -72,8 +72,19 @@ export type RpcReload = { k: "reload"; reason: string; workerGen?: string };
 export type RpcAdmin = {
   k: "admin";
   id: CorrelationId;
-  method: "info" | "restart";
+  method: "info" | "restart" | "clearStorage" | "migrate";
 };
+
+export type WorkerMigrationState = {
+  status: "idle" | "needed" | "migrating" | "failed";
+  legacyMajor?: number;
+  phase?: "clone" | "dump" | "restore";
+  error?: string;
+};
+
+// Owner -> tab push of the worker's migration state (initial seed on connect +
+// on every change), so tabs can drive the migration banner from one flag.
+export type RpcMigration = { k: "migration"; state: WorkerMigrationState };
 
 export type WorkerInspectorInfo = {
   namespace: string;
@@ -151,6 +162,7 @@ export type OwnerMessage =
   | RpcEvent
   | RpcReload
   | RpcBusEvent
-  | RpcLiveEvent;
+  | RpcLiveEvent
+  | RpcMigration;
 
 export type RpcMessage = ClientMessage | OwnerMessage;

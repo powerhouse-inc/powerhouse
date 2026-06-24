@@ -4,6 +4,7 @@ import { ReactorHostServer } from "./host-server.js";
 import { RPC_PROTOCOL_VERSION } from "./protocol.js";
 import type {
   ClientMessage,
+  CorrelationId,
   ReactorIdentity,
   RpcAdmin,
   RpcDbOp,
@@ -14,7 +15,21 @@ import type {
   RpcUnregisterPackages,
   VersionFingerprint,
   WorkerInspectorInfo,
+  WorkerMigrationState,
 } from "./protocol.js";
+
+function isDataMessage(
+  msg: ClientMessage,
+): msg is ClientMessage & { id: CorrelationId } {
+  return (
+    msg.k === "req" ||
+    msg.k === "sub" ||
+    msg.k === "page" ||
+    msg.k === "sync-op" ||
+    msg.k === "db-op" ||
+    msg.k === "sub-live"
+  );
+}
 import { createPortTransport, type IRpcTransport } from "./transport.js";
 
 export type ReactorHostOptions = {
@@ -36,6 +51,8 @@ export type ReactorHostOptions = {
   ownerId?: string;
   bootedAtMs?: number;
   onAdminRestart?: () => void;
+  onAdminClearStorage?: () => Promise<void>;
+  onAdminMigrate?: () => Promise<void>;
 };
 
 function versionsCompatible(
@@ -56,6 +73,7 @@ export class ReactorHost {
   private baseline: VersionFingerprint | null = null;
   private readonly ownerId: string;
   private readonly bootedAtMs: number;
+  private migrationState: WorkerMigrationState | null = null;
 
   constructor(options: ReactorHostOptions) {
     this.options = options;
@@ -85,6 +103,14 @@ export class ReactorHost {
 
     const detach = transport.onMessage((message) => {
       const msg = message as ClientMessage;
+      if (this.migrationState?.status === "migrating" && isDataMessage(msg)) {
+        transport.post({
+          k: "err",
+          id: msg.id,
+          error: toErrorInfo(new Error("migration in progress")),
+        });
+        return;
+      }
       if (msg.k === "hello") {
         void this.handleHello(msg, transport, ensureServer);
         return;
@@ -130,6 +156,9 @@ export class ReactorHost {
     });
 
     this.clients.add(transport);
+    if (this.migrationState) {
+      transport.post({ k: "migration", state: this.migrationState });
+    }
     if (this.options.client) {
       void ensureServer();
     }
@@ -166,6 +195,14 @@ export class ReactorHost {
     }
   }
 
+  // Cache + fan out the worker's migration state so tabs drive the banner from it.
+  setMigrationState(state: WorkerMigrationState): void {
+    this.migrationState = state;
+    for (const transport of this.clients) {
+      transport.post({ k: "migration", state });
+    }
+  }
+
   get connectionCount(): number {
     return this.disposers.size;
   }
@@ -174,6 +211,22 @@ export class ReactorHost {
     if (message.method === "restart") {
       this.options.onAdminRestart?.();
       transport.post({ k: "res", id: message.id, value: { ok: true } });
+      return;
+    }
+    if (message.method === "clearStorage") {
+      void this.handleAdminAsync(
+        this.options.onAdminClearStorage,
+        message,
+        transport,
+      );
+      return;
+    }
+    if (message.method === "migrate") {
+      void this.handleAdminAsync(
+        this.options.onAdminMigrate,
+        message,
+        transport,
+      );
       return;
     }
     const info: WorkerInspectorInfo = {
@@ -187,6 +240,19 @@ export class ReactorHost {
         this.baseline?.rpcProtocolVersion ?? RPC_PROTOCOL_VERSION,
     };
     transport.post({ k: "res", id: message.id, value: info });
+  }
+
+  private async handleAdminAsync(
+    handler: (() => Promise<void>) | undefined,
+    message: RpcAdmin,
+    transport: IRpcTransport,
+  ): Promise<void> {
+    try {
+      await handler?.();
+      transport.post({ k: "res", id: message.id, value: { ok: true } });
+    } catch (error) {
+      transport.post({ k: "err", id: message.id, error: toErrorInfo(error) });
+    }
   }
 
   private resolveClient(construct?: unknown): Promise<IReactorClient> {

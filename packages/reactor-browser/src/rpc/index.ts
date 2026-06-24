@@ -50,4 +50,5 @@ export type {
   RpcMessage,
   VersionFingerprint,
   WorkerInspectorInfo,
+  WorkerMigrationState,
 } from "./protocol.js";

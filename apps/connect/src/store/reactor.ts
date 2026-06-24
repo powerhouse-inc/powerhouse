@@ -186,6 +186,11 @@ function subscribeToPackagesChannel(packageManager: IPackageManager): void {
 
 export async function clearReactorStorage() {
   const module = window.ph?.reactorClientModule;
+  if (module?.kind === "worker") {
+    // The worker holds the PGlite handles open, so it must close + clear them.
+    await module.adminClient.clearStorage();
+    return;
+  }
   if (module?.kind === "browser") {
     await module.reactorModule?.pg?.close();
   }

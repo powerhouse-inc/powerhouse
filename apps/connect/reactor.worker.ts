@@ -18,6 +18,7 @@ import {
   SYNC_STATUS_CHANGED_EVENT,
   WorkerPackageLoader,
   type ReactorIdentity,
+  type WorkerMigrationState,
 } from "@powerhousedao/reactor-browser/rpc";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import {
@@ -38,10 +39,19 @@ import { PGliteDialect } from "kysely-pglite-dialect";
 import { readPgVersionFile } from "./src/utils/pglite-idb.js";
 import {
   coerceMajor,
+  CURRENT_PG_MAJOR,
   loadPGliteModule,
   resolvePgMajorForRuntime,
   type SupportedPgMajor,
 } from "./src/utils/pglite-major.js";
+import {
+  type BackupStrategy,
+  type FileDataEntry,
+  clearFileData,
+  migrateIdb,
+  readFileData,
+  writeFileData,
+} from "./src/utils/pglite-migrate-core.js";
 
 // Matches the main thread's RenownBuilder("connect").
 const RENOWN_APP_NAME = "connect";
@@ -79,6 +89,12 @@ type RelationalState = {
   db?: IRelationalDb;
 };
 const relational: RelationalState = {};
+type OwnedStorage = {
+  reactorPg?: { close: () => Promise<void> };
+  reactorIdb?: string;
+  relationalIdb?: string;
+};
+const owned: OwnedStorage = {};
 let currentIdentity: ReactorIdentity | null = null;
 const registeredKeys = new Set<string>();
 
@@ -171,12 +187,69 @@ async function openRelational(namespace: string): Promise<void> {
   }
 }
 
+let migrationState: WorkerMigrationState = { status: "idle" };
+
+function setMigration(state: WorkerMigrationState): void {
+  migrationState = state;
+  host.setMigrationState(state);
+}
+
+const inMemoryBackup: BackupStrategy = {
+  snapshot: (idbName) => readFileData(idbName),
+  rollback: (handle, idbName) =>
+    writeFileData(idbName, handle as FileDataEntry[]),
+  discard: () => Promise.resolve(),
+  commit: () => Promise.resolve(),
+};
+
 const workerName = (self as { name?: string }).name ?? "";
 
 const host = new ReactorHost({
   namespace: workerName,
   onAdminRestart: () =>
     host.broadcastReload("admin restart", crypto.randomUUID()),
+  onAdminClearStorage: async () => {
+    await relational.pg?.close();
+    await owned.reactorPg?.close();
+    for (const idbName of [owned.reactorIdb, owned.relationalIdb]) {
+      if (idbName) {
+        await clearFileData(idbName);
+      }
+    }
+    host.broadcastReload("storage cleared", crypto.randomUUID());
+  },
+  onAdminMigrate: async () => {
+    setMigration({
+      status: "migrating",
+      legacyMajor: migrationState.legacyMajor,
+    });
+    if (relational.pg) await relational.pg.close().catch(() => undefined);
+    if (owned.reactorPg) await owned.reactorPg.close().catch(() => undefined);
+    try {
+      for (const idbName of [owned.reactorIdb, owned.relationalIdb]) {
+        if (idbName) {
+          await migrateIdb(
+            idbName,
+            (phase) =>
+              setMigration({
+                status: "migrating",
+                legacyMajor: migrationState.legacyMajor,
+                phase,
+              }),
+            inMemoryBackup,
+          );
+        }
+      }
+      host.broadcastReload("migration complete", crypto.randomUUID());
+    } catch (error) {
+      console.error("[reactor.worker] Migration failed:", error);
+      setMigration({
+        status: "failed",
+        error: error instanceof Error ? error.message : String(error),
+      });
+      host.broadcastReload("migration failed", crypto.randomUUID());
+    }
+  },
   build: async (raw) => {
     const construct = raw as WorkerConstruct;
     loader = new WorkerPackageLoader({
@@ -190,6 +263,20 @@ const host = new ReactorHost({
       openReactorPglite(construct.namespace),
       openRelational(construct.relationalNamespace),
     ]);
+    const reactorIdb = `/pglite/${construct.namespace}`;
+    const relationalIdb = `/pglite/${construct.relationalNamespace}`;
+    owned.reactorPg = pg;
+    owned.reactorIdb = reactorIdb;
+    owned.relationalIdb = relationalIdb;
+    const legacyMajor = (
+      await Promise.all([
+        readPgVersionFile(reactorIdb),
+        readPgVersionFile(relationalIdb),
+      ])
+    ).find((m): m is number => m !== null && m !== CURRENT_PG_MAJOR);
+    if (legacyMajor !== undefined) {
+      setMigration({ status: "needed", legacyMajor });
+    }
     const crypto = await buildWorkerCrypto();
     signer = new RenownCryptoSigner(
       crypto,
