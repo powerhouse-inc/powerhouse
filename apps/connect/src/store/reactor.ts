@@ -55,6 +55,7 @@ import { PackageDiscoveryService } from "../package-discovery.js";
 import { BrowserPackageManager } from "../package-manager.js";
 import { getRuntimeConfig } from "../runtime-config.js";
 import { createWorkerReactorClientModule } from "../reactor-worker-client.js";
+import { bumpWorkerGen } from "../reactor-worker-name.js";
 import { isReactorWorkerEnabled } from "../utils/reactor-worker-flag.js";
 import { REACTOR_INSTANCE_NAMESPACE } from "../utils/storage-namespace.js";
 import { createProcessorHostModule } from "./processor-host-module.js";
@@ -377,8 +378,11 @@ export async function createReactor(localPackage?: DocumentModelLib) {
       upgradeManifests,
       documentModelLoader,
       renown,
-      onReload: (reason) => {
+      onReload: (reason, workerGen) => {
         logger.warn("Reactor worker requested reload: @reason", reason);
+        if (workerGen) {
+          bumpWorkerGen(REACTOR_INSTANCE_NAMESPACE, workerGen);
+        }
         window.location.reload();
       },
     });

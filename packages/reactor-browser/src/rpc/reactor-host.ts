@@ -1,14 +1,17 @@
 import type { IReactorClient } from "@powerhousedao/reactor";
 import { toErrorInfo } from "./error-info.js";
 import { ReactorHostServer } from "./host-server.js";
+import { RPC_PROTOCOL_VERSION } from "./protocol.js";
 import type {
   ClientMessage,
   ReactorIdentity,
+  RpcAdmin,
   RpcHello,
   RpcRegisterPackages,
   RpcSyncOp,
   RpcUnregisterPackages,
   VersionFingerprint,
+  WorkerInspectorInfo,
 } from "./protocol.js";
 import { createPortTransport, type IRpcTransport } from "./transport.js";
 
@@ -19,6 +22,12 @@ export type ReactorHostOptions = {
   unregisterPackages?: (names: string[]) => Promise<void>;
   onIdentity?: (user: ReactorIdentity | null) => void;
   onSyncOp?: (method: string, args: unknown[]) => Promise<unknown>;
+  // Worker identity + restart for the admin/inspector channel.
+  namespace?: string;
+  appBuildId?: string;
+  ownerId?: string;
+  bootedAtMs?: number;
+  onAdminRestart?: () => void;
 };
 
 function versionsCompatible(
@@ -37,9 +46,13 @@ export class ReactorHost {
   private readonly clients = new Set<IRpcTransport>();
   private clientPromise: Promise<IReactorClient> | null = null;
   private baseline: VersionFingerprint | null = null;
+  private readonly ownerId: string;
+  private readonly bootedAtMs: number;
 
   constructor(options: ReactorHostOptions) {
     this.options = options;
+    this.ownerId = options.ownerId ?? crypto.randomUUID();
+    this.bootedAtMs = options.bootedAtMs ?? Date.now();
     if (options.client) {
       this.clientPromise = Promise.resolve(options.client);
     }
@@ -83,6 +96,10 @@ export class ReactorHost {
         void this.handleSyncOp(msg, transport);
         return;
       }
+      if (msg.k === "admin") {
+        this.handleAdmin(msg, transport);
+        return;
+      }
       if (server) {
         void server.handleMessage(msg);
       } else {
@@ -116,8 +133,34 @@ export class ReactorHost {
     }
   }
 
+  // Tell every connected tab to reload; `workerGen` makes them adopt one fresh worker name.
+  broadcastReload(reason: string, workerGen?: string): void {
+    for (const transport of this.clients) {
+      transport.post({ k: "reload", reason, workerGen });
+    }
+  }
+
   get connectionCount(): number {
     return this.disposers.size;
+  }
+
+  private handleAdmin(message: RpcAdmin, transport: IRpcTransport): void {
+    if (message.method === "restart") {
+      this.options.onAdminRestart?.();
+      transport.post({ k: "res", id: message.id, value: { ok: true } });
+      return;
+    }
+    const info: WorkerInspectorInfo = {
+      namespace: this.options.namespace ?? "",
+      ownerId: this.ownerId,
+      bootedAtMs: this.bootedAtMs,
+      connectedClients: this.connectionCount,
+      appBuildId:
+        this.baseline?.appBuildId ?? this.options.appBuildId ?? "unknown",
+      rpcProtocolVersion:
+        this.baseline?.rpcProtocolVersion ?? RPC_PROTOCOL_VERSION,
+    };
+    transport.post({ k: "res", id: message.id, value: info });
   }
 
   private resolveClient(construct?: unknown): Promise<IReactorClient> {

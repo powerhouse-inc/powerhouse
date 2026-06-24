@@ -21,6 +21,7 @@ import type { TimelineItem } from "./timeline.js";
 import type { PHToastFn } from "./toast.js";
 import type { IPackageManager } from "./vetra.js";
 import type { DraggingNode } from "../hooks/node-drag-and-drop.js";
+import type { IWorkerAdminClient } from "../rpc/admin-client.js";
 
 // Browser in-process module: the full reactor graph plus the PGlite handle.
 export interface BrowserReactorModule extends InProcessReactorModule {
@@ -37,6 +38,7 @@ export type WorkerReactorModule = ReactorModule;
 export interface WorkerReactorClientModule extends ReactorClientModule {
   kind: "worker";
   reactorModule: WorkerReactorModule;
+  adminClient: IWorkerAdminClient;
 }
 
 export type LOADING = null;

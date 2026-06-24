@@ -64,7 +64,25 @@ export type RpcUnregisterPackages = {
   names: string[];
 };
 
-export type RpcReload = { k: "reload"; reason: string };
+// `workerGen` (present on restart-driven reloads) is the new SharedWorker name
+// suffix every tab should adopt so they converge on one fresh worker.
+export type RpcReload = { k: "reload"; reason: string; workerGen?: string };
+
+// Worker lifecycle/admin channel, separate from the IReactorClient RPC surface.
+export type RpcAdmin = {
+  k: "admin";
+  id: CorrelationId;
+  method: "info" | "restart";
+};
+
+export type WorkerInspectorInfo = {
+  namespace: string;
+  ownerId: string;
+  bootedAtMs: number;
+  connectedClients: number;
+  appBuildId: string;
+  rpcProtocolVersion: number;
+};
 
 // Cloneable subset of renown's user (matches UserActionSigner); token minting + attribution.
 export type ReactorIdentity = {
@@ -99,6 +117,7 @@ export type ClientMessage =
   | RpcRegisterPackages
   | RpcUnregisterPackages
   | RpcIdentity
+  | RpcAdmin
   | RpcSyncOp;
 
 export type OwnerMessage =

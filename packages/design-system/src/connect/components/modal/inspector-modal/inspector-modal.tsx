@@ -19,6 +19,10 @@ import {
   RemotesInspector,
   type RemotesInspectorProps,
 } from "../../remotes-inspector/index.js";
+import {
+  WorkerInspector,
+  type WorkerInspectorProps,
+} from "../../worker-inspector/index.js";
 import { TabContent } from "../../tabs/tab-content.js";
 import { Tabs } from "../../tabs/tabs.js";
 
@@ -34,12 +38,14 @@ export type InspectorModalProps = {
   readonly queueInspectorProps?: QueueInspectorProps;
   readonly processorsInspectorProps?: ProcessorsInspectorProps;
   readonly integrityInspectorProps?: IntegrityInspectorProps;
+  readonly workerInspectorProps?: WorkerInspectorProps;
   readonly defaultTab?:
     | "Database"
     | "Remotes"
     | "Queue"
     | "Processors"
-    | "Integrity";
+    | "Integrity"
+    | "Worker";
 };
 
 export function InspectorModal({
@@ -52,6 +58,7 @@ export function InspectorModal({
   queueInspectorProps,
   processorsInspectorProps,
   integrityInspectorProps,
+  workerInspectorProps,
   defaultTab = "Database",
 }: InspectorModalProps) {
   return (
@@ -111,6 +118,13 @@ export function InspectorModal({
               <TabContent description="Integrity inspector" label="Integrity">
                 <div className="h-full">
                   <IntegrityInspector {...integrityInspectorProps} />
+                </div>
+              </TabContent>
+            )}
+            {workerInspectorProps && (
+              <TabContent description="Worker inspector" label="Worker">
+                <div className="h-full">
+                  <WorkerInspector {...workerInspectorProps} />
                 </div>
               </TabContent>
             )}

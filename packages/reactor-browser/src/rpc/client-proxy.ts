@@ -30,7 +30,7 @@ function isAbortSignal(value: unknown): value is AbortSignal {
 }
 
 export type ReactorClientProxyOptions = {
-  onReload?: (reason: string) => void;
+  onReload?: (reason: string, workerGen?: string) => void;
   // Document model modules carry reducer/editor functions that cannot cross the
   // worker boundary, so module lookups resolve from this tab-local registry.
   registry?: IDocumentModelRegistry;
@@ -91,7 +91,7 @@ export function createReactorClientProxy(
       return;
     }
     if (msg.k === "reload") {
-      options.onReload?.(msg.reason);
+      options.onReload?.(msg.reason, msg.workerGen);
       return;
     }
     if (msg.k === "event") {

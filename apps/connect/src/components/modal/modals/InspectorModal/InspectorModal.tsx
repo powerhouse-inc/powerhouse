@@ -7,6 +7,7 @@ import { useIntegrityInspector } from "./useIntegrityInspector.js";
 import { useProcessorsInspector } from "./useProcessorsInspector.js";
 import { useQueueInspector } from "./useQueueInspector.js";
 import { useRemotesInspector } from "./useRemotesInspector.js";
+import { useWorkerInspector } from "./useWorkerInspector.js";
 
 const DEFAULT_PAGE_SIZE = 25;
 
@@ -26,6 +27,7 @@ export const InspectorModal: React.FC = () => {
   const queueInspectorProps = useQueueInspector();
   const processorsInspectorProps = useProcessorsInspector();
   const integrityInspectorProps = useIntegrityInspector();
+  const workerInspectorProps = useWorkerInspector();
   const { currentPgVersion, supportedPgVersions, onResetToPgVersion } =
     useDebugInspector();
 
@@ -59,6 +61,7 @@ export const InspectorModal: React.FC = () => {
       queueInspectorProps={queueInspectorProps}
       processorsInspectorProps={processorsInspectorProps}
       integrityInspectorProps={integrityInspectorProps}
+      workerInspectorProps={workerInspectorProps}
     />
   );
 };

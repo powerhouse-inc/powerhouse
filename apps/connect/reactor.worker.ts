@@ -116,7 +116,12 @@ async function openReactorPglite(namespace: string) {
   return new PGlite(`idb://${namespace}`, { relaxedDurability: true });
 }
 
+const workerName = (self as { name?: string }).name ?? "";
+
 const host = new ReactorHost({
+  namespace: workerName,
+  onAdminRestart: () =>
+    host.broadcastReload("admin restart", crypto.randomUUID()),
   build: async (raw) => {
     const construct = raw as WorkerConstruct;
     loader = new WorkerPackageLoader({

@@ -10,6 +10,7 @@ import {
   connectReactorClient,
   createPortTransport,
   createReactorEventBusProxy,
+  createWorkerAdminClient,
   postReactorIdentity,
   RPC_PROTOCOL_VERSION,
   SyncManagerProxy,
@@ -20,6 +21,7 @@ import type {
   UpgradeManifest,
 } from "@powerhousedao/shared/document-model";
 import type { IRenown, User } from "@renown/sdk";
+import { reactorWorkerName } from "./reactor-worker-name.js";
 import { getGitSha, getVersion } from "./utils/build-info.js";
 
 export type WorkerReactorClientArgs = {
@@ -30,7 +32,7 @@ export type WorkerReactorClientArgs = {
   upgradeManifests: UpgradeManifest<readonly number[]>[];
   documentModelLoader: IDocumentModelLoader;
   renown: IRenown;
-  onReload: (reason: string) => void;
+  onReload: (reason: string, workerGen?: string) => void;
 };
 
 export type WorkerReactorClient = {
@@ -54,7 +56,7 @@ export function createWorkerReactorClientModule(
 ): WorkerReactorClient {
   const worker = new SharedWorker(
     new URL("./reactor.worker.js", import.meta.url),
-    { name: `ph-reactor:${args.namespace}`, type: "module" },
+    { name: reactorWorkerName(args.namespace), type: "module" },
   );
   const transport = createPortTransport(worker.port);
 
@@ -111,6 +113,7 @@ export function createWorkerReactorClientModule(
   const reactorClientModule: WorkerReactorClientModule = {
     kind: "worker",
     client: clientProxy,
+    adminClient: createWorkerAdminClient(transport),
     reactorModule: {
       documentModelRegistry,
       syncModule: { syncManager: syncManagerProxy },

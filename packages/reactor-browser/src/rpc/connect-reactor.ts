@@ -15,7 +15,7 @@ export type ReactorHello = {
 export function connectReactorClient(
   transport: IRpcTransport,
   hello: ReactorHello,
-  onReload?: (reason: string) => void,
+  onReload?: (reason: string, workerGen?: string) => void,
   registry?: IDocumentModelRegistry,
 ): IReactorClient {
   const client = createReactorClientProxy(transport, { onReload, registry });

@@ -1,3 +1,7 @@
+export {
+  createWorkerAdminClient,
+  type IWorkerAdminClient,
+} from "./admin-client.js";
 export { createReactorClientProxy } from "./client-proxy.js";
 export {
   createReactorEventBusProxy,
@@ -36,4 +40,5 @@ export type {
   ReactorIdentity,
   RpcMessage,
   VersionFingerprint,
+  WorkerInspectorInfo,
 } from "./protocol.js";
