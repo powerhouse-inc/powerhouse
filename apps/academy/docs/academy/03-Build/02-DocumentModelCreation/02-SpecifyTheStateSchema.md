@@ -1,5 +1,9 @@
 # Specify the state schema
 
+:::note[Builds on the Manual Todo tutorial]
+This is the same step from the [Manual Todo tutorial](/academy/Build/ManualTodoTutorial/DefineToDoListDocumentModel), covered here in depth. The Mastery Track's only addition is the computed `stats` field — if you've done the basic build, skim to the stats parts.
+:::
+
 The state schema is the backbone of your document model. It defines the structure, data types, and relationships of the information your document will hold. In Powerhouse, you define this schema with the **GraphQL Schema Definition Language (SDL)**. A well-defined state schema keeps data consistent and is what makes the document queryable.
 
 :::tip[Specification Driven Design]

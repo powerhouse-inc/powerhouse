@@ -1,5 +1,9 @@
 # Implement document model tests
 
+:::note[Builds on the Manual Todo tutorial]
+This is the same step from the [Manual Todo tutorial](/academy/Build/ManualTodoTutorial/WriteDocumentModelTests), covered here in depth. The Mastery Track's only addition is tests for the computed `stats` field — if you've done the basic build, skim to the stats parts.
+:::
+
 ## Ensuring robustness and reliability
 
 In the previous chapter, we implemented the core reducer logic for our document model. Now, we reach a critical stage that underpins the reliability and correctness of our entire model: **Implementing Document Model Tests**.

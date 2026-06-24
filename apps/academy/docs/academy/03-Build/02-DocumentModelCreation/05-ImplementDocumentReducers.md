@@ -1,5 +1,9 @@
 # Implement document reducers
 
+:::note[Builds on the Manual Todo tutorial]
+This is the same step from the [Manual Todo tutorial](/academy/Build/ManualTodoTutorial/ImplementOperationReducers), covered here in depth. The Mastery Track's only addition is the reducer logic for the computed `stats` field — if you've done the basic build, skim to the stats parts.
+:::
+
 ## The heart of document logic
 
 In our journey through Powerhouse Document Model creation, we've defined the "what" – the structure of our data ([State Schema](02-SpecifyTheStateSchema.md)) and the ways it can be changed ([Document Operations](03-SpecifyDocumentOperations.md)). We've also seen how the [Document Model Generator](04-UseTheDocumentModelGenerator.md) translates these specifications into a coded scaffold. Now, we arrive at the "how": implementing **Document Reducers**.
