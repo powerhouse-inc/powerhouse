@@ -1,5 +1,4 @@
-import { RpcCorrelator } from "./rpc-correlator.js";
-import type { IRpcTransport } from "./transport.js";
+import type { MessageRouter } from "./message-router.js";
 
 export interface IInspectorProxy {
   getQueueState(): Promise<unknown>;
@@ -13,18 +12,11 @@ export interface IInspectorProxy {
   queryReactorDb(sql: string, params?: unknown[]): Promise<unknown>;
 }
 
-export function createInspectorProxy(
-  transport: IRpcTransport,
-): IInspectorProxy {
-  const correlator = new RpcCorrelator(transport, {
-    prefix: "insp",
-    timeoutMs: 30000,
-    label: "inspector-op",
-  });
-  correlator.attach();
-
+export function createInspectorProxy(router: MessageRouter): IInspectorProxy {
   const send = (method: string, args: unknown[]): Promise<unknown> =>
-    correlator.request((id) => ({ k: "inspector-op", id, method, args }));
+    router.request((id) => ({ k: "inspector-op", id, method, args }), {
+      timeoutMs: 30000,
+    });
 
   return {
     getQueueState: () => send("queue.getState", []),

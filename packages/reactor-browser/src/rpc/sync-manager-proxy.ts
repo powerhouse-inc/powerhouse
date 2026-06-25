@@ -18,8 +18,7 @@ import {
   type SyncStatus,
   type SyncStatusChangeCallback,
 } from "@powerhousedao/reactor";
-import { RpcCorrelator } from "./rpc-correlator.js";
-import type { IRpcTransport } from "./transport.js";
+import type { MessageRouter } from "./message-router.js";
 
 // Synthetic bus channel id for sync-status deltas (not a reactor IEventBus type).
 export const SYNC_STATUS_CHANGED_EVENT = 90001;
@@ -106,7 +105,7 @@ function channelUrl(meta: RemoteMeta): string | undefined {
 
 // Tab-side ISyncManager: cache-backed reads fed by the bus, ops over sync-op RPC.
 export class SyncManagerProxy implements ISyncManager {
-  private readonly correlator: RpcCorrelator;
+  private readonly router: MessageRouter;
   private readonly connectionStates = new Map<
     string,
     ConnectionStateSnapshot
@@ -117,13 +116,8 @@ export class SyncManagerProxy implements ISyncManager {
   private remotes: Remote[] = [];
   private seedPromise: Promise<void> | null = null;
 
-  constructor(transport: IRpcTransport, busProxy: IEventBus) {
-    this.correlator = new RpcCorrelator(transport, {
-      prefix: "s",
-      timeoutMs: 30000,
-      label: "sync-op",
-    });
-    this.correlator.attach();
+  constructor(router: MessageRouter, busProxy: IEventBus) {
+    this.router = router;
 
     busProxy.subscribe(
       SyncEventTypes.CONNECTION_STATE_CHANGED,
@@ -220,12 +214,9 @@ export class SyncManagerProxy implements ISyncManager {
   }
 
   private callSyncOp(method: string, args: unknown[]): Promise<unknown> {
-    return this.correlator.request((id) => ({
-      k: "sync-op",
-      id,
-      method,
-      args,
-    }));
+    return this.router.request((id) => ({ k: "sync-op", id, method, args }), {
+      timeoutMs: 30000,
+    });
   }
 
   private notifyConnection(remoteName?: string): void {
@@ -317,8 +308,8 @@ export class SyncManagerProxy implements ISyncManager {
 }
 
 export function createSyncManagerProxy(
-  transport: IRpcTransport,
+  router: MessageRouter,
   busProxy: IEventBus,
 ): ISyncManager {
-  return new SyncManagerProxy(transport, busProxy);
+  return new SyncManagerProxy(router, busProxy);
 }

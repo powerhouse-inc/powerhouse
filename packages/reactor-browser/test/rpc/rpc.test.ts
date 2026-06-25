@@ -6,7 +6,14 @@ import type {
 import { afterEach, describe, expect, it } from "vitest";
 import { createReactorClientProxy } from "../../src/rpc/client-proxy.js";
 import { ReactorHostServer } from "../../src/rpc/host-server.js";
+import { MessageRouter } from "../../src/rpc/message-router.js";
 import { createPortTransport } from "../../src/rpc/transport.js";
+
+function tabRouter(port: MessagePort): MessageRouter {
+  const router = new MessageRouter();
+  router.attach(createPortTransport(port));
+  return router;
+}
 
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -81,7 +88,7 @@ function setup() {
     createPortTransport(channel.port1),
   );
   host.start();
-  const proxy = createReactorClientProxy(createPortTransport(channel.port2));
+  const proxy = createReactorClientProxy(tabRouter(channel.port2));
   const close = () => {
     host.stop();
     channel.port1.close();
@@ -221,7 +228,7 @@ describe("reactor RPC proxy <-> host", () => {
       createPortTransport(channel.port1),
     );
     host.start();
-    const proxy = createReactorClientProxy(createPortTransport(channel.port2));
+    const proxy = createReactorClientProxy(tabRouter(channel.port2));
     cleanup = () => {
       host.stop();
       channel.port1.close();

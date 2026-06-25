@@ -1,7 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createReactorClientProxy } from "../../src/rpc/client-proxy.js";
 import { ReactorHostServer } from "../../src/rpc/host-server.js";
+import { MessageRouter } from "../../src/rpc/message-router.js";
 import { createPortTransport } from "../../src/rpc/transport.js";
+
+function tabRouter(port: MessagePort): MessageRouter {
+  const router = new MessageRouter();
+  router.attach(createPortTransport(port));
+  return router;
+}
 import {
   createInMemoryReactorClient,
   type InMemoryReactor,
@@ -23,7 +30,7 @@ describe("RPC proxy against a real in-memory reactor", () => {
       createPortTransport(channel.port1),
     );
     host.start();
-    proxy = createReactorClientProxy(createPortTransport(channel.port2));
+    proxy = createReactorClientProxy(tabRouter(channel.port2));
   });
 
   afterEach(async () => {

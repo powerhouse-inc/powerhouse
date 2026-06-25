@@ -1,27 +1,17 @@
 import type { PGliteWithLive } from "@electric-sql/pglite/live";
 import { createLiveQueryProxy } from "./live-query-proxy.js";
-import { RpcCorrelator } from "./rpc-correlator.js";
-import type { IRpcTransport } from "./transport.js";
+import type { MessageRouter } from "./message-router.js";
 
 export function createRelationalPgliteProxy(
-  transport: IRpcTransport,
+  router: MessageRouter,
 ): PGliteWithLive {
-  const correlator = new RpcCorrelator(transport, {
-    prefix: "db",
-    timeoutMs: 30000,
-    label: "db-op",
-  });
-  correlator.attach();
-
   const runQuery = (sql: string, params: unknown[]): Promise<unknown> =>
-    correlator.request((id) => ({
-      k: "db-op",
-      id,
-      method: "query",
-      args: [sql, params],
-    }));
+    router.request(
+      (id) => ({ k: "db-op", id, method: "query", args: [sql, params] }),
+      { timeoutMs: 30000 },
+    );
 
-  const liveProxy = createLiveQueryProxy(transport);
+  const liveProxy = createLiveQueryProxy(router);
 
   const proxy = {
     query: async (sql: string, params?: unknown[]) => {

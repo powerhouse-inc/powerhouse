@@ -19,6 +19,16 @@ export type RpcResponse = { k: "res"; id: CorrelationId; value: unknown };
 
 export type RpcError = { k: "err"; id: CorrelationId; error: ErrorInfo };
 
+/** Failed document subscribe; routed to the change-subscription registry. */
+export type RpcSubError = { k: "sub-err"; id: CorrelationId; error: ErrorInfo };
+
+/** Failed live query; routed to the live-query registry. */
+export type RpcLiveError = {
+  k: "live-err";
+  id: CorrelationId;
+  error: ErrorInfo;
+};
+
 export type RpcAbort = { k: "abort"; targetId: CorrelationId };
 
 export type RpcSubscribe = {
@@ -180,6 +190,8 @@ export type ClientMessage =
 export type OwnerMessage =
   | RpcResponse
   | RpcError
+  | RpcSubError
+  | RpcLiveError
   | RpcEvent
   | RpcReload
   | RpcBusEvent
@@ -188,3 +200,16 @@ export type OwnerMessage =
   | RpcPong;
 
 export type RpcMessage = ClientMessage | OwnerMessage;
+
+/** Error reply kind for a client message kind, so it reaches the right registry. */
+export function responseErrorKind(
+  k: ClientMessage["k"],
+): "err" | "sub-err" | "live-err" {
+  if (k === "sub") {
+    return "sub-err";
+  }
+  if (k === "sub-live") {
+    return "live-err";
+  }
+  return "err";
+}

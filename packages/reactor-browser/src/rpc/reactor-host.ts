@@ -1,10 +1,11 @@
 import type { IReactorClient } from "@powerhousedao/reactor";
 import { toErrorInfo } from "./error-info.js";
 import { ReactorHostServer } from "./host-server.js";
-import { RPC_PROTOCOL_VERSION } from "./protocol.js";
+import { responseErrorKind, RPC_PROTOCOL_VERSION } from "./protocol.js";
 import type {
   ClientMessage,
   CorrelationId,
+  OwnerMessage,
   ReactorIdentity,
   RpcAdmin,
   RpcDbOp,
@@ -121,11 +122,12 @@ export class ReactorHost {
         return;
       }
       if (this.migrationState?.status === "migrating" && isDataMessage(msg)) {
+        // Route the rejection to the kind's owner (sub -> sub-err, etc.).
         transport.post({
-          k: "err",
+          k: responseErrorKind(msg.k),
           id: msg.id,
           error: toErrorInfo(new Error("migration in progress")),
-        });
+        } as OwnerMessage);
         return;
       }
       if (msg.k === "hello") {
@@ -384,7 +386,7 @@ export class ReactorHost {
     const handler = this.options.onLiveQuery;
     if (!handler) {
       transport.post({
-        k: "err",
+        k: "live-err",
         id: message.id,
         error: toErrorInfo(new Error("ReactorHost has no live-query handler")),
       });
@@ -413,7 +415,11 @@ export class ReactorHost {
       if (liveSubs.get(message.id) === placeholder) {
         liveSubs.delete(message.id);
       }
-      transport.post({ k: "err", id: message.id, error: toErrorInfo(error) });
+      transport.post({
+        k: "live-err",
+        id: message.id,
+        error: toErrorInfo(error),
+      });
     }
   }
 }

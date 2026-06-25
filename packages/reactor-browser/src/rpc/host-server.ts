@@ -5,8 +5,10 @@ import type {
   ViewFilter,
 } from "@powerhousedao/reactor";
 import { toErrorInfo } from "./error-info.js";
+import { responseErrorKind } from "./protocol.js";
 import type {
   ClientMessage,
+  OwnerMessage,
   RpcNextPage,
   RpcRequest,
   RpcSubscribe,
@@ -72,10 +74,10 @@ export class ReactorHostServer {
     } catch (error) {
       if ("id" in message) {
         this.transport.post({
-          k: "err",
+          k: responseErrorKind(message.k),
           id: message.id,
           error: toErrorInfo(error),
-        });
+        } as OwnerMessage);
       }
     }
   }

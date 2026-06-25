@@ -1,10 +1,5 @@
-import type {
-  OwnerMessage,
-  WorkerInspectorInfo,
-  WorkerMigrationState,
-} from "./protocol.js";
-import { RpcCorrelator } from "./rpc-correlator.js";
-import type { IRpcTransport } from "./transport.js";
+import type { MessageRouter } from "./message-router.js";
+import type { WorkerInspectorInfo, WorkerMigrationState } from "./protocol.js";
 
 export interface IWorkerAdminClient {
   info(): Promise<WorkerInspectorInfo>;
@@ -15,34 +10,22 @@ export interface IWorkerAdminClient {
   subscribeMigration(callback: () => void): () => void;
 }
 
-// Worker lifecycle channel over the same transport as the reactor RPC; ids are
-// prefixed so its replies don't collide with the client proxy's pending map.
+/** Worker lifecycle channel (info/restart/clearStorage/migrate) over the shared router. */
 export function createWorkerAdminClient(
-  transport: IRpcTransport,
+  router: MessageRouter,
 ): IWorkerAdminClient {
   let migrationState: WorkerMigrationState = { status: "idle" };
   const migrationListeners = new Set<() => void>();
-  const correlator = new RpcCorrelator(transport, {
-    prefix: "admin-",
-    timeoutMs: 30000,
-    label: "admin-op",
-  });
 
-  transport.onMessage((message) => {
-    const msg = message as OwnerMessage;
-    if (correlator.handleMessage(msg)) {
-      return;
-    }
-    if (msg.k === "migration") {
-      migrationState = msg.state;
-      for (const listener of [...migrationListeners]) listener();
-    }
+  router.on("migration", (msg) => {
+    migrationState = msg.state;
+    for (const listener of [...migrationListeners]) listener();
   });
 
   const send = (
     method: "info" | "restart" | "clearStorage" | "migrate",
   ): Promise<unknown> =>
-    correlator.request((id) => ({ k: "admin", id, method }));
+    router.request((id) => ({ k: "admin", id, method }), { timeoutMs: 30000 });
 
   return {
     info: () => send("info") as Promise<WorkerInspectorInfo>,

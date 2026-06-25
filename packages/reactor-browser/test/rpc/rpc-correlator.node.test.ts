@@ -28,6 +28,14 @@ function createFakeTransport() {
   return { transport, posted, deliver };
 }
 
+// Wire a correlator to a transport the way the router does: post via the
+// transport, route res/err into handleMessage.
+function correlatorOn(transport: IRpcTransport, prefix = "r") {
+  const correlator = new RpcCorrelator(transport, prefix);
+  transport.onMessage((m) => correlator.handleMessage(m as OwnerMessage));
+  return correlator;
+}
+
 function lastId(posted: ClientMessage[]): string {
   const m = posted.at(-1);
   if (!m || !("id" in m)) throw new Error("no id-bearing message posted");
@@ -35,20 +43,14 @@ function lastId(posted: ClientMessage[]): string {
 }
 
 describe("RpcCorrelator", () => {
-  it("resolves a request on res, applying the transform", async () => {
+  it("resolves a request on res, applying a per-request transform", async () => {
     const { transport, posted, deliver } = createFakeTransport();
-    const correlator = new RpcCorrelator(transport, {
-      prefix: "c",
-      transform: (v) => ({ wrapped: v }),
-    });
-    correlator.attach();
+    const correlator = correlatorOn(transport);
 
-    const promise = correlator.request((id) => ({
-      k: "req",
-      id,
-      method: "get",
-      args: [],
-    }));
+    const promise = correlator.request(
+      (id) => ({ k: "req", id, method: "get", args: [] }),
+      { transform: (v) => ({ wrapped: v }) },
+    );
     deliver({ k: "res", id: lastId(posted), value: 42 });
 
     expect(await promise).toEqual({ wrapped: 42 });
@@ -56,8 +58,7 @@ describe("RpcCorrelator", () => {
 
   it("rejects a request on err", async () => {
     const { transport, posted, deliver } = createFakeTransport();
-    const correlator = new RpcCorrelator(transport, { prefix: "c" });
-    correlator.attach();
+    const correlator = correlatorOn(transport);
 
     const promise = correlator.request((id) => ({
       k: "req",
@@ -76,57 +77,42 @@ describe("RpcCorrelator", () => {
 
   it("issues prefixed, incrementing ids", () => {
     const { transport } = createFakeTransport();
-    const correlator = new RpcCorrelator(transport, { prefix: "insp" });
+    const correlator = new RpcCorrelator(transport, "insp");
     expect(correlator.nextId()).toBe("insp1");
     expect(correlator.nextId()).toBe("insp2");
   });
 
-  it("handleMessage returns false for unowned ids and non-res/err kinds", () => {
+  it("ignores a res/err for an id it did not issue", () => {
     const { transport } = createFakeTransport();
-    const correlator = new RpcCorrelator(transport, { prefix: "c" });
-    // unknown id
-    expect(
+    const correlator = new RpcCorrelator(transport, "r");
+    expect(() =>
       correlator.handleMessage({
         k: "err",
         id: "other9",
         error: { name: "E", message: "x" },
       }),
-    ).toBe(false);
-    // not a res/err — lets a shared listener fall through to other consumers
-    expect(
-      correlator.handleMessage({
-        k: "event",
-        id: "c1",
-        change: {},
-      } as OwnerMessage),
-    ).toBe(false);
+    ).not.toThrow();
   });
 
-  it("times out only when timeoutMs is set", async () => {
+  it("times out only when timeoutMs is set (per request)", async () => {
     vi.useFakeTimers();
     try {
-      const { transport, posted } = createFakeTransport();
-      const withTimeout = new RpcCorrelator(transport, {
-        prefix: "s",
-        timeoutMs: 30000,
-        label: "sync-op",
-      });
-      const timed = withTimeout.request((id) => ({
-        k: "sync-op",
-        id,
-        method: "list",
-        args: [],
-      }));
+      const { transport } = createFakeTransport();
+      const correlator = correlatorOn(transport, "s");
+
+      const timed = correlator.request(
+        (id) => ({ k: "sync-op", id, method: "list", args: [] }),
+        { timeoutMs: 30000 },
+      );
       const rejected = expect(timed).rejects.toThrow(
-        /did not respond to sync-op/,
+        /did not respond to sync-op "list"/,
       );
       vi.advanceTimersByTime(30000);
       await rejected;
 
-      // No timeoutMs: the request stays pending past the same interval.
-      const noTimeout = new RpcCorrelator(transport, { prefix: "c" });
+      // No timeoutMs: stays pending past the same interval.
       let settled = false;
-      void noTimeout
+      void correlator
         .request((id) => ({ k: "req", id, method: "get", args: [] }))
         .finally(() => {
           settled = true;
@@ -134,7 +120,6 @@ describe("RpcCorrelator", () => {
       vi.advanceTimersByTime(60000);
       await Promise.resolve();
       expect(settled).toBe(false);
-      expect(posted.length).toBeGreaterThan(0);
     } finally {
       vi.useRealTimers();
     }
@@ -142,13 +127,12 @@ describe("RpcCorrelator", () => {
 
   it("runs the per-request cleanup on settle", async () => {
     const { transport, posted, deliver } = createFakeTransport();
-    const correlator = new RpcCorrelator(transport, { prefix: "c" });
-    correlator.attach();
+    const correlator = correlatorOn(transport);
 
     const cleanup = vi.fn();
     const promise = correlator.request(
       (id) => ({ k: "req", id, method: "get", args: [] }),
-      () => cleanup,
+      { setup: () => cleanup },
     );
     expect(cleanup).not.toHaveBeenCalled();
     deliver({ k: "res", id: lastId(posted), value: 1 });

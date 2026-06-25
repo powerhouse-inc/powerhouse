@@ -1,8 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { connectReactorClient } from "../../src/rpc/connect-reactor.js";
+import { MessageRouter } from "../../src/rpc/message-router.js";
 import type { VersionFingerprint } from "../../src/rpc/protocol.js";
 import { ReactorHost } from "../../src/rpc/reactor-host.js";
 import { createPortTransport } from "../../src/rpc/transport.js";
+
+function tabRouter(port: MessagePort): MessageRouter {
+  const router = new MessageRouter();
+  router.attach(createPortTransport(port));
+  return router;
+}
 import {
   createInMemoryReactorClient,
   type InMemoryReactor,
@@ -34,7 +41,7 @@ describe("connectReactorClient", () => {
     channels.push(channel);
     disposers.push(host.connect(createPortTransport(channel.port1)));
     return connectReactorClient(
-      createPortTransport(channel.port2),
+      tabRouter(channel.port2),
       { version, construct: {} },
       onReload,
     );

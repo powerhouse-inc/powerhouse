@@ -3,8 +3,8 @@ import type {
   IReactorClient,
 } from "@powerhousedao/reactor";
 import { createReactorClientProxy } from "./client-proxy.js";
+import type { MessageRouter } from "./message-router.js";
 import type { ReactorIdentity, VersionFingerprint } from "./protocol.js";
-import type { IRpcTransport } from "./transport.js";
 
 export type ReactorHello = {
   version: VersionFingerprint;
@@ -13,13 +13,13 @@ export type ReactorHello = {
 };
 
 export function connectReactorClient(
-  transport: IRpcTransport,
+  router: MessageRouter,
   hello: ReactorHello,
   onReload?: (reason: string, workerGen?: string) => void,
   registry?: IDocumentModelRegistry,
 ): IReactorClient {
-  const client = createReactorClientProxy(transport, { onReload, registry });
-  transport.post({
+  const client = createReactorClientProxy(router, { onReload, registry });
+  router.post({
     k: "hello",
     id: "hello",
     version: hello.version,
@@ -31,8 +31,8 @@ export function connectReactorClient(
 
 // Push the current renown identity (null on logout) to the worker; re-send on login/logout.
 export function postReactorIdentity(
-  transport: IRpcTransport,
+  router: MessageRouter,
   user: ReactorIdentity | null,
 ): void {
-  transport.post({ k: "identity", user });
+  router.post({ k: "identity", user });
 }

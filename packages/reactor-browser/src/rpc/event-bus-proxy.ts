@@ -1,21 +1,16 @@
 import type { IEventBus, Unsubscribe } from "@powerhousedao/reactor";
 import { FORWARDED_BUS_EVENT_TYPES } from "./forwarded-events.js";
-import type { OwnerMessage } from "./protocol.js";
-import type { IRpcTransport } from "./transport.js";
+import type { MessageRouter } from "./message-router.js";
 
 type BusSubscriber = (type: number, event: unknown) => void | Promise<void>;
 
-// emit() is unsupported tab-side; the worker is the sole emitter.
+/** Tab-side IEventBus over bus-event; emit() is unsupported (the worker emits). */
 export class ReactorEventBusProxy implements IEventBus {
   private readonly forwardedTypes = new Set<number>(FORWARDED_BUS_EVENT_TYPES);
   private readonly subscribers = new Map<number, Set<BusSubscriber>>();
 
-  constructor(transport: IRpcTransport) {
-    transport.onMessage((message) => {
-      const msg = message as OwnerMessage;
-      if (msg.k !== "bus-event") {
-        return;
-      }
+  constructor(router: MessageRouter) {
+    router.on("bus-event", (msg) => {
       const set = this.subscribers.get(msg.eventType);
       if (set) {
         for (const subscriber of [...set]) {
@@ -55,8 +50,6 @@ export class ReactorEventBusProxy implements IEventBus {
   }
 }
 
-export function createReactorEventBusProxy(
-  transport: IRpcTransport,
-): IEventBus {
-  return new ReactorEventBusProxy(transport);
+export function createReactorEventBusProxy(router: MessageRouter): IEventBus {
+  return new ReactorEventBusProxy(router);
 }

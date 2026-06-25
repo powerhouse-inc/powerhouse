@@ -1,8 +1,15 @@
 import type { IReactorClient } from "@powerhousedao/reactor";
 import { describe, expect, it } from "vitest";
 import { createRelationalPgliteProxy } from "../../src/rpc/relational-db-proxy.js";
+import { MessageRouter } from "../../src/rpc/message-router.js";
 import { ReactorHost } from "../../src/rpc/reactor-host.js";
 import { createPortTransport } from "../../src/rpc/transport.js";
+
+function tabRouter(port: MessagePort): MessageRouter {
+  const router = new MessageRouter();
+  router.attach(createPortTransport(port));
+  return router;
+}
 
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -51,7 +58,7 @@ describe("relational PGlite proxy", () => {
     });
     const ch = new MessageChannel();
     host.connect(createPortTransport(ch.port1));
-    const pg = createRelationalPgliteProxy(createPortTransport(ch.port2));
+    const pg = createRelationalPgliteProxy(tabRouter(ch.port2));
 
     const result = await pg.query("select 1 as n", []);
     expect(result).toEqual({ rows: [{ n: 1 }] });
@@ -66,7 +73,7 @@ describe("relational PGlite proxy", () => {
     });
     const ch = new MessageChannel();
     host.connect(createPortTransport(ch.port1));
-    const pg = createRelationalPgliteProxy(createPortTransport(ch.port2));
+    const pg = createRelationalPgliteProxy(tabRouter(ch.port2));
 
     const received: unknown[] = [];
     const handlePromise = pg.live.query("select 1", [], (r) =>
@@ -91,7 +98,7 @@ describe("relational PGlite proxy", () => {
     });
     const ch = new MessageChannel();
     host.connect(createPortTransport(ch.port1));
-    const pg = createRelationalPgliteProxy(createPortTransport(ch.port2));
+    const pg = createRelationalPgliteProxy(tabRouter(ch.port2));
 
     await expect(pg.live.query("select 1", [])).rejects.toThrow(
       /relation does not exist/,

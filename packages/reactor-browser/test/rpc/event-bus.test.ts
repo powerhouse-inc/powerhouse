@@ -1,8 +1,15 @@
 import type { IReactorClient } from "@powerhousedao/reactor";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createReactorEventBusProxy } from "../../src/rpc/event-bus-proxy.js";
+import { MessageRouter } from "../../src/rpc/message-router.js";
 import { ReactorHost } from "../../src/rpc/reactor-host.js";
 import { createPortTransport } from "../../src/rpc/transport.js";
+
+function tabRouter(port: MessagePort): MessageRouter {
+  const router = new MessageRouter();
+  router.attach(createPortTransport(port));
+  return router;
+}
 
 const CONNECTION_STATE_CHANGED = 20005;
 const SYNC_PENDING = 20001;
@@ -25,7 +32,7 @@ describe("distributed EventBus (worker -> tabs)", () => {
     const channel = new MessageChannel();
     channels.push(channel);
     disposers.push(host.connect(createPortTransport(channel.port1)));
-    return createReactorEventBusProxy(createPortTransport(channel.port2));
+    return createReactorEventBusProxy(tabRouter(channel.port2));
   }
 
   beforeEach(() => {
@@ -88,7 +95,7 @@ describe("distributed EventBus (worker -> tabs)", () => {
     const channel = new MessageChannel();
     channels.push(channel);
     const dispose = host.connect(createPortTransport(channel.port1));
-    createReactorEventBusProxy(createPortTransport(channel.port2)).subscribe(
+    createReactorEventBusProxy(tabRouter(channel.port2)).subscribe(
       CONNECTION_STATE_CHANGED,
       (_type, e) => {
         seen.push(e);

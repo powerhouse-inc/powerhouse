@@ -39,7 +39,12 @@ export {
   type WorkerPackageLoaderOptions,
 } from "./worker-package-loader.js";
 export { createPortTransport, type IRpcTransport } from "./transport.js";
-export { RpcCorrelator, type RpcCorrelatorOptions } from "./rpc-correlator.js";
+export { MessageRouter } from "./message-router.js";
+export {
+  RpcCorrelator,
+  type RpcPoster,
+  type RpcRequestOptions,
+} from "./rpc-correlator.js";
 export { fromErrorInfo, toErrorInfo } from "./error-info.js";
 export { RPC_PROTOCOL_VERSION } from "./protocol.js";
 export type {

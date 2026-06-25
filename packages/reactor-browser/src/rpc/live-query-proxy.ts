@@ -1,6 +1,6 @@
 import { fromErrorInfo } from "./error-info.js";
-import type { CorrelationId, OwnerMessage } from "./protocol.js";
-import type { IRpcTransport } from "./transport.js";
+import type { MessageRouter } from "./message-router.js";
+import type { CorrelationId } from "./protocol.js";
 
 export type LiveQueryResultsCallback = (results: unknown) => void;
 export type LiveQueryErrorCallback = (error: unknown) => void;
@@ -19,22 +19,19 @@ type LiveSubscriber = {
   onError?: LiveQueryErrorCallback;
 };
 
-export function createLiveQueryProxy(
-  transport: IRpcTransport,
-): ILiveQueryProxy {
+export function createLiveQueryProxy(router: MessageRouter): ILiveQueryProxy {
   let counter = 0;
   const subscribers = new Map<CorrelationId, LiveSubscriber>();
 
-  transport.onMessage((message) => {
-    const msg = message as OwnerMessage;
-    if (msg.k === "event-live") {
-      subscribers.get(msg.id)?.onResults(msg.results);
-    } else if (msg.k === "err") {
-      const subscriber = subscribers.get(msg.id);
-      if (subscriber) {
-        subscribers.delete(msg.id);
-        subscriber.onError?.(fromErrorInfo(msg.error));
-      }
+  router.on("event-live", (msg) => {
+    subscribers.get(msg.id)?.onResults(msg.results);
+  });
+  router.on("live-err", (msg) => {
+    // terminal: drop the subscriber (the host already tore down its side)
+    const subscriber = subscribers.get(msg.id);
+    if (subscriber) {
+      subscribers.delete(msg.id);
+      subscriber.onError?.(fromErrorInfo(msg.error));
     }
   });
 
@@ -42,10 +39,10 @@ export function createLiveQueryProxy(
     query(sql, params, onResults, onError) {
       const id: CorrelationId = `live${++counter}`;
       subscribers.set(id, { onResults, onError });
-      transport.post({ k: "sub-live", id, sql, params });
+      router.post({ k: "sub-live", id, sql, params });
       return () => {
         subscribers.delete(id);
-        transport.post({ k: "unsub-live", id });
+        router.post({ k: "unsub-live", id });
       };
     },
   };

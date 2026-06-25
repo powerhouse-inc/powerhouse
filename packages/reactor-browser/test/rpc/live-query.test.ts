@@ -1,8 +1,15 @@
 import type { IReactorClient } from "@powerhousedao/reactor";
 import { describe, expect, it } from "vitest";
 import { createLiveQueryProxy } from "../../src/rpc/live-query-proxy.js";
+import { MessageRouter } from "../../src/rpc/message-router.js";
 import { ReactorHost } from "../../src/rpc/reactor-host.js";
 import { createPortTransport } from "../../src/rpc/transport.js";
+
+function tabRouter(port: MessagePort): MessageRouter {
+  const router = new MessageRouter();
+  router.attach(createPortTransport(port));
+  return router;
+}
 
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -48,7 +55,7 @@ describe("live-query bridge over postMessage", () => {
     });
     const ch = new MessageChannel();
     host.connect(createPortTransport(ch.port1));
-    const proxy = createLiveQueryProxy(createPortTransport(ch.port2));
+    const proxy = createLiveQueryProxy(tabRouter(ch.port2));
 
     const received: unknown[] = [];
     proxy.query("select 1", [], (r) => received.push(r));
@@ -69,7 +76,7 @@ describe("live-query bridge over postMessage", () => {
     });
     const ch = new MessageChannel();
     host.connect(createPortTransport(ch.port1));
-    const proxy = createLiveQueryProxy(createPortTransport(ch.port2));
+    const proxy = createLiveQueryProxy(tabRouter(ch.port2));
 
     const received: unknown[] = [];
     const unsubscribe = proxy.query("select 1", [], (r) => received.push(r));
@@ -94,7 +101,7 @@ describe("live-query bridge over postMessage", () => {
     });
     const ch = new MessageChannel();
     const dispose = host.connect(createPortTransport(ch.port1));
-    const proxy = createLiveQueryProxy(createPortTransport(ch.port2));
+    const proxy = createLiveQueryProxy(tabRouter(ch.port2));
 
     proxy.query("select 1", [], () => undefined);
     await waitFor(() => source.subs.length >= 1);
@@ -110,7 +117,7 @@ describe("live-query bridge over postMessage", () => {
     });
     const ch = new MessageChannel();
     host.connect(createPortTransport(ch.port1));
-    const proxy = createLiveQueryProxy(createPortTransport(ch.port2));
+    const proxy = createLiveQueryProxy(tabRouter(ch.port2));
 
     const error = await new Promise<unknown>((resolve) => {
       proxy.query(
@@ -130,7 +137,7 @@ describe("live-query bridge over postMessage", () => {
     });
     const ch = new MessageChannel();
     host.connect(createPortTransport(ch.port1));
-    const proxy = createLiveQueryProxy(createPortTransport(ch.port2));
+    const proxy = createLiveQueryProxy(tabRouter(ch.port2));
 
     const error = await new Promise<unknown>((resolve) => {
       proxy.query(

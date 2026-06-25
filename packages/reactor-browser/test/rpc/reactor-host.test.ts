@@ -1,7 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createReactorClientProxy } from "../../src/rpc/client-proxy.js";
+import { MessageRouter } from "../../src/rpc/message-router.js";
 import { ReactorHost } from "../../src/rpc/reactor-host.js";
 import { createPortTransport } from "../../src/rpc/transport.js";
+
+function tabRouter(port: MessagePort): MessageRouter {
+  const router = new MessageRouter();
+  router.attach(createPortTransport(port));
+  return router;
+}
 import {
   createInMemoryReactorClient,
   type InMemoryReactor,
@@ -19,7 +26,7 @@ describe("ReactorHost shares one reactor across multiple tabs", () => {
     const channel = new MessageChannel();
     channels.push(channel);
     disposers.push(host.connect(createPortTransport(channel.port1)));
-    return createReactorClientProxy(createPortTransport(channel.port2));
+    return createReactorClientProxy(tabRouter(channel.port2));
   }
 
   beforeEach(async () => {

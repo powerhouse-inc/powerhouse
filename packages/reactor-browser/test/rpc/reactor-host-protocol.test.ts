@@ -1,12 +1,19 @@
 import type { IReactorClient } from "@powerhousedao/reactor";
 import { describe, expect, it } from "vitest";
 import { postReactorIdentity } from "../../src/rpc/connect-reactor.js";
+import { MessageRouter } from "../../src/rpc/message-router.js";
 import { ReactorHost } from "../../src/rpc/reactor-host.js";
 import type {
   ReactorIdentity,
   VersionFingerprint,
 } from "../../src/rpc/protocol.js";
 import { createPortTransport } from "../../src/rpc/transport.js";
+
+function tabRouter(port: MessagePort): MessageRouter {
+  const router = new MessageRouter();
+  router.attach(createPortTransport(port));
+  return router;
+}
 
 const V1: VersionFingerprint = {
   appBuildId: "build-1",
@@ -224,7 +231,7 @@ describe("ReactorHost protocol (hello / version / register)", () => {
 
     const ch = new MessageChannel();
     host.connect(createPortTransport(ch.port1));
-    const tab = createPortTransport(ch.port2);
+    const tab = tabRouter(ch.port2);
     const identity: ReactorIdentity = {
       address: "0xabc",
       chainId: 1,

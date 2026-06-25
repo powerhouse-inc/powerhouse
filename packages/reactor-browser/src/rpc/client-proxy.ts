@@ -7,9 +7,8 @@ import type {
   ViewFilter,
 } from "@powerhousedao/reactor";
 import { fromErrorInfo } from "./error-info.js";
-import type { CorrelationId, OwnerMessage } from "./protocol.js";
-import { RpcCorrelator } from "./rpc-correlator.js";
-import type { IRpcTransport } from "./transport.js";
+import type { MessageRouter } from "./message-router.js";
+import type { CorrelationId } from "./protocol.js";
 
 type Forwarder = (...args: unknown[]) => Promise<unknown>;
 
@@ -30,26 +29,22 @@ function isAbortSignal(value: unknown): value is AbortSignal {
 
 export type ReactorClientProxyOptions = {
   onReload?: (reason: string, workerGen?: string) => void;
-  // Document model modules carry reducer/editor functions that cannot cross the
-  // worker boundary, so module lookups resolve from this tab-local registry.
+  /** Tab-local registry for module lookups (reducers/editors can't cross the worker boundary). */
   registry?: IDocumentModelRegistry;
 };
 
 export function createReactorClientProxy(
-  transport: IRpcTransport,
+  router: MessageRouter,
   options: ReactorClientProxyOptions = {},
 ): IReactorClient {
   const registry = options.registry;
+  let subCounter = 0;
   const subscribers = new Map<CorrelationId, ChangeCallback>();
-  // No timeout: the main reactor RPC has long-running calls; teardown on worker
-  // death is handled by the heartbeat + reconnect, not a per-call timer.
-  const correlator = new RpcCorrelator(transport, {
-    prefix: "c",
-    transform: rehydrate,
-  });
 
   function fetchPage(token: string): Promise<unknown> {
-    return correlator.request((id) => ({ k: "page", id, token }));
+    return router.request((id) => ({ k: "page", id, token }), {
+      transform: rehydrate,
+    });
   }
 
   function rehydrate(value: unknown): unknown {
@@ -69,26 +64,17 @@ export function createReactorClientProxy(
     return value;
   }
 
-  transport.onMessage((message) => {
-    const msg = message as OwnerMessage;
-    if (correlator.handleMessage(msg)) {
-      return;
+  router.on("event", (msg) => {
+    subscribers.get(msg.id)?.(msg.change as DocumentChangeEvent);
+  });
+  router.on("sub-err", (msg) => {
+    // failed subscribe: drop the dead subscriber and surface it
+    if (subscribers.delete(msg.id)) {
+      console.error("Reactor subscription failed:", fromErrorInfo(msg.error));
     }
-    if (msg.k === "err") {
-      // err not claimed by a pending request: a failed subscription. Surface it
-      // and drop the dead subscriber rather than leaving the caller "subscribed".
-      if (subscribers.delete(msg.id)) {
-        console.error("Reactor subscription failed:", fromErrorInfo(msg.error));
-      }
-      return;
-    }
-    if (msg.k === "reload") {
-      options.onReload?.(msg.reason, msg.workerGen);
-      return;
-    }
-    if (msg.k === "event") {
-      subscribers.get(msg.id)?.(msg.change as DocumentChangeEvent);
-    }
+  });
+  router.on("reload", (msg) => {
+    options.onReload?.(msg.reason, msg.workerGen);
   });
 
   const call = (method: string, args: unknown[]): Promise<unknown> => {
@@ -103,20 +89,23 @@ export function createReactorClientProxy(
       wire = args.slice();
       wire[abortAt] = undefined;
     }
-    return correlator.request(
+    return router.request(
       (id) => ({ k: "req", id, method, args: wire, abortAt }),
-      (id) => {
-        if (abortAt === undefined) {
-          return;
-        }
-        const signal = args[abortAt] as AbortSignal;
-        const sendAbort = () => transport.post({ k: "abort", targetId: id });
-        if (signal.aborted) {
-          sendAbort();
-          return;
-        }
-        signal.addEventListener("abort", sendAbort, { once: true });
-        return () => signal.removeEventListener("abort", sendAbort);
+      {
+        transform: rehydrate,
+        setup: (id) => {
+          if (abortAt === undefined) {
+            return;
+          }
+          const signal = args[abortAt] as AbortSignal;
+          const sendAbort = () => router.post({ k: "abort", targetId: id });
+          if (signal.aborted) {
+            sendAbort();
+            return;
+          }
+          signal.addEventListener("abort", sendAbort, { once: true });
+          return () => signal.removeEventListener("abort", sendAbort);
+        },
       },
     );
   };
@@ -126,12 +115,12 @@ export function createReactorClientProxy(
     callback: ChangeCallback,
     view?: ViewFilter,
   ): (() => void) => {
-    const id = correlator.nextId();
+    const id: CorrelationId = `sub${++subCounter}`;
     subscribers.set(id, callback);
-    transport.post({ k: "sub", id, search, view });
+    router.post({ k: "sub", id, search, view });
     return () => {
       subscribers.delete(id);
-      transport.post({ k: "unsub", id });
+      router.post({ k: "unsub", id });
     };
   };
 

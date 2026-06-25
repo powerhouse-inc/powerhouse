@@ -16,10 +16,10 @@ import {
   createReactorEventBusProxy,
   createRelationalPgliteProxy,
   createWorkerAdminClient,
+  MessageRouter,
   postReactorIdentity,
   RPC_PROTOCOL_VERSION,
   SyncManagerProxy,
-  type OwnerMessage,
   type ReactorIdentity,
 } from "@powerhousedao/reactor-browser/rpc";
 import type {
@@ -89,6 +89,8 @@ export function createWorkerReactorClientModule(
     );
   };
   const transport = createPortTransport(worker.port);
+  const router = new MessageRouter();
+  router.attach(transport);
 
   const documentModelRegistry = new DocumentModelRegistry();
   documentModelRegistry.registerModules(...args.documentModelModules);
@@ -96,7 +98,7 @@ export function createWorkerReactorClientModule(
 
   const gitSha = getGitSha();
   const clientProxy = connectReactorClient(
-    transport,
+    router,
     {
       version: {
         appBuildId: gitSha !== "unknown" ? gitSha : getVersion(),
@@ -118,8 +120,8 @@ export function createWorkerReactorClientModule(
     documentModelRegistry,
   );
 
-  const busProxy = createReactorEventBusProxy(transport);
-  const syncManagerProxy = new SyncManagerProxy(transport, busProxy);
+  const busProxy = createReactorEventBusProxy(router);
+  const syncManagerProxy = new SyncManagerProxy(router, busProxy);
 
   // Keep the tab registry synced with the worker's on-demand loads.
   const modelResolver = new DocumentModelResolver(
@@ -138,21 +140,21 @@ export function createWorkerReactorClientModule(
 
   // Seed the relational read surface the relational hooks read (SELECT + live, no raw PGlite).
   setPGliteDB({
-    db: createRelationalPgliteProxy(transport),
+    db: createRelationalPgliteProxy(router),
     isLoading: false,
     error: null,
   });
 
-  postReactorIdentity(transport, toReactorIdentity(args.renown.user));
+  postReactorIdentity(router, toReactorIdentity(args.renown.user));
   args.renown.on("user", (user) =>
-    postReactorIdentity(transport, toReactorIdentity(user)),
+    postReactorIdentity(router, toReactorIdentity(user)),
   );
 
   const reactorClientModule: WorkerReactorClientModule = {
     kind: "worker",
     client: clientProxy,
-    adminClient: createWorkerAdminClient(transport),
-    inspector: createInspectorProxy(transport),
+    adminClient: createWorkerAdminClient(router),
+    inspector: createInspectorProxy(router),
     reactorModule: {
       documentModelRegistry,
       syncModule: { syncManager: syncManagerProxy },
@@ -164,11 +166,7 @@ export function createWorkerReactorClientModule(
   let missedPings = 0;
   const pingDeadlines = new Map<string, ReturnType<typeof setTimeout>>();
 
-  transport.onMessage((message) => {
-    const msg = message as OwnerMessage;
-    if (msg.k !== "pong") {
-      return;
-    }
+  router.on("pong", (msg) => {
     const timer = pingDeadlines.get(msg.id);
     if (timer !== undefined) {
       clearTimeout(timer);
@@ -188,7 +186,7 @@ export function createWorkerReactorClientModule(
       }
     }, PING_DEADLINE_MS);
     pingDeadlines.set(id, timer);
-    transport.post({ k: "ping", id });
+    router.post({ k: "ping", id });
   }, PING_INTERVAL_MS);
 
   return { reactorClientModule, syncManagerProxy };

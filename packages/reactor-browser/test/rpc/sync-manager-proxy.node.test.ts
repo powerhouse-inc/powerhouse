@@ -7,6 +7,7 @@ import {
 } from "@powerhousedao/reactor";
 import { describe, expect, it, vi } from "vitest";
 import { createReactorEventBusProxy } from "../../src/rpc/event-bus-proxy.js";
+import { MessageRouter } from "../../src/rpc/message-router.js";
 import type { OwnerMessage, RpcMessage } from "../../src/rpc/protocol.js";
 import {
   createSyncManagerProxy,
@@ -83,9 +84,11 @@ function lastSyncOp(posted: RpcMessage[], method: string) {
 describe("createSyncManagerProxy", () => {
   it("seeds list() from the list sync-op and rehydrates DriveCollectionId", async () => {
     const { transport, posted, deliver } = createFakeTransport();
+    const router = new MessageRouter();
+    router.attach(transport);
     const manager = createSyncManagerProxy(
-      transport,
-      createReactorEventBusProxy(transport),
+      router,
+      createReactorEventBusProxy(router),
     );
 
     const listOp = lastSyncOp(posted, "list");
@@ -107,9 +110,11 @@ describe("createSyncManagerProxy", () => {
 
   it("updates connection state from CONNECTION_STATE_CHANGED bus events", async () => {
     const { transport, posted, deliver } = createFakeTransport();
+    const router = new MessageRouter();
+    router.attach(transport);
     const manager = createSyncManagerProxy(
-      transport,
-      createReactorEventBusProxy(transport),
+      router,
+      createReactorEventBusProxy(router),
     );
     deliver({
       k: "res",
@@ -137,9 +142,11 @@ describe("createSyncManagerProxy", () => {
 
   it("only notifies the changed remote's connection listeners", async () => {
     const { transport, posted, deliver } = createFakeTransport();
+    const router = new MessageRouter();
+    router.attach(transport);
     const manager = createSyncManagerProxy(
-      transport,
-      createReactorEventBusProxy(transport),
+      router,
+      createReactorEventBusProxy(router),
     );
     deliver({
       k: "res",
@@ -176,9 +183,11 @@ describe("createSyncManagerProxy", () => {
 
   it("feeds getSyncStatus from the sync-status bus channel", () => {
     const { transport, deliver } = createFakeTransport();
+    const router = new MessageRouter();
+    router.attach(transport);
     const manager = createSyncManagerProxy(
-      transport,
-      createReactorEventBusProxy(transport),
+      router,
+      createReactorEventBusProxy(router),
     );
 
     expect(manager.getSyncStatus("doc-1")).toBeUndefined();
@@ -192,9 +201,11 @@ describe("createSyncManagerProxy", () => {
 
   it("add() sends a sync-op with collectionId.key and carries config.url", async () => {
     const { transport, posted, deliver } = createFakeTransport();
+    const router = new MessageRouter();
+    router.attach(transport);
     const manager = createSyncManagerProxy(
-      transport,
-      createReactorEventBusProxy(transport),
+      router,
+      createReactorEventBusProxy(router),
     );
     deliver({ k: "res", id: lastSyncOp(posted, "list").id, value: [] });
     await vi.waitFor(() => expect(manager.list()).toHaveLength(0));
@@ -239,9 +250,11 @@ describe("createSyncManagerProxy", () => {
 
   it("ignores responses addressed to another proxy on the shared transport", async () => {
     const { transport, posted, deliver } = createFakeTransport();
+    const router = new MessageRouter();
+    router.attach(transport);
     const manager = createSyncManagerProxy(
-      transport,
-      createReactorEventBusProxy(transport),
+      router,
+      createReactorEventBusProxy(router),
     );
     // a reply with a client-proxy id ("c…") must not satisfy the list op
     deliver({
@@ -262,9 +275,11 @@ describe("createSyncManagerProxy", () => {
 
   it("seeds channel.config.url from the list reply for remotes it did not add", async () => {
     const { transport, posted, deliver } = createFakeTransport();
+    const router = new MessageRouter();
+    router.attach(transport);
     const manager = createSyncManagerProxy(
-      transport,
-      createReactorEventBusProxy(transport),
+      router,
+      createReactorEventBusProxy(router),
     );
     deliver({
       k: "res",
@@ -288,9 +303,11 @@ describe("createSyncManagerProxy", () => {
 
   it("onSyncStatusChange fires on bus events and stops after unsubscribe", () => {
     const { transport, deliver } = createFakeTransport();
+    const router = new MessageRouter();
+    router.attach(transport);
     const manager = createSyncManagerProxy(
-      transport,
-      createReactorEventBusProxy(transport),
+      router,
+      createReactorEventBusProxy(router),
     );
     const calls: Array<[string, SyncStatus]> = [];
     const unsub = manager.onSyncStatusChange((documentId, status) => {
