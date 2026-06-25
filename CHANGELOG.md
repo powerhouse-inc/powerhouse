@@ -1,3 +1,39 @@
+## 6.2.0-dev.31 (2026-06-23)
+
+### 🚀 Features
+
+- added tests that show sync filter storage error ([5bcb27e88](https://github.com/powerhouse-inc/powerhouse/commit/5bcb27e88))
+- **connect:** add --renown-namespace to share Renown session across Connects ([#2769](https://github.com/powerhouse-inc/powerhouse/pull/2769))
+
+### 🩹 Fixes
+
+- fix jsonb encoding of sync-remote storage ([8ab7fa195](https://github.com/powerhouse-inc/powerhouse/commit/8ab7fa195))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Guillermo Puente Sandoval @gpuente
+
+## 6.2.0-dev.30 (2026-06-23)
+
+### 🚀 Features
+
+- **migrate:** strip eslint/prettier artifacts when migrating to oxc ([c9dcb6f36](https://github.com/powerhouse-inc/powerhouse/commit/c9dcb6f36))
+
+### 🩹 Fixes
+
+- **reactor-api:** prevent duplicate subgraph types from crashing the gateway ([#2764](https://github.com/powerhouse-inc/powerhouse/pull/2764))
+
+### 🔥 Performance
+
+- **codegen:** migrate boilerplate lint+format to the oxc toolchain ([a9a9d1ba0](https://github.com/powerhouse-inc/powerhouse/commit/a9a9d1ba0))
+- **codegen:** replace prettier with oxfmt for generation-time formatting ([a2faa630d](https://github.com/powerhouse-inc/powerhouse/commit/a2faa630d))
+
+### ❤️ Thank You
+
+- acaldas
+- Guillermo Puente Sandoval @gpuente
+
 ## 6.2.0-dev.29 (2026-06-23)
 
 This was a version bump only, there were no code changes.

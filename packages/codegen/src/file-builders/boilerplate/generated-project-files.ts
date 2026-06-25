@@ -18,7 +18,6 @@ import {
   documentModelsTemplate,
   editorsIndexTemplate,
   editorsTemplate,
-  eslintConfigTemplate,
   factoryBuildersTemplate,
   geminiSettingsTemplate,
   indexHtmlTemplate,
@@ -28,9 +27,12 @@ import {
   mcpTemplate,
   nginxConfTemplate,
   npmrcTemplate,
+  oxfmtConfigTemplate,
+  oxlintConfigTemplate,
   pnpmWorkspaceTemplate,
   processorsFactoryTemplate,
   processorsIndexTemplate,
+  reactorTsTemplate,
   readmeTemplate,
   styleTemplate,
   subgraphsIndexTemplate,
@@ -56,12 +58,20 @@ export async function writeGeneratedProjectRootFiles(projectDir: string) {
     await formatSafe(mainTsxTemplate),
   );
   await writeFileEnsuringDir(
-    join(projectDir, "eslint.config.js"),
-    await formatSafe(eslintConfigTemplate),
+    join(projectDir, ".oxlintrc.json"),
+    await formatSafe(oxlintConfigTemplate, "json"),
+  );
+  await writeFileEnsuringDir(
+    join(projectDir, ".oxfmtrc.json"),
+    await formatSafe(oxfmtConfigTemplate, "json"),
   );
   await writeFileEnsuringDir(
     join(projectDir, "index.ts"),
     await formatSafe(indexTsTemplate),
+  );
+  await writeFileEnsuringDir(
+    join(projectDir, "reactor/index.ts"),
+    await formatSafe(reactorTsTemplate),
   );
   await writeFileEnsuringDir(
     join(projectDir, "style.css"),

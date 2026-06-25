@@ -20,6 +20,7 @@ import {
   defaultDrivesUrl,
   drivesPreserveStrategy,
   logLevel,
+  renownNamespace,
 } from "./common.js";
 
 // cmd-ts's built-in `boolean` is intended for `flag()` (presence/absence). With
@@ -47,6 +48,7 @@ export const connectStudioArgs = {
     defaultValue: () => DEFAULT_CONNECT_STUDIO_PORT,
     defaultValueIsSerializable: true,
   }),
+  renownNamespace,
   ...commonArgs,
   ...commonServerArgs,
 };
@@ -89,6 +91,7 @@ const connectRuntimeOverrideArgs = {
     long: "renown-chain-id",
     description: "Override connect.renown.chainId.",
   }),
+  renownNamespace,
   allowAddDrive: option({
     type: optional(cliBoolean),
     long: "allow-add-drive",

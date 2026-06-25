@@ -7,7 +7,7 @@ import {
   baseCreateDocument,
   baseLoadFromInputVersioned,
   baseSaveToFileHandle,
-  defaultBaseState,
+  createBaseState,
 } from "document-model";
 import { todoUpgradeManifest } from "../../upgrades/upgrade-manifest.js";
 import {
@@ -27,7 +27,7 @@ export const utils: DocumentModelUtils<TodoPHState> = {
   fileExtension: "todo",
   createState(state) {
     return {
-      ...defaultBaseState(),
+      ...createBaseState(state?.auth, { version: 1, ...state?.document }),
       global: { ...initialGlobalState, ...state?.global },
       local: { ...initialLocalState, ...state?.local },
     };

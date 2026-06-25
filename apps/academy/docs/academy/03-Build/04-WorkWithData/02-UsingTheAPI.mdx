@@ -4,7 +4,7 @@
 
 **Switchboard** is the API interface that enables developers and data engineers to access data captured through document models in Connect and Fusion.
 
-Once you've structured and captured data from your business processes, Switchboard allows you to leverage that data to build insightful experiences in external websites, create interactive drive widgets, or generate detailed reports and dashboards in Fusion.
+Once you've structured and captured data from your business processes, use Switchboard to build experiences in external websites, create interactive drive widgets, or generate reports and dashboards in Fusion.
 
 :::tip[Using your document's state schema]
 Since your document models are defined with a GraphQL schema, you can use the same objects and fields in your queries and mutations to retrieve or write data from and to your documents.
@@ -20,7 +20,7 @@ More specifically, GraphQL is used as:
 - The **schema definition language (SDL)** for defining our document models and thereby self-documenting the API to the data model. It allows developers to define the structure and relationships of data in a strongly-typed format.
 - As the **query language in subgraphs**, which allow different services to expose and query structured data dynamically.
 
-GraphQL SDL is the backbone of **Specification Driven Design & Development** at Powerhouse. By defining your document models in SDL, you create machine-readable specifications that serve as a shared language—bridging the gap between developers, designers, and AI agents for precise, iterative collaboration.
+GraphQL SDL is the backbone of **Specification Driven Design & Development** at Powerhouse. By defining your document models in SDL, you create machine-readable specifications that developers, designers, and AI agents all work from.
 
 ### Why GraphQL?
 
@@ -198,7 +198,7 @@ For more information about GraphQL fundamentals, visit the [Introduction to Grap
 
 ### Starting the reactor locally
 
-In this tutorial, we'll show how to use a **GraphQL** query to query a document model. We'll continue with the **To-do List example** from our [introduction tutorial](/academy/Build/ManualTodoTutorial/CreateNewPowerhouseProject), but the process can be applied to any other document model.
+Use a **GraphQL** query to read a document model. This continues with the **To-do List example** from the [introduction tutorial](/academy/Build/ManualTodoTutorial/CreateNewPowerhouseProject), but the process applies to any document model.
 To make our document model available in the Apollo Studio Sandbox, we'll need to store it on a remote [Reactor](/academy/Reference/Reactor/WorkingWithTheReactor).
 
 :::info[What are reactors?]
@@ -243,8 +243,8 @@ Click the (+) 'Create New Drive' to add a public drive. To add a new drive, you'
 
 ## Query the state of a document
 
-Now that we have our remote reactor and/or drive running, we can store our document model on it.
-Let's quickly create a new to-do list document in Connect Studio to test the process. Let's call it **'Powerhouse-onboarding-tasks'**.
+With the remote reactor and/or drive running, store a document model on it.
+Create a new to-do list document in Connect Studio named **'Powerhouse-onboarding-tasks'**.
 
 Add the following to-dos to your list:
 
@@ -349,7 +349,7 @@ It extracts common metadata fields such as **id**, **name**, **documentType**, *
 
 Once you've found your document via any of the three options above, you'll be able to query its state.
 
-In the previous step, we queried for document metadata. Now let's query for the actual content of the document state.
+The previous step queried for document metadata. Now query for the actual content of the document state.
 
 ```graphql title="Get the Document state"
 query getDocument($identifier: String!) {
@@ -411,7 +411,7 @@ To perform write operations, we use **GraphQL Mutations**. Mutations are similar
 
 ### Adding a new to-do item
 
-Let's start by adding a new item to our list. The document model for our to-do list has an `ADD_TODO_ITEM` operation, which translates to an `addTodoItem` mutation in GraphQL.
+Add a new item to the list. The document model for the to-do list has an `ADD_TODO_ITEM` operation, which translates to an `addTodoItem` mutation in GraphQL.
 To use this mutation, you need to provide the `docId` of the to-do list you want to modify, and the `text` and `id` for the new to-do item. We'll specify these via variables.
 
 Here is an example of how to structure the mutation:
@@ -488,6 +488,6 @@ After performing a write mutation, you can verify that the change was successful
 1.  **Query the document state again:** Rerun the `document` query from earlier in this tutorial. You should see the new item in the list or the deleted item removed.
 2.  **Check the Operation History:** The operation history in Connect will show the new `ADD_TODO_ITEM` or `DELETE_TODO_ITEM` operation, along with who performed it and when. This provides a complete audit trail of all changes to the document.
 
-### Summary
+### Next
 
-This ability to programmatically read from and write to documents via the GraphQL API is a powerful feature of Powerhouse. It unlocks countless possibilities for integrating your structured data into other applications, building automated workflows, and creating rich, data-driven user experiences.
+You can now read and write documents over the GraphQL API. To expose your own queries and mutations on top of this data, see [Using Subgraphs](/academy/Build/WorkWithData/UsingSubgraphs).

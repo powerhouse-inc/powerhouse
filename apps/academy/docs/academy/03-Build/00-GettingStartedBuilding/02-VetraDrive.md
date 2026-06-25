@@ -138,3 +138,7 @@ The preview drive allows you to safely test changes before they affect the share
 → [Full Vetra Remote Drive Reference](/academy/Reference/CLITooling/VetraRemoteDrive)
 
 </details>
+
+## Up next
+
+With your drive set up, [create a package with Vetra](/academy/Build/GettingStartedBuilding/CreateAPackageWithVetra) to see the end-to-end flow, then build one by hand in the [Manual Todo tutorial](/academy/Build/ManualTodoTutorial/ExploreDemoPackage).

@@ -50,7 +50,7 @@ See step 1 for detailed GitHub Desktop instructions.
 
 </details>
 
-In this chapter we will continue with the interface or editor implementation of the **ChatRoom** document model. This means you will create a user interface for the **ChatRoom** document model which will be used to visualize your chatroom, send messages, and react with emojis.
+Now build the editor: the user interface for the **ChatRoom** document model. It visualizes your chatroom, sends messages, and reacts with emojis.
 
 ## Add a document editor specification in Vetra Studio
 
@@ -598,13 +598,4 @@ git show tutorial/main:editors/chat-room-editor/components/Header/EditableLabel.
 git diff tutorial/main -- editors/chat-room-editor/
 ```
 
-## Key concepts learned
-
-In this tutorial you've learned:
-
-✅ **Component-based architecture** - Breaking down complex UIs into reusable components  
-✅ **Document model hooks** - Using `useSelectedChatRoomDocument` to connect React to your document state  
-✅ **User authentication** - Using `useUser` hook for wallet-based authentication  
-✅ **Action dispatching** - How to dispatch operations from your UI  
-✅ **Type-safe development** - Leveraging TypeScript with generated types from your SDL  
-✅ **Real-time collaboration** - Building features that work across multiple users
+You now have a working ChatRoom editor. Compare your implementation against the reference branch above if anything differs.

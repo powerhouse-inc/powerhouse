@@ -138,6 +138,10 @@ export const packageJsonExports = {
     browser: "./dist/browser/index.js",
     node: "./dist/node/index.mjs",
   },
+  "./reactor": {
+    types: "./dist/types/reactor/index.d.ts",
+    browser: "./dist/browser/reactor/index.js",
+  },
   "./document-models": {
     types: "./dist/types/document-models/index.d.ts",
     browser: "./dist/browser/document-models/index.js",
@@ -174,8 +178,10 @@ export const packageJsonExports = {
 
 export const packageScripts = {
   "test:watch": "vitest",
-  lint: "eslint --config eslint.config.js --cache",
-  "lint:fix": "npm run lint -- --fix",
+  lint: "oxlint --type-aware --type-check",
+  "lint:fix": "oxlint --type-aware --type-check --fix",
+  format: "oxfmt",
+  "format:check": "oxfmt --check",
   tsc: "tsc",
   "tsc:watch": "tsc --watch",
   generate: "ph-cli generate",
@@ -192,10 +198,49 @@ export const packageScripts = {
 
 export const externalDependencies = {} as const;
 
+// eslint/prettier devDependencies present in projects scaffolded before the oxc migration.
+// Stripped from package.json during `ph migrate`.
+export const LEGACY_LINT_FORMAT_DEPENDENCIES = [
+  "@eslint/js",
+  "eslint",
+  "eslint-config-prettier",
+  "eslint-plugin-prettier",
+  "eslint-plugin-react",
+  "eslint-plugin-react-hooks",
+  "globals",
+  "prettier",
+  "typescript-eslint",
+] as const;
+
+// Legacy lint/format config files written by eslint/prettier boilerplate.
+// Removed from the project root during `ph migrate`.
+export const LEGACY_LINT_FORMAT_FILES = [
+  "eslint.config.js",
+  "eslint.config.mjs",
+  "eslint.config.cjs",
+  "eslint.config.ts",
+  ".eslintrc",
+  ".eslintrc.js",
+  ".eslintrc.cjs",
+  ".eslintrc.json",
+  ".eslintrc.yml",
+  ".eslintrc.yaml",
+  ".eslintignore",
+  ".prettierrc",
+  ".prettierrc.js",
+  ".prettierrc.cjs",
+  ".prettierrc.json",
+  ".prettierrc.yml",
+  ".prettierrc.yaml",
+  "prettier.config.js",
+  "prettier.config.cjs",
+  "prettier.config.mjs",
+  ".prettierignore",
+] as const;
+
 export const externalDevDependencies = {
   "@electric-sql/pglite": "0.3.15",
   "@electric-sql/pglite-tools": "0.2.20",
-  "@eslint/js": "^9.38.0",
   "@powerhousedao/document-engineering": "1.40.5",
   "@tailwindcss/cli": "^4.1.18",
   "@tailwindcss/vite": "^4.1.18",
@@ -204,15 +249,11 @@ export const externalDevDependencies = {
   "@types/react-dom": "^19.2.3",
   "@vitejs/plugin-react": "^6.0.1",
   "@vitest/coverage-v8": "4.1.1",
-  eslint: "^9.38.0",
-  "eslint-config-prettier": "^10.1.8",
-  "eslint-plugin-prettier": "^5.5.4",
-  "eslint-plugin-react": "^7.37.5",
-  "eslint-plugin-react-hooks": "^7.0.1",
-  globals: "^16.4.0",
+  oxfmt: "0.55.0",
+  oxlint: "1.70.0",
+  "oxlint-tsgolint": "0.23.0",
   tailwindcss: "^4.1.16",
   typescript: "^5.9.3",
-  "typescript-eslint": "^8.46.2",
   vite: "^8.0.10",
   "vite-tsconfig-paths": "6.1.1",
   vitest: "4.1.1",

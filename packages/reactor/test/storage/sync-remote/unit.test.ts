@@ -1,27 +1,22 @@
-import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { KyselySyncRemoteStorage } from "../../../src/storage/kysely/sync-remote-storage.js";
-import type { Database } from "../../../src/storage/kysely/types.js";
 import { DriveCollectionId } from "../../../src/cache/operation-index-types.js";
 import type { RemoteRecord } from "../../../src/sync/types.js";
-import { createTestSyncStorage, testFsBackends } from "../../factories.js";
+import { testSyncStorageBackends } from "../../factories.js";
 
-describe.each(testFsBackends)(
+describe.each(testSyncStorageBackends)(
   "KyselySyncRemoteStorage [$name]",
-  ({ backend }) => {
-    let db: Kysely<Database>;
+  ({ create }) => {
     let storage: KyselySyncRemoteStorage;
-    let cleanup: () => Promise<void>;
+    let cleanup: () => Promise<void> = async () => {};
 
     beforeEach(async () => {
-      const setup = await createTestSyncStorage(backend);
-      db = setup.db;
+      const setup = await create();
       storage = setup.syncRemoteStorage;
       cleanup = setup.cleanup;
     });
 
     afterEach(async () => {
-      await db.destroy();
       await cleanup();
     });
 
@@ -274,6 +269,87 @@ describe.each(testFsBackends)(
         const retrieved = await storage.get("empty-filter-remote");
         expect(retrieved.filter.documentId).toEqual([]);
         expect(retrieved.filter.scope).toEqual([]);
+      });
+
+      it("should handle a non-empty documentId filter", async () => {
+        const remote: RemoteRecord = {
+          id: "test-id",
+          name: "doc-filter-remote",
+          collectionId: DriveCollectionId.forDrive("collection-1"),
+          channelConfig: {
+            type: "internal",
+            parameters: {},
+          },
+          filter: {
+            documentId: ["doc-1", "doc-2"],
+            scope: [],
+            branch: "main",
+          },
+          options: { sinceTimestampUtcMs: "0" },
+          status: {
+            push: { state: "idle", failureCount: 0 },
+            pull: { state: "idle", failureCount: 0 },
+          },
+        };
+
+        await storage.upsert(remote);
+
+        const retrieved = await storage.get("doc-filter-remote");
+        expect(retrieved.filter.documentId).toEqual(["doc-1", "doc-2"]);
+      });
+
+      it("should handle a wildcard documentId filter", async () => {
+        const remote: RemoteRecord = {
+          id: "test-id",
+          name: "wildcard-filter-remote",
+          collectionId: DriveCollectionId.forDrive("collection-1"),
+          channelConfig: {
+            type: "internal",
+            parameters: {},
+          },
+          filter: {
+            documentId: ["*"],
+            scope: [],
+            branch: "main",
+          },
+          options: { sinceTimestampUtcMs: "0" },
+          status: {
+            push: { state: "idle", failureCount: 0 },
+            pull: { state: "idle", failureCount: 0 },
+          },
+        };
+
+        await storage.upsert(remote);
+
+        const retrieved = await storage.get("wildcard-filter-remote");
+        expect(retrieved.filter.documentId).toEqual(["*"]);
+      });
+
+      it("should handle a non-empty scope filter", async () => {
+        const remote: RemoteRecord = {
+          id: "test-id",
+          name: "scope-filter-remote",
+          collectionId: DriveCollectionId.forDrive("collection-1"),
+          channelConfig: {
+            type: "internal",
+            parameters: {},
+          },
+          filter: {
+            documentId: [],
+            scope: ["global", "local"],
+            branch: "main",
+          },
+          options: { sinceTimestampUtcMs: "0" },
+          status: {
+            push: { state: "idle", failureCount: 0 },
+            pull: { state: "idle", failureCount: 0 },
+          },
+        };
+
+        await storage.upsert(remote);
+
+        const retrieved = await storage.get("scope-filter-remote");
+        expect(retrieved.filter.scope).toEqual(["global", "local"]);
       });
 
       it("should handle JSONB parameters correctly", async () => {

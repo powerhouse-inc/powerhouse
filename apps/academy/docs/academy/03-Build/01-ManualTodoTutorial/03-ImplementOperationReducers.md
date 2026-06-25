@@ -43,7 +43,7 @@ git reset --hard tutorial/step-3-implement-reducer-operation-handlers
 
 </details>
 
-In this section, we will implement the operation reducers for the **todo-list** document model. In the previous step Vetra imported our document specification and scaffolded our code and directory through live code generation.
+Now implement the operation reducers for the **todo-list** document model. In the previous step, Vetra imported the document specification and scaffolded the code and directory through live code generation.
 
 :::info
 
@@ -224,4 +224,4 @@ git diff tutorial/step-3-implement-reducer-operation-handlers -- document-models
 
 ## Up next: Writing tests
 
-In the next chapter, you'll write comprehensive tests to verify your reducer implementations work correctly.
+In the next chapter, you'll write tests to verify your reducer implementations work correctly.

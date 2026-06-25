@@ -126,8 +126,8 @@ async function main() {
     "..",
     "docs",
     "academy",
-    "04-Reference",
-    "03-Cookbook.md",
+    "05-Lookup",
+    "00-Cookbook.md",
   );
 
   let cookbook = fs.readFileSync(cookbookPath, "utf8");

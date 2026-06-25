@@ -3,7 +3,7 @@
 :::tip[Tutorial Repository]
 📦 **Reference Code**: [step-4-implement-tests-for-todos-operations](https://github.com/powerhouse-inc/todo-tutorial/tree/step-4-implement-tests-for-todos-operations)
 
-This step focuses on writing comprehensive tests for the reducers you implemented in the previous step.
+This step covers writing tests for the reducers you implemented in the previous step.
 :::
 
 <details>
@@ -31,7 +31,7 @@ After committing your work, compare visually:
 
 </details>
 
-In order to make sure the operation reducers are working as expected, you need to write tests for them. When you generated your document model code, we created some boilerplate tests for you. Now we'll enhance them to properly verify our reducer logic.
+To verify the operation reducers work as expected, write tests for them. Generating your document model code created boilerplate tests; now extend them to check the reducer logic.
 
 ## Understanding the generated test file
 
@@ -96,7 +96,7 @@ describe("Todos Operations", () => {
 
 ## Enhance the tests
 
-The boilerplate tests check that operations are applied, but they don't verify the **actual results**. Let's write more comprehensive tests.
+The boilerplate tests check that operations are applied, but they don't verify the **actual results**. Extend them to assert on the resulting state.
 
 ### Test 1: Update the addTodoItem test
 

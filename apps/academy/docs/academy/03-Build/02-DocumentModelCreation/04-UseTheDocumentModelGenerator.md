@@ -17,7 +17,7 @@ If you're using Vetra Studio with `ph vetra --interactive`, you don't need to ru
 
 If you're using the Connect workflow and need to manually generate code:
 
-1. **Powerhouse CLI (`ph-cmd`) Installed:** The generator is part of the Powerhouse CLI. If you haven't installed it, refer to the [Builder Tools documentation](/academy/GetStarted/BuilderTools#installing-the-powerhouse-cli).
+1. **Powerhouse CLI (`ph-cmd`) Installed:** The generator is part of the Powerhouse CLI. If you haven't installed it, see [Prerequisites](/academy/Build/GettingStartedBuilding/Prerequisites).
 2. **Exported `.phd` File:** You must have exported your document model specification from Connect as a `.phd` file (e.g., `TodoList.phd`).
 
 ## The Generate Command

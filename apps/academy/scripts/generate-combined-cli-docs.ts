@@ -193,7 +193,11 @@ function generateCombinedCliDocs() {
       "\n" +
       targetDocContent.substring(endIndex);
 
-    // Write the updated content back to the target file
+    // Write the updated content back to the target file.
+    // NOTE: do not run Prettier on this file. It is MDX (Docusaurus treats
+    // .md as MDX), and Prettier's Markdown parser corrupts MDX comments
+    // ({/* ... */} -> {/_ ... _/}) while its MDX parser reflows JSX/details
+    // blocks in ways that break compilation. This file is .prettierignore'd.
     fs.writeFileSync(targetDocFile, targetDocContent);
 
     console.log(

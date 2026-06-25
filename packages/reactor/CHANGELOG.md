@@ -1,3 +1,27 @@
+## 6.2.0-dev.31 (2026-06-23)
+
+### 🚀 Features
+
+- added tests that show sync filter storage error ([5bcb27e88](https://github.com/powerhouse-inc/powerhouse/commit/5bcb27e88))
+
+### 🩹 Fixes
+
+- fix jsonb encoding of sync-remote storage ([8ab7fa195](https://github.com/powerhouse-inc/powerhouse/commit/8ab7fa195))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
+## 6.2.0-dev.30 (2026-06-23)
+
+### 🔥 Performance
+
+- **codegen:** replace prettier with oxfmt for generation-time formatting ([a2faa630d](https://github.com/powerhouse-inc/powerhouse/commit/a2faa630d))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.0-dev.29 (2026-06-23)
 
 This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.

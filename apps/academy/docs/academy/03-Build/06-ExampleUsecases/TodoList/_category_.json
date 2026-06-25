@@ -2,6 +2,7 @@
   "label": "Todo List",
   "position": 3,
   "link": {
-    "type": "generated-index"
+    "type": "doc",
+    "id": "academy/Build/ExampleUsecases/TodoList/TodoList"
   }
 }

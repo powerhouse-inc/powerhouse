@@ -1,6 +1,14 @@
 # Prerequisites
 
-This page sets up your machine to build your first Document Model. It covers Node.js 24, VS Code, Git, and the Powerhouse CLI.
+:::tip[Two ways to build: manual vs. AI-guided]
+This **Build** chapter is the **manual experience** — you build Powerhouse packages by hand on your own machine with the Powerhouse CLI, controlling every step (document models, editors, processors, and publishing).
+
+If you'd rather have an AI agent build for you, use the **AI-guided experience** in [**Vetra Studio**](/academy/GetStarted/VetraStudio): you describe what you want in chat and the agent writes the specs and code for you — no local setup required.
+
+The two paths produce the same kind of package, so you can mix and match: prototype with the agent, then drop down to the manual workflow for fine-grained control.
+:::
+
+The rest of this section sets up your machine for the manual path and walks you through the end-to-end package workflow. It covers Node.js 24, VS Code, Git, and the Powerhouse CLI.
 
 :::info
 If you've already set up **Git, Node.js 24, and a package manager (pnpm or npm)**, your most important step is to install the **Powerhouse CLI** with the command: `pnpm install -g ph-cmd` or `npm install -g ph-cmd`. A global install is recommended if you want to use the command from any directory as a power user. The Powerhouse CLI is used to create, build, and run your Document Models and gives you direct access to a series of Powerhouse Builder Tools. Move to the end of this page to [verify your installation.](#verify-installation)
@@ -391,3 +399,7 @@ PH CMD version:  0.43.18
 -------------------------------------
 PH CLI is not available, please run `ph setup-globals` to generate the default global project
 ```
+
+## Up next
+
+Your machine is ready. Next, set up your [Vetra Drive](/academy/Build/GettingStartedBuilding/VetraDrive) — the workspace where you'll manage document model specifications, editors, and data integrations.

@@ -64,7 +64,7 @@ git reset --hard tutorial/main
 
 </details>
 
-In this section, we will implement and test the operation reducers for the **ChatRoom** document model. Vetra Studio has been automatically generating your document model code as you defined the specification.
+Now implement and test the operation reducers for the **ChatRoom** document model. Vetra Studio has been generating your document model code as you defined the specification.
 
 If you need to review the document model specification steps, see [Define ChatRoom Document Model](/academy/Build/ExampleUsecases/Chatroom/DefineChatroomDocumentModel).
 

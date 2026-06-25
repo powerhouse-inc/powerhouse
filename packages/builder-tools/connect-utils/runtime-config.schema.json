@@ -231,6 +231,10 @@
               "type": "number",
               "description": "CAIP-2 chain reference within the network namespace.",
               "default": 1
+            },
+            "namespace": {
+              "type": "string",
+              "description": "Renown localStorage namespace; share it across Connects to share login."
             }
           }
         },

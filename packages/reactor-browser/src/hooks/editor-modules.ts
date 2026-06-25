@@ -1,23 +1,23 @@
 import type { EditorModule } from "document-model";
-import { DEFAULT_DRIVE_EDITOR_ID } from "../constants.js";
+import { DEFAULT_DRIVE_EDITOR_ID, DRIVE_DOCUMENT_TYPES } from "../constants.js";
 import { useVetraPackages } from "./vetra-packages.js";
+
+/** An editor is a drive "app" if it targets any supported drive document type. */
+function isDriveEditor(module: EditorModule): boolean {
+  const driveTypes = DRIVE_DOCUMENT_TYPES as readonly string[];
+  return module.documentTypes.some((t) => driveTypes.includes(t));
+}
 
 export function useEditorModules(): EditorModule[] | undefined {
   const vetraPackages = useVetraPackages();
   return vetraPackages
     .flatMap((pkg) => pkg.editors)
-    .filter(
-      (module) => !module.documentTypes.includes("powerhouse/document-drive"),
-    );
+    .filter((module) => !isDriveEditor(module));
 }
 
 export function useAppModules(): EditorModule[] | undefined {
   const vetraPackages = useVetraPackages();
-  return vetraPackages
-    .flatMap((pkg) => pkg.editors)
-    .filter((module) =>
-      module.documentTypes.includes("powerhouse/document-drive"),
-    );
+  return vetraPackages.flatMap((pkg) => pkg.editors).filter(isDriveEditor);
 }
 
 export function useFallbackEditorModule(

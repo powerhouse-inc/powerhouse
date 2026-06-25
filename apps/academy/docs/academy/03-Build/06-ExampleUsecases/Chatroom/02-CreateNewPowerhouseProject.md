@@ -76,7 +76,7 @@ A Powerhouse project primarily consists of a document model and its editor. The 
 - Visual Studio Code (or your preferred IDE)
 - Terminal/Command Prompt access
 
-If you need help with installing the prerequisites you can visit our page [prerequisites](/academy/GetStarted/Prerequisites)
+If you need help with installing the prerequisites you can visit our page [prerequisites](/academy/Build/GettingStartedBuilding/Prerequisites)
 
 ## Before you begin
 

@@ -177,6 +177,13 @@ export const connectBasePath = option({
   defaultValue: () => "/",
 });
 
+export const renownNamespace = option({
+  type: optional(string),
+  long: "renown-namespace",
+  description:
+    "Renown localStorage namespace; share it across Connects to share login.",
+});
+
 export const drivesPreserveStrategy = option({
   type: oneOf(DRIVES_PRESERVE_STRATEGIES),
   long: "drive-preserve-strategy",

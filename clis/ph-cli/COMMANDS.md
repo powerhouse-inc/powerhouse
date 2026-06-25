@@ -1,4 +1,4 @@
-# Powerhouse CLI Commands (6.2.0-dev.29)<br>
+# Powerhouse CLI Commands (6.2.0-dev.31)<br>
 This document provides detailed information about the available commands in the Powerhouse CLI.<br><br>
 The Powerhouse CLI (ph-cli) is a command-line interface tool that provides essential commands for managing Powerhouse projects. The tool and it's commands are fundamental for creating, building, and running Document Models as a builder in studio mode.<br>
 ## Table of Contents
@@ -282,6 +282,10 @@ public base URL for the drive URLs advertised to Connect; each drive is exposed 
 Database path or connection string. Use a `postgres://` URL for Postgres; otherwise treated as a PGlite filesystem path. Leave unset for in-memory PGlite.<br><br>
 **usage:** `--db-path <str>`<br>
 
+#### Renown Namespace <br>
+Renown localStorage namespace; share it across Connects to share login.<br><br>
+**usage:** `--renown-namespace <str>`<br>
+
 #### Base <br>
 Base path for the app<br><br>
 **usage:** `--base <str>`<br>
@@ -407,6 +411,10 @@ This command:
 Port to run the dev server on.<br><br>
 **usage:** `--port <number>`<br>
 **default**: `3000`
+#### Renown Namespace <br>
+Renown localStorage namespace; share it across Connects to share login.<br><br>
+**usage:** `--renown-namespace <str>`<br>
+
 #### Base <br>
 Base path for the app<br><br>
 **usage:** `--base <str>`<br>
@@ -510,6 +518,10 @@ Override connect.renown.networkId.<br><br>
 #### Renown Chain Id <br>
 Override connect.renown.chainId.<br><br>
 **usage:** `--renown-chain-id <number>`<br>
+
+#### Renown Namespace <br>
+Renown localStorage namespace; share it across Connects to share login.<br><br>
+**usage:** `--renown-namespace <str>`<br>
 
 #### Allow Add Drive <br>
 Override connect.drives.allowAddDrive (top-level add-drive toggle).<br><br>

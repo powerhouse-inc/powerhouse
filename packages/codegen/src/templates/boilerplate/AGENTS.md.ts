@@ -75,7 +75,7 @@ If the \`reactor-mcp\` server is unavailable, ask the user to run \`ph vetra\` o
 After doing changes to the code, or after creating a new document model or a new editor, _YOU MUST RUN_ the following commands to check for errors in your implementation:
 
 - **TypeScript Check**: Run \`npm run tsc\` to validate type safety
-- **ESLint Check**: Run \`npm run lint:fix\` to check for errors with ESLint
+- **Lint Check**: Run \`npm run lint:fix\` to check for errors with oxlint (type-aware rules plus TypeScript type checking)
 - **Reducer Test Coverage**: Run \`npm run test:coverage\` after any change to a document model reducer. Document model reducers are pure synchronous functions and **MUST** stay at or above **95%** coverage on lines, branches, functions, and statements. If coverage drops below the threshold, add tests in \`document-models/<name>/v<n>/tests/\` until the threshold is restored — **DO NOT** lower the threshold or exclude files to make the check pass. Cover the happy path _and_ every error code defined via \`ADD_OPERATION_ERROR\` (each error is a branch that needs explicit test coverage). Push toward 100% by following the strategy below.
 
 #### Strategy: reaching 100% reducer coverage
@@ -170,7 +170,7 @@ The \`useSelectedTodoDocument\` (and every other document hook) is auto-generate
 
 ### Editor code conventions (TypeScript & module resolution)
 
-These rules apply to **every** editor regardless of which UI library you use. They come from the project's \`tsconfig\` (\`module: nodenext\`, \`strict\`, \`verbatimModuleSyntax\`) and ESLint config — they are constraints, not stylistic preferences.
+These rules apply to **every** editor regardless of which UI library you use. They come from the project's \`tsconfig\` (\`module: nodenext\`, \`strict\`, \`verbatimModuleSyntax\`) and oxlint config — they are constraints, not stylistic preferences.
 
 #### Always use the top-level barrel for document-model imports
 
@@ -218,7 +218,7 @@ When a third-party CLI generates extensionless imports, do a bulk find-and-repla
 
 #### Stringifying \`unknown\` values
 
-The boilerplate ESLint config enables \`@typescript-eslint/no-base-to-string\` (via \`recommendedTypeChecked\`). \`String(value ?? "")\` on a value typed as \`unknown\` will trip the rule because the default \`Object.prototype.toString\` produces \`"[object Object]"\`. Use a small helper:
+The boilerplate oxlint config enables \`typescript/no-base-to-string\` (the \`recommendedTypeChecked\` equivalent). \`String(value ?? "")\` on a value typed as \`unknown\` will trip the rule because the default \`Object.prototype.toString\` produces \`"[object Object]"\`. Use a small helper:
 
 ~~~typescript
 function str(v: unknown): string {

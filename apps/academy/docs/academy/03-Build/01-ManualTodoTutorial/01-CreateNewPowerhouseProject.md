@@ -25,7 +25,7 @@ For today's purpose, you'll be using **Vetra Studio**, the builder platform thro
 - Visual Studio Code (or your preferred IDE)
 - Terminal/Command Prompt access
 
-If you need help with installing the prerequisites you can visit our page [prerequisites](/academy/GetStarted/Prerequisites)
+If you need help with installing the prerequisites you can visit our page [prerequisites](/academy/Build/GettingStartedBuilding/Prerequisites)
 
 <details>
 <summary>📖 How to use this tutorial</summary>

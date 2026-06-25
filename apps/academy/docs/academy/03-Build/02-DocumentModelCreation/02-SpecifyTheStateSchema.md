@@ -1,6 +1,10 @@
 # Specify the state schema
 
-The state schema is the backbone of your document model. It defines the structure, data types, and relationships of the information your document will hold. In Powerhouse, we use the **GraphQL Schema Definition Language (SDL)** to define this schema. A well-defined state schema is crucial for ensuring data integrity, consistency, and for enabling powerful querying and manipulation capabilities.
+:::note[Builds on the Manual Todo tutorial]
+This is the same step from the [Manual Todo tutorial](/academy/Build/ManualTodoTutorial/DefineToDoListDocumentModel), covered here in depth. The Mastery Track's only addition is the computed `stats` field — if you've done the basic build, skim to the stats parts.
+:::
+
+The state schema is the backbone of your document model. It defines the structure, data types, and relationships of the information your document will hold. In Powerhouse, you define this schema with the **GraphQL Schema Definition Language (SDL)**. A well-defined state schema keeps data consistent and is what makes the document queryable.
 
 :::tip[Specification Driven Design]
 Your state schema is more than just a data structure—it's a **specification** that enables **Specification Driven Design & Development**. This schema becomes a machine-readable blueprint that AI agents can interpret and execute, enabling precise collaboration between you and AI throughout the development process.
@@ -44,11 +48,11 @@ You can modify types using lists and non-null indicators:
 
 ## Example: TodoList state schema
 
-Let's revisit the `TodoList` example from the "Define the TodoList document specification" tutorial in Get Started.
+Revisit the `TodoList` example from the "Define the TodoList document specification" step of the Manual Todo tutorial.
 
-### Basic schema (matching Get Started tutorial)
+### Basic schema (matching the Manual Todo tutorial)
 
-This is the same schema you built in the Get Started tutorial:
+This is the same schema you built in the Manual Todo tutorial:
 
 ```graphql
 # The state of our TodoList
@@ -67,7 +71,7 @@ type TodoItem {
 ### Advanced schema (with statistics tracking)
 
 :::info[Advanced Feature]
-In this Mastery Track, we'll extend the basic schema with a `stats` field to demonstrate how you can add computed statistics to your document model. This is an **optional enhancement** that builds on the foundation from Get Started.
+In this Mastery Track, we'll extend the basic schema with a `stats` field to demonstrate how you can add computed statistics to your document model. This is an **optional enhancement** that builds on the foundation from the Manual Todo tutorial.
 :::
 
 ```graphql
@@ -123,7 +127,7 @@ type TodoListStats {
 5.  **Consider Future Needs**: While you shouldn't over-engineer, think a little about potential future enhancements. For example, adding a `createdAt: String` or `dueDate: String` field to `TodoItem` might be useful later.
 6.  **Root State Type**: It's a common pattern to have a single root type for your document state (e.g., `TodoListState`). This provides a clear entry point for accessing all document data.
 
-By carefully defining your state schema, you lay a solid foundation for your Powerhouse document model, making it robust, maintainable, and easy to work with. The schema dictates not only how data is stored but also how it can be queried and mutated through operations, which will be covered in the next section.
+The schema dictates how data is stored, and how it can be queried and mutated through operations. Operations are covered in the next section.
 
 ## Practical implementation: defining the state schema in Vetra Studio
 

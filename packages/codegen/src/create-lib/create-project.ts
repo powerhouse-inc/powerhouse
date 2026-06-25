@@ -3,7 +3,7 @@ import chalk from "chalk";
 import fs from "node:fs";
 import path from "path";
 import { gitIgnoreTemplate } from "templates";
-import { runPrettier } from "utils";
+import { runOxfmt } from "utils";
 import {
   applyProjectCustomizations,
   writeAllGeneratedProjectFiles,
@@ -112,9 +112,9 @@ export async function createProject({
     console.log(chalk.green(`\n✅ Project dependencies installed\n`));
   }
 
-  // Use the installed version of `prettier` to format the generated code
+  // Use the installed version of `oxfmt` to format the generated code
   console.log(chalk.blue(`▶️ Formatting boilerplate project files...\n`));
-  await runPrettier();
+  await runOxfmt();
   console.log(chalk.green(`✅ Boilerplate files formatted\n`));
 
   // Project creation complete
