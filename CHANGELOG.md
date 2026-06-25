@@ -1,3 +1,14 @@
+## 6.2.0-dev.37 (2026-06-25)
+
+### 🩹 Fixes
+
+- build fix ([7000b5e3c](https://github.com/powerhouse-inc/powerhouse/commit/7000b5e3c))
+- **codegen:** oops, need to pick the correct field ([6b2777bb9](https://github.com/powerhouse-inc/powerhouse/commit/6b2777bb9))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.2.0-dev.36 (2026-06-25)
 
 ### 🩹 Fixes
