@@ -1,3 +1,13 @@
+## 6.2.0-dev.35 (2026-06-25)
+
+### 🩹 Fixes
+
+- codegen type fix ([184b2e1ba](https://github.com/powerhouse-inc/powerhouse/commit/184b2e1ba))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.2.0-dev.34 (2026-06-25)
 
 ### 🩹 Fixes
