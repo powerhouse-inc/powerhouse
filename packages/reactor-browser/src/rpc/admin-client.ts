@@ -19,7 +19,10 @@ export interface IWorkerAdminClient {
 type Pending = {
   resolve: (value: unknown) => void;
   reject: (error: unknown) => void;
+  timer?: ReturnType<typeof setTimeout>;
 };
+
+const ADMIN_OP_TIMEOUT_MS = 30000;
 
 // Worker lifecycle channel over the same transport as the reactor RPC; ids are
 // prefixed so its replies don't collide with the client proxy's pending map.
@@ -37,12 +40,14 @@ export function createWorkerAdminClient(
       const entry = pending.get(msg.id);
       if (entry) {
         pending.delete(msg.id);
+        if (entry.timer) clearTimeout(entry.timer);
         entry.resolve(msg.value);
       }
     } else if (msg.k === "err") {
       const entry = pending.get(msg.id);
       if (entry) {
         pending.delete(msg.id);
+        if (entry.timer) clearTimeout(entry.timer);
         entry.reject(fromErrorInfo(msg.error));
       }
     } else if (msg.k === "migration") {
@@ -56,7 +61,16 @@ export function createWorkerAdminClient(
   ): Promise<unknown> => {
     const id: CorrelationId = `admin-${++counter}`;
     const promise = new Promise<unknown>((resolve, reject) => {
-      pending.set(id, { resolve, reject });
+      const timer = setTimeout(() => {
+        if (pending.delete(id)) {
+          reject(
+            new Error(
+              `Reactor worker did not respond to admin-op "${method}" within ${ADMIN_OP_TIMEOUT_MS}ms; the worker may have failed to load`,
+            ),
+          );
+        }
+      }, ADMIN_OP_TIMEOUT_MS);
+      pending.set(id, { resolve, reject, timer });
     });
     transport.post({ k: "admin", id, method });
     return promise;

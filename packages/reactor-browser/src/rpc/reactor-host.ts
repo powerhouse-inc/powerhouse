@@ -68,6 +68,11 @@ function versionsCompatible(
   );
 }
 
+// Deterministic per version so every new-build tab converges on one fresh worker.
+function workerGenForVersion(version: VersionFingerprint): string {
+  return `v${version.rpcProtocolVersion}-${version.appBuildId}`;
+}
+
 export class ReactorHost {
   private readonly options: ReactorHostOptions;
   private readonly disposers = new Set<() => void>();
@@ -291,7 +296,11 @@ export class ReactorHost {
   ): Promise<void> {
     if (this.baseline) {
       if (!versionsCompatible(this.baseline, message.version)) {
-        transport.post({ k: "reload", reason: "reactor version mismatch" });
+        transport.post({
+          k: "reload",
+          reason: "reactor version mismatch",
+          workerGen: workerGenForVersion(message.version),
+        });
         transport.post({ k: "res", id: message.id, value: { ok: false } });
         return;
       }

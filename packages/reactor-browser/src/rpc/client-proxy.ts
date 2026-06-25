@@ -13,6 +13,7 @@ import type { IRpcTransport } from "./transport.js";
 type Pending = {
   resolve: (value: unknown) => void;
   reject: (error: unknown) => void;
+  cleanup?: () => void;
 };
 
 type Forwarder = (...args: unknown[]) => Promise<unknown>;
@@ -25,6 +26,9 @@ function isAbortSignal(value: unknown): value is AbortSignal {
     value !== null &&
     typeof (value as AbortSignal).aborted === "boolean" &&
     typeof (value as { addEventListener?: unknown }).addEventListener ===
+      "function" &&
+    // also require removeEventListener — call() attaches a listener it later detaches
+    typeof (value as { removeEventListener?: unknown }).removeEventListener ===
       "function"
   );
 }
@@ -78,6 +82,7 @@ export function createReactorClientProxy(
       const entry = pending.get(msg.id);
       if (entry) {
         pending.delete(msg.id);
+        entry.cleanup?.();
         entry.resolve(rehydrate(msg.value));
       }
       return;
@@ -86,7 +91,13 @@ export function createReactorClientProxy(
       const entry = pending.get(msg.id);
       if (entry) {
         pending.delete(msg.id);
+        entry.cleanup?.();
         entry.reject(fromErrorInfo(msg.error));
+        return;
+      }
+      // err for a subscription id: surface it and drop the dead subscriber.
+      if (subscribers.delete(msg.id)) {
+        console.error("Reactor subscription failed:", fromErrorInfo(msg.error));
       }
       return;
     }
@@ -123,6 +134,10 @@ export function createReactorClientProxy(
         sendAbort();
       } else {
         signal.addEventListener("abort", sendAbort, { once: true });
+        const entry = pending.get(id);
+        if (entry) {
+          entry.cleanup = () => signal.removeEventListener("abort", sendAbort);
+        }
       }
     }
     return promise;

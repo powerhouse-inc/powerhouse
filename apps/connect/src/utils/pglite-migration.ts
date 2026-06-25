@@ -2,7 +2,6 @@ import { setMigrationStatus } from "../components/migration-status.js";
 import { idbError } from "./pglite-idb.js";
 import {
   type BackupStrategy,
-  clearFileData,
   cloneFileData,
   migrateIdb,
 } from "./pglite-migrate-core.js";
@@ -103,7 +102,7 @@ function createPersistentBackup(): BackupStrategy {
     rollback: async (handle, idbName) => {
       const backupName = handle as string;
       try {
-        await clearFileData(idbName);
+        // clone clears-and-replaces in one txn; no pre-clear (which could empty the dir).
         await cloneFileData(backupName, idbName);
       } catch (rollbackErr) {
         console.error(
@@ -126,14 +125,17 @@ function createPersistentBackup(): BackupStrategy {
 
 async function migrateAllLocked(): Promise<void> {
   const backup = createPersistentBackup();
-  for (const idbName of PRIMARY_IDB_NAMES) {
-    await migrateIdb(
-      idbName,
-      (phase) => setMigrationStatus({ idbName, phase }),
-      backup,
-    );
+  try {
+    for (const idbName of PRIMARY_IDB_NAMES) {
+      await migrateIdb(
+        idbName,
+        (phase) => setMigrationStatus({ idbName, phase }),
+        backup,
+      );
+    }
+  } finally {
+    setMigrationStatus(null);
   }
-  setMigrationStatus(null);
 }
 
 export async function migrateAllIfNeeded(): Promise<void> {

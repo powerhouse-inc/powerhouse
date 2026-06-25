@@ -17,7 +17,10 @@ export interface IInspectorProxy {
 type Pending = {
   resolve: (value: unknown) => void;
   reject: (error: unknown) => void;
+  timer?: ReturnType<typeof setTimeout>;
 };
+
+const INSPECTOR_OP_TIMEOUT_MS = 30000;
 
 export function createInspectorProxy(
   transport: IRpcTransport,
@@ -31,12 +34,14 @@ export function createInspectorProxy(
       const entry = pending.get(msg.id);
       if (entry) {
         pending.delete(msg.id);
+        if (entry.timer) clearTimeout(entry.timer);
         entry.resolve(msg.value);
       }
     } else if (msg.k === "err") {
       const entry = pending.get(msg.id);
       if (entry) {
         pending.delete(msg.id);
+        if (entry.timer) clearTimeout(entry.timer);
         entry.reject(fromErrorInfo(msg.error));
       }
     }
@@ -45,7 +50,16 @@ export function createInspectorProxy(
   const send = (method: string, args: unknown[]): Promise<unknown> => {
     const id: CorrelationId = `insp${++counter}`;
     const promise = new Promise<unknown>((resolve, reject) => {
-      pending.set(id, { resolve, reject });
+      const timer = setTimeout(() => {
+        if (pending.delete(id)) {
+          reject(
+            new Error(
+              `Reactor worker did not respond to inspector-op "${method}" within ${INSPECTOR_OP_TIMEOUT_MS}ms; the worker may have failed to load`,
+            ),
+          );
+        }
+      }, INSPECTOR_OP_TIMEOUT_MS);
+      pending.set(id, { resolve, reject, timer });
     });
     transport.post({ k: "inspector-op", id, method, args });
     return promise;

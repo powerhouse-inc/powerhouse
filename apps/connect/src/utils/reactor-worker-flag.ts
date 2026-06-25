@@ -40,7 +40,8 @@ export function isReactorWorkerEnabled(): boolean {
     queryParam,
     storedValue,
   });
-  if (queryParam !== null) {
+  // Persist only an explicit override, not an unrecognized value.
+  if (parseFlag(queryParam) !== undefined) {
     window.localStorage.setItem(
       REACTOR_WORKER_STORAGE_KEY,
       enabled ? "true" : "false",
@@ -53,5 +54,13 @@ function parseFlag(value: string | null | undefined): boolean | undefined {
   if (value === null || value === undefined) {
     return undefined;
   }
-  return value === "true" || value === "1";
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "true" || normalized === "1") {
+    return true;
+  }
+  if (normalized === "false" || normalized === "0") {
+    return false;
+  }
+  // Unrecognized value (e.g. a typo): no override, fall through to store/config.
+  return undefined;
 }

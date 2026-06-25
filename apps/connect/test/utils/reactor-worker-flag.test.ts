@@ -37,4 +37,24 @@ describe("resolveReactorWorkerEnabled", () => {
       }),
     ).toBe(true);
   });
+
+  it("ignores an unrecognized query param instead of disabling", () => {
+    // A typo like ?reactorWorker=on must not be read as an explicit false.
+    expect(
+      resolveReactorWorkerEnabled({ configFlag: true, queryParam: "on" }),
+    ).toBe(true);
+    expect(
+      resolveReactorWorkerEnabled({
+        configFlag: false,
+        queryParam: "yes",
+        storedValue: "true",
+      }),
+    ).toBe(true);
+  });
+
+  it("treats 0 as an explicit disable", () => {
+    expect(
+      resolveReactorWorkerEnabled({ configFlag: true, queryParam: "0" }),
+    ).toBe(false);
+  });
 });

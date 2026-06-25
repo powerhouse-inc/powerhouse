@@ -16,6 +16,9 @@ import type { IRpcTransport } from "./transport.js";
 type AnyMethod = (...args: unknown[]) => unknown;
 type NextPage = () => Promise<unknown>;
 
+// Bound the page-continuation cache; an evicted token falls back to the "expired cursor" error.
+const MAX_PENDING_PAGES = 1000;
+
 export class ReactorHostServer {
   private readonly client: IReactorClient;
   private readonly transport: IRpcTransport;
@@ -154,6 +157,12 @@ export class ReactorHostServer {
     ) {
       const token = `p${++this.pageCounter}`;
       this.pages.set(token, (value as { next: NextPage }).next);
+      if (this.pages.size > MAX_PENDING_PAGES) {
+        const oldest = this.pages.keys().next().value;
+        if (oldest !== undefined) {
+          this.pages.delete(oldest);
+        }
+      }
       const rest: Record<string, unknown> = {
         ...(value as Record<string, unknown>),
       };
