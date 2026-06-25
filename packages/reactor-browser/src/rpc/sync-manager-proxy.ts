@@ -320,7 +320,7 @@ export class SyncManagerProxy implements ISyncManager {
     if (!this.seedPromise) {
       const pending = this.refreshRemotes();
       this.seedPromise = pending;
-      
+
       pending.catch(() => {
         if (this.seedPromise === pending) {
           this.seedPromise = null;
