@@ -87,17 +87,21 @@ describe("getInputFieldNames", () => {
 
 describe("makeTestCaseForOperation", () => {
   test("emits an ISO datetime override for date-like input fields", () => {
-    const code = makeTestCaseForOperation(makeOperation(), "isInvoiceDocument", [
-      { name: "dateIssued", literal: '"2024-01-01T00:00:00.000Z"' },
-    ]);
+    const code = makeTestCaseForOperation(
+      makeOperation(),
+      "isInvoiceDocument",
+      [{ name: "dateIssued", literal: '"2024-01-01T00:00:00.000Z"' }],
+    );
     expect(code).toContain('dateIssued: "2024-01-01T00:00:00.000Z"');
     expect(code).toContain("EditInvoiceInputSchema(),");
   });
 
   test("emits a valid URL override for url-like input fields", () => {
-    const code = makeTestCaseForOperation(makeOperation(), "isInvoiceDocument", [
-      { name: "icon", literal: '"https://example.com"' },
-    ]);
+    const code = makeTestCaseForOperation(
+      makeOperation(),
+      "isInvoiceDocument",
+      [{ name: "icon", literal: '"https://example.com"' }],
+    );
     expect(code).toContain('icon: "https://example.com"');
   });
 
