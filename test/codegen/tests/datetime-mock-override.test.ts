@@ -71,9 +71,11 @@ describe("getInputFieldNames", () => {
 
 describe("makeTestCaseForOperation", () => {
   test("emits an ISO datetime override for date-like input fields", () => {
-    const code = makeTestCaseForOperation(makeOperation(), "isInvoiceDocument", [
-      "dateIssued",
-    ]);
+    const code = makeTestCaseForOperation(
+      makeOperation(),
+      "isInvoiceDocument",
+      ["dateIssued"],
+    );
     expect(code).toContain('dateIssued: "2024-01-01T00:00:00.000Z"');
     expect(code).toContain("EditInvoiceInputSchema(),");
   });
