@@ -43,7 +43,7 @@ import {
     baseCreateDocument,
     baseSaveToFileHandle,
     baseLoadFromInputVersioned,
-    defaultBaseState,
+    createBaseState,
  } from "document-model";
 import { reducer } from './reducer.js';
 ${makeOlderReducerImports(v.versions, v.version) ? makeOlderReducerImports(v.versions, v.version) + "\n" : ""}import { ${v.upgradeManifestName} } from "../../upgrades/upgrade-manifest.js";
@@ -62,7 +62,7 @@ export const initialLocalState: ${v.localStateName} = ${v.initialLocalState};
 export const utils: DocumentModelUtils<${v.phStateName}> = {
     fileExtension: "${v.documentModelState.extension}",
     createState(state) {
-        return { ...defaultBaseState(), global: { ...initialGlobalState, ...state?.global }, local: { ...initialLocalState, ...state?.local } };
+        return { ...createBaseState(state?.auth, { version: ${v.version}, ...state?.document }), global: { ...initialGlobalState, ...state?.global }, local: { ...initialLocalState, ...state?.local } };
     },
     createDocument(state) {
         return baseCreateDocument(
