@@ -135,6 +135,45 @@ describe("createSyncManagerProxy", () => {
     );
   });
 
+  it("only notifies the changed remote's connection listeners", async () => {
+    const { transport, posted, deliver } = createFakeTransport();
+    const manager = createSyncManagerProxy(
+      transport,
+      createReactorEventBusProxy(transport),
+    );
+    deliver({
+      k: "res",
+      id: lastSyncOp(posted, "list").id,
+      value: [
+        wireRemote("r1", "remote-a", "drive-1", "connecting"),
+        wireRemote("r2", "remote-b", "drive-2", "connecting"),
+      ],
+    });
+    await vi.waitFor(() => expect(manager.list()).toHaveLength(2));
+
+    const [a, b] = manager.list();
+    const aCalls: ConnectionState[] = [];
+    const bCalls: ConnectionState[] = [];
+    a.channel.onConnectionStateChange((s) => aCalls.push(s.state));
+    b.channel.onConnectionStateChange((s) => bCalls.push(s.state));
+
+    deliver({
+      k: "bus-event",
+      eventType: SyncEventTypes.CONNECTION_STATE_CHANGED,
+      event: {
+        remoteName: "remote-a",
+        remoteId: "r1",
+        previous: "connecting",
+        current: "connected",
+        snapshot: snapshot("connected"),
+      },
+    });
+
+    // remote-a's listener fires with its new state; remote-b's must not fire.
+    expect(aCalls).toEqual(["connected"]);
+    expect(bCalls).toEqual([]);
+  });
+
   it("feeds getSyncStatus from the sync-status bus channel", () => {
     const { transport, deliver } = createFakeTransport();
     const manager = createSyncManagerProxy(

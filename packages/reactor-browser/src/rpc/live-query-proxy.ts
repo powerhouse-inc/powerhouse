@@ -30,7 +30,11 @@ export function createLiveQueryProxy(
     if (msg.k === "event-live") {
       subscribers.get(msg.id)?.onResults(msg.results);
     } else if (msg.k === "err") {
-      subscribers.get(msg.id)?.onError?.(fromErrorInfo(msg.error));
+      const subscriber = subscribers.get(msg.id);
+      if (subscriber) {
+        subscribers.delete(msg.id);
+        subscriber.onError?.(fromErrorInfo(msg.error));
+      }
     }
   });
 

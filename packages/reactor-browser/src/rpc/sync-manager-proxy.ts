@@ -122,7 +122,7 @@ export class SyncManagerProxy implements ISyncManager {
     string,
     ConnectionStateSnapshot
   >();
-  private readonly connectionListeners = new Set<() => void>();
+  private readonly connectionListeners = new Map<string, Set<() => void>>();
   private readonly syncStatuses = new Map<string, SyncStatus>();
   private readonly syncStatusListeners = new Set<SyncStatusChangeCallback>();
   private remotes: Remote[] = [];
@@ -156,7 +156,7 @@ export class SyncManagerProxy implements ISyncManager {
       (_type, event) => {
         const e = event as ConnectionStateChangedEvent;
         this.connectionStates.set(e.remoteName, e.snapshot);
-        this.notifyConnection();
+        this.notifyConnection(e.remoteName);
       },
     );
 
@@ -214,7 +214,9 @@ export class SyncManagerProxy implements ISyncManager {
   }
 
   triggerPull(name: string): void {
-    void this.callSyncOp("triggerPull", [name]);
+    this.callSyncOp("triggerPull", [name]).catch((error: unknown) => {
+      console.error(`triggerPull failed for remote "${name}":`, error);
+    });
   }
 
   async remove(name: string): Promise<void> {
@@ -265,9 +267,20 @@ export class SyncManagerProxy implements ISyncManager {
     return promise;
   }
 
-  private notifyConnection(): void {
-    for (const listener of [...this.connectionListeners]) {
-      listener();
+  private notifyConnection(remoteName?: string): void {
+    if (remoteName !== undefined) {
+      const listeners = this.connectionListeners.get(remoteName);
+      if (listeners) {
+        for (const listener of [...listeners]) {
+          listener();
+        }
+      }
+      return;
+    }
+    for (const listeners of [...this.connectionListeners.values()]) {
+      for (const listener of [...listeners]) {
+        listener();
+      }
     }
   }
 
@@ -283,13 +296,31 @@ export class SyncManagerProxy implements ISyncManager {
       onConnectionStateChange: (callback: ConnectionStateChangeCallback) => {
         const listener = () =>
           callback(this.connectionStates.get(remoteName) ?? DEFAULT_SNAPSHOT);
-        this.connectionListeners.add(listener);
+        let listeners = this.connectionListeners.get(remoteName);
+        if (!listeners) {
+          listeners = new Set();
+          this.connectionListeners.set(remoteName, listeners);
+        }
+        listeners.add(listener);
         return () => {
-          this.connectionListeners.delete(listener);
+          const set = this.connectionListeners.get(remoteName);
+          if (!set) {
+            return;
+          }
+          set.delete(listener);
+          if (set.size === 0) {
+            this.connectionListeners.delete(remoteName);
+          }
         };
       },
+
       triggerPull: () => {
-        void this.callSyncOp("triggerPull", [remoteName]);
+        this.callSyncOp("triggerPull", [remoteName]).catch((error: unknown) => {
+          console.error(
+            `triggerPull failed for remote "${remoteName}":`,
+            error,
+          );
+        });
       },
       config: { url },
     };
