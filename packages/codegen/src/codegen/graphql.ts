@@ -78,6 +78,13 @@ export const scalarsValidation = {
 // Scalars codegen validates with strict `z.iso.datetime()`.
 const DATE_LIKE_SCALARS = new Set(["Date", "DateTime"]);
 
+// State-field scalar -> valid mock literal (emitted verbatim into generated tests).
+const SCALAR_MOCK_OVERRIDES: Record<string, string> = {
+  Date: `"2024-01-01T00:00:00.000Z"`,
+  DateTime: `"2024-01-01T00:00:00.000Z"`,
+  URL: `"https://example.com"`,
+};
+
 function unwrapNamedTypeName(type: TypeNode): string | null {
   if (type.kind === Kind.NAMED_TYPE) return type.name.value;
   if (type.kind === Kind.NON_NULL_TYPE || type.kind === Kind.LIST_TYPE) {
@@ -107,6 +114,28 @@ export function getDateLikeFieldNames(
     }
   }
   return names;
+}
+
+// State-field name -> override literal, for fields whose scalar needs a stricter mock value.
+export function getMockOverrideFieldNames(
+  stateSchemaSDL: string | null,
+): Map<string, string> {
+  const overrides = new Map<string, string>();
+  if (!stateSchemaSDL) return overrides;
+  let doc;
+  try {
+    doc = parse(stateSchemaSDL);
+  } catch {
+    return overrides;
+  }
+  for (const def of doc.definitions) {
+    if (def.kind !== Kind.OBJECT_TYPE_DEFINITION) continue;
+    for (const field of def.fields ?? []) {
+      const literal = SCALAR_MOCK_OVERRIDES[unwrapNamedTypeName(field.type) ?? ""];
+      if (literal) overrides.set(field.name.value, literal);
+    }
+  }
+  return overrides;
 }
 
 // Field names on the first input type in an operation's SDL.

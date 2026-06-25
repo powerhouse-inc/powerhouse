@@ -34,13 +34,11 @@ function makeOperationInputSchemasForImport(
   );
 }
 
-const VALID_ISO_DATETIME = `"2024-01-01T00:00:00.000Z"`;
-
 export function makeTestCaseForOperation(
   operation: OperationSpecification,
   isPhDocumentOfTypeFunctionName: string,
-  // Input fields feeding a Date/DateTime state field; mocked as a valid datetime.
-  dateLikeInputFields: string[] = [],
+  // Input fields feeding a stricter state validator; each carries its mock override literal.
+  overrideInputFields: ReadonlyArray<{ name: string; literal: string }> = [],
 ) {
   if (operation.name === null) {
     throw new Error(`Operation is missing name.`);
@@ -51,9 +49,9 @@ export function makeTestCaseForOperation(
   const actionInputSchemaName = `${pascalCaseActionName}InputSchema`;
   const scope = operation.scope;
   const overridesArg =
-    dateLikeInputFields.length > 0
-      ? `\n            { ${dateLikeInputFields
-          .map((field) => `${field}: ${VALID_ISO_DATETIME}`)
+    overrideInputFields.length > 0
+      ? `\n            { ${overrideInputFields
+          .map(({ name, literal }) => `${name}: ${literal}`)
           .join(", ")} },`
       : "";
   return ts`

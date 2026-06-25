@@ -13,8 +13,8 @@ import {
 } from "templates";
 import { SyntaxKind } from "ts-morph";
 import {
-  getDateLikeFieldNames,
   getInputFieldNames,
+  getMockOverrideFieldNames,
 } from "../../codegen/graphql.js";
 import {
   formatSourceFileWithPrettier,
@@ -43,9 +43,9 @@ export async function makeOperationModuleTestFile(
     testsDirPath,
     isPhDocumentOfTypeFunctionName,
   } = args;
-  const dateLikeFieldsByScope = {
-    global: getDateLikeFieldNames(specification.state.global.schema),
-    local: getDateLikeFieldNames(specification.state.local.schema),
+  const overrideFieldsByScope = {
+    global: getMockOverrideFieldNames(specification.state.global.schema),
+    local: getMockOverrideFieldNames(specification.state.local.schema),
   };
   const kebabCaseModuleName = kebabCase(module.name);
   const pascalCaseModuleName = pascalCase(module.name);
@@ -164,17 +164,17 @@ export async function makeOperationModuleTestFile(
       return !testCaseNames.some((name) => name === expectedTestCaseName);
     }),
     map((o) => {
-      const dateLikeStateFields =
+      const overrideStateFields =
         o.scope === "local"
-          ? dateLikeFieldsByScope.local
-          : dateLikeFieldsByScope.global;
-      const dateLikeInputFields = getInputFieldNames(o.schema).filter((f) =>
-        dateLikeStateFields.has(f),
-      );
+          ? overrideFieldsByScope.local
+          : overrideFieldsByScope.global;
+      const overrideInputFields = getInputFieldNames(o.schema)
+        .filter((f) => overrideStateFields.has(f))
+        .map((f) => ({ name: f, literal: overrideStateFields.get(f)! }));
       return makeTestCaseForOperation(
         o,
         isPhDocumentOfTypeFunctionName,
-        dateLikeInputFields,
+        overrideInputFields,
       );
     }),
   );
