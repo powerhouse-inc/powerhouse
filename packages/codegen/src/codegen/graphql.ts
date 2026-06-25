@@ -10,6 +10,8 @@ import type {
   ModuleSpecification,
 } from "@powerhousedao/shared/document-model";
 import type { DocumentModelFileMakerArgs } from "file-builders";
+import type { TypeNode } from "graphql";
+import { Kind, parse } from "graphql";
 import type { ValidationSchemaPluginConfig } from "graphql-codegen-typescript-validation-schema";
 import { realpathSync } from "node:fs";
 import fs from "node:fs/promises";
@@ -72,6 +74,58 @@ export const scalarsValidation = {
     "z.custom<`attachment://v${number}:${string}`>((val) => /^attachment:\\/\\/v\\d+:.+$/.test(val as string))",
   ...(validationSchema as Record<string, string>),
 };
+
+// Scalars codegen validates with strict `z.iso.datetime()`.
+const DATE_LIKE_SCALARS = new Set(["Date", "DateTime"]);
+
+function unwrapNamedTypeName(type: TypeNode): string | null {
+  if (type.kind === Kind.NAMED_TYPE) return type.name.value;
+  if (type.kind === Kind.NON_NULL_TYPE || type.kind === Kind.LIST_TYPE) {
+    return unwrapNamedTypeName(type.type);
+  }
+  return null;
+}
+
+// Top-level Date/DateTime field names across all object types in a state SDL.
+export function getDateLikeFieldNames(
+  stateSchemaSDL: string | null,
+): Set<string> {
+  const names = new Set<string>();
+  if (!stateSchemaSDL) return names;
+  let doc;
+  try {
+    doc = parse(stateSchemaSDL);
+  } catch {
+    return names;
+  }
+  for (const def of doc.definitions) {
+    if (def.kind !== Kind.OBJECT_TYPE_DEFINITION) continue;
+    for (const field of def.fields ?? []) {
+      if (DATE_LIKE_SCALARS.has(unwrapNamedTypeName(field.type) ?? "")) {
+        names.add(field.name.value);
+      }
+    }
+  }
+  return names;
+}
+
+// Field names on the first input type in an operation's SDL.
+export function getInputFieldNames(operationSDL: string | null): string[] {
+  if (!operationSDL) return [];
+  let doc;
+  try {
+    doc = parse(operationSDL);
+  } catch {
+    return [];
+  }
+  const inputDef = doc.definitions.find(
+    (d) => d.kind === Kind.INPUT_OBJECT_TYPE_DEFINITION,
+  );
+  if (!inputDef || inputDef.kind !== Kind.INPUT_OBJECT_TYPE_DEFINITION) {
+    return [];
+  }
+  return (inputDef.fields ?? []).map((f) => f.name.value);
+}
 
 const avoidOptionals: TypeScriptPluginConfig["avoidOptionals"] = {
   field: true,

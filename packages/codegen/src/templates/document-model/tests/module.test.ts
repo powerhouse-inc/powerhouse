@@ -34,9 +34,13 @@ function makeOperationInputSchemasForImport(
   );
 }
 
+const VALID_ISO_DATETIME = `"2024-01-01T00:00:00.000Z"`;
+
 export function makeTestCaseForOperation(
   operation: OperationSpecification,
   isPhDocumentOfTypeFunctionName: string,
+  // Input fields feeding a Date/DateTime state field; mocked as a valid datetime.
+  dateLikeInputFields: string[] = [],
 ) {
   if (operation.name === null) {
     throw new Error(`Operation is missing name.`);
@@ -46,11 +50,17 @@ export function makeTestCaseForOperation(
   const constantCaseActionName = constantCase(operation.name);
   const actionInputSchemaName = `${pascalCaseActionName}InputSchema`;
   const scope = operation.scope;
+  const overridesArg =
+    dateLikeInputFields.length > 0
+      ? `\n            { ${dateLikeInputFields
+          .map((field) => `${field}: ${VALID_ISO_DATETIME}`)
+          .join(", ")} },`
+      : "";
   return ts`
   it('should handle ${camelCaseActionName} operation', () => {
         const document = utils.createDocument();
         const input = generateMock(
-            ${actionInputSchemaName}(),
+            ${actionInputSchemaName}(),${overridesArg}
         );
 
         const updatedDocument = reducer(
@@ -115,7 +125,7 @@ export const documentModelOperationsModuleTestFileTemplate = (
  */
 
 import { describe, it, expect } from 'vitest';
-import { generateMock } from '@powerhousedao/common';
+import { generateMock } from 'document-model';
 import {
   reducer,
   utils,

@@ -13,6 +13,10 @@ import {
 } from "templates";
 import { SyntaxKind } from "ts-morph";
 import {
+  getDateLikeFieldNames,
+  getInputFieldNames,
+} from "../../codegen/graphql.js";
+import {
   formatSourceFileWithPrettier,
   getOrCreateSourceFile,
   getPreviousVersionSourceFile,
@@ -33,11 +37,16 @@ export async function makeOperationModuleTestFile(
   const {
     project,
     module,
+    specification,
     version,
     versionImportPath,
     testsDirPath,
     isPhDocumentOfTypeFunctionName,
   } = args;
+  const dateLikeFieldsByScope = {
+    global: getDateLikeFieldNames(specification.state.global.schema),
+    local: getDateLikeFieldNames(specification.state.local.schema),
+  };
   const kebabCaseModuleName = kebabCase(module.name);
   const pascalCaseModuleName = pascalCase(module.name);
   const moduleOperationsTypeName = `${pascalCaseModuleName}Operations`;
@@ -154,7 +163,20 @@ export async function makeOperationModuleTestFile(
       const expectedTestCaseName = `should handle ${opCamelCase} operation`;
       return !testCaseNames.some((name) => name === expectedTestCaseName);
     }),
-    map((o) => makeTestCaseForOperation(o, isPhDocumentOfTypeFunctionName)),
+    map((o) => {
+      const dateLikeStateFields =
+        o.scope === "local"
+          ? dateLikeFieldsByScope.local
+          : dateLikeFieldsByScope.global;
+      const dateLikeInputFields = getInputFieldNames(o.schema).filter((f) =>
+        dateLikeStateFields.has(f),
+      );
+      return makeTestCaseForOperation(
+        o,
+        isPhDocumentOfTypeFunctionName,
+        dateLikeInputFields,
+      );
+    }),
   );
 
   describeCallBody.addStatements(testCasesToAdd);
