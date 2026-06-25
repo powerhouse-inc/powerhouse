@@ -45,6 +45,11 @@ function rowToRemoteRecord(row: SyncRemoteRow): RemoteRecord {
   };
 }
 
+/**
+ * Maps a RemoteRecord to a row. jsonb array columns are JSON-encoded because the
+ * pg driver would otherwise emit a Postgres array literal ("{a,b}"), which jsonb
+ * rejects (matches sync-dead-letter-storage).
+ */
 function remoteRecordToRow(remote: RemoteRecord): InsertableSyncRemote {
   return {
     name: remote.name,
@@ -53,9 +58,6 @@ function remoteRecordToRow(remote: RemoteRecord): InsertableSyncRemote {
     channel_id: remote.id,
     remote_name: remote.name,
     channel_parameters: remote.channelConfig.parameters,
-    // jsonb array columns must be JSON-encoded before binding: the pg driver
-    // serializes a JS array to a Postgres array literal ("{a,b}"), which jsonb
-    // rejects. Matches the convention in sync-dead-letter-storage.
     filter_document_ids:
       remote.filter.documentId.length > 0
         ? JSON.stringify(remote.filter.documentId)

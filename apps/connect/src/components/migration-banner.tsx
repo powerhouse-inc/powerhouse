@@ -1,8 +1,8 @@
 import {
   CURRENT_PG_MAJOR,
-  getCachedReactorPgMajor,
+  getCachedMigrationMajor,
   migrateAllIfNeeded,
-  subscribeReactorPgMajor,
+  subscribeMigrationMajor,
 } from "@powerhousedao/connect/utils";
 import { useReactorClientModule } from "@powerhousedao/reactor-browser";
 import type { IWorkerAdminClient } from "@powerhousedao/reactor-browser/rpc";
@@ -110,8 +110,8 @@ function BrowserMigrationBanner() {
     () => false,
   );
   const major = useSyncExternalStore(
-    subscribeReactorPgMajor,
-    getCachedReactorPgMajor,
+    subscribeMigrationMajor,
+    getCachedMigrationMajor,
     () => undefined,
   );
   const [migrating, setMigrating] = useState(false);

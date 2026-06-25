@@ -43,6 +43,7 @@ import { readPgVersionFile } from "./utils/pglite-idb.js";
 import {
   coerceMajor,
   CURRENT_PG_MAJOR,
+  type DetectedMajor,
   loadPGliteModule,
   resolvePgMajorForRuntime,
   type SupportedPgMajor,
@@ -152,7 +153,8 @@ async function openReactorPglite(namespace: string) {
     );
   }
   const { PGlite } = await loadPGliteModule(major);
-  return new PGlite(`idb://${namespace}`, { relaxedDurability: true });
+  const pg = new PGlite(`idb://${namespace}`, { relaxedDurability: true });
+  return { pg, detected };
 }
 
 type PgLiveModule = typeof PgLiveModuleNs;
@@ -164,7 +166,7 @@ async function loadPgLive(major: SupportedPgMajor): Promise<PgLiveModule> {
   return import("@electric-sql/pglite/live");
 }
 
-async function openRelational(namespace: string): Promise<void> {
+async function openRelational(namespace: string): Promise<DetectedMajor> {
   try {
     const detected = coerceMajor(
       await readPgVersionFile(`/pglite/${namespace}`),
@@ -190,11 +192,13 @@ async function openRelational(namespace: string): Promise<void> {
     console.info(
       `[reactor.worker] Relational store opened: idb://${namespace} (Postgres ${major}).`,
     );
+    return detected;
   } catch (error) {
     console.error(
       "[reactor.worker] Failed to open the relational store:",
       error,
     );
+    return null;
   }
 }
 
@@ -276,21 +280,19 @@ const host = new ReactorHost({
       const models = baseDocumentModels.concat(bundledDocumentModels, loaded);
       phase = "opening pglite stores";
       console.info(`[reactor.worker] boot: ${phase}`);
-      const [pg] = await Promise.all([
+      const [reactor, relationalMajor] = await Promise.all([
         openReactorPglite(construct.namespace),
         openRelational(construct.relationalNamespace),
       ]);
-      const reactorIdb = `/pglite/${construct.namespace}`;
-      const relationalIdb = `/pglite/${construct.relationalNamespace}`;
+      const pg = reactor.pg;
       owned.reactorPg = pg;
-      owned.reactorIdb = reactorIdb;
-      owned.relationalIdb = relationalIdb;
-      const legacyMajor = (
-        await Promise.all([
-          readPgVersionFile(reactorIdb),
-          readPgVersionFile(relationalIdb),
-        ])
-      ).find((m): m is number => m !== null && m !== CURRENT_PG_MAJOR);
+      owned.reactorIdb = `/pglite/${construct.namespace}`;
+      owned.relationalIdb = `/pglite/${construct.relationalNamespace}`;
+      // A store is migratable when coerceMajor kept it (a supported legacy
+      // major) and it is not the current one; openers already read PG_VERSION.
+      const legacyMajor = [reactor.detected, relationalMajor].find(
+        (m): m is SupportedPgMajor => m !== null && m !== CURRENT_PG_MAJOR,
+      );
       if (legacyMajor !== undefined) {
         setMigration({ status: "needed", legacyMajor });
       }

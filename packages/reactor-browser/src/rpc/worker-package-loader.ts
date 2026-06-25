@@ -54,9 +54,9 @@ export class WorkerPackageLoader implements IDocumentModelLoader {
   }
 
   async loadPackages(specs: string[]): Promise<DocumentModelModule[]> {
-    for (const spec of specs) {
-      await this.loadPackage(spec);
-    }
+    await Promise.all(
+      [...new Set(specs)].map((spec) => this.loadPackage(spec)),
+    );
     return this.models;
   }
 
@@ -68,9 +68,9 @@ export class WorkerPackageLoader implements IDocumentModelLoader {
     }
     const packageNames = await this.resolvePackages(documentType);
     const failuresBefore = this.failures.length;
-    for (const name of packageNames) {
-      await this.loadPackage(name);
-    }
+    await Promise.all(
+      [...new Set(packageNames)].map((name) => this.loadPackage(name)),
+    );
     const loaded = this.modulesByType.get(documentType);
     if (loaded) {
       return loaded;

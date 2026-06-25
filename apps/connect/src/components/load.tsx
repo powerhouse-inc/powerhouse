@@ -2,6 +2,7 @@ import { useCheckLatestVersion } from "@powerhousedao/connect/hooks";
 import "@powerhousedao/connect/i18n";
 import { createReactor, useSetSentryUser } from "@powerhousedao/connect/store";
 import {
+  detectMigrationMajor,
   detectReactorPgMajor,
   seedPendingPgVersion,
 } from "@powerhousedao/connect/utils";
@@ -12,7 +13,7 @@ import { applyConnectBranding, loadRuntimeConfig } from "../runtime-config.js";
 
 export async function loadComponent(localPackage?: DocumentModelLib) {
   await seedPendingPgVersion();
-  await detectReactorPgMajor();
+  await Promise.all([detectReactorPgMajor(), detectMigrationMajor()]);
   const runtimeConfig = await loadRuntimeConfig();
   applyConnectBranding(runtimeConfig);
   await createReactor(localPackage);
