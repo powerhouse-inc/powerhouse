@@ -145,15 +145,20 @@ export class ReactorHost {
         return;
       }
       if (msg.k === "sync-op") {
-        void this.handleSyncOp(msg, transport);
+        void this.handleOp(msg, this.options.onSyncOp, "sync", transport);
         return;
       }
       if (msg.k === "db-op") {
-        void this.handleDbOp(msg, transport);
+        void this.handleOp(msg, this.options.onDbOp, "db", transport);
         return;
       }
       if (msg.k === "inspector-op") {
-        void this.handleInspectorOp(msg, transport);
+        void this.handleOp(
+          msg,
+          this.options.onInspectorOp,
+          "inspector",
+          transport,
+        );
         return;
       }
       if (msg.k === "sub-live") {
@@ -342,70 +347,25 @@ export class ReactorHost {
     }
   }
 
-  private async handleSyncOp(
-    message: RpcSyncOp,
+  private async handleOp(
+    message: RpcSyncOp | RpcDbOp | RpcInspectorOp,
+    handler:
+      | ((method: string, args: unknown[]) => Promise<unknown>)
+      | undefined,
+    label: string,
     transport: IRpcTransport,
   ): Promise<void> {
-    const handler = this.options.onSyncOp;
     if (!handler) {
       transport.post({
         k: "err",
         id: message.id,
-        error: toErrorInfo(new Error("ReactorHost has no sync handler")),
+        error: toErrorInfo(new Error(`ReactorHost has no ${label} handler`)),
       });
       return;
     }
     try {
-      // Wait for the reactor to finish building so the handler's syncManager
-      // exists; a tab's eager list() can arrive before the build completes.
-      if (this.clientPromise) {
-        await this.clientPromise;
-      }
-      const value = await handler(message.method, message.args);
-      transport.post({ k: "res", id: message.id, value });
-    } catch (error) {
-      transport.post({ k: "err", id: message.id, error: toErrorInfo(error) });
-    }
-  }
-
-  private async handleDbOp(
-    message: RpcDbOp,
-    transport: IRpcTransport,
-  ): Promise<void> {
-    const handler = this.options.onDbOp;
-    if (!handler) {
-      transport.post({
-        k: "err",
-        id: message.id,
-        error: toErrorInfo(new Error("ReactorHost has no db handler")),
-      });
-      return;
-    }
-    try {
-      if (this.clientPromise) {
-        await this.clientPromise;
-      }
-      const value = await handler(message.method, message.args);
-      transport.post({ k: "res", id: message.id, value });
-    } catch (error) {
-      transport.post({ k: "err", id: message.id, error: toErrorInfo(error) });
-    }
-  }
-
-  private async handleInspectorOp(
-    message: RpcInspectorOp,
-    transport: IRpcTransport,
-  ): Promise<void> {
-    const handler = this.options.onInspectorOp;
-    if (!handler) {
-      transport.post({
-        k: "err",
-        id: message.id,
-        error: toErrorInfo(new Error("ReactorHost has no inspector handler")),
-      });
-      return;
-    }
-    try {
+      // Wait for the reactor to finish building so the handler's dependencies
+      // exist; a tab's eager op can arrive before the build completes.
       if (this.clientPromise) {
         await this.clientPromise;
       }

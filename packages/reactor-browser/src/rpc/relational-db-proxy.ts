@@ -1,59 +1,25 @@
 import type { PGliteWithLive } from "@electric-sql/pglite/live";
-import { fromErrorInfo } from "./error-info.js";
 import { createLiveQueryProxy } from "./live-query-proxy.js";
-import type { CorrelationId, OwnerMessage } from "./protocol.js";
+import { RpcCorrelator } from "./rpc-correlator.js";
 import type { IRpcTransport } from "./transport.js";
-
-type Pending = {
-  resolve: (value: unknown) => void;
-  reject: (error: unknown) => void;
-  timer?: ReturnType<typeof setTimeout>;
-};
-
-const DB_OP_TIMEOUT_MS = 30000;
 
 export function createRelationalPgliteProxy(
   transport: IRpcTransport,
 ): PGliteWithLive {
-  let counter = 0;
-  const pending = new Map<CorrelationId, Pending>();
-
-  transport.onMessage((message) => {
-    const msg = message as OwnerMessage;
-    if (msg.k === "res") {
-      const entry = pending.get(msg.id);
-      if (entry) {
-        pending.delete(msg.id);
-        if (entry.timer) clearTimeout(entry.timer);
-        entry.resolve(msg.value);
-      }
-    } else if (msg.k === "err") {
-      const entry = pending.get(msg.id);
-      if (entry) {
-        pending.delete(msg.id);
-        if (entry.timer) clearTimeout(entry.timer);
-        entry.reject(fromErrorInfo(msg.error));
-      }
-    }
+  const correlator = new RpcCorrelator(transport, {
+    prefix: "db",
+    timeoutMs: 30000,
+    label: "db-op",
   });
+  correlator.attach();
 
-  const runQuery = (sql: string, params: unknown[]): Promise<unknown> => {
-    const id: CorrelationId = `db${++counter}`;
-    const promise = new Promise<unknown>((resolve, reject) => {
-      const timer = setTimeout(() => {
-        if (pending.delete(id)) {
-          reject(
-            new Error(
-              `Reactor worker did not respond to db-op within ${DB_OP_TIMEOUT_MS}ms; the worker may have failed to load`,
-            ),
-          );
-        }
-      }, DB_OP_TIMEOUT_MS);
-      pending.set(id, { resolve, reject, timer });
-    });
-    transport.post({ k: "db-op", id, method: "query", args: [sql, params] });
-    return promise;
-  };
+  const runQuery = (sql: string, params: unknown[]): Promise<unknown> =>
+    correlator.request((id) => ({
+      k: "db-op",
+      id,
+      method: "query",
+      args: [sql, params],
+    }));
 
   const liveProxy = createLiveQueryProxy(transport);
 

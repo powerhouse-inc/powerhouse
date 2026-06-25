@@ -8,13 +8,8 @@ import type {
 } from "@powerhousedao/reactor";
 import { fromErrorInfo } from "./error-info.js";
 import type { CorrelationId, OwnerMessage } from "./protocol.js";
+import { RpcCorrelator } from "./rpc-correlator.js";
 import type { IRpcTransport } from "./transport.js";
-
-type Pending = {
-  resolve: (value: unknown) => void;
-  reject: (error: unknown) => void;
-  cleanup?: () => void;
-};
 
 type Forwarder = (...args: unknown[]) => Promise<unknown>;
 
@@ -45,21 +40,19 @@ export function createReactorClientProxy(
   options: ReactorClientProxyOptions = {},
 ): IReactorClient {
   const registry = options.registry;
-  let counter = 0;
-  const nextId = (): CorrelationId => `c${++counter}`;
-  const pending = new Map<CorrelationId, Pending>();
   const subscribers = new Map<CorrelationId, ChangeCallback>();
+  // No timeout: the main reactor RPC has long-running calls; teardown on worker
+  // death is handled by the heartbeat + reconnect, not a per-call timer.
+  const correlator = new RpcCorrelator(transport, {
+    prefix: "c",
+    transform: rehydrate,
+  });
 
-  const fetchPage = (token: string): Promise<unknown> => {
-    const id = nextId();
-    const promise = new Promise<unknown>((resolve, reject) => {
-      pending.set(id, { resolve, reject });
-    });
-    transport.post({ k: "page", id, token });
-    return promise;
-  };
+  function fetchPage(token: string): Promise<unknown> {
+    return correlator.request((id) => ({ k: "page", id, token }));
+  }
 
-  const rehydrate = (value: unknown): unknown => {
+  function rehydrate(value: unknown): unknown {
     if (
       value !== null &&
       typeof value === "object" &&
@@ -74,28 +67,16 @@ export function createReactorClientProxy(
       return result;
     }
     return value;
-  };
+  }
 
   transport.onMessage((message) => {
     const msg = message as OwnerMessage;
-    if (msg.k === "res") {
-      const entry = pending.get(msg.id);
-      if (entry) {
-        pending.delete(msg.id);
-        entry.cleanup?.();
-        entry.resolve(rehydrate(msg.value));
-      }
+    if (correlator.handleMessage(msg)) {
       return;
     }
     if (msg.k === "err") {
-      const entry = pending.get(msg.id);
-      if (entry) {
-        pending.delete(msg.id);
-        entry.cleanup?.();
-        entry.reject(fromErrorInfo(msg.error));
-        return;
-      }
-      // err for a subscription id: surface it and drop the dead subscriber.
+      // err not claimed by a pending request: a failed subscription. Surface it
+      // and drop the dead subscriber rather than leaving the caller "subscribed".
       if (subscribers.delete(msg.id)) {
         console.error("Reactor subscription failed:", fromErrorInfo(msg.error));
       }
@@ -111,7 +92,6 @@ export function createReactorClientProxy(
   });
 
   const call = (method: string, args: unknown[]): Promise<unknown> => {
-    const id = nextId();
     let abortAt: number | undefined;
     for (let i = 0; i < args.length; i++) {
       if (isAbortSignal(args[i])) {
@@ -123,24 +103,22 @@ export function createReactorClientProxy(
       wire = args.slice();
       wire[abortAt] = undefined;
     }
-    const promise = new Promise<unknown>((resolve, reject) => {
-      pending.set(id, { resolve, reject });
-    });
-    transport.post({ k: "req", id, method, args: wire, abortAt });
-    if (abortAt !== undefined) {
-      const signal = args[abortAt] as AbortSignal;
-      const sendAbort = () => transport.post({ k: "abort", targetId: id });
-      if (signal.aborted) {
-        sendAbort();
-      } else {
-        signal.addEventListener("abort", sendAbort, { once: true });
-        const entry = pending.get(id);
-        if (entry) {
-          entry.cleanup = () => signal.removeEventListener("abort", sendAbort);
+    return correlator.request(
+      (id) => ({ k: "req", id, method, args: wire, abortAt }),
+      (id) => {
+        if (abortAt === undefined) {
+          return;
         }
-      }
-    }
-    return promise;
+        const signal = args[abortAt] as AbortSignal;
+        const sendAbort = () => transport.post({ k: "abort", targetId: id });
+        if (signal.aborted) {
+          sendAbort();
+          return;
+        }
+        signal.addEventListener("abort", sendAbort, { once: true });
+        return () => signal.removeEventListener("abort", sendAbort);
+      },
+    );
   };
 
   const subscribe = (
@@ -148,7 +126,7 @@ export function createReactorClientProxy(
     callback: ChangeCallback,
     view?: ViewFilter,
   ): (() => void) => {
-    const id = nextId();
+    const id = correlator.nextId();
     subscribers.set(id, callback);
     transport.post({ k: "sub", id, search, view });
     return () => {

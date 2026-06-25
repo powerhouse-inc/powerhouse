@@ -1,5 +1,4 @@
-import { fromErrorInfo } from "./error-info.js";
-import type { CorrelationId, OwnerMessage } from "./protocol.js";
+import { RpcCorrelator } from "./rpc-correlator.js";
 import type { IRpcTransport } from "./transport.js";
 
 export interface IInspectorProxy {
@@ -14,56 +13,18 @@ export interface IInspectorProxy {
   queryReactorDb(sql: string, params?: unknown[]): Promise<unknown>;
 }
 
-type Pending = {
-  resolve: (value: unknown) => void;
-  reject: (error: unknown) => void;
-  timer?: ReturnType<typeof setTimeout>;
-};
-
-const INSPECTOR_OP_TIMEOUT_MS = 30000;
-
 export function createInspectorProxy(
   transport: IRpcTransport,
 ): IInspectorProxy {
-  let counter = 0;
-  const pending = new Map<CorrelationId, Pending>();
-
-  transport.onMessage((message) => {
-    const msg = message as OwnerMessage;
-    if (msg.k === "res") {
-      const entry = pending.get(msg.id);
-      if (entry) {
-        pending.delete(msg.id);
-        if (entry.timer) clearTimeout(entry.timer);
-        entry.resolve(msg.value);
-      }
-    } else if (msg.k === "err") {
-      const entry = pending.get(msg.id);
-      if (entry) {
-        pending.delete(msg.id);
-        if (entry.timer) clearTimeout(entry.timer);
-        entry.reject(fromErrorInfo(msg.error));
-      }
-    }
+  const correlator = new RpcCorrelator(transport, {
+    prefix: "insp",
+    timeoutMs: 30000,
+    label: "inspector-op",
   });
+  correlator.attach();
 
-  const send = (method: string, args: unknown[]): Promise<unknown> => {
-    const id: CorrelationId = `insp${++counter}`;
-    const promise = new Promise<unknown>((resolve, reject) => {
-      const timer = setTimeout(() => {
-        if (pending.delete(id)) {
-          reject(
-            new Error(
-              `Reactor worker did not respond to inspector-op "${method}" within ${INSPECTOR_OP_TIMEOUT_MS}ms; the worker may have failed to load`,
-            ),
-          );
-        }
-      }, INSPECTOR_OP_TIMEOUT_MS);
-      pending.set(id, { resolve, reject, timer });
-    });
-    transport.post({ k: "inspector-op", id, method, args });
-    return promise;
-  };
+  const send = (method: string, args: unknown[]): Promise<unknown> =>
+    correlator.request((id) => ({ k: "inspector-op", id, method, args }));
 
   return {
     getQueueState: () => send("queue.getState", []),

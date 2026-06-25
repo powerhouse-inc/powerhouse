@@ -1,10 +1,9 @@
-import { fromErrorInfo } from "./error-info.js";
 import type {
-  CorrelationId,
   OwnerMessage,
   WorkerInspectorInfo,
   WorkerMigrationState,
 } from "./protocol.js";
+import { RpcCorrelator } from "./rpc-correlator.js";
 import type { IRpcTransport } from "./transport.js";
 
 export interface IWorkerAdminClient {
@@ -16,65 +15,34 @@ export interface IWorkerAdminClient {
   subscribeMigration(callback: () => void): () => void;
 }
 
-type Pending = {
-  resolve: (value: unknown) => void;
-  reject: (error: unknown) => void;
-  timer?: ReturnType<typeof setTimeout>;
-};
-
-const ADMIN_OP_TIMEOUT_MS = 30000;
-
 // Worker lifecycle channel over the same transport as the reactor RPC; ids are
 // prefixed so its replies don't collide with the client proxy's pending map.
 export function createWorkerAdminClient(
   transport: IRpcTransport,
 ): IWorkerAdminClient {
-  let counter = 0;
-  const pending = new Map<CorrelationId, Pending>();
   let migrationState: WorkerMigrationState = { status: "idle" };
   const migrationListeners = new Set<() => void>();
+  const correlator = new RpcCorrelator(transport, {
+    prefix: "admin-",
+    timeoutMs: 30000,
+    label: "admin-op",
+  });
 
   transport.onMessage((message) => {
     const msg = message as OwnerMessage;
-    if (msg.k === "res") {
-      const entry = pending.get(msg.id);
-      if (entry) {
-        pending.delete(msg.id);
-        if (entry.timer) clearTimeout(entry.timer);
-        entry.resolve(msg.value);
-      }
-    } else if (msg.k === "err") {
-      const entry = pending.get(msg.id);
-      if (entry) {
-        pending.delete(msg.id);
-        if (entry.timer) clearTimeout(entry.timer);
-        entry.reject(fromErrorInfo(msg.error));
-      }
-    } else if (msg.k === "migration") {
+    if (correlator.handleMessage(msg)) {
+      return;
+    }
+    if (msg.k === "migration") {
       migrationState = msg.state;
-      for (const listener of migrationListeners) listener();
+      for (const listener of [...migrationListeners]) listener();
     }
   });
 
   const send = (
     method: "info" | "restart" | "clearStorage" | "migrate",
-  ): Promise<unknown> => {
-    const id: CorrelationId = `admin-${++counter}`;
-    const promise = new Promise<unknown>((resolve, reject) => {
-      const timer = setTimeout(() => {
-        if (pending.delete(id)) {
-          reject(
-            new Error(
-              `Reactor worker did not respond to admin-op "${method}" within ${ADMIN_OP_TIMEOUT_MS}ms; the worker may have failed to load`,
-            ),
-          );
-        }
-      }, ADMIN_OP_TIMEOUT_MS);
-      pending.set(id, { resolve, reject, timer });
-    });
-    transport.post({ k: "admin", id, method });
-    return promise;
-  };
+  ): Promise<unknown> =>
+    correlator.request((id) => ({ k: "admin", id, method }));
 
   return {
     info: () => send("info") as Promise<WorkerInspectorInfo>,

@@ -18,14 +18,11 @@ import {
   type SyncStatus,
   type SyncStatusChangeCallback,
 } from "@powerhousedao/reactor";
-import { fromErrorInfo } from "./error-info.js";
-import type { CorrelationId, OwnerMessage } from "./protocol.js";
+import { RpcCorrelator } from "./rpc-correlator.js";
 import type { IRpcTransport } from "./transport.js";
 
 // Synthetic bus channel id for sync-status deltas (not a reactor IEventBus type).
 export const SYNC_STATUS_CHANGED_EVENT = 90001;
-
-const SYNC_OP_TIMEOUT_MS = 30000;
 
 export type SyncStatusChangedBusEvent = {
   documentId: string;
@@ -45,12 +42,6 @@ type WireRemoteMeta = {
 type WireRemote = {
   meta: WireRemoteMeta;
   connectionState: ConnectionStateSnapshot;
-};
-
-type PendingCall = {
-  resolve: (value: unknown) => void;
-  reject: (error: unknown) => void;
-  timer?: ReturnType<typeof setTimeout>;
 };
 
 const DEFAULT_SNAPSHOT: ConnectionStateSnapshot = {
@@ -115,9 +106,7 @@ function channelUrl(meta: RemoteMeta): string | undefined {
 
 // Tab-side ISyncManager: cache-backed reads fed by the bus, ops over sync-op RPC.
 export class SyncManagerProxy implements ISyncManager {
-  private readonly transport: IRpcTransport;
-  private counter = 0;
-  private readonly pending = new Map<CorrelationId, PendingCall>();
+  private readonly correlator: RpcCorrelator;
   private readonly connectionStates = new Map<
     string,
     ConnectionStateSnapshot
@@ -129,27 +118,12 @@ export class SyncManagerProxy implements ISyncManager {
   private seedPromise: Promise<void> | null = null;
 
   constructor(transport: IRpcTransport, busProxy: IEventBus) {
-    this.transport = transport;
-
-    transport.onMessage((message) => {
-      const msg = message as OwnerMessage;
-      if (msg.k !== "res" && msg.k !== "err") {
-        return;
-      }
-      const entry = this.pending.get(msg.id);
-      if (!entry) {
-        return;
-      }
-      this.pending.delete(msg.id);
-      if (entry.timer) {
-        clearTimeout(entry.timer);
-      }
-      if (msg.k === "res") {
-        entry.resolve(msg.value);
-      } else {
-        entry.reject(fromErrorInfo(msg.error));
-      }
+    this.correlator = new RpcCorrelator(transport, {
+      prefix: "s",
+      timeoutMs: 30000,
+      label: "sync-op",
     });
+    this.correlator.attach();
 
     busProxy.subscribe(
       SyncEventTypes.CONNECTION_STATE_CHANGED,
@@ -245,26 +219,13 @@ export class SyncManagerProxy implements ISyncManager {
     };
   }
 
-  private nextId(): CorrelationId {
-    return `s${++this.counter}`;
-  }
-
   private callSyncOp(method: string, args: unknown[]): Promise<unknown> {
-    const id = this.nextId();
-    const promise = new Promise<unknown>((resolve, reject) => {
-      const timer = setTimeout(() => {
-        if (this.pending.delete(id)) {
-          reject(
-            new Error(
-              `Reactor worker did not respond to sync-op "${method}" within ${SYNC_OP_TIMEOUT_MS}ms; the worker may have failed to load`,
-            ),
-          );
-        }
-      }, SYNC_OP_TIMEOUT_MS);
-      this.pending.set(id, { resolve, reject, timer });
-    });
-    this.transport.post({ k: "sync-op", id, method, args });
-    return promise;
+    return this.correlator.request((id) => ({
+      k: "sync-op",
+      id,
+      method,
+      args,
+    }));
   }
 
   private notifyConnection(remoteName?: string): void {
