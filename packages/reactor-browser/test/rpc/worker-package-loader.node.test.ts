@@ -69,7 +69,7 @@ describe("WorkerPackageLoader", () => {
       resolvePackages: () => Promise.resolve(["broken-pkg"]),
     });
     await expect(loader.load("ph/lazy")).rejects.toMatchObject({
-      message: expect.stringContaining("broken-pkg"),
+      message: expect.stringContaining("broken-pkg") as string,
       cause: importError,
     });
   });

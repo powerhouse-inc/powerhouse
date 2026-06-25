@@ -2,7 +2,10 @@
 // RUN_HUB_SPOKE_INTEGRATION=1. Requires a Postgres reachable at the host/port
 // in REACTOR_TEST_PG_* (defaults to localhost:5433 via `pnpm --filter
 // @powerhousedao/reactor docker:up`) and outbound access to PH_REGISTRY_URL.
-import { type ISyncManager, type InProcessReactorModule } from "@powerhousedao/reactor";
+import {
+  type ISyncManager,
+  type InProcessReactorModule,
+} from "@powerhousedao/reactor";
 import { httpsHooksPath } from "@powerhousedao/reactor-api/https-hooks";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import { ConsoleLogger } from "document-model";

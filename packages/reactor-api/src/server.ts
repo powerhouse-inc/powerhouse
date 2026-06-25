@@ -983,13 +983,17 @@ export async function initializeAndStartAPI(
   const syncManager =
     reactorClientModule.reactorModule?.syncModule?.syncManager;
   if (!syncManager) {
-    throw new Error("SyncManager not available from InProcessReactorClientModule");
+    throw new Error(
+      "SyncManager not available from InProcessReactorClientModule",
+    );
   }
 
   const reactorProcessorManager =
     reactorClientModule.reactorModule?.processorManager;
   if (!reactorProcessorManager) {
-    throw new Error("ProcessorManager not available from InProcessReactorClientModule");
+    throw new Error(
+      "ProcessorManager not available from InProcessReactorClientModule",
+    );
   }
 
   const documentModelRegistry =

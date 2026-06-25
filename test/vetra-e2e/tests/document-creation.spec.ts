@@ -74,7 +74,9 @@ test("should create document of each supported type in Vetra drive", async ({
       level: 3,
       exact: true,
     });
-    await expect(documentHeading).toBeVisible({ timeout: LONG_VISIBLE_TIMEOUT });
+    await expect(documentHeading).toBeVisible({
+      timeout: LONG_VISIBLE_TIMEOUT,
+    });
   }
 });
 

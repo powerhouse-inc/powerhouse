@@ -1,4 +1,8 @@
-import { expect, reactorWorkerModeRequested, test } from "./helpers/fixtures.js";
+import {
+  expect,
+  reactorWorkerModeRequested,
+  test,
+} from "./helpers/fixtures.js";
 import { DESCRIBE_TIMEOUT } from "./helpers/timeouts.js";
 import { waitForAppReady } from "./helpers/wait.js";
 
