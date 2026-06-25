@@ -1,3 +1,7 @@
+## 6.2.0-dev.36 (2026-06-25)
+
+This was a version bump only for ph-cmd to align it with other projects, there were no code changes.
+
 ## 6.2.0-dev.35 (2026-06-25)
 
 This was a version bump only for ph-cmd to align it with other projects, there were no code changes.

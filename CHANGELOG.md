@@ -1,3 +1,14 @@
+## 6.2.0-dev.36 (2026-06-25)
+
+### 🩹 Fixes
+
+- **codegen:** fixing the migrate command, which can hit a race ([4eb012394](https://github.com/powerhouse-inc/powerhouse/commit/4eb012394))
+- **codegen:** we also need to emit urls differently ([e81a505af](https://github.com/powerhouse-inc/powerhouse/commit/e81a505af))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.2.0-dev.35 (2026-06-25)
 
 ### 🩹 Fixes
