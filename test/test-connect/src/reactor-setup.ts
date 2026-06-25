@@ -2,7 +2,7 @@ import {
   ChannelScheme,
   DriveCollectionId,
   ReactorBuilder,
-  type ReactorModule,
+  type InProcessReactorModule,
 } from "@powerhousedao/reactor";
 import { reactorDriveDocumentModelModule } from "@powerhousedao/reactor-drive";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
@@ -12,7 +12,7 @@ import type { ConnectTestConfig } from "./types.js";
 export async function createReactorWithSync(
   config: ConnectTestConfig,
   logger?: ILogger,
-): Promise<ReactorModule> {
+): Promise<InProcessReactorModule> {
   const builder = new ReactorBuilder()
     .withDocumentModels([
       driveDocumentModelModule,
@@ -74,7 +74,7 @@ export async function createReactorWithSync(
 }
 
 export async function waitForDocument(
-  module: ReactorModule,
+  module: InProcessReactorModule,
   documentId: string,
   timeoutMs = 5_000,
   verbose = false,
