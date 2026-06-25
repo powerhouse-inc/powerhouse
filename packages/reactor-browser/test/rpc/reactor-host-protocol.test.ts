@@ -112,6 +112,35 @@ describe("ReactorHost protocol (hello / version / register)", () => {
     expect(tab2.reloads).toContain("reactor version mismatch");
   });
 
+  it("answers a ping with a pong carrying ownerId/bootedAtMs before any build", async () => {
+    let builds = 0;
+    const host = new ReactorHost({
+      ownerId: "owner-xyz",
+      bootedAtMs: 12345,
+      build: () => {
+        builds += 1;
+        return Promise.resolve(fakeClient([]));
+      },
+    });
+
+    const ch = new MessageChannel();
+    host.connect(createPortTransport(ch.port1));
+
+    const pong = await new Promise<Record<string, unknown>>((resolve) => {
+      ch.port2.onmessage = (event: MessageEvent) =>
+        resolve(event.data as Record<string, unknown>);
+      ch.port2.postMessage({ k: "ping", id: "p1" });
+    });
+
+    expect(pong).toEqual({
+      k: "pong",
+      id: "p1",
+      ownerId: "owner-xyz",
+      bootedAtMs: 12345,
+    });
+    expect(builds).toBe(0);
+  });
+
   it("lazily registers each connecting tab's packages on hello", async () => {
     const registered: string[][] = [];
     const host = new ReactorHost({

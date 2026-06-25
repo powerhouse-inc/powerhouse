@@ -19,6 +19,7 @@ import {
   postReactorIdentity,
   RPC_PROTOCOL_VERSION,
   SyncManagerProxy,
+  type OwnerMessage,
   type ReactorIdentity,
 } from "@powerhousedao/reactor-browser/rpc";
 import type {
@@ -26,8 +27,13 @@ import type {
   UpgradeManifest,
 } from "@powerhousedao/shared/document-model";
 import type { IRenown, User } from "@renown/sdk";
+import { setWorkerConnectionStatus } from "./connection-state.js";
 import { reactorWorkerName } from "./reactor-worker-name.js";
 import { getGitSha, getVersion } from "./utils/build-info.js";
+
+const PING_INTERVAL_MS = 2000;
+const PING_DEADLINE_MS = 3000;
+const MAX_MISSED_PINGS = 2;
 
 export type WorkerReactorClientArgs = {
   namespace: string;
@@ -153,6 +159,37 @@ export function createWorkerReactorClientModule(
       eventBus: busProxy,
     },
   };
+
+  let pingCounter = 0;
+  let missedPings = 0;
+  const pingDeadlines = new Map<string, ReturnType<typeof setTimeout>>();
+
+  transport.onMessage((message) => {
+    const msg = message as OwnerMessage;
+    if (msg.k !== "pong") {
+      return;
+    }
+    const timer = pingDeadlines.get(msg.id);
+    if (timer !== undefined) {
+      clearTimeout(timer);
+      pingDeadlines.delete(msg.id);
+    }
+    missedPings = 0;
+    setWorkerConnectionStatus("connected");
+  });
+
+  setInterval(() => {
+    const id = `ping${++pingCounter}`;
+    const timer = setTimeout(() => {
+      pingDeadlines.delete(id);
+      missedPings += 1;
+      if (missedPings >= MAX_MISSED_PINGS) {
+        setWorkerConnectionStatus("lost");
+      }
+    }, PING_DEADLINE_MS);
+    pingDeadlines.set(id, timer);
+    transport.post({ k: "ping", id });
+  }, PING_INTERVAL_MS);
 
   return { reactorClientModule, syncManagerProxy };
 }

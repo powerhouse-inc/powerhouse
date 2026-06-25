@@ -147,6 +147,18 @@ export type RpcLiveEvent = {
 
 export type RpcLiveUnsub = { k: "unsub-live"; id: CorrelationId };
 
+// Liveness heartbeat. The tab pings; the owner answers synchronously (even
+// mid-build/mid-migration) so a silently-evicted worker is detectable. The pong
+// echoes ownerId/bootedAtMs so a respawned (different) instance is identifiable.
+export type RpcPing = { k: "ping"; id: CorrelationId };
+
+export type RpcPong = {
+  k: "pong";
+  id: CorrelationId;
+  ownerId: string;
+  bootedAtMs: number;
+};
+
 export type ClientMessage =
   | RpcRequest
   | RpcAbort
@@ -162,7 +174,8 @@ export type ClientMessage =
   | RpcDbOp
   | RpcInspectorOp
   | RpcLiveSubscribe
-  | RpcLiveUnsub;
+  | RpcLiveUnsub
+  | RpcPing;
 
 export type OwnerMessage =
   | RpcResponse
@@ -171,6 +184,7 @@ export type OwnerMessage =
   | RpcReload
   | RpcBusEvent
   | RpcLiveEvent
-  | RpcMigration;
+  | RpcMigration
+  | RpcPong;
 
 export type RpcMessage = ClientMessage | OwnerMessage;

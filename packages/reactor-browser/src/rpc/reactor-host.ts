@@ -106,6 +106,15 @@ export class ReactorHost {
 
     const detach = transport.onMessage((message) => {
       const msg = message as ClientMessage;
+      if (msg.k === "ping") {
+        transport.post({
+          k: "pong",
+          id: msg.id,
+          ownerId: this.ownerId,
+          bootedAtMs: this.bootedAtMs,
+        });
+        return;
+      }
       if (this.migrationState?.status === "migrating" && isDataMessage(msg)) {
         transport.post({
           k: "err",
