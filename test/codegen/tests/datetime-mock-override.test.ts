@@ -67,6 +67,22 @@ describe("getInputFieldNames", () => {
     expect(getInputFieldNames(null)).toEqual([]);
     expect(getInputFieldNames("not graphql")).toEqual([]);
   });
+
+  test("selects the named input type, not the first (nested input defined first)", () => {
+    const sdl = `
+      input AssistantContentPartInput { id: OID! url: URL }
+      input AddAssistantMessageInput { id: OID! content: String createdAt: DateTime! }
+    `;
+    // Without the name it would wrongly return the nested input's fields (incl. url).
+    expect(getInputFieldNames(sdl, "AddAssistantMessageInput")).toEqual([
+      "id",
+      "content",
+      "createdAt",
+    ]);
+    expect(getInputFieldNames(sdl, "AddAssistantMessageInput")).not.toContain(
+      "url",
+    );
+  });
 });
 
 describe("makeTestCaseForOperation", () => {

@@ -168,7 +168,10 @@ export async function makeOperationModuleTestFile(
         o.scope === "local"
           ? overrideFieldsByScope.local
           : overrideFieldsByScope.global;
-      const overrideInputFields = getInputFieldNames(o.schema)
+      const overrideInputFields = getInputFieldNames(
+        o.schema,
+        `${pascalCase(o.name ?? "")}Input`,
+      )
         .filter((f) => overrideStateFields.has(f))
         .map((f) => ({ name: f, literal: overrideStateFields.get(f)! }));
       return makeTestCaseForOperation(

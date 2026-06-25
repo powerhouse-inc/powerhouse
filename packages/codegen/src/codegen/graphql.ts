@@ -131,7 +131,8 @@ export function getMockOverrideFieldNames(
   for (const def of doc.definitions) {
     if (def.kind !== Kind.OBJECT_TYPE_DEFINITION) continue;
     for (const field of def.fields ?? []) {
-      const literal = SCALAR_MOCK_OVERRIDES[unwrapNamedTypeName(field.type) ?? ""];
+      const literal =
+        SCALAR_MOCK_OVERRIDES[unwrapNamedTypeName(field.type) ?? ""];
       if (literal) overrides.set(field.name.value, literal);
     }
   }
@@ -139,7 +140,13 @@ export function getMockOverrideFieldNames(
 }
 
 // Field names on the first input type in an operation's SDL.
-export function getInputFieldNames(operationSDL: string | null): string[] {
+export function getInputFieldNames(
+  operationSDL: string | null,
+  // The operation's own input type (e.g. `AddAssistantMessageInput`). An operation SDL may
+  // define nested input types too (defined before the main one), so we must select by name,
+  // not just take the first — otherwise a nested input's fields leak into the override set.
+  preferredInputTypeName?: string,
+): string[] {
   if (!operationSDL) return [];
   let doc;
   try {
@@ -147,9 +154,13 @@ export function getInputFieldNames(operationSDL: string | null): string[] {
   } catch {
     return [];
   }
-  const inputDef = doc.definitions.find(
+  const inputDefs = doc.definitions.filter(
     (d) => d.kind === Kind.INPUT_OBJECT_TYPE_DEFINITION,
   );
+  const inputDef =
+    (preferredInputTypeName &&
+      inputDefs.find((d) => d.name.value === preferredInputTypeName)) ||
+    inputDefs[0];
   if (!inputDef || inputDef.kind !== Kind.INPUT_OBJECT_TYPE_DEFINITION) {
     return [];
   }
