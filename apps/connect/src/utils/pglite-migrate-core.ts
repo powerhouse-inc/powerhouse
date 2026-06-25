@@ -7,7 +7,7 @@ import {
   openIdb,
   readPgVersionFile,
 } from "./pglite-idb.js";
-import { CURRENT_PG_MAJOR } from "./pglite-major.js";
+import { CURRENT_PG_MAJOR, isMigratableMajor } from "./pglite-major.js";
 
 export type MigrationPhase = "clone" | "dump" | "restore";
 
@@ -196,10 +196,18 @@ export async function migrateIdb(
   const major = await readPgVersionFile(idbName);
   if (major === null || major === CURRENT_PG_MAJOR) return;
 
+  if (!isMigratableMajor(major)) {
+    console.warn(
+      `[pglite-migration] Skipping ${idbName}: unsupported PG_VERSION=${major}; no migration path.`,
+    );
+    return;
+  }
+
   const loader = LEGACY_DUMPERS[major];
   if (!loader) {
     throw new Error(
-      `Unsupported legacy PGlite data dir: PG_VERSION=${major} for ${idbName}`,
+      `No legacy dumper for supported PG_VERSION=${major} (${idbName}); ` +
+        `SUPPORTED_PG_MAJORS and LEGACY_DUMPERS are out of sync.`,
     );
   }
 

@@ -1,6 +1,4 @@
 import type { PGlite } from "@electric-sql/pglite";
-import type { Database } from "@powerhousedao/reactor";
-import type { IInspectorProxy } from "@powerhousedao/reactor-browser/rpc";
 import {
   getCachedReactorPgMajor,
   loadPgDump,
@@ -10,6 +8,7 @@ import type {
   FilterGroup,
   SortOptions,
 } from "@powerhousedao/design-system/connect";
+import type { Database } from "@powerhousedao/reactor";
 import {
   REACTOR_SCHEMA,
   useDatabase,
@@ -17,6 +16,7 @@ import {
   useReactorClientModule,
   type IQueue,
 } from "@powerhousedao/reactor-browser";
+import type { IInspectorProxy } from "@powerhousedao/reactor-browser/rpc";
 import { Kysely, sql } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import { useCallback, useMemo } from "react";
@@ -364,11 +364,13 @@ export function useDbExplorer() {
     [],
   );
 
+  const canModifyDb = !!pglite;
+
   return {
     getTables,
     getTableRows,
     getDefaultSort,
-    onExportDb,
-    onImportDb,
+    onExportDb: canModifyDb ? onExportDb : undefined,
+    onImportDb: canModifyDb ? onImportDb : undefined,
   };
 }

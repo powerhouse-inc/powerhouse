@@ -28,6 +28,9 @@ export type SyncStatusChangedBusEvent = {
   status: SyncStatus;
 };
 
+const SEED_MAX_ATTEMPTS = 3;
+const SEED_RETRY_DELAY_MS = 500;
+
 // Wire shapes: DriveCollectionId arrives prototype-less over postMessage.
 type WireDriveCollectionId = { driveId: string; branch: string };
 type WireRemoteMeta = {
@@ -139,8 +142,22 @@ export class SyncManagerProxy implements ISyncManager {
     void this.ensureSeeded();
   }
 
-  startup(): Promise<void> {
-    return this.ensureSeeded();
+  async startup(): Promise<void> {
+    let lastError: unknown;
+    for (let attempt = 0; attempt < SEED_MAX_ATTEMPTS; attempt++) {
+      try {
+        await this.ensureSeeded();
+        return;
+      } catch (error) {
+        lastError = error;
+        if (attempt < SEED_MAX_ATTEMPTS - 1) {
+          await new Promise((resolve) =>
+            setTimeout(resolve, SEED_RETRY_DELAY_MS),
+          );
+        }
+      }
+    }
+    throw lastError;
   }
 
   shutdown(): ShutdownStatus {
@@ -301,7 +318,14 @@ export class SyncManagerProxy implements ISyncManager {
   // Shared in-flight seed so the eager kick-off and startup() share one list RPC.
   private ensureSeeded(): Promise<void> {
     if (!this.seedPromise) {
-      this.seedPromise = this.refreshRemotes();
+      const pending = this.refreshRemotes();
+      this.seedPromise = pending;
+      
+      pending.catch(() => {
+        if (this.seedPromise === pending) {
+          this.seedPromise = null;
+        }
+      });
     }
     return this.seedPromise;
   }

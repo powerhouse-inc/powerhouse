@@ -1,7 +1,7 @@
 import { readPgVersionFile } from "./pglite-idb.js";
 import {
   coerceMajor,
-  CURRENT_PG_MAJOR,
+  isMigratableMajor,
   type DetectedMajor,
 } from "./pglite-major.js";
 import { REACTOR_IDB_NAME, RELATIONAL_IDB_NAME } from "./storage-namespace.js";
@@ -97,10 +97,7 @@ export async function detectMigrationMajor(): Promise<DetectedMajor> {
       readPgVersionFile(REACTOR_IDB_NAME),
       readPgVersionFile(RELATIONAL_IDB_NAME),
     ]);
-    const legacy =
-      majors
-        .map(coerceMajor)
-        .find((m) => m !== null && m !== CURRENT_PG_MAJOR) ?? null;
+    const legacy = majors.find(isMigratableMajor) ?? null;
     cachedMigrationMajor = legacy;
     notifyMigrationChanged();
     return legacy;

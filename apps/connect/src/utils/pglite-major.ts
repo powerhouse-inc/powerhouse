@@ -15,6 +15,17 @@ export function coerceMajor(value: number | null): DetectedMajor {
 }
 
 /**
+ * True when a data dir's on-disk major needs a migration we can actually
+ * perform.
+ */
+export function isMigratableMajor(
+  value: number | null,
+): value is SupportedPgMajor {
+  const major = coerceMajor(value);
+  return major !== null && major !== CURRENT_PG_MAJOR;
+}
+
+/**
  * Pick the PGlite major to use for *new* reactor clients: fall back to the
  * current version when there is no existing data dir.
  */

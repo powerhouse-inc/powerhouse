@@ -1,7 +1,6 @@
 import type { IReactorClient } from "@powerhousedao/reactor";
 import { toErrorInfo } from "./error-info.js";
 import { ReactorHostServer } from "./host-server.js";
-import { responseErrorKind, RPC_PROTOCOL_VERSION } from "./protocol.js";
 import type {
   ClientMessage,
   CorrelationId,
@@ -19,6 +18,8 @@ import type {
   WorkerInspectorInfo,
   WorkerMigrationState,
 } from "./protocol.js";
+import { responseErrorKind, RPC_PROTOCOL_VERSION } from "./protocol.js";
+import { createPortTransport, type IRpcTransport } from "./transport.js";
 
 function isDataMessage(
   msg: ClientMessage,
@@ -33,7 +34,6 @@ function isDataMessage(
     msg.k === "sub-live"
   );
 }
-import { createPortTransport, type IRpcTransport } from "./transport.js";
 
 export type ReactorHostOptions = {
   client?: IReactorClient;
@@ -291,7 +291,13 @@ export class ReactorHost {
           new Error("ReactorHost has no client or builder"),
         );
       }
-      this.clientPromise = build(construct);
+      const pending = build(construct);
+      this.clientPromise = pending;
+      pending.catch(() => {
+        if (this.clientPromise === pending) {
+          this.clientPromise = null;
+        }
+      });
     }
     return this.clientPromise;
   }
