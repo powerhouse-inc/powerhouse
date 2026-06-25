@@ -1,3 +1,25 @@
+## 6.2.0-dev.33 (2026-06-25)
+
+### 🚀 Features
+
+- reactor barrel export ([0cc8466ce](https://github.com/powerhouse-inc/powerhouse/commit/0cc8466ce))
+
+### 🩹 Fixes
+
+- test fixes ([7784d7e6b](https://github.com/powerhouse-inc/powerhouse/commit/7784d7e6b))
+- import paths are wrong ([fafcbe597](https://github.com/powerhouse-inc/powerhouse/commit/fafcbe597))
+- package updates never made it in ([a543795e3](https://github.com/powerhouse-inc/powerhouse/commit/a543795e3))
+- **academy:** repair broken academy build and broken links ([b6de178fc](https://github.com/powerhouse-inc/powerhouse/commit/b6de178fc))
+- **academy:** fail the build on broken links (onBrokenLinks: throw) ([4684d27e0](https://github.com/powerhouse-inc/powerhouse/commit/4684d27e0))
+- **academy:** point generate-recipe-docs at the real Cookbook path ([6f3a1d0f1](https://github.com/powerhouse-inc/powerhouse/commit/6f3a1d0f1))
+- **codegen:** emitted factories now pass along version ([2af3bbe2f](https://github.com/powerhouse-inc/powerhouse/commit/2af3bbe2f))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- CallmeT-ty @CallmeT-ty
+- Claude Opus 4.8
+
 ## 6.2.0-dev.31 (2026-06-23)
 
 ### 🚀 Features

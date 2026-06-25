@@ -1,3 +1,17 @@
+## 6.2.0-dev.33 (2026-06-25)
+
+### 🩹 Fixes
+
+- package updates never made it in ([a543795e3](https://github.com/powerhouse-inc/powerhouse/commit/a543795e3))
+- test fixes ([7784d7e6b](https://github.com/powerhouse-inc/powerhouse/commit/7784d7e6b))
+- **academy:** repair broken academy build and broken links ([b6de178fc](https://github.com/powerhouse-inc/powerhouse/commit/b6de178fc))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- CallmeT-ty @CallmeT-ty
+- Claude Opus 4.8
+
 ## 6.2.0-dev.31 (2026-06-23)
 
 This was a version bump only for @powerhousedao/analytics-engine-browser to align it with other projects, there were no code changes.
