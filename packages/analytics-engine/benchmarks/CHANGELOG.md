@@ -1,3 +1,7 @@
+## 6.2.0-dev.34 (2026-06-25)
+
+This was a version bump only for benchmarks to align it with other projects, there were no code changes.
+
 ## 6.2.0-dev.33 (2026-06-25)
 
 ### 🩹 Fixes

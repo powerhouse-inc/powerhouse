@@ -1,3 +1,13 @@
+## 6.2.0-dev.34 (2026-06-25)
+
+### 🩹 Fixes
+
+- **codegen:** fix issue where codegen tests fail for datetime ([c8e5f69f4](https://github.com/powerhouse-inc/powerhouse/commit/c8e5f69f4))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.2.0-dev.33 (2026-06-25)
 
 ### 🚀 Features
