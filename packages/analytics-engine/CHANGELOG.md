@@ -1,3 +1,13 @@
+## 6.2.0-rc.1 (2026-06-26)
+
+### 🚀 Features
+
+- **release:** support rc release channel in CLIs and docker pipeline ([da765dcb4](https://github.com/powerhouse-inc/powerhouse/commit/da765dcb4))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 6.2.0-rc.0 (2026-06-26)
 
 ### 🚀 Features
