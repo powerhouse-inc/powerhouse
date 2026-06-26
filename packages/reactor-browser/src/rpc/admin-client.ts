@@ -1,3 +1,4 @@
+import { Listeners } from "./listeners.js";
 import type { MessageRouter } from "./message-router.js";
 import { RPC_DEFAULT_TIMEOUT_MS, toVoid } from "./op-channel.js";
 import type { WorkerInspectorInfo, WorkerMigrationState } from "./protocol.js";
@@ -16,11 +17,11 @@ export function createWorkerAdminClient(
   router: MessageRouter,
 ): IWorkerAdminClient {
   let migrationState: WorkerMigrationState = { status: "idle" };
-  const migrationListeners = new Set<() => void>();
+  const migrationListeners = new Listeners();
 
   router.on("migration", (msg) => {
     migrationState = msg.state;
-    for (const listener of [...migrationListeners]) listener();
+    migrationListeners.emit();
   });
 
   const send = (
@@ -36,9 +37,6 @@ export function createWorkerAdminClient(
     clearStorage: () => toVoid(send("clearStorage")),
     migrate: () => toVoid(send("migrate")),
     getMigrationState: () => migrationState,
-    subscribeMigration: (callback) => {
-      migrationListeners.add(callback);
-      return () => migrationListeners.delete(callback);
-    },
+    subscribeMigration: (callback) => migrationListeners.add(callback),
   };
 }

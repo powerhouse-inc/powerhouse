@@ -6,6 +6,7 @@ import type {
 } from "@powerhousedao/reactor";
 import { hostResponder, type IHostResponder } from "./host-reply.js";
 import { dehydratePage } from "./paging.js";
+import { SubscriptionStore } from "./subscription.js";
 import type {
   ClientMessage,
   RpcNextPage,
@@ -25,7 +26,7 @@ export class ReactorHostServer {
   private readonly transport: IRpcTransport;
   private readonly reply: IHostResponder;
   private readonly aborters = new Map<string, AbortController>();
-  private readonly subscriptions = new Map<string, () => void>();
+  private readonly subscriptions = new SubscriptionStore();
   private readonly pages = new Map<string, NextPage>();
   private pageCounter = 0;
   private detach: () => void = () => {};
@@ -44,10 +45,7 @@ export class ReactorHostServer {
 
   stop(): void {
     this.detach();
-    for (const unsubscribe of this.subscriptions.values()) {
-      unsubscribe();
-    }
-    this.subscriptions.clear();
+    this.subscriptions.drain();
     this.aborters.clear();
     this.pages.clear();
   }
@@ -68,8 +66,7 @@ export class ReactorHostServer {
           this.handleSubscribe(message);
           return;
         case "unsub":
-          this.subscriptions.get(message.id)?.();
-          this.subscriptions.delete(message.id);
+          this.subscriptions.end(message.id);
           return;
       }
     } catch (error) {

@@ -14,6 +14,12 @@ export {
   type IOpChannel,
 } from "./op-channel.js";
 export { hostResponder, type IHostResponder } from "./host-reply.js";
+export { KeyedListeners, Listeners } from "./listeners.js";
+export {
+  SubscriptionStore,
+  createCorrelatedSubscriptions,
+  type ICorrelatedSubscriptions,
+} from "./subscription.js";
 export {
   createLiveQueryProxy,
   type ILiveQueryProxy,

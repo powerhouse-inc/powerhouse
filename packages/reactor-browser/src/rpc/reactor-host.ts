@@ -1,6 +1,7 @@
 import type { IReactorClient } from "@powerhousedao/reactor";
 import { hostResponder, type IHostResponder } from "./host-reply.js";
 import { ReactorHostServer } from "./host-server.js";
+import { SubscriptionStore } from "./subscription.js";
 import type {
   ClientMessage,
   CorrelationId,
@@ -95,7 +96,7 @@ export class ReactorHost {
   connect(transport: IRpcTransport): () => void {
     let server: ReactorHostServer | null = null;
     const buffer: ClientMessage[] = [];
-    const liveSubs = new Map<string, () => void>();
+    const liveSubs = new SubscriptionStore();
     const reply = hostResponder(transport);
 
     const ensureServer = async (construct?: unknown): Promise<void> => {
@@ -159,8 +160,7 @@ export class ReactorHost {
         return;
       }
       if (msg.k === "unsub-live") {
-        liveSubs.get(msg.id)?.();
-        liveSubs.delete(msg.id);
+        liveSubs.end(msg.id);
         return;
       }
       if (msg.k === "admin") {
@@ -185,10 +185,7 @@ export class ReactorHost {
     const dispose = () => {
       server?.stop();
       detach();
-      for (const unsubscribe of liveSubs.values()) {
-        unsubscribe();
-      }
-      liveSubs.clear();
+      liveSubs.drain();
       this.clients.delete(transport);
       this.disposers.delete(dispose);
     };
@@ -375,7 +372,7 @@ export class ReactorHost {
     message: RpcLiveSubscribe,
     transport: IRpcTransport,
     reply: IHostResponder,
-    liveSubs: Map<string, () => void>,
+    liveSubs: SubscriptionStore,
   ): Promise<void> {
     const handler = this.options.onLiveQuery;
     if (!this.requireHandler(handler, message, reply, "live-query")) {

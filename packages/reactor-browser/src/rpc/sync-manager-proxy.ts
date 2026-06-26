@@ -18,6 +18,7 @@ import {
   type SyncStatus,
   type SyncStatusChangeCallback,
 } from "@powerhousedao/reactor";
+import { KeyedListeners, Listeners } from "./listeners.js";
 import type { MessageRouter } from "./message-router.js";
 import { opChannel, type IOpChannel } from "./op-channel.js";
 
@@ -114,9 +115,9 @@ export class SyncManagerProxy implements ISyncManager {
     string,
     ConnectionStateSnapshot
   >();
-  private readonly connectionListeners = new Map<string, Set<() => void>>();
+  private readonly connectionListeners = new KeyedListeners<string>();
   private readonly syncStatuses = new Map<string, SyncStatus>();
-  private readonly syncStatusListeners = new Set<SyncStatusChangeCallback>();
+  private readonly syncStatusListeners = new Listeners<[string, SyncStatus]>();
   private remotes: Remote[] = [];
   private seedPromise: Promise<void> | null = null;
 
@@ -135,9 +136,7 @@ export class SyncManagerProxy implements ISyncManager {
     busProxy.subscribe(SYNC_STATUS_CHANGED_EVENT, (_type, event) => {
       const e = event as SyncStatusChangedBusEvent;
       this.syncStatuses.set(e.documentId, e.status);
-      for (const listener of [...this.syncStatusListeners]) {
-        listener(e.documentId, e.status);
-      }
+      this.syncStatusListeners.emit(e.documentId, e.status);
     });
 
     void this.ensureSeeded();
@@ -225,10 +224,7 @@ export class SyncManagerProxy implements ISyncManager {
   }
 
   onSyncStatusChange(callback: SyncStatusChangeCallback): () => void {
-    this.syncStatusListeners.add(callback);
-    return () => {
-      this.syncStatusListeners.delete(callback);
-    };
+    return this.syncStatusListeners.add(callback);
   }
 
   private callSyncOp(method: string, args: unknown[]): Promise<unknown> {
@@ -237,19 +233,10 @@ export class SyncManagerProxy implements ISyncManager {
 
   private notifyConnection(remoteName?: string): void {
     if (remoteName !== undefined) {
-      const listeners = this.connectionListeners.get(remoteName);
-      if (listeners) {
-        for (const listener of [...listeners]) {
-          listener();
-        }
-      }
+      this.connectionListeners.emit(remoteName);
       return;
     }
-    for (const listeners of [...this.connectionListeners.values()]) {
-      for (const listener of [...listeners]) {
-        listener();
-      }
-    }
+    this.connectionListeners.emitAll();
   }
 
   private makeChannel(remoteName: string, url: string | undefined): IChannel {
@@ -264,22 +251,7 @@ export class SyncManagerProxy implements ISyncManager {
       onConnectionStateChange: (callback: ConnectionStateChangeCallback) => {
         const listener = () =>
           callback(this.connectionStates.get(remoteName) ?? DEFAULT_SNAPSHOT);
-        let listeners = this.connectionListeners.get(remoteName);
-        if (!listeners) {
-          listeners = new Set();
-          this.connectionListeners.set(remoteName, listeners);
-        }
-        listeners.add(listener);
-        return () => {
-          const set = this.connectionListeners.get(remoteName);
-          if (!set) {
-            return;
-          }
-          set.delete(listener);
-          if (set.size === 0) {
-            this.connectionListeners.delete(remoteName);
-          }
-        };
+        return this.connectionListeners.add(remoteName, listener);
       },
 
       triggerPull: () => {

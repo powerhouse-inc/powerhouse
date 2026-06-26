@@ -9,7 +9,7 @@ import type {
 import { fromErrorInfo } from "./error-info.js";
 import type { MessageRouter } from "./message-router.js";
 import { rehydratePage } from "./paging.js";
-import type { CorrelationId } from "./protocol.js";
+import { createCorrelatedSubscriptions } from "./subscription.js";
 
 type Forwarder = (...args: unknown[]) => Promise<unknown>;
 
@@ -39,8 +39,6 @@ export function createReactorClientProxy(
   options: ReactorClientProxyOptions = {},
 ): IReactorClient {
   const registry = options.registry;
-  let subCounter = 0;
-  const subscribers = new Map<CorrelationId, ChangeCallback>();
 
   function fetchPage(token: string): Promise<unknown> {
     return router.request((id) => ({ k: "page", id, token }), {
@@ -52,14 +50,18 @@ export function createReactorClientProxy(
     return rehydratePage(value, fetchPage);
   }
 
-  router.on("event", (msg) => {
-    subscribers.get(msg.id)?.(msg.change as DocumentChangeEvent);
-  });
-  router.on("sub-err", (msg) => {
-    // failed subscribe: drop the dead subscriber and surface it
-    if (subscribers.delete(msg.id)) {
-      console.error("Reactor subscription failed:", fromErrorInfo(msg.error));
-    }
+  const changeSubs = createCorrelatedSubscriptions<
+    ChangeCallback,
+    "event",
+    "sub-err"
+  >(router, {
+    idPrefix: "sub",
+    eventKind: "event",
+    errKind: "sub-err",
+    onEvent: (callback, msg) => callback(msg.change as DocumentChangeEvent),
+    onError: (_callback, msg) =>
+      console.error("Reactor subscription failed:", fromErrorInfo(msg.error)),
+    close: (id) => ({ k: "unsub", id }),
   });
   router.on("reload", (msg) => {
     options.onReload?.(msg.reason, msg.workerGen);
@@ -102,15 +104,8 @@ export function createReactorClientProxy(
     search: SearchFilter,
     callback: ChangeCallback,
     view?: ViewFilter,
-  ): (() => void) => {
-    const id: CorrelationId = `sub${++subCounter}`;
-    subscribers.set(id, callback);
-    router.post({ k: "sub", id, search, view });
-    return () => {
-      subscribers.delete(id);
-      router.post({ k: "unsub", id });
-    };
-  };
+  ): (() => void) =>
+    changeSubs.subscribe(callback, (id) => ({ k: "sub", id, search, view }));
 
   const forwarders = new Map<string, Forwarder>();
   const forwarder = (method: string): Forwarder => {
