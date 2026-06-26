@@ -7,12 +7,14 @@ toc_max_heading_level: 3
 The `@powerhousedao/reactor-attachments` package decouples large binaries (images, files, avatars) from the action and operation pipeline. Instead of carrying base64-encoded `data` strings inside actions, document state holds opaque refs of the form `attachment://v1:<sha256>`, and the bytes flow through a dedicated `IAttachmentService`. Storage is content-addressed, so identical uploads dedupe to the same ref.
 
 ```typescript
+import type { AttachmentRef, AttachmentHash } from "@powerhousedao/reactor";
 import {
   type IAttachmentService,
-  type AttachmentRef,
   createRemoteAttachmentService,
 } from "@powerhousedao/reactor-attachments";
 ```
+
+`AttachmentRef` and `AttachmentHash` are defined in `@powerhousedao/reactor`; reactor-attachments re-exports neither. Of the ref-related symbols, only the `InvalidAttachmentRef` error class lives in reactor-attachments. The service and client symbols come from `@powerhousedao/reactor-attachments` and `@powerhousedao/reactor-attachments/client`.
 
 The package exposes two layers. `IAttachmentService` is the low-level, transport-facing interface — reserve a slot, stream the bytes, read them back by ref. `IAttachmentClient` wraps a service with convenience helpers; most notably `preprocess()`, which hashes a file up front so its ref is known before the bytes are uploaded. Build a client with `createAttachmentClient(service)`, and import it from the `/client` entrypoint:
 
@@ -44,6 +46,7 @@ The recommended client today is the switchboard-backed remote service. It target
 
 ```typescript
 import { createRemoteAttachmentService } from "@powerhousedao/reactor-attachments";
+import type { JwtHandler } from "@powerhousedao/reactor";
 
 const attachments = createRemoteAttachmentService({
   remoteUrl: "https://switchboard.example.com",
@@ -54,11 +57,15 @@ const attachments = createRemoteAttachmentService({
 });
 ```
 
+`JwtHandler` is `(url: string) => Promise<string | undefined>`, defined in `@powerhousedao/reactor`.
+
 :::tip
 The switchboard remote service is the supported client implementation right now. Other transports (S3, peer-to-peer) are designed but not yet stable — prefer `createRemoteAttachmentService` until these docs call out a replacement.
 :::
 
 On the server side (inside a subgraph, processor, or trigger), an `IAttachmentClient` is already wired into the host context by `@powerhousedao/reactor-api` and is available as `context.attachments`. There is no need to construct one yourself — the server builds the service and wraps it with `createAttachmentClient(...)`; see `packages/reactor-api/src/server.ts` for the wiring.
+
+The package root also exports the pieces for a local, embedded service: `AttachmentBuilder` (fluent), `KyselyAttachmentStore`, `KyselyReservationStore`, `runAttachmentMigrations`, `ATTACHMENT_SCHEMA`, `DEFAULT_RESERVATION_TTL_MS`, `DirectAttachmentUpload`/`DirectAttachmentUploadFactory`, and `NullAttachmentTransport`. These are on the root entrypoint only, not `/client`. Assemble one with `AttachmentBuilder` if you need an in-process store; the switchboard remote service remains the supported client today.
 
 ## The general flow
 
@@ -155,7 +162,7 @@ const objectUrl = URL.createObjectURL(blob);
 // ...later: URL.revokeObjectURL(objectUrl);
 ```
 
-`get()` succeeds for any ref whose bytes are available. If the bytes were evicted from local storage, the service transparently re-fetches them through the transport. A hash-first ref can also be _pending_ — reserved, with state already referencing it, but the bytes not yet uploaded. During that window `get()` throws `AttachmentPending`, while `stat()` succeeds and reports the declared size.
+`get()` succeeds for any ref whose bytes are available. If the bytes were evicted from local storage, the service transparently re-fetches them through the transport. A hash-first ref can also be _pending_ — reserved, with state already referencing it, but the bytes not yet uploaded. During that window `get()` throws `AttachmentPending`, while `stat()` succeeds and returns a header with `status: "pending"`, the declared `sizeBytes`, and `expiresAtUtc` set to the reservation expiry.
 
 ## The attachment client
 
@@ -271,6 +278,8 @@ setAgentImageOperation(state, action) {
 | Member          | Type                                                              | Description                                                                                                       |
 | --------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
 | `reservationId` | `string`                                                          | Unique identifier for this reservation.                                                                           |
+| `ref`           | `AttachmentRef \| null`                                           | The ref this upload will produce. Set immediately in hash-first mode; `null` in upload-first until `send()` resolves. |
+| `expiresAtUtc`  | `string`                                                          | ISO 8601 UTC reservation expiry (readonly). Use it to bound retry windows.                                        |
 | `send(data)`    | `(ReadableStream<Uint8Array>) => Promise<AttachmentUploadResult>` | Stream the bytes through the handle. Returns `{ hash, ref, header }`. Dedup against existing hashes is automatic. |
 
 ### `IAttachmentClient`
@@ -290,7 +299,8 @@ setAgentImageOperation(state, action) {
 | `HashFirstReserveAttachmentOptions`   | `{ mimeType: string; fileName: string; extension?: string \| null; clientHash: AttachmentHash; sizeBytes: number }` — ref known at reserve time.                                          |
 | `PreprocessResult`                    | `{ ref: AttachmentRef; hash: AttachmentHash; sizeBytes: number; options: HashFirstReserveAttachmentOptions; data: ReadableStream<Uint8Array>; stream: () => ReadableStream<Uint8Array> }` |
 | `AttachmentUploadResult`              | `{ hash: AttachmentHash; ref: AttachmentRef; header: AttachmentHeader }`                                                                                                                  |
-| `AttachmentHeader`                    | `{ hash; mimeType; fileName; sizeBytes; extension; status; source; createdAtUtc; lastAccessedAtUtc }`                                                                                     |
+| `AttachmentStatus`                    | `"available" \| "evicted" \| "pending"` — `pending` is synthesized at query time from a live hash-first reservation; the bytes are not uploaded yet.                                       |
+| `AttachmentHeader`                    | `{ hash; mimeType; fileName; sizeBytes; extension; status: AttachmentStatus; source; createdAtUtc; lastAccessedAtUtc; expiresAtUtc: string \| null }` — `expiresAtUtc` is `null` for committed attachments and carries the reservation expiry while `pending`. |
 | `AttachmentResponse`                  | `{ header: AttachmentHeader; body: ReadableStream<Uint8Array> }`                                                                                                                          |
 
 ### Errors
@@ -302,7 +312,7 @@ setAgentImageOperation(state, action) {
 | `UploadTooLarge`          | `upload.send()` exceeded the server's configured byte cap. Maps to HTTP 413.                                                                              |
 | `ReservationNotFound`     | `upload.send()` after the reservation expired or was deleted.                                                                                             |
 | `AttachmentAlreadyExists` | Hash-first `reserve()` for content whose hash is already stored. The client's `reserve()` catches this and returns the existing ref instead of uploading. |
-| `AttachmentPending`       | `get(ref)` for a hash that is reserved but whose bytes have not finished uploading.                                                                       |
+| `AttachmentPending`       | `get(ref)` for a hash that is reserved but whose bytes have not finished uploading. Carries `readonly hash`, `readonly expiresAtUtc: string`, and `readonly metadata?: { mimeType; fileName; sizeBytes }` so the caller can show the declared size and retry timing. Intentionally not a subclass of `AttachmentNotFound` — pending is "retry later", not "unknown". |
 | `HashMismatch`            | Hash-first `send()` whose uploaded bytes do not match the claimed `clientHash`.                                                                           |
 | `SizeMismatch`            | Hash-first `send()` whose actual byte count differs from the declared `sizeBytes`.                                                                        |
 
@@ -314,7 +324,7 @@ setAgentImageOperation(state, action) {
 
 If a document model previously inlined binary content, the migration is small and mechanical:
 
-- **Schema** — replace `data: String` (or composite fields like `{ image, imageMediaType, imageUrl }`) with a single `attachment: Attachment` field on the input and the state type.
+- **Schema** — replace `data: String` (or composite fields like `{ image, imageMediaType, imageUrl }`) with a single `attachment: AttachmentRef` field on the input and the state type.
 - **Write path** — replace the base64-encoding step with a reservation and upload. Either reserve on the service directly (`attachments.reserve({ mimeType, fileName })` then `upload.send(stream)`, dispatching with `result.ref`), or use the client (`attachments.preprocess(file)` then `client.execute(...)` with `results.ref` and `attachments.reserve(results.options, ...)`). In the browser, `useAttachmentUpload()` wraps the client flow.
 - **Read path** — replace data-URI assembly with `attachments.get(ref)`. In a browser, drain the stream into a `Blob` and use `URL.createObjectURL` (remember to `revokeObjectURL` on cleanup).
 - **Graceful degradation** — code paths that may run without an attachment service (mock environments, tests, off-line previews) should branch on `if (!attachments)`. Writers should surface a clear error to the user; readers should skip the attachment and render a placeholder.

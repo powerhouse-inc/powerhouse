@@ -11,7 +11,7 @@ import type { IReactorClient } from "@powerhousedao/reactor-browser";
 ```
 
 :::info[Import paths]
-`@powerhousedao/reactor-browser` re-exports all reactor types for convenience in browser environments (editors, drive-apps, subgraphs). If you are working outside the browser — for example in a standalone Node.js script, CLI tool, or server-side processor — import directly from `@powerhousedao/reactor`.
+`@powerhousedao/reactor-browser` re-exports a curated subset of reactor values and types for browser environments (editors, drive-apps, subgraphs). `IReactorClient`, `DocumentChangeType`, `ReactorBuilder`, and `ReactorClientBuilder` are re-exported there. Most other types on this page are not re-exported and must come from `@powerhousedao/reactor`: `ViewFilter`, `SearchFilter`, `PagingOptions`, `PagedResults`, `PropagationMode`, `JobInfo`, `JobStatus`, `DocumentChangeEvent`, and `OperationFilter`. Outside the browser (a standalone Node.js script, CLI tool, or server-side processor), import everything from `@powerhousedao/reactor`.
 :::
 
 For an architectural overview of the reactor, see [Working with the Reactor](/academy/Reference/Reactor/WorkingWithTheReactor). For the low-level `IReactor` interface and access to internal components, see [Advanced Reactor Usage](/academy/Reference/Reactor/AdvancedReactorUsage).
@@ -105,12 +105,16 @@ Tracks the status and result of a mutation job.
 ```typescript
 type JobInfo = {
   id: string;
+  documentId: string; // empty string when the job is unknown
   status: JobStatus;
   createdAtUtcIso: string;
   completedAtUtcIso?: string;
   error?: ErrorInfo;
+  errorHistory?: ErrorInfo[];
+  result?: any;
   consistencyToken: ConsistencyToken;
   meta: JobMeta;
+  job?: Job; // populated on failure for debugging
 };
 ```
 
@@ -143,7 +147,7 @@ const topFive = await reactorClient.getOutgoingRelationships(
   "child",
   undefined,
   {
-    cursor: "",
+    cursor: "0",
     limit: 5,
   },
 );
@@ -164,7 +168,7 @@ if (page.nextCursor) {
 
 ## Cancellation with AbortSignal
 
-Most `IReactorClient` methods accept an optional `AbortSignal` parameter. This lets you cancel in-flight requests — useful for cleaning up when a component unmounts, a user navigates away, or a timeout is reached.
+Most `IReactorClient` methods accept an optional `AbortSignal` parameter. This lets you cancel in-flight requests — useful for cleaning up when a component unmounts, a user navigates away, or a timeout is reached. The two methods that do not take an `AbortSignal` are `getDocumentModelModule` and `subscribe`.
 
 **Cancel on component unmount (React):**
 
@@ -181,7 +185,7 @@ useEffect(() => {
     )
     .then(setResults)
     .catch((err) => {
-      if (err.name !== "AbortError") throw err;
+      if (!isAbortError(err)) throw err; // isAbortError is exported from @powerhousedao/reactor
     });
 
   return () => controller.abort();
@@ -214,7 +218,7 @@ const updated = await reactorClient.execute(
 );
 ```
 
-When a request is aborted, the method throws an `AbortError`. The underlying reactor job may still complete — aborting only cancels the client-side wait, not the server-side processing.
+When a request is aborted, the method throws an `AbortError`. Detect it with `isAbortError(err)` from `@powerhousedao/reactor` rather than matching `err.name`. The underlying reactor job may still complete; aborting only cancels the client-side wait, not the server-side processing.
 
 ---
 
@@ -246,6 +250,26 @@ get<TDocument extends PHDocument>(
 const doc = await reactorClient.get("my-todo-list");
 const atRevision = await reactorClient.get("my-todo-list", { revision: 5 });
 ```
+
+---
+
+### `resolveIdOrSlug`
+
+Resolve an id or slug to the canonical document id. Resolution runs against the `main` branch. Throws if the identifier cannot be resolved or is ambiguous.
+
+```typescript
+resolveIdOrSlug(
+  identifier: string,
+  signal?: AbortSignal,
+): Promise<string>
+```
+
+**Parameters:**
+
+| Name         | Type          | Required | Description         |
+| ------------ | ------------- | -------- | ------------------- |
+| `identifier` | `string`      | Yes      | Document id or slug |
+| `signal`     | `AbortSignal` | No       | Cancel the request  |
 
 ---
 
@@ -373,6 +397,8 @@ interface OperationFilter {
 }
 ```
 
+`getOperations` merges operations across all of the document's scopes and sorts them by operation index, paging through them with a composite cursor that tracks each scope's position. Paging defaults to `{ cursor: "0", limit: 100 }` — the default cursor is `"0"`, not `""`.
+
 ---
 
 ### `getDocumentModelModules`
@@ -404,7 +430,7 @@ Get a specific document model module by document type.
 ```typescript
 getDocumentModelModule(
   documentType: string,
-): Promise<DocumentModelModule>
+): Promise<DocumentModelModule<any>>
 ```
 
 **Parameters:**
@@ -424,7 +450,7 @@ All write methods internally create jobs and wait for them to reach `READ_READY`
 Create a document from a full `PHDocument` object.
 
 ```typescript
-create<TDocument extends PHDocument>(
+create<TDocument extends PHDocument = PHDocument>(
   document: PHDocument,
   parentIdentifier?: string,
   signal?: AbortSignal,
@@ -463,27 +489,9 @@ createEmpty<TDocument extends PHDocument>(
 
 ---
 
-### `createDocumentInDrive`
+### Creating a document in a drive
 
-Create a document inside a drive as a single batched operation. More efficient than `createEmpty` followed by `addRelationship` because all actions are batched into dependent jobs.
-
-```typescript
-createDocumentInDrive<TDocument extends PHDocument>(
-  driveId: string,
-  document: PHDocument,
-  parentFolder?: string,
-  signal?: AbortSignal,
-): Promise<TDocument>
-```
-
-**Parameters:**
-
-| Name           | Type          | Required | Description                |
-| -------------- | ------------- | -------- | -------------------------- |
-| `driveId`      | `string`      | Yes      | Drive document id or slug  |
-| `document`     | `PHDocument`  | Yes      | The document to create     |
-| `parentFolder` | `string`      | No       | Folder id within the drive |
-| `signal`       | `AbortSignal` | No       | Cancel the request         |
+To create a document inside a drive, use `client.drives.addFile`. It issues the CREATE_DOCUMENT, UPGRADE_DOCUMENT, ADD_RELATIONSHIP, and ADD_FILE actions in a single dependent batch. See [Drives (`client.drives`)](#drives-clientdrives) for the full signature.
 
 ---
 
@@ -562,6 +570,30 @@ rename(
 | `name`               | `string`      | Yes      | New name             |
 | `branch`             | `string`      | No       | Defaults to `"main"` |
 | `signal`             | `AbortSignal` | No       | Cancel the request   |
+
+---
+
+### `setPreferredEditor`
+
+Update the preferred editor recorded in the document header meta. Pass `null` to clear it.
+
+```typescript
+setPreferredEditor(
+  documentIdentifier: string,
+  preferredEditor: string | null,
+  branch?: string,
+  signal?: AbortSignal,
+): Promise<PHDocument>
+```
+
+**Parameters:**
+
+| Name                 | Type             | Required | Description                       |
+| -------------------- | ---------------- | -------- | --------------------------------- |
+| `documentIdentifier` | `string`         | Yes      | Document id or slug               |
+| `preferredEditor`    | `string \| null` | Yes      | Editor id, or `null` to clear it  |
+| `branch`             | `string`         | No       | Defaults to `"main"`              |
+| `signal`             | `AbortSignal`    | No       | Cancel the request                |
 
 ---
 
@@ -681,6 +713,229 @@ deleteDocuments(
 
 ---
 
+### `executeBatch`
+
+Apply multiple mutation jobs in dependency order. The client signs each job's actions, dispatches them, and waits for all jobs to complete. If a job fails, `executeBatch` throws with that job's error message; the other jobs may still execute because dispatch is fire-and-await-all.
+
+```typescript
+executeBatch(
+  request: BatchExecutionRequest,
+  signal?: AbortSignal,
+): Promise<BatchExecutionResult>
+```
+
+Each job carries a `key` (used to express dependencies) and a `dependsOn` list of other job keys.
+
+```typescript
+type ExecutionJobPlan = {
+  key: string;
+  documentId: string;
+  scope: string;
+  branch: string;
+  actions: Action[];
+  dependsOn: string[];
+};
+
+type BatchExecutionRequest = {
+  jobs: ExecutionJobPlan[];
+};
+
+type BatchExecutionResult = {
+  jobs: Record<string, JobInfo>;
+};
+```
+
+The result's `jobs` record is keyed by each plan's `key`.
+
+---
+
+### `loadBatch`
+
+Submit multiple batches of pre-existing operations across documents, with dependency ordering, and wait for all jobs to complete. Use this to load operations that already exist (for example from sync), as opposed to `executeBatch`, which signs and applies new actions.
+
+```typescript
+loadBatch(
+  request: BatchLoadRequest,
+  signal?: AbortSignal,
+): Promise<BatchLoadResult>
+```
+
+Each job carries `operations` instead of actions. `dependsOn` lists intra-batch plan keys; `externalDeps` lists already-resolved job ids from prior batches.
+
+```typescript
+type LoadJobPlan = {
+  key: string;
+  documentId: string;
+  scope: string;
+  branch: string;
+  operations: Operation[];
+  dependsOn: string[];
+  externalDeps: string[];
+};
+
+type BatchLoadRequest = {
+  jobs: LoadJobPlan[];
+};
+
+type BatchLoadResult = {
+  jobs: Record<string, JobInfo>;
+};
+```
+
+The result's `jobs` record is keyed by each plan's `key`. If a job fails, `loadBatch` throws with that job's error message.
+
+---
+
+## Drives (`client.drives`) {#drives}
+
+`client.drives` is a `readonly` `IDriveClient` namespace for drive-aware operations. These methods orchestrate the multi-action, multi-document work needed to keep a drive's `state.global.nodes` array consistent with the relationship index and the underlying documents. Use the flat `IReactorClient` methods (`get`, `execute`, `find`) for everything that is not drive-aware.
+
+Every method takes a trailing optional `signal?: AbortSignal`.
+
+### `addFile`
+
+Create a document inside a drive as a single dependent batch. This issues CREATE_DOCUMENT, UPGRADE_DOCUMENT, and ADD_RELATIONSHIP on the new document, plus ADD_FILE on the drive. This is the way to create a document in a drive.
+
+```typescript
+addFile<TDocument extends PHDocument = PHDocument>(
+  driveIdentifier: string,
+  document: PHDocument,
+  parentFolder?: string,
+  signal?: AbortSignal,
+): Promise<TDocument>
+```
+
+**Parameters:**
+
+| Name              | Type          | Required | Description                |
+| ----------------- | ------------- | -------- | -------------------------- |
+| `driveIdentifier` | `string`      | Yes      | Drive document id or slug  |
+| `document`        | `PHDocument`  | Yes      | The document to create     |
+| `parentFolder`    | `string`      | No       | Folder id within the drive |
+| `signal`          | `AbortSignal` | No       | Cancel the request         |
+
+### `create`
+
+Create a new drive document and wait for completion.
+
+```typescript
+create(
+  input: DriveInput,
+  signal?: AbortSignal,
+): Promise<DocumentDriveDocument>
+```
+
+### `addFolder`
+
+Add a folder node to a drive.
+
+```typescript
+addFolder(
+  driveIdentifier: string,
+  name: string,
+  parentFolder?: string,
+  signal?: AbortSignal,
+): Promise<FolderNode>
+```
+
+### `removeNode`
+
+Remove a node from a drive. Folder nodes cascade: descendant file documents are deleted first, then the folder node entry.
+
+```typescript
+removeNode(
+  driveIdentifier: string,
+  nodeId: string,
+  signal?: AbortSignal,
+): Promise<void>
+```
+
+### `renameNode`
+
+Rename a node. Updates both the underlying document header and the drive's node entry.
+
+```typescript
+renameNode(
+  driveIdentifier: string,
+  nodeId: string,
+  name: string,
+  signal?: AbortSignal,
+): Promise<Node>
+```
+
+### `setPreferredEditorOnNode`
+
+Update the preferred editor recorded in the node's document header meta. Pass `null` to clear it.
+
+```typescript
+setPreferredEditorOnNode(
+  nodeId: string,
+  preferredEditor: string | null,
+  signal?: AbortSignal,
+): Promise<PHDocument>
+```
+
+### `moveNode`
+
+Move a node to a different parent folder within the same drive. Pass `undefined` as `targetParentFolderId` to move the node to the drive root.
+
+```typescript
+moveNode(
+  driveIdentifier: string,
+  srcNodeId: string,
+  targetParentFolderId: string | undefined,
+  signal?: AbortSignal,
+): Promise<DocumentDriveDocument>
+```
+
+### `copyNode`
+
+Copy a node, and its subtree if it is a folder, within a drive. Each copied file gets a new id and a duplicated document.
+
+```typescript
+copyNode(
+  driveIdentifier: string,
+  srcNodeId: string,
+  targetParentFolderId: string | undefined,
+  signal?: AbortSignal,
+): Promise<DocumentDriveDocument>
+```
+
+### `getNode`
+
+Return a single node from the drive's `state.global.nodes` array.
+
+```typescript
+getNode(
+  driveIdentifier: string,
+  nodeId: string,
+  signal?: AbortSignal,
+): Promise<Node>
+```
+
+### `listNodes`
+
+Return nodes in the drive, optionally filtered by parent folder. Returns a paged result so you can stream through drives with large node counts.
+
+```typescript
+listNodes(
+  driveIdentifier: string,
+  parentFolder?: string | null,
+  paging?: PagingOptions,
+  signal?: AbortSignal,
+): Promise<PagedResults<Node>>
+```
+
+The `parentFolder` argument controls scope:
+
+| Value       | Result                                       |
+| ----------- | -------------------------------------------- |
+| `undefined` | Every node in the drive                      |
+| `null`      | Only root-level nodes                        |
+| a folder id | Only the direct children of that folder      |
+
+---
+
 ## Subscriptions
 
 ### `subscribe`
@@ -712,15 +967,21 @@ type DocumentChangeEvent = {
 
 **`DocumentChangeType`** values:
 
-| Value           | Description                       |
-| --------------- | --------------------------------- |
-| `Created`       | A new document was created        |
-| `Deleted`       | A document was deleted            |
-| `Updated`       | A document's state changed        |
-| `ParentAdded`   | A parent relationship was added   |
-| `ParentRemoved` | A parent relationship was removed |
-| `ChildAdded`    | A child relationship was added    |
-| `ChildRemoved`  | A child relationship was removed  |
+| Value          | Description                |
+| -------------- | -------------------------- |
+| `Created`      | A new document was created |
+| `Deleted`      | A document was deleted     |
+| `Updated`      | A document's state changed |
+| `ChildAdded`   | A child relationship was added   |
+| `ChildRemoved` | A child relationship was removed |
+
+`subscribe` emits the five values above. `ParentAdded` and `ParentRemoved` exist in the `DocumentChangeType` enum but are not currently emitted by `subscribe`.
+
+Which fields populate depends on the change type:
+
+- `Created` and `Updated` carry the changed documents in `documents`.
+- `Deleted` carries `documents: []` and the document id in `context.childId`.
+- `ChildAdded` and `ChildRemoved` carry `documents: []` and the ids in `context.parentId` and `context.childId`.
 
 **Example:**
 
