@@ -27,7 +27,7 @@ Specify the package manager to use for your project. Can be one of: `npm`, `pnpm
 **usage:** `--package-manager, -p <value>`<br>
 
 #### Tag <br>
-Specify the release tag to use for your project. Can be one of: "latest", "staging", or "dev".<br><br>
+Specify the release tag to use for your project. Can be one of: "latest", "staging", "dev", or "rc".<br><br>
 **usage:** `--tag, -t <value>`<br>
 
 #### Version <br>
@@ -68,6 +68,10 @@ Use the `dev` release tag.<br><br>
 Use the `staging` release tag.<br><br>
 **usage:** `--staging, -s`<br>
 
+#### Rc <br>
+Use the `rc` release tag.<br><br>
+**usage:** `--rc`<br>
+
 #### Debug <br>
 Log arguments passed to this command<br><br>
 **usage:** `--debug`<br>
@@ -81,13 +85,13 @@ show help<br><br>
 Specify the release version of Powerhouse dependencies to use.
 ### arguments
 #### Tag <br>
-Specify the release tag to use for your project. Can be one of: "latest", "staging", or "dev".<br><br>
+Specify the release tag to use for your project. Can be one of: "latest", "staging", "dev", or "rc".<br><br>
 **usage:** `[tag]`<br>
 
 
 ### options
 #### Tag <br>
-Specify the release tag to use for your project. Can be one of: "latest", "staging", or "dev".<br><br>
+Specify the release tag to use for your project. Can be one of: "latest", "staging", "dev", or "rc".<br><br>
 **usage:** `--tag, -t <value>`<br>
 
 #### Version <br>
@@ -143,7 +147,7 @@ Specify the package manager to use for your project. Can be one of: `npm`, `pnpm
 **usage:** `--package-manager, -p <value>`<br>
 
 #### Tag <br>
-Specify the release tag to use for your project. Can be one of: "latest", "staging", or "dev".<br><br>
+Specify the release tag to use for your project. Can be one of: "latest", "staging", "dev", or "rc".<br><br>
 **usage:** `--tag, -t <value>`<br>
 
 #### Version <br>
@@ -183,6 +187,10 @@ Use the `dev` release tag.<br><br>
 #### Staging <br>
 Use the `staging` release tag.<br><br>
 **usage:** `--staging, -s`<br>
+
+#### Rc <br>
+Use the `rc` release tag.<br><br>
+**usage:** `--rc`<br>
 
 #### Debug <br>
 Log arguments passed to this command<br><br>
