@@ -33,7 +33,18 @@ runs:
           HEAD="$(git rev-parse HEAD)"
         fi
 
-        FILES="$(git diff --name-only --diff-filter=ACMR "$BASE" "$HEAD")"
+        # support commit amends and force push
+        if [[ "$BASE" =~ ^0+$ ]] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+          echo "BASE '$BASE' is missing or invalid; falling back to HEAD parent."
+          BASE="$(git rev-parse "$HEAD^" 2>/dev/null || echo "")"
+        fi
+
+        if [[ -z "$BASE" ]]; then
+          echo "No usable BASE; treating all tracked files as unchanged."
+          FILES=""
+        else
+          FILES="$(git diff --name-only --diff-filter=ACMR "$BASE" "$HEAD")"
+        fi
 
         echo "Event:  $EVENT_NAME"
         echo "Action: $PR_ACTION"
