@@ -260,7 +260,7 @@ jobs:
     if: ${{ inputs.dry_run != true && inputs.skip_publish != true }}
     uses: "./.github/workflows/test-package-managers.yml"
     with:
-      tag: ${{ github.ref_name == 'main' && 'dev' || startsWith(github.ref_name, 'release/staging') && 'staging' || startsWith(github.ref_name, 'release/production') && 'latest' || 'dev' }}
+      tag: ${{ github.ref_name == 'main' && 'dev' || startsWith(github.ref_name, 'release/rc') && 'rc' || startsWith(github.ref_name, 'release/staging') && 'staging' || startsWith(github.ref_name, 'release/production') && 'latest' || 'dev' }}
     secrets: inherit
 
   determine-downstream-params:
@@ -282,10 +282,12 @@ jobs:
         id: params
         run: |
           # Determine channel based on branch
-          # main = dev, release/staging/* = staging, release/production/* = latest
+          # main = dev, release/rc/* = rc, release/staging/* = staging, release/production/* = latest
           BRANCH="${{ github.ref_name }}"
           if [[ "$BRANCH" == "main" ]]; then
             CHANNEL="dev"
+          elif [[ "$BRANCH" == release/rc/* ]]; then
+            CHANNEL="rc"
           elif [[ "$BRANCH" == release/staging/* ]]; then
             CHANNEL="staging"
           elif [[ "$BRANCH" == release/production/* ]]; then
@@ -299,6 +301,8 @@ jobs:
           # Get the latest version tag for this channel
           if [[ "$CHANNEL" == "dev" ]]; then
             VERSION=$(git tag --sort=-v:refname | grep -E "^v[0-9]+\.[0-9]+\.[0-9]+-dev\.[0-9]+$" | head -1)
+          elif [[ "$CHANNEL" == "rc" ]]; then
+            VERSION=$(git tag --sort=-v:refname | grep -E "^v[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+$" | head -1)
           elif [[ "$CHANNEL" == "staging" ]]; then
             VERSION=$(git tag --sort=-v:refname | grep -E "^v[0-9]+\.[0-9]+\.[0-9]+-staging\.[0-9]+$" | head -1)
           else
