@@ -3,45 +3,152 @@ import * as path from "path";
 import { fileURLToPath } from "url";
 
 /**
- * Generates the Reactor Recipes section of the Cookbook by fetching each
- * recipe's README from the powerhouse-inc/recipes repository and rendering it
- * inline behind a <details> toggle — mirroring how the CLI reference is
- * assembled by generate-combined-cli-docs.ts.
+ * Generates the Reactor Recipes section of the Cookbook (summary table + each
+ * recipe's README inlined behind a <details> toggle).
  *
- * The list of recipes is parsed from the existing table in the Cookbook (the
- * single source of truth), so adding a row there is all that's needed to pull
- * a new recipe in. Run with: pnpm --filter @powerhousedao/academy generate:recipe-docs
+ * The recipe list is DISCOVERED from the powerhouse-inc/recipes repository
+ * itself — every top-level directory that has both a README.md and a
+ * package.json is treated as a recipe. This means a new recipe shows up here
+ * automatically once it is pushed; nothing in this repo needs editing.
+ *
+ * Run with: pnpm --filter @powerhousedao/academy generate:recipe-docs
+ * Set GITHUB_TOKEN to raise the GitHub API rate limit if needed.
  */
 
 const REPO = "powerhouse-inc/recipes";
 const BRANCH = "main";
 const RAW_BASE = `https://raw.githubusercontent.com/${REPO}/${BRANCH}`;
+const API_CONTENTS = `https://api.github.com/repos/${REPO}/contents?ref=${BRANCH}`;
 const TREE_BASE = `https://github.com/${REPO}/tree/${BRANCH}`;
 const BLOB_BASE = `https://github.com/${REPO}/blob/${BRANCH}`;
 
 const START = "{/* AUTO-GENERATED-RECIPE-DOCS-START */}";
 const END = "{/* AUTO-GENERATED-RECIPE-DOCS-END */}";
 
-type Recipe = { title: string; slug: string; description: string };
+// Directories that carry a README but are not runnable recipes.
+const DENYLIST = new Set(["briefs"]);
 
-/** Parse recipe rows from the markdown table linking to the recipes repo. */
-function parseRecipes(cookbook: string): Recipe[] {
-  const rowRe = new RegExp(
-    `\\|\\s*\\[([^\\]]+)\\]\\(https://github\\.com/${REPO.replace(
-      "/",
-      "\\/",
-    )}/tree/${BRANCH}/([^)\\s]+)\\)\\s*\\|\\s*([^|]+?)\\s*\\|`,
-    "g",
-  );
-  const recipes: Recipe[] = [];
-  for (const m of cookbook.matchAll(rowRe)) {
-    recipes.push({
-      title: m[1].trim(),
-      slug: m[2].trim(),
-      description: m[3].trim(),
-    });
+type Recipe = {
+  slug: string;
+  title: string;
+  description: string;
+  readme: string;
+};
+
+function githubHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {
+    "User-Agent": "powerhouse-academy-docgen",
+    Accept: "application/vnd.github+json",
+  };
+  if (process.env.GITHUB_TOKEN) {
+    headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
   }
-  return recipes;
+  return headers;
+}
+
+async function urlExists(url: string): Promise<boolean> {
+  const res = await fetch(url);
+  return res.ok;
+}
+
+/** Discover recipe slugs: top-level dirs with both a README.md and package.json. */
+async function discoverRecipes(): Promise<string[]> {
+  const res = await fetch(API_CONTENTS, { headers: githubHeaders() });
+  if (!res.ok) {
+    const hint =
+      res.status === 403
+        ? " (rate limited — set GITHUB_TOKEN to raise the limit)"
+        : "";
+    throw new Error(`GitHub contents API returned HTTP ${res.status}${hint}`);
+  }
+  const entries = (await res.json()) as Array<{ name: string; type: string }>;
+  const dirs = entries
+    .filter((e) => e.type === "dir")
+    .map((e) => e.name)
+    .filter((name) => !name.startsWith(".") && !DENYLIST.has(name));
+
+  const checked = await Promise.all(
+    dirs.map(async (name) => {
+      const [hasReadme, hasPkg] = await Promise.all([
+        urlExists(`${RAW_BASE}/${name}/README.md`),
+        urlExists(`${RAW_BASE}/${name}/package.json`),
+      ]);
+      return hasReadme && hasPkg ? name : null;
+    }),
+  );
+
+  return checked.filter((s): s is string => s !== null).sort();
+}
+
+async function fetchReadme(slug: string): Promise<string | null> {
+  const res = await fetch(`${RAW_BASE}/${slug}/README.md`);
+  if (!res.ok) {
+    console.warn(`  ⚠️  ${slug}: README fetch failed (HTTP ${res.status})`);
+    return null;
+  }
+  return res.text();
+}
+
+function titleCase(slug: string): string {
+  return slug
+    .split("-")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
+/** Human title: the README's first H1, falling back to the title-cased slug. */
+function deriveTitle(readme: string | null, slug: string): string {
+  const h1 = readme
+    ?.split(/\r?\n/)
+    .find((l) => /^#\s+\S/.test(l))
+    ?.replace(/^#\s+/, "")
+    .trim();
+  return h1 || titleCase(slug);
+}
+
+/** Short description: the first sentence of the README's first prose paragraph. */
+function deriveDescription(readme: string | null, slug: string): string {
+  if (!readme) return `Reactor recipe: ${titleCase(slug)}.`;
+  const lines = readme.split(/\r?\n/);
+  const h1Idx = lines.findIndex((l) => /^#\s+\S/.test(l));
+  let i = h1Idx >= 0 ? h1Idx + 1 : 0;
+  while (i < lines.length && lines[i].trim() === "") i++;
+  const buf: string[] = [];
+  while (
+    i < lines.length &&
+    lines[i].trim() !== "" &&
+    !/^#{1,6}\s/.test(lines[i])
+  ) {
+    buf.push(lines[i].trim());
+    i++;
+  }
+  const paragraph = buf.join(" ").trim();
+  const sentence = paragraph.match(/^(.+?\.)(?:\s|$)/);
+  return (
+    (sentence ? sentence[1] : paragraph) ||
+    `Reactor recipe: ${titleCase(slug)}.`
+  );
+}
+
+/** Escape MDX-hostile characters outside inline code spans. */
+function escapeMdxProse(text: string): string {
+  return text
+    .split(/(`[^`\n]*`)/g)
+    .map((part, i) =>
+      i % 2 === 1
+        ? part
+        : part
+            .replace(/\{/g, "\\{")
+            .replace(/\}/g, "\\}")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;"),
+    )
+    .join("");
+}
+
+/** Same as escapeMdxProse, plus pipe escaping so it is safe inside a table cell. */
+function escapeTableCell(text: string): string {
+  return escapeMdxProse(text).replace(/\|/g, "\\|");
 }
 
 /**
@@ -50,7 +157,6 @@ function parseRecipes(cookbook: string): Recipe[] {
  * like `Kysely<DB>` must survive). Only prose segments are transformed.
  */
 function sanitizeForMdx(md: string, slug: string): string {
-  // Split on fenced code blocks; odd indices are the fences themselves.
   const segments = md.split(/(```[\s\S]*?```)/g);
   return segments
     .map((seg, i) => (i % 2 === 1 ? seg : transformProse(seg, slug)))
@@ -77,39 +183,30 @@ function transformProse(text: string, slug: string): string {
   );
 
   // 3) Escape MDX-hostile characters outside inline code spans.
-  const parts = text.split(/(`[^`\n]*`)/g);
-  return parts
-    .map((part, i) => {
-      if (i % 2 === 1) return part; // inline code — leave as-is
-      return part
-        .replace(/\{/g, "\\{")
-        .replace(/\}/g, "\\}")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;");
-    })
-    .join("");
+  return escapeMdxProse(text);
 }
 
-async function fetchReadme(slug: string): Promise<string | null> {
-  const url = `${RAW_BASE}/${slug}/README.md`;
-  const res = await fetch(url);
-  if (!res.ok) {
-    console.warn(
-      `  ⚠️  ${slug}: README fetch failed (HTTP ${res.status}) — skipping inline content`,
-    );
-    return null;
-  }
-  return res.text();
+function renderTable(recipes: Recipe[]): string {
+  const header = `| Recipe | Description |\n| --- | --- |`;
+  const rows = recipes.map(
+    (r) =>
+      `| [${escapeTableCell(r.title)}](${TREE_BASE}/${r.slug}) | ${escapeTableCell(
+        r.description,
+      )} |`,
+  );
+  return [header, ...rows].join("\n");
 }
 
-function renderRecipe(recipe: Recipe, readme: string | null): string {
+function renderRecipe(recipe: Recipe): string {
   const source = `${TREE_BASE}/${recipe.slug}`;
-  const body = readme
-    ? sanitizeForMdx(readme.trim(), recipe.slug)
+  const body = recipe.readme
+    ? sanitizeForMdx(recipe.readme.trim(), recipe.slug)
     : `> README could not be loaded at generation time. View it on GitHub.`;
   return [
     `<details id="recipe-${recipe.slug}">`,
-    `<summary><strong>${recipe.title}</strong> — ${recipe.description}</summary>`,
+    `<summary><strong>${escapeMdxProse(recipe.title)}</strong> — ${escapeMdxProse(
+      recipe.description,
+    )}</summary>`,
     ``,
     body,
     ``,
@@ -131,7 +228,6 @@ async function main() {
   );
 
   let cookbook = fs.readFileSync(cookbookPath, "utf8");
-
   const startIndex = cookbook.indexOf(START);
   const endIndex = cookbook.indexOf(END);
   if (startIndex === -1 || endIndex === -1) {
@@ -141,23 +237,31 @@ async function main() {
     process.exit(1);
   }
 
-  const recipes = parseRecipes(cookbook);
-  if (recipes.length === 0) {
-    console.error("Error: no recipes parsed from the Cookbook table.");
+  console.log(`Discovering recipes in ${REPO}@${BRANCH}…`);
+  const slugs = await discoverRecipes();
+  if (slugs.length === 0) {
+    console.error("Error: no recipes discovered in the repository.");
     process.exit(1);
   }
-  console.log(`Found ${recipes.length} recipes. Fetching READMEs…`);
+  console.log(`Found ${slugs.length} recipes. Fetching READMEs…`);
 
-  const blocks: string[] = [];
-  for (const recipe of recipes) {
-    const readme = await fetchReadme(recipe.slug);
-    console.log(`  ${readme ? "✅" : "⚠️ "} ${recipe.slug}`);
-    blocks.push(renderRecipe(recipe, readme));
+  const recipes: Recipe[] = [];
+  for (const slug of slugs) {
+    const readme = await fetchReadme(slug);
+    console.log(`  ${readme ? "✅" : "⚠️ "} ${slug}`);
+    recipes.push({
+      slug,
+      title: deriveTitle(readme, slug),
+      description: deriveDescription(readme, slug),
+      readme: readme ?? "",
+    });
   }
 
   const generated =
     `\n{/* This content is automatically generated by scripts/generate-recipe-docs.ts. Do not edit directly. */}\n\n` +
-    blocks.join("\n\n") +
+    renderTable(recipes) +
+    `\n\n> See the [recipes repository](https://github.com/${REPO}) for full source code, setup instructions, and prerequisites.\n\n` +
+    recipes.map(renderRecipe).join("\n\n") +
     `\n`;
 
   cookbook =
@@ -166,7 +270,9 @@ async function main() {
     cookbook.substring(endIndex);
 
   fs.writeFileSync(cookbookPath, cookbook);
-  console.log(`✅ Reactor recipe docs generated into ${cookbookPath}`);
+  console.log(
+    `✅ Reactor recipe docs (${recipes.length} recipes) generated into ${cookbookPath}`,
+  );
 }
 
 main().catch((err) => {

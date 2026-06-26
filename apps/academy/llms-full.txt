@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-06-26T18:18:02.132Z
+> Generated: 2026-06-26T18:27:56.770Z
 > Total Documents: 105
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -32648,29 +32648,167 @@ This section covers managing the Powerhouse Reactor (the local service for proce
 
 The [Powerhouse Recipes](https://github.com/powerhouse-inc/recipes) repository contains standalone example projects that demonstrate common Reactor patterns and integrations. Each recipe is a self-contained project you can clone and run.
 
-| Recipe                                                                                                       | Description                                                                                                                                                                    |
-| ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| [Audit Trail](https://github.com/powerhouse-inc/recipes/tree/main/audit-trail)                               | Reactor processor that builds an immutable audit log in PostgreSQL from `ActionSigner` context, with a GraphQL subgraph for querying entries by user, document, or time range. |
-| [Batch Progress](https://github.com/powerhouse-inc/recipes/tree/main/batch-progress)                         | Multi-document creation with dependency ordering using `executeBatch` and real-time progress tracking via the EventBus.                                                        |
-| [Cross-Document Reactor](https://github.com/powerhouse-inc/recipes/tree/main/cross-document-reactor)         | Event-driven cross-document automation using `ReactorClient` subscriptions to dispatch actions across related documents.                                                       |
-| [Custom Read Model](https://github.com/powerhouse-inc/recipes/tree/main/custom-read-model)                   | Custom `IReadModel` registered via `ReactorBuilder.withReadModel()` that maintains a document-count-per-type materialized view.                                                |
-| [Discord Webhook Processor](https://github.com/powerhouse-inc/recipes/tree/main/discord-webhook-processor)   | Reactor processor that posts document operations to a Discord channel as rich embeds with automatic batching and HMAC-SHA256 signatures.                                       |
-| [Document Snapshot Exporter](https://github.com/powerhouse-inc/recipes/tree/main/document-snapshot-exporter) | CLI tool for reliable read-after-write export of document state and operation history to JSON using Reactor consistency tokens.                                                |
-| [Full-Text Search](https://github.com/powerhouse-inc/recipes/tree/main/full-text-search)                     | Reactor processor that indexes document state into a PostgreSQL full-text search table for ranked keyword search across all documents.                                         |
-| [Rate Limiter](https://github.com/powerhouse-inc/recipes/tree/main/rate-limiter)                             | Reactor processor paired with an `AuthService` gate to throttle users by signer address using a sliding window.                                                                |
-| [Relational DB Subgraph](https://github.com/powerhouse-inc/recipes/tree/main/relational-db-subgraph)         | Complete relational DB processor with Kysely migrations, typed schema, and a GraphQL subgraph for a document catalog.                                                          |
-| [Saga](https://github.com/powerhouse-inc/recipes/tree/main/saga)                                             | Saga pattern via Reactor processor: operations on one document trigger operations on others, linked by a traceable saga context with re-entrancy guards.                       |
-| [Signed Operations Verifier](https://github.com/powerhouse-inc/recipes/tree/main/signed-operations-verifier) | Standalone script that builds document operations with cryptographic signatures and verifies each one, demonstrating tamper detection via `ISigner`.                           |
-| [Subscription CLI](https://github.com/powerhouse-inc/recipes/tree/main/subscription-cli)                     | CLI for monitoring Reactor GraphQL subscriptions over WebSocket in real time, printing timestamped events to stdout.                                                           |
-| [Sync Health Monitor](https://github.com/powerhouse-inc/recipes/tree/main/sync-health-monitor)               | EventBus-based sync health dashboard with two-reactor sync monitoring and a GraphQL subgraph for metrics.                                                                      |
-
-> See the [recipes repository](https://github.com/powerhouse-inc/recipes) for full source code, setup instructions, and prerequisites.
-
 {/* AUTO-GENERATED-RECIPE-DOCS-START */}
 {/* This content is automatically generated by scripts/generate-recipe-docs.ts. Do not edit directly. */}
 
+| Recipe | Description |
+| --- | --- |
+| [Analytics Processor](https://github.com/powerhouse-inc/recipes/tree/main/analytics-processor) | A Reactor processor that projects expense-report line items into the Powerhouse analytics engine — a dedicated dimensional time-series store — and a query layer that reads aggregations back out. |
+| [Audit Trail](https://github.com/powerhouse-inc/recipes/tree/main/audit-trail) | A Reactor processor that inspects `ActionSigner` context on every operation to build an immutable audit log in PostgreSQL. |
+| [Batch Progress](https://github.com/powerhouse-inc/recipes/tree/main/batch-progress) | Demonstrates multi-document wizard creation with dependency ordering using Reactor's `executeBatch` and real-time progress tracking via the EventBus. |
+| [Cross-Document Reactor](https://github.com/powerhouse-inc/recipes/tree/main/cross-document-reactor) | Event-driven cross-document automation using `ReactorClient` subscriptions. |
+| [Custom Read Model](https://github.com/powerhouse-inc/recipes/tree/main/custom-read-model) | A custom `IReadModel` implementation registered via `ReactorBuilder.withReadModel()` that maintains a document-count-per-type materialized view. |
+| [DB Migrate](https://github.com/powerhouse-inc/recipes/tree/main/db-migrate) | PostgreSQL database export, import, and migration scripts using Docker. |
+| [Discord Webhook Processor](https://github.com/powerhouse-inc/recipes/tree/main/discord-webhook-processor) | A Reactor `IProcessor` that posts document operations to a Discord channel via webhook. |
+| [Document Snapshot Exporter](https://github.com/powerhouse-inc/recipes/tree/main/document-snapshot-exporter) | CLI tool that exports document state and operation history to JSON files, demonstrating reliable read-after-write consistency using the Reactor API. |
+| [Document Versioning](https://github.com/powerhouse-inc/recipes/tree/main/document-versioning) | Evolve a document model's schema from v1 to v2 with an `UpgradeManifest` and a pure `upgradeReducer`, so documents created under the old schema keep loading and replaying correctly. |
+| [Drive Override](https://github.com/powerhouse-inc/recipes/tree/main/drive-override) | A custom container document that tracks its children via the reactor's `ADD_RELATIONSHIP` system action instead of the `document-drive` model's `ADD_FILE`. |
+| [External Feed Ingest](https://github.com/powerhouse-inc/recipes/tree/main/external-feed-ingest) | A polling worker that pulls an off-platform feed into event-sourced documents **idempotently**. |
+| [Full-Text Search Processor](https://github.com/powerhouse-inc/recipes/tree/main/full-text-search) | A Reactor `IProcessor` that indexes document state into a PostgreSQL full-text search table, enabling ranked keyword search across all documents managed by a Reactor instance. |
+| [Inbound Webhook Bridge](https://github.com/powerhouse-inc/recipes/tree/main/inbound-webhook-bridge) | Receive external webhooks (Stripe-style), verify the signature **server-side against the raw request bytes**, and map verified events onto document actions. |
+| [Rate Limiter](https://github.com/powerhouse-inc/recipes/tree/main/rate-limiter) | A Reactor `IProcessor` paired with an `AuthService` gate to throttle users by signer address, preventing any single user from overwhelming the system with excessive operations. |
+| [Relational DB Subgraph](https://github.com/powerhouse-inc/recipes/tree/main/relational-db-subgraph) | A complete relational DB processor recipe demonstrating the academy flagship tutorial pattern: |
+| [Role-Based Auth](https://github.com/powerhouse-inc/recipes/tree/main/role-based-auth) | A custom document model where the creator is promoted to admin on first action, admins can grant or revoke admin and member roles, and a domain action (`writeNote`) is gated on member-or-higher. |
+| [Saga](https://github.com/powerhouse-inc/recipes/tree/main/saga) | Saga pattern via Reactor processor: operations on one document trigger operations on others, linked by a traceable saga context. |
+| [Semantic Search Processor](https://github.com/powerhouse-inc/recipes/tree/main/semantic-search) | A Reactor `IProcessor` that embeds document content with an in-process model (Transformers.js) into PGlite's `vector` extension and answers cosine-similarity queries — the semantic sibling of the [full-text-search](../docs/full-text-search) recipe. |
+| [Signed Operations Verifier](https://github.com/powerhouse-inc/recipes/tree/main/signed-operations-verifier) | A standalone script that builds a document operation history with cryptographic signatures, then verifies each one. |
+| [Subscription CLI](https://github.com/powerhouse-inc/recipes/tree/main/subscription-cli) | A standalone CLI for monitoring Powerhouse Reactor GraphQL subscriptions over WebSocket in real time. |
+| [Sync Health Monitor](https://github.com/powerhouse-inc/recipes/tree/main/sync-health-monitor) | Subscribes to `SyncEventTypes` on the Reactor EventBus and maintains a live health dashboard. |
+
+> See the [recipes repository](https://github.com/powerhouse-inc/recipes) for full source code, setup instructions, and prerequisites.
+
+<details id="recipe-analytics-processor">
+<summary><strong>Analytics Processor</strong> — A Reactor processor that projects expense-report line items into the Powerhouse analytics engine — a dedicated dimensional time-series store — and a query layer that reads aggregations back out.</summary>
+
+### Analytics Processor
+
+A Reactor processor that projects expense-report line items into the
+Powerhouse analytics engine — a dedicated dimensional time-series store —
+and a query layer that reads aggregations back out. Everything runs
+in-process (the store is backed by PGlite, an embedded PostgreSQL), so the
+demo needs no external services.
+
+#### What it demonstrates
+
+- Implementing `IProcessor` (from `@powerhousedao/reactor`) whose constructor
+  receives an `IAnalyticsStore`, registered through a `ProcessorFactory` with
+  a document-type filter and `startFrom: "beginning"`.
+- Mapping `ADD_LINE_ITEM` / `UPDATE_LINE_ITEM` / `DELETE_LINE_ITEM` operations
+  into append-only series values: updates and deletes write **compensating
+  entries** (−old, +new) instead of mutating history.
+- **Idempotent reprocessing** — the `clearSource` pattern. A processor
+  registered with `startFrom: "beginning"` can be re-delivered the full
+  operation history at any time (e.g. after a restart). Seeing operation
+  index 0 again for a known document means "replay": the processor clears
+  that document's series (`clearSeriesBySource`) and rebuilds, so
+  reprocessing always converges to the same totals.
+- Building hierarchical `AnalyticsPath` dimensions from user data
+  (slugified category names like `ph/expenses/category/headcount/salaries`).
+- Querying with `AnalyticsQueryEngine`: totals per category, monthly
+  aggregation, and a category × currency breakdown using `lod`
+  (level of detail) to roll subcategories up into their parents.
+- A document model generated with `ph generate` from a spec JSON
+  (`document-models/expense-report/expense-report.json`), the same workflow
+  as the `role-based-auth` recipe.
+
+#### When to use the analytics engine vs a SQL read model
+
+|  | analytics-processor (this recipe) | custom-read-model | relational-db-subgraph |
+|---|---|---|---|
+| Storage model | Dimensional time-series (source, metric, dimensions, unit) | In-memory map | Relational rows (Kysely schema) |
+| Query style | Time-bucketed aggregates, dimension rollups via `lod` | Direct lookup | Arbitrary SQL: joins, filters, ordering |
+| Best for | "Total per category per month in USD" — dashboards, budgets, spend analytics | Simple derived counts | Searchable catalogs, tag filters |
+
+Use the analytics engine when queries are shaped like *aggregate metric X,
+grouped by dimension Y, over period Z, rolled up to depth N*. Use
+`relational-db-subgraph` when you need relational queries, and
+`custom-read-model` for lightweight synchronous counters.
+
+#### Key concepts
+
+- **Source** — an `AnalyticsPath` identifying who owns a set of series. This
+  recipe uses one source per document (`ph/expenses/<documentId>`), so a
+  single `clearSeriesBySource(source, true)` wipes exactly that document
+  during a replay.
+- **Dimensions** — named `AnalyticsPath`s attached to every value
+  (`category`, `currency` here). Queries `select` on dimension path prefixes
+  and group by the (lod-truncated) paths.
+- **Metric + unit** — the metric is a plain string (`"Expenses"`); the unit
+  carries the currency code. One series per currency — the engine never sums
+  across units, which keeps USD and EUR amounts separate.
+- **Business time vs event time** — series values are dated by the line
+  item's `date` field (when the money was spent), not by the operation
+  timestamp and never by processing time. A correction made in March to a
+  January expense still lands in January.
+- **lod (level of detail)** — truncates dimension paths to N segments at
+  query time: `lod: { category: 4 }` collapses
+  `ph/expenses/category/headcount/salaries` into
+  `ph/expenses/category/headcount`. Every key in `select` needs a `lod`
+  entry.
+- **Explicit query windows** — the engine can derive a missing start/end
+  from the data, but it is fragile on degenerate inputs; the query layer
+  always passes an explicit window.
+
+#### Files
+
+| File | Purpose |
+|---|---|
+| `document-models/expense-report/` | Generated document model (`example/expense-report`); reducers in `v1/src/`, spec in `expense-report.json` |
+| `src/processor.ts` | `ExpenseAnalyticsProcessor`, path helpers, processor factory |
+| `src/query.ts` | Query functions over `AnalyticsQueryEngine` + table rendering |
+| `src/demo.ts` | End-to-end demo |
+| `src/processor.test.ts` | Processor tests against a real PGlite-backed store |
+
+#### Setup
+
+```sh
+pnpm install
+pnpm build
+```
+
+#### Running the demo
+
+```sh
+pnpm start
+```
+
+Boots a reactor, creates three expense reports, dispatches nine adds, one
+amount correction, and one delete, waits for the processor via the
+processor-manager consistency tracker (no sleeps), then prints three
+aggregation tables.
+
+#### Tests
+
+```sh
+pnpm test
+```
+
+Covers the delta arithmetic (add/update/delete, date-moving updates),
+idempotent replay (same operations delivered twice → same totals), source
+clearing isolation between documents, slug escaping of hostile category
+names, currency separation, and skipping of failed operations.
+
+#### Regenerating the document model
+
+```sh
+pnpm generate document-model --document document-models/expense-report/expense-report.json
+```
+
+Requires the Powerhouse monorepo checked out next to this repo (the script
+calls `../../powerhouse/clis/ph-cli/dist/cli.mjs`). Note that the generated
+output targets a newer `document-model` than the catalog pin; a few imports
+are adjusted to the `document-model/core` subpath (marked with comments) and
+`v1/hooks.ts` (which requires `@powerhousedao/reactor-browser`) is removed.
+
+#### License
+
+AGPL-3.0-only
+
+[View source on GitHub →](https://github.com/powerhouse-inc/recipes/tree/main/analytics-processor)
+</details>
+
 <details id="recipe-audit-trail">
-<summary><strong>Audit Trail</strong> — Reactor processor that builds an immutable audit log in PostgreSQL from `ActionSigner` context, with a GraphQL subgraph for querying entries by user, document, or time range.</summary>
+<summary><strong>Audit Trail</strong> — A Reactor processor that inspects `ActionSigner` context on every operation to build an immutable audit log in PostgreSQL.</summary>
 
 ### Audit Trail
 
@@ -32742,7 +32880,7 @@ Tests use [PGlite](https://github.com/electric-sql/pglite) for an in-memory Post
 </details>
 
 <details id="recipe-batch-progress">
-<summary><strong>Batch Progress</strong> — Multi-document creation with dependency ordering using `executeBatch` and real-time progress tracking via the EventBus.</summary>
+<summary><strong>Batch Progress</strong> — Demonstrates multi-document wizard creation with dependency ordering using Reactor's `executeBatch` and real-time progress tracking via the EventBus.</summary>
 
 ### Batch Progress
 
@@ -32850,7 +32988,7 @@ AGPL-3.0-only
 </details>
 
 <details id="recipe-cross-document-reactor">
-<summary><strong>Cross-Document Reactor</strong> — Event-driven cross-document automation using `ReactorClient` subscriptions to dispatch actions across related documents.</summary>
+<summary><strong>Cross-Document Reactor</strong> — Event-driven cross-document automation using `ReactorClient` subscriptions.</summary>
 
 ### Cross-Document Reactor
 
@@ -32913,7 +33051,7 @@ AGPL-3.0-only
 </details>
 
 <details id="recipe-custom-read-model">
-<summary><strong>Custom Read Model</strong> — Custom `IReadModel` registered via `ReactorBuilder.withReadModel()` that maintains a document-count-per-type materialized view.</summary>
+<summary><strong>Custom Read Model</strong> — A custom `IReadModel` implementation registered via `ReactorBuilder.withReadModel()` that maintains a document-count-per-type materialized view.</summary>
 
 ### Custom Read Model
 
@@ -33009,8 +33147,101 @@ export { DocumentCountReadModel } from "./src/document-count-read-model.js";
 [View source on GitHub →](https://github.com/powerhouse-inc/recipes/tree/main/custom-read-model)
 </details>
 
+<details id="recipe-db-migrate">
+<summary><strong>DB Migrate</strong> — PostgreSQL database export, import, and migration scripts using Docker.</summary>
+
+### DB Migrate
+
+PostgreSQL database export, import, and migration scripts using Docker. No local `pg_dump` or `pg_restore` installation required.
+
+#### Prerequisites
+
+- [Docker](https://docs.docker.com/get-docker/)
+
+The scripts use the `postgres:17` image, which is pulled automatically on first run.
+
+#### Scripts
+
+##### export.sh
+
+Dump a PostgreSQL database to a file or stdout.
+
+```sh
+# Export to a file (custom format, default)
+./export.sh -o backup.dump postgres://user:pass@localhost:5432/mydb
+
+# Export as plain SQL
+./export.sh -F plain -o backup.sql postgres://user:pass@localhost:5432/mydb
+
+# Export to stdout (pipe to another tool)
+./export.sh postgres://user:pass@localhost:5432/mydb > backup.dump
+```
+
+**Options:**
+
+| Flag | Description |
+|------|-------------|
+| `--format, -F` | Dump format: `custom` (default), `plain`, `tar`, `directory` |
+| `--output, -o` | Output file path (default: stdout) |
+
+##### import.sh
+
+Restore a dump file into a PostgreSQL database.
+
+```sh
+# Import a custom-format dump
+./import.sh postgres://user:pass@localhost:5432/mydb backup.dump
+
+# Import a plain SQL dump
+./import.sh -F plain postgres://user:pass@localhost:5432/mydb backup.sql
+
+# Import from stdin
+cat backup.dump | ./import.sh postgres://user:pass@localhost:5432/mydb -
+```
+
+**Options:**
+
+| Flag | Description |
+|------|-------------|
+| `--format, -F` | Dump format: `custom` (default), `plain`, `tar` |
+
+For custom/tar formats, `pg_restore --clean --if-exists` is used. For plain format, `psql` is used.
+
+##### migrate.sh
+
+Export from one database and import into another in a single step.
+
+```sh
+# Migrate between two databases
+./migrate.sh postgres://user:pass@source:5432/mydb postgres://user:pass@target:5432/mydb
+
+# Migrate using plain SQL format
+./migrate.sh -F plain postgres://user:pass@source:5432/mydb postgres://user:pass@target:5432/mydb
+```
+
+**Options:**
+
+| Flag | Description |
+|------|-------------|
+| `--format, -F` | Dump format: `custom` (default), `plain`, `tar` |
+
+#### Running via pnpm
+
+```sh
+pnpm --filter @powerhousedao/db-migrate export -- -o backup.dump postgres://user:pass@localhost:5432/mydb
+pnpm --filter @powerhousedao/db-migrate import -- postgres://user:pass@localhost:5432/mydb backup.dump
+pnpm --filter @powerhousedao/db-migrate migrate -- postgres://user:pass@source:5432/mydb postgres://user:pass@target:5432/mydb
+```
+
+#### License
+
+AGPL-3.0-only
+
+[View source on GitHub →](https://github.com/powerhouse-inc/recipes/tree/main/db-migrate)
+</details>
+
 <details id="recipe-discord-webhook-processor">
-<summary><strong>Discord Webhook Processor</strong> — Reactor processor that posts document operations to a Discord channel as rich embeds with automatic batching and HMAC-SHA256 signatures.</summary>
+<summary><strong>Discord Webhook Processor</strong> — A Reactor `IProcessor` that posts document operations to a Discord channel via webhook.</summary>
 
 ### Discord Webhook Processor
 
@@ -33055,7 +33286,7 @@ pnpm test
 </details>
 
 <details id="recipe-document-snapshot-exporter">
-<summary><strong>Document Snapshot Exporter</strong> — CLI tool for reliable read-after-write export of document state and operation history to JSON using Reactor consistency tokens.</summary>
+<summary><strong>Document Snapshot Exporter</strong> — CLI tool that exports document state and operation history to JSON files, demonstrating reliable read-after-write consistency using the Reactor API.</summary>
 
 ### Document Snapshot Exporter
 
@@ -33126,8 +33357,439 @@ Each document is written as a JSON file named `<document-id>.json`:
 [View source on GitHub →](https://github.com/powerhouse-inc/recipes/tree/main/document-snapshot-exporter)
 </details>
 
+<details id="recipe-document-versioning">
+<summary><strong>Document Versioning</strong> — Evolve a document model's schema from v1 to v2 with an `UpgradeManifest` and a pure `upgradeReducer`, so documents created under the old schema keep loading and replaying correctly.</summary>
+
+### Document Versioning
+
+Evolve a document model's schema from v1 to v2 with an `UpgradeManifest` and a pure
+`upgradeReducer`, so documents created under the old schema keep loading and replaying
+correctly.
+
+#### What it demonstrates
+
+- Defining two schema versions in a single codegen spec:
+  [`document-models/todo/todo.json`](https://github.com/powerhouse-inc/recipes/blob/main/document-versioning/document-models/todo/todo.json) carries one
+  `specifications` entry per version, and `ph-cli generate` emits the whole `v1/`, `v2/`,
+  and `upgrades/` tree — including a wired-up `UpgradeManifest`
+  (`{ documentType, latestVersion, supportedVersions, upgrades }`) and a stub upgrade
+  transition for you to fill in.
+- `UpgradeTransition`: `{ toVersion, upgradeReducer, description }` — its `upgradeReducer`
+  is a pure function that transforms a whole document from version N−1 to N. Codegen
+  scaffolds the stub at
+  [`document-models/todo/upgrades/v2.ts`](https://github.com/powerhouse-inc/recipes/blob/main/document-versioning/document-models/todo/upgrades/v2.ts); the
+  migration body is the one piece you hand-write.
+- The upgrade-application logic that `@powerhousedao/reactor` runs in production
+  (`computeUpgradePath` + apply + version stamp), distilled into
+  [`src/upgrade.ts`](https://github.com/powerhouse-inc/recipes/blob/main/document-versioning/src/upgrade.ts) — `document-model` only defines the manifest types.
+- Replaying an operation log recorded under v1 into a v2 state shape
+  ([`src/replay.ts`](https://github.com/powerhouse-inc/recipes/blob/main/document-versioning/src/replay.ts)).
+
+#### State shape evolution
+
+```ts
+// v1
+type TodoItemV1 = { id: string; title: string; checked: boolean };
+
+// v2 — a field rename plus a type change, the realistic migration case
+type TodoItemV2 = {
+  id: string;
+  title: string;
+  status: "TODO" | "IN_PROGRESS" | "DONE";
+  priority: number;
+};
+```
+
+Each version's shape is declared as GraphQL in the matching `specifications` entry of
+[`todo.json`](https://github.com/powerhouse-inc/recipes/blob/main/document-versioning/document-models/todo/todo.json); codegen turns it into the types above. The
+transition in [`document-models/todo/upgrades/v2.ts`](https://github.com/powerhouse-inc/recipes/blob/main/document-versioning/document-models/todo/upgrades/v2.ts)
+maps `checked: true → status: "DONE"`, `checked: false → status: "TODO"`, and adds
+`priority: 0`.
+
+#### Critical pitfall: patch `state` and `initialState` together
+
+The upgrade runs **once**, when `UPGRADE_DOCUMENT` is dispatched. Replay never re-runs it:
+loading a document (`baseLoadFromInput` → `replayDocument`) starts from the stored
+`initialState` and folds the domain operations through the latest reducer — the
+`document`-scope log where the upgrade is recorded is not replayed.
+
+So if the upgrade reducer migrates `state` but forgets `initialState`:
+
+- the live document looks perfectly healthy, but
+- anything seeded into `initialState` (never created by an operation) is still v1-shaped
+  there, so a rebuild can no longer reproduce the stored state — and the replayed final
+  state fails the recorded hash check. The document errors on load with a
+  `HashMismatchError` whose message embeds `Hash mismatch on document …, scope global`
+  (match it with `/Hash mismatch/`, as the tests do).
+
+The transition in this recipe patches both in one pass, and
+[`tests/versioning.test.ts`](https://github.com/powerhouse-inc/recipes/blob/main/document-versioning/tests/versioning.test.ts) includes a deliberately broken
+state-only transition that makes the failure visible.
+
+#### The latest reducer owns the historical log
+
+Replay sends the *entire* operation history through the latest reducer — including
+operations whose type no longer exists in the new schema. That is why `CHECK_ITEM` is
+retained as an operation in the v2 spec (so codegen keeps generating its action and reducer
+slot), and [`v2/src/reducers/todo.ts`](https://github.com/powerhouse-inc/recipes/blob/main/document-versioning/document-models/todo/v2/src/reducers/todo.ts) maps
+the old `checked` boolean onto the new `status`. When a migration renames or retypes fields,
+retiring an operation from the editor does not retire it from history.
+
+#### Upgrade reducers must be pure
+
+Upgrade reducers run on every peer that loads the document. No `Date.now()`, no randomness,
+no I/O — and they must *return* a new document (spread-style); there is no immer draft, so
+in-place mutation is lost.
+
+#### `supportedVersions` is ordered, and every hop must be covered
+
+`supportedVersions` lists every version the model has ever shipped, in ascending order.
+Upgrading a v1 document in a package that is already on v3 composes the intermediate
+transitions in sequence (v1→v2, then v2→v3) — there is no shortcut path, and a missing
+`upgrades` entry for any intermediate hop throws at upgrade time. The `computeUpgradePath`
+suite in [`tests/versioning.test.ts`](https://github.com/powerhouse-inc/recipes/blob/main/document-versioning/tests/versioning.test.ts) exercises both.
+
+#### Production wiring
+
+Codegen already emits the structure a real package registers: each version's
+[`module.ts`](https://github.com/powerhouse-inc/recipes/blob/main/document-versioning/document-models/todo/v2/module.ts) carries an explicit `version` field,
+[`document-models/document-models.ts`](https://github.com/powerhouse-inc/recipes/blob/main/document-versioning/document-models/document-models.ts) exports
+`documentModels = [TodoV1, TodoV2]`, and
+[`document-models/upgrade-manifests.ts`](https://github.com/powerhouse-inc/recipes/blob/main/document-versioning/document-models/upgrade-manifests.ts) exports
+`upgradeManifests = [todoUpgradeManifest]`. The only thing this recipe does differently from
+production is *who applies the upgrade*:
+
+- a reactor registers both
+  (`new ReactorBuilder().withDocumentModels(documentModels).withUpgradeManifests(upgradeManifests)`)
+  and, on `UPGRADE_DOCUMENT`, computes the upgrade path from the manifest and applies it;
+- here, [`src/upgrade.ts`](https://github.com/powerhouse-inc/recipes/blob/main/document-versioning/src/upgrade.ts) runs that same
+  compose-transitions-then-stamp-version sequence in-process, so the mechanics are visible
+  without standing up a reactor.
+
+A peer that has only the v1 package registered cannot execute the upgrade: the document
+stays at v1 there, and v2 operations fail until the updated package ships — deploy the new
+model version everywhere before dispatching the first v2 operation.
+
+#### Running
+
+```sh
+pnpm install
+pnpm start
+```
+
+The demo creates a v1 document with a seeded item, applies v1 operations, upgrades to v2,
+keeps dispatching v2 operations, then replays the recorded history and verifies it
+converges on the stored state.
+
+#### Regenerating the model
+
+The `document-models/` tree is generated from
+[`document-models/todo/todo.json`](https://github.com/powerhouse-inc/recipes/blob/main/document-versioning/document-models/todo/todo.json) and committed to the
+repo. To evolve a schema, edit the spec (add a `specifications` entry for the new version)
+and re-run codegen:
+
+```sh
+pnpm generate
+```
+
+`gen/` files are overwritten on every run; the hand-written reducers
+(`*/src/reducers/todo.ts`) and the upgrade transitions (`upgrades/v*.ts`) are scaffolded
+once and then preserved, so re-running is safe.
+
+#### Creating a document at its model version
+
+A v1 document must declare version 1: the upgrade manifest covers 1→2 and has no transition
+*into* v1, so a document left at version 0 would give `computeUpgradePath` nowhere to start
+(`Version 0 ... is not in supportedVersions [1, 2]`). The generated factory stamps the
+version for you — pass it explicitly and seed any initial items through `global`:
+
+```ts
+
+
+createTodoDocument({ document: { version: 1 }, global: { items } });
+```
+
+`createTodoDocument` routes through `baseCreateDocument`, so it also seeds the
+document-scope log (`CREATE_DOCUMENT` plus the genesis `UPGRADE_DOCUMENT` 0→1) — the same
+thing a reactor does from the registered module in production. The "starts at model
+version 1" check in [`tests/v1-reducer.test.ts`](https://github.com/powerhouse-inc/recipes/blob/main/document-versioning/tests/v1-reducer.test.ts) and the
+upgrade/replay suites in [`tests/versioning.test.ts`](https://github.com/powerhouse-inc/recipes/blob/main/document-versioning/tests/versioning.test.ts) guard the
+behavior.
+
+#### Tests
+
+```sh
+pnpm test
+```
+
+Covered: v1/v2 reducer behavior (including the legacy `CHECK_ITEM` case), migration of
+`state` and `initialState`, the no-op upgrade of an already-latest document, replay
+convergence of the mixed v1/v2 history, the broken state-only transition failing replay
+with a hash mismatch, and multi-hop upgrade paths (v1→v2→v3) composing in order.
+
+#### License
+
+AGPL-3.0-only
+
+[View source on GitHub →](https://github.com/powerhouse-inc/recipes/tree/main/document-versioning)
+</details>
+
+<details id="recipe-drive-override">
+<summary><strong>Drive Override</strong> — A custom container document that tracks its children via the reactor's `ADD_RELATIONSHIP` system action instead of the `document-drive` model's `ADD_FILE`.</summary>
+
+### Drive Override
+
+A custom container document that tracks its children via the reactor's `ADD_RELATIONSHIP` system action instead of the `document-drive` model's `ADD_FILE`. The container's own state stays at O(1) regardless of how many children it owns; children live in the reactor's `DocumentRelationship` table and are enumerated through paged, DB-native queries.
+
+#### What it demonstrates
+
+- **Build your own drive** — define a minimal `DocumentModelModule` with `name` + `description` state and a single `SET_METADATA` operation. No `nodes[]` array, no embedded child catalogue.
+- **`ADD_RELATIONSHIP` instead of `ADD_FILE`** — link 10,000 child documents to the container in batches of 100 via `reactor.execute(containerId, "main", [addRelationshipAction(...)])`. The container's state never grows.
+- **Paged enumeration** — read children back via `documentIndexer.getOutgoing(containerId, ["contains"], { cursor, limit })`, advancing `cursor` until `nextCursor` is empty. Backed by indexed Kysely queries on the `DocumentRelationship` table.
+- **Bidirectional graph** — `documentIndexer.getIncoming(childId)` returns the container as a parent. The relationship table is indexed on both `sourceId` and `targetId`.
+
+#### Why this scales better than `ADD_FILE`
+
+`document-drive` keeps its child catalogue inside the drive document's `state.global.nodes[]`. Each `ADD_FILE` mutates that array — every replay walks every previously-added child, every read materialises the full state, and operation-log size grows with child count. Container performance decays as the drive fills.
+
+`ADD_RELATIONSHIP` is a system-scope action handled directly by the reactor's job executor. The source document's state and operation log are unaffected; the indexer writes one row to `DocumentRelationship` and exposes the graph via `IDocumentIndexer`. Cost is flat in the number of children.
+
+#### State shape
+
+```graphql
+type CustomContainerState {
+  name: String!
+  description: String
+}
+```
+
+That is the entire schema. No children, no nodes, no files.
+
+#### Operations
+
+| Operation | Effect |
+|---|---|
+| `SET_METADATA({ name, description? })` | Sets the container's display metadata. |
+
+Children are added by dispatching `addRelationshipAction(containerId, childId, "contains")` directly to `reactor.execute()` — not through the container's own reducer. The reducer never sees relationships.
+
+#### GraphQL
+
+The reactor subgraph exposes the same data over GraphQL:
+
+- `documentOutgoingRelationships(documentId, relationshipTypes, paging)` — children of a container.
+- `documentIncomingRelationships(documentId, relationshipTypes, paging)` — parents of a child.
+
+Both fields are paged. Use them when querying from an external client.
+
+#### Running
+
+```sh
+pnpm install
+pnpm --filter @powerhousedao/example-drive-override start
+```
+
+The demo will:
+
+1. Spin up an in-memory reactor (PGlite-backed).
+2. Create the container and apply `SET_METADATA`.
+3. Create 10,000 plain `document-model` child documents in 100 batches of 100, wiring each to the container via `ADD_RELATIONSHIP`.
+4. Print the container's `state.global` keys — should remain `["description", "name"]`.
+5. Page through all 10,000 children via `documentIndexer.getOutgoing` at 500 per page.
+6. Spot-check one child via `documentIndexer.getIncoming` and confirm the container is its parent.
+
+Expect total runtime in the tens of seconds to a few minutes depending on hardware, dominated by the per-job round-trip through the executor. The point is not throughput — it's that the container's state stays flat.
+
+#### Key files
+
+- [`document-models/custom-container/`](https://github.com/powerhouse-inc/recipes/blob/main/drive-override/document-models/custom-container) — the `powerhouse/custom-container` document model, generated from `custom-container.json` via `pnpm generate` (pinned `ph-cli`, `catalog:`). The `SET_METADATA` reducer lives in `v1/src/reducers/metadata.ts`; everything under `v1/gen/` is codegen output.
+- [`src/index.ts`](https://github.com/powerhouse-inc/recipes/blob/main/drive-override/src/index.ts) — the demo.
+
+[View source on GitHub →](https://github.com/powerhouse-inc/recipes/tree/main/drive-override)
+</details>
+
+<details id="recipe-external-feed-ingest">
+<summary><strong>External Feed Ingest</strong> — A polling worker that pulls an off-platform feed into event-sourced documents **idempotently**.</summary>
+
+### External Feed Ingest
+
+A polling worker that pulls an off-platform feed into event-sourced documents
+**idempotently**. It is the external-input counterpart to
+[`cross-document-reactor`](https://github.com/powerhouse-inc/recipes/blob/main/external-feed-ingest/../cross-document-reactor) (which automates on
+*internal* events): here the trigger comes from outside the reactor.
+
+This generalizes what `defi-united-package` does for real against Ethereum — a
+processor polls Alchemy for asset transfers and dispatches them into receipt
+documents, handling idempotency, confirmation depth, and chain reorgs as
+first-class concerns. We replace Ethereum with a deterministic in-process mock
+feed so the recipe is keyless and offline-runnable.
+
+#### The one idea worth taking away
+
+&gt; **The document is the checkpoint store.** The dedup set and the high-watermark
+&gt; live in document state, and the worker rebuilds them from state at startup. An
+&gt; in-memory-only checkpoint is the bug this recipe exists to prevent: crash the
+&gt; worker mid-stream and an in-memory checkpoint re-ingests everything since the
+&gt; last flush. Seed from state instead and a restart is a no-op.
+
+```
+external feed ──fetchSince(watermark)──▶ FeedPoller
+   (monotonic cursor,                       │  1. seedFromState(): rebuild dedup set
+    redeliveries,                           │     + watermark from the document
+    corrections)                            │  2. skip ids already in state
+                                            │  3. map event → recordEntry / markSuperseded
+                                            ▼
+                                    reactor.execute → Ledger document
+                                       { source, watermark, entries[] }
+```
+
+#### What it demonstrates
+
+- **A poll loop** dispatching actions into a document through the reactor
+  (`FeedPoller.pollOnce` / `start`).
+- **Idempotent ingestion.** The dedup key is `(source, externalId)`, and the
+  set is **seeded from existing document state at startup**, so restarts never
+  double-ingest. The reducer enforces the same uniqueness as defense-in-depth.
+- **High-watermark per source, stored in the document itself** — no side
+  database. The watermark tracks the feed's monotonic *delivery cursor*, not the
+  events' logical timestamps.
+- **Corrections as explicit operations.** An upstream rewrite becomes a
+  `markSuperseded` op that flips the old entry's status and appends the corrected
+  value as a *new* entry — the original payload is never mutated.
+
+#### Why `externalId` is the dedup key, not the watermark
+
+The watermark is only a *fetch optimization* ("don't re-read the whole feed").
+It is **not** the dedup mechanism, because real feeds redeliver: the same
+`externalId` can reappear at a *later* cursor, sailing straight past a
+watermark filter. The authoritative check is "have I already recorded this
+`externalId`?", answered from document state. The watermark and the id-set are
+belt and suspenders — and on restart the id-set is what saves you.
+
+The scripted feed (`feed.ts`) exercises every case in six events:
+
+| cursor | externalId | what it is |
+|--------|------------|-----------|
+| 1 | `po-001` | normal |
+| 2 | `po-002` | normal |
+| 3 | `po-003` | normal, but its `ts` is *earlier* than `po-002`'s (out-of-order logical delivery) |
+| 4 | `po-002` | **duplicate** redelivery at a later cursor |
+| 5 | `po-004` | normal |
+| 6 | `po-001-c` | **correction** of `po-001` (restated amount) |
+
+#### Run it
+
+```sh
+pnpm --filter @powerhousedao/example-external-feed-ingest start
+```
+
+The demo starts a poller, lets it ingest the first three events, **kills it**
+(discarding its in-memory cache), then starts a *fresh* poller that re-seeds
+from the document and drains the rest. It prints the final ledger and operation
+history, and asserts:
+
+- no duplicate entries across the restart (`po-002` appears exactly once),
+- the correction is a `MARK_SUPERSEDED` op + a new entry, and
+- `po-001`'s original payload was never mutated.
+
+#### The document model (codegen)
+
+The `FeedLedger` document model is **generated**, not hand-written. The spec
+lives at `document-models/feed-ledger/feed-ledger.json` (GraphQL state schema +
+operations + initial reducer bodies); everything under
+`document-models/feed-ledger/v1/gen/` — types, zod validators, action creators,
+the reducer wiring, the typed error classes (`DuplicateEntry`, `UnknownEntry`) —
+is produced from it. Regenerate after editing the spec:
+
+```sh
+pnpm --filter @powerhousedao/example-external-feed-ingest generate
+```
+
+The state schema:
+
+```graphql
+type FeedLedgerState {
+  source: String!
+  watermark: Int!
+  entries: [LedgerEntry!]!
+}
+type LedgerEntry {
+  externalId: String!
+  sequence: Int!
+  payload: String!
+  recordedAt: String!          # the FEED timestamp, never local wall-clock
+  status: LedgerEntryStatus!   # RECORDED | SUPERSEDED
+  supersededBy: String
+}
+enum LedgerEntryStatus { RECORDED SUPERSEDED }
+```
+
+The reducer logic is hand-maintained at
+`document-models/feed-ledger/v1/src/reducers/ingest.ts` (codegen scaffolds it
+from the spec's `reducer` fields and then leaves it alone):
+
+- `recordEntry(externalId, sequence, payload, ts)` — append a `RECORDED` entry
+  and advance the watermark to `max(watermark, sequence)` (monotonic, so an
+  out-of-order delivery can't regress it). Throws `DuplicateEntry` if the
+  `externalId` is already present.
+- `markSuperseded(supersededId, externalId, sequence, payload, ts)` — flip an
+  existing entry to `SUPERSEDED`, set its `supersededBy`, and append the
+  correction as a new `RECORDED` entry. Throws `UnknownEntry` if the target is
+  missing or already superseded.
+
+Watermark advancement is folded into both operations; there is no separate
+`setWatermark` op.
+
+Codegen is pinned to the same `6.2.0-dev.9` line as the runtime (the `ph-cli`
+devDependency uses `catalog:`), so the `gen/` tree compiles as-is — nothing
+under it is hand-edited.
+
+#### Where should the poller live?
+
+This recipe runs the poller as a **plain long-running script** using the reactor
+client (the simplest option, matching `cross-document-reactor`'s style). The
+`start(intervalMs)` loop backs off exponentially on feed errors and never
+tight-loops a struggling upstream.
+
+The alternative is to run the poll inside an `IProcessor` — that's
+`defi-united-package`'s choice. It's perfectly valid, but then the reactor owns
+the worker's lifecycle (start/stop/retry), which is more machinery than a recipe
+needs to make the point. The crash-safety argument is identical either way: it
+comes from seeding state from the document, not from where the loop lives.
+
+One document per source keeps watermark advancement contention-free — every
+`recordEntry` touches a single document, so there's no cross-source coordination.
+
+#### Tests
+
+```sh
+pnpm --filter @powerhousedao/example-external-feed-ingest test
+```
+
+- `document-models/feed-ledger/v1/tests/ingest.test.ts` — reducer-level: record,
+  monotonic watermark, duplicate rejection, correction-not-mutation,
+  unknown-supersede rejection.
+- `src/poller.test.ts` — end-to-end over a reactor: full scripted ingest,
+  **restart-without-duplicates**, redelivery-ignored, correction →
+  `markSuperseded`, and backoff-on-feed-error.
+
+#### Related recipes
+
+- [`cross-document-reactor`](https://github.com/powerhouse-inc/recipes/blob/main/external-feed-ingest/../cross-document-reactor) / [`saga`](https://github.com/powerhouse-inc/recipes/blob/main/external-feed-ingest/../saga) —
+  internal-event automation; this is the external-input counterpart.
+- [`inbound-webhook-bridge`](https://github.com/powerhouse-inc/recipes/blob/main/external-feed-ingest/../inbound-webhook-bridge) — the *push* twin: the
+  feed calls you. Same idempotency idea (dedup ids in document state), different
+  trigger.
+- [`sync-health-monitor`](https://github.com/powerhouse-inc/recipes/blob/main/external-feed-ingest/../sync-health-monitor) — similar long-running observer
+  wiring.
+- [`batch-progress`](https://github.com/powerhouse-inc/recipes/blob/main/external-feed-ingest/../batch-progress) — bulk dispatch ergonomics if the feed
+  delivers in batches.
+
+[View source on GitHub →](https://github.com/powerhouse-inc/recipes/tree/main/external-feed-ingest)
+</details>
+
 <details id="recipe-full-text-search">
-<summary><strong>Full-Text Search</strong> — Reactor processor that indexes document state into a PostgreSQL full-text search table for ranked keyword search across all documents.</summary>
+<summary><strong>Full-Text Search Processor</strong> — A Reactor `IProcessor` that indexes document state into a PostgreSQL full-text search table, enabling ranked keyword search across all documents managed by a Reactor instance.</summary>
 
 ### Full-Text Search Processor
 
@@ -33199,8 +33861,142 @@ export { up, down } from "./migrations.js";
 [View source on GitHub →](https://github.com/powerhouse-inc/recipes/tree/main/full-text-search)
 </details>
 
+<details id="recipe-inbound-webhook-bridge">
+<summary><strong>Inbound Webhook Bridge</strong> — Receive external webhooks (Stripe-style), verify the signature **server-side against the raw request bytes**, and map verified events onto document actions.</summary>
+
+### Inbound Webhook Bridge
+
+Receive external webhooks (Stripe-style), verify the signature **server-side
+against the raw request bytes**, and map verified events onto document actions.
+This is the inbound twin of [`discord-webhook-processor`](https://github.com/powerhouse-inc/recipes/blob/main/inbound-webhook-bridge/../discord-webhook-processor)
+(documents → external service); here the flow runs the other way: external
+service → documents.
+
+#### The headline rule: verify the raw bytes
+
+&gt; **`JSON.parse(body)` → `JSON.stringify(parsed)` breaks HMAC.** The signature
+&gt; is computed over the exact bytes the provider sent. Re-serializing changes key
+&gt; order, whitespace, and number formatting, so the MAC no longer matches.
+
+Always verify the raw body string, *then* parse it. This recipe uses a small
+`node:http` listener precisely so it controls the bytes — a GraphQL/JSON
+mutation resolver parses the body before your code runs, which is why the brief
+recommends a dedicated listener when raw-body access is awkward.
+
+#### How it works
+
+```
+provider ──POST raw body + x-webhook-signature──▶ createWebhookServer (node:http)
+                                                     │  1. read raw bytes (no parse yet)
+                                                     │  2. verifyWebhook() — HMAC over `${t}.${rawBody}`,
+                                                     │     constant-time compare, replay-window check
+                                                     │  3. JSON.parse the verified bytes
+                                                     ▼
+                                                  WebhookBridge.handleEvent
+                                                     │  4. resolve orderId → documentId
+                                                     │  5. dedup vs persisted processedEventIds
+                                                     │  6. map event type → typed action
+                                                     ▼
+                                                  reactor.execute → Payment document
+```
+
+##### Signature scheme (modelled on Stripe)
+
+The `x-webhook-signature` header is `t=<unixSeconds>,v1=<hmacHex>`, and the
+signed payload is `` `${t}.${rawBody}` ``. Folding the timestamp into the MAC is
+what makes the replay-window check trustworthy — it can't be altered
+independently of the signature.
+
+```ts
+
+
+const header = signWebhook(secret, rawBody, Math.floor(Date.now() / 1000));
+const verdict = verifyWebhook({ secret, rawBody, signatureHeader: header, nowSeconds });
+// { ok: true, timestampSeconds } | { ok: false, reason }
+```
+
+Verification rejects: missing/malformed header, signature mismatch (wrong
+secret *or* tampered/re-serialized body), and timestamps outside the tolerance
+window (default 5 minutes). Comparison uses `crypto.timingSafeEqual`.
+
+##### Idempotency that survives restarts
+
+Providers redeliver. Every event that mutates the document records its provider
+`event.id` in the document's `processedEventIds` state. Because the dedup set
+lives in **document state** — not a processor's memory — it is rebuilt for free
+after a restart. The bridge short-circuits a known event id (keeping history
+clean), and the reducer refuses a duplicate as a second line of defense for
+racing redeliveries.
+
+#### The payment document model
+
+A deliberately small state machine, **generated** from
+`document-models/payment/payment.json` via `pnpm generate` (pinned
+`ph-cli`, `catalog:`):
+
+```
+PENDING ──recordPayment──▶ PAID ──recordRefund──▶ REFUNDED
+   └──────markFailed──────▶ FAILED
+```
+
+| Event type          | Action          | Transition          |
+|---------------------|-----------------|---------------------|
+| `payment.succeeded` | `recordPayment` | PENDING → PAID      |
+| `payment.failed`    | `markFailed`    | PENDING → FAILED    |
+| `refund.created`    | `recordRefund`  | PAID → REFUNDED     |
+
+State: `{ orderId, amountCents, currency, status, failureReason, processedEventIds }`.
+
+The reducer logic (the state-machine guards + event-id dedup) is hand-maintained
+at `document-models/payment/v1/src/reducers/payment.ts`; everything under
+`document-models/payment/v1/gen/` is codegen output and isn't edited.
+
+#### Architecture
+
+| Module | Purpose |
+|--------|---------|
+| `src/signature.ts` | `signWebhook` / `verifyWebhook` — pure HMAC helpers (raw-bytes, constant-time, replay window) |
+| `document-models/payment/` | The codegen'd `powerhouse/payment` document model; reducer (state machine + event-id dedup) in `v1/src/reducers/payment.ts` |
+| `src/webhook-bridge.ts` | `WebhookBridge` (event → action, dedup, dispatch) and `createWebhookServer` (raw-body HTTP edge) |
+| `src/demo.ts` | Boots a reactor + endpoint and plays the provider: valid / tampered / duplicate / stale events |
+
+#### Secrets
+
+The signing secret is read **only on the server** and must never be bundled for
+the browser. Declare it via the package manifest `config` block (see
+`powerhouse.manifest.json`), the way production packages document required
+secrets:
+
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `WEBHOOK_SIGNING_SECRET` | `secret` | yes | Shared HMAC-SHA256 secret for verifying the `x-webhook-signature` header. |
+
+Load it from the environment server-side; keep it out of any code path that
+could be bundled for the client.
+
+#### Running
+
+```sh
+pnpm start   # runs the demo
+pnpm test    # signature, reducer, and HTTP integration tests
+```
+
+The demo prints the document's final state and history, showing **exactly one**
+state-changing operation despite the tampered, duplicate, and stale deliveries.
+
+#### Related recipes
+
+- [`discord-webhook-processor`](https://github.com/powerhouse-inc/recipes/blob/main/inbound-webhook-bridge/../discord-webhook-processor) — the outbound
+  twin (documents → external service).
+- [`rate-limiter`](https://github.com/powerhouse-inc/recipes/blob/main/inbound-webhook-bridge/../rate-limiter) — precedent for gating the write path.
+- [`saga`](https://github.com/powerhouse-inc/recipes/blob/main/inbound-webhook-bridge/../saga) — what to read next if one webhook should fan out across
+  multiple documents.
+
+[View source on GitHub →](https://github.com/powerhouse-inc/recipes/tree/main/inbound-webhook-bridge)
+</details>
+
 <details id="recipe-rate-limiter">
-<summary><strong>Rate Limiter</strong> — Reactor processor paired with an `AuthService` gate to throttle users by signer address using a sliding window.</summary>
+<summary><strong>Rate Limiter</strong> — A Reactor `IProcessor` paired with an `AuthService` gate to throttle users by signer address, preventing any single user from overwhelming the system with excessive operations.</summary>
 
 ### Rate Limiter
 
@@ -33295,7 +34091,7 @@ pnpm test
 </details>
 
 <details id="recipe-relational-db-subgraph">
-<summary><strong>Relational DB Subgraph</strong> — Complete relational DB processor with Kysely migrations, typed schema, and a GraphQL subgraph for a document catalog.</summary>
+<summary><strong>Relational DB Subgraph</strong> — A complete relational DB processor recipe demonstrating the academy flagship tutorial pattern:</summary>
 
 ### Relational DB Subgraph
 
@@ -33372,8 +34168,100 @@ AGPL-3.0-only
 [View source on GitHub →](https://github.com/powerhouse-inc/recipes/tree/main/relational-db-subgraph)
 </details>
 
+<details id="recipe-role-based-auth">
+<summary><strong>Role-Based Auth</strong> — A custom document model where the creator is promoted to admin on first action, admins can grant or revoke admin and member roles, and a domain action (`writeNote`) is gated on member-or-higher.</summary>
+
+### Role-Based Auth
+
+A custom document model where the creator is promoted to admin on first action, admins can grant or revoke admin and member roles, and a domain action (`writeNote`) is gated on member-or-higher. All authorization runs inside the reducer against `action.context.signer.user.address`.
+
+#### What it demonstrates
+
+- **State-embedded RBAC** — access control lives in the document state and replicates with it.
+- **Reducer-level enforcement** — every operation reads `action.context.signer.user.address` and rejects unauthorized callers.
+- **Creator auto-promotion** — the first `bootstrap` caller becomes the permanent root admin and cannot be demoted.
+- **Typed error taxonomy** — authorization failures surface as named error classes generated into `gen/access/error.ts`.
+
+#### State shape
+
+```graphql
+type RoleBasedAuthState {
+  creator: String
+  admins: [String!]!
+  members: [String!]!
+  notes: [Note!]!
+}
+
+type Note {
+  id: OID!
+  author: String!
+  text: String!
+  createdAt: DateTime!
+}
+```
+
+#### Operations
+
+| Operation | Who can call | Effect |
+|---|---|---|
+| `bootstrap` | anyone, once | Sets the caller as `creator` and pushes them into `admins`. Throws `AlreadyBootstrapped` on a second call. |
+| `grantAdmin(address)` | admin | Promotes `address` to admin; removes from `members` if present. |
+| `revokeAdmin(address)` | admin | Removes `address` from admins. Throws `CannotRevokeCreator` on the creator, `LastAdmin` if it would empty the admin set. |
+| `addMember(address)` | admin | Adds `address` to `members`. Throws `AddressAlreadyAdmin` if the address is already an admin. |
+| `removeMember(address)` | admin | Removes `address` from `members` (no-op if absent). |
+| `writeNote({ id, text, createdAt })` | admin or member | Appends `{ id, author, text, createdAt }` to `state.notes`. Throws `NotAuthorized` if the caller has no role. |
+
+Every operation throws `NotAuthorized` if `action.context.signer` is missing.
+
+#### Authorization pattern
+
+Each reducer op begins with:
+
+```ts
+const address = action.context?.signer?.user?.address;
+if (!address) throw new NotAuthorized("User is not authenticated");
+```
+
+Role-mutating ops additionally call `requireAdmin(state, address)`. Thrown errors are captured by the framework and surfaced as `operation.error` on the resulting document — callers inspect the operation log to detect rejection.
+
+See `document-models/role-based-auth/v1/src/reducers/access.ts` for the full implementation.
+
+#### Running
+
+```sh
+pnpm install
+pnpm start   # runs src/demo.ts
+```
+
+The demo walks through: Alice bootstraps, Bob is rejected from `writeNote`, Alice adds Bob as a member, Bob writes a note, Bob is rejected from `grantAdmin`, Alice promotes Bob, Bob promotes Carol, Carol is rejected from demoting the creator.
+
+#### Tests
+
+```sh
+pnpm test
+```
+
+The suite in `document-models/role-based-auth/v1/tests/access.test.ts` covers the single-bootstrap invariant, missing-signer rejection, non-admin role-mutation rejection, creator-cannot-be-demoted, grantAdmin moving members to admins, and writeNote gating.
+
+#### Regenerating
+
+The document-model spec lives in `document-models/role-based-auth/role-based-auth.json` with the GraphQL schema at `document-models/role-based-auth/v1/schema.graphql`. To regenerate the `gen/` tree after editing either file:
+
+```sh
+pnpm run generate
+```
+
+The hand-written reducer at `v1/src/reducers/access.ts` is not touched by codegen.
+
+#### License
+
+AGPL-3.0-only
+
+[View source on GitHub →](https://github.com/powerhouse-inc/recipes/tree/main/role-based-auth)
+</details>
+
 <details id="recipe-saga">
-<summary><strong>Saga</strong> — Saga pattern via Reactor processor: operations on one document trigger operations on others, linked by a traceable saga context with re-entrancy guards.</summary>
+<summary><strong>Saga</strong> — Saga pattern via Reactor processor: operations on one document trigger operations on others, linked by a traceable saga context.</summary>
 
 ### Saga
 
@@ -33455,8 +34343,88 @@ AGPL-3.0-only
 [View source on GitHub →](https://github.com/powerhouse-inc/recipes/tree/main/saga)
 </details>
 
+<details id="recipe-semantic-search">
+<summary><strong>Semantic Search Processor</strong> — A Reactor `IProcessor` that embeds document content with an in-process model (Transformers.js) into PGlite's `vector` extension and answers cosine-similarity queries — the semantic sibling of the [full-text-search](../docs/full-text-search) recipe.</summary>
+
+### Semantic Search Processor
+
+A Reactor `IProcessor` that embeds document content with an in-process model (Transformers.js) into PGlite's `vector` extension and answers cosine-similarity queries — the semantic sibling of the [full-text-search](https://github.com/powerhouse-inc/recipes/blob/main/semantic-search/../full-text-search) recipe. No external API, no API key, no server: the `all-MiniLM-L6-v2` model runs in-process via ONNX, and pgvector runs inside PGlite.
+
+#### How it works
+
+When operations arrive, the processor:
+
+1. Collects the last operation per document (earlier states are superseded).
+2. Flattens the resulting document state into a single string (same extraction as full-text-search) and truncates it to the model's effective window.
+3. Hashes the text and **skips re-embedding when the hash is unchanged** — embedding is by far the most expensive step.
+4. Embeds the text into a 384-dimensional vector and upserts it into `semantic_index` (`embedding vector(384)`, HNSW index, cosine ops).
+5. Handles `DELETE_DOCUMENT` actions by removing the corresponding row.
+
+Queries go through `searchSimilar(text, k)`: embed the query with the same model, then `ORDER BY embedding <=> $1 LIMIT k`. With normalized embeddings, `similarity = 1 - cosine distance`.
+
+#### Architecture
+
+| Module | Purpose |
+|--------|---------|
+| `processor.ts` | `SemanticSearchProcessor` — the `IProcessor` implementation |
+| `embedder.ts` | Real embedder: Transformers.js feature-extraction pipeline, lazily initialized once |
+| `schema.ts` | Kysely type definitions for the `semantic_index` table |
+| `migrations.ts` | `up` / `down`: `CREATE EXTENSION vector`, the table, and the HNSW index |
+| `query.ts` | `createSimilarityQuery` — returns a `searchSimilar(text, k?)` helper |
+| `utils.ts` | Text flattening, truncation, content hashing, vector literals, dimension guard |
+
+#### Run it
+
+```sh
+pnpm start   # runs demo.ts
+pnpm test    # offline — uses a deterministic fake embedder
+```
+
+The demo builds a reactor, registers the processor, creates ten documents on distinct topics, then runs semantic queries side by side with lexical full-text search over the same content. Queries like *"my car needs an oil change"* find *"Automobile Maintenance and Repair Manual"* — a hit lexical search misses because query and document share no words.
+
+**First-run model download:** `demo.ts` downloads ~25 MB (quantized MiniLM) from the HuggingFace Hub into `.model-cache/` next to the sources; later runs are fully offline. Tests never download anything — they inject a fake embedder (word-hash → pseudo-vector) so similarity ordering and processor mechanics are testable in CI.
+
+#### Usage
+
+```ts
+
+  up,
+  embed,
+  SemanticSearchProcessor,
+  createSimilarityQuery,
+} from "@powerhousedao/example-semantic-search";
+
+
+// PGlite must be constructed with the vector extension
+const pglite = new KyselyPGlite({ extensions: { vector } });
+const db = new Kysely<SemanticSearchDB>({ dialect: pglite.dialect });
+await up(db);
+
+const processor = new SemanticSearchProcessor(db, embed);
+// ...register with a ProcessorManager...
+
+const query = createSimilarityQuery(db, embed);
+const results = await query.searchSimilar("budget allocation", 10);
+// [{ document_id, document_type, title, similarity }]
+```
+
+#### Notes & pitfalls
+
+- **The embedding dimension is baked into the column type.** `vector(384)` matches `all-MiniLM-L6-v2`; the processor asserts `embedding.length === 384` before insert, so swapping models with a different dimension fails loudly instead of corrupting the index.
+- **Long content is truncated**, not chunked. MiniLM attends to ~256 tokens; `utils.ts` cuts at 2 000 characters and stores exactly what was embedded. Production systems should chunk long content into multiple rows.
+- **HNSW parameters don't matter at demo scale.** The defaults (`m=16`, `ef_construction=64`) are fine until the table holds many thousands of vectors.
+- **Plain vs. lazy imports.** [`@powerhousedao/knowledge-note`](https://www.npmjs.com/package/@powerhousedao/knowledge-note) — the production proof of this stack — lazily `import()`s PGlite so its processor and subgraph still register on deployments where transitive runtime deps aren't installed. In a Node-only recipe a plain import is simpler; only the model pipeline is lazily initialized.
+
+#### Related recipes
+
+- [full-text-search](https://github.com/powerhouse-inc/recipes/blob/main/semantic-search/../full-text-search) — the lexical sibling; same layout, same text extraction, so the two approaches diff cleanly.
+- [relational-db-subgraph](https://github.com/powerhouse-inc/recipes/blob/main/semantic-search/../relational-db-subgraph) — how to expose a read model like this one over GraphQL.
+
+[View source on GitHub →](https://github.com/powerhouse-inc/recipes/tree/main/semantic-search)
+</details>
+
 <details id="recipe-signed-operations-verifier">
-<summary><strong>Signed Operations Verifier</strong> — Standalone script that builds document operations with cryptographic signatures and verifies each one, demonstrating tamper detection via `ISigner`.</summary>
+<summary><strong>Signed Operations Verifier</strong> — A standalone script that builds a document operation history with cryptographic signatures, then verifies each one.</summary>
 
 ### Signed Operations Verifier
 
@@ -33495,7 +34463,7 @@ pnpm --filter @powerhousedao/example-signed-operations-verifier test
 </details>
 
 <details id="recipe-subscription-cli">
-<summary><strong>Subscription CLI</strong> — CLI for monitoring Reactor GraphQL subscriptions over WebSocket in real time, printing timestamped events to stdout.</summary>
+<summary><strong>Subscription CLI</strong> — A standalone CLI for monitoring Powerhouse Reactor GraphQL subscriptions over WebSocket in real time.</summary>
 
 ### Subscription CLI
 
@@ -33545,7 +34513,7 @@ Press `Ctrl+C` for clean shutdown.
 </details>
 
 <details id="recipe-sync-health-monitor">
-<summary><strong>Sync Health Monitor</strong> — EventBus-based sync health dashboard with two-reactor sync monitoring and a GraphQL subgraph for metrics.</summary>
+<summary><strong>Sync Health Monitor</strong> — Subscribes to `SyncEventTypes` on the Reactor EventBus and maintains a live health dashboard.</summary>
 
 ### Sync Health Monitor
 
