@@ -25,10 +25,10 @@ export const initArgs = {
   }),
   ...packageManagerArgs,
   tag: option({
-    type: optional(oneOf(["latest", "staging", "dev"])),
+    type: optional(oneOf(["latest", "staging", "dev", "rc"])),
     long: "tag",
     short: "t",
-    description: `Specify the release tag to use for your project. Can be one of: "latest", "staging", or "dev".`,
+    description: `Specify the release tag to use for your project. Can be one of: "latest", "staging", "dev", or "rc".`,
   }),
   version: option({
     type: optional(string),
@@ -48,6 +48,11 @@ export const initArgs = {
     long: "staging",
     short: "s",
     description: "Use the `staging` release tag.",
+  }),
+  rc: flag({
+    type: optional(boolean),
+    long: "rc",
+    description: "Use the `rc` release tag.",
   }),
   remoteDrive: option({
     type: optional(string),

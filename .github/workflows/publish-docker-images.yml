@@ -54,6 +54,8 @@ jobs:
           # and overwrite Harbor's `staging` floating tag with main-branch code.
           if [[ "$BRANCH" == "main" ]]; then
             TAG=$(git tag --sort=-creatordate --list '*-dev.*' | head -n 1)
+          elif [[ "$BRANCH" == release/rc/* ]]; then
+            TAG=$(git tag --sort=-creatordate --list '*-rc.*' | head -n 1)
           elif [[ "$BRANCH" == release/staging/* ]]; then
             TAG=$(git tag --sort=-creatordate --list '*-staging.*' | head -n 1)
           elif [[ "$BRANCH" == release/production/* ]]; then
@@ -83,6 +85,8 @@ jobs:
         run: |
           if [[ "${{ env.GITHUB_TAG }}" == *"-dev."* ]]; then
             echo "ADDITIONAL_TAG=dev" >> $GITHUB_ENV
+          elif [[ "${{ env.GITHUB_TAG }}" == *"-rc."* ]]; then
+            echo "ADDITIONAL_TAG=rc" >> $GITHUB_ENV
           elif [[ "${{ env.GITHUB_TAG }}" == *"-staging."* ]]; then
             echo "ADDITIONAL_TAG=staging" >> $GITHUB_ENV
           elif [[ "${{ env.GITHUB_TAG }}" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
@@ -191,6 +195,7 @@ jobs:
           fi
           CHANNEL=""
           if [[ "$TAG" == *"-dev."* ]]; then CHANNEL="dev"
+          elif [[ "$TAG" == *"-rc."* ]]; then CHANNEL="rc"
           elif [[ "$TAG" == *"-staging."* ]]; then CHANNEL="staging"
           else CHANNEL="latest"; fi
 

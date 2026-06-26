@@ -22,6 +22,7 @@ export interface DelegateInitArgs {
   version?: string;
   dev?: boolean;
   staging?: boolean;
+  rc?: boolean;
   debug?: boolean;
 }
 
@@ -51,6 +52,7 @@ export async function delegateInit(
       version: args.version,
       dev: args.dev,
       staging: args.staging,
+      rc: args.rc,
     },
     "versioning strategy",
   );

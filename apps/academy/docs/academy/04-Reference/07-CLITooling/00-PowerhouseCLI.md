@@ -59,7 +59,7 @@ Initialize a new project
 
 **Package Manager** - Specify the package manager to use for your project. Can be one of: `npm`, `pnpm`, `yarn`, or `bun`. Defaults to your environment package manager. - Usage: `--package-manager, -p <value>`
 
-**Tag** - Specify the release tag to use for your project. Can be one of: "latest", "staging", or "dev". - Usage: `--tag, -t <value>`
+**Tag** - Specify the release tag to use for your project. Can be one of: "latest", "staging", "dev", or "rc". - Usage: `--tag, -t <value>`
 
 **Version** - Specify the exact semver release version to use for your project. - Usage: `--version, -v <str>`
 
@@ -83,6 +83,8 @@ Initialize a new project
 
 **Staging** - Use the `staging` release tag. - Usage: `--staging, -s`
 
+**Rc** - Use the `rc` release tag. - Usage: `--rc`
+
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`
@@ -98,13 +100,13 @@ Specify the release version of Powerhouse dependencies to use.
 ## Parameters
 
 ### Arguments
-**Tag** - Specify the release tag to use for your project. Can be one of: "latest", "staging", or "dev". - Usage: `[tag]`
+**Tag** - Specify the release tag to use for your project. Can be one of: "latest", "staging", "dev", or "rc". - Usage: `[tag]`
 
 
 
 
 ### Options
-**Tag** - Specify the release tag to use for your project. Can be one of: "latest", "staging", or "dev". - Usage: `--tag, -t <value>`
+**Tag** - Specify the release tag to use for your project. Can be one of: "latest", "staging", "dev", or "rc". - Usage: `--tag, -t <value>`
 
 **Version** - Specify the exact semver release version to use for your project. - Usage: `--version, -v <str>`
 
@@ -152,7 +154,7 @@ Initialize a new global project
 
 **Package Manager** - Specify the package manager to use for your project. Can be one of: `npm`, `pnpm`, `yarn`, or `bun`. Defaults to your environment package manager. - Usage: `--package-manager, -p <value>`
 
-**Tag** - Specify the release tag to use for your project. Can be one of: "latest", "staging", or "dev". - Usage: `--tag, -t <value>`
+**Tag** - Specify the release tag to use for your project. Can be one of: "latest", "staging", "dev", or "rc". - Usage: `--tag, -t <value>`
 
 **Version** - Specify the exact semver release version to use for your project. - Usage: `--version, -v <str>`
 
@@ -175,6 +177,8 @@ Initialize a new global project
 **Dev** - Use the `dev` release tag. - Usage: `--dev, -d`
 
 **Staging** - Use the `staging` release tag. - Usage: `--staging, -s`
+
+**Rc** - Use the `rc` release tag. - Usage: `--rc`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
