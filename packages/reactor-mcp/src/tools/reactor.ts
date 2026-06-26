@@ -518,7 +518,7 @@ export function createReactorMcpProvider(options: ReactorMcpProviderOptions) {
       // Check if remote already exists
       const existingRemote = syncManager
         .list()
-        .find((remote) => remote.collectionId.equals(collectionId));
+        .find((remote) => remote.meta.collectionId.equals(collectionId));
       if (existingRemote) {
         return { driveId: resolvedDriveId };
       }

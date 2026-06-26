@@ -1,22 +1,26 @@
 import { DEFAULT_RELATIONAL_PROCESSOR_DB_NAME } from "@powerhousedao/shared/processors";
-import {
-  getStorageNamespace,
-  ROOT_STORAGE_NAMESPACE,
-} from "@powerhousedao/shared/connect";
+import { ROOT_STORAGE_NAMESPACE } from "@powerhousedao/shared/connect";
 import { PH_CONNECT_BASE_PATH } from "../connect.config.js";
+import { getRuntimeConfig } from "../runtime-config.js";
+import { resolveReactorNamespace } from "./reactor-namespace.js";
 
-// Single owner of the origin-scoped storage namespace. Reuses the same
-// resolved base path connect.config.ts feeds the router so every store agrees.
-const basePath = PH_CONNECT_BASE_PATH;
+export const REACTOR_INSTANCE_NAMESPACE = resolveReactorNamespace({
+  basePath: PH_CONNECT_BASE_PATH,
+  explicit: getRuntimeConfig().connect.instance?.namespace ?? undefined,
+});
 
-// "reactor" at the root, "reactor--<slug>" under a path prefix.
-export const STORAGE_NAMESPACE = getStorageNamespace(basePath);
+export const REACTOR_PGLITE_NAME = REACTOR_INSTANCE_NAMESPACE;
 
-// PGlite data-dir name for the reactor store, fed to `idb://`.
-export const REACTOR_PGLITE_NAME = STORAGE_NAMESPACE;
-
-// IdbFs name for the relational-processor worker store.
 export const RELATIONAL_PGLITE_NAME =
-  STORAGE_NAMESPACE === ROOT_STORAGE_NAMESPACE
+  REACTOR_INSTANCE_NAMESPACE === ROOT_STORAGE_NAMESPACE
     ? DEFAULT_RELATIONAL_PROCESSOR_DB_NAME
-    : `${STORAGE_NAMESPACE}-${DEFAULT_RELATIONAL_PROCESSOR_DB_NAME}`;
+    : `${REACTOR_INSTANCE_NAMESPACE}-${DEFAULT_RELATIONAL_PROCESSOR_DB_NAME}`;
+
+// Here, not pglite-idb.ts, so those IDB helpers stay free of runtime-config
+// and remain importable by the reactor SharedWorker.
+export const REACTOR_IDB_NAME = `/pglite/${REACTOR_PGLITE_NAME}`;
+export const RELATIONAL_IDB_NAME = `/pglite/${RELATIONAL_PGLITE_NAME}`;
+export const PRIMARY_IDB_NAMES = [
+  REACTOR_IDB_NAME,
+  RELATIONAL_IDB_NAME,
+] as const;

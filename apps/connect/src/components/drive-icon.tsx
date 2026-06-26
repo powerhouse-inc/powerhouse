@@ -13,7 +13,9 @@ export function DriveIcon({
     if (!drive) return false;
 
     return remotes.some((remote) =>
-      remote.collectionId.equals(DriveCollectionId.forDrive(drive.header.id)),
+      remote.meta.collectionId.equals(
+        DriveCollectionId.forDrive(drive.header.id),
+      ),
     );
   }, [remotes, drive]);
 

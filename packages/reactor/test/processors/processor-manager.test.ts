@@ -23,7 +23,7 @@ import type { IOperationIndex } from "../../src/cache/operation-index-types.js";
 import type { IWriteCache } from "../../src/cache/write/interfaces.js";
 import { DEFAULT_DRIVE_CONTAINER_TYPES } from "../../src/core/drive-container-types.js";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
-import type { Database, ReactorModule } from "../../src/core/types.js";
+import type { Database, InProcessReactorModule } from "../../src/core/types.js";
 import { ProcessorManager } from "../../src/processors/processor-manager.js";
 import type { DocumentViewDatabase } from "../../src/read-models/types.js";
 import { ConsistencyTracker } from "../../src/shared/consistency-tracker.js";
@@ -163,7 +163,7 @@ function makeOp(
 }
 
 describe("ProcessorManager Integration Tests", () => {
-  let reactorModule: ReactorModule;
+  let reactorModule: InProcessReactorModule;
 
   beforeEach(async () => {
     reactorModule = await new ReactorBuilder()

@@ -1238,7 +1238,7 @@ export function pollSyncEnvelopes(
           context: op.context,
         })),
         cursor: {
-          remoteName: remote.name,
+          remoteName: remote.meta.name,
           cursorOrdinal: 0,
           lastSyncedAtUtcMs: Date.now().toString(),
         },
@@ -1334,7 +1334,7 @@ export function pushSyncEnvelopes(
 
     const syncOps = envelopesToSyncOperations(
       envelope as Parameters<typeof envelopesToSyncOperations>[0],
-      remote.name,
+      remote.meta.name,
     );
 
     if (!remoteSyncOps.has(remote)) {

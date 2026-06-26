@@ -2,7 +2,10 @@
 // RUN_HUB_SPOKE_INTEGRATION=1. Requires a Postgres reachable at the host/port
 // in REACTOR_TEST_PG_* (defaults to localhost:5433 via `pnpm --filter
 // @powerhousedao/reactor docker:up`) and outbound access to PH_REGISTRY_URL.
-import { type ISyncManager, type ReactorModule } from "@powerhousedao/reactor";
+import {
+  type ISyncManager,
+  type InProcessReactorModule,
+} from "@powerhousedao/reactor";
 import { httpsHooksPath } from "@powerhousedao/reactor-api/https-hooks";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import { ConsoleLogger } from "document-model";
@@ -84,7 +87,7 @@ describe.each(DRIVE_TYPES)(
     const logger = new ConsoleLogger([`hub-spoke-test:${driveType}`]);
 
     let metadata: FixtureMetadata;
-    let hub: ReactorModule | undefined;
+    let hub: InProcessReactorModule | undefined;
     let hubKysely: Kysely<unknown> | undefined;
     let hubPool: Pool | undefined;
     let httpLoader: HttpPackageLoader;
@@ -179,7 +182,7 @@ describe.each(DRIVE_TYPES)(
 
           globalThis.fetch = bridge;
 
-          const spokes: ReactorModule[] = [];
+          const spokes: InProcessReactorModule[] = [];
           for (let i = 0; i < spokeCount; i++) {
             spokes.push(
               await buildSpokeModule(

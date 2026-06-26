@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { DocumentChangeEvent } from "../../src/client/types.js";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import { ReactorClientBuilder } from "../../src/core/reactor-client-builder.js";
-import type { ReactorClientModule } from "../../src/core/types.js";
+import type { InProcessReactorClientModule } from "../../src/core/types.js";
 import { JobStatus } from "../../src/shared/types.js";
 
 /**
@@ -20,7 +20,7 @@ import { JobStatus } from "../../src/shared/types.js";
  * between OPERATIONS_READY events and the subscription manager is missing.
  */
 describe("ReactorClient Subscription Integration Tests", () => {
-  let module: ReactorClientModule;
+  let module: InProcessReactorClientModule;
 
   async function waitForJobCompletion(jobId: string): Promise<void> {
     await vi.waitUntil(

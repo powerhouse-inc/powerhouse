@@ -4,6 +4,7 @@ export type {
   IChannelFactory,
   ISyncManager,
   Remote,
+  RemoteMeta,
 } from "./interfaces.js";
 
 export type { ShutdownStatus } from "../shared/types.js";

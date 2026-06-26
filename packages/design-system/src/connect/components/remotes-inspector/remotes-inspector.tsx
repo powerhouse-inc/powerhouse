@@ -1,5 +1,5 @@
 import { Icon } from "#design-system";
-import type { Remote } from "@powerhousedao/reactor-browser";
+import type { Remote, RemoteFilter } from "@powerhousedao/reactor-browser";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { twMerge } from "tailwind-merge";
 import { ChannelInspector } from "./components/channel-inspector.js";
@@ -44,7 +44,7 @@ const ACTIONS_COLUMN: ColumnDef = {
   width: "100px",
 };
 
-function formatFilter(filter: Remote["filter"]): string {
+function formatFilter(filter: RemoteFilter): string {
   const parts: string[] = [];
 
   if (filter.branch) {
@@ -74,20 +74,20 @@ function sortRemotes(
 
     switch (sort.column) {
       case "id":
-        aValue = a.id;
-        bValue = b.id;
+        aValue = a.meta.id;
+        bValue = b.meta.id;
         break;
       case "name":
-        aValue = a.name;
-        bValue = b.name;
+        aValue = a.meta.name;
+        bValue = b.meta.name;
         break;
       case "collectionId":
-        aValue = a.collectionId.key;
-        bValue = b.collectionId.key;
+        aValue = a.meta.collectionId.key;
+        bValue = b.meta.collectionId.key;
         break;
       case "filter":
-        aValue = formatFilter(a.filter);
-        bValue = formatFilter(b.filter);
+        aValue = formatFilter(a.meta.filter);
+        bValue = formatFilter(b.meta.filter);
         break;
       default:
         return 0;
@@ -134,7 +134,7 @@ export function RemotesInspector({
   const handleRefresh = useCallback(async () => {
     await loadRemotes();
     if (selectedRemote) {
-      const updated = remotes.find((r) => r.id === selectedRemote.id);
+      const updated = remotes.find((r) => r.meta.id === selectedRemote.meta.id);
       setSelectedRemote(updated);
     }
   }, [loadRemotes, selectedRemote, remotes]);
@@ -160,9 +160,9 @@ export function RemotesInspector({
   const handleRemove = useCallback(
     async (remote: Remote) => {
       if (!removeRemote) return;
-      await removeRemote(remote.name);
+      await removeRemote(remote.meta.name);
       await loadRemotes();
-      if (selectedRemote?.id === remote.id) {
+      if (selectedRemote?.meta.id === remote.meta.id) {
         setSelectedRemote(undefined);
       }
     },
@@ -192,7 +192,7 @@ export function RemotesInspector({
 
   const handlePull = useCallback(
     (remote: Remote) => {
-      triggerPull?.(remote.name);
+      triggerPull?.(remote.meta.name);
     },
     [triggerPull],
   );
@@ -201,10 +201,10 @@ export function RemotesInspector({
     return (
       <ChannelInspector
         channel={selectedRemote.channel}
-        connectionState={connectionStates?.get(selectedRemote.name)}
+        connectionState={connectionStates?.get(selectedRemote.meta.name)}
         onBack={handleBack}
         onRefresh={() => void handleRefresh()}
-        remoteName={selectedRemote.name}
+        remoteName={selectedRemote.meta.name}
       />
     );
   }
@@ -315,26 +315,26 @@ export function RemotesInspector({
             ) : (
               sortedRemotes.map((remote) => (
                 <tr
-                  key={remote.id}
+                  key={remote.meta.id}
                   className="odd:bg-card even:bg-background hover:hover-effect"
                 >
                   <td className="px-3 py-2 text-xs text-foreground">
-                    <span className="block truncate" title={remote.id}>
-                      {truncateId(remote.id)}
+                    <span className="block truncate" title={remote.meta.id}>
+                      {truncateId(remote.meta.id)}
                     </span>
                   </td>
                   <td className="border-l border-border px-3 py-2 text-xs text-foreground">
-                    <span className="block truncate" title={remote.name}>
-                      {remote.name}
+                    <span className="block truncate" title={remote.meta.name}>
+                      {remote.meta.name}
                     </span>
                   </td>
                   <td className="border-l border-border px-3 py-2">
-                    {connectionStates?.get(remote.name) ? (
+                    {connectionStates?.get(remote.meta.name) ? (
                       <ConnectionStateBadge
                         failureCount={
-                          connectionStates.get(remote.name)!.failureCount
+                          connectionStates.get(remote.meta.name)!.failureCount
                         }
-                        state={connectionStates.get(remote.name)!.state}
+                        state={connectionStates.get(remote.meta.name)!.state}
                       />
                     ) : (
                       <span className="text-xs text-muted-foreground">-</span>
@@ -343,17 +343,17 @@ export function RemotesInspector({
                   <td className="border-l border-border px-3 py-2 text-xs text-foreground">
                     <span
                       className="block truncate"
-                      title={remote.collectionId.key}
+                      title={remote.meta.collectionId.key}
                     >
-                      {remote.collectionId.key}
+                      {remote.meta.collectionId.key}
                     </span>
                   </td>
                   <td className="border-l border-border px-3 py-2 text-xs text-foreground">
                     <span
                       className="block truncate"
-                      title={formatFilter(remote.filter)}
+                      title={formatFilter(remote.meta.filter)}
                     >
-                      {formatFilter(remote.filter)}
+                      {formatFilter(remote.meta.filter)}
                     </span>
                   </td>
                   <td className="border-l border-border px-3 py-2">

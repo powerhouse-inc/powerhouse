@@ -1,7 +1,7 @@
 import {
   ReactorBuilder,
   ReactorClientBuilder,
-  type ReactorClientModule,
+  type InProcessReactorClientModule,
 } from "@powerhousedao/reactor";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import {
@@ -17,7 +17,7 @@ const createTestDocument = (): PHDocument => {
 };
 
 describe("ReactorSubgraph Query Resolvers", () => {
-  let module: ReactorClientModule;
+  let module: InProcessReactorClientModule;
 
   beforeEach(async () => {
     const reactorBuilder = new ReactorBuilder().withDocumentModels([
@@ -160,7 +160,7 @@ describe("ReactorSubgraph Query Resolvers", () => {
 });
 
 describe("ReactorSubgraph Mutation Resolvers", () => {
-  let module: ReactorClientModule;
+  let module: InProcessReactorClientModule;
 
   beforeEach(async () => {
     const reactorBuilder = new ReactorBuilder().withDocumentModels([

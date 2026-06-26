@@ -10,7 +10,7 @@ import {
   SyncBuilder,
   type GqlChannelConfig,
   type ISyncManager,
-  type ReactorModule,
+  type InProcessReactorModule,
 } from "@powerhousedao/reactor";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
@@ -101,7 +101,7 @@ class FaultInjector {
 describe("Fault-Injection Sync", () => {
   const CHANNEL_ID = "fault-test-channel";
 
-  let serverModule: ReactorModule;
+  let serverModule: InProcessReactorModule;
   let serverSyncManager: ISyncManager;
   let channel: GqlRequestChannel;
   let manualTimer: ManualPollTimer;

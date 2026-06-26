@@ -25,6 +25,11 @@
       "types": "./dist/src/analytics/index.d.ts",
       "import": "./dist/src/analytics/index.js"
     },
+    "./base-document-models": {
+      "source": "./src/document-model.ts",
+      "types": "./dist/src/document-model.d.ts",
+      "import": "./dist/src/document-model.js"
+    },
     "./graphql": {
       "source": "./src/graphql/client.ts",
       "types": "./dist/src/graphql/client.d.ts",
@@ -39,6 +44,11 @@
       "source": "./src/renown/index.ts",
       "types": "./dist/src/renown/index.d.ts",
       "import": "./dist/src/renown/index.js"
+    },
+    "./rpc": {
+      "source": "./src/rpc/index.ts",
+      "types": "./dist/src/rpc/index.d.ts",
+      "import": "./dist/src/rpc/index.js"
     }
   },
   "sideEffects": false,

@@ -10,7 +10,9 @@ import {
 import { useCallback, useMemo } from "react";
 
 export function useQueueInspector(): QueueInspectorProps | undefined {
-  const reactorClientModule = useReactorClientModule();
+  const module = useReactorClientModule();
+  const reactorClientModule = module?.kind === "browser" ? module : undefined;
+  const inspector = module?.kind === "worker" ? module.inspector : undefined;
   const queue = reactorClientModule?.reactorModule?.queue;
 
   const inMemoryQueue = useMemo(() => {
@@ -21,6 +23,9 @@ export function useQueueInspector(): QueueInspectorProps | undefined {
   }, [queue]);
 
   const getQueueState = useCallback((): Promise<QueueState> => {
+    if (inspector) {
+      return inspector.getQueueState() as Promise<QueueState>;
+    }
     if (!inMemoryQueue) {
       return Promise.resolve({
         isPaused: false,
@@ -51,22 +56,29 @@ export function useQueueInspector(): QueueInspectorProps | undefined {
       totalPending: pendingJobs.length,
       totalExecuting: executingJobs.length,
     });
-  }, [inMemoryQueue]);
+  }, [inMemoryQueue, inspector]);
 
-  const onPause = useCallback((): Promise<void> => {
+  const onPause = useCallback(async (): Promise<void> => {
+    if (inspector) {
+      await inspector.pauseQueue();
+      return;
+    }
     if (inMemoryQueue) {
       inMemoryQueue.pause();
     }
-    return Promise.resolve();
-  }, [inMemoryQueue]);
+  }, [inMemoryQueue, inspector]);
 
   const onResume = useCallback(async (): Promise<void> => {
+    if (inspector) {
+      await inspector.resumeQueue();
+      return;
+    }
     if (inMemoryQueue) {
       await inMemoryQueue.resume();
     }
-  }, [inMemoryQueue]);
+  }, [inMemoryQueue, inspector]);
 
-  if (!inMemoryQueue) {
+  if (!inMemoryQueue && !inspector) {
     return undefined;
   }
 

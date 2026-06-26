@@ -259,6 +259,24 @@
               "default": false
             }
           }
+        },
+        "instance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["namespace", "reactorWorker"],
+          "description": "Per-instance identity. Lets one origin host multiple isolated Connect instances, each with its own storage + SharedWorker namespace.",
+          "properties": {
+            "namespace": {
+              "type": ["string", "null"],
+              "description": "Explicit storage/SharedWorker namespace for this instance. `null` derives it from the base path (and, later, the configured endpoint), so root deployments stay byte-identical.",
+              "default": null
+            },
+            "reactorWorker": {
+              "type": "boolean",
+              "description": "Host the reactor in a shared worker instead of on the main thread. Off by default; the main-thread reactor stays the proven path until cutover is verified.",
+              "default": false
+            }
+          }
         }
       }
     }

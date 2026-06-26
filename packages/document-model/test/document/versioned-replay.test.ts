@@ -95,6 +95,7 @@ const baseReducerV1: StateReducer<StateV1> = (state, action) => {
     default:
       break;
   }
+  return undefined;
 };
 
 const baseReducerV2: StateReducer<StateV2> = (state, action) => {
@@ -115,6 +116,7 @@ const baseReducerV2: StateReducer<StateV2> = (state, action) => {
     default:
       break;
   }
+  return undefined;
 };
 
 // Upgrade reducer: transforms StateV1 → StateV2 (rename checked→done)
@@ -395,6 +397,7 @@ describe("versioned replay", () => {
         default:
           break;
       }
+      return undefined;
     };
     const rv2Additive = createReducer<StateV2Additive>(baseReducerV2Additive);
 
@@ -662,6 +665,7 @@ describe("versioned replay", () => {
           rank: state.global.entries.length,
         });
       }
+      return undefined;
     };
     const rv2 = createReducer<StateV2>(baseV2Reducer);
     const rv3 = createReducer<StateV3>(baseV3Reducer);

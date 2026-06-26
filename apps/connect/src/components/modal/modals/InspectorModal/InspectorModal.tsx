@@ -1,12 +1,16 @@
 import { InspectorModal as ConnectInspectorModal } from "@powerhousedao/design-system/connect";
-import { REACTOR_SCHEMA } from "@powerhousedao/reactor-browser";
-import { closePHModal, usePHModal } from "@powerhousedao/reactor-browser";
+import {
+  closePHModal,
+  REACTOR_SCHEMA,
+  usePHModal,
+} from "@powerhousedao/reactor-browser";
 import { useDbExplorer } from "./useDbExplorer.js";
 import { useDebugInspector } from "./useDebugInspector.js";
 import { useIntegrityInspector } from "./useIntegrityInspector.js";
 import { useProcessorsInspector } from "./useProcessorsInspector.js";
 import { useQueueInspector } from "./useQueueInspector.js";
 import { useRemotesInspector } from "./useRemotesInspector.js";
+import { useWorkerInspector } from "./useWorkerInspector.js";
 
 const DEFAULT_PAGE_SIZE = 25;
 
@@ -26,6 +30,7 @@ export const InspectorModal: React.FC = () => {
   const queueInspectorProps = useQueueInspector();
   const processorsInspectorProps = useProcessorsInspector();
   const integrityInspectorProps = useIntegrityInspector();
+  const workerInspectorProps = useWorkerInspector();
   const { currentPgVersion, supportedPgVersions, onResetToPgVersion } =
     useDebugInspector();
 
@@ -59,6 +64,7 @@ export const InspectorModal: React.FC = () => {
       queueInspectorProps={queueInspectorProps}
       processorsInspectorProps={processorsInspectorProps}
       integrityInspectorProps={integrityInspectorProps}
+      workerInspectorProps={workerInspectorProps}
     />
   );
 };

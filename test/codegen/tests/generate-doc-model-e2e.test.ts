@@ -1,4 +1,4 @@
-import type { ReactorModule } from "@powerhousedao/reactor";
+import type { InProcessReactorModule } from "@powerhousedao/reactor";
 import { ReactorBuilder } from "@powerhousedao/reactor";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import type {
@@ -54,7 +54,7 @@ async function waitFor(fn: () => void, timeout = 5000) {
 }
 
 describe("document model e2e integration", () => {
-  let reactorModule: ReactorModule | undefined;
+  let reactorModule: InProcessReactorModule | undefined;
 
   afterEach(async () => {
     if (reactorModule) {

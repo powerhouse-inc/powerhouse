@@ -1,7 +1,8 @@
 import { handleCookieConsent } from "@powerhousedao/e2e-utils";
 import { expect, test } from "./helpers/fixtures.js";
+import { DESCRIBE_TIMEOUT, LONG_VISIBLE_TIMEOUT } from "./helpers/timeouts.js";
 
-test.describe.configure({ timeout: 5 * 60 * 60 * 1000 });
+test.describe.configure({ timeout: DESCRIBE_TIMEOUT });
 
 test("should display Vetra drive automatically on Connect main page", async ({
   page,
@@ -23,7 +24,7 @@ test("should display Vetra drive automatically on Connect main page", async ({
     level: 3,
     exact: true,
   });
-  await expect(vetraDriveCard).toBeVisible({ timeout: 2 * 60 * 60 * 1000 });
+  await expect(vetraDriveCard).toBeVisible({ timeout: LONG_VISIBLE_TIMEOUT });
 });
 
 test("should allow clicking on Vetra drive", async ({ page }) => {
@@ -42,7 +43,7 @@ test("should allow clicking on Vetra drive", async ({ page }) => {
     level: 3,
     exact: true,
   });
-  await expect(vetraDrive).toBeVisible({ timeout: 2 * 60 * 60 * 1000 });
+  await expect(vetraDrive).toBeVisible({ timeout: LONG_VISIBLE_TIMEOUT });
 
   await vetraDrive.click();
 

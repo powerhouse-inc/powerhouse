@@ -9,7 +9,7 @@ import {
   MetricsCollector,
   Reporter,
 } from "@powerhousedao/load-test-client";
-import type { ReactorModule } from "@powerhousedao/reactor";
+import type { InProcessReactorModule } from "@powerhousedao/reactor";
 import { ConsoleLogger } from "document-model";
 import fs from "node:fs";
 import { createReactorWithSync, waitForDocument } from "./reactor-setup.js";
@@ -20,7 +20,7 @@ export class ConnectTestScheduler {
   private metrics: MetricsCollector;
   private reporter: Reporter;
 
-  private module: ReactorModule | undefined;
+  private module: InProcessReactorModule | undefined;
   private document: TestDocument | undefined;
   private isRunning = false;
   private startTime = 0;

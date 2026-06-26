@@ -61,3 +61,4 @@ export * from "./tooltip/tooltip.js";
 export type * from "./types.js";
 export * from "./upload-file-item/upload-file-item.js";
 export * from "./upload-file-list/upload-file-list.js";
+export * from "./worker-inspector/index.js";

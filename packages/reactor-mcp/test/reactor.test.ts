@@ -1,7 +1,7 @@
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import type {
   IReactorClient,
-  ReactorClientModule,
+  InProcessReactorClientModule,
 } from "@powerhousedao/reactor";
 import { ReactorBuilder, ReactorClientBuilder } from "@powerhousedao/reactor";
 import { createReactorMcpProvider } from "@powerhousedao/reactor-mcp";
@@ -52,7 +52,7 @@ const createMockReactorClient = (): IReactorClient => {
 };
 
 // Create a real reactor client for integration tests
-async function createReactorClientModule(): Promise<ReactorClientModule> {
+async function createReactorClientModule(): Promise<InProcessReactorClientModule> {
   const reactorBuilder = new ReactorBuilder().withDocumentModels([
     documentModelDocumentModelModule,
     driveDocumentModelModule,
@@ -67,7 +67,7 @@ async function createReactorClientModule(): Promise<ReactorClientModule> {
 
 describe("ReactorMcpProvider", () => {
   let mockClient: IReactorClient;
-  let reactorModule: ReactorClientModule;
+  let reactorModule: InProcessReactorClientModule;
   let client: IReactorClient;
 
   beforeEach(async () => {

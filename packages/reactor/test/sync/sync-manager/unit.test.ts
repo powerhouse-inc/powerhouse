@@ -412,7 +412,7 @@ describe("SyncManager - Unit Tests", () => {
 
       const remotes = syncManager.list();
       expect(remotes).toHaveLength(1);
-      expect(remotes[0].name).toBe("remote-ok");
+      expect(remotes[0].meta.name).toBe("remote-ok");
 
       expect(() => syncManager.getByName("remote-fail")).toThrow(
         "Remote with name 'remote-fail' does not exist",
@@ -565,8 +565,10 @@ describe("SyncManager - Unit Tests", () => {
         { sinceTimestampUtcMs: "0" },
       );
 
-      expect(remote.name).toBe("remote1");
-      expect(remote.collectionId.toString()).toBe("drive.main.collection1");
+      expect(remote.meta.name).toBe("remote1");
+      expect(remote.meta.collectionId.toString()).toBe(
+        "drive.main.collection1",
+      );
       expect(mockRemoteStorage.upsert).toHaveBeenCalledWith(
         expect.objectContaining({
           name: "remote1",
@@ -662,8 +664,12 @@ describe("SyncManager - Unit Tests", () => {
         channelConfig,
       );
 
-      expect(remote.filter).toEqual({ documentId: [], scope: [], branch: "" });
-      expect(remote.options).toEqual({ sinceTimestampUtcMs: "0" });
+      expect(remote.meta.filter).toEqual({
+        documentId: [],
+        scope: [],
+        branch: "",
+      });
+      expect(remote.meta.options).toEqual({ sinceTimestampUtcMs: "0" });
     });
   });
 
@@ -755,8 +761,10 @@ describe("SyncManager - Unit Tests", () => {
 
       const remote = syncManager.getByName("remote1");
 
-      expect(remote.name).toBe("remote1");
-      expect(remote.collectionId.toString()).toBe("drive.main.collection1");
+      expect(remote.meta.name).toBe("remote1");
+      expect(remote.meta.collectionId.toString()).toBe(
+        "drive.main.collection1",
+      );
     });
 
     it("should throw error if remote does not exist", async () => {
@@ -825,8 +833,8 @@ describe("SyncManager - Unit Tests", () => {
       const remotes = syncManager.list();
 
       expect(remotes).toHaveLength(2);
-      expect(remotes[0].name).toBe("remote1");
-      expect(remotes[1].name).toBe("remote2");
+      expect(remotes[0].meta.name).toBe("remote1");
+      expect(remotes[1].meta.name).toBe("remote2");
     });
 
     it("should return empty array when no remotes exist", async () => {

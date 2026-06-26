@@ -5,10 +5,33 @@ import coverageOptions from "../../mcr.config.js";
 
 export { expect } from "@playwright/test";
 
+const REACTOR_WORKER_STORAGE_KEY = "ph:reactorWorker";
+
+export function reactorWorkerModeRequested(): boolean {
+  const flag = process.env.PH_REACTOR_WORKER;
+  return flag === "1" || flag === "true";
+}
+
 // fixtures
 const test = testBase.extend<{
   autoTestFixture: string;
+  reactorWorkerFlag: boolean;
 }>({
+  reactorWorkerFlag: [
+    async ({ context }, use) => {
+      const enabled = reactorWorkerModeRequested();
+      if (enabled) {
+        await context.addInitScript((key) => {
+          window.localStorage.setItem(key, "true");
+        }, REACTOR_WORKER_STORAGE_KEY);
+      }
+      await use(enabled);
+    },
+    {
+      scope: "test",
+      auto: true,
+    },
+  ],
   autoTestFixture: [
     async ({ context }, use) => {
       const isChromium = test.info().project.name === "chromium";

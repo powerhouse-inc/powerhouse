@@ -16,7 +16,7 @@ import {
   type IReactor,
   type ISyncManager,
   type JobReadReadyEvent,
-  type ReactorModule,
+  type InProcessReactorModule,
 } from "@powerhousedao/reactor";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
@@ -64,8 +64,8 @@ function createFailableResolverBridge(syncManagers: Map<string, ISyncManager>) {
 type PushBackfillSetup = {
   connectReactor: IReactor;
   switchboardReactor: IReactor;
-  connectModule: ReactorModule;
-  switchboardModule: ReactorModule;
+  connectModule: InProcessReactorModule;
+  switchboardModule: InProcessReactorModule;
   connectEventBus: IEventBus;
   switchboardEventBus: IEventBus;
   connectSyncManager: ISyncManager;

@@ -98,6 +98,7 @@ function setupDefaults() {
   mockUseUser.mockReturnValue(undefined);
   mockUseAcceptedCookies.mockReturnValue([{ analytics: true }, vi.fn()]);
   mockUseReactorClientModule.mockReturnValue({
+    kind: "browser",
     reactorModule: { processorManager: mockProcessorManager },
   });
 }

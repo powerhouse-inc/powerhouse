@@ -119,37 +119,20 @@ export interface IChannelFactory {
  * A remote defines what to synchronize (collectionId, filter) and how to synchronize it (channel).
  * The remote name is used as a unique identifier across the system.
  */
-export type Remote = {
-  /**
-   * Unique identifier for this remote.
-   */
+// Cloneable definition of a remote, separated from the live channel so it can
+// cross a worker boundary as-is.
+export type RemoteMeta = {
   id: string;
-
-  /**
-   * Unique name for this remote.
-   */
   name: string;
-
-  /**
-   * Collection to synchronize. A drive-level abstraction carrying the drive
-   * document id and branch (see DriveCollectionId).
-   */
   collectionId: DriveCollectionId;
-
-  /**
-   * Filter to apply to operations.
-   * Can filter by documentId, scope, and branch.
-   */
+  channelConfig: ChannelConfig;
   filter: RemoteFilter;
-
-  /**
-   * Additional configuration options for the remote.
-   */
   options: RemoteOptions;
+};
 
-  /**
-   * Active channel for bidirectional communication with the remote.
-   */
+// A configured remote: cloneable `meta` plus the live `channel`.
+export type Remote = {
+  meta: RemoteMeta;
   channel: IChannel;
 };
 

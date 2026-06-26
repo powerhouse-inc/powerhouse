@@ -1,6 +1,6 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
-import type { ReactorClientModule } from "@powerhousedao/reactor";
+import type { InProcessReactorClientModule } from "@powerhousedao/reactor";
 import {
   ChannelScheme,
   DriveCollectionId,
@@ -43,7 +43,7 @@ const client = createClient(SWITCHBOARD_URL);
 
 /** Track created document/drive IDs for cleanup. */
 const createdDocumentIds: string[] = [];
-let clientModule: ReactorClientModule | undefined;
+let clientModule: InProcessReactorClientModule | undefined;
 let rejectDeadLetter: ((error: Error) => void) | undefined;
 let deadLetterPromise: Promise<never> | undefined;
 
@@ -65,7 +65,7 @@ async function createDriveOnSwitchboard(name: string): Promise<string> {
 
 async function createLocalReactor(
   driveId: string,
-): Promise<ReactorClientModule> {
+): Promise<InProcessReactorClientModule> {
   const renown = await new RenownBuilder("Test Local").build();
 
   const reactorBuilder = new ReactorBuilder()
@@ -123,7 +123,7 @@ function waitForSync<T>(fn: () => Promise<T>, timeout = 2000): Promise<T> {
 }
 
 async function waitForDocument(
-  module: ReactorClientModule,
+  module: InProcessReactorClientModule,
   documentId: string,
   timeoutMs = 10_000,
 ): Promise<PHDocument> {

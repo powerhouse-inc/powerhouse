@@ -632,8 +632,10 @@ describe("ReactorSubgraph Permission Checks", () => {
       deadLetter: ReturnType<typeof makeDeadLetter>[] = [],
     ) => ({
       getById: vi.fn().mockReturnValue({
-        name: "remote-1",
-        collectionId: DriveCollectionId.forDrive(driveId),
+        meta: {
+          name: "remote-1",
+          collectionId: DriveCollectionId.forDrive(driveId),
+        },
         channel: {
           inbox: { ackOrdinal: 0 },
           outbox: { items: outbox, remove: vi.fn() },
@@ -781,7 +783,7 @@ describe("ReactorSubgraph Permission Checks", () => {
       const inboxAdd = vi.fn();
       const syncManager = {
         getById: vi.fn().mockReturnValue({
-          name: "remote-1",
+          meta: { name: "remote-1" },
           channel: { inbox: { add: inboxAdd } },
         }),
       };

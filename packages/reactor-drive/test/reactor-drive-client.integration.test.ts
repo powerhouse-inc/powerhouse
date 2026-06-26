@@ -9,7 +9,7 @@ import {
   type IOperationIndex,
   type IReactorClient,
   type IWriteCache,
-  type ReactorModule,
+  type InProcessReactorModule,
 } from "@powerhousedao/reactor";
 import type { Node } from "@powerhousedao/shared/document-drive";
 import type {
@@ -36,7 +36,7 @@ describe("ReactorDriveClient Integration", () => {
   let schemaDb: Kysely<NodeProcessorDatabase>;
   let driveClient: ReactorDriveClient;
   let reactorClient: IReactorClient;
-  let reactorModule: ReactorModule;
+  let reactorModule: InProcessReactorModule;
   let killReactor: () => void;
   let driveId: string;
 

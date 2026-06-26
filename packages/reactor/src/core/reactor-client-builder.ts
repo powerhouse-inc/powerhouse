@@ -15,7 +15,11 @@ import { DefaultSubscriptionErrorHandler } from "../subs/default-error-handler.j
 import { ReactorSubscriptionManager } from "../subs/react-subscription-manager.js";
 import type { IReactorSubscriptionManager } from "../subs/types.js";
 import type { ReactorBuilder } from "./reactor-builder.js";
-import type { IReactor, ReactorClientModule, ReactorModule } from "./types.js";
+import type {
+  InProcessReactorClientModule,
+  InProcessReactorModule,
+  IReactor,
+} from "./types.js";
 
 /**
  * Builder class for constructing ReactorClient instances with proper configuration
@@ -112,7 +116,7 @@ export class ReactorClientBuilder {
     return module.client;
   }
 
-  public async buildModule(): Promise<ReactorClientModule> {
+  public async buildModule(): Promise<InProcessReactorClientModule> {
     if (!this.logger) {
       this.logger = new ConsoleLogger(["reactor-client"]);
     }
@@ -121,7 +125,7 @@ export class ReactorClientBuilder {
     let eventBus: IEventBus;
     let documentIndexer: IDocumentIndexer;
     let documentView: IDocumentView;
-    let reactorModule: ReactorModule | undefined;
+    let reactorModule: InProcessReactorModule | undefined;
 
     if (this.reactorBuilder) {
       if (this.signatureVerifier) {

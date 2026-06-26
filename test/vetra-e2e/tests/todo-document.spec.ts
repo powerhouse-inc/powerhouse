@@ -10,6 +10,7 @@ import {
   navigateToVetraDrive,
 } from "./helpers/document.js";
 import { expect, test } from "./helpers/fixtures.js";
+import { DESCRIBE_TIMEOUT } from "./helpers/timeouts.js";
 import {
   CONSUMER_CONNECT_URL,
   buildConsumerConnect,
@@ -29,7 +30,7 @@ import {
 } from "@powerhousedao/e2e-utils";
 
 // Run serially to avoid conflicts with other tests that modify the shared Vetra drive
-test.describe.configure({ mode: "serial", timeout: 5 * 60 * 60 * 1000 });
+test.describe.configure({ mode: "serial", timeout: DESCRIBE_TIMEOUT });
 const DOCUMENT_NAME = "ToDoDocument";
 
 const TEST_DOCUMENT_DATA: DocumentBasicData = {

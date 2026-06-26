@@ -73,6 +73,7 @@
     "@powerhousedao/design-system": "workspace:*",
     "@powerhousedao/document-engineering": "catalog:",
     "@powerhousedao/powerhouse-vetra-packages": "workspace:*",
+    "@powerhousedao/reactor": "workspace:*",
     "@powerhousedao/reactor-attachments": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
