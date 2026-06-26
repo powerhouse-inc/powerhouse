@@ -99,14 +99,16 @@ function createPersistentBackup(): BackupStrategy {
       registerBackup({ name: backupName, idbName, createdAt: Date.now() });
       return backupName;
     },
-    rollback: async (handle, idbName) => {
+    rollback: async (handle, idbName, cause) => {
       const backupName = handle as string;
       try {
         // clone clears-and-replaces in one txn; no pre-clear (which could empty the dir).
         await cloneFileData(backupName, idbName);
       } catch (rollbackErr) {
         console.error(
-          `PGlite migration rollback failed for ${idbName}; backup ${backupName} retained.`,
+          `PGlite migration rollback failed for ${idbName}; backup ${backupName} retained. Primary migration error:`,
+          cause,
+          "Rollback error:",
           rollbackErr,
         );
         return;

@@ -76,7 +76,10 @@ export class RpcCorrelator {
       if (options.timeoutMs !== undefined) {
         const timeoutMs = options.timeoutMs;
         timer = setTimeout(() => {
-          if (this.pending.delete(id)) {
+          const entry = this.pending.get(id);
+          if (entry) {
+            this.pending.delete(id);
+            entry.cleanup?.();
             reject(
               new Error(
                 `Reactor worker did not respond to ${label} within ${timeoutMs}ms; the worker may have failed to load`,
@@ -98,6 +101,8 @@ export class RpcCorrelator {
       const entry = this.pending.get(id);
       if (entry) {
         entry.cleanup = cleanup;
+      } else {
+        cleanup();
       }
     }
     return promise;

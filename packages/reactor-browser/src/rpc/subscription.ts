@@ -71,6 +71,7 @@ export function createCorrelatedSubscriptions<
     const sub = subs.get(id);
     if (sub) {
       subs.delete(id);
+      router.post(config.close(id));
       config.onError(sub, message);
     }
   });

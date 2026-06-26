@@ -50,6 +50,7 @@ export type WorkerReactorClientArgs = {
 export type WorkerReactorClient = {
   reactorClientModule: WorkerReactorClientModule;
   syncManagerProxy: SyncManagerProxy;
+  dispose: () => void;
 };
 
 function toReactorIdentity(user: User | undefined): ReactorIdentity | null {
@@ -168,15 +169,16 @@ export function createWorkerReactorClientModule(
 
   router.on("pong", (msg) => {
     const timer = pingDeadlines.get(msg.id);
-    if (timer !== undefined) {
-      clearTimeout(timer);
-      pingDeadlines.delete(msg.id);
+    if (timer === undefined) {
+      return;
     }
+    clearTimeout(timer);
+    pingDeadlines.delete(msg.id);
     missedPings = 0;
     setWorkerConnectionStatus("connected");
   });
 
-  setInterval(() => {
+  const pingInterval = setInterval(() => {
     const id = `ping${++pingCounter}`;
     const timer = setTimeout(() => {
       pingDeadlines.delete(id);
@@ -189,5 +191,13 @@ export function createWorkerReactorClientModule(
     router.post({ k: "ping", id });
   }, PING_INTERVAL_MS);
 
-  return { reactorClientModule, syncManagerProxy };
+  const dispose = () => {
+    clearInterval(pingInterval);
+    for (const timer of pingDeadlines.values()) {
+      clearTimeout(timer);
+    }
+    pingDeadlines.clear();
+  };
+
+  return { reactorClientModule, syncManagerProxy, dispose };
 }

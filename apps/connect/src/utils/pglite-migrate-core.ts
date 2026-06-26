@@ -24,7 +24,7 @@ export type FileDataEntry = { key: IDBValidKey; value: FileDataValue };
 // the snapshot in memory for same-run rollback only.
 export interface BackupStrategy {
   snapshot(idbName: string): Promise<unknown>;
-  rollback(handle: unknown, idbName: string): Promise<void>;
+  rollback(handle: unknown, idbName: string, cause: unknown): Promise<void>;
   discard(handle: unknown): Promise<void>;
   commit(handle: unknown): Promise<void>;
 }
@@ -229,7 +229,7 @@ export async function migrateIdb(
     publishPhase("restore");
     await restoreDumpIntoIdb(idbName, sql);
   } catch (err) {
-    await backup.rollback(handle, idbName);
+    await backup.rollback(handle, idbName, err);
     throw err;
   }
   await backup.commit(handle);

@@ -95,6 +95,7 @@ export class ReactorHost {
 
   connect(transport: IRpcTransport): () => void {
     let server: ReactorHostServer | null = null;
+    let ready = false;
     const buffer: ClientMessage[] = [];
     const liveSubs = new SubscriptionStore();
     const reply = hostResponder(transport);
@@ -105,10 +106,16 @@ export class ReactorHost {
       }
       const client = await this.resolveClient(construct);
       server = new ReactorHostServer(client, transport);
-      for (const message of buffer) {
-        void server.handleMessage(message);
+    };
+
+    // Drain only after init (server + package registration) completes, in order.
+    // Messages arriving mid-drain stay buffered (ready flips last) so order holds.
+    const drainBuffer = async (): Promise<void> => {
+      while (buffer.length > 0) {
+        const message = buffer.shift()!;
+        await server!.handleMessage(message);
       }
-      buffer.length = 0;
+      ready = true;
     };
 
     const detach = transport.onMessage((message) => {
@@ -128,7 +135,7 @@ export class ReactorHost {
         return;
       }
       if (msg.k === "hello") {
-        void this.handleHello(msg, transport, reply, ensureServer);
+        void this.handleHello(msg, transport, reply, ensureServer, drainBuffer);
         return;
       }
       if (msg.k === "register-packages") {
@@ -167,7 +174,7 @@ export class ReactorHost {
         this.handleAdmin(msg, reply);
         return;
       }
-      if (server) {
+      if (ready && server) {
         void server.handleMessage(msg);
       } else {
         buffer.push(msg);
@@ -179,7 +186,11 @@ export class ReactorHost {
       transport.post({ k: "migration", state: this.migrationState });
     }
     if (this.options.client) {
-      void ensureServer();
+      void ensureServer()
+        .then(drainBuffer)
+        .catch((error) => {
+          console.error("ReactorHost buffer drain failed", error);
+        });
     }
 
     const dispose = () => {
@@ -307,6 +318,7 @@ export class ReactorHost {
     transport: IRpcTransport,
     reply: IHostResponder,
     ensureServer: (construct?: unknown) => Promise<void>,
+    drainBuffer: () => Promise<void>,
   ): Promise<void> {
     if (this.baseline) {
       if (!versionsCompatible(this.baseline, message.version)) {
@@ -326,6 +338,8 @@ export class ReactorHost {
       if (message.packages && message.packages.length > 0) {
         await this.options.registerPackages?.(message.packages);
       }
+      // Packages are registered; replay buffered data messages in order.
+      await drainBuffer();
     });
   }
 
