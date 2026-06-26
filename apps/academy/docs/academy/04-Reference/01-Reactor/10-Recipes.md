@@ -117,7 +117,7 @@ Drives event-driven automation by subscribing to all document changes through an
 
 - `client.subscribe({}, cb)` with an empty filter delivers every `DocumentChangeEvent`; the handler branches on `DocumentChangeType.Updated`.
 - Resolves relationships at runtime with `client.find({ parentId })` plus a naming convention, then acts via `client.rename`.
-- A module-scoped re-entrancy guard stops the handler's own write — which fires another change event — from re-triggering the rule.
+- A local re-entrancy guard (a `reacting` flag) stops the handler's own write — which fires another change event — from re-triggering the rule.
 
 **Source** · [`src/index.ts`](https://github.com/powerhouse-inc/recipes/blob/main/cross-document-reactor/src/index.ts)
 **Concepts** · `IReactorClient.subscribe` · `DocumentChangeEvent` · `client.find` · re-entrancy guard — see [Reactor Client](/academy/Reference/Reactor/ReactorClient)
@@ -223,10 +223,10 @@ Migrates a document model's schema from v1 to v2 with an `UpgradeManifest` and a
 
 ### [Drive Override](https://github.com/powerhouse-inc/recipes/tree/main/drive-override)
 
-A custom container document that tracks its children through the reactor's system-scope `ADD_RELATIONSHIP` action instead of `document-drive`'s `ADD_FILE`, keeping container state O(1).
+A custom container document that tracks its children through the reactor's built-in `ADD_RELATIONSHIP` action instead of `document-drive`'s `ADD_FILE`, keeping container state O(1).
 
 - The container is an ordinary `DocumentModelModule` holding only metadata (`name` / `description`, one `SET_METADATA` op) — no embedded `nodes[]`, so its state and operation log stay flat as children scale past 10,000.
-- Children are linked with `addRelationshipAction(...)` dispatched through `reactor.execute`; the executor writes one row to the relationship index and the container's reducer never sees them.
+- Children are linked with `addRelationshipAction(...)` dispatched through `reactor.execute`; the indexer writes one row to the `DocumentRelationship` table and the container's reducer never sees them.
 - Enumerate with `IDocumentIndexer.getOutgoing` / `getIncoming` and cursor paging — DB-native indexed queries, also exposed over GraphQL.
 
 **Source** · [`src/index.ts`](https://github.com/powerhouse-inc/recipes/blob/main/drive-override/src/index.ts) · [`document-models/custom-container/v1/src/reducers/metadata.ts`](https://github.com/powerhouse-inc/recipes/blob/main/drive-override/document-models/custom-container/v1/src/reducers/metadata.ts)
@@ -263,7 +263,7 @@ A Node CLI that connects to a Reactor's GraphQL subscriptions endpoint over WebS
 Subscribes to the Reactor EventBus sync lifecycle events to maintain live replication-health counters and exposes them through a GraphQL subgraph.
 
 - Folds all five `SyncEventTypes` (pending / succeeded / failed / dead-letter / connection-state) into health counters and derives a healthy / degraded / unhealthy status.
-- Implements `IChannelFactory` and `IChannel` to bridge two reactors entirely in-process, calling the mailbox's success/failure hooks and routing failed sends to a dead-letter queue.
+- Implements `IChannelFactory` and `IChannel` to bridge two reactors entirely in-process, calling the success/failure lifecycle hooks on each `SyncOperation` item (`transported` / `executed` / `failed`) and routing failed sends to a dead-letter mailbox.
 - Registers peers via `syncModule.syncManager.add(...)` and serves a `syncHealth` query over a graphql-yoga subgraph.
 
 **Source** · [`src/health-monitor.ts`](https://github.com/powerhouse-inc/recipes/blob/main/sync-health-monitor/src/health-monitor.ts) · [`src/internal-channel.ts`](https://github.com/powerhouse-inc/recipes/blob/main/sync-health-monitor/src/internal-channel.ts)
