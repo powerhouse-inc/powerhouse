@@ -1,3 +1,13 @@
+## 6.2.0-rc.2 (2026-06-26)
+
+### 🩹 Fixes
+
+- install ph-cli@rc for rc-tagged connect/switchboard image builds ([987d68eeb](https://github.com/powerhouse-inc/powerhouse/commit/987d68eeb))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 6.2.0-rc.1 (2026-06-26)
 
 ### 🚀 Features
