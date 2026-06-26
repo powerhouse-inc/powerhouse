@@ -60,6 +60,7 @@ export type PHConnectDrives = {
 export type PHConnectApp = {
   logLevel?: "debug" | "info" | "warn" | "error";
   basePath?: string;
+  offline?: boolean;
 };
 
 export type PHConnectPackages = {

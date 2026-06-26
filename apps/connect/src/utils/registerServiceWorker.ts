@@ -6,10 +6,44 @@ const serviceWorkerScriptPath = [basePath, "service-worker.js"]
   .join("/")
   .replace(/\/{2,}/gm, "/");
 
+// ---------------------------------------------------------------------------
+// Update-available external store
+//
+// Workbox (generateSW + registerType: "prompt") leaves a freshly-installed
+// worker in the "waiting" state and ships a SKIP_WAITING message listener. We
+// surface "a new version is waiting" through this store so the React prompt
+// (service-worker-update-prompt.tsx) can offer a Refresh button instead of
+// reloading from under the user.
+// ---------------------------------------------------------------------------
+let updateAvailable = false;
+const updateListeners = new Set<() => void>();
+
+function setUpdateAvailable(value: boolean) {
+  if (updateAvailable === value) return;
+  updateAvailable = value;
+  for (const listener of updateListeners) listener();
+}
+
+export function subscribeServiceWorkerUpdate(cb: () => void): () => void {
+  updateListeners.add(cb);
+  return () => {
+    updateListeners.delete(cb);
+  };
+}
+
+export function getServiceWorkerUpdateAvailable(): boolean {
+  return updateAvailable;
+}
+
 class ServiceWorkerManager {
   ready = false;
   debug = false;
   registration: ServiceWorkerRegistration | null = null;
+  // Only reload on controllerchange when the user actually accepted an update.
+  // clientsClaim fires controllerchange on the very first install too, and we
+  // must not reload then.
+  #updateAccepted = false;
+  #reloading = false;
 
   constructor(debug = false) {
     this.debug = debug;
@@ -19,90 +53,73 @@ class ServiceWorkerManager {
     this.debug = debug;
   }
 
-  #handleServiceWorkerMessage(
-    event: MessageEvent<{
-      type: "NEW_VERSION_AVAILABLE";
-      version: string;
-      requiresHardRefresh: boolean;
-    }>,
-  ) {
-    if (this.debug) {
-      console.log("ServiceWorker message: ", event);
-    }
-    const message = "type" in event.data ? event : null;
-    switch (message?.data.type) {
-      case "NEW_VERSION_AVAILABLE": {
-        if (message.data.version === connectConfig.appVersion) {
-          return;
-        }
-        if (message.data.requiresHardRefresh) {
-          if (this.debug) {
-            console.log("New version available");
-          }
-
-          window.location.reload(); // Reload the page to load the new version
-        }
-        break;
-      }
-      default: {
-        console.warn("Unhandled message:", message);
-        break;
-      }
-    }
+  #log(...args: unknown[]) {
+    if (this.debug) console.log("[ServiceWorker]", ...args);
   }
 
-  #handleServiceWorker(registration: ServiceWorkerRegistration) {
-    {
-      // Listen for messages from the service worker
-      if (this.debug) {
-        console.log("ServiceWorker registered: ", registration);
+  // Watch an installing worker; once it reaches "installed" while another
+  // worker already controls the page, a new version is waiting → prompt.
+  #trackInstalling(worker: ServiceWorker | null) {
+    if (!worker) return;
+    worker.addEventListener("statechange", () => {
+      if (worker.state === "installed" && navigator.serviceWorker.controller) {
+        this.#log("New version installed and waiting");
+        setUpdateAvailable(true);
       }
+    });
+  }
 
-      navigator.serviceWorker.addEventListener(
-        "message",
-        this.#handleServiceWorkerMessage.bind(this),
-      );
+  #handleRegistration(registration: ServiceWorkerRegistration) {
+    this.registration = registration;
+    this.ready = true;
+    this.#log("registered", registration);
 
-      this.registration = registration;
-      this.ready = true;
+    // A worker installed by a previous page load may already be waiting.
+    if (registration.waiting && navigator.serviceWorker.controller) {
+      setUpdateAvailable(true);
     }
+
+    this.#trackInstalling(registration.installing);
+    registration.addEventListener("updatefound", () => {
+      this.#trackInstalling(registration.installing);
+    });
   }
 
   async #register() {
     try {
-      // checks if there is a service worker installed already and calls
-      // its the update method to check if there is a new version available
-      const existingRegistration =
-        await navigator.serviceWorker.getRegistration();
-      if (existingRegistration) {
-        await existingRegistration.update();
-        this.#handleServiceWorker(existingRegistration);
-      }
+      // Reload once the worker we activated via applyUpdate() takes control.
+      navigator.serviceWorker.addEventListener("controllerchange", () => {
+        if (!this.#updateAccepted || this.#reloading) return;
+        this.#reloading = true;
+        window.location.reload();
+      });
 
-      // if no service worker is installed then registers the service worker
-      else {
+      const existing = await navigator.serviceWorker.getRegistration();
+      if (existing) {
+        this.#handleRegistration(existing);
+        // Force an immediate check so a deploy that happened while the tab was
+        // closed surfaces a prompt on the next load.
+        await existing.update();
+      } else {
         const registration = await navigator.serviceWorker.register(
           serviceWorkerScriptPath,
         );
-        this.#handleServiceWorker(registration);
-
-        registration.addEventListener("updatefound", () => {
-          this.#handleServiceWorker(registration);
-        });
+        this.#handleRegistration(registration);
       }
 
-      // calls the update on an interval to force
-      // the browser to check for a new version
+      // Periodically poll for a new version while the tab stays open.
       const intervalId = setInterval(() => {
         void (async () => {
-          const existingRegistration =
-            await navigator.serviceWorker.getRegistration();
-          if (existingRegistration) {
-            await existingRegistration.update();
-          } else {
+          const reg = await navigator.serviceWorker.getRegistration();
+          if (!reg) {
             clearInterval(intervalId);
-            this.registerServiceWorker();
+            return;
           }
+          // Skip while a worker is mid-install or the browser is offline —
+          // updating then would only fire a doomed network fetch (per the
+          // vite-plugin-pwa periodic-update guidance).
+          if (reg.installing || !navigator.onLine) return;
+          await reg.update();
         })();
       }, connectConfig.appVersionCheckInterval);
     } catch (error) {
@@ -117,9 +134,51 @@ class ServiceWorkerManager {
       console.warn("Service Worker not available");
       return;
     }
-    window.addEventListener("load", () => {
+    const start = () => {
       this.#register().catch(console.error);
-    });
+    };
+    // This runs from a React effect, which usually fires *after* the window
+    // `load` event has already happened — so adding a load listener would never
+    // fire. Register immediately when the page is already loaded; otherwise wait
+    // for load to avoid contending with initial page resource fetches.
+    if (document.readyState === "complete") {
+      start();
+    } else {
+      window.addEventListener("load", start, { once: true });
+    }
+  }
+
+  // Activate the waiting worker; the controllerchange handler then reloads.
+  applyUpdate() {
+    setUpdateAvailable(false);
+    const waiting = this.registration?.waiting;
+    if (!waiting) {
+      // Nothing waiting (or already activated) — reload to pick up whatever
+      // the active worker now serves.
+      this.#reloading = true;
+      window.location.reload();
+      return;
+    }
+    this.#updateAccepted = true;
+    waiting.postMessage({ type: "SKIP_WAITING" });
+  }
+
+  // Post an arbitrary message to the active (or waiting) worker.
+  sendMessage(message: unknown) {
+    const target =
+      this.registration?.active ??
+      this.registration?.waiting ??
+      navigator.serviceWorker.controller;
+    target?.postMessage(message);
+  }
+
+  // Unregister every worker for this scope — used when offline support is
+  // disabled at runtime so a previously-installed worker stops controlling the
+  // page. (A build with offline disabled also ships a self-destroying worker.)
+  async unregisterAll() {
+    if (!("serviceWorker" in navigator)) return;
+    const registrations = await navigator.serviceWorker.getRegistrations();
+    await Promise.all(registrations.map((r) => r.unregister()));
   }
 }
 

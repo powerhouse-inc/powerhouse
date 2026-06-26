@@ -246,6 +246,11 @@
               "type": "string",
               "description": "Base path Connect is mounted under (e.g. '/connect' for subpath deploys). Normalised at runtime to start and end with '/'. Defaults to the build-time BASE_URL.",
               "default": "/"
+            },
+            "offline": {
+              "type": "boolean",
+              "description": "When true (default), the build emits a precaching service worker so Connect's app shell works offline, and the SPA registers it at boot. Set false to opt this deployment out: no service worker is built, the SPA skips registration, and any previously-installed worker is unregistered.",
+              "default": true
             }
           }
         },
