@@ -21,6 +21,7 @@ RUN pnpm add -g ph-cmd@$TAG prettier
 RUN case "$TAG" in \
         *dev*) ph init project --dev --package-manager pnpm ;; \
         *staging*) ph init project --staging --package-manager pnpm ;; \
+        *rc*) ph init project --rc --package-manager pnpm ;; \
         *) ph init project --package-manager pnpm ;; \
     esac
 
