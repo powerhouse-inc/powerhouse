@@ -1,4 +1,5 @@
 import type { MessageRouter } from "./message-router.js";
+import { RPC_DEFAULT_TIMEOUT_MS, toVoid } from "./op-channel.js";
 import type { WorkerInspectorInfo, WorkerMigrationState } from "./protocol.js";
 
 export interface IWorkerAdminClient {
@@ -25,13 +26,15 @@ export function createWorkerAdminClient(
   const send = (
     method: "info" | "restart" | "clearStorage" | "migrate",
   ): Promise<unknown> =>
-    router.request((id) => ({ k: "admin", id, method }), { timeoutMs: 30000 });
+    router.request((id) => ({ k: "admin", id, method }), {
+      timeoutMs: RPC_DEFAULT_TIMEOUT_MS,
+    });
 
   return {
     info: () => send("info") as Promise<WorkerInspectorInfo>,
-    restart: () => send("restart").then(() => undefined),
-    clearStorage: () => send("clearStorage").then(() => undefined),
-    migrate: () => send("migrate").then(() => undefined),
+    restart: () => toVoid(send("restart")),
+    clearStorage: () => toVoid(send("clearStorage")),
+    migrate: () => toVoid(send("migrate")),
     getMigrationState: () => migrationState,
     subscribeMigration: (callback) => {
       migrationListeners.add(callback);

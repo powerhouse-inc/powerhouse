@@ -1,21 +1,17 @@
 import type { PGliteWithLive } from "@electric-sql/pglite/live";
 import { createLiveQueryProxy } from "./live-query-proxy.js";
 import type { MessageRouter } from "./message-router.js";
+import { opChannel } from "./op-channel.js";
 
 export function createRelationalPgliteProxy(
   router: MessageRouter,
 ): PGliteWithLive {
-  const runQuery = (sql: string, params: unknown[]): Promise<unknown> =>
-    router.request(
-      (id) => ({ k: "db-op", id, method: "query", args: [sql, params] }),
-      { timeoutMs: 30000 },
-    );
-
+  const ops = opChannel(router, "db-op");
   const liveProxy = createLiveQueryProxy(router);
 
   const proxy = {
     query: async (sql: string, params?: unknown[]) => {
-      const rows = await runQuery(sql, params ?? []);
+      const rows = await ops.call("query", [sql, params ?? []]);
       return { rows };
     },
     live: {

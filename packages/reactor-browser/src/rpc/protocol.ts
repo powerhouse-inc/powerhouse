@@ -118,29 +118,23 @@ export type RpcIdentity = { k: "identity"; user: ReactorIdentity | null };
 // reactor IEventBus numeric type; `event` is the (cloneable) payload.
 export type RpcBusEvent = { k: "bus-event"; eventType: number; event: unknown };
 
-// Request/response for syncManager commands (add/remove/triggerPull/list); the
-// reply value is the reactor's RemoteMeta (its DriveCollectionId degrades to
-// plain {driveId,branch} over postMessage and is rehydrated tab-side).
-export type RpcSyncOp = {
-  k: "sync-op";
+export type OpKind = "sync-op" | "db-op" | "inspector-op";
+
+export type MethodCallMessage<K extends OpKind> = {
+  k: K;
   id: CorrelationId;
   method: string;
   args: unknown[];
 };
 
-export type RpcDbOp = {
-  k: "db-op";
-  id: CorrelationId;
-  method: string;
-  args: unknown[];
-};
+// syncManager commands (add/remove/triggerPull/list); the reply value is the
+// reactor's RemoteMeta (its DriveCollectionId degrades to plain
+// {driveId,branch} over postMessage and is rehydrated tab-side).
+export type RpcSyncOp = MethodCallMessage<"sync-op">;
 
-export type RpcInspectorOp = {
-  k: "inspector-op";
-  id: CorrelationId;
-  method: string;
-  args: unknown[];
-};
+export type RpcDbOp = MethodCallMessage<"db-op">;
+
+export type RpcInspectorOp = MethodCallMessage<"inspector-op">;
 
 export type RpcLiveSubscribe = {
   k: "sub-live";

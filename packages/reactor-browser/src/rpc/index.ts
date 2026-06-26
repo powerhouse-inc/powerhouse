@@ -8,6 +8,12 @@ export {
   type IInspectorProxy,
 } from "./inspector-proxy.js";
 export {
+  opChannel,
+  toVoid,
+  RPC_DEFAULT_TIMEOUT_MS,
+  type OpChannel,
+} from "./op-channel.js";
+export {
   createLiveQueryProxy,
   type ILiveQueryProxy,
 } from "./live-query-proxy.js";
@@ -51,6 +57,8 @@ export type {
   ClientMessage,
   CorrelationId,
   ErrorInfo,
+  MethodCallMessage,
+  OpKind,
   OwnerMessage,
   ReactorIdentity,
   RpcDbOp,

@@ -1,4 +1,5 @@
 import type { MessageRouter } from "./message-router.js";
+import { opChannel } from "./op-channel.js";
 
 export interface IInspectorProxy {
   getQueueState(): Promise<unknown>;
@@ -13,24 +14,21 @@ export interface IInspectorProxy {
 }
 
 export function createInspectorProxy(router: MessageRouter): IInspectorProxy {
-  const send = (method: string, args: unknown[]): Promise<unknown> =>
-    router.request((id) => ({ k: "inspector-op", id, method, args }), {
-      timeoutMs: 30000,
-    });
+  const ops = opChannel(router, "inspector-op");
 
   return {
-    getQueueState: () => send("queue.getState", []),
-    pauseQueue: () => send("queue.pause", []).then(() => undefined),
-    resumeQueue: () => send("queue.resume", []).then(() => undefined),
-    getProcessors: () => send("processors.getAll", []),
+    getQueueState: () => ops.call("queue.getState"),
+    pauseQueue: () => ops.callVoid("queue.pause"),
+    resumeQueue: () => ops.callVoid("queue.resume"),
+    getProcessors: () => ops.call("processors.getAll"),
     retryProcessor: (processorId) =>
-      send("processors.retry", [processorId]).then(() => undefined),
+      ops.callVoid("processors.retry", [processorId]),
     validateDocument: (documentId, branch) =>
-      send("integrity.validate", [documentId, branch]),
+      ops.call("integrity.validate", [documentId, branch]),
     rebuildKeyframes: (documentId, branch) =>
-      send("integrity.rebuildKeyframes", [documentId, branch]),
+      ops.call("integrity.rebuildKeyframes", [documentId, branch]),
     rebuildSnapshots: (documentId, branch) =>
-      send("integrity.rebuildSnapshots", [documentId, branch]),
-    queryReactorDb: (sql, params) => send("db.query", [sql, params ?? []]),
+      ops.call("integrity.rebuildSnapshots", [documentId, branch]),
+    queryReactorDb: (sql, params) => ops.call("db.query", [sql, params ?? []]),
   };
 }
