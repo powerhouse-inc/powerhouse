@@ -8,6 +8,7 @@ import type {
 } from "@powerhousedao/reactor";
 import { fromErrorInfo } from "./error-info.js";
 import type { MessageRouter } from "./message-router.js";
+import { rehydratePage } from "./paging.js";
 import type { CorrelationId } from "./protocol.js";
 
 type Forwarder = (...args: unknown[]) => Promise<unknown>;
@@ -48,20 +49,7 @@ export function createReactorClientProxy(
   }
 
   function rehydrate(value: unknown): unknown {
-    if (
-      value !== null &&
-      typeof value === "object" &&
-      typeof (value as { nextToken?: unknown }).nextToken === "string"
-    ) {
-      const token = (value as { nextToken: string }).nextToken;
-      const result: Record<string, unknown> = {
-        ...(value as Record<string, unknown>),
-      };
-      delete result.nextToken;
-      result.next = () => fetchPage(token);
-      return result;
-    }
-    return value;
+    return rehydratePage(value, fetchPage);
   }
 
   router.on("event", (msg) => {

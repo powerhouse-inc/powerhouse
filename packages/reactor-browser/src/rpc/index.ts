@@ -11,8 +11,9 @@ export {
   opChannel,
   toVoid,
   RPC_DEFAULT_TIMEOUT_MS,
-  type OpChannel,
+  type IOpChannel,
 } from "./op-channel.js";
+export { hostResponder, type IHostResponder } from "./host-reply.js";
 export {
   createLiveQueryProxy,
   type ILiveQueryProxy,

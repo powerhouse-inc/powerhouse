@@ -1,10 +1,9 @@
 import type { IReactorClient } from "@powerhousedao/reactor";
-import { toErrorInfo } from "./error-info.js";
+import { hostResponder, type IHostResponder } from "./host-reply.js";
 import { ReactorHostServer } from "./host-server.js";
 import type {
   ClientMessage,
   CorrelationId,
-  OwnerMessage,
   ReactorIdentity,
   RpcAdmin,
   RpcDbOp,
@@ -18,7 +17,7 @@ import type {
   WorkerInspectorInfo,
   WorkerMigrationState,
 } from "./protocol.js";
-import { responseErrorKind, RPC_PROTOCOL_VERSION } from "./protocol.js";
+import { RPC_PROTOCOL_VERSION } from "./protocol.js";
 import { createPortTransport, type IRpcTransport } from "./transport.js";
 
 function isDataMessage(
@@ -97,6 +96,7 @@ export class ReactorHost {
     let server: ReactorHostServer | null = null;
     const buffer: ClientMessage[] = [];
     const liveSubs = new Map<string, () => void>();
+    const reply = hostResponder(transport);
 
     const ensureServer = async (construct?: unknown): Promise<void> => {
       if (server) {
@@ -123,23 +123,19 @@ export class ReactorHost {
       }
       if (this.migrationState?.status === "migrating" && isDataMessage(msg)) {
         // Route the rejection to the kind's owner (sub -> sub-err, etc.).
-        transport.post({
-          k: responseErrorKind(msg.k),
-          id: msg.id,
-          error: toErrorInfo(new Error("migration in progress")),
-        } as OwnerMessage);
+        reply.errForKind(msg, new Error("migration in progress"));
         return;
       }
       if (msg.k === "hello") {
-        void this.handleHello(msg, transport, ensureServer);
+        void this.handleHello(msg, transport, reply, ensureServer);
         return;
       }
       if (msg.k === "register-packages") {
-        void this.handleRegister(msg, transport);
+        void this.handleRegister(msg, reply);
         return;
       }
       if (msg.k === "unregister-packages") {
-        void this.handleUnregister(msg, transport);
+        void this.handleUnregister(msg, reply);
         return;
       }
       if (msg.k === "identity") {
@@ -147,24 +143,19 @@ export class ReactorHost {
         return;
       }
       if (msg.k === "sync-op") {
-        void this.handleOp(msg, this.options.onSyncOp, "sync", transport);
+        void this.handleOp(msg, this.options.onSyncOp, "sync", reply);
         return;
       }
       if (msg.k === "db-op") {
-        void this.handleOp(msg, this.options.onDbOp, "db", transport);
+        void this.handleOp(msg, this.options.onDbOp, "db", reply);
         return;
       }
       if (msg.k === "inspector-op") {
-        void this.handleOp(
-          msg,
-          this.options.onInspectorOp,
-          "inspector",
-          transport,
-        );
+        void this.handleOp(msg, this.options.onInspectorOp, "inspector", reply);
         return;
       }
       if (msg.k === "sub-live") {
-        void this.handleLiveSubscribe(msg, transport, liveSubs);
+        void this.handleLiveSubscribe(msg, transport, reply, liveSubs);
         return;
       }
       if (msg.k === "unsub-live") {
@@ -173,7 +164,7 @@ export class ReactorHost {
         return;
       }
       if (msg.k === "admin") {
-        this.handleAdmin(msg, transport);
+        this.handleAdmin(msg, reply);
         return;
       }
       if (server) {
@@ -235,26 +226,22 @@ export class ReactorHost {
     return this.disposers.size;
   }
 
-  private handleAdmin(message: RpcAdmin, transport: IRpcTransport): void {
+  private handleAdmin(message: RpcAdmin, reply: IHostResponder): void {
     if (message.method === "restart") {
       this.options.onAdminRestart?.();
-      transport.post({ k: "res", id: message.id, value: { ok: true } });
+      reply.ok(message.id);
       return;
     }
     if (message.method === "clearStorage") {
       void this.handleAdminAsync(
         this.options.onAdminClearStorage,
         message,
-        transport,
+        reply,
       );
       return;
     }
     if (message.method === "migrate") {
-      void this.handleAdminAsync(
-        this.options.onAdminMigrate,
-        message,
-        transport,
-      );
+      void this.handleAdminAsync(this.options.onAdminMigrate, message, reply);
       return;
     }
     const info: WorkerInspectorInfo = {
@@ -267,20 +254,17 @@ export class ReactorHost {
       rpcProtocolVersion:
         this.baseline?.rpcProtocolVersion ?? RPC_PROTOCOL_VERSION,
     };
-    transport.post({ k: "res", id: message.id, value: info });
+    reply.ok(message.id, info);
   }
 
   private async handleAdminAsync(
     handler: (() => Promise<void>) | undefined,
     message: RpcAdmin,
-    transport: IRpcTransport,
+    reply: IHostResponder,
   ): Promise<void> {
-    try {
+    await reply.run(message.id, async () => {
       await handler?.();
-      transport.post({ k: "res", id: message.id, value: { ok: true } });
-    } catch (error) {
-      transport.post({ k: "err", id: message.id, error: toErrorInfo(error) });
-    }
+    });
   }
 
   private resolveClient(construct?: unknown): Promise<IReactorClient> {
@@ -302,9 +286,29 @@ export class ReactorHost {
     return this.clientPromise;
   }
 
+  private async awaitClientReady(): Promise<void> {
+    if (this.clientPromise) {
+      await this.clientPromise;
+    }
+  }
+
+  private requireHandler<T>(
+    handler: T | undefined,
+    message: ClientMessage,
+    reply: IHostResponder,
+    label: string,
+  ): handler is T {
+    if (handler) {
+      return true;
+    }
+    reply.errForKind(message, new Error(`ReactorHost has no ${label} handler`));
+    return false;
+  }
+
   private async handleHello(
     message: RpcHello,
     transport: IRpcTransport,
+    reply: IHostResponder,
     ensureServer: (construct?: unknown) => Promise<void>,
   ): Promise<void> {
     if (this.baseline) {
@@ -314,45 +318,36 @@ export class ReactorHost {
           reason: "reactor version mismatch",
           workerGen: workerGenForVersion(message.version),
         });
-        transport.post({ k: "res", id: message.id, value: { ok: false } });
+        reply.ok(message.id, { ok: false });
         return;
       }
     } else {
       this.baseline = message.version;
     }
-    try {
+    await reply.run(message.id, async () => {
       await ensureServer(message.construct);
       if (message.packages && message.packages.length > 0) {
         await this.options.registerPackages?.(message.packages);
       }
-      transport.post({ k: "res", id: message.id, value: { ok: true } });
-    } catch (error) {
-      transport.post({ k: "err", id: message.id, error: toErrorInfo(error) });
-    }
+    });
   }
 
   private async handleRegister(
     message: RpcRegisterPackages,
-    transport: IRpcTransport,
+    reply: IHostResponder,
   ): Promise<void> {
-    try {
+    await reply.run(message.id, async () => {
       await this.options.registerPackages?.(message.specs);
-      transport.post({ k: "res", id: message.id, value: { ok: true } });
-    } catch (error) {
-      transport.post({ k: "err", id: message.id, error: toErrorInfo(error) });
-    }
+    });
   }
 
   private async handleUnregister(
     message: RpcUnregisterPackages,
-    transport: IRpcTransport,
+    reply: IHostResponder,
   ): Promise<void> {
-    try {
+    await reply.run(message.id, async () => {
       await this.options.unregisterPackages?.(message.names);
-      transport.post({ k: "res", id: message.id, value: { ok: true } });
-    } catch (error) {
-      transport.post({ k: "err", id: message.id, error: toErrorInfo(error) });
-    }
+    });
   }
 
   private async handleOp(
@@ -361,49 +356,35 @@ export class ReactorHost {
       | ((method: string, args: unknown[]) => Promise<unknown>)
       | undefined,
     label: string,
-    transport: IRpcTransport,
+    reply: IHostResponder,
   ): Promise<void> {
-    if (!handler) {
-      transport.post({
-        k: "err",
-        id: message.id,
-        error: toErrorInfo(new Error(`ReactorHost has no ${label} handler`)),
-      });
+    if (!this.requireHandler(handler, message, reply, label)) {
       return;
     }
-    try {
-      // Wait for the reactor to finish building so the handler's dependencies
-      // exist; a tab's eager op can arrive before the build completes.
-      if (this.clientPromise) {
-        await this.clientPromise;
-      }
-      const value = await handler(message.method, message.args);
-      transport.post({ k: "res", id: message.id, value });
-    } catch (error) {
-      transport.post({ k: "err", id: message.id, error: toErrorInfo(error) });
-    }
+    await reply.run(
+      message.id,
+      async () => {
+        await this.awaitClientReady();
+        return handler(message.method, message.args);
+      },
+      (value) => value,
+    );
   }
 
   private async handleLiveSubscribe(
     message: RpcLiveSubscribe,
     transport: IRpcTransport,
+    reply: IHostResponder,
     liveSubs: Map<string, () => void>,
   ): Promise<void> {
     const handler = this.options.onLiveQuery;
-    if (!handler) {
-      transport.post({
-        k: "live-err",
-        id: message.id,
-        error: toErrorInfo(new Error("ReactorHost has no live-query handler")),
-      });
+    if (!this.requireHandler(handler, message, reply, "live-query")) {
       return;
     }
     const placeholder = () => undefined;
     liveSubs.set(message.id, placeholder);
     try {
-      if (this.clientPromise) {
-        await this.clientPromise;
-      }
+      await this.awaitClientReady();
       const unsubscribe = await handler(
         message.sql,
         message.params,
@@ -421,11 +402,7 @@ export class ReactorHost {
       if (liveSubs.get(message.id) === placeholder) {
         liveSubs.delete(message.id);
       }
-      transport.post({
-        k: "live-err",
-        id: message.id,
-        error: toErrorInfo(error),
-      });
+      reply.errForKind(message, error);
     }
   }
 }

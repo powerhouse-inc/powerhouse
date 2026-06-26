@@ -4,11 +4,10 @@ import type {
   SearchFilter,
   ViewFilter,
 } from "@powerhousedao/reactor";
-import { toErrorInfo } from "./error-info.js";
-import { responseErrorKind } from "./protocol.js";
+import { hostResponder, type IHostResponder } from "./host-reply.js";
+import { dehydratePage } from "./paging.js";
 import type {
   ClientMessage,
-  OwnerMessage,
   RpcNextPage,
   RpcRequest,
   RpcSubscribe,
@@ -24,6 +23,7 @@ const MAX_PENDING_PAGES = 1000;
 export class ReactorHostServer {
   private readonly client: IReactorClient;
   private readonly transport: IRpcTransport;
+  private readonly reply: IHostResponder;
   private readonly aborters = new Map<string, AbortController>();
   private readonly subscriptions = new Map<string, () => void>();
   private readonly pages = new Map<string, NextPage>();
@@ -33,6 +33,7 @@ export class ReactorHostServer {
   constructor(client: IReactorClient, transport: IRpcTransport) {
     this.client = client;
     this.transport = transport;
+    this.reply = hostResponder(transport);
   }
 
   start(): void {
@@ -72,13 +73,7 @@ export class ReactorHostServer {
           return;
       }
     } catch (error) {
-      if ("id" in message) {
-        this.transport.post({
-          k: responseErrorKind(message.k),
-          id: message.id,
-          error: toErrorInfo(error),
-        } as OwnerMessage);
-      }
+      this.reply.errForKind(message, error);
     }
   }
 
@@ -94,17 +89,9 @@ export class ReactorHostServer {
     try {
       const method = this.resolveMethod(message.method);
       const value = await method(...args);
-      this.transport.post({
-        k: "res",
-        id: message.id,
-        value: this.prepareResult(value),
-      });
+      this.reply.ok(message.id, this.prepareResult(value));
     } catch (error) {
-      this.transport.post({
-        k: "err",
-        id: message.id,
-        error: toErrorInfo(error),
-      });
+      this.reply.err(message.id, error);
     } finally {
       if (controller) {
         this.aborters.delete(message.id);
@@ -116,28 +103,17 @@ export class ReactorHostServer {
     const next = this.pages.get(message.token);
     this.pages.delete(message.token);
     if (!next) {
-      this.transport.post({
-        k: "err",
-        id: message.id,
-        error: toErrorInfo(
-          new Error("Paged cursor already consumed or expired"),
-        ),
-      });
+      this.reply.err(
+        message.id,
+        new Error("Paged cursor already consumed or expired"),
+      );
       return;
     }
     try {
       const value = await next();
-      this.transport.post({
-        k: "res",
-        id: message.id,
-        value: this.prepareResult(value),
-      });
+      this.reply.ok(message.id, this.prepareResult(value));
     } catch (error) {
-      this.transport.post({
-        k: "err",
-        id: message.id,
-        error: toErrorInfo(error),
-      });
+      this.reply.err(message.id, error);
     }
   }
 
@@ -152,27 +128,17 @@ export class ReactorHostServer {
   }
 
   private prepareResult(value: unknown): unknown {
-    if (
-      value !== null &&
-      typeof value === "object" &&
-      typeof (value as { next?: unknown }).next === "function"
-    ) {
+    return dehydratePage(value, (next) => {
       const token = `p${++this.pageCounter}`;
-      this.pages.set(token, (value as { next: NextPage }).next);
+      this.pages.set(token, next);
       if (this.pages.size > MAX_PENDING_PAGES) {
         const oldest = this.pages.keys().next().value;
         if (oldest !== undefined) {
           this.pages.delete(oldest);
         }
       }
-      const rest: Record<string, unknown> = {
-        ...(value as Record<string, unknown>),
-      };
-      delete rest.next;
-      rest.nextToken = token;
-      return rest;
-    }
-    return value;
+      return token;
+    });
   }
 
   private resolveMethod(path: string): AnyMethod {

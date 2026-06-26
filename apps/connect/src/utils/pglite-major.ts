@@ -14,10 +14,6 @@ export function coerceMajor(value: number | null): DetectedMajor {
     : null;
 }
 
-/**
- * True when a data dir's on-disk major needs a migration we can actually
- * perform.
- */
 export function isMigratableMajor(
   value: number | null,
 ): value is SupportedPgMajor {

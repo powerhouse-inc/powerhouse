@@ -19,7 +19,7 @@ import {
   type SyncStatusChangeCallback,
 } from "@powerhousedao/reactor";
 import type { MessageRouter } from "./message-router.js";
-import { opChannel, type OpChannel } from "./op-channel.js";
+import { opChannel, type IOpChannel } from "./op-channel.js";
 
 // Synthetic bus channel id for sync-status deltas (not a reactor IEventBus type).
 export const SYNC_STATUS_CHANGED_EVENT = 90001;
@@ -109,7 +109,7 @@ function channelUrl(meta: RemoteMeta): string | undefined {
 
 // Tab-side ISyncManager: cache-backed reads fed by the bus, ops over sync-op RPC.
 export class SyncManagerProxy implements ISyncManager {
-  private readonly ops: OpChannel;
+  private readonly ops: IOpChannel;
   private readonly connectionStates = new Map<
     string,
     ConnectionStateSnapshot
