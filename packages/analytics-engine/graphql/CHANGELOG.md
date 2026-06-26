@@ -1,3 +1,13 @@
+## 6.2.0-rc.0 (2026-06-26)
+
+### 🚀 Features
+
+- **release:** support release/rc/x.x.x branches publishing under -rc.x npm tag ([51a030c04](https://github.com/powerhouse-inc/powerhouse/commit/51a030c04))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 6.2.0-dev.38 (2026-06-26)
 
 This was a version bump only for @powerhousedao/analytics-engine-graphql to align it with other projects, there were no code changes.
