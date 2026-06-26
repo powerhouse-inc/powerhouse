@@ -1,3 +1,7 @@
+## 6.2.0-dev.38 (2026-06-26)
+
+This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
+
 ## 6.2.0-dev.37 (2026-06-25)
 
 This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
