@@ -1,3 +1,38 @@
+## 6.2.0-dev.39 (2026-06-27)
+
+### 🚀 Features
+
+- **release:** support rc release channel in CLIs and docker pipeline ([36587b045](https://github.com/powerhouse-inc/powerhouse/commit/36587b045))
+- added experimental heartbeat to detect silent worker failure ([8bdd3f923](https://github.com/powerhouse-inc/powerhouse/commit/8bdd3f923))
+- db proxy now sits in between ([852a2d1f2](https://github.com/powerhouse-inc/powerhouse/commit/852a2d1f2))
+- adding worker restart admin and inspector ([d8a999550](https://github.com/powerhouse-inc/powerhouse/commit/d8a999550))
+- added flag to enable worker ([3d34b5d8a](https://github.com/powerhouse-inc/powerhouse/commit/3d34b5d8a))
+- pushing toward distributed event bus ([17a0b628c](https://github.com/powerhouse-inc/powerhouse/commit/17a0b628c))
+- identity protocol for shared worker, and now we push and clear on login/logout ([165a79bae](https://github.com/powerhouse-inc/powerhouse/commit/165a79bae))
+- sharedworker entry ([7ba8a90bb](https://github.com/powerhouse-inc/powerhouse/commit/7ba8a90bb))
+- reactor-host needs protocol adjustment to register packages ([164018eb7](https://github.com/powerhouse-inc/powerhouse/commit/164018eb7))
+- we need a worker-package-loader since the current ones import editor code -- this is temp ([35c649930](https://github.com/powerhouse-inc/powerhouse/commit/35c649930))
+- reactor-host that supports many subs ([45d3607ca](https://github.com/powerhouse-inc/powerhouse/commit/45d3607ca))
+- added good integration tests for the reactor message passing ([fd2b8bb3f](https://github.com/powerhouse-inc/powerhouse/commit/fd2b8bb3f))
+- adding ability to namespace connect instances ([88ea484d7](https://github.com/powerhouse-inc/powerhouse/commit/88ea484d7))
+- **reactor-browser:** we have to reconstruct next lambdas because they cannot go across postMessage ([188e6fb44](https://github.com/powerhouse-inc/powerhouse/commit/188e6fb44))
+- **reactor-browser:** introducing a protocol in front of IReactorClient for cross-worker support ([9b69babe7](https://github.com/powerhouse-inc/powerhouse/commit/9b69babe7))
+
+### 🩹 Fixes
+
+- changed-files action is broken ([63c52e44b](https://github.com/powerhouse-inc/powerhouse/commit/63c52e44b))
+- install ph-cli@rc for rc-tagged connect/switchboard image builds ([461284463](https://github.com/powerhouse-inc/powerhouse/commit/461284463))
+- edge case fixes from code-review flow ([c6bb4e1b3](https://github.com/powerhouse-inc/powerhouse/commit/c6bb4e1b3))
+- a few spots where we could permanently brick thiings, and a pglite migration fix ([b047007db](https://github.com/powerhouse-inc/powerhouse/commit/b047007db))
+- fixing a few more code review issues ([24dd4a78c](https://github.com/powerhouse-inc/powerhouse/commit/24dd4a78c))
+- livequery and connection management fixes ([3dfc606db](https://github.com/powerhouse-inc/powerhouse/commit/3dfc606db))
+- code-review feedback ([f7844599d](https://github.com/powerhouse-inc/powerhouse/commit/f7844599d))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Guillermo Puente @gpuente
+
 ## 6.2.0-dev.38 (2026-06-26)
 
 This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.

@@ -1,3 +1,22 @@
+## 6.2.0-dev.39 (2026-06-27)
+
+### 🚀 Features
+
+- **release:** support rc release channel in CLIs and docker pipeline ([36587b045](https://github.com/powerhouse-inc/powerhouse/commit/36587b045))
+- show placeholders when tabs are unavailable in inspector ([2a0075556](https://github.com/powerhouse-inc/powerhouse/commit/2a0075556))
+- adding worker restart admin and inspector ([d8a999550](https://github.com/powerhouse-inc/powerhouse/commit/d8a999550))
+- sharedworker entry ([7ba8a90bb](https://github.com/powerhouse-inc/powerhouse/commit/7ba8a90bb))
+
+### 🩹 Fixes
+
+- changed-files action is broken ([63c52e44b](https://github.com/powerhouse-inc/powerhouse/commit/63c52e44b))
+- install ph-cli@rc for rc-tagged connect/switchboard image builds ([461284463](https://github.com/powerhouse-inc/powerhouse/commit/461284463))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Guillermo Puente @gpuente
+
 ## 6.2.0-dev.38 (2026-06-26)
 
 This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.

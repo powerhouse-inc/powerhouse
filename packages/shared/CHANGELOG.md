@@ -1,3 +1,22 @@
+## 6.2.0-dev.39 (2026-06-27)
+
+### 🚀 Features
+
+- **release:** support rc release channel in CLIs and docker pipeline ([36587b045](https://github.com/powerhouse-inc/powerhouse/commit/36587b045))
+- added flag to enable worker ([3d34b5d8a](https://github.com/powerhouse-inc/powerhouse/commit/3d34b5d8a))
+- sharedworker entry ([7ba8a90bb](https://github.com/powerhouse-inc/powerhouse/commit/7ba8a90bb))
+- adding ability to namespace connect instances ([88ea484d7](https://github.com/powerhouse-inc/powerhouse/commit/88ea484d7))
+
+### 🩹 Fixes
+
+- changed-files action is broken ([63c52e44b](https://github.com/powerhouse-inc/powerhouse/commit/63c52e44b))
+- install ph-cli@rc for rc-tagged connect/switchboard image builds ([461284463](https://github.com/powerhouse-inc/powerhouse/commit/461284463))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Guillermo Puente @gpuente
+
 ## 6.2.0-dev.38 (2026-06-26)
 
 This was a version bump only for @powerhousedao/shared to align it with other projects, there were no code changes.
