@@ -1,3 +1,7 @@
+## 6.2.0-dev.40 (2026-06-28)
+
+This was a version bump only, there were no code changes.
+
 ## 6.2.0-dev.39 (2026-06-27)
 
 ### 🚀 Features
