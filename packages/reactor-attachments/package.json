@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-attachments",
-  "version": "6.2.0-dev.31",
+  "version": "6.2.0-rc.2",
   "license": "AGPL-3.0-only",
   "type": "module",
   "repository": {

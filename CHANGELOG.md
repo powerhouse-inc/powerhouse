@@ -1,3 +1,101 @@
+## 6.2.0-rc.2 (2026-06-26)
+
+### 🩹 Fixes
+
+- install ph-cli@rc for rc-tagged connect/switchboard image builds ([987d68eeb](https://github.com/powerhouse-inc/powerhouse/commit/987d68eeb))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
+## 6.2.0-rc.1 (2026-06-26)
+
+### 🚀 Features
+
+- **release:** support rc release channel in CLIs and docker pipeline ([da765dcb4](https://github.com/powerhouse-inc/powerhouse/commit/da765dcb4))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
+## 6.2.0-rc.0 (2026-06-26)
+
+### 🚀 Features
+
+- **release:** support release/rc/x.x.x branches publishing under -rc.x npm tag ([51a030c04](https://github.com/powerhouse-inc/powerhouse/commit/51a030c04))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
+## 6.2.0-dev.38 (2026-06-26)
+
+This was a version bump only, there were no code changes.
+
+## 6.2.0-dev.37 (2026-06-25)
+
+### 🩹 Fixes
+
+- build fix ([7000b5e3c](https://github.com/powerhouse-inc/powerhouse/commit/7000b5e3c))
+- **codegen:** oops, need to pick the correct field ([6b2777bb9](https://github.com/powerhouse-inc/powerhouse/commit/6b2777bb9))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
+## 6.2.0-dev.36 (2026-06-25)
+
+### 🩹 Fixes
+
+- **codegen:** fixing the migrate command, which can hit a race ([4eb012394](https://github.com/powerhouse-inc/powerhouse/commit/4eb012394))
+- **codegen:** we also need to emit urls differently ([e81a505af](https://github.com/powerhouse-inc/powerhouse/commit/e81a505af))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
+## 6.2.0-dev.35 (2026-06-25)
+
+### 🩹 Fixes
+
+- codegen type fix ([184b2e1ba](https://github.com/powerhouse-inc/powerhouse/commit/184b2e1ba))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
+## 6.2.0-dev.34 (2026-06-25)
+
+### 🩹 Fixes
+
+- **codegen:** fix issue where codegen tests fail for datetime ([c8e5f69f4](https://github.com/powerhouse-inc/powerhouse/commit/c8e5f69f4))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
+## 6.2.0-dev.33 (2026-06-25)
+
+### 🚀 Features
+
+- reactor barrel export ([0cc8466ce](https://github.com/powerhouse-inc/powerhouse/commit/0cc8466ce))
+
+### 🩹 Fixes
+
+- test fixes ([7784d7e6b](https://github.com/powerhouse-inc/powerhouse/commit/7784d7e6b))
+- import paths are wrong ([fafcbe597](https://github.com/powerhouse-inc/powerhouse/commit/fafcbe597))
+- package updates never made it in ([a543795e3](https://github.com/powerhouse-inc/powerhouse/commit/a543795e3))
+- **academy:** repair broken academy build and broken links ([b6de178fc](https://github.com/powerhouse-inc/powerhouse/commit/b6de178fc))
+- **academy:** fail the build on broken links (onBrokenLinks: throw) ([4684d27e0](https://github.com/powerhouse-inc/powerhouse/commit/4684d27e0))
+- **academy:** point generate-recipe-docs at the real Cookbook path ([6f3a1d0f1](https://github.com/powerhouse-inc/powerhouse/commit/6f3a1d0f1))
+- **codegen:** emitted factories now pass along version ([2af3bbe2f](https://github.com/powerhouse-inc/powerhouse/commit/2af3bbe2f))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- CallmeT-ty @CallmeT-ty
+- Claude Opus 4.8
+
 ## 6.2.0-dev.31 (2026-06-23)
 
 ### 🚀 Features

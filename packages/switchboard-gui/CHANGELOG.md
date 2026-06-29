@@ -1,3 +1,67 @@
+## 6.2.0-rc.2 (2026-06-26)
+
+### 🩹 Fixes
+
+- install ph-cli@rc for rc-tagged connect/switchboard image builds ([987d68eeb](https://github.com/powerhouse-inc/powerhouse/commit/987d68eeb))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
+## 6.2.0-rc.1 (2026-06-26)
+
+### 🚀 Features
+
+- **release:** support rc release channel in CLIs and docker pipeline ([da765dcb4](https://github.com/powerhouse-inc/powerhouse/commit/da765dcb4))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
+## 6.2.0-rc.0 (2026-06-26)
+
+### 🚀 Features
+
+- **release:** support release/rc/x.x.x branches publishing under -rc.x npm tag ([51a030c04](https://github.com/powerhouse-inc/powerhouse/commit/51a030c04))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
+## 6.2.0-dev.38 (2026-06-26)
+
+This was a version bump only for @powerhousedao/switchboard-gui to align it with other projects, there were no code changes.
+
+## 6.2.0-dev.37 (2026-06-25)
+
+This was a version bump only for @powerhousedao/switchboard-gui to align it with other projects, there were no code changes.
+
+## 6.2.0-dev.36 (2026-06-25)
+
+This was a version bump only for @powerhousedao/switchboard-gui to align it with other projects, there were no code changes.
+
+## 6.2.0-dev.35 (2026-06-25)
+
+This was a version bump only for @powerhousedao/switchboard-gui to align it with other projects, there were no code changes.
+
+## 6.2.0-dev.34 (2026-06-25)
+
+This was a version bump only for @powerhousedao/switchboard-gui to align it with other projects, there were no code changes.
+
+## 6.2.0-dev.33 (2026-06-25)
+
+### 🩹 Fixes
+
+- package updates never made it in ([a543795e3](https://github.com/powerhouse-inc/powerhouse/commit/a543795e3))
+- test fixes ([7784d7e6b](https://github.com/powerhouse-inc/powerhouse/commit/7784d7e6b))
+- **academy:** repair broken academy build and broken links ([b6de178fc](https://github.com/powerhouse-inc/powerhouse/commit/b6de178fc))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- CallmeT-ty @CallmeT-ty
+- Claude Opus 4.8
+
 ## 6.2.0-dev.31 (2026-06-23)
 
 This was a version bump only for @powerhousedao/switchboard-gui to align it with other projects, there were no code changes.

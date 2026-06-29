@@ -37,6 +37,8 @@ function makeOperationInputSchemasForImport(
 export function makeTestCaseForOperation(
   operation: OperationSpecification,
   isPhDocumentOfTypeFunctionName: string,
+  // Input fields feeding a stricter state validator; each carries its mock override literal.
+  overrideInputFields: ReadonlyArray<{ name: string; literal: string }> = [],
 ) {
   if (operation.name === null) {
     throw new Error(`Operation is missing name.`);
@@ -46,11 +48,17 @@ export function makeTestCaseForOperation(
   const constantCaseActionName = constantCase(operation.name);
   const actionInputSchemaName = `${pascalCaseActionName}InputSchema`;
   const scope = operation.scope;
+  const overridesArg =
+    overrideInputFields.length > 0
+      ? `\n            { ${overrideInputFields
+          .map(({ name, literal }) => `${name}: ${literal}`)
+          .join(", ")} },`
+      : "";
   return ts`
   it('should handle ${camelCaseActionName} operation', () => {
         const document = utils.createDocument();
         const input = generateMock(
-            ${actionInputSchemaName}(),
+            ${actionInputSchemaName}(),${overridesArg}
         );
 
         const updatedDocument = reducer(
@@ -115,7 +123,7 @@ export const documentModelOperationsModuleTestFileTemplate = (
  */
 
 import { describe, it, expect } from 'vitest';
-import { generateMock } from '@powerhousedao/common';
+import { generateMock } from 'document-model';
 import {
   reducer,
   utils,

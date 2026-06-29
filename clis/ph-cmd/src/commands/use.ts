@@ -17,15 +17,15 @@ export const use = command({
   description: "Specify the release version of Powerhouse dependencies to use.",
   args: {
     tagPositional: positional({
-      type: optional(oneOf(["latest", "staging", "dev"])),
+      type: optional(oneOf(["latest", "staging", "dev", "rc"])),
       displayName: "tag",
-      description: `Specify the release tag to use for your project. Can be one of: "latest", "staging", or "dev".`,
+      description: `Specify the release tag to use for your project. Can be one of: "latest", "staging", "dev", or "rc".`,
     }),
     tagOption: option({
-      type: optional(oneOf(["latest", "staging", "dev"])),
+      type: optional(oneOf(["latest", "staging", "dev", "rc"])),
       long: "tag",
       short: "t",
-      description: `Specify the release tag to use for your project. Can be one of: "latest", "staging", or "dev".`,
+      description: `Specify the release tag to use for your project. Can be one of: "latest", "staging", "dev", or "rc".`,
     }),
     version: option({
       type: optional(string),

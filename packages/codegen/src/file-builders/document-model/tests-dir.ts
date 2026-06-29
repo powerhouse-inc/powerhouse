@@ -13,6 +13,10 @@ import {
 } from "templates";
 import { SyntaxKind } from "ts-morph";
 import {
+  getInputFieldNames,
+  getMockOverrideFieldNames,
+} from "../../codegen/graphql.js";
+import {
   formatSourceFileWithPrettier,
   getOrCreateSourceFile,
   getPreviousVersionSourceFile,
@@ -33,11 +37,16 @@ export async function makeOperationModuleTestFile(
   const {
     project,
     module,
+    specification,
     version,
     versionImportPath,
     testsDirPath,
     isPhDocumentOfTypeFunctionName,
   } = args;
+  const overrideFieldsByScope = {
+    global: getMockOverrideFieldNames(specification.state.global.schema),
+    local: getMockOverrideFieldNames(specification.state.local.schema),
+  };
   const kebabCaseModuleName = kebabCase(module.name);
   const pascalCaseModuleName = pascalCase(module.name);
   const moduleOperationsTypeName = `${pascalCaseModuleName}Operations`;
@@ -154,7 +163,23 @@ export async function makeOperationModuleTestFile(
       const expectedTestCaseName = `should handle ${opCamelCase} operation`;
       return !testCaseNames.some((name) => name === expectedTestCaseName);
     }),
-    map((o) => makeTestCaseForOperation(o, isPhDocumentOfTypeFunctionName)),
+    map((o) => {
+      const overrideStateFields =
+        o.scope === "local"
+          ? overrideFieldsByScope.local
+          : overrideFieldsByScope.global;
+      const overrideInputFields = getInputFieldNames(
+        o.schema,
+        `${pascalCase(o.name ?? "")}Input`,
+      )
+        .filter((f) => overrideStateFields.has(f))
+        .map((f) => ({ name: f, literal: overrideStateFields.get(f)! }));
+      return makeTestCaseForOperation(
+        o,
+        isPhDocumentOfTypeFunctionName,
+        overrideInputFields,
+      );
+    }),
   );
 
   describeCallBody.addStatements(testCasesToAdd);

@@ -11,7 +11,7 @@ const SENTRY_INJECT_DIRS = [
   "clis/ph-cmd/dist",
 ];
 
-type Channel = "dev" | "staging" | "production";
+type Channel = "dev" | "staging" | "production" | "rc";
 const modes = ["prerelease", "patch", "minor", "major"] as const;
 type Mode = (typeof modes)[number];
 
@@ -57,10 +57,11 @@ function runBuild(workspaceVersion: string) {
 
 /** Takes a branch name with the correct format, either:
  * main
- * release/[staging|production]/[semver]
+ * release/[rc|staging|production]/[semver]
  *
  * @returns release channel:
  * "dev" for main branch
+ * "rc" for release/rc/[semver]
  * "staging" for release/staging/[semver]
  * "production" for release/production/[semver]
  *  */
@@ -75,9 +76,9 @@ function getReleaseChannelFromBranchName(branchName: string): Channel {
     );
   }
 
-  if (tag !== "staging" && tag !== "production") {
+  if (tag !== "rc" && tag !== "staging" && tag !== "production") {
     throw new Error(
-      `Branch "${branchName}" has an invalid tag. Must be either "release/staging/" or "release/production/"`,
+      `Branch "${branchName}" has an invalid tag. Must be "release/rc/", "release/staging/", or "release/production/"`,
     );
   }
 

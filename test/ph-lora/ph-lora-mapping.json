@@ -25,6 +25,18 @@
       "skipMechanicalCheck": true
     },
     {
+      "id": "build-getting-started",
+      "label": "Build — Getting Started Building",
+      "docPath": "docs/academy/03-Build/00-GettingStartedBuilding",
+      "packages": ["clis/ph-cmd", "packages/vetra", "packages/builder-tools"],
+      "sourceFiles": [
+        "clis/ph-cmd/src/commands",
+        "packages/vetra/index.ts",
+        "packages/builder-tools/connect-utils"
+      ],
+      "checkFocus": "Prerequisites, Vetra drive setup, creating a package with Vetra, builder tools — CLI commands, package install steps, generated project structure"
+    },
+    {
       "id": "build-manual-todo-tutorial",
       "label": "Build — Manual ToDo Tutorial",
       "docPath": "docs/academy/03-Build/01-ManualTodoTutorial",

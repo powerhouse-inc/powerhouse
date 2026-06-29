@@ -1,6 +1,6 @@
 # ph-lora — Initial Strategy
 
-> Session output from initial planning. Captures decisions made, what was built, and key design principles. Cross-reference: [adr-ph-lora.md](adr-ph-lora.md), [ph-lora-mapping.md](ph-lora-mapping.md).
+> Session output from initial planning. Captures decisions made, what was built, and key design principles. Cross-reference: [adr-ph-lora.md](adr-ph-lora.md), [ph-lora-mapping.json](ph-lora-mapping.json).
 
 ---
 

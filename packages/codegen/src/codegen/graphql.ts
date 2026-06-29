@@ -10,6 +10,8 @@ import type {
   ModuleSpecification,
 } from "@powerhousedao/shared/document-model";
 import type { DocumentModelFileMakerArgs } from "file-builders";
+import type { TypeNode } from "graphql";
+import { Kind, parse } from "graphql";
 import type { ValidationSchemaPluginConfig } from "graphql-codegen-typescript-validation-schema";
 import { realpathSync } from "node:fs";
 import fs from "node:fs/promises";
@@ -72,6 +74,98 @@ export const scalarsValidation = {
     "z.custom<`attachment://v${number}:${string}`>((val) => /^attachment:\\/\\/v\\d+:.+$/.test(val as string))",
   ...(validationSchema as Record<string, string>),
 };
+
+// Scalars codegen validates with strict `z.iso.datetime()`.
+const DATE_LIKE_SCALARS = new Set(["Date", "DateTime"]);
+
+// State-field scalar -> valid mock literal (emitted verbatim into generated tests).
+const SCALAR_MOCK_OVERRIDES: Record<string, string> = {
+  Date: `"2024-01-01T00:00:00.000Z"`,
+  DateTime: `"2024-01-01T00:00:00.000Z"`,
+  URL: `"https://example.com"`,
+};
+
+function unwrapNamedTypeName(type: TypeNode): string | null {
+  if (type.kind === Kind.NAMED_TYPE) return type.name.value;
+  if (type.kind === Kind.NON_NULL_TYPE || type.kind === Kind.LIST_TYPE) {
+    return unwrapNamedTypeName(type.type);
+  }
+  return null;
+}
+
+// Top-level Date/DateTime field names across all object types in a state SDL.
+export function getDateLikeFieldNames(
+  stateSchemaSDL: string | null,
+): Set<string> {
+  const names = new Set<string>();
+  if (!stateSchemaSDL) return names;
+  let doc;
+  try {
+    doc = parse(stateSchemaSDL);
+  } catch {
+    return names;
+  }
+  for (const def of doc.definitions) {
+    if (def.kind !== Kind.OBJECT_TYPE_DEFINITION) continue;
+    for (const field of def.fields ?? []) {
+      if (DATE_LIKE_SCALARS.has(unwrapNamedTypeName(field.type) ?? "")) {
+        names.add(field.name.value);
+      }
+    }
+  }
+  return names;
+}
+
+// State-field name -> override literal, for fields whose scalar needs a stricter mock value.
+export function getMockOverrideFieldNames(
+  stateSchemaSDL: string | null,
+): Map<string, string> {
+  const overrides = new Map<string, string>();
+  if (!stateSchemaSDL) return overrides;
+  let doc;
+  try {
+    doc = parse(stateSchemaSDL);
+  } catch {
+    return overrides;
+  }
+  for (const def of doc.definitions) {
+    if (def.kind !== Kind.OBJECT_TYPE_DEFINITION) continue;
+    for (const field of def.fields ?? []) {
+      const literal =
+        SCALAR_MOCK_OVERRIDES[unwrapNamedTypeName(field.type) ?? ""];
+      if (literal) overrides.set(field.name.value, literal);
+    }
+  }
+  return overrides;
+}
+
+// Field names on the first input type in an operation's SDL.
+export function getInputFieldNames(
+  operationSDL: string | null,
+  // The operation's own input type (e.g. `AddAssistantMessageInput`). An operation SDL may
+  // define nested input types too (defined before the main one), so we must select by name,
+  // not just take the first — otherwise a nested input's fields leak into the override set.
+  preferredInputTypeName?: string,
+): string[] {
+  if (!operationSDL) return [];
+  let doc;
+  try {
+    doc = parse(operationSDL);
+  } catch {
+    return [];
+  }
+  const inputDefs = doc.definitions.filter(
+    (d) => d.kind === Kind.INPUT_OBJECT_TYPE_DEFINITION,
+  );
+  const inputDef =
+    (preferredInputTypeName &&
+      inputDefs.find((d) => d.name.value === preferredInputTypeName)) ||
+    inputDefs[0];
+  if (!inputDef || inputDef.kind !== Kind.INPUT_OBJECT_TYPE_DEFINITION) {
+    return [];
+  }
+  return (inputDef.fields ?? []).map((f) => f.name.value);
+}
 
 const avoidOptionals: TypeScriptPluginConfig["avoidOptionals"] = {
   field: true,

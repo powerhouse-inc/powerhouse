@@ -260,7 +260,7 @@ jobs:
     if: ${{ inputs.dry_run != true && inputs.skip_publish != true }}
     uses: "./.github/workflows/test-package-managers.yml"
     with:
-      tag: ${{ github.ref_name == 'main' && 'dev' || startsWith(github.ref_name, 'release/staging') && 'staging' || startsWith(github.ref_name, 'release/production') && 'latest' || 'dev' }}
+      tag: ${{ github.ref_name == 'main' && 'dev' || startsWith(github.ref_name, 'release/rc') && 'rc' || startsWith(github.ref_name, 'release/staging') && 'staging' || startsWith(github.ref_name, 'release/production') && 'latest' || 'dev' }}
     secrets: inherit
 
   determine-downstream-params:
@@ -282,10 +282,15 @@ jobs:
         id: params
         run: |
           # Determine channel based on branch
-          # main = dev, release/staging/* = staging, release/production/* = latest
+          # main = dev, release/staging/* = staging, release/production/* = latest.
+          # release/rc/* publishes to npm only and does NOT trigger downstream packages.
           BRANCH="${{ github.ref_name }}"
           if [[ "$BRANCH" == "main" ]]; then
             CHANNEL="dev"
+          elif [[ "$BRANCH" == release/rc/* ]]; then
+            echo "rc releases do not trigger downstream packages, skipping"
+            echo "skip=true" >> $GITHUB_OUTPUT
+            exit 0
           elif [[ "$BRANCH" == release/staging/* ]]; then
             CHANNEL="staging"
           elif [[ "$BRANCH" == release/production/* ]]; then

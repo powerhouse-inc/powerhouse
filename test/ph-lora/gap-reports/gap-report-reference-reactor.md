@@ -1,0 +1,47 @@
+## Gap Report: Reference — Reactor
+
+Reviewed: docs/academy/04-Reference/01-Reactor (01-WorkingWithTheReactor.md, 02-ReactorClient.md, 03-AdvancedReactorUsage.md, 09-AttachmentService.md)
+Against: packages/reactor, packages/reactor-browser, packages/reactor-attachments
+Focus: IReactorClient interface methods, reactor usage and advanced-usage API, attachment service API, parameter and return types
+
+### Findings
+
+| # | Urgency | Type | Doc location | Source location | Finding |
+|---|---------|------|-------------|-----------------|---------|
+| 1 | high | wrong | `09-AttachmentService.md` import example (lines 9-15) | `packages/reactor-attachments/src/index.ts:1-62`; `packages/reactor/index.ts:2` | Example imports `type AttachmentRef` from `@powerhousedao/reactor-attachments`, but that package does not export `AttachmentRef` (its barrel only re-exports `InvalidAttachmentRef`). `AttachmentRef` is exported from `@powerhousedao/reactor`. The import as written fails to resolve. |
+| 2 | high | wrong | `03-AdvancedReactorUsage.md` ReactorBuilder example (line 42) and integration-test example (line 307) | `packages/reactor/index.ts` (no `ConsoleLogger` export); `packages/reactor/src/core/reactor-builder.ts:6` | Both examples do `import { ReactorBuilder, ConsoleLogger, ... } from "@powerhousedao/reactor"`. `ConsoleLogger` is not exported by `@powerhousedao/reactor`; internally it is imported from the `document-model` package. The named import fails. |
+| 3 | high | stale | `01-WorkingWithTheReactor.md` Writing-documents table (line 97); `02-ReactorClient.md` `createDocumentInDrive` section (lines 466-487) | `packages/reactor/src/client/types.ts:348-366` | `createDocumentInDrive` is marked `@deprecated` in source ("Use `IDriveClient.addFile` via `client.drives.addFile` ... will be removed in a future release"), but both docs present it as a current, recommended method (the API-reference section even calls it "More efficient than `createEmpty`") with no deprecation warning. |
+| 4 | medium | missing | `02-ReactorClient.md` (whole file); `03-AdvancedReactorUsage.md` only mentions `client.drives.addFile` in passing (line 25) | `packages/reactor/src/client/types.ts:74-183,199` | `IReactorClient.drives` (a readonly `IDriveClient` with `create`, `addFile`, `addFolder`, `removeNode`, `renameNode`, `setPreferredEditorOnNode`, `moveNode`, `copyNode`, `getNode`, `listNodes`) is part of the documented `IReactorClient` surface but is not documented in the ReactorClient API reference at all. The advanced doc points readers to `client.drives.addFile` as the non-deprecated replacement for `createDocumentInDrive`, yet `drives` is never described. |
+| 5 | medium | missing | `02-ReactorClient.md` (method list) | `packages/reactor/src/client/types.ts:249,440,410,542` | Four `IReactorClient` methods are undocumented: `resolveIdOrSlug(identifier, signal?)`, `setPreferredEditor(documentIdentifier, preferredEditor, branch?, signal?)`, `executeBatch(request, signal?)`, and `loadBatch(request, signal?)`. They exist on the interface but appear in no method table or section. |
+| 6 | medium | stale | `02-ReactorClient.md` `JobInfo` type (lines 105-115) | `packages/reactor/src/shared/types.ts:75-101` | Documented `JobInfo` omits the required `documentId: string` field and the optional `errorHistory?: ErrorInfo[]` and `result?` fields present in source. A reader treating the documented shape as complete would be missing the required `documentId`. |
+| 7 | medium | stale | `09-AttachmentService.md` `IAttachmentUpload` table (lines 269-274) | `packages/reactor-attachments/src/interfaces.ts:68-112` | The documented `IAttachmentUpload` lists only `reservationId` and `send(data)`. Source also defines `ref: AttachmentRef | null` and `readonly expiresAtUtc: string` as members of the interface; both are omitted from the table. |
+
+### Verified clean
+
+- `IReactorClient` read methods — `get`, `getOutgoingRelationships`, `getIncomingRelationships`, `find`, `getOperations`, `getDocumentModelModules`, `getDocumentModelModule`: names, parameter order/optionality, and return types in `02-ReactorClient.md` match `client/types.ts:209-319`.
+- `IReactorClient` write methods — `create`, `createEmpty`, `execute`, `executeAsync`, `rename`, `addRelationship`, `removeRelationship`, `moveRelationship`, `deleteDocument`, `deleteDocuments`: signatures match `client/types.ts:329-532` (including `moveRelationship` returning `{ source, target }` and the `sourceParentIdentifier`/`targetParentIdentifier` parameter names).
+- `subscribe(search, callback, view?)`, `getJobStatus(jobId, signal?)`, `waitForJob(jobId: string | JobInfo, signal?)`: match `client/types.ts:554-577`.
+- `ViewFilter`, `SearchFilter`, `PagingOptions`, `PagedResults<T>`, `PropagationMode`, `CreateDocumentOptions`, `DocumentChangeEvent`, `DocumentChangeType` shapes/values in `02-ReactorClient.md` match `shared/types.ts:42-159,123-147` and `client/types.ts:33-63`.
+- `OperationFilter` shape (`actionTypes?`, `timestampFrom?`, `timestampTo?`, `sinceRevision?`) documented at `02-ReactorClient.md:367-374` — present at `storage/interfaces.ts` (imported into `client/types.ts:28`).
+- `JobStatus` enum values (`PENDING`, `RUNNING`, `WRITE_READY`, `READ_READY`, `FAILED`) in `01-WorkingWithTheReactor.md` match `shared/types.ts:106-117`.
+- `ConsistencyToken` shape in `03-AdvancedReactorUsage.md:179-189` matches `shared/types.ts:180-184` (`version: 1`, `createdAtUtcIso`, `coordinates[]` with `documentId`/`scope`/`branch`/`operationIndex`).
+- `ReactorBuilder` builder methods documented in `03-AdvancedReactorUsage.md:61-81` (`withDocumentModels`, `withUpgradeManifests`, `withLogger`, `withExecutorConfig`, `withWriteCacheConfig`, `withMigrationStrategy`, `withKysely`, `withQueue`, `withEventBus`, `withExecutor`, `withReadModel`, `withSync`, `withChannelScheme`, `withFeatures`, `withSignatureVerifier`, `withJwtHandler`, `withDocumentModelLoader`, `withSignalHandlers`) all exist in `reactor-builder.ts:178-383`.
+- `ReactorBuilder`, `ReactorClientBuilder`, `ChannelScheme`, `ReactorModule` are exported from `@powerhousedao/reactor` (`index.ts:25,37,50,280`) and also re-exported from `@powerhousedao/reactor-browser` (`src/re-exports.ts`).
+- `IReactorClient` is re-exported from `@powerhousedao/reactor-browser` (`src/re-exports.ts`), so the import in `01-WorkingWithTheReactor.md:49` and `02-ReactorClient.md:10` resolves.
+- Attachment package: `createRemoteAttachmentService`, `createAttachmentClient` (`/client`), `IAttachmentService`, `IAttachmentClient` (`/client`), `PreprocessResult` (`/client`), `parseRef`, `createRef` are all exported (`reactor-attachments/src/index.ts:36,56`; `src/client.ts:31,135,68,59`).
+- `createRemoteAttachmentService` config (`{ remoteUrl, jwtHandler?, fetchFn? }`) matches `SwitchboardClientConfig` in `switchboard/remote-reservation-store.ts:8-12`.
+- `IAttachmentService` table (`reserve`, `stat`, `get(ref, signal?)`) and `IAttachmentClient` table (`preprocess(file, opts?)`, `reserve(options, send)`) match `interfaces.ts:17-62` and `client.ts:68-77`.
+- Attachment key types `PreprocessResult`, `AttachmentUploadResult`, `AttachmentHeader`, `AttachmentResponse`, `HashFirstReserveAttachmentOptions`, `UploadFirstReserveAttachmentOptions`, `ReserveAttachmentOptions` match `types.ts:16-122` and `client.ts:59-66`.
+- Attachment error classes (`AttachmentNotFound`, `InvalidAttachmentRef`, `UploadTooLarge`, `ReservationNotFound`, `AttachmentAlreadyExists`, `AttachmentPending`, `HashMismatch`, `SizeMismatch`) all exported from `errors.js` (`reactor-attachments/src/index.ts:1-10`).
+- React hooks `useAttachments()` (returns `IAttachmentClient | undefined`), `useAttachmentUpload()` (returns `{ preprocess, upload, status, progress, error }`), and `UploadStatus` enum (`None | Hashing | Uploading | Done | Error`) match `reactor-browser/src/hooks/use-attachments.ts:10-79`. `useReactorClient` exists at `reactor-browser/src/hooks/reactor.ts:35`.
+
+### Could not verify
+
+- Numeric event IDs in the `ReactorEventTypes` / `SyncEventTypes` / `QueueEventTypes` tables (`01-WorkingWithTheReactor.md:158-180`) — the event-type enums were not loaded during this review (event enums live outside the scoped sourceFiles `src/client`); cannot anchor the documented numeric IDs to source.
+- `ReactorModule` component list (`03-AdvancedReactorUsage.md:217-234`) — the `ReactorModule` type is exported from `src/core/types.js`, which was outside the scoped `src/client` read; individual component interface names not cross-checked.
+- `IReactor` low-level method examples (`03-AdvancedReactorUsage.md:86-172`, e.g. `getBySlug`, `getByIdOrSlug`, `load`, `kill`) — `IReactor` is defined in `src/core/types.js`, not read during this scoped review.
+- `IDriveClient`-prefixed deep behaviors and `IOperationStore.getSince`/`getRevisions` example signatures — backing files outside `src/client` were not loaded.
+
+### Summary
+
+7 findings (3 stale [#3, #6, #7], 2 missing [#4, #5], 2 wrong [#1, #2]). The IReactorClient method signatures and the attachment service API are largely accurate and well-aligned with source, but two copy-paste import errors (`AttachmentRef` from the wrong package, `ConsoleLogger` that isn't exported) would break developers following the examples verbatim, the deprecated `createDocumentInDrive` is presented as current with no warning, and the entire `client.drives` (`IDriveClient`) surface plus four other client methods are undocumented.

@@ -37,6 +37,18 @@ import { detectFeatures } from "./features.js";
 import { generateAll } from "./generate.js";
 import { sortByKey } from "./utils.js";
 
+// Anchor dist-tag resolution to ph-cli. Releases publish in topological order
+// (releaseGraph), so ph-cli — a top-level consumer — is published *after* its
+// workspace dependencies, and a dist-tag only moves once that package is
+// published. Resolving the tag against ph-cli therefore yields a version whose
+// entire workspace dependency closure is already on the registry. Anchoring to
+// an arbitrary `WORKSPACE_PACKAGES[0]` (e.g. codegen) instead races during the
+// publish window: codegen@dev.N can be tagged before ph-cli@dev.N exists, so
+// pinning every workspace dep to that version makes `pnpm i` fail with
+// ERR_PNPM_NO_MATCHING_VERSION. This matches the anchor the ph-cli migrate
+// command already uses (clis/ph-cli/src/services/migrate.ts).
+const VERSION_ANCHOR_PACKAGE = "@powerhousedao/ph-cli";
+
 /* Uses the npm cli's fetch function to get the version for a specified tag */
 export async function getFullyQualifiedWorkspacePackageVersion(
   versionOrTag: string,
@@ -47,9 +59,13 @@ export async function getFullyQualifiedWorkspacePackageVersion(
     versionOrTag === "dev";
 
   if (!isTag) return versionOrTag;
-  const result = (await npmFetch.json(
-    `${WORKSPACE_PACKAGES[0].manifest.name!}`,
-  )) as { "dist-tags": Record<"latest" | "staging" | "dev", string> };
+  const anchorPackageName =
+    WORKSPACE_PACKAGES.find(
+      (pkg) => pkg.manifest.name === VERSION_ANCHOR_PACKAGE,
+    )?.manifest.name ?? WORKSPACE_PACKAGES[0].manifest.name!;
+  const result = (await npmFetch.json(anchorPackageName)) as {
+    "dist-tags": Record<"latest" | "staging" | "dev", string>;
+  };
   return result["dist-tags"][versionOrTag];
 }
 
