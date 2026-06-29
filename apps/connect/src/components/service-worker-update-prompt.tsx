@@ -5,9 +5,8 @@ import {
 } from "@powerhousedao/connect/utils";
 import { useSyncExternalStore } from "react";
 
-// Shown when a new service worker has installed and is waiting. The user opts
-// into the refresh so an update never interrupts in-progress work; clicking
-// activates the waiting worker, which reloads the page (see serviceWorkerManager).
+// Prompts the user to load a waiting service-worker update, so a new version
+// never reloads over in-progress work.
 export const ServiceWorkerUpdatePrompt: React.FC = () => {
   const updateAvailable = useSyncExternalStore(
     subscribeServiceWorkerUpdate,

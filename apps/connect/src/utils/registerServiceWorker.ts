@@ -6,15 +6,10 @@ const serviceWorkerScriptPath = [basePath, "service-worker.js"]
   .join("/")
   .replace(/\/{2,}/gm, "/");
 
-// ---------------------------------------------------------------------------
-// Update-available external store
-//
-// Workbox (generateSW + registerType: "prompt") leaves a freshly-installed
-// worker in the "waiting" state and ships a SKIP_WAITING message listener. We
-// surface "a new version is waiting" through this store so the React prompt
-// (service-worker-update-prompt.tsx) can offer a Refresh button instead of
-// reloading from under the user.
-// ---------------------------------------------------------------------------
+// External store backing the refresh prompt: Workbox (generateSW + prompt mode)
+// parks a new worker as "waiting"; we flag that here so
+// service-worker-update-prompt.tsx can offer a Refresh instead of reloading
+// from under the user.
 let updateAvailable = false;
 const updateListeners = new Set<() => void>();
 
@@ -88,12 +83,9 @@ class ServiceWorkerManager {
   async #register() {
     try {
       navigator.serviceWorker.addEventListener("controllerchange", () => {
-        // First visit: the runtime config is fetched during boot (main.tsx
-        // top-level await) BEFORE this SW controls the page, so it bypasses the
-        // SW and never lands in the NetworkFirst cache — leaving the app unable
-        // to boot offline after a single online load. Now that we control the
-        // page (clientsClaim fired this event), warm the cache so one online
-        // load is enough.
+        // First visit: boot fetches the runtime config before this SW controls
+        // the page, so it never lands in the cache. Warm it now (clientsClaim
+        // just gave us control) so a single online load is enough to go offline.
         this.#warmRuntimeConfigCache();
         // Reload once the worker we activated via applyUpdate() takes control.
         if (!this.#updateAccepted || this.#reloading) return;
@@ -155,11 +147,10 @@ class ServiceWorkerManager {
     }
   }
 
-  // Re-fetch powerhouse.config.json through the now-controlling SW so its
-  // NetworkFirst rule caches it (the boot-time fetch on the first visit ran
-  // before the SW controlled the page). Fire-and-forget. The URL MUST match the
-  // one the config loader uses (apps/connect/src/runtime-config.ts:
-  // `${import.meta.env.BASE_URL}powerhouse.config.json`) so the cache key lines up.
+  // Fire-and-forget re-fetch so the controlling SW's NetworkFirst rule caches
+  // the config (see controllerchange). The URL MUST match runtime-config.ts's
+  // loader (`${import.meta.env.BASE_URL}powerhouse.config.json`) or the cache
+  // keys won't line up.
   #warmRuntimeConfigCache() {
     void fetch(`${import.meta.env.BASE_URL}powerhouse.config.json`).catch(
       () => {},
@@ -181,7 +172,6 @@ class ServiceWorkerManager {
     waiting.postMessage({ type: "SKIP_WAITING" });
   }
 
-  // Post an arbitrary message to the active (or waiting) worker.
   sendMessage(message: unknown) {
     const target =
       this.registration?.active ??
@@ -190,9 +180,8 @@ class ServiceWorkerManager {
     target?.postMessage(message);
   }
 
-  // Unregister every worker for this scope — used when offline support is
-  // disabled at runtime so a previously-installed worker stops controlling the
-  // page. (A build with offline disabled also ships a self-destroying worker.)
+  // Drop any worker controlling this scope — used when offline support is
+  // disabled (a disabled build also ships a self-destroying worker).
   async unregisterAll() {
     if (!("serviceWorker" in navigator)) return;
     const registrations = await navigator.serviceWorker.getRegistrations();

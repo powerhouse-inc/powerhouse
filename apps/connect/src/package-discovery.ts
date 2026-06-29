@@ -211,11 +211,10 @@ export class PackageDiscoveryService
   }
 
   async #discover(documentType: string): Promise<DocumentModelModule<any>> {
-    // Offline: skip the doomed registry lookup and record an offline-specific
-    // failure so the UI shows an accurate, retryable message instead of a
-    // generic "couldn't reach the registry" plus a failed network request.
-    // (Already-installed editors don't reach here — they rehydrate from the
-    // service-worker cache; this path is only for never-installed packages.)
+    // Offline: skip the doomed registry lookup and record an "offline" failure
+    // so the banner shows an accurate, retryable message (not a generic registry
+    // error). Only never-installed types reach here; cached editors rehydrate
+    // from the SW.
     if (typeof navigator !== "undefined" && navigator.onLine === false) {
       this.#recordFailure(documentType, "offline", [], null);
       return Promise.reject(

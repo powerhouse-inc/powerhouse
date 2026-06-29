@@ -59,8 +59,7 @@ export const App = () => {
     } else if (connectConfig.offline) {
       serviceWorkerManager.registerServiceWorker(false);
     } else {
-      // Offline disabled at runtime — make sure a worker a previous
-      // offline-enabled build installed stops controlling the page.
+      // Offline disabled — drop any worker a previous offline build left running.
       void serviceWorkerManager.unregisterAll();
     }
   }, []);
