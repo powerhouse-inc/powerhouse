@@ -14,6 +14,7 @@ const reasonLabels: Record<FailedInstallationReason, string> = {
   "registry-error": "Couldn't reach the package registry.",
   "install-failed": "Package failed to install.",
   dismissed: "Installation was dismissed.",
+  offline: "You're offline — this package can't be loaded until you reconnect.",
 };
 
 function canRetry(reason: FailedInstallationReason): boolean {

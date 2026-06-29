@@ -87,8 +87,15 @@ class ServiceWorkerManager {
 
   async #register() {
     try {
-      // Reload once the worker we activated via applyUpdate() takes control.
       navigator.serviceWorker.addEventListener("controllerchange", () => {
+        // First visit: the runtime config is fetched during boot (main.tsx
+        // top-level await) BEFORE this SW controls the page, so it bypasses the
+        // SW and never lands in the NetworkFirst cache — leaving the app unable
+        // to boot offline after a single online load. Now that we control the
+        // page (clientsClaim fired this event), warm the cache so one online
+        // load is enough.
+        this.#warmRuntimeConfigCache();
+        // Reload once the worker we activated via applyUpdate() takes control.
         if (!this.#updateAccepted || this.#reloading) return;
         this.#reloading = true;
         window.location.reload();
@@ -146,6 +153,17 @@ class ServiceWorkerManager {
     } else {
       window.addEventListener("load", start, { once: true });
     }
+  }
+
+  // Re-fetch powerhouse.config.json through the now-controlling SW so its
+  // NetworkFirst rule caches it (the boot-time fetch on the first visit ran
+  // before the SW controlled the page). Fire-and-forget. The URL MUST match the
+  // one the config loader uses (apps/connect/src/runtime-config.ts:
+  // `${import.meta.env.BASE_URL}powerhouse.config.json`) so the cache key lines up.
+  #warmRuntimeConfigCache() {
+    void fetch(`${import.meta.env.BASE_URL}powerhouse.config.json`).catch(
+      () => {},
+    );
   }
 
   // Activate the waiting worker; the controllerchange handler then reloads.

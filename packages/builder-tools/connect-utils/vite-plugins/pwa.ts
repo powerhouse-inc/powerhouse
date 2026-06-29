@@ -118,6 +118,48 @@ export function connectPwaPlugins(options: {
               cacheableResponse: { statuses: [0, 200] },
             },
           },
+          // Document-model editors/packages loaded at runtime from the registry
+          // CDN. The registry ORIGIN is a runtime value (packageRegistryUrl), so
+          // match the stable "/-/cdn/" path instead. Two rules (order matters —
+          // Workbox is first-match-wins): the unversioned ENTRY points first,
+          // then a catch-all for the content-hashed assets.
+          //
+          // statuses: [0, 200] on BOTH — the editor's JS is a CORS module import
+          // (200), but its stylesheet is mounted via cross-origin `@import`
+          // (no-cors → opaque/0) and its CSS-referenced images/fonts ≥14 KB are
+          // also no-cors (0). [200] alone silently dropped those, so styles and
+          // icons broke offline. Opaque responses are still applied/displayed by
+          // the browser when served from cache.
+          //
+          // Entry points (browser/index.js, style.css, package.json) are
+          // unversioned/mutable → SWR so installing a newer editor refreshes
+          // online; offline serves the cached copy.
+          {
+            urlPattern: ({ url }) =>
+              url.pathname.includes("/-/cdn/") &&
+              (url.pathname.endsWith("/browser/index.js") ||
+                url.pathname.endsWith("/style.css") ||
+                url.pathname.endsWith("/package.json")),
+            handler: "StaleWhileRevalidate",
+            options: {
+              cacheName: "ph-package-cdn-entry",
+              expiration: { maxEntries: 60, maxAgeSeconds: 60 * 60 * 24 * 30 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          // Everything else under /-/cdn/ is content-hashed → immutable.
+          // CacheFirst: no revalidation (clean offline network tab), never stale
+          // (the hash changes when content changes). Caches opaque (no-cors)
+          // images/fonts referenced by the editor CSS.
+          {
+            urlPattern: ({ url }) => url.pathname.includes("/-/cdn/"),
+            handler: "CacheFirst",
+            options: {
+              cacheName: "ph-package-cdn",
+              expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 30 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
           // Runtime config: NetworkFirst so a fresh value wins when online, but
           // the last-known config is still served offline (it is precache-
           // ignored above).
