@@ -29,6 +29,10 @@ export type IConnectOptions = {
   /* Build one bundle that serves under any subpath; base resolved at serve
    * time from a runtime global instead of baked in. Overrides the deploy base. */
   dynamicBase?: boolean;
+  /* Path to a custom favicon to bundle as icon.ico instead of the default
+   * Connect asset. Build input (not runtime config); from
+   * `ph connect build --favicon`. Non-absolute paths resolve against the build cwd. */
+  favicon?: string;
 };
 
 export type ConnectCommonOptions = {

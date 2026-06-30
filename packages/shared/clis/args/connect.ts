@@ -205,6 +205,12 @@ export const connectBuildArgs = {
     description:
       "Build one bundle that serves under any subpath; base resolved at serve time from a runtime global. Overrides --base.",
   }),
+  favicon: option({
+    type: optional(string),
+    long: "favicon",
+    description:
+      "Path to a favicon file (e.g. .ico) to bundle in place of the default Connect icon. Emitted as icon.ico; resolved relative to the build cwd.",
+  }),
   ...commonArgs,
 };
 
