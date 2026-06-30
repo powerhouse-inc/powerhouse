@@ -187,6 +187,7 @@ export const connectConfig = {
   warnOutdatedApp: false,
   appVersionCheckInterval: 60 * 60 * 1000,
   routerBasename: PH_CONNECT_BASE_PATH,
+  offline: runtime.app?.offline ?? true,
   externalPackagesEnabled: runtime.packages?.externalEnabled,
   processors: {
     enabled: true,

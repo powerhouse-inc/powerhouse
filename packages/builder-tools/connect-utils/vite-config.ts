@@ -22,12 +22,13 @@ import { createHtmlPlugin } from "vite-plugin-html";
 import type { IConnectOptions } from "./types.js";
 import { devReactImportmapPlugin } from "./vite-plugins/dev-external-react.js";
 import {
-  connectDynamicBasePlugin,
   DYNAMIC_BASE_PLACEHOLDER,
+  connectDynamicBasePlugin,
 } from "./vite-plugins/dynamic-base.js";
 import { connectFaviconPlugin } from "./vite-plugins/favicon.js";
 import { phBundledPackagesPlugin } from "./vite-plugins/ph-bundled-packages.js";
 import { phConfigPlugin } from "./vite-plugins/ph-config.js";
+import { connectPwaPlugins } from "./vite-plugins/pwa.js";
 import { reactSelfHostPlugin } from "./vite-plugins/react-self-host.js";
 
 export function getConnectHtmlTags(
@@ -222,6 +223,11 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     options.cliConnectOverride?.app?.basePath ??
     phConfig.connect?.app?.basePath;
 
+  const offlineEnabled =
+    options.cliConnectOverride?.app?.offline ??
+    phConfig.connect?.app?.offline ??
+    true;
+
   const authToken = env.PH_SENTRY_AUTH_TOKEN;
   const org = env.PH_SENTRY_ORG;
   const project = env.PH_SENTRY_PROJECT;
@@ -405,6 +411,9 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
       // enforce: "post" — rewrites the placeholder base after all other
       // transforms have emitted their asset/chunk URLs.
       ...(options.dynamicBase ? [connectDynamicBasePlugin()] : []),
+      // PWA / service worker last, so its precache manifest sees every emitted
+      // asset (including the icons connectPwaIconsPlugin emits).
+      ...connectPwaPlugins({ offlineEnabled }),
     ],
     worker: {
       format: "es",

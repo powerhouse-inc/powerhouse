@@ -4,6 +4,7 @@ import {
   Router,
 } from "@powerhousedao/connect/components";
 
+import { connectConfig } from "@powerhousedao/connect/config";
 import { SentryProvider } from "@powerhousedao/connect/context";
 import {
   DocumentEditorDebugTools,
@@ -55,8 +56,11 @@ export const App = () => {
   useEffect(() => {
     if (import.meta.env.MODE === "development") {
       window.documentEditorDebugTools = new DocumentEditorDebugTools();
-    } else {
+    } else if (connectConfig.offline) {
       serviceWorkerManager.registerServiceWorker(false);
+    } else {
+      // Offline disabled — drop any worker a previous offline build left running.
+      void serviceWorkerManager.unregisterAll();
     }
   }, []);
 

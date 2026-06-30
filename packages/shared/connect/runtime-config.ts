@@ -32,6 +32,7 @@ export const DEFAULT_CONNECT_CONFIG: PHConnectRuntimeConfig = {
   app: {
     logLevel: "info",
     basePath: "/",
+    offline: true,
   },
   packages: {
     externalEnabled: true,

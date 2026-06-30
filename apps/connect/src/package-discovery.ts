@@ -211,6 +211,17 @@ export class PackageDiscoveryService
   }
 
   async #discover(documentType: string): Promise<DocumentModelModule<any>> {
+    // Offline: skip the doomed registry lookup and record an "offline" failure
+    // so the banner shows an accurate, retryable message (not a generic registry
+    // error). Only never-installed types reach here; cached editors rehydrate
+    // from the SW.
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+      this.#recordFailure(documentType, "offline", [], null);
+      return Promise.reject(
+        new Error(`Offline: cannot discover document type "${documentType}"`),
+      );
+    }
+
     let packageNames: string[];
     try {
       packageNames =
