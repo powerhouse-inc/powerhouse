@@ -1,3 +1,16 @@
+## 6.2.0-rc.3 (2026-06-30)
+
+### 🚀 Features
+
+- **connect:** add --favicon flag to ph connect build ([#2797](https://github.com/powerhouse-inc/powerhouse/pull/2797))
+- **connect:** enhance offline handling in package discovery and service worker caching ([9569b0757](https://github.com/powerhouse-inc/powerhouse/commit/9569b0757))
+- **connect:** add PWA offline support with Workbox service worker ([d65bbd886](https://github.com/powerhouse-inc/powerhouse/commit/d65bbd886))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.0-rc.2 (2026-06-26)
 
 ### 🩹 Fixes
