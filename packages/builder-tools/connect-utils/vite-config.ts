@@ -407,7 +407,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
         dirname: options.dirname,
         dev: mode !== "production" || isDebug,
       }),
-      connectFaviconPlugin(),
+      connectFaviconPlugin({ faviconPath: options.favicon }),
       // enforce: "post" — rewrites the placeholder base after all other
       // transforms have emitted their asset/chunk URLs.
       ...(options.dynamicBase ? [connectDynamicBasePlugin()] : []),

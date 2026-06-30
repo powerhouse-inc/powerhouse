@@ -635,6 +635,8 @@ Build has no read mode; passing only &lt;key&gt; without &lt;value&gt; errors ou
 
 **Sentry Tracing Enabled** - Override connect.sentry.tracing (Sentry performance tracing). - Usage: `--sentry-tracing-enabled <value>`
 
+**Favicon** - Path to a favicon file (e.g. .ico) to bundle in place of the default Connect icon. Emitted as icon.ico; resolved relative to the build cwd. - Usage: `--favicon <str>`
+
 **Base** - Base path for the app - Usage: `--base <str>`
 
 **Log Level** - Log level for the application - Usage: `--log-level <value>`

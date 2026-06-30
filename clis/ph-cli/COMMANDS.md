@@ -579,6 +579,10 @@ Override connect.sentry.env (Sentry environment label).<br><br>
 Override connect.sentry.tracing (Sentry performance tracing).<br><br>
 **usage:** `--sentry-tracing-enabled <value>`<br>
 
+#### Favicon <br>
+Path to a favicon file (e.g. .ico) to bundle in place of the default Connect icon. Emitted as icon.ico; resolved relative to the build cwd.<br><br>
+**usage:** `--favicon <str>`<br>
+
 #### Base <br>
 Base path for the app<br><br>
 **usage:** `--base <str>`<br>
