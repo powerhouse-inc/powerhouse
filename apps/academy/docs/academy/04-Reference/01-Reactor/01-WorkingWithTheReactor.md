@@ -170,7 +170,7 @@ All list methods support pagination via `PagingOptions` (`{ cursor, limit }`) an
 | `deleteDocument(identifier, propagate?)`                                                    | Delete a document (`PropagationMode.Cascade` deletes children too) |
 | `deleteDocuments(identifiers, propagate?)`                                                  | Bulk delete                                                        |
 
-To create a document inside a drive, use `client.drives.addFile`. See the [Drives](/academy/Reference/Reactor/ReactorClient#drives) section on the IReactorClient reference page.
+To create a document inside a drive, use `client.drives.addFile`. See the [Drives](/academy/Reference/Reactor/ReactorClient#drives-clientdrives) section on the IReactorClient reference page.
 
 ### Subscribing to changes
 

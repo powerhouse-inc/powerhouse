@@ -786,7 +786,7 @@ The result's `jobs` record is keyed by each plan's `key`. If a job fails, `loadB
 
 ---
 
-## Drives (`client.drives`) {#drives}
+## Drives (`client.drives`)
 
 `client.drives` is a `readonly` `IDriveClient` namespace for drive-aware operations. These methods orchestrate the multi-action, multi-document work needed to keep a drive's `state.global.nodes` array consistent with the relationship index and the underlying documents. Use the flat `IReactorClient` methods (`get`, `execute`, `find`) for everything that is not drive-aware.
 

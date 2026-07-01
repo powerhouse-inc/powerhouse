@@ -2146,7 +2146,7 @@ The [Powerhouse Recipes](https://github.com/powerhouse-inc/recipes) repository c
 | [Relational DB Subgraph](https://github.com/powerhouse-inc/recipes/tree/main/relational-db-subgraph) | A complete relational DB processor recipe demonstrating the academy flagship tutorial pattern: |
 | [Role-Based Auth](https://github.com/powerhouse-inc/recipes/tree/main/role-based-auth) | A custom document model where the creator is promoted to admin on first action, admins can grant or revoke admin and member roles, and a domain action (`writeNote`) is gated on member-or-higher. |
 | [Saga](https://github.com/powerhouse-inc/recipes/tree/main/saga) | Saga pattern via Reactor processor: operations on one document trigger operations on others, linked by a traceable saga context. |
-| [Semantic Search Processor](https://github.com/powerhouse-inc/recipes/tree/main/semantic-search) | A Reactor `IProcessor` that embeds document content with an in-process model (Transformers.js) into PGlite's `vector` extension and answers cosine-similarity queries — the semantic sibling of the [full-text-search](../full-text-search) recipe. |
+| [Semantic Search Processor](https://github.com/powerhouse-inc/recipes/tree/main/semantic-search) | A Reactor `IProcessor` that embeds document content with an in-process model (Transformers.js) into PGlite's `vector` extension and answers cosine-similarity queries — the semantic sibling of the [full-text-search](#recipe-full-text-search) recipe. |
 | [Signed Operations Verifier](https://github.com/powerhouse-inc/recipes/tree/main/signed-operations-verifier) | A standalone script that builds a document operation history with cryptographic signatures, then verifies each one. |
 | [Subscription CLI](https://github.com/powerhouse-inc/recipes/tree/main/subscription-cli) | A standalone CLI for monitoring Powerhouse Reactor GraphQL subscriptions over WebSocket in real time. |
 | [Sync Health Monitor](https://github.com/powerhouse-inc/recipes/tree/main/sync-health-monitor) | Subscribes to `SyncEventTypes` on the Reactor EventBus and maintains a live health dashboard. |
@@ -3825,7 +3825,7 @@ AGPL-3.0-only
 </details>
 
 <details id="recipe-semantic-search">
-<summary><strong>Semantic Search Processor</strong> — A Reactor `IProcessor` that embeds document content with an in-process model (Transformers.js) into PGlite's `vector` extension and answers cosine-similarity queries — the semantic sibling of the [full-text-search](../full-text-search) recipe.</summary>
+<summary><strong>Semantic Search Processor</strong> — A Reactor `IProcessor` that embeds document content with an in-process model (Transformers.js) into PGlite's `vector` extension and answers cosine-similarity queries — the semantic sibling of the [full-text-search](#recipe-full-text-search) recipe.</summary>
 
 ### Semantic Search Processor
 
