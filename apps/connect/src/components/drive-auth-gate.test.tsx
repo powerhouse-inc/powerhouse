@@ -4,7 +4,9 @@ import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Controls useDriveAuthGate's return between tests.
-const mockGate = vi.hoisted(() => ({ needsLogin: false }));
+const mockGate = vi.hoisted(() => ({
+  gate: null as "login" | "unauthorized" | null,
+}));
 
 vi.mock("../components/use-drive-auth-gate.js", () => ({
   useDriveAuthGate: () => mockGate,
@@ -52,18 +54,18 @@ import { Content } from "../pages/content.js";
 
 describe("Content drive auth gate wiring", () => {
   beforeEach(() => {
-    mockGate.needsLogin = false;
+    mockGate.gate = null;
   });
 
-  it("renders the login gate when needsLogin is true", () => {
-    mockGate.needsLogin = true;
+  it("renders the login gate when gate is 'login'", () => {
+    mockGate.gate = "login";
     render(<Content />);
     expect(screen.getByText("Log in to access this drive")).toBeDefined();
     expect(screen.queryByTestId("home-screen")).toBeNull();
   });
 
-  it("renders the home screen (not the gate) when needsLogin is false", () => {
-    mockGate.needsLogin = false;
+  it("renders the home screen (not the gate) when gate is null", () => {
+    mockGate.gate = null;
     render(<Content />);
     expect(screen.queryByText("Log in to access this drive")).toBeNull();
     expect(screen.getByTestId("home-screen")).toBeDefined();
