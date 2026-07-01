@@ -1,3 +1,13 @@
+## 6.2.0-rc.4 (2026-07-01)
+
+### 🩹 Fixes
+
+- **connect:** distinguish authenticated-but-unauthorized from anonymous in drive auth gate ([#2802](https://github.com/powerhouse-inc/powerhouse/pull/2802))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 6.2.0-rc.3 (2026-06-30)
 
 ### 🚀 Features
