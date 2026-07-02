@@ -1,3 +1,13 @@
+## 6.2.0-dev.45 (2026-07-02)
+
+### 🩹 Fixes
+
+- **reactor-api:** guard top-level dotenv.config() against missing process.cwd ([541bae845](https://github.com/powerhouse-inc/powerhouse/commit/541bae845))
+
+### ❤️ Thank You
+
+- Frank Pfeift
+
 ## 6.2.0-dev.44 (2026-07-02)
 
 ### 🩹 Fixes
