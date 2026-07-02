@@ -1,3 +1,13 @@
+## 6.2.0-dev.46 (2026-07-02)
+
+### 🩹 Fixes
+
+- **reactor-api:** don't inject runtime process.cwd into HTTP-loaded modules ([#2803](https://github.com/powerhouse-inc/powerhouse/issues/2803))
+
+### ❤️ Thank You
+
+- Frank Pfeift
+
 ## 6.2.0-dev.45 (2026-07-02)
 
 ### 🩹 Fixes

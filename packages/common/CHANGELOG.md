@@ -1,3 +1,7 @@
+## 6.2.0-dev.46 (2026-07-02)
+
+This was a version bump only for @powerhousedao/common to align it with other projects, there were no code changes.
+
 ## 6.2.0-dev.45 (2026-07-02)
 
 This was a version bump only for @powerhousedao/common to align it with other projects, there were no code changes.
