@@ -1,3 +1,13 @@
+## 6.2.0-rc.5 (2026-07-02)
+
+### 🚀 Features
+
+- pre-paint theme boot script and cross-context theme sync ([#2806](https://github.com/powerhouse-inc/powerhouse/pull/2806))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 6.2.0-rc.4 (2026-07-01)
 
 This was a version bump only for @powerhousedao/builder-tools to align it with other projects, there were no code changes.

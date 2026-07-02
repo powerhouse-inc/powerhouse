@@ -1,3 +1,7 @@
+## 6.2.0-rc.5 (2026-07-02)
+
+This was a version bump only for @powerhousedao/academy to align it with other projects, there were no code changes.
+
 ## 6.2.0-rc.4 (2026-07-01)
 
 This was a version bump only for @powerhousedao/academy to align it with other projects, there were no code changes.

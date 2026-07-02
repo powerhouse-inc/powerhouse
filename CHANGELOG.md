@@ -1,3 +1,19 @@
+## 6.2.0-rc.5 (2026-07-02)
+
+### 🚀 Features
+
+- pre-paint theme boot script and cross-context theme sync ([#2806](https://github.com/powerhouse-inc/powerhouse/pull/2806))
+
+### 🩹 Fixes
+
+- **renown:** poll cli login every 0.5s instead of 2s ([f2245aee3](https://github.com/powerhouse-inc/powerhouse/commit/f2245aee3))
+- **renown:** avoid double slash on renown fetch profile ([ea16a17d4](https://github.com/powerhouse-inc/powerhouse/commit/ea16a17d4))
+
+### ❤️ Thank You
+
+- acaldas
+- Guillermo Puente Sandoval @gpuente
+
 ## 6.2.0-rc.4 (2026-07-01)
 
 ### 🩹 Fixes
