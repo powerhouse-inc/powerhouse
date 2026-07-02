@@ -16,13 +16,20 @@
       rel="stylesheet"
     />
     <link href="/style.css" rel="stylesheet" />
-    <script>
-      document.documentElement.classList.toggle(
-        "dark",
-        localStorage.theme === "dark" ||
-          (!("theme" in localStorage) &&
-            window.matchMedia("(prefers-color-scheme: dark)").matches),
-      );
+    <script data-ph-theme-boot>
+      (function () {
+        try {
+          var p = new URLSearchParams(location.search).get("theme");
+          if (p === "dark" || p === "light")
+            localStorage.setItem("ph:theme", p);
+          var s = localStorage.getItem("ph:theme");
+          var d =
+            s === "dark" ||
+            ((!s || s === "system") &&
+              matchMedia("(prefers-color-scheme: dark)").matches);
+          document.documentElement.classList.toggle("dark", d);
+        } catch (e) {}
+      })();
     </script>
   </head>
 
