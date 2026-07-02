@@ -30,6 +30,7 @@ import { phBundledPackagesPlugin } from "./vite-plugins/ph-bundled-packages.js";
 import { phConfigPlugin } from "./vite-plugins/ph-config.js";
 import { connectPwaPlugins } from "./vite-plugins/pwa.js";
 import { reactSelfHostPlugin } from "./vite-plugins/react-self-host.js";
+import { connectThemeBootPlugin } from "./vite-plugins/theme-boot.js";
 
 export function getConnectHtmlTags(
   options: {
@@ -408,6 +409,9 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
         dev: mode !== "production" || isDebug,
       }),
       connectFaviconPlugin({ faviconPath: options.favicon }),
+      // Pre-paint theme boot in every emitted index.html (marker-idempotent
+      // with the serve-time injection in the ph-clint connect proxy).
+      connectThemeBootPlugin(),
       // enforce: "post" — rewrites the placeholder base after all other
       // transforms have emitted their asset/chunk URLs.
       ...(options.dynamicBase ? [connectDynamicBasePlugin()] : []),
