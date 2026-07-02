@@ -13,6 +13,7 @@ import {
   type DocumentModelLib,
   type DocumentModelModule,
 } from "@powerhousedao/shared/document-model";
+import { toCdnUrl } from "@powerhousedao/shared/registry/urls";
 import * as vetra from "@powerhousedao/vetra";
 import vetraPkg from "@powerhousedao/vetra/package.json" with { type: "json" };
 
@@ -79,13 +80,7 @@ export class BrowserPackageManager implements IPackageManager {
       namespace + ":PH_PACKAGES",
     );
     this.registryUrl = registryUrl;
-    this.#cdnUrl = registryUrl !== null ? this.#toCdnUrl(registryUrl) : null;
-  }
-
-  #toCdnUrl(baseUrl: string): string {
-    if (baseUrl.includes("/-/cdn")) return baseUrl;
-    const base = baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
-    return `${base}/-/cdn`;
+    this.#cdnUrl = registryUrl !== null ? toCdnUrl(registryUrl) : null;
   }
 
   async init(

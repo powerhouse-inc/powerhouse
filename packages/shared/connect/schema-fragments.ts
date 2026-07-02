@@ -60,6 +60,28 @@ const driveSectionSchema = {
   },
 } as const;
 
+// Reusable shape for a runtime-caching / denylist URL match. A string is
+// handed to Workbox verbatim; `{ source, flags }` is rebuilt into a RegExp at
+// build time. Function patterns aren't serialisable and can't be expressed
+// from config — only Connect's built-in rules use them (see BASE_WORKBOX in
+// builder-tools).
+const pwaUrlPatternSchema = {
+  description:
+    "URL match. A string is matched verbatim by Workbox; { source, flags } is rebuilt into a RegExp at build time.",
+  oneOf: [
+    { type: "string" },
+    {
+      type: "object",
+      additionalProperties: false,
+      required: ["source"],
+      properties: {
+        source: { type: "string", description: "RegExp source." },
+        flags: { type: "string", description: "RegExp flags (e.g. 'i')." },
+      },
+    },
+  ],
+} as const;
+
 export const phConnectRuntimeConfigSchema = {
   type: "object",
   additionalProperties: false,
@@ -218,6 +240,129 @@ export const phConnectRuntimeConfigSchema = {
           type: "boolean",
           description: "Enable Sentry performance tracing.",
           default: false,
+        },
+      },
+    },
+    pwa: {
+      type: "object",
+      additionalProperties: false,
+      description:
+        "Progressive-web-app / service-worker overrides, layered on Connect's built-in PWA defaults at build time. Object fields deep-merge (this layer wins); icons, globs, runtimeCaching and denylist patterns are additive; maximumFileSizeToCacheInBytes takes the max across contributors. Only applied when connect.app.offline is true.",
+      properties: {
+        manifest: {
+          type: "object",
+          additionalProperties: false,
+          description: "Web-app-manifest field overrides.",
+          properties: {
+            name: { type: "string" },
+            short_name: { type: "string" },
+            description: { type: "string" },
+            theme_color: { type: "string" },
+            background_color: { type: "string" },
+            display: {
+              type: "string",
+              enum: ["fullscreen", "standalone", "minimal-ui", "browser"],
+            },
+            start_url: { type: "string" },
+            scope: { type: "string" },
+            icons: {
+              type: "array",
+              description:
+                "Icons appended to the built-in set and de-duplicated by (src, sizes, purpose).",
+              items: {
+                type: "object",
+                additionalProperties: false,
+                required: ["src"],
+                properties: {
+                  src: { type: "string" },
+                  sizes: { type: "string" },
+                  type: { type: "string" },
+                  purpose: { type: "string" },
+                },
+              },
+            },
+          },
+        },
+        globPatterns: {
+          type: "array",
+          items: { type: "string" },
+          description:
+            "Extra Workbox precache globs, unioned with the built-ins.",
+        },
+        globIgnores: {
+          type: "array",
+          items: { type: "string" },
+          description:
+            "Extra precache ignore globs, unioned with the built-ins.",
+        },
+        maximumFileSizeToCacheInBytes: {
+          type: "number",
+          description:
+            "Raise the precache file-size ceiling. The max across all contributors wins, so no contributor can shrink another's limit.",
+        },
+        runtimeCaching: {
+          type: "array",
+          description:
+            "Runtime-caching rules appended after the built-in rules. Workbox is first-match-wins, so these cannot override a built-in rule matching the same URL.",
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["urlPattern", "handler"],
+            properties: {
+              urlPattern: pwaUrlPatternSchema,
+              handler: {
+                type: "string",
+                enum: [
+                  "CacheFirst",
+                  "CacheOnly",
+                  "NetworkFirst",
+                  "NetworkOnly",
+                  "StaleWhileRevalidate",
+                ],
+              },
+              method: {
+                type: "string",
+                enum: ["GET", "POST", "PUT", "DELETE", "HEAD", "PATCH"],
+              },
+              options: {
+                type: "object",
+                additionalProperties: false,
+                properties: {
+                  cacheName: { type: "string" },
+                  networkTimeoutSeconds: {
+                    type: "number",
+                    description:
+                      "Seconds a NetworkFirst rule waits for the network before falling back to the cache.",
+                  },
+                  expiration: {
+                    type: "object",
+                    additionalProperties: false,
+                    properties: {
+                      maxEntries: { type: "number" },
+                      maxAgeSeconds: { type: "number" },
+                    },
+                  },
+                  cacheableResponse: {
+                    type: "object",
+                    additionalProperties: false,
+                    properties: {
+                      statuses: { type: "array", items: { type: "number" } },
+                      headers: {
+                        type: "object",
+                        additionalProperties: { type: "string" },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        navigateFallbackDenylist: {
+          type: "array",
+          description:
+            "Extra SPA navigate-fallback denylist patterns, unioned with the built-ins.",
+          items: pwaUrlPatternSchema,
         },
       },
     },

@@ -50,11 +50,12 @@ Schema lives in `packages/builder-tools/connect-utils/runtime-config-schema.ts`.
   // Connect-only runtime values:
   "connect": {
     "branding":  { "appName": "...", "homeBackground": "..." | null },
-    "app":       { "logLevel": "info", "basePath": "/" },
+    "app":       { "logLevel": "info", "basePath": "/", "offline": true },
     "renown":    { "url": "...", "networkId": "eip155", "chainId": 1 },
     "drives":    { "allowAddDrive": true, "defaultDrives": [...], "preserveStrategy": "...", "sections": {...} },
     "packages":  { "externalEnabled": true },
-    "sentry":    { "dsn": null, "env": "dev", "tracing": false }
+    "sentry":    { "dsn": null, "env": "dev", "tracing": false },
+    "pwa":       { ... } // build-time only, see below
   }
 }
 ```
@@ -76,6 +77,11 @@ packageRegistryUrl = cliPackageRegistryUrl ?? source.packageRegistryUrl ?? null
 ```
 
 Each layer can supply a partial value; missing leaves fall back to the layer below. Arrays replace (they don't append), and `undefined` in a patch means "leave alone".
+
+Two fields interact with the service worker and deserve a caveat:
+
+- **`connect.pwa` is build-time only.** `ph connect build` merges it (together with package `pwa` fragments) into the generated `service-worker.js` and `manifest.webmanifest`. It is carried along in the dist file for transparency, but the SPA never reads it — editing the dist copy or injecting it via `PH_CONNECT_CONFIG_JSON` has no effect on an already-built worker. See the Academy page "Configure the PWA" for the merge semantics.
+- **`connect.app.offline` is hybrid.** At build time it decides whether a precaching worker or a self-destroying one is emitted; at boot the SPA reads it to register or unregister the worker (`apps/connect/src/components/app.tsx`, default `true`). Flipping it to `false` at deploy time therefore unregisters the worker on the next load, but flipping it to `true` cannot conjure a worker the build didn't emit.
 
 ### The five ways to feed a value into a layer
 
@@ -165,6 +171,7 @@ Downstream consumers inside the SPA:
 | Renown auth flow                                | Reads `connect.renown.*`                                                                                                                |
 | Drives sidebar                                  | Reads `connect.drives.*`                                                                                                                |
 | Router                                          | Reads `connect.app.basePath`                                                                                                            |
+| `apps/connect/src/components/app.tsx`           | Reads `connect.app.offline` to register or unregister the service worker                                                                |
 
 A hard refresh in the browser tears down the module graph; the next module evaluation runs `loadRuntimeConfig()` again and the SPA picks up whatever the dist file holds now. This is the path operators use after `ph connect config --renown-url X`: write the new value, refresh the tab.
 

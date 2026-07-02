@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { PHConnectPwa } from "../clis/types.js";
 import type {
   AddChangeLogItemInput,
   AddModuleInput,
@@ -783,6 +784,94 @@ export const ConfigEntrySchema = z.object({
   default: z.boolean().optional(),
 });
 
+// PWA / service-worker overrides a package contributes to a Connect build.
+// The `z.ZodType<PHConnectPwa>` annotation pins the schema to the TS type in
+// packages/shared/clis/types.ts, so drift between them is a compile error;
+// the JSON-schema fragment in packages/shared/connect/schema-fragments.ts is
+// the remaining hand-kept mirror. Kept on the manifest (not a separate file)
+// so it ships in dist/powerhouse.manifest.json and the Connect build can read
+// it without executing package code.
+const PwaUrlPatternSchema = z.union([
+  z.string(),
+  z
+    .object({ source: z.string(), flags: z.string().optional() })
+    // The pair is rebuilt into a RegExp at build time; catch a non-compiling
+    // pattern here, where validation can still name the contributor.
+    .refine(
+      (p) => {
+        try {
+          new RegExp(p.source, p.flags);
+          return true;
+        } catch {
+          return false;
+        }
+      },
+      { message: "source/flags do not compile to a valid RegExp" },
+    ),
+]);
+
+const PwaRuntimeCachingSchema = z.object({
+  urlPattern: PwaUrlPatternSchema,
+  handler: z.enum([
+    "CacheFirst",
+    "CacheOnly",
+    "NetworkFirst",
+    "NetworkOnly",
+    "StaleWhileRevalidate",
+  ]),
+  method: z.enum(["GET", "POST", "PUT", "DELETE", "HEAD", "PATCH"]).optional(),
+  options: z
+    .object({
+      cacheName: z.string().optional(),
+      networkTimeoutSeconds: z.number().optional(),
+      expiration: z
+        .object({
+          maxEntries: z.number().optional(),
+          maxAgeSeconds: z.number().optional(),
+        })
+        .optional(),
+      cacheableResponse: z
+        .object({
+          statuses: z.array(z.number()).optional(),
+          headers: z.record(z.string(), z.string()).optional(),
+        })
+        .optional(),
+    })
+    .optional(),
+});
+
+const PwaManifestOverrideSchema = z.object({
+  name: z.string().optional(),
+  short_name: z.string().optional(),
+  description: z.string().optional(),
+  theme_color: z.string().optional(),
+  background_color: z.string().optional(),
+  display: z
+    .enum(["fullscreen", "standalone", "minimal-ui", "browser"])
+    .optional(),
+  start_url: z.string().optional(),
+  scope: z.string().optional(),
+  icons: z
+    .array(
+      z.object({
+        src: z.string(),
+        sizes: z.string().optional(),
+        type: z.string().optional(),
+        purpose: z.string().optional(),
+      }),
+    )
+    .optional(),
+});
+
+export const PwaConfigSchema: z.ZodType<PHConnectPwa> = z.object({
+  manifest: PwaManifestOverrideSchema.optional(),
+  globPatterns: z.array(z.string()).optional(),
+  globIgnores: z.array(z.string()).optional(),
+  maximumFileSizeToCacheInBytes: z.number().optional(),
+  runtimeCaching: z.array(PwaRuntimeCachingSchema).optional(),
+  navigateFallbackDenylist: z.array(PwaUrlPatternSchema).optional(),
+});
+
 export const ManifestSchema = z.object({
   name: z.string(),
   description: z.string().optional(),
@@ -794,4 +883,5 @@ export const ManifestSchema = z.object({
   processors: PowerhouseModulesSchema,
   subgraphs: PowerhouseModulesSchema,
   config: z.array(ConfigEntrySchema).optional(),
+  pwa: PwaConfigSchema.optional(),
 });

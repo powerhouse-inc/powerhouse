@@ -86,6 +86,85 @@ export type PHConnectSentry = {
   tracing?: boolean;
 };
 
+/**
+ * A URL-matching pattern for a service-worker runtime-caching rule, in
+ * JSON-serialisable form. A plain string is handed to Workbox verbatim (exact
+ * URL or same-origin path match). `{ source, flags }` is reconstructed into a
+ * `RegExp` at build time — use it for prefix/suffix/origin matches (e.g.
+ * `{ source: "^https://api\\.acme\\.io/" }`). Function-valued patterns aren't
+ * expressible here; regex covers the realistic package cases.
+ */
+export type PHConnectPwaUrlPattern =
+  | string
+  | { source: string; flags?: string };
+
+export type PHConnectPwaCacheStrategy =
+  | "CacheFirst"
+  | "CacheOnly"
+  | "NetworkFirst"
+  | "NetworkOnly"
+  | "StaleWhileRevalidate";
+
+/** Serialisable subset of a Workbox `RuntimeCaching` rule. */
+export type PHConnectPwaRuntimeCaching = {
+  urlPattern: PHConnectPwaUrlPattern;
+  handler: PHConnectPwaCacheStrategy;
+  method?: "GET" | "POST" | "PUT" | "DELETE" | "HEAD" | "PATCH";
+  options?: {
+    cacheName?: string;
+    /** Seconds a NetworkFirst rule waits for the network before falling back
+     * to the cache. */
+    networkTimeoutSeconds?: number;
+    expiration?: { maxEntries?: number; maxAgeSeconds?: number };
+    cacheableResponse?: {
+      statuses?: number[];
+      headers?: Record<string, string>;
+    };
+  };
+};
+
+export type PHConnectPwaIcon = {
+  src: string;
+  sizes?: string;
+  type?: string;
+  purpose?: string;
+};
+
+/** Web-app-manifest fields a package or project may override. */
+export type PHConnectPwaManifest = {
+  name?: string;
+  short_name?: string;
+  description?: string;
+  theme_color?: string;
+  background_color?: string;
+  display?: "fullscreen" | "standalone" | "minimal-ui" | "browser";
+  start_url?: string;
+  scope?: string;
+  icons?: PHConnectPwaIcon[];
+};
+
+/**
+ * PWA / service-worker overrides contributed by a package or the project.
+ * Layered on top of Connect's hardcoded PWA defaults at build time. Object
+ * fields deep-merge (later layer wins); `icons`, `globPatterns`,
+ * `globIgnores`, `runtimeCaching` and `navigateFallbackDenylist` are additive
+ * (concatenated/unioned); `maximumFileSizeToCacheInBytes` takes the max across
+ * contributors. Precedence: defaults < package fragments < project config.
+ */
+export type PHConnectPwa = {
+  manifest?: PHConnectPwaManifest;
+  /** Extra Workbox precache globs, unioned with the built-in patterns. */
+  globPatterns?: string[];
+  /** Extra Workbox precache ignore globs, unioned with the built-in list. */
+  globIgnores?: string[];
+  /** Raise the precache file-size ceiling; the max across contributors wins. */
+  maximumFileSizeToCacheInBytes?: number;
+  /** Additional runtime-caching rules, appended after the built-in rules. */
+  runtimeCaching?: PHConnectPwaRuntimeCaching[];
+  /** Extra SPA-fallback denylist patterns, unioned with the built-in list. */
+  navigateFallbackDenylist?: PHConnectPwaUrlPattern[];
+};
+
 export type PHConnectRuntimeConfig = {
   branding?: PHConnectBranding;
   app?: PHConnectApp;
@@ -93,6 +172,7 @@ export type PHConnectRuntimeConfig = {
   drives?: PHConnectDrives;
   renown?: PHConnectRenown;
   sentry?: PHConnectSentry;
+  pwa?: PHConnectPwa;
 };
 
 export type PowerhouseConfig = {
