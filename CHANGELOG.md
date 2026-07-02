@@ -1,3 +1,13 @@
+## 6.2.0-dev.44 (2026-07-02)
+
+### 🩹 Fixes
+
+- **academy:** broken mdx compilation & link ([2bffdb11a](https://github.com/powerhouse-inc/powerhouse/commit/2bffdb11a))
+
+### ❤️ Thank You
+
+- CallmeT-ty @CallmeT-ty
+
 ## 6.2.0-dev.43 (2026-07-01)
 
 This was a version bump only, there were no code changes.
