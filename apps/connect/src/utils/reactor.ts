@@ -22,12 +22,7 @@ import { createSignatureVerifier, type IRenown } from "@renown/sdk";
 import { ConsoleLogger } from "document-model";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
-import {
-  detectReactorPgMajor,
-  loadPGliteModule,
-  resolvePgMajorForRuntime,
-} from "./pglite-runtime.js";
-import { REACTOR_PGLITE_NAME } from "./storage-namespace.js";
+import { getSharedPGlite } from "../pglite.db.js";
 
 /**
  * Creates a Reactor that plugs into legacy storage but syncs through the new
@@ -53,17 +48,7 @@ export async function createBrowserReactor(
     return renown.getBearerToken({ expiresIn: 10 });
   };
 
-  const detected = await detectReactorPgMajor();
-  const major = resolvePgMajorForRuntime(detected);
-  if (major !== 17) {
-    console.warn(
-      `[reactor] Running against legacy PGlite data dir (Postgres ${major}). Migrate to PG17 from the banner or the Inspector → Debug tab.`,
-    );
-  }
-  const { PGlite } = await loadPGliteModule(major);
-  const pg = new PGlite(`idb://${REACTOR_PGLITE_NAME}`, {
-    relaxedDurability: true,
-  });
+  const pg = await getSharedPGlite();
   const logger = new ConsoleLogger(["reactor-client"]);
   const builder = new ReactorClientBuilder()
     .withLogger(logger)
