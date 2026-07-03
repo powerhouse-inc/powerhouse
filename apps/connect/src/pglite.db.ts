@@ -1,5 +1,4 @@
 import type { PGlite } from "@electric-sql/pglite";
-import type { PGliteWorker } from "@electric-sql/pglite/worker";
 import { createRelationalDb } from "@powerhousedao/shared/processors";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
@@ -65,7 +64,7 @@ let sharedPGlite: Promise<PGlite> | undefined;
 // (kept in their own schemas). Memoized so the WASM/data load happens once.
 export function getSharedPGlite(): Promise<PGlite> {
   if (sharedPGlite) return sharedPGlite;
-  sharedPGlite = (async () => {
+  const pending = (async () => {
     const major = resolvePgMajorForRuntime(await detectReactorPgMajor());
     if (major !== 17) {
       console.warn(
@@ -76,14 +75,19 @@ export function getSharedPGlite(): Promise<PGlite> {
       ? createWorkerPGlite(major)
       : createMainThreadPGlite(major);
   })();
-  return sharedPGlite;
+  // Don't cache a rejection: let a later call retry a transient IDB/wasm failure.
+  sharedPGlite = pending;
+  pending.catch(() => {
+    if (sharedPGlite === pending) sharedPGlite = undefined;
+  });
+  return pending;
 }
 
 export async function getDb() {
   const pgLite = await getSharedPGlite();
   const relationalDb = createRelationalDb(
     new Kysely({
-      dialect: new PGliteDialect(pgLite as unknown as PGliteWorker),
+      dialect: new PGliteDialect(pgLite),
     }),
   );
   return { pgLite, relationalDb };
