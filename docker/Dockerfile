@@ -88,7 +88,9 @@ ARG TAG=latest
 ARG GIT_SHA=unknown
 RUN echo '{"name":"app","version":"1.0.0","type":"module","private":true}' > package.json \
  && printf 'allowBuilds:\n  "@apollo/protobufjs": true\n  "@parcel/watcher": true\n  esbuild: true\n  protobufjs: true\n  "@datadog/pprof": true\n' > pnpm-workspace.yaml \
- && pnpm add --shamefully-hoist @powerhousedao/switchboard@$TAG
+ && pnpm add --shamefully-hoist @powerhousedao/switchboard@$TAG \
+ && rm -rf /root/.cache /pnpm/store /tmp/*
+# Store is hardlinked into node_modules; cache/tmp are build-only. ~340MB.
 
 COPY docker/switchboard-entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
