@@ -1,3 +1,7 @@
+## 6.2.0-rc.6 (2026-07-03)
+
+This was a version bump only for benchmarks to align it with other projects, there were no code changes.
+
 ## 6.2.0-rc.5 (2026-07-02)
 
 This was a version bump only for benchmarks to align it with other projects, there were no code changes.

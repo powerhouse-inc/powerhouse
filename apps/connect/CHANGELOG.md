@@ -1,3 +1,17 @@
+## 6.2.0-rc.6 (2026-07-03)
+
+### 🩹 Fixes
+
+- **connect:** retry shared PGlite init on failure; drop unsafe dialect cast ([db4bfa3a7](https://github.com/powerhouse-inc/powerhouse/commit/db4bfa3a7))
+
+### 🔥 Performance
+
+- **connect:** keep Sentry SDK off the boot critical path ([df1aa0663](https://github.com/powerhouse-inc/powerhouse/commit/df1aa0663))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.0-rc.5 (2026-07-02)
 
 ### 🚀 Features
