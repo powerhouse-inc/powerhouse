@@ -1,3 +1,7 @@
+## 6.2.0-dev.49 (2026-07-05)
+
+This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.
+
 ## 6.2.0-dev.48 (2026-07-04)
 
 This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.
